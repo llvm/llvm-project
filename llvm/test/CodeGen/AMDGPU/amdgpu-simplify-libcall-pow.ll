@@ -2673,6 +2673,46 @@ define float @test_pow_f32__y_known_integral_roundeven(float %x, float nofpclass
   ret float %pow
 }
 
+define float @test_pow_f32_known_integral_undef(float %x) {
+; CHECK-LABEL: define float @test_pow_f32_known_integral_undef
+; CHECK-SAME: (float [[X:%.*]]) {
+; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z3powff(float [[X]], float undef)
+; CHECK-NEXT:    ret float [[POW]]
+;
+  %pow = tail call float @_Z3powff(float %x, float undef)
+  ret float %pow
+}
+
+define float @test_pow_f32_known_integral_poison(float %x) {
+; CHECK-LABEL: define float @test_pow_f32_known_integral_poison
+; CHECK-SAME: (float [[X:%.*]]) {
+; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z4pownfi(float [[X]], i32 poison)
+; CHECK-NEXT:    ret float [[POW]]
+;
+  %pow = tail call float @_Z3powff(float %x, float poison)
+  ret float %pow
+}
+
+define <2 x float> @test_pow_v2f32_known_integral_constant_vector_undef_elt(<2 x float> %x) {
+; CHECK-LABEL: define <2 x float> @test_pow_v2f32_known_integral_constant_vector_undef_elt
+; CHECK-SAME: (<2 x float> [[X:%.*]]) {
+; CHECK-NEXT:    [[POW:%.*]] = tail call <2 x float> @_Z3powDv2_fS_(<2 x float> [[X]], <2 x float> <float 4.000000e+00, float undef>)
+; CHECK-NEXT:    ret <2 x float> [[POW]]
+;
+  %pow = tail call <2 x float> @_Z3powDv2_fS_(<2 x float> %x, <2 x float> <float 4.0, float undef>)
+  ret <2 x float> %pow
+}
+
+define <2 x float> @test_pow_v2f32_known_integral_constant_vector_poison_elt(<2 x float> %x) {
+; CHECK-LABEL: define <2 x float> @test_pow_v2f32_known_integral_constant_vector_poison_elt
+; CHECK-SAME: (<2 x float> [[X:%.*]]) {
+; CHECK-NEXT:    [[POW:%.*]] = tail call <2 x float> @_Z4pownDv2_fDv2_i(<2 x float> [[X]], <2 x i32> <i32 4, i32 poison>)
+; CHECK-NEXT:    ret <2 x float> [[POW]]
+;
+  %pow = tail call <2 x float> @_Z3powDv2_fS_(<2 x float> %x, <2 x float> <float 4.0, float poison>)
+  ret <2 x float> %pow
+}
+
 attributes #0 = { minsize }
 attributes #1 = { noinline }
 attributes #2 = { strictfp }

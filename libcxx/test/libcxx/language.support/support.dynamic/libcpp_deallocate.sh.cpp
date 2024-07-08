@@ -21,6 +21,9 @@
 // GCC doesn't support the aligned-allocation flags.
 // XFAIL: gcc
 
+// These compiler versions do not have proper sized deallocation support.
+// UNSUPPORTED: clang-17, clang-18
+
 // RUN: %{build} -faligned-allocation -fsized-deallocation
 // RUN: %{run}
 // RUN: %{build} -faligned-allocation -fno-sized-deallocation -DNO_SIZE

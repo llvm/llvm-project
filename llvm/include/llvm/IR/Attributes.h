@@ -38,6 +38,7 @@ class AttributeImpl;
 class AttributeListImpl;
 class AttributeSetNode;
 class ConstantRange;
+class ConstantRangeList;
 class FoldingSetNodeID;
 class Function;
 class LLVMContext;
@@ -107,6 +108,10 @@ public:
   static bool isConstantRangeAttrKind(AttrKind Kind) {
     return Kind >= FirstConstantRangeAttr && Kind <= LastConstantRangeAttr;
   }
+  static bool isConstantRangeListAttrKind(AttrKind Kind) {
+    return Kind >= FirstConstantRangeListAttr &&
+           Kind <= LastConstantRangeListAttr;
+  }
 
   static bool canUseAsFnAttr(AttrKind Kind);
   static bool canUseAsParamAttr(AttrKind Kind);
@@ -131,6 +136,8 @@ public:
   static Attribute get(LLVMContext &Context, AttrKind Kind, Type *Ty);
   static Attribute get(LLVMContext &Context, AttrKind Kind,
                        const ConstantRange &CR);
+  static Attribute get(LLVMContext &Context, AttrKind Kind,
+                       ArrayRef<ConstantRange> Val);
 
   /// Return a uniquified Attribute object that has the specific
   /// alignment set.
@@ -189,6 +196,9 @@ public:
   /// Return true if the attribute is a ConstantRange attribute.
   bool isConstantRangeAttribute() const;
 
+  /// Return true if the attribute is a ConstantRangeList attribute.
+  bool isConstantRangeListAttribute() const;
+
   /// Return true if the attribute is any kind of attribute.
   bool isValid() const { return pImpl; }
 
@@ -225,6 +235,10 @@ public:
   /// Return the attribute's value as a ConstantRange. This requires the
   /// attribute to be a ConstantRange attribute.
   const ConstantRange &getValueAsConstantRange() const;
+
+  /// Return the attribute's value as a ConstantRange array. This requires the
+  /// attribute to be a ConstantRangeList attribute.
+  ArrayRef<ConstantRange> getValueAsConstantRangeList() const;
 
   /// Returns the alignment field of an attribute as a byte alignment
   /// value.
@@ -266,6 +280,9 @@ public:
 
   /// Returns the value of the range attribute.
   const ConstantRange &getRange() const;
+
+  /// Returns the value of the initializes attribute.
+  ArrayRef<ConstantRange> getInitializes() const;
 
   /// The Attribute is converted to a string of equivalent mnemonic. This
   /// is, presumably, for writing out the mnemonics for the assembly writer.
@@ -1221,6 +1238,13 @@ public:
 
   /// Add range attribute.
   AttrBuilder &addRangeAttr(const ConstantRange &CR);
+
+  /// Add a ConstantRangeList attribute with the given ranges.
+  AttrBuilder &addConstantRangeListAttr(Attribute::AttrKind Kind,
+                                        ArrayRef<ConstantRange> Val);
+
+  /// Add initializes attribute.
+  AttrBuilder &addInitializesAttr(const ConstantRangeList &CRL);
 
   ArrayRef<Attribute> attrs() const { return Attrs; }
 

@@ -1052,7 +1052,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
 static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
                                   Loop *CurLoop) {
   Value *Addr = LI->getPointerOperand();
-  const DataLayout &DL = LI->getModule()->getDataLayout();
+  const DataLayout &DL = LI->getDataLayout();
   const TypeSize LocSizeInBits = DL.getTypeSizeInBits(LI->getType());
 
   // It is not currently possible for clang to generate an invariant.start
@@ -1453,6 +1453,7 @@ static Instruction *cloneInstructionInExitBlock(
     }
 
     New = CallInst::Create(CI, OpBundles);
+    New->copyMetadata(*CI);
   } else {
     New = I.clone();
   }
@@ -2042,7 +2043,7 @@ bool llvm::promoteLoopAccessesToScalars(
   bool SawNotAtomic = false;
   AAMDNodes AATags;
 
-  const DataLayout &MDL = Preheader->getModule()->getDataLayout();
+  const DataLayout &MDL = Preheader->getDataLayout();
 
   // If there are reads outside the promoted set, then promoting stores is
   // definitely not safe.
@@ -2505,7 +2506,7 @@ static bool hoistGEP(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   // The swapped GEPs are inbounds if both original GEPs are inbounds
   // and the sign of the offsets is the same. For simplicity, only
   // handle both offsets being non-negative.
-  const DataLayout &DL = GEP->getModule()->getDataLayout();
+  const DataLayout &DL = GEP->getDataLayout();
   auto NonNegative = [&](Value *V) {
     return isKnownNonNegative(V, SimplifyQuery(DL, DT, AC, GEP));
   };
@@ -2555,7 +2556,7 @@ static bool hoistAdd(ICmpInst::Predicate Pred, Value *VariantLHS,
   // freely move values from left side of inequality to right side (just as in
   // normal linear arithmetics). Overflows make things much more complicated, so
   // we want to avoid this.
-  auto &DL = L.getHeader()->getModule()->getDataLayout();
+  auto &DL = L.getHeader()->getDataLayout();
   bool ProvedNoOverflowAfterReassociate =
       computeOverflowForSignedSub(InvariantRHS, InvariantOp,
                                   SimplifyQuery(DL, DT, AC, &ICmp)) ==
@@ -2608,7 +2609,7 @@ static bool hoistSub(ICmpInst::Predicate Pred, Value *VariantLHS,
   // normal linear arithmetics). Overflows make things much more complicated, so
   // we want to avoid this. Likewise, for "C1 - LV < C2" we need to prove that
   // "C1 - C2" does not overflow.
-  auto &DL = L.getHeader()->getModule()->getDataLayout();
+  auto &DL = L.getHeader()->getDataLayout();
   SimplifyQuery SQ(DL, DT, AC, &ICmp);
   if (VariantSubtracted) {
     // C1 - LV < C2 --> LV > C1 - C2
@@ -2751,7 +2752,7 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
   IRBuilder<> Builder(Preheader->getTerminator());
   for (auto *U : Changes) {
     assert(L.isLoopInvariant(U->get()));
-    Instruction *Ins = cast<Instruction>(U->getUser());
+    auto *Ins = cast<BinaryOperator>(U->getUser());
     Value *Mul;
     if (I.getType()->isIntOrIntVectorTy()) {
       Mul = Builder.CreateMul(U->get(), Factor, "factor.op.mul");
@@ -2759,8 +2760,20 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
       Ins->dropPoisonGeneratingFlags();
     } else
       Mul = Builder.CreateFMulFMF(U->get(), Factor, Ins, "factor.op.fmul");
-    U->set(Mul);
+
+    // Rewrite the reassociable instruction.
+    unsigned OpIdx = U->getOperandNo();
+    auto *LHS = OpIdx == 0 ? Mul : Ins->getOperand(0);
+    auto *RHS = OpIdx == 1 ? Mul : Ins->getOperand(1);
+    auto *NewBO = BinaryOperator::Create(Ins->getOpcode(), LHS, RHS,
+                                         Ins->getName() + ".reass", Ins);
+    NewBO->copyIRFlags(Ins);
+    if (VariantOp == Ins)
+      VariantOp = NewBO;
+    Ins->replaceAllUsesWith(NewBO);
+    eraseInstruction(*Ins, SafetyInfo, MSSAU);
   }
+
   I.replaceAllUsesWith(VariantOp);
   eraseInstruction(I, SafetyInfo, MSSAU);
   return true;

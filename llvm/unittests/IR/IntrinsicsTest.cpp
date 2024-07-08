@@ -77,7 +77,6 @@ TEST_F(IntrinsicsTest, InstrProfInheritance) {
     return isa<TYPE>(I) && is##PARENT(I);                                      \
   }
   __ISA(InstrProfCntrInstBase, InstrProfInstBase);
-  __ISA(InstrProfMCDCCondBitmapUpdate, InstrProfInstBase);
   __ISA(InstrProfCoverInst, InstrProfCntrInstBase);
   __ISA(InstrProfIncrementInst, InstrProfCntrInstBase);
   __ISA(InstrProfIncrementInstStep, InstrProfIncrementInst);
@@ -96,8 +95,6 @@ TEST_F(IntrinsicsTest, InstrProfInheritance) {
           {Intrinsic::instrprof_increment, isInstrProfIncrementInst},
           {Intrinsic::instrprof_increment_step, isInstrProfIncrementInstStep},
           {Intrinsic::instrprof_callsite, isInstrProfCallsite},
-          {Intrinsic::instrprof_mcdc_condbitmap_update,
-           isInstrProfMCDCCondBitmapUpdate},
           {Intrinsic::instrprof_mcdc_parameters,
            isInstrProfMCDCBitmapParameters},
           {Intrinsic::instrprof_mcdc_tvbitmap_update,

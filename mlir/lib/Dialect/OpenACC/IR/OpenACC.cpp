@@ -24,8 +24,8 @@ using namespace acc;
 
 #include "mlir/Dialect/OpenACC/OpenACCOpsDialect.cpp.inc"
 #include "mlir/Dialect/OpenACC/OpenACCOpsEnums.cpp.inc"
-#include "mlir/Dialect/OpenACC/OpenACCOpsInterfaces.cpp.inc"
 #include "mlir/Dialect/OpenACC/OpenACCTypeInterfaces.cpp.inc"
+#include "mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.cpp.inc"
 
 namespace {
 struct MemRefPointerLikeModel
@@ -2878,6 +2878,36 @@ mlir::acc::getBounds(mlir::Operation *accDataClauseOp) {
             return mlir::SmallVector<mlir::Value, 0>();
           })};
   return bounds;
+}
+
+mlir::SmallVector<mlir::Value>
+mlir::acc::getAsyncOperands(mlir::Operation *accDataClauseOp) {
+  return llvm::TypeSwitch<mlir::Operation *, mlir::SmallVector<mlir::Value>>(
+             accDataClauseOp)
+      .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>([&](auto dataClause) {
+        return mlir::SmallVector<mlir::Value>(
+            dataClause.getAsyncOperands().begin(),
+            dataClause.getAsyncOperands().end());
+      })
+      .Default([&](mlir::Operation *) {
+        return mlir::SmallVector<mlir::Value, 0>();
+      });
+}
+
+mlir::ArrayAttr
+mlir::acc::getAsyncOperandsDeviceType(mlir::Operation *accDataClauseOp) {
+  return llvm::TypeSwitch<mlir::Operation *, mlir::ArrayAttr>(accDataClauseOp)
+      .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>([&](auto dataClause) {
+        return dataClause.getAsyncOperandsDeviceTypeAttr();
+      })
+      .Default([&](mlir::Operation *) { return mlir::ArrayAttr{}; });
+}
+
+mlir::ArrayAttr mlir::acc::getAsyncOnly(mlir::Operation *accDataClauseOp) {
+  return llvm::TypeSwitch<mlir::Operation *, mlir::ArrayAttr>(accDataClauseOp)
+      .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>(
+          [&](auto dataClause) { return dataClause.getAsyncOnlyAttr(); })
+      .Default([&](mlir::Operation *) { return mlir::ArrayAttr{}; });
 }
 
 std::optional<llvm::StringRef> mlir::acc::getVarName(mlir::Operation *accOp) {

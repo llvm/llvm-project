@@ -9,6 +9,7 @@
 #include "VPlanAnalysis.h"
 #include "VPlan.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/IR/Instruction.h"
 
 using namespace llvm;
 
@@ -26,7 +27,24 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPBlendRecipe *R) {
 }
 
 Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
-  switch (R->getOpcode()) {
+  // Set the result type from the first operand, check if the types for all
+  // other operands match and cache them.
+  auto SetResultTyFromOp = [this, R]() {
+    Type *ResTy = inferScalarType(R->getOperand(0));
+    for (unsigned Op = 1; Op != R->getNumOperands(); ++Op) {
+      VPValue *OtherV = R->getOperand(Op);
+      assert(inferScalarType(OtherV) == ResTy &&
+             "different types inferred for different operands");
+      CachedTypes[OtherV] = ResTy;
+    }
+    return ResTy;
+  };
+
+  unsigned Opcode = R->getOpcode();
+  if (Instruction::isBinaryOp(Opcode) || Instruction::isUnaryOp(Opcode))
+    return SetResultTyFromOp();
+
+  switch (Opcode) {
   case Instruction::Select: {
     Type *ResTy = inferScalarType(R->getOperand(1));
     VPValue *OtherV = R->getOperand(2);
@@ -35,25 +53,26 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     CachedTypes[OtherV] = ResTy;
     return ResTy;
   }
-  case Instruction::Or:
   case Instruction::ICmp:
-  case VPInstruction::FirstOrderRecurrenceSplice: {
-    Type *ResTy = inferScalarType(R->getOperand(0));
-    VPValue *OtherV = R->getOperand(1);
-    assert(inferScalarType(OtherV) == ResTy &&
-           "different types inferred for different operands");
-    CachedTypes[OtherV] = ResTy;
-    return ResTy;
+  case VPInstruction::ActiveLaneMask:
+    return inferScalarType(R->getOperand(1));
+  case VPInstruction::FirstOrderRecurrenceSplice:
+  case VPInstruction::Not:
+    return SetResultTyFromOp();
+  case VPInstruction::ExtractFromEnd: {
+    Type *BaseTy = inferScalarType(R->getOperand(0));
+    if (auto *VecTy = dyn_cast<VectorType>(BaseTy))
+      return VecTy->getElementType();
+    return BaseTy;
   }
-  case VPInstruction::Not: {
-    Type *ResTy = inferScalarType(R->getOperand(0));
-    assert(IntegerType::get(Ctx, 1) == ResTy &&
-           "unexpected scalar type inferred for operand");
-    return ResTy;
-  }
+  case VPInstruction::LogicalAnd:
+    return IntegerType::get(Ctx, 1);
   case VPInstruction::PtrAdd:
     // Return the type based on the pointer argument (i.e. first operand).
     return inferScalarType(R->getOperand(0));
+  case VPInstruction::BranchOnCond:
+  case VPInstruction::BranchOnCount:
+    return Type::getVoidTy(Ctx);
   default:
     break;
   }
@@ -223,19 +242,21 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
 
   Type *ResultTy =
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
-          .Case<VPCanonicalIVPHIRecipe, VPFirstOrderRecurrencePHIRecipe,
-                VPReductionPHIRecipe, VPWidenPointerInductionRecipe,
-                VPEVLBasedIVPHIRecipe>([this](const auto *R) {
-            // Handle header phi recipes, except VPWidenIntOrFpInduction
-            // which needs special handling due it being possibly truncated.
-            // TODO: consider inferring/caching type of siblings, e.g.,
-            // backedge value, here and in cases below.
-            return inferScalarType(R->getStartValue());
-          })
+          .Case<VPActiveLaneMaskPHIRecipe, VPCanonicalIVPHIRecipe,
+                VPFirstOrderRecurrencePHIRecipe, VPReductionPHIRecipe,
+                VPWidenPointerInductionRecipe, VPEVLBasedIVPHIRecipe>(
+              [this](const auto *R) {
+                // Handle header phi recipes, except VPWidenIntOrFpInduction
+                // which needs special handling due it being possibly truncated.
+                // TODO: consider inferring/caching type of siblings, e.g.,
+                // backedge value, here and in cases below.
+                return inferScalarType(R->getStartValue());
+              })
           .Case<VPWidenIntOrFpInductionRecipe, VPDerivedIVRecipe>(
               [](const auto *R) { return R->getScalarType(); })
-          .Case<VPPredInstPHIRecipe, VPWidenPHIRecipe, VPScalarIVStepsRecipe,
-                VPWidenGEPRecipe>([this](const VPRecipeBase *R) {
+          .Case<VPReductionRecipe, VPPredInstPHIRecipe, VPWidenPHIRecipe,
+                VPScalarIVStepsRecipe, VPWidenGEPRecipe, VPVectorPointerRecipe,
+                VPWidenCanonicalIVRecipe>([this](const VPRecipeBase *R) {
             return inferScalarType(R->getOperand(0));
           })
           .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe,

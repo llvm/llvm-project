@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -basic-aa -polly-allow-nonaffine -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true                                   -polly-print-scops -disable-output < %s | FileCheck %s -check-prefix=SCALAR
-; RUN: opt %loadPolly -basic-aa -polly-allow-nonaffine -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true -polly-process-unprofitable=false -polly-print-scops -disable-output < %s | FileCheck %s -check-prefix=PROFIT
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-allow-nonaffine -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true                                   '-passes=print<polly-detect>,print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s -check-prefix=SCALAR
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa -polly-allow-nonaffine -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true -polly-process-unprofitable=false '-passes=print<polly-detect>,print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s -check-prefix=PROFIT
 ;
 ; SCALAR:      Function: f
 ; SCALAR-NEXT: Region: %bb1---%bb13

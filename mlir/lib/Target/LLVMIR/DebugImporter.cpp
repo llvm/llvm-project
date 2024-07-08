@@ -93,7 +93,11 @@ DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
       getStringAttrOrNull(node->getRawName()), translate(node->getFile()),
       node->getLine(), translate(node->getScope()), baseType,
       flags.value_or(DIFlags::Zero), node->getSizeInBits(),
-      node->getAlignInBits(), elements);
+      node->getAlignInBits(), elements,
+      translateExpression(node->getDataLocationExp()),
+      translateExpression(node->getRankExp()),
+      translateExpression(node->getAllocatedExp()),
+      translateExpression(node->getAssociatedExp()));
 }
 
 DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
@@ -106,7 +110,16 @@ DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
   return DIDerivedTypeAttr::get(
       context, node->getTag(), getStringAttrOrNull(node->getRawName()),
       baseType, node->getSizeInBits(), node->getAlignInBits(),
-      node->getOffsetInBits(), extraData);
+      node->getOffsetInBits(), node->getDWARFAddressSpace(), extraData);
+}
+
+DIStringTypeAttr DebugImporter::translateImpl(llvm::DIStringType *node) {
+  return DIStringTypeAttr::get(
+      context, node->getTag(), getStringAttrOrNull(node->getRawName()),
+      node->getSizeInBits(), node->getAlignInBits(),
+      translate(node->getStringLength()),
+      translateExpression(node->getStringLengthExp()),
+      translateExpression(node->getStringLocationExp()), node->getEncoding());
 }
 
 DIFileAttr DebugImporter::translateImpl(llvm::DIFile *node) {
@@ -170,6 +183,10 @@ DILocalVariableAttr DebugImporter::translateImpl(llvm::DILocalVariable *node) {
       node->getAlignInBits(), translate(node->getType()));
 }
 
+DIVariableAttr DebugImporter::translateImpl(llvm::DIVariable *node) {
+  return cast<DIVariableAttr>(translate(static_cast<llvm::DINode *>(node)));
+}
+
 DIScopeAttr DebugImporter::translateImpl(llvm::DIScope *node) {
   return cast<DIScopeAttr>(translate(static_cast<llvm::DINode *>(node)));
 }
@@ -213,21 +230,32 @@ DISubprogramAttr DebugImporter::translateImpl(llvm::DISubprogram *node) {
 }
 
 DISubrangeAttr DebugImporter::translateImpl(llvm::DISubrange *node) {
-  auto getIntegerAttrOrNull = [&](llvm::DISubrange::BoundType data) {
-    if (auto *constInt = llvm::dyn_cast_or_null<llvm::ConstantInt *>(data))
+  auto getAttrOrNull = [&](llvm::DISubrange::BoundType data) -> Attribute {
+    if (data.isNull())
+      return nullptr;
+    if (auto *constInt = dyn_cast<llvm::ConstantInt *>(data))
       return IntegerAttr::get(IntegerType::get(context, 64),
                               constInt->getSExtValue());
-    return IntegerAttr();
+    if (auto *expr = dyn_cast<llvm::DIExpression *>(data))
+      return translateExpression(expr);
+    if (auto *var = dyn_cast<llvm::DIVariable *>(data)) {
+      if (auto *local = dyn_cast<llvm::DILocalVariable>(var))
+        return translate(local);
+      if (auto *global = dyn_cast<llvm::DIGlobalVariable>(var))
+        return translate(global);
+      return nullptr;
+    }
+    return nullptr;
   };
-  IntegerAttr count = getIntegerAttrOrNull(node->getCount());
-  IntegerAttr upperBound = getIntegerAttrOrNull(node->getUpperBound());
+  Attribute count = getAttrOrNull(node->getCount());
+  Attribute upperBound = getAttrOrNull(node->getUpperBound());
   // Either count or the upper bound needs to be present. Otherwise, the
   // metadata is invalid. The conversion might fail due to unsupported DI nodes.
   if (!count && !upperBound)
     return {};
-  return DISubrangeAttr::get(
-      context, count, getIntegerAttrOrNull(node->getLowerBound()), upperBound,
-      getIntegerAttrOrNull(node->getStride()));
+  return DISubrangeAttr::get(context, count,
+                             getAttrOrNull(node->getLowerBound()), upperBound,
+                             getAttrOrNull(node->getStride()));
 }
 
 DISubroutineTypeAttr
@@ -279,6 +307,8 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
     if (auto *casted = dyn_cast<llvm::DICompositeType>(node))
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DIDerivedType>(node))
+      return translateImpl(casted);
+    if (auto *casted = dyn_cast<llvm::DIStringType>(node))
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DIFile>(node))
       return translateImpl(casted);
@@ -456,6 +486,9 @@ Location DebugImporter::translateLoc(llvm::DILocation *loc) {
 }
 
 DIExpressionAttr DebugImporter::translateExpression(llvm::DIExpression *node) {
+  if (!node)
+    return nullptr;
+
   SmallVector<DIExpressionElemAttr> ops;
 
   // Begin processing the operations.

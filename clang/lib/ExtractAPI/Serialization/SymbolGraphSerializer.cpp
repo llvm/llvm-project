@@ -31,7 +31,6 @@
 using namespace clang;
 using namespace clang::extractapi;
 using namespace llvm;
-using namespace llvm::json;
 
 namespace {
 
@@ -925,6 +924,10 @@ bool SymbolGraphSerializer::visitObjCInterfaceRecord(
 
 bool SymbolGraphSerializer::traverseObjCCategoryRecord(
     const ObjCCategoryRecord *Record) {
+  if (SkipSymbolsInCategoriesToExternalTypes &&
+      !API.findRecordForUSR(Record->Interface.USR))
+    return true;
+
   auto *CurrentModule = ModuleForCurrentSymbol;
   if (Record->isExtendingExternalModule())
     ModuleForCurrentSymbol = &ExtendedModules[Record->Interface.Source];
@@ -1032,16 +1035,19 @@ void SymbolGraphSerializer::serializeGraphToStream(
     ExtendedModule &&EM) {
   Object Root = serializeGraph(ModuleName, std::move(EM));
   if (Options.Compact)
-    OS << formatv("{0}", Value(std::move(Root))) << "\n";
+    OS << formatv("{0}", json::Value(std::move(Root))) << "\n";
   else
-    OS << formatv("{0:2}", Value(std::move(Root))) << "\n";
+    OS << formatv("{0:2}", json::Value(std::move(Root))) << "\n";
 }
 
 void SymbolGraphSerializer::serializeMainSymbolGraph(
     raw_ostream &OS, const APISet &API, const APIIgnoresList &IgnoresList,
     SymbolGraphSerializerOption Options) {
-  SymbolGraphSerializer Serializer(API, IgnoresList,
-                                   Options.EmitSymbolLabelsForTesting);
+  SymbolGraphSerializer Serializer(
+      API, IgnoresList, Options.EmitSymbolLabelsForTesting,
+      /*ForceEmitToMainModule=*/true,
+      /*SkipSymbolsInCategoriesToExternalTypes=*/true);
+
   Serializer.traverseAPISet();
   Serializer.serializeGraphToStream(OS, Options, API.ProductName,
                                     std::move(Serializer.MainModule));

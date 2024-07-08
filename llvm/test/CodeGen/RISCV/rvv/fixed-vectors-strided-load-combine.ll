@@ -75,9 +75,9 @@ define void @widen_4xv4i16_unaligned(ptr %x, ptr %z) {
 ; CHECK-NO-MISALIGN:       # %bb.0:
 ; CHECK-NO-MISALIGN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NO-MISALIGN-NEXT:    vle8.v v8, (a0)
-; CHECK-NO-MISALIGN-NEXT:    addi a2, a0, 16
-; CHECK-NO-MISALIGN-NEXT:    vle8.v v10, (a2)
 ; CHECK-NO-MISALIGN-NEXT:    addi a2, a0, 8
+; CHECK-NO-MISALIGN-NEXT:    addi a3, a0, 16
+; CHECK-NO-MISALIGN-NEXT:    vle8.v v10, (a3)
 ; CHECK-NO-MISALIGN-NEXT:    addi a0, a0, 24
 ; CHECK-NO-MISALIGN-NEXT:    vle8.v v9, (a0)
 ; CHECK-NO-MISALIGN-NEXT:    vle8.v v11, (a2)
@@ -186,9 +186,9 @@ define void @strided_constant_mismatch_4xv4i16(ptr %x, ptr %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    addi a2, a0, 6
-; CHECK-NEXT:    vle16.v v10, (a2)
 ; CHECK-NEXT:    addi a2, a0, 2
+; CHECK-NEXT:    addi a3, a0, 6
+; CHECK-NEXT:    vle16.v v10, (a3)
 ; CHECK-NEXT:    addi a0, a0, 8
 ; CHECK-NEXT:    vle16.v v9, (a0)
 ; CHECK-NEXT:    vle16.v v11, (a2)

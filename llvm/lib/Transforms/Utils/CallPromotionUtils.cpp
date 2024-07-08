@@ -12,11 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
@@ -188,9 +191,9 @@ static void createRetBitCast(CallBase &CB, Type *RetTy, CastInst **RetBitCast) {
 /// Predicate and clone the given call site.
 ///
 /// This function creates an if-then-else structure at the location of the call
-/// site. The "if" condition is specified by `Cond`. The original call site is
-/// moved into the "else" block, and a clone of the call site is placed in the
-/// "then" block. The cloned instruction is returned.
+/// site. The "if" condition is specified by `Cond`.
+/// The original call site is moved into the "else" block, and a clone of the
+/// call site is placed in the "then" block. The cloned instruction is returned.
 ///
 /// For example, the call instruction below:
 ///
@@ -393,7 +396,7 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
                             const char **FailureReason) {
   assert(!CB.getCalledFunction() && "Only indirect call sites can be promoted");
 
-  auto &DL = Callee->getParent()->getDataLayout();
+  auto &DL = Callee->getDataLayout();
 
   // Check the return type. The callee's return value type must be bitcast
   // compatible with the call site's type.
@@ -518,7 +521,8 @@ CallBase &llvm::promoteCall(CallBase &CB, Function *Callee,
     Type *FormalTy = CalleeType->getParamType(ArgNo);
     Type *ActualTy = Arg->getType();
     if (FormalTy != ActualTy) {
-      auto *Cast = CastInst::CreateBitOrPointerCast(Arg, FormalTy, "", CB.getIterator());
+      auto *Cast =
+          CastInst::CreateBitOrPointerCast(Arg, FormalTy, "", CB.getIterator());
       CB.setArgOperand(ArgNo, Cast);
 
       // Remove any incompatible attributes for the argument.
@@ -563,6 +567,27 @@ CallBase &llvm::promoteCallWithIfThenElse(CallBase &CB, Function *Callee,
   // callee, 'NewInst' will be executed, otherwise the original call site will
   // be executed.
   CallBase &NewInst = versionCallSite(CB, Callee, BranchWeights);
+
+  // Promote 'NewInst' so that it directly calls the desired function.
+  return promoteCall(NewInst, Callee);
+}
+
+CallBase &llvm::promoteCallWithVTableCmp(CallBase &CB, Instruction *VPtr,
+                                         Function *Callee,
+                                         ArrayRef<Constant *> AddressPoints,
+                                         MDNode *BranchWeights) {
+  assert(!AddressPoints.empty() && "Caller should guarantee");
+  IRBuilder<> Builder(&CB);
+  SmallVector<Value *, 2> ICmps;
+  for (auto &AddressPoint : AddressPoints)
+    ICmps.push_back(Builder.CreateICmpEQ(VPtr, AddressPoint));
+
+  // TODO: Perform tree height reduction if the number of ICmps is high.
+  Value *Cond = Builder.CreateOr(ICmps);
+
+  // Version the indirect call site. If Cond is true, 'NewInst' will be
+  // executed, otherwise the original call site will be executed.
+  CallBase &NewInst = versionCallSiteWithCond(CB, Cond, BranchWeights);
 
   // Promote 'NewInst' so that it directly calls the desired function.
   return promoteCall(NewInst, Callee);

@@ -627,6 +627,18 @@
 // CHECK-COV-LINUX: "-lpthread"
 // CHECK-COV-LINUX: "-lresolv"
 
+// RUN: %clang -### %s 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -fuse-ld=ld -fsanitize=numerical \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-NSAN-LINUX %s
+//
+// CHECK-NSAN-LINUX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-NSAN-LINUX-NOT: "-lc"
+// CHECK-NSAN-LINUX-NOT: libclang_rt.ubsan
+// CHECK-NSAN-LINUX: libclang_rt.nsan.a"
+// CHECK-NSAN-LINUX: "-lpthread" "-lrt" "-lm" "-ldl" "-lresolv"
+
 // CFI by itself does not link runtime libraries.
 // RUN: not %clang -fsanitize=cfi -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld -rtlib=platform \
@@ -688,7 +700,7 @@
 // CHECK-CFI-CROSS-DSO-DIAG-ANDROID: "--export-dynamic-symbol=__cfi_check"
 
 // RUN: %clangxx -fsanitize=address -### %s 2>&1 \
-// RUN:     -mmacosx-version-min=10.6 \
+// RUN:     -mmacos-version-min=10.6 \
 // RUN:     --target=x86_64-apple-darwin13.4.0 -fuse-ld=ld -stdlib=platform \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -698,7 +710,7 @@
 // CHECK-ASAN-DARWIN106-CXX-NOT: -lc++abi
 
 // RUN: %clangxx -fsanitize=leak -### %s 2>&1 \
-// RUN:     -mmacosx-version-min=10.6 \
+// RUN:     -mmacos-version-min=10.6 \
 // RUN:     --target=x86_64-apple-darwin13.4.0 -fuse-ld=ld -stdlib=platform \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \

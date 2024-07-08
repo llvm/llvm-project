@@ -88,6 +88,8 @@ add_header_library(
   binary_op_single_output_diff
   HDRS
     BinaryOpSingleOutputPerf.h
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_perf_binary(
@@ -341,6 +343,17 @@ add_perf_binary(
     libc.src.math.fmodl
   COMPILE_OPTIONS
     -fno-builtin
+)
+
+add_perf_binary(
+  fmodf16_perf
+  SRCS
+    fmodf16_perf.cpp
+  DEPENDS
+    .binary_op_single_output_diff
+    libc.src.math.fmodf16
+    libc.src.__support.FPUtil.generic.fmod
+    libc.src.__support.macros.properties.types
 )
 
 add_perf_binary(
