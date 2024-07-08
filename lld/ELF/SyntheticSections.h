@@ -135,7 +135,7 @@ protected:
     size_t offset;
     bool isSymbolFunc;
   };
-  SmallVector<AuthEntryInfo> authEntries;
+  SmallVector<AuthEntryInfo, 0> authEntries;
 };
 
 // .note.GNU-stack section.

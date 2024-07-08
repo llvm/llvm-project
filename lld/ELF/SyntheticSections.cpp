@@ -655,10 +655,8 @@ void GotSection::addConstant(const Relocation &r) { relocations.push_back(r); }
 void GotSection::addEntry(const Symbol &sym) {
   assert(sym.auxIdx == symAux.size() - 1);
   symAux.back().gotIdx = numEntries++;
-  if (sym.hasFlag(NEEDS_GOT_AUTH)) {
-    assert(config->emachine == EM_AARCH64);
+  if (sym.hasFlag(NEEDS_GOT_AUTH))
     authEntries.push_back({(numEntries - 1) * config->wordsize, sym.isFunc()});
-  }
 }
 
 bool GotSection::addTlsDescEntry(const Symbol &sym) {
