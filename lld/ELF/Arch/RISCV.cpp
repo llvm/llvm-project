@@ -1102,7 +1102,20 @@ static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
                 ": atomic_abi=" + Twine(static_cast<unsigned>(newTag)));
   };
 
-  switch (static_cast<RISCVAtomicAbiTag>(oldTag)) {
+  auto reportUnknownAbiError = [](const InputSectionBase *section,
+                                  RISCVAtomicAbiTag tag) {
+    switch (tag) {
+    case RISCVAtomicAbiTag::UNKNOWN:
+    case RISCVAtomicAbiTag::A6C:
+    case RISCVAtomicAbiTag::A6S:
+    case RISCVAtomicAbiTag::A7:
+      return;
+    };
+    errorOrWarn("unknown atomic abi for " + section->name + "\n>>> " +
+                toString(section) +
+                ": atomic_abi=" + Twine(static_cast<unsigned>(tag)));
+  };
+  switch (oldTag) {
   case RISCVAtomicAbiTag::UNKNOWN:
     it->getSecond() = static_cast<unsigned>(newTag);
     return;
@@ -1145,7 +1158,12 @@ static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
       return;
     };
   };
-  llvm_unreachable("unknown AtomicABI");
+
+  // If we get here, then we have an invalid tag, so report it.
+  // Putting these checks at the end allows us to only do these checks when we
+  // need to, since this is expected to be a rare occurrence.
+  reportUnknownAbiError(oldSection, oldTag);
+  reportUnknownAbiError(newSection, newTag);
 }
 
 static RISCVAttributesSection *

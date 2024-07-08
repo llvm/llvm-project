@@ -3098,7 +3098,7 @@ public:
   TentativeDefinitionsType TentativeDefinitions;
 
   /// All the external declarations encoutered and used in the TU.
-  SmallVector<VarDecl *, 4> ExternalDeclarations;
+  SmallVector<DeclaratorDecl *, 4> ExternalDeclarations;
 
   /// Generally null except when we temporarily switch decl contexts,
   /// like in \see SemaObjC::ActOnObjCTemporaryExitContainerContext.
@@ -4533,8 +4533,7 @@ public:
   bool checkTargetAttr(SourceLocation LiteralLoc, StringRef Str);
 
   /// Check Target Version attrs
-  bool checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
-                              StringRef &Str, bool &isDefault);
+  bool checkTargetVersionAttr(SourceLocation Loc, Decl *D, StringRef Str);
   bool checkTargetClonesAttrString(
       SourceLocation LiteralLoc, StringRef Str, const StringLiteral *Literal,
       Decl *D, bool &HasDefault, bool &HasCommas, bool &HasNotDefault,

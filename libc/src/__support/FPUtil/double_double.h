@@ -129,6 +129,42 @@ LIBC_INLINE DoubleDouble multiply_add<DoubleDouble>(const DoubleDouble &a,
   return add(c, quick_mult(a, b));
 }
 
+// Accurate double-double division, following Karp-Markstein's trick for
+// division, implemented in the CORE-MATH project at:
+// https://gitlab.inria.fr/core-math/core-math/-/blob/master/src/binary64/tan/tan.c#L1855
+//
+// Error bounds:
+// Let a = ah + al, b = bh + bl.
+// Let r = rh + rl be the approximation of (ah + al) / (bh + bl).
+// Then:
+//   (ah + al) / (bh + bl) - rh =
+// = ((ah - bh * rh) + (al - bl * rh)) / (bh + bl)
+// = (1 + O(bl/bh)) * ((ah - bh * rh) + (al - bl * rh)) / bh
+// Let q = round(1/bh), then the above expressions are approximately:
+// = (1 + O(bl / bh)) * (1 + O(2^-52)) * q * ((ah - bh * rh) + (al - bl * rh))
+// So we can compute:
+//   rl = q * (ah - bh * rh) + q * (al - bl * rh)
+// as accurate as possible, then the error is bounded by:
+//   |(ah + al) / (bh + bl) - (rh + rl)| < O(bl/bh) * (2^-52 + al/ah + bl/bh)
+LIBC_INLINE DoubleDouble div(const DoubleDouble &a, const DoubleDouble &b) {
+  DoubleDouble r;
+  double q = 1.0 / b.hi;
+  r.hi = a.hi * q;
+
+#ifdef LIBC_TARGET_CPU_HAS_FMA
+  double e_hi = fputil::multiply_add(b.hi, -r.hi, a.hi);
+  double e_lo = fputil::multiply_add(b.lo, -r.hi, a.lo);
+#else
+  DoubleDouble b_hi_r_hi = fputil::exact_mult</*NO_FMA=*/true>(b.hi, -r.hi);
+  DoubleDouble b_lo_r_hi = fputil::exact_mult</*NO_FMA=*/true>(b.lo, -r.hi);
+  double e_hi = (a.hi + b_hi_r_hi.hi) + b_hi_r_hi.lo;
+  double e_lo = (a.lo + b_lo_r_hi.hi) + b_lo_r_hi.lo;
+#endif // LIBC_TARGET_CPU_HAS_FMA
+
+  r.lo = q * (e_hi + e_lo);
+  return r;
+}
+
 } // namespace LIBC_NAMESPACE::fputil
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_DOUBLE_DOUBLE_H
