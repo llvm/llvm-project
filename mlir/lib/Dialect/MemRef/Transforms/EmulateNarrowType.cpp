@@ -20,9 +20,9 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <type_traits>
 
@@ -74,7 +74,7 @@ convertCastingOp(ConversionPatternRewriter &rewriter,
 
   SmallVector<int64_t> size;
   if (sizes.size())
-    size.push_back(ceilDiv(sizes[0], elementsPerByte));
+    size.push_back(llvm::divideCeilSigned(sizes[0], elementsPerByte));
   offset = offset / elementsPerByte;
 
   rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(

@@ -322,25 +322,25 @@ def : EGOrCaymanPat<(i32 (atomic_cmp_swap_global_noret i32:$ptr, i32:$cmp, i32:$
           $ptr), sub1)>;
 
 defm AtomicSwapPat : AtomicPat <RAT_ATOMIC_XCHG_INT_NORET,
-                                atomic_swap_global_noret_32>;
+                                atomic_swap_global_noret_i32>;
 defm AtomicAddPat : AtomicPat <RAT_ATOMIC_ADD_NORET,
-                               atomic_load_add_global_noret_32>;
+                               atomic_load_add_global_noret_i32>;
 defm AtomicSubPat : AtomicPat <RAT_ATOMIC_SUB_NORET,
-                               atomic_load_sub_global_noret_32>;
+                               atomic_load_sub_global_noret_i32>;
 defm AtomicMinPat : AtomicPat <RAT_ATOMIC_MIN_INT_NORET,
-                               atomic_load_min_global_noret_32>;
+                               atomic_load_min_global_noret_i32>;
 defm AtomicUMinPat : AtomicPat <RAT_ATOMIC_MIN_UINT_NORET,
-                                atomic_load_umin_global_noret_32>;
+                                atomic_load_umin_global_noret_i32>;
 defm AtomicMaxPat : AtomicPat <RAT_ATOMIC_MAX_INT_NORET,
-                               atomic_load_max_global_noret_32>;
+                               atomic_load_max_global_noret_i32>;
 defm AtomicUMaxPat : AtomicPat <RAT_ATOMIC_MAX_UINT_NORET,
-                                atomic_load_umax_global_noret_32>;
+                                atomic_load_umax_global_noret_i32>;
 defm AtomicAndPat : AtomicPat <RAT_ATOMIC_AND_NORET,
-                               atomic_load_and_global_noret_32>;
+                               atomic_load_and_global_noret_i32>;
 defm AtomicOrPat : AtomicPat <RAT_ATOMIC_OR_NORET,
-                              atomic_load_or_global_noret_32>;
+                              atomic_load_or_global_noret_i32>;
 defm AtomicXorPat : AtomicPat <RAT_ATOMIC_XOR_NORET,
-                               atomic_load_xor_global_noret_32>;
+                               atomic_load_xor_global_noret_i32>;
 
 // Should be predicated on FeatureFP64
 // def FMA_64 : R600_3OP <
@@ -712,37 +712,37 @@ def LDS_SHORT_WRITE : R600_LDS_1A1D_NORET<0x13, "LDS_SHORT_WRITE",
   [(truncstorei16_local i32:$src1, i32:$src0)]
 >;
 def LDS_ADD_RET : R600_LDS_1A1D_RET <0x20, "LDS_ADD",
-  [(set i32:$dst, (atomic_load_add_local_32 i32:$src0, i32:$src1))]
+  [(set i32:$dst, (atomic_load_add_local_i32 i32:$src0, i32:$src1))]
 >;
 def LDS_SUB_RET : R600_LDS_1A1D_RET <0x21, "LDS_SUB",
-  [(set i32:$dst, (atomic_load_sub_local_32 i32:$src0, i32:$src1))]
+  [(set i32:$dst, (atomic_load_sub_local_i32 i32:$src0, i32:$src1))]
 >;
 def LDS_AND_RET : R600_LDS_1A1D_RET <0x29, "LDS_AND",
-  [(set i32:$dst, (atomic_load_and_local_32 i32:$src0, i32:$src1))]
+  [(set i32:$dst, (atomic_load_and_local_i32 i32:$src0, i32:$src1))]
 >;
 def LDS_OR_RET : R600_LDS_1A1D_RET <0x2a, "LDS_OR",
-  [(set i32:$dst, (atomic_load_or_local_32 i32:$src0, i32:$src1))]
+  [(set i32:$dst, (atomic_load_or_local_i32 i32:$src0, i32:$src1))]
 >;
 def LDS_XOR_RET : R600_LDS_1A1D_RET <0x2b, "LDS_XOR",
-  [(set i32:$dst, (atomic_load_xor_local_32 i32:$src0, i32:$src1))]
+  [(set i32:$dst, (atomic_load_xor_local_i32 i32:$src0, i32:$src1))]
 >;
 def LDS_MIN_INT_RET : R600_LDS_1A1D_RET <0x25, "LDS_MIN_INT",
-  [(set i32:$dst, (atomic_load_min_local_32 i32:$src0, i32:$src1))]
+  [(set i32:$dst, (atomic_load_min_local_i32 i32:$src0, i32:$src1))]
 >;
 def LDS_MAX_INT_RET : R600_LDS_1A1D_RET <0x26, "LDS_MAX_INT",
-  [(set i32:$dst, (atomic_load_max_local_32 i32:$src0, i32:$src1))]
+  [(set i32:$dst, (atomic_load_max_local_i32 i32:$src0, i32:$src1))]
 >;
 def LDS_MIN_UINT_RET : R600_LDS_1A1D_RET <0x27, "LDS_MIN_UINT",
-  [(set i32:$dst, (atomic_load_umin_local_32 i32:$src0, i32:$src1))]
+  [(set i32:$dst, (atomic_load_umin_local_i32 i32:$src0, i32:$src1))]
 >;
 def LDS_MAX_UINT_RET : R600_LDS_1A1D_RET <0x28, "LDS_MAX_UINT",
-  [(set i32:$dst, (atomic_load_umax_local_32 i32:$src0, i32:$src1))]
+  [(set i32:$dst, (atomic_load_umax_local_i32 i32:$src0, i32:$src1))]
 >;
 def LDS_WRXCHG_RET : R600_LDS_1A1D_RET <0x2d, "LDS_WRXCHG",
-  [(set i32:$dst, (atomic_swap_local_32 i32:$src0, i32:$src1))]
+  [(set i32:$dst, (atomic_swap_local_i32 i32:$src0, i32:$src1))]
 >;
 def LDS_CMPST_RET : R600_LDS_1A2D_RET <0x30, "LDS_CMPST",
-  [(set i32:$dst, (atomic_cmp_swap_local_32 i32:$src0, i32:$src1, i32:$src2))]
+  [(set i32:$dst, (atomic_cmp_swap_local_i32 i32:$src0, i32:$src1, i32:$src2))]
 >;
 def LDS_READ_RET : R600_LDS_1A <0x32, "LDS_READ_RET",
   [(set (i32 R600_Reg32:$dst), (load_local R600_Reg32:$src0))]

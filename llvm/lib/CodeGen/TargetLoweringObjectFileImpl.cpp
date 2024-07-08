@@ -1696,7 +1696,7 @@ MCSection *TargetLoweringObjectFileCOFF::getExplicitSectionGlobal(
     }
   }
 
-  return getContext().getCOFFSection(Name, Characteristics, Kind, COMDATSymName,
+  return getContext().getCOFFSection(Name, Characteristics, COMDATSymName,
                                      Selection);
 }
 
@@ -1755,12 +1755,12 @@ MCSection *TargetLoweringObjectFileCOFF::SelectSectionForGlobal(
       if (getContext().getTargetTriple().isWindowsGNUEnvironment())
         raw_svector_ostream(Name) << '$' << ComdatGV->getName();
 
-      return getContext().getCOFFSection(Name, Characteristics, Kind,
-                                         COMDATSymName, Selection, UniqueID);
+      return getContext().getCOFFSection(Name, Characteristics, COMDATSymName,
+                                         Selection, UniqueID);
     } else {
       SmallString<256> TmpData;
       getMangler().getNameWithPrefix(TmpData, GO, /*CannotUsePrivateLabel=*/true);
-      return getContext().getCOFFSection(Name, Characteristics, Kind, TmpData,
+      return getContext().getCOFFSection(Name, Characteristics, TmpData,
                                          Selection, UniqueID);
     }
   }
@@ -1817,9 +1817,9 @@ MCSection *TargetLoweringObjectFileCOFF::getSectionForJumpTable(
   Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
   unsigned UniqueID = NextUniqueID++;
 
-  return getContext().getCOFFSection(
-      SecName, Characteristics, Kind, COMDATSymName,
-      COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE, UniqueID);
+  return getContext().getCOFFSection(SecName, Characteristics, COMDATSymName,
+                                     COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE,
+                                     UniqueID);
 }
 
 bool TargetLoweringObjectFileCOFF::shouldPutJumpTableInFunctionSection(
@@ -1846,10 +1846,8 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
   GetObjCImageInfo(M, Version, Flags, Section);
   if (!Section.empty()) {
     auto &C = getContext();
-    auto *S = C.getCOFFSection(Section,
-                               COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-                                   COFF::IMAGE_SCN_MEM_READ,
-                               SectionKind::getReadOnly());
+    auto *S = C.getCOFFSection(Section, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                                            COFF::IMAGE_SCN_MEM_READ);
     Streamer.switchSection(S);
     Streamer.emitLabel(C.getOrCreateSymbol(StringRef("OBJC_IMAGE_INFO")));
     Streamer.emitInt32(Version);
@@ -1929,21 +1927,17 @@ void TargetLoweringObjectFileCOFF::Initialize(MCContext &Ctx,
   if (T.isWindowsMSVCEnvironment() || T.isWindowsItaniumEnvironment()) {
     StaticCtorSection =
         Ctx.getCOFFSection(".CRT$XCU", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-                                           COFF::IMAGE_SCN_MEM_READ,
-                           SectionKind::getReadOnly());
+                                           COFF::IMAGE_SCN_MEM_READ);
     StaticDtorSection =
         Ctx.getCOFFSection(".CRT$XTX", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-                                           COFF::IMAGE_SCN_MEM_READ,
-                           SectionKind::getReadOnly());
+                                           COFF::IMAGE_SCN_MEM_READ);
   } else {
     StaticCtorSection = Ctx.getCOFFSection(
         ".ctors", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-                      COFF::IMAGE_SCN_MEM_READ | COFF::IMAGE_SCN_MEM_WRITE,
-        SectionKind::getData());
+                      COFF::IMAGE_SCN_MEM_READ | COFF::IMAGE_SCN_MEM_WRITE);
     StaticDtorSection = Ctx.getCOFFSection(
         ".dtors", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
-                      COFF::IMAGE_SCN_MEM_READ | COFF::IMAGE_SCN_MEM_WRITE,
-        SectionKind::getData());
+                      COFF::IMAGE_SCN_MEM_READ | COFF::IMAGE_SCN_MEM_WRITE);
   }
 }
 
@@ -1981,8 +1975,7 @@ static MCSectionCOFF *getCOFFStaticStructorSection(MCContext &Ctx,
     if (AddPrioritySuffix)
       OS << format("%05u", Priority);
     MCSectionCOFF *Sec = Ctx.getCOFFSection(
-        Name, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ,
-        SectionKind::getReadOnly());
+        Name, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ);
     return Ctx.getAssociativeCOFFSection(Sec, KeySym, 0);
   }
 
@@ -1993,8 +1986,7 @@ static MCSectionCOFF *getCOFFStaticStructorSection(MCContext &Ctx,
   return Ctx.getAssociativeCOFFSection(
       Ctx.getCOFFSection(Name, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                    COFF::IMAGE_SCN_MEM_READ |
-                                   COFF::IMAGE_SCN_MEM_WRITE,
-                         SectionKind::getData()),
+                                   COFF::IMAGE_SCN_MEM_WRITE),
       KeySym, 0);
 }
 
@@ -2112,7 +2104,7 @@ MCSection *TargetLoweringObjectFileCOFF::getSectionForConstant(
     }
 
     if (!COMDATSymName.empty())
-      return getContext().getCOFFSection(".rdata", Characteristics, Kind,
+      return getContext().getCOFFSection(".rdata", Characteristics,
                                          COMDATSymName,
                                          COFF::IMAGE_COMDAT_SELECT_ANY);
   }
@@ -2733,8 +2725,7 @@ MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
 MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
     const Function &F, const MCSymbol &FnSym, const TargetMachine &TM) const {
   std::string Name = ".gcc_exception_table." + F.getName().str();
-  return getContext().getGOFFSection(Name, SectionKind::getData(), nullptr,
-                                     nullptr);
+  return getContext().getGOFFSection(Name, SectionKind::getData(), nullptr, 0);
 }
 
 MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
@@ -2742,7 +2733,7 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
   auto *Symbol = TM.getSymbol(GO);
   if (Kind.isBSS())
     return getContext().getGOFFSection(Symbol->getName(), SectionKind::getBSS(),
-                                       nullptr, nullptr);
+                                       nullptr, 0);
 
   return getContext().getObjectFileInfo()->getTextSection();
 }

@@ -266,7 +266,7 @@ void ListeningSocket::shutdown() {
   ::close(ObservedFD);
   ::unlink(SocketPath.c_str());
 
-  // Ensure ::poll returns if shutdown is called by a seperate thread
+  // Ensure ::poll returns if shutdown is called by a separate thread
   char Byte = 'A';
   ssize_t written = ::write(PipeFD[1], &Byte, 1);
 

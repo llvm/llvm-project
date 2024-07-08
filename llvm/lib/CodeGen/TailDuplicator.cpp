@@ -253,8 +253,7 @@ bool TailDuplicator::tailDuplicateAndUpdate(
 
   // Eliminate some of the copies inserted by tail duplication to maintain
   // SSA form.
-  for (unsigned i = 0, e = Copies.size(); i != e; ++i) {
-    MachineInstr *Copy = Copies[i];
+  for (MachineInstr *Copy : Copies) {
     if (!Copy->isCopy())
       continue;
     Register Dst = Copy->getOperand(0).getReg();

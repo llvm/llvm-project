@@ -29,7 +29,7 @@ end subroutine
 ! CHECK-SAME:                              %[[VAL_0:.*]]: !fir.box<!fir.array<*:f32>> {fir.bindc_name = "x"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {uniq_name = "_QFtest_size_1Ex"} : (!fir.box<!fir.array<*:f32>>, !fir.dscope) -> (!fir.box<!fir.array<*:f32>>, !fir.box<!fir.array<*:f32>>)
-! CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_2]]#1 : (!fir.box<!fir.array<*:f32>>) -> !fir.box<none>
+! CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_2]]#0 : (!fir.box<!fir.array<*:f32>>) -> !fir.box<none>
 ! CHECK:           %[[VAL_7:.*]] = fir.call @_FortranASize(%[[VAL_5]]
 ! CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i64) -> i32
 ! CHECK:           %[[VAL_9:.*]]:3 = hlfir.associate %[[VAL_8]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
@@ -49,13 +49,13 @@ end subroutine
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_7:.*]] = arith.cmpi eq, %[[VAL_5]], %[[VAL_6]] : i64
 ! CHECK:           %[[VAL_8:.*]] = fir.if %[[VAL_7]] -> (i32) {
-! CHECK:             %[[VAL_11:.*]] = fir.convert %[[VAL_3]]#1 : (!fir.box<!fir.array<*:f32>>) -> !fir.box<none>
+! CHECK:             %[[VAL_11:.*]] = fir.convert %[[VAL_3]]#0 : (!fir.box<!fir.array<*:f32>>) -> !fir.box<none>
 ! CHECK:             %[[VAL_13:.*]] = fir.call @_FortranASize(%[[VAL_11]]
 ! CHECK:             %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (i64) -> i32
 ! CHECK:             fir.result %[[VAL_14]] : i32
 ! CHECK:           } else {
 ! CHECK:             %[[VAL_15:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
-! CHECK:             %[[VAL_18:.*]] = fir.convert %[[VAL_3]]#1 : (!fir.box<!fir.array<*:f32>>) -> !fir.box<none>
+! CHECK:             %[[VAL_18:.*]] = fir.convert %[[VAL_3]]#0 : (!fir.box<!fir.array<*:f32>>) -> !fir.box<none>
 ! CHECK:             %[[VAL_20:.*]] = fir.call @_FortranASizeDim(%[[VAL_18]]
 ! CHECK:             %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i64) -> i32
 ! CHECK:             fir.result %[[VAL_21]] : i32
@@ -76,13 +76,13 @@ end subroutine
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i64
 ! CHECK:           %[[VAL_7:.*]] = arith.cmpi eq, %[[VAL_5]], %[[VAL_6]] : i64
 ! CHECK:           %[[VAL_8:.*]] = fir.if %[[VAL_7]] -> (i32) {
-! CHECK:             %[[VAL_11:.*]] = fir.convert %[[VAL_4]]#1 : (!fir.box<!fir.array<*:f32>>) -> !fir.box<none>
+! CHECK:             %[[VAL_11:.*]] = fir.convert %[[VAL_4]]#0 : (!fir.box<!fir.array<*:f32>>) -> !fir.box<none>
 ! CHECK:             %[[VAL_13:.*]] = fir.call @_FortranASize(%[[VAL_11]],
 ! CHECK:             %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (i64) -> i32
 ! CHECK:             fir.result %[[VAL_14]] : i32
 ! CHECK:           } else {
 ! CHECK:             %[[VAL_15:.*]] = fir.load %[[VAL_3]]#1 : !fir.ref<i32>
-! CHECK:             %[[VAL_18:.*]] = fir.convert %[[VAL_4]]#1 : (!fir.box<!fir.array<*:f32>>) -> !fir.box<none>
+! CHECK:             %[[VAL_18:.*]] = fir.convert %[[VAL_4]]#0 : (!fir.box<!fir.array<*:f32>>) -> !fir.box<none>
 ! CHECK:             %[[VAL_20:.*]] = fir.call @_FortranASizeDim(%[[VAL_18]]
 ! CHECK:             %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i64) -> i32
 ! CHECK:             fir.result %[[VAL_21]] : i32
@@ -97,7 +97,7 @@ end subroutine
 ! CHECK-SAME:                              %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>> {fir.bindc_name = "x"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_size_4Ex"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>)
-! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_2]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>
+! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<*:f32>>>>
 ! CHECK:           %[[VAL_6:.*]] = fir.convert %[[VAL_3]] : (!fir.box<!fir.heap<!fir.array<*:f32>>>) -> !fir.box<none>
 ! CHECK:           %[[VAL_8:.*]] = fir.call @_FortranASize(%[[VAL_6]]
 ! CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (i64) -> i32

@@ -142,7 +142,7 @@ func.func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_thre
    omp.terminator
  }
 
- // CHECK omp.parallel if(%{{.*}}) num_threads(%{{.*}} : i32) private(%{{.*}} : memref<i32>) proc_bind(close)
+ // CHECK: omp.parallel if(%{{.*}}) num_threads(%{{.*}} : i32) proc_bind(close)
  omp.parallel num_threads(%num_threads : i32) if(%if_cond: i1) proc_bind(close) {
    omp.terminator
  }
@@ -502,6 +502,22 @@ func.func @omp_wsloop_pretty(%lb : index, %ub : index, %step : index, %data_var 
     omp.terminator
   }
 
+  // CHECK: omp.wsloop nowait order(reproducible:concurrent) {
+  // CHECK-NEXT: omp.loop_nest
+  omp.wsloop order(reproducible:concurrent) nowait {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+    omp.terminator
+  }
+  // CHECK: omp.wsloop nowait order(unconstrained:concurrent) {
+  // CHECK-NEXT: omp.loop_nest
+  omp.wsloop order(unconstrained:concurrent) nowait {
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+    omp.terminator
+  }
   // CHECK: omp.wsloop {
   // CHECK-NEXT: omp.simd
   // CHECK-NEXT: omp.loop_nest
@@ -652,6 +668,18 @@ func.func @omp_simd_pretty_order(%lb : index, %ub : index, %step : index) -> () 
       omp.yield
     }
   }
+  // CHECK: omp.simd order(reproducible:concurrent)
+  omp.simd order(reproducible:concurrent) {
+    omp.loop_nest (%iv): index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+  // CHECK: omp.simd order(unconstrained:concurrent)
+  omp.simd order(unconstrained:concurrent) {
+    omp.loop_nest (%iv): index = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
   return
 }
 
@@ -707,6 +735,18 @@ func.func @omp_distribute(%chunk_size : i32, %data_var : memref<i32>, %arg0 : i3
   }
   // CHECK: omp.distribute order(concurrent)
   omp.distribute order(concurrent) {
+    omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+      omp.yield
+    }
+  }
+  // CHECK: omp.distribute order(reproducible:concurrent)
+  omp.distribute order(reproducible:concurrent) {
+    omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
+      omp.yield
+    }
+  }
+  // CHECK: omp.distribute order(unconstrained:concurrent)
+  omp.distribute order(unconstrained:concurrent) {
     omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
       omp.yield
     }
@@ -1007,6 +1047,14 @@ func.func @omp_teams(%lb : i32, %ub : i32, %if_cond : i1, %num_threads : i32,
     omp.terminator
   }
 
+  // Test reduction byref
+  // CHECK: omp.teams reduction(byref @add_f32 -> %{{.+}} : !llvm.ptr) {
+  omp.teams reduction(byref @add_f32 -> %0 : !llvm.ptr) {
+    %1 = arith.constant 2.0 : f32
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
   // Test allocate.
   // CHECK: omp.teams allocate(%{{.+}} : memref<i32> -> %{{.+}} : memref<i32>)
   omp.teams allocate(%data_var : memref<i32> -> %data_var : memref<i32>) {
@@ -1023,6 +1071,27 @@ func.func @sections_reduction() {
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
   // CHECK: omp.sections reduction(@add_f32 -> {{.+}} : !llvm.ptr)
   omp.sections reduction(@add_f32 -> %0 : !llvm.ptr) {
+    // CHECK: omp.section
+    omp.section {
+      %1 = arith.constant 2.0 : f32
+      omp.terminator
+    }
+    // CHECK: omp.section
+    omp.section {
+      %1 = arith.constant 3.0 : f32
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: func @sections_reduction_byref
+func.func @sections_reduction_byref() {
+  %c1 = arith.constant 1 : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  // CHECK: omp.sections reduction(byref @add_f32 -> {{.+}} : !llvm.ptr)
+  omp.sections reduction(byref @add_f32 -> %0 : !llvm.ptr) {
     // CHECK: omp.section
     omp.section {
       %1 = arith.constant 2.0 : f32
@@ -1970,6 +2039,15 @@ func.func @omp_task(%bool_var: i1, %i64_var: i64, %i32_var: i32, %data_var: memr
     omp.terminator
   }
 
+  // Checking `in_reduction` clause (mixed) byref
+  // CHECK: omp.task in_reduction(byref @add_f32 -> %[[redn_var1]] : !llvm.ptr, @add_f32 -> %[[redn_var2]] : !llvm.ptr) {
+  omp.task in_reduction(byref @add_f32 -> %0 : !llvm.ptr, @add_f32 -> %1 : !llvm.ptr) {
+    // CHECK: "test.foo"() : () -> ()
+    "test.foo"() : () -> ()
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
   // Checking priority clause
   // CHECK: omp.task priority(%[[i32_var]]) {
   omp.task priority(%i32_var) {
@@ -1991,8 +2069,8 @@ func.func @omp_task(%bool_var: i1, %i64_var: i64, %i32_var: i32, %data_var: memr
   // Checking multiple clauses
   // CHECK: omp.task if(%[[bool_var]]) final(%[[bool_var]]) untied
   omp.task if(%bool_var) final(%bool_var) untied
-      // CHECK-SAME: in_reduction(@add_f32 -> %[[redn_var1]] : !llvm.ptr, @add_f32 -> %[[redn_var2]] : !llvm.ptr)
-      in_reduction(@add_f32 -> %0 : !llvm.ptr, @add_f32 -> %1 : !llvm.ptr)
+      // CHECK-SAME: in_reduction(@add_f32 -> %[[redn_var1]] : !llvm.ptr, byref @add_f32 -> %[[redn_var2]] : !llvm.ptr)
+      in_reduction(@add_f32 -> %0 : !llvm.ptr, byref @add_f32 -> %1 : !llvm.ptr)
       // CHECK-SAME: priority(%[[i32_var]])
       priority(%i32_var)
       // CHECK-SAME: allocate(%[[data_var]] : memref<i32> -> %[[data_var]] : memref<i32>)
@@ -2247,8 +2325,26 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
     }
   }
 
-  // CHECK: omp.taskloop reduction(@add_f32 -> %{{.+}} : !llvm.ptr, @add_f32 -> %{{.+}} : !llvm.ptr) {
-  omp.taskloop reduction(@add_f32 -> %testf32 : !llvm.ptr, @add_f32 -> %testf32_2 : !llvm.ptr) {
+  // Checking byref attribute for in_reduction
+  // CHECK: omp.taskloop in_reduction(byref @add_f32 -> %{{.+}} : !llvm.ptr, @add_f32 -> %{{.+}} : !llvm.ptr) {
+  omp.taskloop in_reduction(byref @add_f32 -> %testf32 : !llvm.ptr, @add_f32 -> %testf32_2 : !llvm.ptr) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      // CHECK: omp.yield
+      omp.yield
+    }
+  }
+
+  // CHECK: omp.taskloop reduction(byref @add_f32 -> %{{.+}} : !llvm.ptr, @add_f32 -> %{{.+}} : !llvm.ptr) {
+  omp.taskloop reduction(byref @add_f32 -> %testf32 : !llvm.ptr, @add_f32 -> %testf32_2 : !llvm.ptr) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      // CHECK: omp.yield
+      omp.yield
+    }
+  }
+
+  // check byref attrbute for reduction
+  // CHECK: omp.taskloop reduction(byref @add_f32 -> %{{.+}} : !llvm.ptr, byref @add_f32 -> %{{.+}} : !llvm.ptr) {
+  omp.taskloop reduction(byref @add_f32 -> %testf32 : !llvm.ptr, byref @add_f32 -> %testf32_2 : !llvm.ptr) {
     omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
       // CHECK: omp.yield
       omp.yield

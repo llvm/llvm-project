@@ -85,6 +85,7 @@ on support follow.
      Extension         Status
      ================  =================================================================
      ``A``             Supported
+     ``B``             Supported
      ``C``             Supported
      ``D``             Supported
      ``F``             Supported
@@ -98,12 +99,16 @@ on support follow.
      ``Shvstvala``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Shvstvecd``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Smaia``         Supported
+     ``Smcdeleg``      Supported
+     ``Smcsrind``      Supported
      ``Smepmp``        Supported
      ``Smstateen``     Assembly Support
      ``Ssaia``         Supported
+     ``Ssccfg``        Supported
      ``Ssccptr``       Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Sscofpmf``      Assembly Support
      ``Sscounterenw``  Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
+     ``Sscsrind``      Supported
      ``Ssstateen``     Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Ssstrict``      Assembly Support (`See note <#riscv-profiles-extensions-note>`__)
      ``Sstc``          Assembly Support

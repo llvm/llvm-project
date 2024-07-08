@@ -4,11 +4,11 @@
 ; RUN: opt -S -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=4 <%s | FileCheck %s
 ;
 ; CHECK: middle.block:
-; CHECK-NEXT: %{{.*}}= add <4 x i32>{{.*}}, !dbg ![[DL:[0-9]+]]
+; CHECK-NEXT: %{{.*}}= icmp eq i64{{.*}}, !dbg ![[DL:[0-9]+]]
+; CHECK-NEXT: %{{.*}}= add <4 x i32>{{.*}}, !dbg ![[DL]]
 ; CHECK-NEXT: %{{.*}}= add <4 x i32>{{.*}}, !dbg ![[DL]]
 ; CHECK-NEXT: %{{.*}}= add <4 x i32>{{.*}}, !dbg ![[DL]]
 ; CHECK-NEXT: %{{.*}}= call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> {{.*}}), !dbg ![[DL]]
-; CHECK-NEXT: %{{.*}}= icmp eq i64{{.*}}, !dbg ![[DL]]
 ; CHECK-NEXT: br i1 %{{.*}}, !dbg ![[DL]]
 ; CHECK: ![[DL]] = !DILocation(line: 5,
 

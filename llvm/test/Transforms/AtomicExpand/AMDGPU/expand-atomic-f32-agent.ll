@@ -3350,17 +3350,17 @@ define float @test_atomicrmw_fmax_f32_global_agent(ptr addrspace(1) %ptr, float 
 ; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
 ; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to float
+; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret float [[RES]]
+; COMMON-NEXT:    ret float [[TMP6]]
 ;
   %res = atomicrmw fmax ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst
   ret float %res
@@ -3372,17 +3372,17 @@ define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_no_fine_grained_memor
 ; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
 ; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to float
+; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret float [[RES]]
+; COMMON-NEXT:    ret float [[TMP6]]
 ;
   %res = atomicrmw fmax ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret float %res
@@ -3394,17 +3394,17 @@ define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_no_remote_memory(ptr 
 ; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
 ; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to float
+; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret float [[RES]]
+; COMMON-NEXT:    ret float [[TMP6]]
 ;
   %res = atomicrmw fmax ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret float %res
@@ -3416,17 +3416,17 @@ define float @test_atomicrmw_fmax_f32_global_agent__amdgpu_no_fine_grained_memor
 ; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[TMP2:%.*]] = call float @llvm.maxnum.f32(float [[LOADED]], float [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
 ; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to float
+; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret float [[RES]]
+; COMMON-NEXT:    ret float [[TMP6]]
 ;
   %res = atomicrmw fmax ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret float %res
@@ -3530,17 +3530,17 @@ define float @test_atomicrmw_fmin_f32_global_agent(ptr addrspace(1) %ptr, float 
 ; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
 ; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to float
+; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret float [[RES]]
+; COMMON-NEXT:    ret float [[TMP6]]
 ;
   %res = atomicrmw fmin ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst
   ret float %res
@@ -3552,17 +3552,17 @@ define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_no_fine_grained_memor
 ; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
 ; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to float
+; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret float [[RES]]
+; COMMON-NEXT:    ret float [[TMP6]]
 ;
   %res = atomicrmw fmin ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret float %res
@@ -3574,17 +3574,17 @@ define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_no_remote_memory(ptr 
 ; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
 ; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to float
+; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret float [[RES]]
+; COMMON-NEXT:    ret float [[TMP6]]
 ;
   %res = atomicrmw fmin ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret float %res
@@ -3596,17 +3596,17 @@ define float @test_atomicrmw_fmin_f32_global_agent__amdgpu_no_fine_grained_memor
 ; COMMON-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR]], align 4
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[RES:%.*]], [[ATOMICRMW_START]] ]
+; COMMON-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[TMP2:%.*]] = call float @llvm.minnum.f32(float [[LOADED]], float [[VALUE]])
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast float [[TMP2]] to i32
 ; COMMON-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
 ; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] syncscope("agent") seq_cst seq_cst, align 4
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; COMMON-NEXT:    [[RES]] = bitcast i32 [[NEWLOADED]] to float
+; COMMON-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret float [[RES]]
+; COMMON-NEXT:    ret float [[TMP6]]
 ;
   %res = atomicrmw fmin ptr addrspace(1) %ptr, float %value syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret float %res

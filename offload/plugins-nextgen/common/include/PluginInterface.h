@@ -19,6 +19,7 @@
 #include <shared_mutex>
 #include <vector>
 
+#include "Shared/APITypes.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
 #include "Shared/EnvironmentVar.h"
@@ -265,7 +266,7 @@ struct GenericKernelTy {
                AsyncInfoWrapperTy &AsyncInfoWrapper) const;
   virtual Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
                            uint64_t NumBlocks, KernelArgsTy &KernelArgs,
-                           void *Args,
+                           KernelLaunchParamsTy LaunchParams,
                            AsyncInfoWrapperTy &AsyncInfoWrapper) const = 0;
 
   /// Get the kernel name.
@@ -326,11 +327,12 @@ protected:
 
 private:
   /// Prepare the arguments before launching the kernel.
-  void *prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
-                    ptrdiff_t *ArgOffsets, uint32_t &NumArgs,
-                    llvm::SmallVectorImpl<void *> &Args,
-                    llvm::SmallVectorImpl<void *> &Ptrs,
-                    KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const;
+  KernelLaunchParamsTy
+  prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
+              ptrdiff_t *ArgOffsets, uint32_t &NumArgs,
+              llvm::SmallVectorImpl<void *> &Args,
+              llvm::SmallVectorImpl<void *> &Ptrs,
+              KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const;
 
   /// Get the number of threads and blocks for the kernel based on the
   /// user-defined threads and block clauses.
@@ -824,6 +826,12 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return OMPX_MinThreadsForLowTripCount;
   }
 
+  /// Whether or not to reuse blocks for high trip count loops.
+  /// @see OMPX_ReuseBlocksForHighTripCount
+  bool getReuseBlocksForHighTripCount() {
+    return OMPX_ReuseBlocksForHighTripCount;
+  }
+
   /// Get the total amount of hardware parallelism supported by the target
   /// device. This is the total amount of warps or wavefronts that can be
   /// resident on the device simultaneously.
@@ -898,6 +906,9 @@ private:
   /// the outer (block/team) parallelism.
   UInt32Envar OMPX_MinThreadsForLowTripCount =
       UInt32Envar("LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT", 32);
+
+  BoolEnvar OMPX_ReuseBlocksForHighTripCount =
+      BoolEnvar("LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT", true);
 
 protected:
   /// Environment variables defined by the LLVM OpenMP implementation

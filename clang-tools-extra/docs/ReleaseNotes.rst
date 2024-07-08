@@ -125,6 +125,9 @@ Improvements to clang-tidy
 - Added argument `--exclude-header-filter` and config option `ExcludeHeaderFilterRegex`
   to exclude headers from analysis via a RegEx.
 
+- Added argument `--allow-no-checks` to suppress "no checks enabled" error
+  when disabling all of the checks by `--checks='-*'`.
+
 New checks
 ^^^^^^^^^^
 
@@ -237,6 +240,12 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/optional-value-conversion>` check by eliminating
   false positives resulting from use of optionals in unevaluated context.
 
+- Improved :doc:`bugprone-sizeof-expression
+  <clang-tidy/checks/bugprone/sizeof-expression>` check by eliminating some
+  false positives and adding a new (off-by-default) option
+  `WarnOnSizeOfPointer` that reports all ``sizeof(pointer)`` expressions
+  (except for a few that are idiomatic).
+
 - Improved :doc:`bugprone-suspicious-include
   <clang-tidy/checks/bugprone/suspicious-include>` check by replacing the local
   options `HeaderFileExtensions` and `ImplementationFileExtensions` by the
@@ -259,6 +268,10 @@ Changes in existing checks
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` check to also handle
   calls to ``std::forward``.
+
+- Improved :doc:`cppcoreguidelines-macro-usage
+  <clang-tidy/checks/cppcoreguidelines/macro-usage>` check by ignoring macro with
+  hash preprocessing token.
 
 - Improved :doc:`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by no longer
@@ -373,11 +386,22 @@ Changes in existing checks
 - Improved :doc:`modernize-use-using <clang-tidy/checks/modernize/use-using>`
   check by adding support for detection of typedefs declared on function level.
 
+- Improved :doc:`performance-inefficient-vector-operation
+  <clang-tidy/checks/performance/inefficient-vector-operation>` fixing false
+  negatives caused by different variable definition type and variable initial
+  value type in loop initialization expression.
+
+- Improved :doc:`performance-move-const-arg
+  <clang-tidy/checks/performance/move-const-arg>` check by ignoring
+  ``std::move()`` calls when their target is used as an rvalue.
+
 - Improved :doc:`performance-unnecessary-copy-initialization
   <clang-tidy/checks/performance/unnecessary-copy-initialization>` check by
   detecting more cases of constant access. In particular, pointers can be
-  analyzed, se the check now handles the common patterns
+  analyzed, so the check now handles the common patterns
   `const auto e = (*vector_ptr)[i]` and `const auto e = vector_ptr->at(i);`.
+  Calls to mutable function where there exists a `const` overload are also
+  handled. Fix crash in the case of a non-member operator call.
 
 - Improved :doc:`readability-avoid-return-with-void-value
   <clang-tidy/checks/readability/avoid-return-with-void-value>` check by adding

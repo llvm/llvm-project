@@ -768,8 +768,8 @@ static KnownBits avgCompute(KnownBits LHS, KnownBits RHS, bool IsCeil,
   unsigned BitWidth = LHS.getBitWidth();
   LHS = IsSigned ? LHS.sext(BitWidth + 1) : LHS.zext(BitWidth + 1);
   RHS = IsSigned ? RHS.sext(BitWidth + 1) : RHS.zext(BitWidth + 1);
-  KnownBits Carry = KnownBits::makeConstant(APInt(1, IsCeil ? 1 : 0));
-  LHS = KnownBits::computeForAddCarry(LHS, RHS, Carry);
+  LHS =
+      computeForAddCarry(LHS, RHS, /*CarryZero*/ !IsCeil, /*CarryOne*/ IsCeil);
   LHS = LHS.extractBits(BitWidth, 1);
   return LHS;
 }

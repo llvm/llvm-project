@@ -59,7 +59,7 @@ public:
 };
 
 char PrintLoopPassWrapper::ID = 0;
-}
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // LPPassManager

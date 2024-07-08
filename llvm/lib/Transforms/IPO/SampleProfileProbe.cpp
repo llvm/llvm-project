@@ -343,7 +343,7 @@ uint32_t SampleProfileProber::getCallsiteId(const Instruction *Call) const {
 void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
   Module *M = F.getParent();
   MDBuilder MDB(F.getContext());
-  // Since the GUID from probe desc and inline stack are computed seperately, we
+  // Since the GUID from probe desc and inline stack are computed separately, we
   // need to make sure their names are consistent, so here also use the name
   // from debug info.
   StringRef FName = F.getName();

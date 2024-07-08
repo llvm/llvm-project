@@ -1581,10 +1581,8 @@ bool IRTranslator::translateGetElementPtr(const User &U,
   LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
 
   uint32_t Flags = 0;
-  if (isa<Instruction>(U)) {
-    const Instruction &I = cast<Instruction>(U);
-    Flags = MachineInstr::copyFlagsFromInstruction(I);
-  }
+  if (const Instruction *I = dyn_cast<Instruction>(&U))
+    Flags = MachineInstr::copyFlagsFromInstruction(*I);
 
   // Normalize Vector GEP - all scalar operands should be converted to the
   // splat vector.
@@ -1881,6 +1879,12 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
   switch (ID) {
     default:
       break;
+    case Intrinsic::acos:
+      return TargetOpcode::G_FACOS;
+    case Intrinsic::asin:
+      return TargetOpcode::G_FASIN;
+    case Intrinsic::atan:
+      return TargetOpcode::G_FATAN;
     case Intrinsic::bswap:
       return TargetOpcode::G_BSWAP;
     case Intrinsic::bitreverse:
@@ -1893,6 +1897,8 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_FCEIL;
     case Intrinsic::cos:
       return TargetOpcode::G_FCOS;
+    case Intrinsic::cosh:
+      return TargetOpcode::G_FCOSH;
     case Intrinsic::ctpop:
       return TargetOpcode::G_CTPOP;
     case Intrinsic::exp:
@@ -1941,10 +1947,14 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_INTRINSIC_ROUNDEVEN;
     case Intrinsic::sin:
       return TargetOpcode::G_FSIN;
+    case Intrinsic::sinh:
+      return TargetOpcode::G_FSINH;
     case Intrinsic::sqrt:
       return TargetOpcode::G_FSQRT;
     case Intrinsic::tan:
       return TargetOpcode::G_FTAN;
+    case Intrinsic::tanh:
+      return TargetOpcode::G_FTANH;
     case Intrinsic::trunc:
       return TargetOpcode::G_INTRINSIC_TRUNC;
     case Intrinsic::readcyclecounter:
@@ -2531,24 +2541,20 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   }
   case Intrinsic::set_fpenv: {
     Value *FPEnv = CI.getOperand(0);
-    MIRBuilder.buildInstr(TargetOpcode::G_SET_FPENV, {},
-                          {getOrCreateVReg(*FPEnv)});
+    MIRBuilder.buildSetFPEnv(getOrCreateVReg(*FPEnv));
     return true;
   }
-  case Intrinsic::reset_fpenv: {
-    MIRBuilder.buildInstr(TargetOpcode::G_RESET_FPENV, {}, {});
+  case Intrinsic::reset_fpenv:
+    MIRBuilder.buildResetFPEnv();
     return true;
-  }
   case Intrinsic::set_fpmode: {
     Value *FPState = CI.getOperand(0);
-    MIRBuilder.buildInstr(TargetOpcode::G_SET_FPMODE, {},
-                          { getOrCreateVReg(*FPState) });
+    MIRBuilder.buildSetFPMode(getOrCreateVReg(*FPState));
     return true;
   }
-  case Intrinsic::reset_fpmode: {
-    MIRBuilder.buildInstr(TargetOpcode::G_RESET_FPMODE, {}, {});
+  case Intrinsic::reset_fpmode:
+    MIRBuilder.buildResetFPMode();
     return true;
-  }
   case Intrinsic::vscale: {
     MIRBuilder.buildVScale(getOrCreateVReg(CI), 1);
     return true;

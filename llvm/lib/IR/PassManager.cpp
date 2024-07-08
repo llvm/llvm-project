@@ -144,6 +144,18 @@ PreservedAnalyses ModuleToFunctionPassAdaptor::run(Module &M,
   return PA;
 }
 
+template <>
+void llvm::printIRUnitNameForStackTrace<Module>(raw_ostream &OS,
+                                                const Module &IR) {
+  OS << "module \"" << IR.getName() << "\"";
+}
+
+template <>
+void llvm::printIRUnitNameForStackTrace<Function>(raw_ostream &OS,
+                                                  const Function &IR) {
+  OS << "function \"" << IR.getName() << "\"";
+}
+
 AnalysisSetKey CFGAnalyses::SetKey;
 
 AnalysisSetKey PreservedAnalyses::AllAnalysesKey;

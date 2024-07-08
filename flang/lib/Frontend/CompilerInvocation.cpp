@@ -347,6 +347,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (auto *a = args.getLastArg(clang::driver::options::OPT_save_temps_EQ))
     opts.SaveTempsDir = a->getValue();
 
+  // -mlink-builtin-bitcode
+  for (auto *a :
+       args.filtered(clang::driver::options::OPT_mlink_builtin_bitcode))
+    opts.BuiltinBCLibs.push_back(a->getValue());
+
   // -mrelocation-model option.
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::driver::options::OPT_mrelocation_model)) {

@@ -420,10 +420,17 @@ TRY_ACQUIRE(<bool>, ...), TRY_ACQUIRE_SHARED(<bool>, ...)
 *Previously:* ``EXCLUSIVE_TRYLOCK_FUNCTION``, ``SHARED_TRYLOCK_FUNCTION``
 
 These are attributes on a function or method that tries to acquire the given
-capability, and returns a boolean value indicating success or failure.
-The first argument must be ``true`` or ``false``, to specify which return value
-indicates success, and the remaining arguments are interpreted in the same way
-as ``ACQUIRE``.  See :ref:`mutexheader`, below, for example uses.
+capability, and returns a boolean, integer, or pointer value indicating success
+or failure.
+
+The attribute's first argument defines whether a zero or non-zero return value
+indicates success. Syntactically, it accepts ``NULL`` or ``nullptr``, ``bool``
+and ``int`` literals, as well as enumerator values. *The analysis only cares
+whether this success value is zero or non-zero.* This leads to some subtle
+consequences, discussed in the next section.
+
+The remaining arguments are interpreted in the same way as ``ACQUIRE``.  See
+:ref:`mutexheader`, below, for example uses.
 
 Because the analysis doesn't support conditional locking, a capability is
 treated as acquired after the first branch on the return value of a try-acquire
@@ -444,6 +451,44 @@ function.
       a = 0;       // Warning, mu is not locked.
     }
   }
+
+Subtle Consequences of Non-Boolean Success Values
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The trylock attributes accept non-boolean expressions for the success value, but
+the analysis only cares whether the value is zero or non-zero.
+
+Suppose you define an enum with two non-zero enumerators: ``LockAcquired = 1``
+and ``LockNotAcquired = 2``. If your trylock function returns ``LockAcquired``
+on success and ``LockNotAcquired`` on failure, the analysis may fail to detect
+access to guarded data without holding the mutex because they are both non-zero.
+
+.. code-block:: c++
+
+  // *** Beware: this code demonstrates incorrect usage. ***
+
+  enum TrylockResult { LockAcquired = 1, LockNotAcquired = 2 };
+
+  class CAPABILITY("mutex") Mutex {
+  public:
+    TrylockResult TryLock() TRY_ACQUIRE(LockAcquired);
+  };
+
+  Mutex mu;
+  int a GUARDED_BY(mu);
+
+  void foo() {
+    if (mu.TryLock()) { // This branch satisfies the analysis, but permits
+                        // unguarded access to `a`!
+      a = 0;
+      mu.Unlock();
+    }
+  }
+
+It's also possible to return a pointer from the trylock function. Similarly, all
+that matters is whether the success value is zero or non-zero. For instance, a
+success value of `true` means the function returns a non-null pointer on
+success.
 
 
 ASSERT_CAPABILITY(...) and ASSERT_SHARED_CAPABILITY(...)

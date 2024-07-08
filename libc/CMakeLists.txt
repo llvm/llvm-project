@@ -401,9 +401,7 @@ if(LLVM_INCLUDE_TESTS)
   add_subdirectory(fuzzing)
 endif()
 
-if(LIBC_INCLUDE_BENCHMARKS)
-  add_subdirectory(benchmarks)
-endif()
+add_subdirectory(benchmarks)
 
 if (LIBC_INCLUDE_DOCS)
   add_subdirectory(docs)

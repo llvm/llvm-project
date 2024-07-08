@@ -15,7 +15,7 @@
 # this case is checked with symbol qux and %t4.so.
 
 # CHECK-NOT: NEEDED
-# CHECK:     (NEEDED) Shared library: [{{.*}}3.so]
+# CHECK:     (NEEDED) Shared library: {{.*}}3.so
 # CHECK-NOT: NEEDED
 
 # CHECK-DAG: FUNC    WEAK   DEFAULT  UND qux

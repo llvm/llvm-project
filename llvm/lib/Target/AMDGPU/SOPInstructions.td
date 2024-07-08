@@ -215,6 +215,11 @@ let isMoveImm = 1 in {
   } // End Uses = [SCC]
 } // End isMoveImm = 1
 
+// Variant of S_MOV_B32 used for reading from volatile registers like
+// SRC_POPS_EXITING_WAVE_ID.
+let hasSideEffects = 1 in
+def S_MOV_B32_sideeffects : SOP1_32 <"s_mov_b32">;
+
 let Defs = [SCC] in {
   def S_NOT_B32 : SOP1_32 <"s_not_b32",
     [(set i32:$sdst, (UniformUnaryFrag<not> i32:$src0))]
@@ -1196,11 +1201,15 @@ let SubtargetPredicate = isGFX9Plus in {
   }
 } // End SubtargetPredicate = isGFX9Plus
 
+def VersionImm : S16ImmOperand {
+  let DecoderMethod = "decodeVersionImm";
+}
+
 let SubtargetPredicate = isGFX10Plus in {
   def S_VERSION : SOPK_Pseudo<
       "s_version",
       (outs),
-      (ins s16imm:$simm16),
+      (ins VersionImm:$simm16),
       "$simm16"> {
     let has_sdst = 0;
   }
@@ -1875,6 +1884,12 @@ def : GetFPModePat<fpmode_mask_gfx9plus>;
 let SubtargetPredicate = isNotGFX9Plus in {
 def : GetFPModePat<fpmode_mask_gfx6plus>;
 }
+
+let SubtargetPredicate = isGFX9GFX10 in
+def : GCNPat<
+  (int_amdgcn_pops_exiting_wave_id),
+  (S_MOV_B32_sideeffects (i32 SRC_POPS_EXITING_WAVE_ID))
+>;
 
 //===----------------------------------------------------------------------===//
 // SOP2 Patterns

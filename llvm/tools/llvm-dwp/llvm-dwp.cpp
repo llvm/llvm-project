@@ -91,7 +91,7 @@ getDWOFilenames(StringRef ExecFilename) {
     std::string DWOCompDir =
         dwarf::toString(Die.find(dwarf::DW_AT_comp_dir), "");
     if (!DWOCompDir.empty()) {
-      SmallString<16> DWOPath(std::move(DWOName));
+      SmallString<16> DWOPath(DWOName);
       sys::fs::make_absolute(DWOCompDir, DWOPath);
       if (!sys::fs::exists(DWOPath) && sys::fs::exists(DWOName))
         DWOPaths.push_back(std::move(DWOName));

@@ -157,7 +157,7 @@
 // CHECK:      DynamicSection [
 // CHECK-NEXT:   Tag        Type                 Name/Value
 // CHECK-NEXT:   0x0000001D RUNPATH              Library runpath: [foo:bar]
-// CHECK-NEXT:   0x00000001 NEEDED               Shared library: [{{.*}}2.so]
+// CHECK-NEXT:   0x00000001 NEEDED               Shared library: {{.*}}2.so
 // CHECK-NEXT:   0x00000015 DEBUG                0x0
 // CHECK-NEXT:   0x00000011 REL                  [[RELADDR]]
 // CHECK-NEXT:   0x00000012 RELSZ                [[RELSIZE]] (bytes)

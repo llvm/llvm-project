@@ -5,7 +5,7 @@
 #include "../cpu_model/aarch64.h"
 
 struct FEATURES {
-  long long features;
+  unsigned long long features;
 };
 
 extern struct FEATURES __aarch64_cpu_features;
@@ -23,14 +23,18 @@ extern bool __aarch64_has_sme_and_tpidr2_el0;
 #pragma GCC diagnostic ignored "-Wprio-ctor-dtor"
 #endif
 __attribute__((constructor(90))) static void get_aarch64_cpu_features(void) {
-  if (!__aarch64_cpu_features.features)
-    __init_cpu_features();
+  if (__atomic_load_n(&__aarch64_cpu_features.features, __ATOMIC_RELAXED))
+    return;
+
+  __init_cpu_features();
 }
 
 __attribute__((target("sve"))) long
 __arm_get_current_vg(void) __arm_streaming_compatible {
   struct SME_STATE State = __arm_sme_state();
-  bool HasSVE = __aarch64_cpu_features.features & (1ULL << FEAT_SVE);
+  unsigned long long features =
+      __atomic_load_n(&__aarch64_cpu_features.features, __ATOMIC_RELAXED);
+  bool HasSVE = features & (1ULL << FEAT_SVE);
 
   if (!HasSVE && !__aarch64_has_sme_and_tpidr2_el0)
     return 0;

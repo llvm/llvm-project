@@ -37,6 +37,8 @@ class DXContainerGlobals : public llvm::ModulePass {
   GlobalVariable *buildSignature(Module &M, Signature &Sig, StringRef Name,
                                  StringRef SectionName);
   void addSignature(Module &M, SmallVector<GlobalValue *> &Globals);
+  void addPipelineStateValidationInfo(Module &M,
+                                      SmallVector<GlobalValue *> &Globals);
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -63,6 +65,7 @@ bool DXContainerGlobals::runOnModule(Module &M) {
   Globals.push_back(getFeatureFlags(M));
   Globals.push_back(computeShaderHash(M));
   addSignature(M, Globals);
+  addPipelineStateValidationInfo(M, Globals);
   appendToCompilerUsed(M, Globals);
   return true;
 }
@@ -131,6 +134,34 @@ void DXContainerGlobals::addSignature(Module &M,
 
   Signature OutputSig;
   Globals.emplace_back(buildSignature(M, OutputSig, "dx.osg1", "OSG1"));
+}
+
+void DXContainerGlobals::addPipelineStateValidationInfo(
+    Module &M, SmallVector<GlobalValue *> &Globals) {
+  SmallString<256> Data;
+  raw_svector_ostream OS(Data);
+  PSVRuntimeInfo PSV;
+  Triple TT(M.getTargetTriple());
+  PSV.BaseData.MinimumWaveLaneCount = 0;
+  PSV.BaseData.MaximumWaveLaneCount = std::numeric_limits<uint32_t>::max();
+  PSV.BaseData.ShaderStage =
+      static_cast<uint8_t>(TT.getEnvironment() - Triple::Pixel);
+
+  // Hardcoded values here to unblock loading the shader into D3D.
+  //
+  // TODO: Lots more stuff to do here!
+  //
+  // See issue https://github.com/llvm/llvm-project/issues/96674.
+  PSV.BaseData.NumThreadsX = 1;
+  PSV.BaseData.NumThreadsY = 1;
+  PSV.BaseData.NumThreadsZ = 1;
+  PSV.EntryName = "main";
+
+  PSV.finalize(TT.getEnvironment());
+  PSV.write(OS);
+  Constant *Constant =
+      ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);
+  Globals.emplace_back(buildContainerGlobal(M, Constant, "dx.psv0", "PSV0"));
 }
 
 char DXContainerGlobals::ID = 0;

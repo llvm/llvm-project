@@ -166,12 +166,12 @@ LogicalResult mesh::ShardingInterface::verifyShardingInterfaceImpl() {
 
   // check loop types
   SmallVector<utils::IteratorType> loopTypes = getLoopIteratorTypes();
-  if (loopTypes.size() == 0)
+  if (loopTypes.empty())
     return failure();
 
   // check maps
   SmallVector<AffineMap> maps = getIndexingMaps();
-  if (maps.size() == 0)
+  if (maps.empty())
     return failure();
   unsigned numOperands = op->getNumOperands();
   unsigned numResults = op->getNumResults();

@@ -170,7 +170,6 @@ static_library("CodeGen") {
     "OptimizePHIs.cpp",
     "PHIElimination.cpp",
     "PHIEliminationUtils.cpp",
-    "ParallelCG.cpp",
     "PatchableFunction.cpp",
     "PeepholeOptimizer.cpp",
     "PostRAHazardRecognizer.cpp",
@@ -246,6 +245,7 @@ static_library("CodeGen") {
     "VirtRegMap.cpp",
     "WasmEHPrepare.cpp",
     "WinEHPrepare.cpp",
+    "WindowScheduler.cpp",
     "XRayInstrumentation.cpp",
   ]
 }

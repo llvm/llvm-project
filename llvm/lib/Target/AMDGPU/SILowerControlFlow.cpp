@@ -149,7 +149,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addUsedIfAvailable<LiveIntervals>();
     // Should preserve the same set that TwoAddressInstructions does.
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<SlotIndexes>();
     AU.addPreserved<LiveIntervals>();
     AU.addPreservedID(LiveVariablesID);
@@ -764,7 +764,8 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
   LIS = getAnalysisIfAvailable<LiveIntervals>();
   // This doesn't actually need LiveVariables, but we can preserve them.
   LV = getAnalysisIfAvailable<LiveVariables>();
-  MDT = getAnalysisIfAvailable<MachineDominatorTree>();
+  auto *MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+  MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
   MRI = &MF.getRegInfo();
   BoolRC = TRI->getBoolRC();
 
