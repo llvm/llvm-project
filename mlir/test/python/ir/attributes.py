@@ -514,7 +514,7 @@ def testDictAttr():
 
         a = DictAttr.get(dict_attr)
 
-        # CHECK attr: {integerattr = 42 : i32, stringattr = "string"}
+        # CHECK: attr: {integerattr = 42 : i32, stringattr = "string"}
         print("attr:", a)
 
         assert len(a) == 2
@@ -546,7 +546,7 @@ def testDictAttr():
         else:
             assert False, "expected IndexError on accessing an out-of-bounds attribute"
 
-        # CHECK "empty: {}"
+        # CHECK: empty: {}
         print("empty: ", DictAttr.get())
 
 

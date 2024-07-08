@@ -523,7 +523,7 @@ static Value getOrCreateAccumulator(ConversionPatternRewriter &rewriter,
                                      llvmType);
 }
 
-/// Creates a constant value with the 1-D vector shape provided in `llvmType`.
+/// Creates a value with the 1-D vector shape provided in `llvmType`.
 /// This is used as effective vector length by some intrinsics supporting
 /// dynamic vector lengths at runtime.
 static Value createVectorLengthValue(ConversionPatternRewriter &rewriter,
@@ -532,9 +532,20 @@ static Value createVectorLengthValue(ConversionPatternRewriter &rewriter,
   auto vShape = vType.getShape();
   assert(vShape.size() == 1 && "Unexpected multi-dim vector type");
 
-  return rewriter.create<LLVM::ConstantOp>(
+  Value baseVecLength = rewriter.create<LLVM::ConstantOp>(
       loc, rewriter.getI32Type(),
       rewriter.getIntegerAttr(rewriter.getI32Type(), vShape[0]));
+
+  if (!vType.getScalableDims()[0])
+    return baseVecLength;
+
+  // For a scalable vector type, create and return `vScale * baseVecLength`.
+  Value vScale = rewriter.create<vector::VectorScaleOp>(loc);
+  vScale =
+      rewriter.create<arith::IndexCastOp>(loc, rewriter.getI32Type(), vScale);
+  Value scalableVecLength =
+      rewriter.create<arith::MulIOp>(loc, baseVecLength, vScale);
+  return scalableVecLength;
 }
 
 /// Helper method to lower a `vector.reduction` op that performs an arithmetic
@@ -1825,6 +1836,30 @@ struct VectorDeinterleaveOpLowering
   }
 };
 
+/// Conversion pattern for a `vector.from_elements`.
+struct VectorFromElementsLowering
+    : public ConvertOpToLLVMPattern<vector::FromElementsOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::FromElementsOp fromElementsOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = fromElementsOp.getLoc();
+    VectorType vectorType = fromElementsOp.getType();
+    // TODO: Multi-dimensional vectors lower to !llvm.array<... x vector<>>.
+    // Such ops should be handled in the same way as vector.insert.
+    if (vectorType.getRank() > 1)
+      return rewriter.notifyMatchFailure(fromElementsOp,
+                                         "rank > 1 vectors are not supported");
+    Type llvmType = typeConverter->convertType(vectorType);
+    Value result = rewriter.create<LLVM::UndefOp>(loc, llvmType);
+    for (auto [idx, val] : llvm::enumerate(adaptor.getElements()))
+      result = rewriter.create<vector::InsertOp>(loc, val, result, idx);
+    rewriter.replaceOp(fromElementsOp, result);
+    return success();
+  }
+};
+
 } // namespace
 
 /// Populate the given list with patterns that convert from Vector to LLVM.
@@ -1850,7 +1885,8 @@ void mlir::populateVectorToLLVMConversionPatterns(
                VectorSplatOpLowering, VectorSplatNdOpLowering,
                VectorScalableInsertOpLowering, VectorScalableExtractOpLowering,
                MaskedReductionOpConversion, VectorInterleaveOpLowering,
-               VectorDeinterleaveOpLowering>(converter);
+               VectorDeinterleaveOpLowering, VectorFromElementsLowering>(
+      converter);
   // Transfer ops with rank > 1 are handled by VectorToSCF.
   populateVectorTransferLoweringPatterns(patterns, /*maxTransferRank=*/1);
 }

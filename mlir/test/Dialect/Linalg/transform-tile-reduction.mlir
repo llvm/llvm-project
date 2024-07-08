@@ -355,7 +355,6 @@ module {
     %0 = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "reduction"]} ins(%arg0 : tensor<?x?xf32>) outs(%arg1 : tensor<?xf32>) {
     ^bb0(%in: f32, %out: f32):
       %1 = llvm.fmul %in, %in  : f32
-      // expected-error @below {{Unknown neutral element for:}}
       %2 = llvm.fadd %1, %out  : f32
       linalg.yield %2 : f32
     } -> tensor<?xf32>

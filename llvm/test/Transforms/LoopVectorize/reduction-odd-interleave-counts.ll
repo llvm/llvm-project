@@ -27,6 +27,7 @@ define i32 @reduction_sum(i64 %n, ptr noalias nocapture %A) {
 ; UF3-NEXT:   br i1 [[EC]], label %middle.block, label %vector.body
 ;
 ; UF3-LABEL: middle.block:
+; UF3-NEXT:    %cmp.n = icmp eq i64 {{.+}}, %n.vec
 ; UF3-NEXT:   [[RDX0:%.+]] = add <4 x i32> [[SUM1_NEXT]], [[SUM0_NEXT]]
 ; UF3-NEXT:   [[RDX1:%.+]] = add <4 x i32> [[SUM2_NEXT]], [[RDX0]]
 ; UF3-NEXT:   call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[RDX1]])
@@ -69,6 +70,7 @@ define i32 @reduction_sum(i64 %n, ptr noalias nocapture %A) {
 ; UF5-NEXT:   br i1 [[EC]], label %middle.block, label %vector.body
 ;
 ; UF5-LABEL: middle.block:
+; UF5-NEXT:    %cmp.n = icmp eq i64 {{.+}}, %n.vec
 ; UF5-NEXT:   [[RDX0:%.+]] = add <4 x i32> [[SUM1_NEXT]], [[SUM0_NEXT]]
 ; UF5-NEXT:   [[RDX1:%.+]] = add <4 x i32> [[SUM2_NEXT]], [[RDX0]]
 ; UF5-NEXT:   [[RDX2:%.+]] = add <4 x i32> [[SUM3_NEXT]], [[RDX1]]

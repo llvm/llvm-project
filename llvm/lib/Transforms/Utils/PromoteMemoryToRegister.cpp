@@ -453,6 +453,15 @@ static void addAssumeNonNull(AssumptionCache *AC, LoadInst *LI) {
 static void convertMetadataToAssumes(LoadInst *LI, Value *Val,
                                      const DataLayout &DL, AssumptionCache *AC,
                                      const DominatorTree *DT) {
+  if (isa<UndefValue>(Val) && LI->hasMetadata(LLVMContext::MD_noundef)) {
+    // Insert non-terminator unreachable.
+    LLVMContext &Ctx = LI->getContext();
+    new StoreInst(ConstantInt::getTrue(Ctx),
+                  PoisonValue::get(PointerType::getUnqual(Ctx)),
+                  /*isVolatile=*/false, Align(1), LI);
+    return;
+  }
+
   // If the load was marked as nonnull we don't want to lose that information
   // when we erase this Load. So we preserve it with an assume. As !nonnull
   // returns poison while assume violations are immediate undefined behavior,

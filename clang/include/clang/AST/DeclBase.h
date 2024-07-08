@@ -670,6 +670,9 @@ public:
   /// Whether this declaration comes from another module unit.
   bool isInAnotherModuleUnit() const;
 
+  /// Whether this declaration comes from the same module unit being compiled.
+  bool isInCurrentModuleUnit() const;
+
   /// Whether the definition of the declaration should be emitted in external
   /// sources.
   bool shouldEmitInExternalSource() const;

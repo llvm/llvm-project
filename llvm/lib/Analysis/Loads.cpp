@@ -165,7 +165,7 @@ static bool isDereferenceableAndAlignedPointer(
     if (getKnowledgeForValue(
             V, {Attribute::Dereferenceable, Attribute::Alignment}, AC,
             [&](RetainedKnowledge RK, Instruction *Assume, auto) {
-              if (!isValidAssumeForContext(Assume, CtxI))
+              if (!isValidAssumeForContext(Assume, CtxI, DT))
                 return false;
               if (RK.AttrKind == Attribute::Alignment)
                 AlignRK = std::max(AlignRK, RK);

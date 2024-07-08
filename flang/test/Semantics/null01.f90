@@ -151,10 +151,16 @@ module m
   subroutine s2(x)
     type(pdt(*)), pointer, intent(in) :: x
   end
-  subroutine test
+  subroutine s3(ar)
+    real, pointer :: ar(..)
+  end
+  subroutine test(ar)
+    real, pointer :: ar(..)
     !ERROR: Actual argument associated with dummy argument 'x=' is a NULL() pointer without a MOLD= to provide a character length
     call s1(null())
     !ERROR: Actual argument associated with dummy argument 'x=' is a NULL() pointer without a MOLD= to provide a value for the assumed type parameter 'n'
     call s2(null())
+    !ERROR: MOLD= argument to NULL() must not be assumed-rank
+    call s3(null(ar))
   end
 end

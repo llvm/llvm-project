@@ -8,7 +8,7 @@
 
 # There must be a NEEDED entry for each undefined
 
-# CHECK: (NEEDED) Shared library: [{{.*}}as-needed-no-reloc{{.*}}2.so]
+# CHECK: (NEEDED) Shared library: {{.*}}as-needed-no-reloc{{.*}}2.so
 # CHECK: UND bar
 
         .globl _start

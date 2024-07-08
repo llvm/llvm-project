@@ -68,6 +68,11 @@ public:
   // extra instructions required to preserve validity of SPIR-V code imposed by
   // the standard.
   void finalizeLowering(MachineFunction &MF) const override;
+
+  MVT getPreferredSwitchConditionType(LLVMContext &Context,
+                                      EVT ConditionVT) const override {
+    return ConditionVT.getSimpleVT();
+  }
 };
 } // namespace llvm
 

@@ -44,13 +44,32 @@ template <> struct ilist_alloc_traits<Instruction> {
 iterator_range<simple_ilist<DbgRecord>::iterator>
 getDbgRecordRange(DbgMarker *);
 
+class InsertPosition {
+  using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>,
+                                       ilist_parent<BasicBlock>>;
+  InstListType::iterator InsertAt;
+
+public:
+  InsertPosition(std::nullptr_t) : InsertAt() {}
+  // LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
+  // "BasicBlock::iterator")
+  InsertPosition(Instruction *InsertBefore);
+  InsertPosition(BasicBlock *InsertAtEnd);
+  InsertPosition(InstListType::iterator InsertAt) : InsertAt(InsertAt) {}
+  operator InstListType::iterator() const { return InsertAt; }
+  bool isValid() const { return InsertAt.isValid(); }
+  BasicBlock *getBasicBlock() { return InsertAt.getNodeParent(); }
+};
+
 class Instruction : public User,
                     public ilist_node_with_parent<Instruction, BasicBlock,
-                                                  ilist_iterator_bits<true>> {
+                                                  ilist_iterator_bits<true>,
+                                                  ilist_parent<BasicBlock>> {
 public:
-  using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>>;
+  using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>,
+                                       ilist_parent<BasicBlock>>;
+
 private:
-  BasicBlock *Parent;
   DebugLoc DbgLoc;                         // 'dbg' Metadata cache.
 
   /// Relative order of this instruction in its parent basic block. Used for
@@ -148,9 +167,6 @@ public:
   /// can only be used by other instructions.
   Instruction       *user_back()       { return cast<Instruction>(*user_begin());}
   const Instruction *user_back() const { return cast<Instruction>(*user_begin());}
-
-  inline const BasicBlock *getParent() const { return Parent; }
-  inline       BasicBlock *getParent()       { return Parent; }
 
   /// Return the module owning the function this instruction belongs to
   /// or nullptr it the function does not have a module.
@@ -980,7 +996,8 @@ public:
   };
 
 private:
-  friend class SymbolTableListTraits<Instruction, ilist_iterator_bits<true>>;
+  friend class SymbolTableListTraits<Instruction, ilist_iterator_bits<true>,
+                                     ilist_parent<BasicBlock>>;
   friend class BasicBlock; // For renumbering.
 
   // Shadow Value::setValueSubclassData with a private forwarding method so that
@@ -992,8 +1009,6 @@ private:
   unsigned short getSubclassDataFromValue() const {
     return Value::getSubclassDataFromValue();
   }
-
-  void setParent(BasicBlock *P);
 
 protected:
   // Instruction subclasses can stick up to 15 bits of stuff into the
@@ -1020,11 +1035,7 @@ protected:
   }
 
   Instruction(Type *Ty, unsigned iType, Use *Ops, unsigned NumOps,
-              InstListType::iterator InsertBefore);
-  Instruction(Type *Ty, unsigned iType, Use *Ops, unsigned NumOps,
-              Instruction *InsertBefore = nullptr);
-  Instruction(Type *Ty, unsigned iType, Use *Ops, unsigned NumOps,
-              BasicBlock *InsertAtEnd);
+              InsertPosition InsertBefore = nullptr);
 
 private:
   /// Create a copy of this instruction.

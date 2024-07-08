@@ -1,0 +1,358 @@
+// RUN: rm -rf %t && mkdir -p %t/docs %t/build
+// RUN: sed 's|$test_dir|%/S|g' %S/Inputs/basic-project/database_template.json > %t/build/compile_commands.json
+// RUN: clang-doc --format=html --output=%t/docs --executor=all-TUs %t/build/compile_commands.json
+// RUN: FileCheck %s -input-file=%t/docs/index_json.js -check-prefix=JSON-INDEX
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Shape.html -check-prefix=HTML-SHAPE
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Calculator.html -check-prefix=HTML-CALC
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Rectangle.html -check-prefix=HTML-RECTANGLE
+// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Circle.html -check-prefix=HTML-CIRCLE
+
+// JSON-INDEX: var JsonIndex = `
+// JSON-INDEX-NEXT: {
+// JSON-INDEX-NEXT:   "USR": "{{([0-9A-F]{40})}}",
+// JSON-INDEX-NEXT:   "Name": "",
+// JSON-INDEX-NEXT:   "RefType": "default",
+// JSON-INDEX-NEXT:   "Path": "",
+// JSON-INDEX-NEXT:   "Children": [
+// JSON-INDEX-NEXT:     {
+// JSON-INDEX-NEXT:       "USR": "{{([0-9A-F]{40})}}",
+// JSON-INDEX-NEXT:       "Name": "GlobalNamespace",
+// JSON-INDEX-NEXT:       "RefType": "namespace",
+// JSON-INDEX-NEXT:       "Path": "GlobalNamespace",
+// JSON-INDEX-NEXT:       "Children": [
+// JSON-INDEX-NEXT:         {
+// JSON-INDEX-NEXT:           "USR": "{{([0-9A-F]{40})}}",
+// JSON-INDEX-NEXT:           "Name": "Calculator",
+// JSON-INDEX-NEXT:           "RefType": "record",
+// JSON-INDEX-NEXT:           "Path": "GlobalNamespace",
+// JSON-INDEX-NEXT:           "Children": []
+// JSON-INDEX-NEXT:         },
+// JSON-INDEX-NEXT:         {
+// JSON-INDEX-NEXT:           "USR": "{{([0-9A-F]{40})}}",
+// JSON-INDEX-NEXT:           "Name": "Circle",
+// JSON-INDEX-NEXT:           "RefType": "record",
+// JSON-INDEX-NEXT:           "Path": "GlobalNamespace",
+// JSON-INDEX-NEXT:           "Children": []
+// JSON-INDEX-NEXT:         },
+// JSON-INDEX-NEXT:         {
+// JSON-INDEX-NEXT:           "USR": "{{([0-9A-F]{40})}}",
+// JSON-INDEX-NEXT:           "Name": "Rectangle",
+// JSON-INDEX-NEXT:           "RefType": "record",
+// JSON-INDEX-NEXT:           "Path": "GlobalNamespace",
+// JSON-INDEX-NEXT:           "Children": []
+// JSON-INDEX-NEXT:         },
+// JSON-INDEX-NEXT:         {
+// JSON-INDEX-NEXT:           "USR": "{{([0-9A-F]{40})}}",
+// JSON-INDEX-NEXT:           "Name": "Shape",
+// JSON-INDEX-NEXT:           "RefType": "record",
+// JSON-INDEX-NEXT:           "Path": "GlobalNamespace",
+// JSON-INDEX-NEXT:           "Children": []
+// JSON-INDEX-NEXT:         }
+// JSON-INDEX-NEXT:       ]
+// JSON-INDEX-NEXT:     }
+// JSON-INDEX-NEXT:   ]
+// JSON-INDEX-NEXT: }`;
+
+// HTML-SHAPE: <!DOCTYPE html>
+// HTML-SHAPE-NEXT: <meta charset="utf-8"/>
+// HTML-SHAPE-NEXT: <title>class Shape</title>
+// HTML-SHAPE-NEXT: <link rel="stylesheet" href="../clang-doc-default-stylesheet.css"/>
+// HTML-SHAPE-NEXT: <script src="../index.js"></script>
+// HTML-SHAPE-NEXT: <script src="../index_json.js"></script>
+// HTML-SHAPE-NEXT: <header id="project-title"></header>
+// HTML-SHAPE-NEXT: <main>
+// HTML-SHAPE-NEXT:   <div id="sidebar-left" path="GlobalNamespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
+// HTML-SHAPE-NEXT:   <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
+// HTML-SHAPE-NEXT:     <h1>class Shape</h1>
+// HTML-SHAPE-NEXT:     <p>Defined at line 8 of file {{.*}}Shape.h</p>
+// HTML-SHAPE-NEXT:     <div>
+// HTML-SHAPE-NEXT:       <div>
+// HTML-SHAPE-NEXT:         <p> Provides a common interface for different types of shapes.</p>
+// HTML-SHAPE-NEXT:       </div>
+// HTML-SHAPE-NEXT:     </div>
+// HTML-SHAPE-NEXT:     <h2 id="Functions">Functions</h2>
+// HTML-SHAPE-NEXT:     <div>
+// HTML-SHAPE-NEXT:       <h3 id="{{([0-9A-F]{40})}}">~Shape</h3>
+// HTML-SHAPE-NEXT:       <p>public void ~Shape()</p>
+// HTML-SHAPE-NEXT:       <p>Defined at line 13 of file {{.*}}Shape.h</p>
+// HTML-SHAPE-NEXT:       <div>
+// HTML-SHAPE-NEXT:         <div></div>
+// HTML-SHAPE-NEXT:       </div>
+// HTML-SHAPE-NEXT:       <h3 id="{{([0-9A-F]{40})}}">area</h3>
+// HTML-SHAPE-NEXT:       <p>public double area()</p>
+// HTML-SHAPE-NEXT:       <div>
+// HTML-SHAPE-NEXT:         <div></div>
+// HTML-SHAPE-NEXT:       </div>
+// HTML-SHAPE-NEXT:       <h3 id="{{([0-9A-F]{40})}}">perimeter</h3>
+// HTML-SHAPE-NEXT:       <p>public double perimeter()</p>
+// HTML-SHAPE-NEXT:       <div>
+// HTML-SHAPE-NEXT:         <div></div>
+// HTML-SHAPE-NEXT:       </div>
+// HTML-SHAPE-NEXT:     </div>
+// HTML-SHAPE-NEXT:   </div>
+// HTML-SHAPE-NEXT:   <div id="sidebar-right" class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right">
+// HTML-SHAPE-NEXT:     <ol>
+// HTML-SHAPE-NEXT:       <li>
+// HTML-SHAPE-NEXT:         <span>
+// HTML-SHAPE-NEXT:           <a href="#Functions">Functions</a>
+// HTML-SHAPE-NEXT:         </span>
+// HTML-SHAPE-NEXT:         <ul>
+// HTML-SHAPE-NEXT:           <li>
+// HTML-SHAPE-NEXT:             <span>
+// HTML-SHAPE-NEXT:               <a href="#{{([0-9A-F]{40})}}">~Shape</a>
+// HTML-SHAPE-NEXT:             </span>
+// HTML-SHAPE-NEXT:           </li>
+// HTML-SHAPE-NEXT:           <li>
+// HTML-SHAPE-NEXT:             <span>
+// HTML-SHAPE-NEXT:               <a href="#{{([0-9A-F]{40})}}">area</a>
+// HTML-SHAPE-NEXT:             </span>
+// HTML-SHAPE-NEXT:           </li>
+// HTML-SHAPE-NEXT:           <li>
+// HTML-SHAPE-NEXT:             <span>
+// HTML-SHAPE-NEXT:               <a href="#{{([0-9A-F]{40})}}">perimeter</a>
+// HTML-SHAPE-NEXT:             </span>
+// HTML-SHAPE-NEXT:           </li>
+// HTML-SHAPE-NEXT:         </ul>
+// HTML-SHAPE-NEXT:       </li>
+// HTML-SHAPE-NEXT:     </ol>
+// HTML-SHAPE-NEXT:   </div>
+// HTML-SHAPE-NEXT: </main>
+
+// HTML-CALC: <!DOCTYPE html>
+// HTML-CALC-NEXT: <meta charset="utf-8"/>
+// HTML-CALC-NEXT: <title>class Calculator</title>
+// HTML-CALC-NEXT: <link rel="stylesheet" href="{{.*}}clang-doc-default-stylesheet.css"/>
+// HTML-CALC-NEXT: <script src="{{.*}}index.js"></script>
+// HTML-CALC-NEXT: <script src="{{.*}}index_json.js"></script>
+// HTML-CALC-NEXT: <header id="project-title"></header>
+// HTML-CALC-NEXT: <main>
+// HTML-CALC-NEXT:   <div id="sidebar-left" path="GlobalNamespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
+// HTML-CALC-NEXT:   <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
+// HTML-CALC-NEXT:     <h1>class Calculator</h1>
+// HTML-CALC-NEXT:     <p>Defined at line 8 of file {{.*}}Calculator.h</p>
+// HTML-CALC-NEXT:     <div>
+// HTML-CALC-NEXT:       <div>
+// HTML-CALC-NEXT:         <p> Provides basic arithmetic operations.</p>
+// HTML-CALC-NEXT:       </div>
+// HTML-CALC-NEXT:     </div>
+// HTML-CALC-NEXT:     <h2 id="Functions">Functions</h2>
+// HTML-CALC-NEXT:     <div>
+// HTML-CALC-NEXT:       <h3 id="{{([0-9A-F]{40})}}">add</h3>
+// HTML-CALC-NEXT:       <p>public int add(int a, int b)</p>
+// HTML-CALC-NEXT:       <p>Defined at line 3 of file {{.*}}Calculator.cpp</p>
+// HTML-CALC-NEXT:       <div>
+// HTML-CALC-NEXT:         <div></div>
+// HTML-CALC-NEXT:       </div>
+// HTML-CALC-NEXT:       <h3 id="{{([0-9A-F]{40})}}">subtract</h3>
+// HTML-CALC-NEXT:       <p>public int subtract(int a, int b)</p>
+// HTML-CALC-NEXT:       <p>Defined at line 7 of file {{.*}}Calculator.cpp</p>
+// HTML-CALC-NEXT:       <div>
+// HTML-CALC-NEXT:         <div></div>
+// HTML-CALC-NEXT:       </div>
+// HTML-CALC-NEXT:       <h3 id="{{([0-9A-F]{40})}}">multiply</h3>
+// HTML-CALC-NEXT:       <p>public int multiply(int a, int b)</p>
+// HTML-CALC-NEXT:       <p>Defined at line 11 of file {{.*}}Calculator.cpp</p>
+// HTML-CALC-NEXT:       <div>
+// HTML-CALC-NEXT:         <div></div>
+// HTML-CALC-NEXT:       </div>
+// HTML-CALC-NEXT:       <h3 id="{{([0-9A-F]{40})}}">divide</h3>
+// HTML-CALC-NEXT:       <p>public double divide(int a, int b)</p>
+// HTML-CALC-NEXT:       <p>Defined at line 15 of file {{.*}}Calculator.cpp</p>
+// HTML-CALC-NEXT:       <div>
+// HTML-CALC-NEXT:         <div></div>
+// HTML-CALC-NEXT:       </div>
+// HTML-CALC-NEXT:     </div>
+// HTML-CALC-NEXT:   </div>
+// HTML-CALC-NEXT:   <div id="sidebar-right" class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right">
+// HTML-CALC-NEXT:     <ol>
+// HTML-CALC-NEXT:       <li>
+// HTML-CALC-NEXT:         <span>
+// HTML-CALC-NEXT:           <a href="#Functions">Functions</a>
+// HTML-CALC-NEXT:         </span>
+// HTML-CALC-NEXT:         <ul>
+// HTML-CALC-NEXT:           <li>
+// HTML-CALC-NEXT:             <span>
+// HTML-CALC-NEXT:               <a href="#{{([0-9A-F]{40})}}">add</a>
+// HTML-CALC-NEXT:             </span>
+// HTML-CALC-NEXT:           </li>
+// HTML-CALC-NEXT:           <li>
+// HTML-CALC-NEXT:             <span>
+// HTML-CALC-NEXT:               <a href="#{{([0-9A-F]{40})}}">subtract</a>
+// HTML-CALC-NEXT:             </span>
+// HTML-CALC-NEXT:           </li>
+// HTML-CALC-NEXT:           <li>
+// HTML-CALC-NEXT:             <span>
+// HTML-CALC-NEXT:               <a href="#{{([0-9A-F]{40})}}">multiply</a>
+// HTML-CALC-NEXT:             </span>
+// HTML-CALC-NEXT:           </li>
+// HTML-CALC-NEXT:           <li>
+// HTML-CALC-NEXT:             <span>
+// HTML-CALC-NEXT:               <a href="#{{([0-9A-F]{40})}}">divide</a>
+// HTML-CALC-NEXT:             </span>
+// HTML-CALC-NEXT:           </li>
+// HTML-CALC-NEXT:         </ul>
+// HTML-CALC-NEXT:       </li>
+// HTML-CALC-NEXT:     </ol>
+// HTML-CALC-NEXT:   </div>
+// HTML-CALC-NEXT: </main>
+
+// HTML-RECTANGLE: <!DOCTYPE html>
+// HTML-RECTANGLE-NEXT: <meta charset="utf-8"/>
+// HTML-RECTANGLE-NEXT: <title>class Rectangle</title>
+// HTML-RECTANGLE-NEXT: <link rel="stylesheet" href="{{.*}}clang-doc-default-stylesheet.css"/>
+// HTML-RECTANGLE-NEXT: <script src="{{.*}}index.js"></script>
+// HTML-RECTANGLE-NEXT: <script src="{{.*}}index_json.js"></script>
+// HTML-RECTANGLE-NEXT: <header id="project-title"></header>
+// HTML-RECTANGLE-NEXT: <main>
+// HTML-RECTANGLE-NEXT:   <div id="sidebar-left" path="GlobalNamespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
+// HTML-RECTANGLE-NEXT:   <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
+// HTML-RECTANGLE-NEXT:     <h1>class Rectangle</h1>
+// HTML-RECTANGLE-NEXT:     <p>Defined at line 10 of file {{.*}}Rectangle.h</p>
+// HTML-RECTANGLE-NEXT:     <div>
+// HTML-RECTANGLE-NEXT:       <div>
+// HTML-RECTANGLE-NEXT:         <p> Represents a rectangle with a given width and height.</p>
+// HTML-RECTANGLE-NEXT:       </div>
+// HTML-RECTANGLE-NEXT:     </div>
+// HTML-RECTANGLE-NEXT:     <p>
+// HTML-RECTANGLE-NEXT:       Inherits from
+// HTML-RECTANGLE-NEXT:       <a href="Shape.html">Shape</a>
+// HTML-RECTANGLE-NEXT:     </p>
+// HTML-RECTANGLE-NEXT:     <h2 id="Members">Members</h2>
+// HTML-RECTANGLE-NEXT:     <ul>
+// HTML-RECTANGLE-NEXT:       <li>private double width_</li>
+// HTML-RECTANGLE-NEXT:       <li>private double height_</li>
+// HTML-RECTANGLE-NEXT:     </ul>
+// HTML-RECTANGLE-NEXT:     <h2 id="Functions">Functions</h2>
+// HTML-RECTANGLE-NEXT:     <div>
+// HTML-RECTANGLE-NEXT:       <h3 id="{{([0-9A-F]{40})}}">Rectangle</h3>
+// HTML-RECTANGLE-NEXT:       <p>public void Rectangle(double width, double height)</p>
+// HTML-RECTANGLE-NEXT:       <p>Defined at line 3 of file {{.*}}Rectangle.cpp</p>
+// HTML-RECTANGLE-NEXT:       <div>
+// HTML-RECTANGLE-NEXT:         <div></div>
+// HTML-RECTANGLE-NEXT:       </div>
+// HTML-RECTANGLE-NEXT:       <h3 id="{{([0-9A-F]{40})}}">area</h3>
+// HTML-RECTANGLE-NEXT:       <p>public double area()</p>
+// HTML-RECTANGLE-NEXT:       <p>Defined at line 6 of file {{.*}}Rectangle.cpp</p>
+// HTML-RECTANGLE-NEXT:       <div>
+// HTML-RECTANGLE-NEXT:         <div></div>
+// HTML-RECTANGLE-NEXT:       </div>
+// HTML-RECTANGLE-NEXT:       <h3 id="{{([0-9A-F]{40})}}">perimeter</h3>
+// HTML-RECTANGLE-NEXT:       <p>public double perimeter()</p>
+// HTML-RECTANGLE-NEXT:       <p>Defined at line 10 of file {{.*}}Rectangle.cpp</p>
+// HTML-RECTANGLE-NEXT:       <div>
+// HTML-RECTANGLE-NEXT:         <div></div>
+// HTML-RECTANGLE-NEXT:       </div>
+// HTML-RECTANGLE-NEXT:     </div>
+// HTML-RECTANGLE-NEXT:   </div>
+// HTML-RECTANGLE-NEXT:   <div id="sidebar-right" class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right">
+// HTML-RECTANGLE-NEXT:     <ol>
+// HTML-RECTANGLE-NEXT:       <li>
+// HTML-RECTANGLE-NEXT:         <span>
+// HTML-RECTANGLE-NEXT:           <a href="#Members">Members</a>
+// HTML-RECTANGLE-NEXT:         </span>
+// HTML-RECTANGLE-NEXT:       </li>
+// HTML-RECTANGLE-NEXT:       <li>
+// HTML-RECTANGLE-NEXT:         <span>
+// HTML-RECTANGLE-NEXT:           <a href="#Functions">Functions</a>
+// HTML-RECTANGLE-NEXT:         </span>
+// HTML-RECTANGLE-NEXT:         <ul>
+// HTML-RECTANGLE-NEXT:           <li>
+// HTML-RECTANGLE-NEXT:             <span>
+// HTML-RECTANGLE-NEXT:               <a href="#{{([0-9A-F]{40})}}">Rectangle</a>
+// HTML-RECTANGLE-NEXT:             </span>
+// HTML-RECTANGLE-NEXT:           </li>
+// HTML-RECTANGLE-NEXT:           <li>
+// HTML-RECTANGLE-NEXT:             <span>
+// HTML-RECTANGLE-NEXT:               <a href="#{{([0-9A-F]{40})}}">area</a>
+// HTML-RECTANGLE-NEXT:             </span>
+// HTML-RECTANGLE-NEXT:           </li>
+// HTML-RECTANGLE-NEXT:           <li>
+// HTML-RECTANGLE-NEXT:             <span>
+// HTML-RECTANGLE-NEXT:               <a href="#{{([0-9A-F]{40})}}">perimeter</a>
+// HTML-RECTANGLE-NEXT:             </span>
+// HTML-RECTANGLE-NEXT:           </li>
+// HTML-RECTANGLE-NEXT:         </ul>
+// HTML-RECTANGLE-NEXT:       </li>
+// HTML-RECTANGLE-NEXT:     </ol>
+// HTML-RECTANGLE-NEXT:   </div>
+// HTML-RECTANGLE-NEXT: </main>
+
+// HTML-CIRCLE: <!DOCTYPE html>
+// HTML-CIRCLE-NEXT: <meta charset="utf-8"/>
+// HTML-CIRCLE-NEXT: <title>class Circle</title>
+// HTML-CIRCLE-NEXT: <link rel="stylesheet" href="{{.*}}clang-doc-default-stylesheet.css"/>
+// HTML-CIRCLE-NEXT: <script src="{{.*}}index.js"></script>
+// HTML-CIRCLE-NEXT: <script src="{{.*}}index_json.js"></script>
+// HTML-CIRCLE-NEXT: <header id="project-title"></header>
+// HTML-CIRCLE-NEXT: <main>
+// HTML-CIRCLE-NEXT:   <div id="sidebar-left" path="GlobalNamespace" class="col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left"></div>
+// HTML-CIRCLE-NEXT:   <div id="main-content" class="col-xs-12 col-sm-9 col-md-8 main-content">
+// HTML-CIRCLE-NEXT:     <h1>class Circle</h1>
+// HTML-CIRCLE-NEXT:     <p>Defined at line 10 of file {{.*}}Circle.h</p>
+// HTML-CIRCLE-NEXT:     <div>
+// HTML-CIRCLE-NEXT:       <div>
+// HTML-CIRCLE-NEXT:         <p> Represents a circle with a given radius.</p>
+// HTML-CIRCLE-NEXT:       </div>
+// HTML-CIRCLE-NEXT:     </div>
+// HTML-CIRCLE-NEXT:     <p>
+// HTML-CIRCLE-NEXT:       Inherits from
+// HTML-CIRCLE-NEXT:       <a href="Shape.html">Shape</a>
+// HTML-CIRCLE-NEXT:     </p>
+// HTML-CIRCLE-NEXT:     <h2 id="Members">Members</h2>
+// HTML-CIRCLE-NEXT:     <ul>
+// HTML-CIRCLE-NEXT:       <li>private double radius_</li>
+// HTML-CIRCLE-NEXT:     </ul>
+// HTML-CIRCLE-NEXT:     <h2 id="Functions">Functions</h2>
+// HTML-CIRCLE-NEXT:     <div>
+// HTML-CIRCLE-NEXT:       <h3 id="{{([0-9A-F]{40})}}">Circle</h3>
+// HTML-CIRCLE-NEXT:       <p>public void Circle(double radius)</p>
+// HTML-CIRCLE-NEXT:       <p>Defined at line 3 of file {{.*}}Circle.cpp</p>
+// HTML-CIRCLE-NEXT:       <div>
+// HTML-CIRCLE-NEXT:         <div></div>
+// HTML-CIRCLE-NEXT:       </div>
+// HTML-CIRCLE-NEXT:       <h3 id="{{([0-9A-F]{40})}}">area</h3>
+// HTML-CIRCLE-NEXT:       <p>public double area()</p>
+// HTML-CIRCLE-NEXT:       <p>Defined at line 5 of file {{.*}}Circle.cpp</p>
+// HTML-CIRCLE-NEXT:       <div>
+// HTML-CIRCLE-NEXT:         <div></div>
+// HTML-CIRCLE-NEXT:       </div>
+// HTML-CIRCLE-NEXT:       <h3 id="{{([0-9A-F]{40})}}">perimeter</h3>
+// HTML-CIRCLE-NEXT:       <p>public double perimeter()</p>
+// HTML-CIRCLE-NEXT:       <p>Defined at line 9 of file {{.*}}Circle.cpp</p>
+// HTML-CIRCLE-NEXT:       <div>
+// HTML-CIRCLE-NEXT:         <div></div>
+// HTML-CIRCLE-NEXT:       </div>
+// HTML-CIRCLE-NEXT:     </div>
+// HTML-CIRCLE-NEXT:   </div>
+// HTML-CIRCLE-NEXT:   <div id="sidebar-right" class="col-xs-6 col-sm-6 col-md-2 sidebar sidebar-offcanvas-right">
+// HTML-CIRCLE-NEXT:     <ol>
+// HTML-CIRCLE-NEXT:       <li>
+// HTML-CIRCLE-NEXT:         <span>
+// HTML-CIRCLE-NEXT:           <a href="#Members">Members</a>
+// HTML-CIRCLE-NEXT:         </span>
+// HTML-CIRCLE-NEXT:       </li>
+// HTML-CIRCLE-NEXT:       <li>
+// HTML-CIRCLE-NEXT:         <span>
+// HTML-CIRCLE-NEXT:           <a href="#Functions">Functions</a>
+// HTML-CIRCLE-NEXT:         </span>
+// HTML-CIRCLE-NEXT:         <ul>
+// HTML-CIRCLE-NEXT:           <li>
+// HTML-CIRCLE-NEXT:             <span>
+// HTML-CIRCLE-NEXT:               <a href="#{{([0-9A-F]{40})}}">Circle</a>
+// HTML-CIRCLE-NEXT:             </span>
+// HTML-CIRCLE-NEXT:           </li>
+// HTML-CIRCLE-NEXT:           <li>
+// HTML-CIRCLE-NEXT:             <span>
+// HTML-CIRCLE-NEXT:               <a href="#{{([0-9A-F]{40})}}">area</a>
+// HTML-CIRCLE-NEXT:             </span>
+// HTML-CIRCLE-NEXT:           </li>
+// HTML-CIRCLE-NEXT:           <li>
+// HTML-CIRCLE-NEXT:             <span>
+// HTML-CIRCLE-NEXT:               <a href="#{{([0-9A-F]{40})}}">perimeter</a>
+// HTML-CIRCLE-NEXT:             </span>
+// HTML-CIRCLE-NEXT:           </li>
+// HTML-CIRCLE-NEXT:         </ul>
+// HTML-CIRCLE-NEXT:       </li>
+// HTML-CIRCLE-NEXT:     </ol>
+// HTML-CIRCLE-NEXT:   </div>
+// HTML-CIRCLE-NEXT: </main>

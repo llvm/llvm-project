@@ -2082,7 +2082,7 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
   // Evaluate special cases related to a constant base.
 
   const APFloat *BaseF;
-  if (!match(Pow->getArgOperand(0), m_APFloat(BaseF)))
+  if (!match(Base, m_APFloat(BaseF)))
     return nullptr;
 
   AttributeList NoAttrs; // Attributes are only meaningful on the original call
@@ -2090,9 +2090,13 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
   const bool UseIntrinsic = Pow->doesNotAccessMemory();
 
   // pow(2.0, itofp(x)) -> ldexp(1.0, x)
-  if ((UseIntrinsic || !Ty->isVectorTy()) && match(Base, m_SpecificFP(2.0)) &&
+  if ((UseIntrinsic || !Ty->isVectorTy()) && BaseF->isExactlyValue(2.0) &&
       (isa<SIToFPInst>(Expo) || isa<UIToFPInst>(Expo)) &&
-      hasFloatFn(M, TLI, Ty, LibFunc_ldexp, LibFunc_ldexpf, LibFunc_ldexpl)) {
+      (UseIntrinsic ||
+       hasFloatFn(M, TLI, Ty, LibFunc_ldexp, LibFunc_ldexpf, LibFunc_ldexpl))) {
+
+    // TODO: Shouldn't really need to depend on getIntToFPVal for intrinsic. Can
+    // just directly use the original integer type.
     if (Value *ExpoI = getIntToFPVal(Expo, B, TLI->getIntSize())) {
       Constant *One = ConstantFP::get(Ty, 1.0);
 
@@ -2133,7 +2137,7 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
   }
 
   // pow(10.0, x) -> exp10(x)
-  if (match(Base, m_SpecificFP(10.0)) &&
+  if (BaseF->isExactlyValue(10.0) &&
       hasFloatFn(M, TLI, Ty, LibFunc_exp10, LibFunc_exp10f, LibFunc_exp10l)) {
 
     if (Pow->doesNotAccessMemory()) {
@@ -2376,7 +2380,13 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
       hasFloatVersion(M, Name))
     Ret = optimizeUnaryDoubleFP(CI, B, TLI, true);
 
-  const bool UseIntrinsic = CI->doesNotAccessMemory();
+  // If we have an llvm.exp2 intrinsic, emit the llvm.ldexp intrinsic. If we
+  // have the libcall, emit the libcall.
+  //
+  // TODO: In principle we should be able to just always use the intrinsic for
+  // any doesNotAccessMemory callsite.
+
+  const bool UseIntrinsic = Callee->isIntrinsic();
   // Bail out for vectors because the code below only expects scalars.
   Type *Ty = CI->getType();
   if (!UseIntrinsic && Ty->isVectorTy())
@@ -2386,12 +2396,11 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
   // exp2(uitofp(x)) -> ldexp(1.0, zext(x))  if sizeof(x) < IntSize
   Value *Op = CI->getArgOperand(0);
   if ((isa<SIToFPInst>(Op) || isa<UIToFPInst>(Op)) &&
-      hasFloatFn(M, TLI, Ty, LibFunc_ldexp, LibFunc_ldexpf, LibFunc_ldexpl)) {
+      (UseIntrinsic ||
+       hasFloatFn(M, TLI, Ty, LibFunc_ldexp, LibFunc_ldexpf, LibFunc_ldexpl))) {
     if (Value *Exp = getIntToFPVal(Op, B, TLI->getIntSize())) {
       Constant *One = ConstantFP::get(Ty, 1.0);
 
-      // TODO: Emitting the intrinsic should not depend on whether the libcall
-      // is available.
       if (UseIntrinsic) {
         return copyFlags(*CI, B.CreateIntrinsic(Intrinsic::ldexp,
                                                 {Ty, Exp->getType()},

@@ -1740,10 +1740,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
             cast<ConstantInt>(II->getArgOperand(HasAVL))->getZExtValue());
         RISCVII::VLMUL VLMUL = static_cast<RISCVII::VLMUL>(
             cast<ConstantInt>(II->getArgOperand(1 + HasAVL))->getZExtValue());
-        // The Range is [Lower, Upper), so we need to subtract 1 here to get the
-        // real upper value.
         uint64_t MaxVLEN =
-            (Range.getUpper().getZExtValue() - 1) * RISCV::RVVBitsPerBlock;
+            Range.getUnsignedMax().getZExtValue() * RISCV::RVVBitsPerBlock;
         uint64_t MaxVL = MaxVLEN / RISCVVType::getSEWLMULRatio(SEW, VLMUL);
 
         // Result of vsetvli must be not larger than AVL.
@@ -2293,8 +2291,11 @@ static bool isGEPKnownNonNull(const GEPOperator *GEP, unsigned Depth,
   if (const Instruction *I = dyn_cast<Instruction>(GEP))
     F = I->getFunction();
 
-  if (!GEP->isInBounds() ||
-      NullPointerIsDefined(F, GEP->getPointerAddressSpace()))
+  // If the gep is nuw or inbounds with invalid null pointer, then the GEP
+  // may be null iff the base pointer is null and the offset is zero.
+  if (!GEP->hasNoUnsignedWrap() &&
+      !(GEP->isInBounds() &&
+        !NullPointerIsDefined(F, GEP->getPointerAddressSpace())))
     return false;
 
   // FIXME: Support vector-GEPs.
@@ -8176,6 +8177,28 @@ bool llvm::isKnownNegation(const Value *X, const Value *Y, bool NeedNSW,
                        match(Y, m_NSWSub(m_Specific(B), m_Specific(A)))));
 }
 
+bool llvm::isKnownInversion(const Value *X, const Value *Y) {
+  // Handle X = icmp pred A, B, Y = icmp pred A, C.
+  Value *A, *B, *C;
+  ICmpInst::Predicate Pred1, Pred2;
+  if (!match(X, m_ICmp(Pred1, m_Value(A), m_Value(B))) ||
+      !match(Y, m_c_ICmp(Pred2, m_Specific(A), m_Value(C))))
+    return false;
+
+  if (B == C)
+    return Pred1 == ICmpInst::getInversePredicate(Pred2);
+
+  // Try to infer the relationship from constant ranges.
+  const APInt *RHSC1, *RHSC2;
+  if (!match(B, m_APInt(RHSC1)) || !match(C, m_APInt(RHSC2)))
+    return false;
+
+  const auto CR1 = ConstantRange::makeExactICmpRegion(Pred1, *RHSC1);
+  const auto CR2 = ConstantRange::makeExactICmpRegion(Pred2, *RHSC2);
+
+  return CR1.inverse() == CR2;
+}
+
 static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
                                               FastMathFlags FMF,
                                               Value *CmpLHS, Value *CmpRHS,
@@ -9368,6 +9391,10 @@ static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II) {
     if (!II.getParent() || !II.getFunction())
       break;
     return getVScaleRange(II.getFunction(), Width);
+  case Intrinsic::scmp:
+  case Intrinsic::ucmp:
+    return ConstantRange::getNonEmpty(APInt::getAllOnes(Width),
+                                      APInt(Width, 2));
   default:
     break;
   }

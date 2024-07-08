@@ -28,8 +28,8 @@ define i64 @int_reduction_add(ptr %a, i64 %N) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP3]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP3]])
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[N]], [[N_VEC]]
@@ -54,8 +54,8 @@ define i64 @int_reduction_add(ptr %a, i64 %N) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT8]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
-; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP10]])
 ; CHECK-NEXT:    [[CMP_N4:%.*]] = icmp eq i64 [[N]], [[N_VEC3]]
+; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP10]])
 ; CHECK-NEXT:    br i1 [[CMP_N4]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC3]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
@@ -119,8 +119,8 @@ define float @fp_reduction_max(ptr noalias %a, i64 %N) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP4]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP4]])
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[N]], [[N_VEC]]
@@ -147,8 +147,8 @@ define float @fp_reduction_max(ptr noalias %a, i64 %N) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT8]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
-; CHECK-NEXT:    [[TMP13:%.*]] = call fast float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP11]])
 ; CHECK-NEXT:    [[CMP_N4:%.*]] = icmp eq i64 [[N]], [[N_VEC3]]
+; CHECK-NEXT:    [[TMP13:%.*]] = call fast float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP11]])
 ; CHECK-NEXT:    br i1 [[CMP_N4]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC3]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
@@ -313,9 +313,9 @@ define float @multiple_fp_rdx(ptr %A, i64 %N) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.vector.reduce.fmul.v4f32(float 1.000000e+00, <4 x float> [[TMP4]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP3]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[N]], [[N_VEC]]
@@ -344,9 +344,9 @@ define float @multiple_fp_rdx(ptr %A, i64 %N) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT11]], [[N_VEC5]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
+; CHECK-NEXT:    [[CMP_N6:%.*]] = icmp eq i64 [[N]], [[N_VEC5]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = call fast float @llvm.vector.reduce.fmul.v4f32(float 1.000000e+00, <4 x float> [[TMP14]])
 ; CHECK-NEXT:    [[TMP16:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP13]])
-; CHECK-NEXT:    [[CMP_N6:%.*]] = icmp eq i64 [[N]], [[N_VEC5]]
 ; CHECK-NEXT:    br i1 [[CMP_N6]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC5]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
@@ -422,8 +422,8 @@ define i32 @reduction_phi_start_val(ptr %A, i64 %N) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP4]])
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[N]], [[N_VEC]]
@@ -448,8 +448,8 @@ define i32 @reduction_phi_start_val(ptr %A, i64 %N) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT8]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
-; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP11]])
 ; CHECK-NEXT:    [[CMP_N4:%.*]] = icmp eq i64 [[N]], [[N_VEC3]]
+; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP11]])
 ; CHECK-NEXT:    br i1 [[CMP_N4]], label [[FOR_COND]], label [[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       vec.epilog.scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC3]], [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK]] ]

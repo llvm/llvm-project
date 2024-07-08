@@ -264,15 +264,6 @@ bool TemplateName::containsUnexpandedParameterPack() const {
   return getDependence() & TemplateNameDependence::UnexpandedPack;
 }
 
-void TemplateName::Profile(llvm::FoldingSetNodeID &ID) {
-  if (const auto* USD = getAsUsingShadowDecl())
-    ID.AddPointer(USD->getCanonicalDecl());
-  else if (const auto *TD = getAsTemplateDecl())
-    ID.AddPointer(TD->getCanonicalDecl());
-  else
-    ID.AddPointer(Storage.getOpaqueValue());
-}
-
 void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
                          Qualified Qual) const {
   auto handleAnonymousTTP = [](TemplateDecl *TD, raw_ostream &OS) {
@@ -359,15 +350,4 @@ const StreamingDiagnostic &clang::operator<<(const StreamingDiagnostic &DB,
   OS << '\'';
   OS.flush();
   return DB << NameStr;
-}
-
-void TemplateName::dump(raw_ostream &OS) const {
-  LangOptions LO;  // FIXME!
-  LO.CPlusPlus = true;
-  LO.Bool = true;
-  print(OS, PrintingPolicy(LO));
-}
-
-LLVM_DUMP_METHOD void TemplateName::dump() const {
-  dump(llvm::errs());
 }

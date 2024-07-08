@@ -836,7 +836,7 @@ struct PeelConvert {
   static Fortran::semantics::MaybeExpr visit_with_category(
       const Fortran::evaluate::Expr<Fortran::evaluate::Type<Category, Kind>>
           &expr) {
-    return std::visit(
+    return Fortran::common::visit(
         [](auto &&s) { return visit_with_category<Category, Kind>(s); },
         expr.u);
   }
@@ -859,12 +859,12 @@ struct PeelConvert {
   static Fortran::semantics::MaybeExpr
   visit(const Fortran::evaluate::Expr<Fortran::evaluate::SomeKind<Category>>
             &expr) {
-    return std::visit([](auto &&s) { return visit_with_category<Category>(s); },
-                      expr.u);
+    return Fortran::common::visit(
+        [](auto &&s) { return visit_with_category<Category>(s); }, expr.u);
   }
   static Fortran::semantics::MaybeExpr
   visit(const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &expr) {
-    return std::visit([](auto &&s) { return visit(s); }, expr.u);
+    return Fortran::common::visit([](auto &&s) { return visit(s); }, expr.u);
   }
   template <typename T> //
   static Fortran::semantics::MaybeExpr visit(const T &) {

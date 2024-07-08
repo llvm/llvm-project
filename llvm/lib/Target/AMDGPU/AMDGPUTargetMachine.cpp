@@ -658,8 +658,7 @@ Error AMDGPUTargetMachine::buildCodeGenPipeline(
   return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
 }
 
-void AMDGPUTargetMachine::registerPassBuilderCallbacks(
-    PassBuilder &PB, bool PopulateClassToPassNames) {
+void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
 #define GET_PASS_REGISTRY "AMDGPUPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
@@ -829,8 +828,24 @@ AMDGPUTargetMachine::getAddressSpaceForPseudoSourceKind(unsigned Kind) const {
 
 bool AMDGPUTargetMachine::splitModule(
     Module &M, unsigned NumParts,
-    function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback) const {
-  splitAMDGPUModule(*this, M, NumParts, ModuleCallback);
+    function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback) {
+  // FIXME(?): Would be better to use an already existing Analysis/PassManager,
+  // but all current users of this API don't have one ready and would need to
+  // create one anyway. Let's hide the boilerplate for now to keep it simple.
+
+  LoopAnalysisManager LAM;
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+
+  PassBuilder PB(this);
+  PB.registerModuleAnalyses(MAM);
+  PB.registerFunctionAnalyses(FAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+  ModulePassManager MPM;
+  MPM.addPass(AMDGPUSplitModulePass(NumParts, ModuleCallback));
+  MPM.run(M, MAM);
   return true;
 }
 

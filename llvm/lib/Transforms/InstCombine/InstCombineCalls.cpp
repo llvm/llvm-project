@@ -2618,6 +2618,24 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
+    // ldexp(x, zext(i1 y)) -> fmul x, (select y, 2.0, 1.0)
+    // ldexp(x, sext(i1 y)) -> fmul x, (select y, 0.5, 1.0)
+    Value *ExtSrc;
+    if (match(Exp, m_ZExt(m_Value(ExtSrc))) &&
+        ExtSrc->getType()->getScalarSizeInBits() == 1) {
+      Value *Select =
+          Builder.CreateSelect(ExtSrc, ConstantFP::get(II->getType(), 2.0),
+                               ConstantFP::get(II->getType(), 1.0));
+      return BinaryOperator::CreateFMulFMF(Src, Select, II);
+    }
+    if (match(Exp, m_SExt(m_Value(ExtSrc))) &&
+        ExtSrc->getType()->getScalarSizeInBits() == 1) {
+      Value *Select =
+          Builder.CreateSelect(ExtSrc, ConstantFP::get(II->getType(), 0.5),
+                               ConstantFP::get(II->getType(), 1.0));
+      return BinaryOperator::CreateFMulFMF(Src, Select, II);
+    }
+
     break;
   }
   case Intrinsic::ptrauth_auth:
@@ -2625,13 +2643,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // (sign|resign) + (auth|resign) can be folded by omitting the middle
     // sign+auth component if the key and discriminator match.
     bool NeedSign = II->getIntrinsicID() == Intrinsic::ptrauth_resign;
+    Value *Ptr = II->getArgOperand(0);
     Value *Key = II->getArgOperand(1);
     Value *Disc = II->getArgOperand(2);
 
     // AuthKey will be the key we need to end up authenticating against in
     // whatever we replace this sequence with.
     Value *AuthKey = nullptr, *AuthDisc = nullptr, *BasePtr;
-    if (auto CI = dyn_cast<CallBase>(II->getArgOperand(0))) {
+    if (const auto *CI = dyn_cast<CallBase>(Ptr)) {
       BasePtr = CI->getArgOperand(0);
       if (CI->getIntrinsicID() == Intrinsic::ptrauth_sign) {
         if (CI->getArgOperand(1) != Key || CI->getArgOperand(2) != Disc)
@@ -2643,6 +2662,27 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         AuthDisc = CI->getArgOperand(2);
       } else
         break;
+    } else if (const auto *PtrToInt = dyn_cast<PtrToIntOperator>(Ptr)) {
+      // ptrauth constants are equivalent to a call to @llvm.ptrauth.sign for
+      // our purposes, so check for that too.
+      const auto *CPA = dyn_cast<ConstantPtrAuth>(PtrToInt->getOperand(0));
+      if (!CPA || !CPA->isKnownCompatibleWith(Key, Disc, DL))
+        break;
+
+      // resign(ptrauth(p,ks,ds),ks,ds,kr,dr) -> ptrauth(p,kr,dr)
+      if (NeedSign && isa<ConstantInt>(II->getArgOperand(4))) {
+        auto *SignKey = cast<ConstantInt>(II->getArgOperand(3));
+        auto *SignDisc = cast<ConstantInt>(II->getArgOperand(4));
+        auto *SignAddrDisc = ConstantPointerNull::get(Builder.getPtrTy());
+        auto *NewCPA = ConstantPtrAuth::get(CPA->getPointer(), SignKey,
+                                            SignDisc, SignAddrDisc);
+        replaceInstUsesWith(
+            *II, ConstantExpr::getPointerCast(NewCPA, II->getType()));
+        return eraseInstFromFunction(*II);
+      }
+
+      // auth(ptrauth(p,k,d),k,d) -> p
+      BasePtr = Builder.CreatePtrToInt(CPA->getPointer(), II->getType());
     } else
       break;
 
@@ -2659,8 +2699,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     } else {
       // sign(0) + auth(0) = nop
       replaceInstUsesWith(*II, BasePtr);
-      eraseInstFromFunction(*II);
-      return nullptr;
+      return eraseInstFromFunction(*II);
     }
 
     SmallVector<Value *, 4> CallArgs;

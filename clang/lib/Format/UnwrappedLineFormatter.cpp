@@ -57,7 +57,7 @@ public:
   /// Update the indent state given that \p Line is going to be formatted
   /// next.
   void nextLine(const AnnotatedLine &Line) {
-    Offset = getIndentOffset(*Line.First);
+    Offset = getIndentOffset(Line);
     // Update the indent level cache size so that we can rely on it
     // having the right size in adjustToUnmodifiedline.
     if (Line.Level >= IndentForLevel.size())
@@ -111,42 +111,41 @@ private:
   ///
   /// For example, 'public:' labels in classes are offset by 1 or 2
   /// characters to the left from their level.
-  int getIndentOffset(const FormatToken &RootToken) {
+  int getIndentOffset(const AnnotatedLine &Line) {
     if (Style.Language == FormatStyle::LK_Java || Style.isJavaScript() ||
         Style.isCSharp()) {
       return 0;
     }
 
-    auto IsAccessModifier = [this, &RootToken]() {
-      if (RootToken.isAccessSpecifier(Style.isCpp())) {
+    auto IsAccessModifier = [&](const FormatToken &RootToken) {
+      if (Line.Type == LT_AccessModifier || RootToken.isObjCAccessSpecifier())
         return true;
-      } else if (RootToken.isObjCAccessSpecifier()) {
-        return true;
-      }
+
+      const auto *Next = RootToken.Next;
+
       // Handle Qt signals.
-      else if (RootToken.isOneOf(Keywords.kw_signals, Keywords.kw_qsignals) &&
-               RootToken.Next && RootToken.Next->is(tok::colon)) {
-        return true;
-      } else if (RootToken.Next &&
-                 RootToken.Next->isOneOf(Keywords.kw_slots,
-                                         Keywords.kw_qslots) &&
-                 RootToken.Next->Next && RootToken.Next->Next->is(tok::colon)) {
+      if (RootToken.isOneOf(Keywords.kw_signals, Keywords.kw_qsignals) &&
+          Next && Next->is(tok::colon)) {
         return true;
       }
+
+      if (Next && Next->isOneOf(Keywords.kw_slots, Keywords.kw_qslots) &&
+          Next->Next && Next->Next->is(tok::colon)) {
+        return true;
+      }
+
       // Handle malformed access specifier e.g. 'private' without trailing ':'.
-      else if (!RootToken.Next && RootToken.isAccessSpecifier(false)) {
-        return true;
-      }
-      return false;
+      return !Next && RootToken.isAccessSpecifier(false);
     };
 
-    if (IsAccessModifier()) {
+    if (IsAccessModifier(*Line.First)) {
       // The AccessModifierOffset may be overridden by IndentAccessModifiers,
       // in which case we take a negative value of the IndentWidth to simulate
       // the upper indent level.
       return Style.IndentAccessModifiers ? -Style.IndentWidth
                                          : Style.AccessModifierOffset;
     }
+
     return 0;
   }
 

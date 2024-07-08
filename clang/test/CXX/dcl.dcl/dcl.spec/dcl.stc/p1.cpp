@@ -7,7 +7,7 @@ template<typename T> void f(T) {}
 template<typename T> static void g(T) {}
 
 
-template<> static void f<int>(int); // expected-error{{explicit specialization has extraneous, inconsistent storage class 'static'}}
+template<> static void f<int>(int); // expected-warning{{explicit specialization cannot have a storage class}}
 template static void f<float>(float); // expected-error{{explicit instantiation cannot have a storage class}}
 
 template<> void f<double>(double);
@@ -29,4 +29,5 @@ int X<T>::value = 17;
 
 template static int X<int>::value; // expected-error{{explicit instantiation cannot have a storage class}}
 
-template<> static int X<float>::value; // expected-error{{'static' can only be specified inside the class definition}}
+template<> static int X<float>::value; // expected-warning{{explicit specialization cannot have a storage class}}
+                                       // expected-error@-1{{'static' can only be specified inside the class definition}}

@@ -28,7 +28,7 @@
 // CHECK:      DynamicSection [
 // CHECK-NEXT:   Tag                Type                 Name/Value
 // CHECK-NEXT:   0x000000000000001D RUNPATH              Library runpath: [foo:bar]
-// CHECK-NEXT:   0x0000000000000001 NEEDED               Shared library: [{{.*}}2.so]
+// CHECK-NEXT:   0x0000000000000001 NEEDED               Shared library: {{.*}}2.so
 // CHECK-NEXT:   0x0000000000000015 DEBUG                0x0
 // CHECK-NEXT:   0x0000000000000007 RELA                 [[RELADDR]]
 // CHECK-NEXT:   0x0000000000000008 RELASZ               [[RELSIZE]] (bytes)

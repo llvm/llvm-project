@@ -1453,6 +1453,7 @@ static Instruction *cloneInstructionInExitBlock(
     }
 
     New = CallInst::Create(CI, OpBundles);
+    New->copyMetadata(*CI);
   } else {
     New = I.clone();
   }

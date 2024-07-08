@@ -151,9 +151,6 @@ class WinCOFFWriter {
   bool UseOffsetLabels = false;
 
 public:
-  MCSectionCOFF *AddrsigSection = nullptr;
-  MCSectionCOFF *CGProfileSection = nullptr;
-
   enum DwoMode {
     AllSections,
     NonDwoOnly,
@@ -327,6 +324,7 @@ void WinCOFFWriter::defineSection(const MCSectionCOFF &MCSec,
   COFFSection *Section = createSection(MCSec.getName());
   COFFSymbol *Symbol = createSymbol(MCSec.getName());
   Section->Symbol = Symbol;
+  SymbolMap[MCSec.getBeginSymbol()] = Symbol;
   Symbol->Section = Section;
   Symbol->Data.StorageClass = COFF::IMAGE_SYM_CLASS_STATIC;
 
@@ -354,7 +352,7 @@ void WinCOFFWriter::defineSection(const MCSectionCOFF &MCSec,
   Section->MCSection = &MCSec;
   SectionMap[&MCSec] = Section;
 
-  if (UseOffsetLabels && !MCSec.getFragmentList().empty()) {
+  if (UseOffsetLabels && !MCSec.empty()) {
     const uint32_t Interval = 1 << OffsetLabelIntervalBits;
     uint32_t N = 1;
     for (uint32_t Off = Interval, E = Layout.getSectionAddressSize(&MCSec);
@@ -401,15 +399,18 @@ COFFSymbol *WinCOFFWriter::getLinkedSymbol(const MCSymbol &Symbol) {
 /// and creates the associated COFF symbol staging object.
 void WinCOFFWriter::DefineSymbol(const MCSymbol &MCSym, MCAssembler &Assembler,
                                  const MCAsmLayout &Layout) {
-  COFFSymbol *Sym = GetOrCreateCOFFSymbol(&MCSym);
   const MCSymbol *Base = Layout.getBaseSymbol(MCSym);
   COFFSection *Sec = nullptr;
+  MCSectionCOFF *MCSec = nullptr;
   if (Base && Base->getFragment()) {
-    Sec = SectionMap[Base->getFragment()->getParent()];
-    if (Sym->Section && Sym->Section != Sec)
-      report_fatal_error("conflicting sections for symbol");
+    MCSec = cast<MCSectionCOFF>(Base->getFragment()->getParent());
+    Sec = SectionMap[MCSec];
   }
 
+  if (Mode == NonDwoOnly && MCSec && isDwoSection(*MCSec))
+    return;
+
+  COFFSymbol *Sym = GetOrCreateCOFFSymbol(&MCSym);
   COFFSymbol *Local = nullptr;
   if (cast<MCSymbolCOFF>(MCSym).getWeakExternalCharacteristics()) {
     Sym->Data.StorageClass = COFF::IMAGE_SYM_CLASS_WEAK_EXTERNAL;
@@ -1096,9 +1097,10 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm,
   }
 
   // Create the contents of the .llvm_addrsig section.
-  if (Mode != DwoOnly && OWriter.EmitAddrsigSection) {
-    auto Frag = new MCDataFragment(AddrsigSection);
-    Frag->setLayoutOrder(0);
+  if (Mode != DwoOnly && OWriter.getEmitAddrsigSection()) {
+    auto *Sec = Asm.getContext().getCOFFSection(
+        ".llvm_addrsig", COFF::IMAGE_SCN_LNK_REMOVE);
+    auto *Frag = cast<MCDataFragment>(Sec->curFragList()->Head);
     raw_svector_ostream OS(Frag->getContents());
     for (const MCSymbol *S : OWriter.AddrsigSyms) {
       if (!S->isRegistered())
@@ -1117,9 +1119,10 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm,
   }
 
   // Create the contents of the .llvm.call-graph-profile section.
-  if (Mode != DwoOnly && CGProfileSection) {
-    auto *Frag = new MCDataFragment(CGProfileSection);
-    Frag->setLayoutOrder(0);
+  if (Mode != DwoOnly && !Asm.CGProfile.empty()) {
+    auto *Sec = Asm.getContext().getCOFFSection(
+        ".llvm.call-graph-profile", COFF::IMAGE_SCN_LNK_REMOVE);
+    auto *Frag = cast<MCDataFragment>(Sec->curFragList()->Head);
     raw_svector_ostream OS(Frag->getContents());
     for (const MCAssembler::CGProfileEntry &CGPE : Asm.CGProfile) {
       uint32_t FromIndex = CGPE.From->getSymbol().getIndex();
@@ -1207,20 +1210,6 @@ bool WinCOFFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
 
 void WinCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
                                                    const MCAsmLayout &Layout) {
-  if (EmitAddrsigSection) {
-    ObjWriter->AddrsigSection = Asm.getContext().getCOFFSection(
-        ".llvm_addrsig", COFF::IMAGE_SCN_LNK_REMOVE,
-        SectionKind::getMetadata());
-    Asm.registerSection(*ObjWriter->AddrsigSection);
-  }
-
-  if (!Asm.CGProfile.empty()) {
-    ObjWriter->CGProfileSection = Asm.getContext().getCOFFSection(
-        ".llvm.call-graph-profile", COFF::IMAGE_SCN_LNK_REMOVE,
-        SectionKind::getMetadata());
-    Asm.registerSection(*ObjWriter->CGProfileSection);
-  }
-
   ObjWriter->executePostLayoutBinding(Asm, Layout);
   if (DwoWriter)
     DwoWriter->executePostLayoutBinding(Asm, Layout);

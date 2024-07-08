@@ -64,7 +64,7 @@ static cl::opt<bool>
 
 namespace llvm {
 extern cl::opt<InlinerFunctionImportStatsOpts> InlinerFunctionImportStats;
-}
+} // namespace llvm
 
 namespace {
 using namespace llvm::ore;

@@ -296,10 +296,6 @@ def PointerSubChecker : Checker<"PointerSub">,
            "different memory chunks">,
   Documentation<HasDocumentation>;
 
-def SizeofPointerChecker : Checker<"SizeofPtr">,
-  HelpText<"Warn about unintended use of sizeof() on pointer expressions">,
-  Documentation<HasDocumentation>;
-
 def TestAfterDivZeroChecker : Checker<"TestAfterDivZero">,
   HelpText<"Check for division by variable that is later compared against 0. "
            "Either the comparison is useless or there is division by zero.">,

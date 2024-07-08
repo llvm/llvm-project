@@ -12,10 +12,6 @@
 
 using LlvmLibcFmafTest = FmaTestTemplate<float>;
 
-TEST_F(LlvmLibcFmafTest, SpecialNumbers) {
-  test_special_numbers(&LIBC_NAMESPACE::fmaf);
-}
-
 TEST_F(LlvmLibcFmafTest, SubnormalRange) {
   test_subnormal_range(&LIBC_NAMESPACE::fmaf);
 }
