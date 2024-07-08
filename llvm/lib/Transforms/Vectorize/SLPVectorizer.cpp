@@ -2213,6 +2213,27 @@ public:
       return getNumLanes() == 2 || Cnt > 1;
     }
 
+    /// Checks if there is at least single compatible operand in lanes other
+    /// than \p Lane, compatible with the operand \p Op.
+    bool canBeVectorized(Instruction *Op, unsigned OpIdx, unsigned Lane) const {
+      bool OpAPO = getData(OpIdx, Lane).APO;
+      for (unsigned Ln = 0, Lns = getNumLanes(); Ln != Lns; ++Ln) {
+        if (Ln == Lane)
+          continue;
+        if (any_of(seq<unsigned>(getNumOperands()), [&](unsigned OpI) {
+              const OperandData &Data = getData(OpI, Ln);
+              if (Data.APO != OpAPO || Data.IsUsed)
+                return true;
+              Value *OpILn = getValue(OpI, Ln);
+              return (L && L->isLoopInvariant(OpILn)) ||
+                     (getSameOpcode({Op, OpILn}, TLI).getOpcode() &&
+                      Op->getParent() == cast<Instruction>(OpILn)->getParent());
+            }))
+          return true;
+      }
+      return false;
+    }
+
   public:
     /// Initialize with all the operands of the instruction vector \p RootVL.
     VLOperands(ArrayRef<Value *> RootVL, const BoUpSLP &R)
@@ -2268,14 +2289,14 @@ public:
         // side.
         if (isa<LoadInst>(OpLane0))
           ReorderingModes[OpIdx] = ReorderingMode::Load;
-        else if (isa<Instruction>(OpLane0)) {
+        else if (auto *OpILane0 = dyn_cast<Instruction>(OpLane0)) {
           // Check if OpLane0 should be broadcast.
-          if (shouldBroadcast(OpLane0, OpIdx, FirstLane))
+          if (shouldBroadcast(OpLane0, OpIdx, FirstLane) ||
+              !canBeVectorized(OpILane0, OpIdx, FirstLane))
             ReorderingModes[OpIdx] = ReorderingMode::Splat;
           else
             ReorderingModes[OpIdx] = ReorderingMode::Opcode;
-        }
-        else if (isa<Constant>(OpLane0))
+        } else if (isa<Constant>(OpLane0))
           ReorderingModes[OpIdx] = ReorderingMode::Constant;
         else if (isa<Argument>(OpLane0))
           // Our best hope is a Splat. It may save some cost in some cases.
