@@ -3,7 +3,6 @@
 ; DXIL operation sin is not valid in vertex stage
 ; CHECK: LLVM ERROR: vertex : Invalid Shader Stage for DXIL operation - ThreadIdInGroup
 
-target datalayout = "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:32-f64:64-n8:16:32:64"
 target triple = "dxil-pc-shadermodel6.7-vertex"
 
 ; Function Attrs: noinline nounwind optnone

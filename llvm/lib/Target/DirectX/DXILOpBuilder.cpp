@@ -11,7 +11,6 @@
 
 #include "DXILOpBuilder.h"
 #include "DXILConstants.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/DXILABI.h"
@@ -193,12 +192,12 @@ static FunctionType *getDXILOpFunctionType(const OpCodeProperty *Prop,
 
 static int getValidConstraintIndex(const OpCodeProperty *Prop,
                                    const VersionTuple SMVer) {
-  // std::vector Prop->SMConstraints is in ascending order of SM Version
+  // std::vector Prop->Constraints is in ascending order of SM Version
   // Overloads of highest SM version that is not greater than SMVer
   // are the ones that are valid for SMVer.
-  auto Size = Prop->SMConstraints.size();
+  auto Size = Prop->Constraints.size();
   for (int I = Size - 1; I >= 0; I--) {
-    auto OL = Prop->SMConstraints[I];
+    auto OL = Prop->Constraints[I];
     if (VersionTuple(OL.ShaderModelVer.Major, OL.ShaderModelVer.Minor) <=
         SMVer) {
       return I;
@@ -221,10 +220,14 @@ CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode,
                                           SmallVector<Value *> Args) {
   const OpCodeProperty *Prop = getOpCodeProperty(OpCode);
   int Index = getValidConstraintIndex(Prop, SMVer);
-  uint16_t ValidTyMask = Prop->SMConstraints[Index].ValidTys;
+  uint16_t ValidTyMask = Prop->Constraints[Index].ValidTys;
 
   OverloadKind Kind = getOverloadKind(OverloadTy);
-  if ((ValidTyMask & (uint16_t)Kind) == 0) {
+
+  // Check if the operation supports overload types and OverloadTy is valid
+  // per the specified types for the operation
+  if ((ValidTyMask != OverloadKind::UNDEFINED) &&
+      (ValidTyMask & (uint16_t)Kind) == 0) {
     report_fatal_error(
         StringRef(std::string("Invalid Overload Type for DXIL operation - ")
                       .append(getOpCodeName((OpCode)))),
@@ -233,7 +236,7 @@ CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode,
 
   // Perform necessary checks to ensure Opcode is valid in the targeted shader
   // kind
-  uint16_t ValidShaderKindMask = Prop->SMConstraints[Index].ValidShaderKinds;
+  uint16_t ValidShaderKindMask = Prop->Constraints[Index].ValidShaderKinds;
   ShaderKind ModuleStagekind = getShaderkKindEnum(StageKind);
 
   // Ensure valid shader stage constraints are specified
@@ -279,45 +282,14 @@ CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode,
   return B.CreateCall(DXILFn, Args);
 }
 
-Type *DXILOpBuilder::getOverloadTy(dxil::OpCode OpCode, VersionTuple SMVer,
-                                   FunctionType *FT) {
+Type *DXILOpBuilder::getOverloadType(dxil::OpCode OpCode, VersionTuple SMVer,
+                                     FunctionType *FT) {
 
   const OpCodeProperty *Prop = getOpCodeProperty(OpCode);
   // If DXIL Op has no overload parameter, just return the
   // precise return type specified.
   if (Prop->OverloadParamIndex < 0) {
-    auto &Ctx = FT->getContext();
-    int Index = getValidConstraintIndex(Prop, SMVer);
-    uint16_t ValidTyMask = Prop->SMConstraints[Index].ValidTys;
-
-    if (ValidTyMask == 0) {
-      report_fatal_error(StringRef(SMVer.getAsString().append(
-                             ": Unhandled Shader Model Version")),
-                         /*gen_crash_diag*/ false);
-    }
-    switch (ValidTyMask) {
-    case OverloadKind::VOID:
-      return Type::getVoidTy(Ctx);
-    case OverloadKind::HALF:
-      return Type::getHalfTy(Ctx);
-    case OverloadKind::FLOAT:
-      return Type::getFloatTy(Ctx);
-    case OverloadKind::DOUBLE:
-      return Type::getDoubleTy(Ctx);
-    case OverloadKind::I1:
-      return Type::getInt1Ty(Ctx);
-    case OverloadKind::I8:
-      return Type::getInt8Ty(Ctx);
-    case OverloadKind::I16:
-      return Type::getInt16Ty(Ctx);
-    case OverloadKind::I32:
-      return Type::getInt32Ty(Ctx);
-    case OverloadKind::I64:
-      return Type::getInt64Ty(Ctx);
-    default:
-      llvm_unreachable("invalid overload type");
-      return nullptr;
-    }
+    return FT->getReturnType();
   }
 
   // Consider FT->getReturnType() as default overload type, unless

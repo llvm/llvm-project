@@ -40,10 +40,8 @@ struct DXILOperationDesc {
   StringRef Doc;      // the documentation description of this instruction
   // Vector of operand type records - return type is at index 0
   SmallVector<Record *> OpTypes;
-  // Vector of fixed types valid for operation overloads
-  // SmallVector<Record *> OpOverloads;
-  // Vector of constraints based on Shader Model version
-  SmallVector<Record *> SMConstraints;
+  // Vector of operation constraint records
+  SmallVector<Record *> Constraints;
   SmallVector<std::string>
       OpAttributes;     // operation attribute represented as strings
   StringRef Intrinsic;  // The llvm intrinsic map to OpName. Default is "" which
@@ -102,13 +100,13 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
 
   Doc = R->getValueAsString("Doc");
   SmallVector<Record *> ParamTypeRecs;
-  DagInit *OutDag = R->getValueAsDag("result");
-  for (const Init *Arg : OutDag->getArgs()) {
-    ParamTypeRecs.push_back(cast<DefInit>(Arg)->getDef());
+  std::vector<Record *> RetTys = R->getValueAsListOfDefs("result");
+  for (auto Ty : RetTys) {
+    ParamTypeRecs.push_back(Ty);
   }
-  DagInit *InDag = R->getValueAsDag("arguments");
-  for (const Init *Arg : InDag->getArgs()) {
-    ParamTypeRecs.push_back(cast<DefInit>(Arg)->getDef());
+  std::vector<Record *> ArgTys = R->getValueAsListOfDefs("arguments");
+  for (auto Ty : ArgTys) {
+    ParamTypeRecs.push_back(Ty);
   }
   unsigned ParamTypeRecsSize = ParamTypeRecs.size();
   // Populate OpTypes with return type and parameter types
@@ -166,48 +164,58 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
            "Multiple overload type specification not supported");
     OverloadParamIndex = OverloadParamIndices[0];
   }
-
-  // Get Shader Model Constraint Records
-  std::vector<Record *> SMConstrintRecs =
-      R->getValueAsListOfDefs("sm_constraints");
+  // Get Constraint Records
+  std::vector<Record *> ConstrintRecs =
+      R->getValueAsListOfDefs("constraints");
 
   // Sort records in ascending order of Shader Model version
-  std::sort(SMConstrintRecs.begin(), SMConstrintRecs.end(),
+  std::sort(ConstrintRecs.begin(), ConstrintRecs.end(),
             [](Record *RecA, Record *RecB) {
               unsigned RecAMaj =
-                  RecA->getValueAsDef("sm_version")->getValueAsInt("Major");
+                  RecA->getValueAsDef("pred")->getValueAsDef("sm_version")->getValueAsInt("Major");
               unsigned RecAMin =
-                  RecA->getValueAsDef("sm_version")->getValueAsInt("Minor");
+                  RecA->getValueAsDef("pred")->getValueAsDef("sm_version")->getValueAsInt("Minor");
               unsigned RecBMaj =
-                  RecB->getValueAsDef("sm_version")->getValueAsInt("Major");
+                  RecB->getValueAsDef("pred")->getValueAsDef("sm_version")->getValueAsInt("Major");
               unsigned RecBMin =
-                  RecB->getValueAsDef("sm_version")->getValueAsInt("Minor");
+                  RecB->getValueAsDef("pred")->getValueAsDef("sm_version")->getValueAsInt("Minor");
 
               return (VersionTuple(RecAMaj, RecAMin) <
                       VersionTuple(RecBMaj, RecBMin));
             });
 
-  for (Record *SMCR : SMConstrintRecs) {
-    SMConstraints.push_back(SMCR);
+  for (Record *CR : ConstrintRecs) {
+    Constraints.push_back(CR);
   }
 
   // Get the operation class
   OpClass = R->getValueAsDef("OpClass")->getName();
 
-  if (R->getValue("LLVMIntrinsic")) {
-    auto *IntrinsicDef = R->getValueAsDef("LLVMIntrinsic");
-    auto DefName = IntrinsicDef->getName();
-    assert(DefName.starts_with("int_") && "invalid intrinsic name");
-    // Remove the int_ from intrinsic name.
-    Intrinsic = DefName.substr(4);
-    // TODO: For now, assume that attributes of DXIL Operation are the same as
-    // that of the intrinsic. Deviations are expected to be encoded in TableGen
-    // record specification and handled accordingly here. Support to be added
-    // as needed.
-    ListInit *IntrPropList = IntrinsicDef->getValueAsListInit("IntrProperties");
-    auto IntrPropListSize = IntrPropList->size();
-    for (unsigned I = 0; I < IntrPropListSize; I++) {
-      OpAttributes.emplace_back(IntrPropList->getElement(I)->getAsString());
+  if (!OpClass.str().compare("UnknownOpClass")) {
+    report_fatal_error(
+        StringRef(std::string("Unspecified DXIL OpClass for DXIL operation - ")
+                      .append(OpName)),
+        /* gen_crash_diag=*/false);
+  }
+
+  const RecordVal *RV = R->getValue("LLVMIntrinsic");
+  if (RV && RV->getValue()) {
+    if (DefInit *DI = dyn_cast<DefInit>(RV->getValue())) {
+      auto *IntrinsicDef = DI->getDef();
+      auto DefName = IntrinsicDef->getName();
+      assert(DefName.starts_with("int_") && "invalid intrinsic name");
+      // Remove the int_ from intrinsic name.
+      Intrinsic = DefName.substr(4);
+      // TODO: For now, assume that attributes of DXIL Operation are the same as
+      // that of the intrinsic. Deviations are expected to be encoded in
+      // TableGen record specification and handled accordingly here. Support to
+      // be added as needed.
+      ListInit *IntrPropList =
+          IntrinsicDef->getValueAsListInit("IntrProperties");
+      auto IntrPropListSize = IntrPropList->size();
+      for (unsigned I = 0; I < IntrPropListSize; I++) {
+        OpAttributes.emplace_back(IntrPropList->getElement(I)->getAsString());
+      }
     }
   }
 }
@@ -279,47 +287,79 @@ static std::string getOverloadKindStr(const Record *R) {
   }
 }
 
-/// Return a string representation of OverloadKind enum that maps to
-/// input LLVMType record
+/// Return a string representation of constraints specified for the DXIL
+/// Operation
+//
 /// \param Recs A vector of records of TableGen class type DXILShaderModel
 /// \return std::string string representation of OverloadKind
 static std::string
-getOverloadKindStrsFromConstraint(const SmallVector<Record *> Recs) {
-  std::string OverloadString = "";
+getConstraintString(const SmallVector<Record *> Recs) {
+  std::string ConstraintString = "";
   std::string Prefix = "";
-  OverloadString.append("{");
-  for (auto SMConstrRec : Recs) {
-    OverloadString.append(Prefix).append("{");
+  ConstraintString.append("{{");
+  // If no constraints were specified, assume the operation
+  // a) to be supported in SM 6.0 and later
+  // b) has no overload types
+  // c) is supported in all shader stage kinds
+  if (Recs.empty()) {
+    ConstraintString.append("{6, 0}, OverloadKind::UNDEFINED, ShaderKind::allKinds}");
+  }
+  for (auto ConstrRec : Recs) {
+    auto SMConstrRec = ConstrRec->getValueAsDef("pred");
     unsigned Major =
         SMConstrRec->getValueAsDef("sm_version")->getValueAsInt("Major");
     unsigned Minor =
         SMConstrRec->getValueAsDef("sm_version")->getValueAsInt("Minor");
-    OverloadString.append("{")
+    ConstraintString.append("{")
         .append(std::to_string(Major))
         .append(", ")
         .append(std::to_string(Minor).append("}, "));
-    auto OvDag = SMConstrRec->getValueAsDag("overload_types");
-    std::string PipePrefix = "";
-    for (const Init *Arg : OvDag->getArgs()) {
-      OverloadString.append(PipePrefix)
-          .append(getOverloadKindStr(cast<DefInit>(Arg)->getDef()));
-      PipePrefix = " | ";
+
+    auto ConstraintList = ConstrRec->getValueAsListOfDefs("constraints");
+    std::string OverloadMaskString = "";
+    std::string StageMaskString = "";
+    for (auto Constr : ConstraintList) {
+      // All Constraints are specified as anonymous records.
+      assert(Constr->isAnonymous() && "Constraint Specification Record expected to be anonymous");
+      // Generate Overload mask for constraint of class Overloads
+      if (!Constr->getType()->getAsString().compare("Overloads")) {
+        std::string PipePrefix = "";
+        auto OLTys = Constr->getValueAsListOfDefs("overload_types");
+        if (OLTys.empty()) {
+          OverloadMaskString.append("OverloadKind::UNDEFINED");
+        }
+        for (const auto *Ty : OLTys) {
+          OverloadMaskString.append(PipePrefix).append(getOverloadKindStr(Ty));
+          PipePrefix = " | ";
+        }
+      }
+      // Generate Shader Kind mask from Shader Stages constraints
+      if (!Constr->getType()->getAsString().compare("Stages")) {
+        std::string PipePrefix = "";
+        auto Stages = Constr->getValueAsListOfDefs("stage_kinds");
+        if (Stages.empty()) {
+          StageMaskString.append("ShaderKind::allKinds");
+        }
+        for (const auto *S : Stages) {
+          StageMaskString.append(PipePrefix).append("ShaderKind::").append(S->getName());
+          PipePrefix = " | ";
+        }
+      }
     }
-    // Shader Kind mask
-    OverloadString.append(", ");
-    auto SKDag = SMConstrRec->getValueAsDag("stage_kinds");
-    PipePrefix = "";
-    for (const Init *Arg : SKDag->getArgs()) {
-      OverloadString.append(PipePrefix)
-          .append(" ShaderKind::")
-          .append(cast<DefInit>(Arg)->getDef()->getName());
-      PipePrefix = " | ";
+    if (OverloadMaskString.empty()) {
+      OverloadMaskString.append(" OverloadKind::UNDEFINED ");
     }
-    OverloadString.append("}");
-    Prefix = ", ";
+    if (StageMaskString.empty()) {
+      StageMaskString.append(" ShaderKind::allKinds ");
+    }
+
+    ConstraintString.append(OverloadMaskString)
+        .append(", ")
+        .append(StageMaskString);
+    ConstraintString.append("}");
   }
-  OverloadString.append("}");
-  return OverloadString;
+  ConstraintString.append("}");
+  return ConstraintString;
 }
 
 /// Emit Enums of DXIL Ops
@@ -448,6 +488,7 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
   // code.
   unsigned TypeSz = PowerOf2Ceil(OverloadKindList.size());
   OS << "enum OverloadKind : uint" << TypeSz << "_t {\n";
+  OS << "    UNDEFINED = 0,\n";
   int shiftVal = 1;
   for (auto TyStr : OverloadKindList) {
     OS << "    " << TyStr << " = 1 << " << shiftVal++ << ",\n";
@@ -461,9 +502,9 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
             unsigned Minor = 0; \n \
           };\n\n";
 
-  // Emit struct SMConstraints that encapsulates overload and shader kind
+  // Emit struct Constraints that encapsulates overload and shader kind
   // constraints predicated on shader model version, if any.
-  OS << "struct OpSMConstraints { \n \
+  OS << "struct OpConstraints { \n \
             Version ShaderModelVer; \n \
             uint16_t ValidTys; \n \
             uint16_t ValidShaderKinds; \n \
@@ -477,7 +518,7 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
             dxil::OpCodeClass OpCodeClass; \n \
             // Offset in DXILOpCodeClassNameTable. \n \
             unsigned OpCodeClassNameOffset; \n \
-            std::vector<OpSMConstraints> SMConstraints; \n \
+            std::vector<OpConstraints> Constraints; \n \
             llvm::Attribute::AttrKind FuncAttr; \n \
             int OverloadParamIndex;        // parameter index which control the overload. \n \
                                            // When < 0, should be only 1 overload type. \n \
@@ -505,12 +546,13 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
     case OverloadKind::I64:  \n \
       return \"i64\";  \n \
     case OverloadKind::VOID:  \n \
+    case OverloadKind::UNDEFINED:  \n \
+      return \"void\";  \n \
     case OverloadKind::ObjectType: \n \
     case OverloadKind::UserDefinedType: \n \
       break; \n \
     } \n \
     llvm_unreachable(\"invalid overload type for name\"); \n \
-    return \"void\"; \n \
   }\n\n";
 
   // Emit access function getOpcodeProperty() that embeds DXIL Operation table
@@ -533,12 +575,14 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
     }
     OS << Prefix << "  { dxil::OpCode::" << Op.OpName << ", "
        << OpStrings.get(Op.OpName) << ", OpCodeClass::" << Op.OpClass << ", "
-       << OpClassStrings.get(Op.OpClass.data()) << ", "
-       << getOverloadKindStrsFromConstraint(Op.SMConstraints) << ", "
+       << OpClassStrings.get(Op.OpClass.data())
+       << ", "
+       << getConstraintString(Op.Constraints) << ", "
        << emitDXILOperationAttr(Op.OpAttributes) << ", "
        << Op.OverloadParamIndex << ", " << Op.OpTypes.size() - 1 << ", "
-       << Parameters.get(ParameterMap[Op.OpClass]) << " }\n";
-    Prefix = ",";
+       << Parameters.get(ParameterMap[Op.OpClass]) << " }";
+    Prefix = ",\n";
+    // OS << "\n// " << getConstraintString(Op.Constraints) << "\n";
   }
   OS << "  };\n";
 

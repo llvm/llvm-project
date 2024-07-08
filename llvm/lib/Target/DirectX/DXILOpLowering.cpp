@@ -78,7 +78,7 @@ static void lowerIntrinsic(dxil::OpCode DXILOp, Function &F, Module &M,
                            VersionTuple SMVer, StringRef StageKind) {
   IRBuilder<> B(M.getContext());
   DXILOpBuilder DXILB(M, B);
-  Type *OverloadTy = DXILB.getOverloadTy(DXILOp, SMVer, F.getFunctionType());
+  Type *OverloadTy = DXILB.getOverloadType(DXILOp, SMVer, F.getFunctionType());
   for (User *U : make_early_inc_range(F.users())) {
     CallInst *CI = dyn_cast<CallInst>(U);
     if (!CI)
