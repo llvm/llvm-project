@@ -365,13 +365,23 @@ bool LiveRegOptimizer::optimizeLiveType(
       else
         MissingIncVal = true;
     }
-    Instruction *DeadInst = Phi;
     if (MissingIncVal) {
-      DeadInst = cast<Instruction>(ValMap[Phi]);
-      // Do not use the dead phi
-      ValMap.erase(Phi);
-    }
-    DeadInsts.emplace_back(DeadInst);
+      Value *DeadVal = ValMap[Phi];
+      // The coercion chain of the PHI is broken. Delete the Phi
+      // from the ValMap and any connected / user Phis.
+      SmallVector<Value *, 4> PHIWorklist;
+      PHIWorklist.push_back(DeadVal);
+      while (!PHIWorklist.empty()) {
+        Value *NextDeadValue = PHIWorklist.pop_back_val();
+        for (User *U : cast<Instruction>(NextDeadValue)->users()) {
+          assert(isa<PHINode>(U));
+          PHIWorklist.push_back(U);
+        }
+        ValMap.erase(NextDeadValue);
+        DeadInsts.emplace_back(cast<Instruction>(NextDeadValue));
+      }
+    } else
+      DeadInsts.emplace_back(cast<Instruction>(Phi));
   }
   // Coerce back to the original type and replace the uses.
   for (Instruction *U : Uses) {
