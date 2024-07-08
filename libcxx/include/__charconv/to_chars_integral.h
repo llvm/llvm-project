@@ -274,6 +274,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int __to_chars_integral_widt
 template <typename _Tp>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
 __to_chars_integral(char* __first, char* __last, _Tp __value, int __base, false_type) {
+# ifndef _LIBCPP_CHARCONV_OPTIMIZE_SIZE
   if (__base == 10) [[likely]]
     return std::__to_chars_itoa(__first, __last, __value, false_type());
 
@@ -285,6 +286,7 @@ __to_chars_integral(char* __first, char* __last, _Tp __value, int __base, false_
   case 16:
     return std::__to_chars_integral<16>(__first, __last, __value);
   }
+# endif
 
   ptrdiff_t __cap = __last - __first;
   int __n         = std::__to_chars_integral_width(__value, __base);
@@ -306,7 +308,12 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
 to_chars(char* __first, char* __last, _Tp __value) {
   using _Type = __make_32_64_or_128_bit_t<_Tp>;
   static_assert(!is_same<_Type, void>::value, "unsupported integral type used in to_chars");
+
+# ifdef _LIBCPP_CHARCONV_OPTIMIZE_SIZE
+  return std::__to_chars_integral(__first, __last, static_cast<_Type>(__value), 10, is_signed<_Tp>());
+# else
   return std::__to_chars_itoa(__first, __last, static_cast<_Type>(__value), is_signed<_Tp>());
+# endif
 }
 
 template <typename _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
