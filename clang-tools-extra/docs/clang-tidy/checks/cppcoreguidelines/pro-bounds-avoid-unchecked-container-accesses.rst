@@ -22,7 +22,7 @@ will generate a warning but
 will not.
 
 The classes ``std::map``, ``std::unordered_map`` and ``std::flat_map`` are
-excluded from this check, because for them the subscript operator has a defined
+excluded from this check, because their subscript operator has a defined
 behaviour when a key does not exist (inserting a new element).
 
 This check enforces part of the `SL.con.3
