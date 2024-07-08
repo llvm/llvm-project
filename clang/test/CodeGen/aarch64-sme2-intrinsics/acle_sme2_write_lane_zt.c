@@ -209,193 +209,193 @@ void test_write_lane_zt_f64_1(svfloat64_t v) __arm_streaming __arm_inout("zt0") 
 
 //ALIAS
 // CHECK-LABEL: define dso_local void @test_write_zt_u8(
-// CHECK-SAME: <vscale x 16 x i8> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: <vscale x 16 x i8> [[V:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv16i8(i32 0, <vscale x 16 x i8> [[V]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z16test_write_zt_u8u11__SVUint8_t(
-// CHECK-CXX-SAME: <vscale x 16 x i8> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-SAME: <vscale x 16 x i8> [[V:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
 // CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv16i8(i32 0, <vscale x 16 x i8> [[V]])
 // CHECK-CXX-NEXT:    ret void
 //
-void test_write_zt_u8(svuint8_t v) __arm_streaming __arm_inout("zt0") {
+void test_write_zt_u8(svuint8_t v) __arm_streaming __arm_out("zt0") {
   SVE_ACLE_FUNC(svwrite_zt, _u8)(0, v);
 }
 
 // CHECK-LABEL: define dso_local void @test_write_zt_s8(
-// CHECK-SAME: <vscale x 16 x i8> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: <vscale x 16 x i8> [[V:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv16i8(i32 0, <vscale x 16 x i8> [[V]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z16test_write_zt_s8u10__SVInt8_t(
-// CHECK-CXX-SAME: <vscale x 16 x i8> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-SAME: <vscale x 16 x i8> [[V:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
 // CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv16i8(i32 0, <vscale x 16 x i8> [[V]])
 // CHECK-CXX-NEXT:    ret void
 //
-void test_write_zt_s8(svint8_t v) __arm_streaming __arm_inout("zt0") {
+void test_write_zt_s8(svint8_t v) __arm_streaming __arm_out("zt0") {
   SVE_ACLE_FUNC(svwrite_zt, _s8)(0, v);
 }
 
 // CHECK-LABEL: define dso_local void @test_write_zt_u16(
-// CHECK-SAME: <vscale x 8 x i16> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: <vscale x 8 x i16> [[V:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv8i16(i32 0, <vscale x 8 x i16> [[V]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z17test_write_zt_u16u12__SVUint16_t(
-// CHECK-CXX-SAME: <vscale x 8 x i16> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-SAME: <vscale x 8 x i16> [[V:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
 // CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv8i16(i32 0, <vscale x 8 x i16> [[V]])
 // CHECK-CXX-NEXT:    ret void
 //
-void test_write_zt_u16(svuint16_t v) __arm_streaming __arm_inout("zt0") {
+void test_write_zt_u16(svuint16_t v) __arm_streaming __arm_out("zt0") {
   SVE_ACLE_FUNC(svwrite_zt, _u16)(0, v);
 }
 
 // CHECK-LABEL: define dso_local void @test_write_zt_s16(
-// CHECK-SAME: <vscale x 8 x i16> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: <vscale x 8 x i16> [[V:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv8i16(i32 0, <vscale x 8 x i16> [[V]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z17test_write_zt_s16u11__SVInt16_t(
-// CHECK-CXX-SAME: <vscale x 8 x i16> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-SAME: <vscale x 8 x i16> [[V:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
 // CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv8i16(i32 0, <vscale x 8 x i16> [[V]])
 // CHECK-CXX-NEXT:    ret void
 //
-void test_write_zt_s16(svint16_t v) __arm_streaming __arm_inout("zt0") {
+void test_write_zt_s16(svint16_t v) __arm_streaming __arm_out("zt0") {
   SVE_ACLE_FUNC(svwrite_zt, _s16)(0, v);
 }
 
 // CHECK-LABEL: define dso_local void @test_write_zt_u32(
-// CHECK-SAME: <vscale x 4 x i32> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: <vscale x 4 x i32> [[V:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv4i32(i32 0, <vscale x 4 x i32> [[V]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z17test_write_zt_u32u12__SVUint32_t(
-// CHECK-CXX-SAME: <vscale x 4 x i32> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-SAME: <vscale x 4 x i32> [[V:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
 // CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv4i32(i32 0, <vscale x 4 x i32> [[V]])
 // CHECK-CXX-NEXT:    ret void
 //
-void test_write_zt_u32(svuint32_t v) __arm_streaming __arm_inout("zt0") {
+void test_write_zt_u32(svuint32_t v) __arm_streaming __arm_out("zt0") {
   SVE_ACLE_FUNC(svwrite_zt, _u32)(0, v);
 }
 
 // CHECK-LABEL: define dso_local void @test_write_zt_s32(
-// CHECK-SAME: <vscale x 4 x i32> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: <vscale x 4 x i32> [[V:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv4i32(i32 0, <vscale x 4 x i32> [[V]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z17test_write_zt_s32u11__SVInt32_t(
-// CHECK-CXX-SAME: <vscale x 4 x i32> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-SAME: <vscale x 4 x i32> [[V:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
 // CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv4i32(i32 0, <vscale x 4 x i32> [[V]])
 // CHECK-CXX-NEXT:    ret void
 //
-void test_write_zt_s32(svint32_t v) __arm_streaming __arm_inout("zt0") {
+void test_write_zt_s32(svint32_t v) __arm_streaming __arm_out("zt0") {
   SVE_ACLE_FUNC(svwrite_zt, _s32)(0, v);
 }
 
 // CHECK-LABEL: define dso_local void @test_write_zt_u64(
-// CHECK-SAME: <vscale x 2 x i64> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: <vscale x 2 x i64> [[V:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv2i64(i32 0, <vscale x 2 x i64> [[V]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z17test_write_zt_u64u12__SVUint64_t(
-// CHECK-CXX-SAME: <vscale x 2 x i64> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-SAME: <vscale x 2 x i64> [[V:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
 // CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv2i64(i32 0, <vscale x 2 x i64> [[V]])
 // CHECK-CXX-NEXT:    ret void
 //
-void test_write_zt_u64(svuint64_t v) __arm_streaming __arm_inout("zt0") {
+void test_write_zt_u64(svuint64_t v) __arm_streaming __arm_out("zt0") {
   SVE_ACLE_FUNC(svwrite_zt, _u64)(0, v);
 }
 
 // CHECK-LABEL: define dso_local void @test_write_zt_s64(
-// CHECK-SAME: <vscale x 2 x i64> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: <vscale x 2 x i64> [[V:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv2i64(i32 0, <vscale x 2 x i64> [[V]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z17test_write_zt_s64u11__SVInt64_t(
-// CHECK-CXX-SAME: <vscale x 2 x i64> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-SAME: <vscale x 2 x i64> [[V:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
 // CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv2i64(i32 0, <vscale x 2 x i64> [[V]])
 // CHECK-CXX-NEXT:    ret void
 //
-void test_write_zt_s64(svint64_t v) __arm_streaming __arm_inout("zt0") {
+void test_write_zt_s64(svint64_t v) __arm_streaming __arm_out("zt0") {
   SVE_ACLE_FUNC(svwrite_zt, _s64)(0, v);
 }
 
 // CHECK-LABEL: define dso_local void @test_write_zt_f16(
-// CHECK-SAME: <vscale x 8 x half> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: <vscale x 8 x half> [[V:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv8f16(i32 0, <vscale x 8 x half> [[V]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z17test_write_zt_f16u13__SVFloat16_t(
-// CHECK-CXX-SAME: <vscale x 8 x half> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-SAME: <vscale x 8 x half> [[V:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
 // CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv8f16(i32 0, <vscale x 8 x half> [[V]])
 // CHECK-CXX-NEXT:    ret void
 //
-void test_write_zt_f16(svfloat16_t v) __arm_streaming __arm_inout("zt0") {
+void test_write_zt_f16(svfloat16_t v) __arm_streaming __arm_out("zt0") {
   SVE_ACLE_FUNC(svwrite_zt, _f16)(0, v);
 }
 
 // CHECK-LABEL: define dso_local void @test_write_zt_bf16(
-// CHECK-SAME: <vscale x 8 x bfloat> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: <vscale x 8 x bfloat> [[V:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv8bf16(i32 0, <vscale x 8 x bfloat> [[V]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z18test_write_zt_bf16u14__SVBfloat16_t(
-// CHECK-CXX-SAME: <vscale x 8 x bfloat> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-SAME: <vscale x 8 x bfloat> [[V:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
 // CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv8bf16(i32 0, <vscale x 8 x bfloat> [[V]])
 // CHECK-CXX-NEXT:    ret void
 //
-void test_write_zt_bf16(svbfloat16_t v) __arm_streaming __arm_inout("zt0") {
+void test_write_zt_bf16(svbfloat16_t v) __arm_streaming __arm_out("zt0") {
   SVE_ACLE_FUNC(svwrite_zt, _bf16)(0, v);
 }
 
 // CHECK-LABEL: define dso_local void @test_write_zt_f32(
-// CHECK-SAME: <vscale x 4 x float> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: <vscale x 4 x float> [[V:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv4f32(i32 0, <vscale x 4 x float> [[V]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z17test_write_zt_f32u13__SVFloat32_t(
-// CHECK-CXX-SAME: <vscale x 4 x float> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-SAME: <vscale x 4 x float> [[V:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
 // CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv4f32(i32 0, <vscale x 4 x float> [[V]])
 // CHECK-CXX-NEXT:    ret void
 //
-void test_write_zt_f32(svfloat32_t v) __arm_streaming __arm_inout("zt0") {
+void test_write_zt_f32(svfloat32_t v) __arm_streaming __arm_out("zt0") {
   SVE_ACLE_FUNC(svwrite_zt, _f32)(0, v);
 }
 
 // CHECK-LABEL: define dso_local void @test_write__zt_f64(
-// CHECK-SAME: <vscale x 2 x double> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: <vscale x 2 x double> [[V:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv2f64(i32 0, <vscale x 2 x double> [[V]])
 // CHECK-NEXT:    ret void
 //
 // CHECK-CXX-LABEL: define dso_local void @_Z18test_write__zt_f64u13__SVFloat64_t(
-// CHECK-CXX-SAME: <vscale x 2 x double> [[V:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-CXX-SAME: <vscale x 2 x double> [[V:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-CXX-NEXT:  [[ENTRY:.*:]]
 // CHECK-CXX-NEXT:    tail call void @llvm.aarch64.sme.write.zt.nxv2f64(i32 0, <vscale x 2 x double> [[V]])
 // CHECK-CXX-NEXT:    ret void
 //
-void test_write__zt_f64(svfloat64_t v) __arm_streaming __arm_inout("zt0") {
+void test_write__zt_f64(svfloat64_t v) __arm_streaming __arm_out("zt0") {
   SVE_ACLE_FUNC(svwrite_zt, _f64)(0, v);
 }
