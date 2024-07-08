@@ -78,7 +78,7 @@ void ExtFOnFloat8RewritePattern::rewrite(arith::ExtFOp op,
   Location loc = op.getLoc();
   Value in = op.getIn();
   Type outElemType = getElementTypeOrSelf(op.getOut().getType());
-  auto inType = dyn_cast<VectorType>(in.getType());
+  auto inType = dyn_cast<ShapedType>(in.getType());
   if (!inType) {
     Value asFloat = rewriter.create<amdgpu::ExtPackedFp8Op>(
         loc, rewriter.getF32Type(), in, 0);
@@ -99,13 +99,12 @@ void ExtFOnFloat8RewritePattern::rewrite(arith::ExtFOp op,
     return rewriter.replaceOp(op, result);
   }
 
-  VectorType flatTy =
-      VectorType::get(SmallVector<int64_t>{numElements}, outElemType);
+  ShapedType outType = cast<ShapedType>(op.getOut().getType());
+  ShapedType flatTy = outType.clone(SmallVector<int64_t>{numElements});
   Value result = rewriter.createOrFold<vector::SplatOp>(loc, flatTy, zero);
 
-  if (inType.getShape().size() > 1) {
-    inType = VectorType::get(SmallVector<int64_t>{numElements},
-                             inType.getElementType());
+  if (inType.getRank() > 1) {
+    inType = inType.clone(SmallVector<int64_t>{numElements});
     in = rewriter.create<vector::ShapeCastOp>(loc, inType, in);
   }
 
@@ -121,8 +120,7 @@ void ExtFOnFloat8RewritePattern::rewrite(arith::ExtFOp op,
     }
   }
 
-  VectorType outType = cast<VectorType>(op.getOut().getType());
-  if (inType.getShape().size() != outType.getShape().size()) {
+  if (inType.getRank() != outType.getRank()) {
     result = rewriter.create<vector::ShapeCastOp>(loc, outType, result);
   }
 
@@ -210,7 +208,7 @@ void TruncFToFloat8RewritePattern::rewrite(arith::TruncFOp op,
   Type outElemType = getElementTypeOrSelf(op.getOut().getType());
   if (saturateFP8)
     in = clampInput(rewriter, loc, outElemType, in);
-  auto inVectorTy = dyn_cast<VectorType>(in.getType());
+  auto inVectorTy = dyn_cast<ShapedType>(in.getType());
   VectorType truncResType = VectorType::get(4, outElemType);
   if (!inVectorTy) {
     Value asFloat = castToF32(in, loc, rewriter);
@@ -220,7 +218,7 @@ void TruncFToFloat8RewritePattern::rewrite(arith::TruncFOp op,
     Value result = rewriter.create<vector::ExtractOp>(loc, asF8s, 0);
     return rewriter.replaceOp(op, result);
   }
-  VectorType outType = cast<VectorType>(op.getOut().getType());
+  ShapedType outType = cast<ShapedType>(op.getOut().getType());
   int64_t numElements = outType.getNumElements();
   Value zero = rewriter.create<arith::ConstantOp>(
       loc, outElemType, rewriter.getFloatAttr(outElemType, 0.0));
@@ -235,13 +233,11 @@ void TruncFToFloat8RewritePattern::rewrite(arith::TruncFOp op,
     return rewriter.replaceOp(op, result);
   }
 
-  VectorType flatTy =
-      VectorType::get(SmallVector<int64_t>{numElements}, outElemType);
+  ShapedType flatTy = outType.clone(SmallVector<int64_t>{numElements});
   Value result = rewriter.createOrFold<vector::SplatOp>(loc, flatTy, zero);
 
-  if (inVectorTy.getShape().size() > 1) {
-    inVectorTy = VectorType::get(SmallVector<int64_t>{numElements},
-                                 inVectorTy.getElementType());
+  if (inVectorTy.getRank() > 1) {
+    inVectorTy = inVectorTy.clone(SmallVector<int64_t>{numElements});
     in = rewriter.create<vector::ShapeCastOp>(loc, inVectorTy, in);
   }
 
@@ -266,7 +262,7 @@ void TruncFToFloat8RewritePattern::rewrite(arith::TruncFOp op,
                                                            result, i, 1);
   }
 
-  if (inVectorTy.getShape().size() != outType.getShape().size()) {
+  if (inVectorTy.getRank() != outType.getRank()) {
     result = rewriter.create<vector::ShapeCastOp>(loc, outType, result);
   }
 
