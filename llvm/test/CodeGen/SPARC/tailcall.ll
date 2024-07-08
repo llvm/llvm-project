@@ -78,10 +78,9 @@ define void @caller_extern(ptr %src) optsize #0 {
 ; V8-LABEL: caller_extern:
 ; V8:       ! %bb.0: ! %entry
 ; V8-NEXT:    sethi %hi(dest), %o1
-; V8-NEXT:    add %o1, %lo(dest), %o1
-; V8-NEXT:    mov 7, %o2
 ; V8-NEXT:    mov %o0, %o3
-; V8-NEXT:    mov %o1, %o0
+; V8-NEXT:    add %o1, %lo(dest), %o0
+; V8-NEXT:    mov 7, %o2
 ; V8-NEXT:    mov %o3, %o1
 ; V8-NEXT:    mov %o7, %g1
 ; V8-NEXT:    call memcpy
@@ -92,10 +91,9 @@ define void @caller_extern(ptr %src) optsize #0 {
 ; V9-NEXT:    sethi %h44(dest), %o1
 ; V9-NEXT:    add %o1, %m44(dest), %o1
 ; V9-NEXT:    sllx %o1, 12, %o1
-; V9-NEXT:    add %o1, %l44(dest), %o1
-; V9-NEXT:    mov 7, %o2
 ; V9-NEXT:    mov %o0, %o3
-; V9-NEXT:    mov %o1, %o0
+; V9-NEXT:    add %o1, %l44(dest), %o0
+; V9-NEXT:    mov 7, %o2
 ; V9-NEXT:    mov %o3, %o1
 ; V9-NEXT:    mov %o7, %g1
 ; V9-NEXT:    call memcpy

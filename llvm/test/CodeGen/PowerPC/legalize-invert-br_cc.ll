@@ -13,9 +13,8 @@ define void @test_fcmpueq_legalize_br_cc_with_invert(float %a) {
 ; CHECK-NEXT:  .LBB0_1: # %l1
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    efscmplt 7, 3, 4
-; CHECK-NEXT:    efscmpgt 0, 3, 4
 ; CHECK-NEXT:    mfcr 5 # cr7
-; CHECK-NEXT:    mcrf 7, 0
+; CHECK-NEXT:    efscmpgt 7, 3, 4
 ; CHECK-NEXT:    mfcr 6 # cr7
 ; CHECK-NEXT:    rlwinm 5, 5, 30, 31, 31
 ; CHECK-NEXT:    rlwinm 6, 6, 30, 31, 31

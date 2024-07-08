@@ -34,8 +34,7 @@ define void @cos_f64(ptr %arg) {
 ; CHECK-AIX-NEXT:    nop
 ; CHECK-AIX-NEXT:    lwz 3, L..C0(2) # %const.0
 ; CHECK-AIX-NEXT:    fmr 31, 1
-; CHECK-AIX-NEXT:    lfs 0, 0(3)
-; CHECK-AIX-NEXT:    fmr 1, 0
+; CHECK-AIX-NEXT:    lfs 1, 0(3)
 ; CHECK-AIX-NEXT:    bl .__xl_cos[PR]
 ; CHECK-AIX-NEXT:    nop
 ; CHECK-AIX-NEXT:    fmul 0, 31, 1
@@ -90,8 +89,7 @@ define void @log_f64(ptr %arg) {
 ; CHECK-AIX-NEXT:    nop
 ; CHECK-AIX-NEXT:    lwz 3, L..C1(2) # %const.0
 ; CHECK-AIX-NEXT:    fmr 31, 1
-; CHECK-AIX-NEXT:    lfs 0, 0(3)
-; CHECK-AIX-NEXT:    fmr 1, 0
+; CHECK-AIX-NEXT:    lfs 1, 0(3)
 ; CHECK-AIX-NEXT:    bl .__xl_log[PR]
 ; CHECK-AIX-NEXT:    nop
 ; CHECK-AIX-NEXT:    fmul 0, 31, 1

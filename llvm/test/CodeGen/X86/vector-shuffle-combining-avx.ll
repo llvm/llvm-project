@@ -740,13 +740,12 @@ define <16 x i64> @bit_reversal_permutation(<16 x i64> %a0) nounwind {
 ; X64-AVX1-NEXT:    vperm2f128 {{.*#+}} ymm5 = ymm2[2,3],ymm3[2,3]
 ; X64-AVX1-NEXT:    vperm2f128 {{.*#+}} ymm6 = ymm0[2,3],ymm1[2,3]
 ; X64-AVX1-NEXT:    vunpcklpd {{.*#+}} ymm4 = ymm6[0],ymm5[0],ymm6[2],ymm5[2]
-; X64-AVX1-NEXT:    vunpckhpd {{.*#+}} ymm5 = ymm6[1],ymm5[1],ymm6[3],ymm5[3]
 ; X64-AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; X64-AVX1-NEXT:    vunpckhpd {{.*#+}} ymm3 = ymm6[1],ymm5[1],ymm6[3],ymm5[3]
 ; X64-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
 ; X64-AVX1-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm1[0],ymm2[0],ymm1[2],ymm2[2]
 ; X64-AVX1-NEXT:    vunpckhpd {{.*#+}} ymm2 = ymm1[1],ymm2[1],ymm1[3],ymm2[3]
 ; X64-AVX1-NEXT:    vmovaps %ymm4, %ymm1
-; X64-AVX1-NEXT:    vmovaps %ymm5, %ymm3
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: bit_reversal_permutation:

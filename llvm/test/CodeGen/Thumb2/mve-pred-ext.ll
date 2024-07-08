@@ -942,8 +942,7 @@ define arm_aapcs_vfpcc <2 x double> @uitofp_v2i1_v2f64(<2 x i64> %src) {
 ; CHECK-NEXT:    vmov d9, r0, r1
 ; CHECK-NEXT:    rsbs r2, r2, #0
 ; CHECK-NEXT:    sbcs.w r2, r4, r3
-; CHECK-NEXT:    cset r2, lt
-; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    cset r0, lt
 ; CHECK-NEXT:    bl __aeabi_ui2d
 ; CHECK-NEXT:    vmov d8, r0, r1
 ; CHECK-NEXT:    vmov q0, q4
@@ -973,8 +972,7 @@ define arm_aapcs_vfpcc <2 x double> @sitofp_v2i1_v2f64(<2 x i64> %src) {
 ; CHECK-NEXT:    vmov d9, r0, r1
 ; CHECK-NEXT:    rsbs r2, r2, #0
 ; CHECK-NEXT:    sbcs.w r2, r4, r3
-; CHECK-NEXT:    csetm r2, lt
-; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    csetm r0, lt
 ; CHECK-NEXT:    bl __aeabi_i2d
 ; CHECK-NEXT:    vmov d8, r0, r1
 ; CHECK-NEXT:    vmov q0, q4

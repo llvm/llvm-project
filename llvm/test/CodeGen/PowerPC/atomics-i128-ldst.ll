@@ -555,9 +555,8 @@ define dso_local void @stqx_unordered(i128 %val, ptr %dst, i64 %idx) {
 ; PPC-PWR8-NEXT:    stw r4, 20(r1)
 ; PPC-PWR8-NEXT:    stw r3, 16(r1)
 ; PPC-PWR8-NEXT:    li r3, 16
-; PPC-PWR8-NEXT:    add r6, r7, r8
-; PPC-PWR8-NEXT:    mr r4, r6
 ; PPC-PWR8-NEXT:    li r6, 0
+; PPC-PWR8-NEXT:    add r4, r7, r8
 ; PPC-PWR8-NEXT:    bl __atomic_store
 ; PPC-PWR8-NEXT:    lwz r0, 36(r1)
 ; PPC-PWR8-NEXT:    addi r1, r1, 32
@@ -624,14 +623,13 @@ define dso_local void @stq_big_offset_unordered(i128 %val, ptr %dst) {
 ; PPC-PWR8-NEXT:    .cfi_def_cfa_offset 32
 ; PPC-PWR8-NEXT:    .cfi_offset lr, 4
 ; PPC-PWR8-NEXT:    stw r6, 28(r1)
-; PPC-PWR8-NEXT:    addis r6, r7, 32
 ; PPC-PWR8-NEXT:    stw r5, 24(r1)
 ; PPC-PWR8-NEXT:    addi r5, r1, 16
+; PPC-PWR8-NEXT:    li r6, 0
 ; PPC-PWR8-NEXT:    stw r4, 20(r1)
+; PPC-PWR8-NEXT:    addis r4, r7, 32
 ; PPC-PWR8-NEXT:    stw r3, 16(r1)
 ; PPC-PWR8-NEXT:    li r3, 16
-; PPC-PWR8-NEXT:    mr r4, r6
-; PPC-PWR8-NEXT:    li r6, 0
 ; PPC-PWR8-NEXT:    bl __atomic_store
 ; PPC-PWR8-NEXT:    lwz r0, 36(r1)
 ; PPC-PWR8-NEXT:    addi r1, r1, 32

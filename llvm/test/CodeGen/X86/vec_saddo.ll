@@ -593,7 +593,8 @@ define <16 x i32> @saddo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; SSE41-NEXT:    pcmpeqb %xmm0, %xmm2
 ; SSE41-NEXT:    pcmpeqd %xmm3, %xmm3
 ; SSE41-NEXT:    pxor %xmm2, %xmm3
-; SSE41-NEXT:    pmovsxbd %xmm3, %xmm4
+; SSE41-NEXT:    movdqa %xmm0, (%rdi)
+; SSE41-NEXT:    pmovsxbd %xmm3, %xmm0
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,1,1,1]
 ; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
 ; SSE41-NEXT:    pslld $31, %xmm1
@@ -606,8 +607,6 @@ define <16 x i32> @saddo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero,xmm3[2],zero,zero,zero,xmm3[3],zero,zero,zero
 ; SSE41-NEXT:    pslld $31, %xmm3
 ; SSE41-NEXT:    psrad $31, %xmm3
-; SSE41-NEXT:    movdqa %xmm0, (%rdi)
-; SSE41-NEXT:    movdqa %xmm4, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: saddo_v16i8:
@@ -769,9 +768,8 @@ define <2 x i32> @saddo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm2
 ; SSE2-NEXT:    pxor %xmm3, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
 ; SSE2-NEXT:    movdqa %xmm0, (%rdi)
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,2,2,3]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: saddo_v2i64:
@@ -792,9 +790,8 @@ define <2 x i32> @saddo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; SSSE3-NEXT:    pxor %xmm2, %xmm2
 ; SSSE3-NEXT:    pcmpgtd %xmm1, %xmm2
 ; SSSE3-NEXT:    pxor %xmm3, %xmm2
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
 ; SSSE3-NEXT:    movdqa %xmm0, (%rdi)
-; SSSE3-NEXT:    movdqa %xmm1, %xmm0
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,2,2,3]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: saddo_v2i64:
@@ -815,9 +812,8 @@ define <2 x i32> @saddo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; SSE41-NEXT:    pxor %xmm2, %xmm2
 ; SSE41-NEXT:    pcmpgtd %xmm1, %xmm2
 ; SSE41-NEXT:    pxor %xmm3, %xmm2
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
 ; SSE41-NEXT:    movdqa %xmm0, (%rdi)
-; SSE41-NEXT:    movdqa %xmm1, %xmm0
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,2,2,3]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: saddo_v2i64:

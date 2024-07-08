@@ -20,10 +20,9 @@ define void @caller_extern(ptr %src) optsize {
 ; CHECK-LABEL: caller_extern:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pcalau12i $a1, %got_pc_hi20(dest)
-; CHECK-NEXT:    ld.d $a1, $a1, %got_pc_lo12(dest)
-; CHECK-NEXT:    ori $a2, $zero, 33
 ; CHECK-NEXT:    move $a3, $a0
-; CHECK-NEXT:    move $a0, $a1
+; CHECK-NEXT:    ld.d $a0, $a1, %got_pc_lo12(dest)
+; CHECK-NEXT:    ori $a2, $zero, 33
 ; CHECK-NEXT:    move $a1, $a3
 ; CHECK-NEXT:    b %plt(memcpy)
 entry:

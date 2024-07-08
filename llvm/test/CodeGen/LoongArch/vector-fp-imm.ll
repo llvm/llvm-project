@@ -454,11 +454,10 @@ define void @test_d2(ptr %P, ptr %S) nounwind {
 ; LA32F-NEXT:    ld.w $fp, $a0, 8
 ; LA32F-NEXT:    ld.w $s0, $a0, 12
 ; LA32F-NEXT:    ld.w $a2, $a0, 0
-; LA32F-NEXT:    ld.w $a4, $a0, 4
 ; LA32F-NEXT:    move $s1, $a1
+; LA32F-NEXT:    ld.w $a1, $a0, 4
 ; LA32F-NEXT:    lu12i.w $a3, 261888
 ; LA32F-NEXT:    move $a0, $a2
-; LA32F-NEXT:    move $a1, $a4
 ; LA32F-NEXT:    move $a2, $zero
 ; LA32F-NEXT:    bl %plt(__adddf3)
 ; LA32F-NEXT:    move $s2, $a0
@@ -565,11 +564,10 @@ define void @test_d4(ptr %P, ptr %S) nounwind {
 ; LA32F-NEXT:    ld.w $s3, $a0, 8
 ; LA32F-NEXT:    ld.w $s4, $a0, 12
 ; LA32F-NEXT:    ld.w $a2, $a0, 0
-; LA32F-NEXT:    ld.w $a4, $a0, 4
 ; LA32F-NEXT:    move $s5, $a1
+; LA32F-NEXT:    ld.w $a1, $a0, 4
 ; LA32F-NEXT:    lu12i.w $a3, 261888
 ; LA32F-NEXT:    move $a0, $a2
-; LA32F-NEXT:    move $a1, $a4
 ; LA32F-NEXT:    move $a2, $zero
 ; LA32F-NEXT:    bl %plt(__adddf3)
 ; LA32F-NEXT:    move $s6, $a0
@@ -754,11 +752,10 @@ define void @test_d8(ptr %P, ptr %S) nounwind {
 ; LA32F-NEXT:    ld.w $s7, $a0, 8
 ; LA32F-NEXT:    ld.w $s0, $a0, 12
 ; LA32F-NEXT:    ld.w $a2, $a0, 0
-; LA32F-NEXT:    ld.w $a4, $a0, 4
 ; LA32F-NEXT:    move $fp, $a1
+; LA32F-NEXT:    ld.w $a1, $a0, 4
 ; LA32F-NEXT:    lu12i.w $a3, 261888
 ; LA32F-NEXT:    move $a0, $a2
-; LA32F-NEXT:    move $a1, $a4
 ; LA32F-NEXT:    move $a2, $zero
 ; LA32F-NEXT:    bl %plt(__adddf3)
 ; LA32F-NEXT:    st.w $a0, $sp, 40 # 4-byte Folded Spill
