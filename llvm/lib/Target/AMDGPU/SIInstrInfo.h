@@ -362,13 +362,6 @@ public:
   bool reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const override;
 
-  bool isProfitableToIfCvt(MachineBasicBlock &MBB, unsigned NumCycles,
-                           unsigned ExtraPredCycles,
-                           BranchProbability Probability) const override;
-  bool isProfitableToIfCvt(MachineBasicBlock &TMBB, unsigned NumTCycles,
-                           unsigned ExtraTCycles, MachineBasicBlock &FMBB,
-                           unsigned NumFCycles, unsigned ExtraFCycles,
-                           BranchProbability Probability) const override;
   bool canInsertSelect(const MachineBasicBlock &MBB,
                        ArrayRef<MachineOperand> Cond, Register DstReg,
                        Register TrueReg, Register FalseReg, int &CondCycles,
@@ -1391,7 +1384,7 @@ public:
   getGenericInstructionUniformity(const MachineInstr &MI) const;
 
   const MIRFormatter *getMIRFormatter() const override {
-    if (!Formatter.get())
+    if (!Formatter)
       Formatter = std::make_unique<AMDGPUMIRFormatter>();
     return Formatter.get();
   }

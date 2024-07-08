@@ -399,7 +399,7 @@ DbgVariableIntrinsic *
 DbgVariableRecord::createDebugIntrinsic(Module *M,
                                         Instruction *InsertBefore) const {
   [[maybe_unused]] DICompileUnit *Unit =
-      getDebugLoc().get()->getScope()->getSubprogram()->getUnit();
+      getDebugLoc()->getScope()->getSubprogram()->getUnit();
   assert(M && Unit &&
          "Cannot clone from BasicBlock that is not part of a Module or "
          "DICompileUnit!");

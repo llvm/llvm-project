@@ -766,9 +766,10 @@ bool SystemZInstrInfo::isPredicable(const MachineInstr &MI) const {
   return false;
 }
 
-bool SystemZInstrInfo::isProfitableToIfCvt(
-    MachineBasicBlock &MBB, unsigned NumCycles, unsigned ExtraPredCycles,
-    BranchProbability Probability) const {
+bool SystemZInstrInfo::
+isProfitableToIfCvt(MachineBasicBlock &MBB,
+                    unsigned NumCycles, unsigned ExtraPredCycles,
+                    BranchProbability Probability) const {
   // Avoid using conditional returns at the end of a loop (since then
   // we'd need to emit an unconditional branch to the beginning anyway,
   // making the loop body longer).  This doesn't apply for low-probability
@@ -777,10 +778,8 @@ bool SystemZInstrInfo::isProfitableToIfCvt(
   // However, since Compare and Trap instructions cost the same as a regular
   // Compare instruction, we should allow the if conversion to convert this
   // into a Conditional Compare regardless of the branch probability.
-  if (auto MI = MBB.getLastNonDebugInstr();
-      MI == MBB.end() ||
-      (MI->getOpcode() != SystemZ::Trap && MBB.succ_empty() &&
-       Probability < BranchProbability(1, 8)))
+  if (MBB.getLastNonDebugInstr()->getOpcode() != SystemZ::Trap &&
+      MBB.succ_empty() && Probability < BranchProbability(1, 8))
     return false;
   // For now only convert single instructions.
   return NumCycles == 1;
@@ -792,7 +791,8 @@ isProfitableToIfCvt(MachineBasicBlock &TMBB,
                     MachineBasicBlock &FMBB,
                     unsigned NumCyclesF, unsigned ExtraPredCyclesF,
                     BranchProbability Probability) const {
-  return TMBB.getParent()->getSubtarget().enableEarlyIfConversion();
+  // For now avoid converting mutually-exclusive cases.
+  return false;
 }
 
 bool SystemZInstrInfo::

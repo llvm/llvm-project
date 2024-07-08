@@ -180,8 +180,9 @@ public:
   /// speculatively execute it.
   bool canConvertIf(MachineBasicBlock *MBB, bool Predicate = false);
 
-  bool isProfitable(const MachineBranchProbabilityInfo *MBPI,
-                    TargetSchedModel SchedModel);
+  bool isProfitableToConvertIf(const MachineBranchProbabilityInfo *MBPI,
+                               TargetSchedModel SchedModel,
+                               bool Predicate = false);
 
   /// convertIf - If-convert the last block passed to canConvertIf(), assuming
   /// it is possible. Add any erased blocks to RemovedBlocks.
@@ -565,8 +566,12 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
 }
 
 /// Apply the target heuristic to decide if the transformation is profitable.
-bool SSAIfConv::isProfitable(const MachineBranchProbabilityInfo *MBPI,
-                             TargetSchedModel SchedModel) {
+bool SSAIfConv::isProfitableToConvertIf(
+    const MachineBranchProbabilityInfo *MBPI, TargetSchedModel SchedModel,
+    bool Predicate) {
+  if (!Predicate && TII->shouldConvertPredictableBranches())
+    return true;
+
   auto TrueProbability = MBPI->getEdgeProbability(Head, TBB);
   if (isTriangle()) {
     MachineBasicBlock &IfBlock = (TBB == Tail) ? *FBB : *TBB;
@@ -915,7 +920,7 @@ bool EarlyIfConverter::shouldConvertIf() {
 
   // Do not try to if-convert if the condition has a high chance of being
   // predictable.
-  if (!IfConv.isProfitable(MBPI, TargetSchedModel))
+  if (!IfConv.isProfitableToConvertIf(MBPI, TargetSchedModel))
     return false;
 
   MachineLoop *CurrentLoop = Loops->getLoopFor(IfConv.Head);
@@ -1205,7 +1210,7 @@ void EarlyIfPredicator::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool EarlyIfPredicator::shouldConvertIf() {
-  return IfConv.isProfitable(MBPI, SchedModel);
+  return IfConv.isProfitableToConvertIf(MBPI, SchedModel, /*Predicate=*/true);
 }
 
 /// Attempt repeated if-conversion on MBB, return true if successful.

@@ -10818,6 +10818,14 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       break;
     }
 
+  // Similar to no_builtin logic above, at this point of the code
+  // FunctionDecl::isThisDeclarationADefinition() always returns `false`
+  // because Sema::ActOnStartOfFunctionDef has not been called yet.
+  if (Context.getTargetInfo().allowDebugInfoForExternalRef() &&
+      !NewFD->isInvalidDecl() &&
+      D.getFunctionDefinitionKind() == FunctionDefinitionKind::Declaration)
+    ExternalDeclarations.push_back(NewFD);
+
   return NewFD;
 }
 

@@ -409,13 +409,6 @@ public:
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
-  bool isProfitableToIfCvt(MachineBasicBlock &MBB, unsigned NumCycles,
-                           unsigned ExtraPredCycles,
-                           BranchProbability Probability) const override;
-  bool isProfitableToIfCvt(MachineBasicBlock &TMBB, unsigned NumTCycles,
-                           unsigned ExtraTCycles, MachineBasicBlock &FMBB,
-                           unsigned NumFCycles, unsigned ExtraFCycles,
-                           BranchProbability Probability) const override;
   bool canInsertSelect(const MachineBasicBlock &, ArrayRef<MachineOperand> Cond,
                        Register, Register, Register, int &, int &,
                        int &) const override;

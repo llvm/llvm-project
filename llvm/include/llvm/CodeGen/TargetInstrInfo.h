@@ -913,6 +913,10 @@ public:
     return false;
   }
 
+  /// Return true if the target will always try to convert predictable branches
+  /// to selects.
+  virtual bool shouldConvertPredictableBranches() const { return true; }
+
   /// Return true if it is possible to insert a select
   /// instruction that chooses between TrueReg and FalseReg based on the
   /// condition code in Cond.
@@ -2214,7 +2218,7 @@ public:
   /// Return MIR formatter to format/parse MIR operands.  Target can override
   /// this virtual function and return target specific MIR formatter.
   virtual const MIRFormatter *getMIRFormatter() const {
-    if (!Formatter.get())
+    if (!Formatter)
       Formatter = std::make_unique<MIRFormatter>();
     return Formatter.get();
   }
