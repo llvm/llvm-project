@@ -155,8 +155,9 @@ std::string hashBlockLoose(BinaryContext &BC, const BinaryBasicBlock &BB) {
   return HashString;
 }
 
-/// An even looser hash of a basic block to use with stale profile matching,
-/// composed of the names of a block's called functions in lexicographic order.
+/// An even looser hash level relative to $ hashBlockLoose to use with stale
+/// profile matching, composed of the names of a block's called functions in
+/// lexicographic order.
 std::string hashBlockCalls(BinaryContext &BC, const BinaryBasicBlock &BB) {
   // The hash is computed by creating a string of all lexicographically ordered
   // called function names.
@@ -178,7 +179,7 @@ std::string hashBlockCalls(BinaryContext &BC, const BinaryBasicBlock &BB) {
   return HashString;
 }
 
-/// The same as the above function, but for profiled functions.
+/// The same as the $hashBlockCalls function, but for profiled functions.
 std::string
 hashBlockCalls(const DenseMap<uint32_t, std::string *> &IdToFunctionName,
                const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {

@@ -465,12 +465,13 @@ size_t matchWeightsByHashes(
     std::string CallHashStr = hashBlockCalls(BC, *BB);
     if (CallHashStr.empty()) {
       CallHashes.push_back(0);
-    } else if (HashFunction == HashFunction::StdHash) {
-      CallHashes.push_back(std::hash<std::string>{}(CallHashStr));
-    } else if (HashFunction == HashFunction::XXH3) {
-      CallHashes.push_back(llvm::xxh3_64bits(CallHashStr));
     } else {
-      llvm_unreachable("Unhandled HashFunction");
+      if (HashFunction == HashFunction::StdHash)
+        CallHashes.push_back(std::hash<std::string>{}(CallHashStr));
+      else if (HashFunction == HashFunction::XXH3)
+        CallHashes.push_back(llvm::xxh3_64bits(CallHashStr));
+      else
+        llvm_unreachable("Unhandled HashFunction");
     }
 
     Blocks.push_back(&Func.Blocks[I + 1]);
@@ -492,15 +493,14 @@ size_t matchWeightsByHashes(
     const FlowBlock *MatchedBlock = nullptr;
     std::string CallHashStr = hashBlockCalls(IdToFunctionName, YamlBB);
     uint64_t CallHash = 0;
-    if (CallHashStr.empty()) { // Noop
-    } else if (HashFunction == HashFunction::StdHash) {
-      CallHash = std::hash<std::string>{}(CallHashStr);
-    } else if (HashFunction == HashFunction::XXH3) {
-      CallHash = llvm::xxh3_64bits(CallHashStr);
-    } else {
-      llvm_unreachable("Unhandled HashFunction");
+    if (!CallHashStr.empty()) {
+      if (HashFunction == HashFunction::StdHash)
+        CallHash = std::hash<std::string>{}(CallHashStr);
+      else if (HashFunction == HashFunction::XXH3)
+        CallHash = llvm::xxh3_64bits(CallHashStr);
+      else
+        llvm_unreachable("Unhandled HashFunction");
     }
-
     MatchedBlock = Matcher.matchBlock(YamlHash, CallHash);
     if (MatchedBlock == nullptr && YamlBB.Index == 0)
       MatchedBlock = Blocks[0];

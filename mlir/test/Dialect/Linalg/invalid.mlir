@@ -455,6 +455,32 @@ func.func @map_input_output_shape_mismatch(
 
 // -----
 
+func.func @map_no_operands1() {
+  // expected-error @+1 {{'linalg.map' op expected 1 or more operands, but found 0}}
+  linalg.map { arith.addf }
+}
+
+// -----
+
+func.func @map_no_operands2() {
+  // expected-error @+1 {{'linalg.map' op expected 1 or more operands, but found 0}}
+  "linalg.map"() ({
+    ^bb0:
+  }) : () -> ()
+}
+
+// -----
+
+func.func @map_no_operands3(
+    %lhs: tensor<64xf32>, %rhs: tensor<64xf32>, %init: tensor<64xf32>)
+    -> tensor<64xf32> {
+  // expected-error @+1 {{cannot name an operation with no results}}
+  %add = linalg.map { arith.addf }
+  func.return %add : tensor<64xf32>
+}
+
+// -----
+
 func.func @reduce_input_vs_init_dimension_mismatch(
     %input: tensor<16x32x64xf32>,
     %init: tensor<16x64xf32>)  -> tensor<16x64xf32> {
@@ -676,6 +702,30 @@ func.func @transpose_input_init_rank_mismatch(%input: tensor<16x32xf32>,
 
 // -----
 
+func.func @transpose_no_operands1() {
+  // expected-error @+1 {{'linalg.transpose' op expected 2 operands, but found 0}}
+  linalg.transpose permutation = [1, 0, 2]
+}
+
+// -----
+
+func.func @transpose_no_operands2() {
+  // expected-error @+1 {{'linalg.transpose' op expected 2 operands, but found 0}}
+  "linalg.transpose"() <{permutation = array<i64: 1, 0, 2>}> ({
+    ^bb0:
+  }) : () -> ()
+}
+
+// -----
+
+func.func @transpose_no_operands3() -> tensor<32x64x16xf32> {
+  // expected-error @+1 {{cannot name an operation with no results}}
+  %transpose = linalg.transpose permutation = [1, 0, 2]
+  func.return %transpose : tensor<32x64x16xf32>
+}
+
+// -----
+
 func.func @broadcast_input_dims_rank_mismatch(
     %input: tensor<4x16xf32>, %init: tensor<4x8x16xf32>)
     -> tensor<4x8x16xf32> {
@@ -724,6 +774,31 @@ func.func @broadcast_size_1_extension_not_supported(
       outs(%init:tensor<4x?x16xf32>)
       dimensions = [1]
   func.return %bcast : tensor<4x?x16xf32>
+}
+
+// -----
+
+func.func @broadcast_no_operands1() {
+  // expected-error @+1 {{'linalg.broadcast' op expected 2 operands, but found 0}}
+  linalg.broadcast dimensions = [1]
+}
+
+// -----
+
+func.func @broadcast_no_operands2() {
+  // expected-error @+1 {{'linalg.broadcast' op expected 2 operands, but found 0}}
+  "linalg.broadcast"() <{dimensions = array<i64: 1>}> ({
+    ^bb0:
+  }) : () -> ()
+}
+
+// -----
+
+func.func @broadcast_no_operands3()
+    -> tensor<4x?x16xf32> {
+  // expected-error @+1 {{cannot name an operation with no results}}
+  %broadcast = linalg.broadcast dimensions = [1]
+  func.return %broadcast : tensor<32x64x16xf32>
 }
 
 // -----
