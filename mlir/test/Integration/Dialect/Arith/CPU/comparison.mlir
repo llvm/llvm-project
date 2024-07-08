@@ -55,7 +55,7 @@ func.func @cmpi_signed() {
   %false = arith.constant false
   %true = arith.constant true
 
-  // slt 0 1 = false, sle 0 1 = false, sgt 0 1 = true, sge 0 1 = true
+  // slt 0 1 = false, sle 0 1 = false, sgt 0 1 = true, sge 0 1 = true, sge 1 0 = false
 
   // CHECK-LABEL: @cmpi_slt_i1
   // CHECK-NEXT:  0
@@ -72,17 +72,10 @@ func.func @cmpi_signed() {
   // CHECK-LABEL: @cmpi_sge_i1
   // CHECK-NEXT:  1
   func.call @cmpi_sge_i1(%false, %true) : (i1, i1) -> ()
-
-  // check that addui_extended overflow bit is treated as -1 in comparison operations
-  //  in the case of an overflow
-  // addui_extended -1 -1 = (..., overflow_bit) 
-  // assert(overflow_bit <= 0)
-  %n1_i64 = arith.constant -1 : i64
-  %sum, %overflow = arith.addui_extended %n1_i64, %n1_i64 : i64, i1
-
+  
   // CHECK-LABEL: @cmpi_sge_i1
-  // CHECK-NEXT: 0
-  func.call @cmpi_sge_i1(%overflow, %false) : (i1, i1) -> ()
+  // CHECK-NEXT:  0
+  func.call @cmpi_sge_i1(%true, %false) : (i1, i1) -> ()
   
   // ------------------------------------------------
   // TODO: Test i8, i16 etc..
