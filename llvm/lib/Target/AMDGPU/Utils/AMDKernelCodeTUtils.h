@@ -80,8 +80,8 @@ struct AMDGPUMCKernelCodeT {
 
   const MCExpr *&getMCExprForIndex(int Index);
 
-  using PrintHelper = void (*)(const MCExpr *, raw_ostream &,
-                               const MCAsmInfo *);
+  using PrintHelper =
+      function_ref<void(const MCExpr *, raw_ostream &, const MCAsmInfo *)>;
   bool ParseKernelCodeT(StringRef ID, MCAsmParser &MCParser, raw_ostream &Err);
   void EmitKernelCodeT(raw_ostream &OS, MCContext &Ctx, PrintHelper Helper);
   void EmitKernelCodeT(MCStreamer &OS, MCContext &Ctx);

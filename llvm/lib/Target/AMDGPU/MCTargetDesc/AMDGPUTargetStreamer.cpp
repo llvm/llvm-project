@@ -245,8 +245,13 @@ void AMDGPUTargetAsmStreamer::EmitDirectiveAMDHSACodeObjectVersion(
 }
 
 void AMDGPUTargetAsmStreamer::EmitAMDKernelCodeT(AMDGPUMCKernelCodeT &Header) {
+  auto FoldAndPrint = [&](const MCExpr *Expr, raw_ostream &OS,
+                          const MCAsmInfo *MAI) {
+    llvm::AMDGPUMCExprPrint(llvm::TryFold(Expr, getContext()), OS, MAI);
+  };
+
   OS << "\t.amd_kernel_code_t\n";
-  Header.EmitKernelCodeT(OS, getContext(), llvm::AMDGPUMCExprPrint);
+  Header.EmitKernelCodeT(OS, getContext(), FoldAndPrint);
   OS << "\t.end_amd_kernel_code_t\n";
 }
 
@@ -333,17 +338,14 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     OS << "\t\t" << Directive << ' ';
     const MCExpr *ShiftedAndMaskedExpr =
         MCKernelDescriptor::bits_get(Expr, Shift, Mask, getContext());
-    llvm::AMDGPUMCExprPrint(ShiftedAndMaskedExpr, OS, MAI);
+    const MCExpr *New = llvm::TryFold(ShiftedAndMaskedExpr, getContext());
+    llvm::AMDGPUMCExprPrint(New, OS, MAI);
     OS << '\n';
   };
 
   auto EmitMCExpr = [&](const MCExpr *Value) {
-    int64_t evaluatableValue;
-    if (Value->evaluateAsAbsolute(evaluatableValue)) {
-      OS << static_cast<uint64_t>(evaluatableValue);
-    } else {
-      Value->print(OS, MAI);
-    }
+    const MCExpr *NewExpr = llvm::TryFold(Value, getContext());
+    llvm::AMDGPUMCExprPrint(NewExpr, OS, MAI);
   };
 
   OS << "\t\t.amdhsa_group_segment_fixed_size ";
@@ -459,7 +461,8 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     accum_bits = MCBinaryExpr::createMul(
         accum_bits, MCConstantExpr::create(4, getContext()), getContext());
     OS << "\t\t.amdhsa_accum_offset ";
-    EmitMCExpr(accum_bits);
+    const MCExpr *New = llvm::TryFold(accum_bits, getContext());
+    llvm::AMDGPUMCExprPrint(New, OS, MAI);
     OS << '\n';
   }
 

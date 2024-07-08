@@ -395,7 +395,10 @@ void AMDGPUAsmPrinter::emitCommonFunctionComments(
 SmallString<128> AMDGPUAsmPrinter::getMCExprStr(const MCExpr *Value) {
   SmallString<128> Str;
   raw_svector_ostream OSS(Str);
-  AMDGPUMCExprPrint(Value, OSS, MAI);
+  auto &Streamer = getTargetStreamer()->getStreamer();
+  auto &Context = Streamer.getContext();
+  const MCExpr *New = llvm::TryFold(Value, Context);
+  AMDGPUMCExprPrint(New, OSS, MAI);
   return Str;
 }
 

@@ -131,7 +131,7 @@ unknown_workitem_private_segment_byte_size:
 	s_endpgm
 
 ; ASM-LABEL: unknown_granulated_workitem_vgpr_count:
-; ASM: granulated_workitem_vgpr_count = ((0&4294967232)|(unknown&63))&63
+; ASM: granulated_workitem_vgpr_count = (unknown&63)&63
 ; ASM: granulated_wavefront_sgpr_count = 0
 ; ASM: priority = 0
 ; ASM: float_mode = 0
@@ -150,7 +150,7 @@ unknown_granulated_workitem_vgpr_count:
 	s_endpgm
 
 ; ASM-LABEL: unknown_enable_sgpr_workgroup_id_x:
-; ASM: enable_sgpr_workgroup_id_x = (((0&4294967167)|((unknown&1)<<7))>>7)&1
+; ASM: enable_sgpr_workgroup_id_x = (((unknown&1)<<7)>>7)&1
 ; ASM: enable_sgpr_workgroup_id_y = 0
 ; ASM: enable_sgpr_workgroup_id_z = 0
 .section .unknown_enable_sgpr_workgroup_id_x

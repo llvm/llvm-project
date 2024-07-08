@@ -91,7 +91,7 @@ public:
                                              MCContext &Ctx);
 
   ArrayRef<const MCExpr *> getArgs() const { return Args; }
-  VariadicKind getKind() const { return Kind; }
+  VariantKind getKind() const { return Kind; }
   const MCExpr *getSubExpr(size_t Index) const;
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
@@ -113,6 +113,8 @@ public:
 // the value to be 1. Particularly useful for AMDGPU metadata MCExprs.
 void AMDGPUMCExprPrint(const MCExpr *Expr, raw_ostream &OS,
                        const MCAsmInfo *MAI);
+
+const MCExpr *TryFold(const MCExpr *Expr, MCContext &Ctx);
 
 } // end namespace llvm
 
