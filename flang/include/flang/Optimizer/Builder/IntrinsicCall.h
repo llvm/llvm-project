@@ -27,18 +27,20 @@ namespace fir {
 class StatementContext;
 struct IntrinsicHandlerEntry;
 
-// TODO: Error handling interface ?
-// TODO: Implementation is incomplete. Many intrinsics to tbd.
-
-/// Same as the other genIntrinsicCall version above, except that the result
-/// deallocation, if required, is not added to a StatementContext. Instead, an
-/// extra boolean result indicates if the result must be freed after use.
+/// Lower an intrinsic call given the intrinsic \p name, its \p resultType (that
+/// must be std::nullopt if and only if this is a subroutine call), and its
+/// lowered arguments \p args. The returned pair contains the result value
+/// (null mlir::Value for subroutine calls), and a boolean that indicates if
+/// this result must be freed after use.
 std::pair<fir::ExtendedValue, bool>
 genIntrinsicCall(fir::FirOpBuilder &, mlir::Location, llvm::StringRef name,
                  std::optional<mlir::Type> resultType,
                  llvm::ArrayRef<fir::ExtendedValue> args,
                  Fortran::lower::AbstractConverter *converter = nullptr);
 
+/// Same as the entry above except that instead of an intrinsic name it takes an
+/// IntrinsicHandlerEntry obtained by a previous lookup for a handler to lower
+/// this intrinsic (see lookupIntrinsicHandler).
 std::pair<fir::ExtendedValue, bool>
 genIntrinsicCall(fir::FirOpBuilder &, mlir::Location,
                  const IntrinsicHandlerEntry &,
