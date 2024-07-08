@@ -23,6 +23,40 @@ using namespace cir;
 
 namespace {
 
+/// Removes branches between two blocks if it is the only branch.
+///
+/// From:
+///   ^bb0:
+///     cir.br ^bb1
+///   ^bb1:  // pred: ^bb0
+///     cir.return
+///
+/// To:
+///   ^bb0:
+///     cir.return
+struct RemoveRedundantBranches : public OpRewritePattern<BrOp> {
+  using OpRewritePattern<BrOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(BrOp op,
+                                PatternRewriter &rewriter) const final {
+    Block *block = op.getOperation()->getBlock();
+    Block *dest = op.getDest();
+
+    if (isa<mlir::cir::LabelOp>(dest->front()))
+      return failure();
+
+    // Single edge between blocks: merge it.
+    if (block->getNumSuccessors() == 1 &&
+        dest->getSinglePredecessor() == block) {
+      rewriter.eraseOp(op);
+      rewriter.mergeBlocks(dest, block);
+      return success();
+    }
+
+    return failure();
+  }
+};
+
 struct RemoveEmptyScope : public OpRewritePattern<ScopeOp> {
   using OpRewritePattern<ScopeOp>::OpRewritePattern;
 
@@ -70,6 +104,7 @@ struct MergeCleanupsPass : public MergeCleanupsBase<MergeCleanupsPass> {
 void populateMergeCleanupPatterns(RewritePatternSet &patterns) {
   // clang-format off
   patterns.add<
+    RemoveRedundantBranches,
     RemoveEmptyScope,
     RemoveEmptySwitch
   >(patterns.getContext());

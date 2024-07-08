@@ -11,10 +11,10 @@
 
 module {
   cir.func @cStyleCasts(%arg0: !u32i, %arg1: !s32i, %arg2: !cir.float, %arg3: !cir.double) -> !s32i {
-    // CHECK: llvm.func @cStyleCasts
+  // CHECK: llvm.func @cStyleCasts
     %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["x1", init] {alignment = 4 : i64}
     %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x2", init] {alignment = 4 : i64}
-    %44 = cir.alloca !s16i, !cir.ptr<!s16i>, ["x4", init] {alignment = 2 : i64}
+    %20 = cir.alloca !s16i, !cir.ptr<!s16i>, ["x4", init] {alignment = 2 : i64}
     %2 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
     %3 = cir.alloca !s8i, !cir.ptr<!s8i>, ["a", init] {alignment = 1 : i64}
     %4 = cir.alloca !s16i, !cir.ptr<!s16i>, ["b", init] {alignment = 2 : i64}
@@ -22,86 +22,64 @@ module {
     %6 = cir.alloca !s64i, !cir.ptr<!s64i>, ["d", init] {alignment = 8 : i64}
     %7 = cir.alloca !cir.array<!s32i x 3>, !cir.ptr<!cir.array<!s32i x 3>>, ["arr"] {alignment = 4 : i64}
     %8 = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["e", init] {alignment = 8 : i64}
-    %9 = cir.alloca !s8i, !cir.ptr<!s8i>, ["tmp1"] {alignment = 1 : i64}
-    %10 = cir.alloca !s16i, !cir.ptr<!s16i>, ["tmp2"] {alignment = 2 : i64}
-    %11 = cir.alloca !s64i, !cir.ptr<!s64i>, ["tmp3"] {alignment = 8 : i64}
-    %12 = cir.alloca !u64i, !cir.ptr<!u64i>, ["tmp4"] {alignment = 8 : i64}
-    %13 = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["tmp5"] {alignment = 8 : i64}
-    %14 = cir.alloca !s32i, !cir.ptr<!s32i>, ["tmp6"] {alignment = 4 : i64}
-    %15 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["tmp7"] {alignment = 1 : i64}
-    %16 = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["tmp8"] {alignment = 4 : i64}
-    %17 = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["tmp9"] {alignment = 4 : i64}
-    %18 = cir.alloca !u32i, !cir.ptr<!u32i>, ["tmp10"] {alignment = 4 : i64}
-    %19 = cir.alloca !s32i, !cir.ptr<!s32i>, ["tmp11"] {alignment = 4 : i64}
     cir.store %arg0, %0 : !u32i, !cir.ptr<!u32i>
     cir.store %arg1, %1 : !s32i, !cir.ptr<!s32i>
 
     // Integer casts.
-    %20 = cir.load %0 : !cir.ptr<!u32i>, !u32i
-    %21 = cir.cast(integral, %20 : !u32i), !s8i
+    %9 = cir.load %0 : !cir.ptr<!u32i>, !u32i
+    %10 = cir.cast(integral, %9 : !u32i), !s8i
     // CHECK: %{{[0-9]+}} = llvm.trunc %{{[0-9]+}} : i32 to i8
-    cir.store %21, %3 : !s8i, !cir.ptr<!s8i>
-    %22 = cir.load %1 : !cir.ptr<!s32i>, !s32i
-    %23 = cir.cast(integral, %22 : !s32i), !s16i
+    cir.store %10, %3 : !s8i, !cir.ptr<!s8i>
+    %11 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+    %12 = cir.cast(integral, %11 : !s32i), !s16i
     // CHECK: %{{[0-9]+}} = llvm.trunc %{{[0-9]+}} : i32 to i16
-    cir.store %23, %4 : !s16i, !cir.ptr<!s16i>
-    %24 = cir.load %0 : !cir.ptr<!u32i>, !u32i
-    %25 = cir.cast(integral, %24 : !u32i), !s64i
+    cir.store %12, %4 : !s16i, !cir.ptr<!s16i>
+    %13 = cir.load %0 : !cir.ptr<!u32i>, !u32i
+    %14 = cir.cast(integral, %13 : !u32i), !s64i
     // CHECK: %{{[0-9]+}} = llvm.zext %{{[0-9]+}} : i32 to i64
-    cir.store %25, %5 : !s64i, !cir.ptr<!s64i>
-    %26 = cir.load %1 : !cir.ptr<!s32i>, !s32i
-    %27 = cir.cast(integral, %26 : !s32i), !s64i
+    cir.store %14, %5 : !s64i, !cir.ptr<!s64i>
+    %15 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+    %16 = cir.cast(integral, %15 : !s32i), !s64i
     // CHECK: %{{[0-9]+}} = llvm.sext %{{[0-9]+}} : i32 to i64
-    cir.store %27, %6 : !s64i, !cir.ptr<!s64i>
-    %28 = cir.cast(integral, %arg1 : !s32i), !u32i
-    cir.store %28, %18 : !u32i, !cir.ptr<!u32i>
+    %30 = cir.cast(integral, %arg1 : !s32i), !u32i
     // Should not produce a cast.
-    %29 = cir.cast(integral, %arg0 : !u32i), !s32i
-    cir.store %29, %19 : !s32i, !cir.ptr<!s32i>
+    %32 = cir.cast(integral, %arg0 : !u32i), !s32i
     // Should not produce a cast.
-    %30 = cir.load %44 : !cir.ptr<!s16i>, !s16i
-    %31 = cir.cast(integral, %30 : !s16i), !u64i
+    %21 = cir.load %20 : !cir.ptr<!s16i>, !s16i
+    %22 = cir.cast(integral, %21 : !s16i), !u64i
     // CHECK: %[[TMP:[0-9]+]] = llvm.sext %{{[0-9]+}} : i16 to i64
-    cir.store %31, %12 : !u64i, !cir.ptr<!u64i>
-    %32 = cir.cast(int_to_bool, %arg1 : !s32i), !cir.bool
-    cir.store %32, %15 : !cir.bool, !cir.ptr<!cir.bool>
+    %33 = cir.cast(int_to_bool, %arg1 : !s32i), !cir.bool
     // CHECK: %[[#ZERO:]] = llvm.mlir.constant(0 : i32) : i32
     // CHECK: %[[#CMP:]] = llvm.icmp "ne" %arg1, %[[#ZERO]] : i32
     // CHECK: %{{.+}} = llvm.zext %[[#CMP]] : i1 to i8
 
     // Pointer casts.
-    %33 = cir.cast(array_to_ptrdecay, %7 : !cir.ptr<!cir.array<!s32i x 3>>), !cir.ptr<!s32i>
-    cir.store %33, %8 : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+    cir.store %16, %6 : !s64i, !cir.ptr<!s64i>
+    %17 = cir.cast(array_to_ptrdecay, %7 : !cir.ptr<!cir.array<!s32i x 3>>), !cir.ptr<!s32i>
+    cir.store %17, %8 : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
     // CHECK: %{{[0-9]+}} = llvm.getelementptr %{{[0-9]+}}[0] : (!llvm.ptr) -> !llvm.ptr, i32
-    %34 = cir.cast(int_to_ptr, %31 : !u64i), !cir.ptr<!u8i>
-    cir.store %34, %13 : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
+    %23 = cir.cast(int_to_ptr, %22 : !u64i), !cir.ptr<!u8i>
     // CHECK: %[[TMP2:[0-9]+]] = llvm.inttoptr %[[TMP]] : i64 to !llvm.ptr
-    %35 = cir.cast(ptr_to_int, %34 : !cir.ptr<!u8i>), !s32i
-    cir.store %35, %14 : !s32i, !cir.ptr<!s32i>
+    %24 = cir.cast(ptr_to_int, %23 : !cir.ptr<!u8i>), !s32i
     // CHECK: %{{[0-9]+}} = llvm.ptrtoint %[[TMP2]] : !llvm.ptr to i32
-    %36 = cir.cast(ptr_to_bool, %34 : !cir.ptr<!u8i>), !cir.bool
-    cir.store %36, %15 : !cir.bool, !cir.ptr<!cir.bool>
+    %29 = cir.cast(ptr_to_bool, %23 : !cir.ptr<!u8i>), !cir.bool
 
     // Floating point casts.
-    %37 = cir.cast(int_to_float, %arg1 : !s32i), !cir.float
-    cir.store %37, %16 : !cir.float, !cir.ptr<!cir.float>
+    %25 = cir.cast(int_to_float, %arg1 : !s32i), !cir.float
     // CHECK: %{{.+}} = llvm.sitofp %{{.+}} : i32 to f32
-    %38 = cir.cast(int_to_float, %arg0 : !u32i), !cir.float
-    cir.store %38, %16 : !cir.float, !cir.ptr<!cir.float>
+    %26 = cir.cast(int_to_float, %arg0 : !u32i), !cir.float
     // CHECK: %{{.+}} = llvm.uitofp %{{.+}} : i32 to f32
-    %39 = cir.cast(float_to_int, %arg2 : !cir.float), !s32i
-    cir.store %39, %14 : !s32i, !cir.ptr<!s32i>
+    %27 = cir.cast(float_to_int, %arg2 : !cir.float), !s32i
     // CHECK: %{{.+}} = llvm.fptosi %{{.+}} : f32 to i32
-    %40 = cir.cast(float_to_int, %arg2 : !cir.float), !u32i
-    cir.store %40, %18 : !u32i, !cir.ptr<!u32i>
+    %28 = cir.cast(float_to_int, %arg2 : !cir.float), !u32i
     // CHECK: %{{.+}} = llvm.fptoui %{{.+}} : f32 to i32
-    %41 = cir.cast(floating, %arg3 : !cir.double), !cir.float
-    cir.store %41, %17 : !cir.float, !cir.ptr<!cir.float>
+    %18 = cir.const #cir.int<0> : !s32i
+    // CHECK: %{{.+}} = llvm.fptrunc %{{.+}} : f64 to f32
+    %34 = cir.cast(floating, %arg3 : !cir.double), !cir.float
 
-    %42 = cir.const #cir.int<0> : !s32i
-    cir.store %42, %2 : !s32i, !cir.ptr<!s32i>
-    %43 = cir.load %2 : !cir.ptr<!s32i>, !s32i
-    cir.return %43 : !s32i
+    cir.store %18, %2 : !s32i, !cir.ptr<!s32i>
+    %19 = cir.load %2 : !cir.ptr<!s32i>, !s32i
+    cir.return %19 : !s32i
   }
 
   cir.func @testBoolToIntCast(%arg0: !cir.bool)  {
