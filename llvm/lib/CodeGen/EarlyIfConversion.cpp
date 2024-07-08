@@ -180,6 +180,9 @@ public:
   /// speculatively execute it.
   bool canConvertIf(MachineBasicBlock *MBB, bool Predicate = false);
 
+  /// isProfitableToConvertIf - Apply the target heuristic to decide if the
+  /// transformation is profitable. Branch probabilities are considered
+  /// currently.
   bool isProfitableToConvertIf(const MachineBranchProbabilityInfo *MBPI,
                                TargetSchedModel SchedModel,
                                bool Predicate = false);
@@ -569,6 +572,7 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
 bool SSAIfConv::isProfitableToConvertIf(
     const MachineBranchProbabilityInfo *MBPI, TargetSchedModel SchedModel,
     bool Predicate) {
+
   if (!Predicate && TII->shouldConvertPredictableBranches())
     return true;
 
