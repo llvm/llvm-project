@@ -2983,7 +2983,7 @@ public:
   bool extractIfOffset(int64_t &Offset) const;
 
   /// Assuming that the expression operates on an address, extract a constant
-  /// offset and the succsessive ops. Return false if the expression contains
+  /// offset and the successive ops. Return false if the expression contains
   /// any incompatible ops (including non-zero DW_OP_LLVM_args - only a single
   /// address operand to the expression is permitted).
   ///
