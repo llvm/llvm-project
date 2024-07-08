@@ -161,6 +161,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdbit.stdc_trailing_zeros_us
 
     # stdlib.h entrypoints
+    libc.src.stdlib._Exit
     libc.src.stdlib.abort
     libc.src.stdlib.abs
     libc.src.stdlib.aligned_alloc
