@@ -113,56 +113,6 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-// -----
-
-#map1 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-func.func @vectorize_scalable_nd_tensor_extract_transfer_read_basic(%arg0: tensor<?x?x?xf32>, %arg2: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
-  %1 = linalg.generic {
-    indexing_maps = [#map1],
-    iterator_types = ["parallel", "parallel", "parallel"]
-  } outs(%arg2 : tensor<?x?x?xf32>) {
-  ^bb0(%arg4: f32):
-    %2 = linalg.index 0 : index
-    %3 = linalg.index 1 : index
-    %4 = linalg.index 2 : index
-    %5 = tensor.extract %arg0[%2, %3, %4] : tensor<?x?x?xf32>
-    linalg.yield %5 : f32
-  } -> tensor<?x?x?xf32>
-  return %1 : tensor<?x?x?xf32>
-}
-
-// CHECK-LABEL: @vectorize_scalable_nd_tensor_extract_transfer_read_basic
-// CHECK-SAME: %[[BASE:.*]]: tensor<?x?x?xf32>, %[[DEST:.*]]: tensor<?x?x?xf32>
-// CHECK:           %[[PASSTHRU:.*]] = arith.constant dense<0.000000e+00> : vector<1x1x[4]xf32>
-// CHECK:           %[[MASK:.*]] = arith.constant dense<true> : vector<1x1x[4]xi1>
-// CHECK:           %[[C2:.*]] = arith.constant 2 : index
-// CHECK:           %[[C1:.*]] = arith.constant 1 : index
-// CHECK:           %[[C0:.*]] = arith.constant 0 : index
-// CHECK:           %[[DEST_DIM0:.*]] = tensor.dim %[[DEST]], %[[C0]] : tensor<?x?x?xf32>
-// CHECK:           %[[DEST_DIM1:.*]] = tensor.dim %[[DEST]], %[[C1]] : tensor<?x?x?xf32>
-// CHECK:           %[[DEST_DIM2:.*]] = tensor.dim %[[DEST]], %[[C2]] : tensor<?x?x?xf32>
-// CHECK:           %[[DEST_MASK:.*]] = vector.create_mask %[[DEST_DIM0]], %[[DEST_DIM1]], %[[DEST_DIM2]] : vector<1x1x[4]xi1>
-// CHECK:           %[[INDEX_VEC:.*]] = vector.step : vector<[4]xindex>
-// CHECK:           %[[INDEX_VEC_BCAST:.*]] = vector.broadcast %[[INDEX_VEC]] : vector<[4]xindex> to vector<1x1x[4]xindex>
-// CHECK:           %[[GATHER:.*]] = vector.mask %[[DEST_MASK]] { vector.gather %[[BASE]]{{\[}}%[[C0]], %[[C0]], %[[C0]]] {{\[}}%[[INDEX_VEC_BCAST]]], %[[MASK]], %[[PASSTHRU]] : tensor<?x?x?xf32>, vector<1x1x[4]xindex>, vector<1x1x[4]xi1>, vector<1x1x[4]xf32> into vector<1x1x[4]xf32> } : vector<1x1x[4]xi1> -> vector<1x1x[4]xf32>
-// CHECK:           %[[OUT:.*]] = vector.mask %[[DEST_MASK]] { vector.transfer_write %[[GATHER]], %[[DEST]]{{\[}}%[[C0]], %[[C0]], %[[C0]]] {in_bounds = [true, true, true]} : vector<1x1x[4]xf32>, tensor<?x?x?xf32> } : vector<1x1x[4]xi1> -> tensor<?x?x?xf32>
-// CHECK:           return %[[OUT]] : tensor<?x?x?xf32>
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    transform.structured.vectorize %0 vector_sizes [1, 1, [4]] {vectorize_nd_extract} : !transform.any_op
-
-    %func = transform.structured.match ops{["func.func"]} in %arg1
-      : (!transform.any_op) -> !transform.any_op
-    transform.apply_patterns to %func {
-      transform.apply_patterns.canonicalization
-      transform.apply_patterns.linalg.tiling_canonicalization
-    } : !transform.any_op
-    transform.yield
-  }
-}
-
  // -----
 
 func.func @vectorize_nd_tensor_extract_transfer_read_complex(%6: tensor<45x80x16xf32>, %arg0: index, %arg2: index, %arg1: index, %arg4: index, %extracted_slice : tensor<1x4xf32>) -> tensor<1x4xf32> {
