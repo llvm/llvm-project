@@ -83,6 +83,12 @@ static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
   return Key == "b_key";
 }
 
+// Determine if we need to treat pointers in GOT as signed (as described in
+// https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst#appendix-signed-got)
+// based on PAuth core info encoded as "aarch64-elf-pauthabi-platform" and
+// "aarch64-elf-pauthabi-version" module flags. Currently, only
+// AARCH64_PAUTH_PLATFORM_LLVM_LINUX platform supports signed GOT with
+// AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_GOT bit in version value set.
 static bool hasELFSignedGOTHelper(const Function &F,
                                   const AArch64Subtarget *STI) {
   if (!Triple(STI->getTargetTriple()).isOSBinFormatELF())
