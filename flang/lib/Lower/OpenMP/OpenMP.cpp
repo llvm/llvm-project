@@ -1076,8 +1076,8 @@ static void genSectionsClauses(
     llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAllocate(clauseOps);
-  cp.processReduction(loc, clauseOps, &reductionTypes, &reductionSyms);
   cp.processNowait(clauseOps);
+  cp.processReduction(loc, clauseOps, &reductionTypes, &reductionSyms);
   // TODO Support delayed privatization.
 }
 
