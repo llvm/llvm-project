@@ -3127,9 +3127,6 @@ TEST_F(DIExpressionTest, get) {
   EXPECT_EQ(78u, N->getElement(3));
   EXPECT_EQ(0u, N->getElement(4));
 
-  TempDIExpression Temp = N->clone();
-  EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
-
   // Test DIExpression::prepend().
   uint64_t Elts0[] = {dwarf::DW_OP_LLVM_fragment, 0, 32};
   auto *N0 = DIExpression::get(Context, Elts0);

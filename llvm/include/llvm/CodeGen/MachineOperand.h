@@ -31,6 +31,7 @@ class MachineInstr;
 class MachineRegisterInfo;
 class MCCFIInstruction;
 class MDNode;
+class Metadata;
 class ModuleSlotTracker;
 class TargetIntrinsicInfo;
 class TargetRegisterInfo;
@@ -173,6 +174,7 @@ private:
     int64_t ImmVal;          // For MO_Immediate.
     const uint32_t *RegMask; // For MO_RegisterMask and MO_RegisterLiveOut.
     const MDNode *MD;        // For MO_Metadata.
+    const Metadata* Expr;
     MCSymbol *Sym;           // For MO_MCSymbol.
     unsigned CFIIndex;       // For MO_CFI.
     Intrinsic::ID IntrinsicID; // For MO_IntrinsicID.
@@ -677,6 +679,11 @@ public:
     return Contents.MD;
   }
 
+  const Metadata *getMetadataDI() const {
+    assert(isMetadata() && "Wrong MachineOperand accessor");
+    return Contents.Expr;
+  }
+
   //===--------------------------------------------------------------------===//
   // Mutators for various operand types.
   //===--------------------------------------------------------------------===//
@@ -710,9 +717,9 @@ public:
     Contents.OffsetedInfo.Val.Index = Idx;
   }
 
-  void setMetadata(const MDNode *MD) {
+  void setMetadata(const Metadata *MD) {
     assert(isMetadata() && "Wrong MachineOperand mutator");
-    Contents.MD = MD;
+    Contents.Expr = MD;
   }
 
   void setInstrRefInstrIndex(unsigned InstrIdx) {
@@ -944,6 +951,11 @@ public:
   static MachineOperand CreateMetadata(const MDNode *Meta) {
     MachineOperand Op(MachineOperand::MO_Metadata);
     Op.Contents.MD = Meta;
+    return Op;
+  }
+  static MachineOperand CreateMetadata(const Metadata *Meta) {
+    MachineOperand Op(MachineOperand::MO_Metadata);
+    Op.Contents.Expr = Meta;
     return Op;
   }
 

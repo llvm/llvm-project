@@ -2162,7 +2162,6 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (Record.size() < 1)
       return error("Invalid record");
 
-    IsDistinct = Record[0] & 1;
     uint64_t Version = Record[0] >> 1;
     auto Elts = MutableArrayRef<uint64_t>(Record).slice(1);
 
@@ -2170,7 +2169,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (Error Err = upgradeDIExpression(Version, Elts, Buffer))
       return Err;
 
-    MetadataList.assignValue(GET_OR_DISTINCT(DIExpression, (Context, Elts)),
+    MetadataList.assignValue(DIExpression::get(Context, Elts),
                              NextMetadataNo);
     NextMetadataNo++;
     break;
