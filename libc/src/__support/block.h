@@ -442,8 +442,7 @@ Block<OffsetType, kAlign>::allocate(Block *block, size_t alignment,
 
   if (!info.block->is_usable_space_aligned(alignment)) {
     size_t adjustment = info.block->padding_for_alignment(alignment);
-    size_t new_inner_size = adjustment - BLOCK_OVERHEAD;
-    LIBC_ASSERT(new_inner_size % ALIGNMENT == 0 &&
+    LIBC_ASSERT((adjustment - BLOCK_OVERHEAD) % ALIGNMENT == 0 &&
                 "The adjustment calculation should always return a new size "
                 "that's a multiple of ALIGNMENT");
 
