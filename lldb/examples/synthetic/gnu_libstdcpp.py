@@ -915,7 +915,7 @@ def VariantSummaryProvider(valobj, dict):
         return " No Value"
 
     # Strip references and typedefs.
-    variant_type = raw_obj.GetType().GetCanonicalType().GetDereferencedType();
+    variant_type = raw_obj.GetType().GetCanonicalType().GetDereferencedType()
     template_arg_count = variant_type.GetNumberOfTemplateArguments()
 
     # Invalid index can happen when the variant is not initialized yet.
