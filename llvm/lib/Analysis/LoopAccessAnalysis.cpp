@@ -3084,6 +3084,22 @@ const LoopAccessInfo &LoopAccessInfoManager::getInfo(Loop &L) {
 
   return *It->second;
 }
+void LoopAccessInfoManager::clear() {
+  SmallVector<Loop *> ToRemove;
+  // Collect LoopAccessInfo entries that may keep references to IR outside the
+  // analyzed loop or SCEVs that may have been modified or invalidated. At the
+  // moment, that is loops requiring memory or SCEV runtime checks, as those cache
+  // SCEVs, e.g. for pointer expressions.
+  for (const auto &[L, LAI] : LoopAccessInfoMap) {
+    if (LAI->getRuntimePointerChecking()->getChecks().empty() &&
+        LAI->getPSE().getPredicate().isAlwaysTrue())
+      continue;
+    ToRemove.push_back(L);
+  }
+
+  for (Loop *L : ToRemove)
+    LoopAccessInfoMap.erase(L);
+}
 
 bool LoopAccessInfoManager::invalidate(
     Function &F, const PreservedAnalyses &PA,

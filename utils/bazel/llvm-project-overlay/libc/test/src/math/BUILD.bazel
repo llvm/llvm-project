@@ -699,6 +699,15 @@ math_test(
 )
 
 math_test(
+    name = "cospif",
+    deps = [
+        ":sdcomp26094",
+        "//libc:__support_cpp_array",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
     name = "tanhf",
     deps = [
         "//libc/utils/MPFRWrapper:mpfr_wrapper",

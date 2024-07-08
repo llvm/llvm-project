@@ -218,6 +218,23 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  cospif
+  SRCS
+    cospif.cpp
+  HDRS
+    ../cospif.h
+  DEPENDS
+    .sincosf_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.optimization
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   sin
   SRCS
     sin.cpp
@@ -4074,4 +4091,20 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.sqrt
   COMPILE_OPTIONS
     -O3
+)
+
+add_entrypoint_object(
+  cbrtf
+  SRCS
+    cbrtf.cpp
+  HDRS
+    ../cbrtf.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.optimization
 )
