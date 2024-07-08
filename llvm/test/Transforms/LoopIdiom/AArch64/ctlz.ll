@@ -773,6 +773,37 @@ do.end:                                           ; preds = %do.body
   ret i32 %inc.0
 }
 
+; Check that we correctly bail on analysis when the ult comparison is with a
+; constant that exceeds the (unsigned) range of a 64-bit integer, as we currently
+; only handle loopback condition ult 2 or 4.
+
+define i128 @large_constant(i128 noundef %n) {
+; CHECK-LABEL: define i128 @large_constant(
+; CHECK-SAME: i128 noundef [[N:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[DO_BODY:%.*]]
+; CHECK:       do.body:
+; CHECK-NEXT:    [[N_ADDR_0:%.*]] = phi i128 [ [[N]], [[ENTRY:%.*]] ], [ [[SHR:%.*]], [[DO_BODY]] ]
+; CHECK-NEXT:    [[SHR]] = lshr i128 [[N_ADDR_0]], 1
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ult i128 [[N_ADDR_0]], 18446744073709551616
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[DO_END:%.*]], label [[DO_BODY]]
+; CHECK:       do.end:
+; CHECK-NEXT:    [[SHR_LCSSA:%.*]] = phi i128 [ [[SHR]], [[DO_BODY]] ]
+; CHECK-NEXT:    ret i128 [[SHR_LCSSA]]
+;
+entry:
+  br label %do.body
+
+do.body:                                          ; preds = %do.body, %entry
+  %n.addr.0 = phi i128 [ %n, %entry ], [ %shr, %do.body ]
+  %shr = lshr i128 %n.addr.0, 1
+  %cmp.not = icmp ult i128 %n.addr.0, 18446744073709551616
+  br i1 %cmp.not, label %do.end, label %do.body
+
+do.end:                                           ; preds = %do.body
+  ret i128 %shr
+}
+
 
 declare i32 @llvm.abs.i32(i32, i1)
 declare i16 @llvm.abs.i16(i16, i1)

@@ -1530,7 +1530,7 @@ static Value *matchCondition(BranchInst *BI, BasicBlock *LoopEntry,
 /// the control yields to the loop entry. If the branch matches the behaviour,
 /// the variable involved in the comparison is returned.
 static Value *matchShiftULTCondition(BranchInst *BI, BasicBlock *LoopEntry,
-                                     uint64_t &Threshold) {
+                                     APInt &Threshold) {
   if (!BI || !BI->isConditional())
     return nullptr;
 
@@ -1546,7 +1546,7 @@ static Value *matchShiftULTCondition(BranchInst *BI, BasicBlock *LoopEntry,
   ICmpInst::Predicate Pred = Cond->getPredicate();
 
   if (Pred == ICmpInst::ICMP_ULT && FalseSucc == LoopEntry) {
-    Threshold = CmpConst->getZExtValue();
+    Threshold = CmpConst->getValue();
     return Cond->getOperand(0);
   }
 
@@ -1595,7 +1595,7 @@ static bool detectShiftUntilLessThanIdiom(Loop *CurLoop, const DataLayout &DL,
                                           Intrinsic::ID &IntrinID,
                                           Value *&InitX, Instruction *&CntInst,
                                           PHINode *&CntPhi, Instruction *&DefX,
-                                          uint64_t &Threshold) {
+                                          APInt &Threshold) {
   BasicBlock *LoopEntry;
 
   DefX = nullptr;
@@ -2012,7 +2012,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilLessThan() {
   PHINode *CntPhi = nullptr;
   Instruction *CntInst = nullptr;
 
-  uint64_t LoopThreshold;
+  APInt LoopThreshold;
   if (!detectShiftUntilLessThanIdiom(CurLoop, *DL, IntrinID, InitX, CntInst,
                                      CntPhi, DefX, LoopThreshold))
     return false;
@@ -2041,7 +2041,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilLessThan() {
   if (!PreCondBI)
     return false;
 
-  uint64_t PreLoopThreshold;
+  APInt PreLoopThreshold;
   if (matchShiftULTCondition(PreCondBI, PH, PreLoopThreshold) != InitX ||
       PreLoopThreshold != 2)
     return false;
