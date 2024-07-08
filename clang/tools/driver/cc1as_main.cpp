@@ -98,6 +98,8 @@ struct AssemblerInvocation {
   LLVM_PREFERRED_TYPE(bool)
   unsigned RelaxELFRelocations : 1;
   LLVM_PREFERRED_TYPE(bool)
+  unsigned SSE2AVX : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned Dwarf64 : 1;
   unsigned DwarfVersion;
   std::string DwarfDebugFlags;
@@ -197,6 +199,7 @@ public:
     ShowInst = 0;
     ShowEncoding = 0;
     RelaxAll = 0;
+    SSE2AVX = 0;
     NoExecStack = 0;
     FatalWarnings = 0;
     NoWarn = 0;
@@ -288,6 +291,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   }
 
   Opts.RelaxELFRelocations = !Args.hasArg(OPT_mrelax_relocations_no);
+  Opts.SSE2AVX = Args.hasArg(OPT_msse2avx);
   if (auto *DwarfFormatArg = Args.getLastArg(OPT_gdwarf64, OPT_gdwarf32))
     Opts.Dwarf64 = DwarfFormatArg->getOption().matches(OPT_gdwarf64);
   Opts.DwarfVersion = getLastArgIntValue(Args, OPT_dwarf_version_EQ, 2, Diags);
@@ -437,6 +441,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   MCOptions.MCSaveTempLabels = Opts.SaveTemporaryLabels;
   MCOptions.Crel = Opts.Crel;
   MCOptions.X86RelaxRelocations = Opts.RelaxELFRelocations;
+  MCOptions.X86Sse2Avx = Opts.SSE2AVX;
   MCOptions.CompressDebugSections = Opts.CompressDebugSections;
   MCOptions.AsSecureLogFile = Opts.AsSecureLogFile;
 

@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple x86_64 -x86-asm-syntax=intel -msse2avx %s | FileCheck %s
+# RUN: llvm-mc -triple x86_64 -x86-asm-syntax=intel -x86-sse2avx %s | FileCheck %s
 	.text
 # CHECK: vmovsd  -352(%rbp), %xmm0
 	movsd	xmm0, qword ptr [rbp - 352]     # xmm0 = mem[0],zero

@@ -42,7 +42,6 @@ MCOPT(bool, Dwarf64)
 MCOPT(EmitDwarfUnwindType, EmitDwarfUnwind)
 MCOPT(bool, EmitCompactUnwindNonCanonical)
 MCOPT(bool, ShowMCInst)
-MCOPT(bool, SSE2AVX)
 MCOPT(bool, FatalWarnings)
 MCOPT(bool, NoWarn)
 MCOPT(bool, NoDeprecatedWarn)
@@ -50,6 +49,7 @@ MCOPT(bool, NoTypeCheck)
 MCOPT(bool, SaveTempLabels)
 MCOPT(bool, Crel)
 MCOPT(bool, X86RelaxRelocations)
+MCOPT(bool, X86Sse2Avx)
 MCOPT(std::string, ABIName)
 MCOPT(std::string, AsSecureLogFile)
 
@@ -109,10 +109,6 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
       cl::desc("Emit internal instruction representation to assembly file"));
   MCBINDOPT(ShowMCInst);
 
-  static cl::opt<bool> SSE2AVX(
-      "msse2avx", cl::desc("Convert SSE Instructions to AVX Instructions"));
-  MCBINDOPT(SSE2AVX);
-
   static cl::opt<bool> FatalWarnings("fatal-warnings",
                                      cl::desc("Treat warnings as errors"));
   MCBINDOPT(FatalWarnings);
@@ -145,6 +141,10 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
       cl::init(true));
   MCBINDOPT(X86RelaxRelocations);
 
+  static cl::opt<bool> X86Sse2Avx(
+      "x86-sse2avx", cl::desc("Convert SSE Instructions to AVX Instructions"));
+  MCBINDOPT(X86Sse2Avx);
+
   static cl::opt<std::string> ABIName(
       "target-abi", cl::Hidden,
       cl::desc("The name of the ABI to be targeted from the backend."),
@@ -166,7 +166,6 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.Dwarf64 = getDwarf64();
   Options.DwarfVersion = getDwarfVersion();
   Options.ShowMCInst = getShowMCInst();
-  Options.SSE2AVX = getSSE2AVX();
   Options.ABIName = getABIName();
   Options.MCFatalWarnings = getFatalWarnings();
   Options.MCNoWarn = getNoWarn();
@@ -175,6 +174,7 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.MCSaveTempLabels = getSaveTempLabels();
   Options.Crel = getCrel();
   Options.X86RelaxRelocations = getX86RelaxRelocations();
+  Options.X86Sse2Avx = getX86Sse2Avx();
   Options.EmitDwarfUnwind = getEmitDwarfUnwind();
   Options.EmitCompactUnwindNonCanonical = getEmitCompactUnwindNonCanonical();
   Options.AsSecureLogFile = getAsSecureLogFile();

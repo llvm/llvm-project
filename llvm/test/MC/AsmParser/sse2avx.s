@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple x86_64 -msse2avx %s | FileCheck %s
+# RUN: llvm-mc -triple x86_64 -x86-sse2avx %s | FileCheck %s
 	.text
 # CHECK: vmovsd  -352(%rbp), %xmm0
 	movsd	-352(%rbp), %xmm0               # xmm0 = mem[0],zero

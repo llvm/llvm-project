@@ -41,8 +41,6 @@ bool getEmitCompactUnwindNonCanonical();
 
 bool getShowMCInst();
 
-bool getSSE2AVX();
-
 bool getFatalWarnings();
 
 bool getNoWarn();
@@ -56,6 +54,8 @@ bool getSaveTempLabels();
 bool getCrel();
 
 bool getX86RelaxRelocations();
+
+bool getX86Sse2Avx();
 
 std::string getABIName();
 

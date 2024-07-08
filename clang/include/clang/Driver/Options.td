@@ -4761,6 +4761,7 @@ def mno_tls_direct_seg_refs : Flag<["-"], "mno-tls-direct-seg-refs">, Group<m_Gr
   HelpText<"Disable direct TLS access through segment registers">,
   MarshallingInfoFlag<CodeGenOpts<"IndirectTlsSegRefs">>;
 def mno_relax_all : Flag<["-"], "mno-relax-all">, Group<m_Group>;
+def mno_sse2avx : Flag<["-"], "mno-sse2avx">, Group<m_Group>;
 let Flags = [TargetSpecific] in {
 def mno_rtd: Flag<["-"], "mno-rtd">, Group<m_Group>;
 def mno_soft_float : Flag<["-"], "mno-soft-float">, Group<m_Group>;
@@ -5186,6 +5187,10 @@ def mrelax_all : Flag<["-"], "mrelax-all">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option, CC1AsOption]>,
   HelpText<"(integrated-as) Relax all machine instructions">,
   MarshallingInfoFlag<CodeGenOpts<"RelaxAll">>;
+def msse2avx : Flag<["-"], "msse2avx">, Group<m_Group>,
+  Visibility<[ClangOption, CC1Option, CC1AsOption]>,
+  HelpText<"Convert SSE to AVX Instructions">,
+  MarshallingInfoFlag<CodeGenOpts<"SSE2AVX">>;
 def mincremental_linker_compatible : Flag<["-"], "mincremental-linker-compatible">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option, CC1AsOption]>,
   HelpText<"(integrated-as) Emit an object file which can be used with an incremental linker">,

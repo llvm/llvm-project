@@ -3767,7 +3767,7 @@ bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
   // When "-msse2avx" option is enabled replaceSSE2AVXOpcode method will
   // replace SSE instruction with equivalent AVX instruction using mapping given
   // in table GET_X86_SSE2AVX_TABLE
-  if (MCOptions.SSE2AVX)
+  if (MCOptions.X86Sse2Avx)
     replaceSSE2AVXOpcode(Inst);
 
   if (ForcedOpcodePrefix != OpcodePrefix_VEX3 &&
