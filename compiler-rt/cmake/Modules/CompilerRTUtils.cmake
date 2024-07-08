@@ -368,14 +368,23 @@ macro(construct_compiler_rt_default_triple)
           "Default triple for which compiler-rt runtimes will be built.")
   endif()
 
-  if ("${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
+  if(CMAKE_C_COMPILER_ID MATCHES "Clang")
     set(option_prefix "")
     if (CMAKE_C_SIMULATE_ID MATCHES "MSVC")
       set(option_prefix "/clang:")
     endif()
-    execute_process(COMMAND ${CMAKE_C_COMPILER} ${option_prefix}--target=${COMPILER_RT_DEFAULT_TARGET_TRIPLE} ${option_prefix}-print-target-triple
-                    OUTPUT_VARIABLE COMPILER_RT_DEFAULT_TARGET_TRIPLE
-                    OUTPUT_STRIP_TRAILING_WHITESPACE)
+    set(print_target_triple ${CMAKE_C_COMPILER} ${option_prefix}--target=${COMPILER_RT_DEFAULT_TARGET_TRIPLE} ${option_prefix}-print-target-triple)
+    execute_process(COMMAND ${print_target_triple}
+      RESULT_VARIABLE result
+      OUTPUT_VARIABLE output
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(result EQUAL 0)
+      set(COMPILER_RT_DEFAULT_TARGET_TRIPLE ${output})
+    else()
+      string(REPLACE ";" " " print_target_triple "${print_target_triple}")
+      # TODO(#97876): Report an error.
+      message(WARNING "Failed to execute `${print_target_triple}` to normalize target triple.")
+    endif()
   endif()
 
   string(REPLACE "-" ";" LLVM_TARGET_TRIPLE_LIST ${COMPILER_RT_DEFAULT_TARGET_TRIPLE})

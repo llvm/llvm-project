@@ -340,7 +340,9 @@ bool Pointer::hasSameArray(const Pointer &A, const Pointer &B) {
          A.getFieldDesc()->IsArray;
 }
 
-std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
+std::optional<APValue> Pointer::toRValue(const Context &Ctx,
+                                         QualType ResultType) const {
+  assert(!ResultType.isNull());
   // Method to recursively traverse composites.
   std::function<bool(QualType, const Pointer &, APValue &)> Composite;
   Composite = [&Composite, &Ctx](QualType Ty, const Pointer &Ptr, APValue &R) {
@@ -483,12 +485,18 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx) const {
     llvm_unreachable("invalid value to return");
   };
 
-  if (isZero())
-    return APValue(static_cast<Expr *>(nullptr), CharUnits::Zero(), {}, false,
-                   true);
-
-  if (isDummy() || !isLive())
+  // Invalid to read from.
+  if (isDummy() || !isLive() || isPastEnd())
     return std::nullopt;
+
+  // We can return these as rvalues, but we can't deref() them.
+  if (isZero() || isIntegralPointer())
+    return toAPValue();
+
+  // Just load primitive types.
+  if (std::optional<PrimType> T = Ctx.classify(ResultType)) {
+    TYPE_SWITCH(*T, return this->deref<T>().toAPValue());
+  }
 
   // Return the composite type.
   APValue Result;

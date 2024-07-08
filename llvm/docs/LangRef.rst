@@ -19441,6 +19441,37 @@ will be on any later loop iteration.
 This intrinsic will only return 0 if the input count is also 0. A non-zero input
 count will produce a non-zero result.
 
+'``llvm.experimental.vector.partial.reduce.add.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v4i32.v8i32(<4 x i32> %a, <8 x i32> %b)
+      declare <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v4i32.v16i32(<4 x i32> %a, <16 x i32> %b)
+      declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv8i32(<vscale x 4 x i32> %a, <vscale x 8 x i32> %b)
+      declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv16i32(<vscale x 4 x i32> %a, <vscale x 16 x i32> %b)
+
+Overview:
+"""""""""
+
+The '``llvm.vector.experimental.partial.reduce.add.*``' intrinsics reduce the
+concatenation of the two vector operands down to the number of elements dictated
+by the result type. The result type is a vector type that matches the type of the
+first operand vector.
+
+Arguments:
+""""""""""
+
+Both arguments must be vectors of matching element types. The first argument type must
+match the result type, while the second argument type must have a vector length that is a
+positive integer multiple of the first vector/result type. The arguments must be either be
+both fixed or both scalable vectors.
+
+
 '``llvm.experimental.vector.histogram.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
