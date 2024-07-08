@@ -572,6 +572,10 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
 bool SSAIfConv::isProfitableToConvertIf(
     const MachineBranchProbabilityInfo *MBPI, TargetSchedModel SchedModel,
     bool Predicate) {
+
+  if (!Predicate && TII->shouldConvertPredictableBranches())
+    return true;
+
   auto TrueProbability = MBPI->getEdgeProbability(Head, TBB);
   if (isTriangle()) {
     MachineBasicBlock &IfBlock = (TBB == Tail) ? *FBB : *TBB;
@@ -807,9 +811,11 @@ namespace {
 class EarlyIfConverter : public MachineFunctionPass {
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
-  MCSchedModel SchedModel;
+  MCSchedModel MCSchedModel;
+  TargetSchedModel TargetSchedModel;
   MachineRegisterInfo *MRI = nullptr;
   MachineDominatorTree *DomTree = nullptr;
+  MachineBranchProbabilityInfo *MBPI = nullptr;
   MachineLoopInfo *Loops = nullptr;
   MachineTraceMetrics *Traces = nullptr;
   MachineTraceMetrics::Ensemble *MinInstr = nullptr;
@@ -918,6 +924,9 @@ bool EarlyIfConverter::shouldConvertIf() {
 
   // Do not try to if-convert if the condition has a high chance of being
   // predictable.
+  if (!IfConv.isProfitableToConvertIf(MBPI, TargetSchedModel))
+    return false;
+
   MachineLoop *CurrentLoop = Loops->getLoopFor(IfConv.Head);
   // If the condition is in a loop, consider it predictable if the condition
   // itself or all its operands are loop-invariant. E.g. this considers a load
@@ -958,7 +967,7 @@ bool EarlyIfConverter::shouldConvertIf() {
                               FBBTrace.getCriticalPath());
 
   // Set a somewhat arbitrary limit on the critical path extension we accept.
-  unsigned CritLimit = SchedModel.MispredictPenalty/2;
+  unsigned CritLimit = MCSchedModel.MispredictPenalty / 2;
 
   MachineBasicBlock &MBB = *IfConv.Head;
   MachineOptimizationRemarkEmitter MORE(*MBB.getParent(), nullptr);
@@ -1131,9 +1140,11 @@ bool EarlyIfConverter::runOnMachineFunction(MachineFunction &MF) {
 
   TII = STI.getInstrInfo();
   TRI = STI.getRegisterInfo();
-  SchedModel = STI.getSchedModel();
+  MCSchedModel = STI.getSchedModel();
+  TargetSchedModel.init(&STI);
   MRI = &MF.getRegInfo();
   DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   Loops = &getAnalysis<MachineLoopInfo>();
   Traces = &getAnalysis<MachineTraceMetrics>();
   MinInstr = nullptr;

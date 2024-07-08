@@ -913,6 +913,10 @@ public:
     return false;
   }
 
+  /// Return true if the target will always try to convert predictable branches
+  /// to selects.
+  virtual bool shouldConvertPredictableBranches() const { return true; }
+
   /// Return true if it is possible to insert a select
   /// instruction that chooses between TrueReg and FalseReg based on the
   /// condition code in Cond.
