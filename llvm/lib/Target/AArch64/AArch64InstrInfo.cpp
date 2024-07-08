@@ -3587,6 +3587,15 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STURWi:
   case AArch64::STURSi:
   case AArch64::STLURWi:
+  case AArch64::LDRSpre:
+  case AArch64::LDRWpre:
+  case AArch64::LDRSWpre:
+  case AArch64::LDTRSWi:
+  case AArch64::STRSpre:
+  case AArch64::STRWpre:
+  case AArch64::LDTRWi:
+  case AArch64::LDTRXi:
+  case AArch64::STTRWi:
     Width = TypeSize::getFixed(4);
     Scale = TypeSize::getFixed(1);
     MinOffset = -256;
@@ -3602,6 +3611,16 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STURHi:
   case AArch64::STURHHi:
   case AArch64::STLURHi:
+  case AArch64::LDRHHpre:
+  case AArch64::STRHHpre:
+  case AArch64::LDRHpre:
+  case AArch64::STRHpre:
+  case AArch64::LDRSHWpre:
+  case AArch64::LDRSHXpre:
+  case AArch64::LDTRHi:
+  case AArch64::LDTRSHWi:
+  case AArch64::LDTRSHXi:
+  case AArch64::STTRHi:
     Width = TypeSize::getFixed(2);
     Scale = TypeSize::getFixed(1);
     MinOffset = -256;
@@ -3617,6 +3636,16 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STURBi:
   case AArch64::STURBBi:
   case AArch64::STLURBi:
+  case AArch64::LDRBpre:
+  case AArch64::STRBpre:
+  case AArch64::LDRBBpre:
+  case AArch64::STRBBpre:
+  case AArch64::LDRSBWpre:
+  case AArch64::LDRSBXpre:
+  case AArch64::LDTRBi:
+  case AArch64::LDTRSBWi:
+  case AArch64::LDTRSBXi:
+  case AArch64::STTRBi:
     Width = TypeSize::getFixed(1);
     Scale = TypeSize::getFixed(1);
     MinOffset = -256;
@@ -3676,6 +3705,12 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STPSi:
   case AArch64::STNPWi:
   case AArch64::STNPSi:
+  case AArch64::LDPSpre:
+  case AArch64::LDPWpre:
+  case AArch64::LDPSWi:
+  case AArch64::STPSpre:
+  case AArch64::STPWpre:
+  case AArch64::LDPSWpre:
     Scale = TypeSize::getFixed(4);
     Width = TypeSize::getFixed(8);
     MinOffset = -64;
@@ -3717,11 +3752,14 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDPXpost:
   case AArch64::STPDpre:
   case AArch64::LDPDpost:
+  case AArch64::LDPXpre:
+  case AArch64::LDPDpre:
     Scale = TypeSize::getFixed(8);
     Width = TypeSize::getFixed(8);
     MinOffset = -512;
     MaxOffset = 504;
     break;
+  case AArch64::LDPQpre:
   case AArch64::STPQpre:
   case AArch64::LDPQpost:
     Scale = TypeSize::getFixed(16);
@@ -3733,6 +3771,9 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STRDpre:
   case AArch64::LDRXpost:
   case AArch64::LDRDpost:
+  case AArch64::LDRXpre:
+  case AArch64::LDRDpre:
+  case AArch64::STTRXi:
     Scale = TypeSize::getFixed(1);
     Width = TypeSize::getFixed(8);
     MinOffset = -256;
@@ -3740,6 +3781,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
     break;
   case AArch64::STRQpre:
   case AArch64::LDRQpost:
+  case AArch64::LDRQpre:
     Scale = TypeSize::getFixed(1);
     Width = TypeSize::getFixed(16);
     MinOffset = -256;
