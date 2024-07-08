@@ -296,8 +296,8 @@ They are described in detail in the `debug info migration guide <https://llvm.or
 * Added the following functions for accessing/setting the no-wrap flags for a
   GetElementPtr instruction
 
-  * ``LLVMBuildGEPWithWrapFlags``
-  * ``LLVMConstGEPWithWrapFlags``
+  * ``LLVMBuildGEPWithNoWrapFlags``
+  * ``LLVMConstGEPWithNoWrapFlags``
   * ``LLVMGEPGetNoWrapFlags``
   * ``LLVMGEPSetNoWrapFlags``
 

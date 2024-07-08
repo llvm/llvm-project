@@ -413,8 +413,8 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
       for (int i = 1; i <= NumIdx; i++)
         Idx.push_back(clone_constant(LLVMGetOperand(Cst, i), M));
 
-      return LLVMConstGEPWithWrapFlags(ElemTy, Ptr, Idx.data(), NumIdx,
-                                       LLVMGEPGetNoWrapFlags(Cst));
+      return LLVMConstGEPWithNoWrapFlags(ElemTy, Ptr, Idx.data(), NumIdx,
+                                         LLVMGEPGetNoWrapFlags(Cst));
     }
     default:
       fprintf(stderr, "%d is not a supported opcode for constant expressions\n",
@@ -767,9 +767,9 @@ struct FunCloner {
         for (int i = 1; i <= NumIdx; i++)
           Idx.push_back(CloneValue(LLVMGetOperand(Src, i)));
 
-        Dst =
-            LLVMBuildGEPWithWrapFlags(Builder, ElemTy, Ptr, Idx.data(), NumIdx,
-                                      Name, LLVMGEPGetNoWrapFlags(Src));
+        Dst = LLVMBuildGEPWithNoWrapFlags(Builder, ElemTy, Ptr, Idx.data(),
+                                          NumIdx, Name,
+                                          LLVMGEPGetNoWrapFlags(Src));
         break;
       }
       case LLVMAtomicRMW: {

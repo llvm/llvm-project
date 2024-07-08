@@ -2409,10 +2409,11 @@ LLVMValueRef LLVMConstGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
 LLVMValueRef LLVMConstInBoundsGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
                                    LLVMValueRef *ConstantIndices,
                                    unsigned NumIndices);
-LLVMValueRef LLVMConstGEPWithWrapFlags(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
-                                       LLVMValueRef *ConstantIndices,
-                                       unsigned NumIndices,
-                                       LLVMGEPNoWrapFlags WrapFlags);
+LLVMValueRef LLVMConstGEPWithNoWrapFlags(LLVMTypeRef Ty,
+                                         LLVMValueRef ConstantVal,
+                                         LLVMValueRef *ConstantIndices,
+                                         unsigned NumIndices,
+                                         LLVMGEPNoWrapFlags NoWrapFlags);
 LLVMValueRef LLVMConstTrunc(LLVMValueRef ConstantVal, LLVMTypeRef ToType);
 LLVMValueRef LLVMConstPtrToInt(LLVMValueRef ConstantVal, LLVMTypeRef ToType);
 LLVMValueRef LLVMConstIntToPtr(LLVMValueRef ConstantVal, LLVMTypeRef ToType);
@@ -3934,7 +3935,7 @@ LLVMGEPNoWrapFlags LLVMGEPGetNoWrapFlags(LLVMValueRef GEP);
  *
  * @see llvm::GetElementPtrInst::setNoWrapFlags
  */
-void LLVMGEPSetNoWrapFlags(LLVMValueRef GEP, LLVMGEPNoWrapFlags WrapFlags);
+void LLVMGEPSetNoWrapFlags(LLVMValueRef GEP, LLVMGEPNoWrapFlags NoWrapFlags);
 
 /**
  * @}
@@ -4395,11 +4396,11 @@ LLVMValueRef LLVMBuildGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
 LLVMValueRef LLVMBuildInBoundsGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
                                    LLVMValueRef Pointer, LLVMValueRef *Indices,
                                    unsigned NumIndices, const char *Name);
-LLVMValueRef LLVMBuildGEPWithWrapFlags(LLVMBuilderRef B, LLVMTypeRef Ty,
-                                       LLVMValueRef Pointer,
-                                       LLVMValueRef *Indices,
-                                       unsigned NumIndices, const char *Name,
-                                       LLVMGEPNoWrapFlags WrapFlags);
+LLVMValueRef LLVMBuildGEPWithNoWrapFlags(LLVMBuilderRef B, LLVMTypeRef Ty,
+                                         LLVMValueRef Pointer,
+                                         LLVMValueRef *Indices,
+                                         unsigned NumIndices, const char *Name,
+                                         LLVMGEPNoWrapFlags NoWrapFlags);
 LLVMValueRef LLVMBuildStructGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
                                  LLVMValueRef Pointer, unsigned Idx,
                                  const char *Name);

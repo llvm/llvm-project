@@ -1815,15 +1815,16 @@ LLVMValueRef LLVMConstInBoundsGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
   return wrap(ConstantExpr::getInBoundsGetElementPtr(unwrap(Ty), Val, IdxList));
 }
 
-LLVMValueRef LLVMConstGEPWithWrapFlags(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
-                                       LLVMValueRef *ConstantIndices,
-                                       unsigned NumIndices,
-                                       LLVMGEPNoWrapFlags WrapFlags) {
+LLVMValueRef LLVMConstGEPWithNoWrapFlags(LLVMTypeRef Ty,
+                                         LLVMValueRef ConstantVal,
+                                         LLVMValueRef *ConstantIndices,
+                                         unsigned NumIndices,
+                                         LLVMGEPNoWrapFlags NoWrapFlags) {
   ArrayRef<Constant *> IdxList(unwrap<Constant>(ConstantIndices, NumIndices),
                                NumIndices);
   Constant *Val = unwrap<Constant>(ConstantVal);
   return wrap(ConstantExpr::getGetElementPtr(
-      unwrap(Ty), Val, IdxList, mapFromLLVMGEPNoWrapFlags(WrapFlags)));
+      unwrap(Ty), Val, IdxList, mapFromLLVMGEPNoWrapFlags(NoWrapFlags)));
 }
 
 LLVMValueRef LLVMConstTrunc(LLVMValueRef ConstantVal, LLVMTypeRef ToType) {
@@ -3144,9 +3145,9 @@ LLVMGEPNoWrapFlags LLVMGEPGetNoWrapFlags(LLVMValueRef GEP) {
   return mapToLLVMGEPNoWrapFlags(GEPOp->getNoWrapFlags());
 }
 
-void LLVMGEPSetNoWrapFlags(LLVMValueRef GEP, LLVMGEPNoWrapFlags WrapFlags) {
+void LLVMGEPSetNoWrapFlags(LLVMValueRef GEP, LLVMGEPNoWrapFlags NoWrapFlags) {
   GetElementPtrInst *GEPInst = unwrap<GetElementPtrInst>(GEP);
-  GEPInst->setNoWrapFlags(mapFromLLVMGEPNoWrapFlags(WrapFlags));
+  GEPInst->setNoWrapFlags(mapFromLLVMGEPNoWrapFlags(NoWrapFlags));
 }
 
 /*--.. Operations on phi nodes .............................................--*/
@@ -3949,14 +3950,14 @@ LLVMValueRef LLVMBuildInBoundsGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
       unwrap(B)->CreateInBoundsGEP(unwrap(Ty), unwrap(Pointer), IdxList, Name));
 }
 
-LLVMValueRef LLVMBuildGEPWithWrapFlags(LLVMBuilderRef B, LLVMTypeRef Ty,
-                                       LLVMValueRef Pointer,
-                                       LLVMValueRef *Indices,
-                                       unsigned NumIndices, const char *Name,
-                                       LLVMGEPNoWrapFlags WrapFlags) {
+LLVMValueRef LLVMBuildGEPWithNoWrapFlags(LLVMBuilderRef B, LLVMTypeRef Ty,
+                                         LLVMValueRef Pointer,
+                                         LLVMValueRef *Indices,
+                                         unsigned NumIndices, const char *Name,
+                                         LLVMGEPNoWrapFlags NoWrapFlags) {
   ArrayRef<Value *> IdxList(unwrap(Indices), NumIndices);
   return wrap(unwrap(B)->CreateGEP(unwrap(Ty), unwrap(Pointer), IdxList, Name,
-                                   mapFromLLVMGEPNoWrapFlags(WrapFlags)));
+                                   mapFromLLVMGEPNoWrapFlags(NoWrapFlags)));
 }
 
 LLVMValueRef LLVMBuildStructGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
