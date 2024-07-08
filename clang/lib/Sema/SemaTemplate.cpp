@@ -2754,20 +2754,34 @@ private:
 // Find all template parameters that appear in the given DeducedArgs.
 // Return the indices of the template parameters in the TemplateParams.
 SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
-    ArrayRef<NamedDecl *> TemplateParams,
+    const TemplateParameterList* TemplateParamsList,
     ArrayRef<TemplateArgument> DeducedArgs) {
   struct TemplateParamsReferencedFinder
       : public RecursiveASTVisitor<TemplateParamsReferencedFinder> {
+    const TemplateParameterList* TemplateParamList;
     llvm::DenseSet<NamedDecl *> TemplateParams;
     llvm::DenseSet<const NamedDecl *> ReferencedTemplateParams;
 
-    TemplateParamsReferencedFinder(ArrayRef<NamedDecl *> TemplateParams)
-        : TemplateParams(TemplateParams.begin(), TemplateParams.end()) {}
+    TemplateParamsReferencedFinder(
+        const TemplateParameterList *TemplateParamList)
+        : TemplateParamList(TemplateParamList),
+          TemplateParams(TemplateParamList->begin(), TemplateParamList->end()) {
+    }
 
     bool VisitTemplateTypeParmType(TemplateTypeParmType *TTP) {
-      MarkAppeared(TTP->getDecl());
+      // We use the index and depth to retrieve the corresponding template
+      // parameter from the parameter list.
+      // Note that Clang may not preserve type sugar during template argument
+      // deduction. In such cases, the TTP is a canonical TemplateTypeParamType,
+      // which only retains its index and depth information.
+      if (TTP->getDepth() == TemplateParamList->getDepth() &&
+          TTP->getIndex() < TemplateParamList->size()) {
+        ReferencedTemplateParams.insert(
+            TemplateParamList->getParam(TTP->getIndex()));
+      }
       return true;
     }
+
     bool VisitDeclRefExpr(DeclRefExpr *DRE) {
       MarkAppeared(DRE->getFoundDecl());
       return true;
@@ -2784,12 +2798,13 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
         ReferencedTemplateParams.insert(ND);
     }
   };
-  TemplateParamsReferencedFinder Finder(TemplateParams);
+  TemplateParamsReferencedFinder Finder(TemplateParamsList);
   Finder.TraverseTemplateArguments(DeducedArgs);
 
   SmallVector<unsigned> Results;
-  for (unsigned Index = 0; Index < TemplateParams.size(); ++Index) {
-    if (Finder.ReferencedTemplateParams.contains(TemplateParams[Index]))
+  for (unsigned Index = 0; Index < TemplateParamsList->size(); ++Index) {
+    if (Finder.ReferencedTemplateParams.contains(
+            TemplateParamsList->getParam(Index)))
       Results.push_back(Index);
   }
   return Results;
@@ -3149,7 +3164,7 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   }
   auto DeducedAliasTemplateParams =
       TemplateParamsReferencedInTemplateArgumentList(
-          AliasTemplate->getTemplateParameters()->asArray(), DeducedArgs);
+          AliasTemplate->getTemplateParameters(), DeducedArgs);
   // All template arguments null by default.
   SmallVector<TemplateArgument> TemplateArgsForBuildingFPrime(
       F->getTemplateParameters()->size());

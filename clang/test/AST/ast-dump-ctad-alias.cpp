@@ -99,3 +99,28 @@ BFoo b2(1.0, 2.0);
 // CHECK-NEXT: | | |-ParmVarDecl {{.*}} 'type-parameter-0-0'
 // CHECK-NEXT: | | `-ParmVarDecl {{.*}} 'type-parameter-0-0'
 // CHECK-NEXT: | `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for BFoo> 'auto (double, double) -> Foo<double, double>' implicit_instantiation
+
+namespace GH90209 {
+template <class Ts>
+struct List {
+  List(int);
+};
+
+template <class T1>
+struct TemplatedClass {
+  TemplatedClass(T1);
+};
+
+template <class T1>
+TemplatedClass(T1) -> TemplatedClass<List<T1>>;
+
+template <class T2>
+using ATemplatedClass = TemplatedClass<List<T2>>;
+
+ATemplatedClass test(1);
+// Verify that we have a correct template parameter list for the deduction guide.
+//
+// CHECK:      FunctionTemplateDecl {{.*}} <deduction guide for ATemplatedClass>
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.*}} class depth 0 index 0 T2
+// CHECK-NEXT: |-TypeTraitExpr {{.*}} 'bool' __is_deducible
+} // namespace GH90209
