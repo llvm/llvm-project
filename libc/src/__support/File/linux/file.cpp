@@ -42,7 +42,7 @@ FileIOResult linux_file_read(File *f, void *buf, size_t size) {
   return ret;
 }
 
-ErrorOr<long> linux_file_seek(File *f, long offset, int whence) {
+ErrorOr<off_t> linux_file_seek(File *f, off_t offset, int whence) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
   auto result = internal::lseekimpl(lf->get_fd(), offset, whence);
   if (!result.has_value())
