@@ -1179,7 +1179,7 @@ bool SeparateConstOffsetFromGEP::run(Function &F) {
   if (DisableSeparateConstOffsetFromGEP)
     return false;
 
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
   bool Changed = false;
   for (BasicBlock &B : F) {
     if (!DT->isReachableFromEntry(&B))
@@ -1238,6 +1238,7 @@ bool SeparateConstOffsetFromGEP::reuniteExts(Instruction *I) {
             new SExtInst(Dom, I->getType(), "", I->getIterator());
         NewSExt->takeName(I);
         I->replaceAllUsesWith(NewSExt);
+        NewSExt->setDebugLoc(I->getDebugLoc());
         RecursivelyDeleteTriviallyDeadInstructions(I);
         return true;
       }
@@ -1250,6 +1251,7 @@ bool SeparateConstOffsetFromGEP::reuniteExts(Instruction *I) {
             new SExtInst(Dom, I->getType(), "", I->getIterator());
         NewSExt->takeName(I);
         I->replaceAllUsesWith(NewSExt);
+        NewSExt->setDebugLoc(I->getDebugLoc());
         RecursivelyDeleteTriviallyDeadInstructions(I);
         return true;
       }

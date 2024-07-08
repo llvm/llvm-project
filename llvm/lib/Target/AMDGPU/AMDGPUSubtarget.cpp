@@ -597,7 +597,7 @@ uint64_t AMDGPUSubtarget::getExplicitKernArgSize(const Function &F,
   assert(F.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
          F.getCallingConv() == CallingConv::SPIR_KERNEL);
 
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   uint64_t ExplicitArgBytes = 0;
   MaxAlign = Align(1);
 

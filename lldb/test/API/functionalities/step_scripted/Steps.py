@@ -92,7 +92,6 @@ class StepUntil(StepWithChild):
 
     def stop_description(self, stream):
         stream.Print(f"Stepped until {self.var_name} changed.")
-        return True
 
 
 # This plan does nothing, but sets stop_mode to the

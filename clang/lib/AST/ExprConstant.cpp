@@ -15859,9 +15859,12 @@ static bool FastEvaluateAsRValue(const Expr *Exp, Expr::EvalResult &Result,
 
   if (const auto *CE = dyn_cast<ConstantExpr>(Exp)) {
     if (CE->hasAPValueResult()) {
-      Result.Val = CE->getAPValueResult();
-      IsConst = true;
-      return true;
+      APValue APV = CE->getAPValueResult();
+      if (!APV.isLValue()) {
+        Result.Val = std::move(APV);
+        IsConst = true;
+        return true;
+      }
     }
 
     // The SubExpr is usually just an IntegerLiteral.

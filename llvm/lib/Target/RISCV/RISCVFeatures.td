@@ -158,7 +158,7 @@ def HasStdExtZicfilp : Predicate<"Subtarget->hasStdExtZicfilp()">,
                        AssemblerPredicate<(all_of FeatureStdExtZicfilp),
                                           "'Zicfilp' (Landing pad)">;
 def NoStdExtZicfilp : Predicate<"!Subtarget->hasStdExtZicfilp()">,
-                                 AssemblerPredicate<(all_of (not FeatureStdExtZicfilp))>;
+                      AssemblerPredicate<(all_of (not FeatureStdExtZicfilp))>;
 
 def FeatureStdExtZicfiss
     : RISCVExperimentalExtension<"zicfiss", 0, 4,
@@ -458,6 +458,8 @@ def FeatureStdExtZbb
 def HasStdExtZbb : Predicate<"Subtarget->hasStdExtZbb()">,
                    AssemblerPredicate<(all_of FeatureStdExtZbb),
                                       "'Zbb' (Basic Bit-Manipulation)">;
+def NoStdExtZbb : Predicate<"!Subtarget->hasStdExtZbb()">,
+                  AssemblerPredicate<(all_of (not FeatureStdExtZbb))>;
 
 def FeatureStdExtZbc
     : RISCVExtension<"zbc", 1, 0,
@@ -1242,10 +1244,10 @@ foreach i = {1-31} in
 def FeatureSaveRestore : SubtargetFeature<"save-restore", "EnableSaveRestore",
                                           "true", "Enable save/restore.">;
 
-def FeatureTrailingSeqCstFence : SubtargetFeature<"seq-cst-trailing-fence",
-                                          "EnableSeqCstTrailingFence",
-                                          "true",
-                                          "Enable trailing fence for seq-cst store.">;
+def FeatureNoTrailingSeqCstFence : SubtargetFeature<"no-trailing-seq-cst-fence",
+                                          "EnableTrailingSeqCstFence",
+                                          "false",
+                                          "Disable trailing fence for seq-cst store.">;
 
 def FeatureUnalignedScalarMem
    : SubtargetFeature<"unaligned-scalar-mem", "EnableUnalignedScalarMem",
@@ -1259,6 +1261,10 @@ def FeatureUnalignedVectorMem
 
 def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">;
+
+def FeaturePredictableSelectIsExpensive
+    : SubtargetFeature<"predictable-select-expensive", "PredictableSelectIsExpensive", "true",
+                       "Prefer likely predicted branches over selects">;
 
 def TuneNoOptimizedZeroStrideLoad
    : SubtargetFeature<"no-optimized-zero-stride-load", "HasOptimizedZeroStrideLoad",

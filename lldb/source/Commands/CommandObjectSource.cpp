@@ -747,13 +747,17 @@ protected:
 
     bool operator==(const SourceInfo &rhs) const {
       return function == rhs.function &&
-             *line_entry.original_file_sp == *rhs.line_entry.original_file_sp &&
+             line_entry.original_file_sp->Equal(
+                 *rhs.line_entry.original_file_sp,
+                 SupportFile::eEqualFileSpecAndChecksumIfSet) &&
              line_entry.line == rhs.line_entry.line;
     }
 
     bool operator!=(const SourceInfo &rhs) const {
       return function != rhs.function ||
-             *line_entry.original_file_sp != *rhs.line_entry.original_file_sp ||
+             !line_entry.original_file_sp->Equal(
+                 *rhs.line_entry.original_file_sp,
+                 SupportFile::eEqualFileSpecAndChecksumIfSet) ||
              line_entry.line != rhs.line_entry.line;
     }
 

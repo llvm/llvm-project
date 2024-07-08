@@ -36,6 +36,7 @@ VALUE_CODEGENOPT(Name, Bits, Default)
 #endif
 
 CODEGENOPT(DisableIntegratedAS, 1, 0) ///< -no-integrated-as
+CODEGENOPT(Crel, 1, 0) ///< -Wa,--crel
 CODEGENOPT(RelaxELFRelocations, 1, 1) ///< -Wa,-mrelax-relocations={yes,no}
 CODEGENOPT(AsmVerbose        , 1, 0) ///< -dA, -fverbose-asm.
 CODEGENOPT(PreserveAsmComments, 1, 1) ///< -dA, -fno-preserve-as-comments.

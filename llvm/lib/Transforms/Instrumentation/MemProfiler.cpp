@@ -652,7 +652,7 @@ bool MemProfiler::instrumentFunction(Function &F) {
       std::optional<InterestingMemoryAccess> Access =
           isInterestingMemoryAccess(Inst);
       if (Access)
-        instrumentMop(Inst, F.getParent()->getDataLayout(), *Access);
+        instrumentMop(Inst, F.getDataLayout(), *Access);
       else
         instrumentMemIntrinsic(cast<MemIntrinsic>(Inst));
     }
