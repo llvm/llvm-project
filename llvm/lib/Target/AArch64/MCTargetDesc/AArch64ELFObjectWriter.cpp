@@ -356,7 +356,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
         if (!IsILP32) {
           if (AddressLoc == AArch64MCExpr::VK_LO15)
             return ELF::R_AARCH64_LD64_GOTPAGE_LO15;
-          return (IsAuth ? ELF::R_AARCH64_AUTH_GOT_LO12_NC
+          return (IsAuth ? ELF::R_AARCH64_AUTH_LD64_GOT_LO12_NC
                          : ELF::R_AARCH64_LD64_GOT_LO12_NC);
         }
         Ctx.reportError(Fixup.getLoc(),

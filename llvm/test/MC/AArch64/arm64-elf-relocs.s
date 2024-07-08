@@ -255,9 +255,9 @@ trickQuestion:
 // CHECK: ldr x24, [x23, :got_auth_lo12:sym]
 // CHECK: ldr d22, [x21, :got_auth_lo12:sym]
 // CHECK: ldr x24, [x23, :got_auth_lo12:sym+7]
-// CHECK-OBJ-LP64: R_AARCH64_AUTH_GOT_LO12_NC sym
-// CHECK-OBJ-LP64: R_AARCH64_AUTH_GOT_LO12_NC sym
-// CHECK-OBJ-LP64: R_AARCH64_AUTH_GOT_LO12_NC sym+0x7
+// CHECK-OBJ-LP64: R_AARCH64_AUTH_LD64_GOT_LO12_NC sym
+// CHECK-OBJ-LP64: R_AARCH64_AUTH_LD64_GOT_LO12_NC sym
+// CHECK-OBJ-LP64: R_AARCH64_AUTH_LD64_GOT_LO12_NC sym+0x7
 
   ldr x24, [x23, #:gotpage_lo15:sym]
   ldr d22, [x21, :gotpage_lo15:sym]
