@@ -31,7 +31,6 @@
 #include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 
@@ -1423,6 +1422,8 @@ static void convertFunctionAttributes(LLVMFuncOp func,
     llvmFunc->addFnAttr(llvm::Attribute::AlwaysInline);
   if (func.getOptimizeNoneAttr())
     llvmFunc->addFnAttr(llvm::Attribute::OptimizeNone);
+  if (func.getConvergentAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::Convergent);
   convertFunctionMemoryAttributes(func, llvmFunc);
 }
 

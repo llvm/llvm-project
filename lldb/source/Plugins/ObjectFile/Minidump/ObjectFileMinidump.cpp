@@ -18,7 +18,6 @@
 #include "lldb/Utility/Log.h"
 
 #include "llvm/Support/FileSystem.h"
-#include <unistd.h>
 
 using namespace lldb;
 using namespace lldb_private;

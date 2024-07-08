@@ -5355,6 +5355,20 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
 
   writeUnhashedControlBlock(PP, Context);
 
+  // Don't reuse type ID and Identifier ID from readers for C++ standard named
+  // modules since we want to support no-transitive-change model for named
+  // modules. The theory for no-transitive-change model is,
+  // for a user of a named module, the user can only access the indirectly
+  // imported decls via the directly imported module. So that it is possible to
+  // control what matters to the users when writing the module. It would be
+  // problematic if the users can reuse the type IDs and identifier IDs from
+  // indirectly imported modules arbitrarily. So we choose to clear these ID
+  // here.
+  if (isWritingStdCXXNamedModules()) {
+    TypeIdxs.clear();
+    IdentifierIDs.clear();
+  }
+
   // Look for any identifiers that were named while processing the
   // headers, but are otherwise not needed. We add these to the hash
   // table to enable checking of the predefines buffer in the case
@@ -6686,6 +6700,11 @@ void ASTWriter::ReaderInitialized(ASTReader *Reader) {
 }
 
 void ASTWriter::IdentifierRead(IdentifierID ID, IdentifierInfo *II) {
+  // Don't reuse Type ID from external modules for named modules. See the
+  // comments in WriteASTCore for details.
+  if (isWritingStdCXXNamedModules())
+    return;
+
   IdentifierID &StoredID = IdentifierIDs[II];
   unsigned OriginalModuleFileIndex = StoredID >> 32;
 
@@ -6708,6 +6727,11 @@ void ASTWriter::MacroRead(serialization::MacroID ID, MacroInfo *MI) {
 }
 
 void ASTWriter::TypeRead(TypeIdx Idx, QualType T) {
+  // Don't reuse Type ID from external modules for named modules. See the
+  // comments in WriteASTCore for details.
+  if (isWritingStdCXXNamedModules())
+    return;
+
   // Always take the type index that comes in later module files.
   // This copes with an interesting
   // case for chained AST writing where we schedule writing the type and then,

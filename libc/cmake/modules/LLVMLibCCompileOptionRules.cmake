@@ -46,6 +46,22 @@ function(_get_common_compile_options output_var flags)
       list(APPEND compile_options "-DLIBC_FULL_BUILD")
       # Only add -ffreestanding flag in full build mode.
       list(APPEND compile_options "-ffreestanding")
+      # Manually disable standard include paths to prevent system headers from
+      # being included.
+      if(LIBC_CC_SUPPORTS_NOSTDLIBINC)
+        list(APPEND compile_options "-nostdlibinc")
+      elseif(COMPILER_RESOURCE_DIR)
+        # TODO: We should require COMPILER_RESOURCE_DIR to be set.
+        list(APPEND compile_options "-isystem${COMPILER_RESOURCE_DIR}/include")
+        list(APPEND compile_options "-nostdinc")
+      endif()
+      # TODO: We should set this unconditionally on Linux.
+      if(LIBC_TARGET_OS_IS_LINUX AND
+         (LIBC_CC_SUPPORTS_NOSTDLIBINC OR COMPILER_RESOURCE_DIR))
+        # We use -idirafter to avoid preempting libc's own headers in case the
+        # directory (e.g. /usr/include) contains other headers.
+        list(APPEND compile_options "-idirafter${LIBC_KERNEL_HEADERS}")
+      endif()
     endif()
 
     if(LIBC_COMPILER_HAS_FIXED_POINT)
@@ -108,11 +124,6 @@ function(_get_common_compile_options output_var flags)
     elseif(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
       list(APPEND compile_options "SHELL:-Xclang -mcode-object-version=none")
     endif()
-
-    # Manually disable all standard include paths and include the resource
-    # directory to prevent system headers from being included.
-    list(APPEND compile_options "-isystem${COMPILER_RESOURCE_DIR}/include")
-    list(APPEND compile_options "-nostdinc")
   endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()

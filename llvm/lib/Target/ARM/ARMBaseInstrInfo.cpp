@@ -49,6 +49,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"
@@ -6886,8 +6887,8 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
          ++Stage) {
       std::deque<SUnit *> Instrs =
           SMS.getInstructions(Cycle + Stage * SMS.getInitiationInterval());
-      llvm::sort(Instrs,
-                 [](SUnit *A, SUnit *B) { return A->NodeNum > B->NodeNum; });
+      std::sort(Instrs.begin(), Instrs.end(),
+                [](SUnit *A, SUnit *B) { return A->NodeNum > B->NodeNum; });
       for (SUnit *SU : Instrs)
         ProposedSchedule.push_back(SU);
     }
