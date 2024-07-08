@@ -219,7 +219,7 @@ bool ARMBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Running on " << MF.getName() << "\n");
   MLI = &getAnalysis<MachineLoopInfo>();
   TII = static_cast<const ARMBaseInstrInfo *>(ST.getInstrInfo());
-  BBUtils = std::unique_ptr<ARMBasicBlockUtils>(new ARMBasicBlockUtils(MF));
+  BBUtils = std::make_unique<ARMBasicBlockUtils>(MF);
   MF.RenumberBlocks();
   BBUtils->computeAllBlockSizes();
   BBUtils->adjustBBOffsetsAfter(&MF.front());

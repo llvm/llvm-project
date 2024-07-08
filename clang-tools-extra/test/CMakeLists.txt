@@ -74,17 +74,8 @@ if (NOT WIN32 OR NOT LLVM_LINK_LLVM_DYLIB)
       PLUGIN_TOOL clang-tidy)
 endif()
 
-if(CLANG_BUILT_STANDALONE)
-  # LLVMHello library is needed below
-  if (EXISTS ${LLVM_MAIN_SRC_DIR}/lib/Transforms/Hello
-      AND NOT TARGET LLVMHello)
-    add_subdirectory(${LLVM_MAIN_SRC_DIR}/lib/Transforms/Hello
-      lib/Transforms/Hello)
-  endif()
-endif()
-
 if(TARGET CTTestTidyModule)
-    list(APPEND CLANG_TOOLS_TEST_DEPS CTTestTidyModule LLVMHello)
+    list(APPEND CLANG_TOOLS_TEST_DEPS CTTestTidyModule)
     target_include_directories(CTTestTidyModule PUBLIC BEFORE "${CLANG_TOOLS_SOURCE_DIR}")
     if(CLANG_PLUGIN_SUPPORT AND (WIN32 OR CYGWIN))
       set(LLVM_LINK_COMPONENTS

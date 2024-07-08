@@ -701,18 +701,19 @@ prettyPrintIntrinsicName(fir::FirOpBuilder &builder, mlir::Location loc,
   if (name == "pow") {
     assert(funcType.getNumInputs() == 2 && "power operator has two arguments");
     std::string displayName{" ** "};
-    sstream << numericMlirTypeToFortran(builder, funcType.getInput(0), loc,
-                                        displayName)
+    sstream << mlirTypeToIntrinsicFortran(builder, funcType.getInput(0), loc,
+                                          displayName)
             << displayName
-            << numericMlirTypeToFortran(builder, funcType.getInput(1), loc,
-                                        displayName);
+            << mlirTypeToIntrinsicFortran(builder, funcType.getInput(1), loc,
+                                          displayName);
   } else {
     sstream << name.upper() << "(";
     if (funcType.getNumInputs() > 0)
-      sstream << numericMlirTypeToFortran(builder, funcType.getInput(0), loc,
-                                          name);
+      sstream << mlirTypeToIntrinsicFortran(builder, funcType.getInput(0), loc,
+                                            name);
     for (mlir::Type argType : funcType.getInputs().drop_front()) {
-      sstream << ", " << numericMlirTypeToFortran(builder, argType, loc, name);
+      sstream << ", "
+              << mlirTypeToIntrinsicFortran(builder, argType, loc, name);
     }
     sstream << ")";
   }
@@ -5747,9 +5748,17 @@ IntrinsicLibrary::genReduce(mlir::Type resultType,
 
   // Arguements to the reduction operation are passed by reference or value?
   bool argByRef = true;
+  if (!operation.getDefiningOp())
+    TODO(loc, "Distinguigh dummy procedure arguments");
   if (auto embox =
           mlir::dyn_cast_or_null<fir::EmboxProcOp>(operation.getDefiningOp())) {
     auto fctTy = mlir::dyn_cast<mlir::FunctionType>(embox.getFunc().getType());
+    argByRef = mlir::isa<fir::ReferenceType>(fctTy.getInput(0));
+  } else if (auto load = mlir::dyn_cast_or_null<fir::LoadOp>(
+                 operation.getDefiningOp())) {
+    auto boxProcTy = mlir::dyn_cast_or_null<fir::BoxProcType>(load.getType());
+    assert(boxProcTy && "expect BoxProcType");
+    auto fctTy = mlir::dyn_cast<mlir::FunctionType>(boxProcTy.getEleTy());
     argByRef = mlir::isa<fir::ReferenceType>(fctTy.getInput(0));
   }
 

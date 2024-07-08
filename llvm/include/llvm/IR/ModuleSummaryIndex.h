@@ -587,6 +587,10 @@ public:
 
   void setImportKind(ImportKind IK) { Flags.ImportType = IK; }
 
+  GlobalValueSummary::ImportKind importType() const {
+    return static_cast<ImportKind>(Flags.ImportType);
+  }
+
   GlobalValue::VisibilityTypes getVisibility() const {
     return (GlobalValue::VisibilityTypes)Flags.Visibility;
   }
@@ -789,7 +793,7 @@ public:
       OS << ", hasUnknownCall: " << this->HasUnknownCall;
       OS << ", mustBeUnreachable: " << this->MustBeUnreachable;
       OS << ")";
-      return OS.str();
+      return Output;
     }
   };
 
@@ -1271,6 +1275,9 @@ using ModulePathStringTableTy = StringMap<ModuleHash>;
 /// Map of global value GUID to its summary, used to identify values defined in
 /// a particular module, and provide efficient access to their summary.
 using GVSummaryMapTy = DenseMap<GlobalValue::GUID, GlobalValueSummary *>;
+
+/// A set of global value summary pointers.
+using GVSummaryPtrSet = SmallPtrSet<GlobalValueSummary *, 4>;
 
 /// Map of a type GUID to type id string and summary (multimap used
 /// in case of GUID conflicts).

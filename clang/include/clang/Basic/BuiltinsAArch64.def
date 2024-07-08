@@ -72,7 +72,7 @@ TARGET_BUILTIN(__builtin_arm_stg, "vv*", "t", "mte")
 TARGET_BUILTIN(__builtin_arm_subp, "Uiv*v*", "t", "mte")
 
 // SME state function
-BUILTIN(__builtin_arm_get_sme_state, "vULi*ULi*", "n")
+BUILTIN(__builtin_arm_get_sme_state, "vWUi*WUi*", "n")
 
 // Memory Operations
 TARGET_BUILTIN(__builtin_arm_mops_memset_tag, "v*v*iz", "", "mte,mops")

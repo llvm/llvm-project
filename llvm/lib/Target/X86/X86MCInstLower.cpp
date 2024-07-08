@@ -67,8 +67,8 @@ class X86MCInstLower {
 public:
   X86MCInstLower(const MachineFunction &MF, X86AsmPrinter &asmprinter);
 
-  std::optional<MCOperand> LowerMachineOperand(const MachineInstr *MI,
-                                               const MachineOperand &MO) const;
+  MCOperand LowerMachineOperand(const MachineInstr *MI,
+                                const MachineOperand &MO) const;
   void Lower(const MachineInstr *MI, MCInst &OutMI) const;
 
   MCSymbol *GetSymbolFromOperand(const MachineOperand &MO) const;
@@ -326,9 +326,8 @@ static unsigned getRetOpcode(const X86Subtarget &Subtarget) {
   return Subtarget.is64Bit() ? X86::RET64 : X86::RET32;
 }
 
-std::optional<MCOperand>
-X86MCInstLower::LowerMachineOperand(const MachineInstr *MI,
-                                    const MachineOperand &MO) const {
+MCOperand X86MCInstLower::LowerMachineOperand(const MachineInstr *MI,
+                                              const MachineOperand &MO) const {
   switch (MO.getType()) {
   default:
     MI->print(errs());
@@ -336,7 +335,7 @@ X86MCInstLower::LowerMachineOperand(const MachineInstr *MI,
   case MachineOperand::MO_Register:
     // Ignore all implicit register operands.
     if (MO.isImplicit())
-      return std::nullopt;
+      return MCOperand();
     return MCOperand::createReg(MO.getReg());
   case MachineOperand::MO_Immediate:
     return MCOperand::createImm(MO.getImm());
@@ -355,7 +354,7 @@ X86MCInstLower::LowerMachineOperand(const MachineInstr *MI,
         MO, AsmPrinter.GetBlockAddressSymbol(MO.getBlockAddress()));
   case MachineOperand::MO_RegisterMask:
     // Ignore call clobbers.
-    return std::nullopt;
+    return MCOperand();
   }
 }
 
@@ -398,8 +397,8 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
   OutMI.setOpcode(MI->getOpcode());
 
   for (const MachineOperand &MO : MI->operands())
-    if (auto MaybeMCOp = LowerMachineOperand(MI, MO))
-      OutMI.addOperand(*MaybeMCOp);
+    if (auto Op = LowerMachineOperand(MI, MO); Op.isValid())
+      OutMI.addOperand(Op);
 
   bool In64BitMode = AsmPrinter.getSubtarget().is64Bit();
   if (X86::optimizeInstFromVEX3ToVEX2(OutMI, MI->getDesc()) ||
@@ -867,8 +866,8 @@ void X86AsmPrinter::LowerFAULTING_OP(const MachineInstr &FaultingMI,
 
   for (const MachineOperand &MO :
        llvm::drop_begin(FaultingMI.operands(), OperandsBeginIdx))
-    if (auto MaybeOperand = MCIL.LowerMachineOperand(&FaultingMI, MO))
-      MI.addOperand(*MaybeOperand);
+    if (auto Op = MCIL.LowerMachineOperand(&FaultingMI, MO); Op.isValid())
+      MI.addOperand(Op);
 
   OutStreamer->AddComment("on-fault: " + HandlerLabel->getName());
   OutStreamer->emitInstruction(MI, getSubtargetInfo());
@@ -1139,9 +1138,10 @@ void X86AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
   // emit nops appropriately sized to keep the sled the same size in every
   // situation.
   for (unsigned I = 0; I < MI.getNumOperands(); ++I)
-    if (auto Op = MCIL.LowerMachineOperand(&MI, MI.getOperand(I))) {
-      assert(Op->isReg() && "Only support arguments in registers");
-      SrcRegs[I] = getX86SubSuperRegister(Op->getReg(), 64);
+    if (auto Op = MCIL.LowerMachineOperand(&MI, MI.getOperand(I));
+        Op.isValid()) {
+      assert(Op.isReg() && "Only support arguments in registers");
+      SrcRegs[I] = getX86SubSuperRegister(Op.getReg(), 64);
       assert(SrcRegs[I].isValid() && "Invalid operand");
       if (SrcRegs[I] != DestRegs[I]) {
         UsedMask[I] = true;
@@ -1237,10 +1237,11 @@ void X86AsmPrinter::LowerPATCHABLE_TYPED_EVENT_CALL(const MachineInstr &MI,
   // In case the arguments are already in the correct register, we emit nops
   // appropriately sized to keep the sled the same size in every situation.
   for (unsigned I = 0; I < MI.getNumOperands(); ++I)
-    if (auto Op = MCIL.LowerMachineOperand(&MI, MI.getOperand(I))) {
+    if (auto Op = MCIL.LowerMachineOperand(&MI, MI.getOperand(I));
+        Op.isValid()) {
       // TODO: Is register only support adequate?
-      assert(Op->isReg() && "Only supports arguments in registers");
-      SrcRegs[I] = getX86SubSuperRegister(Op->getReg(), 64);
+      assert(Op.isReg() && "Only supports arguments in registers");
+      SrcRegs[I] = getX86SubSuperRegister(Op.getReg(), 64);
       assert(SrcRegs[I].isValid() && "Invalid operand");
       if (SrcRegs[I] != DestRegs[I]) {
         UsedMask[I] = true;
@@ -1354,8 +1355,8 @@ void X86AsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
   MCInst Ret;
   Ret.setOpcode(OpCode);
   for (auto &MO : drop_begin(MI.operands()))
-    if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, MO))
-      Ret.addOperand(*MaybeOperand);
+    if (auto Op = MCIL.LowerMachineOperand(&MI, MO); Op.isValid())
+      Ret.addOperand(Op);
   OutStreamer->emitInstruction(Ret, getSubtargetInfo());
   emitX86Nops(*OutStreamer, 10, Subtarget);
   recordSled(CurSled, MI, SledKind::FUNCTION_EXIT, 2);
@@ -1417,8 +1418,8 @@ void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
   // indeed a tail call.
   OutStreamer->AddComment("TAILCALL");
   for (auto &MO : TCOperands)
-    if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, MO))
-      TC.addOperand(*MaybeOperand);
+    if (auto Op = MCIL.LowerMachineOperand(&MI, MO); Op.isValid())
+      TC.addOperand(Op);
   OutStreamer->emitInstruction(TC, getSubtargetInfo());
 
   if (IsConditional)

@@ -67,6 +67,7 @@ class SPIRVEmitIntrinsics
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseMap<Instruction *, Type *> AggrConstTypes;
   DenseSet<Instruction *> AggrStores;
+  SPIRV::InstructionSet::InstructionSet InstrSet;
 
   // deduce element type of untyped pointers
   Type *deduceElementType(Value *I, bool UnknownElemTypeI8);
@@ -375,15 +376,19 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
         {"to_private", 0},
         {"__spirv_GenericCastToPtr_ToGlobal", 0},
         {"__spirv_GenericCastToPtr_ToLocal", 0},
-        {"__spirv_GenericCastToPtr_ToPrivate", 0}};
+        {"__spirv_GenericCastToPtr_ToPrivate", 0},
+        {"__spirv_GenericCastToPtrExplicit_ToGlobal", 0},
+        {"__spirv_GenericCastToPtrExplicit_ToLocal", 0},
+        {"__spirv_GenericCastToPtrExplicit_ToPrivate", 0}};
     // TODO: maybe improve performance by caching demangled names
     if (Function *CalledF = CI->getCalledFunction()) {
       std::string DemangledName =
           getOclOrSpirvBuiltinDemangledName(CalledF->getName());
       auto AsArgIt = ResTypeByArg.find(DemangledName);
-      if (AsArgIt != ResTypeByArg.end())
+      if (AsArgIt != ResTypeByArg.end()) {
         Ty = deduceElementTypeHelper(CI->getArgOperand(AsArgIt->second),
                                      Visited);
+      }
     }
   }
 
@@ -541,6 +546,28 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I) {
       KnownElemTy = ElemTy1;
       Ops.push_back(std::make_pair(Op0, 0));
     }
+  } else if (auto *CI = dyn_cast<CallInst>(I)) {
+    if (Function *CalledF = CI->getCalledFunction()) {
+      std::string DemangledName =
+          getOclOrSpirvBuiltinDemangledName(CalledF->getName());
+      if (DemangledName.length() > 0 &&
+          !StringRef(DemangledName).starts_with("llvm.")) {
+        auto [Grp, Opcode, ExtNo] =
+            SPIRV::mapBuiltinToOpcode(DemangledName, InstrSet);
+        if (Opcode == SPIRV::OpGroupAsyncCopy) {
+          for (unsigned i = 0, PtrCnt = 0; i < CI->arg_size() && PtrCnt < 2;
+               ++i) {
+            Value *Op = CI->getArgOperand(i);
+            if (!isPointerTy(Op->getType()))
+              continue;
+            ++PtrCnt;
+            if (Type *ElemTy = GR->findDeducedElementType(Op))
+              KnownElemTy = ElemTy; // src will rewrite dest if both are defined
+            Ops.push_back(std::make_pair(Op, i));
+          }
+        }
+      }
+    }
   }
 
   // There is no enough info to deduce types or all is valid.
@@ -670,10 +697,8 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
         AggrConst = cast<Constant>(COp);
         ResTy = B.getInt32Ty();
       } else if (auto *COp = dyn_cast<ConstantAggregateZero>(Op)) {
-        if (!Op->getType()->isVectorTy()) {
-          AggrConst = cast<Constant>(COp);
-          ResTy = B.getInt32Ty();
-        }
+        AggrConst = cast<Constant>(COp);
+        ResTy = Op->getType()->isVectorTy() ? COp->getType() : B.getInt32Ty();
       }
       if (AggrConst) {
         SmallVector<Value *> Args;
@@ -1069,7 +1094,7 @@ Instruction *SPIRVEmitIntrinsics::visitLoadInst(LoadInst &I) {
   TrackConstants = false;
   const auto *TLI = TM->getSubtargetImpl()->getTargetLowering();
   MachineMemOperand::Flags Flags =
-      TLI->getLoadMemOperandFlags(I, F->getParent()->getDataLayout());
+      TLI->getLoadMemOperandFlags(I, F->getDataLayout());
   auto *NewI =
       B.CreateIntrinsic(Intrinsic::spv_load, {I.getOperand(0)->getType()},
                         {I.getPointerOperand(), B.getInt16(Flags),
@@ -1086,7 +1111,7 @@ Instruction *SPIRVEmitIntrinsics::visitStoreInst(StoreInst &I) {
   TrackConstants = false;
   const auto *TLI = TM->getSubtargetImpl()->getTargetLowering();
   MachineMemOperand::Flags Flags =
-      TLI->getStoreMemOperandFlags(I, F->getParent()->getDataLayout());
+      TLI->getStoreMemOperandFlags(I, F->getDataLayout());
   auto *PtrOp = I.getPointerOperand();
   auto *NewI = B.CreateIntrinsic(
       Intrinsic::spv_store, {I.getValueOperand()->getType(), PtrOp->getType()},
@@ -1260,8 +1285,7 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
   }
   bool IsPhi = isa<PHINode>(I), BPrepared = false;
   for (const auto &Op : I->operands()) {
-    if ((isa<ConstantAggregateZero>(Op) && Op->getType()->isVectorTy()) ||
-        isa<PHINode>(I) || isa<SwitchInst>(I))
+    if (isa<PHINode>(I) || isa<SwitchInst>(I))
       TrackConstants = false;
     if ((isa<ConstantData>(Op) || isa<ConstantExpr>(Op)) && TrackConstants) {
       unsigned OpNo = Op.getOperandNo();
@@ -1385,6 +1409,8 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
 
   const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(Func);
   GR = ST.getSPIRVGlobalRegistry();
+  InstrSet = ST.isOpenCLEnv() ? SPIRV::InstructionSet::OpenCL_std
+                              : SPIRV::InstructionSet::GLSL_std_450;
 
   F = &Func;
   IRBuilder<> B(Func.getContext());

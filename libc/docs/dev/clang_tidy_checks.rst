@@ -64,6 +64,11 @@ This check that ensures any function call resolves to a function within the
         void LLVM_LIBC_ENTRYPOINT(strcpy)(char *dest, const char *src) {}
     }
 
+..
+  TODO(97655): The clang-tidy check should be updated to ensure the namespace
+  declaration uses LIBC_NAMESPACE_DECL as opposed to LIBC_NAMESPACE. The former
+  should be used for accessing globals in LIBC_NAMESPACE rather than declaration.
+
 
 callee-namespace
 ----------------
