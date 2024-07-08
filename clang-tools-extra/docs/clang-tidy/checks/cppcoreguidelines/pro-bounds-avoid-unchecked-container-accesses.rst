@@ -9,7 +9,7 @@ For example the code
 
 .. code-block:: c++
 
-  std::array<int, 3> a;
+  std::vector<int> a;
   int b = a[4];
 
 will generate a warning but 
