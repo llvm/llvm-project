@@ -1824,29 +1824,45 @@ TEST(TypeHints, Links) {
 }
 
 TEST(TypeHints, LinksForForwardDeclarations) {
+  // Test that we always prefer the location of the forward declaration in the
+  // presence of it. This way, the LSP client would take us to the definition.
   StringRef Source(R"cpp(
     template <class... T>
-    struct $Container[[Container]] {};
+    struct Container {};
 
-    // Test that we always prefer the location of the definition in the
-    // presence of a forward declaration.
     template <class... T>
-    struct Container;
+    struct $Container[[Container]];
 
-    struct $S[[S]] {};
+    // The order of occurrence matters.
+    template <class>
+    struct $optional[[optional]];
 
-    struct S;
+    template <class>
+    struct optional {};
+
+    // FIXME: go-to-def on `optional<int>` would take us to its primary template.
+    template <>
+    struct optional<int> {};
+
+    template <>
+    struct optional<int>;
+
+    struct S {};
+
+    struct $S[[S]];
 
     struct $W[[W]];
 
-    auto $1[[Use]] = Container<Container<S>, W>();
+    struct W {};
+
+    auto $1[[Use]] = Container<optional<S>, W>();
   )cpp");
 
   assertTypeLinkHints(
       Source, "1", ExpectedHintLabelPiece{": "},
       ExpectedHintLabelPiece{"Container", "Container"},
       ExpectedHintLabelPiece{"<"},
-      ExpectedHintLabelPiece{"Container", "Container"},
+      ExpectedHintLabelPiece{"optional", "optional"},
       ExpectedHintLabelPiece{"<"}, ExpectedHintLabelPiece{"S", "S"},
       ExpectedHintLabelPiece{">, "}, ExpectedHintLabelPiece{"W", "W"},
       ExpectedHintLabelPiece{">"});

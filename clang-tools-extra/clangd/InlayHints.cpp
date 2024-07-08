@@ -471,7 +471,7 @@ class TypeHintBuilder : public TypeVisitor<TypeHintBuilder> {
     switch (TN.getKind()) {
     case TemplateName::Template:
       TD = TN.getAsTemplateDecl();
-      Location = nameLocation(*TD, SM);
+      Location = nameLocation(TD, SM);
       break;
     case TemplateName::QualifiedTemplate:
       if (NestedNameSpecifier *NNS =
@@ -519,6 +519,35 @@ class TypeHintBuilder : public TypeVisitor<TypeHintBuilder> {
     return T;
   }
 
+  static SourceLocation nameLocation(Decl *D, const SourceManager &SM) {
+    // If this is a definition, find its *forward declaration* if possible.
+    //
+    // Per LSP specification, code actions, e.g., hover/go-to-def on the type
+    // link, would be performed as if at the location we have given.
+    //
+    // Therefore, we should provide the type part with a location that points to
+    // its declaration because we would otherwise take users to the
+    // *declaration* if they're at the definition.
+    if (auto *TD = dyn_cast<TemplateDecl>(D))
+      D = TD->getTemplatedDecl();
+    bool IsDefinition =
+        isa<TagDecl>(D) && cast<TagDecl>(D)->isThisDeclarationADefinition();
+    if (IsDefinition) {
+      // Happy path: if the canonical declaration is a forward declaration.
+      if (!cast<TagDecl>(D)->getCanonicalDecl()->isThisDeclarationADefinition())
+        D = D->getCanonicalDecl();
+      else {
+        // Otherwise, look through the redeclarations.
+        for (auto *Redecl : D->redecls())
+          if (!cast<TagDecl>(Redecl)->isThisDeclarationADefinition()) {
+            D = Redecl;
+            break;
+          }
+      }
+    }
+    return ::clang::clangd::nameLocation(*D, SM);
+  }
+
 public:
   TypeHintBuilder(QualType Current, ASTContext &Context, StringRef MainFilePath,
                   const PrintingPolicy &PP, llvm::StringRef Prefix,
@@ -539,14 +568,14 @@ public:
         RD && !RD->getTemplateInstantiationPattern())
       return addLabel(
           [&](llvm::raw_ostream &OS) { return RD->printName(OS, PP); },
-          nameLocation(*RD, SM));
+          nameLocation(RD, SM));
     return VisitType(TT);
   }
 
   void VisitEnumType(const EnumType *ET) {
     return addLabel(
         [&](llvm::raw_ostream &OS) { return ET->getDecl()->printName(OS, PP); },
-        nameLocation(*ET->getDecl(), SM));
+        nameLocation(ET->getDecl(), SM));
   }
 
   void VisitAutoType(const AutoType *AT) {
@@ -622,38 +651,38 @@ public:
              [&] {
                BaseUsingDecl *Introducer = UT->getFoundDecl()->getIntroducer();
                if (auto *UD = dyn_cast<UsingDecl>(Introducer))
-                 return nameLocation(*UD, SM);
-               return nameLocation(*Introducer, SM);
+                 return nameLocation(UD, SM);
+               return nameLocation(Introducer, SM);
              }());
   }
 
   void VisitTypedefType(const TypedefType *TT) {
     addLabel([&](llvm::raw_ostream &OS) { TT->getDecl()->printName(OS); },
-             nameLocation(*TT->getDecl(), SM));
+             nameLocation(TT->getDecl(), SM));
   }
 
   void VisitTemplateSpecializationType(const TemplateSpecializationType *TST) {
     maybeAddQualifiers();
     SourceLocation Location;
-    // Special case the ClassTemplateSpecializationDecl:
-    // 1) We want the location of an explicit specialization, if present.
-    // 2) For implicit specializations, the associated CXXRecordDecl might be
-    // pointing to a *declaration*. We want to find out the definition if
-    // possible. Unfortunately, RecordDecl::getDefinition() doesn't work
-    // straightforwardly in this case.
+    // Special case the ClassTemplateSpecializationDecl because
+    // we want the location of an explicit specialization, if present.
+    // FIXME: In practice, populating the location with that of the
+    // specialization would still take us to the primary template because we're
+    // actually sending a go-to-def request there.
     if (auto *Specialization =
             dyn_cast_if_present<ClassTemplateSpecializationDecl>(
                 TST->desugar().getCanonicalType()->getAsCXXRecordDecl())) {
-      Location = nameLocation(*Specialization, SM);
-      // The template argument might be associated to a Decl whose
-      // specialization kind is TSK_Undeclared.
+      // Quirk as it is, the Specialization might have no associated forward
+      // declarations. So we have to find them through the Pattern.
       if (!Specialization->isExplicitInstantiationOrSpecialization()) {
         auto Pattern = Specialization->getSpecializedTemplateOrPartial();
         if (auto *Template = Pattern.dyn_cast<ClassTemplateDecl *>())
-          if (CXXRecordDecl *Definition =
-                  Template->getTemplatedDecl()->getDefinition())
-            Location = nameLocation(*Definition, SM);
-      }
+          Location = nameLocation(Template, SM);
+        if (auto *Template =
+                Pattern.dyn_cast<ClassTemplatePartialSpecializationDecl *>())
+          Location = nameLocation(Template, SM);
+      } else
+        Location = nameLocation(Specialization, SM);
     }
     return handleTemplateSpecialization(TST->getTemplateName(),
                                         TST->template_arguments(), Location);
