@@ -1019,6 +1019,7 @@ public:
                                SMLoc Loc = {});
   virtual void emitCFIWindowSave(SMLoc Loc = {});
   virtual void emitCFINegateRAState(SMLoc Loc = {});
+  virtual void emitCFILabelDirective(SMLoc Loc, StringRef Name);
 
   virtual void emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc = SMLoc());
   virtual void emitWinCFIEndProc(SMLoc Loc = SMLoc());

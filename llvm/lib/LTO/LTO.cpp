@@ -161,19 +161,17 @@ void llvm::computeLTOCacheKey(
   auto ModHash = Index.getModuleHash(ModuleID);
   Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
 
-  std::vector<std::pair<uint64_t, uint8_t>> ExportsGUID;
+  // TODO: `ExportList` is determined by `ImportList`. Since `ImportList` is
+  // used to compute cache key, we could omit hashing `ExportList` here.
+  std::vector<uint64_t> ExportsGUID;
   ExportsGUID.reserve(ExportList.size());
-  for (const auto &[VI, ExportType] : ExportList)
-    ExportsGUID.push_back(
-        std::make_pair(VI.getGUID(), static_cast<uint8_t>(ExportType)));
+  for (const auto &VI : ExportList)
+    ExportsGUID.push_back(VI.getGUID());
 
   // Sort the export list elements GUIDs.
   llvm::sort(ExportsGUID);
-  for (auto [GUID, ExportType] : ExportsGUID) {
-    // The export list can impact the internalization, be conservative here
+  for (auto GUID : ExportsGUID)
     Hasher.update(ArrayRef<uint8_t>((uint8_t *)&GUID, sizeof(GUID)));
-    AddUint8(ExportType);
-  }
 
   // Include the hash for every module we import functions from. The set of
   // imported symbols for each module may affect code generation and is

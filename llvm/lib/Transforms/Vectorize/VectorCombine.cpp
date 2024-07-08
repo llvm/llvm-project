@@ -1925,6 +1925,15 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
       } else if (isa<UnaryOperator, TruncInst, ZExtInst, SExtInst>(FrontU)) {
         Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
         continue;
+      } else if (auto *BitCast = dyn_cast<BitCastInst>(FrontU)) {
+        // TODO: Handle vector widening/narrowing bitcasts.
+        auto *DstTy = dyn_cast<FixedVectorType>(BitCast->getDestTy());
+        auto *SrcTy = dyn_cast<FixedVectorType>(BitCast->getSrcTy());
+        if (DstTy && SrcTy &&
+            SrcTy->getNumElements() == DstTy->getNumElements()) {
+          Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
+          continue;
+        }
       } else if (isa<SelectInst>(FrontU)) {
         Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
         Worklist.push_back(generateInstLaneVectorFromOperand(Item, 1));

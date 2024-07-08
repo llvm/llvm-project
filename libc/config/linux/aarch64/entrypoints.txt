@@ -17,6 +17,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.tolower
     libc.src.ctype.toupper
 
+    # dlfcn.h entrypoints
+    libc.src.dlfcn.dlclose
+    libc.src.dlfcn.dlerror
+    libc.src.dlfcn.dlopen
+    libc.src.dlfcn.dlsym
+
     # errno.h entrypoints
     libc.src.errno.errno
 
@@ -284,6 +290,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.dup3
     libc.src.unistd.execve
     libc.src.unistd.fchdir
+    libc.src.unistd.fpathconf
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate
     libc.src.unistd.getcwd
@@ -295,6 +302,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.link
     libc.src.unistd.linkat
     libc.src.unistd.lseek
+    libc.src.unistd.pathconf
     libc.src.unistd.pread
     libc.src.unistd.pwrite
     libc.src.unistd.read
@@ -346,6 +354,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cos
     libc.src.math.cosf
     libc.src.math.coshf
+    libc.src.math.cospif
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.exp10
@@ -489,6 +498,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.sqrt
     libc.src.math.sqrtf
     libc.src.math.sqrtl
+    libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
     libc.src.math.trunc
