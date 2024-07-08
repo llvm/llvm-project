@@ -517,8 +517,7 @@ static LogicalResult addShardOp(OpBuilder &b, OpResult result,
                                 ArrayRef<ReductionKind> reductionLoopKinds) {
   MeshSharding sharding = getShardingAttribute(
       result, shardingOption, map, loopTypes, reductionLoopKinds);
-  auto shardingOp = b.create<ShardingOp>(result.getLoc(), sharding);
-  maybeInsertTargetShardingAnnotation(shardingOp.getResult(), result, b);
+  maybeInsertTargetShardingAnnotation(sharding, result, b);
 
   return success();
 }
@@ -535,8 +534,7 @@ static LogicalResult addShardOp(OpBuilder &b, OpOperand &opOperand,
     return failure();
   }
   OpBuilder::InsertionGuard guard(b);
-  auto shardingOp = b.create<ShardingOp>(opOperand.get().getLoc(), sharding.value());
-  maybeInsertSourceShardingAnnotation(shardingOp.getResult(), opOperand, b);
+  maybeInsertSourceShardingAnnotation(sharding.value(), opOperand, b);
 
   return success();
 }
