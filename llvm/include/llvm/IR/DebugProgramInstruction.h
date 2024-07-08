@@ -466,13 +466,11 @@ public:
   /// FragmentInfo that covers the entire variable if the variable size is
   /// known, otherwise return a zero-sized fragment.
   DbgVariableFragmentInfo getFragmentOrEntireVariable() const {
-    DbgVariableFragmentInfo VariableSlice(0, 0);
-    // Get the fragment or variable size, or zero.
-    if (auto Sz = getFragmentSizeInBits())
-      VariableSlice.SizeInBits = *Sz;
     if (auto Frag = getFragment())
-      VariableSlice.OffsetInBits = Frag->OffsetInBits;
-    return VariableSlice;
+      return *Frag; 
+    if (auto Sz = getVariable()->getSizeInBits())
+      return {*Sz, 0};
+    return {0, 0};
   }
   /// Get the size (in bits) of the variable, or fragment of the variable that
   /// is described.
