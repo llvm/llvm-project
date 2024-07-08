@@ -4192,25 +4192,30 @@ void CodeGenModule::emitMultiVersionFunctions() {
       return cast<llvm::Function>(Func);
     };
 
+    // For AArch64, a resolver is only emitted if a function marked with
+    // target_version("default")) or target_clones() is present and defined
+    // in this TU. For other architectures it is always emitted.
     bool ShouldEmitResolver = !getTarget().getTriple().isAArch64();
     SmallVector<CodeGenFunction::MultiVersionResolverOption, 10> Options;
 
     getContext().forEachMultiversionedFunctionVersion(
         FD, [&](const FunctionDecl *CurFD) {
           llvm::SmallVector<StringRef, 8> Feats;
+          bool IsDefined = CurFD->doesThisDeclarationHaveABody();
 
           if (const auto *TA = CurFD->getAttr<TargetAttr>()) {
             TA->getAddedFeatures(Feats);
             llvm::Function *Func = createFunction(CurFD);
             Options.emplace_back(Func, TA->getArchitecture(), Feats);
           } else if (const auto *TVA = CurFD->getAttr<TargetVersionAttr>()) {
-            ShouldEmitResolver |= (TVA->isDefaultVersion() &&
-                                   CurFD->doesThisDeclarationHaveABody());
+            if (TVA->isDefaultVersion() && IsDefined)
+              ShouldEmitResolver = true;
             TVA->getFeatures(Feats);
             llvm::Function *Func = createFunction(CurFD);
             Options.emplace_back(Func, /*Architecture*/ "", Feats);
           } else if (const auto *TC = CurFD->getAttr<TargetClonesAttr>()) {
-            ShouldEmitResolver |= CurFD->doesThisDeclarationHaveABody();
+            if (IsDefined)
+              ShouldEmitResolver = true;
             for (unsigned I = 0; I < TC->featuresStrs_size(); ++I) {
               if (!TC->isFirstOfVersion(I))
                 continue;
