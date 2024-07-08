@@ -175,7 +175,7 @@ struct CppEmitter {
   LogicalResult emitExpression(ExpressionOp expressionOp);
 
   /// Insert the expression representing the operation into the value cache.
-  LogicalResult cacheDeferredOpResult(Operation *op);
+  void cacheDeferredOpResult(Value value, StringRef str);
 
   /// Return the existing or a new name for a Value.
   StringRef getOrCreateName(Value val);
@@ -993,8 +993,7 @@ static LogicalResult printFunctionBody(CppEmitter &emitter,
       // trailing semicolon is handled within the printOperation function.
       bool trailingSemicolon =
           !isa<cf::CondBranchOp, emitc::DeclareFuncOp, emitc::ForOp,
-               emitc::IfOp, emitc::VerbatimOp>(op) ||
-          hasDeferredEmission(&op);
+               emitc::IfOp, emitc::VerbatimOp>(op);
 
       if (failed(emitter.emitOperation(
               op, /*trailingSemicolon=*/trailingSemicolon)))
@@ -1127,32 +1126,9 @@ std::string CppEmitter::getSubscriptName(emitc::SubscriptOp op) {
   return out;
 }
 
-LogicalResult CppEmitter::cacheDeferredOpResult(Operation *op) {
-  if (op->getNumResults() != 1)
-    return op->emitError("Adding deferred ops into value cache only works for "
-                         "single result operations, got ")
-           << op->getNumResults() << " results";
-
-  Value result = op->getResult(0);
-  if (valueMapper.count(result))
-    return success();
-
-  if (auto getGlobal = dyn_cast<emitc::GetGlobalOp>(op)) {
-    valueMapper.insert(result, getGlobal.getName().str());
-    return success();
-  }
-
-  if (auto literal = dyn_cast<emitc::LiteralOp>(op)) {
-    valueMapper.insert(result, literal.getValue().str());
-    return success();
-  }
-
-  if (auto subscript = dyn_cast<emitc::SubscriptOp>(op)) {
-    valueMapper.insert(result, getSubscriptName(subscript));
-    return success();
-  }
-
-  return op->emitError("cacheDeferredOpResult not implemented");
+void CppEmitter::cacheDeferredOpResult(Value value, StringRef str) {
+  if (!valueMapper.count(value))
+    valueMapper.insert(value, str.str());
 }
 
 /// Return the existing or a new name for a Value.
@@ -1518,8 +1494,18 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           // Func ops.
           .Case<func::CallOp, func::FuncOp, func::ReturnOp>(
               [&](auto op) { return printOperation(*this, op); })
-          .Case<emitc::GetGlobalOp, emitc::LiteralOp, emitc::SubscriptOp>(
-              [&](Operation *op) { return cacheDeferredOpResult(op); })
+          .Case<emitc::GetGlobalOp>([&](auto op) {
+            cacheDeferredOpResult(op.getResult(), op.getName());
+            return success();
+          })
+          .Case<emitc::LiteralOp>([&](auto op) {
+            cacheDeferredOpResult(op.getResult(), op.getValue());
+            return success();
+          })
+          .Case<emitc::SubscriptOp>([&](auto op) {
+            cacheDeferredOpResult(op.getResult(), getSubscriptName(op));
+            return success();
+          })
           .Default([&](Operation *) {
             return op.emitOpError("unable to find printer for op");
           });
