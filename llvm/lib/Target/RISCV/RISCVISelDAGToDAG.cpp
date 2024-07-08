@@ -3737,6 +3737,7 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
     Info = RISCV::getMaskedPseudoInfo(TrueOpc);
     IsMasked = true;
   }
+  assert(!(IsMasked && !HasTiedDest) && "Expected tied dest");
 
   if (!Info)
     return false;
@@ -3756,11 +3757,10 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
 
   // If True is masked then the vmerge must have an all 1s mask, since we're
   // going to keep the mask from True.
-  if (IsMasked) {
-    assert(HasTiedDest && "Expected tied dest");
+  if (IsMasked && Mask) {
     // FIXME: Support mask agnostic True instruction which would have an
     // undef merge operand.
-    if (Mask && !usesAllOnesMask(Mask, Glue))
+    if (!usesAllOnesMask(Mask, Glue))
       return false;
   }
 
