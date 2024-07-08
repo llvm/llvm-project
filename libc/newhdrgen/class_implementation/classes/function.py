@@ -20,7 +20,7 @@ class Function:
         ]
         self.standards = standards
         self.guard = guard
-        self.attributes = attributes or []
+        self.attributes = attributes or ""
 
     def __str__(self):
         attributes_str = self.attributes

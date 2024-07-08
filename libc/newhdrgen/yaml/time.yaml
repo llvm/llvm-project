@@ -34,7 +34,8 @@ functions:
     standard: 
       - stdc
     return_type: clock_t
-    arguments: []
+    arguments:
+      - type: void
   - name: difftime
     standard: 
       - stdc

@@ -56,7 +56,7 @@ functions:
   - name: strcpy
     standards: 
       - stdc
-    return_type: char
+    return_type: char *
     arguments:
       - type: char *__restrict
       - type: const char *__restrict
@@ -282,16 +282,16 @@ functions:
       - BSDExtensions
     return_type: size_t
     arguments:
-      - type: char *__restrict
-      - type: char *__restrict
+      - type: const char *__restrict
+      - type: const char *__restrict
       - type: size_t
   - name: strlcpy
     standards: 
       - BSDExtensions
     return_type: size_t
     arguments:
-      - type: char *__restrict
-      - type: char *__restrict
+      - type: const char *__restrict
+      - type: const char *__restrict
       - type: size_t
   - name: strsep
     standards: 
@@ -299,4 +299,4 @@ functions:
     return_type: char *
     arguments:
       - type: char **__restrict
-      - type: char *__restrict
+      - type: const char *__restrict
