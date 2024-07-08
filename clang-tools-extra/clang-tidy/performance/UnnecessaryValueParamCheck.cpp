@@ -133,9 +133,11 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
   // 2. the function is virtual as it might break overrides
   // 3. the function is referenced outside of a call expression within the
   //    compilation unit as the signature change could introduce build errors.
+  // 4. the function is an explicit template/ specialization.
   const auto *Method = llvm::dyn_cast<CXXMethodDecl>(Function);
   if (Param->getBeginLoc().isMacroID() || (Method && Method->isVirtual()) ||
-      isReferencedOutsideOfCallExpr(*Function, *Result.Context))
+      isReferencedOutsideOfCallExpr(*Function, *Result.Context) ||
+      Function->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
     return;
   for (const auto *FunctionDecl = Function; FunctionDecl != nullptr;
        FunctionDecl = FunctionDecl->getPreviousDecl()) {
