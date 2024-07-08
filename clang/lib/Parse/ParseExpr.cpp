@@ -3574,9 +3574,9 @@ ExprResult Parser::ParseFoldExpression(ExprResult LHS,
 void Parser::injectEmbedTokens() {
   EmbedAnnotationData *Data =
       reinterpret_cast<EmbedAnnotationData *>(Tok.getAnnotationValue());
-  MutableArrayRef<Token> Toks(
-      PP.getPreprocessorAllocator().Allocate<Token>(Data->BinaryData.size() * 2 - 1),
-      Data->BinaryData.size() * 2 - 1);
+  MutableArrayRef<Token> Toks(PP.getPreprocessorAllocator().Allocate<Token>(
+                                  Data->BinaryData.size() * 2 - 1),
+                              Data->BinaryData.size() * 2 - 1);
   unsigned I = 0;
   for (auto &Byte : Data->BinaryData) {
     Toks[I].startToken();
