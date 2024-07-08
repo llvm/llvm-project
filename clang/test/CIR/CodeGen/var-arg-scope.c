@@ -68,6 +68,9 @@ void f1(__builtin_va_list c) {
 // LLVM: %struct.__va_list = type { ptr, ptr, ptr, i32, i32 }
 // LLVM: define void @f1(%struct.__va_list %0)
 // LLVM: [[VARLIST:%.*]] = alloca %struct.__va_list, i64 1, align 8,
+// LLVM: br label %[[SCOPE_FRONT:.*]],
+
+// LLVM: [[SCOPE_FRONT]]: ; preds = %1
 // LLVM: [[GR_OFFS_P:%.*]] = getelementptr %struct.__va_list, ptr [[VARLIST]], i32 0, i32 3
 // LLVM: [[GR_OFFS:%.*]] = load i32, ptr [[GR_OFFS_P]], align 4,
 // LLVM-NEXT: [[CMP0:%.*]] = icmp sge i32 [[GR_OFFS]], 0,
@@ -96,4 +99,7 @@ void f1(__builtin_va_list c) {
 // LLVM: [[BB_END]]: ; preds = %[[BB_ON_STACK]], %[[BB_IN_REG]]
 // LLVM-NEXT: [[PHIP:%.*]] = phi ptr [ [[IN_REG_OUTPUT]], %[[BB_IN_REG]] ], [ [[STACK_V]], %[[BB_ON_STACK]] ]
 // LLVM-NEXT: [[PHIV:%.*]] = load ptr, ptr [[PHIP]], align 8,
-// LLVM:  ret void,
+// LLVM-NEXT: br label %[[OUT_SCOPE:.*]],
+
+// LLVM: [[OUT_SCOPE]]: ; preds = %[[BB_END]]
+// LLVM-NEXT:  ret void,

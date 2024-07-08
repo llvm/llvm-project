@@ -22,6 +22,8 @@ module {
 // CHECK:  ^bb[[#COND]]:
 // CHECK:    llvm.cond_br %{{.+}}, ^bb[[#BODY:]], ^bb[[#EXIT:]]
 // CHECK:  ^bb[[#BODY]]:
+// CHECK:    llvm.br ^bb[[#STEP:]]
+// CHECK:  ^bb[[#STEP]]:
 // CHECK:    llvm.br ^bb[[#COND]]
 // CHECK:  ^bb[[#EXIT]]:
 
@@ -58,9 +60,11 @@ module {
   }
 
 // CHECK: @testDoWhile
-// CHECK:    llvm.br ^bb[[#COND]]
+// CHECK:    llvm.br ^bb[[#BODY:]]
 // CHECK:  ^bb[[#COND:]]:
 // CHECK:    llvm.cond_br %{{.+}}, ^bb[[#BODY:]], ^bb[[#EXIT:]]
+// CHECK:  ^bb[[#BODY]]:
+// CHECK:    llvm.br ^bb[[#COND]]
 // CHECK:  ^bb[[#EXIT]]:
 
 
@@ -79,6 +83,8 @@ module {
   }
 
 // CHECK: @testWhileWithBreakTerminatedBody
+// CHECK:    llvm.br ^bb[[#COND:]]
+// CHECK:  ^bb[[#COND]]:
 // CHECK:    llvm.cond_br %{{.+}}, ^bb[[#BODY:]], ^bb[[#EXIT:]]
 // CHECK:  ^bb[[#BODY]]:
 // CHECK:    llvm.br ^bb[[#EXIT]]
@@ -109,8 +115,12 @@ module {
 // CHECK:  ^bb[[#COND:]]:
 // CHECK:    llvm.cond_br %{{.+}}, ^bb[[#BODY:]], ^bb[[#EXIT:]]
 // CHECK:  ^bb[[#BODY]]:
+// CHECK:    llvm.br ^bb[[#SCOPE_IN:]]
+// CHECK:  ^bb[[#SCOPE_IN]]:
 // CHECK:    llvm.br ^bb[[#EXIT]]
 // CHECK:  ^bb[[#SCOPE_EXIT:]]:
+// CHECK:    llvm.br ^bb[[#STEP:]]
+// CHECK:  ^bb[[#STEP]]:
 // CHECK:    llvm.br ^bb[[#COND]]
 // CHECK:  ^bb[[#EXIT]]:
 }

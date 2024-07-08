@@ -41,6 +41,8 @@ cir.func @_Z1xi(%arg0: !s32i) -> !s32i {
 // MLIR-NEXT:    %8 = llvm.mlir.constant(5 : i32) : i32
 // MLIR-NEXT:    llvm.br ^bb3(%8 : i32)
 // MLIR-NEXT:  ^bb3(%9: i32):  // 2 preds: ^bb1, ^bb2
+// MLIR-NEXT:    llvm.br ^bb4
+// MLIR-NEXT:  ^bb4:  // pred: ^bb3
 // MLIR-NEXT:    llvm.store %9, %3 {{.*}}: i32, !llvm.ptr
 // MLIR-NEXT:    %10 = llvm.load %3 {alignment = 4 : i64} : !llvm.ptr -> i32
 // MLIR-NEXT:    llvm.return %10 : i32

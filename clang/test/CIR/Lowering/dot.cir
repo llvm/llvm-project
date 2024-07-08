@@ -68,20 +68,22 @@ module {
 // MLIR:           llvm.store {{.*}}, %[[VAL_8]] {{.*}}: i32, !llvm.ptr
 // MLIR:           %[[VAL_13:.*]] = llvm.mlir.constant(0.000000e+00 : f64) : f64
 // MLIR:           llvm.store %[[VAL_13]], %[[VAL_12]] {{.*}}: f64, !llvm.ptr
+// MLIR:           llvm.br ^bb1
+// MLIR:         ^bb1:
 // MLIR:           %[[VAL_14:.*]] = llvm.mlir.constant(1 : index) : i64
 // MLIR:           %[[VAL_15:.*]] = llvm.alloca %[[VAL_14]] x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
 // MLIR:           %[[VAL_16:.*]] = llvm.mlir.constant(0 : i32) : i32
 // MLIR:           llvm.store %[[VAL_16]], %[[VAL_15]] {{.*}}: i32, !llvm.ptr
-// MLIR:           llvm.br ^bb1
-// MLIR:         ^bb1:
+// MLIR:           llvm.br ^bb2
+// MLIR:         ^bb2:
 // MLIR:           %[[VAL_17:.*]] = llvm.load %[[VAL_15]] {alignment = 4 : i64} : !llvm.ptr -> i32
 // MLIR:           %[[VAL_18:.*]] = llvm.load %[[VAL_8]] {alignment = 4 : i64} : !llvm.ptr -> i32
 // MLIR:           %[[VAL_19:.*]] = llvm.icmp "slt" %[[VAL_17]], %[[VAL_18]] : i32
 // MLIR:           %[[VAL_20:.*]] = llvm.zext %[[VAL_19]] : i1 to i32
 // MLIR:           %[[VAL_21:.*]] = llvm.mlir.constant(0 : i32) : i32
 // MLIR:           %[[VAL_22:.*]] = llvm.icmp "ne" %[[VAL_20]], %[[VAL_21]] : i32
-// MLIR:           llvm.cond_br %[[VAL_22]], ^bb2, ^bb3
-// MLIR:         ^bb2:
+// MLIR:           llvm.cond_br %[[VAL_22]], ^bb3, ^bb5
+// MLIR:         ^bb3:
 // MLIR:           %[[VAL_23:.*]] = llvm.load %[[VAL_4]] {alignment = 8 : i64} : !llvm.ptr -> !llvm.ptr
 // MLIR:           %[[VAL_24:.*]] = llvm.load %[[VAL_15]] {alignment = 4 : i64} : !llvm.ptr -> i32
 // MLIR:           %[[VAL_25:.*]] = llvm.sext %[[VAL_24]] : i32 to i64
@@ -96,12 +98,16 @@ module {
 // MLIR:           %[[VAL_34:.*]] = llvm.load %[[VAL_12]] {alignment = 8 : i64} : !llvm.ptr -> f64
 // MLIR:           %[[VAL_35:.*]] = llvm.fadd %[[VAL_34]], %[[VAL_33]]  : f64
 // MLIR:           llvm.store %[[VAL_35]], %[[VAL_12]] {{.*}}: f64, !llvm.ptr
+// MLIR:           llvm.br ^bb4
+// MLIR:         ^bb4:
 // MLIR:           %[[VAL_36:.*]] = llvm.load %[[VAL_15]] {alignment = 4 : i64} : !llvm.ptr -> i32
 // MLIR:           %[[VAL_37:.*]] = llvm.mlir.constant(1 : i32) : i32
 // MLIR:           %[[VAL_38:.*]] = llvm.add %[[VAL_36]], %[[VAL_37]] : i32
 // MLIR:           llvm.store %[[VAL_38]], %[[VAL_15]] {{.*}}: i32, !llvm.ptr
-// MLIR:           llvm.br ^bb1
-// MLIR:         ^bb3:
+// MLIR:           llvm.br ^bb2
+// MLIR:         ^bb5:
+// MLIR:           llvm.br ^bb6
+// MLIR:         ^bb6:
 // MLIR:           %[[VAL_39:.*]] = llvm.load %[[VAL_12]] {alignment = 8 : i64} : !llvm.ptr -> f64
 // MLIR:           llvm.store %[[VAL_39]], %[[VAL_10]] {{.*}}: f64, !llvm.ptr
 // MLIR:           %[[VAL_40:.*]] = llvm.load %[[VAL_10]] {alignment = 8 : i64} : !llvm.ptr -> f64

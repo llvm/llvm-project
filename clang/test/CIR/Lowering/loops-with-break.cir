@@ -44,11 +44,21 @@ module {
   //           [...]
   // CHECK:    llvm.cond_br %{{.+}}, ^bb[[#preBREAK1:]], ^bb[[#EXIT:]]
   // CHECK:  ^bb[[#preBREAK1]]:
+  // CHECK:    llvm.br ^bb[[#preBREAK2:]]
+  // CHECK:  ^bb[[#preBREAK2]]:
+  // CHECK:    llvm.br ^bb[[#BREAK:]]
+  // CHECK:  ^bb[[#BREAK]]:
   //           [...]
   // CHECK:    llvm.cond_br %{{.+}}, ^bb[[#preEXIT1:]], ^bb[[#preBODY0:]]
   // CHECK:  ^bb[[#preEXIT1]]:
   // CHECK:    llvm.br ^bb[[#EXIT:]]
   // CHECK:  ^bb[[#preBODY0]]:
+  // CHECK:    llvm.br ^bb[[#preBODY1:]]
+  // CHECK:  ^bb[[#preBODY1]]:
+  // CHECK:    llvm.br ^bb[[#BODY:]]
+  // CHECK:  ^bb[[#BODY]]:
+  // CHECK:    llvm.br ^bb[[#STEP:]]
+  // CHECK:  ^bb[[#STEP]]:
   //           [...]
   // CHECK:    llvm.br ^bb[[#COND:]]
   // CHECK:  ^bb[[#EXIT]]:
@@ -117,20 +127,39 @@ module {
   //           [...]
   // CHECK:    llvm.cond_br %{{.+}}, ^bb[[#preNESTED1:]], ^bb[[#EXIT:]]
   // CHECK:  ^bb[[#preNESTED1]]:
+  // CHECK:    llvm.br ^bb[[#preNESTED2:]]
+  // CHECK:  ^bb[[#preNESTED2]]:
+  // CHECK:    llvm.br ^bb[[#NESTED:]]
+  // CHECK:  ^bb[[#NESTED]]:
   //           [...]
   // CHECK:    llvm.br ^bb[[#COND_NESTED:]]
   // CHECK:  ^bb[[#COND_NESTED]]:
   //           [...]
   // CHECK:    llvm.cond_br %{{.+}}, ^bb[[#preBREAK1:]], ^bb[[#EXIT_NESTED:]]
   // CHECK:  ^bb[[#preBREAK1]]:
+  // CHECK:    llvm.br ^bb[[#preBREAK2:]]
+  // CHECK:  ^bb[[#preBREAK2]]:
+  // CHECK:    llvm.br ^bb[[#BREAK:]]
+  // CHECK:  ^bb[[#BREAK]]:
   //           [...]
   // CHECK:    llvm.cond_br %{{.+}}, ^bb[[#preEXIT2:]], ^bb[[#preBODY0:]]
   // CHECK:  ^bb[[#preEXIT2]]:
   // CHECK:    llvm.br ^bb[[#EXIT_NESTED:]]
   // CHECK:  ^bb[[#preBODY0]]:
+  // CHECK:    llvm.br ^bb[[#preBODY1:]]
+  // CHECK:  ^bb[[#preBODY1]]:
+  // CHECK:    llvm.br ^bb[[#BODY_NESTED:]]
+  // CHECK:  ^bb[[#BODY_NESTED]]:
+  // CHECK:    llvm.br ^bb[[#STEP_NESTED:]]
+  // CHECK:  ^bb[[#STEP_NESTED]]:
   //           [...]
   // CHECK:    llvm.br ^bb[[#COND_NESTED:]]
   // CHECK:  ^bb[[#EXIT_NESTED]]:
+  //           [...]
+  // CHECK:    llvm.br ^bb[[#BODY:]]
+  // CHECK:  ^bb[[#BODY]]:
+  // CHECK:    llvm.br ^bb[[#STEP:]]
+  // CHECK:  ^bb[[#STEP]]:
   //           [...]
   // CHECK:    llvm.br ^bb[[#COND:]]
   // CHECK:  ^bb[[#EXIT]]:
@@ -176,11 +205,18 @@ module {
   // CHECK:    llvm.cond_br %{{.+}}, ^bb[[#BODY:]], ^bb[[#EXIT:]]
   // CHECK:  ^bb[[#BODY]]:
   //           [...]
+  // CHECK:    llvm.br ^bb[[#BREAK:]]
+  // CHECK:  ^bb[[#BREAK]]:
+  //           [...]
   // CHECK:    llvm.cond_br %{{.+}}, ^bb[[#preEXIT1:]], ^bb[[#preCOND0:]]
   // CHECK:  ^bb[[#preEXIT1]]:
-  // CHECK:    llvm.br ^bb[[#EXIT:]]
+  // CHECK:    llvm.br ^bb[[#preEXIT2:]]
   // CHECK:  ^bb[[#preCOND0]]:
+  // CHECK:    llvm.br ^bb[[#preCOND1:]]
+  // CHECK:  ^bb[[#preCOND1]]:
   // CHECK:    llvm.br ^bb[[#COND:]]
+  // CHECK:  ^bb[[#preEXIT2]]:
+  // CHECK:    llvm.br ^bb[[#EXIT:]]
   // CHECK:  ^bb[[#EXIT]]:
   //           [...]
   // CHECK:  }
@@ -220,12 +256,21 @@ cir.func @testDoWhile() {
   // CHECK:    llvm.br ^bb[[#COND:]]
   // CHECK:  ^bb[[#COND]]:
   //           [...]
-  // CHECK:    llvm.cond_br %{{.+}}, ^bb[[#preEXIT1:]], ^bb[[#BODY:]]
-  // CHECK:  ^bb[[#preEXIT1]]:
-  // CHECK:    llvm.br ^bb[[#EXIT:]]
+  // CHECK:    llvm.cond_br %{{.+}}, ^bb[[#BODY:]], ^bb[[#EXIT:]]
   // CHECK:  ^bb[[#BODY]]:
   //           [...]
-  // CHECK:    llvm.cond_br %{{.+}}, ^bb[[#COND]], ^bb[[#EXIT]]
+  // CHECK:    llvm.br ^bb[[#BREAK:]]
+  // CHECK:  ^bb[[#BREAK]]:
+  //           [...]
+  // CHECK:    llvm.cond_br %{{.+}}, ^bb[[#preEXIT1:]], ^bb[[#preCOND0:]]
+  // CHECK:  ^bb[[#preEXIT1]]:
+  // CHECK:    llvm.br ^bb[[#preEXIT2:]]
+  // CHECK:  ^bb[[#preCOND0]]:
+  // CHECK:    llvm.br ^bb[[#preCOND1:]]
+  // CHECK:  ^bb[[#preCOND1]]:
+  // CHECK:    llvm.br ^bb[[#COND:]]
+  // CHECK:  ^bb[[#preEXIT2]]:
+  // CHECK:    llvm.br ^bb[[#EXIT:]]
   // CHECK:  ^bb[[#EXIT]]:
   //           [...]
   // CHECK:  }

@@ -122,14 +122,17 @@ module {
     cir.return
   }
   // CHECK: llvm.func @shouldLowerMultiBlockCase
-  // CHECK:   llvm.switch {{.*}} : i32, ^bb3 [
-  // CHECK:     3: ^bb1
-  // CHECK:   ]
   // CHECK: ^bb1:  // pred: ^bb0
+  // CHECK:   llvm.switch {{.*}} : i32, ^bb4 [
+  // CHECK:     3: ^bb2
+  // CHECK:   ]
+  // CHECK: ^bb2:  // pred: ^bb1
   // CHECK:   llvm.return
-  // CHECK: ^bb2:  // no predecessors
-  // CHECK:   llvm.br ^bb3
-  // CHECK: ^bb3:  // 2 preds: ^bb0, ^bb2
+  // CHECK: ^bb3:  // no predecessors
+  // CHECK:   llvm.br ^bb4
+  // CHECK: ^bb4:  // 2 preds: ^bb1, ^bb3
+  // CHECK:   llvm.br ^bb5
+  // CHECK: ^bb5:  // pred: ^bb4
   // CHECK:   llvm.return
   // CHECK: }
 
@@ -162,15 +165,21 @@ module {
     cir.return %4 : !s32i
   }
   // CHECK:  llvm.func @shouldLowerNestedBreak
-  // CHECK:    llvm.switch %6 : i32, ^bb4 [
-  // CHECK:      0: ^bb1
+  // CHECK:    llvm.switch %6 : i32, ^bb7 [
+  // CHECK:      0: ^bb2
   // CHECK:    ]
-  // CHECK:  ^bb1:  // pred: ^bb0
-  // CHECK:    llvm.cond_br {{%.*}}, ^bb2, ^bb3
   // CHECK:  ^bb2:  // pred: ^bb1
-  // CHECK:    llvm.br ^bb4
-  // CHECK:  ^bb3:  // pred: ^bb1
-  // CHECK:    llvm.br ^bb4
-  // CHECK:  ^bb4:  // 3 preds: ^bb0, ^bb2, ^bb3
+  // CHECK:    llvm.br ^bb3
+  // CHECK:  ^bb3:  // pred: ^bb2
+  // CHECK:    llvm.cond_br {{%.*}}, ^bb4, ^bb5
+  // CHECK:  ^bb4:  // pred: ^bb3
+  // CHECK:    llvm.br ^bb7
+  // CHECK:  ^bb5:  // pred: ^bb3
+  // CHECK:    llvm.br ^bb6
+  // CHECK:  ^bb6:  // pred: ^bb5
+  // CHECK:    llvm.br ^bb7
+  // CHECK:  ^bb7:  // 3 preds: ^bb1, ^bb4, ^bb6
+  // CHECK:    llvm.br ^bb8
+  // CHECK:  ^bb8:  // pred: ^bb7
   // CHECK:    llvm.return
 }
