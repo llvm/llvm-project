@@ -305,14 +305,6 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetKeyValuePair(
   if (!value_type_sp)
     return nullptr;
 
-  // After dereferencing the __node_pointer, we will have a handle to
-  // a std::__1::__tree_node<void *>, which has the __value_ member
-  // we are looking for.
-  Status s;
-  value_type_sp = value_type_sp->Dereference(s);
-  if (!value_type_sp || s.Fail())
-    return nullptr;
-
   // Finally, get the key/value pair.
   value_type_sp = value_type_sp->GetChildMemberWithName("__value_");
   if (!value_type_sp)
