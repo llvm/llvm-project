@@ -998,6 +998,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
 // compatibility and builtins.
 static const std::pair<const char *, const char *> genericAlias[]{
     {"and", "iand"},
+    {"getenv", "get_environment_variable"},
     {"imag", "aimag"},
     {"lshift", "shiftl"},
     {"or", "ior"},
@@ -1431,18 +1432,6 @@ static const IntrinsicInterface intrinsicSubroutine[]{
              common::Intent::Out},
             {"status", TypePattern{IntType, KindCode::greaterOrEqualToKind, 4},
                 Rank::scalar, Optionality::optional, common::Intent::Out}},
-        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
-    {"getenv",
-        {{"name", DefaultChar, Rank::scalar},
-            {"value", DefaultChar, Rank::scalar, Optionality::optional,
-                common::Intent::Out},
-            {"length", AnyInt, Rank::scalar, Optionality::optional,
-                common::Intent::Out},
-            {"status", AnyInt, Rank::scalar, Optionality::optional,
-                common::Intent::Out},
-            {"trim_name", AnyLogical, Rank::scalar, Optionality::optional},
-            {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
-                common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"move_alloc",
         {{"from", SameType, Rank::known, Optionality::required,
@@ -2606,7 +2595,8 @@ bool IntrinsicProcTable::Implementation::IsIntrinsicFunction(
   return name == "__builtin_c_loc" || name == "null";
 }
 bool IntrinsicProcTable::Implementation::IsIntrinsicSubroutine(
-    const std::string &name) const {
+    const std::string &name0) const {
+  const std::string &name{ResolveAlias(name0)};
   auto subrRange{subroutines_.equal_range(name)};
   if (subrRange.first != subrRange.second) {
     return true;
@@ -3163,7 +3153,8 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
   }
 
   if (call.isSubroutineCall) {
-    auto subrRange{subroutines_.equal_range(call.name)};
+    const std::string &name{ResolveAlias(call.name)};
+    auto subrRange{subroutines_.equal_range(name)};
     for (auto iter{subrRange.first}; iter != subrRange.second; ++iter) {
       if (auto specificCall{iter->second->Match(
               call, defaults_, arguments, context, builtinsScope_)}) {
