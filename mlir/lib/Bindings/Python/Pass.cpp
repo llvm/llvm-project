@@ -123,11 +123,11 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
               op.getOperation().getContext()->clearOperationsInside(op);
             }
             // Actually run the pass manager.
-            PyMlirContext::ErrorCapture error_capture(
+            PyMlirContext::ErrorCapture errorCapture(
                 op.getOperation().getContext());
             MlirLogicalResult status = mlirPassManagerRunOnOp(
                 passManager.get(), op.getOperation().get());
-            auto errors = error_capture.take();
+            auto errors = errorCapture.take();
             if (mlirLogicalResultIsFailure(status)) {
               throw MLIRError("Failure while executing pass pipeline",
                               std::move(errors));
