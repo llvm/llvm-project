@@ -458,9 +458,9 @@ public:
   /// Constructs a IndexBitcodeWriter object for the given combined index,
   /// writing to the provided \p Buffer. When writing a subset of the index
   /// for a distributed backend, provide a \p ModuleToSummariesForIndex map.
-  /// If provided, \p ModuleToDecSummaries specifies the set of summaries for
-  /// which the corresponding functions or aliased functions should be imported
-  /// as a declaration (but not definition) for each module.
+  /// If provided, \p DecSummaries specifies the set of summaries for which
+  /// the corresponding functions or aliased functions should be imported as a
+  /// declaration (but not definition) for each module.
   IndexBitcodeWriter(BitstreamWriter &Stream, StringTableBuilder &StrtabBuilder,
                      const ModuleSummaryIndex &Index,
                      const GVSummaryPtrSet *DecSummaries = nullptr,
