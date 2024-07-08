@@ -2172,14 +2172,18 @@ class VPReductionRecipe : public VPSingleDefRecipe {
   /// The recurrence decriptor for the reduction in question.
   const RecurrenceDescriptor &RdxDesc;
   bool IsOrdered;
+  /// Whether the reduction is conditional.
+  bool IsConditional = false;
 
 protected:
   VPReductionRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
                     Instruction *I, ArrayRef<VPValue *> Operands,
                     VPValue *CondOp, bool IsOrdered)
       : VPSingleDefRecipe(SC, Operands, I), RdxDesc(R), IsOrdered(IsOrdered) {
-    if (CondOp)
+    if (CondOp) {
+      IsConditional = true;
       addOperand(CondOp);
+    }
   }
 
 public:
@@ -2222,13 +2226,15 @@ public:
   }
   /// Return true if the in-loop reduction is ordered.
   bool isOrdered() const { return IsOrdered; };
+  /// Return true if the in-loop reduction is conditional.
+  bool isConditional() const { return IsConditional; };
   /// The VPValue of the scalar Chain being accumulated.
   VPValue *getChainOp() const { return getOperand(0); }
   /// The VPValue of the vector value to be reduced.
   VPValue *getVecOp() const { return getOperand(1); }
   /// The VPValue of the condition for the block.
-  virtual VPValue *getCondOp() const {
-    return getNumOperands() > 2 ? getOperand(2) : nullptr;
+  VPValue *getCondOp() const {
+    return isConditional() ? getOperand(getNumOperands() - 1) : nullptr;
   }
 };
 
@@ -2264,10 +2270,6 @@ public:
 
   /// The VPValue of the explicit vector length.
   VPValue *getEVL() const { return getOperand(2); }
-  /// The VPValue of the condition for the block.
-  VPValue *getCondOp() const override {
-    return getNumOperands() > 3 ? getOperand(3) : nullptr;
-  }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
