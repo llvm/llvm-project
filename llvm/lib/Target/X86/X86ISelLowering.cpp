@@ -41336,6 +41336,7 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
   case X86ISD::VPERMV3: {
     // Combine VPERMV3 to widened VPERMV if the two source operands are split
     // from the same vector.
+    // TODO: Handle extraction from a wider source vector (e.g. v16i32 -> v4i32).
     SDValue V1 = peekThroughBitcasts(N.getOperand(0));
     SDValue V2 = peekThroughBitcasts(N.getOperand(2));
     MVT SVT = V1.getSimpleValueType();
@@ -41346,7 +41347,8 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         V1.getConstantOperandVal(1) == 0 &&
         V2.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
         V2.getConstantOperandVal(1) == SVT.getVectorNumElements() &&
-        V1.getOperand(0) == V2.getOperand(0)) {
+        V1.getOperand(0) == V2.getOperand(0) &&
+        V1.getOperand(0).getValueSizeInBits() == NVT.getSizeInBits()) {
       SDValue Mask =
           DAG.getNode(ISD::INSERT_SUBVECTOR, DL, NVT, DAG.getUNDEF(NVT),
                       N.getOperand(1), DAG.getIntPtrConstant(0, DL));
