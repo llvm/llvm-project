@@ -1401,16 +1401,19 @@ def Vector_TransferReadOp :
     permutation or broadcasting. Elements whose corresponding mask element is
     `0` are masked out and replaced with `padding`.
 
-    An optional boolean array attribute `in_bounds` specifies for every vector
-    dimension if the transfer is guaranteed to be within the source bounds. If
-    specified, the `in_bounds` array length has to be equal to the vector rank.
-    If set to "false", accesses (including the starting point) may run
+    For every vector dimension, the boolean array attribute `in_bounds`
+    specifies if the transfer is guaranteed to be within the source bounds. If
+    set to "false", accesses (including the starting point) may run
     out-of-bounds along the respective vector dimension as the index increases.
-    Broadcast dimensions must always be in-bounds. In absence of the attribute,
-    accesses along all vector dimensions (except for broadcasts) may run
-    out-of-bounds. A `vector.transfer_read` can be lowered to a simple load if
-    all dimensions are specified to be within bounds and no `mask` was
-    specified. Note that non-vector dimensions *must* always be in-bounds.
+    Non-vector and broadcast dimensions *must* always be in-bounds. The
+    `in_bounds` array length has to be equal to the vector rank. This attribute
+    has a default value: `false` (i.e. "out-of-bounds"). When skipped in the
+    textual IR, the default value is assumed. Similarly, the OP printer will
+    omit this attribute when all dimensions are out-of-bounds (i.e. the default
+    value is used).
+
+    A `vector.transfer_read` can be lowered to a simple load if all dimensions
+    are specified to be within bounds and no `mask` was specified.
 
     This operation is called 'read' by opposition to 'load' because the
     super-vector granularity is generally not representable with a single
@@ -1643,15 +1646,19 @@ def Vector_TransferWriteOp :
     any permutation. Elements whose corresponding mask element is `0` are
     masked out.
 
-    An optional boolean array attribute `in_bounds` specifies for every vector
-    dimension if the transfer is guaranteed to be within the source bounds. If
-    specified, the `in_bounds` array length has to be equal to the vector rank.
-    If set to "false", accesses (including the starting point) may run
+    For every vector dimension, the boolean array attribute `in_bounds`
+    specifies if the transfer is guaranteed to be within the source bounds. If
+    set to "false", accesses (including the starting point) may run
     out-of-bounds along the respective vector dimension as the index increases.
-    In absence of the attribute, accesses along all vector dimensions may run
-    out-of-bounds. A `vector.transfer_write` can be lowered to a simple store if
-    all dimensions are specified to be within bounds and no `mask` was
-    specified. Note that non-vector dimensions *must* always be in-bounds.
+    Non-vector and broadcast dimensions *must* always be in-bounds. The
+    `in_bounds` array length has to be equal to the vector rank. This attribute
+    has a default value: `false` (i.e. "out-of-bounds"). When skipped in the
+    textual IR, the default value is assumed. Similarly, the OP printer will
+    omit this attribute when all dimensions are out-of-bounds (i.e. the default
+    value is used).
+
+     A `vector.transfer_write` can be lowered to a simple store if all
+     dimensions are specified to be within bounds and no `mask` was specified.
 
     This operation is called 'write' by opposition to 'store' because the
     super-vector granularity is generally not representable with a single
