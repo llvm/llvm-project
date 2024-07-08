@@ -170,9 +170,7 @@ public:
   // A registry of mutated values
   // (see `SPIRVPrepareFunctions::removeAggregateTypesFromSignature()`):
   // - Add a record.
-  void addMutated(Value *Val, Type *Ty) {
-    MutatedAggRet[Val] = Ty;
-  }
+  void addMutated(Value *Val, Type *Ty) { MutatedAggRet[Val] = Ty; }
   // - Find a record.
   Type *findMutated(const Value *Val) {
     auto It = MutatedAggRet.find(Val);
