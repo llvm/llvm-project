@@ -703,12 +703,12 @@ static void detectX86FamilyModel(unsigned EAX, unsigned *Family,
   }
 }
 
+#define testFeature(F) (Features[F / 32] & (1 << (F % 32))) != 0
+
 static StringRef
 getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
                                 const unsigned *Features,
                                 unsigned *Type, unsigned *Subtype) {
-#define testFeature(F) (Features[F / 32] & (1 << (F % 32))) != 0
-
   StringRef CPU;
 
   switch (Family) {
@@ -1217,6 +1217,8 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
 
   return CPU;
 }
+
+#undef testFeature;
 
 static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
                                  unsigned *Features) {
