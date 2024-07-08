@@ -35,9 +35,9 @@ define void @loop_peeling_smul_with_overflow() {
 ; after loop-unroll
 ; CHECK: Classifying expressions for: @loop_peeling_smul_with_overflow
 ; CHECK: %extractvalue = extractvalue { i32, i1 } %call, 0
-; CHECK-NEXT: -->  (-2 + (-2 * %load))
+; CHECK-NEXT: -->  (-2 * %add8.lcssa)
 ; CHECK: %phi4 = phi i32 [ %add, %bb3 ], [ 0, %bb2 ]
-; CHECK-NEXT: -->  {0,+,(-2 + (-2 * %load))}<nuw><nsw><%bb3>
+; CHECK-NEXT: -->  {0,+,(-2 * %add8.lcssa)}<nuw><nsw><%bb3>
 ;
 bb:
   br label %bb1
