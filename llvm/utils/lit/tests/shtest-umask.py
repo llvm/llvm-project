@@ -13,6 +13,6 @@
 # CHECK: # | 'umask' supports only one argument
 
 # CHECK: Total Discovered Tests: 3
-# CHECK: {{Passed|Unresolved}}: 1 {{\([0-9]*\.[0-9]*%\)}}
+# CHECK: {{Passed|Unsupported}}: 1 {{\([0-9]*\.[0-9]*%\)}}
 # CHECK: Failed{{ *}}: 2 {{\([0-9]*\.[0-9]*%\)}}
 # CHECK-NOT: {{.}}
