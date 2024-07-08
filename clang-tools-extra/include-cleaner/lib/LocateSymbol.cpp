@@ -14,7 +14,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/raw_ostream.h"
 #include <utility>
 #include <vector>
 
@@ -41,11 +40,8 @@ Hints declHints(const Decl *D) {
 std::vector<Hinted<SymbolLocation>> locateDecl(const Decl &D) {
   std::vector<Hinted<SymbolLocation>> Result;
   // FIXME: Should we also provide physical locations?
-  if (auto SS = tooling::stdlib::Recognizer()(&D)) {
-    Result.push_back({*SS, Hints::CompleteSymbol});
-    if (!D.hasBody())
-      return Result;
-  }
+  if (auto SS = tooling::stdlib::Recognizer()(&D))
+    return {{*SS, Hints::CompleteSymbol}};
   // FIXME: Signal foreign decls, e.g. a forward declaration not owned by a
   // library. Some useful signals could be derived by checking the DeclContext.
   // Most incidental forward decls look like:

@@ -30,6 +30,13 @@ public:
       push_back(*begin);
   }
 
+  using const_iterator = typename cpp::array<T, CAPACITY>::const_iterator;
+  constexpr FixedVector(const_iterator begin, const_iterator end)
+      : store{}, item_count{} {
+    for (; begin != end; ++begin)
+      push_back(*begin);
+  }
+
   constexpr FixedVector(size_t count, const T &value) : store{}, item_count{} {
     for (size_t i = 0; i < count; ++i)
       push_back(value);
@@ -83,6 +90,11 @@ public:
 
   LIBC_INLINE constexpr iterator begin() { return store.begin(); }
   LIBC_INLINE constexpr iterator end() { return iterator{&store[item_count]}; }
+
+  LIBC_INLINE constexpr const_iterator begin() const { return store.begin(); }
+  LIBC_INLINE constexpr const_iterator end() const {
+    return const_iterator{&store[item_count]};
+  }
 };
 
 } // namespace LIBC_NAMESPACE

@@ -26,6 +26,10 @@ namespace llvm {
 
 /// A base class for all GenericMachineInstrs.
 class GenericMachineInstr : public MachineInstr {
+  constexpr static unsigned PoisonFlags = NoUWrap | NoSWrap | NoUSWrap |
+                                          IsExact | Disjoint | NonNeg |
+                                          FmNoNans | FmNoInfs;
+
 public:
   GenericMachineInstr() = delete;
 
@@ -37,14 +41,10 @@ public:
     return isPreISelGenericOpcode(MI->getOpcode());
   }
 
-  bool hasPoisonGeneratingFlags() const {
-    return getFlags() & (NoUWrap | NoSWrap | IsExact | Disjoint | NonNeg |
-                         FmNoNans | FmNoInfs);
-  }
+  bool hasPoisonGeneratingFlags() const { return getFlags() & PoisonFlags; }
 
   void dropPoisonGeneratingFlags() {
-    clearFlags(NoUWrap | NoSWrap | IsExact | Disjoint | NonNeg | FmNoNans |
-               FmNoInfs);
+    clearFlags(PoisonFlags);
     assert(!hasPoisonGeneratingFlags());
   }
 };
@@ -183,6 +183,11 @@ class GAnyLoad : public GLoadStore {
 public:
   /// Get the definition register of the loaded value.
   Register getDstReg() const { return getOperand(0).getReg(); }
+
+  /// Returns the Ranges that describes the dereference.
+  const MDNode *getRanges() const {
+    return getMMO().getRanges();
+  }
 
   static bool classof(const MachineInstr *MI) {
     switch (MI->getOpcode()) {

@@ -1252,7 +1252,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
 
   // get the data layout to compare the sizes of base/derived pointer values
   [[maybe_unused]] auto &DL =
-      cast<llvm::Instruction>(Def)->getModule()->getDataLayout();
+      cast<llvm::Instruction>(Def)->getDataLayout();
   // Cache all of our results so we can cheaply reuse them
   // NOTE: This is actually two caches: one of the base defining value
   // relation and one of the base pointer relation!  FIXME
@@ -1734,7 +1734,7 @@ makeStatepointExplicitImpl(CallBase *Call, /* to replace */
       //   memcpy(dest_derived, source_derived, ...) =>
       //   memcpy(dest_base, dest_offset, source_base, source_offset, ...)
       auto &Context = Call->getContext();
-      auto &DL = Call->getModule()->getDataLayout();
+      auto &DL = Call->getDataLayout();
       auto GetBaseAndOffset = [&](Value *Derived) {
         Value *Base = nullptr;
         // Optimizations in unreachable code might substitute the real pointer
@@ -2030,7 +2030,7 @@ static void relocationViaAlloca(
 
   // Emit alloca for "LiveValue" and record it in "allocaMap" and
   // "PromotableAllocas"
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   auto emitAllocaFor = [&](Value *LiveValue) {
     AllocaInst *Alloca =
         new AllocaInst(LiveValue->getType(), DL.getAllocaAddrSpace(), "",
@@ -2148,7 +2148,7 @@ static void relocationViaAlloca(
     }
 
     llvm::sort(Uses);
-    auto Last = std::unique(Uses.begin(), Uses.end());
+    auto Last = llvm::unique(Uses);
     Uses.erase(Last, Uses.end());
 
     for (Instruction *Use : Uses) {
@@ -2271,7 +2271,7 @@ static Value* findRematerializableChainToBasePointer(
   }
 
   if (CastInst *CI = dyn_cast<CastInst>(CurrentValue)) {
-    if (!CI->isNoopCast(CI->getModule()->getDataLayout()))
+    if (!CI->isNoopCast(CI->getDataLayout()))
       return CI;
 
     ChainToBase.push_back(CI);
@@ -2293,7 +2293,7 @@ chainToBasePointerCost(SmallVectorImpl<Instruction *> &Chain,
 
   for (Instruction *Instr : Chain) {
     if (CastInst *CI = dyn_cast<CastInst>(Instr)) {
-      assert(CI->isNoopCast(CI->getModule()->getDataLayout()) &&
+      assert(CI->isNoopCast(CI->getDataLayout()) &&
              "non noop cast is found during rematerialization");
 
       Type *SrcTy = CI->getOperand(0)->getType();
@@ -2601,7 +2601,7 @@ static bool inlineGetBaseAndOffset(Function &F,
                                    DefiningValueMapTy &DVCache,
                                    IsKnownBaseMapTy &KnownBases) {
   auto &Context = F.getContext();
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
   bool Changed = false;
 
   for (auto *Callsite : Intrinsics)
