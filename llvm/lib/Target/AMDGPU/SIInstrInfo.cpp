@@ -4118,6 +4118,13 @@ bool SIInstrInfo::modifiesModeRegister(const MachineInstr &MI) {
 }
 
 bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const {
+  // This function is used to determine if an instruction can be safely
+  // executed under EXECZ without hardware error, indeterminate results,
+  // and/or visible effects on future vector execution or outside the shader.
+  // Note: as of 2024 the only use of this is SIPreEmitPeephole where it is
+  // used in removing branches over short EXECZ sequences.
+  // As such it embeds certain assumptions which may not apply in every case
+  // of EXECZ execution.
   unsigned Opcode = MI.getOpcode();
 
   if (MI.mayStore() && isSMRD(MI))
@@ -4134,13 +4141,17 @@ bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const 
   //       EXEC = 0, but checking for that case here seems not worth it
   //       given the typical code patterns.
   if (Opcode == AMDGPU::S_SENDMSG || Opcode == AMDGPU::S_SENDMSGHALT ||
-      isEXP(Opcode) ||
-      Opcode == AMDGPU::DS_ORDERED_COUNT || Opcode == AMDGPU::S_TRAP ||
-      Opcode == AMDGPU::DS_GWS_INIT || Opcode == AMDGPU::DS_GWS_BARRIER)
+      isEXP(Opcode) || Opcode == AMDGPU::DS_ORDERED_COUNT ||
+      Opcode == AMDGPU::S_TRAP || Opcode == AMDGPU::DS_GWS_INIT ||
+      Opcode == AMDGPU::DS_GWS_BARRIER || Opcode == AMDGPU::S_WAIT_EVENT)
     return true;
 
   if (MI.isCall() || MI.isInlineAsm())
     return true; // conservative assumption
+
+  // Assume that barrier interactions are only intended with active lanes.
+  if (isBarrierRelated(Opcode))
+    return true;
 
   // A mode change is a scalar operation that influences vector instructions.
   if (modifiesModeRegister(MI))
