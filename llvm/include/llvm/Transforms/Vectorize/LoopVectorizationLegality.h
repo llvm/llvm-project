@@ -280,7 +280,7 @@ public:
   bool canFoldTailByMasking() const;
 
   /// Mark all respective loads/stores for masking. Must only be called when
-  /// ail-folding is possible.
+  /// tail-folding is possible.
   void prepareToFoldTailByMasking();
 
   /// Returns the primary induction variable.

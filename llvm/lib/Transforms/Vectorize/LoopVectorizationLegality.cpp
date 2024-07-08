@@ -1586,15 +1586,12 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
   // The list of pointers that we can safely read and write to remains empty.
   SmallPtrSet<Value *, 8> SafePointers;
 
-  // Collect masked ops in temporary set first to avoid partially populating
-  // MaskedOp if a block cannot be predicated.
+  // Check all blocks for predication, including those that ordinarily do not
+  // need predication such as the header block.
   SmallPtrSet<const Instruction *, 8> TmpMaskedOp;
-
-  // Check and mark all blocks for predication, including those that ordinarily
-  // do not need predication such as the header block.
   for (BasicBlock *BB : TheLoop->blocks()) {
     if (!blockCanBePredicated(BB, SafePointers, TmpMaskedOp)) {
-      LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking as requested.\n");
+      LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking.\n");
       return false;
     }
   }
@@ -1608,15 +1605,10 @@ void LoopVectorizationLegality::prepareToFoldTailByMasking() {
   // The list of pointers that we can safely read and write to remains empty.
   SmallPtrSet<Value *, 8> SafePointers;
 
-  // Collect masked ops in temporary set first to avoid partially populating
-  // MaskedOp if a block cannot be predicated.
-  SmallPtrSet<const Instruction *, 8> TmpMaskedOp;
-
-  // Check and mark all blocks for predication, including those that ordinarily
-  // do not need predication such as the header block.
+  // Mark all blocks for predication, including those that ordinarily do not
+  // need predication such as the header block.
   for (BasicBlock *BB : TheLoop->blocks()) {
-    bool R = blockCanBePredicated(BB, SafePointers, MaskedOp);
-    (void)R;
+    [[maybe_unused]] bool R = blockCanBePredicated(BB, SafePointers, MaskedOp);
     assert(R && "Must be able to predicate block when tail-folding.");
   }
 }
