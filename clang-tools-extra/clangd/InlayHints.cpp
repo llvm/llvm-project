@@ -590,6 +590,21 @@ public:
   }
 
   void VisitTagType(const TagType *TT) {
+    auto *CXXRD = dyn_cast<CXXRecordDecl>(TT->getDecl());
+    if (!CXXRD) {
+      // This might be a C TagDecl.
+      if (auto *RD = dyn_cast<RecordDecl>(TT->getDecl())) {
+        // FIXME: Respect SuppressTagKeyword in other cases.
+        if (!PP.SuppressTagKeyword && !RD->getTypedefNameForAnonDecl()) {
+          addLabel(RD->getKindName().str());
+          addLabel(" ");
+        }
+        return addLabel(
+            [&](llvm::raw_ostream &OS) { return RD->printName(OS, PP); },
+            nameLocation(RD, SM));
+      }
+      return VisitType(TT);
+    }
     // Note that we have cases where the type of a template specialization is
     // modeled as a RecordType rather than a TemplateSpecializationType. (Type
     // sugars are not preserved?)
@@ -602,16 +617,13 @@ public:
     // auto [value] = bar;
     //
     // The type of value is modeled as a RecordType here.
-    auto *CXXRD = dyn_cast<CXXRecordDecl>(TT->getDecl());
-    if (!CXXRD)
-      return VisitType(TT);
     CXXRecordDecl *Pattern = CXXRD->getTemplateInstantiationPattern();
     if (!Pattern)
       return addLabel(
           [&](llvm::raw_ostream &OS) { return CXXRD->printName(OS, PP); },
           nameLocation(CXXRD, SM));
 
-    // FIXME: Do we have other kind of specializations?
+    // FIXME: Do we have other kinds of specializations?
     if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(CXXRD))
       return handleTemplateSpecialization(
           TemplateName(Pattern->getDescribedClassTemplate()),

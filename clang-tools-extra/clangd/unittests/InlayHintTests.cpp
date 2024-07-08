@@ -1671,13 +1671,23 @@ TEST(TypeHints, SubstTemplateParameterAliases) {
                         ExpectedHint{": static_vector<int>", "vector_name"});
 }
 
-template <typename... Labels>
+enum struct Language {
+  CXX26 = 1,
+  C23 = 2,
+};
+
+template <Language L = Language::CXX26, typename... Labels>
 void assertTypeLinkHints(StringRef Code, StringRef HintRange,
                          Labels... ExpectedLabels) {
   Annotations Source(Code);
 
   TestTU TU = TestTU::withCode(Source.code());
-  TU.ExtraArgs.push_back("-std=c++2c");
+  if constexpr (L == Language::CXX26) {
+    TU.ExtraArgs.push_back("-std=c++2c");
+  } else if constexpr (L == Language::C23) {
+    TU.ExtraArgs.push_back("-xc");
+    TU.ExtraArgs.push_back("-std=c23");
+  }
   auto AST = TU.build();
 
   Config C;
@@ -1880,6 +1890,20 @@ TEST(TypeHints, LinksForStructureBindings) {
   assertTypeLinkHints(Source, "1", ExpectedHintLabelPiece{": "},
                       ExpectedHintLabelPiece{"A", "A"},
                       ExpectedHintLabelPiece{"<float>"});
+}
+
+TEST(TypeHints, TypeDeductionForC) {
+  StringRef Source(R"cpp(
+    struct $Waldo[[Waldo]] {};
+    struct Waldo foo();
+    int main() {
+      auto $theres[[w]] /*: struct Waldo */ = foo();
+    }
+  )cpp");
+
+  assertTypeLinkHints<Language::C23>(Source, "theres",
+                                     ExpectedHintLabelPiece{": struct "},
+                                     ExpectedHintLabelPiece{"Waldo", "Waldo"});
 }
 
 TEST(DesignatorHints, Basic) {
