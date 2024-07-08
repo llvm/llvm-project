@@ -3334,6 +3334,25 @@ using CIRFMaxOpLowering =
 using CIRFMinOpLowering =
     CIRBinaryFPToFPBuiltinOpLowering<mlir::cir::FMinOp, mlir::LLVM::MinNumOp>;
 
+class CIRClearCacheOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::ClearCacheOp> {
+public:
+  using OpConversionPattern<mlir::cir::ClearCacheOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::ClearCacheOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto begin = adaptor.getBegin();
+    auto end = adaptor.getEnd();
+    auto intrinNameAttr =
+        mlir::StringAttr::get(op.getContext(), "llvm.clear_cache");
+    rewriter.replaceOpWithNewOp<mlir::LLVM::CallIntrinsicOp>(
+        op, mlir::Type{}, intrinNameAttr, mlir::ValueRange{begin, end});
+
+    return mlir::success();
+  }
+};
+
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add<CIRReturnLowering>(patterns.getContext());
@@ -3363,7 +3382,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRCeilOpLowering, CIRFloorOpLowering, CIRFAbsOpLowering,
       CIRNearbyintOpLowering, CIRRintOpLowering, CIRRoundOpLowering,
       CIRTruncOpLowering, CIRCopysignOpLowering, CIRFMaxOpLowering,
-      CIRFMinOpLowering>(converter, patterns.getContext());
+      CIRFMinOpLowering, CIRClearCacheOpLowering>(converter,
+                                                  patterns.getContext());
 }
 
 namespace {
