@@ -11,9 +11,11 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 
 #include "../utils/ExprSequence.h"
 #include "../utils/Matchers.h"
@@ -34,7 +36,12 @@ struct UseAfterMove {
   const DeclRefExpr *DeclRef;
 
   // Is the order in which the move and the use are evaluated undefined?
-  bool EvaluationOrderUndefined;
+  bool EvaluationOrderUndefined = false;
+
+  // Does the use happen in a later loop iteration than the move?
+  //
+  // We default to false and change it to true if required in find().
+  bool UseHappensInLaterLoopIteration = false;
 };
 
 /// Finds uses of a variable after a move (and maintains state required by the
@@ -48,7 +55,7 @@ public:
   // use-after-move is found, writes information about it to 'TheUseAfterMove'.
   // Returns whether a use-after-move was found.
   bool find(Stmt *CodeBlock, const Expr *MovingCall,
-            const ValueDecl *MovedVariable, UseAfterMove *TheUseAfterMove);
+            const DeclRefExpr *MovedVariable, UseAfterMove *TheUseAfterMove);
 
 private:
   bool findInternal(const CFGBlock *Block, const Expr *MovingCall,
@@ -89,7 +96,7 @@ UseAfterMoveFinder::UseAfterMoveFinder(ASTContext *TheContext)
     : Context(TheContext) {}
 
 bool UseAfterMoveFinder::find(Stmt *CodeBlock, const Expr *MovingCall,
-                              const ValueDecl *MovedVariable,
+                              const DeclRefExpr *MovedVariable,
                               UseAfterMove *TheUseAfterMove) {
   // Generate the CFG manually instead of through an AnalysisDeclContext because
   // it seems the latter can't be used to generate a CFG for the body of a
@@ -110,15 +117,32 @@ bool UseAfterMoveFinder::find(Stmt *CodeBlock, const Expr *MovingCall,
   BlockMap = std::make_unique<StmtToBlockMap>(TheCFG.get(), Context);
   Visited.clear();
 
-  const CFGBlock *Block = BlockMap->blockContainingStmt(MovingCall);
-  if (!Block) {
+  const CFGBlock *MoveBlock = BlockMap->blockContainingStmt(MovingCall);
+  if (!MoveBlock) {
     // This can happen if MovingCall is in a constructor initializer, which is
     // not included in the CFG because the CFG is built only from the function
     // body.
-    Block = &TheCFG->getEntry();
+    MoveBlock = &TheCFG->getEntry();
   }
 
-  return findInternal(Block, MovingCall, MovedVariable, TheUseAfterMove);
+  bool Found = findInternal(MoveBlock, MovingCall, MovedVariable->getDecl(),
+                            TheUseAfterMove);
+
+  if (Found) {
+    if (const CFGBlock *UseBlock =
+            BlockMap->blockContainingStmt(TheUseAfterMove->DeclRef)) {
+      // Does the use happen in a later loop iteration than the move?
+      // - If they are in the same CFG block, we know the use happened in a
+      //   later iteration if we visited that block a second time.
+      // - Otherwise, we know the use happened in a later iteration if the
+      //   move is reachable from the use.
+      CFGReverseBlockReachabilityAnalysis CFA(*TheCFG);
+      TheUseAfterMove->UseHappensInLaterLoopIteration =
+          UseBlock == MoveBlock ? Visited.contains(UseBlock)
+                                : CFA.isReachable(UseBlock, MoveBlock);
+    }
+  }
+  return Found;
 }
 
 bool UseAfterMoveFinder::findInternal(const CFGBlock *Block,
@@ -394,7 +418,7 @@ static void emitDiagnostic(const Expr *MovingCall, const DeclRefExpr *MoveArg,
         "there is no guarantee about the order in which they are evaluated",
         DiagnosticIDs::Note)
         << IsMove;
-  } else if (UseLoc < MoveLoc || Use.DeclRef == MoveArg) {
+  } else if (Use.UseHappensInLaterLoopIteration) {
     Check->diag(UseLoc,
                 "the use happens in a later loop iteration than the "
                 "%select{forward|move}0",
@@ -495,7 +519,7 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
   for (Stmt *CodeBlock : CodeBlocks) {
     UseAfterMoveFinder Finder(Result.Context);
     UseAfterMove Use;
-    if (Finder.find(CodeBlock, MovingCall, Arg->getDecl(), &Use))
+    if (Finder.find(CodeBlock, MovingCall, Arg, &Use))
       emitDiagnostic(MovingCall, Arg, Use, this, Result.Context,
                      determineMoveType(MoveDecl));
   }

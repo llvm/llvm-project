@@ -133,7 +133,7 @@ for.body:
 ; YAML:      Function:        getelementptr_2x32
 ; YAML:     Args:
 ; YAML:        - String:          'SLP vectorized with cost '
-; YAML:        - Cost:            '6'
+; YAML:        - Cost:            '4'
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '3'
 
