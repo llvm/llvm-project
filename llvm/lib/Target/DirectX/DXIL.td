@@ -27,11 +27,6 @@ foreach i = 0...8 in {
   def DX1_#i : Version<1, i>;
 }
 
-// Resource ValueType - has no size or value
-def resourceVT : ValueType<-1, -1>;
-
-// Resource type
-def dxil_resource_ty : LLVMType<resourceVT>;
 // Overload type alias of llvm_any_ty
 defvar dxil_overload_ty  = llvm_any_ty;
 
@@ -332,18 +327,6 @@ class DXILOp {
 
 // Concrete definitions of DXIL Operations
 
-def IsInf : DXILOp {
-  let Doc = "Determines if the specified value is infinite.";
-  let OpCode = 9;
-  let OpClass = isSpecialFloat;
-  let LLVMIntrinsic = int_dx_isinf;
-  let arguments = (ins llvm_anyfloat_ty);
-  let result = (out llvm_i1_ty);
-  let sm_constraints = [SMVersionConstraints<SM6_0,
-                             (overloads llvm_half_ty, llvm_float_ty),
-                             (stages allKinds)>];
-}
-
 def Abs : DXILOp {
   let Doc = "Returns the absolute value of the input.";
   let OpCode = 6;
@@ -354,6 +337,22 @@ def Abs : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty, llvm_double_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
+}
+
+def IsInf : DXILOp {
+  let Doc = "Determines if the specified value is infinite.";
+  let OpCode = 9;
+  let OpClass = isSpecialFloat;
+  let LLVMIntrinsic = int_dx_isinf;
+  let arguments = (ins llvm_anyfloat_ty);
+  let result = (out llvm_i1_ty);
+  let sm_constraints = [SMVersionConstraints<SM6_0,
+                             (overloads llvm_half_ty, llvm_float_ty),
+                             (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def Cos  : DXILOp {
@@ -366,6 +365,8 @@ def Cos  : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def Sin  : DXILOp {
@@ -392,6 +393,8 @@ def Tan  : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def ACos  : DXILOp {
@@ -404,6 +407,8 @@ def ACos  : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def ASin  : DXILOp {
@@ -416,6 +421,8 @@ def ASin  : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def ATan  : DXILOp {
@@ -428,6 +435,8 @@ def ATan  : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def HCos  : DXILOp {
@@ -440,6 +449,8 @@ def HCos  : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def HSin  : DXILOp {
@@ -452,6 +463,8 @@ def HSin  : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def HTan  : DXILOp {
@@ -464,6 +477,8 @@ def HTan  : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def Exp2 : DXILOp {
@@ -476,6 +491,8 @@ def Exp2 : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def Frac : DXILOp {
@@ -488,6 +505,8 @@ def Frac : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def Log2 : DXILOp {
@@ -500,6 +519,8 @@ def Log2 : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def Sqrt : DXILOp {
@@ -512,6 +533,8 @@ def Sqrt : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def RSqrt : DXILOp {
@@ -524,6 +547,8 @@ def RSqrt : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def Round : DXILOp {
@@ -536,6 +561,8 @@ def Round : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def Floor : DXILOp {
@@ -548,6 +575,8 @@ def Floor : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def Ceil  : DXILOp {
@@ -560,6 +589,8 @@ def Ceil  : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def Trunc : DXILOp {
@@ -572,6 +603,8 @@ def Trunc : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def Rbits : DXILOp {
@@ -584,6 +617,8 @@ def Rbits : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_i16_ty, llvm_i32_ty, llvm_i64_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def FMax : DXILOp {
@@ -596,6 +631,8 @@ def FMax : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty, llvm_double_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def FMin : DXILOp {
@@ -608,6 +645,8 @@ def FMin : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty, llvm_double_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def SMax : DXILOp {
@@ -620,6 +659,8 @@ def SMax : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_i16_ty, llvm_i32_ty, llvm_i64_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def SMin : DXILOp {
@@ -632,6 +673,8 @@ def SMin : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_i16_ty, llvm_i32_ty, llvm_i64_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def UMax : DXILOp {
@@ -644,6 +687,8 @@ def UMax : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_i16_ty, llvm_i32_ty, llvm_i64_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def UMin : DXILOp {
@@ -656,6 +701,8 @@ def UMin : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_i16_ty, llvm_i32_ty, llvm_i64_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def FMad : DXILOp {
@@ -668,6 +715,8 @@ def FMad : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty, llvm_double_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def IMad : DXILOp {
@@ -680,6 +729,8 @@ def IMad : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_i16_ty, llvm_i32_ty, llvm_i64_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def UMad : DXILOp {
@@ -692,6 +743,8 @@ def UMad : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_i16_ty, llvm_i32_ty, llvm_i64_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def Dot2 : DXILOp {
@@ -704,6 +757,8 @@ def Dot2 : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def Dot3 : DXILOp {
@@ -716,6 +771,8 @@ def Dot3 : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def Dot4 : DXILOp {
@@ -728,6 +785,8 @@ def Dot4 : DXILOp {
   let sm_constraints = [SMVersionConstraints<SM6_0,
                              (overloads llvm_half_ty, llvm_float_ty),
                              (stages allKinds)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def ThreadId : DXILOp {
@@ -739,6 +798,8 @@ def ThreadId : DXILOp {
   let result = (out llvm_i32_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0, (overloads llvm_i32_ty),
                              (stages compute, mesh, amplification, node)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def GroupId  : DXILOp {
@@ -750,6 +811,8 @@ def GroupId  : DXILOp {
   let result = (out llvm_i32_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0, (overloads llvm_i32_ty),
                              (stages compute, mesh, amplification, node)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def ThreadIdInGroup : DXILOp {
@@ -761,6 +824,8 @@ def ThreadIdInGroup : DXILOp {
   let result = (out llvm_i32_ty);
   let sm_constraints = [SMVersionConstraints<SM6_0, (overloads llvm_i32_ty),
                              (stages compute, mesh, amplification, node)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
 
 def FlattenedThreadIdInGroup : DXILOp {
@@ -772,4 +837,6 @@ def FlattenedThreadIdInGroup : DXILOp {
   let result = (out);
   let sm_constraints = [SMVersionConstraints<SM6_0, (overloads llvm_i32_ty),
                              (stages compute, mesh, amplification, node)>];
+  let attributes = (attrs ReadNone);
+  let DXILVersion = DX1_0;
 }
