@@ -673,6 +673,7 @@ class _LIBCPP_TEMPLATE_VIS list : private __list_imp<_Tp, _Alloc> {
 public:
   typedef _Tp value_type;
   typedef _Alloc allocator_type;
+  static_assert(__check_valid_allocator<allocator_type>::value);
   static_assert(is_same<value_type, typename allocator_type::value_type>::value,
                 "Allocator::value_type must be same type as value_type");
   typedef value_type& reference;
@@ -690,10 +691,6 @@ public:
 #else
   typedef void __remove_return_type;
 #endif
-
-  static_assert(is_same<allocator_type, __rebind_alloc<allocator_traits<allocator_type>, value_type> >::value,
-                "[allocator.requirements] states that rebinding an allocator to the same type should result in the "
-                "original allocator");
 
   _LIBCPP_HIDE_FROM_ABI list() _NOEXCEPT_(is_nothrow_default_constructible<__node_allocator>::value) {}
   _LIBCPP_HIDE_FROM_ABI explicit list(const allocator_type& __a) : base(__a) {}
@@ -1683,7 +1680,7 @@ template <class _Tp, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI __synth_three_way_result<_Tp>
 operator<=>(const list<_Tp, _Allocator>& __x, const list<_Tp, _Allocator>& __y) {
   return std::lexicographical_compare_three_way(
-      __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way<_Tp, _Tp>);
+      __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
 }
 
 #endif // _LIBCPP_STD_VER <= 17

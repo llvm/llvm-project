@@ -61,6 +61,11 @@ static cl::opt<bool> EnableOrLikeSelectOpt("enable-aarch64-or-like-select",
 static cl::opt<bool> EnableLSRCostOpt("enable-aarch64-lsr-cost-opt",
                                       cl::init(true), cl::Hidden);
 
+// A complete guess as to a reasonable cost.
+static cl::opt<unsigned>
+    BaseHistCntCost("aarch64-base-histcnt-cost", cl::init(8), cl::Hidden,
+                    cl::desc("The cost of a histcnt instruction"));
+
 namespace {
 class TailFoldingOption {
   // These bitfields will only ever be set to something non-zero in operator=,
@@ -508,11 +513,39 @@ static bool isUnpackedVectorVT(EVT VecVT) {
          VecVT.getSizeInBits().getKnownMinValue() < AArch64::SVEBitsPerBlock;
 }
 
+static InstructionCost getHistogramCost(const IntrinsicCostAttributes &ICA) {
+  Type *BucketPtrsTy = ICA.getArgTypes()[0]; // Type of vector of pointers
+  Type *EltTy = ICA.getArgTypes()[1];        // Type of bucket elements
+
+  // Only allow (32b and 64b) integers or pointers for now...
+  if ((!EltTy->isIntegerTy() && !EltTy->isPointerTy()) ||
+      (EltTy->getScalarSizeInBits() != 32 &&
+       EltTy->getScalarSizeInBits() != 64))
+    return InstructionCost::getInvalid();
+
+  // FIXME: Hacky check for legal vector types. We can promote smaller types
+  //        but we cannot legalize vectors via splitting for histcnt.
+  // FIXME: We should be able to generate histcnt for fixed-length vectors
+  //        using ptrue with a specific VL.
+  if (VectorType *VTy = dyn_cast<VectorType>(BucketPtrsTy))
+    if ((VTy->getElementCount().getKnownMinValue() != 2 &&
+         VTy->getElementCount().getKnownMinValue() != 4) ||
+        VTy->getPrimitiveSizeInBits().getKnownMinValue() > 128 ||
+        !VTy->isScalableTy())
+      return InstructionCost::getInvalid();
+
+  return InstructionCost(BaseHistCntCost);
+}
+
 InstructionCost
 AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                       TTI::TargetCostKind CostKind) {
   auto *RetTy = ICA.getReturnType();
   switch (ICA.getID()) {
+  case Intrinsic::experimental_vector_histogram_add:
+    if (!ST->hasSVE2())
+      return InstructionCost::getInvalid();
+    return getHistogramCost(ICA);
   case Intrinsic::umin:
   case Intrinsic::umax:
   case Intrinsic::smin:
@@ -983,6 +1016,16 @@ static bool isAllActivePredicate(Value *Pred) {
 
   return match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
                          m_ConstantInt<AArch64SVEPredPattern::all>()));
+}
+
+// Erase unary operation where predicate has all inactive lanes
+static std::optional<Instruction *>
+instCombineSVENoActiveUnaryErase(InstCombiner &IC, IntrinsicInst &II,
+                                 int PredPos) {
+  if (match(II.getOperand(PredPos), m_ZeroInt())) {
+    return IC.eraseInstFromFunction(II);
+  }
+  return std::nullopt;
 }
 
 // Simplify unary operation where predicate has all inactive lanes by replacing
@@ -1787,7 +1830,7 @@ instCombineLD1GatherIndex(InstCombiner &IC, IntrinsicInst &II) {
   if (match(Index, m_Intrinsic<Intrinsic::aarch64_sve_index>(
                        m_Value(IndexBase), m_SpecificInt(1)))) {
     Align Alignment =
-        BasePtr->getPointerAlignment(II.getModule()->getDataLayout());
+        BasePtr->getPointerAlignment(II.getDataLayout());
 
     Type *VecPtrTy = PointerType::getUnqual(Ty);
     Value *Ptr = IC.Builder.CreateGEP(cast<VectorType>(Ty)->getElementType(),
@@ -1817,7 +1860,7 @@ instCombineST1ScatterIndex(InstCombiner &IC, IntrinsicInst &II) {
   if (match(Index, m_Intrinsic<Intrinsic::aarch64_sve_index>(
                        m_Value(IndexBase), m_SpecificInt(1)))) {
     Align Alignment =
-        BasePtr->getPointerAlignment(II.getModule()->getDataLayout());
+        BasePtr->getPointerAlignment(II.getDataLayout());
 
     Value *Ptr = IC.Builder.CreateGEP(cast<VectorType>(Ty)->getElementType(),
                                       BasePtr, IndexBase);
@@ -2007,6 +2050,32 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   default:
     break;
 
+  case Intrinsic::aarch64_sve_st1_scatter:
+  case Intrinsic::aarch64_sve_st1_scatter_scalar_offset:
+  case Intrinsic::aarch64_sve_st1_scatter_sxtw:
+  case Intrinsic::aarch64_sve_st1_scatter_sxtw_index:
+  case Intrinsic::aarch64_sve_st1_scatter_uxtw:
+  case Intrinsic::aarch64_sve_st1_scatter_uxtw_index:
+  case Intrinsic::aarch64_sve_st1dq:
+  case Intrinsic::aarch64_sve_st1q_scatter_index:
+  case Intrinsic::aarch64_sve_st1q_scatter_scalar_offset:
+  case Intrinsic::aarch64_sve_st1q_scatter_vector_offset:
+  case Intrinsic::aarch64_sve_st1wq:
+  case Intrinsic::aarch64_sve_stnt1:
+  case Intrinsic::aarch64_sve_stnt1_scatter:
+  case Intrinsic::aarch64_sve_stnt1_scatter_index:
+  case Intrinsic::aarch64_sve_stnt1_scatter_scalar_offset:
+  case Intrinsic::aarch64_sve_stnt1_scatter_uxtw:
+    return instCombineSVENoActiveUnaryErase(IC, II, 1);
+  case Intrinsic::aarch64_sve_st2:
+  case Intrinsic::aarch64_sve_st2q:
+    return instCombineSVENoActiveUnaryErase(IC, II, 2);
+  case Intrinsic::aarch64_sve_st3:
+  case Intrinsic::aarch64_sve_st3q:
+    return instCombineSVENoActiveUnaryErase(IC, II, 3);
+  case Intrinsic::aarch64_sve_st4:
+  case Intrinsic::aarch64_sve_st4q:
+    return instCombineSVENoActiveUnaryErase(IC, II, 4);
   case Intrinsic::aarch64_sve_ld1_gather:
   case Intrinsic::aarch64_sve_ld1_gather_scalar_offset:
   case Intrinsic::aarch64_sve_ld1_gather_sxtw:
@@ -2761,7 +2830,8 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       return AdjustCost(Entry->Cost);
 
   if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
-      CCH == TTI::CastContextHint::Masked && ST->hasSVEorSME() &&
+      CCH == TTI::CastContextHint::Masked &&
+      ST->isSVEorStreamingSVEAvailable() &&
       TLI->getTypeAction(Src->getContext(), SrcTy) ==
           TargetLowering::TypePromoteInteger &&
       TLI->getTypeAction(Dst->getContext(), DstTy) ==
@@ -2782,8 +2852,8 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   // The BasicTTIImpl version only deals with CCH==TTI::CastContextHint::Normal,
   // but we also want to include the TTI::CastContextHint::Masked case too.
   if ((ISD == ISD::ZERO_EXTEND || ISD == ISD::SIGN_EXTEND) &&
-      CCH == TTI::CastContextHint::Masked && ST->hasSVEorSME() &&
-      TLI->isTypeLegal(DstTy))
+      CCH == TTI::CastContextHint::Masked &&
+      ST->isSVEorStreamingSVEAvailable() && TLI->isTypeLegal(DstTy))
     CCH = TTI::CastContextHint::Normal;
 
   return AdjustCost(
@@ -3258,11 +3328,16 @@ AArch64TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
   if (!LT.first.isValid())
     return InstructionCost::getInvalid();
 
+  // Return an invalid cost for element types that we are unable to lower.
+  auto *VT = cast<VectorType>(Src);
+  if (VT->getElementType()->isIntegerTy(1))
+    return InstructionCost::getInvalid();
+
   // The code-generator is currently not able to handle scalable vectors
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
   // it. This change will be removed when code-generation for these types is
   // sufficiently reliable.
-  if (cast<VectorType>(Src)->getElementCount() == ElementCount::getScalable(1))
+  if (VT->getElementCount() == ElementCount::getScalable(1))
     return InstructionCost::getInvalid();
 
   return LT.first;
@@ -3283,16 +3358,17 @@ InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
   if (!LT.first.isValid())
     return InstructionCost::getInvalid();
 
+  // Return an invalid cost for element types that we are unable to lower.
   if (!LT.second.isVector() ||
-      !isElementTypeLegalForScalableVector(VT->getElementType()))
+      !isElementTypeLegalForScalableVector(VT->getElementType()) ||
+      VT->getElementType()->isIntegerTy(1))
     return InstructionCost::getInvalid();
 
   // The code-generator is currently not able to handle scalable vectors
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
   // it. This change will be removed when code-generation for these types is
   // sufficiently reliable.
-  if (cast<VectorType>(DataTy)->getElementCount() ==
-      ElementCount::getScalable(1))
+  if (VT->getElementCount() == ElementCount::getScalable(1))
     return InstructionCost::getInvalid();
 
   ElementCount LegalVF = LT.second.getVectorElementCount();
@@ -3330,8 +3406,12 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
   // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
   // it. This change will be removed when code-generation for these types is
   // sufficiently reliable.
+  // We also only support full register predicate loads and stores.
   if (auto *VTy = dyn_cast<ScalableVectorType>(Ty))
-    if (VTy->getElementCount() == ElementCount::getScalable(1))
+    if (VTy->getElementCount() == ElementCount::getScalable(1) ||
+        (VTy->getElementType()->isIntegerTy(1) &&
+         !VTy->getElementCount().isKnownMultipleOf(
+             ElementCount::getScalable(16))))
       return InstructionCost::getInvalid();
 
   // TODO: consider latency as well for TCK_SizeAndLatency.
