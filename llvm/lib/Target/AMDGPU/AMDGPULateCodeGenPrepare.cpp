@@ -365,6 +365,7 @@ bool LiveRegOptimizer::optimizeLiveType(
       else
         MissingIncVal = true;
     }
+
     if (MissingIncVal) {
       Value *DeadVal = ValMap[Phi];
       // The coercion chain of the PHI is broken. Delete the Phi
@@ -373,12 +374,14 @@ bool LiveRegOptimizer::optimizeLiveType(
       PHIWorklist.push_back(DeadVal);
       while (!PHIWorklist.empty()) {
         Value *NextDeadValue = PHIWorklist.pop_back_val();
-        for (User *U : cast<Instruction>(NextDeadValue)->users()) {
-          assert(isa<PHINode>(U));
-          PHIWorklist.push_back(U);
-        }
         ValMap.erase(NextDeadValue);
         DeadInsts.emplace_back(cast<Instruction>(NextDeadValue));
+
+        for (User *U : cast<Instruction>(NextDeadValue)->users()) {
+          assert(isa<PHINode>(U));
+          if (ValMap.contains(cast<Instruction>(U)))
+            PHIWorklist.push_back(U);
+        }
       }
     } else
       DeadInsts.emplace_back(cast<Instruction>(Phi));
