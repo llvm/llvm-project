@@ -19,8 +19,8 @@ struct BenchmarkOptions {
   uint32_t max_iterations = 10000000;
   uint32_t min_samples = 4;
   uint32_t max_samples = 1000;
-  uint64_t min_duration = 0;                  // in nanoseconds (ns)
-  uint64_t max_duration = 1000 * 1000 * 1000; // 1e9 nanoseconds = 1 second
+  int64_t min_duration = 0;                  // in nanoseconds (ns)
+  int64_t max_duration = 1000 * 1000 * 1000; // 1e9 nanoseconds = 1 second
   double epsilon = 0.01;
   double scaling_factor = 1.4;
 };
