@@ -3224,8 +3224,8 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     //   type, or an unsigned integer type.
     //
     // So we have to treat enum types as integers.
-    OS << "i";
-    return;
+    return encodeTypeForFunctionPointerAuth(
+        Ctx, OS, cast<EnumType>(T)->getDecl()->getIntegerType());
 
   case Type::FunctionNoProto:
   case Type::FunctionProto: {
