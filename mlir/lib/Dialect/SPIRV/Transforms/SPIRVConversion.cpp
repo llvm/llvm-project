@@ -1037,7 +1037,7 @@ LogicalResult ReturnOpVectorTypesConversion::matchAndRewrite(
         llvm::to_vector<4>(origVecType.getShape());
     SmallVector<Type> newTypes;
     SmallVector<int64_t> strides(targetShape->size(), 1);
-    Value returnValue = returnOp.getOperand(0);
+    Value returnValue = returnOp.getOperand(origResultNo);
     for (SmallVector<int64_t> offsets :
          StaticTileOffsetRange(originalShape, *targetShape)) {
       auto result = rewriter.create<vector::ExtractStridedSliceOp>(
