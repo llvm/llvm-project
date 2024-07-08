@@ -518,7 +518,7 @@ lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
   if (!iter_pointer_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  // Cast the __tree_iterator to a __node_pointer (which stores our key/value
+  // Cast the __iter_pointer to a __node_pointer (which stores our key/value
   // pair)
   auto node_pointer_sp = iter_pointer_sp->Cast(node_pointer_type);
   if (!node_pointer_sp)
