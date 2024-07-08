@@ -55,7 +55,6 @@ func.func @cmpi_signed() {
   %false = arith.constant false
   %true = arith.constant true
 
-  // signed comparisons on i1s
   // slt 0 1 = false, sle 0 1 = false, sgt 0 1 = true, sge 0 1 = true
 
   // CHECK-LABEL: @cmpi_slt_i1
