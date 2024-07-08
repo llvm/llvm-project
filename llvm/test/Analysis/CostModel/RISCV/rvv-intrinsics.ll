@@ -45,14 +45,14 @@ define void @vp_icmp() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %9 = icmp slt <vscale x 4 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %10 = icmp slt <vscale x 8 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %11 = call <1 x i1> @llvm.vp.icmp.v1i32(<1 x i32> undef, <1 x i32> undef, metadata !"slt", <1 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %12 = call <2 x i1> @llvm.vp.icmp.v2i32(<2 x i32> undef, <2 x i32> undef, metadata !"slt", <2 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %13 = call <4 x i1> @llvm.vp.icmp.v4i32(<4 x i32> undef, <4 x i32> undef, metadata !"slt", <4 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 55 for instruction: %14 = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> undef, <8 x i32> undef, metadata !"slt", <8 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 111 for instruction: %15 = call <16 x i1> @llvm.vp.icmp.v16i32(<16 x i32> undef, <16 x i32> undef, metadata !"slt", <16 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %16 = call <vscale x 1 x i1> @llvm.vp.icmp.nxv1i32(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, metadata !"slt", <vscale x 1 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %17 = call <vscale x 2 x i1> @llvm.vp.icmp.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, metadata !"slt", <vscale x 2 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %18 = call <vscale x 4 x i1> @llvm.vp.icmp.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, metadata !"slt", <vscale x 4 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %19 = call <vscale x 8 x i1> @llvm.vp.icmp.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i32> undef, metadata !"slt", <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %12 = call <2 x i1> @llvm.vp.icmp.v2i32(<2 x i32> undef, <2 x i32> undef, metadata !"slt", <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = call <4 x i1> @llvm.vp.icmp.v4i32(<4 x i32> undef, <4 x i32> undef, metadata !"slt", <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %14 = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> undef, <8 x i32> undef, metadata !"slt", <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %15 = call <16 x i1> @llvm.vp.icmp.v16i32(<16 x i32> undef, <16 x i32> undef, metadata !"slt", <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %16 = call <vscale x 1 x i1> @llvm.vp.icmp.nxv1i32(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, metadata !"slt", <vscale x 1 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %17 = call <vscale x 2 x i1> @llvm.vp.icmp.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, metadata !"slt", <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %18 = call <vscale x 4 x i1> @llvm.vp.icmp.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, metadata !"slt", <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %19 = call <vscale x 8 x i1> @llvm.vp.icmp.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i32> undef, metadata !"slt", <vscale x 8 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; TYPEBASED-LABEL: 'vp_icmp'
@@ -67,14 +67,14 @@ define void @vp_icmp() {
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %9 = icmp slt <vscale x 4 x i32> undef, undef
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %10 = icmp slt <vscale x 8 x i32> undef, undef
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %11 = call <1 x i1> @llvm.vp.icmp.v1i32(<1 x i32> undef, <1 x i32> undef, metadata !"slt", <1 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %12 = call <2 x i1> @llvm.vp.icmp.v2i32(<2 x i32> undef, <2 x i32> undef, metadata !"slt", <2 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %13 = call <4 x i1> @llvm.vp.icmp.v4i32(<4 x i32> undef, <4 x i32> undef, metadata !"slt", <4 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 116 for instruction: %14 = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> undef, <8 x i32> undef, metadata !"slt", <8 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 236 for instruction: %15 = call <16 x i1> @llvm.vp.icmp.v16i32(<16 x i32> undef, <16 x i32> undef, metadata !"slt", <16 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %16 = call <vscale x 1 x i1> @llvm.vp.icmp.nxv1i32(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, metadata !"slt", <vscale x 1 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %17 = call <vscale x 2 x i1> @llvm.vp.icmp.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, metadata !"slt", <vscale x 2 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %18 = call <vscale x 4 x i1> @llvm.vp.icmp.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, metadata !"slt", <vscale x 4 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %19 = call <vscale x 8 x i1> @llvm.vp.icmp.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i32> undef, metadata !"slt", <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %12 = call <2 x i1> @llvm.vp.icmp.v2i32(<2 x i32> undef, <2 x i32> undef, metadata !"slt", <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = call <4 x i1> @llvm.vp.icmp.v4i32(<4 x i32> undef, <4 x i32> undef, metadata !"slt", <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %14 = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> undef, <8 x i32> undef, metadata !"slt", <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %15 = call <16 x i1> @llvm.vp.icmp.v16i32(<16 x i32> undef, <16 x i32> undef, metadata !"slt", <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %16 = call <vscale x 1 x i1> @llvm.vp.icmp.nxv1i32(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, metadata !"slt", <vscale x 1 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %17 = call <vscale x 2 x i1> @llvm.vp.icmp.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32> undef, metadata !"slt", <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %18 = call <vscale x 4 x i1> @llvm.vp.icmp.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> undef, metadata !"slt", <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %19 = call <vscale x 8 x i1> @llvm.vp.icmp.nxv8i32(<vscale x 8 x i32> undef, <vscale x 8 x i32> undef, metadata !"slt", <vscale x 8 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   icmp slt i32 undef, undef
@@ -112,14 +112,14 @@ define void @vp_fcmp() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %9 = fcmp olt <vscale x 4 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %10 = fcmp olt <vscale x 8 x float> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %11 = call <1 x i1> @llvm.vp.fcmp.v1f32(<1 x float> undef, <1 x float> undef, metadata !"olt", <1 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %12 = call <2 x i1> @llvm.vp.fcmp.v2f32(<2 x float> undef, <2 x float> undef, metadata !"olt", <2 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 27 for instruction: %13 = call <4 x i1> @llvm.vp.fcmp.v4f32(<4 x float> undef, <4 x float> undef, metadata !"olt", <4 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 55 for instruction: %14 = call <8 x i1> @llvm.vp.fcmp.v8f32(<8 x float> undef, <8 x float> undef, metadata !"olt", <8 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 111 for instruction: %15 = call <16 x i1> @llvm.vp.fcmp.v16f32(<16 x float> undef, <16 x float> undef, metadata !"olt", <16 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %16 = call <vscale x 1 x i1> @llvm.vp.fcmp.nxv1f32(<vscale x 1 x float> undef, <vscale x 1 x float> undef, metadata !"olt", <vscale x 1 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %17 = call <vscale x 2 x i1> @llvm.vp.fcmp.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, metadata !"olt", <vscale x 2 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %18 = call <vscale x 4 x i1> @llvm.vp.fcmp.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef, metadata !"olt", <vscale x 4 x i1> undef, i32 undef)
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %19 = call <vscale x 8 x i1> @llvm.vp.fcmp.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef, metadata !"olt", <vscale x 8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %12 = call <2 x i1> @llvm.vp.fcmp.v2f32(<2 x float> undef, <2 x float> undef, metadata !"olt", <2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = call <4 x i1> @llvm.vp.fcmp.v4f32(<4 x float> undef, <4 x float> undef, metadata !"olt", <4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %14 = call <8 x i1> @llvm.vp.fcmp.v8f32(<8 x float> undef, <8 x float> undef, metadata !"olt", <8 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %15 = call <16 x i1> @llvm.vp.fcmp.v16f32(<16 x float> undef, <16 x float> undef, metadata !"olt", <16 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %16 = call <vscale x 1 x i1> @llvm.vp.fcmp.nxv1f32(<vscale x 1 x float> undef, <vscale x 1 x float> undef, metadata !"olt", <vscale x 1 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %17 = call <vscale x 2 x i1> @llvm.vp.fcmp.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, metadata !"olt", <vscale x 2 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %18 = call <vscale x 4 x i1> @llvm.vp.fcmp.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef, metadata !"olt", <vscale x 4 x i1> undef, i32 undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %19 = call <vscale x 8 x i1> @llvm.vp.fcmp.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef, metadata !"olt", <vscale x 8 x i1> undef, i32 undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; TYPEBASED-LABEL: 'vp_fcmp'
@@ -134,14 +134,14 @@ define void @vp_fcmp() {
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %9 = fcmp olt <vscale x 4 x float> undef, undef
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %10 = fcmp olt <vscale x 8 x float> undef, undef
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %11 = call <1 x i1> @llvm.vp.fcmp.v1f32(<1 x float> undef, <1 x float> undef, metadata !"olt", <1 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %12 = call <2 x i1> @llvm.vp.fcmp.v2f32(<2 x float> undef, <2 x float> undef, metadata !"olt", <2 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %13 = call <4 x i1> @llvm.vp.fcmp.v4f32(<4 x float> undef, <4 x float> undef, metadata !"olt", <4 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 116 for instruction: %14 = call <8 x i1> @llvm.vp.fcmp.v8f32(<8 x float> undef, <8 x float> undef, metadata !"olt", <8 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 236 for instruction: %15 = call <16 x i1> @llvm.vp.fcmp.v16f32(<16 x float> undef, <16 x float> undef, metadata !"olt", <16 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %16 = call <vscale x 1 x i1> @llvm.vp.fcmp.nxv1f32(<vscale x 1 x float> undef, <vscale x 1 x float> undef, metadata !"olt", <vscale x 1 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %17 = call <vscale x 2 x i1> @llvm.vp.fcmp.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, metadata !"olt", <vscale x 2 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %18 = call <vscale x 4 x i1> @llvm.vp.fcmp.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef, metadata !"olt", <vscale x 4 x i1> undef, i32 undef)
-; TYPEBASED-NEXT:  Cost Model: Invalid cost for instruction: %19 = call <vscale x 8 x i1> @llvm.vp.fcmp.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef, metadata !"olt", <vscale x 8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %12 = call <2 x i1> @llvm.vp.fcmp.v2f32(<2 x float> undef, <2 x float> undef, metadata !"olt", <2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %13 = call <4 x i1> @llvm.vp.fcmp.v4f32(<4 x float> undef, <4 x float> undef, metadata !"olt", <4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %14 = call <8 x i1> @llvm.vp.fcmp.v8f32(<8 x float> undef, <8 x float> undef, metadata !"olt", <8 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %15 = call <16 x i1> @llvm.vp.fcmp.v16f32(<16 x float> undef, <16 x float> undef, metadata !"olt", <16 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %16 = call <vscale x 1 x i1> @llvm.vp.fcmp.nxv1f32(<vscale x 1 x float> undef, <vscale x 1 x float> undef, metadata !"olt", <vscale x 1 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %17 = call <vscale x 2 x i1> @llvm.vp.fcmp.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef, metadata !"olt", <vscale x 2 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %18 = call <vscale x 4 x i1> @llvm.vp.fcmp.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef, metadata !"olt", <vscale x 4 x i1> undef, i32 undef)
+; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %19 = call <vscale x 8 x i1> @llvm.vp.fcmp.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef, metadata !"olt", <vscale x 8 x i1> undef, i32 undef)
 ; TYPEBASED-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   fcmp olt float undef, undef

@@ -1015,6 +1015,23 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return getArithmeticInstrCost(*FOp, ICA.getReturnType(), CostKind);
     break;
   }
+
+  // vp compare
+  case Intrinsic::vp_icmp:
+  case Intrinsic::vp_fcmp: {
+    Intrinsic::ID IID = ICA.getID();
+    std::optional<unsigned> FOp = VPIntrinsic::getFunctionalOpcodeForVP(IID);
+    CmpInst::Predicate Pred;
+
+    if (IID == Intrinsic::vp_icmp)
+      Pred = CmpInst::ICMP_SLT;
+    else
+      Pred = CmpInst::FCMP_OLT;
+
+    assert(FOp && !ICA.getArgTypes().empty());
+    return getCmpSelInstrCost(*FOp, ICA.getArgTypes()[0], ICA.getReturnType(),
+                              Pred, CostKind);
+  }
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
