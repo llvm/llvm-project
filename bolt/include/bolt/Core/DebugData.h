@@ -343,14 +343,34 @@ public:
   uint32_t getIndexFromAddress(uint64_t Address, DWARFUnit &CU);
 
   /// Write out entries in to .debug_addr section for CUs.
-  virtual void update(DIEBuilder &DIEBlder, DWARFUnit &CUs);
+  virtual void update();
 
   /// Return buffer with all the entries in .debug_addr already writen out using
   /// update(...).
   virtual AddressSectionBuffer &finalize() { return *Buffer; }
 
   /// Returns False if .debug_addr section was created..
-  bool isInitialized() const { return !AddressMaps.empty(); }
+  bool isInitialized() { return Map.empty; }
+
+  /// Updates address base with the given Offset.
+  virtual void updateAddrBase(DIEBuilder &DIEBlder, DWARFUnit &CU,
+                              const uint64_t Offset);
+
+  /// Appends an AddressSectionBuffer to the address writer buffer for the given
+  /// CU.
+  void appendToAddressBuffer(const AddressSectionBuffer &Buffer) {
+    *AddressStream << Buffer;
+  }
+
+  /// Sets AddressByteSize for the CU.
+  void setAddressByteSize(uint8_t AddressByteSize) {
+    this->AddressByteSize = AddressByteSize;
+  }
+
+  /// Sets AddrOffsetSectionBase for the CU.
+  void setAddrOffsetSectionBase(std::optional<uint64_t> AddrOffsetSectionBase) {
+    this->AddrOffsetSectionBase = AddrOffsetSectionBase;
+  }
 
 protected:
   class AddressForDWOCU {
@@ -395,6 +415,8 @@ protected:
 
     void dump();
 
+    bool empty = false;
+
   private:
     AddressToIndexMap AddressToIndex;
     IndexToAddressMap IndexToAddress;
@@ -407,14 +429,16 @@ protected:
   }
 
   BinaryContext *BC;
-  /// Maps DWOID to AddressForDWOCU.
-  std::unordered_map<uint64_t, AddressForDWOCU> AddressMaps;
+  /// Address for the DWO CU associated with the address writer.
+  AddressForDWOCU Map;
+  uint8_t AddressByteSize;
+  std::optional<uint64_t> AddrOffsetSectionBase;
   /// Mutex used for parallel processing of debug info.
   std::mutex WriterMutex;
   std::unique_ptr<AddressSectionBuffer> Buffer;
   std::unique_ptr<raw_svector_ostream> AddressStream;
   /// Used to track sections that were not modified so that they can be re-used.
-  DenseMap<uint64_t, uint64_t> UnmodifiedAddressOffsets;
+  static DenseMap<uint64_t, uint64_t> UnmodifiedAddressOffsets;
 };
 
 class DebugAddrWriterDwarf5 : public DebugAddrWriter {
@@ -423,7 +447,10 @@ public:
   DebugAddrWriterDwarf5(BinaryContext *BC) : DebugAddrWriter(BC) {}
 
   /// Write out entries in to .debug_addr section for CUs.
-  virtual void update(DIEBuilder &DIEBlder, DWARFUnit &CUs) override;
+  virtual void update() override;
+
+  virtual void updateAddrBase(DIEBuilder &DIEBlder, DWARFUnit &CU,
+                              const uint64_t Offset) override;
 
 protected:
   /// Given DWARFUnit \p Unit returns either DWO ID or it's offset within
@@ -583,12 +610,10 @@ class DebugLoclistWriter : public DebugLocWriter {
 public:
   ~DebugLoclistWriter() {}
   DebugLoclistWriter() = delete;
-  DebugLoclistWriter(DWARFUnit &Unit, uint8_t DV, bool SD)
-      : DebugLocWriter(DV, LocWriterKind::DebugLoclistWriter), CU(Unit),
-        IsSplitDwarf(SD) {
-    assert(DebugLoclistWriter::AddrWriter &&
-           "Please use SetAddressWriter to initialize "
-           "DebugAddrWriter before instantiation.");
+  DebugLoclistWriter(DWARFUnit &Unit, uint8_t DV, bool SD,
+                     DebugAddrWriter *AddrW)
+      : DebugLocWriter(DV, LocWriterKind::DebugLoclistWriter),
+        AddrWriter(AddrW), CU(Unit), IsSplitDwarf(SD) {
     if (DwarfVersion >= 5) {
       LocBodyBuffer = std::make_unique<DebugBufferVector>();
       LocBodyStream = std::make_unique<raw_svector_ostream>(*LocBodyBuffer);
@@ -600,7 +625,7 @@ public:
     }
   }
 
-  static void setAddressWriter(DebugAddrWriter *AddrW) { AddrWriter = AddrW; }
+  void setAddressWriter(DebugAddrWriter *AddrW) { AddrWriter = AddrW; }
 
   /// Stores location lists internally to be written out during finalize phase.
   virtual void addList(DIEBuilder &DIEBldr, DIE &Die, DIEValue &AttrInfo,
@@ -630,7 +655,7 @@ private:
   /// Writes out locations in to a local buffer and applies debug info patches.
   void finalizeDWARF5(DIEBuilder &DIEBldr, DIE &Die);
 
-  static DebugAddrWriter *AddrWriter;
+  DebugAddrWriter *AddrWriter;
   DWARFUnit &CU;
   bool IsSplitDwarf{false};
   // Used for DWARF5 to store location lists before being finalized.

@@ -93,6 +93,10 @@ private:
   std::unordered_map<uint64_t, std::unique_ptr<DebugRangesSectionWriter>>
       LegacyRangesWritersByCU;
 
+  /// Stores address writer for each CU.
+  std::unordered_map<uint64_t, std::unique_ptr<DebugAddrWriter>>
+      AddressWritersByCU;
+
   std::mutex LocListDebugInfoPatchesMutex;
 
   /// Dwo id specific its RangesBase.
@@ -115,6 +119,7 @@ private:
   void updateUnitDebugInfo(DWARFUnit &Unit, DIEBuilder &DIEBldr,
                            DebugLocWriter &DebugLocWriter,
                            DebugRangesSectionWriter &RangesSectionWriter,
+                           DebugAddrWriter &AddressWriter,
                            std::optional<uint64_t> RangesBase = std::nullopt);
 
   /// Patches the binary for an object's address ranges to be updated.

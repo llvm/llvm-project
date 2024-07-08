@@ -393,6 +393,7 @@ void DebugARangesSectionWriter::writeARangesSection(
 DebugAddrWriter::DebugAddrWriter(BinaryContext *BC) : BC(BC) {
   Buffer = std::make_unique<AddressSectionBuffer>();
   AddressStream = std::make_unique<raw_svector_ostream>(*Buffer);
+  Map = AddressForDWOCU();
 }
 
 void DebugAddrWriter::AddressForDWOCU::dump() {
@@ -405,11 +406,8 @@ void DebugAddrWriter::AddressForDWOCU::dump() {
 }
 uint32_t DebugAddrWriter::getIndexFromAddress(uint64_t Address, DWARFUnit &CU) {
   std::lock_guard<std::mutex> Lock(WriterMutex);
-  const uint64_t CUID = getCUID(CU);
-  if (!AddressMaps.count(CUID))
-    AddressMaps[CUID] = AddressForDWOCU();
-
-  AddressForDWOCU &Map = AddressMaps[CUID];
+  if (Map.begin() == Map.end())
+    Map.empty = true;
   auto Entry = Map.find(Address);
   if (Entry == Map.end()) {
     auto Index = Map.getNextIndex();
@@ -449,25 +447,20 @@ static void updateAddressBase(DIEBuilder &DIEBlder, DebugAddrWriter &AddrWriter,
   }
 }
 
-void DebugAddrWriter::update(DIEBuilder &DIEBlder, DWARFUnit &CU) {
-  // Handling the case where debug information is a mix of Debug fission and
-  // monolithic.
-  if (!CU.getDWOId())
+void DebugAddrWriter::updateAddrBase(DIEBuilder &DIEBlder, DWARFUnit &CU,
+                                     const uint64_t Offset) {
+  updateAddressBase(DIEBlder, *this, CU, Offset);
+}
+
+void DebugAddrWriter::update() {
+  if (Map.indexToAddressBegin() == Map.indexToAdddessEnd())
     return;
-  const uint64_t CUID = getCUID(CU);
-  auto AM = AddressMaps.find(CUID);
-  // Adding to map even if it did not contribute to .debug_addr.
-  // The Skeleton CU might still have DW_AT_GNU_addr_base.
-  uint64_t Offset = Buffer->size();
-  // If does not exist this CUs DWO section didn't contribute to .debug_addr.
-  if (AM == AddressMaps.end())
-    return;
-  std::vector<IndexAddressPair> SortedMap(AM->second.indexToAddressBegin(),
-                                          AM->second.indexToAdddessEnd());
+  std::vector<IndexAddressPair> SortedMap(Map.indexToAddressBegin(),
+                                          Map.indexToAdddessEnd());
   // Sorting address in increasing order of indices.
   llvm::sort(SortedMap, llvm::less_first());
 
-  uint8_t AddrSize = CU.getAddressByteSize();
+  uint8_t AddrSize = AddressByteSize;
   uint32_t Counter = 0;
   auto WriteAddress = [&](uint64_t Address) -> void {
     ++Counter;
@@ -490,10 +483,23 @@ void DebugAddrWriter::update(DIEBuilder &DIEBlder, DWARFUnit &CU) {
       WriteAddress(0);
     WriteAddress(Val.second);
   }
-  updateAddressBase(DIEBlder, *this, CU, Offset);
 }
 
-void DebugAddrWriterDwarf5::update(DIEBuilder &DIEBlder, DWARFUnit &CU) {
+void DebugAddrWriterDwarf5::updateAddrBase(DIEBuilder &DIEBlder, DWARFUnit &CU,
+                                           const uint64_t Offset) {
+  /// Doesn't update address base if the CU doesn't access .debug_addr.
+  if (Map.indexToAddressBegin() == Map.indexToAdddessEnd()) {
+    std::optional<uint64_t> BaseOffset = CU.getAddrOffsetSectionBase();
+    if (!BaseOffset)
+      return;
+  }
+  /// Header for DWARF5 has size 8, so we add it to the offset.
+  updateAddressBase(DIEBlder, *this, CU, Offset + 8);
+}
+
+DenseMap<uint64_t, uint64_t> DebugAddrWriter::UnmodifiedAddressOffsets;
+
+void DebugAddrWriterDwarf5::update() {
   // Need to layout all sections within .debug_addr
   // Within each section sort Address by index.
   const endianness Endian = BC->DwCtx->isLittleEndian()
@@ -505,14 +511,11 @@ void DebugAddrWriterDwarf5::update(DIEBuilder &DIEBlder, DWARFUnit &CU) {
   DWARFDebugAddrTable AddrTable;
   DIDumpOptions DumpOpts;
   constexpr uint32_t HeaderSize = 8;
-  const uint64_t CUID = getCUID(CU);
-  const uint8_t AddrSize = CU.getAddressByteSize();
-  auto AMIter = AddressMaps.find(CUID);
+  const uint8_t AddrSize = AddressByteSize;
   // A case where CU has entry in .debug_addr, but we don't modify addresses
   // for it.
-  if (AMIter == AddressMaps.end()) {
-    AMIter = AddressMaps.insert({CUID, AddressForDWOCU()}).first;
-    std::optional<uint64_t> BaseOffset = CU.getAddrOffsetSectionBase();
+  if (Map.indexToAddressBegin() == Map.indexToAdddessEnd()) {
+    std::optional<uint64_t> BaseOffset = AddrOffsetSectionBase;
     if (!BaseOffset)
       return;
     // Address base offset is to the first entry.
@@ -520,7 +523,6 @@ void DebugAddrWriterDwarf5::update(DIEBuilder &DIEBlder, DWARFUnit &CU) {
     uint64_t Offset = *BaseOffset - HeaderSize;
     auto Iter = UnmodifiedAddressOffsets.find(Offset);
     if (Iter != UnmodifiedAddressOffsets.end()) {
-      updateAddressBase(DIEBlder, *this, CU, Iter->getSecond());
       return;
     }
     UnmodifiedAddressOffsets[Offset] = Buffer->size() + HeaderSize;
@@ -529,16 +531,13 @@ void DebugAddrWriterDwarf5::update(DIEBuilder &DIEBlder, DWARFUnit &CU) {
       DumpOpts.RecoverableErrorHandler(std::move(Err));
       return;
     }
-
     uint32_t Index = 0;
     for (uint64_t Addr : AddrTable.getAddressEntries())
-      AMIter->second.insert(Addr, Index++);
+      Map.insert(Addr, Index++);
   }
 
-  updateAddressBase(DIEBlder, *this, CU, Buffer->size() + HeaderSize);
-
-  std::vector<IndexAddressPair> SortedMap(AMIter->second.indexToAddressBegin(),
-                                          AMIter->second.indexToAdddessEnd());
+  std::vector<IndexAddressPair> SortedMap(Map.indexToAddressBegin(),
+                                          Map.indexToAdddessEnd());
   // Sorting address in increasing order of indices.
   llvm::sort(SortedMap, llvm::less_first());
   // Writing out Header
@@ -788,8 +787,6 @@ void DebugLoclistWriter::finalize(DIEBuilder &DIEBldr, DIE &Die) {
   if (DwarfVersion >= 5)
     finalizeDWARF5(DIEBldr, Die);
 }
-
-DebugAddrWriter *DebugLoclistWriter::AddrWriter = nullptr;
 
 static std::string encodeLE(size_t ByteSize, uint64_t NewValue) {
   std::string LE64(ByteSize, 0);
