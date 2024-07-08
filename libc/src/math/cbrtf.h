@@ -1,4 +1,4 @@
-//===-- Implementation of the llrintf function for GPU --------------------===//
+//===-- Implementation header for cbrtf -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/llrintf.h"
-#include "src/__support/common.h"
-
-#include "declarations.h"
+#ifndef LLVM_LIBC_SRC_MATH_CBRTF_H
+#define LLVM_LIBC_SRC_MATH_CBRTF_H
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(long long, llrintf, (float x)) {
-  return static_cast<long long>(__builtin_rintf(x));
-}
+float cbrtf(float x);
 
 } // namespace LIBC_NAMESPACE
+
+#endif // LLVM_LIBC_SRC_MATH_CBRTF_H
