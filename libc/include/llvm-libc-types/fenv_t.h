@@ -27,7 +27,7 @@ typedef struct {
 typedef unsigned int fenv_t;
 #elif defined(__AMDGPU__) || defined(__NVPTX__)
 typedef struct {
-  unsigned int __fpc;
+  unsigned long long __fpc;
 } fenv_t;
 #else
 #error "fenv_t not defined for your platform"
