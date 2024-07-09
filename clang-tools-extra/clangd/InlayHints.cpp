@@ -31,6 +31,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
@@ -442,44 +443,10 @@ class TypeHintBuilder : public TypeVisitor<TypeHintBuilder> {
     addLabel(std::move(Label));
   }
 
-  void handleTemplateSpecialization(
-      TemplateName TN, llvm::ArrayRef<TemplateArgument> Args,
-      SourceLocation LocationForOverride = SourceLocation()) {
-    SourceLocation Location;
-    TemplateDecl *TD = nullptr;
-    auto PrintType = TemplateName::Qualified::AsWritten;
-    switch (TN.getKind()) {
-    case TemplateName::Template:
-      TD = TN.getAsTemplateDecl();
-      Location = nameLocation(TD, SM);
-      break;
-    case TemplateName::QualifiedTemplate:
-      if (NestedNameSpecifier *NNS =
-              TN.getAsQualifiedTemplateName()->getQualifier();
-          NNS == CurrentNestedNameSpecifier) {
-        // We have handled the NNS in VisitElaboratedType(). Avoid printing it
-        // twice.
-        TN = TN.getAsQualifiedTemplateName()->getUnderlyingTemplate();
-        PrintType = TemplateName::Qualified::None;
-      }
-      break;
-    case TemplateName::OverloadedTemplate:
-    case TemplateName::AssumedTemplate:
-    case TemplateName::DependentTemplate:
-    case TemplateName::SubstTemplateTemplateParm:
-    case TemplateName::SubstTemplateTemplateParmPack:
-    case TemplateName::UsingTemplate:
-      break;
-    }
-
-    if (LocationForOverride.isValid())
-      Location = LocationForOverride;
-
-    assert(Location.isValid() || LocationForOverride.isValid());
-
-    addLabel([&](llvm::raw_ostream &OS) { TN.print(OS, PP, PrintType); },
-             Location);
-
+  void handleTemplateSpecialization(llvm::StringRef TemplateId,
+                                    llvm::ArrayRef<TemplateArgument> Args,
+                                    SourceLocation Location) {
+    addLabel([&](llvm::raw_ostream &OS) { OS << TemplateId; }, Location);
     addLabel("<");
     printTemplateArgumentList(Args);
     addLabel(">");
@@ -606,11 +573,14 @@ public:
           nameLocation(CXXRD, SM));
 
     // FIXME: Do we have other kinds of specializations?
-    if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(CXXRD))
+    if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(CXXRD)) {
+      std::string TemplateId;
+      llvm::raw_string_ostream OS(TemplateId);
+      CTSD->printName(OS);
       return handleTemplateSpecialization(
-          TemplateName(Pattern->getDescribedClassTemplate()),
-          CTSD->getTemplateArgs().asArray(),
+          TemplateId, CTSD->getTemplateArgs().asArray(),
           getPreferredLocationFromSpecialization(CTSD));
+    }
 
     return VisitType(TT);
   }
@@ -690,8 +660,33 @@ public:
   }
 
   void VisitTemplateSpecializationType(const TemplateSpecializationType *TST) {
-    maybeAddQualifiers();
     SourceLocation Location;
+    TemplateName Name = TST->getTemplateName();
+    TemplateName::Qualified PrintQual = TemplateName::Qualified::AsWritten;
+    switch (Name.getKind()) {
+    case TemplateName::Template:
+    case TemplateName::QualifiedTemplate: {
+      QualifiedTemplateName *Qual = Name.getAsQualifiedTemplateName();
+      if (Qual->getQualifier() == CurrentNestedNameSpecifier) {
+        // We have handled the NNS in VisitElaboratedType(). Avoid printing it
+        // twice.
+        Name = Qual->getUnderlyingTemplate();
+        PrintQual = TemplateName::Qualified::None;
+      }
+      [[fallthrough]];
+    }
+    case TemplateName::SubstTemplateTemplateParm:
+    case TemplateName::UsingTemplate:
+      Location = Name.getAsTemplateDecl()->getLocation();
+      break;
+    case TemplateName::OverloadedTemplate:
+    case TemplateName::AssumedTemplate:
+    case TemplateName::DependentTemplate:
+    case TemplateName::SubstTemplateTemplateParmPack:
+      // FIXME: Handle these cases.
+      return VisitType(TST);
+    }
+    maybeAddQualifiers();
     // Special case the ClassTemplateSpecializationDecl because
     // we want the location of an explicit specialization, if present.
     // FIXME: In practice, populating the location with that of the
@@ -701,8 +696,11 @@ public:
             dyn_cast_if_present<ClassTemplateSpecializationDecl>(
                 TST->desugar().getCanonicalType()->getAsCXXRecordDecl()))
       Location = getPreferredLocationFromSpecialization(Specialization);
-    return handleTemplateSpecialization(TST->getTemplateName(),
-                                        TST->template_arguments(), Location);
+    std::string TemplateId;
+    llvm::raw_string_ostream OS(TemplateId);
+    Name.print(OS, PP, PrintQual);
+    return handleTemplateSpecialization(TemplateId, TST->template_arguments(),
+                                        Location);
   }
 
   void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *ST) {
