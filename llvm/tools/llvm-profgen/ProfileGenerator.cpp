@@ -489,7 +489,7 @@ bool CSProfileGenerator::collectFunctionsFromLLVMProfile(
 FunctionSamples &
 ProfileGenerator::getTopLevelFunctionProfile(FunctionId FuncName) {
   SampleContext Context(FuncName);
-  return ProfileMap.Create(Context);
+  return ProfileMap.create(Context);
 }
 
 void ProfileGenerator::generateProfile() {

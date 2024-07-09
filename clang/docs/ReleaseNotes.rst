@@ -95,10 +95,29 @@ ABI Changes in This Version
 - Fixed Microsoft calling convention when returning classes that have a deleted
   copy assignment operator. Such a class should be returned indirectly.
 
+- Removed the global alias that was pointing to AArch64 Function Multiversioning
+  ifuncs. Its purpose was to preserve backwards compatibility when the ".ifunc"
+  suffix got removed from the name mangling. The alias interacts badly with
+  GlobalOpt (see the issue #96197).
+  
+- Fixed Microsoft name mangling for auto non-type template arguments of pointer
+  type for MSVC 1920+. This change resolves incompatibilities with code compiled
+  by MSVC 1920+ but will introduce incompatibilities with code compiled by
+  earlier versions of Clang unless such code is built with the compiler option
+  `-fms-compatibility-version=19.14` to imitate the MSVC 1914 mangling behavior.
+
+- Fixed Microsoft name mangling for auto non-type template arguments of pointer
+  to member type for MSVC 1920+. This change resolves incompatibilities with code
+  compiled by MSVC 1920+ but will introduce incompatibilities with code compiled by
+  earlier versions of Clang unless such code is built with the compiler option
+  `-fms-compatibility-version=19.14` to imitate the MSVC 1914 mangling behavior.
+  (GH#70899).
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
 - The text ast-dumper has improved printing of TemplateArguments.
+- The text decl-dumper prints template parameters' trailing requires expressions now.
 
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
@@ -149,6 +168,15 @@ Some of the major new features and improvements to Clang are listed
 here. Generic improvements to Clang as a whole or to its underlying
 infrastructure are described first, followed by language-specific
 sections with improvements to Clang's support for those languages.
+
+- The ``\par`` documentation comment command now supports an optional
+  argument, which denotes the header of the paragraph started by
+  an instance of the ``\par`` command comment. The implementation
+  of the argument handling matches its semantics
+  `in Doxygen <https://www.doxygen.nl/manual/commands.html#cmdpar>`.
+  Namely, any text on the same line as the ``\par`` command will become
+  a header for the paragaph, and if there is no text then the command
+  will start a new paragraph.
 
 C++ Language Changes
 --------------------
@@ -208,9 +236,6 @@ C++20 Feature Support
   ``<expected>`` from libstdc++ to work correctly with Clang.
 
 - User defined constructors are allowed for copy-list-initialization with CTAD.
-  The example code for deduction guides for std::map in
-  (`cppreference <https://en.cppreference.com/w/cpp/container/map/deduction_guides>`_)
-  will now work.
   (#GH62925).
 
 C++23 Feature Support
@@ -244,6 +269,7 @@ C++2c Feature Support
 
 - Implemented `P2809R3: Trivial infinite loops are not Undefined Behavior <https://wg21.link/P2809R3>`_.
 
+- Implemented `P3144R2 Deleting a Pointer to an Incomplete Type Should be Ill-formed <https://wg21.link/P3144R2>`_.
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -271,6 +297,9 @@ Resolutions to C++ Defect Reports
 - P0522 implementation is enabled by default in all language versions, and
   provisional wording for CWG2398 is implemented.
 
+- Clang now performs type-only lookup for the name in ``using enum`` declaration.
+  (`CWG2877: Type-only lookup for using-enum-declarator <https://cplusplus.github.io/CWG/issues/2877.html>`_).
+
 - Clang now requires a template argument list after a template keyword.
   (`CWG96: Syntactic disambiguation using the template keyword <https://cplusplus.github.io/CWG/issues/96.html>`_).
 
@@ -279,6 +308,12 @@ Resolutions to C++ Defect Reports
 
 C Language Changes
 ------------------
+
+C2y Feature Support
+^^^^^^^^^^^^^^^^^^^
+- Clang now enables C2y mode with ``-std=c2y``. This sets ``__STDC_VERSION__``
+  to ``202400L`` so that it's greater than the value for C23. The value of this
+  macro is subject to change in the future.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -307,6 +342,14 @@ C23 Feature Support
 
 - Properly promote bit-fields of bit-precise integer types to the field's type
   rather than to ``int``. #GH87641
+
+- Added the ``INFINITY`` and ``NAN`` macros to Clang's ``<float.h>``
+  freestanding implementation; these macros were defined in ``<math.h>`` in C99
+  but C23 added them to ``<float.h>`` in
+  `WG14 N2848 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2848.pdf>`_.
+
+- Clang now supports `N3017 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3017.htm>`_
+  ``#embed`` - a scannable, tooling-friendly binary resource inclusion mechanism.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -363,6 +406,11 @@ Non-comprehensive list of changes in this release
 - ``#pragma GCC diagnostic warning "-Wfoo"`` can now downgrade ``-Werror=foo``
   errors and certain default-to-error ``-W`` diagnostics to warnings.
 
+- Support importing C++20 modules in clang-repl.
+
+- Added support for ``TypeLoc::dump()`` for easier debugging, and improved
+  textual and JSON dumping for various ``TypeLoc``-related nodes.
+
 New Compiler Flags
 ------------------
 - ``-fsanitize=implicit-bitfield-conversion`` checks implicit truncation and
@@ -390,6 +438,17 @@ New Compiler Flags
 - ``-fms-define-stdc`` and its clang-cl counterpart ``/Zc:__STDC__``.
   Matches MSVC behaviour by defining ``__STDC__`` to ``1`` when
   MSVC compatibility mode is used. It has no effect for C++ code.
+
+- ``-Wc++23-compat`` group was added to help migrating existing codebases
+  to C++23.
+
+- ``-Wc++2c-compat`` group was added to help migrating existing codebases
+  to upcoming C++26.
+
+- ``-fdisable-block-signature-string`` instructs clang not to emit the signature
+  string for blocks. Disabling the string can potentially break existing code
+  that relies on it. Users should carefully consider this possibiilty when using
+  the flag.
 
 Deprecated Compiler Flags
 -------------------------
@@ -428,6 +487,10 @@ Modified Compiler Flags
 - Trivial infinite loops (i.e loops with a constant controlling expresion
   evaluating to ``true`` and an empty body such as ``while(1);``)
   are considered infinite, even when the ``-ffinite-loop`` flag is set.
+
+- Diagnostics groups about compatibility with a particular C++ Standard version
+  now include dianostics about C++26 features that are not present in older
+  versions.
 
 Removed Compiler Flags
 -------------------------
@@ -491,6 +554,24 @@ Attribute Changes in Clang
        size_t count;
      };
 
+- The attributes ``sized_by``, ``counted_by_or_null`` and ``sized_by_or_null```
+  have been added as variants on ``counted_by``, each with slightly different semantics.
+  ``sized_by`` takes a byte size parameter instead of an element count, allowing pointees
+  with unknown size. The ``counted_by_or_null`` and ``sized_by_or_null`` variants are equivalent
+  to their base variants, except the pointer can be null regardless of count/size value.
+  If the pointer is null the size is effectively 0. ``sized_by_or_null`` is needed to properly
+  annotate allocator functions like ``malloc`` that return a buffer of a given byte size, but can
+  also return null.
+
+- The ``guarded_by``, ``pt_guarded_by``, ``acquired_after``, ``acquired_before``
+  attributes now support referencing struct members in C. The arguments are also
+  now late parsed when ``-fexperimental-late-parse-attributes`` is passed like
+  for ``counted_by``.
+
+- Introduced new function type attributes ``[[clang::nonblocking]]``, ``[[clang::nonallocating]]``,
+  ``[[clang::blocking]]``, and ``[[clang::allocating]]``, with GNU-style variants as well.
+  The attributes declare constraints about a function's behavior pertaining to blocking and
+  heap memory allocation.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -588,6 +669,19 @@ Improvements to Clang's diagnostics
 
 - Clang no longer emits a "declared here" note for a builtin function that has no declaration in source.
   Fixes #GH93369.
+
+- Clang now has an improved error message for captures that refer to a class member.
+  Fixes #GH94764.
+
+- Clang now diagnoses unsupported class declarations for ``std::initializer_list<E>`` when they are
+  used rather than when they are needed for constant evaluation or when code is generated for them.
+  The check is now stricter to prevent crashes for some unsupported declarations (Fixes #GH95495).
+
+- Clang now diagnoses dangling cases where a pointer is assigned to a temporary
+  that will be destroyed at the end of the full expression.
+  Fixes #GH54492.
+
+- Clang now shows implicit deduction guides when diagnosing overload resolution failure. #GH92393.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -701,6 +795,9 @@ Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fix crash when atomic builtins are called with pointer to zero-size struct (#GH90330)
+
+- Clang now allows pointee types of atomic builtin arguments to be complete template types
+  that was not instantiated elsewhere.
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -883,13 +980,23 @@ Bug Fixes to C++ Support
 - Fix a crash caused by improper use of ``__array_extent``. (#GH80474)
 - Fixed several bugs in capturing variables within unevaluated contexts. (#GH63845), (#GH67260), (#GH69307),
   (#GH88081), (#GH89496), (#GH90669) and (#GH91633).
+- Fixed a crash in constraint instantiation under nested lambdas with dependent parameters.
 - Fixed handling of brace ellison when building deduction guides. (#GH64625), (#GH83368).
 - Clang now instantiates local constexpr functions eagerly for constant evaluators. (#GH35052), (#GH94849)
 - Fixed a failed assertion when attempting to convert an integer representing the difference
   between the addresses of two labels (a GNU extension) to a pointer within a constant expression. (#GH95366).
 - Fix immediate escalation bugs in the presence of dependent call arguments. (#GH94935)
 - Clang now diagnoses explicit specializations with storage class specifiers in all contexts.
-
+- Fix an assertion failure caused by parsing a lambda used as a default argument for the value of a
+  forward-declared class. (#GH93512).
+- Fixed a bug in access checking inside return-type-requirement of compound requirements. (#GH93788).
+- Fixed an assertion failure about invalid conversion when calling lambda. (#GH96205).
+- Fixed a bug where the first operand of binary ``operator&`` would be transformed as if it was the operand
+  of the address of operator. (#GH97483).
+- Fixed an assertion failure about a constant expression which is a known integer but is not
+  evaluated to an integer. (#GH96670).
+- Fixed a bug where references to lambda capture inside a ``noexcept`` specifier were not correctly
+  instantiated. (#GH95735).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -999,6 +1106,7 @@ RISC-V Support
 
 - ``__attribute__((rvv_vector_bits(N)))`` is now supported for RVV vbool*_t types.
 - Profile names in ``-march`` option are now supported.
+- Passing empty structs/unions as arguments in C++ is now handled correctly. The behavior is similar to GCC's.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1022,10 +1130,10 @@ AIX Support
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
 
-The -mcpu=generic configuration now enables multivalue feature, which is
-standardized and available in all major engines. Enabling multivalue here only
-enables the language feature but does not turn on the multivalue ABI (this
-enables non-ABI uses of multivalue, like exnref).
+The -mcpu=generic configuration now enables multivalue and reference-types.
+These proposals are standardized and available in all major engines. Enabling
+multivalue here only enables the language feature but does not turn on the
+multivalue ABI (this enables non-ABI uses of multivalue, like exnref).
 
 AVR Support
 ^^^^^^^^^^^
@@ -1066,6 +1174,11 @@ clang-format
 - Adds ``AllowShortCaseExpressionOnASingleLine`` option.
 - Adds ``AlignCaseArrows`` suboption to ``AlignConsecutiveShortCaseStatements``.
 - Adds ``LeftWithLastLine`` suboption to ``AlignEscapedNewlines``.
+- Adds ``KeepEmptyLines`` option to deprecate ``KeepEmptyLinesAtEOF``
+  and ``KeepEmptyLinesAtTheStartOfBlocks``.
+- Add ``ExceptDoubleParentheses`` sub-option for ``SpacesInParensOptions``
+  to override addition of spaces between multiple, non-redundant parentheses
+  similar to the rules used for ``RemoveParentheses``.
 
 libclang
 --------
@@ -1093,11 +1206,6 @@ Crash and bug fixes
 
 Improvements
 ^^^^^^^^^^^^
-
-- Support importing C++20 modules in clang-repl.
-
-- Added support for ``TypeLoc::dump()`` for easier debugging, and improved
-  textual and JSON dumping for various ``TypeLoc``-related nodes.
 
 Moved checkers
 ^^^^^^^^^^^^^^

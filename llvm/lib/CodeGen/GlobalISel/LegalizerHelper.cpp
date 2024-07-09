@@ -1123,15 +1123,13 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI: {
     // FIXME: Support other types
-    unsigned FromSize = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+    Type *FromTy =
+        getFloatTypeForLLT(Ctx, MRI.getType(MI.getOperand(1).getReg()));
     unsigned ToSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-    if ((ToSize != 32 && ToSize != 64) || (FromSize != 32 && FromSize != 64))
+    if ((ToSize != 32 && ToSize != 64 && ToSize != 128) || !FromTy)
       return UnableToLegalize;
     LegalizeResult Status = conversionLibcall(
-        MI, MIRBuilder,
-        ToSize == 32 ? Type::getInt32Ty(Ctx) : Type::getInt64Ty(Ctx),
-        FromSize == 64 ? Type::getDoubleTy(Ctx) : Type::getFloatTy(Ctx),
-        LocObserver);
+        MI, MIRBuilder, Type::getIntNTy(Ctx, ToSize), FromTy, LocObserver);
     if (Status != Legalized)
       return Status;
     break;
@@ -2463,13 +2461,22 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
       NewOpc = TargetOpcode::G_CTTZ_ZERO_UNDEF;
     }
 
+    unsigned SizeDiff = WideTy.getSizeInBits() - CurTy.getSizeInBits();
+
+    if (MI.getOpcode() == TargetOpcode::G_CTLZ_ZERO_UNDEF) {
+      // An optimization where the result is the CTLZ after the left shift by
+      // (Difference in widety and current ty), that is,
+      // MIBSrc = MIBSrc << (sizeinbits(WideTy) - sizeinbits(CurTy))
+      // Result = ctlz MIBSrc
+      MIBSrc = MIRBuilder.buildShl(WideTy, MIBSrc,
+                                   MIRBuilder.buildConstant(WideTy, SizeDiff));
+    }
+
     // Perform the operation at the larger size.
     auto MIBNewOp = MIRBuilder.buildInstr(NewOpc, {WideTy}, {MIBSrc});
     // This is already the correct result for CTPOP and CTTZs
-    if (MI.getOpcode() == TargetOpcode::G_CTLZ ||
-        MI.getOpcode() == TargetOpcode::G_CTLZ_ZERO_UNDEF) {
+    if (MI.getOpcode() == TargetOpcode::G_CTLZ) {
       // The correct result is NewOp - (Difference in widety and current ty).
-      unsigned SizeDiff = WideTy.getSizeInBits() - CurTy.getSizeInBits();
       MIBNewOp = MIRBuilder.buildSub(
           WideTy, MIBNewOp, MIRBuilder.buildConstant(WideTy, SizeDiff));
     }
@@ -3641,6 +3648,9 @@ LegalizerHelper::bitcast(MachineInstr &MI, unsigned TypeIdx, LLT CastTy) {
     Observer.changingInstr(MI);
     bitcastDst(MI, CastTy, 0);
     MMO.setType(CastTy);
+    // The range metadata is no longer valid when reinterpreted as a different
+    // type.
+    MMO.clearRanges();
     Observer.changedInstr(MI);
     return Legalized;
   }
@@ -7142,8 +7152,6 @@ LegalizerHelper::lowerFPTRUNC(MachineInstr &MI) {
   return UnableToLegalize;
 }
 
-// TODO: If RHS is a constant SelectionDAGBuilder expands this into a
-// multiplication tree.
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerFPOWI(MachineInstr &MI) {
   auto [Dst, Src0, Src1] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(Dst);
@@ -7214,6 +7222,10 @@ LegalizerHelper::lowerFCopySign(MachineInstr &MI) {
   // constants are a nan and -0.0, but the final result should preserve
   // everything.
   unsigned Flags = MI.getFlags();
+
+  // We masked the sign bit and the not-sign bit, so these are disjoint.
+  Flags |= MachineInstr::Disjoint;
+
   MIRBuilder.buildOr(Dst, And0, And1, Flags);
 
   MI.eraseFromParent();

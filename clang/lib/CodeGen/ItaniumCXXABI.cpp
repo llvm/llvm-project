@@ -23,6 +23,7 @@
 #include "CGVTables.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Mangle.h"
@@ -336,9 +337,11 @@ public:
   bool exportThunk() override { return true; }
 
   llvm::Value *performThisAdjustment(CodeGenFunction &CGF, Address This,
-                                     const ThisAdjustment &TA) override;
+                                     const CXXRecordDecl *UnadjustedThisClass,
+                                     const ThunkInfo &TI) override;
 
   llvm::Value *performReturnAdjustment(CodeGenFunction &CGF, Address Ret,
+                                       const CXXRecordDecl *UnadjustedRetClass,
                                        const ReturnAdjustment &RA) override;
 
   size_t getSrcArgforCopyCtor(const CXXConstructorDecl *,
@@ -1477,10 +1480,22 @@ llvm::Value *ItaniumCXXABI::emitDynamicCastCall(
       computeOffsetHint(CGF.getContext(), SrcDecl, DestDecl).getQuantity());
 
   // Emit the call to __dynamic_cast.
-  llvm::Value *Args[] = {ThisAddr.emitRawPointer(CGF), SrcRTTI, DestRTTI,
-                         OffsetHint};
-  llvm::Value *Value =
-      CGF.EmitNounwindRuntimeCall(getItaniumDynamicCastFn(CGF), Args);
+  llvm::Value *Value = ThisAddr.emitRawPointer(CGF);
+  if (CGM.getCodeGenOpts().PointerAuth.CXXVTablePointers) {
+    // We perform a no-op load of the vtable pointer here to force an
+    // authentication. In environments that do not support pointer
+    // authentication this is a an actual no-op that will be elided. When
+    // pointer authentication is supported and enforced on vtable pointers this
+    // load can trap.
+    llvm::Value *Vtable =
+        CGF.GetVTablePtr(ThisAddr, CGM.Int8PtrTy, SrcDecl,
+                         CodeGenFunction::VTableAuthMode::MustTrap);
+    assert(Vtable);
+    (void)Vtable;
+  }
+
+  llvm::Value *args[] = {Value, SrcRTTI, DestRTTI, OffsetHint};
+  Value = CGF.EmitNounwindRuntimeCall(getItaniumDynamicCastFn(CGF), args);
 
   /// C++ [expr.dynamic.cast]p9:
   ///   A failed cast to reference type throws std::bad_cast
@@ -1955,8 +1970,18 @@ llvm::Value *ItaniumCXXABI::getVTableAddressPointInStructorWithVTT(
                                                  VirtualPointerIndex);
 
   // And load the address point from the VTT.
-  return CGF.Builder.CreateAlignedLoad(CGF.GlobalsVoidPtrTy, VTT,
-                                       CGF.getPointerAlign());
+  llvm::Value *AP =
+      CGF.Builder.CreateAlignedLoad(CGF.GlobalsVoidPtrTy, VTT,
+                                    CGF.getPointerAlign());
+
+  if (auto &Schema = CGF.CGM.getCodeGenOpts().PointerAuth.CXXVTTVTablePointers) {
+    CGPointerAuthInfo PointerAuth = CGF.EmitPointerAuthInfo(Schema, VTT,
+                                                            GlobalDecl(),
+                                                            QualType());
+    AP = CGF.EmitPointerAuthAuth(PointerAuth, AP);
+  }
+
+  return AP;
 }
 
 llvm::GlobalVariable *ItaniumCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
@@ -2008,8 +2033,9 @@ CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
   llvm::Value *VTable = CGF.GetVTablePtr(This, PtrTy, MethodDecl->getParent());
 
   uint64_t VTableIndex = CGM.getItaniumVTableContext().getMethodVTableIndex(GD);
-  llvm::Value *VFunc;
-  if (CGF.ShouldEmitVTableTypeCheckedLoad(MethodDecl->getParent())) {
+  llvm::Value *VFunc, *VTableSlotPtr = nullptr;
+  auto &Schema = CGM.getCodeGenOpts().PointerAuth.CXXVirtualFunctionPointers;
+  if (!Schema && CGF.ShouldEmitVTableTypeCheckedLoad(MethodDecl->getParent())) {
     VFunc = CGF.EmitVTableTypeCheckedLoad(
         MethodDecl->getParent(), VTable, PtrTy,
         VTableIndex *
@@ -2024,7 +2050,7 @@ CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
           CGM.getIntrinsic(llvm::Intrinsic::load_relative, {CGM.Int32Ty}),
           {VTable, llvm::ConstantInt::get(CGM.Int32Ty, 4 * VTableIndex)});
     } else {
-      llvm::Value *VTableSlotPtr = CGF.Builder.CreateConstInBoundsGEP1_64(
+      VTableSlotPtr = CGF.Builder.CreateConstInBoundsGEP1_64(
           PtrTy, VTable, VTableIndex, "vfn");
       VFuncLoad = CGF.Builder.CreateAlignedLoad(PtrTy, VTableSlotPtr,
                                                 CGF.getPointerAlign());
@@ -2048,7 +2074,13 @@ CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
     VFunc = VFuncLoad;
   }
 
-  CGCallee Callee(GD, VFunc);
+  CGPointerAuthInfo PointerAuth;
+  if (Schema) {
+    assert(VTableSlotPtr && "virtual function pointer not set");
+    GD = CGM.getItaniumVTableContext().findOriginalMethod(GD.getCanonicalDecl());
+    PointerAuth = CGF.EmitPointerAuthInfo(Schema, VTableSlotPtr, GD, QualType());
+  }
+  CGCallee Callee(GD, VFunc, PointerAuth);
   return Callee;
 }
 
@@ -2147,6 +2179,7 @@ bool ItaniumCXXABI::canSpeculativelyEmitVTable(const CXXRecordDecl *RD) const {
 }
 static llvm::Value *performTypeAdjustment(CodeGenFunction &CGF,
                                           Address InitialPtr,
+                                          const CXXRecordDecl *UnadjustedClass,
                                           int64_t NonVirtualAdjustment,
                                           int64_t VirtualAdjustment,
                                           bool IsReturnAdjustment) {
@@ -2164,8 +2197,8 @@ static llvm::Value *performTypeAdjustment(CodeGenFunction &CGF,
   // Perform the virtual adjustment if we have one.
   llvm::Value *ResultPtr;
   if (VirtualAdjustment) {
-    Address VTablePtrPtr = V.withElementType(CGF.Int8PtrTy);
-    llvm::Value *VTablePtr = CGF.Builder.CreateLoad(VTablePtrPtr);
+    llvm::Value *VTablePtr =
+        CGF.GetVTablePtr(V, CGF.Int8PtrTy, UnadjustedClass);
 
     llvm::Value *Offset;
     llvm::Value *OffsetPtr = CGF.Builder.CreateConstInBoundsGEP1_64(
@@ -2200,18 +2233,20 @@ static llvm::Value *performTypeAdjustment(CodeGenFunction &CGF,
   return ResultPtr;
 }
 
-llvm::Value *ItaniumCXXABI::performThisAdjustment(CodeGenFunction &CGF,
-                                                  Address This,
-                                                  const ThisAdjustment &TA) {
-  return performTypeAdjustment(CGF, This, TA.NonVirtual,
-                               TA.Virtual.Itanium.VCallOffsetOffset,
+llvm::Value *
+ItaniumCXXABI::performThisAdjustment(CodeGenFunction &CGF, Address This,
+                                     const CXXRecordDecl *UnadjustedClass,
+                                     const ThunkInfo &TI) {
+  return performTypeAdjustment(CGF, This, UnadjustedClass, TI.This.NonVirtual,
+                               TI.This.Virtual.Itanium.VCallOffsetOffset,
                                /*IsReturnAdjustment=*/false);
 }
 
 llvm::Value *
 ItaniumCXXABI::performReturnAdjustment(CodeGenFunction &CGF, Address Ret,
+                                       const CXXRecordDecl *UnadjustedClass,
                                        const ReturnAdjustment &RA) {
-  return performTypeAdjustment(CGF, Ret, RA.NonVirtual,
+  return performTypeAdjustment(CGF, Ret, UnadjustedClass, RA.NonVirtual,
                                RA.Virtual.Itanium.VBaseOffsetOffset,
                                /*IsReturnAdjustment=*/true);
 }
@@ -3693,6 +3728,10 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty) {
     VTable = llvm::ConstantExpr::getInBoundsGetElementPtr(CGM.GlobalsInt8PtrTy,
                                                           VTable, Two);
   }
+
+  if (auto &Schema = CGM.getCodeGenOpts().PointerAuth.CXXTypeInfoVTablePointer)
+    VTable = CGM.getConstantSignedPointer(VTable, Schema, nullptr, GlobalDecl(),
+                                          QualType(Ty, 0));
 
   Fields.push_back(VTable);
 }

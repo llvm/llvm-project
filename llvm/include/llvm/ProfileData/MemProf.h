@@ -124,6 +124,13 @@ struct PortableMemInfoBlock {
   OS << "        " << #Name << ": " << Name << "\n";
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
+    if (AccessHistogramSize > 0) {
+      OS << "        " << "AccessHistogramValues" << ":";
+      for (uint32_t I = 0; I < AccessHistogramSize; ++I) {
+        OS << " " << ((uint64_t *)AccessHistogram)[I];
+      }
+      OS << "\n";
+    }
   }
 
   // Return the schema, only for unit tests.

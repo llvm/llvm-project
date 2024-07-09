@@ -830,8 +830,14 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
       // Load the vptr, and mix it with TypeHash.
       llvm::Value *TypeHash =
           llvm::ConstantInt::get(Int64Ty, xxh3_64bits(Out.str()));
+
+      llvm::Type *VPtrTy = llvm::PointerType::get(IntPtrTy, 0);
       Address VPtrAddr(Ptr, IntPtrTy, getPointerAlign());
-      llvm::Value *VPtrVal = Builder.CreateLoad(VPtrAddr);
+      llvm::Value *VPtrVal = GetVTablePtr(VPtrAddr, VPtrTy,
+                                          Ty->getAsCXXRecordDecl(),
+                                          VTableAuthMode::UnsafeUbsanStrip);
+      VPtrVal = Builder.CreateBitOrPointerCast(VPtrVal, IntPtrTy);
+
       llvm::Value *Hash =
           emitHashMix(Builder, TypeHash, Builder.CreateZExt(VPtrVal, Int64Ty));
       Hash = Builder.CreateTrunc(Hash, IntPtrTy);
@@ -2856,22 +2862,22 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
   return LV;
 }
 
-static llvm::Constant *EmitFunctionDeclPointer(CodeGenModule &CGM,
-                                               GlobalDecl GD) {
+llvm::Constant *CodeGenModule::getRawFunctionPointer(GlobalDecl GD,
+                                                     llvm::Type *Ty) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
   if (FD->hasAttr<WeakRefAttr>()) {
-    ConstantAddress aliasee = CGM.GetWeakRefReference(FD);
+    ConstantAddress aliasee = GetWeakRefReference(FD);
     return aliasee.getPointer();
   }
 
-  llvm::Constant *V = CGM.GetAddrOfFunction(GD);
+  llvm::Constant *V = GetAddrOfFunction(GD, Ty);
   return V;
 }
 
 static LValue EmitFunctionDeclLValue(CodeGenFunction &CGF, const Expr *E,
                                      GlobalDecl GD) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
-  llvm::Value *V = EmitFunctionDeclPointer(CGF.CGM, GD);
+  llvm::Constant *V = CGF.CGM.getFunctionPointer(GD);
   CharUnits Alignment = CGF.getContext().getDeclAlign(FD);
   return CGF.MakeAddrLValue(V, E->getType(), Alignment,
                             AlignmentSource::Decl);
@@ -3135,21 +3141,8 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
     return LV;
   }
 
-  if (const auto *FD = dyn_cast<FunctionDecl>(ND)) {
-    LValue LV = EmitFunctionDeclLValue(*this, E, FD);
-
-    // Emit debuginfo for the function declaration if the target wants to.
-    if (getContext().getTargetInfo().allowDebugInfoForExternalRef()) {
-      if (CGDebugInfo *DI = CGM.getModuleDebugInfo()) {
-        auto *Fn =
-            cast<llvm::Function>(LV.getPointer(*this)->stripPointerCasts());
-        if (!Fn->getSubprogram())
-          DI->EmitFunctionDecl(FD, FD->getLocation(), T, Fn);
-      }
-    }
-
-    return LV;
-  }
+  if (const auto *FD = dyn_cast<FunctionDecl>(ND))
+    return EmitFunctionDeclLValue(*this, E, FD);
 
   // FIXME: While we're emitting a binding from an enclosing scope, all other
   // DeclRefExprs we see should be implicitly treated as if they also refer to
@@ -5506,7 +5499,7 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
     // name to make it clear it's not the actual builtin.
     if (CGF.CurFn->getName() != FDInlineName &&
         OnlyHasInlineBuiltinDeclaration(FD)) {
-      llvm::Constant *CalleePtr = EmitFunctionDeclPointer(CGF.CGM, GD);
+      llvm::Constant *CalleePtr = CGF.CGM.getRawFunctionPointer(GD);
       llvm::Function *Fn = llvm::cast<llvm::Function>(CalleePtr);
       llvm::Module *M = Fn->getParent();
       llvm::Function *Clone = M->getFunction(FDInlineName);
@@ -5529,7 +5522,7 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
       return CGCallee::forBuiltin(builtinID, FD);
   }
 
-  llvm::Constant *CalleePtr = EmitFunctionDeclPointer(CGF.CGM, GD);
+  llvm::Constant *CalleePtr = CGF.CGM.getRawFunctionPointer(GD);
   if (CGF.CGM.getLangOpts().CUDA && !CGF.CGM.getLangOpts().CUDAIsDevice &&
       FD->hasAttr<CUDAGlobalAttr>())
     CalleePtr = CGF.CGM.getCUDARuntime().getKernelStub(
@@ -5586,7 +5579,8 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
     GD = GlobalDecl(VD);
 
   CGCalleeInfo calleeInfo(functionType->getAs<FunctionProtoType>(), GD);
-  CGCallee callee(calleeInfo, calleePtr);
+  CGPointerAuthInfo pointerAuth = CGM.getFunctionPointerAuthInfo(functionType);
+  CGCallee callee(calleeInfo, calleePtr, pointerAuth);
   return callee;
 }
 

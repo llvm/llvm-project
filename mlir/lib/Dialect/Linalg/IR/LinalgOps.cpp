@@ -1356,8 +1356,12 @@ ParseResult MapOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   if (payloadOpName.has_value()) {
-    addBodyWithPayloadOp(parser, result, payloadOpName.value(), payloadOpAttrs,
-                         ArrayRef(result.operands).drop_back());
+    if (!result.operands.empty())
+      addBodyWithPayloadOp(parser, result, payloadOpName.value(),
+                           payloadOpAttrs,
+                           ArrayRef(result.operands).drop_back());
+    else
+      result.addRegion();
   } else {
     SmallVector<OpAsmParser::Argument> regionArgs;
     if (parser.parseArgumentList(regionArgs, OpAsmParser::Delimiter::Paren,
@@ -1739,7 +1743,8 @@ static void buildIdentityRegion(OpBuilder &builder, Location loc,
                                 ValueRange outputs) {
   buildGenericRegion(builder, loc, region, inputs, outputs,
                      [](OpBuilder &b, Location loc, ValueRange args) {
-                       b.create<linalg::YieldOp>(loc, args[0]);
+                       if (!args.empty())
+                         b.create<linalg::YieldOp>(loc, args[0]);
                      });
 }
 
