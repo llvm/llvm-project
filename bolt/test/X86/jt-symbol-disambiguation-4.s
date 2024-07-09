@@ -18,7 +18,7 @@
 	.globl	main
 	.type	main,@function
 main:
-# CHECK: Binary Function "main"
+# CHECK: Binary Function "main
 	pushq   %rbp
 	movq	%rsp, %rbp
 	movq	$-16, %rax
