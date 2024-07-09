@@ -335,7 +335,7 @@ def note_constexpr_new_non_replaceable : Note<
 def note_constexpr_new_placement : Note<
   "this placement new expression is not yet supported in constant expressions">;
 def note_constexpr_placement_new_wrong_type : Note<
-  "placement new would change type of storage from %0 to %1">;
+    "placement new would change type of storage from %0 to %1">;
 def note_constexpr_new_negative : Note<
   "cannot allocate array; evaluated array bound %0 is negative">;
 def note_constexpr_new_too_large : Note<

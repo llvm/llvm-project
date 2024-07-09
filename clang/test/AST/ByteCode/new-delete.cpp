@@ -245,7 +245,7 @@ namespace std {
 namespace PlacementNew {
   constexpr int foo() { // both-error {{never produces a constant expression}}
     char c[sizeof(int)];
-    new (c) int{12}; // ref-note {{call to placement 'operator new'}} \
+    new (c) int{12}; // ref-note {{placement new would change type of storage from 'char' to 'int'}} \
                      // expected-note {{subexpression not valid in a constant expression}}
     return 0;
   }
@@ -309,7 +309,7 @@ namespace placement_new_delete {
   constexpr bool bad(int which) {
     switch (which) {
     case 0:
-      delete new (placement_new_arg{}) int; // ref-note {{call to placement 'operator new'}} \
+      delete new (placement_new_arg{}) int; // ref-note {{this placement new expression is not yet supported in constant expression}} \
                                             // expected-note {{subexpression not valid in a constant expression}}
       break;
 

@@ -994,7 +994,7 @@ namespace placement_new_delete {
   constexpr bool bad(int which) {
     switch (which) {
     case 0:
-      delete new (placement_new_arg{}) int; // expected-note {{call to placement 'operator new'}}
+      delete new (placement_new_arg{}) int; // expected-note {{this placement new expression is not yet supported in constant expressions}}
       break;
 
     case 1:

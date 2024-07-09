@@ -131,6 +131,9 @@ C++2c Feature Support
 
 - Implemented `P2893R3 Variadic Friends <https://wg21.link/P2893>`_
 
+- Implemented `P2747R2 constexpr placement new <https://wg21.link/P2747R2>`_.
+
+
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
