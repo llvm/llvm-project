@@ -1527,23 +1527,17 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   // SECTIONS construct.
   auto sectionsOp = builder.create<mlir::omp::SectionsOp>(loc, clauseOps);
 
+  // create entry block with reduction variables as arguments
+  llvm::SmallVector<mlir::Location> blockArgLocs(reductionSyms.size(), loc);
+  builder.createBlock(&sectionsOp->getRegion(0), {}, reductionTypes,
+                      blockArgLocs);
+  mlir::Operation *terminator =
+      lower::genOpenMPTerminator(builder, sectionsOp, loc);
+
   auto reductionCallback = [&](mlir::Operation *op) {
     genReductionVars(op, converter, loc, reductionSyms, reductionTypes);
     return reductionSyms;
   };
-
-  reductionCallback(sectionsOp);
-  // genReductionVars adds a hlfir.declare for the reduction block argument
-  // but only terminators and sectionOps are allowed inside of a SectionsOp
-  llvm::SmallVector<mlir::Operation *> toErase;
-  toErase.reserve(reductionSyms.size());
-  for (auto decl : sectionsOp.getOps<hlfir::DeclareOp>())
-    toErase.push_back(decl);
-  for (mlir::Operation *op : toErase)
-    op->erase();
-
-  mlir::Operation *terminator =
-      lower::genOpenMPTerminator(builder, sectionsOp, loc);
 
   // Generate nested SECTION constructs.
   // This is done here rather than in genOMP([...], OpenMPSectionConstruct )
