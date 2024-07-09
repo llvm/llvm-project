@@ -218,9 +218,7 @@ static unsigned getSegInstLog2SEW(StringRef InstName) {
 #undef KEY_VAL_ALL_NF
 #undef KEY_VAL
 
-  if (SegInsts.contains(InstName))
-    return SegInsts[InstName];
-  return 0;
+  return SegInsts.lookup(InstName);
 }
 
 void emitCodeGenSwitchBody(const RVVIntrinsic *RVVI, raw_ostream &OS) {

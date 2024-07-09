@@ -840,16 +840,17 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
     return TargetTypeInfo(ScalableVectorType::get(Type::getInt1Ty(C), 16),
                           TargetExtType::HasZeroInit);
 
-  // RISCV vector tuple type. The layout is represented as the type that needs
+  // RISC-V vector tuple type. The layout is represented as the type that needs
   // the same number of vector registers(VREGS) as this tuple type, represented
   // as <vscale x (VREGS * 8) x i8>.
   if (Name == "riscv_vec_tuple") {
     unsigned TotalNumElts =
         std::max(cast<ScalableVectorType>(Ty->getTypeParameter(0))
                      ->getMinNumElements(),
-                 8UL) *
+                 (uint64_t)8) *
         Ty->getIntParameter(0);
-    return TargetTypeInfo(ScalableVectorType::get(Type::getInt8Ty(C), TotalNumElts));
+    return TargetTypeInfo(
+        ScalableVectorType::get(Type::getInt8Ty(C), TotalNumElts));
   }
 
   return TargetTypeInfo(Type::getVoidTy(C));

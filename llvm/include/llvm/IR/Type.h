@@ -262,7 +262,7 @@ public:
     return getTypeID() == ScalableVectorTyID || getTypeID() == FixedVectorTyID;
   }
 
-  // True if this is an instance of TargetExtType of RISCV vector tuple.
+  // True if this is an instance of TargetExtType of RISC-V vector tuple.
   bool isRISCVVectorTupleTy() const;
 
   /// Return true if this type could be converted with a lossless BitCast to
