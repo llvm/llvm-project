@@ -122,7 +122,7 @@ return:
 
 }
 
-; The minimal table range is [122, -128]([122, 128]).
+; The cross signed max-min table range is [122, -128]([122, 128]).
 
 define i32 @f_i8_128(i8 %c) {
 ; CHECK-LABEL: @f_i8_128(
@@ -161,7 +161,7 @@ return:
   ret i32 %retval.0
 }
 
-; The minimal table range is [3, 0].
+; The cross signed max-min table range is [3, 0].
 
 define i32 @f_min_max(i3 %c) {
 ; CHECK-LABEL: @f_min_max(
@@ -193,7 +193,7 @@ return:
   ret i32 %retval.0
 }
 
-; The minimal table range is [-1, -4].
+; The cross signed max-min table range is [-1, -4].
 
 define i32 @f_min_max_2(i3 %c) {
 ; CHECK-LABEL: @f_min_max_2(

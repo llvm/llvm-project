@@ -6640,7 +6640,7 @@ static void reuseTableCompare(
 static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
                                 DomTreeUpdater *DTU, const DataLayout &DL,
                                 const TargetTransformInfo &TTI,
-                                bool TryMinTableSize) {
+                                bool ConsiderCrossSignedMaxMinTable) {
   assert(SI->getNumCases() > 1 && "Degenerate switch?");
 
   BasicBlock *BB = SI->getParent();
@@ -6686,13 +6686,12 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   ConstantInt *BeginCaseVal = *CaseValIter;
   ConstantInt *EndCaseVal = CaseVals.back();
   bool RangeOverflow = false;
-  uint64_t MinTableSize = EndCaseVal->getValue()
-                              .ssub_ov(BeginCaseVal->getValue(), RangeOverflow)
-                              .getLimitedValue() +
-                          1;
-  // If there is no overflow, then this must be the minimal table.
-  // The signed max-min can no longer build a lookup table, so return.
-  if (RangeOverflow && TryMinTableSize) {
+  uint64_t LookupTableSize =
+      EndCaseVal->getValue()
+          .ssub_ov(BeginCaseVal->getValue(), RangeOverflow)
+          .getLimitedValue() +
+      1;
+  if (RangeOverflow && ConsiderCrossSignedMaxMinTable) {
     // We consider cases where the starting to the endpoint will cross the
     // signed max and min. For example, for the i8 range `[-128, -127, 126,
     // 127]`, we choose from 126 to -127. The length of the lookup table is 4.
@@ -6704,10 +6703,10 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
       const auto &NextVal = NextCaseVal->getValue();
       const auto &CurVal = CurCaseVal->getValue();
       uint64_t RequireTableSize = (CurVal - NextVal).getLimitedValue() + 1;
-      if (RequireTableSize < MinTableSize) {
+      if (RequireTableSize < LookupTableSize) {
         BeginCaseVal = NextCaseVal;
         EndCaseVal = CurCaseVal;
-        MinTableSize = RequireTableSize;
+        LookupTableSize = RequireTableSize;
       }
     }
   }
@@ -6758,7 +6757,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   if (UseSwitchConditionAsTableIndex)
     TableSize = EndCaseVal->getLimitedValue() + 1;
   else
-    TableSize = MinTableSize;
+    TableSize = LookupTableSize;
 
   // If the default destination is unreachable, or if the lookup table covers
   // all values of the conditional variable, branch directly to the lookup table
@@ -6789,8 +6788,8 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
 
   if (!ShouldBuildLookupTable(SI, TableSize, TTI, DL, ResultTypes))
     // When a signed max-min cannot construct a lookup table, try to find a
-    // range with a minimal lookup table.
-    return !TryMinTableSize &&
+    // range with a smaller lookup table.
+    return RangeOverflow && !ConsiderCrossSignedMaxMinTable &&
            SwitchToLookupTable(SI, Builder, DTU, DL, TTI, true);
 
   std::vector<DominatorTree::UpdateType> Updates;
