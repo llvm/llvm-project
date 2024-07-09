@@ -165,7 +165,7 @@ void Heatmap::print(raw_ostream &OS) const {
 
   // Print map legend
   OS << "Legend:\n";
-  OS << "\nRegions:\n";
+  OS << "\nRanges:\n";
   uint64_t PrevValue = 0;
   for (unsigned I = 0; I < sizeof(Range) / sizeof(Range[0]); ++I) {
     const uint64_t Value = Range[I];
