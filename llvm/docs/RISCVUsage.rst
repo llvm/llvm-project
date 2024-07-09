@@ -146,6 +146,7 @@ on support follow.
      ``Zcmt``          Assembly Support
      ``Zdinx``         Supported
      ``Zfa``           Supported
+     ``Zfbfmin``       Supported
      ``Zfh``           Supported
      ``Zfhmin``        Supported
      ``Zfinx``         Supported
@@ -185,6 +186,8 @@ on support follow.
      ``Zve64x``        Supported
      ``Zve64f``        Supported
      ``Zve64d``        Supported
+     ``Zvfbfmin``      Supported
+     ``Zvfbfwma``      Supported
      ``Zvfh``          Supported
      ``Zvkb``          Assembly Support
      ``Zvkg``          Assembly Support
@@ -270,9 +273,6 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 ``experimental-zalasr``
   LLVM implements the `0.0.5 draft specification <https://github.com/mehnadnerd/riscv-zalasr>`__.
-
-``experimental-zfbfmin``, ``experimental-zvfbfmin``, ``experimental-zvfbfwma``
-  LLVM implements assembler support for the `1.0.0-rc2 specification <https://github.com/riscv/riscv-bfloat16/releases/tag/v59042fc71c31a9bcb2f1957621c960ed36fac401>`__.
 
 ``experimental-zicfilp``, ``experimental-zicfiss``
   LLVM implements the `0.4 draft specification <https://github.com/riscv/riscv-cfi/releases/tag/v0.4.0>`__.

@@ -898,6 +898,7 @@ R"(All available -march extensions for RISC-V
     zama16b              1.0
     zawrs                1.0
     zfa                  1.0
+    zfbfmin              1.0
     zfh                  1.0
     zfhmin               1.0
     zfinx                1.0
@@ -934,6 +935,8 @@ R"(All available -march extensions for RISC-V
     zve64d               1.0
     zve64f               1.0
     zve64x               1.0
+    zvfbfmin             1.0
+    zvfbfwma             1.0
     zvfh                 1.0
     zvfhmin              1.0
     zvkb                 1.0
@@ -1025,10 +1028,7 @@ Experimental extensions
     zicfilp              0.4       This is a long dummy description
     zicfiss              0.4
     zalasr               0.1
-    zfbfmin              1.0
     ztso                 0.1
-    zvfbfmin             1.0
-    zvfbfwma             1.0
     smmpm                1.0
     smnpm                1.0
     ssnpm                1.0
