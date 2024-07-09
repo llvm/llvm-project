@@ -17062,15 +17062,16 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
         SDValue BasePtr = DAG.getNode(ISD::ADD, DL, PtrVT, MGN->getBasePtr(),
                                       DAG.getConstant(Addend, DL, PtrVT));
 
-        SDVTList VTs = DAG.getVTList({VT, MVT::Other});
-        SDValue IntID =
-          DAG.getTargetConstant(Intrinsic::riscv_masked_strided_load, DL,
-                                XLenVT);
-        SDValue Ops[] =
-          {MGN->getChain(), IntID, MGN->getPassThru(), BasePtr,
-           DAG.getConstant(StepNumerator, DL, XLenVT), MGN->getMask()};
-        return DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs,
-                                       Ops, VT, MGN->getMemOperand());
+        SDValue EVL = DAG.getElementCount(DL, Subtarget.getXLenVT(),
+                                          VT.getVectorElementCount());
+        SDValue StridedLoad =
+            DAG.getStridedLoadVP(VT, DL, MGN->getChain(), BasePtr,
+                                 DAG.getConstant(StepNumerator, DL, XLenVT),
+                                 MGN->getMask(), EVL, MGN->getMemOperand());
+        SDValue VPSelect = DAG.getNode(ISD::VP_SELECT, DL, VT, MGN->getMask(),
+                                       StridedLoad, MGN->getPassThru(), EVL);
+        return DAG.getMergeValues({VPSelect, SDValue(StridedLoad.getNode(), 1)},
+                                  DL);
       }
     }
 
