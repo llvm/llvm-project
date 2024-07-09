@@ -16207,17 +16207,9 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
   if (MustNegateStride)
     Stride = DAG.getNegative(Stride, DL, Stride.getValueType());
 
-  SDVTList VTs = DAG.getVTList({WideVecVT, MVT::Other});
-  SDValue IntID =
-    DAG.getTargetConstant(Intrinsic::riscv_masked_strided_load, DL,
-                          Subtarget.getXLenVT());
-
   SDValue AllOneMask =
     DAG.getSplat(WideVecVT.changeVectorElementType(MVT::i1), DL,
                  DAG.getConstant(1, DL, MVT::i1));
-
-  SDValue Ops[] = {BaseLd->getChain(),   IntID,  DAG.getUNDEF(WideVecVT),
-                   BaseLd->getBasePtr(), Stride, AllOneMask};
 
   uint64_t MemSize;
   if (auto *ConstStride = dyn_cast<ConstantSDNode>(Stride);
@@ -16234,8 +16226,11 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
       BaseLd->getPointerInfo(), BaseLd->getMemOperand()->getFlags(), MemSize,
       Align);
 
-  SDValue StridedLoad = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, VTs,
-                                                Ops, WideVecVT, MMO);
+  SDValue StridedLoad = DAG.getStridedLoadVP(
+      WideVecVT, DL, BaseLd->getChain(), BaseLd->getBasePtr(), Stride,
+      AllOneMask,
+      DAG.getConstant(N->getNumOperands(), DL, Subtarget.getXLenVT()), MMO);
+
   for (SDValue Ld : N->ops())
     DAG.makeEquivalentMemoryOrdering(cast<LoadSDNode>(Ld), StridedLoad);
 

@@ -9,9 +9,9 @@
 define void @widen_2xv4i16(ptr %x, ptr %z) {
 ; CHECK-LABEL: widen_2xv4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vse16.v v8, (a1)
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vle64.v v8, (a0)
+; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %x
   %b.gep = getelementptr i8, ptr %x, i64 8
@@ -52,9 +52,9 @@ define void @widen_3xv4i16(ptr %x, ptr %z) {
 define void @widen_4xv4i16(ptr %x, ptr %z) {
 ; CHECK-LABEL: widen_4xv4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vse16.v v8, (a1)
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vle64.v v8, (a0)
+; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %x
   %b.gep = getelementptr i8, ptr %x, i64 8
@@ -90,9 +90,9 @@ define void @widen_4xv4i16_unaligned(ptr %x, ptr %z) {
 ;
 ; RV64-MISALIGN-LABEL: widen_4xv4i16_unaligned:
 ; RV64-MISALIGN:       # %bb.0:
-; RV64-MISALIGN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; RV64-MISALIGN-NEXT:    vle16.v v8, (a0)
-; RV64-MISALIGN-NEXT:    vse16.v v8, (a1)
+; RV64-MISALIGN-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-MISALIGN-NEXT:    vle64.v v8, (a0)
+; RV64-MISALIGN-NEXT:    vse64.v v8, (a1)
 ; RV64-MISALIGN-NEXT:    ret
   %a = load <4 x i16>, ptr %x, align 1
   %b.gep = getelementptr i8, ptr %x, i64 8
