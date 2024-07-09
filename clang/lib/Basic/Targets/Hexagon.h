@@ -146,7 +146,7 @@ public:
     std::optional<unsigned> Rev = getHexagonCPURev(CPU);
 
     // V73 and later have 64-byte cache lines.
-    unsigned CacheLineSizeBytes = Rev >= 73 ? 64 : 32;
+    unsigned CacheLineSizeBytes = Rev >= 73U ? 64 : 32;
     return std::make_pair(CacheLineSizeBytes, CacheLineSizeBytes);
   }
 };
