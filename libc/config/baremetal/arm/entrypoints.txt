@@ -83,6 +83,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.strtoumax
 
     # stdio.h entrypoints
+    libc.src.stdio.getchar
     libc.src.stdio.printf
     libc.src.stdio.putchar
     libc.src.stdio.puts
