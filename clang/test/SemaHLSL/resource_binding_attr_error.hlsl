@@ -58,3 +58,6 @@ struct S {
   // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
   RWBuffer<float> U : register(u3);
 };
+
+// expected-error@+1 {{invalid register type 'z' used; expected 't', 'u', 'b', or 's'}}
+RWBuffer<float> U3 : register(z5);
