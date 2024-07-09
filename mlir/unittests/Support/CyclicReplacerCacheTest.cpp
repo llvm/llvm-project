@@ -195,17 +195,19 @@ public:
   /// A Graph where edges that used to cause cycles (back-edges) are now
   /// represented with an indirection (a recursionId).
   ///
-  /// In addition to each node being an integer, each node also tracks the
-  /// original integer id it had in the original graph. This way for every
+  /// In addition to each node having an integer ID, each node also tracks the
+  /// original integer ID it had in the original graph. This way for every
   /// back-edge, we can represent it as pointing to a new instance of the
   /// original node. Then we mark the original node and the new instance with
   /// a new unique recursionId to indicate that they're supposed to be the same
-  /// graph.
+  /// node.
   struct PrunedGraph {
     using Node = Graph::Node;
     struct NodeInfo {
       Graph::Node originalId;
-      // A negative recursive index means not recursive.
+      /// A negative recursive index means not recursive. Otherwise nodes with
+      /// the same originalId & recursionId are the same node in the original
+      /// graph.
       int64_t recursionId;
     };
 
@@ -243,7 +245,7 @@ public:
     Graph connections;
     int64_t nextRecursionId = 0;
     int64_t nextConnectionId = 0;
-    // Use ordered map for deterministic output.
+    /// Use ordered map for deterministic output.
     std::map<Graph::Node, NodeInfo> info;
   };
 
