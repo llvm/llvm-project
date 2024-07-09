@@ -613,8 +613,8 @@ bool ConstStructBuilder::AppendBitField(
     const FieldDecl *Field, uint64_t FieldOffset, llvm::Constant *C,
     bool AllowOverwrite) {
 
-  llvm::ConstantInt *CI = nullptr;
-  if (!isa<llvm::ConstantInt>(C)) {
+  llvm::ConstantInt *CI = dyn_cast<llvm::ConstantInt>(C);
+  if (!CI) {
     // Constants for long _BitInt types are split into individual bytes.
     // Try to fold these back into an integer constant. If that doesn't work
     // out, then we are trying to initialize a bitfield with a non-trivial
@@ -626,8 +626,6 @@ bool ConstStructBuilder::AppendBitField(
     CI = dyn_cast_if_present<llvm::ConstantInt>(FoldedConstant);
     if (!CI)
       return false;
-  } else {
-    CI = cast<llvm::ConstantInt>(C);
   }
 
   const CGRecordLayout &RL =

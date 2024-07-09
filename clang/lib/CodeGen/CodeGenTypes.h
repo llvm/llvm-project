@@ -128,9 +128,12 @@ public:
   /// memory representation is usually i8 or i32, depending on the target.
   llvm::Type *ConvertTypeForMem(QualType T, bool ForBitField = false);
 
-  /// Check that size and ABI alignment of given LLVM type matches size and
-  /// alignment of given AST type. If they don't, values of the type need to be
-  /// emitted as byte array.
+  /// Check whether the given type needs to be laid out in memory
+  /// using an opaque byte-array type because its load/store type
+  /// does not have the correct alloc size in the LLVM data layout.
+  /// If this is false, the load/store type (convertTypeForLoadStore)
+  /// and memory representation type (ConvertTypeForMem) will
+  /// be the same type.
   bool typeRequiresSplitIntoByteArray(QualType ASTTy,
                                       llvm::Type *LLVMTy = nullptr);
 

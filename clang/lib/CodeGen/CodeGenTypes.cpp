@@ -140,19 +140,17 @@ llvm::Type *CodeGenTypes::convertTypeForLoadStore(QualType T,
   if (!LLVMTy)
     LLVMTy = ConvertType(T);
 
-  if (!T->isBitIntType() && LLVMTy->isIntegerTy(1))
-    return llvm::IntegerType::get(getLLVMContext(),
-                                  (unsigned)Context.getTypeSize(T));
-
   if (T->isBitIntType()) {
     if (typeRequiresSplitIntoByteArray(T))
       return llvm::Type::getIntNTy(
           getLLVMContext(), Context.getTypeSizeInChars(T).getQuantity() * 8);
+  } else if (LLVMTy->isIntegerTy(1)) {
+    return llvm::IntegerType::get(getLLVMContext(),
+                                  (unsigned)Context.getTypeSize(T));
   }
 
-  if (T->isExtVectorBoolType()) {
+  if (T->isExtVectorBoolType())
     return ConvertTypeForMem(T);
-  }
 
   return LLVMTy;
 }
