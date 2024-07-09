@@ -150,7 +150,7 @@ public:
     AU.addUsedIfAvailable<LiveIntervals>();
     // Should preserve the same set that TwoAddressInstructions does.
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<SlotIndexes>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervals>();
     AU.addPreservedID(LiveVariablesID);
     MachineFunctionPass::getAnalysisUsage(AU);

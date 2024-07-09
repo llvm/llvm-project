@@ -155,7 +155,7 @@ char &llvm::RAGreedyID = RAGreedy::ID;
 INITIALIZE_PASS_BEGIN(RAGreedy, "greedy",
                 "Greedy Register Allocator", false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveDebugVariables)
-INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
 INITIALIZE_PASS_DEPENDENCY(RegisterCoalescer)
 INITIALIZE_PASS_DEPENDENCY(MachineScheduler)
@@ -207,8 +207,8 @@ void RAGreedy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<MachineBlockFrequencyInfo>();
   AU.addRequired<LiveIntervals>();
   AU.addPreserved<LiveIntervals>();
-  AU.addRequired<SlotIndexes>();
-  AU.addPreserved<SlotIndexes>();
+  AU.addRequired<SlotIndexesWrapperPass>();
+  AU.addPreserved<SlotIndexesWrapperPass>();
   AU.addRequired<LiveDebugVariables>();
   AU.addPreserved<LiveDebugVariables>();
   AU.addRequired<LiveStacks>();
@@ -2724,7 +2724,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   if (!hasVirtRegAlloc())
     return false;
 
-  Indexes = &getAnalysis<SlotIndexes>();
+  Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
   // Renumber to get accurate and consistent results from
   // SlotIndexes::getApproxInstrDistance.
   Indexes->packIndexes();

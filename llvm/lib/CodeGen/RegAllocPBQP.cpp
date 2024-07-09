@@ -120,7 +120,7 @@ public:
   /// Construct a PBQP register allocator.
   RegAllocPBQP(char *cPassID = nullptr)
       : MachineFunctionPass(ID), customPassID(cPassID) {
-    initializeSlotIndexesPass(*PassRegistry::getPassRegistry());
+    initializeSlotIndexesWrapperPassPass(*PassRegistry::getPassRegistry());
     initializeLiveIntervalsPass(*PassRegistry::getPassRegistry());
     initializeLiveStacksPass(*PassRegistry::getPassRegistry());
     initializeVirtRegMapPass(*PassRegistry::getPassRegistry());
@@ -544,8 +544,8 @@ void RegAllocPBQP::getAnalysisUsage(AnalysisUsage &au) const {
   au.setPreservesCFG();
   au.addRequired<AAResultsWrapperPass>();
   au.addPreserved<AAResultsWrapperPass>();
-  au.addRequired<SlotIndexes>();
-  au.addPreserved<SlotIndexes>();
+  au.addRequired<SlotIndexesWrapperPass>();
+  au.addPreserved<SlotIndexesWrapperPass>();
   au.addRequired<LiveIntervals>();
   au.addPreserved<LiveIntervals>();
   //au.addRequiredID(SplitCriticalEdgesID);

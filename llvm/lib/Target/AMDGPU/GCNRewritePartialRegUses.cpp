@@ -58,7 +58,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addPreserved<LiveIntervals>();
-    AU.addPreserved<SlotIndexes>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 

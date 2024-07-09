@@ -312,7 +312,8 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
   TRI = &TII->getRegisterInfo();
 
   LIS = getAnalysisIfAvailable<LiveIntervals>();
-  Indexes = getAnalysisIfAvailable<SlotIndexes>();
+  auto *SIWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>();
+  Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
 
   assert(SaveBlocks.empty() && RestoreBlocks.empty());
 

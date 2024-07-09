@@ -197,7 +197,7 @@ public:
     AU.addUsedIfAvailable<AAResultsWrapperPass>();
     AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
     AU.addPreserved<LiveVariablesWrapperPass>();
-    AU.addPreserved<SlotIndexes>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervals>();
     AU.addPreservedID(MachineLoopInfoID);
     AU.addPreservedID(MachineDominatorsID);

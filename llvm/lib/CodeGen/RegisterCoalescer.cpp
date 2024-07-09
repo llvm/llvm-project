@@ -407,7 +407,7 @@ char &llvm::RegisterCoalescerID = RegisterCoalescer::ID;
 INITIALIZE_PASS_BEGIN(RegisterCoalescer, "register-coalescer",
                       "Register Coalescer", false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
-INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(RegisterCoalescer, "register-coalescer",
@@ -590,7 +590,7 @@ void RegisterCoalescer::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<LiveIntervals>();
   AU.addPreserved<LiveIntervals>();
-  AU.addPreserved<SlotIndexes>();
+  AU.addPreserved<SlotIndexesWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
   AU.addPreserved<MachineLoopInfoWrapperPass>();
   AU.addPreservedID(MachineDominatorsID);

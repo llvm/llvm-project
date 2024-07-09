@@ -102,8 +102,8 @@ MACHINE_FUNCTION_ANALYSIS("machine-loops", MachineLoopAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-post-dom-tree",
                           MachinePostDominatorTreeAnalysis())
 MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
+MACHINE_FUNCTION_ANALYSIS("slot-indexes", SlotIndexesAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("live-stacks", LiveStacksPass())
-// MACHINE_FUNCTION_ANALYSIS("slot-indexes", SlotIndexesAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("edge-bundles", EdgeBundlesAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("lazy-machine-bfi",
 // LazyMachineBlockFrequencyInfoAnalysis())
@@ -140,6 +140,7 @@ MACHINE_FUNCTION_PASS("print<machine-dom-tree>",
 MACHINE_FUNCTION_PASS("print<machine-loops>", MachineLoopPrinterPass(dbgs()))
 MACHINE_FUNCTION_PASS("print<machine-post-dom-tree>",
                       MachinePostDominatorTreePrinterPass(dbgs()))
+MACHINE_FUNCTION_PASS("print<slot-indexes>", SlotIndexesPrinterPass(dbgs()))
 MACHINE_FUNCTION_PASS("require-all-machine-function-properties",
                       RequireAllMachineFunctionPropertiesPass())
 MACHINE_FUNCTION_PASS("trigger-verifier-error", TriggerVerifierErrorPass())
