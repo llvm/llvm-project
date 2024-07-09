@@ -4,8 +4,14 @@
 define i8 @pr98139(i16 %a, i16 %b, i1 %cond) {
 ; CHECK-LABEL: define i8 @pr98139(
 ; CHECK-SAME: i16 [[A:%.*]], i16 [[B:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i16 [[A]] to i8
-; CHECK-NEXT:    [[TRUNC:%.*]] = xor i8 [[TMP1]], -1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i16 1, i16 254
+; CHECK-NEXT:    [[COND1:%.*]] = icmp ne i16 [[B]], 0
+; CHECK-NEXT:    [[MASK:%.*]] = and i16 [[A]], 255
+; CHECK-NEXT:    [[COND2:%.*]] = icmp ne i16 [[MASK]], 255
+; CHECK-NEXT:    [[COND3:%.*]] = or i1 [[COND1]], [[COND2]]
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[COND3]], i16 [[SEL]], i16 255
+; CHECK-NEXT:    [[SUB:%.*]] = sub i16 [[SEL2]], [[A]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i16 [[SUB]] to i8
 ; CHECK-NEXT:    ret i8 [[TRUNC]]
 ;
   %sel = select i1 %cond, i16 1, i16 254
