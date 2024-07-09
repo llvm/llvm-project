@@ -182,12 +182,14 @@ template <typename ConstraintEvaluator>
 static ExprResult
 calculateConstraintSatisfaction(Sema &S, const Expr *ConstraintExpr,
                                 ConstraintSatisfaction &Satisfaction,
-                                ConstraintEvaluator &&Evaluator);
+                                const ConstraintEvaluator &Evaluator);
 
 template <typename ConstraintEvaluator>
-static ExprResult calculateConstraintSatisfaction(
-    Sema &S, const Expr *LHS, OverloadedOperatorKind Op, const Expr *RHS,
-    ConstraintSatisfaction &Satisfaction, ConstraintEvaluator &Evaluator) {
+static ExprResult
+calculateConstraintSatisfaction(Sema &S, const Expr *LHS,
+                                OverloadedOperatorKind Op, const Expr *RHS,
+                                ConstraintSatisfaction &Satisfaction,
+                                const ConstraintEvaluator &Evaluator) {
   size_t EffectiveDetailEndIndex = Satisfaction.Details.size();
 
   ExprResult LHSRes =
@@ -218,8 +220,8 @@ static ExprResult calculateConstraintSatisfaction(
     // LHS is instantiated while RHS is not. Skip creating invalid BinaryOp.
     return LHSRes;
 
-  ExprResult RHSRes = calculateConstraintSatisfaction(
-      S, RHS, Satisfaction, std::forward<ConstraintEvaluator>(Evaluator));
+  ExprResult RHSRes =
+      calculateConstraintSatisfaction(S, RHS, Satisfaction, Evaluator);
   if (RHSRes.isInvalid())
     return ExprError();
 
@@ -251,7 +253,7 @@ template <typename ConstraintEvaluator>
 static ExprResult
 calculateConstraintSatisfaction(Sema &S, const CXXFoldExpr *FE,
                                 ConstraintSatisfaction &Satisfaction,
-                                ConstraintEvaluator &&Evaluator) {
+                                const ConstraintEvaluator &Evaluator) {
   bool Conjunction = FE->getOperator() == BinaryOperatorKind::BO_LAnd;
   size_t EffectiveDetailEndIndex = Satisfaction.Details.size();
 
@@ -261,13 +263,13 @@ calculateConstraintSatisfaction(Sema &S, const CXXFoldExpr *FE,
                                           Evaluator);
     if (Out.isInvalid())
       return ExprError();
-    bool IsLHSSatisfied = Satisfaction.IsSatisfied;
-    if (Conjunction && !IsLHSSatisfied) {
+
+    // If the first clause of a conjunction is not satisfied,
+    // or if the first clause of a disjection is satisfied,
+    // we have established satisfaction of the whole constraint
+    // and we should not continue further.
+    if (Conjunction != Satisfaction.IsSatisfied)
       return Out;
-    }
-    if (!Conjunction && IsLHSSatisfied) {
-      return Out;
-    }
   }
   std::optional<unsigned> NumExpansions =
       Evaluator.EvaluateFoldExpandedConstraintSize(FE);
@@ -293,9 +295,7 @@ calculateConstraintSatisfaction(Sema &S, const CXXFoldExpr *FE,
           S.Context, Out.get(), Res.get(), FE->getOperator(), S.Context.BoolTy,
           VK_PRValue, OK_Ordinary, FE->getBeginLoc(), FPOptionsOverride{});
     }
-    if (Conjunction && !IsRHSSatisfied)
-      return Out;
-    if (!Conjunction && IsRHSSatisfied)
+    if (Conjunction != IsRHSSatisfied)
       return Out;
   }
 
@@ -325,21 +325,18 @@ template <typename ConstraintEvaluator>
 static ExprResult
 calculateConstraintSatisfaction(Sema &S, const Expr *ConstraintExpr,
                                 ConstraintSatisfaction &Satisfaction,
-                                ConstraintEvaluator &&Evaluator) {
+                                const ConstraintEvaluator &Evaluator) {
   ConstraintExpr = ConstraintExpr->IgnoreParenImpCasts();
 
-  if (LogicalBinOp BO = ConstraintExpr) {
-
+  if (LogicalBinOp BO = ConstraintExpr)
     return calculateConstraintSatisfaction(
         S, BO.getLHS(), BO.getOp(), BO.getRHS(), Satisfaction, Evaluator);
-  }
 
   if (auto *C = dyn_cast<ExprWithCleanups>(ConstraintExpr)) {
     // These aren't evaluated, so we don't care about cleanups, so we can just
     // evaluate these as if the cleanups didn't exist.
-    return calculateConstraintSatisfaction(
-        S, C->getSubExpr(), Satisfaction,
-        std::forward<ConstraintEvaluator>(Evaluator));
+    return calculateConstraintSatisfaction(S, C->getSubExpr(), Satisfaction,
+                                           Evaluator);
   }
 
   if (auto *FE = dyn_cast<CXXFoldExpr>(ConstraintExpr);
@@ -446,7 +443,7 @@ static ExprResult calculateConstraintSatisfaction(
     const MultiLevelTemplateArgumentList &MLTAL;
     ConstraintSatisfaction &Satisfaction;
 
-    ExprResult EvaluateAtomicConstraint(const Expr *AtomicExpr) {
+    ExprResult EvaluateAtomicConstraint(const Expr *AtomicExpr) const {
       EnterExpressionEvaluationContext ConstantEvaluated(
           S, Sema::ExpressionEvaluationContext::ConstantEvaluated,
           Sema::ReuseLambdaContextDecl);
@@ -533,7 +530,7 @@ static ExprResult calculateConstraintSatisfaction(
     }
 
     std::optional<unsigned>
-    EvaluateFoldExpandedConstraintSize(const CXXFoldExpr *FE) {
+    EvaluateFoldExpandedConstraintSize(const CXXFoldExpr *FE) const {
       Expr *Pattern = FE->getPattern();
 
       SmallVector<UnexpandedParameterPack, 2> Unexpanded;
@@ -682,12 +679,12 @@ bool Sema::CheckConstraintSatisfaction(const Expr *ConstraintExpr,
 
   struct ConstraintEvaluator {
     Sema &S;
-    ExprResult EvaluateAtomicConstraint(const Expr *AtomicExpr) {
+    ExprResult EvaluateAtomicConstraint(const Expr *AtomicExpr) const {
       return S.PerformContextuallyConvertToBool(const_cast<Expr *>(AtomicExpr));
     }
 
     std::optional<unsigned>
-    EvaluateFoldExpandedConstraintSize(const CXXFoldExpr *FE) {
+    EvaluateFoldExpandedConstraintSize(const CXXFoldExpr *FE) const {
       return 0;
     }
   };
@@ -1581,8 +1578,8 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E) {
 
     FoldExpandedConstraint::FoldOperatorKind Kind =
         FE->getOperator() == BinaryOperatorKind::BO_LAnd
-            ? FoldExpandedConstraint::FoldOperatorKind::FoAnd
-            : FoldExpandedConstraint::FoldOperatorKind::FoOr;
+            ? FoldExpandedConstraint::FoldOperatorKind::And
+            : FoldExpandedConstraint::FoldOperatorKind::Or;
 
     if (FE->getInit()) {
       auto LHS = fromConstraintExpr(S, D, FE->getLHS());
@@ -1610,23 +1607,7 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E) {
   return NormalizedConstraint{new (S.Context) AtomicConstraint(S, E)};
 }
 
-/*static void CollectConstraintParams(const AtomicConstraint& C,
-SmallVectorImpl<UnexpandedParameterPack> & Packs) {
-  Sema::collectUnexpandedParameterPacks(const_cast<Expr*>(C.ConstraintExpr),
-Packs);
-}
-
-static void CollectConstraintParams(const NormalizedConstraint& C,
-SmallVectorImpl<UnexpandedParameterPack> & Packs) { if(C.isAtomic())
-    CollectConstraintParams(*C.getAtomicConstraint(), Packs);
-  else {
-    CollectConstraintParams(C.getLHS(), Packs);
-    CollectConstraintParams(C.getRHS(), Packs);
-  }
-}
-*/
-
-bool FoldExpandedConstraint::AreSubsumptionElligible(
+bool FoldExpandedConstraint::AreSubsumptionEligible(
     const FoldExpandedConstraint &A, const FoldExpandedConstraint &B) {
   llvm::SmallVector<UnexpandedParameterPack> APacks, BPacks;
   Sema::collectUnexpandedParameterPacks(const_cast<Expr *>(A.Pattern), APacks);
