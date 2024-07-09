@@ -194,6 +194,7 @@ Changes to the RISC-V Backend
   mapping using load-acquire and store-release instructions while remaining
   fully compatible with objects produced prior to this change. The mapping
   (ABI) used is recorded as an ELF attribute.
+* Ztso is no longer experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
