@@ -2239,17 +2239,8 @@ Error Object::removeSections(
   // Transfer removed sections into the Object RemovedSections container for use
   // later.
   std::move(Iter, Sections.end(), std::back_inserter(RemovedSections));
-  // Now get rid of them altogether.
+  // Now finally get rid of them all together.
   Sections.erase(Iter, std::end(Sections));
-
-  // Finally erase empty SHT_GROUP sections.
-  llvm::erase_if(Sections, [](const SecPtr &Sec) {
-    if (auto GroupSec = dyn_cast<GroupSection>(Sec.get()))
-      return GroupSec->getMembersCount() == 0;
-
-    return false;
-  });
-
   return Error::success();
 }
 
