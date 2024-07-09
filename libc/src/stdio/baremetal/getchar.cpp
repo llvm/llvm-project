@@ -9,6 +9,8 @@
 #include "src/stdio/getchar.h"
 #include "src/__support/OSUtil/io.h"
 
+#include <stdio.h>
+
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, getchar, ()) {

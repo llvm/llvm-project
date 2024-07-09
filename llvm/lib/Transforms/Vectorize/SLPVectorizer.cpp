@@ -4099,7 +4099,10 @@ BoUpSLP::~BoUpSLP() {
   SmallVector<WeakTrackingVH> DeadInsts;
   for (auto *I : DeletedInstructions) {
     if (!I->getParent()) {
+      // Temporarily insert instruction back to erase them from parent and
+      // memory later.
       if (isa<PHINode>(I))
+        // Phi nodes must be the very first instructions in the block.
         I->insertBefore(F->getEntryBlock(),
                         F->getEntryBlock().getFirstNonPHIIt());
       else
@@ -16893,9 +16896,8 @@ public:
                              SmallVectorImpl<Value *> &ExtraArgs,
                              SmallVectorImpl<Value *> &PossibleReducedVals,
                              SmallVectorImpl<Instruction *> &ReductionOps) {
-      for (int I = getFirstOperandIndex(TreeN),
-               End = getNumberOfOperands(TreeN);
-           I < End; ++I) {
+      for (int I : reverse(seq<int>(getFirstOperandIndex(TreeN),
+                                    getNumberOfOperands(TreeN)))) {
         Value *EdgeVal = getRdxOperand(TreeN, I);
         ReducedValsToOps[EdgeVal].push_back(TreeN);
         auto *EdgeInst = dyn_cast<Instruction>(EdgeVal);
@@ -16931,7 +16933,6 @@ public:
     initReductionOps(Root);
     DenseMap<Value *, SmallVector<LoadInst *>> LoadsMap;
     SmallSet<size_t, 2> LoadKeyUsed;
-    SmallPtrSet<Value *, 4> DoNotReverseVals;
 
     auto GenerateLoadsSubkey = [&](size_t Key, LoadInst *LI) {
       Value *Ptr = getUnderlyingObject(LI->getPointerOperand());
@@ -16948,14 +16949,12 @@ public:
             if (arePointersCompatible(RLI->getPointerOperand(),
                                       LI->getPointerOperand(), TLI)) {
               hash_code SubKey = hash_value(RLI->getPointerOperand());
-              DoNotReverseVals.insert(RLI);
               return SubKey;
             }
           }
           if (LIt->second.size() > 2) {
             hash_code SubKey =
                 hash_value(LIt->second.back()->getPointerOperand());
-            DoNotReverseVals.insert(LIt->second.back());
             return SubKey;
           }
         }
@@ -17020,24 +17019,19 @@ public:
       });
       int NewIdx = -1;
       for (ArrayRef<Value *> Data : PossibleRedValsVect) {
-        if (isGoodForReduction(Data) ||
-            (isa<LoadInst>(Data.front()) && NewIdx >= 0 &&
-             isa<LoadInst>(ReducedVals[NewIdx].front()) &&
-             getUnderlyingObject(
-                 cast<LoadInst>(Data.front())->getPointerOperand()) ==
-                 getUnderlyingObject(cast<LoadInst>(ReducedVals[NewIdx].front())
-                                         ->getPointerOperand()))) {
-          if (NewIdx < 0) {
-            NewIdx = ReducedVals.size();
-            ReducedVals.emplace_back();
-          }
-          if (DoNotReverseVals.contains(Data.front()))
-            ReducedVals[NewIdx].append(Data.begin(), Data.end());
-          else
-            ReducedVals[NewIdx].append(Data.rbegin(), Data.rend());
-        } else {
-          ReducedVals.emplace_back().append(Data.rbegin(), Data.rend());
+        if (NewIdx < 0 ||
+            (!isGoodForReduction(Data) &&
+             (!isa<LoadInst>(Data.front()) ||
+              !isa<LoadInst>(ReducedVals[NewIdx].front()) ||
+              getUnderlyingObject(
+                  cast<LoadInst>(Data.front())->getPointerOperand()) !=
+                  getUnderlyingObject(
+                      cast<LoadInst>(ReducedVals[NewIdx].front())
+                          ->getPointerOperand())))) {
+          NewIdx = ReducedVals.size();
+          ReducedVals.emplace_back();
         }
+        ReducedVals[NewIdx].append(Data.rbegin(), Data.rend());
       }
     }
     // Sort the reduced values by number of same/alternate opcode and/or pointer
