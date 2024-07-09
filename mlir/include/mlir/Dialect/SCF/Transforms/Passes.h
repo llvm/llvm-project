@@ -69,6 +69,10 @@ std::unique_ptr<Pass> createCounterPass();
 std::unique_ptr<Pass> createLoopUnroll(
     int unrollFactor = 4, bool unrollFull = false );
 
+// Create pass for loop unroll jam
+std::unique_ptr<Pass> createLoopUnrollJam(
+    int unrollJamFactor=-1);
+
 /// Creates a pass that converts SCF forall loops to SCF parallel loops.
 std::unique_ptr<Pass> createForallToParallelLoopPass();
 

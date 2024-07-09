@@ -141,6 +141,16 @@ def SCFLoopUnroll : Pass<"scf-loop-unroll">{
   ];
 }
 
+def SCFLoopUnrollJam : Pass<"scf-loop-unroll-jam">
+{
+  let summary= "Unroll and Jam SCF ForOps";
+  let constructor = "mlir::createLoopUnrollJam()";
+  let options = [
+    Option<"unrollJamFactor", "unroll-jam-factor", "unsigned","4",
+    "Use this unroll jam factor for all loops (default 4)">,
+  ];
+}
+
 def SCFForallToParallelLoop : Pass<"scf-forall-to-parallel"> {
   let summary = "Convert SCF forall loops to SCF parallel loops";
   let constructor = "mlir::createForallToParallelLoopPass()";
