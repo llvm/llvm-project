@@ -8,7 +8,8 @@
 
 // <string>
 
-// Call erase(const_iterator position) with end()
+// Make sure we assert when erase(position) is called with an iterator that isn't a
+// valid iterator into the current string.
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03
@@ -20,11 +21,22 @@
 #include "check_assertion.h"
 #include "min_allocator.h"
 
-template <class S>
+template <class String>
 void test() {
-  S l1("123");
-  typename S::const_iterator i = l1.end();
-  TEST_LIBCPP_ASSERT_FAILURE(l1.erase(i), "string::erase(iterator) called with a non-dereferenceable iterator");
+  {
+    String s("123");
+    TEST_LIBCPP_ASSERT_FAILURE(
+        s.erase(s.end()),
+        "string::erase(iterator) called with an iterator that isn't a valid iterator into this string");
+  }
+
+  {
+    String s1("123");
+    String s2("456");
+    TEST_LIBCPP_ASSERT_FAILURE(
+        s1.erase(s2.begin()),
+        "string::erase(iterator) called with an iterator that isn't a valid iterator into this string");
+  }
 }
 
 int main(int, char**) {
