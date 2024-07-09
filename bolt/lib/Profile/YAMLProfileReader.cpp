@@ -9,6 +9,7 @@
 #include "bolt/Profile/YAMLProfileReader.h"
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
+#include "bolt/Core/HashUtilities.h"
 #include "bolt/Passes/MCF.h"
 #include "bolt/Profile/ProfileYAMLMapping.h"
 #include "bolt/Utils/NameResolver.h"
@@ -41,6 +42,10 @@ llvm::cl::opt<bool>
     MatchProfileWithFunctionHash("match-profile-with-function-hash",
                                  cl::desc("Match profile with function hash"),
                                  cl::Hidden, cl::cat(BoltOptCategory));
+llvm::cl::opt<bool>
+    MatchWithCallGraph("match-with-call-graph",
+                       cl::desc("Match functions with call graph"), cl::Hidden,
+                       cl::cat(BoltOptCategory));
 
 llvm::cl::opt<bool> ProfileUseDFS("profile-use-dfs",
                                   cl::desc("use DFS order for YAML profile"),
@@ -446,6 +451,180 @@ size_t YAMLProfileReader::matchWithLTOCommonName() {
   return MatchedWithLTOCommonName;
 }
 
+size_t YAMLProfileReader::matchWithCallGraph(BinaryContext &BC) {
+  if (!opts::MatchWithCallGraph)
+    return 0;
+
+  struct FunctionHashes {
+    uint64_t Hash{0};
+    uint64_t AdjacentFunctionHash{0};
+    std::set<uint64_t> AdjacentFunctionHashesSet;
+  };
+  size_t MatchedWithCallGraph = 0;
+  std::vector<BinaryFunction *> BFs = BC.getAllBinaryFunctions();
+  std::unordered_map<const BinaryFunction *, FunctionHashes> BFToHashes(
+      BFs.size());
+
+  // Computes the loose hash, as in the opcode hash, of a binary function.
+  auto ComputeBFLooseHash = [&](const BinaryFunction *BF) {
+    std::string FunctionHashStr = std::accumulate(
+        BF->begin(), BF->end(), std::string(""),
+        [&](std::string Accum, const BinaryBasicBlock &BB) {
+          std::string BlockHashStr = hashBlockLoose(BC, BB);
+          uint16_t OpcodeHash;
+          if (YamlBP.Header.HashFunction == HashFunction::StdHash)
+            OpcodeHash =
+                (uint16_t)hash_value(std::hash<std::string>{}(BlockHashStr));
+          else if (YamlBP.Header.HashFunction == HashFunction::XXH3)
+            OpcodeHash = (uint16_t)llvm::xxh3_64bits(BlockHashStr);
+          else
+            llvm_unreachable("Unsupported hash function");
+          return std::move(Accum) + std::to_string(OpcodeHash);
+        });
+
+    return std::hash<std::string>{}(FunctionHashStr);
+  };
+
+  // Computes the loose hash of a function profile.
+  auto ComputeYamlBFLooseHash =
+      [&](const yaml::bolt::BinaryFunctionProfile &YamlBF) {
+        std::string HashStr = std::to_string(
+            YamlBF.Blocks.begin(), YamlBF.Blocks.end(), std::string(""),
+            [&](std::string Accum,
+                const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
+              BlendedBlockHash YamlHash(YamlBB.Hash);
+              return std::move(Accum) + std::to_string(YamlHash.OpcodeHash);
+            });
+
+        return std::hash<std::string>{}(HashStr);
+      };
+
+  // Maps binary functions to adjacent functions in the FCG.
+  for (const BinaryFunction *CallerBF : BFs) {
+    // Add all call targets to the hash map.
+    for (const BinaryBasicBlock &BB : CallerBF->blocks()) {
+      for (const MCInst &Inst : BB) {
+        if (!BC.MIB->isCall(Instr))
+          continue;
+        const MCSymbol *CallSymbol = BC.MIB->getTargetSymbol(Instr);
+        if (!CallSymbol)
+          continue;
+        BinaryData *BD =
+            BC.getBinaryDataByName(CallSymbol->getName()) if (!BD) continue;
+        BinaryFunction *CalleeBF = BC.getFunctionForSymbol(BD->getSymbol());
+        if (!CalleeBF)
+          continue;
+
+        auto CalleeBFIt = BFToHashes.find(CalleeBF);
+        if (CalleeBFIt == BFToHashes.end()) {
+          CalleeBFIt->second = FunctionHashes();
+          CalleeBFIt->second.Hash = ComputeBFLooseHash(CalleeBF);
+        }
+        auto CallerBFIt = BFToHashes.find(CallerBF);
+        if (CallerBFIt == BFToHashes.end()) {
+          CallerBFIt->second = FunctionHashes();
+          CallerBFIt->second.Hash = ComputeBFLooseHash(CallerBF);
+        }
+        CalleeBFIt->second.AdjacentFunctionHashesSet.insert(
+            CallerBFIt->second.Hash);
+        CallerBFIt->second.AdjacentFunctionHashesSet.insert(
+            CalleeBFIt->second.Hash);
+      }
+    }
+  }
+
+  // Create mapping from neighbor hash to BFs.
+  std::unordered_map<uint64_t, std::vector<const BinaryFunction *>>
+      NeighborHashToBFs;
+  for (const BinaryFunction *BF : BFs) {
+    auto It = BFToHashes.find(BF);
+    assert(It != BFToHashes.end() && "All BFs should be processed");
+    FunctionHashes &FunctionHashes = It->second;
+
+    std::string AdjacentFunctionHashStr =
+        std::accumulate(FunctionHashes.AdjacentFunctionHashesSet.begin(),
+                        FunctionHashes.AdjacentFunctionHashesSet.end(),
+                        std::string(""), [&](std::string Accum, uint64_t Hash) {
+                          return Accum + std::to_string(Hash);
+                        });
+    NeighborHashToBFs[FunctionHashes.AdjacentFunctionHash =
+                          std::hash<std::string>{}(AdjacentFunctionHashStr)]
+        .push_back(BF);
+  }
+
+  // TODO: change call anchor PR to have this representation - we need it here
+  DenseMap<uint32_t, const yaml::bolt::BinaryFunctionProfile * YamlBF>
+      IdToYAMLBF;
+  // TODO: change call anchor PR to have this representation - we need it here
+
+  // Maps hashes to profiled functions.
+  std::unordered_map<const yaml::bolt::BinaryFunctionProfile * YamlBF,
+                     FunctionHashes>
+      YamlBFToHashes(BFs.size());
+  for (const auto &CallerYamlBF : YamlBP.Functions) {
+    if (YamlBF.Used)
+      continue;
+    for (const auto &YamlBB : CallerYamlBF.BasicBlocks) {
+      for (const auto &CallSite : YamlBB.Callsites) {
+        auto IdToYAMLBFIt = IdToYAMLBF.find(CallSite.DestId);
+        if (IdToYAMLBFIt == IdToYAMLBF.end())
+          continue;
+
+        auto CalleeBFIt = YamlBFToHashes.find(IdToYAMLBFIt->second);
+        if (CalleeBFIt == YamlBFToHashes.end()) {
+          CalleeBFIt->second = FunctionHashes();
+          CalleeBFIt->second.Hash =
+              ComputeYamlBFLooseHash(*IdToYAMLBFIt->second);
+        }
+        auto CallerBFIt = YamlBFToHashes.find(&CallerYamlBF);
+        if (CallerBFIt == YamlBFToHashes.end()) {
+          CallerBFIt->second = FunctionHashes();
+          CallerBFIt->second.Hash = ComputeYamlBFLooseHash(CallerBF);
+        }
+
+        CalleeBFIt->second.AdjacentFunctionHashesSet.insert(
+            CallerBFIt->second.Hash);
+        CallerBFIt->second.AdjacentFunctionHashesSet.insert(
+            CalleeBFIt->second.Hash);
+      }
+    }
+  }
+
+  // Matching YAMLBF with neighbor hashes.
+  for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions) {
+    if (YamlBF.Used)
+      continue;
+
+    auto It = YamlBFToHashes.find(&YamlBF);
+    assert(It != YamlBFToHashes.end() &&
+           "All unused functions should be processed");
+    FunctionHashes &FunctionHashes = It->second;
+
+    std::string AdjacentFunctionHashStr =
+        std::accumulate(FunctionHashes.AdjacentFunctionHashesSet.begin(),
+                        FunctionHashes.AdjacentFunctionHashesSet.end(),
+                        std::string(""), [&](std::string Accum, uint64_t Hash) {
+                          return Accum + std::to_string(Hash);
+                        });
+    FunctionHashes.AdjacentFunctionHash =
+        std::hash<std::string>{}(AdjacentFunctionHashStr);
+
+    auto NeighborHashToBFsIt =
+        NeighborHashToBFs.find(FunctionHashes.AdjacentFunctionHash);
+    if (NeighborHashToBFsIt == NeighborHashToBFs.end())
+      continue;
+
+    for (const BinaryFunction *BF : NeighborHashToBFsIt->second) {
+      if (!ProfiledFunctions.count(BF) && profileMatches(YamlBF, *BF)) {
+        matchProfileToFunction(YamlBF, *BF);
+        ++MatchedWithCallGraph;
+      }
+    }
+  }
+
+  return MatchedWithCallGraph;
+}
+
 size_t YAMLProfileReader::matchWithNameSimilarity(BinaryContext &BC) {
   if (opts::NameSimilarityFunctionMatchingThreshold == 0)
     return 0;
@@ -489,7 +668,7 @@ size_t YAMLProfileReader::matchWithNameSimilarity(BinaryContext &BC) {
 
   // Maps namespaces to BFs excluding binary functions with no equal sized
   // profiled functions belonging to the same namespace.
-  for (BinaryFunction *BF : BC.getAllBinaryFunctions()) {
+  / for (BinaryFunction *BF : BC.getAllBinaryFunctions()) {
     std::string DemangledName = BF->getDemangledName();
     std::string Namespace = DeriveNameSpace(DemangledName);
 
@@ -569,7 +748,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   YamlProfileToFunction.resize(YamlBP.Functions.size() + 1);
 
   // Computes hash for binary functions.
-  if (opts::MatchProfileWithFunctionHash) {
+  if (opts::MatchProfileWithFunctionHash || opts::MatchWithCallGraph) {
     for (auto &[_, BF] : BC.getBinaryFunctions()) {
       BF.computeHash(YamlBP.Header.IsDFSOrder, YamlBP.Header.HashFunction);
     }
@@ -584,6 +763,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   const size_t MatchedWithExactName = matchWithExactName();
   const size_t MatchedWithHash = matchWithHash(BC);
   const size_t MatchedWithLTOCommonName = matchWithLTOCommonName();
+  const size_t MatchedWithCallGraph = matchWithCallGraph(BC);
   const size_t MatchedWithNameSimilarity = matchWithNameSimilarity(BC);
 
   for (auto [YamlBF, BF] : llvm::zip_equal(YamlBP.Functions, ProfileBFs))
@@ -603,6 +783,8 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
            << " functions with hash\n";
     outs() << "BOLT-INFO: matched " << MatchedWithLTOCommonName
            << " functions with matching LTO common names\n";
+    outs() << "BOLT-INFO: matched " << MatchedWithCallGraph
+           << " functions with call graph\n";
     outs() << "BOLT-INFO: matched " << MatchedWithNameSimilarity
            << " functions with similar names\n";
   }

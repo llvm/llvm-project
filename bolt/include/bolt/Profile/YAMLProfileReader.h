@@ -92,6 +92,9 @@ private:
 
   /// Matches functions using exact hash.
   size_t matchWithHash(BinaryContext &BC);
+  
+  /// Matches functions using the call graph.
+  size_t matchWithCallGraph(BinaryContext &BC);
 
   /// Matches functions with similarly named profiled functions.
   size_t matchWithNameSimilarity(BinaryContext &BC);
