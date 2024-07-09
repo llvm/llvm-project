@@ -166,7 +166,7 @@ class AddressRangeTestCase(TestBase):
     def test_address_range_print_invalid(self):
         """Make sure the SBAddressRange can be printed when invalid."""
         range = lldb.SBAddressRange()
-        self.assertEqual(str(range), "<invalid>")
+        self.assertEqual(str(range), "[0xffffffffffffffff-0xffffffffffffffff)")
 
     def test_address_range_print_resolved(self):
         """Make sure the SBAddressRange can be printed when resolved."""
