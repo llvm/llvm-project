@@ -129,6 +129,40 @@ func.func @mesh_shard_op_two_users(%arg0 : tensor<4x8xf32>) ->
   return %1, %2 : tensor<4x8xf32>, tensor<4x8xf32>
 }
 
+// CHECK-LABEL: func @mesh_shard_halo_sizes
+func.func @mesh_shard_halo_sizes() -> () {
+  // CHECK: %[[C3:.*]] = arith.constant 3 : i64
+  %c3 = arith.constant 3 : i64
+  // CHECK: mesh.sharding @mesh4, {{\[\[}}0]] halo_sizes = [1, 4] : !mesh.sharding
+  %sharding1 = mesh.sharding @mesh4, [[0]] halo_sizes = [1, 4] : !mesh.sharding
+  // CHECK: mesh.sharding @mesh4, {{\[\[}}0]] halo_sizes = [4, %[[C3]]] : !mesh.sharding
+  %sharding2 = mesh.sharding @mesh4, [[0]] halo_sizes = [4, %c3] : !mesh.sharding
+  return
+}
+
+// CHECK-LABEL: func @mesh_shard_dim_sizes
+func.func @mesh_shard_dim_sizes() -> () {
+  // CHECK: %[[C3:.*]] = arith.constant 3 : i64
+  %c3 = arith.constant 3 : i64
+  // CHECK: mesh.sharding @mesh4, {{\[\[}}0]] sharded_dims_sizes = [1, 4, 2] : !mesh.sharding
+  %sharding1 = mesh.sharding @mesh4, [[0]] sharded_dims_sizes = [1, 4, 2] : !mesh.sharding
+  // CHECK: mesh.sharding @mesh4, {{\[\[}}0]] sharded_dims_sizes = [4, %[[C3]], 1] : !mesh.sharding
+  %sharding2 = mesh.sharding @mesh4, [[0]] sharded_dims_sizes = [4, %c3, 1] : !mesh.sharding
+  return
+}
+
+// CHECK-LABEL: func @mesh_shard_op_force
+// CHECK-SAME: %[[ARG:.*]]: tensor<4x8xf32>
+func.func @mesh_shard_op_force(%arg0 : tensor<4x8xf32>) -> (tensor<4x8xf32>, tensor<4x8xf32>) {
+  // CHECK-NEXT: %[[S:.*]] = mesh.sharding @mesh0, {{\[\[}}]] : !mesh.sharding
+  %s = mesh.sharding @mesh0, [[]] : !mesh.sharding
+  // CHECK-NEXT: mesh.shard %[[ARG]] to %[[S]] force : tensor<4x8xf32>
+  %1 = mesh.shard %arg0 to %s force : tensor<4x8xf32>
+  // CHECK-NEXT: mesh.shard %[[ARG]] to %[[S]] annotate_for_users force : tensor<4x8xf32>
+  %2 = mesh.shard %arg0 to %s annotate_for_users force : tensor<4x8xf32>
+  return %1, %2 : tensor<4x8xf32>, tensor<4x8xf32>
+}
+
 // CHECK-LABEL: func @mesh_shape
 func.func @mesh_shape() -> (index, index) {
   // CHECK: %[[RES:.*]]:2 = mesh.mesh_shape @mesh0 axes = [0, 1] : index, index

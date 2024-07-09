@@ -166,9 +166,9 @@ def Mesh_ShardingOp : Mesh_Op<"sharding", [
   ]> {
   let summary = "Define a sharding of a tensor.";
   let description = [{
-    The MeshSharding is used in a `mesh.shard` operation.
-    It specifies how a tensor is sharded and distributed across the process
-    mesh.
+    The MeshSharding specifies how a tensor is sharded and distributed across the
+    process mesh. It is typically used in a `mesh.shard` operation.
+    The operation has the follwing attributes and operands:
 
     1. `mesh`: this attribute is a FlatSymbolRefAttr that refers to the device
     mesh where the distributed tensor is placed. The symbol must resolve to a
@@ -179,18 +179,18 @@ def Mesh_ShardingOp : Mesh_Op<"sharding", [
     its value is [x, y], it indicates that the tensor's i-th dimension is splitted
     along the x and y axes of the device mesh.
 
-    3. `partial_axes`: if not empty, this signifies that the tensor is partial
+    3. [Optional] `partial_axes`: if not empty, this signifies that the tensor is partial
     one along the specified mesh axes. An all-reduce should be applied to obtain
     the complete tensor, with reduction type being specified by `partial_type`.
 
-    4. `partial_type`: indicates the reduction type of the possible all-reduce
+    4. [Optional] `partial_type`: indicates the reduction type of the possible all-reduce
     op. It has 4 possible values:
     `generic`: is not an allowed value inside a shard attribute.
 
     5. [Optional] Sizes of halos to be added for each sharded tensor dimension.
     `halo_sizes`is provided as a flattened 1d array of i64s, 2 values for each sharded dimension.
     `halo_sizes` = [1, 2] means that the first sharded dimension gets an additional
-    halo of size 1 at the start of the dimension and a halo size is 2 at the end.
+    halo of size 1 at the start of the first dimension and a halo size is 2 at its end.
     `halo_sizes` = [1, 2, 2, 3] defines halos for the first 2 sharded dimensions
     e.g. the first sharded dimension gets [1,2] halos and the seconds gets [2,3] halos.
     `?` indicates dynamic halo sizes.
@@ -204,36 +204,43 @@ def Mesh_ShardingOp : Mesh_Op<"sharding", [
     shard of shape 16x24x32.
     `?` indicates dynamic shard dimensions.
     
-    
     `halo_sizes` and `sharded_dims_sizes` are mutually exclusive.
 
-    Example:
+    Examples:
 
     ```
     mesh.mesh @mesh0(shape = 2x2x4)
+    mesh.mesh @mesh1d_4(shape = 4)
 
     // The tensor is fully replicated on @mesh0.
     // Currently, there must be at least one sub-array present in axes, even
     // if it's empty. Otherwise, a parsing error will occur.
-    #mesh.shard<@mesh0, [[]]>
+    %sharding0 = mesh.sharding @mesh0, [[]]
 
     // The tensor is sharded on the first dimension along axis 0 of @mesh0
-    #mesh.shard<@mesh0, [[0]]>
+    %sharding1 = mesh.sharding @mesh0, [[0]]
 
-    // The tensor is sharded on the first dimension along axis 0 of @mesh0 and
+    // The tensor is sharded on its first dimension along axis 0 of @mesh0 and
     // it is also a partial_sum along mesh axis 1.
-    #mesh.shard<@mesh0, [[0], []], partial = sum[1]>
+    %sharding2 = mesh.sharding @mesh0, [[0], []] partial = sum[1]
 
-    // The tensor is sharded on the first dimension along axis 0 of @mesh0 and
+    // The tensor is sharded on its first dimension along axis 0 of @mesh0 and
     // it is also a partial_max along mesh axis 1.
-    #mesh.shard<@mesh0, [[0]], partial = max[1]>
+    %sharding3 = mesh.sharding @mesh0, [[0]] partial = max[1]
 
-    // Could be used in the attribute of mesh.shard op
-    %0 = mesh.shard %arg0 to <@mesh0, [[0]]> : tensor<4x8xf32>
+    // Could be used for a mesh.shard op
+    %sharded0 = mesh.shard %arg0 to %sharding3 : tensor<4x8xf32>
 
-    // The tensor is sharded on the first dimension along axis 0 of @mesh0 and
+    // The tensor is sharded on its first dimension along axis 0 of @mesh0 and
     // and it has halo-sizes of 1 and 2 on the sharded dim.
-    %0 = mesh.shard %arg0 to <@mesh0, [[0]] {<halo_sizes = [1, 2]>}> : tensor<4x8xf32>
+    %halo_sharding = mesh.sharding @mesh0, [[0]] halo_sizes = [1, 2]
+    %sharded1 = mesh.shard %arg0 to %halo_sharding : tensor<4x8xf32>
+    
+    // The tensor is sharded on its second dimension along axis 0 of @mesh1d_4
+    // and it has pre-defined shard sizes. The shards of the devices will have
+    // the following shapes: [4x2, 4x3, 4x4, 4x5]
+    %sharding4 = mesh.sharding @mesh1d_4, [[], [0]] sharded_dims_sizes = [2, 3, 4, 5]
+    %sharded2 = mesh.shard %arg0 to %sharding4 : tensor<4x14xf32>
     ```
   }];
     
@@ -289,7 +296,7 @@ def Mesh_ShardShapeOp : Mesh_Op<"shard_shape", [Pure]> {
   );
   let results = (outs Variadic<Index>:$result);
   let assemblyFormat = [{
-      $shape $sharding $device attr-dict `:` type($result)
+      custom<DimensionList>($shape) $sharding $device attr-dict `:` type($result)
   }];
   let builders = [
     OpBuilder<(ins "ArrayRef<int64_t>":$shape, "Value":$sharding, "Value":$device)>
@@ -304,14 +311,15 @@ def Mesh_ShardOp : Mesh_Op<"shard", [
   let summary = "Annotate on how a tensor is sharded across a mesh.";
   let description = [{
     The mesh.shard operation is designed to specify and guide the sharding
-    behavior of a tensor value across a mesh topology. This operation has one
-    operand and two attributes:
+    behavior of a tensor value across a mesh topology. This operation has two
+    operands and two optional attributes:
 
     1. `input`: This operand represents the tensor value that needs to be
     annotated for sharding.
 
     2. `sharding`: This attribute is type of `MeshShardingType`, which is the core data
-    structure to represent distribution of a tensor on a mesh.
+    structure to represent distribution of a tensor on a mesh. it is typically defiend
+    by an `mesh.sharding` operation.
 
     3. `annotate_for_users`: A unit attribute addressing the scenario when a
     tensor's sharding annotation differs based on its context of use (either as
@@ -320,19 +328,28 @@ def Mesh_ShardOp : Mesh_Op<"shard", [
     as an operand in subsequent operations. If not, the sharding applies to the
     operation that defines the tensor value.
 
-    4. `force`: A unit attribute requesting an explicit sharding of the data not
-    allowing to be optimizied away. This is useful in the presence of halos and
-    inplace semantics.
+    4. `force`: A unit attribute requesting an explicit sharding of the data,
+    therefore not allowing to be optimizied away. This is useful in the presence
+    of halos and inplace semantics.
 
     Example:
     ```
     func.func @only_result_annotated(%arg0 : tensor<4x8xf32>) -> () {
-      %0 = mesh.shard %arg0 to <@mesh0, [[0]]> : tensor<4x8xf32>
+      %sharding = mesh.sharding @mesh0, [[0]] : !mesh.sharding
+      %0 = mesh.shard %arg0 to %sharding : tensor<4x8xf32>
       ...
     }
 
     func.func @only_operand_annotated(%arg0 : tensor<4x8xf32>) -> () {
-      %0 = mesh.shard %arg0 to <@mesh0, [[0]]> annotate_for_users : tensor<4x8xf32>
+      %sharding = mesh.sharding @mesh0, [[0]] : !mesh.sharding
+      %0 = mesh.shard %arg0 to %sharding annotate_for_users : tensor<4x8xf32>
+      ...
+    }
+    
+    func.func @two_operands_annotated(%arg0 : tensor<4x8xf32>, %arg1 : tensor<16x8xf32>) -> () {
+      %sharding = mesh.sharding @mesh0, [[0]] : !mesh.sharding
+      %0 = mesh.shard %arg0 to %sharding annotate_for_users : tensor<4x8xf32>
+      %1 = mesh.shard %arg1 to %sharding annotate_for_users : tensor<16x8xf32>
       ...
     }
 
@@ -341,9 +358,12 @@ def Mesh_ShardOp : Mesh_Op<"shard", [
     // operand of op2
     func.func @both_result_and_multi_operands_annotated(
         %arg0 : tensor<4x8xf32>) -> () {
-      %0 = mesh.shard %arg0 to <@mesh0, [[0]]> : tensor<4x8xf32>
-      %1 = mesh.shard %0 to <@mesh0, [[1]]> annotate_for_users : tensor<4x8xf32>
-      %2 = mesh.shard %0 to <@mesh0, [[2]]> annotate_for_users : tensor<4x8xf32>
+      %sharding = mesh.sharding @mesh0, [[0]] : !mesh.sharding
+      %0 = mesh.shard %arg0 to %sharding : tensor<4x8xf32>
+      %sharding1 = mesh.sharding @mesh0, [[1]] : !mesh.sharding
+      %1 = mesh.shard %0 to %sharding1 annotate_for_users : tensor<4x8xf32>
+      %sharding2 = mesh.sharding @mesh0, [[2]] : !mesh.sharding
+      %2 = mesh.shard %0 to %sharding2 annotate_for_users : tensor<4x8xf32>
       "op0"(%1) : ...
       "op1"(%2) : ...
       ...
@@ -354,29 +374,37 @@ def Mesh_ShardOp : Mesh_Op<"shard", [
     ```
     func.func @annotate_on_same_result_with_different_sharding(
         %arg0 : tensor<4x8xf32>) -> () {
-      %0 = mesh.shard %arg0 to <@mesh0, [[0]]> : tensor<4x8xf32>
-      %1 = mesh.shard %0 to <@mesh0, [[1]]> : tensor<4x8xf32>
+      %sharding1 = mesh.sharding @mesh0, [[0]] : !mesh.sharding
+      %sharding2 = mesh.sharding @mesh0, [[1]] : !mesh.sharding
+      %0 = mesh.shard %arg0 to $sharding1 : tensor<4x8xf32>
+      %1 = mesh.shard %0 to sharding2 : tensor<4x8xf32>
       ...
     }
 
     func.func @annotate_on_same_result_same_value_with_different_sharding(
         %arg0 : tensor<4x8xf32>) -> () {
-      %0 = mesh.shard %arg0 to <@mesh0, [[0]]> : tensor<4x8xf32>
-      %1 = mesh.shard %arg0 to <@mesh0, [[1]]> : tensor<4x8xf32>
+      %sharding1 = mesh.sharding @mesh0, [[0]] : !mesh.sharding
+      %sharding2 = mesh.sharding @mesh0, [[1]] : !mesh.sharding
+      %0 = mesh.shard %arg0 to %sharding1 : tensor<4x8xf32>
+      %1 = mesh.shard %arg0 to %sharding2 : tensor<4x8xf32>
       ...
     }
 
     func.func @annotate_on_same_operand_with_different_sharding(
         %arg0 : tensor<4x8xf32>) -> () {
-      %0 = mesh.shard %arg0 to <@mesh0, [[0]]> annotate_for_users : tensor<4x8xf32>
-      %1 = mesh.shard %0 to <@mesh0, [[1]]> annotate_for_users : tensor<4x8xf32>
+      %sharding1 = mesh.sharding @mesh0, [[0]] : !mesh.sharding
+      %sharding2 = mesh.sharding @mesh0, [[1]] : !mesh.sharding
+      %0 = mesh.shard %arg0 to %sharding1 annotate_for_users : tensor<4x8xf32>
+      %1 = mesh.shard %0 to %sharding2 annotate_for_users : tensor<4x8xf32>
       ...
     }
 
     func.func @result_annotated_after_operand(
         %arg0 : tensor<4x8xf32>) -> () {
-      %0 = mesh.shard %arg0 to <@mesh0, [[0]]> annotate_for_users : tensor<4x8xf32>
-      %1 = mesh.shard %0 to <@mesh0, [[1]]> : tensor<4x8xf32>
+      %sharding1 = mesh.sharding @mesh0, [[0]] : !mesh.sharding
+      %sharding2 = mesh.sharding @mesh0, [[1]] : !mesh.sharding
+      %0 = mesh.shard %arg0 to %sharding1 annotate_for_users : tensor<4x8xf32>
+      %1 = mesh.shard %0 to %sharding2 : tensor<4x8xf32>
       ...
     }
     ```
