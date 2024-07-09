@@ -517,6 +517,38 @@ XtensaTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   return DAG.getNode(XtensaISD::RET, DL, MVT::Other, RetOps);
 }
 
+static unsigned getBranchOpcode(ISD::CondCode Cond, bool &BrInv) {
+  BrInv = false;
+  switch (Cond) {
+  case ISD::SETEQ:
+    return Xtensa::BEQ;
+  case ISD::SETNE:
+    return Xtensa::BNE;
+  case ISD::SETLT:
+    return Xtensa::BLT;
+  case ISD::SETLE:
+    BrInv = true;
+    return Xtensa::BGE;
+  case ISD::SETGT:
+    BrInv = true;
+    return Xtensa::BLT;
+  case ISD::SETGE:
+    return Xtensa::BGE;
+  case ISD::SETULT:
+    return Xtensa::BLTU;
+  case ISD::SETULE:
+    BrInv = true;
+    return Xtensa::BGEU;
+  case ISD::SETUGT:
+    BrInv = true;
+    return Xtensa::BLTU;
+  case ISD::SETUGE:
+    return Xtensa::BGEU;
+  default:
+    llvm_unreachable("Unknown branch kind");
+  }
+}
+
 SDValue XtensaTargetLowering::LowerSELECT_CC(SDValue Op,
                                              SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -526,11 +558,19 @@ SDValue XtensaTargetLowering::LowerSELECT_CC(SDValue Op,
   SDValue TrueValue = Op.getOperand(2);
   SDValue FalseValue = Op.getOperand(3);
   ISD::CondCode CC = cast<CondCodeSDNode>(Op->getOperand(4))->get();
-  SDValue TargetCC = DAG.getConstant(CC, DL, MVT::i32);
+
+  bool BrInv;
+  unsigned BrKind = getBranchOpcode(CC, BrInv);
+  SDValue TargetCC = DAG.getConstant(BrKind, DL, MVT::i32);
 
   // Wrap select nodes
-  return DAG.getNode(XtensaISD::SELECT_CC, DL, Ty, LHS, RHS, TrueValue,
-                     FalseValue, TargetCC);
+  if (BrInv) {
+    return DAG.getNode(XtensaISD::SELECT_CC, DL, Ty, RHS, LHS, TrueValue,
+                       FalseValue, TargetCC);
+  } else {
+    return DAG.getNode(XtensaISD::SELECT_CC, DL, Ty, LHS, RHS, TrueValue,
+                       FalseValue, TargetCC);
+  }
 }
 
 SDValue XtensaTargetLowering::LowerImmediate(SDValue Op,
@@ -728,37 +768,6 @@ const char *XtensaTargetLowering::getTargetNodeName(unsigned Opcode) const {
 // Custom insertion
 //===----------------------------------------------------------------------===//
 
-static int GetBranchKind(int Cond, bool &BrInv) {
-  switch (Cond) {
-  case ISD::SETEQ:
-    return Xtensa::BEQ;
-  case ISD::SETNE:
-    return Xtensa::BNE;
-  case ISD::SETLT:
-    return Xtensa::BLT;
-  case ISD::SETLE:
-    BrInv = true;
-    return Xtensa::BGE;
-  case ISD::SETGT:
-    BrInv = true;
-    return Xtensa::BLT;
-  case ISD::SETGE:
-    return Xtensa::BGE;
-  case ISD::SETULT:
-    return Xtensa::BLTU;
-  case ISD::SETULE:
-    BrInv = true;
-    return Xtensa::BGEU;
-  case ISD::SETUGT:
-    BrInv = true;
-    return Xtensa::BLTU;
-  case ISD::SETUGE:
-    return Xtensa::BGEU;
-  default:
-    return -1;
-  }
-}
-
 MachineBasicBlock *
 XtensaTargetLowering::emitSelectCC(MachineInstr &MI,
                                    MachineBasicBlock *MBB) const {
@@ -769,7 +778,7 @@ XtensaTargetLowering::emitSelectCC(MachineInstr &MI,
   MachineOperand &RHS = MI.getOperand(2);
   MachineOperand &TrueValue = MI.getOperand(3);
   MachineOperand &FalseValue = MI.getOperand(4);
-  MachineOperand &Cond = MI.getOperand(5);
+  unsigned BrKind = MI.getOperand(5).getImm();
 
   // To "insert" a SELECT_CC instruction, we actually have to insert
   // CopyMBB and SinkMBB  blocks and add branch to MBB. We build phi
@@ -801,19 +810,10 @@ XtensaTargetLowering::emitSelectCC(MachineInstr &MI,
   MBB->addSuccessor(CopyMBB);
   MBB->addSuccessor(SinkMBB);
 
-  bool BrInv = false;
-  int BrKind = GetBranchKind(Cond.getImm(), BrInv);
-  if (BrInv) {
-    BuildMI(MBB, DL, TII.get(BrKind))
-        .addReg(RHS.getReg())
-        .addReg(LHS.getReg())
-        .addMBB(SinkMBB);
-  } else {
-    BuildMI(MBB, DL, TII.get(BrKind))
-        .addReg(LHS.getReg())
-        .addReg(RHS.getReg())
-        .addMBB(SinkMBB);
-  }
+  BuildMI(MBB, DL, TII.get(BrKind))
+      .addReg(LHS.getReg())
+      .addReg(RHS.getReg())
+      .addMBB(SinkMBB);
 
   CopyMBB->addSuccessor(SinkMBB);
 
@@ -838,6 +838,6 @@ MachineBasicBlock *XtensaTargetLowering::EmitInstrWithCustomInserter(
   case Xtensa::SELECT:
     return emitSelectCC(MI, MBB);
   default:
-    report_fatal_error("Unexpected instr type to insert");
+    llvm_unreachable("Unexpected instr type to insert");
   }
 }

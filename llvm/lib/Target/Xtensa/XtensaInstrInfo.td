@@ -582,5 +582,5 @@ let Defs = [SP], Uses = [SP] in {
 let usesCustomInserter = 1 in {
   def SELECT : Pseudo<(outs AR:$dst), (ins AR:$lhs, AR:$rhs, AR:$t, AR:$f, i32imm:$cond),
                      "!select $dst, $lhs, $rhs, $t, $f, $cond",
-                     [(set AR:$dst, (Xtensa_select_cc AR:$lhs, AR:$rhs, AR:$t, AR:$f, imm:$cond))]>;
+                     [(set i32:$dst, (Xtensa_select_cc i32:$lhs, i32:$rhs, i32:$t, i32:$f, imm:$cond))]>;
 }
