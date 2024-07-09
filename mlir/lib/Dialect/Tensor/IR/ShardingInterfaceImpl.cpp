@@ -53,7 +53,7 @@ struct EmptyOpShardingInterface
     // if the sharding introduces a new dynamic dimension, we take it from
     // the dynamic sharding info. For now bail out if it's not
     // provided.
-		assert(resultShardings.size() == 1);
+    assert(resultShardings.size() == 1);
     if (!shardType.hasStaticShape()) {
       assert(op->getResult(0).hasOneUse());
       SmallVector<Value> newOperands;
@@ -62,15 +62,17 @@ struct EmptyOpShardingInterface
       int currOldOprndNum = -1;
       mesh::ShardShapeOp shapeForDevice;
       Value device;
-			Operation *newSharding = nullptr;
+      Operation *newSharding = nullptr;
       for (auto i = 0; i < oldType.getRank(); ++i) {
         if (!oldType.isDynamicDim(i) && shardType.isDynamicDim(i)) {
           if (!newSharding) {
-						newSharding = builder.create<ShardingOp>(op->getLoc(), resultShardings[0]);
+            newSharding =
+                builder.create<ShardingOp>(op->getLoc(), resultShardings[0]);
             device = builder.create<mesh::ProcessLinearIndexOp>(
                 op->getLoc(), resultShardings[0].getMesh());
             shapeForDevice = builder.create<mesh::ShardShapeOp>(
-                op->getLoc(), oldType.getShape(), newSharding->getResult(0), device);
+                op->getLoc(), oldType.getShape(), newSharding->getResult(0),
+                device);
           }
           newOperands.emplace_back(shapeForDevice.getResult()[i]);
         } else if (oldType.isDynamicDim(i)) {

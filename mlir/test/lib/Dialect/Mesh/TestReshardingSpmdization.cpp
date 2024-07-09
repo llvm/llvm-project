@@ -44,7 +44,10 @@ struct TestMeshReshardingRewritePattern : OpRewritePattern<ShardOp> {
       if (auto targetShardOp = llvm::dyn_cast<ShardOp>(user)) {
         if (targetShardOp.getAnnotateForUsers() &&
             mesh == symbolTable.lookupNearestSymbolFrom<mesh::MeshOp>(
-                        targetShardOp, cast<ShardingOp>(targetShardOp.getSharding().getDefiningOp()).getMeshAttr())) {
+                        targetShardOp,
+                        cast<ShardingOp>(
+                            targetShardOp.getSharding().getDefiningOp())
+                            .getMeshAttr())) {
           foundUser = true;
           break;
         }
@@ -59,7 +62,9 @@ struct TestMeshReshardingRewritePattern : OpRewritePattern<ShardOp> {
       auto targetShardOp = llvm::dyn_cast<ShardOp>(user);
       if (!targetShardOp || !targetShardOp.getAnnotateForUsers() ||
           symbolTable.lookupNearestSymbolFrom<mesh::MeshOp>(
-              targetShardOp, cast<ShardingOp>(targetShardOp.getSharding().getDefiningOp()).getMeshAttr()) != mesh) {
+              targetShardOp,
+              cast<ShardingOp>(targetShardOp.getSharding().getDefiningOp())
+                  .getMeshAttr()) != mesh) {
         continue;
       }
 

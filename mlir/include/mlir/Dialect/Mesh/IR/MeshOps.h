@@ -39,43 +39,47 @@ namespace mlir {
 namespace mesh {
 
 class MeshSharding {
-  private:
-    ::mlir::FlatSymbolRefAttr mesh;
-    SmallVector<MeshAxesAttr> split_axes;
-    SmallVector<MeshAxis> partial_axes;
-    ReductionKind partial_type;
-    SmallVector<int64_t> static_halo_sizes;
-    SmallVector<int64_t> static_sharded_dims_sizes;
-    SmallVector<Value> dynamic_halo_sizes;
-    SmallVector<Value> dynamic_sharded_dims_sizes;
-  public:
-    MeshSharding() = default;
-    MeshSharding(Value rhs);
-    static MeshSharding get(
-        ::mlir::FlatSymbolRefAttr mesh_,
-        ArrayRef<MeshAxesAttr> split_axes_,
-        ArrayRef<MeshAxis> partial_axes_ = {},
-        ReductionKind partial_type_ = ReductionKind::Sum,
-        ArrayRef<int64_t> static_halo_sizes_ = {},
-        ArrayRef<int64_t> static_sharded_dims_sizes_ = {},
-        ArrayRef<Value> dynamic_halo_sizes_ = {},
-        ArrayRef<Value> dynamic_sharded_dims_sizes_ = {});
-    ::mlir::FlatSymbolRefAttr getMeshAttr() const { return mesh; }
-    ::llvm::StringRef getMesh() const { return mesh.getValue(); }
-    ArrayRef<MeshAxesAttr> getSplitAxes() const {return split_axes; }
-    ArrayRef<MeshAxis> getPartialAxes() const { return partial_axes; }
-    ReductionKind getPartialType() const { return partial_type; }
-    ArrayRef<int64_t> getStaticHaloSizes() const { return static_halo_sizes; }
-    ArrayRef<int64_t> getStaticShardedDimsSizes() const { return static_sharded_dims_sizes; }
-    ArrayRef<Value> getDynamicHaloSizes() const { return dynamic_halo_sizes; }
-    ArrayRef<Value> getDynamicShardedDimsSizes() const { return dynamic_sharded_dims_sizes; }
-    operator bool() const { return (!mesh) == false; }
-    bool operator==(Value rhs) const;
-    bool operator!=(Value rhs) const;
-    bool operator==(const MeshSharding &rhs) const;
-    bool operator!=(const MeshSharding &rhs) const;
-    bool sameExceptConstraint(const MeshSharding &rhs) const;
-    bool sameConstraint(const MeshSharding &rhs) const;
+private:
+  ::mlir::FlatSymbolRefAttr mesh;
+  SmallVector<MeshAxesAttr> split_axes;
+  SmallVector<MeshAxis> partial_axes;
+  ReductionKind partial_type;
+  SmallVector<int64_t> static_halo_sizes;
+  SmallVector<int64_t> static_sharded_dims_sizes;
+  SmallVector<Value> dynamic_halo_sizes;
+  SmallVector<Value> dynamic_sharded_dims_sizes;
+
+public:
+  MeshSharding() = default;
+  MeshSharding(Value rhs);
+  static MeshSharding get(::mlir::FlatSymbolRefAttr mesh_,
+                          ArrayRef<MeshAxesAttr> split_axes_,
+                          ArrayRef<MeshAxis> partial_axes_ = {},
+                          ReductionKind partial_type_ = ReductionKind::Sum,
+                          ArrayRef<int64_t> static_halo_sizes_ = {},
+                          ArrayRef<int64_t> static_sharded_dims_sizes_ = {},
+                          ArrayRef<Value> dynamic_halo_sizes_ = {},
+                          ArrayRef<Value> dynamic_sharded_dims_sizes_ = {});
+  ::mlir::FlatSymbolRefAttr getMeshAttr() const { return mesh; }
+  ::llvm::StringRef getMesh() const { return mesh.getValue(); }
+  ArrayRef<MeshAxesAttr> getSplitAxes() const { return split_axes; }
+  ArrayRef<MeshAxis> getPartialAxes() const { return partial_axes; }
+  ReductionKind getPartialType() const { return partial_type; }
+  ArrayRef<int64_t> getStaticHaloSizes() const { return static_halo_sizes; }
+  ArrayRef<int64_t> getStaticShardedDimsSizes() const {
+    return static_sharded_dims_sizes;
+  }
+  ArrayRef<Value> getDynamicHaloSizes() const { return dynamic_halo_sizes; }
+  ArrayRef<Value> getDynamicShardedDimsSizes() const {
+    return dynamic_sharded_dims_sizes;
+  }
+  operator bool() const { return (!mesh) == false; }
+  bool operator==(Value rhs) const;
+  bool operator!=(Value rhs) const;
+  bool operator==(const MeshSharding &rhs) const;
+  bool operator!=(const MeshSharding &rhs) const;
+  bool sameExceptConstraint(const MeshSharding &rhs) const;
+  bool sameConstraint(const MeshSharding &rhs) const;
 };
 
 } // namespace mesh
@@ -131,9 +135,10 @@ mesh::MeshOp getMesh(Op op, SymbolTableCollection &symbolTableCollection) {
 template <>
 inline mesh::MeshOp
 getMesh<ShardOp>(ShardOp op, SymbolTableCollection &symbolTableCollection) {
-  return getMesh(op.getOperation(),
-                 cast<ShardingOp>(op.getSharding().getDefiningOp()).getMeshAttr(),
-                 symbolTableCollection);
+  return getMesh(
+      op.getOperation(),
+      cast<ShardingOp>(op.getSharding().getDefiningOp()).getMeshAttr(),
+      symbolTableCollection);
 }
 
 // Get the number of processes that participate in each group
@@ -196,8 +201,8 @@ Type shardType(Type type, MeshOp mesh, MeshSharding sharding);
 void maybeInsertTargetShardingAnnotation(MeshSharding sharding,
                                          OpOperand &operand,
                                          OpBuilder &builder);
-void maybeInsertTargetShardingAnnotation(MeshSharding sharding,
-                                         OpResult result, OpBuilder &builder);
+void maybeInsertTargetShardingAnnotation(MeshSharding sharding, OpResult result,
+                                         OpBuilder &builder);
 void maybeInsertSourceShardingAnnotation(MeshSharding sharding,
                                          OpOperand &operand,
                                          OpBuilder &builder);

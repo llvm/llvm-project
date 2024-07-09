@@ -42,11 +42,13 @@ SmallVector<MeshAxis> getReductionMeshAxes(
 
 // Inserts a clone of the operation that has all ranked tensor
 // arguments/results sharded.
-void spmdizeTriviallyShardableOperation(
-    Operation &op, ArrayRef<Value> spmdizedOperands,
-    ArrayRef<MeshSharding> operandShardings,
-    ArrayRef<MeshSharding> resultShardings, IRMapping &spmdizationMap,
-    SymbolTableCollection &symbolTable, OpBuilder &builder);
+void spmdizeTriviallyShardableOperation(Operation &op,
+                                        ArrayRef<Value> spmdizedOperands,
+                                        ArrayRef<MeshSharding> operandShardings,
+                                        ArrayRef<MeshSharding> resultShardings,
+                                        IRMapping &spmdizationMap,
+                                        SymbolTableCollection &symbolTable,
+                                        OpBuilder &builder);
 
 // All ranked tensor argument and result dimensions have
 // independent parallel loop iterators.

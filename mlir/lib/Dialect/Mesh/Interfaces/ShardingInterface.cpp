@@ -91,8 +91,9 @@ checkOperandAffineExpr(AffineExpr expr, unsigned numDims) {
   return positions;
 }
 
-template<typename T>
-SmallVector<MeshAxesAttr> fromArrayOfVector(MLIRContext *ctxt, const SmallVector<SmallVector<T>> &vec) {
+template <typename T>
+SmallVector<MeshAxesAttr>
+fromArrayOfVector(MLIRContext *ctxt, const SmallVector<SmallVector<T>> &vec) {
   SmallVector<MeshAxesAttr> res;
   for (const auto &v : vec) {
     res.emplace_back(MeshAxesAttr::get(ctxt, v));
@@ -140,7 +141,7 @@ mesh::getMeshSharding(OpResult result) {
     for (size_t i = 1; i < shardOps.size(); ++i) {
       // TODO: Deduce a reasonable mesh sharding attr for def when they are
       // different
-      assert(shardForDef == shardOps[i].getSharding()  &&
+      assert(shardForDef == shardOps[i].getSharding() &&
              "only support all shard ops have the same mesh sharding attr");
     }
     return std::make_pair(true, shardForDef);
@@ -152,7 +153,8 @@ FailureOr<std::pair<bool, MeshSharding>>
 mesh::getMeshSharding(OpOperand &opOperand) {
   Value val = opOperand.get();
   if (ShardOp shardOp = val.getDefiningOp<ShardOp>())
-    return std::make_pair(shardOp.getAnnotateForUsers(), MeshSharding(shardOp.getSharding()));
+    return std::make_pair(shardOp.getAnnotateForUsers(),
+                          MeshSharding(shardOp.getSharding()));
 
   return failure();
 }
@@ -259,9 +261,10 @@ static LogicalResult fillShardingOption(Operation *op,
 
 } // namespace
 
-FailureOr<ShardingOption> mesh::detail::defaultGetShardingOption(
-    Operation *op, ArrayRef<MeshSharding> operandShardings,
-    ArrayRef<MeshSharding> resultShardings) {
+FailureOr<ShardingOption>
+mesh::detail::defaultGetShardingOption(Operation *op,
+                                       ArrayRef<MeshSharding> operandShardings,
+                                       ArrayRef<MeshSharding> resultShardings) {
   ShardingInterface shardingOp = llvm::cast<ShardingInterface>(op);
   ShardingOption shardingOption;
 
@@ -343,8 +346,8 @@ FailureOr<ShardingOption> mesh::detail::defaultGetShardingOption(
       if (loopIndices->size() == 1) {
         unsigned loopIdx = *loopIndices->begin();
         visitedLoopIndices.insert(loopIdx);
-        if (failed(fillShardingOption(op, shardingOption, shardAttr.getMeshAttr(),
-                                      axes, loopIdx)))
+        if (failed(fillShardingOption(op, shardingOption,
+                                      shardAttr.getMeshAttr(), axes, loopIdx)))
           return failure();
       }
       // If multiple loop indices correspond to a dimension of an operand, it is
@@ -398,10 +401,11 @@ FailureOr<ShardingOption> mesh::detail::defaultGetShardingOption(
 }
 
 // Get the sharding attributed for the given result and sharding option.
-MeshSharding
-getShardingAttribute(OpResult result, const ShardingOption &shardingOption,
-                     AffineMap map, ArrayRef<utils::IteratorType> loopTypes,
-                     ArrayRef<ReductionKind> reductionLoopKinds) {
+MeshSharding getShardingAttribute(OpResult result,
+                                  const ShardingOption &shardingOption,
+                                  AffineMap map,
+                                  ArrayRef<utils::IteratorType> loopTypes,
+                                  ArrayRef<ReductionKind> reductionLoopKinds) {
   auto resultType = cast<RankedTensorType>(result.getType());
   SmallVector<SmallVector<MeshAxis>> splitAxes(resultType.getRank());
   SmallVector<MeshAxis> partialAxes;
@@ -438,7 +442,8 @@ getShardingAttribute(OpResult result, const ShardingOption &shardingOption,
 
   removeTrailingEmptySubArray(splitAxes);
   return MeshSharding::get(shardingOption.mesh,
-                           fromArrayOfVector(result.getContext(), splitAxes), partialAxes, partialType);
+                           fromArrayOfVector(result.getContext(), splitAxes),
+                           partialAxes, partialType);
 }
 
 static FailureOr<MeshSharding>
@@ -471,7 +476,9 @@ getShardingAttribute(OpOperand &opOperand, const ShardingOption &shardingOption,
   }
 
   removeTrailingEmptySubArray(splitAxes);
-  return MeshSharding::get(shardingOption.mesh, fromArrayOfVector(opOperand.get().getContext(), splitAxes));
+  return MeshSharding::get(
+      shardingOption.mesh,
+      fromArrayOfVector(opOperand.get().getContext(), splitAxes));
 }
 
 FailureOr<std::vector<MeshSharding>>
@@ -515,8 +522,8 @@ static LogicalResult addShardOp(OpBuilder &b, OpResult result,
                                 AffineMap map,
                                 ArrayRef<utils::IteratorType> loopTypes,
                                 ArrayRef<ReductionKind> reductionLoopKinds) {
-  MeshSharding sharding = getShardingAttribute(
-      result, shardingOption, map, loopTypes, reductionLoopKinds);
+  MeshSharding sharding = getShardingAttribute(result, shardingOption, map,
+                                               loopTypes, reductionLoopKinds);
   maybeInsertTargetShardingAnnotation(sharding, result, b);
 
   return success();
@@ -581,19 +588,19 @@ isValueCompatibleWithFullReplicationSharding(Value value,
 }
 
 template <typename ValueRange, typename MeshShardingRage>
-static bool areValuesCompatibleWithFullReplicationShardings(
-    ValueRange &&values, MeshShardingRage &&shardings) {
+static bool
+areValuesCompatibleWithFullReplicationShardings(ValueRange &&values,
+                                                MeshShardingRage &&shardings) {
   if (std::size(values) != std::size(shardings)) {
     return false;
   }
-  return llvm::all_of(llvm::zip_equal(
-                          std::forward<ValueRange>(values),
-                          std::forward<MeshShardingRage>(shardings)),
-                      [](auto valueAndSharding) {
-                        return isValueCompatibleWithFullReplicationSharding(
-                            std::get<0>(valueAndSharding),
-                            std::get<1>(valueAndSharding));
-                      });
+  return llvm::all_of(
+      llvm::zip_equal(std::forward<ValueRange>(values),
+                      std::forward<MeshShardingRage>(shardings)),
+      [](auto valueAndSharding) {
+        return isValueCompatibleWithFullReplicationSharding(
+            std::get<0>(valueAndSharding), std::get<1>(valueAndSharding));
+      });
 }
 #endif // NDEBUG
 
@@ -703,8 +710,8 @@ void mesh::spmdizeTriviallyShardableOperation(
   // Set the result types to the sharded counterparts.
   for (auto [oldResult, newResult, sharding] :
        llvm::zip_equal(op.getResults(), newOp->getResults(), resultShardings)) {
-    newResult.setType(shardType(newResult.getType(),
-                                getMesh(&op, sharding.getMeshAttr(), symbolTable),
-                                sharding));
+    newResult.setType(
+        shardType(newResult.getType(),
+                  getMesh(&op, sharding.getMeshAttr(), symbolTable), sharding));
   }
 }
