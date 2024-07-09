@@ -13,7 +13,6 @@
 #ifndef LLVM_TARGETPARSER_HOST_H
 #define LLVM_TARGETPARSER_HOST_H
 
-#include <optional>
 #include <string>
 
 namespace llvm {
