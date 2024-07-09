@@ -1,3 +1,6 @@
+// See https://github.com/llvm/llvm-project/issues/97712.
+UNSUPPORTED: target={{.*}}
+
 RUN: %cpp_compiler %S/SimpleTest.cpp -o %t-SimpleTest
 RUN: %run %t-SimpleTest -seed=1 -runs=77 -print_final_stats=1 2>&1 | FileCheck %s --check-prefix=FINAL_STATS
 FINAL_STATS: stat::number_of_executed_units: 77
