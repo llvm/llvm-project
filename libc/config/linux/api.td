@@ -76,6 +76,9 @@ def StdIOAPI : PublicAPI<"stdio.h"> {
     SimpleMacroDef<"stderr", "stderr">,
     SimpleMacroDef<"stdin", "stdin">,
     SimpleMacroDef<"stdout", "stdout">,
+    SimpleMacroDef<"_IOFBF", "0">,
+    SimpleMacroDef<"_IOLBF", "1">,
+    SimpleMacroDef<"_IONBF", "2">,
   ];
   let Types = [
     "FILE",
