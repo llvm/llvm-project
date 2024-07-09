@@ -604,7 +604,7 @@ struct ArgumentAccessInfo {
 };
 
 struct UsesPerBlockInfo {
-  SmallDenseMap<Instruction *, ArgumentAccessInfo, 2> Insts;
+  SmallDenseMap<Instruction *, ArgumentAccessInfo, 4> Insts;
   bool HasWrites = false;
   bool HasClobber = false;
 };
@@ -716,7 +716,7 @@ ArgumentAccessInfo GetArgmentAccessInfo(const Instruction *I,
 // block in "F", which will be used to simplify the inference for simple cases.
 std::pair<bool, bool> CollectArgumentUsesPerBlock(
     Argument &A, Function &F,
-    SmallDenseMap<const BasicBlock *, UsesPerBlockInfo, 8> &UsesPerBlock) {
+    SmallDenseMap<const BasicBlock *, UsesPerBlockInfo, 16> &UsesPerBlock) {
   auto &DL = F.getParent()->getDataLayout();
   auto PointerSize =
       DL.getIndexSizeInBits(A.getType()->getPointerAddressSpace());
@@ -1071,7 +1071,7 @@ static bool addAccessAttr(Argument *A, Attribute::AttrKind R) {
 }
 
 static bool inferInitializes(Argument &A, Function &F) {
-  SmallDenseMap<const BasicBlock *, UsesPerBlockInfo, 8> UsesPerBlock;
+  SmallDenseMap<const BasicBlock *, UsesPerBlockInfo, 16> UsesPerBlock;
   auto [HasAnyWrite, HasWriteOutsideEntryBB] =
       CollectArgumentUsesPerBlock(A, F, UsesPerBlock);
   // No write anywhere in the function, bail.
