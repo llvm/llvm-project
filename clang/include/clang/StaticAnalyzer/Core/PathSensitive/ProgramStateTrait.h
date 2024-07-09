@@ -26,7 +26,8 @@
 namespace clang {
 namespace ento {
 
-template <typename T, typename Enable = void> struct ProgramStatePartialTrait;
+template <typename T, typename Enable = void>
+struct ProgramStatePartialTrait {};
 
 /// Declares a program state trait for type \p Type called \p Name, and
 /// introduce a type named \c NameTy.
