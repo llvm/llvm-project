@@ -189,8 +189,8 @@ func.func @incomplete_sharding(
 }
 
 mesh.mesh @mesh_1d_4(shape = 4)
-// CHECK-LABEL: func @update_halo_constraint
-func.func @update_halo_constraint(
+// CHECK-LABEL: func @update_halo_static
+func.func @update_halo_static(
   // CHECK-SAME: %[[IN1:[A-Za-z0-9_]+]]: tensor<11x16xi8>
   %in1: tensor<32x16xi8>
   // CHECK-SAME: -> tensor<11x16xi8> {
@@ -200,6 +200,35 @@ func.func @update_halo_constraint(
   %in1_sharded1 = mesh.shard %in1 to %sin1_sharded1  : tensor<32x16xi8>
   %in1_sharded2 = mesh.shard %in1_sharded1 to %sin1_sharded1 annotate_for_users force : tensor<32x16xi8>
   // CHECK: return %[[RES]] : tensor<11x16xi8>
+  return %in1_sharded2 : tensor<32x16xi8>
+}
+
+// CHECK-LABEL: func @update_halo_dynamic
+func.func @update_halo_dynamic(
+  // CHECK-SAME: %[[IN1:[A-Za-z0-9_]+]]: tensor<?x16xi8>
+  %in1: tensor<?x16xi8>
+  // CHECK-SAME: -> tensor<?x16xi8> {
+) -> tensor<?x16xi8> {
+  // CHECK: %[[RES:.*]] = mesh.update_halo %[[IN1]] on @mesh_1d_4 halo_sizes = [2, 1] : (tensor<?x16xi8>) -> tensor<?x16xi8>
+  %sin1_sharded1 = mesh.sharding @mesh_1d_4, [[0]] halo_sizes = [2, 1] : !mesh.sharding
+  %in1_sharded1 = mesh.shard %in1 to %sin1_sharded1  : tensor<?x16xi8>
+  %in1_sharded2 = mesh.shard %in1_sharded1 to %sin1_sharded1 annotate_for_users force : tensor<?x16xi8>
+  // CHECK: return %[[RES]] : tensor<?x16xi8>
+  return %in1_sharded2 : tensor<?x16xi8>
+}
+
+mesh.mesh @mesh_1d_dyn(shape = ?)
+// CHECK-LABEL: func @update_halo_dynamic_mesh
+func.func @update_halo_dynamic_mesh(
+  // CHECK-SAME: %[[IN1:[A-Za-z0-9_]+]]: tensor<?x16xi8>
+  %in1: tensor<32x16xi8>
+  // CHECK-SAME: -> tensor<?x16xi8> {
+) -> tensor<32x16xi8> {
+  // CHECK: %[[RES:.*]] = mesh.update_halo %[[IN1]] on @mesh_1d_dyn halo_sizes = [2, 1] : (tensor<?x16xi8>) -> tensor<?x16xi8>
+  %sin1_sharded1 = mesh.sharding @mesh_1d_dyn, [[0]] halo_sizes = [2, 1] : !mesh.sharding
+  %in1_sharded1 = mesh.shard %in1 to %sin1_sharded1  : tensor<32x16xi8>
+  %in1_sharded2 = mesh.shard %in1_sharded1 to %sin1_sharded1 annotate_for_users force : tensor<32x16xi8>
+  // CHECK: return %[[RES]] : tensor<?x16xi8>
   return %in1_sharded2 : tensor<32x16xi8>
 }
 
@@ -232,58 +261,3 @@ func.func @ew_chain_with_halo(
   // CHECK-NEXT: return %[[TMP3]] : tensor<5x16xf32>
   return %sharding_annotated_6 : tensor<8x16xf32>
 }
-
-// #map = affine_map<(d0, d1) -> (d0, d1)>
-// // CHECK-LABEL: func @stencil_with_halo
-// func.func @stencil_with_halo() -> () {
-//   %a = "xxx.empty"() : () -> tensor<32x16xf32>
-//   %ssa = mesh.sharding @mesh_1d_4, [[0]] halo_sizes = [1, 2] : !mesh.sharding
-//   %sa = mesh.shard %a to %ssa : tensor<32x16xf32>
-//   %b = "xxx.empty"() : () -> tensor<8x16xf32>
-//   %ssb = mesh.sharding @mesh_1d_4, [[0]] sharded_dims_sizes = [1, 2, 3, 2] : !mesh.sharding
-//   %sb = mesh.shard %b to %ssb  : tensor<8x16xf32>
-
-//   %ssai1 = mesh.sharding @mesh_1d_4, [[0]] halo_sizes = [1, 2] : !mesh.sharding
-//   %sai1 = mesh.shard %sa to %ssai1  annotate_for_users : tensor<32x16xf32>
-//   %v1 = "xxx.view"(%sa) {x = 1} : (tensor<32x16xf32>) -> tensor<8x16xf32>
-//   %ssv1 = mesh.sharding @mesh_1d_4, [[0]] sharded_dims_sizes = [1, 2, 3, 2] : !mesh.sharding
-//   %sv1 = mesh.shard %v1 to %ssv1  : tensor<8x16xf32>
-
-//   %ssai2 = mesh.sharding @mesh_1d_4, [[0]] halo_sizes = [1, 2] : !mesh.sharding
-//   %sai2 = mesh.shard %sa to %ssai2  annotate_for_users : tensor<32x16xf32>
-//   %v2 = "xxx.view"(%sa) {x = 2} : (tensor<32x16xf32>) -> tensor<8x16xf32>
-//   %ssv2 = mesh.sharding @mesh_1d_4, [[0]] sharded_dims_sizes = [1, 2, 3, 2] : !mesh.sharding
-//   %sv2 = mesh.shard %v2 to %ssv2  : tensor<8x16xf32>
-  
-//   %sv1i = mesh.sharding @mesh_1d_4, [[0]] sharded_dims_sizes = [1, 2, 3, 2] : !mesh.sharding
-//   %v1i = mesh.shard %sv1 to %sv1i  annotate_for_users : tensor<8x16xf32>
-//   %sv2i = mesh.sharding @mesh_1d_4, [[0]] sharded_dims_sizes = [1, 2, 3, 2] : !mesh.sharding
-//   %v2i = mesh.shard %sv2 to %sv2i  annotate_for_users : tensor<8x16xf32>
-//   %sbo = mesh.sharding @mesh_1d_4, [[0]] sharded_dims_sizes = [1, 2, 3, 2] : !mesh.sharding
-//   %bo = mesh.shard %sb to %sbo  annotate_for_users : tensor<8x16xf32>
-//   %r = linalg.generic {indexing_maps = [#map, #map, #map], iterator_types = ["parallel", "parallel"]} ins(%v1i, %v2i : tensor<8x16xf32>, tensor<8x16xf32>) outs(%bo : tensor<8x16xf32>) {
-//     ^bb0(%in: f32, %in_56: f32, %out: f32):
-//       %47 = arith.addf %in, %in_56 : f32
-//       linalg.yield %47 : f32
-//     } -> tensor<8x16xf32>
-//   %ssr = mesh.sharding @mesh_1d_4, [[0]] sharded_dims_sizes = [1, 2, 3, 2] : !mesh.sharding
-//   %sr = mesh.shard %r to %ssr  : tensor<8x16xf32>
-
-//   %ssai3 = mesh.sharding @mesh_1d_4, [[0]] halo_sizes = [1, 2] : !mesh.sharding
-//   %sai3 = mesh.shard %sa to %ssai3  annotate_for_users : tensor<32x16xf32>
-//   %ssri = mesh.sharding @mesh_1d_4, [[0]] sharded_dims_sizes = [1, 2, 3, 2] : !mesh.sharding
-//   %sri = mesh.shard %sr to %ssri  annotate_for_users : tensor<8x16xf32>
-//   "xxx.insert_slice"(%sai3, %sri) : (tensor<32x16xf32>, tensor<8x16xf32>) -> ()
-//   %ssai4 = mesh.sharding @mesh_1d_4, [[0]] halo_sizes = [1, 2] : !mesh.sharding
-//   %sai4 = mesh.shard %sa to %ssai4 force : tensor<32x16xf32>
-
-//   return
-// }
-// COM: CHECK: %[[V0:.*]] = "xxx.empty"() : () -> tensor<11x16xf32>
-// COM: CHECK-NEXT: %[[V1:.*]] = "xxx.empty"() : () -> tensor<?x16xf32>
-// COM: CHECK-NEXT: %[[V2:.*]] = "xxx.view"([[V0]]) {x = 1 : i64} : (tensor<11x16xf32>) -> tensor<?x16xf32>
-// COM: CHECK-NEXT: %[[V3:.*]] = "xxx.view"([[V0]]) {x = 2 : i64} : (tensor<11x16xf32>) -> tensor<?x16xf32>
-// COM: CHECK-NEXT: %[[V4:.*]] = linalg.generic {indexing_maps = [#map, #map, #map], iterator_types = ["parallel", "parallel"]} ins([[V2]], [[V3]] : tensor<?x16xf32>, tensor<?x16xf32>) outs([[V1]] : tensor<?x16xf32>) {
-// COM: CHECK: "xxx.insert_slice"([[V0]], [[V4]]) : (tensor<11x16xf32>, tensor<?x16xf32>) -> ()
-// COM: CHECK-NEXT: %update_halo = mesh.update_halo [[V0]] on @mesh_1d_4 halo_sizes = [1, 2] : (tensor<11x16xf32>) -> tensor<11x16xf32>
-// COM: CHECK-NEXT: return
