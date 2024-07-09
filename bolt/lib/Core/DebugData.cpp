@@ -449,7 +449,7 @@ void DebugAddrWriter::updateAddrBase(DIEBuilder &DIEBlder, DWARFUnit &CU,
   updateAddressBase(DIEBlder, *this, CU, Offset);
 }
 
-std::optional<uint64_t> DebugAddrWriter::finalize(size_t BufferSize) {
+std::optional<uint64_t> DebugAddrWriter::finalize(const size_t BufferSize) {
   if (Map.begin() == Map.end())
     return std::nullopt;
   std::vector<IndexAddressPair> SortedMap(Map.indexToAddressBegin(),
@@ -490,7 +490,7 @@ void DebugAddrWriterDwarf5::updateAddrBase(DIEBuilder &DIEBlder, DWARFUnit &CU,
 
 DenseMap<uint64_t, uint64_t> DebugAddrWriter::UnmodifiedAddressOffsets;
 
-std::optional<uint64_t> DebugAddrWriterDwarf5::finalize(size_t BufferSize) {
+std::optional<uint64_t> DebugAddrWriterDwarf5::finalize(const size_t BufferSize) {
   // Need to layout all sections within .debug_addr
   // Within each section sort Address by index.
   const endianness Endian = BC->DwCtx->isLittleEndian()
