@@ -3,10 +3,10 @@
 
 @a = dso_local local_unnamed_addr global [65536 x float] zeroinitializer, align 16
 
-; Equivalent C code for the test case:
+; Generated from the following C code:
 ; #define LEN 256 * 256
 ; float a[LEN];
-
+;
 ; void different_strides() {
 ;   for (int i = 0; i < LEN - 1024 - 255; i++) {
 ;   #pragma clang loop interleave(disable)
@@ -15,9 +15,11 @@
 ;       a[i + j + 1024] += a[j * 4 + i];
 ;   }
 ; }
-define dso_local void @different_strides() local_unnamed_addr {
-; CHECK-LABEL: 'different_strides'
-; CHECK-NEXT:    for.body4:
+; The load and store have different strides(4 and 16 bytes respectively) but the store
+; is always at safe positive distance away from the load, thus BackwardVectorizable
+define dso_local void @different_strides_backward_vectorizable() local_unnamed_addr {
+; CHECK-LABEL: 'different_strides_backward_vectorizable'
+; CHECK-NEXT:    inner.body:
 ; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 2048 bits
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        BackwardVectorizable:
@@ -35,7 +37,7 @@ define dso_local void @different_strides() local_unnamed_addr {
 ; CHECK-NEXT:      SCEV assumptions:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
-; CHECK-NEXT:    for.cond1.preheader:
+; CHECK-NEXT:    outer.header:
 ; CHECK-NEXT:      Report: loop is not the innermost loop
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
@@ -47,34 +49,108 @@ define dso_local void @different_strides() local_unnamed_addr {
 ; CHECK-NEXT:      Expressions re-written:
 ;
 entry:
-  br label %for.cond1.preheader
+  br label %outer.header
 
-for.cond1.preheader:
-  %indvars.iv25 = phi i64 [ 0, %entry ], [ %indvars.iv.next26, %for.cond.cleanup3 ]
-  %0 = add nuw nsw i64 %indvars.iv25, 1024
-  br label %for.body4
+outer.header:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.exit ]
+  %0 = add nuw nsw i64 %i, 1024
+  br label %inner.body
 
-for.cond.cleanup:
-  ret void
-
-for.cond.cleanup3:
-  %indvars.iv.next26 = add nuw nsw i64 %indvars.iv25, 1
-  %exitcond29.not = icmp eq i64 %indvars.iv.next26, 64257
-  br i1 %exitcond29.not, label %for.cond.cleanup, label %for.cond1.preheader
-
-for.body4:
-  %indvars.iv = phi i64 [ 0, %for.cond1.preheader ], [ %indvars.iv.next, %for.body4 ]
-  %1 = shl nuw nsw i64 %indvars.iv, 2
-  %2 = add nuw nsw i64 %1, %indvars.iv25
+inner.body:
+  %j = phi i64 [ 0, %outer.header ], [ %j.next, %inner.body ]
+  %1 = shl nuw nsw i64 %j, 2
+  %2 = add nuw nsw i64 %1, %i
   %arrayidx = getelementptr inbounds [65536 x float], ptr @a, i64 0, i64 %2
   %3 = load float, ptr %arrayidx, align 4
-  %4 = add nuw nsw i64 %0, %indvars.iv
+  %4 = add nuw nsw i64 %0, %j
   %arrayidx8 = getelementptr inbounds [65536 x float], ptr @a, i64 0, i64 %4
   %5 = load float, ptr %arrayidx8, align 4
   %add9 = fadd fast float %5, %3
   store float %add9, ptr %arrayidx8, align 4
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, 256
-  br i1 %exitcond.not, label %for.cond.cleanup3, label %for.body4
+  %j.next = add nuw nsw i64 %j, 1
+  %exitcond.not = icmp eq i64 %j.next, 256
+  br i1 %exitcond.not, label %outer.exit, label %inner.body
+
+outer.exit:
+  %i.next = add nuw nsw i64 %i, 1
+  %outerexitcond.not = icmp eq i64 %i.next, 64257
+  br i1 %outerexitcond.not, label %exit, label %outer.header
+
+exit:
+  ret void
 }
 
+
+; Generated from following C code:
+; void different_stride_and_not_vectorizable(){
+;    for(int i = 0; i < LEN2; i++){
+;        for(int j = 0 ; j < LEN; j++){
+;            a[i + j + LEN] += a[i + 4*j];
+;        }
+;    }
+; }
+; The load and store have different strides, but the store and load are not at a
+; safe distance away from each other, thus not safe for vectorization.
+define dso_local void @different_stride_and_not_vectorizable() local_unnamed_addr {
+; CHECK-LABEL: 'different_stride_and_not_vectorizable'
+; CHECK-NEXT:    inner.body:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            %3 = load float, ptr %arrayidx, align 4 ->
+; CHECK-NEXT:            store float %add9, ptr %arrayidx8, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            %5 = load float, ptr %arrayidx8, align 4 ->
+; CHECK-NEXT:            store float %add9, ptr %arrayidx8, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:    outer.header:
+; CHECK-NEXT:      Report: loop is not the innermost loop
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.exit ]
+  %0 = add nuw nsw i64 %i, 256
+  br label %inner.body
+
+exit:
+  ret void
+
+outer.exit:
+  %i.next = add nuw nsw i64 %i, 1
+  %exitcond29.not = icmp eq i64 %i.next, 65536
+  br i1 %exitcond29.not, label %exit, label %outer.header
+
+inner.body:
+  %j = phi i64 [ 0, %outer.header ], [ %j.next, %inner.body ]
+  %1 = shl nuw nsw i64 %j, 2
+  %2 = add nuw nsw i64 %1, %i
+  %arrayidx = getelementptr inbounds [65536 x float], ptr @a, i64 0, i64 %2
+  %3 = load float, ptr %arrayidx, align 4
+  %4 = add nuw nsw i64 %0, %j
+  %arrayidx8 = getelementptr inbounds [65536 x float], ptr @a, i64 0, i64 %4
+  %5 = load float, ptr %arrayidx8, align 4
+  %add9 = fadd fast float %5, %3
+  store float %add9, ptr %arrayidx8, align 4
+  %j.next = add nuw nsw i64 %j, 1
+  %exitcond.not = icmp eq i64 %j.next, 256
+  br i1 %exitcond.not, label %outer.exit, label %inner.body
+}

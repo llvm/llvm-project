@@ -2143,8 +2143,9 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
 
   // It's not vectorizable if the distance is smaller than the minimum distance
   // needed for a vectroized/unrolled version. Vectorizing one iteration in
-  // front needs TypeByteSize * Stride. Vectorizing the last iteration needs
-  // TypeByteSize (No need to plus the last gap distance).
+  // front needs TypeByteSize * Stride(MaxStride in case of different strides).
+  // Vectorizing the last iteration needs TypeByteSize (No need to plus the last
+  // gap distance).
   //
   // E.g. Assume one char is 1 byte in memory and one int is 4 bytes.
   //      foo(int *A) {
@@ -2167,6 +2168,9 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
   // If MinNumIter is 4 (Say if a user forces the vectorization factor to be 4),
   // the minimum distance needed is 28, which is greater than distance. It is
   // not safe to do vectorization.
+  //
+  // We use MaxStride (maximum of src and sink strides), to get conservative
+  // lower bound on the MinDistanceNeeded in case of different strides.
 
   // We know that Dist is positive, but it may not be constant. Use the signed
   // minimum for computations below, as this ensures we compute the closest
