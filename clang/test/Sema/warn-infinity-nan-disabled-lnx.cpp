@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -x c++ -verify=no-inf-no-nan \
-// RUN: -triple powerpc64le-unknown-unknown %s -ffinite-math-only \
-// RUN: -menable-no-infs -menable-no-nans -std=c++23
+// RUN: -triple powerpc64le-unknown-unknown %s \
+// RUN: -ffinite-math-only -std=c++23
 
 // RUN: %clang_cc1 -x c++ -verify=no-inf-no-nan \
-// RUN: -triple powerpc64le-unknown-unknown %s -ffinite-math-only \
-// RUN: -menable-no-infs -menable-no-nans -funsafe-math-optimizations \
+// RUN: -triple powerpc64le-unknown-unknown %s \
+// RUN: -ffinite-math-only -funsafe-math-optimizations \
 // RUN: -std=c++23
 
 // RUN: %clang_cc1 -x c++ -verify=no-fast -triple powerpc64le-unknown-unknown \
