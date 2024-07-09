@@ -4009,41 +4009,18 @@ bool AMDGPUAsmParser::validateMIMGGatherDMask(const MCInst &Inst) {
 
 bool AMDGPUAsmParser::validateMIMGDim(const MCInst &Inst,
                                       const OperandVector &Operands) {
+  if (!isGFX10Plus())
+    return true;
+
   const unsigned Opc = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opc);
 
   if ((Desc.TSFlags & MIMGFlags) == 0)
     return true;
 
-  if (!isGFX10Plus())
+  // image_bvh_intersect_ray instructions do not have dim
+  if (AMDGPU::getMIMGBaseOpcode(Opc)->BVH)
     return true;
-
-  switch (Opc) {
-  case IMAGE_BVH64_INTERSECT_RAY_a16_gfx12:
-  case IMAGE_BVH64_INTERSECT_RAY_a16_nsa_gfx10:
-  case IMAGE_BVH64_INTERSECT_RAY_a16_nsa_gfx11:
-  case IMAGE_BVH64_INTERSECT_RAY_a16_sa_gfx10:
-  case IMAGE_BVH64_INTERSECT_RAY_a16_sa_gfx11:
-  case IMAGE_BVH64_INTERSECT_RAY_gfx12:
-  case IMAGE_BVH64_INTERSECT_RAY_nsa_gfx10:
-  case IMAGE_BVH64_INTERSECT_RAY_nsa_gfx11:
-  case IMAGE_BVH64_INTERSECT_RAY_sa_gfx10:
-  case IMAGE_BVH64_INTERSECT_RAY_sa_gfx11:
-
-  case IMAGE_BVH_INTERSECT_RAY_a16_gfx12:
-  case IMAGE_BVH_INTERSECT_RAY_a16_nsa_gfx10:
-  case IMAGE_BVH_INTERSECT_RAY_a16_nsa_gfx11:
-  case IMAGE_BVH_INTERSECT_RAY_a16_sa_gfx10:
-  case IMAGE_BVH_INTERSECT_RAY_a16_sa_gfx11:
-  case IMAGE_BVH_INTERSECT_RAY_gfx12:
-  case IMAGE_BVH_INTERSECT_RAY_nsa_gfx10:
-  case IMAGE_BVH_INTERSECT_RAY_nsa_gfx11:
-  case IMAGE_BVH_INTERSECT_RAY_sa_gfx10:
-  case IMAGE_BVH_INTERSECT_RAY_sa_gfx11:
-    return true;
-  default:
-    break;
-  }
 
   for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);

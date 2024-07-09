@@ -1089,6 +1089,10 @@ def exp_vm : NamedBitOperand<"vm", "ExpVM">;
 def FORMAT : CustomOperand<i8>;
 
 def DMask : NamedIntOperand<i16, "dmask">;
+
+// The second argument (Optional) makes Dim optional for the AsmMatcher.
+// This allows proper handling of the case where dim is missing. A validation
+// function would ensure dim is present when required.
 def Dim : CustomOperand<i8, 1>;
 
 def dst_sel : SDWAOperand<"dst_sel", "SDWADstSel">;
