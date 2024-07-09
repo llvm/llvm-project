@@ -14,6 +14,7 @@
 #include <charconv>
 #include <chrono>
 #include <string_view>
+#include <type_traits>
 
 enum class offset_time_zone_flags {
   none             = 0,
@@ -38,6 +39,15 @@ public:
   }
 
   std::chrono::seconds offset() const { return offset_; }
+
+  offset_time_zone* operator->() { return this; }
+
+  template <class Duration>
+  std::chrono::sys_time<std::common_type_t<Duration, std::chrono::seconds>>
+  to_sys(const std::chrono::local_time<Duration>& local) const {
+    return std::chrono::sys_time<std::common_type_t<Duration, std::chrono::seconds>>{
+        local.time_since_epoch() + offset_};
+  }
 
 private:
   std::chrono::seconds offset_;
