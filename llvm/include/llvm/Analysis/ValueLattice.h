@@ -281,7 +281,7 @@ public:
     return std::nullopt;
   }
 
-  ConstantRange asConstantRange(Type *Ty, bool UndefAllowed = false) {
+  ConstantRange asConstantRange(Type *Ty, bool UndefAllowed = false) const {
     assert(Ty->isIntOrIntVectorTy() && "Must be integer type");
     if (isConstantRange(UndefAllowed))
       return getConstantRange();
