@@ -100,3 +100,6 @@ Revert: breaking MIOpen test 2
 f8b1ca4992a2 [MCParser] .altmacro: Support argument expansion not preceded by
 812f9e81d2f7 [MCParser] .altmacro: ignore & after a token
 ---
+Reverts: breaks hipBlender* tests in compilation step
+385118644cca [SLP]Remove operands upon marking instruction for deletion.
+---
