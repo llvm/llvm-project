@@ -654,6 +654,9 @@ Improvements to Clang's diagnostics
 
 - Clang now shows implicit deduction guides when diagnosing overload resolution failure. #GH92393.
 
+- Clong no longer emits a no previous prototype warning for Win32 entry points under ``-Wmissing-prototypes``.
+  Fixes #GH94366.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
