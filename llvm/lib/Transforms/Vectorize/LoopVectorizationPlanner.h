@@ -226,7 +226,7 @@ public:
 
 /// TODO: The following VectorizationFactor was pulled out of
 /// LoopVectorizationCostModel class. LV also deals with
-/// VectorizerParams::VectorizationFactor and VectorizationCostTy.
+/// VectorizerParams::VectorizationFactor.
 /// We need to streamline them.
 
 /// Information about vectorization costs.
@@ -428,7 +428,7 @@ private:
   // converted to reductions, with one operand being vector and the other being
   // the scalar reduction chain. For other reductions, a select is introduced
   // between the phi and live-out recipes when folding the tail.
-  void adjustRecipesForReductions(VPBasicBlock *LatchVPBB, VPlanPtr &Plan,
+  void adjustRecipesForReductions(VPlanPtr &Plan,
                                   VPRecipeBuilder &RecipeBuilder,
                                   ElementCount MinVF);
 

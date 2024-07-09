@@ -348,6 +348,9 @@ C23 Feature Support
   but C23 added them to ``<float.h>`` in
   `WG14 N2848 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2848.pdf>`_.
 
+- Clang now supports `N3017 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3017.htm>`_
+  ``#embed`` - a scannable, tooling-friendly binary resource inclusion mechanism.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -441,6 +444,11 @@ New Compiler Flags
 
 - ``-Wc++2c-compat`` group was added to help migrating existing codebases
   to upcoming C++26.
+
+- ``-fdisable-block-signature-string`` instructs clang not to emit the signature
+  string for blocks. Disabling the string can potentially break existing code
+  that relies on it. Users should carefully consider this possibiilty when using
+  the flag.
 
 Deprecated Compiler Flags
 -------------------------
@@ -546,6 +554,10 @@ Attribute Changes in Clang
        size_t count;
      };
 
+- The ``guarded_by``, ``pt_guarded_by``, ``acquired_after``, ``acquired_before``
+  attributes now support referencing struct members in C. The arguments are also
+  now late parsed when ``-fexperimental-late-parse-attributes`` is passed like
+  for ``counted_by``.
 
 - Introduced new function type attributes ``[[clang::nonblocking]]``, ``[[clang::nonallocating]]``,
   ``[[clang::blocking]]``, and ``[[clang::allocating]]``, with GNU-style variants as well.
@@ -959,6 +971,7 @@ Bug Fixes to C++ Support
 - Fix a crash caused by improper use of ``__array_extent``. (#GH80474)
 - Fixed several bugs in capturing variables within unevaluated contexts. (#GH63845), (#GH67260), (#GH69307),
   (#GH88081), (#GH89496), (#GH90669) and (#GH91633).
+- Fixed a crash in constraint instantiation under nested lambdas with dependent parameters.
 - Fixed handling of brace ellison when building deduction guides. (#GH64625), (#GH83368).
 - Clang now instantiates local constexpr functions eagerly for constant evaluators. (#GH35052), (#GH94849)
 - Fixed a failed assertion when attempting to convert an integer representing the difference
@@ -1084,6 +1097,7 @@ RISC-V Support
 
 - ``__attribute__((rvv_vector_bits(N)))`` is now supported for RVV vbool*_t types.
 - Profile names in ``-march`` option are now supported.
+- Passing empty structs/unions as arguments in C++ is now handled correctly. The behavior is similar to GCC's.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
