@@ -22,7 +22,14 @@ function(add_llvm_lib_precompiled_headers target)
 endfunction()
 
 function(add_llvm_subdir_pch subdir)
-    get_all_targets("${LLVM_MAIN_SRC_DIR}/lib/${subdir}" lib_targets)
+    set(subdir_path "${LLVM_MAIN_SRC_DIR}/lib/${subdir}")
+    if (NOT EXISTS ${subdir_path})
+        message(WARNING "Directory does not exist. Skipping Precompiled Headers for ${subdir_path}")
+        return()
+    endif()
+
+    message(STATUS "Enabling Precompiled Headers for ${subdir_path}")
+    get_all_targets(${subdir_path} lib_targets)
     foreach(target ${lib_targets})
         add_llvm_lib_precompiled_headers(${target})
     endforeach()
@@ -50,7 +57,7 @@ function(llvm_lib_precompiled_headers)
         if (NOT LLVM_LIB_DIRETORIES_FOR_PRECOMPILED_HEADERS)
             set(default_lib_dirs_for_pch
                 "Analysis"
-                "Codegen"
+                "CodeGen"
                 "DebugInfo"
                 "ExecutionEngine"
                 "IR"
