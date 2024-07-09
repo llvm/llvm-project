@@ -1,0 +1,36 @@
+## Test how we dump SHT_CREL sections.
+# RUN: yaml2obj %s -o %t1
+# RUN: obj2yaml %t1 | FileCheck %s --check-prefix=YAML
+
+# YAML:      - Name:    .crel.dyn
+# YAML-NEXT:   Type:    SHT_CREL
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .crel.dyn
+    Type:    SHT_CREL
+    Content: 00
+## Trigger the .dynsym emission.
+DynamicSymbols: []
+
+## Test the behavior when the sh_entsize field is broken.
+## Here we use the 0xFE value instead of expected 0x18/0x10.
+
+# RUN: yaml2obj -DTYPE=SHT_RELA --docnum=2 %s -o %t2
+# RUN: not obj2yaml %t2 2>&1 | FileCheck %s --check-prefix=ERR1
+
+# ERR1: unable to decode LEB128 at offset 0x00000000: malformed uleb128, extends past end
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_DYN
+Sections:
+  - Name:    .foo
+    Type:    SHT_CREL
+    EntSize: 0xFE
