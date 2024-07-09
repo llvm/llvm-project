@@ -110,12 +110,14 @@ template <ARM::ISAKind ISAKind> struct AssertSameExtensionFlags {
     if (ExpectedFlags == GotFlags)
       return testing::AssertionSuccess();
 
-    return testing::AssertionFailure() << llvm::formatv(
-               "CPU: {4}\n"
-               "Expected extension flags: {0} ({1:x})\n"
-               "     Got extension flags: {2} ({3:x})\n",
-               FormatExtensionFlags(ExpectedFlags), ExpectedFlags,
-               FormatExtensionFlags(GotFlags), ExpectedFlags, CPUName);
+    return testing::AssertionFailure()
+           << llvm::formatv("CPU: {4}\n"
+                            "Expected extension flags: {0} ({1:x})\n"
+                            "     Got extension flags: {2} ({3:x})\n"
+                            "                    Diff: {5} ({6:x})\n",
+                            FormatExtensionFlags(ExpectedFlags), ExpectedFlags,
+                            FormatExtensionFlags(GotFlags), GotFlags, CPUName,
+                            FormatExtensionFlags(ExpectedFlags ^ GotFlags));
   }
 
   testing::AssertionResult operator()(const char *m_expr, const char *n_expr,
@@ -127,11 +129,14 @@ template <ARM::ISAKind ISAKind> struct AssertSameExtensionFlags {
     return testing::AssertionFailure()
            << llvm::formatv("CPU: {4}\n"
                             "Expected extension flags: {0} ({1})\n"
-                            "     Got extension flags: {2} ({3})\n",
+                            "     Got extension flags: {2} ({3})\n"
+                            "                    Diff: {5} ({6})\n",
                             FormatExtensionFlags(ExpectedFlags),
                             SerializeExtensionFlags(ExpectedFlags),
                             FormatExtensionFlags(GotFlags),
-                            SerializeExtensionFlags(ExpectedFlags), CPUName);
+                            SerializeExtensionFlags(GotFlags), CPUName,
+                            FormatExtensionFlags(ExpectedFlags ^ GotFlags),
+                            SerializeExtensionFlags(ExpectedFlags ^ GotFlags));
   }
 
 private:
