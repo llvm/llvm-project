@@ -81,7 +81,47 @@ public:
   uint8_t SuccHash{0};
 };
 
-struct CallGraphMatcher {};
+struct CallGraphMatcher {
+public:
+  /// Computes the loose hash, as in the opcode hash, of a binary function.
+  uint64_t computeBFLooseHash(BinaryContext &BC,
+                              yaml::bolt::BinaryProfile &YamlBP,
+                              BinaryFunction *BF);
+
+  /// Computes the loose hash of a function profile.
+  uint64_t computeYamlBFLooseHash(yaml::bolt::BinaryFunctionProfile &YamlBF);
+
+  /// Adds edges to the call graph given the callsites of the parameter
+  /// function.
+  void addBFCGEdges(BinaryContext &BC, yaml::bolt::BinaryProfile &YamlBP,
+                    BinaryFunction *BF);
+
+  /// Using the constructed adjacent function mapping, creates mapping from
+  /// neighbor hash to BFs.
+  void computeBFNeighborHashes(BinaryContext &BC);
+
+  /// Construct profile FCG.
+  void constructYAMLFCG(
+      yaml::bolt::BinaryProfile &YamlBP,
+      DenseMap<uint32_t, yaml::bolt::BinaryFunctionProfile *> &IdToYAMLBF);
+  // private:
+  ///
+  struct FunctionHashes {
+    uint64_t Hash{0};
+    uint64_t AdjacentFunctionHash{0};
+    std::vector<uint64_t> AdjacentFunctionHashesSet;
+  };
+
+  ///
+  std::unordered_map<BinaryFunction *, FunctionHashes> BFToHashes;
+
+  ///
+  std::unordered_map<uint64_t, std::vector<BinaryFunction *>> NeighborHashToBFs;
+
+  ///
+  std::unordered_map<const yaml::bolt::BinaryFunctionProfile *, FunctionHashes>
+      YamlBFToHashes;
+};
 
 class YAMLProfileReader : public ProfileReaderBase {
 public:
@@ -107,6 +147,9 @@ public:
   /// Check if the file contains YAML.
   static bool isYAML(StringRef Filename);
 
+  using ProfileLookupMap =
+      DenseMap<uint32_t, yaml::bolt::BinaryFunctionProfile *>;
+
 private:
   /// Adjustments for basic samples profiles (without LBR).
   bool NormalizeByInsnCount{false};
@@ -123,6 +166,10 @@ private:
   /// is attributed.
   FunctionSet ProfiledFunctions;
 
+  /// Maps profiled function id to function, for function matching with calls as
+  /// anchors.
+  ProfileLookupMap IdToYamLBF;
+
   /// For LTO symbol resolution.
   /// Map a common LTO prefix to a list of YAML profiles matching the prefix.
   StringMap<std::vector<yaml::bolt::BinaryFunctionProfile *>> LTOCommonNameMap;
@@ -135,6 +182,9 @@ private:
 
   /// BinaryFunction pointers indexed by YamlBP functions.
   std::vector<BinaryFunction *> ProfileBFs;
+
+  /// Interface for call graph function matching.
+  CallGraphMatcher CGMatcher;
 
   /// Populate \p Function profile with the one supplied in YAML format.
   bool parseFunctionProfile(BinaryFunction &Function,
