@@ -9,6 +9,7 @@
 #include "src/__support/OSUtil/fcntl.h"
 
 #include "hdr/fcntl_macros.h"
+#include "hdr/types/off_t.h"
 #include "hdr/types/struct_f_owner_ex.h"
 #include "hdr/types/struct_flock.h"
 #include "hdr/types/struct_flock64.h"
