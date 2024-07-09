@@ -1151,7 +1151,7 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
 
   // The length of the memcpy's must be the same, or the preceding one
   // must be larger than the following one.
-  if (MForwardOffset != 0 || (MDep->getLength() != M->getLength())) {
+  if (MForwardOffset != 0 || MDep->getLength() != M->getLength()) {
     auto *MDepLen = dyn_cast<ConstantInt>(MDep->getLength());
     auto *MLen = dyn_cast<ConstantInt>(M->getLength());
     if (!MDepLen || !MLen ||
@@ -1175,12 +1175,11 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     // The copy destination of `M` maybe can serve as the source of copying.
     std::optional<int64_t> MDestOffset =
         M->getRawDest()->getPointerOffsetFrom(MDep->getRawSource(), DL);
-    if (MDestOffset && *MDestOffset == MForwardOffset)
+    if (MDestOffset == MForwardOffset)
       CopySource = M->getRawDest();
     else
       CopySource = Builder.CreateInBoundsPtrAdd(
-          CopySource, ConstantInt::get(Type::getInt64Ty(Builder.getContext()),
-                                       MForwardOffset));
+          CopySource, Builder.getInt64(MForwardOffset));
     MCopyLoc = MCopyLoc.getWithNewPtr(CopySource);
     if (CopySourceAlign)
       CopySourceAlign = commonAlignment(*CopySourceAlign, MForwardOffset);
