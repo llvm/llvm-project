@@ -301,3 +301,27 @@ struct stest14 {
 size_t test14(struct stest14 *p, int idx) {
   return __bdos(&p->z->array[idx]); // -1
 }
+
+struct stest15 {
+  int array[10];
+  int dummy;
+};
+
+// CHECK-LABEL: define dso_local i64 @test15(
+// CHECK-SAME: ptr noundef [[P:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[IDX]], ptr [[IDX_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[IDX_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
+// CHECK-NEXT:    [[TMP2:%.*]] = mul i64 1, [[TMP1]]
+// CHECK-NEXT:    [[TMP3:%.*]] = sub i64 40, [[TMP2]]
+// CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt i64 [[TMP3]], -1
+// CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 [[TMP3]], i64 0
+// CHECK-NEXT:    ret i64 [[TMP5]]
+//
+size_t test15(struct stest15 *p, int idx) {
+  return __bdos(&((char *)p->array)[idx]);
+}
