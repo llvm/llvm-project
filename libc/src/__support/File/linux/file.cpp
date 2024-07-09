@@ -8,6 +8,8 @@
 
 #include "file.h"
 
+#include "hdr/stdio_macros.h"
+#include "hdr/types/off_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
 #include "src/__support/File/linux/lseekImpl.h"
@@ -15,8 +17,7 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/errno/libc_errno.h"         // For error macros
 
-#include <fcntl.h> // For mode_t and other flags to the open syscall
-#include <stdio.h>
+#include <fcntl.h>       // For mode_t and other flags to the open syscall
 #include <sys/stat.h>    // For S_IS*, S_IF*, and S_IR* flags.
 #include <sys/syscall.h> // For syscall numbers
 
