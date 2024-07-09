@@ -51,10 +51,20 @@ function(llvm_lib_precompiled_headers)
         endif()
 
         set(precompiled_header_path ${LLVM_MAIN_INCLUDE_DIR}/llvm/PrecompiledHeaders.h)
-        add_llvm_component_library(LLVMPchTarget ${pch_dummy_cpp} ${precompiled_header_path})
+
+        add_llvm_component_library(
+          LLVMPchTarget
+          ${pch_dummy_cpp}
+          ${precompiled_header_path}
+
+          # The PCH depends on Attributes.inc being generated
+          DEPENDS
+          intrinsics_gen
+        )
         target_precompile_headers(LLVMPchTarget PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:${LLVM_MAIN_INCLUDE_DIR}/llvm/PrecompiledHeaders.h>")
 
         if (NOT LLVM_LIB_DIRETORIES_FOR_PRECOMPILED_HEADERS)
+            # LLVMSupport would be nice to have here, but causes a circular dependency with intrinsics_gen
             set(default_lib_dirs_for_pch
                 "Analysis"
                 "CodeGen"
@@ -66,7 +76,6 @@ function(llvm_lib_precompiled_headers)
                 "ObjCopy"
                 "Object"
                 "Passes"
-                "Support"
                 "Target"
                 "Transforms"
             )
