@@ -589,20 +589,10 @@ private:
   LocalScope<Emitter> &OtherScope;
 };
 
-/// Like a regular LocalScope, except that the destructors of all local
-/// variables are automatically emitted when the AutoScope is destroyed.
-template <class Emitter> class AutoScope : public LocalScope<Emitter> {
-public:
-  AutoScope(Compiler<Emitter> *Ctx) : LocalScope<Emitter>(Ctx), DS(*this) {}
-
-private:
-  DestructorScope<Emitter> DS;
-};
-
 /// Scope for storage declared in a compound statement.
-template <class Emitter> class BlockScope final : public AutoScope<Emitter> {
+template <class Emitter> class BlockScope final : public LocalScope<Emitter> {
 public:
-  BlockScope(Compiler<Emitter> *Ctx) : AutoScope<Emitter>(Ctx) {}
+  BlockScope(Compiler<Emitter> *Ctx) : LocalScope<Emitter>(Ctx) {}
 
   void addExtended(const Scope::Local &Local) override {
     // If we to this point, just add the variable as a normal local
