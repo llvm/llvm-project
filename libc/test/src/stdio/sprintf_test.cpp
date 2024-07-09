@@ -39,18 +39,19 @@ using LIBC_NAMESPACE::fputil::testing::RoundingMode;
     for (char &c : buff) {                                                     \
       c = 0;                                                                   \
     }                                                                          \
-    LIBC_NAMESPACE::sprintf(buff, "%" FMT, X);                                 \
-    ASSERT_STREQ(buff, expected);                                              \
+    written = LIBC_NAMESPACE::sprintf(buff, "%" FMT, X);                       \
+    ASSERT_STREQ_LEN(written, buff, expected);                                 \
   } while (0)
 
 TEST(LlvmLibcSPrintfTest, Macros) {
   char buff[128];
+  int written;
   macro_test(PRIu8, 1, "1");
   macro_test(PRIX16, 0xAA, "AA");
   macro_test(PRId32, -123, "-123");
   macro_test(PRIX32, 0xFFFFFF85, "FFFFFF85");
   macro_test(PRIo8, 0xFF, "377");
-  macro_test(PRIo64, 0123, "123");
+  macro_test(PRIo64, 0123456712345671234567ll, "123456712345671234567");
 }
 
 TEST(LlvmLibcSPrintfTest, SimpleNoConv) {

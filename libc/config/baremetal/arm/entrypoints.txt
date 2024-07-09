@@ -178,6 +178,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.bsearch
     libc.src.stdlib.calloc
     libc.src.stdlib.div
+    libc.src.stdlib.exit
     libc.src.stdlib.free
     libc.src.stdlib.freelist_malloc
     libc.src.stdlib.labs
