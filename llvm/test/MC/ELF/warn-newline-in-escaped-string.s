@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s 2>&1 -o %t | FileCheck --strict-whitespace %s --check-prefix=CHECK-WARN
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s 2>&1 -o /dev/null | FileCheck --strict-whitespace %s --check-prefix=CHECK-WARN
 
 .string "abcd\xFFefg
 12345678"
@@ -57,13 +57,13 @@ newline characters
 
 .cv_file 1 "some_an
 other_file.s"
-// HECK-WARN:   warn-newline-in-escaped-string.s:58:20: warning: unterminated string; newline inserted
+// CHECK-WARN:   warn-newline-in-escaped-string.s:58:20: warning: unterminated string; newline inserted
 
 .ascii "test\nstring\xFF\n\n\xFF"
-// CHECK-WARN-NOT: warn-newline-in-escaped-string.s:62{{.*}}
+// CHECK-WARN-NOT:    warn-newline-in-escaped-string.s:62{{.*}}
 
 .asciz "\n\n\ntest_string\x0A"
-// CHECK-WARN-NOT: warn-newline-in-escaped-string.s:65{{.*}}
+// CHECK-WARN-NOT:    warn-newline-in-escaped-string.s:65{{.*}}
 
 .string "1234\n\xFF\n\xFF\n"
-// CHECK-WARN-NOT: warn-newline-in-escaped-string.s:68{{.*}}
+// CHECK-WARN-NOT:    warn-newline-in-escaped-string.s:68{{.*}}
