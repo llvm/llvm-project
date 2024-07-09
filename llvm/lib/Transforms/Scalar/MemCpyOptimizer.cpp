@@ -1170,7 +1170,11 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
   auto MCopyLoc = MemoryLocation::getForSource(MDep).getWithNewSize(
       MemoryLocation::getForSource(M).Size);
 
-  // We need to update `MCopyLoc` if an offset exists.
+  // When the forwarding offset is greater than 0, we transform
+  //    memcpy(d1 <- s1)
+  //    memcpy(d2 <- d1+o)
+  // to
+  //    memcpy(d2 <- s1+o)
   if (MForwardOffset > 0) {
     // The copy destination of `M` maybe can serve as the source of copying.
     std::optional<int64_t> MDestOffset =
@@ -1180,6 +1184,7 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     else
       CopySource = Builder.CreateInBoundsPtrAdd(
           CopySource, Builder.getInt64(MForwardOffset));
+    // We need to update `MCopyLoc` if an offset exists.
     MCopyLoc = MCopyLoc.getWithNewPtr(CopySource);
     if (CopySourceAlign)
       CopySourceAlign = commonAlignment(*CopySourceAlign, MForwardOffset);
