@@ -165,7 +165,7 @@
 "`3225 <https://wg21.link/LWG3225>`__","``zoned_time``\  converting constructor shall not be ``noexcept``\ ","Belfast","","","|chrono|"
 "`3190 <https://wg21.link/LWG3190>`__","``std::allocator::allocate``\  sometimes returns too little storage","Belfast","|Complete|","14.0"
 "`3218 <https://wg21.link/LWG3218>`__","Modifier for ``%d``\  parse flag does not match POSIX and ``format``\  specification","Belfast","","","|chrono| |format|"
-"`3224 <https://wg21.link/LWG3224>`__","``zoned_time``\  constructor from ``TimeZonePtr``\  does not specify initialization of ``tp_``\ ","Belfast","","","|chrono|"
+"`3224 <https://wg21.link/LWG3224>`__","``zoned_time``\  constructor from ``TimeZonePtr``\  does not specify initialization of ``tp_``\ ","Belfast","|Complete|","19.0","|chrono|"
 "`3230 <https://wg21.link/LWG3230>`__","Format specifier ``%y/%Y``\  is missing locale alternative versions","Belfast","|Complete|","16.0","|chrono| |format|"
 "`3232 <https://wg21.link/LWG3232>`__","Inconsistency in ``zoned_time``\  deduction guides","Belfast","","","|chrono|"
 "`3222 <https://wg21.link/LWG3222>`__","P0574R1 introduced preconditions on non-existent parameters","Belfast","",""
