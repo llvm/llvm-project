@@ -791,6 +791,8 @@ def err_drv_loongarch_wrong_fpu_width : Error<
   "wrong fpu width; %select{LSX|LASX}0 depends on 64-bit FPU">;
 def err_drv_loongarch_invalid_simd_option_combination : Error<
   "invalid option combination; LASX depends on LSX">;
+def err_drv_loongarch_invalid_msimd_EQ : Error<
+  "invalid argument '%0' to -msimd=; must be one of: none, lsx, lasx">;
 
 def err_drv_expand_response_file : Error<
   "failed to expand response file: %0">;
