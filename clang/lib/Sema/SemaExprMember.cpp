@@ -1739,11 +1739,9 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
 
 ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
                                        SourceLocation OpLoc,
-                                       tok::TokenKind OpKind,
-                                       CXXScopeSpec &SS,
+                                       tok::TokenKind OpKind, CXXScopeSpec &SS,
                                        SourceLocation TemplateKWLoc,
-                                       UnqualifiedId &Id,
-                                       Decl *ObjCImpDecl) {
+                                       UnqualifiedId &Id, Decl *ObjCImpDecl) {
   // Warn about the explicit constructor calls Microsoft extension.
   if (getLangOpts().MicrosoftExt &&
       Id.getKind() == UnqualifiedIdKind::IK_ConstructorName)
