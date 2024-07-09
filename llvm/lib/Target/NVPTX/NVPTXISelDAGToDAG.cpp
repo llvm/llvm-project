@@ -714,6 +714,157 @@ static unsigned int getCodeAddrSpace(MemSDNode *N) {
   return NVPTX::PTXLdStInstCode::GENERIC;
 }
 
+static unsigned int getCodeMemorySemantic(MemSDNode *N,
+                                          const NVPTXSubtarget *Subtarget) {
+  AtomicOrdering Ordering = N->getSuccessOrdering();
+  auto CodeAddrSpace = getCodeAddrSpace(N);
+
+  // Supports relaxed, acquire, release, weak:
+  bool hasAtomics =
+      Subtarget->getPTXVersion() >= 60 && Subtarget->getSmVersion() >= 70;
+  // Supports mmio:
+  bool hasRelaxedMMIO =
+      Subtarget->getPTXVersion() >= 82 && Subtarget->getSmVersion() >= 70;
+
+  // TODO: lowering for SequentiallyConsistent Operations: for now, we error.
+  // TODO: lowering for AcquireRelease Operations: for now, we error.
+  //
+
+  // clang-format off
+
+  // Lowering for non-SequentiallyConsistent Operations
+  //
+  // | Atomic  | Volatile | Statespace                    | Lowering sm_60- | Lowering sm_70+                                      |
+  // |---------|----------|-------------------------------|-----------------|------------------------------------------------------|
+  // | No      | No       | All                           | plain           | .weak                                                |
+  // | No      | Yes      | Generic / Shared / Global [0] | .volatile       | .volatile                                            |
+  // | No      | Yes      | Local / Const / Param         | plain [1]       | .weak [1]                                            |
+  // | Relaxed | No       | Generic / Shared / Global [0] | .volatile       | <atomic sem>                                         |
+  // | Other   | No       | Generic / Shared / Global [0] | Error [2]       | <atomic sem>                                         |
+  // | Yes     | No       | Local / Const / Param         | plain [1]       | .weak [1]                                            |
+  // | Relaxed | Yes      | Generic / Shared [0]          | .volatile       | .volatile                                            |
+  // | Relaxed | Yes      | Global [0]                    | .volatile       | .mmio.relaxed.sys (PTX 8.2+) or .volatile (PTX 8.1-) |
+  // | Relaxed | Yes      | Local / Const / Param         | plain [1]       | .weak [1]                                            |
+  // | Other   | Yes      | Generic / Shared / Global [0] | Error [4]       | <atomic sem> [3]                                     |
+
+  // clang-format on
+
+  // [0]: volatile and atomics are only supported on generic addressing to
+  //      shared or global, or shared, or global.
+  //      MMIO requires generic addressing to global or global, but
+  // (TODO) we only implement it for global.
+
+  // [1]: TODO: this implementation exhibits PTX Undefined Behavior; it
+  //      fails to preserve the side-effects of atomics and volatile
+  //      accesses in LLVM IR to local / const / param, causing
+  //      well-formed LLVM-IR & CUDA C++ programs to be miscompiled
+  //      in sm_70+.
+
+  if (CodeAddrSpace == NVPTX::PTXLdStInstCode::LOCAL ||
+      CodeAddrSpace == NVPTX::PTXLdStInstCode::CONSTANT ||
+      CodeAddrSpace == NVPTX::PTXLdStInstCode::PARAM) {
+    return NVPTX::PTXLdStInstCode::NotAtomic;
+  }
+
+  // [2]: Atomics with Ordering different than Relaxed are not supported on
+  //      sm_60 and older.
+  if (!(Ordering == AtomicOrdering::NotAtomic ||
+        Ordering == AtomicOrdering::Monotonic) &&
+      !hasAtomics) {
+    SmallString<256> Msg;
+    raw_svector_ostream OS(Msg);
+    OS << "PTX does not support \"atomic\" for orderings different than"
+          "\"NotAtomic\" or \"Monotonic\" for sm_60 or older, but order is: \""
+       << toIRString(Ordering) << "\".";
+    report_fatal_error(OS.str());
+  }
+
+  // [3]: TODO: these should eventually use .mmio<.atomic sem>; for now we drop
+  // the volatile semantics and preserve the atomic ones. [4]: TODO: volatile
+  // atomics with order stronger than relaxed are currently unimplemented in
+  // sm_60 and older.
+  if (!hasAtomics && N->isVolatile() &&
+      !(Ordering == AtomicOrdering::NotAtomic ||
+        Ordering == AtomicOrdering::Monotonic)) {
+    SmallString<256> Msg;
+    raw_svector_ostream OS(Msg);
+    OS << "PTX does not support \"volatile atomic\" for orderings different "
+          "than \"NotAtomic\" or \"Monotonic\" for sm_60 and older, but order "
+          "is: \""
+       << toIRString(Ordering) << "\".";
+    report_fatal_error(OS.str());
+  }
+
+  // PTX volatile and PTX atomics are not available for statespace that differ
+  // from .generic, .global, or .shared. The behavior of PTX volatile and PTX
+  // atomics is undefined if the generic address does not refer to a .global or
+  // .shared memory location.
+  bool addrGenericOrGlobalOrShared =
+      (CodeAddrSpace == NVPTX::PTXLdStInstCode::GENERIC ||
+       CodeAddrSpace == NVPTX::PTXLdStInstCode::GLOBAL ||
+       CodeAddrSpace == NVPTX::PTXLdStInstCode::SHARED);
+  bool useRelaxedMMIO =
+      hasRelaxedMMIO && CodeAddrSpace == NVPTX::PTXLdStInstCode::GLOBAL;
+
+  switch (Ordering) {
+  case AtomicOrdering::NotAtomic:
+    return N->isVolatile() && addrGenericOrGlobalOrShared
+               ? NVPTX::PTXLdStInstCode::Volatile
+               : NVPTX::PTXLdStInstCode::NotAtomic;
+  case AtomicOrdering::Monotonic:
+    if (N->isVolatile())
+      return useRelaxedMMIO                ? NVPTX::PTXLdStInstCode::RelaxedMMIO
+             : addrGenericOrGlobalOrShared ? NVPTX::PTXLdStInstCode::Volatile
+                                           : NVPTX::PTXLdStInstCode::NotAtomic;
+    else
+      return hasAtomics                    ? NVPTX::PTXLdStInstCode::Relaxed
+             : addrGenericOrGlobalOrShared ? NVPTX::PTXLdStInstCode::Volatile
+                                           : NVPTX::PTXLdStInstCode::NotAtomic;
+  case AtomicOrdering::Acquire:
+    if (!N->readMem()) {
+      SmallString<256> Msg;
+      raw_svector_ostream OS(Msg);
+      OS << "PTX only supports Acquire Ordering on reads: "
+         << N->getOperationName();
+      N->print(OS);
+      report_fatal_error(OS.str());
+    }
+    return addrGenericOrGlobalOrShared ? NVPTX::PTXLdStInstCode::Acquire
+                                       : NVPTX::PTXLdStInstCode::NotAtomic;
+  case AtomicOrdering::Release:
+    if (!N->writeMem()) {
+      SmallString<256> Msg;
+      raw_svector_ostream OS(Msg);
+      OS << "PTX only supports Release Ordering on writes: "
+         << N->getOperationName();
+      N->print(OS);
+      report_fatal_error(OS.str());
+    }
+    return addrGenericOrGlobalOrShared ? NVPTX::PTXLdStInstCode::Release
+                                       : NVPTX::PTXLdStInstCode::NotAtomic;
+  case AtomicOrdering::AcquireRelease: {
+    SmallString<256> Msg;
+    raw_svector_ostream OS(Msg);
+    OS << "PTX only supports AcquireRelease Ordering on read-modify-write: "
+       << N->getOperationName();
+    N->print(OS);
+    report_fatal_error(OS.str());
+  }
+  case AtomicOrdering::SequentiallyConsistent:
+  case AtomicOrdering::Unordered:
+  default: {
+    // TODO: support AcquireRelease and SequentiallyConsistent
+    SmallString<256> Msg;
+    raw_svector_ostream OS(Msg);
+    OS << "NVPTX backend does not support AtomicOrdering \""
+       << toIRString(Ordering) << "\" yet.";
+    report_fatal_error(OS.str());
+  }
+  }
+
+  report_fatal_error("unreachable");
+}
+
 static bool canLowerToLDG(MemSDNode *N, const NVPTXSubtarget &Subtarget,
                           unsigned CodeAddrSpace, MachineFunction *F) {
   // We use ldg (i.e. ld.global.nc) for invariant loads from the global address
@@ -916,31 +1067,17 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   if (!LoadedVT.isSimple())
     return false;
 
-  AtomicOrdering Ordering = LD->getSuccessOrdering();
-  // In order to lower atomic loads with stronger guarantees we would need to
-  // use load.acquire or insert fences. However these features were only added
-  // with PTX ISA 6.0 / sm_70.
-  // TODO: Check if we can actually use the new instructions and implement them.
-  if (isStrongerThanMonotonic(Ordering))
-    return false;
-
   // Address Space Setting
   unsigned int CodeAddrSpace = getCodeAddrSpace(LD);
   if (canLowerToLDG(LD, *Subtarget, CodeAddrSpace, MF)) {
     return tryLDGLDU(N);
   }
 
+  // Memory Semantic Setting
+  unsigned int CodeMemorySem = getCodeMemorySemantic(LD, Subtarget);
+
   unsigned int PointerSize =
       CurDAG->getDataLayout().getPointerSizeInBits(LD->getAddressSpace());
-
-  // Volatile Setting
-  // - .volatile is only available for .global and .shared
-  // - .volatile has the same memory synchronization semantics as .relaxed.sys
-  bool isVolatile = LD->isVolatile() || Ordering == AtomicOrdering::Monotonic;
-  if (CodeAddrSpace != NVPTX::PTXLdStInstCode::GLOBAL &&
-      CodeAddrSpace != NVPTX::PTXLdStInstCode::SHARED &&
-      CodeAddrSpace != NVPTX::PTXLdStInstCode::GENERIC)
-    isVolatile = false;
 
   // Type Setting: fromType + fromTypeWidth
   //
@@ -982,9 +1119,13 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                              NVPTX::LD_f32_avar, NVPTX::LD_f64_avar);
     if (!Opcode)
       return false;
-    SDValue Ops[] = { getI32Imm(isVolatile, dl), getI32Imm(CodeAddrSpace, dl),
-                      getI32Imm(vecType, dl), getI32Imm(fromType, dl),
-                      getI32Imm(fromTypeWidth, dl), Addr, Chain };
+    SDValue Ops[] = {getI32Imm(CodeMemorySem, dl),
+                     getI32Imm(CodeAddrSpace, dl),
+                     getI32Imm(vecType, dl),
+                     getI32Imm(fromType, dl),
+                     getI32Imm(fromTypeWidth, dl),
+                     Addr,
+                     Chain};
     NVPTXLD = CurDAG->getMachineNode(*Opcode, dl, TargetVT, MVT::Other, Ops);
   } else if (PointerSize == 64 ? SelectADDRsi64(N1.getNode(), N1, Base, Offset)
                                : SelectADDRsi(N1.getNode(), N1, Base, Offset)) {
@@ -993,9 +1134,14 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                              NVPTX::LD_f32_asi, NVPTX::LD_f64_asi);
     if (!Opcode)
       return false;
-    SDValue Ops[] = { getI32Imm(isVolatile, dl), getI32Imm(CodeAddrSpace, dl),
-                      getI32Imm(vecType, dl), getI32Imm(fromType, dl),
-                      getI32Imm(fromTypeWidth, dl), Base, Offset, Chain };
+    SDValue Ops[] = {getI32Imm(CodeMemorySem, dl),
+                     getI32Imm(CodeAddrSpace, dl),
+                     getI32Imm(vecType, dl),
+                     getI32Imm(fromType, dl),
+                     getI32Imm(fromTypeWidth, dl),
+                     Base,
+                     Offset,
+                     Chain};
     NVPTXLD = CurDAG->getMachineNode(*Opcode, dl, TargetVT, MVT::Other, Ops);
   } else if (PointerSize == 64 ? SelectADDRri64(N1.getNode(), N1, Base, Offset)
                                : SelectADDRri(N1.getNode(), N1, Base, Offset)) {
@@ -1010,9 +1156,14 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                                NVPTX::LD_f32_ari, NVPTX::LD_f64_ari);
     if (!Opcode)
       return false;
-    SDValue Ops[] = { getI32Imm(isVolatile, dl), getI32Imm(CodeAddrSpace, dl),
-                      getI32Imm(vecType, dl), getI32Imm(fromType, dl),
-                      getI32Imm(fromTypeWidth, dl), Base, Offset, Chain };
+    SDValue Ops[] = {getI32Imm(CodeMemorySem, dl),
+                     getI32Imm(CodeAddrSpace, dl),
+                     getI32Imm(vecType, dl),
+                     getI32Imm(fromType, dl),
+                     getI32Imm(fromTypeWidth, dl),
+                     Base,
+                     Offset,
+                     Chain};
     NVPTXLD = CurDAG->getMachineNode(*Opcode, dl, TargetVT, MVT::Other, Ops);
   } else {
     if (PointerSize == 64)
@@ -1026,9 +1177,13 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                                NVPTX::LD_f32_areg, NVPTX::LD_f64_areg);
     if (!Opcode)
       return false;
-    SDValue Ops[] = { getI32Imm(isVolatile, dl), getI32Imm(CodeAddrSpace, dl),
-                      getI32Imm(vecType, dl), getI32Imm(fromType, dl),
-                      getI32Imm(fromTypeWidth, dl), N1, Chain };
+    SDValue Ops[] = {getI32Imm(CodeMemorySem, dl),
+                     getI32Imm(CodeAddrSpace, dl),
+                     getI32Imm(vecType, dl),
+                     getI32Imm(fromType, dl),
+                     getI32Imm(fromTypeWidth, dl),
+                     N1,
+                     Chain};
     NVPTXLD = CurDAG->getMachineNode(*Opcode, dl, TargetVT, MVT::Other, Ops);
   }
 
@@ -1065,13 +1220,8 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   unsigned int PointerSize =
       CurDAG->getDataLayout().getPointerSizeInBits(MemSD->getAddressSpace());
 
-  // Volatile Setting
-  // - .volatile is only availalble for .global and .shared
-  bool IsVolatile = MemSD->isVolatile();
-  if (CodeAddrSpace != NVPTX::PTXLdStInstCode::GLOBAL &&
-      CodeAddrSpace != NVPTX::PTXLdStInstCode::SHARED &&
-      CodeAddrSpace != NVPTX::PTXLdStInstCode::GENERIC)
-    IsVolatile = false;
+  // Memory Semantic Setting
+  unsigned int CodeMemorySem = getCodeMemorySemantic(MemSD, Subtarget);
 
   // Vector Setting
   MVT SimpleVT = LoadedVT.getSimpleVT();
@@ -1138,9 +1288,13 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     }
     if (!Opcode)
       return false;
-    SDValue Ops[] = { getI32Imm(IsVolatile, DL), getI32Imm(CodeAddrSpace, DL),
-                      getI32Imm(VecType, DL), getI32Imm(FromType, DL),
-                      getI32Imm(FromTypeWidth, DL), Addr, Chain };
+    SDValue Ops[] = {getI32Imm(CodeMemorySem, DL),
+                     getI32Imm(CodeAddrSpace, DL),
+                     getI32Imm(VecType, DL),
+                     getI32Imm(FromType, DL),
+                     getI32Imm(FromTypeWidth, DL),
+                     Addr,
+                     Chain};
     LD = CurDAG->getMachineNode(*Opcode, DL, N->getVTList(), Ops);
   } else if (PointerSize == 64
                  ? SelectADDRsi64(Op1.getNode(), Op1, Base, Offset)
@@ -1163,9 +1317,14 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     }
     if (!Opcode)
       return false;
-    SDValue Ops[] = { getI32Imm(IsVolatile, DL), getI32Imm(CodeAddrSpace, DL),
-                      getI32Imm(VecType, DL), getI32Imm(FromType, DL),
-                      getI32Imm(FromTypeWidth, DL), Base, Offset, Chain };
+    SDValue Ops[] = {getI32Imm(CodeMemorySem, DL),
+                     getI32Imm(CodeAddrSpace, DL),
+                     getI32Imm(VecType, DL),
+                     getI32Imm(FromType, DL),
+                     getI32Imm(FromTypeWidth, DL),
+                     Base,
+                     Offset,
+                     Chain};
     LD = CurDAG->getMachineNode(*Opcode, DL, N->getVTList(), Ops);
   } else if (PointerSize == 64
                  ? SelectADDRri64(Op1.getNode(), Op1, Base, Offset)
@@ -1208,9 +1367,14 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     }
     if (!Opcode)
       return false;
-    SDValue Ops[] = { getI32Imm(IsVolatile, DL), getI32Imm(CodeAddrSpace, DL),
-                      getI32Imm(VecType, DL), getI32Imm(FromType, DL),
-                      getI32Imm(FromTypeWidth, DL), Base, Offset, Chain };
+    SDValue Ops[] = {getI32Imm(CodeMemorySem, DL),
+                     getI32Imm(CodeAddrSpace, DL),
+                     getI32Imm(VecType, DL),
+                     getI32Imm(FromType, DL),
+                     getI32Imm(FromTypeWidth, DL),
+                     Base,
+                     Offset,
+                     Chain};
 
     LD = CurDAG->getMachineNode(*Opcode, DL, N->getVTList(), Ops);
   } else {
@@ -1253,9 +1417,13 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     }
     if (!Opcode)
       return false;
-    SDValue Ops[] = { getI32Imm(IsVolatile, DL), getI32Imm(CodeAddrSpace, DL),
-                      getI32Imm(VecType, DL), getI32Imm(FromType, DL),
-                      getI32Imm(FromTypeWidth, DL), Op1, Chain };
+    SDValue Ops[] = {getI32Imm(CodeMemorySem, DL),
+                     getI32Imm(CodeAddrSpace, DL),
+                     getI32Imm(VecType, DL),
+                     getI32Imm(FromType, DL),
+                     getI32Imm(FromTypeWidth, DL),
+                     Op1,
+                     Chain};
     LD = CurDAG->getMachineNode(*Opcode, DL, N->getVTList(), Ops);
   }
 
@@ -1698,27 +1866,13 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   if (!StoreVT.isSimple())
     return false;
 
-  AtomicOrdering Ordering = ST->getSuccessOrdering();
-  // In order to lower atomic loads with stronger guarantees we would need to
-  // use store.release or insert fences. However these features were only added
-  // with PTX ISA 6.0 / sm_70.
-  // TODO: Check if we can actually use the new instructions and implement them.
-  if (isStrongerThanMonotonic(Ordering))
-    return false;
-
   // Address Space Setting
   unsigned int CodeAddrSpace = getCodeAddrSpace(ST);
   unsigned int PointerSize =
       CurDAG->getDataLayout().getPointerSizeInBits(ST->getAddressSpace());
 
-  // Volatile Setting
-  // - .volatile is only available for .global and .shared
-  // - .volatile has the same memory synchronization semantics as .relaxed.sys
-  bool isVolatile = ST->isVolatile() || Ordering == AtomicOrdering::Monotonic;
-  if (CodeAddrSpace != NVPTX::PTXLdStInstCode::GLOBAL &&
-      CodeAddrSpace != NVPTX::PTXLdStInstCode::SHARED &&
-      CodeAddrSpace != NVPTX::PTXLdStInstCode::GENERIC)
-    isVolatile = false;
+  // Memory Semantic Setting
+  unsigned int CodeMemorySem = getCodeMemorySemantic(ST, Subtarget);
 
   // Vector Setting
   MVT SimpleVT = StoreVT.getSimpleVT();
@@ -1755,7 +1909,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
     if (!Opcode)
       return false;
     SDValue Ops[] = {Value,
-                     getI32Imm(isVolatile, dl),
+                     getI32Imm(CodeMemorySem, dl),
                      getI32Imm(CodeAddrSpace, dl),
                      getI32Imm(vecType, dl),
                      getI32Imm(toType, dl),
@@ -1772,7 +1926,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
     if (!Opcode)
       return false;
     SDValue Ops[] = {Value,
-                     getI32Imm(isVolatile, dl),
+                     getI32Imm(CodeMemorySem, dl),
                      getI32Imm(CodeAddrSpace, dl),
                      getI32Imm(vecType, dl),
                      getI32Imm(toType, dl),
@@ -1797,7 +1951,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
       return false;
 
     SDValue Ops[] = {Value,
-                     getI32Imm(isVolatile, dl),
+                     getI32Imm(CodeMemorySem, dl),
                      getI32Imm(CodeAddrSpace, dl),
                      getI32Imm(vecType, dl),
                      getI32Imm(toType, dl),
@@ -1819,7 +1973,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
     if (!Opcode)
       return false;
     SDValue Ops[] = {Value,
-                     getI32Imm(isVolatile, dl),
+                     getI32Imm(CodeMemorySem, dl),
                      getI32Imm(CodeAddrSpace, dl),
                      getI32Imm(vecType, dl),
                      getI32Imm(toType, dl),
@@ -1858,13 +2012,8 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   unsigned int PointerSize =
       CurDAG->getDataLayout().getPointerSizeInBits(MemSD->getAddressSpace());
 
-  // Volatile Setting
-  // - .volatile is only availalble for .global and .shared
-  bool IsVolatile = MemSD->isVolatile();
-  if (CodeAddrSpace != NVPTX::PTXLdStInstCode::GLOBAL &&
-      CodeAddrSpace != NVPTX::PTXLdStInstCode::SHARED &&
-      CodeAddrSpace != NVPTX::PTXLdStInstCode::GENERIC)
-    IsVolatile = false;
+  // Memory Semantic Setting
+  unsigned int CodeMemorySem = getCodeMemorySemantic(MemSD, Subtarget);
 
   // Type Setting: toType + toTypeWidth
   // - for integer type, always use 'u'
@@ -1906,7 +2055,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
     ToTypeWidth = 32;
   }
 
-  StOps.push_back(getI32Imm(IsVolatile, DL));
+  StOps.push_back(getI32Imm(CodeMemorySem, DL));
   StOps.push_back(getI32Imm(CodeAddrSpace, DL));
   StOps.push_back(getI32Imm(VecType, DL));
   StOps.push_back(getI32Imm(ToType, DL));
