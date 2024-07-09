@@ -5551,8 +5551,7 @@ AArch64InstructionSelector::emitConstantVector(Register Dst, Constant *CV,
   }
 
   if (CV->getSplatValue()) {
-    APInt DefBits = APInt::getSplat(
-        DstSize, CV->getUniqueInteger().trunc(DstTy.getScalarSizeInBits()));
+    APInt DefBits = APInt::getSplat(DstSize, CV->getUniqueInteger());
     auto TryMOVIWithBits = [&](APInt DefBits) -> MachineInstr * {
       MachineInstr *NewOp;
       bool Inv = false;

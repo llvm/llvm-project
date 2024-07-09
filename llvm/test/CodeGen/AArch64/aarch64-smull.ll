@@ -994,9 +994,9 @@ define <8 x i16> @smull_noextvec_v8i8_v8i16(<8 x i8> %arg) nounwind {
 ;
 ; CHECK-GI-LABEL: smull_noextvec_v8i8_v8i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #-999 // =0xfffffc19
+; CHECK-GI-NEXT:    adrp x8, .LCPI34_0
 ; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    dup v1.8h, w8
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI34_0]
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
   %tmp3 = sext <8 x i8> %arg to <8 x i16>
@@ -1088,13 +1088,29 @@ define <8 x i16> @umull_extvec_v8i8_v8i16(<8 x i8> %arg) nounwind {
 
 define <8 x i16> @umull_noextvec_v8i8_v8i16(<8 x i8> %arg) nounwind {
 ; Do not use SMULL if the BUILD_VECTOR element values are too big.
-; CHECK-LABEL: umull_noextvec_v8i8_v8i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #999 // =0x3e7
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    dup v1.8h, w8
-; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    ret
+; CHECK-NEON-LABEL: umull_noextvec_v8i8_v8i16:
+; CHECK-NEON:       // %bb.0:
+; CHECK-NEON-NEXT:    mov w8, #999 // =0x3e7
+; CHECK-NEON-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEON-NEXT:    dup v1.8h, w8
+; CHECK-NEON-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-NEON-NEXT:    ret
+;
+; CHECK-SVE-LABEL: umull_noextvec_v8i8_v8i16:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    mov w8, #999 // =0x3e7
+; CHECK-SVE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-SVE-NEXT:    dup v1.8h, w8
+; CHECK-SVE-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-SVE-NEXT:    ret
+;
+; CHECK-GI-LABEL: umull_noextvec_v8i8_v8i16:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI38_0
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI38_0]
+; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    ret
   %tmp3 = zext <8 x i8> %arg to <8 x i16>
   %tmp4 = mul <8 x i16> %tmp3, <i16 999, i16 999, i16 999, i16 999, i16 999, i16 999, i16 999, i16 999>
   ret <8 x i16> %tmp4

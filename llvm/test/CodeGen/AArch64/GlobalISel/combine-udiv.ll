@@ -18,8 +18,8 @@ define <8 x i16> @combine_vec_udiv_uniform(<8 x i16> %x) {
 ;
 ; GISEL-LABEL: combine_vec_udiv_uniform:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #25645 // =0x642d
-; GISEL-NEXT:    dup v1.8h, w8
+; GISEL-NEXT:    adrp x8, .LCPI0_0
+; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI0_0]
 ; GISEL-NEXT:    umull2 v2.4s, v0.8h, v1.8h
 ; GISEL-NEXT:    umull v1.4s, v0.4h, v1.4h
 ; GISEL-NEXT:    uzp2 v1.8h, v1.8h, v2.8h
