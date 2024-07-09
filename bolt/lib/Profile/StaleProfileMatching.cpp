@@ -452,7 +452,7 @@ matchWeightsByHashes(BinaryContext &BC,
                      const BinaryFunction::BasicBlockOrderType &BlockOrder,
                      const yaml::bolt::BinaryFunctionProfile &YamlBF,
                      FlowFunction &Func, HashFunction HashFunction,
-                     const DenseMap<uint32_t, StringRef> &IdToFunctionName) {
+                     YAMLProfileReader::FunctionMap &IdToYamlBF) {
 
   assert(Func.Blocks.size() == BlockOrder.size() + 2);
 
@@ -492,7 +492,7 @@ matchWeightsByHashes(BinaryContext &BC,
     BlendedBlockHash YamlHash(YamlBB.Hash);
 
     const FlowBlock *MatchedBlock = nullptr;
-    std::string CallHashStr = hashBlockCalls(IdToFunctionName, YamlBB);
+    std::string CallHashStr = hashBlockCalls(IdToYamlBF, YamlBB);
     uint64_t CallHash = 0;
     if (!CallHashStr.empty()) {
       if (HashFunction == HashFunction::StdHash)
@@ -828,7 +828,7 @@ bool YAMLProfileReader::inferStaleProfile(
   // Match as many block/jump counts from the stale profile as possible
   size_t MatchedBlocks =
       matchWeightsByHashes(BF.getBinaryContext(), BlockOrder, YamlBF, Func,
-                           YamlBP.Header.HashFunction, IdToFunctionName);
+                           YamlBP.Header.HashFunction, IdToYamLBF);
 
   // Adjust the flow function by marking unreachable blocks Unlikely so that
   // they don't get any counts assigned.

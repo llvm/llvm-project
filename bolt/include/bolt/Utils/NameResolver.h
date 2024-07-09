@@ -61,6 +61,12 @@ public:
     std::tie(LHS, RHS) = UniqueName.split(Sep);
     return (LHS + Suffix + Twine(Sep) + RHS).str();
   }
+
+  // Removes a suffix from a function name.
+  static StringRef removeSuffix(StringRef Name, StringRef Suffix) {
+    const size_t Pos = Name.find(Suffix);
+    return Pos != StringRef::npos ? Name.substr(0, Pos) : Name;
+  }
 };
 
 } // namespace bolt

@@ -613,7 +613,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
 
   // Map profiled function ids to names.
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions)
-    IdToFunctionName[YamlBF.Id] = YamlBF.Name;
+    IdToYamLBF[YamlBF.Id] = &YamlBF;
 
   uint64_t NumUnused = 0;
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions) {

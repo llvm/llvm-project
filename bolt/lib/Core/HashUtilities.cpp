@@ -12,7 +12,9 @@
 
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Utils/NameResolver.h"
 #include "llvm/MC/MCInstPrinter.h"
+
 
 namespace llvm {
 namespace bolt {
@@ -161,7 +163,7 @@ std::string hashBlockLoose(BinaryContext &BC, const BinaryBasicBlock &BB) {
 std::string hashBlockCalls(BinaryContext &BC, const BinaryBasicBlock &BB) {
   // The hash is computed by creating a string of all lexicographically ordered
   // called function names.
-  std::multiset<std::string> FunctionNames;
+  std::vector<std::string> FunctionNames;
   for (const MCInst &Instr : BB) {
     // Skip non-call instructions.
     if (!BC.MIB->isCall(Instr))
@@ -169,9 +171,9 @@ std::string hashBlockCalls(BinaryContext &BC, const BinaryBasicBlock &BB) {
     const MCSymbol *CallSymbol = BC.MIB->getTargetSymbol(Instr);
     if (!CallSymbol)
       continue;
-    FunctionNames.insert(std::string(CallSymbol->getName()));
+    FunctionNames.push_back(std::string(CallSymbol->getName()));
   }
-
+  std::sort(FunctionNames.begin(), FunctionNames.end());
   std::string HashString;
   for (const std::string &FunctionName : FunctionNames)
     HashString.append(FunctionName);
@@ -181,20 +183,17 @@ std::string hashBlockCalls(BinaryContext &BC, const BinaryBasicBlock &BB) {
 
 /// The same as the $hashBlockCalls function, but for profiled functions.
 std::string
-hashBlockCalls(const DenseMap<uint32_t, StringRef> &IdToFunctionName,
+hashBlockCalls(const DenseMap<uint32_t, yaml::bolt::BinaryFunctionProfile*> &IdToYamlFunction,
                const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
-  std::multiset<std::string> FunctionNames;
+  std::vector<std::string> FunctionNames;
   for (const yaml::bolt::CallSiteInfo &CallSiteInfo : YamlBB.CallSites) {
-    auto It = IdToFunctionName.find(CallSiteInfo.DestId);
-    if (It == IdToFunctionName.end())
+    auto It = IdToYamlFunction.find(CallSiteInfo.DestId);
+    if (It == IdToYamlFunction.end())
       continue;
-    StringRef Name = It->second;
-    const size_t Pos = Name.find("(*");
-    if (Pos != StringRef::npos)
-      Name = Name.substr(0, Pos);
-    FunctionNames.insert(std::string(Name));
+    StringRef Name = NameResolver::removeSuffix(It->second->Name, StringRef("(*"));
+    FunctionNames.push_back(std::string(Name));
   }
-
+  std::sort(FunctionNames.begin(), FunctionNames.end());
   std::string HashString;
   for (const std::string &FunctionName : FunctionNames)
     HashString.append(FunctionName);
