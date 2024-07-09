@@ -68,6 +68,7 @@ public:
     // add them to the module.
     theModule = mlir::ModuleOp::create(builder.getUnknownLoc());
 
+    // Toy中并不支持使用全局变量，因此AST的顶级单元只有方法定义，即FunctionAST
     for (FunctionAST &f : moduleAST)
       mlirGen(f);
 

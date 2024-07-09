@@ -33,7 +33,6 @@ def Toy_Dialect : Dialect {
 //   * The parent dialect of the operation.========================================父类所在的dialect：Toy_Dialect
 //   * The mnemonic for the operation, or the name without the dialect prefix.=====mnemonic：助记符，或者不带dialect前缀的名字
 //   * A list of traits for the operation.=========================================该operation的特征值列表
-
 // 定义toy dialect的Operation基类，这个operation从基类Op继承而来。
 //
 class Toy_Op<string mnemonic, list<Trait> traits = []> :
@@ -56,6 +55,7 @@ def ConstantOp : Toy_Op<"constant", [Pure]> {
   // Provide a summary and description for this operation. This can be used to
   // auto-generate documentation of the operations within our dialect.
   let summary = "constant";
+
   let description = [{
     Constant operation turns a literal into an SSA value. The data is attached
     to the operation as an attribute. For example:
@@ -123,7 +123,7 @@ def AddOp : Toy_Op<"add"> {
 }
 
 //===----------------------------------------------------------------------===//
-// FuncOp
+// FuncOp 方法定义的operation
 //===----------------------------------------------------------------------===//
 
 def FuncOp : Toy_Op<"func", [
@@ -147,11 +147,17 @@ def FuncOp : Toy_Op<"func", [
   }];
 
   let arguments = (ins
+    // 符号表中的方法名
     SymbolNameAttr:$sym_name,
+    // 方法类型信息
     TypeAttrOf<FunctionType>:$function_type,
+    // 入参列表
     OptionalAttr<DictArrayAttr>:$arg_attrs,
+    // 返回值列表
     OptionalAttr<DictArrayAttr>:$res_attrs
   );
+
+  // 当前OP包含的子元素成为 region
   let regions = (region AnyRegion:$body);
 
   let builders = [OpBuilder<(ins
@@ -203,11 +209,13 @@ def GenericCallOp : Toy_Op<"generic_call"> {
   let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<F64Tensor>:$inputs);
 
   // The generic call operation returns a single value of TensorType.
+  // 为了简化，Toy中所有的方法返回值都是固定的为F64Tensor
   let results = (outs F64Tensor);
 
   // Specialize assembly printing and parsing using a declarative format.
+  // 指定当前op输出时候的格式。这里我为其添加了cratels，这后续再进行MLIR的输出中所有的方法调用中都会增加这个后缀（无意义，仅供测试）
   let assemblyFormat = [{
-    $callee `(` $inputs `)` attr-dict `:` functional-type($inputs, results)
+    $callee `(` $inputs `)` attr-dict `:` functional-type($inputs, results)`cratels`
   }];
 
   // Add custom build methods for the generic call operation.

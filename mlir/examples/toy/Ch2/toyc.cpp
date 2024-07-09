@@ -91,6 +91,8 @@ int dumpMLIR() {
     if (!module)
       return 1;
 
+    llvm::outs() << module->getName() << "\n\n";
+
     module->dump();
     return 0;
   }
