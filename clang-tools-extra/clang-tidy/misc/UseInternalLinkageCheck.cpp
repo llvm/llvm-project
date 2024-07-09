@@ -121,6 +121,12 @@ void UseInternalLinkageCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
   if (const auto *VD = Result.Nodes.getNodeAs<VarDecl>("var")) {
+    // In C++, const variables at file scope have implicit internal linkage,
+    // so we should not warn there. This is not the case in C.
+    // https://eel.is/c++draft/diff#basic-3
+    if (getLangOpts().CPlusPlus && VD->getType().isConstQualified())
+      return;
+
     DiagnosticBuilder DB = diag(VD->getLocation(), Message) << "variable" << VD;
     SourceLocation FixLoc = VD->getTypeSpecStartLoc();
     if (FixLoc.isInvalid() || FixLoc.isMacroID())
