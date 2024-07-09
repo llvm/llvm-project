@@ -565,14 +565,24 @@ NaryReassociatePass::findClosestMatchingDominator(const SCEV *CandidateExpr,
   // optimization makes the algorithm O(n).
   while (!Candidates.empty()) {
     // Candidates stores WeakTrackingVHs, so a candidate can be nullptr if it's
-    // removed
-    // during rewriting.
-    if (Value *Candidate = Candidates.back()) {
+    // removed during rewriting.
+    if (Value *Candidate = Candidates.pop_back_val()) {
       Instruction *CandidateInstruction = cast<Instruction>(Candidate);
-      if (DT->dominates(CandidateInstruction, Dominatee))
-        return CandidateInstruction;
+      if (!DT->dominates(CandidateInstruction, Dominatee))
+        continue;
+
+      // Make sure that the instruction is safe to reuse without introducing
+      // poison.
+      SmallVector<Instruction *> DropPoisonGeneratingInsts;
+      if (!SE->canReuseInstruction(CandidateExpr, CandidateInstruction,
+                                   DropPoisonGeneratingInsts))
+        continue;
+
+      for (Instruction *I : DropPoisonGeneratingInsts)
+        I->dropPoisonGeneratingAnnotations();
+
+      return CandidateInstruction;
     }
-    Candidates.pop_back();
   }
   return nullptr;
 }
