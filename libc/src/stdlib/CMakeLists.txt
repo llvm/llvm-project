@@ -505,9 +505,7 @@ add_entrypoint_object(
     exit.h
   DEPENDS
     ._Exit
-    .atexit
     libc.src.__support.OSUtil.osutil
-    .exit_handler
 )
 
 add_entrypoint_object(
