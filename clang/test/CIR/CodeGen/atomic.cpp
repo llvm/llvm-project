@@ -260,7 +260,7 @@ bool fd4(struct S *a, struct S *b, struct S *c) {
 bool fi4a(int *i) {
   int cmp = 0;
   int desired = 1;
-  return __atomic_compare_exchange(i, &cmp, &desired, 0, memory_order_acquire, memory_order_acquire);
+  return __atomic_compare_exchange(i, &cmp, &desired, false, memory_order_acquire, memory_order_acquire);
 }
 
 // CHECK-LABEL: @_Z4fi4aPi
@@ -273,7 +273,7 @@ bool fi4a(int *i) {
 
 bool fi4b(int *i) {
   int cmp = 0;
-  return __atomic_compare_exchange_n(i, &cmp, 1, 1, memory_order_acquire, memory_order_acquire);
+  return __atomic_compare_exchange_n(i, &cmp, 1, true, memory_order_acquire, memory_order_acquire);
 }
 
 // CHECK-LABEL: @_Z4fi4bPi

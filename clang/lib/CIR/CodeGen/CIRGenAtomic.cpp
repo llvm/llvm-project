@@ -348,12 +348,25 @@ static mlir::cir::IntAttr getConstOpIntAttr(mlir::Value v) {
   return constVal;
 }
 
-static bool isCstWeak(mlir::Value weakVal, uint64_t &val) {
-  auto intAttr = getConstOpIntAttr(weakVal);
-  if (!intAttr)
-    return false;
-  val = intAttr.getUInt();
-  return true;
+// Inspect a value that is the strong/weak flag for a compare-exchange.  If it
+// is a constant of intergral or boolean type, set `val` to the constant's
+// boolean value and return true.  Otherwise leave `val` unchanged and return
+// false.
+static bool isCstWeak(mlir::Value weakVal, bool &val) {
+  mlir::Operation *op = weakVal.getDefiningOp();
+  while (auto c = dyn_cast<mlir::cir::CastOp>(op)) {
+    op = c.getOperand().getDefiningOp();
+  }
+  if (auto c = dyn_cast<mlir::cir::ConstantOp>(op)) {
+    if (mlir::isa<mlir::cir::IntType>(c.getType())) {
+      val = mlir::cast<mlir::cir::IntAttr>(c.getValue()).getUInt() != 0;
+      return true;
+    } else if (mlir::isa<mlir::cir::BoolType>(c.getType())) {
+      val = mlir::cast<mlir::cir::BoolAttr>(c.getValue()).getValue();
+      return true;
+    }
+  }
+  return false;
 }
 
 static void buildAtomicCmpXchg(CIRGenFunction &CGF, AtomicExpr *E, bool IsWeak,
@@ -470,7 +483,7 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__atomic_compare_exchange_n:
   case AtomicExpr::AO__scoped_atomic_compare_exchange:
   case AtomicExpr::AO__scoped_atomic_compare_exchange_n: {
-    uint64_t weakVal;
+    bool weakVal;
     if (isCstWeak(IsWeak, weakVal)) {
       buildAtomicCmpXchgFailureSet(CGF, E, weakVal, Dest, Ptr, Val1, Val2,
                                    FailureOrder, Size, Order, Scope);
