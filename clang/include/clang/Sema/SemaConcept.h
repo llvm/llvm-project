@@ -183,8 +183,8 @@ struct FoldExpandedConstraint {
   bool subsumes(const FoldExpandedConstraint &Other,
                 const AtomicSubsumptionEvaluator &E) const;
 
-  static bool AreSubsumptionEligible(const FoldExpandedConstraint &A,
-                                     const FoldExpandedConstraint &B);
+  static bool AreCompatibleForSubsumption(const FoldExpandedConstraint &A,
+                                          const FoldExpandedConstraint &B);
 };
 
 const NormalizedConstraint *getNormalizedAssociatedConstraints(
@@ -262,7 +262,7 @@ template <typename AtomicSubsumptionEvaluator>
 bool FoldExpandedConstraint::subsumes(
     const FoldExpandedConstraint &Other,
     const AtomicSubsumptionEvaluator &E) const {
-  if (Kind != Other.Kind || !AreSubsumptionEligible(*this, Other))
+  if (Kind != Other.Kind || !AreCompatibleForSubsumption(*this, Other))
     return false;
 
   const NormalForm PDNF = makeDNF(this->Constraint);
