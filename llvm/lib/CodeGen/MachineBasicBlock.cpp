@@ -1162,7 +1162,8 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
                     << printMBBReference(*Succ) << '\n');
 
   LiveIntervals *LIS = P.getAnalysisIfAvailable<LiveIntervals>();
-  SlotIndexes *Indexes = P.getAnalysisIfAvailable<SlotIndexes>();
+  auto *SIWrapper = P.getAnalysisIfAvailable<SlotIndexesWrapperPass>();
+  SlotIndexes *Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
   if (LIS)
     LIS->insertMBBInMaps(NMBB);
   else if (Indexes)
@@ -1171,7 +1172,8 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
   // On some targets like Mips, branches may kill virtual registers. Make sure
   // that LiveVariables is properly updated after updateTerminator replaces the
   // terminators.
-  LiveVariables *LV = P.getAnalysisIfAvailable<LiveVariables>();
+  auto *LVWrapper = P.getAnalysisIfAvailable<LiveVariablesWrapperPass>();
+  LiveVariables *LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
 
   // Collect a list of virtual registers killed by the terminators.
   SmallVector<Register, 4> KilledRegs;
