@@ -40,7 +40,7 @@ public:
   /// Check if the file contains YAML.
   static bool isYAML(StringRef Filename);
 
-  using FunctionMap = DenseMap<uint32_t, yaml::bolt::BinaryFunctionProfile*>;
+  using FunctionMap = DenseMap<uint32_t, yaml::bolt::BinaryFunctionProfile *>;
 
 private:
   /// Adjustments for basic samples profiles (without LBR).

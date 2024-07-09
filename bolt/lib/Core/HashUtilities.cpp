@@ -15,7 +15,6 @@
 #include "bolt/Utils/NameResolver.h"
 #include "llvm/MC/MCInstPrinter.h"
 
-
 namespace llvm {
 namespace bolt {
 
@@ -183,14 +182,16 @@ std::string hashBlockCalls(BinaryContext &BC, const BinaryBasicBlock &BB) {
 
 /// The same as the $hashBlockCalls function, but for profiled functions.
 std::string
-hashBlockCalls(const DenseMap<uint32_t, yaml::bolt::BinaryFunctionProfile*> &IdToYamlFunction,
+hashBlockCalls(const DenseMap<uint32_t, yaml::bolt::BinaryFunctionProfile *>
+                   &IdToYamlFunction,
                const yaml::bolt::BinaryBasicBlockProfile &YamlBB) {
   std::vector<std::string> FunctionNames;
   for (const yaml::bolt::CallSiteInfo &CallSiteInfo : YamlBB.CallSites) {
     auto It = IdToYamlFunction.find(CallSiteInfo.DestId);
     if (It == IdToYamlFunction.end())
       continue;
-    StringRef Name = NameResolver::removeSuffix(It->second->Name, StringRef("(*"));
+    StringRef Name =
+        NameResolver::removeSuffix(It->second->Name, StringRef("(*"));
     FunctionNames.push_back(std::string(Name));
   }
   std::sort(FunctionNames.begin(), FunctionNames.end());
