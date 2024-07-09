@@ -113,7 +113,8 @@ enum MemorySemantic {
   Relaxed = 2,
   Acquire = 3,
   Release = 4,
-  RelaxedMMIO = 5
+  RelaxedMMIO = 5,
+  SeqCstFence = 6,
 };
 enum AddressSpace {
   GENERIC = 0,

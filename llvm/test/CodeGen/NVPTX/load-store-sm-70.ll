@@ -247,6 +247,59 @@ define void @generic_unordered_volatile(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) 
   ret void
 }
 
+; CHECK-LABEL: generic_sc
+define void @generic_sc(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) local_unnamed_addr {
+  ; CHECK: fence.sc.sys
+  ; CHECK: ld.acquire.sys.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %a.load = load atomic i8, ptr %a seq_cst, align 1
+  %a.add = add i8 %a.load, 1
+  ; CHECK: fence.sc.sys
+  ; CHECK: st.release.sys.u8 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  store atomic i8 %a.add, ptr %a seq_cst, align 1
+
+  ; CHECK: fence.sc.sys
+  ; CHECK: ld.acquire.sys.u16 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %b.load = load atomic i16, ptr %b seq_cst, align 2
+  %b.add = add i16 %b.load, 1
+  ; CHECK: fence.sc.sys
+  ; CHECK: st.release.sys.u16 [%rd{{[0-9]+}}], %rs{{[0-9]+}}
+  store atomic i16 %b.add, ptr %b seq_cst, align 2
+
+  ; CHECK: fence.sc.sys
+  ; CHECK: ld.acquire.sys.u32 %r{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %c.load = load atomic i32, ptr %c seq_cst, align 4
+  %c.add = add i32 %c.load, 1
+  ; CHECK: fence.sc.sys
+  ; CHECK: st.release.sys.u32 [%rd{{[0-9]+}}], %r{{[0-9]+}}
+  store atomic i32 %c.add, ptr %c seq_cst, align 4
+
+  ; CHECK: fence.sc.sys
+  ; CHECK: ld.acquire.sys.u64 %rd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %d.load = load atomic i64, ptr %d seq_cst, align 8
+  %d.add = add i64 %d.load, 1
+  ; CHECK: fence.sc.sys
+  ; CHECK: st.release.sys.u64 [%rd{{[0-9]+}}], %rd{{[0-9]+}}
+  store atomic i64 %d.add, ptr %d seq_cst, align 8
+
+  ; CHECK: fence.sc.sys
+  ; CHECK: ld.acquire.sys.f32 %f{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %e.load = load atomic float, ptr %e seq_cst, align 4
+  %e.add = fadd float %e.load, 1.0
+  ; CHECK: fence.sc.sys
+  ; CHECK: st.release.sys.f32 [%rd{{[0-9]+}}], %f{{[0-9]+}}
+  store atomic float %e.add, ptr %e seq_cst, align 4
+
+  ; CHECK: fence.sc.sys
+  ; CHECK: ld.acquire.sys.f64 %fd{{[0-9]+}}, [%rd{{[0-9]+}}]
+  %f.load = load atomic double, ptr %e seq_cst, align 8
+  %f.add = fadd double %f.load, 1.
+  ; CHECK: fence.sc.sys
+  ; CHECK: st.release.sys.f64 [%rd{{[0-9]+}}], %fd{{[0-9]+}}
+  store atomic double %f.add, ptr %e seq_cst, align 8
+
+  ret void
+}
+
 ; CHECK-LABEL: generic_monotonic_volatile
 define void @generic_monotonic_volatile(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e) local_unnamed_addr {
   ; CHECK: ld.volatile.u8 %rs{{[0-9]+}}, [%rd{{[0-9]+}}]
@@ -1277,3 +1330,5 @@ define void @local_acq_rel_volatile(ptr addrspace(5) %a, ptr addrspace(5) %b, pt
 
   ret void
 }
+
+

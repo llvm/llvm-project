@@ -714,21 +714,24 @@ static unsigned int getCodeAddrSpace(MemSDNode *N) {
   return NVPTX::PTXLdStInstCode::GENERIC;
 }
 
-static unsigned int getCodeMemorySemantic(MemSDNode *N,
-                                          const NVPTXSubtarget *Subtarget) {
+struct MemorySemantic {
+  unsigned int sem = -1;
+  unsigned int sc_fence = -1;
+  MemorySemantic(unsigned int s) : sem(s) {}
+  MemorySemantic(unsigned int s, unsigned int f) : sem(s), sc_fence(f) {}
+};
+
+static MemorySemantic getCodeMemorySemantic(MemSDNode *N,
+                                            const NVPTXSubtarget *Subtarget) {
   AtomicOrdering Ordering = N->getSuccessOrdering();
   auto CodeAddrSpace = getCodeAddrSpace(N);
 
   bool HasMemoryOrdering = Subtarget->hasMemoryOrdering();
   bool HasRelaxedMMIO = Subtarget->hasRelaxedMMIO();
 
-  // TODO: lowering for SequentiallyConsistent Operations: for now, we error.
-  // TODO: lowering for AcquireRelease Operations: for now, we error.
-  //
-
   // clang-format off
 
-  // Lowering for non-SequentiallyConsistent Operations
+  // Lowering for Load/Store Operations (note: AcquireRelease Loads or Stores error).
   //
   // | Atomic  | Volatile | Statespace         | PTX sm_60- | PTX sm_70+                   |
   // |---------|----------|--------------------|------------|------------------------------|
@@ -748,6 +751,18 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
   // | Relaxed | Yes      | Local,Const,Param  | plain [1]  | .weak [1]                    |
   // | Other   | Yes      | Generic, Shared,   | Error [2]  | <atomic sem> [3]             |
   // |         |          | / Global [0]       |            |                              |
+
+  // Lowering of CUDA C++ SequentiallyConsistent Operations and Fences to PTX
+  // by following the ABI proven sound in:
+  //   Lustig et al, A Formal Analysis of the NVIDIA PTX Memory Consistency Model, ASPLOS’19.
+  //   https://dl.acm.org/doi/pdf/10.1145/3297858.3304043
+  //
+  // | CUDA C++ Atomic Operation or Atomic Fence                                   | PTX Atomic Operation or Fence           |
+  // |-----------------------------------------------------------------------------|-----------------------------------------|
+  // | cuda::atomic_thread_fence(memory_order_seq_cst, cuda::thread_scope_<scope>) | fence.sc.<scope>;                       |
+  // | cuda::atomic_load(memory_order_seq_cst, cuda::thread_scope_<scope>)         | fence.sc.<scope>; ld.acquire.<scope>;   |
+  // | cuda::atomic_store(memory_order_seq_cst, cuda::thread_scope_<scope>)        | fence.sc.<scope>; st.release.<scope>;   |  
+  // | cuda::atomic_fetch_<op>(memory_order_seq_cst, cuda::thread_scope_<scope>)   | fence.sc.<scope>; atom.acq_rel.<scope>; |
 
   // clang-format on
 
@@ -788,7 +803,6 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
   //        - the "weak" memory instruction we are currently lowering to, and
   //        - some other instruction that preserves the side-effect, e.g.,
   //          a dead dummy volatile load.
-
   if (CodeAddrSpace == NVPTX::PTXLdStInstCode::LOCAL ||
       CodeAddrSpace == NVPTX::PTXLdStInstCode::CONSTANT ||
       CodeAddrSpace == NVPTX::PTXLdStInstCode::PARAM) {
@@ -870,16 +884,32 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
     N->print(OS);
     report_fatal_error(OS.str());
   }
-  case AtomicOrdering::SequentiallyConsistent:
-    // TODO: support AcquireRelease and SequentiallyConsistent
-    SmallString<256> Msg;
-    raw_svector_ostream OS(Msg);
-    OS << "NVPTX backend does not support AtomicOrdering \""
-       << toIRString(Ordering) << "\" yet.";
-    report_fatal_error(OS.str());
+  case AtomicOrdering::SequentiallyConsistent: {
+    unsigned int sem;
+    if (N->readMem()) {
+      sem = NVPTX::PTXLdStInstCode::Acquire;
+    } else if (N->writeMem()) {
+      sem = NVPTX::PTXLdStInstCode::Release;
+    } else {
+      SmallString<256> Msg;
+      raw_svector_ostream OS(Msg);
+      OS << "NVPTX does not support SequentiallyConsistent Ordering on "
+            "read-modify-writes yet: "
+         << N->getOperationName();
+      N->print(OS);
+      report_fatal_error(OS.str());
+    }
+    return addrGenericOrGlobalOrShared
+               ? MemorySemantic(sem, NVPTX::PTXLdStInstCode::SeqCstFence)
+               : MemorySemantic(NVPTX::PTXLdStInstCode::NotAtomic);
+  }
   }
 
-  llvm_unreachable("unexpected unhandled case");
+  SmallString<256> Msg;
+  raw_svector_ostream OS(Msg);
+  OS << "NVPTX backend does not support AtomicOrdering \""
+     << toIRString(Ordering) << "\" yet.";
+  report_fatal_error(OS.str());
 }
 
 static bool canLowerToLDG(MemSDNode *N, const NVPTXSubtarget &Subtarget,
@@ -1091,7 +1121,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   }
 
   // Memory Semantic Setting
-  unsigned int CodeMemorySem = getCodeMemorySemantic(LD, Subtarget);
+  auto [CodeMemorySem, SeqCstFence] = getCodeMemorySemantic(LD, Subtarget);
 
   unsigned int PointerSize =
       CurDAG->getDataLayout().getPointerSizeInBits(LD->getAddressSpace());
@@ -1136,7 +1166,8 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                              NVPTX::LD_f32_avar, NVPTX::LD_f64_avar);
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(CodeMemorySem, dl),
+    SDValue Ops[] = {getI32Imm(SeqCstFence, dl),
+                     getI32Imm(CodeMemorySem, dl),
                      getI32Imm(CodeAddrSpace, dl),
                      getI32Imm(vecType, dl),
                      getI32Imm(fromType, dl),
@@ -1151,7 +1182,8 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                              NVPTX::LD_f32_asi, NVPTX::LD_f64_asi);
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(CodeMemorySem, dl),
+    SDValue Ops[] = {getI32Imm(SeqCstFence, dl),
+                     getI32Imm(CodeMemorySem, dl),
                      getI32Imm(CodeAddrSpace, dl),
                      getI32Imm(vecType, dl),
                      getI32Imm(fromType, dl),
@@ -1173,7 +1205,8 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                                NVPTX::LD_f32_ari, NVPTX::LD_f64_ari);
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(CodeMemorySem, dl),
+    SDValue Ops[] = {getI32Imm(SeqCstFence, dl),
+                     getI32Imm(CodeMemorySem, dl),
                      getI32Imm(CodeAddrSpace, dl),
                      getI32Imm(vecType, dl),
                      getI32Imm(fromType, dl),
@@ -1194,7 +1227,8 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                                NVPTX::LD_f32_areg, NVPTX::LD_f64_areg);
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(CodeMemorySem, dl),
+    SDValue Ops[] = {getI32Imm(SeqCstFence, dl),
+                     getI32Imm(CodeMemorySem, dl),
                      getI32Imm(CodeAddrSpace, dl),
                      getI32Imm(vecType, dl),
                      getI32Imm(fromType, dl),
@@ -1238,7 +1272,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
       CurDAG->getDataLayout().getPointerSizeInBits(MemSD->getAddressSpace());
 
   // Memory Semantic Setting
-  unsigned int CodeMemorySem = getCodeMemorySemantic(MemSD, Subtarget);
+  auto [CodeMemorySem, SeqCstFence] = getCodeMemorySemantic(MemSD, Subtarget);
 
   // Vector Setting
   MVT SimpleVT = LoadedVT.getSimpleVT();
@@ -1305,7 +1339,8 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     }
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(CodeMemorySem, DL),
+    SDValue Ops[] = {getI32Imm(SeqCstFence, DL),
+                     getI32Imm(CodeMemorySem, DL),
                      getI32Imm(CodeAddrSpace, DL),
                      getI32Imm(VecType, DL),
                      getI32Imm(FromType, DL),
@@ -1334,7 +1369,8 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     }
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(CodeMemorySem, DL),
+    SDValue Ops[] = {getI32Imm(SeqCstFence, DL),
+                     getI32Imm(CodeMemorySem, DL),
                      getI32Imm(CodeAddrSpace, DL),
                      getI32Imm(VecType, DL),
                      getI32Imm(FromType, DL),
@@ -1384,7 +1420,8 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     }
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(CodeMemorySem, DL),
+    SDValue Ops[] = {getI32Imm(SeqCstFence, DL),
+                     getI32Imm(CodeMemorySem, DL),
                      getI32Imm(CodeAddrSpace, DL),
                      getI32Imm(VecType, DL),
                      getI32Imm(FromType, DL),
@@ -1434,7 +1471,8 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     }
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(CodeMemorySem, DL),
+    SDValue Ops[] = {getI32Imm(SeqCstFence, DL),
+                     getI32Imm(CodeMemorySem, DL),
                      getI32Imm(CodeAddrSpace, DL),
                      getI32Imm(VecType, DL),
                      getI32Imm(FromType, DL),
@@ -1889,7 +1927,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
       CurDAG->getDataLayout().getPointerSizeInBits(ST->getAddressSpace());
 
   // Memory Semantic Setting
-  unsigned int CodeMemorySem = getCodeMemorySemantic(ST, Subtarget);
+  auto [CodeMemorySem, SeqCstFence] = getCodeMemorySemantic(ST, Subtarget);
 
   // Vector Setting
   MVT SimpleVT = StoreVT.getSimpleVT();
@@ -1926,6 +1964,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
     if (!Opcode)
       return false;
     SDValue Ops[] = {Value,
+                     getI32Imm(SeqCstFence, dl),
                      getI32Imm(CodeMemorySem, dl),
                      getI32Imm(CodeAddrSpace, dl),
                      getI32Imm(vecType, dl),
@@ -1943,6 +1982,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
     if (!Opcode)
       return false;
     SDValue Ops[] = {Value,
+                     getI32Imm(SeqCstFence, dl),
                      getI32Imm(CodeMemorySem, dl),
                      getI32Imm(CodeAddrSpace, dl),
                      getI32Imm(vecType, dl),
@@ -1968,6 +2008,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
       return false;
 
     SDValue Ops[] = {Value,
+                     getI32Imm(SeqCstFence, dl),
                      getI32Imm(CodeMemorySem, dl),
                      getI32Imm(CodeAddrSpace, dl),
                      getI32Imm(vecType, dl),
@@ -1990,6 +2031,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
     if (!Opcode)
       return false;
     SDValue Ops[] = {Value,
+                     getI32Imm(SeqCstFence, dl),
                      getI32Imm(CodeMemorySem, dl),
                      getI32Imm(CodeAddrSpace, dl),
                      getI32Imm(vecType, dl),
@@ -2030,7 +2072,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
       CurDAG->getDataLayout().getPointerSizeInBits(MemSD->getAddressSpace());
 
   // Memory Semantic Setting
-  unsigned int CodeMemorySem = getCodeMemorySemantic(MemSD, Subtarget);
+  auto [CodeMemorySem, SeqCstFence] = getCodeMemorySemantic(MemSD, Subtarget);
 
   // Type Setting: toType + toTypeWidth
   // - for integer type, always use 'u'
@@ -2072,6 +2114,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
     ToTypeWidth = 32;
   }
 
+  StOps.push_back(getI32Imm(SeqCstFence, DL));
   StOps.push_back(getI32Imm(CodeMemorySem, DL));
   StOps.push_back(getI32Imm(CodeAddrSpace, DL));
   StOps.push_back(getI32Imm(VecType, DL));

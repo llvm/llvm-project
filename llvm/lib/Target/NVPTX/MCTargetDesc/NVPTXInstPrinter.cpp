@@ -254,6 +254,16 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
         report_fatal_error(OS.str());
         break;
       }
+    } else if (!strcmp(Modifier, "sc")) {
+      switch (Imm) {
+        // TODO: refactor fence insertion in ISelDagToDag instead of here
+        // as part of implementing atomicrmw seq_cst.
+      case NVPTX::PTXLdStInstCode::SeqCstFence:
+        O << "fence.sc.sys;\n\t";
+        break;
+      default:
+        break;
+      }
     } else if (!strcmp(Modifier, "addsp")) {
       switch (Imm) {
       case NVPTX::PTXLdStInstCode::GLOBAL:
