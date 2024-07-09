@@ -1,4 +1,6 @@
-; RUN: %llc_dwarf %s -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
+; RUN: %llc_dwarf %s -filetype=obj -o %t
+; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
+
 
 ; ModuleID = 'test.ll'
 source_filename = "test.f90"
