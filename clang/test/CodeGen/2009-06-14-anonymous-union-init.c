@@ -6,7 +6,7 @@ struct sysfs_dirent {
 };
 struct sysfs_dirent sysfs_root = { {}, 16877 };
 
-// CHECK: @sysfs_root = global %struct.sysfs_dirent { %union.anon zeroinitializer, i16 16877 }
+// CHECK: @sysfs_root = {{.*}}global %struct.sysfs_dirent { %union.anon zeroinitializer, i16 16877 }
 
 struct Foo {
  union { struct empty {} x; };
@@ -14,4 +14,4 @@ struct Foo {
 };
 struct Foo foo = { {}, 16877 };
 
-// CHECK: @foo = global %struct.Foo { i16 16877 }
+// CHECK: @foo = {{.*}}global %struct.Foo { i16 16877 }
