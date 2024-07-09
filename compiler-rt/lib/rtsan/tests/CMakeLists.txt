@@ -60,7 +60,6 @@ foreach(arch ${RTSAN_TEST_ARCH})
   #  RtsanUnitTests "Rtsan-${arch}-Test" ${arch}
   #  COMPILE_DEPS ${RTSAN_UNITTEST_HEADERS}
   #  SOURCES ${RTSAN_INST_TEST_SOURCES} ${COMPILER_RT_GOOGLETEST_SOURCES}
-  #  DEPS llvm_gtest rtsan
   #  CFLAGS ${RTSAN_UNITTEST_CFLAGS} -fsanitize=realtime
   #  LINK_FLAGS ${RTSAN_UNITTEST_LINK_FLAGS} -fsanitize=realtime)
 
