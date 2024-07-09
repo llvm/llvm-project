@@ -233,11 +233,11 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
   if (auto *C = dyn_cast<llvm::Constant>(LLVMV)) {
     for (llvm::Value *COp : C->operands())
       getOrCreateValueInternal(COp, C);
-    It->second = std::make_unique<Constant>(C, *this);
+    It->second = std::unique_ptr<Constant>(new Constant(C, *this));
     return It->second.get();
   }
   if (auto *Arg = dyn_cast<llvm::Argument>(LLVMV)) {
-    It->second = std::make_unique<Argument>(Arg, *this);
+    It->second = std::unique_ptr<Argument>(new Argument(Arg, *this));
     return It->second.get();
   }
   if (auto *BB = dyn_cast<llvm::BasicBlock>(LLVMV)) {
@@ -248,14 +248,14 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     return nullptr;
   }
   assert(isa<llvm::Instruction>(LLVMV) && "Expected Instruction");
-  It->second =
-      std::make_unique<OpaqueInst>(cast<llvm::Instruction>(LLVMV), *this);
+  It->second = std::unique_ptr<OpaqueInst>(
+      new OpaqueInst(cast<llvm::Instruction>(LLVMV), *this));
   return It->second.get();
 }
 
 BasicBlock *Context::createBasicBlock(llvm::BasicBlock *LLVMBB) {
   assert(getValue(LLVMBB) == nullptr && "Already exists!");
-  auto NewBBPtr = std::make_unique<BasicBlock>(LLVMBB, *this);
+  auto NewBBPtr = std::unique_ptr<BasicBlock>(new BasicBlock(LLVMBB, *this));
   auto *BB = cast<BasicBlock>(registerValue(std::move(NewBBPtr)));
   // Create SandboxIR for BB's body.
   BB->buildBasicBlockFromLLVMIR(LLVMBB);
@@ -271,7 +271,7 @@ Value *Context::getValue(llvm::Value *V) const {
 
 Function *Context::createFunction(llvm::Function *F) {
   assert(getValue(F) == nullptr && "Already exists!");
-  auto NewFPtr = std::make_unique<Function>(F, *this);
+  auto NewFPtr = std::unique_ptr<Function>(new Function(F, *this));
   // Create arguments.
   for (auto &Arg : F->args())
     getOrCreateArgument(&Arg);
