@@ -495,6 +495,10 @@ Changes in existing checks
   a false positive when a base class has a forward declaration before its
   definition.
 
+- Improved :doc:`cppcoreguidelines-pro-type-member-init
+  <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by treating
+  ``std::array`` the same as built-in arrays when `IgnoreArrays` option is enabled.
+
 - Improved :doc:`cppcoreguidelines-pro-type-vararg
   <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>` check by no longer
   warning on builtins with custom type checking (e.g., type-generic builtins
