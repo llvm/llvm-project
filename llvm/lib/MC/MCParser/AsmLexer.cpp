@@ -21,7 +21,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SaveAndRestore.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cctype>
 #include <cstdio>
@@ -654,9 +653,6 @@ AsmToken AsmLexer::LexQuote() {
       // Allow \", etc.
       CurChar = getNextChar();
     }
-
-    if (CurChar == '\n')
-      outs() << "Warning: unterminated string; newline inserted\n";
 
     if (CurChar == EOF)
       return ReturnError(TokStart, "unterminated string constant");

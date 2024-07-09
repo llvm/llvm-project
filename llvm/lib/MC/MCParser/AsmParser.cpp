@@ -3129,6 +3129,16 @@ bool AsmParser::parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated) {
     do {
       if (parseEscapedString(Data))
         return true;
+
+      // Warn about newline characters in parsed string like GAS.
+      size_t NewlinePos = -1;
+      size_t DataSize = Data.size();
+      const char *Start = getTok().getLoc().getPointer() - DataSize - 1;
+
+      while ((NewlinePos = Data.find('\n', NewlinePos + 1)) < DataSize)
+        Warning(SMLoc::getFromPointer(Start + NewlinePos),
+                "unterminated string; newline inserted");
+
       getStreamer().emitBytes(Data);
     } while (!ZeroTerminated && getTok().is(AsmToken::String));
     if (ZeroTerminated)
