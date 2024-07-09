@@ -14,7 +14,22 @@
 #include "llvm-libc-macros/math-macros.h"
 #include "llvm-libc-types/float128.h"
 
+#if !defined(__LIBC_CONST_ATTR) && defined(__cplusplus) && defined(__GNUC__)
+#if __has_attribute(const)
+#define __LIBC_CONST_ATTR [[gnu::const]]
+#endif
+#endif
+#if !defined(__LIBC_CONST_ATTR) && defined(__GNUC__)
+#if __has_attribute(const)
+#define __LIBC_CONST_ATTR __attribute__((const))
+#endif
+#endif
+#if !defined(__LIBC_CONST_ATTR)
+#define __LIBC_CONST_ATTR
+#endif
 
 %%public_api()
+
+#undef __LIBC_CONST_ATTR
 
 #endif // LLVM_LIBC_MATH_H

@@ -48,21 +48,47 @@ def yaml_to_classes(yaml_data):
 
     functions = yaml_data.get("functions", [])
     sorted_functions = sorted(functions, key=lambda x: x["name"])
+    guards = []
+    guarded_function_dict = {}
     for function_data in sorted_functions:
-        arguments = [arg["type"] for arg in function_data["arguments"]]
         guard = function_data.get("guard", None)
-        attributes = function_data.get("attributes", None)
-        standards = function_data.get("standards", None)
-        header.add_function(
-            Function(
-                function_data["return_type"],
-                function_data["name"],
-                arguments,
-                standards,
-                guard,
-                attributes,
+        if guard == None:
+            arguments = [arg["type"] for arg in function_data["arguments"]]
+            attributes = function_data.get("attributes", None)
+            standards = function_data.get("standards", None)
+            header.add_function(
+                Function(
+                    function_data["return_type"],
+                    function_data["name"],
+                    arguments,
+                    standards,
+                    guard,
+                    attributes,
+                )
             )
-        )
+        else:
+            if guard not in guards:
+                guards.append(guard)
+                guarded_function_dict[guard] = []
+                guarded_function_dict[guard].append(function_data)
+            else:
+                guarded_function_dict[guard].append(function_data)
+    sorted_guards = sorted(guards)
+    for guard in sorted_guards:
+        for function_data in guarded_function_dict[guard]:
+            arguments = [arg["type"] for arg in function_data["arguments"]]
+            attributes = function_data.get("attributes", None)
+            standards = function_data.get("standards", None)
+            header.add_function(
+                Function(
+                    function_data["return_type"],
+                    function_data["name"],
+                    arguments,
+                    standards,
+                    guard,
+                    attributes,
+                )
+            )
 
     for object_data in yaml_data.get("objects", []):
         header.add_object(
