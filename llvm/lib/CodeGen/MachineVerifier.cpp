@@ -315,7 +315,7 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addUsedIfAvailable<LiveStacks>();
       AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
-      AU.addUsedIfAvailable<SlotIndexes>();
+      AU.addUsedIfAvailable<SlotIndexesWrapperPass>();
       AU.addUsedIfAvailable<LiveIntervals>();
       AU.setPreservesAll();
       MachineFunctionPass::getAnalysisUsage(AU);
@@ -434,7 +434,8 @@ unsigned MachineVerifier::verify(const MachineFunction &MF) {
     if (!LiveInts)
       LiveVars = LVWrapper ? &LVWrapper->getLV() : nullptr;
     LiveStks = PASS->getAnalysisIfAvailable<LiveStacks>();
-    Indexes = PASS->getAnalysisIfAvailable<SlotIndexes>();
+    auto *SIWrapper = PASS->getAnalysisIfAvailable<SlotIndexesWrapperPass>();
+    Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
   }
 
   verifySlotIndexes();
