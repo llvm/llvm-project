@@ -5,7 +5,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-
     def test_summary_string_with_bare_dollar_char(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.c"))
