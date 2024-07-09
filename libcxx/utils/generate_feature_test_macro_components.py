@@ -184,7 +184,6 @@ feature_test_macros = [
             "name": "__cpp_lib_atomic_ref",
             "values": {"c++20": 201806},
             "headers": ["atomic"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_atomic_shared_ptr",
