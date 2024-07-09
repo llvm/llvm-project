@@ -1468,6 +1468,8 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
       callOp = builder.create<CallOp>(loc, funcTy, operands);
     }
     callOp.setCConv(convertCConvFromLLVM(callInst->getCallingConv()));
+    callOp.setTailCallKind(
+        convertTailCallKindFromLLVM(callInst->getTailCallKind()));
     setFastmathFlagsAttr(inst, callOp);
     if (!callInst->getType()->isVoidTy())
       mapValue(inst, callOp.getResult());

@@ -9324,15 +9324,17 @@ BuildTypeCoupledDecls(Expr *E,
 }
 
 QualType Sema::BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
-                                                      Expr *CountExpr) {
+                                                      Expr *CountExpr,
+                                                      bool CountInBytes,
+                                                      bool OrNull) {
   assert(WrappedTy->isIncompleteArrayType() || WrappedTy->isPointerType());
 
   llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
   BuildTypeCoupledDecls(CountExpr, Decls);
   /// When the resulting expression is invalid, we still create the AST using
   /// the original count expression for the sake of AST dump.
-  return Context.getCountAttributedType(
-      WrappedTy, CountExpr, /*CountInBytes*/ false, /*OrNull*/ false, Decls);
+  return Context.getCountAttributedType(WrappedTy, CountExpr, CountInBytes,
+                                        OrNull, Decls);
 }
 
 /// getDecltypeForExpr - Given an expr, will return the decltype for

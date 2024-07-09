@@ -1421,7 +1421,8 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
     for (const auto &Callsite : CallsiteSamples.second) {
       sampleprof::FunctionSamples Remapped =
           remapSamples(Callsite.second, Remapper, Error);
-      MergeResult(Error, Target[Remapped.getFunction()].merge(Remapped));
+      mergeSampleProfErrors(Error,
+                            Target[Remapped.getFunction()].merge(Remapped));
     }
   }
   return Result;
@@ -1542,7 +1543,8 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
                    : FunctionSamples();
       FunctionSamples &Samples = Remapper ? Remapped : I->second;
       SampleContext FContext = Samples.getContext();
-      MergeResult(Result, ProfileMap[FContext].merge(Samples, Input.Weight));
+      mergeSampleProfErrors(Result,
+                            ProfileMap[FContext].merge(Samples, Input.Weight));
       if (Result != sampleprof_error::success) {
         std::error_code EC = make_error_code(Result);
         handleMergeWriterError(errorCodeToError(EC), Input.Filename,
