@@ -1607,7 +1607,7 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E) {
   return NormalizedConstraint{new (S.Context) AtomicConstraint(S, E)};
 }
 
-bool FoldExpandedConstraint::AreSubsumptionEligible(
+bool FoldExpandedConstraint::AreCompatibleForSubsumption(
     const FoldExpandedConstraint &A, const FoldExpandedConstraint &B) {
   llvm::SmallVector<UnexpandedParameterPack> APacks, BPacks;
   Sema::collectUnexpandedParameterPacks(const_cast<Expr *>(A.Pattern), APacks);
