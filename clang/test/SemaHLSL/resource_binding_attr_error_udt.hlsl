@@ -75,8 +75,6 @@ struct Eg9{
 };
 
 Eg9 e9;
-
-
 /* Light up this test when Texture2D is implemented
 template<typename R>
 struct Eg10 {
@@ -86,7 +84,7 @@ struct Eg10 {
 Eg10<Texture2D> e10 : register(u0);
 
 // invalid because after template expansion, there are no valid resources inside Eg10 to bind as a UAV.
-*/ 
+*/
 
 struct Eg11{
   RWBuffer<int> a;

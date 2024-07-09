@@ -508,16 +508,15 @@ bool isDeclaredWithinCOrTBuffer(const Decl *decl) {
 
 const CXXRecordDecl *getRecordDeclFromVarDecl(VarDecl *VD) {
   const Type *Ty = VD->getType()->getPointeeOrArrayElementType();
-  if (!Ty)
-    llvm_unreachable("Resource class must have an element type.");
+  assert(Ty && "Resource class must have an element type.");
 
   if (const BuiltinType *BTy = dyn_cast<BuiltinType>(Ty)) {
     return nullptr;
   }
 
   const CXXRecordDecl *TheRecordDecl = Ty->getAsCXXRecordDecl();
-  if (!TheRecordDecl)
-    llvm_unreachable("Resource class should have a resource type declaration.");
+  assert(TheRecordDecl &&
+         "Resource class should have a resource type declaration.");
 
   if (auto TDecl = dyn_cast<ClassTemplateSpecializationDecl>(TheRecordDecl))
     TheRecordDecl = TDecl->getSpecializedTemplate()->getTemplatedDecl();
@@ -721,10 +720,8 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
   HLSLBufferDecl *CBufferOrTBuffer = dyn_cast<HLSLBufferDecl>(D);
 
   // exactly one of these two types should be set
-  if (!VD && !CBufferOrTBuffer)
-    return;
-  if (VD && CBufferOrTBuffer)
-    return;
+  assert(((VD && !CBufferOrTBuffer) || (!VD && CBufferOrTBuffer)) &&
+         "either VD or CBufferOrTBuffer should be set");
 
   RegisterBindingFlags f = HLSLFillRegisterBindingFlags(S, D);
   assert((int)f.Other + (int)f.Resource + (int)f.Basic + (int)f.Udt == 1 &&
