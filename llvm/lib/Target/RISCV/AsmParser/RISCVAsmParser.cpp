@@ -3081,6 +3081,7 @@ bool RISCVAsmParser::parseDirectiveInsn(SMLoc L) {
         return true;
     }
 
+    // TODO: Add support for long instructions
     int64_t RealLength = (Value & 3) == 3 ? 4 : 2;
     if (!isUIntN(RealLength * 8, Value))
       return Error(ErrorLoc, "invalid operand for instruction");
