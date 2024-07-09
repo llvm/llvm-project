@@ -157,7 +157,6 @@ enum ArchFeatureKind : uint32_t {
   FEATURE_WGP = 1 << 9,
 };
 
-
 enum FeatureError : uint32_t {
   NO_ERROR = 0,
   INVALID_FEATURE_COMBINATION,
