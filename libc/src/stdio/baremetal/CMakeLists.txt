@@ -33,6 +33,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  puts
+  SRCS
+    puts.cpp
+  HDRS
+    ../puts.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.CPP.string_view
+)
+
+add_entrypoint_object(
   vprintf
   SRCS
     vprintf.cpp
