@@ -209,7 +209,7 @@ CodeGenModule::GetNonVirtualBaseClassOffset(const CXXRecordDecl *ClassDecl,
     return nullptr;
 
   llvm::Type *PtrDiffTy =
-  Types.ConvertType(getContext().getPointerDiffType());
+      getTypes().ConvertType(getContext().getPointerDiffType());
 
   return llvm::ConstantInt::get(PtrDiffTy, Offset.getQuantity());
 }
