@@ -140,8 +140,8 @@ func.func @mesh_shard_halo_sizes() -> () {
   return
 }
 
-// CHECK-LABEL: func @mesh_shard_dim_sizes
-func.func @mesh_shard_dim_sizes() -> () {
+// CHECK-LABEL: func @mesh_shard_dims_sizes
+func.func @mesh_shard_dims_sizes() -> () {
   // CHECK: %[[C3:.*]] = arith.constant 3 : i64
   %c3 = arith.constant 3 : i64
   // CHECK: mesh.sharding @mesh4, {{\[\[}}0]] sharded_dims_sizes = [1, 4, 2] : !mesh.sharding
@@ -161,6 +161,19 @@ func.func @mesh_shard_op_force(%arg0 : tensor<4x8xf32>) -> (tensor<4x8xf32>, ten
   // CHECK-NEXT: mesh.shard %[[ARG]] to %[[S]] annotate_for_users force : tensor<4x8xf32>
   %2 = mesh.shard %arg0 to %s annotate_for_users force : tensor<4x8xf32>
   return %1, %2 : tensor<4x8xf32>, tensor<4x8xf32>
+}
+
+// CHECK-LABEL: func @mesh_shard_shape
+func.func @mesh_shard_shape() {
+  // CHECK: %[[C3:.*]] = arith.constant 3 : index
+  %c3 = arith.constant 3 : index
+  // CHECK-NEXT: %[[S:.*]] = mesh.sharding @mesh0, {{\[\[}}]] : !mesh.sharding
+  %s = mesh.sharding @mesh0, [[]] : !mesh.sharding
+  // CHECK-NEXT: mesh.shard_shape 8x? %[[S]] %[[C3]] : index, index
+  %shp:2 = mesh.shard_shape 8x? %s %c3 : index, index
+  // CHECK-NEXT: mesh.shard_shape 8x4 %[[S]] %[[C3]] : index, index
+  %shp1:2 = mesh.shard_shape 8x4 %s %c3 : index, index
+  return
 }
 
 // CHECK-LABEL: func @mesh_shape
