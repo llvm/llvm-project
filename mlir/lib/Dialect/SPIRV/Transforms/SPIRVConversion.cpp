@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
@@ -21,19 +22,24 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/OneToNTypeConversion.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 
+#include <cctype>
 #include <functional>
 #include <optional>
+#include <unordered_set>
 
 #define DEBUG_TYPE "mlir-spirv-conversion"
 
@@ -891,22 +897,35 @@ FuncOpVectorTypesConversion::matchAndRewrite(func::FuncOp funcOp,
   SmallVector<size_t> unrolledInputNums;
   size_t newInputNo = 0;
 
+  std::unordered_map<Operation *, size_t> tmpOps;
+  size_t newOpCount = 0;
+
   // Enumerate through the arguments.
   for (const auto &argType : enumerate(fnType.getInputs())) {
     size_t origInputNo = argType.index();
     Type origType = argType.value();
     auto origVecType = llvm::dyn_cast<VectorType>(origType);
     if (!origVecType) {
+      Value result = rewriter.create<arith::ConstantOp>(
+          loc, origType, rewriter.getZeroAttr(origType));
+      rewriter.replaceAllUsesWith(newFuncOp.getArgument(origInputNo), result);
+      tmpOps.insert({result.getDefiningOp(), newInputNo});
       oneToNTypeMapping.addInputs(origInputNo, origType);
       newInputNo++;
+      newOpCount++;
       continue;
     }
     llvm::errs() << "Try vector unrolling\n";
     auto targetShape = getTargetShape(origVecType);
     if (!targetShape) {
       llvm::errs() << "No target shape\n";
+      Value result = rewriter.create<arith::ConstantOp>(
+          loc, origType, rewriter.getZeroAttr(origType));
+      rewriter.replaceAllUsesWith(newFuncOp.getArgument(origInputNo), result);
+      tmpOps.insert({result.getDefiningOp(), newInputNo});
       oneToNTypeMapping.addInputs(origInputNo, origType);
       newInputNo++;
+      newOpCount++;
       continue;
     }
     llvm::errs() << "Got target shape\n";
@@ -921,10 +940,12 @@ FuncOpVectorTypesConversion::matchAndRewrite(func::FuncOp funcOp,
     Value result = rewriter.create<arith::ConstantOp>(
         loc, origVecType, rewriter.getZeroAttr(origVecType));
     result.dump();
+    newOpCount++;
     // Prepare the placeholder
     Value dummy = rewriter.create<arith::ConstantOp>(
         loc, unrolledType, rewriter.getZeroAttr(unrolledType));
     dummy.dump();
+    newOpCount++;
     SmallVector<int64_t> strides(targetShape->size(), 1);
     for (SmallVector<int64_t> offsets :
          StaticTileOffsetRange(originalShape, *targetShape)) {
@@ -934,6 +955,7 @@ FuncOpVectorTypesConversion::matchAndRewrite(func::FuncOp funcOp,
       newTypes.push_back(unrolledType);
       unrolledInputNums.push_back(newInputNo);
       newInputNo++;
+      newOpCount++;
     }
     rewriter.replaceAllUsesWith(newFuncOp.getArgument(origInputNo), result);
     oneToNTypeMapping.addInputs(origInputNo, newTypes);
@@ -961,10 +983,25 @@ FuncOpVectorTypesConversion::matchAndRewrite(func::FuncOp funcOp,
   llvm::errs() << "After updating the arguments in the entry block\n";
   newFuncOp.dump();
 
-  // Relace the dummy values with actual arguments.
+  // Replace the dummy values with actual arguments.
   size_t i = 0;
-  for (auto &op : entryBlock.getOperations()) {
+  for (auto pair : llvm::enumerate(entryBlock.getOperations())) {
+    size_t count = pair.index();
+    Operation &op = pair.value();
     op.dump();
+    for (auto pair : llvm::enumerate(op.getOperands())) {
+      Operation *operandOp = pair.value().getDefiningOp();
+      if (tmpOps.find(operandOp) != tmpOps.end()) {
+        rewriter.modifyOpInPlace(&op, [&] {
+          op.setOperand(pair.index(), newFuncOp.getArgument(tmpOps[operandOp]));
+        });
+        rewriter.eraseOp(operandOp);
+        count++;
+        continue;
+      }
+    }
+    if (count == newOpCount)
+      continue;
     auto vecOp = dyn_cast<vector::InsertStridedSliceOp>(op);
     if (vecOp) {
       size_t unrolledInputNo = unrolledInputNums[i];
@@ -973,6 +1010,7 @@ FuncOpVectorTypesConversion::matchAndRewrite(func::FuncOp funcOp,
       });
       i++;
     }
+    count++;
   }
 
   return success();

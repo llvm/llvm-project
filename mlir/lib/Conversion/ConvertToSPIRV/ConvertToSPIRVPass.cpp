@@ -39,7 +39,7 @@ using namespace mlir;
 // Vector Lowering
 //===----------------------------------------------------------------------===//
 
-int getComputeVectorSize(int64_t size) {
+static int getComputeVectorSize(int64_t size) {
   for (int i : {4, 3, 2}) {
     if (size % i == 0)
       return i;
@@ -110,28 +110,29 @@ struct ConvertToSPIRVPass final
         SPIRVConversionTarget::get(targetAttr);
 
     // Unroll vectors in function inputs to native vector size.
+    llvm::errs() << "Start unrolling function inputs\n";
     {
-      llvm::errs() << "Start unrolling function inputs\n";
       RewritePatternSet patterns(context);
       populateFuncOpVectorRewritePatterns(patterns);
       GreedyRewriteConfig config;
       config.strictMode = GreedyRewriteStrictness::ExistingOps;
       if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
         return signalPassFailure();
-      llvm::errs() << "Finish unrolling function inputs\n";
     }
+    llvm::errs() << "Finish unrolling function inputs\n";
+    op->dump();
 
     // Unroll vectors in function outputs to native vector size.
+    llvm::errs() << "Start unrolling function outputs\n";
     {
-      llvm::errs() << "Start unrolling function outputs\n";
       RewritePatternSet patterns(context);
       populateReturnOpVectorRewritePatterns(patterns);
       GreedyRewriteConfig config;
       config.strictMode = GreedyRewriteStrictness::ExistingOps;
       if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
         return signalPassFailure();
-      llvm::errs() << "Finish unrolling function inputs\n";
     }
+    llvm::errs() << "Finish unrolling function outputs\n";
 
     SPIRVTypeConverter typeConverter(targetAttr);
 
@@ -175,7 +176,8 @@ struct ConvertToSPIRVPass final
         return signalPassFailure();
     }
 
-    llvm::errs() << "After running canonicalization to cast away leading size-1 dimensions\n";
+    llvm::errs() << "After running canonicalization to cast away leading "
+                    "size-1 dimensions\n";
     op->dump();
 
     // Convert vector.extract_strided_slice into a chain of vector.extract and
@@ -194,7 +196,9 @@ struct ConvertToSPIRVPass final
         return signalPassFailure();
     }
 
-    llvm::errs() << "After converting vector.extract_strided_slice into a chain of vector.extract and then a chain of vector.insert ops\n";
+    llvm::errs()
+        << "After converting vector.extract_strided_slice into a chain of "
+           "vector.extract and then a chain of vector.insert ops\n";
     op->dump();
 
     // Run all sorts of canonicalization patterns to clean up again.
@@ -210,7 +214,8 @@ struct ConvertToSPIRVPass final
         return signalPassFailure();
     }
 
-    llvm::errs() << "After running canonicalization patterns to clean up again\n";
+    llvm::errs()
+        << "After running canonicalization patterns to clean up again\n";
     op->dump();
 
     RewritePatternSet patterns(context);
