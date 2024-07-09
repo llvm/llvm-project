@@ -6676,39 +6676,42 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   SmallDenseMap<PHINode *, Type *> ResultTypes;
   SmallVector<PHINode *, 4> PHIs;
 
-  SmallVector<ConstantInt *, 8> CaseVals(llvm::map_range(
-      SI->cases(), [](const auto &C) { return C.getCaseValue(); }));
+  auto CaseVals = llvm::map_range(
+      SI->cases(), [](const auto &C) { return C.getCaseValue(); });
+  auto *SignedMin =
+      *llvm::min_element(CaseVals, [](const auto *L, const auto *R) {
+        return L->getValue().slt(R->getValue());
+      });
+  auto *SignedMax =
+      *llvm::max_element(CaseVals, [](const auto *L, const auto *R) {
+        return L->getValue().slt(R->getValue());
+      });
+  auto *UnsignedMin =
+      *llvm::min_element(CaseVals, [](const auto *L, const auto *R) {
+        return L->getValue().ult(R->getValue());
+      });
+  auto *UnsignedMax =
+      *llvm::max_element(CaseVals, [](const auto *L, const auto *R) {
+        return L->getValue().ult(R->getValue());
+      });
+  APInt UnsignedDif = UnsignedMax->getValue() - UnsignedMin->getValue();
+  APInt SignedDif = SignedMax->getValue() - SignedMin->getValue();
 
-  llvm::sort(CaseVals, [](const auto *L, const auto *R) {
-    return L->getValue().slt(R->getValue());
-  });
-  auto *CaseValIter = CaseVals.begin();
-  ConstantInt *BeginCaseVal = *CaseValIter;
-  ConstantInt *EndCaseVal = CaseVals.back();
-  bool RangeOverflow = false;
-  uint64_t LookupTableSize =
-      EndCaseVal->getValue()
-          .ssub_ov(BeginCaseVal->getValue(), RangeOverflow)
-          .getLimitedValue() +
-      1;
-  if (RangeOverflow && ConsiderCrossSignedMaxMinTable) {
+  ConstantInt *BeginCaseVal = nullptr;
+  ConstantInt *EndCaseVal = nullptr;
+  uint64_t LookupTableSize = 0;
+  bool CrossSignedMaxMinTableSmaller = UnsignedDif.ult(SignedDif);
+  if (ConsiderCrossSignedMaxMinTable && CrossSignedMaxMinTableSmaller) {
     // We consider cases where the starting to the endpoint will cross the
     // signed max and min. For example, for the i8 range `[-128, -127, 126,
     // 127]`, we choose from 126 to -127. The length of the lookup table is 4.
-    while (CaseValIter != CaseVals.end()) {
-      auto *CurCaseVal = *CaseValIter++;
-      if (CaseValIter == CaseVals.end())
-        break;
-      auto *NextCaseVal = *CaseValIter;
-      const auto &NextVal = NextCaseVal->getValue();
-      const auto &CurVal = CurCaseVal->getValue();
-      uint64_t RequireTableSize = (CurVal - NextVal).getLimitedValue() + 1;
-      if (RequireTableSize < LookupTableSize) {
-        BeginCaseVal = NextCaseVal;
-        EndCaseVal = CurCaseVal;
-        LookupTableSize = RequireTableSize;
-      }
-    }
+    BeginCaseVal = UnsignedMin;
+    EndCaseVal = UnsignedMax;
+    LookupTableSize = UnsignedDif.getLimitedValue() + 1;
+  } else {
+    BeginCaseVal = SignedMin;
+    EndCaseVal = SignedMax;
+    LookupTableSize = SignedDif.getLimitedValue() + 1;
   }
 
   for (const auto &CI : SI->cases()) {
@@ -6789,7 +6792,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   if (!ShouldBuildLookupTable(SI, TableSize, TTI, DL, ResultTypes))
     // When a signed max-min cannot construct a lookup table, try to find a
     // range with a smaller lookup table.
-    return RangeOverflow && !ConsiderCrossSignedMaxMinTable &&
+    return CrossSignedMaxMinTableSmaller && !ConsiderCrossSignedMaxMinTable &&
            SwitchToLookupTable(SI, Builder, DTU, DL, TTI, true);
 
   std::vector<DominatorTree::UpdateType> Updates;
