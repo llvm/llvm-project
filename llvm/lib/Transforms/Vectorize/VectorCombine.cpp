@@ -1491,8 +1491,7 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
 bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   Value *V0, *V1;
   ArrayRef<int> OldMask;
-  if (!match(&I, m_Shuffle(m_OneUse(m_Value(V0)), m_OneUse(m_Value(V1)),
-                           m_Mask(OldMask))))
+  if (!match(&I, m_Shuffle(m_Value(V0), m_Value(V1), m_Mask(OldMask))))
     return false;
 
   auto *C0 = dyn_cast<CastInst>(V0);
@@ -1551,11 +1550,13 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   // Try to replace a castop with a shuffle if the shuffle is not costly.
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
-  InstructionCost OldCost =
+  InstructionCost CostC0 =
       TTI.getCastInstrCost(C0->getOpcode(), CastDstTy, CastSrcTy,
-                           TTI::CastContextHint::None, CostKind) +
+                           TTI::CastContextHint::None, CostKind);
+  InstructionCost CostC1 =
       TTI.getCastInstrCost(C1->getOpcode(), CastDstTy, CastSrcTy,
                            TTI::CastContextHint::None, CostKind);
+  InstructionCost OldCost = CostC0 + CostC1;
   OldCost +=
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, CastDstTy,
                          OldMask, CostKind, 0, nullptr, std::nullopt, &I);
@@ -1564,6 +1565,10 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
       TargetTransformInfo::SK_PermuteTwoSrc, CastSrcTy, NewMask, CostKind);
   NewCost += TTI.getCastInstrCost(Opcode, ShuffleDstTy, NewShuffleDstTy,
                                   TTI::CastContextHint::None, CostKind);
+  if (!C0->hasOneUse())
+    NewCost += CostC0;
+  if (!C1->hasOneUse())
+    NewCost += CostC1;
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two casts: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
@@ -1925,6 +1930,15 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
       } else if (isa<UnaryOperator, TruncInst, ZExtInst, SExtInst>(FrontU)) {
         Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
         continue;
+      } else if (auto *BitCast = dyn_cast<BitCastInst>(FrontU)) {
+        // TODO: Handle vector widening/narrowing bitcasts.
+        auto *DstTy = dyn_cast<FixedVectorType>(BitCast->getDestTy());
+        auto *SrcTy = dyn_cast<FixedVectorType>(BitCast->getSrcTy());
+        if (DstTy && SrcTy &&
+            SrcTy->getNumElements() == DstTy->getNumElements()) {
+          Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
+          continue;
+        }
       } else if (isa<SelectInst>(FrontU)) {
         Worklist.push_back(generateInstLaneVectorFromOperand(Item, 0));
         Worklist.push_back(generateInstLaneVectorFromOperand(Item, 1));

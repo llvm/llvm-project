@@ -134,6 +134,10 @@
     ret void
   }
 
+  define void @unforwardable_avl() {
+    ret void
+  }
+
   declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
 
   declare <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, i64) #1
@@ -990,3 +994,43 @@ body: |
     %x:gpr = PseudoVMV_X_S undef $noreg, 6
     PseudoBR %bb.1
 ...
+---
+name: unforwardable_avl
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: unforwardable_avl
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $x10, $v8m2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %avl:gprnox0 = COPY $x10
+  ; CHECK-NEXT:   %outvl:gprnox0 = PseudoVSETVLI %avl, 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT:   liveins: $v8m2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   dead %avl:gprnox0 = ADDI %avl, 1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   liveins: $v8m2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_:%[0-9]+]]:gpr = PseudoVSETVLIX0 killed $x0, 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   renamable $v10m2 = PseudoVADD_VV_M2 undef renamable $v10m2, renamable $v8m2, renamable $v8m2, -1, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLI %outvl, 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   renamable $v8m2 = PseudoVADD_VV_M2 undef renamable $v8m2, killed renamable $v10m2, renamable $v8m2, $noreg, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   PseudoRET implicit $v8m2
+  bb.0:
+    liveins: $x10, $v8m2
+    %avl:gprnox0 = COPY $x10
+    %outvl:gprnox0 = PseudoVSETVLI %avl:gprnox0, 209, implicit-def dead $vl, implicit-def dead $vtype
+
+  bb.1:
+    liveins: $v8m2
+    %avl:gprnox0 = ADDI %avl:gprnox0, 1
+
+  bb.2:
+    liveins: $v8m2
+    renamable $v10m2 = PseudoVADD_VV_M2 undef renamable $v10m2, renamable $v8m2, renamable $v8m2, -1, 5, 0
+    renamable $v8m2 = PseudoVADD_VV_M2 undef renamable $v8m2, killed renamable $v10m2, killed renamable $v8m2, %outvl:gprnox0, 5, 0
+    PseudoRET implicit $v8m2

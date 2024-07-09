@@ -58,6 +58,10 @@ def AttributedOp : TestOp<"attributed_op"> {
                    UnitAttr:$unit);
 }
 
+def CustomAttributedOp : TestOp<"custom_attributed_op"> {
+  let arguments = (ins TestAttr:$test_attr);
+}
+
 def AttributesOp : TestOp<"attributes_op"> {
   let arguments = (ins
                    AffineMapArrayAttr:$x_affinemaparr,
