@@ -74,7 +74,11 @@ class SPIRVEmitIntrinsics
   SPIRV::InstructionSet::InstructionSet InstrSet;
 
   // a register of Instructions that don't have a complete type definition
+  SmallPtrSet<Value *, 8> UncompleteTypeInfo;
   SmallVector<Instruction *> PostprocessWorklist;
+
+  // well known result types of builtins
+  enum WellKnownTypes { Event };
 
   // deduce element type of untyped pointers
   Type *deduceElementType(Value *I, bool UnknownElemTypeI8);
@@ -246,7 +250,7 @@ static bool IsKernelArgInt8(Function *F, StoreInst *SI) {
          isa<Argument>(SI->getValueOperand());
 }
 
-// maybe restore original function return type
+// Maybe restore original function return type.
 static inline Type *restoreMutatedType(SPIRVGlobalRegistry *GR, Instruction *I,
                                        Type *Ty) {
   CallInst *CI = dyn_cast<CallInst>(I);
@@ -256,6 +260,23 @@ static inline Type *restoreMutatedType(SPIRVGlobalRegistry *GR, Instruction *I,
   if (Type *OriginalTy = GR->findMutated(CI->getCalledFunction()))
     return OriginalTy;
   return Ty;
+}
+
+// Reconstruct type with nested element types according to deduced type info.
+// Return nullptr if no detailed type info is available.
+static inline Type *reconstructType(SPIRVGlobalRegistry *GR, Value *Op) {
+  Type *Ty = Op->getType();
+  if (!isUntypedPointerTy(Ty))
+    return Ty;
+  // try to find the pointee type
+  if (Type *NestedTy = GR->findDeducedElementType(Op))
+    return getTypedPointerWrapper(NestedTy, getPointerAddressSpace(Ty));
+  // not a pointer according to the type info (e.g., Event object)
+  CallInst *CI = GR->findAssignPtrTypeInstr(Op);
+  if (!CI)
+    return nullptr;
+  MetadataAsValue *MD = cast<MetadataAsValue>(CI->getArgOperand(1));
+  return cast<ConstantAsMetadata>(MD->getMetadata())->getType();
 }
 
 void SPIRVEmitIntrinsics::buildAssignType(IRBuilder<> &B, Type *Ty,
@@ -371,8 +392,10 @@ void SPIRVEmitIntrinsics::maybeAssignPtrType(Type *&Ty, Value *Op, Type *RefTy,
   if (isUntypedPointerTy(RefTy)) {
     if (!UnknownElemTypeI8)
       return;
-    if (auto *I = dyn_cast<Instruction>(Op))
+    if (auto *I = dyn_cast<Instruction>(Op)) {
+      UncompleteTypeInfo.insert(I);
       PostprocessWorklist.push_back(I);
+    }
   }
   Ty = RefTy;
 }
@@ -449,6 +472,8 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeHelper(
     if (Function *CalledF = CI->getCalledFunction()) {
       std::string DemangledName =
           getOclOrSpirvBuiltinDemangledName(CalledF->getName());
+      if (DemangledName.length() > 0)
+        DemangledName = SPIRV::lookupBuiltinNameHelper(DemangledName);
       auto AsArgIt = ResTypeByArg.find(DemangledName);
       if (AsArgIt != ResTypeByArg.end()) {
         Ty = deduceElementTypeHelper(CI->getArgOperand(AsArgIt->second),
@@ -559,7 +584,13 @@ Type *SPIRVEmitIntrinsics::deduceNestedTypeHelper(
 Type *SPIRVEmitIntrinsics::deduceElementType(Value *I, bool UnknownElemTypeI8) {
   if (Type *Ty = deduceElementTypeHelper(I, UnknownElemTypeI8))
     return Ty;
-  return UnknownElemTypeI8 ? IntegerType::getInt8Ty(I->getContext()) : nullptr;
+  if (!UnknownElemTypeI8)
+    return nullptr;
+  if (auto *Instr = dyn_cast<Instruction>(I)) {
+    UncompleteTypeInfo.insert(Instr);
+    PostprocessWorklist.push_back(Instr);
+  }
+  return IntegerType::getInt8Ty(I->getContext());
 }
 
 static inline Type *getAtomicElemTy(SPIRVGlobalRegistry *GR, Instruction *I,
@@ -600,6 +631,15 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I,
     if (!KnownElemTy)
       return;
     Ops.push_back(std::make_pair(Ref->getPointerOperand(), 0));
+  } else if (auto *Ref = dyn_cast<GetElementPtrInst>(I)) {
+    KnownElemTy = Ref->getSourceElementType();
+    if (isUntypedPointerTy(KnownElemTy))
+      return;
+    Type *PointeeTy = GR->findDeducedElementType(Ref->getPointerOperand());
+    if (PointeeTy && !isUntypedPointerTy(PointeeTy))
+      return;
+    Ops.push_back(std::make_pair(Ref->getPointerOperand(),
+                                 GetElementPtrInst::getPointerOperandIndex()));
   } else if (auto *Ref = dyn_cast<LoadInst>(I)) {
     KnownElemTy = I->getType();
     if (isUntypedPointerTy(KnownElemTy))
@@ -612,15 +652,8 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I,
   } else if (auto *Ref = dyn_cast<StoreInst>(I)) {
     if (IsKernelArgInt8(Ref->getParent()->getParent(), Ref))
       return;
-    Value *Op = Ref->getValueOperand();
-    KnownElemTy = Op->getType();
-    if (isUntypedPointerTy(KnownElemTy)) {
-      Type *NestedTy = GR->findDeducedElementType(Op);
-      if (!NestedTy)
-        return;
-      KnownElemTy =
-          getTypedPointerWrapper(NestedTy, getPointerAddressSpace(KnownElemTy));
-    }
+    if (!(KnownElemTy = reconstructType(GR, Ref->getValueOperand())))
+      return;
     Type *PointeeTy = GR->findDeducedElementType(Ref->getPointerOperand());
     if (PointeeTy && !isUntypedPointerTy(PointeeTy))
       return;
@@ -743,7 +776,8 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(Instruction *I,
       continue;
     Value *OpTyVal = PoisonValue::get(KnownElemTy);
     Type *OpTy = Op->getType();
-    if (!Ty || AskTy) {
+    if (!Ty || AskTy || isUntypedPointerTy(Ty) ||
+        UncompleteTypeInfo.contains(Op)) {
       GR->addDeducedElementType(Op, KnownElemTy);
       // check if there is existing Intrinsic::spv_assign_ptr_type instruction
       CallInst *AssignCI = AskCI ? AskCI : GR->findAssignPtrTypeInstr(Op);
@@ -1175,7 +1209,7 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
     if (!ExpectedType && !DemangledName.empty())
       ExpectedType = SPIRV::parseBuiltinCallArgumentBaseType(
           DemangledName, OpIdx, I->getContext());
-    if (!ExpectedType)
+    if (!ExpectedType || ExpectedType->isVoidTy())
       continue;
 
     if (ExpectedType->isTargetExtTy())
@@ -1379,9 +1413,39 @@ bool SPIRVEmitIntrinsics::insertAssignPtrTypeIntrs(Instruction *I,
 
 void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
                                                 IRBuilder<> &B) {
+  // TODO: extend the list of functions with known result types
+  static StringMap<unsigned> ResTypeWellKnown = {
+      {"async_work_group_copy", WellKnownTypes::Event},
+      {"async_work_group_strided_copy", WellKnownTypes::Event},
+      {"__spirv_GroupAsyncCopy", WellKnownTypes::Event}};
+
   reportFatalOnTokenType(I);
+
+  bool IsKnown = false;
+  if (auto *CI = dyn_cast<CallInst>(I)) {
+    if (!CI->isIndirectCall() && !CI->isInlineAsm() &&
+        CI->getCalledFunction() && !CI->getCalledFunction()->isIntrinsic()) {
+      Function *CalledF = CI->getCalledFunction();
+      std::string DemangledName =
+          getOclOrSpirvBuiltinDemangledName(CalledF->getName());
+      if (DemangledName.length() > 0)
+        DemangledName = SPIRV::lookupBuiltinNameHelper(DemangledName);
+      auto ResIt = ResTypeWellKnown.find(DemangledName);
+      if (ResIt != ResTypeWellKnown.end()) {
+        IsKnown = true;
+        setInsertPointAfterDef(B, I);
+        switch (ResIt->second) {
+        case WellKnownTypes::Event:
+          buildAssignType(B, TargetExtType::get(I->getContext(), "spirv.Event"),
+                          I);
+          break;
+        }
+      }
+    }
+  }
+
   Type *Ty = I->getType();
-  if (!Ty->isVoidTy() && !isPointerTy(Ty) && requireAssignType(I)) {
+  if (!IsKnown && !Ty->isVoidTy() && !isPointerTy(Ty) && requireAssignType(I)) {
     setInsertPointAfterDef(B, I);
     Type *TypeToAssign = Ty;
     if (auto *II = dyn_cast<IntrinsicInst>(I)) {
@@ -1673,6 +1737,7 @@ bool SPIRVEmitIntrinsics::postprocessTypes() {
 bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
   bool Changed = false;
 
+  UncompleteTypeInfo.clear();
   PostprocessWorklist.clear();
   for (auto &F : M)
     Changed |= runOnFunction(F);
