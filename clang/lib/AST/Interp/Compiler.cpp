@@ -3552,12 +3552,12 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD, bool Topleve
   const Expr *Init = VD->getInit();
   std::optional<PrimType> VarT = classify(VD->getType());
 
-  auto checkDecl = [&]() -> bool {
-    bool NeedsOp = !Toplevel && VD->isLocalVarDecl() && VD->isStaticLocal();
-    return !NeedsOp || this->emitCheckDecl(VD, VD);
-  };
-
   if (Context::shouldBeGloballyIndexed(VD)) {
+    auto checkDecl = [&]() -> bool {
+      bool NeedsOp = !Toplevel && VD->isLocalVarDecl() && VD->isStaticLocal();
+      return !NeedsOp || this->emitCheckDecl(VD, VD);
+    };
+
     auto initGlobal = [&](unsigned GlobalIndex) -> bool {
       assert(Init);
       DeclScope<Emitter> LocalScope(this, VD);
