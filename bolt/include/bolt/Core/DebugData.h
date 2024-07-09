@@ -343,14 +343,19 @@ public:
   uint32_t getIndexFromAddress(uint64_t Address, DWARFUnit &CU);
 
   /// Write out entries in to .debug_addr section for CUs.
-  virtual void update();
+  virtual std::optional<uint64_t> finalize(const size_t BufferSize);
 
   /// Return buffer with all the entries in .debug_addr already writen out using
   /// update(...).
-  virtual AddressSectionBuffer &finalize() { return *Buffer; }
+  virtual std::unique_ptr<AddressSectionBuffer> releaseBuffer() {
+    return std::move(Buffer);
+  }
+
+  /// Returns buffer size.
+  virtual size_t getBufferSize() { return Buffer->size(); }
 
   /// Returns False if .debug_addr section was created..
-  bool isInitialized() { return Map.empty; }
+  bool isInitialized() { return Buffer->size() > 0; }
 
   /// Updates address base with the given Offset.
   virtual void updateAddrBase(DIEBuilder &DIEBlder, DWARFUnit &CU,
@@ -363,12 +368,13 @@ public:
   }
 
   /// Sets AddressByteSize for the CU.
-  void setAddressByteSize(uint8_t AddressByteSize) {
+  void setAddressByteSize(const uint8_t AddressByteSize) {
     this->AddressByteSize = AddressByteSize;
   }
 
   /// Sets AddrOffsetSectionBase for the CU.
-  void setAddrOffsetSectionBase(std::optional<uint64_t> AddrOffsetSectionBase) {
+  void setAddrOffsetSectionBase(
+      const std::optional<uint64_t> AddrOffsetSectionBase) {
     this->AddrOffsetSectionBase = AddrOffsetSectionBase;
   }
 
@@ -415,8 +421,6 @@ protected:
 
     void dump();
 
-    bool empty = false;
-
   private:
     AddressToIndexMap AddressToIndex;
     IndexToAddressMap IndexToAddress;
@@ -433,6 +437,7 @@ protected:
   AddressForDWOCU Map;
   uint8_t AddressByteSize;
   std::optional<uint64_t> AddrOffsetSectionBase;
+  static constexpr uint32_t HeaderSize = 8;
   /// Mutex used for parallel processing of debug info.
   std::mutex WriterMutex;
   std::unique_ptr<AddressSectionBuffer> Buffer;
@@ -447,7 +452,7 @@ public:
   DebugAddrWriterDwarf5(BinaryContext *BC) : DebugAddrWriter(BC) {}
 
   /// Write out entries in to .debug_addr section for CUs.
-  virtual void update() override;
+  virtual std::optional<uint64_t> finalize(const size_t BufferSize) override;
 
   virtual void updateAddrBase(DIEBuilder &DIEBlder, DWARFUnit &CU,
                               const uint64_t Offset) override;

@@ -68,7 +68,7 @@ private:
 
   /// Stores and serializes information that will be put into the
   /// .debug_addr DWARF section.
-  std::unique_ptr<DebugAddrWriter> AddrWriter;
+  std::unique_ptr<DebugAddrWriter> FinalAddrWriter;
 
   /// Stores and serializes information that will be put in to the
   /// .debug_addr DWARF section.
