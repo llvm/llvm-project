@@ -1645,6 +1645,8 @@ void DWARFRewriter::finalizeCompileUnits(DIEBuilder &DIEBlder,
         AddressWriterIterator->second;
     const size_t BufferOffset = FinalAddrWriter->getBufferSize();
     std::optional<uint64_t> Offset = AddressWriter->finalize(BufferOffset);
+    /// If Offset already exists in UnmodifiedAddressOffsets, then update with
+    /// Offset, else update with BufferOffset.
     if (Offset)
       AddressWriter->updateAddrBase(DIEBlder, *CU, *Offset);
     else if (AddressWriter->isInitialized())
