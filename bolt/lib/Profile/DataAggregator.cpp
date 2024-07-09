@@ -110,6 +110,10 @@ static cl::opt<bool> WriteAutoFDOData(
     "autofdo", cl::desc("generate autofdo textual data instead of bolt data"),
     cl::cat(AggregatorCategory));
 
+static cl::opt<long long> CustomOffset("custom_offset", cl::init(0),
+                                       cl::desc("address plus custom_offset"),
+                                       cl::Optional, cl::Hidden,
+                                       cl::cat(AggregatorCategory));
 } // namespace opts
 
 namespace {
@@ -1112,8 +1116,8 @@ ErrorOr<DataAggregator::PerfBranchSample> DataAggregator::parseBranchSample() {
     LBREntry LBR = LBRRes.get();
     if (ignoreKernelInterrupt(LBR))
       continue;
-    if (!BC->HasFixedLoadAddress)
-      adjustLBR(LBR, MMapInfoIter->second);
+    if (!BC->HasFixedLoadAddress || CustomOffset)
+      adjustLBR(LBR, MMapInfoIter->second, CustomOffset);
     Res.LBR.push_back(LBR);
   }
 
@@ -1154,8 +1158,8 @@ ErrorOr<DataAggregator::PerfBasicSample> DataAggregator::parseBasicSample() {
   }
 
   uint64_t Address = *AddrRes;
-  if (!BC->HasFixedLoadAddress)
-    adjustAddress(Address, MMapInfoIter->second);
+  if (!BC->HasFixedLoadAddress || CustomOffset)
+    adjustAddress(Address, MMapInfoIter->second, CustomOffset);
 
   return PerfBasicSample{Event.get(), Address};
 }
@@ -1209,8 +1213,8 @@ ErrorOr<DataAggregator::PerfMemSample> DataAggregator::parseMemSample() {
   }
 
   uint64_t Address = *AddrRes;
-  if (!BC->HasFixedLoadAddress)
-    adjustAddress(Address, MMapInfoIter->second);
+  if (!BC->HasFixedLoadAddress || CustomOffset)
+    adjustAddress(Address, MMapInfoIter->second, CustomOffset);
 
   return PerfMemSample{PCRes.get(), Address};
 }
