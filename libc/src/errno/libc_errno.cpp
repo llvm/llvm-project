@@ -23,6 +23,15 @@ LIBC_NAMESPACE::Errno::operator int() {
   return __llvmlibc_errno.load(cpp::MemoryOrder::RELAXED);
 }
 
+#elif defined(__ELF__) && !defined(__linux__) && !defined(__Fuchsia__)
+// This is the baremetal case which currently uses a global errno.
+extern "C" {
+int __llvmlibc_errno;
+}
+
+void LIBC_NAMESPACE::Errno::operator=(int a) { __llvmlibc_errno = a; }
+LIBC_NAMESPACE::Errno::operator int() { return __llvmlibc_errno; }
+
 #elif !defined(LIBC_COPT_PUBLIC_PACKAGING)
 // This mode is for unit testing.  We just use our internal errno.
 LIBC_THREAD_LOCAL int __llvmlibc_internal_errno;

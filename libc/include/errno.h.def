@@ -25,7 +25,8 @@
 #include "llvm-libc-macros/generic-error-number-macros.h"
 #endif
 
-#if defined(__AMDGPU__) || defined(__NVPTX__)
+#if defined(__AMDGPU__) || defined(__NVPTX__) || \
+  (defined(__ELF__) && !defined(__linux__) && !defined(__Fuchsia__))
 extern int __llvmlibc_errno; // Not thread_local!
 #else
 #ifdef __cplusplus
