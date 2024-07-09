@@ -19,6 +19,7 @@
 
 #include "LegalizeTypes.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -27,6 +28,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 using namespace llvm;
+using namespace llvm::SDPatternMatch;
 
 #define DEBUG_TYPE "legalize-types"
 
@@ -646,6 +648,37 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Constant(SDNode *N) {
   return Result;
 }
 
+// (CTLZ (XOR Op -1)) --> (CTLZ_ZERO_UNDEF (XOR (SHIFT (ANYEXTEND Op1)
+//                                                     ShiftAmount)
+//                                               -1))
+static SDValue ExtendCtlzNot(SDNode *Node, SDLoc &dl, EVT OVT, EVT NVT,
+                             SelectionDAG &DAG) {
+  SDValue SrcOp;
+  if (!sd_match(Node->getOperand(0), m_Not(m_Value(SrcOp))))
+    return SDValue();
+
+  SDValue ExtSrc = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, SrcOp);
+  unsigned SHLAmount = NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits();
+  SDValue ShiftConst =
+      DAG.getShiftAmountConstant(SHLAmount, ExtSrc.getValueType(), dl);
+
+  SDValue NCstOp =
+      DAG.getConstant(APInt::getAllOnes(NVT.getScalarSizeInBits()), dl, NVT);
+  if (!Node->isVPOpcode()) {
+    SDValue LShift = DAG.getNode(ISD::SHL, dl, NVT, ExtSrc, ShiftConst);
+    SDValue Not = DAG.getNOT(dl, LShift, NVT);
+    return DAG.getNode(ISD::CTLZ_ZERO_UNDEF, dl, NVT, Not);
+  }
+
+  SDValue Mask = Node->getOperand(1);
+  SDValue EVL = Node->getOperand(2);
+
+  SDValue LShift =
+      DAG.getNode(ISD::VP_SHL, dl, NVT, ExtSrc, ShiftConst, Mask, EVL);
+  SDValue Not = DAG.getNode(ISD::VP_XOR, dl, NVT, LShift, NCstOp, Mask, EVL);
+  return DAG.getNode(ISD::VP_CTLZ_ZERO_UNDEF, dl, NVT, Not, Mask, EVL);
+}
+
 SDValue DAGTypeLegalizer::PromoteIntRes_CTLZ(SDNode *N) {
   EVT OVT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
@@ -664,6 +697,14 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CTLZ(SDNode *N) {
   }
 
   unsigned CtlzOpcode = N->getOpcode();
+  // If the operand of CTLZ is NOT, push the extend in the NOT.
+  if (SDValue Res;
+      (CtlzOpcode == ISD::CTLZ || CtlzOpcode == ISD::CTLZ_ZERO_UNDEF ||
+       CtlzOpcode == ISD::VP_CTLZ || CtlzOpcode == ISD::VP_CTLZ_ZERO_UNDEF) &&
+      (Res = ExtendCtlzNot(N, dl, OVT, NVT, DAG))) {
+    return Res;
+  }
+
   if (CtlzOpcode == ISD::CTLZ || CtlzOpcode == ISD::VP_CTLZ) {
     // Subtract off the extra leading bits in the bigger type.
     SDValue ExtractLeadingBits = DAG.getConstant(
