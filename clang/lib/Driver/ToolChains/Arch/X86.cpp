@@ -131,11 +131,9 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
   // If -march=native, autodetect the feature list.
   if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ)) {
     if (StringRef(A->getValue()) == "native") {
-      if (std::optional<llvm::StringMap<bool>> HostFeatures =
-              llvm::sys::getHostCPUFeatures())
-        for (auto &F : *HostFeatures)
-          Features.push_back(
-              Args.MakeArgString((F.second ? "+" : "-") + F.first()));
+      for (auto &F : llvm::sys::getHostCPUFeatures())
+        Features.push_back(
+            Args.MakeArgString((F.second ? "+" : "-") + F.first()));
     }
   }
 

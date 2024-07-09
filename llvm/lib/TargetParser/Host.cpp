@@ -1710,16 +1710,15 @@ VendorSignatures getVendorSignature(unsigned *MaxLeaf) {
 
 #if defined(__i386__) || defined(_M_IX86) || \
     defined(__x86_64__) || defined(_M_X64)
-std::optional<StringMap<bool>> sys::getHostCPUFeatures() {
+StringMap<bool> sys::getHostCPUFeatures() {
   unsigned EAX = 0, EBX = 0, ECX = 0, EDX = 0;
   unsigned MaxLevel;
+  StringMap<bool> Features;
 
   if (getX86CpuIDAndInfo(0, &MaxLevel, &EBX, &ECX, &EDX) || MaxLevel < 1)
-    return {};
+    return Features;
 
   getX86CpuIDAndInfo(1, &EAX, &EBX, &ECX, &EDX);
-
-  StringMap<bool> Features;
 
   Features["cx8"]    = (EDX >>  8) & 1;
   Features["cmov"]   = (EDX >> 15) & 1;
@@ -1908,10 +1907,11 @@ std::optional<StringMap<bool>> sys::getHostCPUFeatures() {
   return Features;
 }
 #elif defined(__linux__) && (defined(__arm__) || defined(__aarch64__))
-std::optional<StringMap<bool>> sys::getHostCPUFeatures() {
+StringMap<bool> sys::getHostCPUFeatures() {
+  StringMap<bool> Features;
   std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
   if (!P)
-    return {};
+    return Features;
 
   SmallVector<StringRef, 32> Lines;
   P->getBuffer().split(Lines, "\n");
@@ -1931,7 +1931,6 @@ std::optional<StringMap<bool>> sys::getHostCPUFeatures() {
   uint32_t crypto = 0;
 #endif
 
-  StringMap<bool> Features;
   for (unsigned I = 0, E = CPUFeatures.size(); I != E; ++I) {
     StringRef LLVMFeatureStr = StringSwitch<StringRef>(CPUFeatures[I])
 #if defined(__aarch64__)
@@ -1978,8 +1977,8 @@ std::optional<StringMap<bool>> sys::getHostCPUFeatures() {
   return Features;
 }
 #elif defined(_WIN32) && (defined(__aarch64__) || defined(_M_ARM64))
-std::optional<StringMap<bool>> sys::getHostCPUFeatures() {
-  std::optional<StringMap<bool>> Features;
+StringMap<bool> sys::getHostCPUFeatures() {
+  StringMap<bool> Features;
 
   if (IsProcessorFeaturePresent(PF_ARM_NEON_INSTRUCTIONS_AVAILABLE))
     Features["neon"] = true;
@@ -1992,13 +1991,13 @@ std::optional<StringMap<bool>> sys::getHostCPUFeatures() {
 }
 #elif defined(__linux__) && defined(__loongarch__)
 #include <sys/auxv.h>
-std::optional<StringMap<bool>> sys::getHostCPUFeatures() {
+StringMap<bool> sys::getHostCPUFeatures() {
   unsigned long hwcap = getauxval(AT_HWCAP);
   bool HasFPU = hwcap & (1UL << 3); // HWCAP_LOONGARCH_FPU
   uint32_t cpucfg2 = 0x2;
   __asm__("cpucfg %[cpucfg2], %[cpucfg2]\n\t" : [cpucfg2] "+r"(cpucfg2));
 
-  std::optional<StringMap<bool>> Features;
+  StringMap<bool> Features;
 
   Features["f"] = HasFPU && (cpucfg2 & (1U << 1)); // CPUCFG.2.FP_SP
   Features["d"] = HasFPU && (cpucfg2 & (1U << 2)); // CPUCFG.2.FP_DP
@@ -2010,7 +2009,7 @@ std::optional<StringMap<bool>> sys::getHostCPUFeatures() {
   return Features;
 }
 #else
-std::optional<StringMap<bool>> sys::getHostCPUFeatures() { return {}; }
+StringMap<bool> sys::getHostCPUFeatures() { return {}; }
 #endif
 
 #if __APPLE__

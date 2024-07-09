@@ -22,16 +22,16 @@ using namespace llvm;
 int main(int argc, char **argv) {
 #if defined(__i386__) || defined(_M_IX86) || \
     defined(__x86_64__) || defined(_M_X64)
-  if (const std::optional<StringMap<bool>> features =
-          sys::getHostCPUFeatures(features)) {
-    if (features->lookup("sse"))
-      outs() << "sse\n";
-    if (features->lookup("avx"))
-      outs() << "avx\n";
-    if (features->lookup("avx512f"))
-      outs() << "avx512f\n";
-  } else
+  const < StringMap<bool> features = sys::getHostCPUFeatures(features);
+  if (features.empty())
     return 1;
+
+  if (features->lookup("sse"))
+    outs() << "sse\n";
+  if (features->lookup("avx"))
+    outs() << "avx\n";
+  if (features->lookup("avx512f"))
+    outs() << "avx512f\n";
 #endif
 
   return 0;
