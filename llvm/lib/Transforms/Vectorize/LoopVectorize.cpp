@@ -3290,17 +3290,6 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
   if (EnableVPlanNativePath)
     fixNonInductionPHIs(Plan, State);
 
-  // At this point every instruction in the original loop is widened to a
-  // vector form. Note that fixing reduction phis, as well as extracting the
-  // exit and resume values for fixed-order recurrences are already modeled in
-  // VPlan. All that remains to do here is to create a phi in the scalar
-  // pre-header for each fixed-order recurrence resume value.
-  // TODO: Also model creating phis in the scalar pre-header in VPlan.
-  for (const auto &[_, LO] : to_vector(Plan.getLiveOuts())) {
-    if (!Legal->isFixedOrderRecurrence(LO->getPhi()))
-      continue;
-  }
-
   // Forget the original basic block.
   PSE.getSE()->forgetLoop(OrigLoop);
   PSE.getSE()->forgetBlockAndLoopDispositions();
@@ -3337,8 +3326,6 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
                    VectorLoop->getHeader(), Plan, State);
   }
 
-  // Fix LCSSA phis not already fixed earlier. Extracts may need to be generated
-  // in the exit block, so update the builder.
   State.Builder.SetInsertPoint(State.CFG.ExitBB,
                                State.CFG.ExitBB->getFirstNonPHIIt());
   for (const auto &KV : Plan.getLiveOuts())
@@ -8485,9 +8472,59 @@ static void addUsersInExitBlock(VPBasicBlock *HeaderVPBB, Loop *OrigLoop,
     Value *IncomingValue =
         ExitPhi.getIncomingValueForBlock(ExitingBB);
     VPValue *V = Builder.getVPValueOrAddLiveIn(IncomingValue, Plan);
-    Plan.addLiveOut(
-        &ExitPhi, V,
-        cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor()));
+    Plan.addLiveOut(&ExitPhi, V);
+  }
+}
+
+/// Feed a resume value for every FOR from the vector loop to the scalar loop,
+/// if middle block branches to scalar preheader, by introducing ExtractFromEnd
+/// and ResumePhi recipes in each, respectively, and a VPLiveOut which uses the
+/// latter and corresponds to the scalar header.
+static void addLiveOutsForFirstOrderRecurrences(VPlan &Plan) {
+  VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
+
+  // Start by finding out if middle block branches to scalar preheader.
+  // TODO: Should be replaced by
+  // Plan->getScalarLoopRegion()->getSinglePredecessor() in the future once the
+  // scalar region is modeled as well.
+  VPBasicBlock *ScalarPHVPBB = nullptr;
+  auto *MiddleVPBB = cast<VPBasicBlock>(VectorRegion->getSingleSuccessor());
+  for (VPBlockBase *Succ : MiddleVPBB->getSuccessors()) {
+    if (isa<VPIRBasicBlock>(Succ))
+      continue;
+    assert(!ScalarPHVPBB && "Two candidates for ScalarPHVPBB?");
+    ScalarPHVPBB = cast<VPBasicBlock>(Succ);
+  }
+  if (!ScalarPHVPBB)
+    return;
+
+  for (auto &H : VectorRegion->getEntryBasicBlock()->phis()) {
+    auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&H);
+    if (!FOR)
+      continue;
+
+    VPBuilder B(ScalarPHVPBB);
+    VPBuilder MiddleBuilder(MiddleVPBB);
+    // Reset insert point so new recipes are inserted before terminator and
+    // condition, if there is either the former or both.
+    if (auto *Terminator = MiddleVPBB->getTerminator()) {
+      auto *Condition = dyn_cast<VPInstruction>(Terminator->getOperand(0));
+      assert((!Condition || Condition->getParent() == MiddleVPBB) &&
+             "Condition expected in MiddleVPBB");
+      MiddleBuilder.setInsertPoint(Condition ? Condition : Terminator);
+    }
+
+    // Extract the resume value and create a new VPLiveOut for it.
+    auto *Resume = MiddleBuilder.createNaryOp(
+        VPInstruction::ExtractFromEnd,
+        {FOR->getBackedgeValue(),
+         Plan.getOrAddLiveIn(
+             ConstantInt::get(Plan.getCanonicalIV()->getScalarType(), 1))},
+        {}, "vector.recur.extract");
+    auto *ResumePhiRecipe =
+        B.createNaryOp(VPInstruction::ResumePhi, {Resume, FOR->getStartValue()},
+                       {}, "scalar.recur.init");
+    Plan.addLiveOut(cast<PHINode>(FOR->getUnderlyingInstr()), ResumePhiRecipe);
   }
 }
 
@@ -8655,48 +8692,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
          "VPBasicBlock");
   RecipeBuilder.fixHeaderPhis();
 
-  auto *MiddleVPBB =
-      cast<VPBasicBlock>(Plan->getVectorLoopRegion()->getSingleSuccessor());
-
-  VPBasicBlock *ScalarPH = nullptr;
-  for (VPBlockBase *Succ : MiddleVPBB->getSuccessors()) {
-    auto *VPBB = dyn_cast<VPBasicBlock>(Succ);
-    if (VPBB && !isa<VPIRBasicBlock>(VPBB)) {
-      ScalarPH = VPBB;
-      break;
-    }
-  }
-
-  if (ScalarPH) {
-    for (auto &H : HeaderVPBB->phis()) {
-      auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&H);
-      if (!FOR)
-        continue;
-      VPBuilder B(ScalarPH);
-      VPBuilder MiddleBuilder;
-      // Set insert point so new recipes are inserted before terminator and
-      // condition, if there is either the former or both.
-      if (MiddleVPBB->getNumSuccessors() != 2)
-        MiddleBuilder.setInsertPoint(MiddleVPBB);
-      else if (isa<VPInstruction>(MiddleVPBB->getTerminator()->getOperand(0)))
-        MiddleBuilder.setInsertPoint(
-            &*std::prev(MiddleVPBB->getTerminator()->getIterator()));
-      else
-        MiddleBuilder.setInsertPoint(MiddleVPBB->getTerminator());
-
-      // Extract the resume value and create a new VPLiveOut for it.
-      auto *Resume = MiddleBuilder.createNaryOp(
-          VPInstruction::ExtractFromEnd,
-          {FOR->getBackedgeValue(),
-           Plan->getOrAddLiveIn(
-               ConstantInt::get(Plan->getCanonicalIV()->getScalarType(), 1))},
-          {}, "vector.recur.extract");
-      auto *R =
-          B.createNaryOp(VPInstruction::ExitPhi, {Resume, FOR->getStartValue()},
-                         {}, "scalar.recur.init");
-      Plan->addLiveOut(cast<PHINode>(FOR->getUnderlyingInstr()), R, ScalarPH);
-    }
-  }
+  addLiveOutsForFirstOrderRecurrences(*Plan);
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to

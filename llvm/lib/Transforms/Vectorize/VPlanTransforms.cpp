@@ -937,7 +937,9 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     Type *IntTy = Plan.getCanonicalIV()->getScalarType();
 
     // Extract the penultimate value of the recurrence and update VPLiveOut
-    // users of the recurrence splice.
+    // users of the recurrence splice. Note that the extract of the final value
+    // used to resume in the scalar loop is created earlier during VPlan
+    // construction.
     auto *Penultimate = cast<VPInstruction>(MiddleBuilder.createNaryOp(
         VPInstruction::ExtractFromEnd,
         {FOR->getBackedgeValue(),

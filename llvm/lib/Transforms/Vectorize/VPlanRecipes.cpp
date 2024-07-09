@@ -193,7 +193,13 @@ void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
   auto Lane = vputils::isUniformAfterVectorization(ExitValue)
                   ? VPLane::getFirstLane()
                   : VPLane::getLastLaneForVF(State.VF);
-  BasicBlock *PredBB = State.CFG.VPBB2IRBB[Pred];
+  VPBasicBlock *PredVPBB =
+      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
+  VPRecipeBase *DefRecipe = ExitValue->getDefiningRecipe();
+  if (DefRecipe && !DefRecipe->getParent()->getParent())
+    PredVPBB = DefRecipe->getParent();
+  BasicBlock *PredBB = State.CFG.VPBB2IRBB[PredVPBB];
+  State.Builder.SetInsertPoint(PredBB, PredBB->getFirstNonPHIIt());
   Value *V = State.get(ExitValue, VPIteration(State.UF - 1, Lane));
   if (Phi->getBasicBlockIndex(PredBB) != -1)
     Phi->setIncomingValueForBlock(PredBB, V);
@@ -304,7 +310,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::PtrAdd:
   case VPInstruction::ExplicitVectorLength:
-  case VPInstruction::ExitPhi:
+  case VPInstruction::ResumePhi:
     return true;
   default:
     return false;
@@ -595,20 +601,24 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     Value *Addend = State.get(getOperand(1), Part, /* IsScalar */ true);
     return Builder.CreatePtrAdd(Ptr, Addend, Name);
   }
-  case VPInstruction::ExitPhi: {
+  case VPInstruction::ResumePhi: {
     if (Part != 0)
       return State.get(this, 0, /*IsScalar*/ true);
     Value *IncomingFromVPlanPred =
         State.get(getOperand(0), Part, /* IsScalar */ true);
-    Value *IncomingFromOtherPred =
+    Value *IncomingFromOtherPreds =
         State.get(getOperand(1), Part, /* IsScalar */ true);
-    auto *NewPhi = Builder.CreatePHI(IncomingFromOtherPred->getType(), 2, Name);
+    auto *NewPhi =
+        Builder.CreatePHI(IncomingFromOtherPreds->getType(), 2, Name);
     BasicBlock *VPlanPred =
         State.CFG
             .VPBB2IRBB[cast<VPBasicBlock>(getParent()->getSinglePredecessor())];
     NewPhi->addIncoming(IncomingFromVPlanPred, VPlanPred);
-    for (auto *BB : predecessors(Builder.GetInsertBlock()))
-      NewPhi->addIncoming(IncomingFromOtherPred, BB);
+    for (auto *OtherPred : predecessors(Builder.GetInsertBlock())) {
+      assert(OtherPred != VPlanPred &&
+             "VPlan predecessors should not be connected yet");
+      NewPhi->addIncoming(IncomingFromOtherPreds, OtherPred);
+    }
     return NewPhi;
   }
 
@@ -619,7 +629,7 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
 bool VPInstruction::isVectorToScalar() const {
   return getOpcode() == VPInstruction::ExtractFromEnd ||
-         getOpcode() == VPInstruction::ExitPhi ||
+         getOpcode() == VPInstruction::ResumePhi ||
          getOpcode() == VPInstruction::ComputeReductionResult;
 }
 
@@ -749,7 +759,7 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::ActiveLaneMask:
     O << "active lane mask";
     break;
-  case VPInstruction::ExitPhi:
+  case VPInstruction::ResumePhi:
     O << "exit-phi";
     break;
   case VPInstruction::ExplicitVectorLength:

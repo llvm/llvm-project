@@ -682,27 +682,23 @@ public:
 };
 
 /// A value that is used outside the VPlan. The operand of the user needs to be
-/// added to the associated LCSSA phi node.
+/// added to the associated LCSSA phi node. The incoming block from VPlan is
+/// determined by where the VPValue is defined: if it is defined by a recipe
+/// outside a region, its parent block is used, otherwise the middle block is
+/// used.
 class VPLiveOut : public VPUser {
   PHINode *Phi;
 
-  /// Predecessor in VPlan of this live-out. Used to as block to set the
-  /// incoming value for.
-  VPBasicBlock *Pred;
-
 public:
-  VPLiveOut(PHINode *Phi, VPValue *Op, VPBasicBlock *Pred)
-      : VPUser({Op}, VPUser::VPUserID::LiveOut), Phi(Phi), Pred(Pred) {}
+  VPLiveOut(PHINode *Phi, VPValue *Op)
+      : VPUser({Op}, VPUser::VPUserID::LiveOut), Phi(Phi) {}
 
   static inline bool classof(const VPUser *U) {
     return U->getVPUserID() == VPUser::VPUserID::LiveOut;
   }
 
-  /// Fixup the wrapped LCSSA phi node in the unique exit block.  This simply
-  /// means we need to add the appropriate incoming value from the middle
-  /// block as exiting edges from the scalar epilogue loop (if present) are
-  /// already in place, and we exit the vector loop exclusively to the middle
-  /// block.
+  /// Fixup the wrapped LCSSA phi node. This means we need to add the
+  /// appropriate incoming value from the precessor Pred.
   void fixPhi(VPlan &Plan, VPTransformState &State);
 
   /// Returns true if the VPLiveOut uses scalars of operand \p Op.
@@ -713,11 +709,6 @@ public:
   }
 
   PHINode *getPhi() const { return Phi; }
-
-  /// Returns to incoming block for which to set the value.
-  VPBasicBlock *getPred() const { return Pred; }
-
-  void setPred(VPBasicBlock *Pred) { this->Pred = Pred; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the VPLiveOut to \p O.
@@ -1202,8 +1193,9 @@ public:
     ExplicitVectorLength,
     /// Creates a scalar phi in a leaf VPBB with a single predecessor in VPlan.
     /// The first operand is the incoming value from the predecessor in VPlan,
-    /// the second operand is the incoming value for all other predecessors.
-    ExitPhi,
+    /// the second operand is the incoming value for all other predecessors
+    /// (which are currently not modeled in VPlan).
+    ResumePhi,
     CalculateTripCountMinusVF,
     // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
@@ -3346,7 +3338,7 @@ public:
     return cast<VPCanonicalIVPHIRecipe>(&*EntryVPBB->begin());
   }
 
-  void addLiveOut(PHINode *PN, VPValue *V, VPBasicBlock *Pred);
+  void addLiveOut(PHINode *PN, VPValue *V);
 
   void removeLiveOut(PHINode *PN) {
     delete LiveOuts[PN];
