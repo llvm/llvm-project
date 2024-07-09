@@ -2204,7 +2204,7 @@ bool Compiler<Emitter>::VisitCompoundAssignOperator(
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitExprWithCleanups(const ExprWithCleanups *E) {
-  ExprScope<Emitter> ES(this);
+  LocalScope<Emitter> ES(this);
   const Expr *SubExpr = E->getSubExpr();
 
   assert(E->getNumObjects() == 0 && "TODO: Implement cleanups");
@@ -3425,7 +3425,7 @@ const Function *Compiler<Emitter>::getFunction(const FunctionDecl *FD) {
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitExpr(const Expr *E) {
-  ExprScope<Emitter> RootScope(this);
+  LocalScope<Emitter> RootScope(this);
   // Void expressions.
   if (E->getType()->isVoidType()) {
     if (!visit(E))
@@ -3610,10 +3610,10 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD, bool Topleve
         // If this is a toplevel declaration, create a scope for the
         // initializer.
         if (Toplevel) {
-          ExprScope<Emitter> Scope(this);
+          LocalScope<Emitter> Scope(this);
           if (!this->visit(Init))
             return false;
-          return this->emitSetLocal(*VarT, Offset, VD);
+          return this->emitSetLocal(*VarT, Offset, VD) && Scope.destroyLocals();
         } else {
           if (!this->visit(Init))
             return false;
@@ -4120,7 +4120,7 @@ bool Compiler<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
     return this->emitUnsupported(RS);
 
   if (const Expr *RE = RS->getRetValue()) {
-    ExprScope<Emitter> RetScope(this);
+    LocalScope<Emitter> RetScope(this);
     if (ReturnType) {
       // Primitive types are simply returned.
       if (!this->visit(RE))
