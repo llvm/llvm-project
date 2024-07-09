@@ -155,7 +155,9 @@ void SetSigProcMask(__sanitizer_sigset_t *set, __sanitizer_sigset_t *oldset) {
   CHECK_EQ(0, internal_sigprocmask(SIG_SETMASK, set, oldset));
 }
 
-void BlockSignals(__sanitizer_sigset_t *oldset) {
+// If block_async_only is true: blocks only asynchronous signals; otherwise,
+// blocks (nearly) all signals.
+void BlockSignals(__sanitizer_sigset_t *oldset, bool block_async_only) {
   __sanitizer_sigset_t set;
   internal_sigfillset(&set);
 #  if SANITIZER_LINUX && !SANITIZER_ANDROID
@@ -170,11 +172,21 @@ void BlockSignals(__sanitizer_sigset_t *oldset) {
   // hang.
   internal_sigdelset(&set, 31);
 #  endif
+  if (block_async_only) {
+    internal_sigdelset(&set, SIGSEGV);
+    internal_sigdelset(&set, SIGBUS);
+    internal_sigdelset(&set, SIGILL);
+    internal_sigdelset(&set, SIGTRAP);
+    internal_sigdelset(&set, SIGABRT);
+    internal_sigdelset(&set, SIGFPE);
+    internal_sigdelset(&set, SIGPIPE);
+  }
   SetSigProcMask(&set, oldset);
 }
 
-ScopedBlockSignals::ScopedBlockSignals(__sanitizer_sigset_t *copy) {
-  BlockSignals(&saved_);
+ScopedBlockSignals::ScopedBlockSignals(__sanitizer_sigset_t *copy,
+                                       bool block_async_only) {
+  BlockSignals(&saved_, block_async_only);
   if (copy)
     internal_memcpy(copy, &saved_, sizeof(saved_));
 }
