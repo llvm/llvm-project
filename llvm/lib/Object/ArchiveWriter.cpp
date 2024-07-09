@@ -483,7 +483,7 @@ static uint64_t computeHeadersSize(object::Archive::Kind Kind,
 
 static Expected<std::unique_ptr<SymbolicFile>>
 getSymbolicFile(MemoryBufferRef Buf, LLVMContext &Context,
-                object::Archive::Kind Kind) {
+                object::Archive::Kind Kind, function_ref<void(Error)> Warn) {
   const file_magic Type = identify_magic(Buf.getBuffer());
   // Don't attempt to read non-symbolic file types.
   if (!object::SymbolicFile::isSymbolicFile(Type, &Context))
@@ -512,9 +512,7 @@ getSymbolicFile(MemoryBufferRef Buf, LLVMContext &Context,
       case object::Archive::K_BSD:
       case object::Archive::K_GNU:
       case object::Archive::K_GNU64:
-        llvm::logAllUnhandledErrors(ObjOrErr.takeError(), llvm::errs(),
-                                    "warning: " + Buf.getBufferIdentifier() +
-                                        ": ");
+        Warn(ObjOrErr.takeError());
         return nullptr;
       case object::Archive::K_AIXBIG:
       case object::Archive::K_COFF:
@@ -782,7 +780,7 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
                   object::Archive::Kind Kind, bool Thin, bool Deterministic,
                   SymtabWritingMode NeedSymbols, SymMap *SymMap,
                   LLVMContext &Context, ArrayRef<NewArchiveMember> NewMembers,
-                  std::optional<bool> IsEC) {
+                  std::optional<bool> IsEC, function_ref<void(Error)> Warn) {
   static char PaddingData[8] = {'\n', '\n', '\n', '\n', '\n', '\n', '\n', '\n'};
   uint64_t MemHeadPadSize = 0;
   uint64_t Pos =
@@ -850,8 +848,10 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
 
   if (NeedSymbols != SymtabWritingMode::NoSymtab || isAIXBigArchive(Kind)) {
     for (const NewArchiveMember &M : NewMembers) {
-      Expected<std::unique_ptr<SymbolicFile>> SymFileOrErr =
-          getSymbolicFile(M.Buf->getMemBufferRef(), Context, Kind);
+      Expected<std::unique_ptr<SymbolicFile>> SymFileOrErr = getSymbolicFile(
+          M.Buf->getMemBufferRef(), Context, Kind, [&](Error Err) {
+            Warn(createFileError(M.MemberName, std::move(Err)));
+          });
       if (!SymFileOrErr)
         return createFileError(M.MemberName, SymFileOrErr.takeError());
       SymFiles.push_back(std::move(*SymFileOrErr));
@@ -1031,7 +1031,8 @@ Expected<std::string> computeArchiveRelativePath(StringRef From, StringRef To) {
 static Error
 writeArchiveToStream(raw_ostream &Out, ArrayRef<NewArchiveMember> NewMembers,
                      SymtabWritingMode WriteSymtab, object::Archive::Kind Kind,
-                     bool Deterministic, bool Thin, std::optional<bool> IsEC) {
+                     bool Deterministic, bool Thin, std::optional<bool> IsEC,
+                     function_ref<void(Error)> Warn) {
   assert((!Thin || !isBSDLike(Kind)) && "Only the gnu format has a thin mode");
 
   SmallString<0> SymNamesBuf;
@@ -1053,7 +1054,7 @@ writeArchiveToStream(raw_ostream &Out, ArrayRef<NewArchiveMember> NewMembers,
 
   Expected<std::vector<MemberData>> DataOrErr = computeMemberData(
       StringTable, SymNames, Kind, Thin, Deterministic, WriteSymtab,
-      isCOFFArchive(Kind) ? &SymMap : nullptr, Context, NewMembers, IsEC);
+      isCOFFArchive(Kind) ? &SymMap : nullptr, Context, NewMembers, IsEC, Warn);
   if (Error E = DataOrErr.takeError())
     return E;
   std::vector<MemberData> &Data = *DataOrErr;
@@ -1296,11 +1297,16 @@ writeArchiveToStream(raw_ostream &Out, ArrayRef<NewArchiveMember> NewMembers,
   return Error::success();
 }
 
+void warnToStderr(Error Err) {
+  llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "warning: ");
+}
+
 Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
                    SymtabWritingMode WriteSymtab, object::Archive::Kind Kind,
                    bool Deterministic, bool Thin,
                    std::unique_ptr<MemoryBuffer> OldArchiveBuf,
-                   std::optional<bool> IsEC) {
+                   std::optional<bool> IsEC,
+                   function_ref<void(Error)> Warn) {
   Expected<sys::fs::TempFile> Temp =
       sys::fs::TempFile::create(ArcName + ".temp-archive-%%%%%%%.a");
   if (!Temp)
@@ -1308,7 +1314,7 @@ Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
   raw_fd_ostream Out(Temp->FD, false);
 
   if (Error E = writeArchiveToStream(Out, NewMembers, WriteSymtab, Kind,
-                                     Deterministic, Thin, IsEC)) {
+                                     Deterministic, Thin, IsEC, Warn)) {
     if (Error DiscardError = Temp->discard())
       return joinErrors(std::move(E), std::move(DiscardError));
     return E;
@@ -1332,12 +1338,14 @@ Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
 Expected<std::unique_ptr<MemoryBuffer>>
 writeArchiveToBuffer(ArrayRef<NewArchiveMember> NewMembers,
                      SymtabWritingMode WriteSymtab, object::Archive::Kind Kind,
-                     bool Deterministic, bool Thin) {
+                     bool Deterministic, bool Thin,
+                     function_ref<void(Error)> Warn) {
   SmallVector<char, 0> ArchiveBufferVector;
   raw_svector_ostream ArchiveStream(ArchiveBufferVector);
 
-  if (Error E = writeArchiveToStream(ArchiveStream, NewMembers, WriteSymtab,
-                                     Kind, Deterministic, Thin, std::nullopt))
+  if (Error E =
+          writeArchiveToStream(ArchiveStream, NewMembers, WriteSymtab, Kind,
+                               Deterministic, Thin, std::nullopt, Warn))
     return std::move(E);
 
   return std::make_unique<SmallVectorMemoryBuffer>(

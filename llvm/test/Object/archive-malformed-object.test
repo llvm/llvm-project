@@ -22,6 +22,19 @@
 # RUN: llvm-ar rc bad.a good.bc input.bc 2>&1 | FileCheck %s --check-prefix=WARN1
 # RUN: not llvm-nm --print-armap bad.a | FileCheck %s --check-prefix=ARMAP
 
+## Malformed bitcode object either warn or error depending on the archive format
+## (see switch in getSymbolicFile).
+# RUN: rm -rf bad.a
+# RUN: llvm-ar --format=bsd rc bad.a input.bc 2>&1 | FileCheck %s --check-prefix=WARN1
+# RUN: rm -rf bad.a
+# RUN: llvm-ar --format=gnu rc bad.a input.bc 2>&1 | FileCheck %s --check-prefix=WARN1
+# RUN: rm -rf bad.a
+# RUN: not llvm-ar --format=bigarchive rc bad.a input.bc 2>&1 | FileCheck %s --check-prefix=ERR1
+# RUN: rm -rf bad.a
+# RUN: not llvm-ar --format=coff rc bad.a input.bc 2>&1 | FileCheck %s --check-prefix=ERR1
+# RUN: rm -rf bad.a
+# RUN: not llvm-ar --format=darwin rc bad.a input.bc 2>&1 | FileCheck %s --check-prefix=ERR1
+
 ## Malformed bitcode object if the symbol table is not required for big archive.
 ## For big archives we print an error instead of a warning because the AIX linker
 ## presumably requires the index.
@@ -31,7 +44,7 @@
 # RUN: not llvm-ar --format=bigarchive rcS bad.a good.bc input.bc 2>&1 | FileCheck %s --check-prefix=ERR1
 
 # ERR1: error: bad.a: 'input.bc': Invalid bitcode signature
-# WARN1: warning: input.bc: Invalid bitcode signature
+# WARN1: warning: 'input.bc': Invalid bitcode signature
 
 ## Non-bitcode malformed file.
 # RUN: yaml2obj input.yaml -o input.o
