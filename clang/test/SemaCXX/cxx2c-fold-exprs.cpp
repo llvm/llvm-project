@@ -237,3 +237,41 @@ void g() {
 }
 
 }
+
+namespace nested {
+
+template <typename... T>
+struct S {
+    template <typename... U>
+    consteval static int f()
+        requires ((A<T> && ...) && ... && A<U> ) {
+            return 1;
+    }
+
+    template <typename... U>
+    consteval static int f()
+        requires ((C<T> && ...) && ... && C<U> ) {
+            return 2;
+    }
+
+    template <typename... U>
+    consteval static int g() // #nested-ambiguous-g1
+        requires ((A<T> && ...) && ... && A<U> ) {
+            return 1;
+    }
+
+    template <typename... U>
+    consteval static int g() // #nested-ambiguous-g2
+        requires ((C<U> && ...) && ... && C<T> ) {
+            return 2;
+    }
+};
+
+static_assert(S<int>::f<int>() == 2);
+
+static_assert(S<int>::g<int>() == 2); // expected-error {{call to 'g' is ambiguous}}
+                                      // expected-note@#nested-ambiguous-g1 {{candidate}}
+                                      // expected-note@#nested-ambiguous-g2 {{candidate}}
+
+
+}
