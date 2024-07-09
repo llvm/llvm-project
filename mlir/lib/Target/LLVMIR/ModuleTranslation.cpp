@@ -639,8 +639,7 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
         if (llvm::ConstantDataSequential::isElementTypeCompatible(
                 elementType)) {
           // TODO: Handle all compatible types. This code only handles integer.
-          if (llvm::IntegerType *iTy =
-                  dyn_cast<llvm::IntegerType>(elementType)) {
+          if (isa<llvm::IntegerType>(elementType)) {
             if (llvm::ConstantInt *ci = dyn_cast<llvm::ConstantInt>(child)) {
               if (ci->getBitWidth() == 8) {
                 SmallVector<int8_t> constants(numElements, ci->getZExtValue());
