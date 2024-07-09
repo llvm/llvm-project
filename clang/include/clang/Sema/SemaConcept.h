@@ -83,7 +83,16 @@ struct NormalizedConstraint;
 using NormalForm =
     llvm::SmallVector<llvm::SmallVector<NormalFormConstraint, 2>, 4>;
 
+// A constraint is in conjunctive normal form when it is a conjunction of
+// clauses where each clause is a disjunction of atomic constraints. For atomic
+// constraints A, B, and C, the constraint A  ∧ (B  ∨ C) is in conjunctive
+// normal form.
 NormalForm makeCNF(const NormalizedConstraint &Normalized);
+
+// A constraint is in disjunctive normal form when it is a disjunction of
+// clauses where each clause is a conjunction of atomic constraints. For atomic
+// constraints A, B, and C, the disjunctive normal form of the constraint A
+//  ∧ (B  ∨ C) is (A  ∧ B)  ∨ (A  ∧ C).
 NormalForm makeDNF(const NormalizedConstraint &Normalized);
 
 /// \brief A normalized constraint, as defined in C++ [temp.constr.normal], is
@@ -162,7 +171,7 @@ private:
 };
 
 struct FoldExpandedConstraint {
-  enum class FoldOperatorKind { FoAnd, FoOr } Kind;
+  enum class FoldOperatorKind { And, Or } Kind;
   NormalizedConstraint Constraint;
   const Expr *Pattern;
 
@@ -172,10 +181,10 @@ struct FoldExpandedConstraint {
 
   template <typename AtomicSubsumptionEvaluator>
   bool subsumes(const FoldExpandedConstraint &Other,
-                AtomicSubsumptionEvaluator E) const;
+                const AtomicSubsumptionEvaluator &E) const;
 
-  static bool AreSubsumptionElligible(const FoldExpandedConstraint &A,
-                                      const FoldExpandedConstraint &B);
+  static bool AreSubsumptionEligible(const FoldExpandedConstraint &A,
+                                     const FoldExpandedConstraint &B);
 };
 
 const NormalizedConstraint *getNormalizedAssociatedConstraints(
@@ -184,7 +193,7 @@ const NormalizedConstraint *getNormalizedAssociatedConstraints(
 
 template <typename AtomicSubsumptionEvaluator>
 bool subsumes(const NormalForm &PDNF, const NormalForm &QCNF,
-              AtomicSubsumptionEvaluator E) {
+              const AtomicSubsumptionEvaluator &E) {
   // C++ [temp.constr.order] p2
   //   Then, P subsumes Q if and only if, for every disjunctive clause Pi in the
   //   disjunctive normal form of P, Pi subsumes every conjunctive clause Qj in
@@ -228,29 +237,32 @@ bool subsumes(const NormalForm &PDNF, const NormalForm &QCNF,
 template <typename AtomicSubsumptionEvaluator>
 bool subsumes(Sema &S, NamedDecl *DP, ArrayRef<const Expr *> P, NamedDecl *DQ,
               ArrayRef<const Expr *> Q, bool &Subsumes,
-              AtomicSubsumptionEvaluator E) {
+              const AtomicSubsumptionEvaluator &E) {
   // C++ [temp.constr.order] p2
   //   In order to determine if a constraint P subsumes a constraint Q, P is
   //   transformed into disjunctive normal form, and Q is transformed into
   //   conjunctive normal form. [...]
-  auto *PNormalized = getNormalizedAssociatedConstraints(S, DP, P);
+  const NormalizedConstraint *PNormalized =
+      getNormalizedAssociatedConstraints(S, DP, P);
   if (!PNormalized)
     return true;
-  const NormalForm PDNF = makeDNF(*PNormalized);
+  NormalForm PDNF = makeDNF(*PNormalized);
 
-  auto *QNormalized = getNormalizedAssociatedConstraints(S, DQ, Q);
+  const NormalizedConstraint *QNormalized =
+      getNormalizedAssociatedConstraints(S, DQ, Q);
   if (!QNormalized)
     return true;
-  const NormalForm QCNF = makeCNF(*QNormalized);
+  NormalForm QCNF = makeCNF(*QNormalized);
 
   Subsumes = subsumes(PDNF, QCNF, E);
   return false;
 }
 
 template <typename AtomicSubsumptionEvaluator>
-bool FoldExpandedConstraint::subsumes(const FoldExpandedConstraint &Other,
-                                      AtomicSubsumptionEvaluator E) const {
-  if (Kind != Other.Kind || !AreSubsumptionElligible(*this, Other))
+bool FoldExpandedConstraint::subsumes(
+    const FoldExpandedConstraint &Other,
+    const AtomicSubsumptionEvaluator &E) const {
+  if (Kind != Other.Kind || !AreSubsumptionEligible(*this, Other))
     return false;
 
   const NormalForm PDNF = makeDNF(this->Constraint);
