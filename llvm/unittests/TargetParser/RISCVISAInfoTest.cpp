@@ -1078,20 +1078,20 @@ R"(Extensions enabled for the given RISC-V target
     i                    2.1       'I' (Base Integer Instruction Set)
 
 Experimental extensions
-    ztso                 0.1       'Ztso' (Memory Model - Total Store Order)
+    zicfilp              0.4       'Zicfilp' (Landing pad)
 
-ISA String: rv64i2p1_ztso0p1)";
+ISA String: rv64i2p1_zicfilp0p4)";
   // clang-format on
 
   StringMap<StringRef> DescMap;
   DescMap["i"] = "'I' (Base Integer Instruction Set)";
-  DescMap["experimental-ztso"] = "'Ztso' (Memory Model - Total Store Order)";
-  std::set<StringRef> EnabledExtensions = {"i", "experimental-ztso"};
+  DescMap["experimental-zicfilp"] = "'Zicfilp' (Landing pad)";
+  std::set<StringRef> EnabledExtensions = {"i", "experimental-zicfilp"};
 
   outs().flush();
   testing::internal::CaptureStdout();
   RISCVISAInfo::printEnabledExtensions(/*IsRV64=*/true, EnabledExtensions,
-                                        DescMap);
+                                       DescMap);
   outs().flush();
   std::string CapturedOutput = testing::internal::GetCapturedStdout();
 

@@ -124,7 +124,7 @@ void RISCVISAInfo::printEnabledExtensions(
   RISCVISAUtils::OrderedExtensionMap FullExtMap;
   RISCVISAUtils::OrderedExtensionMap ExtMap;
   for (const auto &E : SupportedExtensions)
-    if (EnabledFeatureNames.find(E.Name) != EnabledFeatureNames.end()) {
+    if (EnabledFeatureNames.count(E.Name) != 0) {
       FullExtMap[E.Name] = {E.Version.Major, E.Version.Minor};
       ExtMap[E.Name] = {E.Version.Major, E.Version.Minor};
     }
@@ -138,8 +138,7 @@ void RISCVISAInfo::printEnabledExtensions(
   ExtMap.clear();
   for (const auto &E : SupportedExperimentalExtensions) {
     StringRef Name(E.Name);
-    if (EnabledFeatureNames.find("experimental-" + Name.str()) !=
-        EnabledFeatureNames.end()) {
+    if (EnabledFeatureNames.count("experimental-" + Name.str()) != 0) {
       FullExtMap[E.Name] = {E.Version.Major, E.Version.Minor};
       ExtMap[E.Name] = {E.Version.Major, E.Version.Minor};
     }
