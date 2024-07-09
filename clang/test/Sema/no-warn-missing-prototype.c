@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wmissing-prototypes -x c -ffreestanding -verify %s
 // RUN: %clang_cc1 -fsyntax-only -Wmissing-prototypes -x c++ -ffreestanding -verify %s
-// RUN: %clang_cc1 -fms-compatibility -fsyntax-only -x c++ -ffreestanding -triple=x86_64-pc-win32 -verify -DMS %s
+// RUN: %clang_cc1 -fms-compatibility -fsyntax-only -Wmissing-prototypes -x c++ -ffreestanding -triple=x86_64-pc-win32 -verify -DMS %s
 // expected-no-diagnostics
 int main() {
   return 0;
@@ -23,7 +23,7 @@ int WinMain(void*, void*, char*, int) {
   return 0;
 }
 
-bool DllMain(void*, unsigned, void* {
+bool DllMain(void*, unsigned, void*) {
   return true;
 }
 #endif
