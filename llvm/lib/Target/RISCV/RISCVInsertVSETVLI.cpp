@@ -41,10 +41,6 @@ using namespace llvm;
 STATISTIC(NumInsertedVSETVL, "Number of VSETVL inst inserted");
 STATISTIC(NumCoalescedVSETVL, "Number of VSETVL inst coalesced");
 
-static cl::opt<bool> DisableInsertVSETVLPHIOpt(
-    "riscv-disable-insert-vsetvl-phi-opt", cl::init(false), cl::Hidden,
-    cl::desc("Disable looking through phis when inserting vsetvlis."));
-
 namespace {
 
 /// Given a virtual register \p Reg, return the corresponding VNInfo for it.
@@ -893,7 +889,7 @@ public:
 
     AU.addUsedIfAvailable<LiveIntervals>();
     AU.addPreserved<LiveIntervals>();
-    AU.addPreserved<SlotIndexes>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveDebugVariables>();
     AU.addPreserved<LiveStacks>();
 
@@ -955,6 +951,12 @@ void RISCVInsertVSETVLI::forwardVSETVLIAVL(VSETVLIInfo &Info) const {
     return;
   VSETVLIInfo DefInstrInfo = getInfoForVSETVLI(*DefMI);
   if (!DefInstrInfo.hasSameVLMAX(Info))
+    return;
+  // If the AVL is a register with multiple definitions, don't forward it. We
+  // might not be able to extend its LiveInterval without clobbering other val
+  // nums.
+  if (DefInstrInfo.hasAVLReg() &&
+      !LIS->getInterval(DefInstrInfo.getAVLReg()).containsOneValue())
     return;
   Info.setAVL(DefInstrInfo);
 }
@@ -1358,9 +1360,6 @@ void RISCVInsertVSETVLI::computeIncomingVLVTYPE(const MachineBasicBlock &MBB) {
 // outputs from the last VSETVLI in their respective basic blocks.
 bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
                                         const MachineBasicBlock &MBB) const {
-  if (DisableInsertVSETVLPHIOpt)
-    return true;
-
   if (!Require.hasAVLReg())
     return true;
 

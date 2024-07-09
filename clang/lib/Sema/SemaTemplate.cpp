@@ -2743,7 +2743,7 @@ Expr *
 buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
                            TypeAliasTemplateDecl *AliasTemplate,
                            ArrayRef<DeducedTemplateArgument> DeduceResults,
-                           Expr *IsDeducible) {
+                           unsigned FirstUndeducedParamIdx, Expr *IsDeducible) {
   Expr *RC = F->getTemplateParameters()->getRequiresClause();
   if (!RC)
     return IsDeducible;
@@ -2803,8 +2803,22 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
 
   for (unsigned Index = 0; Index < DeduceResults.size(); ++Index) {
     const auto &D = DeduceResults[Index];
-    if (D.isNull())
+    if (D.isNull()) { // non-deduced template parameters of f
+      NamedDecl *TP = F->getTemplateParameters()->getParam(Index);
+      MultiLevelTemplateArgumentList Args;
+      Args.setKind(TemplateSubstitutionKind::Rewrite);
+      Args.addOuterTemplateArguments(TemplateArgsForBuildingRC);
+      // Rebuild the template parameter with updated depth and index.
+      NamedDecl *NewParam = transformTemplateParameter(
+          SemaRef, F->getDeclContext(), TP, Args,
+          /*NewIndex=*/FirstUndeducedParamIdx,
+          getTemplateParameterDepth(TP) + AdjustDepth);
+      FirstUndeducedParamIdx += 1;
+      assert(TemplateArgsForBuildingRC[Index].isNull());
+      TemplateArgsForBuildingRC[Index] = Context.getCanonicalTemplateArgument(
+          Context.getInjectedTemplateArg(NewParam));
       continue;
+    }
     TemplateArgumentLoc Input =
         SemaRef.getTrivialTemplateArgumentLoc(D, QualType(), SourceLocation{});
     TemplateArgumentLoc Output;
@@ -2820,8 +2834,8 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
   MultiLevelTemplateArgumentList ArgsForBuildingRC;
   ArgsForBuildingRC.setKind(clang::TemplateSubstitutionKind::Rewrite);
   ArgsForBuildingRC.addOuterTemplateArguments(TemplateArgsForBuildingRC);
-  // For 2), if the underlying F is instantiated from a member template, we need
-  // the entire template argument list, as the constraint AST in the
+  // For 2), if the underlying deduction guide F is nested in a class template,
+  // we need the entire template argument list, as the constraint AST in the
   // require-clause of F remains completely uninstantiated.
   //
   // For example:
@@ -2845,7 +2859,13 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
   // We add the outer template arguments which is [int] to the multi-level arg
   // list to ensure that the occurrence U in `C<U>` will be replaced with int
   // during the substitution.
-  if (F->getInstantiatedFromMemberTemplate()) {
+  //
+  // NOTE: The underlying deduction guide F is instantiated -- either from an
+  // explicitly-written deduction guide member, or from a constructor.
+  // getInstantiatedFromMemberTemplate() can only handle the former case, so we
+  // check the DeclContext kind.
+  if (F->getLexicalDeclContext()->getDeclKind() ==
+      clang::Decl::ClassTemplateSpecialization) {
     auto OuterLevelArgs = SemaRef.getTemplateInstantiationArgs(
         F, F->getLexicalDeclContext(),
         /*Final=*/false, /*Innermost=*/std::nullopt,
@@ -3063,6 +3083,7 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
         Context.getInjectedTemplateArg(NewParam));
     TransformedDeducedAliasArgs[AliasTemplateParamIdx] = NewTemplateArgument;
   }
+  unsigned FirstUndeducedParamIdx = FPrimeTemplateParams.size();
   //   ...followed by the template parameters of f that were not deduced
   //   (including their default template arguments)
   for (unsigned FTemplateParamIdx : NonDeducedTemplateParamsInFIndex) {
@@ -3131,8 +3152,9 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
 
     Expr *IsDeducible = buildIsDeducibleConstraint(
         SemaRef, AliasTemplate, FPrime->getReturnType(), FPrimeTemplateParams);
-    Expr *RequiresClause = buildAssociatedConstraints(
-        SemaRef, F, AliasTemplate, DeduceResults, IsDeducible);
+    Expr *RequiresClause =
+        buildAssociatedConstraints(SemaRef, F, AliasTemplate, DeduceResults,
+                                   FirstUndeducedParamIdx, IsDeducible);
 
     auto *FPrimeTemplateParamList = TemplateParameterList::Create(
         Context, AliasTemplate->getTemplateParameters()->getTemplateLoc(),

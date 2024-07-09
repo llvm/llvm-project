@@ -38,7 +38,7 @@ public:
     AU.addRequired<LiveIntervals>();
     AU.addPreserved<LiveIntervals>();
     AU.addRequired<LiveIntervals>();
-    AU.addPreserved<SlotIndexes>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveDebugVariables>();
     AU.addPreserved<LiveStacks>();
     MachineFunctionPass::getAnalysisUsage(AU);

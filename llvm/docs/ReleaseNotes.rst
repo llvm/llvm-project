@@ -184,6 +184,11 @@ Changes to the RISC-V Backend
 * B (the collection of the Zba, Zbb, Zbs extensions) is supported.
 * Added smcdeleg, ssccfg, smcsrind, and sscsrind extensions to -march.
 * ``-mcpu=syntacore-scr3-rv32`` and ``-mcpu=syntacore-scr3-rv64`` were added.
+* The default atomics mapping was changed to emit an additional trailing fence
+  for sequentially consistent stores, offering compatibility with a future
+  mapping using load-acquire and store-release instructions while remaining
+  fully compatible with objects produced prior to this change. The mapping
+  (ABI) used is recorded as an ELF attribute.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -363,10 +368,6 @@ Changes to the LLVM tools
   using buttons on top-right corner of the page or using keys (L/R/B or 
   jumping in reverse direction with shift+L/R/B). (`#95662
   <https://github.com/llvm/llvm-project/pull/95662>`_).
-
-* llvm-config now quotes and escapes paths emitted in stdout, to account for
-  spaces or other special characters in path.
-  (`#97305 <https://github.com/llvm/llvm-project/pull/97305>`_).
 
 Changes to LLDB
 ---------------------------------
