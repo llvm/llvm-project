@@ -4,6 +4,7 @@
 
 %buf = type [7 x i8]
 
+; FIXME: This can be done independently in memcpyopt.
 ; Check that we eliminate all `memcpy` calls in this function.
 define void @forward_offset_and_store(ptr %dep_src) {
 ; CUSTOM-LABEL: define void @forward_offset_and_store(

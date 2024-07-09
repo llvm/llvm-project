@@ -58,6 +58,7 @@ define void @forward_offset_align_2(ptr %src, ptr %dest) {
 }
 
 ; If the copy destination can be used as the copy source, we don't need to create a GEP instruction.
+; FIXME: We can directly remove memcpy here.
 define void @forward_offset_without_gep(ptr %src) {
 ; CHECK-LABEL: define void @forward_offset_without_gep(
 ; CHECK-SAME: ptr [[SRC:%.*]]) {
