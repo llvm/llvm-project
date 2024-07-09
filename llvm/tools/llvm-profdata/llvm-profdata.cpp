@@ -1123,7 +1123,7 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
     std::string FilePrefixes[] = {".cpp", "cc", ".c", ".hpp", ".h"};
     size_t PrefixPos = StringRef::npos;
     for (auto &FilePrefix : FilePrefixes) {
-      std::string NamePrefix = FilePrefix + kGlobalIdentifierDelimiter;
+      std::string NamePrefix = FilePrefix + GlobalIdentifierDelimiter;
       PrefixPos = Name.find_insensitive(NamePrefix);
       if (PrefixPos == StringRef::npos)
         continue;
