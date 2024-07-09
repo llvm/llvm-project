@@ -612,7 +612,7 @@ public:
     AU.addRequired<MachineBlockFrequencyInfo>();
     if (TailDupPlacement)
       AU.addRequired<MachinePostDominatorTreeWrapperPass>();
-    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -630,7 +630,7 @@ INITIALIZE_PASS_BEGIN(MachineBlockPlacement, DEBUG_TYPE,
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_END(MachineBlockPlacement, DEBUG_TYPE,
                     "Branch Probability Basic Block Placement", false, false)
@@ -3428,7 +3428,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   MBFI = std::make_unique<MBFIWrapper>(
       getAnalysis<MachineBlockFrequencyInfo>());
-  MLI = &getAnalysis<MachineLoopInfo>();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   TII = MF.getSubtarget().getInstrInfo();
   TLI = MF.getSubtarget().getTargetLowering();
   MPDT = nullptr;
