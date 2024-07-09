@@ -28,7 +28,7 @@ using namespace mlir::LLVM::detail;
 
 DebugImporter::DebugImporter(ModuleOp mlirModule,
                              bool dropDICompositeTypeElements)
-    : recursionPruner(mlirModule.getContext()),
+    : cache([&](llvm::DINode *node) { return createRecSelf(node); }),
       context(mlirModule.getContext()), mlirModule(mlirModule),
       dropDICompositeTypeElements(dropDICompositeTypeElements) {}
 
@@ -287,16 +287,9 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
     return nullptr;
 
   // Check for a cached instance.
-  if (DINodeAttr attr = nodeToAttr.lookup(node))
-    return attr;
-
-  // Register with the recursive translator. If it can be handled without
-  // recursing into it, return the result immediately.
-  if (DINodeAttr attr = recursionPruner.pruneOrPushTranslationStack(node))
-    return attr;
-
-  auto guard = llvm::make_scope_exit(
-      [&]() { recursionPruner.popTranslationStack(node); });
+  auto cacheEntry = cache.lookupOrInit(node);
+  if (std::optional<DINodeAttr> result = cacheEntry.get())
+    return *result;
 
   // Convert the debug metadata if possible.
   auto translateNode = [this](llvm::DINode *node) -> DINodeAttr {
@@ -335,19 +328,19 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
     return nullptr;
   };
   if (DINodeAttr attr = translateNode(node)) {
-    auto [result, isSelfContained] =
-        recursionPruner.finalizeTranslation(node, attr);
-    // Only cache fully self-contained nodes.
-    if (isSelfContained)
-      nodeToAttr.try_emplace(node, result);
-    return result;
+    // If this node was repeated, lookup its recursive ID and assign it to the
+    // base result.
+    if (cacheEntry.wasRepeated()) {
+      DistinctAttr recId = nodeToRecId.lookup(node);
+      auto recType = cast<DIRecursiveTypeAttrInterface>(attr);
+      attr = cast<DINodeAttr>(recType.withRecId(recId));
+    }
+    cacheEntry.resolve(attr);
+    return attr;
   }
+  cacheEntry.resolve(nullptr);
   return nullptr;
 }
-
-//===----------------------------------------------------------------------===//
-// RecursionPruner
-//===----------------------------------------------------------------------===//
 
 /// Get the `getRecSelf` constructor for the translated type of `node` if its
 /// translated DITypeAttr supports recursion. Otherwise, returns nullptr.
@@ -361,104 +354,20 @@ getRecSelfConstructor(llvm::DINode *node) {
       .Default(CtorType());
 }
 
-DINodeAttr DebugImporter::RecursionPruner::pruneOrPushTranslationStack(
-    llvm::DINode *node) {
-  // If the node type is capable of being recursive, check if it's seen
-  // before.
+std::optional<DINodeAttr> DebugImporter::createRecSelf(llvm::DINode *node) {
   auto recSelfCtor = getRecSelfConstructor(node);
-  if (recSelfCtor) {
-    // If a cyclic dependency is detected since the same node is being
-    // traversed twice, emit a recursive self type, and mark the duplicate
-    // node on the translationStack so it can emit a recursive decl type.
-    auto [iter, inserted] = translationStack.try_emplace(node);
-    if (!inserted) {
-      // The original node may have already been assigned a recursive ID from
-      // a different self-reference. Use that if possible.
-      DIRecursiveTypeAttrInterface recSelf = iter->second.recSelf;
-      if (!recSelf) {
-        DistinctAttr recId = nodeToRecId.lookup(node);
-        if (!recId) {
-          recId = DistinctAttr::create(UnitAttr::get(context));
-          nodeToRecId[node] = recId;
-        }
-        recSelf = recSelfCtor(recId);
-        iter->second.recSelf = recSelf;
-      }
-      // Inject the self-ref into the previous layer.
-      translationStack.back().second.unboundSelfRefs.insert(recSelf);
-      return cast<DINodeAttr>(recSelf);
-    }
+  if (!recSelfCtor)
+    return std::nullopt;
+
+  // The original node may have already been assigned a recursive ID from
+  // a different self-reference. Use that if possible.
+  DistinctAttr recId = nodeToRecId.lookup(node);
+  if (!recId) {
+    recId = DistinctAttr::create(UnitAttr::get(context));
+    nodeToRecId[node] = recId;
   }
-
-  return lookup(node);
-}
-
-std::pair<DINodeAttr, bool>
-DebugImporter::RecursionPruner::finalizeTranslation(llvm::DINode *node,
-                                                    DINodeAttr result) {
-  // If `node` is not a potentially recursive type, it will not be on the
-  // translation stack. Nothing to set in this case.
-  if (translationStack.empty())
-    return {result, true};
-  if (translationStack.back().first != node)
-    return {result, translationStack.back().second.unboundSelfRefs.empty()};
-
-  TranslationState &state = translationStack.back().second;
-
-  // If this node is actually recursive, set the recId onto `result`.
-  if (DIRecursiveTypeAttrInterface recSelf = state.recSelf) {
-    auto recType = cast<DIRecursiveTypeAttrInterface>(result);
-    result = cast<DINodeAttr>(recType.withRecId(recSelf.getRecId()));
-    // Remove this recSelf from the set of unbound selfRefs.
-    state.unboundSelfRefs.erase(recSelf);
-  }
-
-  // Insert the result into our internal cache if it's not self-contained.
-  if (!state.unboundSelfRefs.empty()) {
-    [[maybe_unused]] auto [_, inserted] = dependentCache.try_emplace(
-        node, DependentTranslation{result, state.unboundSelfRefs});
-    assert(inserted && "invalid state: caching the same DINode twice");
-    return {result, false};
-  }
-  return {result, true};
-}
-
-void DebugImporter::RecursionPruner::popTranslationStack(llvm::DINode *node) {
-  // If `node` is not a potentially recursive type, it will not be on the
-  // translation stack. Nothing to handle in this case.
-  if (translationStack.empty() || translationStack.back().first != node)
-    return;
-
-  // At the end of the stack, all unbound self-refs must be resolved already,
-  // and the entire cache should be accounted for.
-  TranslationState &currLayerState = translationStack.back().second;
-  if (translationStack.size() == 1) {
-    assert(currLayerState.unboundSelfRefs.empty() &&
-           "internal error: unbound recursive self reference at top level.");
-    translationStack.pop_back();
-    return;
-  }
-
-  // Copy unboundSelfRefs down to the previous level.
-  TranslationState &nextLayerState = (++translationStack.rbegin())->second;
-  nextLayerState.unboundSelfRefs.insert(currLayerState.unboundSelfRefs.begin(),
-                                        currLayerState.unboundSelfRefs.end());
-  translationStack.pop_back();
-}
-
-DINodeAttr DebugImporter::RecursionPruner::lookup(llvm::DINode *node) {
-  auto cacheIter = dependentCache.find(node);
-  if (cacheIter == dependentCache.end())
-    return {};
-
-  DependentTranslation &entry = cacheIter->second;
-  if (llvm::set_is_subset(entry.unboundSelfRefs,
-                          translationStack.back().second.unboundSelfRefs))
-    return entry.attr;
-
-  // Stale cache entry.
-  dependentCache.erase(cacheIter);
-  return {};
+  DIRecursiveTypeAttrInterface recSelf = recSelfCtor(recId);
+  return cast<DINodeAttr>(recSelf);
 }
 
 //===----------------------------------------------------------------------===//
