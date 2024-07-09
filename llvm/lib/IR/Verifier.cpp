@@ -359,9 +359,6 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   /// Whether the current function has a DISubprogram attached to it.
   bool HasDebugInfo = false;
 
-  /// The current source language.
-  dwarf::SourceLanguage CurrentSourceLang = dwarf::DW_LANG_lo_user;
-
   /// Stores the count of how many objects were passed to llvm.localescape for a
   /// given function and the largest index passed to llvm.localrecover.
   DenseMap<Function *, std::pair<unsigned, unsigned>> FrameEscapeInfo;
@@ -1156,10 +1153,6 @@ void Verifier::visitDIScope(const DIScope &N) {
 
 void Verifier::visitDISubrange(const DISubrange &N) {
   CheckDI(N.getTag() == dwarf::DW_TAG_subrange_type, "invalid tag", &N);
-  bool HasAssumedSizedArraySupport = dwarf::isFortran(CurrentSourceLang);
-  CheckDI(HasAssumedSizedArraySupport || N.getRawCountNode() ||
-              N.getRawUpperBound(),
-          "Subrange must contain count or upperBound", &N);
   CheckDI(!N.getRawCountNode() || !N.getRawUpperBound(),
           "Subrange can have any one of count or upperBound", &N);
   auto *CBound = N.getRawCountNode();
@@ -1188,8 +1181,6 @@ void Verifier::visitDISubrange(const DISubrange &N) {
 
 void Verifier::visitDIGenericSubrange(const DIGenericSubrange &N) {
   CheckDI(N.getTag() == dwarf::DW_TAG_generic_subrange, "invalid tag", &N);
-  CheckDI(N.getRawCountNode() || N.getRawUpperBound(),
-          "GenericSubrange must contain count or upperBound", &N);
   CheckDI(!N.getRawCountNode() || !N.getRawUpperBound(),
           "GenericSubrange can have any one of count or upperBound", &N);
   auto *CBound = N.getRawCountNode();
@@ -1412,8 +1403,6 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
           N.getRawFile());
   CheckDI(!N.getFile()->getFilename().empty(), "invalid filename", &N,
           N.getFile());
-
-  CurrentSourceLang = (dwarf::SourceLanguage)N.getSourceLanguage();
 
   CheckDI((N.getEmissionKind() <= DICompileUnit::LastEmissionKind),
           "invalid emission kind", &N);
