@@ -103,7 +103,8 @@ bool SILowerWWMCopies::runOnMachineFunction(MachineFunction &MF) {
 
   MFI = MF.getInfo<SIMachineFunctionInfo>();
   LIS = getAnalysisIfAvailable<LiveIntervals>();
-  Indexes = getAnalysisIfAvailable<SlotIndexes>();
+  auto *SIWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>();
+  Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
   VRM = getAnalysisIfAvailable<VirtRegMap>();
   TRI = ST.getRegisterInfo();
   MRI = &MF.getRegInfo();

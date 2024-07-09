@@ -131,23 +131,24 @@ char& llvm::PHIEliminationID = PHIElimination::ID;
 INITIALIZE_PASS_BEGIN(PHIElimination, DEBUG_TYPE,
                       "Eliminate PHI nodes for register allocation",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveVariables)
+INITIALIZE_PASS_DEPENDENCY(LiveVariablesWrapperPass)
 INITIALIZE_PASS_END(PHIElimination, DEBUG_TYPE,
                     "Eliminate PHI nodes for register allocation", false, false)
 
 void PHIElimination::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addUsedIfAvailable<LiveVariables>();
-  AU.addPreserved<LiveVariables>();
-  AU.addPreserved<SlotIndexes>();
+  AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
+  AU.addPreserved<LiveVariablesWrapperPass>();
+  AU.addPreserved<SlotIndexesWrapperPass>();
   AU.addPreserved<LiveIntervals>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
-  AU.addPreserved<MachineLoopInfo>();
+  AU.addPreserved<MachineLoopInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
 bool PHIElimination::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
-  LV = getAnalysisIfAvailable<LiveVariables>();
+  auto *LVWrapper = getAnalysisIfAvailable<LiveVariablesWrapperPass>();
+  LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
   LIS = getAnalysisIfAvailable<LiveIntervals>();
 
   bool Changed = false;
@@ -183,7 +184,9 @@ bool PHIElimination::runOnMachineFunction(MachineFunction &MF) {
       }
     }
 
-    MachineLoopInfo *MLI = getAnalysisIfAvailable<MachineLoopInfo>();
+    MachineLoopInfoWrapperPass *MLIWrapper =
+        getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
+    MachineLoopInfo *MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
     for (auto &MBB : MF)
       Changed |= SplitPHIEdges(MF, MBB, MLI, (LV ? &LiveInSets : nullptr));
   }

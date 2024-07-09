@@ -2882,6 +2882,8 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return SelectInst::Create(NewSelector, Op1, Op0, "blendv");
     }
 
+    Mask = InstCombiner::peekThroughBitcast(Mask);
+
     // Peek through a one-use shuffle - VectorCombine should have simplified
     // this for cases where we're splitting wider vectors to use blendv
     // intrinsics.
@@ -2895,13 +2897,12 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
           any_of(ShuffleMask,
                  [NumElts](int M) { return M < 0 || M >= NumElts; }))
         break;
-      Mask = MaskSrc;
+      Mask = InstCombiner::peekThroughBitcast(MaskSrc);
     }
 
     // Convert to a vector select if we can bypass casts and find a boolean
     // vector condition value.
     Value *BoolVec;
-    Mask = InstCombiner::peekThroughBitcast(Mask);
     if (match(Mask, m_SExt(m_Value(BoolVec))) &&
         BoolVec->getType()->isVectorTy() &&
         BoolVec->getType()->getScalarSizeInBits() == 1) {
