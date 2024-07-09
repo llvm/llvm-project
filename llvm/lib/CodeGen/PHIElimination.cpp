@@ -131,13 +131,13 @@ char& llvm::PHIEliminationID = PHIElimination::ID;
 INITIALIZE_PASS_BEGIN(PHIElimination, DEBUG_TYPE,
                       "Eliminate PHI nodes for register allocation",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveVariables)
+INITIALIZE_PASS_DEPENDENCY(LiveVariablesWrapperPass)
 INITIALIZE_PASS_END(PHIElimination, DEBUG_TYPE,
                     "Eliminate PHI nodes for register allocation", false, false)
 
 void PHIElimination::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addUsedIfAvailable<LiveVariables>();
-  AU.addPreserved<LiveVariables>();
+  AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
+  AU.addPreserved<LiveVariablesWrapperPass>();
   AU.addPreserved<SlotIndexes>();
   AU.addPreserved<LiveIntervals>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
@@ -147,7 +147,8 @@ void PHIElimination::getAnalysisUsage(AnalysisUsage &AU) const {
 
 bool PHIElimination::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
-  LV = getAnalysisIfAvailable<LiveVariables>();
+  auto *LVWrapper = getAnalysisIfAvailable<LiveVariablesWrapperPass>();
+  LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
   LIS = getAnalysisIfAvailable<LiveIntervals>();
 
   bool Changed = false;
