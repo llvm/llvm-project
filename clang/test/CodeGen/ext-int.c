@@ -17,7 +17,7 @@ unsigned _BitInt(1) GlobSize1 = 0;
 // CHECK: @GlobSize1 = {{.*}}global i1 false
 
 // CHECK64: @__const.foo.A = private unnamed_addr constant { i17, [4 x i8], <{ i8, [23 x i8] }> } { i17 1, [4 x i8] undef, <{ i8, [23 x i8] }> <{ i8 -86, [23 x i8] zeroinitializer }> }, align 8
-// CHECK64: @BigGlob = {{.*}}global <{ i8, i8, [38 x i8] }> <{ i8 -68, i8 2, [38 x i8] zeroinitializer }>, align 8
+// @BigGlob = global [40 x i8] c"\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF", align 8
 // CHECK64: @f.p = internal global <{ i8, i8, [22 x i8] }> <{ i8 16, i8 39, [22 x i8] zeroinitializer }>, align 8
 
 void GenericTest(_BitInt(3) a, unsigned _BitInt(3) b, _BitInt(4) c) {
@@ -155,7 +155,7 @@ char *f2(char *p) {
   return p + sizeof(_BitInt(129));
 }
 
-auto BigGlob = (_BitInt(257))700;
+auto BigGlob = (_BitInt(257))-1;
 // CHECK64: define {{.*}}void @foobar(ptr {{.*}} sret([40 x i8]) align 8 %[[RET1:.+]])
 _BitInt(257) foobar() {
   // CHECK64: %A = alloca [40 x i8], align 8

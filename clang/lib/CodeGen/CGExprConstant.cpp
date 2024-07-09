@@ -1792,11 +1792,18 @@ llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
       // So, split constant into individual bytes.
       ConstantAggregateBuilder Builder(CGM);
       llvm::Type *DesiredTy = CGM.getTypes().ConvertTypeForMem(destType);
+      llvm::Type *LoadStoreTy =
+          CGM.getTypes().convertTypeForLoadStore(destType);
       // LLVM type doesn't match AST type only for big enough _BitInts, these
       // types don't appear in constant expressions involving ptrtoint, so it
       // is safe to expect a constant int here.
       auto *CI = cast<llvm::ConstantInt>(C);
-      llvm::APInt Value = CI->getValue();
+      llvm::Constant *Res = llvm::ConstantFoldCastOperand(
+          destType->isSignedIntegerOrEnumerationType()
+              ? llvm::Instruction::SExt
+              : llvm::Instruction::ZExt,
+          CI, LoadStoreTy, CGM.getDataLayout());
+      llvm::APInt Value = cast<llvm::ConstantInt>(Res)->getValue();
       Builder.addBits(Value, /*OffsetInBits=*/0, /*AllowOverwrite=*/false);
       return Builder.build(DesiredTy, /*AllowOversized*/ false);
     }
