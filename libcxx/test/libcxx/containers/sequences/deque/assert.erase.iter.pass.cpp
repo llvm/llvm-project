@@ -23,8 +23,7 @@ int main(int, char**) {
   // With an invalid iterator
   {
     std::deque<int> v = {1, 2, 3, 4, 5};
-    TEST_LIBCPP_ASSERT_FAILURE(
-        v.erase(v.end()), "deque::erase(iterator) called with a non-dereferenceable iterator");
+    TEST_LIBCPP_ASSERT_FAILURE(v.erase(v.end()), "deque::erase(iterator) called with a non-dereferenceable iterator");
   }
 
   // Note that we currently can't catch misuse by erasing with an iterator from another container.
