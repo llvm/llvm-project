@@ -964,8 +964,6 @@ public:
       const DenseMap<SectionBase *, SectionBase *> &FromTo) override;
   void onRemove() override;
 
-  size_t getMembersCount() const { return GroupMembers.size(); }
-
   static bool classof(const SectionBase *S) {
     return S->OriginalType == ELF::SHT_GROUP;
   }
