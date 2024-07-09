@@ -38,7 +38,9 @@ def yaml_to_classes(yaml_data):
     for macro_data in yaml_data.get("macros", []):
         header.add_macro(Macro(macro_data["macro_name"], macro_data["macro_value"]))
 
-    for type_data in yaml_data.get("types", []):
+    types = yaml_data.get("types", [])
+    sorted_types = sorted(types, key=lambda x: x["type_name"])
+    for type_data in sorted_types:
         header.add_type(Type(type_data["type_name"]))
 
     for enum_data in yaml_data.get("enums", []):

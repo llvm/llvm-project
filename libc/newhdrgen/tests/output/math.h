@@ -28,9 +28,9 @@
 #define __LIBC_CONST_ATTR
 #endif
 
-#include <llvm-libc-types/float_t.h>
 #include <llvm-libc-types/double_t.h>
 #include <llvm-libc-types/float128.h>
+#include <llvm-libc-types/float_t.h>
 
 __BEGIN_C_DECLS
 
