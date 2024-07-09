@@ -845,9 +845,9 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   // as <vscale x (VREGS * 8) x i8>.
   if (Name == "riscv_vec_tuple") {
     unsigned TotalNumElts =
-        std::max(cast<ScalableVectorType>(Ty->getTypeParameter(0))
-                     ->getMinNumElements(),
-                 (uint64_t)8) *
+        std::max<uint64_t>(cast<ScalableVectorType>(Ty->getTypeParameter(0))
+                               ->getMinNumElements(),
+                           8) *
         Ty->getIntParameter(0);
     return TargetTypeInfo(
         ScalableVectorType::get(Type::getInt8Ty(C), TotalNumElts));
