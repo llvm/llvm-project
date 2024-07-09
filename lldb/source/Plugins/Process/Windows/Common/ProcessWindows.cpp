@@ -377,14 +377,14 @@ void ProcessWindows::RefreshStateAfterStop() {
   if (!stop_thread)
     return;
 
+  RegisterContextSP register_context = stop_thread->GetRegisterContext();
+  uint64_t pc = register_context->GetPC();
+
   // If we're at a BreakpointSite, mark this as an Unexecuted Breakpoint.
   // We'll clear that state if we've actually executed the breakpoint.
-  if (RegisterContextSP register_context = stop_thread->GetRegisterContext()) {
-    const uint64_t pc = register_context->GetPC();
-    BreakpointSiteSP site(GetBreakpointSiteList().FindByAddress(pc));
-    if (site && site->IsEnabled())
-      stop_thread->SetThreadStoppedAtUnexecutedBP(pc);
-  }
+  BreakpointSiteSP site(GetBreakpointSiteList().FindByAddress(pc));
+  if (site && site->IsEnabled())
+    stop_thread->SetThreadStoppedAtUnexecutedBP(pc);
 
   switch (active_exception->GetExceptionCode()) {
   case EXCEPTION_SINGLE_STEP: {
@@ -412,8 +412,6 @@ void ProcessWindows::RefreshStateAfterStop() {
   }
 
   case EXCEPTION_BREAKPOINT: {
-    RegisterContextSP register_context = stop_thread->GetRegisterContext();
-
     int breakpoint_size = 1;
     switch (GetTarget().GetArchitecture().GetMachine()) {
     case llvm::Triple::aarch64:
@@ -436,9 +434,9 @@ void ProcessWindows::RefreshStateAfterStop() {
     }
 
     // The current PC is AFTER the BP opcode, on all architectures.
-    uint64_t pc = register_context->GetPC() - breakpoint_size;
+    pc = register_context->GetPC() - breakpoint_size;
 
-    BreakpointSiteSP site(GetBreakpointSiteList().FindByAddress(pc));
+    site = GetBreakpointSiteList().FindByAddress(pc);
     if (site) {
       LLDB_LOG(log,
                "detected breakpoint in process {0} at address {1:x} with "
