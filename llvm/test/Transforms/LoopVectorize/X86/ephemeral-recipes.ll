@@ -335,90 +335,22 @@ exit:
   ret i32 %final.load
 }
 
-; FIXME: shouldn't be vectorized, as the only vector values generated are
-; ephemeral.
 define i32 @ephemeral_load_and_compare_another_load_used_outside(ptr %start, ptr %end) #0 {
 ; CHECK-LABEL: define i32 @ephemeral_load_and_compare_another_load_used_outside(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[END:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[END2:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    [[START1:%.*]] = ptrtoint ptr [[START]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[START1]], [[END2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 16
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 16
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[N_VEC]], -8
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP3]]
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[END]], align 8
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT9:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP4]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT10:%.*]] = shufflevector <4 x ptr> [[BROADCAST_SPLATINSERT9]], <4 x ptr> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[BROADCAST_SPLAT10]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER5:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[BROADCAST_SPLAT10]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER8:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[BROADCAST_SPLAT10]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER11:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[BROADCAST_SPLAT10]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i32> [[WIDE_MASKED_GATHER]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <4 x i32> [[WIDE_MASKED_GATHER5]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne <4 x i32> [[WIDE_MASKED_GATHER8]], zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne <4 x i32> [[WIDE_MASKED_GATHER11]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP5]], i32 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP9]])
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP5]], i32 1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP10]])
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP5]], i32 2
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP11]])
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP5]], i32 3
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP12]])
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP6]], i32 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP13]])
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP6]], i32 1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP14]])
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[TMP6]], i32 2
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP15]])
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP6]], i32 3
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP16]])
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i1> [[TMP7]], i32 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP17]])
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i1> [[TMP7]], i32 1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP18]])
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i1> [[TMP7]], i32 2
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP19]])
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i1> [[TMP7]], i32 3
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP20]])
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i1> [[TMP8]], i32 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP21]])
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i1> [[TMP8]], i32 1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP22]])
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i1> [[TMP8]], i32 2
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP23]])
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i1> [[TMP8]], i32 3
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP24]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
-; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[START]], %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT2:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT2:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT2]] = getelementptr nusw i8, ptr [[IV]], i64 -8
 ; CHECK-NEXT:    [[L1:%.*]] = load ptr, ptr [[END]], align 8
 ; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[L1]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[L2]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq ptr [[IV]], [[END]]
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[L1_LCSSA:%.*]] = phi ptr [ [[L1]], %[[LOOP]] ], [ [[TMP4]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[L1_LCSSA:%.*]] = phi ptr [ [[L1]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[FINAL_LOAD:%.*]] = load i32, ptr [[L1_LCSSA]], align 4
 ; CHECK-NEXT:    ret i32 [[FINAL_LOAD]]
 ;
@@ -448,6 +380,4 @@ attributes #0 = { "target-cpu"="skylake-avx512" }
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
 ;.
