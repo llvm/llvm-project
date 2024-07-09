@@ -170,6 +170,9 @@ static void shardShape(const InShape &inShape, const MeshShape &meshShape,
                  inShape[inAxis] == ShapedType::kDynamic);
         }
       } else {
+        // find sharded dims in sharded_dims_sizes with same static size on
+        // all devices. Use kDynamic for dimensions with dynamic or different
+        // sizes in sharded_dims_sizes.
         auto sz = shardedDims[tensorAxis];
         bool same = true;
         for (size_t i = tensorAxis + inShape.size(); i < shardedDims.size();
@@ -179,11 +182,7 @@ static void shardShape(const InShape &inShape, const MeshShape &meshShape,
             break;
           }
         }
-        if (same) {
-          outShape[tensorAxis] = sz;
-        } else {
-          outShape[tensorAxis] = ShapedType::kDynamic;
-        }
+        outShape[tensorAxis] = same ? sz : ShapedType::kDynamic;
       }
     }
   } else {
@@ -194,6 +193,7 @@ static void shardShape(const InShape &inShape, const MeshShape &meshShape,
     }
 
     if (!haloSizes.empty()) {
+      // add halo sizes if requested
       int haloAxis = 0;
       for (auto [tensorAxis, innerSplitAxes] : llvm::enumerate(splitAxes)) {
         if (!ShapedType::isDynamic(outShape[tensorAxis]) &&
@@ -395,10 +395,6 @@ void ShardingOp::build(::mlir::OpBuilder &b, ::mlir::OperationState &odsState,
                        mesh::ReductionKind partial_type,
                        ArrayRef<int64_t> static_halo_sizes,
                        ArrayRef<int64_t> static_sharded_dims_sizes) {
-  // SmallVector<MeshAxesAttr> splitAxesAttr = llvm::map_to_vector(
-  //             split_axes, [&](ArrayRef<MeshAxis> array) {
-  //     return MeshAxesAttr::get(b.getContext(), array);
-  // });
   return build(
       b, odsState, mesh, MeshAxesArrayAttr::get(b.getContext(), split_axes),
       ::mlir::DenseI16ArrayAttr::get(b.getContext(), partial_axes),
@@ -456,24 +452,6 @@ void ShardingOp::build(::mlir::OpBuilder &b, ::mlir::OperationState &odsState,
 //===----------------------------------------------------------------------===//
 // MeshSharding
 //===----------------------------------------------------------------------===//
-
-// ::mlir::FlatSymbolRefAttr MeshSharding::getMeshAttr() const { return mesh; }
-// ::llvm::StringRef MeshSharding::getMesh() const { return mesh.getValue(); }
-// ArrayRef<MeshAxesAttr> MeshSharding::getSplitAxes() const {return split_axes;
-// } ArrayRef<MeshAxis> MeshSharding::getPartialAxes() const { if
-// (partial_axes.empty()) return {}; return partial_axes; } ReductionKind
-// MeshSharding::getPartialType() const { return partial_type; }
-// ArrayRef<int64_t> MeshSharding::getStaticHaloSizes() const {
-// if(static_halo_sizes.empty()) return {}; return static_halo_sizes; }
-// ArrayRef<int64_t> MeshSharding::getStaticShardedDimsSizes() const {
-// if(static_sharded_dims_sizes.empty()) return {}; return
-// static_sharded_dims_sizes; } ArrayRef<Value>
-// MeshSharding::getDynamicHaloSizes() const { if(dynamic_halo_sizes.empty())
-// return {}; return dynamic_halo_sizes; } ArrayRef<Value>
-// MeshSharding::getDynamicShardedDimsSizes() const {
-// if(dynamic_sharded_dims_sizes.empty()) return {}; return
-// dynamic_sharded_dims_sizes; } operator MeshSharding::bool() const { return
-// (!mesh) == false; }
 
 bool MeshSharding::sameExceptConstraint(const MeshSharding &rhs) const {
   if (getMesh() != rhs.getMesh()) {

@@ -1059,9 +1059,10 @@ def Mesh_UpdateHaloOp : Mesh_CollectiveCommunicationOpBase<"update_halo", [
     AllShapesMatch<["input", "result"]>,
     AllElementTypesMatch<["input", "result"]>
   ]> {
-  let summary = "Send over a device mesh.";
+  let summary = "Update halo data.";
   let description = [{
-    Send from one device to another within a device group.
+    Assume all devices hold a tensors with same-sized halo data.
+    Optionally resize to new halo sizes.
   }];
   let arguments = !con(commonArgs, (ins
     AnyNon0RankedTensor:$input,
@@ -1072,11 +1073,11 @@ def Mesh_UpdateHaloOp : Mesh_CollectiveCommunicationOpBase<"update_halo", [
     AnyRankedTensor:$result
   );
   let assemblyFormat = [{
-    $input `on` $mesh (`mesh_axes` `=` $mesh_axes^)?
+    $input `on` $mesh
+    (`mesh_axes` `=` $mesh_axes^)?
     `halo_sizes` `=` $dynamic_halo_sizes
     (`target_halo_sizes` `=` $target_halo_sizes^)?
     attr-dict `:` functional-type(operands, results)
   }];
-  // let hasCanonicalizer = 1;
 }
 #endif // MLIR_DIALECT_MESH_IR_MESHOPS_TD

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect \
+// RUN: mlir-opt \
 // RUN:   --pass-pipeline="builtin.module(func.func(mesh-spmdization,test-constant-fold))" \
 // RUN:   %s | FileCheck %s
 
@@ -195,7 +195,7 @@ func.func @update_halo_static(
   %in1: tensor<32x16xi8>
   // CHECK-SAME: -> tensor<11x16xi8> {
 ) -> tensor<32x16xi8> {
-  // CHECK: %[[RES:.*]] = mesh.update_halo %[[IN1]] on @mesh_1d_4 halo_sizes = [2, 1] : (tensor<11x16xi8>) -> tensor<11x16xi8>
+  // CHECK: %[[RES:.*]] = mesh.update_halo %[[IN1]] on @mesh_1d_4  mesh_axes = [0] halo_sizes = [2, 1] : (tensor<11x16xi8>) -> tensor<11x16xi8>
   %sin1_sharded1 = mesh.sharding @mesh_1d_4, [[0]] halo_sizes = [2, 1] : !mesh.sharding
   %in1_sharded1 = mesh.shard %in1 to %sin1_sharded1  : tensor<32x16xi8>
   %in1_sharded2 = mesh.shard %in1_sharded1 to %sin1_sharded1 annotate_for_users force : tensor<32x16xi8>
@@ -209,7 +209,7 @@ func.func @update_halo_dynamic(
   %in1: tensor<?x16xi8>
   // CHECK-SAME: -> tensor<?x16xi8> {
 ) -> tensor<?x16xi8> {
-  // CHECK: %[[RES:.*]] = mesh.update_halo %[[IN1]] on @mesh_1d_4 halo_sizes = [2, 1] : (tensor<?x16xi8>) -> tensor<?x16xi8>
+  // CHECK: %[[RES:.*]] = mesh.update_halo %[[IN1]] on @mesh_1d_4  mesh_axes = [0] halo_sizes = [2, 1] : (tensor<?x16xi8>) -> tensor<?x16xi8>
   %sin1_sharded1 = mesh.sharding @mesh_1d_4, [[0]] halo_sizes = [2, 1] : !mesh.sharding
   %in1_sharded1 = mesh.shard %in1 to %sin1_sharded1  : tensor<?x16xi8>
   %in1_sharded2 = mesh.shard %in1_sharded1 to %sin1_sharded1 annotate_for_users force : tensor<?x16xi8>
@@ -224,7 +224,7 @@ func.func @update_halo_dynamic_mesh(
   %in1: tensor<32x16xi8>
   // CHECK-SAME: -> tensor<?x16xi8> {
 ) -> tensor<32x16xi8> {
-  // CHECK: %[[RES:.*]] = mesh.update_halo %[[IN1]] on @mesh_1d_dyn halo_sizes = [2, 1] : (tensor<?x16xi8>) -> tensor<?x16xi8>
+  // CHECK: %[[RES:.*]] = mesh.update_halo %[[IN1]] on @mesh_1d_dyn  mesh_axes = [0] halo_sizes = [2, 1] : (tensor<?x16xi8>) -> tensor<?x16xi8>
   %sin1_sharded1 = mesh.sharding @mesh_1d_dyn, [[0]] halo_sizes = [2, 1] : !mesh.sharding
   %in1_sharded1 = mesh.shard %in1 to %sin1_sharded1  : tensor<32x16xi8>
   %in1_sharded2 = mesh.shard %in1_sharded1 to %sin1_sharded1 annotate_for_users force : tensor<32x16xi8>
