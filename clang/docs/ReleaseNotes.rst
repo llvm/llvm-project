@@ -445,6 +445,11 @@ New Compiler Flags
 - ``-Wc++2c-compat`` group was added to help migrating existing codebases
   to upcoming C++26.
 
+- ``-fdisable-block-signature-string`` instructs clang not to emit the signature
+  string for blocks. Disabling the string can potentially break existing code
+  that relies on it. Users should carefully consider this possibiilty when using
+  the flag.
+
 Deprecated Compiler Flags
 -------------------------
 
