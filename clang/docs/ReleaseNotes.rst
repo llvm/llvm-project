@@ -554,6 +554,15 @@ Attribute Changes in Clang
        size_t count;
      };
 
+- The attributes ``sized_by``, ``counted_by_or_null`` and ``sized_by_or_null```
+  have been added as variants on ``counted_by``, each with slightly different semantics.
+  ``sized_by`` takes a byte size parameter instead of an element count, allowing pointees
+  with unknown size. The ``counted_by_or_null`` and ``sized_by_or_null`` variants are equivalent
+  to their base variants, except the pointer can be null regardless of count/size value.
+  If the pointer is null the size is effectively 0. ``sized_by_or_null`` is needed to properly
+  annotate allocator functions like ``malloc`` that return a buffer of a given byte size, but can
+  also return null.
+
 - The ``guarded_by``, ``pt_guarded_by``, ``acquired_after``, ``acquired_before``
   attributes now support referencing struct members in C. The arguments are also
   now late parsed when ``-fexperimental-late-parse-attributes`` is passed like

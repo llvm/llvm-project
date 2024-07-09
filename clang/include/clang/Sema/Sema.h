@@ -14603,7 +14603,9 @@ public:
                            SourceLocation AttrLoc);
 
   QualType BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
-                                                  Expr *CountExpr);
+                                                  Expr *CountExpr,
+                                                  bool CountInBytes,
+                                                  bool OrNull);
 
   /// BuildAddressSpaceAttr - Builds a DependentAddressSpaceType if an
   /// expression is uninstantiated. If instantiated it will apply the
