@@ -189,10 +189,10 @@ bool VPRecipeBase::mayHaveSideEffects() const {
 }
 
 void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
-  auto Lane = VPLane::getLastLaneForVF(State.VF);
   VPValue *ExitValue = getOperand(0);
-  if (vputils::isUniformAfterVectorization(ExitValue))
-    Lane = VPLane::getFirstLane();
+  auto Lane = vputils::isUniformAfterVectorization(ExitValue)
+                  ? VPLane::getFirstLane()
+                  : VPLane::getLastLaneForVF(State.VF);
   BasicBlock *PredBB = State.CFG.VPBB2IRBB[Pred];
   Value *V = State.get(ExitValue, VPIteration(State.UF - 1, Lane));
   if (Phi->getBasicBlockIndex(PredBB) != -1)

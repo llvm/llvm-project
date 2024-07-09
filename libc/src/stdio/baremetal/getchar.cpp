@@ -1,4 +1,4 @@
-//===-- Implementation header of puts ---------------------------*- C++ -*-===//
+//===-- Baremetal implementation of getchar -------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STDIO_PUTS_H
-#define LLVM_LIBC_SRC_STDIO_PUTS_H
+#include "src/stdio/getchar.h"
+#include "src/__support/OSUtil/io.h"
 
 namespace LIBC_NAMESPACE {
 
-int puts(const char *__restrict str);
+LLVM_LIBC_FUNCTION(int, getchar, ()) {
+  char buf[1];
+  auto result = read_from_stdin(buf, sizeof(buf));
+  if (result < 0)
+    return EOF;
+  return buf[0];
+}
 
 } // namespace LIBC_NAMESPACE
-
-#endif // LLVM_LIBC_SRC_STDIO_PUTS_H
