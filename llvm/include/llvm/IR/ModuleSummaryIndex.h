@@ -41,6 +41,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -793,7 +794,7 @@ public:
       OS << ", hasUnknownCall: " << this->HasUnknownCall;
       OS << ", mustBeUnreachable: " << this->MustBeUnreachable;
       OS << ")";
-      return OS.str();
+      return Output;
     }
   };
 
@@ -1277,7 +1278,7 @@ using ModulePathStringTableTy = StringMap<ModuleHash>;
 using GVSummaryMapTy = DenseMap<GlobalValue::GUID, GlobalValueSummary *>;
 
 /// A set of global value summary pointers.
-using GVSummaryPtrSet = SmallPtrSet<GlobalValueSummary *, 4>;
+using GVSummaryPtrSet = std::unordered_set<GlobalValueSummary *>;
 
 /// Map of a type GUID to type id string and summary (multimap used
 /// in case of GUID conflicts).

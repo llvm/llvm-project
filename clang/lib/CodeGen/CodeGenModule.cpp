@@ -1394,22 +1394,45 @@ void CodeGenModule::Release() {
   // that might affect the DLL storage class or the visibility, and
   // before anything that might act on these.
   setVisibilityFromDLLStorageClass(LangOpts, getModule());
+
+  // Check the tail call symbols are truly undefined.
+  if (getTriple().isPPC() && !MustTailCallUndefinedGlobals.empty()) {
+    for (auto &I : MustTailCallUndefinedGlobals) {
+      if (!I.first->isDefined())
+        getDiags().Report(I.second, diag::err_ppc_impossible_musttail) << 2;
+      else {
+        StringRef MangledName = getMangledName(GlobalDecl(I.first));
+        llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
+        if (!Entry || Entry->isWeakForLinker() ||
+            Entry->isDeclarationForLinker())
+          getDiags().Report(I.second, diag::err_ppc_impossible_musttail) << 2;
+      }
+    }
+  }
 }
 
 void CodeGenModule::EmitOpenCLMetadata() {
   // SPIR v2.0 s2.13 - The OpenCL version used by the module is stored in the
   // opencl.ocl.version named metadata node.
-  // C++ for OpenCL has a distinct mapping for versions compatibile with OpenCL.
-  auto Version = LangOpts.getOpenCLCompatibleVersion();
-  llvm::Metadata *OCLVerElts[] = {
-      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-          Int32Ty, Version / 100)),
-      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-          Int32Ty, (Version % 100) / 10))};
-  llvm::NamedMDNode *OCLVerMD =
-      TheModule.getOrInsertNamedMetadata("opencl.ocl.version");
-  llvm::LLVMContext &Ctx = TheModule.getContext();
-  OCLVerMD->addOperand(llvm::MDNode::get(Ctx, OCLVerElts));
+  // C++ for OpenCL has a distinct mapping for versions compatible with OpenCL.
+  auto CLVersion = LangOpts.getOpenCLCompatibleVersion();
+
+  auto EmitVersion = [this](StringRef MDName, int Version) {
+    llvm::Metadata *OCLVerElts[] = {
+        llvm::ConstantAsMetadata::get(
+            llvm::ConstantInt::get(Int32Ty, Version / 100)),
+        llvm::ConstantAsMetadata::get(
+            llvm::ConstantInt::get(Int32Ty, (Version % 100) / 10))};
+    llvm::NamedMDNode *OCLVerMD = TheModule.getOrInsertNamedMetadata(MDName);
+    llvm::LLVMContext &Ctx = TheModule.getContext();
+    OCLVerMD->addOperand(llvm::MDNode::get(Ctx, OCLVerElts));
+  };
+
+  EmitVersion("opencl.ocl.version", CLVersion);
+  if (LangOpts.OpenCLCPlusPlus) {
+    // In addition to the OpenCL compatible version, emit the C++ version.
+    EmitVersion("opencl.cxx.version", LangOpts.OpenCLCPlusPlusVersion);
+  }
 }
 
 void CodeGenModule::EmitBackendOptionsMetadata(
@@ -5177,8 +5200,11 @@ void CodeGenModule::EmitTentativeDefinition(const VarDecl *D) {
   EmitGlobalVarDefinition(D);
 }
 
-void CodeGenModule::EmitExternalDeclaration(const VarDecl *D) {
-  EmitExternalVarDeclaration(D);
+void CodeGenModule::EmitExternalDeclaration(const DeclaratorDecl *D) {
+  if (auto const *V = dyn_cast<const VarDecl>(D))
+    EmitExternalVarDeclaration(V);
+  if (auto const *FD = dyn_cast<const FunctionDecl>(D))
+    EmitExternalFunctionDeclaration(FD);
 }
 
 CharUnits CodeGenModule::GetTargetTypeStoreSize(llvm::Type *Ty) const {
@@ -5611,6 +5637,18 @@ void CodeGenModule::EmitExternalVarDeclaration(const VarDecl *D) {
           GetOrCreateLLVMGlobal(D->getName(), Ty, ASTTy.getAddressSpace(), D);
       DI->EmitExternalVariable(
           cast<llvm::GlobalVariable>(GV->stripPointerCasts()), D);
+    }
+}
+
+void CodeGenModule::EmitExternalFunctionDeclaration(const FunctionDecl *FD) {
+  if (CGDebugInfo *DI = getModuleDebugInfo())
+    if (getCodeGenOpts().hasReducedDebugInfo()) {
+      auto *Ty = getTypes().ConvertType(FD->getType());
+      StringRef MangledName = getMangledName(FD);
+      auto *Fn = dyn_cast<llvm::Function>(
+          GetOrCreateLLVMFunction(MangledName, Ty, FD, /* ForVTable */ false));
+      if (!Fn->getSubprogram())
+        DI->EmitFunctionDecl(FD, FD->getLocation(), FD->getType(), Fn);
     }
 }
 

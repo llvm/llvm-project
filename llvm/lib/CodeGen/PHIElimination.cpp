@@ -83,7 +83,8 @@ namespace {
     bool EliminatePHINodes(MachineFunction &MF, MachineBasicBlock &MBB);
 
     void LowerPHINode(MachineBasicBlock &MBB,
-                      MachineBasicBlock::iterator LastPHIIt);
+                      MachineBasicBlock::iterator LastPHIIt,
+                      bool AllEdgesCritical);
 
     /// analyzePHINodes - Gather information about the PHI nodes in
     /// here. In particular, we want to map the number of uses of a virtual
@@ -130,23 +131,24 @@ char& llvm::PHIEliminationID = PHIElimination::ID;
 INITIALIZE_PASS_BEGIN(PHIElimination, DEBUG_TYPE,
                       "Eliminate PHI nodes for register allocation",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveVariables)
+INITIALIZE_PASS_DEPENDENCY(LiveVariablesWrapperPass)
 INITIALIZE_PASS_END(PHIElimination, DEBUG_TYPE,
                     "Eliminate PHI nodes for register allocation", false, false)
 
 void PHIElimination::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addUsedIfAvailable<LiveVariables>();
-  AU.addPreserved<LiveVariables>();
-  AU.addPreserved<SlotIndexes>();
+  AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
+  AU.addPreserved<LiveVariablesWrapperPass>();
+  AU.addPreserved<SlotIndexesWrapperPass>();
   AU.addPreserved<LiveIntervals>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
-  AU.addPreserved<MachineLoopInfo>();
+  AU.addPreserved<MachineLoopInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
 bool PHIElimination::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
-  LV = getAnalysisIfAvailable<LiveVariables>();
+  auto *LVWrapper = getAnalysisIfAvailable<LiveVariablesWrapperPass>();
+  LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
   LIS = getAnalysisIfAvailable<LiveIntervals>();
 
   bool Changed = false;
@@ -182,7 +184,9 @@ bool PHIElimination::runOnMachineFunction(MachineFunction &MF) {
       }
     }
 
-    MachineLoopInfo *MLI = getAnalysisIfAvailable<MachineLoopInfo>();
+    MachineLoopInfoWrapperPass *MLIWrapper =
+        getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
+    MachineLoopInfo *MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
     for (auto &MBB : MF)
       Changed |= SplitPHIEdges(MF, MBB, MLI, (LV ? &LiveInSets : nullptr));
   }
@@ -191,7 +195,8 @@ bool PHIElimination::runOnMachineFunction(MachineFunction &MF) {
   MRI->leaveSSA();
 
   // Populate VRegPHIUseCount
-  analyzePHINodes(MF);
+  if (LV || LIS)
+    analyzePHINodes(MF);
 
   // Eliminate PHI instructions by inserting copies into predecessor blocks.
   for (auto &MBB : MF)
@@ -239,8 +244,20 @@ bool PHIElimination::EliminatePHINodes(MachineFunction &MF,
   MachineBasicBlock::iterator LastPHIIt =
     std::prev(MBB.SkipPHIsAndLabels(MBB.begin()));
 
+  // If all incoming edges are critical, we try to deduplicate identical PHIs so
+  // that we generate fewer copies. If at any edge is non-critical, we either
+  // have less than two predecessors (=> no PHIs) or a predecessor has only us
+  // as a successor (=> identical PHI node can't occur in different block).
+  bool AllEdgesCritical = MBB.pred_size() >= 2;
+  for (MachineBasicBlock *Pred : MBB.predecessors()) {
+    if (Pred->succ_size() < 2) {
+      AllEdgesCritical = false;
+      break;
+    }
+  }
+
   while (MBB.front().isPHI())
-    LowerPHINode(MBB, LastPHIIt);
+    LowerPHINode(MBB, LastPHIIt, AllEdgesCritical);
 
   return true;
 }
@@ -267,7 +284,8 @@ static bool allPhiOperandsUndefined(const MachineInstr &MPhi,
 }
 /// LowerPHINode - Lower the PHI node at the top of the specified block.
 void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator LastPHIIt) {
+                                  MachineBasicBlock::iterator LastPHIIt,
+                                  bool AllEdgesCritical) {
   ++NumLowered;
 
   MachineBasicBlock::iterator AfterPHIsIt = std::next(LastPHIIt);
@@ -283,6 +301,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
   // Create a new register for the incoming PHI arguments.
   MachineFunction &MF = *MBB.getParent();
   unsigned IncomingReg = 0;
+  bool EliminateNow = true;     // delay elimination of nodes in LoweredPHIs
   bool reusedIncoming = false;  // Is IncomingReg reused from an earlier PHI?
 
   // Insert a register to register copy at the top of the current block (but
@@ -297,19 +316,28 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
             TII->get(TargetOpcode::IMPLICIT_DEF), DestReg);
   else {
     // Can we reuse an earlier PHI node? This only happens for critical edges,
-    // typically those created by tail duplication.
-    unsigned &entry = LoweredPHIs[MPhi];
-    if (entry) {
+    // typically those created by tail duplication. Typically, an identical PHI
+    // node can't occur, so avoid hashing/storing such PHIs, which is somewhat
+    // expensive.
+    unsigned *Entry = nullptr;
+    if (AllEdgesCritical)
+      Entry = &LoweredPHIs[MPhi];
+    if (Entry && *Entry) {
       // An identical PHI node was already lowered. Reuse the incoming register.
-      IncomingReg = entry;
+      IncomingReg = *Entry;
       reusedIncoming = true;
       ++NumReused;
       LLVM_DEBUG(dbgs() << "Reusing " << printReg(IncomingReg) << " for "
                         << *MPhi);
     } else {
       const TargetRegisterClass *RC = MF.getRegInfo().getRegClass(DestReg);
-      entry = IncomingReg = MF.getRegInfo().createVirtualRegister(RC);
+      IncomingReg = MF.getRegInfo().createVirtualRegister(RC);
+      if (Entry) {
+        EliminateNow = false;
+        *Entry = IncomingReg;
+      }
     }
+
     // Give the target possiblity to handle special cases fallthrough otherwise
     PHICopy = TII->createPHIDestinationCopy(MBB, AfterPHIsIt, MPhi->getDebugLoc(),
                                   IncomingReg, DestReg);
@@ -445,11 +473,13 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
   }
 
   // Adjust the VRegPHIUseCount map to account for the removal of this PHI node.
-  for (unsigned i = 1; i != MPhi->getNumOperands(); i += 2) {
-    if (!MPhi->getOperand(i).isUndef()) {
-      --VRegPHIUseCount[BBVRegPair(
-          MPhi->getOperand(i + 1).getMBB()->getNumber(),
-          MPhi->getOperand(i).getReg())];
+  if (LV || LIS) {
+    for (unsigned i = 1; i != MPhi->getNumOperands(); i += 2) {
+      if (!MPhi->getOperand(i).isUndef()) {
+        --VRegPHIUseCount[BBVRegPair(
+            MPhi->getOperand(i + 1).getMBB()->getNumber(),
+            MPhi->getOperand(i).getReg())];
+      }
     }
   }
 
@@ -646,7 +676,7 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
   }
 
   // Really delete the PHI instruction now, if it is not in the LoweredPHIs map.
-  if (reusedIncoming || !IncomingReg) {
+  if (EliminateNow) {
     if (LIS)
       LIS->RemoveMachineInstrFromMaps(*MPhi);
     MF.deleteMachineInstr(MPhi);

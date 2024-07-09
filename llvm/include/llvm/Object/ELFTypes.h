@@ -32,6 +32,7 @@ template <class ELFT> struct Elf_Sym_Impl;
 template <class ELFT> struct Elf_Dyn_Impl;
 template <class ELFT> struct Elf_Phdr_Impl;
 template <class ELFT, bool isRela> struct Elf_Rel_Impl;
+template <bool Is64> struct Elf_Crel_Impl;
 template <class ELFT> struct Elf_Verdef_Impl;
 template <class ELFT> struct Elf_Verdaux_Impl;
 template <class ELFT> struct Elf_Verneed_Impl;
@@ -62,6 +63,7 @@ public:
   using Phdr = Elf_Phdr_Impl<ELFType<E, Is64>>;
   using Rel = Elf_Rel_Impl<ELFType<E, Is64>, false>;
   using Rela = Elf_Rel_Impl<ELFType<E, Is64>, true>;
+  using Crel = Elf_Crel_Impl<Is64>;
   using Relr = packed<uint>;
   using Verdef = Elf_Verdef_Impl<ELFType<E, Is64>>;
   using Verdaux = Elf_Verdaux_Impl<ELFType<E, Is64>>;
@@ -117,6 +119,7 @@ using ELF64BE = ELFType<llvm::endianness::big, true>;
   using Elf_Phdr = typename ELFT::Phdr;                                        \
   using Elf_Rel = typename ELFT::Rel;                                          \
   using Elf_Rela = typename ELFT::Rela;                                        \
+  using Elf_Crel = typename ELFT::Crel;                                        \
   using Elf_Relr = typename ELFT::Relr;                                        \
   using Elf_Verdef = typename ELFT::Verdef;                                    \
   using Elf_Verdaux = typename ELFT::Verdaux;                                  \
@@ -385,6 +388,7 @@ template <endianness Endianness>
 struct Elf_Rel_Impl<ELFType<Endianness, false>, false> {
   LLVM_ELF_IMPORT_TYPES(Endianness, false)
   static const bool HasAddend = false;
+  static const bool IsCrel = false;
   Elf_Addr r_offset; // Location (file byte offset, or program virtual addr)
   Elf_Word r_info;   // Symbol table index and type of relocation to apply
 
@@ -421,6 +425,7 @@ struct Elf_Rel_Impl<ELFType<Endianness, false>, true>
     : public Elf_Rel_Impl<ELFType<Endianness, false>, false> {
   LLVM_ELF_IMPORT_TYPES(Endianness, false)
   static const bool HasAddend = true;
+  static const bool IsCrel = false;
   Elf_Sword r_addend; // Compute value for relocatable field by adding this
 };
 
@@ -428,6 +433,7 @@ template <endianness Endianness>
 struct Elf_Rel_Impl<ELFType<Endianness, true>, false> {
   LLVM_ELF_IMPORT_TYPES(Endianness, true)
   static const bool HasAddend = false;
+  static const bool IsCrel = false;
   Elf_Addr r_offset; // Location (file byte offset, or program virtual addr)
   Elf_Xword r_info;  // Symbol table index and type of relocation to apply
 
@@ -474,7 +480,27 @@ struct Elf_Rel_Impl<ELFType<Endianness, true>, true>
     : public Elf_Rel_Impl<ELFType<Endianness, true>, false> {
   LLVM_ELF_IMPORT_TYPES(Endianness, true)
   static const bool HasAddend = true;
+  static const bool IsCrel = false;
   Elf_Sxword r_addend; // Compute value for relocatable field by adding this.
+};
+
+// In-memory representation. The serialized representation uses LEB128.
+template <bool Is64> struct Elf_Crel_Impl {
+  using uint = std::conditional_t<Is64, uint64_t, uint32_t>;
+  static const bool HasAddend = true;
+  static const bool IsCrel = true;
+  uint r_offset;
+  uint32_t r_symidx;
+  uint32_t r_type;
+  std::conditional_t<Is64, int64_t, int32_t> r_addend;
+
+  // Dummy bool parameter is for compatibility with Elf_Rel_Impl.
+  uint32_t getType(bool) const { return r_type; }
+  uint32_t getSymbol(bool) const { return r_symidx; }
+  void setSymbolAndType(uint32_t s, unsigned char t, bool) {
+    r_symidx = s;
+    r_type = t;
+  }
 };
 
 template <class ELFT>

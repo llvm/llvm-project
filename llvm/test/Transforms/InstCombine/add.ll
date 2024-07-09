@@ -1435,15 +1435,28 @@ define i32 @and31_add_sexts(i1 %x, i1 %y) {
   ret i32 %r
 }
 
-; Negative test - extra use
-
 define i32 @lshr_add_use_sexts(i1 %x, i1 %y, ptr %p) {
 ; CHECK-LABEL: @lshr_add_use_sexts(
+; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i32
+; CHECK-NEXT:    store i32 [[YS]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %xs = sext i1 %x to i32
+  %ys = sext i1 %y to i32
+  store i32 %ys, ptr %p
+  %sub = add i32 %xs, %ys
+  %r = lshr i32 %sub, 31
+  ret i32 %r
+}
+
+define i32 @lshr_add_use_sexts_2(i1 %x, i1 %y, ptr %p) {
+; CHECK-LABEL: @lshr_add_use_sexts_2(
 ; CHECK-NEXT:    [[XS:%.*]] = sext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    store i32 [[XS]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[XS]], [[YS]]
-; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[SUB]], 31
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xs = sext i1 %x to i32
@@ -1456,18 +1469,20 @@ define i32 @lshr_add_use_sexts(i1 %x, i1 %y, ptr %p) {
 
 ; Negative test - extra use
 
-define i32 @lshr_add_use2_sexts(i1 %x, i1 %y, ptr %p) {
-; CHECK-LABEL: @lshr_add_use2_sexts(
+declare void @use_sexts(i32, i32)
+
+define i32 @lshr_add_use_sexts_both(i1 %x, i1 %y) {
+; CHECK-LABEL: @lshr_add_use_sexts_both(
 ; CHECK-NEXT:    [[XS:%.*]] = sext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i32
-; CHECK-NEXT:    store i32 [[YS]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    call void @use_sexts(i32 [[XS]], i32 [[YS]])
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[XS]], [[YS]]
 ; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[SUB]], 31
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xs = sext i1 %x to i32
   %ys = sext i1 %y to i32
-  store i32 %ys, ptr %p
+  call void @use_sexts(i32 %xs, i32 %ys)
   %sub = add i32 %xs, %ys
   %r = lshr i32 %sub, 31
   ret i32 %r
