@@ -13,10 +13,10 @@
 #ifndef OMPTARGET_SHARED_TYPES_H
 #define OMPTARGET_SHARED_TYPES_H
 
-#ifdef OMPTARGET_DEVICE_RUNTIME
-#include "DeviceTypes.h"
-#else
+#ifndef OMPTARGET_DEVICE_RUNTIME
 #include <cstdint>
+#else
+#include "DeviceTypes.h"
 #endif
 
 #endif // OMPTARGET_SHARED_TYPES_H

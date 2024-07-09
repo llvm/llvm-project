@@ -21,6 +21,8 @@ int ompx_thread_id(int Dim);
 int64_t __san_get_location_value();
 }
 
+#define INLINE gnu::always_inline
+
 enum class AllocationKind { LOCAL, GLOBAL, LAST = GLOBAL };
 
 template <AllocationKind AK> struct ASTypes {
@@ -182,7 +184,7 @@ struct SanitizerTrapInfoTy {
   int64_t CallId;
   /// }
 
-  [[clang::disable_sanitizer_instrumentation]] void
+  [[clang::disable_sanitizer_instrumentation, INLINE]] void
   setCoordinates(int64_t SourceId) {
     for (int32_t Dim = 0; Dim < 3; ++Dim) {
       BlockId[Dim] = ompx_block_id(Dim);
@@ -193,7 +195,7 @@ struct SanitizerTrapInfoTy {
   }
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation, gnu::always_inline]] void
+  [[clang::disable_sanitizer_instrumentation, INLINE]] void
   allocationError(ErrorCodeTy EC, _AS_PTR(void, AK) Start, uint64_t Length,
                   int64_t Id, int64_t Tag, uint64_t Slot, int64_t SourceId) {
     AllocationStart = (void *)Start;
@@ -208,7 +210,7 @@ struct SanitizerTrapInfoTy {
   }
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation, gnu::always_inline]] void
+  [[clang::disable_sanitizer_instrumentation, INLINE]] void
   propagateAccessError(ErrorCodeTy EC, const AllocationTy<AK> &A,
                        const AllocationPtrTy<AK> &AP, uint64_t Size, int64_t Id,
                        int64_t SourceId) {
@@ -232,7 +234,7 @@ struct SanitizerTrapInfoTy {
   }
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
+  [[clang::disable_sanitizer_instrumentation, noreturn, INLINE, gnu::cold]] void
   exceedsAllocationLength(_AS_PTR(void, AK) Start, uint64_t Length,
                           int64_t AllocationId, uint64_t Slot,
                           int64_t SourceId) {
@@ -242,7 +244,7 @@ struct SanitizerTrapInfoTy {
   }
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
+  [[clang::disable_sanitizer_instrumentation, noreturn, INLINE, gnu::cold]] void
   exceedsAllocationSlots(_AS_PTR(void, AK) Start, uint64_t Length,
                          int64_t AllocationId, uint64_t Slot,
                          int64_t SourceId) {
@@ -252,7 +254,7 @@ struct SanitizerTrapInfoTy {
   }
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
+  [[clang::disable_sanitizer_instrumentation, noreturn, INLINE, gnu::cold]] void
   pointerOutsideAllocation(_AS_PTR(void, AK) Start, uint64_t Length,
                            int64_t AllocationId, uint64_t Slot, uint64_t PC) {
     allocationError<AK>(PointerOutsideAllocation, Start, Length, AllocationId,
@@ -261,7 +263,7 @@ struct SanitizerTrapInfoTy {
   }
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
+  [[clang::disable_sanitizer_instrumentation, noreturn, INLINE, gnu::cold]] void
   outOfBoundAccess(const AllocationTy<AK> A, const AllocationPtrTy<AK> AP,
                    uint64_t Size, int64_t AccessId, int64_t SourceId) {
     propagateAccessError(OutOfBounds, A, AP, Size, AccessId, SourceId);
@@ -269,7 +271,7 @@ struct SanitizerTrapInfoTy {
   }
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
+  [[clang::disable_sanitizer_instrumentation, noreturn, INLINE, gnu::cold]] void
   useAfterScope(const AllocationTy<AK> A, const AllocationPtrTy<AK> AP,
                 uint64_t Size, int64_t AccessId, int64_t SourceId) {
     propagateAccessError(UseAfterScope, A, AP, Size, AccessId, SourceId);
@@ -277,7 +279,7 @@ struct SanitizerTrapInfoTy {
   }
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
+  [[clang::disable_sanitizer_instrumentation, noreturn, INLINE, gnu::cold]] void
   useAfterFree(const AllocationTy<AK> A, const AllocationPtrTy<AK> AP,
                uint64_t Size, int64_t AccessId, int64_t SourceId) {
     propagateAccessError(UseAfterFree, A, AP, Size, AccessId, SourceId);
@@ -285,12 +287,12 @@ struct SanitizerTrapInfoTy {
   }
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
+  [[clang::disable_sanitizer_instrumentation, noreturn, INLINE, gnu::cold]] void
   accessError(const AllocationPtrTy<AK> AP, int64_t Size, int64_t AccessId,
               int64_t SourceId);
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
+  [[clang::disable_sanitizer_instrumentation, noreturn, INLINE, gnu::cold]] void
   garbagePointer(const AllocationPtrTy<AK> AP, void *P, int64_t SourceId) {
     ErrorCode = GarbagePointer;
     AllocationStart = P;
@@ -304,7 +306,7 @@ struct SanitizerTrapInfoTy {
   }
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
+  [[clang::disable_sanitizer_instrumentation, noreturn, INLINE, gnu::cold]] void
   memoryLeak(const AllocationTy<AK> A, uint64_t Slot) {
     allocationError<AK>(MemoryLeak, A.Start, A.Length, A.Id, A.Tag, Slot,
                         /*SourceId=*/-1);
@@ -341,7 +343,7 @@ getAllocation(const AllocationPtrTy<AK> AP, int64_t AccessId = 0) {
 }
 
 template <enum AllocationKind AK>
-[[clang::disable_sanitizer_instrumentation, noreturn, gnu::noinline]] void
+[[clang::disable_sanitizer_instrumentation, noreturn, INLINE, gnu::cold]] void
 SanitizerTrapInfoTy::accessError(const AllocationPtrTy<AK> AP, int64_t Size,
                                  int64_t AccessId, int64_t SourceId) {
   auto &A = getAllocationArray<AK>().Arr[AP.AllocationId];

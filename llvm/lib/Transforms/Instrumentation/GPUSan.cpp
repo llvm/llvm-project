@@ -18,8 +18,10 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -41,8 +43,10 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <cstdint>
+#include <optional>
 
 using namespace llvm;
 
@@ -188,6 +192,7 @@ private:
     if (!FC) {
       auto *NewAllocationFnTy = FunctionType::get(RetTy, ArgTys, false);
       FC = M.getOrInsertFunction(Name, NewAllocationFnTy);
+      Function *F = cast<Function>(FC.getCallee());
     }
     return FC;
   }
@@ -255,6 +260,14 @@ private:
   FunctionCallee getThreadIdFn() {
     return getOrCreateFn(ThreadIDFn, "ompx_global_thread_id", Int32Ty, {});
   }
+
+  CallInst *createCall(IRBuilder<> &IRB, FunctionCallee Callee,
+                       ArrayRef<Value *> Args = std::nullopt,
+                       const Twine &Name = "") {
+    Calls.push_back(IRB.CreateCall(Callee, Args, Name));
+    return Calls.back();
+  }
+  SmallVector<CallInst *> Calls;
 
   Module &M;
   FunctionAnalysisManager &FAM;
@@ -470,8 +483,8 @@ void GPUSanImpl::getAllocationInfo(Function &Fn, PtrOrigin PO, Value &Object,
     else
       IP = &*Fn.getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
     IRBuilder<> IRB(IP);
-    auto *CB = IRB.CreateCall(getAllocationInfoFn(PO),
-                              {IRB.CreateAddrSpaceCast(&Object, getPtrTy(PO))});
+    auto *CB = createCall(IRB, getAllocationInfoFn(PO),
+                          {IRB.CreateAddrSpaceCast(&Object, getPtrTy(PO))});
     It.Start = IRB.CreateExtractValue(CB, {0});
     It.Length = IRB.CreateExtractValue(CB, {1});
     It.Tag = IRB.CreateExtractValue(CB, {2});
@@ -525,7 +538,7 @@ bool GPUSanImpl::instrumentGlobals() {
                        GlobalValue::PrivateLinkage, "__san.dtor", &M);
   BasicBlock *Entry = BasicBlock::Create(Ctx, "entry", DtorFn);
   IRBuilder<> IRB(Entry);
-  IRB.CreateCall(getLeakCheckFn());
+  createCall(IRB, getLeakCheckFn());
   IRB.CreateRetVoid();
   appendToGlobalDtors(M, DtorFn, 0, nullptr);
 
@@ -550,10 +563,10 @@ Value *GPUSanImpl::instrumentAllocation(Instruction &I, Value &Size,
   Value *PlainI = IRB.CreatePointerBitCastOrAddrSpaceCast(&I, getPtrTy(PO));
   static int AllocationId = 1;
   auto *CB =
-      IRB.CreateCall(Fn,
-                     {PlainI, &Size, ConstantInt::get(Int64Ty, AllocationId++),
-                      getSourceIndex(I)},
-                     I.getName() + ".san");
+      createCall(IRB, Fn,
+                 {PlainI, &Size, ConstantInt::get(Int64Ty, AllocationId++),
+                  getSourceIndex(I)},
+                 I.getName() + ".san");
   SmallVector<LifetimeIntrinsic *> Lifetimes;
   I.replaceUsesWithIf(
       IRB.CreatePointerBitCastOrAddrSpaceCast(CB, I.getType()), [&](Use &U) {
@@ -570,10 +583,10 @@ Value *GPUSanImpl::instrumentAllocation(Instruction &I, Value &Size,
   for (auto *LT : Lifetimes) {
     if (LT->getIntrinsicID() == Intrinsic::lifetime_start) {
       IRB.SetInsertPoint(LT);
-      IRB.CreateCall(getLifetimeStart(), {CB, LT->getArgOperand(0)});
+      createCall(IRB, getLifetimeStart(), {CB, LT->getArgOperand(0)});
     } else {
       IRB.SetInsertPoint(LT);
-      IRB.CreateCall(getLifetimeEnd(), {CB, LT->getArgOperand(0)});
+      createCall(IRB, getLifetimeEnd(), {CB, LT->getArgOperand(0)});
     }
   }
   return CB;
@@ -602,6 +615,12 @@ void GPUSanImpl::instrumentAccess(LoopInfo &LI, Instruction &I, int PtrIdx,
     getAllocationInfo(*I.getFunction(), PO, *const_cast<Value *>(Object), Start,
                       Length, Tag);
 
+  if (Loop *L = LI.getLoopFor(I.getParent())) {
+    auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(*I.getFunction());
+    const auto &LD = SE.getLoopDisposition(SE.getSCEVAtScope(PtrOp, L), L);
+    LD->
+  }
+
   static int32_t ReadAccessId = -1;
   static int32_t WriteAccessId = 1;
   const int32_t &AccessId = IsRead ? ReadAccessId-- : WriteAccessId++;
@@ -614,16 +633,15 @@ void GPUSanImpl::instrumentAccess(LoopInfo &LI, Instruction &I, int PtrIdx,
       IRB.CreatePointerBitCastOrAddrSpaceCast(PtrOp, getPtrTy(PO));
   CallInst *CB;
   if (Start) {
-    CB =
-        IRB.CreateCall(getCheckWithBaseFn(PO),
-                       {PlainPtrOp, Start, Length, Tag, Size,
-                        ConstantInt::get(Int64Ty, AccessId), getSourceIndex(I)},
-                       I.getName() + ".san");
+    CB = createCall(IRB, getCheckWithBaseFn(PO),
+                    {PlainPtrOp, Start, Length, Tag, Size,
+                     ConstantInt::get(Int64Ty, AccessId), getSourceIndex(I)},
+                    I.getName() + ".san");
   } else {
-    CB = IRB.CreateCall(getCheckFn(PO),
-                        {PlainPtrOp, Size, ConstantInt::get(Int64Ty, AccessId),
-                         getSourceIndex(I)},
-                        I.getName() + ".san");
+    CB = createCall(IRB, getCheckFn(PO),
+                    {PlainPtrOp, Size, ConstantInt::get(Int64Ty, AccessId),
+                     getSourceIndex(I)},
+                    I.getName() + ".san");
   }
   I.setOperand(PtrIdx,
                IRB.CreatePointerBitCastOrAddrSpaceCast(CB, PtrOp->getType()));
@@ -651,9 +669,9 @@ void GPUSanImpl::instrumentGEPInst(LoopInfo &LI, GetElementPtrInst &GEP) {
   IRBuilder<> IRB(GEP.getNextNode());
   Value *PlainPtrOp =
       IRB.CreatePointerBitCastOrAddrSpaceCast(PtrOp, getPtrTy(PO));
-  auto *CB = IRB.CreateCall(getGEPFn(PO),
-                            {PlainPtrOp, UndefValue::get(Int64Ty), getPC(IRB)},
-                            GEP.getName() + ".san");
+  auto *CB = createCall(IRB, getGEPFn(PO),
+                        {PlainPtrOp, UndefValue::get(Int64Ty), getPC(IRB)},
+                        GEP.getName() + ".san");
   GEP.replaceAllUsesWith(
       IRB.CreatePointerBitCastOrAddrSpaceCast(CB, GEP.getType()));
   Value *Offset =
@@ -681,8 +699,8 @@ bool GPUSanImpl::instrumentCallInst(LoopInfo &LI, CallInst &CI) {
           continue;
         Value *PlainOp =
             IRB.CreatePointerBitCastOrAddrSpaceCast(Op, getPtrTy(PO));
-        auto *CB = IRB.CreateCall(getUnpackFn(PO), {PlainOp, getPC(IRB)},
-                                  Op->getName() + ".unpack");
+        auto *CB = createCall(IRB, getUnpackFn(PO), {PlainOp, getPC(IRB)},
+                              Op->getName() + ".unpack");
         CI.setArgOperand(
             I, IRB.CreatePointerBitCastOrAddrSpaceCast(CB, Op->getType()));
         Changed = true;
@@ -763,8 +781,8 @@ void GPUSanImpl::instrumentReturns(
     return;
   for (auto *RI : Returns) {
     IRBuilder<> IRB(RI);
-    IRB.CreateCall(getFreeNLocalFn(),
-                   {ConstantInt::get(Int32Ty, Allocas.size())});
+    createCall(IRB, getFreeNLocalFn(),
+               {ConstantInt::get(Int32Ty, Allocas.size())});
   }
 }
 
@@ -783,9 +801,13 @@ bool GPUSanImpl::instrument() {
     if (Fn.hasFnAttribute("kernel"))
       Kernels.push_back(&Fn);
     if (!Fn.getName().contains("ompx") && !Fn.getName().contains("__kmpc") &&
-        !Fn.getName().starts_with("rpc_"))
-      if (!Fn.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
+        !Fn.getName().starts_with("rpc_")) {
+      if (!Fn.hasFnAttribute(Attribute::DisableSanitizerInstrumentation)) {
         Changed |= instrumentFunction(Fn);
+      } else if (!Fn.isDeclaration() &&
+                 Fn.getName().contains("SanitizerTrapInfoTy")) {
+      }
+    }
   }
 
   SmallVector<CallBase *> AmbiguousCallsOrdered;
@@ -836,7 +858,7 @@ bool GPUSanImpl::instrument() {
     }
     auto *EntryBB = BasicBlock::Create(Ctx, "entry", LocationGetter);
     IRBuilder<> IRB(EntryBB);
-    Value *Idx = IRB.CreateCall(getThreadIdFn(), {}, "san.gtid");
+    Value *Idx = createCall(IRB, getThreadIdFn(), {}, "san.gtid");
     Value *Ptr = IRB.CreateGEP(Int64Ty, LocationsArray, {Idx});
     auto *LocationValue = IRB.CreateLoad(Int64Ty, Ptr);
     IRB.CreateRet(LocationValue);
@@ -848,7 +870,7 @@ bool GPUSanImpl::instrument() {
   auto *EntryBB = BasicBlock::Create(Ctx, "entry", InitSharedFn);
   IRBuilder<> IRB(EntryBB);
   if (!AmbiguousCalls.empty()) {
-    Value *Idx = IRB.CreateCall(getThreadIdFn(), {}, "san.gtid");
+    Value *Idx = createCall(IRB, getThreadIdFn(), {}, "san.gtid");
     Value *Ptr = IRB.CreateGEP(Int64Ty, LocationsArray, {Idx});
     IRB.CreateStore(ConstantInt::get(Int64Ty, 0), Ptr);
   }
@@ -856,12 +878,12 @@ bool GPUSanImpl::instrument() {
 
   for (auto *KernelFn : Kernels) {
     IRBuilder<> IRB(&*KernelFn->getEntryBlock().getFirstNonPHIOrDbgOrAlloca());
-    IRB.CreateCall(InitSharedFn, {});
+    createCall(IRB, InitSharedFn, {});
   }
 
   for (const auto &It : llvm::enumerate(AmbiguousCallsOrdered)) {
     IRBuilder<> IRB(It.value());
-    Value *Idx = IRB.CreateCall(getThreadIdFn(), {}, "san.gtid");
+    Value *Idx = createCall(IRB, getThreadIdFn(), {}, "san.gtid");
     Value *Ptr = IRB.CreateGEP(Int64Ty, LocationsArray, {Idx});
     Value *OldVal = IRB.CreateLoad(Int64Ty, Ptr);
     Value *OldValShifted = IRB.CreateShl(
@@ -888,7 +910,12 @@ bool GPUSanImpl::instrument() {
       GlobalValue::ThreadLocalMode::NotThreadLocal, 4);
   GV->setVisibility(GlobalValue::ProtectedVisibility);
 
-  M.dump();
+  for (auto *CI : Calls) {
+    InlineFunctionInfo IFI;
+    if (InlineFunction(*CI, IFI).isSuccess())
+      Changed = true;
+  }
+
   return Changed;
 }
 
@@ -899,6 +926,5 @@ PreservedAnalyses GPUSanPass::run(Module &M, ModuleAnalysisManager &AM) {
   if (!Lowerer.instrument())
     return PreservedAnalyses::all();
   LLVM_DEBUG(M.dump());
-
   return PreservedAnalyses::none();
 }

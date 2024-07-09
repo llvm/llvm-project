@@ -12,6 +12,7 @@
 #include "DeviceUtils.h"
 #include "Interface.h"
 #include "LibC.h"
+#include "Mapping.h"
 #include "Shared/Environment.h"
 #include "Synchronization.h"
 
