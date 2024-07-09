@@ -1633,6 +1633,80 @@ public:
   }
 };
 
+class CIRComplexCreateOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::ComplexCreateOp> {
+public:
+  using OpConversionPattern<mlir::cir::ComplexCreateOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::ComplexCreateOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto complexLLVMTy =
+        getTypeConverter()->convertType(op.getResult().getType());
+    auto initialComplex =
+        rewriter.create<mlir::LLVM::UndefOp>(op->getLoc(), complexLLVMTy);
+
+    int64_t position[1]{0};
+    auto realComplex = rewriter.create<mlir::LLVM::InsertValueOp>(
+        op->getLoc(), initialComplex, adaptor.getReal(), position);
+
+    position[0] = 1;
+    auto complex = rewriter.create<mlir::LLVM::InsertValueOp>(
+        op->getLoc(), realComplex, adaptor.getImag(), position);
+
+    rewriter.replaceOp(op, complex);
+    return mlir::success();
+  }
+};
+
+class CIRComplexRealPtrOPLowering
+    : public mlir::OpConversionPattern<mlir::cir::ComplexRealPtrOp> {
+public:
+  using OpConversionPattern<mlir::cir::ComplexRealPtrOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::ComplexRealPtrOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto operandTy =
+        mlir::cast<mlir::cir::PointerType>(op.getOperand().getType());
+    auto resultLLVMTy =
+        getTypeConverter()->convertType(op.getResult().getType());
+    auto elementLLVMTy =
+        getTypeConverter()->convertType(operandTy.getPointee());
+
+    mlir::LLVM::GEPArg gepIndices[2]{{0}, {0}};
+    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
+        op, resultLLVMTy, elementLLVMTy, adaptor.getOperand(), gepIndices,
+        /*inbounds=*/true);
+
+    return mlir::success();
+  }
+};
+
+class CIRComplexImagPtrOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::ComplexImagPtrOp> {
+public:
+  using OpConversionPattern<mlir::cir::ComplexImagPtrOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::ComplexImagPtrOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto operandTy =
+        mlir::cast<mlir::cir::PointerType>(op.getOperand().getType());
+    auto resultLLVMTy =
+        getTypeConverter()->convertType(op.getResult().getType());
+    auto elementLLVMTy =
+        getTypeConverter()->convertType(operandTy.getPointee());
+
+    mlir::LLVM::GEPArg gepIndices[2]{{0}, {1}};
+    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
+        op, resultLLVMTy, elementLLVMTy, adaptor.getOperand(), gepIndices,
+        /*inbounds=*/true);
+
+    return mlir::success();
+  }
+};
+
 class CIRSwitchFlatOpLowering
     : public mlir::OpConversionPattern<mlir::cir::SwitchFlatOp> {
 public:
@@ -3365,9 +3439,10 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRUnaryOpLowering, CIRBinOpLowering, CIRBinOpOverflowOpLowering,
       CIRShiftOpLowering, CIRLoadLowering, CIRConstantLowering,
       CIRStoreLowering, CIRAllocaLowering, CIRFuncLowering, CIRCastOpLowering,
-      CIRGlobalOpLowering, CIRGetGlobalOpLowering, CIRVAStartLowering,
-      CIRVAEndLowering, CIRVACopyLowering, CIRVAArgLowering, CIRBrOpLowering,
-      CIRGetMemberOpLowering, CIRGetRuntimeMemberOpLowering,
+      CIRGlobalOpLowering, CIRGetGlobalOpLowering, CIRComplexCreateOpLowering,
+      CIRComplexRealPtrOPLowering, CIRComplexImagPtrOpLowering,
+      CIRVAStartLowering, CIRVAEndLowering, CIRVACopyLowering, CIRVAArgLowering,
+      CIRBrOpLowering, CIRGetMemberOpLowering, CIRGetRuntimeMemberOpLowering,
       CIRSwitchFlatOpLowering, CIRPtrDiffOpLowering, CIRCopyOpLowering,
       CIRMemCpyOpLowering, CIRFAbsOpLowering, CIRExpectOpLowering,
       CIRVTableAddrPointOpLowering, CIRVectorCreateLowering,
@@ -3443,6 +3518,14 @@ void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   });
   converter.addConversion([&](mlir::cir::BF16Type type) -> mlir::Type {
     return mlir::FloatType::getBF16(type.getContext());
+  });
+  converter.addConversion([&](mlir::cir::ComplexType type) -> mlir::Type {
+    // A complex type is lowered to an LLVM struct that contains the real and
+    // imaginary part as data fields.
+    mlir::Type elementTy = converter.convertType(type.getElementTy());
+    mlir::Type structFields[2] = {elementTy, elementTy};
+    return mlir::LLVM::LLVMStructType::getLiteral(type.getContext(),
+                                                  structFields);
   });
   converter.addConversion([&](mlir::cir::FuncType type) -> mlir::Type {
     auto result = converter.convertType(type.getReturnType());
