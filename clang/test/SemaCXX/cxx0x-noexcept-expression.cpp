@@ -160,6 +160,16 @@ void f5() {
 
 namespace GH97453 {
 
+struct UnconstrainedCtor {
+  int value_;
+
+  template <typename T>
+  constexpr UnconstrainedCtor(T value) noexcept(noexcept(value_ = value))
+      : value_(static_cast<int>(value)) {}
+};
+
+UnconstrainedCtor U(42);
+
 struct X {
   void ICE(int that) noexcept(noexcept([that]() {}));
 };
