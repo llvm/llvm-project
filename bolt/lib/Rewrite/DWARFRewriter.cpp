@@ -1342,10 +1342,7 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
       assert(RangesWriterIterator != LegacyRangesWritersByCU.end() &&
              "RangesWriter does not exist for DWOId");
       RangesWriterIterator->second->setDie(&Die);
-    } else if (Unit.getVersion() == 5) {
-      DIEBldr.addValue(&Die, dwarf::DW_AT_rnglists_base,
-                       dwarf::DW_FORM_sec_offset, DIEInteger(*RangesBase));
-    } else {
+    } else if (Unit.getVersion() >= 5) {
       DIEBldr.addValue(&Die, dwarf::DW_AT_rnglists_base,
                        dwarf::DW_FORM_sec_offset, DIEInteger(*RangesBase));
     }
