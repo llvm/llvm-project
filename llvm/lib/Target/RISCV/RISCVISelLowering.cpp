@@ -3905,6 +3905,21 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
   return SDValue();
 }
 
+static unsigned getPACKOpcode(unsigned DestBW,
+                              const RISCVSubtarget &Subtarget) {
+  switch (DestBW) {
+  default:
+    llvm_unreachable("Unsupported pack size");
+  case 16:
+    return RISCV::PACKH;
+  case 32:
+    return Subtarget.is64Bit() ? RISCV::PACKW : RISCV::PACK;
+  case 64:
+    assert(Subtarget.is64Bit());
+    return RISCV::PACK;
+  }
+}
+
 /// Double the element size of the build vector to reduce the number
 /// of vslide1down in the build vector chain.  In the worst case, this
 /// trades three scalar operations for 1 vector operation.  Scalar
@@ -3933,30 +3948,34 @@ static SDValue lowerBuildVectorViaPacking(SDValue Op, SelectionDAG &DAG,
   // Produce [B,A] packed into a type twice as wide.  Note that all
   // scalars are XLenVT, possibly masked (see below).
   MVT XLenVT = Subtarget.getXLenVT();
+  SDValue Mask = DAG.getConstant(
+      APInt::getLowBitsSet(XLenVT.getSizeInBits(), ElemSizeInBits), DL, XLenVT);
   auto pack = [&](SDValue A, SDValue B) {
     // Bias the scheduling of the inserted operations to near the
     // definition of the element - this tends to reduce register
     // pressure overall.
     SDLoc ElemDL(B);
-    SDValue ShtAmt = DAG.getConstant(ElemSizeInBits, ElemDL, XLenVT);
-    return DAG.getNode(ISD::OR, ElemDL, XLenVT, A,
-                       DAG.getNode(ISD::SHL, ElemDL, XLenVT, B, ShtAmt));
-  };
+    if (Subtarget.hasStdExtZbkb())
+      // Note that we're relying on the high bits of the result being
+      // don't care.  For PACKW, the result is *sign* extended.
+      return SDValue(
+          DAG.getMachineNode(getPACKOpcode(ElemSizeInBits * 2, Subtarget),
+                             ElemDL, XLenVT, A, B),
+          0);
 
-  SDValue Mask = DAG.getConstant(
-      APInt::getLowBitsSet(XLenVT.getSizeInBits(), ElemSizeInBits), DL, XLenVT);
-  SmallVector<SDValue> NewOperands;
-  NewOperands.reserve(NumElts / 2);
-  for (unsigned i = 0; i < VT.getVectorNumElements(); i += 2) {
-    SDValue A = Op.getOperand(i);
-    SDValue B = Op.getOperand(i + 1);
-    // Bias the scheduling of the inserted operations to near the
-    // definition of the element - this tends to reduce register
-    // pressure overall.
     A = DAG.getNode(ISD::AND, SDLoc(A), XLenVT, A, Mask);
     B = DAG.getNode(ISD::AND, SDLoc(B), XLenVT, B, Mask);
-    NewOperands.push_back(pack(A, B));
-  }
+    SDValue ShtAmt = DAG.getConstant(ElemSizeInBits, ElemDL, XLenVT);
+    SDNodeFlags Flags;
+    Flags.setDisjoint(true);
+    return DAG.getNode(ISD::OR, ElemDL, XLenVT, A,
+                       DAG.getNode(ISD::SHL, ElemDL, XLenVT, B, ShtAmt), Flags);
+  };
+
+  SmallVector<SDValue> NewOperands;
+  NewOperands.reserve(NumElts / 2);
+  for (unsigned i = 0; i < VT.getVectorNumElements(); i += 2)
+    NewOperands.push_back(pack(Op.getOperand(i), Op.getOperand(i + 1)));
   assert(NumElts == NewOperands.size() * 2);
   MVT WideVT = MVT::getIntegerVT(ElemSizeInBits * 2);
   MVT WideVecVT = MVT::getVectorVT(WideVT, NumElts / 2);
