@@ -11,26 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
-#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
-#include "mlir/IR/Block.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
-#include "mlir/IR/Location.h"
-#include "mlir/IR/TypeRange.h"
-#include "mlir/IR/Value.h"
-#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
-#include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/iterator_range.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include <numeric>
 #include <optional>
@@ -77,32 +63,6 @@ static Operation *cloneOpWithOperandsAndTypes(OpBuilder &builder, Location loc,
                                               ArrayRef<Type> resultTypes) {
   return builder.create(loc, op->getName().getIdentifier(), operands,
                         resultTypes, op->getAttrs());
-}
-
-static std::optional<SmallVector<int64_t>>
-getTargetShape(const vector::UnrollVectorOptions &options, func::FuncOp funcOp,
-               VectorType vecType) {
-  assert(options.nativeShape &&
-         "vector unrolling expects the native shape or native"
-         "shape call back function to be set");
-  llvm::errs() << "Get target shape\n";
-  SmallVector<int64_t> unrollShape = llvm::to_vector<4>(vecType.getShape());
-  std::optional<SmallVector<int64_t>> targetShape = options.nativeShape(funcOp);
-  if (!targetShape) {
-    llvm::errs() << "--no unrolling target shape defined\n";
-    return std::nullopt;
-  }
-  auto maybeShapeRatio = computeShapeRatio(unrollShape, *targetShape);
-  if (!maybeShapeRatio) {
-    llvm::errs() << "--could not compute integral shape ratio -> BAIL\n";
-    return std::nullopt;
-  }
-  if (llvm::all_of(*maybeShapeRatio, [](int64_t v) { return v == 1; })) {
-    llvm::errs() << "--no unrolling needed -> SKIP\n";
-    return std::nullopt;
-  }
-  llvm::errs() << "--found an integral shape ratio to unroll to -> SUCCESS\n";
-  return targetShape;
 }
 
 /// Return the target shape for unrolling for the given `op`. Return
@@ -657,160 +617,6 @@ private:
   vector::UnrollVectorOptions options;
 };
 
-struct UnrollFuncSignaturePattern : OpRewritePattern<func::FuncOp> {
-  UnrollFuncSignaturePattern(MLIRContext *context,
-                             const vector::UnrollVectorOptions &options,
-                             PatternBenefit benefit = 1)
-      : OpRewritePattern<func::FuncOp>(context, benefit), options(options) {}
-
-  LogicalResult matchAndRewrite(func::FuncOp funcOp,
-                                PatternRewriter &rewriter) const override {
-    llvm::errs() << "Run unroll function signature pattern\n";
-
-    auto fnType = funcOp.getFunctionType();
-
-    // Check function inputs.
-    Location loc = funcOp.getFunctionBody()
-                       .getBlocks()
-                       .begin()
-                       ->getOperations()
-                       .begin()
-                       ->getLoc();
-    size_t newArgIndex = 0;
-    std::vector<Type> newSignature;
-    std::vector<std::vector<size_t>> newArgMap(fnType.getNumInputs());
-
-    for (const auto &argType : enumerate(fnType.getInputs())) {
-      size_t index = argType.index();
-      Type type = argType.value();
-      auto vecType = llvm::dyn_cast<VectorType>(type);
-      if (!vecType) {
-        newSignature.push_back(type);
-        newArgMap[index].push_back(newArgIndex);
-        newArgIndex++;
-        continue;
-      }
-      // Try vector unrolling
-      llvm::errs() << "Try vector unrolling\n";
-      SmallVector<int64_t> originalShape =
-          llvm::to_vector<4>(vecType.getShape());
-      auto targetShape = getTargetShape(options, funcOp, vecType);
-      if (!targetShape) {
-        llvm::errs() << "No target shape\n";
-        newSignature.push_back(type);
-        newArgMap[index].push_back(newArgIndex);
-        newArgIndex++;
-        continue;
-      }
-      llvm::errs() << "Got target shape\n";
-      VectorType unrolledType =
-          VectorType::get(*targetShape, vecType.getElementType());
-      llvm::errs() << "Unrolled type is ";
-      unrolledType.dump();
-
-      for (SmallVector<int64_t> offsets :
-           StaticTileOffsetRange(originalShape, *targetShape)) {
-        newSignature.push_back(unrolledType);
-        newArgMap[index].push_back(newArgIndex);
-        newArgIndex++;
-      }
-    }
-
-    // Assume there is a single result for now.
-    Type originalResultType = fnType.getResult(0);
-
-    // TODO: Handle illegal vector types in results as well.
-    // SmallVector<Type> resultTypes;
-    // auto vecType = llvm::dyn_cast<VectorType>(originalResultType);
-
-    // if (vecType) {
-    //   // Try vector unrolling
-    //   SmallVector<int64_t> originalShape =
-    //   llvm::to_vector<4>(vecType.getShape()); auto targetShape =
-    //   getTargetShape(options, funcOp, vecType); VectorType unrolledType =
-    //     VectorType::get(*targetShape, vecType.getElementType());
-    //   if (targetShape)
-    //     for (SmallVector<int64_t> offsets :
-    //          StaticTileOffsetRange(originalShape, *targetShape))
-    //       resultTypes.push_back(unrolledType);
-    // }
-
-    // Create the converted func op
-    auto newFuncOp = rewriter.create<func::FuncOp>(
-        funcOp.getLoc(), funcOp.getName(),
-        FunctionType::get(rewriter.getContext(), TypeRange(newSignature),
-                          TypeRange(originalResultType)));
-
-    newFuncOp.addEntryBlock();
-
-    llvm::errs() << "Created new func op\n";
-    newFuncOp.dump();
-    llvm::errs() << newFuncOp.getArguments().size() << "\n";
-
-    // TODO: Copy over all attributes other than the function name and type
-
-    // Clone operations (assuming one block for now)
-    // TODO: The uses for operands that are SSA values are not cloned properly.
-    loc = newFuncOp.getBody().getLoc();
-    rewriter.setInsertionPointToStart(&newFuncOp.getBody().getBlocks().front());
-
-    for (auto &op : funcOp.getBlocks().front().getOperations()) {
-      op.dump();
-      SmallVector<Value> newOperands(op.getNumOperands());
-      for (size_t i = 0; i < op.getOperands().size(); ++i) {
-        Value operand = op.getOperand(i);
-        auto blockArg = llvm::dyn_cast<BlockArgument>(operand);
-        if (!blockArg) {
-          newOperands[i] = operand;
-          continue;
-        }
-        // Not unrolled
-        unsigned int argNum = blockArg.getArgNumber();
-        if (newArgMap[argNum].size() == 1) {
-          newOperands[i] = newFuncOp.getArgument(newArgMap[argNum][0]);
-          continue;
-        }
-        // Unrolled
-        // TODO: Store previously created vector.insert_strided_slice ops.
-        auto vecType = dyn_cast<VectorType>(blockArg.getType());
-        SmallVector<int64_t> originalShape =
-            llvm::to_vector<4>(vecType.getShape());
-        auto targetShape = getTargetShape(options, funcOp, vecType);
-        VectorType unrolledType =
-            VectorType::get(*targetShape, vecType.getElementType());
-        llvm::errs() << "Unrolled type is ";
-        unrolledType.dump();
-        // Prepare the result vector.
-        Value result = rewriter.create<arith::ConstantOp>(
-            loc, vecType, rewriter.getZeroAttr(vecType));
-        result.dump();
-        SmallVector<int64_t> strides(targetShape->size(), 1);
-        // Create the vector.insert_strided_slice ops.
-        unsigned int j = 0;
-        for (SmallVector<int64_t> offsets :
-             StaticTileOffsetRange(originalShape, *targetShape)) {
-          result = rewriter.create<vector::InsertStridedSliceOp>(
-              loc, newFuncOp.getArgument(newArgMap[argNum][j]), result, offsets,
-              strides);
-          result.dump();
-          j++;
-        }
-        newOperands[i] = result;
-      }
-      Operation *newOp =
-          rewriter.create(loc, op.getName().getIdentifier(), newOperands,
-                          op.getResultTypes(), op.getAttrs());
-      llvm::errs() << "newOp is ";
-      newOp->dump();
-    }
-    rewriter.eraseOp(funcOp);
-    return success();
-  }
-
-private:
-  vector::UnrollVectorOptions options;
-};
-
 } // namespace
 
 void mlir::vector::populateVectorUnrollPatterns(
@@ -821,11 +627,4 @@ void mlir::vector::populateVectorUnrollPatterns(
                UnrollReductionPattern, UnrollMultiReductionPattern,
                UnrollTransposePattern, UnrollGatherPattern>(
       patterns.getContext(), options, benefit);
-}
-
-void mlir::vector::populateVectorUnrollFuncSignaturePatterns(
-    RewritePatternSet &patterns, const UnrollVectorOptions &options,
-    PatternBenefit benefit) {
-  patterns.add<UnrollFuncSignaturePattern>(patterns.getContext(), options,
-                                           benefit);
 }
