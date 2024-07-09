@@ -559,7 +559,6 @@ NaryReassociatePass::findClosestMatchingDominator(const SCEV *CandidateExpr,
     return nullptr;
 
   auto &Candidates = Pos->second;
-  const auto *FullExpr = SE->getSCEV(Dominatee);
   // Because we process the basic blocks in pre-order of the dominator tree, a
   // candidate that doesn't dominate the current instruction won't dominate any
   // future instruction either. Therefore, we pop it out of the stack. This
@@ -575,7 +574,7 @@ NaryReassociatePass::findClosestMatchingDominator(const SCEV *CandidateExpr,
       // Make sure that the instruction is safe to reuse without introducing
       // poison.
       SmallVector<Instruction *> DropPoisonGeneratingInsts;
-      if (!SE->canReuseInstruction(FullExpr, CandidateInstruction,
+      if (!SE->canReuseInstruction(CandidateExpr, CandidateInstruction,
                                    DropPoisonGeneratingInsts))
         continue;
 
