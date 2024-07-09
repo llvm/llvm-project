@@ -1,3 +1,7 @@
+// RUN: mlir-opt \
+// RUN:   --pass-pipeline="builtin.module(func.func(mesh-spmdization,test-constant-fold))" \
+// RUN:   %s | FileCheck %s
+
 mesh.mesh @mesh_1d_4(shape = 4)
 
 // CHECK-LABEL: func @tensor_empty_static_sharded_dims_sizes

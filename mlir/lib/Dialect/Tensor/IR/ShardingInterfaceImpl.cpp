@@ -22,7 +22,7 @@ using namespace mlir::mesh;
 
 namespace {
 
-// Sharding of elementwise operations like tensor addition and multiplication.
+// Sharding of tensor.empty
 struct EmptyOpShardingInterface
     : public ShardingInterface::ExternalModel<EmptyOpShardingInterface,
                                               tensor::EmptyOp> {

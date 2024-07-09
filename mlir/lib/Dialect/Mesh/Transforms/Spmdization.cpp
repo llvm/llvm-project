@@ -437,11 +437,16 @@ updateHalosInResharding(ImplicitLocOpBuilder &builder, MeshOp mesh,
   assert(sourceSharding.getMesh() == targetSharding.getMesh());
   assert(sourceSharding.getSplitAxes() == targetSharding.getSplitAxes());
 
+  SmallVector<MeshAxis> splitMeshAxes;
+  for (auto axis : targetSharding.getSplitAxes()) {
+    assert(axis.size() == 1);
+    splitMeshAxes.emplace_back(axis[0]);
+  }
   auto res =
       builder
           .create<UpdateHaloOp>(
               sourceShard.getType(), // update halo keeps the source type
-              mesh.getSymName(), SmallVector<MeshAxis>(), sourceShard,
+              mesh.getSymName(), splitMeshAxes, sourceShard,
               ::mlir::DenseI64ArrayAttr::get(
                   builder.getContext(), sourceSharding.getStaticHaloSizes()),
               nullptr)
@@ -612,8 +617,6 @@ static LogicalResult spmdizeOperation(
   if (!shardingInterface) {
     // If there is no sharding interface we are conservative and assume that
     // the op should be fully replicated no all devices.
-    // FIXME
-    // spmdizeTriviallyShardableOperation
     spmdizeFullyReplicatedOperation(op, spmdizedOperands, operandShardings,
                                     resultShardings, spmdizationMap,
                                     symbolTableCollection, builder);
