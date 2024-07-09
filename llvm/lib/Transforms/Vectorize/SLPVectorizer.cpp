@@ -4099,7 +4099,11 @@ BoUpSLP::~BoUpSLP() {
   SmallVector<WeakTrackingVH> DeadInsts;
   for (auto *I : DeletedInstructions) {
     if (!I->getParent()) {
-      I->insertBefore(F->getEntryBlock().getTerminator());
+      if (isa<PHINode>(I))
+        I->insertBefore(F->getEntryBlock(),
+                        F->getEntryBlock().getFirstNonPHIIt());
+      else
+        I->insertBefore(F->getEntryBlock().getTerminator());
       continue;
     }
     for (Use &U : I->operands()) {
