@@ -59,6 +59,7 @@ foreach(arch ${RTSAN_TEST_ARCH})
   #generate_compiler_rt_tests(RtsanTestObjects
   #  RtsanUnitTests "Rtsan-${arch}-Test" ${arch}
   #  COMPILE_DEPS ${RTSAN_UNITTEST_HEADERS}
+  #  DEPS rtsan
   #  SOURCES ${RTSAN_INST_TEST_SOURCES} ${COMPILER_RT_GOOGLETEST_SOURCES}
   #  CFLAGS ${RTSAN_UNITTEST_CFLAGS} -fsanitize=realtime
   #  LINK_FLAGS ${RTSAN_UNITTEST_LINK_FLAGS} -fsanitize=realtime)
