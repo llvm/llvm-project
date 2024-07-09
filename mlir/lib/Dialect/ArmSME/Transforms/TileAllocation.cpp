@@ -153,10 +153,18 @@ public:
     return failure();
   }
 
+  /// Acquires a specific tile ID. Asserts the tile is initially free.
+  void acquireTileId(ArmSMETileType tileType, unsigned tileId) {
+    TileMask tileMask = getMasks(tileType)[tileId];
+    assert((tilesInUse & tileMask) == TileMask::kNone &&
+           "cannot acquire allocated tile!");
+    tilesInUse |= tileMask;
+  }
+
   /// Releases a previously allocated tile ID.
   void releaseTileId(ArmSMETileType tileType, unsigned tileId) {
     TileMask tileMask = getMasks(tileType)[tileId];
-    assert((tilesInUse & tileMask) != TileMask::kNone &&
+    assert((tilesInUse & tileMask) == tileMask &&
            "cannot release unallocated tile!");
     tilesInUse ^= tileMask;
   }
@@ -287,6 +295,11 @@ struct LiveRange {
     return llvm::IntervalMapOverlaps<RangeSet, RangeSet>(*ranges,
                                                          *otherRange.ranges)
         .valid();
+  }
+
+  /// Returns true if this range overlaps with `point`.
+  bool overlaps(uint64_t point) const {
+    return ranges->lookup(point) == kValidLiveRange;
   }
 
   /// Unions this live range with `otherRange`, aborts if the ranges overlap.
@@ -488,53 +501,93 @@ coalesceTileLiveRanges(DenseMap<Value, LiveRange> &initialLiveRanges) {
   return std::move(coalescedLiveRanges);
 }
 
-/// Choose a live range to spill (via some heuristics). This picks either an
-/// active live range from `activeRanges` or the new live range `newRange`.
+/// Choose a live range to spill (via some heuristics). This picks either a live
+/// range from `activeRanges`, `inactiveRanges`, or the new live range
+/// `newRange`. Note: All live ranges in `activeRanges` and `inactiveRanges` are
+/// assumed to overlap with `newRange`.
 LiveRange *chooseSpillUsingHeuristics(ArrayRef<LiveRange *> activeRanges,
+                                      ArrayRef<LiveRange *> inactiveRanges,
                                       LiveRange *newRange) {
+  auto allOverlappingRanges =
+      llvm::concat<LiveRange>(llvm::make_pointee_range(activeRanges),
+                              llvm::make_pointee_range(inactiveRanges));
+
   // Heuristic: Spill trivially copyable operations (usually free).
-  auto isTrivialSpill = [&](LiveRange *allocatedRange) {
-    return isTileTypeGreaterOrEqual(allocatedRange->getTileType(),
+  auto isTrivialSpill = [&](LiveRange &allocatedRange) {
+    return isTileTypeGreaterOrEqual(allocatedRange.getTileType(),
                                     newRange->getTileType()) &&
-           allocatedRange->values.size() == 1 &&
+           allocatedRange.values.size() == 1 &&
            isTriviallyCloneableTileOp(
-               allocatedRange->values[0]
-                   .getDefiningOp<ArmSMETileOpInterface>());
+               allocatedRange.values[0].getDefiningOp<ArmSMETileOpInterface>());
   };
-  if (isTrivialSpill(newRange))
+  if (isTrivialSpill(*newRange))
     return newRange;
-  auto trivialSpill = llvm::find_if(activeRanges, isTrivialSpill);
-  if (trivialSpill != activeRanges.end())
-    return *trivialSpill;
+  auto trivialSpill = llvm::find_if(allOverlappingRanges, isTrivialSpill);
+  if (trivialSpill != allOverlappingRanges.end())
+    return &*trivialSpill;
 
   // Heuristic: Spill the range that ends last (with a compatible tile type).
-  auto isSmallerTileTypeOrEndsEarlier = [](LiveRange *a, LiveRange *b) {
-    return !isTileTypeGreaterOrEqual(a->getTileType(), b->getTileType()) ||
-           a->end() < b->end();
+  auto isSmallerTileTypeOrEndsEarlier = [](LiveRange &a, LiveRange &b) {
+    return !isTileTypeGreaterOrEqual(a.getTileType(), b.getTileType()) ||
+           a.end() < b.end();
   };
-  LiveRange *lastActiveLiveRange = *std::max_element(
-      activeRanges.begin(), activeRanges.end(), isSmallerTileTypeOrEndsEarlier);
-  if (!isSmallerTileTypeOrEndsEarlier(lastActiveLiveRange, newRange))
-    return lastActiveLiveRange;
+  LiveRange &lastActiveLiveRange = *std::max_element(
+      allOverlappingRanges.begin(), allOverlappingRanges.end(),
+      isSmallerTileTypeOrEndsEarlier);
+  if (!isSmallerTileTypeOrEndsEarlier(lastActiveLiveRange, *newRange))
+    return &lastActiveLiveRange;
   return newRange;
 }
 
 /// Greedily allocate tile IDs to live ranges. Spill using simple heuristics.
-/// Note: This does not attempt to fill holes in active live ranges.
 void allocateTilesToLiveRanges(
     ArrayRef<LiveRange *> liveRangesSortedByStartPoint) {
   TileAllocator tileAllocator;
   SetVector<LiveRange *> activeRanges;
+  SetVector<LiveRange *> inactiveRanges;
   for (LiveRange *nextRange : liveRangesSortedByStartPoint) {
-    // Release tile IDs from live ranges that have ended.
     activeRanges.remove_if([&](LiveRange *activeRange) {
+      // Check for live ranges that have expired.
       if (activeRange->end() <= nextRange->start()) {
         tileAllocator.releaseTileId(activeRange->getTileType(),
                                     *activeRange->tileId);
         return true;
       }
+      // Check for live ranges that have become inactive.
+      if (!activeRange->overlaps(nextRange->start())) {
+        tileAllocator.releaseTileId(activeRange->getTileType(),
+                                    *activeRange->tileId);
+        inactiveRanges.insert(activeRange);
+        return true;
+      }
       return false;
     });
+    inactiveRanges.remove_if([&](LiveRange *inactiveRange) {
+      // Check for live ranges that have expired.
+      if (inactiveRange->end() <= nextRange->start()) {
+        return true;
+      }
+      // Check for live ranges that have become active.
+      if (inactiveRange->overlaps(nextRange->start())) {
+        tileAllocator.acquireTileId(inactiveRange->getTileType(),
+                                    *inactiveRange->tileId);
+        activeRanges.insert(inactiveRange);
+        return true;
+      }
+      return false;
+    });
+
+    // Collect inactive live ranges that overlap with the current new live
+    // range. We need to acquire the tile IDs of overlapping inactive ranges to
+    // prevent two (overlapping) live ranges from getting the same tile ID.
+    SmallVector<LiveRange *> overlappingInactiveRanges;
+    for (LiveRange *inactiveRange : inactiveRanges) {
+      if (inactiveRange->overlaps(*nextRange)) {
+        tileAllocator.acquireTileId(inactiveRange->getTileType(),
+                                    *inactiveRange->tileId);
+        overlappingInactiveRanges.push_back(inactiveRange);
+      }
+    }
 
     // Allocate a tile ID to `nextRange`.
     auto rangeTileType = nextRange->getTileType();
@@ -542,15 +595,19 @@ void allocateTilesToLiveRanges(
     if (succeeded(tileId)) {
       nextRange->tileId = *tileId;
     } else {
-      LiveRange *rangeToSpill =
-          chooseSpillUsingHeuristics(activeRanges.getArrayRef(), nextRange);
+      LiveRange *rangeToSpill = chooseSpillUsingHeuristics(
+          activeRanges.getArrayRef(), overlappingInactiveRanges, nextRange);
       if (rangeToSpill != nextRange) {
-        // Spill an active live range (so release its tile ID first).
+        // Spill an (in)active live range (so release its tile ID first).
         tileAllocator.releaseTileId(rangeToSpill->getTileType(),
                                     *rangeToSpill->tileId);
-        activeRanges.remove(rangeToSpill);
         // This will always succeed after a spill (of an active live range).
         nextRange->tileId = *tileAllocator.allocateTileId(rangeTileType);
+        // Remove the live range from the active/inactive sets.
+        if (!activeRanges.remove(rangeToSpill)) {
+          bool removed = inactiveRanges.remove(rangeToSpill);
+          assert(removed && "expected a range to be removed!");
+        }
       }
       rangeToSpill->tileId = tileAllocator.allocateInMemoryTileId();
     }
@@ -558,6 +615,12 @@ void allocateTilesToLiveRanges(
     // Insert the live range into the active ranges.
     if (nextRange->tileId < kInMemoryTileIdBase)
       activeRanges.insert(nextRange);
+
+    // Release tiles reserved for inactive live ranges.
+    for (LiveRange *range : overlappingInactiveRanges) {
+      if (*range->tileId < kInMemoryTileIdBase)
+        tileAllocator.releaseTileId(range->getTileType(), *range->tileId);
+    }
   }
 }
 
