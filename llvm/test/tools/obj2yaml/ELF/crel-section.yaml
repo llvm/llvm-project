@@ -81,7 +81,6 @@ Symbols:
     Binding: STB_GLOBAL
 
 ## Test the behavior when the sh_entsize field is broken.
-## Here we use the 0xFE value instead of expected 0x18/0x10.
 
 # RUN: yaml2obj -DTYPE=SHT_RELA --docnum=2 %s -o %t2
 # RUN: not obj2yaml %t2 2>&1 | FileCheck %s --check-prefix=ERR1
@@ -96,4 +95,3 @@ FileHeader:
 Sections:
   - Name:    .foo
     Type:    SHT_CREL
-    EntSize: 0xFE
