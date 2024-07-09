@@ -27,6 +27,12 @@ struct SandboxIRTest : public testing::Test {
     if (!M)
       Err.print("SandboxIRTest", errs());
   }
+  BasicBlock *getBasicBlockByName(Function &F, StringRef Name) {
+    for (BasicBlock &BB : F)
+      if (BB.getName() == Name)
+        return &BB;
+    llvm_unreachable("Expected to find basic block!");
+  }
 };
 
 TEST_F(SandboxIRTest, UserInstantiation) {
@@ -89,4 +95,133 @@ define void @foo(i32 %v1) {
   EXPECT_FALSE(isa<sandboxir::User>(Arg0));
   EXPECT_TRUE(isa<sandboxir::User>(Const0));
   EXPECT_TRUE(isa<sandboxir::User>(OpaqueI));
+
+#ifndef NDEBUG
+  // The dump() functions should be very forgiving and should not crash even if
+  // sandboxir has not been built properly.
+  F.dump();
+  Arg0.dump();
+  Const0.dump();
+  OpaqueI.dump();
+#endif
+}
+
+TEST_F(SandboxIRTest, Function) {
+  parseIR(C, R"IR(
+define void @foo(i32 %arg0, i32 %arg1) {
+bb0:
+  br label %bb1
+bb1:
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  llvm::Argument *LLVMArg0 = LLVMF->getArg(0);
+  llvm::Argument *LLVMArg1 = LLVMF->getArg(1);
+
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+
+  // Check F arguments
+  EXPECT_EQ(F->arg_size(), 2u);
+  EXPECT_FALSE(F->arg_empty());
+  EXPECT_EQ(F->getArg(0), Ctx.getValue(LLVMArg0));
+  EXPECT_EQ(F->getArg(1), Ctx.getValue(LLVMArg1));
+
+  // Check F.begin(), F.end(), Function::iterator
+  llvm::BasicBlock *LLVMBB = &*LLVMF->begin();
+  for (sandboxir::BasicBlock &BB : *F) {
+    EXPECT_EQ(&BB, Ctx.getValue(LLVMBB));
+    LLVMBB = LLVMBB->getNextNode();
+  }
+
+#ifndef NDEBUG
+  {
+    // Check F.dumpNameAndArgs()
+    std::string Buff;
+    raw_string_ostream BS(Buff);
+    F->dumpNameAndArgs(BS);
+    EXPECT_EQ(Buff, "void @foo(i32 %arg0, i32 %arg1)");
+  }
+  {
+    // Check F.dump()
+    std::string Buff;
+    raw_string_ostream BS(Buff);
+    BS << "\n";
+    F->dump(BS);
+    EXPECT_EQ(Buff, R"IR(
+void @foo(i32 %arg0, i32 %arg1) {
+bb0:
+  br label %bb1 ; SB3. (Opaque)
+
+bb1:
+  ret void ; SB5. (Opaque)
+}
+)IR");
+  }
+#endif // NDEBUG
+}
+
+TEST_F(SandboxIRTest, BasicBlock) {
+  parseIR(C, R"IR(
+define void @foo(i32 %v1) {
+bb0:
+  br label %bb1
+bb1:
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  llvm::BasicBlock *LLVMBB0 = getBasicBlockByName(*LLVMF, "bb0");
+  llvm::BasicBlock *LLVMBB1 = getBasicBlockByName(*LLVMF, "bb1");
+
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto &BB0 = cast<sandboxir::BasicBlock>(*Ctx.getValue(LLVMBB0));
+  auto &BB1 = cast<sandboxir::BasicBlock>(*Ctx.getValue(LLVMBB1));
+
+  // Check BB::classof()
+  EXPECT_TRUE(isa<sandboxir::Value>(BB0));
+  EXPECT_FALSE(isa<sandboxir::User>(BB0));
+  EXPECT_FALSE(isa<sandboxir::Instruction>(BB0));
+  EXPECT_FALSE(isa<sandboxir::Constant>(BB0));
+  EXPECT_FALSE(isa<sandboxir::Argument>(BB0));
+
+  // Check BB.getParent()
+  EXPECT_EQ(BB0.getParent(), F);
+  EXPECT_EQ(BB1.getParent(), F);
+
+  // Check BBIterator, BB.begin(), BB.end().
+  llvm::Instruction *LLVMI = &*LLVMBB0->begin();
+  for (sandboxir::Instruction &I : BB0) {
+    EXPECT_EQ(&I, Ctx.getValue(LLVMI));
+    LLVMI = LLVMI->getNextNode();
+  }
+  LLVMI = &*LLVMBB1->begin();
+  for (sandboxir::Instruction &I : BB1) {
+    EXPECT_EQ(&I, Ctx.getValue(LLVMI));
+    LLVMI = LLVMI->getNextNode();
+  }
+
+  // Check BB.getTerminator()
+  EXPECT_EQ(BB0.getTerminator(), Ctx.getValue(LLVMBB0->getTerminator()));
+  EXPECT_EQ(BB1.getTerminator(), Ctx.getValue(LLVMBB1->getTerminator()));
+
+  // Check BB.rbegin(), BB.rend()
+  EXPECT_EQ(&*BB0.rbegin(), BB0.getTerminator());
+  EXPECT_EQ(&*std::prev(BB0.rend()), &*BB0.begin());
+
+#ifndef NDEBUG
+  {
+    // Check BB.dump()
+    std::string Buff;
+    raw_string_ostream BS(Buff);
+    BS << "\n";
+    BB0.dump(BS);
+    EXPECT_EQ(Buff, R"IR(
+bb0:
+  br label %bb1 ; SB2. (Opaque)
+)IR");
+  }
+#endif // NDEBUG
 }
