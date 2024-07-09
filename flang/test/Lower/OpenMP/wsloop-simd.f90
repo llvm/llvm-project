@@ -13,7 +13,7 @@ subroutine do_simd_aligned(A)
   ! CHECK-SAME: {
   ! CHECK-NEXT: omp.simd
   ! CHECK-SAME: aligned({{.*}})
-  !$omp do simd aligned(A)
+  !$omp do simd aligned(A:256)
     do index_ = 1, 10
       call c_test_call(A)
     end do
