@@ -4099,7 +4099,10 @@ BoUpSLP::~BoUpSLP() {
   SmallVector<WeakTrackingVH> DeadInsts;
   for (auto *I : DeletedInstructions) {
     if (!I->getParent()) {
+      // Temporarily insert instruction back to erase them from parent and
+      // memory later.
       if (isa<PHINode>(I))
+        // Phi nodes must be the very first instructions in the block.
         I->insertBefore(F->getEntryBlock(),
                         F->getEntryBlock().getFirstNonPHIIt());
       else
