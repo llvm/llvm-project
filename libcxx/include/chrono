@@ -789,6 +789,10 @@ strong_ordering operator<=>(const time_zone& x, const time_zone& y) noexcept;   
 // [time.zone.zonedtraits], class template zoned_traits
 template<class T> struct zoned_traits;                                           // C++20
 
+// [time.zone.zonedtime], class template zoned_time
+template<class Duration, class TimeZonePtr = const time_zone*>                   // C++20
+class zoned_time;
+
 // [time.zone.leap], leap second support
 class leap_second {                                                              // C++20
 public:
