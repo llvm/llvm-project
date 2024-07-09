@@ -16,7 +16,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <unistd.h> // For off_t.
+#include <stdio.h>
 
 namespace LIBC_NAMESPACE {
 
