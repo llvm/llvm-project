@@ -2203,6 +2203,11 @@ Error Object::removeSections(
           if (auto ToRelSec = RelSec->getSection())
             return !ToRemove(*ToRelSec);
         }
+        // Remove empty group sections.
+        if (Sec->Type == ELF::SHT_GROUP) {
+          auto GroupSec = cast<GroupSection>(Sec.get());
+          return !llvm::all_of(GroupSec->members(), ToRemove);
+        }
         return true;
       });
   if (SymbolTable != nullptr && ToRemove(*SymbolTable))
