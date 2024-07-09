@@ -233,10 +233,6 @@ protected:
 
   std::mutex WriterMutex;
 
-  /// Current offset in the section (updated as new entries are written).
-  /// Starts with 16 since the first 16 bytes are reserved for an empty range.
-  uint32_t SectionOffset{0};
-
   /// Offset of an empty address ranges list.
   static constexpr uint64_t EmptyRangesOffset{0};
 
