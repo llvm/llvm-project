@@ -612,11 +612,6 @@ public:
   }
 };
 
-template <class Emitter> class ExprScope final : public AutoScope<Emitter> {
-public:
-  ExprScope(Compiler<Emitter> *Ctx) : AutoScope<Emitter>(Ctx) {}
-};
-
 template <class Emitter> class ArrayIndexScope final {
 public:
   ArrayIndexScope(Compiler<Emitter> *Ctx, uint64_t Index) : Ctx(Ctx) {
