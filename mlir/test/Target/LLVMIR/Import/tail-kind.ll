@@ -7,7 +7,6 @@ declare void @tailkind()
 define void @call_tailkind() {
   ; CHECK: llvm.call musttail @tailkind()
   musttail call void @tailkind()
-
   ret void
 }
 
@@ -20,7 +19,6 @@ declare void @tailkind()
 define void @call_tailkind() {
   ; CHECK: llvm.call tail @tailkind()
   tail call void @tailkind()
-
   ret void
 }
 
@@ -33,6 +31,5 @@ declare void @tailkind()
 define void @call_tailkind() {
   ; CHECK: llvm.call notail @tailkind()
   notail call void @tailkind()
-
   ret void
 }
