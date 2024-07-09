@@ -211,8 +211,8 @@ namespace {
   private:
     bool ProcessBlock(MachineBasicBlock &MBB);
     void ProcessDbgInst(MachineInstr &MI);
-    bool isLegalBreakingCriticalEdge(MachineInstr &MI, MachineBasicBlock *From,
-                                     MachineBasicBlock *To, bool BreakPHIEdge);
+    bool isLegalToBreakCriticalEdge(MachineInstr &MI, MachineBasicBlock *From,
+                                    MachineBasicBlock *To, bool BreakPHIEdge);
     bool isWorthBreakingCriticalEdge(MachineInstr &MI, MachineBasicBlock *From,
                                      MachineBasicBlock *To,
                                      MachineBasicBlock *&DeferredFromBlock);
@@ -910,11 +910,11 @@ bool MachineSinking::isWorthBreakingCriticalEdge(
       continue;
     Register SrcReg = Reg.isVirtual() ? TRI->lookThruCopyLike(Reg, MRI) : Reg;
     auto Key = std::make_pair(SrcReg, To);
-    auto Res = CEMergeCandidates.insert(std::make_pair(Key, From));
+    auto Res = CEMergeCandidates.try_emplace(Key, From);
     // We wanted to sink the same register into the same block, consider it to
     // be profitable.
     if (!Res.second) {
-      // Return the source block that was previously holded off.
+      // Return the source block that was previously held off.
       DeferredFromBlock = Res.first->second;
       return true;
     }
@@ -954,10 +954,10 @@ bool MachineSinking::isWorthBreakingCriticalEdge(
   return false;
 }
 
-bool MachineSinking::isLegalBreakingCriticalEdge(MachineInstr &MI,
-                                                 MachineBasicBlock *FromBB,
-                                                 MachineBasicBlock *ToBB,
-                                                 bool BreakPHIEdge) {
+bool MachineSinking::isLegalToBreakCriticalEdge(MachineInstr &MI,
+                                                MachineBasicBlock *FromBB,
+                                                MachineBasicBlock *ToBB,
+                                                bool BreakPHIEdge) {
   // Avoid breaking back edge. From == To means backedge for single BB cycle.
   if (!SplitEdges || FromBB == ToBB)
     return false;
@@ -1029,8 +1029,8 @@ bool MachineSinking::PostponeSplitCriticalEdge(MachineInstr &MI,
     // of them are legal to split.
     if ((!DeferredFromBB ||
          ToSplit.count(std::make_pair(DeferredFromBB, ToBB)) ||
-         isLegalBreakingCriticalEdge(MI, DeferredFromBB, ToBB, BreakPHIEdge)) &&
-        isLegalBreakingCriticalEdge(MI, FromBB, ToBB, BreakPHIEdge)) {
+         isLegalToBreakCriticalEdge(MI, DeferredFromBB, ToBB, BreakPHIEdge)) &&
+        isLegalToBreakCriticalEdge(MI, FromBB, ToBB, BreakPHIEdge)) {
       ToSplit.insert(std::make_pair(FromBB, ToBB));
       if (DeferredFromBB)
         ToSplit.insert(std::make_pair(DeferredFromBB, ToBB));
