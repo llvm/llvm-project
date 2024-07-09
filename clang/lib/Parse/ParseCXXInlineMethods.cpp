@@ -519,10 +519,6 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
       FunctionToPush = cast<FunctionDecl>(LM.Method);
     Method = dyn_cast<CXXMethodDecl>(FunctionToPush);
 
-    Sema::CXXThisScopeRAII ThisScope(
-        Actions, Method ? Method->getParent() : nullptr,
-        Method ? Method->getMethodQualifiers() : Qualifiers{},
-        Method && getLangOpts().CPlusPlus11);
     // Push a function scope so that tryCaptureVariable() can properly visit
     // function scopes involving function parameters that are referenced inside
     // the noexcept specifier e.g. through a lambda expression.
@@ -530,7 +526,15 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
     // struct X {
     //   void ICE(int val) noexcept(noexcept([val]{}));
     // };
+    // Setup the CurScope to match the function DeclContext - we have such
+    // assumption in IsInFnTryBlockHandler().
+    ParseScope FnScope(this, Scope::FnScope);
     Sema::SynthesizedFunctionScope Scope(Actions, FunctionToPush);
+
+    Sema::CXXThisScopeRAII ThisScope(
+        Actions, Method ? Method->getParent() : nullptr,
+        Method ? Method->getMethodQualifiers() : Qualifiers{},
+        Method && getLangOpts().CPlusPlus11);
 
     // Parse the exception-specification.
     SourceRange SpecificationRange;

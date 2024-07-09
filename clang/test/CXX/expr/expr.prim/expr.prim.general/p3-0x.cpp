@@ -113,12 +113,8 @@ namespace Static {
     static auto g() -> decltype(this->m); // expected-error{{'this' cannot be used in a static member function declaration}}
 
     static int h();
-
-    // [expr.prim.id.general]p4:
-    // An id-expression that denotes a non-static data member... can only be used:
-    //  ...
-    //  (4.3) if that id-expression denotes a non-static data member and it appears in an unevaluated operand.
-    static int i() noexcept(noexcept(m + 2));
+    
+    static int i() noexcept(noexcept(m + 2)); // expected-error{{'this' cannot be implicitly used in a static member function declaration}}
   };
 
   auto X1::h() -> decltype(m) { return 0; } // expected-error{{'this' cannot be implicitly used in a static member function declaration}}
