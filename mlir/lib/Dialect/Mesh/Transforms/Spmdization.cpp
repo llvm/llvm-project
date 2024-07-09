@@ -494,7 +494,7 @@ reshardOn1DMesh(ImplicitLocOpBuilder &builder, MeshOp mesh,
       handlePartialAxesDuringResharding(builder, sourceSharding, targetSharding,
                                         sourceShard);
 
-  if (reducedSourceSharding == targetSharding) {
+  if (!force && reducedSourceSharding == targetSharding) {
     return reducedSourceShard;
   }
 
