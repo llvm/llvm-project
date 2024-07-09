@@ -721,7 +721,7 @@ bool ConstStructBuilder::Build(const InitListExpr *ILE, bool AllowOverwrite) {
 
     // Zero-sized fields are not emitted, but their initializers may still
     // prevent emission of this struct as a constant.
-    if (Field->isZeroSize(CGM.getContext())) {
+    if (isEmptyFieldForLayout(CGM.getContext(), Field)) {
       if (Init->HasSideEffects(CGM.getContext()))
         return false;
       continue;
@@ -849,7 +849,8 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
       continue;
 
     // Don't emit anonymous bitfields or zero-sized fields.
-    if (Field->isUnnamedBitField() || Field->isZeroSize(CGM.getContext()))
+    if (Field->isUnnamedBitField() ||
+        isEmptyFieldForLayout(CGM.getContext(), *Field))
       continue;
 
     // Emit the value of the initializer.
