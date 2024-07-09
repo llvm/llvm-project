@@ -187,13 +187,15 @@ bool AMDGPUTargetInfo::initFeatureMap(
     return false;
 
   // TODO: Should move this logic into TargetParser
-  std::string ErrorMsg;
-  bool IsCombinationError;
-  if (!insertWaveSizeFeature(CPU, getTriple(), Features, ErrorMsg,
-                             IsCombinationError)) {
-    Diags.Report(IsCombinationError ? diag::err_invalid_feature_combination
-                                    : diag::err_opt_not_valid_on_target)
-        << ErrorMsg;
+  auto HasError = insertWaveSizeFeature(CPU, getTriple(), Features);
+  switch (HasError.first) {
+  default:
+    break;
+  case llvm::AMDGPU::INVALID_FEATURE_COMBINATION:
+    Diags.Report(diag::err_invalid_feature_combination) << HasError.second;
+    return false;
+  case llvm::AMDGPU::UNSUPPORTED_TARGET_FEATURE:
+    Diags.Report(diag::err_opt_not_valid_on_target) << HasError.second;
     return false;
   }
 
