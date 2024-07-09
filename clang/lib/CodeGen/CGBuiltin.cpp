@@ -1094,11 +1094,7 @@ public:
 /// analysis.
 class ArrayBaseVisitor
     : public ConstStmtVisitor<ArrayBaseVisitor, const Expr *> {
-  ASTContext &Ctx;
-
 public:
-  ArrayBaseVisitor(ASTContext &Ctx) : Ctx(Ctx) {}
-
   const Expr *Visit(const Expr *E) {
     return ConstStmtVisitor<ArrayBaseVisitor, const Expr *>::Visit(E);
   }
@@ -1109,8 +1105,7 @@ public:
   const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) { return E; }
 
   const Expr *VisitCastExpr(const CastExpr *E) {
-    const Expr *NoopE = E->IgnoreParenNoopCasts(Ctx);
-    return NoopE == E ? nullptr : Visit(NoopE);
+    return Visit(E->getSubExpr());
   }
   const Expr *VisitUnaryAddrOf(const clang::UnaryOperator *E) {
     const Expr *SubExpr = E->getSubExpr()->IgnoreParenImpCasts();
@@ -1171,11 +1166,12 @@ CodeGenFunction::tryToCalculateSubObjectSize(const Expr *E, unsigned Type,
 
   // Return the sub-object of the base object, which is expected to be an array
   // or casts surrounding an array.
-  const Expr *ArrayBase = ArrayBaseVisitor(Ctx).Visit(
-      (isa<ArraySubscriptExpr>(BaseObj)
-           ? cast<ArraySubscriptExpr>(BaseObj)->getBase()
-           : BaseObj)
-          ->IgnoreParenImpCasts());
+  const Expr *ArrayBase = (isa<ArraySubscriptExpr>(BaseObj)
+                               ? cast<ArraySubscriptExpr>(BaseObj)->getBase()
+                               : BaseObj)
+                              ->IgnoreParenImpCasts();
+
+  ArrayBase = ArrayBaseVisitor().Visit(ArrayBase);
   if (!ArrayBase)
     return nullptr;
 
