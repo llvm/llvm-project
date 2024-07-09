@@ -501,7 +501,6 @@ size_t YAMLProfileReader::matchWithCallGraph(BinaryContext &BC) {
 
   // Maps binary functions to adjacent functions in the FCG.
   for (const BinaryFunction *CallerBF : BFs) {
-    // Add all call targets to the hash map.
     for (const BinaryBasicBlock &BB : CallerBF->blocks()) {
       for (const MCInst &Inst : BB) {
         if (!BC.MIB->isCall(Instr))
@@ -533,7 +532,8 @@ size_t YAMLProfileReader::matchWithCallGraph(BinaryContext &BC) {
     }
   }
 
-  // Create mapping from neighbor hash to BFs.
+  // Using the constructed adjacent function mapping, creates mapping from
+  // neighbor hash to BFs.
   std::unordered_map<uint64_t, std::vector<const BinaryFunction *>>
       NeighborHashToBFs;
   for (const BinaryFunction *BF : BFs) {
@@ -552,12 +552,12 @@ size_t YAMLProfileReader::matchWithCallGraph(BinaryContext &BC) {
         .push_back(BF);
   }
 
-  // TODO: change call anchor PR to have this representation - we need it here
+  // TODO: note, this will be introduced in the matching functions with calls
+  // as anchors pr
   DenseMap<uint32_t, const yaml::bolt::BinaryFunctionProfile * YamlBF>
       IdToYAMLBF;
-  // TODO: change call anchor PR to have this representation - we need it here
 
-  // Maps hashes to profiled functions.
+  // Maps YAML functions to adjacent functions in the profile FCG.
   std::unordered_map<const yaml::bolt::BinaryFunctionProfile * YamlBF,
                      FunctionHashes>
       YamlBFToHashes(BFs.size());
@@ -590,7 +590,7 @@ size_t YAMLProfileReader::matchWithCallGraph(BinaryContext &BC) {
     }
   }
 
-  // Matching YAMLBF with neighbor hashes.
+  // Matches YAMLBF to BFs with neighbor hashes.
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions) {
     if (YamlBF.Used)
       continue;
