@@ -30,9 +30,6 @@ set(out_files)
 function(copy_files_to_dst src_dir dst_dir file)
   set(src "${src_dir}/${file}")
   set(dst "${dst_dir}/${file}")
-  if (NOT EXISTS ${dst_dir})
-    file(MAKE_DIRECTORY ${dst_dir})
-  endif()
   add_custom_command(OUTPUT ${dst}
     DEPENDS ${src}
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
