@@ -1794,6 +1794,8 @@ bool Compiler<Emitter>::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
 
     if (!this->visitArrayElemInit(I, SubExpr))
       return false;
+    if (!BS.destroyLocals())
+      return false;
   }
   return true;
 }
@@ -3080,7 +3082,7 @@ bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
     return false;
   }
 
-  return true;
+  return BS.destroyLocals();
 }
 
 template <class Emitter> bool Compiler<Emitter>::discard(const Expr *E) {
@@ -4190,7 +4192,7 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
     this->emitLabel(LabelEnd);
   }
 
-  return true;
+  return IfScope.destroyLocals();
 }
 
 template <class Emitter>
@@ -4656,6 +4658,9 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
         if (!this->emitPopPtr(InitExpr))
           return false;
       }
+
+      if (!Scope.destroyLocals())
+        return false;
     }
   }
 
