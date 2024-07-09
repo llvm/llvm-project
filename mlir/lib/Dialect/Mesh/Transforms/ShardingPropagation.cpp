@@ -116,8 +116,7 @@ getOrderedPossibleShardingAttrs(ArrayRef<MeshSharding> mustShardings,
 
   std::function<void(size_t)> dfsCreateShardingAttrs = [&](size_t i) {
     if (i == mustShardings.size()) {
-      allShardingAttrs.push_back(
-          std::vector<MeshSharding>(curShardingAttrs));
+      allShardingAttrs.push_back(std::vector<MeshSharding>(curShardingAttrs));
       return;
     }
 
@@ -158,8 +157,7 @@ getOrderedPossibleShardingAttrs(ArrayRef<MeshSharding> mustShardings,
 // 3. All other cases. Resharding is required for operands/results with
 //   annotation targeting explicitly this operation.
 ReshardingRquirementKind getReshardingRquirementKind(
-    Operation *op,
-    const std::vector<MeshSharding> &operandAndResultShardings) {
+    Operation *op, const std::vector<MeshSharding> &operandAndResultShardings) {
   ReshardingRquirementKind res = ReshardingRquirementKind::NO_RESHARDING;
 
   size_t operandsCount = op->getOperands().size();
@@ -223,8 +221,7 @@ static FailureOr<ShardingOption> selectShardingOption(
   SmallVector<std::tuple<ShardingOption, ReshardingRquirementKind>>
       shardingOptionsAndReshardingRequirements;
 
-  for (ArrayRef<MeshSharding> resultShardings :
-       possibleResultShardingAttrs) {
+  for (ArrayRef<MeshSharding> resultShardings : possibleResultShardingAttrs) {
     for (ArrayRef<MeshSharding> operandShardings :
          possibleOperandShardingAttrs) {
       FailureOr<ShardingOption> shardingOption =
@@ -285,7 +282,8 @@ static FailureOr<ShardingOption> selectShardingOption(
 // a `mesh.shard` operation for all remaining operands and results that do not
 // have sharding annotations.
 static LogicalResult visitOp(Operation *op, OpBuilder &builder) {
-  if (op->hasTrait<OpTrait::IsTerminator>() || llvm::isa<mesh::ShardOp, mesh::ShardingOp>(op))
+  if (op->hasTrait<OpTrait::IsTerminator>() ||
+      llvm::isa<mesh::ShardOp, mesh::ShardingOp>(op))
     return success();
 
   ShardingInterface shardingOp = llvm::dyn_cast<ShardingInterface>(op);

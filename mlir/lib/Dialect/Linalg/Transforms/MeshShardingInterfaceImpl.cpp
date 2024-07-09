@@ -102,8 +102,7 @@ static ReductionKind getReductionKindOfLinalgOp(LinalgOp op) {
   return getReductionKind(reductionOp.value());
 }
 
-static MeshOp getMesh(Operation *op,
-                      ArrayRef<MeshSharding> operandShardings,
+static MeshOp getMesh(Operation *op, ArrayRef<MeshSharding> operandShardings,
                       ArrayRef<MeshSharding> resultShardings,
                       SymbolTableCollection &symbolTable) {
   for (MeshSharding sharding : operandShardings) {
@@ -199,8 +198,8 @@ static void createAllReduceForResultWithoutPartialSharding(
 
   Value spmdizedLinalgOpResult = spmdizationMap.lookup(unshardedLinalgOpResult);
   Value reducedValue = builder.create<mesh::AllReduceOp>(
-      spmdizedLinalgOpResult, resultSharding.getMesh(),
-      allReduceMeshAxes, reductionKind);
+      spmdizedLinalgOpResult, resultSharding.getMesh(), allReduceMeshAxes,
+      reductionKind);
   spmdizationMap.map(unshardedLinalgOpResult, reducedValue);
 }
 
