@@ -481,6 +481,13 @@ static ConstString GetDWARFMachOSegmentName() {
   return g_dwarf_section_name;
 }
 
+llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> &
+SymbolFileDWARF::GetForwardDeclCompilerTypeToDIE() {
+  if (SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile())
+    return debug_map_symfile->GetForwardDeclCompilerTypeToDIE();
+  return m_forward_decl_compiler_type_to_die;
+}
+
 UniqueDWARFASTTypeMap &SymbolFileDWARF::GetUniqueDWARFASTTypeMap() {
   SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
   if (debug_map_symfile)
@@ -1631,26 +1638,48 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
     return true;
   }
 
-  DWARFDIE dwarf_die = GetDIE(die_it->getSecond());
-  if (dwarf_die) {
-    // Once we start resolving this type, remove it from the forward
-    // declaration map in case anyone child members or other types require this
-    // type to get resolved. The type will get resolved when all of the calls
-    // to SymbolFileDWARF::ResolveClangOpaqueTypeDefinition are done.
-    GetForwardDeclCompilerTypeToDIE().erase(die_it);
-
-    Type *type = GetDIEToType().lookup(dwarf_die.GetDIE());
-
-    Log *log = GetLog(DWARFLog::DebugInfo | DWARFLog::TypeCompletion);
-    if (log)
-      GetObjectFile()->GetModule()->LogMessageVerboseBacktrace(
-          log, "{0:x8}: {1} ({2}) '{3}' resolving forward declaration...",
-          dwarf_die.GetID(), DW_TAG_value_to_name(dwarf_die.Tag()),
-          dwarf_die.Tag(), type->GetName().AsCString());
-    assert(compiler_type);
-    if (DWARFASTParser *dwarf_ast = GetDWARFParser(*dwarf_die.GetCU()))
-      return dwarf_ast->CompleteTypeFromDWARF(dwarf_die, type, compiler_type);
+  DWARFDIE decl_die = GetDIE(die_it->getSecond());
+  // Once we start resolving this type, remove it from the forward
+  // declaration map in case anyone's child members or other types require this
+  // type to get resolved.
+  GetForwardDeclCompilerTypeToDIE().erase(die_it);
+  DWARFDIE def_die = FindDefinitionDIE(decl_die);
+  if (!def_die) {
+    SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
+    if (debug_map_symfile) {
+      // We weren't able to find a full declaration in this DWARF, see
+      // if we have a declaration anywhere else...
+      def_die = debug_map_symfile->FindDefinitionDIE(decl_die);
+    }
   }
+  if (!def_die) {
+    // No definition found. Proceed with the declaration die. We can use it to
+    // create a forward-declared type.
+    def_die = decl_die;
+  }
+
+  Type *type = ResolveType(def_die);
+  if (!type)
+    return false;
+
+  if (def_die != decl_die) {
+    // After the call to FindDefinitionDIE, we have a new mapping from the old
+    // CompilerType to definition DIE. Remove it to mark it as completed.
+    // TODO: Maybe this requires a more robust way to mark the type is already
+    // completed.
+    GetForwardDeclCompilerTypeToDIE().erase(
+        compiler_type_no_qualifiers.GetOpaqueQualType());
+  }
+
+  Log *log = GetLog(DWARFLog::DebugInfo | DWARFLog::TypeCompletion);
+  if (log)
+    GetObjectFile()->GetModule()->LogMessageVerboseBacktrace(
+        log, "{0:x8}: {1} ({2}) '{3}' resolving forward declaration...",
+        def_die.GetID(), DW_TAG_value_to_name(def_die.Tag()), def_die.Tag(),
+        type->GetName().AsCString());
+  assert(compiler_type);
+  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*def_die.GetCU()))
+    return dwarf_ast->CompleteTypeFromDWARF(def_die, type, compiler_type);
   return false;
 }
 
@@ -3047,8 +3076,10 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
 
 DWARFDIE
 SymbolFileDWARF::FindDefinitionDIE(const DWARFDIE &die) {
-  if (!die.GetName())
+  if (!die || !die.GetName())
     return {};
+  if (!die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0))
+    return die;
 
   const dw_tag_t tag = die.Tag();
 
