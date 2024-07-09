@@ -916,7 +916,7 @@ public:
   void writeTo(uint8_t *buf) override;
 
   template <class RelTy>
-  void getNameRelocs(InputSection *sec, ArrayRef<RelTy> rels,
+  void getNameRelocs(InputSection *sec, Relocs<RelTy> rels,
                      llvm::DenseMap<uint32_t, uint32_t> &relocs);
 
 private:

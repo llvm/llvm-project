@@ -455,7 +455,8 @@ template <class ELFT>
 void EhFrameSection::addSectionAux(EhInputSection *sec) {
   if (!sec->isLive())
     return;
-  const RelsOrRelas<ELFT> rels = sec->template relsOrRelas<ELFT>();
+  const RelsOrRelas<ELFT> rels =
+      sec->template relsOrRelas<ELFT>(/*supportsCrel=*/false);
   if (rels.areRelocsRel())
     addRecords<ELFT>(sec, rels.rels);
   else
@@ -489,7 +490,8 @@ void EhFrameSection::iterateFDEWithLSDA(
   DenseSet<size_t> ciesWithLSDA;
   for (EhInputSection *sec : sections) {
     ciesWithLSDA.clear();
-    const RelsOrRelas<ELFT> rels = sec->template relsOrRelas<ELFT>();
+    const RelsOrRelas<ELFT> rels =
+        sec->template relsOrRelas<ELFT>(/*supportsCrel=*/false);
     if (rels.areRelocsRel())
       iterateFDEWithLSDAAux<ELFT>(*sec, rels.rels, ciesWithLSDA, fn);
     else
@@ -3203,7 +3205,7 @@ template <class ELFT> DebugNamesSection<ELFT>::DebugNamesSection() {
 template <class ELFT>
 template <class RelTy>
 void DebugNamesSection<ELFT>::getNameRelocs(
-    InputSection *sec, ArrayRef<RelTy> rels,
+    InputSection *sec, Relocs<RelTy> rels,
     DenseMap<uint32_t, uint32_t> &relocs) {
   for (const RelTy &rel : rels) {
     Symbol &sym = sec->file->getRelocTargetSym(rel);
@@ -3217,7 +3219,9 @@ template <class ELFT> void DebugNamesSection<ELFT>::finalizeContents() {
   parallelFor(0, numChunks, [&](size_t i) {
     InputSection *sec = inputSections[i];
     auto rels = sec->template relsOrRelas<ELFT>();
-    if (rels.areRelocsRel())
+    if (rels.areRelocsCrel())
+      getNameRelocs(sec, rels.crels, relocs.get()[i]);
+    else if (rels.areRelocsRel())
       getNameRelocs(sec, rels.rels, relocs.get()[i]);
     else
       getNameRelocs(sec, rels.relas, relocs.get()[i]);

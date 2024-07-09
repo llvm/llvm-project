@@ -401,10 +401,19 @@ template <class ELFT> static void markUsedLocalSymbols() {
       InputSection *isec = dyn_cast_or_null<InputSection>(s);
       if (!isec)
         continue;
-      if (isec->type == SHT_REL)
+      if (isec->type == SHT_REL) {
         markUsedLocalSymbolsImpl(f, isec->getDataAs<typename ELFT::Rel>());
-      else if (isec->type == SHT_RELA)
+      } else if (isec->type == SHT_RELA) {
         markUsedLocalSymbolsImpl(f, isec->getDataAs<typename ELFT::Rela>());
+      } else if (isec->type == SHT_CREL) {
+        // The is64=true variant also works with ELF32 since only the r_symidx
+        // member is used.
+        for (Elf_Crel_Impl<true> r : RelocsCrel<true>(isec->content_)) {
+          Symbol &sym = file->getSymbol(r.r_symidx);
+          if (sym.isLocal())
+            sym.used = true;
+        }
+      }
     }
   }
 }
