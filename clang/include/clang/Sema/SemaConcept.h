@@ -262,6 +262,12 @@ template <typename AtomicSubsumptionEvaluator>
 bool FoldExpandedConstraint::subsumes(
     const FoldExpandedConstraint &Other,
     const AtomicSubsumptionEvaluator &E) const {
+
+  // [C++26] [temp.constr.order]
+  // a fold expanded constraint A subsumes another fold expanded constraint B if
+  // they are compatible for subsumption, have the same fold-operator, and the
+  // constraint of A subsumes that of B
+
   if (Kind != Other.Kind || !AreCompatibleForSubsumption(*this, Other))
     return false;
 

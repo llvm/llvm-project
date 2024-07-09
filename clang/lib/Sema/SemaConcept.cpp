@@ -1576,6 +1576,8 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E) {
              (FE->getOperator() == BinaryOperatorKind::BO_LAnd ||
               FE->getOperator() == BinaryOperatorKind::BO_LOr)) {
 
+    // Normalize fold expressions in C++26.
+
     FoldExpandedConstraint::FoldOperatorKind Kind =
         FE->getOperator() == BinaryOperatorKind::BO_LAnd
             ? FoldExpandedConstraint::FoldOperatorKind::And
@@ -1609,6 +1611,11 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E) {
 
 bool FoldExpandedConstraint::AreCompatibleForSubsumption(
     const FoldExpandedConstraint &A, const FoldExpandedConstraint &B) {
+
+  // [C++26] [temp.constr.fold]
+  // Two fold expanded constraints are compatible for subsumption
+  // if their respective constraints both contain an equivalent unexpanded pack.
+
   llvm::SmallVector<UnexpandedParameterPack> APacks, BPacks;
   Sema::collectUnexpandedParameterPacks(const_cast<Expr *>(A.Pattern), APacks);
   Sema::collectUnexpandedParameterPacks(const_cast<Expr *>(B.Pattern), BPacks);
