@@ -121,11 +121,9 @@ public:
   StringRef FunctionBytes;
 
 private:
-  ExecutableFunction(std::unique_ptr<LLVMContext> Ctx,
-                     std::unique_ptr<orc::LLJIT> EJIT, StringRef FunctionBytes);
+  ExecutableFunction(std::unique_ptr<LLVMContext> Ctx, StringRef FunctionBytes);
 
   std::unique_ptr<LLVMContext> Context;
-  std::unique_ptr<orc::LLJIT> ExecJIT;
 };
 
 // Copies benchmark function's bytes from benchmark object.

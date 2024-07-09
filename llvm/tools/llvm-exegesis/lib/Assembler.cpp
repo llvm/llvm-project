@@ -401,13 +401,12 @@ Expected<ExecutableFunction> ExecutableFunction::create(
 
   StringRef FBytes =
       StringRef(reinterpret_cast<const char *>(FunctionAddress), CodeSize);
-  return ExecutableFunction(std::move(Ctx), std::move(EJIT), FBytes);
+  return ExecutableFunction(std::move(Ctx), FBytes);
 }
 
 ExecutableFunction::ExecutableFunction(std::unique_ptr<LLVMContext> Ctx,
-                                       std::unique_ptr<orc::LLJIT> EJIT,
                                        StringRef FB)
-    : FunctionBytes(FB), Context(std::move(Ctx)), ExecJIT(std::move(EJIT)) {}
+    : FunctionBytes(FB), Context(std::move(Ctx)) {}
 
 Error getBenchmarkFunctionBytes(const StringRef InputData,
                                 std::vector<uint8_t> &Bytes) {
