@@ -1850,6 +1850,10 @@ multiclass VOP3Only_Realtriple_t16_gfx12_gfx13<bits<10> gfx12Op, bits<10> op = g
 multiclass VOP3Only_Real_Base_gfx1210<bits<10> op> :
   VOP3_Real_Base<GFX1210Gen, op, NAME, 1/*IsSingle*/>;
 
+multiclass VOP3Only_Real_Base_gfx1210_gfx13<bits<10> gfx1210Op, bits<10> op> :
+  VOP3Only_Real_Base_gfx1210<gfx1210Op>,
+  VOP3_Real_Base<GFX13Gen, op, NAME, 1/*IsSingle*/>;
+
 multiclass VOP3Only_Realtriple_gfx1210<bits<10> op, bit isSingle = 0> :
   VOP3_Realtriple<GFX1210Gen, op, isSingle>;
 

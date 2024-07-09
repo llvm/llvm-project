@@ -2011,6 +2011,10 @@ defm V_AND_B16_t16         : VOP3Only_Realtriple_t16_gfx11_gfx12_gfx13<0x362, 0x
 defm V_OR_B16_t16          : VOP3Only_Realtriple_t16_gfx11_gfx12_gfx13<0x363, 0x325, "v_or_b16">;
 defm V_XOR_B16_t16         : VOP3Only_Realtriple_t16_gfx11_gfx12_gfx13<0x364, 0x370, "v_xor_b16">;
 
+def : AMDGPUMnemonicAlias<"v_perm_pk4_b8_u8", "v_perm_b32"> {
+  let AssemblerPredicate = isGFX13Plus;
+}
+
 // These instructions differ from GFX12 variant by supporting DPP:
 defm V_FMA_F64                       : VOP3Only_Realtriple_gfx1210_gfx13<0x214>;
 defm V_DIV_FIXUP_F64                 : VOP3Only_Realtriple_gfx1210<0x228>;
@@ -2023,9 +2027,9 @@ defm V_MUL_HI_I32                    : VOP3Only_Realtriple_gfx1210<0x32e>;
 defm V_LSHRREV_B64                   : VOP3Only_Realtriple_gfx1210_gfx13<0x33d, 0x300>;
 defm V_ASHRREV_I64                   : VOP3Only_Realtriple_gfx1210_gfx13<0x33e, 0x301>;
 
-defm V_PERM_PK16_B4_U4               : VOP3Only_Real_Base_gfx1210<0x23f>;
-defm V_PERM_PK16_B6_U4               : VOP3Only_Real_Base_gfx1210<0x242>;
-defm V_PERM_PK16_B8_U4               : VOP3Only_Real_Base_gfx1210<0x243>;
+defm V_PERM_PK16_B4_U4               : VOP3Only_Real_Base_gfx1210_gfx13<0x23f, 0x341>;
+defm V_PERM_PK16_B6_U4               : VOP3Only_Real_Base_gfx1210_gfx13<0x242, 0x342>;
+defm V_PERM_PK16_B8_U4               : VOP3Only_Real_Base_gfx1210_gfx13<0x243, 0x343>;
 defm V_LSHL_ADD_U64                  : VOP3Only_Realtriple_gfx1210_DPP8_gfx13<0x252>;
 defm V_ASHR_PK_I8_I32                : VOP3Only_Realtriple_gfx1210_gfx13<0x290>;
 defm V_ASHR_PK_U8_I32                : VOP3Only_Realtriple_gfx1210_gfx13<0x291>;

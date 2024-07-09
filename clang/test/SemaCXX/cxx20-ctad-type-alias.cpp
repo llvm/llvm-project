@@ -266,7 +266,7 @@ template <typename U>
 using Bar = Foo<U>; // expected-note {{could not match 'Foo<type-parameter-0-0>' against 'int'}} \
                     // expected-note {{implicit deduction guide declared as 'template <typename U> requires __is_deducible(test18::Bar, Foo<type-parameter-0-0>) Bar(Foo<type-parameter-0-0>) -> Foo<type-parameter-0-0>'}} \
                     // expected-note {{candidate template ignored: constraints not satisfied}} \
-                    // expected-note {{implicit deduction guide declared as 'template <typename T> requires False<T> && __is_deducible(test18::Bar, Foo<int>) Bar(type-parameter-0-0) -> Foo<int>'}} \
+                    // expected-note {{implicit deduction guide declared as 'template <typename T> requires False<type-parameter-0-0> && __is_deducible(test18::Bar, Foo<int>) Bar(type-parameter-0-0) -> Foo<int>'}} \
                     // expected-note {{candidate function template not viable}} \
                     // expected-note {{implicit deduction guide declared as 'template <typename U> requires __is_deducible(test18::Bar, Foo<type-parameter-0-0>) Bar() -> Foo<type-parameter-0-0>'}}
 
@@ -414,4 +414,29 @@ struct A1 {
 template <typename U>
 using AFoo = A1<int>::A2<int>::Foo<U>;
 AFoo case3(1);
+
+// Case4: crashes on the constexpr evaluator due to the mixed-up index for the
+// template parameters `V`.
+template<class T, typename T2>
+struct Case4 {
+  template<class V> requires C<V>
+  Case4(V, T);
+};
+
+template<class T2>
+using ACase4 = Case4<T2, T2>;
+ACase4 case4{0, 1};
+
 } // namespace test24
+
+namespace GH92212 {
+template<typename T, typename...Us>
+struct A{
+  template<typename V> requires __is_same(V, int)
+  A(V);
+};
+
+template<typename...TS>
+using AA = A<int, TS...>;
+AA a{0};
+}
