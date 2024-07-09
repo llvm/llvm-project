@@ -52,7 +52,7 @@ class WebAssemblyRegStackify final : public MachineFunctionPass {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addRequired<LiveIntervals>();
     AU.addPreserved<MachineBlockFrequencyInfo>();
-    AU.addPreserved<SlotIndexes>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervals>();
     AU.addPreservedID(LiveVariablesID);
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
