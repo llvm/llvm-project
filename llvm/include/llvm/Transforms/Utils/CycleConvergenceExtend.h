@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_SCALAR_CYCLECONVERGENCEEXTEND_H
-#define LLVM_TRANSFORMS_SCALAR_CYCLECONVERGENCEEXTEND_H
+#ifndef LLVM_TRANSFORMS_UTILS_CYCLECONVERGENCEEXTEND_H
+#define LLVM_TRANSFORMS_UTILS_CYCLECONVERGENCEEXTEND_H
 
 #include "llvm/IR/PassManager.h"
 
@@ -25,4 +25,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_TRANSFORMS_SCALAR_CYCLECONVERGENCEEXTEND_H
+#endif // LLVM_TRANSFORMS_UTILS_CYCLECONVERGENCEEXTEND_H

@@ -6,6 +6,19 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+// NOTE: It is not clear if the effects of this transform can survive other
+// control flow transforms such as jump-threading. Whether or not every such
+// transform can preserve this CFG, and even if it can, whether that transform
+// should preserve this CFG has not been determined yet.
+//
+// For now, this transform is meant to be used as late as possible, when
+// preparing the CFG for code generation on targets that support convergence
+// control tokens, such as AMDGPU. It is possible that the transform may
+// eventually be merged into the structurizer or similar passes.
+//
+// But notably, this transform serves as a good WYSIWYM demonstration of
+// convergence control tokens.
+// ===----------------------------------------------------------------------===//
 //
 // This file implements a pass to extend cycles: if a token T defined in a cycle
 // L is used at U outside of L, then the entire cycle nest is modified so that
@@ -77,11 +90,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Scalar/CycleConvergenceExtend.h"
+#include "llvm/Transforms/Utils/CycleConvergenceExtend.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -110,11 +125,13 @@ static void updateTokenDefs(TokenDefsMap &TokenDefs, BasicBlock &BB) {
 }
 
 static bool splitForExtension(CycleInfo &CI, Cycle *DefCycle, BasicBlock *BB,
-                              CallBase *TokenUse, TokenDefsMap &TokenDefs) {
+                              CallBase *TokenUse, TokenDefsMap &TokenDefs,
+                              DomTreeUpdater &DTU) {
   if (DefCycle->contains(BB))
     return false;
   BasicBlock *NewBB = BB->splitBasicBlockBefore(TokenUse->getNextNode(),
                                                 BB->getName() + ".ext");
+  DTU.getDomTree().splitBlock(NewBB);
   if (Cycle *BBCycle = CI.getCycle(BB))
     CI.addBlockToCycle(NewBB, BBCycle);
   updateTokenDefs(TokenDefs, *BB);
@@ -124,13 +141,13 @@ static bool splitForExtension(CycleInfo &CI, Cycle *DefCycle, BasicBlock *BB,
 
 static void locateExtensions(CycleInfo &CI, Cycle *DefCycle, BasicBlock *BB,
                              TokenDefsMap &TokenDefs,
-                             TokenDefUsesMap &TokenDefUses,
+                             TokenDefUsesMap &TokenDefUses, DomTreeUpdater &DTU,
                              SmallVectorImpl<CallBase *> &ExtPoints) {
   if (auto Iter = TokenDefs.find(BB); Iter != TokenDefs.end()) {
     for (CallBase *Def : Iter->second) {
       for (CallBase *TokenUse : TokenDefUses[Def]) {
         BasicBlock *BB = TokenUse->getParent();
-        if (splitForExtension(CI, DefCycle, BB, TokenUse, TokenDefs)) {
+        if (splitForExtension(CI, DefCycle, BB, TokenUse, TokenDefs, DTU)) {
           ExtPoints.push_back(TokenUse);
         }
       }
@@ -140,10 +157,10 @@ static void locateExtensions(CycleInfo &CI, Cycle *DefCycle, BasicBlock *BB,
 
 static void initialize(ExtensionMap &ExtBorder, TokenDefsMap &TokenDefs,
                        TokenDefUsesMap &TokenDefUses, Function &F,
-                       CycleInfo &CI) {
-  for (BasicBlock &BB : F) {
-    updateTokenDefs(TokenDefs, BB);
-    for (Instruction &I : BB) {
+                       CycleInfo &CI, DomTreeUpdater &DTU) {
+  for (BasicBlock *BB : depth_first(&F)) {
+    updateTokenDefs(TokenDefs, *BB);
+    for (Instruction &I : *BB) {
       if (auto *CB = dyn_cast<CallBase>(&I)) {
         if (auto *TokenDef =
                 cast_or_null<CallBase>(CB->getConvergenceControlToken())) {
@@ -153,10 +170,11 @@ static void initialize(ExtensionMap &ExtBorder, TokenDefsMap &TokenDefs,
     }
   }
 
-  for (BasicBlock &BB : F) {
-    if (Cycle *DefCycle = CI.getCycle(&BB)) {
+  for (BasicBlock *BB : depth_first(&F)) {
+    if (Cycle *DefCycle = CI.getCycle(BB)) {
       SmallVector<CallBase *> ExtPoints;
-      locateExtensions(CI, DefCycle, &BB, TokenDefs, TokenDefUses, ExtPoints);
+      locateExtensions(CI, DefCycle, BB, TokenDefs, TokenDefUses, DTU,
+                       ExtPoints);
       if (!ExtPoints.empty()) {
         auto Success = ExtBorder.try_emplace(DefCycle, std::move(ExtPoints));
         (void)Success;
@@ -186,7 +204,7 @@ PreservedAnalyses CycleConvergenceExtendPass::run(Function &F,
   TokenDefsMap TokenDefs;
   TokenDefUsesMap TokenDefUses;
 
-  initialize(ExtBorder, TokenDefs, TokenDefUses, F, CI);
+  initialize(ExtBorder, TokenDefs, TokenDefUses, F, CI, DTU);
   if (ExtBorder.empty())
     return PreservedAnalyses::all();
 
@@ -206,12 +224,16 @@ PreservedAnalyses CycleConvergenceExtendPass::run(Function &F,
                         << "\n  for token used:  " << *ExtPoint << "\n");
       CI.extendCycle(DefCycle, ExtPoint->getParent(), &TransferredBlocks);
       for (BasicBlock *BB : TransferredBlocks) {
-        locateExtensions(CI, DefCycle, BB, TokenDefs, TokenDefUses, ExtList);
+        locateExtensions(CI, DefCycle, BB, TokenDefs, TokenDefUses, DTU,
+                         ExtList);
       }
     };
 
     LLVM_DEBUG(dbgs() << "After extension:\n" << CI.print(DefCycle) << "\n");
 
+    // Now that we have absorbed the convergence extensions into the cycle, we
+    // need to introduce dummy backedges so that the cycle remains strongly
+    // connected.
     BBSetVector Incoming, Outgoing;
     SmallVector<BasicBlock *> GuardBlocks;
 
@@ -242,8 +264,20 @@ PreservedAnalyses CycleConvergenceExtendPass::run(Function &F,
     CreateControlFlowHub(&DTU, GuardBlocks, Incoming, Outgoing, "Extend");
     for (BasicBlock *BB : GuardBlocks)
       CI.addBlockToCycle(BB, DefCycle);
+    DTU.flush();
   }
 
+#if !defined(NDEBUG)
+#if defined(EXPENSIVE_CHECKS)
+  assert(DT.verify(DominatorTree::VerificationLevel::Full));
+#else
+  assert(DT.verify(DominatorTree::VerificationLevel::Fast));
+#endif // EXPENSIVE_CHECKS
+  CI.validateTree();
+#endif // NDEBUG
+
   PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<CycleAnalysis>();
   return PA;
 }

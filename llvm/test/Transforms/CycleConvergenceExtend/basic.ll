@@ -157,23 +157,23 @@ define void @nested_loop_extension(i1 %flag1, i1 %flag2) {
 ; CHECK-NEXT:    br label %[[B1:.*]]
 ; CHECK:       [[B1]]:
 ; CHECK-NEXT:    [[B:%.*]] = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token [[A]]) ]
-; CHECK-NEXT:    br i1 [[FLAG1]], label %[[EXTEND_GUARD:.*]], label %[[C:.*]]
+; CHECK-NEXT:    br i1 [[FLAG1]], label %[[EXTEND_GUARD1:.*]], label %[[C:.*]]
 ; CHECK:       [[C]]:
-; CHECK-NEXT:    br i1 [[FLAG2]], label %[[EXTEND_GUARD1:.*]], label %[[D_EXT_EXT:.*]]
+; CHECK-NEXT:    br i1 [[FLAG2]], label %[[EXTEND_GUARD:.*]], label %[[D_EXT_EXT:.*]]
 ; CHECK:       [[D_EXT_EXT]]:
 ; CHECK-NEXT:    call void @convergent.op(i32 0) [ "convergencectrl"(token [[B]]) ]
-; CHECK-NEXT:    br label %[[EXTEND_GUARD]]
+; CHECK-NEXT:    br label %[[EXTEND_GUARD1]]
 ; CHECK:       [[D_EXT:.*]]:
 ; CHECK-NEXT:    call void @convergent.op(i32 0) [ "convergencectrl"(token [[A]]) ]
-; CHECK-NEXT:    br label %[[EXTEND_GUARD1]]
+; CHECK-NEXT:    br label %[[EXTEND_GUARD]]
 ; CHECK:       [[D:.*]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[EXTEND_GUARD]]:
-; CHECK-NEXT:    [[GUARD_D_EXT:%.*]] = phi i1 [ true, %[[D_EXT_EXT]] ], [ false, %[[B1]] ]
-; CHECK-NEXT:    br i1 [[GUARD_D_EXT]], label %[[D_EXT]], label %[[B1]]
-; CHECK:       [[EXTEND_GUARD1]]:
 ; CHECK-NEXT:    [[GUARD_D:%.*]] = phi i1 [ true, %[[D_EXT]] ], [ false, %[[C]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_D]], label %[[D]], label %[[A1]]
+; CHECK:       [[EXTEND_GUARD1]]:
+; CHECK-NEXT:    [[GUARD_D_EXT:%.*]] = phi i1 [ true, %[[D_EXT_EXT]] ], [ false, %[[B1]] ]
+; CHECK-NEXT:    br i1 [[GUARD_D_EXT]], label %[[D_EXT]], label %[[B1]]
 ;
 entry:
   %anchor = call token @llvm.experimental.convergence.anchor()

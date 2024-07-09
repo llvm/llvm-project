@@ -7,7 +7,6 @@ add_llvm_component_library(LLVMScalarOpts
   ConstantHoisting.cpp
   ConstraintElimination.cpp
   CorrelatedValuePropagation.cpp
-  CycleConvergenceExtend.cpp
   DCE.cpp
   DeadStoreElimination.cpp
   DFAJumpThreading.cpp
