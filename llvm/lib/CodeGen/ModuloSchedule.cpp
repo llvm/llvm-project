@@ -2763,7 +2763,7 @@ public:
   void runOnLoop(MachineFunction &MF, MachineLoop &L);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addRequired<LiveIntervals>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -2774,13 +2774,13 @@ char ModuloScheduleTest::ID = 0;
 
 INITIALIZE_PASS_BEGIN(ModuloScheduleTest, "modulo-schedule-test",
                       "Modulo Schedule test pass", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
 INITIALIZE_PASS_END(ModuloScheduleTest, "modulo-schedule-test",
                     "Modulo Schedule test pass", false, false)
 
 bool ModuloScheduleTest::runOnMachineFunction(MachineFunction &MF) {
-  MachineLoopInfo &MLI = getAnalysis<MachineLoopInfo>();
+  MachineLoopInfo &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   for (auto *L : MLI) {
     if (L->getTopBlock() != L->getBottomBlock())
       continue;

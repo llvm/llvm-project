@@ -555,8 +555,8 @@ void RegAllocPBQP::getAnalysisUsage(AnalysisUsage &au) const {
   au.addPreserved<LiveStacks>();
   au.addRequired<MachineBlockFrequencyInfo>();
   au.addPreserved<MachineBlockFrequencyInfo>();
-  au.addRequired<MachineLoopInfo>();
-  au.addPreserved<MachineLoopInfo>();
+  au.addRequired<MachineLoopInfoWrapperPass>();
+  au.addPreserved<MachineLoopInfoWrapperPass>();
   au.addRequired<MachineDominatorTreeWrapperPass>();
   au.addPreserved<MachineDominatorTreeWrapperPass>();
   au.addRequired<VirtRegMap>();
@@ -797,15 +797,16 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
 
   VirtRegMap &VRM = getAnalysis<VirtRegMap>();
 
-  PBQPVirtRegAuxInfo VRAI(MF, LIS, VRM, getAnalysis<MachineLoopInfo>(), MBFI);
+  PBQPVirtRegAuxInfo VRAI(
+      MF, LIS, VRM, getAnalysis<MachineLoopInfoWrapperPass>().getLI(), MBFI);
   VRAI.calculateSpillWeightsAndHints();
 
   // FIXME: we create DefaultVRAI here to match existing behavior pre-passing
   // the VRAI through the spiller to the live range editor. However, it probably
   // makes more sense to pass the PBQP VRAI. The existing behavior had
   // LiveRangeEdit make its own VirtRegAuxInfo object.
-  VirtRegAuxInfo DefaultVRAI(MF, LIS, VRM, getAnalysis<MachineLoopInfo>(),
-                             MBFI);
+  VirtRegAuxInfo DefaultVRAI(
+      MF, LIS, VRM, getAnalysis<MachineLoopInfoWrapperPass>().getLI(), MBFI);
   std::unique_ptr<Spiller> VRegSpiller(
       createInlineSpiller(*this, MF, VRM, DefaultVRAI));
 

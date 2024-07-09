@@ -1340,20 +1340,21 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
           P.getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>())
     MDTWrapper->getDomTree().recordSplitCriticalEdge(this, Succ, NMBB);
 
-  if (MachineLoopInfo *MLI = P.getAnalysisIfAvailable<MachineLoopInfo>())
+  auto *MLIWrapper = P.getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
+  if (MachineLoopInfo *MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr)
     if (MachineLoop *TIL = MLI->getLoopFor(this)) {
       // If one or the other blocks were not in a loop, the new block is not
       // either, and thus LI doesn't need to be updated.
       if (MachineLoop *DestLoop = MLI->getLoopFor(Succ)) {
         if (TIL == DestLoop) {
           // Both in the same loop, the NMBB joins loop.
-          DestLoop->addBasicBlockToLoop(NMBB, MLI->getBase());
+          DestLoop->addBasicBlockToLoop(NMBB, *MLI);
         } else if (TIL->contains(DestLoop)) {
           // Edge from an outer loop to an inner loop.  Add to the outer loop.
-          TIL->addBasicBlockToLoop(NMBB, MLI->getBase());
+          TIL->addBasicBlockToLoop(NMBB, *MLI);
         } else if (DestLoop->contains(TIL)) {
           // Edge from an inner loop to an outer loop.  Add to the outer loop.
-          DestLoop->addBasicBlockToLoop(NMBB, MLI->getBase());
+          DestLoop->addBasicBlockToLoop(NMBB, *MLI);
         } else {
           // Edge from two loops with no containment relation.  Because these
           // are natural loops, we know that the destination block must be the
@@ -1362,7 +1363,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
           assert(DestLoop->getHeader() == Succ &&
                  "Should not create irreducible loops!");
           if (MachineLoop *P = DestLoop->getParentLoop())
-            P->addBasicBlockToLoop(NMBB, MLI->getBase());
+            P->addBasicBlockToLoop(NMBB, *MLI);
         }
       }
     }
