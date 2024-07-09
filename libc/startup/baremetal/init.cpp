@@ -9,14 +9,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
+namespace LIBC_NAMESPACE {
+
 extern "C" {
 extern uintptr_t __preinit_array_start[];
 extern uintptr_t __preinit_array_end[];
 extern uintptr_t __init_array_start[];
 extern uintptr_t __init_array_end[];
 }
-
-namespace LIBC_NAMESPACE {
 
 using InitCallback = void(void);
 
