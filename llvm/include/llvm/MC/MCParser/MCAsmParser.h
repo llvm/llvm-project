@@ -286,7 +286,7 @@ public:
 
   /// Parse the current token as a string which may include escaped
   /// characters and return the string contents.
-  virtual bool parseEscapedString(std::string &Data) = 0;
+  virtual bool parseEscapedString(std::string &Data, bool WarnNewline) = 0;
 
   /// Parse an angle-bracket delimited string at the current position if one is
   /// present, returning the string contents.

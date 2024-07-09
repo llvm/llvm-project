@@ -675,7 +675,7 @@ private:
   bool parseDirectiveElseIf(SMLoc DirectiveLoc); // ".elseif"
   bool parseDirectiveElse(SMLoc DirectiveLoc); // ".else"
   bool parseDirectiveEndIf(SMLoc DirectiveLoc); // .endif
-  bool parseEscapedString(std::string &Data) override;
+  bool parseEscapedString(std::string &Data, bool WarnNewline = false) override;
   bool parseAngleBracketString(std::string &Data) override;
 
   const MCExpr *applyModifierToExpr(const MCExpr *E,
@@ -3025,7 +3025,7 @@ bool AsmParser::parseDirectiveSet(StringRef IDVal, AssignmentKind Kind) {
   return false;
 }
 
-bool AsmParser::parseEscapedString(std::string &Data) {
+bool AsmParser::parseEscapedString(std::string &Data, bool WarnNewline) {
   if (check(getTok().isNot(AsmToken::String), "expected string"))
     return true;
 
@@ -3033,6 +3033,12 @@ bool AsmParser::parseEscapedString(std::string &Data) {
   StringRef Str = getTok().getStringContents();
   for (unsigned i = 0, e = Str.size(); i != e; ++i) {
     if (Str[i] != '\\') {
+      if (Str[i] == '\n' && WarnNewline) {
+        SMLoc NewlineLoc =
+            SMLoc::getFromPointer(getTok().getLoc().getPointer() + i + 1);
+        if (Warning(NewlineLoc, "unterminated string; newline inserted"))
+          return true;
+      }
       Data += Str[i];
       continue;
     }
@@ -3127,17 +3133,8 @@ bool AsmParser::parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated) {
     // Only support spaces as separators for .ascii directive for now. See the
     // discusssion at https://reviews.llvm.org/D91460 for more details.
     do {
-      if (parseEscapedString(Data))
+      if (parseEscapedString(Data, /* WarnNewline */ true))
         return true;
-
-      // Warn about newline characters in parsed string like GAS.
-      size_t NewlinePos = -1;
-      size_t DataSize = Data.size();
-      const char *Start = getTok().getLoc().getPointer() - DataSize - 1;
-
-      while ((NewlinePos = Data.find('\n', NewlinePos + 1)) < DataSize)
-        Warning(SMLoc::getFromPointer(Start + NewlinePos),
-                "unterminated string; newline inserted");
 
       getStreamer().emitBytes(Data);
     } while (!ZeroTerminated && getTok().is(AsmToken::String));

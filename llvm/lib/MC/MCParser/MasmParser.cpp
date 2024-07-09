@@ -1029,7 +1029,7 @@ private:
                                bool CaseInsensitive);
   bool parseDirectiveElse(SMLoc DirectiveLoc);   // "else"
   bool parseDirectiveEndIf(SMLoc DirectiveLoc);  // "endif"
-  bool parseEscapedString(std::string &Data) override;
+  bool parseEscapedString(std::string &Data, bool WarnNewline = false) override;
   bool parseAngleBracketString(std::string &Data) override;
 
   // Macro-like directives
@@ -3509,7 +3509,7 @@ bool MasmParser::parseDirectiveEquate(StringRef IDVal, StringRef Name,
   return false;
 }
 
-bool MasmParser::parseEscapedString(std::string &Data) {
+bool MasmParser::parseEscapedString(std::string &Data, bool WarnNewline) {
   if (check(getTok().isNot(AsmToken::String), "expected string"))
     return true;
 

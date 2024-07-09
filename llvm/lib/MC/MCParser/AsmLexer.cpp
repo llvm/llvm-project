@@ -646,8 +646,6 @@ AsmToken AsmLexer::LexQuote() {
     return AsmToken(AsmToken::String, StringRef(TokStart, CurPtr - TokStart));
   }
 
-  // gas doesn't allow multiline string constants
-  // and emits a warning if a string constant contains newline character
   while (CurChar != '"') {
     if (CurChar == '\\') {
       // Allow \", etc.
