@@ -656,7 +656,10 @@ libc_support_library(
 
 libc_support_library(
     name = "__support_file_file",
-    srcs = ["src/__support/File/file.cpp"],
+    srcs = [
+        "include/llvm-libc-types/off_t.h",
+        "src/__support/File/file.cpp",
+    ],
     hdrs = ["src/__support/File/file.h"],
     deps = [
         ":__support_cpp_new",
