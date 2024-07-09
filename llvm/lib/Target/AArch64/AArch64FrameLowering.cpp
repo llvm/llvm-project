@@ -3079,7 +3079,11 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
 
   computeCalleeSaveRegisterPairs(MF, CSI, TRI, RegPairs, hasFP(MF));
 
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  // Refresh the reserved regs in case there are any potential changes since the
+  // last freeze.
+  MRI.freezeReservedRegs();
+
   if (homogeneousPrologEpilog(MF)) {
     auto MIB = BuildMI(MBB, MI, DL, TII.get(AArch64::HOM_Prolog))
                    .setMIFlag(MachineInstr::FrameSetup);
@@ -3267,13 +3271,10 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
         InsertSEH(MIB, TII, MachineInstr::FrameSetup);
     } else { // The code when the pair of ZReg is not present
       MachineInstrBuilder MIB = BuildMI(MBB, MI, DL, TII.get(StrOpc));
-      const AArch64RegisterInfo *RegInfo =
-          static_cast<const AArch64RegisterInfo *>(
-              MF.getSubtarget().getRegisterInfo());
-      if (!RegInfo->isStrictlyReservedReg(MF, Reg1))
+      if (!MRI.isReserved(Reg1))
         MBB.addLiveIn(Reg1);
       if (RPI.isPaired()) {
-        if (!RegInfo->isStrictlyReservedReg(MF, Reg2))
+        if (!MRI.isReserved(Reg2))
           MBB.addLiveIn(Reg2);
         MIB.addReg(Reg2, getPrologueDeath(MF, Reg2));
         MIB.addMemOperand(MF.getMachineMemOperand(
