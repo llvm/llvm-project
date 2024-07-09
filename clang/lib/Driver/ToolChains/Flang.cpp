@@ -204,7 +204,7 @@ void Flang::AddRISCVTargetArgs(const ArgList &Args,
 
     // Get minimum VLen from march.
     unsigned MinVLen = 0;
-    StringRef Arch = riscv::getRISCVArch(Args, Triple);
+    std::string Arch = riscv::getRISCVArch(Args, Triple);
     auto ISAInfo = llvm::RISCVISAInfo::parseArchString(
         Arch, /*EnableExperimentalExtensions*/ true);
     // Ignore parsing error.
