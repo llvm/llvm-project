@@ -21,7 +21,6 @@ LLVM_LIBC_FUNCTION(float, cospif, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
 
   FPBits xbits(x);
-  Sign xsign = xbits.sign();
   xbits.set_sign(Sign::POS);
 
   uint32_t x_abs = xbits.uintval();
@@ -86,7 +85,7 @@ LLVM_LIBC_FUNCTION(float, cospif, (float x)) {
   sincospif_eval(xd, sin_k, cos_k, sin_y, cosm1_y);
 
   if (LIBC_UNLIKELY(sin_y == 0 && cos_k == 0)) {
-    return FPBits::zero(xsign).get_val();
+    return 0.0f;
   }
 
   return static_cast<float>(fputil::multiply_add(
