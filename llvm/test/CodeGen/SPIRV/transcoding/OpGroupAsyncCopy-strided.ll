@@ -23,6 +23,8 @@
 ; CHECK-SPIRV: OpGroupWaitEvents %[[#Scope]] %[[#Num]] %[[#PtrEventGen]]
 ; CHECK-SPIRV: OpFunctionEnd
 
+target triple = "spir64-unknown-unknown"
+
 define spir_kernel void @foo() {
   %event = alloca ptr, align 8
   %call = call spir_func ptr @_Z29async_work_group_strided_copyPU3AS3hPU3AS1Khmm9ocl_event(ptr null, ptr null, i64 123, i64 1, ptr null)

@@ -108,7 +108,7 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx);
 
 // True if this is an instance of TypedPointerType.
 inline bool isTypedPointerTy(const Type *T) {
-  return T->getTypeID() == Type::TypedPointerTyID;
+  return T && T->getTypeID() == Type::TypedPointerTyID;
 }
 
 // True if this is an instance of PointerType.
