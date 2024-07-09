@@ -4117,9 +4117,17 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   // This catches the 2 variable input case, constants are handled below as a
   // class-like compare.
   if (Pred == FCmpInst::FCMP_ORD || Pred == FCmpInst::FCMP_UNO) {
-    if (FMF.noNaNs() || (isKnownNeverNaN(RHS, /*Depth=*/0, Q) &&
-                         isKnownNeverNaN(LHS, /*Depth=*/0, Q)))
+    KnownFPClass RHSClass =
+        computeKnownFPClass(RHS, fcAllFlags, /*Depth=*/0, Q);
+    KnownFPClass LHSClass =
+        computeKnownFPClass(LHS, fcAllFlags, /*Depth=*/0, Q);
+
+    if (FMF.noNaNs() ||
+        (RHSClass.isKnownNeverNaN() && LHSClass.isKnownNeverNaN()))
       return ConstantInt::get(RetTy, Pred == FCmpInst::FCMP_ORD);
+
+    if (RHSClass.isKnownAlwaysNaN() || LHSClass.isKnownAlwaysNaN())
+      return ConstantInt::get(RetTy, Pred == CmpInst::FCMP_UNO);
   }
 
   const APFloat *C = nullptr;
