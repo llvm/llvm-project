@@ -18732,6 +18732,11 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
         },
         /*MaxVFOnly=*/true, R);
     Changed |= HaveVectorizedPhiNodes;
+    if (HaveVectorizedPhiNodes && any_of(PHIToOpcodes, [&](const auto &P) {
+          auto *PHI = dyn_cast<PHINode>(P.first);
+          return !PHI || R.isDeleted(PHI);
+        }))
+      PHIToOpcodes.clear();
     VisitedInstrs.insert(Incoming.begin(), Incoming.end());
   } while (HaveVectorizedPhiNodes);
 
@@ -18804,7 +18809,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       }
       // Try to vectorize the incoming values of the PHI, to catch reductions
       // that feed into PHIs.
-      for (unsigned I = 0, E = P->getNumIncomingValues(); I != E; I++) {
+      for (unsigned I : seq<unsigned>(P->getNumIncomingValues())) {
         // Skip if the incoming block is the current BB for now. Also, bypass
         // unreachable IR for efficiency and to avoid crashing.
         // TODO: Collect the skipped incoming values and try to vectorize them
@@ -18816,9 +18821,16 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
         // Postponed instructions should not be vectorized here, delay their
         // vectorization.
         if (auto *PI = dyn_cast<Instruction>(P->getIncomingValue(I));
-            PI && !IsInPostProcessInstrs(PI))
-          Changed |= vectorizeRootInstruction(nullptr, PI,
+            PI && !IsInPostProcessInstrs(PI)) {
+          bool Res = vectorizeRootInstruction(nullptr, PI,
                                               P->getIncomingBlock(I), R, TTI);
+          Changed |= Res;
+          if (Res && R.isDeleted(P)) {
+            It = BB->begin();
+            E = BB->end();
+            break;
+          }
+        }
       }
       continue;
     }
