@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -verify=c23 -std=c23 %s
-// RUN: %clang_cc1 -verify=c17 -std=c17 %s
+// RUN: %clang_cc1 -ffreestanding -verify=c23 -std=c23 %s
+// RUN: %clang_cc1 -ffreestanding -verify=c17 -std=c17 %s
 
 // c23-no-diagnostics
 
