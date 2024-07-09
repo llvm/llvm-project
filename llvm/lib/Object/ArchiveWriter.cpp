@@ -1305,8 +1305,7 @@ Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
                    SymtabWritingMode WriteSymtab, object::Archive::Kind Kind,
                    bool Deterministic, bool Thin,
                    std::unique_ptr<MemoryBuffer> OldArchiveBuf,
-                   std::optional<bool> IsEC,
-                   function_ref<void(Error)> Warn) {
+                   std::optional<bool> IsEC, function_ref<void(Error)> Warn) {
   Expected<sys::fs::TempFile> Temp =
       sys::fs::TempFile::create(ArcName + ".temp-archive-%%%%%%%.a");
   if (!Temp)

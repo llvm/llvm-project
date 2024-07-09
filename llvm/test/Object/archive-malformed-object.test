@@ -12,9 +12,9 @@
 # RUN: %python -c "with open('input.bc', 'a') as f: f.truncate(10)"
 # RUN: llvm-ar rc bad.a input.bc 2>&1 | FileCheck %s --check-prefix=WARN1
 
-# llvm-nm will fail when it tries to read the malformed bitcode file, but
-# it's supposed to print the archive map first, which in this case it
-# won't because there won't be one.
+## llvm-nm will fail when it tries to read the malformed bitcode file, but
+## it's supposed to print the archive map first, which in this case it
+## won't because there won't be one.
 # RUN: not llvm-nm --print-armap bad.a | count 0
 
 ## Malformed bitcode object is the last file member of archive if the symbol table is required.
