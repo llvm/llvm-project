@@ -609,9 +609,9 @@ bool ConstStructBuilder::AppendBytes(CharUnits FieldOffsetInChars,
   return Builder.add(InitCst, StartOffset + FieldOffsetInChars, AllowOverwrite);
 }
 
-bool ConstStructBuilder::AppendBitField(
-    const FieldDecl *Field, uint64_t FieldOffset, llvm::Constant *C,
-    bool AllowOverwrite) {
+bool ConstStructBuilder::AppendBitField(const FieldDecl *Field,
+                                        uint64_t FieldOffset, llvm::Constant *C,
+                                        bool AllowOverwrite) {
 
   llvm::ConstantInt *CI = dyn_cast<llvm::ConstantInt>(C);
   if (!CI) {

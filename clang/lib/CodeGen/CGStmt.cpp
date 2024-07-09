@@ -1541,10 +1541,11 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
       llvm::Value *Ret = EmitScalarExpr(RV);
       if (CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::Indirect)
         EmitStoreOfScalar(Ret, MakeAddrLValue(ReturnValue, RV->getType()),
-                  /*isInit*/ true);
+                          /*isInit*/ true);
       else
         Builder.CreateStore(Ret, ReturnValue);
-    } break;
+      break;
+    }
     case TEK_Complex:
       EmitComplexExprIntoLValue(RV, MakeAddrLValue(ReturnValue, RV->getType()),
                                 /*isInit*/ true);
