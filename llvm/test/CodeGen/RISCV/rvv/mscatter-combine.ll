@@ -116,7 +116,7 @@ define void @stride_one_store(i64 %n, ptr %p) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.v.i v8, 0
-; RV64-NEXT:    vs1r.v v8, (a1)
+; RV64-NEXT:    vse64.v v8, (a1)
 ; RV64-NEXT:    ret
   %step = tail call <vscale x 1 x i64> @llvm.experimental.stepvector.nxv1i64()
   %gep = getelementptr inbounds i64, ptr %p, <vscale x 1 x i64> %step
