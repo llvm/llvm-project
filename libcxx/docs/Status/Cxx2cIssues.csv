@@ -64,7 +64,7 @@
 "","","","","",""
 "`3944 <https://wg21.link/LWG3944>`__","Formatters converting sequences of ``char`` to sequences of ``wchar_t``","St. Louis June 2024","","","|format|"
 "`4060 <https://wg21.link/LWG4060>`__","``submdspan`` preconditions do not forbid creating invalid pointer","St. Louis June 2024","","",""
-"`4061 <https://wg21.link/LWG4061>`__","Should ``std::basic_format_context`` be default-constructible/copyable/movable?","St. Louis June 2024","","","|format|"
+"`4061 <https://wg21.link/LWG4061>`__","Should ``std::basic_format_context`` be default-constructible/copyable/movable?","St. Louis June 2024","|Complete|","19.0","|format|"
 "`4071 <https://wg21.link/LWG4071>`__","``reference_wrapper`` comparisons are not SFINAE-friendly","St. Louis June 2024","|Complete|","19.0",""
 "`4074 <https://wg21.link/LWG4074>`__","``compatible-joinable-ranges`` is underconstrained","St. Louis June 2024","","","|ranges|"
 "`4076 <https://wg21.link/LWG4076>`__","``concat_view`` should be freestanding","St. Louis June 2024","","",""
