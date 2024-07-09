@@ -820,8 +820,14 @@ VPlanPtr VPlan::createInitialVPlan(const SCEV *TripCount, ScalarEvolution &SE,
   auto Plan = std::make_unique<VPlan>(Entry, VecPreheader);
   Plan->TripCount =
       vputils::getOrCreateVPValueForSCEVExpr(*Plan, TripCount, SE);
-  // Create empty VPRegionBlock, to be filled during processing later.
-  auto *TopRegion = new VPRegionBlock("vector loop", false /*isReplicator*/);
+  // Create VPRegionBlock, with empty header and latch blocks, to be filled
+  // during processing later.
+  VPBasicBlock *HeaderVPBB = new VPBasicBlock("vector.body");
+  VPBasicBlock *LatchVPBB = new VPBasicBlock("vector.latch");
+  VPBlockUtils::insertBlockAfter(LatchVPBB, HeaderVPBB);
+  auto *TopRegion = new VPRegionBlock(HeaderVPBB, LatchVPBB, "vector loop",
+                                      false /*isReplicator*/);
+
   VPBlockUtils::insertBlockAfter(TopRegion, VecPreheader);
   VPBasicBlock *MiddleVPBB = new VPBasicBlock("middle.block");
   VPBlockUtils::insertBlockAfter(MiddleVPBB, TopRegion);
