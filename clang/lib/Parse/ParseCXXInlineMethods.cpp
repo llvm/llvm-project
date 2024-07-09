@@ -523,14 +523,6 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
         Actions, Method ? Method->getParent() : nullptr,
         Method ? Method->getMethodQualifiers() : Qualifiers{},
         Method && getLangOpts().CPlusPlus11);
-
-    // Parse the exception-specification.
-    SourceRange SpecificationRange;
-    SmallVector<ParsedType, 4> DynamicExceptions;
-    SmallVector<SourceRange, 4> DynamicExceptionRanges;
-    ExprResult NoexceptExpr;
-    CachedTokens *ExceptionSpecTokens;
-
     // Push a function scope so that tryCaptureVariable() can properly visit
     // function scopes involving function parameters that are referenced inside
     // the noexcept specifier e.g. through a lambda expression.
@@ -539,6 +531,13 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
     //   void ICE(int val) noexcept(noexcept([val]{}));
     // };
     Sema::SynthesizedFunctionScope Scope(Actions, FunctionToPush);
+
+    // Parse the exception-specification.
+    SourceRange SpecificationRange;
+    SmallVector<ParsedType, 4> DynamicExceptions;
+    SmallVector<SourceRange, 4> DynamicExceptionRanges;
+    ExprResult NoexceptExpr;
+    CachedTokens *ExceptionSpecTokens;
 
     ExceptionSpecificationType EST
       = tryParseExceptionSpecification(/*Delayed=*/false, SpecificationRange,

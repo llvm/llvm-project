@@ -114,7 +114,10 @@ namespace Static {
 
     static int h();
 
-    // The use of 'm' doesn't constitute an ODR use, so we don't have a reason to reject it.
+    // [expr.prim.id.general]p4:
+    // An id-expression that denotes a non-static data member... can only be used:
+    //  ...
+    //  (4.3) if that id-expression denotes a non-static data member and it appears in an unevaluated operand.
     static int i() noexcept(noexcept(m + 2));
   };
 
