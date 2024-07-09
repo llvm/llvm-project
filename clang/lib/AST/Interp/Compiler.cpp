@@ -85,8 +85,12 @@ bool InitLink::emit(Compiler<Emitter> *Ctx, const Expr *E) const {
   case K_Field:
     // We're assuming there's a base pointer on the stack already.
     return Ctx->emitGetPtrFieldPop(Offset, E);
+  case K_Temp:
+    return Ctx->emitGetPtrLocal(Offset, E);
   case K_Decl:
     return Ctx->visitDeclRef(D, E);
+  default:
+    llvm_unreachable("Unhandled InitLink kind");
   }
   return true;
 }
@@ -1330,6 +1334,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
 
     auto initCompositeField = [=](const Record::Field *FieldToInit,
                                   const Expr *Init) -> bool {
+      InitLinkScope<Emitter> ILS(this, InitLink::Field(FieldToInit->Offset));
       // Non-primitive case. Get a pointer to the field-to-initialize
       // on the stack and recurse into visitInitializer().
       if (!this->emitGetPtrField(FieldToInit->Offset, Init))
@@ -2271,6 +2276,7 @@ bool Compiler<Emitter>::VisitMaterializeTemporaryExpr(
     const Expr *Inner = E->getSubExpr()->skipRValueSubobjectAdjustments();
     if (std::optional<unsigned> LocalIndex =
             allocateLocal(Inner, E->getExtendingDecl())) {
+      InitLinkScope<Emitter> ILS(this, InitLink::Temp(*LocalIndex));
       if (!this->emitGetPtrLocal(*LocalIndex, E))
         return false;
       return this->visitInitializer(SubExpr);
@@ -2446,6 +2452,13 @@ bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
 
   if (T->isRecordType()) {
     const CXXConstructorDecl *Ctor = E->getConstructor();
+
+    // Trivial copy/move constructor. Avoid copy.
+    if (Ctor->isDefaulted() && Ctor->isCopyOrMoveConstructor() &&
+        Ctor->isTrivial() &&
+        E->getArg(0)->isTemporaryObject(Ctx.getASTContext(),
+                                        T->getAsCXXRecordDecl()))
+      return this->visitInitializer(E->getArg(0));
 
     // If we're discarding a construct expression, we still need
     // to allocate a variable and call the constructor and destructor.
@@ -3539,12 +3552,12 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD, bool Topleve
   const Expr *Init = VD->getInit();
   std::optional<PrimType> VarT = classify(VD->getType());
 
-  auto checkDecl = [&]() -> bool {
-    bool NeedsOp = !Toplevel && VD->isLocalVarDecl() && VD->isStaticLocal();
-    return !NeedsOp || this->emitCheckDecl(VD, VD);
-  };
-
   if (Context::shouldBeGloballyIndexed(VD)) {
+    auto checkDecl = [&]() -> bool {
+      bool NeedsOp = !Toplevel && VD->isLocalVarDecl() && VD->isStaticLocal();
+      return !NeedsOp || this->emitCheckDecl(VD, VD);
+    };
+
     auto initGlobal = [&](unsigned GlobalIndex) -> bool {
       assert(Init);
       DeclScope<Emitter> LocalScope(this, VD);
@@ -3577,6 +3590,7 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD, bool Topleve
     return !Init || (checkDecl() && initGlobal(*GlobalIndex));
   } else {
     VariableScope<Emitter> LocalScope(this, VD);
+    InitLinkScope<Emitter> ILS(this, InitLink::Decl(VD));
 
     if (VarT) {
       unsigned Offset = this->allocateLocalPrimitive(
@@ -3911,7 +3925,8 @@ bool Compiler<Emitter>::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E) {
   SourceLocScope<Emitter> SLS(this, E);
 
   bool Old = InitStackActive;
-  InitStackActive = !isa<FunctionDecl>(E->getUsedContext());
+  InitStackActive =
+      !(E->getUsedContext()->getDeclKind() == Decl::CXXConstructor);
   bool Result = this->delegate(E->getExpr());
   InitStackActive = Old;
   return Result;
@@ -3973,8 +3988,14 @@ bool Compiler<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
   // currently being initialized. Here we emit the necessary instruction(s) for
   // this scenario.
   if (InitStackActive && !InitStack.empty()) {
-    for (const InitLink &IL : InitStack) {
-      if (!IL.emit<Emitter>(this, E))
+    unsigned StartIndex = 0;
+    for (StartIndex = InitStack.size() - 1; StartIndex > 0; --StartIndex) {
+      if (InitStack[StartIndex].Kind != InitLink::K_Field)
+        break;
+    }
+
+    for (unsigned I = StartIndex, N = InitStack.size(); I != N; ++I) {
+      if (!InitStack[I].template emit<Emitter>(this, E))
         return false;
     }
     return true;

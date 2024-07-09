@@ -1351,6 +1351,15 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     llvmFunc->addFnAttr("no-signed-zeros-fp-math",
                         llvm::toStringRef(*noSignedZerosFpMath));
 
+  if (auto denormalFpMath = func.getDenormalFpMath())
+    llvmFunc->addFnAttr("denormal-fp-math", *denormalFpMath);
+
+  if (auto denormalFpMathF32 = func.getDenormalFpMathF32())
+    llvmFunc->addFnAttr("denormal-fp-math-f32", *denormalFpMathF32);
+
+  if (auto fpContract = func.getFpContract())
+    llvmFunc->addFnAttr("fp-contract", *fpContract);
+
   // Add function attribute frame-pointer, if found.
   if (FramePointerKindAttr attr = func.getFramePointerAttr())
     llvmFunc->addFnAttr("frame-pointer",
@@ -1422,6 +1431,8 @@ static void convertFunctionAttributes(LLVMFuncOp func,
     llvmFunc->addFnAttr(llvm::Attribute::AlwaysInline);
   if (func.getOptimizeNoneAttr())
     llvmFunc->addFnAttr(llvm::Attribute::OptimizeNone);
+  if (func.getConvergentAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::Convergent);
   convertFunctionMemoryAttributes(func, llvmFunc);
 }
 
