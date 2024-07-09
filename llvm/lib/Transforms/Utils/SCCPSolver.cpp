@@ -42,14 +42,6 @@ static ValueLatticeElement::MergeOptions getMaxWidenStepsOpts() {
       MaxNumRangeExtensions);
 }
 
-static ConstantRange getConstantRange(const ValueLatticeElement &LV, Type *Ty,
-                                      bool UndefAllowed) {
-  assert(Ty->isIntOrIntVectorTy() && "Should be int or int vector");
-  if (LV.isConstantRange(UndefAllowed))
-    return LV.getConstantRange();
-  return ConstantRange::getFull(Ty->getScalarSizeInBits());
-}
-
 namespace llvm {
 
 bool SCCPSolver::isConstant(const ValueLatticeElement &LV) {
@@ -109,14 +101,14 @@ static bool refineInstruction(SCCPSolver &Solver,
                               Instruction &Inst) {
   bool Changed = false;
   auto GetRange = [&Solver, &InsertedValues](Value *Op) {
-    if (auto *Const = dyn_cast<ConstantInt>(Op))
-      return ConstantRange(Const->getValue());
-    if (isa<Constant>(Op) || InsertedValues.contains(Op)) {
+    if (auto *Const = dyn_cast<Constant>(Op))
+      return Const->toConstantRange();
+    if (InsertedValues.contains(Op)) {
       unsigned Bitwidth = Op->getType()->getScalarSizeInBits();
       return ConstantRange::getFull(Bitwidth);
     }
-    return getConstantRange(Solver.getLatticeValueFor(Op), Op->getType(),
-                            /*UndefAllowed=*/false);
+    return Solver.getLatticeValueFor(Op).asConstantRange(
+        Op->getType(), /*UndefAllowed=*/false);
   };
 
   if (isa<OverflowingBinaryOperator>(Inst)) {
@@ -819,7 +811,7 @@ public:
   }
 
   void trackValueOfArgument(Argument *A) {
-    if (A->getType()->isIntegerTy()) {
+    if (A->getType()->isIntOrIntVectorTy()) {
       if (std::optional<ConstantRange> Range = A->getRange()) {
         markConstantRange(ValueState[A], A, *Range);
         return;
@@ -1296,11 +1288,12 @@ void SCCPInstVisitor::visitCastInst(CastInst &I) {
   }
 
   // Ignore bitcasts, as they may change the number of vector elements.
-  if (I.getDestTy()->isIntegerTy() && I.getSrcTy()->isIntOrIntVectorTy() &&
+  if (I.getDestTy()->isIntOrIntVectorTy() &&
+      I.getSrcTy()->isIntOrIntVectorTy() &&
       I.getOpcode() != Instruction::BitCast) {
     auto &LV = getValueState(&I);
     ConstantRange OpRange =
-        getConstantRange(OpSt, I.getSrcTy(), /*UndefAllowed=*/false);
+        OpSt.asConstantRange(I.getSrcTy(), /*UndefAllowed=*/false);
 
     Type *DestTy = I.getDestTy();
     ConstantRange Res =
@@ -1322,8 +1315,8 @@ void SCCPInstVisitor::handleExtractOfWithOverflow(ExtractValueInst &EVI,
     return; // Wait to resolve.
 
   Type *Ty = LHS->getType();
-  ConstantRange LR = getConstantRange(L, Ty, /*UndefAllowed=*/false);
-  ConstantRange RR = getConstantRange(R, Ty, /*UndefAllowed=*/false);
+  ConstantRange LR = L.asConstantRange(Ty, /*UndefAllowed=*/false);
+  ConstantRange RR = R.asConstantRange(Ty, /*UndefAllowed=*/false);
   if (Idx == 0) {
     ConstantRange Res = LR.binaryOp(WO->getBinaryOp(), RR);
     mergeInValue(&EVI, ValueLatticeElement::getRange(Res));
@@ -1523,14 +1516,14 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
   }
 
   // Only use ranges for binary operators on integers.
-  if (!I.getType()->isIntegerTy())
+  if (!I.getType()->isIntOrIntVectorTy())
     return markOverdefined(&I);
 
   // Try to simplify to a constant range.
   ConstantRange A =
-      getConstantRange(V1State, I.getType(), /*UndefAllowed=*/false);
+      V1State.asConstantRange(I.getType(), /*UndefAllowed=*/false);
   ConstantRange B =
-      getConstantRange(V2State, I.getType(), /*UndefAllowed=*/false);
+      V2State.asConstantRange(I.getType(), /*UndefAllowed=*/false);
 
   auto *BO = cast<BinaryOperator>(&I);
   ConstantRange R = ConstantRange::getEmpty(I.getType()->getScalarSizeInBits());
@@ -1626,7 +1619,7 @@ void SCCPInstVisitor::visitStoreInst(StoreInst &SI) {
 }
 
 static ValueLatticeElement getValueFromMetadata(const Instruction *I) {
-  if (I->getType()->isIntegerTy()) {
+  if (I->getType()->isIntOrIntVectorTy()) {
     if (MDNode *Ranges = I->getMetadata(LLVMContext::MD_range))
       return ValueLatticeElement::getRange(
           getConstantRangeFromMetadata(*Ranges));
@@ -1813,8 +1806,11 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
 
         // Combine range info for the original value with the new range from the
         // condition.
-        auto CopyOfCR = getConstantRange(CopyOfVal, CopyOf->getType(),
-                                         /*UndefAllowed=*/true);
+        auto CopyOfCR = CopyOfVal.asConstantRange(CopyOf->getType(),
+                                                  /*UndefAllowed=*/true);
+        // Treat an unresolved input like a full range.
+        if (CopyOfCR.isEmptySet())
+          CopyOfCR = ConstantRange::getFull(CopyOfCR.getBitWidth());
         auto NewCR = ImposedCR.intersectWith(CopyOfCR);
         // If the existing information is != x, do not use the information from
         // a chained predicate, as the != x information is more likely to be
@@ -1860,7 +1856,7 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
         if (State.isUnknownOrUndef())
           return;
         OpRanges.push_back(
-            getConstantRange(State, Op->getType(), /*UndefAllowed=*/false));
+            State.asConstantRange(Op->getType(), /*UndefAllowed=*/false));
       }
 
       ConstantRange Result =
