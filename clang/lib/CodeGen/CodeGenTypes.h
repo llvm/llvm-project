@@ -128,6 +128,15 @@ public:
   /// memory representation is usually i8 or i32, depending on the target.
   llvm::Type *ConvertTypeForMem(QualType T, bool ForBitField = false);
 
+  /// Check whether the given type needs to be laid out in memory
+  /// using an opaque byte-array type because its load/store type
+  /// does not have the correct alloc size in the LLVM data layout.
+  /// If this is false, the load/store type (convertTypeForLoadStore)
+  /// and memory representation type (ConvertTypeForMem) will
+  /// be the same type.
+  bool typeRequiresSplitIntoByteArray(QualType ASTTy,
+                                      llvm::Type *LLVMTy = nullptr);
+
   /// Given that T is a scalar type, return the IR type that should
   /// be used for load and store operations.  For example, this might
   /// be i8 for _Bool or i96 for _BitInt(65).  The store size of the
@@ -140,11 +149,6 @@ public:
   /// it as the second argument so that it does not need to be
   /// recomputed in common cases where the value type and
   /// load/store type are the same.
-  bool typeRequiresSplitIntoByteArray(QualType ASTTy,
-                                      llvm::Type *LLVMTy = nullptr);
-
-  /// For AST types with special memory representation returns type
-  /// that ought to be used for load and store operations.
   llvm::Type *convertTypeForLoadStore(QualType T, llvm::Type *LLVMTy = nullptr);
 
   /// GetFunctionType - Get the LLVM function type for \arg Info.
