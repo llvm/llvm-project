@@ -2785,14 +2785,14 @@ LogicalResult WinogradInputTransformOp::verify() {
   SmallVector<int64_t> expectedOutputShape(6, inputH);
   if (ShapedType::isDynamic(inputH)) {
     expectedOutputShape[0] = tileSize;
-    expectedOutputShape[2] = -1;
+    expectedOutputShape[2] = ShapedType::kDynamic;
   } else {
     expectedOutputShape[0] = leftTransform ? tileSize : 1;
     expectedOutputShape[2] = leftTransform ? (inputH - (r - 1)) / m : 1;
   }
   if (ShapedType::isDynamic(inputW)) {
     expectedOutputShape[1] = tileSize;
-    expectedOutputShape[3] = -1;
+    expectedOutputShape[3] = ShapedType::kDynamic;
   } else {
     expectedOutputShape[1] = rightTransform ? tileSize : 1;
     expectedOutputShape[3] = rightTransform ? (inputW - (r - 1)) / m : 1;
@@ -2826,14 +2826,14 @@ LogicalResult WinogradOutputTransformOp::verify() {
 
   SmallVector<int64_t> expectedOutputShape(4, valueH);
   if (ShapedType::isDynamic(valueH) || ShapedType::isDynamic(valueTileH)) {
-    expectedOutputShape[1] = -1;
+    expectedOutputShape[1] = ShapedType::kDynamic;
   } else {
     if (valueH != (leftTransform ? m + r - 1 : 1))
       return emitOpError("expect input height equals to input tile size");
     expectedOutputShape[1] = (leftTransform ? m : 1) * valueTileH;
   }
   if (ShapedType::isDynamic(valueW) || ShapedType::isDynamic(valueTileW)) {
-    expectedOutputShape[2] = -1;
+    expectedOutputShape[2] = ShapedType::kDynamic;
   } else {
     if (valueW != (rightTransform ? m + r - 1 : 1))
       return emitOpError("expect input width equals to input tile size");
