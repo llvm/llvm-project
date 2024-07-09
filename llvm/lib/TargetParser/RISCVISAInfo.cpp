@@ -80,8 +80,7 @@ static void PrintExtension(StringRef Name, StringRef Version,
          << Description << "\n";
 }
 
-void llvm::riscvExtensionsHelp(StringMap<StringRef> DescMap) {
-
+void llvm::printSupportedExtensions(StringMap<StringRef> &DescMap) {
   outs() << "All available -march extensions for RISC-V\n\n";
   PrintExtension("Name", "Version", (DescMap.empty() ? "" : "Description"));
 
@@ -114,6 +113,45 @@ void llvm::riscvExtensionsHelp(StringMap<StringRef> DescMap) {
 
   outs() << "\nUse -march to specify the target's extension.\n"
             "For example, clang -march=rv32i_v1p0\n";
+}
+
+void llvm::printEnabledExtensions(bool IsRV64,
+                                  std::set<StringRef> &EnabledFeatureNames,
+                                  StringMap<StringRef> &DescMap) {
+  outs() << "Extensions enabled for the given RISC-V target\n\n";
+  PrintExtension("Name", "Version", (DescMap.empty() ? "" : "Description"));
+
+  RISCVISAUtils::OrderedExtensionMap FullExtMap;
+  RISCVISAUtils::OrderedExtensionMap ExtMap;
+  for (const auto &E : SupportedExtensions)
+    if (EnabledFeatureNames.find(E.Name) != EnabledFeatureNames.end()) {
+      FullExtMap[E.Name] = {E.Version.Major, E.Version.Minor};
+      ExtMap[E.Name] = {E.Version.Major, E.Version.Minor};
+    }
+  for (const auto &E : ExtMap) {
+    std::string Version =
+        std::to_string(E.second.Major) + "." + std::to_string(E.second.Minor);
+    PrintExtension(E.first, Version, DescMap[E.first]);
+  }
+
+  outs() << "\nExperimental extensions\n";
+  ExtMap.clear();
+  for (const auto &E : SupportedExperimentalExtensions) {
+    StringRef Name(E.Name);
+    if (EnabledFeatureNames.find("experimental-" + Name.str()) !=
+        EnabledFeatureNames.end()) {
+      FullExtMap[E.Name] = {E.Version.Major, E.Version.Minor};
+      ExtMap[E.Name] = {E.Version.Major, E.Version.Minor};
+    }
+  }
+  for (const auto &E : ExtMap) {
+    std::string Version =
+        std::to_string(E.second.Major) + "." + std::to_string(E.second.Minor);
+    PrintExtension(E.first, Version, DescMap["experimental-" + E.first]);
+  }
+
+  unsigned XLen = IsRV64 ? 64 : 32;
+  outs() << "\nISA String: " << RISCVISAInfo(XLen, FullExtMap).toString();
 }
 
 static bool stripExperimentalPrefix(StringRef &Ext) {

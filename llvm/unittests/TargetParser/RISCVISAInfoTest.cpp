@@ -1060,11 +1060,39 @@ For example, clang -march=rv32i_v1p0)";
 
   outs().flush();
   testing::internal::CaptureStdout();
-  riscvExtensionsHelp(DummyMap);
+  printSupportedExtensions(DummyMap);
   outs().flush();
 
   std::string CapturedOutput = testing::internal::GetCapturedStdout();
   EXPECT_TRUE([](std::string &Captured, std::string &Expected) {
                 return Captured.find(Expected) != std::string::npos;
               }(CapturedOutput, ExpectedOutput));
+}
+
+TEST(TargetParserTest, RISCVPrintEnabledExtensions) {
+  // clang-format off
+  std::string ExpectedOutput =
+R"(Extensions enabled for the given RISC-V target
+
+    Name                 Version   Description
+    i                    2.1       'I' (Base Integer Instruction Set)
+
+Experimental extensions
+    ztso                 0.1       'Ztso' (Memory Model - Total Store Order)
+
+ISA String: rv64i2p1_ztso0p1)";
+  // clang-format on
+
+  StringMap<StringRef> DescMap;
+  DescMap["i"] = "'I' (Base Integer Instruction Set)";
+  DescMap["experimental-ztso"] = "'Ztso' (Memory Model - Total Store Order)";
+  std::set<StringRef> EnabledExtensions = {"i", "experimental-ztso"};
+
+  outs().flush();
+  testing::internal::CaptureStdout();
+  llvm::printEnabledExtensions(/*IsRV64=*/true, EnabledExtensions, DescMap);
+  outs().flush();
+  std::string CapturedOutput = testing::internal::GetCapturedStdout();
+
+  EXPECT_EQ(CapturedOutput, ExpectedOutput);
 }

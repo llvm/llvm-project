@@ -15,11 +15,15 @@
 #include "llvm/Support/RISCVISAUtils.h"
 
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
 namespace llvm {
-void riscvExtensionsHelp(StringMap<StringRef> DescMap);
+void printSupportedExtensions(StringMap<StringRef> &DescMap);
+void printEnabledExtensions(bool IsRV64,
+                            std::set<StringRef> &EnabledFeatureNames,
+                            StringMap<StringRef> &DescMap);
 
 class RISCVISAInfo {
 public:
