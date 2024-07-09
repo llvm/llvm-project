@@ -237,6 +237,15 @@ if(APPLE)
     endif()
   endforeach()
 
+  # Cross-compilation builtins for Mach-O supported archs that Darwin systems don't use, but embedded baremetal use cases might need.
+  if(COMPILER_RT_FORCE_BUILD_BAREMETAL_MACHO_BUILTINS_ARCHS)
+    # Typically, COMPILER_RT_FORCE_BUILD_BAREMETAL_MACHO_BUILTINS_ARCHS is something like "armv6 armv6m armv7 armv7m armv7em"
+    foreach(arch ${COMPILER_RT_FORCE_BUILD_BAREMETAL_MACHO_BUILTINS_ARCHS})
+      list(APPEND COMPILER_RT_SUPPORTED_ARCH ${arch})
+      set(CAN_TARGET_${arch} 1)
+    endforeach()
+  endif()
+
   list_intersect(BUILTIN_SUPPORTED_ARCH ALL_BUILTIN_SUPPORTED_ARCH COMPILER_RT_SUPPORTED_ARCH)
 
 else()
