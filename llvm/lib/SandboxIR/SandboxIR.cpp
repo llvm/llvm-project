@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/SandboxIR/SandboxIR.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/Support/Debug.h"
 #include <sstream>
 
@@ -15,7 +16,7 @@ using namespace llvm::sandboxir;
 Value::Value(ClassID SubclassID, llvm::Value *Val, Context &Ctx)
     : SubclassID(SubclassID), Val(Val), Ctx(Ctx) {
 #ifndef NDEBUG
-  UID = 0; // FIXME: Once SBContext is available.
+  UID = Ctx.getNumValues();
 #endif
 }
 
@@ -47,8 +48,7 @@ void Value::dumpCommonPrefix(raw_ostream &OS) const {
 }
 
 void Value::dumpCommonSuffix(raw_ostream &OS) const {
-  OS << " ; " << getName() << " (" << getSubclassIDStr(SubclassID) << ") "
-     << this;
+  OS << " ; " << getName() << " (" << getSubclassIDStr(SubclassID) << ")";
 }
 
 void Value::printAsOperandCommon(raw_ostream &OS) const {
@@ -92,6 +92,33 @@ void User::dumpCommonHeader(raw_ostream &OS) const {
   // TODO: This is incomplete
 }
 #endif // NDEBUG
+
+BBIterator &BBIterator::operator++() {
+  auto ItE = BB->end();
+  assert(It != ItE && "Already at end!");
+  ++It;
+  if (It == ItE)
+    return *this;
+  Instruction &NextI = *cast<sandboxir::Instruction>(Ctx->getValue(&*It));
+  unsigned Num = NextI.getNumOfIRInstrs();
+  assert(Num > 0 && "Bad getNumOfIRInstrs()");
+  It = std::next(It, Num - 1);
+  return *this;
+}
+
+BBIterator &BBIterator::operator--() {
+  assert(It != BB->begin() && "Already at begin!");
+  if (It == BB->end()) {
+    --It;
+    return *this;
+  }
+  Instruction &CurrI = **this;
+  unsigned Num = CurrI.getNumOfIRInstrs();
+  assert(Num > 0 && "Bad getNumOfIRInstrs()");
+  assert(std::prev(It, Num - 1) != BB->begin() && "Already at begin!");
+  It = std::prev(It, Num);
+  return *this;
+}
 
 const char *Instruction::getOpcodeName(Opcode Opc) {
   switch (Opc) {
@@ -148,7 +175,7 @@ void Constant::dump() const {
 
 void Function::dumpNameAndArgs(raw_ostream &OS) const {
   auto *F = cast<llvm::Function>(Val);
-  OS << *getType() << " @" << F->getName() << "(";
+  OS << *F->getReturnType() << " @" << F->getName() << "(";
   auto NumArgs = F->arg_size();
   for (auto [Idx, Arg] : enumerate(F->args())) {
     auto *SBArg = cast_or_null<Argument>(Ctx.getValue(&Arg));
@@ -164,6 +191,17 @@ void Function::dumpNameAndArgs(raw_ostream &OS) const {
 void Function::dump(raw_ostream &OS) const {
   dumpNameAndArgs(OS);
   OS << " {\n";
+  auto *LLVMF = cast<llvm::Function>(Val);
+  interleave(
+      *LLVMF,
+      [this, &OS](const llvm::BasicBlock &LLVMBB) {
+        auto *BB = cast_or_null<BasicBlock>(Ctx.getValue(&LLVMBB));
+        if (BB == nullptr)
+          OS << "NULL";
+        else
+          OS << *BB;
+      },
+      [&OS] { OS << "\n"; });
   OS << "}\n";
 }
 void Function::dump() const {
@@ -172,9 +210,182 @@ void Function::dump() const {
 }
 #endif // NDEBUG
 
+BasicBlock::iterator::pointer
+BasicBlock::iterator::getInstr(llvm::BasicBlock::iterator It) const {
+  return cast_or_null<Instruction>(Ctx->getValue(&*It));
+}
+
+Value *Context::registerValue(std::unique_ptr<Value> &&VPtr) {
+  assert(VPtr->getSubclassID() != Value::ClassID::User &&
+         "Can't register a user!");
+  Value *V = VPtr.get();
+  llvm::Value *Key = V->Val;
+  LLVMValueToValueMap[Key] = std::move(VPtr);
+  return V;
+}
+
+Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
+  auto Pair = LLVMValueToValueMap.insert({LLVMV, nullptr});
+  auto It = Pair.first;
+  if (!Pair.second)
+    return It->second.get();
+
+  if (auto *C = dyn_cast<llvm::Constant>(LLVMV)) {
+    for (llvm::Value *COp : C->operands())
+      getOrCreateValueInternal(COp, C);
+    It->second = std::make_unique<Constant>(C, *this);
+    return It->second.get();
+  }
+  if (auto *Arg = dyn_cast<llvm::Argument>(LLVMV)) {
+    It->second = std::make_unique<Argument>(Arg, *this);
+    return It->second.get();
+  }
+  if (auto *BB = dyn_cast<llvm::BasicBlock>(LLVMV)) {
+    assert(isa<BlockAddress>(U) &&
+           "This won't create a SBBB, don't call this function directly!");
+    if (auto *SBBB = getValue(BB))
+      return SBBB;
+    return nullptr;
+  }
+  assert(isa<llvm::Instruction>(LLVMV) && "Expected Instruction");
+  It->second =
+      std::make_unique<OpaqueInst>(cast<llvm::Instruction>(LLVMV), *this);
+  return It->second.get();
+}
+
+BasicBlock *Context::createBasicBlock(llvm::BasicBlock *LLVMBB) {
+  assert(getValue(LLVMBB) == nullptr && "Already exists!");
+  auto NewBBPtr = std::make_unique<BasicBlock>(LLVMBB, *this);
+  auto *BB = cast<BasicBlock>(registerValue(std::move(NewBBPtr)));
+  // Create SandboxIR for BB's body.
+  BB->buildBasicBlockFromLLVMIR(LLVMBB);
+  return BB;
+}
+
 Value *Context::getValue(llvm::Value *V) const {
   auto It = LLVMValueToValueMap.find(V);
   if (It != LLVMValueToValueMap.end())
     return It->second.get();
   return nullptr;
 }
+
+Function *Context::createFunction(llvm::Function *F) {
+  assert(getValue(F) == nullptr && "Already exists!");
+  auto NewFPtr = std::make_unique<Function>(F, *this);
+  // Create arguments.
+  for (auto &Arg : F->args())
+    getOrCreateArgument(&Arg);
+  // Create BBs.
+  for (auto &BB : *F)
+    createBasicBlock(&BB);
+  auto *SBF = cast<Function>(registerValue(std::move(NewFPtr)));
+  return SBF;
+}
+
+Function *BasicBlock::getParent() const {
+  auto *BB = cast<llvm::BasicBlock>(Val);
+  auto *F = BB->getParent();
+  if (F == nullptr)
+    // Detached
+    return nullptr;
+  return cast_or_null<Function>(Ctx.getValue(F));
+}
+
+void BasicBlock::buildBasicBlockFromLLVMIR(llvm::BasicBlock *LLVMBB) {
+  for (llvm::Instruction &IRef : reverse(*LLVMBB)) {
+    llvm::Instruction *I = &IRef;
+    Ctx.getOrCreateValue(I);
+    for (auto [OpIdx, Op] : enumerate(I->operands())) {
+      // Skip instruction's label operands
+      if (isa<llvm::BasicBlock>(Op))
+        continue;
+      // Skip metadata
+      if (isa<llvm::MetadataAsValue>(Op))
+        continue;
+      // Skip asm
+      if (isa<llvm::InlineAsm>(Op))
+        continue;
+      Ctx.getOrCreateValue(Op);
+    }
+  }
+#if !defined(NDEBUG) && defined(SBVEC_EXPENSIVE_CHECKS)
+  verify();
+#endif
+}
+
+BasicBlock::iterator BasicBlock::begin() const {
+  llvm::BasicBlock *BB = cast<llvm::BasicBlock>(Val);
+  llvm::BasicBlock::iterator It = BB->begin();
+  if (!BB->empty()) {
+    auto *V = Ctx.getValue(&*BB->begin());
+    assert(V != nullptr && "No SandboxIR for BB->begin()!");
+    auto *I = cast<Instruction>(V);
+    unsigned Num = I->getNumOfIRInstrs();
+    assert(Num >= 1u && "Bad getNumOfIRInstrs()");
+    It = std::next(It, Num - 1);
+  }
+  return iterator(BB, It, &Ctx);
+}
+
+Instruction *BasicBlock::getTerminator() const {
+  auto *TerminatorV =
+      Ctx.getValue(cast<llvm::BasicBlock>(Val)->getTerminator());
+  return cast_or_null<Instruction>(TerminatorV);
+}
+
+Instruction &BasicBlock::front() const {
+  auto *BB = cast<llvm::BasicBlock>(Val);
+  assert(!BB->empty() && "Empty block!");
+  auto *SBI = cast<Instruction>(getContext().getValue(&*BB->begin()));
+  assert(SBI != nullptr && "Expected Instr!");
+  return *SBI;
+}
+
+Instruction &BasicBlock::back() const {
+  auto *BB = cast<llvm::BasicBlock>(Val);
+  assert(!BB->empty() && "Empty block!");
+  auto *SBI = cast<Instruction>(getContext().getValue(&*BB->rbegin()));
+  assert(SBI != nullptr && "Expected Instr!");
+  return *SBI;
+}
+
+#ifndef NDEBUG
+void BasicBlock::dump(raw_ostream &OS) const {
+  llvm::BasicBlock *BB = cast<llvm::BasicBlock>(Val);
+  const auto &Name = BB->getName();
+  OS << Name;
+  if (!Name.empty())
+    OS << ":\n";
+  // If there are Instructions in the BB that are not mapped to SandboxIR, then
+  // use a crash-proof dump.
+  if (any_of(*BB, [this](llvm::Instruction &I) {
+        return Ctx.getValue(&I) == nullptr;
+      })) {
+    OS << "<Crash-proof mode!>\n";
+    DenseSet<Instruction *> Visited;
+    for (llvm::Instruction &IRef : *BB) {
+      Value *SBV = Ctx.getValue(&IRef);
+      if (SBV == nullptr)
+        OS << IRef << " *** No SandboxIR ***\n";
+      else {
+        auto *SBI = dyn_cast<Instruction>(SBV);
+        if (SBI == nullptr) {
+          OS << IRef << " *** Not a SBInstruction!!! ***\n";
+        } else {
+          if (Visited.insert(SBI).second)
+            OS << *SBI << "\n";
+        }
+      }
+    }
+  } else {
+    for (auto &SBI : *this) {
+      SBI.dump(OS);
+      OS << "\n";
+    }
+  }
+}
+void BasicBlock::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG

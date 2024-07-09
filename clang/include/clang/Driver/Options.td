@@ -3477,6 +3477,11 @@ defm objc_avoid_heapify_local_blocks : BoolFOption<"objc-avoid-heapify-local-blo
   PosFlag<SetTrue, [], [ClangOption], "Try">,
   NegFlag<SetFalse, [], [ClangOption], "Don't try">,
   BothFlags<[], [CC1Option], " to avoid heapifying local blocks">>;
+defm disable_block_signature_string : BoolFOption<"disable-block-signature-string",
+  CodeGenOpts<"DisableBlockSignatureString">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Disable">,
+  NegFlag<SetFalse, [], [ClangOption], "Don't disable">,
+  BothFlags<[], [CC1Option], " block signature string)">>;
 
 def fomit_frame_pointer : Flag<["-"], "fomit-frame-pointer">, Group<f_Group>,
   Visibility<[ClangOption, FlangOption]>,
@@ -5252,6 +5257,9 @@ def mlasx : Flag<["-"], "mlasx">, Group<m_loongarch_Features_Group>,
   HelpText<"Enable Loongson Advanced SIMD Extension (LASX).">;
 def mno_lasx : Flag<["-"], "mno-lasx">, Group<m_loongarch_Features_Group>,
   HelpText<"Disable Loongson Advanced SIMD Extension (LASX).">;
+def msimd_EQ : Joined<["-"], "msimd=">, Group<m_loongarch_Features_Group>,
+  Flags<[TargetSpecific]>,
+  HelpText<"Select the SIMD extension(s) to be enabled in LoongArch either 'none', 'lsx', 'lasx'.">;
 def mnop_mcount : Flag<["-"], "mnop-mcount">, HelpText<"Generate mcount/__fentry__ calls as nops. To activate they need to be patched in.">,
   Visibility<[ClangOption, CC1Option]>, Group<m_Group>,
   MarshallingInfoFlag<CodeGenOpts<"MNopMCount">>;

@@ -62,7 +62,7 @@ char &llvm::LiveIntervalsID = LiveIntervals::ID;
 INITIALIZE_PASS_BEGIN(LiveIntervals, "liveintervals", "Live Interval Analysis",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_END(LiveIntervals, "liveintervals",
                 "Live Interval Analysis", false, false)
 
@@ -85,12 +85,12 @@ cl::opt<bool> UseSegmentSetForPhysRegs(
 
 void LiveIntervals::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addPreserved<LiveVariables>();
+  AU.addPreserved<LiveVariablesWrapperPass>();
   AU.addPreservedID(MachineLoopInfoID);
   AU.addRequiredTransitiveID(MachineDominatorsID);
   AU.addPreservedID(MachineDominatorsID);
-  AU.addPreserved<SlotIndexes>();
-  AU.addRequiredTransitive<SlotIndexes>();
+  AU.addPreserved<SlotIndexesWrapperPass>();
+  AU.addRequiredTransitive<SlotIndexesWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -122,7 +122,7 @@ bool LiveIntervals::runOnMachineFunction(MachineFunction &fn) {
   MRI = &MF->getRegInfo();
   TRI = MF->getSubtarget().getRegisterInfo();
   TII = MF->getSubtarget().getInstrInfo();
-  Indexes = &getAnalysis<SlotIndexes>();
+  Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
   DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   if (!LICalc)
