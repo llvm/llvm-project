@@ -681,60 +681,70 @@ static bool ableToUpdatePredOperands(Block *block) {
 
 /// Prunes the redundant list of arguments. E.g., if we are passing an argument
 /// list like [x, y, z, x] this would return [x, y, z] and it would update the
-/// `block` (to whom the argument are passed to) accordingly
-static void
-pruneRedundantArguments(SmallVector<SmallVector<Value, 8>, 2> &newArguments,
-                        RewriterBase &rewriter, Block *block) {
+/// `block` (to whom the argument are passed to) accordingly.
+static SmallVector<SmallVector<Value, 8>, 2> pruneRedundantArguments(
+    const SmallVector<SmallVector<Value, 8>, 2> &newArguments,
+    RewriterBase &rewriter, Block *block) {
+
   SmallVector<SmallVector<Value, 8>, 2> newArgumentsPruned(
       newArguments.size(), SmallVector<Value, 8>());
 
-  if (!newArguments.empty()) {
-    llvm::DenseMap<unsigned, unsigned> toReplace;
-    // Go through the first list of arguments (list 0)
-    for (unsigned j = 0; j < newArguments[0].size(); j++) {
-      bool shouldReplaceJ = false;
-      unsigned replacement = 0;
-      // Look back to see if there are possible redundancies in
-      // list 0
-      for (unsigned k = 0; k < j; k++) {
-        if (newArguments[0][k] == newArguments[0][j]) {
-          shouldReplaceJ = true;
-          replacement = k;
-          // If a possible redundancy is found, then scan the other lists: we
-          // can prune the arguments if and only if they are redundant in every
-          // list
-          for (unsigned i = 1; i < newArguments.size(); i++)
-            shouldReplaceJ =
-                shouldReplaceJ && (newArguments[i][k] == newArguments[i][j]);
-        }
-      }
-      // Save the replacement
-      if (shouldReplaceJ)
-        toReplace[j] = replacement;
-    }
+  if (newArguments.empty())
+    return newArguments;
 
-    // Populate the pruned argument list
-    for (unsigned i = 0; i < newArguments.size(); i++)
-      for (unsigned j = 0; j < newArguments[i].size(); j++)
-        if (!toReplace.contains(j))
-          newArgumentsPruned[i].push_back(newArguments[i][j]);
+  // `newArguments` is a 2D array of size `numLists` x `numArgs`
+  unsigned numLists = newArguments.size();
+  unsigned numArgs = newArguments[0].size();
 
-    // Replace the block's redundant arguments
-    SmallVector<unsigned> toErase;
-    for (auto [idx, arg] : llvm::enumerate(block->getArguments())) {
-      if (toReplace.contains(idx)) {
-        Value oldArg = block->getArgument(idx);
-        Value newArg = block->getArgument(toReplace[idx]);
-        rewriter.replaceAllUsesWith(oldArg, newArg);
-        toErase.push_back(idx);
+  // Map that for each arg index contains the index that we can use in place of
+  // the original index. E.g., if we have newArgs = [x, y, z, x], we will have
+  // idxToReplacement[3] = 0
+  llvm::DenseMap<unsigned, unsigned> idxToReplacement;
+
+  // Go through the first list of arguments (list 0).
+  for (unsigned j = 0; j < numArgs; ++j) {
+    bool shouldReplaceJ = false;
+    unsigned replacement = 0;
+    // Look back to see if there are possible redundancies in
+    // list 0.
+    for (unsigned k = 0; k < j; k++) {
+      if (newArguments[0][k] == newArguments[0][j]) {
+        shouldReplaceJ = true;
+        replacement = k;
+        // If a possible redundancy is found, then scan the other lists: we
+        // can prune the arguments if and only if they are redundant in every
+        // list.
+        for (unsigned i = 1; i < numLists; ++i)
+          shouldReplaceJ =
+              shouldReplaceJ && (newArguments[i][k] == newArguments[i][j]);
       }
     }
-
-    // Erase the block's redundant arguments
-    for (auto idxToErase : llvm::reverse(toErase))
-      block->eraseArgument(idxToErase);
-    newArguments = newArgumentsPruned;
+    // Save the replacement.
+    if (shouldReplaceJ)
+      idxToReplacement[j] = replacement;
   }
+
+  // Populate the pruned argument list.
+  for (unsigned i = 0; i < numLists; ++i)
+    for (unsigned j = 0; j < numArgs; ++j)
+      if (!idxToReplacement.contains(j))
+        newArgumentsPruned[i].push_back(newArguments[i][j]);
+
+  // Replace the block's redundant arguments.
+  SmallVector<unsigned> toErase;
+  for (auto [idx, arg] : llvm::enumerate(block->getArguments())) {
+    if (idxToReplacement.contains(idx)) {
+      Value oldArg = block->getArgument(idx);
+      Value newArg = block->getArgument(idxToReplacement[idx]);
+      rewriter.replaceAllUsesWith(oldArg, newArg);
+      toErase.push_back(idx);
+    }
+  }
+
+  // Erase the block's redundant arguments.
+  for (unsigned idxToErase : llvm::reverse(toErase))
+    block->eraseArgument(idxToErase);
+  return newArgumentsPruned;
 }
 
 LogicalResult BlockMergeCluster::merge(RewriterBase &rewriter) {
@@ -787,7 +797,7 @@ LogicalResult BlockMergeCluster::merge(RewriterBase &rewriter) {
     }
 
     // Prune redundant arguments and update the leader block argument list
-    pruneRedundantArguments(newArguments, rewriter, leaderBlock);
+    newArguments = pruneRedundantArguments(newArguments, rewriter, leaderBlock);
 
     // Update the predecessors for each of the blocks.
     auto updatePredecessors = [&](Block *block, unsigned clusterIndex) {
@@ -889,13 +899,13 @@ static LogicalResult dropRedundantArguments(RewriterBase &rewriter,
                                             Block &block) {
   SmallVector<size_t> argsToErase;
 
-  // Go through the arguments of the block
-  for (size_t argIdx = 0; argIdx < block.getNumArguments(); argIdx++) {
+  // Go through the arguments of the block.
+  for (auto [argIdx, blockOperand] : llvm::enumerate(block.getArguments())) {
     bool sameArg = true;
     Value commonValue;
 
     // Go through the block predecessor and flag if they pass to the block
-    // different values for the same argument
+    // different values for the same argument.
     for (auto predIt = block.pred_begin(), predE = block.pred_end();
          predIt != predE; ++predIt) {
       auto branch = dyn_cast<BranchOpInterface>((*predIt)->getTerminator());
@@ -905,32 +915,31 @@ static LogicalResult dropRedundantArguments(RewriterBase &rewriter,
       }
       unsigned succIndex = predIt.getSuccessorIndex();
       SuccessorOperands succOperands = branch.getSuccessorOperands(succIndex);
-      auto operands = succOperands.getForwardedOperands();
+      auto branchOperands = succOperands.getForwardedOperands();
       if (!commonValue) {
-        commonValue = operands[argIdx];
+        commonValue = branchOperands[argIdx];
       } else {
-        if (operands[argIdx] != commonValue) {
+        if (branchOperands[argIdx] != commonValue) {
           sameArg = false;
           break;
         }
       }
     }
 
-    // If they are passing the same value, drop the argument
+    // If they are passing the same value, drop the argument.
     if (commonValue && sameArg) {
       argsToErase.push_back(argIdx);
 
-      // Remove the argument from the block
-      Value argVal = block.getArgument(argIdx);
-      rewriter.replaceAllUsesWith(argVal, commonValue);
+      // Remove the argument from the block.
+      rewriter.replaceAllUsesWith(blockOperand, commonValue);
     }
   }
 
-  // Remove the arguments
+  // Remove the arguments.
   for (auto argIdx : llvm::reverse(argsToErase)) {
     block.eraseArgument(argIdx);
 
-    // Remove the argument from the branch ops
+    // Remove the argument from the branch ops.
     for (auto predIt = block.pred_begin(), predE = block.pred_end();
          predIt != predE; ++predIt) {
       auto branch = cast<BranchOpInterface>((*predIt)->getTerminator());
