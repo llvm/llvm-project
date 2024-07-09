@@ -27,7 +27,7 @@ func.func @trunci_i16_i8(%v1 : i16) {
 
 func.func @extsi() {
     // ------------------------------------------------
-    // Test i1
+    // Test extending from i1
     // ------------------------------------------------
     %true = arith.constant -1 : i1
 
@@ -38,7 +38,7 @@ func.func @extsi() {
     func.call @extsi_i1_i16(%true) : (i1) -> ()
 
     // ------------------------------------------------
-    // TODO: Test i8, i16 etc..
+    // TODO: Test extension from i8, i16 etc..
     // ------------------------------------------------
 
     return
@@ -46,7 +46,7 @@ func.func @extsi() {
 
 func.func @extui() {
     // ------------------------------------------------
-    // Test i1
+    // Test extending from i1
     // ------------------------------------------------
     %true = arith.constant true
 
@@ -57,7 +57,7 @@ func.func @extui() {
     func.call @extui_i1_i64(%true) : (i1) -> ()
 
     // ------------------------------------------------
-    // TODO: Test i8, i16 etc..
+    // TODO: Test extension from i8, i16 etc..
     // ------------------------------------------------
 
     return
@@ -65,7 +65,7 @@ func.func @extui() {
 
 func.func @trunci() {
     // ------------------------------------------------
-    // Test i16
+    // Test truncating from i16
     // ------------------------------------------------
 
     // trunci on 20194 : i16
@@ -76,7 +76,7 @@ func.func @trunci() {
     func.call @trunci_i16_i8(%c20194) : (i16) -> ()
 
     // ------------------------------------------------
-    // TODO: Test i1, i8 etc..
+    // TODO: Test truncation of i1, i8 etc..
     // ------------------------------------------------
 
     return
