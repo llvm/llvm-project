@@ -196,8 +196,8 @@ def HasStdExtA : Predicate<"Subtarget->hasStdExtA()">,
                                     "'A' (Atomic Instructions)">;
 
 def FeatureStdExtZtso
-    : RISCVExperimentalExtension<"ztso", 0, 1,
-                                 "'Ztso' (Memory Model - Total Store Order)">;
+    : RISCVExtension<"ztso", 1, 0,
+                     "'Ztso' (Memory Model - Total Store Order)">;
 def HasStdExtZtso : Predicate<"Subtarget->hasStdExtZtso()">,
                     AssemblerPredicate<(all_of FeatureStdExtZtso),
                         "'Ztso' (Memory Model - Total Store Order)">;
