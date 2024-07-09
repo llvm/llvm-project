@@ -490,7 +490,8 @@ void DebugAddrWriterDwarf5::updateAddrBase(DIEBuilder &DIEBlder, DWARFUnit &CU,
 
 DenseMap<uint64_t, uint64_t> DebugAddrWriter::UnmodifiedAddressOffsets;
 
-std::optional<uint64_t> DebugAddrWriterDwarf5::finalize(const size_t BufferSize) {
+std::optional<uint64_t>
+DebugAddrWriterDwarf5::finalize(const size_t BufferSize) {
   // Need to layout all sections within .debug_addr
   // Within each section sort Address by index.
   const endianness Endian = BC->DwCtx->isLittleEndian()
