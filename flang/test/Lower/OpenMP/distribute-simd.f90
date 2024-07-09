@@ -15,7 +15,7 @@ subroutine distribute_simd_aligned(A)
   ! CHECK-SAME: {
   ! CHECK-NEXT: omp.simd
   ! CHECK-SAME: aligned({{.*}})
-  !$omp distribute simd aligned(A)
+  !$omp distribute simd aligned(A:256)
   do index_ = 1, 10
     call c_test_call(A)
   end do
