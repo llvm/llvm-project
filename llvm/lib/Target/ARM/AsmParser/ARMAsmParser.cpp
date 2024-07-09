@@ -11878,7 +11878,7 @@ bool ARMAsmParser::parseDirectiveEabiAttr(SMLoc L) {
       return Error(Parser.getTok().getLoc(), "bad string constant");
 
     if (Tag == ARMBuildAttrs::also_compatible_with) {
-      if (Parser.parseEscapedString(EscapedValue, /* WarnNewline */ false))
+      if (Parser.parseEscapedString(EscapedValue))
         return Error(Parser.getTok().getLoc(), "bad escaped string constant");
 
       StringValue = EscapedValue;

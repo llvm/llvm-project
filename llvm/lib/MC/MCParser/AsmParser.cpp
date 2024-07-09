@@ -675,7 +675,7 @@ private:
   bool parseDirectiveElseIf(SMLoc DirectiveLoc); // ".elseif"
   bool parseDirectiveElse(SMLoc DirectiveLoc); // ".else"
   bool parseDirectiveEndIf(SMLoc DirectiveLoc); // .endif
-  bool parseEscapedString(std::string &Data, bool WarnNewline = false) override;
+  bool parseEscapedString(std::string &Data) override;
   bool parseAngleBracketString(std::string &Data) override;
 
   const MCExpr *applyModifierToExpr(const MCExpr *E,
@@ -3025,7 +3025,7 @@ bool AsmParser::parseDirectiveSet(StringRef IDVal, AssignmentKind Kind) {
   return false;
 }
 
-bool AsmParser::parseEscapedString(std::string &Data, bool WarnNewline) {
+bool AsmParser::parseEscapedString(std::string &Data) {
   if (check(getTok().isNot(AsmToken::String), "expected string"))
     return true;
 
@@ -3033,9 +3033,9 @@ bool AsmParser::parseEscapedString(std::string &Data, bool WarnNewline) {
   StringRef Str = getTok().getStringContents();
   for (unsigned i = 0, e = Str.size(); i != e; ++i) {
     if (Str[i] != '\\') {
-      if (Str[i] == '\n' && WarnNewline) {
+      if (Str[i] == '\n') {
         SMLoc NewlineLoc =
-            SMLoc::getFromPointer(getTok().getLoc().getPointer() + i + 1);
+            SMLoc::getFromPointer(Str.data() + i);
         if (Warning(NewlineLoc, "unterminated string; newline inserted"))
           return true;
       }
@@ -3133,7 +3133,7 @@ bool AsmParser::parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated) {
     // Only support spaces as separators for .ascii directive for now. See the
     // discusssion at https://reviews.llvm.org/D91460 for more details.
     do {
-      if (parseEscapedString(Data, /* WarnNewline */ true))
+      if (parseEscapedString(Data))
         return true;
 
       getStreamer().emitBytes(Data);

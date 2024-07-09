@@ -5337,8 +5337,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGCNTarget() {
 
   std::string TargetIDDirective;
   SMLoc TargetStart = getTok().getLoc();
-  if (getParser().parseEscapedString(TargetIDDirective,
-                                     /* WarnNewline */ false))
+  if (getParser().parseEscapedString(TargetIDDirective))
     return true;
 
   SMRange TargetRange = SMRange(TargetStart, getTok().getLoc());

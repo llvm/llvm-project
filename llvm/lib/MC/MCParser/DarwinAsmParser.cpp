@@ -613,7 +613,7 @@ bool DarwinAsmParser::parseDirectiveLinkerOption(StringRef IDVal, SMLoc) {
       return TokError("expected string in '" + Twine(IDVal) + "' directive");
 
     std::string Data;
-    if (getParser().parseEscapedString(Data, false))
+    if (getParser().parseEscapedString(Data))
       return true;
 
     Args.push_back(Data);

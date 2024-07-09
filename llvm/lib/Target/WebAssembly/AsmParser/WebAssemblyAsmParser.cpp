@@ -980,7 +980,7 @@ public:
       if (CheckDataSection())
         return ParseStatus::Failure;
       std::string S;
-      if (Parser.parseEscapedString(S, /* WarnNewline */ false))
+      if (Parser.parseEscapedString(S))
         return error("Cannot parse string constant: ", Lexer.getTok());
       Out.emitBytes(StringRef(S.c_str(), S.length() + 1));
       return expect(AsmToken::EndOfStatement, "EOL");
