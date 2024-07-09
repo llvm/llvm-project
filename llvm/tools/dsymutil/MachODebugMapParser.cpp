@@ -12,6 +12,7 @@
 #include "RelocationMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Path.h"
@@ -719,7 +720,7 @@ void MachODebugMapParser::handleStabSymbolTableEntry(
     for (auto Iter = CurrentObjectAddresses.begin();
          Iter != CurrentObjectAddresses.end(); ++Iter) {
       llvm::StringRef SymbolName = Iter->getKey();
-      auto Pos = SymbolName.rfind(".llvm.");
+      auto Pos = SymbolName.rfind(NameParticles::LLVMSuffix);
       if (Pos != llvm::StringRef::npos && SymbolName.substr(0, Pos) == Name) {
         ObjectSymIt = Iter;
         break;

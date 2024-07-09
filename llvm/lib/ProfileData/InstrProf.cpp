@@ -599,10 +599,9 @@ StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
   // different modules and should be kept. This is the only suffix with the
   // pattern ".xxx" which is kept before matching, other suffixes similar as
   // ".llvm." will be stripped.
-  const std::string UniqSuffix = ".__uniq.";
-  size_t Pos = PGOName.find(UniqSuffix);
+  size_t Pos = PGOName.find(NameParticles::UniqSuffix);
   if (Pos != StringRef::npos)
-    Pos += UniqSuffix.length();
+    Pos += strlen(NameParticles::UniqSuffix);
   else
     Pos = 0;
 

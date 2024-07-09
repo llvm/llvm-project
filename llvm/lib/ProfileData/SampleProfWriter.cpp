@@ -19,6 +19,7 @@
 
 #include "llvm/ProfileData/SampleProfWriter.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Compression.h"
@@ -372,7 +373,7 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTableSection(
   // Original names are unavailable if using MD5, so this option has no use.
   if (!UseMD5) {
     for (const auto &I : NameTable) {
-      if (I.first.stringRef().contains(FunctionSamples::UniqSuffix)) {
+      if (I.first.stringRef().contains(NameParticles::UniqSuffix)) {
         addSectionFlag(SecNameTable, SecNameTableFlags::SecFlagUniqSuffix);
         break;
       }

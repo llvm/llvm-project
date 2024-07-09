@@ -509,4 +509,26 @@ TEST(FunctionTest, UWTable) {
   EXPECT_FALSE(F.hasUWTable());
   EXPECT_TRUE(F.getUWTableKind() == UWTableKind::None);
 }
+
+TEST(FunctionTest, GlobalIdentifier) {
+  // Technically a GlobalValue test, but using Functions as test subject.
+  LLVMContext Ctx;
+  Module M1("test1", Ctx);
+  Module M2("test2", Ctx);
+  Module M3("test3", Ctx);
+
+  static const char *Name = "F.__uniq.1234";
+
+  auto *G = Function::Create(
+      llvm::FunctionType::get(llvm::Type::getVoidTy(Ctx), false),
+      llvm::GlobalValue::ExternalLinkage, Name, &M1);
+  auto *UniqL1 = Function::Create(
+      llvm::FunctionType::get(llvm::Type::getVoidTy(Ctx), false),
+      llvm::GlobalValue::InternalLinkage, Name, &M2);
+  auto *UniqL2 = Function::Create(
+      llvm::FunctionType::get(llvm::Type::getVoidTy(Ctx), false),
+      llvm::GlobalValue::InternalLinkage, Name, &M3);
+  EXPECT_EQ(G->getGUID(), UniqL1->getGUID());
+  EXPECT_EQ(UniqL1->getGUID(), UniqL2->getGUID());
+}
 } // end namespace

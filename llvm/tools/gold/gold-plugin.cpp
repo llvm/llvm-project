@@ -20,6 +20,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
@@ -592,7 +593,7 @@ static ld_plugin_status claim_file_hook(const ld_plugin_input_file *file,
   // unique name.
   cf.name = file->name;
   if (file->offset)
-    cf.name += ".llvm." + std::to_string(file->offset) + "." +
+    cf.name += NameParticles::LLVMSuffix + std::to_string(file->offset) + "." +
                sys::path::filename(Obj->getSourceFileName()).str();
 
   for (auto &Sym : Obj->symbols()) {

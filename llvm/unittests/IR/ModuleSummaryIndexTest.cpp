@@ -8,6 +8,7 @@
 
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
@@ -53,5 +54,13 @@ Versions: 0 MIB:
 		AllocType 1 StackIds: 0, 1, 2, 3
 		AllocType 2 StackIds: 0, 1, 2, 4
 )");
+}
+
+TEST(ModuleSummaryIndexTest, LocalPromotion) {
+  EXPECT_EQ(ModuleSummaryIndex::getGlobalNameForLocal("Hello", "SomeSuffix"),
+            "Hello.llvm.SomeSuffix");
+  EXPECT_EQ(ModuleSummaryIndex::getGlobalNameForLocal("Hello.__uniq.1234",
+                                                      "SomeSuffix"),
+            "Hello.__uniq.1234");
 }
 } // end anonymous namespace

@@ -1743,8 +1743,10 @@ public:
   }
 
   static std::string getGlobalNameForLocal(StringRef Name, StringRef Suffix) {
+    if (Name.contains(NameParticles::UniqSuffix))
+      return std::string(Name);
     SmallString<256> NewName(Name);
-    NewName += ".llvm.";
+    NewName += NameParticles::LLVMSuffix;
     NewName += Suffix;
     return std::string(NewName);
   }
@@ -1754,7 +1756,8 @@ public:
   /// because it is possible in certain clients (not clang at the moment) for
   /// two rounds of ThinLTO optimization and therefore promotion to occur.
   static StringRef getOriginalNameBeforePromote(StringRef Name) {
-    std::pair<StringRef, StringRef> Pair = Name.rsplit(".llvm.");
+    std::pair<StringRef, StringRef> Pair =
+        Name.rsplit(NameParticles::LLVMSuffix);
     return Pair.first;
   }
 

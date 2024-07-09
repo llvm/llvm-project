@@ -45,6 +45,12 @@ typedef unsigned ID;
 // Objective-C functions which commonly have :'s in their names.
 inline constexpr char GlobalIdentifierDelimiter = ';';
 
+struct NameParticles final {
+  static constexpr const char *LLVMSuffix = ".llvm.";
+  static constexpr const char *PartSuffix = ".part.";
+  static constexpr const char *UniqSuffix = ".__uniq.";
+};
+
 class GlobalValue : public Constant {
 public:
   /// An enumeration for the kinds of linkage for global values.

@@ -1091,18 +1091,14 @@ public:
     return getCanonicalFnName(F.getName(), Attr);
   }
 
-  /// Name suffixes which canonicalization should handle to avoid
-  /// profile mismatch.
-  static constexpr const char *LLVMSuffix = ".llvm.";
-  static constexpr const char *PartSuffix = ".part.";
-  static constexpr const char *UniqSuffix = ".__uniq.";
-
   static StringRef getCanonicalFnName(StringRef FnName,
                                       StringRef Attr = "selected") {
     // Note the sequence of the suffixes in the knownSuffixes array matters.
     // If suffix "A" is appended after the suffix "B", "A" should be in front
     // of "B" in knownSuffixes.
-    const char *KnownSuffixes[] = {LLVMSuffix, PartSuffix, UniqSuffix};
+    const char *KnownSuffixes[] = {NameParticles::LLVMSuffix,
+                                   NameParticles::PartSuffix,
+                                   NameParticles::UniqSuffix};
     if (Attr == "" || Attr == "all")
       return FnName.split('.').first;
     if (Attr == "selected") {
@@ -1111,7 +1107,8 @@ public:
         StringRef Suffix(Suf);
         // If the profile contains ".__uniq." suffix, don't strip the
         // suffix for names in the IR.
-        if (Suffix == UniqSuffix && FunctionSamples::HasUniqSuffix)
+        if (Suffix == NameParticles::UniqSuffix &&
+            FunctionSamples::HasUniqSuffix)
           continue;
         auto It = Cand.rfind(Suffix);
         if (It == StringRef::npos)
@@ -1578,7 +1575,7 @@ inline std::string getUniqueInternalLinkagePostfix(const StringRef &FName) {
   // numbers or characters but not both.
   llvm::APInt IntHash(128, Str.str(), 16);
   return toString(IntHash, /* Radix = */ 10, /* Signed = */ false)
-      .insert(0, FunctionSamples::UniqSuffix);
+      .insert(0, NameParticles::UniqSuffix);
 }
 
 } // end namespace llvm

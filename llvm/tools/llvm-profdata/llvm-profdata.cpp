@@ -1108,7 +1108,7 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
   auto checkSampleProfileHasFUnique = [&Reader]() {
     for (const auto &PD : Reader->getProfiles()) {
       auto &FContext = PD.second.getContext();
-      if (FContext.toString().find(FunctionSamples::UniqSuffix) !=
+      if (FContext.toString().find(NameParticles::UniqSuffix) !=
           std::string::npos) {
         return true;
       }
@@ -1142,7 +1142,7 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
     }
 
     // This name should have a static linkage.
-    size_t PostfixPos = NewName.find(FunctionSamples::UniqSuffix);
+    size_t PostfixPos = NewName.find(NameParticles::UniqSuffix);
     bool ProfileHasFUnique = (PostfixPos != StringRef::npos);
 
     // If sample profile and instrumented profile do not agree on symbol
