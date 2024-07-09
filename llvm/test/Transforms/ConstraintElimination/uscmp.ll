@@ -108,3 +108,42 @@ true:
 false:
   ret i8 20
 }
+
+; Negative test: signedness mismatch
+define i8 @scmp_4(i32 %x, i32 %y) {
+; CHECK-LABEL: @scmp_4(
+; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    ret i8 20
+; CHECK:       false:
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %cond = icmp ugt i32 %x, %y
+  br i1 %cond, label %true, label %false
+true:
+  ret i8 20
+false:
+  %r = call i8 @llvm.scmp(i32 %x, i32 %y)
+  ret i8 %r
+}
+
+define i8 @ucmp_4(i32 %x, i32 %y) {
+; CHECK-LABEL: @ucmp_4(
+; CHECK-NEXT:    [[COND:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    ret i8 20
+; CHECK:       false:
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %cond = icmp slt i32 %x, %y
+  br i1 %cond, label %true, label %false
+true:
+  ret i8 20
+false:
+  %r = call i8 @llvm.ucmp(i32 %x, i32 %y)
+  ret i8 %r
+}
