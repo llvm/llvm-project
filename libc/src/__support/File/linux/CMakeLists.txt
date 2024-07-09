@@ -5,6 +5,7 @@ add_object_library(
     file.cpp
   HDRS
     file.h
+    lseekImpl.h
   DEPENDS
     libc.include.fcntl
     libc.include.stdio
@@ -15,6 +16,8 @@ add_object_library(
     libc.src.errno.errno
     libc.src.__support.error_or
     libc.src.__support.File.file
+    libc.hdr.types.off_t
+    libc.hdr.stdio_macros
 )
 
 add_object_library(

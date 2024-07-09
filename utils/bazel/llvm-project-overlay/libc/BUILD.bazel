@@ -138,6 +138,11 @@ libc_support_library(
     hdrs = ["hdr/float_macros.h"],
 )
 
+libc_support_library(
+    name = "hdr_stdio_macros",
+    hdrs = ["hdr/stdio_macros.h"],
+)
+
 ############################ Type Proxy Header Files ###########################
 
 libc_support_library(
@@ -178,6 +183,11 @@ libc_support_library(
 libc_support_library(
     name = "types_pid_t",
     hdrs = ["hdr/types/pid_t.h"],
+)
+
+libc_support_library(
+    name = "types_off_t",
+    hdrs = ["hdr/types/off_t.h"],
 )
 
 ############################### Support libraries ##############################
@@ -667,6 +677,8 @@ libc_support_library(
         ":__support_error_or",
         ":__support_threads_mutex",
         ":errno",
+        ":hdr_stdio_macros",
+        ":types_off_t",
     ],
 )
 
@@ -678,6 +690,7 @@ libc_support_library(
         ":__support_error_or",
         ":__support_osutil_syscall",
         ":errno",
+        ":types_off_t",
     ],
 )
 
