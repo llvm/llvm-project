@@ -61,8 +61,7 @@ add_entrypoint_object(
   HDRS
     fopencookie.h
   DEPENDS
-    libc.hdr.stdio_macros
-    libc.hdr.types.off_t
+    libc.include.stdio
     libc.src.__support.CPP.new
     libc.src.__support.File.file
 )
@@ -75,7 +74,7 @@ add_entrypoint_object(
     setbuf.h
   DEPENDS
     libc.src.errno.errno
-    libc.hdr.types.off_t
+    libc.include.stdio
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
 )
