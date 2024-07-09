@@ -445,6 +445,11 @@ New Compiler Flags
 - ``-Wc++2c-compat`` group was added to help migrating existing codebases
   to upcoming C++26.
 
+- ``-fdisable-block-signature-string`` instructs clang not to emit the signature
+  string for blocks. Disabling the string can potentially break existing code
+  that relies on it. Users should carefully consider this possibiilty when using
+  the flag.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -549,6 +554,10 @@ Attribute Changes in Clang
        size_t count;
      };
 
+- The ``guarded_by``, ``pt_guarded_by``, ``acquired_after``, ``acquired_before``
+  attributes now support referencing struct members in C. The arguments are also
+  now late parsed when ``-fexperimental-late-parse-attributes`` is passed like
+  for ``counted_by``.
 
 - Introduced new function type attributes ``[[clang::nonblocking]]``, ``[[clang::nonallocating]]``,
   ``[[clang::blocking]]``, and ``[[clang::allocating]]``, with GNU-style variants as well.
