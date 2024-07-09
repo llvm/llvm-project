@@ -74,7 +74,7 @@
 "`4096 <https://wg21.link/LWG4096>`__","``views::iota(views::iota(0))`` should be rejected","St. Louis June 2024","","","|ranges|"
 "`4098 <https://wg21.link/LWG4098>`__","``views::adjacent<0>`` should reject non-forward ranges","St. Louis June 2024","","","|ranges|"
 "`4105 <https://wg21.link/LWG4105>`__","``ranges::ends_with``\`s Returns misses difference casting","St. Louis June 2024","","","|ranges|"
-"`4106 <https://wg21.link/LWG4106>`__","``basic_format_args`` should not be default-constructible","St. Louis June 2024","","","|format|"
+"`4106 <https://wg21.link/LWG4106>`__","``basic_format_args`` should not be default-constructible","St. Louis June 2024","|Complete|","19.0","|format|"
 "","","","","",""
 "`3343 <https://wg21.link/LWG3343>`__","Ordering of calls to ``unlock()`` and ``notify_all()`` in Effects element of ``notify_all_at_thread_exit()`` should be reversed","Not Yet Adopted","|Complete|","16.0",""
 "XXXX","","The sys_info range should be affected by save","Not Yet Adopted","|Complete|","19.0"
