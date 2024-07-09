@@ -2133,10 +2133,6 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
                          "different type sizes\n");
     return Dependence::Unknown;
   }
-
-  if (!CommonStride)
-    return Dependence::Unknown;
-
   // Bail out early if passed-in parameters make vectorization not feasible.
   unsigned ForcedFactor = (VectorizerParams::VectorizationFactor ?
                            VectorizerParams::VectorizationFactor : 1);
@@ -2176,7 +2172,7 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
   // minimum for computations below, as this ensures we compute the closest
   // possible dependence distance.
   uint64_t MinDistanceNeeded =
-      TypeByteSize * *CommonStride * (MinNumIter - 1) + TypeByteSize;
+      TypeByteSize * MaxStride * (MinNumIter - 1) + TypeByteSize;
   if (MinDistanceNeeded > static_cast<uint64_t>(MinDistance)) {
     if (!isa<SCEVConstant>(Dist)) {
       // For non-constant distances, we checked the lower bound of the
@@ -2233,7 +2229,7 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
 
   // An update to MinDepDistBytes requires an update to MaxSafeVectorWidthInBits
   // since there is a backwards dependency.
-  uint64_t MaxVF = MinDepDistBytes / (TypeByteSize * *CommonStride);
+  uint64_t MaxVF = MinDepDistBytes / (TypeByteSize * MaxStride);
   LLVM_DEBUG(dbgs() << "LAA: Positive min distance " << MinDistance
                     << " with max VF = " << MaxVF << '\n');
 

@@ -18,10 +18,9 @@
 define dso_local void @different_strides() local_unnamed_addr {
 ; CHECK-LABEL: 'different_strides'
 ; CHECK-NEXT:    for.body4:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 2048 bits
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            %3 = load float, ptr %arrayidx, align 4 ->
 ; CHECK-NEXT:            store float %add9, ptr %arrayidx8, align 4
 ; CHECK-EMPTY:
