@@ -683,38 +683,29 @@ convertOmpTeams(omp::TeamsOp op, llvm::IRBuilderBase &builder,
 }
 
 static void
-buildDependData(Operation *op, LLVM::ModuleTranslation &moduleTranslation,
+buildDependData(std::optional<ArrayAttr> depends, OperandRange dependVars,
+                LLVM::ModuleTranslation &moduleTranslation,
                 SmallVectorImpl<llvm::OpenMPIRBuilder::DependData> &dds) {
-  auto processDepends = [&](std::optional<ArrayAttr> depends,
-                            OperandRange dependVars) {
-    if (dependVars.empty())
-      return;
-    for (auto dep : llvm::zip(dependVars, depends->getValue())) {
-      llvm::omp::RTLDependenceKindTy type;
-      switch (
-          cast<mlir::omp::ClauseTaskDependAttr>(std::get<1>(dep)).getValue()) {
-      case mlir::omp::ClauseTaskDepend::taskdependin:
-        type = llvm::omp::RTLDependenceKindTy::DepIn;
-        break;
-      // The OpenMP runtime requires that the codegen for 'depend' clause for
-      // 'out' dependency kind must be the same as codegen for 'depend' clause
-      // with 'inout' dependency.
-      case mlir::omp::ClauseTaskDepend::taskdependout:
-      case mlir::omp::ClauseTaskDepend::taskdependinout:
-        type = llvm::omp::RTLDependenceKindTy::DepInOut;
-        break;
-      };
-      llvm::Value *depVal = moduleTranslation.lookupValue(std::get<0>(dep));
-      llvm::OpenMPIRBuilder::DependData dd(type, depVal->getType(), depVal);
-      dds.emplace_back(dd);
-    }
-  };
-
-  if (auto taskOp = dyn_cast<omp::TaskOp>(op)) {
-    processDepends(taskOp.getDepends(), taskOp.getDependVars());
-  }
-  if (auto targetOp = dyn_cast<omp::TargetOp>(op)) {
-    processDepends(targetOp.getDepends(), targetOp.getDependVars());
+  if (dependVars.empty())
+    return;
+  for (auto dep : llvm::zip(dependVars, depends->getValue())) {
+    llvm::omp::RTLDependenceKindTy type;
+    switch (
+        cast<mlir::omp::ClauseTaskDependAttr>(std::get<1>(dep)).getValue()) {
+    case mlir::omp::ClauseTaskDepend::taskdependin:
+      type = llvm::omp::RTLDependenceKindTy::DepIn;
+      break;
+    // The OpenMP runtime requires that the codegen for 'depend' clause for
+    // 'out' dependency kind must be the same as codegen for 'depend' clause
+    // with 'inout' dependency.
+    case mlir::omp::ClauseTaskDepend::taskdependout:
+    case mlir::omp::ClauseTaskDepend::taskdependinout:
+      type = llvm::omp::RTLDependenceKindTy::DepInOut;
+      break;
+    };
+    llvm::Value *depVal = moduleTranslation.lookupValue(std::get<0>(dep));
+    llvm::OpenMPIRBuilder::DependData dd(type, depVal->getType(), depVal);
+    dds.emplace_back(dd);
   }
 }
 /// Converts an OpenMP task construct into LLVM IR using OpenMPIRBuilder.
@@ -740,7 +731,8 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
   };
 
   SmallVector<llvm::OpenMPIRBuilder::DependData> dds;
-  buildDependData(taskOp.getOperation(), moduleTranslation, dds);
+  buildDependData(taskOp.getDepends(), taskOp.getDependVars(),
+                  moduleTranslation, dds);
 
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
@@ -3103,7 +3095,8 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
       kernelInput.push_back(mapData.OriginalValue[i]);
   }
   SmallVector<llvm::OpenMPIRBuilder::DependData> dds;
-  buildDependData(targetOp.getOperation(), moduleTranslation, dds);
+  buildDependData(targetOp.getDepends(), targetOp.getDependVars(),
+                  moduleTranslation, dds);
 
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createTarget(
       ompLoc, allocaIP, builder.saveIP(), entryInfo, defaultValTeams,
