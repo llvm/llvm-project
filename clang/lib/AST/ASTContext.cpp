@@ -3360,6 +3360,22 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
   case Type::Record: {
     const RecordDecl *RD = T->getAs<RecordType>()->getDecl();
     const IdentifierInfo *II = RD->getIdentifier();
+
+    // In C++, an immediate typedef of an anonymous struct or union
+    // is considered to name it for ODR purposes, but C's specification
+    // of type compatibility does not have a similar rule.  Using the typedef
+    // name in function type discriminators anyway, as we do here,
+    // therefore technically violates the C standard: two function pointer
+    // types defined in terms of two typedef'd anonymous structs with
+    // different names are formally still compatible, but we are assigning
+    // them different discriminators and therefore incompatible ABIs.
+    //
+    // This is a relatively minor violation that significantly improves
+    // discrimination in some cases and has not caused problems in
+    // practice.  Regardless, it is now part of the ABI in places where
+    // function type discrimination is used, and it can no longer be
+    // changed except on new platforms.
+
     if (!II)
       if (const TypedefNameDecl *Typedef = RD->getTypedefNameForAnonDecl())
         II = Typedef->getDeclName().getAsIdentifierInfo();
