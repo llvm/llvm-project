@@ -49,7 +49,6 @@ endif()
 set(MEMPROF_UNITTEST_LINK_LIBRARIES
   ${COMPILER_RT_UNWINDER_LINK_LIBS}
   ${SANITIZER_TEST_CXX_LIBRARIES})
-append_list_if(COMPILER_RT_HAS_LIBDL -ldl MEMPROF_UNITTEST_LINK_LIBRARIES)
 
 # Adds memprof tests for each architecture.
 macro(add_memprof_tests_for_arch arch)
