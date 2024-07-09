@@ -106,13 +106,70 @@ define <32 x i16> @zero_pmulh_512_commute(<32 x i16> %a0) {
 }
 
 ;
+; Multiply by One
+;
+
+define <8 x i16> @one_pmulh_128(<8 x i16> %a0) {
+; CHECK-LABEL: @one_pmulh_128(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.x86.ssse3.pmul.hr.sw.128(<8 x i16> [[A0:%.*]], <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
+; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+;
+  %1 = call <8 x i16> @llvm.x86.ssse3.pmul.hr.sw.128(<8 x i16> %a0, <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
+  ret <8 x i16> %1
+}
+
+define <8 x i16> @one_pmulh_128_commute(<8 x i16> %a0) {
+; CHECK-LABEL: @one_pmulh_128_commute(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.x86.ssse3.pmul.hr.sw.128(<8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <8 x i16> [[A0:%.*]])
+; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+;
+  %1 = call <8 x i16> @llvm.x86.ssse3.pmul.hr.sw.128(<8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <8 x i16> %a0)
+  ret <8 x i16> %1
+}
+
+define <16 x i16> @one_pmulh_256(<16 x i16> %a0) {
+; CHECK-LABEL: @one_pmulh_256(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i16> @llvm.x86.avx2.pmul.hr.sw(<16 x i16> [[A0:%.*]], <16 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
+; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+;
+  %1 = call <16 x i16> @llvm.x86.avx2.pmul.hr.sw(<16 x i16> %a0, <16 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
+  ret <16 x i16> %1
+}
+
+define <16 x i16> @one_pmulh_256_commute(<16 x i16> %a0) {
+; CHECK-LABEL: @one_pmulh_256_commute(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i16> @llvm.x86.avx2.pmul.hr.sw(<16 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <16 x i16> [[A0:%.*]])
+; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+;
+  %1 = call <16 x i16> @llvm.x86.avx2.pmul.hr.sw(<16 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <16 x i16> %a0)
+  ret <16 x i16> %1
+}
+
+define <32 x i16> @one_pmulh_512(<32 x i16> %a0) {
+; CHECK-LABEL: @one_pmulh_512(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i16> @llvm.x86.avx512.pmul.hr.sw.512(<32 x i16> [[A0:%.*]], <32 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
+; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+;
+  %1 = call <32 x i16> @llvm.x86.avx512.pmul.hr.sw.512(<32 x i16> %a0, <32 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
+  ret <32 x i16> %1
+}
+
+define <32 x i16> @one_pmulh_512_commute(<32 x i16> %a0) {
+; CHECK-LABEL: @one_pmulh_512_commute(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i16> @llvm.x86.avx512.pmul.hr.sw.512(<32 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <32 x i16> [[A0:%.*]])
+; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+;
+  %1 = call <32 x i16> @llvm.x86.avx512.pmul.hr.sw.512(<32 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <32 x i16> %a0)
+  ret <32 x i16> %1
+}
+
+;
 ; Constant Folding
 ;
 
 define <8 x i16> @fold_pmulh_128() {
 ; CHECK-LABEL: @fold_pmulh_128(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.x86.ssse3.pmul.hr.sw.128(<8 x i16> <i16 -1, i16 2, i16 3, i16 -4, i16 -5, i16 6, i16 7, i16 -8>, <8 x i16> <i16 -5, i16 7, i16 -32768, i16 32765, i16 -9, i16 -11, i16 -32763, i16 32761>)
-; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <8 x i16> <i16 0, i16 0, i16 -3, i16 -4, i16 0, i16 0, i16 -7, i16 -8>
 ;
   %1 = call <8 x i16> @llvm.x86.ssse3.pmul.hr.sw.128(<8 x i16> <i16 -1, i16 2, i16 3, i16 -4, i16 -5, i16 6, i16 7, i16 -8>, <8 x i16> <i16 -5, i16 7, i16 -32768, i16 32765, i16 -9, i16 -11, i16 -32763, i16 32761>)
   ret <8 x i16> %1
@@ -120,8 +177,7 @@ define <8 x i16> @fold_pmulh_128() {
 
 define <16 x i16> @fold_pmulh_256() {
 ; CHECK-LABEL: @fold_pmulh_256(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i16> @llvm.x86.avx2.pmul.hr.sw(<16 x i16> <i16 0, i16 -1, i16 2, i16 3, i16 -4, i16 -5, i16 6, i16 7, i16 -8, i16 9, i16 -10, i16 11, i16 -12, i16 13, i16 -14, i16 -15>, <16 x i16> <i16 -5, i16 7, i16 -32768, i16 32766, i16 -9, i16 -11, i16 -32764, i16 32762, i16 13, i16 -15, i16 -32760, i16 32758, i16 17, i16 -19, i16 -32756, i16 32756>)
-; CHECK-NEXT:    ret <16 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <16 x i16> <i16 0, i16 0, i16 -2, i16 3, i16 0, i16 0, i16 -6, i16 7, i16 0, i16 0, i16 10, i16 11, i16 0, i16 0, i16 14, i16 -15>
 ;
   %1 = call <16 x i16> @llvm.x86.avx2.pmul.hr.sw(<16 x i16> <i16 0, i16 -1, i16 2, i16 3, i16 -4, i16 -5, i16 6, i16 7, i16 -8, i16 9, i16 -10, i16 11, i16 -12, i16 13, i16 -14, i16 -15>, <16 x i16> <i16 -5, i16 7, i16 -32768, i16 32766, i16 -9, i16 -11, i16 -32764, i16 32762, i16 13, i16 -15, i16 -32760, i16 32758, i16 17, i16 -19, i16 -32756, i16 32756>)
   ret <16 x i16> %1
@@ -129,8 +185,7 @@ define <16 x i16> @fold_pmulh_256() {
 
 define <32 x i16> @fold_pmulh_512() {
 ; CHECK-LABEL: @fold_pmulh_512(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i16> @llvm.x86.avx512.pmul.hr.sw.512(<32 x i16> <i16 0, i16 -1, i16 2, i16 3, i16 -4, i16 -5, i16 6, i16 7, i16 -8, i16 9, i16 -10, i16 11, i16 -12, i16 13, i16 -14, i16 -15, i16 -5, i16 7, i16 -32768, i16 32766, i16 -9, i16 -11, i16 -32764, i16 32762, i16 13, i16 -15, i16 -32760, i16 32758, i16 17, i16 -19, i16 -32756, i16 32756>, <32 x i16> <i16 -5, i16 7, i16 -32768, i16 32766, i16 -9, i16 -11, i16 -32764, i16 32762, i16 13, i16 -15, i16 -32760, i16 32758, i16 17, i16 -19, i16 -32756, i16 32756, i16 0, i16 -1, i16 2, i16 3, i16 -4, i16 -5, i16 6, i16 7, i16 -8, i16 9, i16 -10, i16 11, i16 -12, i16 13, i16 -14, i16 -15>)
-; CHECK-NEXT:    ret <32 x i16> [[TMP1]]
+; CHECK-NEXT:    ret <32 x i16> <i16 0, i16 0, i16 -2, i16 3, i16 0, i16 0, i16 -6, i16 7, i16 0, i16 0, i16 10, i16 11, i16 0, i16 0, i16 14, i16 -15, i16 0, i16 0, i16 -2, i16 3, i16 0, i16 0, i16 -6, i16 7, i16 0, i16 0, i16 10, i16 11, i16 0, i16 0, i16 14, i16 -15>
 ;
   %1 = call <32 x i16> @llvm.x86.avx512.pmul.hr.sw.512(<32 x i16> <i16 0, i16 -1, i16 2, i16 3, i16 -4, i16 -5, i16 6, i16 7, i16 -8, i16 9, i16 -10, i16 11, i16 -12, i16 13, i16 -14, i16 -15, i16 -5, i16 7, i16 -32768, i16 32766, i16 -9, i16 -11, i16 -32764, i16 32762, i16 13, i16 -15, i16 -32760, i16 32758, i16 17, i16 -19, i16 -32756, i16 32756>, <32 x i16> <i16 -5, i16 7, i16 -32768, i16 32766, i16 -9, i16 -11, i16 -32764, i16 32762, i16 13, i16 -15, i16 -32760, i16 32758, i16 17, i16 -19, i16 -32756, i16 32756, i16 0, i16 -1, i16 2, i16 3, i16 -4, i16 -5, i16 6, i16 7, i16 -8, i16 9, i16 -10, i16 11, i16 -12, i16 13, i16 -14, i16 -15>)
   ret <32 x i16> %1

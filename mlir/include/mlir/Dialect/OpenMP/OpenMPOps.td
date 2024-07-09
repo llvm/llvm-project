@@ -354,7 +354,7 @@ def LoopNestOp : OpenMP_Op<"loop_nest", traits = [
 
 def WsloopOp : OpenMP_Op<"wsloop", traits = [
     AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopWrapperInterface>,
-    RecursiveMemoryEffects, SingleBlockImplicitTerminator<"TerminatorOp">
+    RecursiveMemoryEffects, SingleBlock
   ], clauses = [
     // TODO: Complete clause list (allocate, private).
     // TODO: Sort clauses alphabetically.
@@ -418,7 +418,7 @@ def WsloopOp : OpenMP_Op<"wsloop", traits = [
 
 def SimdOp : OpenMP_Op<"simd", traits = [
     AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopWrapperInterface>,
-    RecursiveMemoryEffects, SingleBlockImplicitTerminator<"TerminatorOp">
+    RecursiveMemoryEffects, SingleBlock
   ], clauses = [
     // TODO: Complete clause list (linear, private, reduction).
     OpenMP_AlignedClause, OpenMP_IfClause, OpenMP_NontemporalClause,
@@ -485,7 +485,7 @@ def YieldOp : OpenMP_Op<"yield",
 //===----------------------------------------------------------------------===//
 def DistributeOp : OpenMP_Op<"distribute", traits = [
     AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopWrapperInterface>,
-    RecursiveMemoryEffects, SingleBlockImplicitTerminator<"TerminatorOp">
+    RecursiveMemoryEffects, SingleBlock
   ], clauses = [
     // TODO: Complete clause list (private).
     // TODO: Sort clauses alphabetically.
@@ -575,7 +575,7 @@ def TaskOp : OpenMP_Op<"task", traits = [
 def TaskloopOp : OpenMP_Op<"taskloop", traits = [
     AttrSizedOperandSegments, AutomaticAllocationScope,
     DeclareOpInterfaceMethods<LoopWrapperInterface>, RecursiveMemoryEffects,
-    SingleBlockImplicitTerminator<"TerminatorOp">
+    SingleBlock
   ], clauses = [
     // TODO: Complete clause list (private).
     // TODO: Sort clauses alphabetically.
@@ -1575,6 +1575,23 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [IsolatedFromAbove,
     }
   }];
   let hasRegionVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// [Spec 5.2] 10.5 masked Construct
+//===----------------------------------------------------------------------===//
+def MaskedOp : OpenMP_Op<"masked", clauses = [
+    OpenMP_FilterClause
+  ], singleRegion = 1> {
+  let summary = "masked construct";
+  let description = [{
+    Masked construct allows to specify a structured block to be executed by a subset of 
+    threads of the current team.
+  }] # clausesDescription;
+
+  let builders = [
+    OpBuilder<(ins CArg<"const MaskedClauseOps &">:$clauses)>
+  ];
 }
 
 #endif // OPENMP_OPS

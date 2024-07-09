@@ -42,7 +42,7 @@ class WebAssemblyOptimizeLiveIntervals final : public MachineFunctionPass {
     AU.setPreservesCFG();
     AU.addRequired<LiveIntervals>();
     AU.addPreserved<MachineBlockFrequencyInfo>();
-    AU.addPreserved<SlotIndexes>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervals>();
     AU.addPreservedID(LiveVariablesID);
     AU.addPreservedID(MachineDominatorsID);

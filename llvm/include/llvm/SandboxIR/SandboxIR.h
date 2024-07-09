@@ -58,15 +58,19 @@
 #ifndef LLVM_TRANSFORMS_SANDBOXIR_SANDBOXIR_H
 #define LLVM_TRANSFORMS_SANDBOXIR_SANDBOXIR_H
 
+#include "llvm/IR/Function.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/raw_ostream.h"
+#include <iterator>
 
 namespace llvm {
 
 namespace sandboxir {
 
+class Function;
 class Context;
+class Instruction;
 
 /// A SandboxIR Value has users. This is the base class.
 class Value {
@@ -105,6 +109,8 @@ protected:
   /// NOTE: Some SBInstructions, like Packs, may include more than one value.
   llvm::Value *Val = nullptr;
 
+  friend class Context; // For getting `Val`.
+
   /// All values point to the context.
   Context &Ctx;
   // This is used by eraseFromParent().
@@ -129,6 +135,35 @@ public:
   void dumpCommonPrefix(raw_ostream &OS) const;
   void dumpCommonSuffix(raw_ostream &OS) const;
   void printAsOperandCommon(raw_ostream &OS) const;
+  friend raw_ostream &operator<<(raw_ostream &OS, const sandboxir::Value &V) {
+    V.dump(OS);
+    return OS;
+  }
+  virtual void dump(raw_ostream &OS) const = 0;
+  LLVM_DUMP_METHOD virtual void dump() const = 0;
+#endif
+};
+
+/// Argument of a sandboxir::Function.
+class Argument : public sandboxir::Value {
+public:
+  Argument(llvm::Argument *Arg, sandboxir::Context &Ctx)
+      : sandboxir::Value(ClassID::Argument, Arg, Ctx) {}
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::Argument;
+  }
+#ifndef NDEBUG
+  void verify() const final {
+    assert(isa<llvm::Argument>(Val) && "Expected Argument!");
+  }
+  friend raw_ostream &operator<<(raw_ostream &OS,
+                                 const sandboxir::Argument &TArg) {
+    TArg.dump(OS);
+    return OS;
+  }
+  void printAsOperand(raw_ostream &OS) const;
+  void dump(raw_ostream &OS) const final;
+  LLVM_DUMP_METHOD void dump() const final;
 #endif
 };
 
@@ -142,16 +177,288 @@ public:
     assert(isa<llvm::User>(Val) && "Expected User!");
   }
   void dumpCommonHeader(raw_ostream &OS) const final;
+  void dump(raw_ostream &OS) const override {
+    // TODO: Remove this tmp implementation once we get the Instruction classes.
+  }
+  LLVM_DUMP_METHOD void dump() const override {
+    // TODO: Remove this tmp implementation once we get the Instruction classes.
+  }
+#endif
+};
+
+class Constant : public sandboxir::User {
+public:
+  Constant(llvm::Constant *C, sandboxir::Context &SBCtx)
+      : sandboxir::User(ClassID::Constant, C, SBCtx) {}
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::Constant ||
+           From->getSubclassID() == ClassID::Function;
+  }
+  sandboxir::Context &getParent() const { return getContext(); }
+#ifndef NDEBUG
+  void verify() const final {
+    assert(isa<llvm::Constant>(Val) && "Expected Constant!");
+  }
+  friend raw_ostream &operator<<(raw_ostream &OS,
+                                 const sandboxir::Constant &SBC) {
+    SBC.dump(OS);
+    return OS;
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
+/// The BasicBlock::iterator.
+class BBIterator {
+public:
+  using difference_type = std::ptrdiff_t;
+  using value_type = Instruction;
+  using pointer = value_type *;
+  using reference = value_type &;
+  using iterator_category = std::bidirectional_iterator_tag;
+
+private:
+  llvm::BasicBlock *BB;
+  llvm::BasicBlock::iterator It;
+  Context *Ctx;
+  pointer getInstr(llvm::BasicBlock::iterator It) const;
+
+public:
+  BBIterator() : BB(nullptr), Ctx(nullptr) {}
+  BBIterator(llvm::BasicBlock *BB, llvm::BasicBlock::iterator It, Context *Ctx)
+      : BB(BB), It(It), Ctx(Ctx) {}
+  reference operator*() const { return *getInstr(It); }
+  BBIterator &operator++();
+  BBIterator operator++(int) {
+    auto Copy = *this;
+    ++*this;
+    return Copy;
+  }
+  BBIterator &operator--();
+  BBIterator operator--(int) {
+    auto Copy = *this;
+    --*this;
+    return Copy;
+  }
+  bool operator==(const BBIterator &Other) const {
+    assert(Ctx == Other.Ctx && "BBIterators in different context!");
+    return It == Other.It;
+  }
+  bool operator!=(const BBIterator &Other) const { return !(*this == Other); }
+  /// \Returns the SBInstruction that corresponds to this iterator, or null if
+  /// the instruction is not found in the IR-to-SandboxIR tables.
+  pointer get() const { return getInstr(It); }
+};
+
+/// A sandboxir::User with operands and opcode.
+class Instruction : public sandboxir::User {
+public:
+  enum class Opcode {
+#define DEF_VALUE(ID, CLASS)
+#define DEF_USER(ID, CLASS)
+#define OP(OPC) OPC,
+#define DEF_INSTR(ID, OPC, CLASS) OPC
+#include "llvm/SandboxIR/SandboxIRValues.def"
+  };
+
+  Instruction(ClassID ID, Opcode Opc, llvm::Instruction *I,
+              sandboxir::Context &SBCtx)
+      : sandboxir::User(ID, I, SBCtx), Opc(Opc) {}
+
+protected:
+  Opcode Opc;
+
+public:
+  static const char *getOpcodeName(Opcode Opc);
+#ifndef NDEBUG
+  friend raw_ostream &operator<<(raw_ostream &OS, Opcode Opc) {
+    OS << getOpcodeName(Opc);
+    return OS;
+  }
+#endif
+  /// This is used by BasicBlock::iterator.
+  virtual unsigned getNumOfIRInstrs() const = 0;
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From);
+
+#ifndef NDEBUG
+  friend raw_ostream &operator<<(raw_ostream &OS,
+                                 const sandboxir::Instruction &SBI) {
+    SBI.dump(OS);
+    return OS;
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
+/// An LLLVM Instruction that has no SandboxIR equivalent class gets mapped to
+/// an OpaqueInstr.
+class OpaqueInst : public sandboxir::Instruction {
+public:
+  OpaqueInst(llvm::Instruction *I, sandboxir::Context &Ctx)
+      : sandboxir::Instruction(ClassID::Opaque, Opcode::Opaque, I, Ctx) {}
+  OpaqueInst(ClassID SubclassID, llvm::Instruction *I, sandboxir::Context &Ctx)
+      : sandboxir::Instruction(SubclassID, Opcode::Opaque, I, Ctx) {}
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::Opaque;
+  }
+  unsigned getNumOfIRInstrs() const final { return 1u; }
+#ifndef NDEBUG
+  void verify() const final {
+    // Nothing to do
+  }
+  friend raw_ostream &operator<<(raw_ostream &OS,
+                                 const sandboxir::OpaqueInst &OI) {
+    OI.dump(OS);
+    return OS;
+  }
+  void dump(raw_ostream &OS) const override;
+  LLVM_DUMP_METHOD void dump() const override;
+#endif
+};
+
+class BasicBlock : public Value {
+  /// Builds a graph that contains all values in \p BB in their original form
+  /// i.e., no vectorization is taking place here.
+  void buildBasicBlockFromLLVMIR(llvm::BasicBlock *LLVMBB);
+  friend class Context; // For `buildBasicBlockFromIR`
+
+public:
+  BasicBlock(llvm::BasicBlock *BB, Context &SBCtx)
+      : Value(ClassID::Block, BB, SBCtx) {
+    buildBasicBlockFromLLVMIR(BB);
+  }
+  ~BasicBlock() = default;
+  /// For isa/dyn_cast.
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == Value::ClassID::Block;
+  }
+  Function *getParent() const;
+  using iterator = BBIterator;
+  iterator begin() const;
+  iterator end() const {
+    auto *BB = cast<llvm::BasicBlock>(Val);
+    return iterator(BB, BB->end(), &Ctx);
+  }
+  std::reverse_iterator<iterator> rbegin() const {
+    return std::make_reverse_iterator(end());
+  }
+  std::reverse_iterator<iterator> rend() const {
+    return std::make_reverse_iterator(begin());
+  }
+  Context &getContext() const { return Ctx; }
+  Instruction *getTerminator() const;
+  bool empty() const { return begin() == end(); }
+  Instruction &front() const;
+  Instruction &back() const;
+
+#ifndef NDEBUG
+  void verify() const final {
+    assert(isa<llvm::BasicBlock>(Val) && "Expected BasicBlock!");
+  }
+  friend raw_ostream &operator<<(raw_ostream &OS, const BasicBlock &SBBB) {
+    SBBB.dump(OS);
+    return OS;
+  }
+  void dump(raw_ostream &OS) const final;
+  LLVM_DUMP_METHOD void dump() const final;
 #endif
 };
 
 class Context {
 protected:
   LLVMContext &LLVMCtx;
+  /// Maps LLVM Value to the corresponding sandboxir::Value. Owns all
+  /// SandboxIR objects.
+  DenseMap<llvm::Value *, std::unique_ptr<sandboxir::Value>>
+      LLVMValueToValueMap;
+
+  /// Take ownership of VPtr and store it in `LLVMValueToValueMap`.
+  Value *registerValue(std::unique_ptr<Value> &&VPtr);
+
+  Value *getOrCreateValueInternal(llvm::Value *V, llvm::User *U = nullptr);
+
+  Argument *getOrCreateArgument(llvm::Argument *LLVMArg) {
+    auto Pair = LLVMValueToValueMap.insert({LLVMArg, nullptr});
+    auto It = Pair.first;
+    if (Pair.second) {
+      It->second = std::make_unique<Argument>(LLVMArg, *this);
+      return cast<Argument>(It->second.get());
+    }
+    return cast<Argument>(It->second.get());
+  }
+
+  Value *getOrCreateValue(llvm::Value *LLVMV) {
+    return getOrCreateValueInternal(LLVMV, 0);
+  }
+
+  BasicBlock *createBasicBlock(llvm::BasicBlock *BB);
+
+  friend class BasicBlock; // For getOrCreateValue().
 
 public:
   Context(LLVMContext &LLVMCtx) : LLVMCtx(LLVMCtx) {}
+
+  sandboxir::Value *getValue(llvm::Value *V) const;
+  const sandboxir::Value *getValue(const llvm::Value *V) const {
+    return getValue(const_cast<llvm::Value *>(V));
+  }
+
+  Function *createFunction(llvm::Function *F);
+
+  /// \Returns the number of values registered with Context.
+  size_t getNumValues() const { return LLVMValueToValueMap.size(); }
 };
+
+class Function : public sandboxir::Value {
+  /// Helper for mapped_iterator.
+  struct LLVMBBToBB {
+    Context &Ctx;
+    LLVMBBToBB(Context &Ctx) : Ctx(Ctx) {}
+    BasicBlock &operator()(llvm::BasicBlock &LLVMBB) const {
+      return *cast<BasicBlock>(Ctx.getValue(&LLVMBB));
+    }
+  };
+
+public:
+  Function(llvm::Function *F, sandboxir::Context &Ctx)
+      : sandboxir::Value(ClassID::Function, F, Ctx) {}
+  /// For isa/dyn_cast.
+  static bool classof(const sandboxir::Value *From) {
+    return From->getSubclassID() == ClassID::Function;
+  }
+
+  Argument *getArg(unsigned Idx) const {
+    llvm::Argument *Arg = cast<llvm::Function>(Val)->getArg(Idx);
+    return cast<Argument>(Ctx.getValue(Arg));
+  }
+
+  size_t arg_size() const { return cast<llvm::Function>(Val)->arg_size(); }
+  bool arg_empty() const { return cast<llvm::Function>(Val)->arg_empty(); }
+
+  using iterator = mapped_iterator<llvm::Function::iterator, LLVMBBToBB>;
+  iterator begin() const {
+    LLVMBBToBB BBGetter(Ctx);
+    return iterator(cast<llvm::Function>(Val)->begin(), BBGetter);
+  }
+  iterator end() const {
+    LLVMBBToBB BBGetter(Ctx);
+    return iterator(cast<llvm::Function>(Val)->end(), BBGetter);
+  }
+
+#ifndef NDEBUG
+  void verify() const final {
+    assert(isa<llvm::Function>(Val) && "Expected Function!");
+  }
+  void dumpNameAndArgs(raw_ostream &OS) const;
+  void dump(raw_ostream &OS) const final;
+  LLVM_DUMP_METHOD void dump() const final;
+#endif
+};
+
 } // namespace sandboxir
 } // namespace llvm
 

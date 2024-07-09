@@ -46,11 +46,13 @@ def yaml_to_classes(yaml_data):
             Enumeration(enum_data["name"], enum_data.get("value", None))
         )
 
-    for function_data in yaml_data.get("functions", []):
+    functions = yaml_data.get("functions", [])
+    sorted_functions = sorted(functions, key=lambda x: x["name"])
+    for function_data in sorted_functions:
         arguments = [arg["type"] for arg in function_data["arguments"]]
         guard = function_data.get("guard", None)
         attributes = function_data.get("attributes", None)
-        standards = (function_data.get("standards", None),)
+        standards = function_data.get("standards", None)
         header.add_function(
             Function(
                 function_data["return_type"],
@@ -99,6 +101,7 @@ def fill_public_api(header_str, h_def_content):
     Returns:
         The final header content with the public API filled in.
     """
+    header_str = header_str.strip()
     return h_def_content.replace("%%public_api()", header_str, 1)
 
 

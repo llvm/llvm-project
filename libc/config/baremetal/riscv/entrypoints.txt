@@ -79,8 +79,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.strtoumax
 
     # stdio.h entrypoints
+    libc.src.stdio.getchar
     libc.src.stdio.printf
     libc.src.stdio.putchar
+    libc.src.stdio.puts
     libc.src.stdio.remove
     libc.src.stdio.snprintf
     libc.src.stdio.sprintf
@@ -161,6 +163,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdbit.stdc_trailing_zeros_us
 
     # stdlib.h entrypoints
+    libc.src.stdlib._Exit
     libc.src.stdlib.abort
     libc.src.stdlib.abs
     libc.src.stdlib.aligned_alloc
@@ -227,6 +230,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.canonicalize
     libc.src.math.canonicalizef
     libc.src.math.canonicalizel
+    libc.src.math.cbrtf
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.ceill
@@ -381,6 +385,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.sqrt
     libc.src.math.sqrtf
     libc.src.math.sqrtl
+    libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
     libc.src.math.trunc
