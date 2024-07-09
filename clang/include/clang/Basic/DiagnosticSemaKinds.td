@@ -12346,7 +12346,7 @@ def err_hlsl_mismatching_register_type_and_variable_type: Error<"unsupported res
 def err_hlsl_unsupported_register_type_and_variable_type: Error<"register binding type '%1' not supported for variable of type '%0'">;
 def err_hlsl_mismatching_register_type_and_resource_type: Error<"%select{srv|uav|cbv|sampler}2 type '%0' requires register type '%select{t|u|b|s}2', but register type '%1' was used">;
 def err_hlsl_unsupported_register_type_and_resource_type: Error<"invalid register type '%0' used; expected 't', 'u', 'b', or 's'">;
-def err_hlsl_conflicting_register_annotations: Error<"conflicting register annotations: multiple register numbers detected for register type '%0'">;
+def err_hlsl_conflicting_register_annotations: Error<"conflicting register annotations: multiple register annotations detected for register type '%0'">;
 def warn_hlsl_deprecated_register_type_b: Warning<"deprecated legacy bool constant register binding 'b' used. 'b' is only used for constant buffer resource binding">, InGroup<DisallowLegacyBindingRules>, DefaultError;
 def warn_hlsl_deprecated_register_type_i: Warning<"deprecated legacy int constant register binding 'i' used">, InGroup<DisallowLegacyBindingRules>, DefaultError;
 def warn_hlsl_register_type_c_not_in_global_scope: Warning<"register binding 'c' ignored inside cbuffer/tbuffer declarations; use pack_offset instead">, InGroup<DisallowLegacyBindingRules>, DefaultError;

@@ -91,8 +91,9 @@ struct Eg11{
   RWBuffer<int> b;
 };
 
-// expected-error@+1{{conflicting register annotations: multiple register numbers detected for register type 'u'}}
+// expected-error@+1{{conflicting register annotations: multiple register annotations detected for register type 'u'}}
 Eg11 e11 : register(u9) : register(u10);
+// expected-error@+1{{conflicting register annotations: multiple register annotations detected for register type 'u'}}
 Eg11 e11a : register(u9, space0) : register(u9, space1);
 struct Eg12{
   RWBuffer<int> a;  
