@@ -142,9 +142,9 @@ bool isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays,
 bool isEmptyFieldForLayout(const ASTContext &Context, const FieldDecl *FD);
 
 /// isEmptyRecordForLayout - Return true iff a structure contains only empty
-/// fields (per \ref isEmptyFieldForLayout). Note, C++ record fields are
-/// considered empty if the [[no_unique_address]] attribute would have made
-/// them empty.
+/// base classes (per \ref isEmptyRecordForLayout) and fields (per
+/// \ref isEmptyFieldForLayout). Note, C++ record fields are considered empty
+/// if the [[no_unique_address]] attribute would have made them empty.
 bool isEmptyRecordForLayout(const ASTContext &Context, QualType T);
 
 /// isSingleElementStruct - Determine if a structure is a "single
