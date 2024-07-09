@@ -31,7 +31,6 @@
 #include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 
@@ -640,8 +639,7 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
         if (llvm::ConstantDataSequential::isElementTypeCompatible(
                 elementType)) {
           // TODO: Handle all compatible types. This code only handles integer.
-          if (llvm::IntegerType *iTy =
-                  dyn_cast<llvm::IntegerType>(elementType)) {
+          if (isa<llvm::IntegerType>(elementType)) {
             if (llvm::ConstantInt *ci = dyn_cast<llvm::ConstantInt>(child)) {
               if (ci->getBitWidth() == 8) {
                 SmallVector<int8_t> constants(numElements, ci->getZExtValue());
@@ -1352,6 +1350,15 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     llvmFunc->addFnAttr("no-signed-zeros-fp-math",
                         llvm::toStringRef(*noSignedZerosFpMath));
 
+  if (auto denormalFpMath = func.getDenormalFpMath())
+    llvmFunc->addFnAttr("denormal-fp-math", *denormalFpMath);
+
+  if (auto denormalFpMathF32 = func.getDenormalFpMathF32())
+    llvmFunc->addFnAttr("denormal-fp-math-f32", *denormalFpMathF32);
+
+  if (auto fpContract = func.getFpContract())
+    llvmFunc->addFnAttr("fp-contract", *fpContract);
+
   // Add function attribute frame-pointer, if found.
   if (FramePointerKindAttr attr = func.getFramePointerAttr())
     llvmFunc->addFnAttr("frame-pointer",
@@ -1423,6 +1430,8 @@ static void convertFunctionAttributes(LLVMFuncOp func,
     llvmFunc->addFnAttr(llvm::Attribute::AlwaysInline);
   if (func.getOptimizeNoneAttr())
     llvmFunc->addFnAttr(llvm::Attribute::OptimizeNone);
+  if (func.getConvergentAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::Convergent);
   convertFunctionMemoryAttributes(func, llvmFunc);
 }
 

@@ -1,9 +1,16 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c89 -ffreestanding %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c99 -ffreestanding %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c11 -ffreestanding %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c23 -ffreestanding %s
+// RUN: %clang_cc1 -fsyntax-only -verify=finite -std=c23 -ffreestanding -ffinite-math-only %s
 // RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++11 -ffreestanding %s
 // RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++14 -ffreestanding %s
 // RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++17 -ffreestanding %s
+// RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++23 -ffreestanding %s
+// NOTE: C++23 wasn't based on top of C23, so it gets no diagnostics for
+//       finite-math-only mode as happens in C. When C++ rebased onto C23, that
+//       is when we'll issue diagnostics for INFINITY and NAN use.
+// RUN: %clang_cc1 -fsyntax-only -verify -xc++ -std=c++23 -ffreestanding -ffinite-math-only %s
 // expected-no-diagnostics
 
 /* Basic floating point conformance checks against:
@@ -207,6 +214,25 @@
     #error "Mandatory macros {FLT,DBL,LDBL}_MAX_10_EXP are invalid."
 #endif
 
+#if __STDC_VERSION__ >= 202311L || !defined(__STRICT_ANSI__)
+  #ifndef INFINITY
+    #error "Mandatory macro INFINITY is missing."
+  #endif
+  #ifndef NAN
+    #error "Mandatory macro NAN is missing."
+  #endif
+  // FIXME: the NAN diagnostic should only be issued once, not twice.
+  _Static_assert(_Generic(INFINITY, float : 1, default : 0), ""); // finite-warning {{use of infinity via a macro is undefined behavior due to the currently enabled floating-point options}}
+  _Static_assert(_Generic(NAN, float : 1, default : 0), ""); // finite-warning {{use of NaN is undefined behavior due to the currently enabled floating-point options}} \
+                                                                finite-warning {{use of NaN via a macro is undefined behavior due to the currently enabled floating-point options}}
+#else
+  #ifdef INFINITY
+    #error "Macro INFINITY should not be defined."
+  #endif
+  #ifdef NAN
+    #error "Macro NAN should not be defined."
+  #endif
+#endif
 
 /* Internal consistency checks */
 _Static_assert(FLT_RADIX == __FLT_RADIX__, "");
@@ -244,3 +270,9 @@ _Static_assert(LDBL_MAX_EXP == __LDBL_MAX_EXP__, "");
 _Static_assert(FLT_MAX_10_EXP == __FLT_MAX_10_EXP__, "");
 _Static_assert(DBL_MAX_10_EXP == __DBL_MAX_10_EXP__, "");
 _Static_assert(LDBL_MAX_10_EXP == __LDBL_MAX_10_EXP__, "");
+
+#if (__STDC_VERSION__ >= 202311L || !defined(__STRICT_ANSI__)) && __FINITE_MATH_ONLY__ == 0
+// Ensure INFINITY and NAN are suitable for use in a constant expression.
+float f1 = INFINITY;
+float f2 = NAN;
+#endif

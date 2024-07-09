@@ -305,23 +305,21 @@ ErrorOr<int> File::seek(long offset, int whence) {
   auto result = platform_seek(this, offset, whence);
   if (!result.has_value())
     return Error(result.error());
-  else
-    return 0;
+  return 0;
 }
 
-ErrorOr<long> File::tell() {
+ErrorOr<off_t> File::tell() {
   FileLock lock(this);
   auto seek_target = eof ? SEEK_END : SEEK_CUR;
   auto result = platform_seek(this, 0, seek_target);
   if (!result.has_value() || result.value() < 0)
     return Error(result.error());
-  long platform_offset = result.value();
+  off_t platform_offset = result.value();
   if (prev_op == FileOp::READ)
     return platform_offset - (read_limit - pos);
-  else if (prev_op == FileOp::WRITE)
+  if (prev_op == FileOp::WRITE)
     return platform_offset + pos;
-  else
-    return platform_offset;
+  return platform_offset;
 }
 
 int File::flush_unlocked() {

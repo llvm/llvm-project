@@ -14,7 +14,7 @@ from lldbsuite.test import configuration
 from textwrap import dedent
 import shutil
 import select
-
+import random
 
 def _get_support_exe(basename):
     support_dir = lldb.SBHostOS.GetLLDBPath(lldb.ePathTypeSupportExecutableDir)
@@ -1042,7 +1042,7 @@ if lldbplatformutil.getHostPlatform() == "windows":
     class Pipe(object):
         def __init__(self, prefix):
             while True:
-                self.name = "lldb-" + str(random.randrange(1e10))
+                self.name = "lldb-" + str(random.randrange(10**10))
                 full_name = "\\\\.\\pipe\\" + self.name
                 self._handle = CreateNamedPipe(
                     full_name,
