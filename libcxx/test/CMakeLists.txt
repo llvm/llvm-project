@@ -1,5 +1,5 @@
 include(HandleLitArguments)
-add_subdirectory(tools)
+
 
 # By default, libcxx and libcxxabi share a library directory.
 if (NOT LIBCXX_CXX_ABI_LIBRARY_PATH)

@@ -73,7 +73,7 @@ _warningFlags = [
     "-Wno-self-move",
 ]
 
-_allStandards = ["c++03", "c++11", "c++14", "c++17", "c++20", "c++23", "c++26"]
+_allStandards = ["c++03", "c++11", "c++14", "c++17", "c++20", "c++23", "c++26", "c++2c"]
 
 
 def getStdFlag(cfg, std):
@@ -117,6 +117,8 @@ def testClangTidy(cfg, version, executable):
     except ConfigurationRuntimeError:
         return None
 
+def hasContractSupport(cfg):
+    return hasCompileFlag(cfg, "-fcontracts") and hasCompileFlag(cfg, "-fcontract-group-evaluation-semantic=std=enforce")
 
 def getSuitableClangTidy(cfg):
     # If we didn't build the libcxx-tidy plugin via CMake, we can't run the clang-tidy tests.
@@ -429,5 +431,16 @@ DEFAULT_PARAMETERS = [
             AddSubstitution('%{clang-tidy}', exe),
         ]
     ),
+    Parameter(
+        name="use-contracts",
+        type=bool,
+        default=True,
+        help="Whether to enable contracts when compiling the test suite.",
+        actions=lambda use_contracts: [] if not use_contracts else [
+            AddCompileFlag("-fcontracts"),
+            AddFeature("contracts"),
+            AddCompileFlag("-fcontract-group-evaluation-semantic=std=enforce")
+        ],
+    )
 ]
 # fmt: on
