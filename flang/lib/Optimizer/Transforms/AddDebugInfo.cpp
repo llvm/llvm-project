@@ -80,11 +80,18 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
                                        mlir::LLVM::DIScopeAttr scopeAttr,
                                        fir::DebugTypeGenerator &typeGen) {
   mlir::MLIRContext *context = &getContext();
+  mlir::ModuleOp module = getOperation();
   mlir::OpBuilder builder(context);
   auto result = fir::NameUniquer::deconstruct(declOp.getUniqName());
 
   if (result.first != fir::NameUniquer::NameKind::VARIABLE)
     return;
+
+  // If this DeclareOp actually represents a global then treat it as such.
+  if (auto global = module.lookupSymbol<fir::GlobalOp>(declOp.getUniqName())) {
+    handleGlobalOp(global, fileAttr, scopeAttr);
+    return;
+  }
 
   // Only accept local variables.
   if (result.second.procs.empty())
@@ -139,6 +146,8 @@ mlir::LLVM::DIModuleAttr AddDebugInfoPass::getOrCreateModuleAttr(
 void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
                                       mlir::LLVM::DIFileAttr fileAttr,
                                       mlir::LLVM::DIScopeAttr scope) {
+  if (mlir::isa<mlir::FusedLoc>(globalOp.getLoc()))
+    return;
   mlir::ModuleOp module = getOperation();
   mlir::MLIRContext *context = &getContext();
   fir::DebugTypeGenerator typeGen(module);
@@ -163,12 +172,19 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
   // declared. We are using a best guess of line - 1 where line is the source
   // line of the first member of the module that we encounter.
 
-  if (result.second.modules.empty())
-    return;
+  if (result.second.procs.empty()) {
+    // Only look for module if this variable is not part of a function.
+    if (result.second.modules.empty())
+      return;
 
-  scope = getOrCreateModuleAttr(result.second.modules[0], fileAttr, scope,
-                                line - 1, !globalOp.isInitialized());
+    // Modules are generated at compile unit scope
+    if (mlir::LLVM::DISubprogramAttr sp =
+            mlir::dyn_cast_if_present<mlir::LLVM::DISubprogramAttr>(scope))
+      scope = sp.getCompileUnit();
 
+    scope = getOrCreateModuleAttr(result.second.modules[0], fileAttr, scope,
+                                  line - 1, !globalOp.isInitialized());
+  }
   mlir::LLVM::DITypeAttr diType = typeGen.convertType(
       globalOp.getType(), fileAttr, scope, globalOp.getLoc());
   auto gvAttr = mlir::LLVM::DIGlobalVariableAttr::get(
@@ -217,12 +233,6 @@ void AddDebugInfoPass::runOnOperation() {
       mlir::DistinctAttr::create(mlir::UnitAttr::get(context)),
       llvm::dwarf::getLanguage("DW_LANG_Fortran95"), fileAttr, producer,
       isOptimized, debugLevel);
-
-  if (debugLevel == mlir::LLVM::DIEmissionKind::Full) {
-    // Process 'GlobalOp' only if full debug info is requested.
-    for (auto globalOp : module.getOps<fir::GlobalOp>())
-      handleGlobalOp(globalOp, fileAttr, cuAttr);
-  }
 
   module.walk([&](mlir::func::FuncOp funcOp) {
     mlir::Location l = funcOp->getLoc();
@@ -296,6 +306,12 @@ void AddDebugInfoPass::runOnOperation() {
       handleDeclareOp(declOp, fileAttr, spAttr, typeGen);
     });
   });
+  // Process any global which was not processed through DeclareOp.
+  if (debugLevel == mlir::LLVM::DIEmissionKind::Full) {
+    // Process 'GlobalOp' only if full debug info is requested.
+    for (auto globalOp : module.getOps<fir::GlobalOp>())
+      handleGlobalOp(globalOp, fileAttr, cuAttr);
+  }
 }
 
 std::unique_ptr<mlir::Pass>
