@@ -113,12 +113,16 @@ void AsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
   if (!TAP)
     report_fatal_error("Inline asm not supported by this streamer because"
                        " we don't have an asm parser for this target\n");
-  Parser->setAssemblerDialect(Dialect);
+
+  // Respect inlineasm dialect on X86 targets only
+  if (TM.getTargetTriple().isX86()) {
+    Parser->setAssemblerDialect(Dialect);
+    // Enable lexing Masm binary and hex integer literals in intel inline
+    // assembly.
+    if (Dialect == InlineAsm::AD_Intel)
+      Parser->getLexer().setLexMasmIntegers(true);
+  }
   Parser->setTargetParser(*TAP);
-  // Enable lexing Masm binary and hex integer literals in intel inline
-  // assembly.
-  if (Dialect == InlineAsm::AD_Intel)
-    Parser->getLexer().setLexMasmIntegers(true);
 
   emitInlineAsmStart();
   // Don't implicitly switch to the text section before the asm.
