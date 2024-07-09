@@ -29,9 +29,10 @@ Options
 
 .. option:: IgnoreArrays
 
-   If set to `true`, the check will not warn about array members that are not
-   zero-initialized during construction. For performance critical code, it may
-   be important to not initialize fixed-size array members. Default is `false`.
+   If set to `true`, the check will not warn about array members (including
+   ``std::array``) that are not zero-initialized during construction. For
+   performance critical code, it may be important to not initialize fixed-size
+   array members. Default is `false`.
 
 .. option:: UseAssignment
 
