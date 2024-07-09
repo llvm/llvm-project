@@ -86,7 +86,6 @@ private:
   RISCVInstrInfo InstrInfo;
   RISCVRegisterInfo RegInfo;
   RISCVTargetLowering TLInfo;
-  SelectionDAGTargetInfo TSInfo;
 
   /// Initializes using the passed in CPU and feature strings so that we can
   /// use initializer lists for subtarget initialization.
@@ -115,9 +114,6 @@ public:
   }
   const RISCVTargetLowering *getTargetLowering() const override {
     return &TLInfo;
-  }
-  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
-    return &TSInfo;
   }
   bool enableMachineScheduler() const override { return true; }
 
