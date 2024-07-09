@@ -8548,11 +8548,6 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
       createTripCountSCEV(Legal->getWidestInductionType(), PSE, OrigLoop),
       *PSE.getSE(), RequiresScalarEpilogueCheck, CM.foldTailByMasking(),
       OrigLoop);
-  VPBasicBlock *HeaderVPBB = new VPBasicBlock("vector.body");
-  VPBasicBlock *LatchVPBB = new VPBasicBlock("vector.latch");
-  VPBlockUtils::insertBlockAfter(LatchVPBB, HeaderVPBB);
-  Plan->getVectorLoopRegion()->setEntry(HeaderVPBB);
-  Plan->getVectorLoopRegion()->setExiting(LatchVPBB);
 
   // Don't use getDecisionAndClampRange here, because we don't know the UF
   // so this function is better to be conservative, rather than to split
@@ -8606,6 +8601,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   LoopBlocksDFS DFS(OrigLoop);
   DFS.perform(LI);
 
+  VPBasicBlock *HeaderVPBB = Plan->getVectorLoopRegion()->getEntryBasicBlock();
   VPBasicBlock *VPBB = HeaderVPBB;
   BasicBlock *HeaderBB = OrigLoop->getHeader();
   bool NeedsMasks =
