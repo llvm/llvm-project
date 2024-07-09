@@ -147,7 +147,7 @@ static int PrintSupportedExtensions(std::string TargetStr) {
     DescMap.insert({feature.Key, feature.Desc});
 
   if (MachineTriple.isRISCV())
-    llvm::printSupportedExtensions(DescMap);
+    llvm::RISCVISAInfo::printSupportedExtensions(DescMap);
   else if (MachineTriple.isAArch64())
     llvm::AArch64::PrintSupportedExtensions();
   else if (MachineTriple.isARM())
@@ -196,7 +196,8 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
     llvm::StringMap<llvm::StringRef> DescMap;
     for (const llvm::SubtargetFeatureKV &feature : Features)
       DescMap.insert({feature.Key, feature.Desc});
-    llvm::printEnabledExtensions(MachineTriple.isArch64Bit(), EnabledFeatureNames, DescMap);
+    llvm::RISCVISAInfo::printEnabledExtensions(MachineTriple.isArch64Bit(),
+                                               EnabledFeatureNames, DescMap);
   } else {
     // The option was already checked in Driver::HandleImmediateArgs,
     // so we do not expect to get here if we are not a supported architecture.

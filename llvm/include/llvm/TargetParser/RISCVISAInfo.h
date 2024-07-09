@@ -20,10 +20,6 @@
 #include <vector>
 
 namespace llvm {
-void printSupportedExtensions(StringMap<StringRef> &DescMap);
-void printEnabledExtensions(bool IsRV64,
-                            std::set<StringRef> &EnabledFeatureNames,
-                            StringMap<StringRef> &DescMap);
 
 class RISCVISAInfo {
 public:
@@ -78,6 +74,11 @@ public:
   static bool isSupportedExtension(StringRef Ext, unsigned MajorVersion,
                                    unsigned MinorVersion);
   static std::string getTargetFeatureForExtension(StringRef Ext);
+
+  static void printSupportedExtensions(StringMap<StringRef> &DescMap);
+  static void printEnabledExtensions(bool IsRV64,
+                                     std::set<StringRef> &EnabledFeatureNames,
+                                     StringMap<StringRef> &DescMap);
 
 private:
   RISCVISAInfo(unsigned XLen) : XLen(XLen) {}

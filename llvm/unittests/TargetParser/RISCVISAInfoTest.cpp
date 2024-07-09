@@ -1060,7 +1060,7 @@ For example, clang -march=rv32i_v1p0)";
 
   outs().flush();
   testing::internal::CaptureStdout();
-  printSupportedExtensions(DummyMap);
+  RISCVISAInfo::printSupportedExtensions(DummyMap);
   outs().flush();
 
   std::string CapturedOutput = testing::internal::GetCapturedStdout();
@@ -1090,7 +1090,8 @@ ISA String: rv64i2p1_ztso0p1)";
 
   outs().flush();
   testing::internal::CaptureStdout();
-  llvm::printEnabledExtensions(/*IsRV64=*/true, EnabledExtensions, DescMap);
+  RISCVISAInfo::printEnabledExtensions(/*IsRV64=*/true, EnabledExtensions,
+                                        DescMap);
   outs().flush();
   std::string CapturedOutput = testing::internal::GetCapturedStdout();
 

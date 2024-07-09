@@ -80,7 +80,7 @@ static void PrintExtension(StringRef Name, StringRef Version,
          << Description << "\n";
 }
 
-void llvm::printSupportedExtensions(StringMap<StringRef> &DescMap) {
+void RISCVISAInfo::printSupportedExtensions(StringMap<StringRef> &DescMap) {
   outs() << "All available -march extensions for RISC-V\n\n";
   PrintExtension("Name", "Version", (DescMap.empty() ? "" : "Description"));
 
@@ -115,9 +115,9 @@ void llvm::printSupportedExtensions(StringMap<StringRef> &DescMap) {
             "For example, clang -march=rv32i_v1p0\n";
 }
 
-void llvm::printEnabledExtensions(bool IsRV64,
-                                  std::set<StringRef> &EnabledFeatureNames,
-                                  StringMap<StringRef> &DescMap) {
+void RISCVISAInfo::printEnabledExtensions(
+    bool IsRV64, std::set<StringRef> &EnabledFeatureNames,
+    StringMap<StringRef> &DescMap) {
   outs() << "Extensions enabled for the given RISC-V target\n\n";
   PrintExtension("Name", "Version", (DescMap.empty() ? "" : "Description"));
 
