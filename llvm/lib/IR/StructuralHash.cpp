@@ -23,7 +23,21 @@ namespace {
 // pass return status consistency with actual change. In addition to being used
 // by the MergeFunctions pass.
 
+static constexpr uint64_t constexpr_hash(const char *str) {
+  uint64_t hash = 0;
+  for (size_t i = 0; str[i]; ++i)
+    hash = hash * 33 + str[i];
+  return hash;
+}
 class StructuralHashImpl {
+
+  static constexpr uint64_t FUNCTION_HEADER = constexpr_hash("FunctionHeader");
+  static constexpr uint64_t BASIC_BLOCK_HEADER =
+      constexpr_hash("BasicBlockHeader");
+  static constexpr uint64_t GLOBAL_HEADER = constexpr_hash("GlobalHeader");
+  static constexpr uint64_t INITIAL_HASH_VALUE =
+      constexpr_hash("InitialHashValue");
+
   uint64_t Hash;
 
   void hash(uint64_t V) { Hash = hashing::detail::hash_16_bytes(Hash, V); }
@@ -43,7 +57,7 @@ class StructuralHashImpl {
   }
 
 public:
-  StructuralHashImpl() : Hash(4) {}
+  StructuralHashImpl() : Hash(INITIAL_HASH_VALUE) {}
 
   void updateOperand(Value *Operand) {
     hashType(Operand->getType());
@@ -102,7 +116,7 @@ public:
     if (F.isDeclaration())
       return;
 
-    hash(0x62642d6b6b2d6b72); // Function header
+    hash(FUNCTION_HEADER); // Function header
 
     hash(F.isVarArg());
     hash(F.arg_size());
@@ -121,7 +135,7 @@ public:
       // This random value acts as a block header, as otherwise the partition of
       // opcodes into BBs wouldn't affect the hash, only the order of the
       // opcodes
-      hash(45798);
+      hash(BASIC_BLOCK_HEADER); // Basic block header
       for (auto &Inst : *BB)
         updateInstruction(Inst, DetailedHash);
 
@@ -137,7 +151,7 @@ public:
     // we ignore anything with the `.llvm` prefix
     if (GV.isDeclaration() || GV.getName().starts_with("llvm."))
       return;
-    hash(23456); // Global header
+    hash(GLOBAL_HEADER); // Global header
     hash(GV.getValueType()->getTypeID());
   }
 
