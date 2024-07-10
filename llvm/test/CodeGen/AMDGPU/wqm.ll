@@ -3463,6 +3463,38 @@ bb:
   ret void
 }
 
+; Test a case that failed machine verification.
+define amdgpu_gs void @wqm_init_exec_switch(i32 %arg) {
+; GFX9-W64-LABEL: wqm_init_exec_switch:
+; GFX9-W64:       ; %bb.0:
+; GFX9-W64-NEXT:    s_mov_b64 exec, 0
+; GFX9-W64-NEXT:    v_cmp_lt_i32_e32 vcc, 0, v0
+; GFX9-W64-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GFX9-W64-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
+; GFX9-W64-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
+; GFX9-W64-NEXT:    s_endpgm
+;
+; GFX10-W32-LABEL: wqm_init_exec_switch:
+; GFX10-W32:       ; %bb.0:
+; GFX10-W32-NEXT:    s_mov_b32 exec_lo, 0
+; GFX10-W32-NEXT:    s_mov_b32 s0, exec_lo
+; GFX10-W32-NEXT:    v_cmpx_lt_i32_e32 0, v0
+; GFX10-W32-NEXT:    s_xor_b32 s0, exec_lo, s0
+; GFX10-W32-NEXT:    s_andn2_saveexec_b32 s0, s0
+; GFX10-W32-NEXT:    s_endpgm
+  call void @llvm.amdgcn.init.exec(i64 0)
+  switch i32 %arg, label %bb1 [
+    i32 0, label %bb3
+    i32 1, label %bb2
+  ]
+bb1:
+  ret void
+bb2:
+  ret void
+bb3:
+  ret void
+}
+
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #1
 declare void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float>, i32, i32, <8 x i32>, i32, i32) #1
 

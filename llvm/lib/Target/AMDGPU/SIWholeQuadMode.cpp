@@ -1676,6 +1676,8 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   if (!(GlobalFlags & (StateWQM | StateStrict)) && LowerToCopyInstrs.empty() &&
       LowerToMovInstrs.empty() && KillInstrs.empty()) {
     lowerLiveMaskQueries();
+    if (!InitExecInstrs.empty())
+      LIS->removeAllRegUnitsForPhysReg(AMDGPU::EXEC);
     return !InitExecInstrs.empty() || !LiveMaskQueries.empty();
   }
 
