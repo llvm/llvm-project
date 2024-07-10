@@ -2144,6 +2144,12 @@ void LoopNestOp::gatherWrappers(
     wrappers.push_back(wrapper);
     parent = parent->getParentOp();
   }
+
+  // omp.parallel can be misidentified as a loop wrapper when it's not taking
+  // that role but it contains no other operations in its region (e.g. parallel
+  // do/for).
+  if (llvm::isa<omp::ParallelOp>(wrappers.back()))
+    wrappers.pop_back();
 }
 
 //===----------------------------------------------------------------------===//
