@@ -62,6 +62,6 @@ class HeaderFile:
             content.append("")
         for object in self.objects:
             content.append(str(object))
-        content.append("\n__END_C_DECLS")
+        content.append("__END_C_DECLS")
 
         return "\n".join(content)
