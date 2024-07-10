@@ -1790,40 +1790,31 @@ define i32 @anyof_icmp(ptr %a, i64 %n, i32 %start, i32 %inv) {
 ; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP6]]
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP5]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; IF-EVL-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 4
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP15:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = sub i64 [[N]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[TMP9]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = add i64 [[EVL_BASED_IV]], 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[EVL_BASED_IV]], i64 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; IF-EVL-NEXT:    [[TMP12:%.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
-; IF-EVL-NEXT:    [[TMP13:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP12]]
-; IF-EVL-NEXT:    [[VEC_IV:%.*]] = add <vscale x 4 x i64> [[BROADCAST_SPLAT]], [[TMP13]]
-; IF-EVL-NEXT:    [[TMP14:%.*]] = icmp ule <vscale x 4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT2]]
-; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP11]]
-; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i32 0
-; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP16]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i32 [[TMP10]])
-; IF-EVL-NEXT:    [[TMP17:%.*]] = icmp slt <vscale x 4 x i32> [[VP_OP_LOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 3, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
-; IF-EVL-NEXT:    [[TMP18]] = or <vscale x 4 x i1> [[VEC_PHI]], [[TMP17]]
-; IF-EVL-NEXT:    [[TMP19:%.*]] = select <vscale x 4 x i1> [[TMP14]], <vscale x 4 x i1> [[TMP18]], <vscale x 4 x i1> [[VEC_PHI]]
-; IF-EVL-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP10]] to i64
-; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP20]], [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP11]]
+; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[TMP12]], i32 0
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP13]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i32 [[TMP10]])
+; IF-EVL-NEXT:    [[TMP14:%.*]] = icmp slt <vscale x 4 x i32> [[VP_OP_LOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 3, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+; IF-EVL-NEXT:    [[TMP15]] = or <vscale x 4 x i1> [[VEC_PHI]], [[TMP14]]
+; IF-EVL-NEXT:    [[TMP16:%.*]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i1> [[TMP15]], <vscale x 4 x i1> [[VEC_PHI]], i32 [[TMP10]])
+; IF-EVL-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP10]] to i64
+; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP17]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
-; IF-EVL-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
+; IF-EVL-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; IF-EVL-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    [[TMP22:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP19]])
-; IF-EVL-NEXT:    [[TMP23:%.*]] = freeze i1 [[TMP22]]
-; IF-EVL-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP23]], i32 [[INV:%.*]], i32 [[START:%.*]]
+; IF-EVL-NEXT:    [[TMP19:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP16]])
+; IF-EVL-NEXT:    [[TMP20:%.*]] = freeze i1 [[TMP19]]
+; IF-EVL-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP20]], i32 [[INV:%.*]], i32 [[START:%.*]]
 ; IF-EVL-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
@@ -1833,8 +1824,8 @@ define i32 @anyof_icmp(ptr %a, i64 %n, i32 %start, i32 %inv) {
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[RDX:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ANYOF:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
-; IF-EVL-NEXT:    [[TMP24:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; IF-EVL-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[TMP24]], 3
+; IF-EVL-NEXT:    [[TMP21:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; IF-EVL-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[TMP21]], 3
 ; IF-EVL-NEXT:    [[ANYOF]] = select i1 [[CMP_I]], i32 [[INV]], i32 [[RDX]]
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
@@ -1926,40 +1917,31 @@ define i32 @anyof_fcmp(ptr %a, i64 %n, i32 %start, i32 %inv) {
 ; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP6]]
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP5]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; IF-EVL-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[N]], 1
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; IF-EVL-NEXT:    [[TMP8:%.*]] = mul i64 [[TMP7]], 4
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
 ; IF-EVL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
-; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
+; IF-EVL-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP15:%.*]], [[VECTOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = sub i64 [[N]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[TMP10:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[TMP9]], i32 4, i1 true)
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = add i64 [[EVL_BASED_IV]], 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[EVL_BASED_IV]], i64 0
-; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; IF-EVL-NEXT:    [[TMP12:%.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
-; IF-EVL-NEXT:    [[TMP13:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP12]]
-; IF-EVL-NEXT:    [[VEC_IV:%.*]] = add <vscale x 4 x i64> [[BROADCAST_SPLAT]], [[TMP13]]
-; IF-EVL-NEXT:    [[TMP14:%.*]] = icmp ule <vscale x 4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT2]]
-; IF-EVL-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP11]]
-; IF-EVL-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[TMP15]], i32 0
-; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP16]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i32 [[TMP10]])
-; IF-EVL-NEXT:    [[TMP17:%.*]] = fcmp fast olt <vscale x 4 x float> [[VP_OP_LOAD]], shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 3.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
-; IF-EVL-NEXT:    [[TMP18]] = or <vscale x 4 x i1> [[VEC_PHI]], [[TMP17]]
-; IF-EVL-NEXT:    [[TMP19:%.*]] = select <vscale x 4 x i1> [[TMP14]], <vscale x 4 x i1> [[TMP18]], <vscale x 4 x i1> [[VEC_PHI]]
-; IF-EVL-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP10]] to i64
-; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP20]], [[EVL_BASED_IV]]
+; IF-EVL-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP11]]
+; IF-EVL-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i32 0
+; IF-EVL-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP13]], <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i32 [[TMP10]])
+; IF-EVL-NEXT:    [[TMP14:%.*]] = fcmp fast olt <vscale x 4 x float> [[VP_OP_LOAD]], shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 3.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
+; IF-EVL-NEXT:    [[TMP15]] = or <vscale x 4 x i1> [[VEC_PHI]], [[TMP14]]
+; IF-EVL-NEXT:    [[TMP16:%.*]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i1> [[TMP15]], <vscale x 4 x i1> [[VEC_PHI]], i32 [[TMP10]])
+; IF-EVL-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP10]] to i64
+; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP17]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
-; IF-EVL-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; IF-EVL-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
+; IF-EVL-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; IF-EVL-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP30:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    [[TMP22:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP19]])
-; IF-EVL-NEXT:    [[TMP23:%.*]] = freeze i1 [[TMP22]]
-; IF-EVL-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP23]], i32 [[INV:%.*]], i32 [[START:%.*]]
+; IF-EVL-NEXT:    [[TMP19:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP16]])
+; IF-EVL-NEXT:    [[TMP20:%.*]] = freeze i1 [[TMP19]]
+; IF-EVL-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[TMP20]], i32 [[INV:%.*]], i32 [[START:%.*]]
 ; IF-EVL-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
@@ -1969,8 +1951,8 @@ define i32 @anyof_fcmp(ptr %a, i64 %n, i32 %start, i32 %inv) {
 ; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[RDX:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ANYOF:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
-; IF-EVL-NEXT:    [[TMP24:%.*]] = load float, ptr [[ARRAYIDX]], align 4
-; IF-EVL-NEXT:    [[CMP_I:%.*]] = fcmp fast olt float [[TMP24]], 3.000000e+00
+; IF-EVL-NEXT:    [[TMP21:%.*]] = load float, ptr [[ARRAYIDX]], align 4
+; IF-EVL-NEXT:    [[CMP_I:%.*]] = fcmp fast olt float [[TMP21]], 3.000000e+00
 ; IF-EVL-NEXT:    [[ANYOF]] = select i1 [[CMP_I]], i32 [[INV]], i32 [[RDX]]
 ; IF-EVL-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; IF-EVL-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
