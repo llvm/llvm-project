@@ -13,13 +13,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stack>
-
 #include "Analysis/SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
+
 #include "llvm/ADT/BreadthFirstIterator.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
@@ -32,6 +31,8 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
+
+#include <stack>
 
 using namespace llvm;
 using namespace SPIRV;
@@ -68,28 +69,28 @@ MachineBasicBlock *getMachineBlockFor(MachineFunction &MF, BasicBlock *BB) {
 // Gather all the successors of |BB|.
 // This function asserts if the terminator neither a branch, switch or return.
 std::unordered_set<BasicBlock *> gatherSuccessors(BasicBlock *BB) {
-  std::unordered_set<BasicBlock *> output;
+  std::unordered_set<BasicBlock *> Output;
   auto *T = BB->getTerminator();
 
   if (auto *BI = dyn_cast<BranchInst>(T)) {
-    output.insert(BI->getSuccessor(0));
+    Output.insert(BI->getSuccessor(0));
     if (BI->isConditional())
-      output.insert(BI->getSuccessor(1));
-    return output;
+      Output.insert(BI->getSuccessor(1));
+    return Output;
   }
 
   if (auto *SI = dyn_cast<SwitchInst>(T)) {
-    output.insert(SI->getDefaultDest());
+    Output.insert(SI->getDefaultDest());
     for (auto &Case : SI->cases())
-      output.insert(Case.getCaseSuccessor());
-    return output;
+      Output.insert(Case.getCaseSuccessor());
+    return Output;
   }
 
   if (auto *RI = dyn_cast<ReturnInst>(T))
-    return output;
+    return Output;
 
   assert(false && "Unhandled terminator type.");
-  return output;
+  return Output;
 }
 
 // Returns the single MachineBasicBlock exiting the convergence region `CR`,
@@ -173,47 +174,47 @@ void visit(MachineFunction &MF, std::function<void(MachineBasicBlock *)> op) {
 // Returns all basic blocks in |MF| with at least one SelectionMerge/LoopMerge
 // instruction.
 SmallPtrSet<MachineBasicBlock *, 8> getHeaderBlocks(MachineFunction &MF) {
-  SmallPtrSet<MachineBasicBlock *, 8> output;
+  SmallPtrSet<MachineBasicBlock *, 8> Output;
   for (MachineBasicBlock &MBB : MF) {
     auto *MI = getMergeInstruction(MBB);
     if (MI != nullptr)
-      output.insert(&MBB);
+      Output.insert(&MBB);
   }
-  return output;
+  return Output;
 }
 
 // Returns all basic blocks in |MF| referenced by at least 1
 // OpSelectionMerge/OpLoopMerge instruction.
 SmallPtrSet<MachineBasicBlock *, 8> getMergeBlocks(MachineFunction &MF) {
-  SmallPtrSet<MachineBasicBlock *, 8> output;
+  SmallPtrSet<MachineBasicBlock *, 8> Output;
   for (MachineBasicBlock &MBB : MF) {
     auto *MI = getMergeInstruction(MBB);
     if (MI != nullptr)
-      output.insert(MI->getOperand(0).getMBB());
+      Output.insert(MI->getOperand(0).getMBB());
   }
-  return output;
+  return Output;
 }
 
 // Returns all basic blocks in |MF| referenced as continue target by at least 1
 // OpLoopMerge.
 SmallPtrSet<MachineBasicBlock *, 8> getContinueBlocks(MachineFunction &MF) {
-  SmallPtrSet<MachineBasicBlock *, 8> output;
+  SmallPtrSet<MachineBasicBlock *, 8> Output;
   for (MachineBasicBlock &MBB : MF) {
     auto *MI = getMergeInstruction(MBB);
     if (MI != nullptr && MI->getOpcode() == SPIRV::OpLoopMerge)
-      output.insert(MI->getOperand(1).getMBB());
+      Output.insert(MI->getOperand(1).getMBB());
   }
-  return output;
+  return Output;
 }
 
-// Returns the block immediatly post-dominating every block in |range| if any,
+// Returns the block immediatly post-dominating every block in |Range| if any,
 // nullptr otherwise.
 MachineBasicBlock *findNearestCommonDominator(
-    const iterator_range<std::vector<MachineBasicBlock *>::iterator> &range,
+    const iterator_range<std::vector<MachineBasicBlock *>::iterator> &Range,
     MachinePostDominatorTree &MPDT) {
-  assert(!range.empty());
-  MachineBasicBlock *Dom = *range.begin();
-  for (MachineBasicBlock *Item : range)
+  assert(!Range.empty());
+  MachineBasicBlock *Dom = *Range.begin();
+  for (MachineBasicBlock *Item : Range)
     Dom = MPDT.findNearestCommonDominator(Dom, Item);
   return Dom;
 }
@@ -278,7 +279,7 @@ public:
 
   // Replace switches with a single target with an unconditional branch.
   bool replaceEmptySwitchWithBranch(MachineFunction &MF) {
-    bool modified = false;
+    bool Modified = false;
     for (MachineBasicBlock &MBB : MF) {
       MachineInstr *I = &*MBB.rbegin();
       GIntrinsic *II = dyn_cast<GIntrinsic>(I);
@@ -286,7 +287,7 @@ public:
           II->getNumOperands() > 3)
         continue;
 
-      modified = true;
+      Modified = true;
       assert(II->getOperand(2).isMBB());
       MachineBasicBlock *Target = II->getOperand(2).getMBB();
 
@@ -296,7 +297,7 @@ public:
       MBB.erase(I);
     }
 
-    return modified;
+    return Modified;
   }
 
   // Traverse each loop, and adds an OpLoopMerge instruction to its header
@@ -314,7 +315,7 @@ public:
             .getRegionInfo()
             .getTopLevelRegion();
 
-    bool modified = false;
+    bool Modified = false;
     for (auto &MBB : MF) {
       // Not a loop header. Ignoring for now.
       if (!MLI.isLoopHeader(&MBB))
@@ -346,10 +347,10 @@ public:
           .addMBB(Continue)
           .addImm(SPIRV::SelectionControl::None)
           .constrainAllUses(TII, TRI, RBI);
-      modified = true;
+      Modified = true;
     }
 
-    return modified;
+    return Modified;
   }
 
   // Add an OpSelectionMerge to each node with an out-degree of 2 or more.
@@ -427,7 +428,7 @@ public:
   // Split basic blocks containing multiple OpLoopMerge/OpSelectionMerge
   // instructions so each basic block contains only a single merge instruction.
   bool splitBlocksWithMultipleHeaders(MachineFunction &MF) {
-    bool modified = false;
+    bool Modified = false;
     for (auto &MBB : MF) {
       MachineInstr *SelectionMerge = getSelectionMergeInstruction(MBB);
       MachineInstr *LoopMerge = getLoopMergeInstruction(MBB);
@@ -436,9 +437,9 @@ public:
       }
 
       splitHeaderBlock(MF, MBB);
-      modified = true;
+      Modified = true;
     }
-    return modified;
+    return Modified;
   }
 
   // Splits the basic block |OldMerge| in two.
@@ -502,7 +503,7 @@ public:
 
     // Maps each merge-block to its associated header block.
     std::unordered_map<MachineBasicBlock *, MachineBasicBlock *> MergeToHeader;
-    bool modified = false;
+    bool Modified = false;
     for (auto *MBB : ToProcess) {
       auto *MI = getMergeInstruction(*MBB);
       assert(MI != nullptr);
@@ -515,7 +516,7 @@ public:
       }
 
       // Otherwise, we need to split the merge block, and update the references.
-      modified = true;
+      Modified = true;
       MachineBasicBlock *ConflictingHeader = MergeToHeader[Merge];
       MachineBasicBlock *NewMerge = splitMergeBlock(MDT, MF, *Merge, *MBB);
       // Each selection/loop construct that is not already processed (hence
@@ -530,7 +531,7 @@ public:
       }
       MergeToHeader.emplace(NewMerge, MBB);
     }
-    return modified;
+    return Modified;
   }
 
   // Modifies the CFG to make sure the same block is not both a continue target,
@@ -542,7 +543,7 @@ public:
           [&toProcess](MachineBasicBlock *MBB) { toProcess.push_back(MBB); });
 
     auto ContinueBlocks = getContinueBlocks(MF);
-    bool modified = false;
+    bool Modified = false;
     for (auto *MBB : toProcess) {
       MachineBasicBlock *Merge = nullptr;
       MachineBasicBlock *Continue = nullptr;
@@ -554,11 +555,11 @@ public:
         continue;
 
       // This blocks' merge is another block's continue.
-      modified = true;
+      Modified = true;
       MachineBasicBlock *NewMerge = splitMergeBlock(MDT, MF, *Merge, *MBB);
       MI->getOperand(0).setMBB(NewMerge);
     }
-    return modified;
+    return Modified;
   }
 
   // Sorts basic blocks by dominance to respect the SPIR-V spec.
@@ -599,7 +600,7 @@ public:
   bool removeSuperfluousSelectionHeaders(MachineFunction &MF) {
     MachineDominatorTree MDT(MF);
 
-    bool modified = false;
+    bool Modified = false;
     for (MachineBasicBlock &MBB : MF) {
       MachineInstr *MI = getMergeInstruction(MBB);
       if (MI == nullptr)
@@ -608,35 +609,35 @@ public:
       if (MI->getOpcode() == SPIRV::OpLoopMerge)
         continue;
 
-      size_t dominated_count = 0;
+      size_t Dominated_count = 0;
       for (auto *Successor : MBB.successors()) {
         if (MDT.dominates(&MBB, Successor))
-          dominated_count += 1;
+          Dominated_count += 1;
       }
 
-      if (dominated_count > 1)
+      if (Dominated_count > 1)
         continue;
 
       MBB.erase(MI);
-      modified = true;
+      Modified = true;
     }
 
-    return modified;
+    return Modified;
   }
 
   virtual bool runOnMachineFunction(MachineFunction &MF) override {
-    bool modified = false;
+    bool Modified = false;
 
-    modified |= replaceEmptySwitchWithBranch(MF);
-    modified |= addMergeForLoops(MF);
-    modified |= addMergeForConditionalBranches(MF);
-    modified |= splitBlocksWithMultipleHeaders(MF);
-    modified |= splitMergeBlocks(MF);
-    modified |= splitMergeAndContinueBlocks(MF);
-    modified |= removeSuperfluousSelectionHeaders(MF);
-    modified |= sortBlocks(MF);
+    Modified |= replaceEmptySwitchWithBranch(MF);
+    Modified |= addMergeForLoops(MF);
+    Modified |= addMergeForConditionalBranches(MF);
+    Modified |= splitBlocksWithMultipleHeaders(MF);
+    Modified |= splitMergeBlocks(MF);
+    Modified |= splitMergeAndContinueBlocks(MF);
+    Modified |= removeSuperfluousSelectionHeaders(MF);
+    Modified |= sortBlocks(MF);
 
-    return modified;
+    return Modified;
   }
 };
 
