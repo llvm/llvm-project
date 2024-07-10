@@ -14,6 +14,7 @@
 
 #include "AMDGPURegPressAnalysis.h"
 #include "AMDGPU.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 
 using namespace llvm;
 
@@ -39,9 +40,9 @@ bool AMDGPURegPressAnalysis::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  const LiveIntervals &LIS = getAnalysis<LiveIntervals>();
+  LiveIntervalsWrapperPass &LIS = getAnalysis<LiveIntervalsWrapperPass>();
 
-  GCNUpwardRPTracker RPT(LIS);
+  GCNUpwardRPTracker RPT(LIS.getLIS());
 
   for (auto &MBB : MF) {
     GCNRegPressure BBMaxPressure;

@@ -25,6 +25,8 @@
 #  include <__config>
 #  include <__fwd/string_view.h>
 #  include <__type_traits/common_type.h>
+#  include <__type_traits/conditional.h>
+#  include <__type_traits/remove_cvref.h>
 #  include <__utility/move.h>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -176,6 +178,38 @@ private:
   _TimeZonePtr __zone_;
   sys_time<duration> __tp_;
 };
+
+zoned_time() -> zoned_time<seconds>;
+
+template <class _Duration>
+zoned_time(sys_time<_Duration>) -> zoned_time<common_type_t<_Duration, seconds>>;
+
+template <class _TimeZonePtrOrName>
+using __time_zone_representation =
+    conditional_t<is_convertible_v<_TimeZonePtrOrName, string_view>,
+                  const time_zone*,
+                  remove_cvref_t<_TimeZonePtrOrName>>;
+
+template <class _TimeZonePtrOrName>
+zoned_time(_TimeZonePtrOrName&&) -> zoned_time<seconds, __time_zone_representation<_TimeZonePtrOrName>>;
+
+template <class _TimeZonePtrOrName, class _Duration>
+zoned_time(_TimeZonePtrOrName&&, sys_time<_Duration>)
+    -> zoned_time<common_type_t<_Duration, seconds>, __time_zone_representation<_TimeZonePtrOrName>>;
+
+template <class _TimeZonePtrOrName, class _Duration>
+zoned_time(_TimeZonePtrOrName&&, local_time<_Duration>, choose = choose::earliest)
+    -> zoned_time<common_type_t<_Duration, seconds>, __time_zone_representation<_TimeZonePtrOrName>>;
+
+template <class _Duration, class _TimeZonePtrOrName, class TimeZonePtr2>
+zoned_time(_TimeZonePtrOrName&&, zoned_time<_Duration, TimeZonePtr2>, choose = choose::earliest)
+    -> zoned_time<common_type_t<_Duration, seconds>, __time_zone_representation<_TimeZonePtrOrName>>;
+
+template <class _Duration1, class _Duration2, class _TimeZonePtr>
+_LIBCPP_HIDE_FROM_ABI bool
+operator==(const zoned_time<_Duration1, _TimeZonePtr>& __lhs, const zoned_time<_Duration2, _TimeZonePtr>& __rhs) {
+  return __lhs.get_time_zone() == __rhs.get_time_zone() && __lhs.get_sys_time() == __rhs.get_sys_time();
+}
 
 } // namespace chrono
 
