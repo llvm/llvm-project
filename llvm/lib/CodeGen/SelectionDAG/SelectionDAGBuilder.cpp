@@ -5273,20 +5273,9 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
           DAG.getTargetConstantFP(*cast<ConstantFP>(Arg), SDLoc(), VT));
     }
   }
-  if (Triple.getArch() == Triple::x86 || Triple.getArch() == Triple::x86_64) {
-    for (SDValue &Op : Ops) {
-      if (Op.getValueType() == MVT::v1i64)
-        Op = DAG.getBitcast(MVT::x86mmx, Op);
-    }
-  }
 
   SmallVector<EVT, 4> ValueVTs;
   ComputeValueVTs(TLI, DAG.getDataLayout(), I.getType(), ValueVTs);
-
-  if (Triple.getArch() == Triple::x86 || Triple.getArch() == Triple::x86_64) {
-    if (ValueVTs.size() == 1 && ValueVTs[0] == MVT::v1i64)
-      ValueVTs[0] = MVT::x86mmx;
-  }
 
   if (HasChain)
     ValueVTs.push_back(MVT::Other);
@@ -5354,11 +5343,6 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
       Result =
           DAG.getAssertAlign(getCurSDLoc(), Result, Alignment.valueOrOne());
     }
-  }
-
-  if (Triple.getArch() == Triple::x86 || Triple.getArch() == Triple::x86_64) {
-    if (Result.getValueType() == MVT::x86mmx)
-      Result = DAG.getBitcast(MVT::v1i64, Result);
   }
 
   setValue(&I, Result);
