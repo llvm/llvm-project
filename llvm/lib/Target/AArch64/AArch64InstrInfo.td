@@ -1291,7 +1291,8 @@ class GCSRtOut<bits<3> op1, bits<3> op2, string mnemonic,
 
 let mayStore = 1, mayLoad = 1 in
 def GCSSS2  : GCSRtOut<0b011, 0b011, "gcsss2">;
-let mayLoad = 1 in
+// FIXME: mayStore = 1 only needed to match the intrinsic definition
+let mayStore = 1, mayLoad = 1 in
 def GCSPOPM : GCSRtOut<0b011, 0b001, "gcspopm",
                        [(set GPR64:$Rt, (int_aarch64_gcspopm GPR64:$src))]>;
 def GCSPOPM_NoOp : InstAlias<"gcspopm", (GCSPOPM XZR)>, Requires<[HasGCS]>; // Rt defaults to XZR if absent

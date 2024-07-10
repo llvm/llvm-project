@@ -96,9 +96,12 @@ def int_aarch64_chkfeat : ClangBuiltin<"__builtin_arm_chkfeat">,
                           DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty],
                                                 [IntrNoMem]>;
 
+// FIXME: This should be marked as [IntrReadMem, IntrHasSideEffects], as it has
+// the side-effect of updating gcspr, but this combination doesn't work
+// correctly.
 def int_aarch64_gcspopm : ClangBuiltin<"__builtin_arm_gcspopm">,
                           DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty],
-                                                [IntrReadMem, IntrHasSideEffects]>;
+                                                []>;
 
 def int_aarch64_gcsss : ClangBuiltin<"__builtin_arm_gcsss">,
                         DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty], []>;
