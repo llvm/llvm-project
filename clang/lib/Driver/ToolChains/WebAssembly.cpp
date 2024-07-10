@@ -166,7 +166,8 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // components at this time. Retain the historical default otherwise, though,
   // of running `wasm-opt` by default.
   bool WasmOptDefault = !IsWasip2(ToolChain.getTriple());
-  bool RunWasmOpt = Args.hasFlag(options::OPT_wasm_opt, options::OPT_no_wasm_opt, WasmOptDefault);
+  bool RunWasmOpt = Args.hasFlag(options::OPT_wasm_opt,
+                                 options::OPT_no_wasm_opt, WasmOptDefault);
 
   // If wasm-opt is enabled and optimizations are happening look for the
   // `wasm-opt` program. If it's not found auto-disable it.
