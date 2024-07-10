@@ -383,8 +383,11 @@ std::unique_ptr<SwiftUnsafeType> SwiftUnsafeType::Create(ValueObject &valobj) {
   }
 
   llvm::StringRef valobj_type_name(type.GetTypeName().GetCString());
-  bool is_raw = valobj_type_name.contains("Raw");
-  bool is_buffer_ptr = valobj_type_name.contains("BufferPointer");
+  valobj_type_name.consume_front("Swift.");
+  valobj_type_name.consume_front("Unsafe");
+  valobj_type_name.consume_front("Mutable");
+  bool is_raw = valobj_type_name.consume_front("Raw");
+  bool is_buffer_ptr = valobj_type_name.consume_front("Buffer");
   UnsafePointerKind kind =
       static_cast<UnsafePointerKind>(is_buffer_ptr << 1 | is_raw);
 
