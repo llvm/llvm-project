@@ -457,6 +457,9 @@ New Compiler Flags
   that relies on it. Users should carefully consider this possibiilty when using
   the flag.
 
+- For the ARM target, added ``-Warm-interrupt-vfp-clobber`` that will emit a
+  diagnostic when an interrupt handler is declared and VFP is enabled.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -498,6 +501,13 @@ Modified Compiler Flags
 - Diagnostics groups about compatibility with a particular C++ Standard version
   now include dianostics about C++26 features that are not present in older
   versions.
+
+- Removed the "arm interrupt calling convention" warning that was included in
+  ``-Wextra`` without its own flag. This warning suggested adding
+  ``__attribute__((interrupt))`` to functions that are called from interrupt
+  handlers to prevent clobbering VFP registers. Following this suggestion leads
+  to unpredictable behavior by causing multiple exception returns from one
+  exception. Fixes #GH34876.
 
 Removed Compiler Flags
 -------------------------
@@ -692,6 +702,8 @@ Improvements to Clang's diagnostics
 
 - Clang no longer emits a "no previous prototype" warning for Win32 entry points under ``-Wmissing-prototypes``.
   Fixes #GH94366.
+
+- For the ARM target, calling an interrupt handler from another function is now an error. #GH95359.
 
 Improvements to Clang's time-trace
 ----------------------------------
