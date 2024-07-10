@@ -1735,6 +1735,10 @@ void populateTransposeMatmulPatterns(RewritePatternSet &patterns,
 void populateBlockPackMatmulPatterns(RewritePatternSet &patterns,
                                      const ControlBlockPackMatmulFn &controlFn);
 
+/// Patterns to apply Winograd Conv2D algorithm F(m x m, r x r).
+void populateWinogradConv2DPatterns(RewritePatternSet &patterns, int64_t m,
+                                    int64_t r);
+
 /// Adds patterns that reduce the rank of named contraction ops that have
 /// unit dimensions in the operand(s) by converting to a sequence of `collapse_shape`,
 /// `<corresponding linalg named op>`, `expand_shape` (if on tensors).  For example a
