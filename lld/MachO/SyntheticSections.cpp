@@ -2459,6 +2459,7 @@ void ChainedFixupsSection::finalizeContents() {
           Twine(symtabSize) + " exceeds 4 GiB");
 
   bool needsLargeOrdinal = any_of(bindings, [](const auto &p) {
+    // 0xF1 - 0xFF are reserved for special ordinals in the 8-bit encoding.
     return ordinalForSymbol(*p.first.first) > 0xF0;
   });
 
