@@ -18,7 +18,6 @@ namespace bolt {
 
 struct CallGraphMatcher {
 public:
-  class YAMLProfileReader;
   /// Adds edges to the binary function call graph given the callsites of the
   /// parameter function.
   void addBFCGEdges(BinaryContext &BC, yaml::bolt::BinaryProfile &YamlBP,
