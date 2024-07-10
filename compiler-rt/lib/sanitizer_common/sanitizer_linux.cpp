@@ -170,7 +170,6 @@ void BlockSignals(__sanitizer_sigset_t *oldset) {
   // If this signal is blocked, such calls cannot be handled and the process may
   // hang.
   internal_sigdelset(&set, 31);
-#  endif
 
   // Don't block synchronous signals
   internal_sigdelset(&set, SIGSEGV);
@@ -180,6 +179,7 @@ void BlockSignals(__sanitizer_sigset_t *oldset) {
   internal_sigdelset(&set, SIGABRT);
   internal_sigdelset(&set, SIGFPE);
   internal_sigdelset(&set, SIGPIPE);
+#  endif
 
   SetSigProcMask(&set, oldset);
 }
