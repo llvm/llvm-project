@@ -18,6 +18,7 @@
 
 #  include <__chrono/calendar.h>
 #  include <__chrono/duration.h>
+#  include <__chrono/sys_info.h>
 #  include <__chrono/system_clock.h>
 #  include <__chrono/time_zone.h>
 #  include <__chrono/tzdb_list.h>
@@ -147,8 +148,29 @@ public:
     } && is_convertible_v<sys_time<_Duration2>, sys_time<_Duration>>)
       : zoned_time{__traits::locate_zone(__name), __zt, __c} {}
 
+  _LIBCPP_HIDE_FROM_ABI zoned_time& operator=(const sys_time<_Duration>& __tp) {
+    __tp_ = __tp;
+    return *this;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI zoned_time& operator=(const local_time<_Duration>& __tp) {
+    // TODO TZDB This seems wrong.
+    // Assigning a non-existent or ambiguous time will throw and not satisfy
+    // the post condition. This seems quite odd; I constructed an object with
+    // choose::earliest and that choice is not respected.
+    // what did LEWG do with this.
+    // MSVC STL and libstdc++ behave the same
+    __tp_ = __zone_->to_sys(__tp);
+    return *this;
+  }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI operator sys_time<duration>() const { return get_sys_time(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit operator local_time<duration>() const { return get_local_time(); }
+
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _TimeZonePtr get_time_zone() const { return __zone_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI local_time<duration> get_local_time() const { return __zone_->to_local(__tp_); }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI sys_time<duration> get_sys_time() const { return __tp_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI sys_info get_info() const { return __zone_->get_info(__tp_); }
 
 private:
   _TimeZonePtr __zone_;
