@@ -1710,7 +1710,7 @@ VendorSignatures getVendorSignature(unsigned *MaxLeaf) {
 
 #if defined(__i386__) || defined(_M_IX86) || \
     defined(__x86_64__) || defined(_M_X64)
-StringMap<bool> sys::getHostCPUFeatures() {
+const StringMap<bool> sys::getHostCPUFeatures() {
   unsigned EAX = 0, EBX = 0, ECX = 0, EDX = 0;
   unsigned MaxLevel;
   StringMap<bool> Features;
@@ -1907,7 +1907,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
   return Features;
 }
 #elif defined(__linux__) && (defined(__arm__) || defined(__aarch64__))
-StringMap<bool> sys::getHostCPUFeatures() {
+const StringMap<bool> sys::getHostCPUFeatures() {
   StringMap<bool> Features;
   std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
   if (!P)
@@ -1977,7 +1977,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
   return Features;
 }
 #elif defined(_WIN32) && (defined(__aarch64__) || defined(_M_ARM64))
-StringMap<bool> sys::getHostCPUFeatures() {
+const StringMap<bool> sys::getHostCPUFeatures() {
   StringMap<bool> Features;
 
   if (IsProcessorFeaturePresent(PF_ARM_NEON_INSTRUCTIONS_AVAILABLE))
@@ -1991,7 +1991,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
 }
 #elif defined(__linux__) && defined(__loongarch__)
 #include <sys/auxv.h>
-StringMap<bool> sys::getHostCPUFeatures() {
+const StringMap<bool> sys::getHostCPUFeatures() {
   unsigned long hwcap = getauxval(AT_HWCAP);
   bool HasFPU = hwcap & (1UL << 3); // HWCAP_LOONGARCH_FPU
   uint32_t cpucfg2 = 0x2;
@@ -2009,7 +2009,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
   return Features;
 }
 #else
-StringMap<bool> sys::getHostCPUFeatures() { return {}; }
+const StringMap<bool> sys::getHostCPUFeatures() { return {}; }
 #endif
 
 #if __APPLE__
