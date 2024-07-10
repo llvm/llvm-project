@@ -2888,8 +2888,10 @@ private:
     }
     mlir::Value streamValue;
     if (stream)
-      streamValue = fir::getBase(
-          genExprValue(*Fortran::semantics::GetExpr(*stream), stmtCtx));
+      streamValue = builder->createConvert(
+          loc, builder->getI32Type(),
+          fir::getBase(
+              genExprValue(*Fortran::semantics::GetExpr(*stream), stmtCtx)));
 
     const auto &outerDoConstruct =
         std::get<std::optional<Fortran::parser::DoConstruct>>(kernel.t);

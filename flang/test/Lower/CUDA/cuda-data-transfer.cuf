@@ -233,3 +233,4 @@ end subroutine
 ! CHECK: %[[TEMP:.*]] = fir.allocmem !fir.array<?xi32>, %14#1 {bindc_name = ".tmp", uniq_name = ""}
 ! CHECK: cuf.data_transfer
 ! CHECK: fir.freemem %[[TEMP]] : !fir.heap<!fir.array<?xi32>>
+
