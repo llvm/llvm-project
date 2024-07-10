@@ -72,6 +72,7 @@ libc_support_library(
 libc_support_library(
     name = "llvm_libc_macros_float16_macros",
     hdrs = ["include/llvm-libc-macros/float16-macros.h"],
+    deps = [":llvm_libc_types_float128"],
 )
 
 libc_support_library(
@@ -655,7 +656,10 @@ libc_support_library(
 
 libc_support_library(
     name = "__support_file_file",
-    srcs = ["src/__support/File/file.cpp"],
+    srcs = [
+        "include/llvm-libc-types/off_t.h",
+        "src/__support/File/file.cpp",
+    ],
     hdrs = ["src/__support/File/file.h"],
     deps = [
         ":__support_cpp_new",
@@ -882,6 +886,7 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
+        ":__support_fputil_dyadic_float",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
@@ -900,6 +905,8 @@ libc_support_library(
     deps = [
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_dyadic_float",
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
@@ -917,7 +924,7 @@ libc_support_library(
     ],
     deps = [
         ":__support_common",
-        ":__support_fputil_fma",
+        ":__support_cpp_type_traits",
     ],
 )
 
@@ -980,6 +987,8 @@ libc_support_library(
     deps = [
         ":__support_big_int",
         ":__support_common",
+        ":__support_cpp_type_traits",
+        ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_macros_optimization",
@@ -1185,6 +1194,7 @@ libc_function(
     hdrs = ["src/errno/libc_errno.h"],
     deps = [
         ":__support_common",
+        ":__support_cpp_atomic",
         ":__support_macros_attributes",
         ":__support_macros_properties_architectures",
         ":hdr_errno_macros",
@@ -1717,6 +1727,21 @@ libc_math_function(
         ":__support_macros_optimization",
         ":common_constants",
         ":explogxf",
+    ],
+)
+
+libc_math_function(
+    name = "cospif",
+    additional_deps = [
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_optimization",
+        ":common_constants",
+        ":explogxf",
+        ":sincosf_utils",
     ],
 )
 

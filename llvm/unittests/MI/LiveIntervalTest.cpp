@@ -7,6 +7,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -234,8 +235,8 @@ body: |
 }
 
 static void liveVariablesTest(StringRef MIRFunc,
-                             TestPassT<LiveVariables>::TestFx T,
-                             bool ShouldPass = true) {
+                              TestPassT<LiveVariablesWrapperPass>::TestFx T,
+                              bool ShouldPass = true) {
   SmallString<160> S;
   StringRef MIRString = (Twine(R"MIR(
 ---
@@ -247,7 +248,7 @@ registers:
 body: |
   bb.0:
 )MIR") + Twine(MIRFunc) + Twine("...\n")).toNullTerminatedStringRef(S);
-  doTest<LiveVariables>(MIRString, T, ShouldPass);
+  doTest<LiveVariablesWrapperPass>(MIRString, T, ShouldPass);
 }
 
 } // End of anonymous namespace.
@@ -811,43 +812,49 @@ TEST(LiveIntervalTest, LiveThroughSegments) {
 }
 
 TEST(LiveVariablesTest, recomputeForSingleDefVirtReg_handle_undef1) {
-  liveVariablesTest(R"MIR(
+  liveVariablesTest(
+      R"MIR(
     %0 = IMPLICIT_DEF
     S_NOP 0, implicit %0
     S_NOP 0, implicit undef %0
-)MIR", [](MachineFunction &MF, LiveVariables &LV) {
-     auto &FirstNop = getMI(MF, 1, 0);
-     auto &SecondNop = getMI(MF, 2, 0);
-     EXPECT_TRUE(FirstNop.getOperand(1).isKill());
-     EXPECT_FALSE(SecondNop.getOperand(1).isKill());
+)MIR",
+      [](MachineFunction &MF, LiveVariablesWrapperPass &LVWrapper) {
+        auto &LV = LVWrapper.getLV();
+        auto &FirstNop = getMI(MF, 1, 0);
+        auto &SecondNop = getMI(MF, 2, 0);
+        EXPECT_TRUE(FirstNop.getOperand(1).isKill());
+        EXPECT_FALSE(SecondNop.getOperand(1).isKill());
 
-     Register R = Register::index2VirtReg(0);
-     LV.recomputeForSingleDefVirtReg(R);
+        Register R = Register::index2VirtReg(0);
+        LV.recomputeForSingleDefVirtReg(R);
 
-     EXPECT_TRUE(FirstNop.getOperand(1).isKill());
-     EXPECT_FALSE(SecondNop.getOperand(1).isKill());
-  });
+        EXPECT_TRUE(FirstNop.getOperand(1).isKill());
+        EXPECT_FALSE(SecondNop.getOperand(1).isKill());
+      });
 }
 
 TEST(LiveVariablesTest, recomputeForSingleDefVirtReg_handle_undef2) {
-  liveVariablesTest(R"MIR(
+  liveVariablesTest(
+      R"MIR(
     %0 = IMPLICIT_DEF
     S_NOP 0, implicit %0
     S_NOP 0, implicit undef %0, implicit %0
-)MIR", [](MachineFunction &MF, LiveVariables &LV) {
-     auto &FirstNop = getMI(MF, 1, 0);
-     auto &SecondNop = getMI(MF, 2, 0);
-     EXPECT_FALSE(FirstNop.getOperand(1).isKill());
-     EXPECT_FALSE(SecondNop.getOperand(1).isKill());
-     EXPECT_TRUE(SecondNop.getOperand(2).isKill());
+)MIR",
+      [](MachineFunction &MF, LiveVariablesWrapperPass &LVWrapper) {
+        auto &LV = LVWrapper.getLV();
+        auto &FirstNop = getMI(MF, 1, 0);
+        auto &SecondNop = getMI(MF, 2, 0);
+        EXPECT_FALSE(FirstNop.getOperand(1).isKill());
+        EXPECT_FALSE(SecondNop.getOperand(1).isKill());
+        EXPECT_TRUE(SecondNop.getOperand(2).isKill());
 
-     Register R = Register::index2VirtReg(0);
-     LV.recomputeForSingleDefVirtReg(R);
+        Register R = Register::index2VirtReg(0);
+        LV.recomputeForSingleDefVirtReg(R);
 
-     EXPECT_FALSE(FirstNop.getOperand(1).isKill());
-     EXPECT_FALSE(SecondNop.getOperand(1).isKill());
-     EXPECT_TRUE(SecondNop.getOperand(2).isKill());
-  });
+        EXPECT_FALSE(FirstNop.getOperand(1).isKill());
+        EXPECT_FALSE(SecondNop.getOperand(1).isKill());
+        EXPECT_TRUE(SecondNop.getOperand(2).isKill());
+      });
 }
 
 int main(int argc, char **argv) {

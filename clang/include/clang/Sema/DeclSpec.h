@@ -75,6 +75,7 @@ class CXXScopeSpec {
   SourceRange Range;
   NestedNameSpecifierLocBuilder Builder;
   ArrayRef<TemplateParameterList *> TemplateParamLists;
+  ArrayRef<DeclAccessPair> UnqualifiedLookups;
 
 public:
   SourceRange getRange() const { return Range; }
@@ -89,6 +90,13 @@ public:
   }
   ArrayRef<TemplateParameterList *> getTemplateParamLists() const {
     return TemplateParamLists;
+  }
+
+  void setUnqualifiedLookups(ArrayRef<DeclAccessPair> Found) {
+    UnqualifiedLookups = Found;
+  }
+  ArrayRef<DeclAccessPair> getUnqualifiedLookups() const {
+    return UnqualifiedLookups;
   }
 
   /// Retrieve the representation of the nested-name-specifier.
@@ -269,7 +277,7 @@ public:
 
   enum TSC {
     TSC_unspecified,
-    TSC_imaginary,
+    TSC_imaginary, // Unsupported
     TSC_complex
   };
 
@@ -875,7 +883,7 @@ public:
   }
 
   /// Finish - This does final analysis of the declspec, issuing diagnostics for
-  /// things like "_Imaginary" (lacking an FP type).  After calling this method,
+  /// things like "_Complex" (lacking an FP type).  After calling this method,
   /// DeclSpec is guaranteed self-consistent, even if an error occurred.
   void Finish(Sema &S, const PrintingPolicy &Policy);
 

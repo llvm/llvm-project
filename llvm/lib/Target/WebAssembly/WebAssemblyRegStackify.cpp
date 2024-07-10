@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iterator>
@@ -51,7 +52,7 @@ class WebAssemblyRegStackify final : public MachineFunctionPass {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addRequired<LiveIntervals>();
     AU.addPreserved<MachineBlockFrequencyInfo>();
-    AU.addPreserved<SlotIndexes>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervals>();
     AU.addPreservedID(LiveVariablesID);
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
