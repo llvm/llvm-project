@@ -59,8 +59,10 @@ void RTDECL(Rename)(const Descriptor &path1, const Descriptor &path2,
     const Descriptor *status, const char *sourceFile, int line) {
   Terminator terminator{sourceFile, line};
 
-  char * pathSrc{EnsureNullTerminated(path1.OffsetElement(), path1.ElementBytes(), terminator)};
-  char * pathDst{EnsureNullTerminated(path2.OffsetElement(), path2.ElementBytes(), terminator)};
+  char *pathSrc{EnsureNullTerminated(
+      path1.OffsetElement(), path1.ElementBytes(), terminator)};
+  char *pathDst{EnsureNullTerminated(
+      path2.OffsetElement(), path2.ElementBytes(), terminator)};
 
   // We simply call rename(2) from POSIX
   int result = rename(pathSrc, pathDst);
