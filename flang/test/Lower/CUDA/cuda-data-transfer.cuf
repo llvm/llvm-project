@@ -247,6 +247,7 @@ subroutine sub12()
   x = dev1(a)
 end subroutine
 
+! CHECK-LABEL: func.func @_QPsub12
 ! CHECK: %{{.*}} = fir.call @_QMmod1Pdev1
 ! CHECK: hlfir.assign
 ! CHECK-NOT: cuf.data_transfer
