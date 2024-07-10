@@ -16,22 +16,11 @@
 #include "Analysis/SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
-#include "SPIRVTargetMachine.h"
-#include "SPIRVUtils.h"
-
-#include "llvm/ADT/BreadthFirstIterator.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
-#include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
-#include "llvm/IR/Dominators.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
-#include "llvm/Transforms/Utils/Cloning.h"
-#include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
-
+#include "llvm/InitializePasses.h"
 #include <stack>
 
 using namespace llvm;
@@ -252,7 +241,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     MachineFunctionPass::getAnalysisUsage(AU);
-    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<SPIRVConvergenceRegionAnalysisWrapperPass>();
   }
@@ -309,7 +298,7 @@ public:
     auto &TRI = *MF.getSubtarget<SPIRVSubtarget>().getRegisterInfo();
     auto &RBI = *MF.getSubtarget<SPIRVSubtarget>().getRegBankInfo();
 
-    const auto &MLI = getAnalysis<MachineLoopInfo>();
+    const auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
     const auto *TopLevelRegion =
         getAnalysis<SPIRVConvergenceRegionAnalysisWrapperPass>()
             .getRegionInfo()
@@ -642,8 +631,12 @@ public:
 };
 
 char SPIRVStructurizer::ID = 0;
-INITIALIZE_PASS(SPIRVStructurizer, "structurizer", "SPIRV structurizer", false,
-                false)
+
+INITIALIZE_PASS_BEGIN(SPIRVStructurizer, "structurizer", "SPIRV structurizer",
+                      false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_END(SPIRVStructurizer, "structurizer", "SPIRV structurizer",
+                    false, false)
 
 FunctionPass *llvm::createSPIRVStructurizerPass() {
   return new SPIRVStructurizer();
