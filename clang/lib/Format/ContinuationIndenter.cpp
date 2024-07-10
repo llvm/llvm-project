@@ -803,13 +803,6 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     return !Tok.Previous->isOneOf(TT_CastRParen, tok::kw_for, tok::kw_while,
                                   tok::kw_switch);
   };
-  // Detecting functions is brittle. It would be better if we could annotate
-  // the LParen type of functions/calls.
-  auto IsFunctionDeclParen = [&](const FormatToken &Tok) {
-    return Tok.is(tok::l_paren) && Tok.Previous &&
-           (Tok.Previous->is(TT_FunctionDeclarationName) ||
-            Tok.endsSequence(TT_FunctionDeclarationName, tok::coloncolon));
-  };
   auto IsLambdaParameterList = [](const FormatToken *Tok) {
     // adapted from TokenAnnotator.cpp:isLambdaParameterList()
     // Skip <...> if present.
@@ -846,10 +839,11 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
     if (Tok.FakeLParens.size() > 0 && Tok.FakeLParens.back() > prec::Unknown)
       return true;
     if (Previous &&
-        (IsFunctionDeclParen(*Previous) || IsFunctionCallParen(*Previous) ||
-         IsLambdaParameterList(Previous))) {
+        (Previous->is(TT_FunctionDeclarationLParen) ||
+         IsFunctionCallParen(*Previous) || IsLambdaParameterList(Previous))) {
       return !IsOpeningBracket(Tok) && Next && !Next->isMemberAccess() &&
-             !IsInTemplateString(Tok) && !IsFunctionDeclParen(*Next) &&
+             !IsInTemplateString(Tok) &&
+             !Next->is(TT_FunctionDeclarationLParen) &&
              !IsFunctionCallParen(*Next);
     }
     return false;

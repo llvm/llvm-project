@@ -9353,7 +9353,7 @@ TEST_F(FormatTest, AlignsAfterOpenBracket) {
                ") const noexcept -> std::vector<of_very_long_type>;",
                Style);
   verifyFormat(
-      "aaaaaaaaaaaaaaaaaaa(\n"
+      "x = aaaaaaaaaaaaaaa(\n"
       "    \"a aaaaaaa aaaaaaaaaaaaaaaaa aaaaaaaaaaaaaaa aaaaaaaaaaaaa\"\n"
       ");",
       Style);
