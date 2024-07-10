@@ -15,7 +15,7 @@ define dso_local i8 @foo(ptr %p, i32 %cond) !dbg !7 {
 entry:
 ; There should be no dbg.values in this block.
 ; CHECK-LABEL: entry:
-; CHECK-NOT:   dbg.value
+; CHECK-NOT:   #dbg_value
   %arith = getelementptr i8, ptr %p, i32 3
   %load1 = load i8, ptr %arith
   %cmpresult = icmp eq i32 %cond, 0
@@ -25,15 +25,15 @@ next:
 ; Address calcs should be duplicated into this block. One dbg.value should be
 ; updated, and the other should not.
 ; CHECK-LABEL: next:
-; CHECK:       dbg.value(metadata ptr %arith, metadata ![[DIVAR:[0-9]+]],
-; CHECK-SAME:    metadata !DIExpression()
+; CHECK:       #dbg_value(ptr %arith, ![[DIVAR:[0-9]+]],
+; CHECK-SAME:    !DIExpression()
 ; CHECK-NEXT:  %[[GEPVAR:[0-9a-zA-Z]+]] = getelementptr i8, ptr %p,
 ; CHECK-SAME:                             i64 3
 ; CHECK-NEXT:  %loaded = load i8, ptr %[[GEPVAR]]
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata ptr %[[GEPVAR]],
-; CHECK-SAME:                            metadata ![[DIVAR]],
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata !DIArgList(ptr %[[GEPVAR]],
-; CHECK-SAME:                            ptr %[[GEPVAR]]), metadata ![[DIVAR]],
+; CHECK-NEXT:  #dbg_value(ptr %[[GEPVAR]],
+; CHECK-SAME:                            ![[DIVAR]],
+; CHECK-NEXT:  #dbg_value(!DIArgList(ptr %[[GEPVAR]],
+; CHECK-SAME:                            ptr %[[GEPVAR]]), ![[DIVAR]],
   call void @llvm.dbg.value(metadata ptr %arith, metadata !12, metadata !DIExpression()), !dbg !14
   %loaded = load i8, ptr %arith
   call void @llvm.dbg.value(metadata ptr %arith, metadata !12, metadata !DIExpression()), !dbg !14

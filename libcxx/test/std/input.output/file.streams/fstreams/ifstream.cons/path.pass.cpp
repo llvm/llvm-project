@@ -38,7 +38,7 @@ constexpr bool test_non_convert_to_path() {
   static_assert(!std::is_constructible_v<std::ifstream, const std::basic_string_view<CharT>>);
 
   // Char* pointers
-  if constexpr (!std::is_same_v<CharT, char>)
+  if constexpr (!std::is_same_v<CharT, char> && !std::is_same_v<CharT, fs::path::value_type>)
     static_assert(!std::is_constructible_v<std::ifstream, const CharT*>);
 
   // Iterators

@@ -233,8 +233,8 @@ private:
 
     // The cost of the scalar loads/stores.
     InstructionCost MemoryOpCost =
-        VF * getMemoryOpCost(Opcode, VT->getElementType(), Alignment,
-                             AddressSpace, CostKind);
+        VF * thisT()->getMemoryOpCost(Opcode, VT->getElementType(), Alignment,
+                                      AddressSpace, CostKind);
 
     // Next, compute the cost of packing the result in a vector.
     InstructionCost PackingCost =
@@ -253,8 +253,8 @@ private:
           getScalarizationOverhead(
               FixedVectorType::get(Type::getInt1Ty(DataTy->getContext()), VF),
               /*Insert=*/false, /*Extract=*/true, CostKind) +
-          VF * (getCFInstrCost(Instruction::Br, CostKind) +
-                getCFInstrCost(Instruction::PHI, CostKind));
+          VF * (thisT()->getCFInstrCost(Instruction::Br, CostKind) +
+                thisT()->getCFInstrCost(Instruction::PHI, CostKind));
     }
 
     return AddrExtractCost + MemoryOpCost + PackingCost + ConditionalCost;
@@ -397,6 +397,10 @@ public:
   bool shouldFoldTerminatingConditionAfterLSR() const {
     return TargetTransformInfoImplBase::
         shouldFoldTerminatingConditionAfterLSR();
+  }
+
+  bool shouldDropLSRSolutionIfLessProfitable() const {
+    return TargetTransformInfoImplBase::shouldDropLSRSolutionIfLessProfitable();
   }
 
   bool isProfitableLSRChainElement(Instruction *I) {
@@ -1941,8 +1945,7 @@ public:
         ScalarRetTy = RetTy->getScalarType();
       }
       SmallVector<Type *, 4> ScalarTys;
-      for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
-        Type *Ty = Tys[i];
+      for (Type *Ty : Tys) {
         if (auto *VTy = dyn_cast<VectorType>(Ty)) {
           if (!SkipScalarizationCost)
             ScalarizationCost += getScalarizationOverhead(
@@ -1972,6 +1975,9 @@ public:
       break;
     case Intrinsic::cos:
       ISD = ISD::FCOS;
+      break;
+    case Intrinsic::tan:
+      ISD = ISD::FTAN;
       break;
     case Intrinsic::exp:
       ISD = ISD::FEXP;
@@ -2361,8 +2367,7 @@ public:
 
       unsigned ScalarCalls = cast<FixedVectorType>(RetVTy)->getNumElements();
       SmallVector<Type *, 4> ScalarTys;
-      for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
-        Type *Ty = Tys[i];
+      for (Type *Ty : Tys) {
         if (Ty->isVectorTy())
           Ty = Ty->getScalarType();
         ScalarTys.push_back(Ty);
@@ -2370,8 +2375,8 @@ public:
       IntrinsicCostAttributes Attrs(IID, RetTy->getScalarType(), ScalarTys, FMF);
       InstructionCost ScalarCost =
           thisT()->getIntrinsicInstrCost(Attrs, CostKind);
-      for (unsigned i = 0, ie = Tys.size(); i != ie; ++i) {
-        if (auto *VTy = dyn_cast<VectorType>(Tys[i])) {
+      for (Type *Ty : Tys) {
+        if (auto *VTy = dyn_cast<VectorType>(Ty)) {
           if (!ICA.skipScalarizationCost())
             ScalarizationCost += getScalarizationOverhead(
                 VTy, /*Insert*/ false, /*Extract*/ true, CostKind);

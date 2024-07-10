@@ -119,9 +119,11 @@ static void fixSeparateAttrArgAndNumber(StringRef ArgStr, SourceLocation ArgLoc,
 }
 
 void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
-                                  SourceLocation *EndLoc) {
+                                  SourceLocation *EndLoc,
+                                  bool CouldBeBitField) {
 
   assert(Tok.is(tok::colon) && "Not a HLSL Annotation");
+  Token OldToken = Tok;
   ConsumeToken();
 
   IdentifierInfo *II = nullptr;
@@ -131,6 +133,10 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
     II = Tok.getIdentifierInfo();
 
   if (!II) {
+    if (CouldBeBitField) {
+      UnconsumeToken(OldToken);
+      return;
+    }
     Diag(Tok.getLocation(), diag::err_expected_semantic_identifier);
     return;
   }
@@ -174,7 +180,7 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
       ArgExprs.push_back(ParseIdentifierLoc());
 
       // Add numeric_constant for fix-it.
-      if (SpaceStr.equals("space") && Tok.is(tok::numeric_constant))
+      if (SpaceStr == "space" && Tok.is(tok::numeric_constant))
         fixSeparateAttrArgAndNumber(SpaceStr, SpaceLoc, Tok, ArgExprs, *this,
                                     Actions.Context, PP);
     }

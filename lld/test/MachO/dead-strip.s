@@ -35,7 +35,7 @@
 # EXEC-DAG:   g {{.*}} __mh_execute_header
 # EXECDATA-LABEL: Indirect symbols
 # EXECDATA-NEXT:  name
-# EXECDATA-NEXT:  _ref_com
+# EXECDATA-NEXT:  LOCAL
 # EXECDATA-LABEL: Contents of (__DATA,__ref_section) section
 # EXECDATA-NEXT:   04 00 00 00 00 00 00 00 05 00 00 00 00 00 00 00
 # EXECDATA-LABEL: Exports trie:
@@ -266,12 +266,12 @@
 # UNWIND-NEXT:   g F __TEXT,__text _main
 # UNWIND-NEXT:   g F __TEXT,__text __mh_execute_header
 # UNWIND-NEXT:   *UND* dyld_stub_binder
-# UNWIND-NEXT:   *UND* ___cxa_allocate_exception
-# UNWIND-NEXT:   *UND* ___cxa_end_catch
 # UNWIND-NEXT:   *UND* __ZTIi
+# UNWIND-NEXT:   *UND* ___cxa_allocate_exception
+# UNWIND-NEXT:   *UND* ___cxa_begin_catch
+# UNWIND-NEXT:   *UND* ___cxa_end_catch
 # UNWIND-NEXT:   *UND* ___cxa_throw
 # UNWIND-NEXT:   *UND* ___gxx_personality_v0
-# UNWIND-NEXT:   *UND* ___cxa_begin_catch
 # UNWIND-NOT:    GCC_except_table0
 
 ## If a dead stripped function has a strong ref to a dylib symbol but

@@ -21,6 +21,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
@@ -562,8 +563,7 @@ struct SalvageDebugInfoTest : ::testing::Test {
     const auto &CI = *cast<ConstantInt>(DVR.getVariableLocationOp(0));
     if (CI.isZero())
       return DVR.getExpression()->getElements().equals(
-          {dwarf::DW_OP_plus_uconst, 1, dwarf::DW_OP_plus_uconst, 2,
-           dwarf::DW_OP_stack_value});
+          {dwarf::DW_OP_plus_uconst, 3, dwarf::DW_OP_stack_value});
     else if (CI.isOneValue())
       return DVR.getExpression()->getElements().equals(
           {dwarf::DW_OP_plus_uconst, 2, dwarf::DW_OP_stack_value});

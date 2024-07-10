@@ -2082,6 +2082,18 @@ let Predicates = [HasSVEorSME] in {
   def : Pat<(i64 (AArch64CttzElts nxv16i1:$Op1)),
             (CNTP_XPP_B (BRKB_PPzP (PTRUE_B 31), PPR:$Op1),
                         (BRKB_PPzP (PTRUE_B 31), PPR:$Op1))>;
+
+  def : Pat<(i64 (AArch64CttzElts nxv8i1:$Op1)),
+            (CNTP_XPP_H (BRKB_PPzP (PTRUE_H 31), PPR:$Op1),
+                        (BRKB_PPzP (PTRUE_H 31), PPR:$Op1))>;
+
+  def : Pat<(i64 (AArch64CttzElts nxv4i1:$Op1)),
+            (CNTP_XPP_S (BRKB_PPzP (PTRUE_S 31), PPR:$Op1),
+                        (BRKB_PPzP (PTRUE_S 31), PPR:$Op1))>;
+
+  def : Pat<(i64 (AArch64CttzElts nxv2i1:$Op1)),
+            (CNTP_XPP_D (BRKB_PPzP (PTRUE_D 31), PPR:$Op1),
+                        (BRKB_PPzP (PTRUE_D 31), PPR:$Op1))>;
 }
 
   defm INCB_XPiI : sve_int_pred_pattern_a<0b000, "incb", add, int_aarch64_sve_cntb>;
@@ -2172,6 +2184,30 @@ let Predicates = [HasSVEorSME] in {
 
   def : Pat<(i32 (add GPR32:$Op1, (trunc (i64 (AArch64CttzElts nxv16i1:$Op2))))),
             (EXTRACT_SUBREG (INCP_XP_B (BRKB_PPzP (PTRUE_B 31), PPR:$Op2),
+                                       (INSERT_SUBREG (IMPLICIT_DEF), GPR32:$Op1, sub_32)),
+                            sub_32)>;
+
+  def : Pat<(i64 (add GPR64:$Op1, (i64 (AArch64CttzElts nxv8i1:$Op2)))),
+            (INCP_XP_H (BRKB_PPzP (PTRUE_H 31), PPR:$Op2), GPR64:$Op1)>;
+
+  def : Pat<(i32 (add GPR32:$Op1, (trunc (i64 (AArch64CttzElts nxv8i1:$Op2))))),
+            (EXTRACT_SUBREG (INCP_XP_H (BRKB_PPzP (PTRUE_H 31), PPR:$Op2),
+                                       (INSERT_SUBREG (IMPLICIT_DEF), GPR32:$Op1, sub_32)),
+                            sub_32)>;
+
+  def : Pat<(i64 (add GPR64:$Op1, (i64 (AArch64CttzElts nxv4i1:$Op2)))),
+            (INCP_XP_S (BRKB_PPzP (PTRUE_S 31), PPR:$Op2), GPR64:$Op1)>;
+
+  def : Pat<(i32 (add GPR32:$Op1, (trunc (i64 (AArch64CttzElts nxv4i1:$Op2))))),
+            (EXTRACT_SUBREG (INCP_XP_S (BRKB_PPzP (PTRUE_S 31), PPR:$Op2),
+                                       (INSERT_SUBREG (IMPLICIT_DEF), GPR32:$Op1, sub_32)),
+                            sub_32)>;
+
+  def : Pat<(i64 (add GPR64:$Op1, (i64 (AArch64CttzElts nxv2i1:$Op2)))),
+            (INCP_XP_D (BRKB_PPzP (PTRUE_D 31), PPR:$Op2), GPR64:$Op1)>;
+
+  def : Pat<(i32 (add GPR32:$Op1, (trunc (i64 (AArch64CttzElts nxv2i1:$Op2))))),
+            (EXTRACT_SUBREG (INCP_XP_D (BRKB_PPzP (PTRUE_D 31), PPR:$Op2),
                                        (INSERT_SUBREG (IMPLICIT_DEF), GPR32:$Op1, sub_32)),
                             sub_32)>;
 
@@ -3315,7 +3351,7 @@ let Predicates = [HasSVEorSME] in {
             (EXTRACT_SUBREG (DUP_ZZI_D ZPR:$vec, sve_elm_idx_extdup_d:$index), dsub)>;
 
   // Extract element from vector with immediate index that's within the bottom 128-bits.
-  let Predicates = [IsNeonAvailable], AddedComplexity = 1 in {
+  let Predicates = [HasNEON], AddedComplexity = 1 in {
   def : Pat<(i32 (vector_extract nxv16i8:$vec, VectorIndexB:$index)),
             (UMOVvi8 (v16i8 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexB:$index)>;
   def : Pat<(i32 (vector_extract nxv8i16:$vec, VectorIndexH:$index)),
@@ -3324,9 +3360,9 @@ let Predicates = [HasSVEorSME] in {
             (UMOVvi32 (v4i32 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexS:$index)>;
   def : Pat<(i64 (vector_extract nxv2i64:$vec, VectorIndexD:$index)),
             (UMOVvi64 (v2i64 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexD:$index)>;
-  } // End IsNeonAvailable
+  } // End HasNEON
 
-  let Predicates = [IsNeonAvailable] in {
+  let Predicates = [HasNEON] in {
   def : Pat<(sext_inreg (vector_extract nxv16i8:$vec, VectorIndexB:$index), i8),
             (SMOVvi8to32 (v16i8 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexB:$index)>;
   def : Pat<(sext_inreg (anyext (i32 (vector_extract nxv16i8:$vec, VectorIndexB:$index))), i8),
@@ -3339,7 +3375,7 @@ let Predicates = [HasSVEorSME] in {
 
   def : Pat<(sext (i32 (vector_extract nxv4i32:$vec, VectorIndexS:$index))),
             (SMOVvi32to64 (v4i32 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexS:$index)>;
-  } // End IsNeonAvailable
+  } // End HasNEON
 
   // Extract first element from vector.
   let AddedComplexity = 2 in {

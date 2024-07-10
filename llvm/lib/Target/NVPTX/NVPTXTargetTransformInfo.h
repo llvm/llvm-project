@@ -38,7 +38,7 @@ class NVPTXTTIImpl : public BasicTTIImplBase<NVPTXTTIImpl> {
 
 public:
   explicit NVPTXTTIImpl(const NVPTXTargetMachine *TM, const Function &F)
-      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl()),
+      : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl()),
         TLI(ST->getTargetLowering()) {}
 
   bool hasBranchDivergence(const Function *F = nullptr) { return true; }

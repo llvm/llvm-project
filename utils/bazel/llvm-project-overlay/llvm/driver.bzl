@@ -39,6 +39,7 @@ _EXTRA_ALIASES = {
     "clang": ["clang++", "clang-cl", "clang-cpp"],
     "lld": ["ld", "lld-link", "ld.lld", "ld64.lld", "wasm-ld"],
     "llvm-ar": ["ranlib", "lib", "dlltool"],
+    "llvm-cxxfilt": ["c++filt"],
     "llvm-objcopy": ["bitcode-strip", "install-name-tool", "strip"],
     "llvm-objdump": ["otool"],
     "llvm-rc": ["windres"],

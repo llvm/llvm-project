@@ -25,7 +25,7 @@ def OptSMEMOffsetMod : NamedIntOperand<i32, "offset"> {
 
 class SM_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> pattern=[]> :
   InstSI <outs, ins, "", pattern>,
-  SIMCInstr<opName, SIEncodingFamily.NONE> {
+  SIMCInstr<NAME, SIEncodingFamily.NONE> {
   let isPseudo = 1;
   let isCodeGenOnly = 1;
 
@@ -71,6 +71,8 @@ class SM_Real <SM_Pseudo ps, string opName = ps.Mnemonic>
   let AsmMatchConverter    = ps.AsmMatchConverter;
   let IsAtomicRet          = ps.IsAtomicRet;
   let IsAtomicNoRet        = ps.IsAtomicNoRet;
+  let Uses                 = ps.Uses;
+  let Defs                 = ps.Defs;
 
   let TSFlags = ps.TSFlags;
 
@@ -114,7 +116,6 @@ class SM_Probe_Pseudo <string opName, RegisterClass baseClass, OffsetMode offset
   let hasSideEffects = 1;
   let has_offset = offsets.HasOffset;
   let has_soffset = offsets.HasSOffset;
-  let PseudoInstr = opName # offsets.Variant;
 }
 
 class SM_Load_Pseudo <string opName, RegisterClass baseClass,
@@ -130,7 +131,6 @@ class SM_Load_Pseudo <string opName, RegisterClass baseClass,
   let has_dlc = 1;
   let has_offset = offsets.HasOffset;
   let has_soffset = offsets.HasSOffset;
-  let PseudoInstr = opName # offsets.Variant;
 }
 
 class SM_Store_Pseudo <string opName, RegisterClass baseClass,
@@ -146,7 +146,6 @@ class SM_Store_Pseudo <string opName, RegisterClass baseClass,
   let has_offset = offsets.HasOffset;
   let has_soffset = offsets.HasSOffset;
   let ScalarStore = 1;
-  let PseudoInstr = opName # offsets.Variant;
 }
 
 class SM_Discard_Pseudo <string opName, OffsetMode offsets>
@@ -160,7 +159,6 @@ class SM_Discard_Pseudo <string opName, OffsetMode offsets>
   let hasSideEffects = 1;
   let has_offset = offsets.HasOffset;
   let has_soffset = offsets.HasSOffset;
-  let PseudoInstr = opName # offsets.Variant;
 }
 
 multiclass SM_Pseudo_Loads<RegisterClass baseClass,
@@ -236,7 +234,6 @@ class SM_Prefetch_Pseudo <string opName, RegisterClass baseClass, bit hasSBase>
   let ScalarStore = 0;
   let has_offset = 1;
   let has_soffset = 1;
-  let PseudoInstr = opName;
 }
 
 //===----------------------------------------------------------------------===//
@@ -269,8 +266,6 @@ class SM_Pseudo_Atomic<string opName,
                        RegisterClass dataClass,
                        OffsetMode offsets,
                        bit isRet,
-                       string opNameWithSuffix =
-                         opName # offsets.Variant # !if(isRet, "_RTN", ""),
                        Operand CPolTy = !if(isRet, CPol_GLC, CPol_NonGLC)> :
   SM_Atomic_Pseudo<opName,
                    !if(isRet, (outs dataClass:$sdst), (outs)),
@@ -281,7 +276,6 @@ class SM_Pseudo_Atomic<string opName,
                    isRet> {
   let has_offset = offsets.HasOffset;
   let has_soffset = offsets.HasSOffset;
-  let PseudoInstr = opNameWithSuffix;
 
   let Constraints = !if(isRet, "$sdst = $sdata", "");
   let DisableEncoding = !if(isRet, "$sdata", "");

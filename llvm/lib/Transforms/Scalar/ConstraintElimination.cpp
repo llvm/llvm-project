@@ -29,6 +29,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Pass.h"
@@ -554,6 +555,12 @@ static Decomposition decompose(Value *V,
     V = Op0;
   }
 
+  if (match(V, m_SExt(m_Value(Op0)))) {
+    V = Op0;
+    Preconditions.emplace_back(CmpInst::ICMP_SGE, Op0,
+                               ConstantInt::get(Op0->getType(), 0));
+  }
+
   Value *Op1;
   ConstantInt *CI;
   if (match(V, m_NUWAdd(m_Value(Op0), m_Value(Op1)))) {
@@ -1025,6 +1032,20 @@ void State::addInfoForInductions(BasicBlock &BB) {
   WorkList.push_back(FactOrCheck::getConditionFact(
       DTN, CmpInst::ICMP_SLT, PN, B,
       ConditionTy(CmpInst::ICMP_SLE, StartValue, B)));
+
+  // Try to add condition from header to the exit blocks. When exiting either
+  // with EQ or NE in the header, we know that the induction value must be u<=
+  // B, as other exits may only exit earlier.
+  assert(!StepOffset.isNegative() && "induction must be increasing");
+  assert((Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE) &&
+         "unsupported predicate");
+  ConditionTy Precond = {CmpInst::ICMP_ULE, StartValue, B};
+  SmallVector<BasicBlock *> ExitBBs;
+  L->getExitBlocks(ExitBBs);
+  for (BasicBlock *EB : ExitBBs) {
+    WorkList.emplace_back(FactOrCheck::getConditionFact(
+        DT.getNode(EB), CmpInst::ICMP_ULE, A, B, Precond));
+  }
 }
 
 void State::addInfoFor(BasicBlock &BB) {
@@ -1634,7 +1655,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
   SmallVector<Value *> FunctionArgs;
   for (Value &Arg : F.args())
     FunctionArgs.push_back(&Arg);
-  ConstraintInfo Info(F.getParent()->getDataLayout(), FunctionArgs);
+  ConstraintInfo Info(F.getDataLayout(), FunctionArgs);
   State S(DT, LI, SE);
   std::unique_ptr<Module> ReproducerModule(
       DumpReproducers ? new Module(F.getName(), F.getContext()) : nullptr);

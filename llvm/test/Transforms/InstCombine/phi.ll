@@ -88,12 +88,12 @@ L2:             ; preds = %Loop
   br label %Loop
 }
 
-define i32 @test5(i32 %A, i1 %b) {
-; CHECK-LABEL: @test5(
+define i32 @test5_undef(i32 %A, i1 %cond) {
+; CHECK-LABEL: @test5_undef(
 ; CHECK-NEXT:  BB0:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       Loop:
-; CHECK-NEXT:    br i1 [[B:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       Exit:
 ; CHECK-NEXT:    ret i32 [[A:%.*]]
 ;
@@ -103,7 +103,28 @@ BB0:
 Loop:           ; preds = %Loop, %BB0
   ; PHI has same value always.
   %B = phi i32 [ %A, %BB0 ], [ undef, %Loop ]
-  br i1 %b, label %Loop, label %Exit
+  br i1 %cond, label %Loop, label %Exit
+
+Exit:           ; preds = %Loop
+  ret i32 %B
+}
+
+define i32 @test5_poison(i32 %A, i1 %cond) {
+; CHECK-LABEL: @test5_poison(
+; CHECK-NEXT:  BB0:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       Loop:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       Exit:
+; CHECK-NEXT:    ret i32 [[A:%.*]]
+;
+BB0:
+  br label %Loop
+
+Loop:           ; preds = %Loop, %BB0
+  ; PHI has same value always.
+  %B = phi i32 [ %A, %BB0 ], [ poison, %Loop ]
+  br i1 %cond, label %Loop, label %Exit
 
 Exit:           ; preds = %Loop
   ret i32 %B

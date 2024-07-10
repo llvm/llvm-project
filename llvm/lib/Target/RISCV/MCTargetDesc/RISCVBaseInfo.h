@@ -279,6 +279,8 @@ enum OperandType : unsigned {
   OPERAND_UIMM9_LSB000,
   OPERAND_UIMM10_LSB00_NONZERO,
   OPERAND_UIMM12,
+  OPERAND_UIMM16,
+  OPERAND_UIMM32,
   OPERAND_ZERO,
   OPERAND_SIMM5,
   OPERAND_SIMM5_PLUS1,
@@ -372,6 +374,15 @@ inline static bool isValidRoundingMode(unsigned Mode) {
   }
 }
 } // namespace RISCVFPRndMode
+
+namespace RISCVVXRndMode {
+enum RoundingMode {
+  RNU = 0,
+  RNE = 1,
+  RDN = 2,
+  ROD = 3,
+};
+} // namespace RISCVVXRndMode
 
 //===----------------------------------------------------------------------===//
 // Floating-point Immediates

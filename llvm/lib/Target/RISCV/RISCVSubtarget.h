@@ -121,9 +121,7 @@ public:
   }
   bool enableMachineScheduler() const override { return true; }
 
-  bool enablePostRAScheduler() const override {
-    return getSchedModel().PostRAScheduler || UsePostRAScheduler;
-  }
+  bool enablePostRAScheduler() const override { return UsePostRAScheduler; }
 
   Align getPrefFunctionAlignment() const {
     return Align(TuneInfo->PrefFunctionAlignment);
@@ -247,10 +245,10 @@ public:
 
 protected:
   // GlobalISel related APIs.
-  std::unique_ptr<CallLowering> CallLoweringInfo;
-  std::unique_ptr<InstructionSelector> InstSelector;
-  std::unique_ptr<LegalizerInfo> Legalizer;
-  std::unique_ptr<RegisterBankInfo> RegBankInfo;
+  mutable std::unique_ptr<CallLowering> CallLoweringInfo;
+  mutable std::unique_ptr<InstructionSelector> InstSelector;
+  mutable std::unique_ptr<LegalizerInfo> Legalizer;
+  mutable std::unique_ptr<RegisterBankInfo> RegBankInfo;
 
   // Return the known range for the bit length of RVV data registers as set
   // at the command line. A value of 0 means nothing is known about that particular

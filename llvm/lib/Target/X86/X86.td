@@ -124,24 +124,15 @@ def FeatureEVEX512  : SubtargetFeature<"evex512", "HasEVEX512", "true",
 def FeatureAVX512   : SubtargetFeature<"avx512f", "X86SSELevel", "AVX512",
                                       "Enable AVX-512 instructions",
                                       [FeatureAVX2, FeatureFMA, FeatureF16C]>;
-def FeatureERI      : SubtargetFeature<"avx512er", "HasERI", "true",
-                      "Enable AVX-512 Exponential and Reciprocal Instructions",
-                                      [FeatureAVX512]>;
 def FeatureCDI      : SubtargetFeature<"avx512cd", "HasCDI", "true",
                       "Enable AVX-512 Conflict Detection Instructions",
                                       [FeatureAVX512]>;
 def FeatureVPOPCNTDQ : SubtargetFeature<"avx512vpopcntdq", "HasVPOPCNTDQ",
                        "true", "Enable AVX-512 Population Count Instructions",
                                       [FeatureAVX512]>;
-def FeaturePFI      : SubtargetFeature<"avx512pf", "HasPFI", "true",
-                      "Enable AVX-512 PreFetch Instructions",
-                                      [FeatureAVX512]>;
 def FeaturePREFETCHI  : SubtargetFeature<"prefetchi", "HasPREFETCHI",
                                    "true",
                                    "Prefetch instruction with T0 or T1 Hint">;
-def FeaturePREFETCHWT1  : SubtargetFeature<"prefetchwt1", "HasPREFETCHWT1",
-                                   "true",
-                                   "Prefetch with Intent to Write and T1 Hint">;
 def FeatureDQI     : SubtargetFeature<"avx512dq", "HasDQI", "true",
                       "Enable AVX-512 Doubleword and Quadword Instructions",
                                       [FeatureAVX512]>;
@@ -351,8 +342,15 @@ def FeatureNDD : SubtargetFeature<"ndd", "HasNDD", "true",
                                   "Support non-destructive destination">;
 def FeatureCCMP : SubtargetFeature<"ccmp", "HasCCMP", "true",
                                    "Support conditional cmp & test instructions">;
+def FeatureNF : SubtargetFeature<"nf", "HasNF", "true",
+                                 "Support status flags update suppression">;
 def FeatureCF : SubtargetFeature<"cf", "HasCF", "true",
                                  "Support conditional faulting">;
+def FeatureZU : SubtargetFeature<"zu", "HasZU", "true",
+                                 "Support zero-upper SETcc/IMUL">;
+def FeatureUseGPR32InInlineAsm
+    : SubtargetFeature<"inline-asm-use-gpr32", "UseInlineAsmGPR32", "true",
+                       "Enable use of GPR32 in inline assembly for APX">;
 
 // Ivy Bridge and newer processors have enhanced REP MOVSB and STOSB (aka
 // "string operations"). See "REP String Enhancement" in the Intel Software
@@ -751,6 +749,11 @@ def TuningUseGLMDivSqrtCosts
     : SubtargetFeature<"use-glm-div-sqrt-costs", "UseGLMDivSqrtCosts", "true",
         "Use Goldmont specific floating point div/sqrt costs">;
 
+// Starting with Redwood Cove architecture, the branch has branch taken hint
+// (i.e., instruction prefix 3EH).
+def TuningBranchHint: SubtargetFeature<"branch-hint", "HasBranchHint", "true",
+                                        "Target has branch hint feature">;
+
 //===----------------------------------------------------------------------===//
 // X86 CPU Families
 // TODO: Remove these - use general tuning features to determine codegen.
@@ -1126,6 +1129,8 @@ def ProcessorFeatures {
                                                   FeaturePREFETCHI];
   list<SubtargetFeature> GNRFeatures =
     !listconcat(SPRFeatures, GNRAdditionalFeatures);
+  list<SubtargetFeature> GNRAdditionalTuning = [TuningBranchHint];
+  list<SubtargetFeature> GNRTuning = !listconcat(SPRTuning, GNRAdditionalTuning);
 
   // Graniterapids D
   list<SubtargetFeature> GNRDAdditionalFeatures = [FeatureAMXCOMPLEX];
@@ -1310,10 +1315,7 @@ def ProcessorFeatures {
                                         FeatureFSGSBase,
                                         FeatureAVX512,
                                         FeatureEVEX512,
-                                        FeatureERI,
                                         FeatureCDI,
-                                        FeaturePFI,
-                                        FeaturePREFETCHWT1,
                                         FeatureADX,
                                         FeatureRDSEED,
                                         FeatureMOVBE,
@@ -1819,13 +1821,13 @@ def : ProcModel<"pantherlake", AlderlakePModel,
                 ProcessorFeatures.PTLFeatures, ProcessorFeatures.ADLTuning>;
 def : ProcModel<"clearwaterforest", AlderlakePModel,
                 ProcessorFeatures.CWFFeatures, ProcessorFeatures.ADLTuning>;
-def : ProcModel<"graniterapids", SapphireRapidsModel,
-                ProcessorFeatures.GNRFeatures, ProcessorFeatures.SPRTuning>;
 def : ProcModel<"emeraldrapids", SapphireRapidsModel,
                 ProcessorFeatures.SPRFeatures, ProcessorFeatures.SPRTuning>;
+def : ProcModel<"graniterapids", SapphireRapidsModel,
+                ProcessorFeatures.GNRFeatures, ProcessorFeatures.GNRTuning>;
 foreach P = ["graniterapids-d", "graniterapids_d"] in {
 def : ProcModel<P, SapphireRapidsModel,
-                ProcessorFeatures.GNRDFeatures, ProcessorFeatures.SPRTuning>;
+                ProcessorFeatures.GNRDFeatures, ProcessorFeatures.GNRTuning>;
 }
 
 // AMD CPUs.

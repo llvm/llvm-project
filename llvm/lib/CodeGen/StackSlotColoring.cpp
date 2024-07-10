@@ -13,6 +13,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervalUnion.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -64,6 +65,7 @@ namespace {
     MachineFrameInfo *MFI = nullptr;
     const TargetInstrInfo *TII = nullptr;
     const MachineBlockFrequencyInfo *MBFI = nullptr;
+    SlotIndexes *Indexes = nullptr;
 
     // SSIntervals - Spill slot intervals.
     std::vector<LiveInterval*> SSIntervals;
@@ -146,12 +148,20 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.setPreservesCFG();
-      AU.addRequired<SlotIndexes>();
-      AU.addPreserved<SlotIndexes>();
+      AU.addRequired<SlotIndexesWrapperPass>();
+      AU.addPreserved<SlotIndexesWrapperPass>();
       AU.addRequired<LiveStacks>();
       AU.addRequired<MachineBlockFrequencyInfo>();
       AU.addPreserved<MachineBlockFrequencyInfo>();
       AU.addPreservedID(MachineDominatorsID);
+
+      // In some Target's pipeline, register allocation (RA) might be
+      // split into multiple phases based on register class. So, this pass
+      // may be invoked multiple times requiring it to save these analyses to be
+      // used by RA later.
+      AU.addPreserved<LiveIntervalsWrapperPass>();
+      AU.addPreserved<LiveDebugVariables>();
+
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -175,9 +185,9 @@ char &llvm::StackSlotColoringID = StackSlotColoring::ID;
 
 INITIALIZE_PASS_BEGIN(StackSlotColoring, DEBUG_TYPE,
                 "Stack Slot Coloring", false, false)
-INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveStacks)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(StackSlotColoring, DEBUG_TYPE,
                 "Stack Slot Coloring", false, false)
 
@@ -390,8 +400,8 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
 
     const PseudoSourceValue *NewSV = MF.getPSVManager().getFixedStack(NewFI);
     SmallVectorImpl<MachineMemOperand *> &RefMMOs = SSRefs[SS];
-    for (unsigned i = 0, e = RefMMOs.size(); i != e; ++i)
-      RefMMOs[i]->setValue(NewSV);
+    for (MachineMemOperand *MMO : RefMMOs)
+      MMO->setValue(NewSV);
   }
 
   // Rewrite all MO_FrameIndex operands.  Look for dead stores.
@@ -496,8 +506,11 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
     ++I;
   }
 
-  for (MachineInstr *MI : toErase)
+  for (MachineInstr *MI : toErase) {
+    if (Indexes)
+      Indexes->removeMachineInstrFromMaps(*MI);
     MI->eraseFromParent();
+  }
 
   return changed;
 }
@@ -515,6 +528,7 @@ bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
   TII = MF.getSubtarget().getInstrInfo();
   LS = &getAnalysis<LiveStacks>();
   MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
+  Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
 
   bool Changed = false;
 

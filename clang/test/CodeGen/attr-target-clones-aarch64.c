@@ -27,14 +27,6 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 
 //.
 // CHECK: @__aarch64_cpu_features = external dso_local global { i64 }
-// CHECK: @ftc.ifunc = weak_odr alias i32 (), ptr @ftc
-// CHECK: @ftc_def.ifunc = weak_odr alias i32 (), ptr @ftc_def
-// CHECK: @ftc_dup1.ifunc = weak_odr alias i32 (), ptr @ftc_dup1
-// CHECK: @ftc_dup2.ifunc = weak_odr alias i32 (), ptr @ftc_dup2
-// CHECK: @ftc_dup3.ifunc = weak_odr alias i32 (), ptr @ftc_dup3
-// CHECK: @ftc_inline2.ifunc = weak_odr alias i32 (), ptr @ftc_inline2
-// CHECK: @ftc_inline1.ifunc = weak_odr alias i32 (), ptr @ftc_inline1
-// CHECK: @ftc_inline3.ifunc = weak_odr alias i32 (), ptr @ftc_inline3
 // CHECK: @ftc = weak_odr ifunc i32 (), ptr @ftc.resolver
 // CHECK: @ftc_def = weak_odr ifunc i32 (), ptr @ftc_def.resolver
 // CHECK: @ftc_dup1 = weak_odr ifunc i32 (), ptr @ftc_dup1.resolver
@@ -45,14 +37,6 @@ inline int __attribute__((target_clones("fp16", "sve2-bitperm+fcma", "default"))
 // CHECK: @ftc_inline3 = weak_odr ifunc i32 (), ptr @ftc_inline3.resolver
 //.
 // CHECK-MTE-BTI: @__aarch64_cpu_features = external dso_local global { i64 }
-// CHECK-MTE-BTI: @ftc.ifunc = weak_odr alias i32 (), ptr @ftc
-// CHECK-MTE-BTI: @ftc_def.ifunc = weak_odr alias i32 (), ptr @ftc_def
-// CHECK-MTE-BTI: @ftc_dup1.ifunc = weak_odr alias i32 (), ptr @ftc_dup1
-// CHECK-MTE-BTI: @ftc_dup2.ifunc = weak_odr alias i32 (), ptr @ftc_dup2
-// CHECK-MTE-BTI: @ftc_dup3.ifunc = weak_odr alias i32 (), ptr @ftc_dup3
-// CHECK-MTE-BTI: @ftc_inline2.ifunc = weak_odr alias i32 (), ptr @ftc_inline2
-// CHECK-MTE-BTI: @ftc_inline1.ifunc = weak_odr alias i32 (), ptr @ftc_inline1
-// CHECK-MTE-BTI: @ftc_inline3.ifunc = weak_odr alias i32 (), ptr @ftc_inline3
 // CHECK-MTE-BTI: @ftc = weak_odr ifunc i32 (), ptr @ftc.resolver
 // CHECK-MTE-BTI: @ftc_def = weak_odr ifunc i32 (), ptr @ftc_def.resolver
 // CHECK-MTE-BTI: @ftc_dup1 = weak_odr ifunc i32 (), ptr @ftc_dup1.resolver

@@ -5,6 +5,7 @@
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@build_bazel_apple_support//rules:apple_genrule.bzl", "apple_genrule")
 load("//:vars.bzl", "LLVM_VERSION_MAJOR", "LLVM_VERSION_MINOR", "LLVM_VERSION_PATCH", "LLVM_VERSION_SUFFIX", "PACKAGE_VERSION")
 load("//lldb/source/Plugins:plugin_config.bzl", "DEFAULT_PLUGINS", "DEFAULT_SCRIPT_PLUGINS", "OBJCPP_COPTS")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
@@ -106,6 +107,9 @@ expand_template(
 
         # TODO: lua support
         "#cmakedefine01 LLDB_ENABLE_LUA": "#define LLDB_ENABLE_LUA 0",
+
+        # TODO: curl support
+        "#cmakedefine01 LLVM_ENABLE_CURL": "#define LLVM_ENABLE_CURL 0",
 
         # TODO: python support
         "#cmakedefine01 LLDB_ENABLE_PYTHON": "#define LLDB_ENABLE_PYTHON 0",
@@ -800,24 +804,20 @@ gentbl_cc_library(
     deps = ["//llvm:OptParserTdFiles"],
 )
 
+alias(
+    name = "gdb-server",
+    actual = select({
+        "@platforms//os:macos": ":debugserver",
+        "//conditions:default": ":lldb-server",
+    }),
+)
+
 cc_binary(
     name = "lldb",
     srcs = glob([
         "tools/driver/*.cpp",
         "tools/driver/*.h",
     ]),
-    data = [
-        ":lldb-argdumper",
-    ] + select({
-        "@platforms//os:macos": [
-            ":debugserver",
-            ":lldb-server",
-        ],
-        "@platforms//os:linux": [
-            ":lldb-server",
-        ],
-        "//conditions:default": [],
-    }),
     deps = [
         ":APIHeaders",
         ":Host",
@@ -872,7 +872,7 @@ cc_library(
     ],
 )
 
-genrule(
+apple_genrule(
     name = "mach_gen",
     srcs = ["tools/debugserver/source/MacOSX/dbgnub-mig.defs"],
     outs = [
@@ -881,7 +881,10 @@ genrule(
         "mach_excUser.c",
     ],
     cmd = "mig -header $(location :mach_exc.h) -server $(location :mach_excServer.c) -user $(location :mach_excUser.c) $(SRCS)",
-    tags = ["nobuildkite"],
+    tags = [
+        "manual",
+        "nobuildkite",
+    ],
     target_compatible_with = select({
         "@platforms//os:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -896,7 +899,7 @@ expand_template(
 )
 
 cc_binary(
-    name = "debugserver",
+    name = "debugserver_unsigned",
     srcs = [
         "tools/debugserver/source/debugserver.cpp",
         ":debugserver_version_gen",
@@ -911,6 +914,24 @@ cc_binary(
         ":DebugServerCommon",
         ":DebugServerCommonHeaders",
         ":DebugServerCommonMacOSXHeaders",
+    ],
+)
+
+apple_genrule(
+    name = "debugserver_signed",
+    srcs = [":debugserver_unsigned"],
+    outs = ["debugserver"],
+    cmd = "cp $(SRCS) $(OUTS) && xcrun codesign -f -s - --entitlements $(location tools/debugserver/resources/debugserver-macosx-entitlements.plist) $(OUTS)",
+    tags = [
+        "manual",
+        "nobuildkite",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:macos": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    tools = [
+        "tools/debugserver/resources/debugserver-macosx-entitlements.plist",
     ],
 )
 
