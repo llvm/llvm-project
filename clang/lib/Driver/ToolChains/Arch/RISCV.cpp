@@ -83,13 +83,8 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   // and other features (ex. mirco architecture feature) from mcpu
   if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
     StringRef CPU = A->getValue();
-    if (CPU == "native") {
+    if (CPU == "native")
       CPU = llvm::sys::getHostCPUName();
-      llvm::StringMap<bool> HostFeatures;
-      if (llvm::sys::getHostCPUFeatures(HostFeatures))
-        for (auto &F : HostFeatures)
-          Features.push_back(((F.second ? "+" : "-") + F.first()).str());
-    }
 
     getRISCFeaturesFromMcpu(D, A, Triple, CPU, Features);
 
@@ -295,8 +290,23 @@ std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
   // 2. Get march (isa string) based on `-mcpu=`
   if (const Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
     StringRef CPU = A->getValue();
-    if (CPU == "native")
+    if (CPU == "native") {
       CPU = llvm::sys::getHostCPUName();
+      // If the target cpu is unrecognized, use target features.
+      if (CPU.empty() || CPU.starts_with("generic")) {
+        llvm::StringMap<bool> HostFeatures;
+        if (llvm::sys::getHostCPUFeatures(HostFeatures)) {
+          std::vector<std::string> Features;
+          for (auto &F : HostFeatures)
+            Features.push_back(((F.second ? "+" : "-") + F.first()).str());
+          auto ParseResult = llvm::RISCVISAInfo::parseFeatures(
+              Triple.isRISCV32() ? 32 : 64, Features);
+          if (ParseResult)
+            return (*ParseResult)->toString();
+        }
+      }
+    }
+
     StringRef MArch = llvm::RISCV::getMArchFromMcpu(CPU);
     // Bypass if target cpu's default march is empty.
     if (MArch != "")
