@@ -100,6 +100,10 @@ private:
   // enter/leave scopes.
   llvm::DenseMap<const Expr *, mlir::Value> VLASizeMap;
 
+  /// Add OpenCL kernel arg metadata and the kernel attribute metadata to
+  /// the function metadata.
+  void buildKernelMetadata(const FunctionDecl *FD, mlir::cir::FuncOp Fn);
+
 public:
   /// A non-RAII class containing all the information about a bound
   /// opaque value.  OpaqueValueMapping, below, is a RAII wrapper for

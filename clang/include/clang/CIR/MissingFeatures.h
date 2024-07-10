@@ -142,6 +142,7 @@ struct MissingFeatures {
   static bool getFPFeaturesInEffect() { return false; }
   static bool cxxABI() { return false; }
   static bool openCL() { return false; }
+  static bool openCLGenKernelMetadata() { return false; }
   static bool CUDA() { return false; }
   static bool openMP() { return false; }
   static bool openMPRuntime() { return false; }

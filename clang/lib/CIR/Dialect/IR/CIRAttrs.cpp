@@ -15,6 +15,7 @@
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
@@ -496,6 +497,60 @@ LogicalResult DynamicCastInfoAttr::verify(
   if (!isRttiPtr(destRtti.getType())) {
     emitError() << "destRtti must be an RTTI pointer";
     return failure();
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// OpenCLKernelMetadataAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult OpenCLKernelMetadataAttr::verify(
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
+    ArrayAttr workGroupSizeHint, ArrayAttr reqdWorkGroupSize,
+    TypeAttr vecTypeHint, std::optional<bool> vecTypeHintSignedness,
+    IntegerAttr intelReqdSubGroupSize) {
+  // If no field is present, the attribute is considered invalid.
+  if (!workGroupSizeHint && !reqdWorkGroupSize && !vecTypeHint &&
+      !vecTypeHintSignedness && !intelReqdSubGroupSize) {
+    return emitError()
+           << "metadata attribute without any field present is invalid";
+  }
+
+  // Check for 3-dim integer tuples
+  auto is3dimIntTuple = [](ArrayAttr arr) {
+    auto isInt = [](Attribute dim) { return mlir::isa<IntegerAttr>(dim); };
+    return arr.size() == 3 && llvm::all_of(arr, isInt);
+  };
+  if (workGroupSizeHint && !is3dimIntTuple(workGroupSizeHint)) {
+    return emitError()
+           << "work_group_size_hint must have exactly 3 integer elements";
+  }
+  if (reqdWorkGroupSize && !is3dimIntTuple(reqdWorkGroupSize)) {
+    return emitError()
+           << "reqd_work_group_size must have exactly 3 integer elements";
+  }
+
+  // Check for co-presence of vecTypeHintSignedness
+  if (!!vecTypeHint != vecTypeHintSignedness.has_value()) {
+    return emitError() << "vec_type_hint_signedness should be present if and "
+                          "only if vec_type_hint is set";
+  }
+
+  if (vecTypeHint) {
+    Type vecTypeHintValue = vecTypeHint.getValue();
+    if (mlir::isa<cir::CIRDialect>(vecTypeHintValue.getDialect())) {
+      // Check for signedness alignment in CIR
+      if (isSignedHint(vecTypeHintValue) != vecTypeHintSignedness) {
+        return emitError() << "vec_type_hint_signedness must match the "
+                              "signedness of the vec_type_hint type";
+      }
+      // Check for the dialect of type hint
+    } else if (!LLVM::isCompatibleType(vecTypeHintValue)) {
+      return emitError() << "vec_type_hint must be a type from the CIR or LLVM "
+                            "dialect";
+    }
   }
 
   return success();

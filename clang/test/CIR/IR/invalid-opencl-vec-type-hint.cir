@@ -1,0 +1,7 @@
+// RUN: cir-opt %s -verify-diagnostics -allow-unregistered-dialect
+
+// expected-error@+1 {{vec_type_hint must be a type from the CIR or LLVM dialect}}
+#fn_attr = #cir.cl.kernel_metadata<
+  vec_type_hint = !tensor<7xi8>,
+  vec_type_hint_signedness = 0
+>

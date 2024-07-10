@@ -61,6 +61,11 @@ public:
           llvmFunc->addFnAttr(llvm::Attribute::OptimizeNone);
         } else if (mlir::dyn_cast<mlir::cir::NoThrowAttr>(attr.getValue())) {
           llvmFunc->addFnAttr(llvm::Attribute::NoUnwind);
+        } else if (auto clKernelMetadata =
+                       mlir::dyn_cast<mlir::cir::OpenCLKernelMetadataAttr>(
+                           attr.getValue())) {
+          emitOpenCLKernelMetadata(clKernelMetadata, llvmFunc,
+                                   moduleTranslation);
         }
       }
     }
@@ -82,6 +87,60 @@ public:
               moduleTranslation.convertType(cirOp.getType()));
 
     return mlir::success();
+  }
+
+private:
+  void emitOpenCLKernelMetadata(
+      mlir::cir::OpenCLKernelMetadataAttr clKernelMetadata,
+      llvm::Function *llvmFunc,
+      mlir::LLVM::ModuleTranslation &moduleTranslation) const {
+    auto &vmCtx = moduleTranslation.getLLVMContext();
+
+    auto lowerArrayAttr = [&](mlir::ArrayAttr arrayAttr) {
+      llvm::SmallVector<llvm::Metadata *, 3> attrMDArgs;
+      for (mlir::Attribute attr : arrayAttr) {
+        int64_t value = mlir::cast<mlir::IntegerAttr>(attr).getInt();
+        attrMDArgs.push_back(
+            llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+                llvm::IntegerType::get(vmCtx, 32), llvm::APInt(32, value))));
+      }
+      return llvm::MDNode::get(vmCtx, attrMDArgs);
+    };
+
+    if (auto workGroupSizeHint = clKernelMetadata.getWorkGroupSizeHint()) {
+      llvmFunc->setMetadata("work_group_size_hint",
+                            lowerArrayAttr(workGroupSizeHint));
+    }
+
+    if (auto reqdWorkGroupSize = clKernelMetadata.getReqdWorkGroupSize()) {
+      llvmFunc->setMetadata("reqd_work_group_size",
+                            lowerArrayAttr(reqdWorkGroupSize));
+    }
+
+    if (auto vecTypeHint = clKernelMetadata.getVecTypeHint()) {
+      auto hintQTy = vecTypeHint.getValue();
+      bool isSignedInteger = *clKernelMetadata.getVecTypeHintSignedness();
+      llvm::Metadata *attrMDArgs[] = {
+          llvm::ConstantAsMetadata::get(
+              llvm::UndefValue::get(moduleTranslation.convertType(hintQTy))),
+          llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+              llvm::IntegerType::get(vmCtx, 32),
+              llvm::APInt(32, (uint64_t)(isSignedInteger ? 1 : 0))))};
+      llvmFunc->setMetadata("vec_type_hint",
+                            llvm::MDNode::get(vmCtx, attrMDArgs));
+    }
+
+    if (auto intelReqdSubgroupSize =
+            clKernelMetadata.getIntelReqdSubGroupSize()) {
+      int64_t reqdSubgroupSize = intelReqdSubgroupSize.getInt();
+      llvm::Metadata *attrMDArgs[] = {
+          llvm::ConstantAsMetadata::get(
+              llvm::ConstantInt::get(llvm::IntegerType::get(vmCtx, 32),
+                                     llvm::APInt(32, reqdSubgroupSize))),
+      };
+      llvmFunc->setMetadata("intel_reqd_sub_group_size",
+                            llvm::MDNode::get(vmCtx, attrMDArgs));
+    }
   }
 };
 
