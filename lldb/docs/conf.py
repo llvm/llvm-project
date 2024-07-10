@@ -89,8 +89,12 @@ templates_path = ["_templates"]
 # The suffix of source filenames.
 source_suffix = {
     ".rst": "restructuredtext",
-    ".md": "markdown",
 }
+
+# Man pages do not use markdown pages, so we don't need to register a markdown
+# parser.
+if not building_man_page:
+  source_suffix[".md"] = "markdown"
 
 # The encoding of source files.
 # source_encoding = 'utf-8-sig'
