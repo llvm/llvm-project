@@ -653,7 +653,6 @@ void DWARFRewriter::updateDebugInfo() {
                "LegacyRangeLists writer for DWO unit already exists.");
         auto LegacyRangesSectionWriterByCU =
             std::make_unique<DebugRangesSectionWriter>();
-        LegacyRangesSectionWriterByCU->clearBuffer();
         LegacyRangesWritersByCU[*DWOId] =
             std::move(LegacyRangesSectionWriterByCU);
       }
