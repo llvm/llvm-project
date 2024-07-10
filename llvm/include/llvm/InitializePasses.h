@@ -151,7 +151,7 @@ void initializeGISelCSEAnalysisWrapperPassPass(PassRegistry &);
 void initializeGISelKnownBitsAnalysisPass(PassRegistry &);
 void initializeLiveDebugValuesPass(PassRegistry&);
 void initializeLiveDebugVariablesPass(PassRegistry&);
-void initializeLiveIntervalsPass(PassRegistry&);
+void initializeLiveIntervalsWrapperPassPass(PassRegistry &);
 void initializeLiveRangeShrinkPass(PassRegistry&);
 void initializeLiveRegMatrixPass(PassRegistry&);
 void initializeLiveStacksPass(PassRegistry&);
