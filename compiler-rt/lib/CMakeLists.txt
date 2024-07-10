@@ -47,11 +47,11 @@ if(COMPILER_RT_BUILD_SANITIZERS)
   endforeach()
 endif()
 
-if(COMPILER_RT_BUILD_PROFILE AND COMPILER_RT_HAS_PROFILE)
+if(COMPILER_RT_BUILD_PROFILE)
   compiler_rt_build_runtime(profile)
 endif()
 
-if(COMPILER_RT_BUILD_CTX_PROFILE AND COMPILER_RT_HAS_CTX_PROFILE)
+if(COMPILER_RT_BUILD_CTX_PROFILE)
   compiler_rt_build_runtime(ctx_profile)
 endif()
 
