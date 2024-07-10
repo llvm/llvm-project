@@ -892,7 +892,7 @@ bool SparcAsmParser::ParseInstruction(ParseInstructionInfo &Info,
                  "instruction requires a CPU feature not currently enabled");
   case Match_MnemonicFail:
     return Error(NameLoc,
-                 "unknown instruction" +
+                 "invalid instruction mnemonic" +
                      SparcMnemonicSpellCheck(Name, getAvailableFeatures(), 0));
   default:
     llvm_unreachable("invalid return status!");
