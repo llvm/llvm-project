@@ -406,19 +406,19 @@ def FeatureStdExtZcf
 
 def FeatureStdExtZcmp
     : RISCVExtension<"zcmp", 1, 0,
-                     "'Zcmp' (sequenced instuctions for code-size reduction)",
+                     "'Zcmp' (sequenced instructions for code-size reduction)",
                      [FeatureStdExtZca]>;
 def HasStdExtZcmp : Predicate<"Subtarget->hasStdExtZcmp() && !Subtarget->hasStdExtC()">,
                     AssemblerPredicate<(all_of FeatureStdExtZcmp),
-                        "'Zcmp' (sequenced instuctions for code-size reduction)">;
+                        "'Zcmp' (sequenced instructions for code-size reduction)">;
 
 def FeatureStdExtZcmt
     : RISCVExtension<"zcmt", 1, 0,
-                     "'Zcmt' (table jump instuctions for code-size reduction)",
+                     "'Zcmt' (table jump instructions for code-size reduction)",
                      [FeatureStdExtZca, FeatureStdExtZicsr]>;
 def HasStdExtZcmt : Predicate<"Subtarget->hasStdExtZcmt()">,
                            AssemblerPredicate<(all_of FeatureStdExtZcmt),
-                           "'Zcmt' (table jump instuctions for code-size reduction)">;
+                           "'Zcmt' (table jump instructions for code-size reduction)">;
 
 def FeatureStdExtZce
     : RISCVExtension<"zce", 1, 0,
