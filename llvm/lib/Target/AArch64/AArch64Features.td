@@ -571,6 +571,10 @@ foreach i = {1-7,9-15,18,20-28} in
                                              "Reserve X"#i#", making it unavailable "
                                              "as a GPR">;
 
+def FeatureReserveLRForRA : SubtargetFeature<"reserve-lr-for-ra",
+                                             "ReserveLRForRA", "true",
+                                             "Reserve LR for call use only">;
+
 foreach i = {8-15,18} in
     def FeatureCallSavedX#i : SubtargetFeature<"call-saved-x"#i,
          "CustomCallSavedXRegs["#i#"]", "true", "Make X"#i#" callee saved.">;
