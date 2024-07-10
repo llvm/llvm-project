@@ -5731,7 +5731,7 @@ def print_supported_extensions : Flag<["-", "--"], "print-supported-extensions">
 def print_enabled_extensions : Flag<["-", "--"], "print-enabled-extensions">,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Print the extensions enabled by the given target and -march/-mcpu options."
-           " (AArch64 only)">,
+           " (AArch64 and RISC-V only)">,
   MarshallingInfoFlag<FrontendOpts<"PrintEnabledExtensions">>;
 def : Flag<["-"], "mcpu=help">, Alias<print_supported_cpus>;
 def : Flag<["-"], "mtune=help">, Alias<print_supported_cpus>;
