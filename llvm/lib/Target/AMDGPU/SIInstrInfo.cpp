@@ -4142,15 +4142,14 @@ bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const 
   //       given the typical code patterns.
   if (Opcode == AMDGPU::S_SENDMSG || Opcode == AMDGPU::S_SENDMSGHALT ||
       isEXP(Opcode) || Opcode == AMDGPU::DS_ORDERED_COUNT ||
-      Opcode == AMDGPU::S_TRAP || Opcode == AMDGPU::DS_GWS_INIT ||
-      Opcode == AMDGPU::DS_GWS_BARRIER || Opcode == AMDGPU::S_WAIT_EVENT)
+      Opcode == AMDGPU::S_TRAP || Opcode == AMDGPU::S_WAIT_EVENT)
     return true;
 
   if (MI.isCall() || MI.isInlineAsm())
     return true; // conservative assumption
 
   // Assume that barrier interactions are only intended with active lanes.
-  if (isBarrierRelated(Opcode))
+  if (isBarrier(Opcode))
     return true;
 
   // A mode change is a scalar operation that influences vector instructions.
