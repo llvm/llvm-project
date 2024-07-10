@@ -73,7 +73,7 @@ static_assert(std::is_constructible_v< ResettablePtr<int>, int* >);
 
 template <typename _Tp>
 struct NonConstructiblePtr : public ResettablePtr<_Tp> {
-  NonConstructiblePtr() : NonConstructiblePtr::ResettablePtr(nullptr){};
+  NonConstructiblePtr() : NonConstructiblePtr::ResettablePtr(nullptr) {};
 
   void reset(_Tp* p) { ResettablePtr<_Tp>::ptr.reset(p); }
 };
