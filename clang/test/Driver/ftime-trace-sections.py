@@ -16,7 +16,7 @@ def is_before(range1, range2):
     c = range2["ts"]
     return b <= c
 
-instantiation_pattern = re.compile("^.*<.*>@.*.cpp$")
+instantiation_pattern = re.compile("^.*<.*>, file:.*.cpp$")
 
 def is_valid_instantiation(instantiation):
     return instantiation_pattern.match(instantiation["args"]["detail"])

@@ -4966,7 +4966,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     llvm::raw_string_ostream OS(Name);
     Function->getNameForDiagnostic(OS, getPrintingPolicy(),
                                    /*Qualified=*/true);
-    OS << "@" << SourceMgr.getFilename(Function->getLocation());
+    OS << ", file:" << SourceMgr.getFilename(Function->getLocation());
     return Name;
   });
 
