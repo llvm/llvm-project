@@ -639,7 +639,7 @@ function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
         append_flags(SANITIZER_FLAGS "-fsanitize-memory-track-origins")
       endif()
     elseif (USE_SANITIZER STREQUAL "Undefined")
-      append_flags(SANITIZER_FLAGS "-fsanitize=undefined" "-fno-sanitize=vptr,function" "-fno-sanitize-recover=all")
+      append_flags(SANITIZER_FLAGS "-fsanitize=undefined" "-fsanitize=implicit-integer-sign-change" "-fno-sanitize=vptr,function" "-fno-sanitize-recover=all")
     elseif (USE_SANITIZER STREQUAL "Address;Undefined" OR
             USE_SANITIZER STREQUAL "Undefined;Address")
       append_flags(SANITIZER_FLAGS "-fsanitize=address,undefined" "-fno-sanitize=vptr,function" "-fno-sanitize-recover=all")
