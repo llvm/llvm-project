@@ -1264,9 +1264,9 @@ def FeaturePredictableSelectIsExpensive
     : SubtargetFeature<"predictable-select-expensive", "PredictableSelectIsExpensive", "true",
                        "Prefer likely predicted branches over selects">;
 
-def TuneNoOptimizedZeroStrideLoad
-   : SubtargetFeature<"no-optimized-zero-stride-load", "HasOptimizedZeroStrideLoad",
-                      "false", "Hasn't optimized (perform fewer memory operations)"
+def TuneOptimizedZeroStrideLoad
+   : SubtargetFeature<"optimized-zero-stride-load", "HasOptimizedZeroStrideLoad",
+                      "true", "Optimized (perform fewer memory operations)"
                       "zero-stride vector load">;
 
 def Experimental
