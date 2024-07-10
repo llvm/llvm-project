@@ -3134,7 +3134,6 @@ bool AsmParser::parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated) {
     do {
       if (parseEscapedString(Data))
         return true;
-
       getStreamer().emitBytes(Data);
     } while (!ZeroTerminated && getTok().is(AsmToken::String));
     if (ZeroTerminated)

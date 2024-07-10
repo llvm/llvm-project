@@ -3,12 +3,30 @@
 .string "abcd\xFFefg
 12345678"
 
+// CHECK-WARN:   warn-newline-in-escaped-string.s:[[#@LINE-3]]:21: warning: unterminated string; newline inserted
+// CHECK-WARN:  .string "abcd\xFFefg
+
 .ascii "some test ascii
 
 sequence
 with
 newlines\x0A
 "
+
+// CHECK-WARN:   warn-newline-in-escaped-string.s:[[#@LINE-7]]:24: warning: unterminated string; newline inserted
+// CHECK-WARN:  .ascii "some test ascii
+// CHECK-WARN:                         ^
+// CHECK-WARN:   warn-newline-in-escaped-string.s:[[#@LINE-9]]:1: warning: unterminated string; newline inserted
+// CHECK-WARN:   ^
+// CHECK-WARN:   warn-newline-in-escaped-string.s:[[#@LINE-10]]:9: warning: unterminated string; newline inserted
+// CHECK-WARN:   sequence
+// CHECK-WARN:           ^
+// CHECK-WARN:   warn-newline-in-escaped-string.s:[[#@LINE-12]]:5: warning: unterminated string; newline inserted
+// CHECK-WARN:   with
+// CHECK-WARN:        ^
+// CHECK-WARN:   warn-newline-in-escaped-string.s:[[#@LINE-14]]:13: warning: unterminated string; newline inserted
+// CHECK-WARN:   newlines\x0A
+// CHECK-WARN:           ^
 
 .asciz "another test string
 
@@ -18,52 +36,34 @@ newline characters
 
 "
 
-// CHECK-WARN:   warn-newline-in-escaped-string.s:3:21: warning: unterminated string; newline inserted
-// CHECK-WARN:  .string "abcd\xFFefg
-
-// CHECK-WARN:   warn-newline-in-escaped-string.s:6:24: warning: unterminated string; newline inserted
-// CHECK-WARN:  .ascii "some test ascii
-// CHECK-WARN:                         ^
-// CHECK-WARN:   warn-newline-in-escaped-string.s:7:1: warning: unterminated string; newline inserted
-// CHECK-WARN:   ^
-// CHECK-WARN:   warn-newline-in-escaped-string.s:8:9: warning: unterminated string; newline inserted
-// CHECK-WARN:   sequence
-// CHECK-WARN:           ^
-// CHECK-WARN:   warn-newline-in-escaped-string.s:9:5: warning: unterminated string; newline inserted
-// CHECK-WARN:   with
-// CHECK-WARN:        ^
-// CHECK-WARN:   warn-newline-in-escaped-string.s:10:13: warning: unterminated string; newline inserted
-// CHECK-WARN:   newlines\x0A
-// CHECK-WARN:           ^
-
-// CHECK-WATN:   warn-newline-in-escaped-string.s:13:28: warning: unterminated string; newline inserted
+// CHECK-WARN:   warn-newline-in-escaped-string.s:[[#@LINE-8]]:28: warning: unterminated string; newline inserted
 // CHECK-WARN:   .asciz "another test string
-// CHECK-WARN:   warn-newline-in-escaped-string.s:14:1: warning: unterminated string; newline inserted
+// CHECK-WARN:   warn-newline-in-escaped-string.s:[[#@LINE-9]]:1: warning: unterminated string; newline inserted
 // CHECK-WARN:   ^
-// CHECK-WARN:   warn-newline-in-escaped-string.s:15:5: warning: unterminated string; newline inserted
+// CHECK-WARN:   warn-newline-in-escaped-string.s:[[#@LINE-10]]:5: warning: unterminated string; newline inserted
 // CHECK-WARN:   with
 // CHECK-WARN:        ^
-// CHECK-WARN:   warn-newline-in-escaped-string.s:16:19: warning: unterminated string; newline inserted
+// CHECK-WARN:   warn-newline-in-escaped-string.s:[[#@LINE-12]]:19: warning: unterminated string; newline inserted
 // CHECK-WARN:   newline characters
 // CHECK-WARN:                      ^
-// CHECK-WARN:   warn-newline-in-escaped-string.s:17:1: warning: unterminated string; newline inserted
+// CHECK-WARN:   warn-newline-in-escaped-string.s:[[#@LINE-14]]:1: warning: unterminated string; newline inserted
 // CHECK-WARN:   ^
-// CHECK-WARN:   warn-newline-in-escaped-string.s:18:1: warning: unterminated string; newline inserted
+// CHECK-WARN:   warn-newline-in-escaped-string.s:[[#@LINE-15]]:1: warning: unterminated string; newline inserted
 // CHECK-WARN:   ^
 
 .file "warn-newline
 .s"
-// CHECK-WARN:   warn-newline-in-escaped-string.s:54:20: warning: unterminated string; newline inserted
+// CHECK-WARN:   warn-newline-in-escaped-string.s:[[#@LINE-2]]:20: warning: unterminated string; newline inserted
 
 .cv_file 1 "some_an
 other_file.s"
-// CHECK-WARN:   warn-newline-in-escaped-string.s:58:20: warning: unterminated string; newline inserted
+// CHECK-WARN:   warn-newline-in-escaped-string.s:[[#@LINE-2]]:20: warning: unterminated string; newline inserted
 
 .ascii "test\nstring\xFF\n\n\xFF"
-// CHECK-WARN-NOT:    warn-newline-in-escaped-string.s:62{{.*}}
+// CHECK-WARN-NOT:    warn-newline-in-escaped-string.s:[[#@LINE-1]]{{.*}}
 
 .asciz "\n\n\ntest_string\x0A"
-// CHECK-WARN-NOT:    warn-newline-in-escaped-string.s:65{{.*}}
+// CHECK-WARN-NOT:    warn-newline-in-escaped-string.s:[[#@LINE-1]]{{.*}}
 
 .string "1234\n\xFF\n\xFF\n"
-// CHECK-WARN-NOT:    warn-newline-in-escaped-string.s:68{{.*}}
+// CHECK-WARN-NOT:    warn-newline-in-escaped-string.s:[[#@LINE-1]]{{.*}}
