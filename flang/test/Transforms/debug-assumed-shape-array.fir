@@ -11,6 +11,6 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : 
 #loc2 = loc("test1.f90":3:16)
 
 // CHECK: #llvm.di_composite_type<tag = DW_TAG_array_type
-// CHECK-SAME: elements = #llvm.di_subrange<lowerBound = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(24), DW_OP_deref]>, upperBound = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(32), DW_OP_deref]>>
-// CHECK-SAME: #llvm.di_subrange<lowerBound = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(48), DW_OP_deref]>, upperBound = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(56), DW_OP_deref]>>
+// CHECK-SAME: elements = #llvm.di_subrange<count = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(32), DW_OP_deref]>, lowerBound = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(24), DW_OP_deref]>>,
+// CHECK-SAME: #llvm.di_subrange<count = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(56), DW_OP_deref]>, lowerBound = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(48), DW_OP_deref]>>
 // CHECK-SAME: dataLocation = <[DW_OP_push_object_address, DW_OP_deref]>>
