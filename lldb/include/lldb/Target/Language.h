@@ -283,7 +283,7 @@ public:
     return mangled.GetMangledName();
   }
 
-  virtual ConstString GetDisplayDemangledName(Mangled mangled) const {
+  virtual ConstString GetDisplayDemangledName(const Mangled &mangled) const {
     return mangled.GetDemangledName();
   }
 
