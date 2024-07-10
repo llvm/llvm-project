@@ -83,6 +83,9 @@ ISA naming string. Currently supported profiles:
 * ``rva22u64``
 * ``rva22s64``
 
+Note that you can also append additional extension names to be enable, e.g.
+``rva20u64_zicond`` will enable the ``zicond`` extension in addition to those
+in the ``rva20u64`` profile.
 
 Profiles that are not yet ratified cannot be used unless
 ``-menable-experimental-extensions`` (or equivalent for other tools) is
