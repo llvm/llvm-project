@@ -35,8 +35,8 @@ class Number<T:Numeric> {
   }
 }
 
-// Ensure "Raw" in the name doesn't confuse the data formatters into thinking
-// it's a raw value.
+// Put "Raw" in the name to test that the data formatter is not confused into
+// choosing a one of the Unsafe*Raw types.
 struct NotRaw {
   var x: Int
 }
@@ -212,6 +212,7 @@ func main() {
 
   let cooked: [NotRaw] = [.init(x: 1), .init(x: 2), .init(x: 4)]
   cooked.withUnsafeBufferPointer { buffer in
+    print("break")
     //% self.expect("frame variable buffer",
     //%            patterns=[
     //%            '\(UnsafeBufferPointer<a.NotRaw>\) buffer = 3 values \(0[xX][0-9a-fA-F]+\) {',
