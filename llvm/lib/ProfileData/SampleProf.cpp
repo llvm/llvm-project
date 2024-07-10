@@ -121,7 +121,7 @@ sampleprof_error SampleRecord::merge(const SampleRecord &Other,
   sampleprof_error Result;
   Result = addSamples(Other.getSamples(), Weight);
   for (const auto &I : Other.getCallTargets()) {
-    MergeResult(Result, addCalledTarget(I.first, I.second, Weight));
+    mergeSampleProfErrors(Result, addCalledTarget(I.first, I.second, Weight));
   }
   return Result;
 }
@@ -364,7 +364,7 @@ void SampleContextTrimmer::trimAndMergeColdContextProfiles(
       if (ColdContextFrameLength < MergedContext.size())
         MergedContext = MergedContext.take_back(ColdContextFrameLength);
       // Need to set MergedProfile's context here otherwise it will be lost.
-      FunctionSamples &MergedProfile = MergedProfileMap.Create(MergedContext);
+      FunctionSamples &MergedProfile = MergedProfileMap.create(MergedContext);
       MergedProfile.merge(*I.second);
     }
     ProfileMap.erase(I.first);

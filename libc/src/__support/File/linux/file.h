@@ -12,7 +12,7 @@ namespace LIBC_NAMESPACE {
 
 FileIOResult linux_file_write(File *, const void *, size_t);
 FileIOResult linux_file_read(File *, void *, size_t);
-ErrorOr<long> linux_file_seek(File *, long, int);
+ErrorOr<off_t> linux_file_seek(File *, off_t, int);
 int linux_file_close(File *);
 
 class LinuxFile : public File {
@@ -28,5 +28,8 @@ public:
 
   int get_fd() const { return fd; }
 };
+
+// Create a File object and associate it with a fd.
+ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode);
 
 } // namespace LIBC_NAMESPACE

@@ -60,6 +60,17 @@ The address of a global value.
 
   %0(p0) = G_GLOBAL_VALUE @var_local
 
+G_PTRAUTH_GLOBAL_VALUE
+^^^^^^^^^^^^^^^^^^^^^^
+
+The signed address of a global value. Operands: address to be signed (pointer),
+key (32-bit imm), address for address discrimination (zero if not needed) and
+an extra discriminator (64-bit imm).
+
+.. code-block:: none
+
+  %0:_(p0) = G_PTRAUTH_GLOBAL_VALUE %1:_(p0), s32, %2:_(p0), s64
+
 G_BLOCK_ADDR
 ^^^^^^^^^^^^
 
@@ -592,10 +603,15 @@ G_FLOG, G_FLOG2, G_FLOG10
 
 Calculate the base-e, base-2, or base-10 respectively.
 
-G_FCEIL, G_FCOS, G_FSIN, G_FTAN, G_FSQRT, G_FFLOOR, G_FRINT, G_FNEARBYINT
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+G_FCEIL, G_FSQRT, G_FFLOOR, G_FRINT, G_FNEARBYINT
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 These correspond to the standard C functions of the same name.
+
+G_FCOS, G_FSIN, G_FTAN, G_FACOS, G_FASIN, G_FATAN, G_FCOSH, G_FSINH, G_FTANH
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+These correspond to the standard C trigonometry functions of the same name.
 
 G_INTRINSIC_TRUNC
 ^^^^^^^^^^^^^^^^^

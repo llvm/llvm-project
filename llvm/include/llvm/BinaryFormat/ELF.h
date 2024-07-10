@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <cstring>
+#include <type_traits>
 
 namespace llvm {
 namespace ELF {
@@ -1082,7 +1083,10 @@ enum : unsigned {
   SHT_SYMTAB_SHNDX = 18,  // Indices for SHN_XINDEX entries.
   // Experimental support for SHT_RELR sections. For details, see proposal
   // at https://groups.google.com/forum/#!topic/generic-abi/bX460iggiKg
-  SHT_RELR = 19,         // Relocation entries; only offsets.
+  SHT_RELR = 19, // Relocation entries; only offsets.
+  // TODO: Experimental CREL relocations. LLVM will change the value and
+  // break compatibility in the future.
+  SHT_CREL = 0x40000014,
   SHT_LOOS = 0x60000000, // Lowest operating system-specific type.
   // Android packed relocation section types.
   // https://android.googlesource.com/platform/bionic/+/6f12bfece5dcc01325e0abba56a46b1bcf991c69/tools/relocation_packer/src/elf_file.cc#37
@@ -1425,6 +1429,14 @@ struct Elf64_Rela {
   void setSymbolAndType(Elf64_Word s, Elf64_Word t) {
     r_info = ((Elf64_Xword)s << 32) + (t & 0xffffffffL);
   }
+};
+
+// In-memory representation of CREL. The serialized representation uses LEB128.
+template <bool Is64> struct Elf_Crel {
+  std::conditional_t<Is64, uint64_t, uint32_t> r_offset;
+  uint32_t r_symidx;
+  uint32_t r_type;
+  std::conditional_t<Is64, int64_t, int32_t> r_addend;
 };
 
 // Relocation entry without explicit addend or info (relative relocations only).
@@ -1936,6 +1948,8 @@ enum {
   ELFCOMPRESS_LOPROC = 0x70000000, // Start of processor-specific.
   ELFCOMPRESS_HIPROC = 0x7fffffff  // End of processor-specific.
 };
+
+constexpr unsigned CREL_HDR_ADDEND = 4;
 
 /// Convert an architecture name into ELF's e_machine value.
 uint16_t convertArchNameToEMachine(StringRef Arch);

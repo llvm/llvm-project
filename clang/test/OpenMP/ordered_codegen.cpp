@@ -203,6 +203,7 @@ void foo_simd(int low, int up) {
 // CHECK1:       omp.dispatch.inc:
 // CHECK1-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK1:       omp.dispatch.end:
+// CHECK1-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK1-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2:[0-9]+]], i32 [[TMP0]])
 // CHECK1-NEXT:    ret void
 //
@@ -285,6 +286,7 @@ void foo_simd(int low, int up) {
 // CHECK1:       omp.dispatch.inc:
 // CHECK1-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK1:       omp.dispatch.end:
+// CHECK1-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK1-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP0]])
 // CHECK1-NEXT:    ret void
 //
@@ -415,6 +417,7 @@ void foo_simd(int low, int up) {
 // CHECK1:       omp.dispatch.inc:
 // CHECK1-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK1:       omp.dispatch.end:
+// CHECK1-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK1-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK1:       omp.precond.end:
 // CHECK1-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP0]])
@@ -516,6 +519,7 @@ void foo_simd(int low, int up) {
 // CHECK1:       omp.dispatch.inc:
 // CHECK1-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK1:       omp.dispatch.end:
+// CHECK1-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK1-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP0]])
 // CHECK1-NEXT:    ret void
 //
@@ -671,6 +675,7 @@ void foo_simd(int low, int up) {
 // CHECK1:       omp.dispatch.inc:
 // CHECK1-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK1:       omp.dispatch.end:
+// CHECK1-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK1-NEXT:    [[TMP34:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK1-NEXT:    [[TMP35:%.*]] = icmp ne i32 [[TMP34]], 0
 // CHECK1-NEXT:    br i1 [[TMP35]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -805,8 +810,10 @@ void foo_simd(int low, int up) {
 // CHECK1-IRBUILDER:       omp.dispatch.inc:
 // CHECK1-IRBUILDER-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK1-IRBUILDER:       omp.dispatch.end:
-// CHECK1-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM12:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK1-IRBUILDER-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM12]])
+// CHECK1-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM12:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB3]])
+// CHECK1-IRBUILDER-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM12]])
+// CHECK1-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM13:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK1-IRBUILDER-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM13]])
 // CHECK1-IRBUILDER-NEXT:    ret void
 //
 //
@@ -893,8 +900,10 @@ void foo_simd(int low, int up) {
 // CHECK1-IRBUILDER:       omp.dispatch.inc:
 // CHECK1-IRBUILDER-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK1-IRBUILDER:       omp.dispatch.end:
-// CHECK1-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM11:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK1-IRBUILDER-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4]], i32 [[OMP_GLOBAL_THREAD_NUM11]])
+// CHECK1-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM11:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB6]])
+// CHECK1-IRBUILDER-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM11]])
+// CHECK1-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM12:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK1-IRBUILDER-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4]], i32 [[OMP_GLOBAL_THREAD_NUM12]])
 // CHECK1-IRBUILDER-NEXT:    ret void
 //
 //
@@ -1029,10 +1038,12 @@ void foo_simd(int low, int up) {
 // CHECK1-IRBUILDER:       omp.dispatch.inc:
 // CHECK1-IRBUILDER-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK1-IRBUILDER:       omp.dispatch.end:
+// CHECK1-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM34:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB8]])
+// CHECK1-IRBUILDER-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM34]])
 // CHECK1-IRBUILDER-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK1-IRBUILDER:       omp.precond.end:
-// CHECK1-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM34:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK1-IRBUILDER-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4]], i32 [[OMP_GLOBAL_THREAD_NUM34]])
+// CHECK1-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM35:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK1-IRBUILDER-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4]], i32 [[OMP_GLOBAL_THREAD_NUM35]])
 // CHECK1-IRBUILDER-NEXT:    ret void
 //
 //
@@ -1136,8 +1147,10 @@ void foo_simd(int low, int up) {
 // CHECK1-IRBUILDER:       omp.dispatch.inc:
 // CHECK1-IRBUILDER-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK1-IRBUILDER:       omp.dispatch.end:
-// CHECK1-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM19:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK1-IRBUILDER-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4]], i32 [[OMP_GLOBAL_THREAD_NUM19]])
+// CHECK1-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM19:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB10]])
+// CHECK1-IRBUILDER-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM19]])
+// CHECK1-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM20:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK1-IRBUILDER-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4]], i32 [[OMP_GLOBAL_THREAD_NUM20]])
 // CHECK1-IRBUILDER-NEXT:    ret void
 //
 //
@@ -1298,6 +1311,8 @@ void foo_simd(int low, int up) {
 // CHECK1-IRBUILDER:       omp.dispatch.inc:
 // CHECK1-IRBUILDER-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK1-IRBUILDER:       omp.dispatch.end:
+// CHECK1-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM43:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB12]])
+// CHECK1-IRBUILDER-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM43]])
 // CHECK1-IRBUILDER-NEXT:    [[TMP33:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK1-IRBUILDER-NEXT:    [[TMP34:%.*]] = icmp ne i32 [[TMP33]], 0
 // CHECK1-IRBUILDER-NEXT:    br i1 [[TMP34]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -1305,19 +1320,19 @@ void foo_simd(int low, int up) {
 // CHECK1-IRBUILDER-NEXT:    [[TMP35:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_18]], align 4
 // CHECK1-IRBUILDER-NEXT:    [[TMP36:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_19]], align 4
 // CHECK1-IRBUILDER-NEXT:    [[TMP37:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_18]], align 4
-// CHECK1-IRBUILDER-NEXT:    [[SUB43:%.*]] = sub i32 [[TMP36]], [[TMP37]]
-// CHECK1-IRBUILDER-NEXT:    [[SUB44:%.*]] = sub i32 [[SUB43]], 1
-// CHECK1-IRBUILDER-NEXT:    [[ADD45:%.*]] = add i32 [[SUB44]], 1
-// CHECK1-IRBUILDER-NEXT:    [[DIV46:%.*]] = udiv i32 [[ADD45]], 1
-// CHECK1-IRBUILDER-NEXT:    [[MUL47:%.*]] = mul i32 [[DIV46]], 1
-// CHECK1-IRBUILDER-NEXT:    [[ADD48:%.*]] = add i32 [[TMP35]], [[MUL47]]
-// CHECK1-IRBUILDER-NEXT:    store i32 [[ADD48]], ptr [[I28]], align 4
+// CHECK1-IRBUILDER-NEXT:    [[SUB44:%.*]] = sub i32 [[TMP36]], [[TMP37]]
+// CHECK1-IRBUILDER-NEXT:    [[SUB45:%.*]] = sub i32 [[SUB44]], 1
+// CHECK1-IRBUILDER-NEXT:    [[ADD46:%.*]] = add i32 [[SUB45]], 1
+// CHECK1-IRBUILDER-NEXT:    [[DIV47:%.*]] = udiv i32 [[ADD46]], 1
+// CHECK1-IRBUILDER-NEXT:    [[MUL48:%.*]] = mul i32 [[DIV47]], 1
+// CHECK1-IRBUILDER-NEXT:    [[ADD49:%.*]] = add i32 [[TMP35]], [[MUL48]]
+// CHECK1-IRBUILDER-NEXT:    store i32 [[ADD49]], ptr [[I28]], align 4
 // CHECK1-IRBUILDER-NEXT:    br label [[DOTOMP_FINAL_DONE]]
 // CHECK1-IRBUILDER:       .omp.final.done:
 // CHECK1-IRBUILDER-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK1-IRBUILDER:       omp.precond.end:
-// CHECK1-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM49:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK1-IRBUILDER-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4]], i32 [[OMP_GLOBAL_THREAD_NUM49]])
+// CHECK1-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM50:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK1-IRBUILDER-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4]], i32 [[OMP_GLOBAL_THREAD_NUM50]])
 // CHECK1-IRBUILDER-NEXT:    ret void
 //
 //
@@ -1428,6 +1443,7 @@ void foo_simd(int low, int up) {
 // CHECK3:       omp.dispatch.inc:
 // CHECK3-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK3:       omp.dispatch.end:
+// CHECK3-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK3-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2:[0-9]+]], i32 [[TMP0]])
 // CHECK3-NEXT:    ret void
 //
@@ -1510,6 +1526,7 @@ void foo_simd(int low, int up) {
 // CHECK3:       omp.dispatch.inc:
 // CHECK3-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK3:       omp.dispatch.end:
+// CHECK3-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK3-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP0]])
 // CHECK3-NEXT:    ret void
 //
@@ -1640,6 +1657,7 @@ void foo_simd(int low, int up) {
 // CHECK3:       omp.dispatch.inc:
 // CHECK3-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK3:       omp.dispatch.end:
+// CHECK3-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK3-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK3:       omp.precond.end:
 // CHECK3-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP0]])
@@ -1741,6 +1759,7 @@ void foo_simd(int low, int up) {
 // CHECK3:       omp.dispatch.inc:
 // CHECK3-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK3:       omp.dispatch.end:
+// CHECK3-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK3-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2]], i32 [[TMP0]])
 // CHECK3-NEXT:    ret void
 //
@@ -1896,6 +1915,7 @@ void foo_simd(int low, int up) {
 // CHECK3:       omp.dispatch.inc:
 // CHECK3-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK3:       omp.dispatch.end:
+// CHECK3-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB1]], i32 [[TMP0]])
 // CHECK3-NEXT:    [[TMP34:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK3-NEXT:    [[TMP35:%.*]] = icmp ne i32 [[TMP34]], 0
 // CHECK3-NEXT:    br i1 [[TMP35]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -2030,8 +2050,10 @@ void foo_simd(int low, int up) {
 // CHECK3-IRBUILDER:       omp.dispatch.inc:
 // CHECK3-IRBUILDER-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK3-IRBUILDER:       omp.dispatch.end:
-// CHECK3-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM12:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK3-IRBUILDER-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM12]])
+// CHECK3-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM12:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB3]])
+// CHECK3-IRBUILDER-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM12]])
+// CHECK3-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM13:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK3-IRBUILDER-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM13]])
 // CHECK3-IRBUILDER-NEXT:    ret void
 //
 //
@@ -2118,8 +2140,10 @@ void foo_simd(int low, int up) {
 // CHECK3-IRBUILDER:       omp.dispatch.inc:
 // CHECK3-IRBUILDER-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK3-IRBUILDER:       omp.dispatch.end:
-// CHECK3-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM11:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK3-IRBUILDER-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4]], i32 [[OMP_GLOBAL_THREAD_NUM11]])
+// CHECK3-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM11:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB6]])
+// CHECK3-IRBUILDER-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM11]])
+// CHECK3-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM12:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK3-IRBUILDER-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4]], i32 [[OMP_GLOBAL_THREAD_NUM12]])
 // CHECK3-IRBUILDER-NEXT:    ret void
 //
 //
@@ -2254,10 +2278,12 @@ void foo_simd(int low, int up) {
 // CHECK3-IRBUILDER:       omp.dispatch.inc:
 // CHECK3-IRBUILDER-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK3-IRBUILDER:       omp.dispatch.end:
+// CHECK3-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM34:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB8]])
+// CHECK3-IRBUILDER-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM34]])
 // CHECK3-IRBUILDER-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK3-IRBUILDER:       omp.precond.end:
-// CHECK3-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM34:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK3-IRBUILDER-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4]], i32 [[OMP_GLOBAL_THREAD_NUM34]])
+// CHECK3-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM35:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK3-IRBUILDER-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4]], i32 [[OMP_GLOBAL_THREAD_NUM35]])
 // CHECK3-IRBUILDER-NEXT:    ret void
 //
 //
@@ -2361,8 +2387,10 @@ void foo_simd(int low, int up) {
 // CHECK3-IRBUILDER:       omp.dispatch.inc:
 // CHECK3-IRBUILDER-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK3-IRBUILDER:       omp.dispatch.end:
-// CHECK3-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM19:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK3-IRBUILDER-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4]], i32 [[OMP_GLOBAL_THREAD_NUM19]])
+// CHECK3-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM19:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB10]])
+// CHECK3-IRBUILDER-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM19]])
+// CHECK3-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM20:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK3-IRBUILDER-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4]], i32 [[OMP_GLOBAL_THREAD_NUM20]])
 // CHECK3-IRBUILDER-NEXT:    ret void
 //
 //
@@ -2523,6 +2551,8 @@ void foo_simd(int low, int up) {
 // CHECK3-IRBUILDER:       omp.dispatch.inc:
 // CHECK3-IRBUILDER-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK3-IRBUILDER:       omp.dispatch.end:
+// CHECK3-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM43:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB12]])
+// CHECK3-IRBUILDER-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM43]])
 // CHECK3-IRBUILDER-NEXT:    [[TMP33:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK3-IRBUILDER-NEXT:    [[TMP34:%.*]] = icmp ne i32 [[TMP33]], 0
 // CHECK3-IRBUILDER-NEXT:    br i1 [[TMP34]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -2530,19 +2560,19 @@ void foo_simd(int low, int up) {
 // CHECK3-IRBUILDER-NEXT:    [[TMP35:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_18]], align 4
 // CHECK3-IRBUILDER-NEXT:    [[TMP36:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_19]], align 4
 // CHECK3-IRBUILDER-NEXT:    [[TMP37:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_18]], align 4
-// CHECK3-IRBUILDER-NEXT:    [[SUB43:%.*]] = sub i32 [[TMP36]], [[TMP37]]
-// CHECK3-IRBUILDER-NEXT:    [[SUB44:%.*]] = sub i32 [[SUB43]], 1
-// CHECK3-IRBUILDER-NEXT:    [[ADD45:%.*]] = add i32 [[SUB44]], 1
-// CHECK3-IRBUILDER-NEXT:    [[DIV46:%.*]] = udiv i32 [[ADD45]], 1
-// CHECK3-IRBUILDER-NEXT:    [[MUL47:%.*]] = mul i32 [[DIV46]], 1
-// CHECK3-IRBUILDER-NEXT:    [[ADD48:%.*]] = add i32 [[TMP35]], [[MUL47]]
-// CHECK3-IRBUILDER-NEXT:    store i32 [[ADD48]], ptr [[I28]], align 4
+// CHECK3-IRBUILDER-NEXT:    [[SUB44:%.*]] = sub i32 [[TMP36]], [[TMP37]]
+// CHECK3-IRBUILDER-NEXT:    [[SUB45:%.*]] = sub i32 [[SUB44]], 1
+// CHECK3-IRBUILDER-NEXT:    [[ADD46:%.*]] = add i32 [[SUB45]], 1
+// CHECK3-IRBUILDER-NEXT:    [[DIV47:%.*]] = udiv i32 [[ADD46]], 1
+// CHECK3-IRBUILDER-NEXT:    [[MUL48:%.*]] = mul i32 [[DIV47]], 1
+// CHECK3-IRBUILDER-NEXT:    [[ADD49:%.*]] = add i32 [[TMP35]], [[MUL48]]
+// CHECK3-IRBUILDER-NEXT:    store i32 [[ADD49]], ptr [[I28]], align 4
 // CHECK3-IRBUILDER-NEXT:    br label [[DOTOMP_FINAL_DONE]]
 // CHECK3-IRBUILDER:       .omp.final.done:
 // CHECK3-IRBUILDER-NEXT:    br label [[OMP_PRECOND_END]]
 // CHECK3-IRBUILDER:       omp.precond.end:
-// CHECK3-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM49:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
-// CHECK3-IRBUILDER-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4]], i32 [[OMP_GLOBAL_THREAD_NUM49]])
+// CHECK3-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM50:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK3-IRBUILDER-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4]], i32 [[OMP_GLOBAL_THREAD_NUM50]])
 // CHECK3-IRBUILDER-NEXT:    ret void
 //
 //

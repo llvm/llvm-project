@@ -2438,12 +2438,6 @@ defm t2SUB  : T2I_bin_ii12rs<0b101, "sub", sub>;
 defm t2ADDS : T2I_bin_s_irs <IIC_iALUi, IIC_iALUr, IIC_iALUsi, ARMaddc, 1>;
 defm t2SUBS : T2I_bin_s_irs <IIC_iALUi, IIC_iALUr, IIC_iALUsi, ARMsubc>;
 
-def : T2Pat<(ARMsubs GPRnopc:$Rn, t2_so_imm:$imm),
-            (t2SUBSri $Rn, t2_so_imm:$imm)>;
-def : T2Pat<(ARMsubs GPRnopc:$Rn, rGPR:$Rm), (t2SUBSrr $Rn, $Rm)>;
-def : T2Pat<(ARMsubs GPRnopc:$Rn, t2_so_reg:$ShiftedRm),
-            (t2SUBSrs $Rn, t2_so_reg:$ShiftedRm)>;
-
 defm t2ADC  : T2I_adde_sube_irs<0b1010, "adc", ARMadde, 1, 1>;
 defm t2SBC  : T2I_adde_sube_irs<0b1011, "sbc", ARMsube, 0, 1>;
 

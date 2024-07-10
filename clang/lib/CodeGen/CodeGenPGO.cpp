@@ -32,8 +32,6 @@ static llvm::cl::opt<bool>
                          llvm::cl::desc("Enable value profiling"),
                          llvm::cl::Hidden, llvm::cl::init(false));
 
-extern llvm::cl::opt<bool> SystemHeadersCoverage;
-
 using namespace clang;
 using namespace CodeGen;
 
@@ -1046,13 +1044,17 @@ void CodeGenPGO::assignRegionCounters(GlobalDecl GD, llvm::Function *Fn) {
   if (Fn->hasFnAttribute(llvm::Attribute::SkipProfile))
     return;
 
+  SourceManager &SM = CGM.getContext().getSourceManager();
+  if (!llvm::coverage::SystemHeadersCoverage &&
+      SM.isInSystemHeader(D->getLocation()))
+    return;
+
   setFuncName(Fn);
 
   mapRegionCounters(D);
   if (CGM.getCodeGenOpts().CoverageMapping)
     emitCounterRegionMapping(D);
   if (PGOReader) {
-    SourceManager &SM = CGM.getContext().getSourceManager();
     loadRegionCounts(PGOReader, SM.isInMainFile(D->getLocation()));
     computeRegionCounts(D);
     applyFunctionAttributes(PGOReader, Fn);
@@ -1118,7 +1120,7 @@ bool CodeGenPGO::skipRegionMappingForDecl(const Decl *D) {
   // Don't map the functions in system headers.
   const auto &SM = CGM.getContext().getSourceManager();
   auto Loc = D->getBody()->getBeginLoc();
-  return !SystemHeadersCoverage && SM.isInSystemHeader(Loc);
+  return !llvm::coverage::SystemHeadersCoverage && SM.isInSystemHeader(Loc);
 }
 
 void CodeGenPGO::emitCounterRegionMapping(const Decl *D) {
@@ -1207,8 +1209,7 @@ void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
                          ArrayRef(Args, 4));
     else
       Builder.CreateCall(
-          CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment_step),
-          ArrayRef(Args));
+          CGM.getIntrinsic(llvm::Intrinsic::instrprof_increment_step), Args);
   }
 }
 
@@ -1260,9 +1261,8 @@ void CodeGenPGO::emitMCDCTestVectorBitmapUpdate(CGBuilderTy &Builder,
   // from a pointer to a dedicated temporary value on the stack that is itself
   // updated via emitMCDCCondBitmapReset() and emitMCDCCondBitmapUpdate(). The
   // index represents an executed test vector.
-  llvm::Value *Args[5] = {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
+  llvm::Value *Args[4] = {llvm::ConstantExpr::getBitCast(FuncNameVar, I8PtrTy),
                           Builder.getInt64(FunctionHash),
-                          Builder.getInt32(0), // Unused
                           Builder.getInt32(MCDCTestVectorBitmapOffset),
                           MCDCCondBitmapAddr.emitRawPointer(CGF)};
   Builder.CreateCall(

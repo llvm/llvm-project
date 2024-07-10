@@ -560,31 +560,76 @@ SemaARM::ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD) {
   return SemaARM::ArmNonStreaming;
 }
 
-static void checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
+static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
                                      const FunctionDecl *FD,
-                                     SemaARM::ArmStreamingType BuiltinType) {
+                                     SemaARM::ArmStreamingType BuiltinType,
+                                     unsigned BuiltinID) {
   SemaARM::ArmStreamingType FnType = getArmStreamingFnType(FD);
-  if (BuiltinType == SemaARM::ArmStreamingOrSVE2p1) {
-    // Check intrinsics that are available in [sve2p1 or sme/sme2].
-    llvm::StringMap<bool> CallerFeatureMap;
-    S.Context.getFunctionFeatureMap(CallerFeatureMap, FD);
-    if (Builtin::evaluateRequiredTargetFeatures("sve2p1", CallerFeatureMap))
-      BuiltinType = SemaARM::ArmStreamingCompatible;
-    else
+
+  // Check if the intrinsic is available in the right mode, i.e.
+  // * When compiling for SME only, the caller must be in streaming mode.
+  // * When compiling for SVE only, the caller must be in non-streaming mode.
+  // * When compiling for both SVE and SME, the caller can be in either mode.
+  if (BuiltinType == SemaARM::VerifyRuntimeMode) {
+    auto DisableFeatures = [](llvm::StringMap<bool> &Map, StringRef S) {
+      for (StringRef K : Map.keys())
+        if (K.starts_with(S))
+          Map[K] = false;
+    };
+
+    llvm::StringMap<bool> CallerFeatureMapWithoutSVE;
+    S.Context.getFunctionFeatureMap(CallerFeatureMapWithoutSVE, FD);
+    DisableFeatures(CallerFeatureMapWithoutSVE, "sve");
+
+    // Avoid emitting diagnostics for a function that can never compile.
+    if (FnType == SemaARM::ArmStreaming && !CallerFeatureMapWithoutSVE["sme"])
+      return false;
+
+    llvm::StringMap<bool> CallerFeatureMapWithoutSME;
+    S.Context.getFunctionFeatureMap(CallerFeatureMapWithoutSME, FD);
+    DisableFeatures(CallerFeatureMapWithoutSME, "sme");
+
+    // We know the builtin requires either some combination of SVE flags, or
+    // some combination of SME flags, but we need to figure out which part
+    // of the required features is satisfied by the target features.
+    //
+    // For a builtin with target guard 'sve2p1|sme2', if we compile with
+    // '+sve2p1,+sme', then we know that it satisfies the 'sve2p1' part if we
+    // evaluate the features for '+sve2p1,+sme,+nosme'.
+    //
+    // Similarly, if we compile with '+sve2,+sme2', then we know it satisfies
+    // the 'sme2' part if we evaluate the features for '+sve2,+sme2,+nosve'.
+    StringRef BuiltinTargetGuards(
+        S.Context.BuiltinInfo.getRequiredFeatures(BuiltinID));
+    bool SatisfiesSVE = Builtin::evaluateRequiredTargetFeatures(
+        BuiltinTargetGuards, CallerFeatureMapWithoutSME);
+    bool SatisfiesSME = Builtin::evaluateRequiredTargetFeatures(
+        BuiltinTargetGuards, CallerFeatureMapWithoutSVE);
+
+    if ((SatisfiesSVE && SatisfiesSME) ||
+        (SatisfiesSVE && FnType == SemaARM::ArmStreamingCompatible))
+      return false;
+    else if (SatisfiesSVE)
+      BuiltinType = SemaARM::ArmNonStreaming;
+    else if (SatisfiesSME)
       BuiltinType = SemaARM::ArmStreaming;
+    else
+      // This should be diagnosed by CodeGen
+      return false;
   }
 
-  if (FnType == SemaARM::ArmStreaming &&
+  if (FnType != SemaARM::ArmNonStreaming &&
       BuiltinType == SemaARM::ArmNonStreaming)
-    S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
-        << TheCall->getSourceRange() << "streaming";
-  else if (FnType == SemaARM::ArmNonStreaming && BuiltinType == SemaARM::ArmStreaming)
-    S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
+    S.Diag(TheCall->getBeginLoc(), diag::err_attribute_arm_sm_incompat_builtin)
         << TheCall->getSourceRange() << "non-streaming";
-  else if (FnType == SemaARM::ArmStreamingCompatible &&
-           BuiltinType != SemaARM::ArmStreamingCompatible)
-    S.Diag(TheCall->getBeginLoc(), diag::warn_attribute_arm_sm_incompat_builtin)
-        << TheCall->getSourceRange() << "streaming compatible";
+  else if (FnType != SemaARM::ArmStreaming &&
+           BuiltinType == SemaARM::ArmStreaming)
+    S.Diag(TheCall->getBeginLoc(), diag::err_attribute_arm_sm_incompat_builtin)
+        << TheCall->getSourceRange() << "streaming";
+  else
+    return false;
+
+  return true;
 }
 
 static bool hasArmZAState(const FunctionDecl *FD) {
@@ -622,8 +667,9 @@ bool SemaARM::CheckSMEBuiltinFunctionCall(unsigned BuiltinID,
 #undef GET_SME_STREAMING_ATTRS
     }
 
-    if (BuiltinType)
-      checkArmStreamingBuiltin(SemaRef, TheCall, FD, *BuiltinType);
+    if (BuiltinType &&
+        checkArmStreamingBuiltin(SemaRef, TheCall, FD, *BuiltinType, BuiltinID))
+      return true;
 
     if ((getSMEState(BuiltinID) & ArmZAMask) && !hasArmZAState(FD))
       Diag(TheCall->getBeginLoc(),
@@ -660,8 +706,9 @@ bool SemaARM::CheckSVEBuiltinFunctionCall(unsigned BuiltinID,
 #include "clang/Basic/arm_sve_streaming_attrs.inc"
 #undef GET_SVE_STREAMING_ATTRS
     }
-    if (BuiltinType)
-      checkArmStreamingBuiltin(SemaRef, TheCall, FD, *BuiltinType);
+    if (BuiltinType &&
+        checkArmStreamingBuiltin(SemaRef, TheCall, FD, *BuiltinType, BuiltinID))
+      return true;
   }
   // Range check SVE intrinsics that take immediate values.
   SmallVector<std::tuple<int, int, int>, 3> ImmChecks;
@@ -689,7 +736,9 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
 #define TARGET_BUILTIN(id, ...) case NEON::BI##id:
 #define BUILTIN(id, ...) case NEON::BI##id:
 #include "clang/Basic/arm_neon.inc"
-      checkArmStreamingBuiltin(SemaRef, TheCall, FD, ArmNonStreaming);
+      if (checkArmStreamingBuiltin(SemaRef, TheCall, FD, ArmNonStreaming,
+                                   BuiltinID))
+        return true;
       break;
 #undef TARGET_BUILTIN
 #undef BUILTIN
@@ -1063,6 +1112,9 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   if (BuiltinID == AArch64::BI__break)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0xffff);
 
+  if (BuiltinID == AArch64::BI__hlt)
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0xffff);
+
   if (CheckNeonBuiltinFunctionCall(TI, BuiltinID, TheCall))
     return true;
 
@@ -1276,6 +1328,10 @@ void SemaARM::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
         << AL << Str << ArgLoc;
     return;
   }
+
+  const TargetInfo &TI = getASTContext().getTargetInfo();
+  if (TI.hasFeature("vfp"))
+    Diag(D->getLocation(), diag::warn_arm_interrupt_vfp_clobber);
 
   D->addAttr(::new (getASTContext())
                  ARMInterruptAttr(getASTContext(), AL, Kind));
