@@ -6,6 +6,7 @@
 #       <target name>
 #       HDR <header file>
 #     )
+
 function(add_header target_name)
   cmake_parse_arguments(
     "ADD_HEADER"
@@ -15,7 +16,7 @@ function(add_header target_name)
     ${ARGN}
   )
   if(NOT ADD_HEADER_HDR)
-    message(FATAL_ERROR "'add_header' rules requires the HDR argument specifying a headef file.")
+    message(FATAL_ERROR "'add_header' rules requires the HDR argument specifying a header file.")
   endif()
 
   set(absolute_path ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_HEADER_HDR})
@@ -65,6 +66,90 @@ function(add_header target_name)
       DEPS "${fq_deps_list}"
   )
 endfunction(add_header)
+
+function(add_yaml_header target_name)
+  cmake_parse_arguments(
+    "ADD_YAML_HDR"
+    "PUBLIC" # No optional arguments
+    "YAML_FILE;DEF_FILE;GEN_HDR" # Single value arguments
+    "DEPENDS"     # Multi value arguments
+    ${ARGN}
+  )
+  get_fq_target_name(${target_name} fq_target_name)
+  if(NOT LLVM_LIBC_FULL_BUILD)
+    # We don't want to use generated headers if we are doing a non-full-build.
+    add_library(${fq_target_name} INTERFACE)
+    return()
+  endif()
+  if(NOT ADD_YAML_HDR_DEF_FILE)
+    message(FATAL_ERROR "`add_yaml_hdr` rule requires DEF_FILE to be specified.")
+  endif()
+  if(NOT ADD_YAML_HDR_GEN_HDR)
+    message(FATAL_ERROR "`add_yaml_hdr` rule requires GEN_HDR to be specified.")
+  endif()
+  if(NOT ADD_YAML_HDR_YAML_FILE)
+    message(FATAL_ERROR "`add_yaml_hdr` rule requires YAML_FILE to be specified.")
+  endif()
+
+  set(absolute_path ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_YAML_HDR_GEN_HDR})
+  file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_SOURCE_DIR} ${absolute_path})
+  set(out_file ${LIBC_INCLUDE_DIR}/${relative_path})
+  set(yaml_file ${CMAKE_SOURCE_DIR}/${ADD_YAML_HDR_YAML_FILE})
+  set(def_file ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_YAML_HDR_DEF_FILE})
+
+  set(fq_data_files "")
+  if(ADD_YAML_HDR_DATA_FILES)
+    foreach(data_file IN LISTS ADD_YAML_HDR_DATA_FILES)
+      list(APPEND fq_data_files "${CMAKE_CURRENT_SOURCE_DIR}/${data_file}")
+    endforeach(data_file)
+  endif()
+
+  set(entry_points "${TARGET_ENTRYPOINT_NAME_LIST}")
+  list(TRANSFORM entry_points PREPEND "--e=")
+
+  add_custom_command(
+    OUTPUT ${out_file}
+    COMMAND ${Python3_EXECUTABLE} ${LIBC_SOURCE_DIR}/newhdrgen/yaml_to_classes.py
+            ${yaml_file}
+            ${def_file}
+            ${entry_points}
+            --output_dir ${CMAKE_CURRENT_BINARY_DIR}
+    DEPENDS ${yaml_file} ${def_file} ${fq_data_files}
+    COMMENT "Generating header ${ADD_YAML_HDR_GEN_HDR} from ${yaml_file} and ${def_file}"
+  )
+
+  if(ADD_YAML_HDR_DEPENDS)
+    get_fq_deps_list(fq_deps_list ${ADD_YAML_HDR_DEPENDS})
+    # Dependencies of a add_header target can only be another add_gen_header target
+    # or an add_header target.
+    foreach(dep IN LISTS fq_deps_list)
+      get_target_property(header_file ${dep} HEADER_FILE_PATH)
+      if(NOT header_file)
+        message(FATAL_ERROR "Invalid dependency '${dep}' for '${fq_target_name}'.")
+      endif()
+    endforeach()
+  endif()
+  set(generated_hdr_target ${fq_target_name}.__generated_hdr__)
+  add_custom_target(
+    ${generated_hdr_target}
+    DEPENDS ${out_file} ${fq_deps_list}
+  )
+
+  add_header_library(
+    ${target_name}
+    HDRS
+      ${out_file}
+  )
+
+  add_dependencies(${fq_target_name} ${generated_hdr_target})
+
+  set_target_properties(
+    ${fq_target_name}
+    PROPERTIES
+      HEADER_FILE_PATH ${out_file}
+      DEPS "${fq_deps_list}"
+  )
+endfunction(add_yaml_header)
 
 # A rule for generated header file targets.
 # Usage:

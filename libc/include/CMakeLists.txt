@@ -3,6 +3,7 @@ set(LIBC_INCLUDE_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 include(LLVMLibCHeaderRules)
 
+
 # The GPU build wants to install files in the compiler's resource directory.
 if(LIBC_TARGET_OS_IS_GPU)
   include(GetClangResourceDir)
@@ -17,16 +18,18 @@ add_header(
     __llvm-libc-common.h
 )
 
-add_gen_header(
+add_yaml_header(
   ctype
+  YAML_FILE ../libc/newhdrgen/yaml/ctype.yaml
   DEF_FILE ctype.h.def
   GEN_HDR ctype.h
   DEPENDS
     .llvm_libc_common_h
 )
 
-add_gen_header(
+add_yaml_header(
   dirent
+  YAML_FILE ../libc/newhdrgen/yaml/dirent.yaml
   DEF_FILE dirent.h.def
   GEN_HDR dirent.h
   DEPENDS
