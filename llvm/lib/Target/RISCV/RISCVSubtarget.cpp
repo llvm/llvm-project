@@ -13,7 +13,6 @@
 #include "RISCVSubtarget.h"
 #include "GISel/RISCVCallLowering.h"
 #include "GISel/RISCVLegalizerInfo.h"
-#include "GISel/RISCVRegisterBankInfo.h"
 #include "RISCV.h"
 #include "RISCVFrameLowering.h"
 #include "RISCVTargetMachine.h"
@@ -109,7 +108,7 @@ InstructionSelector *RISCVSubtarget::getInstructionSelector() const {
   if (!InstSelector) {
     InstSelector.reset(createRISCVInstructionSelector(
         *static_cast<const RISCVTargetMachine *>(&TLInfo.getTargetMachine()),
-        *this, *static_cast<const RISCVRegisterBankInfo *>(getRegBankInfo())));
+        *this, *getRegBankInfo()));
   }
   return InstSelector.get();
 }
@@ -120,7 +119,7 @@ const LegalizerInfo *RISCVSubtarget::getLegalizerInfo() const {
   return Legalizer.get();
 }
 
-const RegisterBankInfo *RISCVSubtarget::getRegBankInfo() const {
+const RISCVRegisterBankInfo *RISCVSubtarget::getRegBankInfo() const {
   if (!RegBankInfo)
     RegBankInfo.reset(new RISCVRegisterBankInfo(getHwMode()));
   return RegBankInfo.get();
