@@ -1266,7 +1266,7 @@ def FeaturePredictableSelectIsExpensive
 
 def TuneOptimizedZeroStrideLoad
    : SubtargetFeature<"optimized-zero-stride-load", "HasOptimizedZeroStrideLoad",
-                      "true", "optimized (perform fewer memory operations)"
+                      "true", "Optimized (perform fewer memory operations)"
                       "zero-stride vector load">;
 
 def Experimental
