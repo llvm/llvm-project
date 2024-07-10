@@ -9,7 +9,6 @@
 #include "bolt/Profile/YAMLProfileReader.h"
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
-#include "bolt/Core/HashUtilities.h"
 #include "bolt/Passes/MCF.h"
 #include "bolt/Profile/ProfileYAMLMapping.h"
 #include "bolt/Utils/NameResolver.h"

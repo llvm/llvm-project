@@ -5,6 +5,7 @@ types:
   - type_name: uid_t
   - type_name: time_t
   - type_name: pthread_t
+  - type_name: pthread_rwlock_t
   - type_name: pthread_rwlockattr_t
   - type_name: pthread_mutex_t
   - type_name: blkcnt_t
