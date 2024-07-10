@@ -271,8 +271,8 @@ bool FoldExpandedConstraint::subsumes(
   if (Kind != Other.Kind || !AreCompatibleForSubsumption(*this, Other))
     return false;
 
-  const NormalForm PDNF = makeDNF(this->Constraint);
-  const NormalForm QCNF = makeCNF(Other.Constraint);
+  NormalForm PDNF = makeDNF(this->Constraint);
+  NormalForm QCNF = makeCNF(Other.Constraint);
   return clang::subsumes(PDNF, QCNF, E);
 }
 
