@@ -357,11 +357,11 @@ define void @loop_invariant_definition(i64 %arg) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[T1:%.*]]
 ; CHECK:       t1:
-; CHECK-NEXT:    [[T2:%.*]] = phi i64 [ [[T3:%.*]], [[T1]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[T3]] = add nuw i64 [[T2]], 1
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[T1]] ], [ -1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], 1
 ; CHECK-NEXT:    br i1 true, label [[T4:%.*]], label [[T1]]
 ; CHECK:       t4:
-; CHECK-NEXT:    [[T5:%.*]] = trunc i64 [[T2]] to i32
+; CHECK-NEXT:    [[T5:%.*]] = trunc i64 [[LSR_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[T6:%.*]] = add i32 [[T5]], 1
 ; CHECK-NEXT:    [[T7:%.*]] = icmp eq i32 [[T5]], [[T6]]
 ; CHECK-NEXT:    ret void

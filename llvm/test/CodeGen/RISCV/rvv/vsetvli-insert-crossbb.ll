@@ -635,17 +635,17 @@ define void @vlmax(i64 %N, ptr %c, ptr %a, ptr %b) {
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    li a4, 0
 ; CHECK-NEXT:    vsetvli a6, zero, e64, m1, ta, ma
+; CHECK-NEXT:    slli a5, a6, 3
 ; CHECK-NEXT:  .LBB12_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    slli a7, a4, 3
-; CHECK-NEXT:    add a5, a2, a7
-; CHECK-NEXT:    vle64.v v8, (a5)
-; CHECK-NEXT:    add a5, a3, a7
-; CHECK-NEXT:    vle64.v v9, (a5)
+; CHECK-NEXT:    vle64.v v8, (a2)
+; CHECK-NEXT:    vle64.v v9, (a3)
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
-; CHECK-NEXT:    add a7, a7, a1
+; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    add a4, a4, a6
-; CHECK-NEXT:    vse64.v v8, (a7)
+; CHECK-NEXT:    add a1, a1, a5
+; CHECK-NEXT:    add a3, a3, a5
+; CHECK-NEXT:    add a2, a2, a5
 ; CHECK-NEXT:    blt a4, a0, .LBB12_2
 ; CHECK-NEXT:  .LBB12_3: # %for.end
 ; CHECK-NEXT:    ret
@@ -682,13 +682,13 @@ define void @vector_init_vlmax(i64 %N, ptr %c) {
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    vsetvli a3, zero, e64, m1, ta, ma
+; CHECK-NEXT:    slli a4, a3, 3
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:  .LBB13_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    slli a4, a2, 3
-; CHECK-NEXT:    add a4, a4, a1
+; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    add a2, a2, a3
-; CHECK-NEXT:    vse64.v v8, (a4)
+; CHECK-NEXT:    add a1, a1, a4
 ; CHECK-NEXT:    blt a2, a0, .LBB13_2
 ; CHECK-NEXT:  .LBB13_3: # %for.end
 ; CHECK-NEXT:    ret
@@ -718,15 +718,15 @@ define void @vector_init_vsetvli_N(i64 %N, ptr %c) {
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    vsetvli a3, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vsetvli a4, zero, e64, m1, ta, ma
+; CHECK-NEXT:    slli a4, a3, 3
+; CHECK-NEXT:    vsetvli a5, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:  .LBB14_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    slli a4, a2, 3
-; CHECK-NEXT:    add a4, a4, a1
-; CHECK-NEXT:    add a2, a2, a3
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vse64.v v8, (a4)
+; CHECK-NEXT:    vse64.v v8, (a1)
+; CHECK-NEXT:    add a2, a2, a3
+; CHECK-NEXT:    add a1, a1, a4
 ; CHECK-NEXT:    blt a2, a0, .LBB14_2
 ; CHECK-NEXT:  .LBB14_3: # %for.end
 ; CHECK-NEXT:    ret
@@ -754,15 +754,15 @@ define void @vector_init_vsetvli_fv(i64 %N, ptr %c) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    vsetivli a3, 4, e64, m1, ta, ma
-; CHECK-NEXT:    vsetvli a4, zero, e64, m1, ta, ma
+; CHECK-NEXT:    slli a4, a3, 3
+; CHECK-NEXT:    vsetvli a5, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:  .LBB15_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    slli a4, a2, 3
-; CHECK-NEXT:    add a4, a4, a1
-; CHECK-NEXT:    add a2, a2, a3
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
-; CHECK-NEXT:    vse64.v v8, (a4)
+; CHECK-NEXT:    vse64.v v8, (a1)
+; CHECK-NEXT:    add a2, a2, a3
+; CHECK-NEXT:    add a1, a1, a4
 ; CHECK-NEXT:    blt a2, a0, .LBB15_1
 ; CHECK-NEXT:  # %bb.2: # %for.end
 ; CHECK-NEXT:    ret
