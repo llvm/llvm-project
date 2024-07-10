@@ -15222,6 +15222,9 @@ ShouldWarnAboutMissingPrototype(const FunctionDecl *FD,
       if (II->isStr("main") || II->isStr("efi_main"))
         return false;
 
+  if (FD->isMSVCRTEntryPoint())
+    return false;
+
   // Don't warn about inline functions.
   if (FD->isInlined())
     return false;
