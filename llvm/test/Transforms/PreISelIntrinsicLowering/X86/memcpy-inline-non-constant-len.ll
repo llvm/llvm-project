@@ -29,8 +29,21 @@ define void @memcpy_x(ptr %dst, ptr %src, i64 %x) nounwind {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP5]], [[X]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[LOOP_MEMCPY_EXPANSION]], label %[[POST_LOOP_MEMCPY_EXPANSION]]
 ; CHECK:       [[POST_LOOP_MEMCPY_EXPANSION]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i64 [[X]], 0
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[LOOP_MEMCPY_EXPANSION2:.*]], label %[[POST_LOOP_MEMCPY_EXPANSION1:.*]]
+; CHECK:       [[LOOP_MEMCPY_EXPANSION2]]:
+; CHECK-NEXT:    [[LOOP_INDEX3:%.*]] = phi i64 [ 0, %[[POST_LOOP_MEMCPY_EXPANSION]] ], [ [[TMP11:%.*]], %[[LOOP_MEMCPY_EXPANSION2]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[LOOP_INDEX3]]
+; CHECK-NEXT:    [[TMP9:%.*]] = load volatile i8, ptr [[TMP8]], align 1
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[LOOP_INDEX3]]
+; CHECK-NEXT:    store volatile i8 [[TMP9]], ptr [[TMP10]], align 1
+; CHECK-NEXT:    [[TMP11]] = add i64 [[LOOP_INDEX3]], 1
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ult i64 [[TMP11]], [[X]]
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[LOOP_MEMCPY_EXPANSION2]], label %[[POST_LOOP_MEMCPY_EXPANSION1]]
+; CHECK:       [[POST_LOOP_MEMCPY_EXPANSION1]]:
 ; CHECK-NEXT:    ret void
 ;
-  tail call void @llvm.memcpy.inline.p0.p0.i64(ptr %dst, ptr %src, i64 %x, i1 0)
+  call void @llvm.memcpy.inline.p0.p0.i64(ptr %dst, ptr %src, i64 %x, i1 0)
+  tail call void @llvm.memcpy.inline.p0.p0.i64(ptr %dst, ptr %src, i64 %x, i1 1)
   ret void
 }
