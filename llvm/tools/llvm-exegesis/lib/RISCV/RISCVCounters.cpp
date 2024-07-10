@@ -60,10 +60,11 @@ public:
 
 RISCVCpuCyclesCounter::RISCVCpuCyclesCounter(pfm::PerfEvent &&Event)
     : CounterGroup(std::move(Event), {}) {
-  #if defined(__riscv) && defined(__linux__)
+#if defined(__riscv) && defined(__linux__)
   char Value[2] = "0";
   int File = 0;
-  std::error_code FileError = sys::fs::openFileForRead("/proc/sys/kernel/watchdog", File);
+  std::error_code FileError =
+      sys::fs::openFileForRead("/proc/sys/kernel/watchdog", File);
   sys::fs::file_t FileNative = sys::fs::convertFDToNativeFile(File);
   Expected<size_t> ReadBytes = sys::fs::readNativeFile(FileNative, Value);
 
@@ -71,7 +72,7 @@ RISCVCpuCyclesCounter::RISCVCpuCyclesCounter(pfm::PerfEvent &&Event)
     report_fatal_error(
         "Please write 'sudo echo 1 > /proc/sys/kernel/perf_user_access'");
   }
-  #endif
+#endif
   StartValue = getRISCVCpuCyclesCount();
   EndValue = getRISCVCpuCyclesCount();
   MeasurementCycles = EndValue - StartValue;
