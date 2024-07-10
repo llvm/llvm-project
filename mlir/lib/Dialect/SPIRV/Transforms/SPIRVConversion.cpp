@@ -909,7 +909,7 @@ FuncOpVectorUnroll::matchAndRewrite(func::FuncOp funcOp,
     size_t origInputNo = argType.index();
     Type origType = argType.value();
     // Check whether the argument is of vector type.
-    auto origVecType = llvm::dyn_cast<VectorType>(origType);
+    auto origVecType = dyn_cast<VectorType>(origType);
     if (!origVecType) {
       // We need a placeholder for the old argument that will be erased later.
       Value result = rewriter.create<arith::ConstantOp>(
