@@ -807,11 +807,6 @@ private:
   /// the consumer eagerly.
   SmallVector<GlobalDeclID, 16> EagerlyDeserializedDecls;
 
-  /// The IDs of all vtables to emit. The referenced declarations are passed
-  /// to the consumers's HandleVTable eagerly after passing
-  /// EagerlyDeserializedDecls.
-  SmallVector<GlobalDeclID, 16> VTablesToEmit;
-
   /// The IDs of all tentative definitions stored in the chain.
   ///
   /// Sema keeps track of all tentative definitions in a TU because it has to
@@ -1522,7 +1517,6 @@ private:
   bool isConsumerInterestedIn(Decl *D);
   void PassInterestingDeclsToConsumer();
   void PassInterestingDeclToConsumer(Decl *D);
-  void PassVTableToConsumer(CXXRecordDecl *RD);
 
   void finishPendingActions();
   void diagnoseOdrViolations();
