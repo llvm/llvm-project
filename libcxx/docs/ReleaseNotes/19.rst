@@ -140,6 +140,8 @@ LLVM 20
 - The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable and the ``_LIBCPP_ENABLE_ASSERTIONS`` macro that were used to enable
   the safe mode will be removed in LLVM 20.
 
+- The C++20 synchronization library will be removed entirely in language modes prior to C++20 in LLVM 20.
+
 LLVM 21
 ~~~~~~~
 TODO
