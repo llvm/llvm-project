@@ -1774,8 +1774,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         Changed |= Simplified;
       } else if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(Inst)) {
         Changed |= checkAndReplaceMinMax(MinMax, Info, ToRemove);
-      } else if (auto *CmpIntrinsic = dyn_cast<class CmpIntrinsic>(Inst)) {
-        Changed |= checkAndReplaceCmp(CmpIntrinsic, Info, ToRemove);
+      } else if (auto *CmpIntr = dyn_cast<CmpIntrinsic>(Inst)) {
+        Changed |= checkAndReplaceCmp(CmpIntr, Info, ToRemove);
       }
       continue;
     }
