@@ -11,8 +11,6 @@
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(int, isnan, (double x)) {
-  return __builtin_isnan(x);
-}
+LLVM_LIBC_FUNCTION(int, isnan, (double x)) { return __builtin_isnan(x); }
 
 } // namespace LIBC_NAMESPACE
