@@ -223,7 +223,10 @@ def SectionOp : OpenMP_Op<"section", [HasParent<"SectionsOp">],
   let description = [{
     A section operation encloses a region which represents one section in a
     sections construct. A section op should always be surrounded by an
-    `omp.sections` operation.
+    `omp.sections` operation. The section operation may have block args
+    which corespond to the block arguments of the surrounding `omp.sections`
+    operation. This is done to reflect situations where these block arguments
+    represent variables private to each section.
   }];
   let assemblyFormat = "$region attr-dict";
 }
@@ -242,6 +245,8 @@ def SectionsOp : OpenMP_Op<"sections", traits = [
     distributed among and executed by the threads in a team. Each `omp.section`
     is executed once by one of the threads in the team in the context of its
     implicit task.
+    Block arguments for reduction variables should be mirrored in enclosed
+    `omp.section` operations.
   }] # clausesDescription;
 
   // Override region definition.
