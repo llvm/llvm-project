@@ -5,15 +5,32 @@
 define <8 x i8> @test_pavgusb(x86_mmx %a.coerce, x86_mmx %b.coerce) nounwind readnone {
 ; X86-LABEL: test_pavgusb:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pavgusb %mm1, %mm0
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl 12(%ebp), %eax
+; X86-NEXT:    movl 16(%ebp), %ecx
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    movl 20(%ebp), %eax
+; X86-NEXT:    movl 24(%ebp), %ecx
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movq (%esp), %mm0
+; X86-NEXT:    pavgusb {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    movq %mm0, (%eax)
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: test_pavgusb:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pavgusb %mm1, %mm0
-; X64-NEXT:    movq2dq %mm0, %xmm0
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    pavgusb %mm0, %mm1
+; X64-NEXT:    movq2dq %mm1, %xmm0
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast x86_mmx %a.coerce to <8 x i8>
@@ -638,8 +655,12 @@ define <2 x float> @test_pi2fd(x86_mmx %a.coerce) nounwind readnone {
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    pi2fd %mm0, %mm0
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl 12(%ebp), %ecx
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    pi2fd {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds (%esp)
@@ -649,6 +670,7 @@ define <2 x float> @test_pi2fd(x86_mmx %a.coerce) nounwind readnone {
 ;
 ; X64-LABEL: test_pi2fd:
 ; X64:       # %bb.0: # %entry
+; X64-NEXT:    movq %rdi, %mm0
 ; X64-NEXT:    pi2fd %mm0, %mm0
 ; X64-NEXT:    movq %mm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0
@@ -666,15 +688,32 @@ declare x86_mmx @llvm.x86.3dnow.pi2fd(x86_mmx) nounwind readnone
 define <4 x i16> @test_pmulhrw(x86_mmx %a.coerce, x86_mmx %b.coerce) nounwind readnone {
 ; X86-LABEL: test_pmulhrw:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pmulhrw %mm1, %mm0
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl 12(%ebp), %eax
+; X86-NEXT:    movl 16(%ebp), %ecx
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    movl 20(%ebp), %eax
+; X86-NEXT:    movl 24(%ebp), %ecx
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movq (%esp), %mm0
+; X86-NEXT:    pmulhrw {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    movq %mm0, (%eax)
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl $4
 ;
 ; X64-LABEL: test_pmulhrw:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pmulhrw %mm1, %mm0
-; X64-NEXT:    movq2dq %mm0, %xmm0
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    pmulhrw %mm0, %mm1
+; X64-NEXT:    movq2dq %mm1, %xmm0
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast x86_mmx %a.coerce to <4 x i16>
@@ -805,8 +844,12 @@ define <2 x float> @test_pi2fw(x86_mmx %a.coerce) nounwind readnone {
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    pi2fw %mm0, %mm0
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl 12(%ebp), %ecx
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    pi2fw {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds (%esp)
@@ -816,6 +859,7 @@ define <2 x float> @test_pi2fw(x86_mmx %a.coerce) nounwind readnone {
 ;
 ; X64-LABEL: test_pi2fw:
 ; X64:       # %bb.0: # %entry
+; X64-NEXT:    movq %rdi, %mm0
 ; X64-NEXT:    pi2fw %mm0, %mm0
 ; X64-NEXT:    movq %mm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movaps -{{[0-9]+}}(%rsp), %xmm0

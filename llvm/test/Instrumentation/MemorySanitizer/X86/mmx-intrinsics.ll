@@ -17,16 +17,16 @@ define i64 @test1(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <4 x i16> [[TMP13]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i16> [[TMP12]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP16]], [[TMP8]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call x86_mmx @llvm.x86.ssse3.phadd.w(x86_mmx [[TMP2]], x86_mmx [[TMP3]]) #[[ATTR5:[0-9]+]]
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i64 [[_MSPROP]] to <4 x i16>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast x86_mmx [[TMP4]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <4 x i16> [[TMP13]] to <1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i16> [[TMP12]] to <1 x i64>
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP16]], [[TMP8]]
+; CHECK-NEXT:    [[TMP18:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.phadd.w(<1 x i64> [[TMP2]], <1 x i64> [[TMP17]]) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <1 x i64> [[TMP18]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <4 x i16> [[TMP5]] to <1 x i64>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <4 x i16> [[TMP19]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <1 x i64> [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <1 x i64> [[TMP14]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP7]], ptr @__msan_retval_tls, align 8
@@ -57,16 +57,16 @@ define i64 @test88(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.pcmpgt.d(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2:[0-9]+]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <2 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pcmpgt.d(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <2 x i32>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -97,16 +97,16 @@ define i64 @test87(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.pcmpgt.w(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <4 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pcmpgt.w(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -137,16 +137,16 @@ define i64 @test86(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.pcmpgt.b(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <8 x i8>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <8 x i8>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pcmpgt.b(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <8 x i8>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -177,16 +177,16 @@ define i64 @test85(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.pcmpeq.d(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <2 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pcmpeq.d(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <2 x i32>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -217,16 +217,16 @@ define i64 @test84(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.pcmpeq.w(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <4 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pcmpeq.w(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -257,16 +257,16 @@ define i64 @test83(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.pcmpeq.b(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <8 x i8>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <8 x i8>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pcmpeq.b(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <8 x i8>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -297,16 +297,16 @@ define i64 @test82(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.punpckldq(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <2 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.punpckldq(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <2 x i32>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -337,16 +337,16 @@ define i64 @test81(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.punpcklwd(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <4 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.punpcklwd(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -377,16 +377,16 @@ define i64 @test80(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.punpcklbw(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <8 x i8>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <8 x i8>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.punpcklbw(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <8 x i8>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -417,16 +417,16 @@ define i64 @test79(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.punpckhdq(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <2 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.punpckhdq(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <2 x i32>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -457,16 +457,16 @@ define i64 @test78(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.punpckhwd(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <4 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.punpckhwd(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -497,16 +497,16 @@ define i64 @test77(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.punpckhbw(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <8 x i8>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <8 x i8>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.punpckhbw(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <8 x i8>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -537,23 +537,22 @@ define i64 @test76(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP20:%.*]] = bitcast <1 x i64> [[TMP17]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP23:%.*]] = bitcast <4 x i16> [[TMP20]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP19]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64 [[TMP23]] to <4 x i16>
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[TMP7]] to <4 x i16>
+; CHECK-NEXT:    [[TMP23:%.*]] = bitcast <4 x i16> [[TMP20]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP19]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <1 x i64> [[TMP23]] to <4 x i16>
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[TMP7]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne <4 x i16> [[TMP8]], zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = sext <4 x i1> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne <4 x i16> [[TMP9]], zeroinitializer
 ; CHECK-NEXT:    [[TMP13:%.*]] = sext <4 x i1> [[TMP12]] to <4 x i16>
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <4 x i16> [[TMP11]] to x86_mmx
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <4 x i16> [[TMP13]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP_VECTOR_PACK:%.*]] = call x86_mmx @llvm.x86.mmx.packsswb(x86_mmx [[TMP14]], x86_mmx [[TMP15]])
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast x86_mmx [[_MSPROP_VECTOR_PACK]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call x86_mmx @llvm.x86.mmx.packuswb(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i64 [[TMP2]] to <8 x i8>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast x86_mmx [[TMP3]] to <8 x i8>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <4 x i16> [[TMP13]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP_VECTOR_PACK:%.*]] = call <1 x i64> @llvm.x86.mmx.packsswb(<1 x i64> [[TMP14]], <1 x i64> [[TMP15]])
+; CHECK-NEXT:    [[TMP24:%.*]] = tail call <1 x i64> @llvm.x86.mmx.packuswb(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast <1 x i64> [[_MSPROP_VECTOR_PACK]] to <8 x i8>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[TMP24]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i8> [[TMP18]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP21:%.*]] = bitcast <8 x i8> [[TMP4]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <1 x i64> [[TMP5]], i32 0
@@ -586,23 +585,22 @@ define i64 @test75(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP20:%.*]] = bitcast <1 x i64> [[TMP17]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP23:%.*]] = bitcast <2 x i32> [[TMP20]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP19]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64 [[TMP23]] to <2 x i32>
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[TMP7]] to <2 x i32>
+; CHECK-NEXT:    [[TMP23:%.*]] = bitcast <2 x i32> [[TMP20]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP19]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <1 x i64> [[TMP23]] to <2 x i32>
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[TMP7]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne <2 x i32> [[TMP8]], zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = sext <2 x i1> [[TMP10]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne <2 x i32> [[TMP9]], zeroinitializer
 ; CHECK-NEXT:    [[TMP13:%.*]] = sext <2 x i1> [[TMP12]] to <2 x i32>
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <2 x i32> [[TMP11]] to x86_mmx
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <2 x i32> [[TMP13]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP_VECTOR_PACK:%.*]] = call x86_mmx @llvm.x86.mmx.packssdw(x86_mmx [[TMP14]], x86_mmx [[TMP15]])
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast x86_mmx [[_MSPROP_VECTOR_PACK]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call x86_mmx @llvm.x86.mmx.packssdw(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i64 [[TMP2]] to <4 x i16>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast x86_mmx [[TMP3]] to <4 x i16>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <2 x i32> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <2 x i32> [[TMP13]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP_VECTOR_PACK:%.*]] = call <1 x i64> @llvm.x86.mmx.packssdw(<1 x i64> [[TMP14]], <1 x i64> [[TMP15]])
+; CHECK-NEXT:    [[TMP24:%.*]] = tail call <1 x i64> @llvm.x86.mmx.packssdw(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast <1 x i64> [[_MSPROP_VECTOR_PACK]] to <4 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[TMP24]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i16> [[TMP18]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP21:%.*]] = bitcast <4 x i16> [[TMP4]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <1 x i64> [[TMP5]], i32 0
@@ -635,23 +633,22 @@ define i64 @test74(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP20:%.*]] = bitcast <1 x i64> [[TMP17]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP23:%.*]] = bitcast <4 x i16> [[TMP20]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP19]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64 [[TMP23]] to <4 x i16>
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[TMP7]] to <4 x i16>
+; CHECK-NEXT:    [[TMP23:%.*]] = bitcast <4 x i16> [[TMP20]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP19]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <1 x i64> [[TMP23]] to <4 x i16>
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[TMP7]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne <4 x i16> [[TMP8]], zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = sext <4 x i1> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne <4 x i16> [[TMP9]], zeroinitializer
 ; CHECK-NEXT:    [[TMP13:%.*]] = sext <4 x i1> [[TMP12]] to <4 x i16>
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <4 x i16> [[TMP11]] to x86_mmx
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <4 x i16> [[TMP13]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP_VECTOR_PACK:%.*]] = call x86_mmx @llvm.x86.mmx.packsswb(x86_mmx [[TMP14]], x86_mmx [[TMP15]])
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast x86_mmx [[_MSPROP_VECTOR_PACK]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call x86_mmx @llvm.x86.mmx.packsswb(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i64 [[TMP2]] to <8 x i8>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast x86_mmx [[TMP3]] to <8 x i8>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <4 x i16> [[TMP13]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP_VECTOR_PACK:%.*]] = call <1 x i64> @llvm.x86.mmx.packsswb(<1 x i64> [[TMP14]], <1 x i64> [[TMP15]])
+; CHECK-NEXT:    [[TMP24:%.*]] = tail call <1 x i64> @llvm.x86.mmx.packsswb(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast <1 x i64> [[_MSPROP_VECTOR_PACK]] to <8 x i8>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[TMP24]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i8> [[TMP18]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP21:%.*]] = bitcast <8 x i8> [[TMP4]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <1 x i64> [[TMP5]], i32 0
@@ -681,17 +678,15 @@ define i64 @test73(<1 x i64> %a) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <1 x i64> [[TMP7]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <2 x i32> [[TMP8]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i64 [[TMP9]] to x86_mmx
-; CHECK-NEXT:    [[TMP1:%.*]] = call x86_mmx @llvm.x86.mmx.psrai.d(x86_mmx [[TMP10]], i32 3)
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast x86_mmx [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = or i64 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call x86_mmx @llvm.x86.mmx.psrai.d(x86_mmx [[MMX_VAR_I]], i32 3) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i64 [[TMP11]] to <2 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast x86_mmx [[TMP3]] to <2 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i32> [[TMP14]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP4]] to <1 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP8]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <1 x i64> @llvm.x86.mmx.psrai.d(<1 x i64> [[TMP1]], i32 3)
+; CHECK-NEXT:    [[TMP11:%.*]] = or <1 x i64> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psrai.d(<1 x i64> [[MMX_VAR_I]], i32 3) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <1 x i64> [[TMP11]] to <2 x i32>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP9]] to <2 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i32> [[TMP10]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP14]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <1 x i64> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP6]], ptr @__msan_retval_tls, align 8
@@ -717,17 +712,15 @@ define i64 @test72(<1 x i64> %a) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <1 x i64> [[TMP7]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <4 x i16> [[TMP8]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i64 [[TMP9]] to x86_mmx
-; CHECK-NEXT:    [[TMP1:%.*]] = call x86_mmx @llvm.x86.mmx.psrai.w(x86_mmx [[TMP10]], i32 3)
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast x86_mmx [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = or i64 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call x86_mmx @llvm.x86.mmx.psrai.w(x86_mmx [[MMX_VAR_I]], i32 3) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i64 [[TMP11]] to <4 x i16>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast x86_mmx [[TMP3]] to <4 x i16>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP4]] to <1 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP8]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <1 x i64> @llvm.x86.mmx.psrai.w(<1 x i64> [[TMP1]], i32 3)
+; CHECK-NEXT:    [[TMP11:%.*]] = or <1 x i64> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psrai.w(<1 x i64> [[MMX_VAR_I]], i32 3) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <1 x i64> [[TMP11]] to <4 x i16>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP9]] to <4 x i16>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i16> [[TMP10]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <1 x i64> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP6]], ptr @__msan_retval_tls, align 8
@@ -751,17 +744,15 @@ define i64 @test72_2(<1 x i64> %a) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <1 x i64> [[TMP7]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <4 x i16> [[TMP8]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i64 [[TMP9]] to x86_mmx
-; CHECK-NEXT:    [[TMP1:%.*]] = call x86_mmx @llvm.x86.mmx.psrai.w(x86_mmx [[TMP10]], i32 0)
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast x86_mmx [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = or i64 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call x86_mmx @llvm.x86.mmx.psrai.w(x86_mmx [[MMX_VAR_I]], i32 0) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i64 [[TMP11]] to <4 x i16>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast x86_mmx [[TMP3]] to <4 x i16>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP4]] to <1 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP8]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <1 x i64> @llvm.x86.mmx.psrai.w(<1 x i64> [[TMP1]], i32 0)
+; CHECK-NEXT:    [[TMP11:%.*]] = or <1 x i64> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psrai.w(<1 x i64> [[MMX_VAR_I]], i32 0) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <1 x i64> [[TMP11]] to <4 x i16>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP9]] to <4 x i16>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i16> [[TMP10]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <1 x i64> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP6]], ptr @__msan_retval_tls, align 8
@@ -787,13 +778,13 @@ define i64 @test71(<1 x i64> %a) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = extractelement <1 x i64> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <1 x i64> [[A]], i32 0
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast i64 [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64 [[_MSPROP]] to x86_mmx
-; CHECK-NEXT:    [[TMP1:%.*]] = call x86_mmx @llvm.x86.mmx.psrli.q(x86_mmx [[TMP6]], i32 3)
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast x86_mmx [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = or i64 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call x86_mmx @llvm.x86.mmx.psrli.q(x86_mmx [[MMX_VAR_I]], i32 3) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast x86_mmx [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64 [[_MSPROP]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast i64 [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <1 x i64> @llvm.x86.mmx.psrli.q(<1 x i64> [[TMP2]], i32 3)
+; CHECK-NEXT:    [[TMP6:%.*]] = or <1 x i64> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psrli.q(<1 x i64> [[MMX_VAR_I]], i32 3) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <1 x i64> [[TMP6]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[TMP8]] to i64
 ; CHECK-NEXT:    store i64 [[TMP7]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
@@ -815,17 +806,15 @@ define i64 @test70(<1 x i64> %a) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <1 x i64> [[TMP7]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <2 x i32> [[TMP8]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i64 [[TMP9]] to x86_mmx
-; CHECK-NEXT:    [[TMP1:%.*]] = call x86_mmx @llvm.x86.mmx.psrli.d(x86_mmx [[TMP10]], i32 3)
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast x86_mmx [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = or i64 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call x86_mmx @llvm.x86.mmx.psrli.d(x86_mmx [[MMX_VAR_I]], i32 3) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i64 [[TMP11]] to <2 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast x86_mmx [[TMP3]] to <2 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i32> [[TMP14]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP4]] to <1 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP8]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <1 x i64> @llvm.x86.mmx.psrli.d(<1 x i64> [[TMP1]], i32 3)
+; CHECK-NEXT:    [[TMP11:%.*]] = or <1 x i64> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psrli.d(<1 x i64> [[MMX_VAR_I]], i32 3) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <1 x i64> [[TMP11]] to <2 x i32>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP9]] to <2 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i32> [[TMP10]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP14]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <1 x i64> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP6]], ptr @__msan_retval_tls, align 8
@@ -849,17 +838,15 @@ define i64 @test70_2(<1 x i64> %a) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <1 x i64> [[TMP7]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <2 x i32> [[TMP8]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i64 [[TMP9]] to x86_mmx
-; CHECK-NEXT:    [[TMP1:%.*]] = call x86_mmx @llvm.x86.mmx.psrli.d(x86_mmx [[TMP10]], i32 0)
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast x86_mmx [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = or i64 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call x86_mmx @llvm.x86.mmx.psrli.d(x86_mmx [[MMX_VAR_I]], i32 0) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i64 [[TMP11]] to <2 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast x86_mmx [[TMP3]] to <2 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i32> [[TMP14]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP4]] to <1 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP8]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <1 x i64> @llvm.x86.mmx.psrli.d(<1 x i64> [[TMP1]], i32 0)
+; CHECK-NEXT:    [[TMP11:%.*]] = or <1 x i64> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psrli.d(<1 x i64> [[MMX_VAR_I]], i32 0) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <1 x i64> [[TMP11]] to <2 x i32>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP9]] to <2 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i32> [[TMP10]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP14]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <1 x i64> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP6]], ptr @__msan_retval_tls, align 8
@@ -885,17 +872,15 @@ define i64 @test69(<1 x i64> %a) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <1 x i64> [[TMP7]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <4 x i16> [[TMP8]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i64 [[TMP9]] to x86_mmx
-; CHECK-NEXT:    [[TMP1:%.*]] = call x86_mmx @llvm.x86.mmx.psrli.w(x86_mmx [[TMP10]], i32 3)
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast x86_mmx [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = or i64 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call x86_mmx @llvm.x86.mmx.psrli.w(x86_mmx [[MMX_VAR_I]], i32 3) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i64 [[TMP11]] to <4 x i16>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast x86_mmx [[TMP3]] to <4 x i16>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP4]] to <1 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP8]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <1 x i64> @llvm.x86.mmx.psrli.w(<1 x i64> [[TMP1]], i32 3)
+; CHECK-NEXT:    [[TMP11:%.*]] = or <1 x i64> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psrli.w(<1 x i64> [[MMX_VAR_I]], i32 3) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <1 x i64> [[TMP11]] to <4 x i16>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP9]] to <4 x i16>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i16> [[TMP10]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <1 x i64> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP6]], ptr @__msan_retval_tls, align 8
@@ -921,13 +906,13 @@ define i64 @test68(<1 x i64> %a) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = extractelement <1 x i64> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <1 x i64> [[A]], i32 0
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast i64 [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64 [[_MSPROP]] to x86_mmx
-; CHECK-NEXT:    [[TMP1:%.*]] = call x86_mmx @llvm.x86.mmx.pslli.q(x86_mmx [[TMP6]], i32 3)
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast x86_mmx [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = or i64 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call x86_mmx @llvm.x86.mmx.pslli.q(x86_mmx [[MMX_VAR_I]], i32 3) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast x86_mmx [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64 [[_MSPROP]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast i64 [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <1 x i64> @llvm.x86.mmx.pslli.q(<1 x i64> [[TMP2]], i32 3)
+; CHECK-NEXT:    [[TMP6:%.*]] = or <1 x i64> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pslli.q(<1 x i64> [[MMX_VAR_I]], i32 3) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <1 x i64> [[TMP6]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[TMP8]] to i64
 ; CHECK-NEXT:    store i64 [[TMP7]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
@@ -949,17 +934,15 @@ define i64 @test67(<1 x i64> %a) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <1 x i64> [[TMP7]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <2 x i32> [[TMP8]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i64 [[TMP9]] to x86_mmx
-; CHECK-NEXT:    [[TMP1:%.*]] = call x86_mmx @llvm.x86.mmx.pslli.d(x86_mmx [[TMP10]], i32 3)
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast x86_mmx [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = or i64 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call x86_mmx @llvm.x86.mmx.pslli.d(x86_mmx [[MMX_VAR_I]], i32 3) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i64 [[TMP11]] to <2 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast x86_mmx [[TMP3]] to <2 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i32> [[TMP14]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP4]] to <1 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP8]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <1 x i64> @llvm.x86.mmx.pslli.d(<1 x i64> [[TMP1]], i32 3)
+; CHECK-NEXT:    [[TMP11:%.*]] = or <1 x i64> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pslli.d(<1 x i64> [[MMX_VAR_I]], i32 3) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <1 x i64> [[TMP11]] to <2 x i32>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP9]] to <2 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i32> [[TMP10]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP14]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <1 x i64> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP6]], ptr @__msan_retval_tls, align 8
@@ -985,17 +968,15 @@ define i64 @test66(<1 x i64> %a) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <1 x i64> [[TMP7]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <4 x i16> [[TMP8]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i64 [[TMP9]] to x86_mmx
-; CHECK-NEXT:    [[TMP1:%.*]] = call x86_mmx @llvm.x86.mmx.pslli.w(x86_mmx [[TMP10]], i32 3)
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast x86_mmx [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = or i64 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call x86_mmx @llvm.x86.mmx.pslli.w(x86_mmx [[MMX_VAR_I]], i32 3) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i64 [[TMP11]] to <4 x i16>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast x86_mmx [[TMP3]] to <4 x i16>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP4]] to <1 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP8]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <1 x i64> @llvm.x86.mmx.pslli.w(<1 x i64> [[TMP1]], i32 3)
+; CHECK-NEXT:    [[TMP11:%.*]] = or <1 x i64> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pslli.w(<1 x i64> [[MMX_VAR_I]], i32 3) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <1 x i64> [[TMP11]] to <4 x i16>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP9]] to <4 x i16>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i16> [[TMP10]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <1 x i64> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP6]], ptr @__msan_retval_tls, align 8
@@ -1019,17 +1000,15 @@ define i64 @test66_2(<1 x i64> %a) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <1 x i64> [[TMP7]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <4 x i16> [[TMP8]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i64 [[TMP9]] to x86_mmx
-; CHECK-NEXT:    [[TMP1:%.*]] = call x86_mmx @llvm.x86.mmx.pslli.w(x86_mmx [[TMP10]], i32 0)
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast x86_mmx [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = or i64 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call x86_mmx @llvm.x86.mmx.pslli.w(x86_mmx [[MMX_VAR_I]], i32 0) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i64 [[TMP11]] to <4 x i16>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast x86_mmx [[TMP3]] to <4 x i16>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP4]] to <1 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP8]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <1 x i64> @llvm.x86.mmx.pslli.w(<1 x i64> [[TMP1]], i32 0)
+; CHECK-NEXT:    [[TMP11:%.*]] = or <1 x i64> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pslli.w(<1 x i64> [[MMX_VAR_I]], i32 0) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <1 x i64> [[TMP11]] to <4 x i16>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP9]] to <4 x i16>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i16> [[TMP10]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <1 x i64> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP6]], ptr @__msan_retval_tls, align 8
@@ -1056,20 +1035,21 @@ define i64 @test65(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[TMP9]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = extractelement <1 x i64> [[TMP10]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <1 x i64> [[B]], i32 0
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast i64 [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[_MSPROP]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64 [[_MSPROP]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast i64 [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <1 x i64> [[TMP8]] to i64
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[TMP15]], 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = sext i1 [[TMP13]] to i64
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64 [[TMP12]] to x86_mmx
-; CHECK-NEXT:    [[TMP2:%.*]] = call x86_mmx @llvm.x86.mmx.psra.d(x86_mmx [[TMP8]], x86_mmx [[MMX_VAR1_I]])
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP15:%.*]] = or i64 [[TMP3]], [[TMP14]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call x86_mmx @llvm.x86.mmx.psra.d(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i64 [[TMP15]] to <2 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast x86_mmx [[TMP4]] to <2 x i32>
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast i64 [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[TMP20:%.*]] = call <1 x i64> @llvm.x86.mmx.psra.d(<1 x i64> [[TMP4]], <1 x i64> [[MMX_VAR1_I]])
+; CHECK-NEXT:    [[TMP12:%.*]] = or <1 x i64> [[TMP20]], [[TMP19]]
+; CHECK-NEXT:    [[TMP21:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psra.d(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast <1 x i64> [[TMP12]] to <2 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[TMP21]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP18]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <2 x i32> [[TMP5]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <1 x i64> [[TMP6]], i32 0
@@ -1100,20 +1080,21 @@ define i64 @test64(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[TMP9]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = extractelement <1 x i64> [[TMP10]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <1 x i64> [[B]], i32 0
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast i64 [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[_MSPROP]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64 [[_MSPROP]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast i64 [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <1 x i64> [[TMP8]] to i64
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[TMP15]], 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = sext i1 [[TMP13]] to i64
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64 [[TMP12]] to x86_mmx
-; CHECK-NEXT:    [[TMP2:%.*]] = call x86_mmx @llvm.x86.mmx.psra.w(x86_mmx [[TMP8]], x86_mmx [[MMX_VAR1_I]])
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP15:%.*]] = or i64 [[TMP3]], [[TMP14]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call x86_mmx @llvm.x86.mmx.psra.w(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i64 [[TMP15]] to <4 x i16>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast x86_mmx [[TMP4]] to <4 x i16>
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast i64 [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[TMP20:%.*]] = call <1 x i64> @llvm.x86.mmx.psra.w(<1 x i64> [[TMP4]], <1 x i64> [[MMX_VAR1_I]])
+; CHECK-NEXT:    [[TMP12:%.*]] = or <1 x i64> [[TMP20]], [[TMP19]]
+; CHECK-NEXT:    [[TMP21:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psra.w(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast <1 x i64> [[TMP12]] to <4 x i16>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[TMP21]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP18]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <4 x i16> [[TMP5]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <1 x i64> [[TMP6]], i32 0
@@ -1144,18 +1125,21 @@ define i64 @test63(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = extractelement <1 x i64> [[TMP7]], i32 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <1 x i64> [[A]], i32 0
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast i64 [[TMP0]] to x86_mmx
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i64 [[_MSPROP]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast i64 [[TMP0]] to <1 x i64>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <1 x i64> [[TMP8]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <1 x i64> [[B]], i32 0
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast i64 [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne i64 [[_MSPROP1]], 0
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast i64 [[_MSPROP1]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast i64 [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <1 x i64> [[TMP13]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne i64 [[TMP6]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = sext i1 [[TMP9]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64 [[_MSPROP]] to x86_mmx
-; CHECK-NEXT:    [[TMP2:%.*]] = call x86_mmx @llvm.x86.mmx.psrl.q(x86_mmx [[TMP6]], x86_mmx [[MMX_VAR1_I]])
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = or i64 [[TMP3]], [[TMP10]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call x86_mmx @llvm.x86.mmx.psrl.q(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast x86_mmx [[TMP4]] to i64
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i64 [[TMP10]] to <1 x i64>
+; CHECK-NEXT:    [[TMP15:%.*]] = call <1 x i64> @llvm.x86.mmx.psrl.q(<1 x i64> [[TMP3]], <1 x i64> [[MMX_VAR1_I]])
+; CHECK-NEXT:    [[TMP16:%.*]] = or <1 x i64> [[TMP15]], [[TMP14]]
+; CHECK-NEXT:    [[TMP12:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psrl.q(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[TMP16]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[TMP12]] to i64
 ; CHECK-NEXT:    store i64 [[TMP11]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
@@ -1180,20 +1164,21 @@ define i64 @test62(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[TMP9]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = extractelement <1 x i64> [[TMP10]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <1 x i64> [[B]], i32 0
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast i64 [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[_MSPROP]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64 [[_MSPROP]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast i64 [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <1 x i64> [[TMP8]] to i64
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[TMP15]], 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = sext i1 [[TMP13]] to i64
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64 [[TMP12]] to x86_mmx
-; CHECK-NEXT:    [[TMP2:%.*]] = call x86_mmx @llvm.x86.mmx.psrl.d(x86_mmx [[TMP8]], x86_mmx [[MMX_VAR1_I]])
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP15:%.*]] = or i64 [[TMP3]], [[TMP14]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call x86_mmx @llvm.x86.mmx.psrl.d(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i64 [[TMP15]] to <2 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast x86_mmx [[TMP4]] to <2 x i32>
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast i64 [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[TMP20:%.*]] = call <1 x i64> @llvm.x86.mmx.psrl.d(<1 x i64> [[TMP4]], <1 x i64> [[MMX_VAR1_I]])
+; CHECK-NEXT:    [[TMP12:%.*]] = or <1 x i64> [[TMP20]], [[TMP19]]
+; CHECK-NEXT:    [[TMP21:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psrl.d(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast <1 x i64> [[TMP12]] to <2 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[TMP21]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP18]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <2 x i32> [[TMP5]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <1 x i64> [[TMP6]], i32 0
@@ -1224,20 +1209,21 @@ define i64 @test61(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[TMP9]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = extractelement <1 x i64> [[TMP10]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <1 x i64> [[B]], i32 0
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast i64 [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[_MSPROP]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64 [[_MSPROP]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast i64 [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <1 x i64> [[TMP8]] to i64
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[TMP15]], 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = sext i1 [[TMP13]] to i64
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64 [[TMP12]] to x86_mmx
-; CHECK-NEXT:    [[TMP2:%.*]] = call x86_mmx @llvm.x86.mmx.psrl.w(x86_mmx [[TMP8]], x86_mmx [[MMX_VAR1_I]])
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP15:%.*]] = or i64 [[TMP3]], [[TMP14]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call x86_mmx @llvm.x86.mmx.psrl.w(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i64 [[TMP15]] to <4 x i16>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast x86_mmx [[TMP4]] to <4 x i16>
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast i64 [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[TMP20:%.*]] = call <1 x i64> @llvm.x86.mmx.psrl.w(<1 x i64> [[TMP4]], <1 x i64> [[MMX_VAR1_I]])
+; CHECK-NEXT:    [[TMP12:%.*]] = or <1 x i64> [[TMP20]], [[TMP19]]
+; CHECK-NEXT:    [[TMP21:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psrl.w(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast <1 x i64> [[TMP12]] to <4 x i16>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[TMP21]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP18]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <4 x i16> [[TMP5]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <1 x i64> [[TMP6]], i32 0
@@ -1268,18 +1254,21 @@ define i64 @test60(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = extractelement <1 x i64> [[TMP7]], i32 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <1 x i64> [[A]], i32 0
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast i64 [[TMP0]] to x86_mmx
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i64 [[_MSPROP]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast i64 [[TMP0]] to <1 x i64>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <1 x i64> [[TMP8]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <1 x i64> [[B]], i32 0
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast i64 [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne i64 [[_MSPROP1]], 0
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast i64 [[_MSPROP1]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast i64 [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <1 x i64> [[TMP13]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne i64 [[TMP6]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = sext i1 [[TMP9]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64 [[_MSPROP]] to x86_mmx
-; CHECK-NEXT:    [[TMP2:%.*]] = call x86_mmx @llvm.x86.mmx.psll.q(x86_mmx [[TMP6]], x86_mmx [[MMX_VAR1_I]])
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = or i64 [[TMP3]], [[TMP10]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call x86_mmx @llvm.x86.mmx.psll.q(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast x86_mmx [[TMP4]] to i64
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i64 [[TMP10]] to <1 x i64>
+; CHECK-NEXT:    [[TMP15:%.*]] = call <1 x i64> @llvm.x86.mmx.psll.q(<1 x i64> [[TMP3]], <1 x i64> [[MMX_VAR1_I]])
+; CHECK-NEXT:    [[TMP16:%.*]] = or <1 x i64> [[TMP15]], [[TMP14]]
+; CHECK-NEXT:    [[TMP12:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psll.q(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[TMP16]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[TMP12]] to i64
 ; CHECK-NEXT:    store i64 [[TMP11]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
@@ -1304,20 +1293,21 @@ define i64 @test59(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[TMP9]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = extractelement <1 x i64> [[TMP10]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <1 x i64> [[B]], i32 0
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast i64 [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[_MSPROP]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64 [[_MSPROP]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast i64 [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <1 x i64> [[TMP8]] to i64
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[TMP15]], 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = sext i1 [[TMP13]] to i64
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64 [[TMP12]] to x86_mmx
-; CHECK-NEXT:    [[TMP2:%.*]] = call x86_mmx @llvm.x86.mmx.psll.d(x86_mmx [[TMP8]], x86_mmx [[MMX_VAR1_I]])
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP15:%.*]] = or i64 [[TMP3]], [[TMP14]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call x86_mmx @llvm.x86.mmx.psll.d(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i64 [[TMP15]] to <2 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast x86_mmx [[TMP4]] to <2 x i32>
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast i64 [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[TMP20:%.*]] = call <1 x i64> @llvm.x86.mmx.psll.d(<1 x i64> [[TMP4]], <1 x i64> [[MMX_VAR1_I]])
+; CHECK-NEXT:    [[TMP12:%.*]] = or <1 x i64> [[TMP20]], [[TMP19]]
+; CHECK-NEXT:    [[TMP21:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psll.d(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast <1 x i64> [[TMP12]] to <2 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[TMP21]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP18]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <2 x i32> [[TMP5]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <1 x i64> [[TMP6]], i32 0
@@ -1348,20 +1338,21 @@ define i64 @test58(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[TMP9]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = extractelement <1 x i64> [[TMP10]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <1 x i64> [[B]], i32 0
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast i64 [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[_MSPROP]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64 [[_MSPROP]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast i64 [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <1 x i64> [[TMP8]] to i64
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[TMP15]], 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = sext i1 [[TMP13]] to i64
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64 [[TMP12]] to x86_mmx
-; CHECK-NEXT:    [[TMP2:%.*]] = call x86_mmx @llvm.x86.mmx.psll.w(x86_mmx [[TMP8]], x86_mmx [[MMX_VAR1_I]])
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP15:%.*]] = or i64 [[TMP3]], [[TMP14]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call x86_mmx @llvm.x86.mmx.psll.w(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i64 [[TMP15]] to <4 x i16>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast x86_mmx [[TMP4]] to <4 x i16>
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast i64 [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[TMP20:%.*]] = call <1 x i64> @llvm.x86.mmx.psll.w(<1 x i64> [[TMP4]], <1 x i64> [[MMX_VAR1_I]])
+; CHECK-NEXT:    [[TMP12:%.*]] = or <1 x i64> [[TMP20]], [[TMP19]]
+; CHECK-NEXT:    [[TMP21:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psll.w(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast <1 x i64> [[TMP12]] to <4 x i16>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[TMP21]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP18]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <4 x i16> [[TMP5]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <1 x i64> [[TMP6]], i32 0
@@ -1394,16 +1385,16 @@ define i64 @test56(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.pxor(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <2 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pxor(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <2 x i32>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -1434,16 +1425,16 @@ define i64 @test55(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.por(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <2 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.por(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <2 x i32>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -1474,16 +1465,16 @@ define i64 @test54(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.pandn(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <2 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pandn(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <2 x i32>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -1514,16 +1505,16 @@ define i64 @test53(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.pand(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <2 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pand(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <2 x i32>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -1554,16 +1545,16 @@ define i64 @test52(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.pmull.w(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <4 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pmull.w(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -1592,16 +1583,16 @@ define i64 @test51(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.pmull.w(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <4 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pmull.w(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -1632,16 +1623,16 @@ define i64 @test50(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.pmulh.w(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <4 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pmulh.w(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -1672,22 +1663,22 @@ define i64 @test49(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <1 x i64> [[TMP15]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP19]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP16]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[TMP8:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[TMP8]] to <2 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP19]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP16]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[TMP8]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne <2 x i32> [[TMP9]], zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = sext <2 x i1> [[TMP10]] to <2 x i32>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP11]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.pmadd.wd(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i64 [[TMP12]] to <2 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <2 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[TMP14:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[TMP12]] to <2 x i32>
+; CHECK-NEXT:    [[TMP20:%.*]] = bitcast <1 x i64> [[TMP14]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <2 x i32> [[TMP3]] to <1 x i64>
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <1 x i64> [[TMP17]], i32 0
+; CHECK-NEXT:    [[TMP21:%.*]] = bitcast <2 x i32> [[TMP20]] to <1 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP17]], i32 0
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <1 x i64> [[TMP21]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[TMP18]]
 ;
@@ -1716,16 +1707,16 @@ define i64 @test48(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.psubus.w(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <4 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psubus.w(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -1756,16 +1747,16 @@ define i64 @test47(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.psubus.b(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <8 x i8>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <8 x i8>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psubus.b(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <8 x i8>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -1796,16 +1787,16 @@ define i64 @test46(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.psubs.w(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <4 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psubs.w(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -1836,16 +1827,16 @@ define i64 @test45(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.psubs.b(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <8 x i8>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <8 x i8>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psubs.b(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <8 x i8>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -1872,13 +1863,16 @@ define i64 @test44(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <1 x i64> [[A]], i32 0
-; CHECK-NEXT:    [[MMX_VAR:%.*]] = bitcast i64 [[TMP0]] to x86_mmx
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i64 [[_MSPROP]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR:%.*]] = bitcast i64 [[TMP0]] to <1 x i64>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <1 x i64> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <1 x i64> [[B]], i32 0
-; CHECK-NEXT:    [[MMX_VAR1:%.*]] = bitcast i64 [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP2:%.*]] = or i64 [[_MSPROP]], [[_MSPROP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.psub.q(x86_mmx [[MMX_VAR]], x86_mmx [[MMX_VAR1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64 [[_MSPROP1]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1:%.*]] = bitcast i64 [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <1 x i64> [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psub.q(<1 x i64> [[MMX_VAR]], <1 x i64> [[MMX_VAR1]])
+; CHECK-NEXT:    [[_MSPROP2:%.*]] = bitcast <1 x i64> [[_MSPROP3]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[TMP6]] to i64
 ; CHECK-NEXT:    store i64 [[_MSPROP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[TMP3]]
 ;
@@ -1907,16 +1901,16 @@ define i64 @test43(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.psub.d(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <2 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psub.d(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <2 x i32>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -1947,16 +1941,16 @@ define i64 @test42(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.psub.w(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <4 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psub.w(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -1987,16 +1981,16 @@ define i64 @test41(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.psub.b(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <8 x i8>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <8 x i8>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psub.b(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <8 x i8>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -2027,16 +2021,16 @@ define i64 @test40(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.paddus.w(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <4 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.paddus.w(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -2067,16 +2061,16 @@ define i64 @test39(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.paddus.b(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <8 x i8>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <8 x i8>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.paddus.b(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <8 x i8>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -2107,16 +2101,16 @@ define i64 @test38(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.padds.w(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <4 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.padds.w(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -2147,16 +2141,16 @@ define i64 @test37(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.padds.b(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <8 x i8>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <8 x i8>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.padds.b(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <8 x i8>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -2185,13 +2179,16 @@ define i64 @test36(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <1 x i64> [[A]], i32 0
-; CHECK-NEXT:    [[MMX_VAR:%.*]] = bitcast i64 [[TMP0]] to x86_mmx
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i64 [[_MSPROP]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR:%.*]] = bitcast i64 [[TMP0]] to <1 x i64>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <1 x i64> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <1 x i64> [[B]], i32 0
-; CHECK-NEXT:    [[MMX_VAR1:%.*]] = bitcast i64 [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP2:%.*]] = or i64 [[_MSPROP]], [[_MSPROP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.padd.q(x86_mmx [[MMX_VAR]], x86_mmx [[MMX_VAR1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64 [[_MSPROP1]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1:%.*]] = bitcast i64 [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP3:%.*]] = or <1 x i64> [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call <1 x i64> @llvm.x86.mmx.padd.q(<1 x i64> [[MMX_VAR]], <1 x i64> [[MMX_VAR1]])
+; CHECK-NEXT:    [[_MSPROP2:%.*]] = bitcast <1 x i64> [[_MSPROP3]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[TMP6]] to i64
 ; CHECK-NEXT:    store i64 [[_MSPROP2]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[TMP3]]
 ;
@@ -2218,16 +2215,16 @@ define i64 @test35(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <2 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <2 x i32>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <2 x i32> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -2258,16 +2255,16 @@ define i64 @test34(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.padd.w(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <4 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.padd.w(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -2298,16 +2295,16 @@ define i64 @test33(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.padd.b(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <8 x i8>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <8 x i8>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.padd.b(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <8 x i8>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -2338,17 +2335,20 @@ define i64 @test32(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[TMP12]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP4]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP13]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[TMP8:%.*]] = or i64 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP4]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP13]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP16:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <1 x i64> [[TMP16]] to i64
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = sext i1 [[TMP9]] to i64
 ; CHECK-NEXT:    [[TMP11:%.*]] = lshr i64 [[TMP10]], 48
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.psad.bw(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to i64
-; CHECK-NEXT:    store i64 [[TMP11]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast i64 [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[TMP14:%.*]] = tail call <1 x i64> @llvm.x86.mmx.psad.bw(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <1 x i64> [[TMP17]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[TMP14]] to i64
+; CHECK-NEXT:    store i64 [[TMP15]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[TMP3]]
 ;
 entry:
@@ -2374,16 +2374,16 @@ define i64 @test31(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.pmins.w(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <4 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pmins.w(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -2414,16 +2414,16 @@ define i64 @test30(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.pminu.b(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <8 x i8>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <8 x i8>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pminu.b(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <8 x i8>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -2454,16 +2454,16 @@ define i64 @test29(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.pmaxs.w(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <4 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pmaxs.w(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -2494,16 +2494,16 @@ define i64 @test28(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.pmaxu.b(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <8 x i8>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <8 x i8>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pmaxu.b(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <8 x i8>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -2534,16 +2534,16 @@ define i64 @test27(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.pavg.w(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <4 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pavg.w(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -2574,16 +2574,16 @@ define i64 @test26(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.pavg.b(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <8 x i8>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <8 x i8>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pavg.b(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <8 x i8>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i8> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -2612,16 +2612,19 @@ define void @test25(ptr %p, <1 x i64> %a) nounwind optsize ssp #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = extractelement <1 x i64> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <1 x i64> [[A]], i32 0
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast i64 [[TMP0]] to x86_mmx
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i64 [[_MSPROP]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast i64 [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = xor i64 [[TMP4]], 87960930222080
+; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
+; CHECK-NEXT:    store <1 x i64> [[TMP3]], ptr [[TMP6]], align 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0:![0-9]+]]
-; CHECK:       3:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF0:![0-9]+]]
+; CHECK:       7:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6:[0-9]+]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       4:
-; CHECK-NEXT:    tail call void @llvm.x86.mmx.movnt.dq(ptr [[P]], x86_mmx [[MMX_VAR_I]]) #[[ATTR2]]
+; CHECK:       8:
+; CHECK-NEXT:    tail call void @llvm.x86.mmx.movnt.dq(ptr [[P]], <1 x i64> [[MMX_VAR_I]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2641,15 +2644,16 @@ define i32 @test24(<1 x i64> %a) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <1 x i64> [[TMP2]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i8> [[TMP6]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP0]] to x86_mmx
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP6]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[TMP4]] to i64
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP3]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
-; CHECK:       4:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
+; CHECK:       5:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       5:
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.x86.mmx.pmovmskb(x86_mmx [[MMX_VAR_I]]) #[[ATTR2]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.x86.mmx.pmovmskb(<1 x i64> [[MMX_VAR_I]]) #[[ATTR2]]
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
@@ -2674,21 +2678,23 @@ define void @test23(<1 x i64> %d, <1 x i64> %n, ptr %p) nounwind optsize ssp #0 
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[N]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[TMP6]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[D]] to <8 x i8>
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i8> [[TMP5]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <8 x i8> [[TMP3]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to x86_mmx
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <8 x i8> [[TMP5]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <1 x i64> [[TMP9]] to i64
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP7]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <1 x i64> [[TMP10]] to i64
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP8]], 0
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP2]], 0
 ; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF0]]
-; CHECK:       9:
+; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF0]]
+; CHECK:       11:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       10:
-; CHECK-NEXT:    tail call void @llvm.x86.mmx.maskmovq(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]], ptr [[P]]) #[[ATTR2]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.x86.mmx.maskmovq(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]], ptr [[P]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2713,16 +2719,16 @@ define i64 @test22(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.pmulhu.w(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64 [[_MSPROP]] to <4 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP14]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP15:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pmulhu.w(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP15]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP9]] to <1 x i64>
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i16> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <1 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -2750,16 +2756,17 @@ define i64 @test21(<1 x i64> %a) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <1 x i64> [[TMP7]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <4 x i16> [[TMP8]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <4 x i16> [[TMP8]] to <1 x i64>
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[TMP10]] to i64
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP10:%.*]], label [[TMP6:%.*]], !prof [[PROF0]]
-; CHECK:       5:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP12:%.*]], !prof [[PROF0]]
+; CHECK:       6:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       6:
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.sse.pshuf.w(x86_mmx [[TMP1]], i8 3) #[[ATTR5]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <4 x i16>
+; CHECK:       7:
+; CHECK-NEXT:    [[TMP13:%.*]] = tail call <1 x i64> @llvm.x86.sse.pshuf.w(<1 x i64> [[TMP11]], i8 3) #[[ATTR5]]
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[TMP13]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP3]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
@@ -2783,16 +2790,17 @@ define i32 @test21_2(<1 x i64> %a) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <1 x i64> [[TMP7]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <4 x i16> [[TMP8]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <4 x i16> [[TMP8]] to <1 x i64>
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <1 x i64> [[TMP10]] to i64
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP9]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP10:%.*]], label [[TMP6:%.*]], !prof [[PROF0]]
-; CHECK:       5:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP12:%.*]], !prof [[PROF0]]
+; CHECK:       6:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       6:
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.sse.pshuf.w(x86_mmx [[TMP1]], i8 3) #[[ATTR5]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <4 x i16>
+; CHECK:       7:
+; CHECK-NEXT:    [[TMP13:%.*]] = tail call <1 x i64> @llvm.x86.sse.pshuf.w(<1 x i64> [[TMP11]], i8 3) #[[ATTR5]]
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[TMP13]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP3]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP4]], i32 0
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
@@ -2821,13 +2829,14 @@ define i64 @test20(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[TMP8]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP4]] to i64
-; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP9]] to i64
-; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.pmulu.dq(x86_mmx [[MMX_VAR_I]], x86_mmx [[MMX_VAR1_I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP4]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR_I:%.*]] = bitcast <2 x i32> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i32> [[TMP9]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1_I:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP1:%.*]] = or <1 x i64> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pmulu.dq(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
+; CHECK-NEXT:    [[_MSPROP:%.*]] = bitcast <1 x i64> [[_MSPROP1]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[TMP10]] to i64
 ; CHECK-NEXT:    store i64 [[_MSPROP]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[TMP3]]
 ;
@@ -2851,15 +2860,16 @@ define <2 x double> @test19(<1 x i64> %a) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <1 x i64> [[TMP4]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP7]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i32> [[TMP7]] to <1 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[TMP5]] to i64
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP3]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF0]]
-; CHECK:       5:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK:       6:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       6:
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.x86.sse.cvtpi2pd(x86_mmx [[TMP1]]) #[[ATTR5]]
+; CHECK:       7:
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.x86.sse.cvtpi2pd(<1 x i64> [[TMP8]]) #[[ATTR5]]
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x double> [[TMP2]]
 ;
@@ -2885,8 +2895,8 @@ define i64 @test18(<2 x double> %a) #0 {
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       3:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call x86_mmx @llvm.x86.sse.cvttpd2pi(<2 x double> [[A]]) #[[ATTR5]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast x86_mmx [[TMP0]] to <2 x i32>
+; CHECK-NEXT:    [[TMP8:%.*]] = tail call <1 x i64> @llvm.x86.sse.cvttpd2pi(<2 x double> [[A]]) #[[ATTR5]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[TMP8]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <1 x i64> [[TMP2]], i32 0
 ; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
@@ -2915,8 +2925,8 @@ define i64 @test17(<2 x double> %a) #0 {
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       3:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call x86_mmx @llvm.x86.sse.cvtpd2pi(<2 x double> [[A]]) #[[ATTR5]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast x86_mmx [[TMP0]] to <2 x i32>
+; CHECK-NEXT:    [[TMP8:%.*]] = tail call <1 x i64> @llvm.x86.sse.cvtpd2pi(<2 x double> [[A]]) #[[ATTR5]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[TMP8]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <1 x i64> [[TMP2]], i32 0
 ; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
@@ -2941,20 +2951,24 @@ define i64 @test16(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = extractelement <1 x i64> [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <1 x i64> [[A]], i32 0
-; CHECK-NEXT:    [[MMX_VAR:%.*]] = bitcast i64 [[TMP0]] to x86_mmx
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i64 [[_MSPROP]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR:%.*]] = bitcast i64 [[TMP0]] to <1 x i64>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = extractelement <1 x i64> [[TMP7]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <1 x i64> [[B]], i32 0
-; CHECK-NEXT:    [[MMX_VAR1:%.*]] = bitcast i64 [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[_MSPROP]], 0
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[_MSPROP1]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i64 [[_MSPROP1]] to <1 x i64>
+; CHECK-NEXT:    [[MMX_VAR1:%.*]] = bitcast i64 [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[TMP4]] to i64
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP11]], 0
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <1 x i64> [[TMP5]] to i64
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP12]], 0
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP2]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
-; CHECK:       4:
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       5:
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.mmx.palignr.b(x86_mmx [[MMX_VAR]], x86_mmx [[MMX_VAR1]], i8 16)
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to i64
+; CHECK:       9:
+; CHECK-NEXT:    [[TMP10:%.*]] = tail call <1 x i64> @llvm.x86.mmx.palignr.b(<1 x i64> [[MMX_VAR]], <1 x i64> [[MMX_VAR1]], i8 16)
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[TMP10]] to i64
 ; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[TMP3]]
 ;
@@ -2978,13 +2992,13 @@ define i64 @test15(<1 x i64> %a) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <1 x i64> [[TMP7]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <2 x i32> [[TMP8]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.ssse3.pabs.d(x86_mmx [[TMP1]]) #[[ATTR5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64 [[TMP11]] to <2 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <2 x i32> [[TMP8]] to <1 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.pabs.d(<1 x i64> [[TMP1]]) #[[ATTR5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <1 x i64> [[TMP11]] to <2 x i32>
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <1 x i64> [[TMP12]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i32> [[TMP6]] to <1 x i64>
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <2 x i32> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <2 x i32> [[TMP13]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <1 x i64> [[TMP9]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -3010,13 +3024,13 @@ define i64 @test14(<1 x i64> %a) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <1 x i64> [[TMP7]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <4 x i16> [[TMP8]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.ssse3.pabs.w(x86_mmx [[TMP1]]) #[[ATTR5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64 [[TMP11]] to <4 x i16>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <4 x i16> [[TMP8]] to <1 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.pabs.w(<1 x i64> [[TMP1]]) #[[ATTR5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <1 x i64> [[TMP11]] to <4 x i16>
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <1 x i64> [[TMP12]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP6]] to <1 x i64>
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <4 x i16> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <4 x i16> [[TMP13]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <1 x i64> [[TMP9]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -3042,13 +3056,13 @@ define i64 @test13(<1 x i64> %a) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <1 x i64> [[TMP7]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <8 x i8> [[TMP8]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call x86_mmx @llvm.x86.ssse3.pabs.b(x86_mmx [[TMP1]]) #[[ATTR5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64 [[TMP11]] to <8 x i8>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast x86_mmx [[TMP2]] to <8 x i8>
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <8 x i8> [[TMP8]] to <1 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP12:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.pabs.b(<1 x i64> [[TMP1]]) #[[ATTR5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <1 x i64> [[TMP11]] to <8 x i8>
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <1 x i64> [[TMP12]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP6]] to <1 x i64>
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <8 x i8> [[TMP3]] to <1 x i64>
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <8 x i8> [[TMP13]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <1 x i64> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <1 x i64> [[TMP9]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr @__msan_retval_tls, align 8
@@ -3077,16 +3091,16 @@ define i64 @test12(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <1 x i64> [[TMP10]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <2 x i32> [[TMP13]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <2 x i32> [[TMP12]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP16]], [[TMP8]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call x86_mmx @llvm.x86.ssse3.psign.d(x86_mmx [[TMP2]], x86_mmx [[TMP3]]) #[[ATTR5]]
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i64 [[_MSPROP]] to <2 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast x86_mmx [[TMP4]] to <2 x i32>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <2 x i32> [[TMP13]] to <1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <2 x i32> [[TMP12]] to <1 x i64>
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP16]], [[TMP8]]
+; CHECK-NEXT:    [[TMP18:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.psign.d(<1 x i64> [[TMP2]], <1 x i64> [[TMP17]]) #[[ATTR5]]
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <2 x i32>
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <1 x i64> [[TMP18]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP11]] to <1 x i64>
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <2 x i32> [[TMP5]] to <1 x i64>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <2 x i32> [[TMP19]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <1 x i64> [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <1 x i64> [[TMP14]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP7]], ptr @__msan_retval_tls, align 8
@@ -3117,16 +3131,16 @@ define i64 @test11(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <4 x i16> [[TMP13]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i16> [[TMP12]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP16]], [[TMP8]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call x86_mmx @llvm.x86.ssse3.psign.w(x86_mmx [[TMP2]], x86_mmx [[TMP3]]) #[[ATTR5]]
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i64 [[_MSPROP]] to <4 x i16>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast x86_mmx [[TMP4]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <4 x i16> [[TMP13]] to <1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i16> [[TMP12]] to <1 x i64>
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP16]], [[TMP8]]
+; CHECK-NEXT:    [[TMP18:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.psign.w(<1 x i64> [[TMP2]], <1 x i64> [[TMP17]]) #[[ATTR5]]
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <1 x i64> [[TMP18]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <4 x i16> [[TMP5]] to <1 x i64>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <4 x i16> [[TMP19]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <1 x i64> [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <1 x i64> [[TMP14]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP7]], ptr @__msan_retval_tls, align 8
@@ -3157,16 +3171,16 @@ define i64 @test10(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <1 x i64> [[TMP10]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <8 x i8> [[TMP13]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <8 x i8> [[TMP12]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i8> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP16]], [[TMP8]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call x86_mmx @llvm.x86.ssse3.psign.b(x86_mmx [[TMP2]], x86_mmx [[TMP3]]) #[[ATTR5]]
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i64 [[_MSPROP]] to <8 x i8>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast x86_mmx [[TMP4]] to <8 x i8>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <8 x i8> [[TMP13]] to <1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <8 x i8> [[TMP12]] to <1 x i64>
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP16]], [[TMP8]]
+; CHECK-NEXT:    [[TMP18:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.psign.b(<1 x i64> [[TMP2]], <1 x i64> [[TMP17]]) #[[ATTR5]]
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <8 x i8>
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <1 x i64> [[TMP18]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP11]] to <1 x i64>
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <8 x i8> [[TMP5]] to <1 x i64>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <8 x i8> [[TMP19]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <1 x i64> [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <1 x i64> [[TMP14]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP7]], ptr @__msan_retval_tls, align 8
@@ -3197,16 +3211,16 @@ define i64 @test9(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <1 x i64> [[TMP10]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <8 x i8> [[TMP13]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <8 x i8> [[TMP12]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i8> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP16]], [[TMP8]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call x86_mmx @llvm.x86.ssse3.pshuf.b(x86_mmx [[TMP2]], x86_mmx [[TMP3]]) #[[ATTR5]]
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i64 [[_MSPROP]] to <8 x i8>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast x86_mmx [[TMP4]] to <8 x i8>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <8 x i8> [[TMP13]] to <1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <8 x i8> [[TMP12]] to <1 x i64>
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP16]], [[TMP8]]
+; CHECK-NEXT:    [[TMP18:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.pshuf.b(<1 x i64> [[TMP2]], <1 x i64> [[TMP17]]) #[[ATTR5]]
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <8 x i8>
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <1 x i64> [[TMP18]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP11]] to <1 x i64>
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <8 x i8> [[TMP5]] to <1 x i64>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <8 x i8> [[TMP19]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <1 x i64> [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <1 x i64> [[TMP14]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP7]], ptr @__msan_retval_tls, align 8
@@ -3237,16 +3251,16 @@ define i64 @test8(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <4 x i16> [[TMP13]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i16> [[TMP12]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP16]], [[TMP8]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call x86_mmx @llvm.x86.ssse3.pmul.hr.sw(x86_mmx [[TMP2]], x86_mmx [[TMP3]]) #[[ATTR5]]
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i64 [[_MSPROP]] to <4 x i16>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast x86_mmx [[TMP4]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <4 x i16> [[TMP13]] to <1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i16> [[TMP12]] to <1 x i64>
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP16]], [[TMP8]]
+; CHECK-NEXT:    [[TMP18:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.pmul.hr.sw(<1 x i64> [[TMP2]], <1 x i64> [[TMP17]]) #[[ATTR5]]
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <1 x i64> [[TMP18]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <4 x i16> [[TMP5]] to <1 x i64>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <4 x i16> [[TMP19]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <1 x i64> [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <1 x i64> [[TMP14]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP7]], ptr @__msan_retval_tls, align 8
@@ -3277,18 +3291,18 @@ define i64 @test7(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP18:%.*]] = bitcast <1 x i64> [[TMP15]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-; CHECK-NEXT:    [[TMP21:%.*]] = bitcast <8 x i8> [[TMP18]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <8 x i8> [[TMP17]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i8> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP21]], [[TMP8]]
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i64 [[TMP10]] to <4 x i16>
+; CHECK-NEXT:    [[TMP21:%.*]] = bitcast <8 x i8> [[TMP18]] to <1 x i64>
+; CHECK-NEXT:    [[TMP22:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <8 x i8> [[TMP17]] to <1 x i64>
+; CHECK-NEXT:    [[TMP23:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[TMP10:%.*]] = or <1 x i64> [[TMP21]], [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne <4 x i16> [[TMP11]], zeroinitializer
 ; CHECK-NEXT:    [[TMP13:%.*]] = sext <4 x i1> [[TMP12]] to <4 x i16>
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <4 x i16> [[TMP13]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call x86_mmx @llvm.x86.ssse3.pmadd.ub.sw(x86_mmx [[TMP2]], x86_mmx [[TMP3]]) #[[ATTR5]]
-; CHECK-NEXT:    [[TMP16:%.*]] = bitcast i64 [[TMP14]] to <8 x i8>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast x86_mmx [[TMP4]] to <8 x i8>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <4 x i16> [[TMP13]] to <1 x i64>
+; CHECK-NEXT:    [[TMP24:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.pmadd.ub.sw(<1 x i64> [[TMP22]], <1 x i64> [[TMP23]]) #[[ATTR5]]
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <1 x i64> [[TMP14]] to <8 x i8>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[TMP24]] to <8 x i8>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP16]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <8 x i8> [[TMP5]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <1 x i64> [[TMP6]], i32 0
@@ -3321,16 +3335,16 @@ define i64 @test6(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <4 x i16> [[TMP13]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i16> [[TMP12]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP16]], [[TMP8]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call x86_mmx @llvm.x86.ssse3.phsub.sw(x86_mmx [[TMP2]], x86_mmx [[TMP3]]) #[[ATTR5]]
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i64 [[_MSPROP]] to <4 x i16>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast x86_mmx [[TMP4]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <4 x i16> [[TMP13]] to <1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i16> [[TMP12]] to <1 x i64>
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP16]], [[TMP8]]
+; CHECK-NEXT:    [[TMP18:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.phsub.sw(<1 x i64> [[TMP2]], <1 x i64> [[TMP17]]) #[[ATTR5]]
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <1 x i64> [[TMP18]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <4 x i16> [[TMP5]] to <1 x i64>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <4 x i16> [[TMP19]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <1 x i64> [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <1 x i64> [[TMP14]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP7]], ptr @__msan_retval_tls, align 8
@@ -3361,16 +3375,16 @@ define i64 @test5(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <1 x i64> [[TMP10]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <2 x i32> [[TMP13]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <2 x i32> [[TMP12]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP16]], [[TMP8]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call x86_mmx @llvm.x86.ssse3.phsub.d(x86_mmx [[TMP2]], x86_mmx [[TMP3]]) #[[ATTR5]]
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i64 [[_MSPROP]] to <2 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast x86_mmx [[TMP4]] to <2 x i32>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <2 x i32> [[TMP13]] to <1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <2 x i32> [[TMP12]] to <1 x i64>
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP16]], [[TMP8]]
+; CHECK-NEXT:    [[TMP18:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.phsub.d(<1 x i64> [[TMP2]], <1 x i64> [[TMP17]]) #[[ATTR5]]
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <2 x i32>
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <1 x i64> [[TMP18]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP11]] to <1 x i64>
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <2 x i32> [[TMP5]] to <1 x i64>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <2 x i32> [[TMP19]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <1 x i64> [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <1 x i64> [[TMP14]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP7]], ptr @__msan_retval_tls, align 8
@@ -3401,16 +3415,16 @@ define i64 @test4(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <4 x i16> [[TMP13]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i16> [[TMP12]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP16]], [[TMP8]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call x86_mmx @llvm.x86.ssse3.phsub.w(x86_mmx [[TMP2]], x86_mmx [[TMP3]]) #[[ATTR5]]
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i64 [[_MSPROP]] to <4 x i16>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast x86_mmx [[TMP4]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <4 x i16> [[TMP13]] to <1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i16> [[TMP12]] to <1 x i64>
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP16]], [[TMP8]]
+; CHECK-NEXT:    [[TMP18:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.phsub.w(<1 x i64> [[TMP2]], <1 x i64> [[TMP17]]) #[[ATTR5]]
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <1 x i64> [[TMP18]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <4 x i16> [[TMP5]] to <1 x i64>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <4 x i16> [[TMP19]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <1 x i64> [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <1 x i64> [[TMP14]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP7]], ptr @__msan_retval_tls, align 8
@@ -3441,16 +3455,16 @@ define i64 @test3(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <1 x i64> [[TMP10]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <4 x i16>
-; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <4 x i16> [[TMP13]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i16> [[TMP12]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i16> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP16]], [[TMP8]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call x86_mmx @llvm.x86.ssse3.phadd.sw(x86_mmx [[TMP2]], x86_mmx [[TMP3]]) #[[ATTR5]]
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i64 [[_MSPROP]] to <4 x i16>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast x86_mmx [[TMP4]] to <4 x i16>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <4 x i16> [[TMP13]] to <1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i16> [[TMP12]] to <1 x i64>
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <4 x i16> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP16]], [[TMP8]]
+; CHECK-NEXT:    [[TMP18:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.phadd.sw(<1 x i64> [[TMP2]], <1 x i64> [[TMP17]]) #[[ATTR5]]
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <4 x i16>
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <1 x i64> [[TMP18]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP11]] to <1 x i64>
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <4 x i16> [[TMP5]] to <1 x i64>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <4 x i16> [[TMP19]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <1 x i64> [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <1 x i64> [[TMP14]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP7]], ptr @__msan_retval_tls, align 8
@@ -3481,16 +3495,16 @@ define i64 @test2(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[B]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <1 x i64> [[TMP10]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <2 x i32> [[TMP13]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to x86_mmx
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <2 x i32> [[TMP12]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP0]] to x86_mmx
-; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP16]], [[TMP8]]
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call x86_mmx @llvm.x86.ssse3.phadd.d(x86_mmx [[TMP2]], x86_mmx [[TMP3]]) #[[ATTR5]]
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i64 [[_MSPROP]] to <2 x i32>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast x86_mmx [[TMP4]] to <2 x i32>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <2 x i32> [[TMP13]] to <1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i32> [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <2 x i32> [[TMP12]] to <1 x i64>
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <2 x i32> [[TMP0]] to <1 x i64>
+; CHECK-NEXT:    [[_MSPROP:%.*]] = or <1 x i64> [[TMP16]], [[TMP8]]
+; CHECK-NEXT:    [[TMP18:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.phadd.d(<1 x i64> [[TMP2]], <1 x i64> [[TMP17]]) #[[ATTR5]]
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <1 x i64> [[_MSPROP]] to <2 x i32>
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <1 x i64> [[TMP18]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i32> [[TMP11]] to <1 x i64>
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <2 x i32> [[TMP5]] to <1 x i64>
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <2 x i32> [[TMP19]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <1 x i64> [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <1 x i64> [[TMP14]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP7]], ptr @__msan_retval_tls, align 8
@@ -3514,20 +3528,21 @@ define <4 x float> @test89(<4 x float> %a, x86_mmx %b) nounwind #0 {
 ; ALL-NEXT:    cvtpi2ps %mm0, %xmm0
 ; ALL-NEXT:    ret{{[l|q]}}
 ; CHECK-LABEL: define <4 x float> @test89(
-; CHECK-SAME: <4 x float> [[A:%.*]], x86_mmx [[B:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: <4 x float> [[A:%.*]], <1 x i64> [[B:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load <1 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 16) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP3]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[TMP4]] to i64
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
-; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
-; CHECK:       4:
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF0]]
+; CHECK:       5:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       5:
-; CHECK-NEXT:    [[C:%.*]] = tail call <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float> [[A]], x86_mmx [[B]])
+; CHECK:       6:
+; CHECK-NEXT:    [[C:%.*]] = tail call <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float> [[A]], <1 x i64> [[B]])
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[C]]
 ;
@@ -3561,8 +3576,8 @@ define <1 x i64> @test_mm_insert_pi16(<1 x i64> %a.coerce, i32 %d) nounwind #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <1 x i64> [[A_COERCE]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <1 x i64> [[TMP3]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A_COERCE]] to x86_mmx
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP7]], 0
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i32 [[TMP6]], 0
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
@@ -3571,8 +3586,8 @@ define <1 x i64> @test_mm_insert_pi16(<1 x i64> %a.coerce, i32 %d) nounwind #0 {
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       5:
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call x86_mmx @llvm.x86.mmx.pinsr.w(x86_mmx [[TMP0]], i32 [[D]], i32 2)
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast x86_mmx [[TMP1]] to <1 x i64>
+; CHECK-NEXT:    [[TMP9:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pinsr.w(<1 x i64> [[TMP8]], i32 [[D]], i32 2)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[TMP9]] to <1 x i64>
 ; CHECK-NEXT:    store <1 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <1 x i64> [[TMP2]]
 ;
@@ -3591,15 +3606,15 @@ define i32 @test_mm_extract_pi16(<1 x i64> %a.coerce) nounwind #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <1 x i64> [[A_COERCE]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[TMP2]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A_COERCE]] to x86_mmx
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP5]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.x86.mmx.pextr.w(x86_mmx [[TMP0]], i32 2)
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.x86.mmx.pextr.w(<1 x i64> [[TMP6]], i32 2)
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;

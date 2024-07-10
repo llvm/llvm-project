@@ -32,10 +32,10 @@ define i64 @test1(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test1:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    phaddw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    phaddw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
@@ -77,10 +77,10 @@ define i64 @test88(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test88:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    pcmpgtd %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    pcmpgtd %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
@@ -122,10 +122,10 @@ define i64 @test87(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test87:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    pcmpgtw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    pcmpgtw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
@@ -167,10 +167,10 @@ define i64 @test86(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test86:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    pcmpgtb %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    pcmpgtb %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
@@ -212,10 +212,10 @@ define i64 @test85(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test85:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    pcmpeqd %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    pcmpeqd %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
@@ -257,10 +257,10 @@ define i64 @test84(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test84:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    pcmpeqw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    pcmpeqw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
@@ -302,10 +302,10 @@ define i64 @test83(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test83:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    pcmpeqb %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    pcmpeqb %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
@@ -347,10 +347,10 @@ define i64 @test82(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test82:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    punpckldq %mm1, %mm0 # mm0 = mm0[0],mm1[0]
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
@@ -392,10 +392,10 @@ define i64 @test81(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test81:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    punpcklwd %mm1, %mm0 # mm0 = mm0[0],mm1[0],mm0[1],mm1[1]
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    punpcklwd %mm0, %mm1 # mm1 = mm1[0],mm0[0],mm1[1],mm0[1]
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
@@ -437,10 +437,10 @@ define i64 @test80(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test80:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    punpcklbw %mm1, %mm0 # mm0 = mm0[0],mm1[0],mm0[1],mm1[1],mm0[2],mm1[2],mm0[3],mm1[3]
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    punpcklbw %mm0, %mm1 # mm1 = mm1[0],mm0[0],mm1[1],mm0[1],mm1[2],mm0[2],mm1[3],mm0[3]
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
@@ -482,10 +482,10 @@ define i64 @test79(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test79:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    punpckhdq %mm1, %mm0 # mm0 = mm0[1],mm1[1]
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    punpckhdq %mm0, %mm1 # mm1 = mm1[1],mm0[1]
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
@@ -527,10 +527,10 @@ define i64 @test78(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test78:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    punpckhwd %mm1, %mm0 # mm0 = mm0[2],mm1[2],mm0[3],mm1[3]
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    punpckhwd %mm0, %mm1 # mm1 = mm1[2],mm0[2],mm1[3],mm0[3]
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
@@ -572,10 +572,10 @@ define i64 @test77(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test77:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    punpckhbw %mm1, %mm0 # mm0 = mm0[4],mm1[4],mm0[5],mm1[5],mm0[6],mm1[6],mm0[7],mm1[7]
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    punpckhbw %mm0, %mm1 # mm1 = mm1[4],mm0[4],mm1[5],mm0[5],mm1[6],mm0[6],mm1[7],mm0[7]
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
@@ -617,10 +617,10 @@ define i64 @test76(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test76:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    packuswb %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    packuswb %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
@@ -662,10 +662,10 @@ define i64 @test75(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test75:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    packssdw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    packssdw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
@@ -707,10 +707,10 @@ define i64 @test74(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test74:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    packsswb %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    packsswb %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
@@ -1459,8 +1459,8 @@ define i64 @test56(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test56:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pxor %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -1504,8 +1504,8 @@ define i64 @test55(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test55:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    por %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -1549,10 +1549,10 @@ define i64 @test54(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test54:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    pandn %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    pandn %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
@@ -1594,8 +1594,8 @@ define i64 @test53(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test53:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pand %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -1639,8 +1639,8 @@ define i64 @test52(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test52:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pmullw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -1682,8 +1682,8 @@ define i64 @test51(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test51:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pmullw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -1727,8 +1727,8 @@ define i64 @test50(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test50:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pmulhw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -1772,8 +1772,8 @@ define i64 @test49(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test49:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pmaddwd %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -1817,10 +1817,10 @@ define i64 @test48(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test48:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    psubusw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    psubusw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
@@ -1862,10 +1862,10 @@ define i64 @test47(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test47:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    psubusb %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    psubusb %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
@@ -1907,10 +1907,10 @@ define i64 @test46(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test46:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    psubsw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    psubsw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
@@ -1952,10 +1952,10 @@ define i64 @test45(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test45:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    psubsb %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    psubsb %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
@@ -2032,10 +2032,10 @@ define i64 @test43(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test43:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    psubd %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    psubd %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
@@ -2077,10 +2077,10 @@ define i64 @test42(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test42:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    psubw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    psubw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
@@ -2122,10 +2122,10 @@ define i64 @test41(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test41:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    psubb %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    psubb %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
@@ -2167,8 +2167,8 @@ define i64 @test40(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test40:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    paddusw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -2212,8 +2212,8 @@ define i64 @test39(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test39:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    paddusb %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -2257,8 +2257,8 @@ define i64 @test38(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test38:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    paddsw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -2302,8 +2302,8 @@ define i64 @test37(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test37:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    paddsb %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -2382,8 +2382,8 @@ define i64 @test35(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test35:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    paddd %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -2427,8 +2427,8 @@ define i64 @test34(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test34:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    paddw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -2472,8 +2472,8 @@ define i64 @test33(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test33:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    paddb %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -2517,8 +2517,8 @@ define i64 @test32(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test32:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    psadbw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -2560,8 +2560,8 @@ define i64 @test31(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test31:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pminsw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -2605,8 +2605,8 @@ define i64 @test30(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test30:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pminub %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -2650,8 +2650,8 @@ define i64 @test29(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test29:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pmaxsw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -2695,8 +2695,8 @@ define i64 @test28(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test28:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pmaxub %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -2740,8 +2740,8 @@ define i64 @test27(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test27:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pavgw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -2785,8 +2785,8 @@ define i64 @test26(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test26:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pavgb %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -2884,10 +2884,10 @@ define void @test23(<1 x i64> %d, <1 x i64> %n, ptr %p) nounwind optsize ssp {
 ;
 ; X64-LABEL: test23:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    movq %rdx, %rdi
-; X64-NEXT:    maskmovq %mm1, %mm0
+; X64-NEXT:    maskmovq %mm0, %mm1
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %n to <8 x i8>
@@ -2926,8 +2926,8 @@ define i64 @test22(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test22:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pmulhuw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -3041,8 +3041,8 @@ define i64 @test20(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test20:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pmuludq %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -3320,10 +3320,10 @@ define i64 @test12(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test12:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    psignd %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    psignd %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
@@ -3365,10 +3365,10 @@ define i64 @test11(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test11:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    psignw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    psignw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
@@ -3410,10 +3410,10 @@ define i64 @test10(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test10:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    psignb %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    psignb %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
@@ -3455,10 +3455,10 @@ define i64 @test9(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test9:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    pshufb %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    pshufb %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
@@ -3500,8 +3500,8 @@ define i64 @test8(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test8:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
 ; X64-NEXT:    pmulhrsw %mm0, %mm1
 ; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
@@ -3545,10 +3545,10 @@ define i64 @test7(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test7:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    pmaddubsw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    pmaddubsw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <8 x i8>
@@ -3590,10 +3590,10 @@ define i64 @test6(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test6:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    phsubsw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    phsubsw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
@@ -3635,10 +3635,10 @@ define i64 @test5(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test5:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    phsubd %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    phsubd %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
@@ -3680,10 +3680,10 @@ define i64 @test4(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test4:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    phsubw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    phsubw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
@@ -3725,10 +3725,10 @@ define i64 @test3(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test3:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    phaddsw %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    phaddsw %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <4 x i16>
@@ -3770,10 +3770,10 @@ define i64 @test2(<1 x i64> %a, <1 x i64> %b) nounwind readnone optsize ssp {
 ;
 ; X64-LABEL: test2:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq %rdi, %mm0
-; X64-NEXT:    movq %rsi, %mm1
-; X64-NEXT:    phaddd %mm1, %mm0
-; X64-NEXT:    movq %mm0, %rax
+; X64-NEXT:    movq %rsi, %mm0
+; X64-NEXT:    movq %rdi, %mm1
+; X64-NEXT:    phaddd %mm0, %mm1
+; X64-NEXT:    movq %mm1, %rax
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <1 x i64> %b to <2 x i32>
@@ -3788,10 +3788,26 @@ entry:
 }
 
 define <4 x float> @test89(<4 x float> %a, x86_mmx %b) nounwind {
-; ALL-LABEL: test89:
-; ALL:       # %bb.0:
-; ALL-NEXT:    cvtpi2ps %mm0, %xmm0
-; ALL-NEXT:    ret{{[l|q]}}
+; X86-LABEL: test89:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-8, %esp
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl 12(%ebp), %ecx
+; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    cvtpi2ps (%esp), %xmm0
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
+;
+; X64-LABEL: test89:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %mm0
+; X64-NEXT:    cvtpi2ps %mm0, %xmm0
+; X64-NEXT:    retq
   %c = tail call <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float> %a, x86_mmx %b)
   ret <4 x float> %c
 }

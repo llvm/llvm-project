@@ -14,15 +14,11 @@ define i64 @test47(i64 %arg)  {
 ;
 ; X64-LABEL: test47:
 ; X64:       # %bb.0:
+; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    testq %rdi, %rdi
-; X64-NEXT:    je .LBB0_1
-; X64-NEXT:  # %bb.2:
-; X64-NEXT:    pxor %mm0, %mm0
-; X64-NEXT:    jmp .LBB0_3
-; X64-NEXT:  .LBB0_1:
-; X64-NEXT:    movl $7, %eax
-; X64-NEXT:    movd %eax, %mm0
-; X64-NEXT:  .LBB0_3:
+; X64-NEXT:    movl $7, %ecx
+; X64-NEXT:    cmovneq %rax, %rcx
+; X64-NEXT:    movq %rcx, %mm0
 ; X64-NEXT:    psllw %mm0, %mm0
 ; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    retq
@@ -35,17 +31,17 @@ define i64 @test47(i64 %arg)  {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    orl 12(%ebp), %eax
-; X86-NEXT:    je .LBB0_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    pxor %mm0, %mm0
-; X86-NEXT:    jmp .LBB0_3
-; X86-NEXT:  .LBB0_1:
 ; X86-NEXT:    movl $7, %eax
-; X86-NEXT:    movd %eax, %mm0
-; X86-NEXT:  .LBB0_3:
+; X86-NEXT:    je .LBB0_2
+; X86-NEXT:  # %bb.1:
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:  .LBB0_2:
+; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movq {{[0-9]+}}(%esp), %mm0
 ; X86-NEXT:    psllw %mm0, %mm0
 ; X86-NEXT:    movq %mm0, (%esp)
 ; X86-NEXT:    movl (%esp), %eax
@@ -74,13 +70,8 @@ define i64 @test49(i64 %arg, i64 %x, i64 %y) {
 ; X64-LABEL: test49:
 ; X64:       # %bb.0:
 ; X64-NEXT:    testq %rdi, %rdi
-; X64-NEXT:    je .LBB1_1
-; X64-NEXT:  # %bb.2:
-; X64-NEXT:    movq %rdx, %mm0
-; X64-NEXT:    jmp .LBB1_3
-; X64-NEXT:  .LBB1_1:
+; X64-NEXT:    cmovneq %rdx, %rsi
 ; X64-NEXT:    movq %rsi, %mm0
-; X64-NEXT:  .LBB1_3:
 ; X64-NEXT:    psllw %mm0, %mm0
 ; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    retq

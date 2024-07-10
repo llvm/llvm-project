@@ -30,11 +30,11 @@ entry:
 
 ; CHECK-LABEL: @test_mmx
 ; CHECK: = icmp ne i64 {{.*}}, 0
-; CHECK: [[C:%.*]] = sext i1 {{.*}} to i64
-; CHECK: [[A:%.*]] = call x86_mmx @llvm.x86.mmx.psll.d(
-; CHECK: [[B:%.*]] = bitcast x86_mmx {{.*}}[[A]] to i64
-; CHECK: = or i64 {{.*}}[[B]], {{.*}}[[C]]
-; CHECK: call x86_mmx @llvm.x86.mmx.psll.d(
+; CHECK: [[B:%.*]] = sext i1 {{.*}} to i64
+; CHECK: [[C:%.*]] = bitcast i64 [[B]] to <1 x i64>
+; CHECK: [[A:%.*]] = call <1 x i64> @llvm.x86.mmx.psll.d(
+; CHECK: = or <1 x i64> {{.*}}[[A]], {{.*}}[[C]]
+; CHECK: call <1 x i64> @llvm.x86.mmx.psll.d(
 ; CHECK: ret i64
 
 

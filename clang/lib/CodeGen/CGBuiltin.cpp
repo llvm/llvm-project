@@ -14386,7 +14386,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_vec_init_v4hi:
   case X86::BI__builtin_ia32_vec_init_v2si:
     return Builder.CreateBitCast(BuildVector(Ops),
-                                 llvm::Type::getX86_MMXTy(getLLVMContext()));
+                                 llvm::FixedVectorType::get(Int64Ty, 1));
   case X86::BI__builtin_ia32_vec_ext_v2si:
   case X86::BI__builtin_ia32_vec_ext_v16qi:
   case X86::BI__builtin_ia32_vec_ext_v8hi:
@@ -15971,7 +15971,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   // 3DNow!
   case X86::BI__builtin_ia32_pswapdsf:
   case X86::BI__builtin_ia32_pswapdsi: {
-    llvm::Type *MMXTy = llvm::Type::getX86_MMXTy(getLLVMContext());
+    llvm::Type *MMXTy = llvm::FixedVectorType::get(Int64Ty, 1);
     Ops[0] = Builder.CreateBitCast(Ops[0], MMXTy, "cast");
     llvm::Function *F = CGM.getIntrinsic(Intrinsic::x86_3dnowa_pswapd);
     return Builder.CreateCall(F, Ops, "pswapd");
