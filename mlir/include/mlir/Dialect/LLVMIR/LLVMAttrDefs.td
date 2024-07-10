@@ -1082,8 +1082,8 @@ def LLVM_ZeroAttr : LLVM_Attr<"Zero", "zero">;
 //===----------------------------------------------------------------------===//
 
 def TailCallKindAttr : LLVM_Attr<"TailCallKind", "tailcallkind"> {
-  let parameters = (ins "TailCallKind":$TailCallKind);
-  let assemblyFormat = "`<` $TailCallKind `>`";
+  let parameters = (ins "TailCallKind":$tailCallKind);
+  let assemblyFormat = "`<` $tailCallKind `>`";
 }
 
 #endif // LLVMIR_ATTRDEFS
