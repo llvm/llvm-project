@@ -8,10 +8,9 @@ import sys
 
 class TestHeaderGenIntegration(unittest.TestCase):
     def setUp(self):
-        output_dir_env = os.getenv("TEST_OUTPUT_DIR")
 
         self.output_dir = Path(
-            output_dir_env if output_dir_env else "libc/newhdrgen/tests/output"
+            args.output_dir if args.output_dir else "libc/newhdrgen/tests/output"
         )
 
         self.maxDiff = None
@@ -69,8 +68,7 @@ if __name__ == "__main__":
     )
     args, remaining_argv = parser.parse_known_args()
 
-    if args.output_dir:
-        os.environ["TEST_OUTPUT_DIR"] = args.output_dir
+    TestHeaderGenIntegration.output_dir = args.output_dir
 
     sys.argv[1:] = remaining_argv
 

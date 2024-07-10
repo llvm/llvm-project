@@ -2,7 +2,7 @@ if(LLVM_LIBC_FULL_BUILD)
   enable_testing()
 
   set(NEWHDGEN_TESTS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tests)
-  set(TEST_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/newhdrgen/output)
+  set(TEST_OUTPUT_DIR ${CMAKE_BINARY_DIR}/newhdrgen/output)
 
   add_test(
     NAME newhdrgen_integration_test
