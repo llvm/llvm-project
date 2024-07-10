@@ -1,10 +1,10 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s 2>&1 -o /dev/null | FileCheck -DFILE=%s --strict-whitespace %s --check-prefix=CHECK-WARN
+// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s 2>&1 -o /dev/null | FileCheck -DFILE=%s --strict-whitespace %s --implicit-check-not=valid1_string --implicit-check-not=valid2_string --implicit-check-not=valid3_string --check-prefix=CHECK-WARN
 
 .string "abcd\xFFefg
 12345678"
 
 // CHECK-WARN:   warn-newline-in-escaped-string.s:[[#@LINE-3]]:21: warning: unterminated string; newline inserted
-// CHECK-WARN:  .string "abcd\xFFefg
+// CHECK-NEXT:  .string "abcd\xFFefg
 
 .ascii "some test ascii
 
@@ -13,20 +13,14 @@ with
 newlines\x0A
 "
 
-// CHECK-WARN:   [[#@LINE-7]]:24: warning: unterminated string; newline inserted
-// CHECK-WARN:  .ascii "some test ascii
-// CHECK-WARN:                         ^
-// CHECK-WARN:   [[#@LINE-9]]:1: warning: unterminated string; newline inserted
-// CHECK-WARN:   ^
-// CHECK-WARN:   [[#@LINE-10]]:9: warning: unterminated string; newline inserted
-// CHECK-WARN:   sequence
-// CHECK-WARN:           ^
-// CHECK-WARN:   [[#@LINE-12]]:5: warning: unterminated string; newline inserted
-// CHECK-WARN:   with
-// CHECK-WARN:        ^
-// CHECK-WARN:   [[#@LINE-14]]:13: warning: unterminated string; newline inserted
-// CHECK-WARN:   newlines\x0A
-// CHECK-WARN:           ^
+// CHECK-NEXT:   [[#@LINE-7]]:24: warning: unterminated string; newline inserted
+// CHECK-NEXT:  .ascii "some test ascii
+// CHECK-NEXT:   [[#@LINE-7]]:9: warning: unterminated string; newline inserted
+// CHECK-NEXT:   sequence
+// CHECK-NEXT:   [[#@LINE-8]]:5: warning: unterminated string; newline inserted
+// CHECK-NEXT:   with
+// CHECK-NEXT:   [[#@LINE-9]]:13: warning: unterminated string; newline inserted
+// CHECK-NEXT:   newlines\x0A
 
 .asciz "another test string
 
@@ -36,34 +30,21 @@ newline characters
 
 "
 
-// CHECK-WARN:   [[#@LINE-8]]:28: warning: unterminated string; newline inserted
-// CHECK-WARN:   .asciz "another test string
-// CHECK-WARN:   [[#@LINE-9]]:1: warning: unterminated string; newline inserted
-// CHECK-WARN:   ^
-// CHECK-WARN:   [[#@LINE-10]]:5: warning: unterminated string; newline inserted
-// CHECK-WARN:   with
-// CHECK-WARN:        ^
-// CHECK-WARN:   [[#@LINE-12]]:19: warning: unterminated string; newline inserted
-// CHECK-WARN:   newline characters
-// CHECK-WARN:                      ^
-// CHECK-WARN:   [[#@LINE-14]]:1: warning: unterminated string; newline inserted
-// CHECK-WARN:   ^
-// CHECK-WARN:   [[#@LINE-15]]:1: warning: unterminated string; newline inserted
-// CHECK-WARN:   ^
+// CHECK-NEXT:   [[#@LINE-8]]:28: warning: unterminated string; newline inserted
+// CHECK-NEXT:   .asciz "another test string
+// CHECK-NEXT:   [[#@LINE-8]]:5: warning: unterminated string; newline inserted
+// CHECK-NEXT:   with
+// CHECK-NEXT:   [[#@LINE-9]]:19: warning: unterminated string; newline inserted
+// CHECK-NEXT:   newline characters
 
 .file "warn-newline
 .s"
-// CHECK-WARN:   [[#@LINE-2]]:20: warning: unterminated string; newline inserted
+// CHECK-NEXT:   [[#@LINE-2]]:20: warning: unterminated string; newline inserted
 
 .cv_file 1 "some_an
 other_file.s"
-// CHECK-WARN:   [[#@LINE-2]]:20: warning: unterminated string; newline inserted
+// CHECK-NEXT:   [[#@LINE-2]]:20: warning: unterminated string; newline inserted
 
-.ascii "test\nstring\xFF\n\n\xFF"
-// CHECK-WARN-NOT:    [[#@LINE-1]]{{.*}}
-
-.asciz "\n\n\ntest_string\x0A"
-// CHECK-WARN-NOT:    [[#@LINE-1]]{{.*}}
-
-.string "1234\n\xFF\n\xFF\n"
-// CHECK-WARN-NOT:    [[#@LINE-1]]{{.*}}
+.ascii "test\nvalid1_string\xFF\n\n\xFF"
+.asciz "\n\n\nvalid2_string\x0A"
+.string "1234\nvalid3_string\xFF\n\xFF\n"
