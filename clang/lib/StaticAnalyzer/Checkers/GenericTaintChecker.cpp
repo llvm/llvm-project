@@ -1044,6 +1044,7 @@ bool GenericTaintChecker::generateReportIfTainted(const Expr *E, StringRef Msg,
     return false;
 
   // Generate diagnostic.
+  assert(BT);
   static CheckerProgramPointTag Tag(BT->getCheckerName(), Msg);
   if (ExplodedNode *N = C.generateNonFatalErrorNode(C.getState(), &Tag)) {
     auto report = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
