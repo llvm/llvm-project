@@ -1163,7 +1163,10 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
     // isn't always the case, e.g. PseudoVMV_X_S doesn't have an AVL operand or
     // we've taken the AVL from the VL output of another vsetvli.
     LiveInterval &LI = LIS->getInterval(AVLReg);
-    LIS->extendToIndices(LI, {LIS->getInstructionIndex(*MI).getRegSlot()});
+    SlotIndex SI = LIS->getInstructionIndex(*MI).getRegSlot();
+    assert((LI.liveAt(SI) && LI.getVNInfoAt(SI) == Info.getAVLVNInfo()) ||
+           (!LI.liveAt(SI) && LI.containsOneValue()));
+    LIS->extendToIndices(LI, SI);
   }
 }
 
