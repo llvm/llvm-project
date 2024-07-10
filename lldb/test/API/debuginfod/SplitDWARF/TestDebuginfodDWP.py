@@ -25,7 +25,7 @@ class DebugInfodDWPTests(TestBase):
     # No need to try every flavor of debug inf.
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessPlatform(["linux", "freebsd"])
+    @skipUnlessPlatform(["linux_freebsd_but_old_dwp_tools_on_build_bots_are_broken"])
     def test_normal_stripped(self):
         """
         Validate behavior with a stripped binary, no symbols or symbol locator.
