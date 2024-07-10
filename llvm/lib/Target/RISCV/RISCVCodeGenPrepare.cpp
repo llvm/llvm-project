@@ -187,7 +187,7 @@ bool RISCVCodeGenPrepare::expandVPStrideLoad(IntrinsicInst &II) {
   Type *STy = VTy->getElementType();
   Value *Val = Builder.CreateLoad(STy, BasePtr);
   const auto &TLI = *ST->getTargetLowering();
-  Value *Res = Builder.CreateVectorSplat(VTy->getElementCount(), Val);
+  Value *Res;
 
   // TODO: Also support fixed/illegal vector types to splat with evl = vl.
   if (isa<ScalableVectorType>(VTy) && TLI.isTypeLegal(EVT::getEVT(VTy))) {
@@ -195,6 +195,8 @@ bool RISCVCodeGenPrepare::expandVPStrideLoad(IntrinsicInst &II) {
                                               : Intrinsic::riscv_vmv_v_x;
     Res = Builder.CreateIntrinsic(VMVOp, {VTy, VL->getType()},
                                   {PoisonValue::get(VTy), Val, VL});
+  } else {
+    Res = Builder.CreateVectorSplat(VTy->getElementCount(), Val);
   }
 
   II.replaceAllUsesWith(Res);
