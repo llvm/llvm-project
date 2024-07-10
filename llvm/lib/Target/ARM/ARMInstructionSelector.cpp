@@ -1103,6 +1103,26 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
     assert((ValSize != 64 || STI.hasVFP2Base()) &&
            "Don't know how to load/store 64-bit value without VFP");
 
+    MachineInstr *Ptr = MRI.getVRegDef(I.getOperand(1).getReg());
+    if (Ptr->getOpcode() == TargetOpcode::G_CONSTANT_POOL) {
+      unsigned Opcode;
+      if (Subtarget->isThumb())
+        Opcode = ARM::tLDRpci;
+      else
+        Opcode = ARM::LDRcp;
+
+      auto Instr = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Opcode))
+                       .addDef(Reg)
+                       .add(Ptr->getOperand(1))
+                       .addImm(0)
+                       .add(predOps(ARMCC::AL))
+                       .addMemOperand(I.memoperands().front());
+      if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
+        return false;
+      I.eraseFromParent();
+      return true;
+    }
+
     const auto NewOpc = selectLoadStoreOpCode(I.getOpcode(), RegBank, ValSize);
     if (NewOpc == G_LOAD || NewOpc == G_STORE)
       return false;
