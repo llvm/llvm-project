@@ -6518,9 +6518,11 @@ struct page_object {
   uint32_t prot;
 };
 
-bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
-                               const FileSpec &outfile,
-                               lldb::SaveCoreStyle &core_style, Status &error) {
+bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp, 
+                               lldb_private::CoreDumpOptions &core_options,
+                               Status &error) {
+  auto core_style = core_options.GetCoreDumpStyle();
+  const auto outfile = core_options.GetOutputFile();
   if (!process_sp)
     return false;
 

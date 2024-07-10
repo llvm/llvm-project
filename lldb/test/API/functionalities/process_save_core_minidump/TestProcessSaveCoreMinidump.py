@@ -132,8 +132,11 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 stacks_to_sp_map,
             )
 
+            options = lldb.SBCoreDumpOptions(core_sb_stack)
+            options.SetCoreDumpPluginName("minidump")
+            options.SetCoreDumpStyle(lldb.eSaveCoreStackOnly)
             # validate saving via SBProcess
-            error = process.SaveCore(core_sb_stack, "minidump", lldb.eSaveCoreStackOnly)
+            error = process.SaveCore(options)
             self.assertTrue(error.Success())
             self.assertTrue(os.path.isfile(core_sb_stack))
             self.verify_core_file(
@@ -144,7 +147,10 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
                 stacks_to_sp_map,
             )
 
-            error = process.SaveCore(core_sb_dirty, "minidump", lldb.eSaveCoreDirtyOnly)
+            options = lldb.SBCoreDumpOptions(core_sb_dirty)
+            options.SetCoreDumpPluginName("minidump")
+            options.SetCoreDumpStyle(lldb.eSaveCoreDirtyOnly)
+            error = process.SaveCore(options)
             self.assertTrue(error.Success())
             self.assertTrue(os.path.isfile(core_sb_dirty))
             self.verify_core_file(
@@ -157,7 +163,10 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
 
             # Minidump can now save full core files, but they will be huge and
             # they might cause this test to timeout.
-            error = process.SaveCore(core_sb_full, "minidump", lldb.eSaveCoreFull)
+            options = lldb.SBCoreDumpOptions(core_sb_full)
+            options.SetCoreDumpPluginName("minidump")
+            options.SetCoreDumpStyle(lldb.eSaveCoreFull)
+            error = process.SaveCore(options)
             self.assertTrue(error.Success())
             self.assertTrue(os.path.isfile(core_sb_full))
             self.verify_core_file(

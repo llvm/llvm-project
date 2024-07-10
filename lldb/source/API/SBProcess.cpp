@@ -34,6 +34,7 @@
 
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandReturnObject.h"
+#include "lldb/API/SBCoreDumpOptions.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBFile.h"
@@ -1222,7 +1223,18 @@ lldb::SBError SBProcess::SaveCore(const char *file_name) {
 lldb::SBError SBProcess::SaveCore(const char *file_name,
                                   const char *flavor,
                                   SaveCoreStyle core_style) {
-  LLDB_INSTRUMENT_VA(this, file_name, flavor, core_style);
+  SBCoreDumpOptions options(file_name);
+  options.SetCoreDumpPluginName(flavor);
+  options.SetCoreDumpStyle(core_style);
+  return SaveCore(options);
+}
+
+lldb::SBError SBProcess::SaveCore(SBCoreDumpOptions &options) {
+
+  LLDB_INSTRUMENT_VA(this, 
+      options.GetOutputFile(), 
+      options.GetCoreDumpPluginName(), 
+      options.GetCoreDumpStyle());
 
   lldb::SBError error;
   ProcessSP process_sp(GetSP());
@@ -1239,10 +1251,7 @@ lldb::SBError SBProcess::SaveCore(const char *file_name,
     return error;
   }
 
-  FileSpec core_file(file_name);
-  FileSystem::Instance().Resolve(core_file);
-  error.ref() = PluginManager::SaveCore(process_sp, core_file, core_style,
-                                        flavor);
+  error.ref() = PluginManager::SaveCore(process_sp, options.Ref());
 
   return error;
 }

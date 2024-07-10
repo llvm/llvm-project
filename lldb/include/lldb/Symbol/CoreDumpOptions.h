@@ -9,29 +9,35 @@
 #ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_COREDUMPOPTIONS_H
 #define LLDB_SOURCE_PLUGINS_OBJECTFILE_COREDUMPOPTIONS_H
 
+#include "lldb/Utility/FileSpec.h"
+#include "lldb/lldb-forward.h"
+#include "lldb/lldb-types.h"
+
+#include <optional>
 #include <string>
 
-using namespace lldb;
+namespace lldb_private {
 
 class CoreDumpOptions {
   public:
-    CoreDumpOptions() {};
+    CoreDumpOptions(const lldb_private::FileSpec &fspec) :
+      m_core_dump_file(std::move(fspec)) {};
     ~CoreDumpOptions() = default;
 
 
-  void SetCoreDumpPluginName(const char* name);
-  const char* GetCoreDumpPluginName() const;
+  void SetCoreDumpPluginName(llvm::StringRef name);
+  std::optional<llvm::StringRef> GetCoreDumpPluginName() const;
 
   void SetCoreDumpStyle(lldb::SaveCoreStyle style);
   lldb::SaveCoreStyle GetCoreDumpStyle() const;
 
-  void SetOutputFilePath(const char* path);
-  const char* GetOutputFilePath() const;
+  const lldb_private::FileSpec& GetOutputFile() const;
 
 private:
-  std::string m_core_dump_plugin_name;
-  std::string m_output_file_path;
-  lldb::SaveCoreStyle m_core_dump_style = lldb::eSaveCoreStyleNone;
+  std::optional<std::string> m_core_dump_plugin_name;
+  const lldb_private::FileSpec m_core_dump_file;
+  lldb::SaveCoreStyle m_core_dump_style = lldb::eSaveCoreUnspecified;
 };
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_COREDUMPOPTIONS_H

@@ -9,29 +9,34 @@
 #ifndef LLDB_API_SBCOREDUMPOPTIONS_H
 #define LLDB_API_SBCOREDUMPOPTIONS_H
 
+#include "lldb/API/SBDefines.h"
+#include "lldb/Symbol/CoreDumpOptions.h"
+
 namespace lldb {
 
 class LLDB_API SBCoreDumpOptions {
 public:
-  SBCoreDumpOptions() {};
-  SBStatisticsOptions(const lldb::SBCoreDumpOptions &rhs);
-  ~SBExpressionOptions() = default;
+  SBCoreDumpOptions(const char* filePath);
+  SBCoreDumpOptions(const lldb::SBCoreDumpOptions &rhs);
+  ~SBCoreDumpOptions() = default;
 
-  const SBStatisticsOptions &operator=(const lldb::SBStatisticsOptions &rhs);
+  const SBCoreDumpOptions &operator=(const lldb::SBCoreDumpOptions &rhs);
 
   void SetCoreDumpPluginName(const char* plugin);
-  const char* GetCoreDumpPluginName();
+  const std::optional<const char *> GetCoreDumpPluginName() const;
 
-  void SetCoreDumpStyle(const char* style);
-  const char* GetCoreDumpStyle();
+  void SetCoreDumpStyle(lldb::SaveCoreStyle style);
+  const std::optional<lldb::SaveCoreStyle> GetCoreDumpStyle() const;
 
-  void SetOutputFilePath(const char* path);
-  const char* GetOutputFilePath();
+  const char * GetOutputFile() const;
+
+protected:
+  friend class SBProcess;
+  lldb_private::CoreDumpOptions &Ref() const;
 
 private:
-  std::unique_ptr<lldb_private::SBCoreDumpOptions> m_opaque_up;
+  std::unique_ptr<lldb_private::CoreDumpOptions> m_opaque_up;
 }; // SBCoreDumpOptions
-
-}; // namespace lldb
+} // namespace lldb
 
 #endif // LLDB_API_SBCOREDUMPOPTIONS_H
