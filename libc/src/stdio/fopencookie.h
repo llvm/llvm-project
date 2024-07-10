@@ -9,7 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STDIO_FOPENCOOKIE_H
 #define LLVM_LIBC_SRC_STDIO_FOPENCOOKIE_H
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
+#include "hdr/types/cookie_io_functions_t.h"
 
 namespace LIBC_NAMESPACE {
 

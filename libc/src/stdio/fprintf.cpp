@@ -12,8 +12,8 @@
 #include "src/__support/arg_list.h"
 #include "src/stdio/printf_core/vfprintf_internal.h"
 
+#include "hdr/types/FILE.h"
 #include <stdarg.h>
-#include <stdio.h>
 
 namespace LIBC_NAMESPACE {
 

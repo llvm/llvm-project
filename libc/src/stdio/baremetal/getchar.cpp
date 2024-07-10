@@ -9,7 +9,7 @@
 #include "src/stdio/getchar.h"
 #include "src/__support/OSUtil/io.h"
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
 
 namespace LIBC_NAMESPACE {
 

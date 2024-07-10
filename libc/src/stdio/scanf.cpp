@@ -12,8 +12,8 @@
 #include "src/__support/arg_list.h"
 #include "src/stdio/scanf_core/vfscanf_internal.h"
 
+#include "hdr/types/FILE.h"
 #include <stdarg.h>
-#include <stdio.h>
 
 #ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
 #define SCANF_STDIN LIBC_NAMESPACE::stdin

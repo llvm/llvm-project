@@ -13,8 +13,9 @@
 #include "src/stdio/scanf_core/reader.h"
 #include "src/stdio/scanf_core/scanf_main.h"
 
+#include "hdr/stdio_macros.h"
+#include "hdr/types/FILE.h"
 #include <stdarg.h>
-#include <stdio.h>
 
 namespace LIBC_NAMESPACE {
 

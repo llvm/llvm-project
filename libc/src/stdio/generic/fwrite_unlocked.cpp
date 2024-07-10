@@ -9,8 +9,9 @@
 #include "src/stdio/fwrite_unlocked.h"
 #include "src/__support/File/file.h"
 
+#include "hdr/types/FILE.h"
 #include "src/errno/libc_errno.h"
-#include <stdio.h>
+#include <stddef.h>
 
 namespace LIBC_NAMESPACE {
 

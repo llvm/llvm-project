@@ -37,7 +37,7 @@ add_entrypoint_object(
   HDRS
     flockfile.h
   DEPENDS
-    libc.include.stdio
+    libc.hdr.types.FILE
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
 )
@@ -49,7 +49,7 @@ add_entrypoint_object(
   HDRS
     funlockfile.h
   DEPENDS
-    libc.include.stdio
+    libc.hdr.types.FILE
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
 )
@@ -63,6 +63,8 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.stdio_macros
     libc.hdr.types.off_t
+    libc.hdr.types.cookie_io_functions_t
+    libc.hdr.types.FILE
     libc.src.__support.CPP.new
     libc.src.__support.File.file
 )
@@ -88,7 +90,7 @@ add_entrypoint_object(
     setvbuf.h
   DEPENDS
     libc.src.errno.errno
-    libc.include.stdio
+    libc.hdr.types.FILE
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
 )
@@ -96,6 +98,7 @@ add_entrypoint_object(
 list(APPEND scanf_deps
       libc.src.__support.arg_list
       libc.src.stdio.scanf_core.vfscanf_internal
+      libc.hdr.types.FILE
 )
 
 if(LLVM_LIBC_FULL_BUILD)
@@ -167,6 +170,7 @@ add_entrypoint_object(
   HDRS
     fprintf.h
   DEPENDS
+    libc.hdr.types.FILE
     libc.src.__support.arg_list
     libc.src.stdio.printf_core.vfprintf_internal
 )
@@ -200,6 +204,7 @@ add_entrypoint_object(
   HDRS
     vfprintf.h
   DEPENDS
+    libc.hdr.types.FILE
     libc.src.__support.arg_list
     libc.src.stdio.printf_core.vfprintf_internal
 )
