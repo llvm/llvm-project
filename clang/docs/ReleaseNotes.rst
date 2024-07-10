@@ -1000,6 +1000,7 @@ Bug Fixes to C++ Support
   evaluated to an integer. (#GH96670).
 - Fixed a bug where references to lambda capture inside a ``noexcept`` specifier were not correctly
   instantiated. (#GH95735).
+- Fixed a CTAD substitution bug involving type aliases that reference outer template parameters. (#GH94614).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
