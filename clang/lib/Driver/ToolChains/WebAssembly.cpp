@@ -61,6 +61,10 @@ std::string wasm::Linker::getLinkerPath(const ArgList &Args) const {
   return ToolChain.GetProgramPath(ToolChain.getDefaultLinker());
 }
 
+static bool IsWasip2(const llvm::Triple &TargetTriple) {
+  return TargetTriple.getOSName() == "wasip2";
+}
+
 void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                 const InputInfo &Output,
                                 const InputInfoList &Inputs,
@@ -158,46 +162,51 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
-  if (Args.hasFlag(options::OPT_wasm_opt, options::OPT_no_wasm_opt, true)) {
-    // When optimizing, if wasm-opt is available, run it.
-    std::string WasmOptPath;
-    if (Args.getLastArg(options::OPT_O_Group)) {
-      WasmOptPath = ToolChain.GetProgramPath("wasm-opt");
-      if (WasmOptPath == "wasm-opt") {
-        WasmOptPath = {};
-      }
-    }
+  // Don't use wasm-opt by default on `wasip2` as it doesn't have support for
+  // components at this time. Retain the historical default otherwise, though,
+  // of running `wasm-opt` by default.
+  bool WasmOptDefault = !IsWasip2(ToolChain.getTriple());
+  bool RunWasmOpt = Args.hasFlag(options::OPT_wasm_opt, options::OPT_no_wasm_opt, WasmOptDefault);
 
+  // If wasm-opt is enabled and optimizations are happening look for the
+  // `wasm-opt` program. If it's not found auto-disable it.
+  std::string WasmOptPath;
+  if (RunWasmOpt && Args.getLastArg(options::OPT_O_Group)) {
+    WasmOptPath = ToolChain.GetProgramPath("wasm-opt");
+    if (WasmOptPath == "wasm-opt") {
+      WasmOptPath = {};
+    }
+  }
+
+  if (!WasmOptPath.empty()) {
+    CmdArgs.push_back("--keep-section=target_features");
+  }
+
+  C.addCommand(std::make_unique<Command>(JA, *this,
+                                         ResponseFileSupport::AtFileCurCP(),
+                                         Linker, CmdArgs, Inputs, Output));
+
+  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
     if (!WasmOptPath.empty()) {
-      CmdArgs.push_back("--keep-section=target_features");
-    }
+      StringRef OOpt = "s";
+      if (A->getOption().matches(options::OPT_O4) ||
+          A->getOption().matches(options::OPT_Ofast))
+        OOpt = "4";
+      else if (A->getOption().matches(options::OPT_O0))
+        OOpt = "0";
+      else if (A->getOption().matches(options::OPT_O))
+        OOpt = A->getValue();
 
-    C.addCommand(std::make_unique<Command>(JA, *this,
-                                           ResponseFileSupport::AtFileCurCP(),
-                                           Linker, CmdArgs, Inputs, Output));
-
-    if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
-      if (!WasmOptPath.empty()) {
-        StringRef OOpt = "s";
-        if (A->getOption().matches(options::OPT_O4) ||
-            A->getOption().matches(options::OPT_Ofast))
-          OOpt = "4";
-        else if (A->getOption().matches(options::OPT_O0))
-          OOpt = "0";
-        else if (A->getOption().matches(options::OPT_O))
-          OOpt = A->getValue();
-
-        if (OOpt != "0") {
-          const char *WasmOpt = Args.MakeArgString(WasmOptPath);
-          ArgStringList OptArgs;
-          OptArgs.push_back(Output.getFilename());
-          OptArgs.push_back(Args.MakeArgString(llvm::Twine("-O") + OOpt));
-          OptArgs.push_back("-o");
-          OptArgs.push_back(Output.getFilename());
-          C.addCommand(std::make_unique<Command>(
-              JA, *this, ResponseFileSupport::AtFileCurCP(), WasmOpt, OptArgs,
-              Inputs, Output));
-        }
+      if (OOpt != "0") {
+        const char *WasmOpt = Args.MakeArgString(WasmOptPath);
+        ArgStringList OptArgs;
+        OptArgs.push_back(Output.getFilename());
+        OptArgs.push_back(Args.MakeArgString(llvm::Twine("-O") + OOpt));
+        OptArgs.push_back("-o");
+        OptArgs.push_back(Output.getFilename());
+        C.addCommand(std::make_unique<Command>(
+            JA, *this, ResponseFileSupport::AtFileCurCP(), WasmOpt, OptArgs,
+            Inputs, Output));
       }
     }
   }
@@ -241,7 +250,7 @@ WebAssembly::WebAssembly(const Driver &D, const llvm::Triple &Triple,
 }
 
 const char *WebAssembly::getDefaultLinker() const {
-  if (getOS() == "wasip2")
+  if (IsWasip2(getTriple()))
     return "wasm-component-ld";
   return "wasm-ld";
 }
