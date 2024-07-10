@@ -155,11 +155,6 @@ def parse_args():
         default=[],
     )
     execution_group.add_argument(
-        "--time-tests",
-        help="Track elapsed wall time for each test",
-        action="store_true",
-    )
-    execution_group.add_argument(
         "--no-execute",
         dest="noExecute",
         help="Don't execute any tests (assume PASS)",
@@ -208,6 +203,17 @@ def parse_args():
         dest="ignoreFail",
         action="store_true",
         help="Exit with status zero even if some tests fail",
+    )
+    execution_test_time_group = execution_group.add_mutually_exclusive_group()
+    execution_test_time_group.add_argument(
+        "--no-time-tests",
+        help="Do not track elapsed wall time for each test",
+        action="store_true",
+    )
+    execution_test_time_group.add_argument(
+        "--time-tests-histogram",
+        help="Track elapsed wall time for each test in a histogram",
+        action="store_true",
     )
 
     selection_group = parser.add_argument_group("Test Selection")

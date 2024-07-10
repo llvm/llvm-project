@@ -124,13 +124,14 @@ def main(builtin_params={}):
     run_tests(selected_tests, lit_config, opts, len(discovered_tests))
     elapsed = time.time() - start
 
-    record_test_times(selected_tests, lit_config)
+    if not opts.no_time_tests or opts.time_tests_histogram:
+        record_test_times(selected_tests, lit_config)
 
     selected_tests, discovered_tests = GoogleTest.post_process_shard_results(
         selected_tests, discovered_tests
     )
 
-    if opts.time_tests:
+    if opts.time_tests_histogram:
         print_histogram(discovered_tests)
 
     print_results(discovered_tests, elapsed, opts)
