@@ -813,6 +813,8 @@ Bug Fixes in This Version
 
 - Fixed `static_cast` to array of unknown bound. Fixes (#GH62863).
 
+- Fixed Clang crashing when failing to perform some C++ Initialization Sequences. (#GH98102)
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
