@@ -393,7 +393,9 @@ DebugAddrWriter::DebugAddrWriter(BinaryContext *BC) : BC(BC) {
   AddressStream = std::make_unique<raw_svector_ostream>(*Buffer);
 }
 
-DebugAddrWriter::DebugAddrWriter(BinaryContext *BC, const uint8_t AddressByteSize) : BC(BC), AddressByteSize(AddressByteSize) {
+DebugAddrWriter::DebugAddrWriter(BinaryContext *BC,
+                                 const uint8_t AddressByteSize)
+    : BC(BC), AddressByteSize(AddressByteSize) {
   Buffer = std::make_unique<AddressSectionBuffer>();
   AddressStream = std::make_unique<raw_svector_ostream>(*Buffer);
 }

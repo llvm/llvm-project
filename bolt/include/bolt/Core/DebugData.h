@@ -436,8 +436,11 @@ protected:
 class DebugAddrWriterDwarf5 : public DebugAddrWriter {
 public:
   DebugAddrWriterDwarf5() = delete;
-  DebugAddrWriterDwarf5(BinaryContext *BC) : DebugAddrWriter(BC){}
-  DebugAddrWriterDwarf5(BinaryContext *BC, uint8_t AddressByteSize, std::optional<uint64_t> AddrOffsetSectionBase) : DebugAddrWriter(BC, AddressByteSize), AddrOffsetSectionBase(AddrOffsetSectionBase){}
+  DebugAddrWriterDwarf5(BinaryContext *BC) : DebugAddrWriter(BC) {}
+  DebugAddrWriterDwarf5(BinaryContext *BC, uint8_t AddressByteSize,
+                        std::optional<uint64_t> AddrOffsetSectionBase)
+      : DebugAddrWriter(BC, AddressByteSize),
+        AddrOffsetSectionBase(AddrOffsetSectionBase) {}
 
   /// Write out entries in to .debug_addr section for CUs.
   virtual std::optional<uint64_t> finalize(const size_t BufferSize) override;
