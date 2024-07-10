@@ -1305,10 +1305,10 @@ protected:
         FileSystem::Instance().Resolve(output_file);
         SaveCoreStyle corefile_style = m_options.m_requested_save_core_style;
         CoreDumpOptions core_dump_options(output_file);
-        core_dump_options.SetCoreDumpPluginName(m_options.m_requested_plugin_name);
+        core_dump_options.SetCoreDumpPluginName(
+            m_options.m_requested_plugin_name);
         core_dump_options.SetCoreDumpStyle(corefile_style);
-        Status error =
-            PluginManager::SaveCore(process_sp, core_dump_options);
+        Status error = PluginManager::SaveCore(process_sp, core_dump_options);
         if (error.Success()) {
           if (corefile_style == SaveCoreStyle::eSaveCoreDirtyOnly ||
               corefile_style == SaveCoreStyle::eSaveCoreStackOnly) {

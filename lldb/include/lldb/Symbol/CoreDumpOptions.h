@@ -19,11 +19,10 @@
 namespace lldb_private {
 
 class CoreDumpOptions {
-  public:
-    CoreDumpOptions(const lldb_private::FileSpec &fspec) :
-      m_core_dump_file(std::move(fspec)) {};
-    ~CoreDumpOptions() = default;
-
+public:
+  CoreDumpOptions(const lldb_private::FileSpec &fspec)
+      : m_core_dump_file(std::move(fspec)){};
+  ~CoreDumpOptions() = default;
 
   void SetCoreDumpPluginName(llvm::StringRef name);
   std::optional<llvm::StringRef> GetCoreDumpPluginName() const;
@@ -31,7 +30,7 @@ class CoreDumpOptions {
   void SetCoreDumpStyle(lldb::SaveCoreStyle style);
   lldb::SaveCoreStyle GetCoreDumpStyle() const;
 
-  const lldb_private::FileSpec& GetOutputFile() const;
+  const lldb_private::FileSpec &GetOutputFile() const;
 
 private:
   std::optional<std::string> m_core_dump_plugin_name;

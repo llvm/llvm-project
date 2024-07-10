@@ -1231,10 +1231,9 @@ lldb::SBError SBProcess::SaveCore(const char *file_name,
 
 lldb::SBError SBProcess::SaveCore(SBCoreDumpOptions &options) {
 
-  LLDB_INSTRUMENT_VA(this, 
-      options.GetOutputFile(), 
-      options.GetCoreDumpPluginName(), 
-      options.GetCoreDumpStyle());
+  LLDB_INSTRUMENT_VA(this, options.GetOutputFile(),
+                     options.GetCoreDumpPluginName(),
+                     options.GetCoreDumpStyle());
 
   lldb::SBError error;
   ProcessSP process_sp(GetSP());

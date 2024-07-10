@@ -66,7 +66,8 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
     return false;
 
   llvm::Expected<lldb::FileUP> maybe_core_file = FileSystem::Instance().Open(
-      core_options.GetOutputFile(), File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate);
+      core_options.GetOutputFile(),
+      File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate);
   if (!maybe_core_file) {
     error = maybe_core_file.takeError();
     return false;

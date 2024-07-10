@@ -8,11 +8,11 @@
 
 #include "lldb/Core/PluginManager.h"
 
-#include "lldb/Symbol/CoreDumpOptions.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
+#include "lldb/Symbol/CoreDumpOptions.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
@@ -693,7 +693,8 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
                                lldb_private::CoreDumpOptions &options) {
   if (options.GetCoreDumpPluginName()->empty()) {
     // Try saving core directly from the process plugin first.
-    llvm::Expected<bool> ret = process_sp->SaveCore(options.GetOutputFile().GetPath());
+    llvm::Expected<bool> ret =
+        process_sp->SaveCore(options.GetOutputFile().GetPath());
     if (!ret)
       return Status(ret.takeError());
     if (ret.get())
@@ -704,9 +705,9 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
   Status error;
   auto &instances = GetObjectFileInstances().GetInstances();
   for (auto &instance : instances) {
-    if (options.GetCoreDumpPluginName()->empty() || instance.name == options.GetCoreDumpPluginName()) {
-      if (instance.save_core &&
-          instance.save_core(process_sp, options, error))
+    if (options.GetCoreDumpPluginName()->empty() ||
+        instance.name == options.GetCoreDumpPluginName()) {
+      if (instance.save_core && instance.save_core(process_sp, options, error))
         return error;
     }
   }
@@ -718,7 +719,6 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
         "no ObjectFile plugins were able to save a core for this process");
   return error;
 }
-
 
 #pragma mark ObjectContainer
 

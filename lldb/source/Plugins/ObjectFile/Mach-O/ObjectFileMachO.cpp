@@ -6518,7 +6518,7 @@ struct page_object {
   uint32_t prot;
 };
 
-bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp, 
+bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
                                lldb_private::CoreDumpOptions &core_options,
                                Status &error) {
   auto core_style = core_options.GetCoreDumpStyle();
