@@ -190,6 +190,12 @@ Changes to the RISC-V Backend
 * Added smcdeleg, ssccfg, smcsrind, and sscsrind extensions to -march.
 * ``-mcpu=syntacore-scr3-rv32`` and ``-mcpu=syntacore-scr3-rv64`` were added.
 * ``-mcpu=native`` now detects available features with hwprobe (RISC-V Hardware Probing Interface) on Linux 6.4 or later.
+* The default atomics mapping was changed to emit an additional trailing fence
+  for sequentially consistent stores, offering compatibility with a future
+  mapping using load-acquire and store-release instructions while remaining
+  fully compatible with objects produced prior to this change. The mapping
+  (ABI) used is recorded as an ELF attribute.
+* Ztso is no longer experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------

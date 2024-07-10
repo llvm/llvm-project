@@ -2849,6 +2849,36 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  isnan
+  SRCS
+    isnan.cpp
+  HDRS
+    ../isnan.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  isnanf
+  SRCS
+    isnanf.cpp
+  HDRS
+    ../isnanf.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  isnanl
+  SRCS
+    isnanl.cpp
+  HDRS
+    ../isnanl.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   nan
   SRCS
     nan.cpp
@@ -4091,4 +4121,20 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.sqrt
   COMPILE_OPTIONS
     -O3
+)
+
+add_entrypoint_object(
+  cbrtf
+  SRCS
+    cbrtf.cpp
+  HDRS
+    ../cbrtf.h
+  COMPILE_OPTIONS
+    -O3
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.optimization
 )

@@ -110,12 +110,14 @@ template <ARM::ISAKind ISAKind> struct AssertSameExtensionFlags {
     if (ExpectedFlags == GotFlags)
       return testing::AssertionSuccess();
 
-    return testing::AssertionFailure() << llvm::formatv(
-               "CPU: {4}\n"
-               "Expected extension flags: {0} ({1:x})\n"
-               "     Got extension flags: {2} ({3:x})\n",
-               FormatExtensionFlags(ExpectedFlags), ExpectedFlags,
-               FormatExtensionFlags(GotFlags), ExpectedFlags, CPUName);
+    return testing::AssertionFailure()
+           << llvm::formatv("CPU: {4}\n"
+                            "Expected extension flags: {0} ({1:x})\n"
+                            "     Got extension flags: {2} ({3:x})\n"
+                            "                    Diff: {5} ({6:x})\n",
+                            FormatExtensionFlags(ExpectedFlags), ExpectedFlags,
+                            FormatExtensionFlags(GotFlags), GotFlags, CPUName,
+                            FormatExtensionFlags(ExpectedFlags ^ GotFlags));
   }
 
   testing::AssertionResult operator()(const char *m_expr, const char *n_expr,
@@ -127,11 +129,14 @@ template <ARM::ISAKind ISAKind> struct AssertSameExtensionFlags {
     return testing::AssertionFailure()
            << llvm::formatv("CPU: {4}\n"
                             "Expected extension flags: {0} ({1})\n"
-                            "     Got extension flags: {2} ({3})\n",
+                            "     Got extension flags: {2} ({3})\n"
+                            "                    Diff: {5} ({6})\n",
                             FormatExtensionFlags(ExpectedFlags),
                             SerializeExtensionFlags(ExpectedFlags),
                             FormatExtensionFlags(GotFlags),
-                            SerializeExtensionFlags(ExpectedFlags), CPUName);
+                            SerializeExtensionFlags(GotFlags), CPUName,
+                            FormatExtensionFlags(ExpectedFlags ^ GotFlags),
+                            SerializeExtensionFlags(ExpectedFlags ^ GotFlags));
   }
 
 private:
@@ -2253,23 +2258,6 @@ TEST(TargetParserTest, AArch64PrintSupportedExtensions) {
   EXPECT_EQ(std::string::npos, captured.find("memtag3"));
   EXPECT_EQ(std::string::npos, captured.find("sha1"));
   EXPECT_EQ(std::string::npos, captured.find("ssbs2"));
-}
-
-TEST(TargetParserTest, AArch64PrintEnabledExtensions) {
-  // Pick a single enabled extension to validate formatting
-  std::set<StringRef> EnabledExtensions = {"crc"};
-  std::string ExpectedOutput =
-      "Extensions enabled for the given AArch64 target\n\n"
-      "    Architecture Feature(s)                                Description\n"
-      "    FEAT_CRC32                                             Enable ARMv8 CRC-32 checksum instructions\n";
-
-  outs().flush();
-  testing::internal::CaptureStdout();
-  AArch64::printEnabledExtensions(EnabledExtensions);
-  outs().flush();
-  std::string CapturedOutput = testing::internal::GetCapturedStdout();
-
-  EXPECT_EQ(CapturedOutput, ExpectedOutput);
 }
 
 struct AArch64ExtensionDependenciesBaseArchTestParams {
