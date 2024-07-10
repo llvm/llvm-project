@@ -256,7 +256,7 @@ public:
   };
   virtual ~DebugRangeListsSectionWriter(){};
 
-  static void setAddressWriter(DebugAddrWriter *AddrW) { AddrWriter = AddrW; }
+  void setAddressWriter(DebugAddrWriter *AddrW) { AddrWriter = AddrW; }
 
   /// Add ranges with caching.
   uint64_t addRanges(
@@ -284,7 +284,7 @@ public:
   }
 
 private:
-  static DebugAddrWriter *AddrWriter;
+  DebugAddrWriter *AddrWriter = nullptr;
   /// Used to find unique CU ID.
   DWARFUnit *CU;
   /// Current relative offset of range list entry within this CUs rangelist
@@ -337,6 +337,7 @@ class DebugAddrWriter {
 public:
   DebugAddrWriter() = delete;
   DebugAddrWriter(BinaryContext *BC_);
+  DebugAddrWriter(BinaryContext *BC_, uint8_t AddressByteSize);
   virtual ~DebugAddrWriter(){};
   /// Given an address returns an index in .debug_addr.
   /// Adds Address to map.
@@ -354,28 +355,16 @@ public:
   /// Returns buffer size.
   virtual size_t getBufferSize() { return Buffer->size(); }
 
-  /// Returns False if .debug_addr section was created..
-  bool isInitialized() { return Buffer->size() > 0; }
+  /// Returns True if Buffer is not empty.
+  bool isInitialized() { return !Buffer->empty(); }
 
   /// Updates address base with the given Offset.
   virtual void updateAddrBase(DIEBuilder &DIEBlder, DWARFUnit &CU,
                               const uint64_t Offset);
 
-  /// Appends an AddressSectionBuffer to the address writer buffer for the given
-  /// CU.
+  /// Appends an AddressSectionBuffer to the address writer's buffer.
   void appendToAddressBuffer(const AddressSectionBuffer &Buffer) {
     *AddressStream << Buffer;
-  }
-
-  /// Sets AddressByteSize for the CU.
-  void setAddressByteSize(const uint8_t AddressByteSize) {
-    this->AddressByteSize = AddressByteSize;
-  }
-
-  /// Sets AddrOffsetSectionBase for the CU.
-  void setAddrOffsetSectionBase(
-      const std::optional<uint64_t> AddrOffsetSectionBase) {
-    this->AddrOffsetSectionBase = AddrOffsetSectionBase;
   }
 
 protected:
@@ -436,8 +425,6 @@ protected:
   /// Address for the DWO CU associated with the address writer.
   AddressForDWOCU Map;
   uint8_t AddressByteSize;
-  std::optional<uint64_t> AddrOffsetSectionBase;
-  static constexpr uint32_t HeaderSize = 8;
   /// Mutex used for parallel processing of debug info.
   std::mutex WriterMutex;
   std::unique_ptr<AddressSectionBuffer> Buffer;
@@ -449,7 +436,8 @@ protected:
 class DebugAddrWriterDwarf5 : public DebugAddrWriter {
 public:
   DebugAddrWriterDwarf5() = delete;
-  DebugAddrWriterDwarf5(BinaryContext *BC) : DebugAddrWriter(BC) {}
+  DebugAddrWriterDwarf5(BinaryContext *BC) : DebugAddrWriter(BC){}
+  DebugAddrWriterDwarf5(BinaryContext *BC, uint8_t AddressByteSize, std::optional<uint64_t> AddrOffsetSectionBase) : DebugAddrWriter(BC, AddressByteSize), AddrOffsetSectionBase(AddrOffsetSectionBase){}
 
   /// Write out entries in to .debug_addr section for CUs.
   virtual std::optional<uint64_t> finalize(const size_t BufferSize) override;
@@ -467,6 +455,10 @@ protected:
     }
     return Unit.getOffset();
   }
+
+private:
+  std::optional<uint64_t> AddrOffsetSectionBase;
+  static constexpr uint32_t HeaderSize = 8;
 };
 
 /// This class is NOT thread safe.
@@ -616,9 +608,9 @@ public:
   ~DebugLoclistWriter() {}
   DebugLoclistWriter() = delete;
   DebugLoclistWriter(DWARFUnit &Unit, uint8_t DV, bool SD,
-                     DebugAddrWriter *AddrW)
+                     DebugAddrWriter &AddrW)
       : DebugLocWriter(DV, LocWriterKind::DebugLoclistWriter),
-        AddrWriter(AddrW), CU(Unit), IsSplitDwarf(SD) {
+        AddrWriter(&AddrW), CU(Unit), IsSplitDwarf(SD) {
     if (DwarfVersion >= 5) {
       LocBodyBuffer = std::make_unique<DebugBufferVector>();
       LocBodyStream = std::make_unique<raw_svector_ostream>(*LocBodyBuffer);
@@ -629,8 +621,6 @@ public:
       *LocStream << StringRef(Zeroes, 16);
     }
   }
-
-  void setAddressWriter(DebugAddrWriter *AddrW) { AddrWriter = AddrW; }
 
   /// Stores location lists internally to be written out during finalize phase.
   virtual void addList(DIEBuilder &DIEBldr, DIE &Die, DIEValue &AttrInfo,

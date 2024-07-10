@@ -184,8 +184,6 @@ void DebugRangesSectionWriter::appendToRangeBuffer(
   *RangesStream << CUBuffer;
 }
 
-DebugAddrWriter *DebugRangeListsSectionWriter::AddrWriter = nullptr;
-
 uint64_t DebugRangeListsSectionWriter::addRanges(
     DebugAddressRangesVector &&Ranges,
     std::map<DebugAddressRangesVector, uint64_t> &CachedRanges) {
@@ -391,6 +389,11 @@ void DebugARangesSectionWriter::writeARangesSection(
 }
 
 DebugAddrWriter::DebugAddrWriter(BinaryContext *BC) : BC(BC) {
+  Buffer = std::make_unique<AddressSectionBuffer>();
+  AddressStream = std::make_unique<raw_svector_ostream>(*Buffer);
+}
+
+DebugAddrWriter::DebugAddrWriter(BinaryContext *BC, const uint8_t AddressByteSize) : BC(BC), AddressByteSize(AddressByteSize) {
   Buffer = std::make_unique<AddressSectionBuffer>();
   AddressStream = std::make_unique<raw_svector_ostream>(*Buffer);
 }
