@@ -1726,11 +1726,12 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
   for (auto *MI : ToDelete) {
     if (LIS)
       LIS->RemoveMachineInstrFromMaps(*MI);
+    Register OldAVLReg;
+    if (MI->getOperand(1).isReg())
+      OldAVLReg = MI->getOperand(1).getReg();
     MI->eraseFromParent();
-    if (LIS)
-      for (MachineOperand &MO : MI->uses())
-        if (MO.isReg() && MO.getReg().isVirtual())
-          LIS->shrinkToUses(&LIS->getInterval(MO.getReg()));
+    if (LIS && OldAVLReg && OldAVLReg.isVirtual())
+      LIS->shrinkToUses(&LIS->getInterval(OldAVLReg));
   }
 }
 
