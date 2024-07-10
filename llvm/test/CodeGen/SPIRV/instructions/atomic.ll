@@ -1,3 +1,6 @@
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
@@ -12,6 +15,7 @@
 ; CHECK-DAG: OpName [[XOR:%.*]] "test_xor"
 
 ; CHECK-DAG: [[I32Ty:%.*]] = OpTypeInt 32 0
+; CHECK-DAG: [[I64Ty:%.*]] = OpTypeInt 64 0
 ;; Device scope is encoded with constant 1
 ; CHECK-DAG: [[SCOPE:%.*]] = OpConstant [[I32Ty]] 1
 ;; "monotonic" maps to the relaxed memory semantics, encoded with constant 0
@@ -133,3 +137,24 @@ define i32 @test_xor(i32* %ptr, i32 %val) {
   %r = atomicrmw xor i32* %ptr, i32 %val monotonic
   ret i32 %r
 }
+
+; CHECK: OpFunction
+; CHECK: [[Arg1:%.*]] = OpFunctionParameter
+; CHECK: [[Arg2:%.*]] = OpFunctionParameter
+; CHECK: OpAtomicSMin [[I64Ty]] %[[#]] [[SCOPE]] [[RELAXED]] [[Arg2]]
+; CHECK: OpAtomicSMax [[I64Ty]] %[[#]] [[SCOPE]] [[RELAXED]] [[Arg2]]
+; CHECK: OpAtomicUMin [[I64Ty]] %[[#]] [[SCOPE]] [[RELAXED]] [[Arg2]]
+; CHECK: OpAtomicUMax [[I64Ty]] %[[#]] [[SCOPE]] [[RELAXED]] [[Arg2]]
+; CHECK: OpFunctionEnd
+define dso_local spir_kernel void @test_wrappers(ptr addrspace(4) %arg, i64 %val) {
+  %r1 = call spir_func i64 @__spirv_AtomicSMin(ptr addrspace(4) %arg, i32 1, i32 0, i64 %val)
+  %r2 = call spir_func i64 @__spirv_AtomicSMax(ptr addrspace(4) %arg, i32 1, i32 0, i64 %val)
+  %r3 = call spir_func i64 @__spirv_AtomicUMin(ptr addrspace(4) %arg, i32 1, i32 0, i64 %val)
+  %r4 = call spir_func i64 @__spirv_AtomicUMax(ptr addrspace(4) %arg, i32 1, i32 0, i64 %val)
+  ret void
+}
+
+declare dso_local spir_func i64 @__spirv_AtomicSMin(ptr addrspace(4), i32, i32, i64)
+declare dso_local spir_func i64 @__spirv_AtomicSMax(ptr addrspace(4), i32, i32, i64)
+declare dso_local spir_func i64 @__spirv_AtomicUMin(ptr addrspace(4), i32, i32, i64)
+declare dso_local spir_func i64 @__spirv_AtomicUMax(ptr addrspace(4), i32, i32, i64)

@@ -36,7 +36,7 @@ public:
                const clang::CodeGenOptions &CGO,
                clang::DiagnosticsEngine &Diags);
 
-  ~CIRGenModule();
+  ~CIRGenModule() = default;
 
 private:
   /// Hold Clang AST information.
@@ -44,12 +44,8 @@ private:
 
   const clang::LangOptions &langOpts;
 
-  [[maybe_unused]] const clang::CodeGenOptions &codeGenOpts;
-
   /// A "module" matches a c/cpp source file: containing a list of functions.
   mlir::ModuleOp theModule;
-
-  [[maybe_unused]] clang::DiagnosticsEngine &Diags;
 
   const clang::TargetInfo &target;
 

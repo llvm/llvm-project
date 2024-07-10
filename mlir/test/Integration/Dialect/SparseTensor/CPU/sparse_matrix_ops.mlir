@@ -163,11 +163,11 @@ module {
     // CHECK-NEXT: nse = 9
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 4, 8 )
-    // CHECK-NEXT: pos[0] : ( 0, 4
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3
-    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 6, 9
-    // CHECK-NEXT: crd[1] : ( 0, 1, 7, 2, 4, 7, 0, 2, 3
-    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8, 9
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 6, 9 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 7, 2, 4, 7, 0, 2, 3 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5, 6, 7, 8, 9 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %sm1 : tensor<?x?xf64, #DCSR>
@@ -177,11 +177,11 @@ module {
     // CHECK-NEXT: nse = 6
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 4, 8 )
-    // CHECK-NEXT: pos[0] : ( 0, 3
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2
-    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 6
-    // CHECK-NEXT: crd[1] : ( 0, 7, 0, 6, 1, 7
-    // CHECK-NEXT: values : ( 6, 5, 4, 3, 2, 1
+    // CHECK-NEXT: pos[0] : ( 0, 3 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 4, 6 )
+    // CHECK-NEXT: crd[1] : ( 0, 7, 0, 6, 1, 7 )
+    // CHECK-NEXT: values : ( 6, 5, 4, 3, 2, 1 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %sm2 : tensor<?x?xf64, #DCSR>
@@ -191,11 +191,11 @@ module {
     // CHECK-NEXT: nse = 9
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 4, 8 )
-    // CHECK-NEXT: pos[0] : ( 0, 4
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3
-    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 6, 9
-    // CHECK-NEXT: crd[1] : ( 0, 1, 7, 2, 4, 7, 0, 2, 3
-    // CHECK-NEXT: values : ( 2, 4, 6, 8, 10, 12, 14, 16, 18
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 6, 9 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 7, 2, 4, 7, 0, 2, 3 )
+    // CHECK-NEXT: values : ( 2, 4, 6, 8, 10, 12, 14, 16, 18 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %0 : tensor<?x?xf64, #DCSR>
@@ -205,11 +205,11 @@ module {
     // CHECK-NEXT: nse = 9
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 4, 8 )
-    // CHECK-NEXT: pos[0] : ( 0, 4
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3
-    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 6, 9
-    // CHECK-NEXT: crd[1] : ( 0, 1, 7, 2, 4, 7, 0, 2, 3
-    // CHECK-NEXT: values : ( 2, 4, 6, 8, 10, 12, 14, 16, 18
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3, 6, 9 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 7, 2, 4, 7, 0, 2, 3 )
+    // CHECK-NEXT: values : ( 2, 4, 6, 8, 10, 12, 14, 16, 18 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %1 : tensor<?x?xf64, #DCSR>
@@ -219,11 +219,11 @@ module {
     // CHECK-NEXT: nse = 13
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 4, 8 )
-    // CHECK-NEXT: pos[0] : ( 0, 4
-    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3
-    // CHECK-NEXT: pos[1] : ( 0, 3, 6, 10, 13
-    // CHECK-NEXT: crd[1] : ( 0, 1, 7, 0, 6, 7, 1, 2, 4, 7, 0, 2, 3
-    // CHECK-NEXT: values : ( 8, 4, 5, 4, 3, 6, 2, 8, 10, 13, 14, 16, 18
+    // CHECK-NEXT: pos[0] : ( 0, 4 )
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 3 )
+    // CHECK-NEXT: pos[1] : ( 0, 3, 6, 10, 13 )
+    // CHECK-NEXT: crd[1] : ( 0, 1, 7, 0, 6, 7, 1, 2, 4, 7, 0, 2, 3 )
+    // CHECK-NEXT: values : ( 8, 4, 5, 4, 3, 6, 2, 8, 10, 13, 14, 16, 18 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %2 : tensor<?x?xf64, #DCSR>
@@ -233,11 +233,11 @@ module {
     // CHECK-NEXT: nse = 2
     // CHECK-NEXT: dim = ( 4, 8 )
     // CHECK-NEXT: lvl = ( 4, 8 )
-    // CHECK-NEXT: pos[0] : ( 0, 2
-    // CHECK-NEXT: crd[0] : ( 0, 2
-    // CHECK-NEXT: pos[1] : ( 0, 1, 2
-    // CHECK-NEXT: crd[1] : ( 0, 7
-    // CHECK-NEXT: values : ( 12, 12
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 0, 2 )
+    // CHECK-NEXT: pos[1] : ( 0, 1, 2 )
+    // CHECK-NEXT: crd[1] : ( 0, 7 )
+    // CHECK-NEXT: values : ( 12, 12 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %3 : tensor<?x?xf64, #DCSR>

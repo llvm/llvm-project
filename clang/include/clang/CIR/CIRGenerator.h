@@ -11,18 +11,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_CIRGENERATOR_H_
-#define CLANG_CIRGENERATOR_H_
+#ifndef LLVM_CLANG_CIR_CIRGENERATOR_H
+#define LLVM_CLANG_CIR_CIRGENERATOR_H
 
 #include "clang/AST/ASTConsumer.h"
-#include "clang/AST/DeclGroup.h"
 #include "clang/Basic/CodeGenOptions.h"
-#include "clang/Basic/Diagnostic.h"
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
 #include <memory>
+
+namespace clang {
+class DeclGroupRef;
+class DiagnosticsEngine;
+} // namespace clang
 
 namespace mlir {
 class MLIRContext;
@@ -32,28 +35,26 @@ class CIRGenModule;
 
 class CIRGenerator : public clang::ASTConsumer {
   virtual void anchor();
-  clang::DiagnosticsEngine &Diags;
+  clang::DiagnosticsEngine &diags;
   clang::ASTContext *astCtx;
-  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-      fs; // Only used for debug info.
+  // Only used for debug info.
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs;
 
-  const clang::CodeGenOptions codeGenOpts; // Intentionally copied in.
-
-  [[maybe_unused]] unsigned HandlingTopLevelDecls;
+  const clang::CodeGenOptions &codeGenOpts;
 
 protected:
   std::unique_ptr<mlir::MLIRContext> mlirCtx;
-  std::unique_ptr<CIRGenModule> CGM;
+  std::unique_ptr<CIRGenModule> cgm;
 
 public:
   CIRGenerator(clang::DiagnosticsEngine &diags,
-               llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-               const clang::CodeGenOptions &CGO);
-  ~CIRGenerator();
-  void Initialize(clang::ASTContext &Context) override;
-  bool HandleTopLevelDecl(clang::DeclGroupRef D) override;
+               llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs,
+               const clang::CodeGenOptions &cgo);
+  ~CIRGenerator() override;
+  void Initialize(clang::ASTContext &astCtx) override;
+  bool HandleTopLevelDecl(clang::DeclGroupRef group) override;
 };
 
 } // namespace cir
 
-#endif // CLANG_CIRGENERATOR_H_
+#endif // LLVM_CLANG_CIR_CIRGENERATOR_H

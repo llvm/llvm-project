@@ -269,7 +269,7 @@ public:
 
   enum TSC {
     TSC_unspecified,
-    TSC_imaginary,
+    TSC_imaginary, // Unsupported
     TSC_complex
   };
 
@@ -875,7 +875,7 @@ public:
   }
 
   /// Finish - This does final analysis of the declspec, issuing diagnostics for
-  /// things like "_Imaginary" (lacking an FP type).  After calling this method,
+  /// things like "_Complex" (lacking an FP type).  After calling this method,
   /// DeclSpec is guaranteed self-consistent, even if an error occurred.
   void Finish(Sema &S, const PrintingPolicy &Policy);
 

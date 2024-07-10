@@ -14,8 +14,6 @@
 
 #include "clang/AST/DeclBase.h"
 
-#include "llvm/Support/Debug.h"
-
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
@@ -23,13 +21,11 @@
 using namespace cir;
 CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
                            clang::ASTContext &astctx,
-                           const clang::CodeGenOptions &CGO,
-                           DiagnosticsEngine &Diags)
-    : astCtx(astctx), langOpts(astctx.getLangOpts()), codeGenOpts(CGO),
-      theModule{mlir::ModuleOp::create(mlir::UnknownLoc())}, Diags(Diags),
+                           const clang::CodeGenOptions &cgo,
+                           DiagnosticsEngine &diags)
+    : astCtx(astctx), langOpts(astctx.getLangOpts()),
+      theModule{mlir::ModuleOp::create(mlir::UnknownLoc())},
       target(astCtx.getTargetInfo()) {}
-
-CIRGenModule::~CIRGenModule() {}
 
 // Emit code for a single top level declaration.
 void CIRGenModule::buildTopLevelDecl(Decl *decl) {}

@@ -22,25 +22,22 @@ void CIRGenerator::anchor() {}
 
 CIRGenerator::CIRGenerator(clang::DiagnosticsEngine &diags,
                            llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> vfs,
-                           const CodeGenOptions &CGO)
-    : Diags(diags), fs(std::move(vfs)), codeGenOpts{CGO},
-      HandlingTopLevelDecls(0) {}
-CIRGenerator::~CIRGenerator() {}
+                           const CodeGenOptions &cgo)
+    : diags(diags), fs(std::move(vfs)), codeGenOpts{cgo} {}
+CIRGenerator::~CIRGenerator() = default;
 
 void CIRGenerator::Initialize(ASTContext &astCtx) {
   using namespace llvm;
 
   this->astCtx = &astCtx;
 
-  CGM = std::make_unique<CIRGenModule>(*mlirCtx.get(), astCtx, codeGenOpts,
-                                       Diags);
+  cgm = std::make_unique<CIRGenModule>(*mlirCtx, astCtx, codeGenOpts, diags);
 }
 
-bool CIRGenerator::HandleTopLevelDecl(DeclGroupRef D) {
+bool CIRGenerator::HandleTopLevelDecl(DeclGroupRef group) {
 
-  for (DeclGroupRef::iterator I = D.begin(), E = D.end(); I != E; ++I) {
-    CGM->buildTopLevelDecl(*I);
-  }
+  for (Decl *decl : group)
+    cgm->buildTopLevelDecl(decl);
 
   return true;
 }

@@ -12,14 +12,29 @@
 #include "src/__support/common.h"
 
 #ifdef __thumb__
-#error "The arm syscall implementation does not yet support thumb flavor."
-#endif // __thumb__
+#define R7 long r7 = number
+#define SYSCALL_INSTR(input_constraint)                                        \
+  int temp;                                                                    \
+  LIBC_INLINE_ASM(R"(
+    mov %[temp], r7
+    mov r7, %2
+    svc #0
+    mov r7, %[temp]
+  )"                                                          \
+                  : "=r"(r0), [temp] "=&r"(temp)                               \
+                  : input_constraint                                           \
+                  : "memory", "cc")
+#else
+#define R7 register long r7 asm("r7") = number
+#define SYSCALL_INSTR(input_constraint)                                        \
+  LIBC_INLINE_ASM("svc 0" : "=r"(r0) : input_constraint : "memory", "cc")
+#endif
 
 #define REGISTER_DECL_0                                                        \
-  register long r7 __asm__("r7") = number;                                     \
+  R7;                                                                          \
   register long r0 __asm__("r0");
 #define REGISTER_DECL_1                                                        \
-  register long r7 __asm__("r7") = number;                                     \
+  R7;                                                                          \
   register long r0 __asm__("r0") = arg1;
 #define REGISTER_DECL_2                                                        \
   REGISTER_DECL_1                                                              \
@@ -44,9 +59,6 @@
 #define REGISTER_CONSTRAINT_4 REGISTER_CONSTRAINT_3, "r"(r3)
 #define REGISTER_CONSTRAINT_5 REGISTER_CONSTRAINT_4, "r"(r4)
 #define REGISTER_CONSTRAINT_6 REGISTER_CONSTRAINT_5, "r"(r5)
-
-#define SYSCALL_INSTR(input_constraint)                                        \
-  LIBC_INLINE_ASM("svc 0" : "=r"(r0) : input_constraint : "memory", "cc")
 
 namespace LIBC_NAMESPACE {
 

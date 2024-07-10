@@ -153,18 +153,20 @@ bool WebAssemblyTargetInfo::initFeatureMap(
   auto addGenericFeatures = [&]() {
     Features["multivalue"] = true;
     Features["mutable-globals"] = true;
+    Features["reference-types"] = true;
     Features["sign-ext"] = true;
   };
   auto addBleedingEdgeFeatures = [&]() {
     addGenericFeatures();
     Features["atomics"] = true;
     Features["bulk-memory"] = true;
+    Features["exception-handling"] = true;
+    Features["extended-const"] = true;
     Features["half-precision"] = true;
     Features["multimemory"] = true;
     Features["nontrapping-fptoint"] = true;
-    Features["reference-types"] = true;
     Features["tail-call"] = true;
-    setSIMDLevel(Features, SIMD128, true);
+    setSIMDLevel(Features, RelaxedSIMD, true);
   };
   if (CPU == "generic") {
     addGenericFeatures();

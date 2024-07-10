@@ -54,7 +54,6 @@ namespace std
 #include <__assert>
 #include <__atomic/atomic_base.h>
 #include <__atomic/memory_order.h>
-#include <__availability>
 #include <__memory/unique_ptr.h>
 #include <__thread/poll_with_backoff.h>
 #include <__thread/timed_backoff_policy.h>
@@ -103,10 +102,10 @@ _LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI __barrier_algorithm_base*
 __construct_barrier_algorithm_base(ptrdiff_t& __expected);
 
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI bool
-__arrive_barrier_algorithm_base(__barrier_algorithm_base* __barrier, __barrier_phase_t __old_phase);
+__arrive_barrier_algorithm_base(__barrier_algorithm_base* __barrier, __barrier_phase_t __old_phase) noexcept;
 
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI void
-__destroy_barrier_algorithm_base(__barrier_algorithm_base* __barrier);
+__destroy_barrier_algorithm_base(__barrier_algorithm_base* __barrier) noexcept;
 
 template <class _CompletionF>
 class __barrier_base {
@@ -265,8 +264,8 @@ public:
 
   static _LIBCPP_HIDE_FROM_ABI constexpr ptrdiff_t max() noexcept { return __barrier_base<_CompletionF>::max(); }
 
-  _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI explicit barrier(
-      ptrdiff_t __count, _CompletionF __completion = _CompletionF())
+  _LIBCPP_AVAILABILITY_SYNC
+      _LIBCPP_HIDE_FROM_ABI explicit barrier(ptrdiff_t __count, _CompletionF __completion = _CompletionF())
       : __b_(__count, std::move(__completion)) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __count >= 0,

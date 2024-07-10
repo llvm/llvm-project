@@ -163,7 +163,7 @@ public:
   void readTypeLoc(TypeLoc TL, LocSeq *Seq = nullptr);
 
   /// Map a local type ID within a given AST file to a global type ID.
-  serialization::TypeID getGlobalTypeID(unsigned LocalID) const {
+  serialization::TypeID getGlobalTypeID(serialization::TypeID LocalID) const {
     return Reader->getGlobalTypeID(*F, LocalID);
   }
 
@@ -271,6 +271,9 @@ public:
 
   /// Read a list of Exprs used for a var-list.
   llvm::SmallVector<Expr *> readOpenACCVarList();
+
+  /// Read a list of Exprs used for a int-expr-list.
+  llvm::SmallVector<Expr *> readOpenACCIntExprList();
 
   /// Read an OpenACC clause, advancing Idx.
   OpenACCClause *readOpenACCClause();

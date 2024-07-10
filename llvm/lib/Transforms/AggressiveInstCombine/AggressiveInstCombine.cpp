@@ -423,7 +423,8 @@ static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
   if (TTI.haveFastSqrt(Ty) &&
       (Call->hasNoNaNs() ||
        cannotBeOrderedLessThanZero(
-           Arg, 0, SimplifyQuery(M->getDataLayout(), &TLI, &DT, &AC, Call)))) {
+           Arg, 0,
+           SimplifyQuery(Call->getDataLayout(), &TLI, &DT, &AC, Call)))) {
     IRBuilder<> Builder(Call);
     IRBuilderBase::FastMathFlagGuard Guard(Builder);
     Builder.setFastMathFlags(Call->getFastMathFlags());
@@ -1073,7 +1074,8 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
         B.CreateZExt(B.CreateLoad(B.getInt8Ty(),
                                   B.CreateInBoundsPtrAdd(Base, B.getInt64(i))),
                      CI->getType());
-    Value *VR = ConstantInt::get(CI->getType(), RHS[i]);
+    Value *VR =
+        ConstantInt::get(CI->getType(), static_cast<unsigned char>(RHS[i]));
     Value *Sub = Swapped ? B.CreateSub(VR, VL) : B.CreateSub(VL, VR);
     if (i < N - 1)
       B.CreateCondBr(B.CreateICmpNE(Sub, ConstantInt::get(CI->getType(), 0)),
@@ -1151,7 +1153,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
     if (!DT.isReachableFromEntry(&BB))
       continue;
 
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
 
     // Walk the block backwards for efficiency. We're matching a chain of
     // use->defs, so we're more likely to succeed by starting from the bottom.
@@ -1187,7 +1189,7 @@ static bool runImpl(Function &F, AssumptionCache &AC, TargetTransformInfo &TTI,
                     TargetLibraryInfo &TLI, DominatorTree &DT,
                     AliasAnalysis &AA, bool &MadeCFGChange) {
   bool MadeChange = false;
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   TruncInstCombine TIC(AC, TLI, DL, DT);
   MadeChange |= TIC.run(F);
   MadeChange |= foldUnusualPatterns(F, DT, TTI, TLI, AA, AC, MadeCFGChange);

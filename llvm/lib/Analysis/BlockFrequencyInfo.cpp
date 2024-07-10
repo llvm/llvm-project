@@ -188,12 +188,11 @@ void BlockFrequencyInfo::calculate(const Function &F,
     BFI.reset(new ImplType);
   BFI->calculate(F, BPI, LI);
   if (ViewBlockFreqPropagationDAG != GVDT_None &&
-      (ViewBlockFreqFuncName.empty() ||
-       F.getName().equals(ViewBlockFreqFuncName))) {
+      (ViewBlockFreqFuncName.empty() || F.getName() == ViewBlockFreqFuncName)) {
     view();
   }
   if (PrintBFI &&
-      (PrintBFIFuncName.empty() || F.getName().equals(PrintBFIFuncName))) {
+      (PrintBFIFuncName.empty() || F.getName() == PrintBFIFuncName)) {
     print(dbgs());
   }
 }

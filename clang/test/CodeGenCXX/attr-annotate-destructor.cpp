@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -S -emit-llvm -triple x86_64-unknown-linux-gnu -o - | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -triple x86_64-unknown-linux-gnu -o - | FileCheck %s
 
 // Test annotation attributes on destructors do not crash.
 

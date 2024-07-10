@@ -43,18 +43,18 @@ body:             |
     ; CHECK: DIVERGENT: %{{[0-9]}}: %{{[0-9]}}:_(s32) = G_PHI
     ; CHECK: DIVERGENT: %{{[0-9]}}: %{{[0-9]}}:_(s32) = G_PHI
     ; CHECK: DIVERGENT: %{{[0-9]}}: %{{[0-9]}}:_(s32) = G_PHI
-    ; CHECK-NOT: DIVERGENT: %{{[0-9]}}: %{{[0-9]}}:sreg_32_xm0_xexec(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.if.break)
+    ; CHECK-NOT: DIVERGENT: %{{[0-9]}}: %{{[0-9]}}:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break)
     %19:_(s32) = G_PHI %18(s32), %bb.7, %25(s32), %bb.4
     %20:_(s32) = G_PHI %6(s32), %bb.7, %25(s32), %bb.4
     %21:_(s1) = G_PHI %34(s1), %bb.7, %33(s1), %bb.4
-    G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %16(s32)
-    %22:sreg_32_xm0_xexec(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.if.break), %21(s1), %0(s32)
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %16(s32)
+    %22:sreg_32_xm0_xexec(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), %21(s1), %0(s32)
     SI_LOOP %22(s32), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
     G_BR %bb.6
   
   bb.6:
     %24:_(s32) = G_PHI %22(s32), %bb.5
-    G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %24(s32)
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %24(s32)
     SI_RETURN
   
   bb.7:

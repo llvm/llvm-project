@@ -110,7 +110,7 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
 
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   dispatchIndexOpFoldResults(shape, dynamicShape, staticShape);
-  dispatchIndexOpFoldResults(strides, dynamicStrides, staticOffsets);
+  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
 
   auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
   auto staticShapeAttr = builder.getDenseI64ArrayAttr(staticShape);

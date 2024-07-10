@@ -31,6 +31,7 @@ exports_files([
     "include/llvm/IR/Intrinsics.td",
     "include/llvm/Option/OptParser.td",
     "utils/lit/lit.py",
+    "utils/lldbDataFormatters.py",
 ])
 
 # It may be tempting to add compiler flags here, but that should be avoided.
@@ -164,6 +165,11 @@ td_library(
     includes = ["include"],
 )
 
+llvm_config_target_defines = [
+    "LLVM_HAS_{}_TARGET=1".format(t)
+    for t in llvm_targets
+]
+
 cc_library(
     name = "config",
     hdrs = [
@@ -171,7 +177,7 @@ cc_library(
         "include/llvm/Config/llvm-config.h",
     ],
     copts = llvm_copts,
-    defines = llvm_config_defines,
+    defines = llvm_config_defines + llvm_config_target_defines,
     includes = ["include"],
     textual_hdrs = [
         "include/llvm/Config/AsmParsers.def",
@@ -287,6 +293,7 @@ cc_library(
     linkopts = select({
         "@platforms//os:windows": [
             "ws2_32.lib",
+            "ntdll.lib",
         ],
         "@platforms//os:freebsd": [
             "-pthread",
@@ -636,8 +643,8 @@ cc_binary(
 cc_binary(
     name = "llvm-min-tblgen",
     srcs = [
-        "utils/TableGen/Attributes.cpp",
         "utils/TableGen/ARMTargetDefEmitter.cpp",
+        "utils/TableGen/Attributes.cpp",
         "utils/TableGen/Basic/CodeGenIntrinsics.cpp",
         "utils/TableGen/Basic/CodeGenIntrinsics.h",
         "utils/TableGen/Basic/SDNodeProperties.cpp",
@@ -721,6 +728,7 @@ cc_binary(
         ":TargetParser",
         ":config",
         ":llvm-tblgen-headers",
+        ":vt_gen",
     ],
 )
 
@@ -1125,6 +1133,8 @@ cc_library(
     ]),
     copts = llvm_copts,
     deps = [
+        ":BitstreamReader",
+        ":BitstreamWriter",
         ":Core",
         ":DebugInfo",
         ":DebugInfoDWARF",
@@ -1287,8 +1297,9 @@ cc_library(
     copts = llvm_copts,
     includes = ["include"],
     textual_hdrs = [
-        "include/llvm/TargetParser/ARMTargetParserDef.inc",
+        "include/llvm/TargetParser/AArch64CPUFeatures.inc",
         "include/llvm/TargetParser/AArch64TargetParserDef.inc",
+        "include/llvm/TargetParser/ARMTargetParserDef.inc",
         "include/llvm/TargetParser/RISCVTargetParserDef.inc",
     ] + glob([
         "include/llvm/TargetParser/*.def",
@@ -1471,6 +1482,7 @@ cc_library(
     deps = [
         ":Analysis",
         ":Core",
+        ":Scalar",
         ":Support",
         ":Target",
         ":TransformUtils",
@@ -1751,6 +1763,7 @@ cc_library(
         ":TransformUtils",
         ":Vectorize",
         ":config",
+        ":ir_headers",
     ],
 )
 
@@ -1879,6 +1892,7 @@ cc_library(
         ":Instrumentation",
         ":MC",
         ":MCParser",
+        ":ObjCARC",
         ":Object",
         ":ProfileData",
         ":Remarks",
@@ -2228,7 +2242,7 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-callingconv", "lib/Target/X86/X86GenCallingConv.inc"),
             ("-gen-subtarget", "lib/Target/X86/X86GenSubtargetInfo.inc"),
             ("-gen-x86-fold-tables -asmwriternum=1", "lib/Target/X86/X86GenFoldTables.inc"),
-            ("-gen-x86-compress-evex-tables", "lib/Target/X86/X86GenCompressEVEXTables.inc"),
+            ("-gen-x86-instr-mapping", "lib/Target/X86/X86GenInstrMapping.inc"),
             ("-gen-exegesis", "lib/Target/X86/X86GenExegesis.inc"),
             ("-gen-x86-mnemonic-tables -asmwriternum=1", "lib/Target/X86/X86GenMnemonicTables.inc"),
         ],
@@ -2421,6 +2435,7 @@ gentbl(
         strip_include_prefix = "lib/Target/" + target["name"],
         deps = [
             ":BinaryFormat",
+            ":CodeGen",
             ":CodeGenTypes",
             ":Core",
             ":DebugInfoCodeView",
@@ -2638,6 +2653,7 @@ cc_library(
         ":CodeGen",
         ":Core",
         ":Coroutines",
+        ":Demangle",
         ":HipStdPar",
         ":IPO",
         ":IRPrinter",
@@ -4049,7 +4065,7 @@ cc_binary(
 
 cc_binary(
     name = "llvm-mca",
-    srcs =[
+    srcs = [
         "tools/llvm-mca/llvm-mca.cpp",
     ],
     copts = llvm_copts,

@@ -11,7 +11,6 @@
 
 #include "AArch64TargetMachine.h"
 #include "AArch64.h"
-#include "AArch64LoopIdiomTransform.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64MachineScheduler.h"
 #include "AArch64MacroFusion.h"
@@ -52,6 +51,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/CFGuard.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include <memory>
 #include <optional>
 #include <string>
@@ -187,6 +187,16 @@ static cl::opt<unsigned> SVEVectorBitsMinOpt(
              "with zero meaning no minimum size is assumed."),
     cl::init(0), cl::Hidden);
 
+static cl::opt<bool> ForceStreaming(
+    "force-streaming",
+    cl::desc("Force the use of streaming code for all functions"),
+    cl::init(false), cl::Hidden);
+
+static cl::opt<bool> ForceStreamingCompatible(
+    "force-streaming-compatible",
+    cl::desc("Force the use of streaming-compatible code for all functions"),
+    cl::init(false), cl::Hidden);
+
 extern cl::opt<bool> EnableHomogeneousPrologEpilog;
 
 static cl::opt<bool> EnableGISelLoadStoreOptPreLegal(
@@ -229,7 +239,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64DeadRegisterDefinitionsPass(*PR);
   initializeAArch64ExpandPseudoPass(*PR);
   initializeAArch64LoadStoreOptPass(*PR);
-  initializeAArch64LoopIdiomTransformLegacyPassPass(*PR);
   initializeAArch64MIPeepholeOptPass(*PR);
   initializeAArch64SIMDInstrOptPass(*PR);
   initializeAArch64O0PreLegalizerCombinerPass(*PR);
@@ -253,7 +262,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64StackTaggingPass(*PR);
   initializeAArch64StackTaggingPreRAPass(*PR);
   initializeAArch64LowerHomogeneousPrologEpilogPass(*PR);
-  initializeAArch64DAGToDAGISelPass(*PR);
+  initializeAArch64DAGToDAGISelLegacyPass(*PR);
   initializeAArch64GlobalsTaggingPass(*PR);
 }
 
@@ -275,15 +284,15 @@ static std::string computeDataLayout(const Triple &TT,
                                      bool LittleEndian) {
   if (TT.isOSBinFormatMachO()) {
     if (TT.getArch() == Triple::aarch64_32)
-      return "e-m:o-p:32:32-i64:64-i128:128-n32:64-S128";
-    return "e-m:o-i64:64-i128:128-n32:64-S128";
+      return "e-m:o-p:32:32-i64:64-i128:128-n32:64-S128-Fn32";
+    return "e-m:o-i64:64-i128:128-n32:64-S128-Fn32";
   }
   if (TT.isOSBinFormatCOFF())
-    return "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128";
+    return "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128-Fn32";
   std::string Endian = LittleEndian ? "e" : "E";
   std::string Ptr32 = TT.getEnvironment() == Triple::GNUILP32 ? "-p:32:32" : "";
   return Endian + "-m:e" + Ptr32 +
-         "-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128";
+         "-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32";
 }
 
 static StringRef computeDefaultCPU(const Triple &TT, StringRef CPU) {
@@ -408,10 +417,11 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   StringRef FS = FSAttr.isValid() ? FSAttr.getValueAsString() : TargetFS;
   bool HasMinSize = F.hasMinSize();
 
-  bool StreamingSVEMode = F.hasFnAttribute("aarch64_pstate_sm_enabled") ||
-                          F.hasFnAttribute("aarch64_pstate_sm_body");
-  bool StreamingCompatibleSVEMode =
-      F.hasFnAttribute("aarch64_pstate_sm_compatible");
+  bool IsStreaming = ForceStreaming ||
+                     F.hasFnAttribute("aarch64_pstate_sm_enabled") ||
+                     F.hasFnAttribute("aarch64_pstate_sm_body");
+  bool IsStreamingCompatible = ForceStreamingCompatible ||
+                               F.hasFnAttribute("aarch64_pstate_sm_compatible");
 
   unsigned MinSVEVectorSize = 0;
   unsigned MaxSVEVectorSize = 0;
@@ -439,10 +449,9 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
 
   SmallString<512> Key;
   raw_svector_ostream(Key) << "SVEMin" << MinSVEVectorSize << "SVEMax"
-                           << MaxSVEVectorSize
-                           << "StreamingSVEMode=" << StreamingSVEMode
-                           << "StreamingCompatibleSVEMode="
-                           << StreamingCompatibleSVEMode << CPU << TuneCPU << FS
+                           << MaxSVEVectorSize << "IsStreaming=" << IsStreaming
+                           << "IsStreamingCompatible=" << IsStreamingCompatible
+                           << CPU << TuneCPU << FS
                            << "HasMinSize=" << HasMinSize;
 
   auto &I = SubtargetMap[Key];
@@ -453,12 +462,10 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
     resetTargetOptions(F);
     I = std::make_unique<AArch64Subtarget>(
         TargetTriple, CPU, TuneCPU, FS, *this, isLittle, MinSVEVectorSize,
-        MaxSVEVectorSize, StreamingSVEMode, StreamingCompatibleSVEMode,
-        HasMinSize);
+        MaxSVEVectorSize, IsStreaming, IsStreamingCompatible, HasMinSize);
   }
 
-  assert((!StreamingSVEMode || I->hasSME()) &&
-         "Expected SME to be available");
+  assert((!IsStreaming || I->hasSME()) && "Expected SME to be available");
 
   return I.get();
 }
@@ -547,15 +554,11 @@ public:
 
 } // end anonymous namespace
 
-void AArch64TargetMachine::registerPassBuilderCallbacks(
-    PassBuilder &PB, bool PopulateClassToPassNames) {
-
-#define GET_PASS_REGISTRY "AArch64PassRegistry.def"
-#include "llvm/Passes/TargetPassRegistry.inc"
+void AArch64TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
-        LPM.addPass(AArch64LoopIdiomTransformPass());
+        LPM.addPass(LoopIdiomVectorizePass());
       });
 }
 
@@ -858,7 +861,6 @@ void AArch64PassConfig::addPreEmitPass() {
 }
 
 void AArch64PassConfig::addPostBBSections() {
-  addPass(createAArch64IndirectThunks());
   addPass(createAArch64SLSHardeningPass());
   addPass(createAArch64PointerAuthPass());
   if (EnableBranchTargets)

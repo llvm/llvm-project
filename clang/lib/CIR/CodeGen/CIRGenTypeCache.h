@@ -19,7 +19,7 @@ namespace cir {
 /// during IR emission. It's initialized once in CodeGenModule's
 /// constructor and then copied around into new CIRGenFunction's.
 struct CIRGenTypeCache {
-  CIRGenTypeCache() {}
+  CIRGenTypeCache() = default;
 };
 
 } // namespace cir

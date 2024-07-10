@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DbgVariableFragmentInfo.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/Support/Casting.h"
@@ -2147,13 +2148,20 @@ public:
   static unsigned
   getBaseDiscriminatorFromDiscriminator(unsigned D,
                                         bool IsFSDiscriminator = false) {
-    // Return the probe id instead of zero for a pseudo probe discriminator.
-    // This should help differenciate callsites with same line numbers to
-    // achieve a decent AutoFDO profile under -fpseudo-probe-for-profiling,
-    // where the original callsite dwarf discriminator is overwritten by
-    // callsite probe information.
-    if (isPseudoProbeDiscriminator(D))
+    // Extract the dwarf base discriminator if it's encoded in the pseudo probe
+    // discriminator.
+    if (isPseudoProbeDiscriminator(D)) {
+      auto DwarfBaseDiscriminator =
+          PseudoProbeDwarfDiscriminator::extractDwarfBaseDiscriminator(D);
+      if (DwarfBaseDiscriminator)
+        return *DwarfBaseDiscriminator;
+      // Return the probe id instead of zero for a pseudo probe discriminator.
+      // This should help differenciate callsites with same line numbers to
+      // achieve a decent AutoFDO profile under -fpseudo-probe-for-profiling,
+      // where the original callsite dwarf discriminator is overwritten by
+      // callsite probe information.
       return PseudoProbeDwarfDiscriminator::extractProbeIndex(D);
+    }
 
     if (IsFSDiscriminator)
       return getMaskedDiscriminator(D, getBaseDiscriminatorBits());
@@ -2879,29 +2887,13 @@ public:
   /// Return whether there is exactly one operator and it is a DW_OP_deref;
   bool isDeref() const;
 
-  /// Holds the characteristics of one fragment of a larger variable.
-  struct FragmentInfo {
-    FragmentInfo() = default;
-    FragmentInfo(uint64_t SizeInBits, uint64_t OffsetInBits)
-        : SizeInBits(SizeInBits), OffsetInBits(OffsetInBits) {}
-    uint64_t SizeInBits;
-    uint64_t OffsetInBits;
-    /// Return the index of the first bit of the fragment.
-    uint64_t startInBits() const { return OffsetInBits; }
-    /// Return the index of the bit after the end of the fragment, e.g. for
-    /// fragment offset=16 and size=32 return their sum, 48.
-    uint64_t endInBits() const { return OffsetInBits + SizeInBits; }
+  using FragmentInfo = DbgVariableFragmentInfo;
 
-    /// Returns a zero-sized fragment if A and B don't intersect.
-    static DIExpression::FragmentInfo intersect(DIExpression::FragmentInfo A,
-                                                DIExpression::FragmentInfo B) {
-      uint64_t StartInBits = std::max(A.OffsetInBits, B.OffsetInBits);
-      uint64_t EndInBits = std::min(A.endInBits(), B.endInBits());
-      if (EndInBits <= StartInBits)
-        return {0, 0};
-      return DIExpression::FragmentInfo(EndInBits - StartInBits, StartInBits);
-    }
-  };
+  /// Return the number of bits that have an active value, i.e. those that
+  /// aren't known to be zero/sign (depending on the type of Var) and which
+  /// are within the size of this fragment (if it is one). If we can't deduce
+  /// anything from the expression this will return the size of Var.
+  std::optional<uint64_t> getActiveBits(DIVariable *Var);
 
   /// Retrieve the details of this fragment expression.
   static std::optional<FragmentInfo> getFragmentInfo(expr_op_iterator Start,
@@ -2989,6 +2981,16 @@ public:
   /// If this is a constant offset, extract it. If there is no expression,
   /// return true with an offset of zero.
   bool extractIfOffset(int64_t &Offset) const;
+
+  /// Assuming that the expression operates on an address, extract a constant
+  /// offset and the successive ops. Return false if the expression contains
+  /// any incompatible ops (including non-zero DW_OP_LLVM_args - only a single
+  /// address operand to the expression is permitted).
+  ///
+  /// We don't try very hard to interpret the expression because we assume that
+  /// foldConstantMath has canonicalized the expression.
+  bool extractLeadingOffset(int64_t &OffsetInBytes,
+                            SmallVectorImpl<uint64_t> &RemainingOps) const;
 
   /// Returns true iff this DIExpression contains at least one instance of
   /// `DW_OP_LLVM_arg, n` for all n in [0, N).
@@ -3121,6 +3123,11 @@ public:
   /// expression and constant on failure.
   std::pair<DIExpression *, const ConstantInt *>
   constantFold(const ConstantInt *CI);
+
+  /// Try to shorten an expression with constant math operations that can be
+  /// evaluated at compile time. Returns a new expression on success, or the old
+  /// expression if there is nothing to be reduced.
+  DIExpression *foldConstantMath();
 };
 
 inline bool operator==(const DIExpression::FragmentInfo &A,
@@ -3148,6 +3155,84 @@ template <> struct DenseMapInfo<DIExpression::FragmentInfo> {
   }
 
   static bool isEqual(const FragInfo &A, const FragInfo &B) { return A == B; }
+};
+
+/// Holds a DIExpression and keeps track of how many operands have been consumed
+/// so far.
+class DIExpressionCursor {
+  DIExpression::expr_op_iterator Start, End;
+
+public:
+  DIExpressionCursor(const DIExpression *Expr) {
+    if (!Expr) {
+      assert(Start == End);
+      return;
+    }
+    Start = Expr->expr_op_begin();
+    End = Expr->expr_op_end();
+  }
+
+  DIExpressionCursor(ArrayRef<uint64_t> Expr)
+      : Start(Expr.begin()), End(Expr.end()) {}
+
+  DIExpressionCursor(const DIExpressionCursor &) = default;
+
+  /// Consume one operation.
+  std::optional<DIExpression::ExprOperand> take() {
+    if (Start == End)
+      return std::nullopt;
+    return *(Start++);
+  }
+
+  /// Consume N operations.
+  void consume(unsigned N) { std::advance(Start, N); }
+
+  /// Return the current operation.
+  std::optional<DIExpression::ExprOperand> peek() const {
+    if (Start == End)
+      return std::nullopt;
+    return *(Start);
+  }
+
+  /// Return the next operation.
+  std::optional<DIExpression::ExprOperand> peekNext() const {
+    if (Start == End)
+      return std::nullopt;
+
+    auto Next = Start.getNext();
+    if (Next == End)
+      return std::nullopt;
+
+    return *Next;
+  }
+
+  std::optional<DIExpression::ExprOperand> peekNextN(unsigned N) const {
+    if (Start == End)
+      return std::nullopt;
+    DIExpression::expr_op_iterator Nth = Start;
+    for (unsigned I = 0; I < N; I++) {
+      Nth = Nth.getNext();
+      if (Nth == End)
+        return std::nullopt;
+    }
+    return *Nth;
+  }
+
+  void assignNewExpr(ArrayRef<uint64_t> Expr) {
+    this->Start = DIExpression::expr_op_iterator(Expr.begin());
+    this->End = DIExpression::expr_op_iterator(Expr.end());
+  }
+
+  /// Determine whether there are any operations left in this expression.
+  operator bool() const { return Start != End; }
+
+  DIExpression::expr_op_iterator begin() const { return Start; }
+  DIExpression::expr_op_iterator end() const { return End; }
+
+  /// Retrieve the fragment information, if any.
+  std::optional<DIExpression::FragmentInfo> getFragmentInfo() const {
+    return DIExpression::getFragmentInfo(Start, End);
+  }
 };
 
 /// Global variables.

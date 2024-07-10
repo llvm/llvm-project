@@ -1,0 +1,9 @@
+## Verify that BOLT detects fixed destination of indirect jump for PIC
+## case.
+
+XFAIL: *
+
+RUN: %clang %cflags -no-pie %S/Inputs/jump-table-fixed-ref-pic.s -Wl,-q -o %t
+RUN: llvm-bolt %t --relocs -o %t.null 2>&1 | FileCheck %s
+
+CHECK: BOLT-INFO: fixed indirect branch detected in main

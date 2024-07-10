@@ -161,7 +161,8 @@ namespace llvm {
 
     /// equals - Check for string equality, this is more efficient than
     /// compare() when the relative ordering of inequal strings isn't needed.
-    [[nodiscard]] bool equals(StringRef RHS) const {
+    [[nodiscard]] LLVM_DEPRECATED("Use == instead",
+                                  "==") bool equals(StringRef RHS) const {
       return (Length == RHS.Length &&
               compareMemory(Data, RHS.Data, RHS.Length) == 0);
     }
@@ -871,7 +872,11 @@ namespace llvm {
   /// @{
 
   inline bool operator==(StringRef LHS, StringRef RHS) {
-    return LHS.equals(RHS);
+    if (LHS.size() != RHS.size())
+      return false;
+    if (LHS.empty())
+      return true;
+    return ::memcmp(LHS.data(), RHS.data(), LHS.size()) == 0;
   }
 
   inline bool operator!=(StringRef LHS, StringRef RHS) { return !(LHS == RHS); }

@@ -17,6 +17,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
@@ -1659,18 +1660,16 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses9) {
         Function *FnF = M->getFunction("f");
 
         // Use the CallGraphUpdater to update the call graph.
-        {
-          CallGraphUpdater CGU;
-          CGU.initialize(CG, C, AM, UR);
-          ASSERT_NO_FATAL_FAILURE(CGU.removeFunction(*FnF));
-          ASSERT_EQ(M->getFunctionList().size(), 6U);
-        }
-        ASSERT_EQ(M->getFunctionList().size(), 5U);
+        CallGraphUpdater CGU;
+        CGU.initialize(CG, C, AM, UR);
+        ASSERT_NO_FATAL_FAILURE(CGU.removeFunction(*FnF));
+        ASSERT_EQ(M->getFunctionList().size(), 6U);
       }));
 
   ModulePassManager MPM;
   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
   MPM.run(*M, MAM);
+  ASSERT_EQ(M->getFunctionList().size(), 5U);
 }
 
 TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses10) {
@@ -1876,6 +1875,61 @@ TEST_F(CGSCCPassManagerTest, TestInsertionOfNewFunctions2) {
   ModulePassManager MPM;
   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
   MPM.run(*M, MAM);
+  ASSERT_TRUE(Ran);
+}
+
+TEST_F(CGSCCPassManagerTest, TestDeletionOfFunctionInNonTrivialRefSCC) {
+  std::unique_ptr<Module> M = parseIR("define void @f1() {\n"
+                                      "entry:\n"
+                                      "  call void @f2()\n"
+                                      "  ret void\n"
+                                      "}\n"
+                                      "define void @f2() {\n"
+                                      "entry:\n"
+                                      "  call void @f1()\n"
+                                      "  ret void\n"
+                                      "}\n");
+
+  bool Ran = false;
+  CGSCCPassManager CGPM;
+  CGPM.addPass(LambdaSCCPassNoPreserve(
+      [&](LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM, LazyCallGraph &CG,
+          CGSCCUpdateResult &UR) {
+        if (Ran)
+          return;
+
+        LazyCallGraph::Node *N1 = nullptr;
+
+        for (LazyCallGraph::Node *N : SCCNodes(C)) {
+          Function &F = N->getFunction();
+          if (F.getName() != "f1")
+            continue;
+          N1 = N;
+
+          Function &F2 = *F.getParent()->getFunction("f2");
+
+          // Remove f1 <-> f2 references
+          F.getEntryBlock().front().eraseFromParent();
+          F2.getEntryBlock().front().eraseFromParent();
+
+          CallGraphUpdater CGU;
+          CGU.initialize(CG, C, AM, UR);
+          CGU.removeFunction(F2);
+          CGU.reanalyzeFunction(F);
+
+          Ran = true;
+        }
+
+        // Check that updateCGAndAnalysisManagerForCGSCCPass() after
+        // CallGraphUpdater::removeFunction() succeeds.
+        updateCGAndAnalysisManagerForCGSCCPass(CG, *CG.lookupSCC(*N1), *N1, AM,
+                                               UR, FAM);
+      }));
+
+  ModulePassManager MPM;
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
+  MPM.run(*M, MAM);
+
   ASSERT_TRUE(Ran);
 }
 

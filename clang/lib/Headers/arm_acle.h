@@ -109,7 +109,7 @@ __swp(uint32_t __x, volatile uint32_t *__p) {
 #endif
 
 /* 7.7 NOP */
-#if !defined(_MSC_VER) || !defined(__aarch64__)
+#if !defined(_MSC_VER) || (!defined(__aarch64__) && !defined(__arm64ec__))
 static __inline__ void __attribute__((__always_inline__, __nodebug__)) __nop(void) {
   __builtin_arm_nop();
 }

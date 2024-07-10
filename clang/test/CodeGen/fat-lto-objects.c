@@ -62,7 +62,7 @@
 
 // ELF: .llvm.lto
 
-//      ASM: .section        .llvm.lto,"e",@progbits
+//      ASM: .section        .llvm.lto,"e",@llvm_lto
 // ASM-NEXT: .Lllvm.embedded.object:
 // ASM-NEXT:        .asciz  "BC
 // ASM-NEXT: .size   .Lllvm.embedded.object

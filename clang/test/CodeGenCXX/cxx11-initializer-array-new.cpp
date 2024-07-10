@@ -16,22 +16,20 @@ void *p = new S[2][3]{ { 1, 2, 3 }, { 4, 5, 6 } };
 // { 1, 2, 3 }
 //
 //
-// CHECK: %[[S_0_0:.*]] = getelementptr inbounds [3 x %[[S:.*]]], ptr %[[START_AS_i8]], i64 0, i64 0
-// CHECK: call void @_ZN1SC1Ei(ptr {{[^,]*}} %[[S_0_0]], i32 noundef 1)
-// CHECK: %[[S_0_1:.*]] = getelementptr inbounds %[[S]], ptr %[[S_0_0]], i64 1
+// CHECK: call void @_ZN1SC1Ei(ptr {{[^,]*}} %[[START_AS_i8]], i32 noundef 1)
+// CHECK: %[[S_0_1:.*]] = getelementptr inbounds %[[S:.+]], ptr %[[START_AS_i8]], i64 1
 // CHECK: call void @_ZN1SC1Ei(ptr {{[^,]*}} %[[S_0_1]], i32 noundef 2)
-// CHECK: %[[S_0_2:.*]] = getelementptr inbounds %[[S]], ptr %[[S_0_1]], i64 1
+// CHECK: %[[S_0_2:.*]] = getelementptr inbounds %[[S]], ptr %[[START_AS_i8]], i64 2
 // CHECK: call void @_ZN1SC1Ei(ptr {{[^,]*}} %[[S_0_2]], i32 noundef 3)
 //
 // { 4, 5, 6 }
 //
 // CHECK: %[[S_1:.*]] = getelementptr inbounds [3 x %[[S]]], ptr %[[START_AS_i8]], i64 1
 //
-// CHECK: %[[S_1_0:.*]] = getelementptr inbounds [3 x %[[S]]], ptr %[[S_1]], i64 0, i64 0
-// CHECK: call void @_ZN1SC1Ei(ptr {{[^,]*}} %[[S_1_0]], i32 noundef 4)
-// CHECK: %[[S_1_1:.*]] = getelementptr inbounds %[[S]], ptr %[[S_1_0]], i64 1
+// CHECK: call void @_ZN1SC1Ei(ptr {{[^,]*}} %[[S_1]], i32 noundef 4)
+// CHECK: %[[S_1_1:.*]] = getelementptr inbounds %[[S]], ptr %[[S_1]], i64 1
 // CHECK: call void @_ZN1SC1Ei(ptr {{[^,]*}} %[[S_1_1]], i32 noundef 5)
-// CHECK: %[[S_1_2:.*]] = getelementptr inbounds %[[S]], ptr %[[S_1_1]], i64 1
+// CHECK: %[[S_1_2:.*]] = getelementptr inbounds %[[S]], ptr %[[S_1]], i64 2
 // CHECK: call void @_ZN1SC1Ei(ptr {{[^,]*}} %[[S_1_2]], i32 noundef 6)
 //
 // CHECK-NOT: br i1
@@ -57,22 +55,20 @@ void *q = new S[n][3]{ { 1, 2, 3 }, { 4, 5, 6 } };
 // { 1, 2, 3 }
 //
 //
-// CHECK: %[[S_0_0:.*]] = getelementptr inbounds [3 x %[[S]]], ptr %[[START_AS_i8]], i64 0, i64 0
-// CHECK: call void @_ZN1SC1Ei(ptr {{[^,]*}} %[[S_0_0]], i32 noundef 1)
-// CHECK: %[[S_0_1:.*]] = getelementptr inbounds %[[S]], ptr %[[S_0_0]], i64 1
+// CHECK: call void @_ZN1SC1Ei(ptr {{[^,]*}} %[[START_AS_i8]], i32 noundef 1)
+// CHECK: %[[S_0_1:.*]] = getelementptr inbounds %[[S]], ptr %[[START_AS_i8]], i64 1
 // CHECK: call void @_ZN1SC1Ei(ptr {{[^,]*}} %[[S_0_1]], i32 noundef 2)
-// CHECK: %[[S_0_2:.*]] = getelementptr inbounds %[[S]], ptr %[[S_0_1]], i64 1
+// CHECK: %[[S_0_2:.*]] = getelementptr inbounds %[[S]], ptr %[[START_AS_i8]], i64 2
 // CHECK: call void @_ZN1SC1Ei(ptr {{[^,]*}} %[[S_0_2]], i32 noundef 3)
 //
 // { 4, 5, 6 }
 //
 // CHECK: %[[S_1:.*]] = getelementptr inbounds [3 x %[[S]]], ptr %[[START_AS_i8]], i64 1
 //
-// CHECK: %[[S_1_0:.*]] = getelementptr inbounds [3 x %[[S]]], ptr %[[S_1]], i64 0, i64 0
-// CHECK: call void @_ZN1SC1Ei(ptr {{[^,]*}} %[[S_1_0]], i32 noundef 4)
-// CHECK: %[[S_1_1:.*]] = getelementptr inbounds %[[S]], ptr %[[S_1_0]], i64 1
+// CHECK: call void @_ZN1SC1Ei(ptr {{[^,]*}} %[[S_1]], i32 noundef 4)
+// CHECK: %[[S_1_1:.*]] = getelementptr inbounds %[[S]], ptr %[[S_1]], i64 1
 // CHECK: call void @_ZN1SC1Ei(ptr {{[^,]*}} %[[S_1_1]], i32 noundef 5)
-// CHECK: %[[S_1_2:.*]] = getelementptr inbounds %[[S]], ptr %[[S_1_1]], i64 1
+// CHECK: %[[S_1_2:.*]] = getelementptr inbounds %[[S]], ptr %[[S_1]], i64 2
 // CHECK: call void @_ZN1SC1Ei(ptr {{[^,]*}} %[[S_1_2]], i32 noundef 6)
 //
 // And the rest.
@@ -114,13 +110,12 @@ void *r = new T[n][3]{ { 1, 2, 3 }, { 4, 5, 6 } };
 // { 1, 2, 3 }
 //
 //
-// CHECK: %[[T_0_0:.*]] = getelementptr inbounds [3 x %[[T:.*]]], ptr %[[ALLOC]], i64 0, i64 0
-// CHECK: %[[T_0_0_0:.*]] = getelementptr inbounds %[[T]], ptr %[[T_0_0]], i32 0, i32 0
+// CHECK: %[[T_0_0_0:.*]] = getelementptr inbounds %[[T:.+]], ptr %[[ALLOC]], i32 0, i32 0
 // CHECK: store i32 1, ptr %[[T_0_0_0]]
-// CHECK: %[[T_0_1:.*]] = getelementptr inbounds %[[T]], ptr %[[T_0_0]], i64 1
+// CHECK: %[[T_0_1:.*]] = getelementptr inbounds %[[T]], ptr %[[ALLOC]], i64 1
 // CHECK: %[[T_0_1_0:.*]] = getelementptr inbounds %[[T]], ptr %[[T_0_1]], i32 0, i32 0
 // CHECK: store i32 2, ptr %[[T_0_1_0]]
-// CHECK: %[[T_0_2:.*]] = getelementptr inbounds %[[T]], ptr %[[T_0_1]], i64 1
+// CHECK: %[[T_0_2:.*]] = getelementptr inbounds %[[T]], ptr %[[ALLOC]], i64 2
 // CHECK: %[[T_0_2_0:.*]] = getelementptr inbounds %[[T]], ptr %[[T_0_2]], i32 0, i32 0
 // CHECK: store i32 3, ptr %[[T_0_2_0]]
 //
@@ -128,13 +123,12 @@ void *r = new T[n][3]{ { 1, 2, 3 }, { 4, 5, 6 } };
 //
 // CHECK: %[[T_1:.*]] = getelementptr inbounds [3 x %[[T]]], ptr %[[ALLOC]], i64 1
 //
-// CHECK: %[[T_1_0:.*]] = getelementptr inbounds [3 x %[[T]]], ptr %[[T_1]], i64 0, i64 0
-// CHECK: %[[T_1_0_0:.*]] = getelementptr inbounds %[[T]], ptr %[[T_1_0]], i32 0, i32 0
+// CHECK: %[[T_1_0_0:.*]] = getelementptr inbounds %[[T]], ptr %[[T_1]], i32 0, i32 0
 // CHECK: store i32 4, ptr %[[T_1_0_0]]
-// CHECK: %[[T_1_1:.*]] = getelementptr inbounds %[[T]], ptr %[[T_1_0]], i64 1
+// CHECK: %[[T_1_1:.*]] = getelementptr inbounds %[[T]], ptr %[[T_1]], i64 1
 // CHECK: %[[T_1_1_0:.*]] = getelementptr inbounds %[[T]], ptr %[[T_1_1]], i32 0, i32 0
 // CHECK: store i32 5, ptr %[[T_1_1_0]]
-// CHECK: %[[T_1_2:.*]] = getelementptr inbounds %[[T]], ptr %[[T_1_1]], i64 1
+// CHECK: %[[T_1_2:.*]] = getelementptr inbounds %[[T]], ptr %[[T_1]], i64 2
 // CHECK: %[[T_1_2_0:.*]] = getelementptr inbounds %[[T]], ptr %[[T_1_2]], i32 0, i32 0
 // CHECK: store i32 6, ptr %[[T_1_2_0]]
 //

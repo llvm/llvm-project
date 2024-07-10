@@ -120,7 +120,7 @@ bool Input::mapTag(StringRef Tag, bool Default) {
     return Default;
   }
   // Return true iff found tag matches supplied tag.
-  return Tag.equals(foundTag);
+  return Tag == foundTag;
 }
 
 void Input::beginMapping() {
@@ -271,7 +271,7 @@ bool Input::matchEnumScalar(const char *Str, bool) {
   if (ScalarMatchFound)
     return false;
   if (ScalarHNode *SN = dyn_cast<ScalarHNode>(CurrentNode)) {
-    if (SN->value().equals(Str)) {
+    if (SN->value() == Str) {
       ScalarMatchFound = true;
       return true;
     }
@@ -310,7 +310,7 @@ bool Input::bitSetMatch(const char *Str, bool) {
     unsigned Index = 0;
     for (auto &N : SQ->Entries) {
       if (ScalarHNode *SN = dyn_cast<ScalarHNode>(N)) {
-        if (SN->value().equals(Str)) {
+        if (SN->value() == Str) {
           BitValuesUsed[Index] = true;
           return true;
         }

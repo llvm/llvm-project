@@ -70,9 +70,10 @@ public:
   };
 
   // TODO: Make sure fmin_legacy/fmax_legacy don't canonicalize
-  bool matchFMinFMaxLegacy(MachineInstr &MI, FMinFMaxLegacyInfo &Info) const;
-  void applySelectFCmpToFMinToFMaxLegacy(MachineInstr &MI,
-                                         const FMinFMaxLegacyInfo &Info) const;
+  bool matchFMinFMaxLegacy(MachineInstr &MI, MachineInstr &FCmp,
+                           FMinFMaxLegacyInfo &Info) const;
+  void applySelectFCmpToFMinFMaxLegacy(MachineInstr &MI,
+                                       const FMinFMaxLegacyInfo &Info) const;
 
   bool matchUCharToFloat(MachineInstr &MI) const;
   void applyUCharToFloat(MachineInstr &MI) const;
@@ -99,7 +100,7 @@ public:
   bool matchRemoveFcanonicalize(MachineInstr &MI, Register &Reg) const;
 
   // Combine unsigned buffer load and signed extension instructions to generate
-  // signed buffer laod instructions.
+  // signed buffer load instructions.
   bool matchCombineSignExtendInReg(
       MachineInstr &MI, std::pair<MachineInstr *, unsigned> &MatchInfo) const;
   void applyCombineSignExtendInReg(
@@ -158,17 +159,14 @@ bool AMDGPUPostLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
 }
 
 bool AMDGPUPostLegalizerCombinerImpl::matchFMinFMaxLegacy(
-    MachineInstr &MI, FMinFMaxLegacyInfo &Info) const {
-  // FIXME: Type predicate on pattern
-  if (MRI.getType(MI.getOperand(0).getReg()) != LLT::scalar(32))
+    MachineInstr &MI, MachineInstr &FCmp, FMinFMaxLegacyInfo &Info) const {
+  if (!MRI.hasOneNonDBGUse(FCmp.getOperand(0).getReg()))
     return false;
 
-  Register Cond = MI.getOperand(1).getReg();
-  if (!MRI.hasOneNonDBGUse(Cond) ||
-      !mi_match(Cond, MRI,
-                m_GFCmp(m_Pred(Info.Pred), m_Reg(Info.LHS), m_Reg(Info.RHS))))
-    return false;
-
+  Info.Pred =
+      static_cast<CmpInst::Predicate>(FCmp.getOperand(1).getPredicate());
+  Info.LHS = FCmp.getOperand(2).getReg();
+  Info.RHS = FCmp.getOperand(3).getReg();
   Register True = MI.getOperand(2).getReg();
   Register False = MI.getOperand(3).getReg();
 
@@ -188,7 +186,7 @@ bool AMDGPUPostLegalizerCombinerImpl::matchFMinFMaxLegacy(
   return Info.Pred != CmpInst::getSwappedPredicate(Info.Pred);
 }
 
-void AMDGPUPostLegalizerCombinerImpl::applySelectFCmpToFMinToFMaxLegacy(
+void AMDGPUPostLegalizerCombinerImpl::applySelectFCmpToFMinFMaxLegacy(
     MachineInstr &MI, const FMinFMaxLegacyInfo &Info) const {
   unsigned Opc = (Info.Pred & CmpInst::FCMP_OGT) ? AMDGPU::G_AMDGPU_FMAX_LEGACY
                                                  : AMDGPU::G_AMDGPU_FMIN_LEGACY;
@@ -467,8 +465,8 @@ void AMDGPUPostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<GISelKnownBitsAnalysis>();
   AU.addPreserved<GISelKnownBitsAnalysis>();
   if (!IsOptNone) {
-    AU.addRequired<MachineDominatorTree>();
-    AU.addPreserved<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
   }
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -496,7 +494,8 @@ bool AMDGPUPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
 
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
   MachineDominatorTree *MDT =
-      IsOptNone ? nullptr : &getAnalysis<MachineDominatorTree>();
+      IsOptNone ? nullptr
+                : &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   CombinerInfo CInfo(/*AllowIllegalOps*/ false, /*ShouldLegalizeIllegal*/ true,
                      LI, EnableOpt, F.hasOptSize(), F.hasMinSize());

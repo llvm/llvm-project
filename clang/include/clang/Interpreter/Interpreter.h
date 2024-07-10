@@ -110,9 +110,9 @@ class Interpreter {
   RuntimeInterfaceBuilder::TransformExprFunction *AddPrintValueCall = nullptr;
 
 protected:
-  // Derived classes can make use an extended interface of the Interpreter.
-  // That's useful for testing and out-of-tree clients.
-  Interpreter(std::unique_ptr<CompilerInstance> CI, llvm::Error &Err);
+  // Derived classes can use an extended interface of the Interpreter.
+  Interpreter(std::unique_ptr<CompilerInstance> CI, llvm::Error &Err,
+              std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder = nullptr);
 
   // Create the internal IncrementalExecutor, or re-create it after calling
   // ResetExecutor().
@@ -127,13 +127,6 @@ protected:
   // targets the in-process __clang_Interpreter runtime. Override this to use a
   // custom runtime.
   virtual std::unique_ptr<RuntimeInterfaceBuilder> FindRuntimeInterface();
-
-  // Lazily construct thev ORCv2 JITBuilder. This called when the internal
-  // IncrementalExecutor is created. The default implementation populates an
-  // in-process JIT with debugging support. Override this to configure the JIT
-  // engine used for execution.
-  virtual llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
-  CreateJITBuilder(CompilerInstance &CI);
 
 public:
   virtual ~Interpreter();
@@ -189,6 +182,8 @@ private:
   llvm::DenseMap<CXXRecordDecl *, llvm::orc::ExecutorAddr> Dtors;
 
   llvm::SmallVector<Expr *, 4> ValuePrintingInfo;
+
+  std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder;
 };
 } // namespace clang
 

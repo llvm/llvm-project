@@ -22,9 +22,9 @@
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple systemz -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=SYSTEMZ
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple ppc64 -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=PPC64
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple ppc -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=PPC32
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple aarch64 -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=AARCH64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple aarch64 -O3 -disable-llvm-passes -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=AARCH64
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple aarch64 -target-abi darwinpcs -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=AARCH64DARWIN
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple arm64_32-apple-ios -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=AARCH64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple arm64_32-apple-ios -O3 -disable-llvm-passes -fexperimental-max-bitint-width=1024 -emit-llvm -o - %s | FileCheck %s --check-prefixes=AARCH64
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple arm64_32-apple-ios -target-abi darwinpcs -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=AARCH64DARWIN
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple arm -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=ARM
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple loongarch64 -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=LA64
@@ -135,6 +135,7 @@ void ParamPassing4(_BitInt(129) a) {}
 // WIN64: define dso_local void @ParamPassing4(ptr %{{.+}})
 // LIN32: define{{.*}} void @ParamPassing4(ptr %{{.+}})
 // WIN32: define dso_local void @ParamPassing4(ptr %{{.+}})
+// AARCH64: define{{.*}} void @ParamPassing4(ptr %{{.+}})
 // NACL-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
 // NVPTX64-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
 // NVPTX-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
@@ -155,7 +156,6 @@ void ParamPassing4(_BitInt(129) a) {}
 // SYSTEMZ-NOT: define{{.*}} void @ParamPassing4(ptr %{{.+}})
 // PPC64-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
 // PPC32-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
-// AARCH64-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
 // AARCH64DARWIN-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
 // ARM-NOT: define{{.*}} arm_aapcscc void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
 // LA64-NOT: define{{.*}} void @ParamPassing4(ptr %{{.+}})
@@ -294,6 +294,7 @@ _BitInt(129) ReturnPassing5(void){}
 // WIN64: define dso_local void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 // LIN32: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 // WIN32: define dso_local void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
+// AARCH64: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 // NACL-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 // NVPTX64-NOT: define{{.*}} i129 @ReturnPassing5(
 // NVPTX-NOT: define{{.*}} i129 @ReturnPassing5(
@@ -314,7 +315,6 @@ _BitInt(129) ReturnPassing5(void){}
 // SYSTEMZ-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 // PPC64-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 // PPC32-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
-// AARCH64-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 // AARCH64DARWIN-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 // ARM-NOT: define{{.*}} arm_aapcscc void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 // LA64-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret

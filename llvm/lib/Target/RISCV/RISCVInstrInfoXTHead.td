@@ -549,39 +549,10 @@ def : Pat<(add_non_imm12 sh2add_op:$rs1, (XLenVT GPR:$rs2)),
 def : Pat<(add_non_imm12 sh3add_op:$rs1, (XLenVT GPR:$rs2)),
           (TH_ADDSL GPR:$rs2, sh3add_op:$rs1, 3)>;
 
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 6)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 1)), 1)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 10)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 2)), 1)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 18)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 3)), 1)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 12)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 1)), 2)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 20)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 2)), 2)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 36)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 3)), 2)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 24)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 1)), 3)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 40)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 2)), 3)>;
-def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 72)), GPR:$rs2),
-          (TH_ADDSL GPR:$rs2, (XLenVT (TH_ADDSL GPR:$rs1, GPR:$rs1, 3)), 3)>;
-
 def : Pat<(add (XLenVT GPR:$r), CSImm12MulBy4:$i),
           (TH_ADDSL GPR:$r, (XLenVT (ADDI (XLenVT X0), (SimmShiftRightBy2XForm CSImm12MulBy4:$i))), 2)>;
 def : Pat<(add (XLenVT GPR:$r), CSImm12MulBy8:$i),
           (TH_ADDSL GPR:$r, (XLenVT (ADDI (XLenVT X0), (SimmShiftRightBy3XForm CSImm12MulBy8:$i))), 3)>;
-
-def : Pat<(mul (XLenVT GPR:$r), C3LeftShift:$i),
-          (SLLI (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 1)),
-                (TrailingZeros C3LeftShift:$i))>;
-def : Pat<(mul (XLenVT GPR:$r), C5LeftShift:$i),
-          (SLLI (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 2)),
-                (TrailingZeros C5LeftShift:$i))>;
-def : Pat<(mul (XLenVT GPR:$r), C9LeftShift:$i),
-          (SLLI (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 3)),
-                (TrailingZeros C9LeftShift:$i))>;
 
 def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 200)),
           (SLLI (XLenVT (TH_ADDSL (XLenVT (TH_ADDSL GPR:$r, GPR:$r, 2)),

@@ -1389,10 +1389,10 @@ TEST(YAMLIO, TestReadWriteMyFlowSequence) {
     yin >> map2;
 
     EXPECT_FALSE(yin.error());
-    EXPECT_TRUE(map2.name.equals("hello"));
+    EXPECT_TRUE(map2.name == "hello");
     EXPECT_EQ(map2.strings.size(), 2UL);
-    EXPECT_TRUE(map2.strings[0].value.equals("one"));
-    EXPECT_TRUE(map2.strings[1].value.equals("two"));
+    EXPECT_TRUE(map2.strings[0].value == "one");
+    EXPECT_TRUE(map2.strings[1].value == "two");
     EXPECT_EQ(map2.single.size(), 1UL);
     EXPECT_EQ(1,       map2.single[0]);
     EXPECT_EQ(map2.numbers.size(), 3UL);
@@ -1436,7 +1436,7 @@ TEST(YAMLIO, TestReadWriteSequenceOfMyFlowSequence) {
     yin >> map2;
 
     EXPECT_FALSE(yin.error());
-    EXPECT_TRUE(map2.name.equals("hello"));
+    EXPECT_TRUE(map2.name == "hello");
     EXPECT_EQ(map2.sequenceOfNumbers.size(), 3UL);
     EXPECT_EQ(map2.sequenceOfNumbers[0].size(), 1UL);
     EXPECT_EQ(0,    map2.sequenceOfNumbers[0][0]);

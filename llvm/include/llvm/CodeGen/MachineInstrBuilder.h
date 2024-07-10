@@ -40,6 +40,7 @@ class MDNode;
 
 namespace RegState {
 
+// Keep this in sync with the table in MIRLangRef.rst.
 enum {
   /// Register definition.
   Define = 0x2,

@@ -1,27 +1,16 @@
-; Test long double atomic loads.
+; Test long double atomic loads - via i128.
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck -check-prefixes=CHECK,BASE %s
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck -check-prefixes=CHECK,Z13 %s
-; TODO: Is it worth testing softfp with vector?
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mattr=+soft-float | FileCheck -check-prefixes=SOFTFP %s
 
-; FIXME: Without vector support, v2i64 should be legal and we should
-; introduce a simple bitcast, which could fold into the store use
-; avoid the intermediate f registers.
 define void @f1(ptr %ret, ptr %src) {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
-; Z13-NEXT:    lpq %r0, 0(%r3)
-; Z13-NEXT:    stg %r1, 8(%r2)
-; Z13-NEXT:    stg %r0, 0(%r2)
-; Z13-NEXT:    br %r14
-
-; BASE: lpq	%r0, 0(%r3)
-; BASE-NEXT: ldgr	%f0, %r0
-; BASE-NEXT: ldgr	%f2, %r1
-; BASE-NEXT: std	%f0, 0(%r2)
-; BASE-NEXT: std	%f2, 8(%r2)
-; BASE-NEXT: br %r14
+; CHECK-NEXT:    lpq %r0, 0(%r3)
+; CHECK-NEXT:    stg %r1, 8(%r2)
+; CHECK-NEXT:    stg %r0, 0(%r2)
+; CHECK-NEXT:    br %r14
 
 ; SOFTFP-LABEL: f1:
 ; SOFTFP:       # %bb.0:

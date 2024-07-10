@@ -144,7 +144,7 @@ public:
   /// @name MCStreamer Interface
   /// @{
 
-  void changeSection(MCSection *Section, const MCExpr *Subsection) override;
+  void changeSection(MCSection *Section, uint32_t Subsection) override;
 
   void emitELFSymverDirective(const MCSymbol *OriginalSym, StringRef Name,
                               bool KeepOriginalSym) override;
@@ -356,6 +356,7 @@ public:
   void emitCFIWindowSave(SMLoc Loc) override;
   void emitCFINegateRAState(SMLoc Loc) override;
   void emitCFIReturnColumn(int64_t Register) override;
+  void emitCFILabelDirective(SMLoc Loc, StringRef Name) override;
 
   void emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) override;
   void emitWinCFIEndProc(SMLoc Loc) override;
@@ -468,7 +469,7 @@ void MCAsmStreamer::emitRawComment(const Twine &T, bool TabPrefix) {
 
 void MCAsmStreamer::addExplicitComment(const Twine &T) {
   StringRef c = T.getSingleStringRef();
-  if (c.equals(StringRef(MAI->getSeparatorString())))
+  if (c == MAI->getSeparatorString())
     return;
   if (c.starts_with(StringRef("//"))) {
     ExplicitCommentToEmit.append("\t");
@@ -510,15 +511,14 @@ void MCAsmStreamer::emitExplicitComments() {
   ExplicitCommentToEmit.clear();
 }
 
-void MCAsmStreamer::changeSection(MCSection *Section,
-                                  const MCExpr *Subsection) {
-  assert(Section && "Cannot switch to a null section!");
+void MCAsmStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   if (MCTargetStreamer *TS = getTargetStreamer()) {
-    TS->changeSection(getCurrentSectionOnly(), Section, Subsection, OS);
+    TS->changeSection(getCurrentSection().first, Section, Subsection, OS);
   } else {
     Section->printSwitchToSection(*MAI, getContext().getTargetTriple(), OS,
                                   Subsection);
   }
+  MCStreamer::changeSection(Section, Subsection);
 }
 
 void MCAsmStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
@@ -1081,7 +1081,7 @@ void MCAsmStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
                                  uint64_t Size, Align ByteAlignment,
                                  SMLoc Loc) {
   if (Symbol)
-    assignFragment(Symbol, &Section->getDummyFragment());
+    Symbol->setFragment(&Section->getDummyFragment());
 
   // Note: a .zerofill directive does not switch sections.
   OS << ".zerofill ";
@@ -1107,9 +1107,8 @@ void MCAsmStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
 // e.g. _a.
 void MCAsmStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                                    uint64_t Size, Align ByteAlignment) {
-  assignFragment(Symbol, &Section->getDummyFragment());
+  Symbol->setFragment(&Section->getDummyFragment());
 
-  assert(Symbol && "Symbol shouldn't be NULL!");
   // Instead of using the Section we'll just use the shortcut.
 
   assert(Section->getVariant() == MCSection::SV_MachO &&
@@ -2128,6 +2127,12 @@ void MCAsmStreamer::emitCFIReturnColumn(int64_t Register) {
   EmitEOL();
 }
 
+void MCAsmStreamer::emitCFILabelDirective(SMLoc Loc, StringRef Name) {
+  MCStreamer::emitCFILabelDirective(Loc, Name);
+  OS << "\t.cfi_label " << Name;
+  EmitEOL();
+}
+
 void MCAsmStreamer::emitCFIBKeyFrame() {
   MCStreamer::emitCFIBKeyFrame();
   OS << "\t.cfi_b_key_frame";
@@ -2209,7 +2214,7 @@ void MCAsmStreamer::emitWinEHHandlerData(SMLoc Loc) {
 
   MCSection *TextSec = &CurFrame->Function->getSection();
   MCSection *XData = getAssociatedXDataSection(TextSec);
-  switchSectionNoChange(XData);
+  switchSectionNoPrint(XData);
 
   OS << "\t.seh_handlerdata";
   EmitEOL();
@@ -2626,7 +2631,7 @@ void MCAsmStreamer::doFinalizationAtSectionEnd(MCSection *Section) {
   if (MAI->usesDwarfFileAndLocDirectives())
     return;
 
-  switchSectionNoChange(Section);
+  switchSectionNoPrint(Section);
 
   MCSymbol *Sym = getCurrentSectionOnly()->getEndSymbol(getContext());
 
