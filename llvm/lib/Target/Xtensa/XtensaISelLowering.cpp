@@ -564,13 +564,8 @@ SDValue XtensaTargetLowering::LowerSELECT_CC(SDValue Op,
   SDValue TargetCC = DAG.getConstant(BrKind, DL, MVT::i32);
 
   // Wrap select nodes
-  if (BrInv) {
-    return DAG.getNode(XtensaISD::SELECT_CC, DL, Ty, RHS, LHS, TrueValue,
-                       FalseValue, TargetCC);
-  } else {
-    return DAG.getNode(XtensaISD::SELECT_CC, DL, Ty, LHS, RHS, TrueValue,
-                       FalseValue, TargetCC);
-  }
+  return DAG.getNode(XtensaISD::SELECT_CC, DL, Ty, BrInv ? RHS : LHS,
+                     BrInv ? LHS : RHS, TrueValue, FalseValue, TargetCC);
 }
 
 SDValue XtensaTargetLowering::LowerImmediate(SDValue Op,
