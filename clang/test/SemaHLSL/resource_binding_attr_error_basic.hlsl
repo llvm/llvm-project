@@ -21,11 +21,11 @@ tbuffer g_tbuffer1 {
 };
 
 cbuffer g_cbuffer2 {
-// expected-error@+1{{register binding type 'float' not supported for variable of type 'b'}}
+// expected-error@+1{{register binding type 'b' not supported for variable of type 'float'}}
     float f6 : register(b2);
 };
 
 tbuffer g_tbuffer2 {
-// expected-error@+1{{register binding type 'float' not supported for variable of type 'i'}}
+// expected-error@+1{{register binding type 'i' not supported for variable of type 'float'}}
     float f7 : register(i2);
 };

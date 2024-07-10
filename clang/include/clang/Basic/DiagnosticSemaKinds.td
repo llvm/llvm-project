@@ -12343,7 +12343,7 @@ def err_hlsl_init_priority_unsupported : Error<
   "initializer priorities are not supported in HLSL">;
 
 def err_hlsl_mismatching_register_type_and_variable_type: Error<"unsupported resource register binding '%select{t|u|b|s}0' on variable of type '%1'">;
-def err_hlsl_unsupported_register_type_and_variable_type: Error<"register binding type '%1' not supported for variable of type '%0'">;
+def err_hlsl_unsupported_register_type_and_variable_type: Error<"register binding type '%0' not supported for variable of type '%1'">;
 def err_hlsl_mismatching_register_type_and_resource_type: Error<"%select{srv|uav|cbv|sampler}2 type '%0' requires register type '%select{t|u|b|s}2', but register type '%1' was used">;
 def err_hlsl_unsupported_register_type_and_resource_type: Error<"invalid register type '%0' used; expected 't', 'u', 'b', or 's'">;
 def err_hlsl_conflicting_register_annotations: Error<"conflicting register annotations: multiple register annotations detected for register type '%0'">;
