@@ -416,16 +416,6 @@ def BBSI : RRI8_Inst<0x07, (outs),
   let imm8 = target;
 }
 
-def : Pat<(brcc SETGT, AR:$s, AR:$t, bb:$target),
-          (BLT AR:$t, AR:$s, bb:$target)>;
-def : Pat<(brcc SETUGT, AR:$s, AR:$t, bb:$target),
-          (BLTU AR:$t, AR:$s, bb:$target)>;
-def : Pat<(brcc SETLE, AR:$s, AR:$t, bb:$target),
-          (BGE AR:$t, AR:$s, bb:$target)>;
-def : Pat<(brcc SETULE, AR:$s, AR:$t, bb:$target),
-          (BGEU AR:$t, AR:$s, bb:$target)>;
-
-
 //===----------------------------------------------------------------------===//
 // Call and jump instructions
 //===----------------------------------------------------------------------===//

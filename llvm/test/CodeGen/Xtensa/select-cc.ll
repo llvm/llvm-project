@@ -31,8 +31,9 @@ define i32 @f_ne(i32 %a, ptr %b) nounwind {
 
 define i32 @f_ugt(i32 %a, ptr %b) nounwind {
 ; CHECK-LABEL: f_ugt:
-; CHECK:         l32i a8, a3, 0
-; CHECK-NEXT:    bltu a8, a2, .LBB2_2
+; CHECK:         or a8, a2, a2
+; CHECK-NEXT:    l32i a2, a3, 0
+; CHECK-NEXT:    bgeu a2, a8, .LBB2_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    or a2, a8, a8
 ; CHECK-NEXT:  .LBB2_2:
@@ -73,8 +74,9 @@ define i32 @f_ult(i32 %a, ptr %b) nounwind {
 
 define i32 @f_ule(i32 %a, ptr %b) nounwind {
 ; CHECK-LABEL: f_ule:
-; CHECK:         l32i a8, a3, 0
-; CHECK-NEXT:    bgeu a8, a2, .LBB5_2
+; CHECK:         or a8, a2, a2
+; CHECK-NEXT:    l32i a2, a3, 0
+; CHECK-NEXT:    bltu a2, a8, .LBB5_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    or a2, a8, a8
 ; CHECK-NEXT:  .LBB5_2:
@@ -87,8 +89,9 @@ define i32 @f_ule(i32 %a, ptr %b) nounwind {
 
 define i32 @f_sgt(i32 %a, ptr %b) nounwind {
 ; CHECK-LABEL: f_sgt:
-; CHECK:         l32i a8, a3, 0
-; CHECK-NEXT:    blt a8, a2, .LBB6_2
+; CHECK:         or a8, a2, a2
+; CHECK-NEXT:    l32i a2, a3, 0
+; CHECK-NEXT:    bge a2, a8, .LBB6_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    or a2, a8, a8
 ; CHECK-NEXT:  .LBB6_2:
@@ -129,8 +132,9 @@ define i32 @f_slt(i32 %a, ptr %b) nounwind {
 
 define i32 @f_sle(i32 %a, ptr %b) nounwind {
 ; CHECK-LABEL: f_sle:
-; CHECK:         l32i a8, a3, 0
-; CHECK-NEXT:    bge a8, a2, .LBB9_2
+; CHECK:         or a8, a2, a2
+; CHECK-NEXT:    l32i a2, a3, 0
+; CHECK-NEXT:    blt a2, a8, .LBB9_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    or a2, a8, a8
 ; CHECK-NEXT:  .LBB9_2:
@@ -157,10 +161,12 @@ define i32 @f_slt_imm(i32 %a, ptr %b) nounwind {
 
 define i32 @f_sgt_imm(i32 %a, ptr %b) nounwind {
 ; CHECK-LABEL: f_sgt_imm:
-; CHECK:         movi a8, -1
-; CHECK-NEXT:    blt a8, a2, .LBB11_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK:         or a8, a2, a2
 ; CHECK-NEXT:    l32i a2, a3, 0
+; CHECK-NEXT:    movi a9, -1
+; CHECK-NEXT:    bge a9, a8, .LBB11_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    or a2, a8, a8
 ; CHECK-NEXT:  .LBB11_2:
 ; CHECK-NEXT:    ret
   %val1 = load i32, ptr %b

@@ -93,6 +93,11 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
   setOperationAction(ISD::SETCC, MVT::i32, Expand);
 
+  setCondCodeAction(ISD::SETGT, MVT::i32, Expand);
+  setCondCodeAction(ISD::SETLE, MVT::i32, Expand);
+  setCondCodeAction(ISD::SETUGT, MVT::i32, Expand);
+  setCondCodeAction(ISD::SETULE, MVT::i32, Expand);
+
   // Implement custom stack allocations
   setOperationAction(ISD::DYNAMIC_STACKALLOC, PtrVT, Custom);
   // Implement custom stack save and restore
@@ -517,8 +522,7 @@ XtensaTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   return DAG.getNode(XtensaISD::RET, DL, MVT::Other, RetOps);
 }
 
-static unsigned getBranchOpcode(ISD::CondCode Cond, bool &BrInv) {
-  BrInv = false;
+static unsigned getBranchOpcode(ISD::CondCode Cond) {
   switch (Cond) {
   case ISD::SETEQ:
     return Xtensa::BEQ;
@@ -527,20 +531,16 @@ static unsigned getBranchOpcode(ISD::CondCode Cond, bool &BrInv) {
   case ISD::SETLT:
     return Xtensa::BLT;
   case ISD::SETLE:
-    BrInv = true;
     return Xtensa::BGE;
   case ISD::SETGT:
-    BrInv = true;
     return Xtensa::BLT;
   case ISD::SETGE:
     return Xtensa::BGE;
   case ISD::SETULT:
     return Xtensa::BLTU;
   case ISD::SETULE:
-    BrInv = true;
     return Xtensa::BGEU;
   case ISD::SETUGT:
-    BrInv = true;
     return Xtensa::BLTU;
   case ISD::SETUGE:
     return Xtensa::BGEU;
@@ -559,13 +559,12 @@ SDValue XtensaTargetLowering::LowerSELECT_CC(SDValue Op,
   SDValue FalseValue = Op.getOperand(3);
   ISD::CondCode CC = cast<CondCodeSDNode>(Op->getOperand(4))->get();
 
-  bool BrInv;
-  unsigned BrKind = getBranchOpcode(CC, BrInv);
+  unsigned BrKind = getBranchOpcode(CC);
   SDValue TargetCC = DAG.getConstant(BrKind, DL, MVT::i32);
 
   // Wrap select nodes
-  return DAG.getNode(XtensaISD::SELECT_CC, DL, Ty, BrInv ? RHS : LHS,
-                     BrInv ? LHS : RHS, TrueValue, FalseValue, TargetCC);
+  return DAG.getNode(XtensaISD::SELECT_CC, DL, Ty, LHS, RHS, TrueValue,
+                     FalseValue, TargetCC);
 }
 
 SDValue XtensaTargetLowering::LowerImmediate(SDValue Op,
