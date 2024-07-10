@@ -105,6 +105,14 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
                                         : AMDGPUSubtarget::SOUTHERN_ISLANDS;
   }
 
+  if (!hasFeature(AMDGPU::FeatureWavefrontSize32) &&
+      !hasFeature(AMDGPU::FeatureWavefrontSize64)) {
+    if (getGeneration() >= AMDGPUSubtarget::GFX10)
+      ToggleFeature(AMDGPU::FeatureWavefrontSize32);
+    else
+      ToggleFeature(AMDGPU::FeatureWavefrontSize64);
+  }
+
   // We don't support FP64 for EG/NI atm.
   assert(!hasFP64() || (getGeneration() >= AMDGPUSubtarget::SOUTHERN_ISLANDS));
 

@@ -45,10 +45,26 @@ using namespace llvm;
 
 using DecodeStatus = llvm::MCDisassembler::DecodeStatus;
 
+static const MCSubtargetInfo &addDefaultWaveSize(const MCSubtargetInfo &STI,
+                                                 MCContext &Ctx) {
+  if (!STI.hasFeature(AMDGPU::FeatureWavefrontSize64) &&
+      !STI.hasFeature(AMDGPU::FeatureWavefrontSize32)) {
+    MCSubtargetInfo &STICopy = Ctx.getSubtargetCopy(STI);
+    if (AMDGPU::isGFX10Plus(STI))
+      STICopy.ToggleFeature(AMDGPU::FeatureWavefrontSize32);
+    else
+      STICopy.ToggleFeature(AMDGPU::FeatureWavefrontSize64);
+    return STICopy;
+  }
+
+  return STI;
+}
+
 AMDGPUDisassembler::AMDGPUDisassembler(const MCSubtargetInfo &STI,
                                        MCContext &Ctx, MCInstrInfo const *MCII)
-    : MCDisassembler(STI, Ctx), MCII(MCII), MRI(*Ctx.getRegisterInfo()),
-      MAI(*Ctx.getAsmInfo()), TargetMaxInstBytes(MAI.getMaxInstLength(&STI)),
+    : MCDisassembler(addDefaultWaveSize(STI, Ctx), Ctx), MCII(MCII),
+      MRI(*Ctx.getRegisterInfo()), MAI(*Ctx.getAsmInfo()),
+      TargetMaxInstBytes(MAI.getMaxInstLength(&STI)),
       CodeObjectVersion(AMDGPU::getDefaultAMDHSACodeObjectVersion()) {
   // ToDo: AMDGPUDisassembler supports only VI ISA.
   if (!STI.hasFeature(AMDGPU::FeatureGCN3Encoding) && !isGFX10Plus())

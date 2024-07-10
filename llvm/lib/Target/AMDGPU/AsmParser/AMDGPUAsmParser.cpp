@@ -1408,9 +1408,18 @@ public:
       copySTI().ToggleFeature("southern-islands");
     }
 
+    AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(getSTI().getCPU());
+    FeatureBitset FB = getFeatureBits();
+    if (!FB[AMDGPU::FeatureWavefrontSize64] &&
+        !FB[AMDGPU::FeatureWavefrontSize32]) {
+      if (ISA.Major >= 10)
+        copySTI().ToggleFeature(AMDGPU::FeatureWavefrontSize32);
+      else
+        copySTI().ToggleFeature(AMDGPU::FeatureWavefrontSize64);
+    }
+
     setAvailableFeatures(ComputeAvailableFeatures(getFeatureBits()));
 
-    AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(getSTI().getCPU());
     if (ISA.Major >= 6 && isHsaAbi(getSTI())) {
       createConstantSymbol(".amdgcn.gfx_generation_number", ISA.Major);
       createConstantSymbol(".amdgcn.gfx_generation_minor", ISA.Minor);
