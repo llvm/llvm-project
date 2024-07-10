@@ -1828,14 +1828,6 @@ struct Attributor {
       Configuration.InitializationCallback(*this, F);
   }
 
-  /// Helper function to remove callsite.
-  void removeCallSite(CallInst *CI) {
-    if (!CI)
-      return;
-
-    Configuration.CGUpdater.removeCallSite(*CI);
-  }
-
   /// Record that \p U is to be replaces with \p NV after information was
   /// manifested. This also triggers deletion of trivially dead istructions.
   bool changeUseAfterManifest(Use &U, Value &NV) {
