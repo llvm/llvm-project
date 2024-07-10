@@ -3894,7 +3894,9 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   // needs predication, or it was decided to use masking to deal with gaps
   // (either a gap at the end of a load-access that may result in a speculative
   // load, or any gaps in a store-access).
-  bool PredicatedAccessRequiresMasking = isPredicatedInst(I);
+  bool PredicatedAccessRequiresMasking =
+      blockNeedsPredicationForAnyReason(I->getParent()) &&
+      Legal->isMaskRequired(I);
   bool LoadAccessWithGapsRequiresEpilogMasking =
       isa<LoadInst>(I) && Group->requiresScalarEpilogue() &&
       !isScalarEpilogueAllowed();
@@ -4816,11 +4818,15 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
   assert(VF.isVector() && "Checking a scalar VF?");
   VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType(),
                           Plan.getCanonicalIV()->getScalarType()->getContext());
+  DenseSet<VPRecipeBase *> EphemeralRecipes;
+  collectEphemeralRecipesForVPlan(Plan, EphemeralRecipes);
   // Set of already visited types.
   DenseSet<Type *> Visited;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : *VPBB) {
+      if (EphemeralRecipes.contains(&R))
+        continue;
       // Continue early if the recipe is considered to not produce a vector
       //  result. Note that this includes VPInstruction where some opcodes may
       // produce a vector, to preserve existing behavior as VPInstructions model
@@ -6023,7 +6029,7 @@ LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
          "Stride should be 1 or -1 for consecutive memory access");
   const Align Alignment = getLoadStoreAlignment(I);
   InstructionCost Cost = 0;
-  if (isPredicatedInst(I)) {
+  if (Legal->isMaskRequired(I)) {
     Cost += TTI.getMaskedMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS,
                                       CostKind);
   } else {
@@ -6077,7 +6083,7 @@ LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
 
   return TTI.getAddressComputationCost(VectorTy) +
          TTI.getGatherScatterOpCost(
-             I->getOpcode(), VectorTy, Ptr, isPredicatedInst(I), Alignment,
+             I->getOpcode(), VectorTy, Ptr, Legal->isMaskRequired(I), Alignment,
              TargetTransformInfo::TCK_RecipThroughput, I);
 }
 
@@ -6107,7 +6113,7 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
       (isa<StoreInst>(I) && (Group->getNumMembers() < Group->getFactor()));
   InstructionCost Cost = TTI.getInterleavedMemoryOpCost(
       I->getOpcode(), WideVecTy, Group->getFactor(), Indices, Group->getAlign(),
-      AS, CostKind, isPredicatedInst(I), UseMaskForGaps);
+      AS, CostKind, Legal->isMaskRequired(I), UseMaskForGaps);
 
   if (Group->isReverse()) {
     // TODO: Add support for reversed masked interleaved access.
@@ -6559,7 +6565,7 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
       Function *ScalarFunc = CI->getCalledFunction();
       Type *ScalarRetTy = CI->getType();
       SmallVector<Type *, 4> Tys, ScalarTys;
-      bool MaskRequired = isPredicatedInst(CI);
+      bool MaskRequired = Legal->isMaskRequired(CI);
       for (auto &ArgOp : CI->args())
         ScalarTys.push_back(ArgOp->getType());
 
@@ -6983,8 +6989,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
         return TTI::CastContextHint::Interleave;
       case LoopVectorizationCostModel::CM_Scalarize:
       case LoopVectorizationCostModel::CM_Widen:
-        return isPredicatedInst(I) ? TTI::CastContextHint::Masked
-                                   : TTI::CastContextHint::Normal;
+        return Legal->isMaskRequired(I) ? TTI::CastContextHint::Masked
+                                        : TTI::CastContextHint::Normal;
       case LoopVectorizationCostModel::CM_Widen_Reverse:
         return TTI::CastContextHint::Reversed;
       case LoopVectorizationCostModel::CM_Unknown:
@@ -8055,7 +8061,7 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
     return nullptr;
 
   VPValue *Mask = nullptr;
-  if (CM.isPredicatedInst(I))
+  if (Legal->isMaskRequired(I))
     Mask = getBlockInMask(I->getParent());
 
   // Determine if the pointer operand of the access is either consecutive or
@@ -8262,7 +8268,7 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
       //      vector variant at this VF requires a mask, so we synthesize an
       //      all-true mask.
       VPValue *Mask = nullptr;
-      if (CM.isPredicatedInst(CI))
+      if (Legal->isMaskRequired(CI))
         Mask = getBlockInMask(CI->getParent());
       else
         Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(
@@ -8574,11 +8580,6 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
       createTripCountSCEV(Legal->getWidestInductionType(), PSE, OrigLoop),
       *PSE.getSE(), RequiresScalarEpilogueCheck, CM.foldTailByMasking(),
       OrigLoop);
-  VPBasicBlock *HeaderVPBB = new VPBasicBlock("vector.body");
-  VPBasicBlock *LatchVPBB = new VPBasicBlock("vector.latch");
-  VPBlockUtils::insertBlockAfter(LatchVPBB, HeaderVPBB);
-  Plan->getVectorLoopRegion()->setEntry(HeaderVPBB);
-  Plan->getVectorLoopRegion()->setExiting(LatchVPBB);
 
   // Don't use getDecisionAndClampRange here, because we don't know the UF
   // so this function is better to be conservative, rather than to split
@@ -8632,6 +8633,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   LoopBlocksDFS DFS(OrigLoop);
   DFS.perform(LI);
 
+  VPBasicBlock *HeaderVPBB = Plan->getVectorLoopRegion()->getEntryBasicBlock();
   VPBasicBlock *VPBB = HeaderVPBB;
   BasicBlock *HeaderBB = OrigLoop->getHeader();
   bool NeedsMasks =
@@ -8722,7 +8724,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   // ---------------------------------------------------------------------------
 
   // Adjust the recipes for any inloop reductions.
-  adjustRecipesForReductions(LatchVPBB, Plan, RecipeBuilder, Range.Start);
+  adjustRecipesForReductions(Plan, RecipeBuilder, Range.Start);
 
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
@@ -8864,8 +8866,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
 // with a boolean reduction phi node to check if the condition is true in any
 // iteration. The final value is selected by the final ComputeReductionResult.
 void LoopVectorizationPlanner::adjustRecipesForReductions(
-    VPBasicBlock *LatchVPBB, VPlanPtr &Plan, VPRecipeBuilder &RecipeBuilder,
-    ElementCount MinVF) {
+    VPlanPtr &Plan, VPRecipeBuilder &RecipeBuilder, ElementCount MinVF) {
   VPRegionBlock *VectorLoopRegion = Plan->getVectorLoopRegion();
   VPBasicBlock *Header = VectorLoopRegion->getEntryBasicBlock();
   // Gather all VPReductionPHIRecipe and sort them so that Intermediate stores
@@ -9029,6 +9030,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       PreviousLink = RedRecipe;
     }
   }
+  VPBasicBlock *LatchVPBB = VectorLoopRegion->getExitingBasicBlock();
   Builder.setInsertPoint(&*LatchVPBB->begin());
   VPBasicBlock *MiddleVPBB =
       cast<VPBasicBlock>(VectorLoopRegion->getSingleSuccessor());

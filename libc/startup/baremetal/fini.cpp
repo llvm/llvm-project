@@ -9,12 +9,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
+namespace LIBC_NAMESPACE {
+
 extern "C" {
 extern uintptr_t __fini_array_start[];
 extern uintptr_t __fini_array_end[];
 }
-
-namespace LIBC_NAMESPACE {
 
 using FiniCallback = void(void);
 

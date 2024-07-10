@@ -596,6 +596,7 @@ ELFDumper<ELFT>::dumpSections() {
       return [this](const Elf_Shdr *S) { return dumpSymtabShndxSection(S); };
     case ELF::SHT_REL:
     case ELF::SHT_RELA:
+    case ELF::SHT_CREL:
       return [this](const Elf_Shdr *S) { return dumpRelocSection(S); };
     case ELF::SHT_RELR:
       return [this](const Elf_Shdr *S) { return dumpRelrSection(S); };
@@ -1165,27 +1166,41 @@ ELFDumper<ELFT>::dumpRelocSection(const Elf_Shdr *Shdr) {
   if (Shdr->sh_size != 0)
     S->Relocations.emplace();
 
-  if (Shdr->sh_type == ELF::SHT_REL) {
-    auto Rels = Obj.rels(*Shdr);
-    if (!Rels)
-      return Rels.takeError();
-    for (const Elf_Rel &Rel : *Rels) {
-      ELFYAML::Relocation R;
-      if (Error E = dumpRelocation(&Rel, *SymTabOrErr, R))
-        return std::move(E);
-      S->Relocations->push_back(R);
-    }
+  std::vector<Elf_Rel> Rels;
+  std::vector<Elf_Rela> Relas;
+  if (Shdr->sh_type == ELF::SHT_CREL) {
+    Expected<ArrayRef<uint8_t>> ContentOrErr = Obj.getSectionContents(*Shdr);
+    if (!ContentOrErr)
+      return ContentOrErr.takeError();
+    auto Crel = Obj.decodeCrel(*ContentOrErr);
+    if (!Crel)
+      return Crel.takeError();
+    Rels = std::move(Crel->first);
+    Relas = std::move(Crel->second);
+  } else if (Shdr->sh_type == ELF::SHT_REL) {
+    auto R = Obj.rels(*Shdr);
+    if (!R)
+      return R.takeError();
+    Rels = std::move(*R);
   } else {
-    auto Rels = Obj.relas(*Shdr);
-    if (!Rels)
-      return Rels.takeError();
-    for (const Elf_Rela &Rel : *Rels) {
-      ELFYAML::Relocation R;
-      if (Error E = dumpRelocation(&Rel, *SymTabOrErr, R))
-        return std::move(E);
-      R.Addend = Rel.r_addend;
-      S->Relocations->push_back(R);
-    }
+    auto R = Obj.relas(*Shdr);
+    if (!R)
+      return R.takeError();
+    Relas = std::move(*R);
+  }
+
+  for (const Elf_Rel &Rel : Rels) {
+    ELFYAML::Relocation R;
+    if (Error E = dumpRelocation(&Rel, *SymTabOrErr, R))
+      return std::move(E);
+    S->Relocations->push_back(R);
+  }
+  for (const Elf_Rela &Rel : Relas) {
+    ELFYAML::Relocation R;
+    if (Error E = dumpRelocation(&Rel, *SymTabOrErr, R))
+      return std::move(E);
+    R.Addend = Rel.r_addend;
+    S->Relocations->push_back(R);
   }
 
   return S.release();

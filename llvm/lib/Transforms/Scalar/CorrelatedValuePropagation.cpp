@@ -538,29 +538,28 @@ static bool processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
   return false;
 }
 
-static bool processCmpIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
-  bool IsSigned = II->getIntrinsicID() == Intrinsic::scmp;
-  ConstantRange LHS_CR = LVI->getConstantRangeAtUse(II->getOperandUse(0),
-                                                    /*UndefAllowed*/ false);
-  ConstantRange RHS_CR = LVI->getConstantRangeAtUse(II->getOperandUse(1),
-                                                    /*UndefAllowed*/ false);
+static bool processCmpIntrinsic(CmpIntrinsic *CI, LazyValueInfo *LVI) {
+  ConstantRange LHS_CR =
+      LVI->getConstantRangeAtUse(CI->getOperandUse(0), /*UndefAllowed*/ false);
+  ConstantRange RHS_CR =
+      LVI->getConstantRangeAtUse(CI->getOperandUse(1), /*UndefAllowed*/ false);
 
-  if (LHS_CR.icmp(IsSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT, RHS_CR)) {
+  if (LHS_CR.icmp(CI->getGTPredicate(), RHS_CR)) {
     ++NumCmpIntr;
-    II->replaceAllUsesWith(ConstantInt::get(II->getType(), 1));
-    II->eraseFromParent();
+    CI->replaceAllUsesWith(ConstantInt::get(CI->getType(), 1));
+    CI->eraseFromParent();
     return true;
   }
-  if (LHS_CR.icmp(IsSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT, RHS_CR)) {
+  if (LHS_CR.icmp(CI->getLTPredicate(), RHS_CR)) {
     ++NumCmpIntr;
-    II->replaceAllUsesWith(ConstantInt::getSigned(II->getType(), -1));
-    II->eraseFromParent();
+    CI->replaceAllUsesWith(ConstantInt::getSigned(CI->getType(), -1));
+    CI->eraseFromParent();
     return true;
   }
   if (LHS_CR.icmp(ICmpInst::ICMP_EQ, RHS_CR)) {
     ++NumCmpIntr;
-    II->replaceAllUsesWith(ConstantInt::get(II->getType(), 0));
-    II->eraseFromParent();
+    CI->replaceAllUsesWith(ConstantInt::get(CI->getType(), 0));
+    CI->eraseFromParent();
     return true;
   }
 
@@ -658,9 +657,8 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
     return processAbsIntrinsic(&cast<IntrinsicInst>(CB), LVI);
   }
 
-  if (CB.getIntrinsicID() == Intrinsic::scmp ||
-      CB.getIntrinsicID() == Intrinsic::ucmp) {
-    return processCmpIntrinsic(&cast<IntrinsicInst>(CB), LVI);
+  if (auto *CI = dyn_cast<CmpIntrinsic>(&CB)) {
+    return processCmpIntrinsic(CI, LVI);
   }
 
   if (auto *MM = dyn_cast<MinMaxIntrinsic>(&CB)) {
