@@ -79,9 +79,10 @@ void initializeRISCVMoveMergePass(PassRegistry &);
 FunctionPass *createRISCVPushPopOptimizationPass();
 void initializeRISCVPushPopOptPass(PassRegistry &);
 
-InstructionSelector *createRISCVInstructionSelector(const RISCVTargetMachine &,
-                                                    RISCVSubtarget &,
-                                                    RISCVRegisterBankInfo &);
+InstructionSelector *
+createRISCVInstructionSelector(const RISCVTargetMachine &,
+                               const RISCVSubtarget &,
+                               const RISCVRegisterBankInfo &);
 void initializeRISCVDAGToDAGISelLegacyPass(PassRegistry &);
 
 FunctionPass *createRISCVPostLegalizerCombiner();
