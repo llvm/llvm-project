@@ -4966,8 +4966,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     llvm::raw_string_ostream OS(Name);
     Function->getNameForDiagnostic(OS, getPrintingPolicy(),
                                    /*Qualified=*/true);
-    if (llvm::timeTraceAddFilename())
-      OS << "@" << SourceMgr.getFilename(Function->getLocation());
+    OS << "@" << SourceMgr.getFilename(Function->getLocation());
     return Name;
   });
 

@@ -583,9 +583,6 @@ public:
   /// Path which stores the output files for -ftime-trace
   std::string TimeTracePath;
 
-  /// Adds filename to event details wherever supported
-  bool TimeTraceAddFilename = false;
-
   /// Output Path for module output file.
   std::string ModuleOutputPath;
 
