@@ -136,9 +136,9 @@ Value *SSAUpdater::GetValueInMiddleOfBlock(BasicBlock *BB) {
     }
   }
 
-  // If there are no predecessors, just return undef.
+  // If there are no predecessors, just return poison.
   if (PredValues.empty())
-    return UndefValue::get(ProtoType);
+    return PoisonValue::get(ProtoType);
 
   // Otherwise, if all the merged values are the same, just use it.
   if (SingularValue)
@@ -167,7 +167,7 @@ Value *SSAUpdater::GetValueInMiddleOfBlock(BasicBlock *BB) {
   // See if the PHI node can be merged to a single value.  This can happen in
   // loop cases when we get a PHI of itself and one other value.
   if (Value *V =
-          simplifyInstruction(InsertedPHI, BB->getModule()->getDataLayout())) {
+          simplifyInstruction(InsertedPHI, BB->getDataLayout())) {
     InsertedPHI->eraseFromParent();
     return V;
   }
@@ -199,17 +199,17 @@ void SSAUpdater::RewriteUse(Use &U) {
 
 void SSAUpdater::UpdateDebugValues(Instruction *I) {
   SmallVector<DbgValueInst *, 4> DbgValues;
-  SmallVector<DPValue *, 4> DPValues;
-  llvm::findDbgValues(DbgValues, I, &DPValues);
+  SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
+  llvm::findDbgValues(DbgValues, I, &DbgVariableRecords);
   for (auto &DbgValue : DbgValues) {
     if (DbgValue->getParent() == I->getParent())
       continue;
     UpdateDebugValue(I, DbgValue);
   }
-  for (auto &DPV : DPValues) {
-    if (DPV->getParent() == I->getParent())
+  for (auto &DVR : DbgVariableRecords) {
+    if (DVR->getParent() == I->getParent())
       continue;
-    UpdateDebugValue(I, DPV);
+    UpdateDebugValue(I, DVR);
   }
 }
 
@@ -220,10 +220,10 @@ void SSAUpdater::UpdateDebugValues(Instruction *I,
   }
 }
 
-void SSAUpdater::UpdateDebugValues(Instruction *I,
-                                   SmallVectorImpl<DPValue *> &DPValues) {
-  for (auto &DPV : DPValues) {
-    UpdateDebugValue(I, DPV);
+void SSAUpdater::UpdateDebugValues(
+    Instruction *I, SmallVectorImpl<DbgVariableRecord *> &DbgVariableRecords) {
+  for (auto &DVR : DbgVariableRecords) {
+    UpdateDebugValue(I, DVR);
   }
 }
 
@@ -236,13 +236,13 @@ void SSAUpdater::UpdateDebugValue(Instruction *I, DbgValueInst *DbgValue) {
     DbgValue->setKillLocation();
 }
 
-void SSAUpdater::UpdateDebugValue(Instruction *I, DPValue *DPV) {
-  BasicBlock *UserBB = DPV->getParent();
+void SSAUpdater::UpdateDebugValue(Instruction *I, DbgVariableRecord *DVR) {
+  BasicBlock *UserBB = DVR->getParent();
   if (HasValueForBlock(UserBB)) {
     Value *NewVal = GetValueAtEndOfBlock(UserBB);
-    DPV->replaceVariableLocationOp(I, NewVal);
+    DVR->replaceVariableLocationOp(I, NewVal);
   } else
-    DPV->setKillLocation();
+    DVR->setKillLocation();
 }
 
 void SSAUpdater::RewriteUseAfterInsertions(Use &U) {
@@ -307,10 +307,10 @@ public:
       append_range(*Preds, predecessors(BB));
   }
 
-  /// GetUndefVal - Get an undefined value of the same type as the value
+  /// GetPoisonVal - Get a poison value of the same type as the value
   /// being handled.
-  static Value *GetUndefVal(BasicBlock *BB, SSAUpdater *Updater) {
-    return UndefValue::get(Updater->ProtoType);
+  static Value *GetPoisonVal(BasicBlock *BB, SSAUpdater *Updater) {
+    return PoisonValue::get(Updater->ProtoType);
   }
 
   /// CreateEmptyPHI - Create a new PHI instruction in the specified block.

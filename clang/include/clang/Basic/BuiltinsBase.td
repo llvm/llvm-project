@@ -49,6 +49,8 @@ def UnevaluatedArguments : Attribute<"u">;
 // is required for a builtin.
 def FunctionWithBuiltinPrefix : Attribute<"F">;
 
+def FunctionWithoutBuiltinPrefix : Attribute<"f">;
+
 // const, but only when -fno-math-errno and FP exceptions are ignored.
 def ConstIgnoringErrnoAndExceptions : Attribute<"e">;
 

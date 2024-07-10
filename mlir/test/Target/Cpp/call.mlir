@@ -18,7 +18,7 @@ func.func @emitc_call_opaque() {
 
 
 func.func @emitc_call_opaque_two_results() {
-  %0 = arith.constant 0 : index
+  %0 = "emitc.constant"() <{value = 0 : index}> : () -> index
   %1:2 = emitc.call_opaque "two_results" () : () -> (i32, i32)
   return
 }

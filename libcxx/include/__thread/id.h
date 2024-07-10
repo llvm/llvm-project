@@ -12,7 +12,7 @@
 
 #include <__compare/ordering.h>
 #include <__config>
-#include <__fwd/hash.h>
+#include <__fwd/functional.h>
 #include <__fwd/ostream.h>
 #include <__thread/support.h>
 

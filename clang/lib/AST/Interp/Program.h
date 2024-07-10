@@ -34,7 +34,6 @@ class VarDecl;
 
 namespace interp {
 class Context;
-class Record;
 
 /// The program contains and links the bytecode for all functions.
 class Program final {
@@ -46,7 +45,8 @@ public:
     // but primitive arrays might have an InitMap* heap allocated and
     // that needs to be freed.
     for (Global *G : Globals)
-      G->block()->invokeDtor();
+      if (Block *B = G->block(); B->isInitialized())
+        B->invokeDtor();
 
     // Records might actually allocate memory themselves, but they
     // are allocated using a BumpPtrAllocator. Call their desctructors
@@ -77,6 +77,7 @@ public:
 
   /// Finds a global's index.
   std::optional<unsigned> getGlobal(const ValueDecl *VD);
+  std::optional<unsigned> getGlobal(const Expr *E);
 
   /// Returns or creates a global an creates an index to it.
   std::optional<unsigned> getOrCreateGlobal(const ValueDecl *VD,
@@ -209,7 +210,7 @@ private:
   llvm::DenseMap<const RecordDecl *, Record *> Records;
 
   /// Dummy parameter to generate pointers from.
-  llvm::DenseMap<const ValueDecl *, unsigned> DummyParams;
+  llvm::DenseMap<const ValueDecl *, unsigned> DummyVariables;
 
   /// Creates a new descriptor.
   template <typename... Ts>

@@ -463,7 +463,7 @@ findClangRelativeSysroot(const Driver &D, const llvm::Triple &LiteralTriple,
   Subdirs.back() += "-w64-mingw32";
   Subdirs.emplace_back(T.getArchName());
   Subdirs.back() += "-w64-mingw32ucrt";
-  StringRef ClangRoot = llvm::sys::path::parent_path(D.getInstalledDir());
+  StringRef ClangRoot = llvm::sys::path::parent_path(D.Dir);
   StringRef Sep = llvm::sys::path::get_separator();
   for (StringRef CandidateSubdir : Subdirs) {
     if (llvm::sys::fs::is_directory(ClangRoot + Sep + CandidateSubdir)) {
@@ -487,10 +487,10 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
                          const ArgList &Args)
     : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args),
       RocmInstallation(D, Triple, Args) {
-  getProgramPaths().push_back(getDriver().getInstalledDir());
+  getProgramPaths().push_back(getDriver().Dir);
 
   std::string InstallBase =
-      std::string(llvm::sys::path::parent_path(getDriver().getInstalledDir()));
+      std::string(llvm::sys::path::parent_path(getDriver().Dir));
   // The sequence for detecting a sysroot here should be kept in sync with
   // the testTriple function below.
   llvm::Triple LiteralTriple = getLiteralTriple(D, getTriple());
@@ -726,6 +726,30 @@ void toolchains::MinGW::addClangTargetOptions(
     }
   }
 
+  // Default to not enabling sized deallocation, but let user provided options
+  // override it.
+  //
+  // If using sized deallocation, user code that invokes delete will end up
+  // calling delete(void*,size_t). If the user wanted to override the
+  // operator delete(void*), there may be a fallback operator
+  // delete(void*,size_t) which calls the regular operator delete(void*).
+  //
+  // However, if the C++ standard library is linked in the form of a DLL,
+  // and the fallback operator delete(void*,size_t) is within this DLL (which is
+  // the case for libc++ at least) it will only redirect towards the library's
+  // default operator delete(void*), not towards the user's provided operator
+  // delete(void*).
+  //
+  // This issue can be avoided, if the fallback operators are linked statically
+  // into the callers, even if the C++ standard library is linked as a DLL.
+  //
+  // This is meant as a temporary workaround until libc++ implements this
+  // technique, which is tracked in
+  // https://github.com/llvm/llvm-project/issues/96899.
+  if (!DriverArgs.hasArgNoClaim(options::OPT_fsized_deallocation,
+                                options::OPT_fno_sized_deallocation))
+    CC1Args.push_back("-fno-sized-deallocation");
+
   CC1Args.push_back("-fno-use-init-array");
 
   for (auto Opt : {options::OPT_mthreads, options::OPT_mwindows,
@@ -796,8 +820,7 @@ static bool testTriple(const Driver &D, const llvm::Triple &Triple,
   if (D.SysRoot.size())
     return true;
   llvm::Triple LiteralTriple = getLiteralTriple(D, Triple);
-  std::string InstallBase =
-      std::string(llvm::sys::path::parent_path(D.getInstalledDir()));
+  std::string InstallBase = std::string(llvm::sys::path::parent_path(D.Dir));
   if (llvm::ErrorOr<std::string> TargetSubdir =
           findClangRelativeSysroot(D, LiteralTriple, Triple, SubdirName))
     return true;

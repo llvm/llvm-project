@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -transform-interpreter -test-transform-dialect-erase-schedule -lower-vector-mask -one-shot-bufferize -test-lower-to-llvm | \
+// RUN: mlir-opt %s -transform-interpreter -test-transform-dialect-erase-schedule -lower-vector-mask -one-shot-bufferize -buffer-deallocation-pipeline -test-lower-to-llvm | \
 // RUN: %mcr_aarch64_cmd -e=entry -entry-point-result=void --march=aarch64 --mattr="+sve" -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 

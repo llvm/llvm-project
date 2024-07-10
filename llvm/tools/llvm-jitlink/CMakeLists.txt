@@ -28,8 +28,12 @@ add_llvm_tool(llvm-jitlink
   llvm-jitlink-statistics.cpp
   )
 
- if(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+if(${CMAKE_SYSTEM_NAME} MATCHES "Haiku")
+  target_link_libraries(llvm-jitlink PRIVATE network)
+endif()
+
+if(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
   target_link_libraries(llvm-jitlink PRIVATE socket)
- endif()
+endif()
 
 export_executable_symbols(llvm-jitlink)

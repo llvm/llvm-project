@@ -764,9 +764,9 @@ AST_POLYMORPHIC_MATCHER(isImplicit,
   return Node.isImplicit();
 }
 
-/// Matches classTemplateSpecializations, templateSpecializationType and
-/// functionDecl that have at least one TemplateArgument matching the given
-/// InnerMatcher.
+/// Matches templateSpecializationTypes, class template specializations,
+/// variable template specializations, and function template specializations
+/// that have at least one TemplateArgument matching the given InnerMatcher.
 ///
 /// Given
 /// \code
@@ -788,8 +788,8 @@ AST_POLYMORPHIC_MATCHER(isImplicit,
 AST_POLYMORPHIC_MATCHER_P(
     hasAnyTemplateArgument,
     AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
-                                    TemplateSpecializationType,
-                                    FunctionDecl),
+                                    VarTemplateSpecializationDecl, FunctionDecl,
+                                    TemplateSpecializationType),
     internal::Matcher<TemplateArgument>, InnerMatcher) {
   ArrayRef<TemplateArgument> List =
       internal::getTemplateSpecializationArgs(Node);
@@ -1047,8 +1047,9 @@ AST_MATCHER(Expr, isTypeDependent) { return Node.isTypeDependent(); }
 /// expr(isValueDependent()) matches return Size
 AST_MATCHER(Expr, isValueDependent) { return Node.isValueDependent(); }
 
-/// Matches classTemplateSpecializations, templateSpecializationType and
-/// functionDecl where the n'th TemplateArgument matches the given InnerMatcher.
+/// Matches templateSpecializationType, class template specializations,
+/// variable template specializations, and function template specializations
+/// where the n'th TemplateArgument matches the given InnerMatcher.
 ///
 /// Given
 /// \code
@@ -1068,8 +1069,8 @@ AST_MATCHER(Expr, isValueDependent) { return Node.isValueDependent(); }
 AST_POLYMORPHIC_MATCHER_P2(
     hasTemplateArgument,
     AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
-                                    TemplateSpecializationType,
-                                    FunctionDecl),
+                                    VarTemplateSpecializationDecl, FunctionDecl,
+                                    TemplateSpecializationType),
     unsigned, N, internal::Matcher<TemplateArgument>, InnerMatcher) {
   ArrayRef<TemplateArgument> List =
       internal::getTemplateSpecializationArgs(Node);
@@ -4066,7 +4067,7 @@ AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
 ///   Matcher<CXXCtorInitializer>, Matcher<CXXFunctionalCastExpr>,
 ///   Matcher<CXXNewExpr>, Matcher<CXXTemporaryObjectExpr>,
 ///   Matcher<CXXUnresolvedConstructExpr>,
-///   Matcher<ClassTemplateSpecializationDecl>, Matcher<CompoundLiteralExpr>,
+///   Matcher<CompoundLiteralExpr>,
 ///   Matcher<DeclaratorDecl>, Matcher<ExplicitCastExpr>,
 ///   Matcher<ObjCPropertyDecl>, Matcher<TemplateArgumentLoc>,
 ///   Matcher<TypedefNameDecl>
@@ -4075,9 +4076,8 @@ AST_POLYMORPHIC_MATCHER_P(
     AST_POLYMORPHIC_SUPPORTED_TYPES(
         BlockDecl, CXXBaseSpecifier, CXXCtorInitializer, CXXFunctionalCastExpr,
         CXXNewExpr, CXXTemporaryObjectExpr, CXXUnresolvedConstructExpr,
-        ClassTemplateSpecializationDecl, CompoundLiteralExpr, DeclaratorDecl,
-        ExplicitCastExpr, ObjCPropertyDecl, TemplateArgumentLoc,
-        TypedefNameDecl),
+        CompoundLiteralExpr, DeclaratorDecl, ExplicitCastExpr, ObjCPropertyDecl,
+        TemplateArgumentLoc, TypedefNameDecl),
     internal::Matcher<TypeLoc>, Inner) {
   TypeSourceInfo *source = internal::GetTypeSourceInfo(Node);
   if (source == nullptr) {
@@ -4961,6 +4961,8 @@ AST_MATCHER_P(LambdaExpr, hasAnyCapture, internal::Matcher<LambdaCapture>,
 /// capturesVar(hasName("x")) matches `x` and `x = 1`.
 AST_MATCHER_P(LambdaCapture, capturesVar, internal::Matcher<ValueDecl>,
               InnerMatcher) {
+  if (!Node.capturesVariable())
+    return false;
   auto *capturedVar = Node.getCapturedVar();
   return capturedVar && InnerMatcher.matches(*capturedVar, Finder, Builder);
 }
@@ -5032,6 +5034,25 @@ AST_POLYMORPHIC_MATCHER_P2(hasParameter,
           && InnerMatcher.matches(*Node.parameters()[N], Finder, Builder));
 }
 
+/// Matches if the given method declaration declares a member function with an
+/// explicit object parameter.
+///
+/// Given
+/// \code
+/// struct A {
+///  int operator-(this A, int);
+///  void fun(this A &&self);
+///  static int operator()(int);
+///  int operator+(int);
+/// };
+/// \endcode
+///
+/// cxxMethodDecl(isExplicitObjectMemberFunction()) matches the first two
+/// methods but not the last two.
+AST_MATCHER(CXXMethodDecl, isExplicitObjectMemberFunction) {
+  return Node.isExplicitObjectMemberFunction();
+}
+
 /// Matches all arguments and their respective ParmVarDecl.
 ///
 /// Given
@@ -5060,10 +5081,12 @@ AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParam,
   // argument of the method which should not be matched against a parameter, so
   // we skip over it here.
   BoundNodesTreeBuilder Matches;
-  unsigned ArgIndex = cxxOperatorCallExpr(callee(cxxMethodDecl()))
-                              .matches(Node, Finder, &Matches)
-                          ? 1
-                          : 0;
+  unsigned ArgIndex =
+      cxxOperatorCallExpr(
+          callee(cxxMethodDecl(unless(isExplicitObjectMemberFunction()))))
+              .matches(Node, Finder, &Matches)
+          ? 1
+          : 0;
   int ParamIndex = 0;
   bool Matched = false;
   for (; ArgIndex < Node.getNumArgs(); ++ArgIndex) {
@@ -5121,11 +5144,12 @@ AST_POLYMORPHIC_MATCHER_P2(forEachArgumentWithParamType,
   // argument of the method which should not be matched against a parameter, so
   // we skip over it here.
   BoundNodesTreeBuilder Matches;
-  unsigned ArgIndex = cxxOperatorCallExpr(callee(cxxMethodDecl()))
-                              .matches(Node, Finder, &Matches)
-                          ? 1
-                          : 0;
-
+  unsigned ArgIndex =
+      cxxOperatorCallExpr(
+          callee(cxxMethodDecl(unless(isExplicitObjectMemberFunction()))))
+              .matches(Node, Finder, &Matches)
+          ? 1
+          : 0;
   const FunctionProtoType *FProto = nullptr;
 
   if (const auto *Call = dyn_cast<CallExpr>(&Node)) {
@@ -5280,9 +5304,10 @@ AST_POLYMORPHIC_MATCHER_P(parameterCountIs,
   return Node.getNumParams() == N;
 }
 
-/// Matches classTemplateSpecialization, templateSpecializationType and
-/// functionDecl nodes where the template argument matches the inner matcher.
-/// This matcher may produce multiple matches.
+/// Matches templateSpecializationType, class template specialization,
+/// variable template specialization, and function template specialization
+/// nodes where the template argument matches the inner matcher. This matcher
+/// may produce multiple matches.
 ///
 /// Given
 /// \code
@@ -5306,7 +5331,8 @@ AST_POLYMORPHIC_MATCHER_P(parameterCountIs,
 AST_POLYMORPHIC_MATCHER_P(
     forEachTemplateArgument,
     AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
-                                    TemplateSpecializationType, FunctionDecl),
+                                    VarTemplateSpecializationDecl, FunctionDecl,
+                                    TemplateSpecializationType),
     internal::Matcher<TemplateArgument>, InnerMatcher) {
   ArrayRef<TemplateArgument> TemplateArgs =
       clang::ast_matchers::internal::getTemplateSpecializationArgs(Node);
@@ -6881,8 +6907,10 @@ extern const internal::VariadicDynCastAllOfMatcher<
     TypeLoc, TemplateSpecializationTypeLoc>
     templateSpecializationTypeLoc;
 
-/// Matches template specialization `TypeLoc`s that have at least one
-/// `TemplateArgumentLoc` matching the given `InnerMatcher`.
+/// Matches template specialization `TypeLoc`s, class template specializations,
+/// variable template specializations, and function template specializations
+/// that have at least one `TemplateArgumentLoc` matching the given
+/// `InnerMatcher`.
 ///
 /// Given
 /// \code
@@ -6892,20 +6920,21 @@ extern const internal::VariadicDynCastAllOfMatcher<
 /// varDecl(hasTypeLoc(templateSpecializationTypeLoc(hasAnyTemplateArgumentLoc(
 ///   hasTypeLoc(loc(asString("int")))))))
 ///   matches `A<int> a`.
-AST_MATCHER_P(TemplateSpecializationTypeLoc, hasAnyTemplateArgumentLoc,
-              internal::Matcher<TemplateArgumentLoc>, InnerMatcher) {
-  for (unsigned Index = 0, N = Node.getNumArgs(); Index < N; ++Index) {
-    clang::ast_matchers::internal::BoundNodesTreeBuilder Result(*Builder);
-    if (InnerMatcher.matches(Node.getArgLoc(Index), Finder, &Result)) {
-      *Builder = std::move(Result);
-      return true;
-    }
-  }
+AST_POLYMORPHIC_MATCHER_P(
+    hasAnyTemplateArgumentLoc,
+    AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
+                                    VarTemplateSpecializationDecl, FunctionDecl,
+                                    DeclRefExpr, TemplateSpecializationTypeLoc),
+    internal::Matcher<TemplateArgumentLoc>, InnerMatcher) {
+  auto Args = internal::getTemplateArgsWritten(Node);
+  return matchesFirstInRange(InnerMatcher, Args.begin(), Args.end(), Finder,
+                             Builder) != Args.end();
   return false;
 }
 
-/// Matches template specialization `TypeLoc`s where the n'th
-/// `TemplateArgumentLoc` matches the given `InnerMatcher`.
+/// Matches template specialization `TypeLoc`s, class template specializations,
+/// variable template specializations, and function template specializations
+/// where the n'th `TemplateArgumentLoc` matches the given `InnerMatcher`.
 ///
 /// Given
 /// \code
@@ -6918,10 +6947,13 @@ AST_MATCHER_P(TemplateSpecializationTypeLoc, hasAnyTemplateArgumentLoc,
 ///   matches `A<double, int> b`, but not `A<int, double> c`.
 AST_POLYMORPHIC_MATCHER_P2(
     hasTemplateArgumentLoc,
-    AST_POLYMORPHIC_SUPPORTED_TYPES(DeclRefExpr, TemplateSpecializationTypeLoc),
+    AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
+                                    VarTemplateSpecializationDecl, FunctionDecl,
+                                    DeclRefExpr, TemplateSpecializationTypeLoc),
     unsigned, Index, internal::Matcher<TemplateArgumentLoc>, InnerMatcher) {
-  return internal::MatchTemplateArgLocAt(Node, Index, InnerMatcher, Finder,
-                                         Builder);
+  auto Args = internal::getTemplateArgsWritten(Node);
+  return Index < Args.size() &&
+         InnerMatcher.matches(Args[Index], Finder, Builder);
 }
 
 /// Matches C or C++ elaborated `TypeLoc`s.
@@ -8339,20 +8371,28 @@ AST_MATCHER_P(Stmt, forCallable, internal::Matcher<Decl>, InnerMatcher) {
     const auto &CurNode = Stack.back();
     Stack.pop_back();
     if (const auto *FuncDeclNode = CurNode.get<FunctionDecl>()) {
-      if (InnerMatcher.matches(*FuncDeclNode, Finder, Builder)) {
+      BoundNodesTreeBuilder B = *Builder;
+      if (InnerMatcher.matches(*FuncDeclNode, Finder, &B)) {
+        *Builder = std::move(B);
         return true;
       }
     } else if (const auto *LambdaExprNode = CurNode.get<LambdaExpr>()) {
+      BoundNodesTreeBuilder B = *Builder;
       if (InnerMatcher.matches(*LambdaExprNode->getCallOperator(), Finder,
-                               Builder)) {
+                               &B)) {
+        *Builder = std::move(B);
         return true;
       }
     } else if (const auto *ObjCMethodDeclNode = CurNode.get<ObjCMethodDecl>()) {
-      if (InnerMatcher.matches(*ObjCMethodDeclNode, Finder, Builder)) {
+      BoundNodesTreeBuilder B = *Builder;
+      if (InnerMatcher.matches(*ObjCMethodDeclNode, Finder, &B)) {
+        *Builder = std::move(B);
         return true;
       }
     } else if (const auto *BlockDeclNode = CurNode.get<BlockDecl>()) {
-      if (InnerMatcher.matches(*BlockDeclNode, Finder, Builder)) {
+      BoundNodesTreeBuilder B = *Builder;
+      if (InnerMatcher.matches(*BlockDeclNode, Finder, &B)) {
+        *Builder = std::move(B);
         return true;
       }
     } else {

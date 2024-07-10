@@ -12,7 +12,7 @@ declare ptr addrspace(3) @ptr_to_shared() memory(none)
 
 ; Should be memory(none)
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external dso_local addrspace(4) global i32, align 4
+; CHECK: @G = external dso_local addrspace(4) global i32, align 4
 ;.
 define i32 @test_const_as_global1() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)

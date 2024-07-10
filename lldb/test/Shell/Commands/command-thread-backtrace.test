@@ -1,0 +1,14 @@
+# RUN: %clang_host -g %S/Inputs/main.c -o %t
+
+# RUN: not %lldb %t -b -o 'b foo' -o 'r' -o 'thread backtrace --count -1' 2>&1 | FileCheck %s --check-prefix COUNT
+# COUNT: error: invalid integer value for option 'c': -1
+
+# RUN: not %lldb %t -b -o 'b foo' -o 'r' -o 'thread backtrace --extended nah' 2>&1 | FileCheck %s --check-prefix EXTENDED
+# EXTENDED: error: invalid boolean value for option 'e': nah
+
+# RUN: not %lldb %t -b -o 'b foo' -o 'r' -o 'thread backtrace --start -1' 2>&1 | FileCheck %s --check-prefix START
+# START: error: invalid integer value for option 's': -1
+
+# RUN: %lldb %t -b -o 'b foo' -o 'r' -o 'thread backtrace --count 0' | FileCheck %s
+# CHECK: frame #0:
+# CHECK: frame #1:

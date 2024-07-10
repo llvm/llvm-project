@@ -116,7 +116,8 @@ static void expandFPToI(Instruction *FPToI) {
   // fp80 conversion is implemented by fpext to fp128 first then do the
   // conversion.
   FPMantissaWidth = FPMantissaWidth == 63 ? 112 : FPMantissaWidth;
-  unsigned FloatWidth = PowerOf2Ceil(FPMantissaWidth);
+  unsigned FloatWidth =
+      PowerOf2Ceil(FloatVal->getType()->getScalarSizeInBits());
   unsigned ExponentWidth = FloatWidth - FPMantissaWidth - 1;
   unsigned ExponentBias = (1 << (ExponentWidth - 1)) - 1;
   Value *ImplicitBit = Builder.CreateShl(
@@ -175,9 +176,10 @@ static void expandFPToI(Instruction *FPToI) {
   // if.end:
   Builder.SetInsertPoint(IfEnd);
   Value *Add1 = Builder.CreateAdd(
-      And2, ConstantInt::getSigned(IntTy, -int64_t(ExponentBias + BitWidth)));
-  Value *Cmp3 =
-      Builder.CreateICmpULT(Add1, ConstantInt::getSigned(IntTy, -BitWidth));
+      And2, ConstantInt::getSigned(
+                IntTy, -static_cast<int64_t>(ExponentBias + BitWidth)));
+  Value *Cmp3 = Builder.CreateICmpULT(
+      Add1, ConstantInt::getSigned(IntTy, -static_cast<int64_t>(BitWidth)));
   Builder.CreateCondBr(Cmp3, IfThen5, IfEnd9);
 
   // if.then5:
@@ -203,8 +205,8 @@ static void expandFPToI(Instruction *FPToI) {
   // if.else:
   Builder.SetInsertPoint(IfElse);
   Value *Sub15 = Builder.CreateAdd(
-      And2,
-      ConstantInt::getSigned(IntTy, -(ExponentBias + FPMantissaWidth)));
+      And2, ConstantInt::getSigned(
+                IntTy, -static_cast<int64_t>(ExponentBias + FPMantissaWidth)));
   Value *Shl = Builder.CreateShl(Or, Sub15);
   Value *Mul16 = Builder.CreateMul(Shl, Sign);
   Builder.CreateBr(End);
@@ -318,6 +320,7 @@ static void expandIToFP(Instruction *IToFP) {
   // FIXME: As there is no related builtins added in compliler-rt,
   // here currently utilized the fp32 <-> fp16 lib calls to implement.
   FPMantissaWidth = FPMantissaWidth == 10 ? 23 : FPMantissaWidth;
+  FPMantissaWidth = FPMantissaWidth == 7 ? 23 : FPMantissaWidth;
   unsigned FloatWidth = PowerOf2Ceil(FPMantissaWidth);
   bool IsSigned = IToFP->getOpcode() == Instruction::SIToFP;
 
@@ -375,7 +378,7 @@ static void expandIToFP(Instruction *IToFP) {
   Value *Sub2 = Builder.CreateSub(Builder.getIntN(BitWidthNew, BitWidth - 1),
                                   FloatWidth == 128 ? Call : Cast);
   Value *Cmp3 = Builder.CreateICmpSGT(
-      Sub2, Builder.getIntN(BitWidthNew, FPMantissaWidth + 1));
+      Sub1, Builder.getIntN(BitWidthNew, FPMantissaWidth + 1));
   Builder.CreateCondBr(Cmp3, IfThen4, IfElse);
 
   // if.then4:
@@ -546,7 +549,7 @@ static void expandIToFP(Instruction *IToFP) {
     Value *A40 =
         Builder.CreateBitCast(Or35, Type::getFP128Ty(Builder.getContext()));
     A4 = Builder.CreateFPTrunc(A40, IToFP->getType());
-  } else if (IToFP->getType()->isHalfTy()) {
+  } else if (IToFP->getType()->isHalfTy() || IToFP->getType()->isBFloatTy()) {
     // Deal with "half" situation. This is a workaround since we don't have
     // floattihf.c currently as referring.
     Value *A40 =
@@ -567,8 +570,29 @@ static void expandIToFP(Instruction *IToFP) {
   IToFP->eraseFromParent();
 }
 
+static void scalarize(Instruction *I, SmallVectorImpl<Instruction *> &Replace) {
+  VectorType *VTy = cast<FixedVectorType>(I->getType());
+
+  IRBuilder<> Builder(I);
+
+  unsigned NumElements = VTy->getElementCount().getFixedValue();
+  Value *Result = PoisonValue::get(VTy);
+  for (unsigned Idx = 0; Idx < NumElements; ++Idx) {
+    Value *Ext = Builder.CreateExtractElement(I->getOperand(0), Idx);
+    Value *Cast = Builder.CreateCast(cast<CastInst>(I)->getOpcode(), Ext,
+                                     I->getType()->getScalarType());
+    Result = Builder.CreateInsertElement(Result, Cast, Idx);
+    if (isa<Instruction>(Cast))
+      Replace.push_back(cast<Instruction>(Cast));
+  }
+  I->replaceAllUsesWith(Result);
+  I->dropAllReferences();
+  I->eraseFromParent();
+}
+
 static bool runImpl(Function &F, const TargetLowering &TLI) {
   SmallVector<Instruction *, 4> Replace;
+  SmallVector<Instruction *, 4> ReplaceVector;
   bool Modified = false;
 
   unsigned MaxLegalFpConvertBitWidth =
@@ -583,35 +607,47 @@ static bool runImpl(Function &F, const TargetLowering &TLI) {
     switch (I.getOpcode()) {
     case Instruction::FPToUI:
     case Instruction::FPToSI: {
-      // TODO: This pass doesn't handle vectors.
-      if (I.getOperand(0)->getType()->isVectorTy())
+      // TODO: This pass doesn't handle scalable vectors.
+      if (I.getOperand(0)->getType()->isScalableTy())
         continue;
 
-      auto *IntTy = dyn_cast<IntegerType>(I.getType());
+      auto *IntTy = cast<IntegerType>(I.getType()->getScalarType());
       if (IntTy->getIntegerBitWidth() <= MaxLegalFpConvertBitWidth)
         continue;
 
-      Replace.push_back(&I);
+      if (I.getOperand(0)->getType()->isVectorTy())
+        ReplaceVector.push_back(&I);
+      else
+        Replace.push_back(&I);
       Modified = true;
       break;
     }
     case Instruction::UIToFP:
     case Instruction::SIToFP: {
-      // TODO: This pass doesn't handle vectors.
-      if (I.getOperand(0)->getType()->isVectorTy())
+      // TODO: This pass doesn't handle scalable vectors.
+      if (I.getOperand(0)->getType()->isScalableTy())
         continue;
 
-      auto *IntTy = dyn_cast<IntegerType>(I.getOperand(0)->getType());
+      auto *IntTy =
+          cast<IntegerType>(I.getOperand(0)->getType()->getScalarType());
       if (IntTy->getIntegerBitWidth() <= MaxLegalFpConvertBitWidth)
         continue;
 
-      Replace.push_back(&I);
+      if (I.getOperand(0)->getType()->isVectorTy())
+        ReplaceVector.push_back(&I);
+      else
+        Replace.push_back(&I);
       Modified = true;
       break;
     }
     default:
       break;
     }
+  }
+
+  while (!ReplaceVector.empty()) {
+    Instruction *I = ReplaceVector.pop_back_val();
+    scalarize(I, Replace);
   }
 
   if (Replace.empty())

@@ -1018,13 +1018,13 @@ declare half @llvm.vector.reduce.fmin.nxv10f16(<vscale x 10 x half>)
 define half @vreduce_fmin_nxv10f16(<vscale x 10 x half> %v) {
 ; CHECK-LABEL: vreduce_fmin_nxv10f16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(.LCPI73_0)
+; CHECK-NEXT:    flh fa5, %lo(.LCPI73_0)(a0)
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    lui a1, %hi(.LCPI73_0)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI73_0)
-; CHECK-NEXT:    vsetvli a2, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vlse16.v v12, (a1), zero
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    add a1, a0, a0
+; CHECK-NEXT:    vsetvli a2, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vfmv.v.f v12, fa5
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v10, v12, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma

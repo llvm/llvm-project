@@ -4,6 +4,7 @@ from functools import partialmethod
 from mlir.ir import *
 import mlir.dialects.arith as arith
 import mlir.dialects.func as func
+from array import array
 
 
 def run(f):
@@ -92,3 +93,42 @@ def testArithValue():
             b = a * a
             # CHECK: ArithValue(%2 = arith.mulf %cst_1, %cst_1 : f64)
             print(b)
+
+
+# CHECK-LABEL: TEST: testArrayConstantConstruction
+@run
+def testArrayConstantConstruction():
+    with Context(), Location.unknown():
+        module = Module.create()
+        with InsertionPoint(module.body):
+            i32_array = array("i", [1, 2, 3, 4])
+            i32 = IntegerType.get_signless(32)
+            vec_i32 = VectorType.get([2, 2], i32)
+            arith.constant(vec_i32, i32_array)
+            arith.ConstantOp(vec_i32, DenseIntElementsAttr.get(i32_array, type=vec_i32))
+
+            # "q" is the equivalent of `long long` in C and requires at least
+            # 64 bit width integers on both Linux and Windows.
+            i64_array = array("q", [5, 6, 7, 8])
+            i64 = IntegerType.get_signless(64)
+            vec_i64 = VectorType.get([1, 4], i64)
+            arith.constant(vec_i64, i64_array)
+            arith.ConstantOp(vec_i64, DenseIntElementsAttr.get(i64_array, type=vec_i64))
+
+            f32_array = array("f", [1.0, 2.0, 3.0, 4.0])
+            f32 = F32Type.get()
+            vec_f32 = VectorType.get([4, 1], f32)
+            arith.constant(vec_f32, f32_array)
+            arith.ConstantOp(vec_f32, DenseFPElementsAttr.get(f32_array, type=vec_f32))
+
+            f64_array = array("d", [1.0, 2.0, 3.0, 4.0])
+            f64 = F64Type.get()
+            vec_f64 = VectorType.get([2, 1, 2], f64)
+            arith.constant(vec_f64, f64_array)
+            arith.ConstantOp(vec_f64, DenseFPElementsAttr.get(f64_array, type=vec_f64))
+
+        # CHECK-COUNT-2: arith.constant dense<[{{\[}}1, 2], [3, 4]]> : vector<2x2xi32>
+        # CHECK-COUNT-2: arith.constant dense<[{{\[}}5, 6, 7, 8]]> : vector<1x4xi64>
+        # CHECK-COUNT-2: arith.constant dense<[{{\[}}1.000000e+00], [2.000000e+00], [3.000000e+00], [4.000000e+00]]> : vector<4x1xf32>
+        # CHECK-COUNT-2: arith.constant dense<[{{\[}}[1.000000e+00, 2.000000e+00]], [{{\[}}3.000000e+00, 4.000000e+00]]]> : vector<2x1x2xf64>
+        print(module)

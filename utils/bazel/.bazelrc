@@ -9,10 +9,16 @@
 # Prevent invalid caching if input files are modified during a build.
 build --experimental_guard_against_concurrent_changes
 
+# Automatically enable --config=(linux|macos|windows) based on the host
+build --enable_platform_specific_config
+
 # In opt mode, bazel by default builds both PIC and non-PIC object files for
 # tests vs binaries. We don't need this feature and it slows down opt builds
 # considerably.
-build --force_pic
+# TODO: Remove platform specifics we're on bazel 7.x https://github.com/bazelbuild/bazel/issues/12439
+# Apple platforms always enable pic so this flag is unnecessary anyways
+build:linux --force_pic
+build:windows --force_pic
 
 # Shared objects take up more space. With fast linkers and binaries that aren't
 # super large, the benefits of shared objects are minimal.
@@ -30,6 +36,13 @@ build --features=layering_check
 # See: https://bazel.build/reference/be/functions#exports_files
 build --incompatible_no_implicit_file_export
 
+# Enable so downstream users can flip this flag globally, this should
+# eventually become the default
+common --incompatible_disallow_empty_glob
+
+# TODO: Remove once we move to bazel 7.x
+build --experimental_cc_shared_library
+
 ###############################################################################
 # Options to select different strategies for linking potential dependent
 # libraries. The default leaves it disabled.
@@ -37,9 +50,6 @@ build --incompatible_no_implicit_file_export
 
 build:zlib_external --repo_env=BAZEL_LLVM_ZLIB_STRATEGY=external
 build:zlib_system --repo_env=BAZEL_LLVM_ZLIB_STRATEGY=system
-
-build:terminfo_external --repo_env=BAZEL_LLVM_TERMINFO_STRATEGY=external
-build:terminfo_system --repo_env=BAZEL_LLVM_TERMINFO_STRATEGY=system
 
 ###############################################################################
 # Options for "generic_clang" builds: these options should generally apply to
@@ -190,6 +200,9 @@ build:ci --keep_going
 
 # Show test errors.
 build:ci --test_output=errors
+
+# Only show failing tests to reduce output
+build:ci --test_summary=terse
 
 ###############################################################################
 

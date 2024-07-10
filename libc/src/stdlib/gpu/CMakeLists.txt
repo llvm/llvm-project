@@ -6,7 +6,7 @@ add_entrypoint_object(
     ../malloc.h
   DEPENDS
     libc.include.stdlib
-    libc.src.__support.RPC.rpc_client
+    libc.src.__support.GPU.allocator
 )
 
 add_entrypoint_object(
@@ -28,5 +28,5 @@ add_entrypoint_object(
     ../abort.h
   DEPENDS
     libc.include.stdlib
-    libc.src.__support.RPC.rpc_client
+    libc.src.__support.GPU.allocator
 )

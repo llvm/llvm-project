@@ -3,21 +3,41 @@
 // expected-error@+1{{OpenACC construct 'parallel' cannot be used here; it can only be used in a statement context}}
 #pragma acc parallel
 
+// expected-error@+1{{OpenACC construct 'serial' cannot be used here; it can only be used in a statement context}}
+#pragma acc serial
+
+// expected-error@+1{{OpenACC construct 'kernels' cannot be used here; it can only be used in a statement context}}
+#pragma acc kernels
+
 // expected-error@+1{{OpenACC construct 'parallel' cannot be used here; it can only be used in a statement context}}
 #pragma acc parallel
 int foo;
+// expected-error@+1{{OpenACC construct 'serial' cannot be used here; it can only be used in a statement context}}
+#pragma acc serial
+int foo2;
+// expected-error@+1{{OpenACC construct 'kernels' cannot be used here; it can only be used in a statement context}}
+#pragma acc kernels
+int foo3;
 
 struct S {
 // expected-error@+1{{OpenACC construct 'parallel' cannot be used here; it can only be used in a statement context}}
 #pragma acc parallel
 int foo;
+// expected-error@+1{{OpenACC construct 'serial' cannot be used here; it can only be used in a statement context}}
+#pragma acc serial
+int foo2;
+// expected-error@+1{{OpenACC construct 'kernels' cannot be used here; it can only be used in a statement context}}
+#pragma acc kernels
+int foo3;
 };
 
 void func() {
   // FIXME: Should we disallow this on declarations, or consider this to be on
-  // the initialization?
+  // the initialization? This is currently rejected in C because
+  // Parser::ParseOpenACCDirectiveStmt() calls ParseStatement() and passes the
+  // statement context as "SubStmt" which does not allow for a declaration in C.
 #pragma acc parallel
-  int foo;
+  int foo; // expected-error {{expected expression}}
 
 #pragma acc parallel
   {
@@ -29,6 +49,15 @@ void func() {
   {
 // expected-error@+2{{expected statement}}
 #pragma acc parallel
+  }
+
+  {
+// expected-error@+2{{expected statement}}
+#pragma acc serial
+  }
+  {
+// expected-error@+2{{expected statement}}
+#pragma acc kernels
   }
 
 #pragma acc parallel

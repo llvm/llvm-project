@@ -6,8 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/common.h"
 #include <stddef.h>
 #include <stdint.h>
+
+#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+#include "src/sys/auxv/getauxval.h"
+#endif
 
 namespace LIBC_NAMESPACE {
 
@@ -18,6 +23,12 @@ void *memcpy(void *__restrict, const void *__restrict, size_t);
 void *memmove(void *dst, const void *src, size_t count);
 void *memset(void *ptr, int value, size_t count);
 int atexit(void (*func)(void));
+
+// TODO: It seems that some old test frameworks does not use
+// add_libc_hermetic_test properly. Such that they won't get correct linkage
+// against the object containing this function. We create a dummy function that
+// always returns 0 to indicate a failure.
+[[gnu::weak]] unsigned long getauxval(unsigned long id) { return 0; }
 
 } // namespace LIBC_NAMESPACE
 
@@ -101,6 +112,14 @@ void __cxa_pure_virtual() {
 // Hermetic tests are linked with -nostdlib. BFD linker expects
 // __dso_handle when -nostdlib is used.
 void *__dso_handle = nullptr;
+
+#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+// Due to historical reasons, libgcc on aarch64 may expect __getauxval to be
+// defined. See also https://gcc.gnu.org/pipermail/gcc-cvs/2020-June/300635.html
+unsigned long __getauxval(unsigned long id) {
+  return LIBC_NAMESPACE::getauxval(id);
+}
+#endif
 
 } // extern "C"
 

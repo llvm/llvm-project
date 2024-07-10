@@ -332,7 +332,7 @@ bool PointerReplacer::collectUsersRecursive(Instruction &I) {
       Worklist.insert(SI);
       if (!collectUsersRecursive(*SI))
         return false;
-    } else if (isa<GetElementPtrInst, BitCastInst>(Inst)) {
+    } else if (isa<GetElementPtrInst>(Inst)) {
       Worklist.insert(Inst);
       if (!collectUsersRecursive(*Inst))
         return false;
@@ -342,9 +342,13 @@ bool PointerReplacer::collectUsersRecursive(Instruction &I) {
       Worklist.insert(Inst);
     } else if (isEqualOrValidAddrSpaceCast(Inst, FromAS)) {
       Worklist.insert(Inst);
+      if (!collectUsersRecursive(*Inst))
+        return false;
     } else if (Inst->isLifetimeStartOrEnd()) {
       continue;
     } else {
+      // TODO: For arbitrary uses with address space mismatches, should we check
+      // if we can introduce a valid addrspacecast?
       LLVM_DEBUG(dbgs() << "Cannot handle pointer user: " << *U << '\n');
       return false;
     }
@@ -374,7 +378,7 @@ void PointerReplacer::replace(Instruction *I) {
   } else if (auto *PHI = dyn_cast<PHINode>(I)) {
     Type *NewTy = getReplacement(PHI->getIncomingValue(0))->getType();
     auto *NewPHI = PHINode::Create(NewTy, PHI->getNumIncomingValues(),
-                                   PHI->getName(), PHI);
+                                   PHI->getName(), PHI->getIterator());
     for (unsigned int I = 0; I < PHI->getNumIncomingValues(); ++I)
       NewPHI->addIncoming(getReplacement(PHI->getIncomingValue(I)),
                           PHI->getIncomingBlock(I));
@@ -382,22 +386,13 @@ void PointerReplacer::replace(Instruction *I) {
   } else if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
     auto *V = getReplacement(GEP->getPointerOperand());
     assert(V && "Operand not replaced");
-    SmallVector<Value *, 8> Indices;
-    Indices.append(GEP->idx_begin(), GEP->idx_end());
+    SmallVector<Value *, 8> Indices(GEP->indices());
     auto *NewI =
         GetElementPtrInst::Create(GEP->getSourceElementType(), V, Indices);
     IC.InsertNewInstWith(NewI, GEP->getIterator());
     NewI->takeName(GEP);
+    NewI->setNoWrapFlags(GEP->getNoWrapFlags());
     WorkMap[GEP] = NewI;
-  } else if (auto *BC = dyn_cast<BitCastInst>(I)) {
-    auto *V = getReplacement(BC->getOperand(0));
-    assert(V && "Operand not replaced");
-    auto *NewT = PointerType::get(BC->getType()->getContext(),
-                                  V->getType()->getPointerAddressSpace());
-    auto *NewI = new BitCastInst(V, NewT);
-    IC.InsertNewInstWith(NewI, BC->getIterator());
-    NewI->takeName(BC);
-    WorkMap[BC] = NewI;
   } else if (auto *SI = dyn_cast<SelectInst>(I)) {
     auto *NewSI = SelectInst::Create(
         SI->getCondition(), getReplacement(SI->getTrueValue()),
@@ -406,20 +401,18 @@ void PointerReplacer::replace(Instruction *I) {
     NewSI->takeName(SI);
     WorkMap[SI] = NewSI;
   } else if (auto *MemCpy = dyn_cast<MemTransferInst>(I)) {
-    auto *SrcV = getReplacement(MemCpy->getRawSource());
-    // The pointer may appear in the destination of a copy, but we don't want to
-    // replace it.
-    if (!SrcV) {
-      assert(getReplacement(MemCpy->getRawDest()) &&
-             "destination not in replace list");
-      return;
-    }
+    auto *DestV = MemCpy->getRawDest();
+    auto *SrcV = MemCpy->getRawSource();
+
+    if (auto *DestReplace = getReplacement(DestV))
+      DestV = DestReplace;
+    if (auto *SrcReplace = getReplacement(SrcV))
+      SrcV = SrcReplace;
 
     IC.Builder.SetInsertPoint(MemCpy);
     auto *NewI = IC.Builder.CreateMemTransferInst(
-        MemCpy->getIntrinsicID(), MemCpy->getRawDest(), MemCpy->getDestAlign(),
-        SrcV, MemCpy->getSourceAlign(), MemCpy->getLength(),
-        MemCpy->isVolatile());
+        MemCpy->getIntrinsicID(), DestV, MemCpy->getDestAlign(), SrcV,
+        MemCpy->getSourceAlign(), MemCpy->getLength(), MemCpy->isVolatile());
     AAMDNodes AAMD = MemCpy->getAAMetadata();
     if (AAMD)
       NewI->setAAMetadata(AAMD);
@@ -432,16 +425,17 @@ void PointerReplacer::replace(Instruction *I) {
     assert(isEqualOrValidAddrSpaceCast(
                ASC, V->getType()->getPointerAddressSpace()) &&
            "Invalid address space cast!");
-    auto *NewV = V;
+
     if (V->getType()->getPointerAddressSpace() !=
         ASC->getType()->getPointerAddressSpace()) {
       auto *NewI = new AddrSpaceCastInst(V, ASC->getType(), "");
       NewI->takeName(ASC);
       IC.InsertNewInstWith(NewI, ASC->getIterator());
-      NewV = NewI;
+      WorkMap[ASC] = NewI;
+    } else {
+      WorkMap[ASC] = V;
     }
-    IC.replaceInstUsesWith(*ASC, NewV);
-    IC.eraseInstFromFunction(*ASC);
+
   } else {
     llvm_unreachable("should never reach here");
   }

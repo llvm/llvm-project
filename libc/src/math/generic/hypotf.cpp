@@ -42,14 +42,14 @@ LLVM_LIBC_FUNCTION(float, hypotf, (float x, float y)) {
   double err = (x_sq >= y_sq) ? (sum_sq - x_sq) - y_sq : (sum_sq - y_sq) - x_sq;
 
   // Take sqrt in double precision.
-  DoubleBits result(fputil::sqrt(sum_sq));
+  DoubleBits result(fputil::sqrt<double>(sum_sq));
 
   if (!DoubleBits(sum_sq).is_inf_or_nan()) {
     // Correct rounding.
     double r_sq = result.get_val() * result.get_val();
     double diff = sum_sq - r_sq;
-    constexpr uint64_t mask = 0x0000'0000'3FFF'FFFFULL;
-    uint64_t lrs = result.uintval() & mask;
+    constexpr uint64_t MASK = 0x0000'0000'3FFF'FFFFULL;
+    uint64_t lrs = result.uintval() & MASK;
 
     if (lrs == 0x0000'0000'1000'0000ULL && err < diff) {
       result.set_uintval(result.uintval() | 1ULL);

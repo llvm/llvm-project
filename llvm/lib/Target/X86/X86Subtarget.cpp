@@ -26,6 +26,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
@@ -140,7 +141,7 @@ unsigned char X86Subtarget::classifyGlobalReference(const GlobalValue *GV,
     }
   }
 
-  if (TM.shouldAssumeDSOLocal(M, GV))
+  if (TM.shouldAssumeDSOLocal(GV))
     return classifyLocalReference(GV);
 
   if (isTargetCOFF()) {
@@ -190,7 +191,7 @@ X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV) const {
 unsigned char
 X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
                                               const Module &M) const {
-  if (TM.shouldAssumeDSOLocal(M, GV))
+  if (TM.shouldAssumeDSOLocal(GV))
     return X86II::MO_NO_FLAG;
 
   // Functions on COFF can be non-DSO local for three reasons:

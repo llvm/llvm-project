@@ -40,13 +40,13 @@ define <2 x i1> @p1_vec(<2 x i8> %x, <2 x i8> %y) {
   ret <2 x i1> %ret
 }
 
-define <3 x i1> @p2_vec_undef(<3 x i8> %x, <3 x i8> %y) {
-; CHECK-LABEL: @p2_vec_undef(
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr <3 x i8> <i8 -1, i8 undef, i8 -1>, [[Y:%.*]]
+define <3 x i1> @p2_vec_poison(<3 x i8> %x, <3 x i8> %y) {
+; CHECK-LABEL: @p2_vec_poison(
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr <3 x i8> <i8 -1, i8 poison, i8 -1>, [[Y:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = icmp ult <3 x i8> [[TMP0]], [[X:%.*]]
 ; CHECK-NEXT:    ret <3 x i1> [[RET]]
 ;
-  %tmp0 = lshr <3 x i8> <i8 -1, i8 undef, i8 -1>, %y
+  %tmp0 = lshr <3 x i8> <i8 -1, i8 poison, i8 -1>, %y
   %tmp1 = and <3 x i8> %tmp0, %x
   %ret = icmp ne <3 x i8> %tmp1, %x
   ret <3 x i1> %ret

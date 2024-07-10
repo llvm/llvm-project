@@ -8,13 +8,13 @@
 
 #include "src/stdbit/stdc_first_trailing_one_ui.h"
 
-#include "src/__support/CPP/bit.h"
 #include "src/__support/common.h"
+#include "src/__support/math_extras.h"
 
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(unsigned, stdc_first_trailing_one_ui, (unsigned value)) {
-  return static_cast<unsigned>(cpp::first_trailing_one(value));
+  return static_cast<unsigned>(first_trailing_one(value));
 }
 
 } // namespace LIBC_NAMESPACE

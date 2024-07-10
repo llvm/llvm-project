@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -allow-unregistered-dialect -test-loop-fusion -test-loop-fusion-transformation -split-input-file -canonicalize | FileCheck %s
+// RUN: mlir-opt %s -allow-unregistered-dialect -test-loop-fusion=test-loop-fusion-transformation -split-input-file -canonicalize | FileCheck %s
 
 // CHECK-LABEL: func @slice_depth1_loop_nest() {
 func.func @slice_depth1_loop_nest() {

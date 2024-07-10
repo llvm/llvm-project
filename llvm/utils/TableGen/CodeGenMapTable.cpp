@@ -75,8 +75,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenInstruction.h"
-#include "CodeGenTarget.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenTarget.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 using namespace llvm;

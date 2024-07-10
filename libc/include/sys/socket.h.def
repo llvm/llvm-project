@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_SYS_SOCKET_H
 #define LLVM_LIBC_SYS_SOCKET_H
 
-#include <__llvm-libc-common.h>
+#include "__llvm-libc-common.h"
 
-#include <llvm-libc-macros/sys-socket-macros.h>
+#include "llvm-libc-macros/sys-socket-macros.h"
 
 %%public_api()
 

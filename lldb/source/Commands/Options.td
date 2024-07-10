@@ -784,7 +784,7 @@ let Command = "process save_core" in {
     EnumArg<"SaveCoreStyle">, Desc<"Request a specific style "
     "of corefile to be saved.">;
   def process_save_core_plugin_name : Option<"plugin-name", "p">,
-    OptionalArg<"Plugin">, Desc<"Specify a plugin name to create the core file."
+    OptionalArg<"Plugin">, Desc<"Specify a plugin name to create the core file. "
     "This allows core files to be saved in different formats.">;
 }
 
@@ -805,7 +805,7 @@ let Command = "script add" in {
   def script_add_function : Option<"function", "f">, Group<1>,
     Arg<"PythonFunction">,
     Desc<"Name of the Python function to bind to this command name.">;
-  def script_add_class : Option<"class", "c">, Groups<[2,3]>, 
+  def script_add_class : Option<"class", "c">, Groups<[2,3]>,
     Arg<"PythonClass">,
     Desc<"Name of the Python class to bind to this command name.">;
   def script_add_help : Option<"help", "h">, Group<1>, Arg<"HelpText">,
@@ -816,7 +816,7 @@ let Command = "script add" in {
     EnumArg<"ScriptedCommandSynchronicity">,
     Desc<"Set the synchronicity of this command's executions with regard to "
     "LLDB event system.">;
-  def script_add_completion_type : Option<"completion-type", "C">, 
+  def script_add_completion_type : Option<"completion-type", "C">,
     Groups<[1,2]>, EnumArg<"CompletionType">,
     Desc<"Specify which completion type the command should use - if none is "
     "specified, the command won't use auto-completion.">;
@@ -835,7 +835,7 @@ let Command = "container add" in {
   Desc<"Overwrite an existing command at this node.">;
 }
 
-let Command = "script" in {
+let Command = "scripting run" in {
   def script_language : Option<"language", "l">,
     EnumArg<"ScriptLang">, Desc<"Specify the scripting "
     " language. If none is specific the default scripting language is used.">;
@@ -1037,7 +1037,7 @@ let Command = "target stop hook add" in {
 
 let Command = "thread backtrace" in {
   def thread_backtrace_count : Option<"count", "c">, Group<1>, Arg<"Count">,
-  Desc<"How many frames to display (-1 for all)">;
+  Desc<"How many frames to display (0 for all)">;
   def thread_backtrace_start : Option<"start", "s">, Group<1>,
   Arg<"FrameIndex">, Desc<"Frame in which to start the backtrace">;
   def thread_backtrace_extended : Option<"extended", "e">, Group<1>,
@@ -1425,4 +1425,27 @@ let Command = "statistics dump" in {
     Desc<"Dump the total possible debug info statistics. "
     "Force loading all the debug information if not yet loaded, and collect "
     "statistics with those.">;
+  def statistics_dump_targets: Option<"targets", "r">, Group<1>,
+    Arg<"Boolean">,
+    Desc<"Dump statistics for the targets, including breakpoints, expression "
+    "evaluations, frame variables, etc. "
+    "Defaults to true in both default mode and summary mode. "
+    "In default mode, if both '--targets' and '--modules' are 'true', a list "
+    "of module identifiers will be added to the 'targets' section.">;
+  def statistics_dump_modules: Option<"modules", "m">, Group<1>,
+    Arg<"Boolean">,
+    Desc<"Dump statistics for the modules, including time and size of various "
+    "aspects of the module and debug information, type system, path, etc. "
+    "Defaults to true, unless the '--summary' mode is enabled, in which case "
+    "this is turned off unless specified. "
+    "In default mode, if both '--targets' and '--modules' are 'true', a list "
+    "of module identifiers will be added to the 'targets' section.">;
+  def statistics_dump_transcript: Option<"transcript", "t">, Group<1>,
+    Arg<"Boolean">,
+    Desc<"If the setting interpreter.save-transcript is enabled and this "
+    "option is 'true', include a JSON array with all commands the user and/or "
+    "scripts executed during a debug session. "
+    "Defaults to true, unless the '--summary' mode is enabled, in which case "
+    "this is turned off unless specified.">;
+
 }

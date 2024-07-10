@@ -34,7 +34,7 @@ void llvm::createMemCpyLoopKnownSize(
   BasicBlock *PostLoopBB = nullptr;
   Function *ParentFunc = PreLoopBB->getParent();
   LLVMContext &Ctx = PreLoopBB->getContext();
-  const DataLayout &DL = ParentFunc->getParent()->getDataLayout();
+  const DataLayout &DL = ParentFunc->getDataLayout();
   MDBuilder MDB(Ctx);
   MDNode *NewDomain = MDB.createAnonymousAliasScopeDomain("MemCopyDomain");
   StringRef Name = "MemCopyAliasScope";
@@ -186,7 +186,7 @@ void llvm::createMemCpyLoopUnknownSize(
       PreLoopBB->splitBasicBlock(InsertBefore, "post-loop-memcpy-expansion");
 
   Function *ParentFunc = PreLoopBB->getParent();
-  const DataLayout &DL = ParentFunc->getParent()->getDataLayout();
+  const DataLayout &DL = ParentFunc->getDataLayout();
   LLVMContext &Ctx = PreLoopBB->getContext();
   MDBuilder MDB(Ctx);
   MDNode *NewDomain = MDB.createAnonymousAliasScopeDomain("MemCopyDomain");
@@ -374,7 +374,7 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
   Type *TypeOfCopyLen = CopyLen->getType();
   BasicBlock *OrigBB = InsertBefore->getParent();
   Function *F = OrigBB->getParent();
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
   // TODO: Use different element type if possible?
   Type *EltTy = Type::getInt8Ty(F->getContext());
 
@@ -384,10 +384,10 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
   // SplitBlockAndInsertIfThenElse conveniently creates the basic if-then-else
   // structure. Its block terminators (unconditional branches) are replaced by
   // the appropriate conditional branches when the loop is built.
-  ICmpInst *PtrCompare = new ICmpInst(InsertBefore, ICmpInst::ICMP_ULT,
+  ICmpInst *PtrCompare = new ICmpInst(InsertBefore->getIterator(), ICmpInst::ICMP_ULT,
                                       SrcAddr, DstAddr, "compare_src_dst");
   Instruction *ThenTerm, *ElseTerm;
-  SplitBlockAndInsertIfThenElse(PtrCompare, InsertBefore, &ThenTerm,
+  SplitBlockAndInsertIfThenElse(PtrCompare, InsertBefore->getIterator(), &ThenTerm,
                                 &ElseTerm);
 
   // Each part of the function consists of two blocks:
@@ -409,7 +409,7 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
   // Initial comparison of n == 0 that lets us skip the loops altogether. Shared
   // between both backwards and forward copy clauses.
   ICmpInst *CompareN =
-      new ICmpInst(OrigBB->getTerminator(), ICmpInst::ICMP_EQ, CopyLen,
+      new ICmpInst(OrigBB->getTerminator()->getIterator(), ICmpInst::ICMP_EQ, CopyLen,
                    ConstantInt::get(TypeOfCopyLen, 0), "compare_n_to_0");
 
   // Copying backwards.
@@ -422,16 +422,16 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
       LoopPhi, ConstantInt::get(TypeOfCopyLen, 1), "index_ptr");
   Value *Element = LoopBuilder.CreateAlignedLoad(
       EltTy, LoopBuilder.CreateInBoundsGEP(EltTy, SrcAddr, IndexPtr),
-      PartSrcAlign, "element");
+      PartSrcAlign, SrcIsVolatile, "element");
   LoopBuilder.CreateAlignedStore(
       Element, LoopBuilder.CreateInBoundsGEP(EltTy, DstAddr, IndexPtr),
-      PartDstAlign);
+      PartDstAlign, DstIsVolatile);
   LoopBuilder.CreateCondBr(
       LoopBuilder.CreateICmpEQ(IndexPtr, ConstantInt::get(TypeOfCopyLen, 0)),
       ExitBB, LoopBB);
   LoopPhi->addIncoming(IndexPtr, LoopBB);
   LoopPhi->addIncoming(CopyLen, CopyBackwardsBB);
-  BranchInst::Create(ExitBB, LoopBB, CompareN, ThenTerm);
+  BranchInst::Create(ExitBB, LoopBB, CompareN, ThenTerm->getIterator());
   ThenTerm->eraseFromParent();
 
   // Copying forward.
@@ -440,10 +440,11 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
   IRBuilder<> FwdLoopBuilder(FwdLoopBB);
   PHINode *FwdCopyPhi = FwdLoopBuilder.CreatePHI(TypeOfCopyLen, 0, "index_ptr");
   Value *SrcGEP = FwdLoopBuilder.CreateInBoundsGEP(EltTy, SrcAddr, FwdCopyPhi);
-  Value *FwdElement =
-      FwdLoopBuilder.CreateAlignedLoad(EltTy, SrcGEP, PartSrcAlign, "element");
+  Value *FwdElement = FwdLoopBuilder.CreateAlignedLoad(
+      EltTy, SrcGEP, PartSrcAlign, SrcIsVolatile, "element");
   Value *DstGEP = FwdLoopBuilder.CreateInBoundsGEP(EltTy, DstAddr, FwdCopyPhi);
-  FwdLoopBuilder.CreateAlignedStore(FwdElement, DstGEP, PartDstAlign);
+  FwdLoopBuilder.CreateAlignedStore(FwdElement, DstGEP, PartDstAlign,
+                                    DstIsVolatile);
   Value *FwdIndexPtr = FwdLoopBuilder.CreateAdd(
       FwdCopyPhi, ConstantInt::get(TypeOfCopyLen, 1), "index_increment");
   FwdLoopBuilder.CreateCondBr(FwdLoopBuilder.CreateICmpEQ(FwdIndexPtr, CopyLen),
@@ -451,7 +452,7 @@ static void createMemMoveLoop(Instruction *InsertBefore, Value *SrcAddr,
   FwdCopyPhi->addIncoming(FwdIndexPtr, FwdLoopBB);
   FwdCopyPhi->addIncoming(ConstantInt::get(TypeOfCopyLen, 0), CopyForwardBB);
 
-  BranchInst::Create(ExitBB, FwdLoopBB, CompareN, ElseTerm);
+  BranchInst::Create(ExitBB, FwdLoopBB, CompareN, ElseTerm->getIterator());
   ElseTerm->eraseFromParent();
 }
 
@@ -461,7 +462,7 @@ static void createMemSetLoop(Instruction *InsertBefore, Value *DstAddr,
   Type *TypeOfCopyLen = CopyLen->getType();
   BasicBlock *OrigBB = InsertBefore->getParent();
   Function *F = OrigBB->getParent();
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
   BasicBlock *NewBB =
       OrigBB->splitBasicBlock(InsertBefore, "split");
   BasicBlock *LoopBB

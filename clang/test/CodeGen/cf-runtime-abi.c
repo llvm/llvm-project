@@ -1,42 +1,42 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macosx -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-OBJC
-// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-OBJC-LLP64
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-OBJC
+// RUN: %clang_cc1 -triple x86_64-apple-macosx -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-OBJC
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-OBJC-LLP64
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-OBJC
 
-// RUN: %clang_cc1 -triple x86_64-apple-macosx -fcf-runtime-abi=objc -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-OBJC
-// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -fcf-runtime-abi=objc -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-OBJC-LLP64
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcf-runtime-abi=objc -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-OBJC
+// RUN: %clang_cc1 -triple x86_64-apple-macosx -fcf-runtime-abi=objc -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-OBJC
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -fcf-runtime-abi=objc -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-OBJC-LLP64
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcf-runtime-abi=objc -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-OBJC
 
-// RUN: %clang_cc1 -triple x86_64-apple-macosx -fcf-runtime-abi=standalone -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-OBJC
-// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -fcf-runtime-abi=standalone -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-OBJC-LLP64
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcf-runtime-abi=standalone -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-OBJC
+// RUN: %clang_cc1 -triple x86_64-apple-macosx -fcf-runtime-abi=standalone -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-OBJC
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -fcf-runtime-abi=standalone -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-OBJC-LLP64
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcf-runtime-abi=standalone -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-OBJC
 
-// RUN: %clang_cc1 -triple x86_64-apple-macosx -fcf-runtime-abi=swift -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-5_0-64
-// RUN: %clang_cc1 -triple aarch64-apple-ios -fcf-runtime-abi=swift -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-5_0-64
-// RUN: %clang_cc1 -triple armv7k-apple-watchos -fcf-runtime-abi=swift -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-5_0-32
-// RUN: %clang_cc1 -triple armv7-apple-tvos -fcf-runtime-abi=swift -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-5_0-32
-// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -fcf-runtime-abi=swift -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-5_0-64
-// RUN: %clang_cc1 -triple armv7-unknown-linux-android -fcf-runtime-abi=swift -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-5_0-32
+// RUN: %clang_cc1 -triple x86_64-apple-macosx -fcf-runtime-abi=swift -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-5_0-64
+// RUN: %clang_cc1 -triple aarch64-apple-ios -fcf-runtime-abi=swift -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-5_0-64
+// RUN: %clang_cc1 -triple armv7k-apple-watchos -fcf-runtime-abi=swift -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-5_0-32
+// RUN: %clang_cc1 -triple armv7-apple-tvos -fcf-runtime-abi=swift -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-5_0-32
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -fcf-runtime-abi=swift -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-5_0-64
+// RUN: %clang_cc1 -triple armv7-unknown-linux-android -fcf-runtime-abi=swift -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-5_0-32
 
-// RUN: %clang_cc1 -triple x86_64-apple-macosx -fcf-runtime-abi=swift-5.0 -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-5_0-64
-// RUN: %clang_cc1 -triple aarch64-apple-ios -fcf-runtime-abi=swift-5.0 -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-5_0-64
-// RUN: %clang_cc1 -triple armv7k-apple-watchos -fcf-runtime-abi=swift-5.0 -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-5_0-32
-// RUN: %clang_cc1 -triple armv7-apple-tvos -fcf-runtime-abi=swift-5.0 -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-5_0-32
-// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -fcf-runtime-abi=swift-5.0 -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-5_0-64
-// RUN: %clang_cc1 -triple armv7-unknown-linux-android -fcf-runtime-abi=swift-5.0 -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-5_0-32
+// RUN: %clang_cc1 -triple x86_64-apple-macosx -fcf-runtime-abi=swift-5.0 -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-5_0-64
+// RUN: %clang_cc1 -triple aarch64-apple-ios -fcf-runtime-abi=swift-5.0 -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-5_0-64
+// RUN: %clang_cc1 -triple armv7k-apple-watchos -fcf-runtime-abi=swift-5.0 -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-5_0-32
+// RUN: %clang_cc1 -triple armv7-apple-tvos -fcf-runtime-abi=swift-5.0 -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-5_0-32
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -fcf-runtime-abi=swift-5.0 -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-5_0-64
+// RUN: %clang_cc1 -triple armv7-unknown-linux-android -fcf-runtime-abi=swift-5.0 -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-5_0-32
 
-// RUN: %clang_cc1 -triple x86_64-apple-macosx -fcf-runtime-abi=swift-4.2 -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-4_2-64
-// RUN: %clang_cc1 -triple aarch64-apple-ios -fcf-runtime-abi=swift-4.2 -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-4_2-64
-// RUN: %clang_cc1 -triple armv7k-apple-watchos -fcf-runtime-abi=swift-4.2 -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-4_2-32
-// RUN: %clang_cc1 -triple armv7-apple-tvos -fcf-runtime-abi=swift-4.2 -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-4_2-32
-// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -fcf-runtime-abi=swift-4.2 -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-4_2-64
-// RUN: %clang_cc1 -triple armv7-unknown-linux-android -fcf-runtime-abi=swift-4.2 -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-4_2-32
+// RUN: %clang_cc1 -triple x86_64-apple-macosx -fcf-runtime-abi=swift-4.2 -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-4_2-64
+// RUN: %clang_cc1 -triple aarch64-apple-ios -fcf-runtime-abi=swift-4.2 -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-4_2-64
+// RUN: %clang_cc1 -triple armv7k-apple-watchos -fcf-runtime-abi=swift-4.2 -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-4_2-32
+// RUN: %clang_cc1 -triple armv7-apple-tvos -fcf-runtime-abi=swift-4.2 -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-4_2-32
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -fcf-runtime-abi=swift-4.2 -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-4_2-64
+// RUN: %clang_cc1 -triple armv7-unknown-linux-android -fcf-runtime-abi=swift-4.2 -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-4_2-32
 
-// RUN: %clang_cc1 -triple x86_64-apple-macosx -fcf-runtime-abi=swift-4.1 -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-4_1-64
-// RUN: %clang_cc1 -triple aarch64-apple-ios -fcf-runtime-abi=swift-4.1 -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-4_1-64
-// RUN: %clang_cc1 -triple armv7k-apple-watchos -fcf-runtime-abi=swift-4.1 -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-4_1-32
-// RUN: %clang_cc1 -triple armv7-apple-tvos -fcf-runtime-abi=swift-4.1 -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-4_1-32
-// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -fcf-runtime-abi=swift-4.1 -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-4_1-64
-// RUN: %clang_cc1 -triple armv7-unknown-linux-android -fcf-runtime-abi=swift-4.1 -S -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-4_1-32
+// RUN: %clang_cc1 -triple x86_64-apple-macosx -fcf-runtime-abi=swift-4.1 -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-4_1-64
+// RUN: %clang_cc1 -triple aarch64-apple-ios -fcf-runtime-abi=swift-4.1 -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-4_1-64
+// RUN: %clang_cc1 -triple armv7k-apple-watchos -fcf-runtime-abi=swift-4.1 -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-4_1-32
+// RUN: %clang_cc1 -triple armv7-apple-tvos -fcf-runtime-abi=swift-4.1 -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-DARWIN-4_1-32
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -fcf-runtime-abi=swift-4.1 -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-4_1-64
+// RUN: %clang_cc1 -triple armv7-unknown-linux-android -fcf-runtime-abi=swift-4.1 -emit-llvm -o - %s | FileCheck %s -check-prefix CHECK-SWIFT-4_1-32
 
 const __NSConstantString *s = __builtin___CFStringMakeConstantString("");
 

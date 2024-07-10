@@ -11,6 +11,7 @@
 #include "RISCVTargetMachine.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -163,7 +164,7 @@ TEST_P(RISCVInstrInfoTest, GetMemOperandsWithOffsetWidth) {
   DebugLoc DL;
 
   SmallVector<const MachineOperand *> BaseOps;
-  unsigned Width;
+  LocationSize Width = 0;
   int64_t Offset;
   bool OffsetIsScalable;
 

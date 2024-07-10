@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 include "llvm/Target/Target.td"
+include "llvm/TableGen/SearchableTable.td"
 
 //===----------------------------------------------------------------------===//
 // SPARC Subtarget features.
@@ -91,6 +92,7 @@ foreach i = 0 ... 5 in
 //===----------------------------------------------------------------------===//
 
 include "SparcASITags.td"
+include "SparcPrefetchTags.td"
 include "SparcRegisterInfo.td"
 include "SparcCallingConv.td"
 include "SparcSchedule.td"
@@ -99,7 +101,8 @@ include "SparcInstrInfo.td"
 def SparcInstrInfo : InstrInfo;
 
 def SparcAsmParser : AsmParser {
-  bit ShouldEmitMatchRegisterName = 0;
+  let ShouldEmitMatchRegisterAltName = true;
+  let AllowDuplicateRegisterNames = true;
 }
 
 def SparcAsmParserVariant : AsmParserVariant {

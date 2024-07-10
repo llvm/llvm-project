@@ -7,6 +7,9 @@
 // RUN: %clang_cc1 -std=c++20 %t/a.cppm -emit-module-interface -o %t/a.pcm
 // RUN: %clang_cc1 -std=c++20 -fmodule-file=a=%t/a.pcm %t/b.cppm -fsyntax-only -verify
 
+// RUN: %clang_cc1 -std=c++20 %t/a.cppm -emit-reduced-module-interface -o %t/a.pcm
+// RUN: %clang_cc1 -std=c++20 -fmodule-file=a=%t/a.pcm %t/b.cppm -fsyntax-only -verify
+
 //--- foo.h
 template<typename = void>
 struct s {

@@ -22,7 +22,7 @@ define internal i32 @callee.1(i32 %arg) {
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 false, i32 16, i32 [[ARG]]
 ; CHECK-NEXT:    br label [[BB10:%.*]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %c.1 = icmp slt i32 %arg, 0
   %sel = select i1 %c.1, i32 16, i32 %arg
@@ -113,15 +113,13 @@ define i1 @caller2(i32 %y, i1 %cmp) {
   ret i1 %res
 }
 
-@GV = common global i32 0, align 4
-
 define i32 @f3_constantexpr_cond(i32 %x, i32 %y) {
 ; CHECK-LABEL: define {{[^@]+}}@f3_constantexpr_cond
 ; CHECK-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SEL_1:%.*]] = select i1 icmp eq (ptr @f3_constantexpr_cond, ptr @GV), i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    [[SEL_1:%.*]] = select i1 ptrtoint (ptr @f3_constantexpr_cond to i1), i32 [[X]], i32 [[Y]]
 ; CHECK-NEXT:    ret i32 [[SEL_1]]
 ;
-  %sel.1 = select i1 icmp eq (ptr @f3_constantexpr_cond, ptr @GV), i32 %x, i32 %y
+  %sel.1 = select i1 ptrtoint (ptr @f3_constantexpr_cond to i1), i32 %x, i32 %y
   ret i32 %sel.1
 }
 

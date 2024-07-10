@@ -374,8 +374,9 @@ getHazardType(SUnit *SU, int Stalls) {
   // overlapping address.
   if (isLoad && NumStores && !MI->memoperands_empty()) {
     MachineMemOperand *MO = *MI->memoperands_begin();
-    if (isLoadOfStoredAddress(MO->getSize(),
-                              MO->getOffset(), MO->getValue()))
+    if (MO->getSize().hasValue() &&
+        isLoadOfStoredAddress(MO->getSize().getValue(), MO->getOffset(),
+                              MO->getValue()))
       return NoopHazard;
   }
 
@@ -399,9 +400,10 @@ void PPCHazardRecognizer970::EmitInstruction(SUnit *SU) {
   if (Opcode == PPC::MTCTR || Opcode == PPC::MTCTR8) HasCTRSet = true;
 
   // Track the address stored to.
-  if (isStore && NumStores < 4 && !MI->memoperands_empty()) {
+  if (isStore && NumStores < 4 && !MI->memoperands_empty() &&
+      (*MI->memoperands_begin())->getSize().hasValue()) {
     MachineMemOperand *MO = *MI->memoperands_begin();
-    StoreSize[NumStores] = MO->getSize();
+    StoreSize[NumStores] = MO->getSize().getValue();
     StoreOffset[NumStores] = MO->getOffset();
     StoreValue[NumStores] = MO->getValue();
     ++NumStores;

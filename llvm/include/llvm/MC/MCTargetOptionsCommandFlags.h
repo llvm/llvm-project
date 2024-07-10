@@ -49,6 +49,12 @@ bool getNoDeprecatedWarn();
 
 bool getNoTypeCheck();
 
+bool getSaveTempLabels();
+
+bool getCrel();
+
+bool getX86RelaxRelocations();
+
 std::string getABIName();
 
 std::string getAsSecureLogFile();

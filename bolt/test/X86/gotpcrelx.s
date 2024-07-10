@@ -5,8 +5,7 @@
 ## kinds of handling of the relocation by the linker (no relaxation, pic, and
 ## non-pic).
 
-# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux \
-# RUN:   -relax-relocations %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe -q
 # RUN: ld.lld %t.o -o %t.pie.exe -q -pie
 # RUN: ld.lld %t.o -o %t.no-relax.exe -q --no-relax

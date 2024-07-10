@@ -3,6 +3,7 @@
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wreturn-type"
 #endif
+BENCHMARK_DISABLE_DEPRECATED_WARNING
 
 extern "C" {
 

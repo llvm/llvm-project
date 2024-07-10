@@ -213,17 +213,15 @@ public:
   bool hasAnyFMA() const { return hasFMA() || hasFMA4(); }
   bool hasPrefetchW() const {
     // The PREFETCHW instruction was added with 3DNow but later CPUs gave it
-    // its own CPUID bit as part of deprecating 3DNow. Intel eventually added
-    // it and KNL has another that prefetches to L2 cache. We assume the
+    // its own CPUID bit as part of deprecating 3DNow. We assume the
     // L1 version exists if the L2 version does.
-    return hasThreeDNow() || hasPRFCHW() || hasPREFETCHWT1();
+    return hasThreeDNow() || hasPRFCHW();
   }
   bool hasSSEPrefetch() const {
     // We implicitly enable these when we have a write prefix supporting cache
     // level OR if we have prfchw, but don't already have a read prefetch from
     // 3dnow.
-    return hasSSE1() || (hasPRFCHW() && !hasThreeDNow()) || hasPREFETCHWT1() ||
-           hasPREFETCHI();
+    return hasSSE1() || (hasPRFCHW() && !hasThreeDNow()) || hasPREFETCHI();
   }
   bool canUseLAHFSAHF() const { return hasLAHFSAHF64() || !is64Bit(); }
   // These are generic getters that OR together all of the thunk types
@@ -244,7 +242,8 @@ public:
   // TODO: Currently we're always allowing widening on CPUs without VLX,
   // because for many cases we don't have a better option.
   bool canExtendTo512DQ() const {
-    return hasAVX512() && (!hasVLX() || getPreferVectorWidth() >= 512);
+    return hasAVX512() && hasEVEX512() &&
+           (!hasVLX() || getPreferVectorWidth() >= 512);
   }
   bool canExtendTo512BW() const  {
     return hasBWI() && canExtendTo512DQ();

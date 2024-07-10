@@ -205,7 +205,7 @@ bool NaryReassociatePass::runImpl(Function &F, AssumptionCache *AC_,
   SE = SE_;
   TLI = TLI_;
   TTI = TTI_;
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
 
   bool Changed = false, ChangedInThisIteration;
   do {
@@ -511,14 +511,15 @@ Instruction *NaryReassociatePass::tryReassociatedBinaryOp(const SCEV *LHSExpr,
   Instruction *NewI = nullptr;
   switch (I->getOpcode()) {
   case Instruction::Add:
-    NewI = BinaryOperator::CreateAdd(LHS, RHS, "", I);
+    NewI = BinaryOperator::CreateAdd(LHS, RHS, "", I->getIterator());
     break;
   case Instruction::Mul:
-    NewI = BinaryOperator::CreateMul(LHS, RHS, "", I);
+    NewI = BinaryOperator::CreateMul(LHS, RHS, "", I->getIterator());
     break;
   default:
     llvm_unreachable("Unexpected instruction.");
   }
+  NewI->setDebugLoc(I->getDebugLoc());
   NewI->takeName(I);
   return NewI;
 }
@@ -564,14 +565,24 @@ NaryReassociatePass::findClosestMatchingDominator(const SCEV *CandidateExpr,
   // optimization makes the algorithm O(n).
   while (!Candidates.empty()) {
     // Candidates stores WeakTrackingVHs, so a candidate can be nullptr if it's
-    // removed
-    // during rewriting.
-    if (Value *Candidate = Candidates.back()) {
+    // removed during rewriting.
+    if (Value *Candidate = Candidates.pop_back_val()) {
       Instruction *CandidateInstruction = cast<Instruction>(Candidate);
-      if (DT->dominates(CandidateInstruction, Dominatee))
-        return CandidateInstruction;
+      if (!DT->dominates(CandidateInstruction, Dominatee))
+        continue;
+
+      // Make sure that the instruction is safe to reuse without introducing
+      // poison.
+      SmallVector<Instruction *> DropPoisonGeneratingInsts;
+      if (!SE->canReuseInstruction(CandidateExpr, CandidateInstruction,
+                                   DropPoisonGeneratingInsts))
+        continue;
+
+      for (Instruction *I : DropPoisonGeneratingInsts)
+        I->dropPoisonGeneratingAnnotations();
+
+      return CandidateInstruction;
     }
-    Candidates.pop_back();
   }
   return nullptr;
 }

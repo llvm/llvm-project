@@ -15,6 +15,9 @@
 #include "IncrementalExecutor.h"
 #include "IncrementalParser.h"
 #include "InterpreterUtils.h"
+#ifdef __EMSCRIPTEN__
+#include "Wasm.h"
+#endif // __EMSCRIPTEN__
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Mangle.h"
@@ -42,6 +45,9 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
+
+#include <cstdarg>
+
 using namespace clang;
 
 // FIXME: Figure out how to unify with namespace init_convenience from
@@ -132,7 +138,8 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
 } // anonymous namespace
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
-IncrementalCompilerBuilder::create(std::vector<const char *> &ClangArgv) {
+IncrementalCompilerBuilder::create(std::string TT,
+                                   std::vector<const char *> &ClangArgv) {
 
   // If we don't know ClangArgv0 or the address of main() at this point, try
   // to guess it anyway (it's possible on some platforms).
@@ -162,8 +169,7 @@ IncrementalCompilerBuilder::create(std::vector<const char *> &ClangArgv) {
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
 
-  driver::Driver Driver(/*MainBinaryName=*/ClangArgv[0],
-                        llvm::sys::getProcessTriple(), Diags);
+  driver::Driver Driver(/*MainBinaryName=*/ClangArgv[0], TT, Diags);
   Driver.setCheckInputsExist(false); // the input comes from mem buffers
   llvm::ArrayRef<const char *> RF = llvm::ArrayRef(ClangArgv);
   std::unique_ptr<driver::Compilation> Compilation(Driver.BuildCompilation(RF));
@@ -183,9 +189,16 @@ IncrementalCompilerBuilder::CreateCpp() {
   std::vector<const char *> Argv;
   Argv.reserve(5 + 1 + UserArgs.size());
   Argv.push_back("-xc++");
+#ifdef __EMSCRIPTEN__
+  Argv.push_back("-target");
+  Argv.push_back("wasm32-unknown-emscripten");
+  Argv.push_back("-pie");
+  Argv.push_back("-shared");
+#endif
   Argv.insert(Argv.end(), UserArgs.begin(), UserArgs.end());
 
-  return IncrementalCompilerBuilder::create(Argv);
+  std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
+  return IncrementalCompilerBuilder::create(TT, Argv);
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
@@ -213,7 +226,8 @@ IncrementalCompilerBuilder::createCuda(bool device) {
 
   Argv.insert(Argv.end(), UserArgs.begin(), UserArgs.end());
 
-  return IncrementalCompilerBuilder::create(Argv);
+  std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
+  return IncrementalCompilerBuilder::create(TT, Argv);
 }
 
 llvm::Expected<std::unique_ptr<CompilerInstance>>
@@ -227,12 +241,32 @@ IncrementalCompilerBuilder::CreateCudaHost() {
 }
 
 Interpreter::Interpreter(std::unique_ptr<CompilerInstance> CI,
-                         llvm::Error &Err) {
-  llvm::ErrorAsOutParameter EAO(&Err);
+                         llvm::Error &ErrOut,
+                         std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder)
+    : JITBuilder(std::move(JITBuilder)) {
+  llvm::ErrorAsOutParameter EAO(&ErrOut);
   auto LLVMCtx = std::make_unique<llvm::LLVMContext>();
   TSCtx = std::make_unique<llvm::orc::ThreadSafeContext>(std::move(LLVMCtx));
-  IncrParser = std::make_unique<IncrementalParser>(*this, std::move(CI),
-                                                   *TSCtx->getContext(), Err);
+  IncrParser = std::make_unique<IncrementalParser>(
+      *this, std::move(CI), *TSCtx->getContext(), ErrOut);
+  if (ErrOut)
+    return;
+
+  // Not all frontends support code-generation, e.g. ast-dump actions don't
+  if (IncrParser->getCodeGen()) {
+    if (llvm::Error Err = CreateExecutor()) {
+      ErrOut = joinErrors(std::move(ErrOut), std::move(Err));
+      return;
+    }
+
+    // Process the PTUs that came from initialization. For example -include will
+    // give us a header that's processed at initialization of the preprocessor.
+    for (PartialTranslationUnit &PTU : IncrParser->getPTUs())
+      if (llvm::Error Err = Execute(PTU)) {
+        ErrOut = joinErrors(std::move(ErrOut), std::move(Err));
+        return;
+      }
+  }
 }
 
 Interpreter::~Interpreter() {
@@ -248,14 +282,10 @@ Interpreter::~Interpreter() {
 // can't find the precise resource directory in unittests so we have to hard
 // code them.
 const char *const Runtimes = R"(
+    #define __CLANG_REPL__ 1
 #ifdef __cplusplus
+    #define EXTERN_C extern "C"
     void *__clang_Interpreter_SetValueWithAlloc(void*, void*, void*);
-    void __clang_Interpreter_SetValueNoAlloc(void*, void*, void*);
-    void __clang_Interpreter_SetValueNoAlloc(void*, void*, void*, void*);
-    void __clang_Interpreter_SetValueNoAlloc(void*, void*, void*, float);
-    void __clang_Interpreter_SetValueNoAlloc(void*, void*, void*, double);
-    void __clang_Interpreter_SetValueNoAlloc(void*, void*, void*, long double);
-    void __clang_Interpreter_SetValueNoAlloc(void*,void*,void*,unsigned long long);
     struct __clang_Interpreter_NewTag{} __ci_newtag;
     void* operator new(__SIZE_TYPE__, void* __p, __clang_Interpreter_NewTag) noexcept;
     template <class T, class = T (*)() /*disable for arrays*/>
@@ -267,7 +297,11 @@ const char *const Runtimes = R"(
     void __clang_Interpreter_SetValueCopyArr(const T (*Src)[N], void* Placement, unsigned long Size) {
       __clang_Interpreter_SetValueCopyArr(Src[0], Placement, Size);
     }
+#else
+    #define EXTERN_C extern
 #endif // __cplusplus
+
+  EXTERN_C void __clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType, ...);
 )";
 
 llvm::Expected<std::unique_ptr<Interpreter>>
@@ -278,15 +312,14 @@ Interpreter::create(std::unique_ptr<CompilerInstance> CI) {
   if (Err)
     return std::move(Err);
 
+  // Add runtime code and set a marker to hide it from user code. Undo will not
+  // go through that.
   auto PTU = Interp->Parse(Runtimes);
   if (!PTU)
     return PTU.takeError();
+  Interp->markUserCodeStart();
 
   Interp->ValuePrintingInfo.resize(4);
-  // FIXME: This is a ugly hack. Undo command checks its availability by looking
-  // at the size of the PTU list. However we have parsed something in the
-  // beginning of the REPL so we have to mark them as 'Irrevocable'.
-  Interp->InitPTUSize = Interp->IncrParser->getPTUs().size();
   return std::move(Interp);
 }
 
@@ -343,6 +376,11 @@ const ASTContext &Interpreter::getASTContext() const {
   return getCompilerInstance()->getASTContext();
 }
 
+void Interpreter::markUserCodeStart() {
+  assert(!InitPTUSize && "We only do this once");
+  InitPTUSize = IncrParser->getPTUs().size();
+}
+
 size_t Interpreter::getEffectivePTUSize() const {
   std::list<PartialTranslationUnit> &PTUs = IncrParser->getPTUs();
   assert(PTUs.size() >= InitPTUSize && "empty PTU list?");
@@ -366,16 +404,50 @@ Interpreter::Parse(llvm::StringRef Code) {
   return IncrParser->Parse(Code);
 }
 
+static llvm::Expected<llvm::orc::JITTargetMachineBuilder>
+createJITTargetMachineBuilder(const std::string &TT) {
+  if (TT == llvm::sys::getProcessTriple())
+    // This fails immediately if the target backend is not registered
+    return llvm::orc::JITTargetMachineBuilder::detectHost();
+
+  // If the target backend is not registered, LLJITBuilder::create() will fail
+  return llvm::orc::JITTargetMachineBuilder(llvm::Triple(TT));
+}
+
 llvm::Error Interpreter::CreateExecutor() {
-  const clang::TargetInfo &TI =
-      getCompilerInstance()->getASTContext().getTargetInfo();
+  if (IncrExecutor)
+    return llvm::make_error<llvm::StringError>("Operation failed. "
+                                               "Execution engine exists",
+                                               std::error_code());
+  if (!IncrParser->getCodeGen())
+    return llvm::make_error<llvm::StringError>("Operation failed. "
+                                               "No code generator available",
+                                               std::error_code());
+  if (!JITBuilder) {
+    const std::string &TT = getCompilerInstance()->getTargetOpts().Triple;
+    auto JTMB = createJITTargetMachineBuilder(TT);
+    if (!JTMB)
+      return JTMB.takeError();
+    auto JB = IncrementalExecutor::createDefaultJITBuilder(std::move(*JTMB));
+    if (!JB)
+      return JB.takeError();
+    JITBuilder = std::move(*JB);
+  }
+
   llvm::Error Err = llvm::Error::success();
-  auto Executor = std::make_unique<IncrementalExecutor>(*TSCtx, Err, TI);
+#ifdef __EMSCRIPTEN__
+  auto Executor = std::make_unique<WasmIncrementalExecutor>(*TSCtx);
+#else
+  auto Executor =
+      std::make_unique<IncrementalExecutor>(*TSCtx, *JITBuilder, Err);
+#endif
   if (!Err)
     IncrExecutor = std::move(Executor);
 
   return Err;
 }
+
+void Interpreter::ResetExecutor() { IncrExecutor.reset(); }
 
 llvm::Error Interpreter::Execute(PartialTranslationUnit &T) {
   assert(T.TheModule);
@@ -505,16 +577,21 @@ static constexpr llvm::StringRef MagicRuntimeInterface[] = {
     "__clang_Interpreter_SetValueWithAlloc",
     "__clang_Interpreter_SetValueCopyArr", "__ci_newtag"};
 
-bool Interpreter::FindRuntimeInterface() {
+static std::unique_ptr<RuntimeInterfaceBuilder>
+createInProcessRuntimeInterfaceBuilder(Interpreter &Interp, ASTContext &Ctx,
+                                       Sema &S);
+
+std::unique_ptr<RuntimeInterfaceBuilder> Interpreter::FindRuntimeInterface() {
   if (llvm::all_of(ValuePrintingInfo, [](Expr *E) { return E != nullptr; }))
-    return true;
+    return nullptr;
 
   Sema &S = getCompilerInstance()->getSema();
   ASTContext &Ctx = S.getASTContext();
 
   auto LookupInterface = [&](Expr *&Interface, llvm::StringRef Name) {
     LookupResult R(S, &Ctx.Idents.get(Name), SourceLocation(),
-                   Sema::LookupOrdinaryName, Sema::ForVisibleRedeclaration);
+                   Sema::LookupOrdinaryName,
+                   RedeclarationKind::ForVisibleRedeclaration);
     S.LookupQualifiedName(R, Ctx.getTranslationUnitDecl());
     if (R.empty())
       return false;
@@ -526,120 +603,36 @@ bool Interpreter::FindRuntimeInterface() {
 
   if (!LookupInterface(ValuePrintingInfo[NoAlloc],
                        MagicRuntimeInterface[NoAlloc]))
-    return false;
-  if (!LookupInterface(ValuePrintingInfo[WithAlloc],
-                       MagicRuntimeInterface[WithAlloc]))
-    return false;
-  if (!LookupInterface(ValuePrintingInfo[CopyArray],
-                       MagicRuntimeInterface[CopyArray]))
-    return false;
-  if (!LookupInterface(ValuePrintingInfo[NewTag],
-                       MagicRuntimeInterface[NewTag]))
-    return false;
-  return true;
+    return nullptr;
+  if (Ctx.getLangOpts().CPlusPlus) {
+    if (!LookupInterface(ValuePrintingInfo[WithAlloc],
+                         MagicRuntimeInterface[WithAlloc]))
+      return nullptr;
+    if (!LookupInterface(ValuePrintingInfo[CopyArray],
+                         MagicRuntimeInterface[CopyArray]))
+      return nullptr;
+    if (!LookupInterface(ValuePrintingInfo[NewTag],
+                         MagicRuntimeInterface[NewTag]))
+      return nullptr;
+  }
+
+  return createInProcessRuntimeInterfaceBuilder(*this, Ctx, S);
 }
 
 namespace {
 
-class RuntimeInterfaceBuilder
-    : public TypeVisitor<RuntimeInterfaceBuilder, Interpreter::InterfaceKind> {
-  clang::Interpreter &Interp;
+class InterfaceKindVisitor
+    : public TypeVisitor<InterfaceKindVisitor, Interpreter::InterfaceKind> {
+  friend class InProcessRuntimeInterfaceBuilder;
+
   ASTContext &Ctx;
   Sema &S;
   Expr *E;
   llvm::SmallVector<Expr *, 3> Args;
 
 public:
-  RuntimeInterfaceBuilder(clang::Interpreter &In, ASTContext &C, Sema &SemaRef,
-                          Expr *VE, ArrayRef<Expr *> FixedArgs)
-      : Interp(In), Ctx(C), S(SemaRef), E(VE) {
-    // The Interpreter* parameter and the out parameter `OutVal`.
-    for (Expr *E : FixedArgs)
-      Args.push_back(E);
-
-    // Get rid of ExprWithCleanups.
-    if (auto *EWC = llvm::dyn_cast_if_present<ExprWithCleanups>(E))
-      E = EWC->getSubExpr();
-  }
-
-  ExprResult getCall() {
-    QualType Ty = E->getType();
-    QualType DesugaredTy = Ty.getDesugaredType(Ctx);
-
-    // For lvalue struct, we treat it as a reference.
-    if (DesugaredTy->isRecordType() && E->isLValue()) {
-      DesugaredTy = Ctx.getLValueReferenceType(DesugaredTy);
-      Ty = Ctx.getLValueReferenceType(Ty);
-    }
-
-    Expr *TypeArg =
-        CStyleCastPtrExpr(S, Ctx.VoidPtrTy, (uintptr_t)Ty.getAsOpaquePtr());
-    // The QualType parameter `OpaqueType`, represented as `void*`.
-    Args.push_back(TypeArg);
-
-    // We push the last parameter based on the type of the Expr. Note we need
-    // special care for rvalue struct.
-    Interpreter::InterfaceKind Kind = Visit(&*DesugaredTy);
-    switch (Kind) {
-    case Interpreter::InterfaceKind::WithAlloc:
-    case Interpreter::InterfaceKind::CopyArray: {
-      // __clang_Interpreter_SetValueWithAlloc.
-      ExprResult AllocCall = S.ActOnCallExpr(
-          /*Scope=*/nullptr,
-          Interp.getValuePrintingInfo()[Interpreter::InterfaceKind::WithAlloc],
-          E->getBeginLoc(), Args, E->getEndLoc());
-      assert(!AllocCall.isInvalid() && "Can't create runtime interface call!");
-
-      TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(Ty, SourceLocation());
-
-      // Force CodeGen to emit destructor.
-      if (auto *RD = Ty->getAsCXXRecordDecl()) {
-        auto *Dtor = S.LookupDestructor(RD);
-        Dtor->addAttr(UsedAttr::CreateImplicit(Ctx));
-        Interp.getCompilerInstance()->getASTConsumer().HandleTopLevelDecl(
-            DeclGroupRef(Dtor));
-      }
-
-      // __clang_Interpreter_SetValueCopyArr.
-      if (Kind == Interpreter::InterfaceKind::CopyArray) {
-        const auto *ConstantArrTy =
-            cast<ConstantArrayType>(DesugaredTy.getTypePtr());
-        size_t ArrSize = Ctx.getConstantArrayElementCount(ConstantArrTy);
-        Expr *ArrSizeExpr = IntegerLiteralExpr(Ctx, ArrSize);
-        Expr *Args[] = {E, AllocCall.get(), ArrSizeExpr};
-        return S.ActOnCallExpr(
-            /*Scope *=*/nullptr,
-            Interp
-                .getValuePrintingInfo()[Interpreter::InterfaceKind::CopyArray],
-            SourceLocation(), Args, SourceLocation());
-      }
-      Expr *Args[] = {
-          AllocCall.get(),
-          Interp.getValuePrintingInfo()[Interpreter::InterfaceKind::NewTag]};
-      ExprResult CXXNewCall = S.BuildCXXNew(
-          E->getSourceRange(),
-          /*UseGlobal=*/true, /*PlacementLParen=*/SourceLocation(), Args,
-          /*PlacementRParen=*/SourceLocation(),
-          /*TypeIdParens=*/SourceRange(), TSI->getType(), TSI, std::nullopt,
-          E->getSourceRange(), E);
-
-      assert(!CXXNewCall.isInvalid() &&
-             "Can't create runtime placement new call!");
-
-      return S.ActOnFinishFullExpr(CXXNewCall.get(),
-                                   /*DiscardedValue=*/false);
-    }
-      // __clang_Interpreter_SetValueNoAlloc.
-    case Interpreter::InterfaceKind::NoAlloc: {
-      return S.ActOnCallExpr(
-          /*Scope=*/nullptr,
-          Interp.getValuePrintingInfo()[Interpreter::InterfaceKind::NoAlloc],
-          E->getBeginLoc(), Args, E->getEndLoc());
-    }
-    default:
-      llvm_unreachable("Unhandled Interpreter::InterfaceKind");
-    }
-  }
+  InterfaceKindVisitor(ASTContext &Ctx, Sema &S, Expr *E)
+      : Ctx(Ctx), S(S), E(E) {}
 
   Interpreter::InterfaceKind VisitRecordType(const RecordType *Ty) {
     return Interpreter::InterfaceKind::WithAlloc;
@@ -693,10 +686,12 @@ public:
   }
 
 private:
-  // Force cast these types to uint64 to reduce the number of overloads of
-  // `__clang_Interpreter_SetValueNoAlloc`.
+  // Force cast these types to the uint that fits the register size. That way we
+  // reduce the number of overloads of `__clang_Interpreter_SetValueNoAlloc`.
   void HandleIntegralOrEnumType(const Type *Ty) {
-    TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(Ctx.UnsignedLongLongTy);
+    uint64_t PtrBits = Ctx.getTypeSize(Ctx.VoidPtrTy);
+    QualType UIntTy = Ctx.getBitIntType(/*Unsigned=*/true, PtrBits);
+    TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(UIntTy);
     ExprResult CastedExpr =
         S.BuildCStyleCastExpr(SourceLocation(), TSI, SourceLocation(), E);
     assert(!CastedExpr.isInvalid() && "Cannot create cstyle cast expr");
@@ -711,7 +706,123 @@ private:
     Args.push_back(CastedExpr.get());
   }
 };
+
+class InProcessRuntimeInterfaceBuilder : public RuntimeInterfaceBuilder {
+  Interpreter &Interp;
+  ASTContext &Ctx;
+  Sema &S;
+
+public:
+  InProcessRuntimeInterfaceBuilder(Interpreter &Interp, ASTContext &C, Sema &S)
+      : Interp(Interp), Ctx(C), S(S) {}
+
+  TransformExprFunction *getPrintValueTransformer() override {
+    return &transformForValuePrinting;
+  }
+
+private:
+  static ExprResult transformForValuePrinting(RuntimeInterfaceBuilder *Builder,
+                                              Expr *E,
+                                              ArrayRef<Expr *> FixedArgs) {
+    auto *B = static_cast<InProcessRuntimeInterfaceBuilder *>(Builder);
+
+    // Get rid of ExprWithCleanups.
+    if (auto *EWC = llvm::dyn_cast_if_present<ExprWithCleanups>(E))
+      E = EWC->getSubExpr();
+
+    InterfaceKindVisitor Visitor(B->Ctx, B->S, E);
+
+    // The Interpreter* parameter and the out parameter `OutVal`.
+    for (Expr *E : FixedArgs)
+      Visitor.Args.push_back(E);
+
+    QualType Ty = E->getType();
+    QualType DesugaredTy = Ty.getDesugaredType(B->Ctx);
+
+    // For lvalue struct, we treat it as a reference.
+    if (DesugaredTy->isRecordType() && E->isLValue()) {
+      DesugaredTy = B->Ctx.getLValueReferenceType(DesugaredTy);
+      Ty = B->Ctx.getLValueReferenceType(Ty);
+    }
+
+    Expr *TypeArg = CStyleCastPtrExpr(B->S, B->Ctx.VoidPtrTy,
+                                      (uintptr_t)Ty.getAsOpaquePtr());
+    // The QualType parameter `OpaqueType`, represented as `void*`.
+    Visitor.Args.push_back(TypeArg);
+
+    // We push the last parameter based on the type of the Expr. Note we need
+    // special care for rvalue struct.
+    Interpreter::InterfaceKind Kind = Visitor.Visit(&*DesugaredTy);
+    switch (Kind) {
+    case Interpreter::InterfaceKind::WithAlloc:
+    case Interpreter::InterfaceKind::CopyArray: {
+      // __clang_Interpreter_SetValueWithAlloc.
+      ExprResult AllocCall = B->S.ActOnCallExpr(
+          /*Scope=*/nullptr,
+          B->Interp
+              .getValuePrintingInfo()[Interpreter::InterfaceKind::WithAlloc],
+          E->getBeginLoc(), Visitor.Args, E->getEndLoc());
+      assert(!AllocCall.isInvalid() && "Can't create runtime interface call!");
+
+      TypeSourceInfo *TSI =
+          B->Ctx.getTrivialTypeSourceInfo(Ty, SourceLocation());
+
+      // Force CodeGen to emit destructor.
+      if (auto *RD = Ty->getAsCXXRecordDecl()) {
+        auto *Dtor = B->S.LookupDestructor(RD);
+        Dtor->addAttr(UsedAttr::CreateImplicit(B->Ctx));
+        B->Interp.getCompilerInstance()->getASTConsumer().HandleTopLevelDecl(
+            DeclGroupRef(Dtor));
+      }
+
+      // __clang_Interpreter_SetValueCopyArr.
+      if (Kind == Interpreter::InterfaceKind::CopyArray) {
+        const auto *ConstantArrTy =
+            cast<ConstantArrayType>(DesugaredTy.getTypePtr());
+        size_t ArrSize = B->Ctx.getConstantArrayElementCount(ConstantArrTy);
+        Expr *ArrSizeExpr = IntegerLiteralExpr(B->Ctx, ArrSize);
+        Expr *Args[] = {E, AllocCall.get(), ArrSizeExpr};
+        return B->S.ActOnCallExpr(
+            /*Scope *=*/nullptr,
+            B->Interp
+                .getValuePrintingInfo()[Interpreter::InterfaceKind::CopyArray],
+            SourceLocation(), Args, SourceLocation());
+      }
+      Expr *Args[] = {
+          AllocCall.get(),
+          B->Interp.getValuePrintingInfo()[Interpreter::InterfaceKind::NewTag]};
+      ExprResult CXXNewCall = B->S.BuildCXXNew(
+          E->getSourceRange(),
+          /*UseGlobal=*/true, /*PlacementLParen=*/SourceLocation(), Args,
+          /*PlacementRParen=*/SourceLocation(),
+          /*TypeIdParens=*/SourceRange(), TSI->getType(), TSI, std::nullopt,
+          E->getSourceRange(), E);
+
+      assert(!CXXNewCall.isInvalid() &&
+             "Can't create runtime placement new call!");
+
+      return B->S.ActOnFinishFullExpr(CXXNewCall.get(),
+                                      /*DiscardedValue=*/false);
+    }
+      // __clang_Interpreter_SetValueNoAlloc.
+    case Interpreter::InterfaceKind::NoAlloc: {
+      return B->S.ActOnCallExpr(
+          /*Scope=*/nullptr,
+          B->Interp.getValuePrintingInfo()[Interpreter::InterfaceKind::NoAlloc],
+          E->getBeginLoc(), Visitor.Args, E->getEndLoc());
+    }
+    default:
+      llvm_unreachable("Unhandled Interpreter::InterfaceKind");
+    }
+  }
+};
 } // namespace
+
+static std::unique_ptr<RuntimeInterfaceBuilder>
+createInProcessRuntimeInterfaceBuilder(Interpreter &Interp, ASTContext &Ctx,
+                                       Sema &S) {
+  return std::make_unique<InProcessRuntimeInterfaceBuilder>(Interp, Ctx, S);
+}
 
 // This synthesizes a call expression to a speciall
 // function that is responsible for generating the Value.
@@ -731,8 +842,13 @@ Expr *Interpreter::SynthesizeExpr(Expr *E) {
   Sema &S = getCompilerInstance()->getSema();
   ASTContext &Ctx = S.getASTContext();
 
-  if (!FindRuntimeInterface())
-    llvm_unreachable("We can't find the runtime iterface for pretty print!");
+  if (!RuntimeIB) {
+    RuntimeIB = FindRuntimeInterface();
+    AddPrintValueCall = RuntimeIB->getPrintValueTransformer();
+  }
+
+  assert(AddPrintValueCall &&
+         "We don't have a runtime interface for pretty print!");
 
   // Create parameter `ThisInterp`.
   auto *ThisInterp = CStyleCastPtrExpr(S, Ctx.VoidPtrTy, (uintptr_t)this);
@@ -741,9 +857,9 @@ Expr *Interpreter::SynthesizeExpr(Expr *E) {
   auto *OutValue = CStyleCastPtrExpr(S, Ctx.VoidPtrTy, (uintptr_t)&LastValue);
 
   // Build `__clang_Interpreter_SetValue*` call.
-  RuntimeInterfaceBuilder Builder(*this, Ctx, S, E, {ThisInterp, OutValue});
+  ExprResult Result =
+      AddPrintValueCall(RuntimeIB.get(), E, {ThisInterp, OutValue});
 
-  ExprResult Result = Builder.getCall();
   // It could fail, like printing an array type in C. (not supported)
   if (Result.isInvalid())
     return E;
@@ -759,69 +875,81 @@ __clang_Interpreter_SetValueWithAlloc(void *This, void *OutVal,
   return VRef.getPtr();
 }
 
-// Pointers, lvalue struct that can take as a reference.
-REPL_EXTERNAL_VISIBILITY void
-__clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType,
-                                    void *Val) {
+extern "C" void REPL_EXTERNAL_VISIBILITY __clang_Interpreter_SetValueNoAlloc(
+    void *This, void *OutVal, void *OpaqueType, ...) {
   Value &VRef = *(Value *)OutVal;
-  VRef = Value(static_cast<Interpreter *>(This), OpaqueType);
-  VRef.setPtr(Val);
-}
+  Interpreter *I = static_cast<Interpreter *>(This);
+  VRef = Value(I, OpaqueType);
+  if (VRef.isVoid())
+    return;
 
-REPL_EXTERNAL_VISIBILITY void
-__clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal,
-                                    void *OpaqueType) {
-  Value &VRef = *(Value *)OutVal;
-  VRef = Value(static_cast<Interpreter *>(This), OpaqueType);
-}
+  va_list args;
+  va_start(args, /*last named param*/ OpaqueType);
 
-static void SetValueDataBasedOnQualType(Value &V, unsigned long long Data) {
-  QualType QT = V.getType();
-  if (const auto *ET = QT->getAs<EnumType>())
-    QT = ET->getDecl()->getIntegerType();
-
-  switch (QT->castAs<BuiltinType>()->getKind()) {
-  default:
-    llvm_unreachable("unknown type kind!");
-#define X(type, name)                                                          \
-  case BuiltinType::name:                                                      \
-    V.set##name(Data);                                                         \
-    break;
-    REPL_BUILTIN_TYPES
-#undef X
+  QualType QT = VRef.getType();
+  if (VRef.getKind() == Value::K_PtrOrObj) {
+    VRef.setPtr(va_arg(args, void *));
+  } else {
+    if (const auto *ET = QT->getAs<EnumType>())
+      QT = ET->getDecl()->getIntegerType();
+    switch (QT->castAs<BuiltinType>()->getKind()) {
+    default:
+      llvm_unreachable("unknown type kind!");
+      break;
+      // Types shorter than int are resolved as int, else va_arg has UB.
+    case BuiltinType::Bool:
+      VRef.setBool(va_arg(args, int));
+      break;
+    case BuiltinType::Char_S:
+      VRef.setChar_S(va_arg(args, int));
+      break;
+    case BuiltinType::SChar:
+      VRef.setSChar(va_arg(args, int));
+      break;
+    case BuiltinType::Char_U:
+      VRef.setChar_U(va_arg(args, unsigned));
+      break;
+    case BuiltinType::UChar:
+      VRef.setUChar(va_arg(args, unsigned));
+      break;
+    case BuiltinType::Short:
+      VRef.setShort(va_arg(args, int));
+      break;
+    case BuiltinType::UShort:
+      VRef.setUShort(va_arg(args, unsigned));
+      break;
+    case BuiltinType::Int:
+      VRef.setInt(va_arg(args, int));
+      break;
+    case BuiltinType::UInt:
+      VRef.setUInt(va_arg(args, unsigned));
+      break;
+    case BuiltinType::Long:
+      VRef.setLong(va_arg(args, long));
+      break;
+    case BuiltinType::ULong:
+      VRef.setULong(va_arg(args, unsigned long));
+      break;
+    case BuiltinType::LongLong:
+      VRef.setLongLong(va_arg(args, long long));
+      break;
+    case BuiltinType::ULongLong:
+      VRef.setULongLong(va_arg(args, unsigned long long));
+      break;
+      // Types shorter than double are resolved as double, else va_arg has UB.
+    case BuiltinType::Float:
+      VRef.setFloat(va_arg(args, double));
+      break;
+    case BuiltinType::Double:
+      VRef.setDouble(va_arg(args, double));
+      break;
+    case BuiltinType::LongDouble:
+      VRef.setLongDouble(va_arg(args, long double));
+      break;
+      // See REPL_BUILTIN_TYPES.
+    }
   }
-}
-
-REPL_EXTERNAL_VISIBILITY void
-__clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType,
-                                    unsigned long long Val) {
-  Value &VRef = *(Value *)OutVal;
-  VRef = Value(static_cast<Interpreter *>(This), OpaqueType);
-  SetValueDataBasedOnQualType(VRef, Val);
-}
-
-REPL_EXTERNAL_VISIBILITY void
-__clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType,
-                                    float Val) {
-  Value &VRef = *(Value *)OutVal;
-  VRef = Value(static_cast<Interpreter *>(This), OpaqueType);
-  VRef.setFloat(Val);
-}
-
-REPL_EXTERNAL_VISIBILITY void
-__clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType,
-                                    double Val) {
-  Value &VRef = *(Value *)OutVal;
-  VRef = Value(static_cast<Interpreter *>(This), OpaqueType);
-  VRef.setDouble(Val);
-}
-
-REPL_EXTERNAL_VISIBILITY void
-__clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType,
-                                    long double Val) {
-  Value &VRef = *(Value *)OutVal;
-  VRef = Value(static_cast<Interpreter *>(This), OpaqueType);
-  VRef.setLongDouble(Val);
+  va_end(args);
 }
 
 // A trampoline to work around the fact that operator placement new cannot

@@ -613,6 +613,91 @@ bool X86ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case X86::CALL64m_RVMARKER:
     expandCALL_RVMARKER(MBB, MBBI);
     return true;
+  case X86::ADD32mi_ND:
+  case X86::ADD64mi32_ND:
+  case X86::SUB32mi_ND:
+  case X86::SUB64mi32_ND:
+  case X86::AND32mi_ND:
+  case X86::AND64mi32_ND:
+  case X86::OR32mi_ND:
+  case X86::OR64mi32_ND:
+  case X86::XOR32mi_ND:
+  case X86::XOR64mi32_ND:
+  case X86::ADC32mi_ND:
+  case X86::ADC64mi32_ND:
+  case X86::SBB32mi_ND:
+  case X86::SBB64mi32_ND: {
+    // It's possible for an EVEX-encoded legacy instruction to reach the 15-byte
+    // instruction length limit: 4 bytes of EVEX prefix + 1 byte of opcode + 1
+    // byte of ModRM + 1 byte of SIB + 4 bytes of displacement + 4 bytes of
+    // immediate = 15 bytes in total, e.g.
+    //
+    //  subq    $184, %fs:257(%rbx, %rcx), %rax
+    //
+    // In such a case, no additional (ADSIZE or segment override) prefix can be
+    // used. To resolve the issue, we split the “long” instruction into 2
+    // instructions:
+    //
+    //  movq %fs:257(%rbx, %rcx)，%rax
+    //  subq $184, %rax
+    //
+    //  Therefore we consider the OPmi_ND to be a pseudo instruction to some
+    //  extent.
+    const MachineOperand &ImmOp =
+        MI.getOperand(MI.getNumExplicitOperands() - 1);
+    // If the immediate is a expr, conservatively estimate 4 bytes.
+    if (ImmOp.isImm() && isInt<8>(ImmOp.getImm()))
+      return false;
+    int MemOpNo = X86::getFirstAddrOperandIdx(MI);
+    const MachineOperand &DispOp = MI.getOperand(MemOpNo + X86::AddrDisp);
+    Register Base = MI.getOperand(MemOpNo + X86::AddrBaseReg).getReg();
+    // If the displacement is a expr, conservatively estimate 4 bytes.
+    if (Base && DispOp.isImm() && isInt<8>(DispOp.getImm()))
+      return false;
+    // There can only be one of three: SIB, segment override register, ADSIZE
+    Register Index = MI.getOperand(MemOpNo + X86::AddrIndexReg).getReg();
+    unsigned Count = !!MI.getOperand(MemOpNo + X86::AddrSegmentReg).getReg();
+    if (X86II::needSIB(Base, Index, /*In64BitMode=*/true))
+      ++Count;
+    if (X86MCRegisterClasses[X86::GR32RegClassID].contains(Base) ||
+        X86MCRegisterClasses[X86::GR32RegClassID].contains(Index))
+      ++Count;
+    if (Count < 2)
+      return false;
+    unsigned Opc, LoadOpc;
+    switch (Opcode) {
+#define MI_TO_RI(OP)                                                           \
+  case X86::OP##32mi_ND:                                                       \
+    Opc = X86::OP##32ri;                                                       \
+    LoadOpc = X86::MOV32rm;                                                    \
+    break;                                                                     \
+  case X86::OP##64mi32_ND:                                                     \
+    Opc = X86::OP##64ri32;                                                     \
+    LoadOpc = X86::MOV64rm;                                                    \
+    break;
+
+    default:
+      llvm_unreachable("Unexpected Opcode");
+      MI_TO_RI(ADD);
+      MI_TO_RI(SUB);
+      MI_TO_RI(AND);
+      MI_TO_RI(OR);
+      MI_TO_RI(XOR);
+      MI_TO_RI(ADC);
+      MI_TO_RI(SBB);
+#undef MI_TO_RI
+    }
+    // Insert OPri.
+    Register DestReg = MI.getOperand(0).getReg();
+    BuildMI(MBB, std::next(MBBI), DL, TII->get(Opc), DestReg)
+        .addReg(DestReg)
+        .add(ImmOp);
+    // Change OPmi_ND to MOVrm.
+    for (unsigned I = MI.getNumImplicitOperands() + 1; I != 0; --I)
+      MI.removeOperand(MI.getNumOperands() - 1);
+    MI.setDesc(TII->get(LoadOpc));
+    return true;
+  }
   }
   llvm_unreachable("Previous switch has a fallthrough?");
 }

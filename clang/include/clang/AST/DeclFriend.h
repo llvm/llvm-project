@@ -112,7 +112,7 @@ public:
   Create(ASTContext &C, DeclContext *DC, SourceLocation L, FriendUnion Friend_,
          SourceLocation FriendL,
          ArrayRef<TemplateParameterList *> FriendTypeTPLists = std::nullopt);
-  static FriendDecl *CreateDeserialized(ASTContext &C, unsigned ID,
+  static FriendDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                         unsigned FriendTypeNumTPLists);
 
   /// If this friend declaration names an (untemplated but possibly

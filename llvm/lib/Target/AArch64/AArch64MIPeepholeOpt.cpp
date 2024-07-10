@@ -136,7 +136,7 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -680,9 +680,11 @@ bool AArch64MIPeepholeOpt::visitFMOVDr(MachineInstr &MI) {
   // Let's remove MIs for high 64-bits.
   Register OldDef = MI.getOperand(0).getReg();
   Register NewDef = MI.getOperand(1).getReg();
+  LLVM_DEBUG(dbgs() << "Removing: " << MI << "\n");
+  MRI->clearKillFlags(OldDef);
+  MRI->clearKillFlags(NewDef);
   MRI->constrainRegClass(NewDef, MRI->getRegClass(OldDef));
   MRI->replaceRegWith(OldDef, NewDef);
-  LLVM_DEBUG(dbgs() << "Removed: " << MI << "\n");
   MI.eraseFromParent();
 
   return true;
@@ -695,7 +697,7 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
   TII = static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
   TRI = static_cast<const AArch64RegisterInfo *>(
       MF.getSubtarget().getRegisterInfo());
-  MLI = &getAnalysis<MachineLoopInfo>();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   MRI = &MF.getRegInfo();
 
   assert(MRI->isSSA() && "Expected to be run on SSA form!");

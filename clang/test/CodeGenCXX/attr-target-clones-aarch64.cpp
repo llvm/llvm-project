@@ -40,23 +40,12 @@ void run_foo_tml() {
 
 //.
 // CHECK: @__aarch64_cpu_features = external dso_local global { i64 }
-// CHECK: @_Z7foo_ovli.ifunc = weak_odr alias i32 (i32), ptr @_Z7foo_ovli
-// CHECK: @_Z7foo_ovlv.ifunc = weak_odr alias i32 (), ptr @_Z7foo_ovlv
-// CHECK: @_ZN7MyClassIssE7foo_tmlEv.ifunc = weak_odr alias i32 (ptr), ptr @_ZN7MyClassIssE7foo_tmlEv
-// CHECK: @_ZN7MyClassIisE7foo_tmlEv.ifunc = weak_odr alias i32 (ptr), ptr @_ZN7MyClassIisE7foo_tmlEv
 // CHECK: @_Z7foo_ovli = weak_odr ifunc i32 (i32), ptr @_Z7foo_ovli.resolver
 // CHECK: @_Z7foo_ovlv = weak_odr ifunc i32 (), ptr @_Z7foo_ovlv.resolver
 // CHECK: @_ZN7MyClassIssE7foo_tmlEv = weak_odr ifunc i32 (ptr), ptr @_ZN7MyClassIssE7foo_tmlEv.resolver
 // CHECK: @_ZN7MyClassIisE7foo_tmlEv = weak_odr ifunc i32 (ptr), ptr @_ZN7MyClassIisE7foo_tmlEv.resolver
 //.
 // CHECK-LABEL: @_Z7foo_ovli._Mfp16Mls64_v(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: @_Z7foo_ovli.default(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
@@ -78,11 +67,6 @@ void run_foo_tml() {
 //
 //
 // CHECK-LABEL: @_Z7foo_ovlv._Mls64Mls64_accdata(
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 2
-//
-//
-// CHECK-LABEL: @_Z7foo_ovlv.default(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret i32 2
 //
@@ -182,6 +166,18 @@ void run_foo_tml() {
 // CHECK-NEXT:    ret i32 4
 //
 //
+// CHECK-LABEL: @_Z7foo_ovli.default(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK-LABEL: @_Z7foo_ovlv.default(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 2
+//
+//
 // CHECK-LABEL: @_ZN7MyClassIssE7foo_tmlEv._Mfrintts(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
@@ -231,8 +227,8 @@ void run_foo_tml() {
 //
 //.
 // CHECK: attributes #[[ATTR0:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon" }
-// CHECK: attributes #[[ATTR1:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK: attributes #[[ATTR2:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ls64" }
+// CHECK: attributes #[[ATTR1:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ls64" }
+// CHECK: attributes #[[ATTR2:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK: attributes #[[ATTR3:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fptoint" }
 // CHECK: attributes #[[ATTR4:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme,+sme-f64f64" }
 //.

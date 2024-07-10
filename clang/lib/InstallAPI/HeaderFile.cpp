@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/InstallAPI/HeaderFile.h"
+#include "llvm/TextAPI/Utils.h"
 
 using namespace llvm;
 namespace clang::installapi {
@@ -34,4 +35,54 @@ std::optional<std::string> createIncludeHeaderName(const StringRef FullPath) {
   return Matches[1].drop_front(Matches[1].rfind('/') + 1).str() + "/" +
          Matches[3].str();
 }
+
+bool isHeaderFile(StringRef Path) {
+  return StringSwitch<bool>(sys::path::extension(Path))
+      .Cases(".h", ".H", ".hh", ".hpp", ".hxx", true)
+      .Default(false);
+}
+
+llvm::Expected<PathSeq> enumerateFiles(FileManager &FM, StringRef Directory) {
+  PathSeq Files;
+  std::error_code EC;
+  auto &FS = FM.getVirtualFileSystem();
+  for (llvm::vfs::recursive_directory_iterator i(FS, Directory, EC), ie;
+       i != ie; i.increment(EC)) {
+    if (EC)
+      return errorCodeToError(EC);
+
+    // Skip files that do not exist. This usually happens for broken symlinks.
+    if (FS.status(i->path()) == std::errc::no_such_file_or_directory)
+      continue;
+
+    StringRef Path = i->path();
+    if (isHeaderFile(Path))
+      Files.emplace_back(Path);
+  }
+
+  return Files;
+}
+
+HeaderGlob::HeaderGlob(StringRef GlobString, Regex &&Rule, HeaderType Type)
+    : GlobString(GlobString), Rule(std::move(Rule)), Type(Type) {}
+
+bool HeaderGlob::match(const HeaderFile &Header) {
+  if (Header.getType() != Type)
+    return false;
+
+  bool Match = Rule.match(Header.getPath());
+  if (Match)
+    FoundMatch = true;
+  return Match;
+}
+
+Expected<std::unique_ptr<HeaderGlob>> HeaderGlob::create(StringRef GlobString,
+                                                         HeaderType Type) {
+  auto Rule = MachO::createRegexFromGlob(GlobString);
+  if (!Rule)
+    return Rule.takeError();
+
+  return std::make_unique<HeaderGlob>(GlobString, std::move(*Rule), Type);
+}
+
 } // namespace clang::installapi

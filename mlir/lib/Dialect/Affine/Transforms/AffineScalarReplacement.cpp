@@ -13,10 +13,10 @@
 
 #include "mlir/Dialect/Affine/Passes.h"
 
+#include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Dominance.h"
-#include "mlir/Support/LogicalResult.h"
 #include <algorithm>
 
 namespace mlir {
@@ -47,5 +47,6 @@ mlir::affine::createAffineScalarReplacementPass() {
 
 void AffineScalarReplacement::runOnOperation() {
   affineScalarReplace(getOperation(), getAnalysis<DominanceInfo>(),
-                      getAnalysis<PostDominanceInfo>());
+                      getAnalysis<PostDominanceInfo>(),
+                      getAnalysis<AliasAnalysis>());
 }

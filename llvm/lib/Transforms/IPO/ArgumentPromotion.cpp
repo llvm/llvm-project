@@ -58,6 +58,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
@@ -203,7 +204,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
   // Loop over all the callers of the function, transforming the call sites to
   // pass in the loaded pointers.
   SmallVector<Value *, 16> Args;
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
   SmallVector<WeakTrackingVH, 16> DeadArgs;
 
   while (!F->use_empty()) {
@@ -266,9 +267,10 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     CallBase *NewCS = nullptr;
     if (InvokeInst *II = dyn_cast<InvokeInst>(&CB)) {
       NewCS = InvokeInst::Create(NF, II->getNormalDest(), II->getUnwindDest(),
-                                 Args, OpBundles, "", &CB);
+                                 Args, OpBundles, "", CB.getIterator());
     } else {
-      auto *NewCall = CallInst::Create(NF, Args, OpBundles, "", &CB);
+      auto *NewCall =
+          CallInst::Create(NF, Args, OpBundles, "", CB.getIterator());
       NewCall->setTailCallKind(cast<CallInst>(&CB)->getTailCallKind());
       NewCS = NewCall;
     }
@@ -425,7 +427,7 @@ static bool allCallersPassValidPointerForArgument(Argument *Arg,
                                                   Align NeededAlign,
                                                   uint64_t NeededDerefBytes) {
   Function *Callee = Arg->getParent();
-  const DataLayout &DL = Callee->getParent()->getDataLayout();
+  const DataLayout &DL = Callee->getDataLayout();
   APInt Bytes(64, NeededDerefBytes);
 
   // Check if the argument itself is marked dereferenceable and aligned.
@@ -652,10 +654,6 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
   // check to see if the pointer is guaranteed to not be modified from entry of
   // the function to each of the load instructions.
 
-  // Because there could be several/many load instructions, remember which
-  // blocks we know to be transparent to the load.
-  df_iterator_default_set<BasicBlock *, 16> TranspBlocks;
-
   for (LoadInst *Load : Loads) {
     // Check to see if the load is invalidated from the start of the block to
     // the load itself.
@@ -669,7 +667,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
     // To do this, we perform a depth first search on the inverse CFG from the
     // loading block.
     for (BasicBlock *P : predecessors(BB)) {
-      for (BasicBlock *TranspBB : inverse_depth_first_ext(P, TranspBlocks))
+      for (BasicBlock *TranspBB : inverse_depth_first(P))
         if (AAR.canBasicBlockModify(*TranspBB, Loc))
           return false;
     }
@@ -757,7 +755,7 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
     if (BB.getTerminatingMustTailCall())
       return nullptr;
 
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
   auto &AAR = FAM.getResult<AAManager>(*F);
   const auto &TTI = FAM.getResult<TargetIRAnalysis>(*F);
 

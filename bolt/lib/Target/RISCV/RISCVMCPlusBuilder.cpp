@@ -16,10 +16,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "mcplus"
 
@@ -154,14 +151,14 @@ public:
     }
   }
 
-  bool reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
+  void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
                               MCContext *Ctx) const override {
     auto Opcode = getInvertedBranchOpcode(Inst.getOpcode());
     Inst.setOpcode(Opcode);
-    return replaceBranchTarget(Inst, TBB, Ctx);
+    replaceBranchTarget(Inst, TBB, Ctx);
   }
 
-  bool replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
+  void replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
                            MCContext *Ctx) const override {
     assert((isCall(Inst) || isBranch(Inst)) && !isIndirectBranch(Inst) &&
            "Invalid instruction");
@@ -173,7 +170,6 @@ public:
 
     Inst.getOperand(SymOpIndex) = MCOperand::createExpr(
         MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx));
-    return true;
   }
 
   IndirectBranchType analyzeIndirectBranch(
@@ -219,46 +215,43 @@ public:
     return true;
   }
 
-  bool createReturn(MCInst &Inst) const override {
+  void createReturn(MCInst &Inst) const override {
     // TODO "c.jr ra" when RVC is enabled
     Inst.setOpcode(RISCV::JALR);
     Inst.clear();
     Inst.addOperand(MCOperand::createReg(RISCV::X0));
     Inst.addOperand(MCOperand::createReg(RISCV::X1));
     Inst.addOperand(MCOperand::createImm(0));
-    return true;
   }
 
-  bool createUncondBranch(MCInst &Inst, const MCSymbol *TBB,
+  void createUncondBranch(MCInst &Inst, const MCSymbol *TBB,
                           MCContext *Ctx) const override {
     Inst.setOpcode(RISCV::JAL);
     Inst.clear();
     Inst.addOperand(MCOperand::createReg(RISCV::X0));
     Inst.addOperand(MCOperand::createExpr(
         MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx)));
-    return true;
   }
 
   StringRef getTrapFillValue() const override {
     return StringRef("\0\0\0\0", 4);
   }
 
-  bool createCall(unsigned Opcode, MCInst &Inst, const MCSymbol *Target,
+  void createCall(unsigned Opcode, MCInst &Inst, const MCSymbol *Target,
                   MCContext *Ctx) {
     Inst.setOpcode(Opcode);
     Inst.clear();
     Inst.addOperand(MCOperand::createExpr(RISCVMCExpr::create(
         MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
         RISCVMCExpr::VK_RISCV_CALL, *Ctx)));
-    return true;
   }
 
-  bool createCall(MCInst &Inst, const MCSymbol *Target,
+  void createCall(MCInst &Inst, const MCSymbol *Target,
                   MCContext *Ctx) override {
     return createCall(RISCV::PseudoCALL, Inst, Target, Ctx);
   }
 
-  bool createTailCall(MCInst &Inst, const MCSymbol *Target,
+  void createTailCall(MCInst &Inst, const MCSymbol *Target,
                       MCContext *Ctx) override {
     return createCall(RISCV::PseudoTAIL, Inst, Target, Ctx);
   }

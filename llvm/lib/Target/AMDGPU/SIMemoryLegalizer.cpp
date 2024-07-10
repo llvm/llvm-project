@@ -18,9 +18,11 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/TargetParser/TargetParser.h"
 
@@ -98,22 +100,22 @@ private:
   bool IsCrossAddressSpaceOrdering = false;
   bool IsVolatile = false;
   bool IsNonTemporal = false;
+  bool IsLastUse = false;
 
-  SIMemOpInfo(AtomicOrdering Ordering = AtomicOrdering::SequentiallyConsistent,
-              SIAtomicScope Scope = SIAtomicScope::SYSTEM,
-              SIAtomicAddrSpace OrderingAddrSpace = SIAtomicAddrSpace::ATOMIC,
-              SIAtomicAddrSpace InstrAddrSpace = SIAtomicAddrSpace::ALL,
-              bool IsCrossAddressSpaceOrdering = true,
-              AtomicOrdering FailureOrdering =
-                AtomicOrdering::SequentiallyConsistent,
-              bool IsVolatile = false,
-              bool IsNonTemporal = false)
-    : Ordering(Ordering), FailureOrdering(FailureOrdering),
-      Scope(Scope), OrderingAddrSpace(OrderingAddrSpace),
-      InstrAddrSpace(InstrAddrSpace),
-      IsCrossAddressSpaceOrdering(IsCrossAddressSpaceOrdering),
-      IsVolatile(IsVolatile),
-      IsNonTemporal(IsNonTemporal) {
+  SIMemOpInfo(
+      AtomicOrdering Ordering = AtomicOrdering::SequentiallyConsistent,
+      SIAtomicScope Scope = SIAtomicScope::SYSTEM,
+      SIAtomicAddrSpace OrderingAddrSpace = SIAtomicAddrSpace::ATOMIC,
+      SIAtomicAddrSpace InstrAddrSpace = SIAtomicAddrSpace::ALL,
+      bool IsCrossAddressSpaceOrdering = true,
+      AtomicOrdering FailureOrdering = AtomicOrdering::SequentiallyConsistent,
+      bool IsVolatile = false, bool IsNonTemporal = false,
+      bool IsLastUse = false)
+      : Ordering(Ordering), FailureOrdering(FailureOrdering), Scope(Scope),
+        OrderingAddrSpace(OrderingAddrSpace), InstrAddrSpace(InstrAddrSpace),
+        IsCrossAddressSpaceOrdering(IsCrossAddressSpaceOrdering),
+        IsVolatile(IsVolatile), IsNonTemporal(IsNonTemporal),
+        IsLastUse(IsLastUse) {
 
     if (Ordering == AtomicOrdering::NotAtomic) {
       assert(Scope == SIAtomicScope::NONE &&
@@ -200,6 +202,10 @@ public:
   bool isNonTemporal() const {
     return IsNonTemporal;
   }
+
+  /// \returns True if memory access of the machine instruction used to
+  /// create this SIMemOpInfo is last use, false otherwise.
+  bool isLastUse() const { return IsLastUse; }
 
   /// \returns True if ordering constraint of the machine instruction used to
   /// create this SIMemOpInfo is unordered or higher, false otherwise.
@@ -305,12 +311,13 @@ public:
                                     SIAtomicAddrSpace AddrSpace) const = 0;
 
   /// Update \p MI memory instruction of kind \p Op associated with address
-  /// spaces \p AddrSpace to indicate it is volatile and/or nontemporal. Return
-  /// true iff the instruction was modified.
+  /// spaces \p AddrSpace to indicate it is volatile and/or
+  /// nontemporal/last-use. Return true iff the instruction was modified.
   virtual bool enableVolatileAndOrNonTemporal(MachineBasicBlock::iterator &MI,
                                               SIAtomicAddrSpace AddrSpace,
                                               SIMemOp Op, bool IsVolatile,
-                                              bool IsNonTemporal) const = 0;
+                                              bool IsNonTemporal,
+                                              bool IsLastUse = false) const = 0;
 
   virtual bool expandSystemScopeStore(MachineBasicBlock::iterator &MI) const {
     return false;
@@ -394,8 +401,8 @@ public:
 
   bool enableVolatileAndOrNonTemporal(MachineBasicBlock::iterator &MI,
                                       SIAtomicAddrSpace AddrSpace, SIMemOp Op,
-                                      bool IsVolatile,
-                                      bool IsNonTemporal) const override;
+                                      bool IsVolatile, bool IsNonTemporal,
+                                      bool IsLastUse) const override;
 
   bool insertWait(MachineBasicBlock::iterator &MI,
                   SIAtomicScope Scope,
@@ -447,8 +454,8 @@ public:
 
   bool enableVolatileAndOrNonTemporal(MachineBasicBlock::iterator &MI,
                                       SIAtomicAddrSpace AddrSpace, SIMemOp Op,
-                                      bool IsVolatile,
-                                      bool IsNonTemporal) const override;
+                                      bool IsVolatile, bool IsNonTemporal,
+                                      bool IsLastUse) const override;
 
   bool insertWait(MachineBasicBlock::iterator &MI,
                   SIAtomicScope Scope,
@@ -508,8 +515,8 @@ public:
 
   bool enableVolatileAndOrNonTemporal(MachineBasicBlock::iterator &MI,
                                       SIAtomicAddrSpace AddrSpace, SIMemOp Op,
-                                      bool IsVolatile,
-                                      bool IsNonTemporal) const override;
+                                      bool IsVolatile, bool IsNonTemporal,
+                                      bool IsLastUse) const override;
 
   bool insertAcquire(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, Position Pos) const override;
@@ -552,8 +559,8 @@ public:
 
   bool enableVolatileAndOrNonTemporal(MachineBasicBlock::iterator &MI,
                                       SIAtomicAddrSpace AddrSpace, SIMemOp Op,
-                                      bool IsVolatile,
-                                      bool IsNonTemporal) const override;
+                                      bool IsVolatile, bool IsNonTemporal,
+                                      bool IsLastUse) const override;
 
   bool insertWait(MachineBasicBlock::iterator &MI,
                   SIAtomicScope Scope,
@@ -578,8 +585,8 @@ public:
 
   bool enableVolatileAndOrNonTemporal(MachineBasicBlock::iterator &MI,
                                       SIAtomicAddrSpace AddrSpace, SIMemOp Op,
-                                      bool IsVolatile,
-                                      bool IsNonTemporal) const override;
+                                      bool IsVolatile, bool IsNonTemporal,
+                                      bool IsLastUse) const override;
 };
 
 class SIGfx12CacheControl : public SIGfx11CacheControl {
@@ -614,8 +621,8 @@ public:
 
   bool enableVolatileAndOrNonTemporal(MachineBasicBlock::iterator &MI,
                                       SIAtomicAddrSpace AddrSpace, SIMemOp Op,
-                                      bool IsVolatile,
-                                      bool IsNonTemporal) const override;
+                                      bool IsVolatile, bool IsNonTemporal,
+                                      bool IsLastUse) const override;
 
   bool expandSystemScopeStore(MachineBasicBlock::iterator &MI) const override;
 };
@@ -672,6 +679,49 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
+
+static const StringMap<SIAtomicAddrSpace> ASNames = {{
+    {"global", SIAtomicAddrSpace::GLOBAL},
+    {"local", SIAtomicAddrSpace::LDS},
+}};
+
+void diagnoseUnknownMMRAASName(const MachineInstr &MI, StringRef AS) {
+  const MachineFunction *MF = MI.getMF();
+  const Function &Fn = MF->getFunction();
+  SmallString<128> Str;
+  raw_svector_ostream OS(Str);
+  OS << "unknown address space '" << AS << "'; expected one of ";
+  ListSeparator LS;
+  for (const auto &[Name, Val] : ASNames)
+    OS << LS << '\'' << Name << '\'';
+  DiagnosticInfoUnsupported BadTag(Fn, Str.str(), MI.getDebugLoc(), DS_Warning);
+  Fn.getContext().diagnose(BadTag);
+}
+
+/// Reads \p MI's MMRAs to parse the "amdgpu-as" MMRA.
+/// If this tag isn't present, or if it has no meaningful values, returns \p
+/// Default. Otherwise returns all the address spaces concerned by the MMRA.
+static SIAtomicAddrSpace getFenceAddrSpaceMMRA(const MachineInstr &MI,
+                                               SIAtomicAddrSpace Default) {
+  static constexpr StringLiteral FenceASPrefix = "amdgpu-as";
+
+  auto MMRA = MMRAMetadata(MI.getMMRAMetadata());
+  if (!MMRA)
+    return Default;
+
+  SIAtomicAddrSpace Result = SIAtomicAddrSpace::NONE;
+  for (const auto &[Prefix, Suffix] : MMRA) {
+    if (Prefix != FenceASPrefix)
+      continue;
+
+    if (auto It = ASNames.find(Suffix); It != ASNames.end())
+      Result |= It->second;
+    else
+      diagnoseUnknownMMRAASName(MI, Suffix);
+  }
+
+  return (Result != SIAtomicAddrSpace::NONE) ? Result : Default;
+}
 
 } // end namespace anonymous
 
@@ -745,12 +795,14 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
   SIAtomicAddrSpace InstrAddrSpace = SIAtomicAddrSpace::NONE;
   bool IsNonTemporal = true;
   bool IsVolatile = false;
+  bool IsLastUse = false;
 
   // Validator should check whether or not MMOs cover the entire set of
   // locations accessed by the memory instruction.
   for (const auto &MMO : MI->memoperands()) {
     IsNonTemporal &= MMO->isNonTemporal();
     IsVolatile |= MMO->isVolatile();
+    IsLastUse |= MMO->getFlags() & MOLastUse;
     InstrAddrSpace |=
       toSIAtomicAddrSpace(MMO->getPointerInfo().getAddrSpace());
     AtomicOrdering OpOrdering = MMO->getSuccessOrdering();
@@ -792,7 +844,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
   }
   return SIMemOpInfo(Ordering, Scope, OrderingAddrSpace, InstrAddrSpace,
                      IsCrossAddressSpaceOrdering, FailureOrdering, IsVolatile,
-                     IsNonTemporal);
+                     IsNonTemporal, IsLastUse);
 }
 
 std::optional<SIMemOpInfo>
@@ -969,7 +1021,7 @@ bool SIGfx6CacheControl::enableRMWCacheBypass(
 
 bool SIGfx6CacheControl::enableVolatileAndOrNonTemporal(
     MachineBasicBlock::iterator &MI, SIAtomicAddrSpace AddrSpace, SIMemOp Op,
-    bool IsVolatile, bool IsNonTemporal) const {
+    bool IsVolatile, bool IsNonTemporal, bool IsLastUse = false) const {
   // Only handle load and store, not atomic read-modify-write insructions. The
   // latter use glc to indicate if the atomic returns a result and so must not
   // be used for cache control.
@@ -1322,7 +1374,7 @@ bool SIGfx90ACacheControl::enableRMWCacheBypass(
 
 bool SIGfx90ACacheControl::enableVolatileAndOrNonTemporal(
     MachineBasicBlock::iterator &MI, SIAtomicAddrSpace AddrSpace, SIMemOp Op,
-    bool IsVolatile, bool IsNonTemporal) const {
+    bool IsVolatile, bool IsNonTemporal, bool IsLastUse = false) const {
   // Only handle load and store, not atomic read-modify-write insructions. The
   // latter use glc to indicate if the atomic returns a result and so must not
   // be used for cache control.
@@ -1624,7 +1676,7 @@ bool SIGfx940CacheControl::enableRMWCacheBypass(
 
 bool SIGfx940CacheControl::enableVolatileAndOrNonTemporal(
     MachineBasicBlock::iterator &MI, SIAtomicAddrSpace AddrSpace, SIMemOp Op,
-    bool IsVolatile, bool IsNonTemporal) const {
+    bool IsVolatile, bool IsNonTemporal, bool IsLastUse = false) const {
   // Only handle load and store, not atomic read-modify-write insructions. The
   // latter use glc to indicate if the atomic returns a result and so must not
   // be used for cache control.
@@ -1856,7 +1908,7 @@ bool SIGfx10CacheControl::enableLoadCacheBypass(
 
 bool SIGfx10CacheControl::enableVolatileAndOrNonTemporal(
     MachineBasicBlock::iterator &MI, SIAtomicAddrSpace AddrSpace, SIMemOp Op,
-    bool IsVolatile, bool IsNonTemporal) const {
+    bool IsVolatile, bool IsNonTemporal, bool IsLastUse = false) const {
 
   // Only handle load and store, not atomic read-modify-write insructions. The
   // latter use glc to indicate if the atomic returns a result and so must not
@@ -2127,7 +2179,7 @@ bool SIGfx11CacheControl::enableLoadCacheBypass(
 
 bool SIGfx11CacheControl::enableVolatileAndOrNonTemporal(
     MachineBasicBlock::iterator &MI, SIAtomicAddrSpace AddrSpace, SIMemOp Op,
-    bool IsVolatile, bool IsNonTemporal) const {
+    bool IsVolatile, bool IsNonTemporal, bool IsLastUse = false) const {
 
   // Only handle load and store, not atomic read-modify-write insructions. The
   // latter use glc to indicate if the atomic returns a result and so must not
@@ -2379,7 +2431,7 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
 
 bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
     MachineBasicBlock::iterator &MI, SIAtomicAddrSpace AddrSpace, SIMemOp Op,
-    bool IsVolatile, bool IsNonTemporal) const {
+    bool IsVolatile, bool IsNonTemporal, bool IsLastUse = false) const {
 
   // Only handle load and store, not atomic read-modify-write instructions.
   assert(MI->mayLoad() ^ MI->mayStore());
@@ -2391,6 +2443,14 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
   assert(Op == SIMemOp::LOAD || Op == SIMemOp::STORE);
 
   bool Changed = false;
+
+  if (IsLastUse) {
+    // Set last-use hint.
+    Changed |= setTH(MI, AMDGPU::CPol::TH_LU);
+  } else if (IsNonTemporal) {
+    // Set non-temporal hint for all cache levels.
+    Changed |= setTH(MI, AMDGPU::CPol::TH_NT);
+  }
 
   if (IsVolatile) {
     Changed |= setScope(MI, AMDGPU::CPol::SCOPE_SYS);
@@ -2405,11 +2465,6 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
     // address space operations.
     Changed |= insertWait(MI, SIAtomicScope::SYSTEM, AddrSpace, Op, false,
                           Position::AFTER);
-  }
-
-  if (IsNonTemporal) {
-    // Set non-temporal hint for all cache levels.
-    Changed |= setTH(MI, AMDGPU::CPol::TH_NT);
   }
 
   return Changed;
@@ -2472,11 +2527,12 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
   }
 
   // Atomic instructions already bypass caches to the scope specified by the
-  // SyncScope operand. Only non-atomic volatile and nontemporal instructions
-  // need additional treatment.
-  Changed |= CC->enableVolatileAndOrNonTemporal(MI, MOI.getInstrAddrSpace(),
-                                                SIMemOp::LOAD, MOI.isVolatile(),
-                                                MOI.isNonTemporal());
+  // SyncScope operand. Only non-atomic volatile and nontemporal/last-use
+  // instructions need additional treatment.
+  Changed |= CC->enableVolatileAndOrNonTemporal(
+      MI, MOI.getInstrAddrSpace(), SIMemOp::LOAD, MOI.isVolatile(),
+      MOI.isNonTemporal(), MOI.isLastUse());
+
   return Changed;
 }
 
@@ -2524,12 +2580,17 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
   AtomicPseudoMIs.push_back(MI);
   bool Changed = false;
 
+  // Refine fenced address space based on MMRAs.
+  //
+  // TODO: Should we support this MMRA on other atomic operations?
+  auto OrderingAddrSpace =
+      getFenceAddrSpaceMMRA(*MI, MOI.getOrderingAddrSpace());
+
   if (MOI.isAtomic()) {
     if (MOI.getOrdering() == AtomicOrdering::Acquire)
-      Changed |= CC->insertWait(MI, MOI.getScope(), MOI.getOrderingAddrSpace(),
-                                SIMemOp::LOAD | SIMemOp::STORE,
-                                MOI.getIsCrossAddressSpaceOrdering(),
-                                Position::BEFORE);
+      Changed |= CC->insertWait(
+          MI, MOI.getScope(), OrderingAddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
+          MOI.getIsCrossAddressSpaceOrdering(), Position::BEFORE);
 
     if (MOI.getOrdering() == AtomicOrdering::Release ||
         MOI.getOrdering() == AtomicOrdering::AcquireRelease ||
@@ -2541,8 +2602,7 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
       /// generate a fence. Could add support in this file for
       /// barrier. SIInsertWaitcnt.cpp could then stop unconditionally
       /// adding S_WAITCNT before a S_BARRIER.
-      Changed |= CC->insertRelease(MI, MOI.getScope(),
-                                   MOI.getOrderingAddrSpace(),
+      Changed |= CC->insertRelease(MI, MOI.getScope(), OrderingAddrSpace,
                                    MOI.getIsCrossAddressSpaceOrdering(),
                                    Position::BEFORE);
 
@@ -2554,8 +2614,7 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
     if (MOI.getOrdering() == AtomicOrdering::Acquire ||
         MOI.getOrdering() == AtomicOrdering::AcquireRelease ||
         MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent)
-      Changed |= CC->insertAcquire(MI, MOI.getScope(),
-                                   MOI.getOrderingAddrSpace(),
+      Changed |= CC->insertAcquire(MI, MOI.getScope(), OrderingAddrSpace,
                                    Position::BEFORE);
 
     return Changed;

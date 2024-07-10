@@ -175,6 +175,10 @@ public:
   std::optional<std::string> handleAsmEscapedChar(char EscChar) const override;
   StringRef getABI() const override { return ABI; }
 
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(32, 32);
+  }
+
 protected:
   std::string CPU;
   StringRef ABI;

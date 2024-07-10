@@ -643,9 +643,8 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // It seems that the 'e' option is completely ignored for dynamic executables
   // (the default), and with static executables, the last one wins, as expected.
-  Args.addAllArgs(CmdArgs,
-                  {options::OPT_d_Flag, options::OPT_s, options::OPT_t,
-                   options::OPT_Z_Flag, options::OPT_u_Group, options::OPT_r});
+  Args.addAllArgs(CmdArgs, {options::OPT_d_Flag, options::OPT_s, options::OPT_t,
+                            options::OPT_Z_Flag, options::OPT_u_Group});
 
   // Forward -ObjC when either -ObjC or -ObjC++ is used, to force loading
   // members of static archive libraries which implement Objective-C classes or
@@ -687,7 +686,7 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
-    addOpenMPRuntime(CmdArgs, getToolChain(), Args);
+    addOpenMPRuntime(C, CmdArgs, getToolChain(), Args);
 
   if (isObjCRuntimeLinked(Args) &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
@@ -926,9 +925,7 @@ void darwin::VerifyDebug::ConstructJob(Compilation &C, const JobAction &JA,
 MachO::MachO(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : ToolChain(D, Triple, Args) {
   // We expect 'as', 'ld', etc. to be adjacent to our install dir.
-  getProgramPaths().push_back(getDriver().getInstalledDir());
-  if (getDriver().getInstalledDir() != getDriver().Dir)
-    getProgramPaths().push_back(getDriver().Dir);
+  getProgramPaths().push_back(getDriver().Dir);
 }
 
 /// Darwin - Darwin tool chain for i386 and x86_64.
@@ -1260,14 +1257,23 @@ unsigned DarwinClang::GetDefaultDwarfVersion() const {
   if ((isTargetMacOSBased() && isMacosxVersionLT(10, 11)) ||
       (isTargetIOSBased() && isIPhoneOSVersionLT(9)))
     return 2;
-  return 4;
+  // Default to use DWARF 4 on OS X 10.11 - macOS 14 / iOS 9 - iOS 17.
+  if ((isTargetMacOSBased() && isMacosxVersionLT(15)) ||
+      (isTargetIOSBased() && isIPhoneOSVersionLT(18)) ||
+      (isTargetWatchOSBased() && TargetVersion < llvm::VersionTuple(11)) ||
+      (isTargetXROS() && TargetVersion < llvm::VersionTuple(2)) ||
+      (isTargetDriverKit() && TargetVersion < llvm::VersionTuple(24)) ||
+      (isTargetMacOSBased() &&
+       TargetVersion.empty())) // apple-darwin, no version.
+    return 4;
+  return 5;
 }
 
 void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
                               StringRef Component, RuntimeLinkOptions Opts,
                               bool IsShared) const {
   SmallString<64> DarwinLibName = StringRef("libclang_rt.");
-  // an Darwin the builtins compomnent is not in the library name
+  // On Darwin the builtins component is not in the library name.
   if (Component != "builtins") {
     DarwinLibName += Component;
     if (!(Opts & RLO_IsEmbedded))
@@ -2517,25 +2523,19 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
   switch (GetCXXStdlibType(DriverArgs)) {
   case ToolChain::CST_Libcxx: {
     // On Darwin, libc++ can be installed in one of the following places:
-    // 1. Alongside the compiler in <install>/include/c++/v1
-    // 2. Alongside the compiler in <clang-executable-folder>/../include/c++/v1
-    // 3. In a SDK (or a custom sysroot) in <sysroot>/usr/include/c++/v1
+    // 1. Alongside the compiler in <clang-executable-folder>/../include/c++/v1
+    // 2. In a SDK (or a custom sysroot) in <sysroot>/usr/include/c++/v1
     //
     // The precedence of paths is as listed above, i.e. we take the first path
     // that exists. Note that we never include libc++ twice -- we take the first
     // path that exists and don't send the other paths to CC1 (otherwise
     // include_next could break).
-    //
-    // Also note that in most cases, (1) and (2) are exactly the same path.
-    // Those two paths will differ only when the `clang` program being run
-    // is actually a symlink to the real executable.
 
     // Check for (1)
     // Get from '<install>/bin' to '<install>/include/c++/v1'.
     // Note that InstallBin can be relative, so we use '..' instead of
     // parent_path.
-    llvm::SmallString<128> InstallBin =
-        llvm::StringRef(getDriver().getInstalledDir()); // <install>/bin
+    llvm::SmallString<128> InstallBin(getDriver().Dir); // <install>/bin
     llvm::sys::path::append(InstallBin, "..", "include", "c++", "v1");
     if (getVFS().exists(InstallBin)) {
       addSystemInclude(DriverArgs, CC1Args, InstallBin);
@@ -2545,20 +2545,7 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
                    << "\"\n";
     }
 
-    // (2) Check for the folder where the executable is located, if different.
-    if (getDriver().getInstalledDir() != getDriver().Dir) {
-      InstallBin = llvm::StringRef(getDriver().Dir);
-      llvm::sys::path::append(InstallBin, "..", "include", "c++", "v1");
-      if (getVFS().exists(InstallBin)) {
-        addSystemInclude(DriverArgs, CC1Args, InstallBin);
-        return;
-      } else if (DriverArgs.hasArg(options::OPT_v)) {
-        llvm::errs() << "ignoring nonexistent directory \"" << InstallBin
-                     << "\"\n";
-      }
-    }
-
-    // Otherwise, check for (3)
+    // Otherwise, check for (2)
     llvm::SmallString<128> SysrootUsr = Sysroot;
     llvm::sys::path::append(SysrootUsr, "usr", "include", "c++", "v1");
     if (getVFS().exists(SysrootUsr)) {
@@ -2934,15 +2921,67 @@ static bool sdkSupportsBuiltinModules(const Darwin::DarwinPlatformKind &TargetPl
   }
 }
 
-void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                                   llvm::opt::ArgStringList &CC1Args,
-                                   Action::OffloadKind DeviceOffloadKind) const {
+static inline llvm::VersionTuple
+sizedDeallocMinVersion(llvm::Triple::OSType OS) {
+  switch (OS) {
+  default:
+    break;
+  case llvm::Triple::Darwin:
+  case llvm::Triple::MacOSX: // Earliest supporting version is 10.12.
+    return llvm::VersionTuple(10U, 12U);
+  case llvm::Triple::IOS:
+  case llvm::Triple::TvOS: // Earliest supporting version is 10.0.0.
+    return llvm::VersionTuple(10U);
+  case llvm::Triple::WatchOS: // Earliest supporting version is 3.0.0.
+    return llvm::VersionTuple(3U);
+  }
+
+  llvm_unreachable("Unexpected OS");
+}
+
+bool Darwin::isSizedDeallocationUnavailable() const {
+  llvm::Triple::OSType OS;
+
+  if (isTargetMacCatalyst())
+    return TargetVersion < sizedDeallocMinVersion(llvm::Triple::MacOSX);
+  switch (TargetPlatform) {
+  case MacOS: // Earlier than 10.12.
+    OS = llvm::Triple::MacOSX;
+    break;
+  case IPhoneOS:
+    OS = llvm::Triple::IOS;
+    break;
+  case TvOS: // Earlier than 10.0.
+    OS = llvm::Triple::TvOS;
+    break;
+  case WatchOS: // Earlier than 3.0.
+    OS = llvm::Triple::WatchOS;
+    break;
+  case DriverKit:
+  case XROS:
+    // Always available.
+    return false;
+  }
+
+  return TargetVersion < sizedDeallocMinVersion(OS);
+}
+
+void Darwin::addClangTargetOptions(
+    const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+    Action::OffloadKind DeviceOffloadKind) const {
   // Pass "-faligned-alloc-unavailable" only when the user hasn't manually
   // enabled or disabled aligned allocations.
   if (!DriverArgs.hasArgNoClaim(options::OPT_faligned_allocation,
                                 options::OPT_fno_aligned_allocation) &&
       isAlignedAllocationUnavailable())
     CC1Args.push_back("-faligned-alloc-unavailable");
+
+  // Pass "-fno-sized-deallocation" only when the user hasn't manually enabled
+  // or disabled sized deallocations.
+  if (!DriverArgs.hasArgNoClaim(options::OPT_fsized_deallocation,
+                                options::OPT_fno_sized_deallocation) &&
+      isSizedDeallocationUnavailable())
+    CC1Args.push_back("-fno-sized-deallocation");
 
   addClangCC1ASTargetOptions(DriverArgs, CC1Args);
 
@@ -2990,7 +3029,7 @@ void Darwin::addClangCC1ASTargetOptions(
       std::string Arg;
       llvm::raw_string_ostream OS(Arg);
       OS << "-target-sdk-version=" << V;
-      CC1ASArgs.push_back(Args.MakeArgString(OS.str()));
+      CC1ASArgs.push_back(Args.MakeArgString(Arg));
     };
 
     if (isTargetMacCatalyst()) {
@@ -3013,7 +3052,7 @@ void Darwin::addClangCC1ASTargetOptions(
         std::string Arg;
         llvm::raw_string_ostream OS(Arg);
         OS << "-darwin-target-variant-sdk-version=" << SDKInfo->getVersion();
-        CC1ASArgs.push_back(Args.MakeArgString(OS.str()));
+        CC1ASArgs.push_back(Args.MakeArgString(Arg));
       } else if (const auto *MacOStoMacCatalystMapping =
                      SDKInfo->getVersionMapping(
                          DarwinSDKInfo::OSEnvPair::macOStoMacCatalystPair())) {
@@ -3024,7 +3063,7 @@ void Darwin::addClangCC1ASTargetOptions(
           std::string Arg;
           llvm::raw_string_ostream OS(Arg);
           OS << "-darwin-target-variant-sdk-version=" << *SDKVersion;
-          CC1ASArgs.push_back(Args.MakeArgString(OS.str()));
+          CC1ASArgs.push_back(Args.MakeArgString(Arg));
         }
       }
     }
@@ -3434,6 +3473,10 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
        isTargetTvOSSimulator() || isTargetWatchOSSimulator())) {
     Res |= SanitizerKind::Thread;
   }
+
+  if (IsX86_64)
+    Res |= SanitizerKind::NumericalStability;
+
   return Res;
 }
 

@@ -16,24 +16,24 @@ define <vscale x 4 x double> @mull_add(<vscale x 4 x double> %a, <vscale x 4 x d
 ; CHECK-NEXT:    mov z1.d, z5.d
 ; CHECK-NEXT:    ret
 entry:
-  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %a)
+  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %a)
   %0 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 0
   %1 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 1
-  %strided.vec29 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %b)
+  %strided.vec29 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %b)
   %2 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec29, 0
   %3 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec29, 1
   %4 = fmul fast <vscale x 2 x double> %3, %0
   %5 = fmul fast <vscale x 2 x double> %2, %1
   %6 = fadd fast <vscale x 2 x double> %4, %5
   %7 = fmul fast <vscale x 2 x double> %2, %0
-  %strided.vec31 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %c)
+  %strided.vec31 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %c)
   %8 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec31, 0
   %9 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec31, 1
   %10 = fadd fast <vscale x 2 x double> %8, %7
   %11 = fmul fast <vscale x 2 x double> %3, %1
   %12 = fsub fast <vscale x 2 x double> %10, %11
   %13 = fadd fast <vscale x 2 x double> %6, %9
-  %interleaved.vec = tail call <vscale x 4 x double> @llvm.experimental.vector.interleave2.nxv4f64(<vscale x 2 x double> %12, <vscale x 2 x double> %13)
+  %interleaved.vec = tail call <vscale x 4 x double> @llvm.vector.interleave2.nxv4f64(<vscale x 2 x double> %12, <vscale x 2 x double> %13)
   ret <vscale x 4 x double> %interleaved.vec
 }
 
@@ -41,35 +41,35 @@ entry:
 define <vscale x 4 x double> @mul_add_mull(<vscale x 4 x double> %a, <vscale x 4 x double> %b, <vscale x 4 x double> %c, <vscale x 4 x double> %d) {
 ; CHECK-LABEL: mul_add_mull:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z24.d, #0 // =0x0
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z25.d, z24.d
-; CHECK-NEXT:    fcmla z25.d, p0/m, z6.d, z4.d, #0
 ; CHECK-NEXT:    fcmla z24.d, p0/m, z7.d, z5.d, #0
-; CHECK-NEXT:    fcmla z25.d, p0/m, z0.d, z2.d, #0
+; CHECK-NEXT:    fcmla z25.d, p0/m, z6.d, z4.d, #0
 ; CHECK-NEXT:    fcmla z24.d, p0/m, z1.d, z3.d, #0
-; CHECK-NEXT:    fcmla z25.d, p0/m, z6.d, z4.d, #90
+; CHECK-NEXT:    fcmla z25.d, p0/m, z0.d, z2.d, #0
 ; CHECK-NEXT:    fcmla z24.d, p0/m, z7.d, z5.d, #90
-; CHECK-NEXT:    fcmla z25.d, p0/m, z0.d, z2.d, #90
+; CHECK-NEXT:    fcmla z25.d, p0/m, z6.d, z4.d, #90
 ; CHECK-NEXT:    fcmla z24.d, p0/m, z1.d, z3.d, #90
-; CHECK-NEXT:    mov z0.d, z25.d
+; CHECK-NEXT:    fcmla z25.d, p0/m, z0.d, z2.d, #90
 ; CHECK-NEXT:    mov z1.d, z24.d
+; CHECK-NEXT:    mov z0.d, z25.d
 ; CHECK-NEXT:    ret
 entry:
-  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %a)
+  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %a)
   %0 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 0
   %1 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 1
-  %strided.vec52 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %b)
+  %strided.vec52 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %b)
   %2 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec52, 0
   %3 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec52, 1
   %4 = fmul fast <vscale x 2 x double> %3, %0
   %5 = fmul fast <vscale x 2 x double> %2, %1
   %6 = fmul fast <vscale x 2 x double> %2, %0
   %7 = fmul fast <vscale x 2 x double> %3, %1
-  %strided.vec54 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %c)
+  %strided.vec54 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %c)
   %8 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec54, 0
   %9 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec54, 1
-  %strided.vec56 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %d)
+  %strided.vec56 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %d)
   %10 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec56, 0
   %11 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec56, 1
   %12 = fmul fast <vscale x 2 x double> %11, %8
@@ -82,7 +82,7 @@ entry:
   %19 = fadd fast <vscale x 2 x double> %4, %5
   %20 = fadd fast <vscale x 2 x double> %19, %13
   %21 = fadd fast <vscale x 2 x double> %20, %12
-  %interleaved.vec = tail call <vscale x 4 x double> @llvm.experimental.vector.interleave2.nxv4f64(<vscale x 2 x double> %18, <vscale x 2 x double> %21)
+  %interleaved.vec = tail call <vscale x 4 x double> @llvm.vector.interleave2.nxv4f64(<vscale x 2 x double> %18, <vscale x 2 x double> %21)
   ret <vscale x 4 x double> %interleaved.vec
 }
 
@@ -90,35 +90,35 @@ entry:
 define <vscale x 4 x double> @mul_sub_mull(<vscale x 4 x double> %a, <vscale x 4 x double> %b, <vscale x 4 x double> %c, <vscale x 4 x double> %d) {
 ; CHECK-LABEL: mul_sub_mull:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z24.d, #0 // =0x0
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z25.d, z24.d
-; CHECK-NEXT:    fcmla z25.d, p0/m, z6.d, z4.d, #270
 ; CHECK-NEXT:    fcmla z24.d, p0/m, z7.d, z5.d, #270
-; CHECK-NEXT:    fcmla z25.d, p0/m, z0.d, z2.d, #0
+; CHECK-NEXT:    fcmla z25.d, p0/m, z6.d, z4.d, #270
 ; CHECK-NEXT:    fcmla z24.d, p0/m, z1.d, z3.d, #0
-; CHECK-NEXT:    fcmla z25.d, p0/m, z6.d, z4.d, #180
+; CHECK-NEXT:    fcmla z25.d, p0/m, z0.d, z2.d, #0
 ; CHECK-NEXT:    fcmla z24.d, p0/m, z7.d, z5.d, #180
-; CHECK-NEXT:    fcmla z25.d, p0/m, z0.d, z2.d, #90
+; CHECK-NEXT:    fcmla z25.d, p0/m, z6.d, z4.d, #180
 ; CHECK-NEXT:    fcmla z24.d, p0/m, z1.d, z3.d, #90
-; CHECK-NEXT:    mov z0.d, z25.d
+; CHECK-NEXT:    fcmla z25.d, p0/m, z0.d, z2.d, #90
 ; CHECK-NEXT:    mov z1.d, z24.d
+; CHECK-NEXT:    mov z0.d, z25.d
 ; CHECK-NEXT:    ret
 entry:
-  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %a)
+  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %a)
   %0 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 0
   %1 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 1
-  %strided.vec54 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %b)
+  %strided.vec54 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %b)
   %2 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec54, 0
   %3 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec54, 1
   %4 = fmul fast <vscale x 2 x double> %3, %0
   %5 = fmul fast <vscale x 2 x double> %2, %1
   %6 = fmul fast <vscale x 2 x double> %2, %0
   %7 = fmul fast <vscale x 2 x double> %3, %1
-  %strided.vec56 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %c)
+  %strided.vec56 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %c)
   %8 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec56, 0
   %9 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec56, 1
-  %strided.vec58 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %d)
+  %strided.vec58 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %d)
   %10 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec58, 0
   %11 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec58, 1
   %12 = fmul fast <vscale x 2 x double> %11, %9
@@ -131,7 +131,7 @@ entry:
   %19 = fadd fast <vscale x 2 x double> %18, %17
   %20 = fadd fast <vscale x 2 x double> %4, %5
   %21 = fsub fast <vscale x 2 x double> %20, %19
-  %interleaved.vec = tail call <vscale x 4 x double> @llvm.experimental.vector.interleave2.nxv4f64(<vscale x 2 x double> %16, <vscale x 2 x double> %21)
+  %interleaved.vec = tail call <vscale x 4 x double> @llvm.vector.interleave2.nxv4f64(<vscale x 2 x double> %16, <vscale x 2 x double> %21)
   ret <vscale x 4 x double> %interleaved.vec
 }
 
@@ -139,34 +139,34 @@ entry:
 define <vscale x 4 x double> @mul_conj_mull(<vscale x 4 x double> %a, <vscale x 4 x double> %b, <vscale x 4 x double> %c, <vscale x 4 x double> %d) {
 ; CHECK-LABEL: mul_conj_mull:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z24.d, #0 // =0x0
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z25.d, z24.d
-; CHECK-NEXT:    fcmla z25.d, p0/m, z0.d, z2.d, #0
 ; CHECK-NEXT:    fcmla z24.d, p0/m, z1.d, z3.d, #0
-; CHECK-NEXT:    fcmla z25.d, p0/m, z0.d, z2.d, #90
+; CHECK-NEXT:    fcmla z25.d, p0/m, z0.d, z2.d, #0
 ; CHECK-NEXT:    fcmla z24.d, p0/m, z1.d, z3.d, #90
-; CHECK-NEXT:    fcmla z25.d, p0/m, z4.d, z6.d, #0
+; CHECK-NEXT:    fcmla z25.d, p0/m, z0.d, z2.d, #90
 ; CHECK-NEXT:    fcmla z24.d, p0/m, z5.d, z7.d, #0
-; CHECK-NEXT:    fcmla z25.d, p0/m, z4.d, z6.d, #270
+; CHECK-NEXT:    fcmla z25.d, p0/m, z4.d, z6.d, #0
 ; CHECK-NEXT:    fcmla z24.d, p0/m, z5.d, z7.d, #270
-; CHECK-NEXT:    mov z0.d, z25.d
+; CHECK-NEXT:    fcmla z25.d, p0/m, z4.d, z6.d, #270
 ; CHECK-NEXT:    mov z1.d, z24.d
+; CHECK-NEXT:    mov z0.d, z25.d
 ; CHECK-NEXT:    ret
 entry:
-  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %a)
+  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %a)
   %0 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 0
   %1 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 1
-  %strided.vec60 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %b)
+  %strided.vec60 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %b)
   %2 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec60, 0
   %3 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec60, 1
   %4 = fmul fast <vscale x 2 x double> %3, %0
   %5 = fmul fast <vscale x 2 x double> %2, %1
   %6 = fmul fast <vscale x 2 x double> %2, %0
-  %strided.vec62 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %c)
+  %strided.vec62 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %c)
   %7 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec62, 0
   %8 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec62, 1
-  %strided.vec64 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %d)
+  %strided.vec64 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %d)
   %9 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec64, 0
   %10 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec64, 1
   %11 = fmul fast <vscale x 2 x double> %10, %7
@@ -180,7 +180,7 @@ entry:
   %19 = fmul fast <vscale x 2 x double> %9, %8
   %20 = fsub fast <vscale x 2 x double> %18, %19
   %21 = fadd fast <vscale x 2 x double> %20, %11
-  %interleaved.vec = tail call <vscale x 4 x double> @llvm.experimental.vector.interleave2.nxv4f64(<vscale x 2 x double> %17, <vscale x 2 x double> %21)
+  %interleaved.vec = tail call <vscale x 4 x double> @llvm.vector.interleave2.nxv4f64(<vscale x 2 x double> %17, <vscale x 2 x double> %21)
   ret <vscale x 4 x double> %interleaved.vec
 }
 
@@ -188,42 +188,43 @@ entry:
 define <vscale x 4 x double> @mul_add_rot_mull(<vscale x 4 x double> %a, <vscale x 4 x double> %b, <vscale x 4 x double> %c, <vscale x 4 x double> %d) {
 ; CHECK-LABEL: mul_add_rot_mull:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uzp1 z24.d, z2.d, z3.d
+; CHECK-NEXT:    uzp2 z24.d, z2.d, z3.d
 ; CHECK-NEXT:    uzp2 z25.d, z0.d, z1.d
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    uzp2 z2.d, z2.d, z3.d
+; CHECK-NEXT:    uzp1 z2.d, z2.d, z3.d
 ; CHECK-NEXT:    uzp1 z0.d, z0.d, z1.d
+; CHECK-NEXT:    uzp2 z1.d, z4.d, z5.d
 ; CHECK-NEXT:    uzp1 z26.d, z6.d, z7.d
-; CHECK-NEXT:    fmul z1.d, z24.d, z25.d
-; CHECK-NEXT:    fmul z3.d, z2.d, z25.d
-; CHECK-NEXT:    uzp2 z25.d, z4.d, z5.d
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    uzp1 z4.d, z4.d, z5.d
 ; CHECK-NEXT:    uzp2 z5.d, z6.d, z7.d
-; CHECK-NEXT:    fmla z1.d, p0/m, z2.d, z0.d
-; CHECK-NEXT:    fmla z3.d, p0/m, z26.d, z25.d
-; CHECK-NEXT:    movprfx z2, z3
-; CHECK-NEXT:    fmla z2.d, p0/m, z5.d, z4.d
-; CHECK-NEXT:    fnmls z2.d, p0/m, z24.d, z0.d
-; CHECK-NEXT:    fmla z1.d, p0/m, z26.d, z4.d
-; CHECK-NEXT:    fmls z1.d, p0/m, z5.d, z25.d
+; CHECK-NEXT:    fmul z3.d, z2.d, z25.d
+; CHECK-NEXT:    fmul z25.d, z24.d, z25.d
+; CHECK-NEXT:    fmla z3.d, p0/m, z24.d, z0.d
+; CHECK-NEXT:    movprfx z24, z25
+; CHECK-NEXT:    fmla z24.d, p0/m, z26.d, z1.d
+; CHECK-NEXT:    movprfx z6, z24
+; CHECK-NEXT:    fmla z6.d, p0/m, z5.d, z4.d
+; CHECK-NEXT:    fmla z3.d, p0/m, z26.d, z4.d
+; CHECK-NEXT:    fnmsb z2.d, p0/m, z0.d, z6.d
+; CHECK-NEXT:    fmsb z1.d, p0/m, z5.d, z3.d
 ; CHECK-NEXT:    zip1 z0.d, z2.d, z1.d
 ; CHECK-NEXT:    zip2 z1.d, z2.d, z1.d
 ; CHECK-NEXT:    ret
 entry:
-  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %a)
+  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %a)
   %0 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 0
   %1 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 1
-  %strided.vec80 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %b)
+  %strided.vec80 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %b)
   %2 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec80, 0
   %3 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec80, 1
   %4 = fmul fast <vscale x 2 x double> %3, %0
   %5 = fmul fast <vscale x 2 x double> %2, %1
   %6 = fmul fast <vscale x 2 x double> %2, %0
   %7 = fmul fast <vscale x 2 x double> %3, %1
-  %strided.vec82 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %c)
+  %strided.vec82 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %c)
   %8 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec82, 0
   %9 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec82, 1
-  %strided.vec84 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %d)
+  %strided.vec84 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %d)
   %10 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec84, 0
   %11 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec84, 1
   %12 = fmul fast <vscale x 2 x double> %10, %8
@@ -236,9 +237,9 @@ entry:
   %19 = fadd fast <vscale x 2 x double> %18, %12
   %20 = fmul fast <vscale x 2 x double> %11, %9
   %21 = fsub fast <vscale x 2 x double> %19, %20
-  %interleaved.vec = tail call <vscale x 4 x double> @llvm.experimental.vector.interleave2.nxv4f64(<vscale x 2 x double> %17, <vscale x 2 x double> %21)
+  %interleaved.vec = tail call <vscale x 4 x double> @llvm.vector.interleave2.nxv4f64(<vscale x 2 x double> %17, <vscale x 2 x double> %21)
   ret <vscale x 4 x double> %interleaved.vec
 }
 
-declare { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double>)
-declare <vscale x 4 x double> @llvm.experimental.vector.interleave2.nxv4f64(<vscale x 2 x double>, <vscale x 2 x double>)
+declare { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double>)
+declare <vscale x 4 x double> @llvm.vector.interleave2.nxv4f64(<vscale x 2 x double>, <vscale x 2 x double>)

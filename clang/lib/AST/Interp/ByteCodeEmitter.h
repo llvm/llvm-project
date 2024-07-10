@@ -1,4 +1,4 @@
-//===--- ByteCodeEmitter.h - Instruction emitter for the VM ---------*- C++ -*-===//
+//===--- ByteCodeEmitter.h - Instruction emitter for the VM -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -46,13 +46,16 @@ protected:
   /// Methods implemented by the compiler.
   virtual bool visitFunc(const FunctionDecl *E) = 0;
   virtual bool visitExpr(const Expr *E) = 0;
-  virtual bool visitDecl(const VarDecl *E) = 0;
+  virtual bool visitDeclAndReturn(const VarDecl *E, bool ConstantContext) = 0;
 
   /// Emits jumps.
   bool jumpTrue(const LabelTy &Label);
   bool jumpFalse(const LabelTy &Label);
   bool jump(const LabelTy &Label);
   bool fallthrough(const LabelTy &Label);
+
+  /// We're always emitting bytecode.
+  bool isActive() const { return true; }
 
   /// Callback for local registration.
   Local createLocal(Descriptor *D);
@@ -62,7 +65,7 @@ protected:
   /// Lambda captures.
   llvm::DenseMap<const ValueDecl *, ParamOffset> LambdaCaptures;
   /// Offset of the This parameter in a lambda record.
-  unsigned LambdaThisCapture = 0;
+  ParamOffset LambdaThisCapture{0, false};
   /// Local descriptors.
   llvm::SmallVector<SmallVector<Local, 8>, 2> Descriptors;
 

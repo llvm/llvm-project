@@ -243,7 +243,7 @@ struct PositiveUninitializedBaseOrdering : public NegativeAggregateType,
 };
 
 // We shouldn't need to initialize anything because PositiveUninitializedBase
-// has a user-defined constructor.
+// has a user-provided constructor.
 struct NegativeUninitializedBase : public PositiveUninitializedBase {
   NegativeUninitializedBase() {}
 };
@@ -461,12 +461,6 @@ struct NegativeEmptyArrayMember {
 struct NegativeIncompleteArrayMember {
   NegativeIncompleteArrayMember() {}
   char e[];
-};
-
-template <typename T> class NoCrash {
-  class B : public NoCrash {
-    template <typename U> B(U u) {}
-  };
 };
 
 struct PositiveBitfieldMember {

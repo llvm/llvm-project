@@ -16,11 +16,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenDAGPatterns.h"
-#include "CodeGenInstruction.h"
-#include "CodeGenRegisters.h"
-#include "CodeGenTarget.h"
-#include "InfoByHwMode.h"
+#include "Common/CodeGenDAGPatterns.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenRegisters.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/InfoByHwMode.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Error.h"
@@ -821,8 +821,7 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
     if (MI != SignaturesWithConstantForms.end()) {
       // Unique any duplicates out of the list.
       llvm::sort(MI->second);
-      MI->second.erase(std::unique(MI->second.begin(), MI->second.end()),
-                       MI->second.end());
+      MI->second.erase(llvm::unique(MI->second), MI->second.end());
 
       // Check each in order it was seen.  It would be nice to have a good
       // relative ordering between them, but we're not going for optimality

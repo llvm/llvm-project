@@ -6,12 +6,11 @@
 // RUN: %clang --target=aarch64 -march=armv8.6a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV8A-NOSVE %s
 // GENERICV8A-NOSVE-NOT: "-target-feature" "+sve"
 
-// The 32-bit floating point matrix multiply extension is enabled by default
-// for armv8.6-a targets (or later) with SVE, and can optionally be enabled for
-// any target from armv8.2a onwards (we don't enforce not using it with earlier
-// targets).
+// The 32-bit floating point matrix multiply extension is an optional feature
+// that can be used for any target from armv8.2a and onwards. This can be
+// enabled using the `+f32mm` option.`.
 // RUN: %clang --target=aarch64 -march=armv8.6a       -### -c %s 2>&1 | FileCheck -check-prefix=NO-F32MM %s
-// RUN: %clang --target=aarch64 -march=armv8.6a+sve   -### -c %s 2>&1 | FileCheck -check-prefix=F32MM %s
+// RUN: %clang --target=aarch64 -march=armv8.6a+sve+f32mm   -### -c %s 2>&1 | FileCheck -check-prefix=F32MM %s
 // RUN: %clang --target=aarch64 -march=armv8.5a+f32mm -### -c %s 2>&1 | FileCheck -check-prefix=F32MM %s
 // NO-F32MM-NOT: "-target-feature" "+f32mm"
 // F32MM: "-target-feature" "+f32mm"

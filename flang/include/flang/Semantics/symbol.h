@@ -14,6 +14,7 @@
 #include "flang/Common/enum-set.h"
 #include "flang/Common/reference.h"
 #include "flang/Common/visit.h"
+#include "flang/Semantics/module-dependences.h"
 #include "llvm/ADT/DenseMapInfo.h"
 
 #include <array>
@@ -86,11 +87,19 @@ public:
   void set_scope(const Scope *);
   bool isDefaultPrivate() const { return isDefaultPrivate_; }
   void set_isDefaultPrivate(bool yes = true) { isDefaultPrivate_ = yes; }
+  std::optional<ModuleCheckSumType> moduleFileHash() const {
+    return moduleFileHash_;
+  }
+  void set_moduleFileHash(ModuleCheckSumType x) { moduleFileHash_ = x; }
+  const Symbol *previous() const { return previous_; }
+  void set_previous(const Symbol *p) { previous_ = p; }
 
 private:
   bool isSubmodule_;
   bool isDefaultPrivate_{false};
   const Scope *scope_{nullptr};
+  std::optional<ModuleCheckSumType> moduleFileHash_;
+  const Symbol *previous_{nullptr}; // same name, different module file hash
 };
 
 class MainProgramDetails : public WithOmpDeclarative {
@@ -106,10 +115,13 @@ public:
   bool isExplicitBindName() const { return isExplicitBindName_; }
   void set_bindName(std::string &&name) { bindName_ = std::move(name); }
   void set_isExplicitBindName(bool yes) { isExplicitBindName_ = yes; }
+  bool isCDefined() const { return isCDefined_; }
+  void set_isCDefined(bool yes) { isCDefined_ = yes; }
 
 private:
   std::optional<std::string> bindName_;
   bool isExplicitBindName_{false};
+  bool isCDefined_{false};
 };
 
 // Device type specific OpenACC routine information
@@ -411,9 +423,12 @@ public:
   ProcEntityDetails(ProcEntityDetails &&) = default;
   ProcEntityDetails &operator=(const ProcEntityDetails &) = default;
 
+  const Symbol *rawProcInterface() const { return rawProcInterface_; }
   const Symbol *procInterface() const { return procInterface_; }
-  void set_procInterface(const Symbol &sym) { procInterface_ = &sym; }
-  bool IsInterfaceSet() { return procInterface_ || type(); }
+  void set_procInterfaces(const Symbol &raw, const Symbol &resolved) {
+    rawProcInterface_ = &raw;
+    procInterface_ = &resolved;
+  }
   inline bool HasExplicitInterface() const;
 
   // Be advised: !init().has_value() => uninitialized pointer,
@@ -423,11 +438,17 @@ public:
   void set_init(std::nullptr_t) { init_ = nullptr; }
   bool isCUDAKernel() const { return isCUDAKernel_; }
   void set_isCUDAKernel(bool yes = true) { isCUDAKernel_ = yes; }
+  std::optional<SourceName> usedAsProcedureHere() const {
+    return usedAsProcedureHere_;
+  }
+  void set_usedAsProcedureHere(SourceName here) { usedAsProcedureHere_ = here; }
 
 private:
+  const Symbol *rawProcInterface_{nullptr};
   const Symbol *procInterface_{nullptr};
   std::optional<const Symbol *> init_;
   bool isCUDAKernel_{false};
+  std::optional<SourceName> usedAsProcedureHere_;
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const ProcEntityDetails &);
 };
@@ -696,6 +717,7 @@ public:
       CrayPointer, CrayPointee,
       LocalityLocal, // named in LOCAL locality-spec
       LocalityLocalInit, // named in LOCAL_INIT locality-spec
+      LocalityReduce, // named in REDUCE locality-spec
       LocalityShared, // named in SHARED locality-spec
       InDataStmt, // initialized in a DATA statement, =>object, or /init/
       InNamelist, // in a Namelist group
@@ -727,7 +749,8 @@ public:
       OmpCommonBlock, OmpReduction, OmpAligned, OmpNontemporal, OmpAllocate,
       OmpDeclarativeAllocateDirective, OmpExecutableAllocateDirective,
       OmpDeclareSimd, OmpDeclareTarget, OmpThreadprivate, OmpDeclareReduction,
-      OmpFlushed, OmpCriticalLock, OmpIfSpecified, OmpNone, OmpPreDetermined);
+      OmpFlushed, OmpCriticalLock, OmpIfSpecified, OmpNone, OmpPreDetermined,
+      OmpImplicit);
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   const Scope &owner() const { return *owner_; }
@@ -794,8 +817,10 @@ public:
   void SetBindName(std::string &&);
   bool GetIsExplicitBindName() const;
   void SetIsExplicitBindName(bool);
+  void SetIsCDefined(bool);
   bool IsFuncResult() const;
   bool IsObjectArray() const;
+  const ArraySpec *GetShape() const;
   bool IsSubprogram() const;
   bool IsFromModFile() const;
   bool HasExplicitInterface() const {
@@ -1035,7 +1060,7 @@ struct SymbolAddressCompare {
 // Symbol comparison is usually based on the order of cooked source
 // stream creation and, when both are from the same cooked source,
 // their positions in that cooked source stream.
-// Don't use this comparator or OrderedSymbolSet to hold
+// Don't use this comparator or SourceOrderedSymbolSet to hold
 // Symbols that might be subject to ReplaceName().
 struct SymbolSourcePositionCompare {
   // These functions are implemented in Evaluate/tools.cpp to

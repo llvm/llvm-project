@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -1531,6 +1532,9 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
 
   OutStreamer->emitInt16(0x0000); // Service level string length.
 
+  // The binder requires that the offset to the PPA2 be emitted in a different,
+  // specially-named section.
+  OutStreamer->switchSection(getObjFileLowering().getPPA2ListSection());
   // Emit 8 byte alignment.
   // Emit pointer to PPA2 label.
   OutStreamer->AddComment("A(PPA2-CELQSTRT)");

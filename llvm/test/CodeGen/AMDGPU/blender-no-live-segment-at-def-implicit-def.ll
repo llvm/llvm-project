@@ -124,4 +124,4 @@ kernel_direct_lighting.exit:                      ; preds = %if.end294.i.i, %ent
 declare float @_Z3dotDv3_fS_(<3 x float>)
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

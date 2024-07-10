@@ -141,10 +141,10 @@ namespace llvm {
           HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
           GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
           EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
-          DisableIntegratedAS(false), RelaxELFRelocations(true),
-          FunctionSections(false), DataSections(false),
-          IgnoreXCOFFVisibility(false), XCOFFTracebackTable(true),
-          UniqueSectionNames(true), UniqueBasicBlockSectionNames(false),
+          DisableIntegratedAS(false), FunctionSections(false),
+          DataSections(false), IgnoreXCOFFVisibility(false),
+          XCOFFTracebackTable(true), UniqueSectionNames(true),
+          UniqueBasicBlockSectionNames(false), SeparateNamedSections(false),
           TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
           EmulatedTLS(false), EnableTLSDESC(false), EnableIPRA(false),
           EmitStackSizeSection(false), EnableMachineOutliner(false),
@@ -160,6 +160,11 @@ namespace llvm {
     /// DisableFramePointerElim - This returns true if frame pointer elimination
     /// optimization should be disabled for the given machine function.
     bool DisableFramePointerElim(const MachineFunction &MF) const;
+
+    /// FramePointerIsReserved - This returns true if the frame pointer must
+    /// always either point to a new frame record or be un-modified in the given
+    /// function.
+    bool FramePointerIsReserved(const MachineFunction &MF) const;
 
     /// If greater than 0, override the default value of
     /// MCAsmInfo::BinutilsVersion.
@@ -260,11 +265,6 @@ namespace llvm {
     /// Disable the integrated assembler.
     unsigned DisableIntegratedAS : 1;
 
-    /// Compress DWARF debug sections.
-    DebugCompressionType CompressDebugSections = DebugCompressionType::None;
-
-    unsigned RelaxELFRelocations : 1;
-
     /// Emit functions into separate sections.
     unsigned FunctionSections : 1;
 
@@ -281,6 +281,9 @@ namespace llvm {
 
     /// Use unique names for basic block sections.
     unsigned UniqueBasicBlockSectionNames : 1;
+
+    /// Emit named sections with the same name into different sections.
+    unsigned SeparateNamedSections : 1;
 
     /// Emit target-specific trap instruction for 'unreachable' IR instructions.
     unsigned TrapUnreachable : 1;

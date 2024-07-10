@@ -174,7 +174,6 @@ add_lit_testsuite(check-asan "Running the AddressSanitizer tests"
   ${ASAN_TESTSUITES}
   ${exclude_from_check_all}
   DEPENDS ${ASAN_TEST_DEPS})
-set_target_properties(check-asan PROPERTIES FOLDER "Compiler-RT Misc")
 
 if(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME)
   add_lit_testsuite(check-asan-dynamic
@@ -182,6 +181,4 @@ if(COMPILER_RT_ASAN_HAS_STATIC_RUNTIME)
                     ${ASAN_DYNAMIC_TESTSUITES}
                     ${exclude_from_check_all.g}
                     DEPENDS ${ASAN_DYNAMIC_TEST_DEPS})
-  set_target_properties(check-asan-dynamic
-                        PROPERTIES FOLDER "Compiler-RT Misc")
 endif()

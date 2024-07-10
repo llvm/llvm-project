@@ -235,3 +235,48 @@ namespace LambdaToAPValue {
     static_assert(g() == f(), "");
   }
 }
+
+namespace ns2_capture_this_byval {
+  struct S {
+    int s;
+    constexpr S(int s) : s{s} { }
+    constexpr auto f(S o) {
+      return [*this,o] (auto a) { return s + o.s + a.s; };
+    }
+  };
+
+  constexpr auto L = S{5}.f(S{10});
+  static_assert(L(S{100}) == 115, "");
+} // end test_captures_1::ns2_capture_this_byval
+
+namespace CaptureDefaults {
+  struct S {
+    int x;
+  };
+
+  constexpr auto f = [x = S{10}]() {
+      return x.x;
+  };
+  static_assert(f() == 10, "");
+
+  constexpr auto f2 = [x = 3]() {
+      return x;
+  };
+  static_assert(f2() == 3, "");
+}
+
+constexpr auto t4 = ([x=42]() consteval { return x; }());
+static_assert(t4 == 42, "");
+
+namespace InvalidCapture {
+
+  int &f(int *p);
+  char &f(...);
+  void g() {
+    int n = -1;   // both-note {{declared here}}
+    [=] {
+      int arr[n]; // both-warning {{variable length arrays in C++ are a Clang extension}} \
+                     both-note {{read of non-const variable 'n' is not allowed in a constant expression}}
+    } ();
+  }
+}

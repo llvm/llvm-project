@@ -30,6 +30,11 @@ struct default_delete;
 
 template <typename T, typename Deleter = std::default_delete<T>>
 struct unique_ptr {
+  unique_ptr();
+  unique_ptr(unique_ptr const&);
+  unique_ptr(unique_ptr &&);
+  unique_ptr& operator=(unique_ptr const&);
+  unique_ptr& operator=(unique_ptr &&);
   T *release() noexcept;
 };
 
@@ -254,3 +259,12 @@ void noWarning() {
   ({ std::async(increment, 42); });
   auto StmtExprRetval = ({ std::async(increment, 42); });
 }
+
+namespace gh84314 {
+
+extern std::unique_ptr<int> alloc();
+void f1(std::unique_ptr<int> &foo) {
+    foo = alloc();
+}
+
+} // namespace gh84314

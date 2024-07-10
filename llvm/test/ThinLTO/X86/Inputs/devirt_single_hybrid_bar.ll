@@ -23,7 +23,7 @@ define hidden i32 @_Z3barv() local_unnamed_addr #0 {
 entry:
   %b = alloca %struct.A, align 8
   call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %b)
-  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV1A, i64 0, inrange i32 0, i64 2), ptr %b, align 8, !tbaa !4
+  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV1A, i64 0, i32 0, i64 2), ptr %b, align 8, !tbaa !4
   %call = call i32 @_Z3fooP1A(ptr nonnull %b)
   %add = add nsw i32 %call, 10
   call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %b) #4

@@ -11,7 +11,7 @@
 
 #include <vector>
 
-#include "SparseTensorLevel.h"
+#include "SparseTensorIterator.h"
 
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
@@ -220,9 +220,11 @@ public:
   ///
   /// Getters.
   ///
-  Value getValPosits(TensorId tid) const {
-    Value lastLvlPos = iters[tid].back().back()->getCurPosition().first;
-    return lastLvlPos;
+  SmallVector<Value> getValPosits(TensorId tid) const {
+    SmallVector<Value> batchCrds = iters[tid].back().back()->getBatchCrds();
+    Value lastLvlPos = iters[tid].back().back()->getCurPosition().front();
+    batchCrds.push_back(lastLvlPos);
+    return batchCrds;
   };
   Value getCoord(TensorId tid, Level lvl) const {
     return getCurIterator(tid, lvl).getCrd();
@@ -416,6 +418,13 @@ private:
   // Loop Sequence Stack, stores the universal index for the current loop
   // sequence. and a list of tid level that the loop sequence traverse.
   std::vector<std::pair<Value, std::vector<TensorLevel>>> loopSeqStack;
+
+  //
+  // EXPERIMENTAL:
+  // Fields for generating sparse-iterator-based loop.
+  //
+
+  std::vector<std::vector<Value>> spIterVals;
 };
 
 } // namespace sparse_tensor

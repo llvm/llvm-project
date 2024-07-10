@@ -45,6 +45,8 @@ constexpr int Failed2 = Failed1 + 1; // both-error {{must be initialized by a co
 static_assert(Failed2 == 0, ""); // both-error {{not an integral constant expression}} \
                                  // both-note {{initializer of 'Failed2' is not a constant expression}}
 
+const int x = *(volatile int*)0x1234;
+
 namespace ScalarTypes {
   constexpr int ScalarInitInt = int();
   static_assert(ScalarInitInt == 0, "");
@@ -66,7 +68,12 @@ namespace ScalarTypes {
     First = 0,
   };
   static_assert(getScalar<E>() == First, "");
-  /// FIXME: Member pointers.
+
+  struct S {
+    int v;
+  };
+  constexpr int S::* MemberPtr = &S::v;
+  static_assert(getScalar<decltype(MemberPtr)>() == nullptr, "");
 
 #if __cplusplus >= 201402L
   constexpr void Void(int n) {
@@ -839,6 +846,18 @@ namespace IncDec {
     return a[1];
   }
   static_assert(f() == 3, "");
+
+  int nonconst(int a) { // both-note 4{{declared here}}
+    static_assert(a++, ""); // both-error {{not an integral constant expression}} \
+                            // both-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+    static_assert(a--, ""); // both-error {{not an integral constant expression}} \
+                            // both-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+    static_assert(++a, ""); // both-error {{not an integral constant expression}} \
+                            // both-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+    static_assert(--a, ""); // both-error {{not an integral constant expression}} \
+                            // both-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+  }
+
 };
 #endif
 
@@ -898,6 +917,18 @@ namespace TypeTraits {
   struct U {};
   static_assert(S3<U>{}.foo(), "");
   static_assert(!S3<T>{}.foo(), "");
+
+  typedef int Int;
+  typedef Int IntAr[10];
+  typedef const IntAr ConstIntAr;
+  typedef ConstIntAr ConstIntArAr[4];
+
+  static_assert(__array_rank(IntAr) == 1, "");
+  static_assert(__array_rank(ConstIntArAr) == 2, "");
+
+  static_assert(__array_extent(IntAr, 0) == 10, "");
+  static_assert(__array_extent(ConstIntArAr, 0) == 4, "");
+  static_assert(__array_extent(ConstIntArAr, 1) == 10, "");
 }
 
 #if __cplusplus >= 201402L
@@ -960,6 +991,8 @@ namespace DiscardExprs {
     (signed)4u;
     __uuidof(GuidType);
     __uuidof(number); // both-error {{cannot call operator __uuidof on a type with no GUID}}
+
+    requires{false;};
 
     return 0;
   }
@@ -1101,6 +1134,9 @@ namespace InvalidDeclRefs {
   int b03 = 3; // both-note {{declared here}}
   static_assert(b03, ""); // both-error {{not an integral constant expression}} \
                           // both-note {{read of non-const variable}}
+
+  extern int var;
+  constexpr int *varp = &var; // Ok.
 }
 
 namespace NonConstReads {
@@ -1131,3 +1167,112 @@ namespace nullptrsub {
     f = (char *)((char *)0 - (char *)0);
   }
 }
+
+namespace incdecbool {
+#if __cplusplus >= 201402L
+  constexpr bool incb(bool c) {
+    if (!c)
+      ++c;
+    else {++c; c++; }
+#if __cplusplus >= 202002L
+    // both-error@-3 {{ISO C++17 does not allow incrementing expression of type bool}}
+    // both-error@-3 2{{ISO C++17 does not allow incrementing expression of type bool}}
+#else
+    // both-warning@-6 {{incrementing expression of type bool is deprecated and incompatible with C++17}}
+#endif
+    return c;
+  }
+  static_assert(incb(false), "");
+  static_assert(incb(true), "");
+  static_assert(incb(true) == 1, "");
+#endif
+
+
+#if __cplusplus == 201103L
+  constexpr bool foo() { // both-error {{never produces a constant expression}}
+    bool b = true; // both-warning {{variable declaration in a constexpr function is a C++14 extension}}
+    b++; // both-warning {{incrementing expression of type bool is deprecated and incompatible with C++17}} \
+         // both-warning {{use of this statement in a constexpr function is a C++14 extension}} \
+         // both-note 2{{subexpression not valid in a constant expression}}
+
+    return b;
+  }
+  static_assert(foo() == 1, ""); // both-error {{not an integral constant expression}} \
+                                 // both-note {{in call to}}
+#endif
+
+
+
+}
+
+#if __cplusplus >= 201402L
+/// NOTE: The diagnostics of the two interpreters are a little
+/// different here, but they both make sense.
+constexpr int externvar1() { // both-error {{never produces a constant expression}}
+  extern char arr[]; // ref-note {{declared here}}
+   return arr[0]; // ref-note {{read of non-constexpr variable 'arr'}} \
+                  // expected-note {{indexing of array without known bound}}
+}
+
+namespace StmtExprs {
+  constexpr int foo() {
+     ({
+       int i;
+       for (i = 0; i < 76; i++) {}
+       i; // both-warning {{expression result unused}}
+    });
+    return 76;
+  }
+  static_assert(foo() == 76, "");
+}
+#endif
+
+namespace Extern {
+  constexpr extern char Oops = 1;
+  static_assert(Oops == 1, "");
+
+#if __cplusplus >= 201402L
+  struct NonLiteral {
+    NonLiteral() {}
+  };
+  NonLiteral nl;
+  constexpr NonLiteral &ExternNonLiteralVarDecl() {
+    extern NonLiteral nl;
+    return nl;
+  }
+  static_assert(&ExternNonLiteralVarDecl() == &nl, "");
+#endif
+}
+
+#if __cplusplus >= 201402L
+constexpr int StmtExprEval() {
+  if (({
+    while (0);
+    true;
+  })) {
+    return 2;
+  }
+  return 1;
+}
+static_assert(StmtExprEval() == 2, "");
+
+constexpr int ReturnInStmtExpr() { // both-error {{never produces a constant expression}}
+  return ({
+      return 1; // both-note 2{{this use of statement expressions is not supported in a constant expression}}
+      2;
+      });
+}
+static_assert(ReturnInStmtExpr() == 1, ""); // both-error {{not an integral constant expression}} \
+                                            // both-note {{in call to}}
+
+#endif
+
+namespace ComparisonAgainstOnePastEnd {
+  int a, b;
+  static_assert(&a + 1 == &b, ""); // both-error {{not an integral constant expression}} \
+                                   // both-note {{comparison against pointer '&a + 1' that points past the end of a complete object has unspecified value}}
+  static_assert(&a == &b + 1, ""); // both-error {{not an integral constant expression}} \
+                                   // both-note {{comparison against pointer '&b + 1' that points past the end of a complete object has unspecified value}}
+
+  static_assert(&a + 1 == &b + 1, ""); // both-error {{static assertion failed}}
+};

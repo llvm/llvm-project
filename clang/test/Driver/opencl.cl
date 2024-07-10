@@ -21,7 +21,7 @@
 // RUN: %clang -S -### -fno-offload-uniform-block -cl-uniform-work-group-size %s 2>&1 | FileCheck --check-prefix=CHECK-UNIFORM-WG %s
 // RUN: not %clang -cl-std=c99 -DOPENCL %s 2>&1 | FileCheck --check-prefix=CHECK-C99 %s
 // RUN: not %clang -cl-std=invalid -DOPENCL %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID %s
-// RUN: %clang -S -### -target spir-unknown-unknown %s 2>&1 | FileCheck --check-prefix=CHECK-W-SPIR-COMPAT %s
+// RUN: %clang -S -### --target=spir %s 2>&1 | FileCheck --check-prefix=CHECK-W-SPIR-COMPAT %s
 // RUN: %clang -S -### --target=amdgcn-amd-amdhsa-opencl -nogpuinc -nogpulib %s 2>&1 | FileCheck --check-prefix=CHECK-NO-W-SPIR-COMPAT %s
 // RUN: %clang -S -### -cl-ext="+test_ext" %s 2>&1 | FileCheck --check-prefix=CHECK-EXT %s
 

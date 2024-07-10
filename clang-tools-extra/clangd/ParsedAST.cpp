@@ -360,7 +360,8 @@ void applyWarningOptions(llvm::ArrayRef<std::string> ExtraArgs,
   }
 }
 
-std::vector<Diag> getIncludeCleanerDiags(ParsedAST &AST, llvm::StringRef Code) {
+std::vector<Diag> getIncludeCleanerDiags(ParsedAST &AST, llvm::StringRef Code,
+                                         const ThreadsafeFS &TFS) {
   auto &Cfg = Config::current();
   if (Cfg.Diagnostics.SuppressAll)
     return {};
@@ -372,12 +373,13 @@ std::vector<Diag> getIncludeCleanerDiags(ParsedAST &AST, llvm::StringRef Code) {
       Cfg.Diagnostics.UnusedIncludes == Config::IncludesPolicy::None;
   if (SuppressMissing && SuppressUnused)
     return {};
-  auto Findings = computeIncludeCleanerFindings(AST);
+  auto Findings = computeIncludeCleanerFindings(
+      AST, Cfg.Diagnostics.Includes.AnalyzeAngledIncludes);
   if (SuppressMissing)
     Findings.MissingIncludes.clear();
   if (SuppressUnused)
     Findings.UnusedIncludes.clear();
-  return issueIncludeCleanerDiagnostics(AST, Code, Findings,
+  return issueIncludeCleanerDiagnostics(AST, Code, Findings, TFS,
                                         Cfg.Diagnostics.Includes.IgnoreHeader);
 }
 
@@ -625,7 +627,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
     // (e.g. incomplete type) and attach include insertion fixes to diagnostics.
     if (Inputs.Index && !BuildDir.getError()) {
       auto Style =
-          getFormatStyleForFile(Filename, Inputs.Contents, *Inputs.TFS);
+          getFormatStyleForFile(Filename, Inputs.Contents, *Inputs.TFS, false);
       auto Inserter = std::make_shared<IncludeInserter>(
           Filename, Inputs.Contents, Style, BuildDir.get(),
           &Clang->getPreprocessor().getHeaderSearchInfo());
@@ -741,7 +743,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
                    std::move(Clang), std::move(Action), std::move(Tokens),
                    std::move(Macros), std::move(Marks), std::move(ParsedDecls),
                    std::move(Diags), std::move(Includes), std::move(PI));
-  llvm::move(getIncludeCleanerDiags(Result, Inputs.Contents),
+  llvm::move(getIncludeCleanerDiags(Result, Inputs.Contents, *Inputs.TFS),
              std::back_inserter(Result.Diags));
   return std::move(Result);
 }

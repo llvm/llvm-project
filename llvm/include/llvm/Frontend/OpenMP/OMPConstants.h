@@ -15,9 +15,8 @@
 #define LLVM_FRONTEND_OPENMP_OMPCONSTANTS_H
 
 #include "llvm/ADT/BitmaskEnum.h"
-
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Frontend/OpenMP/OMP.h.inc"
+#include "llvm/Frontend/OpenMP/OMP.h"
 
 namespace llvm {
 namespace omp {
@@ -73,7 +72,10 @@ enum class IdentFlag {
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
 // Version of the kernel argument format used by the omp runtime.
-#define OMP_KERNEL_ARG_VERSION 2
+#define OMP_KERNEL_ARG_VERSION 3
+
+// Minimum version of the compiler that generates a kernel dynamic pointer.
+#define OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR 3
 
 /// \note This needs to be kept in sync with kmp.h enum sched_type.
 /// Todo: Update kmp.h to include this file, and remove the enums in kmp.h

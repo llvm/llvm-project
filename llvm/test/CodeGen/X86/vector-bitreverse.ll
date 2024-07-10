@@ -5,6 +5,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=ALL,AVX,AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefixes=ALL,AVX,AVX512,AVX512F
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefixes=ALL,AVX,AVX512,AVX512BW
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+avx512bw | FileCheck %s --check-prefixes=ALL,AVX,AVX512,AVX512BW
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+xop,+avx | FileCheck %s --check-prefixes=ALL,XOP,XOPAVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+xop,+avx2 | FileCheck %s --check-prefixes=ALL,XOP,XOPAVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+ssse3,+gfni | FileCheck %s --check-prefixes=ALL,GFNISSE
@@ -61,36 +62,18 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ;
 ; GFNISSE-LABEL: test_bitreverse_i8:
 ; GFNISSE:       # %bb.0:
-; GFNISSE-NEXT:    rolb $4, %dil
-; GFNISSE-NEXT:    movl %edi, %eax
-; GFNISSE-NEXT:    andb $51, %al
-; GFNISSE-NEXT:    shlb $2, %al
-; GFNISSE-NEXT:    shrb $2, %dil
-; GFNISSE-NEXT:    andb $51, %dil
-; GFNISSE-NEXT:    orb %dil, %al
-; GFNISSE-NEXT:    movl %eax, %ecx
-; GFNISSE-NEXT:    andb $85, %cl
-; GFNISSE-NEXT:    addb %cl, %cl
-; GFNISSE-NEXT:    shrb %al
-; GFNISSE-NEXT:    andb $85, %al
-; GFNISSE-NEXT:    orb %cl, %al
+; GFNISSE-NEXT:    movd %edi, %xmm0
+; GFNISSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; GFNISSE-NEXT:    movd %xmm0, %eax
+; GFNISSE-NEXT:    # kill: def $al killed $al killed $eax
 ; GFNISSE-NEXT:    retq
 ;
 ; GFNIAVX-LABEL: test_bitreverse_i8:
 ; GFNIAVX:       # %bb.0:
-; GFNIAVX-NEXT:    rolb $4, %dil
-; GFNIAVX-NEXT:    movl %edi, %eax
-; GFNIAVX-NEXT:    andb $51, %al
-; GFNIAVX-NEXT:    shlb $2, %al
-; GFNIAVX-NEXT:    shrb $2, %dil
-; GFNIAVX-NEXT:    andb $51, %dil
-; GFNIAVX-NEXT:    orb %dil, %al
-; GFNIAVX-NEXT:    movl %eax, %ecx
-; GFNIAVX-NEXT:    andb $85, %cl
-; GFNIAVX-NEXT:    addb %cl, %cl
-; GFNIAVX-NEXT:    shrb %al
-; GFNIAVX-NEXT:    andb $85, %al
-; GFNIAVX-NEXT:    orb %cl, %al
+; GFNIAVX-NEXT:    vmovd %edi, %xmm0
+; GFNIAVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; GFNIAVX-NEXT:    vmovd %xmm0, %eax
+; GFNIAVX-NEXT:    # kill: def $al killed $al killed $eax
 ; GFNIAVX-NEXT:    retq
   %b = call i8 @llvm.bitreverse.i8(i8 %a)
   ret i8 %b
@@ -153,47 +136,19 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ;
 ; GFNISSE-LABEL: test_bitreverse_i16:
 ; GFNISSE:       # %bb.0:
-; GFNISSE-NEXT:    # kill: def $edi killed $edi def $rdi
-; GFNISSE-NEXT:    rolw $8, %di
-; GFNISSE-NEXT:    movl %edi, %eax
-; GFNISSE-NEXT:    andl $3855, %eax # imm = 0xF0F
-; GFNISSE-NEXT:    shll $4, %eax
-; GFNISSE-NEXT:    shrl $4, %edi
-; GFNISSE-NEXT:    andl $3855, %edi # imm = 0xF0F
-; GFNISSE-NEXT:    orl %eax, %edi
-; GFNISSE-NEXT:    movl %edi, %eax
-; GFNISSE-NEXT:    andl $13107, %eax # imm = 0x3333
-; GFNISSE-NEXT:    shrl $2, %edi
-; GFNISSE-NEXT:    andl $13107, %edi # imm = 0x3333
-; GFNISSE-NEXT:    leal (%rdi,%rax,4), %eax
-; GFNISSE-NEXT:    movl %eax, %ecx
-; GFNISSE-NEXT:    andl $21845, %ecx # imm = 0x5555
-; GFNISSE-NEXT:    shrl %eax
-; GFNISSE-NEXT:    andl $21845, %eax # imm = 0x5555
-; GFNISSE-NEXT:    leal (%rax,%rcx,2), %eax
+; GFNISSE-NEXT:    movd %edi, %xmm0
+; GFNISSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; GFNISSE-NEXT:    movd %xmm0, %eax
+; GFNISSE-NEXT:    rolw $8, %ax
 ; GFNISSE-NEXT:    # kill: def $ax killed $ax killed $eax
 ; GFNISSE-NEXT:    retq
 ;
 ; GFNIAVX-LABEL: test_bitreverse_i16:
 ; GFNIAVX:       # %bb.0:
-; GFNIAVX-NEXT:    # kill: def $edi killed $edi def $rdi
-; GFNIAVX-NEXT:    rolw $8, %di
-; GFNIAVX-NEXT:    movl %edi, %eax
-; GFNIAVX-NEXT:    andl $3855, %eax # imm = 0xF0F
-; GFNIAVX-NEXT:    shll $4, %eax
-; GFNIAVX-NEXT:    shrl $4, %edi
-; GFNIAVX-NEXT:    andl $3855, %edi # imm = 0xF0F
-; GFNIAVX-NEXT:    orl %eax, %edi
-; GFNIAVX-NEXT:    movl %edi, %eax
-; GFNIAVX-NEXT:    andl $13107, %eax # imm = 0x3333
-; GFNIAVX-NEXT:    shrl $2, %edi
-; GFNIAVX-NEXT:    andl $13107, %edi # imm = 0x3333
-; GFNIAVX-NEXT:    leal (%rdi,%rax,4), %eax
-; GFNIAVX-NEXT:    movl %eax, %ecx
-; GFNIAVX-NEXT:    andl $21845, %ecx # imm = 0x5555
-; GFNIAVX-NEXT:    shrl %eax
-; GFNIAVX-NEXT:    andl $21845, %eax # imm = 0x5555
-; GFNIAVX-NEXT:    leal (%rax,%rcx,2), %eax
+; GFNIAVX-NEXT:    vmovd %edi, %xmm0
+; GFNIAVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; GFNIAVX-NEXT:    vmovd %xmm0, %eax
+; GFNIAVX-NEXT:    rolw $8, %ax
 ; GFNIAVX-NEXT:    # kill: def $ax killed $ax killed $eax
 ; GFNIAVX-NEXT:    retq
   %b = call i16 @llvm.bitreverse.i16(i16 %a)
@@ -254,46 +209,18 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ;
 ; GFNISSE-LABEL: test_bitreverse_i32:
 ; GFNISSE:       # %bb.0:
-; GFNISSE-NEXT:    # kill: def $edi killed $edi def $rdi
-; GFNISSE-NEXT:    bswapl %edi
-; GFNISSE-NEXT:    movl %edi, %eax
-; GFNISSE-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
-; GFNISSE-NEXT:    shll $4, %eax
-; GFNISSE-NEXT:    shrl $4, %edi
-; GFNISSE-NEXT:    andl $252645135, %edi # imm = 0xF0F0F0F
-; GFNISSE-NEXT:    orl %eax, %edi
-; GFNISSE-NEXT:    movl %edi, %eax
-; GFNISSE-NEXT:    andl $858993459, %eax # imm = 0x33333333
-; GFNISSE-NEXT:    shrl $2, %edi
-; GFNISSE-NEXT:    andl $858993459, %edi # imm = 0x33333333
-; GFNISSE-NEXT:    leal (%rdi,%rax,4), %eax
-; GFNISSE-NEXT:    movl %eax, %ecx
-; GFNISSE-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
-; GFNISSE-NEXT:    shrl %eax
-; GFNISSE-NEXT:    andl $1431655765, %eax # imm = 0x55555555
-; GFNISSE-NEXT:    leal (%rax,%rcx,2), %eax
+; GFNISSE-NEXT:    movd %edi, %xmm0
+; GFNISSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; GFNISSE-NEXT:    movd %xmm0, %eax
+; GFNISSE-NEXT:    bswapl %eax
 ; GFNISSE-NEXT:    retq
 ;
 ; GFNIAVX-LABEL: test_bitreverse_i32:
 ; GFNIAVX:       # %bb.0:
-; GFNIAVX-NEXT:    # kill: def $edi killed $edi def $rdi
-; GFNIAVX-NEXT:    bswapl %edi
-; GFNIAVX-NEXT:    movl %edi, %eax
-; GFNIAVX-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
-; GFNIAVX-NEXT:    shll $4, %eax
-; GFNIAVX-NEXT:    shrl $4, %edi
-; GFNIAVX-NEXT:    andl $252645135, %edi # imm = 0xF0F0F0F
-; GFNIAVX-NEXT:    orl %eax, %edi
-; GFNIAVX-NEXT:    movl %edi, %eax
-; GFNIAVX-NEXT:    andl $858993459, %eax # imm = 0x33333333
-; GFNIAVX-NEXT:    shrl $2, %edi
-; GFNIAVX-NEXT:    andl $858993459, %edi # imm = 0x33333333
-; GFNIAVX-NEXT:    leal (%rdi,%rax,4), %eax
-; GFNIAVX-NEXT:    movl %eax, %ecx
-; GFNIAVX-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
-; GFNIAVX-NEXT:    shrl %eax
-; GFNIAVX-NEXT:    andl $1431655765, %eax # imm = 0x55555555
-; GFNIAVX-NEXT:    leal (%rax,%rcx,2), %eax
+; GFNIAVX-NEXT:    vmovd %edi, %xmm0
+; GFNIAVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; GFNIAVX-NEXT:    vmovd %xmm0, %eax
+; GFNIAVX-NEXT:    bswapl %eax
 ; GFNIAVX-NEXT:    retq
   %b = call i32 @llvm.bitreverse.i32(i32 %a)
   ret i32 %b
@@ -357,50 +284,18 @@ define i64 @test_bitreverse_i64(i64 %a) nounwind {
 ;
 ; GFNISSE-LABEL: test_bitreverse_i64:
 ; GFNISSE:       # %bb.0:
-; GFNISSE-NEXT:    bswapq %rdi
-; GFNISSE-NEXT:    movq %rdi, %rax
-; GFNISSE-NEXT:    shrq $4, %rax
-; GFNISSE-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
-; GFNISSE-NEXT:    andq %rcx, %rax
-; GFNISSE-NEXT:    andq %rcx, %rdi
-; GFNISSE-NEXT:    shlq $4, %rdi
-; GFNISSE-NEXT:    orq %rax, %rdi
-; GFNISSE-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
-; GFNISSE-NEXT:    movq %rdi, %rcx
-; GFNISSE-NEXT:    andq %rax, %rcx
-; GFNISSE-NEXT:    shrq $2, %rdi
-; GFNISSE-NEXT:    andq %rax, %rdi
-; GFNISSE-NEXT:    leaq (%rdi,%rcx,4), %rax
-; GFNISSE-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
-; GFNISSE-NEXT:    movq %rax, %rdx
-; GFNISSE-NEXT:    andq %rcx, %rdx
-; GFNISSE-NEXT:    shrq %rax
-; GFNISSE-NEXT:    andq %rcx, %rax
-; GFNISSE-NEXT:    leaq (%rax,%rdx,2), %rax
+; GFNISSE-NEXT:    movq %rdi, %xmm0
+; GFNISSE-NEXT:    gf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; GFNISSE-NEXT:    movq %xmm0, %rax
+; GFNISSE-NEXT:    bswapq %rax
 ; GFNISSE-NEXT:    retq
 ;
 ; GFNIAVX-LABEL: test_bitreverse_i64:
 ; GFNIAVX:       # %bb.0:
-; GFNIAVX-NEXT:    bswapq %rdi
-; GFNIAVX-NEXT:    movq %rdi, %rax
-; GFNIAVX-NEXT:    shrq $4, %rax
-; GFNIAVX-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
-; GFNIAVX-NEXT:    andq %rcx, %rax
-; GFNIAVX-NEXT:    andq %rcx, %rdi
-; GFNIAVX-NEXT:    shlq $4, %rdi
-; GFNIAVX-NEXT:    orq %rax, %rdi
-; GFNIAVX-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
-; GFNIAVX-NEXT:    movq %rdi, %rcx
-; GFNIAVX-NEXT:    andq %rax, %rcx
-; GFNIAVX-NEXT:    shrq $2, %rdi
-; GFNIAVX-NEXT:    andq %rax, %rdi
-; GFNIAVX-NEXT:    leaq (%rdi,%rcx,4), %rax
-; GFNIAVX-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
-; GFNIAVX-NEXT:    movq %rax, %rdx
-; GFNIAVX-NEXT:    andq %rcx, %rdx
-; GFNIAVX-NEXT:    shrq %rax
-; GFNIAVX-NEXT:    andq %rcx, %rax
-; GFNIAVX-NEXT:    leaq (%rax,%rdx,2), %rax
+; GFNIAVX-NEXT:    vmovq %rdi, %xmm0
+; GFNIAVX-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; GFNIAVX-NEXT:    vmovq %xmm0, %rax
+; GFNIAVX-NEXT:    bswapq %rax
 ; GFNIAVX-NEXT:    retq
   %b = call i64 @llvm.bitreverse.i64(i64 %a)
   ret i64 %b

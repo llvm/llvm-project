@@ -40,9 +40,11 @@ public:
 
   ~NSIndexPathSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override { return m_impl.GetNumIndexes(); }
+  llvm::Expected<uint32_t> CalculateNumChildren() override {
+    return m_impl.GetNumIndexes();
+  }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     return m_impl.GetIndexAtIndex(idx, m_uint_star_type);
   }
 
@@ -127,7 +129,7 @@ public:
   size_t GetIndexOfChildWithName(ConstString name) override {
     const char *item_name = name.GetCString();
     uint32_t idx = ExtractIndexFromString(item_name);
-    if (idx < UINT32_MAX && idx >= CalculateNumChildren())
+    if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
       return UINT32_MAX;
     return idx;
   }

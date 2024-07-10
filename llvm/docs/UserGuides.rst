@@ -43,6 +43,7 @@ intermediate LLVM representation.
    HowToCrossCompileBuiltinsOnArm
    HowToCrossCompileLLVM
    HowToUpdateDebugInfo
+   InstCombineContributorGuide
    InstrProfileFormat
    InstrRefDebugInfo
    LinkTimeOptimization
@@ -57,13 +58,13 @@ intermediate LLVM representation.
    JITLink
    NewPassManager
    NVPTXUsage
-   Phabricator
    Passes
    ReportingGuide
    ResponseGuide
    Remarks
    RemoveDIsDebugInfo
    RISCVUsage
+   RISCV/RISCVVectorExtension
    SourceLevelDebugging
    SPIRVUsage
    StackSafetyAnalysis
@@ -182,10 +183,14 @@ Optimizations
 
 :doc:`RemoveDIsDebugInfo`
    This is a migration guide describing how to move from debug info using
-   intrinsics such as dbg.value to using the non-instruction DPValue object.
+   intrinsics such as dbg.value to using the non-instruction DbgRecord object.
 
 :doc:`InstrProfileFormat`
    This document explains two binary formats of instrumentation-based profiles.
+
+:doc:`InstCombineContributorGuide`
+   This document specifies guidelines for contributions for InstCombine and
+   related passes.
 
 Code Generation
 ---------------
@@ -280,3 +285,6 @@ Additional Topics
 
 :doc:`RISCVUsage`
    This document describes using the RISCV-V target.
+
+:doc:`RISCV/RISCVVectorExtension`
+   This document describes how the RISC-V Vector extension can be expressed in LLVM IR and how code is generated for it in the backend.

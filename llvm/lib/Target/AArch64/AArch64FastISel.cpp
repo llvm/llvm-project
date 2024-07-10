@@ -55,6 +55,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -2828,7 +2829,7 @@ bool AArch64FastISel::selectFPToInt(const Instruction *I, bool Signed) {
     return false;
 
   EVT SrcVT = TLI.getValueType(DL, I->getOperand(0)->getType(), true);
-  if (SrcVT == MVT::f128 || SrcVT == MVT::f16)
+  if (SrcVT == MVT::f128 || SrcVT == MVT::f16 || SrcVT == MVT::bf16)
     return false;
 
   unsigned Opc;
@@ -2856,7 +2857,7 @@ bool AArch64FastISel::selectIntToFP(const Instruction *I, bool Signed) {
   if (!isTypeLegal(I->getType(), DestVT) || DestVT.isVector())
     return false;
   // Let regular ISEL handle FP16
-  if (DestVT == MVT::f16)
+  if (DestVT == MVT::f16 || DestVT == MVT::bf16)
     return false;
 
   assert((DestVT == MVT::f32 || DestVT == MVT::f64) &&
@@ -2978,7 +2979,7 @@ bool AArch64FastISel::fastLowerArguments() {
     } else if (VT == MVT::i64) {
       SrcReg = Registers[1][GPRIdx++];
       RC = &AArch64::GPR64RegClass;
-    } else if (VT == MVT::f16) {
+    } else if (VT == MVT::f16 || VT == MVT::bf16) {
       SrcReg = Registers[2][FPRIdx++];
       RC = &AArch64::FPR16RegClass;
     } else if (VT ==  MVT::f32) {
@@ -3170,6 +3171,11 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   // FIXME: Add large code model support for ELF.
   if (CM == CodeModel::Large && !Subtarget->isTargetMachO())
+    return false;
+
+  // ELF -fno-plt compiled intrinsic calls do not have the nonlazybind
+  // attribute. Check "RtLibUseGOT" instead.
+  if (MF->getFunction().getParent()->getRtLibUseGOT())
     return false;
 
   // Let SDISel handle vararg functions.
@@ -3529,6 +3535,7 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
   }
   case Intrinsic::sin:
   case Intrinsic::cos:
+  case Intrinsic::tan:
   case Intrinsic::pow: {
     MVT RetVT;
     if (!isTypeLegal(II->getType(), RetVT))
@@ -3537,11 +3544,11 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     if (RetVT != MVT::f32 && RetVT != MVT::f64)
       return false;
 
-    static const RTLIB::Libcall LibCallTable[3][2] = {
-      { RTLIB::SIN_F32, RTLIB::SIN_F64 },
-      { RTLIB::COS_F32, RTLIB::COS_F64 },
-      { RTLIB::POW_F32, RTLIB::POW_F64 }
-    };
+    static const RTLIB::Libcall LibCallTable[4][2] = {
+        {RTLIB::SIN_F32, RTLIB::SIN_F64},
+        {RTLIB::COS_F32, RTLIB::COS_F64},
+        {RTLIB::TAN_F32, RTLIB::TAN_F64},
+        {RTLIB::POW_F32, RTLIB::POW_F64}};
     RTLIB::Libcall LC;
     bool Is64Bit = RetVT == MVT::f64;
     switch (II->getIntrinsicID()) {
@@ -3553,8 +3560,11 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     case Intrinsic::cos:
       LC = LibCallTable[1][Is64Bit];
       break;
-    case Intrinsic::pow:
+    case Intrinsic::tan:
       LC = LibCallTable[2][Is64Bit];
+      break;
+    case Intrinsic::pow:
+      LC = LibCallTable[3][Is64Bit];
       break;
     }
 
