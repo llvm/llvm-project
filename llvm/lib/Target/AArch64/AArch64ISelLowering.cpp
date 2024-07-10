@@ -17732,13 +17732,14 @@ AArch64TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
                                      SmallVectorImpl<SDNode *> &Created) const {
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
   if (isIntDivCheap(N->getValueType(0), Attr))
-    return SDValue(N,0); // Lower SDIV as SDIV
+    return SDValue(N, 0); // Lower SDIV as SDIV
 
   EVT VT = N->getValueType(0);
 
   // For scalable and fixed types, mark them as cheap so we can handle it much
   // later. This allows us to handle larger than legal types.
-  if (VT.isScalableVector() || Subtarget->useSVEForFixedLengthVectors())
+  if (VT.isScalableVector() ||
+      (VT.isFixedLengthVector() && Subtarget->useSVEForFixedLengthVectors()))
     return SDValue(N, 0);
 
   // fold (sdiv X, pow2)
