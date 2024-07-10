@@ -7,11 +7,11 @@
         ! CHECK: argument must be between
         set 4294967296, %o1
 
-        ! V8: unexpected token
+        ! V8: instruction requires a CPU feature not currently enabled
         ! V9: unknown membar tag
         membar #BadTag
 
-        ! V8: unexpected token
+        ! V8: instruction requires a CPU feature not currently enabled
         ! V9: invalid membar mask number
         membar -127
 
