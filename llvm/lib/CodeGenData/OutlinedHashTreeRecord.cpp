@@ -119,8 +119,8 @@ void OutlinedHashTreeRecord::convertToStableData(
       [&NodeIdMap](const HashNode *Current) {
         size_t Index = NodeIdMap.size();
         NodeIdMap[Current] = Index;
-        assert(Index + 1 == NodeIdMap.size() &&
-               "Expected size of NodeMap to increment by 1");
+        assert((Index + 1 == NodeIdMap.size()) &&
+               "Duplicate key in NodeIdMap: 'Current' should be unique.");
       },
       /*EdgeCallbackFn=*/nullptr, /*SortedWork=*/true);
 
