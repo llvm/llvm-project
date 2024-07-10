@@ -194,7 +194,7 @@ def FeatureComplxNum : ExtensionWithMArch<"complxnum", "ComplxNum", "FEAT_FCMA",
   [FeatureNEON]>;
 
 def FeatureNV : Extension<"nv", "NV", "FEAT_NV, FEAT_NV2",
-  "Enable v8.4-A Nested Virtualization Enchancement">;
+  "Enable v8.4-A Nested Virtualization Enhancement">;
 
 //===----------------------------------------------------------------------===//
 //  Armv8.4 Architecture Extensions
@@ -467,10 +467,10 @@ def FeatureFAMINMAX: ExtensionWithMArch<"faminmax", "FAMINMAX", "FEAT_FAMINMAX",
 
 def FeatureLUT: ExtensionWithMArch<"lut", "LUT", "FEAT_LUT",
  "Enable Lookup Table instructions">;
-   
+
 def FeatureFP8 : ExtensionWithMArch<"fp8", "FP8", "FEAT_FP8",
   "Enable FP8 instructions", [FeatureFAMINMAX, FeatureLUT, FeatureBF16]>;
-  
+
 def FeatureFP8FMA : ExtensionWithMArch<"fp8fma", "FP8FMA", "FEAT_FP8FMA",
   "Enable fp8 multiply-add instructions", [FeatureFP8]>;
 
@@ -479,7 +479,7 @@ def FeatureSSVE_FP8FMA : ExtensionWithMArch<"ssve-fp8fma", "SSVE_FP8FMA", "FEAT_
 
 def FeatureFP8DOT4: ExtensionWithMArch<"fp8dot4", "FP8DOT4", "FEAT_FP8DOT4",
   "Enable fp8 4-way dot instructions", [FeatureFP8FMA]>;
-  
+
 def FeatureFP8DOT2: ExtensionWithMArch<"fp8dot2", "FP8DOT2", "FEAT_FP8DOT2",
   "Enable fp8 2-way dot instructions", [FeatureFP8DOT4]>;
 
