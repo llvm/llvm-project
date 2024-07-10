@@ -14,7 +14,7 @@ entry:
 declare void @__asan_init()
 declare void @__asan_version_mismatch_check_v8()
 
-define internal void @asan.module_ctor() #0 {
+define internal void @asan.module_ctor() {
   call void @__asan_init()
   call void @__asan_version_mismatch_check_v8()
   ret void
@@ -22,7 +22,7 @@ define internal void @asan.module_ctor() #0 {
 ;; CHECK-LABEL: asan.module_ctor:
 ;; CHECK: hint #34
 
-attributes #0 = { noinline nounwind optnone sanitize_address uwtable "branch-target-enforcement" }
+attributes #0 = { noinline nounwind optnone sanitize_address uwtable "branch-target-enforcement"="true" }
 
 !llvm.module.flags = !{!0, !1, !2, !3, !4}
 

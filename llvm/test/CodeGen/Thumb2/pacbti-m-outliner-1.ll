@@ -116,7 +116,7 @@ entry:
 ; CHECK-NOT: r12
 ; CHECK: bx lr
 
-attributes #0 = { minsize nofree norecurse nounwind optsize uwtable "sign-return-address"="non-leaf"}
+attributes #0 = { minsize nofree norecurse nounwind optsize uwtable}
 
 !llvm.module.flags = !{!0, !1, !2}
 

@@ -152,7 +152,9 @@ public:
               diag::warn_target_unsupported_branch_protection_attribute)
               << Arch;
         } else {
-          BPI.setFnAttributes(*Fn);
+          Fn->addFnAttr("sign-return-address", BPI.getSignReturnAddrStr());
+          Fn->addFnAttr("branch-target-enforcement",
+                        BPI.BranchTargetEnforcement ? "true" : "false");
         }
       } else if (CGM.getLangOpts().BranchTargetEnforcement ||
                  CGM.getLangOpts().hasSignReturnAddress()) {
@@ -165,10 +167,6 @@ public:
               diag::warn_target_unsupported_branch_protection_attribute)
               << Attr.CPU;
       }
-    } else if (CGM.getTarget().isBranchProtectionSupportedArch(
-                   CGM.getTarget().getTargetOpts().CPU)) {
-      TargetInfo::BranchProtectionInfo BPI(CGM.getLangOpts());
-      BPI.setFnAttributes(*Fn);
     }
 
     const ARMInterruptAttr *Attr = FD->getAttr<ARMInterruptAttr>();

@@ -8,10 +8,6 @@ define void @g() #1 {
   ret void
 }
 
-define void @h() #2 {
-  ret void
-}
-
 attributes #0 = {
 ; CHECK:  invalid value for 'sign-return-address' attribute: non-loaf
   "sign-return-address"="non-loaf"
@@ -26,14 +22,4 @@ attributes #1 = {
 ; CHECK: invalid value for 'sign-return-address-key' attribute: B_Key
   "sign-return-address-key"="B_Key"
 ; CHECK:   invalid value for 'branch-target-enforcement' attribute: True
-  "branch-target-enforcement"="True"
-; CHECK:   invalid value for 'branch-protection-pauth-lr' attribute: Yes
-  "branch-protection-pauth-lr"="Yes"
-; CHECK:   invalid value for 'guarded-control-stack' attribute: True
-  "guarded-control-stack"="True"
-  }
-
-attributes #2 = {
-; CHECK:  'sign-return-address-key' present without `sign-return-address`
-  "sign-return-address-key"="a_key"
-  }
+  "branch-target-enforcement"="True" }

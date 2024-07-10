@@ -2348,31 +2348,13 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     if (S != "a_key" && S != "b_key")
       CheckFailed("invalid value for 'sign-return-address-key' attribute: " + S,
                   V);
-    if (auto AA = Attrs.getFnAttr("sign-return-address"); !AA.isValid()) {
-      CheckFailed(
-          "'sign-return-address-key' present without `sign-return-address`");
-    }
   }
 
   if (auto A = Attrs.getFnAttr("branch-target-enforcement"); A.isValid()) {
     StringRef S = A.getValueAsString();
-    if (S != "" && S != "true" && S != "false")
+    if (S != "true" && S != "false")
       CheckFailed(
           "invalid value for 'branch-target-enforcement' attribute: " + S, V);
-  }
-
-  if (auto A = Attrs.getFnAttr("branch-protection-pauth-lr"); A.isValid()) {
-    StringRef S = A.getValueAsString();
-    if (S != "" && S != "true" && S != "false")
-      CheckFailed(
-          "invalid value for 'branch-protection-pauth-lr' attribute: " + S, V);
-  }
-
-  if (auto A = Attrs.getFnAttr("guarded-control-stack"); A.isValid()) {
-    StringRef S = A.getValueAsString();
-    if (S != "" && S != "true" && S != "false")
-      CheckFailed("invalid value for 'guarded-control-stack' attribute: " + S,
-                  V);
   }
 
   if (auto A = Attrs.getFnAttr("vector-function-abi-variant"); A.isValid()) {

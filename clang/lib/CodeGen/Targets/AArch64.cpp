@@ -120,20 +120,37 @@ public:
     if (!FD)
       return;
 
-    TargetInfo::BranchProtectionInfo BPI(CGM.getLangOpts());
+    const auto *TA = FD->getAttr<TargetAttr>();
+    if (TA == nullptr)
+      return;
 
-    if (const auto *TA = FD->getAttr<TargetAttr>()) {
-      ParsedTargetAttr Attr =
-          CGM.getTarget().parseTargetAttr(TA->getFeaturesStr());
-      if (!Attr.BranchProtection.empty()) {
-        StringRef Error;
-        (void)CGM.getTarget().validateBranchProtection(Attr.BranchProtection,
-                                                       Attr.CPU, BPI, Error);
-        assert(Error.empty());
-      }
-    }
+    ParsedTargetAttr Attr =
+        CGM.getTarget().parseTargetAttr(TA->getFeaturesStr());
+    if (Attr.BranchProtection.empty())
+      return;
+
+    TargetInfo::BranchProtectionInfo BPI;
+    StringRef Error;
+    (void)CGM.getTarget().validateBranchProtection(Attr.BranchProtection,
+                                                   Attr.CPU, BPI, Error);
+    assert(Error.empty());
+
     auto *Fn = cast<llvm::Function>(GV);
-    BPI.setFnAttributes(*Fn);
+    Fn->addFnAttr("sign-return-address", BPI.getSignReturnAddrStr());
+
+    if (BPI.SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
+      Fn->addFnAttr("sign-return-address-key",
+                    BPI.SignKey == LangOptions::SignReturnAddressKeyKind::AKey
+                        ? "a_key"
+                        : "b_key");
+    }
+
+    Fn->addFnAttr("branch-target-enforcement",
+                  BPI.BranchTargetEnforcement ? "true" : "false");
+    Fn->addFnAttr("branch-protection-pauth-lr",
+                  BPI.BranchProtectionPAuthLR ? "true" : "false");
+    Fn->addFnAttr("guarded-control-stack",
+                  BPI.GuardedControlStack ? "true" : "false");
   }
 
   bool isScalarizableAsmOperand(CodeGen::CodeGenFunction &CGF,
