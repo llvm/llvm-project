@@ -3000,7 +3000,7 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
              << Unsupported << None << CurFeature << Target;
   }
 
-  TargetInfo::BranchProtectionInfo BPI;
+  TargetInfo::BranchProtectionInfo BPI{};
   StringRef DiagMsg;
   if (ParsedAttrs.BranchProtection.empty())
     return false;
