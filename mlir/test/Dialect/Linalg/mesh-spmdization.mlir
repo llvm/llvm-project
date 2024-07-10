@@ -18,7 +18,7 @@ func.func @elementwise_static_1d_mesh_static_1d_tensor(
   %dps_out: tensor<2xi8>
 // CHECK-SAME: -> tensor<1xi8> {
 ) -> tensor<2xi8> {
-  %sharding = mesh.sharding @mesh_1d, [[0]]  : !mesh.sharding
+  %sharding = mesh.sharding @mesh_1d split_axis = [[0]]  : !mesh.sharding
   %in1_sharded1 = mesh.shard %in1 to %sharding  : tensor<2xi8>
   %in1_sharded2 = mesh.shard %in1_sharded1 to %sharding annotate_for_users : tensor<2xi8>
   %in2_sharded1 = mesh.shard %in2 to %sharding : tensor<2xi8>
@@ -59,10 +59,10 @@ func.func @matmul_1d_mesh_static_tensors_parallel_iterator_sharding(
   %dps_out: tensor<4x8xi8>
 // CHECK-SAME: -> tensor<1x8xi8> {
 ) -> tensor<4x8xi8> {
-  %sharding = mesh.sharding @mesh_1d, [[0]] : !mesh.sharding
+  %sharding = mesh.sharding @mesh_1d split_axis = [[0]] : !mesh.sharding
   %in1_shared1 = mesh.shard %in1 to %sharding : tensor<4x3xi8>
   %in1_shared2 = mesh.shard %in1_shared1 to %sharding annotate_for_users : tensor<4x3xi8>
-  %sharding2 = mesh.sharding @mesh_1d, [[]] : !mesh.sharding
+  %sharding2 = mesh.sharding @mesh_1d split_axis = [[]] : !mesh.sharding
   %in2_shared1 = mesh.shard %in2 to %sharding2 : tensor<3x8xi8>
   %in2_shared2 = mesh.shard %in2_shared1 to %sharding2 annotate_for_users : tensor<3x8xi8>
   %dps_out_shared1 = mesh.shard %dps_out to %sharding : tensor<4x8xi8>
@@ -93,13 +93,13 @@ func.func @matmul_1d_mesh_static_tensors_reduction_iterator_sharding(
   %dps_out: tensor<4x8xi8>
 // CHECK-SAME: -> tensor<4x8xi8> {
 ) -> tensor<4x8xi8> {
-  %sharding = mesh.sharding @mesh_1d, [[], [0]] : !mesh.sharding
+  %sharding = mesh.sharding @mesh_1d split_axis = [[], [0]] : !mesh.sharding
   %in1_shared1 = mesh.shard %in1 to %sharding : tensor<4x6xi8>
   %in1_shared2 = mesh.shard %in1_shared1 to %sharding annotate_for_users : tensor<4x6xi8>
-  %sharding2 = mesh.sharding @mesh_1d, [[0]] : !mesh.sharding
+  %sharding2 = mesh.sharding @mesh_1d split_axis = [[0]] : !mesh.sharding
   %in2_shared1 = mesh.shard %in2 to %sharding2 : tensor<6x8xi8>
   %in2_shared2 = mesh.shard %in2_shared1 to %sharding2 annotate_for_users : tensor<6x8xi8>
-  %sharding3 = mesh.sharding @mesh_1d, [[]] : !mesh.sharding
+  %sharding3 = mesh.sharding @mesh_1d split_axis = [[]] : !mesh.sharding
   %dps_out_shared1 = mesh.shard %dps_out to %sharding3 : tensor<4x8xi8>
   %dps_out_shared2 = mesh.shard %dps_out_shared1 to %sharding3 annotate_for_users : tensor<4x8xi8>
   // CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
@@ -140,15 +140,15 @@ func.func @matmul_1d_mesh_static_tensors_reduction_iterator_sharding_with_partia
   %dps_out: tensor<4x8xi8>
 // CHECK-SAME: -> tensor<4x8xi8> {
 ) -> tensor<4x8xi8> {
-  %sharding = mesh.sharding @mesh_1d, [[], [0]] : !mesh.sharding
+  %sharding = mesh.sharding @mesh_1d split_axis = [[], [0]] : !mesh.sharding
   %in1_shared1 = mesh.shard %in1 to %sharding : tensor<4x6xi8>
   %in1_shared2 = mesh.shard %in1_shared1 to %sharding annotate_for_users : tensor<4x6xi8>
-  %sharding2 = mesh.sharding @mesh_1d, [[0]] : !mesh.sharding
+  %sharding2 = mesh.sharding @mesh_1d split_axis = [[0]] : !mesh.sharding
   %in2_shared1 = mesh.shard %in2 to %sharding2 : tensor<6x8xi8>
   %in2_shared2 = mesh.shard %in2_shared1 to %sharding2 annotate_for_users : tensor<6x8xi8>
-  %sharding3 = mesh.sharding @mesh_1d, [[]] : !mesh.sharding
+  %sharding3 = mesh.sharding @mesh_1d split_axis = [[]] : !mesh.sharding
   %dps_out_shared1 = mesh.shard %dps_out to %sharding3 : tensor<4x8xi8>
-  %sdps_out_shared2 = mesh.sharding @mesh_1d, [[]] : !mesh.sharding
+  %sdps_out_shared2 = mesh.sharding @mesh_1d split_axis = [[]] : !mesh.sharding
   %dps_out_shared2 = mesh.shard %dps_out_shared1 to %sharding3 annotate_for_users : tensor<4x8xi8>
   // CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
   // CHECK-DAG:  %[[C0_I8:.*]] = arith.constant 0 : i8
@@ -167,7 +167,7 @@ func.func @matmul_1d_mesh_static_tensors_reduction_iterator_sharding_with_partia
   // CHECK-SAME:     outs(%[[DPS_INIT_OPERAND]] : tensor<4x8xi8>) -> tensor<4x8xi8>
   %res = linalg.matmul ins(%in1_shared2, %in2_shared2 : tensor<4x6xi8>, tensor<6x8xi8>)
       outs(%dps_out_shared2 : tensor<4x8xi8>) -> tensor<4x8xi8>
-  %sharding4 = mesh.sharding @mesh_1d, [[]] partial = sum[0] : !mesh.sharding
+  %sharding4 = mesh.sharding @mesh_1d split_axis = [[]] partial = sum[0] : !mesh.sharding
   %res_shared1 = mesh.shard %res to %sharding4 : tensor<4x8xi8>
   %res_shared2 = mesh.shard %res_shared1 to %sharding4 annotate_for_users : tensor<4x8xi8>
   // CHECK:      return %[[SHARDED_MATMUL]] : tensor<4x8xi8>
@@ -188,12 +188,12 @@ func.func @matmul_1d_mesh_static_tensors_parallel_iterator_unsplit_last_axis(
   %dps_out: tensor<4x8xi8>
   // CHECK-SAME: -> tensor<4x8xi8> {
 ) -> tensor<4x8xi8> {
-  %sharding1 = mesh.sharding @mesh_1d, [[], []] : !mesh.sharding
+  %sharding1 = mesh.sharding @mesh_1d split_axis = [[], []] : !mesh.sharding
   %in1_replicated1 = mesh.shard %in1 to %sharding1 : tensor<4x6xi8>
   %in1_replicated2 = mesh.shard %in1_replicated1 to %sharding1 annotate_for_users : tensor<4x6xi8>
   // CHECK: %[[ALL_SLICE1:.*]] = mesh.all_slice %[[IN2]] on @mesh_1d mesh_axes = [0] slice_axis = 1
   %in2_replicated = mesh.shard %in2 to %sharding1 : tensor<6x8xi8>
-  %sharding2 = mesh.sharding @mesh_1d, [[], [0]] : !mesh.sharding
+  %sharding2 = mesh.sharding @mesh_1d split_axis = [[], [0]] : !mesh.sharding
   %in2_sharded = mesh.shard %in2_replicated to %sharding2 annotate_for_users : tensor<6x8xi8>
   // CHECK: %[[ALL_SLICE2:.*]] = mesh.all_slice %[[DPS_OUT]] on @mesh_1d mesh_axes = [0] slice_axis = 1
   %dps_out_replicated = mesh.shard %dps_out to %sharding1 : tensor<4x8xi8>

@@ -401,11 +401,9 @@ mesh::detail::defaultGetShardingOption(Operation *op,
 }
 
 // Get the sharding attributed for the given result and sharding option.
-MeshSharding getShardingAttribute(OpResult result,
-                                  const ShardingOption &shardingOption,
-                                  AffineMap map,
-                                  ArrayRef<utils::IteratorType> loopTypes,
-                                  ArrayRef<ReductionKind> reductionLoopKinds) {
+MeshSharding getSharding(OpResult result, const ShardingOption &shardingOption,
+                         AffineMap map, ArrayRef<utils::IteratorType> loopTypes,
+                         ArrayRef<ReductionKind> reductionLoopKinds) {
   auto resultType = cast<RankedTensorType>(result.getType());
   SmallVector<SmallVector<MeshAxis>> splitAxes(resultType.getRank());
   SmallVector<MeshAxis> partialAxes;
@@ -446,9 +444,9 @@ MeshSharding getShardingAttribute(OpResult result,
                            partialAxes, partialType);
 }
 
-static FailureOr<MeshSharding>
-getShardingAttribute(OpOperand &opOperand, const ShardingOption &shardingOption,
-                     AffineMap map) {
+static FailureOr<MeshSharding> getSharding(OpOperand &opOperand,
+                                           const ShardingOption &shardingOption,
+                                           AffineMap map) {
   Value operandValue = opOperand.get();
   auto operandType = cast<RankedTensorType>(operandValue.getType());
   SmallVector<SmallVector<MeshAxis>> splitAxes(operandType.getRank());
@@ -495,7 +493,7 @@ mesh::detail::defaultGetShardingAnnotations(
   unsigned numOperands = op->getNumOperands();
 
   for (OpOperand &opOperand : op->getOpOperands()) {
-    FailureOr<MeshSharding> shardingAttr = getShardingAttribute(
+    FailureOr<MeshSharding> shardingAttr = getSharding(
         opOperand, shardingOption, maps[opOperand.getOperandNumber()]);
     if (failed(shardingAttr))
       return failure();
@@ -503,9 +501,9 @@ mesh::detail::defaultGetShardingAnnotations(
   }
 
   for (OpResult result : op->getResults()) {
-    res.push_back(getShardingAttribute(
-        result, shardingOption, maps[numOperands + result.getResultNumber()],
-        loopTypes, reductionKinds));
+    res.push_back(getSharding(result, shardingOption,
+                              maps[numOperands + result.getResultNumber()],
+                              loopTypes, reductionKinds));
   }
 
   return res;
@@ -522,8 +520,8 @@ static LogicalResult addShardOp(OpBuilder &b, OpResult result,
                                 AffineMap map,
                                 ArrayRef<utils::IteratorType> loopTypes,
                                 ArrayRef<ReductionKind> reductionLoopKinds) {
-  MeshSharding sharding = getShardingAttribute(result, shardingOption, map,
-                                               loopTypes, reductionLoopKinds);
+  MeshSharding sharding =
+      getSharding(result, shardingOption, map, loopTypes, reductionLoopKinds);
   maybeInsertTargetShardingAnnotation(sharding, result, b);
 
   return success();
@@ -536,7 +534,7 @@ static LogicalResult addShardOp(OpBuilder &b, OpOperand &opOperand,
                                 AffineMap map) {
 
   FailureOr<MeshSharding> sharding =
-      getShardingAttribute(opOperand, shardingOption, map);
+      getSharding(opOperand, shardingOption, map);
   if (failed(sharding)) {
     return failure();
   }

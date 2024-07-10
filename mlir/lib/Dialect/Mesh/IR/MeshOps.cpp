@@ -553,23 +553,17 @@ MeshSharding MeshSharding::get(::mlir::FlatSymbolRefAttr mesh_,
         MeshAxesAttr::get(mesh_.getContext(), axis.asArrayRef());
   }
 
-  auto do_copy = [&](auto src, auto &dst) {
+  auto clone = [](const auto src, auto &dst) {
     dst.resize(src.size());
-    for (auto [i, v] : llvm::enumerate(src)) {
-      dst[i] = v;
-    }
+    llvm::copy(src, dst.begin());
   };
 
-  do_copy(partial_axes_, res.partial_axes);
+  clone(partial_axes_, res.partial_axes);
   res.partial_type = partial_type_;
-  res.static_halo_sizes.resize(static_halo_sizes_.size());
-  do_copy(static_halo_sizes_, res.static_halo_sizes);
-  res.static_sharded_dims_sizes.resize(static_sharded_dims_sizes_.size());
-  do_copy(static_sharded_dims_sizes_, res.static_sharded_dims_sizes);
-  res.dynamic_halo_sizes.resize(dynamic_halo_sizes_.size());
-  do_copy(dynamic_halo_sizes_, res.dynamic_halo_sizes);
-  res.dynamic_sharded_dims_sizes.resize(dynamic_sharded_dims_sizes_.size());
-  do_copy(dynamic_sharded_dims_sizes_, res.dynamic_sharded_dims_sizes);
+  clone(static_halo_sizes_, res.static_halo_sizes);
+  clone(static_sharded_dims_sizes_, res.static_sharded_dims_sizes);
+  clone(dynamic_halo_sizes_, res.dynamic_halo_sizes);
+  clone(dynamic_sharded_dims_sizes_, res.dynamic_sharded_dims_sizes);
 
   return res;
 }

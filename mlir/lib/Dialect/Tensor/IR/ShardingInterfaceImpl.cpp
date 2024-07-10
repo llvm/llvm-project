@@ -26,8 +26,10 @@ namespace {
 struct EmptyOpShardingInterface
     : public ShardingInterface::ExternalModel<EmptyOpShardingInterface,
                                               tensor::EmptyOp> {
-  SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *) const {
-    return {utils::IteratorType::parallel};
+  SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
+    auto ndims = mlir::cast<ShapedType>(op->getResult(0).getType()).getRank();
+    return SmallVector<utils::IteratorType>(ndims,
+                                            utils::IteratorType::parallel);
   }
 
   SmallVector<AffineMap> getIndexingMaps(Operation *op) const {

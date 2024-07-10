@@ -215,31 +215,31 @@ def Mesh_ShardingOp : Mesh_Op<"sharding", [
     // The tensor is fully replicated on @mesh0.
     // Currently, there must be at least one sub-array present in axes, even
     // if it's empty. Otherwise, a parsing error will occur.
-    %sharding0 = mesh.sharding @mesh0, [[]]
+    %sharding0 = mesh.sharding @mesh0 split_axis = [[]]
 
     // The tensor is sharded on the first dimension along axis 0 of @mesh0
-    %sharding1 = mesh.sharding @mesh0, [[0]]
+    %sharding1 = mesh.sharding @mesh0 split_axis = [[0]]
 
     // The tensor is sharded on its first dimension along axis 0 of @mesh0 and
     // it is also a partial_sum along mesh axis 1.
-    %sharding2 = mesh.sharding @mesh0, [[0], []] partial = sum[1]
+    %sharding2 = mesh.sharding @mesh0 split_axis = [[0] split_axis = []] partial = sum[1]
 
     // The tensor is sharded on its first dimension along axis 0 of @mesh0 and
     // it is also a partial_max along mesh axis 1.
-    %sharding3 = mesh.sharding @mesh0, [[0]] partial = max[1]
+    %sharding3 = mesh.sharding @mesh0 split_axis = [[0]] partial = max[1]
 
     // Could be used for a mesh.shard op
     %sharded0 = mesh.shard %arg0 to %sharding3 : tensor<4x8xf32>
 
     // The tensor is sharded on its first dimension along axis 0 of @mesh0 and
     // and it has halo-sizes of 1 and 2 on the sharded dim.
-    %halo_sharding = mesh.sharding @mesh0, [[0]] halo_sizes = [1, 2]
+    %halo_sharding = mesh.sharding @mesh0 split_axis = [[0]] halo_sizes = [1, 2]
     %sharded1 = mesh.shard %arg0 to %halo_sharding : tensor<4x8xf32>
     
     // The tensor is sharded on its second dimension along axis 0 of @mesh1d_4
     // and it has pre-defined shard sizes. The shards of the devices will have
     // the following shapes: [4x2, 4x3, 4x4, 4x5]
-    %sharding4 = mesh.sharding @mesh1d_4, [[], [0]] sharded_dims_sizes = [2, 3, 4, 5]
+    %sharding4 = mesh.sharding @mesh1d_4 split_axis = [[] split_axis = [0]] sharded_dims_sizes = [2, 3, 4, 5]
     %sharded2 = mesh.shard %arg0 to %sharding4 : tensor<4x14xf32>
     ```
   }];
@@ -258,7 +258,8 @@ def Mesh_ShardingOp : Mesh_Op<"sharding", [
     Mesh_Sharding:$result
   );
   let assemblyFormat = [{
-    $mesh `,` $split_axes
+    $mesh
+    `split_axis` `=` $split_axes
     (`partial` `=` $partial_type $partial_axes^)?
     (`halo_sizes` `=` custom<DynamicIndexList>($dynamic_halo_sizes, $static_halo_sizes)^)?
     (`sharded_dims_sizes` `=` custom<DynamicIndexList>($dynamic_sharded_dims_sizes, $static_sharded_dims_sizes)^)?
@@ -287,7 +288,7 @@ def Mesh_ShardShapeOp : Mesh_Op<"shard_shape", [Pure]> {
   let description = [{
     The device/process id is a linearized id of the device/process in the mesh.
     This operation might be used during spmdization when the shard shape depends
-    on values if the sharding.
+    on (non-constant) values used in `mesh.sharding`.
   }];
   let arguments = (ins
     DenseI64ArrayAttr:$shape,
@@ -335,19 +336,19 @@ def Mesh_ShardOp : Mesh_Op<"shard", [
     Example:
     ```
     func.func @only_result_annotated(%arg0 : tensor<4x8xf32>) -> () {
-      %sharding = mesh.sharding @mesh0, [[0]] : !mesh.sharding
+      %sharding = mesh.sharding @mesh0 split_axis = [[0]] : !mesh.sharding
       %0 = mesh.shard %arg0 to %sharding : tensor<4x8xf32>
       ...
     }
 
     func.func @only_operand_annotated(%arg0 : tensor<4x8xf32>) -> () {
-      %sharding = mesh.sharding @mesh0, [[0]] : !mesh.sharding
+      %sharding = mesh.sharding @mesh0 split_axis = [[0]] : !mesh.sharding
       %0 = mesh.shard %arg0 to %sharding annotate_for_users : tensor<4x8xf32>
       ...
     }
     
     func.func @two_operands_annotated(%arg0 : tensor<4x8xf32>, %arg1 : tensor<16x8xf32>) -> () {
-      %sharding = mesh.sharding @mesh0, [[0]] : !mesh.sharding
+      %sharding = mesh.sharding @mesh0 split_axis = [[0]] : !mesh.sharding
       %0 = mesh.shard %arg0 to %sharding annotate_for_users : tensor<4x8xf32>
       %1 = mesh.shard %arg1 to %sharding annotate_for_users : tensor<16x8xf32>
       ...
@@ -358,11 +359,11 @@ def Mesh_ShardOp : Mesh_Op<"shard", [
     // operand of op2
     func.func @both_result_and_multi_operands_annotated(
         %arg0 : tensor<4x8xf32>) -> () {
-      %sharding = mesh.sharding @mesh0, [[0]] : !mesh.sharding
+      %sharding = mesh.sharding @mesh0 split_axis = [[0]] : !mesh.sharding
       %0 = mesh.shard %arg0 to %sharding : tensor<4x8xf32>
-      %sharding1 = mesh.sharding @mesh0, [[1]] : !mesh.sharding
+      %sharding1 = mesh.sharding @mesh0 split_axis = [[1]] : !mesh.sharding
       %1 = mesh.shard %0 to %sharding1 annotate_for_users : tensor<4x8xf32>
-      %sharding2 = mesh.sharding @mesh0, [[2]] : !mesh.sharding
+      %sharding2 = mesh.sharding @mesh0 split_axis = [[2]] : !mesh.sharding
       %2 = mesh.shard %0 to %sharding2 annotate_for_users : tensor<4x8xf32>
       "op0"(%1) : ...
       "op1"(%2) : ...
@@ -374,8 +375,8 @@ def Mesh_ShardOp : Mesh_Op<"shard", [
     ```
     func.func @annotate_on_same_result_with_different_sharding(
         %arg0 : tensor<4x8xf32>) -> () {
-      %sharding1 = mesh.sharding @mesh0, [[0]] : !mesh.sharding
-      %sharding2 = mesh.sharding @mesh0, [[1]] : !mesh.sharding
+      %sharding1 = mesh.sharding @mesh0 split_axis = [[0]] : !mesh.sharding
+      %sharding2 = mesh.sharding @mesh0 split_axis = [[1]] : !mesh.sharding
       %0 = mesh.shard %arg0 to $sharding1 : tensor<4x8xf32>
       %1 = mesh.shard %0 to sharding2 : tensor<4x8xf32>
       ...
@@ -383,8 +384,8 @@ def Mesh_ShardOp : Mesh_Op<"shard", [
 
     func.func @annotate_on_same_result_same_value_with_different_sharding(
         %arg0 : tensor<4x8xf32>) -> () {
-      %sharding1 = mesh.sharding @mesh0, [[0]] : !mesh.sharding
-      %sharding2 = mesh.sharding @mesh0, [[1]] : !mesh.sharding
+      %sharding1 = mesh.sharding @mesh0 split_axis = [[0]] : !mesh.sharding
+      %sharding2 = mesh.sharding @mesh0 split_axis = [[1]] : !mesh.sharding
       %0 = mesh.shard %arg0 to %sharding1 : tensor<4x8xf32>
       %1 = mesh.shard %arg0 to %sharding2 : tensor<4x8xf32>
       ...
@@ -392,8 +393,8 @@ def Mesh_ShardOp : Mesh_Op<"shard", [
 
     func.func @annotate_on_same_operand_with_different_sharding(
         %arg0 : tensor<4x8xf32>) -> () {
-      %sharding1 = mesh.sharding @mesh0, [[0]] : !mesh.sharding
-      %sharding2 = mesh.sharding @mesh0, [[1]] : !mesh.sharding
+      %sharding1 = mesh.sharding @mesh0 split_axis = [[0]] : !mesh.sharding
+      %sharding2 = mesh.sharding @mesh0 split_axis = [[1]] : !mesh.sharding
       %0 = mesh.shard %arg0 to %sharding1 annotate_for_users : tensor<4x8xf32>
       %1 = mesh.shard %0 to %sharding2 annotate_for_users : tensor<4x8xf32>
       ...
@@ -401,8 +402,8 @@ def Mesh_ShardOp : Mesh_Op<"shard", [
 
     func.func @result_annotated_after_operand(
         %arg0 : tensor<4x8xf32>) -> () {
-      %sharding1 = mesh.sharding @mesh0, [[0]] : !mesh.sharding
-      %sharding2 = mesh.sharding @mesh0, [[1]] : !mesh.sharding
+      %sharding1 = mesh.sharding @mesh0 split_axis = [[0]] : !mesh.sharding
+      %sharding2 = mesh.sharding @mesh0 split_axis = [[1]] : !mesh.sharding
       %0 = mesh.shard %arg0 to %sharding1 annotate_for_users : tensor<4x8xf32>
       %1 = mesh.shard %0 to %sharding2 : tensor<4x8xf32>
       ...
@@ -1061,8 +1062,18 @@ def Mesh_UpdateHaloOp : Mesh_CollectiveCommunicationOpBase<"update_halo", [
   ]> {
   let summary = "Update halo data.";
   let description = [{
-    Assume all devices hold a tensors with same-sized halo data.
-    Optionally resize to new halo sizes.
+    This operation updates halo regions of shards, e.g. if their sharding
+    specified `halo_sizes` and the actual tensor data might have changed
+    on the remote devices. Changes might be caused by mutating operations
+    and/or if the new halo regions are larger than the existing ones.
+
+    Assumes all devices hold tensors with same-sized halo data as specified
+    by `halo_sizes`.
+
+    `mesh_axes` specifies the tensor axes along which the halo data is updated.
+    Currently each tensor dim can be sharded along a single mesh axis only.
+
+    Optionally resizes to new halo sizes `target_halo_sizes`.
   }];
   let arguments = !con(commonArgs, (ins
     AnyNon0RankedTensor:$input,
