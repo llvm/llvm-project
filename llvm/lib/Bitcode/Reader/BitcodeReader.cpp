@@ -7991,12 +7991,19 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       break;
     }
 
-    case bitc::FS_PERMODULE_ALLOC_INFO: {
+    case bitc::FS_PERMODULE_ALLOC_INFO:
+    case bitc::FS_PERMODULE_ALLOC_INFO_TOTAL_SIZES: {
+      bool HasTotalSizes = BitCode == bitc::FS_PERMODULE_ALLOC_INFO_TOTAL_SIZES;
       unsigned I = 0;
       std::vector<MIBInfo> MIBs;
+      std::vector<uint64_t> TotalSizes;
       while (I < Record.size()) {
-        assert(Record.size() - I >= 2);
+        assert(Record.size() - I >= (HasTotalSizes ? 3 : 2));
         AllocationType AllocType = (AllocationType)Record[I++];
+        if (HasTotalSizes) {
+          TotalSizes.push_back(Record[I++]);
+          assert(TotalSizes.back());
+        }
         unsigned NumStackEntries = Record[I++];
         assert(Record.size() - I >= NumStackEntries);
         SmallVector<unsigned> StackIdList;
@@ -8008,18 +8015,31 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
         MIBs.push_back(MIBInfo(AllocType, std::move(StackIdList)));
       }
       PendingAllocs.push_back(AllocInfo(std::move(MIBs)));
+      assert(HasTotalSizes != TotalSizes.empty());
+      if (HasTotalSizes) {
+        assert(PendingAllocs.back().MIBs.size() == TotalSizes.size());
+        PendingAllocs.back().TotalSizes =
+            std::make_unique<std::vector<uint64_t>>(std::move(TotalSizes));
+      }
       break;
     }
 
-    case bitc::FS_COMBINED_ALLOC_INFO: {
+    case bitc::FS_COMBINED_ALLOC_INFO:
+    case bitc::FS_COMBINED_ALLOC_INFO_TOTAL_SIZES: {
+      bool HasTotalSizes = BitCode == bitc::FS_COMBINED_ALLOC_INFO_TOTAL_SIZES;
       unsigned I = 0;
       std::vector<MIBInfo> MIBs;
+      std::vector<uint64_t> TotalSizes;
       unsigned NumMIBs = Record[I++];
       unsigned NumVersions = Record[I++];
       unsigned MIBsRead = 0;
       while (MIBsRead++ < NumMIBs) {
-        assert(Record.size() - I >= 2);
+        assert(Record.size() - I >= (HasTotalSizes ? 3 : 2));
         AllocationType AllocType = (AllocationType)Record[I++];
+        if (HasTotalSizes) {
+          TotalSizes.push_back(Record[I++]);
+          assert(TotalSizes.back());
+        }
         unsigned NumStackEntries = Record[I++];
         assert(Record.size() - I >= NumStackEntries);
         SmallVector<unsigned> StackIdList;
@@ -8036,6 +8056,12 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
         Versions.push_back(Record[I++]);
       PendingAllocs.push_back(
           AllocInfo(std::move(Versions), std::move(MIBs)));
+      assert(HasTotalSizes != TotalSizes.empty());
+      if (HasTotalSizes) {
+        assert(PendingAllocs.back().MIBs.size() == TotalSizes.size());
+        PendingAllocs.back().TotalSizes =
+            std::make_unique<std::vector<uint64_t>>(std::move(TotalSizes));
+      }
       break;
     }
     }

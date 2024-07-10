@@ -403,6 +403,10 @@ struct AllocInfo {
   // Vector of MIBs in this memprof metadata.
   std::vector<MIBInfo> MIBs;
 
+  // If requested, keep track of total profiled sizes for each MIB. This will be
+  // a vector of the same length and order as the MIBs vector.
+  std::unique_ptr<std::vector<uint64_t>> TotalSizes;
+
   AllocInfo(std::vector<MIBInfo> MIBs) : MIBs(std::move(MIBs)) {
     Versions.push_back(0);
   }
@@ -422,6 +426,16 @@ inline raw_ostream &operator<<(raw_ostream &OS, const AllocInfo &AE) {
   OS << " MIB:\n";
   for (auto &M : AE.MIBs) {
     OS << "\t\t" << M << "\n";
+  }
+  if (AE.TotalSizes) {
+    OS << " TotalSizes per MIB:\n\t\t";
+    First = true;
+    for (auto &TS : *AE.TotalSizes) {
+      if (!First)
+        OS << ", ";
+      First = false;
+      OS << TS << "\n";
+    }
   }
   return OS;
 }

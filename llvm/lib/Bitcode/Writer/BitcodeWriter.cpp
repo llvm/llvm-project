@@ -230,7 +230,8 @@ private:
   void writePerModuleFunctionSummaryRecord(
       SmallVector<uint64_t, 64> &NameVals, GlobalValueSummary *Summary,
       unsigned ValueID, unsigned FSCallsAbbrev, unsigned FSCallsProfileAbbrev,
-      unsigned CallsiteAbbrev, unsigned AllocAbbrev, const Function &F);
+      unsigned CallsiteAbbrev, unsigned AllocAbbrev,
+      unsigned AllocTotalSizeAbbrev, const Function &F);
   void writeModuleLevelReferences(const GlobalVariable &V,
                                   SmallVector<uint64_t, 64> &NameVals,
                                   unsigned FSModRefsAbbrev,
@@ -4158,7 +4159,7 @@ static void writeTypeIdCompatibleVtableSummaryRecord(
 
 static void writeFunctionHeapProfileRecords(
     BitstreamWriter &Stream, FunctionSummary *FS, unsigned CallsiteAbbrev,
-    unsigned AllocAbbrev, bool PerModule,
+    unsigned AllocAbbrev, unsigned AllocTotalSizeAbbrev, bool PerModule,
     std::function<unsigned(const ValueInfo &VI)> GetValueID,
     std::function<unsigned(unsigned)> GetStackIndex) {
   SmallVector<uint64_t> Record;
@@ -4193,19 +4194,31 @@ static void writeFunctionHeapProfileRecords(
       Record.push_back(AI.MIBs.size());
       Record.push_back(AI.Versions.size());
     }
+    unsigned I = 0;
+    assert(!AI.TotalSizes || AI.TotalSizes->size() == AI.MIBs.size());
     for (auto &MIB : AI.MIBs) {
       Record.push_back((uint8_t)MIB.AllocType);
+      if (AI.TotalSizes) {
+        Record.push_back((*AI.TotalSizes)[I]);
+        assert((*AI.TotalSizes)[I]);
+      }
       Record.push_back(MIB.StackIdIndices.size());
       for (auto Id : MIB.StackIdIndices)
         Record.push_back(GetStackIndex(Id));
+      I++;
     }
     if (!PerModule) {
       for (auto V : AI.Versions)
         Record.push_back(V);
     }
-    Stream.EmitRecord(PerModule ? bitc::FS_PERMODULE_ALLOC_INFO
-                                : bitc::FS_COMBINED_ALLOC_INFO,
-                      Record, AllocAbbrev);
+    unsigned Code =
+        PerModule ? (AI.TotalSizes ? bitc::FS_PERMODULE_ALLOC_INFO_TOTAL_SIZES
+                                   : bitc::FS_PERMODULE_ALLOC_INFO)
+                  : (AI.TotalSizes ? bitc::FS_COMBINED_ALLOC_INFO_TOTAL_SIZES
+                                   : bitc::FS_COMBINED_ALLOC_INFO);
+    unsigned AllocAbbrevToUse =
+        AI.TotalSizes ? AllocTotalSizeAbbrev : AllocAbbrev;
+    Stream.EmitRecord(Code, Record, AllocAbbrevToUse);
   }
 }
 
@@ -4214,7 +4227,7 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
     SmallVector<uint64_t, 64> &NameVals, GlobalValueSummary *Summary,
     unsigned ValueID, unsigned FSCallsRelBFAbbrev,
     unsigned FSCallsProfileAbbrev, unsigned CallsiteAbbrev,
-    unsigned AllocAbbrev, const Function &F) {
+    unsigned AllocAbbrev, unsigned AllocTotalSizeAbbrev, const Function &F) {
   NameVals.push_back(ValueID);
 
   FunctionSummary *FS = cast<FunctionSummary>(Summary);
@@ -4225,7 +4238,7 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
       });
 
   writeFunctionHeapProfileRecords(
-      Stream, FS, CallsiteAbbrev, AllocAbbrev,
+      Stream, FS, CallsiteAbbrev, AllocAbbrev, AllocTotalSizeAbbrev,
       /*PerModule*/ true,
       /*GetValueId*/ [&](const ValueInfo &VI) { return getValueId(VI); },
       /*GetStackIndex*/ [&](unsigned I) { return I; });
@@ -4437,6 +4450,13 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
   unsigned AllocAbbrev = Stream.EmitAbbrev(std::move(Abbv));
 
+  Abbv = std::make_shared<BitCodeAbbrev>();
+  Abbv->Add(BitCodeAbbrevOp(bitc::FS_PERMODULE_ALLOC_INFO_TOTAL_SIZES));
+  // n x (alloc type, total size, numstackids, numstackids x stackidindex)
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
+  unsigned AllocTotalSizeAbbrev = Stream.EmitAbbrev(std::move(Abbv));
+
   SmallVector<uint64_t, 64> NameVals;
   // Iterate over the list of functions instead of the Index to
   // ensure the ordering is stable.
@@ -4454,9 +4474,10 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
       continue;
     }
     auto *Summary = VI.getSummaryList()[0].get();
-    writePerModuleFunctionSummaryRecord(
-        NameVals, Summary, VE.getValueID(&F), FSCallsRelBFAbbrev,
-        FSCallsProfileAbbrev, CallsiteAbbrev, AllocAbbrev, F);
+    writePerModuleFunctionSummaryRecord(NameVals, Summary, VE.getValueID(&F),
+                                        FSCallsRelBFAbbrev,
+                                        FSCallsProfileAbbrev, CallsiteAbbrev,
+                                        AllocAbbrev, AllocTotalSizeAbbrev, F);
   }
 
   // Capture references from GlobalVariable initializers, which are outside
@@ -4586,6 +4607,16 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     return DecSummaries->count(GVS);
   };
 
+  Abbv = std::make_shared<BitCodeAbbrev>();
+  Abbv->Add(BitCodeAbbrevOp(bitc::FS_COMBINED_ALLOC_INFO_TOTAL_SIZES));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4)); // nummib
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4)); // numver
+  // nummib x (alloc type, total size, numstackids, numstackids x stackidindex),
+  // numver x version
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
+  unsigned AllocTotalSizeAbbrev = Stream.EmitAbbrev(std::move(Abbv));
+
   // The aliases are emitted as a post-pass, and will point to the value
   // id of the aliasee. Save them in a vector for post-processing.
   SmallVector<AliasSummary *, 64> Aliases;
@@ -4673,9 +4704,10 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     getReferencedTypeIds(FS, ReferencedTypeIds);
 
     writeFunctionHeapProfileRecords(
-        Stream, FS, CallsiteAbbrev, AllocAbbrev,
+        Stream, FS, CallsiteAbbrev, AllocAbbrev, AllocTotalSizeAbbrev,
         /*PerModule*/ false,
-        /*GetValueId*/ [&](const ValueInfo &VI) -> unsigned {
+        /*GetValueId*/
+        [&](const ValueInfo &VI) -> unsigned {
           std::optional<unsigned> ValueID = GetValueId(VI);
           // This can happen in shared index files for distributed ThinLTO if
           // the callee function summary is not included. Record 0 which we
@@ -4685,7 +4717,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
             return 0;
           return *ValueID;
         },
-        /*GetStackIndex*/ [&](unsigned I) {
+        /*GetStackIndex*/
+        [&](unsigned I) {
           // Get the corresponding index into the list of StackIds actually
           // being written for this combined index (which may be a subset in
           // the case of distributed indexes).
