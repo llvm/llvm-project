@@ -2225,6 +2225,45 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
+add_fp_unittest(
+  isnan_test
+  SUITE
+    libc-math-unittests
+  SRCS
+    isnan_test.cpp
+  HDRS
+    IsNanTest.h
+  DEPENDS
+    libc.src.math.isnan
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  isnanf_test
+  SUITE
+    libc-math-unittests
+  SRCS
+    isnanf_test.cpp
+  HDRS
+    IsNanTest.h
+  DEPENDS
+    libc.src.math.isnanf
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  isnanl_test
+  SUITE
+    libc-math-unittests
+  SRCS
+    isnanl_test.cpp
+  HDRS
+    IsNanTest.h
+  DEPENDS
+    libc.src.math.isnanl
+    libc.src.__support.FPUtil.fp_bits
+)
+
 add_subdirectory(generic)
 add_subdirectory(smoke)
 
