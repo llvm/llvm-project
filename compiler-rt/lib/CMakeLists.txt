@@ -38,7 +38,9 @@ endif()
 if(COMPILER_RT_BUILD_SANITIZERS)
   if(COMPILER_RT_HAS_SANITIZER_COMMON)
     add_subdirectory(stats)
-    # Contains LSanCommon used even without COMPILER_RT_HAS_LSAN.
+    # Contains RTLSanCommon used even without COMPILER_RT_HAS_LSAN.
+    add_subdirectory(lsan)
+    # Contains RTUbsan used even without COMPILER_RT_HAS_UBSAN.
     add_subdirectory(lsan)
   endif()
 
