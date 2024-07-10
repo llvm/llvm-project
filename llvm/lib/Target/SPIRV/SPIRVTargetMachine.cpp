@@ -115,7 +115,7 @@ public:
   void addOptimizedRegAlloc() override {}
 
   void addPostRegAlloc() override;
-  void addMachinePasses() override;
+  void addPreEmitPass() override;
 
 private:
   const SPIRVTargetMachine &TM;
@@ -209,8 +209,7 @@ bool SPIRVPassConfig::addRegBankSelect() {
   return false;
 }
 
-void SPIRVPassConfig::addMachinePasses() {
-  TargetPassConfig::addMachinePasses();
+void SPIRVPassConfig::addPreEmitPass() {
   addPass(createSPIRVEmitNonSemanticDIPass(&getTM<SPIRVTargetMachine>()));
 }
 
