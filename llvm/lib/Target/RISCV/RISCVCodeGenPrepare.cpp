@@ -178,10 +178,6 @@ bool RISCVCodeGenPrepare::expandVPStrideLoad(IntrinsicInst &II) {
 
   auto *VTy = cast<VectorType>(II.getType());
 
-  // FIXME: Support fixed vector types.
-  if (!isa<ScalableVectorType>(VTy))
-    return false;
-
   IRBuilder<> Builder(&II);
 
   // Extend VL from i32 to XLen if needed.
@@ -190,10 +186,16 @@ bool RISCVCodeGenPrepare::expandVPStrideLoad(IntrinsicInst &II) {
 
   Type *STy = VTy->getElementType();
   Value *Val = Builder.CreateLoad(STy, BasePtr);
-  unsigned VMVOp = STy->isFloatingPointTy() ? Intrinsic::riscv_vfmv_v_f
-                                            : Intrinsic::riscv_vmv_v_x;
-  Value *Res = Builder.CreateIntrinsic(VMVOp, {VTy, VL->getType()},
-                                       {PoisonValue::get(VTy), Val, VL});
+  const auto &TLI = *ST->getTargetLowering();
+  Value *Res = Builder.CreateVectorSplat(VTy->getElementCount(), Val);
+
+  // TODO: Also support fixed/illegal vector types to splat with evl = vl.
+  if (isa<ScalableVectorType>(VTy) && TLI.isTypeLegal(EVT::getEVT(VTy))) {
+    unsigned VMVOp = STy->isFloatingPointTy() ? Intrinsic::riscv_vfmv_v_f
+                                              : Intrinsic::riscv_vmv_v_x;
+    Res = Builder.CreateIntrinsic(VMVOp, {VTy, VL->getType()},
+                                  {PoisonValue::get(VTy), Val, VL});
+  }
 
   II.replaceAllUsesWith(Res);
   II.eraseFromParent();
