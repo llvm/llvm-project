@@ -225,7 +225,7 @@ namespace clang {
 
       ArrayRef<GlobalDeclID> LazySpecializations;
       if (auto *LS = Common->LazySpecializations)
-        LazySpecializations = llvm::ArrayRef(LS + 1, LS[0].get());
+        LazySpecializations = llvm::ArrayRef(LS + 1, LS[0].getRawValue());
 
       // Add a slot to the record for the number of specializations.
       unsigned I = Record.size();
@@ -1733,7 +1733,7 @@ void ASTDeclWriter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   if (Writer.isGeneratingReducedBMI()) {
     auto Name = Context.DeclarationNames.getCXXDeductionGuideName(D);
     for (auto *DG : D->getDeclContext()->noload_lookup(Name))
-      Writer.GetDeclRef(DG);
+      Writer.GetDeclRef(DG->getCanonicalDecl());
   }
 
   Code = serialization::DECL_CLASS_TEMPLATE;
@@ -2828,7 +2828,7 @@ void ASTWriter::WriteDecl(ASTContext &Context, Decl *D) {
   SourceLocationEncoding::RawLocEncoding RawLoc =
       getRawSourceLocationEncoding(getAdjustedLocation(Loc));
 
-  unsigned Index = ID.get() - FirstDeclID.get();
+  unsigned Index = ID.getRawValue() - FirstDeclID.getRawValue();
   if (DeclOffsets.size() == Index)
     DeclOffsets.emplace_back(RawLoc, Offset, DeclTypesBlockStartOffset);
   else if (DeclOffsets.size() < Index) {

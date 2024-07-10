@@ -875,4 +875,61 @@ main:
     # CHECK: f16x8.pmax # encoding: [0xfd,0xbb,0x02]
     f16x8.pmax
 
+    # CHECK: f16x8.eq # encoding: [0xfd,0xc0,0x02]
+    f16x8.eq
+
+    # CHECK: f16x8.ne # encoding: [0xfd,0xc1,0x02]
+    f16x8.ne
+
+    # CHECK: f16x8.lt # encoding: [0xfd,0xc2,0x02]
+    f16x8.lt
+
+    # CHECK: f16x8.gt # encoding: [0xfd,0xc3,0x02]
+    f16x8.gt
+
+    # CHECK: f16x8.le # encoding: [0xfd,0xc4,0x02]
+    f16x8.le
+
+    # CHECK: f16x8.ge # encoding: [0xfd,0xc5,0x02]
+    f16x8.ge
+
+    # CHECK: f16x8.abs # encoding: [0xfd,0xb1,0x02]
+    f16x8.abs
+
+    # CHECK: f16x8.neg # encoding: [0xfd,0xb2,0x02]
+    f16x8.neg
+
+    # CHECK: f16x8.sqrt # encoding: [0xfd,0xb3,0x02]
+    f16x8.sqrt
+
+    # CHECK: f16x8.ceil # encoding: [0xfd,0xbc,0x02]
+    f16x8.ceil
+
+    # CHECK: f16x8.floor # encoding: [0xfd,0xbd,0x02]
+    f16x8.floor
+
+    # CHECK: f16x8.trunc # encoding: [0xfd,0xbe,0x02]
+    f16x8.trunc
+
+    # CHECK: f16x8.nearest # encoding: [0xfd,0xbf,0x02]
+    f16x8.nearest
+
+    # CHECK: f16x8.relaxed_madd # encoding: [0xfd,0xc6,0x02]
+    f16x8.relaxed_madd
+
+    # CHECK: f16x8.relaxed_nmadd # encoding: [0xfd,0xc7,0x02]
+    f16x8.relaxed_nmadd
+
+    # CHECK: i16x8.trunc_sat_f16x8_s # encoding: [0xfd,0xc8,0x02]
+    i16x8.trunc_sat_f16x8_s
+
+    # CHECK: i16x8.trunc_sat_f16x8_u # encoding: [0xfd,0xc9,0x02]
+    i16x8.trunc_sat_f16x8_u
+
+    # CHECK: f16x8.convert_i16x8_s # encoding: [0xfd,0xca,0x02]
+    f16x8.convert_i16x8_s
+
+    # CHECK: f16x8.convert_i16x8_u # encoding: [0xfd,0xcb,0x02]
+    f16x8.convert_i16x8_u
+
     end_function

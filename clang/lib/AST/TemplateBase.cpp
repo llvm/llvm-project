@@ -544,16 +544,7 @@ void TemplateArgument::print(const PrintingPolicy &Policy, raw_ostream &Out,
     break;
 
   case Template: {
-    TemplateName TN = getAsTemplate();
-    if (const auto *TD = TN.getAsTemplateDecl();
-        TD && TD->getDeclName().isEmpty()) {
-      assert(isa<TemplateTemplateParmDecl>(TD) &&
-             "Unexpected anonymous template");
-      const auto *TTP = cast<TemplateTemplateParmDecl>(TD);
-      Out << "template-parameter-" << TTP->getDepth() << "-" << TTP->getIndex();
-    } else {
-      TN.print(Out, Policy);
-    }
+    getAsTemplate().print(Out, Policy);
     break;
   }
 
@@ -585,15 +576,6 @@ void TemplateArgument::print(const PrintingPolicy &Policy, raw_ostream &Out,
     break;
   }
 }
-
-void TemplateArgument::dump(raw_ostream &Out) const {
-  LangOptions LO; // FIXME! see also TemplateName::dump().
-  LO.CPlusPlus = true;
-  LO.Bool = true;
-  print(PrintingPolicy(LO), Out, /*IncludeType*/ true);
-}
-
-LLVM_DUMP_METHOD void TemplateArgument::dump() const { dump(llvm::errs()); }
 
 //===----------------------------------------------------------------------===//
 // TemplateArgumentLoc Implementation

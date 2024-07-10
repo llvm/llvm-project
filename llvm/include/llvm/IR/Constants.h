@@ -1122,8 +1122,6 @@ public:
   static Constant *getMul(Constant *C1, Constant *C2, bool HasNUW = false,
                           bool HasNSW = false);
   static Constant *getXor(Constant *C1, Constant *C2);
-  static Constant *getShl(Constant *C1, Constant *C2, bool HasNUW = false,
-                          bool HasNSW = false);
   static Constant *getTrunc(Constant *C, Type *Ty, bool OnlyIfReduced = false);
   static Constant *getPtrToInt(Constant *C, Type *Ty,
                                bool OnlyIfReduced = false);
@@ -1158,14 +1156,6 @@ public:
 
   static Constant *getNUWMul(Constant *C1, Constant *C2) {
     return getMul(C1, C2, true, false);
-  }
-
-  static Constant *getNSWShl(Constant *C1, Constant *C2) {
-    return getShl(C1, C2, false, true);
-  }
-
-  static Constant *getNUWShl(Constant *C1, Constant *C2) {
-    return getShl(C1, C2, true, false);
   }
 
   /// If C is a scalar/fixed width vector of known powers of 2, then this
@@ -1234,29 +1224,12 @@ public:
   /// Return true if this is a convert constant expression
   bool isCast() const;
 
-  /// Return true if this is a compare constant expression
-  bool isCompare() const;
-
   /// get - Return a binary or shift operator constant expression,
   /// folding if possible.
   ///
   /// \param OnlyIfReducedTy see \a getWithOperands() docs.
   static Constant *get(unsigned Opcode, Constant *C1, Constant *C2,
                        unsigned Flags = 0, Type *OnlyIfReducedTy = nullptr);
-
-  /// Return an ICmp or FCmp comparison operator constant expression.
-  ///
-  /// \param OnlyIfReduced see \a getWithOperands() docs.
-  static Constant *getCompare(unsigned short pred, Constant *C1, Constant *C2,
-                              bool OnlyIfReduced = false);
-
-  /// get* - Return some common constants without having to
-  /// specify the full Instruction::OPCODE identifier.
-  ///
-  static Constant *getICmp(unsigned short pred, Constant *LHS, Constant *RHS,
-                           bool OnlyIfReduced = false);
-  static Constant *getFCmp(unsigned short pred, Constant *LHS, Constant *RHS,
-                           bool OnlyIfReduced = false);
 
   /// Getelementptr form.  Value* is only accepted for convenience;
   /// all elements must be Constants.
@@ -1317,10 +1290,6 @@ public:
 
   /// Return the opcode at the root of this constant expression
   unsigned getOpcode() const { return getSubclassDataFromValue(); }
-
-  /// Return the ICMP or FCMP predicate value. Assert if this is not an ICMP or
-  /// FCMP constant expression.
-  unsigned getPredicate() const;
 
   /// Assert that this is a shufflevector and return the mask. See class
   /// ShuffleVectorInst for a description of the mask representation.

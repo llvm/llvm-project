@@ -48,6 +48,39 @@ struct FoldExpandOfRankReducingExtract
   }
 };
 
+/// Fold collapse_shape which only removes static dimensions of size `1`
+/// into extract_slice.
+struct FoldUnPaddingCollapseIntoExtract
+    : public OpRewritePattern<tensor::CollapseShapeOp> {
+  using OpRewritePattern<tensor::CollapseShapeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::CollapseShapeOp collapseShapeOp,
+                                PatternRewriter &rewriter) const override {
+    auto extractSliceOp =
+        collapseShapeOp.getSrc().getDefiningOp<tensor::ExtractSliceOp>();
+    // Collapse cannot be folded away with multiple users of the extract slice
+    // and it is not necessarily beneficial to only convert the collapse into
+    // another extract slice.
+    if (!extractSliceOp || !extractSliceOp->hasOneUse())
+      return failure();
+
+    // Only fold away simple collapse where all removed dimensions have static
+    // size `1`.
+    SliceVerificationResult res = isRankReducedType(
+        collapseShapeOp.getSrcType(), collapseShapeOp.getResultType());
+    if (res != SliceVerificationResult::Success)
+      return rewriter.notifyMatchFailure(collapseShapeOp,
+                                         "expected unpadding collapse");
+
+    Value unPaddedExtractSlice = rewriter.create<tensor::ExtractSliceOp>(
+        extractSliceOp.getLoc(), collapseShapeOp.getResultType(),
+        extractSliceOp.getSource(), extractSliceOp.getMixedOffsets(),
+        extractSliceOp.getMixedSizes(), extractSliceOp.getMixedStrides());
+    rewriter.replaceOp(collapseShapeOp, unPaddedExtractSlice);
+    return success();
+  }
+};
+
 /// Fold insert_slice(collapse_shape) ops that cancel itself out.
 template <typename OpTy>
 struct FoldInsertOfRankReducingInsert : public OpRewritePattern<OpTy> {
@@ -111,10 +144,11 @@ struct FoldPaddingExpandIntoInsert : public OpRewritePattern<OpTy> {
 
 void mlir::tensor::populateReassociativeReshapeFoldingPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<FoldExpandOfRankReducingExtract,
-               FoldInsertOfRankReducingInsert<tensor::InsertSliceOp>,
-               FoldInsertOfRankReducingInsert<tensor::ParallelInsertSliceOp>,
-               FoldPaddingExpandIntoInsert<tensor::InsertSliceOp>,
-               FoldPaddingExpandIntoInsert<tensor::ParallelInsertSliceOp>>(
-      patterns.getContext());
+  patterns
+      .add<FoldExpandOfRankReducingExtract, FoldUnPaddingCollapseIntoExtract,
+           FoldInsertOfRankReducingInsert<tensor::InsertSliceOp>,
+           FoldInsertOfRankReducingInsert<tensor::ParallelInsertSliceOp>,
+           FoldPaddingExpandIntoInsert<tensor::InsertSliceOp>,
+           FoldPaddingExpandIntoInsert<tensor::ParallelInsertSliceOp>>(
+          patterns.getContext());
 }

@@ -80,6 +80,30 @@ namespace cwg1909 { // cwg1909: 3.7
   };
 }
 
+namespace cwg1918 { // cwg1918: no
+template<typename T> struct A {
+  class B {
+    class C {};
+  };
+};
+class X {
+  static int x;
+  // FIXME: this is ill-formed, because A<T>::B::C does not end with a simple-template-id
+  template <typename T>
+  friend class A<T>::B::C;
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>::B::' for friend class declaration is not supported; turning off access control for 'X'}}
+};
+template<> struct A<int> {
+  typedef struct Q B;
+};
+struct Q {
+  class C {
+    // FIXME: 'f' is not a friend, so 'X::x' is not accessible
+    int f() { return X::x; }
+  };
+};
+} // namespace cwg1918
+
 namespace cwg1940 { // cwg1940: 3.5
 #if __cplusplus >= 201103L
 static union {
@@ -120,6 +144,21 @@ derived d1(it, end);
 derived d2(42, 9);
 #endif
 }
+
+namespace cwg1945 { // cwg1945: no
+template<typename T> struct A {
+  class B {
+    class C {};
+  };
+};
+class X {
+  static int x;
+  // FIXME: this is ill-formed, because A<T>::B::C does not end with a simple-template-id
+  template <typename T>
+  friend class A<T>::B::C;
+  // expected-warning@-1 {{dependent nested name specifier 'A<T>::B::' for friend class declaration is not supported; turning off access control for 'X'}}
+};
+} // namespace cwg1945
 
 namespace cwg1947 { // cwg1947: 3.5
 #if __cplusplus >= 201402L

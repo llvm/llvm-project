@@ -214,23 +214,6 @@ UsingShadowDecl *TemplateName::getAsUsingShadowDecl() const {
   return nullptr;
 }
 
-TemplateName TemplateName::getNameToSubstitute() const {
-  TemplateDecl *Decl = getAsTemplateDecl();
-
-  // Substituting a dependent template name: preserve it as written.
-  if (!Decl)
-    return *this;
-
-  // If we have a template declaration, use the most recent non-friend
-  // declaration of that template.
-  Decl = cast<TemplateDecl>(Decl->getMostRecentDecl());
-  while (Decl->getFriendObjectKind()) {
-    Decl = cast<TemplateDecl>(Decl->getPreviousDecl());
-    assert(Decl && "all declarations of template are friends");
-  }
-  return TemplateName(Decl);
-}
-
 TemplateNameDependence TemplateName::getDependence() const {
   auto D = TemplateNameDependence::None;
   switch (getKind()) {
@@ -281,17 +264,16 @@ bool TemplateName::containsUnexpandedParameterPack() const {
   return getDependence() & TemplateNameDependence::UnexpandedPack;
 }
 
-void TemplateName::Profile(llvm::FoldingSetNodeID &ID) {
-  if (const auto* USD = getAsUsingShadowDecl())
-    ID.AddPointer(USD->getCanonicalDecl());
-  else if (const auto *TD = getAsTemplateDecl())
-    ID.AddPointer(TD->getCanonicalDecl());
-  else
-    ID.AddPointer(Storage.getOpaqueValue());
-}
-
 void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
                          Qualified Qual) const {
+  auto handleAnonymousTTP = [](TemplateDecl *TD, raw_ostream &OS) {
+    if (TemplateTemplateParmDecl *TTP = dyn_cast<TemplateTemplateParmDecl>(TD);
+        TTP && TTP->getIdentifier() == nullptr) {
+      OS << "template-parameter-" << TTP->getDepth() << "-" << TTP->getIndex();
+      return true;
+    }
+    return false;
+  };
   if (NameKind Kind = getKind();
       Kind == TemplateName::Template || Kind == TemplateName::UsingTemplate) {
     // After `namespace ns { using std::vector }`, what is the fully-qualified
@@ -304,6 +286,8 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
     // names more often than to export them, thus using the original name is
     // most useful in this case.
     TemplateDecl *Template = getAsTemplateDecl();
+    if (handleAnonymousTTP(Template, OS))
+      return;
     if (Qual == Qualified::None)
       OS << *Template;
     else
@@ -320,6 +304,10 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
            Underlying.getKind() == TemplateName::UsingTemplate);
 
     TemplateDecl *UTD = Underlying.getAsTemplateDecl();
+
+    if (handleAnonymousTTP(UTD, OS))
+      return;
+
     if (IdentifierInfo *II = UTD->getIdentifier();
         Policy.CleanUglifiedParameters && II &&
         isa<TemplateTemplateParmDecl>(UTD))
@@ -362,15 +350,4 @@ const StreamingDiagnostic &clang::operator<<(const StreamingDiagnostic &DB,
   OS << '\'';
   OS.flush();
   return DB << NameStr;
-}
-
-void TemplateName::dump(raw_ostream &OS) const {
-  LangOptions LO;  // FIXME!
-  LO.CPlusPlus = true;
-  LO.Bool = true;
-  print(OS, PrintingPolicy(LO));
-}
-
-LLVM_DUMP_METHOD void TemplateName::dump() const {
-  dump(llvm::errs());
 }

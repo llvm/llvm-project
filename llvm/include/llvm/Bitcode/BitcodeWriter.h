@@ -30,7 +30,6 @@ class Module;
 class raw_ostream;
 
 class BitcodeWriter {
-  SmallVectorImpl<char> &Buffer;
   std::unique_ptr<BitstreamWriter> Stream;
 
   StringTableBuilder StrtabBuilder{StringTableBuilder::RAW};
@@ -47,7 +46,8 @@ class BitcodeWriter {
 
 public:
   /// Create a BitcodeWriter that writes to Buffer.
-  BitcodeWriter(SmallVectorImpl<char> &Buffer, raw_fd_stream *FS = nullptr);
+  BitcodeWriter(SmallVectorImpl<char> &Buffer);
+  BitcodeWriter(raw_ostream &FS);
 
   ~BitcodeWriter();
 

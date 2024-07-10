@@ -6,7 +6,15 @@
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -passes=mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sve -target-feature +bf16 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sme -target-feature +bf16 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+
 #include <arm_sve.h>
+
+#if defined __ARM_FEATURE_SME
+#define MODE_ATTR __arm_streaming
+#else
+#define MODE_ATTR
+#endif
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -27,7 +35,7 @@
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <vscale x 8 x bfloat> [[DOTSPLATINSERT]], <vscale x 8 x bfloat> poison, <vscale x 8 x i32> zeroinitializer
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
-svbfloat16_t test_svdup_n_bf16(bfloat16_t op) {
+svbfloat16_t test_svdup_n_bf16(bfloat16_t op) MODE_ATTR {
   // expected-warning@+1 {{implicit declaration of function 'svdup_n_bf16'}}
   return SVE_ACLE_FUNC(svdup, _n, _bf16, )(op);
 }
@@ -44,7 +52,7 @@ svbfloat16_t test_svdup_n_bf16(bfloat16_t op) {
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.dup.nxv8bf16(<vscale x 8 x bfloat> zeroinitializer, <vscale x 8 x i1> [[TMP0]], bfloat [[OP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
-svbfloat16_t test_svdup_n_bf16_z(svbool_t pg, bfloat16_t op) {
+svbfloat16_t test_svdup_n_bf16_z(svbool_t pg, bfloat16_t op) MODE_ATTR {
   // expected-warning@+1 {{implicit declaration of function 'svdup_n_bf16_z'}}
   return SVE_ACLE_FUNC(svdup, _n, _bf16_z, )(pg, op);
 }
@@ -61,7 +69,7 @@ svbfloat16_t test_svdup_n_bf16_z(svbool_t pg, bfloat16_t op) {
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.dup.nxv8bf16(<vscale x 8 x bfloat> [[INACTIVE:%.*]], <vscale x 8 x i1> [[TMP0]], bfloat [[OP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
-svbfloat16_t test_svdup_n_bf16_m(svbfloat16_t inactive, svbool_t pg, bfloat16_t op) {
+svbfloat16_t test_svdup_n_bf16_m(svbfloat16_t inactive, svbool_t pg, bfloat16_t op) MODE_ATTR {
   // expected-warning@+1 {{implicit declaration of function 'svdup_n_bf16_m'}}
   return SVE_ACLE_FUNC(svdup, _n, _bf16_m, )(inactive, pg, op);
 }
@@ -78,7 +86,7 @@ svbfloat16_t test_svdup_n_bf16_m(svbfloat16_t inactive, svbool_t pg, bfloat16_t 
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.dup.nxv8bf16(<vscale x 8 x bfloat> undef, <vscale x 8 x i1> [[TMP0]], bfloat [[OP:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP1]]
 //
-svbfloat16_t test_svdup_n_bf16_x(svbool_t pg, bfloat16_t op) {
+svbfloat16_t test_svdup_n_bf16_x(svbool_t pg, bfloat16_t op) MODE_ATTR {
   // expected-warning@+1 {{implicit declaration of function 'svdup_n_bf16_x'}}
   return SVE_ACLE_FUNC(svdup, _n, _bf16_x, )(pg, op);
 }
@@ -97,7 +105,7 @@ svbfloat16_t test_svdup_n_bf16_x(svbool_t pg, bfloat16_t op) {
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.tbl.nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 8 x i16> [[DOTSPLAT]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
-svbfloat16_t test_svdup_lane_bf16(svbfloat16_t data, uint16_t index)
+svbfloat16_t test_svdup_lane_bf16(svbfloat16_t data, uint16_t index) MODE_ATTR
 {
   // expected-warning@+1 {{implicit declaration of function 'svdup_lane_bf16'}}
   return SVE_ACLE_FUNC(svdup_lane,_bf16,,)(data, index);

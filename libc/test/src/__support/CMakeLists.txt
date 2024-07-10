@@ -1,5 +1,50 @@
 add_custom_target(libc-support-tests)
 
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+  add_libc_test(
+    block_test
+    SUITE
+      libc-support-tests
+    SRCS
+      block_test.cpp
+    DEPENDS
+      libc.src.__support.CPP.array
+      libc.src.__support.CPP.bit
+      libc.src.__support.CPP.span
+      libc.src.__support.block
+      libc.src.string.memcpy
+  )
+
+  add_libc_test(
+    freelist_test
+    SUITE
+      libc-support-tests
+    SRCS
+      freelist_test.cpp
+    DEPENDS
+      libc.src.__support.CPP.array
+      libc.src.__support.CPP.span
+      libc.src.__support.freelist
+  )
+endif()
+
+if(LLVM_LIBC_FULL_BUILD)
+  add_libc_test(
+    freelist_heap_test
+    SUITE
+      libc-support-tests
+    SRCS
+      freelist_heap_test.cpp
+      freelist_malloc_test.cpp
+    DEPENDS
+      libc.src.__support.CPP.span
+      libc.src.__support.freelist_heap
+      libc.src.stdlib.freelist_malloc
+      libc.src.string.memcmp
+      libc.src.string.memcpy
+  )
+endif()
+
 add_libc_test(
   blockstore_test
   SUITE
@@ -86,8 +131,8 @@ add_libc_test(
     libc.src.__support.uint128
 )
 
-# The GPU does not support varargs currently.
-if(NOT LIBC_TARGET_OS_IS_GPU)
+# NVPTX does not support varargs currently.
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_libc_test(
     arg_list_test
     SUITE
@@ -132,6 +177,7 @@ add_libc_test(
   SRCS
     fixedvector_test.cpp
   DEPENDS
+    libc.src.__support.CPP.array
     libc.src.__support.fixedvector
 )
 
@@ -193,7 +239,7 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
 
   add_custom_command(TARGET libc_str_to_float_comparison_test
                      POST_BUILD
-                     COMMAND $<TARGET_FILE:libc_str_to_float_comparison_test> ${float_test_file}
+                     COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:libc_str_to_float_comparison_test> ${float_test_file}
                      DEPENDS ${float_test_file}
                      COMMENT "Test the strtof and strtod implementations against precomputed results."
                      VERBATIM)
@@ -207,3 +253,4 @@ add_subdirectory(FPUtil)
 add_subdirectory(fixed_point)
 add_subdirectory(HashTable)
 add_subdirectory(time)
+add_subdirectory(threads)

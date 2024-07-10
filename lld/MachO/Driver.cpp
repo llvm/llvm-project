@@ -1162,6 +1162,8 @@ static void createFiles(const InputArgList &args) {
   // This loop should be reserved for options whose exact ordering matters.
   // Other options should be handled via filtered() and/or getLastArg().
   bool isLazy = false;
+  // If we've processed an opening --start-lib, without a matching --end-lib
+  bool inLib = false;
   for (const Arg *arg : args) {
     const Option &opt = arg->getOption();
     warnIfDeprecatedOption(opt);
@@ -1219,13 +1221,16 @@ static void createFiles(const InputArgList &args) {
                    LoadType::CommandLine);
       break;
     case OPT_start_lib:
-      if (isLazy)
+      if (inLib)
         error("nested --start-lib");
-      isLazy = true;
+      inLib = true;
+      if (!config->allLoad)
+        isLazy = true;
       break;
     case OPT_end_lib:
-      if (!isLazy)
+      if (!inLib)
         error("stray --end-lib");
+      inLib = false;
       isLazy = false;
       break;
     default:
@@ -1386,6 +1391,12 @@ static void handleExplicitExports() {
           defined->privateExtern = true;
     });
   }
+}
+
+static void eraseInitializerSymbols() {
+  for (ConcatInputSection *isec : in.initOffsets->inputs())
+    for (Defined *sym : isec->symbols)
+      sym->used = false;
 }
 
 namespace lld {
@@ -1965,6 +1976,11 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
     if (config->deadStrip)
       markLive();
+
+    // Ensure that no symbols point inside __mod_init_func sections if they are
+    // removed due to -init_offsets. This must run after dead stripping.
+    if (config->emitInitOffsets)
+      eraseInitializerSymbols();
 
     // Categories are not subject to dead-strip. The __objc_catlist section is
     // marked as NO_DEAD_STRIP and that propagates into all category data.

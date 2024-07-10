@@ -115,6 +115,12 @@ static bool shouldInspect(MachineInstr &MI) {
   return isDomainMVE(&MI) || isVectorPredicate(&MI) || hasVPRUse(MI);
 }
 
+static bool isHorizontalReduction(const MachineInstr &MI) {
+  const MCInstrDesc &MCID = MI.getDesc();
+  uint64_t Flags = MCID.TSFlags;
+  return (Flags & ARMII::HorizontalReduction) != 0;
+}
+
 namespace {
 
   using InstSet = SmallPtrSetImpl<MachineInstr *>;
@@ -274,6 +280,16 @@ namespace {
 
       if (VPT->getOpcode() == ARM::MVE_VPST)
         return false;
+
+      // If the VPT block does not define something that is an "output", then
+      // the tail-predicated version will just perform a subset of the original
+      // vpt block, where the last lanes should not be used.
+      if (isVPTOpcode(VPT->getOpcode()) &&
+          all_of(Block.getInsts(), [](const MachineInstr *MI) {
+            return !MI->mayStore() && !MI->mayLoad() &&
+                   !isHorizontalReduction(*MI) && !isVCTP(MI);
+          }))
+        return true;
 
       auto IsOperandPredicated = [&](MachineInstr *MI, unsigned Idx) {
         MachineInstr *Op = RDA.getMIOperand(MI, MI->getOperand(Idx));
@@ -468,7 +484,7 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.setPreservesCFG();
-      AU.addRequired<MachineLoopInfo>();
+      AU.addRequired<MachineLoopInfoWrapperPass>();
       AU.addRequired<ReachingDefAnalysis>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
@@ -811,12 +827,6 @@ static bool producesDoubleWidthResult(const MachineInstr &MI) {
   const MCInstrDesc &MCID = MI.getDesc();
   uint64_t Flags = MCID.TSFlags;
   return (Flags & ARMII::DoubleWidthResult) != 0;
-}
-
-static bool isHorizontalReduction(const MachineInstr &MI) {
-  const MCInstrDesc &MCID = MI.getDesc();
-  uint64_t Flags = MCID.TSFlags;
-  return (Flags & ARMII::HorizontalReduction) != 0;
 }
 
 // Can this instruction generate a non-zero result when given only zeroed
@@ -1285,13 +1295,13 @@ bool ARMLowOverheadLoops::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;
   LLVM_DEBUG(dbgs() << "ARM Loops on " << MF->getName() << " ------------- \n");
 
-  MLI = &getAnalysis<MachineLoopInfo>();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   RDA = &getAnalysis<ReachingDefAnalysis>();
   MF->getProperties().set(MachineFunctionProperties::Property::TracksLiveness);
   MRI = &MF->getRegInfo();
   TII = static_cast<const ARMBaseInstrInfo*>(ST.getInstrInfo());
   TRI = ST.getRegisterInfo();
-  BBUtils = std::unique_ptr<ARMBasicBlockUtils>(new ARMBasicBlockUtils(*MF));
+  BBUtils = std::make_unique<ARMBasicBlockUtils>(*MF);
   BBUtils->computeAllBlockSizes();
   BBUtils->adjustBBOffsetsAfter(&MF->front());
 

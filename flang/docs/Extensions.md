@@ -118,6 +118,22 @@ end
   procedure interface.  This compiler accepts it, since there is otherwise
   no way to declare an interoperable dummy procedure with an arbitrary
   interface like `void (*)()`.
+* `PURE` functions are allowed to have dummy arguments that are
+  neither `INTENT(IN)` nor `VALUE`, similar to `PURE` subroutines,
+  with a warning.
+  This enables atomic memory operations to be naturally represented
+  as `PURE` functions, which allows their use in parallel constructs
+  and `DO CONCURRENT`.
+* A non-definable actual argument, including the case of a vector
+  subscript, may be associated with an `ASYNCHRONOUS` or `VOLATILE`
+  dummy argument, F'2023 15.5.2.5 p31 notwithstanding.
+  The effects of these attributes are scoped over the lifetime of
+  the procedure reference, and they can by added by internal subprograms
+  and `BLOCK` constructs within the procedure.
+  Further, a dummy argument can acquire the `ASYNCHRONOUS` attribute
+  implicitly simply appearing in an asynchronous data transfer statement,
+  without the attribute being visible in the procedure's explicit
+  interface.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -356,6 +372,11 @@ end
 * A derived type that meets (most of) the requirements of an interoperable
   derived type can be used as such where an interoperable type is
   required, with warnings, even if it lacks the BIND(C) attribute.
+* A "mult-operand" in an expression can be preceded by a unary
+  `+` or `-` operator.
+* `BIND(C, NAME="...", CDEFINED)` signifies that the storage for an
+  interoperable variable will be allocated outside of Fortran,
+  probably by a C or C++ external definition.
 
 ### Extensions supported when enabled by options
 

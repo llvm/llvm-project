@@ -1,8 +1,6 @@
 // Tests the driver when targeting the NVPTX architecture directly without a
 // host toolchain to perform CUDA mappings.
 
-// REQUIRES: nvptx-registered-target
-
 //
 // Test the generated phases when targeting NVPTX.
 //

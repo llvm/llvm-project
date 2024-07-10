@@ -30,6 +30,21 @@ s_version 0x1234
 s_version 0xc1d1
 // GFX12: encoding: [0xd1,0xc1,0x80,0xb0]
 
+s_version UC_VERSION_GFX12
+// GFX12: encoding: [0x09,0x00,0x80,0xb0]
+
+s_version UC_VERSION_GFX12 | UC_VERSION_W32_BIT
+// GFX12: encoding: [0x09,0x40,0x80,0xb0]
+
+s_version UC_VERSION_GFX12 | UC_VERSION_W64_BIT
+// GFX12: encoding: [0x09,0x20,0x80,0xb0]
+
+s_version UC_VERSION_GFX12 | UC_VERSION_MDP_BIT
+// GFX12: encoding: [0x09,0x80,0x80,0xb0]
+
+s_version UC_VERSION_GFX12 | UC_VERSION_W64_BIT | UC_VERSION_MDP_BIT
+// GFX12: encoding: [0x09,0xa0,0x80,0xb0]
+
 s_cmovk_i32 s0, 0x1234
 // GFX12: encoding: [0x34,0x12,0x00,0xb1]
 

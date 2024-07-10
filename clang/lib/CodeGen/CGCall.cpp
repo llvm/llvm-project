@@ -1917,6 +1917,7 @@ static void getTrivialDefaultFunctionAttributes(
     case CodeGenOptions::FramePointerKind::None:
       // This is the default behavior.
       break;
+    case CodeGenOptions::FramePointerKind::Reserved:
     case CodeGenOptions::FramePointerKind::NonLeaf:
     case CodeGenOptions::FramePointerKind::All:
       FuncAttrs.addAttribute("frame-pointer",
@@ -5677,6 +5678,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       !isa_and_nonnull<FunctionDecl>(TargetDecl))
     EmitKCFIOperandBundle(ConcreteCallee, BundleList);
 
+  // Add the pointer-authentication bundle.
+  EmitPointerAuthOperandBundle(ConcreteCallee.getPointerAuthInfo(), BundleList);
+
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl))
     if (FD->hasAttr<StrictFPAttr>())
       // All calls within a strictfp function are marked strictfp
@@ -5747,8 +5751,35 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   if (llvm::CallInst *Call = dyn_cast<llvm::CallInst>(CI)) {
     if (TargetDecl && TargetDecl->hasAttr<NotTailCalledAttr>())
       Call->setTailCallKind(llvm::CallInst::TCK_NoTail);
-    else if (IsMustTail)
+    else if (IsMustTail) {
+      if (getTarget().getTriple().isPPC()) {
+        if (getTarget().getTriple().isOSAIX())
+          CGM.getDiags().Report(Loc, diag::err_aix_musttail_unsupported);
+        else if (!getTarget().hasFeature("pcrelative-memops")) {
+          if (getTarget().hasFeature("longcall"))
+            CGM.getDiags().Report(Loc, diag::err_ppc_impossible_musttail) << 0;
+          else if (Call->isIndirectCall())
+            CGM.getDiags().Report(Loc, diag::err_ppc_impossible_musttail) << 1;
+          else if (isa_and_nonnull<FunctionDecl>(TargetDecl)) {
+            if (!cast<FunctionDecl>(TargetDecl)->isDefined())
+              // The undefined callee may be a forward declaration. Without
+              // knowning all symbols in the module, we won't know the symbol is
+              // defined or not. Collect all these symbols for later diagnosing.
+              CGM.addUndefinedGlobalForTailCall(
+                  {cast<FunctionDecl>(TargetDecl), Loc});
+            else {
+              llvm::GlobalValue::LinkageTypes Linkage = CGM.getFunctionLinkage(
+                  GlobalDecl(cast<FunctionDecl>(TargetDecl)));
+              if (llvm::GlobalValue::isWeakForLinker(Linkage) ||
+                  llvm::GlobalValue::isDiscardableIfUnused(Linkage))
+                CGM.getDiags().Report(Loc, diag::err_ppc_impossible_musttail)
+                    << 2;
+            }
+          }
+        }
+      }
       Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
+    }
   }
 
   // Add metadata for calls to MSAllocator functions
@@ -5759,7 +5790,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // Add metadata if calling an __attribute__((error(""))) or warning fn.
   if (TargetDecl && TargetDecl->hasAttr<ErrorAttr>()) {
     llvm::ConstantInt *Line =
-        llvm::ConstantInt::get(Int32Ty, Loc.getRawEncoding());
+        llvm::ConstantInt::get(Int64Ty, Loc.getRawEncoding());
     llvm::ConstantAsMetadata *MD = llvm::ConstantAsMetadata::get(Line);
     llvm::MDTuple *MDT = llvm::MDNode::get(getLLVMContext(), {MD});
     CI->setMetadata("srcloc", MDT);
@@ -5988,12 +6019,12 @@ CGCallee CGCallee::prepareConcreteCallee(CodeGenFunction &CGF) const {
 
 /* VarArg handling */
 
-Address CodeGenFunction::EmitVAArg(VAArgExpr *VE, Address &VAListAddr) {
-  VAListAddr = VE->isMicrosoftABI()
-                 ? EmitMSVAListRef(VE->getSubExpr())
-                 : EmitVAListRef(VE->getSubExpr());
+RValue CodeGenFunction::EmitVAArg(VAArgExpr *VE, Address &VAListAddr,
+                                  AggValueSlot Slot) {
+  VAListAddr = VE->isMicrosoftABI() ? EmitMSVAListRef(VE->getSubExpr())
+                                    : EmitVAListRef(VE->getSubExpr());
   QualType Ty = VE->getType();
   if (VE->isMicrosoftABI())
-    return CGM.getTypes().getABIInfo().EmitMSVAArg(*this, VAListAddr, Ty);
-  return CGM.getTypes().getABIInfo().EmitVAArg(*this, VAListAddr, Ty);
+    return CGM.getTypes().getABIInfo().EmitMSVAArg(*this, VAListAddr, Ty, Slot);
+  return CGM.getTypes().getABIInfo().EmitVAArg(*this, VAListAddr, Ty, Slot);
 }

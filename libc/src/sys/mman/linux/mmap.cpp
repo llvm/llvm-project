@@ -39,9 +39,12 @@ LLVM_LIBC_FUNCTION(void *, mmap,
 #error "mmap or mmap2 syscalls not available."
 #endif
 
+  // We add an explicit cast to silence a "implicit conversion loses integer
+  // precision" warning when compiling for 32-bit systems.
+  long mmap_offset = static_cast<long>(offset);
   long ret =
       LIBC_NAMESPACE::syscall_impl(syscall_number, reinterpret_cast<long>(addr),
-                                   size, prot, flags, fd, offset);
+                                   size, prot, flags, fd, mmap_offset);
 
   // The mmap/mmap2 syscalls return negative values on error. These negative
   // values are actually the negative values of the error codes. So, fix them

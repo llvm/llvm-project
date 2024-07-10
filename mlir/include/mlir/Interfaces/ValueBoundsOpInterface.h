@@ -313,7 +313,8 @@ protected:
   /// An index-typed value or the dimension of a shaped-type value.
   using ValueDim = std::pair<Value, int64_t>;
 
-  ValueBoundsConstraintSet(MLIRContext *ctx, StopConditionFn stopCondition);
+  ValueBoundsConstraintSet(MLIRContext *ctx, StopConditionFn stopCondition,
+                           bool addConservativeSemiAffineBounds = false);
 
   /// Return "true" if, based on the current state of the constraint system,
   /// "lhs cmp rhs" was proven to hold. Return "false" if the specified relation
@@ -404,6 +405,9 @@ protected:
 
   /// The current stop condition function.
   StopConditionFn stopCondition = nullptr;
+
+  /// Should conservative bounds be added for semi-affine expressions.
+  bool addConservativeSemiAffineBounds = false;
 };
 
 } // namespace mlir

@@ -9,6 +9,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUMEMORYUTILS_H
 #define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUMEMORYUTILS_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 
@@ -54,7 +55,7 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M);
 /// Strip FnAttr attribute from any functions where we may have
 /// introduced its use.
 void removeFnAttrFromReachable(CallGraph &CG, Function *KernelRoot,
-                               StringRef FnAttr);
+                               ArrayRef<StringRef> FnAttrs);
 
 /// Given a \p Def clobbering a load from \p Ptr according to the MSSA check
 /// if this is actually a memory update or an artificial clobber to facilitate

@@ -24,7 +24,7 @@
 ;   notsetjmp();
 ; }
 
-define void @bbb() {
+define void @bbb() #1 {
 ; BTI-LABEL: bbb:
 ; BTI:       bl setjmp
 ; BTI-NEXT:  hint #36
@@ -72,6 +72,4 @@ declare i32 @setjmp(ptr noundef) #0
 declare void @notsetjmp()
 
 attributes #0 = { returns_twice }
-
-!llvm.module.flags = !{!0}
-!0 = !{i32 8, !"branch-target-enforcement", i32 1}
+attributes #1 = { "branch-target-enforcement" }

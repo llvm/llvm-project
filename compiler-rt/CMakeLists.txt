@@ -4,6 +4,7 @@
 # based on the ability of the host toolchain to target various platforms.
 
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "Compiler-RT")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
@@ -90,7 +91,7 @@ if (COMPILER_RT_STANDALONE_BUILD)
   if (TARGET intrinsics_gen)
     # Loading the llvm config causes this target to be imported so place it
     # under the appropriate folder in an IDE.
-    set_target_properties(intrinsics_gen PROPERTIES FOLDER "Compiler-RT Misc")
+    set_target_properties(intrinsics_gen PROPERTIES FOLDER "LLVM/Tablegenning")
   endif()
 
   find_package(Python3 COMPONENTS Interpreter)
@@ -378,12 +379,8 @@ if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "s390x")
 endif()
 
 if(MSVC)
-
-  # asan on windows only supports the release dll version of the runtimes, in the interest of
-  # only having one asan dll to support/test. Having asan statically linked
-  # with the runtime might be possible, but it multiplies the number of scenerios to test.
-  # the program USING sanitizers can use whatever version of the runtime it wants to.
-  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
+  # FIXME: In fact, sanitizers should support both /MT and /MD, see PR20214.
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
 
   # Remove any /M[DT][d] flags, and strip any definitions of _DEBUG.
   # Since we're using CMAKE_MSVC_RUNTIME_LIBRARY (CMP0091 set to NEW),

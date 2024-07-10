@@ -348,6 +348,20 @@ static llvm::json::Array toJSONSorted(std::vector<ModuleID> V) {
   return Ret;
 }
 
+static llvm::json::Array
+toJSONSorted(llvm::SmallVector<Module::LinkLibrary, 2> &LinkLibs) {
+  llvm::sort(LinkLibs, [](const Module::LinkLibrary &lhs,
+                          const Module::LinkLibrary &rhs) {
+    return lhs.Library < rhs.Library;
+  });
+
+  llvm::json::Array Ret;
+  for (const Module::LinkLibrary &LL : LinkLibs)
+    Ret.push_back(llvm::json::Object(
+        {{"link-name", LL.Library}, {"isFramework", LL.IsFramework}}));
+  return Ret;
+}
+
 // Thread safe.
 class FullDeps {
 public:
@@ -439,14 +453,13 @@ public:
     Array OutModules;
     for (auto &&ModID : ModuleIDs) {
       auto &MD = Modules[ModID];
-      Object O{
-          {"name", MD.ID.ModuleName},
-          {"context-hash", MD.ID.ContextHash},
-          {"file-deps", toJSONSorted(MD.FileDeps)},
-          {"clang-module-deps", toJSONSorted(MD.ClangModuleDeps)},
-          {"clang-modulemap-file", MD.ClangModuleMapFile},
-          {"command-line", MD.getBuildArguments()},
-      };
+      Object O{{"name", MD.ID.ModuleName},
+               {"context-hash", MD.ID.ContextHash},
+               {"file-deps", toJSONSorted(MD.FileDeps)},
+               {"clang-module-deps", toJSONSorted(MD.ClangModuleDeps)},
+               {"clang-modulemap-file", MD.ClangModuleMapFile},
+               {"command-line", MD.getBuildArguments()},
+               {"link-libraries", toJSONSorted(MD.LinkLibraries)}};
       OutModules.push_back(std::move(O));
     }
 

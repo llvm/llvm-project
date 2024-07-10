@@ -398,11 +398,13 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
       OS << '(' << cast<OpenACCDefaultClause>(C)->getDefaultClauseKind() << ')';
       break;
     case OpenACCClauseKind::Async:
+    case OpenACCClauseKind::Auto:
     case OpenACCClauseKind::Attach:
     case OpenACCClauseKind::Copy:
     case OpenACCClauseKind::PCopy:
     case OpenACCClauseKind::PresentOrCopy:
     case OpenACCClauseKind::If:
+    case OpenACCClauseKind::Independent:
     case OpenACCClauseKind::DevicePtr:
     case OpenACCClauseKind::FirstPrivate:
     case OpenACCClauseKind::NoCreate:
@@ -411,6 +413,7 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Present:
     case OpenACCClauseKind::Private:
     case OpenACCClauseKind::Self:
+    case OpenACCClauseKind::Seq:
     case OpenACCClauseKind::VectorLength:
       // The condition expression will be printed as a part of the 'children',
       // but print 'clause' here so it is clear what is happening from the dump.
@@ -955,6 +958,9 @@ void TextNodeDumper::dumpTemplateArgument(const TemplateArgument &TA) {
   }
   OS << " '" << Str << "'";
 
+  if (!Context)
+    return;
+
   if (TemplateArgument CanonTA = Context->getCanonicalTemplateArgument(TA);
       !CanonTA.structurallyEquals(TA)) {
     llvm::SmallString<128> CanonStr;
@@ -1126,7 +1132,34 @@ void TextNodeDumper::VisitIntegralTemplateArgument(const TemplateArgument &TA) {
   dumpTemplateArgument(TA);
 }
 
-void TextNodeDumper::dumpTemplateName(TemplateName TN) {
+void TextNodeDumper::dumpTemplateName(TemplateName TN, StringRef Label) {
+  AddChild(Label, [=] {
+    {
+      llvm::SmallString<128> Str;
+      {
+        llvm::raw_svector_ostream SS(Str);
+        TN.print(SS, PrintPolicy);
+      }
+      OS << "'" << Str << "'";
+
+      if (Context) {
+        if (TemplateName CanonTN = Context->getCanonicalTemplateName(TN);
+            CanonTN != TN) {
+          llvm::SmallString<128> CanonStr;
+          {
+            llvm::raw_svector_ostream SS(CanonStr);
+            CanonTN.print(SS, PrintPolicy);
+          }
+          if (CanonStr != Str)
+            OS << ":'" << CanonStr << "'";
+        }
+      }
+    }
+    dumpBareTemplateName(TN);
+  });
+}
+
+void TextNodeDumper::dumpBareTemplateName(TemplateName TN) {
   switch (TN.getKind()) {
   case TemplateName::Template:
     AddChild([=] { Visit(TN.getAsTemplateDecl()); });
@@ -1143,7 +1176,7 @@ void TextNodeDumper::dumpTemplateName(TemplateName TN) {
     if (QTN->hasTemplateKeyword())
       OS << " keyword";
     dumpNestedNameSpecifier(QTN->getQualifier());
-    dumpTemplateName(QTN->getUnderlyingTemplate());
+    dumpBareTemplateName(QTN->getUnderlyingTemplate());
     return;
   }
   case TemplateName::DependentTemplate: {
@@ -1162,7 +1195,7 @@ void TextNodeDumper::dumpTemplateName(TemplateName TN) {
     if (const TemplateTemplateParmDecl *P = STS->getParameter())
       AddChild("parameter", [=] { Visit(P); });
     dumpDeclRef(STS->getAssociatedDecl(), "associated");
-    AddChild("replacement", [=] { dumpTemplateName(STS->getReplacement()); });
+    dumpTemplateName(STS->getReplacement(), "replacement");
     return;
   }
   // FIXME: Implement these.
@@ -1182,14 +1215,14 @@ void TextNodeDumper::dumpTemplateName(TemplateName TN) {
 void TextNodeDumper::VisitTemplateTemplateArgument(const TemplateArgument &TA) {
   OS << " template";
   dumpTemplateArgument(TA);
-  dumpTemplateName(TA.getAsTemplate());
+  dumpBareTemplateName(TA.getAsTemplate());
 }
 
 void TextNodeDumper::VisitTemplateExpansionTemplateArgument(
     const TemplateArgument &TA) {
   OS << " template expansion";
   dumpTemplateArgument(TA);
-  dumpTemplateName(TA.getAsTemplateOrTemplatePattern());
+  dumpBareTemplateName(TA.getAsTemplateOrTemplatePattern());
 }
 
 void TextNodeDumper::VisitExpressionTemplateArgument(
@@ -1989,18 +2022,14 @@ void TextNodeDumper::VisitAutoType(const AutoType *T) {
 
 void TextNodeDumper::VisitDeducedTemplateSpecializationType(
     const DeducedTemplateSpecializationType *T) {
-  if (T->getTemplateName().getAsUsingShadowDecl())
-    OS << " using";
+  dumpTemplateName(T->getTemplateName(), "name");
 }
 
 void TextNodeDumper::VisitTemplateSpecializationType(
     const TemplateSpecializationType *T) {
   if (T->isTypeAlias())
     OS << " alias";
-  if (T->getTemplateName().getAsUsingShadowDecl())
-    OS << " using";
-  OS << " ";
-  T->getTemplateName().dump(OS);
+  dumpTemplateName(T->getTemplateName(), "name");
 }
 
 void TextNodeDumper::VisitInjectedClassNameType(
@@ -2847,4 +2876,16 @@ void TextNodeDumper::VisitHLSLBufferDecl(const HLSLBufferDecl *D) {
 
 void TextNodeDumper::VisitOpenACCConstructStmt(const OpenACCConstructStmt *S) {
   OS << " " << S->getDirectiveKind();
+}
+void TextNodeDumper::VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *S) {
+
+  if (S->isOrphanedLoopConstruct())
+    OS << " <orphan>";
+  else
+    OS << " parent: " << S->getParentComputeConstruct();
+}
+
+void TextNodeDumper::VisitEmbedExpr(const EmbedExpr *S) {
+  AddChild("begin", [=] { OS << S->getStartingElementPos(); });
+  AddChild("number of elements", [=] { OS << S->getDataElementCount(); });
 }

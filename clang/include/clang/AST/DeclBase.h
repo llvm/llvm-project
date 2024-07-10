@@ -701,10 +701,7 @@ public:
 
   /// Set the owning module ID.  This may only be called for
   /// deserialized Decls.
-  void setOwningModuleID(unsigned ID) {
-    assert(isFromASTFile() && "Only works on a deserialized declaration");
-    *((unsigned*)this - 2) = ID;
-  }
+  void setOwningModuleID(unsigned ID);
 
 public:
   /// Determine the availability of the given declaration.
@@ -777,19 +774,11 @@ public:
 
   /// Retrieve the global declaration ID associated with this
   /// declaration, which specifies where this Decl was loaded from.
-  GlobalDeclID getGlobalID() const {
-    if (isFromASTFile())
-      return (*((const GlobalDeclID *)this - 1));
-    return GlobalDeclID();
-  }
+  GlobalDeclID getGlobalID() const;
 
   /// Retrieve the global ID of the module that owns this particular
   /// declaration.
-  unsigned getOwningModuleID() const {
-    if (isFromASTFile())
-      return *((const unsigned*)this - 2);
-    return 0;
-  }
+  unsigned getOwningModuleID() const;
 
 private:
   Module *getOwningModuleSlow() const;
@@ -836,10 +825,7 @@ public:
 
   /// Get the module that owns this declaration for linkage purposes.
   /// There only ever is such a standard C++ module.
-  ///
-  /// \param IgnoreLinkage Ignore the linkage of the entity; assume that
-  /// all declarations in a global module fragment are unowned.
-  Module *getOwningModuleForLinkage(bool IgnoreLinkage = false) const;
+  Module *getOwningModuleForLinkage() const;
 
   /// Determine whether this declaration is definitely visible to name lookup,
   /// independent of whether the owning module is visible.
@@ -2146,6 +2132,10 @@ public:
   bool isRecord() const {
     return getDeclKind() >= Decl::firstRecord &&
            getDeclKind() <= Decl::lastRecord;
+  }
+
+  bool isRequiresExprBody() const {
+    return getDeclKind() == Decl::RequiresExprBody;
   }
 
   bool isNamespace() const { return getDeclKind() == Decl::Namespace; }

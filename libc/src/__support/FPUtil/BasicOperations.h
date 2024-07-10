@@ -240,6 +240,73 @@ LIBC_INLINE int canonicalize(T &cx, const T &x) {
   return 0;
 }
 
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
+totalorder(T x, T y) {
+  using FPBits = FPBits<T>;
+  FPBits x_bits(x);
+  FPBits y_bits(y);
+
+  using StorageType = typename FPBits::StorageType;
+  StorageType x_u = x_bits.uintval();
+  StorageType y_u = y_bits.uintval();
+
+  using signed_t = cpp::make_signed_t<StorageType>;
+  signed_t x_signed = static_cast<signed_t>(x_u);
+  signed_t y_signed = static_cast<signed_t>(y_u);
+
+  bool both_neg = (x_u & y_u & FPBits::SIGN_MASK) != 0;
+  return x_signed == y_signed || ((x_signed <= y_signed) != both_neg);
+}
+
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
+totalordermag(T x, T y) {
+  return FPBits<T>(x).abs().uintval() <= FPBits<T>(y).abs().uintval();
+}
+
+template <typename T>
+LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> getpayload(T x) {
+  using FPBits = FPBits<T>;
+  FPBits x_bits(x);
+
+  if (!x_bits.is_nan())
+    return T(-1.0);
+
+  return T(x_bits.uintval() & (FPBits::FRACTION_MASK >> 1));
+}
+
+template <bool IsSignaling, typename T>
+LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
+setpayload(T &res, T pl) {
+  using FPBits = FPBits<T>;
+  FPBits pl_bits(pl);
+
+  // Signaling NaNs don't have the mantissa's MSB set to 1, so they need a
+  // non-zero payload to distinguish them from infinities.
+  if (!IsSignaling && pl_bits.is_zero()) {
+    res = FPBits::quiet_nan(Sign::POS).get_val();
+    return false;
+  }
+
+  int pl_exp = pl_bits.get_exponent();
+
+  if (pl_bits.is_neg() || pl_exp < 0 || pl_exp >= FPBits::FRACTION_LEN - 1 ||
+      ((pl_bits.get_mantissa() << pl_exp) & FPBits::FRACTION_MASK) != 0) {
+    res = T(0.0);
+    return true;
+  }
+
+  using StorageType = typename FPBits::StorageType;
+  StorageType v(pl_bits.get_explicit_mantissa() >> (FPBits::SIG_LEN - pl_exp));
+
+  if constexpr (IsSignaling)
+    res = FPBits::signaling_nan(Sign::POS, v).get_val();
+  else
+    res = FPBits::quiet_nan(Sign::POS, v).get_val();
+  return false;
+}
+
 } // namespace fputil
 } // namespace LIBC_NAMESPACE
 

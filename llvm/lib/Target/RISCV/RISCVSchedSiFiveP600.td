@@ -190,7 +190,7 @@ def : WriteRes<WriteLDW, [SiFiveP600LDST]>;
 def : WriteRes<WriteLDD, [SiFiveP600LDST]>;
 }
 
-let Latency = 6 in {
+let Latency = 5 in {
 def : WriteRes<WriteFLD16, [SiFiveP600LDST]>;
 def : WriteRes<WriteFLD32, [SiFiveP600LDST]>;
 def : WriteRes<WriteFLD64, [SiFiveP600LDST]>;

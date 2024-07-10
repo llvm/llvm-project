@@ -13,8 +13,10 @@
 // ASAN: link.exe
 // ASAN: "-debug"
 // ASAN: "-incremental:no"
-// ASAN: "{{[^"]*}}clang_rt.asan_dynamic.lib"
-// ASAN: "-wholearchive:{{.*}}clang_rt.asan_static_runtime_thunk.lib"
+// ASAN: "{{[^"]*}}clang_rt.asan.lib"
+// ASAN: "-wholearchive:{{.*}}clang_rt.asan.lib"
+// ASAN: "{{[^"]*}}clang_rt.asan_cxx.lib"
+// ASAN: "-wholearchive:{{.*}}clang_rt.asan_cxx.lib"
 // ASAN: "{{.*}}cl-link{{.*}}.obj"
 
 // RUN: %clang_cl -m32 -arch:IA32 --target=i386-pc-win32 /MD /Tc%s -fuse-ld=link -### -fsanitize=address 2>&1 | FileCheck --check-prefix=ASAN-MD %s
@@ -22,6 +24,7 @@
 // ASAN-MD: "-debug"
 // ASAN-MD: "-incremental:no"
 // ASAN-MD: "{{.*}}clang_rt.asan_dynamic.lib"
+// ASAN-MD: "{{[^"]*}}clang_rt.asan_dynamic_runtime_thunk.lib"
 // ASAN-MD: "-include:___asan_seh_interceptor"
 // ASAN-MD: "-wholearchive:{{.*}}clang_rt.asan_dynamic_runtime_thunk.lib"
 // ASAN-MD: "{{.*}}cl-link{{.*}}.obj"
@@ -37,8 +40,7 @@
 // ASAN-DLL: "-dll"
 // ASAN-DLL: "-debug"
 // ASAN-DLL: "-incremental:no"
-// ASAN-DLL: "{{.*}}clang_rt.asan_dynamic.lib"
-// ASAN-DLL: "-wholearchive:{{.*}}clang_rt.asan_static_runtime_thunk.lib"
+// ASAN-DLL: "{{.*}}clang_rt.asan_dll_thunk.lib"
 // ASAN-DLL: "{{.*}}cl-link{{.*}}.obj"
 
 // RUN: %clang_cl /Zi /Tc%s -fuse-ld=link -### 2>&1 | FileCheck --check-prefix=DEBUG %s

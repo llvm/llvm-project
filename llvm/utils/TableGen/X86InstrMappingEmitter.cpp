@@ -25,15 +25,6 @@ using namespace X86Disassembler;
 
 namespace {
 
-const std::map<StringRef, StringRef> ManualMap = {
-#define ENTRY(OLD, NEW) {#OLD, #NEW},
-#include "X86ManualCompressEVEXTables.def"
-};
-const std::set<StringRef> NoCompressSet = {
-#define NOCOMP(INSN) #INSN,
-#include "X86ManualCompressEVEXTables.def"
-};
-
 class X86InstrMappingEmitter {
   RecordKeeper &Records;
   CodeGenTarget Target;
@@ -63,6 +54,8 @@ private:
                              raw_ostream &OS);
   void emitNFTransformTable(ArrayRef<const CodeGenInstruction *> Insts,
                             raw_ostream &OS);
+  void emitND2NonNDTable(ArrayRef<const CodeGenInstruction *> Insts,
+                         raw_ostream &OS);
 
   // Prints the definition of class X86TableEntry.
   void printClassDef(raw_ostream &OS);
@@ -174,6 +167,16 @@ static bool isInteresting(const Record *Rec) {
 
 void X86InstrMappingEmitter::emitCompressEVEXTable(
     ArrayRef<const CodeGenInstruction *> Insts, raw_ostream &OS) {
+
+  const std::map<StringRef, StringRef> ManualMap = {
+#define ENTRY(OLD, NEW) {#OLD, #NEW},
+#include "X86ManualInstrMapping.def"
+  };
+  const std::set<StringRef> NoCompressSet = {
+#define NOCOMP(INSN) #INSN,
+#include "X86ManualInstrMapping.def"
+  };
+
   for (const CodeGenInstruction *Inst : Insts) {
     const Record *Rec = Inst->TheDef;
     StringRef Name = Rec->getName();
@@ -217,13 +220,10 @@ void X86InstrMappingEmitter::emitCompressEVEXTable(
     } else if (Name.ends_with("_EVEX")) {
       if (auto *NewRec = Records.getDef(Name.drop_back(5)))
         NewInst = &Target.getInstruction(NewRec);
-    } else if (Name.ends_with("_ND")) {
-      if (auto *NewRec = Records.getDef(Name.drop_back(3))) {
-        auto &TempInst = Target.getInstruction(NewRec);
-        if (isRegisterOperand(TempInst.Operands[0].Rec))
-          NewInst = &TempInst;
-      }
-    } else {
+    } else if (Name.ends_with("_ND"))
+      // Leave it to ND2NONND table.
+      continue;
+    else {
       // For each pre-compression instruction look for a match in the
       // appropriate vector (instructions with the same opcode) using function
       // object IsMatch.
@@ -297,6 +297,44 @@ void X86InstrMappingEmitter::emitNFTransformTable(
   printTable(Table, "X86NFTransformTable", "GET_X86_NF_TRANSFORM_TABLE", OS);
 }
 
+void X86InstrMappingEmitter::emitND2NonNDTable(
+    ArrayRef<const CodeGenInstruction *> Insts, raw_ostream &OS) {
+
+  const std::map<StringRef, StringRef> ManualMap = {
+#define ENTRY_ND(OLD, NEW) {#OLD, #NEW},
+#include "X86ManualInstrMapping.def"
+  };
+  const std::set<StringRef> NoCompressSet = {
+#define NOCOMP_ND(INSN) #INSN,
+#include "X86ManualInstrMapping.def"
+  };
+
+  std::vector<Entry> Table;
+  for (const CodeGenInstruction *Inst : Insts) {
+    const Record *Rec = Inst->TheDef;
+    StringRef Name = Rec->getName();
+    if (!isInteresting(Rec) || NoCompressSet.find(Name) != NoCompressSet.end())
+      continue;
+    if (ManualMap.find(Name) != ManualMap.end()) {
+      auto *NewRec = Records.getDef(ManualMap.at(Rec->getName()));
+      assert(NewRec && "Instruction not found!");
+      auto &NewInst = Target.getInstruction(NewRec);
+      Table.push_back(std::pair(Inst, &NewInst));
+      continue;
+    }
+
+    if (!Name.ends_with("_ND"))
+      continue;
+    auto *NewRec = Records.getDef(Name.drop_back(3));
+    if (!NewRec)
+      continue;
+    auto &NewInst = Target.getInstruction(NewRec);
+    if (isRegisterOperand(NewInst.Operands[0].Rec))
+      Table.push_back(std::pair(Inst, &NewInst));
+  }
+  printTable(Table, "X86ND2NonNDTable", "GET_X86_ND2NONND_TABLE", OS);
+}
+
 void X86InstrMappingEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("X86 instruction mapping", OS);
 
@@ -305,6 +343,7 @@ void X86InstrMappingEmitter::run(raw_ostream &OS) {
   printClassDef(OS);
   emitCompressEVEXTable(Insts, OS);
   emitNFTransformTable(Insts, OS);
+  emitND2NonNDTable(Insts, OS);
 }
 } // namespace
 

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/support.h"
+#include "ISO_Fortran_util.h"
 #include "type-info.h"
 #include "flang/Runtime/descriptor.h"
 
@@ -16,6 +17,10 @@ RT_EXT_API_GROUP_BEGIN
 
 bool RTDEF(IsContiguous)(const Descriptor &descriptor) {
   return descriptor.IsContiguous();
+}
+
+bool RTDEF(IsAssumedSize)(const Descriptor &descriptor) {
+  return ISO::IsAssumedSize(&descriptor.raw());
 }
 
 void RTDEF(CopyAndUpdateDescriptor)(Descriptor &to, const Descriptor &from,

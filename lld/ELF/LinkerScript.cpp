@@ -177,11 +177,10 @@ void LinkerScript::setDot(Expr e, const Twine &loc, bool inSec) {
   // report it if this is the last assignAddresses iteration. dot may be smaller
   // if there is another assignAddresses iteration.
   if (val < dot && inSec) {
-    backwardDotErr =
-        (loc + ": unable to move location counter (0x" + Twine::utohexstr(dot) +
-         ") backward to 0x" + Twine::utohexstr(val) + " for section '" +
-         state->outSec->name + "'")
-            .str();
+    recordError(loc + ": unable to move location counter (0x" +
+                Twine::utohexstr(dot) + ") backward to 0x" +
+                Twine::utohexstr(val) + " for section '" + state->outSec->name +
+                "'");
   }
 
   // Update to location counter means update to section size.
@@ -1025,13 +1024,14 @@ static OutputSection *findFirstSection(PhdrEntry *load) {
   return nullptr;
 }
 
-// This function assigns offsets to input sections and an output section
-// for a single sections command (e.g. ".text { *(.text); }").
-void LinkerScript::assignOffsets(OutputSection *sec) {
+// Assign addresses to an output section and offsets to its input sections and
+// symbol assignments. Return true if the output section's address has changed.
+bool LinkerScript::assignOffsets(OutputSection *sec) {
   const bool isTbss = (sec->flags & SHF_TLS) && sec->type == SHT_NOBITS;
   const bool sameMemRegion = state->memRegion == sec->memRegion;
   const bool prevLMARegionIsDefault = state->lmaRegion == nullptr;
   const uint64_t savedDot = dot;
+  bool addressChanged = false;
   state->memRegion = sec->memRegion;
   state->lmaRegion = sec->lmaRegion;
 
@@ -1061,17 +1061,15 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
   }
 
   state->outSec = sec;
-  if (sec->addrExpr && script->hasSectionsCommand) {
-    // The alignment is ignored.
-    sec->addr = dot;
-  } else {
-    // sec->alignment is the max of ALIGN and the maximum of input
-    // section alignments.
+  if (!(sec->addrExpr && script->hasSectionsCommand)) {
+    // ALIGN is respected. sec->alignment is the max of ALIGN and the maximum of
+    // input section alignments.
     const uint64_t pos = dot;
     dot = alignToPowerOf2(dot, sec->addralign);
-    sec->addr = dot;
     expandMemoryRegions(dot - pos);
   }
+  addressChanged = sec->addr != dot;
+  sec->addr = dot;
 
   // state->lmaOffset is LMA minus VMA. If LMA is explicitly specified via AT()
   // or AT>, recompute state->lmaOffset; otherwise, if both previous/current LMA
@@ -1154,6 +1152,7 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
     state->tbssAddr = dot;
     dot = savedDot;
   }
+  return addressChanged;
 }
 
 static bool isDiscardable(const OutputSection &sec) {
@@ -1183,11 +1182,6 @@ static bool isDiscardable(const OutputSection &sec) {
       return false;
   }
   return true;
-}
-
-bool LinkerScript::isDiscarded(const OutputSection *sec) const {
-  return hasSectionsCommand && (getFirstInputSection(sec) == nullptr) &&
-         isDiscardable(*sec);
 }
 
 static void maybePropagatePhdrs(OutputSection &sec,
@@ -1390,9 +1384,10 @@ LinkerScript::AddressState::AddressState() {
 // Here we assign addresses as instructed by linker script SECTIONS
 // sub-commands. Doing that allows us to use final VA values, so here
 // we also handle rest commands like symbol assignments and ASSERTs.
-// Returns a symbol that has changed its section or value, or nullptr if no
-// symbol has changed.
-const Defined *LinkerScript::assignAddresses() {
+// Return an output section that has changed its address or null, and a symbol
+// that has changed its section or value (or nullptr if no symbol has changed).
+std::pair<const OutputSection *, const Defined *>
+LinkerScript::assignAddresses() {
   if (script->hasSectionsCommand) {
     // With a linker script, assignment of addresses to headers is covered by
     // allocateHeaders().
@@ -1405,11 +1400,12 @@ const Defined *LinkerScript::assignAddresses() {
     dot += getHeaderSize();
   }
 
+  OutputSection *changedOsec = nullptr;
   AddressState st;
   state = &st;
   errorOnMissingSection = true;
   st.outSec = aether;
-  backwardDotErr.clear();
+  recordedErrors.clear();
 
   SymbolAssignmentMap oldValues = getSymbolAssignmentValues(sectionCommands);
   for (SectionCommand *cmd : sectionCommands) {
@@ -1419,11 +1415,12 @@ const Defined *LinkerScript::assignAddresses() {
       assign->size = dot - assign->addr;
       continue;
     }
-    assignOffsets(&cast<OutputDesc>(cmd)->osec);
+    if (assignOffsets(&cast<OutputDesc>(cmd)->osec) && !changedOsec)
+      changedOsec = &cast<OutputDesc>(cmd)->osec;
   }
 
   state = nullptr;
-  return getChangedSymbolAssignment(oldValues);
+  return {changedOsec, getChangedSymbolAssignment(oldValues)};
 }
 
 static bool hasRegionOverflowed(MemoryRegion *mr) {
@@ -1658,6 +1655,11 @@ void LinkerScript::printMemoryUsage(raw_ostream& os) {
   }
 }
 
+void LinkerScript::recordError(const Twine &msg) {
+  auto &str = recordedErrors.emplace_back();
+  msg.toVector(str);
+}
+
 static void checkMemoryRegion(const MemoryRegion *region,
                               const OutputSection *osec, uint64_t addr) {
   uint64_t osecEnd = addr + osec->size;
@@ -1670,8 +1672,8 @@ static void checkMemoryRegion(const MemoryRegion *region,
 }
 
 void LinkerScript::checkFinalScriptConditions() const {
-  if (backwardDotErr.size())
-    errorOrWarn(backwardDotErr);
+  for (StringRef err : recordedErrors)
+    errorOrWarn(err);
   for (const OutputSection *sec : outputSections) {
     if (const MemoryRegion *memoryRegion = sec->memRegion)
       checkMemoryRegion(memoryRegion, sec, sec->addr);
