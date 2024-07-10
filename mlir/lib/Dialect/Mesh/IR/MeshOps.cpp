@@ -156,28 +156,28 @@ template <typename InShape, typename MeshShape, typename SplitAxes,
           typename OutShape>
 static void shardShape(const InShape &inShape, const MeshShape &meshShape,
                        const SplitAxes &splitAxes, OutShape &outShape,
-                       ArrayRef<int64_t> shardedDims = {},
+                       ArrayRef<int64_t> shardedDimsSizes = {},
                        ArrayRef<int64_t> haloSizes = {}) {
   std::copy(llvm::adl_begin(inShape), llvm::adl_end(inShape),
             llvm::adl_begin(outShape));
 
-  if (!shardedDims.empty()) {
+  if (!shardedDimsSizes.empty()) {
     for (auto [tensorAxis, innerSplitAxes] : llvm::enumerate(splitAxes)) {
       if (innerSplitAxes.empty()) {
-        for (auto dimSz : shardedDims) {
+        for (auto dimSz : shardedDimsSizes) {
           auto inAxis = dimSz % inShape.size();
           assert(inShape[inAxis] == dimSz || dimSz == ShapedType::kDynamic ||
                  inShape[inAxis] == ShapedType::kDynamic);
         }
       } else {
         // find sharded dims in sharded_dims_sizes with same static size on
-        // all devices. Use kDynamic for dimensions with dynamic or different
+        // all devices. Use kDynamic for dimensions with dynamic or non-uniform
         // sizes in sharded_dims_sizes.
-        auto sz = shardedDims[tensorAxis];
+        auto sz = shardedDimsSizes[tensorAxis];
         bool same = true;
-        for (size_t i = tensorAxis + inShape.size(); i < shardedDims.size();
+        for (size_t i = tensorAxis + inShape.size(); i < shardedDimsSizes.size();
              i += inShape.size()) {
-          if (shardedDims[i] != sz) {
+          if (shardedDimsSizes[i] != sz) {
             same = false;
             break;
           }
