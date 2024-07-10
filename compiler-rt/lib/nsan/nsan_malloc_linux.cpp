@@ -48,6 +48,15 @@ INTERCEPTOR(void, free, void *ptr) {
   REAL(free)(ptr);
 }
 
+INTERCEPTOR(void *, malloc, uptr size) {
+  if (DlsymAlloc::Use())
+    return DlsymAlloc::Allocate(size);
+  void *res = REAL(malloc)(size);
+  if (res)
+    __nsan_set_value_unknown(static_cast<u8 *>(res), size);
+  return res;
+}
+
 INTERCEPTOR(void *, realloc, void *ptr, uptr size) {
   if (DlsymAlloc::Use() || DlsymAlloc::PointerIsMine(ptr))
     return DlsymAlloc::Realloc(ptr, size);
@@ -59,15 +68,14 @@ INTERCEPTOR(void *, realloc, void *ptr, uptr size) {
   return res;
 }
 
-INTERCEPTOR(void *, malloc, uptr size) {
-  if (DlsymAlloc::Use())
-    return DlsymAlloc::Allocate(size);
-
-  void *res = REAL(malloc)(size);
+#if SANITIZER_INTERCEPT_REALLOCARRAY
+INTERCEPTOR(void *, reallocarray, void *ptr, uptr nmemb, uptr size) {
+  void *res = REAL(reallocarray)(ptr, nmemb, size);
   if (res)
-    __nsan_set_value_unknown(static_cast<u8 *>(res), size);
+    __nsan_set_value_unknown(static_cast<u8 *>(res), nmemb * size);
   return res;
 }
+#endif // SANITIZER_INTERCEPT_REALLOCARRAY
 
 INTERCEPTOR(int, posix_memalign, void **memptr, uptr align, uptr size) {
   int res = REAL(posix_memalign)(memptr, align, size);
@@ -76,15 +84,7 @@ INTERCEPTOR(int, posix_memalign, void **memptr, uptr align, uptr size) {
   return res;
 }
 
-#if SANITIZER_INTERCEPT_REALLOCARRAY
-INTERCEPTOR(void *, reallocarray, void *ptr, uptr nmemb, uptr size) {
-  void *res = REAL(reallocarray)(ptr, nmemb, size);
-  if (res)
-    __nsan_set_value_unknown(static_cast<u8 *>(res), size);
-}
-#endif // SANITIZER_INTERCEPT_REALLOCARRAY
-
-// Deprecated allocation functions (memalign, pvalloc, valloc, etc).
+// Deprecated allocation functions (memalign, etc).
 #if SANITIZER_INTERCEPT_MEMALIGN
 INTERCEPTOR(void *, memalign, uptr align, uptr size) {
   void *const res = REAL(memalign)(align, size);
@@ -101,22 +101,6 @@ INTERCEPTOR(void *, __libc_memalign, uptr align, uptr size) {
 }
 #endif
 
-#if SANITIZER_INTERCEPT_PVALLOC
-INTERCEPTOR(void *, pvalloc, uptr size) {
-  void *const res = REAL(pvalloc)(size);
-  if (res)
-    __nsan_set_value_unknown(static_cast<u8 *>(res), size);
-  return res;
-}
-#endif
-
-INTERCEPTOR(void *, valloc, uptr size) {
-  void *const res = REAL(valloc)(size);
-  if (res)
-    __nsan_set_value_unknown(static_cast<u8 *>(res), size);
-  return res;
-}
-
 void __nsan::InitializeMallocInterceptors() {
   INTERCEPT_FUNCTION(aligned_alloc);
   INTERCEPT_FUNCTION(calloc);
@@ -124,13 +108,13 @@ void __nsan::InitializeMallocInterceptors() {
   INTERCEPT_FUNCTION(malloc);
   INTERCEPT_FUNCTION(posix_memalign);
   INTERCEPT_FUNCTION(realloc);
-
-  INTERCEPT_FUNCTION(memalign);
-  INTERCEPT_FUNCTION(__libc_memalign);
-  INTERCEPT_FUNCTION(pvalloc);
-  INTERCEPT_FUNCTION(valloc);
 #if SANITIZER_INTERCEPT_REALLOCARRAY
   INTERCEPT_FUNCTION(reallocarray);
+#endif
+
+#if SANITIZER_INTERCEPT_MEMALIGN
+  INTERCEPT_FUNCTION(memalign);
+  INTERCEPT_FUNCTION(__libc_memalign);
 #endif
 }
 
