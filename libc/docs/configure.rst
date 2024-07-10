@@ -29,7 +29,7 @@ to learn about the defaults for your platform and target.
     - ``LIBC_CONF_ENABLE_STRONG_STACK_PROTECTOR``: Enable -fstack-protector-strong to defend against stack smashing attack.
     - ``LIBC_CONF_KEEP_FRAME_POINTER``: Keep frame pointer in functions for better debugging experience.
 * **"errno" options**
-    - ``LIBC_CONF_ERRNO_MODE``: The implementation used for errno, acceptable values are LIBC_ERRNO_MODE_NONE, LIBC_ERRNO_MODE_INTERNAL, LIBC_ERRNO_MODE_EXTERNAL, LIBC_ERRNO_MODE_THREAD_LOCAL, LIBC_ERRNO_MODE_GLOBAL, and LIBC_ERRNO_MODE_LOCATION.
+    - ``LIBC_CONF_ERRNO_MODE``: The implementation used for errno, acceptable values are LIBC_ERRNO_MODE_NONE, LIBC_ERRNO_MODE_INTERNAL, LIBC_ERRNO_MODE_EXTERNAL, LIBC_ERRNO_MODE_THREAD_LOCAL, and LIBC_ERRNO_MODE_GLOBAL.
 * **"malloc" options**
     - ``LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE``: Default size for the constinit freelist buffer used for the freelist malloc implementation (default 1o 1GB).
 * **"math" options**

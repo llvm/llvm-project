@@ -17,22 +17,28 @@
 #define LIBC_ERRNO_MODE_LOCATION 0x20
 
 #ifndef LIBC_ERRNO_MODE
-#error LIBC_ERRNO_MODE is not defined
+#ifndef LIBC_COPT_PUBLIC_PACKAGING
+// This mode is for unit testing. We just use our internal errno.
+#define LIBC_ERRNO_MODE LIBC_ERRNO_MODE_INTERNAL
+#elif defined(LIBC_FULL_BUILD)
+// In full build mode, we provide the errno storage ourselves.
+#define LIBC_ERRNO_MODE LIBC_ERRNO_MODE_THREAD_LOCAL
+#else
+#define LIBC_ERRNO_MODE LIBC_ERRNO_MODE_EXTERNAL
 #endif
+#endif // LIBC_ERRNO_MODE
 
 #if LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_NONE &&                                 \
     LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_INTERNAL &&                             \
     LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_EXTERNAL &&                             \
     LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_THREAD_LOCAL &&                         \
-    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_GLOBAL &&                               \
-    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_LOCATION
+    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_GLOBAL
 #error LIBC_ERRNO_MODE must be one of the following values: \
 LIBC_ERRNO_MODE_NONE, \
 LIBC_ERRNO_MODE_INTERNAL, \
 LIBC_ERRNO_MODE_EXTERNAL, \
 LIBC_ERRNO_MODE_THREAD_LOCAL, \
-LIBC_ERRNO_MODE_GLOBAL, \
-LIBC_ERRNO_MODE_LOCATION
+LIBC_ERRNO_MODE_GLOBAL
 #endif
 
 namespace LIBC_NAMESPACE {
@@ -64,11 +70,11 @@ Errno::operator int() { return __llvmlibc_internal_errno; }
 #elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_EXTERNAL
 
 extern "C" {
-int *__errno_location(void) { return &errno; }
+int *__errno_location(void);
 }
 
-void Errno::operator=(int a) { errno = a; }
-Errno::operator int() { return errno; }
+void Errno::operator=(int a) { *__errno_location() = a; }
+Errno::operator int() { return *__errno_location(); }
 
 #elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_THREAD_LOCAL
 
@@ -93,15 +99,6 @@ void Errno::operator=(int a) {
 Errno::operator int() {
   return __llvmlibc_errno.load(cpp::MemoryOrder::RELAXED);
 }
-
-#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_LOCATION
-
-extern "C" {
-int *__errno_location(void);
-}
-
-void Errno::operator=(int a) { *__errno_location() = a; }
-Errno::operator int() { return *__errno_location(); }
 
 #endif
 

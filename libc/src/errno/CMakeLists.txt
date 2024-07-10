@@ -11,13 +11,6 @@ endif()
 
 if(LIBC_CONF_ERRNO_MODE)
   set(errno_config_copts "-DLIBC_ERRNO_MODE=${LIBC_CONF_ERRNO_MODE}")
-else()
-  if(LLVM_LIBC_FULL_BUILD)
-    set(errno_mode "LIBC_ERRNO_MODE_THREAD_LOCAL")
-  else()
-    set(errno_mode "LIBC_ERRNO_MODE_EXTERNAL")
-  endif()
-  set(errno_config_copts "-DLIBC_ERRNO_MODE=${errno_mode}")
 endif()
 
 add_entrypoint_object(
