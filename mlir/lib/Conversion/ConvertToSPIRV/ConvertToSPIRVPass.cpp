@@ -39,8 +39,7 @@ namespace {
 /// A pass to perform the SPIR-V conversion.
 class ConvertToSPIRVPass
     : public impl::ConvertToSPIRVPassBase<ConvertToSPIRVPass> {
-  using impl::ConvertToSPIRVPassBase<
-      ConvertToSPIRVPass>::ConvertToSPIRVPassBase;
+  using impl::ConvertToSPIRVPassBase::ConvertToSPIRVPassBase;
 
   void runOnOperation() override {
     MLIRContext *context = &getContext();
