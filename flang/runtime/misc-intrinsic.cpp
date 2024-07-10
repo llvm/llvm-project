@@ -55,6 +55,10 @@ static RT_API_ATTRS void TransferImpl(Descriptor &result,
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
+void RTDECL(Rename)(const Descriptor &path1, const Descriptor &path2,
+    const Descriptor *status, const char *sourceFile, int line) {
+}
+
 void RTDEF(Transfer)(Descriptor &result, const Descriptor &source,
     const Descriptor &mold, const char *sourceFile, int line) {
   Fortran::common::optional<std::int64_t> elements;
