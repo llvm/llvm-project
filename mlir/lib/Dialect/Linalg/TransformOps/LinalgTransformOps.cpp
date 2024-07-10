@@ -2890,6 +2890,12 @@ LogicalResult transform::TileUsingForOp::verify() {
     return emitOpError("expected same number of sizes (")
            << getMixedSizes().size() << ") and scalable sizes ()"
            << getScalableSizes().size() << ")";
+  auto staticSizes = getStaticSizes();
+  unsigned numExpectedLoops = staticSizes.size() - llvm::count(staticSizes, 0);
+  if (getLoops().size() != numExpectedLoops)
+    return emitOpError("expected number of loops to tile (")
+           << numExpectedLoops << ") to match number of `loops` results ("
+           << getLoops().size() << ")";
   return success();
 }
 
