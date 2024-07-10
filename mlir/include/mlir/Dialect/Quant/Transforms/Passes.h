@@ -21,6 +21,8 @@ namespace quant {
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/Quant/Transforms/Passes.h.inc"
 
+void populateLowerQuantOpsPatterns(RewritePatternSet &patterns);
+
 } // namespace quant
 } // namespace mlir
 

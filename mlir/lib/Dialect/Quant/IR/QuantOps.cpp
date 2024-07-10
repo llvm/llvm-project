@@ -20,11 +20,26 @@
 #include "llvm/Support/MathExtras.h"
 #include <numeric>
 
-using namespace mlir;
-using namespace mlir::quant;
-using namespace mlir::quant::detail;
-
 #include "mlir/Dialect/Quant/IR/QuantOpsDialect.cpp.inc"
+
+
+namespace mlir {
+namespace quant {
+
+namespace {
+
+Type getPrimitiveType(Type ty) {
+  if (auto tensorType = dyn_cast<TensorType>(ty))
+    return tensorType.getElementType();
+  return ty;
+}
+
+} // namespace
+
+
+//===----------------------------------------------------------------------===//
+// Dialect
+//===----------------------------------------------------------------------===//
 
 void QuantDialect::initialize() {
   addTypes<AnyQuantizedType, CalibratedQuantizedType, UniformQuantizedType,
@@ -33,17 +48,39 @@ void QuantDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Quant/IR/QuantOps.cpp.inc"
       >();
-  addBytecodeInterface(this);
+  detail::addBytecodeInterface(this);
 }
+
+
+//===----------------------------------------------------------------------===//
+// QuantizeCastOp
+//===----------------------------------------------------------------------===//
+
+FloatType QuantizeCastOp::getFloatType() {
+  return cast<FloatType>(getPrimitiveType(getInput().getType()));
+}
+
+UniformQuantizedType QuantizeCastOp::getQuantizedType() {
+  return cast<UniformQuantizedType>(getPrimitiveType(getResult().getType()));
+}
+
+
+//===----------------------------------------------------------------------===//
+// StorageCastOp
+//===----------------------------------------------------------------------===//
 
 OpFoldResult StorageCastOp::fold(FoldAdaptor adaptor) {
   // Matches x -> [scast -> scast] -> y, replacing the second scast with the
   // value of x if the casts invert each other.
-  auto srcScastOp = getArg().getDefiningOp<StorageCastOp>();
-  if (!srcScastOp || srcScastOp.getArg().getType() != getType())
+  auto srcScastOp = getInput().getDefiningOp<StorageCastOp>();
+  if (!srcScastOp || srcScastOp.getInput().getType() != getType())
     return OpFoldResult();
-  return srcScastOp.getArg();
+  return srcScastOp.getInput();
 }
+
+} // namespace quant
+} // namespace mlir
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Quant/IR/QuantOps.cpp.inc"
+

@@ -114,6 +114,10 @@ public:
   /// The maximum value that storageType can take.
   int64_t getStorageTypeMax() const;
 
+  /// Return whether the storage type has explicit min or max boundaries
+  /// different from the minimum and maximum representable values.
+  bool hasStorageTypeBounds() const;
+
   /// Gets the integral bit width that the underlying storage type can exactly
   /// represent. For integral storage types, this will just be their width.
   unsigned getStorageTypeIntegralWidth() const;

@@ -28,6 +28,24 @@ class quant_Op<string mnemonic, list<Trait> traits> :
 // Quantization casts
 //===----------------------------------------------------------------------===//
 
+def quant_DequantizeCastOp : quant_Op<"dcast", [Pure]> {
+  let summary = "convert back from a quantized to quantizable (expressed) type operation";
+  let description = [{
+    A DequantizeCast op `dcast` represents the inverse of a `qcast`,
+    converting back from a quantized to quantizable (expressed) type.
+
+    Like `qcast`s, a `dcast` is allowed to have both its operand and result
+    as non quantized types. This facilitates transformations and marks edges
+    where the computation must be carried out in the expressed type.
+
+    Especially early in transformation, it is common to have `dcast`s on
+    all operands to ops that must operate with the expressed type (typically
+    math ops prior to lowering to target-specific, quantized kernels).
+  }];
+  let arguments = (ins quant_RealValueType:$input);
+  let results = (outs quant_RealValueType:$result);
+}
+
 def quant_QuantizeCastOp : quant_Op<"qcast", [Pure]> {
   let summary = "convert a quantizable type to a quantized type";
   let description = [{
@@ -52,26 +70,18 @@ def quant_QuantizeCastOp : quant_Op<"qcast", [Pure]> {
     it is legal to use a quantized representation (but is not known to be
     acceptable).
   }];
-  let arguments = (ins quant_RealValueType:$arg);
-  let results = (outs quant_RealValueType:$res);
-}
+  let arguments = (ins quant_RealValueType:$input);
+  let results = (outs quant_RealValueType:$result);
 
-def quant_DequantizeCastOp : quant_Op<"dcast", [Pure]> {
-  let summary = "convert back from a quantized to quantizable (expressed) type operation";
-  let description = [{
-    A DequantizeCast op `dcast` represents the inverse of a `qcast`,
-    converting back from a quantized to quantizable (expressed) type.
+  let extraClassDeclaration = [{
 
-    Like `qcast`s, a `dcast` is allowed to have both its operand and result
-    as non quantized types. This facilitates transformations and marks edges
-    where the computation must be carried out in the expressed type.
+    /// Return the primitive (scalar or tensor element) type of the float input.
+    FloatType getFloatType();
 
-    Especially early in transformation, it is common to have `dcast`s on
-    all operands to ops that must operate with the expressed type (typically
-    math ops prior to lowering to target-specific, quantized kernels).
+    /// Return the primitive (scalar or tensor element) type of the quantized
+    /// result.
+    quant::UniformQuantizedType getQuantizedType();
   }];
-  let arguments = (ins quant_RealValueType:$arg);
-  let results = (outs quant_RealValueType:$res);
 }
 
 def quant_StorageCastOp : quant_Op<"scast", [Pure]> {
@@ -95,8 +105,8 @@ def quant_StorageCastOp : quant_Op<"scast", [Pure]> {
     vector<4xi8> -> vector<4x!quant<"uniform[i8:f32]{1.0}">>
     ```
   }];
-  let arguments = (ins quant_RealOrStorageValueType:$arg);
-  let results = (outs quant_RealOrStorageValueType:$res);
+  let arguments = (ins quant_RealOrStorageValueType:$input);
+  let results = (outs quant_RealOrStorageValueType:$result);
   let hasFolder = 1;
 }
 

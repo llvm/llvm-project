@@ -346,12 +346,7 @@ static void printStorageType(QuantizedType type, DialectAsmPrinter &out) {
   }
 
   // storageTypeMin and storageTypeMax if not default.
-  int64_t defaultIntegerMin =
-      QuantizedType::getDefaultMinimumForInteger(isSigned, storageWidth);
-  int64_t defaultIntegerMax =
-      QuantizedType::getDefaultMaximumForInteger(isSigned, storageWidth);
-  if (defaultIntegerMin != type.getStorageTypeMin() ||
-      defaultIntegerMax != type.getStorageTypeMax()) {
+  if (type.hasStorageTypeBounds()) {
     out << "<" << type.getStorageTypeMin() << ":" << type.getStorageTypeMax()
         << ">";
   }

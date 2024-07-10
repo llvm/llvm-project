@@ -21,6 +21,14 @@
 
 #include "mlir/Dialect/Quant/IR/QuantOpsDialect.h.inc"
 
+namespace mlir {
+namespace quant {
+
+class UniformQuantizedType;
+
+} // namespace quant
+} // namespace mlir
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Quant/IR/QuantOps.h.inc"
 
