@@ -15201,6 +15201,9 @@ ShouldWarnAboutMissingPrototype(const FunctionDecl *FD,
       if (II->isStr("main") || II->isStr("efi_main"))
         return false;
 
+  if (FD->isMSVCRTEntryPoint())
+    return false;
+
   // Don't warn about inline functions.
   if (FD->isInlined())
     return false;
@@ -18007,15 +18010,6 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
       if (NumInitMethods > 1 || !Def->hasInitMethod())
         Diag(RD->getLocation(), diag::err_sycl_special_type_num_init_method);
     }
-
-    // If we're defining a dynamic class in a module interface unit, we always
-    // need to produce the vtable for it even if the vtable is not used in the
-    // current TU.
-    //
-    // The case that the current class is not dynamic is handled in
-    // MarkVTableUsed.
-    if (getCurrentModule() && getCurrentModule()->isInterfaceOrPartition())
-      MarkVTableUsed(RD->getLocation(), RD, /*DefinitionRequired=*/true);
   }
 
   // Exit this scope of this tag's definition.

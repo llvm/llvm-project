@@ -1141,28 +1141,6 @@ bool Decl::isInAnotherModuleUnit() const {
   return M != getASTContext().getCurrentNamedModule();
 }
 
-
-bool Decl::isInCurrentModuleUnit() const {
-  auto *M = getOwningModule();
-
-  if (!M || !M->isNamedModule())
-    return false;
-
-  return M == getASTContext().getCurrentNamedModule();
-}
-
-bool Decl::shouldEmitInExternalSource() const {
-  ExternalASTSource *Source = getASTContext().getExternalSource();
-  if (!Source)
-    return false;
-
-  return Source->hasExternalDefinitions(this) == ExternalASTSource::EK_Always;
-}
-
-bool Decl::isInNamedModule() const {
-  return getOwningModule() && getOwningModule()->isNamedModule();
-}
-
 bool Decl::isFromExplicitGlobalModule() const {
   return getOwningModule() && getOwningModule()->isExplicitGlobalModule();
 }

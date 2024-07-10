@@ -103,3 +103,7 @@ f8b1ca4992a2 [MCParser] .altmacro: Support argument expansion not preceded by
 Reverts: breaks hipBlender* tests in compilation step
 385118644cca [SLP]Remove operands upon marking instruction for deletion.
 ---
+Revert: more Sema:
+9e1f1cfa59c4 [Clang][Sema] Handle class member access expressions with valid nested-name-specifiers that become invalid after lookup (#98167)
+RonL
+==
