@@ -5,10 +5,12 @@
 define void @memcpy_32(ptr %dst, ptr %src) nounwind {
 ; CHECK-LABEL: define void @memcpy_32(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    tail call void @llvm.memcpy.inline.p0.p0.i64(ptr [[DST]], ptr [[SRC]], i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i64(ptr [[DST]], ptr [[SRC]], i64 32, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.inline.p0.p0.i64(ptr [[DST]], ptr [[SRC]], i64 32, i1 true)
 ; CHECK-NEXT:    ret void
 ;
-  tail call void @llvm.memcpy.inline.p0.p0.i64(ptr %dst, ptr %src, i64 32, i1 0)
+  call void @llvm.memcpy.inline.p0.p0.i64(ptr %dst, ptr %src, i64 32, i1 0)
+  tail call void @llvm.memcpy.inline.p0.p0.i64(ptr %dst, ptr %src, i64 32, i1 1)
   ret void
 }
 
