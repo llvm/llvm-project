@@ -95,6 +95,7 @@ needs previous SEMA patches
 ---
 reverts: breaks hipBlender*
 4eecf3c6 [SLP]Reorder buildvector/reduction vectorization and fuse
+3742c2a83cd6 [SLP]Use stored signedness after minbitwidth analysis.
 ---
 Revert: breaking MIOpen test 2
 f8b1ca4992a2 [MCParser] .altmacro: Support argument expansion not preceded by

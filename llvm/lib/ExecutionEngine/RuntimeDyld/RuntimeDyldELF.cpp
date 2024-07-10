@@ -220,8 +220,7 @@ RuntimeDyldELF::RuntimeDyldELF(RuntimeDyld::MemoryManager &MemMgr,
 RuntimeDyldELF::~RuntimeDyldELF() = default;
 
 void RuntimeDyldELF::registerEHFrames() {
-  for (int i = 0, e = UnregisteredEHFrameSections.size(); i != e; ++i) {
-    SID EHFrameSID = UnregisteredEHFrameSections[i];
+  for (SID EHFrameSID : UnregisteredEHFrameSections) {
     uint8_t *EHFrameAddr = Sections[EHFrameSID].getAddress();
     uint64_t EHFrameLoadAddr = Sections[EHFrameSID].getLoadAddress();
     size_t EHFrameSize = Sections[EHFrameSID].getSize();
