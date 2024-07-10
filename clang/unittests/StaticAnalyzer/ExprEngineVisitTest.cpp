@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "CheckerRegistration.h"
 #include "clang/AST/Stmt.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
@@ -28,25 +27,22 @@ void emitErrorReport(CheckerContext &C, const BugType &Bug,
   }
 }
 
-class ExprEngineVisitPreChecker : public Checker<check::PreStmt<GCCAsmStmt>> {
-public:
-  void checkPreStmt(const GCCAsmStmt *ASM, CheckerContext &C) const {
-    emitErrorReport(C, Bug, "PreStmt<GCCAsmStmt>");
-  }
+#define CREATE_EXPR_ENGINE_CHECKER(CHECKER_NAME, CALLBACK, STMT_TYPE,          \
+                                   BUG_NAME)                                   \
+  class CHECKER_NAME : public Checker<check::CALLBACK<STMT_TYPE>> {            \
+  public:                                                                      \
+    void check##CALLBACK(const STMT_TYPE *ASM, CheckerContext &C) const {      \
+      emitErrorReport(C, Bug, "check" #CALLBACK "<" #STMT_TYPE ">");           \
+    }                                                                          \
+                                                                               \
+  private:                                                                     \
+    const BugType Bug{this, BUG_NAME};                                         \
+  };
 
-private:
-  const BugType Bug{this, "GCCAsmStmtBug"};
-};
-
-class ExprEngineVisitPostChecker : public Checker<check::PostStmt<GCCAsmStmt>> {
-public:
-  void checkPostStmt(const GCCAsmStmt *ASM, CheckerContext &C) const {
-    emitErrorReport(C, Bug, "PostStmt<GCCAsmStmt>");
-  }
-
-private:
-  const BugType Bug{this, "GCCAsmStmtBug"};
-};
+CREATE_EXPR_ENGINE_CHECKER(ExprEngineVisitPreChecker, PreStmt, GCCAsmStmt,
+                           "GCCAsmStmtBug")
+CREATE_EXPR_ENGINE_CHECKER(ExprEngineVisitPostChecker, PostStmt, GCCAsmStmt,
+                           "GCCAsmStmtBug")
 
 void addExprEngineVisitPreChecker(AnalysisASTConsumer &AnalysisConsumer,
                                   AnalyzerOptions &AnOpts) {
@@ -74,7 +70,7 @@ TEST(ExprEngineVisitTest, checkPreStmtGCCAsmStmt) {
     }
   )",
                                                              Diags));
-  EXPECT_EQ(Diags, "ExprEngineVisitPreChecker: PreStmt<GCCAsmStmt>\n");
+  EXPECT_EQ(Diags, "ExprEngineVisitPreChecker: checkPreStmt<GCCAsmStmt>\n");
 }
 
 TEST(ExprEngineVisitTest, checkPostStmtGCCAsmStmt) {
@@ -85,7 +81,7 @@ TEST(ExprEngineVisitTest, checkPostStmtGCCAsmStmt) {
     }
   )",
                                                               Diags));
-  EXPECT_EQ(Diags, "ExprEngineVisitPostChecker: PostStmt<GCCAsmStmt>\n");
+  EXPECT_EQ(Diags, "ExprEngineVisitPostChecker: checkPostStmt<GCCAsmStmt>\n");
 }
 
 } // namespace
