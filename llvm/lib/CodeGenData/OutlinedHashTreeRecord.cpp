@@ -120,7 +120,7 @@ void OutlinedHashTreeRecord::convertToStableData(
         size_t Index = NodeIdMap.size();
         NodeIdMap[Current] = Index;
         assert(Index + 1 == NodeIdMap.size() &&
-                       "Expected size of NodeMap to increment by 1");
+               "Expected size of NodeMap to increment by 1");
       },
       /*EdgeCallbackFn=*/nullptr, /*SortedWork=*/true);
 
