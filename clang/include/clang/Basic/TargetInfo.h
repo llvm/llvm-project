@@ -32,7 +32,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
-#include "llvm/IR/Attributes.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Error.h"
@@ -46,6 +45,8 @@
 
 namespace llvm {
 struct fltSemantics;
+class Function;
+class AttrBuilder;
 }
 
 namespace clang {
