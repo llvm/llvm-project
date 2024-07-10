@@ -131,7 +131,8 @@ static bool startsSegmentOfBuilderTypeCall(const FormatToken &Tok) {
 // Returns \c true if \c Current starts a new parameter.
 static bool startsNextParameter(const FormatToken &Current,
                                 const FormatStyle &Style) {
-  const FormatToken &Previous = *Current.Previous;
+  assert(Current.Previous);
+  const auto &Previous = *Current.Previous;
   if (Current.is(TT_CtorInitializerComma) &&
       Style.BreakConstructorInitializers == FormatStyle::BCIS_BeforeComma) {
     return true;
@@ -146,12 +147,13 @@ static bool startsNextParameter(const FormatToken &Current,
            Style.BreakInheritanceList != FormatStyle::BILS_BeforeComma));
 }
 
-// Returns \c true if \c Current starts a new operand in a binary operation.
+// Returns \c true if \c Current starts the next operand in a binary operation.
 static bool startsNextOperand(const FormatToken &Current) {
-  const FormatToken &Previous = *Current.Previous;
+  assert(Current.Previous);
+  const auto &Previous = *Current.Previous;
   return Previous.is(TT_BinaryOperator) && !Current.isTrailingComment() &&
-         (Previous.getPrecedence() > prec::Conditional) &&
-         (Previous.getPrecedence() < prec::PointerToMember);
+         Previous.getPrecedence() > prec::Conditional &&
+         Previous.getPrecedence() < prec::PointerToMember;
 }
 
 static bool opensProtoMessageField(const FormatToken &LessTok,
