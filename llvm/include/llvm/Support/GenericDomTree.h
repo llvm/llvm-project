@@ -854,6 +854,12 @@ protected:
 
     assert(!PredBlocks.empty() && "No predblocks?");
 
+    bool NewBBDominatesNewBBSucc =
+        llvm::none_of(inverse_children<N>(NewBBSucc), [&](const auto *Pred) {
+          return Pred != NewBB && !dominates(NewBBSucc, Pred) &&
+                 isReachableFromEntry(Pred);
+        });
+
     // Find NewBB's immediate dominator and create new dominator tree node for
     // NewBB.
     NodeT *NewBBIDom = nullptr;
@@ -873,12 +879,6 @@ protected:
       if (isReachableFromEntry(PredBlocks[i]))
         NewBBIDom = findNearestCommonDominator(NewBBIDom, PredBlocks[i]);
     }
-
-    bool NewBBDominatesNewBBSucc =
-        llvm::none_of(inverse_children<N>(NewBBSucc), [&](const auto *Pred) {
-          return Pred != NewBB && !dominates(NewBBSucc, Pred) &&
-                 isReachableFromEntry(Pred);
-        });
 
     // Create the new dominator tree node... and set the idom of NewBB.
     DomTreeNodeBase<NodeT> *NewBBNode = addNewBlock(NewBB, NewBBIDom);
