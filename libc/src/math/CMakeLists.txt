@@ -245,6 +245,10 @@ add_math_entrypoint_object(ilogbl)
 add_math_entrypoint_object(ilogbf16)
 add_math_entrypoint_object(ilogbf128)
 
+add_math_entrypoint_object(isnan)
+add_math_entrypoint_object(isnanf)
+add_math_entrypoint_object(isnanl)
+
 add_math_entrypoint_object(llogb)
 add_math_entrypoint_object(llogbf)
 add_math_entrypoint_object(llogbl)
