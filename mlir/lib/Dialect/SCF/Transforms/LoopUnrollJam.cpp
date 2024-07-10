@@ -16,6 +16,7 @@ File containing pass for loop unroll and jam transformation
 #include "mlir/Support/LLVM.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
+#include <map>
 namespace mlir {
     #define GEN_PASS_DEF_SCFLOOPUNROLLJAM
     #include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
@@ -27,11 +28,6 @@ using scf::ForOp;
 
 
 namespace{
-    struct LoopReduction {
-        arith::AtomicRMWKind kind;
-        unsigned position;
-        Value reducedValue;
-    };
     struct ForBlockGatherer{
         SmallVector<std::pair<Block::iterator, Block::iterator>> subBlocks;
         void walk(Operation *op) {
@@ -63,11 +59,25 @@ namespace{
             }
         void runOnOperation() override
         {
+            std::map<ForOp, int> outerLoopMap;
+            std::map<ForOp, int> innerLoopMap;
             auto *op = getOperation();
             op->walk([&](ForOp forOp)
             {
-                (void)loopUnrollJamByFactor(forOp);
+                outerLoopMap[forOp]=0;
+                innerLoopMap[forOp]=0;
             });
+            op->walk([&](ForOp forOp)
+            {
+                loopGatherer(forOp,outerLoopMap,innerLoopMap);
+            });
+            for(auto ele :innerLoopMap)
+            {
+                if(ele.second ==0)
+                {
+                    (void)loopUnrollJamByFactor(ele.first);
+                }
+            }
         }
         std::optional<uint64_t> getConstantTripCount(scf::ForOp forOp) {
             // This is a placeholder implementation. You need to adapt it to your use case.
@@ -94,6 +104,21 @@ namespace{
                 return WalkResult::advance();
             });
             return !walkResult.wasInterrupted();
+        }
+        void loopNestMapper(ForOp op,std::map<ForOp, int> &outerLoopMap,
+        std::map<ForOp, int> &innerLoopMap) {
+            /*Identifies if a given for loop is the inner most scf ForOp*/
+            op.getBody()->walk([&](ForOp nestedForOp){
+                outerLoopMap[op]+=1;
+                innerLoopMap[nestedForOp]+=1;
+                });
+        }
+        void loopGatherer(Operation *op, std::map<ForOp, int> &outerLoopMap,
+        std::map<ForOp, int> &innerLoopMap) {
+            /*Function gathers all the innermost scf for loops*/
+            op->walk([&](ForOp forOp) {
+                loopNestMapper(forOp,outerLoopMap,innerLoopMap);
+            });
         }
 
         void duplicateArgs(SmallVector<IRMapping> &mapper, SmallVector<ForOp> &newInnerLoops,
@@ -149,7 +174,6 @@ namespace{
                 rewriter.setInsertionPointToEnd(prevBlock);
             else
                 rewriter.setInsertionPoint(forOp);
-            // rewriter.setInsertionPoint(forOp);
             auto newStep = rewriter.createOrFold<arith::MulIOp>(
                 forOp.getLoc(), forOp.getStep(),
                 rewriter.createOrFold<arith::ConstantOp>(
@@ -186,7 +210,6 @@ namespace{
         LogicalResult loopUnrollJamByFactor(ForOp forOp)
         {
             if(unrollJamFactor ==1) return success();
-            if(!invariantBounds(forOp))return failure();
             std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
             if (unrollJamFactor > *tripCount) unrollJamFactor = *tripCount;
             else if (*tripCount % unrollJamFactor != 0) return failure();
