@@ -15,7 +15,6 @@
 #define LLVM_ADT_SMALLVECTOR_H
 
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/type_traits.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -26,7 +25,6 @@
 #include <iterator>
 #include <limits>
 #include <memory>
-#include <new>
 #include <type_traits>
 #include <utility>
 
@@ -88,10 +86,10 @@ protected:
                           size_t VSize = 0);
 
 public:
-  size_t size() const { return Size; }
-  size_t capacity() const { return Capacity; }
+  constexpr size_t size() const { return Size; }
+  constexpr size_t capacity() const { return Capacity; }
 
-  [[nodiscard]] bool empty() const { return !Size; }
+  [[nodiscard]] constexpr bool empty() const { return !Size; }
 
 protected:
   /// Set the array size to \p N, which the current array must have enough
@@ -138,7 +136,7 @@ protected:
   /// Find the address of the first element.  For this pointer math to be valid
   /// with small-size of 0 for T with lots of alignment, it's important that
   /// SmallVectorStorage is properly-aligned even for small-size of 0.
-  void *getFirstEl() const {
+  constexpr void *getFirstEl() const {
     return const_cast<void *>(reinterpret_cast<const void *>(
         reinterpret_cast<const char *>(this) +
         offsetof(SmallVectorAlignmentAndSize<T>, FirstEl)));
@@ -153,7 +151,7 @@ protected:
 
   /// Return true if this is a smallvector which has not had dynamic
   /// memory allocated for it.
-  bool isSmall() const { return this->BeginX == getFirstEl(); }
+  constexpr bool isSmall() const { return this->BeginX == getFirstEl(); }
 
   /// Put this vector in a state of being small.
   void resetToSmall() {
@@ -162,20 +160,21 @@ protected:
   }
 
   /// Return true if V is an internal reference to the given range.
-  bool isReferenceToRange(const void *V, const void *First, const void *Last) const {
+  constexpr bool isReferenceToRange(const void *V, const void *First,
+                                    const void *Last) const {
     // Use std::less to avoid UB.
     std::less<> LessThan;
     return !LessThan(V, First) && LessThan(V, Last);
   }
 
   /// Return true if V is an internal reference to this vector.
-  bool isReferenceToStorage(const void *V) const {
+  constexpr bool isReferenceToStorage(const void *V) const {
     return isReferenceToRange(V, this->begin(), this->end());
   }
 
   /// Return true if First and Last form a valid (possibly empty) range in this
   /// vector's storage.
-  bool isRangeInStorage(const void *First, const void *Last) const {
+  constexpr bool isRangeInStorage(const void *First, const void *Last) const {
     // Use std::less to avoid UB.
     std::less<> LessThan;
     return !LessThan(First, this->begin()) && !LessThan(Last, First) &&
@@ -184,7 +183,7 @@ protected:
 
   /// Return true unless Elt will be invalidated by resizing the vector to
   /// NewSize.
-  bool isSafeToReferenceAfterResize(const void *Elt, size_t NewSize) {
+  constexpr bool isSafeToReferenceAfterResize(const void *Elt, size_t NewSize) {
     // Past the end.
     if (LLVM_LIKELY(!isReferenceToStorage(Elt)))
       return true;
@@ -198,7 +197,8 @@ protected:
   }
 
   /// Check whether Elt will be invalidated by resizing the vector to NewSize.
-  void assertSafeToReferenceAfterResize(const void *Elt, size_t NewSize) {
+  constexpr void assertSafeToReferenceAfterResize(const void *Elt,
+                                                  size_t NewSize) {
     assert(isSafeToReferenceAfterResize(Elt, NewSize) &&
            "Attempting to reference an element of the vector in an operation "
            "that invalidates it");
@@ -206,12 +206,12 @@ protected:
 
   /// Check whether Elt will be invalidated by increasing the size of the
   /// vector by N.
-  void assertSafeToAdd(const void *Elt, size_t N = 1) {
+  constexpr void assertSafeToAdd(const void *Elt, size_t N = 1) {
     this->assertSafeToReferenceAfterResize(Elt, this->size() + N);
   }
 
   /// Check whether any part of the range will be invalidated by clearing.
-  void assertSafeToReferenceAfterClear(const T *From, const T *To) {
+  constexpr void assertSafeToReferenceAfterClear(const T *From, const T *To) {
     if (From == To)
       return;
     this->assertSafeToReferenceAfterResize(From, 0);
@@ -224,7 +224,7 @@ protected:
   void assertSafeToReferenceAfterClear(ItTy, ItTy) {}
 
   /// Check whether any part of the range will be invalidated by growing.
-  void assertSafeToAddRange(const T *From, const T *To) {
+  constexpr void assertSafeToAddRange(const T *From, const T *To) {
     if (From == To)
       return;
     this->assertSafeToAdd(From, To - From);
@@ -239,8 +239,8 @@ protected:
   /// Reserve enough space to add one element, and return the updated element
   /// pointer in case it was a reference to the storage.
   template <class U>
-  static const T *reserveForParamAndGetAddressImpl(U *This, const T &Elt,
-                                                   size_t N) {
+  static constexpr const T *
+  reserveForParamAndGetAddressImpl(U *This, const T &Elt, size_t N) {
     size_t NewSize = This->size() + N;
     if (LLVM_LIKELY(NewSize <= This->capacity()))
       return &Elt;
@@ -277,52 +277,58 @@ public:
   using Base::size;
 
   // forward iterator creation methods.
-  iterator begin() { return (iterator)this->BeginX; }
-  const_iterator begin() const { return (const_iterator)this->BeginX; }
-  iterator end() { return begin() + size(); }
-  const_iterator end() const { return begin() + size(); }
+  constexpr iterator begin() { return (iterator)this->BeginX; }
+  constexpr const_iterator begin() const {
+    return (const_iterator)this->BeginX;
+  }
+  constexpr iterator end() { return begin() + size(); }
+  constexpr const_iterator end() const { return begin() + size(); }
 
   // reverse iterator creation methods.
-  reverse_iterator rbegin()            { return reverse_iterator(end()); }
-  const_reverse_iterator rbegin() const{ return const_reverse_iterator(end()); }
-  reverse_iterator rend()              { return reverse_iterator(begin()); }
-  const_reverse_iterator rend() const { return const_reverse_iterator(begin());}
+  constexpr reverse_iterator rbegin() { return reverse_iterator(end()); }
+  constexpr const_reverse_iterator rbegin() const {
+    return const_reverse_iterator(end());
+  }
+  constexpr reverse_iterator rend() { return reverse_iterator(begin()); }
+  constexpr const_reverse_iterator rend() const {
+    return const_reverse_iterator(begin());
+  }
 
-  size_type size_in_bytes() const { return size() * sizeof(T); }
-  size_type max_size() const {
+  constexpr size_type size_in_bytes() const { return size() * sizeof(T); }
+  constexpr size_type max_size() const {
     return std::min(this->SizeTypeMax(), size_type(-1) / sizeof(T));
   }
 
-  size_t capacity_in_bytes() const { return capacity() * sizeof(T); }
+  constexpr size_t capacity_in_bytes() const { return capacity() * sizeof(T); }
 
   /// Return a pointer to the vector's buffer, even if empty().
-  pointer data() { return pointer(begin()); }
+  constexpr pointer data() { return pointer(begin()); }
   /// Return a pointer to the vector's buffer, even if empty().
-  const_pointer data() const { return const_pointer(begin()); }
+  constexpr const_pointer data() const { return const_pointer(begin()); }
 
-  reference operator[](size_type idx) {
+  constexpr reference operator[](size_type idx) {
     assert(idx < size());
     return begin()[idx];
   }
-  const_reference operator[](size_type idx) const {
+  constexpr const_reference operator[](size_type idx) const {
     assert(idx < size());
     return begin()[idx];
   }
 
-  reference front() {
+  constexpr reference front() {
     assert(!empty());
     return begin()[0];
   }
-  const_reference front() const {
+  constexpr const_reference front() const {
     assert(!empty());
     return begin()[0];
   }
 
-  reference back() {
+  constexpr reference back() {
     assert(!empty());
     return end()[-1];
   }
-  const_reference back() const {
+  constexpr const_reference back() const {
     assert(!empty());
     return end()[-1];
   }
@@ -387,19 +393,19 @@ protected:
 
   /// Reserve enough space to add one element, and return the updated element
   /// pointer in case it was a reference to the storage.
-  const T *reserveForParamAndGetAddress(const T &Elt, size_t N = 1) {
+  constexpr const T *reserveForParamAndGetAddress(const T &Elt, size_t N = 1) {
     return this->reserveForParamAndGetAddressImpl(this, Elt, N);
   }
 
   /// Reserve enough space to add one element, and return the updated element
   /// pointer in case it was a reference to the storage.
-  T *reserveForParamAndGetAddress(T &Elt, size_t N = 1) {
+  constexpr T *reserveForParamAndGetAddress(T &Elt, size_t N = 1) {
     return const_cast<T *>(
         this->reserveForParamAndGetAddressImpl(this, Elt, N));
   }
 
-  static T &&forward_value_param(T &&V) { return std::move(V); }
-  static const T &forward_value_param(const T &V) { return V; }
+  static constexpr T &&forward_value_param(T &&V) { return std::move(V); }
+  static constexpr const T &forward_value_param(const T &V) { return V; }
 
   void growAndAssign(size_t NumElts, const T &Elt) {
     // Grow manually in case Elt is an internal reference.
@@ -551,7 +557,7 @@ protected:
   }
 
   /// Copy \p V or return a reference, depending on \a ValueParamT.
-  static ValueParamT forward_value_param(ValueParamT V) { return V; }
+  static constexpr ValueParamT forward_value_param(ValueParamT V) { return V; }
 
   void growAndAssign(size_t NumElts, T Elt) {
     // Elt has been copied in case it's an internal reference, side-stepping
@@ -1296,7 +1302,7 @@ public:
 };
 
 template <typename T, unsigned N>
-inline size_t capacity_in_bytes(const SmallVector<T, N> &X) {
+constexpr size_t capacity_in_bytes(const SmallVector<T, N> &X) {
   return X.capacity_in_bytes();
 }
 
@@ -1313,16 +1319,17 @@ SmallVector<ValueTypeFromRangeType<R>, Size> to_vector(R &&Range) {
   return {std::begin(Range), std::end(Range)};
 }
 template <typename R>
-SmallVector<ValueTypeFromRangeType<R>> to_vector(R &&Range) {
+constexpr SmallVector<ValueTypeFromRangeType<R>> to_vector(R &&Range) {
   return {std::begin(Range), std::end(Range)};
 }
 
 template <typename Out, unsigned Size, typename R>
-SmallVector<Out, Size> to_vector_of(R &&Range) {
+constexpr SmallVector<Out, Size> to_vector_of(R &&Range) {
   return {std::begin(Range), std::end(Range)};
 }
 
-template <typename Out, typename R> SmallVector<Out> to_vector_of(R &&Range) {
+template <typename Out, typename R>
+SmallVector<Out> constexpr to_vector_of(R &&Range) {
   return {std::begin(Range), std::end(Range)};
 }
 
