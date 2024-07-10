@@ -66,25 +66,27 @@ macro(add_scudo_unittest testname)
          RTGwpAsan RTGwpAsanBacktraceLibc RTGwpAsanSegvHandler)
   endif()
 
-  foreach(arch ${SCUDO_TEST_ARCH})
-    # Additional runtime objects get added along RTScudoStandalone
-    set(SCUDO_TEST_RTOBJECTS $<TARGET_OBJECTS:RTScudoStandalone.${arch}>)
-    foreach(rtobject ${TEST_ADDITIONAL_RTOBJECTS})
-      list(APPEND SCUDO_TEST_RTOBJECTS $<TARGET_OBJECTS:${rtobject}.${arch}>)
+  if(COMPILER_RT_HAS_SCUDO_STANDALONE)
+    foreach(arch ${SCUDO_TEST_ARCH})
+      # Additional runtime objects get added along RTScudoStandalone
+      set(SCUDO_TEST_RTOBJECTS $<TARGET_OBJECTS:RTScudoStandalone.${arch}>)
+      foreach(rtobject ${TEST_ADDITIONAL_RTOBJECTS})
+        list(APPEND SCUDO_TEST_RTOBJECTS $<TARGET_OBJECTS:${rtobject}.${arch}>)
+      endforeach()
+      # Add the static runtime library made of all the runtime objects
+      set(RUNTIME RT${testname}.${arch})
+      add_library(${RUNTIME} STATIC ${SCUDO_TEST_RTOBJECTS})
+      set(ScudoUnitTestsObjects)
+      generate_compiler_rt_tests(ScudoUnitTestsObjects ScudoUnitTests
+        "${testname}-${arch}-Test" ${arch}
+        SOURCES ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
+        COMPILE_DEPS ${SCUDO_TEST_HEADERS}
+        DEPS scudo_standalone
+        RUNTIME ${RUNTIME}
+        CFLAGS ${SCUDO_UNITTEST_CFLAGS}
+        LINK_FLAGS ${SCUDO_UNITTEST_LINK_FLAGS})
     endforeach()
-    # Add the static runtime library made of all the runtime objects
-    set(RUNTIME RT${testname}.${arch})
-    add_library(${RUNTIME} STATIC ${SCUDO_TEST_RTOBJECTS})
-    set(ScudoUnitTestsObjects)
-    generate_compiler_rt_tests(ScudoUnitTestsObjects ScudoUnitTests
-      "${testname}-${arch}-Test" ${arch}
-      SOURCES ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
-      COMPILE_DEPS ${SCUDO_TEST_HEADERS}
-      DEPS scudo_standalone
-      RUNTIME ${RUNTIME}
-      CFLAGS ${SCUDO_UNITTEST_CFLAGS}
-      LINK_FLAGS ${SCUDO_UNITTEST_LINK_FLAGS})
-  endforeach()
+  endif()
 endmacro()
 
 set(SCUDO_UNIT_TEST_SOURCES
