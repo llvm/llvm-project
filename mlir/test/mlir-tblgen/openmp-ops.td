@@ -6,11 +6,11 @@
 // Run tablegen to generate OmpCommon.td in temp directory first.
 // RUN: mkdir -p %t/mlir/Dialect/OpenMP
 // RUN: mlir-tblgen --gen-directive-decl --directives-dialect=OpenMP \
-// RUN:   %S/../../../llvm/include/llvm/Frontend/OpenMP/OMP.td \
-// RUN:   -I %S/../../../llvm/include > %t/mlir/Dialect/OpenMP/OmpCommon.td
+// RUN:   %llvm_src_root/include/llvm/Frontend/OpenMP/OMP.td \
+// RUN:   -I %llvm_src_root/include > %t/mlir/Dialect/OpenMP/OmpCommon.td
 
-// RUN: mlir-tblgen -gen-op-decls -I %S/../../include -I %t %s | FileCheck %s --check-prefix=DECL
-// RUN: mlir-tblgen -gen-op-doc -I %S/../../include -I %t %s | FileCheck %s --check-prefix=DOC
+// RUN: mlir-tblgen -gen-op-decls -I %mlir_src_root/include -I %t %s | FileCheck %s --check-prefix=DECL
+// RUN: mlir-tblgen -gen-op-doc -I %mlir_src_root/include -I %t %s | FileCheck %s --check-prefix=DOC
 
 include "mlir/Dialect/OpenMP/OpenMPOpBase.td"
 
