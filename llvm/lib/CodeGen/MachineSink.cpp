@@ -189,7 +189,7 @@ namespace {
       AU.addRequired<MachineCycleInfoWrapperPass>();
       AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
       AU.addPreserved<MachineCycleInfoWrapperPass>();
-      AU.addPreserved<MachineLoopInfo>();
+      AU.addPreserved<MachineLoopInfoWrapperPass>();
       if (UseBlockFreqInfo)
         AU.addRequired<MachineBlockFrequencyInfo>();
       AU.addRequired<TargetPassConfig>();
