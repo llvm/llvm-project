@@ -2161,21 +2161,21 @@ void DWARFRewriter::convertToRangesPatchDebugInfo(
       DIEBldr.replaceValue(&Die, LowPCAttrInfo.getAttribute(),
                            LowPCAttrInfo.getForm(), DIEInteger(0));
     }
-  }
-  // Original CU didn't have DW_AT_*_base. We converted it's children (or
-  // dwo), so need to insert it into CU.
-  if (RangesBase) {
-    if (Unit.getVersion() >= 5) {
-      DIEBldr.addValue(&Die, RangeBaseAttribute, dwarf::DW_FORM_sec_offset,
-                       DIEInteger(*RangesBase));
-    } else {
-      DIEBldr.addValue(&Die, RangeBaseAttribute, dwarf::DW_FORM_sec_offset,
-                       DIEInteger(INT_MAX));
-      auto RangesWriterIterator =
-          LegacyRangesWritersByCU.find(*Unit.getDWOId());
-      assert(RangesWriterIterator != LegacyRangesWritersByCU.end() &&
-             "RangesWriter does not exist for DWOId");
-      RangesWriterIterator->second->setDie(&Die);
+    // Original CU didn't have DW_AT_*_base. We converted it's children (or
+    // dwo), so need to insert it into CU.
+    if (RangesBase) {
+      if (Unit.getVersion() >= 5) {
+        DIEBldr.addValue(&Die, RangeBaseAttribute, dwarf::DW_FORM_sec_offset,
+                         DIEInteger(*RangesBase));
+      } else {
+        DIEBldr.addValue(&Die, RangeBaseAttribute, dwarf::DW_FORM_sec_offset,
+                         DIEInteger(INT_MAX));
+        auto RangesWriterIterator =
+            LegacyRangesWritersByCU.find(*Unit.getDWOId());
+        assert(RangesWriterIterator != LegacyRangesWritersByCU.end() &&
+               "RangesWriter does not exist for DWOId");
+        RangesWriterIterator->second->setDie(&Die);
+      }
     }
   }
 
