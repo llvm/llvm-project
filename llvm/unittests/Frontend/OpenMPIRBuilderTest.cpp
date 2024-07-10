@@ -2097,7 +2097,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdlenSafelen) {
   }));
 }
 
-TEST_F(OpenMPIRBuilderTest, ApplySimdLoopIf) {
+TEST_F(OpenMPIRBuilderTest, ApplySimdIf) {
   OpenMPIRBuilder OMPBuilder(*M);
   IRBuilder<> Builder(BB);
   MapVector<Value *, Value *> AlignedVars;
@@ -4980,10 +4980,18 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
   Builder.restoreIP(AfterIP);
 
   OpenMPIRBuilder::ReductionInfo ReductionInfos[] = {
-      {SumType, SumReduced, SumPrivatized, sumReduction, sumAtomicReduction},
-      {XorType, XorReduced, XorPrivatized, xorReduction, xorAtomicReduction}};
+      {SumType, SumReduced, SumPrivatized,
+       /*EvaluationKind=*/OpenMPIRBuilder::EvalKind::Scalar, sumReduction,
+       /*ReductionGenClang=*/nullptr, sumAtomicReduction},
+      {XorType, XorReduced, XorPrivatized,
+       /*EvaluationKind=*/OpenMPIRBuilder::EvalKind::Scalar, xorReduction,
+       /*ReductionGenClang=*/nullptr, xorAtomicReduction}};
+  OMPBuilder.Config.setIsGPU(false);
 
-  OMPBuilder.createReductions(BodyIP, BodyAllocaIP, ReductionInfos);
+  bool ReduceVariableByRef[] = {false, false};
+
+  OMPBuilder.createReductions(BodyIP, BodyAllocaIP, ReductionInfos,
+                              ReduceVariableByRef);
 
   Builder.restoreIP(AfterIP);
   Builder.CreateRetVoid();
@@ -5230,12 +5238,21 @@ TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {
       /* NumThreads */ nullptr, OMP_PROC_BIND_default,
       /* IsCancellable */ false);
 
+  OMPBuilder.Config.setIsGPU(false);
+  bool ReduceVariableByRef[] = {false};
+
   OMPBuilder.createReductions(
       FirstBodyIP, FirstBodyAllocaIP,
-      {{SumType, SumReduced, SumPrivatized, sumReduction, sumAtomicReduction}});
+      {{SumType, SumReduced, SumPrivatized,
+        /*EvaluationKind=*/OpenMPIRBuilder::EvalKind::Scalar, sumReduction,
+        /*ReductionGenClang=*/nullptr, sumAtomicReduction}},
+      ReduceVariableByRef);
   OMPBuilder.createReductions(
       SecondBodyIP, SecondBodyAllocaIP,
-      {{XorType, XorReduced, XorPrivatized, xorReduction, xorAtomicReduction}});
+      {{XorType, XorReduced, XorPrivatized,
+        /*EvaluationKind=*/OpenMPIRBuilder::EvalKind::Scalar, xorReduction,
+        /*ReductionGenClang=*/nullptr, xorAtomicReduction}},
+      ReduceVariableByRef);
 
   Builder.restoreIP(AfterIP);
   Builder.CreateRetVoid();
@@ -6975,16 +6992,16 @@ TEST_F(OpenMPIRBuilderTest, registerTargetGlobalVariable) {
 
   // Clauses for data_int_0 with To + Any clauses for the host
   std::vector<GlobalVariable *> OffloadEntries;
-  OffloadEntries.push_back(M->getNamedGlobal(".omp_offloading.entry_name"));
+  OffloadEntries.push_back(M->getNamedGlobal(".offloading.entry_name"));
   OffloadEntries.push_back(
-      M->getNamedGlobal(".omp_offloading.entry.test_data_int_0"));
+      M->getNamedGlobal(".offloading.entry.test_data_int_0"));
 
   // Clauses for data_int_1 with Link + Any clauses for the host
   OffloadEntries.push_back(
       M->getNamedGlobal("test_data_int_1_decl_tgt_ref_ptr"));
-  OffloadEntries.push_back(M->getNamedGlobal(".omp_offloading.entry_name.1"));
-  OffloadEntries.push_back(M->getNamedGlobal(
-      ".omp_offloading.entry.test_data_int_1_decl_tgt_ref_ptr"));
+  OffloadEntries.push_back(M->getNamedGlobal(".offloading.entry_name.1"));
+  OffloadEntries.push_back(
+      M->getNamedGlobal(".offloading.entry.test_data_int_1_decl_tgt_ref_ptr"));
 
   for (unsigned I = 0; I < OffloadEntries.size(); ++I)
     EXPECT_NE(OffloadEntries[I], nullptr);

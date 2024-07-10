@@ -280,6 +280,35 @@ def CConv : DialectAttr<
 }
 
 //===----------------------------------------------------------------------===//
+// TailCallKind
+//===----------------------------------------------------------------------===//
+
+def TailCallKindNone : LLVM_EnumAttrCase<"None", "none", "TCK_None", 0>;
+def TailCallKindTail : LLVM_EnumAttrCase<"Tail", "tail", "TCK_Tail", 1>;
+def TailCallKindMustTail : LLVM_EnumAttrCase<"MustTail", "musttail", "TCK_MustTail", 2>;
+def TailCallKindNoTailCall : LLVM_EnumAttrCase<"NoTail", "notail", "TCK_NoTail", 3>;
+
+def TailCallKindEnum : LLVM_EnumAttr<
+    "TailCallKind",
+    "::llvm::CallInst::TailCallKind",
+    "Tail Call Kind",
+    [TailCallKindNone, TailCallKindNoTailCall,
+    TailCallKindMustTail, TailCallKindTail]> {
+  let cppNamespace = "::mlir::LLVM::tailcallkind";
+}
+
+def TailCallKind : DialectAttr<
+    LLVM_Dialect,
+    CPred<"::llvm::isa<::mlir::LLVM::TailCallKindAttr>($_self)">,
+    "LLVM Calling Convention specification"> {
+  let storageType = "::mlir::LLVM::TailCallKindAttr";
+  let returnType = "::mlir::LLVM::tailcallkind::TailCallKind";
+  let convertFromStorage = "$_self.getTailCallKind()";
+  let constBuilderCall =
+          "::mlir::LLVM::TailCallKindAttr::get($_builder.getContext(), $0)";
+}
+
+//===----------------------------------------------------------------------===//
 // DIEmissionKind
 //===----------------------------------------------------------------------===//
 
@@ -391,6 +420,26 @@ def DIFlags : I32BitEnumAttr<
     ]> {
   let cppNamespace = "::mlir::LLVM";
   let printBitEnumPrimaryGroups = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// DINameTableKind
+//===----------------------------------------------------------------------===//
+
+def LLVM_DINameTableDefault : I64EnumAttrCase<"Default", 0>;
+def LLVM_DINameTableGNU     : I64EnumAttrCase<"GNU", 1>;
+def LLVM_DINameTableNone    : I64EnumAttrCase<"None", 2>;
+def LLVM_DINameTableApple   : I64EnumAttrCase<"Apple", 3>;
+
+def LLVM_DINameTableKind : I64EnumAttr<
+    "DINameTableKind",
+    "LLVM debug name table kind", [
+      LLVM_DINameTableDefault,
+      LLVM_DINameTableGNU,
+      LLVM_DINameTableNone,
+      LLVM_DINameTableApple,
+    ]> {
+  let cppNamespace = "::mlir::LLVM";
 }
 
 //===----------------------------------------------------------------------===//
@@ -696,12 +745,15 @@ def FramePointerKindNonLeaf
     : LLVM_EnumAttrCase<"NonLeaf", "non-leaf", "NonLeaf", 1>;
 def FramePointerKindAll
     : LLVM_EnumAttrCase<"All", "all", "All", 2>;
+def FramePointerKindReserved
+    : LLVM_EnumAttrCase<"Reserved", "reserved", "Reserved", 3>;
 
 def FramePointerKindEnum : LLVM_EnumAttr<
     "FramePointerKind",
     "::llvm::FramePointerKind",
     "LLVM FramePointerKind",
-    [FramePointerKindNone, FramePointerKindNonLeaf, FramePointerKindAll]> {
+    [FramePointerKindNone, FramePointerKindNonLeaf,
+     FramePointerKindAll, FramePointerKindReserved]> {
   let cppNamespace = "::mlir::LLVM::framePointerKind";
 }
 

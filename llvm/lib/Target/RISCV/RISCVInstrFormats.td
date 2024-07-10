@@ -155,7 +155,7 @@ def OPC_BRANCH    : RISCVOpcode<"BRANCH",    0b1100011>;
 def OPC_JALR      : RISCVOpcode<"JALR",      0b1100111>;
 def OPC_JAL       : RISCVOpcode<"JAL",       0b1101111>;
 def OPC_SYSTEM    : RISCVOpcode<"SYSTEM",    0b1110011>;
-def OPC_OP_P      : RISCVOpcode<"OP_P",      0b1110111>;
+def OPC_OP_VE     : RISCVOpcode<"OP_VE",     0b1110111>;
 def OPC_CUSTOM_3  : RISCVOpcode<"CUSTOM_3",  0b1111011>;
 
 class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,

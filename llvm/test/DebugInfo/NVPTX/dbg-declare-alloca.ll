@@ -9,7 +9,6 @@
 ; CHECK: add.u64 %rd1, %SP, 0;
 ; CHECK: .loc 1 5 3                   // t.c:5:3
 ; CHECK: { // callseq 0, 0
-; CHECK: .reg .b32 temp_param_reg;
 ; CHECK: .param .b64 param0;
 ; CHECK: st.param.b64 [param0+0], %rd1;
 ; CHECK: call.uni

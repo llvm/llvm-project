@@ -29,6 +29,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/TarWriter.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -194,6 +195,18 @@ static void updateSupportedARMFeatures(const ARMAttributeParser &attributes) {
   if (arch >= ARMBuildAttrs::CPUArch::v8_M_Base &&
       profile == ARMBuildAttrs::MicroControllerProfile)
     config->armCMSESupport = true;
+
+  // The thumb PLT entries require Thumb2 which can be used on multiple archs.
+  // For now, let's limit it to ones where ARM isn't available and we know have
+  // Thumb2.
+  std::optional<unsigned> armISA =
+      attributes.getAttributeValue(ARMBuildAttrs::ARM_ISA_use);
+  std::optional<unsigned> thumb =
+      attributes.getAttributeValue(ARMBuildAttrs::THUMB_ISA_use);
+  bool noArmISA = !armISA || *armISA == ARMBuildAttrs::Not_Allowed;
+  bool hasThumb2 = thumb && *thumb >= ARMBuildAttrs::AllowThumb32;
+  if (noArmISA && hasThumb2)
+    config->armThumbPLTs = true;
 }
 
 InputFile::InputFile(Kind k, MemoryBufferRef m)
@@ -664,7 +677,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         symtab.comdatGroups.try_emplace(CachedHashStringRef(signature), this)
             .second;
     if (keepGroup) {
-      if (config->relocatable)
+      if (!config->resolveGroups)
         this->sections[i] = createInputSection(
             i, sec, check(obj.getSectionName(sec, shstrtab)));
       continue;
@@ -832,6 +845,16 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       this->sections[i] =
           createInputSection(i, sec, check(obj.getSectionName(sec, shstrtab)));
       break;
+    case SHT_LLVM_LTO:
+      // Discard .llvm.lto in a relocatable link that does not use the bitcode.
+      // The concatenated output does not properly reflect the linking
+      // semantics. In addition, since we do not use the bitcode wrapper format,
+      // the concatenated raw bitcode would be invalid.
+      if (config->relocatable && !config->fatLTOObjects) {
+        sections[i] = &InputSection::discarded;
+        break;
+      }
+      [[fallthrough]];
     default:
       this->sections[i] =
           createInputSection(i, sec, check(obj.getSectionName(sec, shstrtab)));
@@ -864,7 +887,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       // We handle that situation gracefully by discarding dangling relocation
       // sections.
       const uint32_t info = sec.sh_info;
-      InputSectionBase *s = getRelocTarget(i, sec, info);
+      InputSectionBase *s = getRelocTarget(i, info);
       if (!s)
         continue;
 
@@ -926,25 +949,18 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     handleSectionGroup<ELFT>(this->sections, entries);
 }
 
-// If a source file is compiled with x86 hardware-assisted call flow control
-// enabled, the generated object file contains feature flags indicating that
-// fact. This function reads the feature flags and returns it.
-//
-// Essentially we want to read a single 32-bit value in this function, but this
-// function is rather complicated because the value is buried deep inside a
-// .note.gnu.property section.
-//
-// The section consists of one or more NOTE records. Each NOTE record consists
-// of zero or more type-length-value fields. We want to find a field of a
-// certain type. It seems a bit too much to just store a 32-bit value, perhaps
-// the ABI is unnecessarily complicated.
-template <class ELFT> static uint32_t readAndFeatures(const InputSection &sec) {
+// Read the following info from the .note.gnu.property section and write it to
+// the corresponding fields in `ObjFile`:
+// - Feature flags (32 bits) representing x86 or AArch64 features for
+//   hardware-assisted call flow control;
+// - AArch64 PAuth ABI core info (16 bytes).
+template <class ELFT>
+void readGnuProperty(const InputSection &sec, ObjFile<ELFT> &f) {
   using Elf_Nhdr = typename ELFT::Nhdr;
   using Elf_Note = typename ELFT::Note;
 
-  uint32_t featuresSet = 0;
   ArrayRef<uint8_t> data = sec.content();
-  auto reportFatal = [&](const uint8_t *place, const char *msg) {
+  auto reportFatal = [&](const uint8_t *place, const Twine &msg) {
     fatal(toString(sec.file) + ":(" + sec.name + "+0x" +
           Twine::utohexstr(place - sec.content().data()) + "): " + msg);
   };
@@ -983,7 +999,19 @@ template <class ELFT> static uint32_t readAndFeatures(const InputSection &sec) {
         // accumulate the bits set.
         if (size < 4)
           reportFatal(place, "FEATURE_1_AND entry is too short");
-        featuresSet |= read32<ELFT::Endianness>(desc.data());
+        f.andFeatures |= read32<ELFT::Endianness>(desc.data());
+      } else if (config->emachine == EM_AARCH64 &&
+                 type == GNU_PROPERTY_AARCH64_FEATURE_PAUTH) {
+        if (!f.aarch64PauthAbiCoreInfo.empty()) {
+          reportFatal(data.data(),
+                      "multiple GNU_PROPERTY_AARCH64_FEATURE_PAUTH entries are "
+                      "not supported");
+        } else if (size != 16) {
+          reportFatal(data.data(), "GNU_PROPERTY_AARCH64_FEATURE_PAUTH entry "
+                                   "is invalid: expected 16 bytes, but got " +
+                                       Twine(size));
+        }
+        f.aarch64PauthAbiCoreInfo = desc;
       }
 
       // Padding is present in the note descriptor, if necessary.
@@ -993,14 +1021,10 @@ template <class ELFT> static uint32_t readAndFeatures(const InputSection &sec) {
     // Go to next NOTE record to look for more FEATURE_1_AND descriptions.
     data = data.slice(nhdr->getSize(sec.addralign));
   }
-
-  return featuresSet;
 }
 
 template <class ELFT>
-InputSectionBase *ObjFile<ELFT>::getRelocTarget(uint32_t idx,
-                                                const Elf_Shdr &sec,
-                                                uint32_t info) {
+InputSectionBase *ObjFile<ELFT>::getRelocTarget(uint32_t idx, uint32_t info) {
   if (info < this->sections.size()) {
     InputSectionBase *target = this->sections[info];
 
@@ -1051,7 +1075,7 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
     // .note.gnu.property containing a single AND'ed bitmap, we discard an input
     // file's .note.gnu.property section.
     if (name == ".note.gnu.property") {
-      this->andFeatures = readAndFeatures<ELFT>(InputSection(*this, sec, name));
+      readGnuProperty<ELFT>(InputSection(*this, sec, name), *this);
       return &InputSection::discarded;
     }
 

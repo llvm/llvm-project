@@ -9,7 +9,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/Test.h"
 
-#include "include/llvm-libc-macros/math-macros.h"
+#include "hdr/math_macros.h"
 
 using FPBits = LIBC_NAMESPACE::fputil::FPBits<long double>;
 

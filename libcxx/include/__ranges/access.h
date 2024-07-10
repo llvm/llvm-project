@@ -191,9 +191,8 @@ struct __fn {
 
   template <class _Tp>
     requires is_rvalue_reference_v<_Tp&&>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-      noexcept(noexcept(ranges::end(static_cast<const _Tp&&>(__t))))
-          -> decltype(ranges::end(static_cast<const _Tp&&>(__t))) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const noexcept(
+      noexcept(ranges::end(static_cast<const _Tp&&>(__t)))) -> decltype(ranges::end(static_cast<const _Tp&&>(__t))) {
     return ranges::end(static_cast<const _Tp&&>(__t));
   }
 };

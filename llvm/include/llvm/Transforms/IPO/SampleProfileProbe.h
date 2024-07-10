@@ -17,6 +17,7 @@
 
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include <unordered_map>
 
@@ -85,14 +86,12 @@ private:
   void findInvokeNormalDests(DenseSet<BasicBlock *> &InvokeNormalDests);
   void computeBlocksToIgnore(DenseSet<BasicBlock *> &BlocksToIgnore,
                              DenseSet<BasicBlock *> &BlocksAndCallsToIgnore);
-  void computeProbeIdForCallsites(
-      const DenseSet<BasicBlock *> &BlocksAndCallsToIgnore);
   const Instruction *
   getOriginalTerminator(const BasicBlock *Head,
                         const DenseSet<BasicBlock *> &BlocksToIgnore);
   void computeCFGHash(const DenseSet<BasicBlock *> &BlocksToIgnore);
-  void computeProbeIdForBlocks(const DenseSet<BasicBlock *> &BlocksToIgnore);
-  void computeProbeIdForCallsites();
+  void computeProbeId(const DenseSet<BasicBlock *> &BlocksToIgnore,
+                      const DenseSet<BasicBlock *> &BlocksAndCallsToIgnore);
 
   Function *F;
 

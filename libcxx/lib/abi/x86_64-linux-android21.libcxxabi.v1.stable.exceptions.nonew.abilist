@@ -209,6 +209,7 @@
 {'is_defined': True, 'name': '_ZNKSt6__ndk118__time_get_storageIcE15__do_date_orderEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt6__ndk118__time_get_storageIwE15__do_date_orderEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt6__ndk119__shared_weak_count13__get_deleterERKSt9type_info', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNKSt6__ndk119bad_expected_accessIvE4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt6__ndk120__codecvt_utf8_utf16IDiE10do_unshiftER9mbstate_tPcS4_RS4_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt6__ndk120__codecvt_utf8_utf16IDiE11do_encodingEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt6__ndk120__codecvt_utf8_utf16IDiE13do_max_lengthEv', 'type': 'FUNC'}
@@ -1722,6 +1723,7 @@
 {'is_defined': True, 'name': '_ZTINSt6__ndk118__time_get_storageIwEE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt6__ndk118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt6__ndk119__shared_weak_countE', 'size': 40, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZTINSt6__ndk119bad_expected_accessIvEE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt6__ndk119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt6__ndk119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt6__ndk120__codecvt_utf8_utf16IDiEE', 'size': 24, 'type': 'OBJECT'}
@@ -1955,6 +1957,7 @@
 {'is_defined': True, 'name': '_ZTSNSt6__ndk118__time_get_storageIwEE', 'size': 35, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt6__ndk118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 72, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt6__ndk119__shared_weak_countE', 'size': 33, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZTSNSt6__ndk119bad_expected_accessIvEE', 'size': 36, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt6__ndk119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 73, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt6__ndk119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 73, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt6__ndk120__codecvt_utf8_utf16IDiEE', 'size': 38, 'type': 'OBJECT'}
@@ -2182,6 +2185,7 @@
 {'is_defined': True, 'name': '_ZTVNSt6__ndk117moneypunct_bynameIwLb1EEE', 'size': 112, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt6__ndk118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 120, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt6__ndk119__shared_weak_countE', 'size': 56, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZTVNSt6__ndk119bad_expected_accessIvEE', 'size': 40, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt6__ndk119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 80, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt6__ndk119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 80, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt6__ndk120__codecvt_utf8_utf16IDiEE', 'size': 96, 'type': 'OBJECT'}
@@ -2291,6 +2295,7 @@
 {'is_defined': True, 'name': '__cxa_bad_cast', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__cxa_bad_typeid', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__cxa_begin_catch', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__cxa_call_terminate', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__cxa_call_unexpected', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__cxa_current_exception_type', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__cxa_current_primary_exception', 'type': 'FUNC'}

@@ -645,12 +645,13 @@ struct MatchableInfo {
     // vex encoding size is smaller. Since X86InstrSSE.td is included ahead
     // of X86InstrAVX512.td, the AVX instruction ID is less than AVX512 ID.
     // We use the ID to sort AVX instruction before AVX512 instruction in
-    // matching table.
-    if (TheDef->isSubClassOf("Instruction") &&
-        TheDef->getValueAsBit("HasPositionOrder") &&
-        RHS.TheDef->isSubClassOf("Instruction") &&
-        RHS.TheDef->getValueAsBit("HasPositionOrder"))
-      return TheDef->getID() < RHS.TheDef->getID();
+    // matching table. As well as InstAlias.
+    if (getResultInst()->TheDef->isSubClassOf("Instruction") &&
+        getResultInst()->TheDef->getValueAsBit("HasPositionOrder") &&
+        RHS.getResultInst()->TheDef->isSubClassOf("Instruction") &&
+        RHS.getResultInst()->TheDef->getValueAsBit("HasPositionOrder"))
+      return getResultInst()->TheDef->getID() <
+             RHS.getResultInst()->TheDef->getID();
 
     // Give matches that require more features higher precedence. This is useful
     // because we cannot define AssemblerPredicates with the negation of
@@ -2366,10 +2367,10 @@ emitConvertFuncs(CodeGenTarget &Target, StringRef ClassName,
   OS << "};\n\n";
 
   // Spit out the conversion driver function.
-  OS << CvtOS.str();
+  OS << ConvertFnBody;
 
   // Spit out the operand number lookup function.
-  OS << OpOS.str();
+  OS << OperandFnBody;
 
   return ConversionTable.size();
 }
@@ -3120,7 +3121,7 @@ static void emitMnemonicSpellChecker(raw_ostream &OS, CodeGenTarget &Target,
     OS << "\n";
     OS << "    StringRef T = I->getMnemonic();\n";
     OS << "    // Avoid recomputing the edit distance for the same string.\n";
-    OS << "    if (T.equals(Prev))\n";
+    OS << "    if (T == Prev)\n";
     OS << "      continue;\n";
     OS << "\n";
     OS << "    Prev = T;\n";
@@ -3471,9 +3472,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     }
     return false;
   });
-  FeatureBitsets.erase(
-      std::unique(FeatureBitsets.begin(), FeatureBitsets.end()),
-      FeatureBitsets.end());
+  FeatureBitsets.erase(llvm::unique(FeatureBitsets), FeatureBitsets.end());
   OS << "// Feature bitsets.\n"
      << "enum : " << getMinimalTypeForRange(FeatureBitsets.size()) << " {\n"
      << "  AMFBS_None,\n";

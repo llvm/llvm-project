@@ -63,7 +63,7 @@ INITIALIZE_PASS_BEGIN(RegBankSelect, DEBUG_TYPE,
                       "Assign register bank of generic virtual registers",
                       false, false);
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(RegBankSelect, DEBUG_TYPE,
                     "Assign register bank of generic virtual registers", false,
@@ -86,7 +86,7 @@ void RegBankSelect::init(MachineFunction &MF) {
   TPC = &getAnalysis<TargetPassConfig>();
   if (OptMode != Mode::Fast) {
     MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
-    MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
+    MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   } else {
     MBFI = nullptr;
     MBPI = nullptr;
@@ -100,7 +100,7 @@ void RegBankSelect::getAnalysisUsage(AnalysisUsage &AU) const {
     // We could preserve the information from these two analysis but
     // the APIs do not allow to do so yet.
     AU.addRequired<MachineBlockFrequencyInfo>();
-    AU.addRequired<MachineBranchProbabilityInfo>();
+    AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
   }
   AU.addRequired<TargetPassConfig>();
   getSelectionDAGFallbackAnalysisUsage(AU);
@@ -420,7 +420,8 @@ void RegBankSelect::tryAvoidingSplit(
       // If the next terminator uses Reg, this means we have
       // to split right after MI and thus we need a way to ask
       // which outgoing edges are affected.
-      assert(!Next->readsRegister(Reg) && "Need to split between terminators");
+      assert(!Next->readsRegister(Reg, /*TRI=*/nullptr) &&
+             "Need to split between terminators");
     // We will split all the edges and repair there.
   } else {
     // This is a virtual register defined by a terminator.
@@ -954,8 +955,10 @@ uint64_t RegBankSelect::EdgeInsertPoint::frequency(const Pass &P) const {
   if (WasMaterialized)
     return MBFI->getBlockFreq(DstOrSplit).getFrequency();
 
+  auto *MBPIWrapper =
+      P.getAnalysisIfAvailable<MachineBranchProbabilityInfoWrapperPass>();
   const MachineBranchProbabilityInfo *MBPI =
-      P.getAnalysisIfAvailable<MachineBranchProbabilityInfo>();
+      MBPIWrapper ? &MBPIWrapper->getMBPI() : nullptr;
   if (!MBPI)
     return 1;
   // The basic block will be on the edge.

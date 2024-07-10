@@ -12,9 +12,12 @@
 
 #include "Thumb1InstrInfo.h"
 #include "ARMSubtarget.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 
@@ -47,21 +50,54 @@ void Thumb1InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   assert(ARM::GPRRegClass.contains(DestReg, SrcReg) &&
          "Thumb1 can only copy GPR registers");
 
-  if (st.hasV6Ops() || ARM::hGPRRegClass.contains(SrcReg)
-      || !ARM::tGPRRegClass.contains(DestReg))
+  if (st.hasV6Ops() || ARM::hGPRRegClass.contains(SrcReg) ||
+      !ARM::tGPRRegClass.contains(DestReg))
     BuildMI(MBB, I, DL, get(ARM::tMOVr), DestReg)
         .addReg(SrcReg, getKillRegState(KillSrc))
         .add(predOps(ARMCC::AL));
   else {
-    // FIXME: Can also use 'mov hi, $src; mov $dst, hi',
-    // with hi as either r10 or r11.
-
     const TargetRegisterInfo *RegInfo = st.getRegisterInfo();
-    if (MBB.computeRegisterLiveness(RegInfo, ARM::CPSR, I)
-        == MachineBasicBlock::LQR_Dead) {
+    LiveRegUnits UsedRegs(*RegInfo);
+    UsedRegs.addLiveOuts(MBB);
+
+    auto InstUpToI = MBB.end();
+    while (InstUpToI != I)
+      // The pre-decrement is on purpose here.
+      // We want to have the liveness right before I.
+      UsedRegs.stepBackward(*--InstUpToI);
+
+    if (UsedRegs.available(ARM::CPSR)) {
       BuildMI(MBB, I, DL, get(ARM::tMOVSr), DestReg)
           .addReg(SrcReg, getKillRegState(KillSrc))
           ->addRegisterDead(ARM::CPSR, RegInfo);
+      return;
+    }
+
+    // Use high register to move source to destination
+    // if movs is not an option.
+    BitVector Allocatable = RegInfo->getAllocatableSet(
+        MF, RegInfo->getRegClass(ARM::hGPRRegClassID));
+
+    Register TmpReg = ARM::NoRegister;
+    // Prefer R12 as it is known to not be preserved anyway
+    if (UsedRegs.available(ARM::R12) && Allocatable.test(ARM::R12)) {
+      TmpReg = ARM::R12;
+    } else {
+      for (Register Reg : Allocatable.set_bits()) {
+        if (UsedRegs.available(Reg)) {
+          TmpReg = Reg;
+          break;
+        }
+      }
+    }
+
+    if (TmpReg) {
+      BuildMI(MBB, I, DL, get(ARM::tMOVr), TmpReg)
+          .addReg(SrcReg, getKillRegState(KillSrc))
+          .add(predOps(ARMCC::AL));
+      BuildMI(MBB, I, DL, get(ARM::tMOVr), DestReg)
+          .addReg(TmpReg, getKillRegState(true))
+          .add(predOps(ARMCC::AL));
       return;
     }
 

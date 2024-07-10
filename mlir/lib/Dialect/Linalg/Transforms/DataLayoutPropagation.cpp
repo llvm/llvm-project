@@ -17,6 +17,8 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -376,7 +378,7 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, tensor::PackOp packOp,
     return failure();
 
   // User controlled propagation function.
-  if (!controlFn(genericOp))
+  if (!controlFn(&packOp.getSourceMutable()))
     return failure();
 
   // TODO: Enable propagation in the presence of linalg.index and
@@ -486,10 +488,7 @@ public:
       return failure();
 
     // User controlled propagation function.
-    if (!controlFn(padOp))
-      return failure();
-
-    if (!padOp.getResult().hasOneUse())
+    if (!controlFn(&packOp.getSourceMutable()))
       return failure();
 
     // TODO: Enable padding when the padding values are the same.
@@ -508,7 +507,6 @@ public:
       return failure();
 
     ArrayRef<int64_t> innerDimsPos = packOp.getInnerDimsPos();
-    ArrayRef<int64_t> outerDimsPerm = packOp.getOuterDimsPerm();
 
     // Bail out if one of the padded dimension is a tiled one.
     llvm::SmallBitVector paddedDims = padOp.getPaddedDims();
@@ -522,11 +520,13 @@ public:
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPoint(padOp);
 
+    ArrayRef<int64_t> outerDimsPerm = packOp.getOuterDimsPerm();
+    SmallVector<OpFoldResult> mixedTiles = packOp.getMixedTiles();
     auto empty = tensor::PackOp::createDestinationTensor(
-        rewriter, loc, padOp.getSource(), packOp.getMixedTiles(), innerDimsPos,
+        rewriter, loc, padOp.getSource(), mixedTiles, innerDimsPos,
         outerDimsPerm);
-    Value packedSource = rewriter.create<tensor::PackOp>(
-        loc, padOp.getSource(), empty, innerDimsPos, packOp.getMixedTiles(),
+    auto sourcePack = rewriter.create<tensor::PackOp>(
+        loc, padOp.getSource(), empty, innerDimsPos, mixedTiles,
         /*padding=*/std::nullopt, outerDimsPerm);
 
     // If we have `outer_dims_perms` we need to adjust the padded dimensions.
@@ -543,9 +543,22 @@ public:
     highPad.append(pointLoopsSize, rewriter.getIndexAttr(0));
 
     auto newPadOp = rewriter.create<tensor::PadOp>(
-        loc, /*result=*/Type(), packedSource, lowPad, highPad, paddingVal,
+        loc, /*result=*/Type(), sourcePack, lowPad, highPad, paddingVal,
         padOp.getNofold());
+
+    // If the pad has more than one user, create an unpack on the new pad to
+    // replace the other uses.
+    if (!padOp->hasOneUse()) {
+      auto unpackEmpty = tensor::UnPackOp::createDestinationTensor(
+          rewriter, loc, newPadOp, mixedTiles, innerDimsPos, outerDimsPerm);
+      Value unpackedPad = rewriter.create<tensor::UnPackOp>(
+          loc, newPadOp, unpackEmpty, innerDimsPos, mixedTiles, outerDimsPerm);
+      rewriter.replaceAllUsesExcept(padOp, unpackedPad, sourcePack);
+    }
+
+    // Replace the pack with the new pad.
     rewriter.replaceOp(packOp, newPadOp.getResult());
+
     return success();
   }
 
@@ -603,7 +616,8 @@ static bool isDimsDivisibleByTileSizes(ArrayRef<int64_t> dimsPos,
 static int64_t applyPermutationAndReindexReassoc(
     SmallVector<ReassociationIndices> &reassocIndices,
     ArrayRef<int64_t> permutation) {
-  applyPermutationToVector<ReassociationIndices>(reassocIndices, permutation);
+  if (!permutation.empty())
+    applyPermutationToVector<ReassociationIndices>(reassocIndices, permutation);
   int64_t nextPos = 0;
   for (ReassociationIndices &indices : reassocIndices) {
     for (auto &index : indices) {
@@ -694,6 +708,131 @@ bubbleUpPackOpThroughCollapseShape(tensor::CollapseShapeOp collapseOp,
   return success();
 }
 
+/// Project dimsPos to their collapsed positions in the reassocIndices.
+///
+/// For example, given dimsPos [0, 1, 2, 4], and matching reassocIndices
+/// [[0], [1, 2], [3], [4]], it returns [0, 1, 1, 3]. Because for pos 0,
+/// the reassoc dim [0] is 0. For pos 1 and 2, the reassoc dim in pos
+/// [1, 2] is 1. And for pos 4, the reassoc dim [4] is 3.
+static SmallVector<int64_t>
+projectDimsPosIntoReassocPos(ArrayRef<int64_t> dimsPos,
+                             ArrayRef<ReassociationIndices> reassocIndices) {
+  SmallVector<int64_t> projectedPos;
+
+  // Map each dimension to the position of corresponding reassociation index.
+  for (auto pos : dimsPos) {
+    for (auto [idx, indices] : llvm::enumerate(reassocIndices)) {
+      // If the dimension is present in the current indices group, the group
+      // position within the reassociation map is the desired projected
+      // dimension position.
+      if (llvm::any_of(indices,
+                       [&](int64_t expandDim) { return expandDim == pos; })) {
+        projectedPos.push_back(idx);
+        break;
+      }
+    }
+  }
+  assert(projectedPos.size() == dimsPos.size() && "Invalid dim pos projection");
+
+  return projectedPos;
+}
+
+/// Bubble up pack op through expand shape op.
+///
+/// For example:
+///
+/// %expand = tensor.expand_shape %in [[0], [1, 2]]
+///     : tensor<?x64xf32> into tensor<?x4x16xf32>
+/// %pack = tensor.pack %expand outer_dims_perm = [0, 1]
+///     inner_dims_pos = [2] inner_tiles = [8] into %empty
+///     : tensor<?x4x16xf32> -> tensor<?x4x2x8xf32>
+///
+/// can be transformed into:
+///
+/// %pack = tensor.pack %in outer_dims_perm = [1, 2]
+///     inner_dims_pos = [1] inner_tiles = [8] into %empty
+///     : tensor<?x64xf32> -> tensor<?x8x8xf32>
+/// %expand = tensor.expand_shape %pack [[0], [1, 2], [3]]
+///     : tensor<?x8x8xf32> into tensor<?x4x2x8xf32>
+static LogicalResult
+bubbleUpPackOpThroughExpandShape(tensor::ExpandShapeOp expandOp,
+                                 tensor::PackOp packOp,
+                                 PatternRewriter &rewriter) {
+  // Outer dimensions permutation is not supported currently.
+  // TODO: Handle outer_dims_perm variants.
+  ArrayRef<int64_t> outerDimsPerm = packOp.getOuterDimsPerm();
+  if (!outerDimsPerm.empty() && !isIdentityPermutation(outerDimsPerm)) {
+    return rewriter.notifyMatchFailure(packOp,
+                                       "non-identity outer dims perm NYI");
+  }
+
+  // Validate dimensions' relations between shape expansion and packing.
+  SmallVector<ReassociationIndices, 4> reassoc =
+      expandOp.getReassociationIndices();
+  ArrayRef<int64_t> packInnerDims = packOp.getInnerDimsPos();
+  llvm::SetVector<int64_t> packDimsPos(packInnerDims.begin(),
+                                       packInnerDims.end());
+
+  for (auto [idx, indices] : llvm::enumerate(reassoc)) {
+    // For each expand_shape reassociation, figure out which dimensions get
+    // packed if any.
+    llvm::SetVector<int64_t> expandDimPos(indices.begin(), indices.end());
+    llvm::SetVector<int64_t> packedDims =
+        llvm::set_intersection(packDimsPos, expandDimPos);
+
+    // The expanded dimension is not packed so, it does not affect moving pack
+    // before shape expansion - simply continue.
+    if (packedDims.empty())
+      continue;
+    // Shape expansion cannot be propagated when multiple expanded dimension are
+    // packed - in this case operation reordering would affect final element
+    // positions and/or shapes can no longer be projected.
+    if (packedDims.size() != 1)
+      return rewriter.notifyMatchFailure(
+          packOp, "only one of the expanded dimensions can be packed");
+    // Only the inner-most expanded dimension should be packed. Otherwise,
+    // elements order will be affected after operation reordering.
+    if (packedDims.front() != indices.back())
+      return rewriter.notifyMatchFailure(
+          packOp, "can only pack the inner-most expanded dimension");
+  }
+
+  // Project pack.inner_dims_pos to positions before shape expansion.
+  SmallVector<int64_t> projectedInnerDimsPos =
+      projectDimsPosIntoReassocPos(packInnerDims, reassoc);
+
+  // Project the shape expansion to new packed shape.
+  // The pack.outer_dims_perm is restricted to identity so, the permutation can
+  // be omitted for simplicity.
+  // TODO: Account for outer dimensions permutation.
+  //
+  // If reassociation is not possible, then reordering cannot happen.
+  // This can be caused by pack padding affecting previously expanded
+  // dimensions or packing extending dimensions.
+  RankedTensorType newPackType = tensor::PackOp::inferPackedType(
+      expandOp.getSrcType(), packOp.getStaticInnerTiles(),
+      projectedInnerDimsPos, /*outerDimsPerm=*/SmallVector<int64_t>{});
+  auto reassocExpand =
+      getReassociationIndicesForReshape(newPackType, packOp.getDestType());
+  if (!reassocExpand)
+    return rewriter.notifyMatchFailure(
+        packOp, "could not reassociate dims after bubbling up");
+
+  Value destTensor = tensor::PackOp::createDestinationTensor(
+      rewriter, packOp.getLoc(), expandOp.getSrc(), packOp.getMixedTiles(),
+      projectedInnerDimsPos, /*outerDimsPerm=*/SmallVector<int64_t>{});
+  Value packedVal = rewriter.create<tensor::PackOp>(
+      packOp.getLoc(), expandOp.getSrc(), destTensor, projectedInnerDimsPos,
+      packOp.getMixedTiles(), packOp.getPaddingValue(),
+      /*outerDimsPerm=*/SmallVector<int64_t>{});
+
+  Value newExpandOp = rewriter.create<tensor::ExpandShapeOp>(
+      packOp.getLoc(), packOp.getDestType(), packedVal, *reassocExpand);
+  rewriter.replaceOp(packOp, newExpandOp);
+
+  return success();
+}
+
 class BubbleUpPackOpThroughReshapeOp final
     : public OpRewritePattern<tensor::PackOp> {
 public:
@@ -716,12 +855,15 @@ public:
     }
 
     // User controlled propagation function.
-    if (!controlFn(srcOp))
+    if (!controlFn(&packOp.getSourceMutable()))
       return failure();
 
     return TypeSwitch<Operation *, LogicalResult>(srcOp)
         .Case([&](tensor::CollapseShapeOp op) {
           return bubbleUpPackOpThroughCollapseShape(op, packOp, rewriter);
+        })
+        .Case([&](tensor::ExpandShapeOp op) {
+          return bubbleUpPackOpThroughExpandShape(op, packOp, rewriter);
         })
         .Default([](Operation *) { return failure(); });
   }
@@ -749,15 +891,21 @@ private:
 /// %unpack = tensor.unpack %expanded outer_dims_perm = [0, 1, 2]
 ///     inner_dims_pos = [1, 2] inner_tiles = [8, 8] into %empty
 ///     : tensor<?x32x32x8x8xf32> -> tensor<?x256x256xf32>
-static LogicalResult
-pushDownUnPackOpThroughExpandShape(tensor::UnPackOp unPackOp,
-                                   tensor::ExpandShapeOp expandOp,
-                                   PatternRewriter &rewriter) {
+static LogicalResult pushDownUnPackOpThroughExpandShape(
+    tensor::UnPackOp unPackOp, tensor::ExpandShapeOp expandOp,
+    PatternRewriter &rewriter, ControlPropagationFn controlFn) {
+  // User controlled propagation function.
+  if (!controlFn(&expandOp.getSrcMutable()))
+    return failure();
+
   SmallVector<int64_t> innerTileSizes = unPackOp.getStaticTiles();
   ArrayRef<int64_t> innerDimsPos = unPackOp.getInnerDimsPos();
   ArrayRef<int64_t> outerDimsPerm = unPackOp.getOuterDimsPerm();
 
-  ArrayRef<int64_t> dstShape = expandOp.getType().getShape();
+  auto expandTy = dyn_cast<RankedTensorType>(expandOp.getType());
+  if (!expandTy)
+    return failure();
+  ArrayRef<int64_t> dstShape = expandTy.getShape();
   SmallVector<ReassociationIndices> reassocIndices =
       expandOp.getReassociationIndices();
   // Project inner tile pos to the dim pos after expanding. For example, if dims
@@ -796,9 +944,8 @@ pushDownUnPackOpThroughExpandShape(tensor::UnPackOp unPackOp,
     nextPos += 1;
   }
 
-  RankedTensorType newExpandType =
-      tensor::PackOp::inferPackedType(expandOp.getType(), innerTileSizes,
-                                      projectedInnerDimsPos, newOuterDimsPerm);
+  RankedTensorType newExpandType = tensor::PackOp::inferPackedType(
+      expandTy, innerTileSizes, projectedInnerDimsPos, newOuterDimsPerm);
   auto newExpandOp = rewriter.create<tensor::ExpandShapeOp>(
       expandOp.getLoc(), newExpandType, unPackOp.getSource(),
       newReassocIndices);
@@ -837,13 +984,10 @@ public:
     }
 
     Operation *consumerOp = *result.user_begin();
-    // User controlled propagation function.
-    if (!controlFn(consumerOp))
-      return failure();
-
     return TypeSwitch<Operation *, LogicalResult>(consumerOp)
         .Case([&](tensor::ExpandShapeOp op) {
-          return pushDownUnPackOpThroughExpandShape(unPackOp, op, rewriter);
+          return pushDownUnPackOpThroughExpandShape(unPackOp, op, rewriter,
+                                                    controlFn);
         })
         .Default([](Operation *) { return failure(); });
   }
@@ -905,7 +1049,8 @@ static FailureOr<OpOperand *> getUnPackedOperand(GenericOp genericOp) {
 ///                       inner_dims_pos = [3] inner_tiles = [32] into %0
 ///
 static FailureOr<std::tuple<GenericOp, Value>>
-pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp) {
+pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp,
+                                 ControlPropagationFn controlFn) {
   if (genericOp.getNumResults() != 1)
     return failure();
 
@@ -922,6 +1067,10 @@ pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp) {
   tensor::UnPackOp producerUnPackOp =
       unPackedOperand->get().getDefiningOp<tensor::UnPackOp>();
   assert(producerUnPackOp && "expect a valid UnPackOp");
+
+  if (!controlFn(unPackedOperand))
+    return failure();
+
   auto packInfo =
       getPackingInfoFromOperand(unPackedOperand, genericOp, producerUnPackOp);
   if (failed(packInfo))
@@ -989,10 +1138,8 @@ public:
 
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
-    if (!controlFn(genericOp))
-      return failure();
-
-    auto genericAndRepl = pushDownUnPackOpThroughGenericOp(rewriter, genericOp);
+    auto genericAndRepl =
+        pushDownUnPackOpThroughGenericOp(rewriter, genericOp, controlFn);
     if (failed(genericAndRepl))
       return failure();
     rewriter.replaceOp(genericOp, std::get<1>(*genericAndRepl));
@@ -1017,7 +1164,7 @@ struct PushDownUnPackThroughPadOp : public OpRewritePattern<tensor::PadOp> {
     if (!unpackOp)
       return failure();
 
-    if (!controlFn(padOp))
+    if (!controlFn(&padOp.getSourceMutable()))
       return failure();
 
     Location loc = padOp.getLoc();

@@ -315,8 +315,8 @@ bool Constant::isElementWiseEqual(Value *Y) const {
   Type *IntTy = VectorType::getInteger(VTy);
   Constant *C0 = ConstantExpr::getBitCast(const_cast<Constant *>(this), IntTy);
   Constant *C1 = ConstantExpr::getBitCast(cast<Constant>(Y), IntTy);
-  Constant *CmpEq = ConstantExpr::getICmp(ICmpInst::ICMP_EQ, C0, C1);
-  return isa<UndefValue>(CmpEq) || match(CmpEq, m_One());
+  Constant *CmpEq = ConstantFoldCompareInstruction(ICmpInst::ICMP_EQ, C0, C1);
+  return CmpEq && (isa<PoisonValue>(CmpEq) || match(CmpEq, m_One()));
 }
 
 static bool
@@ -550,6 +550,9 @@ void llvm::deleteConstant(Constant *C) {
   case Constant::NoCFIValueVal:
     delete static_cast<NoCFIValue *>(C);
     break;
+  case Constant::ConstantPtrAuthVal:
+    delete static_cast<ConstantPtrAuth *>(C);
+    break;
   case Constant::UndefValueVal:
     delete static_cast<UndefValue *>(C);
     break;
@@ -569,8 +572,6 @@ void llvm::deleteConstant(Constant *C) {
       delete static_cast<ShuffleVectorConstantExpr *>(C);
     else if (isa<GetElementPtrConstantExpr>(C))
       delete static_cast<GetElementPtrConstantExpr *>(C);
-    else if (isa<CompareConstantExpr>(C))
-      delete static_cast<CompareConstantExpr *>(C);
     else
       llvm_unreachable("Unexpected constant expr");
     break;
@@ -1511,17 +1512,7 @@ void ConstantTokenNone::destroyConstantImpl() {
 // Utility function for determining if a ConstantExpr is a CastOp or not. This
 // can't be inline because we don't want to #include Instruction.h into
 // Constant.h
-bool ConstantExpr::isCast() const {
-  return Instruction::isCast(getOpcode());
-}
-
-bool ConstantExpr::isCompare() const {
-  return getOpcode() == Instruction::ICmp || getOpcode() == Instruction::FCmp;
-}
-
-unsigned ConstantExpr::getPredicate() const {
-  return cast<CompareConstantExpr>(this)->predicate;
-}
+bool ConstantExpr::isCast() const { return Instruction::isCast(getOpcode()); }
 
 ArrayRef<int> ConstantExpr::getShuffleMask() const {
   return cast<ShuffleVectorConstantExpr>(this)->ShuffleMask;
@@ -1568,12 +1559,8 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
     assert(SrcTy || (Ops[0]->getType() == getOperand(0)->getType()));
     return ConstantExpr::getGetElementPtr(
         SrcTy ? SrcTy : GEPO->getSourceElementType(), Ops[0], Ops.slice(1),
-        GEPO->isInBounds(), GEPO->getInRange(), OnlyIfReducedTy);
+        GEPO->getNoWrapFlags(), GEPO->getInRange(), OnlyIfReducedTy);
   }
-  case Instruction::ICmp:
-  case Instruction::FCmp:
-    return ConstantExpr::getCompare(getPredicate(), Ops[0], Ops[1],
-                                    OnlyIfReducedTy);
   default:
     assert(getNumOperands() == 2 && "Must be binary operator?");
     return ConstantExpr::get(getOpcode(), Ops[0], Ops[1], SubclassOptionalData,
@@ -1696,14 +1683,14 @@ void ConstantVector::destroyConstantImpl() {
   getType()->getContext().pImpl->VectorConstants.remove(this);
 }
 
-Constant *Constant::getSplatValue(bool AllowUndefs) const {
+Constant *Constant::getSplatValue(bool AllowPoison) const {
   assert(this->getType()->isVectorTy() && "Only valid for vectors!");
   if (isa<ConstantAggregateZero>(this))
     return getNullValue(cast<VectorType>(getType())->getElementType());
   if (const ConstantDataVector *CV = dyn_cast<ConstantDataVector>(this))
     return CV->getSplatValue();
   if (const ConstantVector *CV = dyn_cast<ConstantVector>(this))
-    return CV->getSplatValue(AllowUndefs);
+    return CV->getSplatValue(AllowPoison);
 
   // Check if this is a constant expression splat of the form returned by
   // ConstantVector::getSplat()
@@ -1728,7 +1715,7 @@ Constant *Constant::getSplatValue(bool AllowUndefs) const {
   return nullptr;
 }
 
-Constant *ConstantVector::getSplatValue(bool AllowUndefs) const {
+Constant *ConstantVector::getSplatValue(bool AllowPoison) const {
   // Check out first element.
   Constant *Elt = getOperand(0);
   // Then make sure all remaining elements point to the same value.
@@ -1738,15 +1725,15 @@ Constant *ConstantVector::getSplatValue(bool AllowUndefs) const {
       continue;
 
     // Strict mode: any mismatch is not a splat.
-    if (!AllowUndefs)
+    if (!AllowPoison)
       return nullptr;
 
-    // Allow undefs mode: ignore undefined elements.
-    if (isa<UndefValue>(OpC))
+    // Allow poison mode: ignore poison elements.
+    if (isa<PoisonValue>(OpC))
       continue;
 
     // If we do not have a defined element yet, use the current operand.
-    if (isa<UndefValue>(Elt))
+    if (isa<PoisonValue>(Elt))
       Elt = OpC;
 
     if (OpC != Elt)
@@ -1767,6 +1754,44 @@ const APInt &Constant::getUniqueInteger() const {
   const Constant *C = this->getAggregateElement(0U);
   assert(C && isa<ConstantInt>(C) && "Not a vector of numbers!");
   return cast<ConstantInt>(C)->getValue();
+}
+
+ConstantRange Constant::toConstantRange() const {
+  if (auto *CI = dyn_cast<ConstantInt>(this))
+    return ConstantRange(CI->getValue());
+
+  unsigned BitWidth = getType()->getScalarSizeInBits();
+  if (!getType()->isVectorTy())
+    return ConstantRange::getFull(BitWidth);
+
+  if (auto *CI = dyn_cast_or_null<ConstantInt>(
+          getSplatValue(/*AllowPoison=*/true)))
+    return ConstantRange(CI->getValue());
+
+  if (auto *CDV = dyn_cast<ConstantDataVector>(this)) {
+    ConstantRange CR = ConstantRange::getEmpty(BitWidth);
+    for (unsigned I = 0, E = CDV->getNumElements(); I < E; ++I)
+      CR = CR.unionWith(CDV->getElementAsAPInt(I));
+    return CR;
+  }
+
+  if (auto *CV = dyn_cast<ConstantVector>(this)) {
+    ConstantRange CR = ConstantRange::getEmpty(BitWidth);
+    for (unsigned I = 0, E = CV->getNumOperands(); I < E; ++I) {
+      Constant *Elem = CV->getOperand(I);
+      if (!Elem)
+        return ConstantRange::getFull(BitWidth);
+      if (isa<PoisonValue>(Elem))
+        continue;
+      auto *CI = dyn_cast<ConstantInt>(Elem);
+      if (!CI)
+        return ConstantRange::getFull(BitWidth);
+      CR = CR.unionWith(CI->getValue());
+    }
+    return CR;
+  }
+
+  return ConstantRange::getFull(BitWidth);
 }
 
 //---- ConstantPointerNull::get() implementation.
@@ -2015,6 +2040,124 @@ Value *NoCFIValue::handleOperandChangeImpl(Value *From, Value *To) {
   return nullptr;
 }
 
+//---- ConstantPtrAuth::get() implementations.
+//
+
+ConstantPtrAuth *ConstantPtrAuth::get(Constant *Ptr, ConstantInt *Key,
+                                      ConstantInt *Disc, Constant *AddrDisc) {
+  Constant *ArgVec[] = {Ptr, Key, Disc, AddrDisc};
+  ConstantPtrAuthKeyType MapKey(ArgVec);
+  LLVMContextImpl *pImpl = Ptr->getContext().pImpl;
+  return pImpl->ConstantPtrAuths.getOrCreate(Ptr->getType(), MapKey);
+}
+
+ConstantPtrAuth *ConstantPtrAuth::getWithSameSchema(Constant *Pointer) const {
+  return get(Pointer, getKey(), getDiscriminator(), getAddrDiscriminator());
+}
+
+ConstantPtrAuth::ConstantPtrAuth(Constant *Ptr, ConstantInt *Key,
+                                 ConstantInt *Disc, Constant *AddrDisc)
+    : Constant(Ptr->getType(), Value::ConstantPtrAuthVal, &Op<0>(), 4) {
+  assert(Ptr->getType()->isPointerTy());
+  assert(Key->getBitWidth() == 32);
+  assert(Disc->getBitWidth() == 64);
+  assert(AddrDisc->getType()->isPointerTy());
+  setOperand(0, Ptr);
+  setOperand(1, Key);
+  setOperand(2, Disc);
+  setOperand(3, AddrDisc);
+}
+
+/// Remove the constant from the constant table.
+void ConstantPtrAuth::destroyConstantImpl() {
+  getType()->getContext().pImpl->ConstantPtrAuths.remove(this);
+}
+
+Value *ConstantPtrAuth::handleOperandChangeImpl(Value *From, Value *ToV) {
+  assert(isa<Constant>(ToV) && "Cannot make Constant refer to non-constant!");
+  Constant *To = cast<Constant>(ToV);
+
+  SmallVector<Constant *, 4> Values;
+  Values.reserve(getNumOperands());
+
+  unsigned NumUpdated = 0;
+
+  Use *OperandList = getOperandList();
+  unsigned OperandNo = 0;
+  for (Use *O = OperandList, *E = OperandList + getNumOperands(); O != E; ++O) {
+    Constant *Val = cast<Constant>(O->get());
+    if (Val == From) {
+      OperandNo = (O - OperandList);
+      Val = To;
+      ++NumUpdated;
+    }
+    Values.push_back(Val);
+  }
+
+  return getContext().pImpl->ConstantPtrAuths.replaceOperandsInPlace(
+      Values, this, From, To, NumUpdated, OperandNo);
+}
+
+bool ConstantPtrAuth::isKnownCompatibleWith(const Value *Key,
+                                            const Value *Discriminator,
+                                            const DataLayout &DL) const {
+  // If the keys are different, there's no chance for this to be compatible.
+  if (getKey() != Key)
+    return false;
+
+  // We can have 3 kinds of discriminators:
+  // - simple, integer-only:    `i64 x, ptr null` vs. `i64 x`
+  // - address-only:            `i64 0, ptr p` vs. `ptr p`
+  // - blended address/integer: `i64 x, ptr p` vs. `@llvm.ptrauth.blend(p, x)`
+
+  // If this constant has a simple discriminator (integer, no address), easy:
+  // it's compatible iff the provided full discriminator is also a simple
+  // discriminator, identical to our integer discriminator.
+  if (!hasAddressDiscriminator())
+    return getDiscriminator() == Discriminator;
+
+  // Otherwise, we can isolate address and integer discriminator components.
+  const Value *AddrDiscriminator = nullptr;
+
+  // This constant may or may not have an integer discriminator (instead of 0).
+  if (!getDiscriminator()->isNullValue()) {
+    // If it does, there's an implicit blend.  We need to have a matching blend
+    // intrinsic in the provided full discriminator.
+    if (!match(Discriminator,
+               m_Intrinsic<Intrinsic::ptrauth_blend>(
+                   m_Value(AddrDiscriminator), m_Specific(getDiscriminator()))))
+      return false;
+  } else {
+    // Otherwise, interpret the provided full discriminator as address-only.
+    AddrDiscriminator = Discriminator;
+  }
+
+  // Either way, we can now focus on comparing the address discriminators.
+
+  // Discriminators are i64, so the provided addr disc may be a ptrtoint.
+  if (auto *Cast = dyn_cast<PtrToIntOperator>(AddrDiscriminator))
+    AddrDiscriminator = Cast->getPointerOperand();
+
+  // Beyond that, we're only interested in compatible pointers.
+  if (getAddrDiscriminator()->getType() != AddrDiscriminator->getType())
+    return false;
+
+  // These are often the same constant GEP, making them trivially equivalent.
+  if (getAddrDiscriminator() == AddrDiscriminator)
+    return true;
+
+  // Finally, they may be equivalent base+offset expressions.
+  APInt Off1(DL.getIndexTypeSizeInBits(getAddrDiscriminator()->getType()), 0);
+  auto *Base1 = getAddrDiscriminator()->stripAndAccumulateConstantOffsets(
+      DL, Off1, /*AllowNonInbounds=*/true);
+
+  APInt Off2(DL.getIndexTypeSizeInBits(AddrDiscriminator->getType()), 0);
+  auto *Base2 = AddrDiscriminator->stripAndAccumulateConstantOffsets(
+      DL, Off2, /*AllowNonInbounds=*/true);
+
+  return Base1 == Base2 && Off1 == Off2;
+}
+
 //---- ConstantExpr::get() implementations.
 //
 
@@ -2180,12 +2323,6 @@ Constant *ConstantExpr::get(unsigned Opcode, Constant *C1, Constant *C2,
     assert(C1->getType()->isIntOrIntVectorTy() &&
            "Tried to create a logical operation on a non-integral type!");
     break;
-  case Instruction::Shl:
-  case Instruction::LShr:
-  case Instruction::AShr:
-    assert(C1->getType()->isIntOrIntVectorTy() &&
-           "Tried to create a shift operation on a non-integer type!");
-    break;
   default:
     break;
   }
@@ -2197,8 +2334,8 @@ Constant *ConstantExpr::get(unsigned Opcode, Constant *C1, Constant *C2,
   if (OnlyIfReducedTy == C1->getType())
     return nullptr;
 
-  Constant *ArgVec[] = { C1, C2 };
-  ConstantExprKeyType Key(Opcode, ArgVec, 0, Flags);
+  Constant *ArgVec[] = {C1, C2};
+  ConstantExprKeyType Key(Opcode, ArgVec, Flags);
 
   LLVMContextImpl *pImpl = C1->getContext().pImpl;
   return pImpl->ExprConstants.getOrCreate(C1->getType(), Key);
@@ -2219,11 +2356,11 @@ bool ConstantExpr::isDesirableBinOp(unsigned Opcode) {
   case Instruction::Or:
   case Instruction::LShr:
   case Instruction::AShr:
+  case Instruction::Shl:
     return false;
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::Mul:
-  case Instruction::Shl:
   case Instruction::Xor:
     return true;
   default:
@@ -2246,11 +2383,11 @@ bool ConstantExpr::isSupportedBinOp(unsigned Opcode) {
   case Instruction::Or:
   case Instruction::LShr:
   case Instruction::AShr:
+  case Instruction::Shl:
     return false;
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::Mul:
-  case Instruction::Shl:
   case Instruction::Xor:
     return true;
   default:
@@ -2316,45 +2453,24 @@ Constant *ConstantExpr::getAlignOf(Type* Ty) {
   // alignof is implemented as: (i64) gep ({i1,Ty}*)null, 0, 1
   // Note that a non-inbounds gep is used, as null isn't within any object.
   Type *AligningTy = StructType::get(Type::getInt1Ty(Ty->getContext()), Ty);
-  Constant *NullPtr = Constant::getNullValue(PointerType::getUnqual(AligningTy->getContext()));
+  Constant *NullPtr =
+      Constant::getNullValue(PointerType::getUnqual(AligningTy->getContext()));
   Constant *Zero = ConstantInt::get(Type::getInt64Ty(Ty->getContext()), 0);
   Constant *One = ConstantInt::get(Type::getInt32Ty(Ty->getContext()), 1);
-  Constant *Indices[2] = { Zero, One };
+  Constant *Indices[2] = {Zero, One};
   Constant *GEP = getGetElementPtr(AligningTy, NullPtr, Indices);
-  return getPtrToInt(GEP,
-                     Type::getInt64Ty(Ty->getContext()));
-}
-
-Constant *ConstantExpr::getCompare(unsigned short Predicate, Constant *C1,
-                                   Constant *C2, bool OnlyIfReduced) {
-  assert(C1->getType() == C2->getType() && "Op types should be identical!");
-
-  switch (Predicate) {
-  default: llvm_unreachable("Invalid CmpInst predicate");
-  case CmpInst::FCMP_FALSE: case CmpInst::FCMP_OEQ: case CmpInst::FCMP_OGT:
-  case CmpInst::FCMP_OGE:   case CmpInst::FCMP_OLT: case CmpInst::FCMP_OLE:
-  case CmpInst::FCMP_ONE:   case CmpInst::FCMP_ORD: case CmpInst::FCMP_UNO:
-  case CmpInst::FCMP_UEQ:   case CmpInst::FCMP_UGT: case CmpInst::FCMP_UGE:
-  case CmpInst::FCMP_ULT:   case CmpInst::FCMP_ULE: case CmpInst::FCMP_UNE:
-  case CmpInst::FCMP_TRUE:
-    return getFCmp(Predicate, C1, C2, OnlyIfReduced);
-
-  case CmpInst::ICMP_EQ:  case CmpInst::ICMP_NE:  case CmpInst::ICMP_UGT:
-  case CmpInst::ICMP_UGE: case CmpInst::ICMP_ULT: case CmpInst::ICMP_ULE:
-  case CmpInst::ICMP_SGT: case CmpInst::ICMP_SGE: case CmpInst::ICMP_SLT:
-  case CmpInst::ICMP_SLE:
-    return getICmp(Predicate, C1, C2, OnlyIfReduced);
-  }
+  return getPtrToInt(GEP, Type::getInt64Ty(Ty->getContext()));
 }
 
 Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
-                                         ArrayRef<Value *> Idxs, bool InBounds,
+                                         ArrayRef<Value *> Idxs,
+                                         GEPNoWrapFlags NW,
                                          std::optional<ConstantRange> InRange,
                                          Type *OnlyIfReducedTy) {
   assert(Ty && "Must specify element type");
   assert(isSupportedGetElementPtr(Ty) && "Element type is unsupported!");
 
-  if (Constant *FC = ConstantFoldGetElementPtr(Ty, C, InBounds, InRange, Idxs))
+  if (Constant *FC = ConstantFoldGetElementPtr(Ty, C, InRange, Idxs))
     return FC; // Fold a few common cases.
 
   assert(GetElementPtrInst::getIndexedType(Ty, Idxs) && "GEP indices invalid!");
@@ -2390,63 +2506,11 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
     ArgVec.push_back(Idx);
   }
 
-  unsigned SubClassOptionalData = InBounds ? GEPOperator::IsInBounds : 0;
-  const ConstantExprKeyType Key(Instruction::GetElementPtr, ArgVec, 0,
-                                SubClassOptionalData, std::nullopt, Ty,
-                                InRange);
+  const ConstantExprKeyType Key(Instruction::GetElementPtr, ArgVec, NW.getRaw(),
+                                std::nullopt, Ty, InRange);
 
   LLVMContextImpl *pImpl = C->getContext().pImpl;
   return pImpl->ExprConstants.getOrCreate(ReqTy, Key);
-}
-
-Constant *ConstantExpr::getICmp(unsigned short pred, Constant *LHS,
-                                Constant *RHS, bool OnlyIfReduced) {
-  auto Predicate = static_cast<CmpInst::Predicate>(pred);
-  assert(LHS->getType() == RHS->getType());
-  assert(CmpInst::isIntPredicate(Predicate) && "Invalid ICmp Predicate");
-
-  if (Constant *FC = ConstantFoldCompareInstruction(Predicate, LHS, RHS))
-    return FC;          // Fold a few common cases...
-
-  if (OnlyIfReduced)
-    return nullptr;
-
-  // Look up the constant in the table first to ensure uniqueness
-  Constant *ArgVec[] = { LHS, RHS };
-  // Get the key type with both the opcode and predicate
-  const ConstantExprKeyType Key(Instruction::ICmp, ArgVec, Predicate);
-
-  Type *ResultTy = Type::getInt1Ty(LHS->getContext());
-  if (VectorType *VT = dyn_cast<VectorType>(LHS->getType()))
-    ResultTy = VectorType::get(ResultTy, VT->getElementCount());
-
-  LLVMContextImpl *pImpl = LHS->getType()->getContext().pImpl;
-  return pImpl->ExprConstants.getOrCreate(ResultTy, Key);
-}
-
-Constant *ConstantExpr::getFCmp(unsigned short pred, Constant *LHS,
-                                Constant *RHS, bool OnlyIfReduced) {
-  auto Predicate = static_cast<CmpInst::Predicate>(pred);
-  assert(LHS->getType() == RHS->getType());
-  assert(CmpInst::isFPPredicate(Predicate) && "Invalid FCmp Predicate");
-
-  if (Constant *FC = ConstantFoldCompareInstruction(Predicate, LHS, RHS))
-    return FC;          // Fold a few common cases...
-
-  if (OnlyIfReduced)
-    return nullptr;
-
-  // Look up the constant in the table first to ensure uniqueness
-  Constant *ArgVec[] = { LHS, RHS };
-  // Get the key type with both the opcode and predicate
-  const ConstantExprKeyType Key(Instruction::FCmp, ArgVec, Predicate);
-
-  Type *ResultTy = Type::getInt1Ty(LHS->getContext());
-  if (VectorType *VT = dyn_cast<VectorType>(LHS->getType()))
-    ResultTy = VectorType::get(ResultTy, VT->getElementCount());
-
-  LLVMContextImpl *pImpl = LHS->getType()->getContext().pImpl;
-  return pImpl->ExprConstants.getOrCreate(ResultTy, Key);
 }
 
 Constant *ConstantExpr::getExtractElement(Constant *Val, Constant *Idx,
@@ -2514,7 +2578,7 @@ Constant *ConstantExpr::getShuffleVector(Constant *V1, Constant *V2,
 
   // Look up the constant in the table first to ensure uniqueness
   Constant *ArgVec[] = {V1, V2};
-  ConstantExprKeyType Key(Instruction::ShuffleVector, ArgVec, 0, 0, Mask);
+  ConstantExprKeyType Key(Instruction::ShuffleVector, ArgVec, 0, Mask);
 
   LLVMContextImpl *pImpl = ShufTy->getContext().pImpl;
   return pImpl->ExprConstants.getOrCreate(ShufTy, Key);
@@ -2555,13 +2619,6 @@ Constant *ConstantExpr::getMul(Constant *C1, Constant *C2,
 
 Constant *ConstantExpr::getXor(Constant *C1, Constant *C2) {
   return get(Instruction::Xor, C1, C2);
-}
-
-Constant *ConstantExpr::getShl(Constant *C1, Constant *C2,
-                               bool HasNUW, bool HasNSW) {
-  unsigned Flags = (HasNUW ? OverflowingBinaryOperator::NoUnsignedWrap : 0) |
-                   (HasNSW ? OverflowingBinaryOperator::NoSignedWrap   : 0);
-  return get(Instruction::Shl, C1, C2, Flags);
 }
 
 Constant *ConstantExpr::getExactLogBase2(Constant *C) {
@@ -3313,14 +3370,6 @@ Instruction *ConstantExpr::getAsInstruction() const {
 
   switch (getOpcode()) {
   case Instruction::Trunc:
-  case Instruction::ZExt:
-  case Instruction::SExt:
-  case Instruction::FPTrunc:
-  case Instruction::FPExt:
-  case Instruction::UIToFP:
-  case Instruction::SIToFP:
-  case Instruction::FPToUI:
-  case Instruction::FPToSI:
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:
   case Instruction::BitCast:
@@ -3336,17 +3385,9 @@ Instruction *ConstantExpr::getAsInstruction() const {
 
   case Instruction::GetElementPtr: {
     const auto *GO = cast<GEPOperator>(this);
-    if (GO->isInBounds())
-      return GetElementPtrInst::CreateInBounds(GO->getSourceElementType(),
-                                               Ops[0], Ops.slice(1), "");
     return GetElementPtrInst::Create(GO->getSourceElementType(), Ops[0],
-                                     Ops.slice(1), "");
+                                     Ops.slice(1), GO->getNoWrapFlags(), "");
   }
-  case Instruction::ICmp:
-  case Instruction::FCmp:
-    return CmpInst::Create((Instruction::OtherOps)getOpcode(),
-                           (CmpInst::Predicate)getPredicate(), Ops[0], Ops[1],
-                           "");
   default:
     assert(getNumOperands() == 2 && "Must be binary operator?");
     BinaryOperator *BO = BinaryOperator::Create(

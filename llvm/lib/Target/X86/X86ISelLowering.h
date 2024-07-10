@@ -699,18 +699,6 @@ namespace llvm {
     // Test if in transactional execution.
     XTEST,
 
-    // ERI instructions.
-    RSQRT28,
-    RSQRT28_SAE,
-    RSQRT28S,
-    RSQRT28S_SAE,
-    RCP28,
-    RCP28_SAE,
-    RCP28S,
-    RCP28S_SAE,
-    EXP2,
-    EXP2_SAE,
-
     // Conversions between float and half-float.
     CVTPS2PH,
     CVTPS2PH_SAE,
@@ -746,6 +734,10 @@ namespace llvm {
 
     // Perform an FP80 add after changing precision control in FPCW.
     FP80_ADD,
+
+    // Conditional compare instructions
+    CCMP,
+    CTEST,
 
     /// X86 strict FP compare instructions.
     STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
@@ -910,6 +902,10 @@ namespace llvm {
     // Save xmm argument registers to the stack, according to %al. An operator
     // is needed so that this can be expanded with control flow.
     VASTART_SAVE_XMM_REGS,
+
+    // Conditional load/store instructions
+    CLOAD,
+    CSTORE,
 
     // WARNING: Do not add anything in the end unless you want the node to
     // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
@@ -1323,6 +1319,8 @@ namespace llvm {
                                Type *Ty, unsigned AS,
                                Instruction *I = nullptr) const override;
 
+    bool addressingModeSupportsTLS(const GlobalValue &GV) const override;
+
     /// Return true if the specified immediate is legal
     /// icmp immediate, that is the target has icmp instructions which can
     /// compare a register against the immediate without having to materialize
@@ -1479,11 +1477,6 @@ namespace llvm {
                                  const SelectionDAG &DAG,
                                  const MachineMemOperand &MMO) const override;
 
-    /// Intel processors have a unified instruction and data cache
-    const char * getClearCacheBuiltinName() const override {
-      return nullptr; // nothing to do, move along.
-    }
-
     Register getRegisterByName(const char* RegName, LLT VT,
                                const MachineFunction &MF) const override;
 
@@ -1567,6 +1560,14 @@ namespace llvm {
     bool isInlineAsmTargetBranch(const SmallVectorImpl<StringRef> &AsmStrs,
                                  unsigned OpNo) const override;
 
+    SDValue visitMaskedLoad(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
+                            MachineMemOperand *MMO, SDValue &NewLoad,
+                            SDValue Ptr, SDValue PassThru,
+                            SDValue Mask) const override;
+    SDValue visitMaskedStore(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
+                             MachineMemOperand *MMO, SDValue Ptr, SDValue Val,
+                             SDValue Mask) const override;
+
     /// Lower interleaved load(s) into target specific
     /// instructions/intrinsics.
     bool lowerInterleavedLoad(LoadInst *LI,
@@ -1630,10 +1631,8 @@ namespace llvm {
     /// Check whether the call is eligible for tail call optimization. Targets
     /// that want to do tail call optimization should implement this function.
     bool IsEligibleForTailCallOptimization(
-        SDValue Callee, CallingConv::ID CalleeCC, bool IsCalleeStackStructRet,
-        bool isVarArg, Type *RetTy, const SmallVectorImpl<ISD::OutputArg> &Outs,
-        const SmallVectorImpl<SDValue> &OutVals,
-        const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG) const;
+        TargetLowering::CallLoweringInfo &CLI, CCState &CCInfo,
+        SmallVectorImpl<CCValAssign> &ArgLocs, bool IsCalleePopSRet) const;
     SDValue EmitTailCallLoadRetAddr(SelectionDAG &DAG, SDValue &OutRetAddr,
                                     SDValue Chain, bool IsTailCall,
                                     bool Is64Bit, int FPDiff,
@@ -1805,6 +1804,9 @@ namespace llvm {
 
     MachineBasicBlock *EmitSjLjDispatchBlock(MachineInstr &MI,
                                              MachineBasicBlock *MBB) const;
+
+    MachineBasicBlock *emitPatchableEventCall(MachineInstr &MI,
+                                              MachineBasicBlock *MBB) const;
 
     /// Emit flags for the given setcc condition and operands. Also returns the
     /// corresponding X86 condition code constant in X86CC.

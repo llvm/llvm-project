@@ -32,7 +32,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
@@ -40,6 +42,7 @@
 #include <cassert>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -95,6 +98,10 @@ struct TransferrableTargetInfo {
   unsigned char LongWidth, LongAlign;
   unsigned char LongLongWidth, LongLongAlign;
   unsigned char Int128Align;
+
+  // This is an optional parameter for targets that
+  // don't use 'LongLongAlign' for '_BitInt' max alignment
+  std::optional<unsigned> BitIntMaxAlign;
 
   // Fixed point bit widths
   unsigned char ShortAccumWidth, ShortAccumAlign;
@@ -516,6 +523,22 @@ public:
 
   /// getInt128Align() - Returns the alignment of Int128.
   unsigned getInt128Align() const { return Int128Align; }
+
+  /// getBitIntMaxAlign() - Returns the maximum possible alignment of
+  /// '_BitInt' and 'unsigned _BitInt'.
+  unsigned getBitIntMaxAlign() const {
+    return BitIntMaxAlign.value_or(LongLongAlign);
+  }
+
+  /// getBitIntAlign/Width - Return aligned size of '_BitInt' and
+  /// 'unsigned _BitInt' for this target, in bits.
+  unsigned getBitIntWidth(unsigned NumBits) const {
+    return llvm::alignTo(NumBits, getBitIntAlign(NumBits));
+  }
+  unsigned getBitIntAlign(unsigned NumBits) const {
+    return std::clamp<unsigned>(llvm::PowerOf2Ceil(NumBits), getCharWidth(),
+                                getBitIntMaxAlign());
+  }
 
   /// getShortAccumWidth/Align - Return the size of 'signed short _Accum' and
   /// 'unsigned short _Accum' for this target, in bits.
@@ -1379,20 +1402,15 @@ public:
     return true;
   }
 
-  /// For given feature return dependent ones.
-  virtual StringRef getFeatureDependencies(StringRef Feature) const {
-    return StringRef();
-  }
-
-  struct BranchProtectionInfo {
+  class BranchProtectionInfo {
+  public:
     LangOptions::SignReturnAddressScopeKind SignReturnAddr;
     LangOptions::SignReturnAddressKeyKind SignKey;
     bool BranchTargetEnforcement;
     bool BranchProtectionPAuthLR;
     bool GuardedControlStack;
 
-    BranchProtectionInfo() = default;
-
+  protected:
     const char *getSignReturnAddrStr() const {
       switch (SignReturnAddr) {
       case LangOptions::SignReturnAddressScopeKind::None:
@@ -1413,6 +1431,47 @@ public:
         return "b_key";
       }
       llvm_unreachable("Unexpected SignReturnAddressKeyKind");
+    }
+
+  public:
+    BranchProtectionInfo()
+        : SignReturnAddr(LangOptions::SignReturnAddressScopeKind::None),
+          SignKey(LangOptions::SignReturnAddressKeyKind::AKey),
+          BranchTargetEnforcement(false), BranchProtectionPAuthLR(false),
+          GuardedControlStack(false) {}
+
+    BranchProtectionInfo(const LangOptions &LangOpts) {
+      SignReturnAddr =
+          LangOpts.hasSignReturnAddress()
+              ? (LangOpts.isSignReturnAddressScopeAll()
+                     ? LangOptions::SignReturnAddressScopeKind::All
+                     : LangOptions::SignReturnAddressScopeKind::NonLeaf)
+              : LangOptions::SignReturnAddressScopeKind::None;
+      SignKey = LangOpts.isSignReturnAddressWithAKey()
+                    ? LangOptions::SignReturnAddressKeyKind::AKey
+                    : LangOptions::SignReturnAddressKeyKind::BKey;
+      BranchTargetEnforcement = LangOpts.BranchTargetEnforcement;
+      BranchProtectionPAuthLR = LangOpts.BranchProtectionPAuthLR;
+      GuardedControlStack = LangOpts.GuardedControlStack;
+    }
+
+    void setFnAttributes(llvm::Function &F) {
+      llvm::AttrBuilder FuncAttrs(F.getContext());
+      setFnAttributes(FuncAttrs);
+      F.addFnAttrs(FuncAttrs);
+    }
+
+    void setFnAttributes(llvm::AttrBuilder &FuncAttrs) {
+      if (SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
+        FuncAttrs.addAttribute("sign-return-address", getSignReturnAddrStr());
+        FuncAttrs.addAttribute("sign-return-address-key", getSignKeyStr());
+      }
+      if (BranchTargetEnforcement)
+        FuncAttrs.addAttribute("branch-target-enforcement");
+      if (BranchProtectionPAuthLR)
+        FuncAttrs.addAttribute("branch-protection-pauth-lr");
+      if (GuardedControlStack)
+        FuncAttrs.addAttribute("guarded-control-stack");
     }
   };
 
@@ -1791,6 +1850,15 @@ public:
 
   /// Whether to support HIP image/texture API's.
   virtual bool hasHIPImageSupport() const { return true; }
+
+  /// The first value in the pair is the minimum offset between two objects to
+  /// avoid false sharing (destructive interference). The second value in the
+  /// pair is maximum size of contiguous memory to promote true sharing
+  /// (constructive interference). Neither of these values are considered part
+  /// of the ABI and can be changed by targets at any time.
+  virtual std::pair<unsigned, unsigned> hardwareInterferenceSizes() const {
+    return std::make_pair(64, 64);
+  }
 
 protected:
   /// Copy type and layout related info.

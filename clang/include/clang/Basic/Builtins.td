@@ -482,11 +482,11 @@ def SqrtF16F128 : Builtin, F16F128MathTemplate {
   let Prototype = "T(T)";
 }
 
-def TanF128 : Builtin {
-  let Spellings = ["__builtin_tanf128"];
+def TanF16F128 : Builtin, F16F128MathTemplate {
+  let Spellings = ["__builtin_tan"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow,
                     ConstIgnoringErrnoAndExceptions];
-  let Prototype = "__float128(__float128)";
+  let Prototype = "T(T)";
 }
 
 def TanhF128 : Builtin {
@@ -1152,6 +1152,12 @@ def Trap : Builtin {
   let Prototype = "void()";
 }
 
+def VerboseTrap : Builtin {
+  let Spellings = ["__builtin_verbose_trap"];
+  let Attributes = [NoThrow, NoReturn];
+  let Prototype = "void(char const*, char const*)";
+}
+
 def Debugtrap : Builtin {
   let Spellings = ["__builtin_debugtrap"];
   let Attributes = [NoThrow];
@@ -1162,6 +1168,12 @@ def Unreachable : Builtin {
   let Spellings = ["__builtin_unreachable"];
   let Attributes = [NoThrow, NoReturn];
   let Prototype = "void()";
+}
+
+def AllowRuntimeCheck : Builtin {
+  let Spellings = ["__builtin_allow_runtime_check"];
+  let Attributes = [NoThrow, Pure, Const];
+  let Prototype = "bool(char const*)";
 }
 
 def ShuffleVector : Builtin {
@@ -1212,6 +1224,24 @@ def ElementwiseAbs : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwiseACos : Builtin {
+  let Spellings = ["__builtin_elementwise_acos"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseASin : Builtin {
+  let Spellings = ["__builtin_elementwise_asin"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseATan : Builtin {
+  let Spellings = ["__builtin_elementwise_atan"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ElementwiseBitreverse : Builtin {
   let Spellings = ["__builtin_elementwise_bitreverse"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
@@ -1238,6 +1268,12 @@ def ElementwiseCeil : Builtin {
 
 def ElementwiseCos : Builtin {
   let Spellings = ["__builtin_elementwise_cos"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseCosh : Builtin {
+  let Spellings = ["__builtin_elementwise_cosh"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -1314,8 +1350,26 @@ def ElementwiseSin : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwiseSinh : Builtin {
+  let Spellings = ["__builtin_elementwise_sinh"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ElementwiseSqrt : Builtin {
   let Spellings = ["__builtin_elementwise_sqrt"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseTan : Builtin {
+  let Spellings = ["__builtin_elementwise_tan"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseTanh : Builtin {
+  let Spellings = ["__builtin_elementwise_tanh"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -4381,6 +4435,12 @@ def PtrauthSignUnauthenticated : Builtin {
   let Prototype = "void*(void*,int,void*)";
 }
 
+def PtrauthSignConstant : Builtin {
+  let Spellings = ["__builtin_ptrauth_sign_constant"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const, Constexpr];
+  let Prototype = "void*(void*,int,void*)";
+}
+
 def PtrauthSignGenericData : Builtin {
   let Spellings = ["__builtin_ptrauth_sign_generic_data"];
   let Attributes = [CustomTypeChecking, NoThrow, Const];
@@ -4397,6 +4457,12 @@ def PtrauthAuth : Builtin {
   let Spellings = ["__builtin_ptrauth_auth"];
   let Attributes = [CustomTypeChecking, NoThrow];
   let Prototype = "void*(void*,int,void*)";
+}
+
+def PtrauthStringDiscriminator : Builtin {
+  let Spellings = ["__builtin_ptrauth_string_discriminator"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "size_t(char const*)";
 }
 
 // OpenCL v2.0 s6.13.16, s9.17.3.5 - Pipe functions.
@@ -4587,6 +4653,12 @@ def GetDeviceSideMangledName : LangBuiltin<"CUDA_LANG"> {
 }
 
 // HLSL
+def HLSLAll : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_all"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "bool(...)";
+}
+
 def HLSLAny : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_any"];
   let Attributes = [NoThrow, Const];

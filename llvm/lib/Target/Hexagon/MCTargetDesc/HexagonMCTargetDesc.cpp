@@ -158,7 +158,7 @@ StringRef Hexagon_MC::selectHexagonCPU(StringRef CPU) {
     // non-tiny subtarget.  See: addArchSubtarget
     std::pair<StringRef, StringRef> ArchP = ArchV.split('t');
     std::pair<StringRef, StringRef> CPUP = CPU.split('t');
-    if (!ArchP.first.equals(CPUP.first))
+    if (ArchP.first != CPUP.first)
       report_fatal_error("conflicting architectures specified.");
     return CPU;
   }
@@ -385,8 +385,7 @@ createMCAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
 static MCStreamer *createMCStreamer(Triple const &T, MCContext &Context,
                                     std::unique_ptr<MCAsmBackend> &&MAB,
                                     std::unique_ptr<MCObjectWriter> &&OW,
-                                    std::unique_ptr<MCCodeEmitter> &&Emitter,
-                                    bool RelaxAll) {
+                                    std::unique_ptr<MCCodeEmitter> &&Emitter) {
   return createHexagonELFStreamer(T, Context, std::move(MAB), std::move(OW),
                                   std::move(Emitter));
 }
@@ -579,7 +578,7 @@ MCSubtargetInfo *Hexagon_MC::createHexagonMCSubtargetInfo(const Triple &TT,
   if (X != nullptr && (CPUName == "hexagonv67t" || CPUName == "hexagon71t"))
     addArchSubtarget(X, ArchFS);
 
-  if (CPU.equals("help"))
+  if (CPU == "help")
     exit(0);
 
   if (!isCPUValid(CPUName.str())) {

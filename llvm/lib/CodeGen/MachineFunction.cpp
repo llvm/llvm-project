@@ -200,10 +200,11 @@ void MachineFunction::init() {
   // explicitly asked us not to.
   bool CanRealignSP = STI->getFrameLowering()->isStackRealignable() &&
                       !F.hasFnAttribute("no-realign-stack");
+  bool ForceRealignSP = F.hasFnAttribute(Attribute::StackAlignment) ||
+                        F.hasFnAttribute("stackrealign");
   FrameInfo = new (Allocator) MachineFrameInfo(
       getFnStackAlignment(STI, F), /*StackRealignable=*/CanRealignSP,
-      /*ForcedRealign=*/CanRealignSP &&
-          F.hasFnAttribute(Attribute::StackAlignment));
+      /*ForcedRealign=*/ForceRealignSP && CanRealignSP);
 
   setUnsafeStackSize(F, *FrameInfo);
 
@@ -306,7 +307,7 @@ void MachineFunction::clear() {
 }
 
 const DataLayout &MachineFunction::getDataLayout() const {
-  return F.getParent()->getDataLayout();
+  return F.getDataLayout();
 }
 
 /// Get the JumpTableInfo for this function.
@@ -573,10 +574,10 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
 MachineInstr::ExtraInfo *MachineFunction::createMIExtraInfo(
     ArrayRef<MachineMemOperand *> MMOs, MCSymbol *PreInstrSymbol,
     MCSymbol *PostInstrSymbol, MDNode *HeapAllocMarker, MDNode *PCSections,
-    uint32_t CFIType) {
+    uint32_t CFIType, MDNode *MMRAs) {
   return MachineInstr::ExtraInfo::create(Allocator, MMOs, PreInstrSymbol,
                                          PostInstrSymbol, HeapAllocMarker,
-                                         PCSections, CFIType);
+                                         PCSections, CFIType, MMRAs);
 }
 
 const char *MachineFunction::createExternalSymbolName(StringRef Name) {

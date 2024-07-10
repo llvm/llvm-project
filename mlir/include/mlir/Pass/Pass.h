@@ -12,7 +12,6 @@
 #include "mlir/IR/Action.h"
 #include "mlir/Pass/AnalysisManager.h"
 #include "mlir/Pass/PassRegistry.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/Statistic.h"
 #include <optional>
@@ -355,7 +354,7 @@ private:
 template <typename OpT = void>
 class OperationPass : public Pass {
 public:
-  ~OperationPass() = default;
+  ~OperationPass() override = default;
 
 protected:
   OperationPass(TypeID passID) : Pass(passID, OpT::getOperationName()) {}
@@ -400,7 +399,7 @@ protected:
 template <>
 class OperationPass<void> : public Pass {
 public:
-  ~OperationPass() = default;
+  ~OperationPass() override = default;
 
 protected:
   OperationPass(TypeID passID) : Pass(passID) {}
@@ -461,7 +460,7 @@ public:
   static bool classof(const Pass *pass) {
     return pass->getTypeID() == TypeID::get<PassT>();
   }
-  ~PassWrapper() = default;
+  ~PassWrapper() override = default;
 
 protected:
   PassWrapper() : BaseT(TypeID::get<PassT>()) {}

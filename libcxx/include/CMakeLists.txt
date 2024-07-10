@@ -72,37 +72,7 @@ set(files
   __algorithm/partition_point.h
   __algorithm/pop_heap.h
   __algorithm/prev_permutation.h
-  __algorithm/pstl_any_all_none_of.h
-  __algorithm/pstl_backend.h
-  __algorithm/pstl_backends/cpu_backend.h
-  __algorithm/pstl_backends/cpu_backends/any_of.h
-  __algorithm/pstl_backends/cpu_backends/backend.h
-  __algorithm/pstl_backends/cpu_backends/fill.h
-  __algorithm/pstl_backends/cpu_backends/find_if.h
-  __algorithm/pstl_backends/cpu_backends/for_each.h
-  __algorithm/pstl_backends/cpu_backends/libdispatch.h
-  __algorithm/pstl_backends/cpu_backends/merge.h
-  __algorithm/pstl_backends/cpu_backends/serial.h
-  __algorithm/pstl_backends/cpu_backends/stable_sort.h
-  __algorithm/pstl_backends/cpu_backends/thread.h
-  __algorithm/pstl_backends/cpu_backends/transform.h
-  __algorithm/pstl_backends/cpu_backends/transform_reduce.h
-  __algorithm/pstl_copy.h
-  __algorithm/pstl_count.h
-  __algorithm/pstl_equal.h
-  __algorithm/pstl_fill.h
-  __algorithm/pstl_find.h
-  __algorithm/pstl_for_each.h
-  __algorithm/pstl_frontend_dispatch.h
-  __algorithm/pstl_generate.h
-  __algorithm/pstl_is_partitioned.h
-  __algorithm/pstl_merge.h
-  __algorithm/pstl_move.h
-  __algorithm/pstl_replace.h
-  __algorithm/pstl_rotate_copy.h
-  __algorithm/pstl_sort.h
-  __algorithm/pstl_stable_sort.h
-  __algorithm/pstl_transform.h
+  __algorithm/pstl.h
   __algorithm/push_heap.h
   __algorithm/ranges_adjacent_find.h
   __algorithm/ranges_all_of.h
@@ -238,6 +208,7 @@ set(files
   __atomic/atomic_flag.h
   __atomic/atomic_init.h
   __atomic/atomic_lock_free.h
+  __atomic/atomic_ref.h
   __atomic/atomic_sync.h
   __atomic/check_memory_order.h
   __atomic/contention_t.h
@@ -246,7 +217,7 @@ set(files
   __atomic/is_always_lock_free.h
   __atomic/kill_dependency.h
   __atomic/memory_order.h
-  __availability
+  __atomic/to_gcc_order.h
   __bit/bit_cast.h
   __bit/bit_ceil.h
   __bit/bit_floor.h
@@ -278,11 +249,14 @@ set(files
   __chrono/convert_to_tm.h
   __chrono/day.h
   __chrono/duration.h
+  __chrono/exception.h
   __chrono/file_clock.h
   __chrono/formatter.h
   __chrono/hh_mm_ss.h
   __chrono/high_resolution_clock.h
+  __chrono/leap_second.h
   __chrono/literals.h
+  __chrono/local_info.h
   __chrono/month.h
   __chrono/month_weekday.h
   __chrono/monthday.h
@@ -290,6 +264,7 @@ set(files
   __chrono/parser_std_format_spec.h
   __chrono/statically_widen.h
   __chrono/steady_clock.h
+  __chrono/sys_info.h
   __chrono/system_clock.h
   __chrono/time_point.h
   __chrono/time_zone.h
@@ -301,6 +276,7 @@ set(files
   __chrono/year_month.h
   __chrono/year_month_day.h
   __chrono/year_month_weekday.h
+  __chrono/zoned_time.h
   __compare/common_comparison_category.h
   __compare/compare_partial_order_fallback.h
   __compare/compare_strong_order_fallback.h
@@ -338,11 +314,17 @@ set(files
   __concepts/totally_ordered.h
   __condition_variable/condition_variable.h
   __config
+  __configuration/abi.h
+  __configuration/availability.h
+  __configuration/compiler.h
+  __configuration/language.h
+  __configuration/platform.h
   __coroutine/coroutine_handle.h
   __coroutine/coroutine_traits.h
   __coroutine/noop_coroutine_handle.h
   __coroutine/trivial_awaitables.h
   __debug_utils/randomize_range.h
+  __debug_utils/sanitizers.h
   __debug_utils/strict_weak_ordering_check.h
   __exception/exception.h
   __exception/exception_ptr.h
@@ -394,6 +376,7 @@ set(files
   __format/formatter_pointer.h
   __format/formatter_string.h
   __format/formatter_tuple.h
+  __format/indic_conjunct_break_table.h
   __format/parser_std_format_spec.h
   __format/range_default_formatter.h
   __format/range_formatter.h
@@ -455,6 +438,7 @@ set(files
   __ios/fpos.h
   __iterator/access.h
   __iterator/advance.h
+  __iterator/aliasing_iterator.h
   __iterator/back_insert_iterator.h
   __iterator/bounded_iter.h
   __iterator/common_iterator.h
@@ -583,13 +567,31 @@ set(files
   __numeric/iota.h
   __numeric/midpoint.h
   __numeric/partial_sum.h
-  __numeric/pstl_reduce.h
-  __numeric/pstl_transform_reduce.h
+  __numeric/pstl.h
   __numeric/reduce.h
   __numeric/saturation_arithmetic.h
   __numeric/transform_exclusive_scan.h
   __numeric/transform_inclusive_scan.h
   __numeric/transform_reduce.h
+  __ostream/basic_ostream.h
+  __ostream/print.h
+  __pstl/backend.h
+  __pstl/backend_fwd.h
+  __pstl/backends/default.h
+  __pstl/backends/libdispatch.h
+  __pstl/backends/serial.h
+  __pstl/backends/std_thread.h
+  __pstl/cpu_algos/any_of.h
+  __pstl/cpu_algos/cpu_traits.h
+  __pstl/cpu_algos/fill.h
+  __pstl/cpu_algos/find_if.h
+  __pstl/cpu_algos/for_each.h
+  __pstl/cpu_algos/merge.h
+  __pstl/cpu_algos/stable_sort.h
+  __pstl/cpu_algos/transform.h
+  __pstl/cpu_algos/transform_reduce.h
+  __pstl/dispatch.h
+  __pstl/handle_exception.h
   __random/bernoulli_distribution.h
   __random/binomial_distribution.h
   __random/cauchy_distribution.h
@@ -726,7 +728,6 @@ set(files
   __type_traits/aligned_storage.h
   __type_traits/aligned_union.h
   __type_traits/alignment_of.h
-  __type_traits/apply_cv.h
   __type_traits/can_extract_key.h
   __type_traits/common_reference.h
   __type_traits/common_type.h
@@ -737,6 +738,7 @@ set(files
   __type_traits/datasizeof.h
   __type_traits/decay.h
   __type_traits/dependent_type.h
+  __type_traits/desugars_to.h
   __type_traits/disjunction.h
   __type_traits/enable_if.h
   __type_traits/extent.h
@@ -821,7 +823,6 @@ set(files
   __type_traits/nat.h
   __type_traits/negation.h
   __type_traits/noexcept_move_assign_container.h
-  __type_traits/operation_traits.h
   __type_traits/promote.h
   __type_traits/rank.h
   __type_traits/remove_all_extents.h
@@ -855,11 +856,13 @@ set(files
   __utility/in_place.h
   __utility/integer_sequence.h
   __utility/is_pointer_in_range.h
+  __utility/is_valid_range.h
   __utility/move.h
   __utility/no_destroy.h
   __utility/pair.h
   __utility/piecewise_construct.h
   __utility/priority_tag.h
+  __utility/private_constructor_tag.h
   __utility/rel_ops.h
   __utility/small_buffer.h
   __utility/swap.h
@@ -950,7 +953,6 @@ set(files
   istream
   iterator
   latch
-  libcxx.imp
   limits
   list
   locale
@@ -1029,6 +1031,15 @@ foreach(f ${files})
   list(APPEND _all_includes "${dst}")
 endforeach()
 
+# Generate the IWYU mapping. This depends on all header files but it's also considered as an
+# "include" for dependency tracking.
+add_custom_command(OUTPUT "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
+  COMMAND "${Python3_EXECUTABLE}" "${LIBCXX_SOURCE_DIR}/utils/generate_iwyu_mapping.py" "-o" "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
+  DEPENDS ${_all_includes}
+  COMMENT "Generate the mapping file for include-what-you-use"
+)
+list(APPEND _all_includes "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp")
+
 add_custom_target(generate-cxx-headers ALL DEPENDS ${_all_includes})
 
 add_library(cxx-headers INTERFACE)
@@ -1061,8 +1072,8 @@ if (LIBCXX_INSTALL_HEADERS)
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     COMPONENT cxx-headers)
 
-  # Install the generated modulemap file to the generic include dir.
-  install(FILES "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap"
+  # Install the generated IWYU file to the generic include dir.
+  install(FILES "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
     DESTINATION "${LIBCXX_INSTALL_INCLUDE_DIR}"
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     COMPONENT cxx-headers)

@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_BSEARCH_H
 #define LLVM_LIBC_SRC_STDLIB_BSEARCH_H
 
-#include <stdlib.h>
+#include <stddef.h> // size_t
 
 namespace LIBC_NAMESPACE {
 

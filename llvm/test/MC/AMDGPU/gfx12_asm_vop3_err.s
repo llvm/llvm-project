@@ -101,3 +101,8 @@ v_permlane16_var_b32 v5, v1, v2 op_sel:[0, 0, 1]
 // GFX12: error: invalid op_sel operand
 // GFX12-NEXT:{{^}}v_permlane16_var_b32 v5, v1, v2 op_sel:[0, 0, 1]
 // GFX12-NEXT:{{^}}                                ^
+
+v_cvt_sr_bf8_f32 v1, v2, v3 byte_sel:4
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid byte_sel value.
+// GFX12-NEXT:{{^}}v_cvt_sr_bf8_f32 v1, v2, v3 byte_sel:4
+// GFX12-NEXT:{{^}}                            ^

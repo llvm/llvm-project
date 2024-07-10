@@ -11,9 +11,7 @@ define void @test(ptr %0, i8 %1, i1 %cmp12.i) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i8> [[TMP4]], <8 x i8> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[PRE:%.*]]
 ; CHECK:       pre:
-; CHECK-NEXT:    [[TMP6:%.*]] = zext <8 x i8> [[TMP5]] to <8 x i32>
-; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x i32> @llvm.umax.v8i32(<8 x i32> [[TMP6]], <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>)
-; CHECK-NEXT:    [[TMP8:%.*]] = trunc <8 x i32> [[TMP7]] to <8 x i8>
+; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x i8> @llvm.umax.v8i8(<8 x i8> [[TMP5]], <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
 ; CHECK-NEXT:    [[TMP9:%.*]] = add <8 x i8> [[TMP8]], <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <8 x i1> [[TMP3]], <8 x i8> [[TMP9]], <8 x i8> [[TMP5]]
 ; CHECK-NEXT:    store <8 x i8> [[TMP10]], ptr [[TMP0]], align 1

@@ -270,8 +270,10 @@ void CompileUnit::analyzeImportedModule(const DWARFDebugInfoEntry *DieEntry) {
     return;
   // Don't track interfaces that are part of the toolchain.
   // For example: Swift, _Concurrency, ...
-  SmallString<128> Toolchain = guessToolchainBaseDir(SysRoot);
-  if (!Toolchain.empty() && Path.starts_with(Toolchain))
+  StringRef DeveloperDir = guessDeveloperDir(SysRoot);
+  if (!DeveloperDir.empty() && Path.starts_with(DeveloperDir))
+    return;
+  if (isInToolchainDir(Path))
     return;
   if (std::optional<DWARFFormValue> Val = find(DieEntry, dwarf::DW_AT_name)) {
     Expected<const char *> Name = Val->getAsCString();
@@ -1831,7 +1833,7 @@ TypeUnit *CompileUnit::OutputUnitVariantPtr::getAsTypeUnit() {
 
 bool CompileUnit::resolveDependenciesAndMarkLiveness(
     bool InterCUProcessingStarted, std::atomic<bool> &HasNewInterconnectedCUs) {
-  if (!Dependencies.get())
+  if (!Dependencies)
     Dependencies.reset(new DependencyTracker(*this));
 
   return Dependencies->resolveDependenciesAndMarkLiveness(
@@ -1841,13 +1843,13 @@ bool CompileUnit::resolveDependenciesAndMarkLiveness(
 bool CompileUnit::updateDependenciesCompleteness() {
   assert(Dependencies.get());
 
-  return Dependencies.get()->updateDependenciesCompleteness();
+  return Dependencies->updateDependenciesCompleteness();
 }
 
 void CompileUnit::verifyDependencies() {
   assert(Dependencies.get());
 
-  Dependencies.get()->verifyKeepChain();
+  Dependencies->verifyKeepChain();
 }
 
 ArrayRef<dwarf::Attribute> dwarf_linker::parallel::getODRAttributes() {

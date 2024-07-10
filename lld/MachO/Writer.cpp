@@ -640,7 +640,17 @@ void Writer::treatSpecialUndefineds() {
 
 static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
                                     const lld::macho::Reloc &r) {
-  assert(sym->isLive());
+  if (!sym->isLive()) {
+    if (Defined *defined = dyn_cast<Defined>(sym)) {
+      if (config->emitInitOffsets &&
+          defined->isec()->getName() == section_names::moduleInitFunc)
+        fatal(isec->getLocation(r.offset) + ": cannot reference " +
+              sym->getName() +
+              " defined in __mod_init_func when -init_offsets is used");
+    }
+    assert(false && "referenced symbol must be live");
+  }
+
   const RelocAttrs &relocAttrs = target->getRelocAttrs(r.type);
 
   if (relocAttrs.hasAttr(RelocAttrBits::BRANCH)) {
@@ -725,10 +735,9 @@ void Writer::scanSymbols() {
     if (auto *defined = dyn_cast<Defined>(sym)) {
       if (!defined->isLive())
         continue;
-      defined->canonicalize();
       if (defined->overridesWeakDef)
         addNonWeakDefinition(defined);
-      if (!defined->isAbsolute() && isCodeSection(defined->isec))
+      if (!defined->isAbsolute() && isCodeSection(defined->isec()))
         in.unwindInfo->addSymbol(defined);
     } else if (const auto *dysym = dyn_cast<DylibSymbol>(sym)) {
       // This branch intentionally doesn't check isLive().
@@ -756,9 +765,8 @@ void Writer::scanSymbols() {
         if (auto *defined = dyn_cast_or_null<Defined>(sym)) {
           if (!defined->isLive())
             continue;
-          defined->canonicalize();
           if (!defined->isExternal() && !defined->isAbsolute() &&
-              isCodeSection(defined->isec))
+              isCodeSection(defined->isec()))
             in.unwindInfo->addSymbol(defined);
         }
       }

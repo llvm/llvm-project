@@ -92,7 +92,7 @@ int64_t mlir::computeProduct(ArrayRef<int64_t> basis) {
   assert(llvm::all_of(basis, [](int64_t s) { return s > 0; }) &&
          "basis must be nonnegative");
   if (basis.empty())
-    return 0;
+    return 1;
   return std::accumulate(basis.begin(), basis.end(), 1,
                          std::multiplies<int64_t>());
 }

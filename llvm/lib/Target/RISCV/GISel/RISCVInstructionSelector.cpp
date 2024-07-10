@@ -177,6 +177,20 @@ RISCVInstructionSelector::selectShiftMask(MachineOperand &Root) const {
 
   APInt AndMask;
   Register AndSrcReg;
+  // Try to combine the following pattern (applicable to other shift
+  // instructions as well as 32-bit ones):
+  //
+  //   %4:gprb(s64) = G_AND %3, %2
+  //   %5:gprb(s64) = G_LSHR %1, %4(s64)
+  //
+  // According to RISC-V's ISA manual, SLL, SRL, and SRA ignore other bits than
+  // the lowest log2(XLEN) bits of register rs2. As for the above pattern, if
+  // the lowest log2(XLEN) bits of register rd and rs2 of G_AND are the same,
+  // then it can be eliminated. Given register rs1 or rs2 holding a constant
+  // (the and mask), there are two cases G_AND can be erased:
+  //
+  // 1. the lowest log2(XLEN) bits of the and mask are all set
+  // 2. the bits of the register being masked are already unset (zero set)
   if (mi_match(ShAmtReg, MRI, m_GAnd(m_Reg(AndSrcReg), m_ICst(AndMask)))) {
     APInt ShMask(AndMask.getBitWidth(), ShiftWidth - 1);
     if (ShMask.isSubsetOf(AndMask)) {
@@ -184,7 +198,7 @@ RISCVInstructionSelector::selectShiftMask(MachineOperand &Root) const {
     } else {
       // SimplifyDemandedBits may have optimized the mask so try restoring any
       // bits that are known zero.
-      KnownBits Known = KB->getKnownBits(ShAmtReg);
+      KnownBits Known = KB->getKnownBits(AndSrcReg);
       if (ShMask.isSubsetOf(AndMask | Known.Zero))
         ShAmtReg = AndSrcReg;
     }
@@ -544,6 +558,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
   case TargetOpcode::G_PTRTOINT:
   case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_TRUNC:
+  case TargetOpcode::G_FREEZE:
     return selectCopy(MI, MRI);
   case TargetOpcode::G_CONSTANT: {
     Register DstReg = MI.getOperand(0).getReg();
@@ -562,12 +577,14 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     const APFloat &FPimm = MI.getOperand(1).getFPImm()->getValueAPF();
     APInt Imm = FPimm.bitcastToAPInt();
     unsigned Size = MRI.getType(DstReg).getSizeInBits();
-    if (Size == 32 || (Size == 64 && Subtarget->is64Bit())) {
+    if (Size == 16 || Size == 32 || (Size == 64 && Subtarget->is64Bit())) {
       Register GPRReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
       if (!materializeImm(GPRReg, Imm.getSExtValue(), MIB))
         return false;
 
-      unsigned Opcode = Size == 64 ? RISCV::FMV_D_X : RISCV::FMV_W_X;
+      unsigned Opcode = Size == 64   ? RISCV::FMV_D_X
+                        : Size == 32 ? RISCV::FMV_W_X
+                                     : RISCV::FMV_H_X;
       auto FMV = MIB.buildInstr(Opcode, {DstReg}, {GPRReg});
       if (!FMV.constrainAllUses(TII, TRI, RBI))
         return false;
@@ -834,6 +851,8 @@ const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(
   }
 
   if (RB.getID() == RISCV::FPRBRegBankID) {
+    if (Ty.getSizeInBits() == 16)
+      return &RISCV::FPR16RegClass;
     if (Ty.getSizeInBits() == 32)
       return &RISCV::FPR32RegClass;
     if (Ty.getSizeInBits() == 64)
@@ -1129,16 +1148,16 @@ bool RISCVInstructionSelector::selectSelect(MachineInstr &MI,
 
 // Convert an FCMP predicate to one of the supported F or D instructions.
 static unsigned getFCmpOpcode(CmpInst::Predicate Pred, unsigned Size) {
-  assert((Size == 32 || Size == 64) && "Unsupported size");
+  assert((Size == 16 || Size == 32 || Size == 64) && "Unsupported size");
   switch (Pred) {
   default:
     llvm_unreachable("Unsupported predicate");
   case CmpInst::FCMP_OLT:
-    return Size == 32 ? RISCV::FLT_S : RISCV::FLT_D;
+    return Size == 16 ? RISCV::FLT_H : Size == 32 ? RISCV::FLT_S : RISCV::FLT_D;
   case CmpInst::FCMP_OLE:
-    return Size == 32 ? RISCV::FLE_S : RISCV::FLE_D;
+    return Size == 16 ? RISCV::FLE_H : Size == 32 ? RISCV::FLE_S : RISCV::FLE_D;
   case CmpInst::FCMP_OEQ:
-    return Size == 32 ? RISCV::FEQ_S : RISCV::FEQ_D;
+    return Size == 16 ? RISCV::FEQ_H : Size == 32 ? RISCV::FEQ_S : RISCV::FEQ_D;
   }
 }
 
@@ -1190,7 +1209,7 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI,
   Register RHS = CmpMI.getRHSReg();
 
   unsigned Size = MRI.getType(LHS).getSizeInBits();
-  assert((Size == 32 || Size == 64) && "Unexpected size");
+  assert((Size == 16 || Size == 32 || Size == 64) && "Unexpected size");
 
   Register TmpReg = DstReg;
 
@@ -1311,8 +1330,8 @@ void RISCVInstructionSelector::emitFence(AtomicOrdering FenceOrdering,
 namespace llvm {
 InstructionSelector *
 createRISCVInstructionSelector(const RISCVTargetMachine &TM,
-                               RISCVSubtarget &Subtarget,
-                               RISCVRegisterBankInfo &RBI) {
+                               const RISCVSubtarget &Subtarget,
+                               const RISCVRegisterBankInfo &RBI) {
   return new RISCVInstructionSelector(TM, Subtarget, RBI);
 }
 } // end namespace llvm

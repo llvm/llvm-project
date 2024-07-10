@@ -55,6 +55,7 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -225,7 +226,7 @@ namespace {
     // This is calculated only when trying to verify convergence control tokens.
     // Similar to the LLVM IR verifier, we calculate this locally instead of
     // relying on the pass manager.
-    MachineDomTree DT;
+    MachineDominatorTree DT;
 
     void visitMachineFunctionBefore();
     void visitMachineBasicBlockBefore(const MachineBasicBlock *MBB);
@@ -313,9 +314,9 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addUsedIfAvailable<LiveStacks>();
-      AU.addUsedIfAvailable<LiveVariables>();
-      AU.addUsedIfAvailable<SlotIndexes>();
-      AU.addUsedIfAvailable<LiveIntervals>();
+      AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
+      AU.addUsedIfAvailable<SlotIndexesWrapperPass>();
+      AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
       AU.setPreservesAll();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
@@ -427,12 +428,15 @@ unsigned MachineVerifier::verify(const MachineFunction &MF) {
       MachineFunctionProperties::Property::TracksDebugUserValues);
 
   if (PASS) {
-    LiveInts = PASS->getAnalysisIfAvailable<LiveIntervals>();
+    auto *LISWrapper = PASS->getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+    LiveInts = LISWrapper ? &LISWrapper->getLIS() : nullptr;
     // We don't want to verify LiveVariables if LiveIntervals is available.
+    auto *LVWrapper = PASS->getAnalysisIfAvailable<LiveVariablesWrapperPass>();
     if (!LiveInts)
-      LiveVars = PASS->getAnalysisIfAvailable<LiveVariables>();
+      LiveVars = LVWrapper ? &LVWrapper->getLV() : nullptr;
     LiveStks = PASS->getAnalysisIfAvailable<LiveStacks>();
-    Indexes = PASS->getAnalysisIfAvailable<SlotIndexes>();
+    auto *SIWrapper = PASS->getAnalysisIfAvailable<SlotIndexesWrapperPass>();
+    Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
   }
 
   verifySlotIndexes();
@@ -1788,6 +1792,60 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     break;
   }
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+    LLT IdxTy = MRI->getType(MI->getOperand(2).getReg());
+
+    if (!DstTy.isScalar() && !DstTy.isPointer()) {
+      report("Destination type must be a scalar or pointer", MI);
+      break;
+    }
+
+    if (!SrcTy.isVector()) {
+      report("First source must be a vector", MI);
+      break;
+    }
+
+    auto TLI = MF->getSubtarget().getTargetLowering();
+    if (IdxTy.getSizeInBits() !=
+        TLI->getVectorIdxTy(MF->getDataLayout()).getFixedSizeInBits()) {
+      report("Index type must match VectorIdxTy", MI);
+      break;
+    }
+
+    break;
+  }
+  case TargetOpcode::G_INSERT_VECTOR_ELT: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT VecTy = MRI->getType(MI->getOperand(1).getReg());
+    LLT ScaTy = MRI->getType(MI->getOperand(2).getReg());
+    LLT IdxTy = MRI->getType(MI->getOperand(3).getReg());
+
+    if (!DstTy.isVector()) {
+      report("Destination type must be a vector", MI);
+      break;
+    }
+
+    if (VecTy != DstTy) {
+      report("Destination type and vector type must match", MI);
+      break;
+    }
+
+    if (!ScaTy.isScalar() && !ScaTy.isPointer()) {
+      report("Inserted element must be a scalar or pointer", MI);
+      break;
+    }
+
+    auto TLI = MF->getSubtarget().getTargetLowering();
+    if (IdxTy.getSizeInBits() !=
+        TLI->getVectorIdxTy(MF->getDataLayout()).getFixedSizeInBits()) {
+      report("Index type must match VectorIdxTy", MI);
+      break;
+    }
+
+    break;
+  }
   case TargetOpcode::G_DYN_STACKALLOC: {
     const MachineOperand &DstOp = MI->getOperand(0);
     const MachineOperand &AllocOp = MI->getOperand(1);
@@ -2009,6 +2067,12 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       report("Src operand 1 must be a constant pool index", MI);
     if (!MRI->getType(MI->getOperand(0).getReg()).isPointer())
       report("Dst operand 0 must be a pointer", MI);
+    break;
+  }
+  case TargetOpcode::G_PTRAUTH_GLOBAL_VALUE: {
+    const MachineOperand &AddrOp = MI->getOperand(1);
+    if (!AddrOp.isReg() || !MRI->getType(AddrOp.getReg()).isPointer())
+      report("addr operand must be a pointer", &AddrOp, 1);
     break;
   }
   default:
@@ -3122,7 +3186,7 @@ void MachineVerifier::checkPHIOps(const MachineBasicBlock &MBB) {
 }
 
 static void
-verifyConvergenceControl(const MachineFunction &MF, MachineDomTree &DT,
+verifyConvergenceControl(const MachineFunction &MF, MachineDominatorTree &DT,
                          std::function<void(const Twine &Message)> FailureCB) {
   MachineConvergenceVerifier CV;
   CV.initialize(&errs(), FailureCB, MF);

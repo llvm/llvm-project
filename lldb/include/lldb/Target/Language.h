@@ -281,6 +281,10 @@ public:
     return mangled.GetMangledName();
   }
 
+  virtual ConstString GetDisplayDemangledName(Mangled mangled) const {
+    return mangled.GetDemangledName();
+  }
+
   virtual void GetExceptionResolverDescription(bool catch_on, bool throw_on,
                                                Stream &s);
 
@@ -358,6 +362,14 @@ public:
   virtual bool IgnoreForLineBreakpoints(const SymbolContext &) const {
     return false;
   }
+
+  /// Returns true if this Language supports exception breakpoints on throw via
+  /// a corresponding LanguageRuntime plugin.
+  virtual bool SupportsExceptionBreakpointsOnThrow() const { return false; }
+
+  /// Returns true if this Language supports exception breakpoints on catch via
+  /// a corresponding LanguageRuntime plugin.
+  virtual bool SupportsExceptionBreakpointsOnCatch() const { return false; }
 
 protected:
   // Classes that inherit from Language can see and modify these

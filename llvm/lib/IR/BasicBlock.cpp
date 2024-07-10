@@ -30,11 +30,19 @@ using namespace llvm;
 #define DEBUG_TYPE "ir"
 STATISTIC(NumInstrRenumberings, "Number of renumberings across all blocks");
 
-cl::opt<bool>
-    UseNewDbgInfoFormat("experimental-debuginfo-iterators",
-                        cl::desc("Enable communicating debuginfo positions "
-                                 "through iterators, eliminating intrinsics"),
-                        cl::init(true));
+cl::opt<bool> UseNewDbgInfoFormat(
+    "experimental-debuginfo-iterators",
+    cl::desc("Enable communicating debuginfo positions through iterators, "
+             "eliminating intrinsics. Has no effect if "
+             "--preserve-input-debuginfo-format=true."),
+    cl::init(true));
+cl::opt<cl::boolOrDefault> PreserveInputDbgFormat(
+    "preserve-input-debuginfo-format", cl::Hidden,
+    cl::desc("When set to true, IR files will be processed and printed in "
+             "their current debug info format, regardless of default behaviour "
+             "or other flags passed. Has no effect if input IR does not "
+             "contain debug records or intrinsics. Ignored in llvm-link, "
+             "llvm-lto, and llvm-lto2."));
 
 bool WriteNewDbgInfoFormatToBitcode /*set default value in cl::init() below*/;
 cl::opt<bool, true> WriteNewDbgInfoFormatToBitcode2(
@@ -147,6 +155,9 @@ void BasicBlock::setIsNewDbgInfoFormat(bool NewFlag) {
   else if (!NewFlag && IsNewDbgInfoFormat)
     convertFromNewDbgValues();
 }
+void BasicBlock::setNewDbgInfoFormatFlag(bool NewFlag) {
+  IsNewDbgInfoFormat = NewFlag;
+}
 
 ValueSymbolTable *BasicBlock::getValueSymbolTable() {
   if (Function *F = getParent())
@@ -164,13 +175,13 @@ template <> void llvm::invalidateParentIListOrdering(BasicBlock *BB) {
 
 // Explicit instantiation of SymbolTableListTraits since some of the methods
 // are not in the public header file...
-template class llvm::SymbolTableListTraits<Instruction,
-                                           ilist_iterator_bits<true>>;
+template class llvm::SymbolTableListTraits<
+    Instruction, ilist_iterator_bits<true>, ilist_parent<BasicBlock>>;
 
 BasicBlock::BasicBlock(LLVMContext &C, const Twine &Name, Function *NewParent,
                        BasicBlock *InsertBefore)
     : Value(Type::getLabelTy(C), Value::BasicBlockVal),
-      IsNewDbgInfoFormat(false), Parent(nullptr) {
+      IsNewDbgInfoFormat(UseNewDbgInfoFormat), Parent(nullptr) {
 
   if (NewParent)
     insertInto(NewParent, InsertBefore);
@@ -178,6 +189,7 @@ BasicBlock::BasicBlock(LLVMContext &C, const Twine &Name, Function *NewParent,
     assert(!InsertBefore &&
            "Cannot insert block before another block with no function!");
 
+  end().getNodePtr()->setParent(this);
   setName(Name);
   if (NewParent)
     setIsNewDbgInfoFormat(NewParent->IsNewDbgInfoFormat);
@@ -277,6 +289,10 @@ void BasicBlock::moveAfter(BasicBlock *MovePos) {
 
 const Module *BasicBlock::getModule() const {
   return getParent()->getParent();
+}
+
+const DataLayout &BasicBlock::getDataLayout() const {
+  return getModule()->getDataLayout();
 }
 
 const CallInst *BasicBlock::getTerminatingMustTailCall() const {
@@ -671,7 +687,7 @@ std::optional<uint64_t> BasicBlock::getIrrLoopHeaderWeight() const {
   if (MDNode *MDIrrLoopHeader =
       TI->getMetadata(LLVMContext::MD_irr_loop)) {
     MDString *MDName = cast<MDString>(MDIrrLoopHeader->getOperand(0));
-    if (MDName->getString().equals("loop_header_weight")) {
+    if (MDName->getString() == "loop_header_weight") {
       auto *CI = mdconst::extract<ConstantInt>(MDIrrLoopHeader->getOperand(1));
       return std::optional<uint64_t>(CI->getValue().getZExtValue());
     }
@@ -998,9 +1014,9 @@ void BasicBlock::spliceDebugInfoImpl(BasicBlock::iterator Dest, BasicBlock *Src,
     // generate the iterator with begin() / getFirstInsertionPt(), it means
     // any trailing debug-info at the end of the block would "normally" have
     // been pushed in front of "First". Move it there now.
-    DbgMarker *FirstMarker = getMarker(First);
     DbgMarker *TrailingDbgRecords = getTrailingDbgRecords();
     if (TrailingDbgRecords) {
+      DbgMarker *FirstMarker = createMarker(First);
       FirstMarker->absorbDebugValues(*TrailingDbgRecords, true);
       TrailingDbgRecords->eraseFromParent();
       deleteTrailingDbgRecords();

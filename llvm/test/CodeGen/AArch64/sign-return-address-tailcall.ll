@@ -129,4 +129,36 @@ define i32 @tailcall_ib_key() "sign-return-address"="all" "sign-return-address-k
   ret i32 %call
 }
 
+define i32 @tailcall_two_branches(i1 %0) "sign-return-address"="all" {
+; COMMON-LABEL:    tailcall_two_branches:
+; COMMON:            tbz w0, #0, .[[ELSE:LBB[_0-9]+]]
+; COMMON:            str x30, [sp, #-16]!
+; COMMON:            bl callee2
+; COMMON:            ldr x30, [sp], #16
+; COMMON-NEXT:       [[AUTIASP]]
+; COMMON-NEXT:     .[[ELSE]]:
+
+; LDR-NEXT:          ldr w16, [x30]
+;
+; BITS-NOTBI-NEXT:   eor x16, x30, x30, lsl #1
+; BITS-NOTBI-NEXT:   tbnz x16, #62, .[[FAIL:LBB[_0-9]+]]
+;
+; XPAC-NEXT:         mov x16, x30
+; XPAC-NEXT:         [[XPACLRI]]
+; XPAC-NEXT:         cmp x16, x30
+; XPAC-NEXT:         b.ne .[[FAIL:LBB[_0-9]+]]
+;
+; COMMON-NEXT:       b callee
+; BRK-NEXT:        .[[FAIL]]:
+; BRK-NEXT:          brk #0xc470
+  br i1 %0, label %2, label %3
+2:
+  call void @callee2()
+  br label %3
+3:
+  %call = tail call i32 @callee()
+  ret i32 %call
+}
+
 declare i32 @callee()
+declare void @callee2()

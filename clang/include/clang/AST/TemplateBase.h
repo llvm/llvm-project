@@ -459,7 +459,7 @@ public:
              bool IncludeType) const;
 
   /// Debugging aid that dumps the template argument.
-  void dump(raw_ostream &Out) const;
+  void dump(raw_ostream &Out, const ASTContext &Context) const;
 
   /// Debugging aid that dumps the template argument to standard error.
   void dump() const;

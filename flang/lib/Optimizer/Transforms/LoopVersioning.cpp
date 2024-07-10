@@ -147,7 +147,7 @@ struct ArgsUsageInLoop {
 
 static fir::SequenceType getAsSequenceType(mlir::Value *v) {
   mlir::Type argTy = fir::unwrapPassByRefType(fir::unwrapRefType(v->getType()));
-  return argTy.dyn_cast<fir::SequenceType>();
+  return mlir::dyn_cast<fir::SequenceType>(argTy);
 }
 
 /// if a value comes from a fir.declare, follow it to the original source,
@@ -555,8 +555,4 @@ void LoopVersioningPass::runOnOperation() {
   LLVM_DEBUG(module->dump());
 
   LLVM_DEBUG(llvm::dbgs() << "=== End " DEBUG_TYPE " ===\n");
-}
-
-std::unique_ptr<mlir::Pass> fir::createLoopVersioningPass() {
-  return std::make_unique<LoopVersioningPass>();
 }

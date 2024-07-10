@@ -46,6 +46,7 @@
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Version.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -150,7 +151,7 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
                                  "--error-limit=0 to see all errors)";
 
   config = ConfigWrapper();
-  script = std::make_unique<LinkerScript>();
+  script = ScriptWrapper();
 
   symAux.emplace_back();
 
@@ -323,7 +324,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     return;
   }
   case file_magic::elf_shared_object: {
-    if (config->isStatic || config->relocatable) {
+    if (config->isStatic) {
       error("attempted static link of dynamic object " + path);
       return;
     }
@@ -441,6 +442,8 @@ static void checkOptions() {
       error("-r and -pie may not be used together");
     if (config->exportDynamic)
       error("-r and --export-dynamic may not be used together");
+    if (config->debugNames)
+      error("-r and --debug-names may not be used together");
   }
 
   if (config->executeOnly) {
@@ -461,6 +464,12 @@ static void checkOptions() {
       error("-z force-bti only supported on AArch64");
     if (config->zBtiReport != "none")
       error("-z bti-report only supported on AArch64");
+    if (config->zPauthReport != "none")
+      error("-z pauth-report only supported on AArch64");
+    if (config->zGcsReport != "none")
+      error("-z gcs-report only supported on AArch64");
+    if (config->zGcs != GcsPolicy::Implicit)
+      error("-z gcs only supported on AArch64");
   }
 
   if (config->emachine != EM_386 && config->emachine != EM_X86_64 &&
@@ -550,6 +559,25 @@ static uint8_t getZStartStopVisibility(opt::InputArgList &args) {
       else
         error("unknown -z start-stop-visibility= value: " +
               StringRef(kv.second));
+    }
+  }
+  return ret;
+}
+
+static GcsPolicy getZGcs(opt::InputArgList &args) {
+  GcsPolicy ret = GcsPolicy::Implicit;
+  for (auto *arg : args.filtered(OPT_z)) {
+    std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
+    if (kv.first == "gcs") {
+      arg->claim();
+      if (kv.second == "implicit")
+        ret = GcsPolicy::Implicit;
+      else if (kv.second == "never")
+        ret = GcsPolicy::Never;
+      else if (kv.second == "always")
+        ret = GcsPolicy::Always;
+      else
+        error("unknown -z gcs= value: " + kv.second);
     }
   }
   return ret;
@@ -1231,6 +1259,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->cref = args.hasArg(OPT_cref);
   config->optimizeBBJumps =
       args.hasFlag(OPT_optimize_bb_jumps, OPT_no_optimize_bb_jumps, false);
+  config->debugNames = args.hasFlag(OPT_debug_names, OPT_no_debug_names, false);
   config->demangle = args.hasFlag(OPT_demangle, OPT_no_demangle, true);
   config->dependencyFile = args.getLastArgValue(OPT_dependency_file);
   config->dependentLibraries = args.hasFlag(OPT_dependent_libraries, OPT_no_dependent_libraries, true);
@@ -1240,10 +1269,12 @@ static void readConfigs(opt::InputArgList &args) {
   config->dynamicLinker = getDynamicLinker(args);
   config->ehFrameHdr =
       args.hasFlag(OPT_eh_frame_hdr, OPT_no_eh_frame_hdr, false);
-  config->emitLLVM = args.hasArg(OPT_plugin_opt_emit_llvm, false);
+  config->emitLLVM = args.hasArg(OPT_lto_emit_llvm);
   config->emitRelocs = args.hasArg(OPT_emit_relocs);
   config->enableNewDtags =
       args.hasFlag(OPT_enable_new_dtags, OPT_disable_new_dtags, true);
+  config->enableNonContiguousRegions =
+      args.hasArg(OPT_enable_non_contiguous_regions);
   config->entry = args.getLastArgValue(OPT_entry);
 
   errorHandler().errorHandlingScript =
@@ -1353,6 +1384,8 @@ static void readConfigs(opt::InputArgList &args) {
   config->relaxGP = args.hasFlag(OPT_relax_gp, OPT_no_relax_gp, false);
   config->rpath = getRpath(args);
   config->relocatable = args.hasArg(OPT_relocatable);
+  config->resolveGroups =
+      !args.hasArg(OPT_relocatable) || args.hasArg(OPT_force_group_allocation);
 
   if (args.hasArg(OPT_save_temps)) {
     // --save-temps implies saving all temps.
@@ -1430,6 +1463,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->zCopyreloc = getZFlag(args, "copyreloc", "nocopyreloc", true);
   config->zForceBti = hasZOption(args, "force-bti");
   config->zForceIbt = hasZOption(args, "force-ibt");
+  config->zGcs = getZGcs(args);
   config->zGlobal = hasZOption(args, "global");
   config->zGnustack = getZGnuStack(args);
   config->zHazardplt = hasZOption(args, "hazardplt");
@@ -1501,7 +1535,9 @@ static void readConfigs(opt::InputArgList &args) {
   }
 
   auto reports = {std::make_pair("bti-report", &config->zBtiReport),
-                  std::make_pair("cet-report", &config->zCetReport)};
+                  std::make_pair("cet-report", &config->zCetReport),
+                  std::make_pair("gcs-report", &config->zGcsReport),
+                  std::make_pair("pauth-report", &config->zPauthReport)};
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
@@ -1526,9 +1562,17 @@ static void readConfigs(opt::InputArgList &args) {
             ": parse error, not 'section-glob=[none|zlib|zstd]'");
       continue;
     }
-    auto type = getCompressionType(fields[1], arg->getSpelling());
+    auto [typeStr, levelStr] = fields[1].split(':');
+    auto type = getCompressionType(typeStr, arg->getSpelling());
+    unsigned level = 0;
+    if (fields[1].size() != typeStr.size() &&
+        !llvm::to_integer(levelStr, level)) {
+      error(arg->getSpelling() +
+            ": expected a non-negative integer compression level, but got '" +
+            levelStr + "'");
+    }
     if (Expected<GlobPattern> pat = GlobPattern::create(fields[0])) {
-      config->compressSections.emplace_back(std::move(*pat), type);
+      config->compressSections.emplace_back(std::move(*pat), type, level);
     } else {
       error(arg->getSpelling() + ": " + toString(pat.takeError()));
       continue;
@@ -1848,9 +1892,13 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
   // For --{push,pop}-state.
   std::vector<std::tuple<bool, bool, bool>> stack;
 
+  // -r implies -Bstatic and has precedence over -Bdynamic.
+  config->isStatic = config->relocatable;
+
   // Iterate over argv to process input files and positional arguments.
+  std::optional<MemoryBufferRef> defaultScript;
   InputFile::isInGroup = false;
-  bool hasInput = false;
+  bool hasInput = false, hasScript = false;
   for (auto *arg : args) {
     switch (arg->getOption().getID()) {
     case OPT_library:
@@ -1872,9 +1920,16 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       break;
     }
     case OPT_script:
+    case OPT_default_script:
       if (std::optional<std::string> path = searchScript(arg->getValue())) {
-        if (std::optional<MemoryBufferRef> mb = readFile(*path))
-          readLinkerScript(*mb);
+        if (std::optional<MemoryBufferRef> mb = readFile(*path)) {
+          if (arg->getOption().matches(OPT_default_script)) {
+            defaultScript = mb;
+          } else {
+            readLinkerScript(*mb);
+            hasScript = true;
+          }
+        }
         break;
       }
       error(Twine("cannot find linker script ") + arg->getValue());
@@ -1894,7 +1949,8 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       config->isStatic = true;
       break;
     case OPT_Bdynamic:
-      config->isStatic = false;
+      if (!config->relocatable)
+        config->isStatic = false;
       break;
     case OPT_whole_archive:
       inWholeArchive = true;
@@ -1954,6 +2010,8 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
     }
   }
 
+  if (defaultScript && !hasScript)
+    readLinkerScript(*defaultScript);
   if (files.empty() && !hasInput && errorCount() == 0)
     error("no input files");
 }
@@ -1963,16 +2021,22 @@ void LinkerDriver::inferMachineType() {
   if (config->ekind != ELFNoneKind)
     return;
 
+  bool inferred = false;
   for (InputFile *f : files) {
     if (f->ekind == ELFNoneKind)
       continue;
-    config->ekind = f->ekind;
-    config->emachine = f->emachine;
+    if (!inferred) {
+      inferred = true;
+      config->ekind = f->ekind;
+      config->emachine = f->emachine;
+      config->mipsN32Abi = config->emachine == EM_MIPS && isMipsN32Abi(f);
+    }
     config->osabi = f->osabi;
-    config->mipsN32Abi = config->emachine == EM_MIPS && isMipsN32Abi(f);
-    return;
+    if (f->osabi != ELFOSABI_NONE)
+      return;
   }
-  error("target emulation unknown: -m or at least one .o file required");
+  if (!inferred)
+    error("target emulation unknown: -m or at least one .o file required");
 }
 
 // Parse -z max-page-size=<value>. The default value is defined by
@@ -2599,14 +2663,17 @@ static void redirectSymbols(ArrayRef<WrappedSymbol> wrapped) {
     symtab.wrap(w.sym, w.real, w.wrap);
 }
 
+static void reportMissingFeature(StringRef config, const Twine &report) {
+  if (config == "error")
+    error(report);
+  else if (config == "warning")
+    warn(report);
+}
+
 static void checkAndReportMissingFeature(StringRef config, uint32_t features,
                                          uint32_t mask, const Twine &report) {
-  if (!(features & mask)) {
-    if (config == "error")
-      error(report);
-    else if (config == "warning")
-      warn(report);
-  }
+  if (!(features & mask))
+    reportMissingFeature(config, report);
 }
 
 // To enable CET (x86's hardware-assisted control flow enforcement), each
@@ -2617,12 +2684,28 @@ static void checkAndReportMissingFeature(StringRef config, uint32_t features,
 //
 // This is also the case with AARCH64's BTI and PAC which use the similar
 // GNU_PROPERTY_AARCH64_FEATURE_1_AND mechanism.
-static uint32_t getAndFeatures() {
+//
+// For AArch64 PAuth-enabled object files, the core info of all of them must
+// match. Missing info for some object files with matching info for remaining
+// ones can be allowed (see -z pauth-report).
+static void readSecurityNotes() {
   if (config->emachine != EM_386 && config->emachine != EM_X86_64 &&
       config->emachine != EM_AARCH64)
-    return 0;
+    return;
 
-  uint32_t ret = -1;
+  config->andFeatures = -1;
+
+  StringRef referenceFileName;
+  if (config->emachine == EM_AARCH64) {
+    auto it = llvm::find_if(ctx.objectFiles, [](const ELFFileBase *f) {
+      return !f->aarch64PauthAbiCoreInfo.empty();
+    });
+    if (it != ctx.objectFiles.end()) {
+      ctx.aarch64PauthAbiCoreInfo = (*it)->aarch64PauthAbiCoreInfo;
+      referenceFileName = (*it)->getName();
+    }
+  }
+
   for (ELFFileBase *f : ctx.objectFiles) {
     uint32_t features = f->andFeatures;
 
@@ -2630,6 +2713,11 @@ static uint32_t getAndFeatures() {
         config->zBtiReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_BTI,
         toString(f) + ": -z bti-report: file does not have "
                       "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property");
+
+    checkAndReportMissingFeature(
+        config->zGcsReport, features, GNU_PROPERTY_AARCH64_FEATURE_1_GCS,
+        toString(f) + ": -z gcs-report: file does not have "
+                      "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property");
 
     checkAndReportMissingFeature(
         config->zCetReport, features, GNU_PROPERTY_X86_FEATURE_1_IBT,
@@ -2658,14 +2746,37 @@ static uint32_t getAndFeatures() {
                          "GNU_PROPERTY_AARCH64_FEATURE_1_PAC property");
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
     }
-    ret &= features;
+    config->andFeatures &= features;
+
+    if (ctx.aarch64PauthAbiCoreInfo.empty())
+      continue;
+
+    if (f->aarch64PauthAbiCoreInfo.empty()) {
+      reportMissingFeature(config->zPauthReport,
+                           toString(f) +
+                               ": -z pauth-report: file does not have AArch64 "
+                               "PAuth core info while '" +
+                               referenceFileName + "' has one");
+      continue;
+    }
+
+    if (ctx.aarch64PauthAbiCoreInfo != f->aarch64PauthAbiCoreInfo)
+      errorOrWarn("incompatible values of AArch64 PAuth core info found\n>>> " +
+                  referenceFileName + ": 0x" +
+                  toHex(ctx.aarch64PauthAbiCoreInfo, /*LowerCase=*/true) +
+                  "\n>>> " + toString(f) + ": 0x" +
+                  toHex(f->aarch64PauthAbiCoreInfo, /*LowerCase=*/true));
   }
 
   // Force enable Shadow Stack.
   if (config->zShstk)
-    ret |= GNU_PROPERTY_X86_FEATURE_1_SHSTK;
+    config->andFeatures |= GNU_PROPERTY_X86_FEATURE_1_SHSTK;
 
-  return ret;
+  // Force enable/disable GCS
+  if (config->zGcs == GcsPolicy::Always)
+    config->andFeatures |= GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+  else if (config->zGcs == GcsPolicy::Never)
+    config->andFeatures &= ~GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
 }
 
 static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {
@@ -2727,13 +2838,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Create dynamic sections for dynamic linking and static PIE.
   config->hasDynSymTab = !ctx.sharedFiles.empty() || config->isPic;
 
-  script->addScriptReferencedSymbolsToSymTable();
-
-  // Prevent LTO from removing any definition referenced by -u.
-  for (StringRef name : config->undefined)
-    if (Defined *sym = dyn_cast_or_null<Defined>(symtab.find(name)))
-      sym->isUsedInRegularObj = true;
-
   // If an entry symbol is in a static archive, pull out that file now.
   if (Symbol *sym = symtab.find(config->entry))
     handleUndefined(sym, "--entry");
@@ -2741,6 +2845,16 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Handle the `--undefined-glob <pattern>` options.
   for (StringRef pat : args::getStrings(args, OPT_undefined_glob))
     handleUndefinedGlob(pat);
+
+  // After potential archive member extraction involving ENTRY and
+  // -u/--undefined-glob, check whether PROVIDE symbols should be defined (the
+  // RHS may refer to definitions in just extracted object files).
+  script->addScriptReferencedSymbolsToSymTable();
+
+  // Prevent LTO from removing any definition referenced by -u.
+  for (StringRef name : config->undefined)
+    if (Defined *sym = dyn_cast_or_null<Defined>(symtab.find(name)))
+      sym->isUsedInRegularObj = true;
 
   // Mark -init and -fini symbols so that the LTO doesn't eliminate them.
   if (Symbol *sym = dyn_cast_or_null<Defined>(symtab.find(config->init)))
@@ -2944,7 +3058,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Read .note.gnu.property sections from input object files which
   // contain a hint to tweak linker's and loader's behaviors.
-  config->andFeatures = getAndFeatures();
+  readSecurityNotes();
 
   // The Target instance handles target-specific stuff, such as applying
   // relocations or writing a PLT section. It also contains target-dependent
@@ -3021,7 +3135,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     // sectionBases.
     for (SectionCommand *cmd : script->sectionCommands)
       if (auto *osd = dyn_cast<OutputDesc>(cmd))
-        osd->osec.finalizeInputSections();
+        osd->osec.finalizeInputSections(&script.s);
   }
 
   // Two input sections with different output sections should not be folded.

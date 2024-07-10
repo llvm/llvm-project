@@ -63,14 +63,14 @@ define <2 x i8> @abs_canonical_2(<2 x i8> %x) {
   ret <2 x i8> %abs
 }
 
-; Even if a constant has undef elements.
+; Even if a constant has poison elements.
 
-define <2 x i8> @abs_canonical_2_vec_undef_elts(<2 x i8> %x) {
-; CHECK-LABEL: @abs_canonical_2_vec_undef_elts(
+define <2 x i8> @abs_canonical_2_vec_poison_elts(<2 x i8> %x) {
+; CHECK-LABEL: @abs_canonical_2_vec_poison_elts(
 ; CHECK-NEXT:    [[ABS:%.*]] = call <2 x i8> @llvm.abs.v2i8(<2 x i8> [[X:%.*]], i1 false)
 ; CHECK-NEXT:    ret <2 x i8> [[ABS]]
 ;
-  %cmp = icmp sgt <2 x i8> %x, <i8 undef, i8 -1>
+  %cmp = icmp sgt <2 x i8> %x, <i8 poison, i8 -1>
   %neg = sub <2 x i8> zeroinitializer, %x
   %abs = select <2 x i1> %cmp, <2 x i8> %x, <2 x i8> %neg
   ret <2 x i8> %abs
@@ -208,15 +208,15 @@ define <2 x i8> @nabs_canonical_2(<2 x i8> %x) {
   ret <2 x i8> %abs
 }
 
-; Even if a constant has undef elements.
+; Even if a constant has poison elements.
 
-define <2 x i8> @nabs_canonical_2_vec_undef_elts(<2 x i8> %x) {
-; CHECK-LABEL: @nabs_canonical_2_vec_undef_elts(
+define <2 x i8> @nabs_canonical_2_vec_poison_elts(<2 x i8> %x) {
+; CHECK-LABEL: @nabs_canonical_2_vec_poison_elts(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.abs.v2i8(<2 x i8> [[X:%.*]], i1 false)
 ; CHECK-NEXT:    [[ABS:%.*]] = sub <2 x i8> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i8> [[ABS]]
 ;
-  %cmp = icmp sgt <2 x i8> %x, <i8 -1, i8 undef>
+  %cmp = icmp sgt <2 x i8> %x, <i8 -1, i8 poison>
   %neg = sub <2 x i8> zeroinitializer, %x
   %abs = select <2 x i1> %cmp, <2 x i8> %neg, <2 x i8> %x
   ret <2 x i8> %abs
@@ -852,11 +852,8 @@ define i8 @abs_diff_signed_sgt_nuw_extra_use3(i8 %a, i8 %b) {
 
 define i32 @abs_diff_signed_slt_swap_wrong_pred1(i32 %a, i32 %b) {
 ; CHECK-LABEL: @abs_diff_signed_slt_swap_wrong_pred1(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nsw i32 [[B]], [[A]]
-; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw i32 [[A]], [[B]]
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SUB_BA]], i32 [[SUB_AB]]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[SUB_AB]]
 ;
   %cmp = icmp eq i32 %a, %b
   %sub_ba = sub nsw i32 %b, %a

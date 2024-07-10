@@ -23,6 +23,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/CRC.h"
@@ -178,8 +179,7 @@ SampleProfileProber::SampleProfileProber(Function &Func,
   DenseSet<BasicBlock *> BlocksAndCallsToIgnore;
   computeBlocksToIgnore(BlocksToIgnore, BlocksAndCallsToIgnore);
 
-  computeProbeIdForBlocks(BlocksToIgnore);
-  computeProbeIdForCallsites(BlocksAndCallsToIgnore);
+  computeProbeId(BlocksToIgnore, BlocksAndCallsToIgnore);
   computeCFGHash(BlocksToIgnore);
 }
 
@@ -300,27 +300,20 @@ void SampleProfileProber::computeCFGHash(
                     << ", Hash = " << FunctionHash << "\n");
 }
 
-void SampleProfileProber::computeProbeIdForBlocks(
-    const DenseSet<BasicBlock *> &BlocksToIgnore) {
-  for (auto &BB : *F) {
-    if (BlocksToIgnore.contains(&BB))
-      continue;
-    BlockProbeIds[&BB] = ++LastProbeId;
-  }
-}
-
-void SampleProfileProber::computeProbeIdForCallsites(
+void SampleProfileProber::computeProbeId(
+    const DenseSet<BasicBlock *> &BlocksToIgnore,
     const DenseSet<BasicBlock *> &BlocksAndCallsToIgnore) {
   LLVMContext &Ctx = F->getContext();
   Module *M = F->getParent();
 
   for (auto &BB : *F) {
+    if (!BlocksToIgnore.contains(&BB))
+      BlockProbeIds[&BB] = ++LastProbeId;
+
     if (BlocksAndCallsToIgnore.contains(&BB))
       continue;
     for (auto &I : BB) {
-      if (!isa<CallBase>(I))
-        continue;
-      if (isa<IntrinsicInst>(&I))
+      if (!isa<CallBase>(I) || isa<IntrinsicInst>(&I))
         continue;
 
       // The current implementation uses the lower 16 bits of the discriminator
@@ -351,7 +344,7 @@ uint32_t SampleProfileProber::getCallsiteId(const Instruction *Call) const {
 void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
   Module *M = F.getParent();
   MDBuilder MDB(F.getContext());
-  // Since the GUID from probe desc and inline stack are computed seperately, we
+  // Since the GUID from probe desc and inline stack are computed separately, we
   // need to make sure their names are consistent, so here also use the name
   // from debug info.
   StringRef FName = F.getName();
@@ -439,8 +432,8 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
       // and type of a callsite probe. This gets rid of the dependency on
       // plumbing a customized metadata through the codegen pipeline.
       uint32_t V = PseudoProbeDwarfDiscriminator::packProbeData(
-          Index, Type, 0,
-          PseudoProbeDwarfDiscriminator::FullDistributionFactor);
+          Index, Type, 0, PseudoProbeDwarfDiscriminator::FullDistributionFactor,
+          DIL->getBaseDiscriminator());
       DIL = DIL->cloneWithDiscriminator(V);
       Call->setDebugLoc(DIL);
     }

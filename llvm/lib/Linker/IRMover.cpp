@@ -1489,8 +1489,7 @@ Error IRLinker::linkModuleFlagsMetadata() {
   }
 
   // Check all of the requirements.
-  for (unsigned I = 0, E = Requirements.size(); I != E; ++I) {
-    MDNode *Requirement = Requirements[I];
+  for (MDNode *Requirement : Requirements) {
     MDString *Flag = cast<MDString>(Requirement->getOperand(0));
     Metadata *ReqValue = Requirement->getOperand(1);
 
@@ -1548,25 +1547,10 @@ Error IRLinker::run() {
       return Err;
 
   // Convert source module to match dest for the duration of the link.
-  bool SrcModuleNewDbgFormat = SrcM->IsNewDbgInfoFormat;
-  if (DstM.IsNewDbgInfoFormat != SrcM->IsNewDbgInfoFormat) {
-    if (DstM.IsNewDbgInfoFormat)
-      SrcM->convertToNewDbgValues();
-    else
-      SrcM->convertFromNewDbgValues();
-  }
-  // Undo debug mode conversion afterwards.
-  auto Cleanup = make_scope_exit([&]() {
-    if (SrcModuleNewDbgFormat != SrcM->IsNewDbgInfoFormat) {
-      if (SrcModuleNewDbgFormat)
-        SrcM->convertToNewDbgValues();
-      else
-        SrcM->convertFromNewDbgValues();
-    }
-  });
+  ScopedDbgInfoFormatSetter FormatSetter(*SrcM, DstM.IsNewDbgInfoFormat);
 
-  // Inherit the target data from the source module if the destination module
-  // doesn't have one already.
+  // Inherit the target data from the source module if the destination
+  // module doesn't have one already.
   if (DstM.getDataLayout().isDefault())
     DstM.setDataLayout(SrcM->getDataLayout());
 

@@ -15,6 +15,7 @@
 #include "llvm/Support/TypeName.h"
 #include <optional>
 
+using llvm::SmallPtrSetImpl;
 namespace mlir {
 
 class PatternRewriter;
@@ -704,6 +705,8 @@ public:
       return user != exceptedUser;
     });
   }
+  void replaceAllUsesExcept(Value from, Value to,
+                            const SmallPtrSetImpl<Operation *> &preservedUsers);
 
   /// Used to notify the listener that the IR failed to be rewritten because of
   /// a match failure, and provide a callback to populate a diagnostic with the
@@ -781,6 +784,7 @@ public:
 /// place.
 class PatternRewriter : public RewriterBase {
 public:
+  explicit PatternRewriter(MLIRContext *ctx) : RewriterBase(ctx) {}
   using RewriterBase::RewriterBase;
 
   /// A hook used to indicate if the pattern rewriter can recover from failure

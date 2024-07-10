@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/memory.h"
-#include "freestanding-tools.h"
 #include "terminator.h"
 #include "tools.h"
+#include "flang/Runtime/freestanding-tools.h"
 #include <cstdlib>
 
 namespace Fortran::runtime {

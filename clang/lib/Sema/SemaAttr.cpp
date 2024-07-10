@@ -837,7 +837,7 @@ void Sema::ActOnPragmaUnused(const Token &IdTok, Scope *curScope,
 
   IdentifierInfo *Name = IdTok.getIdentifierInfo();
   LookupResult Lookup(*this, Name, IdTok.getLocation(), LookupOrdinaryName);
-  LookupParsedName(Lookup, curScope, nullptr, true);
+  LookupName(Lookup, curScope, /*AllowBuiltinCreation=*/true);
 
   if (Lookup.empty()) {
     Diag(PragmaLoc, diag::warn_pragma_unused_undeclared_var)
@@ -858,22 +858,6 @@ void Sema::ActOnPragmaUnused(const Token &IdTok, Scope *curScope,
 
   VD->addAttr(UnusedAttr::CreateImplicit(Context, IdTok.getLocation(),
                                          UnusedAttr::GNU_unused));
-}
-
-void Sema::AddCFAuditedAttribute(Decl *D) {
-  IdentifierInfo *Ident;
-  SourceLocation Loc;
-  std::tie(Ident, Loc) = PP.getPragmaARCCFCodeAuditedInfo();
-  if (!Loc.isValid()) return;
-
-  // Don't add a redundant or conflicting attribute.
-  if (D->hasAttr<CFAuditedTransferAttr>() ||
-      D->hasAttr<CFUnknownTransferAttr>())
-    return;
-
-  AttributeCommonInfo Info(Ident, SourceRange(Loc),
-                           AttributeCommonInfo::Form::Pragma());
-  D->addAttr(CFAuditedTransferAttr::CreateImplicit(Context, Info));
 }
 
 namespace {
@@ -1247,7 +1231,6 @@ void Sema::AddPushedVisibilityAttribute(Decl *D) {
   D->addAttr(VisibilityAttr::CreateImplicit(Context, type, loc));
 }
 
-/// FreeVisContext - Deallocate and null out VisContext.
 void Sema::FreeVisContext() {
   delete static_cast<VisStack*>(VisContext);
   VisContext = nullptr;

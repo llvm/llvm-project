@@ -75,6 +75,30 @@ void errno_mkdtemp(char *template) {
   }
 }
 
+typedef char* CHAR_PTR;
+void errno_mkdtemp2(CHAR_PTR template) {
+  CHAR_PTR Dir = mkdtemp(template);
+  if (Dir == NULL) {
+    clang_analyzer_eval(errno != 0);      // expected-warning{{TRUE}}
+    if (errno) {}                         // no warning
+  } else {
+    clang_analyzer_eval(Dir == template); // expected-warning{{TRUE}}
+    if (errno) {}                         // expected-warning{{An undefined value may be read from 'errno'}}
+  }
+}
+
+typedef char const* CONST_CHAR_PTR;
+void errno_mkdtemp3(CHAR_PTR template) {
+  CONST_CHAR_PTR Dir = mkdtemp(template);
+  if (Dir == NULL) {
+    clang_analyzer_eval(errno != 0);      // expected-warning{{TRUE}}
+    if (errno) {}                         // no warning
+  } else {
+    clang_analyzer_eval(Dir == template); // expected-warning{{TRUE}}
+    if (errno) {}                         // expected-warning{{An undefined value may be read from 'errno'}}
+  }
+}
+
 void errno_getcwd(char *Buf, size_t Sz) {
   char *Path = getcwd(Buf, Sz);
   if (Sz == 0) {

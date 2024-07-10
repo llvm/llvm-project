@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "descriptor-io.h"
-#include "freestanding-tools.h"
 #include "flang/Common/restorer.h"
+#include "flang/Runtime/freestanding-tools.h"
 
 namespace Fortran::runtime::io::descr {
 RT_OFFLOAD_API_GROUP_BEGIN

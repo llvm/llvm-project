@@ -40,7 +40,7 @@ TEST(IncrementalCompilerBuilder, SetTargetTriple) {
   auto CB = clang::IncrementalCompilerBuilder();
   CB.SetTargetTriple("armv6-none-eabi");
   auto CI = cantFail(CB.CreateCpp());
-  EXPECT_EQ(CI->getTargetOpts().Triple, "armv6-none-unknown-eabi");
+  EXPECT_EQ(CI->getTargetOpts().Triple, "armv6-unknown-none-eabi");
   cleanupRemappedFileBuffers(*CI);
 }
 

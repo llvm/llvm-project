@@ -21,7 +21,6 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Support/LogicalResult.h"
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -62,6 +61,14 @@ static IntegerAttr subIntegerAttrs(PatternRewriter &builder, Value res,
 static IntegerAttr mulIntegerAttrs(PatternRewriter &builder, Value res,
                                    Attribute lhs, Attribute rhs) {
   return applyToIntegerAttrs(builder, res, lhs, rhs, std::multiplies<APInt>());
+}
+
+// Merge overflow flags from 2 ops, selecting the most conservative combination.
+static IntegerOverflowFlagsAttr
+mergeOverflowFlags(IntegerOverflowFlagsAttr val1,
+                   IntegerOverflowFlagsAttr val2) {
+  return IntegerOverflowFlagsAttr::get(val1.getContext(),
+                                       val1.getValue() & val2.getValue());
 }
 
 /// Invert an integer comparison predicate.
@@ -213,6 +220,15 @@ LogicalResult arith::ConstantOp::verify() {
     return emitOpError(
         "value must be an integer, float, or elements attribute");
   }
+
+  // Note, we could relax this for vectors with 1 scalable dim, e.g.:
+  //  * arith.constant dense<[[3, 3], [1, 1]]> : vector<2 x [2] x i32>
+  // However, this would most likely require updating the lowerings to LLVM.
+  auto vecType = dyn_cast<VectorType>(type);
+  if (vecType && vecType.isScalable() && !isa<SplatElementsAttr>(getValue()))
+    return emitOpError(
+        "intializing scalable vectors with elements attribute is not supported"
+        " unless it's a vector splat");
   return success();
 }
 
@@ -423,6 +439,33 @@ OpFoldResult arith::MulIOp::fold(FoldAdaptor adaptor) {
       [](const APInt &a, const APInt &b) { return a * b; });
 }
 
+void arith::MulIOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  if (!isa<IndexType>(getType()))
+    return;
+
+  // Match vector.vscale by name to avoid depending on the vector dialect (which
+  // is a circular dependency).
+  auto isVscale = [](Operation *op) {
+    return op && op->getName().getStringRef() == "vector.vscale";
+  };
+
+  IntegerAttr baseValue;
+  auto isVscaleExpr = [&](Value a, Value b) {
+    return matchPattern(a, m_Constant(&baseValue)) &&
+           isVscale(b.getDefiningOp());
+  };
+
+  if (!isVscaleExpr(getLhs(), getRhs()) && !isVscaleExpr(getRhs(), getLhs()))
+    return;
+
+  // Name `base * vscale` or `vscale * base` as `c<base_value>_vscale`.
+  SmallString<32> specialNameBuffer;
+  llvm::raw_svector_ostream specialName(specialNameBuffer);
+  specialName << 'c' << baseValue.getInt() << "_vscale";
+  setNameFn(getResult(), specialName.str());
+}
+
 void arith::MulIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                                 MLIRContext *context) {
   patterns.add<MulIMulIConstant>(context);
@@ -457,9 +500,7 @@ arith::MulSIExtendedOp::fold(FoldAdaptor adaptor,
     // Invoke the constant fold helper again to calculate the 'high' result.
     Attribute highAttr = constFoldBinaryOp<IntegerAttr>(
         adaptor.getOperands(), [](const APInt &a, const APInt &b) {
-          unsigned bitWidth = a.getBitWidth();
-          APInt fullProduct = a.sext(bitWidth * 2) * b.sext(bitWidth * 2);
-          return fullProduct.extractBits(bitWidth, bitWidth);
+          return llvm::APIntOps::mulhs(a, b);
         });
     assert(highAttr && "Unexpected constant-folding failure");
 
@@ -514,9 +555,7 @@ arith::MulUIExtendedOp::fold(FoldAdaptor adaptor,
     // Invoke the constant fold helper again to calculate the 'high' result.
     Attribute highAttr = constFoldBinaryOp<IntegerAttr>(
         adaptor.getOperands(), [](const APInt &a, const APInt &b) {
-          unsigned bitWidth = a.getBitWidth();
-          APInt fullProduct = a.zext(bitWidth * 2) * b.zext(bitWidth * 2);
-          return fullProduct.extractBits(bitWidth, bitWidth);
+          return llvm::APIntOps::mulhu(a, b);
         });
     assert(highAttr && "Unexpected constant-folding failure");
 
@@ -651,6 +690,8 @@ OpFoldResult arith::CeilDivSIOp::fold(FoldAdaptor adaptor) {
     return getLhs();
 
   // Don't fold if it would overflow or if it requires a division by zero.
+  // TODO: This hook won't fold operations where a = MININT, because
+  // negating MININT overflows. This can be improved.
   bool overflowOrDiv0 = false;
   auto result = constFoldBinaryOp<IntegerAttr>(
       adaptor.getOperands(), [&](APInt a, const APInt &b) {
@@ -669,22 +710,36 @@ OpFoldResult arith::CeilDivSIOp::fold(FoldAdaptor adaptor) {
           // Both positive, return ceil(a, b).
           return signedCeilNonnegInputs(a, b, overflowOrDiv0);
         }
+
+        // No folding happens if any of the intermediate arithmetic operations
+        // overflows.
+        bool overflowNegA = false;
+        bool overflowNegB = false;
+        bool overflowDiv = false;
+        bool overflowNegRes = false;
         if (!aGtZero && !bGtZero) {
           // Both negative, return ceil(-a, -b).
-          APInt posA = zero.ssub_ov(a, overflowOrDiv0);
-          APInt posB = zero.ssub_ov(b, overflowOrDiv0);
-          return signedCeilNonnegInputs(posA, posB, overflowOrDiv0);
+          APInt posA = zero.ssub_ov(a, overflowNegA);
+          APInt posB = zero.ssub_ov(b, overflowNegB);
+          APInt res = signedCeilNonnegInputs(posA, posB, overflowDiv);
+          overflowOrDiv0 = (overflowNegA || overflowNegB || overflowDiv);
+          return res;
         }
         if (!aGtZero && bGtZero) {
           // A is negative, b is positive, return - ( -a / b).
-          APInt posA = zero.ssub_ov(a, overflowOrDiv0);
-          APInt div = posA.sdiv_ov(b, overflowOrDiv0);
-          return zero.ssub_ov(div, overflowOrDiv0);
+          APInt posA = zero.ssub_ov(a, overflowNegA);
+          APInt div = posA.sdiv_ov(b, overflowDiv);
+          APInt res = zero.ssub_ov(div, overflowNegRes);
+          overflowOrDiv0 = (overflowNegA || overflowDiv || overflowNegRes);
+          return res;
         }
         // A is positive, b is negative, return - (a / -b).
-        APInt posB = zero.ssub_ov(b, overflowOrDiv0);
-        APInt div = a.sdiv_ov(posB, overflowOrDiv0);
-        return zero.ssub_ov(div, overflowOrDiv0);
+        APInt posB = zero.ssub_ov(b, overflowNegB);
+        APInt div = a.sdiv_ov(posB, overflowDiv);
+        APInt res = zero.ssub_ov(div, overflowNegRes);
+
+        overflowOrDiv0 = (overflowNegB || overflowDiv || overflowNegRes);
+        return res;
       });
 
   return overflowOrDiv0 ? Attribute() : result;
@@ -1148,7 +1203,10 @@ OpFoldResult arith::RemFOp::fold(FoldAdaptor adaptor) {
   return constFoldBinaryOp<FloatAttr>(adaptor.getOperands(),
                                       [](const APFloat &a, const APFloat &b) {
                                         APFloat result(a);
-                                        (void)result.remainder(b);
+                                        // APFloat::mod() offers the remainder
+                                        // behavior we want, i.e. the result has
+                                        // the sign of LHS operand.
+                                        (void)result.mod(b);
                                         return result;
                                       });
 }
@@ -1334,6 +1392,22 @@ LogicalResult arith::ExtSIOp::verify() {
 /// Fold extension of float constants when there is no information loss due the
 /// difference in fp semantics.
 OpFoldResult arith::ExtFOp::fold(FoldAdaptor adaptor) {
+  if (auto truncFOp = getOperand().getDefiningOp<TruncFOp>()) {
+    if (truncFOp.getOperand().getType() == getType()) {
+      arith::FastMathFlags truncFMF =
+          truncFOp.getFastmath().value_or(arith::FastMathFlags::none);
+      bool isTruncContract =
+          bitEnumContainsAll(truncFMF, arith::FastMathFlags::contract);
+      arith::FastMathFlags extFMF =
+          getFastmath().value_or(arith::FastMathFlags::none);
+      bool isExtContract =
+          bitEnumContainsAll(extFMF, arith::FastMathFlags::contract);
+      if (isTruncContract && isExtContract) {
+        return truncFOp.getOperand();
+      }
+    }
+  }
+
   auto resElemType = cast<FloatType>(getElementTypeOrSelf(getType()));
   const llvm::fltSemantics &targetSemantics = resElemType.getFloatSemantics();
   return constFoldCastOp<FloatAttr, FloatAttr>(
@@ -2411,6 +2485,12 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
                            : APFloat::getInf(semantic, /*Negative=*/true);
     return builder.getFloatAttr(resultType, identity);
   }
+  case AtomicRMWKind::maxnumf: {
+    const llvm::fltSemantics &semantic =
+        llvm::cast<FloatType>(resultType).getFloatSemantics();
+    APFloat identity = APFloat::getNaN(semantic, /*Negative=*/true);
+    return builder.getFloatAttr(resultType, identity);
+  }
   case AtomicRMWKind::addf:
   case AtomicRMWKind::addi:
   case AtomicRMWKind::maxu:
@@ -2431,6 +2511,12 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
                            ? APFloat::getLargest(semantic, /*Negative=*/false)
                            : APFloat::getInf(semantic, /*Negative=*/false);
 
+    return builder.getFloatAttr(resultType, identity);
+  }
+  case AtomicRMWKind::minnumf: {
+    const llvm::fltSemantics &semantic =
+        llvm::cast<FloatType>(resultType).getFloatSemantics();
+    APFloat identity = APFloat::getNaN(semantic, /*Negative=*/false);
     return builder.getFloatAttr(resultType, identity);
   }
   case AtomicRMWKind::mins:
@@ -2462,6 +2548,8 @@ std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
           .Case([](arith::MulFOp op) { return AtomicRMWKind::mulf; })
           .Case([](arith::MaximumFOp op) { return AtomicRMWKind::maximumf; })
           .Case([](arith::MinimumFOp op) { return AtomicRMWKind::minimumf; })
+          .Case([](arith::MaxNumFOp op) { return AtomicRMWKind::maxnumf; })
+          .Case([](arith::MinNumFOp op) { return AtomicRMWKind::minnumf; })
           // Integer operations.
           .Case([](arith::AddIOp op) { return AtomicRMWKind::addi; })
           .Case([](arith::OrIOp op) { return AtomicRMWKind::ori; })
@@ -2474,7 +2562,6 @@ std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
           .Case([](arith::MulIOp op) { return AtomicRMWKind::muli; })
           .Default([](Operation *op) { return std::nullopt; });
   if (!maybeKind) {
-    op->emitError() << "Unknown neutral element for: " << *op;
     return std::nullopt;
   }
 

@@ -9,12 +9,14 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_CANONICALIZETEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_CANONICALIZETEST_H
 
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/integer_literals.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include "include/llvm-libc-macros/math-macros.h"
+#include "hdr/math_macros.h"
 
 #define TEST_SPECIAL(x, y, expected, expected_exception)                       \
   EXPECT_EQ(expected, f(&x, &y));                                              \
@@ -26,7 +28,7 @@
 using LIBC_NAMESPACE::operator""_u128;
 
 template <typename T>
-class CanonicalizeTest : public LIBC_NAMESPACE::testing::Test {
+class CanonicalizeTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 

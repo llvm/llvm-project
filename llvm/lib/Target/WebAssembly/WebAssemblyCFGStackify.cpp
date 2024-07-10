@@ -48,8 +48,8 @@ class WebAssemblyCFGStackify final : public MachineFunctionPass {
   StringRef getPassName() const override { return "WebAssembly CFG Stackify"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineDominatorTree>();
-    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addRequired<WebAssemblyExceptionInfo>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -252,7 +252,7 @@ void WebAssemblyCFGStackify::unregisterScope(MachineInstr *Begin) {
 void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
   assert(!MBB.isEHPad());
   MachineFunction &MF = *MBB.getParent();
-  auto &MDT = getAnalysis<MachineDominatorTree>();
+  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
   const auto &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
 
@@ -397,7 +397,7 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
 /// Insert a LOOP marker for a loop starting at MBB (if it's a loop header).
 void WebAssemblyCFGStackify::placeLoopMarker(MachineBasicBlock &MBB) {
   MachineFunction &MF = *MBB.getParent();
-  const auto &MLI = getAnalysis<MachineLoopInfo>();
+  const auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   const auto &WEI = getAnalysis<WebAssemblyExceptionInfo>();
   SortRegionInfo SRI(MLI, WEI);
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
@@ -465,9 +465,9 @@ void WebAssemblyCFGStackify::placeLoopMarker(MachineBasicBlock &MBB) {
 void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
   assert(MBB.isEHPad());
   MachineFunction &MF = *MBB.getParent();
-  auto &MDT = getAnalysis<MachineDominatorTree>();
+  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
-  const auto &MLI = getAnalysis<MachineLoopInfo>();
+  const auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   const auto &WEI = getAnalysis<WebAssemblyExceptionInfo>();
   SortRegionInfo SRI(MLI, WEI);
   const auto &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();

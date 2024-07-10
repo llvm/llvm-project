@@ -36,7 +36,8 @@
   _ZTW1k.exit:
     %1 = phi i32 [ %.pre, %entry._ZTW1k.exit_crit_edge ], [ %call.i.i.i, %init.i.i ]
     %add2 = add nsw i32 %add1, %1
-    br i1 icmp ne (ptr @_ZTH1j, ptr null), label %2, label %_ZTW1j.exit
+    %cmp = icmp ne ptr @_ZTH1j, null
+    br i1 %cmp, label %2, label %_ZTW1j.exit
 
   ; <label>:2:
     tail call void @_ZTH1j()

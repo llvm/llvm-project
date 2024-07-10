@@ -19,7 +19,7 @@
 ; RUN: llvm-readtapi -compare %t/mismatching.tbd  %t/mismatching-expected.tbd
 
 // Try out a dylib that only has 1 symbol for a ObjCClass, but is represented in header. 
-; RUN: clang-installapi -target arm64-apple-macos14 \
+; RUN: clang-installapi -target arm64-apple-macos14 -dynamiclib \
 ; RUN: -install_name tmp.dylib --verify-against=%t/libswift-objc.dylib \
 ; RUN: -I%t/usr/include %t/inputs.json -o %t/matching.tbd \
 ; RUN: --verify-mode=Pedantic \

@@ -247,8 +247,8 @@ void ObjCDeallocChecker::checkASTDecl(const ObjCImplementationDecl *D,
     PathDiagnosticLocation DLoc =
         PathDiagnosticLocation::createBegin(D, BR.getSourceManager());
 
-    BR.EmitBasicReport(D, this, Name, categories::CoreFoundationObjectiveC,
-                       OS.str(), DLoc);
+    BR.EmitBasicReport(D, this, Name, categories::CoreFoundationObjectiveC, Buf,
+                       DLoc);
     return;
   }
 }
@@ -585,7 +585,7 @@ void ObjCDeallocChecker::diagnoseMissingReleases(CheckerContext &C) const {
           " before '[super dealloc]'";
 
     auto BR = std::make_unique<PathSensitiveBugReport>(MissingReleaseBugType,
-                                                       OS.str(), ErrNode);
+                                                       Buf, ErrNode);
     C.emitReport(std::move(BR));
   }
 
@@ -706,8 +706,8 @@ bool ObjCDeallocChecker::diagnoseExtraRelease(SymbolRef ReleasedValue,
     OS <<  " property but was released in 'dealloc'";
   }
 
-  auto BR = std::make_unique<PathSensitiveBugReport>(ExtraReleaseBugType,
-                                                     OS.str(), ErrNode);
+  auto BR = std::make_unique<PathSensitiveBugReport>(ExtraReleaseBugType, Buf,
+                                                     ErrNode);
   BR->addRange(M.getOriginExpr()->getSourceRange());
 
   C.emitReport(std::move(BR));
@@ -749,7 +749,7 @@ bool ObjCDeallocChecker::diagnoseMistakenDealloc(SymbolRef DeallocedValue,
      << "' should be released rather than deallocated";
 
   auto BR = std::make_unique<PathSensitiveBugReport>(MistakenDeallocBugType,
-                                                     OS.str(), ErrNode);
+                                                     Buf, ErrNode);
   BR->addRange(M.getOriginExpr()->getSourceRange());
 
   C.emitReport(std::move(BR));
@@ -768,8 +768,8 @@ void ObjCDeallocChecker::initIdentifierInfoAndSelectors(
   Block_releaseII = &Ctx.Idents.get("_Block_release");
   CIFilterII = &Ctx.Idents.get("CIFilter");
 
-  IdentifierInfo *DeallocII = &Ctx.Idents.get("dealloc");
-  IdentifierInfo *ReleaseII = &Ctx.Idents.get("release");
+  const IdentifierInfo *DeallocII = &Ctx.Idents.get("dealloc");
+  const IdentifierInfo *ReleaseII = &Ctx.Idents.get("release");
   DeallocSel = Ctx.Selectors.getSelector(0, &DeallocII);
   ReleaseSel = Ctx.Selectors.getSelector(0, &ReleaseII);
 }

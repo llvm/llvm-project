@@ -50,8 +50,10 @@ public:
                         mlir::SymbolTable *symbolTable = nullptr)
       : OpBuilder{op, /*listener=*/this}, kindMap{std::move(kindMap)},
         symbolTable{symbolTable} {}
-  explicit FirOpBuilder(mlir::OpBuilder &builder, fir::KindMapping kindMap)
-      : OpBuilder(builder), OpBuilder::Listener(), kindMap{std::move(kindMap)} {
+  explicit FirOpBuilder(mlir::OpBuilder &builder, fir::KindMapping kindMap,
+                        mlir::SymbolTable *symbolTable = nullptr)
+      : OpBuilder(builder), OpBuilder::Listener(), kindMap{std::move(kindMap)},
+        symbolTable{symbolTable} {
     setListener(this);
   }
   explicit FirOpBuilder(mlir::OpBuilder &builder, mlir::ModuleOp mod)
@@ -164,8 +166,21 @@ public:
   mlir::Value createNullConstant(mlir::Location loc, mlir::Type ptrType = {});
 
   /// Create an integer constant of type \p type and value \p i.
+  /// Should not be used with negative values with integer types of more
+  /// than 64 bits.
   mlir::Value createIntegerConstant(mlir::Location loc, mlir::Type integerType,
                                     std::int64_t i);
+
+  /// Create an integer of \p integerType where all the bits have been set to
+  /// ones. Safe to use regardless of integerType bitwidth.
+  mlir::Value createAllOnesInteger(mlir::Location loc, mlir::Type integerType);
+
+  /// Create -1 constant of \p integerType. Safe to use regardless of
+  /// integerType bitwidth.
+  mlir::Value createMinusOneInteger(mlir::Location loc,
+                                    mlir::Type integerType) {
+    return createAllOnesInteger(loc, integerType);
+  }
 
   /// Create a real constant from an integer value.
   mlir::Value createRealConstant(mlir::Location loc, mlir::Type realType,
@@ -241,13 +256,13 @@ public:
                              mlir::StringAttr linkage = {},
                              mlir::Attribute value = {}, bool isConst = false,
                              bool isTarget = false,
-                             fir::CUDADataAttributeAttr cudaAttr = {});
+                             cuf::DataAttributeAttr dataAttr = {});
 
   fir::GlobalOp createGlobal(mlir::Location loc, mlir::Type type,
                              llvm::StringRef name, bool isConst, bool isTarget,
                              std::function<void(FirOpBuilder &)> bodyBuilder,
                              mlir::StringAttr linkage = {},
-                             fir::CUDADataAttributeAttr cudaAttr = {});
+                             cuf::DataAttributeAttr dataAttr = {});
 
   /// Create a global constant (read-only) value.
   fir::GlobalOp createGlobalConstant(mlir::Location loc, mlir::Type type,
@@ -270,6 +285,10 @@ public:
   /// Convert a StringRef string into a fir::StringLitOp.
   fir::StringLitOp createStringLitOp(mlir::Location loc,
                                      llvm::StringRef string);
+
+  std::pair<fir::TypeInfoOp, mlir::OpBuilder::InsertPoint>
+  createTypeInfoOp(mlir::Location loc, fir::RecordType recordType,
+                   fir::RecordType parentType);
 
   //===--------------------------------------------------------------------===//
   // Linkage helpers (inline). The default linkage is external.
@@ -695,6 +714,13 @@ mlir::Value createNullBoxProc(fir::FirOpBuilder &builder, mlir::Location loc,
 
 /// Set internal linkage attribute on a function.
 void setInternalLinkage(mlir::func::FuncOp);
+
+llvm::SmallVector<mlir::Value>
+elideExtentsAlreadyInType(mlir::Type type, mlir::ValueRange shape);
+
+llvm::SmallVector<mlir::Value>
+elideLengthsAlreadyInType(mlir::Type type, mlir::ValueRange lenParams);
+
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

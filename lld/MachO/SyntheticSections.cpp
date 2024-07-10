@@ -544,6 +544,14 @@ static void flushOpcodes(const BindIR &op, raw_svector_ostream &os) {
   }
 }
 
+static bool needsWeakBind(const Symbol &sym) {
+  if (auto *dysym = dyn_cast<DylibSymbol>(&sym))
+    return dysym->isWeakDef();
+  if (auto *defined = dyn_cast<Defined>(&sym))
+    return defined->isExternalWeakDef();
+  return false;
+}
+
 // Non-weak bindings need to have their dylib ordinal encoded as well.
 static int16_t ordinalForDylibSymbol(const DylibSymbol &dysym) {
   if (config->namespaceKind == NamespaceKind::flat || dysym.isDynamicLookup())
@@ -553,6 +561,8 @@ static int16_t ordinalForDylibSymbol(const DylibSymbol &dysym) {
 }
 
 static int16_t ordinalForSymbol(const Symbol &sym) {
+  if (config->emitChainedFixups && needsWeakBind(sym))
+    return BIND_SPECIAL_DYLIB_WEAK_LOOKUP;
   if (const auto *dysym = dyn_cast<DylibSymbol>(&sym))
     return ordinalForDylibSymbol(*dysym);
   assert(cast<Defined>(&sym)->interposable);
@@ -828,7 +838,7 @@ void ObjCSelRefsHelper::initialize() {
     auto Reloc = isec->relocs[0];
     if (const auto *sym = Reloc.referent.dyn_cast<Symbol *>()) {
       if (const auto *d = dyn_cast<Defined>(sym)) {
-        auto *cisec = cast<CStringInputSection>(d->isec);
+        auto *cisec = cast<CStringInputSection>(d->isec());
         auto methname = cisec->getStringRefAtOffset(d->value);
         methnameToSelref[CachedHashStringRef(methname)] = isec;
       }
@@ -1127,7 +1137,7 @@ void FunctionStartsSection::finalizeContents() {
     if (auto *objFile = dyn_cast<ObjFile>(file)) {
       for (const Symbol *sym : objFile->symbols) {
         if (const auto *defined = dyn_cast_or_null<Defined>(sym)) {
-          if (!defined->isec || !isCodeSection(defined->isec) ||
+          if (!defined->isec() || !isCodeSection(defined->isec()) ||
               !defined->isLive())
             continue;
           addrs.push_back(defined->getVA());
@@ -1220,15 +1230,18 @@ void SymtabSection::emitStabs() {
         continue;
 
       // Constant-folded symbols go in the executable's symbol table, but don't
-      // get a stabs entry.
-      if (defined->wasIdenticalCodeFolded)
+      // get a stabs entry unless --keep-icf-stabs flag is specified
+      if (!config->keepICFStabs && defined->wasIdenticalCodeFolded)
         continue;
 
       ObjFile *file = defined->getObjectFile();
       if (!file || !file->compileUnit)
         continue;
 
-      symbolsNeedingStabs.emplace_back(defined, defined->isec->getFile()->id);
+      // We use 'originalIsec' to get the file id of the symbol since 'isec()'
+      // might point to the merged ICF symbol's file
+      symbolsNeedingStabs.emplace_back(defined,
+                                       defined->originalIsec->getFile()->id);
     }
   }
 
@@ -1243,7 +1256,9 @@ void SymtabSection::emitStabs() {
   InputFile *lastFile = nullptr;
   for (SortingPair &pair : symbolsNeedingStabs) {
     Defined *defined = pair.first;
-    InputSection *isec = defined->isec;
+    // We use 'originalIsec' of the symbol since we care about the actual origin
+    // of the symbol, not the canonical location returned by `isec()`.
+    InputSection *isec = defined->originalIsec;
     ObjFile *file = cast<ObjFile>(isec->getFile());
 
     if (lastFile == nullptr || lastFile != file) {
@@ -1256,7 +1271,7 @@ void SymtabSection::emitStabs() {
     }
 
     StabsEntry symStab;
-    symStab.sect = defined->isec->parent->index;
+    symStab.sect = isec->parent->index;
     symStab.strx = stringTableSection.addString(defined->getName());
     symStab.value = defined->getVA();
 
@@ -1407,7 +1422,7 @@ template <class LP> void SymtabSectionImpl<LP>::writeTo(uint8_t *buf) const {
         nList->n_value = defined->value;
       } else {
         nList->n_type = scope | N_SECT;
-        nList->n_sect = defined->isec->parent->index;
+        nList->n_sect = defined->isec()->parent->index;
         // For the N_SECT symbol type, n_value is the address of the symbol
         nList->n_value = defined->getVA();
       }
@@ -1473,11 +1488,8 @@ void IndirectSymtabSection::finalizeContents() {
 }
 
 static uint32_t indirectValue(const Symbol *sym) {
-  if (sym->symtabIndex == UINT32_MAX)
+  if (sym->symtabIndex == UINT32_MAX || !needsBinding(sym))
     return INDIRECT_SYMBOL_LOCAL;
-  if (auto *defined = dyn_cast<Defined>(sym))
-    if (defined->privateExtern)
-      return INDIRECT_SYMBOL_LOCAL;
   return sym->symtabIndex;
 }
 
@@ -2000,7 +2012,7 @@ void ObjCMethListSection::setUp() {
       assert(reloc && "Relocation expected at method list name slot");
       auto *def = dyn_cast_or_null<Defined>(reloc->referent.get<Symbol *>());
       assert(def && "Expected valid Defined at method list name slot");
-      auto *cisec = cast<CStringInputSection>(def->isec);
+      auto *cisec = cast<CStringInputSection>(def->isec());
       assert(cisec && "Expected method name to be in a CStringInputSection");
       auto methname = cisec->getStringRefAtOffset(def->value);
       if (!ObjCSelRefsHelper::getSelRef(methname))
@@ -2107,7 +2119,7 @@ void ObjCMethListSection::writeRelativeOffsetForIsec(
   uint32_t symVA = def->getVA();
 
   if (useSelRef) {
-    auto *cisec = cast<CStringInputSection>(def->isec);
+    auto *cisec = cast<CStringInputSection>(def->isec());
     auto methname = cisec->getStringRefAtOffset(def->value);
     ConcatInputSection *selRef = ObjCSelRefsHelper::getSelRef(methname);
     assert(selRef && "Expected all selector names to already be already be "
@@ -2274,14 +2286,6 @@ bool ChainedFixupsSection::isNeeded() const {
   return true;
 }
 
-static bool needsWeakBind(const Symbol &sym) {
-  if (auto *dysym = dyn_cast<DylibSymbol>(&sym))
-    return dysym->isWeakDef();
-  if (auto *defined = dyn_cast<Defined>(&sym))
-    return defined->isExternalWeakDef();
-  return false;
-}
-
 void ChainedFixupsSection::addBinding(const Symbol *sym,
                                       const InputSection *isec, uint64_t offset,
                                       int64_t addend) {
@@ -2310,7 +2314,7 @@ ChainedFixupsSection::getBinding(const Symbol *sym, int64_t addend) const {
   return {it->second, 0};
 }
 
-static size_t writeImport(uint8_t *buf, int format, uint32_t libOrdinal,
+static size_t writeImport(uint8_t *buf, int format, int16_t libOrdinal,
                           bool weakRef, uint32_t nameOffset, int64_t addend) {
   switch (format) {
   case DYLD_CHAINED_IMPORT: {
@@ -2428,11 +2432,8 @@ void ChainedFixupsSection::writeTo(uint8_t *buf) const {
   uint64_t nameOffset = 0;
   for (auto [import, idx] : bindings) {
     const Symbol &sym = *import.first;
-    int16_t libOrdinal = needsWeakBind(sym)
-                             ? (int64_t)BIND_SPECIAL_DYLIB_WEAK_LOOKUP
-                             : ordinalForSymbol(sym);
-    buf += writeImport(buf, importFormat, libOrdinal, sym.isWeakRef(),
-                       nameOffset, import.second);
+    buf += writeImport(buf, importFormat, ordinalForSymbol(sym),
+                       sym.isWeakRef(), nameOffset, import.second);
     nameOffset += sym.getName().size() + 1;
   }
 
@@ -2457,7 +2458,12 @@ void ChainedFixupsSection::finalizeContents() {
     error("cannot encode chained fixups: imported symbols table size " +
           Twine(symtabSize) + " exceeds 4 GiB");
 
-  if (needsLargeAddend || !isUInt<23>(symtabSize))
+  bool needsLargeOrdinal = any_of(bindings, [](const auto &p) {
+    // 0xF1 - 0xFF are reserved for special ordinals in the 8-bit encoding.
+    return ordinalForSymbol(*p.first.first) > 0xF0;
+  });
+
+  if (needsLargeAddend || !isUInt<23>(symtabSize) || needsLargeOrdinal)
     importFormat = DYLD_CHAINED_IMPORT_ADDEND64;
   else if (needsAddend)
     importFormat = DYLD_CHAINED_IMPORT_ADDEND;

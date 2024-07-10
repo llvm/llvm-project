@@ -692,7 +692,7 @@ void LoopVectorizationLegality::addInductionPhi(
     InductionCastsToIgnore.insert(*Casts.begin());
 
   Type *PhiTy = Phi->getType();
-  const DataLayout &DL = Phi->getModule()->getDataLayout();
+  const DataLayout &DL = Phi->getDataLayout();
 
   // Get the widest type.
   if (!PhiTy->isFloatingPointTy()) {
@@ -1067,6 +1067,15 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   if (!LAI->canVectorizeMemory())
     return false;
 
+  if (LAI->hasLoadStoreDependenceInvolvingLoopInvariantAddress()) {
+    reportVectorizationFailure("We don't allow storing to uniform addresses",
+                               "write to a loop invariant address could not "
+                               "be vectorized",
+                               "CantVectorizeStoreToLoopInvariantAddress", ORE,
+                               TheLoop);
+    return false;
+  }
+
   // We can vectorize stores to invariant address when final reduction value is
   // guaranteed to be stored at the end of the loop. Also, if decision to
   // vectorize loop is made, runtime checks are added so as to make sure that
@@ -1102,13 +1111,12 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
       }
     }
 
-    if (LAI->hasDependenceInvolvingLoopInvariantAddress()) {
+    if (LAI->hasStoreStoreDependenceInvolvingLoopInvariantAddress()) {
       // For each invariant address, check its last stored value is the result
       // of one of our reductions.
       //
-      // We do not check if dependence with loads exists because they are
-      // currently rejected earlier in LoopAccessInfo::analyzeLoop. In case this
-      // behaviour changes we have to modify this code.
+      // We do not check if dependence with loads exists because that is already
+      // checked via hasLoadStoreDependenceInvolvingLoopInvariantAddress.
       ScalarEvolution *SE = PSE.getSE();
       SmallVector<StoreInst *, 4> UnhandledStores;
       for (StoreInst *SI : LAI->getStoresToInvariantAddresses()) {
@@ -1498,6 +1506,16 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
+  if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount())) {
+    reportVectorizationFailure("could not determine number of loop iterations",
+                               "could not determine number of loop iterations",
+                               "CantComputeNumberOfIterations", ORE, TheLoop);
+    if (DoExtraAnalysis)
+      Result = false;
+    else
+      return false;
+  }
+
   LLVM_DEBUG(dbgs() << "LV: We can vectorize this loop"
                     << (LAI->getRuntimePointerChecking()->Need
                             ? " (with a runtime bound check)"
@@ -1525,7 +1543,7 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
   return Result;
 }
 
-bool LoopVectorizationLegality::prepareToFoldTailByMasking() {
+bool LoopVectorizationLegality::canFoldTailByMasking() const {
 
   LLVM_DEBUG(dbgs() << "LV: checking if tail can be folded by masking.\n");
 
@@ -1568,23 +1586,31 @@ bool LoopVectorizationLegality::prepareToFoldTailByMasking() {
   // The list of pointers that we can safely read and write to remains empty.
   SmallPtrSet<Value *, 8> SafePointers;
 
-  // Collect masked ops in temporary set first to avoid partially populating
-  // MaskedOp if a block cannot be predicated.
+  // Check all blocks for predication, including those that ordinarily do not
+  // need predication such as the header block.
   SmallPtrSet<const Instruction *, 8> TmpMaskedOp;
-
-  // Check and mark all blocks for predication, including those that ordinarily
-  // do not need predication such as the header block.
   for (BasicBlock *BB : TheLoop->blocks()) {
     if (!blockCanBePredicated(BB, SafePointers, TmpMaskedOp)) {
-      LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking as requested.\n");
+      LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking.\n");
       return false;
     }
   }
 
   LLVM_DEBUG(dbgs() << "LV: can fold tail by masking.\n");
 
-  MaskedOp.insert(TmpMaskedOp.begin(), TmpMaskedOp.end());
   return true;
+}
+
+void LoopVectorizationLegality::prepareToFoldTailByMasking() {
+  // The list of pointers that we can safely read and write to remains empty.
+  SmallPtrSet<Value *, 8> SafePointers;
+
+  // Mark all blocks for predication, including those that ordinarily do not
+  // need predication such as the header block.
+  for (BasicBlock *BB : TheLoop->blocks()) {
+    [[maybe_unused]] bool R = blockCanBePredicated(BB, SafePointers, MaskedOp);
+    assert(R && "Must be able to predicate block when tail-folding.");
+  }
 }
 
 } // namespace llvm
