@@ -188,10 +188,12 @@ public:
             // IR for.
 
             if (CI.getCalledFunction()) {
-              // Skip some known intrinsics. YKFIXME: Is there a more general
-              // solution, e.g. skip all intrinsics?
-              if (CI.getCalledFunction()->getName() ==
-                  "llvm.experimental.stackmap") {
+              if (CI.getCalledFunction()->isIntrinsic()) {
+                // Skip intrinsics.
+                continue;
+              }
+              if (CI.getCalledFunction()->isDeclaration()) {
+                // Skip external functions.
                 continue;
               }
               if (CI.getCalledFunction()->getName() == "llvm.dbg.declare") {
