@@ -672,22 +672,30 @@ void MemoryAccessRangeT(ThreadState* thr, uptr pc, uptr addr, uptr size) {
 
 #if SANITIZER_DEBUG
   if (!IsAppMem(addr)) {
-    Printf("Access to non app mem %zx\n", addr);
+    Printf("Access to non app mem start: 0x%zx\n", addr);
     DCHECK(IsAppMem(addr));
   }
   if (!IsAppMem(addr + size - 1)) {
-    Printf("Access to non app mem %zx\n", addr + size - 1);
+    Printf("Access to non app mem end: 0x%zx\n", addr + size - 1);
     DCHECK(IsAppMem(addr + size - 1));
   }
   if (!IsShadowMem(shadow_mem)) {
-    Printf("Bad shadow addr %p (%zx)\n", static_cast<void*>(shadow_mem), addr);
+    Printf("Bad shadow start addr: %p (0x%zx)\n",
+           static_cast<void*>(shadow_mem), addr);
     DCHECK(IsShadowMem(shadow_mem));
   }
-  if (!IsShadowMem(shadow_mem + size * kShadowCnt - 1)) {
-    Printf("Bad shadow addr %p (%zx)\n",
-           static_cast<void*>(shadow_mem + size * kShadowCnt - 1),
-           addr + size - 1);
-    DCHECK(IsShadowMem(shadow_mem + size * kShadowCnt - 1));
+
+  // Be careful to cast to uptr before performing arithmetic.
+  RawShadow* shadow_mem_end = static_cast<RawShadow*>(
+      (void*)(((uptr)shadow_mem) + size * kShadowMultiplier - 1));
+  if (!IsShadowMem(shadow_mem_end)) {
+    Printf("Bad shadow end addr: %p (0x%zx)\n",
+           static_cast<void*>(shadow_mem_end), addr + size - 1);
+    Printf(
+        "Shadow start addr (ok): %p (0x%zx); size: 0x%zx; kShadowMultiplier: "
+        "%zx\n",
+        static_cast<void*>(shadow_mem), addr, size, kShadowMultiplier);
+    DCHECK(IsShadowMem(shadow_mem_end));
   }
 #endif
 
