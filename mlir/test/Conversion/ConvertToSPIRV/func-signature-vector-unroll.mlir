@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-to-spirv="run-signature-conversion" -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -convert-to-spirv -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: @simple_scalar
 // CHECK-SAME: (%[[ARG0:.+]]: i32)

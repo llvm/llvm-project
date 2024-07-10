@@ -46,7 +46,7 @@ def ConvertToSPIRVPass : Pass<"convert-to-spirv"> {
   ];
   let options = [
     Option<"runSignatureConversion", "run-signature-conversion", "bool",
-    /*default=*/"false",
+    /*default=*/"true",
     "Run function signature conversion to convert vector types">
   ];
 }

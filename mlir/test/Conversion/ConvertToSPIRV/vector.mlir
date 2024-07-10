@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -convert-to-spirv %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -convert-to-spirv="run-signature-conversion=false" %s | FileCheck %s
 
 // CHECK-LABEL: @extract
 //  CHECK-SAME: %[[ARG:.+]]: vector<2xf32>

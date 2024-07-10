@@ -53,24 +53,31 @@ static int getComputeVectorSize(int64_t size) {
 }
 
 static std::optional<SmallVector<int64_t>> getTargetShape(VectorType vecType) {
-  llvm::errs() << "Get target shape\n";
+  LLVM_DEBUG(llvm::dbgs() << "Get target shape\n");
+  if (vecType.isScalable()) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "--scalable vectors are not supported -> BAIL\n");
+    return std::nullopt;
+  }
   SmallVector<int64_t> unrollShape = llvm::to_vector<4>(vecType.getShape());
   std::optional<SmallVector<int64_t>> targetShape =
       SmallVector<int64_t>(1, getComputeVectorSize(vecType.getShape().back()));
   if (!targetShape) {
-    llvm::errs() << "--no unrolling target shape defined\n";
+    LLVM_DEBUG(llvm::dbgs() << "--no unrolling target shape defined\n");
     return std::nullopt;
   }
   auto maybeShapeRatio = computeShapeRatio(unrollShape, *targetShape);
   if (!maybeShapeRatio) {
-    llvm::errs() << "--could not compute integral shape ratio -> BAIL\n";
+    LLVM_DEBUG(llvm::dbgs()
+               << "--could not compute integral shape ratio -> BAIL\n");
     return std::nullopt;
   }
   if (llvm::all_of(*maybeShapeRatio, [](int64_t v) { return v == 1; })) {
-    llvm::errs() << "--no unrolling needed -> SKIP\n";
+    LLVM_DEBUG(llvm::dbgs() << "--no unrolling needed -> SKIP\n");
     return std::nullopt;
   }
-  llvm::errs() << "--found an integral shape ratio to unroll to -> SUCCESS\n";
+  LLVM_DEBUG(llvm::dbgs()
+             << "--found an integral shape ratio to unroll to -> SUCCESS\n");
   return targetShape;
 }
 
@@ -862,170 +869,154 @@ namespace {
 /// functions to be of valid types
 class FuncOpVectorUnroll : public OpRewritePattern<func::FuncOp> {
 public:
-  using OpRewritePattern<func::FuncOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(func::FuncOp funcOp,
-                                PatternRewriter &rewriter) const override;
+                                PatternRewriter &rewriter) const override {
+    FunctionType fnType = funcOp.getFunctionType();
+
+    // TODO: Handle declarations.
+    if (funcOp.isDeclaration()) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << fnType << " illegal: declarations are unsupported\n");
+      return failure();
+    }
+
+    // Create a new func op with the original type and copy the function body.
+    auto newFuncOp = rewriter.create<func::FuncOp>(funcOp.getLoc(),
+                                                   funcOp.getName(), fnType);
+    rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
+                                newFuncOp.end());
+
+    Location loc = newFuncOp.getBody().getLoc();
+
+    Block &entryBlock = newFuncOp.getBlocks().front();
+    OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPointToStart(&entryBlock);
+
+    OneToNTypeMapping oneToNTypeMapping(fnType.getInputs());
+
+    // For arguments that are of illegal types and require unrolling.
+    // `unrolledInputNums` stores the indices of arguments that result from
+    // unrolling in the new function signature. `newInputNo` is a counter.
+    SmallVector<size_t> unrolledInputNums;
+    size_t newInputNo = 0;
+
+    // For arguments that are of legal types and do not require unrolling.
+    // `tmpOps` stores a mapping from temporary operations that serve as
+    // placeholders for new arguments that will be added later. These operations
+    // will be erased once the entry block's argument list is updated.
+    llvm::SmallDenseMap<Operation *, size_t> tmpOps;
+
+    // This counts the number of new operations created.
+    size_t newOpCount = 0;
+
+    // Enumerate through the arguments.
+    for (auto [origInputNo, origType] : enumerate(fnType.getInputs())) {
+      // Check whether the argument is of vector type.
+      auto origVecType = dyn_cast<VectorType>(origType);
+      if (!origVecType) {
+        // We need a placeholder for the old argument that will be erased later.
+        Value result = rewriter.create<arith::ConstantOp>(
+            loc, origType, rewriter.getZeroAttr(origType));
+        rewriter.replaceAllUsesWith(newFuncOp.getArgument(origInputNo), result);
+        tmpOps.insert({result.getDefiningOp(), newInputNo});
+        oneToNTypeMapping.addInputs(origInputNo, origType);
+        newInputNo++;
+        newOpCount++;
+        continue;
+      }
+      // Check whether the vector needs unrolling.
+      auto targetShape = getTargetShape(origVecType);
+      if (!targetShape) {
+        // We need a placeholder for the old argument that will be erased later.
+        Value result = rewriter.create<arith::ConstantOp>(
+            loc, origType, rewriter.getZeroAttr(origType));
+        rewriter.replaceAllUsesWith(newFuncOp.getArgument(origInputNo), result);
+        tmpOps.insert({result.getDefiningOp(), newInputNo});
+        oneToNTypeMapping.addInputs(origInputNo, origType);
+        newInputNo++;
+        newOpCount++;
+        continue;
+      }
+      VectorType unrolledType =
+          VectorType::get(*targetShape, origVecType.getElementType());
+      SmallVector<int64_t> originalShape =
+          llvm::to_vector(origVecType.getShape());
+
+      // Prepare the result vector.
+      Value result = rewriter.create<arith::ConstantOp>(
+          loc, origVecType, rewriter.getZeroAttr(origVecType));
+      newOpCount++;
+      // Prepare the placeholder for the new arguments that will be added later.
+      Value dummy = rewriter.create<arith::ConstantOp>(
+          loc, unrolledType, rewriter.getZeroAttr(unrolledType));
+      newOpCount++;
+
+      // Create the `vector.insert_strided_slice` ops.
+      SmallVector<int64_t> strides(targetShape->size(), 1);
+      SmallVector<Type> newTypes;
+      for (SmallVector<int64_t> offsets :
+           StaticTileOffsetRange(originalShape, *targetShape)) {
+        result = rewriter.create<vector::InsertStridedSliceOp>(
+            loc, dummy, result, offsets, strides);
+        newTypes.push_back(unrolledType);
+        unrolledInputNums.push_back(newInputNo);
+        newInputNo++;
+        newOpCount++;
+      }
+      rewriter.replaceAllUsesWith(newFuncOp.getArgument(origInputNo), result);
+      oneToNTypeMapping.addInputs(origInputNo, newTypes);
+    }
+
+    // Change the function signature.
+    auto convertedTypes = oneToNTypeMapping.getConvertedTypes();
+    auto newFnType = fnType.clone(convertedTypes, fnType.getResults());
+    rewriter.modifyOpInPlace(newFuncOp,
+                             [&] { newFuncOp.setFunctionType(newFnType); });
+
+    // Update the arguments in the entry block.
+    entryBlock.eraseArguments(0, fnType.getNumInputs());
+    SmallVector<Location> locs(convertedTypes.size(), newFuncOp.getLoc());
+    entryBlock.addArguments(convertedTypes, locs);
+
+    // Replace the placeholder values with the new arguments. We assume there is
+    // only one block for now.
+    size_t idx = 0;
+    for (auto [count, op] : enumerate(entryBlock.getOperations())) {
+      // We first look for operands that are placeholders for initially legal
+      // arguments.
+      for (auto [operandIdx, operandVal] : llvm::enumerate(op.getOperands())) {
+        Operation *operandOp = operandVal.getDefiningOp();
+        auto it = tmpOps.find(operandOp);
+        if (it != tmpOps.end())
+          rewriter.modifyOpInPlace(&op, [&] {
+            op.setOperand(operandIdx, newFuncOp.getArgument(it->second));
+          });
+      }
+      // Since all newly created operations are in the beginning, reaching the
+      // end of them means that any later `vector.insert_strided_slice` should
+      // not be touched.
+      if (count >= newOpCount)
+        continue;
+      auto vecOp = dyn_cast<vector::InsertStridedSliceOp>(op);
+      if (vecOp) {
+        size_t unrolledInputNo = unrolledInputNums[idx];
+        rewriter.modifyOpInPlace(&op, [&] {
+          op.setOperand(0, newFuncOp.getArgument(unrolledInputNo));
+        });
+        idx++;
+      }
+      count++;
+    }
+
+    // Erase the original funcOp. The `tmpOps` do not need to be erased since
+    // they have no uses and will be handled by dead-code elimination.
+    rewriter.eraseOp(funcOp);
+    return success();
+  }
 };
 } // namespace
-
-LogicalResult
-FuncOpVectorUnroll::matchAndRewrite(func::FuncOp funcOp,
-                                    PatternRewriter &rewriter) const {
-  auto fnType = funcOp.getFunctionType();
-
-  // Create a new func op with the original type and copy the function body.
-  auto newFuncOp =
-      rewriter.create<func::FuncOp>(funcOp.getLoc(), funcOp.getName(), fnType);
-  rewriter.inlineRegionBefore(funcOp.getBody(), newFuncOp.getBody(),
-                              newFuncOp.end());
-
-  llvm::errs() << "After creating new func op and copying the function body\n";
-  newFuncOp.dump();
-
-  Location loc = newFuncOp.getBody().getLoc();
-  Block &entryBlock = newFuncOp.getBlocks().front();
-  rewriter.setInsertionPointToStart(&entryBlock);
-
-  OneToNTypeMapping oneToNTypeMapping(fnType.getInputs());
-
-  // For arguments that are of illegal types and require unrolling.
-  // `unrolledInputNums` stores the indices of arguments that result from
-  // unrolling in the new function signature. `newInputNo` is a counter.
-  SmallVector<size_t> unrolledInputNums;
-  size_t newInputNo = 0;
-
-  // For arguments that are of legal types and do not require unrolling.
-  // `tmpOps` stores a mapping from temporary operations that serve as
-  // placeholders for new arguments that will be added later. These operations
-  // will be erased once the entry block's argument list is updated.
-  DenseMap<Operation *, size_t> tmpOps;
-
-  // This counts the number of new operations created.
-  size_t newOpCount = 0;
-
-  // Enumerate through the arguments.
-  for (const auto &argType : enumerate(fnType.getInputs())) {
-    size_t origInputNo = argType.index();
-    Type origType = argType.value();
-    // Check whether the argument is of vector type.
-    auto origVecType = dyn_cast<VectorType>(origType);
-    if (!origVecType) {
-      // We need a placeholder for the old argument that will be erased later.
-      Value result = rewriter.create<arith::ConstantOp>(
-          loc, origType, rewriter.getZeroAttr(origType));
-      rewriter.replaceAllUsesWith(newFuncOp.getArgument(origInputNo), result);
-      tmpOps.insert({result.getDefiningOp(), newInputNo});
-      oneToNTypeMapping.addInputs(origInputNo, origType);
-      newInputNo++;
-      newOpCount++;
-      continue;
-    }
-    // Check whether the vector needs unrolling.
-    auto targetShape = getTargetShape(origVecType);
-    if (!targetShape) {
-      // We need a placeholder for the old argument that will be erased later.
-      Value result = rewriter.create<arith::ConstantOp>(
-          loc, origType, rewriter.getZeroAttr(origType));
-      rewriter.replaceAllUsesWith(newFuncOp.getArgument(origInputNo), result);
-      tmpOps.insert({result.getDefiningOp(), newInputNo});
-      oneToNTypeMapping.addInputs(origInputNo, origType);
-      newInputNo++;
-      newOpCount++;
-      continue;
-    }
-    llvm::errs() << "Got target shape\n";
-    VectorType unrolledType =
-        VectorType::get(*targetShape, origVecType.getElementType());
-    llvm::errs() << "Unrolled type is ";
-    unrolledType.dump();
-    SmallVector<int64_t> originalShape =
-        llvm::to_vector<4>(origVecType.getShape());
-
-    // Prepare the result vector.
-    Value result = rewriter.create<arith::ConstantOp>(
-        loc, origVecType, rewriter.getZeroAttr(origVecType));
-    newOpCount++;
-    // Prepare the placeholder for the new arguments that will be added later.
-    Value dummy = rewriter.create<arith::ConstantOp>(
-        loc, unrolledType, rewriter.getZeroAttr(unrolledType));
-    newOpCount++;
-
-    // Create the `vector.insert_strided_slice` ops.
-    SmallVector<int64_t> strides(targetShape->size(), 1);
-    SmallVector<Type> newTypes;
-    for (SmallVector<int64_t> offsets :
-         StaticTileOffsetRange(originalShape, *targetShape)) {
-      result = rewriter.create<vector::InsertStridedSliceOp>(loc, dummy, result,
-                                                             offsets, strides);
-      newTypes.push_back(unrolledType);
-      unrolledInputNums.push_back(newInputNo);
-      newInputNo++;
-      newOpCount++;
-    }
-    rewriter.replaceAllUsesWith(newFuncOp.getArgument(origInputNo), result);
-    oneToNTypeMapping.addInputs(origInputNo, newTypes);
-  }
-
-  llvm::errs() << "After enumerating through the arguments\n";
-  newFuncOp.dump();
-
-  // Change the function signature.
-  auto convertedTypes = oneToNTypeMapping.getConvertedTypes();
-  auto newFnType =
-      FunctionType::get(rewriter.getContext(), TypeRange(convertedTypes),
-                        TypeRange(fnType.getResults()));
-  rewriter.modifyOpInPlace(newFuncOp,
-                           [&] { newFuncOp.setFunctionType(newFnType); });
-
-  llvm::errs() << "After changing function signature\n";
-  newFuncOp.dump();
-
-  // Update the arguments in the entry block.
-  entryBlock.eraseArguments(0, fnType.getNumInputs());
-  SmallVector<Location> locs(convertedTypes.size(), newFuncOp.getLoc());
-  entryBlock.addArguments(convertedTypes, locs);
-
-  llvm::errs() << "After updating the arguments in the entry block\n";
-  newFuncOp.dump();
-
-  // Replace the placeholder values with the new arguments. We assume there is
-  // only one block for now.
-  size_t idx = 0;
-  for (auto opPair : llvm::enumerate(entryBlock.getOperations())) {
-    size_t count = opPair.index();
-    Operation &op = opPair.value();
-    // We first look for operands that are placeholders for initially legal
-    // arguments.
-    for (auto operandPair : llvm::enumerate(op.getOperands())) {
-      Operation *operandOp = operandPair.value().getDefiningOp();
-      if (tmpOps.find(operandOp) != tmpOps.end())
-        rewriter.modifyOpInPlace(&op, [&] {
-          op.setOperand(operandPair.index(),
-                        newFuncOp.getArgument(tmpOps[operandOp]));
-        });
-    }
-    // Since all newly created operations are in the beginning, reaching the end
-    // of them means that any later `vector.insert_strided_slice` should not be
-    // touched.
-    if (count >= newOpCount)
-      continue;
-    auto vecOp = dyn_cast<vector::InsertStridedSliceOp>(op);
-    if (vecOp) {
-      size_t unrolledInputNo = unrolledInputNums[idx];
-      rewriter.modifyOpInPlace(&op, [&] {
-        op.setOperand(0, newFuncOp.getArgument(unrolledInputNo));
-      });
-      idx++;
-    }
-    count++;
-  }
-
-  // Erase the original funcOp. The `tmpOps` do not need to be erased since
-  // they have no uses and will be handled by dead-code elimination.
-  rewriter.eraseOp(funcOp);
-  return success();
-}
 
 void mlir::populateFuncOpVectorRewritePatterns(RewritePatternSet &patterns) {
   patterns.add<FuncOpVectorUnroll>(patterns.getContext());
@@ -1040,89 +1031,75 @@ namespace {
 /// vectors to be of valid types.
 class ReturnOpVectorUnroll : public OpRewritePattern<func::ReturnOp> {
 public:
-  using OpRewritePattern<func::ReturnOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(func::ReturnOp returnOp,
-                                PatternRewriter &rewriter) const override;
+                                PatternRewriter &rewriter) const override {
+    // Check whether the parent funcOp is valid.
+    auto funcOp = dyn_cast<func::FuncOp>(returnOp->getParentOp());
+    if (!funcOp)
+      return failure();
+
+    FunctionType fnType = funcOp.getFunctionType();
+    OneToNTypeMapping oneToNTypeMapping(fnType.getResults());
+    Location loc = returnOp.getLoc();
+
+    // For the new return op.
+    SmallVector<Value> newOperands;
+
+    // Enumerate through the results.
+    for (auto [origResultNo, origType] : enumerate(fnType.getResults())) {
+      // Check whether the argument is of vector type.
+      auto origVecType = dyn_cast<VectorType>(origType);
+      if (!origVecType) {
+        oneToNTypeMapping.addInputs(origResultNo, origType);
+        newOperands.push_back(returnOp.getOperand(origResultNo));
+        continue;
+      }
+      // Check whether the vector needs unrolling.
+      auto targetShape = getTargetShape(origVecType);
+      if (!targetShape) {
+        // The original argument can be used.
+        oneToNTypeMapping.addInputs(origResultNo, origType);
+        newOperands.push_back(returnOp.getOperand(origResultNo));
+        continue;
+      }
+      VectorType unrolledType =
+          VectorType::get(*targetShape, origVecType.getElementType());
+
+      // Create `vector.extract_strided_slice` ops to form legal vectors from
+      // the original operand of illegal type.
+      SmallVector<int64_t> originalShape =
+          llvm::to_vector<4>(origVecType.getShape());
+      SmallVector<int64_t> strides(targetShape->size(), 1);
+      SmallVector<Type> newTypes;
+      Value returnValue = returnOp.getOperand(origResultNo);
+      for (SmallVector<int64_t> offsets :
+           StaticTileOffsetRange(originalShape, *targetShape)) {
+        Value result = rewriter.create<vector::ExtractStridedSliceOp>(
+            loc, returnValue, offsets, *targetShape, strides);
+        newOperands.push_back(result);
+        newTypes.push_back(unrolledType);
+      }
+      oneToNTypeMapping.addInputs(origResultNo, newTypes);
+    }
+
+    // Change the function signature.
+    auto newFnType =
+        FunctionType::get(rewriter.getContext(), TypeRange(fnType.getInputs()),
+                          TypeRange(oneToNTypeMapping.getConvertedTypes()));
+    rewriter.modifyOpInPlace(funcOp,
+                             [&] { funcOp.setFunctionType(newFnType); });
+
+    // Replace the return op using the new operands. This will automatically
+    // update the entry block as well.
+    rewriter.replaceOp(returnOp,
+                       rewriter.create<func::ReturnOp>(loc, newOperands));
+
+    return success();
+  }
 };
 } // namespace
-
-LogicalResult
-ReturnOpVectorUnroll::matchAndRewrite(func::ReturnOp returnOp,
-                                      PatternRewriter &rewriter) const {
-
-  // Check whether the parent funcOp is valid.
-  func::FuncOp funcOp = dyn_cast<func::FuncOp>(returnOp->getParentOp());
-  if (!funcOp)
-    return failure();
-
-  auto fnType = funcOp.getFunctionType();
-  OneToNTypeMapping oneToNTypeMapping(fnType.getResults());
-  Location loc = returnOp.getLoc();
-
-  // For the new return op.
-  SmallVector<Value> newOperands;
-
-  // Enumerate through the results.
-  for (const auto &argType : enumerate(fnType.getResults())) {
-    size_t origResultNo = argType.index();
-    Type origType = argType.value();
-    auto origVecType = llvm::dyn_cast<VectorType>(origType);
-    // Check whether the argument is of vector type.
-    if (!origVecType) {
-      oneToNTypeMapping.addInputs(origResultNo, origType);
-      newOperands.push_back(returnOp.getOperand(origResultNo));
-      continue;
-    }
-    // Check whether the vector needs unrolling.
-    auto targetShape = getTargetShape(origVecType);
-    if (!targetShape) {
-      // The original argument can be used.
-      oneToNTypeMapping.addInputs(origResultNo, origType);
-      newOperands.push_back(returnOp.getOperand(origResultNo));
-      continue;
-    }
-    llvm::errs() << "Got target shape\n";
-    VectorType unrolledType =
-        VectorType::get(*targetShape, origVecType.getElementType());
-    llvm::errs() << "Unrolled type is ";
-    unrolledType.dump();
-
-    // Create `vector.extract_strided_slice` ops to form legal vectors from the
-    // original operand of illegal type.
-    SmallVector<int64_t> originalShape =
-        llvm::to_vector<4>(origVecType.getShape());
-    SmallVector<int64_t> strides(targetShape->size(), 1);
-    SmallVector<Type> newTypes;
-    Value returnValue = returnOp.getOperand(origResultNo);
-    for (SmallVector<int64_t> offsets :
-         StaticTileOffsetRange(originalShape, *targetShape)) {
-      Value result = rewriter.create<vector::ExtractStridedSliceOp>(
-          loc, returnValue, offsets, *targetShape, strides);
-      newOperands.push_back(result);
-      newTypes.push_back(unrolledType);
-    }
-    oneToNTypeMapping.addInputs(origResultNo, newTypes);
-  }
-
-  llvm::errs() << "After enumerating through the arguments\n";
-  funcOp.dump();
-
-  // Change the function signature.
-  auto newFnType =
-      FunctionType::get(rewriter.getContext(), TypeRange(fnType.getInputs()),
-                        TypeRange(oneToNTypeMapping.getConvertedTypes()));
-  rewriter.modifyOpInPlace(funcOp, [&] { funcOp.setFunctionType(newFnType); });
-  llvm::errs() << "After changing function signature\n";
-  funcOp.dump();
-
-  // Replace the return op using the new operands. This will automatically
-  // update the entry block as well.
-  rewriter.replaceOp(returnOp,
-                     rewriter.create<func::ReturnOp>(loc, newOperands));
-
-  return success();
-}
 
 void mlir::populateReturnOpVectorRewritePatterns(RewritePatternSet &patterns) {
   patterns.add<ReturnOpVectorUnroll>(patterns.getContext());
