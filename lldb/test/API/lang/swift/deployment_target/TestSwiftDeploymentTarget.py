@@ -66,3 +66,31 @@ class TestSwiftDeploymentTarget(TestBase):
         self.filecheck('platform shell cat ""%s"' % log, __file__)
 #       CHECK: SwiftASTContextForExpressions::SetTriple({{.*}}apple-macosx11.0.0
 #       CHECK-NOT: SwiftASTContextForExpressions::RegisterSectionModules("a.out"){{.*}} AST Data blobs
+
+    @skipUnlessDarwin  # This test uses macOS triples explicitly.
+    @skipIfDarwinEmbedded
+    @skipIf(macos_version=["<", "11.1"])
+    @skipIf(setting=("symbols.swift-precise-compiler-invocation", "false"))
+    @swiftTest
+    def test_swift_precise_compiler_invocation_triple(self):
+        """
+        Ensure expressions prefer the target triple of their module, as it may
+        differ from the target triple of the target. This is necessary for
+        explicitly built modules.
+        """
+        self.build()
+        log = self.getBuildArtifact("types.log")
+        self.runCmd(f'log enable lldb types -f "{log}"')
+        lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("NewerTarget.swift")
+        )
+        self.expect(
+            "image list -t libNewerTarget.dylib",
+            substrs=["-apple-macosx11.1.0"],
+        )
+        self.expect("expression self", substrs=["i = 23"])
+        self.filecheck(
+            f'platform shell cat "{log}"', __file__, "-check-prefix=CHECK-PRECISE"
+        )
+#       CHECK-PRECISE: SwiftASTContextForExpressions(module: "NewerTarget", cu: "NewerTarget.swift")::CreateInstance() -- Fully specified target triple {{.*}}-apple-macosx11.1.0
+#       CHECK-PRECISE: SwiftASTContextForExpressions(module: "NewerTarget", cu: "NewerTarget.swift")::SetTriple("{{.*}}-apple-macosx11.1.0")

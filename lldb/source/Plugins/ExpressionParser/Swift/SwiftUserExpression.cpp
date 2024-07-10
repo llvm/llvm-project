@@ -731,8 +731,15 @@ exe_scope = exe_ctx.GetBestExecutionContextScope();
     return error("could not create a Swift scratch context: ",
                  m_err.AsCString());
 
-  const SymbolContext *sc =
-      &frame->GetSymbolContext(lldb::eSymbolContextFunction);
+  // For playgrounds, the target triple should be used for expression
+  // evaluation, not the current module. This requires disabling precise
+  // compiler invocations.
+  //
+  // To disable precise compiler invocations, pass a null SymbolContext.
+  const SymbolContext *sc = nullptr;
+  if (!m_runs_in_playground_or_repl)
+    sc = &frame->GetSymbolContext(lldb::eSymbolContextFunction);
+
   auto *swift_ast_ctx = m_swift_scratch_ctx->get()->GetSwiftASTContext(sc);
   m_swift_ast_ctx =
       llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(swift_ast_ctx);
