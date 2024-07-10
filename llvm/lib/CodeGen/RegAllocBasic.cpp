@@ -130,14 +130,14 @@ char &llvm::RABasicID = RABasic::ID;
 INITIALIZE_PASS_BEGIN(RABasic, "regallocbasic", "Basic Register Allocator",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveDebugVariables)
-INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
 INITIALIZE_PASS_DEPENDENCY(RegisterCoalescer)
 INITIALIZE_PASS_DEPENDENCY(MachineScheduler)
 INITIALIZE_PASS_DEPENDENCY(LiveStacks)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
 INITIALIZE_PASS_DEPENDENCY(LiveRegMatrix)
 INITIALIZE_PASS_END(RABasic, "regallocbasic", "Basic Register Allocator", false,
@@ -179,7 +179,7 @@ void RABasic::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<AAResultsWrapperPass>();
   AU.addRequired<LiveIntervals>();
   AU.addPreserved<LiveIntervals>();
-  AU.addPreserved<SlotIndexes>();
+  AU.addPreserved<SlotIndexesWrapperPass>();
   AU.addRequired<LiveDebugVariables>();
   AU.addPreserved<LiveDebugVariables>();
   AU.addRequired<LiveStacks>();
@@ -188,8 +188,8 @@ void RABasic::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<MachineBlockFrequencyInfo>();
   AU.addRequiredID(MachineDominatorsID);
   AU.addPreservedID(MachineDominatorsID);
-  AU.addRequired<MachineLoopInfo>();
-  AU.addPreserved<MachineLoopInfo>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
+  AU.addPreserved<MachineLoopInfoWrapperPass>();
   AU.addRequired<VirtRegMap>();
   AU.addPreserved<VirtRegMap>();
   AU.addRequired<LiveRegMatrix>();
@@ -312,7 +312,8 @@ bool RABasic::runOnMachineFunction(MachineFunction &mf) {
   RegAllocBase::init(getAnalysis<VirtRegMap>(),
                      getAnalysis<LiveIntervals>(),
                      getAnalysis<LiveRegMatrix>());
-  VirtRegAuxInfo VRAI(*MF, *LIS, *VRM, getAnalysis<MachineLoopInfo>(),
+  VirtRegAuxInfo VRAI(*MF, *LIS, *VRM,
+                      getAnalysis<MachineLoopInfoWrapperPass>().getLI(),
                       getAnalysis<MachineBlockFrequencyInfo>());
   VRAI.calculateSpillWeightsAndHints();
 

@@ -78,19 +78,8 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
       !Args.hasArg(clang::driver::options::OPT_mfentry))
     return true;
 
-  if (Triple.isAndroid()) {
-    switch (Triple.getArch()) {
-    case llvm::Triple::aarch64:
-    case llvm::Triple::arm:
-    case llvm::Triple::armeb:
-    case llvm::Triple::thumb:
-    case llvm::Triple::thumbeb:
-    case llvm::Triple::riscv64:
-      return true;
-    default:
-      break;
-    }
-  }
+  if (Triple.isAndroid())
+    return true;
 
   switch (Triple.getArch()) {
   case llvm::Triple::xcore:
@@ -166,7 +155,7 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
 
 static bool useLeafFramePointerForTargetByDefault(const llvm::Triple &Triple) {
   if (Triple.isAArch64() || Triple.isPS() || Triple.isVE() ||
-      (Triple.isAndroid() && Triple.isRISCV64()))
+      (Triple.isAndroid() && !Triple.isARM()))
     return false;
 
   return true;

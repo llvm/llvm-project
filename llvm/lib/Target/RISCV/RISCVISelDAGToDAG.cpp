@@ -3523,24 +3523,26 @@ bool RISCVDAGToDAGISel::doPeepholeSExtW(SDNode *N) {
   return false;
 }
 
-static bool usesAllOnesMask(SDValue MaskOp, SDValue GlueOp) {
+// After ISel, a vector pseudo's mask will be copied to V0 via a CopyToReg
+// that's glued to the pseudo. This tries to look up the value that was copied
+// to V0.
+static SDValue getMaskSetter(SDValue MaskOp, SDValue GlueOp) {
   // Check that we're using V0 as a mask register.
   if (!isa<RegisterSDNode>(MaskOp) ||
       cast<RegisterSDNode>(MaskOp)->getReg() != RISCV::V0)
-    return false;
+    return SDValue();
 
   // The glued user defines V0.
   const auto *Glued = GlueOp.getNode();
 
   if (!Glued || Glued->getOpcode() != ISD::CopyToReg)
-    return false;
+    return SDValue();
 
   // Check that we're defining V0 as a mask register.
   if (!isa<RegisterSDNode>(Glued->getOperand(1)) ||
       cast<RegisterSDNode>(Glued->getOperand(1))->getReg() != RISCV::V0)
-    return false;
+    return SDValue();
 
-  // Check the instruction defining V0; it needs to be a VMSET pseudo.
   SDValue MaskSetter = Glued->getOperand(2);
 
   // Sometimes the VMSET is wrapped in a COPY_TO_REGCLASS, e.g. if the mask came
@@ -3548,6 +3550,15 @@ static bool usesAllOnesMask(SDValue MaskOp, SDValue GlueOp) {
   if (MaskSetter->isMachineOpcode() &&
       MaskSetter->getMachineOpcode() == RISCV::COPY_TO_REGCLASS)
     MaskSetter = MaskSetter->getOperand(0);
+
+  return MaskSetter;
+}
+
+static bool usesAllOnesMask(SDValue MaskOp, SDValue GlueOp) {
+  // Check the instruction defining V0; it needs to be a VMSET pseudo.
+  SDValue MaskSetter = getMaskSetter(MaskOp, GlueOp);
+  if (!MaskSetter)
+    return false;
 
   const auto IsVMSet = [](unsigned Opc) {
     return Opc == RISCV::PseudoVMSET_M_B1 || Opc == RISCV::PseudoVMSET_M_B16 ||
@@ -3755,12 +3766,16 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
       return false;
   }
 
-  // If True is masked then the vmerge must have an all 1s mask, since we're
-  // going to keep the mask from True.
+  // If True is masked then the vmerge must have either the same mask or an all
+  // 1s mask, since we're going to keep the mask from True.
   if (IsMasked && Mask) {
     // FIXME: Support mask agnostic True instruction which would have an
     // undef merge operand.
-    if (!usesAllOnesMask(Mask, Glue))
+    SDValue TrueMask =
+        getMaskSetter(True->getOperand(Info->MaskOpIdx),
+                      True->getOperand(True->getNumOperands() - 1));
+    assert(TrueMask);
+    if (!usesAllOnesMask(Mask, Glue) && getMaskSetter(Mask, Glue) != TrueMask)
       return false;
   }
 

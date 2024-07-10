@@ -1652,7 +1652,7 @@ void populateElementwiseOpsFusionPatterns(
 
 /// Function type which is used to control propagation of tensor.pack/unpack
 /// ops.
-using ControlPropagationFn = std::function<bool(Operation *op)>;
+using ControlPropagationFn = std::function<bool(OpOperand *opOperand)>;
 
 /// Patterns to bubble up or down data layout ops across other operations.
 void populateDataLayoutPropagationPatterns(
@@ -1734,6 +1734,10 @@ void populateTransposeMatmulPatterns(RewritePatternSet &patterns,
 /// Patterns to block pack Linalg matmul ops.
 void populateBlockPackMatmulPatterns(RewritePatternSet &patterns,
                                      const ControlBlockPackMatmulFn &controlFn);
+
+/// Patterns to apply Winograd Conv2D algorithm F(m x m, r x r).
+void populateWinogradConv2DPatterns(RewritePatternSet &patterns, int64_t m,
+                                    int64_t r);
 
 /// Adds patterns that reduce the rank of named contraction ops that have
 /// unit dimensions in the operand(s) by converting to a sequence of `collapse_shape`,
