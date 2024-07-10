@@ -141,7 +141,7 @@ void PHIElimination::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
   AU.addPreserved<LiveVariablesWrapperPass>();
   AU.addPreserved<SlotIndexesWrapperPass>();
-  AU.addPreserved<LiveIntervals>();
+  AU.addPreserved<LiveIntervalsWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addPreserved<MachineLoopInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -151,7 +151,8 @@ bool PHIElimination::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   auto *LVWrapper = getAnalysisIfAvailable<LiveVariablesWrapperPass>();
   LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
-  LIS = getAnalysisIfAvailable<LiveIntervals>();
+  auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+  LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
 
   bool Changed = false;
 

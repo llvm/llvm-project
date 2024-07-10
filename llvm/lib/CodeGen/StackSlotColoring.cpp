@@ -159,7 +159,7 @@ namespace {
       // split into multiple phases based on register class. So, this pass
       // may be invoked multiple times requiring it to save these analyses to be
       // used by RA later.
-      AU.addPreserved<LiveIntervals>();
+      AU.addPreserved<LiveIntervalsWrapperPass>();
       AU.addPreserved<LiveDebugVariables>();
 
       MachineFunctionPass::getAnalysisUsage(AU);
