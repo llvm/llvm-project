@@ -361,6 +361,12 @@ feature_test_macros = [
             "headers": ["memory"],
         },
         {
+            "name": "__cpp_lib_constexpr_new",
+            "values": {"c++26": 202406},  # P2747R2 constexpr placement new
+            "headers": ["new"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_constexpr_numeric",
             "values": {"c++20": 201911},
             "headers": ["numeric"],
@@ -680,6 +686,12 @@ feature_test_macros = [
             "headers": ["forward_list", "list", "vector"],
         },
         {
+            "name": "__cpp_lib_inplace_vector",
+            "values": {"c++26": 202406},  # P0843R14 inplace_vector
+            "headers": ["inplace_vector"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_int_pow2",
             "values": {"c++20": 202002},
             "headers": ["bit"],
@@ -772,6 +784,14 @@ feature_test_macros = [
             "headers": ["type_traits"],
         },
         {
+            "name": "__cpp_lib_is_virtual_base_of",
+            "values": {
+                "c++26": 202406  # P2985R0 A type trait for detecting virtual base classes
+            },
+            "headers": ["type_traits"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_is_within_lifetime",
             # Note this name was changed from "__cpp_lib_within_lifetime" when the paper was adopted
             # https://github.com/cplusplus/draft/commit/0facada4cadd97e1ba15bfaea76a804f1dc5c309
@@ -851,7 +871,10 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_mdspan",
-            "values": {"c++23": 202207},
+            "values": {
+                "c++23": 202207,
+                # "c++26": 202406, # P2389R2 dextents Index Type Parameter
+            },
             "headers": ["mdspan"],
         },
         {
@@ -919,6 +942,12 @@ feature_test_macros = [
             "headers": ["optional"],
         },
         {
+            "name": "__cpp_lib_optional_range_support",
+            "values": {"c++26": 202406},  # P3168R2 Give std::optional Range Support
+            "headers": ["optional"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_out_ptr",
             "values": {
                 "c++23": 202106,
@@ -934,6 +963,15 @@ feature_test_macros = [
             "unimplemented": True,
         },
         {
+            "name": "__cpp_lib_philox_engine",
+            "values": {
+                "c++26": 202406
+            },  # P2075R6 Philox as an extension of the C++ RNG engines
+            # Note the paper mentions 202310L as value, which differs from the typical procedure.
+            "headers": ["random"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_polymorphic_allocator",
             "values": {"c++20": 201902},
             "headers": ["memory_resource"],
@@ -945,6 +983,7 @@ feature_test_macros = [
             "values": {
                 "c++23": 202207,
                 # "c++26": 202403, # P3107R5: Permit an efficient implementation of std::print
+                # "c++26": 202406, # P3235R3 std::print more types faster with less memory
             },
             "headers": ["ostream", "print"],
         },
@@ -957,7 +996,10 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_ranges",
-            "values": {"c++20": 202207},
+            "values": {
+                "c++20": 202207,
+                # "c++26": 202406, # P2997R1 Removing the common reference requirement from the indirectly invocable concepts
+            },
             "headers": ["algorithm", "functional", "iterator", "memory", "ranges"],
         },
         {
@@ -1102,6 +1144,12 @@ feature_test_macros = [
             "headers": ["semaphore"],
             "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && (!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_SYNC)",
             "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC",
+        },
+        {
+            "name": "__cpp_lib_senders",
+            "values": {"c++26": 202406},  # P2300R10 std::execution
+            "headers": ["execution"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_shared_mutex",
