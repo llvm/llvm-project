@@ -450,7 +450,7 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
 size_t matchWeightsByHashes(
     BinaryContext &BC, const BinaryFunction::BasicBlockOrderType &BlockOrder,
     const yaml::bolt::BinaryFunctionProfile &YamlBF, FlowFunction &Func,
-    HashFunction HashFunction, YAMLProfileReader::FunctionMap &IdToYamlBF) {
+    HashFunction HashFunction, YAMLProfileReader::ProfileLookupMap &IdToYamlBF) {
 
   assert(Func.Blocks.size() == BlockOrder.size() + 2);
 

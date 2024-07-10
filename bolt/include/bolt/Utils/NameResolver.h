@@ -63,8 +63,8 @@ public:
   }
 
   // Removes a suffix from a function name.
-  static StringRef removeSuffix(StringRef Name, StringRef Suffix) {
-    const size_t Pos = Name.find(Suffix);
+  static StringRef unify(StringRef Name) {
+    const size_t Pos = Name.find("(*");
     return Pos != StringRef::npos ? Name.substr(0, Pos) : Name;
   }
 };

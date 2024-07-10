@@ -40,7 +40,7 @@ public:
   /// Check if the file contains YAML.
   static bool isYAML(StringRef Filename);
 
-  using FunctionMap = DenseMap<uint32_t, yaml::bolt::BinaryFunctionProfile *>;
+  using ProfileLookupMap = DenseMap<uint32_t, yaml::bolt::BinaryFunctionProfile *>;
 
 private:
   /// Adjustments for basic samples profiles (without LBR).
@@ -60,7 +60,7 @@ private:
 
   /// Maps profiled function id to function, for function matching with calls as
   /// anchors.
-  FunctionMap IdToYamLBF;
+  ProfileLookupMap IdToYamLBF;
 
   /// For LTO symbol resolution.
   /// Map a common LTO prefix to a list of YAML profiles matching the prefix.
