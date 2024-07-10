@@ -174,6 +174,7 @@ protected:
   bool HasAtomicBufferPkAddBF16Inst = false;
   bool HasFlatAtomicFaddF32Inst = false;
   bool HasDefaultComponentZero = false;
+  bool HasAgentScopeFineGrainedRemoteMemoryAtomics = false;
   bool HasDefaultComponentBroadcast = false;
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
   /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
@@ -870,6 +871,13 @@ public:
   }
 
   bool hasFlatAtomicFaddF32Inst() const { return HasFlatAtomicFaddF32Inst; }
+
+  /// \return true if atomic operations targeting fine-grained memory work
+  /// correctly at device scope, in allocations in host or peer PCIe device
+  /// memory.
+  bool supportsAgentScopeFineGrainedRemoteMemoryAtomics() const {
+    return HasAgentScopeFineGrainedRemoteMemoryAtomics;
+  }
 
   bool hasDefaultComponentZero() const { return HasDefaultComponentZero; }
 
