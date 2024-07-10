@@ -39,30 +39,18 @@ namespace {
 /// A pass to perform the SPIR-V conversion.
 class ConvertToSPIRVPass
     : public impl::ConvertToSPIRVPassBase<ConvertToSPIRVPass> {
-  using impl::ConvertToSPIRVPassBase::ConvertToSPIRVPassBase;
+  using impl::ConvertToSPIRVPassBase<
+      ConvertToSPIRVPass>::ConvertToSPIRVPassBase;
 
   void runOnOperation() override {
     MLIRContext *context = &getContext();
     Operation *op = getOperation();
 
     if (runSignatureConversion) {
-      // Unroll vectors in function inputs to native vector size.
-      llvm::errs() << "Start unrolling function inputs\n";
+      // Unroll vectors in function signatures to native vector size.
       {
         RewritePatternSet patterns(context);
         populateFuncOpVectorRewritePatterns(patterns);
-        GreedyRewriteConfig config;
-        config.strictMode = GreedyRewriteStrictness::ExistingOps;
-        if (failed(
-                applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
-          return signalPassFailure();
-      }
-      llvm::errs() << "Finish unrolling function inputs\n";
-
-      // Unroll vectors in function outputs to native vector size.
-      llvm::errs() << "Start unrolling function outputs\n";
-      {
-        RewritePatternSet patterns(context);
         populateReturnOpVectorRewritePatterns(patterns);
         GreedyRewriteConfig config;
         config.strictMode = GreedyRewriteStrictness::ExistingOps;
@@ -70,8 +58,6 @@ class ConvertToSPIRVPass
                 applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
           return signalPassFailure();
       }
-      llvm::errs() << "Finish unrolling function outputs\n";
-
       return;
     }
 
