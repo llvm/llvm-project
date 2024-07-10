@@ -903,8 +903,6 @@ private:
                    const VSETVLIInfo &CurInfo) const;
   bool needVSETVLIPHI(const VSETVLIInfo &Require,
                       const MachineBasicBlock &MBB) const;
-  void insertVSETVLI(MachineBasicBlock &MBB, MachineInstr &MI,
-                     const VSETVLIInfo &Info, const VSETVLIInfo &PrevInfo);
   void insertVSETVLI(MachineBasicBlock &MBB,
                      MachineBasicBlock::iterator InsertPt, DebugLoc DL,
                      const VSETVLIInfo &Info, const VSETVLIInfo &PrevInfo);
@@ -1078,13 +1076,6 @@ RISCVInsertVSETVLI::computeInfoForInstr(const MachineInstr &MI) const {
   forwardVSETVLIAVL(InstrInfo);
 
   return InstrInfo;
-}
-
-void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB, MachineInstr &MI,
-                                       const VSETVLIInfo &Info,
-                                       const VSETVLIInfo &PrevInfo) {
-  DebugLoc DL = MI.getDebugLoc();
-  insertVSETVLI(MBB, MachineBasicBlock::iterator(&MI), DL, Info, PrevInfo);
 }
 
 void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
@@ -1436,7 +1427,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
         // we *do* need to model the state as if it changed as while the
         // register contents are unchanged, the abstract model can change.
         if (!PrefixTransparent || needVSETVLIPHI(CurInfo, MBB))
-          insertVSETVLI(MBB, MI, CurInfo, PrevInfo);
+          insertVSETVLI(MBB, MI, MI.getDebugLoc(), CurInfo, PrevInfo);
         PrefixTransparent = false;
       }
 
