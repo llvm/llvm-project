@@ -81,6 +81,15 @@ def AttrWithTrait : Test_Attr<"AttrWithTrait", [TestAttrTrait]> {
   let mnemonic = "attr_with_trait";
 }
 
+// An attribute of decimal formatted integer.
+def TestDecimalIntegerAttr : Test_Attr<"TestDecimalInteger"> {
+  let mnemonic = "decimal_integer";
+
+  let parameters = (ins "int64_t":$value);
+
+  let hasCustomAssemblyFormat = 1;
+}
+
 // Test support for ElementsAttrInterface.
 def TestI64ElementsAttr : Test_Attr<"TestI64Elements", [ElementsAttrInterface]> {
   let mnemonic = "i64_elements";

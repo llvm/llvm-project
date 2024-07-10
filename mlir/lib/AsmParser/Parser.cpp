@@ -308,13 +308,6 @@ OptionalParseResult Parser::parseOptionalInteger(APInt &result) {
   return success();
 }
 
-namespace {
-bool isBinOrHexOrOctIndicator(char c) {
-  return (llvm::toLower(c) == 'x' || llvm::toLower(c) == 'b' ||
-          llvm::isDigit(c));
-}
-} // namespace
-
 /// Parse an optional integer value only in decimal format from the stream.
 OptionalParseResult Parser::parseOptionalDecimalInteger(APInt &result) {
   Token curToken = getToken();
@@ -329,10 +322,11 @@ OptionalParseResult Parser::parseOptionalDecimalInteger(APInt &result) {
   }
 
   StringRef spelling = curTok.getSpelling();
-  // If the integer is in bin, hex, or oct format, return only the 0 and reset
-  // the lex pointer.
+  // If the integer is in hexadecimal return only the 0. The lexer has already
+  // moved past the entire hexidecimal encoded integer so we reset the lex
+  // pointer to just past the 0 we actualy want to consume.
   if (spelling[0] == '0' && spelling.size() > 1 &&
-      isBinOrHexOrOctIndicator(spelling[1])) {
+      llvm::toLower(spelling[1]) == 'x') {
     result = 0;
     state.lex.resetPointer(spelling.data() + 1);
     consumeToken();

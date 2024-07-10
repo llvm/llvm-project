@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s | mlir-opt -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL: func private @compoundA()
 // CHECK-SAME: #test.cmpnd_a<1, !test.smpla, [5, 6]>
@@ -18,4 +18,17 @@ func.func private @qualifiedAttr() attributes {foo = #test.cmpnd_nested_outer_qu
 // CHECK-SAME: foo = 5 : index
 func.func private @overriddenAttr() attributes {
   foo = #test.override_builder<5>
+}
+
+// CHECK-LABEL: @decimalInteger
+// CHECK-SAME: foo = #test.decimal_integer<5>
+func.func private @decimalInteger() attributes {
+  foo = #test.decimal_integer<5>
+}
+
+// -----
+
+func.func private @hexdecimalInteger() attributes {
+// expected-error @below {{expected '>'}}
+  foo = #test.decimal_integer<0x5>
 }

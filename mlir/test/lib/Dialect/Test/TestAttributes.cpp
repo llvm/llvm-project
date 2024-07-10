@@ -13,9 +13,11 @@
 
 #include "TestAttributes.h"
 #include "TestDialect.h"
+#include "TestTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/ExtensibleDialect.h"
+#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Hashing.h"
@@ -62,6 +64,25 @@ void CompoundAAttr::print(AsmPrinter &printer) const {
 //===----------------------------------------------------------------------===//
 // CompoundAAttr
 //===----------------------------------------------------------------------===//
+
+
+Attribute TestDecimalIntegerAttr::parse(AsmParser &parser, Type type) {
+  if (parser.parseLess()){
+    return Attribute();
+  }
+  uint64_t intVal;
+  if (failed(*parser.parseOptionalDecimalInteger(intVal))) {
+    return Attribute();
+  }
+  if (parser.parseGreater()) {
+    return Attribute();
+  }
+  return get(parser.getContext(), intVal);
+}
+
+void TestDecimalIntegerAttr::print(AsmPrinter &printer) const {
+  printer << "<" << getValue() << ">";
+}
 
 Attribute TestI64ElementsAttr::parse(AsmParser &parser, Type type) {
   SmallVector<uint64_t> elements;
