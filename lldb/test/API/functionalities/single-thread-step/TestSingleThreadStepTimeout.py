@@ -121,11 +121,11 @@ class SingleThreadStepTimeoutTestCase(TestBase):
         )
         self.dbg.HandleCommand("settings set target.use-fast-stepping false")
         self.step_over_multi_calls_helper()
-    
+
     @skipIfWindows
     def test_step_over_deadlock_with_inner_breakpoint_continue(self):
         """Test step over deadlock function with inner breakpoint will trigger the breakpoint
-            and later continue will finish the stepping.
+        and later continue will finish the stepping.
         """
         self.dbg.HandleCommand(
             "settings set target.process.thread.single-thread-plan-timeout 2000"
@@ -140,11 +140,15 @@ class SingleThreadStepTimeoutTestCase(TestBase):
         # Change signal_main_thread global variable to 1 so that worker thread loop can
         # terminate and move forward to signal main thread
         signal_main_thread_value.SetValueFromCString("1")
-        
+
         # Set breakpoint on inner function call
         inner_breakpoint = target.BreakpointCreateByLocation(
-            lldb.SBFileSpec(self.main_source), line_number("main.cpp", "// Set interrupt breakpoint here"), 
-            0, 0, lldb.SBFileSpecList(), False
+            lldb.SBFileSpec(self.main_source),
+            line_number("main.cpp", "// Set interrupt breakpoint here"),
+            0,
+            0,
+            lldb.SBFileSpecList(),
+            False,
         )
 
         # Step over will hit the inner breakpoint and stop
@@ -153,19 +157,22 @@ class SingleThreadStepTimeoutTestCase(TestBase):
         thread1 = lldbutil.get_one_thread_stopped_at_breakpoint(
             process, inner_breakpoint
         )
-        self.assertTrue(thread1.IsValid(), "We are indeed stopped at inner breakpoint inside deadlock_func")
-        
+        self.assertTrue(
+            thread1.IsValid(),
+            "We are indeed stopped at inner breakpoint inside deadlock_func",
+        )
+
         # Continue the process should complete the step-over
         process.Continue()
         self.assertState(process.GetState(), lldb.eStateStopped)
         self.assertStopReason(self.thread.GetStopReason(), lldb.eStopReasonPlanComplete)
-        
-        self.verify_hit_correct_line("// Finish step-over from breakpoint1")  
-        
+
+        self.verify_hit_correct_line("// Finish step-over from breakpoint1")
+
     @skipIfWindows
     def test_step_over_deadlock_with_inner_breakpoint_step(self):
         """Test step over deadlock function with inner breakpoint will trigger the breakpoint
-            and later step still works
+        and later step still works
         """
         self.dbg.HandleCommand(
             "settings set target.process.thread.single-thread-plan-timeout 2000"
@@ -180,11 +187,15 @@ class SingleThreadStepTimeoutTestCase(TestBase):
         # Change signal_main_thread global variable to 1 so that worker thread loop can
         # terminate and move forward to signal main thread
         signal_main_thread_value.SetValueFromCString("1")
-        
+
         # Set breakpoint on inner function call
         inner_breakpoint = target.BreakpointCreateByLocation(
-            lldb.SBFileSpec(self.main_source), line_number("main.cpp", "// Set interrupt breakpoint here"), 
-            0, 0, lldb.SBFileSpecList(), False
+            lldb.SBFileSpec(self.main_source),
+            line_number("main.cpp", "// Set interrupt breakpoint here"),
+            0,
+            0,
+            lldb.SBFileSpecList(),
+            False,
         )
 
         # Step over will hit the inner breakpoint and stop
@@ -193,25 +204,28 @@ class SingleThreadStepTimeoutTestCase(TestBase):
         thread1 = lldbutil.get_one_thread_stopped_at_breakpoint(
             process, inner_breakpoint
         )
-        self.assertTrue(thread1.IsValid(), "We are indeed stopped at inner breakpoint inside deadlock_func")
-        
+        self.assertTrue(
+            thread1.IsValid(),
+            "We are indeed stopped at inner breakpoint inside deadlock_func",
+        )
+
         # Step still works
         self.thread.StepOver(lldb.eOnlyThisThread)
         self.assertState(process.GetState(), lldb.eStateStopped)
         self.assertStopReason(self.thread.GetStopReason(), lldb.eStopReasonPlanComplete)
-        
-        self.verify_hit_correct_line("// Finish step-over from inner breakpoint")  
+
+        self.verify_hit_correct_line("// Finish step-over from inner breakpoint")
 
     @skipIfWindows
     def test_step_over_deadlock_with_user_async_interrupt(self):
         """Test step over deadlock function without large timeout then async interrupt will result
         Correct stop reason
         """
-        
+
         self.dbg.HandleCommand(
             "settings set target.process.thread.single-thread-plan-timeout 2000000"
         )
-        
+
         (target, process, self.thread, _) = lldbutil.run_to_source_breakpoint(
             self, "// Set breakpoint1 here", lldb.SBFileSpec(self.main_source)
         )
@@ -222,18 +236,18 @@ class SingleThreadStepTimeoutTestCase(TestBase):
         # Change signal_main_thread global variable to 1 so that worker thread loop can
         # terminate and move forward to signal main thread
         signal_main_thread_value.SetValueFromCString("1")
-        
+
         self.dbg.SetAsync(True)
-        
-        # This stepping should block due to large timeout and should be interrupted by the 
+
+        # This stepping should block due to large timeout and should be interrupted by the
         # async interrupt from the worker thread
         self.thread.StepOver(lldb.eOnlyThisThread)
         time.sleep(1)
-        
+
         listener = self.dbg.GetListener()
         lldbutil.expect_state_changes(self, listener, process, [lldb.eStateRunning])
         self.dbg.SetAsync(False)
-        
+
         process.SendAsyncInterrupt()
 
         lldbutil.expect_state_changes(self, listener, process, [lldb.eStateStopped])
