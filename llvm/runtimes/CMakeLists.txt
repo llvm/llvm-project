@@ -446,7 +446,9 @@ if(build_runtimes)
 
   if(LLVM_INCLUDE_TESTS)
     foreach(dep FileCheck
+                clang
                 count
+                lld
                 lli
                 llvm-cov
                 llvm-lto
@@ -455,6 +457,7 @@ if(build_runtimes)
                 llvm-objdump
                 llvm-profdata
                 llvm-size
+                llvm-symbolizer
                 llvm-xray
                 not
                 obj2yaml
