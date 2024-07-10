@@ -62,15 +62,11 @@ void RTDECL(Rename)(const Descriptor &path1, const Descriptor &path2,
   char * pathSrc{EnsureNullTerminated(path1.OffsetElement(), path1.ElementBytes(), terminator)};
   char * pathDst{EnsureNullTerminated(path2.OffsetElement(), path2.ElementBytes(), terminator)};
 
-#ifdef _WIN32
-  terminator.crash("RENAME intrinsic not implemented on Windows");
-#else // _WIN32
-  // We simply call rename(2) on a non-Windows system
+  // We simply call rename(2) from POSIX
   int result = rename(pathSrc, pathDst);
   if (status) {
     StoreIntToDescriptor(status, result, terminator);
   }
-#endif // WIN32
 
   // Deallocate memory if EnsureNullTerminated dynamically allocated memory
   if (pathSrc != path1.OffsetElement()) {
