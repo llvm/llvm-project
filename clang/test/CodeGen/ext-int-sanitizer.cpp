@@ -55,12 +55,15 @@ void FloatOverflow(float f, double d) {
 void UIntTruncation(unsigned _BitInt(35) E, unsigned int i, unsigned long long ll) {
 
   i = E;
-  // CHECK: %[[LOADE:.+]] = load i35
-  // CHECK: store i35 %[[LOADE]], ptr %[[EADDR:.+]]
-  // CHECK: %[[LOADE2:.+]] = load i35, ptr %[[EADDR]]
-  // CHECK: %[[CONV:.+]] = trunc i35 %[[LOADE2]] to i32
+  // CHECK: %[[LOADE:.+]] = load i64
+  // CHECK: %[[E1:.+]] = trunc i64 %[[LOADE]] to i35
+  // CHECK: %[[STOREDV:.+]] = zext i35 %[[E1]] to i64
+  // CHECK: store i64 %[[STOREDV]], ptr %[[EADDR:.+]]
+  // CHECK: %[[LOADE2:.+]] = load i64, ptr %[[EADDR]]
+  // CHECK: %[[LOADEDV:.+]] = trunc i64 %[[LOADE2]] to i35
+  // CHECK: %[[CONV:.+]] = trunc i35 %[[LOADEDV]] to i32
   // CHECK: %[[EXT:.+]] = zext i32 %[[CONV]] to i35
-  // CHECK: %[[CHECK:.+]] = icmp eq i35 %[[EXT]], %[[LOADE2]]
+  // CHECK: %[[CHECK:.+]] = icmp eq i35 %[[EXT]], %[[LOADEDV]]
   // CHECK: br i1 %[[CHECK]]
   // CHECK: call void @__ubsan_handle_implicit_conversion_abort
 
@@ -77,43 +80,49 @@ void UIntTruncation(unsigned _BitInt(35) E, unsigned int i, unsigned long long l
 void IntTruncation(_BitInt(35) E, unsigned _BitInt(42) UE, int i, unsigned j) {
 
   j = E;
-  // CHECK: %[[LOADE:.+]] = load i35
-  // CHECK: store i35 %[[LOADE]], ptr %[[EADDR:.+]]
-  // CHECK: %[[LOADE2:.+]] = load i35, ptr %[[EADDR]]
-  // CHECK: %[[CONV:.+]] = trunc i35 %[[LOADE2]] to i32
+  // CHECK: %[[LOADE:.+]] = load i64
+  // CHECK: %[[E1:.+]] = trunc i64 %[[LOADE]] to i35
+  // CHECK: %[[STOREDV:.+]] = sext i35 %[[E1]] to i64
+  // CHECK: store i64 %[[STOREDV]], ptr %[[EADDR:.+]]
+  // CHECK: %[[LOADE2:.+]] = load i64, ptr %[[EADDR]]
+  // CHECK: %[[LOADEDV:.+]] = trunc i64 %[[LOADE2]] to i35
+  // CHECK: %[[CONV:.+]] = trunc i35 %[[LOADEDV]] to i32
   // CHECK: %[[EXT:.+]] = zext i32 %[[CONV]] to i35
-  // CHECK: %[[CHECK:.+]] = icmp eq i35 %[[EXT]], %[[LOADE2]]
+  // CHECK: %[[CHECK:.+]] = icmp eq i35 %[[EXT]], %[[LOADEDV]]
   // CHECK: br i1 %[[CHECK]]
   // CHECK: call void @__ubsan_handle_implicit_conversion_abort
 
   j = UE;
-  // CHECK: %[[LOADUE:.+]] = load i42
-  // CHECK: %[[CONV:.+]] = trunc i42 %[[LOADUE]] to i32
+  // CHECK: %[[LOADUE:.+]] = load i64
+  // CHECK: %[[LOADEDV:.+]] = trunc i64 %[[LOADUE]] to i42
+  // CHECK: %[[CONV:.+]] = trunc i42 %[[LOADEDV]] to i32
   // CHECK: %[[EXT:.+]] = zext i32 %[[CONV]] to i42
-  // CHECK: %[[CHECK:.+]] = icmp eq i42 %[[EXT]], %[[LOADUE]]
+  // CHECK: %[[CHECK:.+]] = icmp eq i42 %[[EXT]], %[[LOADEDV]]
   // CHECK: br i1 %[[CHECK]]
   // CHECK: call void @__ubsan_handle_implicit_conversion_abort
 
   // Note: also triggers sign change check.
   i = UE;
-  // CHECK: %[[LOADUE:.+]] = load i42
-  // CHECK: %[[CONV:.+]] = trunc i42 %[[LOADUE]] to i32
+  // CHECK: %[[LOADUE:.+]] = load i64
+  // CHECK: %[[LOADEDV:.+]] = trunc i64 %[[LOADUE]] to i42
+  // CHECK: %[[CONV:.+]] = trunc i42 %[[LOADEDV]] to i32
   // CHECK: %[[NEG:.+]] = icmp slt i32 %[[CONV]], 0
   // CHECK: %[[SIGNCHECK:.+]] = icmp eq i1 false, %[[NEG]]
   // CHECK: %[[EXT:.+]] = sext i32 %[[CONV]] to i42
-  // CHECK: %[[CHECK:.+]] = icmp eq i42 %[[EXT]], %[[LOADUE]]
+  // CHECK: %[[CHECK:.+]] = icmp eq i42 %[[EXT]], %[[LOADEDV]]
   // CHECK: %[[CHECKBOTH:.+]] = and i1 %[[SIGNCHECK]], %[[CHECK]]
   // CHECK: br i1 %[[CHECKBOTH]]
   // CHECK: call void @__ubsan_handle_implicit_conversion_abort
 
   // Note: also triggers sign change check.
   E = UE;
-  // CHECK: %[[LOADUE:.+]] = load i42
-  // CHECK: %[[CONV:.+]] = trunc i42 %[[LOADUE]] to i35
+  // CHECK: %[[LOADUE:.+]] = load i64
+  // CHECK: %[[LOADEDV:.+]] = trunc i64 %[[LOADUE]] to i42
+  // CHECK: %[[CONV:.+]] = trunc i42 %[[LOADEDV]] to i35
   // CHECK: %[[NEG:.+]] = icmp slt i35 %[[CONV]], 0
   // CHECK: %[[SIGNCHECK:.+]] = icmp eq i1 false, %[[NEG]]
   // CHECK: %[[EXT:.+]] = sext i35 %[[CONV]] to i42
-  // CHECK: %[[CHECK:.+]] = icmp eq i42 %[[EXT]], %[[LOADUE]]
+  // CHECK: %[[CHECK:.+]] = icmp eq i42 %[[EXT]], %[[LOADEDV]]
   // CHECK: %[[CHECKBOTH:.+]] = and i1 %[[SIGNCHECK]], %[[CHECK]]
   // CHECK: br i1 %[[CHECKBOTH]]
   // CHECK: call void @__ubsan_handle_implicit_conversion_abort

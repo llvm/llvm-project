@@ -3,9 +3,9 @@
 // RUN: %clang_cc1 -std=c23 -triple i386-gnu-linux -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LIN32
 // RUN: %clang_cc1 -std=c23 -triple i386-windows-pc -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,WIN32
 
-// CHECK64: %struct.S1 = type { i17, [4 x i8], [24 x i8] }
-// WIN32: %struct.S1 = type { i17, [4 x i8], [24 x i8] }
-// LIN32: %struct.S1 = type { i17, [20 x i8] }
+// CHECK64: %struct.S1 = type { i32, [4 x i8], [24 x i8] }
+// WIN32: %struct.S1 = type { i32, [4 x i8], [24 x i8] }
+// LIN32: %struct.S1 = type { i32, [20 x i8] }
 // CHECK64: %struct.S2 = type { [40 x i8], i32, [4 x i8] }
 // WIN32: %struct.S2 = type { [40 x i8], i32, [4 x i8] }
 // LIN32: %struct.S2 = type { [36 x i8], i32 }
@@ -14,9 +14,9 @@
 
 //GH62207
 unsigned _BitInt(1) GlobSize1 = 0;
-// CHECK: @GlobSize1 = {{.*}}global i1 false
+// CHECK: @GlobSize1 = {{.*}}global i8 0
 
-// CHECK64: @__const.foo.A = private unnamed_addr constant { i17, [4 x i8], <{ i8, [23 x i8] }> } { i17 1, [4 x i8] undef, <{ i8, [23 x i8] }> <{ i8 -86, [23 x i8] zeroinitializer }> }, align 8
+// CHECK64: @__const.foo.A = private unnamed_addr constant { i32, [4 x i8], <{ i8, [23 x i8] }> } { i32 1, [4 x i8] undef, <{ i8, [23 x i8] }> <{ i8 -86, [23 x i8] zeroinitializer }> }, align 8
 // @BigGlob = global [40 x i8] c"\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF", align 8
 // CHECK64: @f.p = internal global <{ i8, i8, [22 x i8] }> <{ i8 16, i8 39, [22 x i8] zeroinitializer }>, align 8
 
@@ -65,14 +65,17 @@ void OffsetOfTest(void) {
 
 void Size1ExtIntParam(unsigned _BitInt(1) A) {
   // CHECK: define {{.*}}void @Size1ExtIntParam(i1{{.*}}  %[[PARAM:.+]])
-  // CHECK: %[[PARAM_ADDR:.+]] = alloca i1
-  // CHECK: %[[B:.+]] = alloca [5 x i1]
-  // CHECK: store i1 %[[PARAM]], ptr %[[PARAM_ADDR]]
+  // CHECK: %[[PARAM_ADDR:.+]] = alloca i8
+  // CHECK: %[[B:.+]] = alloca [5 x i8]
+  // CHECK: %[[STOREDV:.+]] = zext i1 %[[PARAM]] to i8
+  // CHECK: store i8 %[[STOREDV]], ptr %[[PARAM_ADDR]]
   unsigned _BitInt(1) B[5];
 
-  // CHECK: %[[PARAM_LOAD:.+]] = load i1, ptr %[[PARAM_ADDR]]
-  // CHECK: %[[IDX:.+]] = getelementptr inbounds [5 x i1], ptr %[[B]]
-  // CHECK: store i1 %[[PARAM_LOAD]], ptr %[[IDX]]
+  // CHECK: %[[PARAM_LOAD:.+]] = load i8, ptr %[[PARAM_ADDR]]
+  // CHECK: %[[LOADEDV:.+]] = trunc i8 %0 to i1
+  // CHECK: %[[IDX:.+]] = getelementptr inbounds [5 x i8], ptr %[[B]]
+  // CHECK: %[[STOREDV1:.+]] = zext i1 %[[LOADEDV]] to i8
+  // CHECK: store i8 %[[STOREDV1]], ptr %[[IDX]]
   B[2] = A;
 }
 
@@ -84,7 +87,7 @@ struct S1 {
 
 int foo(int a) {
   // CHECK: %A1 = getelementptr inbounds %struct.S1, ptr %B, i32 0, i32 0
-  // CHECK: store i17 1, ptr %A1
+  // CHECK: store i32 1, ptr %A1
   // CHECK64: %B2 = getelementptr inbounds %struct.S1, ptr %B, i32 0, i32 2
   // WIN32: %B2 = getelementptr inbounds %struct.S1, ptr %B, i32 0, i32 2
   // LIN32: %B2 = getelementptr inbounds %struct.S1, ptr %B, i32 0, i32 1

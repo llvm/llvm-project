@@ -615,7 +615,7 @@ bool ConstStructBuilder::AppendBitField(const FieldDecl *Field,
 
   llvm::ConstantInt *CI = dyn_cast<llvm::ConstantInt>(C);
   if (!CI) {
-    // Constants for long _BitInt types are split into individual bytes.
+    // Constants long _BitInt types are sometimes split into individual bytes.
     // Try to fold these back into an integer constant. If that doesn't work
     // out, then we are trying to initialize a bitfield with a non-trivial
     // constant, this must require run-time code.
@@ -1897,26 +1897,24 @@ llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
   }
 
   if (destType->isBitIntType()) {
+    ConstantAggregateBuilder Builder(CGM);
+    llvm::Type *LoadStoreTy = CGM.getTypes().convertTypeForLoadStore(destType);
+    // ptrtoint/inttoptr should not involve _BitInt in constant expressions, so
+    // casting to ConstantInt is safe here.
+    auto *CI = cast<llvm::ConstantInt>(C);
+    llvm::Constant *Res = llvm::ConstantFoldCastOperand(
+        destType->isSignedIntegerOrEnumerationType() ? llvm::Instruction::SExt
+                                                     : llvm::Instruction::ZExt,
+        CI, LoadStoreTy, CGM.getDataLayout());
     if (CGM.getTypes().typeRequiresSplitIntoByteArray(destType, C->getType())) {
       // Long _BitInt has array of bytes as in-memory type.
       // So, split constant into individual bytes.
-      ConstantAggregateBuilder Builder(CGM);
       llvm::Type *DesiredTy = CGM.getTypes().ConvertTypeForMem(destType);
-      llvm::Type *LoadStoreTy =
-          CGM.getTypes().convertTypeForLoadStore(destType);
-      // LLVM type doesn't match AST type only for big enough _BitInts, these
-      // types don't appear in constant expressions involving ptrtoint, so it
-      // is safe to expect a constant int here.
-      auto *CI = cast<llvm::ConstantInt>(C);
-      llvm::Constant *Res = llvm::ConstantFoldCastOperand(
-          destType->isSignedIntegerOrEnumerationType()
-              ? llvm::Instruction::SExt
-              : llvm::Instruction::ZExt,
-          CI, LoadStoreTy, CGM.getDataLayout());
       llvm::APInt Value = cast<llvm::ConstantInt>(Res)->getValue();
       Builder.addBits(Value, /*OffsetInBits=*/0, /*AllowOverwrite=*/false);
       return Builder.build(DesiredTy, /*AllowOversized*/ false);
     }
+    return Res;
   }
 
   return C;

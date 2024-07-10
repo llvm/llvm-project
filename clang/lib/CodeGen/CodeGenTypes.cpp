@@ -89,7 +89,7 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
 /// ConvertType in that it is used to convert to the memory representation for
 /// a type.  For example, the scalar representation for _Bool is i1, but the
 /// memory representation is usually i8 or i32, depending on the target.
-llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T, bool ForBitField) {
+llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
   if (T->isConstantMatrixType()) {
     const Type *Ty = Context.getCanonicalType(T).getTypePtr();
     const ConstantMatrixType *MT = cast<ConstantMatrixType>(Ty);
@@ -111,12 +111,11 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T, bool ForBitField) {
     if (typeRequiresSplitIntoByteArray(T, R))
       return llvm::ArrayType::get(CGM.Int8Ty,
                                   Context.getTypeSizeInChars(T).getQuantity());
+    return llvm::IntegerType::get(getLLVMContext(),
+                                  (unsigned)Context.getTypeSize(T));
   }
 
-  // If this is a bool type, or a bit-precise integer type in a bitfield
-  // representation, map this integer to the target-specified size.
-  if ((ForBitField && T->isBitIntType()) ||
-      (!T->isBitIntType() && R->isIntegerTy(1)))
+  if (R->isIntegerTy(1))
     return llvm::IntegerType::get(getLLVMContext(),
                                   (unsigned)Context.getTypeSize(T));
 
@@ -140,14 +139,13 @@ llvm::Type *CodeGenTypes::convertTypeForLoadStore(QualType T,
   if (!LLVMTy)
     LLVMTy = ConvertType(T);
 
-  if (T->isBitIntType()) {
-    if (typeRequiresSplitIntoByteArray(T))
-      return llvm::Type::getIntNTy(
-          getLLVMContext(), Context.getTypeSizeInChars(T).getQuantity() * 8);
-  } else if (LLVMTy->isIntegerTy(1)) {
+  if (T->isBitIntType())
+    return llvm::Type::getIntNTy(
+        getLLVMContext(), Context.getTypeSizeInChars(T).getQuantity() * 8);
+
+  if (LLVMTy->isIntegerTy(1))
     return llvm::IntegerType::get(getLLVMContext(),
                                   (unsigned)Context.getTypeSize(T));
-  }
 
   if (T->isExtVectorBoolType())
     return ConvertTypeForMem(T);
