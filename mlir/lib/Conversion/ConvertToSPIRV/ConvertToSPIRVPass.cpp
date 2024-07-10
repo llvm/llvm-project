@@ -39,7 +39,8 @@ namespace {
 /// A pass to perform the SPIR-V conversion.
 class ConvertToSPIRVPass
     : public impl::ConvertToSPIRVPassBase<ConvertToSPIRVPass> {
-  using impl::ConvertToSPIRVPassBase<ConvertToSPIRVPass>::ConvertToSPIRVPassBase;
+  using impl::ConvertToSPIRVPassBase<
+      ConvertToSPIRVPass>::ConvertToSPIRVPassBase;
 
   void runOnOperation() override {
     MLIRContext *context = &getContext();
@@ -53,7 +54,8 @@ class ConvertToSPIRVPass
         populateFuncOpVectorRewritePatterns(patterns);
         GreedyRewriteConfig config;
         config.strictMode = GreedyRewriteStrictness::ExistingOps;
-        if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
+        if (failed(
+                applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
           return signalPassFailure();
       }
       llvm::errs() << "Finish unrolling function inputs\n";
@@ -65,10 +67,13 @@ class ConvertToSPIRVPass
         populateReturnOpVectorRewritePatterns(patterns);
         GreedyRewriteConfig config;
         config.strictMode = GreedyRewriteStrictness::ExistingOps;
-        if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
+        if (failed(
+                applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
           return signalPassFailure();
       }
       llvm::errs() << "Finish unrolling function outputs\n";
+
+      return;
     }
 
     spirv::TargetEnvAttr targetAttr = spirv::lookupTargetEnvOrDefault(op);
