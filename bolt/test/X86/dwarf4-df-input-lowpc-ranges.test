@@ -48,9 +48,9 @@
 ; BOLT-NEXT: DW_AT_GNU_addr_base [DW_FORM_sec_offset]  (0x00000000)
 
 ; BOLT-DWO-MAIN:        DW_TAG_subprogram
-; BOLT-DWO-MAIN-NEXT:   DW_AT_ranges [DW_FORM_sec_offset] (0x00000010
+; BOLT-DWO-MAIN-NEXT:   DW_AT_ranges [DW_FORM_sec_offset] (0x00000000
 ; BOLT-DWO-MAIN:        DW_TAG_subprogram
 ; BOLT-DWO-MAIN:        DW_TAG_subprogram
 ; BOLT-DWO-MAIN:        DW_TAG_subprogram
 ; BOLT-DWO-MAIN:        DW_TAG_subprogram
-; BOLT-DWO-MAIN-NEXT:   DW_AT_ranges [DW_FORM_sec_offset] (0x00000050
+; BOLT-DWO-MAIN-NEXT:   DW_AT_ranges [DW_FORM_sec_offset] (0x00000040

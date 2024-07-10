@@ -205,9 +205,6 @@ public:
     return std::move(RangesBuffer);
   }
 
-  /// Clears the ranges buffer.
-  void clearBuffer() { RangesBuffer->clear(); }
-
   RangesWriterKind getKind() const { return Kind; }
 
   static bool classof(const DebugRangesSectionWriter *Writer) {
@@ -228,6 +225,9 @@ public:
 
   /// Needs to be invoked before each \p CU is processed.
   void virtual initSection(DWARFUnit &CU){};
+
+  /// Inits Ranges section with empty list.
+  void initSection();
 
 protected:
   std::unique_ptr<DebugBufferVector> RangesBuffer;

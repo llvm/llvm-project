@@ -137,9 +137,11 @@ DebugRangesSectionWriter::DebugRangesSectionWriter() {
   RangesBuffer = std::make_unique<DebugBufferVector>();
   RangesStream = std::make_unique<raw_svector_ostream>(*RangesBuffer);
 
-  // Add an empty range as the first entry;
-  writeAddressRanges(*RangesStream.get(), DebugAddressRangesVector{});
   Kind = RangesWriterKind::DebugRangesWriter;
+}
+
+void DebugRangesSectionWriter::initSection() {
+  writeAddressRanges(*RangesStream.get(), DebugAddressRangesVector{});
 }
 
 uint64_t DebugRangesSectionWriter::addRanges(
