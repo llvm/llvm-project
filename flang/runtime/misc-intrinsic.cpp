@@ -57,6 +57,28 @@ RT_EXT_API_GROUP_BEGIN
 
 void RTDECL(Rename)(const Descriptor &path1, const Descriptor &path2,
     const Descriptor *status, const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+
+  char * pathSrc{EnsureNullTerminated(path1.OffsetElement(), path1.ElementBytes(), terminator)};
+  char * pathDst{EnsureNullTerminated(path2.OffsetElement(), path2.ElementBytes(), terminator)};
+
+#ifdef _WIN32
+  terminator.crash("RENAME intrinsic not implemented on Windows");
+#else // _WIN32
+  // We simply call rename(2) on a non-Windows system
+  int result = rename(pathSrc, pathDst);
+  if (status) {
+    StoreIntToDescriptor(status, result, terminator);
+  }
+#endif // WIN32
+
+  // Deallocate memory if EnsureNullTerminated dynamically allocated memory
+  if (pathSrc != path1.OffsetElement()) {
+    FreeMemory(pathSrc);
+  }
+  if (pathDst != path2.OffsetElement()) {
+    FreeMemory(pathDst);
+  }
 }
 
 void RTDEF(Transfer)(Descriptor &result, const Descriptor &source,
