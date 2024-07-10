@@ -559,10 +559,9 @@ SDValue XtensaTargetLowering::LowerSELECT_CC(SDValue Op,
   SDValue FalseValue = Op.getOperand(3);
   ISD::CondCode CC = cast<CondCodeSDNode>(Op->getOperand(4))->get();
 
-  unsigned BrKind = getBranchOpcode(CC);
-  SDValue TargetCC = DAG.getConstant(BrKind, DL, MVT::i32);
+  unsigned BrOpcode = getBranchOpcode(CC);
+  SDValue TargetCC = DAG.getConstant(BrOpcode, DL, MVT::i32);
 
-  // Wrap select nodes
   return DAG.getNode(XtensaISD::SELECT_CC, DL, Ty, LHS, RHS, TrueValue,
                      FalseValue, TargetCC);
 }

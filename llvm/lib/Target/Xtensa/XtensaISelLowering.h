@@ -39,7 +39,7 @@ enum {
   // a false value (ops #2 and #3) based on the boolean result of comparing
   // the lhs and rhs (ops #0 and #1) of a conditional expression with the
   // condition code in op #4
-  SELECT_CC
+  SELECT_CC,
 };
 }
 
@@ -115,7 +115,6 @@ private:
 
   CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg) const;
 
-  // Implement EmitInstrWithCustomInserter for individual operation types.
   MachineBasicBlock *emitSelectCC(MachineInstr &MI,
                                   MachineBasicBlock *BB) const;
 };
