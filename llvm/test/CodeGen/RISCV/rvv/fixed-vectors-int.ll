@@ -1401,12 +1401,12 @@ define void @mulhs_v4i32(ptr %x) {
 ;
 ; RV64-LABEL: mulhs_v4i32:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    lui a1, %hi(.LCPI73_0)
+; RV64-NEXT:    ld a1, %lo(.LCPI73_0)(a1)
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vle32.v v8, (a0)
-; RV64-NEXT:    lui a1, %hi(.LCPI73_0)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI73_0)
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vlse64.v v9, (a1), zero
+; RV64-NEXT:    vmv.v.x v9, a1
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vmulh.vv v8, v8, v9
 ; RV64-NEXT:    vsra.vi v8, v8, 1
@@ -3371,15 +3371,15 @@ define void @mulhu_v16i16(ptr %x) {
 ; RV64-NEXT:    vsrl.vv v14, v8, v16
 ; RV64-NEXT:    vmulhu.vv v12, v14, v12
 ; RV64-NEXT:    lui a1, %hi(.LCPI182_1)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI182_1)
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vlse64.v v14, (a1), zero
-; RV64-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; RV64-NEXT:    ld a1, %lo(.LCPI182_1)(a1)
 ; RV64-NEXT:    vsub.vv v8, v8, v12
 ; RV64-NEXT:    vmulhu.vv v8, v8, v10
 ; RV64-NEXT:    vadd.vv v8, v8, v12
-; RV64-NEXT:    vsext.vf2 v10, v14
-; RV64-NEXT:    vsrl.vv v8, v8, v10
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vmv.v.x v10, a1
+; RV64-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; RV64-NEXT:    vsext.vf2 v12, v10
+; RV64-NEXT:    vsrl.vv v8, v8, v12
 ; RV64-NEXT:    vse16.v v8, (a0)
 ; RV64-NEXT:    ret
   %a = load <16 x i16>, ptr %x
@@ -3557,12 +3557,12 @@ define void @mulhs_v8i32(ptr %x) {
 ;
 ; RV64-LABEL: mulhs_v8i32:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    lui a1, %hi(.LCPI187_0)
+; RV64-NEXT:    ld a1, %lo(.LCPI187_0)(a1)
 ; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV64-NEXT:    vle32.v v8, (a0)
-; RV64-NEXT:    lui a1, %hi(.LCPI187_0)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI187_0)
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vlse64.v v10, (a1), zero
+; RV64-NEXT:    vmv.v.x v10, a1
 ; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV64-NEXT:    vmulh.vv v8, v8, v10
 ; RV64-NEXT:    vsra.vi v8, v8, 1

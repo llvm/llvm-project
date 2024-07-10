@@ -57,7 +57,8 @@
 # CHECK:       stackSize: 32
 
 # CHECK:      bb.0.entry:
-# CHECK-NEXT: $sp = frame-setup STRXpre killed $[[SCRATCH:[a-z0-9]+]], $sp, -16
+# CHECK:      liveins: $fp
+# CHECK:      early-clobber $sp = frame-setup STRXpre killed $[[SCRATCH:[a-z0-9]+]], $sp, -16
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 16
 # CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $w29, -16
 # CHECK-NEXT: $sp = frame-setup SUBXri $sp, 16, 0

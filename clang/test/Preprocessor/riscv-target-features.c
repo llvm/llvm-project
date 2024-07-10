@@ -1650,13 +1650,13 @@
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZICFILP-EXT %s
 // CHECK-ZICFILP-EXT: __riscv_zicfilp 4000{{$}}
 
-// RUN: %clang --target=riscv32-unknown-linux-gnu -menable-experimental-extensions \
-// RUN:   -march=rv32iztso0p1 -E -dM %s \
+// RUN: %clang --target=riscv32-unknown-linux-gnu \
+// RUN:   -march=rv32iztso1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZTSO-EXT %s
-// RUN: %clang --target=riscv64-unknown-linux-gnu -menable-experimental-extensions \
-// RUN:   -march=rv64iztso0p1 -E -dM %s \
+// RUN: %clang --target=riscv64-unknown-linux-gnu \
+// RUN:   -march=rv64iztso1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZTSO-EXT %s
-// CHECK-ZTSO-EXT: __riscv_ztso 1000{{$}}
+// CHECK-ZTSO-EXT: __riscv_ztso 1000000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
 // RUN:   -march=rv32ifzvfbfmin1p0 -E -dM %s \
