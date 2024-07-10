@@ -6001,7 +6001,7 @@ TargetLowering::ConstraintGroup TargetLowering::getConstraintPreferences(
   // If we can fold the register (i.e. it has an "rm" constraint), opt for the
   // 'r' constraint, and allow the register allocator to spill if need be.
   // Applies only to the greedy and default register allocators.
-  if (OpInfo.MayFoldRegister && usesGreedyOrDefaultRegisterAllocator()) {
+  if (OpInfo.MayFoldRegister) {
     Ret.emplace_back(ConstraintPair("r", getConstraintType("r")));
     Ret.emplace_back(ConstraintPair("m", getConstraintType("m")));
     return Ret;
