@@ -979,7 +979,7 @@ static LogicalResult dropRedundantArguments(RewriterBase &rewriter,
 static LogicalResult dropRedundantArguments(RewriterBase &rewriter,
                                             MutableArrayRef<Region> regions) {
   llvm::SmallSetVector<Region *, 1> worklist;
-  for (auto &region : regions)
+  for (Region &region : regions)
     worklist.insert(&region);
   bool anyChanged = false;
   while (!worklist.empty()) {
@@ -989,8 +989,8 @@ static LogicalResult dropRedundantArguments(RewriterBase &rewriter,
     for (Block &block : *region) {
       anyChanged = succeeded(dropRedundantArguments(rewriter, block));
 
-      for (auto &op : block)
-        for (auto &nestedRegion : op.getRegions())
+      for (Operation &op : block)
+        for (Region &nestedRegion : op.getRegions())
           worklist.insert(&nestedRegion);
     }
   }
