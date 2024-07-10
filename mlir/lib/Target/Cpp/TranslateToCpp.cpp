@@ -305,8 +305,7 @@ static bool shouldBeInlined(ExpressionOp expressionOp) {
   Operation *user = *result.getUsers().begin();
 
   // Do not inline expressions used by operations with deferred emission, since
-  // the way their translation is implemented requires that variables be
-  // materialized.
+  // their translation requires the materialization of variables.
   if (hasDeferredEmission(user))
     return false;
 
