@@ -1116,8 +1116,8 @@ ErrorOr<DataAggregator::PerfBranchSample> DataAggregator::parseBranchSample() {
     LBREntry LBR = LBRRes.get();
     if (ignoreKernelInterrupt(LBR))
       continue;
-    if (!BC->HasFixedLoadAddress || CustomOffset)
-      adjustLBR(LBR, MMapInfoIter->second, CustomOffset);
+    if (!BC->HasFixedLoadAddress || opts::CustomOffset)
+      adjustLBR(LBR, MMapInfoIter->second, opts::CustomOffset);
     Res.LBR.push_back(LBR);
   }
 
@@ -1158,8 +1158,8 @@ ErrorOr<DataAggregator::PerfBasicSample> DataAggregator::parseBasicSample() {
   }
 
   uint64_t Address = *AddrRes;
-  if (!BC->HasFixedLoadAddress || CustomOffset)
-    adjustAddress(Address, MMapInfoIter->second, CustomOffset);
+  if (!BC->HasFixedLoadAddress || opts::CustomOffset)
+    adjustAddress(Address, MMapInfoIter->second, opts::CustomOffset);
 
   return PerfBasicSample{Event.get(), Address};
 }
@@ -1213,8 +1213,8 @@ ErrorOr<DataAggregator::PerfMemSample> DataAggregator::parseMemSample() {
   }
 
   uint64_t Address = *AddrRes;
-  if (!BC->HasFixedLoadAddress || CustomOffset)
-    adjustAddress(Address, MMapInfoIter->second, CustomOffset);
+  if (!BC->HasFixedLoadAddress || opts::CustomOffset)
+    adjustAddress(Address, MMapInfoIter->second, opts::CustomOffset);
 
   return PerfMemSample{PCRes.get(), Address};
 }
