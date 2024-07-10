@@ -40,12 +40,10 @@ public:
   /// \param OverloadTy Overload type of the DXIL Op call constructed
   /// \param Args Arguments for the DXIL Op call constructed
   /// \return DXIL Op call constructed
-  CallInst *createDXILOpCall(dxil::OpCode OpCode, VersionTuple SMVer,
-                             StringRef StageKind, Type *ReturnTy,
+  CallInst *createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
                              Type *OverloadTy, SmallVector<Value *> Args);
 
-  Type *getOverloadType(dxil::OpCode OpCode, VersionTuple SMVer,
-                        FunctionType *FT);
+  Type *getOverloadType(dxil::OpCode OpCode, FunctionType *FT);
   static const char *getOpCodeName(dxil::OpCode DXILOp);
 
 private:

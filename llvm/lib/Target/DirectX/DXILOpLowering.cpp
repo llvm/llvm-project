@@ -74,11 +74,10 @@ static SmallVector<Value *> argVectorFlatten(CallInst *Orig,
   return NewOperands;
 }
 
-static void lowerIntrinsic(dxil::OpCode DXILOp, Function &F, Module &M,
-                           VersionTuple SMVer, StringRef StageKind) {
+static void lowerIntrinsic(dxil::OpCode DXILOp, Function &F, Module &M) {
   IRBuilder<> B(M.getContext());
   DXILOpBuilder DXILB(M, B);
-  Type *OverloadTy = DXILB.getOverloadType(DXILOp, SMVer, F.getFunctionType());
+  Type *OverloadTy = DXILB.getOverloadType(DXILOp, F.getFunctionType());
   for (User *U : make_early_inc_range(F.users())) {
     CallInst *CI = dyn_cast<CallInst>(U);
     if (!CI)
@@ -94,8 +93,8 @@ static void lowerIntrinsic(dxil::OpCode DXILOp, Function &F, Module &M,
     } else
       Args.append(CI->arg_begin(), CI->arg_end());
 
-    CallInst *DXILCI = DXILB.createDXILOpCall(
-        DXILOp, SMVer, StageKind, F.getReturnType(), OverloadTy, Args);
+    CallInst *DXILCI =
+        DXILB.createDXILOpCall(DXILOp, F.getReturnType(), OverloadTy, Args);
 
     CI->replaceAllUsesWith(DXILCI);
     CI->eraseFromParent();
@@ -111,19 +110,6 @@ static bool lowerIntrinsics(Module &M) {
 #include "DXILOperation.inc"
 #undef DXIL_OP_INTRINSIC_MAP
 
-  // Get Shader Model version
-  std::string TTStr = M.getTargetTriple();
-  // No extra checks need be performed to verify that the Triple is
-  // well-formed or the target is supported since these checks would have
-  // been done at the time the module M is constructed in the earlier stages of
-  // compilation.
-  auto Major = Triple(TTStr).getOSVersion().getMajor();
-  auto MinorOrErr = Triple(TTStr).getOSVersion().getMinor();
-  uint32_t Minor = MinorOrErr.has_value() ? *MinorOrErr : 0;
-  VersionTuple SMVer(Major, Minor);
-  // Get Shader Kind
-  std::string StageKind = Triple(TTStr).getEnvironmentName().str();
-
   for (Function &F : make_early_inc_range(M.functions())) {
     if (!F.isDeclaration())
       continue;
@@ -133,7 +119,7 @@ static bool lowerIntrinsics(Module &M) {
     auto LowerIt = LowerMap.find(ID);
     if (LowerIt == LowerMap.end())
       continue;
-    lowerIntrinsic(LowerIt->second, F, M, SMVer, StageKind);
+    lowerIntrinsic(LowerIt->second, F, M);
     Updated = true;
   }
   return Updated;

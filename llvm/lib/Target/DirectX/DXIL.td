@@ -237,6 +237,10 @@ def mesh : ShaderStage;
 def node : ShaderStage;
 def raygeneration : ShaderStage;
 def intersection : ShaderStage;
+def anyhit : ShaderStage;
+def closesthit : ShaderStage;
+def callable : ShaderStage;
+def miss : ShaderStage;
 
 // Primitive predicate
 class Pred;

@@ -165,20 +165,23 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
     OverloadParamIndex = OverloadParamIndices[0];
   }
   // Get Constraint Records
-  std::vector<Record *> ConstrintRecs =
-      R->getValueAsListOfDefs("constraints");
+  std::vector<Record *> ConstrintRecs = R->getValueAsListOfDefs("constraints");
 
   // Sort records in ascending order of Shader Model version
   std::sort(ConstrintRecs.begin(), ConstrintRecs.end(),
             [](Record *RecA, Record *RecB) {
-              unsigned RecAMaj =
-                  RecA->getValueAsDef("pred")->getValueAsDef("sm_version")->getValueAsInt("Major");
-              unsigned RecAMin =
-                  RecA->getValueAsDef("pred")->getValueAsDef("sm_version")->getValueAsInt("Minor");
-              unsigned RecBMaj =
-                  RecB->getValueAsDef("pred")->getValueAsDef("sm_version")->getValueAsInt("Major");
-              unsigned RecBMin =
-                  RecB->getValueAsDef("pred")->getValueAsDef("sm_version")->getValueAsInt("Minor");
+              unsigned RecAMaj = RecA->getValueAsDef("pred")
+                                     ->getValueAsDef("sm_version")
+                                     ->getValueAsInt("Major");
+              unsigned RecAMin = RecA->getValueAsDef("pred")
+                                     ->getValueAsDef("sm_version")
+                                     ->getValueAsInt("Minor");
+              unsigned RecBMaj = RecB->getValueAsDef("pred")
+                                     ->getValueAsDef("sm_version")
+                                     ->getValueAsInt("Major");
+              unsigned RecBMin = RecB->getValueAsDef("pred")
+                                     ->getValueAsDef("sm_version")
+                                     ->getValueAsInt("Minor");
 
               return (VersionTuple(RecAMaj, RecAMin) <
                       VersionTuple(RecBMaj, RecBMin));
@@ -292,8 +295,7 @@ static std::string getOverloadKindStr(const Record *R) {
 //
 /// \param Recs A vector of records of TableGen class type DXILShaderModel
 /// \return std::string string representation of OverloadKind
-static std::string
-getConstraintString(const SmallVector<Record *> Recs) {
+static std::string getConstraintString(const SmallVector<Record *> Recs) {
   std::string ConstraintString = "";
   std::string Prefix = "";
   ConstraintString.append("{{");
@@ -302,7 +304,8 @@ getConstraintString(const SmallVector<Record *> Recs) {
   // b) has no overload types
   // c) is supported in all shader stage kinds
   if (Recs.empty()) {
-    ConstraintString.append("{6, 0}, OverloadKind::UNDEFINED, ShaderKind::allKinds}");
+    ConstraintString.append(
+        "{6, 0}, OverloadKind::UNDEFINED, ShaderKind::allKinds}");
   }
   for (auto ConstrRec : Recs) {
     auto SMConstrRec = ConstrRec->getValueAsDef("pred");
@@ -320,7 +323,8 @@ getConstraintString(const SmallVector<Record *> Recs) {
     std::string StageMaskString = "";
     for (auto Constr : ConstraintList) {
       // All Constraints are specified as anonymous records.
-      assert(Constr->isAnonymous() && "Constraint Specification Record expected to be anonymous");
+      assert(Constr->isAnonymous() &&
+             "Constraint Specification Record expected to be anonymous");
       // Generate Overload mask for constraint of class Overloads
       if (!Constr->getType()->getAsString().compare("Overloads")) {
         std::string PipePrefix = "";
@@ -341,7 +345,9 @@ getConstraintString(const SmallVector<Record *> Recs) {
           StageMaskString.append("ShaderKind::allKinds");
         }
         for (const auto *S : Stages) {
-          StageMaskString.append(PipePrefix).append("ShaderKind::").append(S->getName());
+          StageMaskString.append(PipePrefix)
+              .append("ShaderKind::")
+              .append(S->getName());
           PipePrefix = " | ";
         }
       }
@@ -441,7 +447,6 @@ static std::string emitDXILOperationAttr(SmallVector<std::string> Attrs) {
 /// \param Output stream
 static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
                                    raw_ostream &OS) {
-  OS << "#ifdef DXIL_OP_OPERATION_TABLE\n";
   // Sort by OpCode.
   llvm::sort(Ops, [](DXILOperationDesc &A, DXILOperationDesc &B) {
     return A.OpCode < B.OpCode;
@@ -475,86 +480,6 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
   OpClassStrings.layout();
   Parameters.layout();
 
-  // Emit definitions of various data types used to define DXIL Operation table
-  // entries.
-
-  // Emit enum OverloadKind with valid overload types.
-  const SmallVector<std::string> OverloadKindList = {
-      "VOID", "HALF", "FLOAT", "DOUBLE",          "I1",        "I8",
-      "I16",  "I32",  "I64",   "UserDefinedType", "ObjectType"};
-  // Choose the type of enum OverloadKind based on the number of valid types in
-  // OverloadKindList. This gives the flexibility to just add new supported
-  // types to the list above, if needed, with no need to change this backend
-  // code.
-  unsigned TypeSz = PowerOf2Ceil(OverloadKindList.size());
-  OS << "enum OverloadKind : uint" << TypeSz << "_t {\n";
-  OS << "    UNDEFINED = 0,\n";
-  int shiftVal = 1;
-  for (auto TyStr : OverloadKindList) {
-    OS << "    " << TyStr << " = 1 << " << shiftVal++ << ",\n";
-  }
-  OS << "  }; \n";
-
-  // Emit a convenience struct Version to encode Shader Model version specified
-  // in constraints
-  OS << "struct Version { \n \
-            unsigned Major = 0; \n \
-            unsigned Minor = 0; \n \
-          };\n\n";
-
-  // Emit struct Constraints that encapsulates overload and shader kind
-  // constraints predicated on shader model version, if any.
-  OS << "struct OpConstraints { \n \
-            Version ShaderModelVer; \n \
-            uint16_t ValidTys; \n \
-            uint16_t ValidShaderKinds; \n \
-          };\n\n";
-
-  // Emit struct OpCodeProperty record that encapsulates DXIL Op information.
-  OS << "struct OpCodeProperty { \n \
-            dxil::OpCode OpCode; \n \
-            // Offset in DXILOpCodeNameTable. \n \
-            unsigned OpCodeNameOffset; \n \
-            dxil::OpCodeClass OpCodeClass; \n \
-            // Offset in DXILOpCodeClassNameTable. \n \
-            unsigned OpCodeClassNameOffset; \n \
-            std::vector<OpConstraints> Constraints; \n \
-            llvm::Attribute::AttrKind FuncAttr; \n \
-            int OverloadParamIndex;        // parameter index which control the overload. \n \
-                                           // When < 0, should be only 1 overload type. \n \
-            unsigned NumOfParameters;      // Number of parameters include return value. \n \
-            unsigned ParameterTableOffset; // Offset in ParameterTable. \n \
-          };\n\n";
-
-  // Emit access function getOverloadTypeName()
-  OS << "static const char *getOverloadTypeName(OverloadKind Kind) { \n \
-    switch (Kind) { \n \
-    case OverloadKind::HALF: \n \
-      return \"f16\"; \n \
-    case OverloadKind::FLOAT:  \n \
-      return \"f32\";  \n \
-    case OverloadKind::DOUBLE:  \n \
-      return \"f64\";  \n \
-    case OverloadKind::I1:  \n \
-      return \"i1\";  \n \
-    case OverloadKind::I8:  \n \
-      return \"i8\";  \n \
-    case OverloadKind::I16:  \n \
-      return \"i16\";  \n \
-    case OverloadKind::I32:  \n \
-      return \"i32\";  \n \
-    case OverloadKind::I64:  \n \
-      return \"i64\";  \n \
-    case OverloadKind::VOID:  \n \
-    case OverloadKind::UNDEFINED:  \n \
-      return \"void\";  \n \
-    case OverloadKind::ObjectType: \n \
-    case OverloadKind::UserDefinedType: \n \
-      break; \n \
-    } \n \
-    llvm_unreachable(\"invalid overload type for name\"); \n \
-  }\n\n";
-
   // Emit access function getOpcodeProperty() that embeds DXIL Operation table
   // with entries of type struct OpcodeProperty.
   OS << "static const OpCodeProperty *getOpCodeProperty(dxil::OpCode Op) "
@@ -575,8 +500,7 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
     }
     OS << Prefix << "  { dxil::OpCode::" << Op.OpName << ", "
        << OpStrings.get(Op.OpName) << ", OpCodeClass::" << Op.OpClass << ", "
-       << OpClassStrings.get(Op.OpClass.data())
-       << ", "
+       << OpClassStrings.get(Op.OpClass.data()) << ", "
        << getConstraintString(Op.Constraints) << ", "
        << emitDXILOperationAttr(Op.OpAttributes) << ", "
        << Op.OverloadParamIndex << ", " << Op.OpTypes.size() - 1 << ", "
@@ -635,10 +559,10 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
   OS << "  unsigned Index = Prop.ParameterTableOffset;\n";
   OS << "  return DXILOpParameterKindTable + Index;\n";
   OS << "}\n ";
-  OS << "#endif // DXIL_OP_OPERATION_TABLE\n";
 }
 
-static void emitShaderKindEnums(RecordKeeper &Records, raw_ostream &OS) {
+static void emitDXILOperationTableDataStructs(RecordKeeper &Records,
+                                              raw_ostream &OS) {
   // Get Shader stage records
   std::vector<Record *> ShaderKindRecs =
       Records.getAllDerivedDefinitions("ShaderStage");
@@ -646,13 +570,13 @@ static void emitShaderKindEnums(RecordKeeper &Records, raw_ostream &OS) {
   llvm::sort(ShaderKindRecs,
              [](Record *A, Record *B) { return A->getName() < B->getName(); });
 
-  OS << "#ifdef SHADER_KIND_ENUM \n";
   OS << "// Valid shader kinds\n\n";
   // Choose the type of enum ShaderKind based on the number of stages declared
+  // plus one for allKinds
   // This gives the flexibility to just add add new stage records in DXIL.td, if
   // needed, with no need to change this backend code.
-  unsigned TypeSz = PowerOf2Ceil(ShaderKindRecs.size());
-  OS << "enum ShaderKind : uint" << TypeSz << "_t {\n";
+  uint64_t ShaderKindCount = PowerOf2Ceil(ShaderKindRecs.size() + 1);
+  OS << "enum ShaderKind : uint" << ShaderKindCount << "_t {\n";
   const std::string allKinds("allKinds");
   // set unknown kind to 0
   OS << "  Unknown = 0,\n";
@@ -663,21 +587,91 @@ static void emitShaderKindEnums(RecordKeeper &Records, raw_ostream &OS) {
       OS << "  " << Name << " = 1 << " << std::to_string(shiftVal++) << ",\n";
     }
   }
-  // allkinds is set to (1 << TypeSz) - 1, with all bits set denoting support
-  // for all stages
-  OS << "  " << allKinds << " =  0x" << utohexstr(((1 << TypeSz) - 1), false, 4)
-     << "\n";
-  OS << "}\n\n; // enum ShaderKind\n";
-  // Generate ShaderKind enum getter from  string
-  OS << "static ShaderKind getShaderkKindEnum(StringRef StageKindStr) {\n"
-        "  return StringSwitch<ShaderKind>(StageKindStr)\n";
-  for (auto R : ShaderKindRecs) {
-    auto Name = R->getName();
-    OS << "    .Case(\"" << Name << "\", ShaderKind::" << Name << ")\n";
+  // allkinds is set to (1 << ShaderKindCount) - 1, with all bits set denoting
+  // support for all stages
+  OS << "  " << allKinds << " =  0x"
+     << utohexstr(((1 << shiftVal) - 1), false, 0) << "\n";
+  OS << "}; // enum ShaderKind\n\n";
+
+  // Emit definitions of various data types used to define DXIL Operation table
+  // entries.
+
+  // Emit enum OverloadKind with valid overload types.
+  const SmallVector<std::string> OverloadKindList = {
+      "VOID", "HALF", "FLOAT", "DOUBLE",          "I1",        "I8",
+      "I16",  "I32",  "I64",   "UserDefinedType", "ObjectType"};
+  // Choose the type of enum OverloadKind based on the number of valid types in
+  // OverloadKindList. This gives the flexibility to just add new supported
+  // types to the list above, if needed, with no need to change this backend
+  // code.
+  unsigned OverloadKindCount = PowerOf2Ceil(OverloadKindList.size());
+  OS << "enum OverloadKind : uint" << OverloadKindCount << "_t {\n";
+  OS << "    UNDEFINED = 0,\n";
+  shiftVal = 1;
+  for (auto TyStr : OverloadKindList) {
+    OS << "    " << TyStr << " = 1 << " << shiftVal++ << ",\n";
   }
-  OS << "    .Default(ShaderKind::Unknown);\n";
-  OS << "}\n";
-  OS << "#endif // SHADER_KIND_ENUM \n\n\n";
+  OS << "  }; \n";
+
+  // Emit a convenience struct Version to encode Shader Model version specified
+  // in constraints
+  OS << "struct Version { \n \
+            unsigned Major = 0; \n \
+            unsigned Minor = 0; \n \
+          };\n\n";
+
+  // Emit struct Constraints that encapsulate overload and shader kind
+  // constraints predicated on shader model version, if any.
+  OS << "struct OpConstraints { \n \
+            Version ShaderModelVer; \n";
+  OS << "             uint" << OverloadKindCount << "_t ValidTys; \n";
+  OS << "             uint" << ShaderKindCount << "_t ValidShaderKinds; \n \
+        };\n\n";
+
+  // Emit struct OpCodeProperty record that encapsulates DXIL Op information.
+  OS << "struct OpCodeProperty { \n \
+            dxil::OpCode OpCode; \n \
+            // Offset in DXILOpCodeNameTable. \n \
+            unsigned OpCodeNameOffset; \n \
+            dxil::OpCodeClass OpCodeClass; \n \
+            // Offset in DXILOpCodeClassNameTable. \n \
+            unsigned OpCodeClassNameOffset; \n \
+            std::vector<OpConstraints> Constraints; \n \
+            llvm::Attribute::AttrKind FuncAttr; \n \
+            int OverloadParamIndex;        // parameter index which control the overload. \n \
+                                           // When < 0, should be only 1 overload type. \n \
+            unsigned NumOfParameters;      // Number of parameters include return value. \n \
+            unsigned ParameterTableOffset; // Offset in ParameterTable. \n \
+          };\n\n";
+
+  // Emit access function getOverloadTypeName()
+  OS << "static const char *getOverloadTypeName(OverloadKind Kind) { \n \
+    switch (Kind) { \n \
+    case OverloadKind::HALF: \n \
+      return \"f16\"; \n \
+    case OverloadKind::FLOAT:  \n \
+      return \"f32\";  \n \
+    case OverloadKind::DOUBLE:  \n \
+      return \"f64\";  \n \
+    case OverloadKind::I1:  \n \
+      return \"i1\";  \n \
+    case OverloadKind::I8:  \n \
+      return \"i8\";  \n \
+    case OverloadKind::I16:  \n \
+      return \"i16\";  \n \
+    case OverloadKind::I32:  \n \
+      return \"i32\";  \n \
+    case OverloadKind::I64:  \n \
+      return \"i64\";  \n \
+    case OverloadKind::VOID:  \n \
+    case OverloadKind::UNDEFINED:  \n \
+      return \"void\";  \n \
+    case OverloadKind::ObjectType: \n \
+    case OverloadKind::UserDefinedType: \n \
+      break; \n \
+    } \n \
+    llvm_unreachable(\"invalid overload type for name\"); \n \
+  }\n\n";
 }
 
 /// Entry function call that invokes the functionality of this TableGen backend
@@ -686,7 +680,6 @@ static void emitShaderKindEnums(RecordKeeper &Records, raw_ostream &OS) {
 static void EmitDXILOperation(RecordKeeper &Records, raw_ostream &OS) {
   OS << "// Generated code, do not edit.\n";
   OS << "\n";
-  emitShaderKindEnums(Records, OS);
   // Get all DXIL Ops property records
   std::vector<Record *> OpIntrProps =
       Records.getAllDerivedDefinitions("DXILOp");
@@ -696,7 +689,10 @@ static void EmitDXILOperation(RecordKeeper &Records, raw_ostream &OS) {
   }
   emitDXILEnums(DXILOps, OS);
   emitDXILIntrinsicMap(DXILOps, OS);
+  OS << "#ifdef DXIL_OP_OPERATION_TABLE\n";
+  emitDXILOperationTableDataStructs(Records, OS);
   emitDXILOperationTable(DXILOps, OS);
+  OS << "#endif // DXIL_OP_OPERATION_TABLE\n";
 }
 
 static TableGen::Emitter::Opt X("gen-dxil-operation", EmitDXILOperation,
