@@ -127,6 +127,12 @@ static cl::opt<int>
                  cl::desc("Maximum stages allowed in the generated scheduled."),
                  cl::Hidden, cl::init(3));
 
+/// A command line argument to limit the number of instructions for loop body.
+static cl::opt<unsigned>
+    SwpMaxSize("pipeliner-max-body-size",
+               cl::desc("Size limit for the loop body to schedule."),
+               cl::Hidden, cl::init(2000));
+
 /// A command line option to disable the pruning of chain dependences due to
 /// an unrelated Phi.
 static cl::opt<bool>
@@ -429,13 +435,19 @@ bool MachinePipeliner::swingModuloScheduler(MachineLoop &L) {
 
   // Compute the number of 'real' instructions in the basic block by
   // ignoring terminators.
-  unsigned size = MBB->size();
+  unsigned Size = MBB->size();
   for (MachineBasicBlock::iterator I = MBB->getFirstTerminator(),
                                    E = MBB->instr_end();
-       I != E; ++I, --size)
+       I != E; ++I, --Size)
     ;
 
-  SMS.enterRegion(MBB, MBB->begin(), MBB->getFirstTerminator(), size);
+  // If the size exceeds the limit, mostly the sms will not be success,
+  // give up early to reduce compile time.
+  if (Size > SwpMaxSize) {
+    return false;
+  }
+
+  SMS.enterRegion(MBB, MBB->begin(), MBB->getFirstTerminator(), Size);
   SMS.schedule();
   SMS.exitRegion();
 
