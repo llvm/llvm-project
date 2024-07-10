@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/SandboxIR/SandboxIR.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/Support/Debug.h"
 #include <sstream>
@@ -58,12 +59,49 @@ OperandUseIterator &OperandUseIterator::operator++() {
   return *this;
 }
 
+UserUseIterator &UserUseIterator::operator++() {
+  llvm::Use *&LLVMUse = Use.LLVMUse;
+  assert(LLVMUse != nullptr && "Already at end!");
+  LLVMUse = LLVMUse->getNext();
+  if (LLVMUse == nullptr) {
+    Use.Usr = nullptr;
+    return *this;
+  }
+  auto *Ctx = Use.Ctx;
+  auto *LLVMUser = LLVMUse->getUser();
+  Use.Usr = cast_or_null<sandboxir::User>(Ctx->getValue(LLVMUser));
+  return *this;
+}
+
 Value::Value(ClassID SubclassID, llvm::Value *Val, Context &Ctx)
     : SubclassID(SubclassID), Val(Val), Ctx(Ctx) {
 #ifndef NDEBUG
   UID = Ctx.getNumValues();
 #endif
 }
+
+Value::use_iterator Value::use_begin() {
+  llvm::Use *LLVMUse = nullptr;
+  if (Val->use_begin() != Val->use_end())
+    LLVMUse = &*Val->use_begin();
+  User *User = LLVMUse != nullptr ? cast_or_null<sandboxir::User>(Ctx.getValue(
+                                        Val->use_begin()->getUser()))
+                                  : nullptr;
+  return use_iterator(Use(LLVMUse, User, Ctx));
+}
+
+Value::user_iterator Value::user_begin() {
+  auto UseBegin = Val->use_begin();
+  auto UseEnd = Val->use_end();
+  bool AtEnd = UseBegin == UseEnd;
+  llvm::Use *LLVMUse = AtEnd ? nullptr : &*UseBegin;
+  User *User =
+      AtEnd ? nullptr
+            : cast_or_null<sandboxir::User>(Ctx.getValue(&*LLVMUse->getUser()));
+  return user_iterator(Use(LLVMUse, User, Ctx), UseToUser());
+}
+
+unsigned Value::getNumUses() const { return range_size(Val->users()); }
 
 #ifndef NDEBUG
 std::string Value::getName() const {

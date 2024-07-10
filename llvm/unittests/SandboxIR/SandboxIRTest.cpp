@@ -143,6 +143,8 @@ define i32 @foo(i32 %v0, i32 %v1) {
     // Check Use.get().
     sandboxir::Value *Op = Use.get();
     EXPECT_EQ(Op, Ctx.getValue(LLVMI0->getOperand(OpIdx)));
+    // Check Use.getUser().
+    EXPECT_EQ(Use.getUser(), I0);
     // Check implicit cast to Value.
     sandboxir::Value *Cast = Use;
     EXPECT_EQ(Cast, Op);
@@ -180,6 +182,51 @@ User:   %add0 = add i32 %v0, %v1 ; SB4. (Opaque)
 OperandNo: 0
 )IR");
 #endif // NDEBUG
+
+  // Check Value.user_begin().
+  sandboxir::Value::user_iterator UIt = I0->user_begin();
+  sandboxir::User *U = *UIt;
+  EXPECT_EQ(U, Ret);
+  // Check Value.uses().
+  EXPECT_EQ(range_size(I0->uses()), 1u);
+  EXPECT_EQ((*I0->uses().begin()).getUser(), Ret);
+  // Check Value.users().
+  EXPECT_EQ(range_size(I0->users()), 1u);
+  EXPECT_EQ(*I0->users().begin(), Ret);
+  // Check Value.getNumUses().
+  EXPECT_EQ(I0->getNumUses(), 1u);
+  // Check Value.hasNUsesOrMore().
+  EXPECT_TRUE(I0->hasNUsesOrMore(0u));
+  EXPECT_TRUE(I0->hasNUsesOrMore(1u));
+  EXPECT_FALSE(I0->hasNUsesOrMore(2u));
+  // Check Value.hasNUses().
+  EXPECT_FALSE(I0->hasNUses(0u));
+  EXPECT_TRUE(I0->hasNUses(1u));
+  EXPECT_FALSE(I0->hasNUses(2u));
+}
+
+// Check that the operands/users are counted correctly.
+//  I1
+// /  \
+// \  /
+//  I2
+TEST_F(SandboxIRTest, DuplicateUses) {
+  parseIR(C, R"IR(
+define void @foo(i8 %v) {
+  %I1 = add i8 %v, %v
+  %I2 = add i8 %I1, %I1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(&LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *I1 = &*It++;
+  auto *I2 = &*It++;
+  EXPECT_EQ(range_size(I1->users()), 2u);
+  EXPECT_EQ(range_size(I2->operands()), 2u);
 }
 
 TEST_F(SandboxIRTest, Function) {

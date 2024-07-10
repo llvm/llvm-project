@@ -88,8 +88,10 @@ class Use {
       : LLVMUse(LLVMUse), Usr(Usr), Ctx(&Ctx) {}
   Use() : LLVMUse(nullptr), Ctx(nullptr) {}
 
+  friend class Value;              // For constructor
   friend class User;               // For constructor
   friend class OperandUseIterator; // For constructor
+  friend class UserUseIterator;    // For accessing members
 
 public:
   operator Value *() const { return get(); }
@@ -131,6 +133,31 @@ public:
     return Use == Other.Use;
   }
   bool operator!=(const OperandUseIterator &Other) const {
+    return !(*this == Other);
+  }
+};
+
+/// Returns user edge when dereferenced.
+class UserUseIterator {
+  Use Use;
+  /// Don't let the user create a non-empty UserUseIterator.
+  UserUseIterator(const class Use &Use) : Use(Use) {}
+  friend class Value; // For constructor
+
+public:
+  using difference_type = std::ptrdiff_t;
+  using value_type = sandboxir::Use;
+  using pointer = value_type *;
+  using reference = value_type &;
+  using iterator_category = std::input_iterator_tag;
+
+  UserUseIterator() = default;
+  value_type operator*() const { return Use; }
+  UserUseIterator &operator++();
+  bool operator==(const UserUseIterator &Other) const {
+    return Use == Other.Use;
+  }
+  bool operator!=(const UserUseIterator &Other) const {
     return !(*this == Other);
   }
 };
@@ -186,9 +213,77 @@ public:
   virtual ~Value() = default;
   ClassID getSubclassID() const { return SubclassID; }
 
+  using use_iterator = UserUseIterator;
+  using const_use_iterator = UserUseIterator;
+
+  use_iterator use_begin();
+  const_use_iterator use_begin() const {
+    return const_cast<Value *>(this)->use_begin();
+  }
+  use_iterator use_end() { return use_iterator(Use(nullptr, nullptr, Ctx)); }
+  const_use_iterator use_end() const {
+    return const_cast<Value *>(this)->use_end();
+  }
+
+  iterator_range<use_iterator> uses() {
+    return make_range<use_iterator>(use_begin(), use_end());
+  }
+  iterator_range<const_use_iterator> uses() const {
+    return make_range<const_use_iterator>(use_begin(), use_end());
+  }
+
+  /// Helper for mapped_iterator.
+  struct UseToUser {
+    User *operator()(const Use &Use) const { return &*Use.getUser(); }
+  };
+
+  using user_iterator = mapped_iterator<sandboxir::UserUseIterator, UseToUser>;
+  using const_user_iterator = user_iterator;
+
+  user_iterator user_begin();
+  user_iterator user_end() {
+    return user_iterator(Use(nullptr, nullptr, Ctx), UseToUser());
+  }
+  const_user_iterator user_begin() const {
+    return const_cast<Value *>(this)->user_begin();
+  }
+  const_user_iterator user_end() const {
+    return const_cast<Value *>(this)->user_end();
+  }
+
+  iterator_range<user_iterator> users() {
+    return make_range<user_iterator>(user_begin(), user_end());
+  }
+  iterator_range<const_user_iterator> users() const {
+    return make_range<const_user_iterator>(user_begin(), user_end());
+  }
+  /// \Returns the number of user edges (not necessarily to unique users).
+  /// WARNING: This is a linear-time operation.
+  unsigned getNumUses() const;
+  /// Return true if this value has N uses or more.
+  /// This is logically equivalent to getNumUses() >= N.
+  /// WARNING: This can be expensive, as it is linear to the number of users.
+  bool hasNUsesOrMore(unsigned Num) const {
+    unsigned Cnt = 0;
+    for (auto It = use_begin(), ItE = use_end(); It != ItE; ++It) {
+      if (++Cnt >= Num)
+        return true;
+    }
+    return false;
+  }
+  /// Return true if this Value has exactly N uses.
+  bool hasNUses(unsigned Num) const {
+    unsigned Cnt = 0;
+    for (auto It = use_begin(), ItE = use_end(); It != ItE; ++It) {
+      if (++Cnt > Num)
+        return false;
+    }
+    return Cnt == Num;
+  }
+
   Type *getType() const { return Val->getType(); }
 
-  Context &getContext() const;
+  Context &getContext() const { return Ctx; }
 #ifndef NDEBUG
   /// Should crash if there is something wrong with the instruction.
   virtual void verify() const = 0;
