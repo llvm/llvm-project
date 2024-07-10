@@ -81,7 +81,7 @@ public:
   /// contain a single CGDataError.
   static std::pair<cgdata_error, std::string> take(Error E) {
     auto Err = cgdata_error::success;
-    std::string Msg = "";
+    std::string Msg;
     handleAllErrors(std::move(E), [&Err, &Msg](const CGDataError &IPE) {
       assert(Err == cgdata_error::success && "Multiple errors encountered");
       Err = IPE.get();

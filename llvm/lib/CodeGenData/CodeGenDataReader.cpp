@@ -121,7 +121,7 @@ CodeGenDataReader::create(std::unique_ptr<MemoryBuffer> Buffer) {
 
 bool IndexedCodeGenDataReader::hasFormat(const MemoryBuffer &DataBuffer) {
   using namespace support;
-  if (DataBuffer.getBufferSize() < 8)
+  if (DataBuffer.getBufferSize() < sizeof(IndexedCGData::Magic))
     return false;
 
   uint64_t Magic = endian::read<uint64_t, llvm::endianness::little, aligned>(
