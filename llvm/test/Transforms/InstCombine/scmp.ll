@@ -159,8 +159,7 @@ define i1 @scmp_sle_neg_1(i32 %x, i32 %y) {
 define i8 @scmp_negated(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i8 @scmp_negated(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[X]], i32 [[Y]])
-; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i8 0, [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[Y]], i32 [[X]])
 ; CHECK-NEXT:    ret i8 [[TMP2]]
 ;
   %1 = call i8 @llvm.scmp(i32 %x, i32 %y)
