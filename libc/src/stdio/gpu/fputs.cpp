@@ -11,7 +11,8 @@
 #include "src/errno/libc_errno.h"
 #include "src/stdio/gpu/file.h"
 
-#include <stdio.h>
+#include "hdr/stdio_macros.h" // for EOF.
+#include "hdr/types/FILE.h"
 
 namespace LIBC_NAMESPACE {
 

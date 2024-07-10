@@ -10,7 +10,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/stdio/gpu/file.h"
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
 
 namespace LIBC_NAMESPACE {
 

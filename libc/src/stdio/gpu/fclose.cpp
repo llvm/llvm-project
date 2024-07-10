@@ -9,7 +9,8 @@
 #include "src/stdio/fclose.h"
 #include "src/stdio/gpu/file.h"
 
-#include <stdio.h>
+#include "hdr/stdio_macros.h"
+#include "hdr/types/FILE.h"
 
 namespace LIBC_NAMESPACE {
 

@@ -9,7 +9,9 @@
 #include "src/__support/RPC/rpc_client.h"
 #include "src/string/string_utils.h"
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
+
+#include <stdio.h> //needed for stdin/out/err
 
 namespace LIBC_NAMESPACE {
 namespace file {

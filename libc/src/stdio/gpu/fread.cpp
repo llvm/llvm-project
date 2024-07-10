@@ -9,7 +9,7 @@
 #include "src/stdio/fread.h"
 #include "src/stdio/gpu/file.h"
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
 
 namespace LIBC_NAMESPACE {
 
