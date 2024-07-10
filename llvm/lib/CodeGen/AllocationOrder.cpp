@@ -39,14 +39,14 @@ AllocationOrder AllocationOrder::create(unsigned VirtReg, const VirtRegMap &VRM,
   LLVM_DEBUG({
     if (!Hints.empty()) {
       dbgs() << "hints:";
-      for (unsigned I = 0, E = Hints.size(); I != E; ++I)
-        dbgs() << ' ' << printReg(Hints[I], TRI);
+      for (MCPhysReg Hint : Hints)
+        dbgs() << ' ' << printReg(Hint, TRI);
       dbgs() << '\n';
     }
   });
 #ifndef NDEBUG
-  for (unsigned I = 0, E = Hints.size(); I != E; ++I)
-    assert(is_contained(Order, Hints[I]) &&
+  for (MCPhysReg Hint : Hints)
+    assert(is_contained(Order, Hint) &&
            "Target hint is outside allocation order.");
 #endif
   return AllocationOrder(std::move(Hints), Order, HardHints);
