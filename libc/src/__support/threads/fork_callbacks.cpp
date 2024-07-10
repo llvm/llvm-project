@@ -21,7 +21,6 @@ struct ForkCallbackTriple {
   ForkCallback *prepare = nullptr;
   ForkCallback *parent = nullptr;
   ForkCallback *child = nullptr;
-  constexpr ForkCallbackTriple() = default;
 };
 
 class AtForkCallbackManager {
