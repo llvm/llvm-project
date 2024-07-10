@@ -2066,7 +2066,8 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
         VisitGCCAsmStmt(cast<GCCAsmStmt>(S), N, PostVisit);
       getCheckerManager().runCheckersForPostStmt(Dst, PostVisit, S, *this);
       Bldr.addNodes(Dst);
-    } break;
+      break;
+    }
 
     case Stmt::MSAsmStmtClass:
       Bldr.takeNodes(Pred);
