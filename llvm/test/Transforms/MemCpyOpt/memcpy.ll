@@ -129,12 +129,12 @@ define void @test5_memcpy(ptr noalias %P, ptr noalias %Q) nounwind  {
 define void @test6_memcpy(ptr %src, ptr %dest) nounwind {
 ; CHECK-LABEL: @test6_memcpy(
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca [16 x i8], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 [[TMP]], ptr align 1 [[DEST:%.*]], i32 16, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 [[DEST]], ptr align 1 [[TMP]], i32 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 [[TMP]], ptr align 1 [[SRC:%.*]], i32 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 [[DEST:%.*]], ptr align 1 [[TMP]], i32 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %tmp = alloca [16 x i8], align 1
-  call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 %tmp, ptr align 1 %dest, i32 16, i1 false)
+  call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 %tmp, ptr align 1 %src, i32 16, i1 false)
   call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 %dest, ptr align 1 %tmp, i32 16, i1 false)
   ret void
 }
@@ -699,7 +699,7 @@ define void @immut_valid_align_branched(i1 %c, ptr noalias align 4 %val) {
 ; Merge/drop noalias metadata when replacing parameter.
 define void @immut_param_noalias_metadata(ptr align 4 byval(i32) %ptr) {
 ; CHECK-LABEL: @immut_param_noalias_metadata(
-; CHECK-NEXT:    store i32 1, ptr [[PTR:%.*]], align 4, !noalias !0
+; CHECK-NEXT:    store i32 1, ptr [[PTR:%.*]], align 4, !noalias [[META0:![0-9]+]]
 ; CHECK-NEXT:    call void @f(ptr noalias nocapture readonly [[PTR]])
 ; CHECK-NEXT:    ret void
 ;
@@ -712,7 +712,7 @@ define void @immut_param_noalias_metadata(ptr align 4 byval(i32) %ptr) {
 
 define void @byval_param_noalias_metadata(ptr align 4 byval(i32) %ptr) {
 ; CHECK-LABEL: @byval_param_noalias_metadata(
-; CHECK-NEXT:    store i32 1, ptr [[PTR:%.*]], align 4, !noalias !0
+; CHECK-NEXT:    store i32 1, ptr [[PTR:%.*]], align 4, !noalias [[META0]]
 ; CHECK-NEXT:    call void @f_byval(ptr byval(i32) align 4 [[PTR]])
 ; CHECK-NEXT:    ret void
 ;
