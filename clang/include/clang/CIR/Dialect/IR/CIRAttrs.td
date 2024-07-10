@@ -979,4 +979,6 @@ def BitfieldInfoAttr : CIR_Attr<"BitfieldInfo", "bitfield_info"> {
   ];
 }
 
+include "clang/CIR/Dialect/IR/CIROpenCLAttrs.td"
+
 #endif // MLIR_CIR_DIALECT_CIR_ATTRS

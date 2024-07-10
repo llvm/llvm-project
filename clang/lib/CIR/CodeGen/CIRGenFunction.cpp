@@ -993,8 +993,7 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     llvm_unreachable("NYI");
 
   if (FD && getLangOpts().OpenCL) {
-    // TODO(cir): Emit OpenCL kernel metadata
-    assert(!MissingFeatures::openCL());
+    buildKernelMetadata(FD, Fn);
   }
 
   // If we are checking function types, emit a function type signature as
@@ -1719,4 +1718,68 @@ CIRGenFunction::buildArrayLength(const clang::ArrayType *origArrayType,
     llvm_unreachable("NYI");
 
   return numElements;
+}
+
+void CIRGenFunction::buildKernelMetadata(const FunctionDecl *FD,
+                                         mlir::cir::FuncOp Fn) {
+  if (!FD->hasAttr<OpenCLKernelAttr>() && !FD->hasAttr<CUDAGlobalAttr>())
+    return;
+
+  // TODO(cir): CGM.genKernelArgMetadata(Fn, FD, this);
+  assert(!MissingFeatures::openCLGenKernelMetadata());
+
+  if (!getLangOpts().OpenCL)
+    return;
+
+  using mlir::cir::OpenCLKernelMetadataAttr;
+
+  mlir::ArrayAttr workGroupSizeHintAttr, reqdWorkGroupSizeAttr;
+  mlir::TypeAttr vecTypeHintAttr;
+  std::optional<bool> vecTypeHintSignedness;
+  mlir::IntegerAttr intelReqdSubGroupSizeAttr;
+
+  if (const VecTypeHintAttr *A = FD->getAttr<VecTypeHintAttr>()) {
+    mlir::Type typeHintValue = getTypes().ConvertType(A->getTypeHint());
+    vecTypeHintAttr = mlir::TypeAttr::get(typeHintValue);
+    vecTypeHintSignedness =
+        OpenCLKernelMetadataAttr::isSignedHint(typeHintValue);
+  }
+
+  if (const WorkGroupSizeHintAttr *A = FD->getAttr<WorkGroupSizeHintAttr>()) {
+    workGroupSizeHintAttr = builder.getI32ArrayAttr({
+        static_cast<int32_t>(A->getXDim()),
+        static_cast<int32_t>(A->getYDim()),
+        static_cast<int32_t>(A->getZDim()),
+    });
+  }
+
+  if (const ReqdWorkGroupSizeAttr *A = FD->getAttr<ReqdWorkGroupSizeAttr>()) {
+    reqdWorkGroupSizeAttr = builder.getI32ArrayAttr({
+        static_cast<int32_t>(A->getXDim()),
+        static_cast<int32_t>(A->getYDim()),
+        static_cast<int32_t>(A->getZDim()),
+    });
+  }
+
+  if (const OpenCLIntelReqdSubGroupSizeAttr *A =
+          FD->getAttr<OpenCLIntelReqdSubGroupSizeAttr>()) {
+    intelReqdSubGroupSizeAttr = builder.getI32IntegerAttr(A->getSubGroupSize());
+  }
+
+  // Skip the metadata attr if no hints are present.
+  if (!vecTypeHintAttr && !workGroupSizeHintAttr && !reqdWorkGroupSizeAttr &&
+      !intelReqdSubGroupSizeAttr)
+    return;
+
+  // Append the kernel metadata to the extra attributes dictionary.
+  mlir::NamedAttrList attrs;
+  attrs.append(Fn.getExtraAttrs().getElements());
+
+  auto kernelMetadataAttr = OpenCLKernelMetadataAttr::get(
+      builder.getContext(), workGroupSizeHintAttr, reqdWorkGroupSizeAttr,
+      vecTypeHintAttr, vecTypeHintSignedness, intelReqdSubGroupSizeAttr);
+  attrs.append(kernelMetadataAttr.getMnemonic(), kernelMetadataAttr);
+
+  Fn.setExtraAttrsAttr(mlir::cir::ExtraFuncAttributesAttr::get(
+      builder.getContext(), attrs.getDictionary(builder.getContext())));
 }

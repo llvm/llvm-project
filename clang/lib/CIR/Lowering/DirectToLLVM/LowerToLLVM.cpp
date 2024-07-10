@@ -1523,12 +1523,13 @@ public:
   /// to the name of the attribute in ODS.
   static StringRef getLinkageAttrNameString() { return "linkage"; }
 
+  /// Convert the `cir.func` attributes to `llvm.func` attributes.
   /// Only retain those attributes that are not constructed by
   /// `LLVMFuncOp::build`. If `filterArgAttrs` is set, also filter out
   /// argument attributes.
   void
-  filterFuncAttributes(mlir::cir::FuncOp func, bool filterArgAndResAttrs,
-                       SmallVectorImpl<mlir::NamedAttribute> &result) const {
+  lowerFuncAttributes(mlir::cir::FuncOp func, bool filterArgAndResAttrs,
+                      SmallVectorImpl<mlir::NamedAttribute> &result) const {
     for (auto attr : func->getAttrs()) {
       if (attr.getName() == mlir::SymbolTable::getSymbolAttrName() ||
           attr.getName() == func.getFunctionTypeAttrName() ||
@@ -1543,9 +1544,43 @@ public:
       if (attr.getName() == func.getExtraAttrsAttrName()) {
         std::string cirName = "cir." + func.getExtraAttrsAttrName().str();
         attr.setName(mlir::StringAttr::get(getContext(), cirName));
+
+        lowerFuncOpenCLKernelMetadata(attr);
       }
       result.push_back(attr);
     }
+  }
+
+  /// When do module translation, we can only translate LLVM-compatible types.
+  /// Here we lower possible OpenCLKernelMetadataAttr to use the converted type.
+  void
+  lowerFuncOpenCLKernelMetadata(mlir::NamedAttribute &extraAttrsEntry) const {
+    const auto attrKey = mlir::cir::OpenCLKernelMetadataAttr::getMnemonic();
+    auto oldExtraAttrs =
+        cast<mlir::cir::ExtraFuncAttributesAttr>(extraAttrsEntry.getValue());
+    if (!oldExtraAttrs.getElements().contains(attrKey))
+      return;
+    
+    mlir::NamedAttrList newExtraAttrs;
+    for (auto entry : oldExtraAttrs.getElements()) {
+      if (entry.getName() == attrKey) {
+        auto clKernelMetadata =
+            cast<mlir::cir::OpenCLKernelMetadataAttr>(entry.getValue());
+        if (auto vecTypeHint = clKernelMetadata.getVecTypeHint()) {
+          auto newType = typeConverter->convertType(vecTypeHint.getValue());
+          auto newTypeHint = mlir::TypeAttr::get(newType);
+          auto newCLKMAttr = mlir::cir::OpenCLKernelMetadataAttr::get(
+              getContext(), clKernelMetadata.getWorkGroupSizeHint(),
+              clKernelMetadata.getReqdWorkGroupSize(), newTypeHint,
+              clKernelMetadata.getVecTypeHintSignedness(),
+              clKernelMetadata.getIntelReqdSubGroupSize());
+          entry.setValue(newCLKMAttr);
+        }
+      }
+      newExtraAttrs.push_back(entry);
+    }
+    extraAttrsEntry.setValue(mlir::cir::ExtraFuncAttributesAttr::get(
+        getContext(), newExtraAttrs.getDictionary(getContext())));
   }
 
   mlir::LogicalResult
@@ -1585,7 +1620,7 @@ public:
 
     auto linkage = convertLinkage(op.getLinkage());
     SmallVector<mlir::NamedAttribute, 4> attributes;
-    filterFuncAttributes(op, /*filterArgAndResAttrs=*/false, attributes);
+    lowerFuncAttributes(op, /*filterArgAndResAttrs=*/false, attributes);
 
     auto fn = rewriter.create<mlir::LLVM::LLVMFuncOp>(
         Loc, op.getName(), llvmFnTy, linkage, isDsoLocal, mlir::LLVM::CConv::C,
