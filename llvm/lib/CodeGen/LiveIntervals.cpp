@@ -1536,8 +1536,7 @@ void LiveIntervals::handleMoveIntoNewBundle(MachineInstr &BundleStart,
 
   // Fix up dead defs
   const SlotIndex Index = getInstructionIndex(BundleStart);
-  for (unsigned Idx = 0, E = BundleStart.getNumOperands(); Idx != E; ++Idx) {
-    MachineOperand &MO = BundleStart.getOperand(Idx);
+  for (MachineOperand &MO : BundleStart.operands()) {
     if (!MO.isReg())
       continue;
     Register Reg = MO.getReg();
