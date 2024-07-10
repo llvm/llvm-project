@@ -67,16 +67,26 @@ template <size_t Bits> struct DyadicFloat {
   }
 
   // Used for aligning exponents.  Output might not be normalized.
-  LIBC_INLINE constexpr DyadicFloat &shift_left(int shift_length) {
-    exponent -= shift_length;
-    mantissa <<= static_cast<size_t>(shift_length);
+  LIBC_INLINE constexpr DyadicFloat &shift_left(unsigned shift_length) {
+    if (shift_length < Bits) {
+      exponent -= static_cast<int>(shift_length);
+      mantissa <<= shift_length;
+    } else {
+      exponent = 0;
+      mantissa = MantissaType(0);
+    }
     return *this;
   }
 
   // Used for aligning exponents.  Output might not be normalized.
-  LIBC_INLINE constexpr DyadicFloat &shift_right(int shift_length) {
-    exponent += shift_length;
-    mantissa >>= static_cast<size_t>(shift_length);
+  LIBC_INLINE constexpr DyadicFloat &shift_right(unsigned shift_length) {
+    if (shift_length < Bits) {
+      exponent += static_cast<int>(shift_length);
+      mantissa >>= shift_length;
+    } else {
+      exponent = 0;
+      mantissa = MantissaType(0);
+    }
     return *this;
   }
 
@@ -110,7 +120,7 @@ template <size_t Bits> struct DyadicFloat {
               .get_val();
       // volatile prevents constant propagation that would result in infinity
       // always being returned no matter the current rounding mode.
-      volatile T two(2.0);
+      volatile T two = static_cast<T>(2.0);
       T r = two * d_hi;
 
       // TODO: Whether rounding down the absolute value to max_normal should
@@ -156,13 +166,13 @@ template <size_t Bits> struct DyadicFloat {
       // d_lo is denormal, but the output is normal.
       int scale_up_exponent = 1 - exp_lo;
       T scale_up_factor =
-          FPBits<T>::create_value(sign,
+          FPBits<T>::create_value(Sign::POS,
                                   static_cast<output_bits_t>(
                                       FPBits<T>::EXP_BIAS + scale_up_exponent),
                                   IMPLICIT_MASK)
               .get_val();
       T scale_down_factor =
-          FPBits<T>::create_value(sign,
+          FPBits<T>::create_value(Sign::POS,
                                   static_cast<output_bits_t>(
                                       FPBits<T>::EXP_BIAS - scale_up_exponent),
                                   IMPLICIT_MASK)
@@ -261,9 +271,9 @@ LIBC_INLINE constexpr DyadicFloat<Bits> quick_add(DyadicFloat<Bits> a,
 
   // Align exponents
   if (a.exponent > b.exponent)
-    b.shift_right(a.exponent - b.exponent);
+    b.shift_right(static_cast<unsigned>(a.exponent - b.exponent));
   else if (b.exponent > a.exponent)
-    a.shift_right(b.exponent - a.exponent);
+    a.shift_right(static_cast<unsigned>(b.exponent - a.exponent));
 
   DyadicFloat<Bits> result;
 

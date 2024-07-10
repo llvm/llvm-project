@@ -3655,8 +3655,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
 
     // (A & B) | (A ^ B) --> A | B
     // (B & A) | (A ^ B) --> A | B
-    if (match(Op0, m_And(m_Specific(A), m_Specific(B))) ||
-        match(Op0, m_And(m_Specific(B), m_Specific(A))))
+    if (match(Op0, m_c_And(m_Specific(A), m_Specific(B))))
       return BinaryOperator::CreateOr(A, B);
 
     // ~A | (A ^ B) --> ~(A & B)
@@ -4617,8 +4616,12 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   Value *M;
   if (match(&I, m_c_Xor(m_c_And(m_Not(m_Value(M)), m_Value()),
-                        m_c_And(m_Deferred(M), m_Value()))))
-    return BinaryOperator::CreateDisjointOr(Op0, Op1);
+                        m_c_And(m_Deferred(M), m_Value())))) {
+    if (isGuaranteedNotToBeUndef(M))
+      return BinaryOperator::CreateDisjointOr(Op0, Op1);
+    else
+      return BinaryOperator::CreateOr(Op0, Op1);
+  }
 
   if (Instruction *Xor = visitMaskedMerge(I, Builder))
     return Xor;

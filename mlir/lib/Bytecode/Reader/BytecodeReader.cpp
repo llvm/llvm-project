@@ -17,7 +17,6 @@
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
@@ -707,7 +706,7 @@ LogicalResult ResourceSectionReader::initialize(
     auto resolveKey = [&](StringRef key) -> StringRef {
       auto it = dialectResourceHandleRenamingMap.find(key);
       if (it == dialectResourceHandleRenamingMap.end())
-        return "";
+        return key;
       return it->second;
     };
 

@@ -494,6 +494,12 @@ namespace DeclRefs {
   constexpr B b;
   static_assert(b.a.m == 100, "");
   static_assert(b.a.f == 100, "");
+
+  constexpr B b2{};
+  static_assert(b2.a.m == 100, "");
+  static_assert(b2.a.f == 100, "");
+  static_assert(b2.a.f == 101, ""); // both-error {{failed}} \
+                                    // both-note {{evaluates to '100 == 101'}}
 }
 
 namespace PointerArith {
@@ -1482,3 +1488,15 @@ namespace FloatAPValue {
   ClassTemplateArgRefTemplate<ClassTemplateArgObj.Arg> ClassTemplateArgRefObj;
 }
 #endif
+
+namespace LocalWithThisPtrInit {
+  struct S {
+    int i;
+    int *p = &i;
+  };
+  constexpr int foo() {
+    S s{2};
+    return *s.p;
+  }
+  static_assert(foo() == 2, "");
+}

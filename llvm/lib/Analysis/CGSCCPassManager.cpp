@@ -150,9 +150,8 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
   SmallPriorityWorklist<LazyCallGraph::RefSCC *, 1> RCWorklist;
   SmallPriorityWorklist<LazyCallGraph::SCC *, 1> CWorklist;
 
-  // Keep sets for invalidated SCCs and RefSCCs that should be skipped when
+  // Keep sets for invalidated SCCs that should be skipped when
   // iterating off the worklists.
-  SmallPtrSet<LazyCallGraph::RefSCC *, 4> InvalidRefSCCSet;
   SmallPtrSet<LazyCallGraph::SCC *, 4> InvalidSCCSet;
 
   SmallDenseSet<std::pair<LazyCallGraph::Node *, LazyCallGraph::SCC *>, 4>
@@ -161,7 +160,6 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
   SmallVector<Function *, 4> DeadFunctions;
 
   CGSCCUpdateResult UR = {CWorklist,
-                          InvalidRefSCCSet,
                           InvalidSCCSet,
                           nullptr,
                           PreservedAnalyses::all(),
@@ -194,11 +192,6 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
 
     do {
       LazyCallGraph::RefSCC *RC = RCWorklist.pop_back_val();
-      if (InvalidRefSCCSet.count(RC)) {
-        LLVM_DEBUG(dbgs() << "Skipping an invalid RefSCC...\n");
-        continue;
-      }
-
       assert(CWorklist.empty() &&
              "Should always start with an empty SCC worklist");
 
@@ -1172,7 +1165,6 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
   }
 
   assert(!UR.InvalidatedSCCs.count(C) && "Invalidated the current SCC!");
-  assert(!UR.InvalidatedRefSCCs.count(RC) && "Invalidated the current RefSCC!");
   assert(&C->getOuterRefSCC() == RC && "Current SCC not in current RefSCC!");
 
   // Record the current SCC for higher layers of the CGSCC pass manager now that

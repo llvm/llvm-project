@@ -478,7 +478,6 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     LLT Ty = MRI.getType(MI.getOperand(2).getReg());
 
     unsigned Size = Ty.getSizeInBits();
-    assert((Size == 32 || Size == 64) && "Unsupported size for G_FCMP");
 
     OpdsMapping[0] = GPRValueMapping;
     OpdsMapping[2] = OpdsMapping[3] = getFPValueMapping(Size);

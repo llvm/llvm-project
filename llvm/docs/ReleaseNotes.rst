@@ -129,8 +129,15 @@ Changes to the AMDGPU Backend
 -----------------------------
 
 * Implemented the ``llvm.get.fpenv`` and ``llvm.set.fpenv`` intrinsics.
+* Added ``!amdgpu.no.fine.grained.memory`` and
+  ``!amdgpu.no.remote.memory`` metadata to control atomic behavior.
 
 * Implemented :ref:`llvm.get.rounding <int_get_rounding>` and :ref:`llvm.set.rounding <int_set_rounding>`
+
+* Removed ``llvm.amdgcn.ds.fadd``, ``llvm.amdgcn.ds.fmin`` and
+  ``llvm.amdgcn.ds.fmax`` intrinsics. Users should use the
+  :ref:`atomicrmw <i_atomicrmw>` instruction with `fadd`, `fmin` and
+  `fmax` with addrspace(3) instead.
 
 Changes to the ARM Backend
 --------------------------
@@ -171,7 +178,7 @@ Changes to the RISC-V Backend
 * The names of the majority of the S-prefixed (supervisor-level) extension
   names in the RISC-V profiles specification are now recognised.
 * Codegen support was added for the Zimop (May-Be-Operations) extension.
-* The experimental Ssnpm, Smnpm, Smmpm, Sspm, and Supm 0.8.1 Pointer Masking extensions are supported.
+* The experimental Ssnpm, Smnpm, Smmpm, Sspm, and Supm 1.0.0 Pointer Masking extensions are supported.
 * The experimental Ssqosid extension is supported.
 * Zacas is no longer experimental.
 * Added the CSR names from the Resumable Non-Maskable Interrupts (Smrnmi) extension.
@@ -184,6 +191,12 @@ Changes to the RISC-V Backend
 * B (the collection of the Zba, Zbb, Zbs extensions) is supported.
 * Added smcdeleg, ssccfg, smcsrind, and sscsrind extensions to -march.
 * ``-mcpu=syntacore-scr3-rv32`` and ``-mcpu=syntacore-scr3-rv64`` were added.
+* The default atomics mapping was changed to emit an additional trailing fence
+  for sequentially consistent stores, offering compatibility with a future
+  mapping using load-acquire and store-release instructions while remaining
+  fully compatible with objects produced prior to this change. The mapping
+  (ABI) used is recorded as an ELF attribute.
+* Ztso is no longer experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -282,6 +295,12 @@ They are described in detail in the `debug info migration guide <https://llvm.or
   * ``LLVMDIBuilderInsertDbgValueBefore``
   * ``LLVMDIBuilderInsertDbgValueAtEnd``
 
+* Added the following functions for accessing a Target Extension Type's data:
+
+  * ``LLVMGetTargetExtTypeName``
+  * ``LLVMGetTargetExtTypeNumTypeParams``/``LLVMGetTargetExtTypeTypeParam``
+  * ``LLVMGetTargetExtTypeNumIntParams``/``LLVMGetTargetExtTypeIntParam``
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
@@ -343,23 +362,43 @@ Changes to the LLVM tools
   would continue. Additionally, it can now continue when it encounters
   instructions which lack scheduling information. The behaviour can be
   controlled by the newly introduced
-  `--skip-unsupported-instructions=<none|lack-sched|parse-failure|any>`, as
-  documented in `--help` output and the command guide. (`#90474
-  <https://github.com/llvm/llvm-project/pull/90474>`)
+  ``--skip-unsupported-instructions=<none|lack-sched|parse-failure|any>``, as
+  documented in ``--help`` output and the command guide. (`#90474
+  <https://github.com/llvm/llvm-project/pull/90474>`_)
 
 * llvm-readobj's LLVM output format for ELF core files has been changed.
   Similarly, the JSON format has been fixed for this case. The NT_FILE note
   now has a map for the mapped files. (`#92835
-  <https://github.com/llvm/llvm-project/pull/92835>`).
+  <https://github.com/llvm/llvm-project/pull/92835>`_).
 
 * llvm-cov now generates HTML report with JavaScript code to allow simple
   jumping between uncovered parts (lines/regions/branches) of code 
   using buttons on top-right corner of the page or using keys (L/R/B or 
   jumping in reverse direction with shift+L/R/B). (`#95662
-  <https://github.com/llvm/llvm-project/pull/95662>`).
+  <https://github.com/llvm/llvm-project/pull/95662>`_).
 
 Changes to LLDB
 ---------------------------------
+
+* Register field information is now provided on AArch64 FreeBSD for live
+  processes and core files (previously only provided on AArch64 Linux).
+
+* Register field information can now include enums to represent field
+  values. Enums have been added for ``fpcr.RMode`` and ``mte_ctrl.TCF``
+  for AArch64 targets::
+
+    (lldb) register read fpcr
+        fpcr = 0x00000000
+             = (AHP = 0, DN = 0, FZ = 0, RMode = RN, <...>)
+
+  If you need to know the values of the enum, these can be found in
+  the output of ``register info`` for the same register.
+
+Changes to BOLT
+---------------------------------
+* Now supports ``--match-profile-with-function-hash`` to match profiled and
+  binary functions with exact hash, allowing for the matching of renamed but
+  identical functions.
 
 Changes to Sanitizers
 ---------------------

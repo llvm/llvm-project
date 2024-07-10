@@ -1618,6 +1618,7 @@ def shared_libsan : Flag<["-"], "shared-libsan">,
 def static_libsan : Flag<["-"], "static-libsan">,
   HelpText<"Statically link the sanitizer runtime (Not supported for ASan, TSan or UBSan on darwin)">;
 def : Flag<["-"], "shared-libasan">, Alias<shared_libsan>;
+def : Flag<["-"], "static-libasan">, Alias<static_libsan>;
 def fasm : Flag<["-"], "fasm">, Group<f_Group>;
 
 defm assume_unique_vtables : BoolFOption<"assume-unique-vtables",
@@ -3477,6 +3478,11 @@ defm objc_avoid_heapify_local_blocks : BoolFOption<"objc-avoid-heapify-local-blo
   PosFlag<SetTrue, [], [ClangOption], "Try">,
   NegFlag<SetFalse, [], [ClangOption], "Don't try">,
   BothFlags<[], [CC1Option], " to avoid heapifying local blocks">>;
+defm disable_block_signature_string : BoolFOption<"disable-block-signature-string",
+  CodeGenOpts<"DisableBlockSignatureString">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Disable">,
+  NegFlag<SetFalse, [], [ClangOption], "Don't disable">,
+  BothFlags<[], [CC1Option], " block signature string)">>;
 
 def fomit_frame_pointer : Flag<["-"], "fomit-frame-pointer">, Group<f_Group>,
   Visibility<[ClangOption, FlangOption]>,
@@ -4235,6 +4241,12 @@ def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
     HelpText<"Enable matrix data type and related builtin functions">,
     MarshallingInfoFlag<LangOpts<"MatrixTypes">>;
 
+defm raw_string_literals : BoolFOption<"raw-string-literals",
+    LangOpts<"RawStringLiterals">, Default<std#".hasRawStringLiterals()">,
+    PosFlag<SetTrue, [], [], "Enable">,
+    NegFlag<SetFalse, [], [], "Disable">,
+    BothFlags<[], [ClangOption, CC1Option], " raw string literals">>;
+
 def fzero_call_used_regs_EQ
     : Joined<["-"], "fzero-call-used-regs=">, Group<f_Group>,
     Visibility<[ClangOption, CC1Option]>,
@@ -4612,10 +4624,10 @@ def inline_asm_EQ : Joined<["-"], "inline-asm=">, Group<m_Group>,
   NormalizedValuesScope<"CodeGenOptions">, NormalizedValues<["IAD_ATT", "IAD_Intel"]>,
   MarshallingInfoEnum<CodeGenOpts<"InlineAsmDialect">, "IAD_ATT">;
 def mcmodel_EQ : Joined<["-"], "mcmodel=">, Group<m_Group>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   MarshallingInfoString<TargetOpts<"CodeModel">, [{"default"}]>;
 def mlarge_data_threshold_EQ : Joined<["-"], "mlarge-data-threshold=">, Group<m_Group>,
-  Flags<[TargetSpecific]>, Visibility<[ClangOption, CC1Option]>,
+  Flags<[TargetSpecific]>, Visibility<[ClangOption, CC1Option,FlangOption, FC1Option]>,
   MarshallingInfoInt<TargetOpts<"LargeDataThreshold">, "0">;
 def mtls_size_EQ : Joined<["-"], "mtls-size=">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
@@ -5252,6 +5264,9 @@ def mlasx : Flag<["-"], "mlasx">, Group<m_loongarch_Features_Group>,
   HelpText<"Enable Loongson Advanced SIMD Extension (LASX).">;
 def mno_lasx : Flag<["-"], "mno-lasx">, Group<m_loongarch_Features_Group>,
   HelpText<"Disable Loongson Advanced SIMD Extension (LASX).">;
+def msimd_EQ : Joined<["-"], "msimd=">, Group<m_loongarch_Features_Group>,
+  Flags<[TargetSpecific]>,
+  HelpText<"Select the SIMD extension(s) to be enabled in LoongArch either 'none', 'lsx', 'lasx'.">;
 def mnop_mcount : Flag<["-"], "mnop-mcount">, HelpText<"Generate mcount/__fentry__ calls as nops. To activate they need to be patched in.">,
   Visibility<[ClangOption, CC1Option]>, Group<m_Group>,
   MarshallingInfoFlag<CodeGenOpts<"MNopMCount">>;
@@ -5421,7 +5436,6 @@ def module_file_info : Flag<["-"], "module-file-info">, Flags<[]>,
   HelpText<"Provide information about a particular module file">;
 def mthumb : Flag<["-"], "mthumb">, Group<m_Group>;
 def mtune_EQ : Joined<["-"], "mtune=">, Group<m_Group>,
-  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Only supported on AArch64, PowerPC, RISC-V, SPARC, SystemZ, and X86">;
 def multi__module : Flag<["-"], "multi_module">;
 def multiply__defined__unused : Separate<["-"], "multiply_defined_unused">;
@@ -5536,7 +5550,10 @@ def print_prog_name_EQ : Joined<["-", "--"], "print-prog-name=">,
   Visibility<[ClangOption, CLOption]>;
 def print_resource_dir : Flag<["-", "--"], "print-resource-dir">,
   HelpText<"Print the resource directory pathname">,
-  Visibility<[ClangOption, CLOption]>;
+  HelpTextForVariants<[FlangOption],
+                      "Print the resource directory pathname that contains lib and "
+                      "include directories with the runtime libraries and MODULE files.">,
+  Visibility<[ClangOption, CLOption, FlangOption]>;
 def print_search_dirs : Flag<["-", "--"], "print-search-dirs">,
   HelpText<"Print the paths used for finding libraries and programs">,
   Visibility<[ClangOption, CLOption]>;
@@ -5711,6 +5728,11 @@ def print_supported_extensions : Flag<["-", "--"], "print-supported-extensions">
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Print supported -march extensions (RISC-V, AArch64 and ARM only)">,
   MarshallingInfoFlag<FrontendOpts<"PrintSupportedExtensions">>;
+def print_enabled_extensions : Flag<["-", "--"], "print-enabled-extensions">,
+  Visibility<[ClangOption, CC1Option, CLOption]>,
+  HelpText<"Print the extensions enabled by the given target and -march/-mcpu options."
+           " (AArch64 and RISC-V only)">,
+  MarshallingInfoFlag<FrontendOpts<"PrintEnabledExtensions">>;
 def : Flag<["-"], "mcpu=help">, Alias<print_supported_cpus>;
 def : Flag<["-"], "mtune=help">, Alias<print_supported_cpus>;
 def time : Flag<["-"], "time">,
@@ -6312,9 +6334,9 @@ def mno_gather : Flag<["-"], "mno-gather">, Group<m_Group>,
 def mno_scatter : Flag<["-"], "mno-scatter">, Group<m_Group>,
                   HelpText<"Disable generation of scatter instructions in auto-vectorization(x86 only)">;
 def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Features_Group>,
-    HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">;
+    HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">,  Visibility<[ClangOption, CLOption, FlangOption]>;
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
-    HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">;
+    HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">, Visibility<[ClangOption, CLOption, FlangOption]>;
 // For stability, we only add a feature to -mapxf after it passes the validation of llvm-test-suite && cpu2017 on Intel SDE.
 def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf"]>;
 def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf"]>;
@@ -6738,6 +6760,9 @@ def emit_hlfir : Flag<["-"], "emit-hlfir">, Group<Action_Group>,
 
 let Visibility = [CC1Option, CC1AsOption] in {
 
+def tune_cpu : Separate<["-"], "tune-cpu">,
+  HelpText<"Tune for a specific cpu type">,
+  MarshallingInfoString<TargetOpts<"TuneCPU">>;
 def target_abi : Separate<["-"], "target-abi">,
   HelpText<"Target a particular ABI type">,
   MarshallingInfoString<TargetOpts<"ABI">>;
@@ -6764,9 +6789,6 @@ def darwin_target_variant_triple : Separate<["-"], "darwin-target-variant-triple
 
 let Visibility = [CC1Option, CC1AsOption, FC1Option] in {
 
-def tune_cpu : Separate<["-"], "tune-cpu">,
-  HelpText<"Tune for a specific cpu type">,
-  MarshallingInfoString<TargetOpts<"TuneCPU">>;
 def target_cpu : Separate<["-"], "target-cpu">,
   HelpText<"Target a specific cpu type">,
   MarshallingInfoString<TargetOpts<"CPU">>;
@@ -7020,6 +7042,9 @@ def massembler_no_warn : Flag<["-"], "massembler-no-warn">,
 def massembler_fatal_warnings : Flag<["-"], "massembler-fatal-warnings">,
   HelpText<"Make assembler warnings fatal">,
   MarshallingInfoFlag<CodeGenOpts<"FatalWarnings">>;
+def crel : Flag<["--"], "crel">,
+  HelpText<"Enable CREL relocation format (ELF only)">,
+  MarshallingInfoFlag<CodeGenOpts<"Crel">>;
 def mrelax_relocations_no : Flag<["-"], "mrelax-relocations=no">,
     HelpText<"Disable x86 relax relocations">,
     MarshallingInfoNegativeFlag<CodeGenOpts<"RelaxELFRelocations">>;

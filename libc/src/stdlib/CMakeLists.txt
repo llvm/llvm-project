@@ -304,6 +304,7 @@ add_entrypoint_object(
   DEPENDS
     .rand_util
     libc.include.stdlib
+    libc.src.__support.threads.sleep
 )
 
 add_entrypoint_object(
@@ -504,9 +505,7 @@ add_entrypoint_object(
     exit.h
   DEPENDS
     ._Exit
-    .atexit
     libc.src.__support.OSUtil.osutil
-    .exit_handler
 )
 
 add_entrypoint_object(

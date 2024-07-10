@@ -789,6 +789,16 @@ strong_ordering operator<=>(const time_zone& x, const time_zone& y) noexcept;   
 // [time.zone.zonedtraits], class template zoned_traits
 template<class T> struct zoned_traits;                                           // C++20
 
+// [time.zone.zonedtime], class template zoned_time
+template<class Duration, class TimeZonePtr = const time_zone*>                   // C++20
+class zoned_time;
+
+using zoned_seconds = zoned_time<seconds>;                                       // C++20
+
+template<class Duration1, class Duration2, class TimeZonePtr>                    // C++20
+  bool operator==(const zoned_time<Duration1, TimeZonePtr>& x,
+                  const zoned_time<Duration2, TimeZonePtr>& y);
+
 // [time.zone.leap], leap second support
 class leap_second {                                                              // C++20
 public:
@@ -996,7 +1006,9 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER == 20
 #  include <charconv>
-#  include <locale>
+#  if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#    include <locale>
+#  endif
 #  include <ostream>
 #endif
 

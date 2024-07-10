@@ -196,6 +196,13 @@
 // RUN:     -static-libsan \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-ANDROID-STATICLIBASAN %s
 //
+// RUN: %clang -### %s 2>&1 \
+// RUN:     --target=arm-linux-androideabi -fuse-ld=ld -fsanitize=address \
+// RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     -static-libasan \
+// RUN:   | FileCheck --check-prefix=CHECK-ASAN-ANDROID-STATICLIBASAN %s
+//
 // CHECK-ASAN-ANDROID-STATICLIBASAN: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-ASAN-ANDROID-STATICLIBASAN: libclang_rt.asan.a"
 // CHECK-ASAN-ANDROID-STATICLIBASAN-NOT: "-lpthread"
@@ -626,6 +633,18 @@
 // CHECK-COV-LINUX-NOT: "-lstdc++"
 // CHECK-COV-LINUX: "-lpthread"
 // CHECK-COV-LINUX: "-lresolv"
+
+// RUN: %clang -### %s 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -fuse-ld=ld -fsanitize=numerical \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-NSAN-LINUX %s
+//
+// CHECK-NSAN-LINUX: "{{.*}}ld{{(.exe)?}}"
+// CHECK-NSAN-LINUX-NOT: "-lc"
+// CHECK-NSAN-LINUX-NOT: libclang_rt.ubsan
+// CHECK-NSAN-LINUX: libclang_rt.nsan.a"
+// CHECK-NSAN-LINUX: "-lpthread" "-lrt" "-lm" "-ldl" "-lresolv"
 
 // CFI by itself does not link runtime libraries.
 // RUN: not %clang -fsanitize=cfi -### %s 2>&1 \

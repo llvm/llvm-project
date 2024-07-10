@@ -35,8 +35,7 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
       kindMapping(getKindMapping(module)),
       specifics(CodeGenSpecifics::get(
           module.getContext(), getTargetTriple(module), getKindMapping(module),
-          getTargetCPU(module), getTargetFeatures(module), dl,
-          getTuneCPU(module))),
+          getTargetCPU(module), getTargetFeatures(module), dl)),
       tbaaBuilder(std::make_unique<TBAABuilder>(module->getContext(), applyTBAA,
                                                 forceUnifiedTBAATree)),
       dataLayout{&dl} {
@@ -171,7 +170,7 @@ mlir::Type LLVMTypeConverter::indexType() const {
 }
 
 // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
-std::optional<mlir::LogicalResult> LLVMTypeConverter::convertRecordType(
+std::optional<llvm::LogicalResult> LLVMTypeConverter::convertRecordType(
     fir::RecordType derived, llvm::SmallVectorImpl<mlir::Type> &results) {
   auto name = fir::NameUniquer::dropTypeConversionMarkers(derived.getName());
   auto st = mlir::LLVM::LLVMStructType::getIdentified(&getContext(), name);

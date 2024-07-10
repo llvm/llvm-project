@@ -1312,14 +1312,16 @@ let SubtargetPredicate = isGFX90APlus in {
   }
 } // End SubtargetPredicate = isGFX90APlus
 
-let SubtargetPredicate = HasBufferFlatGlobalAtomicsF64 in {
+let SubtargetPredicate = HasFlatBufferGlobalAtomicFaddF64Inst in {
   defm BUFFER_ATOMIC_ADD_F64 : MUBUF_Pseudo_Atomics<"buffer_atomic_add_f64", VReg_64, f64>;
+} // End SubtargetPredicate = HasFlatBufferGlobalAtomicFaddF64Inst
 
+let SubtargetPredicate = HasAtomicFMinFMaxF64GlobalInsts in {
   // Note the names can be buffer_atomic_fmin_x2/buffer_atomic_fmax_x2
   // depending on some subtargets.
   defm BUFFER_ATOMIC_MIN_F64 : MUBUF_Pseudo_Atomics<"buffer_atomic_min_f64", VReg_64, f64>;
   defm BUFFER_ATOMIC_MAX_F64 : MUBUF_Pseudo_Atomics<"buffer_atomic_max_f64", VReg_64, f64>;
-} // End SubtargetPredicate = HasBufferFlatGlobalAtomicsF64
+}
 
 def BUFFER_INV : MUBUF_Invalidate<"buffer_inv"> {
   let SubtargetPredicate = isGFX940Plus;
@@ -1836,9 +1838,9 @@ let SubtargetPredicate = HasAtomicBufferGlobalPkAddF16Insts in {
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fadd", v2f16, "BUFFER_ATOMIC_PK_ADD_F16", ["ret"]>;
 } // End SubtargetPredicate = HasAtomicBufferGlobalPkAddF16Insts
 
-let SubtargetPredicate = HasBufferFlatGlobalAtomicsF64 in {
+let SubtargetPredicate = HasFlatBufferGlobalAtomicFaddF64Inst in {
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fadd", f64, "BUFFER_ATOMIC_ADD_F64">;
-} // End SubtargetPredicate = HasBufferFlatGlobalAtomicsF64
+} // End SubtargetPredicate = HasFlatBufferGlobalAtomicFaddF64Inst
 
 let SubtargetPredicate = HasAtomicFMinFMaxF64GlobalInsts in {
   defm : SIBufferAtomicPat<"SIbuffer_atomic_fmin", f64, "BUFFER_ATOMIC_MIN_F64">;
