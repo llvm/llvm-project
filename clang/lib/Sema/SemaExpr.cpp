@@ -2666,11 +2666,10 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     return ExprError();
   }
 
-  // BoundsSafety: This specially handles arguments of bounds attributes
-  // appertains to a type of C struct field such that the name lookup
-  // within a struct finds the member name, which is not the case for other
-  // contexts in C.
-  if (isBoundsAttrContext() && !getLangOpts().CPlusPlus && S->isClassScope()) {
+  // This specially handles arguments of attributes appertains to a type of C
+  // struct field such that the name lookup within a struct finds the member
+  // name, which is not the case for other contexts in C.
+  if (isAttrContext() && !getLangOpts().CPlusPlus && S->isClassScope()) {
     // See if this is reference to a field of struct.
     LookupResult R(*this, NameInfo, LookupMemberName);
     // LookupName handles a name lookup from within anonymous struct.
@@ -3279,7 +3278,7 @@ ExprResult Sema::BuildDeclarationNameExpr(
   case Decl::Field:
   case Decl::IndirectField:
   case Decl::ObjCIvar:
-    assert((getLangOpts().CPlusPlus || isBoundsAttrContext()) &&
+    assert((getLangOpts().CPlusPlus || isAttrContext()) &&
            "building reference to field in C?");
 
     // These can't have reference type in well-formed programs, but
@@ -6626,27 +6625,21 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   unsigned BuiltinID = (FDecl ? FDecl->getBuiltinID() : 0);
 
   // Functions with 'interrupt' attribute cannot be called directly.
-  if (FDecl && FDecl->hasAttr<AnyX86InterruptAttr>()) {
-    Diag(Fn->getExprLoc(), diag::err_anyx86_interrupt_called);
-    return ExprError();
+  if (FDecl) {
+    if (FDecl->hasAttr<AnyX86InterruptAttr>()) {
+      Diag(Fn->getExprLoc(), diag::err_anyx86_interrupt_called);
+      return ExprError();
+    }
+    if (FDecl->hasAttr<ARMInterruptAttr>()) {
+      Diag(Fn->getExprLoc(), diag::err_arm_interrupt_called);
+      return ExprError();
+    }
   }
 
-  // Interrupt handlers don't save off the VFP regs automatically on ARM,
-  // so there's some risk when calling out to non-interrupt handler functions
-  // that the callee might not preserve them. This is easy to diagnose here,
-  // but can be very challenging to debug.
-  // Likewise, X86 interrupt handlers may only call routines with attribute
+  // X86 interrupt handlers may only call routines with attribute
   // no_caller_saved_registers since there is no efficient way to
   // save and restore the non-GPR state.
   if (auto *Caller = getCurFunctionDecl()) {
-    if (Caller->hasAttr<ARMInterruptAttr>()) {
-      bool VFP = Context.getTargetInfo().hasFeature("vfp");
-      if (VFP && (!FDecl || !FDecl->hasAttr<ARMInterruptAttr>())) {
-        Diag(Fn->getExprLoc(), diag::warn_arm_interrupt_calling_convention);
-        if (FDecl)
-          Diag(FDecl->getLocation(), diag::note_callee_decl) << FDecl;
-      }
-    }
     if (Caller->hasAttr<AnyX86InterruptAttr>() ||
         Caller->hasAttr<AnyX86NoCallerSavedRegistersAttr>()) {
       const TargetInfo &TI = Context.getTargetInfo();

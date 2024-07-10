@@ -209,7 +209,7 @@ bool TargetLowering::findOptimalMemOpLowering(
     // Use the largest integer type whose alignment constraints are satisfied.
     // We only need to check DstAlign here as SrcAlign is always greater or
     // equal to DstAlign (or zero).
-    VT = MVT::i64;
+    VT = MVT::LAST_INTEGER_VALUETYPE;
     if (Op.isFixedDstAlign())
       while (Op.getDstAlign() < (VT.getSizeInBits() / 8) &&
              !allowsMisalignedMemoryAccesses(VT, DstAS, Op.getDstAlign()))
@@ -217,7 +217,7 @@ bool TargetLowering::findOptimalMemOpLowering(
     assert(VT.isInteger());
 
     // Find the largest legal integer type.
-    MVT LVT = MVT::i64;
+    MVT LVT = MVT::LAST_INTEGER_VALUETYPE;
     while (!isTypeLegal(LVT))
       LVT = (MVT::SimpleValueType)(LVT.SimpleTy - 1);
     assert(LVT.isInteger());

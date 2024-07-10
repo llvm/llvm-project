@@ -60,7 +60,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeJMCInstrumenterPass(Registry);
   initializeLiveDebugValuesPass(Registry);
   initializeLiveDebugVariablesPass(Registry);
-  initializeLiveIntervalsPass(Registry);
+  initializeLiveIntervalsWrapperPassPass(Registry);
   initializeLiveRangeShrinkPass(Registry);
   initializeLiveStacksPass(Registry);
   initializeLiveVariablesWrapperPassPass(Registry);
