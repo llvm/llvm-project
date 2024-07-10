@@ -1480,9 +1480,6 @@ static bool BuiltinSEHScopeCheck(Sema &SemaRef, CallExpr *TheCall,
 // In OpenCL, __builtin_alloca_* should return a pointer to address space
 // that corresponds to the stack address space i.e private address space.
 static bool OpenCLBuiltinAllocaAddrSpace(Sema &S, CallExpr *TheCall) {
-  S.Diag(TheCall->getBeginLoc(), diag::warn_alloca)
-      << TheCall->getDirectCallee();
-
   QualType RT = TheCall->getType();
   if (!RT->isPointerType() || RT->getPointeeType().hasAddressSpace())
     return true;
@@ -2231,6 +2228,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     [[fallthrough]];
   case Builtin::BI__builtin_alloca:
   case Builtin::BI__builtin_alloca_uninitialized:
+    Diag(TheCall->getBeginLoc(), diag::warn_alloca)
+        << TheCall->getDirectCallee();
     if (OpenCLBuiltinAllocaAddrSpace(*this, TheCall))
       return ExprError();
     break;
