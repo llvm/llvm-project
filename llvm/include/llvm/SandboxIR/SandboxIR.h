@@ -71,6 +71,69 @@ namespace sandboxir {
 class Function;
 class Context;
 class Instruction;
+class User;
+class Value;
+
+/// Represents a Def-use/Use-def edge in SandboxIR.
+/// NOTE: Unlike llvm::Use, this is not an integral part of the use-def chains.
+/// It is also not uniqued and is currently passed by value, so you can have
+/// more than one sandboxir::Use objects for the same use-def edge.
+class Use {
+  llvm::Use *LLVMUse;
+  User *Usr;
+  Context *Ctx;
+
+  /// Don't allow the user to create a sandboxir::Use directly.
+  Use(llvm::Use *LLVMUse, User *Usr, Context &Ctx)
+      : LLVMUse(LLVMUse), Usr(Usr), Ctx(&Ctx) {}
+  Use() : LLVMUse(nullptr), Ctx(nullptr) {}
+
+  friend class User;               // For constructor
+  friend class OperandUseIterator; // For constructor
+
+public:
+  operator Value *() const { return get(); }
+  Value *get() const;
+  class User *getUser() const { return Usr; }
+  unsigned getOperandNo() const;
+  Context *getContext() const { return Ctx; }
+  bool operator==(const Use &Other) const {
+    assert(Ctx == Other.Ctx && "Contexts differ!");
+    return LLVMUse == Other.LLVMUse && Usr == Other.Usr;
+  }
+  bool operator!=(const Use &Other) const { return !(*this == Other); }
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const;
+  void dump() const;
+#endif // NDEBUG
+};
+
+/// Returns the operand edge when dereferenced.
+class OperandUseIterator {
+  Use Use;
+  /// Don't let the user create a non-empty OperandUseIterator.
+  OperandUseIterator(const class Use &Use) : Use(Use) {}
+  friend class User;                                  // For constructor
+#define DEF_INSTR(ID, OPC, CLASS) friend class CLASS; // For constructor
+#include "llvm/SandboxIR/SandboxIRValues.def"
+
+public:
+  using difference_type = std::ptrdiff_t;
+  using value_type = sandboxir::Use;
+  using pointer = value_type *;
+  using reference = value_type &;
+  using iterator_category = std::input_iterator_tag;
+
+  OperandUseIterator() = default;
+  value_type operator*() const;
+  OperandUseIterator &operator++();
+  bool operator==(const OperandUseIterator &Other) const {
+    return Use == Other.Use;
+  }
+  bool operator!=(const OperandUseIterator &Other) const {
+    return !(*this == Other);
+  }
+};
 
 /// A SandboxIR Value has users. This is the base class.
 class Value {
@@ -174,9 +237,61 @@ class User : public Value {
 protected:
   User(ClassID ID, llvm::Value *V, Context &Ctx) : Value(ID, V, Ctx) {}
 
+  /// \Returns the Use edge that corresponds to \p OpIdx.
+  /// Note: This is the default implementation that works for instructions that
+  /// match the underlying LLVM instruction. All others should use a different
+  /// implementation.
+  Use getOperandUseDefault(unsigned OpIdx, bool Verify) const;
+  virtual Use getOperandUseInternal(unsigned OpIdx, bool Verify) const = 0;
+  friend class OperandUseIterator; // for getOperandUseInternal()
+
+  /// The default implementation works only for single-LLVMIR-instruction
+  /// Users and only if they match exactly the LLVM instruction.
+  unsigned getUseOperandNoDefault(const Use &Use) const {
+    return Use.LLVMUse->getOperandNo();
+  }
+  /// \Returns the operand index of \p Use.
+  virtual unsigned getUseOperandNo(const Use &Use) const = 0;
+  friend unsigned Use::getOperandNo() const; // For getUseOperandNo()
+
 public:
   /// For isa/dyn_cast.
   static bool classof(const Value *From);
+  using op_iterator = OperandUseIterator;
+  using const_op_iterator = OperandUseIterator;
+  using op_range = iterator_range<op_iterator>;
+  using const_op_range = iterator_range<const_op_iterator>;
+
+  virtual op_iterator op_begin() {
+    assert(isa<llvm::User>(Val) && "Expect User value!");
+    return op_iterator(getOperandUseInternal(0, /*Verify=*/false));
+  }
+  virtual op_iterator op_end() {
+    assert(isa<llvm::User>(Val) && "Expect User value!");
+    return op_iterator(
+        getOperandUseInternal(getNumOperands(), /*Verify=*/false));
+  }
+  virtual const_op_iterator op_begin() const {
+    return const_cast<User *>(this)->op_begin();
+  }
+  virtual const_op_iterator op_end() const {
+    return const_cast<User *>(this)->op_end();
+  }
+
+  op_range operands() { return make_range<op_iterator>(op_begin(), op_end()); }
+  const_op_range operands() const {
+    return make_range<const_op_iterator>(op_begin(), op_end());
+  }
+  Value *getOperand(unsigned OpIdx) const { return getOperandUse(OpIdx).get(); }
+  /// \Returns the operand edge for \p OpIdx. NOTE: This should also work for
+  /// OpIdx == getNumOperands(), which is used for op_end().
+  Use getOperandUse(unsigned OpIdx) const {
+    return getOperandUseInternal(OpIdx, /*Verify=*/true);
+  }
+  virtual unsigned getNumOperands() const {
+    return isa<llvm::User>(Val) ? cast<llvm::User>(Val)->getNumOperands() : 0;
+  }
+
 #ifndef NDEBUG
   void verify() const override {
     assert(isa<llvm::User>(Val) && "Expected User!");
@@ -195,6 +310,9 @@ class Constant : public sandboxir::User {
   Constant(llvm::Constant *C, sandboxir::Context &SBCtx)
       : sandboxir::User(ClassID::Constant, C, SBCtx) {}
   friend class Context; // For constructor.
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
 
 public:
   /// For isa/dyn_cast.
@@ -203,6 +321,9 @@ public:
            From->getSubclassID() == ClassID::Function;
   }
   sandboxir::Context &getParent() const { return getContext(); }
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
+  }
 #ifndef NDEBUG
   void verify() const final {
     assert(isa<llvm::Constant>(Val) && "Expected Constant!");
@@ -309,10 +430,16 @@ class OpaqueInst : public sandboxir::Instruction {
   OpaqueInst(ClassID SubclassID, llvm::Instruction *I, sandboxir::Context &Ctx)
       : sandboxir::Instruction(SubclassID, Opcode::Opaque, I, Ctx) {}
   friend class Context; // For constructor.
+  Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
+    return getOperandUseDefault(OpIdx, Verify);
+  }
 
 public:
   static bool classof(const sandboxir::Value *From) {
     return From->getSubclassID() == ClassID::Opaque;
+  }
+  unsigned getUseOperandNo(const Use &Use) const final {
+    return getUseOperandNoDefault(Use);
   }
   unsigned getNumOfIRInstrs() const final { return 1u; }
 #ifndef NDEBUG

@@ -13,6 +13,51 @@
 
 using namespace llvm::sandboxir;
 
+Value *Use::get() const { return Ctx->getValue(LLVMUse->get()); }
+
+unsigned Use::getOperandNo() const { return Usr->getUseOperandNo(*this); }
+
+#ifndef NDEBUG
+void Use::dump(raw_ostream &OS) const {
+  Value *Def = nullptr;
+  if (LLVMUse == nullptr)
+    OS << "<null> LLVM Use! ";
+  else
+    Def = Ctx->getValue(LLVMUse->get());
+  OS << "Def:  ";
+  if (Def == nullptr)
+    OS << "NULL";
+  else
+    OS << *Def;
+  OS << "\n";
+
+  OS << "User: ";
+  if (Usr == nullptr)
+    OS << "NULL";
+  else
+    OS << *Usr;
+  OS << "\n";
+
+  OS << "OperandNo: ";
+  if (Usr == nullptr)
+    OS << "N/A";
+  else
+    OS << getOperandNo();
+  OS << "\n";
+}
+
+void Use::dump() const { dump(dbgs()); }
+#endif // NDEBUG
+
+Use OperandUseIterator::operator*() const { return Use; }
+
+OperandUseIterator &OperandUseIterator::operator++() {
+  assert(Use.LLVMUse != nullptr && "Already at end!");
+  User *User = Use.getUser();
+  Use = User->getOperandUseInternal(Use.getOperandNo() + 1, /*Verify=*/false);
+  return *this;
+}
+
 Value::Value(ClassID SubclassID, llvm::Value *Val, Context &Ctx)
     : SubclassID(SubclassID), Val(Val), Ctx(Ctx) {
 #ifndef NDEBUG
@@ -70,6 +115,17 @@ void Argument::dump() const {
   dbgs() << "\n";
 }
 #endif // NDEBUG
+
+Use User::getOperandUseDefault(unsigned OpIdx, bool Verify) const {
+  assert((!Verify || OpIdx < getNumOperands()) && "Out of bounds!");
+  assert(isa<llvm::User>(Val) && "Non-users have no operands!");
+  llvm::Use *LLVMUse;
+  if (OpIdx != getNumOperands())
+    LLVMUse = &cast<llvm::User>(Val)->getOperandUse(OpIdx);
+  else
+    LLVMUse = cast<llvm::User>(Val)->op_end();
+  return Use(LLVMUse, const_cast<User *>(this), Ctx);
+}
 
 bool User::classof(const Value *From) {
   switch (From->getSubclassID()) {
