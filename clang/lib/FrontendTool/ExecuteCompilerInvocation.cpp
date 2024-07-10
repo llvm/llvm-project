@@ -71,8 +71,7 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
 #else
     llvm_unreachable("CIR suppport not built into clang");
 #endif
-  case EmitHTML:
-    return std::make_unique<HTMLPrintAction>();
+  case EmitHTML:               return std::make_unique<HTMLPrintAction>();
   case EmitLLVM:               return std::make_unique<EmitLLVMAction>();
   case EmitLLVMOnly:           return std::make_unique<EmitLLVMOnlyAction>();
   case EmitCodeGenOnly:        return std::make_unique<EmitCodeGenOnlyAction>();
