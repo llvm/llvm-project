@@ -50,23 +50,23 @@ entry:
 
 if.end:                                           ; preds = %entry
   %GroupID.ascast = addrspacecast ptr %GroupID to ptr addrspace(4)
-  %0 = load <3 x i64>, ptr addrspace(1) @__spirv_BuiltInWorkgroupId, align 32
-  %1 = extractelement <3 x i64> %0, i64 0
-  store i64 %1, ptr %GroupID, align 8
+  %r0 = load <3 x i64>, ptr addrspace(1) @__spirv_BuiltInWorkgroupId, align 32
+  %r1 = extractelement <3 x i64> %r0, i64 0
+  store i64 %r1, ptr %GroupID, align 8
   %arrayinit.element = getelementptr inbounds i8, ptr %GroupID, i64 8
-  %2 = extractelement <3 x i64> %0, i64 1
-  store i64 %2, ptr %arrayinit.element, align 8
+  %r2 = extractelement <3 x i64> %r0, i64 1
+  store i64 %r2, ptr %arrayinit.element, align 8
   %arrayinit.element1 = getelementptr inbounds i8, ptr %GroupID, i64 16
-  %3 = extractelement <3 x i64> %0, i64 2
-  store i64 %3, ptr %arrayinit.element1, align 8
-  %4 = load i64, ptr addrspace(1) @__spirv_BuiltInGlobalLinearId, align 8
-  %5 = load i64, ptr addrspace(1) @__spirv_BuiltInWorkgroupSize, align 32
-  %6 = load i64, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @__spirv_BuiltInWorkgroupSize, i64 8), align 8
-  %mul = mul i64 %5, %6
-  %7 = load i64, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @__spirv_BuiltInWorkgroupSize, i64 16), align 16
-  %mul2 = mul i64 %mul, %7
+  %r3 = extractelement <3 x i64> %r0, i64 2
+  store i64 %r3, ptr %arrayinit.element1, align 8
+  %r4 = load i64, ptr addrspace(1) @__spirv_BuiltInGlobalLinearId, align 8
+  %r5 = load i64, ptr addrspace(1) @__spirv_BuiltInWorkgroupSize, align 32
+  %r6 = load i64, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @__spirv_BuiltInWorkgroupSize, i64 8), align 8
+  %mul = mul i64 %r5, %r6
+  %r7 = load i64, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @__spirv_BuiltInWorkgroupSize, i64 16), align 16
+  %mul2 = mul i64 %mul, %r7
   %conv = trunc i64 %mul2 to i32
-  call spir_func void @start_helper(ptr addrspace(4) noundef %GroupID.ascast, i64 noundef %4, i32 noundef %conv)
+  call spir_func void @start_helper(ptr addrspace(4) noundef %GroupID.ascast, i64 noundef %r4, i32 noundef %conv)
   br label %return
 
 return:                                           ; preds = %if.end, %entry
@@ -82,17 +82,17 @@ entry:
 
 if.end:                                           ; preds = %entry
   %GroupID.ascast = addrspacecast ptr %GroupID to ptr addrspace(4)
-  %0 = load <3 x i64>, ptr addrspace(1) @__spirv_BuiltInWorkgroupId, align 32
-  %1 = extractelement <3 x i64> %0, i64 0
-  store i64 %1, ptr %GroupID, align 8
+  %r0 = load <3 x i64>, ptr addrspace(1) @__spirv_BuiltInWorkgroupId, align 32
+  %r1 = extractelement <3 x i64> %r0, i64 0
+  store i64 %r1, ptr %GroupID, align 8
   %arrayinit.element = getelementptr inbounds i8, ptr %GroupID, i64 8
-  %2 = extractelement <3 x i64> %0, i64 1
-  store i64 %2, ptr %arrayinit.element, align 8
+  %r2 = extractelement <3 x i64> %r0, i64 1
+  store i64 %r2, ptr %arrayinit.element, align 8
   %arrayinit.element1 = getelementptr inbounds i8, ptr %GroupID, i64 16
-  %3 = extractelement <3 x i64> %0, i64 2
-  store i64 %3, ptr %arrayinit.element1, align 8
-  %4 = load i64, ptr addrspace(1) @__spirv_BuiltInGlobalLinearId, align 8
-  call spir_func void @finish_helper(ptr addrspace(4) noundef %GroupID.ascast, i64 noundef %4)
+  %r3 = extractelement <3 x i64> %r0, i64 2
+  store i64 %r3, ptr %arrayinit.element1, align 8
+  %r4 = load i64, ptr addrspace(1) @__spirv_BuiltInGlobalLinearId, align 8
+  call spir_func void @finish_helper(ptr addrspace(4) noundef %GroupID.ascast, i64 noundef %r4)
   br label %return
 
 return:                                           ; preds = %if.end, %entry
