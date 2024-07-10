@@ -794,6 +794,9 @@ Bug Fixes in This Version
 
 - Fixed `static_cast` to array of unknown bound. Fixes (#GH62863).
 
+- Fixed an assertion failure when a template non-type parameter contains
+  an invalid expression.
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
