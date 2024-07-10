@@ -142,11 +142,7 @@ define void @test6_memcpy(ptr %src, ptr %dest) nounwind {
 ; FIXME: When forwarding to memcpy(arg+1, arg+1), we don't need to create this memcpy.
 define void @test6_memcpy_forward_back(ptr %arg) nounwind {
 ; CHECK-LABEL: @test6_memcpy_forward_back(
-; CHECK-NEXT:    [[TMP:%.*]] = alloca [16 x i8], align 1
-; CHECK-NEXT:    [[SRC:%.*]] = getelementptr inbounds i8, ptr [[ARG:%.*]], i64 1
-; CHECK-NEXT:    [[DEST:%.*]] = getelementptr inbounds i8, ptr [[ARG]], i64 1
-; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 [[TMP]], ptr align 1 [[SRC]], i32 16, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.inline.p0.p0.i32(ptr align 1 [[DEST]], ptr align 1 [[TMP]], i32 16, i1 false)
+; CHECK-NEXT:    [[DEST:%.*]] = getelementptr inbounds i8, ptr [[ARG:%.*]], i64 1
 ; CHECK-NEXT:    ret void
 ;
   %tmp = alloca [16 x i8], align 1
