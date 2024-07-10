@@ -209,11 +209,30 @@ Example 7 - Addresses as symbol names:
 
 Example 8 - :option:`--skip-line-zero` output for an address with no line correspondence (an address associated with line zero):
 
+.. code-block:: c
+
+  // test.c
+  int foo = 0;
+  int x = 1234;
+  int main() {
+    if (x)
+      return foo;
+    else
+      return x;
+  }
+
+These files are built as follows:
+
 .. code-block:: console
 
-  $ llvm-symbolizer --obj=test.elf --skip-line-zero 0xa
+  $ clang -g -O2 -S test.c -o test.s
+  $ llvm-mc -filetype=obj -triple=x86_64-unknown-linux  test.s -o test.o
+
+.. code-block:: console
+
+  $ llvm-symbolizer --obj=test.o --skip-line-zero 0xa
   main
-  /tmp/test/main.c:4:6 (approximate)
+  /tmp/test.c:5:7 (approximate)
 
 OPTIONS
 -------
