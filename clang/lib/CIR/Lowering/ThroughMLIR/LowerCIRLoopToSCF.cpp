@@ -204,19 +204,6 @@ void SCFLoop::analysis() {
   assert(upperBound && "can't find loop upper bound");
 }
 
-// Return true if op operation is in the loop body.
-static bool isInLoopBody(mlir::Operation *op) {
-  mlir::Operation *parentOp = op->getParentOp();
-  if (!parentOp)
-    return false;
-  if (isa<mlir::scf::ForOp>(parentOp))
-    return true;
-  auto forOp = dyn_cast<mlir::cir::ForOp>(parentOp);
-  if (forOp && (&forOp.getBody() == op->getParentRegion()))
-    return true;
-  return false;
-}
-
 void SCFLoop::transferToSCFForOp() {
   auto ub = getUpperBound();
   auto lb = getLowerBound();
@@ -236,12 +223,13 @@ void SCFLoop::transferToSCFForOp() {
           "Not support lowering loop with break, continue or if yet");
     // Replace the IV usage to scf loop induction variable.
     if (isIVLoad(op, IVAddr)) {
-      auto newIV = scfForOp.getInductionVar();
-      op->getResult(0).replaceAllUsesWith(newIV);
-      // Only erase the IV load in the loop body because all the operations
-      // in loop step and condition regions will be erased.
-      if (isInLoopBody(op))
-        rewriter->eraseOp(op);
+      // Replace CIR IV load with arith.addi scf.IV, 0.
+      // The replacement makes the SCF IV can be automatically propogated
+      // by OpAdaptor for individual IV user lowering.
+      // The redundant arith.addi can be removed by later MLIR passes.
+      rewriter->setInsertionPoint(op);
+      auto newIV = plusConstant(scfForOp.getInductionVar(), loc, 0);
+      rewriter->replaceOp(op, newIV.getDefiningOp());
     }
     return mlir::WalkResult::advance();
   });
