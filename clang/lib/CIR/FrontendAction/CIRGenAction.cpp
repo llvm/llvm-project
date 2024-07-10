@@ -22,27 +22,27 @@ class CIRGenConsumer : public clang::ASTConsumer {
 
   virtual void anchor();
 
-  std::unique_ptr<raw_pwrite_stream> outputStream;
+  std::unique_ptr<raw_pwrite_stream> OutputStream;
 
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
-  std::unique_ptr<CIRGenerator> gen;
+  std::unique_ptr<CIRGenerator> Gen;
 
 public:
-  CIRGenConsumer(CIRGenAction::OutputType action,
-                 DiagnosticsEngine &diagnosticsEngine,
+  CIRGenConsumer(CIRGenAction::OutputType Action,
+                 DiagnosticsEngine &DiagnosticsEngine,
                  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                 const HeaderSearchOptions &headerSearchOptions,
-                 const CodeGenOptions &codeGenOptions,
-                 const TargetOptions &targetOptions,
-                 const LangOptions &langOptions,
-                 const FrontendOptions &feOptions,
-                 std::unique_ptr<raw_pwrite_stream> os)
-      : outputStream(std::move(os)), FS(VFS),
-        gen(std::make_unique<CIRGenerator>(diagnosticsEngine, std::move(VFS),
-                                           codeGenOptions)) {}
+                 const HeaderSearchOptions &HeaderSearchOptions,
+                 const CodeGenOptions &CodeGenOptions,
+                 const TargetOptions &TargetOptions,
+                 const LangOptions &LangOptions,
+                 const FrontendOptions &FEOptions,
+                 std::unique_ptr<raw_pwrite_stream> OS)
+      : OutputStream(std::move(OS)), FS(VFS),
+        Gen(std::make_unique<CIRGenerator>(DiagnosticsEngine, std::move(VFS),
+                                           CodeGenOptions)) {}
 
   bool HandleTopLevelDecl(DeclGroupRef D) override {
-    gen->HandleTopLevelDecl(D);
+    Gen->HandleTopLevelDecl(D);
     return true;
   }
 };
@@ -57,12 +57,12 @@ CIRGenAction::~CIRGenAction() { MLIRMod.release(); }
 
 std::unique_ptr<ASTConsumer>
 CIRGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
-  std::unique_ptr<llvm::raw_pwrite_stream> out = CI.takeOutputStream();
+  std::unique_ptr<llvm::raw_pwrite_stream> Out = CI.takeOutputStream();
 
   auto Result = std::make_unique<cir::CIRGenConsumer>(
       Action, CI.getDiagnostics(), &CI.getVirtualFileSystem(),
       CI.getHeaderSearchOpts(), CI.getCodeGenOpts(), CI.getTargetOpts(),
-      CI.getLangOpts(), CI.getFrontendOpts(), std::move(out));
+      CI.getLangOpts(), CI.getFrontendOpts(), std::move(Out));
 
   return Result;
 }
