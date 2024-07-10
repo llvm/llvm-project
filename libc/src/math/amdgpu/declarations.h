@@ -65,6 +65,8 @@ float __ocml_nextafter_f32(float, float);
 double __ocml_nextafter_f64(double, double);
 float __ocml_pow_f32(float, float);
 double __ocml_pow_f64(double, double);
+float __ocml_pown_f32(float, int);
+double __ocml_pown_f64(double, int);
 float __ocml_sin_f32(float);
 double __ocml_sin_f64(double);
 float __ocml_sincos_f32(float, float *);
