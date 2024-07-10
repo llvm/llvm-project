@@ -16,7 +16,10 @@ File containing pass for loop unroll and jam transformation
 #include "mlir/Support/LLVM.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
+#include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include <map>
+#include "../lib/Analysis/SliceAnalysis.cpp"
+#include "llvm/ADT/TypeSwitch.h"
 namespace mlir {
     #define GEN_PASS_DEF_SCFLOOPUNROLLJAM
     #include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
@@ -24,6 +27,7 @@ namespace mlir {
 using namespace llvm;
 using namespace mlir;
 using namespace mlir::scf;
+using namespace mlir::affine;
 using scf::ForOp;
 
 
@@ -80,7 +84,6 @@ namespace{
             }
         }
         std::optional<uint64_t> getConstantTripCount(scf::ForOp forOp) {
-            // This is a placeholder implementation. You need to adapt it to your use case.
             auto lowerBoundConst = forOp.getLowerBound().getDefiningOp<arith::ConstantIndexOp>();
             auto upperBoundConst = forOp.getUpperBound().getDefiningOp<arith::ConstantIndexOp>();
             auto stepConst = forOp.getStep().getDefiningOp<arith::ConstantIndexOp>();
@@ -107,7 +110,6 @@ namespace{
         }
         void loopNestMapper(ForOp op,std::map<ForOp, int> &outerLoopMap,
         std::map<ForOp, int> &innerLoopMap) {
-            /*Identifies if a given for loop is the inner most scf ForOp*/
             op.getBody()->walk([&](ForOp nestedForOp){
                 outerLoopMap[op]+=1;
                 innerLoopMap[nestedForOp]+=1;
@@ -115,12 +117,10 @@ namespace{
         }
         void loopGatherer(Operation *op, std::map<ForOp, int> &outerLoopMap,
         std::map<ForOp, int> &innerLoopMap) {
-            /*Function gathers all the innermost scf for loops*/
             op->walk([&](ForOp forOp) {
                 loopNestMapper(forOp,outerLoopMap,innerLoopMap);
             });
         }
-
         void duplicateArgs(SmallVector<IRMapping> &mapper, SmallVector<ForOp> &newInnerLoops,
          ForOp &forOp, IRRewriter &rewriter,
           const SmallVector<ForOp> &innerLoops, unsigned unrollJamFactor) {
@@ -160,7 +160,6 @@ namespace{
 
         Value createUpdatedInductionVar(unsigned i, Value iv, OpBuilder &builder,
                                   Value step) {
-            /*Function writes ir to update the induction variable*/
             Location loc = iv.getLoc();
             Value constantI = builder.create<arith::ConstantIndexOp>(loc, i);
             Value increment =builder.create<arith::MulIOp>(loc, constantI, step);
@@ -207,6 +206,85 @@ namespace{
                 }
             }
         }
+        void getReductions(ForOp forOp, SmallVectorImpl<LoopReduction> &reductions) {
+            ValueRange iterArgs = forOp.getRegionIterArgs();
+            unsigned numIterArgs = iterArgs.size();
+
+            if (numIterArgs == 0)
+            {
+                llvm::errs()<<"Iter args == 0";
+                return;   
+            }
+            llvm::errs()<<"Iter args"<<numIterArgs;
+            reductions.reserve(numIterArgs);
+            for (unsigned i = 0; i < numIterArgs; ++i) {
+                arith::AtomicRMWKind kind;
+                if (Value value = getReduction(forOp, i, kind))
+                {
+                    llvm::errs()<<"Inside here \n";
+                    reductions.emplace_back(LoopReduction{kind, i, value});
+                    llvm::errs()<<"\nValue "<<value;
+                }
+                
+            }
+        }
+        Value getReduction(ForOp forOp, unsigned pos,
+                                    arith::AtomicRMWKind &kind) {
+            SmallVector<Operation *> combinerOps;
+            Value reducedVal = matchReduction(forOp.getRegionIterArgs(), pos, combinerOps);
+            if (!reducedVal)return nullptr;
+    
+            if (combinerOps.size() > 1)return nullptr;
+            
+            Operation *combinerOp = combinerOps.back();
+            std::optional<arith::AtomicRMWKind> maybeKind =
+                mlir::TypeSwitch<Operation *, std::optional<arith::AtomicRMWKind>>(combinerOp)
+                    .Case([](arith::AddFOp) { return arith::AtomicRMWKind::addf; })
+                    .Case([](arith::MulFOp) { return arith::AtomicRMWKind::mulf; })
+                    .Case([](arith::AddIOp) { return arith::AtomicRMWKind::addi; })
+                    .Case([](arith::AndIOp) { return arith::AtomicRMWKind::andi; })
+                    .Case([](arith::OrIOp) { return arith::AtomicRMWKind::ori; })
+                    .Case([](arith::MulIOp) { return arith::AtomicRMWKind::muli; })
+                    .Case(
+                        [](arith::MinimumFOp) { return arith::AtomicRMWKind::minimumf; })
+                    .Case(
+                        [](arith::MaximumFOp) { return arith::AtomicRMWKind::maximumf; })
+                    .Case([](arith::MinSIOp) { return arith::AtomicRMWKind::mins; })
+                    .Case([](arith::MaxSIOp) { return arith::AtomicRMWKind::maxs; })
+                    .Case([](arith::MinUIOp) { return arith::AtomicRMWKind::minu; })
+                    .Case([](arith::MaxUIOp) { return arith::AtomicRMWKind::maxu; })
+                    .Default([](Operation *) -> std::optional<arith::AtomicRMWKind> {
+                        return std::nullopt;
+                    });
+            if (!maybeKind)
+                return nullptr;
+            
+            kind = *maybeKind;
+            return reducedVal;
+        }
+        void updateReductions(ForOp forOp, IRRewriter &rewriter,
+        SmallVector<LoopReduction> &reductions)
+        {
+            rewriter.setInsertionPointAfter(forOp);
+            auto loc = forOp.getLoc();
+            unsigned oldNumResults = forOp.getNumResults() / unrollJamFactor;
+            for (LoopReduction &reduction : reductions) {
+                unsigned pos = reduction.iterArgPosition;
+                Value lhs = forOp.getResult(pos);
+                Value rhs;
+                SmallPtrSet<Operation *, 4> newOps;
+                for (unsigned i = unrollJamFactor - 1; i >= 1; --i) {
+                    rhs = forOp.getResult(i * oldNumResults + pos);
+                    lhs = arith::getReductionOp(reduction.kind, rewriter, loc, lhs, rhs);
+                    if (!lhs)
+                    return;
+                    Operation *op = lhs.getDefiningOp();
+                    assert(op && "Reduction op should have been created");
+                    newOps.insert(op);
+                }
+            forOp.getResult(pos).replaceAllUsesExcept(lhs, newOps);
+            }
+        }   
         LogicalResult loopUnrollJamByFactor(ForOp forOp)
         {
             if(unrollJamFactor ==1) return success();
@@ -222,6 +300,12 @@ namespace{
             SmallVector<ForOp> innerLoops;
             forOp.walk([&](ForOp innerForOp) { innerLoops.push_back(innerForOp); });
 
+            SmallVector<LoopReduction> reductions;
+            ValueRange iterArgs = forOp.getRegionIterArgs();
+            unsigned numIterOperands = iterArgs.size();
+            if (numIterOperands > 0)
+                getReductions(forOp, reductions);
+
             SmallVector<IRMapping> mapper(unrollJamFactor - 1);
             IRRewriter rewriter(forOp.getContext());
             SmallVector<ForOp> newInnerLoops;
@@ -229,6 +313,9 @@ namespace{
             updateStep(forOp,rewriter); 
             auto forOpInductionVar = forOp.getInductionVar();
             finalUnrollJam(forOpInductionVar,subBlocks,mapper,newInnerLoops,forOp);
+            if (forOp.getNumResults() > 0) {
+                updateReductions(forOp,rewriter,reductions);
+            }
             (void)forOp.promoteIfSingleIteration(rewriter);
             return success();
         } 
