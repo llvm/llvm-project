@@ -147,6 +147,31 @@ struct hoistLoopInvariantInCondBlock : public OpRewritePattern<ForOp> {
     return true;
   }
 
+  // Return true for loop invariant operation and push it to initOps.
+  bool isLoopInvariantOp(Operation *op, ForOp forOp,
+                         SmallVector<Operation *> &initOps) const {
+    if (!op)
+      return false;
+    if (isa<ConstantOp>(op) || isLoopInvariantLoad(op, forOp)) {
+      initOps.push_back(op);
+      return true;
+    } else if (isa<BinOp>(op) &&
+               isLoopInvariantOp(op->getOperand(0).getDefiningOp(), forOp,
+                                 initOps) &&
+               isLoopInvariantOp(op->getOperand(1).getDefiningOp(), forOp,
+                                 initOps)) {
+      initOps.push_back(op);
+      return true;
+    } else if (isa<mlir::cir::CastOp>(op) &&
+               isLoopInvariantOp(op->getOperand(0).getDefiningOp(), forOp,
+                                 initOps)) {
+      initOps.push_back(op);
+      return true;
+    }
+
+    return false;
+  }
+
   LogicalResult matchAndRewrite(ForOp forOp,
                                 PatternRewriter &rewriter) const final {
     auto *cond = &forOp.getCond().front();
@@ -164,16 +189,10 @@ struct hoistLoopInvariantInCondBlock : public OpRewritePattern<ForOp> {
 
     Value cmpRhs = loopCmp.getRhs();
     auto defOp = cmpRhs.getDefiningOp();
-    SmallVector<Operation *> ops;
-    // Go through the cast if exist.
-    if (defOp && isa<mlir::cir::CastOp>(defOp)) {
-      ops.push_back(defOp);
-      defOp = defOp->getOperand(0).getDefiningOp();
-    }
-    if (defOp &&
-        (isa<ConstantOp>(defOp) || isLoopInvariantLoad(defOp, forOp))) {
-      ops.push_back(defOp);
-      for (auto op : reverse(ops))
+    SmallVector<Operation *> initOps;
+    // Collect loop invariant operations and move them before forOp.
+    if (isLoopInvariantOp(defOp, forOp, initOps)) {
+      for (auto op : initOps)
         op->moveBefore(forOp);
       return success();
     }
