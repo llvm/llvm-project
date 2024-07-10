@@ -396,6 +396,17 @@ static Error getExtensionVersion(StringRef Ext, StringRef In, unsigned &Major,
 }
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
+RISCVISAInfo::createFromExtMap(unsigned XLen,
+                               const RISCVISAUtils::OrderedExtensionMap &Exts) {
+  assert(XLen == 32 || XLen == 64);
+  std::unique_ptr<RISCVISAInfo> ISAInfo(new RISCVISAInfo(XLen));
+
+  ISAInfo->Exts = Exts;
+
+  return RISCVISAInfo::postProcessAndChecking(std::move(ISAInfo));
+}
+
+llvm::Expected<std::unique_ptr<RISCVISAInfo>>
 RISCVISAInfo::parseFeatures(unsigned XLen,
                             const std::vector<std::string> &Features) {
   assert(XLen == 32 || XLen == 64);

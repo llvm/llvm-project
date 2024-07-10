@@ -1251,9 +1251,8 @@ mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
     }
   }
 
-  if (hasArch) {
-    if (auto result = RISCVISAInfo::postProcessAndChecking(
-            std::make_unique<RISCVISAInfo>(xlen, exts))) {
+  if (hasArch && xlen != 0) {
+    if (auto result = RISCVISAInfo::createFromExtMap(xlen, exts)) {
       merged.strAttr.try_emplace(RISCVAttrs::ARCH,
                                  saver().save((*result)->toString()));
     } else {
