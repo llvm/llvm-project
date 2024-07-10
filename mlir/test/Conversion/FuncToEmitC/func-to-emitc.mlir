@@ -104,3 +104,19 @@ func.func @index_args_only(%i: index) -> f32 {
   %0 = arith.constant 0.0 : f32
   return %0 : f32
 }
+
+// -----
+
+// CHECK-LABEL: emitc.func private @return_void() attributes {specifiers = ["static"]}
+// CHECK-NEXT: emitc.return
+func.func private @return_void() {
+  return
+}
+
+// CHECK-LABEL: emitc.func @call()
+// CHECK-NEXT: emitc.call @return_void() : () -> ()
+// CHECK-NEXT: emitc.return
+func.func @call() {
+  call @return_void() : () -> ()
+  return
+}
