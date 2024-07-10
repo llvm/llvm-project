@@ -26,9 +26,6 @@ public:
   RISCVISAInfo(const RISCVISAInfo &) = delete;
   RISCVISAInfo &operator=(const RISCVISAInfo &) = delete;
 
-  RISCVISAInfo(unsigned XLen, RISCVISAUtils::OrderedExtensionMap &Exts)
-      : XLen(XLen), FLen(0), MinVLen(0), MaxELen(0), MaxELenFp(0), Exts(Exts) {}
-
   /// Parse RISC-V ISA info from arch string.
   /// If IgnoreUnknown is set, any unrecognised extension names or
   /// extensions with unrecognised versions will be silently dropped, except
@@ -36,8 +33,7 @@ public:
   /// default version will be used (as ignoring the base is not possible).
   static llvm::Expected<std::unique_ptr<RISCVISAInfo>>
   parseArchString(StringRef Arch, bool EnableExperimentalExtension,
-                  bool ExperimentalExtensionVersionCheck = true,
-                  bool IgnoreUnknown = false);
+                  bool ExperimentalExtensionVersionCheck = true);
 
   /// Parse RISC-V ISA info from an arch string that is already in normalized
   /// form (as defined in the psABI). Unlike parseArchString, this function
@@ -48,6 +44,10 @@ public:
   /// Parse RISC-V ISA info from feature vector.
   static llvm::Expected<std::unique_ptr<RISCVISAInfo>>
   parseFeatures(unsigned XLen, const std::vector<std::string> &Features);
+
+  static llvm::Expected<std::unique_ptr<RISCVISAInfo>>
+  createFromExtMap(unsigned XLen,
+                   const RISCVISAUtils::OrderedExtensionMap &Exts);
 
   /// Convert RISC-V ISA info to a feature vector.
   std::vector<std::string> toFeatures(bool AddAllExtensions = false,
@@ -73,8 +73,6 @@ public:
   static bool isSupportedExtensionWithVersion(StringRef Ext);
   static bool isSupportedExtension(StringRef Ext, unsigned MajorVersion,
                                    unsigned MinorVersion);
-  static llvm::Expected<std::unique_ptr<RISCVISAInfo>>
-  postProcessAndChecking(std::unique_ptr<RISCVISAInfo> &&ISAInfo);
   static std::string getTargetFeatureForExtension(StringRef Ext);
 
 private:
@@ -87,8 +85,6 @@ private:
 
   RISCVISAUtils::OrderedExtensionMap Exts;
 
-  bool addExtension(StringRef ExtName, RISCVISAUtils::ExtensionVersion Version);
-
   Error checkDependency();
 
   void updateImplication();
@@ -96,6 +92,9 @@ private:
 
   /// Update FLen, MinVLen, MaxELen, and MaxELenFp.
   void updateImpliedLengths();
+
+  static llvm::Expected<std::unique_ptr<RISCVISAInfo>>
+  postProcessAndChecking(std::unique_ptr<RISCVISAInfo> &&ISAInfo);
 };
 
 } // namespace llvm

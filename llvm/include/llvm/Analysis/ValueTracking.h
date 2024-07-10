@@ -100,6 +100,12 @@ KnownBits analyzeKnownBitsFromAndXorOr(const Operator *I,
                                        const KnownBits &KnownRHS,
                                        unsigned Depth, const SimplifyQuery &SQ);
 
+/// Adjust \p Known for the given select \p Arm to include information from the
+/// select \p Cond.
+void adjustKnownBitsForSelectArm(KnownBits &Known, Value *Cond, Value *Arm,
+                                 bool Invert, unsigned Depth,
+                                 const SimplifyQuery &Q);
+
 /// Return true if LHS and RHS have no common bits set.
 bool haveNoCommonBitsSet(const WithCache<const Value *> &LHSCache,
                          const WithCache<const Value *> &RHSCache,
@@ -270,6 +276,8 @@ struct KnownFPClass {
     return (KnownFPClasses & Mask) == fcNone;
   }
 
+  bool isKnownAlways(FPClassTest Mask) const { return isKnownNever(~Mask); }
+
   bool isUnknown() const {
     return KnownFPClasses == fcAllFlags && !SignBit;
   }
@@ -278,6 +286,9 @@ struct KnownFPClass {
   bool isKnownNeverNaN() const {
     return isKnownNever(fcNan);
   }
+
+  /// Return true if it's known this must always be a nan.
+  bool isKnownAlwaysNaN() const { return isKnownAlways(fcNan); }
 
   /// Return true if it's known this can never be an infinity.
   bool isKnownNeverInfinity() const {

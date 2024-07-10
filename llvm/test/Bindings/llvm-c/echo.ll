@@ -66,6 +66,23 @@ define void @types() {
   ret void
 }
 
+; Target extension types:
+define target("target.ext.1") @target_ext_01(target("target.ext.1") %0) {
+  ret target("target.ext.1") %0
+}
+
+define target("target.ext.2", i8, i1) @target_ext_02(target("target.ext.2", i8, i1) %0) {
+  ret target("target.ext.2", i8, i1) %0
+}
+
+define target("target.ext.3", 7) @target_ext_03(target("target.ext.3", 7) %0) {
+  ret target("target.ext.3", 7) %0
+}
+
+define target("target.ext.4", i1, i32, 7) @target_ext_04(target("target.ext.4", i1, i32, 7) %0) {
+  ret target("target.ext.4", i1, i32, 7) %0
+}
+
 define i32 @iops(i32 %a, i32 %b) {
   %1 = add i32 %a, %b
   %2 = mul i32 %a, %1

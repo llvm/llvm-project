@@ -476,7 +476,7 @@ RawInstrProfReader<IntPtrT>::getTemporalProfTraces(
     return TemporalProfTraces;
   }
   // Sort functions by their timestamps to build the trace.
-  llvm::sort(TemporalProfTimestamps);
+  std::sort(TemporalProfTimestamps.begin(), TemporalProfTimestamps.end());
   TemporalProfTraceTy Trace;
   if (Weight)
     Trace.Weight = *Weight;
@@ -1049,7 +1049,7 @@ public:
     // '_Z'; we'll assume that's the mangled name we want.
     std::pair<StringRef, StringRef> Parts = {StringRef(), Name};
     while (true) {
-      Parts = Parts.second.split(kGlobalIdentifierDelimiter);
+      Parts = Parts.second.split(GlobalIdentifierDelimiter);
       if (Parts.first.starts_with("_Z"))
         return Parts.first;
       if (Parts.second.empty())
