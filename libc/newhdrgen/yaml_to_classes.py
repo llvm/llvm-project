@@ -92,7 +92,9 @@ def yaml_to_classes(yaml_data):
                 )
             )
 
-    for object_data in yaml_data.get("objects", []):
+    objects = yaml_data.get("objects", [])
+    sorted_objects = sorted(objects, key=lambda x: x["object_name"])
+    for object_data in sorted_objects:
         header.add_object(
             Object(object_data["object_name"], object_data["object_type"])
         )
