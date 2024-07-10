@@ -43,46 +43,44 @@ add_compiler_rt_object_libraries(RTLSanCommon
     ADDITIONAL_HEADERS ${LSAN_HEADERS}
     CFLAGS ${LSAN_CFLAGS})
 
-if(COMPILER_RT_HAS_LSAN)
-  add_compiler_rt_component(lsan)
-  if(APPLE)
-    set(LSAN_LINK_LIBS ${SANITIZER_COMMON_LINK_LIBS})
+add_compiler_rt_component(lsan)
+if(APPLE)
+  set(LSAN_LINK_LIBS ${SANITIZER_COMMON_LINK_LIBS})
 
-    add_weak_symbols("lsan" WEAK_SYMBOL_LINK_FLAGS)
-    add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
+  add_weak_symbols("lsan" WEAK_SYMBOL_LINK_FLAGS)
+  add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
 
+  add_compiler_rt_runtime(clang_rt.lsan
+    SHARED
+    OS ${LSAN_SUPPORTED_OS}
+    ARCHS ${LSAN_SUPPORTED_ARCH}
+    SOURCES ${LSAN_SOURCES}
+    ADDITIONAL_HEADERS ${LSAN_HEADERS}
+    OBJECT_LIBS RTLSanCommon
+                RTInterception
+                RTSanitizerCommon
+                RTSanitizerCommonLibc
+                RTSanitizerCommonCoverage
+                RTSanitizerCommonSymbolizer
+    CFLAGS ${LSAN_CFLAGS}
+    LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS} ${WEAK_SYMBOL_LINK_FLAGS}
+    LINK_LIBS ${LSAN_LINK_LIBS}
+    PARENT_TARGET lsan)
+else()
+  foreach(arch ${LSAN_SUPPORTED_ARCH})
     add_compiler_rt_runtime(clang_rt.lsan
-      SHARED
-      OS ${LSAN_SUPPORTED_OS}
-      ARCHS ${LSAN_SUPPORTED_ARCH}
+      STATIC
+      ARCHS ${arch}
       SOURCES ${LSAN_SOURCES}
+              $<TARGET_OBJECTS:RTInterception.${arch}>
+              $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
+              $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
+              $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
+              $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
+              $<TARGET_OBJECTS:RTSanitizerCommonSymbolizerInternal.${arch}>
+              $<TARGET_OBJECTS:RTLSanCommon.${arch}>
       ADDITIONAL_HEADERS ${LSAN_HEADERS}
-      OBJECT_LIBS RTLSanCommon
-                  RTInterception
-                  RTSanitizerCommon
-                  RTSanitizerCommonLibc
-                  RTSanitizerCommonCoverage
-                  RTSanitizerCommonSymbolizer
       CFLAGS ${LSAN_CFLAGS}
-      LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS} ${WEAK_SYMBOL_LINK_FLAGS}
-      LINK_LIBS ${LSAN_LINK_LIBS}
       PARENT_TARGET lsan)
-  else()
-    foreach(arch ${LSAN_SUPPORTED_ARCH})
-      add_compiler_rt_runtime(clang_rt.lsan
-        STATIC
-        ARCHS ${arch}
-        SOURCES ${LSAN_SOURCES}
-                $<TARGET_OBJECTS:RTInterception.${arch}>
-                $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
-                $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
-                $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
-                $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
-                $<TARGET_OBJECTS:RTSanitizerCommonSymbolizerInternal.${arch}>
-                $<TARGET_OBJECTS:RTLSanCommon.${arch}>
-        ADDITIONAL_HEADERS ${LSAN_HEADERS}
-        CFLAGS ${LSAN_CFLAGS}
-        PARENT_TARGET lsan)
-    endforeach()
-  endif()
+  endforeach()
 endif()
