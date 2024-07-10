@@ -2882,6 +2882,9 @@ protected:
   /// Handle thread specific async interrupt and return the original thread
   /// that requested the async interrupt. It can be null if original thread
   /// has exited.
+  ///
+  /// \param[in] description
+  ///     Returns the stop reason description of the async interrupt.
   virtual lldb::ThreadSP
   HandleThreadAsyncInterrupt(uint8_t signo, const std::string &description) {
     return lldb::ThreadSP();

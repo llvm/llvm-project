@@ -28,21 +28,30 @@ ThreadPlanSingleThreadTimeout::ThreadPlanSingleThreadTimeout(Thread &thread,
                                                              TimeoutInfo &info)
     : ThreadPlan(ThreadPlan::eKindSingleThreadTimeout, "Single thread timeout",
                  thread, eVoteNo, eVoteNoOpinion),
-      m_info(info), m_state(State::WaitTimeout), m_exit_flag(false) {
+      m_info(info), m_state(State::WaitTimeout) {
+  // TODO: reuse m_timer_thread without recreation.
   m_timer_thread = std::thread(TimeoutThreadFunc, this);
-  m_info.m_instance = this;
+  m_info.m_isAlive = true;
   m_state = m_info.m_last_state;
 }
 
 ThreadPlanSingleThreadTimeout::~ThreadPlanSingleThreadTimeout() {
-  m_info.m_instance = nullptr;
-  if (m_state == State::Done)
-    m_state = State::WaitTimeout;
+  m_info.m_isAlive = false;
+}
+
+uint64_t ThreadPlanSingleThreadTimeout::GetRemainingTimeoutMicroSeconds() {
+  uint64_t timeout_in_ms = GetThread().GetSingleThreadPlanTimeout();
+  std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+  std::chrono::microseconds duration_us =
+      std::chrono::duration_cast<std::chrono::microseconds>(now -
+                                                            m_timeout_start);
+  return timeout_in_ms * 1000 - duration_us.count();
 }
 
 void ThreadPlanSingleThreadTimeout::GetDescription(
     Stream *s, lldb::DescriptionLevel level) {
-  s->Printf("Single thread timeout, state(%s)", StateToString(m_state).c_str());
+  s->Printf("Single thread timeout, state(%s), remaining %lld us",
+            StateToString(m_state).c_str(), GetRemainingTimeoutMicroSeconds());
 }
 
 std::string ThreadPlanSingleThreadTimeout::StateToString(State state) {
@@ -71,7 +80,9 @@ void ThreadPlanSingleThreadTimeout::PushNewWithTimeout(Thread &thread,
   auto status = thread.QueueThreadPlan(thread_plan_sp,
                                        /*abort_other_plans*/ false);
   Log *log = GetLog(LLDBLog::Step);
-  LLDB_LOGF(log, "ThreadPlanSingleThreadTimeout pushing a brand new one");
+  LLDB_LOGF(
+      log, "ThreadPlanSingleThreadTimeout pushing a brand new one with %llu ms",
+      timeout_in_ms);
 }
 
 void ThreadPlanSingleThreadTimeout::ResumeFromPrevState(Thread &thread,
@@ -80,7 +91,8 @@ void ThreadPlanSingleThreadTimeout::ResumeFromPrevState(Thread &thread,
   if (timeout_in_ms == 0)
     return;
 
-  if (info.m_instance != nullptr)
+  // There is already an instance alive.
+  if (info.m_isAlive)
     return;
 
   // Do not create timeout if we are not stopping other threads.
@@ -92,7 +104,10 @@ void ThreadPlanSingleThreadTimeout::ResumeFromPrevState(Thread &thread,
   auto status = thread.QueueThreadPlan(thread_plan_sp,
                                        /*abort_other_plans*/ false);
   Log *log = GetLog(LLDBLog::Step);
-  LLDB_LOGF(log, "ThreadPlanSingleThreadTimeout reset from previous state");
+  LLDB_LOGF(
+      log,
+      "ThreadPlanSingleThreadTimeout reset from previous state with %llu ms",
+      timeout_in_ms);
 }
 
 bool ThreadPlanSingleThreadTimeout::WillStop() {
@@ -101,7 +116,6 @@ bool ThreadPlanSingleThreadTimeout::WillStop() {
 
   // Reset the state during stop.
   m_info.m_last_state = State::WaitTimeout;
-  m_info.m_instance = this;
   return true;
 }
 
@@ -111,7 +125,7 @@ void ThreadPlanSingleThreadTimeout::DidPop() {
     std::lock_guard<std::mutex> lock(m_mutex);
     LLDB_LOGF(log, "ThreadPlanSingleThreadTimeout::DidPop().");
     // Tell timer thread to exit.
-    m_exit_flag = true;
+    m_info.m_isAlive = false;
   }
   m_wakeup_cv.notify_one();
   // Wait for timer thread to exit.
@@ -119,14 +133,13 @@ void ThreadPlanSingleThreadTimeout::DidPop() {
 }
 
 bool ThreadPlanSingleThreadTimeout::DoPlanExplainsStop(Event *event_ptr) {
-  lldb::StateType stop_state =
-      Process::ProcessEventData::GetStateFromEvent(event_ptr);
+  bool is_timeout_interrupt = IsTimeoutAsyncInterrupt(event_ptr);
   Log *log = GetLog(LLDBLog::Step);
-  LLDB_LOGF(
-      log,
-      "ThreadPlanSingleThreadTimeout::DoPlanExplainsStop(): got event: %s.",
-      StateAsCString(stop_state));
-  return true;
+  LLDB_LOGF(log,
+            "ThreadPlanSingleThreadTimeout::DoPlanExplainsStop() returns %d. "
+            "%llu us remaining.",
+            is_timeout_interrupt, GetRemainingTimeoutMicroSeconds());
+  return is_timeout_interrupt;
 }
 
 lldb::StateType ThreadPlanSingleThreadTimeout::GetPlanRunState() {
@@ -137,15 +150,21 @@ void ThreadPlanSingleThreadTimeout::TimeoutThreadFunc(
     ThreadPlanSingleThreadTimeout *self) {
   std::unique_lock<std::mutex> lock(self->m_mutex);
   uint64_t timeout_in_ms = self->GetThread().GetSingleThreadPlanTimeout();
-  self->m_wakeup_cv.wait_for(lock, std::chrono::milliseconds(timeout_in_ms),
-                             [self] { return self->m_exit_flag; });
-
+  // The thread should wakeup either when timeout or
+  // ThreadPlanSingleThreadTimeout has been popped (not alive).
   Log *log = GetLog(LLDBLog::Step);
+  self->m_timeout_start = std::chrono::steady_clock::now();
+  LLDB_LOGF(
+      log,
+      "ThreadPlanSingleThreadTimeout::TimeoutThreadFunc(), wait for %llu ms",
+      timeout_in_ms);
+  self->m_wakeup_cv.wait_for(lock, std::chrono::milliseconds(timeout_in_ms),
+                             [self] { return !self->m_info.m_isAlive; });
   LLDB_LOGF(log,
-            "ThreadPlanSingleThreadTimeout::TimeoutThreadFunc() called with "
-            "m_exit_flag(%d).",
-            self->m_exit_flag);
-  if (self->m_exit_flag)
+            "ThreadPlanSingleThreadTimeout::TimeoutThreadFunc() wake up with "
+            "m_isAlive(%d).",
+            self->m_info.m_isAlive);
+  if (!self->m_info.m_isAlive)
     return;
 
   self->HandleTimeout();
@@ -163,6 +182,8 @@ bool ThreadPlanSingleThreadTimeout::ShouldStop(Event *event_ptr) {
 }
 
 void ThreadPlanSingleThreadTimeout::SetStopOthers(bool new_value) {
+  // Note: this assumes that the SingleThreadTimeout plan is always going to be
+  // pushed on behalf of the plan directly above it.
   GetPreviousPlan()->SetStopOthers(new_value);
 }
 
@@ -173,16 +194,24 @@ bool ThreadPlanSingleThreadTimeout::StopOthers() {
     return GetPreviousPlan()->StopOthers();
 }
 
-bool ThreadPlanSingleThreadTimeout::HandleEvent(Event *event_ptr) {
+bool ThreadPlanSingleThreadTimeout::IsTimeoutAsyncInterrupt(Event *event_ptr) {
   lldb::StateType stop_state =
       Process::ProcessEventData::GetStateFromEvent(event_ptr);
   Log *log = GetLog(LLDBLog::Step);
-  LLDB_LOGF(log, "ThreadPlanSingleThreadTimeout::HandleEvent(): got event: %s.",
+  LLDB_LOGF(log,
+            "ThreadPlanSingleThreadTimeout::IsTimeoutAsyncInterrupt(): got "
+            "event: %s.",
             StateAsCString(stop_state));
 
   lldb::StopInfoSP stop_info = GetThread().GetStopInfo();
-  if (m_state == State::AsyncInterrupt && stop_state == lldb::eStateStopped &&
-      stop_info && stop_info->GetStopReason() == lldb::eStopReasonInterrupt) {
+  return (m_state == State::AsyncInterrupt &&
+          stop_state == lldb::eStateStopped && stop_info &&
+          stop_info->GetStopReason() == lldb::eStopReasonInterrupt);
+}
+
+bool ThreadPlanSingleThreadTimeout::HandleEvent(Event *event_ptr) {
+  if (IsTimeoutAsyncInterrupt(event_ptr)) {
+    Log *log = GetLog(LLDBLog::Step);
     if (Process::ProcessEventData::GetRestartedFromEvent(event_ptr)) {
       // If we were restarted, we just need to go back up to fetch
       // another event.

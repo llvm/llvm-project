@@ -15,6 +15,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/State.h"
 
+#include <chrono>
 #include <thread>
 
 namespace lldb_private {
@@ -27,9 +28,9 @@ namespace lldb_private {
 // This means this thread plan may be created/destroyed multiple times by the
 // parent execution plan.
 //
-// When timeout happens, the thread plan resolves the potential deadlock by
-// issuing a thread specific async interrupt to enter stop state, then all
-// threads execution are resumed to resolve the potential deadlock.
+// When a timeout happens, the thread plan resolves the potential deadlock by
+// issuing a thread specific async interrupt to enter stop state, then execution
+// is resumed with all threads running to resolve the potential deadlock
 //
 class ThreadPlanSingleThreadTimeout : public ThreadPlan {
   enum class State {
@@ -39,8 +40,10 @@ class ThreadPlanSingleThreadTimeout : public ThreadPlan {
   };
 
 public:
+  // TODO: allow timeout to be set on per thread plan basis.
   struct TimeoutInfo {
-    ThreadPlanSingleThreadTimeout *m_instance = nullptr;
+    // Whether there is a ThreadPlanSingleThreadTimeout instance alive.
+    bool m_isAlive;
     ThreadPlanSingleThreadTimeout::State m_last_state = State::WaitTimeout;
   };
 
@@ -49,7 +52,7 @@ public:
   // If input \param thread is running in single thread mode, push a
   // new ThreadPlanSingleThreadTimeout based on timeout setting from fresh new
   // state. The reference of \param info is passed in so that when
-  // ThreadPlanSingleThreadTimeout got popped out its last state can be stored
+  // ThreadPlanSingleThreadTimeout got popped its last state can be stored
   // in it for future resume.
   static void PushNewWithTimeout(Thread &thread, TimeoutInfo &info);
 
@@ -62,6 +65,7 @@ public:
   bool WillStop() override;
   void DidPop() override;
 
+  bool IsLeafPlan() override { return true; }
   bool DoPlanExplainsStop(Event *event_ptr) override;
 
   lldb::StateType GetPlanRunState() override;
@@ -76,8 +80,10 @@ public:
 private:
   ThreadPlanSingleThreadTimeout(Thread &thread, TimeoutInfo &info);
 
+  bool IsTimeoutAsyncInterrupt(Event *event_ptr);
   bool HandleEvent(Event *event_ptr);
   void HandleTimeout();
+  uint64_t GetRemainingTimeoutMicroSeconds();
 
   static std::string StateToString(State state);
 
@@ -92,9 +98,8 @@ private:
   // thread
   std::mutex m_mutex;
   std::condition_variable m_wakeup_cv;
-  // Whether the timer thread should exit or not.
-  bool m_exit_flag;
   std::thread m_timer_thread;
+  std::chrono::steady_clock::time_point m_timeout_start;
 };
 
 } // namespace lldb_private

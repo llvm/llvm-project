@@ -13,8 +13,8 @@
 
 namespace lldb_private {
 
-// Mixin class that provides capability for ThreadPlan that supports single
-// thread execution to resume all threads after a timeout.
+// Mixin class that provides the capability for ThreadPlan to support single
+// thread execution that resumes all threads after a timeout.
 // Opt-in thread plan should call PushNewTimeout() in its DidPush() and
 // ResumeWithTimeout() during DoWillResume().
 class TimeoutResumeAll {

@@ -27,13 +27,19 @@ void worker(int id) {
   std::cout << "Worker " << id << " finished." << std::endl;
 }
 
+void deadlock_func(std::unique_lock<std::mutex> &lock) {
+  int i = 10;
+  ++i;             // Set interrupt breakpoint here
+  printf("%d", i); // Finish step-over from inner breakpoint
+  auto func = [] { return ready_thread_id == 1; };
+  cv.wait(lock, func);
+}
+
 int simulate_thread() {
   std::thread t1(worker, 1);
 
-  // Wait until signaled by the first thread
   std::unique_lock<std::mutex> lock(mtx);
-  auto func = [] { return ready_thread_id == 1; };
-  cv.wait(lock, func); // Set breakpoint1 here
+  deadlock_func(lock); // Set breakpoint1 here
 
   std::thread t2(worker, 2); // Finish step-over from breakpoint1
 
