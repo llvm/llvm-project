@@ -11,8 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVCounters.h"
-#include <linux/sysctl.h>
-#include <sys/types.h>
 
 namespace llvm {
 namespace exegesis {
@@ -63,12 +61,16 @@ public:
 RISCVCpuCyclesCounter::RISCVCpuCyclesCounter(pfm::PerfEvent &&Event)
     : CounterGroup(std::move(Event), {}) {
   #if defined(__riscv) && defined(__linux__)
-  uint32_t Cycle;
-  size_t Length = sizeof(Cycle);
-  if (!sysctlbyname("kernel.perf_user_access", &Cycle, &Length, NULL, 0) ||
-      Cycle != 1)
+  char Value[2] = "0";
+  int File = 0;
+  std::error_code FileError = sys::fs::openFileForRead("/proc/sys/kernel/watchdog", File);
+  sys::fs::file_t FileNative = sys::fs::convertFDToNativeFile(File);
+  Expected<size_t> ReadBytes = sys::fs::readNativeFile(FileNative, Value);
+
+  if (FileError || !ReadBytes || strcmp(Value, "1") != 0) {
     report_fatal_error(
         "Please write 'sudo echo 1 > /proc/sys/kernel/perf_user_access'");
+  }
   #endif
   StartValue = getRISCVCpuCyclesCount();
   EndValue = getRISCVCpuCyclesCount();
