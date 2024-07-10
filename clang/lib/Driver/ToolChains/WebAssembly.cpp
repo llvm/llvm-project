@@ -61,8 +61,12 @@ std::string wasm::Linker::getLinkerPath(const ArgList &Args) const {
   return ToolChain.GetProgramPath(ToolChain.getDefaultLinker());
 }
 
-static bool IsWasip2(const llvm::Triple &TargetTriple) {
-  return TargetTriple.getOSName() == "wasip2";
+static bool TargetBuildsComponents(const llvm::Triple &TargetTriple) {
+  // WASIp2 and above are all based on components, so test for WASI but exclude
+  // the original `wasi` target in addition to the `wasip1` name.
+  return TargetTriple.isOSWASI()
+         && TargetTriple.getOSName() != "wasip1"
+         && TargetTriple.getOSName() != "wasi";
 }
 
 void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -165,7 +169,7 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // Don't use wasm-opt by default on `wasip2` as it doesn't have support for
   // components at this time. Retain the historical default otherwise, though,
   // of running `wasm-opt` by default.
-  bool WasmOptDefault = !IsWasip2(ToolChain.getTriple());
+  bool WasmOptDefault = !TargetBuildsComponents(ToolChain.getTriple());
   bool RunWasmOpt = Args.hasFlag(options::OPT_wasm_opt,
                                  options::OPT_no_wasm_opt, WasmOptDefault);
 
@@ -251,7 +255,7 @@ WebAssembly::WebAssembly(const Driver &D, const llvm::Triple &Triple,
 }
 
 const char *WebAssembly::getDefaultLinker() const {
-  if (IsWasip2(getTriple()))
+  if (TargetBuildsComponents(getTriple()))
     return "wasm-component-ld";
   return "wasm-ld";
 }
