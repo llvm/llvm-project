@@ -141,6 +141,7 @@ DebugRangesSectionWriter::DebugRangesSectionWriter() {
 }
 
 void DebugRangesSectionWriter::initSection() {
+  // Adds an empty range to the buffer.
   writeAddressRanges(*RangesStream.get(), DebugAddressRangesVector{});
 }
 

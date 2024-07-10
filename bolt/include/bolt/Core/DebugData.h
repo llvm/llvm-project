@@ -226,7 +226,7 @@ public:
   /// Needs to be invoked before each \p CU is processed.
   void virtual initSection(DWARFUnit &CU){};
 
-  /// Inits Ranges section with empty list.
+  /// Initializes Ranges section with empty list.
   void initSection();
 
 protected:
