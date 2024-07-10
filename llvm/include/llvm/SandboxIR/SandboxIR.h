@@ -117,8 +117,9 @@ protected:
   void clearValue() { Val = nullptr; }
   template <typename ItTy, typename SBTy> friend class LLVMOpUserItToSBTy;
 
-public:
   Value(ClassID SubclassID, llvm::Value *Val, Context &Ctx);
+
+public:
   virtual ~Value() = default;
   ClassID getSubclassID() const { return SubclassID; }
 
@@ -146,9 +147,11 @@ public:
 
 /// Argument of a sandboxir::Function.
 class Argument : public sandboxir::Value {
-public:
   Argument(llvm::Argument *Arg, sandboxir::Context &Ctx)
       : sandboxir::Value(ClassID::Argument, Arg, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
   static bool classof(const sandboxir::Value *From) {
     return From->getSubclassID() == ClassID::Argument;
   }
@@ -168,8 +171,10 @@ public:
 };
 
 class User : public Value {
-public:
+protected:
   User(ClassID ID, llvm::Value *V, Context &Ctx) : Value(ID, V, Ctx) {}
+
+public:
   /// For isa/dyn_cast.
   static bool classof(const Value *From);
 #ifndef NDEBUG
@@ -187,9 +192,11 @@ public:
 };
 
 class Constant : public sandboxir::User {
-public:
   Constant(llvm::Constant *C, sandboxir::Context &SBCtx)
       : sandboxir::User(ClassID::Constant, C, SBCtx) {}
+  friend class Context; // For constructor.
+
+public:
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From) {
     return From->getSubclassID() == ClassID::Constant ||
@@ -263,11 +270,11 @@ public:
 #include "llvm/SandboxIR/SandboxIRValues.def"
   };
 
+protected:
   Instruction(ClassID ID, Opcode Opc, llvm::Instruction *I,
               sandboxir::Context &SBCtx)
       : sandboxir::User(ID, I, SBCtx), Opc(Opc) {}
 
-protected:
   Opcode Opc;
 
 public:
@@ -297,11 +304,13 @@ public:
 /// An LLLVM Instruction that has no SandboxIR equivalent class gets mapped to
 /// an OpaqueInstr.
 class OpaqueInst : public sandboxir::Instruction {
-public:
   OpaqueInst(llvm::Instruction *I, sandboxir::Context &Ctx)
       : sandboxir::Instruction(ClassID::Opaque, Opcode::Opaque, I, Ctx) {}
   OpaqueInst(ClassID SubclassID, llvm::Instruction *I, sandboxir::Context &Ctx)
       : sandboxir::Instruction(SubclassID, Opcode::Opaque, I, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
   static bool classof(const sandboxir::Value *From) {
     return From->getSubclassID() == ClassID::Opaque;
   }
@@ -326,11 +335,12 @@ class BasicBlock : public Value {
   void buildBasicBlockFromLLVMIR(llvm::BasicBlock *LLVMBB);
   friend class Context; // For `buildBasicBlockFromIR`
 
-public:
   BasicBlock(llvm::BasicBlock *BB, Context &SBCtx)
       : Value(ClassID::Block, BB, SBCtx) {
     buildBasicBlockFromLLVMIR(BB);
   }
+
+public:
   ~BasicBlock() = default;
   /// For isa/dyn_cast.
   static bool classof(const Value *From) {
@@ -385,7 +395,7 @@ protected:
     auto Pair = LLVMValueToValueMap.insert({LLVMArg, nullptr});
     auto It = Pair.first;
     if (Pair.second) {
-      It->second = std::make_unique<Argument>(LLVMArg, *this);
+      It->second = std::unique_ptr<Argument>(new Argument(LLVMArg, *this));
       return cast<Argument>(It->second.get());
     }
     return cast<Argument>(It->second.get());
@@ -422,10 +432,12 @@ class Function : public sandboxir::Value {
       return *cast<BasicBlock>(Ctx.getValue(&LLVMBB));
     }
   };
-
-public:
+  /// Use Context::createFunction() instead.
   Function(llvm::Function *F, sandboxir::Context &Ctx)
       : sandboxir::Value(ClassID::Function, F, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From) {
     return From->getSubclassID() == ClassID::Function;
