@@ -195,9 +195,9 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addUsedIfAvailable<AAResultsWrapperPass>();
-    AU.addUsedIfAvailable<LiveVariables>();
-    AU.addPreserved<LiveVariables>();
-    AU.addPreserved<SlotIndexes>();
+    AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
+    AU.addPreserved<LiveVariablesWrapperPass>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervals>();
     AU.addPreservedID(MachineLoopInfoID);
     AU.addPreservedID(MachineDominatorsID);
@@ -1762,7 +1762,8 @@ bool TwoAddressInstructionPass::runOnMachineFunction(MachineFunction &Func) {
   TII = MF->getSubtarget().getInstrInfo();
   TRI = MF->getSubtarget().getRegisterInfo();
   InstrItins = MF->getSubtarget().getInstrItineraryData();
-  LV = getAnalysisIfAvailable<LiveVariables>();
+  auto *LVWrapper = getAnalysisIfAvailable<LiveVariablesWrapperPass>();
+  LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
   LIS = getAnalysisIfAvailable<LiveIntervals>();
   if (auto *AAPass = getAnalysisIfAvailable<AAResultsWrapperPass>())
     AA = &AAPass->getAAResults();
