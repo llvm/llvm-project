@@ -1727,6 +1727,10 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
     if (LIS)
       LIS->RemoveMachineInstrFromMaps(*MI);
     MI->eraseFromParent();
+    if (LIS)
+      for (MachineOperand &MO : MI->uses())
+        if (MO.isReg() && MO.getReg().isVirtual())
+          LIS->shrinkToUses(&LIS->getInterval(MO.getReg()));
   }
 }
 
