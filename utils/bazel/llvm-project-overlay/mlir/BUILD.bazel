@@ -930,11 +930,14 @@ exports_files(
 # Some out-of-tree projects alias @python_runtime//:headers to
 # @local_config_python//:python_headers.
 
-MLIR_BINDINGS_PYTHON_HEADERS = [
-    "lib/Bindings/Python/*.h",
-    "include/mlir-c/Bindings/Python/*.h",
-    "include/mlir/Bindings/Python/*.h",
-]
+filegroup(
+    name = "MLIRBindingsPythonHeaderFiles",
+    srcs = glob([
+        "lib/Bindings/Python/*.h",
+        "include/mlir-c/Bindings/Python/*.h",
+        "include/mlir/Bindings/Python/*.h",
+    ]),
+)
 
 cc_library(
     name = "MLIRBindingsPythonHeaders",
@@ -946,7 +949,7 @@ cc_library(
         "manual",  # External dependency
         "nobuildkite",  # TODO(gcmn): Add support for this target
     ],
-    textual_hdrs = glob(MLIR_BINDINGS_PYTHON_HEADERS),
+    textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
         ":CAPIIRHeaders",
         ":CAPITransformsHeaders",
@@ -965,7 +968,7 @@ cc_library(
         "manual",  # External dependency
         "nobuildkite",  # TODO(gcmn): Add support for this target
     ],
-    textual_hdrs = glob(MLIR_BINDINGS_PYTHON_HEADERS),
+    textual_hdrs = [":MLIRBindingsPythonHeaderFiles"],
     deps = [
         ":CAPIIR",
         ":CAPITransforms",
@@ -985,20 +988,23 @@ PYBIND11_FEATURES = [
     "-use_header_modules",
 ]
 
-MLIR_PYTHON_BINDINGS_SOURCES = [
-    "lib/Bindings/Python/IRAffine.cpp",
-    "lib/Bindings/Python/IRAttributes.cpp",
-    "lib/Bindings/Python/IRCore.cpp",
-    "lib/Bindings/Python/IRInterfaces.cpp",
-    "lib/Bindings/Python/IRModule.cpp",
-    "lib/Bindings/Python/IRTypes.cpp",
-    "lib/Bindings/Python/Pass.cpp",
-    "lib/Bindings/Python/Rewrite.cpp",
-]
+filegroup(
+    name = "MLIRBindingsPythonSourceFiles",
+    srcs = [
+        "lib/Bindings/Python/IRAffine.cpp",
+        "lib/Bindings/Python/IRAttributes.cpp",
+        "lib/Bindings/Python/IRCore.cpp",
+        "lib/Bindings/Python/IRInterfaces.cpp",
+        "lib/Bindings/Python/IRModule.cpp",
+        "lib/Bindings/Python/IRTypes.cpp",
+        "lib/Bindings/Python/Pass.cpp",
+        "lib/Bindings/Python/Rewrite.cpp",
+    ],
+)
 
 cc_library(
     name = "MLIRBindingsPythonCore",
-    srcs = MLIR_PYTHON_BINDINGS_SOURCES,
+    srcs = [":MLIRBindingsPythonSourceFiles"],
     copts = PYBIND11_COPTS,
     features = PYBIND11_FEATURES,
     tags = [
@@ -1021,7 +1027,7 @@ cc_library(
 
 cc_library(
     name = "MLIRBindingsPythonCoreNoCAPI",
-    srcs = MLIR_PYTHON_BINDINGS_SOURCES,
+    srcs = [":MLIRBindingsPythonSourceFiles"],
     copts = PYBIND11_COPTS,
     features = PYBIND11_FEATURES,
     tags = [
@@ -1032,9 +1038,9 @@ cc_library(
         ":CAPIAsyncHeaders",
         ":CAPIDebugHeaders",
         ":CAPIIRHeaders",
-        ":config",
         ":MLIRBindingsPythonHeaders",
         ":Support",
+        ":config",
         "//llvm:Support",
         "@local_config_python//:python_headers",
         "@pybind11",
