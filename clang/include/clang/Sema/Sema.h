@@ -3098,7 +3098,7 @@ public:
   TentativeDefinitionsType TentativeDefinitions;
 
   /// All the external declarations encoutered and used in the TU.
-  SmallVector<VarDecl *, 4> ExternalDeclarations;
+  SmallVector<DeclaratorDecl *, 4> ExternalDeclarations;
 
   /// Generally null except when we temporarily switch decl contexts,
   /// like in \see SemaObjC::ActOnObjCTemporaryExitContainerContext.
@@ -4533,8 +4533,7 @@ public:
   bool checkTargetAttr(SourceLocation LiteralLoc, StringRef Str);
 
   /// Check Target Version attrs
-  bool checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
-                              StringRef &Str, bool &isDefault);
+  bool checkTargetVersionAttr(SourceLocation Loc, Decl *D, StringRef Str);
   bool checkTargetClonesAttrString(
       SourceLocation LiteralLoc, StringRef Str, const StringLiteral *Literal,
       Decl *D, bool &HasDefault, bool &HasCommas, bool &HasNotDefault,
@@ -6342,7 +6341,7 @@ public:
     enum ExpressionKind {
       EK_Decltype,
       EK_TemplateArgument,
-      EK_BoundsAttrArgument,
+      EK_AttrArgument,
       EK_Other
     } ExprContext;
 
@@ -6455,10 +6454,9 @@ public:
     return const_cast<Sema *>(this)->parentEvaluationContext();
   };
 
-  bool isBoundsAttrContext() const {
+  bool isAttrContext() const {
     return ExprEvalContexts.back().ExprContext ==
-           ExpressionEvaluationContextRecord::ExpressionKind::
-               EK_BoundsAttrArgument;
+           ExpressionEvaluationContextRecord::ExpressionKind::EK_AttrArgument;
   }
 
   /// Increment when we find a reference; decrement when we find an ignored
@@ -14605,7 +14603,9 @@ public:
                            SourceLocation AttrLoc);
 
   QualType BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
-                                                  Expr *CountExpr);
+                                                  Expr *CountExpr,
+                                                  bool CountInBytes,
+                                                  bool OrNull);
 
   /// BuildAddressSpaceAttr - Builds a DependentAddressSpaceType if an
   /// expression is uninstantiated. If instantiated it will apply the

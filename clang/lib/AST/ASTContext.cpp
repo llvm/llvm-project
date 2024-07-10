@@ -284,10 +284,9 @@ RawComment *ASTContext::getRawCommentForDeclNoCacheImpl(
   StringRef Text(Buffer + CommentEndOffset,
                  DeclLocDecomp.second - CommentEndOffset);
 
-  // There should be no other declarations between comment and declaration.
-  // Preprocessor directives are implicitly allowed to be between a comment and
-  // its associated decl.
-  if (Text.find_last_of(";{}@") != StringRef::npos)
+  // There should be no other declarations or preprocessor directives between
+  // comment and declaration.
+  if (Text.find_last_of(";{}#@") != StringRef::npos)
     return nullptr;
 
   return CommentBeforeDecl;
@@ -12117,7 +12116,7 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
     return false;
 
   // Variables in other module units shouldn't be forced to be emitted.
-  if (VD->shouldEmitInExternalSource())
+  if (VD->isInAnotherModuleUnit())
     return false;
 
   // Variables that can be needed in other TUs are required.

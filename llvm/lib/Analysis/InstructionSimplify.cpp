@@ -1872,14 +1872,11 @@ static Value *simplifyAndOrOfFCmps(const SimplifyQuery &Q, FCmpInst *LHS,
   if ((PredL == FCmpInst::FCMP_ORD || PredL == FCmpInst::FCMP_UNO) &&
       ((FCmpInst::isOrdered(PredR) && IsAnd) ||
        (FCmpInst::isUnordered(PredR) && !IsAnd))) {
-    // (fcmp ord X, NNAN) & (fcmp o** X, Y) --> fcmp o** X, Y
-    // (fcmp uno X, NNAN) & (fcmp o** X, Y) --> false
-    // (fcmp uno X, NNAN) | (fcmp u** X, Y) --> fcmp u** X, Y
-    // (fcmp ord X, NNAN) | (fcmp u** X, Y) --> true
-    if (((LHS1 == RHS0 || LHS1 == RHS1) &&
-         isKnownNeverNaN(LHS0, /*Depth=*/0, Q)) ||
-        ((LHS0 == RHS0 || LHS0 == RHS1) &&
-         isKnownNeverNaN(LHS1, /*Depth=*/0, Q)))
+    // (fcmp ord X, 0) & (fcmp o** X, Y) --> fcmp o** X, Y
+    // (fcmp uno X, 0) & (fcmp o** X, Y) --> false
+    // (fcmp uno X, 0) | (fcmp u** X, Y) --> fcmp u** X, Y
+    // (fcmp ord X, 0) | (fcmp u** X, Y) --> true
+    if ((LHS0 == RHS0 || LHS0 == RHS1) && match(LHS1, m_PosZeroFP()))
       return FCmpInst::isOrdered(PredL) == FCmpInst::isOrdered(PredR)
                  ? static_cast<Value *>(RHS)
                  : ConstantInt::getBool(LHS->getType(), !IsAnd);
@@ -1888,14 +1885,11 @@ static Value *simplifyAndOrOfFCmps(const SimplifyQuery &Q, FCmpInst *LHS,
   if ((PredR == FCmpInst::FCMP_ORD || PredR == FCmpInst::FCMP_UNO) &&
       ((FCmpInst::isOrdered(PredL) && IsAnd) ||
        (FCmpInst::isUnordered(PredL) && !IsAnd))) {
-    // (fcmp o** X, Y) & (fcmp ord X, NNAN) --> fcmp o** X, Y
-    // (fcmp o** X, Y) & (fcmp uno X, NNAN) --> false
-    // (fcmp u** X, Y) | (fcmp uno X, NNAN) --> fcmp u** X, Y
-    // (fcmp u** X, Y) | (fcmp ord X, NNAN) --> true
-    if (((RHS1 == LHS0 || RHS1 == LHS1) &&
-         isKnownNeverNaN(RHS0, /*Depth=*/0, Q)) ||
-        ((RHS0 == LHS0 || RHS0 == LHS1) &&
-         isKnownNeverNaN(RHS1, /*Depth=*/0, Q)))
+    // (fcmp o** X, Y) & (fcmp ord X, 0) --> fcmp o** X, Y
+    // (fcmp o** X, Y) & (fcmp uno X, 0) --> false
+    // (fcmp u** X, Y) | (fcmp uno X, 0) --> fcmp u** X, Y
+    // (fcmp u** X, Y) | (fcmp ord X, 0) --> true
+    if ((RHS0 == LHS0 || RHS0 == LHS1) && match(RHS1, m_PosZeroFP()))
       return FCmpInst::isOrdered(PredL) == FCmpInst::isOrdered(PredR)
                  ? static_cast<Value *>(LHS)
                  : ConstantInt::getBool(LHS->getType(), !IsAnd);
@@ -4117,9 +4111,17 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   // This catches the 2 variable input case, constants are handled below as a
   // class-like compare.
   if (Pred == FCmpInst::FCMP_ORD || Pred == FCmpInst::FCMP_UNO) {
-    if (FMF.noNaNs() || (isKnownNeverNaN(RHS, /*Depth=*/0, Q) &&
-                         isKnownNeverNaN(LHS, /*Depth=*/0, Q)))
+    KnownFPClass RHSClass =
+        computeKnownFPClass(RHS, fcAllFlags, /*Depth=*/0, Q);
+    KnownFPClass LHSClass =
+        computeKnownFPClass(LHS, fcAllFlags, /*Depth=*/0, Q);
+
+    if (FMF.noNaNs() ||
+        (RHSClass.isKnownNeverNaN() && LHSClass.isKnownNeverNaN()))
       return ConstantInt::get(RetTy, Pred == FCmpInst::FCMP_ORD);
+
+    if (RHSClass.isKnownAlwaysNaN() || LHSClass.isKnownAlwaysNaN())
+      return ConstantInt::get(RetTy, Pred == CmpInst::FCMP_UNO);
   }
 
   const APFloat *C = nullptr;

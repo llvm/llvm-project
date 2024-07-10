@@ -131,7 +131,8 @@ public:
   }
 
   /// Converts the pointer to an APValue that is an rvalue.
-  std::optional<APValue> toRValue(const Context &Ctx) const;
+  std::optional<APValue> toRValue(const Context &Ctx,
+                                  QualType ResultType) const;
 
   /// Offsets a pointer inside an array.
   [[nodiscard]] Pointer atIndex(uint64_t Idx) const {
@@ -556,8 +557,16 @@ public:
     if (isUnknownSizeArray())
       return false;
 
-    return isElementPastEnd() ||
+    return isElementPastEnd() || isPastEnd() ||
            (getSize() == getOffset() && !isZeroSizeArray());
+  }
+
+  /// Checks if the pointer points past the end of the object.
+  bool isPastEnd() const {
+    if (isIntegralPointer())
+      return false;
+
+    return !isZero() && Offset > PointeeStorage.BS.Pointee->getSize();
   }
 
   /// Checks if the pointer is an out-of-bounds element pointer.
@@ -629,6 +638,7 @@ private:
   /// Returns the embedded descriptor preceding a field.
   InlineDescriptor *getInlineDesc() const {
     assert(asBlockPointer().Base != sizeof(GlobalInlineDescriptor));
+    assert(asBlockPointer().Base <= asBlockPointer().Pointee->getSize());
     return getDescriptor(asBlockPointer().Base);
   }
 

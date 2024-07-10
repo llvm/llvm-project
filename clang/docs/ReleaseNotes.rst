@@ -43,6 +43,10 @@ code bases.
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
+- Clang now supports raw string literals in ``-std=gnuXY`` mode as an extension in
+  C99 and later. This behaviour can also be overridden using ``-f[no-]raw-string-literals``.
+  Support of raw string literals in C++ is not affected. Fixes (#GH85703).
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 - Clang now diagnoses function/variable templates that shadow their own template parameters, e.g. ``template<class T> void T();``.
@@ -106,6 +110,13 @@ ABI Changes in This Version
   earlier versions of Clang unless such code is built with the compiler option
   `-fms-compatibility-version=19.14` to imitate the MSVC 1914 mangling behavior.
 
+- Fixed Microsoft name mangling for auto non-type template arguments of pointer
+  to member type for MSVC 1920+. This change resolves incompatibilities with code
+  compiled by MSVC 1920+ but will introduce incompatibilities with code compiled by
+  earlier versions of Clang unless such code is built with the compiler option
+  `-fms-compatibility-version=19.14` to imitate the MSVC 1914 mangling behavior.
+  (GH#70899).
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
@@ -146,22 +157,6 @@ Clang Frontend Potentially Breaking Changes
 
 - The ``hasTypeLoc`` AST matcher will no longer match a ``classTemplateSpecializationDecl``;
   existing uses should switch to ``templateArgumentLoc`` or ``hasAnyTemplateArgumentLoc`` instead.
-
-- The comment parser now matches comments to declarations even if there is a
-  preprocessor macro in between the comment and declaration. This change is
-  intended to improve Clang's support for parsing documentation comments and
-  to better conform to Doxygen's behavior.
-
-  This has the potential to cause ``-Wdocumentation`` warnings, especially in
-  cases where a function-like macro has a documentation comment and is followed
-  immediately by a normal function. The function-like macro's documentation
-  comments will be attributed to the subsequent function and may cause
-  ``-Wdocumentation`` warnings such as mismatched parameter names, or invalid
-  return documentation comments.
-
-  In cases where the ``-Wdocumentation`` warnings are thrown, the suggested fix
-  is to document the declaration following the macro so that the warnings are
-  fixed.
 
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
@@ -245,9 +240,6 @@ C++20 Feature Support
   ``<expected>`` from libstdc++ to work correctly with Clang.
 
 - User defined constructors are allowed for copy-list-initialization with CTAD.
-  The example code for deduction guides for std::map in
-  (`cppreference <https://en.cppreference.com/w/cpp/container/map/deduction_guides>`_)
-  will now work.
   (#GH62925).
 
 C++23 Feature Support
@@ -281,6 +273,7 @@ C++2c Feature Support
 
 - Implemented `P2809R3: Trivial infinite loops are not Undefined Behavior <https://wg21.link/P2809R3>`_.
 
+- Implemented `P3144R2 Deleting a Pointer to an Incomplete Type Should be Ill-formed <https://wg21.link/P3144R2>`_.
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -353,6 +346,14 @@ C23 Feature Support
 
 - Properly promote bit-fields of bit-precise integer types to the field's type
   rather than to ``int``. #GH87641
+
+- Added the ``INFINITY`` and ``NAN`` macros to Clang's ``<float.h>``
+  freestanding implementation; these macros were defined in ``<math.h>`` in C99
+  but C23 added them to ``<float.h>`` in
+  `WG14 N2848 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2848.pdf>`_.
+
+- Clang now supports `N3017 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3017.htm>`_
+  ``#embed`` - a scannable, tooling-friendly binary resource inclusion mechanism.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -442,6 +443,17 @@ New Compiler Flags
   Matches MSVC behaviour by defining ``__STDC__`` to ``1`` when
   MSVC compatibility mode is used. It has no effect for C++ code.
 
+- ``-Wc++23-compat`` group was added to help migrating existing codebases
+  to C++23.
+
+- ``-Wc++2c-compat`` group was added to help migrating existing codebases
+  to upcoming C++26.
+
+- ``-fdisable-block-signature-string`` instructs clang not to emit the signature
+  string for blocks. Disabling the string can potentially break existing code
+  that relies on it. Users should carefully consider this possibiilty when using
+  the flag.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -479,6 +491,10 @@ Modified Compiler Flags
 - Trivial infinite loops (i.e loops with a constant controlling expresion
   evaluating to ``true`` and an empty body such as ``while(1);``)
   are considered infinite, even when the ``-ffinite-loop`` flag is set.
+
+- Diagnostics groups about compatibility with a particular C++ Standard version
+  now include dianostics about C++26 features that are not present in older
+  versions.
 
 Removed Compiler Flags
 -------------------------
@@ -542,6 +558,19 @@ Attribute Changes in Clang
        size_t count;
      };
 
+- The attributes ``sized_by``, ``counted_by_or_null`` and ``sized_by_or_null```
+  have been added as variants on ``counted_by``, each with slightly different semantics.
+  ``sized_by`` takes a byte size parameter instead of an element count, allowing pointees
+  with unknown size. The ``counted_by_or_null`` and ``sized_by_or_null`` variants are equivalent
+  to their base variants, except the pointer can be null regardless of count/size value.
+  If the pointer is null the size is effectively 0. ``sized_by_or_null`` is needed to properly
+  annotate allocator functions like ``malloc`` that return a buffer of a given byte size, but can
+  also return null.
+
+- The ``guarded_by``, ``pt_guarded_by``, ``acquired_after``, ``acquired_before``
+  attributes now support referencing struct members in C. The arguments are also
+  now late parsed when ``-fexperimental-late-parse-attributes`` is passed like
+  for ``counted_by``.
 
 - Introduced new function type attributes ``[[clang::nonblocking]]``, ``[[clang::nonallocating]]``,
   ``[[clang::blocking]]``, and ``[[clang::allocating]]``, with GNU-style variants as well.
@@ -657,6 +686,9 @@ Improvements to Clang's diagnostics
   Fixes #GH54492.
 
 - Clang now shows implicit deduction guides when diagnosing overload resolution failure. #GH92393.
+
+- Clang no longer emits a "no previous prototype" warning for Win32 entry points under ``-Wmissing-prototypes``.
+  Fixes #GH94366.
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -955,6 +987,7 @@ Bug Fixes to C++ Support
 - Fix a crash caused by improper use of ``__array_extent``. (#GH80474)
 - Fixed several bugs in capturing variables within unevaluated contexts. (#GH63845), (#GH67260), (#GH69307),
   (#GH88081), (#GH89496), (#GH90669) and (#GH91633).
+- Fixed a crash in constraint instantiation under nested lambdas with dependent parameters.
 - Fixed handling of brace ellison when building deduction guides. (#GH64625), (#GH83368).
 - Clang now instantiates local constexpr functions eagerly for constant evaluators. (#GH35052), (#GH94849)
 - Fixed a failed assertion when attempting to convert an integer representing the difference
@@ -965,6 +998,13 @@ Bug Fixes to C++ Support
   forward-declared class. (#GH93512).
 - Fixed a bug in access checking inside return-type-requirement of compound requirements. (#GH93788).
 - Fixed an assertion failure about invalid conversion when calling lambda. (#GH96205).
+- Fixed a bug where the first operand of binary ``operator&`` would be transformed as if it was the operand
+  of the address of operator. (#GH97483).
+- Fixed an assertion failure about a constant expression which is a known integer but is not
+  evaluated to an integer. (#GH96670).
+- Fixed a bug where references to lambda capture inside a ``noexcept`` specifier were not correctly
+  instantiated. (#GH95735).
+- Fixed a CTAD substitution bug involving type aliases that reference outer template parameters. (#GH94614).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1074,6 +1114,7 @@ RISC-V Support
 
 - ``__attribute__((rvv_vector_bits(N)))`` is now supported for RVV vbool*_t types.
 - Profile names in ``-march`` option are now supported.
+- Passing empty structs/unions as arguments in C++ is now handled correctly. The behavior is similar to GCC's.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
