@@ -15,12 +15,17 @@
 
 #include "CIRGenTypeCache.h"
 
-#include "clang/AST/ASTContext.h"
-#include "clang/Basic/CodeGenOptions.h"
-#include "clang/Basic/Diagnostic.h"
-
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
+
+namespace clang {
+class ASTContext;
+class CodeGenOptions;
+class Decl;
+class DiagnosticsEngine;
+class LangOptions;
+class TargetInfo;
+} // namespace clang
 
 using namespace clang;
 namespace cir {
@@ -33,7 +38,7 @@ class CIRGenModule : public CIRGenTypeCache {
 
 public:
   CIRGenModule(mlir::MLIRContext &context, clang::ASTContext &astctx,
-               const clang::CodeGenOptions &CGO,
+               const clang::CodeGenOptions &cgo,
                clang::DiagnosticsEngine &Diags);
 
   ~CIRGenModule() = default;
