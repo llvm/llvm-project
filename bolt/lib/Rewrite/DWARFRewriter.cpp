@@ -620,8 +620,10 @@ void DWARFRewriter::updateDebugInfo() {
     AddrWriter = std::make_unique<DebugAddrWriter>(&BC);
   }
 
-  if (BC.isDWARFLegacyUsed())
+  if (BC.isDWARFLegacyUsed()) {
     LegacyRangesSectionWriter = std::make_unique<DebugRangesSectionWriter>();
+    LegacyRangesSectionWriter->initSection();
+  }
 
   DebugLoclistWriter::setAddressWriter(AddrWriter.get());
 
@@ -651,7 +653,6 @@ void DWARFRewriter::updateDebugInfo() {
                "LegacyRangeLists writer for DWO unit already exists.");
         auto LegacyRangesSectionWriterByCU =
             std::make_unique<DebugRangesSectionWriter>();
-        LegacyRangesSectionWriterByCU->initSection(CU);
         LegacyRangesWritersByCU[*DWOId] =
             std::move(LegacyRangesSectionWriterByCU);
       }
