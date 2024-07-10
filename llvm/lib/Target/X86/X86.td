@@ -1821,10 +1821,10 @@ def : ProcModel<"pantherlake", AlderlakePModel,
                 ProcessorFeatures.PTLFeatures, ProcessorFeatures.ADLTuning>;
 def : ProcModel<"clearwaterforest", AlderlakePModel,
                 ProcessorFeatures.CWFFeatures, ProcessorFeatures.ADLTuning>;
+def : ProcModel<"emeraldrapids", SapphireRapidsModel,
+                ProcessorFeatures.SPRFeatures, ProcessorFeatures.SPRTuning>;
 def : ProcModel<"graniterapids", SapphireRapidsModel,
                 ProcessorFeatures.GNRFeatures, ProcessorFeatures.GNRTuning>;
-def : ProcModel<"emeraldrapids", SapphireRapidsModel,
-                ProcessorFeatures.SPRFeatures, ProcessorFeatures.GNRTuning>;
 foreach P = ["graniterapids-d", "graniterapids_d"] in {
 def : ProcModel<P, SapphireRapidsModel,
                 ProcessorFeatures.GNRDFeatures, ProcessorFeatures.GNRTuning>;
