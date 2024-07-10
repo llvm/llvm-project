@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import functools
 
+
 class LibcxxUniquePtrDataFormatterSimulatorTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -20,10 +21,13 @@ class LibcxxUniquePtrDataFormatterSimulatorTestCase(TestBase):
         )
         self.expect("frame variable var_up", substrs=["pointer ="])
         self.expect("frame variable var_up", substrs=["deleter ="], matching=False)
-        self.expect("frame variable var_with_deleter_up", substrs=["pointer =", "deleter ="])
+        self.expect(
+            "frame variable var_with_deleter_up", substrs=["pointer =", "deleter ="]
+        )
 
-#for r in range(3):
-for r in range(1):
+
+# for r in range(3):
+for r in [0, 2]:
     name = "test_r%d" % r
     defines = ["COMPRESSED_PAIR_REV=%d" % r]
     f = functools.partialmethod(
