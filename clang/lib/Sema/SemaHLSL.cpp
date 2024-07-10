@@ -487,11 +487,8 @@ bool isDeclaredWithinCOrTBuffer(const Decl *decl) {
 
   // Traverse up the parent contexts
   const DeclContext *context = decl->getDeclContext();
-  while (context) {
-    if (isa<HLSLBufferDecl>(context)) {
-      return true;
-    }
-    context = context->getParent();
+  if (isa<HLSLBufferDecl>(context)) {
+    return true;
   }
 
   return false;
@@ -655,16 +652,22 @@ RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S, Decl *D) {
 int getRegisterTypeIndex(StringRef Slot) {
   switch (Slot[0]) {
   case 't':
+  case 'T':
     return 0;
   case 'u':
+  case 'U':
     return 1;
   case 'b':
+  case 'B ':
     return 2;
   case 's':
+  case 'S':
     return 3;
   case 'c':
+  case 'C':
     return 4;
   case 'i':
+  case 'I':
     return 5;
   default:
     llvm_unreachable("invalid register type");
@@ -675,22 +678,20 @@ static void ValidateMultipleRegisterAnnotations(Sema &S, Decl *D,
                                                 StringRef &Slot) {
   // make sure that there are no tworegister annotations
   // applied to the decl with the same register type
-  bool registerTypesDetectedCount[6];
-  for (int i = 0; i < 6; i++)
-    registerTypesDetectedCount[i] = false;
-  registerTypesDetectedCount[getRegisterTypeIndex(Slot)] = true;
+  bool RegisterTypesDetected[6] = {false};
+  RegisterTypesDetected[getRegisterTypeIndex(Slot)] = true;
 
   for (auto it = D->attr_begin(); it != D->attr_end(); ++it) {
     if (HLSLResourceBindingAttr *attr =
             dyn_cast<HLSLResourceBindingAttr>(*it)) {
-      std::string otherSlot(attr->getSlot().data());
-      int registerTypeIndex = getRegisterTypeIndex(otherSlot);
-      if (registerTypesDetectedCount[registerTypeIndex])
+
+      int registerTypeIndex = getRegisterTypeIndex(attr->getSlot());
+      if (RegisterTypesDetected[registerTypeIndex]) {
         S.Diag(D->getLocation(),
                diag::err_hlsl_conflicting_register_annotations)
-            << otherSlot.substr(0, 1);
-      else {
-        registerTypesDetectedCount[registerTypeIndex] = true;
+            << attr->getSlot().substr(0, 1);
+      } else {
+        RegisterTypesDetected[registerTypeIndex] = true;
       }
     }
   }
@@ -819,7 +820,8 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
   // finally, we handle the udt case
   if (f.UDT) {
     switch (Slot[0]) {
-    case 't': {
+    case 't':
+    case 'T': {
       if (!f.SRV) {
         S.Diag(D->getLocation(),
                diag::warn_hlsl_UDT_missing_resource_type_member)
@@ -827,7 +829,8 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
       }
       break;
     }
-    case 'u': {
+    case 'u':
+    case 'U': {
       if (!f.UAV) {
         S.Diag(D->getLocation(),
                diag::warn_hlsl_UDT_missing_resource_type_member)
@@ -835,7 +838,8 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
       }
       break;
     }
-    case 'b': {
+    case 'b':
+    case 'B': {
       if (!f.CBV) {
         S.Diag(D->getLocation(),
                diag::warn_hlsl_UDT_missing_resource_type_member)
@@ -843,7 +847,8 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
       }
       break;
     }
-    case 's': {
+    case 's':
+    case 'S': {
       if (!f.Sampler) {
         S.Diag(D->getLocation(),
                diag::warn_hlsl_UDT_missing_resource_type_member)
@@ -851,7 +856,8 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
       }
       break;
     }
-    case 'c': {
+    case 'c':
+    case 'C': {
       if (!f.ContainsNumeric)
         S.Diag(D->getLocation(), diag::warn_hlsl_UDT_missing_basic_type);
       break;
@@ -906,11 +912,17 @@ void SemaHLSL::handleResourceBindingAttr(Decl *D, const ParsedAttr &AL) {
   if (!Slot.empty()) {
     switch (Slot[0]) {
     case 't':
+    case 'T':
     case 'u':
+    case 'U':
     case 'b':
+    case 'B':
     case 's':
+    case 'S':
     case 'c':
+    case 'C':
     case 'i':
+    case 'I':
       break;
     default:
       Diag(ArgLoc, diag::err_hlsl_unsupported_register_type_and_resource_type)

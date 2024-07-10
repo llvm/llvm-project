@@ -20,7 +20,7 @@ tbuffer g_tbuffer1 {
     float f5 : register(c2);
 };
 
-tbuffer g_cbuffer2 {
+cbuffer g_cbuffer2 {
 // expected-error@+1{{register binding type 'float' not supported for variable of type 'b'}}
     float f6 : register(b2);
 };
