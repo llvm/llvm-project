@@ -38,8 +38,10 @@ endif()
 if(COMPILER_RT_BUILD_SANITIZERS)
   if(COMPILER_RT_HAS_SANITIZER_COMMON)
     add_subdirectory(stats)
-    compiler_rt_build_runtime(lsan)
-    compiler_rt_build_runtime(ubsan)
+    # Contains RTLSanCommon used even without COMPILER_RT_HAS_LSAN.
+    add_subdirectory(lsan)
+    # Contains RTUbsan used even without COMPILER_RT_HAS_UBSAN.
+    add_subdirectory(lsan)
   endif()
 
   foreach(sanitizer ${COMPILER_RT_SANITIZERS_TO_BUILD})
