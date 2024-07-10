@@ -37,36 +37,39 @@ using namespace mlir;
 namespace {
 
 /// A pass to perform the SPIR-V conversion.
-struct ConvertToSPIRVPass final
-    : impl::ConvertToSPIRVPassBase<ConvertToSPIRVPass> {
+class ConvertToSPIRVPass
+    : public impl::ConvertToSPIRVPassBase<ConvertToSPIRVPass> {
+  using impl::ConvertToSPIRVPassBase<ConvertToSPIRVPass>::ConvertToSPIRVPassBase;
 
   void runOnOperation() override {
     MLIRContext *context = &getContext();
     Operation *op = getOperation();
 
-    // Unroll vectors in function inputs to native vector size.
-    llvm::errs() << "Start unrolling function inputs\n";
-    {
-      RewritePatternSet patterns(context);
-      populateFuncOpVectorRewritePatterns(patterns);
-      GreedyRewriteConfig config;
-      config.strictMode = GreedyRewriteStrictness::ExistingOps;
-      if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
-        return signalPassFailure();
-    }
-    llvm::errs() << "Finish unrolling function inputs\n";
+    if (runSignatureConversion) {
+      // Unroll vectors in function inputs to native vector size.
+      llvm::errs() << "Start unrolling function inputs\n";
+      {
+        RewritePatternSet patterns(context);
+        populateFuncOpVectorRewritePatterns(patterns);
+        GreedyRewriteConfig config;
+        config.strictMode = GreedyRewriteStrictness::ExistingOps;
+        if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
+          return signalPassFailure();
+      }
+      llvm::errs() << "Finish unrolling function inputs\n";
 
-    // Unroll vectors in function outputs to native vector size.
-    llvm::errs() << "Start unrolling function outputs\n";
-    {
-      RewritePatternSet patterns(context);
-      populateReturnOpVectorRewritePatterns(patterns);
-      GreedyRewriteConfig config;
-      config.strictMode = GreedyRewriteStrictness::ExistingOps;
-      if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
-        return signalPassFailure();
+      // Unroll vectors in function outputs to native vector size.
+      llvm::errs() << "Start unrolling function outputs\n";
+      {
+        RewritePatternSet patterns(context);
+        populateReturnOpVectorRewritePatterns(patterns);
+        GreedyRewriteConfig config;
+        config.strictMode = GreedyRewriteStrictness::ExistingOps;
+        if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
+          return signalPassFailure();
+      }
+      llvm::errs() << "Finish unrolling function outputs\n";
     }
-    llvm::errs() << "Finish unrolling function outputs\n";
 
     spirv::TargetEnvAttr targetAttr = spirv::lookupTargetEnvOrDefault(op);
     std::unique_ptr<ConversionTarget> target =
