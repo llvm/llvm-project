@@ -1953,6 +1953,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     break;
 
   case attr::CountedBy:
+  case attr::CountedByOrNull:
+  case attr::SizedBy:
+  case attr::SizedByOrNull:
   case attr::LifetimeBound:
   case attr::TypeNonNull:
   case attr::TypeNullable:
