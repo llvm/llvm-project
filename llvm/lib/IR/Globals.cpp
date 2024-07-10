@@ -183,7 +183,7 @@ std::string GlobalValue::getGlobalIdentifier(StringRef Name,
     else
       GlobalName += FileName;
 
-    GlobalName += kGlobalIdentifierDelimiter;
+    GlobalName += GlobalIdentifierDelimiter;
   }
   GlobalName += Name;
   return GlobalName;
