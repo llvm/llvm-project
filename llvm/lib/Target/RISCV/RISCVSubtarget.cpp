@@ -97,29 +97,32 @@ RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU,
       RVVVectorBitsMin(RVVVectorBitsMin), RVVVectorBitsMax(RVVVectorBitsMax),
       FrameLowering(
           initializeSubtargetDependencies(TT, CPU, TuneCPU, FS, ABIName)),
-      InstrInfo(*this), RegInfo(getHwMode()), TLInfo(TM, *this) {
-  CallLoweringInfo.reset(new RISCVCallLowering(*getTargetLowering()));
-  Legalizer.reset(new RISCVLegalizerInfo(*this));
-
-  auto *RBI = new RISCVRegisterBankInfo(getHwMode());
-  RegBankInfo.reset(RBI);
-  InstSelector.reset(createRISCVInstructionSelector(
-      *static_cast<const RISCVTargetMachine *>(&TM), *this, *RBI));
-}
+      InstrInfo(*this), RegInfo(getHwMode()), TLInfo(TM, *this) {}
 
 const CallLowering *RISCVSubtarget::getCallLowering() const {
+  if (!CallLoweringInfo)
+    CallLoweringInfo.reset(new RISCVCallLowering(*getTargetLowering()));
   return CallLoweringInfo.get();
 }
 
 InstructionSelector *RISCVSubtarget::getInstructionSelector() const {
+  if (!InstSelector) {
+    InstSelector.reset(createRISCVInstructionSelector(
+        *static_cast<const RISCVTargetMachine *>(&TLInfo.getTargetMachine()),
+        *this, *static_cast<const RISCVRegisterBankInfo *>(getRegBankInfo())));
+  }
   return InstSelector.get();
 }
 
 const LegalizerInfo *RISCVSubtarget::getLegalizerInfo() const {
+  if (!Legalizer)
+    Legalizer.reset(new RISCVLegalizerInfo(*this));
   return Legalizer.get();
 }
 
 const RegisterBankInfo *RISCVSubtarget::getRegBankInfo() const {
+  if (!RegBankInfo)
+    RegBankInfo.reset(new RISCVRegisterBankInfo(getHwMode()));
   return RegBankInfo.get();
 }
 
