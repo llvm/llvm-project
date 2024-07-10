@@ -3989,6 +3989,10 @@ def ftime_trace_EQ : Joined<["-"], "ftime-trace=">, Group<f_Group>,
   HelpText<"Similar to -ftime-trace. Specify the JSON file or a directory which will contain the JSON file">,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
   MarshallingInfoString<FrontendOpts<"TimeTracePath">>;
+def ftime_trace_add_filename : Flag<["-"], "ftime-trace-add-filename">, Group<f_Group>,
+  HelpText<"Adds filename to event details wherever supported. Eg: For template instantiation A<int>, details would include A<int>@source_file.h.">,
+  Visibility<[ClangOption, CLOption, DXCOption]>;
+  MarshallingInfoString<FrontendOpts<"TimeTraceAddFilename">>;
 def fproc_stat_report : Joined<["-"], "fproc-stat-report">, Group<f_Group>,
   HelpText<"Print subprocess statistics">;
 def fproc_stat_report_EQ : Joined<["-"], "fproc-stat-report=">, Group<f_Group>,

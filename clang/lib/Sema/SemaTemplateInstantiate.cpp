@@ -3430,6 +3430,8 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
     llvm::raw_string_ostream OS(Name);
     Instantiation->getNameForDiagnostic(OS, getPrintingPolicy(),
                                         /*Qualified=*/true);
+    if (llvm::timeTraceAddFilename())
+      OS << "@" << SourceMgr.getFilename(Instantiation->getLocation());
     return Name;
   });
 
