@@ -37,8 +37,8 @@ class MachineModuleInfoMachO : public MachineModuleInfoImpl {
   DenseMap<MCSymbol *, StubValueTy> ThreadLocalGVStubs;
 
   /// Darwin '$auth_ptr' stubs.  The key is the stub symbol, like
-  /// "Lfoo$addend$auth_ptr$ib$12".  The value is the MCExpr representing that
-  /// pointer, something like "_foo+addend@AUTH(ib, 12)".
+  /// "Lfoo$auth_ptr$ib$12".  The value is the MCExpr representing that
+  /// signed pointer, something like "_foo@AUTH(ib, 12)".
   DenseMap<MCSymbol *, const MCExpr *> AuthPtrStubs;
 
   virtual void anchor(); // Out of line virtual method.

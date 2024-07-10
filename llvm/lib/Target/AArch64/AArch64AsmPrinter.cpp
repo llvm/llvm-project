@@ -861,7 +861,6 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
 
   const Triple &TT = TM.getTargetTriple();
   if (TT.isOSBinFormatMachO()) {
-
     // Output authenticated pointers as indirect symbols, if we have any.
     MachineModuleInfoMachO &MMIMacho =
         MMI->getObjFileInfo<MachineModuleInfoMachO>();
@@ -875,7 +874,7 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
                                      SectionKind::getMetadata()));
       emitAlignment(Align(8));
 
-      for (auto &Stub : Stubs)
+      for (const auto &Stub : Stubs)
         emitAuthenticatedPointer(*OutStreamer, Stub.first, Stub.second);
 
       OutStreamer->addBlankLine();
