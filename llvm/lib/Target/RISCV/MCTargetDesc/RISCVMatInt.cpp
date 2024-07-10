@@ -510,7 +510,7 @@ int getIntMatCost(const APInt &Val, unsigned Size, const MCSubtargetInfo &STI,
   int Cost = 0;
   for (unsigned ShiftVal = 0; ShiftVal < Size; ShiftVal += PlatRegSize) {
     APInt Chunk = Val.ashr(ShiftVal).sextOrTrunc(PlatRegSize);
-    if (FreeZeroes && Chunk == 0)
+    if (FreeZeroes && Chunk.getSExtValue() == 0)
       continue;
     InstSeq MatSeq = generateInstSeq(Chunk.getSExtValue(), STI);
     Cost += getInstSeqCost(MatSeq, HasRVC);
