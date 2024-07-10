@@ -51,11 +51,9 @@ uptr internal_sigprocmask(int how, __sanitizer_sigset_t *set,
                           __sanitizer_sigset_t *oldset);
 
 void SetSigProcMask(__sanitizer_sigset_t *set, __sanitizer_sigset_t *oldset);
-void BlockSignals(__sanitizer_sigset_t *oldset = nullptr,
-                  bool block_async_only = false);
+void BlockSignals(__sanitizer_sigset_t *oldset = nullptr);
 struct ScopedBlockSignals {
-  explicit ScopedBlockSignals(__sanitizer_sigset_t *copy,
-                              bool block_async_only = false);
+  explicit ScopedBlockSignals(__sanitizer_sigset_t *copy);
   ~ScopedBlockSignals();
 
   ScopedBlockSignals &operator=(const ScopedBlockSignals &) = delete;
