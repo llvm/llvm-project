@@ -4240,6 +4240,12 @@ def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
     HelpText<"Enable matrix data type and related builtin functions">,
     MarshallingInfoFlag<LangOpts<"MatrixTypes">>;
 
+defm raw_string_literals : BoolFOption<"raw-string-literals",
+    LangOpts<"RawStringLiterals">, Default<std#".hasRawStringLiterals()">,
+    PosFlag<SetTrue, [], [], "Enable">,
+    NegFlag<SetFalse, [], [], "Disable">,
+    BothFlags<[], [ClangOption, CC1Option], " raw string literals">>;
+
 def fzero_call_used_regs_EQ
     : Joined<["-"], "fzero-call-used-regs=">, Group<f_Group>,
     Visibility<[ClangOption, CC1Option]>,
