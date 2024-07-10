@@ -24,7 +24,7 @@
 #else
 
 #  if __has_builtin(__builtin_verbose_trap)
-#    define _LIBCPP_ASSERTION_HANDLER(message) (__builtin_verbose_trap(message))
+#    define _LIBCPP_ASSERTION_HANDLER(message) __builtin_verbose_trap("libc++", message)
 #  else
 #    define _LIBCPP_ASSERTION_HANDLER(message) ((void)message, __builtin_trap())
 #  endif
