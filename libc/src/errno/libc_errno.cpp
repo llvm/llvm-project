@@ -20,11 +20,11 @@
 #error LIBC_ERRNO_MODE is not defined
 #endif
 
-#if LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_NONE && \
-    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_INTERNAL && \
-    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_EXTERNAL && \
-    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_THREAD_LOCAL && \
-    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_GLOBAL && \
+#if LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_NONE &&                                 \
+    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_INTERNAL &&                             \
+    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_EXTERNAL &&                             \
+    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_THREAD_LOCAL &&                         \
+    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_GLOBAL &&                               \
     LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_LOCATION
 #error LIBC_ERRNO_MODE must be one of the following values: \
 LIBC_ERRNO_MODE_NONE, \
