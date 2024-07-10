@@ -19,8 +19,8 @@
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/SmallSet.h"
 #include "mlir/Transforms/OneToNTypeConversion.h"
+#include "llvm/ADT/SmallSet.h"
 
 namespace mlir {
 
