@@ -39,7 +39,7 @@ class CIRGenModule : public CIRGenTypeCache {
 public:
   CIRGenModule(mlir::MLIRContext &context, clang::ASTContext &astctx,
                const clang::CodeGenOptions &cgo,
-               clang::DiagnosticsEngine &Diags);
+               clang::DiagnosticsEngine &diags);
 
   ~CIRGenModule() = default;
 

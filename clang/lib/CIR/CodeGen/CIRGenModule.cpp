@@ -12,6 +12,7 @@
 
 #include "CIRGenModule.h"
 
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclBase.h"
 
 #include "mlir/IR/BuiltinOps.h"
