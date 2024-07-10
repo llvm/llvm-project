@@ -650,13 +650,8 @@ static Error verifyNoteSection(StringRef Name, endianness Endianness,
   ArrayRef<uint8_t> NameSize = Data.slice(0, 4);
   ArrayRef<uint8_t> DescSize = Data.slice(4, 4);
 
-  uint32_t NameSizeValue = *reinterpret_cast<const uint32_t *>(NameSize.data());
-  uint32_t DescSizeValue = *reinterpret_cast<const uint32_t *>(DescSize.data());
-
-  if (Endianness != endianness::native) {
-    NameSizeValue = byteswap(NameSizeValue);
-    DescSizeValue = byteswap(DescSizeValue);
-  }
+  uint32_t NameSizeValue = support::endian::read32(NameSize.data(), Endianness);
+  uint32_t DescSizeValue = support::endian::read32(DescSize.data(), Endianness);
 
   uint64_t ExpectedDataSize =
       /*NameSize=*/4 + /*DescSize=*/4 + /*Type=*/4 +
