@@ -393,11 +393,9 @@ public:
                                CheckerContext &C) const;
 
   bool isTaintReporterCheckerEnabled = false;
-  CheckerNameRef reporterCheckerName;
+  std::optional<BugType> BT;
 
 private:
-  mutable std::unique_ptr<BugType> BT;
-
   bool checkUncontrolledFormatString(const CallEvent &Call,
                                      CheckerContext &C) const;
 
@@ -1046,10 +1044,7 @@ bool GenericTaintChecker::generateReportIfTainted(const Expr *E, StringRef Msg,
     return false;
 
   // Generate diagnostic.
-  if (!BT)
-    BT.reset(new BugType(reporterCheckerName, "Use of Untrusted Data",
-                         categories::TaintedData));
-  static CheckerProgramPointTag Tag(reporterCheckerName, Msg);
+  static CheckerProgramPointTag Tag(BT->getCheckerName(), Msg);
   if (ExplodedNode *N = C.generateNonFatalErrorNode(C.getState(), &Tag)) {
     auto report = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
     report->addRange(E->getSourceRange());
@@ -1142,7 +1137,8 @@ bool ento::shouldRegisterTaintPropagationChecker(const CheckerManager &mgr) {
 void ento::registerGenericTaintChecker(CheckerManager &Mgr) {
   GenericTaintChecker *checker = Mgr.getChecker<GenericTaintChecker>();
   checker->isTaintReporterCheckerEnabled = true;
-  checker->reporterCheckerName = Mgr.getCurrentCheckerName();
+  checker->BT.emplace(Mgr.getCurrentCheckerName(), "Use of Untrusted Data",
+                      categories::TaintedData);
 }
 
 bool ento::shouldRegisterGenericTaintChecker(const CheckerManager &mgr) {
