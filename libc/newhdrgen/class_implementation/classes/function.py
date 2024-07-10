@@ -23,9 +23,12 @@ class Function:
         self.attributes = attributes or ""
 
     def __str__(self):
-        attributes_str = self.attributes
+        attributes_str = " ".join(self.attributes)
         arguments_str = ", ".join(self.arguments)
-        result = f"{self.return_type} {self.name}({arguments_str}){attributes_str};"
+        if attributes_str == "":
+            result = f"{self.return_type} {self.name}({arguments_str}) __NOEXCEPT;"
+        else:
+            result = f"{attributes_str} {self.return_type} {self.name}({arguments_str}) __NOEXCEPT;"
         if self.guard:
             result = f"#ifdef {self.guard}\n{result}\n#endif // {self.guard}"
         return result
