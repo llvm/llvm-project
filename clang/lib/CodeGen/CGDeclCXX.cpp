@@ -338,7 +338,8 @@ void CodeGenFunction::registerGlobalDtorWithLLVM(const VarDecl &VD,
                                                  llvm::FunctionCallee Dtor,
                                                  llvm::Constant *Addr) {
   // Create a function which calls the destructor.
-  llvm::Function *dtorStub = createAtExitStub(VD, Dtor, Addr);
+  llvm::Function *dtorStub =
+      cast<llvm::Function>(createAtExitStub(VD, Dtor, Addr));
   CGM.AddGlobalDtor(dtorStub);
 }
 
