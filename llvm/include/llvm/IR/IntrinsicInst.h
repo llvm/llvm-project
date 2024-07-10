@@ -1240,9 +1240,6 @@ public:
 /// This class wraps the llvm.memset.inline intrinsic.
 class MemSetInlineInst : public MemSetInst {
 public:
-  ConstantInt *getLength() const {
-    return cast<ConstantInt>(MemSetInst::getLength());
-  }
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::memset_inline;
