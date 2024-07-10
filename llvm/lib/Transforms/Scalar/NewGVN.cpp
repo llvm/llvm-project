@@ -4237,7 +4237,7 @@ PreservedAnalyses NewGVNPass::run(Function &F, AnalysisManager<Function> &AM) {
   auto &AA = AM.getResult<AAManager>(F);
   auto &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
   bool Changed =
-      NewGVN(F, &DT, &AC, &TLI, &AA, &MSSA, F.getParent()->getDataLayout())
+      NewGVN(F, &DT, &AC, &TLI, &AA, &MSSA, F.getDataLayout())
           .runGVN();
   if (!Changed)
     return PreservedAnalyses::all();

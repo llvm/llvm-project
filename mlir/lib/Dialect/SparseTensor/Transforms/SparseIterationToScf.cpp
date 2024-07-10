@@ -164,7 +164,6 @@ public:
       // replace sparse_tensor.yield with scf.yield.
       rewriter.eraseOp(yieldOp);
       rewriter.create<scf::YieldOp>(loc, yields);
-
       const OneToNTypeMapping &resultMapping = adaptor.getResultMapping();
       rewriter.replaceOp(
           op, whileOp.getResults().drop_front(it->getCursor().size()),
@@ -192,6 +191,8 @@ mlir::SparseIterationTypeConverter::SparseIterationTypeConverter() {
 
 void mlir::populateLowerSparseIterationToSCFPatterns(
     TypeConverter &converter, RewritePatternSet &patterns) {
+
+  IterateOp::getCanonicalizationPatterns(patterns, patterns.getContext());
   patterns.add<ExtractIterSpaceConverter, SparseIterateOpConverter>(
       converter, patterns.getContext());
 }

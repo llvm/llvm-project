@@ -237,7 +237,7 @@ void JSONNodeDumper::Visit(const APValue &Value, QualType Ty) {
   std::string Str;
   llvm::raw_string_ostream OS(Str);
   Value.printPretty(OS, Ctx, Ty);
-  JOS.attribute("value", OS.str());
+  JOS.attribute("value", Str);
 }
 
 void JSONNodeDumper::Visit(const ConceptReference *CR) {
@@ -802,7 +802,7 @@ void JSONNodeDumper::VisitTemplateSpecializationType(
   std::string Str;
   llvm::raw_string_ostream OS(Str);
   TST->getTemplateName().print(OS, PrintPolicy);
-  JOS.attribute("templateName", OS.str());
+  JOS.attribute("templateName", Str);
 }
 
 void JSONNodeDumper::VisitInjectedClassNameType(
@@ -824,7 +824,7 @@ void JSONNodeDumper::VisitElaboratedType(const ElaboratedType *ET) {
     std::string Str;
     llvm::raw_string_ostream OS(Str);
     NNS->print(OS, PrintPolicy, /*ResolveTemplateArgs*/ true);
-    JOS.attribute("qualifier", OS.str());
+    JOS.attribute("qualifier", Str);
   }
   if (const TagDecl *TD = ET->getOwnedTagDecl())
     JOS.attribute("ownedTagDecl", createBareDeclRef(TD));
@@ -1246,7 +1246,7 @@ void JSONNodeDumper::VisitObjCMessageExpr(const ObjCMessageExpr *OME) {
   llvm::raw_string_ostream OS(Str);
 
   OME->getSelector().print(OS);
-  JOS.attribute("selector", OS.str());
+  JOS.attribute("selector", Str);
 
   switch (OME->getReceiverKind()) {
   case ObjCMessageExpr::Instance:
@@ -1277,7 +1277,7 @@ void JSONNodeDumper::VisitObjCBoxedExpr(const ObjCBoxedExpr *OBE) {
     llvm::raw_string_ostream OS(Str);
 
     MD->getSelector().print(OS);
-    JOS.attribute("selector", OS.str());
+    JOS.attribute("selector", Str);
   }
 }
 
@@ -1286,7 +1286,7 @@ void JSONNodeDumper::VisitObjCSelectorExpr(const ObjCSelectorExpr *OSE) {
   llvm::raw_string_ostream OS(Str);
 
   OSE->getSelector().print(OS);
-  JOS.attribute("selector", OS.str());
+  JOS.attribute("selector", Str);
 }
 
 void JSONNodeDumper::VisitObjCProtocolExpr(const ObjCProtocolExpr *OPE) {
@@ -1634,7 +1634,7 @@ void JSONNodeDumper::VisitStringLiteral(const StringLiteral *SL) {
   std::string Buffer;
   llvm::raw_string_ostream SS(Buffer);
   SL->outputString(SS);
-  JOS.attribute("value", SS.str());
+  JOS.attribute("value", Buffer);
 }
 void JSONNodeDumper::VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *BLE) {
   JOS.attribute("value", BLE->getValue());

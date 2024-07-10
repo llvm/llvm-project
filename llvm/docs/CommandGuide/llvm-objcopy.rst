@@ -299,6 +299,10 @@ them.
  Allow :program:`llvm-objcopy` to remove sections even if it would leave invalid
  section references. Any invalid sh_link fields will be set to zero.
 
+.. option:: --change-section-lma \*{+-}<val>
+
+ Shift LMA of non-zero-sized segments by ``<val>``.
+
 .. option:: --change-start <incr>, --adjust-start
 
  Add ``<incr>`` to the program's start address. Can be specified multiple

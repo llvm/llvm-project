@@ -228,6 +228,11 @@ private:
   /// unit, while 0 is reserved for NULL.
   llvm::DenseMap<const Decl *, LocalDeclID> DeclIDs;
 
+  /// Set of predefined decls. This is a helper data to determine if a decl
+  /// is predefined. It should be more clear and safer to query the set
+  /// instead of comparing the result of `getDeclID()` or `GetDeclRef()`.
+  llvm::SmallPtrSet<const Decl *, 32> PredefinedDecls;
+
   /// Offset of each declaration in the bitstream, indexed by
   /// the declaration's ID.
   std::vector<serialization::DeclOffset> DeclOffsets;
@@ -495,10 +500,6 @@ private:
   std::vector<SourceRange> NonAffectingRanges;
   std::vector<SourceLocation::UIntTy> NonAffectingOffsetAdjustments;
 
-  /// A list of classes which need to emit the VTable in the corresponding
-  /// object file.
-  llvm::SmallVector<CXXRecordDecl *> PendingEmittingVTables;
-
   /// Computes input files that didn't affect compilation of the current module,
   /// and initializes data structures necessary for leaving those files out
   /// during \c SourceManager serialization.
@@ -563,8 +564,6 @@ private:
   void WriteType(QualType T);
 
   bool isLookupResultExternal(StoredDeclsList &Result, DeclContext *DC);
-  bool isLookupResultEntirelyExternalOrUnreachable(StoredDeclsList &Result,
-                                                   DeclContext *DC);
 
   void GenerateNameLookupTable(const DeclContext *DC,
                                llvm::SmallVectorImpl<char> &LookupTable);
@@ -729,8 +728,7 @@ public:
     if (D->isFromASTFile())
       return false;
     auto I = DeclIDs.find(D);
-    return (I == DeclIDs.end() ||
-            I->second.get() >= clang::NUM_PREDEF_DECL_IDS);
+    return (I == DeclIDs.end() || I->second >= clang::NUM_PREDEF_DECL_IDS);
   };
 
   /// Emit a reference to a declaration.
@@ -845,6 +843,8 @@ public:
   bool hasChain() const { return Chain; }
   ASTReader *getChain() const { return Chain; }
 
+  bool isWritingModule() const { return WritingModule; }
+
   bool isWritingStdCXXNamedModules() const {
     return WritingModule && WritingModule->isNamedModule();
   }
@@ -853,7 +853,9 @@ public:
 
   bool getDoneWritingDeclsAndTypes() const { return DoneWritingDeclsAndTypes; }
 
-  void handleVTable(CXXRecordDecl *RD);
+  bool isDeclPredefined(const Decl *D) const {
+    return PredefinedDecls.count(D);
+  }
 
 private:
   // ASTDeserializationListener implementation
@@ -949,7 +951,6 @@ public:
 
   void InitializeSema(Sema &S) override { SemaPtr = &S; }
   void HandleTranslationUnit(ASTContext &Ctx) override;
-  void HandleVTable(CXXRecordDecl *RD) override { Writer.handleVTable(RD); }
   ASTMutationListener *GetASTMutationListener() override;
   ASTDeserializationListener *GetASTDeserializationListener() override;
   bool hasEmittedPCH() const { return Buffer->IsComplete; }

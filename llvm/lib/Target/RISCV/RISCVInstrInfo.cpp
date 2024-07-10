@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -163,6 +164,18 @@ Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   }
 
   return 0;
+}
+
+bool RISCVInstrInfo::isReallyTriviallyReMaterializable(
+    const MachineInstr &MI) const {
+  if (RISCV::getRVVMCOpcode(MI.getOpcode()) == RISCV::VID_V &&
+      MI.getOperand(1).isUndef() &&
+      /* After RISCVInsertVSETVLI most pseudos will have implicit uses on vl and
+         vtype.  Make sure we only rematerialize before RISCVInsertVSETVLI
+         i.e. -riscv-vsetvl-after-rvv-regalloc=true */
+      !MI.hasRegisterImplicitUseOperand(RISCV::VTYPE))
+    return true;
+  return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
 }
 
 static bool forwardCopyWillClobberTuple(unsigned DstReg, unsigned SrcReg,
@@ -3695,7 +3708,7 @@ void RISCVInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
         .addReg(ScaledRegister, RegState::Kill)
         .addReg(DestReg, RegState::Kill)
         .setMIFlag(Flag);
-  } else if (STI.hasStdExtM() || STI.hasStdExtZmmul()) {
+  } else if (STI.hasStdExtZmmul()) {
     Register N = MRI.createVirtualRegister(&RISCV::GPRRegClass);
     movImm(MBB, II, DL, N, Amount, Flag);
     BuildMI(MBB, II, DL, get(RISCV::MUL), DestReg)

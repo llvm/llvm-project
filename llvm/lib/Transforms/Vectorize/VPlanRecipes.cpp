@@ -39,6 +39,7 @@ using VectorParts = SmallVector<Value *, 2>;
 namespace llvm {
 extern cl::opt<bool> EnableVPlanNativePath;
 }
+extern cl::opt<unsigned> ForceTargetInstructionCost;
 
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
@@ -189,14 +190,12 @@ bool VPRecipeBase::mayHaveSideEffects() const {
 }
 
 void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
-  auto Lane = VPLane::getLastLaneForVF(State.VF);
   VPValue *ExitValue = getOperand(0);
-  if (vputils::isUniformAfterVectorization(ExitValue))
-    Lane = VPLane::getFirstLane();
+  auto Lane = vputils::isUniformAfterVectorization(ExitValue)
+                  ? VPLane::getFirstLane()
+                  : VPLane::getLastLaneForVF(State.VF);
   VPBasicBlock *MiddleVPBB =
       cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
-  assert(MiddleVPBB->getNumSuccessors() == 0 &&
-         "the middle block must not have any successors");
   BasicBlock *MiddleBB = State.CFG.VPBB2IRBB[MiddleVPBB];
   Phi->addIncoming(State.get(ExitValue, VPIteration(State.UF - 1, Lane)),
                    MiddleBB);
@@ -255,6 +254,49 @@ void VPRecipeBase::moveBefore(VPBasicBlock &BB,
   insertBefore(BB, I);
 }
 
+/// Return the underlying instruction to be used for computing \p R's cost via
+/// the legacy cost model. Return nullptr if there's no suitable instruction.
+static Instruction *getInstructionForCost(const VPRecipeBase *R) {
+  if (auto *S = dyn_cast<VPSingleDefRecipe>(R))
+    return dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
+  if (auto *IG = dyn_cast<VPInterleaveRecipe>(R))
+    return IG->getInsertPos();
+  if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(R))
+    return &WidenMem->getIngredient();
+  return nullptr;
+}
+
+InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
+  if (auto *UI = getInstructionForCost(this))
+    if (Ctx.skipCostComputation(UI, VF.isVector()))
+      return 0;
+
+  InstructionCost RecipeCost = computeCost(VF, Ctx);
+  if (ForceTargetInstructionCost.getNumOccurrences() > 0 &&
+      RecipeCost.isValid())
+    RecipeCost = InstructionCost(ForceTargetInstructionCost);
+
+  LLVM_DEBUG({
+    dbgs() << "Cost of " << RecipeCost << " for VF " << VF << ": ";
+    dump();
+  });
+  return RecipeCost;
+}
+
+InstructionCost VPRecipeBase::computeCost(ElementCount VF,
+                                          VPCostContext &Ctx) const {
+  // Compute the cost for the recipe falling back to the legacy cost model using
+  // the underlying instruction. If there is no underlying instruction, returns
+  // 0.
+  Instruction *UI = getInstructionForCost(this);
+  if (UI && isa<VPReplicateRecipe>(this)) {
+    // VPReplicateRecipe may be cloned as part of an existing VPlan-to-VPlan
+    // transform, avoid computing their cost multiple times for now.
+    Ctx.SkipCostComputation.insert(UI);
+  }
+  return UI ? Ctx.getLegacyCost(UI, VF) : 0;
+}
+
 FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
   assert(OpType == OperationType::FPMathOp &&
          "recipe doesn't have fast math flags");
@@ -298,6 +340,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   if (isVectorToScalar())
     return true;
   switch (Opcode) {
+  case Instruction::ICmp:
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnCount:
   case VPInstruction::CalculateTripCountMinusVF:
@@ -340,8 +383,9 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     return Builder.CreateNot(A, Name);
   }
   case Instruction::ICmp: {
-    Value *A = State.get(getOperand(0), Part);
-    Value *B = State.get(getOperand(1), Part);
+    bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
+    Value *A = State.get(getOperand(0), Part, OnlyFirstLaneUsed);
+    Value *B = State.get(getOperand(1), Part, OnlyFirstLaneUsed);
     return Builder.CreateCmp(getPredicate(), A, B, Name);
   }
   case Instruction::Select: {
@@ -442,20 +486,20 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
       return nullptr;
 
     Value *Cond = State.get(getOperand(0), VPIteration(Part, 0));
-    VPRegionBlock *ParentRegion = getParent()->getParent();
-    VPBasicBlock *Header = ParentRegion->getEntryBasicBlock();
-
     // Replace the temporary unreachable terminator with a new conditional
     // branch, hooking it up to backward destination for exiting blocks now and
     // to forward destination(s) later when they are created.
     BranchInst *CondBr =
         Builder.CreateCondBr(Cond, Builder.GetInsertBlock(), nullptr);
-
-    if (getParent()->isExiting())
-      CondBr->setSuccessor(1, State.CFG.VPBB2IRBB[Header]);
-
     CondBr->setSuccessor(0, nullptr);
     Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
+
+    if (!getParent()->isExiting())
+      return CondBr;
+
+    VPRegionBlock *ParentRegion = getParent()->getParent();
+    VPBasicBlock *Header = ParentRegion->getEntryBasicBlock();
+    CondBr->setSuccessor(1, State.CFG.VPBB2IRBB[Header]);
     return CondBr;
   }
   case VPInstruction::BranchOnCount: {
@@ -676,6 +720,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::BranchOnCount:
+  case VPInstruction::BranchOnCond:
     return true;
   };
   llvm_unreachable("switch should return");
@@ -1502,7 +1547,7 @@ void VPVectorPointerRecipe ::execute(VPTransformState &State) {
     // Use i32 for the gep index type when the value is constant,
     // or query DataLayout for a more suitable index type otherwise.
     const DataLayout &DL =
-        Builder.GetInsertBlock()->getModule()->getDataLayout();
+        Builder.GetInsertBlock()->getDataLayout();
     Type *IndexTy = State.VF.isScalable() && (IsReverse || Part > 0)
                         ? DL.getIndexType(IndexedTy->getPointerTo())
                         : Builder.getInt32Ty();
@@ -1941,7 +1986,7 @@ void VPWidenPointerInductionRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPExpandSCEVRecipe::execute(VPTransformState &State) {
   assert(!State.Instance && "cannot be used in per-lane");
-  const DataLayout &DL = State.CFG.PrevBB->getModule()->getDataLayout();
+  const DataLayout &DL = State.CFG.PrevBB->getDataLayout();
   SCEVExpander Exp(SE, DL, "induction");
 
   Value *Res = Exp.expandCodeFor(Expr, Expr->getType(),

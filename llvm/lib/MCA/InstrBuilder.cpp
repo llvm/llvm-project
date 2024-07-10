@@ -14,6 +14,7 @@
 #include "llvm/MCA/InstrBuilder.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/Support/Debug.h"
@@ -504,6 +505,24 @@ void InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
   ID.Reads.resize(CurrentUse);
 }
 
+hash_code hashMCOperand(const MCOperand &MCO) {
+  hash_code TypeHash = hash_combine(MCO.isReg(), MCO.isImm(), MCO.isSFPImm(),
+                                    MCO.isDFPImm(), MCO.isExpr(), MCO.isInst());
+  if (MCO.isReg())
+    return hash_combine(TypeHash, MCO.getReg());
+
+  return TypeHash;
+}
+
+hash_code hashMCInst(const MCInst &MCI) {
+  hash_code InstructionHash = hash_combine(MCI.getOpcode(), MCI.getFlags());
+  for (unsigned I = 0; I < MCI.getNumOperands(); ++I) {
+    InstructionHash =
+        hash_combine(InstructionHash, hashMCOperand(MCI.getOperand(I)));
+  }
+  return InstructionHash;
+}
+
 Error InstrBuilder::verifyInstrDesc(const InstrDesc &ID,
                                     const MCInst &MCI) const {
   if (ID.NumMicroOps != 0)
@@ -519,6 +538,22 @@ Error InstrBuilder::verifyInstrDesc(const InstrDesc &ID,
   StringRef Message = "found an inconsistent instruction that decodes to zero "
                       "opcodes and that consumes scheduler resources.";
   return make_error<InstructionError<MCInst>>(std::string(Message), MCI);
+}
+
+Expected<unsigned> InstrBuilder::getVariantSchedClassID(const MCInst &MCI,
+                                                        unsigned SchedClassID) {
+  const MCSchedModel &SM = STI.getSchedModel();
+  unsigned CPUID = SM.getProcessorID();
+  while (SchedClassID && SM.getSchedClassDesc(SchedClassID)->isVariant())
+    SchedClassID =
+        STI.resolveVariantSchedClass(SchedClassID, &MCI, &MCII, CPUID);
+
+  if (!SchedClassID) {
+    return make_error<InstructionError<MCInst>>(
+        "unable to resolve scheduling class for write variant.", MCI);
+  }
+
+  return SchedClassID;
 }
 
 Expected<const InstrDesc &>
@@ -539,15 +574,13 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
 
   // Try to solve variant scheduling classes.
   if (IsVariant) {
-    unsigned CPUID = SM.getProcessorID();
-    while (SchedClassID && SM.getSchedClassDesc(SchedClassID)->isVariant())
-      SchedClassID =
-          STI.resolveVariantSchedClass(SchedClassID, &MCI, &MCII, CPUID);
-
-    if (!SchedClassID) {
-      return make_error<InstructionError<MCInst>>(
-          "unable to resolve scheduling class for write variant.", MCI);
+    Expected<unsigned> VariantSchedClassIDOrErr =
+        getVariantSchedClassID(MCI, SchedClassID);
+    if (!VariantSchedClassIDOrErr) {
+      return VariantSchedClassIDOrErr.takeError();
     }
+
+    SchedClassID = *VariantSchedClassIDOrErr;
   }
 
   // Check if this instruction is supported. Otherwise, report an error.
@@ -605,7 +638,10 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
     return *Descriptors[DKey];
   }
 
-  auto VDKey = std::make_pair(&MCI, SchedClassID);
+  auto VDKey = std::make_pair(hashMCInst(MCI), SchedClassID);
+  assert(
+      !VariantDescriptors.contains(VDKey) &&
+      "Expected VariantDescriptors to not already have a value for this key.");
   VariantDescriptors[VDKey] = std::move(ID);
   return *VariantDescriptors[VDKey];
 }
@@ -620,9 +656,15 @@ InstrBuilder::getOrCreateInstrDesc(const MCInst &MCI,
   if (Descriptors.find_as(DKey) != Descriptors.end())
     return *Descriptors[DKey];
 
-  unsigned CPUID = STI.getSchedModel().getProcessorID();
-  SchedClassID = STI.resolveVariantSchedClass(SchedClassID, &MCI, &MCII, CPUID);
-  auto VDKey = std::make_pair(&MCI, SchedClassID);
+  Expected<unsigned> VariantSchedClassIDOrErr =
+      getVariantSchedClassID(MCI, SchedClassID);
+  if (!VariantSchedClassIDOrErr) {
+    return VariantSchedClassIDOrErr.takeError();
+  }
+
+  SchedClassID = *VariantSchedClassIDOrErr;
+
+  auto VDKey = std::make_pair(hashMCInst(MCI), SchedClassID);
   if (VariantDescriptors.contains(VDKey))
     return *VariantDescriptors[VDKey];
 

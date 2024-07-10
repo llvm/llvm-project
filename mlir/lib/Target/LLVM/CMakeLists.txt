@@ -32,6 +32,8 @@ endif()
 add_mlir_dialect_library(MLIRNVVMTarget
   NVVM/Target.cpp
 
+  OBJECT
+
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
 
@@ -109,6 +111,8 @@ endif()
 add_mlir_dialect_library(MLIRROCDLTarget
   ROCDL/Target.cpp
 
+  OBJECT
+
   LINK_COMPONENTS
   MCParser
   ${AMDGPU_LIBS}
@@ -128,7 +132,7 @@ if(MLIR_ENABLE_ROCM_CONVERSIONS)
   elseif(DEFINED ENV{ROCM_PATH})
     set(DEFAULT_ROCM_PATH "$ENV{ROCM_PATH}" CACHE PATH "Fallback path to search for ROCm installs")
   else()
-    IF (WIN32)
+    if (WIN32)
       # Avoid setting an UNIX path for Windows.
       # TODO: Eventually migrate to FindHIP once it becomes a part of CMake.
       set(DEFAULT_ROCM_PATH "" CACHE PATH "Fallback path to search for ROCm installs")

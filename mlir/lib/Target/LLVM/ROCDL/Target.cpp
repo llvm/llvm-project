@@ -108,10 +108,6 @@ SerializeGPUModuleBase::SerializeGPUModuleBase(
     for (Attribute attr : files.getValue())
       if (auto file = dyn_cast<StringAttr>(attr))
         fileList.push_back(file.str());
-
-  // By default add all libraries if the toolkit path is not empty.
-  if (!getToolkitPath().empty())
-    deviceLibs = AMDGCNLibraries::All;
 }
 
 void SerializeGPUModuleBase::init() {
@@ -140,9 +136,6 @@ LogicalResult SerializeGPUModuleBase::appendStandardLibs(AMDGCNLibraries libs) {
   if (libs == AMDGCNLibraries::None)
     return success();
   StringRef pathRef = getToolkitPath();
-  // Fail if the toolkit is empty.
-  if (pathRef.empty())
-    return failure();
 
   // Get the path for the device libraries
   SmallString<256> path;
@@ -152,8 +145,8 @@ LogicalResult SerializeGPUModuleBase::appendStandardLibs(AMDGCNLibraries libs) {
 
   // Fail if the path is invalid.
   if (!llvm::sys::fs::is_directory(pathRef)) {
-    getOperation().emitRemark() << "ROCm amdgcn bitcode path: " << pathRef
-                                << " does not exist or is not a directory";
+    getOperation().emitError() << "ROCm amdgcn bitcode path: " << pathRef
+                               << " does not exist or is not a directory";
     return failure();
   }
 
@@ -191,12 +184,12 @@ LogicalResult SerializeGPUModuleBase::appendStandardLibs(AMDGCNLibraries libs) {
 
 std::optional<SmallVector<std::unique_ptr<llvm::Module>>>
 SerializeGPUModuleBase::loadBitcodeFiles(llvm::Module &module) {
-  SmallVector<std::unique_ptr<llvm::Module>> bcFiles;
   // Return if there are no libs to load.
   if (deviceLibs == AMDGCNLibraries::None && fileList.empty())
-    return bcFiles;
+    return SmallVector<std::unique_ptr<llvm::Module>>();
   if (failed(appendStandardLibs(deviceLibs)))
     return std::nullopt;
+  SmallVector<std::unique_ptr<llvm::Module>> bcFiles;
   if (failed(loadBitcodeFilesFromList(module.getContext(), fileList, bcFiles,
                                       true)))
     return std::nullopt;
@@ -230,6 +223,8 @@ void SerializeGPUModuleBase::handleModulePreLink(llvm::Module &module) {
           deviceLibs |= AMDGCNLibraries::Ockl;
         if (funcName.starts_with("__ocml_"))
           deviceLibs |= AMDGCNLibraries::Ocml;
+        if (funcName == "__atomic_work_item_fence")
+          deviceLibs |= AMDGCNLibraries::Hip;
       }
     }
   }
@@ -249,9 +244,8 @@ void SerializeGPUModuleBase::addControlVariables(
   // Helper function for adding control variables.
   auto addControlVariable = [&module](StringRef name, uint32_t value,
                                       uint32_t bitwidth) {
-    if (module.getNamedGlobal(name)) {
+    if (module.getNamedGlobal(name))
       return;
-    }
     llvm::IntegerType *type =
         llvm::IntegerType::getIntNTy(module.getContext(), bitwidth);
     llvm::GlobalVariable *controlVariable = new llvm::GlobalVariable(
@@ -339,12 +333,12 @@ SerializeGPUModuleBase::assembleIsa(StringRef isa) {
 
   if (!tap) {
     emitError(loc, "assembler initialization error");
-    return {};
+    return std::nullopt;
   }
 
   parser->setTargetParser(*tap);
   parser->Run(false);
-  return result;
+  return std::move(result);
 }
 
 std::optional<SmallVector<char, 0>>
@@ -447,8 +441,10 @@ std::optional<SmallVector<char, 0>> SerializeGPUModuleBase::moduleToObjectImpl(
     return SmallVector<char, 0>(serializedISA->begin(), serializedISA->end());
 
   // Compiling to binary requires a valid ROCm path, fail if it's not found.
-  if (getToolkitPath().empty())
+  if (getToolkitPath().empty()) {
     getOperation().emitError() << "invalid ROCm path, please set a valid path";
+    return std::nullopt;
+  }
 
   // Compile to binary.
   return compileToBinary(*serializedISA);
@@ -460,8 +456,6 @@ class AMDGPUSerializer : public SerializeGPUModuleBase {
 public:
   AMDGPUSerializer(Operation &module, ROCDLTargetAttr target,
                    const gpu::TargetOptions &targetOptions);
-
-  gpu::GPUModuleOp getOperation();
 
   std::optional<SmallVector<char, 0>>
   moduleToObject(llvm::Module &llvmModule) override;
@@ -476,10 +470,6 @@ AMDGPUSerializer::AMDGPUSerializer(Operation &module, ROCDLTargetAttr target,
                                    const gpu::TargetOptions &targetOptions)
     : SerializeGPUModuleBase(module, target, targetOptions),
       targetOptions(targetOptions) {}
-
-gpu::GPUModuleOp AMDGPUSerializer::getOperation() {
-  return dyn_cast<gpu::GPUModuleOp>(&SerializeGPUModuleBase::getOperation());
-}
 
 std::optional<SmallVector<char, 0>>
 AMDGPUSerializer::moduleToObject(llvm::Module &llvmModule) {

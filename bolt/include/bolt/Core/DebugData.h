@@ -210,6 +210,15 @@ public:
   static bool classof(const DebugRangesSectionWriter *Writer) {
     return Writer->getKind() == RangesWriterKind::DebugRangesWriter;
   }
+  
+  /// Append a range to the main buffer.
+  void appendToRangeBuffer(const DebugBufferVector &CUBuffer);
+
+  /// Sets Unit DIE to be updated for CU.
+  void setDie(DIE *Die) { this->Die = Die; }
+
+  /// Returns Unit DIE to be updated for CU.
+  DIE *getDie() const { return Die; }
 
   /// Writes out range lists for a current CU being processed.
   void virtual finalizeSection(){};
@@ -224,14 +233,13 @@ protected:
 
   std::mutex WriterMutex;
 
-  /// Current offset in the section (updated as new entries are written).
-  /// Starts with 16 since the first 16 bytes are reserved for an empty range.
-  uint32_t SectionOffset{0};
-
   /// Offset of an empty address ranges list.
   static constexpr uint64_t EmptyRangesOffset{0};
 
 private:
+  /// Stores Unit DIE to be updated for CU.
+  DIE *Die{0};
+
   RangesWriterKind Kind;
 };
 
