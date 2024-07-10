@@ -2109,7 +2109,7 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
     auto *VecTy = dyn_cast<llvm::FixedVectorType>(SrcTy);
     if (!CGM.getCodeGenOpts().PreserveVec3Type) {
       // Handle vec3 special.
-      if (!ClangVecTy->isExtVectorBoolType() && VecTy &&
+      if (VecTy && !ClangVecTy->isExtVectorBoolType() &&
           cast<llvm::FixedVectorType>(VecTy)->getNumElements() == 3) {
         // Our source is a vec3, do a shuffle vector to make it a vec4.
         Value = Builder.CreateShuffleVector(Value, ArrayRef<int>{0, 1, 2, -1},
