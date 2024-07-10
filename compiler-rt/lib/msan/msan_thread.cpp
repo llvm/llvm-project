@@ -3,6 +3,7 @@
 #include "msan_thread.h"
 #include "msan_interface_internal.h"
 
+#include "sanitizer_common/sanitizer_linux.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 
 namespace __msan {
@@ -56,6 +57,7 @@ void MsanThread::TSDDtor(void *tsd) {
 }
 
 void MsanThread::Destroy() {
+  ScopedBlockSignals block(nullptr);
   malloc_storage().CommitBack();
   // We also clear the shadow on thread destruction because
   // some code may still be executing in later TSD destructors
