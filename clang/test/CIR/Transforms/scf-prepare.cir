@@ -137,4 +137,75 @@ module {
     }
     cir.return
   }
+
+  // for (int i = 0; i < 100 - 1; ++i) {}
+  //
+  // Check that the loop upper bound operations(100 - 1) will be hoisted out
+  // of loop.
+  cir.func @loopInvariantBinOp() {
+    // CHECK: %[[C100:.*]] = cir.const #cir.int<100> : !s32i
+    // CHECK: %[[C1:.*]] = cir.const #cir.int<1> : !s32i
+    // CHECK: %[[UPPER_BOUND:.*]] = cir.binop(sub, %[[C100]], %[[C1]]) nsw : !s32i
+    // CHECK: cir.for : cond {
+
+    cir.scope {
+      %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+      %1 = cir.const #cir.int<0> : !s32i
+      cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+      cir.for : cond {
+        %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+        %3 = cir.const #cir.int<100> : !s32i
+        %4 = cir.const #cir.int<1> : !s32i
+        %5 = cir.binop(sub, %3, %4) nsw : !s32i
+        %6 = cir.cmp(lt, %2, %5) : !s32i, !s32i
+        %7 = cir.cast(int_to_bool, %6 : !s32i), !cir.bool
+        cir.condition(%7)
+      } body {
+        cir.scope {
+        }
+        cir.yield
+      } step {
+        %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+        %3 = cir.unary(inc, %2) : !s32i, !s32i
+        cir.store %3, %0 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      }
+    }
+    cir.return
+  }
+
+  // It's a hand-writing test case to check that the operation has block
+  // argument as operand won't be hoisted out of loop.
+  // Note that the current codegen will store the argument first and then
+  // load the value to user. This test case is manually created to check
+  // that the hoisting pass won't break when encounter block argument.
+  cir.func @loopInvariantBinOp_blockArg(%arg0: !s32i) {
+    // CHECK: cir.for : cond {
+    // CHECK: %[[C100:.*]] = cir.const #cir.int<100> : !s32i
+    // CHECK: %[[UPPER_BOUND:.*]] = cir.binop(sub, %[[C100]], %arg0) nsw : !s32i
+
+    cir.scope {
+      %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+      %1 = cir.const #cir.int<0> : !s32i
+      cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+      cir.for : cond {
+        %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+        %3 = cir.const #cir.int<100> : !s32i
+        %5 = cir.binop(sub, %3, %arg0) nsw : !s32i
+        %6 = cir.cmp(lt, %2, %5) : !s32i, !s32i
+        %7 = cir.cast(int_to_bool, %6 : !s32i), !cir.bool
+        cir.condition(%7)
+      } body {
+        cir.scope {
+        }
+        cir.yield
+      } step {
+        %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+        %3 = cir.unary(inc, %2) : !s32i, !s32i
+        cir.store %3, %0 : !s32i, !cir.ptr<!s32i>
+        cir.yield
+      }
+    }
+    cir.return
+  }
 }
