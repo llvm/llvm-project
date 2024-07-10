@@ -223,7 +223,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     break;
   }
   case Instruction::Call:
-    if (auto *CI = dyn_cast<CmpIntrinsic>(I))
+    if (auto *CI = dyn_cast<CmpIntrinsic>(I); CI && CI->hasOneUse())
       return Builder.CreateIntrinsic(CI->getType(), CI->getIntrinsicID(),
                                      {CI->getRHS(), CI->getLHS()});
     break;
