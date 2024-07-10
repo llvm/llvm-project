@@ -57,7 +57,9 @@ void MsanThread::TSDDtor(void *tsd) {
 }
 
 void MsanThread::Destroy() {
+#if SANITIZER_LINUX
   ScopedBlockSignals block(nullptr);
+#endif
   malloc_storage().CommitBack();
   // We also clear the shadow on thread destruction because
   // some code may still be executing in later TSD destructors
