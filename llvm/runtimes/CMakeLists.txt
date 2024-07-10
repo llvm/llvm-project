@@ -444,6 +444,35 @@ if(build_runtimes)
   set(extra_deps "")
   set(extra_cmake_args "")
 
+  if(LLVM_INCLUDE_TESTS)
+    foreach(dep FileCheck
+                clang
+                count
+                lld
+                lli
+                llvm-cov
+                llvm-lto
+                llvm-jitlink
+                llvm-nm
+                llvm-objdump
+                llvm-profdata
+                llvm-size
+                llvm-symbolizer
+                llvm-xray
+                not
+                obj2yaml
+                opt
+                sancov
+                sanstats
+                llvm_gtest_main
+                llvm_gtest
+                split-file)
+      if(TARGET ${dep})
+        list(APPEND extra_deps ${dep})
+      endif()
+    endforeach()
+  endif()
+
   # Forward user-provived system configuration to runtimes for requirement introspection.
   # CMAKE_PREFIX_PATH is the search path for CMake packages.
   if(CMAKE_PREFIX_PATH)
@@ -612,29 +641,10 @@ if(build_runtimes)
   if(LLVM_INCLUDE_TESTS)
     set_property(GLOBAL APPEND PROPERTY LLVM_ALL_ADDITIONAL_TEST_DEPENDS runtimes-test-depends)
 
-    set(RUNTIMES_TEST_DEPENDS
-        FileCheck
-        count
-        llvm-cov
-        llvm-lto
-        llvm-nm
-        llvm-objdump
-        llvm-profdata
-        llvm-size
-        llvm-xray
-        not
-        obj2yaml
-        opt
-        sancov
-        sanstats
-        llvm_gtest_main
-        llvm_gtest
-        split-file
-      )
     foreach(target ${test_targets} ${SUB_CHECK_TARGETS})
-      add_dependencies(${target} ${RUNTIMES_TEST_DEPENDS})
+      add_dependencies(${target} ${extra_deps})
     endforeach()
 
-    set_property(GLOBAL APPEND PROPERTY LLVM_ALL_ADDITIONAL_TEST_TARGETS runtimes ${RUNTIMES_TEST_DEPENDS})
+    set_property(GLOBAL APPEND PROPERTY LLVM_ALL_ADDITIONAL_TEST_TARGETS runtimes ${extra_deps})
   endif()
 endif()
