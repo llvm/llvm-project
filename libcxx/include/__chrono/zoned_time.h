@@ -205,6 +205,12 @@ template <class _Duration, class _TimeZonePtrOrName, class TimeZonePtr2>
 zoned_time(_TimeZonePtrOrName&&, zoned_time<_Duration, TimeZonePtr2>, choose = choose::earliest)
     -> zoned_time<common_type_t<_Duration, seconds>, __time_zone_representation<_TimeZonePtrOrName>>;
 
+template <class _Duration1, class _Duration2, class _TimeZonePtr>
+_LIBCPP_HIDE_FROM_ABI bool
+operator==(const zoned_time<_Duration1, _TimeZonePtr>& __lhs, const zoned_time<_Duration2, _TimeZonePtr>& __rhs) {
+  return __lhs.get_time_zone() == __rhs.get_time_zone() && __lhs.get_sys_time() == __rhs.get_sys_time();
+}
+
 } // namespace chrono
 
 #  endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
