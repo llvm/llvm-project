@@ -99,7 +99,7 @@ public:
             getTypeConverter()->convertTypes(op.getResultTypes(), types)))
       return mlir::failure();
     rewriter.replaceOpWithNewOp<mlir::func::CallOp>(
-        op, mlir::SymbolRefAttr::get(op), types, adaptor.getOperands());
+        op, op.getCalleeAttr(), types, adaptor.getOperands());
     return mlir::LogicalResult::success();
   }
 };
