@@ -25,29 +25,31 @@ set(NSAN_DYNAMIC_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
 
 set(NSAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 
-foreach(arch ${NSAN_SUPPORTED_ARCH})
-  add_compiler_rt_runtime(
-    clang_rt.nsan
-    STATIC
-    ARCHS ${arch}
-    SOURCES ${NSAN_SOURCES}
-            $<TARGET_OBJECTS:RTInterception.${arch}>
-            $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
-            $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
-            $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
-            $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
-            $<TARGET_OBJECTS:RTUbsan.${arch}>
-    ADDITIONAL_HEADERS ${NSAN_HEADERS}
-    CFLAGS ${NSAN_CFLAGS}
-    PARENT_TARGET nsan
-  )
-endforeach()
+if (COMPILER_RT_HAS_NSAN)
+  foreach(arch ${NSAN_SUPPORTED_ARCH})
+    add_compiler_rt_runtime(
+      clang_rt.nsan
+      STATIC
+      ARCHS ${arch}
+      SOURCES ${NSAN_SOURCES}
+              $<TARGET_OBJECTS:RTInterception.${arch}>
+              $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
+              $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
+              $<TARGET_OBJECTS:RTSanitizerCommonCoverage.${arch}>
+              $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
+              $<TARGET_OBJECTS:RTUbsan.${arch}>
+      ADDITIONAL_HEADERS ${NSAN_HEADERS}
+      CFLAGS ${NSAN_CFLAGS}
+      PARENT_TARGET nsan
+    )
+  endforeach()
 
-add_compiler_rt_object_libraries(RTNsan
-    ARCHS ${NSAN_SUPPORTED_ARCH}
-    SOURCES ${NSAN_SOURCES}
-    ADDITIONAL_HEADERS ${NSAN_HEADERS}
-    CFLAGS ${NSAN_CFLAGS})
+  add_compiler_rt_object_libraries(RTNsan
+      ARCHS ${NSAN_SUPPORTED_ARCH}
+      SOURCES ${NSAN_SOURCES}
+      ADDITIONAL_HEADERS ${NSAN_HEADERS}
+      CFLAGS ${NSAN_CFLAGS})
+endif()
 
 if(COMPILER_RT_INCLUDE_TESTS)
   add_subdirectory(tests)
