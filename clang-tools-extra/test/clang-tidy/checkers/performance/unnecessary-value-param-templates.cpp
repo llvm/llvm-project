@@ -30,14 +30,14 @@ template <typename T> void nonInstantiatedTemplateWithNonConstValue(T S) {}
 
 template <typename T> void instantiatedTemplateSpecialization(T NoSpecS) {}
 template <> void instantiatedTemplateSpecialization<int>(int SpecSInt) {}
+// Updating template specialization would also require to update the main
+// template and other specializations. Such specializations may be
+// spreaded across different translation units.
+// For that reason we only issue a warning, but do not propose fixes.
 template <>
 void instantiatedTemplateSpecialization<ExpensiveToCopyType>(
     ExpensiveToCopyType SpecSExpensiveToCopy) {
   // CHECK-MESSAGES: [[@LINE-1]]:25: warning: the parameter 'SpecSExpensiveToCopy'
-  // Updating template specialization would also require to update the main
-  // template and other specializations. Such specializations may be
-  // spreaded across across different translation units.
-  // For that reason we only issue a warning, but do not propose fixes.
   // CHECK-FIXES-NOT: const T& NoSpecS
   // CHECK-FIXES-NOT: const int& SpecSInt
   // CHECK-FIXES-NOT: const ExpensiveToCopyType& SpecSExpensiveToCopy
