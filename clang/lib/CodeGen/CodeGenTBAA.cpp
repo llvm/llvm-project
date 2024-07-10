@@ -210,7 +210,7 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
   // allowing e.g. `int *` l-values to access `unsigned *` objects.
   if (Ty->isPointerType() || Ty->isReferenceType()) {
     llvm::MDNode *AnyPtr = createScalarTypeNode("any pointer", getChar(), Size);
-    if (CodeGenOpts.RelaxedPointerAliasing)
+    if (!CodeGenOpts.PointerTBAA)
       return AnyPtr;
     // Compute the depth of the pointer and generate a tag of the form "p<depth>
     // <base type tag>".

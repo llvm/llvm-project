@@ -7140,9 +7140,9 @@ def fuse_register_sized_bitfield_access: Flag<["-"], "fuse-register-sized-bitfie
 def relaxed_aliasing : Flag<["-"], "relaxed-aliasing">,
   HelpText<"Turn off Type Based Alias Analysis">,
   MarshallingInfoFlag<CodeGenOpts<"RelaxedAliasing">>;
-def relaxed_pointer_aliasing : Flag<["-"], "relaxed-pointer-aliasing">,
-  HelpText<"Turn off Type Based Alias Analysis for pointer accesses">,
-  MarshallingInfoFlag<CodeGenOpts<"RelaxedPointerAliasing">>;
+def pointer_tbaa: Flag<["-"], "pointer-tbaa">,
+  HelpText<"Turn on Type Based Alias Analysis for pointer accesses">,
+  MarshallingInfoFlag<CodeGenOpts<"PointerTBAA">>;
 def no_struct_path_tbaa : Flag<["-"], "no-struct-path-tbaa">,
   HelpText<"Turn off struct-path aware Type Based Alias Analysis">,
   MarshallingInfoNegativeFlag<CodeGenOpts<"StructPathTBAA">>;
