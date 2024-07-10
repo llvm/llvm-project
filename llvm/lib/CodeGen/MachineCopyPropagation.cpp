@@ -112,7 +112,7 @@ class CopyTracker {
     bool Avail;
   };
 
-  DenseMap<MCRegister, CopyInfo> Copies;
+  DenseMap<MCRegUnit, CopyInfo> Copies;
 
 public:
   /// Mark all of the given registers and their subregisters as unavailable for
