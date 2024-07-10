@@ -1152,6 +1152,12 @@ def Trap : Builtin {
   let Prototype = "void()";
 }
 
+def VerboseTrap : Builtin {
+  let Spellings = ["__builtin_verbose_trap"];
+  let Attributes = [NoThrow, NoReturn];
+  let Prototype = "void(char const*, char const*)";
+}
+
 def Debugtrap : Builtin {
   let Spellings = ["__builtin_debugtrap"];
   let Attributes = [NoThrow];

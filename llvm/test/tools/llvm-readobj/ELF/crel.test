@@ -1,0 +1,230 @@
+# RUN: yaml2obj --docnum=1 %s -o %t
+# RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=LLVM --match-full-lines
+# RUN: llvm-readelf -r %t | FileCheck %s --check-prefix=GNU --match-full-lines
+
+# LLVM:      Relocations [
+# LLVM-NEXT:   Section ([[#]]) .crel.text {
+# LLVM-NEXT:     0x1 R_X86_64_32 g1 0x1
+# LLVM-NEXT:     0x2 R_X86_64_64 l1 0x2
+# LLVM-NEXT:     0x0 R_X86_64_32S g1 0xFFFFFFFFFFFFFFFF
+# LLVM-NEXT:     0x4 R_X86_64_32S .text 0x8000000000000000
+# LLVM-NEXT:   }
+# LLVM-NEXT:   Section ([[#]]) .crelnonalloc {
+# LLVM-NEXT:     0x10 R_X86_64_64 g1 0x1
+# LLVM-NEXT:     0x20 R_X86_64_64 g2 0x2
+# LLVM-NEXT:   }
+# LLVM-NEXT: ]
+
+# GNU:      Relocation section '.crel.text' at offset 0x48 contains 4 entries:
+# GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# GNU-NEXT: 0000000000000001  000000030000000a R_X86_64_32            0000000000000000 g1 + 1
+# GNU-NEXT: 0000000000000002  0000000200000001 R_X86_64_64            0000000000000000 l1 + 2
+# GNU-NEXT: 0000000000000000  000000030000000b R_X86_64_32S           0000000000000000 g1 - 1
+# GNU-NEXT: 0000000000000004  000000010000000b R_X86_64_32S           0000000000000000 .text - 8000000000000000
+# GNU-EMPTY:
+# GNU-NEXT: Relocation section '.crelnonalloc' at offset 0xa2 contains 2 entries:
+# GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# GNU-NEXT: 0000000000000010  0000000300000001 R_X86_64_64            0000000000000000 g1 + 1
+# GNU-NEXT: 0000000000000020  0000000400000001 R_X86_64_64            0000000000000000 g2 + 2
+
+--- !ELF
+FileHeader: !FileHeader
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_REL
+  Machine: EM_X86_64
+
+Sections:
+- Name: .text
+  Type: SHT_PROGBITS
+  Content: "0000000000000000"
+  Flags: [SHF_ALLOC]
+- Name: .crel.text
+  Type: SHT_CREL
+  Info: .text
+  Link: .symtab
+  Relocations:
+    - Offset: 0x1
+      Symbol: g1
+      Type:   R_X86_64_32
+      Addend: 1
+    - Offset: 0x2
+      Symbol: l1
+      Type:   R_X86_64_64
+      Addend: 2
+    - Offset: 0x0
+      Symbol: g1
+      Type:   R_X86_64_32S
+      Addend: 0xffffffffffffffff
+    - Offset: 0x4
+      Symbol: .text
+      Type:   R_X86_64_32S
+      Addend: 0x8000000000000000
+- Name: nonalloc
+  Type: SHT_PROGBITS
+  Size: 0x30
+- Name: .crelnonalloc
+  Type: SHT_CREL
+  Info: nonalloc
+  Link: .symtab
+  Relocations:
+    - Offset: 0x10
+      Symbol: g1
+      Type:   R_X86_64_64
+      Addend: 1
+    - Offset: 0x20
+      Symbol: g2
+      Type:   R_X86_64_64
+      Addend: 2
+
+Symbols:
+  - Name: .text
+    Type: STT_SECTION
+    Section: .text
+  - Name:    l1
+  - Name:    g1
+    Section: .text
+    Value:   0x0
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    g2
+    Binding: STB_GLOBAL
+
+## Check relocation formatting on ELFCLASS32 as well.
+# RUN: yaml2obj --docnum=2 %s -o %t2
+# RUN: llvm-readobj -r %t2 | FileCheck %s --check-prefix=LLVM2 --match-full-lines
+# RUN: llvm-readelf -r %t2 | FileCheck %s --check-prefix=GNU2 --match-full-lines
+
+# LLVM2:      Relocations [
+# LLVM2-NEXT:   Section (2) .crel.text {
+# LLVM2-NEXT:     0x8 R_386_PC32 l1 0x1
+# LLVM2-NEXT:     0x4 R_386_32 g1 0x0
+# LLVM2-NEXT:   }
+# LLVM2-NEXT: ]
+
+# GNU2:      Relocation section '.crel.text' at offset {{.*}} contains 2 entries:
+# GNU2-NEXT:  Offset     Info    Type                Sym. Value  Symbol's Name + Addend
+# GNU2-NEXT: 00000008  00000102 R_386_PC32             00000000   l1 + 1
+# GNU2-NEXT: 00000004  00000201 R_386_32               00000000   g1 + 0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+Sections:
+- Name: .text
+  Type: SHT_PROGBITS
+  Size: 0x10
+- Name: .crel.text
+  Type: SHT_CREL
+  Info: .text
+  Link: .symtab
+  Relocations:
+    - Offset: 0x8
+      Symbol: l1
+      Type:   R_386_PC32
+      Addend: 1
+    - Offset: 0x4
+      Symbol: g1
+      Type:   R_386_32
+Symbols:
+  - Name:    l1
+  - Name:    g1
+    Binding: STB_GLOBAL
+
+## Check CREL with implicit addends.
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-readobj -r %t3 | FileCheck %s --check-prefix=LLVM3 --match-full-lines
+# RUN: llvm-readelf -r %t3 | FileCheck %s --check-prefix=GNU3 --match-full-lines
+
+# LLVM3:      Relocations [
+# LLVM3-NEXT:   Section (3) .crel.data {
+# LLVM3-NEXT:     0x1F R_X86_64_32 g1
+# LLVM3-NEXT:     0x3F R_X86_64_64 g1
+# LLVM3-NEXT:     0x0 R_X86_64_32S l1
+# LLVM3-NEXT:   }
+# LLVM3-NEXT: ]
+
+# GNU3:      Relocation section '.crel.data' at offset {{.*}} contains 3 entries:
+# GNU3-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name
+# GNU3-NEXT: 000000000000001f  000000030000000a R_X86_64_32            0000000000000000 g1
+# GNU3-NEXT: 000000000000003f  0000000300000001 R_X86_64_64            0000000000000000 g1
+# GNU3-NEXT: 0000000000000000  000000020000000b R_X86_64_32S           0000000000000000 l1
+--- !ELF
+FileHeader:
+  Class:     ELFCLASS64
+  Data:      ELFDATA2LSB
+  Type:      ET_REL
+  Machine:   EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+  - Name:    .data
+    Type:    SHT_PROGBITS
+  - Name:    .crel.data
+    Type:    SHT_CREL
+    Flags:   [ SHF_INFO_LINK ]
+    Link:    .symtab
+    Info:    .data
+    Content: 187f030a82017787feffffffffffffff077f0a
+Symbols:
+  - Name:    .text
+    Type:    STT_SECTION
+    Section: .text
+  - Name:    l1
+    Section: .text
+  - Name:    g1
+    Section: .text
+    Binding: STB_GLOBAL
+
+## Test errors. See also relocation-errors.test.
+# RUN: yaml2obj --docnum=4 %s -o %t.err
+# RUN: llvm-readobj -r %t.err 2>&1 | FileCheck %s --check-prefix=ERR-LLVM -DFILE=%t.err
+# RUN: llvm-readelf -r %t.err 2>&1 | FileCheck %s --check-prefix=ERR-GNU -DFILE=%t.err
+
+# ERR-LLVM:      Section ([[#]]) .crel.data {
+# ERR-LLVM-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_CREL section with index 3: unable to decode LEB128 at offset 0x00000000: malformed uleb128, extends past end
+# ERR-LLVM-NEXT: }
+
+# ERR-GNU: warning: '[[FILE]]': unable to get the number of relocations in SHT_CREL section with index 3: unable to decode LEB128 at offset 0x00000000: malformed uleb128, extends past end
+# ERR-GNU-EMPTY:
+# ERR-GNU-NEXT: Relocation section '.crel.data' at offset 0x40 contains <?> entries:
+# ERR-GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name
+# ERR-GNU-NOT:  {{.}}
+
+# RUN: yaml2obj --docnum=4 -DCONTENT=08 %s -o %t.err2
+# RUN: llvm-readobj -r %t.err2 2>&1 | FileCheck %s --check-prefix=ERR2-LLVM -DFILE=%t.err2
+# RUN: llvm-readelf -r %t.err2 2>&1 | FileCheck %s --check-prefix=ERR2-GNU -DFILE=%t.err2
+
+# ERR2-LLVM:      Section ([[#]]) .crel.data {
+# ERR2-LLVM-NEXT: warning: '[[FILE]]': unable to read relocations from SHT_CREL section with index 3: unexpected end of data at offset 0x1 while reading [0x1, 0x2)
+# ERR2-LLVM-NEXT: }
+
+# ERR2-GNU:      Relocation section '.crel.data' at offset 0x40 contains 1 entries:
+# ERR2-GNU-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name
+# ERR2-GNU:      warning: '[[FILE]]': unable to read relocations from SHT_CREL section with index 3: unexpected end of data at offset 0x1 while reading [0x1, 0x2)
+# ERR2-GNU-NOT:  {{.}}
+
+--- !ELF
+FileHeader:
+  Class:     ELFCLASS64
+  Data:      ELFDATA2LSB
+  Type:      ET_REL
+  Machine:   EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+  - Name:    .data
+    Type:    SHT_PROGBITS
+  - Name:    .crel.data
+    Type:    SHT_CREL
+    Flags:   []
+    Link:    .symtab
+    Info:    .data
+    Content: [[CONTENT=""]]
+Symbols:
+  - Name:    .text
+    Type:    STT_SECTION
+    Section: .text

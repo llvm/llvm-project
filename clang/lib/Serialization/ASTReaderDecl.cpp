@@ -4215,6 +4215,7 @@ void ASTReader::PassInterestingDeclsToConsumer() {
   };
   std::deque<Decl *> MaybeInterestingDecls =
       std::move(PotentiallyInterestingDecls);
+  PotentiallyInterestingDecls.clear();
   assert(PotentiallyInterestingDecls.empty());
   while (!MaybeInterestingDecls.empty()) {
     Decl *D = MaybeInterestingDecls.front();
@@ -4234,13 +4235,6 @@ void ASTReader::PassInterestingDeclsToConsumer() {
 
   // If we add any new potential interesting decl in the last call, consume it.
   ConsumingPotentialInterestingDecls();
-
-  for (GlobalDeclID ID : VTablesToEmit) {
-    auto *RD = cast<CXXRecordDecl>(GetDecl(ID));
-    assert(!RD->shouldEmitInExternalSource());
-    PassVTableToConsumer(RD);
-  }
-  VTablesToEmit.clear();
 }
 
 void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {

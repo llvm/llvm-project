@@ -262,7 +262,7 @@ RawCoverage::read(const std::string &FileName) {
   // to compactify the data.
   Addrs->erase(0);
 
-  return std::unique_ptr<RawCoverage>(new RawCoverage(std::move(Addrs)));
+  return std::make_unique<RawCoverage>(std::move(Addrs));
 }
 
 // Print coverage addresses.
@@ -460,8 +460,7 @@ static std::unique_ptr<symbolize::LLVMSymbolizer> createSymbolizer() {
   symbolize::LLVMSymbolizer::Options SymbolizerOptions;
   SymbolizerOptions.Demangle = ClDemangle;
   SymbolizerOptions.UseSymbolTable = true;
-  return std::unique_ptr<symbolize::LLVMSymbolizer>(
-      new symbolize::LLVMSymbolizer(SymbolizerOptions));
+  return std::make_unique<symbolize::LLVMSymbolizer>(SymbolizerOptions);
 }
 
 static std::string normalizeFilename(const std::string &FileName) {

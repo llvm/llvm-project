@@ -109,7 +109,7 @@ Status MinidumpFileBuilder::AddDirectory(StreamType type,
   if (m_directories.size() + 1 > m_expected_directories) {
     error.SetErrorStringWithFormat(
         "Unable to add directory for stream type %x, exceeded expected number "
-        "of directories %d.",
+        "of directories %zu.",
         (uint32_t)type, m_expected_directories);
     return error;
   }

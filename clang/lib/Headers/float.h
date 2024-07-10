@@ -94,6 +94,12 @@
 #endif
 #endif
 
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) ||              \
+    !defined(__STRICT_ANSI__)
+#  undef INFINITY
+#  undef NAN
+#endif
+
 /* Characteristics of floating point types, C99 5.2.4.2.2 */
 
 #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) ||              \
@@ -163,6 +169,10 @@
 
 #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) ||              \
     !defined(__STRICT_ANSI__)
+   /* C23 5.2.5.3.3p29-30 */
+#  define INFINITY (__builtin_inff())
+#  define NAN (__builtin_nanf(""))
+   /* C23 5.2.5.3.3p32 */
 #  define FLT_NORM_MAX __FLT_NORM_MAX__
 #  define DBL_NORM_MAX __DBL_NORM_MAX__
 #  define LDBL_NORM_MAX __LDBL_NORM_MAX__

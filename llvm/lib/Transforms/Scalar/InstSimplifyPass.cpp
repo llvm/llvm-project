@@ -99,7 +99,7 @@ struct InstSimplifyLegacyPass : public FunctionPass {
         &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
     AssumptionCache *AC =
         &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     const SimplifyQuery SQ(DL, TLI, DT, AC);
     return runImpl(F, SQ);
   }
@@ -125,7 +125,7 @@ PreservedAnalyses InstSimplifyPass::run(Function &F,
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   const SimplifyQuery SQ(DL, &TLI, &DT, &AC);
   bool Changed = runImpl(F, SQ);
   if (!Changed)
