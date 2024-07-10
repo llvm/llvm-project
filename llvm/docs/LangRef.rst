@@ -26507,8 +26507,8 @@ Syntax:
 
       declare <type>
       @llvm.experimental.constrained.asin(<type> <op1>,
-                                         metadata <rounding mode>,
-                                         metadata <exception behavior>)
+                                          metadata <rounding mode>,
+                                          metadata <exception behavior>)
 
 Overview:
 """""""""
@@ -26543,8 +26543,8 @@ Syntax:
 
       declare <type>
       @llvm.experimental.constrained.acos(<type> <op1>,
-                                         metadata <rounding mode>,
-                                         metadata <exception behavior>)
+                                          metadata <rounding mode>,
+                                          metadata <exception behavior>)
 
 Overview:
 """""""""
@@ -26579,8 +26579,8 @@ Syntax:
 
       declare <type>
       @llvm.experimental.constrained.atan(<type> <op1>,
-                                         metadata <rounding mode>,
-                                         metadata <exception behavior>)
+                                          metadata <rounding mode>,
+                                          metadata <exception behavior>)
 
 Overview:
 """""""""
@@ -26614,8 +26614,8 @@ Syntax:
 
       declare <type>
       @llvm.experimental.constrained.sinh(<type> <op1>,
-                                         metadata <rounding mode>,
-                                         metadata <exception behavior>)
+                                          metadata <rounding mode>,
+                                          metadata <exception behavior>)
 
 Overview:
 """""""""
@@ -26650,8 +26650,8 @@ Syntax:
 
       declare <type>
       @llvm.experimental.constrained.cosh(<type> <op1>,
-                                         metadata <rounding mode>,
-                                         metadata <exception behavior>)
+                                          metadata <rounding mode>,
+                                          metadata <exception behavior>)
 
 Overview:
 """""""""
@@ -26686,8 +26686,8 @@ Syntax:
 
       declare <type>
       @llvm.experimental.constrained.tanh(<type> <op1>,
-                                         metadata <rounding mode>,
-                                         metadata <exception behavior>)
+                                          metadata <rounding mode>,
+                                          metadata <exception behavior>)
 
 Overview:
 """""""""
