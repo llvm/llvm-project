@@ -64,7 +64,7 @@ RISCVCpuCyclesCounter::RISCVCpuCyclesCounter(pfm::PerfEvent &&Event)
   char Value[2] = "0";
   int File = 0;
   std::error_code FileError =
-      sys::fs::openFileForRead("/proc/sys/kernel/watchdog", File);
+      sys::fs::openFileForRead("/proc/sys/kernel/perf_user_access", File);
   sys::fs::file_t FileNative = sys::fs::convertFDToNativeFile(File);
   Expected<size_t> ReadBytes = sys::fs::readNativeFile(FileNative, Value);
 
