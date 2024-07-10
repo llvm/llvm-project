@@ -1602,6 +1602,8 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E) {
                                                            : CCK_Disjunction);
     }
     auto Sub = fromConstraintExpr(S, D, FE->getPattern());
+    if (!Sub)
+      return std::nullopt;
     return NormalizedConstraint{new (S.Context) FoldExpandedConstraint{
         Kind, std::move(*Sub), FE->getPattern()}};
   }
