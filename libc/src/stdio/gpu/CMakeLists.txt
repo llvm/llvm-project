@@ -40,7 +40,7 @@ add_entrypoint_object(
   HDRS
     ../fseek.h
   DEPENDS
-    libc.hdr.types.file
+    libc.hdr.types.FILE
     .gpu_file
 )
 
@@ -51,7 +51,7 @@ add_entrypoint_object(
   HDRS
     ../ftell.h
   DEPENDS
-    libc.hdr.types.file
+    libc.hdr.types.FILE
     .gpu_file
 )
 
@@ -62,7 +62,7 @@ add_entrypoint_object(
   HDRS
     ../fflush.h
   DEPENDS
-    libc.hdr.types.file
+    libc.hdr.types.FILE
     .gpu_file
 )
 
@@ -73,7 +73,7 @@ add_entrypoint_object(
   HDRS
     ../clearerr.h
   DEPENDS
-    libc.hdr.types.file
+    libc.hdr.types.FILE
     libc.src.__support.RPC.rpc_client
 )
 
@@ -84,7 +84,7 @@ add_entrypoint_object(
   HDRS
     ../fopen.h
   DEPENDS
-    libc.hdr.types.file
+    libc.hdr.types.FILE
 )
 
 add_entrypoint_object(
@@ -94,7 +94,7 @@ add_entrypoint_object(
   HDRS
     ../fclose.h
   DEPENDS
-    libc.hdr.types.file
+    libc.hdr.types.FILE
 )
 
 add_entrypoint_object(
@@ -104,7 +104,7 @@ add_entrypoint_object(
   HDRS
     ../fread.h
   DEPENDS
-    libc.hdr.types.file
+    libc.hdr.types.FILE
 )
 
 add_entrypoint_object(
@@ -126,7 +126,7 @@ add_entrypoint_object(
   HDRS
     ../fputs.h
   DEPENDS
-    libc.hdr.types.file
+    libc.hdr.types.FILE
     .gpu_file
 )
 
@@ -137,7 +137,7 @@ add_entrypoint_object(
   HDRS
     ../fwrite.h
   DEPENDS
-    libc.hdr.types.file
+    libc.hdr.types.FILE
     .gpu_file
 )
 
@@ -148,7 +148,7 @@ add_entrypoint_object(
   HDRS
     ../fputc.h
   DEPENDS
-    libc.hdr.types.file
+    libc.hdr.types.FILE
     .gpu_file
 )
 
@@ -183,7 +183,7 @@ add_entrypoint_object(
   HDRS
     ../fgetc.h
   DEPENDS
-    libc.hdr.types.file
+    libc.hdr.types.FILE
     .gpu_file
 )
 
@@ -218,7 +218,7 @@ add_entrypoint_object(
   HDRS
     ../fgets.h
   DEPENDS
-    libc.hdr.types.file
+    libc.hdr.types.FILE
     .gpu_file
     .feof
     .ferror
@@ -231,7 +231,7 @@ add_entrypoint_object(
   HDRS
     ../ungetc.h
   DEPENDS
-    libc.hdr.types.file
+    libc.hdr.types.FILE
     .gpu_file
 )
 
@@ -242,7 +242,7 @@ add_entrypoint_object(
   HDRS
     ../remove.h
   DEPENDS
-    libc.hdr.types.file
+    libc.hdr.types.FILE
     .gpu_file
 )
 
@@ -253,7 +253,7 @@ add_entrypoint_object(
   HDRS
     ../stdin.h
   DEPENDS
-    libc.hdr.types.file
+    libc.hdr.types.FILE
 )
 
 add_entrypoint_object(
@@ -263,7 +263,7 @@ add_entrypoint_object(
   HDRS
     ../stdout.h
   DEPENDS
-    libc.hdr.types.file
+    libc.hdr.types.FILE
 )
 
 add_entrypoint_object(
@@ -273,5 +273,5 @@ add_entrypoint_object(
   HDRS
     ../stderr.h
   DEPENDS
-    libc.hdr.types.file
+    libc.hdr.types.FILE
 )
