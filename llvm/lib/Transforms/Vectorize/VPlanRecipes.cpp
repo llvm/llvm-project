@@ -39,6 +39,7 @@ using VectorParts = SmallVector<Value *, 2>;
 namespace llvm {
 extern cl::opt<bool> EnableVPlanNativePath;
 }
+extern cl::opt<unsigned> ForceTargetInstructionCost;
 
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
@@ -251,6 +252,49 @@ void VPRecipeBase::moveBefore(VPBasicBlock &BB,
                               iplist<VPRecipeBase>::iterator I) {
   removeFromParent();
   insertBefore(BB, I);
+}
+
+/// Return the underlying instruction to be used for computing \p R's cost via
+/// the legacy cost model. Return nullptr if there's no suitable instruction.
+static Instruction *getInstructionForCost(const VPRecipeBase *R) {
+  if (auto *S = dyn_cast<VPSingleDefRecipe>(R))
+    return dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
+  if (auto *IG = dyn_cast<VPInterleaveRecipe>(R))
+    return IG->getInsertPos();
+  if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(R))
+    return &WidenMem->getIngredient();
+  return nullptr;
+}
+
+InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
+  if (auto *UI = getInstructionForCost(this))
+    if (Ctx.skipCostComputation(UI, VF.isVector()))
+      return 0;
+
+  InstructionCost RecipeCost = computeCost(VF, Ctx);
+  if (ForceTargetInstructionCost.getNumOccurrences() > 0 &&
+      RecipeCost.isValid())
+    RecipeCost = InstructionCost(ForceTargetInstructionCost);
+
+  LLVM_DEBUG({
+    dbgs() << "Cost of " << RecipeCost << " for VF " << VF << ": ";
+    dump();
+  });
+  return RecipeCost;
+}
+
+InstructionCost VPRecipeBase::computeCost(ElementCount VF,
+                                          VPCostContext &Ctx) const {
+  // Compute the cost for the recipe falling back to the legacy cost model using
+  // the underlying instruction. If there is no underlying instruction, returns
+  // 0.
+  Instruction *UI = getInstructionForCost(this);
+  if (UI && isa<VPReplicateRecipe>(this)) {
+    // VPReplicateRecipe may be cloned as part of an existing VPlan-to-VPlan
+    // transform, avoid computing their cost multiple times for now.
+    Ctx.SkipCostComputation.insert(UI);
+  }
+  return UI ? Ctx.getLegacyCost(UI, VF) : 0;
 }
 
 FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
