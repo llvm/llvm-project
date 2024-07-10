@@ -1,4 +1,4 @@
-# RUN: clang -march=x86-64 -msse2avx %s -c -o %t
+# RUN: %clang -march=x86-64 -msse2avx %s -c -o %t
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 # CHECK:       0:       vmovsd  -0x160(%rbp), %xmm0

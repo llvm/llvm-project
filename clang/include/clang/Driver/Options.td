@@ -4766,7 +4766,6 @@ def mno_tls_direct_seg_refs : Flag<["-"], "mno-tls-direct-seg-refs">, Group<m_Gr
   HelpText<"Disable direct TLS access through segment registers">,
   MarshallingInfoFlag<CodeGenOpts<"IndirectTlsSegRefs">>;
 def mno_relax_all : Flag<["-"], "mno-relax-all">, Group<m_Group>;
-def mno_sse2avx : Flag<["-"], "mno-sse2avx">, Group<m_Group>;
 let Flags = [TargetSpecific] in {
 def mno_rtd: Flag<["-"], "mno-rtd">, Group<m_Group>;
 def mno_soft_float : Flag<["-"], "mno-soft-float">, Group<m_Group>;

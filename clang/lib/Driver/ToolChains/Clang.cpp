@@ -8362,8 +8362,8 @@ void ClangAs::AddX86TargetArgs(const ArgList &Args,
   addX86AlignBranchArgs(getToolChain().getDriver(), Args, CmdArgs,
                         /*IsLTO=*/false);
 
-  if (Args.hasFlag(options::OPT_msse2avx, options::OPT_mno_sse2avx, true))
-    Args.addOptInFlag(CmdArgs, options::OPT_msse2avx, options::OPT_mno_sse2avx);
+  if (Args.hasArg(options::OPT_msse2avx))
+    Args.AddLastArg(CmdArgs, options::OPT_msse2avx);
 
   if (Arg *A = Args.getLastArg(options::OPT_masm_EQ)) {
     StringRef Value = A->getValue();
