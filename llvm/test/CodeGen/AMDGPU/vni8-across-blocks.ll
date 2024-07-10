@@ -870,7 +870,8 @@ bb.3:
 ; Note: whether or not the assertion fires depends on the iteration ortder of PhiNodes in AMDGPULateCodeGenPrepare, which
 ; is non-deterministic due to iterators over a set of pointers.
 
-define amdgpu_kernel void @MissingInc_PhiChain(i1 %cmp1.i.i.i.i.i.not, <16 x i8> %promotealloca31.i.i.i.i) {
+
+define amdgpu_kernel void @MissingInc_PhiChain(i1 %cmp, <16 x i8> %input) {
 ; GFX906-LABEL: MissingInc_PhiChain:
 ; GFX906:       ; %bb.0: ; %entry
 ; GFX906-NEXT:    s_load_dword s2, s[0:1], 0x24
@@ -885,18 +886,18 @@ define amdgpu_kernel void @MissingInc_PhiChain(i1 %cmp1.i.i.i.i.i.not, <16 x i8>
 ; GFX906-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; GFX906-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v0
 ; GFX906-NEXT:    s_branch .LBB14_2
-; GFX906-NEXT:  .LBB14_1: ; %if.end.1.i.i.i.i.i
+; GFX906-NEXT:  .LBB14_1: ; %bb.5
 ; GFX906-NEXT:    ; in Loop: Header=BB14_2 Depth=1
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v4, 8, v0
 ; GFX906-NEXT:    s_mov_b32 s10, 0
 ; GFX906-NEXT:    s_mov_b32 s11, 0
-; GFX906-NEXT:  .LBB14_2: ; %for.body10.i.i.i.i
+; GFX906-NEXT:  .LBB14_2: ; %bb.1
 ; GFX906-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX906-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; GFX906-NEXT:    s_mov_b64 s[8:9], s[2:3]
 ; GFX906-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; GFX906-NEXT:    s_cbranch_vccnz .LBB14_4
-; GFX906-NEXT:  ; %bb.3: ; %if.then.i.i.i.i.i
+; GFX906-NEXT:  ; %bb.3: ; %bb.2
 ; GFX906-NEXT:    ; in Loop: Header=BB14_2 Depth=1
 ; GFX906-NEXT:    v_lshlrev_b16_e64 v0, 8, s11
 ; GFX906-NEXT:    v_or_b32_sdwa v0, s10, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
@@ -907,11 +908,11 @@ define amdgpu_kernel void @MissingInc_PhiChain(i1 %cmp1.i.i.i.i.i.not, <16 x i8>
 ; GFX906-NEXT:    ; in Loop: Header=BB14_2 Depth=1
 ; GFX906-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
 ; GFX906-NEXT:    s_cbranch_vccnz .LBB14_7
-; GFX906-NEXT:  ; %bb.5: ; %if.end.i.i.i.i.i
+; GFX906-NEXT:  ; %bb.5: ; %bb.3
 ; GFX906-NEXT:    ; in Loop: Header=BB14_2 Depth=1
 ; GFX906-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; GFX906-NEXT:    s_cbranch_vccnz .LBB14_1
-; GFX906-NEXT:  ; %bb.6: ; %if.then.1.i.i.i.i.i
+; GFX906-NEXT:  ; %bb.6: ; %bb.4
 ; GFX906-NEXT:    ; in Loop: Header=BB14_2 Depth=1
 ; GFX906-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX906-NEXT:    v_mov_b32_e32 v1, s5
@@ -926,28 +927,29 @@ define amdgpu_kernel void @MissingInc_PhiChain(i1 %cmp1.i.i.i.i.i.not, <16 x i8>
 ; GFX906-NEXT:  ; %bb.8: ; %DummyReturnBlock
 ; GFX906-NEXT:    s_endpgm
 entry:
-  br label %for.body10.i.i.i.i
+  br label %bb.1
 
-for.body10.i.i.i.i:                               ; preds = %if.end.1.i.i.i.i.i, %entry
-  %promotealloca3237.i.i.i.i = phi <16 x i8> [ <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, %entry ], [ %1, %if.end.1.i.i.i.i.i ]
-  br i1 %cmp1.i.i.i.i.i.not, label %if.end.i.i.i.i.i, label %if.then.i.i.i.i.i
+bb.1:                               ; preds = %bb.5, %entry
+  %phi1 = phi <16 x i8> [ <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, %entry ], [ %shuffle, %bb.5 ]
+  br i1 %cmp, label %bb.3, label %bb.2
 
-if.then.i.i.i.i.i:                                ; preds = %for.body10.i.i.i.i
-  %0 = insertelement <16 x i8> %promotealloca3237.i.i.i.i, i8 0, i64 0
-  br label %if.end.i.i.i.i.i
+bb.2:                                ; preds = %bb.1
+  %insert = insertelement <16 x i8> %phi1, i8 0, i64 0
+  br label %bb.3
 
-if.end.i.i.i.i.i:                                 ; preds = %if.then.i.i.i.i.i, %for.body10.i.i.i.i
-  %promotealloca31.i.i.i.i3 = phi <16 x i8> [ %0, %if.then.i.i.i.i.i ], [ %promotealloca3237.i.i.i.i, %for.body10.i.i.i.i ]
-  br i1 %cmp1.i.i.i.i.i.not, label %if.end.1.i.i.i.i.i, label %if.then.1.i.i.i.i.i
+bb.3:                                 ; preds = %bb.2, %bb.1
+  %phi2 = phi <16 x i8> [ %insert, %bb.2 ], [ %phi1, %bb.1 ]
+  br i1 %cmp, label %bb.5, label %bb.4
 
-if.then.1.i.i.i.i.i:                              ; preds = %if.end.i.i.i.i.i
-  br label %if.end.1.i.i.i.i.i
+bb.4:                              ; preds = %bb.3
+  br label %bb.5
 
-if.end.1.i.i.i.i.i:                               ; preds = %if.then.1.i.i.i.i.i, %if.end.i.i.i.i.i
-  %promotealloca30.i.i.i.i = phi <16 x i8> [ %promotealloca31.i.i.i.i, %if.then.1.i.i.i.i.i ], [ %promotealloca31.i.i.i.i3, %if.end.i.i.i.i.i ]
-  %1 = shufflevector <16 x i8> %promotealloca30.i.i.i.i, <16 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-  br label %for.body10.i.i.i.i
+bb.5:                               ; preds = %bb.4, %bb.3
+  %phi3 = phi <16 x i8> [ %input, %bb.4 ], [ %phi2, %bb.3 ]
+  %shuffle = shufflevector <16 x i8> %phi3, <16 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  br label %bb.1
 }
+
 
 
 declare i32 @llvm.amdgcn.workitem.id.x()

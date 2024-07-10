@@ -377,9 +377,8 @@ bool LiveRegOptimizer::optimizeLiveType(
         ValMap.erase(NextDeadValue);
         DeadInsts.emplace_back(cast<Instruction>(NextDeadValue));
 
-        for (User *U : cast<Instruction>(NextDeadValue)->users()) {
-          assert(isa<PHINode>(U));
-          if (ValMap.contains(cast<Instruction>(U)))
+        for (User *U : NextDeadValue->users()) {
+          if (ValMap.contains(cast<PHINode>(U)))
             PHIWorklist.push_back(U);
         }
       }
