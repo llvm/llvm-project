@@ -50,7 +50,7 @@ Options
    If the multiplication operands are compile-time constants (like literals or
    are ``constexpr``) and fit within the source expression type, do not emit a
    diagnostic or suggested fix.  Only considers expressions where the source
-   expression is a signed integer type.
+   expression is a signed integer type.  Defaults to ``false``.
 
 Examples:
 
