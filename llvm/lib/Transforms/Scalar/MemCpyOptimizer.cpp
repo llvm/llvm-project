@@ -1162,7 +1162,7 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     return false;
 
   // No need to create `memcpy(a <- a)`.
-  if (BAA.isMustAlias(M->getDest(), MDep->getRawSource())) {
+  if (BAA.isMustAlias(M->getDest(), MDep->getSource())) {
     // Remove the instruction we're replacing.
     eraseInstruction(M);
     ++NumMemCpyInstr;
