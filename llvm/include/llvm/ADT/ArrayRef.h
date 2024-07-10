@@ -460,8 +460,8 @@ namespace llvm {
 
     OwningArrayRef &operator=(OwningArrayRef &&Other) {
       delete[] this->data();
-      this->MutableArrayRef<T>::operator=(Other);
-      Other.MutableArrayRef<T>::operator=(MutableArrayRef<T>());
+      this->template MutableArrayRef<T>::operator=(Other);
+      Other.template MutableArrayRef<T>::operator=(MutableArrayRef<T>());
       return *this;
     }
 
