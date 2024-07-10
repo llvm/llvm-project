@@ -9,12 +9,11 @@
 #include "libc_errno.h"
 #include "src/__support/CPP/atomic.h"
 
-#define LIBC_ERRNO_MODE_NONE 0x01
-#define LIBC_ERRNO_MODE_INTERNAL 0x02
-#define LIBC_ERRNO_MODE_EXTERNAL 0x04
-#define LIBC_ERRNO_MODE_THREAD_LOCAL 0x08
-#define LIBC_ERRNO_MODE_GLOBAL 0x10
-#define LIBC_ERRNO_MODE_LOCATION 0x20
+#define LIBC_ERRNO_MODE_UNDEFINED 0x01
+#define LIBC_ERRNO_MODE_THREAD_LOCAL 0x02
+#define LIBC_ERRNO_MODE_GLOBAL 0x04
+#define LIBC_ERRNO_MODE_EXTERNAL 0x08
+#define LIBC_ERRNO_MODE_SYSTEM 0x10
 
 #ifndef LIBC_ERRNO_MODE
 #ifndef LIBC_COPT_PUBLIC_PACKAGING
@@ -24,21 +23,21 @@
 // In full build mode, we provide the errno storage ourselves.
 #define LIBC_ERRNO_MODE LIBC_ERRNO_MODE_THREAD_LOCAL
 #else
-#define LIBC_ERRNO_MODE LIBC_ERRNO_MODE_EXTERNAL
+#define LIBC_ERRNO_MODE LIBC_ERRNO_MODE_SYSTEM
 #endif
 #endif // LIBC_ERRNO_MODE
 
-#if LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_NONE &&                                 \
-    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_INTERNAL &&                             \
-    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_EXTERNAL &&                             \
+#if LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_UNDEFINED &&                            \
     LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_THREAD_LOCAL &&                         \
-    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_GLOBAL
+    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_GLOBAL &&                               \
+    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_EXTERNAL &&                             \
+    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SYSTEM
 #error LIBC_ERRNO_MODE must be one of the following values: \
 LIBC_ERRNO_MODE_NONE, \
-LIBC_ERRNO_MODE_INTERNAL, \
-LIBC_ERRNO_MODE_EXTERNAL, \
 LIBC_ERRNO_MODE_THREAD_LOCAL, \
-LIBC_ERRNO_MODE_GLOBAL
+LIBC_ERRNO_MODE_GLOBAL, \
+LIBC_ERRNO_MODE_EXTERNAL, \
+LIBC_ERRNO_MODE_SYSTEM
 #endif
 
 namespace LIBC_NAMESPACE {
@@ -46,59 +45,54 @@ namespace LIBC_NAMESPACE {
 // Define the global `libc_errno` instance.
 Errno libc_errno;
 
-#if LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_NONE
-
-extern "C" {
-const int __llvmlibc_errno = 0;
-int *__errno_location(void) { return &__llvmlibc_errno; }
-}
+#if LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_UNDEFINED
 
 void Errno::operator=(int) {}
 Errno::operator int() { return 0; }
 
-#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_INTERNAL
+#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_THREAD_LOCAL
 
-LIBC_THREAD_LOCAL int __llvmlibc_internal_errno;
-
-extern "C" {
-int *__errno_location(void) { return &__llvmlibc_internal_errno; }
+namespace {
+LIBC_THREAD_LOCAL int __libc_errno;
 }
 
-void Errno::operator=(int a) { __llvmlibc_internal_errno = a; }
-Errno::operator int() { return __llvmlibc_internal_errno; }
+extern "C" {
+int *__llvm_libc_errno(void) { return &__libc_errno; }
+}
+
+void Errno::operator=(int a) { __libc_errno = a; }
+Errno::operator int() { return __libc_errno; }
+
+#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_GLOBAL
+
+namespace {
+LIBC_NAMESPACE::cpp::Atomic<int> __libc_errno;
+}
+
+extern "C" {
+int *__llvm_libc_errno(void) { return &__libc_errno; }
+}
+
+void Errno::operator=(int a) {
+  __libc_errno.store(a, cpp::MemoryOrder::RELAXED);
+}
+Errno::operator int() {
+  return __libc_errno.load(cpp::MemoryOrder::RELAXED);
+}
 
 #elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_EXTERNAL
 
 extern "C" {
-int *__errno_location(void);
+int *__llvm_libc_errno(void);
 }
 
-void Errno::operator=(int a) { *__errno_location() = a; }
-Errno::operator int() { return *__errno_location(); }
+void Errno::operator=(int a) { *__llvm_libc_errno() = a; }
+Errno::operator int() { return *__llvm_libc_errno(); }
 
-#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_THREAD_LOCAL
+#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_SYSTEM
 
-extern "C" {
-LIBC_THREAD_LOCAL int __llvmlibc_errno;
-int *__errno_location(void) { return &__llvmlibc_errno; }
-}
-
-void Errno::operator=(int a) { __llvmlibc_errno = a; }
-Errno::operator int() { return __llvmlibc_errno; }
-
-#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_GLOBAL
-
-extern "C" {
-LIBC_NAMESPACE::cpp::Atomic<int> __llvmlibc_errno;
-int *__errno_location(void) { return &__llvmlibc_errno; }
-}
-
-void Errno::operator=(int a) {
-  __llvmlibc_errno.store(a, cpp::MemoryOrder::RELAXED);
-}
-Errno::operator int() {
-  return __llvmlibc_errno.load(cpp::MemoryOrder::RELAXED);
-}
+void Errno::operator=(int a) { errno = a; }
+Errno::operator int() { return errno; }
 
 #endif
 

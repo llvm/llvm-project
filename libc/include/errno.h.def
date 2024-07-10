@@ -27,10 +27,10 @@
 
 __BEGIN_C_DECLS
 
-int *__errno_location(void) __NOEXCEPT;
+int *__llvm_libc_errno(void) __NOEXCEPT;
 
 __END_C_DECLS
 
-#define errno (*__errno_location())
+#define errno (*__llvm_libc_errno())
 
 #endif // LLVM_LIBC_ERRNO_H
