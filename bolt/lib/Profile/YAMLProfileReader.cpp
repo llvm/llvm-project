@@ -72,69 +72,26 @@ void CallGraphMatcher::addBFCGEdges(BinaryContext &BC,
       if (!CalleeBF)
         continue;
 
-      auto CalleeBFIt = BFToHashes.find(CalleeBF);
-      if (CalleeBFIt == BFToHashes.end()) {
-        CalleeBFIt->second = FunctionHashes();
-        CalleeBFIt->second.Hash = computeBFLooseHash(BC, YamlBP, CalleeBF);
-      }
-      auto CallerBFIt = BFToHashes.find(BF);
-      if (CallerBFIt == BFToHashes.end()) {
-        CallerBFIt->second = FunctionHashes();
-        CallerBFIt->second.Hash = computeBFLooseHash(BC, YamlBP, BF);
-      }
-      CalleeBFIt->second.AdjacentFunctionHashesSet.push_back(
-          CallerBFIt->second.Hash);
-      CallerBFIt->second.AdjacentFunctionHashesSet.push_back(
-          CalleeBFIt->second.Hash);
+      BFAdjacencyMap[CalleeBF].push_back(BF);
+      BFAdjacencyMap[BF].push_back(CalleeBF);
     }
   }
 }
 
-uint64_t CallGraphMatcher::computeBFLooseHash(BinaryContext &BC,
-                                              yaml::bolt::BinaryProfile &YamlBP,
-                                              BinaryFunction *BF) {
-
-  std::string FunctionHashStr;
-  for (const BinaryBasicBlock &BB : *BF) {
-    std::string BlockHashStr = hashBlockLoose(BC, BB);
-    uint16_t OpcodeHash;
-    if (YamlBP.Header.HashFunction == HashFunction::StdHash)
-      OpcodeHash = (uint16_t)hash_value(std::hash<std::string>{}(BlockHashStr));
-    else if (YamlBP.Header.HashFunction == HashFunction::XXH3)
-      OpcodeHash = (uint16_t)llvm::xxh3_64bits(BlockHashStr);
-    else
-      llvm_unreachable("Unsupported hash function");
-    FunctionHashStr.append(std::to_string(OpcodeHash));
-  }
-  return std::hash<std::string>{}(FunctionHashStr);
-}
-
-uint64_t CallGraphMatcher::computeYamlBFLooseHash(
-    yaml::bolt::BinaryFunctionProfile &YamlBF) {
-  std::string HashStr;
-  for (auto &YamlBB : YamlBF.Blocks) {
-    BlendedBlockHash YamlHash(YamlBB.Hash);
-    HashStr.append(std::to_string(YamlHash.OpcodeHash));
-  }
-  return std::hash<std::string>{}(HashStr);
-}
-
 void CallGraphMatcher::computeBFNeighborHashes(BinaryContext &BC) {
   for (BinaryFunction *BF : BC.getAllBinaryFunctions()) {
-    auto It = BFToHashes.find(BF);
-    assert(It != BFToHashes.end() && "All BFs should be processed");
-    FunctionHashes &FunctionHashes = It->second;
-    std::sort(FunctionHashes.AdjacentFunctionHashesSet.begin(),
-              FunctionHashes.AdjacentFunctionHashesSet.end());
-    std::string AdjacentFunctionHashStr =
-        std::accumulate(FunctionHashes.AdjacentFunctionHashesSet.begin(),
-                        FunctionHashes.AdjacentFunctionHashesSet.end(),
-                        std::string(""), [&](std::string Accum, uint64_t Hash) {
-                          return Accum + std::to_string(Hash);
-                        });
-    NeighborHashToBFs[FunctionHashes.AdjacentFunctionHash =
-                          std::hash<std::string>{}(AdjacentFunctionHashStr)]
-        .push_back(BF);
+    auto It = BFAdjacencyMap.find(BF);
+    assert(It != BFAdjacencyMap.end() && "All BFs should be processed");
+    std::vector<BinaryFunction *> &AdjacentBFs = It->second;
+    std::sort(AdjacentBFs.begin(), AdjacentBFs.end(),
+              [&](const BinaryFunction *A, const BinaryFunction *B) {
+                return A->getOneName() < B->getOneName();
+              });
+    std::string HashStr;
+    for (BinaryFunction *BF : AdjacentBFs)
+      HashStr += BF->getOneName();
+    uint64_t Hash = std::hash<std::string>{}(HashStr);
+    NeighborHashToBFs[Hash].push_back(BF);
   }
 }
 
@@ -147,23 +104,7 @@ void CallGraphMatcher::constructYAMLFCG(
         auto IdToYAMLBFIt = IdToYAMLBF.find(CallSite.DestId);
         if (IdToYAMLBFIt == IdToYAMLBF.end())
           continue;
-
-        auto CalleeYamlBFIt = YamlBFToHashes.find(IdToYAMLBFIt->second);
-        if (CalleeYamlBFIt == YamlBFToHashes.end()) {
-          CalleeYamlBFIt->second = FunctionHashes();
-          CalleeYamlBFIt->second.Hash =
-              computeYamlBFLooseHash(*IdToYAMLBFIt->second);
-        }
-        auto CallerYamlBFIt = YamlBFToHashes.find(&CallerYamlBF);
-        if (CallerYamlBFIt == YamlBFToHashes.end()) {
-          CallerYamlBFIt->second = FunctionHashes();
-          CallerYamlBFIt->second.Hash = computeYamlBFLooseHash(CallerYamlBF);
-        }
-
-        CalleeYamlBFIt->second.AdjacentFunctionHashesSet.push_back(
-            CallerYamlBFIt->second.Hash);
-        CallerYamlBFIt->second.AdjacentFunctionHashesSet.push_back(
-            CalleeYamlBFIt->second.Hash);
+        YamlBFAdjacencyMap[&CallerYamlBF].push_back(IdToYAMLBFIt->second);
       }
     }
   }
@@ -569,36 +510,32 @@ size_t YAMLProfileReader::matchWithCallGraph(BinaryContext &BC) {
   if (!opts::MatchWithCallGraph)
     return 0;
 
-  size_t MatchedWithCallGraph = 0;
-
   CGMatcher.computeBFNeighborHashes(BC);
   CGMatcher.constructYAMLFCG(YamlBP, IdToYamLBF);
 
+  size_t MatchedWithCallGraph = 0;
   // Matches YAMLBF to BFs with neighbor hashes.
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions) {
     if (YamlBF.Used)
       continue;
-
-    auto It = CGMatcher.YamlBFToHashes.find(&YamlBF);
-    assert(It != CGMatcher.YamlBFToHashes.end() &&
+    auto It = CGMatcher.YamlBFAdjacencyMap.find(&YamlBF);
+    assert(It != CGMatcher.YamlBFAdjacencyMap.end() &&
            "All unused functions should be processed");
-    CallGraphMatcher::FunctionHashes &FunctionHashes = It->second;
-    std::sort(FunctionHashes.AdjacentFunctionHashesSet.begin(),
-              FunctionHashes.AdjacentFunctionHashesSet.end());
-    std::string AdjacentFunctionHashStr =
-        std::accumulate(FunctionHashes.AdjacentFunctionHashesSet.begin(),
-                        FunctionHashes.AdjacentFunctionHashesSet.end(),
-                        std::string(""), [&](std::string Accum, uint64_t Hash) {
-                          return Accum + std::to_string(Hash);
-                        });
-    FunctionHashes.AdjacentFunctionHash =
-        std::hash<std::string>{}(AdjacentFunctionHashStr);
-
-    auto NeighborHashToBFsIt =
-        CGMatcher.NeighborHashToBFs.find(FunctionHashes.AdjacentFunctionHash);
+    std::vector<yaml::bolt::BinaryFunctionProfile *> &AdjacentFunctions =
+        It->second;
+    std::sort(AdjacentFunctions.begin(), AdjacentFunctions.end(),
+              [&](const yaml::bolt::BinaryFunctionProfile *A,
+                  const yaml::bolt::BinaryFunctionProfile *B) {
+                return A->Name < B->Name;
+              });
+    std::string AdjacentFunctionHashStr;
+    for (auto &AdjacentFunction : AdjacentFunctions) {
+      AdjacentFunctionHashStr += AdjacentFunction->Name;
+    }
+    uint64_t Hash = std::hash<std::string>{}(AdjacentFunctionHashStr);
+    auto NeighborHashToBFsIt = CGMatcher.NeighborHashToBFs.find(Hash);
     if (NeighborHashToBFsIt == CGMatcher.NeighborHashToBFs.end())
       continue;
-
     for (BinaryFunction *BF : NeighborHashToBFsIt->second) {
       if (!ProfiledFunctions.count(BF) && profileMatches(YamlBF, *BF)) {
         matchProfileToFunction(YamlBF, *BF);

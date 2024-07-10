@@ -121,6 +121,71 @@ cl::opt<unsigned> StaleMatchingCostJumpUnknownFTInc(
 namespace llvm {
 namespace bolt {
 
+/// An object wrapping several components of a basic block hash. The combined
+/// (blended) hash is represented and stored as one uint64_t, while individual
+/// components are of smaller size (e.g., uint16_t or uint8_t).
+struct BlendedBlockHash {
+private:
+  using ValueOffset = Bitfield::Element<uint16_t, 0, 16>;
+  using ValueOpcode = Bitfield::Element<uint16_t, 16, 16>;
+  using ValueInstr = Bitfield::Element<uint16_t, 32, 16>;
+  using ValuePred = Bitfield::Element<uint8_t, 48, 8>;
+  using ValueSucc = Bitfield::Element<uint8_t, 56, 8>;
+
+public:
+  explicit BlendedBlockHash() {}
+
+  explicit BlendedBlockHash(uint64_t Hash) {
+    Offset = Bitfield::get<ValueOffset>(Hash);
+    OpcodeHash = Bitfield::get<ValueOpcode>(Hash);
+    InstrHash = Bitfield::get<ValueInstr>(Hash);
+    PredHash = Bitfield::get<ValuePred>(Hash);
+    SuccHash = Bitfield::get<ValueSucc>(Hash);
+  }
+
+  /// Combine the blended hash into uint64_t.
+  uint64_t combine() const {
+    uint64_t Hash = 0;
+    Bitfield::set<ValueOffset>(Hash, Offset);
+    Bitfield::set<ValueOpcode>(Hash, OpcodeHash);
+    Bitfield::set<ValueInstr>(Hash, InstrHash);
+    Bitfield::set<ValuePred>(Hash, PredHash);
+    Bitfield::set<ValueSucc>(Hash, SuccHash);
+    return Hash;
+  }
+
+  /// Compute a distance between two given blended hashes. The smaller the
+  /// distance, the more similar two blocks are. For identical basic blocks,
+  /// the distance is zero.
+  uint64_t distance(const BlendedBlockHash &BBH) const {
+    assert(OpcodeHash == BBH.OpcodeHash &&
+           "incorrect blended hash distance computation");
+    uint64_t Dist = 0;
+    // Account for NeighborHash
+    Dist += SuccHash == BBH.SuccHash ? 0 : 1;
+    Dist += PredHash == BBH.PredHash ? 0 : 1;
+    Dist <<= 16;
+    // Account for InstrHash
+    Dist += InstrHash == BBH.InstrHash ? 0 : 1;
+    Dist <<= 16;
+    // Account for Offset
+    Dist += (Offset >= BBH.Offset ? Offset - BBH.Offset : BBH.Offset - Offset);
+    return Dist;
+  }
+
+  /// The offset of the basic block from the function start.
+  uint16_t Offset{0};
+  /// (Loose) Hash of the basic block instructions, excluding operands.
+  uint16_t OpcodeHash{0};
+  /// (Strong) Hash of the basic block instructions, including opcodes and
+  /// operands.
+  uint16_t InstrHash{0};
+  /// (Loose) Hashes of the predecessors of the basic block.
+  uint8_t PredHash{0};
+  /// (Loose) Hashes of the successors of the basic block.
+  uint8_t SuccHash{0};
+};
+
 /// The object is used to identify and match basic blocks in a BinaryFunction
 /// given their hashes computed on a binary built from several revisions behind
 /// release.

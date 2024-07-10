@@ -16,111 +16,35 @@
 namespace llvm {
 namespace bolt {
 
-/// An object wrapping several components of a basic block hash. The combined
-/// (blended) hash is represented and stored as one uint64_t, while individual
-/// components are of smaller size (e.g., uint16_t or uint8_t).
-struct BlendedBlockHash {
-private:
-  using ValueOffset = Bitfield::Element<uint16_t, 0, 16>;
-  using ValueOpcode = Bitfield::Element<uint16_t, 16, 16>;
-  using ValueInstr = Bitfield::Element<uint16_t, 32, 16>;
-  using ValuePred = Bitfield::Element<uint8_t, 48, 8>;
-  using ValueSucc = Bitfield::Element<uint8_t, 56, 8>;
-
-public:
-  explicit BlendedBlockHash() {}
-
-  explicit BlendedBlockHash(uint64_t Hash) {
-    Offset = Bitfield::get<ValueOffset>(Hash);
-    OpcodeHash = Bitfield::get<ValueOpcode>(Hash);
-    InstrHash = Bitfield::get<ValueInstr>(Hash);
-    PredHash = Bitfield::get<ValuePred>(Hash);
-    SuccHash = Bitfield::get<ValueSucc>(Hash);
-  }
-
-  /// Combine the blended hash into uint64_t.
-  uint64_t combine() const {
-    uint64_t Hash = 0;
-    Bitfield::set<ValueOffset>(Hash, Offset);
-    Bitfield::set<ValueOpcode>(Hash, OpcodeHash);
-    Bitfield::set<ValueInstr>(Hash, InstrHash);
-    Bitfield::set<ValuePred>(Hash, PredHash);
-    Bitfield::set<ValueSucc>(Hash, SuccHash);
-    return Hash;
-  }
-
-  /// Compute a distance between two given blended hashes. The smaller the
-  /// distance, the more similar two blocks are. For identical basic blocks,
-  /// the distance is zero.
-  uint64_t distance(const BlendedBlockHash &BBH) const {
-    assert(OpcodeHash == BBH.OpcodeHash &&
-           "incorrect blended hash distance computation");
-    uint64_t Dist = 0;
-    // Account for NeighborHash
-    Dist += SuccHash == BBH.SuccHash ? 0 : 1;
-    Dist += PredHash == BBH.PredHash ? 0 : 1;
-    Dist <<= 16;
-    // Account for InstrHash
-    Dist += InstrHash == BBH.InstrHash ? 0 : 1;
-    Dist <<= 16;
-    // Account for Offset
-    Dist += (Offset >= BBH.Offset ? Offset - BBH.Offset : BBH.Offset - Offset);
-    return Dist;
-  }
-
-  /// The offset of the basic block from the function start.
-  uint16_t Offset{0};
-  /// (Loose) Hash of the basic block instructions, excluding operands.
-  uint16_t OpcodeHash{0};
-  /// (Strong) Hash of the basic block instructions, including opcodes and
-  /// operands.
-  uint16_t InstrHash{0};
-  /// (Loose) Hashes of the predecessors of the basic block.
-  uint8_t PredHash{0};
-  /// (Loose) Hashes of the successors of the basic block.
-  uint8_t SuccHash{0};
-};
-
 struct CallGraphMatcher {
 public:
-  /// Computes the loose hash, as in the opcode hash, of a binary function.
-  uint64_t computeBFLooseHash(BinaryContext &BC,
-                              yaml::bolt::BinaryProfile &YamlBP,
-                              BinaryFunction *BF);
-
-  /// Computes the loose hash of a function profile.
-  uint64_t computeYamlBFLooseHash(yaml::bolt::BinaryFunctionProfile &YamlBF);
-
-  /// Adds edges to the call graph given the callsites of the parameter
-  /// function.
+  class YAMLProfileReader;
+  /// Adds edges to the binary function call graph given the callsites of the
+  /// parameter function.
   void addBFCGEdges(BinaryContext &BC, yaml::bolt::BinaryProfile &YamlBP,
                     BinaryFunction *BF);
 
-  /// Using the constructed adjacent function mapping, creates mapping from
-  /// neighbor hash to BFs.
+  /// Using the constructed binary function call graph, computes and creates
+  /// mappings from "neighbor hash" (composed of the function names of callee
+  /// and caller functions of a function) to binary functions.
   void computeBFNeighborHashes(BinaryContext &BC);
 
-  /// Construct profile FCG.
+  /// Constructs the call graph for profile functions.
   void constructYAMLFCG(
       yaml::bolt::BinaryProfile &YamlBP,
       DenseMap<uint32_t, yaml::bolt::BinaryFunctionProfile *> &IdToYAMLBF);
-  // private:
-  ///
-  struct FunctionHashes {
-    uint64_t Hash{0};
-    uint64_t AdjacentFunctionHash{0};
-    std::vector<uint64_t> AdjacentFunctionHashesSet;
-  };
 
-  ///
-  std::unordered_map<BinaryFunction *, FunctionHashes> BFToHashes;
+  /// Adjacency map for binary functions in the call graph.
+  std::unordered_map<BinaryFunction *, std::vector<BinaryFunction *>>
+      BFAdjacencyMap;
 
-  ///
+  /// Maps neighbor hashes to binary functions.
   std::unordered_map<uint64_t, std::vector<BinaryFunction *>> NeighborHashToBFs;
 
-  ///
-  std::unordered_map<const yaml::bolt::BinaryFunctionProfile *, FunctionHashes>
-      YamlBFToHashes;
+  /// Adjacency map for profile functions in the call graph.
+  std::unordered_map<yaml::bolt::BinaryFunctionProfile *,
+                     std::vector<yaml::bolt::BinaryFunctionProfile *>>
+      YamlBFAdjacencyMap;
 };
 
 class YAMLProfileReader : public ProfileReaderBase {
