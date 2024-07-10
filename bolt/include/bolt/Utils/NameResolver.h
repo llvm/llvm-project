@@ -62,8 +62,8 @@ public:
     return (LHS + Suffix + Twine(Sep) + RHS).str();
   }
 
-  // Removes a suffix from a function name.
-  static StringRef unify(StringRef Name) {
+  // Drops the suffix that describes the function's number of names.
+  static StringRef dropNumNames(StringRef Name) {
     const size_t Pos = Name.find("(*");
     return Pos != StringRef::npos ? Name.substr(0, Pos) : Name;
   }

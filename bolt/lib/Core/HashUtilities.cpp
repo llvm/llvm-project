@@ -191,7 +191,7 @@ hashBlockCalls(const DenseMap<uint32_t, yaml::bolt::BinaryFunctionProfile *>
     if (It == IdToYamlFunction.end())
       continue;
     StringRef Name =
-        NameResolver::unify(It->second->Name);
+        NameResolver::dropNumNames(It->second->Name);
     FunctionNames.push_back(std::string(Name));
   }
   std::sort(FunctionNames.begin(), FunctionNames.end());
