@@ -21,7 +21,7 @@ ________
 
 Taint analysis works by checking for the occurrence of special operations during the symbolic execution of the program.
 Taint analysis defines sources, sinks, and propagation rules. It identifies errors by detecting a flow of information that originates from a taint source, reaches a taint sink, and propagates through the program paths via propagation rules.
-A source, sink, or an operation that propagates taint is mainly domain-specific knowledge, but there are some built-in defaults provided by ``TaintPropagation`` checker.
+A source, sink, or an operation that propagates taint is mainly domain-specific knowledge, but there are some built-in defaults provided by the ``TaintPropagation`` checker.
 It is possible to express that a statement sanitizes tainted values by providing a ``Filters`` section in the external configuration (see :ref:`clangsa-taint-configuration-example` and :ref:`clangsa-taint-filter-details`).
 There are no default filters defined in the built-in settings.
 The checker's documentation also specifies how to provide a custom taint configuration with command-line options.
