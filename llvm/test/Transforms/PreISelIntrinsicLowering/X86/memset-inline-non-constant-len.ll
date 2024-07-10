@@ -5,10 +5,12 @@
 define void @memset_32(ptr %a, i8 %value) nounwind {
 ; CHECK-LABEL: define void @memset_32(
 ; CHECK-SAME: ptr [[A:%.*]], i8 [[VALUE:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    tail call void @llvm.memset.inline.p0.i64(ptr [[A]], i8 [[VALUE]], i64 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.inline.p0.i64(ptr [[A]], i8 [[VALUE]], i64 32, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memset.inline.p0.i64(ptr [[A]], i8 [[VALUE]], i64 32, i1 true)
 ; CHECK-NEXT:    ret void
 ;
-  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 %value, i64 32, i1 0)
+  call void @llvm.memset.inline.p0.i64(ptr %a, i8 %value, i64 32, i1 0)
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 %value, i64 32, i1 1)
   ret void
 }
 
