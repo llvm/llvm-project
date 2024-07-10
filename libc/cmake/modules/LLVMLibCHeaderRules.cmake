@@ -107,8 +107,8 @@ function(add_yaml_header target_name)
   set(entry_points "${TARGET_ENTRYPOINT_NAME_LIST}")
   list(TRANSFORM entry_points PREPEND "--e=")
 
-  add_custom_command(
-    OUTPUT ${out_file}
+  add_custom_target(
+    generate_${ADD_YAML_HDR_GEN_HDR}
     COMMAND ${Python3_EXECUTABLE} ${LIBC_SOURCE_DIR}/newhdrgen/yaml_to_classes.py
             ${yaml_file}
             ${def_file}
@@ -132,7 +132,7 @@ function(add_yaml_header target_name)
   set(generated_hdr_target ${fq_target_name}.__generated_hdr__)
   add_custom_target(
     ${generated_hdr_target}
-    DEPENDS ${out_file} ${fq_deps_list}
+    DEPENDS generate_${ADD_YAML_HDR_GEN_HDR} ${fq_deps_list}
   )
 
   add_header_library(
