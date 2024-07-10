@@ -15,7 +15,7 @@ mesh.mesh @mesh0(shape = 2x4)
 func.func @mesh_axis_duplicated_different_subarray(
     %arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
   // expected-error@+1 {{mesh axis duplicated}}
-  %s = mesh.sharding @mesh0 split_axis = [[0], [0]] : !mesh.sharding
+  %s = mesh.sharding @mesh0 split_axes = [[0], [0]] : !mesh.sharding
   %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
   return %0 : tensor<4x8xf32>
 }
@@ -27,7 +27,7 @@ mesh.mesh @mesh0(shape = 2x4)
 func.func @mesh_axis_duplicated_same_subarray(
     %arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
   // expected-error@+1 {{mesh axis duplicated}}
-  %s = mesh.sharding @mesh0 split_axis = [[0, 0]] : !mesh.sharding
+  %s = mesh.sharding @mesh0 split_axes = [[0, 0]] : !mesh.sharding
   %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
   return %0 : tensor<4x8xf32>
 }
@@ -39,7 +39,7 @@ mesh.mesh @mesh0(shape = 2x4)
 func.func @mesh_axis_duplicated_bewteen_split_and_partial(
     %arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
   // expected-error@+1 {{mesh axis duplicated}}
-  %s = mesh.sharding @mesh0 split_axis = [[0]] partial=max[0] : !mesh.sharding
+  %s = mesh.sharding @mesh0 split_axes = [[0]] partial=max[0] : !mesh.sharding
   %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
   return %0 : tensor<4x8xf32>
 }
@@ -51,7 +51,7 @@ mesh.mesh @mesh0(shape = 2x4)
 func.func @mesh_axis_negtive_in_split_part(
     %arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
   // expected-error@+1 {{mesh axis is expected to be non-negative}}
-  %s = mesh.sharding @mesh0 split_axis = [[-1]] : !mesh.sharding
+  %s = mesh.sharding @mesh0 split_axes = [[-1]] : !mesh.sharding
   %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
   return %0 : tensor<4x8xf32>
 }
@@ -63,7 +63,7 @@ mesh.mesh @mesh0(shape = 2x4)
 func.func @mesh_axis_negtive_in_partial(
     %arg0 : tensor<4x8xf32>) -> tensor<4x8xf32> {
   // expected-error@+1 {{mesh axis is expected to be non-negative}}
-  %s = mesh.sharding @mesh0 split_axis = [[0]] partial=max[-1] : !mesh.sharding
+  %s = mesh.sharding @mesh0 split_axes = [[0]] partial=max[-1] : !mesh.sharding
   %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
   return %0 : tensor<4x8xf32>
 }
@@ -72,7 +72,7 @@ func.func @mesh_axis_negtive_in_partial(
 
 func.func @sharding_attribute_invalid_nested_symbol(%arg0 : tensor<4x8xf32>) {
   // expected-error@+1 {{custom op 'mesh.sharding' invalid kind of attribute specified}}
-  %s = mesh.sharding @a::@b split_axis = [[0]] : !mesh.sharding
+  %s = mesh.sharding @a::@b split_axes = [[0]] : !mesh.sharding
   %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
   return
 }
@@ -81,7 +81,7 @@ func.func @sharding_attribute_invalid_nested_symbol(%arg0 : tensor<4x8xf32>) {
 
 func.func @sharding_attribute_invalid_halo(%arg0 : tensor<4x8xf32>) {
   // expected-error@+1 {{halo sizes must be specified for all split axes}}
-  %s = mesh.sharding @mesh0 split_axis = [[0], [1]] halo_sizes = [1, 2] : !mesh.sharding
+  %s = mesh.sharding @mesh0 split_axes = [[0], [1]] halo_sizes = [1, 2] : !mesh.sharding
   %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
   return
 }
@@ -90,7 +90,7 @@ func.func @sharding_attribute_invalid_halo(%arg0 : tensor<4x8xf32>) {
 
 func.func @sharding_attribute_invalid_sizes(%arg0 : tensor<4x8xf32>) {
   // expected-error@+1 {{halo sizes and shard shapes are mutually exclusive}}
-  %s = mesh.sharding @mesh0 split_axis = [[0]] halo_sizes = [1, 2] sharded_dims_sizes = [2, 2] : !mesh.sharding
+  %s = mesh.sharding @mesh0 split_axes = [[0]] halo_sizes = [1, 2] sharded_dims_sizes = [2, 2] : !mesh.sharding
   %0 = mesh.shard %arg0 to %s : tensor<4x8xf32>
   return
 }
