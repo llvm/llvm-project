@@ -998,6 +998,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
 // compatibility and builtins.
 static const std::pair<const char *, const char *> genericAlias[]{
     {"and", "iand"},
+    {"getenv", "get_environment_variable"},
     {"imag", "aimag"},
     {"lshift", "shiftl"},
     {"or", "ior"},
@@ -2594,7 +2595,8 @@ bool IntrinsicProcTable::Implementation::IsIntrinsicFunction(
   return name == "__builtin_c_loc" || name == "null";
 }
 bool IntrinsicProcTable::Implementation::IsIntrinsicSubroutine(
-    const std::string &name) const {
+    const std::string &name0) const {
+  const std::string &name{ResolveAlias(name0)};
   auto subrRange{subroutines_.equal_range(name)};
   if (subrRange.first != subrRange.second) {
     return true;
@@ -3151,7 +3153,8 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
   }
 
   if (call.isSubroutineCall) {
-    auto subrRange{subroutines_.equal_range(call.name)};
+    const std::string &name{ResolveAlias(call.name)};
+    auto subrRange{subroutines_.equal_range(name)};
     for (auto iter{subrRange.first}; iter != subrRange.second; ++iter) {
       if (auto specificCall{iter->second->Match(
               call, defaults_, arguments, context, builtinsScope_)}) {

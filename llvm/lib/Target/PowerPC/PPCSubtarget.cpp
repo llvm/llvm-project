@@ -65,8 +65,7 @@ PPCSubtarget::PPCSubtarget(const Triple &TT, const std::string &CPU,
   auto *RBI = new PPCRegisterBankInfo(*getRegisterInfo());
   RegBankInfo.reset(RBI);
 
-  InstSelector.reset(createPPCInstructionSelector(
-      *static_cast<const PPCTargetMachine *>(&TM), *this, *RBI));
+  InstSelector.reset(createPPCInstructionSelector(TM, *this, *RBI));
 }
 
 void PPCSubtarget::initializeEnvironment() {
