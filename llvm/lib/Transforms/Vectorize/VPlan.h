@@ -697,7 +697,7 @@ public:
 };
 
 /// A value that is used outside the VPlan. The operand of the user needs to be
-/// added to the associated LCSSA phi node. The incoming block from VPlan is
+/// added to the associated phi node. The incoming block from VPlan is
 /// determined by where the VPValue is defined: if it is defined by a recipe
 /// outside a region, its parent block is used, otherwise the middle block is
 /// used.
@@ -712,8 +712,10 @@ public:
     return U->getVPUserID() == VPUser::VPUserID::LiveOut;
   }
 
-  /// Fixup the wrapped LCSSA phi node. This means we need to add the
-  /// appropriate incoming value from the precessor Pred.
+  /// Fix the wrapped phi node. This means adding an incoming value to exit
+  /// block phi's from the vector loop via middle block (values from scalar loop
+  /// already reach these phi's), and updating the value to scalar header phi's
+  /// from the scalar preheader.
   void fixPhi(VPlan &Plan, VPTransformState &State);
 
   /// Returns true if the VPLiveOut uses scalars of operand \p Op.

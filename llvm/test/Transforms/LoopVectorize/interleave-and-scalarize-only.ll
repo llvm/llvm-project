@@ -219,7 +219,7 @@ exit:
 ; DBG-NEXT: No successors
 ; DBG-EMPTY:
 ; DBG-NEXT: scalar.ph:
-; DBG-NEXT:  EMIT vp<[[RESUME_P:%.*]]> = exit-phi vp<[[RESUME_1]]>, ir<0>
+; DBG-NEXT:  EMIT vp<[[RESUME_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<0>
 ; DBG-NEXT: No successors
 ; DBG-EMPTY:
 ; DBG-NEXT: Live-out i32 %for = vp<[[RESUME_P]]>

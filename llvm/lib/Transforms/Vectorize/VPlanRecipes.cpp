@@ -194,12 +194,18 @@ void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
   auto Lane = vputils::isUniformAfterVectorization(ExitValue)
                   ? VPLane::getFirstLane()
                   : VPLane::getLastLaneForVF(State.VF);
-  VPBasicBlock *PredVPBB =
+  VPBasicBlock *MiddleVPBB =
       cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
   VPRecipeBase *DefRecipe = ExitValue->getDefiningRecipe();
-  if (DefRecipe && !DefRecipe->getParent()->getParent())
-    PredVPBB = DefRecipe->getParent();
+  auto *ExitingVPBB = DefRecipe ? DefRecipe->getParent() : nullptr;
+  // Values leaving the vector loop reach live out phi's in the exiting block
+  // via middle block.
+  auto *PredVPBB = !ExitingVPBB || ExitingVPBB->getEnclosingLoopRegion()
+                       ? MiddleVPBB
+                       : ExitingVPBB;
   BasicBlock *PredBB = State.CFG.VPBB2IRBB[PredVPBB];
+  // Set insertion point in PredBB in case an extract needs to be generated.
+  // TODO: Model extracts explicitly.
   State.Builder.SetInsertPoint(PredBB, PredBB->getFirstNonPHIIt());
   Value *V = State.get(ExitValue, VPIteration(State.UF - 1, Lane));
   if (Phi->getBasicBlockIndex(PredBB) != -1)
@@ -751,6 +757,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnCond:
+  case VPInstruction::ResumePhi:
     return true;
   };
   llvm_unreachable("switch should return");
@@ -804,7 +811,7 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     O << "active lane mask";
     break;
   case VPInstruction::ResumePhi:
-    O << "exit-phi";
+    O << "resume-phi";
     break;
   case VPInstruction::ExplicitVectorLength:
     O << "EXPLICIT-VECTOR-LENGTH";
