@@ -788,6 +788,16 @@ def FeatureFlatAtomicFaddF32Inst
   "Has flat_atomic_add_f32 instruction"
 >;
 
+def FeatureAgentScopeFineGrainedRemoteMemoryAtomics
+  : SubtargetFeature<"agent-scope-fine-grained-remote-memory-atomics",
+  "HasAgentScopeFineGrainedRemoteMemoryAtomics",
+  "true",
+  "Agent (device) scoped atomic operations, excluding those directly "
+  "supported by PCIe (i.e. integer atomic add, exchange, and "
+  "compare-and-swap), are functional for allocations in host or peer "
+  "device memory."
+>;
+
 def FeatureDefaultComponentZero : SubtargetFeature<"default-component-zero",
   "HasDefaultComponentZero",
   "true",
@@ -1207,7 +1217,8 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
    FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
    FeatureMaxHardClauseLength32,
-   FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts
+   FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
+   FeatureAgentScopeFineGrainedRemoteMemoryAtomics
   ]
 >;
 
@@ -1415,7 +1426,8 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureBackOffBarrier,
    FeatureKernargPreload,
    FeatureAtomicFMinFMaxF64GlobalInsts,
-   FeatureAtomicFMinFMaxF64FlatInsts
+   FeatureAtomicFMinFMaxF64FlatInsts,
+   FeatureAgentScopeFineGrainedRemoteMemoryAtomics
    ]>;
 
 def FeatureISAVersion9_4_0 : FeatureSet<
