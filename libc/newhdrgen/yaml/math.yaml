@@ -7,6 +7,12 @@ types:
 enums: []
 objects: []
 functions:
+  - name: cbrtf
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: float
   - name: copysign
     standards: 
       - stdc
@@ -498,6 +504,24 @@ functions:
   - name: ilogbl
     standards: 
       - stdc
+    return_type: int
+    arguments:
+      - type: long double
+  - name: isnan
+    standards:
+      - BSDExtensions
+    return_type: int
+    arguments: 
+      - type: double
+  - name: isnanf
+    standards:
+      - BSDExtensions
+    return_type: int
+    arguments:
+      - type: float
+  - name: isnanl
+    standards:
+      - BSDExtensions
     return_type: int
     arguments:
       - type: long double
@@ -1048,6 +1072,18 @@ functions:
     arguments:
       - type: double
       - type: double
+  - name: powi
+    standards: llvm_libc_ext
+    return_type: double
+    arguments:
+      - type: double
+      - type: int
+  - name: powif
+    standards: llvm_libc_ext
+    return_type: float
+    arguments:
+      - type: float
+      - type: int
   - name: coshf
     standards: 
       - stdc
@@ -1256,7 +1292,7 @@ functions:
     guard: LIBC_TYPES_HAS_FLOAT16
   - name: f16fma
     standards: 
-      - stdc
+      - llvm_libc_ext
     return_type: _Float16
     arguments:
       - type: double
@@ -1265,7 +1301,7 @@ functions:
     guard: LIBC_TYPES_HAS_FLOAT16
   - name: f16fmaf
     standards: 
-      - stdc
+      - llvm_libc_ext
     return_type: _Float16
     arguments:
       - type: float
@@ -1274,7 +1310,7 @@ functions:
     guard: LIBC_TYPES_HAS_FLOAT16
   - name: f16fmal
     standards: 
-      - stdc
+      - llvm_libc_ext
     return_type: _Float16
     arguments:
       - type: long double
