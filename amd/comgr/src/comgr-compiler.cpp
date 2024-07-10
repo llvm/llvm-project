@@ -1052,8 +1052,8 @@ amd_comgr_status_t AMDGPUCompiler::addCompilationFlags() {
     break;
   case AMD_COMGR_LANGUAGE_HIP:
     Args.push_back("hip");
-    Args.push_back("-std=c++11");
-    Args.push_back("--cuda-device-only");
+    Args.push_back("-nogpuinc");
+    Args.push_back("--offload-device-only");
     Args.push_back("-isystem");
     Args.push_back(ROCMIncludePath.c_str());
     Args.push_back("-isystem");
