@@ -15230,6 +15230,62 @@ The behavior of '``llvm.memset.inline.*``' is equivalent to the behavior of
 '``llvm.memset.*``', but the generated code is guaranteed not to call any
 external functions.
 
+.. _int_memset_pattern:
+
+'``llvm.memset_pattern``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.memset_pattern`` on
+any integer bit width and for different address spaces. Not all targets
+support all bit widths however.
+
+::
+
+      declare void @llvm.memset_pattern.p0.i64.i128(ptr <dest>, i128 <val>,
+                                                    i64 <len>, i1 <isvolatile>)
+
+Overview:
+"""""""""
+
+The '``llvm.memset_pattern.*``' intrinsics fill a block of memory with
+a particular value. This may be expanded to an inline loop, a sequence of
+stores, or a libcall depending on what is available for the target and the
+expected performance and code size impact.
+
+Arguments:
+""""""""""
+
+The first argument is a pointer to the destination to fill, the second
+is the value with which to fill it, the third argument is an integer
+argument specifying the number of bytes to fill, and the fourth is a boolean
+indicating a volatile access.
+
+The :ref:`align <attr_align>` parameter attribute can be provided
+for the first argument.
+
+If the ``isvolatile`` parameter is ``true``, the
+``llvm.memset_pattern`` call is a :ref:`volatile operation <volatile>`. The
+detailed access behavior is not very cleanly specified and it is unwise to
+depend on it.
+
+Semantics:
+""""""""""
+
+The '``llvm.memset_pattern.*``' intrinsics fill "len" bytes of memory
+starting at the destination location. If the argument is known to be aligned
+to some boundary, this can be specified as an attribute on the argument.
+
+If ``<len>`` is not an integer multiple of the pattern width in bytes, then any
+remainder bytes will be copied from ``<val>``.
+If ``<len>`` is 0, it is no-op modulo the behavior of attributes attached to
+the arguments.
+If ``<len>`` is not a well-defined value, the behavior is undefined.
+If ``<len>`` is not zero, ``<dest>`` should be well-defined, otherwise the
+behavior is undefined.
+
 .. _int_sqrt:
 
 '``llvm.sqrt.*``' Intrinsic
