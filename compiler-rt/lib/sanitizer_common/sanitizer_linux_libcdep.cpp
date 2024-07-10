@@ -160,7 +160,7 @@ void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
     if (*stack_top == maxAddr + 1)
       *stack_top = maxAddr;
     else
-      CHECK_LT(*stack_top, maxAddr);
+      CHECK_LE(*stack_top, maxAddr);
 
     return;
   }
