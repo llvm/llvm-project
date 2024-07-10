@@ -1007,13 +1007,15 @@ void TargetInfo::copyAuxTarget(const TargetInfo *Aux) {
   *Target = *Src;
 }
 
-void TargetInfo::BranchProtectionInfo::setFnAttributes(llvm::Function &F) const {
+void TargetInfo::BranchProtectionInfo::setFnAttributes(
+    llvm::Function &F) const {
   llvm::AttrBuilder FuncAttrs(F.getContext());
   setFnAttributes(FuncAttrs);
   F.addFnAttrs(FuncAttrs);
 }
 
-void  TargetInfo::BranchProtectionInfo::setFnAttributes(llvm::AttrBuilder &FuncAttrs) const {
+void TargetInfo::BranchProtectionInfo::setFnAttributes(
+    llvm::AttrBuilder &FuncAttrs) const {
   if (SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
     FuncAttrs.addAttribute("sign-return-address", getSignReturnAddrStr());
     FuncAttrs.addAttribute("sign-return-address-key", getSignKeyStr());
