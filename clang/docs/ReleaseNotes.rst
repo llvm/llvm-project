@@ -355,6 +355,9 @@ C23 Feature Support
 - Clang now supports `N3017 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3017.htm>`_
   ``#embed`` - a scannable, tooling-friendly binary resource inclusion mechanism.
 
+- Added the ``FLT_NORM_MAX``, ``DBL_NORM_MAX``, and ``LDBL_NORM_MAX`` to the
+  freestanding implementation of ``<float.h>`` that ships with Clang.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 

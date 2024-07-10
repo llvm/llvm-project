@@ -7790,8 +7790,8 @@ void AArch64InstructionSelector::processPHIs(MachineFunction &MF) {
 namespace llvm {
 InstructionSelector *
 createAArch64InstructionSelector(const AArch64TargetMachine &TM,
-                                 AArch64Subtarget &Subtarget,
-                                 AArch64RegisterBankInfo &RBI) {
+                                 const AArch64Subtarget &Subtarget,
+                                 const AArch64RegisterBankInfo &RBI) {
   return new AArch64InstructionSelector(TM, Subtarget, RBI);
 }
 }
