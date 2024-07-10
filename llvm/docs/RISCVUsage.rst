@@ -70,6 +70,30 @@ To specify the target triple:
 To select an E variant ISA (e.g. RV32E instead of RV32I), use the base
 architecture string (e.g. ``riscv32``) with the extension ``e``.
 
+Profiles
+========
+
+Supported profile names can be passed using ``-march`` instead of a standard
+ISA naming string. Currently supported profiles:
+
+* ``rvi20u32``
+* ``rvi20u64``
+* ``rva20u64``
+* ``rva20s64``
+* ``rva22u64``
+* ``rva22s64``
+
+
+Profiles that are not yet ratified cannot be used unless
+``-menable-experimental-extensions`` (or equivalent for other tools) is
+specified. This applies to the following profiles:
+
+* ``rva23u64``
+* ``rva23s64``
+* ``rvb23u64``
+* ``rvb23s64``
+* ``rvm23u32``
+
 .. _riscv-extensions:
 
 Extensions
