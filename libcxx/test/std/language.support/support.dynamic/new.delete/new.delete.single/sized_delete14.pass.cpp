@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// test sized operator delete replacement.
+// Test sized operator delete replacement.
 
-// These compiler versions do not have proper sized deallocation support.
+// These compiler versions do not enable sized deallocation by default.
 // UNSUPPORTED: clang-17, clang-18
 
 // UNSUPPORTED: sanitizer-new-delete, c++03, c++11
