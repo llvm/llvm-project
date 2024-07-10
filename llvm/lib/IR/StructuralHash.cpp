@@ -26,6 +26,20 @@ namespace {
 class StructuralHashImpl {
   uint64_t Hash;
 
+  static constexpr uint64_t FUNCTION_HEADER =
+      llvm::hashing::detail::hash_16_bytes(
+          0,
+          reinterpret_cast<uint64_t>("FunctionHeader")); // 0x62642d6b6b2d6b72;
+  static constexpr uint64_t BASIC_BLOCK_HEADER =
+      llvm::hashing::detail::hash_16_bytes(
+          0, reinterpret_cast<uint64_t>("BasicBlockHeader"));
+  static constexpr uint64_t GLOBAL_HEADER =
+      llvm::hashing::detail::hash_16_bytes(
+          0, reinterpret_cast<uint64_t>("GlobalHeader"));
+  static constexpr uint64_t INITIAL_HASH_VALUE =
+      llvm::hashing::detail::hash_16_bytes(
+          0, reinterpret_cast<uint64_t>("InitialHashValue"));
+
   void hash(uint64_t V) { Hash = hashing::detail::hash_16_bytes(Hash, V); }
 
   // This will produce different values on 32-bit and 64-bit systens as
@@ -43,7 +57,7 @@ class StructuralHashImpl {
   }
 
 public:
-  StructuralHashImpl() : Hash(4) {}
+  StructuralHashImpl() : Hash(INITIAL_HASH_VALUE) {}
 
   void updateOperand(Value *Operand) {
     hashType(Operand->getType());
@@ -102,7 +116,7 @@ public:
     if (F.isDeclaration())
       return;
 
-    hash(0x62642d6b6b2d6b72); // Function header
+    hash(FUNCTION_HEADER); // Function header
 
     hash(F.isVarArg());
     hash(F.arg_size());
@@ -121,7 +135,7 @@ public:
       // This random value acts as a block header, as otherwise the partition of
       // opcodes into BBs wouldn't affect the hash, only the order of the
       // opcodes
-      hash(45798);
+      hash(BASIC_BLOCK_HEADER); // Basic block header
       for (auto &Inst : *BB)
         updateInstruction(Inst, DetailedHash);
 
@@ -137,7 +151,7 @@ public:
     // we ignore anything with the `.llvm` prefix
     if (GV.isDeclaration() || GV.getName().starts_with("llvm."))
       return;
-    hash(23456); // Global header
+    hash(GLOBAL_VARIABLE_HEADER); // Global header
     hash(GV.getValueType()->getTypeID());
   }
 
