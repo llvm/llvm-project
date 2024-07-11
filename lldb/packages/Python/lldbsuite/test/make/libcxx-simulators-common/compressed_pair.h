@@ -1,7 +1,6 @@
 #ifndef STD_LLDB_COMPRESSED_PAIR_H
 #define STD_LLDB_COMPRESSED_PAIR_H
 
-#include <__memory/compressed_pair.h>
 #include <type_traits>
 
 namespace std {
@@ -53,26 +52,27 @@ public:
   _T1 &first() { return static_cast<_Base1 &>(*this).__get(); }
 };
 #elif COMPRESSED_PAIR_REV == 1
+template <class _ToPad> class __compressed_pair_padding {
+  char __padding_[(is_empty<_ToPad>::value && !__libcpp_is_final<_ToPad>::value)
+                      ? 0
+                      : sizeof(_ToPad) - __datasizeof(_ToPad)];
+};
+
 #define _LLDB_COMPRESSED_PAIR(T1, Initializer1, T2, Initializer2)              \
   [[__gnu__::__aligned__(alignof(T2))]] [[no_unique_address]] T1 Initializer1; \
-  [[no_unique_address]] __compressed_pair_padding<T1> _LIBCPP_CONCAT3(         \
-      __padding1_, __LINE__, _);                                               \
+  [[no_unique_address]] __compressed_pair_padding<T1> __padding1_;             \
   [[no_unique_address]] T2 Initializer2;                                       \
-  [[no_unique_address]] __compressed_pair_padding<T2> _LIBCPP_CONCAT3(         \
-      __padding2_, __LINE__, _)
+  [[no_unique_address]] __compressed_pair_padding<T2> __padding2_;
 
 #define _LLDB_COMPRESSED_TRIPLE(T1, Initializer1, T2, Initializer2, T3,        \
                                 Initializer3)                                  \
   [[using __gnu__: __aligned__(alignof(T2)),                                   \
     __aligned__(alignof(T3))]] [[no_unique_address]] T1 Initializer1;          \
-  [[no_unique_address]] __compressed_pair_padding<T1> _LIBCPP_CONCAT3(         \
-      __padding1_, __LINE__, _);                                               \
+  [[no_unique_address]] __compressed_pair_padding<T1> __padding1_;             \
   [[no_unique_address]] T2 Initializer2;                                       \
-  [[no_unique_address]] __compressed_pair_padding<T2> _LIBCPP_CONCAT3(         \
-      __padding2_, __LINE__, _);                                               \
+  [[no_unique_address]] __compressed_pair_padding<T2> __padding2_;             \
   [[no_unique_address]] T3 Initializer3;                                       \
-  [[no_unique_address]] __compressed_pair_padding<T3> _LIBCPP_CONCAT3(         \
-      __padding3_, __LINE__, _)
+  [[no_unique_address]] __compressed_pair_padding<T3> __padding3_;
 #elif COMPRESSED_PAIR_REV == 2
 #define _LLDB_COMPRESSED_PAIR(T1, Name1, T2, Name2)                            \
   [[no_unique_address]] T1 Name1;                                              \

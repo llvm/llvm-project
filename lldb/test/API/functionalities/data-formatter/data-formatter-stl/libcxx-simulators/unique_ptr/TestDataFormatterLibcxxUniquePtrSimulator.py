@@ -26,8 +26,7 @@ class LibcxxUniquePtrDataFormatterSimulatorTestCase(TestBase):
         )
 
 
-# for r in range(3):
-for r in [0, 2]:
+for r in range(3):
     name = "test_r%d" % r
     defines = ["COMPRESSED_PAIR_REV=%d" % r]
     f = functools.partialmethod(

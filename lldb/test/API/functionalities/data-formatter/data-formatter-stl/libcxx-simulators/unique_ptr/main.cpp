@@ -1,6 +1,4 @@
-#include "../compressed_pair.h"
-
-#include <__memory/allocator_traits.h>
+#include <libcxx-simulators-common/compressed_pair.h>
 
 namespace std {
 namespace __lldb {
@@ -14,7 +12,7 @@ template <class _Tp, class _Dp = default_delete<_Tp>> class unique_ptr {
 public:
   typedef _Tp element_type;
   typedef _Dp deleter_type;
-  typedef typename __pointer<_Tp, deleter_type>::type pointer;
+  typedef _Tp *pointer;
 
 #if COMPRESSED_PAIR_REV == 0
   std::__lldb::__compressed_pair<pointer, deleter_type> __ptr_;
