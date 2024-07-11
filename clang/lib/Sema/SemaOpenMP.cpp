@@ -4811,7 +4811,6 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
         << getOpenMPDirectiveName(CurrentRegion);
     return true;
   }
-
   if (isOpenMPSimdDirective(ParentRegion) &&
       ((SemaRef.LangOpts.OpenMP <= 45 && CurrentRegion != OMPD_ordered) ||
        (SemaRef.LangOpts.OpenMP >= 50 && CurrentRegion != OMPD_ordered &&
@@ -4835,14 +4834,12 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
         << (SemaRef.LangOpts.OpenMP >= 50 ? 1 : 0);
     return CurrentRegion != OMPD_simd;
   }
-
   if (EnclosingConstruct == OMPD_atomic) {
     // OpenMP [2.16, Nesting of Regions]
     // OpenMP constructs may not be nested inside an atomic region.
     SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region_atomic);
     return true;
   }
-
   if (CurrentRegion == OMPD_section) {
     // OpenMP [2.7.2, sections Construct, Restrictions]
     // Orphaned section directives are prohibited. That is, the section
@@ -4856,7 +4853,6 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     }
     return false;
   }
-
   // Allow some constructs (except teams and cancellation constructs) to be
   // orphaned (they could be used in functions, called from OpenMP regions
   // with the required preconditions).
@@ -4865,7 +4861,6 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
       CurrentRegion != OMPD_cancellation_point &&
       CurrentRegion != OMPD_cancel && CurrentRegion != OMPD_scan)
     return false;
-
   // Checks needed for mapping "loop" construct. Please check mapLoopConstruct
   // for a detailed explanation
   if (SemaRef.LangOpts.OpenMP >= 50 && CurrentRegion == OMPD_loop &&
@@ -4878,7 +4873,6 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
         << getOpenMPDirectiveName(CurrentRegion);
     return true;
   }
-
   if (CurrentRegion == OMPD_cancellation_point ||
       CurrentRegion == OMPD_cancel) {
     // OpenMP [2.16, Nesting of Regions]
@@ -5001,7 +4995,6 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     OrphanSeen = ParentRegion == OMPD_unknown;
     Recommend = ShouldBeInLoopSimdRegion;
   }
-
   if (!NestingProhibited && !isOpenMPTargetExecutionDirective(CurrentRegion) &&
       !isOpenMPTargetDataManagementDirective(CurrentRegion) &&
       EnclosingConstruct == OMPD_teams) {
@@ -5021,7 +5014,6 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
                           CurrentRegion == OMPD_atomic);
     Recommend = ShouldBeInParallelRegion;
   }
-
   if (!NestingProhibited && CurrentRegion == OMPD_loop) {
     // OpenMP [5.1, 2.11.7, loop Construct, Restrictions]
     // If the bind clause is present on the loop construct and binding is
@@ -5031,7 +5023,6 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
         BindKind == OMPC_BIND_teams && EnclosingConstruct != OMPD_teams;
     Recommend = ShouldBeInTeamsRegion;
   }
-
   if (!NestingProhibited && isOpenMPNestingDistributeDirective(CurrentRegion)) {
     // OpenMP 4.5 [2.17 Nesting of Regions]
     // The region associated with the distribute construct must be strictly
@@ -5039,7 +5030,6 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     NestingProhibited = EnclosingConstruct != OMPD_teams;
     Recommend = ShouldBeInTeamsRegion;
   }
-
   if (!NestingProhibited &&
       (isOpenMPTargetExecutionDirective(CurrentRegion) ||
        isOpenMPTargetDataManagementDirective(CurrentRegion))) {
@@ -5059,7 +5049,6 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
         false /* don't skip top directive */);
     CloseNesting = false;
   }
-
   if (NestingProhibited) {
     if (OrphanSeen) {
       SemaRef.Diag(StartLoc, diag::err_omp_orphaned_device_directive)
