@@ -351,7 +351,7 @@ float my_cosf(float f) {
   // CHECK: {{.+}} = cir.cos {{.+}} : !cir.float
 
   // LLVM: define float @my_cosf(float %0)
-  // LLVM:   %{{.+}} = call float @cosf(float %{{.+}})
+  // LLVM:   %{{.+}} = call float @llvm.cos.f32(float %{{.+}})
   // LLVM: }
 }
 
@@ -361,7 +361,7 @@ double my_cos(double f) {
   // CHECK: {{.+}} = cir.cos {{.+}} : !cir.double
 
   // LLVM: define double @my_cos(double %0)
-  // LLVM:   %{{.+}} = call double @cos(double %{{.+}})
+  // LLVM:   %{{.+}} = call double @llvm.cos.f64(double %{{.+}})
   // LLVM: }
 }
 
@@ -372,7 +372,7 @@ long double my_cosl(long double f) {
   // AARCH64: {{.+}} = cir.cos {{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define x86_fp80 @my_cosl(x86_fp80 %0)
-  // LLVM:   %{{.+}} = call x86_fp80 @cosl(x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = call x86_fp80 @llvm.cos.f80(x86_fp80 %{{.+}})
   // LLVM: }
 }
 
@@ -386,7 +386,7 @@ float call_cosf(float f) {
   // CHECK: {{.+}} = cir.cos {{.+}} : !cir.float
 
   // LLVM: define float @call_cosf(float %0)
-  // LLVM:   %{{.+}} = call float @cosf(float %{{.+}})
+  // LLVM:   %{{.+}} = call float @llvm.cos.f32(float %{{.+}})
   // LLVM: }
 }
 
@@ -396,7 +396,7 @@ double call_cos(double f) {
   // CHECK: {{.+}} = cir.cos {{.+}} : !cir.double
 
   // LLVM: define double @call_cos(double %0)
-  // LLVM:   %{{.+}} = call double @cos(double %{{.+}})
+  // LLVM:   %{{.+}} = call double @llvm.cos.f64(double %{{.+}})
   // LLVM: }
 }
 
@@ -407,7 +407,7 @@ long double call_cosl(long double f) {
   // AARCH64: {{.+}} = cir.cos {{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define x86_fp80 @call_cosl(x86_fp80 %0)
-  // LLVM:   %{{.+}} = call x86_fp80 @cosl(x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = call x86_fp80 @llvm.cos.f80(x86_fp80 %{{.+}})
   // LLVM: }
 }
 
@@ -419,7 +419,7 @@ float my_expf(float f) {
   // CHECK: {{.+}} = cir.exp {{.+}} : !cir.float
 
   // LLVM: define float @my_expf(float %0)
-  // LLVM:   %{{.+}} = call float @expf(float %{{.+}})
+  // LLVM:   %{{.+}} = call float @llvm.exp.f32(float %{{.+}})
   // LLVM: }
 }
 
@@ -429,7 +429,7 @@ double my_exp(double f) {
   // CHECK: {{.+}} = cir.exp {{.+}} : !cir.double
 
   // LLVM: define double @my_exp(double %0)
-  // LLVM:   %{{.+}} = call double @exp(double %{{.+}})
+  // LLVM:   %{{.+}} = call double @llvm.exp.f64(double %{{.+}})
   // LLVM: }
 }
 
@@ -440,7 +440,7 @@ long double my_expl(long double f) {
   // AARCH64: {{.+}} = cir.exp {{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define x86_fp80 @my_expl(x86_fp80 %0)
-  // LLVM:   %{{.+}} = call x86_fp80 @expl(x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = call x86_fp80 @llvm.exp.f80(x86_fp80 %{{.+}})
   // LLVM: }
 }
 
@@ -454,7 +454,7 @@ float call_expf(float f) {
   // CHECK: {{.+}} = cir.exp {{.+}} : !cir.float
 
   // LLVM: define float @call_expf(float %0)
-  // LLVM:   %{{.+}} = call float @expf(float %{{.+}})
+  // LLVM:   %{{.+}} = call float @llvm.exp.f32(float %{{.+}})
   // LLVM: }
 }
 
@@ -464,7 +464,7 @@ double call_exp(double f) {
   // CHECK: {{.+}} = cir.exp {{.+}} : !cir.double
 
   // LLVM: define double @call_exp(double %0)
-  // LLVM:   %{{.+}} = call double @exp(double %{{.+}})
+  // LLVM:   %{{.+}} = call double @llvm.exp.f64(double %{{.+}})
   // LLVM: }
 }
 
@@ -475,7 +475,7 @@ long double call_expl(long double f) {
   // AARCH64: {{.+}} = cir.exp {{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define x86_fp80 @call_expl(x86_fp80 %0)
-  // LLVM:   %{{.+}} = call x86_fp80 @expl(x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = call x86_fp80 @llvm.exp.f80(x86_fp80 %{{.+}})
   // LLVM: }
 }
 
@@ -487,7 +487,7 @@ float my_exp2f(float f) {
   // CHECK: {{.+}} = cir.exp2 {{.+}} : !cir.float
 
   // LLVM: define float @my_exp2f(float %0)
-  // LLVM:   %{{.+}} = call float @exp2f(float %{{.+}})
+  // LLVM:   %{{.+}} = call float @llvm.exp2.f32(float %{{.+}})
   // LLVM: }
 }
 
@@ -497,7 +497,7 @@ double my_exp2(double f) {
   // CHECK: {{.+}} = cir.exp2 {{.+}} : !cir.double
 
   // LLVM: define double @my_exp2(double %0)
-  // LLVM:   %{{.+}} = call double @exp2(double %{{.+}})
+  // LLVM:   %{{.+}} = call double @llvm.exp2.f64(double %{{.+}})
   // LLVM: }
 }
 
@@ -508,7 +508,7 @@ long double my_exp2l(long double f) {
   // AARCH64: {{.+}} = cir.exp2 {{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define x86_fp80 @my_exp2l(x86_fp80 %0)
-  // LLVM:   %{{.+}} = call x86_fp80 @exp2l(x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = call x86_fp80 @llvm.exp2.f80(x86_fp80 %{{.+}})
   // LLVM: }
 }
 
@@ -522,7 +522,7 @@ float call_exp2f(float f) {
   // CHECK: {{.+}} = cir.exp2 {{.+}} : !cir.float
 
   // LLVM: define float @call_exp2f(float %0)
-  // LLVM:   %{{.+}} = call float @exp2f(float %{{.+}})
+  // LLVM:   %{{.+}} = call float @llvm.exp2.f32(float %{{.+}})
   // LLVM: }
 }
 
@@ -532,7 +532,7 @@ double call_exp2(double f) {
   // CHECK: {{.+}} = cir.exp2 {{.+}} : !cir.double
 
   // LLVM: define double @call_exp2(double %0)
-  // LLVM:   %{{.+}} = call double @exp2(double %{{.+}})
+  // LLVM:   %{{.+}} = call double @llvm.exp2.f64(double %{{.+}})
   // LLVM: }
 }
 
@@ -543,7 +543,7 @@ long double call_exp2l(long double f) {
   // AARCH64: {{.+}} = cir.exp2 {{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define x86_fp80 @call_exp2l(x86_fp80 %0)
-  // LLVM:   %{{.+}} = call x86_fp80 @exp2l(x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = call x86_fp80 @llvm.exp2.f80(x86_fp80 %{{.+}})
   // LLVM: }
 }
 
@@ -623,7 +623,7 @@ float my_logf(float f) {
   // CHECK: {{.+}} = cir.log {{.+}} : !cir.float
 
   // LLVM: define float @my_logf(float %0)
-  // LLVM:   %{{.+}} = call float @logf(float %{{.+}})
+  // LLVM:   %{{.+}} = call float @llvm.log.f32(float %{{.+}})
   // LLVM: }
 }
 
@@ -633,7 +633,7 @@ double my_log(double f) {
   // CHECK: {{.+}} = cir.log {{.+}} : !cir.double
 
   // LLVM: define double @my_log(double %0)
-  // LLVM:   %{{.+}} = call double @log(double %{{.+}})
+  // LLVM:   %{{.+}} = call double @llvm.log.f64(double %{{.+}})
   // LLVM: }
 }
 
@@ -644,7 +644,7 @@ long double my_logl(long double f) {
   // AARCH64: {{.+}} = cir.log {{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define x86_fp80 @my_logl(x86_fp80 %0)
-  // LLVM:   %{{.+}} = call x86_fp80 @logl(x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = call x86_fp80 @llvm.log.f80(x86_fp80 %{{.+}})
   // LLVM: }
 }
 
@@ -658,7 +658,7 @@ float call_logf(float f) {
   // CHECK: {{.+}} = cir.log {{.+}} : !cir.float
 
   // LLVM: define float @call_logf(float %0)
-  // LLVM:   %{{.+}} = call float @logf(float %{{.+}})
+  // LLVM:   %{{.+}} = call float @llvm.log.f32(float %{{.+}})
   // LLVM: }
 }
 
@@ -668,7 +668,7 @@ double call_log(double f) {
   // CHECK: {{.+}} = cir.log {{.+}} : !cir.double
 
   // LLVM: define double @call_log(double %0)
-  // LLVM:   %{{.+}} = call double @log(double %{{.+}})
+  // LLVM:   %{{.+}} = call double @llvm.log.f64(double %{{.+}})
   // LLVM: }
 }
 
@@ -679,7 +679,7 @@ long double call_logl(long double f) {
   // AARCH64: {{.+}} = cir.log {{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define x86_fp80 @call_logl(x86_fp80 %0)
-  // LLVM:   %{{.+}} = call x86_fp80 @logl(x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = call x86_fp80 @llvm.log.f80(x86_fp80 %{{.+}})
   // LLVM: }
 }
 
@@ -691,7 +691,7 @@ float my_log10f(float f) {
   // CHECK: {{.+}} = cir.log10 {{.+}} : !cir.float
 
   // LLVM: define float @my_log10f(float %0)
-  // LLVM:   %{{.+}} = call float @log10f(float %{{.+}})
+  // LLVM:   %{{.+}} = call float @llvm.log10.f32(float %{{.+}})
   // LLVM: }
 }
 
@@ -701,7 +701,7 @@ double my_log10(double f) {
   // CHECK: {{.+}} = cir.log10 {{.+}} : !cir.double
 
   // LLVM: define double @my_log10(double %0)
-  // LLVM:   %{{.+}} = call double @log10(double %{{.+}})
+  // LLVM:   %{{.+}} = call double @llvm.log10.f64(double %{{.+}})
   // LLVM: }
 }
 
@@ -712,7 +712,7 @@ long double my_log10l(long double f) {
   // AARCH64: {{.+}} = cir.log10 {{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define x86_fp80 @my_log10l(x86_fp80 %0)
-  // LLVM:   %{{.+}} = call x86_fp80 @log10l(x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = call x86_fp80 @llvm.log10.f80(x86_fp80 %{{.+}})
   // LLVM: }
 }
 
@@ -726,7 +726,7 @@ float call_log10f(float f) {
   // CHECK: {{.+}} = cir.log10 {{.+}} : !cir.float
 
   // LLVM: define float @call_log10f(float %0)
-  // LLVM:   %{{.+}} = call float @log10f(float %{{.+}})
+  // LLVM:   %{{.+}} = call float @llvm.log10.f32(float %{{.+}})
   // LLVM: }
 }
 
@@ -736,7 +736,7 @@ double call_log10(double f) {
   // CHECK: {{.+}} = cir.log10 {{.+}} : !cir.double
 
   // LLVM: define double @call_log10(double %0)
-  // LLVM:   %{{.+}} = call double @log10(double %{{.+}})
+  // LLVM:   %{{.+}} = call double @llvm.log10.f64(double %{{.+}})
   // LLVM: }
 }
 
@@ -747,7 +747,7 @@ long double call_log10l(long double f) {
   // AARCH64: {{.+}} = cir.log10 {{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define x86_fp80 @call_log10l(x86_fp80 %0)
-  // LLVM:   %{{.+}} = call x86_fp80 @log10l(x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = call x86_fp80 @llvm.log10.f80(x86_fp80 %{{.+}})
   // LLVM: }
 }
 
@@ -759,7 +759,7 @@ float my_log2f(float f) {
   // CHECK: {{.+}} = cir.log2 {{.+}} : !cir.float
 
   // LLVM: define float @my_log2f(float %0)
-  // LLVM:   %{{.+}} = call float @log2f(float %{{.+}})
+  // LLVM:   %{{.+}} = call float @llvm.log2.f32(float %{{.+}})
   // LLVM: }
 }
 
@@ -769,7 +769,7 @@ double my_log2(double f) {
   // CHECK: {{.+}} = cir.log2 {{.+}} : !cir.double
 
   // LLVM: define double @my_log2(double %0)
-  // LLVM:   %{{.+}} = call double @log2(double %{{.+}})
+  // LLVM:   %{{.+}} = call double @llvm.log2.f64(double %{{.+}})
   // LLVM: }
 }
 
@@ -780,7 +780,7 @@ long double my_log2l(long double f) {
   // AARCH64: {{.+}} = cir.log2 {{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define x86_fp80 @my_log2l(x86_fp80 %0)
-  // LLVM:   %{{.+}} = call x86_fp80 @log2l(x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = call x86_fp80 @llvm.log2.f80(x86_fp80 %{{.+}})
   // LLVM: }
 }
 
@@ -794,7 +794,7 @@ float call_log2f(float f) {
   // CHECK: {{.+}} = cir.log2 {{.+}} : !cir.float
 
   // LLVM: define float @call_log2f(float %0)
-  // LLVM:   %{{.+}} = call float @log2f(float %{{.+}})
+  // LLVM:   %{{.+}} = call float @llvm.log2.f32(float %{{.+}})
   // LLVM: }
 }
 
@@ -804,7 +804,7 @@ double call_log2(double f) {
   // CHECK: {{.+}} = cir.log2 {{.+}} : !cir.double
 
   // LLVM: define double @call_log2(double %0)
-  // LLVM:   %{{.+}} = call double @log2(double %{{.+}})
+  // LLVM:   %{{.+}} = call double @llvm.log2.f64(double %{{.+}})
   // LLVM: }
 }
 
@@ -815,7 +815,7 @@ long double call_log2l(long double f) {
   // AARCH64: {{.+}} = cir.log2 {{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define x86_fp80 @call_log2l(x86_fp80 %0)
-  // LLVM:   %{{.+}} = call x86_fp80 @log2l(x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = call x86_fp80 @llvm.log2.f80(x86_fp80 %{{.+}})
   // LLVM: }
 }
 
@@ -1031,7 +1031,7 @@ float my_sinf(float f) {
   // CHECK: {{.+}} = cir.sin {{.+}} : !cir.float
 
   // LLVM: define float @my_sinf(float %0)
-  // LLVM:   %{{.+}} = call float @sinf(float %{{.+}})
+  // LLVM:   %{{.+}} = call float @llvm.sin.f32(float %{{.+}})
   // LLVM: }
 }
 
@@ -1041,7 +1041,7 @@ double my_sin(double f) {
   // CHECK: {{.+}} = cir.sin {{.+}} : !cir.double
 
   // LLVM: define double @my_sin(double %0)
-  // LLVM:   %{{.+}} = call double @sin(double %{{.+}})
+  // LLVM:   %{{.+}} = call double @llvm.sin.f64(double %{{.+}})
   // LLVM: }
 }
 
@@ -1052,7 +1052,7 @@ long double my_sinl(long double f) {
   // AARCH64: {{.+}} = cir.sin {{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define x86_fp80 @my_sinl(x86_fp80 %0)
-  // LLVM:   %{{.+}} = call x86_fp80 @sinl(x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = call x86_fp80 @llvm.sin.f80(x86_fp80 %{{.+}})
   // LLVM: }
 }
 
@@ -1066,7 +1066,7 @@ float call_sinf(float f) {
   // CHECK: {{.+}} = cir.sin {{.+}} : !cir.float
 
   // LLVM: define float @call_sinf(float %0)
-  // LLVM:   %{{.+}} = call float @sinf(float %{{.+}})
+  // LLVM:   %{{.+}} = call float @llvm.sin.f32(float %{{.+}})
   // LLVM: }
 }
 
@@ -1076,7 +1076,7 @@ double call_sin(double f) {
   // CHECK: {{.+}} = cir.sin {{.+}} : !cir.double
 
   // LLVM: define double @call_sin(double %0)
-  // LLVM:   %{{.+}} = call double @sin(double %{{.+}})
+  // LLVM:   %{{.+}} = call double @llvm.sin.f64(double %{{.+}})
   // LLVM: }
 }
 
@@ -1087,7 +1087,7 @@ long double call_sinl(long double f) {
   // AARCH64: {{.+}} = cir.sin {{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define x86_fp80 @call_sinl(x86_fp80 %0)
-  // LLVM:   %{{.+}} = call x86_fp80 @sinl(x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = call x86_fp80 @llvm.sin.f80(x86_fp80 %{{.+}})
   // LLVM: }
 }
 
@@ -1099,7 +1099,7 @@ float my_sqrtf(float f) {
   // CHECK: {{.+}} = cir.sqrt {{.+}} : !cir.float
 
   // LLVM: define float @my_sqrtf(float %0)
-  // LLVM:   %{{.+}} = call float @sqrtf(float %{{.+}})
+  // LLVM:   %{{.+}} = call float @llvm.sqrt.f32(float %{{.+}})
   // LLVM: }
 }
 
@@ -1109,7 +1109,7 @@ double my_sqrt(double f) {
   // CHECK: {{.+}} = cir.sqrt {{.+}} : !cir.double
 
   // LLVM: define double @my_sqrt(double %0)
-  // LLVM:   %{{.+}} = call double @sqrt(double %{{.+}})
+  // LLVM:   %{{.+}} = call double @llvm.sqrt.f64(double %{{.+}})
   // LLVM: }
 }
 
@@ -1120,7 +1120,7 @@ long double my_sqrtl(long double f) {
   // AARCH64: {{.+}} = cir.sqrt {{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define x86_fp80 @my_sqrtl(x86_fp80 %0)
-  // LLVM:   %{{.+}} = call x86_fp80 @sqrtl(x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = call x86_fp80 @llvm.sqrt.f80(x86_fp80 %{{.+}})
   // LLVM: }
 }
 
@@ -1134,7 +1134,7 @@ float call_sqrtf(float f) {
   // CHECK: {{.+}} = cir.sqrt {{.+}} : !cir.float
 
   // LLVM: define float @call_sqrtf(float %0)
-  // LLVM:   %{{.+}} = call float @sqrtf(float %{{.+}})
+  // LLVM:   %{{.+}} = call float @llvm.sqrt.f32(float %{{.+}})
   // LLVM: }
 }
 
@@ -1144,7 +1144,7 @@ double call_sqrt(double f) {
   // CHECK: {{.+}} = cir.sqrt {{.+}} : !cir.double
 
   // LLVM: define double @call_sqrt(double %0)
-  // LLVM:   %{{.+}} = call double @sqrt(double %{{.+}})
+  // LLVM:   %{{.+}} = call double @llvm.sqrt.f64(double %{{.+}})
   // LLVM: }
 }
 
@@ -1155,7 +1155,7 @@ long double call_sqrtl(long double f) {
   // AARCH64: {{.+}} = cir.sqrt {{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define x86_fp80 @call_sqrtl(x86_fp80 %0)
-  // LLVM:   %{{.+}} = call x86_fp80 @sqrtl(x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = call x86_fp80 @llvm.sqrt.f80(x86_fp80 %{{.+}})
   // LLVM: }
 }
 
@@ -1439,7 +1439,7 @@ float my_fmodf(float x, float y) {
   // CHECK:   %{{.+}} = cir.fmod %{{.+}}, %{{.+}} : !cir.float
 
   // LLVM: define float @my_fmodf
-  // LLVM:   %{{.+}} = call float @fmodf(float %{{.+}}, float %{{.+}})
+  // LLVM:   %{{.+}} = frem float %{{.+}}, %{{.+}}
   // LLVM: }
 }
 
@@ -1449,7 +1449,7 @@ double my_fmod(double x, double y) {
   // CHECK:   %{{.+}} = cir.fmod %{{.+}}, %{{.+}} : !cir.double
 
   // LLVM: define double @my_fmod
-  // LLVM:   %{{.+}} = call double @fmod(double %{{.+}}, double %{{.+}})
+  // LLVM:   %{{.+}} = frem double %{{.+}}, %{{.+}}
   // LLVM: }
 }
 
@@ -1460,7 +1460,7 @@ long double my_fmodl(long double x, long double y) {
   // AARCH64: %{{.+}} = cir.fmod %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define x86_fp80 @my_fmodl
-  // LLVM:   %{{.+}} = call x86_fp80 @fmodl(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = frem x86_fp80 %{{.+}}, %{{.+}}
   // LLVM: }
 }
 
@@ -1474,7 +1474,7 @@ float call_fmodf(float x, float y) {
   // CHECK:   %{{.+}} = cir.fmod %{{.+}}, %{{.+}} : !cir.float
 
   // LLVM: define float @call_fmodf
-  // LLVM:   %{{.+}} = call float @fmodf(float %{{.+}}, float %{{.+}})
+  // LLVM:   %{{.+}} = frem float %{{.+}}, %{{.+}}
   // LLVM: }
 }
 
@@ -1484,7 +1484,7 @@ double call_fmod(double x, double y) {
   // CHECK:   %{{.+}} = cir.fmod %{{.+}}, %{{.+}} : !cir.double
 
   // LLVM: define double @call_fmod
-  // LLVM:   %{{.+}} = call double @fmod(double %{{.+}}, double %{{.+}})
+  // LLVM:   %{{.+}} = frem double %{{.+}}, %{{.+}}
   // LLVM: }
 }
 
@@ -1495,7 +1495,7 @@ long double call_fmodl(long double x, long double y) {
   // AARCH64: %{{.+}} = cir.fmod %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define x86_fp80 @call_fmodl
-  // LLVM:   %{{.+}} = call x86_fp80 @fmodl(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = frem x86_fp80 %{{.+}}, %{{.+}}
   // LLVM: }
 }
 
@@ -1507,7 +1507,7 @@ float my_powf(float x, float y) {
   // CHECK:   %{{.+}} = cir.pow %{{.+}}, %{{.+}} : !cir.float
 
   // LLVM: define float @my_powf
-  // LLVM:   %{{.+}} = call float @powf(float %{{.+}}, float %{{.+}})
+  // LLVM:   %{{.+}} = call float @llvm.pow.f32(float %{{.+}}, float %{{.+}})
   // LLVM: }
 }
 
@@ -1517,7 +1517,7 @@ double my_pow(double x, double y) {
   // CHECK:   %{{.+}} = cir.pow %{{.+}}, %{{.+}} : !cir.double
 
   // LLVM: define double @my_pow
-  // LLVM:   %{{.+}} = call double @pow(double %{{.+}}, double %{{.+}})
+  // LLVM:   %{{.+}} = call double @llvm.pow.f64(double %{{.+}}, double %{{.+}})
   // LLVM: }
 }
 
@@ -1528,7 +1528,7 @@ long double my_powl(long double x, long double y) {
   // AARCH64: %{{.+}} = cir.pow %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define x86_fp80 @my_powl
-  // LLVM:   %{{.+}} = call x86_fp80 @powl(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = call x86_fp80 @llvm.pow.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
   // LLVM: }
 }
 
@@ -1542,7 +1542,7 @@ float call_powf(float x, float y) {
   // CHECK:   %{{.+}} = cir.pow %{{.+}}, %{{.+}} : !cir.float
 
   // LLVM: define float @call_powf
-  // LLVM:   %{{.+}} = call float @powf(float %{{.+}}, float %{{.+}})
+  // LLVM:   %{{.+}} = call float @llvm.pow.f32(float %{{.+}}, float %{{.+}})
   // LLVM: }
 }
 
@@ -1552,7 +1552,7 @@ double call_pow(double x, double y) {
   // CHECK:   %{{.+}} = cir.pow %{{.+}}, %{{.+}} : !cir.double
 
   // LLVM: define double @call_pow
-  // LLVM:   %{{.+}} = call double @pow(double %{{.+}}, double %{{.+}})
+  // LLVM:   %{{.+}} = call double @llvm.pow.f64(double %{{.+}}, double %{{.+}})
   // LLVM: }
 }
 
@@ -1563,6 +1563,6 @@ long double call_powl(long double x, long double y) {
   // AARCH64: %{{.+}} = cir.pow %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define x86_fp80 @call_powl
-  // LLVM:   %{{.+}} = call x86_fp80 @powl(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
+  // LLVM:   %{{.+}} = call x86_fp80 @llvm.pow.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
   // LLVM: }
 }

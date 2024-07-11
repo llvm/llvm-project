@@ -448,6 +448,8 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_cosf16:
     case Builtin::BI__builtin_cosl:
     case Builtin::BI__builtin_cosf128:
+      assert(getContext().getLangOpts().FastMath &&
+             "cir.cos is only expected under -ffast-math");
       return buildUnaryFPBuiltin<mlir::cir::CosOp>(*this, *E);
 
     case Builtin::BIexp:
@@ -458,6 +460,8 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_expf16:
     case Builtin::BI__builtin_expl:
     case Builtin::BI__builtin_expf128:
+      assert(getContext().getLangOpts().FastMath &&
+             "cir.exp is only expected under -ffast-math");
       return buildUnaryFPBuiltin<mlir::cir::ExpOp>(*this, *E);
 
     case Builtin::BIexp2:
@@ -468,6 +472,8 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_exp2f16:
     case Builtin::BI__builtin_exp2l:
     case Builtin::BI__builtin_exp2f128:
+      assert(getContext().getLangOpts().FastMath &&
+             "cir.exp2 is only expected under -ffast-math");
       return buildUnaryFPBuiltin<mlir::cir::Exp2Op>(*this, *E);
 
     case Builtin::BIfabs:
@@ -534,6 +540,8 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_fmod:
     case Builtin::BI__builtin_fmodf:
     case Builtin::BI__builtin_fmodl:
+      assert(getContext().getLangOpts().FastMath &&
+             "cir.fmod is only expected under -ffast-math");
       return buildBinaryFPBuiltin<mlir::cir::FModOp>(*this, *E);
 
     case Builtin::BI__builtin_fmodf16:
@@ -548,6 +556,8 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_logf16:
     case Builtin::BI__builtin_logl:
     case Builtin::BI__builtin_logf128:
+      assert(getContext().getLangOpts().FastMath &&
+             "cir.log is only expected under -ffast-math");
       return buildUnaryFPBuiltin<mlir::cir::LogOp>(*this, *E);
 
     case Builtin::BIlog10:
@@ -558,6 +568,8 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_log10f16:
     case Builtin::BI__builtin_log10l:
     case Builtin::BI__builtin_log10f128:
+      assert(getContext().getLangOpts().FastMath &&
+             "cir.log10 is only expected under -ffast-math");
       return buildUnaryFPBuiltin<mlir::cir::Log10Op>(*this, *E);
 
     case Builtin::BIlog2:
@@ -568,6 +580,8 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_log2f16:
     case Builtin::BI__builtin_log2l:
     case Builtin::BI__builtin_log2f128:
+      assert(getContext().getLangOpts().FastMath &&
+             "cir.log2 is only expected under -ffast-math");
       return buildUnaryFPBuiltin<mlir::cir::Log2Op>(*this, *E);
 
     case Builtin::BInearbyint:
@@ -585,6 +599,8 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_pow:
     case Builtin::BI__builtin_powf:
     case Builtin::BI__builtin_powl:
+      assert(getContext().getLangOpts().FastMath &&
+             "cir.pow is only expected under -ffast-math");
       return RValue::get(
           buildBinaryMaybeConstrainedFPBuiltin<mlir::cir::PowOp>(*this, *E));
 
@@ -620,6 +636,8 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_sinf16:
     case Builtin::BI__builtin_sinl:
     case Builtin::BI__builtin_sinf128:
+      assert(getContext().getLangOpts().FastMath &&
+             "cir.sin is only expected under -ffast-math");
       return buildUnaryFPBuiltin<mlir::cir::SinOp>(*this, *E);
 
     case Builtin::BIsqrt:
@@ -630,6 +648,8 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_sqrtf16:
     case Builtin::BI__builtin_sqrtl:
     case Builtin::BI__builtin_sqrtf128:
+      assert(getContext().getLangOpts().FastMath &&
+             "cir.sqrt is only expected under -ffast-math");
       return buildUnaryFPBuiltin<mlir::cir::SqrtOp>(*this, *E);
 
     case Builtin::BItrunc:
