@@ -2779,7 +2779,7 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
     ArrayRef<TemplateArgument> DeducedArgs) {
   struct TemplateParamsReferencedFinder
       : public RecursiveASTVisitor<TemplateParamsReferencedFinder> {
-    const TemplateParameterList* TemplateParamList;
+    const TemplateParameterList *TemplateParamList;
     llvm::BitVector ReferencedTemplateParams;
 
     TemplateParamsReferencedFinder(
