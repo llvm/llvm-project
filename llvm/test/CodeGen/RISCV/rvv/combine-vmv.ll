@@ -156,12 +156,13 @@ define <vscale x 4 x float> @unfoldable_constrained_fadd(<vscale x 4 x float> %p
   ret <vscale x 4 x float> %b
 }
 
-; FIXME: This shouldn't be folded because changing the AVL affects the result
 define <vscale x 2 x i32> @unfoldable_vredsum(<vscale x 2 x i32> %passthru, <vscale x 4 x i32> %x, <vscale x 2 x i32> %y) {
 ; CHECK-LABEL: unfoldable_vredsum:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m2, tu, ma
-; CHECK-NEXT:    vredsum.vs v8, v10, v9
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vredsum.vs v9, v10, v9
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, tu, ma
+; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i32> @llvm.riscv.vredsum.nxv2i32.nxv4i32(<vscale x 2 x i32> poison, <vscale x 4 x i32> %x, <vscale x 2 x i32> %y, iXLen -1)
   %b = call <vscale x 2 x i32> @llvm.riscv.vmv.v.v.nxv2i32(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %a, iXLen 1)

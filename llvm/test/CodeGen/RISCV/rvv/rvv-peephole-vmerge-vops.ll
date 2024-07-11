@@ -1014,12 +1014,14 @@ define <vscale x 2 x float> @vfredusum_allones_mask(<vscale x 2 x float> %passth
   ret <vscale x 2 x float> %b
 }
 
-; FIXME: This shouldn't be folded because changing the AVL affects the result
 define <vscale x 2 x i32> @unfoldable_vredsum_allones_mask_diff_vl(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y) {
 ; CHECK-LABEL: unfoldable_vredsum_allones_mask_diff_vl:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv1r.v v11, v8
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, tu, ma
+; CHECK-NEXT:    vredsum.vs v11, v9, v10
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, tu, ma
-; CHECK-NEXT:    vredsum.vs v8, v9, v10
+; CHECK-NEXT:    vmv.v.v v8, v11
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i32> @llvm.riscv.vredsum.nxv2i32.nxv2i32(
     <vscale x 2 x i32> %passthru,
