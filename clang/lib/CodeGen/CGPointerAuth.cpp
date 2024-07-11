@@ -29,7 +29,9 @@ llvm::ConstantInt *CodeGenModule::getPointerAuthOtherDiscriminator(
     return nullptr;
 
   case PointerAuthSchema::Discrimination::Type:
-    llvm_unreachable("type discrimination not implemented yet");
+    assert(!Type.isNull() && "type not provided for type-discriminated schema");
+    return llvm::ConstantInt::get(
+        IntPtrTy, getContext().getPointerAuthTypeDiscriminator(Type));
 
   case PointerAuthSchema::Discrimination::Decl:
     assert(Decl.getDecl() &&
@@ -41,6 +43,11 @@ llvm::ConstantInt *CodeGenModule::getPointerAuthOtherDiscriminator(
     return llvm::ConstantInt::get(IntPtrTy, Schema.getConstantDiscrimination());
   }
   llvm_unreachable("bad discrimination kind");
+}
+
+uint16_t CodeGen::getPointerAuthTypeDiscriminator(CodeGenModule &CGM,
+                                                  QualType FunctionType) {
+  return CGM.getContext().getPointerAuthTypeDiscriminator(FunctionType);
 }
 
 uint16_t CodeGen::getPointerAuthDeclDiscriminator(CodeGenModule &CGM,
@@ -71,12 +78,15 @@ CGPointerAuthInfo CodeGenModule::getFunctionPointerAuthInfo(QualType T) {
   assert(!Schema.isAddressDiscriminated() &&
          "function pointers cannot use address-specific discrimination");
 
-  assert(!Schema.hasOtherDiscrimination() &&
-         "function pointers don't support any discrimination yet");
+  llvm::Constant *Discriminator = nullptr;
+  if (T->isFunctionPointerType() || T->isFunctionReferenceType())
+    T = T->getPointeeType();
+  if (T->isFunctionType())
+    Discriminator = getPointerAuthOtherDiscriminator(Schema, GlobalDecl(), T);
 
   return CGPointerAuthInfo(Schema.getKey(), Schema.getAuthenticationMode(),
                            /*IsaPointer=*/false, /*AuthenticatesNull=*/false,
-                           /*Discriminator=*/nullptr);
+                           Discriminator);
 }
 
 llvm::Value *
@@ -112,6 +122,47 @@ CGPointerAuthInfo CodeGenFunction::EmitPointerAuthInfo(
   return CGPointerAuthInfo(Schema.getKey(), Schema.getAuthenticationMode(),
                            Schema.isIsaPointer(),
                            Schema.authenticatesNullValues(), Discriminator);
+}
+
+/// Return the natural pointer authentication for values of the given
+/// pointee type.
+static CGPointerAuthInfo
+getPointerAuthInfoForPointeeType(CodeGenModule &CGM, QualType PointeeType) {
+  if (PointeeType.isNull())
+    return CGPointerAuthInfo();
+
+  // Function pointers use the function-pointer schema by default.
+  if (PointeeType->isFunctionType())
+    return CGM.getFunctionPointerAuthInfo(PointeeType);
+
+  // Normal data pointers never use direct pointer authentication by default.
+  return CGPointerAuthInfo();
+}
+
+CGPointerAuthInfo CodeGenModule::getPointerAuthInfoForPointeeType(QualType T) {
+  return ::getPointerAuthInfoForPointeeType(*this, T);
+}
+
+/// Return the natural pointer authentication for values of the given
+/// pointer type.
+static CGPointerAuthInfo getPointerAuthInfoForType(CodeGenModule &CGM,
+                                                   QualType PointerType) {
+  assert(PointerType->isSignableType());
+
+  // Block pointers are currently not signed.
+  if (PointerType->isBlockPointerType())
+    return CGPointerAuthInfo();
+
+  auto PointeeType = PointerType->getPointeeType();
+
+  if (PointeeType.isNull())
+    return CGPointerAuthInfo();
+
+  return ::getPointerAuthInfoForPointeeType(CGM, PointeeType);
+}
+
+CGPointerAuthInfo CodeGenModule::getPointerAuthInfoForType(QualType T) {
+  return ::getPointerAuthInfoForType(*this, T);
 }
 
 llvm::Constant *
@@ -180,6 +231,14 @@ llvm::Constant *CodeGenModule::getFunctionPointer(GlobalDecl GD,
                                                   llvm::Type *Ty) {
   const auto *FD = cast<FunctionDecl>(GD.getDecl());
   QualType FuncType = FD->getType();
+
+  // Annoyingly, K&R functions have prototypes in the clang AST, but
+  // expressions referring to them are unprototyped.
+  if (!FD->hasPrototype())
+    if (const auto *Proto = FuncType->getAs<FunctionProtoType>())
+      FuncType = Context.getFunctionNoProtoType(Proto->getReturnType(),
+                                                Proto->getExtInfo());
+
   return getFunctionPointer(getRawFunctionPointer(GD, Ty), FuncType);
 }
 
