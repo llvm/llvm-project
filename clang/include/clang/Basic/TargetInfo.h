@@ -32,7 +32,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
@@ -45,8 +47,6 @@
 
 namespace llvm {
 struct fltSemantics;
-class Function;
-class AttrBuilder;
 }
 
 namespace clang {
@@ -1455,9 +1455,24 @@ public:
       GuardedControlStack = LangOpts.GuardedControlStack;
     }
 
-    void setFnAttributes(llvm::Function &F) const;
+    void setFnAttributes(llvm::Function &F) {
+      llvm::AttrBuilder FuncAttrs(F.getContext());
+      setFnAttributes(FuncAttrs);
+      F.addFnAttrs(FuncAttrs);
+    }
 
-    void setFnAttributes(llvm::AttrBuilder &FuncAttrs) const;
+    void setFnAttributes(llvm::AttrBuilder &FuncAttrs) {
+      if (SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
+        FuncAttrs.addAttribute("sign-return-address", getSignReturnAddrStr());
+        FuncAttrs.addAttribute("sign-return-address-key", getSignKeyStr());
+      }
+      if (BranchTargetEnforcement)
+        FuncAttrs.addAttribute("branch-target-enforcement");
+      if (BranchProtectionPAuthLR)
+        FuncAttrs.addAttribute("branch-protection-pauth-lr");
+      if (GuardedControlStack)
+        FuncAttrs.addAttribute("guarded-control-stack");
+    }
   };
 
   /// Determine if the Architecture in this TargetInfo supports branch

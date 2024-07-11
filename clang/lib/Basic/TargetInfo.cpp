@@ -18,7 +18,6 @@
 #include "clang/Basic/LangOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/Function.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include <cstdlib>
@@ -1005,25 +1004,4 @@ void TargetInfo::copyAuxTarget(const TargetInfo *Aux) {
   auto *Target = static_cast<TransferrableTargetInfo*>(this);
   auto *Src = static_cast<const TransferrableTargetInfo*>(Aux);
   *Target = *Src;
-}
-
-void TargetInfo::BranchProtectionInfo::setFnAttributes(
-    llvm::Function &F) const {
-  llvm::AttrBuilder FuncAttrs(F.getContext());
-  setFnAttributes(FuncAttrs);
-  F.addFnAttrs(FuncAttrs);
-}
-
-void TargetInfo::BranchProtectionInfo::setFnAttributes(
-    llvm::AttrBuilder &FuncAttrs) const {
-  if (SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
-    FuncAttrs.addAttribute("sign-return-address", getSignReturnAddrStr());
-    FuncAttrs.addAttribute("sign-return-address-key", getSignKeyStr());
-  }
-  if (BranchTargetEnforcement)
-    FuncAttrs.addAttribute("branch-target-enforcement");
-  if (BranchProtectionPAuthLR)
-    FuncAttrs.addAttribute("branch-protection-pauth-lr");
-  if (GuardedControlStack)
-    FuncAttrs.addAttribute("guarded-control-stack");
 }
