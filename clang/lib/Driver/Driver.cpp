@@ -681,7 +681,7 @@ static llvm::Triple computeTargetTriple(const Driver &D,
   if (Target.isRISCV()) {
     if (Args.hasArg(options::OPT_march_EQ) ||
         Args.hasArg(options::OPT_mcpu_EQ)) {
-      StringRef ArchName = tools::riscv::getRISCVArch(Args, Target);
+      std::string ArchName = tools::riscv::getRISCVArch(Args, Target);
       auto ISAInfo = llvm::RISCVISAInfo::parseArchString(
           ArchName, /*EnableExperimentalExtensions=*/true);
       if (!llvm::errorToBool(ISAInfo.takeError())) {
@@ -4367,6 +4367,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
         return;
       }
       if (Opt == options::OPT_print_enabled_extensions &&
+          !C.getDefaultToolChain().getTriple().isRISCV() &&
           !C.getDefaultToolChain().getTriple().isAArch64()) {
         C.getDriver().Diag(diag::err_opt_not_valid_on_target)
             << "--print-enabled-extensions";

@@ -131,6 +131,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`boost-use-ranges
+  <clang-tidy/checks/boost/use-ranges>` check.
+
+  Detects calls to standard library iterator algorithms that could be replaced
+  with a Boost ranges version instead.
+
 - New :doc:`bugprone-crtp-constructor-accessibility
   <clang-tidy/checks/bugprone/crtp-constructor-accessibility>` check.
 
@@ -173,6 +179,12 @@ New checks
 
   Finds initializer lists for aggregate types that could be
   written as designated initializers instead.
+
+- New :doc:`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` check.
+
+  Detects calls to standard library iterator algorithms that could be replaced
+  with a ranges version instead.
 
 - New :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check.

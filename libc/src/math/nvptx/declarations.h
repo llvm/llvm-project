@@ -64,6 +64,8 @@ double __nv_nextafter(double, double);
 float __nv_nextafterf(float, float);
 double __nv_pow(double, double);
 float __nv_powf(float, float);
+double __nv_powi(double, int);
+float __nv_powif(float, int);
 double __nv_sin(double);
 float __nv_sinf(float);
 void __nv_sincos(double, double *, double *);

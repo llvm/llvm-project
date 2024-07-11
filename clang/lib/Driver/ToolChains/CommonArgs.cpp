@@ -1409,6 +1409,8 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
       if (!Args.hasArg(options::OPT_shared) && !TC.getTriple().isAndroid())
         HelperStaticRuntimes.push_back("memprof-preinit");
     }
+    if (SanArgs.needsNsanRt())
+      SharedRuntimes.push_back("nsan");
     if (SanArgs.needsUbsanRt()) {
       if (SanArgs.requiresMinimalRuntime())
         SharedRuntimes.push_back("ubsan_minimal");
@@ -1479,7 +1481,7 @@ collectSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     if (SanArgs.linkCXXRuntimes())
       StaticRuntimes.push_back("msan_cxx");
   }
-  if (SanArgs.needsNsanRt())
+  if (!SanArgs.needsSharedRt() && SanArgs.needsNsanRt())
     StaticRuntimes.push_back("nsan");
   if (!SanArgs.needsSharedRt() && SanArgs.needsTsanRt()) {
     StaticRuntimes.push_back("tsan");
@@ -1532,6 +1534,12 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
                              RequiredSymbols);
   }
 
+  // -u options must be added before the runtime libs that resolve them.
+  for (auto S : RequiredSymbols) {
+    CmdArgs.push_back("-u");
+    CmdArgs.push_back(Args.MakeArgString(S));
+  }
+
   // Inject libfuzzer dependencies.
   if (SanArgs.needsFuzzer() && SanArgs.linkRuntimes() &&
       !Args.hasArg(options::OPT_shared)) {
@@ -1563,10 +1571,6 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   for (auto RT : NonWholeStaticRuntimes) {
     addSanitizerRuntime(TC, Args, CmdArgs, RT, false, false);
     AddExportDynamic |= !addSanitizerDynamicList(TC, Args, CmdArgs, RT);
-  }
-  for (auto S : RequiredSymbols) {
-    CmdArgs.push_back("-u");
-    CmdArgs.push_back(Args.MakeArgString(S));
   }
   // If there is a static runtime with no dynamic list, force all the symbols
   // to be dynamic to be sure we export sanitizer interface functions.

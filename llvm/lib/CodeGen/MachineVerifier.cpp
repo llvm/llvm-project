@@ -314,9 +314,9 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addUsedIfAvailable<LiveStacks>();
-      AU.addUsedIfAvailable<LiveVariables>();
-      AU.addUsedIfAvailable<SlotIndexes>();
-      AU.addUsedIfAvailable<LiveIntervals>();
+      AU.addUsedIfAvailable<LiveVariablesWrapperPass>();
+      AU.addUsedIfAvailable<SlotIndexesWrapperPass>();
+      AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
       AU.setPreservesAll();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
@@ -428,12 +428,15 @@ unsigned MachineVerifier::verify(const MachineFunction &MF) {
       MachineFunctionProperties::Property::TracksDebugUserValues);
 
   if (PASS) {
-    LiveInts = PASS->getAnalysisIfAvailable<LiveIntervals>();
+    auto *LISWrapper = PASS->getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+    LiveInts = LISWrapper ? &LISWrapper->getLIS() : nullptr;
     // We don't want to verify LiveVariables if LiveIntervals is available.
+    auto *LVWrapper = PASS->getAnalysisIfAvailable<LiveVariablesWrapperPass>();
     if (!LiveInts)
-      LiveVars = PASS->getAnalysisIfAvailable<LiveVariables>();
+      LiveVars = LVWrapper ? &LVWrapper->getLV() : nullptr;
     LiveStks = PASS->getAnalysisIfAvailable<LiveStacks>();
-    Indexes = PASS->getAnalysisIfAvailable<SlotIndexes>();
+    auto *SIWrapper = PASS->getAnalysisIfAvailable<SlotIndexesWrapperPass>();
+    Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
   }
 
   verifySlotIndexes();

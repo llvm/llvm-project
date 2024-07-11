@@ -100,22 +100,26 @@ functions:
     standards: 
       - POSIX
     return_type: uid_t
-    arguments: []
+    arguments:
+      - type: void
   - name: getpid
     standards: 
       - POSIX
     return_type: int
-    arguments: []
+    arguments:
+      - type: void
   - name: getppid
     standards: 
       - POSIX
     return_type: int
-    arguments: []
+    arguments:
+      - type: void
   - name: getuid
     standards: 
       - POSIX
     return_type: uid_t
-    arguments: []
+    arguments:
+      - type: void
   - name: isatty
     standards: 
       - POSIX
@@ -186,16 +190,16 @@ functions:
       - POSIX
     return_type: ssize_t
     arguments:
-      - type: const char * __restrict
-      - type: char * __restrict
+      - type: const char *__restrict
+      - type: char *__restrict
       - type: size_t
   - name: readlinkat
     standards: 
       - POSIX
     return_type: ssize_t
     arguments:
-      - type: const char * __restrict
-      - type: char * __restrict
+      - type: const char *__restrict
+      - type: char *__restrict
       - type: size_t
   - name: rmdir
     standards: 
@@ -273,7 +277,8 @@ functions:
     standards: 
       - POSIX
     return_type: pid_t
-    arguments: []
+    arguments:
+      - type: void
   - name: __llvm_libc_syscall
     standards: 
       - POSIX
@@ -299,31 +304,6 @@ functions:
       - POSIX
     return_type: void
     arguments:
-      - type: const void * __restrict
+      - type: const void *__restrict
       - type: void *
       - type: ssize_t
-  - name: enivron
-    standards: 
-      - POSIX
-    return_type: extern char **
-    arguments: []
-  - name: optarg
-    standards: 
-      - POSIX
-    return_type: extern char *
-    arguments: []
-  - name: optind
-    standards: 
-      - POSIX
-    return_type: extern int 
-    arguments: []
-  - name: optopt
-    standards: 
-      - POSIX
-    return_type: extern int 
-    arguments: []
-  - name: opterr
-    standards: 
-      - POSIX
-    return_type: extern int 
-    arguments: []
