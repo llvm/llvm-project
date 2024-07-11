@@ -32,7 +32,7 @@ to learn about the defaults for your platform and target.
     - ``LIBC_CONF_ERRNO_MODE``: The implementation used for errno, acceptable values are:
         - ``LIBC_ERRNO_MODE_UNDEFINED``: libc never stores a value; ``errno`` macro uses get link-time failure,
         - ``LIBC_ERRNO_MODE_THREAD_LOCAL``: libc maintains per-thread state (requires C++ ``thread_local`` support for libc implementation code),
-        - ``LIBC_ERRNO_MODE_SHARED``: libc maintains an ``atomic_int`` used by all threads, contrary to standard C semantics (requires use of atomics in libc implementation code, may produce libcalls an embedder must supply),
+        - ``LIBC_ERRNO_MODE_SHARED``: libc maintains shared state used by all threads, contrary to standard C semantics unless always single-threaded; nothing prevents data races,
         - ``LIBC_ERRNO_MODE_EXTERNAL``: embedder must define ``int *__llvm_libc_errno(void);`` C function,
         - ``LIBC_ERRNO_MODE_SYSTEM``: in overlay mode, system ``<errno.h>`` ``errno`` macro is used directly; in fullbuild mode, effectively the same as ``LIBC_ERRNO_MODE_EXTERNAL``.
 * **"malloc" options**

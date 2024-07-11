@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "libc_errno.h"
-#include "src/__support/CPP/atomic.h"
+#include "src/errno/errno.h"
 
 #define LIBC_ERRNO_MODE_UNDEFINED 1
 #define LIBC_ERRNO_MODE_THREAD_LOCAL 2
@@ -56,29 +56,23 @@ extern "C" {
 int *__llvm_libc_errno() { return &thread_errno; }
 }
 
-void Errno::operator=(int a) { __libc_errno = a; }
-Errno::operator int() { return __libc_errno; }
+void Errno::operator=(int a) { thread_errno = a; }
+Errno::operator int() { return thread_errno; }
 
-#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_GLOBAL
+#elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_SHARED
 
 namespace {
-cpp::Atomic<int> global_errno;
+int shared_errno;
 }
 
 extern "C" {
-int *__llvm_libc_errno() { return &global_errno; }
+int *__llvm_libc_errno() { return &shared_errno; }
 }
 
-void Errno::operator=(int a) {
-  __libc_errno.store(a, cpp::MemoryOrder::RELAXED);
-}
-Errno::operator int() { return __libc_errno.load(cpp::MemoryOrder::RELAXED); }
+void Errno::operator=(int a) { shared_errno = a; }
+Errno::operator int() { return shared_errno; }
 
 #elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_EXTERNAL
-
-extern "C" {
-int *__llvm_libc_errno();
-}
 
 void Errno::operator=(int a) { *__llvm_libc_errno() = a; }
 Errno::operator int() { return *__llvm_libc_errno(); }
