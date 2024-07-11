@@ -474,7 +474,6 @@ static bool allCallersPassValidPointerForArgument(
 /// parts it can be promoted into.
 static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
                          unsigned MaxElements, bool IsRecursive,
-                         bool isSelfRecursive,
                          SmallVectorImpl<OffsetAndArgPart> &ArgPartsVec) {
   // Quick exit for unused arguments
   if (Arg->use_empty())
@@ -854,8 +853,7 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
     // If we can promote the pointer to its value.
     SmallVector<OffsetAndArgPart, 4> ArgParts;
 
-    if (findArgParts(PtrArg, DL, AAR, MaxElements, IsRecursive, IsSelfRecursive,
-                     ArgParts)) {
+    if (findArgParts(PtrArg, DL, AAR, MaxElements, IsRecursive, ArgParts)) {
       SmallVector<Type *, 4> Types;
       for (const auto &Pair : ArgParts)
         Types.push_back(Pair.second.Ty);
