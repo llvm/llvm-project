@@ -98,7 +98,7 @@ static long initHwProbe(struct riscv_hwprobe *Hwprobes, int len) {
                              (long)(cpu_set_t *)((void *)0), 0);
 }
 
-#define RISCV_FEATURE_BITS_LENGTH 2
+#define RISCV_FEATURE_BITS_LENGTH 1
 struct {
   unsigned length;
   unsigned long long features[RISCV_FEATURE_BITS_LENGTH];
