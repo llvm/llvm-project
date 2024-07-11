@@ -3742,22 +3742,19 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     const RegisterBank *SrcBank = getRegBank(MI.getOperand(1).getReg(), MRI,
                                              *TRI);
     assert(SrcBank && "src bank should have been assigned already");
-    if (!DstBank)
-      DstBank = SrcBank;
 
-    // The calling convention is to be updated such that i1 function arguments
-    // or return values are assigned to SGPRs without promoting to i32. With
-    // this, for i1 function arguments, the call of getRegBank() above gives
-    // incorrect result. We set both src and dst banks to VCCRegBank.
-    if (!MI.getOperand(1).getReg().isVirtual() &&
-        MRI.getType(MI.getOperand(0).getReg()) == LLT::scalar(1)) {
+    // For copy from a physical reg to s1 dest, the call of getRegBank() above
+    // gives incorrect result. We set both src and dst banks to VCCRegBank.
+    if (!MI.getOperand(1).getReg().isVirtual() && !DstBank &&
+        MRI.getType(MI.getOperand(0).getReg()) == LLT::scalar(1))
       DstBank = SrcBank = &AMDGPU::VCCRegBank;
-    }
+    // For copy from s1 src to a physical reg, we set both src and dst banks to
+    // VCCRegBank.
+    else if (!MI.getOperand(0).getReg().isVirtual() &&
+             MRI.getType(MI.getOperand(1).getReg()) == LLT::scalar(1))
+      DstBank = SrcBank = &AMDGPU::VCCRegBank;
 
-    // Similarly, for i1 return value, the dst reg is an SReg but we need to
-    // explicitly set the reg bank to VCCRegBank.
-    if (!MI.getOperand(0).getReg().isVirtual() &&
-        SrcBank == &AMDGPU::VCCRegBank)
+    if (!DstBank)
       DstBank = SrcBank;
 
     unsigned Size = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
