@@ -63,8 +63,8 @@ public:
 
   MCSymbol *getAuthPtrSlotSymbol(const TargetMachine &TM,
                                  MachineModuleInfo *MMI, const MCSymbol *RawSym,
-                                 int64_t RawSymOffset, AArch64PACKey::ID Key,
-                                 uint16_t Discriminator,
+                                 AArch64PACKey::ID Key, uint16_t Discriminator,
+                                 int64_t RawSymOffset = 0,
                                  bool HasAddressDiversity = false) const;
 };
 
