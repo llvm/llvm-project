@@ -529,7 +529,7 @@ size_t YAMLProfileReader::matchWithCallGraph(BinaryContext &BC) {
     if (NeighborHashToBFsIt == CGMatcher.NeighborHashToBFs.end())
       continue;
     for (BinaryFunction *BF : NeighborHashToBFsIt->second) {
-      if (!ProfiledFunctions.count(BF) && profileMatches(YamlBF, *BF)) {
+      if (!ProfiledFunctions.count(BF)) {
         matchProfileToFunction(YamlBF, *BF);
         ++MatchedWithCallGraph;
       }
