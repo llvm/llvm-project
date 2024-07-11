@@ -4549,11 +4549,7 @@ def HLSLResource : InheritableAttr {
   let Spellings = [];
   let Subjects = SubjectList<[Struct]>;
   let LangOpts = [HLSL];
-  let Args = [
-    EnumArgument<"ResourceClass", "llvm::hlsl::ResourceClass",
-                 /*is_string=*/0, ["SRV", "UAV", "CBuffer", "Sampler"],
-                 ["SRV", "UAV", "CBuffer", "Sampler"],
-                 /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>,
+  let Args = [    
     EnumArgument<
         "ResourceKind", "llvm::hlsl::ResourceKind",
         /*is_string=*/0,
@@ -4573,6 +4569,19 @@ def HLSLResource : InheritableAttr {
         ],
         /*opt=*/0, /*fake=*/0, /*isExternalType=*/1, /*isCovered=*/0>,
     DefaultBoolArgument<"isROV", /*default=*/0>
+  ];
+  let Documentation = [InternalOnly];
+}
+
+def HLSLResourceClass : InheritableAttr {
+  let Spellings = [CXX11<"hlsl", "resource_class">];
+  let Subjects = SubjectList<[Struct]>;
+  let LangOpts = [HLSL];
+  let Args = [
+	EnumArgument<"ResourceClass", "llvm::hlsl::ResourceClass",
+				 /*is_string=*/true, ["SRV", "UAV", "CBuffer", "Sampler"],
+				 ["SRV", "UAV", "CBuffer", "Sampler"],
+				 /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>
   ];
   let Documentation = [InternalOnly];
 }

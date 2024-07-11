@@ -115,12 +115,19 @@ struct BuiltinTypeDeclBuilder {
     return addMemberVariable("h", Ty, Access);
   }
 
-  BuiltinTypeDeclBuilder &annotateResourceClass(ResourceClass RC,
-                                                ResourceKind RK, bool IsROV) {
+  BuiltinTypeDeclBuilder &annotateHLSLResource(ResourceKind RK, bool IsROV) {
     if (Record->isCompleteDefinition())
       return *this;
-    Record->addAttr(HLSLResourceAttr::CreateImplicit(Record->getASTContext(),
-                                                     RC, RK, IsROV));
+    Record->addAttr(
+        HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK, IsROV));
+    return *this;
+  }
+
+  BuiltinTypeDeclBuilder &annotateHLSLResourceClass(ResourceClass RC) {
+    if (Record->isCompleteDefinition())
+      return *this;
+    Record->addAttr(
+        HLSLResourceClassAttr::CreateImplicit(Record->getASTContext(), RC));
     return *this;
   }
 
@@ -143,16 +150,7 @@ struct BuiltinTypeDeclBuilder {
                                VD, false, NameInfo, Ty, VK_PRValue);
   }
 
-  static Expr *emitResourceClassExpr(ASTContext &AST, ResourceClass RC) {
-    return IntegerLiteral::Create(
-        AST,
-        llvm::APInt(AST.getIntWidth(AST.UnsignedCharTy),
-                    static_cast<uint8_t>(RC)),
-        AST.UnsignedCharTy, SourceLocation());
-  }
-
-  BuiltinTypeDeclBuilder &addDefaultHandleConstructor(Sema &S,
-                                                      ResourceClass RC) {
+  BuiltinTypeDeclBuilder &addDefaultHandleConstructor(Sema &S) {
     if (Record->isCompleteDefinition())
       return *this;
     ASTContext &AST = Record->getASTContext();
@@ -172,8 +170,7 @@ struct BuiltinTypeDeclBuilder {
     DeclRefExpr *Fn =
         lookupBuiltinFunction(AST, S, "__builtin_hlsl_create_handle");
 
-    Expr *RCExpr = emitResourceClassExpr(AST, RC);
-    Expr *Call = CallExpr::Create(AST, Fn, {RCExpr}, AST.VoidPtrTy, VK_PRValue,
+    Expr *Call = CallExpr::Create(AST, Fn, {}, AST.VoidPtrTy, VK_PRValue,
                                   SourceLocation(), FPOptionsOverride());
 
     CXXThisExpr *This = CXXThisExpr::Create(
@@ -495,8 +492,9 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
                                               bool IsROV) {
   return BuiltinTypeDeclBuilder(Decl)
       .addHandleMember()
-      .addDefaultHandleConstructor(S, RC)
-      .annotateResourceClass(RC, RK, IsROV);
+      .addDefaultHandleConstructor(S)
+      .annotateHLSLResourceClass(RC)
+      .annotateHLSLResource(RK, IsROV);
 }
 
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
