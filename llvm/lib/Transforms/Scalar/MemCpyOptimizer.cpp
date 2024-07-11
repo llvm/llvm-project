@@ -1163,6 +1163,11 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
   auto *CopySource = MDep->getSource();
   auto CleanupOnFailure = llvm::make_scope_exit([&CopySource] {
     if (CopySource->use_empty())
+      // Safety: It's safe here because we will only allocate more instructions
+      // after finishing all BatchAA queries, but we have to be careful if we
+      // want to do something like this in another place. Then we'd probably
+      // have to delay instruction removal until all transforms on an
+      // instruction finished.
       cast<Instruction>(CopySource)->eraseFromParent();
   });
   MaybeAlign CopySourceAlign = MDep->getSourceAlign();
