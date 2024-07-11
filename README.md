@@ -1,6 +1,6 @@
-# Apple's fork of llvm-project
+# Swift's fork of llvm-project
 
-This is Apple's fork of llvm-project.  For more information on Apple's
+This is Swift's fork of llvm-project.  For more information on Swift's
 branching scheme, please see
 [apple-docs/AppleBranchingScheme.md](https://github.com/apple/llvm-project/tree/apple/main/apple-docs/AppleBranchingScheme.md).
 
