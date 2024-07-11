@@ -28,7 +28,7 @@
 #define LIBC_HAS_FEATURE(f) 0
 #endif
 
-#ifndef __GNUC__
+#ifdef __clang__
 // Declare a LIBC_NAMESPACE with hidden visibility. `namespace
 // LIBC_NAMESPACE_DECL {` should be used around all declarations and definitions
 // for libc internals as opposed to just `namespace LIBC_NAMESPACE {`. This
