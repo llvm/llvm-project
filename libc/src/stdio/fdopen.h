@@ -9,11 +9,11 @@
 #ifndef LLVM_LIBC_SRC_STDIO_FDOPEN_H
 #define LLVM_LIBC_SRC_STDIO_FDOPEN_H
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
 
 namespace LIBC_NAMESPACE {
 
-FILE *fdopen(int fd, const char *mode);
+::FILE *fdopen(int fd, const char *mode);
 
 } // namespace LIBC_NAMESPACE
 

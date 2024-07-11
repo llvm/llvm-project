@@ -9,7 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STDIO_FREAD_UNLOCKED_H
 #define LLVM_LIBC_SRC_STDIO_FREAD_UNLOCKED_H
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
+#include <stddef.h>
 
 namespace LIBC_NAMESPACE {
 

@@ -10,7 +10,7 @@
 #include "src/__support/common.h"
 #include "src/__support/wctype_utils.h"
 
-#include <stdio.h> // for EOF.
+#include "hdr/stdio_macros.h" // for EOF.
 
 namespace LIBC_NAMESPACE {
 

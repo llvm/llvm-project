@@ -9,7 +9,7 @@
 #include "src/stdio/ungetc.h"
 #include "file.h"
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
 
 namespace LIBC_NAMESPACE {
 

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
 
 namespace LIBC_NAMESPACE {
 static struct {

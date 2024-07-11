@@ -9,7 +9,7 @@
 #include "src/stdio/feof_unlocked.h"
 #include "src/__support/File/file.h"
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
 
 namespace LIBC_NAMESPACE {
 
