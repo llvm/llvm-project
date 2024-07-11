@@ -2564,7 +2564,7 @@ void SoftmaxOp::getEffects(
 
 // Helper functions for softmax decomposition.
 // @{
-TypedAttr createInitValueForReduceMaxOp(Type type, OpBuilder &b) {
+static TypedAttr createInitValueForReduceMaxOp(Type type, OpBuilder &b) {
   if (isa<FloatType>(type))
     return b.getFloatAttr(
         type, APFloat::getLargest(cast<FloatType>(type).getFloatSemantics(),
@@ -2575,7 +2575,7 @@ TypedAttr createInitValueForReduceMaxOp(Type type, OpBuilder &b) {
   return {};
 }
 
-TypedAttr createInitValueForReduceSumOp(Type type, OpBuilder &b) {
+static TypedAttr createInitValueForReduceSumOp(Type type, OpBuilder &b) {
   if (isa<FloatType>(type))
     return b.getFloatAttr(
         type, APFloat::getZero(cast<FloatType>(type).getFloatSemantics()));
@@ -2584,8 +2584,8 @@ TypedAttr createInitValueForReduceSumOp(Type type, OpBuilder &b) {
   return {};
 }
 
-Value createLinalgReduceMaxBody(OpBuilder b, Location loc, ValueRange args,
-                                Type elementTy) {
+static Value createLinalgReduceMaxBody(OpBuilder b, Location loc,
+                                       ValueRange args, Type elementTy) {
   if (isa<FloatType>(elementTy))
     return b.create<arith::MaxNumFOp>(loc, args[0], args[1]);
   if (isa<IntegerType>(elementTy))
@@ -2593,8 +2593,8 @@ Value createLinalgReduceMaxBody(OpBuilder b, Location loc, ValueRange args,
   return {};
 }
 
-Value createLinalgReduceSumBody(OpBuilder &b, Location loc, ValueRange args,
-                                Type elementTy) {
+static Value createLinalgReduceSumBody(OpBuilder &b, Location loc,
+                                       ValueRange args, Type elementTy) {
   if (isa<FloatType>(elementTy))
     return b.create<arith::AddFOp>(loc, args[0], args[1]);
   if (isa<IntegerType>(elementTy))
