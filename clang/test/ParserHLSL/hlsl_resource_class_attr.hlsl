@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -ast-dump -o - %s | FileCheck %s
 
+
 // CHECK: -HLSLResourceClassAttr 0x{{[0-9a-f]+}} <<invalid sloc>> SRV
 struct [[hlsl::resource_class(SRV)]] Eg1 {
   int i;  

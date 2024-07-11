@@ -150,7 +150,16 @@ struct BuiltinTypeDeclBuilder {
                                VD, false, NameInfo, Ty, VK_PRValue);
   }
 
-  BuiltinTypeDeclBuilder &addDefaultHandleConstructor(Sema &S) {
+  static Expr *emitResourceClassExpr(ASTContext &AST, ResourceClass RC) {
+    return IntegerLiteral::Create(
+        AST,
+        llvm::APInt(AST.getIntWidth(AST.UnsignedCharTy),
+                    static_cast<uint8_t>(RC)),
+        AST.UnsignedCharTy, SourceLocation());
+  }
+
+  BuiltinTypeDeclBuilder &addDefaultHandleConstructor(Sema &S,
+                                                      ResourceClass RC) {
     if (Record->isCompleteDefinition())
       return *this;
     ASTContext &AST = Record->getASTContext();
@@ -169,8 +178,8 @@ struct BuiltinTypeDeclBuilder {
 
     DeclRefExpr *Fn =
         lookupBuiltinFunction(AST, S, "__builtin_hlsl_create_handle");
-
-    Expr *Call = CallExpr::Create(AST, Fn, {}, AST.VoidPtrTy, VK_PRValue,
+    Expr *RCExpr = emitResourceClassExpr(AST, RC);
+    Expr *Call = CallExpr::Create(AST, Fn, {RCExpr}, AST.VoidPtrTy, VK_PRValue,
                                   SourceLocation(), FPOptionsOverride());
 
     CXXThisExpr *This = CXXThisExpr::Create(
@@ -492,7 +501,7 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
                                               bool IsROV) {
   return BuiltinTypeDeclBuilder(Decl)
       .addHandleMember()
-      .addDefaultHandleConstructor(S)
+      .addDefaultHandleConstructor(S, RC)
       .annotateHLSLResourceClass(RC)
       .annotateHLSLResource(RK, IsROV);
 }
