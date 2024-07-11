@@ -1885,11 +1885,14 @@ bool RISCVTargetLowering::isTruncateFree(EVT SrcVT, EVT DstVT) const {
 }
 
 bool RISCVTargetLowering::isTruncateFree(SDValue Val, EVT VT2) const {
+  EVT SrcVT = Val.getValueType();
   // free truncate from vnsrl and vnsra
   if (Subtarget.hasStdExtV() &&
       (Val.getOpcode() == ISD::SRL || Val.getOpcode() == ISD::SRA) &&
-      Val.getValueType().isVector() && VT2.isVector()) {
-    return true;
+      SrcVT.isVector() && VT2.isVector()) {
+    unsigned SrcBits = SrcVT.getVectorElementType().getSizeInBits();
+    unsigned DestBits = VT2.getVectorElementType().getSizeInBits();
+    return (SrcBits == DestBits * 2);
   }
   return TargetLowering::isTruncateFree(Val, VT2);
 }
