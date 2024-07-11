@@ -153,8 +153,8 @@ EXECUTION OPTIONS
 
 .. option:: --no-time-tests
 
- Disable tracking the wall time individual tests take to execute. This is useful
- for external build systems to orchestrate the scheduled tests.
+ Disable tracking the wall time individual tests take to execute. This allows
+ external build systems to orchestrate the scheduled tests.
 
 .. option:: --time-tests-histogram
 

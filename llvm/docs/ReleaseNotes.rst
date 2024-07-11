@@ -114,7 +114,7 @@ Changes to the AArch64 Backend
   Cortex-A725, Cortex-X925, Neoverse-N3, Neoverse-V3 and Neoverse-V3AE CPUs.
 
 * ``-mbranch-protection=standard`` now enables FEAT_PAuth_LR by
-  default when the feature is enabled. The new behaviour results 
+  default when the feature is enabled. The new behaviour results
   in ``standard`` being equal to ``bti+pac-ret+pc`` when ``+pauth-lr``
   is passed as part of ``-mcpu=`` options.
 
@@ -370,10 +370,14 @@ Changes to the LLVM tools
   <https://github.com/llvm/llvm-project/pull/92835>`_).
 
 * llvm-cov now generates HTML report with JavaScript code to allow simple
-  jumping between uncovered parts (lines/regions/branches) of code 
-  using buttons on top-right corner of the page or using keys (L/R/B or 
+  jumping between uncovered parts (lines/regions/branches) of code
+  using buttons on top-right corner of the page or using keys (L/R/B or
   jumping in reverse direction with shift+L/R/B). (`#95662
   <https://github.com/llvm/llvm-project/pull/95662>`_).
+
+* llvm-lit's ``--time-tests`` has been renamed to ``--time-tests-histogram``.
+  Additionally, a new option, ``--no-time-tests`` is added as an option to
+  disable lit from creating ``.lit_test_times.txt``.
 
 Changes to LLDB
 ---------------------------------
