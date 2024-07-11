@@ -103,6 +103,9 @@ public:
         CallInst &CI = cast<CallInst>(*I);
         if (!CI.isIndirectCall() &&
             CI.getCalledFunction()->getName() == YK_NEW_CONTROL_POINT) {
+          // Update the stackmap id passed into the control point.
+          unsigned ArgSize = CI.arg_size();
+          CI.setArgOperand(ArgSize - 1, SMID);
           assert(isa<IntrinsicInst>(Args.back()) &&
                  cast<IntrinsicInst>(Args.back())->getIntrinsicID() ==
                      Intrinsic::frameaddress);
