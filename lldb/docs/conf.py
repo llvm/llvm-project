@@ -94,7 +94,7 @@ source_suffix = {
 # Man pages do not use markdown pages, so we don't need to register a markdown
 # parser.
 if not building_man_page:
-  source_suffix[".md"] = "markdown"
+    source_suffix[".md"] = "markdown"
 
 # The encoding of source files.
 # source_encoding = 'utf-8-sig'
