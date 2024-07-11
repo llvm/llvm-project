@@ -21,9 +21,11 @@
 using namespace __sanitizer;
 using __nsan::nsan_initialized;
 
+namespace {
 struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
   static bool UseImpl() { return !nsan_initialized; }
 };
+} // namespace
 
 INTERCEPTOR(void *, aligned_alloc, uptr align, uptr size) {
   void *res = REAL(aligned_alloc)(align, size);
