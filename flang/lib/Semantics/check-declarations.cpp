@@ -884,7 +884,7 @@ void CheckHelper::CheckObjectEntity(
       if (auto *msg{messages_.Say(
               "'%s' may not be a local variable in a pure subprogram"_err_en_US,
               symbol.name())}) {
-        msg->Attach(std::move(*whyNot));
+        msg->Attach(std::move(whyNot->set_severity(parser::Severity::Because)));
       }
     }
   }

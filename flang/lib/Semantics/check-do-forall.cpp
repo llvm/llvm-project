@@ -505,7 +505,7 @@ private:
             .Say(sourceLocation,
                 "'%s' may not be used as a DO variable"_err_en_US,
                 symbol->name())
-            .Attach(std::move(*why));
+            .Attach(std::move(why->set_severity(parser::Severity::Because)));
       } else {
         const DeclTypeSpec *symType{symbol->GetType()};
         if (!symType) {
