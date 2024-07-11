@@ -246,18 +246,17 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
       }
       break;
     case Triple::IOS:
+      if (TT.isOSVersionLT(7, 0)) {
+        setLibcallName(RTLIB::EXP10_F32, nullptr);
+        setLibcallName(RTLIB::EXP10_F64, nullptr);
+        break;
+      }
+      [[fallthrough]];
     case Triple::TvOS:
     case Triple::WatchOS:
     case Triple::XROS:
-      if (!TT.isWatchOS() &&
-          (TT.isOSVersionLT(7, 0) || (TT.isOSVersionLT(9, 0) && TT.isX86()))) {
-        setLibcallName(RTLIB::EXP10_F32, nullptr);
-        setLibcallName(RTLIB::EXP10_F64, nullptr);
-      } else {
-        setLibcallName(RTLIB::EXP10_F32, "__exp10f");
-        setLibcallName(RTLIB::EXP10_F64, "__exp10");
-      }
-
+      setLibcallName(RTLIB::EXP10_F32, "__exp10f");
+      setLibcallName(RTLIB::EXP10_F64, "__exp10");
       break;
     default:
       break;
