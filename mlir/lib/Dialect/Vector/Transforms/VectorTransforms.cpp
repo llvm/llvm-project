@@ -1394,9 +1394,31 @@ class DropInnerMostUnitDimsTransferWrite
     if (dimsToDrop == 0)
       return failure();
 
-    // Make sure that the indices to be dropped are equal 0.
-    // TODO: Deal with cases when the indices are not 0.
-    if (!llvm::all_of(writeOp.getIndices().take_back(dimsToDrop), isZeroIndex))
+    // We need to consider 3 cases for the dim to drop:
+    //  1. if "in bounds", it can safely be assumeed that the corresponding
+    //     index is equal to 0 (safe to collapse) (*)
+    //  2. if "out of bounds" and the corresponding index is 0, it is
+    //     effectively "in bounds" (safe to collapse)
+    //  3. If "out of bounds" and the correspondong index is != 0,
+    //     be conservative and bail out (not safe to collapse)
+    // (*)  This pattern only drops unit dims, so the only possible "in bounds"
+    // index is "0". This could be added as a folder.
+    // TODO: Deal with 3. by e.g. proppaging the "out of bounds" flag to other
+    // dims.
+    bool indexOutOfBounds = true;
+    if (writeOp.getInBounds())
+      indexOutOfBounds = llvm::any_of(
+          llvm::zip(writeOp.getInBounds()->getValue().take_back(dimsToDrop),
+                    writeOp.getIndices().take_back(dimsToDrop)),
+          [](auto zipped) {
+            auto inBounds = cast<BoolAttr>(std::get<0>(zipped)).getValue();
+            auto nonZeroIdx = !isZeroIndex(std::get<1>(zipped));
+            return !inBounds && nonZeroIdx;
+          });
+    else
+      indexOutOfBounds = !llvm::all_of(
+          writeOp.getIndices().take_back(dimsToDrop), isZeroIndex);
+    if (indexOutOfBounds)
       return failure();
 
     auto resultTargetVecType =
