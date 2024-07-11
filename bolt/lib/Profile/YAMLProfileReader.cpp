@@ -528,11 +528,23 @@ size_t YAMLProfileReader::matchWithCallGraph(BinaryContext &BC) {
     auto NeighborHashToBFsIt = CGMatcher.NeighborHashToBFs.find(Hash);
     if (NeighborHashToBFsIt == CGMatcher.NeighborHashToBFs.end())
       continue;
+
+    BinaryFunction *ClosestBF = nullptr;
+    size_t MinDistance = std::numeric_limits<size_t>::max();
     for (BinaryFunction *BF : NeighborHashToBFsIt->second) {
-      if (!ProfiledFunctions.count(BF)) {
-        matchProfileToFunction(YamlBF, *BF);
-        ++MatchedWithCallGraph;
+      if (ProfiledFunctions.count(BF))
+        continue;
+      size_t Distance = YamlBF.NumBasicBlocks > BF->size()
+                            ? YamlBF.NumBasicBlocks - BF->size()
+                            : BF->size() - YamlBF.NumBasicBlocks;
+      if (Distance < MinDistance) {
+        MinDistance = Distance;
+        ClosestBF = BF;
       }
+    }
+    if (ClosestBF) {
+      matchProfileToFunction(YamlBF, *ClosestBF);
+      ++MatchedWithCallGraph;
     }
   }
 
