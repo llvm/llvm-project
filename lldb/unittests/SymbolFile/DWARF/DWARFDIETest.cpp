@@ -249,7 +249,8 @@ DWARF:
     return CompilerContext(CompilerContextKind::Namespace, ConstString(name));
   };
   auto make_struct = [](llvm::StringRef name) {
-    return CompilerContext(CompilerContextKind::Struct, ConstString(name));
+    return CompilerContext(CompilerContextKind::ClassOrStruct,
+                           ConstString(name));
   };
   DWARFDIE struct_die = unit->DIE().GetFirstChild().GetFirstChild();
   ASSERT_TRUE(struct_die);
@@ -356,7 +357,8 @@ DWARF:
     return CompilerContext(CompilerContextKind::Namespace, ConstString(name));
   };
   auto make_struct = [](llvm::StringRef name) {
-    return CompilerContext(CompilerContextKind::Struct, ConstString(name));
+    return CompilerContext(CompilerContextKind::ClassOrStruct,
+                           ConstString(name));
   };
   // Grab the "a::struct_t" type from the "a" namespace
   DWARFDIE a_struct_die = unit->DIE().GetFirstChild().GetFirstChild();

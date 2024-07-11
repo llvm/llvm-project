@@ -70,8 +70,6 @@ STATISTIC(NumFolded,          "Number of folded stack accesses");
 STATISTIC(NumFoldedLoads,     "Number of folded loads");
 STATISTIC(NumRemats,          "Number of rematerialized defs for spilling");
 
-static cl::opt<bool> DisableHoisting("disable-spill-hoist", cl::Hidden,
-                                     cl::desc("Disable inline spill hoisting"));
 static cl::opt<bool>
 RestrictStatepointRemat("restrict-statepoint-remat",
                        cl::init(false), cl::Hidden,
@@ -133,7 +131,7 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
 public:
   HoistSpillHelper(MachineFunctionPass &pass, MachineFunction &mf,
                    VirtRegMap &vrm)
-      : MF(mf), LIS(pass.getAnalysis<LiveIntervals>()),
+      : MF(mf), LIS(pass.getAnalysis<LiveIntervalsWrapperPass>().getLIS()),
         LSS(pass.getAnalysis<LiveStacks>()),
         MDT(pass.getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree()),
         VRM(vrm), MRI(mf.getRegInfo()), TII(*mf.getSubtarget().getInstrInfo()),
@@ -190,7 +188,7 @@ class InlineSpiller : public Spiller {
 public:
   InlineSpiller(MachineFunctionPass &Pass, MachineFunction &MF, VirtRegMap &VRM,
                 VirtRegAuxInfo &VRAI)
-      : MF(MF), LIS(Pass.getAnalysis<LiveIntervals>()),
+      : MF(MF), LIS(Pass.getAnalysis<LiveIntervalsWrapperPass>().getLIS()),
         LSS(Pass.getAnalysis<LiveStacks>()),
         MDT(Pass.getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree()),
         VRM(VRM), MRI(MF.getRegInfo()), TII(*MF.getSubtarget().getInstrInfo()),

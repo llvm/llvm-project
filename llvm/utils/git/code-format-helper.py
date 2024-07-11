@@ -225,7 +225,7 @@ class ClangFormatHelper(FormatHelper):
                 ext.strip(".")
             )  # Exclude periods since git-clang-format takes extensions without them
         cf_cmd.append("--extensions")
-        cf_cmd.append("'{}'".format(",".join(extensions)))
+        cf_cmd.append(",".join(extensions))
 
         cf_cmd.append("--")
         cf_cmd += cpp_files

@@ -58,6 +58,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
@@ -203,7 +204,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
   // Loop over all the callers of the function, transforming the call sites to
   // pass in the loaded pointers.
   SmallVector<Value *, 16> Args;
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
   SmallVector<WeakTrackingVH, 16> DeadArgs;
 
   while (!F->use_empty()) {
@@ -426,7 +427,7 @@ static bool allCallersPassValidPointerForArgument(Argument *Arg,
                                                   Align NeededAlign,
                                                   uint64_t NeededDerefBytes) {
   Function *Callee = Arg->getParent();
-  const DataLayout &DL = Callee->getParent()->getDataLayout();
+  const DataLayout &DL = Callee->getDataLayout();
   APInt Bytes(64, NeededDerefBytes);
 
   // Check if the argument itself is marked dereferenceable and aligned.
@@ -754,7 +755,7 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
     if (BB.getTerminatingMustTailCall())
       return nullptr;
 
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
   auto &AAR = FAM.getResult<AAManager>(*F);
   const auto &TTI = FAM.getResult<TargetIRAnalysis>(*F);
 

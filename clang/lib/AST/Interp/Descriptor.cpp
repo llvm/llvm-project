@@ -64,7 +64,14 @@ static void dtorArrayTy(Block *, std::byte *Ptr, const Descriptor *D) {
 template <typename T>
 static void moveArrayTy(Block *, const std::byte *Src, std::byte *Dst,
                         const Descriptor *D) {
-  // FIXME: Need to copy the InitMap?
+  // FIXME: Get rid of the const_cast.
+  InitMapPtr &SrcIMP =
+      *reinterpret_cast<InitMapPtr *>(const_cast<std::byte *>(Src));
+  if (SrcIMP) {
+    // We only ever invoke the moveFunc when moving block contents to a
+    // DeadBlock. DeadBlocks don't need InitMaps, so we destroy them here.
+    SrcIMP = std::nullopt;
+  }
   Src += sizeof(InitMapPtr);
   Dst += sizeof(InitMapPtr);
   for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
@@ -348,19 +355,25 @@ Descriptor::Descriptor(const DeclTy &D)
 }
 
 QualType Descriptor::getType() const {
-  if (auto *E = asExpr())
+  if (const auto *E = asExpr())
     return E->getType();
-  if (auto *D = asValueDecl())
+  if (const auto *D = asValueDecl())
     return D->getType();
-  if (auto *T = dyn_cast<TypeDecl>(asDecl()))
+  if (const auto *T = dyn_cast<TypeDecl>(asDecl()))
     return QualType(T->getTypeForDecl(), 0);
   llvm_unreachable("Invalid descriptor type");
 }
 
 QualType Descriptor::getElemQualType() const {
   assert(isArray());
-  const auto *AT = cast<ArrayType>(getType());
-  return AT->getElementType();
+  QualType T = getType();
+  if (const auto *AT = T->getAsArrayTypeUnsafe())
+    return AT->getElementType();
+  if (const auto *CT = T->getAs<ComplexType>())
+    return CT->getElementType();
+  if (const auto *CT = T->getAs<VectorType>())
+    return CT->getElementType();
+  llvm_unreachable("Array that's not an array/complex/vector type?");
 }
 
 SourceLocation Descriptor::getLocation() const {

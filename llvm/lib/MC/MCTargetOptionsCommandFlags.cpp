@@ -47,6 +47,7 @@ MCOPT(bool, NoWarn)
 MCOPT(bool, NoDeprecatedWarn)
 MCOPT(bool, NoTypeCheck)
 MCOPT(bool, SaveTempLabels)
+MCOPT(bool, Crel)
 MCOPT(bool, X86RelaxRelocations)
 MCOPT(std::string, ABIName)
 MCOPT(std::string, AsSecureLogFile)
@@ -128,6 +129,10 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
       "save-temp-labels", cl::desc("Don't discard temporary labels"));
   MCBINDOPT(SaveTempLabels);
 
+  static cl::opt<bool> Crel("crel",
+                            cl::desc("Use CREL relocation format for ELF"));
+  MCBINDOPT(Crel);
+
   static cl::opt<bool> X86RelaxRelocations(
       "x86-relax-relocations",
       cl::desc(
@@ -162,6 +167,7 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.MCNoDeprecatedWarn = getNoDeprecatedWarn();
   Options.MCNoTypeCheck = getNoTypeCheck();
   Options.MCSaveTempLabels = getSaveTempLabels();
+  Options.Crel = getCrel();
   Options.X86RelaxRelocations = getX86RelaxRelocations();
   Options.EmitDwarfUnwind = getEmitDwarfUnwind();
   Options.EmitCompactUnwindNonCanonical = getEmitCompactUnwindNonCanonical();

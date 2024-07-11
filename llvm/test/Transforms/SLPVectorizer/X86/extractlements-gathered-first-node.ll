@@ -6,7 +6,6 @@ define void @test() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x i32> zeroinitializer, i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> zeroinitializer, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> <i32 0, i32 undef>, i32 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i32 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    ret void
 ;

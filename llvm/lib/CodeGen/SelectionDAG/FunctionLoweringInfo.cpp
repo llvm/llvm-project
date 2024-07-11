@@ -186,7 +186,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
           Register SP = TLI->getStackPointerRegisterToSaveRestore();
           const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
           std::vector<TargetLowering::AsmOperandInfo> Ops =
-              TLI->ParseConstraints(Fn->getParent()->getDataLayout(), TRI,
+              TLI->ParseConstraints(Fn->getDataLayout(), TRI,
                                     *Call);
           for (TargetLowering::AsmOperandInfo &Op : Ops) {
             if (Op.Type == InlineAsm::isClobber) {
@@ -570,7 +570,7 @@ FunctionLoweringInfo::getValueFromVirtualReg(Register Vreg) {
     SmallVector<EVT, 4> ValueVTs;
     for (auto &P : ValueMap) {
       ValueVTs.clear();
-      ComputeValueVTs(*TLI, Fn->getParent()->getDataLayout(),
+      ComputeValueVTs(*TLI, Fn->getDataLayout(),
                       P.first->getType(), ValueVTs);
       unsigned Reg = P.second;
       for (EVT VT : ValueVTs) {

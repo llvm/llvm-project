@@ -244,7 +244,6 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
   add_flags_if_supported("-mdefault-visibility-export-mapping=explicit")
   set(CMAKE_AIX_EXPORT_ALL_SYMBOLS OFF)
 endif()
-add_compile_flags("${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
 add_library_flags("${LIBCXXABI_ADDITIONAL_LIBRARIES}")
 
 # Configure compiler. Must happen after setting the target flags.

@@ -82,6 +82,8 @@ auto IsVariableHelper::operator()(const Symbol &symbol) const -> Result {
   const Symbol &ultimate{symbol.GetUltimate()};
   return !IsNamedConstant(ultimate) &&
       (ultimate.has<semantics::ObjectEntityDetails>() ||
+          (ultimate.has<semantics::EntityDetails>() &&
+              ultimate.attrs().test(semantics::Attr::TARGET)) ||
           ultimate.has<semantics::AssocEntityDetails>());
 }
 auto IsVariableHelper::operator()(const Component &x) const -> Result {

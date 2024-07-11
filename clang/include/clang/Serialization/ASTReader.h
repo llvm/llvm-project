@@ -491,14 +491,6 @@ private:
   /// ID = (I + 1) << FastQual::Width has already been loaded
   llvm::PagedVector<QualType> TypesLoaded;
 
-  using GlobalTypeMapType =
-      ContinuousRangeMap<serialization::TypeID, ModuleFile *, 4>;
-
-  /// Mapping from global type IDs to the module in which the
-  /// type resides along with the offset that should be added to the
-  /// global type ID to produce a local ID.
-  GlobalTypeMapType GlobalTypeMap;
-
   /// Declarations that have already been loaded from the chain.
   ///
   /// When the pointer at index I is non-NULL, the declaration with ID
@@ -797,11 +789,6 @@ private:
   /// in the chain. The referenced declarations are deserialized and passed to
   /// the consumer eagerly.
   SmallVector<GlobalDeclID, 16> EagerlyDeserializedDecls;
-
-  /// The IDs of all vtables to emit. The referenced declarations are passed
-  /// to the consumers's HandleVTable eagerly after passing
-  /// EagerlyDeserializedDecls.
-  SmallVector<GlobalDeclID, 16> VTablesToEmit;
 
   /// The IDs of all tentative definitions stored in the chain.
   ///
@@ -1429,8 +1416,8 @@ private:
     RecordLocation(ModuleFile *M, uint64_t O) : F(M), Offset(O) {}
   };
 
-  QualType readTypeRecord(unsigned Index);
-  RecordLocation TypeCursorForIndex(unsigned Index);
+  QualType readTypeRecord(serialization::TypeID ID);
+  RecordLocation TypeCursorForIndex(serialization::TypeID ID);
   void LoadedDecl(unsigned Index, Decl *D);
   Decl *ReadDeclRecord(GlobalDeclID ID);
   void markIncompleteDeclChain(Decl *D);
@@ -1513,7 +1500,6 @@ private:
   bool isConsumerInterestedIn(Decl *D);
   void PassInterestingDeclsToConsumer();
   void PassInterestingDeclToConsumer(Decl *D);
-  void PassVTableToConsumer(CXXRecordDecl *RD);
 
   void finishPendingActions();
   void diagnoseOdrViolations();
@@ -1543,6 +1529,11 @@ private:
   /// array and the corresponding module file.
   std::pair<ModuleFile *, unsigned>
   translateIdentifierIDToIndex(serialization::IdentifierID ID) const;
+
+  /// Translate an \param TypeID ID to the index of TypesLoaded
+  /// array and the corresponding module file.
+  std::pair<ModuleFile *, unsigned>
+  translateTypeIDToIndex(serialization::TypeID ID) const;
 
 public:
   /// Load the AST file and validate its contents against the given
@@ -1892,10 +1883,11 @@ public:
   QualType GetType(serialization::TypeID ID);
 
   /// Resolve a local type ID within a given AST file into a type.
-  QualType getLocalType(ModuleFile &F, unsigned LocalID);
+  QualType getLocalType(ModuleFile &F, serialization::LocalTypeID LocalID);
 
   /// Map a local type ID within a given AST file into a global type ID.
-  serialization::TypeID getGlobalTypeID(ModuleFile &F, unsigned LocalID) const;
+  serialization::TypeID
+  getGlobalTypeID(ModuleFile &F, serialization::LocalTypeID LocalID) const;
 
   /// Read a type from the current position in the given record, which
   /// was read from the given AST file.
