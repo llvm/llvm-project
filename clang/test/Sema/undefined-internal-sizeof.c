@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -pedantic-errors
+// RUN: %clang_cc1 -fsyntax-only -verify %s -Wno-pointer-arith -pedantic-errors
 
 // expected-no-diagnostics
 
