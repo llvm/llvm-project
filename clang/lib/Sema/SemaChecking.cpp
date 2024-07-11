@@ -1487,10 +1487,7 @@ static bool OpenCLBuiltinAllocaAddrSpace(Sema &S, CallExpr *TheCall) {
   if (S.getLangOpts().OpenCL) {
     RT = RT->getPointeeType();
 
-    // Stack Address space corresponds to private address space.
-    LangAS openCLStackAS = LangAS::opencl_private;
-
-    RT = S.Context.getAddrSpaceQualType(RT, openCLStackAS);
+    RT = S.Context.getAddrSpaceQualType(RT, LangAS::opencl_private);
     TheCall->setType(S.Context.getPointerType(RT));
   }
 
