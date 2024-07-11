@@ -634,25 +634,21 @@ void DWARFRewriter::updateDebugInfo() {
     if (DwarfVersion >= 5) {
       auto AddrW = std::make_unique<DebugAddrWriterDwarf5>(
           &BC, CU.getAddressByteSize(), CU.getAddrOffsetSectionBase());
-      DebugAddrWriter *AddressWriter =
-          AddressWritersByCU.insert({CU.getOffset(), std::move(AddrW)})
-              .first->second.get();
-      RangeListsSectionWriter->setAddressWriter(AddressWriter);
-      LocListWritersByCU[CUIndex] = std::make_unique<DebugLoclistWriter>(
-          CU, DwarfVersion, false, *AddressWriter);
+      RangeListsSectionWriter->setAddressWriter(AddrW.get());
+      LocListWritersByCU[CUIndex] =
+          std::make_unique<DebugLoclistWriter>(CU, DwarfVersion, false, *AddrW);
 
       if (std::optional<uint64_t> DWOId = CU.getDWOId()) {
         assert(RangeListsWritersByCU.count(*DWOId) == 0 &&
                "RangeLists writer for DWO unit already exists.");
-        auto RangeListsSectionWriter =
+        auto RangeListSectionWriter =
             std::make_unique<DebugRangeListsSectionWriter>();
-        RangeListsSectionWriter->initSection(CU);
-        DebugRangeListsSectionWriter *RangeListSectionWriter =
-            RangeListsWritersByCU
-                .insert({*DWOId, std::move(RangeListsSectionWriter)})
-                .first->second.get();
-        RangeListSectionWriter->setAddressWriter(AddressWriter);
+        RangeListSectionWriter->initSection(CU);
+        RangeListSectionWriter->setAddressWriter(AddrW.get());
+        RangeListsWritersByCU.insert(
+            {*DWOId, std::move(RangeListSectionWriter)});
       }
+      AddressWritersByCU.insert({CU.getOffset(), std::move(AddrW)});
 
     } else {
       auto AddrW =
