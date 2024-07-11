@@ -228,6 +228,11 @@ private:
   /// unit, while 0 is reserved for NULL.
   llvm::DenseMap<const Decl *, LocalDeclID> DeclIDs;
 
+  /// Set of predefined decls. This is a helper data to determine if a decl
+  /// is predefined. It should be more clear and safer to query the set
+  /// instead of comparing the result of `getDeclID()` or `GetDeclRef()`.
+  llvm::SmallPtrSet<const Decl *, 32> PredefinedDecls;
+
   /// Offset of each declaration in the bitstream, indexed by
   /// the declaration's ID.
   std::vector<serialization::DeclOffset> DeclOffsets;
@@ -559,8 +564,6 @@ private:
   void WriteType(QualType T);
 
   bool isLookupResultExternal(StoredDeclsList &Result, DeclContext *DC);
-  bool isLookupResultEntirelyExternalOrUnreachable(StoredDeclsList &Result,
-                                                   DeclContext *DC);
 
   void GenerateNameLookupTable(const DeclContext *DC,
                                llvm::SmallVectorImpl<char> &LookupTable);
@@ -725,8 +728,7 @@ public:
     if (D->isFromASTFile())
       return false;
     auto I = DeclIDs.find(D);
-    return (I == DeclIDs.end() ||
-            I->second.get() >= clang::NUM_PREDEF_DECL_IDS);
+    return (I == DeclIDs.end() || I->second >= clang::NUM_PREDEF_DECL_IDS);
   };
 
   /// Emit a reference to a declaration.
@@ -841,6 +843,8 @@ public:
   bool hasChain() const { return Chain; }
   ASTReader *getChain() const { return Chain; }
 
+  bool isWritingModule() const { return WritingModule; }
+
   bool isWritingStdCXXNamedModules() const {
     return WritingModule && WritingModule->isNamedModule();
   }
@@ -848,6 +852,10 @@ public:
   bool isGeneratingReducedBMI() const { return GeneratingReducedBMI; }
 
   bool getDoneWritingDeclsAndTypes() const { return DoneWritingDeclsAndTypes; }
+
+  bool isDeclPredefined(const Decl *D) const {
+    return PredefinedDecls.count(D);
+  }
 
 private:
   // ASTDeserializationListener implementation

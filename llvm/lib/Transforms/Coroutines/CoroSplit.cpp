@@ -1790,7 +1790,7 @@ static void splitRetconCoroutine(Function &F, coro::Shape &Shape,
     IRBuilder<> Builder(Id);
 
     // Determine the size of the frame.
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     auto Size = DL.getTypeAllocSize(Shape.FrameTy);
 
     // Allocate.  We don't need to update the call graph node because we're
@@ -2108,12 +2108,6 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
   if (Coroutines.empty() && PrepareFns.empty())
     return PreservedAnalyses::all();
 
-  if (Coroutines.empty()) {
-    for (auto *PrepareFn : PrepareFns) {
-      replaceAllPrepares(PrepareFn, CG, C);
-    }
-  }
-
   // Split all the coroutines.
   for (LazyCallGraph::Node *N : Coroutines) {
     Function &F = N->getFunction();
@@ -2143,11 +2137,9 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
     }
   }
 
-  if (!PrepareFns.empty()) {
     for (auto *PrepareFn : PrepareFns) {
       replaceAllPrepares(PrepareFn, CG, C);
     }
-  }
 
   return PreservedAnalyses::none();
 }

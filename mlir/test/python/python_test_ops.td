@@ -58,6 +58,10 @@ def AttributedOp : TestOp<"attributed_op"> {
                    UnitAttr:$unit);
 }
 
+def CustomAttributedOp : TestOp<"custom_attributed_op"> {
+  let arguments = (ins TestAttr:$test_attr);
+}
+
 def AttributesOp : TestOp<"attributes_op"> {
   let arguments = (ins
                    AffineMapArrayAttr:$x_affinemaparr,
@@ -128,7 +132,7 @@ def InferResultsOp : TestOp<"infer_results_op", [InferTypeOpInterface]> {
   let results = (outs AnyInteger:$single, AnyInteger:$doubled);
 
   let extraClassDeclaration = [{
-    static ::mlir::LogicalResult inferReturnTypes(
+    static ::llvm::LogicalResult inferReturnTypes(
       ::mlir::MLIRContext *context, ::std::optional<::mlir::Location> location,
       ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
       ::mlir::OpaqueProperties,
@@ -151,7 +155,7 @@ def InferResultsVariadicInputsOp : TestOp<"infer_results_variadic_inputs_op",
   let results = (outs I32OrF32:$res);
 
   let extraClassDeclaration = [{
-    static ::mlir::LogicalResult inferReturnTypes(
+    static ::llvm::LogicalResult inferReturnTypes(
       ::mlir::MLIRContext *context, ::std::optional<::mlir::Location> location,
       ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
       ::mlir::OpaqueProperties,
@@ -180,7 +184,7 @@ def InferShapedTypeComponentsOp : TestOp<"infer_shaped_type_components_op",
   let results = (outs AnyTensor:$result);
 
   let extraClassDefinition = [{
-    ::mlir::LogicalResult $cppClass::inferReturnTypeComponents(
+    ::llvm::LogicalResult $cppClass::inferReturnTypeComponents(
       ::mlir::MLIRContext *context, ::std::optional<::mlir::Location> location,
       ::mlir::ValueShapeRange operands, ::mlir::DictionaryAttr attributes,
       ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,

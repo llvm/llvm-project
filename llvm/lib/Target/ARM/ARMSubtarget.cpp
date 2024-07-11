@@ -111,8 +111,7 @@ ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
   // FIXME: At this point, we can't rely on Subtarget having RBI.
   // It's awkward to mix passing RBI and the Subtarget; should we pass
   // TII/TRI as well?
-  InstSelector.reset(createARMInstructionSelector(
-      *static_cast<const ARMBaseTargetMachine *>(&TM), *this, *RBI));
+  InstSelector.reset(createARMInstructionSelector(TM, *this, *RBI));
 
   RegBankInfo.reset(RBI);
 }

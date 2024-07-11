@@ -43,7 +43,7 @@ std::optional<APValue> EvaluationResult::toRValue() const {
 
   // We have a pointer and want an RValue.
   if (const auto *P = std::get_if<Pointer>(&Value))
-    return P->toRValue(*Ctx);
+    return P->toRValue(*Ctx, getSourceType());
   else if (const auto *FP = std::get_if<FunctionPointer>(&Value)) // Nope
     return FP->toAPValue();
   llvm_unreachable("Unhandled lvalue kind");
@@ -124,9 +124,16 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
   for (const Record::Base &B : R->bases()) {
     Pointer P = BasePtr.atField(B.Offset);
     if (!P.isInitialized()) {
-      S.FFDiag(BasePtr.getDeclDesc()->asDecl()->getLocation(),
-               diag::note_constexpr_uninitialized_base)
-          << B.Desc->getType();
+      const Descriptor *Desc = BasePtr.getDeclDesc();
+      if (Desc->asDecl())
+        S.FFDiag(BasePtr.getDeclDesc()->asDecl()->getLocation(),
+                 diag::note_constexpr_uninitialized_base)
+            << B.Desc->getType();
+      else
+        S.FFDiag(BasePtr.getDeclDesc()->asExpr()->getExprLoc(),
+                 diag::note_constexpr_uninitialized_base)
+            << B.Desc->getType();
+
       return false;
     }
     Result &= CheckFieldsInitialized(S, Loc, P, B.R);

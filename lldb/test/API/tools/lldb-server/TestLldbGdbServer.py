@@ -953,7 +953,7 @@ class LldbGdbServerTestCase(
         z_packet_type = 0
 
         # If hardware breakpoint is requested set packet type to Z1
-        if want_hardware == True:
+        if want_hardware:
             z_packet_type = 1
 
         self.reset_test_sequence()
