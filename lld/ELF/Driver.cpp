@@ -2992,8 +2992,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     reportDuplicate(*d.sym, d.file, d.section, d.value);
 
   // ELF dependent libraries may have introduced new input files after LTO has
-  // completed. This is an error if the file hadn't already been parsed, since
-  // it's no longer legal to change the symbol table by parsing it.
+  // completed. This is an error if the files haven't already been parsed, since
+  // it's no longer legal to change the symbol table by parsing them.
   auto newInputFiles = ArrayRef(ctx.driver.files).slice(numInputFilesBeforeLTO);
   if (!newInputFiles.empty()) {
     DenseSet<StringRef> oldFilenames;
@@ -3002,7 +3002,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
       oldFilenames.insert(f->getName());
     for (InputFile *newFile : newInputFiles)
       if (!oldFilenames.contains(newFile->getName()))
-        error("input file '" + newFile->getName() + "' added after LTO");
+        errorOrWarn("input file '" + newFile->getName() + "' added after LTO");
   }
 
   // Handle --exclude-libs again because lto.tmp may reference additional
