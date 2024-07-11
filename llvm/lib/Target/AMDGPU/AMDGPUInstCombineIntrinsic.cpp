@@ -1102,6 +1102,97 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     break;
   }
+  case Intrinsic::amdgcn_trig_preop: {
+    // The intrinsic is declared with name mangling, but currently the
+    // instruction only exists for f64
+    if (!II.getType()->isDoubleTy())
+      break;
+
+    Value *Src = II.getArgOperand(0);
+    Value *Segment = II.getArgOperand(1);
+    if (isa<PoisonValue>(Src))
+      return IC.replaceInstUsesWith(II, Src);
+
+    if (isa<UndefValue>(Src)) {
+      auto *QNaN = ConstantFP::get(
+          II.getType(), APFloat::getQNaN(II.getType()->getFltSemantics()));
+      return IC.replaceInstUsesWith(II, QNaN);
+    }
+
+    const ConstantFP *Csrc = dyn_cast<ConstantFP>(Src);
+    if (!Csrc)
+      break;
+
+    if (II.isStrictFP())
+      break;
+
+    const APFloat &Fsrc = Csrc->getValueAPF();
+    if (Fsrc.isNaN()) {
+      // FIXME: We just need to make the nan quiet here, but that's unavailable
+      // on APFloat, only IEEEfloat
+      auto *Quieted = ConstantFP::get(
+          II.getType(), scalbn(Fsrc, 0, APFloat::rmNearestTiesToEven));
+      return IC.replaceInstUsesWith(II, Quieted);
+    }
+
+    const ConstantInt *Cseg = dyn_cast<ConstantInt>(Segment);
+    if (!Cseg)
+      break;
+
+    // 2.0/PI table.
+    static const uint32_t TwoByPi[] = {
+        0xa2f9836e, 0x4e441529, 0xfc2757d1, 0xf534ddc0, 0xdb629599, 0x3c439041,
+        0xfe5163ab, 0xdebbc561, 0xb7246e3a, 0x424dd2e0, 0x06492eea, 0x09d1921c,
+        0xfe1deb1c, 0xb129a73e, 0xe88235f5, 0x2ebb4484, 0xe99c7026, 0xb45f7e41,
+        0x3991d639, 0x835339f4, 0x9c845f8b, 0xbdf9283b, 0x1ff897ff, 0xde05980f,
+        0xef2f118b, 0x5a0a6d1f, 0x6d367ecf, 0x27cb09b7, 0x4f463f66, 0x9e5fea2d,
+        0x7527bac7, 0xebe5f17b, 0x3d0739f7, 0x8a5292ea, 0x6bfb5fb1, 0x1f8d5d08,
+        0x56033046};
+
+    const APInt &SegVal = Cseg->getValue();
+    bool Ovflow = false;
+    unsigned Numbits = 32;
+    bool Signed = true;
+    APInt EClamp(Numbits, 1077, Signed);
+    APInt E = Fsrc.bitcastToAPInt().ashr(52);
+    E &= 0x7ff;
+    E = E.trunc(Numbits);
+    APInt Shift =
+        (E.sgt(EClamp) ? E.ssub_ov(EClamp, Ovflow) : APInt(Numbits, 0, Signed))
+            .sadd_ov(APInt(Numbits, 53, Signed).smul_ov(SegVal & 0x1f, Ovflow),
+                     Ovflow);
+    uint32_t Idx = Shift.ashr(5).getZExtValue();
+
+    // Return 0 for invalid segment select (outbound).
+    if (static_cast<size_t>(Idx) + 2 >= std::size(TwoByPi)) {
+      APFloat Zero = APFloat::getZero(II.getType()->getFltSemantics());
+      return IC.replaceInstUsesWith(II, ConstantFP::get(Src->getType(), Zero));
+    }
+
+    APInt Bshift = Shift & 0x1f;
+    Numbits = 64;
+    Signed = false;
+    uint64_t Hi = ((uint64_t)TwoByPi[Idx] << 32) | (uint64_t)TwoByPi[Idx + 1];
+    APInt Thi = APInt(Numbits, Hi, Signed);
+    APInt Tlo = APInt(Numbits, (uint64_t)TwoByPi[Idx + 2] << 32, Signed);
+
+    if (Bshift.sgt(0)) {
+      Numbits = 32;
+      Signed = true;
+      Thi = Thi.shl(Bshift) |
+            Tlo.lshr(APInt(Numbits, 64, Signed).ssub_ov(Bshift, Ovflow));
+    }
+
+    Thi = Thi.lshr(11);
+    APFloat Res = APFloat(Thi.roundToDouble());
+    int32_t Scale = -53 - Shift.getSExtValue();
+
+    if (E.sge(0x7b0))
+      Scale += 128;
+
+    Res = scalbn(Res, Scale, RoundingMode::NearestTiesToEven);
+    return IC.replaceInstUsesWith(II, ConstantFP::get(Src->getType(), Res));
+  }
   case Intrinsic::amdgcn_fmul_legacy: {
     Value *Op0 = II.getArgOperand(0);
     Value *Op1 = II.getArgOperand(1);
