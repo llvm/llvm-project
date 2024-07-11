@@ -208,7 +208,7 @@ llvm::Value *TargetCodeGenInfo::createEnqueuedBlockKernel(
 }
 
 void TargetCodeGenInfo::setBranchProtectionFnAttributes(
-    const TargetInfo::BranchProtectionInfo &BPI, llvm::Function &F) const {
+    const TargetInfo::BranchProtectionInfo &BPI, llvm::Function &F) {
   llvm::AttrBuilder FuncAttrs(F.getContext());
   setBranchProtectionFnAttributes(BPI, FuncAttrs);
   F.addFnAttrs(FuncAttrs);
@@ -216,7 +216,7 @@ void TargetCodeGenInfo::setBranchProtectionFnAttributes(
 
 void TargetCodeGenInfo::setBranchProtectionFnAttributes(
     const TargetInfo::BranchProtectionInfo &BPI,
-    llvm::AttrBuilder &FuncAttrs) const {
+    llvm::AttrBuilder &FuncAttrs) {
   if (BPI.SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
     FuncAttrs.addAttribute("sign-return-address", BPI.getSignReturnAddrStr());
     FuncAttrs.addAttribute("sign-return-address-key", BPI.getSignKeyStr());
