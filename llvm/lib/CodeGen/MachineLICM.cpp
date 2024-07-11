@@ -261,7 +261,8 @@ namespace {
         DenseMap<MachineDomTreeNode *, unsigned> &OpenChildren,
         const DenseMap<MachineDomTreeNode *, MachineDomTreeNode *> &ParentMap);
 
-    void HoistOutOfLoop(MachineLoop *CurLoop, MachineBasicBlock *CurPreheader);
+    void HoistOutOfLoop(MachineDomTreeNode *HeaderN, MachineLoop *CurLoop,
+                        MachineBasicBlock *CurPreheader);
 
     void InitRegPressure(MachineBasicBlock *BB);
 
@@ -390,8 +391,9 @@ bool MachineLICMBase::runOnMachineFunction(MachineFunction &MF) {
     else {
       // CSEMap is initialized for loop header when the first instruction is
       // being hoisted.
+      MachineDomTreeNode *N = DT->getNode(CurLoop->getHeader());
       FirstInLoop = true;
-      HoistOutOfLoop(CurLoop, CurPreheader);
+      HoistOutOfLoop(N, CurLoop, CurPreheader);
       CSEMap.clear();
     }
   }
@@ -794,10 +796,10 @@ void MachineLICMBase::ExitScopeIfDone(MachineDomTreeNode *Node,
 /// specified header block, and that are in the current loop) in depth first
 /// order w.r.t the DominatorTree. This allows us to visit definitions before
 /// uses, allowing us to hoist a loop body in one pass without iteration.
-void MachineLICMBase::HoistOutOfLoop(MachineLoop *CurLoop,
+void MachineLICMBase::HoistOutOfLoop(MachineDomTreeNode *HeaderN,
+                                     MachineLoop *CurLoop,
                                      MachineBasicBlock *CurPreheader) {
   MachineBasicBlock *Preheader = getCurPreheader(CurLoop, CurPreheader);
-  MachineDomTreeNode *HeaderN = DT->getNode(CurLoop->getHeader());
   if (!Preheader)
     return;
 
