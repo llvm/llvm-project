@@ -72,9 +72,7 @@ int *__llvm_libc_errno() { return &global_errno; }
 void Errno::operator=(int a) {
   __libc_errno.store(a, cpp::MemoryOrder::RELAXED);
 }
-Errno::operator int() {
-  return __libc_errno.load(cpp::MemoryOrder::RELAXED);
-}
+Errno::operator int() { return __libc_errno.load(cpp::MemoryOrder::RELAXED); }
 
 #elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_EXTERNAL
 
