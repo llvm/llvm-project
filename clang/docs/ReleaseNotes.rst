@@ -705,6 +705,8 @@ Improvements to Clang's diagnostics
 
 - For the ARM target, calling an interrupt handler from another function is now an error. #GH95359.
 
+- Clang now diagnoses integer constant expressions that are folded to a constant value as an extension in more circumstances. Fixes #GH59863
+
 Improvements to Clang's time-trace
 ----------------------------------
 
