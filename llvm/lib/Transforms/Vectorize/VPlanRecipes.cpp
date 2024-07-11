@@ -350,7 +350,7 @@ bool VPInstruction::doesGeneratePerAllLanes() const {
 bool VPInstruction::canGenerateScalarForFirstLane() const {
   if (Instruction::isBinaryOp(getOpcode()))
     return true;
-  if (isScalar() || isVectorToScalar())
+  if (isSingleScalar() || isVectorToScalar())
     return true;
   switch (Opcode) {
   case Instruction::ICmp:
@@ -734,7 +734,7 @@ void VPInstruction::execute(VPTransformState &State) {
     assert(GeneratedValue && "generatePerPart must produce a value");
     assert((GeneratedValue->getType()->isVectorTy() ==
                 !GeneratesPerFirstLaneOnly ||
-            State.VF.isSingleScalar()) &&
+            State.VF.isScalar()) &&
            "scalar value but not only first lane defined");
     State.set(this, GeneratedValue, Part,
               /*IsScalar*/ GeneratesPerFirstLaneOnly);
