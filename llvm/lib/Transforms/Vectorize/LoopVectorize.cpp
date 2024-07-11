@@ -3390,7 +3390,6 @@ void InnerLoopVectorizer::fixFixedOrderRecurrence(VPLiveOut *LO,
   }
   ScalarHeaderPhi->setIncomingValueForBlock(LoopScalarPreHeader,
                                             ScalarPreheaderPhi);
-  ScalarHeaderPhi->setName("scalar.recur");
 }
 
 void InnerLoopVectorizer::sinkScalarOperands(Instruction *PredInst) {
@@ -7002,6 +7001,14 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
           IntegerType::get(SrcScalarTy->getContext(), MinBWs[Op0AsInstruction]);
     Type *SrcVecTy =
         VectorTy->isVectorTy() ? ToVectorTy(SrcScalarTy, VF) : SrcScalarTy;
+
+    if (canTruncateToMinimalBitwidth(I, VF)) {
+      // If the result type is <= then the source type, there will be no extend
+      // after truncating the users to the minimal required bitwidth.
+      if (VectorTy->getScalarSizeInBits() <= SrcVecTy->getScalarSizeInBits() &&
+          (I->getOpcode() == Instruction::ZExt || I->getOpcode()))
+        return 0;
+    }
 
     return TTI.getCastInstrCost(Opcode, VectorTy, SrcVecTy, CCH, CostKind, I);
   }

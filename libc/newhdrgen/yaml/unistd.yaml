@@ -307,4 +307,3 @@ functions:
       - type: const void *__restrict
       - type: void *
       - type: ssize_t
- 

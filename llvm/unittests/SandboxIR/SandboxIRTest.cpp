@@ -109,6 +109,126 @@ define void @foo(i32 %v1) {
 #endif
 }
 
+TEST_F(SandboxIRTest, Use) {
+  parseIR(C, R"IR(
+define i32 @foo(i32 %v0, i32 %v1) {
+  %add0 = add i32 %v0, %v1
+  ret i32 %add0
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  BasicBlock *LLVMBB = &*LLVMF.begin();
+  auto LLVMBBIt = LLVMBB->begin();
+  Instruction *LLVMI0 = &*LLVMBBIt++;
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto *Arg0 = F.getArg(0);
+  auto *Arg1 = F.getArg(1);
+  auto It = BB.begin();
+  auto *I0 = &*It++;
+  auto *Ret = &*It++;
+
+  SmallVector<sandboxir::Argument *> Args{Arg0, Arg1};
+  unsigned OpIdx = 0;
+  for (sandboxir::Use Use : I0->operands()) {
+    // Check Use.getOperandNo().
+    EXPECT_EQ(Use.getOperandNo(), OpIdx);
+    // Check Use.getUser().
+    EXPECT_EQ(Use.getUser(), I0);
+    // Check Use.getContext().
+    EXPECT_EQ(Use.getContext(), &Ctx);
+    // Check Use.get().
+    sandboxir::Value *Op = Use.get();
+    EXPECT_EQ(Op, Ctx.getValue(LLVMI0->getOperand(OpIdx)));
+    // Check Use.getUser().
+    EXPECT_EQ(Use.getUser(), I0);
+    // Check implicit cast to Value.
+    sandboxir::Value *Cast = Use;
+    EXPECT_EQ(Cast, Op);
+    // Check that Use points to the correct operand.
+    EXPECT_EQ(Op, Args[OpIdx]);
+    // Check getOperand().
+    EXPECT_EQ(Op, I0->getOperand(OpIdx));
+    // Check getOperandUse().
+    EXPECT_EQ(Use, I0->getOperandUse(OpIdx));
+    ++OpIdx;
+  }
+  EXPECT_EQ(OpIdx, 2u);
+
+  // Check Use.operator==() and Use.operator!=().
+  sandboxir::Use UseA = I0->getOperandUse(0);
+  sandboxir::Use UseB = I0->getOperandUse(0);
+  EXPECT_TRUE(UseA == UseB);
+  EXPECT_FALSE(UseA != UseB);
+
+  // Check getNumOperands().
+  EXPECT_EQ(I0->getNumOperands(), 2u);
+  EXPECT_EQ(Ret->getNumOperands(), 1u);
+
+  EXPECT_EQ(Ret->getOperand(0), I0);
+
+#ifndef NDEBUG
+  // Check Use.dump()
+  std::string Buff;
+  raw_string_ostream BS(Buff);
+  BS << "\n";
+  I0->getOperandUse(0).dump(BS);
+  EXPECT_EQ(Buff, R"IR(
+Def:  i32 %v0 ; SB1. (Argument)
+User:   %add0 = add i32 %v0, %v1 ; SB4. (Opaque)
+OperandNo: 0
+)IR");
+#endif // NDEBUG
+
+  // Check Value.user_begin().
+  sandboxir::Value::user_iterator UIt = I0->user_begin();
+  sandboxir::User *U = *UIt;
+  EXPECT_EQ(U, Ret);
+  // Check Value.uses().
+  EXPECT_EQ(range_size(I0->uses()), 1u);
+  EXPECT_EQ((*I0->uses().begin()).getUser(), Ret);
+  // Check Value.users().
+  EXPECT_EQ(range_size(I0->users()), 1u);
+  EXPECT_EQ(*I0->users().begin(), Ret);
+  // Check Value.getNumUses().
+  EXPECT_EQ(I0->getNumUses(), 1u);
+  // Check Value.hasNUsesOrMore().
+  EXPECT_TRUE(I0->hasNUsesOrMore(0u));
+  EXPECT_TRUE(I0->hasNUsesOrMore(1u));
+  EXPECT_FALSE(I0->hasNUsesOrMore(2u));
+  // Check Value.hasNUses().
+  EXPECT_FALSE(I0->hasNUses(0u));
+  EXPECT_TRUE(I0->hasNUses(1u));
+  EXPECT_FALSE(I0->hasNUses(2u));
+}
+
+// Check that the operands/users are counted correctly.
+//  I1
+// /  \
+// \  /
+//  I2
+TEST_F(SandboxIRTest, DuplicateUses) {
+  parseIR(C, R"IR(
+define void @foo(i8 %v) {
+  %I1 = add i8 %v, %v
+  %I2 = add i8 %I1, %I1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(&LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *I1 = &*It++;
+  auto *I2 = &*It++;
+  EXPECT_EQ(range_size(I1->users()), 2u);
+  EXPECT_EQ(range_size(I2->operands()), 2u);
+}
+
 TEST_F(SandboxIRTest, Function) {
   parseIR(C, R"IR(
 define void @foo(i32 %arg0, i32 %arg1) {
