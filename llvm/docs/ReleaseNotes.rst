@@ -129,6 +129,8 @@ Changes to the AMDGPU Backend
 -----------------------------
 
 * Implemented the ``llvm.get.fpenv`` and ``llvm.set.fpenv`` intrinsics.
+* Added ``!amdgpu.no.fine.grained.memory`` and
+  ``!amdgpu.no.remote.memory`` metadata to control atomic behavior.
 
 * Implemented :ref:`llvm.get.rounding <int_get_rounding>` and :ref:`llvm.set.rounding <int_set_rounding>`
 
@@ -195,6 +197,8 @@ Changes to the RISC-V Backend
   fully compatible with objects produced prior to this change. The mapping
   (ABI) used is recorded as an ELF attribute.
 * Ztso is no longer experimental.
+* The WCH / Nanjing Qinheng Microelectronics QingKe "XW" compressed opcodes are
+  supported under the name "Xwchc".
 
 Changes to the WebAssembly Backend
 ----------------------------------

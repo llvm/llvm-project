@@ -75,6 +75,8 @@ public:
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override;
 
+  bool useFP16ConversionIntrinsics() const override { return false; }
+
   bool
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                  StringRef CPU,

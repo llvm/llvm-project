@@ -13313,7 +13313,8 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   if (getLangOpts().CPlusPlusModules && currentModuleIsHeaderUnit() &&
       !VDecl->isInvalidDecl() && VDecl->isThisDeclarationADefinition() &&
       VDecl->getFormalLinkage() == Linkage::External && !VDecl->isInline() &&
-      !VDecl->isTemplated() && !isa<VarTemplateSpecializationDecl>(VDecl)) {
+      !VDecl->isTemplated() && !isa<VarTemplateSpecializationDecl>(VDecl) &&
+      !VDecl->getInstantiatedFromStaticDataMember()) {
     Diag(VDecl->getLocation(), diag::err_extern_def_in_header_unit);
     VDecl->setInvalidDecl();
   }

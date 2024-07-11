@@ -43,6 +43,10 @@ code bases.
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
+- Clang now supports raw string literals in ``-std=gnuXY`` mode as an extension in
+  C99 and later. This behaviour can also be overridden using ``-f[no-]raw-string-literals``.
+  Support of raw string literals in C++ is not affected. Fixes (#GH85703).
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 - Clang now diagnoses function/variable templates that shadow their own template parameters, e.g. ``template<class T> void T();``.
@@ -351,6 +355,9 @@ C23 Feature Support
 - Clang now supports `N3017 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3017.htm>`_
   ``#embed`` - a scannable, tooling-friendly binary resource inclusion mechanism.
 
+- Added the ``FLT_NORM_MAX``, ``DBL_NORM_MAX``, and ``LDBL_NORM_MAX`` to the
+  freestanding implementation of ``<float.h>`` that ships with Clang.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -450,6 +457,9 @@ New Compiler Flags
   that relies on it. Users should carefully consider this possibiilty when using
   the flag.
 
+- For the ARM target, added ``-Warm-interrupt-vfp-clobber`` that will emit a
+  diagnostic when an interrupt handler is declared and VFP is enabled.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -491,6 +501,13 @@ Modified Compiler Flags
 - Diagnostics groups about compatibility with a particular C++ Standard version
   now include dianostics about C++26 features that are not present in older
   versions.
+
+- Removed the "arm interrupt calling convention" warning that was included in
+  ``-Wextra`` without its own flag. This warning suggested adding
+  ``__attribute__((interrupt))`` to functions that are called from interrupt
+  handlers to prevent clobbering VFP registers. Following this suggestion leads
+  to unpredictable behavior by causing multiple exception returns from one
+  exception. Fixes #GH34876.
 
 Removed Compiler Flags
 -------------------------
@@ -686,6 +703,8 @@ Improvements to Clang's diagnostics
 - Clang no longer emits a "no previous prototype" warning for Win32 entry points under ``-Wmissing-prototypes``.
   Fixes #GH94366.
 
+- For the ARM target, calling an interrupt handler from another function is now an error. #GH95359.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -793,6 +812,8 @@ Bug Fixes in This Version
   Fixes #GH92775
 
 - Fixed `static_cast` to array of unknown bound. Fixes (#GH62863).
+
+- Fixed Clang crashing when failing to perform some C++ Initialization Sequences. (#GH98102)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1193,26 +1214,55 @@ libclang
 Static Analyzer
 ---------------
 
-- Fixed crashing on loops if the loop variable was declared in switch blocks
-  but not under any case blocks if ``unroll-loops=true`` analyzer config is
-  set. (#GH68819)
-- Support C++23 static operator calls. (#GH84972)
-- Fixed a crash in ``security.cert.env.InvalidPtr`` checker when accidentally
-  matched user-defined ``strerror`` and similar library functions. (GH#88181)
-- Fixed a crash when storing through an address that refers to the address of
-  a label. (GH#89185)
-
 New features
 ^^^^^^^^^^^^
 
+- The attribute ``[[clang::suppress]]`` can now be applied to declarations.
+  (#GH80371)
+
+- Support C++23 static operator calls. (#GH84972)
+
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
+
+- Fixed crashing on loops if the loop variable was declared in switch blocks
+  but not under any case blocks if ``unroll-loops=true`` analyzer config is
+  set. (#GH68819)
+
+- Fixed a crash in ``security.cert.env.InvalidPtr`` checker when accidentally
+  matched user-defined ``strerror`` and similar library functions. (#GH88181)
+
+- Fixed a crash when storing through an address that refers to the address of
+  a label. (#GH89185)
+
+- Z3 crosschecking (aka. Z3 refutation) is now bounded, and can't consume
+  more total time than the eymbolic execution itself. (#GH97298)
 
 Improvements
 ^^^^^^^^^^^^
 
 Moved checkers
 ^^^^^^^^^^^^^^
+
+- Moved ``alpha.cplusplus.ArrayDelete`` out of the ``alpha`` package
+  to ``cplusplus.ArrayDelete``. (#GH83985)
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-arraydelete-c>`__.
+
+- Moved ``alpha.unix.Stream`` out of the ``alpha`` package to
+  ``unix.Stream``. (#GH89247)
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-stream-c>`__.
+
+- Moved ``alpha.unix.BlockInCriticalSection`` out of the ``alpha`` package to
+  ``unix.BlockInCriticalSection``. (#GH93815)
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-blockincriticalsection-c-c>`__.
+
+- Moved ``alpha.security.cert.pos.34c`` out of the ``alpha`` package to
+  ``security.PutenvStackArray``. (#GH92424, #GH93815)
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#security-putenvstackarray-c>`__.
+
+- Moved ``alpha.core.SizeofPtr`` into ``clang-tidy``
+  ``bugprone-sizeof-expression``. (#GH95118, #GH94356)
+  `Documentation <https://clang.llvm.org/extra/clang-tidy/checks/bugprone/sizeof-expression.html>`__.
 
 .. _release-notes-sanitizers:
 

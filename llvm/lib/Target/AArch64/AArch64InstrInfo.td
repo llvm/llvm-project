@@ -1845,8 +1845,8 @@ let Predicates = [HasPAuthLR] in {
     def AUTIASPPCi : SignAuthPCRel<0b00, "autiasppc">;
     def AUTIBSPPCi : SignAuthPCRel<0b01, "autibsppc">;
     //                              opcode2, opcode,   asm
-    def AUTIASPPCr : SignAuthOneReg<0b00001, 0b100100, "autiasppc">;
-    def AUTIBSPPCr : SignAuthOneReg<0b00001, 0b100101, "autibsppc">;
+    def AUTIASPPCr : SignAuthOneReg<0b00001, 0b100100, "autiasppcr">;
+    def AUTIBSPPCr : SignAuthOneReg<0b00001, 0b100101, "autibsppcr">;
     //                                  opcode2, opcode,   asm
     def PACIA171615 : SignAuthFixedRegs<0b00001, 0b100010, "pacia171615">;
     def PACIB171615 : SignAuthFixedRegs<0b00001, 0b100011, "pacib171615">;
@@ -1859,8 +1859,8 @@ let Predicates = [HasPAuthLR] in {
     def RETAASPPCi : SignAuthReturnPCRel<0b000, 0b11111, "retaasppc">;
     def RETABSPPCi : SignAuthReturnPCRel<0b001, 0b11111, "retabsppc">;
     //                                 op3,      asm
-    def RETAASPPCr : SignAuthReturnReg<0b000010, "retaasppc">;
-    def RETABSPPCr : SignAuthReturnReg<0b000011, "retabsppc">;
+    def RETAASPPCr : SignAuthReturnReg<0b000010, "retaasppcr">;
+    def RETABSPPCr : SignAuthReturnReg<0b000011, "retabsppcr">;
   }
   def : InstAlias<"pacm", (PACM), 1>;
 }
