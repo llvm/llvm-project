@@ -118,17 +118,46 @@ entry:
   ret i64 add (i64 ptrtoint (ptr @foo to i64), i64 -1)
 }
 
+define dso_local i64 @neg_0x70000000() #0 {
+; STATIC-LABEL: neg_0x70000000:
+; STATIC:       # %bb.0: # %entry
+; STATIC-NEXT:    leaq foo-1879048192(%rip), %rax
+; STATIC-NEXT:    retq
+;
+; PIC-LABEL: neg_0x70000000:
+; PIC:       # %bb.0: # %entry
+; PIC-NEXT:    leaq foo-1879048192(%rip), %rax
+; PIC-NEXT:    retq
+;
+; MSTATIC-LABEL: neg_0x70000000:
+; MSTATIC:       # %bb.0: # %entry
+; MSTATIC-NEXT:    movabsq $foo, %rax
+; MSTATIC-NEXT:    addq $-1879048192, %rax # imm = 0x90000000
+; MSTATIC-NEXT:    retq
+;
+; MPIC-LABEL: neg_0x70000000:
+; MPIC:       # %bb.0: # %entry
+; MPIC-NEXT:    leaq _GLOBAL_OFFSET_TABLE_(%rip), %rax
+; MPIC-NEXT:    movabsq $foo@GOTOFF, %rcx
+; MPIC-NEXT:    leaq -1879048192(%rax,%rcx), %rax
+; MPIC-NEXT:    retq
+entry:
+  ret i64 add (i64 ptrtoint (ptr @foo to i64), i64 -1879048192)
+}
+
 ;; Test we don't emit movl foo-2147483648, %eax. ELF R_X86_64_32 does not allow
 ;; a negative value.
 define dso_local i64 @neg_0x80000000() #0 {
 ; STATIC-LABEL: neg_0x80000000:
 ; STATIC:       # %bb.0: # %entry
-; STATIC-NEXT:    leaq foo-2147483648(%rip), %rax
+; STATIC-NEXT:    movq $-2147483648, %rax # imm = 0x80000000
+; STATIC-NEXT:    leaq foo(%rax), %rax
 ; STATIC-NEXT:    retq
 ;
 ; PIC-LABEL: neg_0x80000000:
 ; PIC:       # %bb.0: # %entry
-; PIC-NEXT:    leaq foo-2147483648(%rip), %rax
+; PIC-NEXT:    leaq foo(%rip), %rax
+; PIC-NEXT:    addq $-2147483648, %rax # imm = 0x80000000
 ; PIC-NEXT:    retq
 ;
 ; MSTATIC-LABEL: neg_0x80000000:
@@ -178,6 +207,71 @@ define dso_local i64 @neg_0x80000001() #0 {
 ; MPIC-NEXT:    retq
 entry:
   ret i64 add (i64 ptrtoint (ptr @foo to i64), i64 -2147483649)
+}
+
+define internal void @bar() #0 {
+; STATIC-LABEL: bar:
+; STATIC:       # %bb.0:
+; STATIC-NEXT:    retq
+;
+; PIC-LABEL: bar:
+; PIC:       # %bb.0:
+; PIC-NEXT:    retq
+;
+; MSTATIC-LABEL: bar:
+; MSTATIC:       # %bb.0:
+; MSTATIC-NEXT:    retq
+;
+; MPIC-LABEL: bar:
+; MPIC:       # %bb.0:
+; MPIC-NEXT:    retq
+  ret void
+}
+
+define dso_local i64 @fun_neg_0x6fffffff() #0 {
+; STATIC-LABEL: fun_neg_0x6fffffff:
+; STATIC:       # %bb.0:
+; STATIC-NEXT:    leaq bar-1879048191(%rip), %rax
+; STATIC-NEXT:    retq
+;
+; PIC-LABEL: fun_neg_0x6fffffff:
+; PIC:       # %bb.0:
+; PIC-NEXT:    leaq bar-1879048191(%rip), %rax
+; PIC-NEXT:    retq
+;
+; MSTATIC-LABEL: fun_neg_0x6fffffff:
+; MSTATIC:       # %bb.0:
+; MSTATIC-NEXT:    leaq bar-1879048191(%rip), %rax
+; MSTATIC-NEXT:    retq
+;
+; MPIC-LABEL: fun_neg_0x6fffffff:
+; MPIC:       # %bb.0:
+; MPIC-NEXT:    leaq bar-1879048191(%rip), %rax
+; MPIC-NEXT:    retq
+  ret i64 add (i64 ptrtoint (ptr @bar to i64), i64 -1879048191)
+}
+
+define dso_local i64 @fun_neg_0x70000000() #0 {
+; STATIC-LABEL: fun_neg_0x70000000:
+; STATIC:       # %bb.0:
+; STATIC-NEXT:    leaq bar-1879048192(%rip), %rax
+; STATIC-NEXT:    retq
+;
+; PIC-LABEL: fun_neg_0x70000000:
+; PIC:       # %bb.0:
+; PIC-NEXT:    leaq bar-1879048192(%rip), %rax
+; PIC-NEXT:    retq
+;
+; MSTATIC-LABEL: fun_neg_0x70000000:
+; MSTATIC:       # %bb.0:
+; MSTATIC-NEXT:    leaq bar-1879048192(%rip), %rax
+; MSTATIC-NEXT:    retq
+;
+; MPIC-LABEL: fun_neg_0x70000000:
+; MPIC:       # %bb.0:
+; MPIC-NEXT:    leaq bar-1879048192(%rip), %rax
+; MPIC-NEXT:    retq
+  ret i64 add (i64 ptrtoint (ptr @bar to i64), i64 -1879048192)
 }
 
 attributes #0 = { nounwind }

@@ -1795,6 +1795,13 @@ bool X86DAGToDAGISel::foldOffsetIntoAddress(uint64_t Offset,
         !X86::isOffsetSuitableForCodeModel(Val, M,
                                            AM.hasSymbolicDisplacement()))
       return true;
+    // When Sym is a local symbol in ELF, leaq Sym+Offset(%rip) in non-large
+    // code models generates a relocation referencing the section symbol. Don't
+    // fold offsets that are too closer to INT32_MIN, as the addend could
+    // underflow.
+    if (Val < INT32_MIN + 256 * 1024 * 1024 && M != CodeModel::Large &&
+        AM.hasSymbolicDisplacement())
+      return true;
     // In addition to the checks required for a register base, check that
     // we do not try to use an unsafe Disp with a frame index.
     if (AM.BaseType == X86ISelAddressMode::FrameIndexBase &&
