@@ -198,3 +198,22 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
   %r.0.lcssa = phi i32 [ 0, %entry ], [ %add, %for.body ]
   ret i32 %r.0.lcssa
 }
+
+define i32 @smin(ptr %a, i64 %n, i32 %start) {
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %rdx = phi i32 [ %start, %entry ], [ %smin, %for.body ]
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %cmp.i = icmp slt i32 %0, %rdx
+  %smin = select i1 %cmp.i, i32 %0, i32 %rdx
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:
+  ret i32 %smin
+}
