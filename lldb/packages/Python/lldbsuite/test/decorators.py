@@ -1053,6 +1053,10 @@ def _get_bool_config_skip_if_decorator(key):
     return unittest.skipIf(not have, "requires " + key)
 
 
+def skipIfCurlSupportMissing(func):
+    return _get_bool_config_skip_if_decorator("curl")(func)
+
+
 def skipIfCursesSupportMissing(func):
     return _get_bool_config_skip_if_decorator("curses")(func)
 
