@@ -33,7 +33,7 @@ public:
 
   ~ThreadList() override;
 
-  // Precondition: both thread lists must be belong to the same process.
+  /// Precondition: both thread lists must be belong to the same process.
   const ThreadList &operator=(const ThreadList &rhs);
 
   uint32_t GetSize(bool can_update = true);
@@ -136,7 +136,7 @@ public:
 
   std::recursive_mutex &GetMutex() const override;
 
-  // Precondition: both thread lists must be belong to the same process.
+  /// Precondition: both thread lists must be belong to the same process.
   void Update(ThreadList &rhs);
 
 protected:

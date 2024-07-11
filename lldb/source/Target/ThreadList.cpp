@@ -36,10 +36,11 @@ ThreadList::ThreadList(const ThreadList &rhs)
 
 const ThreadList &ThreadList::operator=(const ThreadList &rhs) {
   if (this != &rhs) {
-    // Same process implies same mutex...
+    // We only allow assignments between thread lists describing the same
+    // process. Same process implies same mutex, which means it's enough to lock
+    // just the current object.
     assert(&m_process == &rhs.m_process);
-    assert(&GetMutex() == &GetMutex());
-    // .. which means it's enough to lock one of them.
+    assert(&GetMutex() == &rhs.GetMutex());
     std::lock_guard<std::recursive_mutex> guard(GetMutex());
 
     m_stop_id = rhs.m_stop_id;
@@ -734,10 +735,11 @@ void ThreadList::NotifySelectedThreadChanged(lldb::tid_t tid) {
 
 void ThreadList::Update(ThreadList &rhs) {
   if (this != &rhs) {
-    // Same process implies same mutex...
+    // We only allow assignments between thread lists describing the same
+    // process. Same process implies same mutex, which means it's enough to lock
+    // just the current object.
     assert(&m_process == &rhs.m_process);
-    assert(&GetMutex() == &GetMutex());
-    // .. which means it's enough to lock one of them.
+    assert(&GetMutex() == &rhs.GetMutex());
     std::lock_guard<std::recursive_mutex> guard(GetMutex());
 
     m_stop_id = rhs.m_stop_id;
