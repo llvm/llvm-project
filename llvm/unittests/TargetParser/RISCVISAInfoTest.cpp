@@ -1023,6 +1023,7 @@ R"(All available -march extensions for RISC-V
     xtheadsync           1.0
     xtheadvdot           1.0
     xventanacondops      1.0
+    xwchc                2.2
 
 Experimental extensions
     zicfilp              0.4       This is a long dummy description
@@ -1080,7 +1081,8 @@ R"(Extensions enabled for the given RISC-V target
 Experimental extensions
     zicfilp              0.4       'Zicfilp' (Landing pad)
 
-ISA String: rv64i2p1_zicfilp0p4_zicsr2p0)";
+ISA String: rv64i2p1_zicfilp0p4_zicsr2p0
+)";
   // clang-format on
 
   StringMap<StringRef> DescMap;
