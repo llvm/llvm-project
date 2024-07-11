@@ -89,6 +89,13 @@ void CodeGenTypes::addRecordTypeName(const RecordDecl *RD,
 /// ConvertType in that it is used to convert to the memory representation for
 /// a type.  For example, the scalar representation for _Bool is i1, but the
 /// memory representation is usually i8 or i32, depending on the target.
+///
+/// We generally assume that the alloc size of this type under the LLVM
+/// data layout is the same as the size of the AST type.  The alignment
+/// does not have to match: Clang should always use explicit alignments
+/// and packed structs as necessary to produce the layout it needs.
+/// But the size does need to be exactly right or else things like struct
+/// layout will break.
 llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
   if (T->isConstantMatrixType()) {
     const Type *Ty = Context.getCanonicalType(T).getTypePtr();
