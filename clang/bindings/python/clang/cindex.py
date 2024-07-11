@@ -583,10 +583,7 @@ class BaseEnumeration(Enum):
 
     @classmethod
     def from_id(cls, id):
-        try:
-            return cls(id)
-        except ValueError:
-            raise ValueError("Unknown %s %d" % (cls.__name__, id)) from None
+        return cls(id)
 
     def __repr__(self):
         return "%s.%s" % (
