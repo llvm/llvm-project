@@ -717,9 +717,6 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
       indices.push_back(builder.createConvert(loc, idxTy, sh));
     mlir::Value alloc = builder.create<cuf::AllocOp>(
         loc, ty, nm, symNm, dataAttr, lenParams, indices);
-    // converter.getFctCtx().attachCleanup([&builder, loc, alloc, dataAttr]() {
-    //   builder.create<cuf::FreeOp>(loc, alloc, dataAttr);
-    // });
     return alloc;
   }
 
