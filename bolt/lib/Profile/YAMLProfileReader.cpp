@@ -507,10 +507,10 @@ size_t YAMLProfileReader::matchWithCallGraph(BinaryContext &BC) {
   if (!opts::MatchWithCallGraph)
     return 0;
 
+  size_t MatchedWithCallGraph = 0;
   CGMatcher.computeBFNeighborHashes(BC);
   CGMatcher.constructYAMLFCG(YamlBP, IdToYamLBF);
 
-  size_t MatchedWithCallGraph = 0;
   // Matches YAMLBF to BFs with neighbor hashes.
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions) {
     if (YamlBF.Used)
@@ -518,6 +518,7 @@ size_t YAMLProfileReader::matchWithCallGraph(BinaryContext &BC) {
     auto It = CGMatcher.YamlBFAdjacencyMap.find(&YamlBF);
     if (It == CGMatcher.YamlBFAdjacencyMap.end())
       continue;
+    // Computes profiled function's neighbor hash.
     std::set<yaml::bolt::BinaryFunctionProfile *> &AdjacentFunctions =
         It->second;
     std::string AdjacentFunctionHashStr;
@@ -528,7 +529,8 @@ size_t YAMLProfileReader::matchWithCallGraph(BinaryContext &BC) {
     auto NeighborHashToBFsIt = CGMatcher.NeighborHashToBFs.find(Hash);
     if (NeighborHashToBFsIt == CGMatcher.NeighborHashToBFs.end())
       continue;
-
+    // Finds the binary function with the closest block size to the profiled
+    // function and matches.
     BinaryFunction *ClosestBF = nullptr;
     size_t MinDistance = std::numeric_limits<size_t>::max();
     for (BinaryFunction *BF : NeighborHashToBFsIt->second) {
@@ -677,6 +679,9 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions)
     IdToYamLBF[YamlBF.Id] = &YamlBF;
 
+  // Creates a vector of lamdas that preprocess binary functions for function
+  // matching to avoid multiple preprocessing passes over binary functions in
+  // different function matching techniques.
   std::vector<std::function<void(BinaryFunction *)>> BFPreprocessingLambdas;
   if (opts::MatchProfileWithFunctionHash) {
     BFPreprocessingLambdas.push_back([&](BinaryFunction *BF) {

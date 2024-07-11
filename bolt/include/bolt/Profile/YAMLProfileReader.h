@@ -16,6 +16,7 @@
 namespace llvm {
 namespace bolt {
 
+/// A class for matching binary functions in functions in the YAML profile.
 struct CallGraphMatcher {
 public:
   /// Adds edges to the binary function call graph given the callsites of the
