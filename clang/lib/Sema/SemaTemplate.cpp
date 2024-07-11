@@ -37,6 +37,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -2751,23 +2752,48 @@ private:
   }
 };
 
+unsigned getTemplateParameterDepth(NamedDecl *TemplateParam) {
+  if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(TemplateParam))
+    return TTP->getDepth();
+  if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TemplateParam))
+    return TTP->getDepth();
+  if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TemplateParam))
+    return NTTP->getDepth();
+  llvm_unreachable("Unhandled template parameter types");
+}
+
+unsigned getTemplateParameterIndex(NamedDecl *TemplateParam) {
+  if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(TemplateParam))
+    return TTP->getIndex();
+  if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TemplateParam))
+    return TTP->getIndex();
+  if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TemplateParam))
+    return NTTP->getIndex();
+  llvm_unreachable("Unhandled template parameter types");
+}
+
 // Find all template parameters that appear in the given DeducedArgs.
 // Return the indices of the template parameters in the TemplateParams.
 SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
-    ArrayRef<NamedDecl *> TemplateParams,
+    const TemplateParameterList *TemplateParamsList,
     ArrayRef<TemplateArgument> DeducedArgs) {
   struct TemplateParamsReferencedFinder
       : public RecursiveASTVisitor<TemplateParamsReferencedFinder> {
-    llvm::DenseSet<NamedDecl *> TemplateParams;
-    llvm::DenseSet<const NamedDecl *> ReferencedTemplateParams;
+    const TemplateParameterList *TemplateParamList;
+    llvm::BitVector ReferencedTemplateParams;
 
-    TemplateParamsReferencedFinder(ArrayRef<NamedDecl *> TemplateParams)
-        : TemplateParams(TemplateParams.begin(), TemplateParams.end()) {}
+    TemplateParamsReferencedFinder(
+        const TemplateParameterList *TemplateParamList)
+        : TemplateParamList(TemplateParamList),
+          ReferencedTemplateParams(TemplateParamList->size()) {}
 
     bool VisitTemplateTypeParmType(TemplateTypeParmType *TTP) {
-      MarkAppeared(TTP->getDecl());
+      // We use the index and depth to retrieve the corresponding template
+      // parameter from the parameter list, which is more robost.
+      Mark(TTP->getDepth(), TTP->getIndex());
       return true;
     }
+
     bool VisitDeclRefExpr(DeclRefExpr *DRE) {
       MarkAppeared(DRE->getFoundDecl());
       return true;
@@ -2780,16 +2806,22 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
     }
 
     void MarkAppeared(NamedDecl *ND) {
-      if (TemplateParams.contains(ND))
-        ReferencedTemplateParams.insert(ND);
+      if (llvm::isa<NonTypeTemplateParmDecl, TemplateTypeParmDecl,
+                    TemplateTemplateParmDecl>(ND))
+        Mark(getTemplateParameterDepth(ND), getTemplateParameterIndex(ND));
+    }
+    void Mark(unsigned Depth, unsigned Index) {
+      if (Index < TemplateParamList->size() &&
+          TemplateParamList->getParam(Index)->getTemplateDepth() == Depth)
+        ReferencedTemplateParams.set(Index);
     }
   };
-  TemplateParamsReferencedFinder Finder(TemplateParams);
+  TemplateParamsReferencedFinder Finder(TemplateParamsList);
   Finder.TraverseTemplateArguments(DeducedArgs);
 
   SmallVector<unsigned> Results;
-  for (unsigned Index = 0; Index < TemplateParams.size(); ++Index) {
-    if (Finder.ReferencedTemplateParams.contains(TemplateParams[Index]))
+  for (unsigned Index = 0; Index < TemplateParamsList->size(); ++Index) {
+    if (Finder.ReferencedTemplateParams[Index])
       Results.push_back(Index);
   }
   return Results;
@@ -2806,16 +2838,6 @@ bool hasDeclaredDeductionGuides(DeclarationName Name, DeclContext *DC) {
     if (D->isImplicit())
       return true;
   return false;
-}
-
-unsigned getTemplateParameterDepth(NamedDecl *TemplateParam) {
-  if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(TemplateParam))
-    return TTP->getDepth();
-  if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TemplateParam))
-    return TTP->getDepth();
-  if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TemplateParam))
-    return NTTP->getDepth();
-  llvm_unreachable("Unhandled template parameter types");
 }
 
 NamedDecl *transformTemplateParameter(Sema &SemaRef, DeclContext *DC,
@@ -3149,7 +3171,7 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   }
   auto DeducedAliasTemplateParams =
       TemplateParamsReferencedInTemplateArgumentList(
-          AliasTemplate->getTemplateParameters()->asArray(), DeducedArgs);
+          AliasTemplate->getTemplateParameters(), DeducedArgs);
   // All template arguments null by default.
   SmallVector<TemplateArgument> TemplateArgsForBuildingFPrime(
       F->getTemplateParameters()->size());
