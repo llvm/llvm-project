@@ -2775,7 +2775,7 @@ unsigned getTemplateParameterIndex(NamedDecl *TemplateParam) {
 // Find all template parameters that appear in the given DeducedArgs.
 // Return the indices of the template parameters in the TemplateParams.
 SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
-    const TemplateParameterList* TemplateParamsList,
+    const TemplateParameterList *TemplateParamsList,
     ArrayRef<TemplateArgument> DeducedArgs) {
   struct TemplateParamsReferencedFinder
       : public RecursiveASTVisitor<TemplateParamsReferencedFinder> {
