@@ -279,7 +279,7 @@ void Function::dumpNameAndArgs(raw_ostream &OS) const {
         else
           SBArg->printAsOperand(OS);
       },
-      [this, &OS] { OS << ", "; });
+      [&] { OS << ", "; });
   OS << ")";
 }
 void Function::dump(raw_ostream &OS) const {
