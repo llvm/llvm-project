@@ -3574,6 +3574,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STURXi:
   case AArch64::STURDi:
   case AArch64::STLURXi:
+  case AArch64::LDTRXi:
     Width = TypeSize::getFixed(8);
     Scale = TypeSize::getFixed(1);
     MinOffset = -256;
@@ -3594,7 +3595,6 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STRSpre:
   case AArch64::STRWpre:
   case AArch64::LDTRWi:
-  case AArch64::LDTRXi:
   case AArch64::STTRWi:
     Width = TypeSize::getFixed(4);
     Scale = TypeSize::getFixed(1);
