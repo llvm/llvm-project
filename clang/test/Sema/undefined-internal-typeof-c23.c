@@ -6,5 +6,5 @@ static int f(void);
 
 int main(void)
 {
-    typeof(f()) x;
+    typeof(&f) x;
 }
