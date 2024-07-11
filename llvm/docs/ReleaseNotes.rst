@@ -79,6 +79,8 @@ Changes to the LLVM IR
   * ``llvm.instprof.mcdc.tvbitmap.update``: 3rd argument has been
     removed. The next argument has been changed from byte index to bit
     index.
+* The ``x86_mmx`` IR type has been removed. It will be translated to
+  the standard vector type ``<1 x i64>`` in bitcode upgrade.
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -209,6 +211,11 @@ Changes to the X86 Backend
 
 - Removed knl/knm specific ISA intrinsics: AVX512PF, AVX512ER, PREFETCHWT1,
   while assembly encoding/decoding supports are kept.
+- Due to the removal of the ``x86_mmx`` IR type, functions with
+  ``x86_mmx`` arguments or return values will use a different,
+  incompatible, calling convention ABI. Such functions are not
+  generally seen in the wild (Clang never generates them!), so this is
+  not expected to result in real-world compatibility problems.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -300,6 +307,12 @@ They are described in detail in the `debug info migration guide <https://llvm.or
   * ``LLVMGetTargetExtTypeName``
   * ``LLVMGetTargetExtTypeNumTypeParams``/``LLVMGetTargetExtTypeTypeParam``
   * ``LLVMGetTargetExtTypeNumIntParams``/``LLVMGetTargetExtTypeIntParam``
+
+* The following symbols are deleted due to the removal of the ``x86_mmx`` IR type:
+
+  * ``LLVMX86_MMXTypeKind``
+  * ``LLVMX86MMXTypeInContext``
+  * ``LLVMX86MMXType``
 
 Changes to the CodeGen infrastructure
 -------------------------------------

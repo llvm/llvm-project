@@ -3945,24 +3945,6 @@ or constants of this type.
       x86_amx
 
 
-X86_mmx Type
-""""""""""""
-
-:Overview:
-
-The x86_mmx type represents a value held in an MMX register on an x86
-machine. The operations allowed on it are quite limited: parameters and
-return values, load and store, and bitcast. User-specified MMX
-instructions are represented as intrinsic or asm calls with arguments
-and/or results of this type. There are no arrays, vectors or constants
-of this type.
-
-:Syntax:
-
-::
-
-      x86_mmx
-
 
 .. _t_pointer:
 
@@ -4396,7 +4378,7 @@ represented by ``0xH`` followed by 4 hexadecimal digits. The bfloat 16-bit
 format is represented by ``0xR`` followed by 4 hexadecimal digits. All
 hexadecimal formats are big-endian (sign bit at the left).
 
-There are no constants of type x86_mmx and x86_amx.
+There are no constants of type x86_amx.
 
 .. _complexconstants:
 

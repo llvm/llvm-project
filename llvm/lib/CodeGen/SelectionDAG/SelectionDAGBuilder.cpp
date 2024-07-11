@@ -5225,7 +5225,6 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
   // Ignore the callsite's attributes. A specific call site may be marked with
   // readnone, but the lowering code will expect the chain based on the
   // definition.
-  const auto &Triple = DAG.getTarget().getTargetTriple();
   const Function *F = I.getCalledFunction();
   bool HasChain = !F->doesNotAccessMemory();
   bool OnlyLoad = HasChain && F->onlyReadsMemory();
