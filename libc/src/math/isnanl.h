@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_SRC_MATH_ISNANL_H
 #define LLVM_LIBC_SRC_MATH_ISNANL_H
 
-namespace LIBC_NAMESPACE {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 int isnanl(long double x);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_ISNANL_H
