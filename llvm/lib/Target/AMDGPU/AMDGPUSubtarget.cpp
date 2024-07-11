@@ -107,7 +107,7 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
   if (!hasFeature(AMDGPU::FeatureWavefrontSize32) &&
       !hasFeature(AMDGPU::FeatureWavefrontSize64)) {
-    // If there is no default wave size it must be a generation before gfx9,
+    // If there is no default wave size it must be a generation before gfx10,
     // these have FeatureWavefrontSize64 in their definition already. For gfx10+
     // set wave32 as a default.
     ToggleFeature(AMDGPU::FeatureWavefrontSize32);
