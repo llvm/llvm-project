@@ -33,7 +33,7 @@ struct DecomposeSoftmaxPattern : public OpRewritePattern<SoftmaxOp> {
     FailureOr<DecompositionResult> results = op.decomposeOperation(rewriter);
     if (failed(results))
       return rewriter.notifyMatchFailure(op, "Failed to decompose SoftmaxOp");
-    rewriter.replaceOp(op, results->decomposedValues);
+    rewriter.replaceOp(op, results->replacementValues);
     return success();
   }
 };

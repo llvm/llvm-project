@@ -37,8 +37,8 @@ class GenericOp;
 /// aggregate operation.
 struct DecompositionResult {
   /// TODO: can be further constrained to LinalgOp.
-  SmallVector<Operation *> decomposedOps;
-  SmallVector<Value> decomposedValues;
+  SmallVector<Operation *> replacementOps;
+  SmallVector<Value> replacementValues;
 };
 
 namespace detail {

@@ -447,8 +447,8 @@ transform::DecomposeInterfaceOp::apply(transform::TransformRewriter &rewriter,
     if (failed(maybeNewResults))
       return emitDefaultSilenceableFailure(target);
 
-    rewriter.replaceOp(decomposableOp, maybeNewResults->decomposedValues);
-    allDecomposedOps.append(maybeNewResults->decomposedOps);
+    rewriter.replaceOp(decomposableOp, maybeNewResults->replacementValues);
+    allDecomposedOps.append(maybeNewResults->replacementOps);
   }
   transformResults.set(cast<OpResult>(getResult()), allDecomposedOps);
   return DiagnosedSilenceableFailure::success();
