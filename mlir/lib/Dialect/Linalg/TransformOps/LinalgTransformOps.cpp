@@ -3727,9 +3727,7 @@ DiagnosedSilenceableFailure transform::WinogradConv2DOp::applyToOne(
                              winogradConv2D(rewriter, op, getM(), getR());
                          return true;
                        })
-                       .Default([&](Operation *op) {
-                         return false;
-                       });
+                       .Default([&](Operation *op) { return false; });
 
   if (!supported) {
     return emitSilenceableError()
