@@ -95,6 +95,7 @@
 #include <cctype>
 #include <cstdint>
 #include <cstdlib>
+#include <deque>
 #include <iterator>
 #include <limits>
 #include <optional>
@@ -17503,6 +17504,8 @@ static SDValue performVecReduceAddCombineWithUADDLP(SDNode *N,
   return DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i32, UADDLP);
 }
 
+// Turn [sign|zero]_extend(vecreduce_add()) into SVE's  SADDV|UADDV
+// instructions.
 static SDValue
 performVecReduceAddExtCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                               const AArch64TargetLowering &TLI) {
@@ -17513,44 +17516,35 @@ performVecReduceAddExtCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   SelectionDAG &DAG = DCI.DAG;
   auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
-  SDNode *ZEXT = N->getOperand(0).getNode();
-  EVT VecVT = ZEXT->getOperand(0).getValueType();
+  SDValue VecOp = N->getOperand(0).getOperand(0);
   SDLoc DL(N);
 
-  SDValue VecOp = ZEXT->getOperand(0);
-  VecVT = VecOp.getValueType();
-  bool IsScalableType = VecVT.isScalableVector();
-  SmallVector<SDValue, 2> ResultValues;
+  bool IsScalableType = VecOp.getValueType().isScalableVector();
+  std::deque<SDValue> ResultValues;
+  ResultValues.push_back(VecOp);
 
-  if (!TLI.isTypeLegal(VecVT)) {
-    SmallVector<SDValue, 2> PrevValues;
-    PrevValues.push_back(VecOp);
+  // Split the input vectors if not legal.
+  while (!TLI.isTypeLegal(ResultValues.front().getValueType())) {
+    if (!ResultValues.front()
+             .getValueType()
+             .getVectorElementCount()
+             .isKnownEven())
+      return SDValue();
+    EVT CurVT = ResultValues.front().getValueType();
     while (true) {
-
-      if (!VecVT.isScalableVector() &&
-          !PrevValues[0].getValueType().getVectorElementCount().isKnownEven())
-        return SDValue();
-
-      for (SDValue Vec : PrevValues) {
-        SDValue Lo, Hi;
-        std::tie(Lo, Hi) = DAG.SplitVector(Vec, DL);
-        ResultValues.push_back(Lo);
-        ResultValues.push_back(Hi);
-      }
-      if (TLI.isTypeLegal(ResultValues[0].getValueType()))
+      SDValue Vec = ResultValues.front();
+      if (Vec.getValueType() != CurVT)
         break;
-      PrevValues.clear();
-      std::copy(ResultValues.begin(), ResultValues.end(),
-                std::back_inserter(PrevValues));
-      ResultValues.clear();
+      ResultValues.pop_front();
+      SDValue Lo, Hi;
+      std::tie(Lo, Hi) = DAG.SplitVector(Vec, DL);
+      ResultValues.push_back(Lo);
+      ResultValues.push_back(Hi);
     }
-  } else {
-    ResultValues.push_back(VecOp);
   }
-  SDNode *VecRed = N;
-  EVT ElemType = VecRed->getValueType(0);
-  SmallVector<SDValue, 2> Results;
 
+  EVT ElemType = N->getValueType(0);
+  SmallVector<SDValue, 2> Results;
   if (!IsScalableType &&
       !TLI.useSVEForFixedLengthVectorVT(
           ResultValues[0].getValueType(),
@@ -17558,8 +17552,7 @@ performVecReduceAddExtCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
               ResultValues[0].getValueType())))
     return SDValue();
 
-  for (unsigned Num = 0; Num < ResultValues.size(); ++Num) {
-    SDValue Reg = ResultValues[Num];
+  for (SDValue Reg : ResultValues) {
     EVT RdxVT = Reg->getValueType(0);
     SDValue Pg = getPredicateForVector(DAG, DL, RdxVT);
     if (!IsScalableType) {
