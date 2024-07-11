@@ -1622,7 +1622,8 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
   }
 };
 
-// Scalable unit dimensions are not supported. Folding such dimensions would
+// Helper function dropping unit non-scalable dimension from a VectorType.
+// Scalable unit dimensions are not dropped. Folding such dimensions would
 // require "shifting" the scalable flag onto some other fixed-width dim (e.g.
 // vector<[1]x4xf32> -> vector<[4]xf32>). This could be implemented in the
 // future.
@@ -1637,6 +1638,11 @@ static VectorType dropNonScalableUnitDimFromType(VectorType inVecTy) {
 
     newShape.push_back(dim);
     newScalableDims.push_back(isScalable);
+  }
+  // All dims have been dropped, we need to return a legal shape for VectorType.
+  if (newShape.empty()) {
+    newShape.push_back(1);
+    newScalableDims.push_back(false);
   }
 
   return VectorType::get(newShape, inVecTy.getElementType(), newScalableDims);
