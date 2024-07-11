@@ -307,26 +307,6 @@ define ptr @test_global_process_specific() {
   ret ptr ptrauth (ptr @g, i32 1)
 }
 
-; weak symbols can't be assumed to be non-nil. Use $auth_ptr$ stub slot always.
-; The alternative is to emit a null-check here, but that'd be redundant with
-; whatever null-check follows in user code.
-
-define ptr @test_global_weak() {
-; ELF-LABEL: test_global_weak:
-; ELF:       // %bb.0:
-; ELF-NEXT:    adrp    x0, g_weak$auth_ptr$ia$42
-; ELF-NEXT:    ldr     x0, [x0, :lo12:g_weak$auth_ptr$ia$42]
-; ELF-NEXT:    ret
-
-; MACHO-LABEL: _test_global_weak:
-; MACHO:       ; %bb.0:
-; MACHO-NEXT:    adrp    x0, l_g_weak$auth_ptr$ia$42@PAGE
-; MACHO-NEXT:    ldr     x0, [x0, l_g_weak$auth_ptr$ia$42@PAGEOFF]
-; MACHO-NEXT:    ret
-
-  ret ptr ptrauth (ptr @g_weak, i32 0, i64 42)
-}
-
 ; Non-external symbols don't need to be accessed through the GOT.
 
 define ptr @test_global_strong_def() {
@@ -349,8 +329,52 @@ define ptr @test_global_strong_def() {
   ret ptr ptrauth (ptr @g_strong_def, i32 2)
 }
 
+; weak symbols can't be assumed to be non-nil. Use $auth_ptr$ stub slot always.
+; The alternative is to emit a null-check here, but that'd be redundant with
+; whatever null-check follows in user code.
+
+define ptr @test_global_weak() {
+; ELF-LABEL: test_global_weak:
+; ELF:       // %bb.0:
+; ELF-NEXT:    adrp    x0, g_weak$auth_ptr$ia$42
+; ELF-NEXT:    ldr     x0, [x0, :lo12:g_weak$auth_ptr$ia$42]
+; ELF-NEXT:    ret
+
+; MACHO-LABEL: _test_global_weak:
+; MACHO:       ; %bb.0:
+; MACHO-NEXT:    adrp    x0, l_g_weak$auth_ptr$ia$42@PAGE
+; MACHO-NEXT:    ldr     x0, [x0, l_g_weak$auth_ptr$ia$42@PAGEOFF]
+; MACHO-NEXT:    ret
+
+  ret ptr ptrauth (ptr @g_weak, i32 0, i64 42)
+}
+
+; Test another weak symbol to check that stubs are emitted in a stable order.
+
+@g_weak_2 = extern_weak global i32
+
+define ptr @test_global_weak_2() {
+; ELF-LABEL: test_global_weak_2:
+; ELF:       // %bb.0:
+; ELF-NEXT:    adrp    x0, g_weak_2$auth_ptr$ia$42
+; ELF-NEXT:    ldr     x0, [x0, :lo12:g_weak_2$auth_ptr$ia$42]
+; ELF-NEXT:    ret
+
+; MACHO-LABEL: _test_global_weak_2:
+; MACHO:       ; %bb.0:
+; MACHO-NEXT:    adrp    x0, l_g_weak_2$auth_ptr$ia$42@PAGE
+; MACHO-NEXT:    ldr     x0, [x0, l_g_weak_2$auth_ptr$ia$42@PAGEOFF]
+; MACHO-NEXT:    ret
+
+  ret ptr ptrauth (ptr @g_weak_2, i32 0, i64 42)
+}
+
 ; ELF-LABEL: g_weak$auth_ptr$ia$42:
 ; ELF-NEXT:    .xword  g_weak@AUTH(ia,42)
+; ELF-LABEL: g_weak_2$auth_ptr$ia$42:
+; ELF-NEXT:    .xword  g_weak_2@AUTH(ia,42)
 
 ; MACHO-LABEL: l_g_weak$auth_ptr$ia$42:
 ; MACHO-NEXT:    .quad  _g_weak@AUTH(ia,42)
+; MACHO-LABEL: l_g_weak_2$auth_ptr$ia$42:
+; MACHO-NEXT:    .quad  _g_weak_2@AUTH(ia,42)

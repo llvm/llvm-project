@@ -9564,8 +9564,7 @@ SDValue AArch64TargetLowering::LowerGlobalTLSAddress(SDValue Op,
 //   Load a signed pointer for symbol 'sym' from a stub slot named
 //   'sym$auth_ptr$key$disc' filled by dynamic linker during relocation
 //   resolving. This usually lowers to adrp+ldr, but also emits an entry into
-//   .data with an
-//   @AUTH relocation. See LowerLOADauthptrstatic.
+//   .data with an @AUTH relocation. See LowerLOADauthptrstatic.
 //
 // All 3 are pseudos that are expand late to longer sequences: this lets us
 // provide integrity guarantees on the to-be-signed intermediate values.
