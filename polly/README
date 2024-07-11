@@ -10,3 +10,9 @@ optimal loop structure. These transformations can be used to do constant
 propagation through arrays, remove dead loop iterations, optimize loops for
 cache locality, optimize arrays, apply advanced automatic parallelization, drive
 vectorization, or they can be used to do software pipelining.
+
+---
+
+Polly 是 LLVM 项目中的一个高阶循环和数据局部性优化器以及优化基础设施。它使用基于整数多面体的抽象数学表示来分析和优化程序的内存访问模式。Polly 可以在 LLVM 管道中使用，并与 Clang 集成，提供自动 OpenMP 代码生成和自动向量代码生成等功能。它允许手动使用 Polly 的各个部分，并执行单个 Polly 遍历。
+Polly 的一个关键特性是它能够自动检测和转换相关程序部分，这种转换是语言无关的和语法透明的。这使得 Polly 能够提供一种通用的优化方法，适用于多种编程语言和代码结构。
+要开始使用 Polly，你可以使用你偏好的生成器（如 Ninja、make、Visual Studio 等）来构建和安装 Polly。你还可以通过从 GitHub 克隆 LLVM 项目来获取 Polly 的代码。
