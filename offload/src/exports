@@ -74,6 +74,7 @@ VERS1.0 {
     __tgt_set_info_flag;
     __tgt_print_device_info;
     omp_is_coarse_grain_mem_region;
+    omp_register_coarse_grain_mem;
     libomptarget_ompt_set_trace_ompt;
     libomptarget_ompt_start_trace;
     libomptarget_ompt_flush_trace;

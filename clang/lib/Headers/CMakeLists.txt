@@ -329,6 +329,7 @@ set(openmp_wrapper_files
   openmp_wrappers/complex_cmath.h
   openmp_wrappers/new
   openmp_wrappers/hip/hip_runtime.h
+  openmp_wrappers/hip_host_overlay.h
 )
 
 set(llvm_libc_wrapper_files

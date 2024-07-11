@@ -805,7 +805,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   // Switch memory region to coarse grain mode
   Error setCoarseGrainMemory(void *ptr, int64_t size);
-  virtual Error setCoarseGrainMemoryImpl(void *ptr, int64_t size) {
+  virtual Error setCoarseGrainMemoryImpl(void *ptr, int64_t size,
+                                         bool set_attr = true) {
     return Error::success();
   }
 
@@ -1370,6 +1371,10 @@ public:
   /// Gets the coarse grained memory region.
   int32_t query_coarse_grain_mem_region(int32_t DeviceId, const void *ptr,
                                         int64_t size);
+
+  /// Set coarse_grain memory for omp_register_coarse_grain_mem
+  void set_coarse_grain_mem(int32_t DeviceId, const void *ptr, int64_t size,
+                            bool set_attr);
 
   /// Look up a global symbol in the given binary.
   int32_t get_global(__tgt_device_binary Binary, uint64_t Size,

@@ -2485,6 +2485,19 @@ int32_t GenericPluginTy::query_coarse_grain_mem_region(int32_t DeviceId,
   return R;
 }
 
+// set coarse grain mem for tracking on memory whose memtype attribute
+// has already been set
+void GenericPluginTy::set_coarse_grain_mem(int32_t DeviceId, const void *ptr,
+                                           int64_t size, bool set_attr) {
+  auto T = logger::log<int32_t>(__func__, DeviceId, ptr, size);
+  if (auto Err = getDevice(DeviceId).setCoarseGrainMemoryImpl((void *)ptr, size,
+                                                              set_attr))
+    REPORT("Failure to setCoarseGrainMemory: %s\n",
+           toString(std::move(Err)).data());
+  T.res(0);
+  return;
+}
+
 int32_t GenericPluginTy::get_global(__tgt_device_binary Binary, uint64_t Size,
                                     const char *Name, void **DevicePtr) {
   auto T = logger::log<int32_t>(__func__, Binary.handle, Size, Name, DevicePtr);

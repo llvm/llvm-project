@@ -3494,7 +3494,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
-  Error setCoarseGrainMemoryImpl(void *ptr, int64_t size) override final {
+  Error setCoarseGrainMemoryImpl(void *ptr, int64_t size,
+                                 bool set_attr = true) override final {
     // If the table has not yet been created, check if the gpu arch is
     // MI200 and create it.
     if (!IsEquippedWithGFX90A)
@@ -3505,17 +3506,22 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
               1, // memory size
           AMDGPU_X86_64_SystemConfiguration::page_size);
 
+    if (CoarseGrainMemoryTable->contains((const uintptr_t)ptr, size))
+      return Plugin::success();
+
     // track coarse grain memory pages in local table for user queries.
     CoarseGrainMemoryTable->insert((const uintptr_t)ptr, size);
 
-    // Ask ROCr to turn [ptr, ptr+size-1] pages to
-    // coarse grain.
-    hsa_amd_svm_attribute_pair_t tt;
-    tt.attribute = HSA_AMD_SVM_ATTRIB_GLOBAL_FLAG;
-    tt.value = HSA_AMD_SVM_GLOBAL_FLAG_COARSE_GRAINED;
-    hsa_status_t err = hsa_amd_svm_attributes_set(ptr, size, &tt, 1);
-    if (err != HSA_STATUS_SUCCESS) {
-      return Plugin::error("Failed to switch memotry to coarse grain mode.");
+    if (set_attr) {
+      // Ask ROCr to turn [ptr, ptr+size-1] pages to
+      // coarse grain.
+      hsa_amd_svm_attribute_pair_t tt;
+      tt.attribute = HSA_AMD_SVM_ATTRIB_GLOBAL_FLAG;
+      tt.value = HSA_AMD_SVM_GLOBAL_FLAG_COARSE_GRAINED;
+      hsa_status_t err = hsa_amd_svm_attributes_set(ptr, size, &tt, 1);
+      if (err != HSA_STATUS_SUCCESS) {
+        return Plugin::error("Failed to switch memotry to coarse grain mode.");
+      }
     }
 
     return Plugin::success();
@@ -4951,6 +4957,15 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
   if (Error Err = MemoryPool->allocate(Size, &Alloc)) {
     REPORT("%s\n", toString(std::move(Err)).data());
     return nullptr;
+  }
+  // FIXME: Maybe this should be guarded by hasgfx90a
+  if (MemoryPool == CoarseGrainedMemoryPools[0]) {
+    // printf(" Device::allocate calling setCoarseGrainMemoryImpl(Alloc, Size,
+    // false)\n");
+    if (auto Err = setCoarseGrainMemoryImpl(Alloc, Size, /*set_attr=*/false)) {
+      REPORT("%s\n", toString(std::move(Err)).data());
+      return nullptr;
+    }
   }
 
   if (Alloc) {
