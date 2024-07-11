@@ -47,6 +47,7 @@ TEST(CachedCyclicReplacerTest, testInPlaceRecursionPruneAnywhere) {
 /// infinitely long vector. The cycle-breaker function prunes this infinite
 /// recursion in the replacer logic by returning an empty vector upon the first
 /// re-occurrence of an input value.
+namespace {
 class CachedCyclicReplacerChainRecursionPruningTest : public ::testing::Test {
 public:
   // N ==> (N+1) % 3
@@ -71,6 +72,7 @@ public:
   int invokeCount = 0;
   std::optional<int> baseCase = std::nullopt;
 };
+} // namespace
 
 TEST_F(CachedCyclicReplacerChainRecursionPruningTest, testPruneAnywhere0) {
   // Starting at 0. Cycle length is 3.
@@ -128,6 +130,7 @@ TEST_F(CachedCyclicReplacerChainRecursionPruningTest, testPruneSpecific1) {
 /// - PrunedGraph
 ///   - A Graph where edges that used to cause cycles are now represented with
 ///     an indirection (a recursionId).
+namespace {
 class CachedCyclicReplacerGraphReplacement : public ::testing::Test {
 public:
   /// A directed graph where nodes are non-negative integers.
@@ -195,17 +198,19 @@ public:
   /// A Graph where edges that used to cause cycles (back-edges) are now
   /// represented with an indirection (a recursionId).
   ///
-  /// In addition to each node being an integer, each node also tracks the
-  /// original integer id it had in the original graph. This way for every
+  /// In addition to each node having an integer ID, each node also tracks the
+  /// original integer ID it had in the original graph. This way for every
   /// back-edge, we can represent it as pointing to a new instance of the
   /// original node. Then we mark the original node and the new instance with
   /// a new unique recursionId to indicate that they're supposed to be the same
-  /// graph.
+  /// node.
   struct PrunedGraph {
     using Node = Graph::Node;
     struct NodeInfo {
       Graph::Node originalId;
-      // A negative recursive index means not recursive.
+      /// A negative recursive index means not recursive. Otherwise nodes with
+      /// the same originalId & recursionId are the same node in the original
+      /// graph.
       int64_t recursionId;
     };
 
@@ -243,7 +248,7 @@ public:
     Graph connections;
     int64_t nextRecursionId = 0;
     int64_t nextConnectionId = 0;
-    // Use ordered map for deterministic output.
+    /// Use ordered map for deterministic output.
     std::map<Graph::Node, NodeInfo> info;
   };
 
@@ -315,6 +320,7 @@ public:
     return oss.str();
   }
 };
+} // namespace
 
 TEST_F(CachedCyclicReplacerGraphReplacement, testSingleLoop) {
   // 0 -> 1 -> 2

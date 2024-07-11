@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_SUPPORT_CACHINGREPLACER_H
-#define MLIR_SUPPORT_CACHINGREPLACER_H
+#ifndef MLIR_SUPPORT_CYCLICREPLACERCACHE_H
+#define MLIR_SUPPORT_CYCLICREPLACERCACHE_H
 
 #include "mlir/IR/Visitors.h"
 #include "llvm/ADT/DenseSet.h"
@@ -43,13 +43,16 @@ namespace mlir {
 /// any given cycle can perform pruning. Even if not, an assertion will
 /// eventually be tripped instead of infinite recursion (the run-time is
 /// linearly bounded by the maximum cycle length of its input).
+///
+/// WARNING: This class works best with InT & OutT that are trivial scalar
+/// types. The input/output elements will be frequently copied and hashed.
 template <typename InT, typename OutT>
 class CyclicReplacerCache {
 public:
   /// User-provided replacement function & cycle-breaking functions.
   /// The cycle-breaking function must not make any more recursive invocations
   /// to this cached replacer.
-  using CycleBreakerFn = std::function<std::optional<OutT>(const InT &)>;
+  using CycleBreakerFn = std::function<std::optional<OutT>(InT)>;
 
   CyclicReplacerCache() = delete;
   CyclicReplacerCache(CycleBreakerFn cycleBreaker)
@@ -77,19 +80,19 @@ public:
     /// in the cache.
     void resolve(OutT result) {
       assert(!this->result && "cache entry already resolved");
-      this->result = result;
       cache.finalizeReplacement(element, result);
+      this->result = std::move(result);
     }
 
     /// Get the resolved result if one exists.
-    std::optional<OutT> get() { return result; }
+    const std::optional<OutT> &get() const { return result; }
 
   private:
     friend class CyclicReplacerCache;
     CacheEntry() = delete;
     CacheEntry(CyclicReplacerCache<InT, OutT> &cache, InT element,
                std::optional<OutT> result = std::nullopt)
-        : cache(cache), element(element), result(result) {}
+        : cache(cache), element(std::move(element)), result(result) {}
 
     CyclicReplacerCache<InT, OutT> &cache;
     InT element;
@@ -106,11 +109,11 @@ public:
   /// retrieval, i.e. the last retrieved CacheEntry must be resolved first, and
   /// the first retrieved CacheEntry must be resolved last. This should be
   /// natural when used as a stack / inside recursion.
-  CacheEntry lookupOrInit(const InT &element);
+  CacheEntry lookupOrInit(InT element);
 
 private:
   /// Register the replacement in the cache and update the replacementStack.
-  void finalizeReplacement(const InT &element, const OutT &result);
+  void finalizeReplacement(InT element, OutT result);
 
   CycleBreakerFn cycleBreaker;
   DenseMap<InT, OutT> standaloneCache;
@@ -145,7 +148,7 @@ private:
 
 template <typename InT, typename OutT>
 typename CyclicReplacerCache<InT, OutT>::CacheEntry
-CyclicReplacerCache<InT, OutT>::lookupOrInit(const InT &element) {
+CyclicReplacerCache<InT, OutT>::lookupOrInit(InT element) {
   assert(!resolvingCycle &&
          "illegal recursive invocation while breaking cycle");
 
@@ -153,7 +156,7 @@ CyclicReplacerCache<InT, OutT>::lookupOrInit(const InT &element) {
     return CacheEntry(*this, element, it->second);
 
   if (auto it = dependentCache.find(element); it != dependentCache.end()) {
-    // pdate the current top frame (the element that invoked this current
+    // Update the current top frame (the element that invoked this current
     // replacement) to include any dependencies the cache entry had.
     ReplacementFrame &currFrame = replacementStack.back();
     currFrame.dependentFrames.insert(it->second.highestDependentFrame);
@@ -195,8 +198,8 @@ CyclicReplacerCache<InT, OutT>::lookupOrInit(const InT &element) {
 }
 
 template <typename InT, typename OutT>
-void CyclicReplacerCache<InT, OutT>::finalizeReplacement(const InT &element,
-                                                         const OutT &result) {
+void CyclicReplacerCache<InT, OutT>::finalizeReplacement(InT element,
+                                                         OutT result) {
   ReplacementFrame &currFrame = replacementStack.back();
   // With the conclusion of this replacement frame, the current element is no
   // longer a dependent element.
@@ -249,7 +252,7 @@ void CyclicReplacerCache<InT, OutT>::finalizeReplacement(const InT &element,
 template <typename InT, typename OutT>
 class CachedCyclicReplacer {
 public:
-  using ReplacerFn = std::function<OutT(const InT &)>;
+  using ReplacerFn = std::function<OutT(InT)>;
   using CycleBreakerFn =
       typename CyclicReplacerCache<InT, OutT>::CycleBreakerFn;
 
@@ -257,7 +260,7 @@ public:
   CachedCyclicReplacer(ReplacerFn replacer, CycleBreakerFn cycleBreaker)
       : replacer(std::move(replacer)), cache(std::move(cycleBreaker)) {}
 
-  OutT operator()(const InT &element) {
+  OutT operator()(InT element) {
     auto cacheEntry = cache.lookupOrInit(element);
     if (std::optional<OutT> result = cacheEntry.get())
       return *result;
@@ -274,4 +277,4 @@ private:
 
 } // namespace mlir
 
-#endif // MLIR_SUPPORT_CACHINGREPLACER_H
+#endif // MLIR_SUPPORT_CYCLICREPLACERCACHE_H
