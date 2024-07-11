@@ -762,13 +762,10 @@ void CheckHelper::CheckObjectEntity(
     }
     if (auto ignoreTKR{GetIgnoreTKR(symbol)}; !ignoreTKR.empty()) {
       const Symbol *ownerSymbol{symbol.owner().symbol()};
-      const auto *ownerSubp{ownerSymbol->detailsIf<SubprogramDetails>()};
-      bool inInterface{ownerSubp && ownerSubp->isInterface()};
-      bool inExplicitInterface{
-          inInterface && !IsSeparateModuleProcedureInterface(ownerSymbol)};
-      bool inModuleProc{
-          !inInterface && ownerSymbol && IsModuleProcedure(*ownerSymbol)};
-      if (!inExplicitInterface && !inModuleProc) {
+      bool inModuleProc{ownerSymbol && IsModuleProcedure(*ownerSymbol)};
+      bool inExplicitExternalInterface{
+          InInterface() && !IsSeparateModuleProcedureInterface(ownerSymbol)};
+      if (!InInterface() && !inModuleProc) {
         messages_.Say(
             "!DIR$ IGNORE_TKR may apply only in an interface or a module procedure"_err_en_US);
       }
@@ -779,7 +776,7 @@ void CheckHelper::CheckObjectEntity(
       }
       if (IsPassedViaDescriptor(symbol)) {
         if (IsAllocatableOrObjectPointer(&symbol)) {
-          if (inExplicitInterface) {
+          if (inExplicitExternalInterface) {
             if (context_.ShouldWarn(common::UsageWarning::IgnoreTKRUsage)) {
               WarnIfNotInModuleFile(
                   "!DIR$ IGNORE_TKR should not apply to an allocatable or pointer"_warn_en_US);
@@ -794,7 +791,7 @@ void CheckHelper::CheckObjectEntity(
               WarnIfNotInModuleFile(
                   "!DIR$ IGNORE_TKR(R) is not meaningful for an assumed-rank array"_warn_en_US);
             }
-          } else if (inExplicitInterface) {
+          } else if (inExplicitExternalInterface) {
             if (context_.ShouldWarn(common::UsageWarning::IgnoreTKRUsage)) {
               WarnIfNotInModuleFile(
                   "!DIR$ IGNORE_TKR(R) should not apply to a dummy argument passed via descriptor"_warn_en_US);
