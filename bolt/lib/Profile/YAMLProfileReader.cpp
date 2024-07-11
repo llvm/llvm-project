@@ -71,8 +71,8 @@ void CallGraphMatcher::addBFCGEdges(BinaryContext &BC,
       if (!CalleeBF)
         continue;
 
-      BFAdjacencyMap[CalleeBF].push_back(BF);
-      BFAdjacencyMap[BF].push_back(CalleeBF);
+      BFAdjacencyMap[CalleeBF].insert(BF);
+      BFAdjacencyMap[BF].insert(CalleeBF);
     }
   }
 }
@@ -80,12 +80,9 @@ void CallGraphMatcher::addBFCGEdges(BinaryContext &BC,
 void CallGraphMatcher::computeBFNeighborHashes(BinaryContext &BC) {
   for (BinaryFunction *BF : BC.getAllBinaryFunctions()) {
     auto It = BFAdjacencyMap.find(BF);
-    assert(It != BFAdjacencyMap.end() && "All BFs should be processed");
-    std::vector<BinaryFunction *> &AdjacentBFs = It->second;
-    std::sort(AdjacentBFs.begin(), AdjacentBFs.end(),
-              [&](const BinaryFunction *A, const BinaryFunction *B) {
-                return A->getOneName() < B->getOneName();
-              });
+    if (It == BFAdjacencyMap.end())
+      continue;
+    auto &AdjacentBFs = It->second;
     std::string HashStr;
     for (BinaryFunction *BF : AdjacentBFs)
       HashStr += BF->getOneName();
@@ -103,7 +100,8 @@ void CallGraphMatcher::constructYAMLFCG(
         auto IdToYAMLBFIt = IdToYAMLBF.find(CallSite.DestId);
         if (IdToYAMLBFIt == IdToYAMLBF.end())
           continue;
-        YamlBFAdjacencyMap[&CallerYamlBF].push_back(IdToYAMLBFIt->second);
+        YamlBFAdjacencyMap[&CallerYamlBF].insert(IdToYAMLBFIt->second);
+        YamlBFAdjacencyMap[IdToYAMLBFIt->second].insert(&CallerYamlBF);
       }
     }
   }
@@ -518,15 +516,10 @@ size_t YAMLProfileReader::matchWithCallGraph(BinaryContext &BC) {
     if (YamlBF.Used)
       continue;
     auto It = CGMatcher.YamlBFAdjacencyMap.find(&YamlBF);
-    assert(It != CGMatcher.YamlBFAdjacencyMap.end() &&
-           "All unused functions should be processed");
-    std::vector<yaml::bolt::BinaryFunctionProfile *> &AdjacentFunctions =
+    if (It == CGMatcher.YamlBFAdjacencyMap.end())
+      continue;
+    std::set<yaml::bolt::BinaryFunctionProfile *> &AdjacentFunctions =
         It->second;
-    std::sort(AdjacentFunctions.begin(), AdjacentFunctions.end(),
-              [&](const yaml::bolt::BinaryFunctionProfile *A,
-                  const yaml::bolt::BinaryFunctionProfile *B) {
-                return A->Name < B->Name;
-              });
     std::string AdjacentFunctionHashStr;
     for (auto &AdjacentFunction : AdjacentFunctions) {
       AdjacentFunctionHashStr += AdjacentFunction->Name;
