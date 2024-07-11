@@ -227,8 +227,8 @@ declare void @bar1()
 @glob0 = global ptr @bar0
 @glob1 = global ptr @bar1
 
-define i32 @foo(i32 %v0, i32 %v1) {
-  %add0 = add i32 %v0, %v1
+define i32 @foo(i32 %arg0, i32 %arg1) {
+  %add0 = add i32 %arg0, %arg1
   %gep1 = getelementptr i8, ptr @glob0, i32 1
   %gep2 = getelementptr i8, ptr @glob1, i32 1
   ret i32 %add0
@@ -279,34 +279,53 @@ define i32 @foo(i32 %v0, i32 %v1) {
   EXPECT_EQ(Glob0->getOperand(0), Glob1);
 }
 
-TEST_F(SandboxIRTest, RAW_RUWIf) {
+TEST_F(SandboxIRTest, RAUW_RUWIf) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr) {
   %ld0 = load float, ptr %ptr
   %ld1 = load float, ptr %ptr
+  store float %ld0, ptr %ptr
   store float %ld0, ptr %ptr
   ret void
 }
 )IR");
   llvm::Function &LLVMF = *M->getFunction("foo");
   sandboxir::Context Ctx(C);
-  llvm::BasicBlock *LLVMBB0 = &*LLVMF.begin();
+  llvm::BasicBlock *LLVMBB = &*LLVMF.begin();
 
   Ctx.createFunction(&LLVMF);
-  auto *BB0 = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMBB0));
-  auto It = BB0->begin();
+  auto *BB = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMBB));
+  auto It = BB->begin();
   sandboxir::Instruction *Ld0 = &*It++;
   sandboxir::Instruction *Ld1 = &*It++;
   sandboxir::Instruction *St0 = &*It++;
+  sandboxir::Instruction *St1 = &*It++;
   // Check RUWIf when the lambda returns false.
   Ld0->replaceUsesWithIf(Ld1, [](const sandboxir::Use &Use) { return false; });
   EXPECT_EQ(St0->getOperand(0), Ld0);
+  EXPECT_EQ(St1->getOperand(0), Ld0);
   // Check RUWIf when the lambda returns true.
   Ld0->replaceUsesWithIf(Ld1, [](const sandboxir::Use &Use) { return true; });
   EXPECT_EQ(St0->getOperand(0), Ld1);
+  EXPECT_EQ(St1->getOperand(0), Ld1);
+  St0->setOperand(0, Ld0);
+  St1->setOperand(0, Ld0);
+  // Check RUWIf user == St0.
+  Ld0->replaceUsesWithIf(
+      Ld1, [St0](const sandboxir::Use &Use) { return Use.getUser() == St0; });
+  EXPECT_EQ(St0->getOperand(0), Ld1);
+  EXPECT_EQ(St1->getOperand(0), Ld0);
+  St0->setOperand(0, Ld0);
+  // Check RUWIf user == St1.
+  Ld0->replaceUsesWithIf(
+      Ld1, [St1](const sandboxir::Use &Use) { return Use.getUser() == St1; });
+  EXPECT_EQ(St0->getOperand(0), Ld0);
+  EXPECT_EQ(St1->getOperand(0), Ld1);
+  St1->setOperand(0, Ld0);
   // Check RAUW.
   Ld1->replaceAllUsesWith(Ld0);
   EXPECT_EQ(St0->getOperand(0), Ld0);
+  EXPECT_EQ(St1->getOperand(0), Ld0);
 }
 
 // Check that the operands/users are counted correctly.
