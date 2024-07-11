@@ -22,9 +22,9 @@ from class_implementation.classes.enumeration import Enumeration
 from class_implementation.classes.object import Object
 
 
-def yaml_to_classes(yaml_data):
+def yaml_to_classes(yaml_data, entry_points=None):
     """
-    Convert YAML data to header classes.
+    Convert YAML data to header classes, filtering functions by entry points.
 
     Args:
         yaml_data: The YAML data containing header specifications.
@@ -49,6 +49,9 @@ def yaml_to_classes(yaml_data):
         )
 
     functions = yaml_data.get("functions", [])
+    if entry_points:
+        entry_points_set = set(entry_points)
+        functions = [f for f in functions if f["name"] in entry_points_set]
     sorted_functions = sorted(functions, key=lambda x: x["name"])
     guards = []
     guarded_function_dict = {}
@@ -105,19 +108,20 @@ def yaml_to_classes(yaml_data):
     return header
 
 
-def load_yaml_file(yaml_file):
+def load_yaml_file(yaml_file, entry_points):
     """
-    Load YAML file and convert it to header classes.
+    Load YAML file and convert it to header classes, filtering by entry points.
 
     Args:
         yaml_file: The path to the YAML file.
+        entry_points: A list of entry points to filter functions.
 
     Returns:
         HeaderFile: An instance of HeaderFile populated with the data from the YAML file.
     """
     with open(yaml_file, "r") as f:
         yaml_data = yaml.safe_load(f)
-    return yaml_to_classes(yaml_data)
+    return yaml_to_classes(yaml_data, entry_points)
 
 
 def fill_public_api(header_str, h_def_content):
@@ -207,7 +211,7 @@ def add_function_to_yaml(yaml_file, function_details):
     print(f"Added function {new_function.name} to {yaml_file}")
 
 
-def main(yaml_file, h_def_file, output_dir, add_function=None):
+def main(yaml_file, h_def_file, output_dir, add_function=None, entry_points=None):
     """
     Main function to generate header files from YAML and .h.def templates.
 
@@ -216,12 +220,13 @@ def main(yaml_file, h_def_file, output_dir, add_function=None):
         h_def_file: Path to the .h.def template file.
         output_dir: Directory to output the generated header file.
         add_function: Details of the function to be added to the YAML file (if any).
+        entry_points: A list of entry points to filter functions.
     """
 
     if add_function:
         add_function_to_yaml(yaml_file, add_function)
 
-    header = load_yaml_file(yaml_file)
+    header = load_yaml_file(yaml_file, entry_points)
 
     with open(h_def_file, "r") as f:
         h_def_content = f.read()
@@ -264,6 +269,15 @@ if __name__ == "__main__":
         ),
         help="Add a function to the YAML file",
     )
+    parser.add_argument(
+        "--e", action="append", help="Entry point to include", dest="entry_points"
+    )
     args = parser.parse_args()
 
-    main(args.yaml_file, args.h_def_file, args.output_dir, args.add_function)
+    main(
+        args.yaml_file,
+        args.h_def_file,
+        args.output_dir,
+        args.add_function,
+        args.entry_points,
+    )
