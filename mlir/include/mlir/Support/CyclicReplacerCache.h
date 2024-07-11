@@ -82,14 +82,14 @@ public:
     }
 
     /// Get the resolved result if one exists.
-    std::optional<OutT> get() { return result; }
+    const std::optional<OutT> &get() { return result; }
 
   private:
     friend class CyclicReplacerCache;
     CacheEntry() = delete;
     CacheEntry(CyclicReplacerCache<InT, OutT> &cache, InT element,
                std::optional<OutT> result = std::nullopt)
-        : cache(cache), element(element), result(result) {}
+        : cache(cache), element(std::move(element)), result(result) {}
 
     CyclicReplacerCache<InT, OutT> &cache;
     InT element;
@@ -153,7 +153,7 @@ CyclicReplacerCache<InT, OutT>::lookupOrInit(const InT &element) {
     return CacheEntry(*this, element, it->second);
 
   if (auto it = dependentCache.find(element); it != dependentCache.end()) {
-    // pdate the current top frame (the element that invoked this current
+    // Update the current top frame (the element that invoked this current
     // replacement) to include any dependencies the cache entry had.
     ReplacementFrame &currFrame = replacementStack.back();
     currFrame.dependentFrames.insert(it->second.highestDependentFrame);
