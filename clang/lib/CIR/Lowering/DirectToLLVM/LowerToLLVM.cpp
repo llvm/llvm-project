@@ -3395,10 +3395,22 @@ public:
 
 using CIRCeilOpLowering =
     CIRUnaryFPBuiltinOpLowering<mlir::cir::CeilOp, mlir::LLVM::FCeilOp>;
+using CIRCosOpLowering =
+    CIRUnaryFPBuiltinOpLowering<mlir::cir::CosOp, mlir::LLVM::CosOp>;
+using CIRExpOpLowering =
+    CIRUnaryFPBuiltinOpLowering<mlir::cir::ExpOp, mlir::LLVM::ExpOp>;
+using CIRExp2OpLowering =
+    CIRUnaryFPBuiltinOpLowering<mlir::cir::Exp2Op, mlir::LLVM::Exp2Op>;
 using CIRFloorOpLowering =
     CIRUnaryFPBuiltinOpLowering<mlir::cir::FloorOp, mlir::LLVM::FFloorOp>;
 using CIRFabsOpLowering =
     CIRUnaryFPBuiltinOpLowering<mlir::cir::FAbsOp, mlir::LLVM::FAbsOp>;
+using CIRLogOpLowering =
+    CIRUnaryFPBuiltinOpLowering<mlir::cir::LogOp, mlir::LLVM::LogOp>;
+using CIRLog10OpLowering =
+    CIRUnaryFPBuiltinOpLowering<mlir::cir::Log10Op, mlir::LLVM::Log10Op>;
+using CIRLog2OpLowering =
+    CIRUnaryFPBuiltinOpLowering<mlir::cir::Log2Op, mlir::LLVM::Log2Op>;
 using CIRNearbyintOpLowering =
     CIRUnaryFPBuiltinOpLowering<mlir::cir::NearbyintOp,
                                 mlir::LLVM::NearbyintOp>;
@@ -3406,6 +3418,10 @@ using CIRRintOpLowering =
     CIRUnaryFPBuiltinOpLowering<mlir::cir::RintOp, mlir::LLVM::RintOp>;
 using CIRRoundOpLowering =
     CIRUnaryFPBuiltinOpLowering<mlir::cir::RoundOp, mlir::LLVM::RoundOp>;
+using CIRSinOpLowering =
+    CIRUnaryFPBuiltinOpLowering<mlir::cir::SinOp, mlir::LLVM::SinOp>;
+using CIRSqrtOpLowering =
+    CIRUnaryFPBuiltinOpLowering<mlir::cir::SqrtOp, mlir::LLVM::SqrtOp>;
 using CIRTruncOpLowering =
     CIRUnaryFPBuiltinOpLowering<mlir::cir::TruncOp, mlir::LLVM::FTruncOp>;
 
@@ -3442,6 +3458,24 @@ using CIRFMaxOpLowering =
     CIRBinaryFPToFPBuiltinOpLowering<mlir::cir::FMaxOp, mlir::LLVM::MaxNumOp>;
 using CIRFMinOpLowering =
     CIRBinaryFPToFPBuiltinOpLowering<mlir::cir::FMinOp, mlir::LLVM::MinNumOp>;
+using CIRPowOpLowering =
+    CIRBinaryFPToFPBuiltinOpLowering<mlir::cir::PowOp, mlir::LLVM::PowOp>;
+
+// cir.fmod is special. Instead of lowering it to an intrinsic call, lower it to
+// the frem LLVM instruction.
+class CIRFModOpLowering : public mlir::OpConversionPattern<mlir::cir::FModOp> {
+public:
+  using mlir::OpConversionPattern<mlir::cir::FModOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::FModOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto resTy = this->getTypeConverter()->convertType(op.getType());
+    rewriter.replaceOpWithNewOp<mlir::LLVM::FRemOp>(op, resTy, adaptor.getLhs(),
+                                                    adaptor.getRhs());
+    return mlir::success();
+  }
+};
 
 class CIRClearCacheOpLowering
     : public mlir::OpConversionPattern<mlir::cir::ClearCacheOp> {
@@ -3489,11 +3523,13 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRGetBitfieldLowering, CIRPrefetchLowering, CIRObjSizeOpLowering,
       CIRIsConstantOpLowering, CIRCmpThreeWayOpLowering, CIRLroundOpLowering,
       CIRLLroundOpLowering, CIRLrintOpLowering, CIRLLrintOpLowering,
-      CIRCeilOpLowering, CIRFloorOpLowering, CIRFAbsOpLowering,
-      CIRNearbyintOpLowering, CIRRintOpLowering, CIRRoundOpLowering,
-      CIRTruncOpLowering, CIRCopysignOpLowering, CIRFMaxOpLowering,
-      CIRFMinOpLowering, CIRClearCacheOpLowering>(converter,
-                                                  patterns.getContext());
+      CIRCeilOpLowering, CIRCosOpLowering, CIRExpOpLowering, CIRExp2OpLowering,
+      CIRFloorOpLowering, CIRFAbsOpLowering, CIRLogOpLowering,
+      CIRLog10OpLowering, CIRLog2OpLowering, CIRNearbyintOpLowering,
+      CIRRintOpLowering, CIRRoundOpLowering, CIRSinOpLowering,
+      CIRSqrtOpLowering, CIRTruncOpLowering, CIRCopysignOpLowering,
+      CIRFModOpLowering, CIRFMaxOpLowering, CIRFMinOpLowering, CIRPowOpLowering,
+      CIRClearCacheOpLowering>(converter, patterns.getContext());
 }
 
 namespace {
