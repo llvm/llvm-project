@@ -120,7 +120,7 @@ bool LiveDebugValues::runOnMachineFunction(MachineFunction &MF) {
   MachineDominatorTree *DomTree = nullptr;
   if (InstrRefBased) {
     DomTree = &MDT;
-    MDT.recalculate(MF);
+    MDT.calculate(MF);
     TheImpl = &*InstrRefImpl;
   }
 

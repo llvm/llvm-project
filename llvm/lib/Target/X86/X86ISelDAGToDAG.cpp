@@ -1799,9 +1799,9 @@ bool X86DAGToDAGISel::foldOffsetIntoAddress(uint64_t Offset,
     // code models generates a relocation referencing the section symbol. Don't
     // fold offsets that are too closer to INT32_MIN, as the addend could
     // underflow.
-    if (Val < INT32_MIN + 256 * 1024 * 1024 && M != CodeModel::Large &&
-        AM.hasSymbolicDisplacement())
-      return true;
+    // if (Val < INT32_MIN + 256 * 1024 * 1024 && M != CodeModel::Large &&
+    //     AM.hasSymbolicDisplacement())
+    //   return true;
     // In addition to the checks required for a register base, check that
     // we do not try to use an unsafe Disp with a frame index.
     if (AM.BaseType == X86ISelAddressMode::FrameIndexBase &&
@@ -1980,6 +1980,15 @@ bool X86DAGToDAGISel::matchAddress(SDValue N, X86ISelAddressMode &AM) {
       AM.Scale == 1 && AM.BaseType == X86ISelAddressMode::RegBase &&
       AM.Base_Reg.getNode() == nullptr && AM.IndexReg.getNode() == nullptr &&
       AM.SymbolFlags == X86II::MO_NO_FLAG && AM.hasSymbolicDisplacement()) {
+    // However, when GV is a local function symbol and in the same section as
+    // the current instruction, and AM.Disp is negative and near INT32_MIN,
+    // referencing GV+Disp generates a relocation referencing the section symbol
+    // with an even smaller offset, which might underflow. Bail out if the
+    // negative offset is too close to INT32_MIN.
+    if (isa_and_nonnull<Function>(AM.GV) &&
+        AM.Disp < INT32_MIN + 256 * 1024 * 1024)
+      return true;
+
     AM.Base_Reg = CurDAG->getRegister(X86::RIP, MVT::i64);
   }
 
