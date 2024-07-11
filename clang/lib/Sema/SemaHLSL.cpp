@@ -437,23 +437,6 @@ void SemaHLSL::handleShaderAttr(Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
-llvm::dxil::ResourceClass
-getResourceClassFromStr(StringRef ResourceClassTypeStrRef) {
-  if (ResourceClassTypeStrRef == "SRV")
-    return llvm::dxil::ResourceClass::SRV;
-
-  if (ResourceClassTypeStrRef == "UAV")
-    return llvm::dxil::ResourceClass::UAV;
-
-  if (ResourceClassTypeStrRef == "CBuffer")
-    return llvm::dxil::ResourceClass::CBuffer;
-
-  if (ResourceClassTypeStrRef == "Sampler")
-    return llvm::dxil::ResourceClass::Sampler;
-
-  llvm_unreachable("Unsupported resource class type");
-}
-
 void SemaHLSL::handleResourceClassAttr(Decl *D, const ParsedAttr &AL) {
   if (!AL.isArgIdent(0)) {
     Diag(AL.getLoc(), diag::err_attribute_argument_type)
@@ -466,16 +449,17 @@ void SemaHLSL::handleResourceClassAttr(Decl *D, const ParsedAttr &AL) {
   SourceLocation ArgLoc = Loc->Loc;
 
   // Validate.
-  if (ResourceClassTypeStrRef != "SRV" && ResourceClassTypeStrRef != "UAV" &&
-      ResourceClassTypeStrRef != "CBuffer" &&
-      ResourceClassTypeStrRef != "Sampler") {
-    Diag(ArgLoc, diag::err_hlsl_unsupported_resource_class)
-        << ResourceClassTypeStrRef;
+  llvm::dxil::ResourceClass RC;
+  bool succ = HLSLResourceClassAttr::ConvertStrToResourceClass(
+      ResourceClassTypeStrRef, RC);
+  if (!succ) {
+    Diag(ArgLoc, diag::warn_attribute_type_not_supported)
+        << "ResourceClass" << ResourceClassTypeStrRef;
     return;
   }
 
-  HLSLResourceClassAttr *NewAttr = HLSLResourceClassAttr::Create(
-      getASTContext(), getResourceClassFromStr(ResourceClassTypeStrRef));
+  HLSLResourceClassAttr *NewAttr =
+      HLSLResourceClassAttr::Create(getASTContext(), RC, ArgLoc);
   if (NewAttr)
     D->addAttr(NewAttr);
 }
