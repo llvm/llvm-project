@@ -1254,5 +1254,49 @@ entry:
   ret i32 %.
 }
 
+define void @ccmp64ri64(i64 noundef %a, i64 noundef %b, i64 noundef %c) {
+; CHECK-LABEL: ccmp64ri64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cmpq %rdx, %rdi # encoding: [0x48,0x39,0xd7]
+; CHECK-NEXT:    ccmpbeq {dfv=zf} $9992147483646, %rsi # encoding: [0x62,0xf4,0x94,0x06,0x81,0xfe,0xfe,0xbb,0x66,0x7a]
+; CHECK-NEXT:    # imm = 0x9167A66BBFE
+; CHECK-NEXT:    jg .LBB30_1 # encoding: [0x7f,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB30_1-1, kind: FK_PCRel_1
+; CHECK-NEXT:  # %bb.2: # %if.then
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    jmp foo # TAILCALL
+; CHECK-NEXT:    # encoding: [0xeb,A]
+; CHECK-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; CHECK-NEXT:  .LBB30_1: # %if.end
+; CHECK-NEXT:    retq # encoding: [0xc3]
+;
+; NDD-LABEL: ccmp64ri64:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    cmpq %rdx, %rdi # encoding: [0x48,0x39,0xd7]
+; NDD-NEXT:    ccmpbeq {dfv=zf} $9992147483646, %rsi # encoding: [0x62,0xf4,0x94,0x06,0x81,0xfe,0xfe,0xbb,0x66,0x7a]
+; NDD-NEXT:    # imm = 0x9167A66BBFE
+; NDD-NEXT:    jg .LBB30_1 # encoding: [0x7f,A]
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB30_1-1, kind: FK_PCRel_1
+; NDD-NEXT:  # %bb.2: # %if.then
+; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NDD-NEXT:    jmp foo # TAILCALL
+; NDD-NEXT:    # encoding: [0xeb,A]
+; NDD-NEXT:    # fixup A - offset: 1, value: foo-1, kind: FK_PCRel_1
+; NDD-NEXT:  .LBB30_1: # %if.end
+; NDD-NEXT:    retq # encoding: [0xc3]
+entry:
+  %cmp = icmp ugt i64 %a, %c
+  %cmp1 = icmp slt i64 %b, 9992147483647
+  %or.cond = or i1 %cmp, %cmp1
+  br i1 %or.cond, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  tail call void (...) @foo()
+  br label %if.end
+
+if.end:                                           ; preds = %entry, %if.then
+  ret void
+}
+
 declare dso_local void @foo(...)
 declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone
