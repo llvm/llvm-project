@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -pedantic-errors
+// RUN: %clang_cc1 -fsyntax-only -verify %s -Wno-unused -pedantic-errors
 
 static void f(void); // expected-error {{function 'f' has internal linkage but is not defined}}
 
