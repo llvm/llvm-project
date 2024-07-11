@@ -44,8 +44,6 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   case hsail:          return "hsail";
   case kalimba:        return "kalimba";
   case lanai:          return "lanai";
-  case le32:           return "le32";
-  case le64:           return "le64";
   case loongarch32:    return "loongarch32";
   case loongarch64:    return "loongarch64";
   case m68k:           return "m68k";
@@ -198,9 +196,6 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
   // NVPTX intrinsics are namespaced under nvvm.
   case nvptx:       return "nvvm";
   case nvptx64:     return "nvvm";
-
-  case le32:        return "le32";
-  case le64:        return "le64";
 
   case amdil:
   case amdil64:     return "amdil";
@@ -432,8 +427,6 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
     .Case("xcore", xcore)
     .Case("nvptx", nvptx)
     .Case("nvptx64", nvptx64)
-    .Case("le32", le32)
-    .Case("le64", le64)
     .Case("amdil", amdil)
     .Case("amdil64", amdil64)
     .Case("hsail", hsail)
@@ -525,6 +518,7 @@ static Triple::ArchType parseARMArch(StringRef ArchName) {
 }
 
 static Triple::ArchType parseArch(StringRef ArchName) {
+<<<<<<< HEAD:llvm/lib/TargetParser/Triple.cpp
   auto AT =
       StringSwitch<Triple::ArchType>(ArchName)
           .Cases("i386", "i486", "i586", "i686", Triple::x86)
@@ -605,6 +599,71 @@ static Triple::ArchType parseArch(StringRef ArchName) {
                  Triple::dxil)
           .Case("xtensa", Triple::xtensa)
           .Default(Triple::UnknownArch);
+=======
+  auto AT = StringSwitch<Triple::ArchType>(ArchName)
+    .Cases("i386", "i486", "i586", "i686", Triple::x86)
+    // FIXME: Do we need to support these?
+    .Cases("i786", "i886", "i986", Triple::x86)
+    .Cases("amd64", "x86_64", "x86_64h", Triple::x86_64)
+    .Cases("powerpc", "powerpcspe", "ppc", "ppc32", Triple::ppc)
+    .Cases("powerpcle", "ppcle", "ppc32le", Triple::ppcle)
+    .Cases("powerpc64", "ppu", "ppc64", Triple::ppc64)
+    .Cases("powerpc64le", "ppc64le", Triple::ppc64le)
+    .Case("xscale", Triple::arm)
+    .Case("xscaleeb", Triple::armeb)
+    .Case("aarch64", Triple::aarch64)
+    .Case("aarch64_be", Triple::aarch64_be)
+    .Case("aarch64_32", Triple::aarch64_32)
+    .Case("arc", Triple::arc)
+    .Case("arm64", Triple::aarch64)
+    .Case("arm64_32", Triple::aarch64_32)
+    .Case("arm64e", Triple::aarch64)
+    .Case("arm", Triple::arm)
+    .Case("armeb", Triple::armeb)
+    .Case("thumb", Triple::thumb)
+    .Case("thumbeb", Triple::thumbeb)
+    .Case("avr", Triple::avr)
+    .Case("m68k", Triple::m68k)
+    .Case("msp430", Triple::msp430)
+    .Cases("mips", "mipseb", "mipsallegrex", "mipsisa32r6",
+           "mipsr6", Triple::mips)
+    .Cases("mipsel", "mipsallegrexel", "mipsisa32r6el", "mipsr6el",
+           Triple::mipsel)
+    .Cases("mips64", "mips64eb", "mipsn32", "mipsisa64r6",
+           "mips64r6", "mipsn32r6", Triple::mips64)
+    .Cases("mips64el", "mipsn32el", "mipsisa64r6el", "mips64r6el",
+           "mipsn32r6el", Triple::mips64el)
+    .Case("r600", Triple::r600)
+    .Case("amdgcn", Triple::amdgcn)
+    .Case("riscv32", Triple::riscv32)
+    .Case("riscv64", Triple::riscv64)
+    .Case("hexagon", Triple::hexagon)
+    .Cases("s390x", "systemz", Triple::systemz)
+    .Case("sparc", Triple::sparc)
+    .Case("sparcel", Triple::sparcel)
+    .Cases("sparcv9", "sparc64", Triple::sparcv9)
+    .Case("tce", Triple::tce)
+    .Case("tcele", Triple::tcele)
+    .Case("xcore", Triple::xcore)
+    .Case("nvptx", Triple::nvptx)
+    .Case("nvptx64", Triple::nvptx64)
+    .Case("amdil", Triple::amdil)
+    .Case("amdil64", Triple::amdil64)
+    .Case("hsail", Triple::hsail)
+    .Case("hsail64", Triple::hsail64)
+    .Case("spir", Triple::spir)
+    .Case("spir64", Triple::spir64)
+    .StartsWith("kalimba", Triple::kalimba)
+    .Case("lanai", Triple::lanai)
+    .Case("renderscript32", Triple::renderscript32)
+    .Case("renderscript64", Triple::renderscript64)
+    .Case("shave", Triple::shave)
+    .Case("ve", Triple::ve)
+    .Case("wasm32", Triple::wasm32)
+    .Case("wasm64", Triple::wasm64)
+    .Case("csky", Triple::csky)
+    .Default(Triple::UnknownArch);
+>>>>>>> parent of ef5e7f90ea4d (Temporarily revert the code part of D100981 "Delete le32/le64 targets"):llvm/lib/Support/Triple.cpp
 
   // Some architectures require special parsing logic just to compute the
   // ArchType result.
@@ -905,10 +964,13 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::hsail:
   case Triple::kalimba:
   case Triple::lanai:
+<<<<<<< HEAD:llvm/lib/TargetParser/Triple.cpp
   case Triple::le32:
   case Triple::le64:
   case Triple::loongarch32:
   case Triple::loongarch64:
+=======
+>>>>>>> parent of ef5e7f90ea4d (Temporarily revert the code part of D100981 "Delete le32/le64 targets"):llvm/lib/Support/Triple.cpp
   case Triple::m68k:
   case Triple::mips64:
   case Triple::mips64el:
@@ -1603,8 +1665,11 @@ unsigned Triple::getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   case llvm::Triple::hsail:
   case llvm::Triple::kalimba:
   case llvm::Triple::lanai:
+<<<<<<< HEAD:llvm/lib/TargetParser/Triple.cpp
   case llvm::Triple::le32:
   case llvm::Triple::loongarch32:
+=======
+>>>>>>> parent of ef5e7f90ea4d (Temporarily revert the code part of D100981 "Delete le32/le64 targets"):llvm/lib/Support/Triple.cpp
   case llvm::Triple::m68k:
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
@@ -1636,8 +1701,11 @@ unsigned Triple::getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   case llvm::Triple::bpfeb:
   case llvm::Triple::bpfel:
   case llvm::Triple::hsail64:
+<<<<<<< HEAD:llvm/lib/TargetParser/Triple.cpp
   case llvm::Triple::le64:
   case llvm::Triple::loongarch64:
+=======
+>>>>>>> parent of ef5e7f90ea4d (Temporarily revert the code part of D100981 "Delete le32/le64 targets"):llvm/lib/Support/Triple.cpp
   case llvm::Triple::mips64:
   case llvm::Triple::mips64el:
   case llvm::Triple::nvptx64:
@@ -1695,8 +1763,11 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::hsail:
   case Triple::kalimba:
   case Triple::lanai:
+<<<<<<< HEAD:llvm/lib/TargetParser/Triple.cpp
   case Triple::le32:
   case Triple::loongarch32:
+=======
+>>>>>>> parent of ef5e7f90ea4d (Temporarily revert the code part of D100981 "Delete le32/le64 targets"):llvm/lib/Support/Triple.cpp
   case Triple::m68k:
   case Triple::mips:
   case Triple::mipsel:
@@ -1726,6 +1797,7 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::aarch64_be:     T.setArch(Triple::armeb);   break;
   case Triple::amdil64:        T.setArch(Triple::amdil);   break;
   case Triple::hsail64:        T.setArch(Triple::hsail);   break;
+<<<<<<< HEAD:llvm/lib/TargetParser/Triple.cpp
   case Triple::le64:           T.setArch(Triple::le32);    break;
   case Triple::loongarch64:    T.setArch(Triple::loongarch32); break;
   case Triple::mips64:
@@ -1734,6 +1806,10 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::mips64el:
     T.setArch(Triple::mipsel, getSubArch());
     break;
+=======
+  case Triple::mips64:         T.setArch(Triple::mips);    break;
+  case Triple::mips64el:       T.setArch(Triple::mipsel);  break;
+>>>>>>> parent of ef5e7f90ea4d (Temporarily revert the code part of D100981 "Delete le32/le64 targets"):llvm/lib/Support/Triple.cpp
   case Triple::nvptx64:        T.setArch(Triple::nvptx);   break;
   case Triple::ppc64:          T.setArch(Triple::ppc);     break;
   case Triple::ppc64le:        T.setArch(Triple::ppcle);   break;
@@ -1781,8 +1857,11 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::bpfeb:
   case Triple::bpfel:
   case Triple::hsail64:
+<<<<<<< HEAD:llvm/lib/TargetParser/Triple.cpp
   case Triple::le64:
   case Triple::loongarch64:
+=======
+>>>>>>> parent of ef5e7f90ea4d (Temporarily revert the code part of D100981 "Delete le32/le64 targets"):llvm/lib/Support/Triple.cpp
   case Triple::mips64:
   case Triple::mips64el:
   case Triple::nvptx64:
@@ -1805,6 +1884,7 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::arm:             T.setArch(Triple::aarch64);    break;
   case Triple::armeb:           T.setArch(Triple::aarch64_be); break;
   case Triple::hsail:           T.setArch(Triple::hsail64);    break;
+<<<<<<< HEAD:llvm/lib/TargetParser/Triple.cpp
   case Triple::le32:            T.setArch(Triple::le64);       break;
   case Triple::loongarch32:     T.setArch(Triple::loongarch64);    break;
   case Triple::mips:
@@ -1813,6 +1893,10 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::mipsel:
     T.setArch(Triple::mips64el, getSubArch());
     break;
+=======
+  case Triple::mips:            T.setArch(Triple::mips64);     break;
+  case Triple::mipsel:          T.setArch(Triple::mips64el);   break;
+>>>>>>> parent of ef5e7f90ea4d (Temporarily revert the code part of D100981 "Delete le32/le64 targets"):llvm/lib/Support/Triple.cpp
   case Triple::nvptx:           T.setArch(Triple::nvptx64);    break;
   case Triple::ppc:             T.setArch(Triple::ppc64);      break;
   case Triple::ppcle:           T.setArch(Triple::ppc64le);    break;
@@ -1848,10 +1932,13 @@ Triple Triple::getBigEndianArchVariant() const {
   case Triple::hsail64:
   case Triple::hsail:
   case Triple::kalimba:
+<<<<<<< HEAD:llvm/lib/TargetParser/Triple.cpp
   case Triple::le32:
   case Triple::le64:
   case Triple::loongarch32:
   case Triple::loongarch64:
+=======
+>>>>>>> parent of ef5e7f90ea4d (Temporarily revert the code part of D100981 "Delete le32/le64 targets"):llvm/lib/Support/Triple.cpp
   case Triple::msp430:
   case Triple::nvptx64:
   case Triple::nvptx:
@@ -1953,10 +2040,13 @@ bool Triple::isLittleEndian() const {
   case Triple::hsail64:
   case Triple::hsail:
   case Triple::kalimba:
+<<<<<<< HEAD:llvm/lib/TargetParser/Triple.cpp
   case Triple::le32:
   case Triple::le64:
   case Triple::loongarch32:
   case Triple::loongarch64:
+=======
+>>>>>>> parent of ef5e7f90ea4d (Temporarily revert the code part of D100981 "Delete le32/le64 targets"):llvm/lib/Support/Triple.cpp
   case Triple::mips64el:
   case Triple::mipsel:
   case Triple::msp430:

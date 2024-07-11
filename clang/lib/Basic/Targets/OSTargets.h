@@ -842,8 +842,8 @@ public:
     } else if (Triple.getArch() == llvm::Triple::mipsel) {
       // Handled on mips' setDataLayout.
     } else {
-      assert(Triple.getArch() == llvm::Triple::le32);
-      this->resetDataLayout("e-p:32:32-i64:64");
+      assert(Triple.getArch() == llvm::Triple::mipsel);
+      // Handled on mips' setDataLayout.
     }
   }
 };
