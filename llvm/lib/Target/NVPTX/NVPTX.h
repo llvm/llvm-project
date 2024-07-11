@@ -122,32 +122,32 @@ enum class Ordering : OrderingUnderlyingType {
   LAST = RelaxedMMIO
 };
 
-template <typename OStream> OStream &operator<<(OStream &os, Ordering order) {
-  switch (order) {
+template <typename OStream> OStream &operator<<(OStream &O, Ordering Order) {
+  switch (Order) {
   case Ordering::NotAtomic:
-    os << "NotAtomic";
-    return os;
+    O << "NotAtomic";
+    return O;
   case Ordering::Relaxed:
-    os << "Relaxed";
-    return os;
+    O << "Relaxed";
+    return O;
   case Ordering::Acquire:
-    os << "Acquire";
-    return os;
+    O << "Acquire";
+    return O;
   case Ordering::Release:
-    os << "Release";
-    return os;
+    O << "Release";
+    return O;
   // case Ordering::AcquireRelease:
-  //   os << "AcquireRelease";
-  //   return os;
+  //   O << "AcquireRelease";
+  //   return O;
   case Ordering::SequentiallyConsistent:
-    os << "SequentiallyConsistent";
-    return os;
+    O << "SequentiallyConsistent";
+    return O;
   case Ordering::Volatile:
-    os << "Volatile";
-    return os;
+    O << "Volatile";
+    return O;
   case Ordering::RelaxedMMIO:
-    os << "RelaxedMMIO";
-    return os;
+    O << "RelaxedMMIO";
+    return O;
   }
   report_fatal_error("unknown ordering");
 }

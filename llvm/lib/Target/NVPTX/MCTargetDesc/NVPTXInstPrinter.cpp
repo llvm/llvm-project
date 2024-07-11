@@ -228,9 +228,9 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
     const MCOperand &MO = MI->getOperand(OpNum);
     int Imm = (int) MO.getImm();
     if (!strcmp(Modifier, "sem")) {
-      auto ordering =
+      auto Ordering =
           NVPTX::Ordering(static_cast<NVPTX::OrderingUnderlyingType>(Imm));
-      switch (ordering) {
+      switch (Ordering) {
       case NVPTX::Ordering::NotAtomic:
         break;
       case NVPTX::Ordering::Volatile:
@@ -251,15 +251,15 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
       default:
         SmallString<256> Msg;
         raw_svector_ostream OS(Msg);
-        OS << "NVPTX LdStCode Printer does not support \"" << ordering
+        OS << "NVPTX LdStCode Printer does not support \"" << Ordering
            << "\" sem modifier.";
         report_fatal_error(OS.str());
         break;
       }
     } else if (!strcmp(Modifier, "sc")) {
-      auto ordering =
+      auto Ordering =
           NVPTX::Ordering(static_cast<NVPTX::OrderingUnderlyingType>(Imm));
-      switch (ordering) {
+      switch (Ordering) {
         // TODO: refactor fence insertion in ISelDagToDag instead of here
         // as part of implementing atomicrmw seq_cst.
       case NVPTX::Ordering::SequentiallyConsistent:

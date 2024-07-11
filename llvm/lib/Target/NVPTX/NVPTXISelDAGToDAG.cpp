@@ -715,12 +715,12 @@ static unsigned int getCodeAddrSpace(MemSDNode *N) {
 }
 
 struct OperationOrderings {
-  NVPTX::OrderingUnderlyingType instr_ordering;
-  NVPTX::OrderingUnderlyingType fence_ordering;
+  NVPTX::OrderingUnderlyingType InstrOrdering;
+  NVPTX::OrderingUnderlyingType FenceOrdering;
   OperationOrderings(NVPTX::Ordering o = NVPTX::Ordering::NotAtomic,
                      NVPTX::Ordering f = NVPTX::Ordering::NotAtomic)
-      : instr_ordering(static_cast<NVPTX::OrderingUnderlyingType>(o)),
-        fence_ordering(static_cast<NVPTX::OrderingUnderlyingType>(f)) {}
+      : InstrOrdering(static_cast<NVPTX::OrderingUnderlyingType>(o)),
+        FenceOrdering(static_cast<NVPTX::OrderingUnderlyingType>(f)) {}
 };
 
 static OperationOrderings
@@ -759,12 +759,19 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   //   Lustig et al, A Formal Analysis of the NVIDIA PTX Memory Consistency Model, ASPLOS’19.
   //   https://dl.acm.org/doi/pdf/10.1145/3297858.3304043
   //
-  // | CUDA C++ Atomic Operation or Atomic Fence                                   | PTX Atomic Operation or Fence           |
-  // |-----------------------------------------------------------------------------|-----------------------------------------|
-  // | cuda::atomic_thread_fence(memory_order_seq_cst, cuda::thread_scope_<scope>) | fence.sc.<scope>;                       |
-  // | cuda::atomic_load(memory_order_seq_cst, cuda::thread_scope_<scope>)         | fence.sc.<scope>; ld.acquire.<scope>;   |
-  // | cuda::atomic_store(memory_order_seq_cst, cuda::thread_scope_<scope>)        | fence.sc.<scope>; st.release.<scope>;   |  
-  // | cuda::atomic_fetch_<op>(memory_order_seq_cst, cuda::thread_scope_<scope>)   | fence.sc.<scope>; atom.acq_rel.<scope>; |
+  // | CUDA C++ Atomic Operation or Atomic Fence            | PTX Atomic Operation or Fence |
+  // |------------------------------------------------------|-------------------------------|
+  // | cuda::atomic_thread_fence                            | fence.sc.<scope>;             |
+  // |   (memory_order_seq_cst, cuda::thread_scope_<scope>) |                               |
+  // |------------------------------------------------------|-------------------------------|
+  // | cuda::atomic_load                                    | fence.sc.<scope>;             |
+  // |   (memory_order_seq_cst, cuda::thread_scope_<scope>) | ld.acquire.<scope>;           |
+  // |------------------------------------------------------|-------------------------------|  
+  // | cuda::atomic_store                                   | fence.sc.<scope>;             |
+  // |   (memory_order_seq_cst, cuda::thread_scope_<scope>) | st.release.<scope>;           |
+  // |------------------------------------------------------|-------------------------------|
+  // | cuda::atomic_fetch_<op>                              | fence.sc.<scope>;             |
+  // |   (memory_order_seq_cst, cuda::thread_scope_<scope>) | atom.acq_rel.<scope>;         |
 
   // clang-format on
 
@@ -897,11 +904,11 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
     //
     // This sets the ordering of the fence to SequentiallyConsistent, and
     // sets the corresponding ordering for the instruction.
-    NVPTX::Ordering ord;
+    NVPTX::Ordering InstrOrder;
     if (N->readMem()) {
-      ord = NVPTX::Ordering::Acquire;
+      InstrOrder = NVPTX::Ordering::Acquire;
     } else if (N->writeMem()) {
-      ord = NVPTX::Ordering::Release;
+      InstrOrder = NVPTX::Ordering::Release;
     } else {
       SmallString<256> Msg;
       raw_svector_ostream OS(Msg);
@@ -912,7 +919,7 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
       report_fatal_error(OS.str());
     }
     return AddrGenericOrGlobalOrShared
-               ? OperationOrderings(ord,
+               ? OperationOrderings(InstrOrder,
                                     NVPTX::Ordering::SequentiallyConsistent)
                : OperationOrderings(NVPTX::Ordering::NotAtomic);
   }

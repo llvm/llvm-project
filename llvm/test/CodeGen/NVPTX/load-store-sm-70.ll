@@ -1330,5 +1330,3 @@ define void @local_acq_rel_volatile(ptr addrspace(5) %a, ptr addrspace(5) %b, pt
 
   ret void
 }
-
-
