@@ -2708,6 +2708,8 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   }
   if (!UseRelaxRelocations)
     CmdArgs.push_back("-mrelax-relocations=no");
+  if (Args.hasArg(options::OPT_msse2avx))
+    CmdArgs.push_back("-msse2avx");
   if (UseNoExecStack)
     CmdArgs.push_back("-mnoexecstack");
   if (MipsTargetFeature != nullptr) {
