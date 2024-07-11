@@ -1081,7 +1081,8 @@ R"(Extensions enabled for the given RISC-V target
 Experimental extensions
     zicfilp              0.4       'Zicfilp' (Landing pad)
 
-ISA String: rv64i2p1_zicfilp0p4_zicsr2p0)";
+ISA String: rv64i2p1_zicfilp0p4_zicsr2p0
+)";
   // clang-format on
 
   StringMap<StringRef> DescMap;
