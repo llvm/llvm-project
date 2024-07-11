@@ -816,11 +816,6 @@ public:
     setAllowFPReassociate(LO.AllowFPReassoc);
     setNoHonorNaNs(LO.NoHonorNaNs);
     setNoHonorInfs(LO.NoHonorInfs);
-    // Ensure that if FiniteMathOnly is enabled, NoHonorNaNs and NoHonorInfs are
-    // also enabled. This is because FiniteMathOnly mode assumes no NaNs or Infs
-    // are present in computations.
-    assert((LO.FiniteMathOnly == (LO.NoHonorInfs && LO.NoHonorNaNs)) &&
-           "inf/nan inconsistent internal state");
     setNoSignedZero(LO.NoSignedZero);
     setAllowReciprocal(LO.AllowRecip);
     setAllowApproxFunc(LO.ApproxFunc);

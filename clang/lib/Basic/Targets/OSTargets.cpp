@@ -174,9 +174,10 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
   // transformation unless the transformation is guaranteed to produce a bitwise
   // identical result."
   const bool any_imprecise_flags =
-      Opts.FastMath || Opts.FiniteMathOnly || Opts.UnsafeFPMath ||
-      Opts.AllowFPReassoc || Opts.NoHonorNaNs || Opts.NoHonorInfs ||
-      Opts.NoSignedZero || Opts.AllowRecip || Opts.ApproxFunc;
+      Opts.FastMath || (Opts.NoHonorInfs && Opts.NoHonorNaNs) ||
+      Opts.UnsafeFPMath || Opts.AllowFPReassoc || Opts.NoHonorNaNs ||
+      Opts.NoHonorInfs || Opts.NoSignedZero || Opts.AllowRecip ||
+      Opts.ApproxFunc;
 
   // "Under both /fp:precise and /fp:fast, the compiler generates code intended
   // to run in the default floating-point environment."
