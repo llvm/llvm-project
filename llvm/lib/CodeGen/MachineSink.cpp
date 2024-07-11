@@ -913,7 +913,7 @@ bool MachineSinking::isWorthBreakingCriticalEdge(
     auto Res = CEMergeCandidates.try_emplace(Key, From);
     // We wanted to sink the same register into the same block, consider it to
     // be profitable.
-    if (!Res.second && Res.first->second->isSuccessor(To)) {
+    if (!Res.second) {
       // Return the source block that was previously held off.
       DeferredFromBlock = Res.first->second;
       return true;
