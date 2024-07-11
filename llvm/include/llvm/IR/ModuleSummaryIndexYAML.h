@@ -224,7 +224,6 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
           V.emplace(RefGUID, /*IsAnalysis=*/false);
         Refs.push_back(ValueInfo(/*IsAnalysis=*/false, &*V.find(RefGUID)));
       }
-      std::vector<AllocInfo> EmptyAllocInfo;
       Elem.SummaryList.push_back(std::make_unique<FunctionSummary>(
           GlobalValueSummary::GVFlags(
               static_cast<GlobalValue::LinkageTypes>(FSum.Linkage),
@@ -239,7 +238,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
           std::move(FSum.TypeTestAssumeConstVCalls),
           std::move(FSum.TypeCheckedLoadConstVCalls),
           ArrayRef<FunctionSummary::ParamAccess>{}, ArrayRef<CallsiteInfo>{},
-          std::move(EmptyAllocInfo)));
+          ArrayRef<AllocInfo>{}));
     }
   }
   static void output(IO &io, GlobalValueSummaryMapTy &V) {

@@ -404,8 +404,8 @@ struct AllocInfo {
   std::vector<MIBInfo> MIBs;
 
   // If requested, keep track of total profiled sizes for each MIB. This will be
-  // a vector of the same length and order as the MIBs vector.
-  std::unique_ptr<std::vector<uint64_t>> TotalSizes;
+  // a vector of the same length and order as the MIBs vector, if non-empty.
+  std::vector<uint64_t> TotalSizes;
 
   AllocInfo(std::vector<MIBInfo> MIBs) : MIBs(std::move(MIBs)) {
     Versions.push_back(0);
@@ -427,10 +427,10 @@ inline raw_ostream &operator<<(raw_ostream &OS, const AllocInfo &AE) {
   for (auto &M : AE.MIBs) {
     OS << "\t\t" << M << "\n";
   }
-  if (AE.TotalSizes) {
+  if (!AE.TotalSizes.empty()) {
     OS << " TotalSizes per MIB:\n\t\t";
     First = true;
-    for (auto &TS : *AE.TotalSizes) {
+    for (auto &TS : AE.TotalSizes) {
       if (!First)
         OS << ", ";
       First = false;
@@ -1445,7 +1445,7 @@ public:
   // in the way some record are interpreted, like flags for instance.
   // Note that incrementing this may require changes in both BitcodeReader.cpp
   // and BitcodeWriter.cpp.
-  static constexpr uint64_t BitcodeSummaryVersion = 9;
+  static constexpr uint64_t BitcodeSummaryVersion = 10;
 
   // Regular LTO module name for ASM writer
   static constexpr const char *getRegularLTOModuleName() {

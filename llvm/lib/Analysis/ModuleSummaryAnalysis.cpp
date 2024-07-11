@@ -548,8 +548,7 @@ static void computeFunctionSummary(
         Allocs.push_back(AllocInfo(std::move(MIBs)));
         if (MemProfReportHintedSizes) {
           assert(Allocs.back().MIBs.size() == TotalSizes.size());
-          Allocs.back().TotalSizes =
-              std::make_unique<std::vector<uint64_t>>(std::move(TotalSizes));
+          Allocs.back().TotalSizes = std::move(TotalSizes);
         }
       } else if (!InstCallsite.empty()) {
         SmallVector<unsigned> StackIdIndices;
@@ -948,7 +947,6 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
           CantBePromoted.insert(GV->getGUID());
           // Create the appropriate summary type.
           if (Function *F = dyn_cast<Function>(GV)) {
-            std::vector<AllocInfo> EmptyAllocInfo;
             std::unique_ptr<FunctionSummary> Summary =
                 std::make_unique<FunctionSummary>(
                     GVFlags, /*InstCount=*/0,
@@ -971,7 +969,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                     ArrayRef<FunctionSummary::ConstVCall>{},
                     ArrayRef<FunctionSummary::ConstVCall>{},
                     ArrayRef<FunctionSummary::ParamAccess>{},
-                    ArrayRef<CallsiteInfo>{}, std::move(EmptyAllocInfo));
+                    ArrayRef<CallsiteInfo>{}, ArrayRef<AllocInfo>{});
             Index.addGlobalValueSummary(*GV, std::move(Summary));
           } else {
             std::unique_ptr<GlobalVarSummary> Summary =

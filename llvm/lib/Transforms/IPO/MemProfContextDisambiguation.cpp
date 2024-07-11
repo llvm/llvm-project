@@ -1766,14 +1766,14 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
               EmptyContext;
           unsigned I = 0;
           assert(!MemProfReportHintedSizes ||
-                 (AN.TotalSizes && AN.TotalSizes->size() == AN.MIBs.size()));
+                 AN.TotalSizes.size() == AN.MIBs.size());
           // Now add all of the MIBs and their stack nodes.
           for (auto &MIB : AN.MIBs) {
             CallStack<MIBInfo, SmallVector<unsigned>::const_iterator>
                 StackContext(&MIB);
             uint64_t TotalSize = 0;
             if (MemProfReportHintedSizes)
-              TotalSize = (*AN.TotalSizes)[I];
+              TotalSize = AN.TotalSizes[I];
             addStackNodesForMIB<MIBInfo, SmallVector<unsigned>::const_iterator>(
                 AllocNode, StackContext, EmptyContext, MIB.AllocType,
                 TotalSize);
