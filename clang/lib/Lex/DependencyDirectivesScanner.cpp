@@ -73,8 +73,8 @@ struct Scanner {
     // Set the lexer to use 'tok::at' for '@', instead of 'tok::unknown'.
     LangOpts.ObjC = true;
     LangOpts.LineComment = true;
-    // FIXME: we do not enable C11 or C++11, so we are missing u/u8/U"" and
-    // R"()" literals.
+    LangOpts.RawStringLiterals = true;
+    // FIXME: we do not enable C11 or C++11, so we are missing u/u8/U"".
     return LangOpts;
   }
 

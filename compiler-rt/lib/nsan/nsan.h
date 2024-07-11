@@ -55,6 +55,7 @@ extern bool nsan_initialized;
 extern bool nsan_init_is_running;
 
 void InitializeInterceptors();
+void InitializeMallocInterceptors();
 
 // See notes in nsan_platform.
 // printf-free (see comment in nsan_interceptors.cc).
