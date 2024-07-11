@@ -286,7 +286,6 @@ void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
     return;
 
   llvm::hlsl::ResourceClass RC = HLSLResClassAttr->getResourceClass();
-  ;
   llvm::hlsl::ResourceKind RK = HLSLResAttr->getResourceKind();
   bool IsROV = HLSLResAttr->getIsROV();
   llvm::hlsl::ElementType ET = calculateElementType(CGM.getContext(), Ty);
