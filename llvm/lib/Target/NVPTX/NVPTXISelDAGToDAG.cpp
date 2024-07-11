@@ -730,31 +730,63 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
 
   // Lowering for non-SequentiallyConsistent Operations
   //
-  // | Atomic  | Volatile | Statespace                    | Lowering sm_60- | Lowering sm_70+                                      |
-  // |---------|----------|-------------------------------|-----------------|------------------------------------------------------|
-  // | No      | No       | All                           | plain           | .weak                                                |
-  // | No      | Yes      | Generic / Shared / Global [0] | .volatile       | .volatile                                            |
-  // | No      | Yes      | Local / Const / Param         | plain [1]       | .weak [1]                                            |
-  // | Relaxed | No       | Generic / Shared / Global [0] | .volatile       | <atomic sem>                                         |
-  // | Other   | No       | Generic / Shared / Global [0] | Error [2]       | <atomic sem>                                         |
-  // | Yes     | No       | Local / Const / Param         | plain [1]       | .weak [1]                                            |
-  // | Relaxed | Yes      | Generic / Shared [0]          | .volatile       | .volatile                                            |
-  // | Relaxed | Yes      | Global [0]                    | .volatile       | .mmio.relaxed.sys (PTX 8.2+) or .volatile (PTX 8.1-) |
-  // | Relaxed | Yes      | Local / Const / Param         | plain [1]       | .weak [1]                                            |
-  // | Other   | Yes      | Generic / Shared / Global [0] | Error [2]       | <atomic sem> [3]                                     |
+  // | Atomic  | Volatile | Statespace         | PTX sm_60- | PTX sm_70+                   |
+  // |---------|----------|--------------------|------------|------------------------------|
+  // | No      | No       | All                | plain      | .weak                        |
+  // | No      | Yes      | Generic,Shared,    | .volatile  | .volatile                    |
+  // |         |          | Global [0]         |            |                              |
+  // | No      | Yes      | Local,Const,Param  | plain [1]  | .weak [1]                    |
+  // | Relaxed | No       | Generic,Shared,    |            |                              |
+  // |         |          | Global [0]         | .volatile  | <atomic sem>                 |
+  // | Other   | No       | Generic,Shared,    | Error [2]  | <atomic sem>                 |
+  // |         |          | Global [0]         |            |                              |
+  // | Yes     | No       | Local,Const,Param  | plain [1]  | .weak [1]                    |
+  // | Relaxed | Yes      | Generic,Shared [0] | .volatile  | .volatile                    |
+  // | Relaxed | Yes      | Global [0]         | .volatile  | .mmio.relaxed.sys (PTX 8.2+) |
+  // |         |          |                    |            |  or .volatile (PTX 8.1-)     |
+  // | Relaxed | Yes      | Local,Const,Param  | plain [1]  | .weak [1]                    |
+  // | Other   | Yes      | Generic, Shared,   | Error [2]  | <atomic sem> [3]             |
+  // |         |          | / Global [0]       |            |                              |
 
   // clang-format on
 
-  // [0]: volatile and atomics are only supported on generic addressing to
-  //      shared or global, or shared, or global.
-  //      MMIO requires generic addressing to global or global, but
-  // (TODO) we only implement it for global.
+  // [0]: volatile and atomics are only supported on global or shared
+  //      memory locations, accessed via generic/shared/global pointers.
+  //      MMIO is only supported on global memory locations,
+  //      accessed via generic/global pointers.
+  // TODO: Implement MMIO access via generic pointer to global.
+  //       Currently implemented for global pointers only.
 
-  // [1]: TODO: this implementation exhibits PTX Undefined Behavior; it
-  //      fails to preserve the side-effects of atomics and volatile
-  //      accesses in LLVM IR to local / const / param, causing
-  //      well-formed LLVM-IR & CUDA C++ programs to be miscompiled
-  //      in sm_70+.
+  // [1]: Lowering volatile/atomic operations to non-volatile/non-atomic
+  //      PTX instructions fails to preserve their C++ side-effects.
+  //
+  //      Example (https://github.com/llvm/llvm-project/issues/62057):
+  //
+  //          void example() {
+  //              std::atomic<bool> True = true;
+  //              while (True.load(std::memory_order_relaxed));
+  //          }
+  //
+  //      A C++ program that calls "example" is well-defined: the infinite loop
+  //      performs an atomic operation. By lowering volatile/atomics to
+  //      "weak" memory operations, we are transforming the above into:
+  //
+  //          void undefined_behavior() {
+  //              bool True = true;
+  //              while (True);
+  //          }
+  //
+  //      which exhibits undefined behavior in both C++ and PTX.
+  //
+  //      Calling "example" in CUDA C++ compiled for sm_60- exhibits undefined
+  //      behavior due to lack of Independent Forward Progress. Lowering these
+  //      to weak memory operations in sm_60- is therefore fine.
+  //
+  //      TODO: lower atomic and volatile operatios to memory locations
+  //      in local, const, and param to two PTX operations in sm_70+:
+  //        - the "weak" memory operation we are currently lowering to, and
+  //        - some other memory operation that preserves the side-effect, e.g.,
+  //          a dummy volatile load.
 
   if (CodeAddrSpace == NVPTX::PTXLdStInstCode::LOCAL ||
       CodeAddrSpace == NVPTX::PTXLdStInstCode::CONSTANT ||
@@ -835,7 +867,6 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
   }
   case AtomicOrdering::SequentiallyConsistent:
   case AtomicOrdering::Unordered:
-  default: {
     // TODO: support AcquireRelease and SequentiallyConsistent
     SmallString<256> Msg;
     raw_svector_ostream OS(Msg);
@@ -843,9 +874,8 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
        << toIRString(Ordering) << "\" yet.";
     report_fatal_error(OS.str());
   }
-  }
 
-  report_fatal_error("unreachable");
+  llvm_unreachable("unexpected unhandled case");
 }
 
 static bool canLowerToLDG(MemSDNode *N, const NVPTXSubtarget &Subtarget,
