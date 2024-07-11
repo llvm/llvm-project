@@ -113,15 +113,69 @@ func.func @contiguous_inner_most_outer_dim_dyn_scalable_inner_dim(%a: index, %b:
 
 // -----
 
-// The index to be dropped is != 0 - this is currently not supported.
-func.func @negative_contiguous_inner_most_dim_non_zero_idxs(%A: memref<16x1xf32>, %i:index) -> (vector<8x1xf32>) {
-  %f0 = arith.constant 0.0 : f32
-  %1 = vector.transfer_read %A[%i, %i], %f0 : memref<16x1xf32>, vector<8x1xf32>
+// Test the impact of changing the in_bounds attribute. The behaviour will
+// depend on whether the index is == 0 or != 0.
+
+// The index to be dropped is == 0, so it's safe to collapse. The other index
+// should be preserved correctly.
+func.func @contiguous_inner_most_zero_idx_in_bounds(%A: memref<16x1xf32>, %i:index) -> (vector<8x1xf32>) {
+  %pad = arith.constant 0.0 : f32
+  %c0 = arith.constant 0 : index
+  %1 = vector.transfer_read %A[%i, %c0], %pad {in_bounds = [true, true]} : memref<16x1xf32>, vector<8x1xf32>
   return %1 : vector<8x1xf32>
 }
-// CHECK-LABEL: func @negative_contiguous_inner_most_dim_non_zero_idxs
+// CHECK-LABEL:   func.func @contiguous_inner_most_zero_idx_in_bounds(
+// CHECK-SAME:      %[[MEM:.*]]: memref<16x1xf32>,
+// CHECK-SAME:      %[[IDX:.*]]: index) -> vector<8x1xf32> {
+// CHECK:           %[[PAD:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[SV:.*]] = memref.subview %[[MEM]][0, 0] [16, 1] [1, 1] : memref<16x1xf32> to memref<16xf32, strided<[1]>>
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[SV]]{{\[}}%[[IDX]]], %[[PAD]] {in_bounds = [true]} : memref<16xf32, strided<[1]>>, vector<8xf32>
+// CHECK:           vector.shape_cast %[[READ]] : vector<8xf32> to vector<8x1xf32>
+
+// The index to be dropped is == 0, so it's safe to collapse. The "out of
+// bounds" attribute is too conservative and will be folded to "in bounds"
+// before the pattern runs. The other index should be preserved correctly.
+func.func @contiguous_inner_most_zero_idx_out_of_bounds(%A: memref<16x1xf32>, %i:index) -> (vector<8x1xf32>) {
+  %pad = arith.constant 0.0 : f32
+  %c0 = arith.constant 0 : index
+  %1 = vector.transfer_read %A[%i, %c0], %pad {in_bounds = [true, false]} : memref<16x1xf32>, vector<8x1xf32>
+  return %1 : vector<8x1xf32>
+}
+// CHECK-LABEL:   func.func @contiguous_inner_most_zero_idx_out_of_bounds(
+// CHECK-SAME:      %[[MEM:.*]]: memref<16x1xf32>,
+// CHECK-SAME:      %[[IDX:.*]]: index) -> vector<8x1xf32> {
+// CHECK:           %[[PAD:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[SV:.*]] = memref.subview %[[MEM]][0, 0] [16, 1] [1, 1] : memref<16x1xf32> to memref<16xf32, strided<[1]>>
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[SV]]{{\[}}%[[IDX]]], %[[PAD]] {in_bounds = [true]} : memref<16xf32, strided<[1]>>, vector<8xf32>
+// CHECK:           vector.shape_cast %[[READ]] : vector<8xf32> to vector<8x1xf32>
+
+// The index to be dropped is unknown, but since it's "in bounds", it has to be
+// == 0. It's safe to collapse the corresponding dim.
+func.func @contiguous_inner_most_non_zero_idx_in_bounds(%A: memref<16x1xf32>, %i:index) -> (vector<8x1xf32>) {
+  %pad = arith.constant 0.0 : f32
+  %1 = vector.transfer_read %A[%i, %i], %pad {in_bounds = [true, true]} : memref<16x1xf32>, vector<8x1xf32>
+  return %1 : vector<8x1xf32>
+}
+// CHECK-LABEL:   func.func @contiguous_inner_most_non_zero_idx_in_bounds(
+// CHECK-SAME:      %[[MEM:.*]]: memref<16x1xf32>,
+// CHECK-SAME:      %[[IDX:.*]]: index) -> vector<8x1xf32> {
+// CHECK:           %[[PAD:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[SV:.*]] = memref.subview %[[MEM]][0, 0] [16, 1] [1, 1] : memref<16x1xf32> to memref<16xf32, strided<[1]>>
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[SV]]{{\[}}%[[IDX]]], %[[PAD]] {in_bounds = [true]} : memref<16xf32, strided<[1]>>, vector<8xf32>
+// CHECK:           vector.shape_cast %[[READ]] : vector<8xf32> to vector<8x1xf32>
+
+// The index to be dropped is unknown and "out of bounds" - not safe to
+// collapse.
+func.func @negative_contiguous_inner_most_non_zero_idx_out_of_bounds(%A: memref<16x1xf32>, %i:index) -> (vector<8x1xf32>) {
+  %pad = arith.constant 0.0 : f32
+  %1 = vector.transfer_read %A[%i, %i], %pad {in_bounds = [true, false]} : memref<16x1xf32>, vector<8x1xf32>
+  return %1 : vector<8x1xf32>
+}
+// CHECK-LABEL:   func.func @negative_contiguous_inner_most_non_zero_idx_out_of_bounds(
 // CHECK-NOT:     memref.subview
+// CHECK-NOT:     memref.shape_cast
 // CHECK:         vector.transfer_read
+
 
 // -----
 
@@ -354,6 +408,9 @@ func.func @contiguous_inner_most_zero_idx_in_bounds(%arg0: memref<16x1xf32>, %ar
 // CHECK:           %[[SC:.*]] = vector.shape_cast %[[VEC]] : vector<8x1xf32> to vector<8xf32>
 // CHECK:           vector.transfer_write %[[SC]], %[[SV]]{{\[}}%[[IDX]]] {in_bounds = [true]} : vector<8xf32>, memref<16xf32, strided<[1]>>
 
+// The index to be dropped is == 0, so it's safe to collapse. The "out of
+// bounds" attribute is too conservative and will be folded to "in bounds"
+// before the pattern runs. The other index should be preserved correctly.
 func.func @contiguous_inner_most_zero_idx_out_of_bounds(%arg0: memref<16x1xf32>, %arg1: vector<8x1xf32>, %i: index) {
   %c0 = arith.constant 0 : index
   vector.transfer_write %arg1, %arg0[%i, %c0] {in_bounds = [true, false]} : vector<8x1xf32>, memref<16x1xf32>
@@ -369,7 +426,6 @@ func.func @contiguous_inner_most_zero_idx_out_of_bounds(%arg0: memref<16x1xf32>,
 
 // The index to be dropped is unknown, but since it's "in bounds", it has to be
 // == 0. It's safe to collapse the corresponding dim.
-
 func.func @contiguous_inner_most_dim_non_zero_idx_in_bounds(%arg0: memref<16x1xf32>, %arg1: vector<8x1xf32>, %i: index) {
   vector.transfer_write %arg1, %arg0[%i, %i] {in_bounds = [true, true]} : vector<8x1xf32>, memref<16x1xf32>
   return
@@ -382,6 +438,8 @@ func.func @contiguous_inner_most_dim_non_zero_idx_in_bounds(%arg0: memref<16x1xf
 // CHECK:           %[[SC:.*]] = vector.shape_cast %[[VEC]] : vector<8x1xf32> to vector<8xf32>
 // CHECK:           vector.transfer_write %[[SC]], %[[SV]]{{\[}}%[[IDX]]] {in_bounds = [true]} : vector<8xf32>, memref<16xf32, strided<[1]>>
 
+// The index to be dropped is unknown and "out of bounds" - not safe to
+// collapse.
 func.func @negative_contiguous_inner_most_dim_non_zero_idx_out_of_bounds(%arg0: memref<16x1xf32>, %arg1: vector<8x1xf32>, %i: index) {
   vector.transfer_write %arg1, %arg0[%i, %i] {in_bounds = [true, false]} : vector<8x1xf32>, memref<16x1xf32>
   return
