@@ -21,7 +21,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -955,42 +954,6 @@ void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
       O << ": " << Variant->getName();
     O << ")";
   }
-}
-#endif
-
-void VPHistogramRecipe::execute(VPTransformState &State) {
-  assert(State.UF == 1 && "Tried interleaving histogram operation");
-  State.setDebugLocFrom(getDebugLoc());
-  IRBuilderBase &Builder = State.Builder;
-  Value *Address = State.get(getOperand(0), 0);
-  Value *IncVec = State.get(getOperand(1), 0);
-  Value *Mask = State.get(getOperand(2), 0);
-
-  // Not sure how to make IncAmt stay scalar yet. For now just extract the
-  // first element and tidy up later.
-  // FIXME: Do we actually want this to be scalar? We just splat it in the
-  //        backend anyway...
-  Value *IncAmt = Builder.CreateExtractElement(IncVec, Builder.getInt64(0));
-
-  // If this is a subtract, we want to invert the increment amount. We may
-  // add a separate intrinsic in future, but for now we'll try this.
-  if (Opcode == Instruction::Sub)
-    IncAmt = Builder.CreateNeg(IncAmt);
-
-  State.Builder.CreateIntrinsic(Intrinsic::experimental_vector_histogram_add,
-                                {Address->getType(), IncAmt->getType()},
-                                {Address, IncAmt, Mask});
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPHistogramRecipe::print(raw_ostream &O, const Twine &Indent,
-                              VPSlotTracker &SlotTracker) const {
-  O << Indent << "WIDEN-HISTOGRAM buckets: ";
-  getOperand(0)->printAsOperand(O, SlotTracker);
-  O << ", inc: ";
-  getOperand(1)->printAsOperand(O, SlotTracker);
-  O << ", mask: ";
-  getOperand(2)->printAsOperand(O, SlotTracker);
 }
 
 void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,

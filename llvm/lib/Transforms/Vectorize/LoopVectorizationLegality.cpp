@@ -78,10 +78,6 @@ static cl::opt<LoopVectorizeHints::ScalableForceKind>
                 "Scalable vectorization is available and favored when the "
                 "cost is inconclusive.")));
 
-static cl::opt<bool> EnableHistogramVectorization(
-    "enable-histogram-loop-vectorization", cl::init(false), cl::Hidden,
-    cl::desc("Enables autovectorization of some loops containing histograms"));
-
 /// Maximum vectorization interleave count.
 static const unsigned MaxInterleaveFactor = 16;
 
@@ -1069,9 +1065,7 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   }
 
   if (!LAI->canVectorizeMemory())
-    if (!EnableHistogramVectorization ||
-        !LAI->canVectorizeMemoryWithHistogram())
-      return false;
+    return false;
 
   if (LAI->hasLoadStoreDependenceInvolvingLoopInvariantAddress()) {
     reportVectorizationFailure("We don't allow storing to uniform addresses",
