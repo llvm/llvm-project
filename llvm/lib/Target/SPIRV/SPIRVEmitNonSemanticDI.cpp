@@ -114,7 +114,10 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     SPIRVGlobalRegistry *GR = TM->getSubtargetImpl()->getSPIRVGlobalRegistry();
     MachineRegisterInfo &MRI = MF.getRegInfo();
     MachineBasicBlock &MBB = *MF.begin();
-    MachineIRBuilder MIRBuilder(MBB, MBB.begin());
+
+    // To correct placement of a OpLabel instruction during SPIRVAsmPrinter
+    // emission all new instructions needs to be placed after OpFunction
+    MachineIRBuilder MIRBuilder(MBB, MBB.end());
 
     // Emit OpString with FilePath which is required by DebugSource
     const Register StrReg = MRI.createVirtualRegister(&SPIRV::IDRegClass);

@@ -910,6 +910,14 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::Float16Buffer);
     break;
   }
+  case SPIRV::OpExtInst: {
+    if (MI.getOperand(2).getImm() ==
+        static_cast<int64_t>(
+            SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
+    }
+    break;
+  }
   case SPIRV::OpBitReverse:
   case SPIRV::OpBitFieldInsert:
   case SPIRV::OpBitFieldSExtract:
