@@ -215,6 +215,8 @@ TEST(DXCFile, ParseDXILPart) {
   EXPECT_EQ(Header.getMinorVersion(), 5u);
   EXPECT_EQ(Header.ShaderKind, 5u);
   EXPECT_EQ(Header.Size, 8u);
+  EXPECT_EQ(Header.Bitcode.MajorVersion, 1u);
+  EXPECT_EQ(Header.Bitcode.MinorVersion, 5u);
 }
 
 static Expected<DXContainer>
@@ -283,8 +285,8 @@ Parts:
       MinorVersion:    0
       ShaderKind:      14
       Size:            6
-      DXILMajorVersion: 0
-      DXILMinorVersion: 1
+      DXILMajorVersion: 1
+      DXILMinorVersion: 0
       DXILSize:        0
 ...
 )";
@@ -404,8 +406,8 @@ Parts:
 //       MinorVersion:    0
 //       ShaderKind:      14
 //       Size:            6
-//       DXILMajorVersion: 0
-//       DXILMinorVersion: 1
+//       DXILMajorVersion: 1
+//       DXILMinorVersion: 0
 //       DXILSize:        0
 //   - Name:            PSV0
 //     Size:            36
@@ -520,7 +522,7 @@ TEST(DXCFile, MaliciousFiles) {
 //
 // --- !dxcontainer
 // Header:
-//   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+//   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
 //                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
 //   Version:
 //     Major:           1
@@ -534,8 +536,8 @@ TEST(DXCFile, MaliciousFiles) {
 //       MinorVersion:    0
 //       ShaderKind:      14
 //       Size:            6
-//       DXILMajorVersion: 0
-//       DXILMinorVersion: 1
+//       DXILMajorVersion: 1
+//       DXILMinorVersion: 0
 //       DXILSize:        0
 //   - Name:            PSV0
 //     Size:            100

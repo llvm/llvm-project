@@ -281,7 +281,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeRight(
 
     const FormatToken *LastSimpleTypeSpecifier = TypeToken;
     while (isQualifierOrType(LastSimpleTypeSpecifier->getNextNonComment(),
-                             &LangOpts)) {
+                             LangOpts)) {
       LastSimpleTypeSpecifier = LastSimpleTypeSpecifier->getNextNonComment();
     }
 
@@ -414,7 +414,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
     const FormatToken *LastSimpleTypeSpecifier = TypeToken;
     while (isConfiguredQualifierOrType(
         LastSimpleTypeSpecifier->getPreviousNonComment(),
-        ConfiguredQualifierTokens, &LangOpts)) {
+        ConfiguredQualifierTokens, LangOpts)) {
       LastSimpleTypeSpecifier =
           LastSimpleTypeSpecifier->getPreviousNonComment();
     }
@@ -612,24 +612,21 @@ void prepareLeftRightOrderingForQualifierAlignmentFixer(
   }
 }
 
-bool LeftRightQualifierAlignmentFixer::isQualifierOrType(
-    const FormatToken *Tok, const LangOptions *LangOpts) {
-  return Tok &&
-         (Tok->isTypeName(LangOpts ? *LangOpts : getFormattingLangOpts()) ||
-          Tok->is(tok::kw_auto) || isQualifier(Tok));
+bool isQualifierOrType(const FormatToken *Tok, const LangOptions &LangOpts) {
+  return Tok && (Tok->isTypeName(LangOpts) || Tok->is(tok::kw_auto) ||
+                 isQualifier(Tok));
 }
 
-bool LeftRightQualifierAlignmentFixer::isConfiguredQualifierOrType(
-    const FormatToken *Tok, const std::vector<tok::TokenKind> &Qualifiers,
-    const LangOptions *LangOpts) {
-  return Tok &&
-         (Tok->isTypeName(LangOpts ? *LangOpts : getFormattingLangOpts()) ||
-          Tok->is(tok::kw_auto) || isConfiguredQualifier(Tok, Qualifiers));
+bool isConfiguredQualifierOrType(const FormatToken *Tok,
+                                 const std::vector<tok::TokenKind> &Qualifiers,
+                                 const LangOptions &LangOpts) {
+  return Tok && (Tok->isTypeName(LangOpts) || Tok->is(tok::kw_auto) ||
+                 isConfiguredQualifier(Tok, Qualifiers));
 }
 
 // If a token is an identifier and it's upper case, it could
 // be a macro and hence we need to be able to ignore it.
-bool LeftRightQualifierAlignmentFixer::isPossibleMacro(const FormatToken *Tok) {
+bool isPossibleMacro(const FormatToken *Tok) {
   if (!Tok)
     return false;
   if (Tok->isNot(tok::identifier))

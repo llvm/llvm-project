@@ -14,6 +14,13 @@ namespace std {
   };
 }
 
+namespace cwg930 { // cwg930: 2.7
+#if __cplusplus >= 201103L
+static_assert(alignof(int[]) == alignof(int), "");
+static_assert(alignof(int[][2]) == alignof(int[2]), "");
+#endif
+} // namespace cwg930
+
 namespace cwg948 { // cwg948: 3.7
 #if __cplusplus >= 201103L
   class A {

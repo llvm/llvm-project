@@ -1,6 +1,3 @@
-// REQUIRES: nvptx-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
 // RUN:     -fopenmp-targets=nvptx64-nvidia-cuda,amdgcn-amd-amdhsa -Xopenmp-target=nvptx64-nvidia-cuda --offload-arch=sm_70 \
 // RUN:     -fopenmp-targets=nvptx64-nvidia-cuda,amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa --offload-arch=gfx908  \

@@ -113,9 +113,9 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineDominatorTree>();
-    AU.addRequired<MachinePostDominatorTree>();
-    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachinePostDominatorTreeWrapperPass>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -138,11 +138,11 @@ public:
     OrderedBlks.clear();
     Visited.clear();
     FuncRep = &MF;
-    MLI = &getAnalysis<MachineLoopInfo>();
+    MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
     LLVM_DEBUG(dbgs() << "LoopInfo:\n"; PrintLoopinfo(*MLI););
-    MDT = &getAnalysis<MachineDominatorTree>();
-    LLVM_DEBUG(MDT->print(dbgs(), (const Module *)nullptr););
-    PDT = &getAnalysis<MachinePostDominatorTree>();
+    MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+    LLVM_DEBUG(MDT->print(dbgs()););
+    PDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
     LLVM_DEBUG(PDT->print(dbgs()););
     prepare();
     run();
@@ -1629,9 +1629,9 @@ void R600MachineCFGStructurizer::retireBlock(MachineBasicBlock *MBB) {
 
 INITIALIZE_PASS_BEGIN(R600MachineCFGStructurizer, "amdgpustructurizer",
                       "AMDGPU CFG Structurizer", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(R600MachineCFGStructurizer, "amdgpustructurizer",
                       "AMDGPU CFG Structurizer", false, false)
 

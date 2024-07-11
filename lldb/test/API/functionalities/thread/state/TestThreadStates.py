@@ -102,10 +102,6 @@ class ThreadStateTestCase(TestBase):
 
     def wait_for_running_event(self, process):
         listener = self.dbg.GetListener()
-        if lldb.remote_platform:
-            lldbutil.expect_state_changes(
-                self, listener, process, [lldb.eStateConnected]
-            )
         lldbutil.expect_state_changes(self, listener, process, [lldb.eStateRunning])
 
     def thread_state_after_continue_test(self):

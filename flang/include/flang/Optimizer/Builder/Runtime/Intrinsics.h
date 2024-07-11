@@ -44,6 +44,8 @@ void genDateAndTime(fir::FirOpBuilder &, mlir::Location,
                     std::optional<fir::CharBoxValue> date,
                     std::optional<fir::CharBoxValue> time,
                     std::optional<fir::CharBoxValue> zone, mlir::Value values);
+void genEtime(fir::FirOpBuilder &builder, mlir::Location loc,
+              mlir::Value values, mlir::Value time);
 
 void genRandomInit(fir::FirOpBuilder &, mlir::Location, mlir::Value repeatable,
                    mlir::Value imageDistinct);

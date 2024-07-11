@@ -479,14 +479,6 @@ static void addTocDataOptions(const llvm::opt::ArgList &Args,
       return false;
   }();
 
-  // Currently only supported for small code model.
-  if (TOCDataGloballyinEffect &&
-      (Args.getLastArgValue(options::OPT_mcmodel_EQ) == "large" ||
-       Args.getLastArgValue(options::OPT_mcmodel_EQ) == "medium")) {
-    D.Diag(clang::diag::warn_drv_unsupported_tocdata);
-    return;
-  }
-
   enum TOCDataSetting {
     AddressInTOC = 0, // Address of the symbol stored in the TOC.
     DataInTOC = 1     // Symbol defined in the TOC.
@@ -559,6 +551,12 @@ void AIX::addClangTargetOptions(
   if (Args.hasFlag(options::OPT_fxl_pragma_pack,
                    options::OPT_fno_xl_pragma_pack, true))
     CC1Args.push_back("-fxl-pragma-pack");
+
+  // Pass "-fno-sized-deallocation" only when the user hasn't manually enabled
+  // or disabled sized deallocations.
+  if (!Args.getLastArgNoClaim(options::OPT_fsized_deallocation,
+                              options::OPT_fno_sized_deallocation))
+    CC1Args.push_back("-fno-sized-deallocation");
 }
 
 void AIX::addProfileRTLibs(const llvm::opt::ArgList &Args,

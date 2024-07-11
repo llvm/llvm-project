@@ -40,6 +40,16 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  errno_macros
+  HDRS
+    errno_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.errno
+    libc.include.llvm-libc-macros.error_number_macros
+    libc.include.llvm-libc-macros.generic_error_number_macros
+)
+
+add_proxy_header_library(
   fcntl_macros
   HDRS
     fcntl_macros.h
@@ -76,12 +86,49 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  sys_stat_macros
+  HDRS
+    sys_stat_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.sys_stat
+    libc.include.llvm-libc-macros.sys_stat_macros
+)
+
+add_proxy_header_library(
+  unistd_macros
+  HDRS
+    unistd_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.unistd
+    libc.include.llvm-libc-macros.unistd_macros
+)
+
+add_proxy_header_library(
   time_macros
   HDRS
     time_macros.h
   FULL_BUILD_DEPENDS
     libc.include.time
     libc.include.llvm-libc-macros.time_macros
+)
+
+add_proxy_header_library(
+  float_macros
+  HDRS
+    float_macros.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float_macros
+  FULL_BUILD_DEPENDS
+    libc.include.float
+)
+
+add_proxy_header_library(
+  limits_macros
+  HDRS
+    limits_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.limits
+    libc.include.llvm-libc-macros.limits_macros
 )
 
 add_subdirectory(types)

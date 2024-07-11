@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx17
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx17
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx17
-// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx17
+// RUN: %clang_cc1 -std=c++98 -pedantic-errors %s -verify=expected
+// RUN: %clang_cc1 -std=c++11 -pedantic-errors %s -verify=expected
+// RUN: %clang_cc1 -std=c++14 -pedantic-errors %s -verify=expected
+// RUN: %clang_cc1 -std=c++17 -pedantic-errors %s -verify=expected,since-cxx17
+// RUN: %clang_cc1 -std=c++20 -pedantic-errors %s -verify=expected,since-cxx17
+// RUN: %clang_cc1 -std=c++23 -pedantic-errors %s -verify=expected,since-cxx17
+// RUN: %clang_cc1 -std=c++2c -pedantic-errors %s -verify=expected,since-cxx17
 
 #if __cplusplus <= 201402L
 // expected-no-diagnostics
@@ -44,6 +44,54 @@ void fallthrough(int n) {
 }
 #endif
 }
+
+namespace cwg2428 { // cwg2428: 19
+#if __cplusplus >= 202002L
+template <typename>
+concept C [[deprecated]] = true; // #cwg2428-C
+
+template <typename>
+[[deprecated]] concept C2 = true;
+// expected-error@-1 {{expected unqualified-id}}
+
+template <typename T>
+concept C3 = C<T>;
+// expected-warning@-1 {{'C' is deprecated}}
+//   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
+
+template <typename T, C U>
+// expected-warning@-1 {{'C' is deprecated}}
+//   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
+requires C<T>
+// expected-warning@-1 {{'C' is deprecated}}
+//   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
+void f() {
+  bool b = C<int>;
+  // expected-warning@-1 {{'C' is deprecated}}
+  //   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
+};
+
+void g(C auto a) {};
+// expected-warning@-1 {{'C' is deprecated}}
+//   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
+
+template <typename T>
+auto h() -> C auto {
+// expected-warning@-1 {{'C' is deprecated}}
+//   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
+  C auto foo = T();
+  // expected-warning@-1 {{'C' is deprecated}}
+  //   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
+  return foo;
+}
+#endif
+} // namespace cwg2428
+
+namespace cwg2430 { // cwg2430: 2.7
+struct S {
+  S f(S s) { return s; }
+};
+} // namespace cwg2430
 
 namespace cwg2450 { // cwg2450: 18
 #if __cplusplus >= 202302L

@@ -577,7 +577,7 @@ Version 12.0
   Symbol added: ___cxa_free_dependent_exception
 
 ------------
-Version 10.0
+Version 11.0
 ------------
 
 * 54fa9ecd3088 - [libc++] Implementation of C++20's P1135R6 for libcxx

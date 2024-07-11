@@ -71,3 +71,12 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.callonce)
       .${LIBC_TARGET_OS}.callonce
   )
 endif()
+
+if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.CndVar)
+  add_object_library(
+    CndVar
+    ALIAS
+    DEPENDS
+    .${LIBC_TARGET_OS}.CndVar
+  )
+endif()
