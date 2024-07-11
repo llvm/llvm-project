@@ -339,20 +339,27 @@ void X86InstrMappingEmitter::emitND2NonNDTable(
 
 void X86InstrMappingEmitter::emitSSE2AVXTable(
     ArrayRef<const CodeGenInstruction *> Insts, raw_ostream &OS) {
+
+  const std::map<StringRef, StringRef> ManualMap = {
+#define ENTRY_SSE2AVX(OLD, NEW) {#OLD, #NEW},
+#include "X86ManualInstrMapping.def"
+  };
+
   std::vector<Entry> Table;
   for (const CodeGenInstruction *Inst : Insts) {
     const Record *Rec = Inst->TheDef;
     StringRef Name = Rec->getName();
     if (!isInteresting(Rec))
       continue;
-    auto *NewRec = Records.getDef(Name);
-    if (!NewRec)
+    if (ManualMap.find(Name) != ManualMap.end()) {
+      auto *NewRec = Records.getDef(ManualMap.at(Rec->getName()));
+      assert(NewRec && "Instruction not found!");
+      auto &NewInst = Target.getInstruction(NewRec);
+      Table.push_back(std::pair(Inst, &NewInst));
       continue;
+    }
 
     std::string NewName = ("V" + Name).str();
-    // Handle instructions BLENDVPD, BLENDVPS ,PBLENDVB
-    if (Name.ends_with("rm0") || Name.ends_with("rr0"))
-      NewName.back() = 'r';
     auto *AVXRec = Records.getDef(NewName);
     if (!AVXRec)
       continue;
