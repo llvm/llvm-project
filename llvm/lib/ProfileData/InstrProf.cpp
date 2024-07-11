@@ -1000,16 +1000,20 @@ uint64_t InstrProfRecord::remapValue(uint64_t Value, uint32_t ValueKind,
 void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
                                    ArrayRef<InstrProfValueData> VData,
                                    InstrProfSymtab *ValueMap) {
+  // Remap values.
+  std::vector<InstrProfValueData> RemappedVD;
+  RemappedVD.reserve(VData.size());
+  for (const auto &V : VData) {
+    uint64_t NewValue = remapValue(V.Value, ValueKind, ValueMap);
+    RemappedVD.push_back({NewValue, V.Count});
+  }
+
   std::vector<InstrProfValueSiteRecord> &ValueSites =
       getOrCreateValueSitesForKind(ValueKind);
   assert(ValueSites.size() == Site);
-  if (VData.empty())
-    ValueSites.emplace_back();
-  else {
-    ValueSites.emplace_back(VData.begin(), VData.end());
-    for (auto &V : ValueSites.back().ValueData)
-      V.Value = remapValue(V.Value, ValueKind, ValueMap);
-  }
+
+  // Add a new value site with remapped value profiling data.
+  ValueSites.emplace_back(std::move(RemappedVD));
 }
 
 void TemporalProfTraceTy::createBPFunctionNodes(
