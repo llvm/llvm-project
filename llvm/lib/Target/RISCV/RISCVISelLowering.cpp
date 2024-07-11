@@ -5332,7 +5332,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   SmallVector<int> ShuffleMaskLHS, ShuffleMaskRHS;
 
   // Now construct the mask that will be used by the blended vrgather operation.
-  // Cconstruct the appropriate indices into each vector.
+  // Construct the appropriate indices into each vector.
   for (int MaskIndex : Mask) {
     bool IsLHSOrUndefIndex = MaskIndex < (int)NumElts;
     ShuffleMaskLHS.push_back(IsLHSOrUndefIndex && MaskIndex >= 0
@@ -5351,8 +5351,6 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   V1 = DAG.getVectorShuffle(VT, DL, V1, DAG.getUNDEF(VT), ShuffleMaskLHS);
   V2 = DAG.getVectorShuffle(VT, DL, V2, DAG.getUNDEF(VT), ShuffleMaskRHS);
 
-  // Now construct the mask that will be used by the blended vrgather operation.
-  // Cconstruct the appropriate indices into each vector.
   SmallVector<SDValue> MaskVals;
   for (int MaskIndex : Mask) {
     bool SelectMaskVal = (MaskIndex < (int)NumElts) ^ !SwapOps;
