@@ -1392,6 +1392,10 @@ public:
   /// Returns true if this VPInstruction produces a scalar value from a vector,
   /// e.g. by performing a reduction or extracting a lane.
   bool isVectorToScalar() const;
+
+  /// Returns true if this VPInstruction's operands are single scalars and the
+  /// result is also a single scalar.
+  bool isSingleScalar() const;
 };
 
 /// VPWidenRecipe is a recipe for producing a copy of vector type its
@@ -3743,7 +3747,7 @@ inline bool isUniformAfterVectorization(VPValue *VPV) {
   if (auto *GEP = dyn_cast<VPWidenGEPRecipe>(Def))
     return all_of(GEP->operands(), isUniformAfterVectorization);
   if (auto *VPI = dyn_cast<VPInstruction>(Def))
-    return VPI->isVectorToScalar();
+    return VPI->isSingleScalar() || VPI->isVectorToScalar();
   return false;
 }
 

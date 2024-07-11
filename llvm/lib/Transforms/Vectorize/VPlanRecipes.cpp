@@ -196,8 +196,8 @@ void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
                   : VPLane::getLastLaneForVF(State.VF);
   VPBasicBlock *MiddleVPBB =
       cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
-  VPRecipeBase *DefRecipe = ExitValue->getDefiningRecipe();
-  auto *ExitingVPBB = DefRecipe ? DefRecipe->getParent() : nullptr;
+  VPRecipeBase *ExitingRecipe = ExitValue->getDefiningRecipe();
+  auto *ExitingVPBB = ExitingRecipe ? ExitingRecipe->getParent() : nullptr;
   // Values leaving the vector loop reach live out phi's in the exiting block
   // via middle block.
   auto *PredVPBB = !ExitingVPBB || ExitingVPBB->getEnclosingLoopRegion()
@@ -350,7 +350,7 @@ bool VPInstruction::doesGeneratePerAllLanes() const {
 bool VPInstruction::canGenerateScalarForFirstLane() const {
   if (Instruction::isBinaryOp(getOpcode()))
     return true;
-  if (isVectorToScalar())
+  if (isScalar() || isVectorToScalar())
     return true;
   switch (Opcode) {
   case Instruction::ICmp:
@@ -360,7 +360,6 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::PtrAdd:
   case VPInstruction::ExplicitVectorLength:
-  case VPInstruction::ResumePhi:
     return true;
   default:
     return false;
@@ -679,8 +678,11 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 
 bool VPInstruction::isVectorToScalar() const {
   return getOpcode() == VPInstruction::ExtractFromEnd ||
-         getOpcode() == VPInstruction::ResumePhi ||
          getOpcode() == VPInstruction::ComputeReductionResult;
+}
+
+bool VPInstruction::isSingleScalar() const {
+  return getOpcode() == VPInstruction::ResumePhi;
 }
 
 #if !defined(NDEBUG)
@@ -703,9 +705,9 @@ void VPInstruction::execute(VPTransformState &State) {
   if (hasFastMathFlags())
     State.Builder.setFastMathFlags(getFastMathFlags());
   State.setDebugLocFrom(getDebugLoc());
-  bool GeneratesPerFirstLaneOnly =
-      canGenerateScalarForFirstLane() &&
-      (vputils::onlyFirstLaneUsed(this) || isVectorToScalar());
+  bool GeneratesPerFirstLaneOnly = canGenerateScalarForFirstLane() &&
+                                   (vputils::onlyFirstLaneUsed(this) ||
+                                    isVectorToScalar() || isSingleScalar());
   bool GeneratesPerAllLanes = doesGeneratePerAllLanes();
   bool OnlyFirstPartUsed = vputils::onlyFirstPartUsed(this);
   for (unsigned Part = 0; Part < State.UF; ++Part) {
@@ -732,7 +734,7 @@ void VPInstruction::execute(VPTransformState &State) {
     assert(GeneratedValue && "generatePerPart must produce a value");
     assert((GeneratedValue->getType()->isVectorTy() ==
                 !GeneratesPerFirstLaneOnly ||
-            State.VF.isScalar()) &&
+            State.VF.isSingleScalar()) &&
            "scalar value but not only first lane defined");
     State.set(this, GeneratedValue, Part,
               /*IsScalar*/ GeneratesPerFirstLaneOnly);
