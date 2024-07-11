@@ -225,13 +225,12 @@ define void @_ZN5clang6format22BreakableStringLiteral11insertBreakEjjSt4pairImjE
 ; CHECK-NEXT:    li 11, 1
 ; CHECK-NEXT:    std 0, 160(1)
 ; CHECK-NEXT:    add 5, 6, 5
-; CHECK-NEXT:    lbz 30, 20(3)
 ; CHECK-NEXT:    clrldi 6, 7, 32
+; CHECK-NEXT:    ld 7, 64(3)
+; CHECK-NEXT:    lbz 30, 20(3)
 ; CHECK-NEXT:    iseleq 8, 11, 8
-; CHECK-NEXT:    ld 11, 64(3)
 ; CHECK-NEXT:    add 5, 5, 10
 ; CHECK-NEXT:    clrldi 5, 5, 32
-; CHECK-NEXT:    mr 7, 11
 ; CHECK-NEXT:    sub 0, 4, 8
 ; CHECK-NEXT:    ld 4, 8(3)
 ; CHECK-NEXT:    ld 8, 72(3)

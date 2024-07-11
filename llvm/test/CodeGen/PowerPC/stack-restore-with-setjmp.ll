@@ -18,10 +18,9 @@ define dso_local signext i32 @main(i32 signext %argc, ptr nocapture readnone %ar
 ; CHECK-NEXT:    stdu 1, -784(1)
 ; CHECK-NEXT:    # kill: def $r3 killed $r3 killed $x3
 ; CHECK-NEXT:    cmpwi 2, 3, 2
-; CHECK-NEXT:    li 4, 0
+; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    std 0, 800(1)
 ; CHECK-NEXT:    mr 31, 1
-; CHECK-NEXT:    mr 3, 4
 ; CHECK-NEXT:    blt 2, .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    addi 3, 31, 112

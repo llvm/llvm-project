@@ -19,11 +19,10 @@ declare void @llvm.memcpy.p0.p0.i32(ptr, ptr, i32, i1)
 define void @caller_extern(ptr %src) optsize {
 ; CHECK-LABEL: caller_extern:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lui a1, %hi(dest)
-; CHECK-NEXT:    addi a1, a1, %lo(dest)
-; CHECK-NEXT:    li a2, 7
 ; CHECK-NEXT:    mv a3, a0
-; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    lui a0, %hi(dest)
+; CHECK-NEXT:    addi a0, a0, %lo(dest)
+; CHECK-NEXT:    li a2, 7
 ; CHECK-NEXT:    mv a1, a3
 ; CHECK-NEXT:    tail memcpy
 entry:
@@ -36,11 +35,10 @@ entry:
 define void @caller_extern_pgso(ptr %src) !prof !14 {
 ; CHECK-LABEL: caller_extern_pgso:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lui a1, %hi(dest_pgso)
-; CHECK-NEXT:    addi a1, a1, %lo(dest_pgso)
-; CHECK-NEXT:    li a2, 7
 ; CHECK-NEXT:    mv a3, a0
-; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    lui a0, %hi(dest_pgso)
+; CHECK-NEXT:    addi a0, a0, %lo(dest_pgso)
+; CHECK-NEXT:    li a2, 7
 ; CHECK-NEXT:    mv a1, a3
 ; CHECK-NEXT:    tail memcpy
 entry:

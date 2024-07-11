@@ -3294,7 +3294,8 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; SSE-NEXT:    movapd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movq %rdi, %rax
-; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm14
+; SSE-NEXT:    movapd %xmm1, %xmm9
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm11
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm13
 ; SSE-NEXT:    movapd %xmm13, %xmm12
@@ -3303,7 +3304,6 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; SSE-NEXT:    mulpd %xmm12, %xmm10
 ; SSE-NEXT:    movapd %xmm2, %xmm8
 ; SSE-NEXT:    mulpd %xmm12, %xmm8
-; SSE-NEXT:    movapd %xmm1, %xmm9
 ; SSE-NEXT:    mulpd %xmm12, %xmm9
 ; SSE-NEXT:    mulpd %xmm0, %xmm12
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm13 = xmm13[1,1]
@@ -3321,7 +3321,6 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; SSE-NEXT:    addpd %xmm12, %xmm13
 ; SSE-NEXT:    movapd %xmm11, %xmm6
 ; SSE-NEXT:    unpcklpd {{.*#+}} xmm6 = xmm6[0],xmm11[0]
-; SSE-NEXT:    movapd %xmm14, %xmm1
 ; SSE-NEXT:    mulpd %xmm6, %xmm1
 ; SSE-NEXT:    addpd %xmm13, %xmm1
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm3

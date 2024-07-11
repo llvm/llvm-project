@@ -463,20 +463,20 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1032-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX1032-NEXT:    v_permlanex16_b32 v2, v2, -1, -1
 ; GFX1032-NEXT:    v_add_nc_u32_dpp v1, v2, v1 quad_perm:[0,1,2,3] row_mask:0xa bank_mask:0xf
-; GFX1032-NEXT:    v_readlane_b32 s11, v1, 31
 ; GFX1032-NEXT:    v_mov_b32_dpp v3, v1 row_shr:1 row_mask:0xf bank_mask:0xf
 ; GFX1032-NEXT:    v_readlane_b32 s10, v1, 15
+; GFX1032-NEXT:    v_writelane_b32 v3, s10, 16
+; GFX1032-NEXT:    v_readlane_b32 s10, v1, 31
 ; GFX1032-NEXT:    s_mov_b32 exec_lo, s9
 ; GFX1032-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
 ; GFX1032-NEXT:    s_or_saveexec_b32 s9, -1
-; GFX1032-NEXT:    v_writelane_b32 v3, s10, 16
 ; GFX1032-NEXT:    s_mov_b32 exec_lo, s9
 ; GFX1032-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX1032-NEXT:    ; implicit-def: $vgpr0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s9, vcc_lo
 ; GFX1032-NEXT:    s_cbranch_execz .LBB1_3
 ; GFX1032-NEXT:  ; %bb.2:
-; GFX1032-NEXT:    v_mov_b32_e32 v0, s11
+; GFX1032-NEXT:    v_mov_b32_e32 v0, s10
 ; GFX1032-NEXT:    buffer_atomic_add v0, off, s[4:7], 0 glc
 ; GFX1032-NEXT:  .LBB1_3:
 ; GFX1032-NEXT:    s_waitcnt_depctr 0xffe3
@@ -598,22 +598,22 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ; GFX1132-NEXT:    v_permlanex16_b32 v2, v2, -1, -1
 ; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    v_add_nc_u32_dpp v1, v2, v1 quad_perm:[0,1,2,3] row_mask:0xa bank_mask:0xf
-; GFX1132-NEXT:    v_readlane_b32 s11, v1, 31
 ; GFX1132-NEXT:    v_mov_b32_dpp v3, v1 row_shr:1 row_mask:0xf bank_mask:0xf
 ; GFX1132-NEXT:    v_readlane_b32 s10, v1, 15
+; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX1132-NEXT:    v_writelane_b32 v3, s10, 16
+; GFX1132-NEXT:    v_readlane_b32 s10, v1, 31
 ; GFX1132-NEXT:    s_mov_b32 exec_lo, s9
-; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1132-NEXT:    v_mbcnt_lo_u32_b32 v0, exec_lo, 0
 ; GFX1132-NEXT:    s_or_saveexec_b32 s9, -1
-; GFX1132-NEXT:    v_writelane_b32 v3, s10, 16
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1132-NEXT:    s_mov_b32 exec_lo, s9
-; GFX1132-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1132-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX1132-NEXT:    ; implicit-def: $vgpr0
 ; GFX1132-NEXT:    s_and_saveexec_b32 s9, vcc_lo
 ; GFX1132-NEXT:    s_cbranch_execz .LBB1_3
 ; GFX1132-NEXT:  ; %bb.2:
-; GFX1132-NEXT:    v_mov_b32_e32 v0, s11
+; GFX1132-NEXT:    v_mov_b32_e32 v0, s10
 ; GFX1132-NEXT:    buffer_atomic_add_u32 v0, off, s[4:7], 0 glc
 ; GFX1132-NEXT:  .LBB1_3:
 ; GFX1132-NEXT:    s_or_b32 exec_lo, exec_lo, s9

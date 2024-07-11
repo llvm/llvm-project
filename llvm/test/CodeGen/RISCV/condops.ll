@@ -388,9 +388,8 @@ define i64 @sub1(i1 zeroext %rc, i64 %rs1, i64 %rs2) {
 ; RV32I-NEXT:    sltu a5, a1, a3
 ; RV32I-NEXT:    and a0, a0, a4
 ; RV32I-NEXT:    sub a2, a2, a0
-; RV32I-NEXT:    sub a2, a2, a5
 ; RV32I-NEXT:    sub a0, a1, a3
-; RV32I-NEXT:    mv a1, a2
+; RV32I-NEXT:    sub a1, a2, a5
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sub1:
@@ -418,9 +417,8 @@ define i64 @sub1(i1 zeroext %rc, i64 %rs1, i64 %rs2) {
 ; RV32ZICOND-NEXT:    sltu a5, a1, a3
 ; RV32ZICOND-NEXT:    czero.eqz a0, a4, a0
 ; RV32ZICOND-NEXT:    sub a2, a2, a0
-; RV32ZICOND-NEXT:    sub a2, a2, a5
 ; RV32ZICOND-NEXT:    sub a0, a1, a3
-; RV32ZICOND-NEXT:    mv a1, a2
+; RV32ZICOND-NEXT:    sub a1, a2, a5
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: sub1:
@@ -441,9 +439,8 @@ define i64 @sub2(i1 zeroext %rc, i64 %rs1, i64 %rs2) {
 ; RV32I-NEXT:    sltu a5, a1, a3
 ; RV32I-NEXT:    and a0, a0, a4
 ; RV32I-NEXT:    sub a2, a2, a0
-; RV32I-NEXT:    sub a2, a2, a5
 ; RV32I-NEXT:    sub a0, a1, a3
-; RV32I-NEXT:    mv a1, a2
+; RV32I-NEXT:    sub a1, a2, a5
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sub2:
@@ -471,9 +468,8 @@ define i64 @sub2(i1 zeroext %rc, i64 %rs1, i64 %rs2) {
 ; RV32ZICOND-NEXT:    sltu a5, a1, a3
 ; RV32ZICOND-NEXT:    czero.nez a0, a4, a0
 ; RV32ZICOND-NEXT:    sub a2, a2, a0
-; RV32ZICOND-NEXT:    sub a2, a2, a5
 ; RV32ZICOND-NEXT:    sub a0, a1, a3
-; RV32ZICOND-NEXT:    mv a1, a2
+; RV32ZICOND-NEXT:    sub a1, a2, a5
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: sub2:
