@@ -3,11 +3,11 @@
 
 # Test to ensure that this does not crash on undefs
 ---
-name: machine-cse-copyprop
+name: copyprop_regsequence_with_undef
 tracksRegLiveness: true
 body:               |
   bb.0:
-    ; CHECK-LABEL: name: machine-cse-copyprop
+    ; CHECK-LABEL: name: copyprop_regsequence_with_undef
     ; CHECK: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE undef %3:sreg_32, %subreg.sub0, [[DEF]], %subreg.sub1
