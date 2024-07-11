@@ -13,6 +13,7 @@
 #include "flang/Runtime/descriptor.h"
 #include <algorithm>
 #include <cstring>
+#include <cstdio>
 
 namespace Fortran::runtime {
 
@@ -67,7 +68,13 @@ void RTDECL(Rename)(const Descriptor &path1, const Descriptor &path2,
   // We simply call rename(2) from POSIX
   int result = rename(pathSrc, pathDst);
   if (status) {
-    StoreIntToDescriptor(status, result, terminator);
+    // When an error has happened,
+    int errorCode = 0; // Assume success
+    if (result < 0) {
+      // The rename operation has failed, so return the error code as status.
+      errorCode = errno;
+    }
+    StoreIntToDescriptor(status, errorCode, terminator);
   }
 
   // Deallocate memory if EnsureNullTerminated dynamically allocated memory

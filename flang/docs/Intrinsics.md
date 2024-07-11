@@ -1013,13 +1013,15 @@ This intrinsic is provided in both subroutine and function form; however, only o
 - **Class:** Subroutine, function
 - **Syntax:** `CALL RENAME(SRC, DST[, STATUS])`
 - **Arguments:**
-- **Return value** status code (0: success, -1: error)
+- **Return value** status code (0: success, non-zero for errors)
 
 | Argument | Description                       |
 |----------|-----------------------------------|
 | `SRC`    | Source path                       |
 | `DST`    | Destination path                  |
 | `STATUS` | Status code (for subroutine form) |
+
+The status code return by both the subroutine and function form correspond to the value of `errno` if the invocation of `rename(2)` was not successful.
 
 #### Example
 
