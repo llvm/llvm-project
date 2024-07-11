@@ -4989,14 +4989,19 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     OrphanSeen = ParentRegion == OMPD_unknown;
     Recommend = ShouldBeInTargetRegion;
   } else if (CurrentRegion == OMPD_scan) {
-    // OpenMP [2.16, Nesting of Regions]
-    // If specified, a teams construct must be contained within a target
-    // construct.
-    NestingProhibited =
-        SemaRef.LangOpts.OpenMP < 50 ||
-        (ParentRegion != OMPD_simd && ParentRegion != OMPD_for &&
-         ParentRegion != OMPD_for_simd && ParentRegion != OMPD_parallel_for &&
-         ParentRegion != OMPD_parallel_for_simd);
+    if (SemaRef.LangOpts.OpenMP >= 50) {
+      SmallVector<OpenMPDirectiveKind, 4> LeafOrComposite;
+      std::ignore = getLeafOrCompositeConstructs(ParentRegion, LeafOrComposite);
+      // OpenMP spec 5.0 and 5.1 require scan to be directly enclosed by for,
+      // simd, or for simd. This has to take into account combined directives.
+      // In 5.2 this seems to be implied by the fact that the specified
+      // separated constructs are do, for, and simd.
+      OpenMPDirectiveKind Enclosing = LeafOrComposite.back();
+      NestingProhibited = Enclosing != OMPD_for && Enclosing != OMPD_simd &&
+                          Enclosing != OMPD_for_simd;
+    } else {
+      NestingProhibited = true;
+    }
     OrphanSeen = ParentRegion == OMPD_unknown;
     Recommend = ShouldBeInLoopSimdRegion;
   }
