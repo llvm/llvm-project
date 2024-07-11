@@ -20,7 +20,7 @@ using namespace llvm;
 int main(int argc, char **argv) {
 #if defined(__i386__) || defined(_M_IX86) || \
     defined(__x86_64__) || defined(_M_X64)
-  const StringMap<bool> features = sys::getHostCPUFeatures(features);
+  const StringMap<bool> features = sys::getHostCPUFeatures();
   if (features.empty())
     return 1;
 
