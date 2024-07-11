@@ -1875,13 +1875,16 @@ bool calculateFragmentIntersectImpl(
   if (AssignRecord->isKillAddress())
     return false;
 
-  int64_t AddrOffsetInBytes;
-  SmallVector<uint64_t> PostOffsetOps; //< Unused.
-  // Bail if we can't find a constant offset (or none) in the expression.
-  if (!AssignRecord->getAddressExpression()->extractLeadingOffset(
-          AddrOffsetInBytes, PostOffsetOps))
-    return false;
-  int64_t AddrOffsetInBits = AddrOffsetInBytes * 8;
+  int64_t AddrOffsetInBits;
+  {
+    int64_t AddrOffsetInBytes;
+    SmallVector<uint64_t> PostOffsetOps; //< Unused.
+    // Bail if we can't find a constant offset (or none) in the expression.
+    if (!AssignRecord->getAddressExpression()->extractLeadingOffset(
+            AddrOffsetInBytes, PostOffsetOps))
+      return false;
+    AddrOffsetInBits = AddrOffsetInBytes * 8;
+  }
 
   Value *Addr = AssignRecord->getAddress();
   // FIXME: It may not always be zero.
@@ -1901,7 +1904,6 @@ bool at::calculateFragmentIntersect(
     const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
     uint64_t SliceSizeInBits, const DbgAssignIntrinsic *DbgAssign,
     std::optional<DIExpression::FragmentInfo> &Result) {
-
   return calculateFragmentIntersectImpl(DL, Dest, SliceOffsetInBits,
                                         SliceSizeInBits, DbgAssign, Result);
 }
@@ -1912,8 +1914,6 @@ bool at::calculateFragmentIntersect(
     const DataLayout &DL, const Value *Dest, uint64_t SliceOffsetInBits,
     uint64_t SliceSizeInBits, const DbgVariableRecord *DVRAssign,
     std::optional<DIExpression::FragmentInfo> &Result) {
-  // FIXME: Remove this wrapper function and call
-  // DIExpression::calculateFragmentIntersect directly.
   return calculateFragmentIntersectImpl(DL, Dest, SliceOffsetInBits,
                                         SliceSizeInBits, DVRAssign, Result);
 }

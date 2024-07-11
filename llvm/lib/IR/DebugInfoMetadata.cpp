@@ -2138,16 +2138,16 @@ bool DIExpression::calculateFragmentIntersect(
   // dbg location start with VarFrag offset=32
   //         |
   //         mem slice start: SliceOfVariable offset=40
-  int64_t MemStartRelToFragInBits =
+  int64_t MemStartRelToVarInBits =
       MemStartRelToDbgStartInBits + VarFrag.OffsetInBits;
-  int64_t MemEndRelToFragInBits = MemStartRelToFragInBits + SliceSizeInBits;
+  int64_t MemEndRelToVarInBits = MemStartRelToVarInBits + SliceSizeInBits;
   // If the memory region starts before the debug location the fragment
   // offset would be negative, which we can't encode. Limit those to 0. This
-  // is fine becausethose bits necessarily don't overlap with the variable
-  // fragment.
-  int64_t MemFragStart = std::max<int64_t>(0, MemStartRelToFragInBits);
+  // is fine because those bits necessarily don't overlap with the existing
+  // variable fragment.
+  int64_t MemFragStart = std::max<int64_t>(0, MemStartRelToVarInBits);
   int64_t MemFragSize =
-      std::max<int64_t>(0, MemEndRelToFragInBits - MemFragStart);
+      std::max<int64_t>(0, MemEndRelToVarInBits - MemFragStart);
   DIExpression::FragmentInfo SliceOfVariable(MemFragSize, MemFragStart);
 
   // Intersect the memory region fragment with the variable location fragment.
