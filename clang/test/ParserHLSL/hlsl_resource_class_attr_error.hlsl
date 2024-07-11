@@ -7,7 +7,7 @@ struct [[hlsl::resource_class()]] Eg1 {
 
 Eg1 e1;
 
-// expected-error@+1{{invalid resource class 'gibberish' used; expected 'SRV', 'UAV', 'CBuffer', or 'Sampler'}}
+// expected-warning@+1{{ResourceClass attribute argument not supported: gibberish}}
 struct [[hlsl::resource_class(gibberish)]] Eg2 {
   int i;  
 };
