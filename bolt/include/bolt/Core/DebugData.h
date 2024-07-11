@@ -336,7 +336,7 @@ using AddressSectionBuffer = SmallVector<char, 4>;
 class DebugAddrWriter {
 public:
   DebugAddrWriter() = delete;
-  DebugAddrWriter(BinaryContext *BC_) : DebugAddrWriter(BC_, 255) {};
+  DebugAddrWriter(BinaryContext *BC_) : DebugAddrWriter(BC_, UCHAR_MAX){};
   DebugAddrWriter(BinaryContext *BC_, uint8_t AddressByteSize);
   virtual ~DebugAddrWriter(){};
   /// Given an address returns an index in .debug_addr.
@@ -353,10 +353,10 @@ public:
   }
 
   /// Returns buffer size.
-  virtual size_t getBufferSize() { return Buffer->size(); }
+  virtual size_t getBufferSize() const { return Buffer->size(); }
 
   /// Returns True if Buffer is not empty.
-  bool isInitialized() { return !Buffer->empty(); }
+  bool isInitialized() const { return !Buffer->empty(); }
 
   /// Updates address base with the given Offset.
   virtual void updateAddrBase(DIEBuilder &DIEBlder, DWARFUnit &CU,
@@ -445,6 +445,7 @@ public:
   /// Write out entries in to .debug_addr section for CUs.
   virtual std::optional<uint64_t> finalize(const size_t BufferSize) override;
 
+  /// Updates address base with the given Offset.
   virtual void updateAddrBase(DIEBuilder &DIEBlder, DWARFUnit &CU,
                               const uint64_t Offset) override;
 
@@ -613,7 +614,7 @@ public:
   DebugLoclistWriter(DWARFUnit &Unit, uint8_t DV, bool SD,
                      DebugAddrWriter &AddrW)
       : DebugLocWriter(DV, LocWriterKind::DebugLoclistWriter),
-        AddrWriter(&AddrW), CU(Unit), IsSplitDwarf(SD) {
+        AddrWriter(AddrW), CU(Unit), IsSplitDwarf(SD) {
     if (DwarfVersion >= 5) {
       LocBodyBuffer = std::make_unique<DebugBufferVector>();
       LocBodyStream = std::make_unique<raw_svector_ostream>(*LocBodyBuffer);
@@ -653,7 +654,7 @@ private:
   /// Writes out locations in to a local buffer and applies debug info patches.
   void finalizeDWARF5(DIEBuilder &DIEBldr, DIE &Die);
 
-  DebugAddrWriter *AddrWriter;
+  DebugAddrWriter &AddrWriter;
   DWARFUnit &CU;
   bool IsSplitDwarf{false};
   // Used for DWARF5 to store location lists before being finalized.

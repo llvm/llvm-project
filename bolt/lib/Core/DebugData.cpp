@@ -711,11 +711,11 @@ void DebugLoclistWriter::addList(DIEBuilder &DIEBldr, DIE &Die,
                                  DIEValue &AttrInfo,
                                  DebugLocationsVector &LocList) {
   if (DwarfVersion < 5)
-    writeLegacyLocList(AttrInfo, LocList, DIEBldr, Die, *AddrWriter, *LocBuffer,
+    writeLegacyLocList(AttrInfo, LocList, DIEBldr, Die, AddrWriter, *LocBuffer,
                        CU, *LocStream);
   else
     writeDWARF5LocList(NumberOfEntries, AttrInfo, LocList, Die, DIEBldr,
-                       *AddrWriter, *LocBodyBuffer, RelativeLocListOffsets, CU,
+                       AddrWriter, *LocBodyBuffer, RelativeLocListOffsets, CU,
                        *LocBodyStream);
 }
 
