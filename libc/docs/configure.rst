@@ -29,7 +29,12 @@ to learn about the defaults for your platform and target.
     - ``LIBC_CONF_ENABLE_STRONG_STACK_PROTECTOR``: Enable -fstack-protector-strong to defend against stack smashing attack.
     - ``LIBC_CONF_KEEP_FRAME_POINTER``: Keep frame pointer in functions for better debugging experience.
 * **"errno" options**
-    - ``LIBC_CONF_ERRNO_MODE``: The implementation used for errno, acceptable values are LIBC_ERRNO_MODE_UNDEFINED, LIBC_ERRNO_MODE_THREAD_LOCAL, LIBC_ERRNO_MODE_SHARED, LIBC_ERRNO_MODE_EXTERNAL, and LIBC_ERRNO_MODE_SYSTEM.
+    - ``LIBC_CONF_ERRNO_MODE``: The implementation used for errno, acceptable values are:
+        - ``LIBC_ERRNO_MODE_UNDEFINED``: libc never stores a value; ``errno`` macro uses get link-time failure,
+        - ``LIBC_ERRNO_MODE_THREAD_LOCAL``: libc maintains per-thread state (requires C++ ``thread_local`` support for libc implementation code),
+        - ``LIBC_ERRNO_MODE_SHARED``: libc maintains an ``atomic_int`` used by all threads, contrary to standard C semantics (requires use of atomics in libc implementation code, may produce libcalls an embedder must supply),
+        - ``LIBC_ERRNO_MODE_EXTERNAL``: embedder must define ``int *__llvm_libc_errno(void);`` C function,
+        - ``LIBC_ERRNO_MODE_SYSTEM``: in overlay mode, system ``<errno.h>`` ``errno`` macro is used directly; in fullbuild mode, effectively the same as ``LIBC_ERRNO_MODE_EXTERNAL``.
 * **"malloc" options**
     - ``LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE``: Default size for the constinit freelist buffer used for the freelist malloc implementation (default 1o 1GB).
 * **"math" options**
