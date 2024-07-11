@@ -741,7 +741,7 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
   // | Relaxed | Yes      | Generic / Shared [0]          | .volatile       | .volatile                                            |
   // | Relaxed | Yes      | Global [0]                    | .volatile       | .mmio.relaxed.sys (PTX 8.2+) or .volatile (PTX 8.1-) |
   // | Relaxed | Yes      | Local / Const / Param         | plain [1]       | .weak [1]                                            |
-  // | Other   | Yes      | Generic / Shared / Global [0] | Error [4]       | <atomic sem> [3]                                     |
+  // | Other   | Yes      | Generic / Shared / Global [0] | Error [2]       | <atomic sem> [3]                                     |
 
   // clang-format on
 
@@ -763,7 +763,7 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
   }
 
   // [2]: Atomics with Ordering different than Relaxed are not supported on
-  //      sm_60 and older.
+  //      sm_60 and older; this includes volatile atomics.
   if (!(Ordering == AtomicOrdering::NotAtomic ||
         Ordering == AtomicOrdering::Monotonic) &&
       !HasMemoryOrdering) {
@@ -776,45 +776,32 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
   }
 
   // [3]: TODO: these should eventually use .mmio<.atomic sem>; for now we drop
-  // the volatile semantics and preserve the atomic ones. [4]: TODO: volatile
-  // atomics with order stronger than relaxed are currently unimplemented in
-  // sm_60 and older.
-  if (!HasMemoryOrdering && N->isVolatile() &&
-      !(Ordering == AtomicOrdering::NotAtomic ||
-        Ordering == AtomicOrdering::Monotonic)) {
-    SmallString<256> Msg;
-    raw_svector_ostream OS(Msg);
-    OS << "PTX does not support \"volatile atomic\" for orderings different "
-          "than \"NotAtomic\" or \"Monotonic\" for sm_60 and older, but order "
-          "is: \""
-       << toIRString(Ordering) << "\".";
-    report_fatal_error(OS.str());
-  }
+  // the volatile semantics and preserve the atomic ones.
 
   // PTX volatile and PTX atomics are not available for statespace that differ
   // from .generic, .global, or .shared. The behavior of PTX volatile and PTX
   // atomics is undefined if the generic address does not refer to a .global or
   // .shared memory location.
-  bool addrGenericOrGlobalOrShared =
+  bool AddrGenericOrGlobalOrShared =
       (CodeAddrSpace == NVPTX::PTXLdStInstCode::GENERIC ||
        CodeAddrSpace == NVPTX::PTXLdStInstCode::GLOBAL ||
        CodeAddrSpace == NVPTX::PTXLdStInstCode::SHARED);
-  bool useRelaxedMMIO =
+  bool UseRelaxedMMIO =
       HasRelaxedMMIO && CodeAddrSpace == NVPTX::PTXLdStInstCode::GLOBAL;
 
   switch (Ordering) {
   case AtomicOrdering::NotAtomic:
-    return N->isVolatile() && addrGenericOrGlobalOrShared
+    return N->isVolatile() && AddrGenericOrGlobalOrShared
                ? NVPTX::PTXLdStInstCode::Volatile
                : NVPTX::PTXLdStInstCode::NotAtomic;
   case AtomicOrdering::Monotonic:
     if (N->isVolatile())
-      return useRelaxedMMIO                ? NVPTX::PTXLdStInstCode::RelaxedMMIO
-             : addrGenericOrGlobalOrShared ? NVPTX::PTXLdStInstCode::Volatile
+      return UseRelaxedMMIO                ? NVPTX::PTXLdStInstCode::RelaxedMMIO
+             : AddrGenericOrGlobalOrShared ? NVPTX::PTXLdStInstCode::Volatile
                                            : NVPTX::PTXLdStInstCode::NotAtomic;
     else
       return HasMemoryOrdering             ? NVPTX::PTXLdStInstCode::Relaxed
-             : addrGenericOrGlobalOrShared ? NVPTX::PTXLdStInstCode::Volatile
+             : AddrGenericOrGlobalOrShared ? NVPTX::PTXLdStInstCode::Volatile
                                            : NVPTX::PTXLdStInstCode::NotAtomic;
   case AtomicOrdering::Acquire:
     if (!N->readMem()) {
@@ -825,7 +812,7 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
       N->print(OS);
       report_fatal_error(OS.str());
     }
-    return addrGenericOrGlobalOrShared ? NVPTX::PTXLdStInstCode::Acquire
+    return AddrGenericOrGlobalOrShared ? NVPTX::PTXLdStInstCode::Acquire
                                        : NVPTX::PTXLdStInstCode::NotAtomic;
   case AtomicOrdering::Release:
     if (!N->writeMem()) {
@@ -836,7 +823,7 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
       N->print(OS);
       report_fatal_error(OS.str());
     }
-    return addrGenericOrGlobalOrShared ? NVPTX::PTXLdStInstCode::Release
+    return AddrGenericOrGlobalOrShared ? NVPTX::PTXLdStInstCode::Release
                                        : NVPTX::PTXLdStInstCode::NotAtomic;
   case AtomicOrdering::AcquireRelease: {
     SmallString<256> Msg;
