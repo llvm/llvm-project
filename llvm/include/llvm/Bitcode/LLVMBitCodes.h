@@ -307,7 +307,7 @@ enum GlobalValueSummarySymtabCodes {
   // [valueid, n x stackidindex]
   FS_PERMODULE_CALLSITE_INFO = 26,
   // Summary of per-module allocation memprof metadata.
-  // [nummib, nummib x (alloc type, nummib, nummib x stackidindex),
+  // [nummib, nummib x (alloc type, numstackids, numstackids x stackidindex),
   // [nummib x total size]?]
   FS_PERMODULE_ALLOC_INFO = 27,
   // Summary of combined index memprof callsite metadata.
