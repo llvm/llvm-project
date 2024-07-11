@@ -1397,13 +1397,22 @@ substituteParameterMappings(Sema &S, NormalizedConstraint &N,
                             ConceptDecl *Concept,
                             const MultiLevelTemplateArgumentList &MLTAL,
                             const ASTTemplateArgumentListInfo *ArgsAsWritten) {
-  if (!N.isAtomic()) {
+
+  if (N.isCompound()) {
     if (substituteParameterMappings(S, N.getLHS(), Concept, MLTAL,
                                     ArgsAsWritten))
       return true;
     return substituteParameterMappings(S, N.getRHS(), Concept, MLTAL,
                                        ArgsAsWritten);
   }
+
+  if (N.isFoldExpanded()) {
+    Sema::ArgumentPackSubstitutionIndexRAII _(S, -1);
+    return substituteParameterMappings(
+        S, N.getFoldExpandedConstraint()->Constraint, Concept, MLTAL,
+        ArgsAsWritten);
+  }
+
   TemplateParameterList *TemplateParams = Concept->getTemplateParameters();
 
   AtomicConstraint &Atomic = *N.getAtomicConstraint();

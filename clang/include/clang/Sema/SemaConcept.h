@@ -131,23 +131,24 @@ struct NormalizedConstraint {
     return *this;
   }
 
-  CompoundConstraintKind getCompoundKind() const {
-    assert(!isAtomic() && "getCompoundKind called on atomic constraint.");
-    return Constraint.get<CompoundConstraint>().getInt();
-  }
-
   bool isAtomic() const { return Constraint.is<AtomicConstraint *>(); }
   bool isFoldExpanded() const {
     return Constraint.is<FoldExpandedConstraint *>();
   }
+  bool isCompound() const { return Constraint.is<CompoundConstraint *>(); }
+
+  CompoundConstraintKind getCompoundKind() const {
+    assert(isCompound() && "getCompoundKind on a non-compound constraint..");
+    return Constraint.get<CompoundConstraint>().getInt();
+  }
 
   NormalizedConstraint &getLHS() const {
-    assert(!isAtomic() && "getLHS called on atomic constraint.");
+    assert(isCompound() && "getLHS called on a non-compound constraint.");
     return Constraint.get<CompoundConstraint>().getPointer()->first;
   }
 
   NormalizedConstraint &getRHS() const {
-    assert(!isAtomic() && "getRHS called on atomic constraint.");
+    assert(isCompound() && "getRHS called on a non-compound constraint.");
     return Constraint.get<CompoundConstraint>().getPointer()->second;
   }
 
