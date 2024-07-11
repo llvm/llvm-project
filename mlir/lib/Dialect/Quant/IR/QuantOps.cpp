@@ -53,19 +53,6 @@ void QuantDialect::initialize() {
 
 
 //===----------------------------------------------------------------------===//
-// QuantizeCastOp
-//===----------------------------------------------------------------------===//
-
-FloatType QuantizeCastOp::getFloatType() {
-  return cast<FloatType>(getPrimitiveType(getInput().getType()));
-}
-
-UniformQuantizedType QuantizeCastOp::getQuantizedType() {
-  return cast<UniformQuantizedType>(getPrimitiveType(getResult().getType()));
-}
-
-
-//===----------------------------------------------------------------------===//
 // StorageCastOp
 //===----------------------------------------------------------------------===//
 

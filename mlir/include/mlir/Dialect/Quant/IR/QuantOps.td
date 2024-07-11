@@ -44,6 +44,7 @@ def quant_DequantizeCastOp : quant_Op<"dcast", [Pure]> {
   }];
   let arguments = (ins quant_RealValueType:$input);
   let results = (outs quant_RealValueType:$result);
+  let assemblyFormat = "$input attr-dict `:` type($input) `to` type($result)";
 }
 
 def quant_QuantizeCastOp : quant_Op<"qcast", [Pure]> {
@@ -72,16 +73,7 @@ def quant_QuantizeCastOp : quant_Op<"qcast", [Pure]> {
   }];
   let arguments = (ins quant_RealValueType:$input);
   let results = (outs quant_RealValueType:$result);
-
-  let extraClassDeclaration = [{
-
-    /// Return the primitive (scalar or tensor element) type of the float input.
-    FloatType getFloatType();
-
-    /// Return the primitive (scalar or tensor element) type of the quantized
-    /// result.
-    quant::UniformQuantizedType getQuantizedType();
-  }];
+  let assemblyFormat = "$input attr-dict `:` type($input) `to` type($result)";
 }
 
 def quant_StorageCastOp : quant_Op<"scast", [Pure]> {
@@ -107,6 +99,7 @@ def quant_StorageCastOp : quant_Op<"scast", [Pure]> {
   }];
   let arguments = (ins quant_RealOrStorageValueType:$input);
   let results = (outs quant_RealOrStorageValueType:$result);
+  let assemblyFormat = "$input attr-dict `:` type($input) `to` type($result)";
   let hasFolder = 1;
 }
 

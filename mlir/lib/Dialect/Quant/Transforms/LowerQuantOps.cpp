@@ -16,7 +16,7 @@
 #include "mlir/Dialect/Quant/IR/Quant.h"
 #include "mlir/Dialect/Quant/IR/QuantTypes.h"
 #include "mlir/Dialect/Quant/Transforms/Passes.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/Shape/IR/Shape.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -104,41 +104,6 @@ Value getContainerConstant(OpBuilder &builder, Location loc, TypedAttr attr,
   return containerConstant;
 }
 
-// Calculate the size of an unranked tensor starting at dimension 'fromDim' up
-// to, but not including, dimension 'toDim'.
-Value getUnrankedTensorSizeRange(OpBuilder &builder, Location loc, Value input,
-                                 Value fromDim, Value toDim, Value one) {
-  auto loop = builder.create<scf::ForOp>(
-      loc,
-      fromDim,  // lowerBound
-      toDim,  // upperBound
-      one,  // step
-      one,  // iterArgs
-      [&](OpBuilder &builder, Location loc, Value index, ValueRange args) {
-        Value size = builder.create<tensor::DimOp>(loc, input, index);
-        Value totalSize = builder.create<arith::MulIOp>(loc, args.front(), size);
-        builder.create<scf::YieldOp>(loc, totalSize);
-      });
-  return loop.getResult(0);
-}
-
-// Obtain the shape of an unranked tensor. This function returns a 1D tensor of
-// size 'rank' and element type 'index'.
-Value getUnrankedTensorShape(OpBuilder &builder, Location loc, Value input,
-                             Value rank) {
-  auto shapeType =
-      RankedTensorType::get({ShapedType::kDynamic}, builder.getIndexType());
-  auto shape = builder.create<tensor::GenerateOp>(
-      loc,
-      shapeType,
-      rank,
-      [&](OpBuilder &builder, Location loc, ValueRange args) {
-        Value size = builder.create<tensor::DimOp>(loc, input, args.front());
-        builder.create<tensor::YieldOp>(loc, size);
-      });
-  return shape;
-}
-
 class QuantizeCastOpConversion : public OpConversionPattern<quant::QuantizeCastOp> {
 
   Value convertPerLayerScalarOrRanked(
@@ -191,18 +156,18 @@ class QuantizeCastOpConversion : public OpConversionPattern<quant::QuantizeCastO
   Value convertPerLayerUnranked(
       OpBuilder &builder, Location loc, Value input,
       UniformQuantizedType quantizedType) const {
-    auto rank = builder.create<tensor::RankOp>(loc, input);
-    auto inputShape = getUnrankedTensorShape(builder, loc, input, rank);
+    auto *context = builder.getContext();
     auto inputType = cast<UnrankedTensorType>(input.getType());
 
-    auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
-    auto one = builder.create<arith::ConstantIndexOp>(loc, 1);
-    auto inputSize = getUnrankedTensorSizeRange(builder, loc, input, zero, rank, one);
+    auto shapeType = shape::getExtentTensorType(context);
+    auto inputShape = builder.create<shape::ShapeOfOp>(loc, shapeType, input);
+    Value inputSize = builder.create<shape::NumElementsOp>(
+        loc, builder.getIndexType(), inputShape);
 
-    // Compute collapsed input shape as a 1D 1-sized index tensor
-    auto collapsedInputShapeType = RankedTensorType::get({1}, builder.getIndexType());
+    // Turn input size into 1D tensor
+    auto collapsedShapeType = shape::getExtentTensorType(context, 1);
     auto collapsedInputShape = builder.create<tensor::FromElementsOp>(
-        loc, collapsedInputShapeType, inputSize);
+        loc, collapsedShapeType, inputSize);
 
     // Reshape input tensor into 1D
     auto collapsedInputType = RankedTensorType::get({ShapedType::kDynamic},
@@ -210,7 +175,7 @@ class QuantizeCastOpConversion : public OpConversionPattern<quant::QuantizeCastO
     auto collapsedInput = builder.create<tensor::ReshapeOp>(
         loc, collapsedInputType, input, collapsedInputShape);
 
-    // Now we know how to convert a ranked tensor
+    // We now know how to deal with a 1D ranked input
     auto collapsedStoredValue = convertPerLayerScalarOrRanked(
         builder, loc, collapsedInput, quantizedType);
 
@@ -262,7 +227,7 @@ struct LowerQuantOps : public impl::LowerQuantOpsBase<LowerQuantOps> {
     target.addLegalDialect<
       arith::ArithDialect,
       linalg::LinalgDialect,
-      scf::SCFDialect,
+      shape::ShapeDialect,
       tensor::TensorDialect
     >();
 

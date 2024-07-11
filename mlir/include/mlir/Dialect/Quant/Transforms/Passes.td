@@ -26,7 +26,7 @@ def LowerQuantOps : Pass<"lower-quant-ops", "func::FuncOp"> {
     "arith::ArithDialect",
     "linalg::LinalgDialect",
     "quant::QuantDialect",
-    "scf::SCFDialect",
+    "shape::ShapeDialect",
     "tensor::TensorDialect"
   ];
 }
