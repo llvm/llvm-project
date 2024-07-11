@@ -43,7 +43,7 @@ public:
   // TODO: allow timeout to be set on per thread plan basis.
   struct TimeoutInfo {
     // Whether there is a ThreadPlanSingleThreadTimeout instance alive.
-    bool m_isAlive;
+    bool m_isAlive = false;
     ThreadPlanSingleThreadTimeout::State m_last_state = State::WaitTimeout;
   };
 
@@ -83,7 +83,7 @@ private:
   bool IsTimeoutAsyncInterrupt(Event *event_ptr);
   bool HandleEvent(Event *event_ptr);
   void HandleTimeout();
-  uint64_t GetRemainingTimeoutMicroSeconds();
+  uint64_t GetRemainingTimeoutMilliSeconds();
 
   static std::string StateToString(State state);
 

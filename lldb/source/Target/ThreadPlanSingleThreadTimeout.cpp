@@ -39,19 +39,19 @@ ThreadPlanSingleThreadTimeout::~ThreadPlanSingleThreadTimeout() {
   m_info.m_isAlive = false;
 }
 
-uint64_t ThreadPlanSingleThreadTimeout::GetRemainingTimeoutMicroSeconds() {
+uint64_t ThreadPlanSingleThreadTimeout::GetRemainingTimeoutMilliSeconds() {
   uint64_t timeout_in_ms = GetThread().GetSingleThreadPlanTimeout();
   std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-  std::chrono::microseconds duration_us =
-      std::chrono::duration_cast<std::chrono::microseconds>(now -
+  std::chrono::milliseconds duration_ms =
+      std::chrono::duration_cast<std::chrono::milliseconds>(now -
                                                             m_timeout_start);
-  return timeout_in_ms * 1000 - duration_us.count();
+  return timeout_in_ms - duration_ms.count();
 }
 
 void ThreadPlanSingleThreadTimeout::GetDescription(
     Stream *s, lldb::DescriptionLevel level) {
-  s->Printf("Single thread timeout, state(%s), remaining %lld us",
-            StateToString(m_state).c_str(), GetRemainingTimeoutMicroSeconds());
+  s->Printf("Single thread timeout, state(%s), remaining %lld ms",
+            StateToString(m_state).c_str(), GetRemainingTimeoutMilliSeconds());
 }
 
 std::string ThreadPlanSingleThreadTimeout::StateToString(State state) {
@@ -137,8 +137,8 @@ bool ThreadPlanSingleThreadTimeout::DoPlanExplainsStop(Event *event_ptr) {
   Log *log = GetLog(LLDBLog::Step);
   LLDB_LOGF(log,
             "ThreadPlanSingleThreadTimeout::DoPlanExplainsStop() returns %d. "
-            "%llu us remaining.",
-            is_timeout_interrupt, GetRemainingTimeoutMicroSeconds());
+            "%llu ms remaining.",
+            is_timeout_interrupt, GetRemainingTimeoutMilliSeconds());
   return is_timeout_interrupt;
 }
 
