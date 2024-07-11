@@ -167,9 +167,11 @@ public:
     // Create the new control point, which is of the form:
     //   void new_control_point(YkMT*, YkLocation*, CtrlPointVars*, void*)
     PointerType *VoidPtr = PointerType::get(Context, 0);
+    Type *Int64Ty = Type::getInt64Ty(Context);
     FunctionType *FType = FunctionType::get(
         Type::getVoidTy(Context),
-        {YkMTTy, YkLocTy, CtrlPointVarsTy->getPointerTo(), VoidPtr}, false);
+        {YkMTTy, YkLocTy, CtrlPointVarsTy->getPointerTo(), VoidPtr, Int64Ty},
+        false);
     Function *NF = Function::Create(FType, GlobalVariable::ExternalLinkage,
                                     YK_NEW_CONTROL_POINT, M);
 
@@ -196,11 +198,13 @@ public:
         Intrinsic::getDeclaration(&M, Intrinsic::frameaddress, {VoidPtr});
     Value *FAddr = Builder.CreateCall(FrameAddress, {Builder.getInt32(0)});
 
-    // Insert call to the new control point.
+    // Insert call to the new control point. The last argument is the stackmap
+    // id belonging to the control point. This is temporarily set to INT_MAX
+    // and overwritten by the stackmap pass.
     Instruction *NewCtrlPointCallInst = Builder.CreateCall(
         NF, {OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_MT_IDX),
              OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_LOC_IDX),
-             InputStruct, FAddr});
+             InputStruct, FAddr, Builder.getInt64(UINT64_MAX)});
 
     // Replace the call to the dummy control point.
     OldCtrlPointCall->eraseFromParent();
