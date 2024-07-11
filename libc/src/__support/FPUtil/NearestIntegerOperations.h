@@ -75,14 +75,16 @@ LIBC_INLINE T ceil(T x) {
   }
 
   uint32_t trim_size = FPBits<T>::FRACTION_LEN - exponent;
-  StorageType trunc_mantissa =
-      static_cast<StorageType>((bits.get_mantissa() >> trim_size) << trim_size);
-  bits.set_mantissa(trunc_mantissa);
-  T trunc_value = bits.get_val();
+  StorageType x_u = bits.uintval();
+  StorageType trunc_u =
+      static_cast<StorageType>((x_u >> trim_size) << trim_size);
 
   // If x is already an integer, return it.
-  if (trunc_value == x)
+  if (trunc_u == x_u)
     return x;
+
+  bits.set_uintval(trunc_u);
+  T trunc_value = bits.get_val();
 
   // If x is negative, the ceil operation is equivalent to the trunc operation.
   if (is_neg)
@@ -130,14 +132,16 @@ LIBC_INLINE T round(T x) {
   uint32_t trim_size = FPBits<T>::FRACTION_LEN - exponent;
   bool half_bit_set =
       bool(bits.get_mantissa() & (StorageType(1) << (trim_size - 1)));
-  StorageType trunc_mantissa =
-      static_cast<StorageType>((bits.get_mantissa() >> trim_size) << trim_size);
-  bits.set_mantissa(trunc_mantissa);
-  T trunc_value = bits.get_val();
+  StorageType x_u = bits.uintval();
+  StorageType trunc_u =
+      static_cast<StorageType>((x_u >> trim_size) << trim_size);
 
   // If x is already an integer, return it.
-  if (trunc_value == x)
+  if (trunc_u == x_u)
     return x;
+
+  bits.set_uintval(trunc_u);
+  T trunc_value = bits.get_val();
 
   if (!half_bit_set) {
     // Franctional part is less than 0.5 so round value is the
@@ -188,15 +192,16 @@ round_using_specific_rounding_mode(T x, int rnd) {
   }
 
   uint32_t trim_size = FPBits<T>::FRACTION_LEN - exponent;
-  FPBits<T> new_bits = bits;
-  StorageType trunc_mantissa =
-      static_cast<StorageType>((bits.get_mantissa() >> trim_size) << trim_size);
-  new_bits.set_mantissa(trunc_mantissa);
-  T trunc_value = new_bits.get_val();
+  StorageType x_u = bits.uintval();
+  StorageType trunc_u =
+      static_cast<StorageType>((x_u >> trim_size) << trim_size);
 
   // If x is already an integer, return it.
-  if (trunc_value == x)
+  if (trunc_u == x_u)
     return x;
+
+  FPBits<T> new_bits(trunc_u);
+  T trunc_value = new_bits.get_val();
 
   StorageType trim_value =
       bits.get_mantissa() &
