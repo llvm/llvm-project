@@ -64,6 +64,7 @@ define void @forward_offset_without_gep(ptr %src) {
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca [9 x i8], align 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[TMP]], ptr align 1 [[SRC]], i64 7, i1 false)
 ; CHECK-NEXT:    [[TMP_OFFSET:%.*]] = getelementptr inbounds i8, ptr [[TMP]], i64 1
+; CHECK-NEXT:    [[DEST:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 1
 ; CHECK-NEXT:    ret void
 ;
   %cpy_tmp = alloca %buf, align 1
