@@ -16,11 +16,13 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveVariables.h"
+#include "llvm/CodeGen/MachineDomTreeUpdater.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -1339,9 +1341,17 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     LIS->repairIntervalsInRange(this, getFirstTerminator(), end(), UsedRegs);
   }
 
-  if (auto *MDTWrapper =
-          P.getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>())
-    MDTWrapper->getDomTree().recordSplitCriticalEdge(this, Succ, NMBB);
+  auto *MDTWrapper =
+      P.getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+  auto *MPDTWrapper =
+      P.getAnalysisIfAvailable<MachinePostDominatorTreeWrapperPass>();
+  auto *MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
+  auto *MPDT = MPDTWrapper ? &MPDTWrapper->getPostDomTree() : nullptr;
+  MachineDomTreeUpdater MDTU(MDT, MPDT,
+                             MachineDomTreeUpdater::UpdateStrategy::Eager);
+  MDTU.applyUpdates({{MachineDominatorTree::Insert, this, NMBB},
+                     {MachineDominatorTree::Insert, NMBB, Succ},
+                     {MachineDominatorTree::Delete, this, Succ}});
 
   auto *MLIWrapper = P.getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
   if (MachineLoopInfo *MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr)

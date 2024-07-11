@@ -548,7 +548,7 @@ bool PhiLoweringHelper::lowerPhis() {
   if (Vreg1Phis.empty())
     return false;
 
-  DT->getBase().updateDFSNumbers();
+  DT->updateDFSNumbers();
   MachineBasicBlock *PrevMBB = nullptr;
   for (MachineInstr *MI : Vreg1Phis) {
     MachineBasicBlock &MBB = *MI->getParent();

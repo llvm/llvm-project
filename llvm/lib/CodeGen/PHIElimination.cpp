@@ -222,11 +222,6 @@ bool PHIElimination::runOnMachineFunction(MachineFunction &MF) {
     MF.deleteMachineInstr(I.first);
   }
 
-  // TODO: we should use the incremental DomTree updater here.
-  if (Changed)
-    if (auto *MDT = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>())
-      MDT->getDomTree().getBase().recalculate(MF);
-
   LoweredPHIs.clear();
   ImpDefs.clear();
   VRegPHIUseCount.clear();
