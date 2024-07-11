@@ -181,6 +181,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds a new instruction that enables rotating values across invocations within a subgroup.
    * - ``SPV_KHR_uniform_group_instructions``
      - Allows support for additional group operations within uniform control flow.
+   * - ``SPV_KHR_non_semantic_info``
+     - Adds the ability to declare extended instruction sets that have no semantic impact and can be safely removed from a module.
 
 To enable multiple extensions, list them separated by spaces. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
 
