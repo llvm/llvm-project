@@ -537,142 +537,142 @@
         ! V9: stxa %g0, [%g2+%i5] #ASI_SNF   ! encoding: [0xc0,0xf0,0x90,0x7d]
         stxa %g0, [%g2 + %i5] #ASI_SNF
 
-        ! V8:      error: invalid operand for instruction
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], 1
         ! V9: prefetch  [%i1+3968], #one_read  ! encoding: [0xc3,0x6e,0x6f,0x80]
         prefetch  [ %i1 + 0xf80 ], 1
 
-        ! V8:      error: unexpected token
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], #n_reads
         ! V9: prefetch  [%i1+3968], #n_reads  ! encoding: [0xc1,0x6e,0x6f,0x80]
         prefetch  [ %i1 + 0xf80 ], #n_reads
 
-        ! V8:      error: unexpected token
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], #one_read
         ! V9: prefetch  [%i1+3968], #one_read  ! encoding: [0xc3,0x6e,0x6f,0x80]
         prefetch  [ %i1 + 0xf80 ], #one_read
 
-        ! V8:      error: unexpected token
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], #n_writes
         ! V9: prefetch  [%i1+3968], #n_writes  ! encoding: [0xc5,0x6e,0x6f,0x80]
         prefetch  [ %i1 + 0xf80 ], #n_writes
 
-        ! V8:      error: unexpected token
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], #one_write
         ! V9: prefetch  [%i1+3968], #one_write  ! encoding: [0xc7,0x6e,0x6f,0x80]
         prefetch  [ %i1 + 0xf80 ], #one_write
 
-        ! V8:      error: unexpected token
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], #page
         ! V9: prefetch  [%i1+3968], #page  ! encoding: [0xc9,0x6e,0x6f,0x80]
         prefetch  [ %i1 + 0xf80 ], #page
 
-        ! V8:      error: unexpected token
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], #unified
         ! V9: prefetch  [%i1+3968], #unified  ! encoding: [0xe3,0x6e,0x6f,0x80]
         prefetch  [ %i1 + 0xf80 ], #unified
 
-        ! V8:      error: unexpected token
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], #n_reads_strong
         ! V9: prefetch  [%i1+3968], #n_reads_strong  ! encoding: [0xe9,0x6e,0x6f,0x80]
         prefetch  [ %i1 + 0xf80 ], #n_reads_strong
 
-        ! V8:      error: unexpected token
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], #one_read_strong
         ! V9: prefetch  [%i1+3968], #one_read_strong  ! encoding: [0xeb,0x6e,0x6f,0x80]
         prefetch  [ %i1 + 0xf80 ], #one_read_strong
 
-        ! V8:      error: unexpected token
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], #n_writes_strong
         ! V9: prefetch  [%i1+3968], #n_writes_strong  ! encoding: [0xed,0x6e,0x6f,0x80]
         prefetch  [ %i1 + 0xf80 ], #n_writes_strong
 
-        ! V8:      error: unexpected token
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + 0xf80 ], #one_write_strong
         ! V9: prefetch  [%i1+3968], #one_write_strong  ! encoding: [0xef,0x6e,0x6f,0x80]
         prefetch  [ %i1 + 0xf80 ], #one_write_strong
 
-        ! V8:      error: invalid operand for instruction
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + %i2 ], 1
         ! V9: prefetch  [%i1+%i2], #one_read  ! encoding: [0xc3,0x6e,0x40,0x1a]
         prefetch  [ %i1 + %i2 ], 1
 
-        ! V8:      error: unexpected token
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + %i2 ], #n_reads
         ! V9: prefetch  [%i1+%i2], #n_reads  ! encoding: [0xc1,0x6e,0x40,0x1a]
         prefetch  [ %i1 + %i2 ], #n_reads
 
-        ! V8:      error: unexpected token
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + %i2 ], #one_read
         ! V9: prefetch  [%i1+%i2], #one_read  ! encoding: [0xc3,0x6e,0x40,0x1a]
         prefetch  [ %i1 + %i2 ], #one_read
 
-        ! V8:      error: unexpected token
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + %i2 ], #n_writes
         ! V9: prefetch  [%i1+%i2], #n_writes  ! encoding: [0xc5,0x6e,0x40,0x1a]
         prefetch  [ %i1 + %i2 ], #n_writes
 
-        ! V8:      error: unexpected token
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + %i2 ], #one_write
         ! V9: prefetch  [%i1+%i2], #one_write  ! encoding: [0xc7,0x6e,0x40,0x1a]
         prefetch  [ %i1 + %i2 ], #one_write
 
-        ! V8:      error: unexpected token
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + %i2 ], #page
         ! V9: prefetch  [%i1+%i2], #page  ! encoding: [0xc9,0x6e,0x40,0x1a]
         prefetch  [ %i1 + %i2 ], #page
 
-        ! V8:      error: unexpected token
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + %i2 ], #unified
         ! V9: prefetch  [%i1+%i2], #unified  ! encoding: [0xe3,0x6e,0x40,0x1a]
         prefetch  [ %i1 + %i2 ], #unified
 
-        ! V8:      error: unexpected token
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + %i2 ], #n_reads_strong
         ! V9: prefetch  [%i1+%i2], #n_reads_strong  ! encoding: [0xe9,0x6e,0x40,0x1a]
         prefetch  [ %i1 + %i2 ], #n_reads_strong
 
-        ! V8:      error: unexpected token
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + %i2 ], #one_read_strong
         ! V9: prefetch  [%i1+%i2], #one_read_strong  ! encoding: [0xeb,0x6e,0x40,0x1a]
         prefetch  [ %i1 + %i2 ], #one_read_strong
 
-        ! V8:      error: unexpected token
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + %i2 ], #n_writes_strong
         ! V9: prefetch  [%i1+%i2], #n_writes_strong  ! encoding: [0xed,0x6e,0x40,0x1a]
         prefetch  [ %i1 + %i2 ], #n_writes_strong
 
-        ! V8:      error: unexpected token
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetch  [ %i1 + %i2 ], #one_write_strong
         ! V9: prefetch  [%i1+%i2], #one_write_strong  ! encoding: [0xef,0x6e,0x40,0x1a]
         prefetch  [ %i1 + %i2 ], #one_write_strong
 
-        ! V8:      error: malformed ASI tag, must be a constant integer expression
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetcha  [ %i1 + 0xf80 ] %asi, 1
         ! V9: prefetcha [%i1+3968] %asi, #one_read    ! encoding: [0xc3,0xee,0x6f,0x80]
         prefetcha  [ %i1 + 0xf80 ] %asi, 1
 
-        ! V8:      error: malformed ASI tag, must be a constant integer expression
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetcha  [ %i1 + 0xf80 ] %asi, #one_read
         ! V9: prefetcha [%i1+3968] %asi, #one_read    ! encoding: [0xc3,0xee,0x6f,0x80]
         prefetcha  [ %i1 + 0xf80 ] %asi, #one_read
 
-        ! V8:      error: invalid operand for instruction
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetcha  [ %i1 + %i2 ] #ASI_SNF, 1
         ! V9: prefetcha [%i1+%i2] #ASI_SNF, #one_read ! encoding: [0xc3,0xee,0x50,0x7a]
         prefetcha  [ %i1 + %i2 ] #ASI_SNF, 1
 
-        ! V8:      error: unexpected token
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetcha  [ %i1 + %i2 ] #ASI_SNF, #one_read
         ! V9: prefetcha [%i1+%i2] #ASI_SNF, #one_read ! encoding: [0xc3,0xee,0x50,0x7a]
         prefetcha  [ %i1 + %i2 ] #ASI_SNF, #one_read
 
-        ! V8:      error: invalid operand for instruction
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetcha  [ %i1 + %i2 ] 131, 1
         ! V9: prefetcha [%i1+%i2] #ASI_SNF, #one_read ! encoding: [0xc3,0xee,0x50,0x7a]
         prefetcha  [ %i1 + %i2 ] 131, 1
 
-        ! V8:      error: unexpected token
+        ! V8:      error: instruction requires a CPU feature not currently enabled
         ! V8-NEXT: prefetcha  [ %i1 + %i2 ] 131, #one_read
         ! V9: prefetcha [%i1+%i2] #ASI_SNF, #one_read ! encoding: [0xc3,0xee,0x50,0x7a]
         prefetcha  [ %i1 + %i2 ] 131, #one_read
