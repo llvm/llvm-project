@@ -962,24 +962,32 @@ public:
         llvm::SmallVector<mlir::Location> locs;
         locs.push_back(mainLocation);
 
+        llvm::SmallVector<fir::LocationKindAttr> locAttrs;
+        locAttrs.push_back(fir::LocationKindAttr::get(&getMLIRContext(),
+                                                      fir::LocationKind::Base));
+
         // Gather include location information if any.
         Fortran::parser::ProvenanceRange *prov = &*provenance;
         while (prov) {
           if (std::optional<Fortran::parser::ProvenanceRange> include =
                   cooked->allSources().GetInclusionInfo(*prov)) {
             if (std::optional<Fortran::parser::SourcePosition> incPos =
-                    cooked->allSources().GetSourcePosition(include->start()))
+                    cooked->allSources().GetSourcePosition(include->start())) {
               locs.push_back(genLocation(*incPos, getMLIRContext()));
+              locAttrs.push_back(fir::LocationKindAttr::get(
+                  &getMLIRContext(), fir::LocationKind::Inclusion));
+            }
             prov = &*include;
           } else {
             prov = nullptr;
           }
         }
         if (locs.size() > 1) {
-          auto attr = mlir::IntegerAttr::get(
-              mlir::IntegerType::get(&getMLIRContext(), 32), 1);
-          return mlir::FusedLocWith<mlir::IntegerAttr>::get(&getMLIRContext(),
-                                                            locs, attr);
+          assert(locs.size() == locAttrs.size() &&
+                 "expect as many attributes as locations");
+          return mlir::FusedLocWith<fir::LocationKindArrayAttr>::get(
+              &getMLIRContext(), locs,
+              fir::LocationKindArrayAttr::get(&getMLIRContext(), locAttrs));
         }
       }
     }
