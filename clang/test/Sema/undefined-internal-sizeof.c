@@ -6,5 +6,5 @@ static int f(void);
 
 int main(void)
 {
-    int x = sizeof f();
+    int x = sizeof(f);
 }
