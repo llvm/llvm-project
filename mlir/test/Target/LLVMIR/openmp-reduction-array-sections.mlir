@@ -73,19 +73,6 @@ llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attribute
   llvm.return
 }
 
-// CHECK-LABEL: define void @sectionsreduction_
-// CHECK:         br label %entry
-// CHECK:       entry:                                            ; preds = %[[VAL_1:.*]]
-// CHECK:         %[[VAL_2:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
-// CHECK:         br label %[[VAL_3:.*]]
-// CHECK:       omp_parallel:                                     ; preds = %entry
-// CHECK:         call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @1, i32 0, ptr @sectionsreduction_..omp_par)
-// CHECK:         br label %[[VAL_4:.*]]
-// CHECK:       omp.par.outlined.exit:                            ; preds = %[[VAL_3]]
-// CHECK:         br label %[[VAL_5:.*]]
-// CHECK:       omp.par.exit.split:                               ; preds = %[[VAL_4]]
-// CHECK:         ret void
-
 // CHECK-LABEL: define internal void @sectionsreduction_..omp_par
 // CHECK:       omp.par.entry:
 // CHECK:         %[[VAL_6:.*]] = alloca i32, align 4

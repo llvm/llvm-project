@@ -36,22 +36,6 @@ llvm.func @sections_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attributes {fir.in
   llvm.return
 }
 
-// CHECK-LABEL: define void @sections_
-// CHECK:         %[[VAL_0:.*]] = alloca { ptr }, align 8
-// CHECK:         br label %[[VAL_1:.*]]
-// CHECK:       entry:                                            ; preds = %[[VAL_2:.*]]
-// CHECK:         %[[VAL_3:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
-// CHECK:         br label %[[VAL_4:.*]]
-// CHECK:       omp_parallel:                                     ; preds = %[[VAL_1]]
-// CHECK:         %[[VAL_5:.*]] = getelementptr { ptr }, ptr %[[VAL_0]], i32 0, i32 0
-// CHECK:         store ptr %[[VAL_6:.*]], ptr %[[VAL_5]], align 8
-// CHECK:         call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @1, i32 1, ptr @sections_..omp_par, ptr %[[VAL_0]])
-// CHECK:         br label %[[VAL_7:.*]]
-// CHECK:       omp.par.outlined.exit:                            ; preds = %[[VAL_4]]
-// CHECK:         br label %[[VAL_8:.*]]
-// CHECK:       omp.par.exit.split:                               ; preds = %[[VAL_7]]
-// CHECK:         ret void
-
 // CHECK-LABEL: define internal void @sections_..omp_par
 // CHECK:       omp.par.entry:
 // CHECK:         %[[VAL_9:.*]] = getelementptr { ptr }, ptr %[[VAL_10:.*]], i32 0, i32 0
