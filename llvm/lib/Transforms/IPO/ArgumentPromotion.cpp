@@ -642,19 +642,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
     auto *CB = dyn_cast<CallBase>(V);
     Value *PtrArg = cast<Value>(U);
     if (CB && PtrArg && CB->getCalledFunction() == CB->getFunction()) {
-      Type *PtrTy = PtrArg->getType();
-      APInt Offset(DL.getIndexTypeSizeInBits(PtrTy), 0);
-      PtrArg = PtrArg->stripAndAccumulateConstantOffsets(
-          DL, Offset,
-          /* AllowNonInbounds= */ true);
-      if (PtrArg != Arg)
-        return false;
-
-      if (Offset.getSignificantBits() >= 64)
-        return false;
-
-      int64_t Off = Offset.getSExtValue();
-      if (Off) {
+      if (PtrArg != Arg) {
         LLVM_DEBUG(dbgs() << "ArgPromotion of " << *Arg << " failed: "
                           << "pointer offset is not equal to zero\n");
         return false;
