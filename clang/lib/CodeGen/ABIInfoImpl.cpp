@@ -329,10 +329,14 @@ bool CodeGen::isEmptyRecordForLayout(const ASTContext &Context, QualType T) {
   const RecordDecl *RD = RT->getDecl();
 
   // If this is a C++ record, check the bases first.
-  if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+  if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+    if (CXXRD->isPolymorphic())
+      return false;
+
     for (const auto &I : CXXRD->bases())
       if (!isEmptyRecordForLayout(Context, I.getType()))
         return false;
+  }
 
   for (const auto *I : RD->fields())
     if (!isEmptyFieldForLayout(Context, I))
