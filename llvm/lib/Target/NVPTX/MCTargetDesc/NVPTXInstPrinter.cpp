@@ -228,37 +228,41 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
     const MCOperand &MO = MI->getOperand(OpNum);
     int Imm = (int) MO.getImm();
     if (!strcmp(Modifier, "sem")) {
-      switch (Imm) {
-      case NVPTX::PTXLdStInstCode::NotAtomic:
+      auto ordering =
+          NVPTX::Ordering(static_cast<NVPTX::OrderingUnderlyingType>(Imm));
+      switch (ordering) {
+      case NVPTX::Ordering::NotAtomic:
         break;
-      case NVPTX::PTXLdStInstCode::Volatile:
+      case NVPTX::Ordering::Volatile:
         O << ".volatile";
         break;
-      case NVPTX::PTXLdStInstCode::Relaxed:
+      case NVPTX::Ordering::Relaxed:
         O << ".relaxed.sys";
         break;
-      case NVPTX::PTXLdStInstCode::Acquire:
+      case NVPTX::Ordering::Acquire:
         O << ".acquire.sys";
         break;
-      case NVPTX::PTXLdStInstCode::Release:
+      case NVPTX::Ordering::Release:
         O << ".release.sys";
         break;
-      case NVPTX::PTXLdStInstCode::RelaxedMMIO:
+      case NVPTX::Ordering::RelaxedMMIO:
         O << ".mmio.relaxed.sys";
         break;
       default:
         SmallString<256> Msg;
         raw_svector_ostream OS(Msg);
-        OS << "NVPTX LdStCode Printer does not support \"" << Imm
+        OS << "NVPTX LdStCode Printer does not support \"" << ordering
            << "\" sem modifier.";
         report_fatal_error(OS.str());
         break;
       }
     } else if (!strcmp(Modifier, "sc")) {
-      switch (Imm) {
+      auto ordering =
+          NVPTX::Ordering(static_cast<NVPTX::OrderingUnderlyingType>(Imm));
+      switch (ordering) {
         // TODO: refactor fence insertion in ISelDagToDag instead of here
         // as part of implementing atomicrmw seq_cst.
-      case NVPTX::PTXLdStInstCode::SeqCstFence:
+      case NVPTX::Ordering::SequentiallyConsistent:
         O << "fence.sc.sys;\n\t";
         break;
       default:

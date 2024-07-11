@@ -106,16 +106,53 @@ enum LoadStore {
   isStoreShift = 6
 };
 
-namespace PTXLdStInstCode {
-enum MemorySemantic {
+// Extends LLVM AtomicOrdering with PTX Orderings:
+using OrderingUnderlyingType = unsigned int;
+enum class Ordering : OrderingUnderlyingType {
   NotAtomic = 0, // PTX calls these: "Weak"
-  Volatile = 1,
+  // Unordered = 1, // TODO: NVPTX should map this to "Relaxed"
   Relaxed = 2,
-  Acquire = 3,
-  Release = 4,
-  RelaxedMMIO = 5,
-  SeqCstFence = 6,
+  // Consume = 3,   // Unimplemented in LLVM; NVPTX would map to "Acquire"
+  Acquire = 4,
+  Release = 5,
+  // AcquireRelease = 6, // TODO
+  SequentiallyConsistent = 7,
+  Volatile = 8,
+  RelaxedMMIO = 9,
+  LAST = RelaxedMMIO
 };
+
+template <typename OStream> OStream &operator<<(OStream &os, Ordering order) {
+  switch (order) {
+  case Ordering::NotAtomic:
+    os << "NotAtomic";
+    return os;
+  case Ordering::Relaxed:
+    os << "Relaxed";
+    return os;
+  case Ordering::Acquire:
+    os << "Acquire";
+    return os;
+  case Ordering::Release:
+    os << "Release";
+    return os;
+  // case Ordering::AcquireRelease:
+  //   os << "AcquireRelease";
+  //   return os;
+  case Ordering::SequentiallyConsistent:
+    os << "SequentiallyConsistent";
+    return os;
+  case Ordering::Volatile:
+    os << "Volatile";
+    return os;
+  case Ordering::RelaxedMMIO:
+    os << "RelaxedMMIO";
+    return os;
+  }
+  report_fatal_error("unknown ordering");
+}
+
+namespace PTXLdStInstCode {
 enum AddressSpace {
   GENERIC = 0,
   GLOBAL = 1,
@@ -135,7 +172,7 @@ enum VecType {
   V2 = 2,
   V4 = 4
 };
-}
+} // namespace PTXLdStInstCode
 
 /// PTXCvtMode - Conversion code enumeration
 namespace PTXCvtMode {
