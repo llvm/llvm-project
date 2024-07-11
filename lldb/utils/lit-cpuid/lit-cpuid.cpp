@@ -24,11 +24,11 @@ int main(int argc, char **argv) {
   if (features.empty())
     return 1;
 
-  if (features->lookup("sse"))
+  if (features.lookup("sse"))
     outs() << "sse\n";
-  if (features->lookup("avx"))
+  if (features.lookup("avx"))
     outs() << "avx\n";
-  if (features->lookup("avx512f"))
+  if (features.lookup("avx512f"))
     outs() << "avx512f\n";
 #endif
 
