@@ -1,1 +1,1 @@
-print*,'from location.inc'
+print *, 'from location.inc'
