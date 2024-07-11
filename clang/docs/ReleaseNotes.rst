@@ -103,7 +103,7 @@ ABI Changes in This Version
   ifuncs. Its purpose was to preserve backwards compatibility when the ".ifunc"
   suffix got removed from the name mangling. The alias interacts badly with
   GlobalOpt (see the issue #96197).
-  
+
 - Fixed Microsoft name mangling for auto non-type template arguments of pointer
   type for MSVC 1920+. This change resolves incompatibilities with code compiled
   by MSVC 1920+ but will introduce incompatibilities with code compiled by
@@ -592,6 +592,9 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Clang now emits an error instead of a warning for ``-Wundefined-internal``
+  when compiling with `-pedantic-errors` to conform to the C standard
+
 - Clang now applies syntax highlighting to the code snippets it
   prints.
 
@@ -705,6 +708,8 @@ Improvements to Clang's diagnostics
 
 - For the ARM target, calling an interrupt handler from another function is now an error. #GH95359.
 
+- Clang now diagnoses integer constant expressions that are folded to a constant value as an extension in more circumstances. Fixes #GH59863
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -812,6 +817,8 @@ Bug Fixes in This Version
   Fixes #GH92775
 
 - Fixed `static_cast` to array of unknown bound. Fixes (#GH62863).
+
+- Fixed Clang crashing when failing to perform some C++ Initialization Sequences. (#GH98102)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1020,6 +1027,8 @@ Bug Fixes to C++ Support
 - Fixed a bug where references to lambda capture inside a ``noexcept`` specifier were not correctly
   instantiated. (#GH95735).
 - Fixed a CTAD substitution bug involving type aliases that reference outer template parameters. (#GH94614).
+- Clang now correctly handles unexpanded packs in the template parameter list of a generic lambda expression
+  (#GH48937)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

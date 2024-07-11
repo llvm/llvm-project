@@ -732,7 +732,8 @@ public:
   }
 
   LIBC_INLINE constexpr BigInt operator%=(const BigInt &other) {
-    return *this->div(other);
+    *this = *this % other;
+    return *this;
   }
 
   LIBC_INLINE constexpr BigInt &operator*=(const BigInt &other) {

@@ -40,8 +40,8 @@ void initializeRISCVMakeCompressibleOptPass(PassRegistry &);
 FunctionPass *createRISCVGatherScatterLoweringPass();
 void initializeRISCVGatherScatterLoweringPass(PassRegistry &);
 
-FunctionPass *createRISCVFoldMasksPass();
-void initializeRISCVFoldMasksPass(PassRegistry &);
+FunctionPass *createRISCVVectorPeepholePass();
+void initializeRISCVVectorPeepholePass(PassRegistry &);
 
 FunctionPass *createRISCVOptWInstrsPass();
 void initializeRISCVOptWInstrsPass(PassRegistry &);
