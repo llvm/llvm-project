@@ -529,7 +529,10 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
     // Setup the CurScope to match the function DeclContext - we have such
     // assumption in IsInFnTryBlockHandler().
     ParseScope FnScope(this, Scope::FnScope);
-    Sema::SynthesizedFunctionScope Scope(Actions, FunctionToPush);
+    Sema::ContextRAII FnContext(Actions, FunctionToPush,
+                                /*NewThisContext=*/false);
+    Sema::FunctionScopeRAII PopFnContext(Actions);
+    Actions.PushFunctionScope();
 
     Sema::CXXThisScopeRAII ThisScope(
         Actions, Method ? Method->getParent() : nullptr,
