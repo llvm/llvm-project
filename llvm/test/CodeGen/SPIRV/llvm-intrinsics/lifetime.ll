@@ -1,12 +1,20 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+
+; CHECK-DAG: %[[#Char:]] = OpTypeInt 8 0
+; CHECK-DAG: %[[#PtrChar:]] = OpTypePointer Function %[[#Char]]
 ; CHECK: OpFunction
-; CHECK: %[[FooArg:.*]] = OpVariable
-; CHECK: OpLifetimeStart %[[FooArg]], 0
+; CHECK: %[[#FooArg:]] = OpVariable
+; CHECK: %[[#Casted1:]] = OpBitcast %[[#PtrChar]] %[[#FooArg]]
+; CHECK: OpLifetimeStart %[[#Casted1]], 72
 ; CHECK: OpCopyMemorySized
 ; CHECK: OpBitcast
 ; CHECK: OpInBoundsPtrAccessChain
-; CHECK: OpLifetimeStop %[[FooArg]], 0
+; CHECK: %[[#Casted2:]] = OpBitcast %[[#PtrChar]] %[[#FooArg]]
+; CHECK: OpLifetimeStop %[[#Casted2]], 72
 
 %tprange = type { %tparray }
 %tparray = type { [2 x i64] }

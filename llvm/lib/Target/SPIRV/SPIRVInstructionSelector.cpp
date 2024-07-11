@@ -2088,9 +2088,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
                                                        : SPIRV::OpLifetimeStop;
     int64_t Size = I.getOperand(I.getNumExplicitDefs() + 1).getImm();
     Register PtrReg = I.getOperand(I.getNumExplicitDefs() + 2).getReg();
-    unsigned PonteeOpType = GR.getPointeeTypeOp(PtrReg);
-    bool IsNonvoidPtr = PonteeOpType != 0 && PonteeOpType != SPIRV::OpTypeVoid;
-    if (Size == -1 || IsNonvoidPtr)
+    if (Size == -1)
       Size = 0;
     BuildMI(BB, I, I.getDebugLoc(), TII.get(Op)).addUse(PtrReg).addImm(Size);
   } break;
