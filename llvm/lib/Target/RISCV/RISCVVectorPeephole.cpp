@@ -1,20 +1,31 @@
-//===- RISCVFoldMasks.cpp - MI Vector Pseudo Mask Peepholes ---------------===//
+//===- RISCVVectorPeephole.cpp - MI Vector Pseudo Peepholes ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
-// This pass performs various peephole optimisations that fold masks into vector
-// pseudo instructions after instruction selection.
+// This pass performs various vector pseudo peephole optimisations after
+// instruction selection.
 //
-// Currently it converts
+// Currently it converts vmerge.vvm to vmv.v.v
 // PseudoVMERGE_VVM %false, %false, %true, %allonesmask, %vl, %sew
 // ->
 // PseudoVMV_V_V %false, %true, %vl, %sew
 //
-//===---------------------------------------------------------------------===//
+// And masked pseudos to unmasked pseudos
+// PseudoVADD_V_V_MASK %passthru, %a, %b, %allonesmask, %vl, sew, policy
+// ->
+// PseudoVADD_V_V %passthru %a, %b, %vl, sew, policy
+//
+// It also converts AVLs to VLMAX where possible
+// %vl = VLENB * something
+// PseudoVADD_V_V %passthru, %a, %b, %vl, sew, policy
+// ->
+// PseudoVADD_V_V %passthru, %a, %b, -1, sew, policy
+//
+//===----------------------------------------------------------------------===//
 
 #include "RISCV.h"
 #include "RISCVISelDAGToDAG.h"
@@ -26,17 +37,17 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "riscv-fold-masks"
+#define DEBUG_TYPE "riscv-vector-peephole"
 
 namespace {
 
-class RISCVFoldMasks : public MachineFunctionPass {
+class RISCVVectorPeephole : public MachineFunctionPass {
 public:
   static char ID;
   const TargetInstrInfo *TII;
   MachineRegisterInfo *MRI;
   const TargetRegisterInfo *TRI;
-  RISCVFoldMasks() : MachineFunctionPass(ID) {}
+  RISCVVectorPeephole() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   MachineFunctionProperties getRequiredProperties() const override {
@@ -47,6 +58,7 @@ public:
   StringRef getPassName() const override { return "RISC-V Fold Masks"; }
 
 private:
+  bool convertToVLMAX(MachineInstr &MI) const;
   bool convertToUnmasked(MachineInstr &MI) const;
   bool convertVMergeToVMv(MachineInstr &MI) const;
 
@@ -58,11 +70,65 @@ private:
 
 } // namespace
 
-char RISCVFoldMasks::ID = 0;
+char RISCVVectorPeephole::ID = 0;
 
-INITIALIZE_PASS(RISCVFoldMasks, DEBUG_TYPE, "RISC-V Fold Masks", false, false)
+INITIALIZE_PASS(RISCVVectorPeephole, DEBUG_TYPE, "RISC-V Fold Masks", false,
+                false)
 
-bool RISCVFoldMasks::isAllOnesMask(const MachineInstr *MaskDef) const {
+// If an AVL is a VLENB that's possibly scaled to be equal to VLMAX, convert it
+// to the VLMAX sentinel value.
+bool RISCVVectorPeephole::convertToVLMAX(MachineInstr &MI) const {
+  if (!RISCVII::hasVLOp(MI.getDesc().TSFlags) ||
+      !RISCVII::hasSEWOp(MI.getDesc().TSFlags))
+    return false;
+  MachineOperand &VL = MI.getOperand(RISCVII::getVLOpNum(MI.getDesc()));
+  if (!VL.isReg())
+    return false;
+  MachineInstr *Def = MRI->getVRegDef(VL.getReg());
+  if (!Def)
+    return false;
+
+  // Fixed-point value, denominator=8
+  uint64_t ScaleFixed = 8;
+  // Check if the VLENB was potentially scaled with slli/srli
+  if (Def->getOpcode() == RISCV::SLLI) {
+    assert(Def->getOperand(2).getImm() < 64);
+    ScaleFixed <<= Def->getOperand(2).getImm();
+    Def = MRI->getVRegDef(Def->getOperand(1).getReg());
+  } else if (Def->getOpcode() == RISCV::SRLI) {
+    assert(Def->getOperand(2).getImm() < 64);
+    ScaleFixed >>= Def->getOperand(2).getImm();
+    Def = MRI->getVRegDef(Def->getOperand(1).getReg());
+  }
+
+  if (!Def || Def->getOpcode() != RISCV::PseudoReadVLENB)
+    return false;
+
+  auto LMUL = RISCVVType::decodeVLMUL(RISCVII::getLMul(MI.getDesc().TSFlags));
+  // Fixed-point value, denominator=8
+  unsigned LMULFixed = LMUL.second ? (8 / LMUL.first) : 8 * LMUL.first;
+  unsigned Log2SEW = MI.getOperand(RISCVII::getSEWOpNum(MI.getDesc())).getImm();
+  // A Log2SEW of 0 is an operation on mask registers only
+  unsigned SEW = Log2SEW ? 1 << Log2SEW : 8;
+  assert(RISCVVType::isValidSEW(SEW) && "Unexpected SEW");
+  assert(8 * LMULFixed / SEW > 0);
+
+  // AVL = (VLENB * Scale)
+  //
+  // VLMAX = (VLENB * 8 * LMUL) / SEW
+  //
+  // AVL == VLMAX
+  // -> VLENB * Scale == (VLENB * 8 * LMUL) / SEW
+  // -> Scale == (8 * LMUL) / SEW
+  if (ScaleFixed != 8 * LMULFixed / SEW)
+    return false;
+
+  VL.ChangeToImmediate(RISCV::VLMaxSentinel);
+
+  return true;
+}
+
+bool RISCVVectorPeephole::isAllOnesMask(const MachineInstr *MaskDef) const {
   assert(MaskDef && MaskDef->isCopy() &&
          MaskDef->getOperand(0).getReg() == RISCV::V0);
   Register SrcReg = TRI->lookThruCopyLike(MaskDef->getOperand(1).getReg(), MRI);
@@ -91,7 +157,7 @@ bool RISCVFoldMasks::isAllOnesMask(const MachineInstr *MaskDef) const {
 
 // Transform (VMERGE_VVM_<LMUL> false, false, true, allones, vl, sew) to
 // (VMV_V_V_<LMUL> false, true, vl, sew). It may decrease uses of VMSET.
-bool RISCVFoldMasks::convertVMergeToVMv(MachineInstr &MI) const {
+bool RISCVVectorPeephole::convertVMergeToVMv(MachineInstr &MI) const {
 #define CASE_VMERGE_TO_VMV(lmul)                                               \
   case RISCV::PseudoVMERGE_VVM_##lmul:                                         \
     NewOpc = RISCV::PseudoVMV_V_V_##lmul;                                      \
@@ -134,7 +200,7 @@ bool RISCVFoldMasks::convertVMergeToVMv(MachineInstr &MI) const {
   return true;
 }
 
-bool RISCVFoldMasks::convertToUnmasked(MachineInstr &MI) const {
+bool RISCVVectorPeephole::convertToUnmasked(MachineInstr &MI) const {
   const RISCV::RISCVMaskedPseudoInfo *I =
       RISCV::getMaskedPseudoInfo(MI.getOpcode());
   if (!I)
@@ -178,7 +244,7 @@ bool RISCVFoldMasks::convertToUnmasked(MachineInstr &MI) const {
   return true;
 }
 
-bool RISCVFoldMasks::runOnMachineFunction(MachineFunction &MF) {
+bool RISCVVectorPeephole::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
@@ -213,6 +279,7 @@ bool RISCVFoldMasks::runOnMachineFunction(MachineFunction &MF) {
 
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
+      Changed |= convertToVLMAX(MI);
       Changed |= convertToUnmasked(MI);
       Changed |= convertVMergeToVMv(MI);
     }
@@ -221,4 +288,6 @@ bool RISCVFoldMasks::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-FunctionPass *llvm::createRISCVFoldMasksPass() { return new RISCVFoldMasks(); }
+FunctionPass *llvm::createRISCVVectorPeepholePass() {
+  return new RISCVVectorPeephole();
+}
