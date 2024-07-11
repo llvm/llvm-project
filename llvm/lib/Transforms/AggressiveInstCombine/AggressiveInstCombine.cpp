@@ -54,6 +54,11 @@ static cl::opt<unsigned> StrNCmpInlineThreshold(
     cl::desc("The maximum length of a constant string for a builtin string cmp "
              "call eligible for inlining. The default value is 3."));
 
+static cl::opt<unsigned>
+    StrChrInlineThreshold("strchr-inline-threshold", cl::init(3), cl::Hidden,
+                          cl::desc("The maximum length of a constant string to "
+                                   "inline a memchr/strchr call."));
+
 /// Match a pattern for a bitwise funnel/rotate operation that partially guards
 /// against undefined behavior by branching around the funnel-shift/rotation
 /// when the shift amount is 0.
@@ -1103,6 +1108,81 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
   }
 }
 
+/// Convert strchr/memchr with a small constant string into a switch
+static bool foldStrChr(CallInst *Call, LibFunc Func, DomTreeUpdater *DTU,
+                       const DataLayout &DL) {
+  assert((Func == LibFunc_strchr || Func == LibFunc_memchr) &&
+         "Unexpected LibFunc");
+  if (isa<Constant>(Call->getArgOperand(1)))
+    return false;
+
+  StringRef Str;
+  Value *Base = Call->getArgOperand(0);
+  if (!getConstantStringInfo(Base, Str, /*TrimAtNul=*/Func == LibFunc_strchr))
+    return false;
+
+  uint64_t N = Str.size();
+  if (Func == LibFunc_memchr) {
+    if (auto *ConstInt = dyn_cast<ConstantInt>(Call->getArgOperand(2)))
+      N = std::min(N, ConstInt->getZExtValue());
+    else
+      return false;
+  }
+
+  if (N > StrChrInlineThreshold)
+    return false;
+
+  BasicBlock *BB = Call->getParent();
+  BasicBlock *BBNext = SplitBlock(BB, Call, DTU);
+  IRBuilder<> IRB(BB);
+  IntegerType *ByteTy = IRB.getInt8Ty();
+  BB->getTerminator()->eraseFromParent();
+  SwitchInst *SI = IRB.CreateSwitch(
+      IRB.CreateTrunc(Call->getArgOperand(1), ByteTy), BBNext, N);
+  Type *IndexTy = DL.getIndexType(Call->getType());
+
+  PHINode *PHI = PHINode::Create(Call->getType(), 2, "", BBNext->begin());
+  PHI->addIncoming(Constant::getNullValue(Call->getType()), BB);
+
+  SmallVector<DominatorTree::UpdateType, 8> Updates;
+
+  BasicBlock *BBSuccess =
+      BasicBlock::Create(Call->getContext(), "", BB->getParent(), BBSuccess);
+  IRB.SetInsertPoint(BBSuccess);
+  PHINode *IndexPHI = IRB.CreatePHI(IndexTy, N);
+  Value *FirstOccursLocation = IRB.CreateInBoundsPtrAdd(Base, IndexPHI);
+  PHI->addIncoming(FirstOccursLocation, BBSuccess);
+  IRB.CreateBr(BBNext);
+  if (DTU)
+    Updates.push_back({DominatorTree::Insert, BBSuccess, BBNext});
+
+  SmallPtrSet<ConstantInt *, 4> Cases;
+  for (uint64_t I = 0; I < N; ++I) {
+    ConstantInt *CaseVal = ConstantInt::get(ByteTy, Str[I]);
+    if (!Cases.insert(CaseVal).second)
+      continue;
+
+    BasicBlock *BBCase =
+        BasicBlock::Create(Call->getContext(), "", BB->getParent(), BBNext);
+    SI->addCase(CaseVal, BBCase);
+    IRB.SetInsertPoint(BBCase);
+    IndexPHI->addIncoming(ConstantInt::get(IndexTy, I), BBCase);
+    IRB.CreateBr(BBSuccess);
+    if (DTU) {
+      Updates.push_back({DominatorTree::Insert, BB, BBCase});
+      Updates.push_back({DominatorTree::Insert, BBCase, BBSuccess});
+    }
+  }
+
+  Call->replaceAllUsesWith(PHI);
+  Call->eraseFromParent();
+
+  if (DTU)
+    DTU->applyUpdates(Updates);
+
+  return true;
+}
+
 static bool foldLibCalls(Instruction &I, TargetTransformInfo &TTI,
                          TargetLibraryInfo &TLI, AssumptionCache &AC,
                          DominatorTree &DT, const DataLayout &DL,
@@ -1131,6 +1211,13 @@ static bool foldLibCalls(Instruction &I, TargetTransformInfo &TTI,
   case LibFunc_strcmp:
   case LibFunc_strncmp:
     if (StrNCmpInliner(CI, LF, &DTU, DL).optimizeStrNCmp()) {
+      MadeCFGChange = true;
+      return true;
+    }
+    break;
+  case LibFunc_strchr:
+  case LibFunc_memchr:
+    if (foldStrChr(CI, LF, &DTU, DL)) {
       MadeCFGChange = true;
       return true;
     }
