@@ -58,15 +58,12 @@ define void @forward_offset_align_2(ptr %src, ptr %dest) {
 }
 
 ; If the copy destination can be used as the copy source, we don't need to create a GEP instruction.
-; FIXME: We can directly remove memcpy here.
 define void @forward_offset_without_gep(ptr %src) {
 ; CHECK-LABEL: define void @forward_offset_without_gep(
 ; CHECK-SAME: ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca [9 x i8], align 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[TMP]], ptr align 1 [[SRC]], i64 7, i1 false)
 ; CHECK-NEXT:    [[TMP_OFFSET:%.*]] = getelementptr inbounds i8, ptr [[TMP]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 1
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[TMP1]], ptr align 1 [[TMP1]], i64 6, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %cpy_tmp = alloca %buf, align 1

@@ -1160,7 +1160,7 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
   }
 
   IRBuilder<> Builder(M);
-  auto *CopySource = MDep->getRawSource();
+  auto *CopySource = MDep->getSource();
   auto CleanupOnFailure = llvm::make_scope_exit([&CopySource] {
     if (CopySource->use_empty())
       cast<Instruction>(CopySource)->eraseFromParent();
@@ -1180,7 +1180,7 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     std::optional<int64_t> MDestOffset =
         M->getRawDest()->getPointerOffsetFrom(MDep->getRawSource(), DL);
     if (MDestOffset == MForwardOffset)
-      CopySource = M->getRawDest();
+      CopySource = M->getDest();
     else
       CopySource = Builder.CreateInBoundsPtrAdd(
           CopySource, Builder.getInt64(MForwardOffset));
@@ -1204,7 +1204,7 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     return false;
 
   // No need to create `memcpy(a <- a)`.
-  if (BAA.isMustAlias(M->getDest(), MDep->getSource())) {
+  if (BAA.isMustAlias(M->getDest(), CopySource)) {
     // Remove the instruction we're replacing.
     eraseInstruction(M);
     ++NumMemCpyInstr;
@@ -1236,18 +1236,18 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
   Instruction *NewM;
   if (UseMemMove)
     NewM =
-        Builder.CreateMemMove(M->getRawDest(), M->getDestAlign(), CopySource,
+        Builder.CreateMemMove(M->getDest(), M->getDestAlign(), CopySource,
                               CopySourceAlign, M->getLength(), M->isVolatile());
   else if (isa<MemCpyInlineInst>(M)) {
     // llvm.memcpy may be promoted to llvm.memcpy.inline, but the converse is
     // never allowed since that would allow the latter to be lowered as a call
     // to an external function.
-    NewM = Builder.CreateMemCpyInline(M->getRawDest(), M->getDestAlign(),
+    NewM = Builder.CreateMemCpyInline(M->getDest(), M->getDestAlign(),
                                       CopySource, CopySourceAlign,
                                       M->getLength(), M->isVolatile());
   } else
     NewM =
-        Builder.CreateMemCpy(M->getRawDest(), M->getDestAlign(), CopySource,
+        Builder.CreateMemCpy(M->getDest(), M->getDestAlign(), CopySource,
                              CopySourceAlign, M->getLength(), M->isVolatile());
   NewM->copyMetadata(*M, LLVMContext::MD_DIAssignID);
 
