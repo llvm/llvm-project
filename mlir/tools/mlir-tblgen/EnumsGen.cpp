@@ -81,7 +81,7 @@ static void emitParserPrinter(const EnumAttr &enumAttr, StringRef qualName,
       nonKeywordCases.set(index);
 
   // Generate the parser and the start of the printer for the enum.
-  const char *parsedAndPrinterStart = R"(
+  const char *parser = R"(
 namespace mlir {
 template <typename T, typename>
 struct FieldParser;
@@ -103,13 +103,16 @@ struct FieldParser<{0}, {0}> {{
   }
 };
 } // namespace mlir
+)";
+  if (enumAttr.genParser())
+    os << formatv(parser, qualName, cppNamespace, enumAttr.getSummary());
 
+  const char *printerStart = R"(
 namespace llvm {
 inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
   auto valueStr = stringifyEnum(value);
 )";
-  os << formatv(parsedAndPrinterStart, qualName, cppNamespace,
-                enumAttr.getSummary());
+  os << formatv(printerStart, qualName, cppNamespace, enumAttr.getSummary());
 
   // If all cases require a string, always wrap.
   if (nonKeywordCases.all()) {
