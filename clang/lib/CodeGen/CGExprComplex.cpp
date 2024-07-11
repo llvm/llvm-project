@@ -351,7 +351,7 @@ public:
     QualType promotionTy = getPromotionType(                                   \
         (E->hasStoredFPFeatures() ? E->getStoredFPFeatures()                   \
                                   : FPOptionsOverride()),                      \
-          E->getType(),                                                        \
+        E->getType(),                                                          \
         (E->getOpcode() == BinaryOperatorKind::BO_Div) ? true : false);        \
     ComplexPairTy result = EmitBin##OP(EmitBinOps(E, promotionTy));            \
     if (!promotionTy.isNull())                                                 \
