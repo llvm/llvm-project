@@ -215,8 +215,7 @@ void TargetCodeGenInfo::setBranchProtectionFnAttributes(
 }
 
 void TargetCodeGenInfo::setBranchProtectionFnAttributes(
-    const TargetInfo::BranchProtectionInfo &BPI,
-    llvm::AttrBuilder &FuncAttrs) {
+    const TargetInfo::BranchProtectionInfo &BPI, llvm::AttrBuilder &FuncAttrs) {
   if (BPI.SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
     FuncAttrs.addAttribute("sign-return-address", BPI.getSignReturnAddrStr());
     FuncAttrs.addAttribute("sign-return-address-key", BPI.getSignKeyStr());
