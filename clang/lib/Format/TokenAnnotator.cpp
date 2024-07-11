@@ -3154,8 +3154,8 @@ public:
 
       int CurrentPrecedence = getCurrentPrecedence();
       if (!Style.BinPackBinaryOperations &&
-          (CurrentPrecedence > prec::Conditional) &&
-          (CurrentPrecedence < prec::PointerToMember)) {
+          CurrentPrecedence > prec::Conditional &&
+          CurrentPrecedence < prec::PointerToMember) {
         // With BinPackBinaryOperations disabled,
         // all operations will be on the same line or on individual lines.
         // Override precedence to avoid adding fake parenthesis which could

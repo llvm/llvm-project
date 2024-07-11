@@ -27650,12 +27650,12 @@ TEST_F(FormatTest, BinPackBinaryOperations) {
   verifyFormat("const int result = lhs + rhs;\n", Style);
 
   verifyFormat("const int result = loooooooongop1 + looooooooongop2 +\n"
-               "                   loooooooooooooooooooooongop3;\n",
+               "                   loooooooooooooooooooooongop3;",
                Style);
 
   verifyFormat("result = longOperand1 + longOperand2 -\n"
                "         (longOperand3 + longOperand4) -\n"
-               "         longOperand5 * longOperand6;\n",
+               "         longOperand5 * longOperand6;",
                Style);
 
   verifyFormat("const int result =\n"
@@ -27687,18 +27687,18 @@ TEST_F(FormatTest, BinPackBinaryOperations) {
 
   verifyFormat("result = loooooooooooooooooooooongop1 +\n"
                "         loooooooooooooooooooooongop2 +\n"
-               "         loooooooooooooooooooooongop3;\n",
+               "         loooooooooooooooooooooongop3;",
                Style);
 
   verifyFormat("const int result =\n"
-               "    operand1 + operand2 - (operand3 + operand4);\n",
+               "    operand1 + operand2 - (operand3 + operand4);",
                Style);
 
   verifyFormat("result = longOperand1 +\n"
                "         longOperand2 -\n"
                "         (longOperand3 + longOperand4) -\n"
                "         longOperand5 +\n"
-               "         longOperand6;\n",
+               "         longOperand6;",
                Style);
 
   verifyFormat("result = operand1 +\n"
@@ -27706,7 +27706,7 @@ TEST_F(FormatTest, BinPackBinaryOperations) {
                "         operand3 +\n"
                "         operand4 -\n"
                "         operand5 +\n"
-               "         operand6;\n",
+               "         operand6;",
                Style);
 
   // Ensure mixed precedence operations are handled properly
@@ -27717,7 +27717,7 @@ TEST_F(FormatTest, BinPackBinaryOperations) {
                "         operand3 +\n"
                "         operand4 /\n"
                "         operand5 *\n"
-               "         operand6;\n",
+               "         operand6;",
                Style);
 
   verifyFormat("result = operand1 *\n"
@@ -27725,19 +27725,19 @@ TEST_F(FormatTest, BinPackBinaryOperations) {
                "         operand3 *\n"
                "         operand4 -\n"
                "         operand5 +\n"
-               "         operand6;\n",
+               "         operand6;",
                Style);
 
   verifyFormat("result = operand1 *\n"
                "         (operand2 - operand3 * operand4) -\n"
                "         operand5 +\n"
-               "         operand6;\n",
+               "         operand6;",
                Style);
 
   verifyFormat("result = operand1.member *\n"
                "         (operand2.member() - operand3->mem * operand4) -\n"
                "         operand5.member() +\n"
-               "         operand6->member;\n",
+               "         operand6->member;",
                Style);
 }
 
