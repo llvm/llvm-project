@@ -11,23 +11,18 @@
 
 namespace llvm {
 
-#if !defined(__LONG_DOUBLE_IBM128__) && (__SIZEOF_LONG_DOUBLE__ == 16) &&      \
-    (__SIZEOF_INT128__ == 16) && (__LDBL_MANT_DIG__ == 113)
-#define HAS_IEE754_FLOAT128
-#if (defined(__GNUC__) && __GNUC__ > 12)
+#ifdef HAS_FLOAT128_LOGF128
 typedef _Float128 float128;
-#else
-typedef long double float128;
-#endif
-#elif defined(__clang__) && defined(__FLOAT128__) &&                           \
-    defined(__SIZEOF_INT128__) && !defined(__LONG_DOUBLE_IBM128__)
 #define HAS_IEE754_FLOAT128
+#elif HAS__FLOAT128_LOGF128
 typedef __float128 float128;
-#elif defined(__FLOAT128__) && defined(__SIZEOF_INT128__) &&                   \
-    !defined(__LONG_DOUBLE_IBM128__) &&                                        \
-    (defined(__GNUC__) || defined(__GNUG__))
+extern "C" {
+float128 logf128(float128);
+}
 #define HAS_IEE754_FLOAT128
-typedef _Float128 float128;
+#elif HAS_LONG_DOUBLE_LOGF128
+typedef long double float128;
+#define HAS_IEE754_FLOAT128
 #endif
 
 } // namespace llvm
