@@ -47,6 +47,7 @@ TEST(CachedCyclicReplacerTest, testInPlaceRecursionPruneAnywhere) {
 /// infinitely long vector. The cycle-breaker function prunes this infinite
 /// recursion in the replacer logic by returning an empty vector upon the first
 /// re-occurrence of an input value.
+namespace {
 class CachedCyclicReplacerChainRecursionPruningTest : public ::testing::Test {
 public:
   // N ==> (N+1) % 3
@@ -71,6 +72,7 @@ public:
   int invokeCount = 0;
   std::optional<int> baseCase = std::nullopt;
 };
+} // namespace
 
 TEST_F(CachedCyclicReplacerChainRecursionPruningTest, testPruneAnywhere0) {
   // Starting at 0. Cycle length is 3.
@@ -128,6 +130,7 @@ TEST_F(CachedCyclicReplacerChainRecursionPruningTest, testPruneSpecific1) {
 /// - PrunedGraph
 ///   - A Graph where edges that used to cause cycles are now represented with
 ///     an indirection (a recursionId).
+namespace {
 class CachedCyclicReplacerGraphReplacement : public ::testing::Test {
 public:
   /// A directed graph where nodes are non-negative integers.
@@ -317,6 +320,7 @@ public:
     return oss.str();
   }
 };
+} // namespace
 
 TEST_F(CachedCyclicReplacerGraphReplacement, testSingleLoop) {
   // 0 -> 1 -> 2
