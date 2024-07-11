@@ -824,6 +824,36 @@ DWARFASTParserClang::GetDIEClassTemplateParams(const DWARFDIE &die) {
   return {};
 }
 
+void DWARFASTParserClang::MappingDeclDIEToDefDIE(
+    const lldb_private::plugin::dwarf::DWARFDIE &decl_die,
+    const lldb_private::plugin::dwarf::DWARFDIE &def_die) {
+  LinkDeclContextToDIE(GetCachedClangDeclContextForDIE(decl_die), def_die);
+  SymbolFileDWARF *dwarf = def_die.GetDWARF();
+  ParsedDWARFTypeAttributes decl_attrs(decl_die);
+  ParsedDWARFTypeAttributes def_attrs(def_die);
+  ConstString unique_typename(decl_attrs.name);
+  Declaration decl_declaration(decl_attrs.decl);
+  if (Language::LanguageIsCPlusPlus(
+          SymbolFileDWARF::GetLanguage(*decl_die.GetCU()))) {
+    std::string qualified_name = GetCPlusPlusQualifiedName(decl_die);
+    if (!qualified_name.empty())
+      unique_typename = ConstString(qualified_name);
+    decl_declaration.Clear();
+  }
+  if (UniqueDWARFASTType *unique_ast_entry_type =
+          dwarf->GetUniqueDWARFASTTypeMap().Find(
+              unique_typename, decl_die, decl_declaration,
+              decl_attrs.byte_size.value_or(0),
+              decl_attrs.is_forward_declaration)) {
+    unique_ast_entry_type->m_die = def_die;
+    if (int32_t def_byte_size = def_attrs.byte_size.value_or(0))
+      unique_ast_entry_type->m_byte_size = def_byte_size;
+    if (def_attrs.decl.IsValid())
+      unique_ast_entry_type->m_declaration = def_attrs.decl;
+    unique_ast_entry_type->m_is_forward_declaration = false;
+  }
+}
+
 TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
                                       const DWARFDIE &decl_die,
                                       ParsedDWARFTypeAttributes &attrs) {
@@ -1654,11 +1684,13 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
         if (!attrs.is_forward_declaration &&
             unique_ast_entry_type->m_is_forward_declaration) {
           unique_ast_entry_type->m_die = die;
-          unique_ast_entry_type->m_byte_size = byte_size;
-          unique_ast_entry_type->m_declaration = unique_decl;
+          if (byte_size)
+            unique_ast_entry_type->m_byte_size = byte_size;
+          if (unique_decl.IsValid())
+            unique_ast_entry_type->m_declaration = unique_decl;
           unique_ast_entry_type->m_is_forward_declaration = false;
           // Need to update Type ID to refer to the definition DIE. because
-          // it's used in ParseSubroutine to determine if we need to copy cxx
+          // it's used in ParseCXXMethod to determine if we need to copy cxx
           // method types from a declaration DIE to this definition DIE.
           type_sp->SetID(die.GetID());
           clang_type = type_sp->GetForwardCompilerType();

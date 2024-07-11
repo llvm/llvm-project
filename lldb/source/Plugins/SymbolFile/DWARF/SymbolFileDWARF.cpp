@@ -1653,22 +1653,24 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
     }
   }
   if (!def_die) {
-    // No definition found. Proceed with the declaration die. We can use it to
-    // create a forward-declared type.
+    // If we don't have definition DIE, CompleteTypeFromDWARF will forcefully
+    // complete this type.
     def_die = decl_die;
   }
 
-  Type *type = ResolveType(def_die);
-  if (!type)
+  DWARFASTParser *dwarf_ast = GetDWARFParser(*def_die.GetCU());
+  if (!dwarf_ast)
     return false;
-
-  if (def_die != decl_die) {
-    // After the call to FindDefinitionDIE, we have a new mapping from the old
-    // CompilerType to definition DIE. Remove it to mark it as completed.
-    // TODO: Maybe this requires a more robust way to mark the type is already
-    // completed.
-    GetForwardDeclCompilerTypeToDIE().erase(
-        compiler_type_no_qualifiers.GetOpaqueQualType());
+  Type *type = GetDIEToType().lookup(decl_die.GetDIE());
+  if (decl_die != def_die) {
+    GetDIEToType()[def_die.GetDIE()] = type;
+    // Need to update Type ID to refer to the definition DIE. because
+    // it's used in ParseCXXMethod to determine if we need to copy cxx
+    // method types from a declaration DIE to this definition DIE.
+    type->SetID(def_die.GetID());
+    if (DWARFASTParserClang *ast_parser =
+            static_cast<DWARFASTParserClang *>(dwarf_ast))
+      ast_parser->MappingDeclDIEToDefDIE(decl_die, def_die);
   }
 
   Log *log = GetLog(DWARFLog::DebugInfo | DWARFLog::TypeCompletion);
@@ -1678,9 +1680,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
         def_die.GetID(), DW_TAG_value_to_name(def_die.Tag()), def_die.Tag(),
         type->GetName().AsCString());
   assert(compiler_type);
-  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*def_die.GetCU()))
-    return dwarf_ast->CompleteTypeFromDWARF(def_die, type, compiler_type);
-  return false;
+  return dwarf_ast->CompleteTypeFromDWARF(def_die, type, compiler_type);
 }
 
 Type *SymbolFileDWARF::ResolveType(const DWARFDIE &die,
