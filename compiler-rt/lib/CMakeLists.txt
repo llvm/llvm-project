@@ -41,7 +41,7 @@ if(COMPILER_RT_BUILD_SANITIZERS)
     # Contains RTLSanCommon used even without COMPILER_RT_HAS_LSAN.
     add_subdirectory(lsan)
     # Contains RTUbsan used even without COMPILER_RT_HAS_UBSAN.
-    add_subdirectory(lsan)
+    add_subdirectory(ubsan)
   endif()
 
   foreach(sanitizer ${COMPILER_RT_SANITIZERS_TO_BUILD})
