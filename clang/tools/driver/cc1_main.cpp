@@ -174,6 +174,9 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
 
   // Register the support for object-file-wrapped Clang modules.
+  // clang-format off
+  // Cratels: PCH是需要额外维护数据的。
+  // clang-format on
   auto PCHOps = Clang->getPCHContainerOperations();
   PCHOps->registerWriter(std::make_unique<ObjectFilePCHContainerWriter>());
   PCHOps->registerReader(std::make_unique<ObjectFilePCHContainerReader>());
@@ -186,6 +189,9 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // Buffer diagnostics from argument parsing so that we can output them using a
   // well formed diagnostic object.
+  // clang-format off
+  // Cratels: 从参数中获取diagnostic的控制参数然后缓存下来交给诊断信息的引擎
+  // clang-format on
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
@@ -201,6 +207,8 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   // 实例中，可见后续Clang->getFrontendOpts()，Clang->getHeaderSearchOpts()等操作
   // 这里CreateFromArgs实际返回值是bool是用来显示创建过程是否正确，实际代码的side effect是改变了Clang->getInvocation()
   // 经过该方法调用后用户调用编译时的option等信息就写入到了Clang对象中，比如源码路径，include路径，options（包括Action种类）等信息。
+  // Clang是掌管整个流程，Invocation是一次调用的抽象类
+  // 这一步就是为了解析所有参数，后面的步骤中直接使用即可。
   // clang-format on
   bool Success = CompilerInvocation::CreateFromArgs(Clang->getInvocation(),
                                                     Argv, Diags, Argv0);

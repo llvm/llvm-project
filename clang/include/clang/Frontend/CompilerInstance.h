@@ -35,7 +35,7 @@ namespace llvm {
 class raw_fd_ostream;
 class Timer;
 class TimerGroup;
-}
+} // namespace llvm
 
 namespace clang {
 class ASTContext;
@@ -76,11 +76,29 @@ enum class DisableValidationForModuleKind;
 /// in to the compiler instance for everything. When possible, utility functions
 /// come in two forms; a short form that reuses the CompilerInstance objects,
 /// and a long form that takes explicit instances of any required objects.
+
+// clang-format off
+// Cratels: CompilerInstance - 用于管理 Clang 编译器单个实例的辅助类。
+// CompilerInstance 有两个作用：
+//  (1) 它管理运行编译器所需的多个对象、例如预处理器对象、目标信息对象和 AST 上下文对象等
+//  (2) 它提供了用于构建和操作常见 Clang 对象的的实用例程。
+// 编译器实例通常拥有它所管理的所有对象的实例。不过，客户端仍可通过手动设置对象来共享对象，并在销毁 CompilerInstance 之前重新获得所有权。
+// 编译器实例的目的是简化客户机，而不是将客户机与编译器实例锁定在一起。在可能的情况下，实用功能有两种形式：
+// 一种是重用 CompilerInstance 对象的简短形式、
+// 一种是获取任何所需对象的显式实例的长形式。
+// clang-format on
 class CompilerInstance : public ModuleLoader {
   /// The options used in this compiler instance.
   std::shared_ptr<CompilerInvocation> Invocation;
 
+  // clang-format off
+  // Cratels: IntrusiveRefCntPtr 侵入性的引用计数智能指针
+  // clang-format on
+
   /// The diagnostics engine instance.
+  // clang-format off
+  // Cratels: 诊断信息
+  // clang-format on
   IntrusiveRefCntPtr<DiagnosticsEngine> Diagnostics;
 
   /// The target being compiled for.
@@ -204,6 +222,7 @@ class CompilerInstance : public ModuleLoader {
 
   CompilerInstance(const CompilerInstance &) = delete;
   void operator=(const CompilerInstance &) = delete;
+
 public:
   explicit CompilerInstance(
       std::shared_ptr<PCHContainerOperations> PCHContainerOps =
@@ -270,9 +289,7 @@ public:
 
   /// Set the flag indicating whether we should (re)build the global
   /// module index.
-  void setBuildGlobalModuleIndex(bool Build) {
-    BuildGlobalModuleIndex = Build;
-  }
+  void setBuildGlobalModuleIndex(bool Build) { BuildGlobalModuleIndex = Build; }
 
   /// @}
   /// @name Forwarding Methods
@@ -280,9 +297,7 @@ public:
 
   AnalyzerOptions &getAnalyzerOpts() { return Invocation->getAnalyzerOpts(); }
 
-  CodeGenOptions &getCodeGenOpts() {
-    return Invocation->getCodeGenOpts();
-  }
+  CodeGenOptions &getCodeGenOpts() { return Invocation->getCodeGenOpts(); }
   const CodeGenOptions &getCodeGenOpts() const {
     return Invocation->getCodeGenOpts();
   }
@@ -308,9 +323,7 @@ public:
     return Invocation->getFileSystemOpts();
   }
 
-  FrontendOptions &getFrontendOpts() {
-    return Invocation->getFrontendOpts();
-  }
+  FrontendOptions &getFrontendOpts() { return Invocation->getFrontendOpts(); }
   const FrontendOptions &getFrontendOpts() const {
     return Invocation->getFrontendOpts();
   }
@@ -350,9 +363,7 @@ public:
     return Invocation->getPreprocessorOutputOpts();
   }
 
-  TargetOptions &getTargetOpts() {
-    return Invocation->getTargetOpts();
-  }
+  TargetOptions &getTargetOpts() { return Invocation->getTargetOpts(); }
   const TargetOptions &getTargetOpts() const {
     return Invocation->getTargetOpts();
   }
@@ -394,9 +405,7 @@ public:
   void setVerboseOutputStream(std::unique_ptr<raw_ostream> Value);
 
   /// Get the current stream for verbose output.
-  raw_ostream &getVerboseOutputStream() {
-    return *VerboseOutputStream;
-  }
+  raw_ostream &getVerboseOutputStream() { return *VerboseOutputStream; }
 
   /// @}
   /// @name Target Info
@@ -574,8 +583,8 @@ public:
   void setASTReader(IntrusiveRefCntPtr<ASTReader> Reader);
 
   std::shared_ptr<ModuleDependencyCollector> getModuleDepCollector() const;
-  void setModuleDepCollector(
-      std::shared_ptr<ModuleDependencyCollector> Collector);
+  void
+  setModuleDepCollector(std::shared_ptr<ModuleDependencyCollector> Collector);
 
   std::shared_ptr<PCHContainerOperations> getPCHContainerOperations() const {
     return ThePCHContainerOperations;
@@ -701,11 +710,9 @@ public:
   /// used by some diagnostics printers (for logging purposes only).
   ///
   /// \return The new object on success, or null on failure.
-  static IntrusiveRefCntPtr<DiagnosticsEngine>
-  createDiagnostics(DiagnosticOptions *Opts,
-                    DiagnosticConsumer *Client = nullptr,
-                    bool ShouldOwnClient = true,
-                    const CodeGenOptions *CodeGenOpts = nullptr);
+  static IntrusiveRefCntPtr<DiagnosticsEngine> createDiagnostics(
+      DiagnosticOptions *Opts, DiagnosticConsumer *Client = nullptr,
+      bool ShouldOwnClient = true, const CodeGenOptions *CodeGenOpts = nullptr);
 
   /// Create the file manager and replace any existing one with it.
   ///
