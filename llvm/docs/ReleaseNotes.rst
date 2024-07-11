@@ -197,6 +197,8 @@ Changes to the RISC-V Backend
   fully compatible with objects produced prior to this change. The mapping
   (ABI) used is recorded as an ELF attribute.
 * Ztso is no longer experimental.
+* The WCH / Nanjing Qinheng Microelectronics QingKe "XW" compressed opcodes are
+  supported under the name "Xwchc".
 
 Changes to the WebAssembly Backend
 ----------------------------------
