@@ -4,6 +4,13 @@
 // RUN:                   --shared-libs=%mlir_c_runner_utils | \
 // RUN:   FileCheck %s --match-full-lines
 
+func.func @cmpi_eq_i1(%v1 : i1, %v2 : i1) {
+  vector.print str "@cmpi_eq_i1\n"
+  %res = arith.cmpi eq, %v1, %v2 : i1
+  vector.print %res : i1
+  return
+}
+
 func.func @cmpi_slt_i1(%v1 : i1, %v2 : i1) {
   vector.print str "@cmpi_slt_i1\n"
   %res = arith.cmpi slt, %v1, %v2 : i1
@@ -40,9 +47,12 @@ func.func @cmpi_signed() {
   %true_i1 = arith.constant 1 : i1
   %true_i1_n1 = arith.constant -1 : i1
 
-  // sge 0 -1, sge 0 1, should be true
-  // since the bitvector `1` is interpreted as the int value -1 in signed comparisons
-  // sge 0 -1 == sge 0 1 == true (1)
+  // int values 1 and -1 represent the same bitvector
+  // CHECK-LABEL: @cmpi_eq_i1
+  // CHECK-NEXT:  1
+  func.call @cmpi_eq_i1(%true_i1, %true_i1_n1) : (i1, i1) -> ()
+
+  // But, bitvector `1` is interpreted as int value -1 in signed comparison
 
   // CHECK-LABEL: @cmpi_sge_i1
   // CHECK-NEXT:  1
@@ -54,8 +64,6 @@ func.func @cmpi_signed() {
 
   %false = arith.constant false
   %true = arith.constant true
-
-  // slt 0 1 = false, sle 0 1 = false, sgt 0 1 = true, sge 0 1 = true, sge 1 0 = false
 
   // CHECK-LABEL: @cmpi_slt_i1
   // CHECK-NEXT:  0
