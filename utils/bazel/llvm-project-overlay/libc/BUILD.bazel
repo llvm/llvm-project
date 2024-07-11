@@ -51,6 +51,13 @@ config_setting(
     flag_values = {":mpfr": "system"},
 )
 
+################################## Base Config #################################
+
+cc_library(
+    name = "__support_macros_config",
+    hdrs = ["src/__support/macros/config.h"],
+)
+
 ################################# Include Files ################################
 
 libc_support_library(
@@ -235,11 +242,6 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_macros_config",
-    hdrs = ["src/__support/macros/config.h"],
-)
-
-libc_support_library(
     name = "__support_macros_attributes",
     hdrs = ["src/__support/macros/attributes.h"],
     deps = [
@@ -252,7 +254,6 @@ libc_support_library(
     hdrs = ["src/__support/macros/optimization.h"],
     deps = [
         ":__support_macros_attributes",
-        ":__support_macros_config",
         ":__support_macros_properties_compiler",
     ],
 )
@@ -260,9 +261,6 @@ libc_support_library(
 libc_support_library(
     name = "__support_macros_sanitizer",
     hdrs = ["src/__support/macros/sanitizer.h"],
-    deps = [
-        ":__support_macros_config",
-    ],
 )
 
 libc_support_library(

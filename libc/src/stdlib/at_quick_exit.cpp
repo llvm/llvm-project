@@ -9,9 +9,10 @@
 #include "src/stdlib/at_quick_exit.h"
 #include "hdr/types/atexithandler_t.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/stdlib/exit_handler.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, at_quick_exit, (__atexithandler_t callback)) {
   return add_atexit_unit(
@@ -19,4 +20,4 @@ LLVM_LIBC_FUNCTION(int, at_quick_exit, (__atexithandler_t callback)) {
       {&stdc_at_exit_func, reinterpret_cast<void *>(callback)});
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
