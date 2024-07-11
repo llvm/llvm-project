@@ -247,6 +247,7 @@ DWARFContext::DWARFContextState::parseMacroOrMacinfo(MacroSecType SectionType) {
   return Macro;
 }
 
+namespace {
 class ThreadUnsafeDWARFContextState : public DWARFContext::DWARFContextState {
 
   DWARFUnitVector NormalUnits;
@@ -740,8 +741,7 @@ public:
     return ThreadUnsafeDWARFContextState::getTypeUnitMap(IsDWO);
   }
 };
-
-
+} // namespace
 
 DWARFContext::DWARFContext(std::unique_ptr<const DWARFObject> DObj,
                            std::string DWPName,
