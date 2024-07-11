@@ -424,7 +424,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
 /// Return true if we can prove that all callees pass in a valid pointer for the
 /// specified function argument.
 static bool allCallersPassValidPointerForArgument(
-    Argument *Arg, SmallPtrSet<CallBase *, 4> &RecursiveCalls,
+    Argument *Arg, SmallPtrSetImpl<CallBase *, 4> &RecursiveCalls,
     Align NeededAlign, uint64_t NeededDerefBytes) {
   Function *Callee = Arg->getParent();
   const DataLayout &DL = Callee->getDataLayout();
