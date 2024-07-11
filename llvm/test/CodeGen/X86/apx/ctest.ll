@@ -901,7 +901,8 @@ define void @ctest64ri64(i64 noundef %a, i64 noundef %b) {
 ; CHECK-LABEL: ctest64ri64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    ctestneq {dfv=zf} $9992147483647, %rsi # imm = 0x9167A66BBFF
+; CHECK-NEXT:    movabsq $9992147483647, %rax # imm = 0x9167A66BBFF
+; CHECK-NEXT:    ctestneq {dfv=zf} %rax, %rsi
 ; CHECK-NEXT:    jne .LBB24_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -912,7 +913,8 @@ define void @ctest64ri64(i64 noundef %a, i64 noundef %b) {
 ; NDD-LABEL: ctest64ri64:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    testq %rdi, %rdi
-; NDD-NEXT:    ctestneq {dfv=zf} $9992147483647, %rsi # imm = 0x9167A66BBFF
+; NDD-NEXT:    movabsq $9992147483647, %rax # imm = 0x9167A66BBFF
+; NDD-NEXT:    ctestneq {dfv=zf} %rax, %rsi
 ; NDD-NEXT:    jne .LBB24_1
 ; NDD-NEXT:  # %bb.2: # %if.then
 ; NDD-NEXT:    xorl %eax, %eax
