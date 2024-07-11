@@ -1078,10 +1078,9 @@ LogicalResult ModuleTranslation::convertGlobals() {
       // of the variable is the parent function. We use the compile unit of the
       // parent function in this case.
       llvm::DIScope *scope = diGlobalVar->getScope();
-      if (llvm::DIModule *mod = dyn_cast_if_present<llvm::DIModule>(scope))
+      if (auto *mod = dyn_cast_if_present<llvm::DIModule>(scope))
         scope = mod->getScope();
-      else if (llvm::DISubprogram *sp =
-                   dyn_cast_or_null<llvm::DISubprogram>(scope))
+      else if (auto *sp = dyn_cast_if_present<llvm::DISubprogram>(scope))
         scope = sp->getUnit();
 
       // Get the compile unit (scope) of the the global variable.
