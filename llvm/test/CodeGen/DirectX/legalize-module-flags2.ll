@@ -2,7 +2,7 @@
 
 ; CHECK: define void @main()
 ; Make sure behavior flag > 6 is fixed.
-; CHECK-NOT:{i32 7, !"frame-pointer", i32 2}
+; CHECK:{i32 2, !"frame-pointer", i32 2}
 
 ; Function Attrs: nounwind memory(none)
 define void @main() local_unnamed_addr #0 {
