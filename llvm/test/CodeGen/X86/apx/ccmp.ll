@@ -1258,8 +1258,9 @@ define void @ccmp64ri64(i64 noundef %a, i64 noundef %b, i64 noundef %c) {
 ; CHECK-LABEL: ccmp64ri64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpq %rdx, %rdi # encoding: [0x48,0x39,0xd7]
-; CHECK-NEXT:    ccmpbeq {dfv=zf} $9992147483646, %rsi # encoding: [0x62,0xf4,0x94,0x06,0x81,0xfe,0xfe,0xbb,0x66,0x7a]
+; CHECK-NEXT:    movabsq $9992147483646, %rax # encoding: [0x48,0xb8,0xfe,0xbb,0x66,0x7a,0x16,0x09,0x00,0x00]
 ; CHECK-NEXT:    # imm = 0x9167A66BBFE
+; CHECK-NEXT:    ccmpbeq {dfv=zf} %rax, %rsi # encoding: [0x62,0xf4,0x94,0x06,0x39,0xc6]
 ; CHECK-NEXT:    jg .LBB30_1 # encoding: [0x7f,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB30_1-1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
@@ -1273,8 +1274,9 @@ define void @ccmp64ri64(i64 noundef %a, i64 noundef %b, i64 noundef %c) {
 ; NDD-LABEL: ccmp64ri64:
 ; NDD:       # %bb.0: # %entry
 ; NDD-NEXT:    cmpq %rdx, %rdi # encoding: [0x48,0x39,0xd7]
-; NDD-NEXT:    ccmpbeq {dfv=zf} $9992147483646, %rsi # encoding: [0x62,0xf4,0x94,0x06,0x81,0xfe,0xfe,0xbb,0x66,0x7a]
+; NDD-NEXT:    movabsq $9992147483646, %rax # encoding: [0x48,0xb8,0xfe,0xbb,0x66,0x7a,0x16,0x09,0x00,0x00]
 ; NDD-NEXT:    # imm = 0x9167A66BBFE
+; NDD-NEXT:    ccmpbeq {dfv=zf} %rax, %rsi # encoding: [0x62,0xf4,0x94,0x06,0x39,0xc6]
 ; NDD-NEXT:    jg .LBB30_1 # encoding: [0x7f,A]
 ; NDD-NEXT:    # fixup A - offset: 1, value: .LBB30_1-1, kind: FK_PCRel_1
 ; NDD-NEXT:  # %bb.2: # %if.then
