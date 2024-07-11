@@ -366,3 +366,22 @@ add_perf_binary(
   COMPILE_OPTIONS
     -fno-builtin
 )
+
+add_perf_binary(
+  nearest_integer_funcs_perf
+  SRCS
+    nearest_integer_funcs_perf.cpp
+  DEPENDS
+    libc.src.math.ceilf
+    libc.src.math.ceilf16
+    libc.src.math.floorf
+    libc.src.math.floorf16
+    libc.src.math.roundevenf
+    libc.src.math.roundevenf16
+    libc.src.math.roundf
+    libc.src.math.roundf16
+    libc.src.math.truncf
+    libc.src.math.truncf16
+  COMPILE_OPTIONS
+    -fno-builtin
+)
