@@ -719,12 +719,8 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
   AtomicOrdering Ordering = N->getSuccessOrdering();
   auto CodeAddrSpace = getCodeAddrSpace(N);
 
-  // Supports relaxed, acquire, release, weak:
-  bool hasAtomics =
-      Subtarget->getPTXVersion() >= 60 && Subtarget->getSmVersion() >= 70;
-  // Supports mmio:
-  bool hasRelaxedMMIO =
-      Subtarget->getPTXVersion() >= 82 && Subtarget->getSmVersion() >= 70;
+  bool HasMemoryOrdering = Subtarget->hasMemoryOrdering();
+  bool HasRelaxedMMIO = Subtarget->hasRelaxedMMIO();
 
   // TODO: lowering for SequentiallyConsistent Operations: for now, we error.
   // TODO: lowering for AcquireRelease Operations: for now, we error.
@@ -770,7 +766,7 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
   //      sm_60 and older.
   if (!(Ordering == AtomicOrdering::NotAtomic ||
         Ordering == AtomicOrdering::Monotonic) &&
-      !hasAtomics) {
+      !HasMemoryOrdering) {
     SmallString<256> Msg;
     raw_svector_ostream OS(Msg);
     OS << "PTX does not support \"atomic\" for orderings different than"
@@ -783,7 +779,7 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
   // the volatile semantics and preserve the atomic ones. [4]: TODO: volatile
   // atomics with order stronger than relaxed are currently unimplemented in
   // sm_60 and older.
-  if (!hasAtomics && N->isVolatile() &&
+  if (!HasMemoryOrdering && N->isVolatile() &&
       !(Ordering == AtomicOrdering::NotAtomic ||
         Ordering == AtomicOrdering::Monotonic)) {
     SmallString<256> Msg;
@@ -804,7 +800,7 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
        CodeAddrSpace == NVPTX::PTXLdStInstCode::GLOBAL ||
        CodeAddrSpace == NVPTX::PTXLdStInstCode::SHARED);
   bool useRelaxedMMIO =
-      hasRelaxedMMIO && CodeAddrSpace == NVPTX::PTXLdStInstCode::GLOBAL;
+      HasRelaxedMMIO && CodeAddrSpace == NVPTX::PTXLdStInstCode::GLOBAL;
 
   switch (Ordering) {
   case AtomicOrdering::NotAtomic:
@@ -817,7 +813,7 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
              : addrGenericOrGlobalOrShared ? NVPTX::PTXLdStInstCode::Volatile
                                            : NVPTX::PTXLdStInstCode::NotAtomic;
     else
-      return hasAtomics                    ? NVPTX::PTXLdStInstCode::Relaxed
+      return HasMemoryOrdering             ? NVPTX::PTXLdStInstCode::Relaxed
              : addrGenericOrGlobalOrShared ? NVPTX::PTXLdStInstCode::Volatile
                                            : NVPTX::PTXLdStInstCode::NotAtomic;
   case AtomicOrdering::Acquire:
