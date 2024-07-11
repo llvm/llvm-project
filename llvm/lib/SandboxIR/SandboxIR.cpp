@@ -270,16 +270,16 @@ void Constant::dump() const {
 void Function::dumpNameAndArgs(raw_ostream &OS) const {
   auto *F = cast<llvm::Function>(Val);
   OS << *F->getReturnType() << " @" << F->getName() << "(";
-  auto NumArgs = F->arg_size();
-  for (auto [Idx, Arg] : enumerate(F->args())) {
-    auto *SBArg = cast_or_null<Argument>(Ctx.getValue(&Arg));
-    if (SBArg == nullptr)
-      OS << "NULL";
-    else
-      SBArg->printAsOperand(OS);
-    if (Idx + 1 < NumArgs)
-      OS << ", ";
-  }
+  interleave(
+      F->args(),
+      [this, &OS](const llvm::Argument &LLVMArg) {
+        auto *SBArg = cast_or_null<Argument>(Ctx.getValue(&LLVMArg));
+        if (SBArg == nullptr)
+          OS << "NULL";
+        else
+          SBArg->printAsOperand(OS);
+      },
+      [this, &OS] { OS << ", "; });
   OS << ")";
 }
 void Function::dump(raw_ostream &OS) const {
