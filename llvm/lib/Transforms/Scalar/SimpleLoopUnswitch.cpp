@@ -1245,7 +1245,7 @@ static BasicBlock *buildClonedLoopBlocks(
       if (SE && isa<PHINode>(I))
         SE->forgetValue(&I);
 
-      Instruction *InsertPt = &*MergeBB->getFirstInsertionPt();
+      BasicBlock::iterator InsertPt = MergeBB->getFirstInsertionPt();
 
       auto *MergePN =
           PHINode::Create(I.getType(), /*NumReservedValues*/ 2, ".us-phi");
@@ -2353,11 +2353,12 @@ static void unswitchNontrivialInvariants(
       BI->setSuccessor(ClonedSucc, ClonedPH);
       BI->setSuccessor(1 - ClonedSucc, LoopPH);
       Value *Cond = skipTrivialSelect(BI->getCondition());
-      if (InsertFreeze)
+      if (InsertFreeze) {
         // We don't give any debug location to the new freeze, because the
         // BI (`dyn_cast<BranchInst>(TI)`) is an in-loop instruction hoisted
         // out of the loop.
         Cond = new FreezeInst(Cond, Cond->getName() + ".fr", BI->getIterator());
+      }
       BI->setCondition(Cond);
       DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
     } else {
