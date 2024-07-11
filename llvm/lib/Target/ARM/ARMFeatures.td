@@ -523,11 +523,11 @@ def FeatureLOB            : SubtargetFeature<"lob", "HasLOB", "true",
                                              "Enable Low Overhead Branch "
                                              "extensions">;
 
-// Mitigate against the cve-2021-35465 security vulnurability.
+// Mitigate against the cve-2021-35465 security vulnerability.
 def FeatureFixCMSE_CVE_2021_35465 : SubtargetFeature<"fix-cmse-cve-2021-35465",
                                         "FixCMSE_CVE_2021_35465", "true",
                                         "Mitigate against the cve-2021-35465 "
-                                        "security vulnurability">;
+                                        "security vulnerability">;
 
 def FeaturePACBTI         : SubtargetFeature<"pacbti", "HasPACBTI", "true",
                                              "Enable Pointer Authentication and Branch "
@@ -761,4 +761,3 @@ def FeatureHardenSlsNoComdat : SubtargetFeature<"harden-sls-nocomdat",
 def ModeBigEndianInstructions : SubtargetFeature<"big-endian-instructions",
     "BigEndianInstructions", "true",
      "Expect instructions to be stored big-endian.">;
-
