@@ -27647,7 +27647,7 @@ TEST_F(FormatTest, BinPackBinaryOperations) {
                Style);
 
   // Arithmetic
-  verifyFormat("const int result = lhs + rhs;\n", Style);
+  verifyFormat("const int result = lhs + rhs;", Style);
 
   verifyFormat("const int result = loooooooongop1 + looooooooongop2 +\n"
                "                   loooooooooooooooooooooongop3;",
