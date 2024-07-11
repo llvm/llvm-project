@@ -89,3 +89,44 @@ void AArch64_MachoTargetObjectFile::getNameWithPrefix(
   // be accessed via at least a linker-private symbol.
   getMangler().getNameWithPrefix(OutName, GV, /* CannotUsePrivateLabel */ true);
 }
+
+template <typename MachineModuleInfoTarget>
+static MCSymbol *getAuthPtrSlotSymbolHelper(
+    MCContext &Ctx, const TargetMachine &TM, MachineModuleInfo *MMI,
+    MachineModuleInfoTarget &TargetMMI, const MCSymbol *RawSym,
+    AArch64PACKey::ID Key, uint16_t Discriminator) {
+  const DataLayout &DL = MMI->getModule()->getDataLayout();
+
+  MCSymbol *StubSym = Ctx.getOrCreateSymbol(
+      DL.getLinkerPrivateGlobalPrefix() + RawSym->getName() +
+      Twine("$auth_ptr$") + AArch64PACKeyIDToString(Key) + Twine('$') +
+      Twine(Discriminator));
+
+  const MCExpr *&StubAuthPtrRef = TargetMMI.getAuthPtrStubEntry(StubSym);
+
+  if (StubAuthPtrRef)
+    return StubSym;
+
+  const MCExpr *Sym = MCSymbolRefExpr::create(RawSym, Ctx);
+
+  StubAuthPtrRef =
+      AArch64AuthMCExpr::create(Sym, Discriminator, Key,
+                                /*HasAddressDiversity=*/false, Ctx);
+  return StubSym;
+}
+
+MCSymbol *AArch64_ELFTargetObjectFile::getAuthPtrSlotSymbol(
+    const TargetMachine &TM, MachineModuleInfo *MMI, const MCSymbol *RawSym,
+    AArch64PACKey::ID Key, uint16_t Discriminator) const {
+  auto &ELFMMI = MMI->getObjFileInfo<MachineModuleInfoELF>();
+  return getAuthPtrSlotSymbolHelper(getContext(), TM, MMI, ELFMMI, RawSym, Key,
+                                    Discriminator);
+}
+
+MCSymbol *AArch64_MachoTargetObjectFile::getAuthPtrSlotSymbol(
+    const TargetMachine &TM, MachineModuleInfo *MMI, const MCSymbol *RawSym,
+    AArch64PACKey::ID Key, uint16_t Discriminator) const {
+  auto &MachOMMI = MMI->getObjFileInfo<MachineModuleInfoMachO>();
+  return getAuthPtrSlotSymbolHelper(getContext(), TM, MMI, MachOMMI, RawSym,
+                                    Key, Discriminator);
+}

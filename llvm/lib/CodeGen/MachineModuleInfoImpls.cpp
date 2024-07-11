@@ -41,3 +41,20 @@ MachineModuleInfoImpl::SymbolListTy MachineModuleInfoImpl::getSortedStubs(
   Map.clear();
   return List;
 }
+
+using ExprStubPairTy = std::pair<MCSymbol *, const MCExpr *>;
+static int SortAuthStubPair(const ExprStubPairTy *LHS,
+                            const ExprStubPairTy *RHS) {
+  return LHS->first->getName().compare(RHS->first->getName());
+}
+
+MachineModuleInfoImpl::ExprStubListTy MachineModuleInfoImpl::getSortedExprStubs(
+    DenseMap<MCSymbol *, const MCExpr *> &ExprStubs) {
+  MachineModuleInfoImpl::ExprStubListTy List(ExprStubs.begin(),
+                                             ExprStubs.end());
+
+  array_pod_sort(List.begin(), List.end(), SortAuthStubPair);
+
+  ExprStubs.clear();
+  return List;
+}
