@@ -666,8 +666,8 @@ public:
     switch (Name.getKind()) {
     case TemplateName::Template:
     case TemplateName::QualifiedTemplate: {
-      QualifiedTemplateName *Qual = Name.getAsQualifiedTemplateName();
-      if (Qual->getQualifier() == CurrentNestedNameSpecifier) {
+      if (QualifiedTemplateName *Qual = Name.getAsQualifiedTemplateName();
+          Qual && Qual->getQualifier() == CurrentNestedNameSpecifier) {
         // We have handled the NNS in VisitElaboratedType(). Avoid printing it
         // twice.
         Name = Qual->getUnderlyingTemplate();
