@@ -51,8 +51,9 @@ class MCSectionWasm final : public MCSection {
   friend class MCContext;
   MCSectionWasm(StringRef Name, SectionKind K, unsigned SegmentFlags,
                 const MCSymbolWasm *Group, unsigned UniqueID, MCSymbol *Begin)
-      : MCSection(SV_Wasm, Name, K.isText(), Begin), UniqueID(UniqueID),
-        Group(Group), IsWasmData(K.isReadOnly() || K.isWriteable()),
+      : MCSection(SV_Wasm, Name, K.isText(), /*IsVirtual=*/false, Begin),
+        UniqueID(UniqueID), Group(Group),
+        IsWasmData(K.isReadOnly() || K.isWriteable()),
         IsMetadata(K.isMetadata()), SegmentFlags(SegmentFlags) {}
 
 public:
@@ -65,9 +66,8 @@ public:
 
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
-                            const MCExpr *Subsection) const override;
+                            uint32_t Subsection) const override;
   bool useCodeAlign() const override;
-  bool isVirtualSection() const override;
 
   bool isWasmData() const { return IsWasmData; }
   bool isMetadata() const { return IsMetadata; }

@@ -40,7 +40,6 @@
 #include <cstdint>
 #include <ctime>
 #include <memory>
-#include <stack>
 #include <string>
 #include <system_error>
 #include <vector>
@@ -1471,7 +1470,7 @@ namespace detail {
 
   /// Keeps state for the recursive_directory_iterator.
   struct RecDirIterState {
-    std::stack<directory_iterator, std::vector<directory_iterator>> Stack;
+    std::vector<directory_iterator> Stack;
     uint16_t Level = 0;
     bool HasNoPushRequest = false;
   };
@@ -1490,8 +1489,8 @@ public:
                                         bool follow_symlinks = true)
       : State(std::make_shared<detail::RecDirIterState>()),
         Follow(follow_symlinks) {
-    State->Stack.push(directory_iterator(path, ec, Follow));
-    if (State->Stack.top() == directory_iterator())
+    State->Stack.push_back(directory_iterator(path, ec, Follow));
+    if (State->Stack.back() == directory_iterator())
       State.reset();
   }
 
@@ -1502,27 +1501,28 @@ public:
     if (State->HasNoPushRequest)
       State->HasNoPushRequest = false;
     else {
-      file_type type = State->Stack.top()->type();
+      file_type type = State->Stack.back()->type();
       if (type == file_type::symlink_file && Follow) {
         // Resolve the symlink: is it a directory to recurse into?
-        ErrorOr<basic_file_status> status = State->Stack.top()->status();
+        ErrorOr<basic_file_status> status = State->Stack.back()->status();
         if (status)
           type = status->type();
         // Otherwise broken symlink, and we'll continue.
       }
       if (type == file_type::directory_file) {
-        State->Stack.push(directory_iterator(*State->Stack.top(), ec, Follow));
-        if (State->Stack.top() != end_itr) {
+        State->Stack.push_back(
+            directory_iterator(*State->Stack.back(), ec, Follow));
+        if (State->Stack.back() != end_itr) {
           ++State->Level;
           return *this;
         }
-        State->Stack.pop();
+        State->Stack.pop_back();
       }
     }
 
     while (!State->Stack.empty()
-           && State->Stack.top().increment(ec) == end_itr) {
-      State->Stack.pop();
+           && State->Stack.back().increment(ec) == end_itr) {
+      State->Stack.pop_back();
       --State->Level;
     }
 
@@ -1533,8 +1533,8 @@ public:
     return *this;
   }
 
-  const directory_entry &operator*() const { return *State->Stack.top(); }
-  const directory_entry *operator->() const { return &*State->Stack.top(); }
+  const directory_entry &operator*() const { return *State->Stack.back(); }
+  const directory_entry *operator->() const { return &*State->Stack.back(); }
 
   // observers
   /// Gets the current level. Starting path is at level 0.
@@ -1554,10 +1554,10 @@ public:
     do {
       if (ec)
         report_fatal_error("Error incrementing directory iterator.");
-      State->Stack.pop();
+      State->Stack.pop_back();
       --State->Level;
     } while (!State->Stack.empty()
-             && State->Stack.top().increment(ec) == end_itr);
+             && State->Stack.back().increment(ec) == end_itr);
 
     // Check if we are done. If so, create an end iterator.
     if (State->Stack.empty())

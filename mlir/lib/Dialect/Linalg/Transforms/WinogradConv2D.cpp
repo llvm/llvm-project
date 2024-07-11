@@ -13,10 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
-#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "llvm/Support/MathExtras.h"
 
 namespace mlir {
@@ -110,24 +111,16 @@ static Value matrixMultiply(RewriterBase &rewriter, Location loc,
 
 /// Create an empty tensor with alignedType and insert the value into the
 /// created empty tensor with aligned size.
-static Value insertToAlignedTensor(RewriterBase &rewriter, Location loc,
-                                   Value value,
-                                   ArrayRef<int64_t> alignedShape) {
-  OpFoldResult zeroIndex = rewriter.getIndexAttr(0);
+static Value padToAlignedTensor(RewriterBase &rewriter, Location loc,
+                                Value value, ArrayRef<int64_t> alignedShape) {
   auto valueType = cast<ShapedType>(value.getType());
   Type elementType = valueType.getElementType();
-  ArrayRef<int64_t> valueShape = valueType.getShape();
-  SmallVector<OpFoldResult, 6> lowIndices(alignedShape.size(), zeroIndex);
-  SmallVector<OpFoldResult, 6> highIndices;
-  for (unsigned i = 0; i < alignedShape.size(); ++i) {
-    highIndices.emplace_back(
-        rewriter.getIndexAttr(alignedShape[i] - valueShape[i]));
-  }
   auto alignedType = RankedTensorType::get(alignedShape, elementType);
-  Value pad_value = rewriter.create<arith::ConstantOp>(
+  Value padValue = rewriter.create<arith::ConstantOp>(
       loc, elementType, rewriter.getZeroAttr(elementType));
-  return rewriter.create<tensor::PadOp>(loc, alignedType, value, lowIndices,
-                                        highIndices, pad_value);
+
+  return linalg::makeComposedPadHighOp(rewriter, loc, alignedType, value,
+                                       padValue, false);
 }
 
 /// Extract sub-tensor with extractedType from value.
@@ -253,8 +246,8 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
   int64_t alignedInputH = tileH * heightM + (heightR - 1);
   int64_t alignedInputW = tileW * widthM + (widthR - 1);
   if (alignedInputH != inputH || alignedInputW != inputW) {
-    input = insertToAlignedTensor(
-        rewriter, loc, input, {inputN, alignedInputH, alignedInputW, inputC});
+    input = padToAlignedTensor(rewriter, loc, input,
+                               {inputN, alignedInputH, alignedInputW, inputC});
   }
 
   retType = RankedTensorType::get(
@@ -279,8 +272,8 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
   if (isOutputUnaligned) {
     auto alignedOutputType = RankedTensorType::get(
         {outputN, alignedOutputH, alignedOutputW, outputF}, outputElementType);
-    output = insertToAlignedTensor(rewriter, loc, output,
-                                   alignedOutputType.getShape());
+    output =
+        padToAlignedTensor(rewriter, loc, output, alignedOutputType.getShape());
     outputType = alignedOutputType;
   }
 
@@ -333,6 +326,7 @@ FailureOr<Operation *> winogradConv2D(RewriterBase &rewriter,
 void populateWinogradConv2DPatterns(RewritePatternSet &patterns, int64_t m,
                                     int64_t r) {
   MLIRContext *context = patterns.getContext();
+  // TODO: Support more Conv2D data layout, e.g., conv_2d_nchw_fchw
   patterns.insert<WinogradConv2DNhwcFhwc>(context, m, r);
 }
 

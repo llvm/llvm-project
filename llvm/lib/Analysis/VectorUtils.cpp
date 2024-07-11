@@ -165,11 +165,11 @@ Intrinsic::ID llvm::getVectorIntrinsicIDForCall(const CallInst *CI,
 Value *llvm::findScalarElement(Value *V, unsigned EltNo) {
   assert(V->getType()->isVectorTy() && "Not looking at a vector?");
   VectorType *VTy = cast<VectorType>(V->getType());
-  // For fixed-length vector, return undef for out of range access.
+  // For fixed-length vector, return poison for out of range access.
   if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
     unsigned Width = FVTy->getNumElements();
     if (EltNo >= Width)
-      return UndefValue::get(FVTy->getElementType());
+      return PoisonValue::get(FVTy->getElementType());
   }
 
   if (Constant *C = dyn_cast<Constant>(V))
@@ -202,7 +202,7 @@ Value *llvm::findScalarElement(Value *V, unsigned EltNo) {
         cast<FixedVectorType>(SVI->getOperand(0)->getType())->getNumElements();
     int InEl = SVI->getMaskValue(EltNo);
     if (InEl < 0)
-      return UndefValue::get(VTy->getElementType());
+      return PoisonValue::get(VTy->getElementType());
     if (InEl < (int)LHSWidth)
       return findScalarElement(SVI->getOperand(0), InEl);
     return findScalarElement(SVI->getOperand(1), InEl - LHSWidth);
@@ -415,6 +415,31 @@ bool llvm::widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
 
   // All elements of the original mask can be scaled down to map to the elements
   // of a mask with wider elements.
+  return true;
+}
+
+bool llvm::scaleShuffleMaskElts(unsigned NumDstElts, ArrayRef<int> Mask,
+                                SmallVectorImpl<int> &ScaledMask) {
+  unsigned NumSrcElts = Mask.size();
+  assert(NumSrcElts > 0 && NumDstElts > 0 && "Unexpected scaling factor");
+
+  // Fast-path: if no scaling, then it is just a copy.
+  if (NumSrcElts == NumDstElts) {
+    ScaledMask.assign(Mask.begin(), Mask.end());
+    return true;
+  }
+
+  // Ensure we can find a whole scale factor.
+  assert(((NumSrcElts % NumDstElts) == 0 || (NumDstElts % NumSrcElts) == 0) &&
+         "Unexpected scaling factor");
+
+  if (NumSrcElts > NumDstElts) {
+    int Scale = NumSrcElts / NumDstElts;
+    return widenShuffleMaskElts(Scale, Mask, ScaledMask);
+  }
+
+  int Scale = NumDstElts / NumSrcElts;
+  narrowShuffleMaskElts(Scale, Mask, ScaledMask);
   return true;
 }
 
@@ -1070,7 +1095,7 @@ bool InterleavedAccessInfo::isStrided(int Stride) {
 void InterleavedAccessInfo::collectConstStrideAccesses(
     MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
     const DenseMap<Value*, const SCEV*> &Strides) {
-  auto &DL = TheLoop->getHeader()->getModule()->getDataLayout();
+  auto &DL = TheLoop->getHeader()->getDataLayout();
 
   // Since it's desired that the load/store instructions be maintained in
   // "program order" for the interleaved access analysis, we have to visit the
@@ -1456,20 +1481,19 @@ void InterleavedAccessInfo::invalidateGroupsRequiringScalarEpilogue() {
   if (!requiresScalarEpilogue())
     return;
 
-  bool ReleasedGroup = false;
   // Release groups requiring scalar epilogues. Note that this also removes them
   // from InterleaveGroups.
-  for (auto *Group : make_early_inc_range(InterleaveGroups)) {
+  bool ReleasedGroup = InterleaveGroups.remove_if([&](auto *Group) {
     if (!Group->requiresScalarEpilogue())
-      continue;
+      return false;
     LLVM_DEBUG(
         dbgs()
         << "LV: Invalidate candidate interleaved group due to gaps that "
            "require a scalar epilogue (not allowed under optsize) and cannot "
            "be masked (not enabled). \n");
-    releaseGroup(Group);
-    ReleasedGroup = true;
-  }
+    releaseGroupWithoutRemovingFromSet(Group);
+    return true;
+  });
   assert(ReleasedGroup && "At least one group must be invalidated, as a "
                           "scalar epilogue was required");
   (void)ReleasedGroup;

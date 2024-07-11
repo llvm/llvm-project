@@ -905,6 +905,31 @@ mlir::Value ParallelOp::getWaitDevnum(mlir::acc::DeviceType deviceType) {
                             deviceType);
 }
 
+void ParallelOp::build(mlir::OpBuilder &odsBuilder,
+                       mlir::OperationState &odsState,
+                       mlir::ValueRange numGangs, mlir::ValueRange numWorkers,
+                       mlir::ValueRange vectorLength,
+                       mlir::ValueRange asyncOperands,
+                       mlir::ValueRange waitOperands, mlir::Value ifCond,
+                       mlir::Value selfCond, mlir::ValueRange reductionOperands,
+                       mlir::ValueRange gangPrivateOperands,
+                       mlir::ValueRange gangFirstPrivateOperands,
+                       mlir::ValueRange dataClauseOperands) {
+
+  ParallelOp::build(
+      odsBuilder, odsState, asyncOperands, /*asyncOperandsDeviceType=*/nullptr,
+      /*asyncOnly=*/nullptr, waitOperands, /*waitOperandsSegments=*/nullptr,
+      /*waitOperandsDeviceType=*/nullptr, /*hasWaitDevnum=*/nullptr,
+      /*waitOnly=*/nullptr, numGangs, /*numGangsSegments=*/nullptr,
+      /*numGangsDeviceType=*/nullptr, numWorkers,
+      /*numWorkersDeviceType=*/nullptr, vectorLength,
+      /*vectorLengthDeviceType=*/nullptr, ifCond, selfCond,
+      /*selfAttr=*/nullptr, reductionOperands, /*reductionRecipes=*/nullptr,
+      gangPrivateOperands, /*privatizations=*/nullptr, gangFirstPrivateOperands,
+      /*firstprivatizations=*/nullptr, dataClauseOperands,
+      /*defaultAttr=*/nullptr, /*combined=*/nullptr);
+}
+
 static ParseResult parseNumGangs(
     mlir::OpAsmParser &parser,
     llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &operands,
@@ -2085,8 +2110,8 @@ void printLoopControl(OpAsmPrinter &p, Operation *op, Region &region,
     llvm::interleaveComma(regionArgs, p,
                           [&p](Value v) { p << v << " : " << v.getType(); });
     p << ") = (" << lowerbound << " : " << lowerboundType << ") to ("
-      << upperbound << " : " << upperboundType << ") "
-      << " step (" << steps << " : " << stepType << ") ";
+      << upperbound << " : " << upperboundType << ") " << " step (" << steps
+      << " : " << stepType << ") ";
   }
   p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
@@ -2878,6 +2903,36 @@ mlir::acc::getBounds(mlir::Operation *accDataClauseOp) {
             return mlir::SmallVector<mlir::Value, 0>();
           })};
   return bounds;
+}
+
+mlir::SmallVector<mlir::Value>
+mlir::acc::getAsyncOperands(mlir::Operation *accDataClauseOp) {
+  return llvm::TypeSwitch<mlir::Operation *, mlir::SmallVector<mlir::Value>>(
+             accDataClauseOp)
+      .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>([&](auto dataClause) {
+        return mlir::SmallVector<mlir::Value>(
+            dataClause.getAsyncOperands().begin(),
+            dataClause.getAsyncOperands().end());
+      })
+      .Default([&](mlir::Operation *) {
+        return mlir::SmallVector<mlir::Value, 0>();
+      });
+}
+
+mlir::ArrayAttr
+mlir::acc::getAsyncOperandsDeviceType(mlir::Operation *accDataClauseOp) {
+  return llvm::TypeSwitch<mlir::Operation *, mlir::ArrayAttr>(accDataClauseOp)
+      .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>([&](auto dataClause) {
+        return dataClause.getAsyncOperandsDeviceTypeAttr();
+      })
+      .Default([&](mlir::Operation *) { return mlir::ArrayAttr{}; });
+}
+
+mlir::ArrayAttr mlir::acc::getAsyncOnly(mlir::Operation *accDataClauseOp) {
+  return llvm::TypeSwitch<mlir::Operation *, mlir::ArrayAttr>(accDataClauseOp)
+      .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>(
+          [&](auto dataClause) { return dataClause.getAsyncOnlyAttr(); })
+      .Default([&](mlir::Operation *) { return mlir::ArrayAttr{}; });
 }
 
 std::optional<llvm::StringRef> mlir::acc::getVarName(mlir::Operation *accOp) {
