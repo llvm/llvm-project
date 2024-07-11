@@ -21,12 +21,9 @@ namespace doc {
 static llvm::StringSet USRVisited;
 static llvm::sys::Mutex USRVisitedGuard;
 
-
-template <typename T> bool isTypedefAnonRecord(const T* D) {
+template <typename T> bool isTypedefAnonRecord(const T *D) {
   if (const auto *C = dyn_cast<CXXRecordDecl>(D)) {
-    if (const TypedefNameDecl *TD = C->getTypedefNameForAnonDecl()) {
-      return true;
-    }
+    return C->getTypedefNameForAnonDecl();
   }
   return false;
 }
@@ -35,8 +32,8 @@ void MapASTVisitor::HandleTranslationUnit(ASTContext &Context) {
   TraverseDecl(Context.getTranslationUnitDecl());
 }
 
-template <typename T> bool MapASTVisitor::mapDecl(const T *D,
-                            bool IsDefinition) {
+template <typename T>
+bool MapASTVisitor::mapDecl(const T *D, bool IsDefinition) {
   // If we're looking a decl not in user files, skip this decl.
   if (D->getASTContext().getSourceManager().isInSystemHeader(D->getLocation()))
     return true;
@@ -80,7 +77,7 @@ template <typename T> bool MapASTVisitor::mapDecl(const T *D,
 }
 
 bool MapASTVisitor::VisitNamespaceDecl(const NamespaceDecl *D) {
-  return mapDecl(D, true);
+  return mapDecl(D, /*isDefinition=*/true);
 }
 
 bool MapASTVisitor::VisitRecordDecl(const RecordDecl *D) {
@@ -103,11 +100,11 @@ bool MapASTVisitor::VisitFunctionDecl(const FunctionDecl *D) {
 }
 
 bool MapASTVisitor::VisitTypedefDecl(const TypedefDecl *D) {
-  return mapDecl(D, true);
+  return mapDecl(D, /*isDefinition=*/true);
 }
 
 bool MapASTVisitor::VisitTypeAliasDecl(const TypeAliasDecl *D) {
-  return mapDecl(D, true);
+  return mapDecl(D, /*isDefinition=*/true);
 }
 
 comments::FullComment *
