@@ -361,83 +361,6 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
   }
 }
 
-static unsigned updateImpliedFeaturesImpl() {
-
-  unsigned long long OriFeaturesBits[RISCV_FEATURE_BITS_LENGTH];
-  for (unsigned i = 0; i < __riscv_feature_bits.length; i++)
-    OriFeaturesBits[i] = __riscv_feature_bits.features[i];
-
-  if (__riscv_feature_bits.features[D_GROUPID] & D_BITMASK)
-    __riscv_feature_bits.features[F_GROUPID] |= F_BITMASK;
-
-  if (__riscv_feature_bits.features[F_GROUPID] & F_BITMASK)
-    __riscv_feature_bits.features[ZICSR_GROUPID] |= ZICSR_BITMASK;
-
-  if (__riscv_feature_bits.features[V_GROUPID] & V_BITMASK)
-    __riscv_feature_bits.features[ZVL128B_GROUPID] |= ZVL128B_BITMASK;
-
-  if (__riscv_feature_bits.features[V_GROUPID] & V_BITMASK)
-    __riscv_feature_bits.features[ZVE64D_GROUPID] |= ZVE64D_BITMASK;
-
-  if (__riscv_feature_bits.features[ZFA_GROUPID] & ZFA_BITMASK)
-    __riscv_feature_bits.features[F_GROUPID] |= F_BITMASK;
-
-  if (__riscv_feature_bits.features[ZFH_GROUPID] & ZFH_BITMASK)
-    __riscv_feature_bits.features[ZFHMIN_GROUPID] |= ZFHMIN_BITMASK;
-
-  if (__riscv_feature_bits.features[ZFHMIN_GROUPID] & ZFHMIN_BITMASK)
-    __riscv_feature_bits.features[F_GROUPID] |= F_BITMASK;
-
-  if (__riscv_feature_bits.features[ZVBB_GROUPID] & ZVBB_BITMASK)
-    __riscv_feature_bits.features[ZVKB_GROUPID] |= ZVKB_BITMASK;
-
-  if (__riscv_feature_bits.features[ZVE32F_GROUPID] & ZVE32F_BITMASK)
-    __riscv_feature_bits.features[ZVE32X_GROUPID] |= ZVE32X_BITMASK;
-
-  if (__riscv_feature_bits.features[ZVE32F_GROUPID] & ZVE32F_BITMASK)
-    __riscv_feature_bits.features[F_GROUPID] |= F_BITMASK;
-
-  if (__riscv_feature_bits.features[ZVE32X_GROUPID] & ZVE32X_BITMASK)
-    __riscv_feature_bits.features[ZICSR_GROUPID] |= ZICSR_BITMASK;
-
-  if (__riscv_feature_bits.features[ZVE32X_GROUPID] & ZVE32X_BITMASK)
-    __riscv_feature_bits.features[ZVL32B_GROUPID] |= ZVL32B_BITMASK;
-
-  if (__riscv_feature_bits.features[ZVE64D_GROUPID] & ZVE64D_BITMASK)
-    __riscv_feature_bits.features[ZVE64F_GROUPID] |= ZVE64F_BITMASK;
-
-  if (__riscv_feature_bits.features[ZVE64D_GROUPID] & ZVE64D_BITMASK)
-    __riscv_feature_bits.features[D_GROUPID] |= D_BITMASK;
-
-  if (__riscv_feature_bits.features[ZVE64F_GROUPID] & ZVE64F_BITMASK)
-    __riscv_feature_bits.features[ZVE32F_GROUPID] |= ZVE32F_BITMASK;
-
-  if (__riscv_feature_bits.features[ZVE64F_GROUPID] & ZVE64F_BITMASK)
-    __riscv_feature_bits.features[ZVE64X_GROUPID] |= ZVE64X_BITMASK;
-
-  if (__riscv_feature_bits.features[ZVE64X_GROUPID] & ZVE64X_BITMASK)
-    __riscv_feature_bits.features[ZVE32X_GROUPID] |= ZVE32X_BITMASK;
-
-  if (__riscv_feature_bits.features[ZVE64X_GROUPID] & ZVE64X_BITMASK)
-    __riscv_feature_bits.features[ZVL64B_GROUPID] |= ZVL64B_BITMASK;
-
-  if (__riscv_feature_bits.features[ZVFH_GROUPID] & ZVFH_BITMASK)
-    __riscv_feature_bits.features[ZVFHMIN_GROUPID] |= ZVFHMIN_BITMASK;
-
-  for (unsigned i = 0; i < __riscv_feature_bits.length; i++)
-    if (OriFeaturesBits[i] != __riscv_feature_bits.features[i])
-      return 1;
-
-  return 0;
-}
-
-static void updateImpliedFeatures() {
-  unsigned Changed = 1;
-
-  while (Changed)
-    Changed = updateImpliedFeaturesImpl();
-}
-
 #endif // defined(__linux__)
 
 static int FeaturesBitCached = 0;
@@ -459,6 +382,5 @@ void __init_riscv_features_bit() {
     return ;
 
   initRISCVFeature(Hwprobes);
-  updateImpliedFeatures();
 #endif // defined(__linux__)
 }
