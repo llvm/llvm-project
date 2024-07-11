@@ -328,7 +328,7 @@ def main():
             pass
 
         # Save the commit sha so that we can include it in the output message.
-        merge_commit = git('rev-parse', '--short', 'HEAD')
+        merge_commit = git('rev-parse', 'HEAD')
 
         # Perform the push.
         merge_id = MergeId(content)
