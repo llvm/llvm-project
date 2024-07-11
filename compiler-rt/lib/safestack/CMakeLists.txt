@@ -14,6 +14,7 @@ foreach(arch ${SAFESTACK_SUPPORTED_ARCH})
     ARCHS ${arch}
     SOURCES ${SAFESTACK_SOURCES}
             $<TARGET_OBJECTS:RTInterception.${arch}>
+    # Intentionally does not deppend on sanitizer_common.
     CFLAGS ${SAFESTACK_CFLAGS}
     PARENT_TARGET safestack)
 endforeach()
