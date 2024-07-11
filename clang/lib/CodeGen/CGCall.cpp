@@ -2032,7 +2032,7 @@ static void getTrivialDefaultFunctionAttributes(
   }
 
   TargetInfo::BranchProtectionInfo BPI(LangOpts);
-  BPI.setFnAttributes(FuncAttrs);
+  TargetCodeGenInfo::setBranchProtectionFnAttributes(BPI, FuncAttrs);
 }
 
 /// Merges `target-features` from \TargetOpts and \F, and sets the result in
