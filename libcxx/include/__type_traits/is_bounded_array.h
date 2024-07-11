@@ -32,7 +32,7 @@ template <class _Tp, size_t _Np>
 struct _LIBCPP_TEMPLATE_VIS is_bounded_array<_Tp[_Np]> : true_type {};
 
 template <class _Tp>
-inline constexpr bool is_bounded_array_v = is_bounded_array<_Tp>::value;
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_bounded_array_v = is_bounded_array<_Tp>::value;
 
 #endif
 

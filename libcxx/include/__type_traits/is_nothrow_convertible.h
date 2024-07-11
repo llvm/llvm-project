@@ -32,7 +32,7 @@ template <class _Tp, class _Up>
 struct is_nothrow_convertible : bool_constant<__is_nothrow_convertible(_Tp, _Up)> {};
 
 template <class _Tp, class _Up>
-inline constexpr bool is_nothrow_convertible_v = __is_nothrow_convertible(_Tp, _Up);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_nothrow_convertible_v = __is_nothrow_convertible(_Tp, _Up);
 
 #  else // __has_builtin(__is_nothrow_convertible)
 
@@ -51,7 +51,7 @@ struct is_nothrow_convertible
           _Lazy<_And, is_convertible<_Fm, _To>, __is_nothrow_convertible_helper<_Fm, _To> > >::type {};
 
 template <typename _Fm, typename _To>
-inline constexpr bool is_nothrow_convertible_v = is_nothrow_convertible<_Fm, _To>::value;
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_nothrow_convertible_v = is_nothrow_convertible<_Fm, _To>::value;
 
 #  endif // __has_builtin(__is_nothrow_convertible)
 

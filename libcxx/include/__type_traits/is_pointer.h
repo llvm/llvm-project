@@ -26,7 +26,7 @@ struct _LIBCPP_TEMPLATE_VIS is_pointer : _BoolConstant<__is_pointer(_Tp)> {};
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_pointer_v = __is_pointer(_Tp);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_pointer_v = __is_pointer(_Tp);
 #  endif
 
 #else // __has_builtin(__is_pointer)

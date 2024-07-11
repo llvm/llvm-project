@@ -25,7 +25,7 @@ struct _LIBCPP_TEMPLATE_VIS is_const : _BoolConstant<__is_const(_Tp)> {};
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_const_v = __is_const(_Tp);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_const_v = __is_const(_Tp);
 #  endif
 
 #else
@@ -37,7 +37,7 @@ struct _LIBCPP_TEMPLATE_VIS is_const<_Tp const> : public true_type {};
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_const_v = is_const<_Tp>::value;
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_const_v = is_const<_Tp>::value;
 #  endif
 
 #endif // __has_builtin(__is_const)

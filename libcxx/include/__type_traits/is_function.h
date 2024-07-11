@@ -23,7 +23,7 @@ struct _LIBCPP_TEMPLATE_VIS is_function : integral_constant<bool, __is_function(
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_function_v = __is_function(_Tp);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_function_v = __is_function(_Tp);
 #endif
 
 _LIBCPP_END_NAMESPACE_STD

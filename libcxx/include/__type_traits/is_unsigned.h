@@ -27,7 +27,7 @@ struct _LIBCPP_TEMPLATE_VIS is_unsigned : _BoolConstant<__is_unsigned(_Tp)> {};
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_unsigned_v = __is_unsigned(_Tp);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_unsigned_v = __is_unsigned(_Tp);
 #  endif
 
 #else // __has_builtin(__is_unsigned)
@@ -49,7 +49,7 @@ struct _LIBCPP_TEMPLATE_VIS is_unsigned : public __libcpp_is_unsigned<_Tp> {};
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_unsigned_v = is_unsigned<_Tp>::value;
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_unsigned_v = is_unsigned<_Tp>::value;
 #  endif
 
 #endif // __has_builtin(__is_unsigned)

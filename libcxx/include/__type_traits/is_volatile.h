@@ -25,7 +25,7 @@ struct _LIBCPP_TEMPLATE_VIS is_volatile : _BoolConstant<__is_volatile(_Tp)> {};
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_volatile_v = __is_volatile(_Tp);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_volatile_v = __is_volatile(_Tp);
 #  endif
 
 #else
@@ -37,7 +37,7 @@ struct _LIBCPP_TEMPLATE_VIS is_volatile<_Tp volatile> : public true_type {};
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_volatile_v = is_volatile<_Tp>::value;
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_volatile_v = is_volatile<_Tp>::value;
 #  endif
 
 #endif // __has_builtin(__is_volatile)

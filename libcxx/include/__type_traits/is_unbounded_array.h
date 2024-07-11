@@ -31,7 +31,7 @@ template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_unbounded_array<_Tp[]> : true_type {};
 
 template <class _Tp>
-inline constexpr bool is_unbounded_array_v = is_unbounded_array<_Tp>::value;
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_unbounded_array_v = is_unbounded_array<_Tp>::value;
 
 #endif
 

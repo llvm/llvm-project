@@ -28,7 +28,7 @@ struct _LIBCPP_TEMPLATE_VIS is_null_pointer : integral_constant<bool, __is_null_
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_null_pointer_v = __is_null_pointer_v<_Tp>;
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_null_pointer_v = __is_null_pointer_v<_Tp>;
 #  endif
 #endif // _LIBCPP_STD_VER >= 14
 

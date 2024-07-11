@@ -26,7 +26,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_assignable : public integral_constant<boo
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp, class _Arg>
-inline constexpr bool is_nothrow_assignable_v = __is_nothrow_assignable(_Tp, _Arg);
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_nothrow_assignable_v = __is_nothrow_assignable(_Tp, _Arg);
 #endif
 
 template <class _Tp>
@@ -37,7 +37,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_copy_assignable
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_nothrow_copy_assignable_v = is_nothrow_copy_assignable<_Tp>::value;
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_nothrow_copy_assignable_v = is_nothrow_copy_assignable<_Tp>::value;
 #endif
 
 template <class _Tp>
@@ -48,7 +48,7 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_move_assignable
 
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-inline constexpr bool is_nothrow_move_assignable_v = is_nothrow_move_assignable<_Tp>::value;
+_LIBCPP_EXPORTED_FROM_ABI inline constexpr bool is_nothrow_move_assignable_v = is_nothrow_move_assignable<_Tp>::value;
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
