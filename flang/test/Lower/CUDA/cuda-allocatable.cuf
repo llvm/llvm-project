@@ -25,6 +25,7 @@ end subroutine
 ! CHECK: fir.if %[[NE_C0]] {
 ! CHECK:   %{{.*}} = cuf.deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
 ! CHECK: }
+! CHECK: cuf.free %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
 
 subroutine sub2()
   real, allocatable, managed :: a(:)
@@ -49,6 +50,7 @@ end subroutine
 ! CHECK: fir.if %{{.*}} {
 ! CHECK:   %{{.*}} = cuf.deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<managed>} -> i32
 ! CHECK: }
+! CHECK: cuf.free %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<managed>}
 
 subroutine sub3()
   integer, allocatable, pinned :: a(:,:)
@@ -66,6 +68,7 @@ end subroutine
 ! CHECK: fir.if %{{.*}} {
 ! CHECK:   %{{.*}} = cuf.deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>> {data_attr = #cuf.cuda<pinned>} -> i32
 ! CHECK: }
+! CHECK: cuf.free %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>> {data_attr = #cuf.cuda<pinned>}
 
 subroutine sub4()
   real, allocatable, device :: a(:)
@@ -84,6 +87,7 @@ end subroutine
 ! CHECK: fir.if %{{.*}} {
 ! CHECK:   %{{.*}} = cuf.deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
 ! CHECK: }
+! CHECK: cuf.free %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
 
 subroutine sub5()
   real, allocatable, device :: a(:)
@@ -104,6 +108,7 @@ end subroutine
 ! CHECK: fir.if %{{.*}} {
 ! CHECK:   %{{.*}} = cuf.deallocate %[[BOX_A_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
 ! CHECK: }
+! CHECK: cuf.free %[[BOX_A_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
 
 subroutine sub6()
   real, allocatable, device :: a(:)
@@ -122,6 +127,7 @@ end subroutine
 ! CHECK: fir.if %{{.*}} {
 ! CHECK:   %{{.*}} = cuf.deallocate %[[BOX_A_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
 ! CHECK: }
+! CHECK: cuf.free %[[BOX_A_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}
 
 subroutine sub7()
   real, allocatable, device :: a(:)
@@ -150,3 +156,4 @@ end subroutine
 ! CHECK: fir.if %{{.*}} {
 ! CHECK:   %{{.*}} = cuf.deallocate %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>} -> i32
 ! CHECK: }
+! CHECK: cuf.free %[[BOX_DECL]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<device>}

@@ -717,9 +717,9 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
       indices.push_back(builder.createConvert(loc, idxTy, sh));
     mlir::Value alloc = builder.create<cuf::AllocOp>(
         loc, ty, nm, symNm, dataAttr, lenParams, indices);
-    converter.getFctCtx().attachCleanup([&builder, loc, alloc, dataAttr]() {
-      builder.create<cuf::FreeOp>(loc, alloc, dataAttr);
-    });
+    // converter.getFctCtx().attachCleanup([&builder, loc, alloc, dataAttr]() {
+    //   builder.create<cuf::FreeOp>(loc, alloc, dataAttr);
+    // });
     return alloc;
   }
 
@@ -931,6 +931,19 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
     finalizeAtRuntime(converter, var, symMap);
   if (mustBeDefaultInitializedAtRuntime(var))
     defaultInitializeAtRuntime(converter, var, symMap);
+  if (Fortran::semantics::NeedCUDAAlloc(var.getSymbol())) {
+    auto *builder = &converter.getFirOpBuilder();
+    mlir::Location loc = converter.getCurrentLocation();
+    fir::ExtendedValue exv =
+        converter.getSymbolExtendedValue(var.getSymbol(), &symMap);
+    auto *sym = &var.getSymbol();
+    converter.getFctCtx().attachCleanup([builder, loc, exv, sym]() {
+      cuf::DataAttributeAttr dataAttr =
+          Fortran::lower::translateSymbolCUFDataAttribute(builder->getContext(),
+                                                          *sym);
+      builder->create<cuf::FreeOp>(loc, fir::getBase(exv), dataAttr);
+    });
+  }
   if (std::optional<VariableCleanUp> cleanup =
           needDeallocationOrFinalization(var)) {
     auto *builder = &converter.getFirOpBuilder();
@@ -954,21 +967,9 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
                "trying to deallocate entity not lowered as allocatable");
         Fortran::lower::genDeallocateIfAllocated(*converterPtr, *mutableBox,
                                                  loc, sym);
+        
       });
     }
-  }
-  if (Fortran::semantics::NeedCUDAAlloc(var.getSymbol())) {
-    auto *builder = &converter.getFirOpBuilder();
-    mlir::Location loc = converter.getCurrentLocation();
-    fir::ExtendedValue exv =
-        converter.getSymbolExtendedValue(var.getSymbol(), &symMap);
-    auto *sym = &var.getSymbol();
-    converter.getFctCtx().attachCleanup([builder, loc, exv, sym]() {
-      cuf::DataAttributeAttr dataAttr =
-          Fortran::lower::translateSymbolCUFDataAttribute(builder->getContext(),
-                                                          *sym);
-      builder->create<cuf::FreeOp>(loc, fir::getBase(exv), dataAttr);
-    });
   }
 }
 
