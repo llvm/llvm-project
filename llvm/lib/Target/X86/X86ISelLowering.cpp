@@ -39554,13 +39554,11 @@ static SDValue canonicalizeShuffleMaskWithHorizOp(
 // Attempt to constant fold all of the constant source ops.
 // Returns true if the entire shuffle is folded to a constant.
 // TODO: Extend this to merge multiple constant Ops and update the mask.
-static SDValue combineX86ShufflesConstants(ArrayRef<SDValue> Ops,
-                                           ArrayRef<int> Mask, SDValue Root,
+static SDValue combineX86ShufflesConstants(MVT VT, ArrayRef<SDValue> Ops,
+                                           ArrayRef<int> Mask,
                                            bool HasVariableMask,
-                                           SelectionDAG &DAG,
+                                           SelectionDAG &DAG, const SDLoc &DL,
                                            const X86Subtarget &Subtarget) {
-  MVT VT = Root.getSimpleValueType();
-
   unsigned SizeInBits = VT.getSizeInBits();
   unsigned NumMaskElts = Mask.size();
   unsigned MaskSizeInBits = SizeInBits / NumMaskElts;
@@ -39585,7 +39583,6 @@ static SDValue combineX86ShufflesConstants(ArrayRef<SDValue> Ops,
     return SDValue();
 
   // Shuffle the constant bits according to the mask.
-  SDLoc DL(Root);
   APInt UndefElts(NumMaskElts, 0);
   APInt ZeroElts(NumMaskElts, 0);
   APInt ConstantElts(NumMaskElts, 0);
@@ -39625,7 +39622,7 @@ static SDValue combineX86ShufflesConstants(ArrayRef<SDValue> Ops,
 
   // Attempt to create a zero vector.
   if ((UndefElts | ZeroElts).isAllOnes())
-    return getZeroVector(Root.getSimpleValueType(), Subtarget, DAG, DL);
+    return getZeroVector(VT, Subtarget, DAG, DL);
 
   // Create the constant data.
   MVT MaskSVT;
@@ -39691,6 +39688,7 @@ static SDValue combineX86ShufflesRecursively(
   MVT RootVT = Root.getSimpleValueType();
   assert(RootVT.isVector() && "Shuffles operate on vector types!");
   unsigned RootSizeInBits = RootVT.getSizeInBits();
+  SDLoc DL(Root);
 
   // Bound the depth of our recursive combine because this is ultimately
   // quadratic in nature.
@@ -39946,10 +39944,10 @@ static SDValue combineX86ShufflesRecursively(
   if (all_of(Mask, [](int Idx) { return Idx == SM_SentinelUndef; }))
     return DAG.getUNDEF(RootVT);
   if (all_of(Mask, [](int Idx) { return Idx < 0; }))
-    return getZeroVector(RootVT, Subtarget, DAG, SDLoc(Root));
+    return getZeroVector(RootVT, Subtarget, DAG, DL);
   if (Ops.size() == 1 && ISD::isBuildVectorAllOnes(Ops[0].getNode()) &&
       !llvm::is_contained(Mask, SM_SentinelZero))
-    return getOnesVector(RootVT, DAG, SDLoc(Root));
+    return getOnesVector(RootVT, DAG, DL);
 
   assert(!Ops.empty() && "Shuffle with no inputs detected");
   HasVariableMask |= IsOpVariableMask;
@@ -39990,7 +39988,7 @@ static SDValue combineX86ShufflesRecursively(
 
   // Attempt to constant fold all of the constant source ops.
   if (SDValue Cst = combineX86ShufflesConstants(
-          Ops, Mask, Root, HasVariableMask, DAG, Subtarget))
+          RootVT, Ops, Mask, HasVariableMask, DAG, DL, Subtarget))
     return Cst;
 
   // If constant fold failed and we only have constants - then we have
@@ -40010,7 +40008,7 @@ static SDValue combineX86ShufflesRecursively(
   // Canonicalize the combined shuffle mask chain with horizontal ops.
   // NOTE: This will update the Ops and Mask.
   if (SDValue HOp = canonicalizeShuffleMaskWithHorizOp(
-          Ops, Mask, RootSizeInBits, SDLoc(Root), DAG, Subtarget))
+          Ops, Mask, RootSizeInBits, DL, DAG, Subtarget))
     return DAG.getBitcast(RootVT, HOp);
 
   // Try to refine our inputs given our knowledge of target shuffle mask.
