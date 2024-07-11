@@ -130,14 +130,6 @@ namespace {
     // Remember which edges have been considered for breaking.
     SmallSet<std::pair<MachineBasicBlock*, MachineBasicBlock*>, 8>
     CEBCandidates;
-    // Memorize the register that also wanted to sink into the same block along
-    // a different critical edge.
-    // {register to sink, sink-to block} -> the first sink-from block.
-    // We're recording the first sink-from block because that (critical) edge
-    // was deferred until we see another register that's going to sink into the
-    // same block.
-    DenseMap<std::pair<Register, MachineBasicBlock *>, MachineBasicBlock *>
-        CEMergeCandidates;
     // Remember which edges we are about to split.
     // This is different from CEBCandidates since those edges
     // will be split.
@@ -205,17 +197,14 @@ namespace {
 
     void releaseMemory() override {
       CEBCandidates.clear();
-      CEMergeCandidates.clear();
     }
 
   private:
     bool ProcessBlock(MachineBasicBlock &MBB);
     void ProcessDbgInst(MachineInstr &MI);
-    bool isLegalToBreakCriticalEdge(MachineInstr &MI, MachineBasicBlock *From,
-                                    MachineBasicBlock *To, bool BreakPHIEdge);
-    bool isWorthBreakingCriticalEdge(MachineInstr &MI, MachineBasicBlock *From,
-                                     MachineBasicBlock *To,
-                                     MachineBasicBlock *&DeferredFromBlock);
+    bool isWorthBreakingCriticalEdge(MachineInstr &MI,
+                                     MachineBasicBlock *From,
+                                     MachineBasicBlock *To);
 
     bool hasStoreBetween(MachineBasicBlock *From, MachineBasicBlock *To,
                          MachineInstr &MI);
@@ -736,7 +725,6 @@ bool MachineSinking::runOnMachineFunction(MachineFunction &MF) {
 
     // Process all basic blocks.
     CEBCandidates.clear();
-    CEMergeCandidates.clear();
     ToSplit.clear();
     for (auto &MBB: MF)
       MadeChange |= ProcessBlock(MBB);
@@ -885,9 +873,9 @@ void MachineSinking::ProcessDbgInst(MachineInstr &MI) {
   SeenDbgVars.insert(Var);
 }
 
-bool MachineSinking::isWorthBreakingCriticalEdge(
-    MachineInstr &MI, MachineBasicBlock *From, MachineBasicBlock *To,
-    MachineBasicBlock *&DeferredFromBlock) {
+bool MachineSinking::isWorthBreakingCriticalEdge(MachineInstr &MI,
+                                                 MachineBasicBlock *From,
+                                                 MachineBasicBlock *To) {
   // FIXME: Need much better heuristics.
 
   // If the pass has already considered breaking this edge (during this pass
@@ -898,27 +886,6 @@ bool MachineSinking::isWorthBreakingCriticalEdge(
 
   if (!MI.isCopy() && !TII->isAsCheapAsAMove(MI))
     return true;
-
-  // Check and record the register and the destination block we want to sink
-  // into. Note that we want to do the following before the next check on branch
-  // probability. Because we want to record the initial candidate even if it's
-  // on hot edge, so that other candidates that might not on hot edges can be
-  // sinked as well.
-  for (const auto &MO : MI.all_defs()) {
-    Register Reg = MO.getReg();
-    if (!Reg)
-      continue;
-    Register SrcReg = Reg.isVirtual() ? TRI->lookThruCopyLike(Reg, MRI) : Reg;
-    auto Key = std::make_pair(SrcReg, To);
-    auto Res = CEMergeCandidates.try_emplace(Key, From);
-    // We wanted to sink the same register into the same block, consider it to
-    // be profitable.
-    if (!Res.second) {
-      // Return the source block that was previously held off.
-      DeferredFromBlock = Res.first->second;
-      return true;
-    }
-  }
 
   if (From->isSuccessor(To) && MBPI->getEdgeProbability(From, To) <=
       BranchProbability(SplitEdgeProbabilityThreshold, 100))
@@ -954,10 +921,13 @@ bool MachineSinking::isWorthBreakingCriticalEdge(
   return false;
 }
 
-bool MachineSinking::isLegalToBreakCriticalEdge(MachineInstr &MI,
-                                                MachineBasicBlock *FromBB,
-                                                MachineBasicBlock *ToBB,
-                                                bool BreakPHIEdge) {
+bool MachineSinking::PostponeSplitCriticalEdge(MachineInstr &MI,
+                                               MachineBasicBlock *FromBB,
+                                               MachineBasicBlock *ToBB,
+                                               bool BreakPHIEdge) {
+  if (!isWorthBreakingCriticalEdge(MI, FromBB, ToBB))
+    return false;
+
   // Avoid breaking back edge. From == To means backedge for single BB cycle.
   if (!SplitEdges || FromBB == ToBB)
     return false;
@@ -1015,30 +985,9 @@ bool MachineSinking::isLegalToBreakCriticalEdge(MachineInstr &MI,
         return false;
   }
 
+  ToSplit.insert(std::make_pair(FromBB, ToBB));
+
   return true;
-}
-
-bool MachineSinking::PostponeSplitCriticalEdge(MachineInstr &MI,
-                                               MachineBasicBlock *FromBB,
-                                               MachineBasicBlock *ToBB,
-                                               bool BreakPHIEdge) {
-  bool Status = false;
-  MachineBasicBlock *DeferredFromBB = nullptr;
-  if (isWorthBreakingCriticalEdge(MI, FromBB, ToBB, DeferredFromBB)) {
-    // If there is a DeferredFromBB, we consider FromBB only if _both_
-    // of them are legal to split.
-    if ((!DeferredFromBB ||
-         ToSplit.count(std::make_pair(DeferredFromBB, ToBB)) ||
-         isLegalToBreakCriticalEdge(MI, DeferredFromBB, ToBB, BreakPHIEdge)) &&
-        isLegalToBreakCriticalEdge(MI, FromBB, ToBB, BreakPHIEdge)) {
-      ToSplit.insert(std::make_pair(FromBB, ToBB));
-      if (DeferredFromBB)
-        ToSplit.insert(std::make_pair(DeferredFromBB, ToBB));
-      Status = true;
-    }
-  }
-
-  return Status;
 }
 
 std::vector<unsigned> &
