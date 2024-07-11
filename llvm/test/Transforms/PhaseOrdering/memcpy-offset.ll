@@ -6,18 +6,12 @@
 define void @memcpy_forward_back_with_offset(ptr %arg) {
 ; CUSTOM-LABEL: define void @memcpy_forward_back_with_offset(
 ; CUSTOM-SAME: ptr [[ARG:%.*]]) {
-; CUSTOM-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[ARG]], i64 1
 ; CUSTOM-NEXT:    store i8 1, ptr [[ARG]], align 1
-; CUSTOM-NEXT:    [[I3:%.*]] = getelementptr inbounds i8, ptr [[ARG]], i64 1
-; CUSTOM-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(753) [[I3]], ptr noundef nonnull align 1 dereferenceable(753) [[TMP1]], i64 753, i1 false)
 ; CUSTOM-NEXT:    ret void
 ;
 ; O2-LABEL: define void @memcpy_forward_back_with_offset(
-; O2-SAME: ptr nocapture [[ARG:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-; O2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[ARG]], i64 1
+; O2-SAME: ptr nocapture writeonly [[ARG:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; O2-NEXT:    store i8 1, ptr [[ARG]], align 1
-; O2-NEXT:    [[I3:%.*]] = getelementptr inbounds i8, ptr [[ARG]], i64 1
-; O2-NEXT:    tail call void @llvm.memmove.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(753) [[I3]], ptr noundef nonnull align 1 dereferenceable(753) [[TMP1]], i64 753, i1 false)
 ; O2-NEXT:    ret void
 ;
   %i = alloca [753 x i8], align 1

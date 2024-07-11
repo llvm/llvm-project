@@ -1204,12 +1204,12 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     return false;
 
   // No need to create `memcpy(a <- a)`.
-  // if (BAA.isMustAlias(M->getDest(), CopySource)) {
-  //   // Remove the instruction we're replacing.
-  //   eraseInstruction(M);
-  //   ++NumMemCpyInstr;
-  //   return true;
-  // }
+  if (BAA.isMustAlias(M->getDest(), CopySource)) {
+    // Remove the instruction we're replacing.
+    eraseInstruction(M);
+    ++NumMemCpyInstr;
+    return true;
+  }
 
   // If the dest of the second might alias the source of the first, then the
   // source and dest might overlap. In addition, if the source of the first
