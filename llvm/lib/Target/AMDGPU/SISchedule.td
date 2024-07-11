@@ -370,15 +370,15 @@ let SchedModel = GFX12SpeedModel in {
 def : HWWriteRes<Write32Bit,             [HWVALU, HWRC],   5>;
 def : HWWriteRes<WriteFloatCvt,          [HWVALU, HWRC],   5>;
 def : HWWriteRes<Write64Bit,             [HWVALU, HWRC],   6>;
-def : HWWriteRes<WriteTrans32,           [HWVALU, HWRC],   10>;
-def : HWWriteRes<WriteQuarterRate32,     [HWVALU, HWRC],   8>;
+def : HWWriteRes<WriteTrans32,           [HWVALU, HWRC],   9>;
+def : HWWriteRes<WriteQuarterRate32,     [HWVALU, HWRC],   6>;
 def : HWWriteRes<WriteFloatFMA,          [HWVALU, HWRC],   5>;
 def : HWWriteRes<WriteDouble,            [HWVALU, HWRC],   38>;
 def : HWWriteRes<WriteDoubleAdd,         [HWVALU, HWRC],   38>;
 def : HWWriteRes<WriteDoubleCvt,         [HWVALU, HWRC],   38>;
 def : HWWriteRes<WriteIntMul,            [HWVALU, HWRC],   8>;
 def : HWWriteRes<WriteTrans64,           [HWVALU, HWRC],   40>;
-def : HWWriteRes<WritePseudoScalarTrans, [HWVALU, HWRC],   7>;
+def : HWWriteRes<WritePseudoScalarTrans, [HWVALU, HWRC],   8>;
 
 def : HWWriteRes<WriteBranch,            [HWBranch],       32>;
 def : HWWriteRes<WriteExport,            [HWExport, HWRC], 16>;
