@@ -522,8 +522,8 @@ them.
 
 .. option:: --verify-note-sections
 
- When adding note sections, verify if the section format is valid. On by default
- for ELF files.
+ When adding note sections, verify if the section format is valid. On by
+ default.
 
 .. option:: --weaken-symbol <symbol>, -W
 
