@@ -49,7 +49,7 @@ int NoAlignmentOnOriginalDecl;
 _Alignas(8) int NoAlignmentOnOriginalDecl;
 _Static_assert(_Alignof(NoAlignmentOnOriginalDecl) == 8, "");
 
-_Alignas(8) int AlignmentOnOriginalDecl;
+_Alignas(8) int AlignmentOnOriginalDecl; // expected-note {{declared with '_Alignas' attribute here}}
 // FIXME: this should be accepted because the redeclaration has no alignment
 // specifier.
 int AlignmentOnOriginalDecl; // expected-error {{'_Alignas' must be specified on definition if it is specified on any declaration}}
@@ -59,7 +59,25 @@ long long CompatibleAlignment;
 _Static_assert(_Alignof(CompatibleAlignment) == _Alignof(long long), "");
 _Alignas(_Alignof(long long)) long long CompatibleAlignment; // Okay, alignment is the same as the implied alignment
 
-_Alignas(_Alignof(long long)) long long CompatibleAlignment2;
+_Alignas(_Alignof(long long)) long long CompatibleAlignment2; // expected-note {{declared with '_Alignas' attribute here}}
 // FIXME: this should be accepted because the redeclaration has no alignment
 // specifier.
 long long CompatibleAlignment2; // expected-error {{'_Alignas' must be specified on definition if it is specified on any declaration}}
+
+// FIXME: this should be accepted because the definition specifies the
+// alignment and a subsequent declaration does not specify any alignment.
+_Alignas(8) long long DefnWithInit = 12; // expected-note {{declared with '_Alignas' attribute here}}
+long long DefnWithInit; // expected-error {{'_Alignas' must be specified on definition if it is specified on any declaration}}
+
+// This is accepted because the definition has an alignment specifier and the
+// subsequent redeclaration does not specify an alignment.
+_Alignas(8) long long DefnWithInit2 = 12;
+extern long long DefnWithInit2;
+
+// FIXME: this should be accepted because the definition specifies the
+// alignment and a subsequent declaration specifies a compatible alignment.
+long long DefnWithInit3 = 12; // expected-error {{'_Alignas' must be specified on definition if it is specified on any declaration}}
+_Alignas(_Alignof(long long)) long long DefnWithInit3; // expected-note {{declared with '_Alignas' attribute here}}
+
+_Alignas(8) int Mismatch;  // expected-note {{previous declaration is here}}
+_Alignas(16) int Mismatch; // expected-error {{redeclaration has different alignment requirement (16 vs 8)}}
