@@ -3,6 +3,7 @@ add_library(
   Timer.cpp
   Timer.h
 )
+add_dependencies(libc_diff_test_utils libc.src.__support.macros.config)
 
 # A convenience target to build all performance tests.
 add_custom_target(libc-math-performance-tests)
