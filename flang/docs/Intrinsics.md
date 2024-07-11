@@ -1021,7 +1021,7 @@ This intrinsic is provided in both subroutine and function form; however, only o
 | `DST`    | Destination path                  |
 | `STATUS` | Status code (for subroutine form) |
 
-The status code return by both the subroutine and function form correspond to the value of `errno` if the invocation of `rename(2)` was not successful.
+The status code returned by both the subroutine and function form corresponds to the value of `errno` if the invocation of `rename(2)` was not successful.
 
 #### Example
 
