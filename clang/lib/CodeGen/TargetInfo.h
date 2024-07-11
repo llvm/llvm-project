@@ -414,11 +414,13 @@ public:
     return nullptr;
   }
 
-  void setFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
-                       llvm::Function &F) const;
+  void
+  setBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
+                                  llvm::Function &F) const;
 
-  void setFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
-                       llvm::AttrBuilder &FuncAttrs) const;
+  void
+  setBranchProtectionFnAttributes(const TargetInfo::BranchProtectionInfo &BPI,
+                                  llvm::AttrBuilder &FuncAttrs) const;
 
 protected:
   static std::string qualifyWindowsLibrary(StringRef Lib);

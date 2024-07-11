@@ -133,7 +133,7 @@ public:
       }
     }
     auto *Fn = cast<llvm::Function>(GV);
-    CGM.getTargetCodeGenInfo().setFnAttributes(BPI, *Fn);
+    setBranchProtectionFnAttributes(BPI, *Fn);
   }
 
   bool isScalarizableAsmOperand(CodeGen::CodeGenFunction &CGF,

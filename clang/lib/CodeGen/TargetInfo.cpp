@@ -207,14 +207,14 @@ llvm::Value *TargetCodeGenInfo::createEnqueuedBlockKernel(
   return F;
 }
 
-void TargetCodeGenInfo::setFnAttributes(
+void TargetCodeGenInfo::setBranchProtectionFnAttributes(
     const TargetInfo::BranchProtectionInfo &BPI, llvm::Function &F) const {
   llvm::AttrBuilder FuncAttrs(F.getContext());
-  setFnAttributes(BPI, FuncAttrs);
+  setBranchProtectionFnAttributes(BPI, FuncAttrs);
   F.addFnAttrs(FuncAttrs);
 }
 
-void TargetCodeGenInfo::setFnAttributes(
+void TargetCodeGenInfo::setBranchProtectionFnAttributes(
     const TargetInfo::BranchProtectionInfo &BPI,
     llvm::AttrBuilder &FuncAttrs) const {
   if (BPI.SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
