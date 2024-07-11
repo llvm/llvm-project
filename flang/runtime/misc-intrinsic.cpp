@@ -70,7 +70,7 @@ void RTDECL(Rename)(const Descriptor &path1, const Descriptor &path2,
   if (status) {
     // When an error has happened,
     int errorCode = 0; // Assume success
-    if (result < 0) {
+    if (result != 0) {
       // The rename operation has failed, so return the error code as status.
       errorCode = errno;
     }
