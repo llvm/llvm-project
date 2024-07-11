@@ -28,11 +28,6 @@ namespace safestack {
     };                                                                \
   } while (false)
 
-inline size_t RoundUpTo(size_t size, size_t boundary) {
-  SFS_CHECK((boundary & (boundary - 1)) == 0);
-  return (size + boundary - 1) & ~(boundary - 1);
-}
-
 class MutexLock {
  public:
   explicit MutexLock(pthread_mutex_t &mutex) : mutex_(&mutex) {

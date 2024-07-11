@@ -33,11 +33,13 @@
 #  endif
 
 #  include <dlfcn.h>  // for dlsym()
+#  include <errno.h>
 #  include <link.h>
 #  include <pthread.h>
 #  include <signal.h>
 #  include <sys/mman.h>
 #  include <sys/resource.h>
+#  include <sys/syscall.h>
 #  include <syslog.h>
 
 #  if !defined(ElfW)
@@ -112,6 +114,23 @@ int internal_sigaction(int signum, const void *act, void *oldact) {
                    (struct sigaction *)oldact);
 #  endif
 }
+
+#  if !SANITIZER_NETBSD
+int TgKill(pid_t pid, tid_t tid, int sig) {
+#    if SANITIZER_LINUX
+  // Cannot use internal_syscall here: returns -errno instead of -1 on failure
+  // on x86_64.
+  return syscall(SYS_tgkill, pid, (pid_t)tid, sig);
+#    elif SANITIZER_FREEBSD
+  return internal_syscall(SYSCALL(thr_kill2), pid, tid, sig);
+#    elif SANITIZER_SOLARIS
+  (void)pid;
+  errno = thr_kill(tid, sig);
+  // TgKill is expected to return -1 on error, not an errno.
+  return errno != 0 ? -1 : 0;
+#    endif
+}
+#  endif
 
 void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
                                 uptr *stack_bottom) {

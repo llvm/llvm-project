@@ -13,14 +13,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "safestack_platform.h"
-#include "safestack_util.h"
-
 #include <errno.h>
+#include <sys/mman.h>
 #include <sys/resource.h>
+#include <unistd.h>
 
 #include "interception/interception.h"
+#include "safestack_util.h"
+#include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_platform.h"
+#include "sanitizer_common/sanitizer_posix.h"
 
+using namespace __sanitizer;
 using namespace safestack;
 
 // TODO: To make accessing the unsafe stack pointer faster, we plan to
@@ -90,10 +94,11 @@ __thread size_t unsafe_stack_guard = 0;
 
 inline void *unsafe_stack_alloc(size_t size, size_t guard) {
   SFS_CHECK(size + guard >= size);
-  void *addr = Mmap(nullptr, size + guard, PROT_READ | PROT_WRITE,
-                    MAP_PRIVATE | MAP_ANON, -1, 0);
+  void *addr =
+      (void *)internal_mmap(nullptr, size + guard, PROT_READ | PROT_WRITE,
+                            MAP_PRIVATE | MAP_ANON, -1, 0);
   SFS_CHECK(MAP_FAILED != addr);
-  Mprotect(addr, guard, PROT_NONE);
+  internal_mprotect(addr, guard, PROT_NONE);
   return (char *)addr + guard;
 }
 
@@ -146,7 +151,7 @@ struct thread_stack_ll {
   void *stack_base;
   size_t size;
   pid_t pid;
-  ThreadId tid;
+  tid_t tid;
 };
 
 /// Linked list of unsafe stacks for threads that are exiting. We delay
@@ -169,7 +174,7 @@ void thread_cleanup_handler(void *_iter) {
   pthread_mutex_unlock(&thread_stacks_mutex);
 
   pid_t pid = getpid();
-  ThreadId tid = GetTid();
+  tid_t tid = GetTid();
 
   // Free stacks for dead threads
   thread_stack_ll **stackp = &temp_stacks;
@@ -177,7 +182,7 @@ void thread_cleanup_handler(void *_iter) {
     thread_stack_ll *stack = *stackp;
     if (stack->pid != pid ||
         (-1 == TgKill(stack->pid, stack->tid, 0) && errno == ESRCH)) {
-      Munmap(stack->stack_base, stack->size);
+      internal_munmap(stack->stack_base, stack->size);
       *stackp = stack->next;
       free(stack);
     } else

@@ -566,17 +566,6 @@ tid_t GetTid() {
   return internal_syscall(SYSCALL(gettid));
 #    endif
 }
-
-int TgKill(pid_t pid, tid_t tid, int sig) {
-#    if SANITIZER_LINUX
-  return internal_syscall(SYSCALL(tgkill), pid, tid, sig);
-#    elif SANITIZER_FREEBSD
-  return internal_syscall(SYSCALL(thr_kill2), pid, tid, sig);
-#    elif SANITIZER_SOLARIS
-  (void)pid;
-  return thr_kill(tid, sig);
-#    endif
-}
 #  endif
 
 #  if SANITIZER_GLIBC
