@@ -12,8 +12,8 @@
 #include "flang/Common/optional.h"
 #include "flang/Runtime/descriptor.h"
 #include <algorithm>
-#include <cstring>
 #include <cstdio>
+#include <cstring>
 
 namespace Fortran::runtime {
 
@@ -66,10 +66,10 @@ void RTDECL(Rename)(const Descriptor &path1, const Descriptor &path2,
       path2.OffsetElement(), path2.ElementBytes(), terminator)};
 
   // We simply call rename(2) from POSIX
-  int result = rename(pathSrc, pathDst);
+  int result{rename(pathSrc, pathDst)};
   if (status) {
     // When an error has happened,
-    int errorCode = 0; // Assume success
+    int errorCode{0}; // Assume success
     if (result != 0) {
       // The rename operation has failed, so return the error code as status.
       errorCode = errno;

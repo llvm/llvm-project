@@ -2622,7 +2622,8 @@ bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
     const std::string &name) const {
   // Collection for some intrinsics with function and subroutine form,
   // in order to pass the semantic check.
-  static const std::string dualIntrinsic[]{{"etime"}, {"getcwd"}, {"rename"}};
+  static const std::string dualIntrinsic[]{
+      {"etime"s}, {"getcwd"s}, {"rename"s}};
 
   return std::find_if(std::begin(dualIntrinsic), std::end(dualIntrinsic),
              [&name](const std::string &dualName) {
