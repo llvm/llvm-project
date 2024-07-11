@@ -26,9 +26,21 @@ void Preprocessor::EnableBacktrackAtThisPos(bool Unannotated) {
   assert(LexLevel == 0 && "cannot use lookahead while lexing");
   BacktrackPositions.push_back((CachedLexPos << 1) | Unannotated);
   if (Unannotated)
-    UnannotatedBacktrackPositions.emplace_back(CachedTokens,
-                                               CachedTokens.size());
+    UnannotatedBacktrackTokens.emplace_back(CachedTokens, CachedTokens.size());
   EnterCachingLexMode();
+}
+
+Preprocessor::CachedTokensTy Preprocessor::PopUnannotatedBacktrackTokens() {
+  assert(isUnannotatedBacktrackEnabled() && "missing unannotated tokens?");
+  auto [UnannotatedTokens, NumCachedToks] =
+      std::move(UnannotatedBacktrackTokens.back());
+  UnannotatedBacktrackTokens.pop_back();
+  // If another unannotated backtrack is active, propagate any tokens that were
+  // lexed (not cached) since EnableBacktrackAtThisPos was last called.
+  if (isUnannotatedBacktrackEnabled())
+    UnannotatedBacktrackTokens.back().first.append(
+        UnannotatedTokens.begin() + NumCachedToks, UnannotatedTokens.end());
+  return std::move(UnannotatedTokens);
 }
 
 // Disable the last EnableBacktrackAtThisPos call.
@@ -37,16 +49,8 @@ void Preprocessor::CommitBacktrackedTokens() {
          && "EnableBacktrackAtThisPos was not called!");
   auto BacktrackPos = BacktrackPositions.back();
   BacktrackPositions.pop_back();
-  if (BacktrackPos & 1) {
-    assert(!UnannotatedBacktrackPositions.empty() &&
-           "missing unannotated tokens?");
-    auto [UnannotatedTokens, NumCachedToks] =
-        std::move(UnannotatedBacktrackPositions.back());
-    if (!UnannotatedBacktrackPositions.empty())
-      UnannotatedBacktrackPositions.back().first.append(
-          UnannotatedTokens.begin() + NumCachedToks, UnannotatedTokens.end());
-    UnannotatedBacktrackPositions.pop_back();
-  }
+  if (BacktrackPos & 1)
+    PopUnannotatedBacktrackTokens();
 }
 
 // Make Preprocessor re-lex the tokens that were lexed since
@@ -57,17 +61,8 @@ void Preprocessor::Backtrack() {
   auto BacktrackPos = BacktrackPositions.back();
   BacktrackPositions.pop_back();
   CachedLexPos = BacktrackPos >> 1;
-  if (BacktrackPos & 1) {
-    assert(!UnannotatedBacktrackPositions.empty() &&
-           "missing unannotated tokens?");
-    auto [UnannotatedTokens, NumCachedToks] =
-        std::move(UnannotatedBacktrackPositions.back());
-    UnannotatedBacktrackPositions.pop_back();
-    if (!UnannotatedBacktrackPositions.empty())
-      UnannotatedBacktrackPositions.back().first.append(
-          UnannotatedTokens.begin() + NumCachedToks, UnannotatedTokens.end());
-    CachedTokens = std::move(UnannotatedTokens);
-  }
+  if (BacktrackPos & 1)
+    CachedTokens = PopUnannotatedBacktrackTokens();
   recomputeCurLexerKind();
 }
 
@@ -94,7 +89,7 @@ void Preprocessor::CachingLex(Token &Result) {
     CachedTokens.push_back(Result);
     ++CachedLexPos;
     if (isUnannotatedBacktrackEnabled())
-      UnannotatedBacktrackPositions.back().first.push_back(Result);
+      UnannotatedBacktrackTokens.back().first.push_back(Result);
     return;
   }
 
@@ -137,7 +132,7 @@ const Token &Preprocessor::PeekAhead(unsigned N) {
     CachedTokens.push_back(Token());
     Lex(CachedTokens.back());
     if (isUnannotatedBacktrackEnabled())
-      UnannotatedBacktrackPositions.back().first.push_back(CachedTokens.back());
+      UnannotatedBacktrackTokens.back().first.push_back(CachedTokens.back());
   }
   EnterCachingLexMode();
   return CachedTokens.back();

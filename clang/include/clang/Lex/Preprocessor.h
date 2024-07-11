@@ -1161,7 +1161,7 @@ private:
   std::vector<CachedTokensTy::size_type> BacktrackPositions;
 
   std::vector<std::pair<CachedTokensTy, CachedTokensTy::size_type>>
-      UnannotatedBacktrackPositions;
+      UnannotatedBacktrackTokens;
 
   /// True if \p Preprocessor::SkipExcludedConditionalBlock() is running.
   /// This is used to guard against calling this function recursively.
@@ -1727,6 +1727,10 @@ public:
   ///
   void EnableBacktrackAtThisPos(bool Unannotated = false);
 
+private:
+  CachedTokensTy PopUnannotatedBacktrackTokens();
+
+public:
   /// Disable the last EnableBacktrackAtThisPos call.
   void CommitBacktrackedTokens();
 
@@ -1739,7 +1743,7 @@ public:
 
   bool isBacktrackEnabled() const { return !BacktrackPositions.empty(); }
   bool isUnannotatedBacktrackEnabled() const {
-    return !UnannotatedBacktrackPositions.empty();
+    return !UnannotatedBacktrackTokens.empty();
   }
 
   /// Lex the next token for this preprocessor.
