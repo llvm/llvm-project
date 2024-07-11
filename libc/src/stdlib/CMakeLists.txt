@@ -502,9 +502,9 @@ list(APPEND exit_deps
   ._Exit
 )
 if (NOT LIBC_TARGET_OS_IS_BAREMETAL)
-  # list(APPEND exit_deps
-  #   .atexit
-  # )
+  list(APPEND exit_deps
+    .atexit
+  )
 endif()
 
 add_entrypoint_object(
