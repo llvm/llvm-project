@@ -1,6 +1,7 @@
-# Overlapping PT_LOAD and PT_TLS segments should be able to exist side by side.
+# Overlapping PT_LOAD and PT_TLS segments in an object file should be able to
+# exist side by side.
 
-# When an ELF file contains both PT_LOAD and PT_TLS segmentsq where the PT_TLS
+# When an ELF file contains both PT_LOAD and PT_TLS segments where the PT_TLS
 # segment has the same p_vaddr and p_paddr as a PT_LOAD segment, this
 # was causing LLDB, when loading a ELF object file at an address, to overwrite
 # the section load address for a PT_LOAD that shares the same p_vaddr value in
@@ -13,12 +14,6 @@
 
 # RUN: yaml2obj %s -o %t
 # RUN: lldb-test object-file %t | FileCheck %s
-# RUN: %lldb %t -b \
-# RUN:       -o "image lookup -a 0x1000" \
-# RUN:       -o "target modules load --file %t --slide 0" \
-# RUN:       -o "image lookup -a 0x1000" \
-# RUN:       -o "target dump section-load-list" \
-# RUN:       | FileCheck --check-prefix=LOOKUP %s
 
 
 # CHECK:        Index: 0
@@ -42,6 +37,13 @@
 # CHECK-NEXT:   VM size: 16
 # CHECK-NEXT:   File size: 0
 # CHECK-NEXT:   Showing 1 subsections
+
+# RUN: %lldb %t -b \
+# RUN:       -o "image lookup -a 0x1000" \
+# RUN:       -o "target modules load --file %t --slide 0" \
+# RUN:       -o "image lookup -a 0x1000" \
+# RUN:       -o "target dump section-load-list" \
+# RUN:       | FileCheck --check-prefix=LOOKUP %s
 
 # LOOKUP-LABEL: image lookup -a 0x1000
 # LOOKUP:       Address: {{.*}}.PT_LOAD[0]..data + 0)
