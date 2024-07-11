@@ -419,6 +419,11 @@ public:
   /// this factor, it is very likely to be predicted correctly.
   BranchProbability getPredictableBranchThreshold() const;
 
+  // Returns an integer indicating how aggressive the target wants for
+  // eliminating unpredictable branches. A zero return value means extra
+  // optimization applied to them should be minimal.
+  unsigned getBranchMispredictPenalty() const;
+
   /// Return true if branch divergence exists.
   ///
   /// Branch divergence has a significantly negative impact on GPU performance
@@ -1832,6 +1837,7 @@ public:
                                              ArrayRef<const Value *> Operands,
                                              TargetCostKind CostKind) = 0;
   virtual BranchProbability getPredictableBranchThreshold() = 0;
+  virtual unsigned getBranchMispredictPenalty() = 0;
   virtual bool hasBranchDivergence(const Function *F = nullptr) = 0;
   virtual bool isSourceOfDivergence(const Value *V) = 0;
   virtual bool isAlwaysUniform(const Value *V) = 0;
@@ -2242,6 +2248,9 @@ public:
   }
   BranchProbability getPredictableBranchThreshold() override {
     return Impl.getPredictableBranchThreshold();
+  }
+  unsigned getBranchMispredictPenalty() override {
+    return Impl.getBranchMispredictPenalty();
   }
   bool hasBranchDivergence(const Function *F = nullptr) override {
     return Impl.hasBranchDivergence(F);

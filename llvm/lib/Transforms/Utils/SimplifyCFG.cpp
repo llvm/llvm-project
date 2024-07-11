@@ -3508,7 +3508,8 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   // jump to one specific 'then' block (if we have two of them).
   // It isn't beneficial to speculatively execute the code
   // from the block that we know is predictably not entered.
-  if (!DomBI->getMetadata(LLVMContext::MD_unpredictable)) {
+  bool IsUnpredictable = DomBI->getMetadata(LLVMContext::MD_unpredictable);
+  if (!IsUnpredictable) {
     uint64_t TWeight, FWeight;
     if (extractBranchWeights(*DomBI, TWeight, FWeight) &&
         (TWeight + FWeight) != 0) {
@@ -3549,8 +3550,10 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   // that need to be moved to the dominating block.
   SmallPtrSet<Instruction *, 4> AggressiveInsts;
   InstructionCost Cost = 0;
-  InstructionCost Budget =
-      TwoEntryPHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic;
+  unsigned Threshold = TwoEntryPHINodeFoldingThreshold;
+  if (IsUnpredictable)
+    Threshold += TTI.getBranchMispredictPenalty();
+  InstructionCost Budget = Threshold * TargetTransformInfo::TCC_Basic;
 
   bool Changed = false;
   for (BasicBlock::iterator II = BB->begin(); isa<PHINode>(II);) {
