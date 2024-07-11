@@ -801,15 +801,15 @@ def HasV8_9aOps : Architecture64<8, 9, "a", "v8.9a",
   !listconcat(HasV8_8aOps.DefaultExts, [FeatureSPECRES2, FeatureCSSC,
     FeatureRASv2])>;
 def HasV9_0aOps : Architecture64<9, 0, "a", "v9a",
-  [HasV8_5aOps, FeatureMEC],
+  [HasV8_5aOps],
   !listconcat(HasV8_5aOps.DefaultExts, [FeatureFullFP16, FeatureSVE,
     FeatureSVE2])>;
 def HasV9_1aOps : Architecture64<9, 1, "a", "v9.1a",
   [HasV8_6aOps, HasV9_0aOps],
-  !listconcat(HasV9_0aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8])>;
+  !listconcat(HasV9_0aOps.DefaultExts, [FeatureBF16, FeatureMatMulInt8, FeatureRME])>;
 def HasV9_2aOps : Architecture64<9, 2, "a", "v9.2a",
   [HasV8_7aOps, HasV9_1aOps],
-  !listconcat(HasV9_1aOps.DefaultExts, [])>;
+  !listconcat(HasV9_1aOps.DefaultExts, [FeatureMEC])>;
 def HasV9_3aOps : Architecture64<9, 3, "a", "v9.3a",
   [HasV8_8aOps, HasV9_2aOps],
   !listconcat(HasV9_2aOps.DefaultExts, [FeatureMOPS, FeatureHBC])>;
