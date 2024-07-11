@@ -249,8 +249,8 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
     case Triple::TvOS:
     case Triple::WatchOS:
     case Triple::XROS:
-        setLibcallName(RTLIB::EXP10_F32, "__exp10f");
-        setLibcallName(RTLIB::EXP10_F64, "__exp10");
+      setLibcallName(RTLIB::EXP10_F32, "__exp10f");
+      setLibcallName(RTLIB::EXP10_F64, "__exp10");
       break;
     default:
       break;
