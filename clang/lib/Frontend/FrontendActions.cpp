@@ -845,7 +845,8 @@ void DumpModuleInfoAction::ExecuteAction() {
 
   // Don't process files of type other than module to avoid crash
   if (!isCurrentFileAST()) {
-    CI.getDiagnostics().Report(diag::err_file_is_not_module) << getCurrentFile();
+    CI.getDiagnostics().Report(diag::err_file_is_not_module)
+        << getCurrentFile();
     return;
   }
 
