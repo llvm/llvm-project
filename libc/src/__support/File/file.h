@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H
 #define LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H
 
+#include "include/llvm-libc-types/off_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/properties/architectures.h"
@@ -45,7 +46,7 @@ public:
   using ReadFunc = FileIOResult(File *, void *, size_t);
   // The SeekFunc is expected to return the current offset of the external
   // file position indicator.
-  using SeekFunc = ErrorOr<long>(File *, long, int);
+  using SeekFunc = ErrorOr<off_t>(File *, off_t, int);
   using CloseFunc = int(File *);
 
   using ModeFlags = uint32_t;
@@ -182,7 +183,7 @@ public:
 
   ErrorOr<int> seek(long offset, int whence);
 
-  ErrorOr<long> tell();
+  ErrorOr<off_t> tell();
 
   // If buffer has data written to it, flush it out. Does nothing if the
   // buffer is currently being used as a read buffer.

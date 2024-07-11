@@ -24,7 +24,7 @@
 
 @buf = global [20 x i64] zeroinitializer, align 8
 
-define i32 @f(i32 %a, i32 %b, i32 %c, i32 %d) {
+define i32 @f(i32 %a, i32 %b, i32 %c, i32 %d) "branch-target-enforcement" {
 ; BTI-LABEL: f:
 ; BTI:       bl OUTLINED_FUNCTION_0
 ; BTI-NEXT:  bti
@@ -53,7 +53,7 @@ return:                                           ; preds = %entry, %if.end
   ret i32 %retval.0
 }
 
-define i32 @g(i32 %a, i32 %b, i32 %c, i32 %d) {
+define i32 @g(i32 %a, i32 %b, i32 %c, i32 %d) "branch-target-enforcement" {
 ; BTI-LABEL: g:
 ; BTI:       bl OUTLINED_FUNCTION_0
 ; BTI-NEXT:  bti
@@ -87,6 +87,3 @@ declare i32 @setjmp(ptr) #0
 
 attributes #0 = { returns_twice }
 
-!llvm.module.flags = !{!0}
-
-!0 = !{i32 8, !"branch-target-enforcement", i32 1}

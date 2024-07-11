@@ -116,6 +116,9 @@ class SparcAsmParser : public MCTargetAsmParser {
   // Helper function to see if current token can start an expression.
   bool isPossibleExpression(const AsmToken &Token);
 
+  // Check if mnemonic is valid.
+  MatchResultTy mnemonicIsValid(StringRef Mnemonic, unsigned VariantID);
+
   // returns true if Tok is matched to a register and returns register in RegNo.
   MCRegister matchRegisterName(const AsmToken &Tok, unsigned &RegKind);
 
@@ -601,6 +604,45 @@ public:
 
 } // end anonymous namespace
 
+#define GET_MATCHER_IMPLEMENTATION
+#define GET_REGISTER_MATCHER
+#define GET_MNEMONIC_SPELL_CHECKER
+#include "SparcGenAsmMatcher.inc"
+
+// Use a custom function instead of the one from SparcGenAsmMatcher
+// so we can differentiate between unavailable and unknown instructions.
+SparcAsmParser::MatchResultTy
+SparcAsmParser::mnemonicIsValid(StringRef Mnemonic, unsigned VariantID) {
+  // Process all MnemonicAliases to remap the mnemonic.
+  applyMnemonicAliases(Mnemonic, getAvailableFeatures(), VariantID);
+
+  // Find the appropriate table for this asm variant.
+  const MatchEntry *Start, *End;
+  switch (VariantID) {
+  default:
+    llvm_unreachable("invalid variant!");
+  case 0:
+    Start = std::begin(MatchTable0);
+    End = std::end(MatchTable0);
+    break;
+  }
+
+  // Search the table.
+  auto MnemonicRange = std::equal_range(Start, End, Mnemonic, LessOpcode());
+
+  if (MnemonicRange.first == MnemonicRange.second)
+    return Match_MnemonicFail;
+
+  for (const MatchEntry *it = MnemonicRange.first, *ie = MnemonicRange.second;
+       it != ie; ++it) {
+    const FeatureBitset &RequiredFeatures =
+        FeatureBitsets[it->RequiredFeaturesIdx];
+    if ((getAvailableFeatures() & RequiredFeatures) == RequiredFeatures)
+      return Match_Success;
+  }
+  return Match_MissingFeature;
+}
+
 bool SparcAsmParser::expandSET(MCInst &Inst, SMLoc IDLoc,
                                SmallVectorImpl<MCInst> &Instructions) {
   MCOperand MCRegOp = Inst.getOperand(0);
@@ -829,13 +871,32 @@ ParseStatus SparcAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
   return ParseStatus::NoMatch;
 }
 
-static void applyMnemonicAliases(StringRef &Mnemonic,
-                                 const FeatureBitset &Features,
-                                 unsigned VariantID);
-
 bool SparcAsmParser::ParseInstruction(ParseInstructionInfo &Info,
                                       StringRef Name, SMLoc NameLoc,
                                       OperandVector &Operands) {
+  // Validate and reject unavailable mnemonics early before
+  // running any operand parsing.
+  // This is needed because some operands (mainly memory ones)
+  // differ between V8 and V9 ISA and so any operand parsing errors
+  // will cause IAS to bail out before it reaches MatchAndEmitInstruction
+  // (where the instruction as a whole, including the mnemonic, is validated
+  // once again just before emission).
+  // As a nice side effect this also allows us to reject unknown
+  // instructions and suggest replacements.
+  MatchResultTy MS = mnemonicIsValid(Name, 0);
+  switch (MS) {
+  case Match_Success:
+    break;
+  case Match_MissingFeature:
+    return Error(NameLoc,
+                 "instruction requires a CPU feature not currently enabled");
+  case Match_MnemonicFail:
+    return Error(NameLoc,
+                 "invalid instruction mnemonic" +
+                     SparcMnemonicSpellCheck(Name, getAvailableFeatures(), 0));
+  default:
+    llvm_unreachable("invalid return status!");
+  }
 
   // First operand in MCInst is instruction mnemonic.
   Operands.push_back(SparcOperand::CreateToken(Name, NameLoc));
@@ -1378,9 +1439,6 @@ ParseStatus SparcAsmParser::parseExpression(int64_t &Val) {
   return getParser().parseAbsoluteExpression(Val);
 }
 
-#define GET_REGISTER_MATCHER
-#include "SparcGenAsmMatcher.inc"
-
 MCRegister SparcAsmParser::matchRegisterName(const AsmToken &Tok,
                                              unsigned &RegKind) {
   RegKind = SparcOperand::rk_None;
@@ -1627,9 +1685,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcAsmParser() {
   RegisterMCAsmParser<SparcAsmParser> B(getTheSparcV9Target());
   RegisterMCAsmParser<SparcAsmParser> C(getTheSparcelTarget());
 }
-
-#define GET_MATCHER_IMPLEMENTATION
-#include "SparcGenAsmMatcher.inc"
 
 unsigned SparcAsmParser::validateTargetOperandClass(MCParsedAsmOperand &GOp,
                                                     unsigned Kind) {

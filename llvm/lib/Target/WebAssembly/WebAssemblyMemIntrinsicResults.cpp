@@ -58,9 +58,9 @@ public:
     AU.addPreserved<MachineBlockFrequencyInfo>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
-    AU.addRequired<LiveIntervals>();
-    AU.addPreserved<SlotIndexes>();
-    AU.addPreserved<LiveIntervals>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
+    AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -185,7 +185,7 @@ bool WebAssemblyMemIntrinsicResults::runOnMachineFunction(MachineFunction &MF) {
       *MF.getSubtarget<WebAssemblySubtarget>().getTargetLowering();
   const auto &LibInfo =
       getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(MF.getFunction());
-  auto &LIS = getAnalysis<LiveIntervals>();
+  auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   bool Changed = false;
 
   // We don't preserve SSA form.

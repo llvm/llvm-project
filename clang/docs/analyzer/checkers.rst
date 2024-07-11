@@ -1003,9 +1003,6 @@ array new C++ operator is tainted (potentially attacker controlled).
 If an attacker can inject a large value as the size parameter, memory exhaustion
 denial of service attack can be carried out.
 
-The ``alpha.security.taint.TaintPropagation`` checker also needs to be enabled for
-this checker to give warnings.
-
 The analyzer emits warning only if it cannot prove that the size parameter is
 within reasonable bounds (``<= SIZE_MAX/4``). This functionality partially
 covers the SEI Cert coding standard rule `INT04-C
@@ -1013,7 +1010,7 @@ covers the SEI Cert coding standard rule `INT04-C
 
 You can silence this warning either by bound checking the ``size`` parameter, or
 by explicitly marking the ``size`` parameter as sanitized. See the
-:ref:`alpha-security-taint-TaintPropagation` checker for more details.
+:ref:`alpha-security-taint-GenericTaint` checker for an example.
 
 .. code-block:: c
 
@@ -3011,10 +3008,10 @@ alpha.security.taint
 Checkers implementing
 `taint analysis <https://en.wikipedia.org/wiki/Taint_checking>`_.
 
-.. _alpha-security-taint-TaintPropagation:
+.. _alpha-security-taint-GenericTaint:
 
-alpha.security.taint.TaintPropagation (C, C++)
-""""""""""""""""""""""""""""""""""""""""""""""
+alpha.security.taint.GenericTaint (C, C++)
+""""""""""""""""""""""""""""""""""""""""""
 
 Taint analysis identifies potential security vulnerabilities where the
 attacker can inject malicious data to the program to execute an attack

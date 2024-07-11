@@ -21,6 +21,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -39,6 +40,7 @@ using VectorParts = SmallVector<Value *, 2>;
 namespace llvm {
 extern cl::opt<bool> EnableVPlanNativePath;
 }
+extern cl::opt<unsigned> ForceTargetInstructionCost;
 
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
@@ -189,10 +191,10 @@ bool VPRecipeBase::mayHaveSideEffects() const {
 }
 
 void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
-  auto Lane = VPLane::getLastLaneForVF(State.VF);
   VPValue *ExitValue = getOperand(0);
-  if (vputils::isUniformAfterVectorization(ExitValue))
-    Lane = VPLane::getFirstLane();
+  auto Lane = vputils::isUniformAfterVectorization(ExitValue)
+                  ? VPLane::getFirstLane()
+                  : VPLane::getLastLaneForVF(State.VF);
   VPBasicBlock *MiddleVPBB =
       cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
   BasicBlock *MiddleBB = State.CFG.VPBB2IRBB[MiddleVPBB];
@@ -251,6 +253,49 @@ void VPRecipeBase::moveBefore(VPBasicBlock &BB,
                               iplist<VPRecipeBase>::iterator I) {
   removeFromParent();
   insertBefore(BB, I);
+}
+
+/// Return the underlying instruction to be used for computing \p R's cost via
+/// the legacy cost model. Return nullptr if there's no suitable instruction.
+static Instruction *getInstructionForCost(const VPRecipeBase *R) {
+  if (auto *S = dyn_cast<VPSingleDefRecipe>(R))
+    return dyn_cast_or_null<Instruction>(S->getUnderlyingValue());
+  if (auto *IG = dyn_cast<VPInterleaveRecipe>(R))
+    return IG->getInsertPos();
+  if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(R))
+    return &WidenMem->getIngredient();
+  return nullptr;
+}
+
+InstructionCost VPRecipeBase::cost(ElementCount VF, VPCostContext &Ctx) {
+  if (auto *UI = getInstructionForCost(this))
+    if (Ctx.skipCostComputation(UI, VF.isVector()))
+      return 0;
+
+  InstructionCost RecipeCost = computeCost(VF, Ctx);
+  if (ForceTargetInstructionCost.getNumOccurrences() > 0 &&
+      RecipeCost.isValid())
+    RecipeCost = InstructionCost(ForceTargetInstructionCost);
+
+  LLVM_DEBUG({
+    dbgs() << "Cost of " << RecipeCost << " for VF " << VF << ": ";
+    dump();
+  });
+  return RecipeCost;
+}
+
+InstructionCost VPRecipeBase::computeCost(ElementCount VF,
+                                          VPCostContext &Ctx) const {
+  // Compute the cost for the recipe falling back to the legacy cost model using
+  // the underlying instruction. If there is no underlying instruction, returns
+  // 0.
+  Instruction *UI = getInstructionForCost(this);
+  if (UI && isa<VPReplicateRecipe>(this)) {
+    // VPReplicateRecipe may be cloned as part of an existing VPlan-to-VPlan
+    // transform, avoid computing their cost multiple times for now.
+    Ctx.SkipCostComputation.insert(UI);
+  }
+  return UI ? Ctx.getLegacyCost(UI, VF) : 0;
 }
 
 FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
@@ -868,6 +913,42 @@ void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
       O << ": " << Variant->getName();
     O << ")";
   }
+}
+#endif
+
+void VPHistogramRecipe::execute(VPTransformState &State) {
+  assert(State.UF == 1 && "Tried interleaving histogram operation");
+  State.setDebugLocFrom(getDebugLoc());
+  IRBuilderBase &Builder = State.Builder;
+  Value *Address = State.get(getOperand(0), 0);
+  Value *IncVec = State.get(getOperand(1), 0);
+  Value *Mask = State.get(getOperand(2), 0);
+
+  // Not sure how to make IncAmt stay scalar yet. For now just extract the
+  // first element and tidy up later.
+  // FIXME: Do we actually want this to be scalar? We just splat it in the
+  //        backend anyway...
+  Value *IncAmt = Builder.CreateExtractElement(IncVec, Builder.getInt64(0));
+
+  // If this is a subtract, we want to invert the increment amount. We may
+  // add a separate intrinsic in future, but for now we'll try this.
+  if (Opcode == Instruction::Sub)
+    IncAmt = Builder.CreateNeg(IncAmt);
+
+  State.Builder.CreateIntrinsic(Intrinsic::experimental_vector_histogram_add,
+                                {Address->getType(), IncAmt->getType()},
+                                {Address, IncAmt, Mask});
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPHistogramRecipe::print(raw_ostream &O, const Twine &Indent,
+                              VPSlotTracker &SlotTracker) const {
+  O << Indent << "WIDEN-HISTOGRAM buckets: ";
+  getOperand(0)->printAsOperand(O, SlotTracker);
+  O << ", inc: ";
+  getOperand(1)->printAsOperand(O, SlotTracker);
+  O << ", mask: ";
+  getOperand(2)->printAsOperand(O, SlotTracker);
 }
 
 void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,

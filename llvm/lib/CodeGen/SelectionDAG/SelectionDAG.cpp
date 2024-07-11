@@ -5649,7 +5649,7 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
     const APInt &Multiplier = Op.getConstantOperandAPInt(0);
     ConstantRange CR =
         getVScaleRange(&F, Op.getScalarValueSizeInBits()).multiply(Multiplier);
-    if (!CR.getUnsignedMin().isZero())
+    if (!CR.contains(APInt(CR.getBitWidth(), 0)))
       return true;
     break;
   }

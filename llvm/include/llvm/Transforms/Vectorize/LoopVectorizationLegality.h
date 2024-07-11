@@ -276,9 +276,12 @@ public:
   bool canVectorizeFPMath(bool EnableStrictReductions);
 
   /// Return true if we can vectorize this loop while folding its tail by
-  /// masking, and mark all respective loads/stores for masking.
-  /// This object's state is only modified iff this function returns true.
-  bool prepareToFoldTailByMasking();
+  /// masking.
+  bool canFoldTailByMasking() const;
+
+  /// Mark all respective loads/stores for masking. Must only be called when
+  /// tail-folding is possible.
+  void prepareToFoldTailByMasking();
 
   /// Returns the primary induction variable.
   PHINode *getPrimaryInduction() { return PrimaryInduction; }
@@ -386,6 +389,23 @@ public:
 
   unsigned getNumStores() const { return LAI->getNumStores(); }
   unsigned getNumLoads() const { return LAI->getNumLoads(); }
+
+  std::optional<const HistogramInfo *> getHistogramInfo(Instruction *I) const {
+    for (const HistogramInfo &HGram : LAI->getHistograms())
+      if (HGram.Load == I || HGram.Update == I || HGram.Store == I)
+        return &HGram;
+
+    return std::nullopt;
+  }
+
+  std::optional<const HistogramInfo *>
+  getHistogramForStore(StoreInst *SI) const {
+    for (const HistogramInfo &HGram : LAI->getHistograms())
+      if (HGram.Store == SI)
+        return &HGram;
+
+    return std::nullopt;
+  }
 
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;

@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
@@ -69,6 +70,8 @@ using namespace llvm;
 using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "loop-accesses"
+
+STATISTIC(HistogramsDetected, "Number of Histograms detected");
 
 static cl::opt<unsigned, true>
 VectorizationFactor("force-vector-width", cl::Hidden,
@@ -731,6 +734,23 @@ public:
   getUnderlyingObjects() {
     return UnderlyingObjects;
   }
+
+  /// Find Histogram counts that match high-level code in loops:
+  /// \code
+  /// buckets[indices[i]]+=step;
+  /// \endcode
+  ///
+  /// It matches a pattern starting from \p HSt, which Stores to the 'buckets'
+  /// array the computed histogram. It uses a BinOp to sum all counts, storing
+  /// them using a loop-variant index Load from the 'indices' input array.
+  ///
+  /// On successful matches it updates the STATISTIC 'HistogramsDetected',
+  /// regardless of hardware support. When there is support, it additionally
+  /// stores the BinOp/Load pairs in \p HistogramCounts, as well the pointers
+  /// used to update histogram in \p HistogramPtrs.
+  void findHistograms(StoreInst *HSt, Loop *TheLoop,
+                      SmallVectorImpl<HistogramInfo> &Histograms,
+                      SmallPtrSetImpl<const Value *> &HistogramPtrs);
 
 private:
   typedef MapVector<MemAccessInfo, SmallSetVector<Type *, 1>> PtrAccessMap;
@@ -1698,6 +1718,7 @@ MemoryDepChecker::Dependence::isSafeForVectorization(DepType Type) {
   case NoDep:
   case Forward:
   case BackwardVectorizable:
+  case Histogram:
     return VectorizationSafetyStatus::Safe;
 
   case Unknown:
@@ -1718,6 +1739,7 @@ bool MemoryDepChecker::Dependence::isBackward() const {
   case ForwardButPreventsForwarding:
   case Unknown:
   case IndirectUnsafe:
+  case Histogram:
     return false;
 
   case BackwardVectorizable:
@@ -1729,7 +1751,7 @@ bool MemoryDepChecker::Dependence::isBackward() const {
 }
 
 bool MemoryDepChecker::Dependence::isPossiblyBackward() const {
-  return isBackward() || Type == Unknown;
+  return isBackward() || Type == Unknown || Type == Histogram;
 }
 
 bool MemoryDepChecker::Dependence::isForward() const {
@@ -1744,6 +1766,7 @@ bool MemoryDepChecker::Dependence::isForward() const {
   case Backward:
   case BackwardVectorizableButPreventsForwarding:
   case IndirectUnsafe:
+  case Histogram:
     return false;
   }
   llvm_unreachable("unexpected DepType!");
@@ -1913,8 +1936,8 @@ std::variant<MemoryDepChecker::Dependence::DepType,
 MemoryDepChecker::getDependenceDistanceStrideAndSize(
     const AccessAnalysis::MemAccessInfo &A, Instruction *AInst,
     const AccessAnalysis::MemAccessInfo &B, Instruction *BInst,
-    const DenseMap<Value *, SmallVector<const Value *, 16>>
-        &UnderlyingObjects) {
+    const DenseMap<Value *, SmallVector<const Value *, 16>> &UnderlyingObjects,
+    const SmallPtrSetImpl<const Value *> &HistogramPtrs) {
   auto &DL = InnermostLoop->getHeader()->getDataLayout();
   auto &SE = *PSE.getSE();
   auto [APtr, AIsWrite] = A;
@@ -1931,6 +1954,12 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
   if (APtr->getType()->getPointerAddressSpace() !=
       BPtr->getType()->getPointerAddressSpace())
     return MemoryDepChecker::Dependence::Unknown;
+
+  // Ignore Histogram count updates as they are handled by the Intrinsic. This
+  // happens when the same pointer is first used to read from and then is used
+  // to write to.
+  if (!AIsWrite && BIsWrite && APtr == BPtr && HistogramPtrs.contains(APtr))
+    return MemoryDepChecker::Dependence::Histogram;
 
   int64_t StrideAPtr =
       getPtrStride(PSE, ATy, APtr, InnermostLoop, SymbolicStrides, true)
@@ -2008,14 +2037,14 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
 MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
     const MemAccessInfo &A, unsigned AIdx, const MemAccessInfo &B,
     unsigned BIdx,
-    const DenseMap<Value *, SmallVector<const Value *, 16>>
-        &UnderlyingObjects) {
+    const DenseMap<Value *, SmallVector<const Value *, 16>> &UnderlyingObjects,
+    const SmallPtrSetImpl<const Value *> &HistogramPtrs) {
   assert(AIdx < BIdx && "Must pass arguments in program order");
 
   // Get the dependence distance, stride, type size and what access writes for
   // the dependence between A and B.
   auto Res = getDependenceDistanceStrideAndSize(
-      A, InstMap[AIdx], B, InstMap[BIdx], UnderlyingObjects);
+      A, InstMap[AIdx], B, InstMap[BIdx], UnderlyingObjects, HistogramPtrs);
   if (std::holds_alternative<Dependence::DepType>(Res))
     return std::get<Dependence::DepType>(Res);
 
@@ -2251,8 +2280,8 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
 
 bool MemoryDepChecker::areDepsSafe(
     DepCandidates &AccessSets, MemAccessInfoList &CheckDeps,
-    const DenseMap<Value *, SmallVector<const Value *, 16>>
-        &UnderlyingObjects) {
+    const DenseMap<Value *, SmallVector<const Value *, 16>> &UnderlyingObjects,
+    const SmallPtrSetImpl<const Value *> &HistogramPtrs) {
 
   MinDepDistBytes = -1;
   SmallPtrSet<MemAccessInfo, 8> Visited;
@@ -2295,8 +2324,9 @@ bool MemoryDepChecker::areDepsSafe(
             if (*I1 > *I2)
               std::swap(A, B);
 
-            Dependence::DepType Type = isDependent(*A.first, A.second, *B.first,
-                                                   B.second, UnderlyingObjects);
+            Dependence::DepType Type =
+                isDependent(*A.first, A.second, *B.first, B.second,
+                            UnderlyingObjects, HistogramPtrs);
             mergeInStatus(Dependence::isSafeForVectorization(Type));
 
             // Gather dependences unless we accumulated MaxDependences
@@ -2347,7 +2377,8 @@ const char *MemoryDepChecker::Dependence::DepName[] = {
     "ForwardButPreventsForwarding",
     "Backward",
     "BackwardVectorizable",
-    "BackwardVectorizableButPreventsForwarding"};
+    "BackwardVectorizableButPreventsForwarding",
+    "Histogram"};
 
 void MemoryDepChecker::Dependence::print(
     raw_ostream &OS, unsigned Depth,
@@ -2395,9 +2426,9 @@ bool LoopAccessInfo::canAnalyzeLoop() {
   return true;
 }
 
-bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
-                                 const TargetLibraryInfo *TLI,
-                                 DominatorTree *DT) {
+LoopAccessInfo::VecMemPossible
+LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
+                            const TargetLibraryInfo *TLI, DominatorTree *DT) {
   // Holds the Load and Store instructions.
   SmallVector<LoadInst *, 16> Loads;
   SmallVector<StoreInst *, 16> Stores;
@@ -2437,7 +2468,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
       // With both a non-vectorizable memory instruction and a convergent
       // operation, found in this loop, no reason to continue the search.
       if (HasComplexMemInst && HasConvergentOp)
-        return false;
+        return CantVec;
 
       // Avoid hitting recordAnalysis multiple times.
       if (HasComplexMemInst)
@@ -2513,7 +2544,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   } // Next block.
 
   if (HasComplexMemInst)
-    return false;
+    return CantVec;
 
   // Now we have two lists that hold the loads and the stores.
   // Next, we find the pointers that they use.
@@ -2522,7 +2553,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   // care if the pointers are *restrict*.
   if (!Stores.size()) {
     LLVM_DEBUG(dbgs() << "LAA: Found a read-only loop!\n");
-    return true;
+    return NormalVec;
   }
 
   MemoryDepChecker::DepCandidates DependentAccesses;
@@ -2575,7 +2606,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
     LLVM_DEBUG(
         dbgs() << "LAA: A loop annotated parallel, ignore memory dependency "
                << "checks.\n");
-    return true;
+    return NormalVec;
   }
 
   for (LoadInst *LD : Loads) {
@@ -2622,12 +2653,15 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   // other reads in this loop then is it safe to vectorize.
   if (NumReadWrites == 1 && NumReads == 0) {
     LLVM_DEBUG(dbgs() << "LAA: Found a write-only loop!\n");
-    return true;
+    return NormalVec;
   }
 
   // Build dependence sets and check whether we need a runtime pointer bounds
   // check.
   Accesses.buildDependenceSets();
+
+  for (StoreInst *ST : Stores)
+    Accesses.findHistograms(ST, TheLoop, Histograms, HistogramPtrs);
 
   // Find pointers with computable bounds. We are going to use this information
   // to place a runtime bound check.
@@ -2641,7 +2675,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
         << "cannot identify array bounds";
     LLVM_DEBUG(dbgs() << "LAA: We can't vectorize because we can't find "
                       << "the array bounds.\n");
-    return false;
+    return CantVec;
   }
 
   LLVM_DEBUG(
@@ -2650,9 +2684,9 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
   bool DepsAreSafe = true;
   if (Accesses.isDependencyCheckNeeded()) {
     LLVM_DEBUG(dbgs() << "LAA: Checking memory dependencies\n");
-    DepsAreSafe = DepChecker->areDepsSafe(DependentAccesses,
-                                          Accesses.getDependenciesToCheck(),
-                                          Accesses.getUnderlyingObjects());
+    DepsAreSafe = DepChecker->areDepsSafe(
+        DependentAccesses, Accesses.getDependenciesToCheck(),
+        Accesses.getUnderlyingObjects(), HistogramPtrs);
 
     if (!DepsAreSafe && DepChecker->shouldRetryWithRuntimeCheck()) {
       LLVM_DEBUG(dbgs() << "LAA: Retrying with memory checks\n");
@@ -2674,7 +2708,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
         recordAnalysis("CantCheckMemDepsAtRunTime", I)
             << "cannot check memory dependencies at runtime";
         LLVM_DEBUG(dbgs() << "LAA: Can't vectorize with memory checks\n");
-        return false;
+        return CantVec;
       }
       DepsAreSafe = true;
     }
@@ -2685,7 +2719,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
         << "cannot add control dependency to convergent operation";
     LLVM_DEBUG(dbgs() << "LAA: We can't vectorize because a runtime check "
                          "would be needed with a convergent operation\n");
-    return false;
+    return CantVec;
   }
 
   if (DepsAreSafe) {
@@ -2693,11 +2727,11 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
         dbgs() << "LAA: No unsafe dependent memory operations in loop.  We"
                << (PtrRtChecking->Need ? "" : " don't")
                << " need runtime memory checks.\n");
-    return true;
+    return Histograms.empty() ? NormalVec : HistogramVec;
   }
 
   emitUnsafeDependenceRemark();
-  return false;
+  return CantVec;
 }
 
 void LoopAccessInfo::emitUnsafeDependenceRemark() {
@@ -2756,6 +2790,9 @@ void LoopAccessInfo::emitUnsafeDependenceRemark() {
     break;
   case MemoryDepChecker::Dependence::Unknown:
     R << "\nUnknown data dependence.";
+    break;
+  case MemoryDepChecker::Dependence::Histogram:
+    R << "\nHistogram data dependence.";
     break;
   }
 
@@ -3028,7 +3065,7 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
 }
 
 void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
-  if (CanVecMem) {
+  if (CanVecMem != CantVec) {
     OS.indent(Depth) << "Memory dependences are safe";
     const MemoryDepChecker &DC = getDepChecker();
     if (!DC.isSafeForAnyVectorWidth())
@@ -3099,6 +3136,79 @@ void LoopAccessInfoManager::clear() {
 
   for (Loop *L : ToRemove)
     LoopAccessInfoMap.erase(L);
+}
+
+void AccessAnalysis::findHistograms(
+    StoreInst *HSt, Loop *TheLoop, SmallVectorImpl<HistogramInfo> &Histograms,
+    SmallPtrSetImpl<const Value *> &HistogramPtrs) {
+
+  // Store value must come from a Binary Operation.
+  Instruction *HPtrInstr = nullptr;
+  BinaryOperator *HBinOp = nullptr;
+  if (!match(HSt, m_Store(m_BinOp(HBinOp), m_Instruction(HPtrInstr))))
+    return;
+
+  // BinOp must be an Add or a Sub modifying the bucket value by a
+  // loop invariant amount.
+  // FIXME: We assume the loop invariant term is on the RHS.
+  //        Fine for an immediate/constant, but maybe not a generic value?
+  Value *HIncVal = nullptr;
+  if (!match(HBinOp, m_Add(m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal))) &&
+      !match(HBinOp, m_Sub(m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal))))
+    return;
+
+  // Make sure the increment value is loop invariant.
+  if (!TheLoop->isLoopInvariant(HIncVal))
+    return;
+
+  // The address to store is calculated through a GEP Instruction.
+  // FIXME: Support GEPs with more operands.
+  GetElementPtrInst *HPtr = dyn_cast<GetElementPtrInst>(HPtrInstr);
+  if (!HPtr || HPtr->getNumOperands() > 2)
+    return;
+
+  // Check that the index is calculated by loading from another array. Ignore
+  // any extensions.
+  // FIXME: Support indices from other sources that a linear load from memory?
+  Value *HIdx = HPtr->getOperand(1);
+  Instruction *IdxInst = nullptr;
+  if (!match(HIdx, m_ZExtOrSExtOrSelf(m_Instruction(IdxInst))))
+    return;
+
+  // Currently restricting this to linear addressing when loading indices.
+  LoadInst *VLoad = dyn_cast<LoadInst>(IdxInst);
+  Value *VPtrVal;
+  if (!VLoad || !match(VLoad, m_Load(m_Value(VPtrVal))))
+    return;
+
+  if (!isa<SCEVAddRecExpr>(PSE.getSCEV(VPtrVal)))
+    return;
+
+  // Ensure we'll have the same mask by checking that all parts of the histogram
+  // (gather load, update, scatter store) are in the same block.
+  LoadInst *IndexedLoad = cast<LoadInst>(HBinOp->getOperand(0));
+  BasicBlock *LdBB = IndexedLoad->getParent();
+  if (LdBB != HBinOp->getParent() || LdBB != HSt->getParent())
+    return;
+
+  // A histogram pointer may only alias to itself, and must only have two uses,
+  // the load and the store.
+  // We may be able to relax these constraints later.
+  for (AliasSet &AS : AST)
+    if (AS.isMustAlias() || AS.isMayAlias())
+      if ((is_contained(AS.getPointers(), HPtr) && AS.size() > 1) ||
+          HPtr->getNumUses() != 2)
+        return;
+
+  HistogramsDetected++;
+
+  LLVM_DEBUG(dbgs() << "LAA: Found histogram for load: " << *IndexedLoad
+                    << " and store: " << *HSt << "\n");
+
+  // Store the operations that make up the histogram.
+  Histograms.emplace_back(IndexedLoad, HBinOp, HSt);
+  // Store pointers used to write those counts in the computed histogram.
+  HistogramPtrs.insert(HPtr);
 }
 
 bool LoopAccessInfoManager::invalidate(
