@@ -6334,6 +6334,10 @@ void CGDebugInfo::EmitExternalVariable(llvm::GlobalVariable *Var,
 
 void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
                                      llvm::Instruction *Value, QualType Ty) {
+  // FIXME: Workaround to prevent crash when using with -gheterogeneous-dwarf
+  if (CGM.getCodeGenOpts().HeterogeneousDwarf)
+    return;
+
   // Only when -g2 or above is specified, debug info for variables will be
   // generated.
   if (CGM.getCodeGenOpts().getDebugInfo() <=

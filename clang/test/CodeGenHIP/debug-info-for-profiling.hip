@@ -1,5 +1,7 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: not %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -debug-info-kind=constructor -fdebug-info-for-profiling -gheterogeneous-dwarf -o - %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -debug-info-kind=constructor -fdebug-info-for-profiling -gheterogeneous-dwarf -o - %s 2>&1 | FileCheck %s
+
+// Regression test for workaround in SWDEV-469667
 
 #define __device__ __attribute__((device))
 
@@ -10,9 +12,7 @@ struct S {
 __device__ int *sink;
 
 __device__ void kernel1(struct S *s) {
-// CHECK: MDNode incompatible with Debug Info Version
-// CHECK: !DIExpression()
-// CHECK: 4
+// CHECK-NOT: MDNode incompatible with Debug Info Version
   *sink = s->member;
 }
 
