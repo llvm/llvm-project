@@ -2280,12 +2280,15 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     // optimizations (mainly Register Coalescer) aware of WWM register liveness.
     BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), MI.getOperand(0).getReg())
         .add(MI.getOperand(1));
-    auto FirstNot = BuildMI(MBB, MI, DL, get(NotOpc), Exec).addReg(Exec);
-    FirstNot->addRegisterDead(AMDGPU::SCC, TRI); // SCC is overwritten
-    BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), MI.getOperand(0).getReg())
-      .add(MI.getOperand(2));
-    BuildMI(MBB, MI, DL, get(NotOpc), Exec)
-      .addReg(Exec);
+    if (!MI.getOperand(2).isReg() ||
+        MI.getOperand(0).getReg() != MI.getOperand(2).getReg()) {
+      auto FirstNot = BuildMI(MBB, MI, DL, get(NotOpc), Exec).addReg(Exec);
+      FirstNot->addRegisterDead(AMDGPU::SCC, TRI); // SCC is overwritten
+      BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32),
+              MI.getOperand(0).getReg())
+          .add(MI.getOperand(2));
+      BuildMI(MBB, MI, DL, get(NotOpc), Exec).addReg(Exec);
+    }
     MI.eraseFromParent();
     break;
   }
@@ -2296,14 +2299,16 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
                                  MI.getOperand(0).getReg())
                              .add(MI.getOperand(1));
     expandPostRAPseudo(*Copy);
-    auto FirstNot = BuildMI(MBB, MI, DL, get(NotOpc), Exec).addReg(Exec);
-    FirstNot->addRegisterDead(AMDGPU::SCC, TRI); // SCC is overwritten
-    Copy = BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B64_PSEUDO),
-                   MI.getOperand(0).getReg())
-               .add(MI.getOperand(2));
-    expandPostRAPseudo(*Copy);
-    BuildMI(MBB, MI, DL, get(NotOpc), Exec)
-      .addReg(Exec);
+    if (!MI.getOperand(2).isReg() ||
+        MI.getOperand(0).getReg() != MI.getOperand(2).getReg()) {
+      auto FirstNot = BuildMI(MBB, MI, DL, get(NotOpc), Exec).addReg(Exec);
+      FirstNot->addRegisterDead(AMDGPU::SCC, TRI); // SCC is overwritten
+      Copy = BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B64_PSEUDO),
+                     MI.getOperand(0).getReg())
+                 .add(MI.getOperand(2));
+      expandPostRAPseudo(*Copy);
+      BuildMI(MBB, MI, DL, get(NotOpc), Exec).addReg(Exec);
+    }
     MI.eraseFromParent();
     break;
   }
