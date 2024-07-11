@@ -44,10 +44,8 @@ AllocationOrder AllocationOrder::create(unsigned VirtReg, const VirtRegMap &VRM,
       dbgs() << '\n';
     }
   });
-#ifndef NDEBUG
-  for (MCPhysReg Hint : Hints)
-    assert(is_contained(Order, Hint) &&
-           "Target hint is outside allocation order.");
-#endif
+  assert(all_of(Hints,
+                [&](MCPhysReg Hint) { return is_contained(Order, Hint); }) &&
+         "Target hint is outside allocation order.");
   return AllocationOrder(std::move(Hints), Order, HardHints);
 }
