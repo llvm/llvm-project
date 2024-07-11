@@ -1,5 +1,4 @@
 // RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+mec < %s | FileCheck %s
-// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v9a < %s | FileCheck %s
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu < %s 2>&1 | FileCheck --check-prefix=CHECK-NO-MEC %s
 
           mrs x0, MECIDR_EL2
