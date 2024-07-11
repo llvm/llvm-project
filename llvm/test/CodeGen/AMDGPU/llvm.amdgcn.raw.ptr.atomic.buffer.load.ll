@@ -2,8 +2,8 @@
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -global-isel=0 | FileCheck %s -check-prefix=CHECK
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs -global-isel=1 | FileCheck %s -check-prefix=CHECK
 
-define amdgpu_kernel void @raw_atomic_ptr_buffer_ptr_load_i32(ptr addrspace(8) %ptr) {
-; CHECK-LABEL: raw_atomic_ptr_buffer_ptr_load_i32:
+define amdgpu_kernel void @raw_ptr_atomic_buffer_ptr_load_i32(ptr addrspace(8) %ptr) {
+; CHECK-LABEL: raw_ptr_atomic_buffer_ptr_load_i32:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; CHECK-NEXT:    s_mov_b32 s4, 0
@@ -23,15 +23,15 @@ bb:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   br label %bb1
 bb1:
-  %load = call i32 @llvm.amdgcn.raw.atomic.ptr.buffer.load.i32(ptr addrspace(8) %ptr, i32 0, i32 0, i32 1)
+  %load = call i32 @llvm.amdgcn.raw.ptr.atomic.buffer.load.i32(ptr addrspace(8) %ptr, i32 0, i32 0, i32 1)
   %cmp = icmp eq i32 %load, %id
   br i1 %cmp, label %bb1, label %bb2
 bb2:
   ret void
 }
 
-define amdgpu_kernel void @raw_atomic_ptr_buffer_load_i32_off(ptr addrspace(8) %ptr) {
-; CHECK-LABEL: raw_atomic_ptr_buffer_load_i32_off:
+define amdgpu_kernel void @raw_ptr_atomic_buffer_load_i32_off(ptr addrspace(8) %ptr) {
+; CHECK-LABEL: raw_ptr_atomic_buffer_load_i32_off:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; CHECK-NEXT:    s_mov_b32 s4, 0
@@ -51,14 +51,14 @@ bb:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   br label %bb1
 bb1:
-  %load = call i32 @llvm.amdgcn.raw.atomic.ptr.buffer.load.i32(ptr addrspace(8) %ptr, i32 0, i32 0, i32 1)
+  %load = call i32 @llvm.amdgcn.raw.ptr.atomic.buffer.load.i32(ptr addrspace(8) %ptr, i32 0, i32 0, i32 1)
   %cmp = icmp eq i32 %load, %id
   br i1 %cmp, label %bb1, label %bb2
 bb2:
   ret void
 }
-define amdgpu_kernel void @raw_atomic_ptr_buffer_load_i32_soff(ptr addrspace(8) %ptr) {
-; CHECK-LABEL: raw_atomic_ptr_buffer_load_i32_soff:
+define amdgpu_kernel void @raw_ptr_atomic_buffer_load_i32_soff(ptr addrspace(8) %ptr) {
+; CHECK-LABEL: raw_ptr_atomic_buffer_load_i32_soff:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; CHECK-NEXT:    s_mov_b32 s4, 0
@@ -78,14 +78,14 @@ bb:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   br label %bb1
 bb1:
-  %load = call i32 @llvm.amdgcn.raw.atomic.ptr.buffer.load.i32(ptr addrspace(8) %ptr, i32 4, i32 4, i32 1)
+  %load = call i32 @llvm.amdgcn.raw.ptr.atomic.buffer.load.i32(ptr addrspace(8) %ptr, i32 4, i32 4, i32 1)
   %cmp = icmp eq i32 %load, %id
   br i1 %cmp, label %bb1, label %bb2
 bb2:
   ret void
 }
-define amdgpu_kernel void @raw_atomic_ptr_buffer_load_i32_dlc(ptr addrspace(8) %ptr) {
-; CHECK-LABEL: raw_atomic_ptr_buffer_load_i32_dlc:
+define amdgpu_kernel void @raw_ptr_atomic_buffer_load_i32_dlc(ptr addrspace(8) %ptr) {
+; CHECK-LABEL: raw_ptr_atomic_buffer_load_i32_dlc:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; CHECK-NEXT:    s_mov_b32 s4, 0
@@ -105,15 +105,15 @@ bb:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   br label %bb1
 bb1:
-  %load = call i32 @llvm.amdgcn.raw.atomic.ptr.buffer.load.i32(ptr addrspace(8) %ptr, i32 4, i32 0, i32 4)
+  %load = call i32 @llvm.amdgcn.raw.ptr.atomic.buffer.load.i32(ptr addrspace(8) %ptr, i32 4, i32 0, i32 4)
   %cmp = icmp eq i32 %load, %id
   br i1 %cmp, label %bb1, label %bb2
 bb2:
   ret void
 }
 
-define amdgpu_kernel void @raw_nonatomic_ptr_buffer_load_i32(ptr addrspace(8) %ptr) {
-; CHECK-LABEL: raw_nonatomic_ptr_buffer_load_i32:
+define amdgpu_kernel void @raw_nonptr_atomic_buffer_load_i32(ptr addrspace(8) %ptr) {
+; CHECK-LABEL: raw_nonptr_atomic_buffer_load_i32:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
@@ -141,8 +141,8 @@ bb2:
   ret void
 }
 
-define amdgpu_kernel void @raw_atomic_ptr_buffer_load_i64(ptr addrspace(8) %ptr) {
-; CHECK-LABEL: raw_atomic_ptr_buffer_load_i64:
+define amdgpu_kernel void @raw_ptr_atomic_buffer_load_i64(ptr addrspace(8) %ptr) {
+; CHECK-LABEL: raw_ptr_atomic_buffer_load_i64:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
@@ -164,15 +164,15 @@ bb:
   %id.zext = zext i32 %id to i64
   br label %bb1
 bb1:
-  %load = call i64 @llvm.amdgcn.raw.atomic.ptr.buffer.load.i64(ptr addrspace(8) %ptr, i32 4, i32 0, i32 1)
+  %load = call i64 @llvm.amdgcn.raw.ptr.atomic.buffer.load.i64(ptr addrspace(8) %ptr, i32 4, i32 0, i32 1)
   %cmp = icmp eq i64 %load, %id.zext
   br i1 %cmp, label %bb1, label %bb2
 bb2:
   ret void
 }
 
-define amdgpu_kernel void @raw_atomic_ptr_buffer_load_v2i16(ptr addrspace(8) %ptr) {
-; CHECK-LABEL: raw_atomic_ptr_buffer_load_v2i16:
+define amdgpu_kernel void @raw_ptr_atomic_buffer_load_v2i16(ptr addrspace(8) %ptr) {
+; CHECK-LABEL: raw_ptr_atomic_buffer_load_v2i16:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; CHECK-NEXT:    s_mov_b32 s4, 0
@@ -192,7 +192,7 @@ bb:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   br label %bb1
 bb1:
-  %load = call <2 x i16> @llvm.amdgcn.raw.atomic.ptr.buffer.load.v2i16(ptr addrspace(8) %ptr, i32 0, i32 0, i32 1)
+  %load = call <2 x i16> @llvm.amdgcn.raw.ptr.atomic.buffer.load.v2i16(ptr addrspace(8) %ptr, i32 0, i32 0, i32 1)
   %bitcast = bitcast <2 x i16> %load to i32
   %cmp = icmp eq i32 %bitcast, %id
   br i1 %cmp, label %bb1, label %bb2
@@ -200,8 +200,8 @@ bb2:
   ret void
 }
 
-define amdgpu_kernel void @raw_atomic_ptr_buffer_load_v4i16(ptr addrspace(8) %ptr) {
-; CHECK-LABEL: raw_atomic_ptr_buffer_load_v4i16:
+define amdgpu_kernel void @raw_ptr_atomic_buffer_load_v4i16(ptr addrspace(8) %ptr) {
+; CHECK-LABEL: raw_ptr_atomic_buffer_load_v4i16:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; CHECK-NEXT:    s_mov_b32 s4, 0
@@ -224,7 +224,7 @@ bb:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   br label %bb1
 bb1:
-  %load = call <4 x i16> @llvm.amdgcn.raw.atomic.ptr.buffer.load.v4i16(ptr addrspace(8) %ptr, i32 4, i32 0, i32 1)
+  %load = call <4 x i16> @llvm.amdgcn.raw.ptr.atomic.buffer.load.v4i16(ptr addrspace(8) %ptr, i32 4, i32 0, i32 1)
   %shortened = shufflevector <4 x i16> %load, <4 x i16> poison, <2 x i32> <i32 0, i32 2>
   %bitcast = bitcast <2 x i16> %shortened to i32
   %cmp = icmp eq i32 %bitcast, %id
@@ -233,8 +233,8 @@ bb2:
   ret void
 }
 
-define amdgpu_kernel void @raw_atomic_ptr_buffer_load_v4i32(ptr addrspace(8) %ptr) {
-; CHECK-LABEL: raw_atomic_ptr_buffer_load_v4i32:
+define amdgpu_kernel void @raw_ptr_atomic_buffer_load_v4i32(ptr addrspace(8) %ptr) {
+; CHECK-LABEL: raw_ptr_atomic_buffer_load_v4i32:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; CHECK-NEXT:    s_mov_b32 s4, 0
@@ -254,7 +254,7 @@ bb:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   br label %bb1
 bb1:
-  %load = call <4 x i32> @llvm.amdgcn.raw.atomic.ptr.buffer.load.v4i32(ptr addrspace(8) %ptr, i32 4, i32 0, i32 1)
+  %load = call <4 x i32> @llvm.amdgcn.raw.ptr.atomic.buffer.load.v4i32(ptr addrspace(8) %ptr, i32 4, i32 0, i32 1)
   %extracted = extractelement <4 x i32> %load, i32 3
   %cmp = icmp eq i32 %extracted, %id
   br i1 %cmp, label %bb1, label %bb2
@@ -262,8 +262,8 @@ bb2:
   ret void
 }
 
-define amdgpu_kernel void @raw_atomic_ptr_buffer_load_ptr(ptr addrspace(8) %ptr) {
-; CHECK-LABEL: raw_atomic_ptr_buffer_load_ptr:
+define amdgpu_kernel void @raw_ptr_atomic_buffer_load_ptr(ptr addrspace(8) %ptr) {
+; CHECK-LABEL: raw_ptr_atomic_buffer_load_ptr:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; CHECK-NEXT:    s_mov_b32 s4, 0
@@ -285,7 +285,7 @@ bb:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   br label %bb1
 bb1:
-  %load = call ptr @llvm.amdgcn.raw.atomic.ptr.buffer.load.ptr(ptr addrspace(8) %ptr, i32 4, i32 0, i32 1)
+  %load = call ptr @llvm.amdgcn.raw.ptr.atomic.buffer.load.ptr(ptr addrspace(8) %ptr, i32 4, i32 0, i32 1)
   %elem = load i32, ptr %load
   %cmp = icmp eq i32 %elem, %id
   br i1 %cmp, label %bb1, label %bb2
@@ -294,11 +294,11 @@ bb2:
 }
 
 ; Function Attrs: nounwind readonly
-declare i32 @llvm.amdgcn.raw.atomic.ptr.buffer.load.i32(ptr addrspace(8), i32, i32, i32 immarg)
-declare i64 @llvm.amdgcn.raw.atomic.ptr.buffer.load.i64(ptr addrspace(8), i32, i32, i32 immarg)
-declare <2 x i16> @llvm.amdgcn.raw.atomic.ptr.buffer.load.v2i16(ptr addrspace(8), i32, i32, i32 immarg)
-declare <4 x i16> @llvm.amdgcn.raw.atomic.ptr.buffer.load.v4i16(ptr addrspace(8), i32, i32, i32 immarg)
-declare <4 x i32> @llvm.amdgcn.raw.atomic.ptr.buffer.load.v4i32(ptr addrspace(8), i32, i32, i32 immarg)
-declare ptr @llvm.amdgcn.raw.atomic.ptr.buffer.load.ptr(ptr addrspace(8), i32, i32, i32 immarg)
+declare i32 @llvm.amdgcn.raw.ptr.atom.buffer.load.i32(ptr addrspace(8), i32, i32, i32 immarg)
+declare i64 @llvm.amdgcn.raw.ptr.atom.buffer.load.i64(ptr addrspace(8), i32, i32, i32 immarg)
+declare <2 x i16> @llvm.amdgcn.raw.ptr.atom.buffer.load.v2i16(ptr addrspace(8), i32, i32, i32 immarg)
+declare <4 x i16> @llvm.amdgcn.raw.ptr.atom.buffer.load.v4i16(ptr addrspace(8), i32, i32, i32 immarg)
+declare <4 x i32> @llvm.amdgcn.raw.ptr.atom.buffer.load.v4i32(ptr addrspace(8), i32, i32, i32 immarg)
+declare ptr @llvm.amdgcn.raw.ptr.atom.buffer.load.ptr(ptr addrspace(8), i32, i32, i32 immarg)
 declare i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8), i32, i32, i32 immarg)
 declare i32 @llvm.amdgcn.workitem.id.x()

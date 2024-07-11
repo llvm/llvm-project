@@ -1094,7 +1094,7 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
   if (isa<LoadInst>(I))
     IID = Order == AtomicOrdering::NotAtomic
               ? Intrinsic::amdgcn_raw_ptr_buffer_load
-              : Intrinsic::amdgcn_raw_atomic_ptr_buffer_load;
+              : Intrinsic::amdgcn_raw_ptr_atomic_buffer_load;
   else if (isa<StoreInst>(I))
     IID = Intrinsic::amdgcn_raw_ptr_buffer_store;
   else if (auto *RMW = dyn_cast<AtomicRMWInst>(I)) {

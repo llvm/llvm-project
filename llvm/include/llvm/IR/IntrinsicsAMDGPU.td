@@ -1147,7 +1147,7 @@ class AMDGPURawPtrBufferLoad<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntri
 def int_amdgcn_raw_ptr_buffer_load_format : AMDGPURawPtrBufferLoad<llvm_anyfloat_ty>;
 def int_amdgcn_raw_ptr_buffer_load : AMDGPURawPtrBufferLoad;
 
-class AMDGPURawAtomicPtrBufferLoad<LLVMType data_ty = llvm_any_ty> : Intrinsic <
+class AMDGPURawPtrAtomicBufferLoad<LLVMType data_ty = llvm_any_ty> : Intrinsic <
   [data_ty],
   [AMDGPUBufferRsrcTy,// rsrc(SGPR)
    llvm_i32_ty,       // offset(VGPR/imm, included in bounds checking and swizzling)
@@ -1158,7 +1158,7 @@ class AMDGPURawAtomicPtrBufferLoad<LLVMType data_ty = llvm_any_ty> : Intrinsic <
                       //                      swizzled buffer (bit 3 = swz))
   [IntrArgMemOnly, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<3>>, IntrWillReturn, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<0>;
-def int_amdgcn_raw_atomic_ptr_buffer_load : AMDGPURawAtomicPtrBufferLoad;
+def int_amdgcn_raw_ptr_atomic_buffer_load : AMDGPURawPtrAtomicBufferLoad;
 
 class AMDGPUStructBufferLoad<LLVMType data_ty = llvm_any_ty> : DefaultAttrsIntrinsic <
   [data_ty],
