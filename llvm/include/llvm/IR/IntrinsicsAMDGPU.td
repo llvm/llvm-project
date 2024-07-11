@@ -3078,6 +3078,36 @@ def int_amdgcn_wave_match :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrConvergent]>,
   ClangBuiltin<"__builtin_amdgcn_wave_match">;
 
+// void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) %sem, i32 %limit)
+// The %sem argument must be uniform, otherwise behavior is undefined.
+def int_amdgcn_s_sema_set_limit :
+  ClangBuiltin<"__builtin_amdgcn_s_sema_set_limit">,
+  Intrinsic<
+    [],
+    [local_ptr_ty, llvm_i32_ty],
+    [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<1>>]
+  >;
+
+// void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) %sem, i32 %count)
+// The %sem argument must be uniform, otherwise behavior is undefined.
+def int_amdgcn_s_sema_signal :
+  ClangBuiltin<"__builtin_amdgcn_s_sema_signal">,
+  Intrinsic<
+    [],
+    [local_ptr_ty, llvm_i32_ty],
+    [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<1>>]
+  >;
+
+// void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) %sem)
+// The %sem argument must be uniform, otherwise behavior is undefined.
+def int_amdgcn_s_sema_wait :
+  ClangBuiltin<"__builtin_amdgcn_s_sema_wait">,
+  Intrinsic<
+    [],
+    [local_ptr_ty],
+    [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]
+  >;
+
 // ML Intrinsics
 //
 // Most ML intrinsics take aux_data argument, which maps to multiple fields

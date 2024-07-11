@@ -58,6 +58,9 @@ protected:
   /// Need to be aligned and converted into dwords for VGPR counting.
   uint32_t LaneSharedVGPRSize = 0;
 
+  // Number of statically allocated semaphores.
+  unsigned NumSemaphores = 0;
+
   // Flag to check dynamic LDS usage by kernel.
   bool UsesDynamicLDS = false;
 
