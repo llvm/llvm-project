@@ -18,7 +18,7 @@
 namespace clang {
 namespace doc {
 
-static llvm::StringSet USRVisited;
+static llvm::StringSet<> USRVisited;
 static llvm::sys::Mutex USRVisitedGuard;
 
 template <typename T> bool isTypedefAnonRecord(const T *D) {
