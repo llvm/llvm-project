@@ -646,6 +646,24 @@
 // CHECK-NSAN-LINUX: libclang_rt.nsan.a"
 // CHECK-NSAN-LINUX: "-lpthread" "-lrt" "-lm" "-ldl" "-lresolv"
 
+// RUN: %clang -### %s 2>&1 --target=x86_64-unknown-linux -fuse-ld=ld -fsanitize=numerical -shared-libsan \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-NSAN-SHARED-LINUX %s
+
+// CHECK-NSAN-SHARED-LINUX: libclang_rt.nsan.so"
+// CHECK-NSAN-SHARED-LINUX-NOT: "-lpthread"
+// CHECK-NSAN-SHARED-LINUX-NOT: "-ldl"
+// CHECK-NSAN-SHARED-LINUX-NOT: "--dynamic-list
+
+// RUN: %clang -### %s 2>&1 --target=x86_64-unknown-linux -fsanitize=numerical,undefined \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-NSAN-UBSAN %s
+
+// CHECK-NSAN-UBSAN: "--whole-archive" "{{[^"]*}}libclang_rt.nsan.a" "--no-whole-archive"
+// CHECK-NSAN-UBSAN-NOT: libclang_rt.ubsan
+
 // CFI by itself does not link runtime libraries.
 // RUN: not %clang -fsanitize=cfi -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld -rtlib=platform \
