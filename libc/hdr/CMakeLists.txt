@@ -29,6 +29,13 @@ add_proxy_header_library(
     math_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.math_macros
+)
+
+add_proxy_header_library(
+  math_function_macros
+  HDRS
+    math_function_macros.h
+  FULL_BUILD_DEPENDS
     libc.include.math
 )
 

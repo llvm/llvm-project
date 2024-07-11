@@ -15,8 +15,6 @@
 
 #else // Overlay mode
 
-#include <math.h>
-
 // Some older math.h header does not have FP_INT_* constants yet.
 #ifndef FP_INT_UPWARD
 #define FP_INT_UPWARD 0
