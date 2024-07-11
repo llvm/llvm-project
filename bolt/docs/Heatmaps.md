@@ -54,18 +54,35 @@ corresponding 64 bytes of code. You can change this granularity with a
 E.g. set it to 4096 to see code usage grouped by 4K pages.
 
 
-When a block is shown as a dot, it means that no samples were found for that address.
-When it is shown as a letter, it indicates a captured sample on a particular text section of the binary. To show a mapping between letters and text sections in the legend, use `-print-mappings`. When a sampled address does not belong to any of the TextSegments, the characters 'o' or 'O' will be shown.
+When a block is shown as a dot, it means that no samples were found for that
+address.
+When it is shown as a letter, it indicates a captured sample on a particular
+text section of the binary.
+To show a mapping between letters and text sections in the legend, use
+`-print-mappings`.
+When a sampled address does not belong to any of the text sections, the
+characters 'o' or 'O' will be shown.
 
 The legend shows by default the ranges in the heatmap according to the number
 of samples per block.
 A color is assigned per range, except the first two ranges that distinguished by
 lower and upper case letters.
 
-Each consecutive line in the heatmap advances by the same amount,
-with the binary size covered by a line being dependent on the block size and the
-line size.
-An empty new line is inserted for bigger gaps between samples.
+On the Y axis, each row/line starts with an actual address of the binary.
+Consecutive lines in the heatmap advance by the same amount, with the binary
+size covered by a line dependent on the block size and the line size.
+An empty new line is inserted for larger gaps between samples.
+
+On the X axis, the horizontally emitted hex numbers can help *estimate* where
+in the line the samples lie, but they cannot be combined to provide a full
+address, as they are relative to both the bucket and line sizes.
+
+In the example below, the highlighted `0x100` column is not an offset to each
+row's address, but instead, it points to the middle of the line.
+For the generation, the default bucket size was used with a line size of 128.
+
+
+![](./HeatmapHeader.png)
 
 
 Some useful options are:
