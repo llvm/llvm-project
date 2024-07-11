@@ -15,7 +15,7 @@ foreach(arch ${SAFESTACK_SUPPORTED_ARCH})
     SOURCES ${SAFESTACK_SOURCES}
             $<TARGET_OBJECTS:RTInterception.${arch}>
     # Intentionally does not deppend on sanitizer_common,
-    # to keep runtime trivial, and more usable in security
+    # to keep runtime trivial, and acceptable for security
     # sensitive applications.
     CFLAGS ${SAFESTACK_CFLAGS}
     PARENT_TARGET safestack)
