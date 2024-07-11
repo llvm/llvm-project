@@ -336,7 +336,7 @@ using AddressSectionBuffer = SmallVector<char, 4>;
 class DebugAddrWriter {
 public:
   DebugAddrWriter() = delete;
-  DebugAddrWriter(BinaryContext *BC_) : DebugAddrWriter(BC_, 255){};
+  DebugAddrWriter(BinaryContext *BC_) : DebugAddrWriter(BC_, 255) {};
   DebugAddrWriter(BinaryContext *BC_, uint8_t AddressByteSize);
   virtual ~DebugAddrWriter(){};
   /// Given an address returns an index in .debug_addr.
