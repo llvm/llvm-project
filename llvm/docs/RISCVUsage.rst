@@ -70,6 +70,33 @@ To specify the target triple:
 To select an E variant ISA (e.g. RV32E instead of RV32I), use the base
 architecture string (e.g. ``riscv32``) with the extension ``e``.
 
+Profiles
+========
+
+Supported profile names can be passed using ``-march`` instead of a standard
+ISA naming string. Currently supported profiles:
+
+* ``rvi20u32``
+* ``rvi20u64``
+* ``rva20u64``
+* ``rva20s64``
+* ``rva22u64``
+* ``rva22s64``
+
+Note that you can also append additional extension names to be enable, e.g.
+``rva20u64_zicond`` will enable the ``zicond`` extension in addition to those
+in the ``rva20u64`` profile.
+
+Profiles that are not yet ratified cannot be used unless
+``-menable-experimental-extensions`` (or equivalent for other tools) is
+specified. This applies to the following profiles:
+
+* ``rva23u64``
+* ``rva23s64``
+* ``rvb23u64``
+* ``rvb23s64``
+* ``rvm23u32``
+
 .. _riscv-extensions:
 
 Extensions
@@ -368,6 +395,9 @@ The current vendor extensions supported are:
 
 ``XSfcease``
   LLVM implements `the SiFive sf.cease instruction specified in <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`_ by SiFive.
+
+``Xwchc``
+  LLVM implements `the custom compressed opcodes present in some QingKe cores` by WCH / Nanjing Qinheng Microelectronics. The vendor refers to these opcodes by the name "XW".
 
 Experimental C Intrinsics
 =========================
