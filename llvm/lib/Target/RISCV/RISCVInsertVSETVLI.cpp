@@ -1692,12 +1692,8 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
           else
             MI.getOperand(1).ChangeToRegister(NextMI->getOperand(1).getReg(), false);
 
-          // Clear NextMI's AVL early so we're not counting it as a use.
-          if (NextMI->getOperand(1).isReg())
-            NextMI->getOperand(1).setReg(RISCV::NoRegister);
-
           if (OldVLReg && OldVLReg.isVirtual()) {
-            // NextMI no longer uses OldVLReg so shrink its LiveInterval.
+            // MI no longer uses OldVLReg so shrink its LiveInterval.
             if (LIS)
               LIS->shrinkToUses(&LIS->getInterval(OldVLReg));
 
