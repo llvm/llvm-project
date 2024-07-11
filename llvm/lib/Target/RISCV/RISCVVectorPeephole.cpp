@@ -1,10 +1,10 @@
-//===- RISCVVectorPeephole.cpp - MI Vector Pseudo Peepholes --------------===//
+//===- RISCVVectorPeephole.cpp - MI Vector Pseudo Peepholes ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // This pass performs various vector pseudo peephole optimisations after
 // instruction selection.
@@ -25,7 +25,7 @@
 // ->
 // PseudoVADD_V_V %passthru, %a, %b, -1, sew, policy
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #include "RISCV.h"
 #include "RISCVISelDAGToDAG.h"
