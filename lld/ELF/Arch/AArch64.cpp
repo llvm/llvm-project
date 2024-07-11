@@ -221,7 +221,6 @@ RelType AArch64::getDynRel(RelType type) const {
 
 int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
-    // Relocation types that point at data.
   case R_AARCH64_TLSDESC:
     return read64(buf + 8);
   case R_AARCH64_NONE:
@@ -241,11 +240,13 @@ int64_t AArch64::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_AARCH64_TLS_TPREL64:
     return read64(buf);
 
-    // Relocation types that point at instructions. The general rule,
-    // from AAELF64 §5.7.2 "Addends and PC-bias", says: "If the
-    // relocation relocates an instruction the immediate field of the
-    // instruction is extracted, scaled as required by the instruction
-    // field encoding, and sign-extended to 64 bits".
+    // The following relocation types all point at instructions, and
+    // relocate an immediate field in the instruction.
+    //
+    // The general rule, from AAELF64 §5.7.2 "Addends and PC-bias",
+    // says: "If the relocation relocates an instruction the immediate
+    // field of the instruction is extracted, scaled as required by
+    // the instruction field encoding, and sign-extended to 64 bits".
 
     // The R_AARCH64_MOVW family operates on wide MOV/MOVK/MOVZ
     // instructions, which have a 16-bit immediate field with its low
