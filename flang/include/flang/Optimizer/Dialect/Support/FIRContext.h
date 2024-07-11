@@ -58,6 +58,13 @@ void setTargetCPU(mlir::ModuleOp mod, llvm::StringRef cpu);
 /// Get the target CPU string from the Module or return a null reference.
 llvm::StringRef getTargetCPU(mlir::ModuleOp mod);
 
+/// Set the tune CPU for the module. `cpu` must not be deallocated while
+/// module `mod` is still live.
+void setTuneCPU(mlir::ModuleOp mod, llvm::StringRef cpu);
+
+/// Get the tune CPU string from the Module or return a null reference.
+llvm::StringRef getTuneCPU(mlir::ModuleOp mod);
+
 /// Set the target features for the module.
 void setTargetFeatures(mlir::ModuleOp mod, llvm::StringRef features);
 
