@@ -4,9 +4,7 @@ static void *f(void); // expected-error {{function 'f' has internal linkage but 
 
 int main(void)
 {
-    int j = _Generic(&f, void *(*)(void): 10, default: 20);
-    // expected-no-diagnostic@-1
-
-    void *k = _Generic(&f, void *(*)(void): f(), default: 20);
+    int j = _Generic(&f, void (*)(void): 0);
+    void *k = _Generic(&f, void (*)(void): f, default: 0); // expected-note {{used here}}
     // expected-note@-1 {{used here}}
 }
