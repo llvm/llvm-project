@@ -130,3 +130,18 @@ func.func @reduction(%arg0 : vector<8xi32>, %arg1 : vector<8xi32>, %arg2 : i32) 
   %2 = arith.addi %1, %arg2 : i32
   return %2 : i32
 }
+
+// -----
+
+// CHECK-LABEL: func.func private @unsupported_decl(vector<8xi32>)
+func.func private @unsupported_decl(vector<8xi32>)
+
+// -----
+
+// CHECK-LABEL: @unsupported_scalable
+// CHECK-SAME: (%[[ARG0:.+]]: vector<[8]xi32>)
+func.func @unsupported_scalable(%arg0 : vector<[8]xi32>) -> (vector<[8]xi32>) {
+  // CHECK: return %[[ARG0]] : vector<[8]xi32>
+  return %arg0 : vector<[8]xi32>
+}
+
