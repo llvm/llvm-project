@@ -32,6 +32,7 @@
 namespace llvm {
 
 class BasicBlock;
+class MachineDomTreeUpdater;
 class MachineFunction;
 class MCSymbol;
 class ModuleSlotTracker;
@@ -970,15 +971,17 @@ public:
   /// MachineLoopInfo, as applicable.
   MachineBasicBlock *
   SplitCriticalEdge(MachineBasicBlock *Succ, Pass &P,
-                    std::vector<SparseBitVector<>> *LiveInSets = nullptr) {
-    return SplitCriticalEdge(Succ, &P, nullptr, LiveInSets);
+                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
+                    MachineDomTreeUpdater *MDTU = nullptr) {
+    return SplitCriticalEdge(Succ, &P, nullptr, LiveInSets, MDTU);
   }
 
   MachineBasicBlock *
   SplitCriticalEdge(MachineBasicBlock *Succ,
                     MachineFunctionAnalysisManager &MFAM,
-                    std::vector<SparseBitVector<>> *LiveInSets = nullptr) {
-    return SplitCriticalEdge(Succ, nullptr, &MFAM, LiveInSets);
+                    std::vector<SparseBitVector<>> *LiveInSets = nullptr,
+                    MachineDomTreeUpdater *MDTU = nullptr) {
+    return SplitCriticalEdge(Succ, nullptr, &MFAM, LiveInSets, MDTU);
   }
 
   /// Check if the edge between this block and the given successor \p
@@ -1256,10 +1259,9 @@ private:
   void removePredecessor(MachineBasicBlock *Pred);
 
   // Helper method for new pass manager migration.
-  MachineBasicBlock *
-  SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P,
-                    MachineFunctionAnalysisManager *MFAM,
-                    std::vector<SparseBitVector<>> *LiveInSets);
+  MachineBasicBlock *SplitCriticalEdge(
+      MachineBasicBlock *Succ, Pass *P, MachineFunctionAnalysisManager *MFAM,
+      std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater *MDTU);
 };
 
 raw_ostream& operator<<(raw_ostream &OS, const MachineBasicBlock &MBB);
