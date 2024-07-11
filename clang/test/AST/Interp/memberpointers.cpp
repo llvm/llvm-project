@@ -195,3 +195,15 @@ namespace {
     use(psr->*&S::x);
   }
 }
+
+namespace MemPtrTemporary {
+  struct A {
+    constexpr int f() const { return 5; }
+  };
+
+  constexpr int apply(const A &a, int (A::*ff)() const) {
+    return (a.*ff)();
+  }
+
+  static_assert(apply(A(), &A::f) == 5, "");
+}
