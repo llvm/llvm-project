@@ -2888,9 +2888,9 @@ void transform::TileUsingForOp::build(
 LogicalResult transform::TileUsingForOp::verify() {
   if (getMixedSizes().size() != getScalableSizes().size())
     return emitOpError("expected same number of sizes (")
-           << getMixedSizes().size() << ") and scalable sizes ()"
+           << getMixedSizes().size() << ") and scalable sizes ("
            << getScalableSizes().size() << ")";
-  auto staticSizes = getStaticSizes();
+  ArrayRef<int64_t> staticSizes = getStaticSizes();
   unsigned numExpectedLoops = staticSizes.size() - llvm::count(staticSizes, 0);
   if (getLoops().size() != numExpectedLoops)
     return emitOpError("expected number of loops to tile (")
