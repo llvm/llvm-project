@@ -209,6 +209,7 @@ public:
     AllReservedX |= ReserveXRegisterForRA;
     return AllReservedX.count();
   }
+  bool isLRReservedForRA() const { return ReserveLRForRA; }
   bool isXRegCustomCalleeSaved(size_t i) const {
     return CustomCallSavedXRegs[i];
   }
