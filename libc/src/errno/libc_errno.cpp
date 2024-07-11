@@ -9,18 +9,14 @@
 #include "libc_errno.h"
 #include "src/__support/CPP/atomic.h"
 
-#define LIBC_ERRNO_MODE_UNDEFINED 0x01
-#define LIBC_ERRNO_MODE_THREAD_LOCAL 0x02
-#define LIBC_ERRNO_MODE_GLOBAL 0x04
-#define LIBC_ERRNO_MODE_EXTERNAL 0x08
-#define LIBC_ERRNO_MODE_SYSTEM 0x10
+#define LIBC_ERRNO_MODE_UNDEFINED 1
+#define LIBC_ERRNO_MODE_THREAD_LOCAL 2
+#define LIBC_ERRNO_MODE_SHARED 3
+#define LIBC_ERRNO_MODE_EXTERNAL 4
+#define LIBC_ERRNO_MODE_SYSTEM 5
 
 #ifndef LIBC_ERRNO_MODE
-#ifndef LIBC_COPT_PUBLIC_PACKAGING
-// This mode is for unit testing. We just use our internal errno.
-#define LIBC_ERRNO_MODE LIBC_ERRNO_MODE_INTERNAL
-#elif defined(LIBC_FULL_BUILD)
-// In full build mode, we provide the errno storage ourselves.
+#if defined(LIBC_FULL_BUILD) || !defined(LIBC_COPT_PUBLIC_PACKAGING)
 #define LIBC_ERRNO_MODE LIBC_ERRNO_MODE_THREAD_LOCAL
 #else
 #define LIBC_ERRNO_MODE LIBC_ERRNO_MODE_SYSTEM
@@ -29,13 +25,13 @@
 
 #if LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_UNDEFINED &&                            \
     LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_THREAD_LOCAL &&                         \
-    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_GLOBAL &&                               \
+    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SHARED &&                               \
     LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_EXTERNAL &&                             \
     LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SYSTEM
 #error LIBC_ERRNO_MODE must be one of the following values: \
-LIBC_ERRNO_MODE_NONE, \
+LIBC_ERRNO_MODE_UNDEFINED, \
 LIBC_ERRNO_MODE_THREAD_LOCAL, \
-LIBC_ERRNO_MODE_GLOBAL, \
+LIBC_ERRNO_MODE_SHARED, \
 LIBC_ERRNO_MODE_EXTERNAL, \
 LIBC_ERRNO_MODE_SYSTEM
 #endif
@@ -53,11 +49,11 @@ Errno::operator int() { return 0; }
 #elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_THREAD_LOCAL
 
 namespace {
-LIBC_THREAD_LOCAL int __libc_errno;
+LIBC_THREAD_LOCAL int thread_errno;
 }
 
 extern "C" {
-int *__llvm_libc_errno(void) { return &__libc_errno; }
+int *__llvm_libc_errno() { return &thread_errno; }
 }
 
 void Errno::operator=(int a) { __libc_errno = a; }
@@ -66,11 +62,11 @@ Errno::operator int() { return __libc_errno; }
 #elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_GLOBAL
 
 namespace {
-LIBC_NAMESPACE::cpp::Atomic<int> __libc_errno;
+cpp::Atomic<int> global_errno;
 }
 
 extern "C" {
-int *__llvm_libc_errno(void) { return &__libc_errno; }
+int *__llvm_libc_errno() { return &global_errno; }
 }
 
 void Errno::operator=(int a) {
@@ -83,7 +79,7 @@ Errno::operator int() {
 #elif LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_EXTERNAL
 
 extern "C" {
-int *__llvm_libc_errno(void);
+int *__llvm_libc_errno();
 }
 
 void Errno::operator=(int a) { *__llvm_libc_errno() = a; }
