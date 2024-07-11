@@ -151,9 +151,8 @@ public:
               D->getLocation(),
               diag::warn_target_unsupported_branch_protection_attribute)
               << Arch;
-        } else {
+        } else
           setBranchProtectionFnAttributes(BPI, (*Fn));
-        }
       } else if (CGM.getLangOpts().BranchTargetEnforcement ||
                  CGM.getLangOpts().hasSignReturnAddress()) {
         // If the Branch Protection attribute is missing, validate the target
