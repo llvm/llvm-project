@@ -135,7 +135,7 @@ struct NormalizedConstraint {
   bool isFoldExpanded() const {
     return Constraint.is<FoldExpandedConstraint *>();
   }
-  bool isCompound() const { return Constraint.is<CompoundConstraint *>(); }
+  bool isCompound() const { return Constraint.is<CompoundConstraint>(); }
 
   CompoundConstraintKind getCompoundKind() const {
     assert(isCompound() && "getCompoundKind on a non-compound constraint..");
