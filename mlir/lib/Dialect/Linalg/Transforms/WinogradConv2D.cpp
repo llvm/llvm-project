@@ -27,7 +27,7 @@ namespace linalg {
 
 namespace {
 
-/// clang-format off
+// clang-format off
 /// Winograd Conv2D uses a minimal 2D filtering algorithm to calculate its
 /// result. The formula of minimal 2D filtering algorithm F(m x m, r x r),
 /// m is the output dimension and r is the filter dimension, is
