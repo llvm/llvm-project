@@ -26,6 +26,7 @@ add_lld_library(lldMachO
   OutputSegment.cpp
   Relocations.cpp
   SectionPriorities.cpp
+  Sections.cpp
   SymbolTable.cpp
   Symbols.cpp
   SyntheticSections.cpp
