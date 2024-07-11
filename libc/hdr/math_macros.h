@@ -21,7 +21,6 @@
 #if defined(__GNUC__) && !defined(__clang__)
 #define _GLIBCXX_INCLUDE_NEXT_C_HEADERS
 #endif
-#include <math.h>
 
 // Some older math.h header does not have FP_INT_* constants yet.
 #ifndef FP_INT_UPWARD
