@@ -89,12 +89,14 @@ bool RISCVVectorPeephole::convertToVLMAX(MachineInstr &MI) const {
     return false;
 
   // Fixed-point value, denominator=8
-  unsigned ScaleFixed = 8;
+  uint64_t ScaleFixed = 8;
   // Check if the VLENB was potentially scaled with slli/srli
   if (Def->getOpcode() == RISCV::SLLI) {
+    assert(Def->getOperand(2).getImm() < 64);
     ScaleFixed <<= Def->getOperand(2).getImm();
     Def = MRI->getVRegDef(Def->getOperand(1).getReg());
   } else if (Def->getOpcode() == RISCV::SRLI) {
+    assert(Def->getOperand(2).getImm() < 64);
     ScaleFixed >>= Def->getOperand(2).getImm();
     Def = MRI->getVRegDef(Def->getOperand(1).getReg());
   }
@@ -109,6 +111,7 @@ bool RISCVVectorPeephole::convertToVLMAX(MachineInstr &MI) const {
   // A Log2SEW of 0 is an operation on mask registers only
   unsigned SEW = Log2SEW ? 1 << Log2SEW : 8;
   assert(RISCVVType::isValidSEW(SEW) && "Unexpected SEW");
+  assert(8 * LMULFixed / SEW > 0);
 
   // AVL = (VLENB * Scale)
   //
