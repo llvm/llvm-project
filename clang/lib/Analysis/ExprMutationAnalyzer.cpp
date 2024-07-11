@@ -404,15 +404,14 @@ ExprMutationAnalyzer::Analyzer::findDirectMutation(const Expr *Exp) {
             memberExpr(hasObjectExpression(canResolveToExpr(Exp)))),
       nonConstReferenceType());
   const auto NotInstantiated = unless(hasDeclaration(isInstantiated()));
-  const auto TypeDependentCallee =
-      callee(expr(anyOf(unresolvedLookupExpr(), unresolvedMemberExpr(),
-                        cxxDependentScopeMemberExpr(),
-                        hasType(templateTypeParmType()), isTypeDependent())));
 
   const auto AsNonConstRefArg = anyOf(
       callExpr(NonConstRefParam, NotInstantiated),
       cxxConstructExpr(NonConstRefParam, NotInstantiated),
-      callExpr(TypeDependentCallee, hasAnyArgument(canResolveToExpr(Exp))),
+      // If the call is type-dependent, we can't properly process any
+      // argument because required type conversions and implicit casts
+      // will be inserted only after specialization.
+      callExpr(isTypeDependent(), hasAnyArgument(canResolveToExpr(Exp))),
       cxxUnresolvedConstructExpr(hasAnyArgument(canResolveToExpr(Exp))),
       // Previous False Positive in the following Code:
       // `template <typename T> void f() { int i = 42; new Type<T>(i); }`
