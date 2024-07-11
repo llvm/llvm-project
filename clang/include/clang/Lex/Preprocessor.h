@@ -1742,7 +1742,7 @@ public:
 
   void LexModuleName(Token &Result, const Token FirstName,
                      bool AllowMacroExpansion = true);
-  
+
   /// Lex the parameters for an #embed directive, returns nullopt on error.
   std::optional<LexEmbedParametersResult> LexEmbedParameters(Token &Current,
                                                              bool ForHasEmbed);

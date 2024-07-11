@@ -756,8 +756,7 @@ public:
     // If this is the 'import' contextual keyword, mark it as such.
     if (Name == "import")
       II->setModulesImport(true);
-
-   else if (Name == "module")
+    else if (Name == "module")
       II->setModulesDeclaration(true);
 
     return *II;
