@@ -292,6 +292,7 @@ void MsanTSDDtor(void *tsd) {
     CHECK_EQ(0, pthread_setspecific(tsd_key, tsd));
     return;
   }
+  ScopedBlockSignals block(nullptr);
   msan_current_thread = nullptr;
   // Make sure that signal handler can not see a stale current thread pointer.
   atomic_signal_fence(memory_order_seq_cst);
