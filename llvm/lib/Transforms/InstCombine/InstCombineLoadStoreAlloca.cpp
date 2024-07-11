@@ -270,6 +270,8 @@ private:
     unsigned ToAS = ASC->getDestAddressSpace();
     return (FromAS == ToAS) || IC.isValidAddrSpaceCast(FromAS, ToAS);
   }
+  bool foundASC(const Value *Op, const SelectInst *SI) const;
+  bool hasConflictingAS(const SelectInst *SI) const;
 
   SmallPtrSet<Instruction *, 32> ValuesToRevisit;
   SmallSetVector<Instruction *, 4> Worklist;
@@ -279,6 +281,45 @@ private:
   unsigned FromAS;
 };
 } // end anonymous namespace
+
+/// Return true iff Op is an addrspacecast whose src addrspace
+/// is that of the root and whose dst addrspace is that of
+/// the select.
+bool PointerReplacer::foundASC(const Value *Op, const SelectInst *SI) const {
+  const Instruction *I;
+  while ((I = dyn_cast<Instruction>(Op)) != &Root) {
+    if (auto *ASC = dyn_cast<AddrSpaceCastInst>(I)) {
+      unsigned SelectOpSrcAS = ASC->getSrcAddressSpace();
+      unsigned RootAS = Root.getType()->getPointerAddressSpace();
+      unsigned SelectOpDstAS = ASC->getDestAddressSpace();
+      unsigned SelectDstAS = SI->getType()->getPointerAddressSpace();
+      return SelectOpSrcAS == RootAS && SelectOpDstAS == SelectDstAS;
+    }
+    if (I && isa<Instruction>(I->getOperand(0)))
+      Op = I->getOperand(0);
+    else if (I)
+      Op = I->getOperand(1);
+    else
+      break;
+  }
+  return false;
+}
+
+/// Return true iff there is only one ASC from root's addrspace
+/// as an operand to the select.
+bool PointerReplacer::hasConflictingAS(const SelectInst *SI) const {
+  auto *TI = SI->getTrueValue();
+  auto *FI = SI->getFalseValue();
+
+  bool FoundTrueASC = foundASC(TI, SI);
+  bool FoundFalseASC = foundASC(FI, SI);
+
+  bool HasConflictingAS = FoundFalseASC ^ FoundTrueASC;
+  LLVM_DEBUG(dbgs() << "HasConflictingAS: " << HasConflictingAS << "{ False: "
+                    << FoundFalseASC << ", True: " << FoundTrueASC << " }: "
+                    << *SI << '\n');
+  return HasConflictingAS;
+}
 
 bool PointerReplacer::collectUsers() {
   if (!collectUsersRecursive(Root))
@@ -322,6 +363,8 @@ bool PointerReplacer::collectUsersRecursive(Instruction &I) {
     } else if (auto *SI = dyn_cast<SelectInst>(Inst)) {
       if (!isa<Instruction>(SI->getTrueValue()) ||
           !isa<Instruction>(SI->getFalseValue()))
+        return false;
+      if (hasConflictingAS(SI))
         return false;
 
       if (!isAvailable(cast<Instruction>(SI->getTrueValue())) ||
