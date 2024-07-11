@@ -430,7 +430,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const AllocInfo &AE) {
   if (!AE.TotalSizes.empty()) {
     OS << " TotalSizes per MIB:\n\t\t";
     First = true;
-    for (auto &TS : AE.TotalSizes) {
+    for (uint64_t TS : AE.TotalSizes) {
       if (!First)
         OS << ", ";
       First = false;
