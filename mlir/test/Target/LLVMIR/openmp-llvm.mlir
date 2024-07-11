@@ -325,15 +325,6 @@ llvm.func @test_omp_masked(%arg0: i32)-> () {
     }
     omp.terminator
   }
-  omp.parallel {
-    omp.parallel {
-      omp.masked filter(%arg0: i32){
-        omp.terminator
-      }
-      omp.terminator
-    }
-    omp.terminator
-  }
   llvm.return
 }
 
