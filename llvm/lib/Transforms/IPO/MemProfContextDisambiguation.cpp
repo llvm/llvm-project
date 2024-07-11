@@ -614,7 +614,9 @@ private:
   /// Map from each context ID to the AllocationType assigned to that context.
   DenseMap<uint32_t, AllocationType> ContextIdToAllocationType;
 
-  std::map<uint32_t, uint64_t> ContextIdToTotalSize;
+  /// Map from each contextID to the profiled aggregate allocation size,
+  /// optionally populated when requested (via MemProfReportHintedSizes).
+  DenseMap<uint32_t, uint64_t> ContextIdToTotalSize;
 
   /// Identifies the context node created for a stack id when adding the MIB
   /// contexts to the graph. This is used to locate the context nodes when
@@ -2294,7 +2296,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
       continue;
     if (!Node->IsAllocation)
       continue;
-    auto ContextIds = Node->getContextIds();
+    DenseSet<uint32_t> ContextIds = Node->getContextIds();
     std::vector<uint32_t> SortedIds(ContextIds.begin(), ContextIds.end());
     std::sort(SortedIds.begin(), SortedIds.end());
     for (auto Id : SortedIds) {

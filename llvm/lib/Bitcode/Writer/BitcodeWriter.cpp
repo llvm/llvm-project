@@ -4706,8 +4706,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     writeFunctionHeapProfileRecords(
         Stream, FS, CallsiteAbbrev, AllocAbbrev, AllocTotalSizeAbbrev,
         /*PerModule*/ false,
-        /*GetValueId*/
-        [&](const ValueInfo &VI) -> unsigned {
+        /*GetValueId*/ [&](const ValueInfo &VI) -> unsigned {
           std::optional<unsigned> ValueID = GetValueId(VI);
           // This can happen in shared index files for distributed ThinLTO if
           // the callee function summary is not included. Record 0 which we
@@ -4717,8 +4716,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
             return 0;
           return *ValueID;
         },
-        /*GetStackIndex*/
-        [&](unsigned I) {
+        /*GetStackIndex*/ [&](unsigned I) {
           // Get the corresponding index into the list of StackIds actually
           // being written for this combined index (which may be a subset in
           // the case of distributed indexes).
