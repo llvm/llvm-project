@@ -1,8 +1,8 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
 # RUN: ld.lld -shared -o %t.so %t.o -wrap foo
 
-# RUN: llvm-readelf --dyn-syms %t.so | FileCheck %s --check-prefix=CHECK
+# RUN: llvm-readelf --dyn-syms %t.so | FileCheck %s
 
 # CHECK:      Symbol table '.dynsym' contains 4 entries:
 # CHECK:      NOTYPE  LOCAL  DEFAULT   UND

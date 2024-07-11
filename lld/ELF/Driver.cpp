@@ -2553,8 +2553,8 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
     StringRef realName = saver().save("__real_" + name);
     if (Symbol *real = symtab.find(realName)) {
       symtab.addUnusedUndefined(name, sym->binding);
-      // update sym's binding to __real_'s binding, as sym will replacing
-      // __real_ later in SymbolTable::wrap().
+      // Update sym's binding, which will replace real's later in
+      // SymbolTable::wrap.
       sym->binding = real->binding;
     }
 
