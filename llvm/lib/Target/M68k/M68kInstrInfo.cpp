@@ -384,8 +384,8 @@ bool M68kInstrInfo::ExpandMOVI(MachineInstrBuilder &MIB, MVT MVTSize) const {
     MachineBasicBlock &MBB = *MIB->getParent();
     DebugLoc DL = MIB->getDebugLoc();
 
-    Register SubReg = Register(RI.getSubReg(Reg, M68k::MxSubRegIndex8Lo));
-    assert(SubReg.id() && "No viable SUB register available");
+    unsigned SubReg = RI.getSubReg(Reg, M68k::MxSubRegIndex8Lo);
+    assert(SubReg && "No viable SUB register available");
 
     BuildMI(MBB, MIB.getInstr(), DL, get(M68k::MOVQ), SReg).addImm(~Imm & 0xFF);
     BuildMI(MBB, MIB.getInstr(), DL, get(M68k::NOT8d), SubReg).addReg(SubReg);
@@ -413,8 +413,8 @@ bool M68kInstrInfo::ExpandMOVI(MachineInstrBuilder &MIB, MVT MVTSize) const {
   } else if (AR32->contains(Reg) && Imm >= -32768 && Imm <= 32767) {
     LLVM_DEBUG(dbgs() << "MOVEA w/ implicit extend\n");
 
-    Register SubReg = Register(RI.getSubReg(Reg, M68k::MxSubRegIndex16Lo));
-    assert(SubReg.id() && "No viable SUB register available");
+    unsigned SubReg = RI.getSubReg(Reg, M68k::MxSubRegIndex16Lo);
+    assert(SubReg && "No viable SUB register available");
 
     MIB->setDesc(get(M68k::MOV16ai));
     MIB->getOperand(0).setReg(SubReg);
