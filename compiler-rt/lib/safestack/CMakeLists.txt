@@ -14,8 +14,6 @@ foreach(arch ${SAFESTACK_SUPPORTED_ARCH})
     ARCHS ${arch}
     SOURCES ${SAFESTACK_SOURCES}
             $<TARGET_OBJECTS:RTInterception.${arch}>
-    OBJECT_LIBS RTSanitizerCommon
-                RTSanitizerCommonLibc
     CFLAGS ${SAFESTACK_CFLAGS}
     PARENT_TARGET safestack)
 endforeach()
