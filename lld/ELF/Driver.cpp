@@ -2883,9 +2883,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // to, i.e. if the symbol's definition is in bitcode. Any other required
   // libcall symbols will be added to the link after LTO when we add the LTO
   // object file to the link.
-  if (!ctx.bitcodeFiles.empty())
-    for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
+  if (!ctx.bitcodeFiles.empty()) {
+    llvm::Triple TT(ctx.bitcodeFiles.front()->obj->getTargetTriple());
+    for (auto *s : lto::LTO::getRuntimeLibcallSymbols(TT))
       handleLibcall(s);
+  }
 
   // Archive members defining __wrap symbols may be extracted.
   std::vector<WrappedSymbol> wrapped = addWrappedSymbols(args);
