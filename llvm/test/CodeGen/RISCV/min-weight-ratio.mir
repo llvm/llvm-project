@@ -2,7 +2,7 @@
 # RUN: llc %s -mtriple=riscv64 -run-pass=greedy,virtregrewriter \
 # RUN: -min-weight-ratio-needed-to-evict-hint=7.5 -o - | FileCheck %s
 
-# Due to the minimum weight heuristic (see the explanation of `MinWeightRatioNeededToEvictHint`) we are able to get rid of ALL the copies in the code below. When heuristic is disabled (-min-weight-ratio-needed-to-evict-hint=1.0) we end up with 3 copies.
+# Due to the minimum weight heuristic (see the explanation of `MinWeightRatioNeededToEvictHint`) we are able to get rid of ALL the copies in the code below. When heuristic is disabled (`-min-weight-ratio-needed-to-evict-hint=1.0`) we end up with 3 copies.
 
 --- |
   source_filename = "test.c"
