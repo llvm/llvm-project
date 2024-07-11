@@ -12012,17 +12012,7 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
         // table branch.
         if (FallthroughUnreachable) {
           Function &CurFunc = CurMF->getFunction();
-          bool HasBranchTargetEnforcement = false;
-          if (CurFunc.hasFnAttribute("branch-target-enforcement")) {
-            HasBranchTargetEnforcement =
-                CurFunc.getFnAttribute("branch-target-enforcement")
-                    .getValueAsBool();
-          } else {
-            HasBranchTargetEnforcement =
-                CurMF->getMMI().getModule()->getModuleFlag(
-                    "branch-target-enforcement");
-          }
-          if (!HasBranchTargetEnforcement)
+          if (!CurFunc.hasFnAttribute("branch-target-enforcement"))
             JTH->FallthroughUnreachable = true;
         }
 

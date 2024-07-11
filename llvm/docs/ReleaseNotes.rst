@@ -129,6 +129,8 @@ Changes to the AMDGPU Backend
 -----------------------------
 
 * Implemented the ``llvm.get.fpenv`` and ``llvm.set.fpenv`` intrinsics.
+* Added ``!amdgpu.no.fine.grained.memory`` and
+  ``!amdgpu.no.remote.memory`` metadata to control atomic behavior.
 
 * Implemented :ref:`llvm.get.rounding <int_get_rounding>` and :ref:`llvm.set.rounding <int_set_rounding>`
 
@@ -194,6 +196,9 @@ Changes to the RISC-V Backend
   mapping using load-acquire and store-release instructions while remaining
   fully compatible with objects produced prior to this change. The mapping
   (ABI) used is recorded as an ELF attribute.
+* Ztso is no longer experimental.
+* The WCH / Nanjing Qinheng Microelectronics QingKe "XW" compressed opcodes are
+  supported under the name "Xwchc".
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -373,6 +378,10 @@ Changes to the LLVM tools
   using buttons on top-right corner of the page or using keys (L/R/B or 
   jumping in reverse direction with shift+L/R/B). (`#95662
   <https://github.com/llvm/llvm-project/pull/95662>`_).
+
+* llvm-objcopy now verifies format of ``.note`` sections for ELF input. This can
+  be disabled by ``--no-verify-note-sections``. (`#90458
+  <https://github.com/llvm/llvm-project/pull/90458>`).
 
 Changes to LLDB
 ---------------------------------

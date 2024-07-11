@@ -9545,8 +9545,7 @@ SDValue AArch64TargetLowering::LowerGlobalTLSAddress(SDValue Op,
 //   Load a signed pointer for symbol 'sym' from a stub slot named
 //   'sym$auth_ptr$key$disc' filled by dynamic linker during relocation
 //   resolving. This usually lowers to adrp+ldr, but also emits an entry into
-//   .data with an
-//   @AUTH relocation. See LowerLOADauthptrstatic.
+//   .data with an @AUTH relocation. See LowerLOADauthptrstatic.
 //
 // All 3 are pseudos that are expand late to longer sequences: this lets us
 // provide integrity guarantees on the to-be-signed intermediate values.
@@ -9599,8 +9598,8 @@ AArch64TargetLowering::LowerPtrAuthGlobalAddress(SDValue Op,
         "constant discriminator in ptrauth global out of range [0, 0xffff]");
 
   // Choosing between 3 lowering alternatives is target-specific.
-  if (!Subtarget->isTargetELF())
-    report_fatal_error("ptrauth global lowering is only implemented for ELF");
+  if (!Subtarget->isTargetELF() && !Subtarget->isTargetMachO())
+    report_fatal_error("ptrauth global lowering only supported on MachO/ELF");
 
   int64_t PtrOffsetC = 0;
   if (Ptr.getOpcode() == ISD::ADD) {
@@ -17732,13 +17731,14 @@ AArch64TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
                                      SmallVectorImpl<SDNode *> &Created) const {
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
   if (isIntDivCheap(N->getValueType(0), Attr))
-    return SDValue(N,0); // Lower SDIV as SDIV
+    return SDValue(N, 0); // Lower SDIV as SDIV
 
   EVT VT = N->getValueType(0);
 
   // For scalable and fixed types, mark them as cheap so we can handle it much
   // later. This allows us to handle larger than legal types.
-  if (VT.isScalableVector() || Subtarget->useSVEForFixedLengthVectors())
+  if (VT.isScalableVector() ||
+      (VT.isFixedLengthVector() && Subtarget->useSVEForFixedLengthVectors()))
     return SDValue(N, 0);
 
   // fold (sdiv X, pow2)

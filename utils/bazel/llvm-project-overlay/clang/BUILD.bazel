@@ -2525,6 +2525,7 @@ cc_binary(
         "//llvm:Object",
         "//llvm:Option",
         "//llvm:Passes",
+        "//llvm:Remarks",
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:TargetParser",
@@ -2637,9 +2638,9 @@ cc_library(
         "lib/ExtractAPI/**/*.cpp",
     ]),
     hdrs = glob([
-       "include/clang/ExtractAPI/**/*.h",
+        "include/clang/ExtractAPI/**/*.h",
     ]) + [
-       "include/clang/ExtractAPI/APIRecords.inc",
+        "include/clang/ExtractAPI/APIRecords.inc",
     ],
     includes = ["include"],
     deps = [

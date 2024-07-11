@@ -219,9 +219,10 @@ exit:
 ; DBG-NEXT: No successors
 ; DBG-EMPTY:
 ; DBG-NEXT: scalar.ph:
+; DBG-NEXT:  EMIT vp<[[RESUME_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<0>
 ; DBG-NEXT: No successors
 ; DBG-EMPTY:
-; DBG-NEXT: Live-out i32 %for = vp<[[RESUME_1]]>
+; DBG-NEXT: Live-out i32 %for = vp<[[RESUME_P]]>
 ; DBG-NEXT: }
 
 define void @first_order_recurrence_using_induction(i32 %n, ptr %dst) {

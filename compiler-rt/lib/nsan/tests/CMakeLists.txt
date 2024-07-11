@@ -23,9 +23,6 @@ set(NSAN_UNITTESTS
 
 add_custom_target(NsanUnitTests)
 
-# set(NSAN_UNITTEST_LINK_FLAGS ${COMPILER_RT_UNITTEST_LINK_FLAGS} -ldl)
-# list(APPEND NSAN_UNITTEST_LINK_FLAGS --driver-mode=g++)
-
 if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST NSAN_SUPPORTED_ARCH)
   # NSan unit tests are only run on the host machine.
   set(arch ${COMPILER_RT_DEFAULT_TARGET_ARCH})

@@ -218,6 +218,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                                 operandsRef.drop_front());
     }
     call->setCallingConv(convertCConvToLLVM(callOp.getCConv()));
+    call->setTailCallKind(convertTailCallKindToLLVM(callOp.getTailCallKind()));
     moduleTranslation.setAccessGroupsMetadata(callOp, call);
     moduleTranslation.setAliasScopeMetadata(callOp, call);
     moduleTranslation.setTBAAMetadata(callOp, call);
