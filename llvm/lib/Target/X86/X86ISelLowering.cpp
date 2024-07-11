@@ -180,12 +180,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
-  if (Subtarget.getTargetTriple().isOSMSVCRT()) {
-    // MSVCRT doesn't have powi; fall back to pow
-    setLibcallName(RTLIB::POWI_F32, nullptr);
-    setLibcallName(RTLIB::POWI_F64, nullptr);
-  }
-
   if (Subtarget.canUseCMPXCHG16B())
     setMaxAtomicSizeInBitsSupported(128);
   else if (Subtarget.canUseCMPXCHG8B())
@@ -2443,18 +2437,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SADDO_CARRY, VT, Custom);
     setOperationAction(ISD::SSUBO_CARRY, VT, Custom);
   }
-
-  if (!Subtarget.is64Bit()) {
-    // These libcalls are not available in 32-bit.
-    setLibcallName(RTLIB::SHL_I128, nullptr);
-    setLibcallName(RTLIB::SRL_I128, nullptr);
-    setLibcallName(RTLIB::SRA_I128, nullptr);
-    setLibcallName(RTLIB::MUL_I128, nullptr);
-    // The MULO libcall is not part of libgcc, only compiler-rt.
-    setLibcallName(RTLIB::MULO_I64, nullptr);
-  }
-  // The MULO libcall is not part of libgcc, only compiler-rt.
-  setLibcallName(RTLIB::MULO_I128, nullptr);
 
   // Combine sin / cos into _sincos_stret if it is available.
   if (getLibcallName(RTLIB::SINCOS_STRET_F32) != nullptr &&
