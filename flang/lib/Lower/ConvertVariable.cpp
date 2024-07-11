@@ -715,8 +715,12 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
     auto idxTy = builder.getIndexType();
     for (mlir::Value sh : elidedShape)
       indices.push_back(builder.createConvert(loc, idxTy, sh));
-    return builder.create<cuf::AllocOp>(loc, ty, nm, symNm, dataAttr, lenParams,
-                                        indices);
+    mlir::Value alloc = builder.create<cuf::AllocOp>(
+        loc, ty, nm, symNm, dataAttr, lenParams, indices);
+    converter.getFctCtx().attachCleanup([&builder, loc, alloc, dataAttr]() {
+      builder.create<cuf::FreeOp>(loc, alloc, dataAttr);
+    });
+    return alloc;
   }
 
   // Let the builder do all the heavy lifting.

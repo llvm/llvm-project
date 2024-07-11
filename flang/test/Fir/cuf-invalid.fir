@@ -89,17 +89,8 @@ func.func @_QPsub1() {
 // -----
 
 func.func @_QPsub1() {
-  // expected-error@+1{{'cuf.alloc' op expect device, managed or unified cuda attribute}}
-  %0 = cuf.alloc f32 {bindc_name = "r", data_attr = #cuf.cuda<pinned>, uniq_name = "_QFsub1Er"} -> !fir.ref<f32>
-  cuf.free %0 : !fir.ref<f32> {data_attr = #cuf.cuda<constant>}
-  return
-}
-
-// -----
-
-func.func @_QPsub1() {
   %0 = cuf.alloc f32 {bindc_name = "r", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub1Er"} -> !fir.ref<f32>
-  // expected-error@+1{{'cuf.free' op expect device, managed or unified cuda attribute}}
+  // expected-error@+1{{'cuf.free' op expect device, managed, pinned or unified cuda attribute}}
   cuf.free %0 : !fir.ref<f32> {data_attr = #cuf.cuda<constant>}
   return
 }
