@@ -970,6 +970,23 @@ ort \
   EXPECT_EQ(Directives[1].Kind, cxx_export_module_decl);
 }
 
+TEST(MinimizeSourceToDependencyDirectivesTest, ObjCMethodArgs) {
+  SmallVector<char, 128> Out;
+
+  StringRef Source = R"(
+    @interface SomeObjcClass
+      - (void)func:(int)otherData
+              module:(int)module
+              import:(int)import;
+    @end
+  )";
+
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out));
+  // `module :` and `import :` not followed by an identifier are not treated as
+  // directive lines because they can be method argument decls.
+  EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
+}
+
 TEST(MinimizeSourceToDependencyDirectivesTest, TokensBeforeEOF) {
   SmallString<128> Out;
 
