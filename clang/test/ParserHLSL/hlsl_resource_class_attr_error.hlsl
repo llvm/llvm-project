@@ -13,3 +13,6 @@ struct [[hlsl::resource_class(gibberish)]] Eg2 {
 };
 
 Eg2 e2;
+
+[numthreads(1,1,1)]
+void main() {}

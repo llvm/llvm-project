@@ -115,19 +115,14 @@ struct BuiltinTypeDeclBuilder {
     return addMemberVariable("h", Ty, Access);
   }
 
-  BuiltinTypeDeclBuilder &annotateHLSLResource(ResourceKind RK, bool IsROV) {
-    if (Record->isCompleteDefinition())
-      return *this;
-    Record->addAttr(
-        HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK, IsROV));
-    return *this;
-  }
-
-  BuiltinTypeDeclBuilder &annotateHLSLResourceClass(ResourceClass RC) {
+  BuiltinTypeDeclBuilder &annotateHLSLResource(ResourceClass RC,
+                                               ResourceKind RK, bool IsROV) {
     if (Record->isCompleteDefinition())
       return *this;
     Record->addAttr(
         HLSLResourceClassAttr::CreateImplicit(Record->getASTContext(), RC));
+    Record->addAttr(
+        HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK, IsROV));
     return *this;
   }
 
@@ -502,8 +497,7 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
   return BuiltinTypeDeclBuilder(Decl)
       .addHandleMember()
       .addDefaultHandleConstructor(S, RC)
-      .annotateHLSLResourceClass(RC)
-      .annotateHLSLResource(RK, IsROV);
+      .annotateHLSLResource(RC, RK, IsROV);
 }
 
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {

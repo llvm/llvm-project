@@ -445,23 +445,18 @@ void SemaHLSL::handleResourceClassAttr(Decl *D, const ParsedAttr &AL) {
   }
 
   IdentifierLoc *Loc = AL.getArgAsIdent(0);
-  StringRef ResourceClassTypeStrRef = Loc->Ident->getName();
+  StringRef Identifier = Loc->Ident->getName();
   SourceLocation ArgLoc = Loc->Loc;
 
   // Validate.
   llvm::dxil::ResourceClass RC;
-  bool succ = HLSLResourceClassAttr::ConvertStrToResourceClass(
-      ResourceClassTypeStrRef, RC);
-  if (!succ) {
+  if (!HLSLResourceClassAttr::ConvertStrToResourceClass(Identifier, RC)) {
     Diag(ArgLoc, diag::warn_attribute_type_not_supported)
-        << "ResourceClass" << ResourceClassTypeStrRef;
+        << "ResourceClass" << Identifier;
     return;
   }
 
-  HLSLResourceClassAttr *NewAttr =
-      HLSLResourceClassAttr::Create(getASTContext(), RC, ArgLoc);
-  if (NewAttr)
-    D->addAttr(NewAttr);
+  D->addAttr(HLSLResourceClassAttr::Create(getASTContext(), RC, ArgLoc));
 }
 
 void SemaHLSL::handleResourceBindingAttr(Decl *D, const ParsedAttr &AL) {
