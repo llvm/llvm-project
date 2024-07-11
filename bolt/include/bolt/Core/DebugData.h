@@ -460,7 +460,7 @@ protected:
   }
 
 private:
-  std::optional<uint64_t> AddrOffsetSectionBase = INT_MAX;
+  std::optional<uint64_t> AddrOffsetSectionBase = std::nullopt;
   static constexpr uint32_t HeaderSize = 8;
 };
 
