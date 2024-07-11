@@ -147,12 +147,6 @@ bool MCPlusBuilder::isTailCall(const MCInst &Inst) const {
   return false;
 }
 
-InstructionListType MCPlusBuilder::createDummyReturn(MCContext *Ctx) const {
-  InstructionListType Insts(1);
-  createReturn(Insts[0]);
-  return Insts;
-}
-
 std::optional<MCLandingPad> MCPlusBuilder::getEHInfo(const MCInst &Inst) const {
   if (!isCall(Inst))
     return std::nullopt;

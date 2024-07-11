@@ -2044,7 +2044,11 @@ public:
   /// Returns a function body that contains only a return instruction. An
   /// example usage is a workaround for the '__bolt_fini_trampoline' of
   // Instrumentation.
-  virtual InstructionListType createDummyReturn(MCContext *Ctx) const;
+  virtual InstructionListType createDummyReturnFunction(MCContext *Ctx) const {
+    InstructionListType Insts(1);
+    createReturn(Insts[0]);
+    return Insts;
+  }
 
   /// This method takes an indirect call instruction and splits it up into an
   /// equivalent set of instructions that use direct calls for target
