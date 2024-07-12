@@ -1926,6 +1926,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   auto lambdaNameAttr = getLambdaAttrName(state.name);
   auto visNameAttr = getSymVisibilityAttrName(state.name);
   auto noProtoNameAttr = getNoProtoAttrName(state.name);
+  auto dsolocalNameAttr = getDsolocalAttrName(state.name);
   if (::mlir::succeeded(parser.parseOptionalKeyword(builtinNameAttr.strref())))
     state.addAttribute(builtinNameAttr, parser.getBuilder().getUnitAttr());
   if (::mlir::succeeded(
@@ -1949,6 +1950,8 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     state.addAttribute(visNameAttr,
                        parser.getBuilder().getStringAttr(visAttrStr));
   }
+  if (parser.parseOptionalKeyword(dsolocalNameAttr).succeeded())
+    state.addAttribute(dsolocalNameAttr, parser.getBuilder().getUnitAttr());
 
   StringAttr nameAttr;
   SmallVector<OpAsmParser::Argument, 8> arguments;
