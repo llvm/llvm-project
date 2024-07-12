@@ -219,7 +219,7 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
 
   // Init standard extension
   // TODO: Maybe Extension implied generate from tablegen?
-  __riscv_feature_bits.length = 2;
+  __riscv_feature_bits.length = RISCV_FEATURE_BITS_LENGTH;
   // Check RISCV_HWPROBE_KEY_BASE_BEHAVIOR
   unsigned long long BaseValue = Hwprobes[0].value;
   if (BaseValue & RISCV_HWPROBE_BASE_BEHAVIOR_IMA) {
