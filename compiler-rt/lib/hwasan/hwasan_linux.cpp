@@ -251,9 +251,6 @@ bool InitShadow() {
   CHECK_GT(kLowShadowEnd, kLowShadowStart);
   CHECK_GT(kLowShadowStart, kLowMemEnd);
 
-  if (Verbosity())
-    PrintAddressSpaceLayout();
-
   // Reserve shadow memory.
   ReserveShadowMemoryRange(kLowShadowStart, kLowShadowEnd, "low shadow");
   ReserveShadowMemoryRange(kHighShadowStart, kHighShadowEnd, "high shadow");
@@ -266,6 +263,9 @@ bool InitShadow() {
     ProtectGap(kLowShadowEnd + 1, kHighShadowStart - kLowShadowEnd - 1);
   if (kHighShadowEnd + 1 < kHighMemStart)
     ProtectGap(kHighShadowEnd + 1, kHighMemStart - kHighShadowEnd - 1);
+
+  if (Verbosity())
+    PrintAddressSpaceLayout();
 
   return true;
 }
