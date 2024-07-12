@@ -47,6 +47,13 @@ struct Chipset {
   DEFINE_COMP_OPERATOR(>)
   DEFINE_COMP_OPERATOR(>=)
 #undef DEFINE_COMP_OPERATOR
+
+  bool isGfx940() const {
+    return majorVersion == 9 && minorVersion >= 0x40 && minorVersion < 0x50;
+  }
+  bool hasOcpFp8() const {
+    return (majorVersion == 9 && minorVersion >= 0x50) || majorVersion >= 12;
+  }
 };
 
 } // namespace mlir::amdgpu
