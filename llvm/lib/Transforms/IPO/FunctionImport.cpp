@@ -688,7 +688,12 @@ class WorkloadImportsManager : public ModuleImportsManager {
       return;
     }
     const auto &CtxMap = *Ctx;
+    DenseSet<GlobalValue::GUID> ContainedGUIDs;
     for (const auto &[RootGuid, Root] : CtxMap) {
+      // Avoid ContainedGUIDs to get in/out of scope. Reuse its memory for
+      // subsequent roots, but clear its contents.
+      ContainedGUIDs.clear();
+
       auto RootVI = Index.getValueInfo(RootGuid);
       if (!RootVI) {
         LLVM_DEBUG(dbgs() << "[Workload] Root " << RootGuid
@@ -705,7 +710,6 @@ class WorkloadImportsManager : public ModuleImportsManager {
           RootVI.getSummaryList().front()->modulePath();
       LLVM_DEBUG(dbgs() << "[Workload] Root defining module for " << RootGuid
                         << " is : " << RootDefiningModule << "\n");
-      DenseSet<GlobalValue::GUID> ContainedGUIDs;
       auto &Set = Workloads[RootDefiningModule];
       Root.getContainedGuids(ContainedGUIDs);
       for (auto Guid : ContainedGUIDs)
