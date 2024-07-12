@@ -6,7 +6,7 @@ int TenElements[10];
 void arrayUnderflow(void) {
   TenElements[-3] = 5;
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at negative byte offset -12}}
+  // expected-note@-2 {{Access of 'TenElements' at negative byte offset}}
 }
 
 int underflowWithDeref(void) {
@@ -14,7 +14,29 @@ int underflowWithDeref(void) {
   --p;
   return *p;
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at negative byte offset -4}}
+  // expected-note@-2 {{Access of 'TenElements' at negative byte offset}}
+}
+
+int rng(void);
+int getIndex(void) {
+  switch (rng()) {
+    case 1: return -152;
+    case 2: return -160;
+    case 3: return -168;
+    default: return -172;
+  }
+}
+
+void gh86959(void) {
+  // Previously code like this produced many almost-identical bug reports that
+  // only differed in the byte offset value (which was reported by the checker
+  // at that time). Verify that now we only see one report.
+
+  // expected-note@+1 {{Entering loop body}}
+  while (rng())
+    TenElements[getIndex()] = 10;
+  // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
+  // expected-note@-2 {{Access of 'TenElements' at negative byte offset}}
 }
 
 int scanf(const char *restrict fmt, ...);
