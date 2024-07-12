@@ -1139,6 +1139,15 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (!Cseg)
       break;
 
+    APInt Exponent = Fsrc.bitcastToAPInt().ashr(52);
+    Exponent &= 0x7ff;
+    Exponent = Exponent.trunc(32);
+
+    unsigned SegmentVal = Cseg->getValue().trunc(5).getZExtValue();
+    unsigned Shift = SegmentVal * 53;
+    if (Exponent.sgt(1077))
+      Shift += Exponent.getZExtValue() - 1077;
+
     // 2.0/PI table.
     static const uint32_t TwoByPi[] = {
         0xa2f9836e, 0x4e441529, 0xfc2757d1, 0xf534ddc0, 0xdb629599, 0x3c439041,
@@ -1149,49 +1158,27 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         0x7527bac7, 0xebe5f17b, 0x3d0739f7, 0x8a5292ea, 0x6bfb5fb1, 0x1f8d5d08,
         0x56033046};
 
-    const APInt &SegVal = Cseg->getValue();
-    bool Ovflow = false;
-    unsigned Numbits = 32;
-    bool Signed = true;
-    APInt EClamp(Numbits, 1077, Signed);
-    APInt E = Fsrc.bitcastToAPInt().ashr(52);
-    E &= 0x7ff;
-    E = E.trunc(Numbits);
-    APInt Shift =
-        (E.sgt(EClamp) ? E.ssub_ov(EClamp, Ovflow) : APInt(Numbits, 0, Signed))
-            .sadd_ov(APInt(Numbits, 53, Signed).smul_ov(SegVal & 0x1f, Ovflow),
-                     Ovflow);
-    uint32_t Idx = Shift.ashr(5).getZExtValue();
-
-    // Return 0 for invalid segment select (outbound).
-    if (static_cast<size_t>(Idx) + 2 >= std::size(TwoByPi)) {
+    // Return 0 for outbound segment (hardware behavior).
+    unsigned Idx = Shift >> 5;
+    if (Idx + 2 >= std::size(TwoByPi)) {
       APFloat Zero = APFloat::getZero(II.getType()->getFltSemantics());
       return IC.replaceInstUsesWith(II, ConstantFP::get(Src->getType(), Zero));
     }
 
-    APInt Bshift = Shift & 0x1f;
-    Numbits = 64;
-    Signed = false;
-    uint64_t Hi = ((uint64_t)TwoByPi[Idx] << 32) | (uint64_t)TwoByPi[Idx + 1];
-    APInt Thi = APInt(Numbits, Hi, Signed);
-    APInt Tlo = APInt(Numbits, (uint64_t)TwoByPi[Idx + 2] << 32, Signed);
-
-    if (Bshift.sgt(0)) {
-      Numbits = 32;
-      Signed = true;
-      Thi = Thi.shl(Bshift) |
-            Tlo.lshr(APInt(Numbits, 64, Signed).ssub_ov(Bshift, Ovflow));
-    }
-
+    unsigned BShift = Shift & 0x1f;
+    APInt Thi = APInt(64, Make_64(TwoByPi[Idx], TwoByPi[Idx + 1]), false);
+    APInt Tlo = APInt(64, Make_64(TwoByPi[Idx + 2], 0), false);
+    if (BShift)
+      Thi = Thi.shl(BShift) | Tlo.lshr(64 - BShift);
     Thi = Thi.lshr(11);
-    APFloat Res = APFloat(Thi.roundToDouble());
-    int32_t Scale = -53 - Shift.getSExtValue();
+    APFloat Result = APFloat(Thi.roundToDouble());
 
-    if (E.sge(0x7b0))
+    int Scale = -53 - Shift;
+    if (Exponent.sge(1968))
       Scale += 128;
 
-    Res = scalbn(Res, Scale, RoundingMode::NearestTiesToEven);
-    return IC.replaceInstUsesWith(II, ConstantFP::get(Src->getType(), Res));
+    Result = scalbn(Result, Scale, RoundingMode::NearestTiesToEven);
+    return IC.replaceInstUsesWith(II, ConstantFP::get(Src->getType(), Result));
   }
   case Intrinsic::amdgcn_fmul_legacy: {
     Value *Op0 = II.getArgOperand(0);

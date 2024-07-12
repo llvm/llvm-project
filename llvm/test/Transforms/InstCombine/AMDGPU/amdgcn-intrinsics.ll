@@ -5751,6 +5751,14 @@ define double @trig_preop_constfold_exponent0__segment0() {
   ret double %val
 }
 
+define double @trig_preop_constfold_exponent0__segment1() {
+; CHECK-LABEL: @trig_preop_constfold_exponent0__segment1(
+; CHECK-NEXT:    ret double 0x3C94A7F09D5F47D4
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0xFFFFFFFFFFFFF, i32 1)
+  ret double %val
+}
+
 define double @trig_preop_constfold_exponent0__segment2() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent0__segment2(
 ; CHECK-NEXT:    ret double 0x394A6EE06DB14ACC
@@ -5778,6 +5786,15 @@ define double @trig_preop_constfold_exponent1607__segment0() {
 }
 
 ; 1607 = 1077 + 10 * 53
+define double @trig_preop_constfold_exponent1607__segment1() {
+; CHECK-LABEL: @trig_preop_constfold_exponent1607__segment1(
+; CHECK-NEXT:    ret double 0x1B791D639835339F
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0x647FFFFFFFFFFFFF, i32 1)
+  ret double %val
+}
+
+; 1607 = 1077 + 10 * 53
 define double @trig_preop_constfold_exponent1607__segment2() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent1607__segment2(
 ; CHECK-NEXT:    ret double 0x181272117E2EF7E4
@@ -5800,6 +5817,14 @@ define double @trig_preop_constfold_exponent1968__segment0() {
 ; CHECK-NEXT:    ret double 0x10374F463F669E5F
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double 0x7B00000000000000, i32 0)
+  ret double %val
+}
+
+define double @trig_preop_constfold_exponent1968__segment1() {
+; CHECK-LABEL: @trig_preop_constfold_exponent1968__segment1(
+; CHECK-NEXT:    ret double 0xCED45AEA4F758FD
+;
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0x7B0FFFFFFFFFFFFF, i32 1)
   ret double %val
 }
 
