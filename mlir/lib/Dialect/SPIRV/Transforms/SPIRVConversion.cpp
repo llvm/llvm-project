@@ -33,7 +33,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 
-#include <cctype>
+#include <functional>
 #include <optional>
 
 #define DEBUG_TYPE "mlir-spirv-conversion"
@@ -867,8 +867,7 @@ void mlir::populateBuiltinFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
 namespace {
 /// A pattern for rewriting function signature to convert vector arguments of
 /// functions to be of valid types
-class FuncOpVectorUnroll : public OpRewritePattern<func::FuncOp> {
-public:
+struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(func::FuncOp funcOp,
@@ -922,8 +921,8 @@ public:
         rewriter.replaceAllUsesWith(newFuncOp.getArgument(origInputNo), result);
         tmpOps.insert({result.getDefiningOp(), newInputNo});
         oneToNTypeMapping.addInputs(origInputNo, origType);
-        newInputNo++;
-        newOpCount++;
+        ++newInputNo;
+        ++newOpCount;
         continue;
       }
       // Check whether the vector needs unrolling.
@@ -935,8 +934,8 @@ public:
         rewriter.replaceAllUsesWith(newFuncOp.getArgument(origInputNo), result);
         tmpOps.insert({result.getDefiningOp(), newInputNo});
         oneToNTypeMapping.addInputs(origInputNo, origType);
-        newInputNo++;
-        newOpCount++;
+        ++newInputNo;
+        ++newOpCount;
         continue;
       }
       VectorType unrolledType =
@@ -947,11 +946,11 @@ public:
       // Prepare the result vector.
       Value result = rewriter.create<arith::ConstantOp>(
           loc, origVecType, rewriter.getZeroAttr(origVecType));
-      newOpCount++;
+      ++newOpCount;
       // Prepare the placeholder for the new arguments that will be added later.
       Value dummy = rewriter.create<arith::ConstantOp>(
           loc, unrolledType, rewriter.getZeroAttr(unrolledType));
-      newOpCount++;
+      ++newOpCount;
 
       // Create the `vector.insert_strided_slice` ops.
       SmallVector<int64_t> strides(targetShape->size(), 1);
@@ -962,8 +961,8 @@ public:
             loc, dummy, result, offsets, strides);
         newTypes.push_back(unrolledType);
         unrolledInputNums.push_back(newInputNo);
-        newInputNo++;
-        newOpCount++;
+        ++newInputNo;
+        ++newOpCount;
       }
       rewriter.replaceAllUsesWith(newFuncOp.getArgument(origInputNo), result);
       oneToNTypeMapping.addInputs(origInputNo, newTypes);
@@ -999,15 +998,14 @@ public:
       // not be touched.
       if (count >= newOpCount)
         continue;
-      auto vecOp = dyn_cast<vector::InsertStridedSliceOp>(op);
-      if (vecOp) {
+      if (auto vecOp = dyn_cast<vector::InsertStridedSliceOp>(op)) {
         size_t unrolledInputNo = unrolledInputNums[idx];
         rewriter.modifyOpInPlace(&op, [&] {
           op.setOperand(0, newFuncOp.getArgument(unrolledInputNo));
         });
-        idx++;
+        ++idx;
       }
-      count++;
+      ++count;
     }
 
     // Erase the original funcOp. The `tmpOps` do not need to be erased since
@@ -1029,8 +1027,7 @@ void mlir::populateFuncOpVectorRewritePatterns(RewritePatternSet &patterns) {
 namespace {
 /// A pattern for rewriting function signature and the return op to convert
 /// vectors to be of valid types.
-class ReturnOpVectorUnroll : public OpRewritePattern<func::ReturnOp> {
-public:
+struct ReturnOpVectorUnroll final : OpRewritePattern<func::ReturnOp> {
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(func::ReturnOp returnOp,

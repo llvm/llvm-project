@@ -37,8 +37,8 @@ using namespace mlir;
 namespace {
 
 /// A pass to perform the SPIR-V conversion.
-struct ConvertToSPIRVPass
-    : public impl::ConvertToSPIRVPassBase<ConvertToSPIRVPass> {
+struct ConvertToSPIRVPass final
+    : impl::ConvertToSPIRVPassBase<ConvertToSPIRVPass> {
   using ConvertToSPIRVPassBase::ConvertToSPIRVPassBase;
 
   void runOnOperation() override {
@@ -47,16 +47,13 @@ struct ConvertToSPIRVPass
 
     if (runSignatureConversion) {
       // Unroll vectors in function signatures to native vector size.
-      {
-        RewritePatternSet patterns(context);
-        populateFuncOpVectorRewritePatterns(patterns);
-        populateReturnOpVectorRewritePatterns(patterns);
-        GreedyRewriteConfig config;
-        config.strictMode = GreedyRewriteStrictness::ExistingOps;
-        if (failed(
-                applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
-          return signalPassFailure();
-      }
+      RewritePatternSet patterns(context);
+      populateFuncOpVectorRewritePatterns(patterns);
+      populateReturnOpVectorRewritePatterns(patterns);
+      GreedyRewriteConfig config;
+      config.strictMode = GreedyRewriteStrictness::ExistingOps;
+      if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
+        return signalPassFailure();
       return;
     }
 
