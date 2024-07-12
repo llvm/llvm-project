@@ -65,6 +65,7 @@ static long syscall_impl_5_args(long number, long arg1, long arg2, long arg3,
 #define RISCV_HWPROBE_EXT_ZTSO (1ULL << 33)
 #define RISCV_HWPROBE_EXT_ZACAS (1ULL << 34)
 #define RISCV_HWPROBE_EXT_ZICOND (1ULL << 35)
+#define	RISCV_HWPROBE_EXT_ZIHINTPAUSE	(1ULL << 36)
 #define RISCV_HWPROBE_KEY_CPUPERF_0 5
 #define RISCV_HWPROBE_MISALIGNED_UNKNOWN (0 << 0)
 #define RISCV_HWPROBE_MISALIGNED_EMULATED (1ULL << 0)
@@ -155,6 +156,8 @@ struct {
 #define ZICOND_BITMASK (1ULL << 38)
 #define ZIHINTNTL_GROUPID 0
 #define ZIHINTNTL_BITMASK (1ULL << 39)
+#define ZIHINTPAUSE_GROUPID 0
+#define ZIHINTPAUSE_BITMASK (1ULL << 40)
 #define ZKND_GROUPID 0
 #define ZKND_BITMASK (1ULL << 41)
 #define ZKNE_GROUPID 0
@@ -196,6 +199,18 @@ struct {
 
 #define HWPROBE_LENGTH 3
 
+#define SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(EXTNAME) \
+  SET_SINGLE_IMAEXT_RISCV_FEATURE(RISCV_HWPROBE_EXT_##EXTNAME, EXTNAME)
+
+#define SET_SINGLE_IMAEXT_RISCV_FEATURE(HWPROBE_BITMASK, EXT) \
+  SET_SINGLE_RISCV_FEATURE(IMAEXT0Value & HWPROBE_BITMASK, EXT)
+
+#define SET_SINGLE_RISCV_FEATURE(COND, EXT) \
+  if (COND) { SET_RISCV_FEATURE(EXT); }
+
+#define SET_RISCV_FEATURE(EXT) \
+    __riscv_feature_bits.features[EXT##_GROUPID] |= EXT##_BITMASK
+
 static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
 
   // Init vendor extension
@@ -208,157 +223,54 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
   // Check RISCV_HWPROBE_KEY_BASE_BEHAVIOR
   unsigned long long BaseValue = Hwprobes[0].value;
   if (BaseValue & RISCV_HWPROBE_BASE_BEHAVIOR_IMA) {
-    __riscv_feature_bits.features[I_GROUPID] |= I_BITMASK;
-    __riscv_feature_bits.features[M_GROUPID] |= M_BITMASK;
-    __riscv_feature_bits.features[A_GROUPID] |= A_BITMASK;
+    SET_RISCV_FEATURE(I);
+    SET_RISCV_FEATURE(M);
+    SET_RISCV_FEATURE(A);
   }
 
   // Check RISCV_HWPROBE_KEY_IMA_EXT_0
   unsigned long long IMAEXT0Value = Hwprobes[1].value;
   if (IMAEXT0Value & RISCV_HWPROBE_IMA_FD) {
-    __riscv_feature_bits.features[F_GROUPID] |= F_BITMASK;
-    __riscv_feature_bits.features[D_GROUPID] |= D_BITMASK;
+    SET_RISCV_FEATURE(F);
+    SET_RISCV_FEATURE(D);
   }
 
-  if (IMAEXT0Value & RISCV_HWPROBE_IMA_C) {
-    __riscv_feature_bits.features[C_GROUPID] |= C_BITMASK;
-  }
-
-  if (IMAEXT0Value & RISCV_HWPROBE_IMA_V) {
-    __riscv_feature_bits.features[V_GROUPID] |= V_BITMASK;
-  }
-
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZBA) {
-    __riscv_feature_bits.features[ZBA_GROUPID] |= ZBA_BITMASK;
-  }
-
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZBB) {
-    __riscv_feature_bits.features[ZBB_GROUPID] |= ZBB_BITMASK;
-  }
-
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZBS) {
-    __riscv_feature_bits.features[ZBS_GROUPID] |= ZBS_BITMASK;
-  }
-
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZICBOZ) {
-    __riscv_feature_bits.features[ZICBOZ_GROUPID] |= ZICBOZ_BITMASK;
-  }
-
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZBC) {
-    __riscv_feature_bits.features[ZBC_GROUPID] |= ZBC_BITMASK;
-  }
-
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZBKB) {
-    __riscv_feature_bits.features[ZBKB_GROUPID] |= ZBKB_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZBKC) {
-    __riscv_feature_bits.features[ZBKC_GROUPID] |= ZBKC_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZBKX) {
-    __riscv_feature_bits.features[ZBKX_GROUPID] |= ZBKX_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZKND) {
-    __riscv_feature_bits.features[ZKND_GROUPID] |= ZKND_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZKNE) {
-    __riscv_feature_bits.features[ZKNE_GROUPID] |= ZKNE_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZKNH) {
-    __riscv_feature_bits.features[ZKNH_GROUPID] |= ZKNH_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZKSED) {
-    __riscv_feature_bits.features[ZKSED_GROUPID] |= ZKSED_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZKSH) {
-    __riscv_feature_bits.features[ZKSH_GROUPID] |= ZKSH_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZKT) {
-    __riscv_feature_bits.features[ZKT_GROUPID] |= ZKT_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVBB) {
-    __riscv_feature_bits.features[ZVBB_GROUPID] |= ZVBB_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVBC) {
-    __riscv_feature_bits.features[ZVBC_GROUPID] |= ZVBC_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVKB) {
-    __riscv_feature_bits.features[ZVKB_GROUPID] |= ZVKB_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVKG) {
-    __riscv_feature_bits.features[ZVKG_GROUPID] |= ZVKG_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVKNED) {
-    __riscv_feature_bits.features[ZVKNED_GROUPID] |= ZVKNED_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVKNHA) {
-    __riscv_feature_bits.features[ZVKNHA_GROUPID] |= ZVKNHA_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVKNHB) {
-    __riscv_feature_bits.features[ZVKNHB_GROUPID] |= ZVKNHB_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVKSED) {
-    __riscv_feature_bits.features[ZVKSED_GROUPID] |= ZVKSED_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVKSH) {
-    __riscv_feature_bits.features[ZVKSH_GROUPID] |= ZVKSH_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVKT) {
-    __riscv_feature_bits.features[ZVKT_GROUPID] |= ZVKT_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZFH) {
-    __riscv_feature_bits.features[ZFH_GROUPID] |= ZFH_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZFHMIN) {
-    __riscv_feature_bits.features[ZFHMIN_GROUPID] |= ZFHMIN_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZIHINTNTL) {
-    __riscv_feature_bits.features[ZIHINTNTL_GROUPID] |= ZIHINTNTL_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVFH) {
-    __riscv_feature_bits.features[ZVFH_GROUPID] |= ZVFH_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZVFHMIN) {
-    __riscv_feature_bits.features[ZVFHMIN_GROUPID] |= ZVFHMIN_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZFA) {
-    __riscv_feature_bits.features[ZFA_GROUPID] |= ZFA_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZTSO) {
-    __riscv_feature_bits.features[ZTSO_GROUPID] |= ZTSO_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZACAS) {
-    __riscv_feature_bits.features[ZACAS_GROUPID] |= ZACAS_BITMASK;
-  }
-  
-  if (IMAEXT0Value & RISCV_HWPROBE_EXT_ZICOND) {
-    __riscv_feature_bits.features[ZICOND_GROUPID] |= ZICOND_BITMASK;
-  }
+  SET_SINGLE_IMAEXT_RISCV_FEATURE(RISCV_HWPROBE_IMA_C, C);
+  SET_SINGLE_IMAEXT_RISCV_FEATURE(RISCV_HWPROBE_IMA_V, V);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZBA);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZBB);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZBS);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZICBOZ);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZBC);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZBKB);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZBKC);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZBKX);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZKND);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZKNE);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZKNH);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZKSED);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZKSH);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZKT);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZVBB);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZVBC);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZVKB);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZVKG);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZVKNED);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZVKNHA);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZVKNHB);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZVKSED);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZVKSH);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZVKT);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZFH);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZFHMIN);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZIHINTNTL);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZIHINTPAUSE);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZVFH);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZVFHMIN);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZFA);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZTSO);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZACAS);
+  SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZICOND);
 }
 
 #endif // defined(__linux__)
