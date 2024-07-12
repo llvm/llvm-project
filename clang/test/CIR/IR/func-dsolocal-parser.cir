@@ -1,0 +1,13 @@
+// RUN: cir-opt %s | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+#fn_attr = #cir<extra({inline = #cir.inline<no>, nothrow = #cir.nothrow, optnone = #cir.optnone})>
+module {
+    cir.func dsolocal @foo(%arg0: !s32i ) extra(#fn_attr) {
+        %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+        cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+        cir.return
+    }
+}
+
+// CHECK: cir.func dsolocal @foo(%arg0: !s32i) extra(#fn_attr)
