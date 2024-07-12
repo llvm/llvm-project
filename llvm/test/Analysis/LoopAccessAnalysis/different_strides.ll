@@ -52,7 +52,7 @@ entry:
   br label %outer.header
 
 outer.header:
-  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.exit ]
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
   %0 = add nuw nsw i64 %i, 1024
   br label %inner.body
 
@@ -69,9 +69,9 @@ inner.body:
   store float %add9, ptr %arrayidx8, align 4
   %j.next = add nuw nsw i64 %j, 1
   %exitcond.not = icmp eq i64 %j.next, 256
-  br i1 %exitcond.not, label %outer.exit, label %inner.body
+  br i1 %exitcond.not, label %outer.latch, label %inner.body
 
-outer.exit:
+outer.latch:
   %i.next = add nuw nsw i64 %i, 1
   %outerexitcond.not = icmp eq i64 %i.next, 64257
   br i1 %outerexitcond.not, label %exit, label %outer.header
@@ -127,17 +127,9 @@ entry:
   br label %outer.header
 
 outer.header:
-  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.exit ]
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
   %0 = add nuw nsw i64 %i, 256
   br label %inner.body
-
-exit:
-  ret void
-
-outer.exit:
-  %i.next = add nuw nsw i64 %i, 1
-  %exitcond29.not = icmp eq i64 %i.next, 65536
-  br i1 %exitcond29.not, label %exit, label %outer.header
 
 inner.body:
   %j = phi i64 [ 0, %outer.header ], [ %j.next, %inner.body ]
@@ -152,5 +144,13 @@ inner.body:
   store float %add9, ptr %arrayidx8, align 4
   %j.next = add nuw nsw i64 %j, 1
   %exitcond.not = icmp eq i64 %j.next, 256
-  br i1 %exitcond.not, label %outer.exit, label %inner.body
+  br i1 %exitcond.not, label %outer.latch, label %inner.body
+
+outer.latch:
+  %i.next = add nuw nsw i64 %i, 1
+  %exitcond29.not = icmp eq i64 %i.next, 65536
+  br i1 %exitcond29.not, label %exit, label %outer.header
+
+exit:
+  ret void
 }
