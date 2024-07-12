@@ -1071,8 +1071,8 @@ void SelectOptimizeImpl::getExclBackwardsSlice(Instruction *I,
     Slice.push(II);
 
     // Explore all the operands of the current instruction to expand the slice.
-    for (unsigned k = 0; k < II->getNumOperands(); ++k)
-      if (auto *OpI = dyn_cast<Instruction>(II->getOperand(k)))
+    for (Value *Op : II->operand_values())
+      if (auto *OpI = dyn_cast<Instruction>(Op))
         Worklist.push(OpI);
   }
 }

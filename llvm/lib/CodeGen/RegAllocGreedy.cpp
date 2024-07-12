@@ -1664,8 +1664,8 @@ unsigned RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
 
     // Remove any gaps with regmask clobbers.
     if (Matrix->checkRegMaskInterference(VirtReg, PhysReg))
-      for (unsigned I = 0, E = RegMaskGaps.size(); I != E; ++I)
-        GapWeight[RegMaskGaps[I]] = huge_valf;
+      for (unsigned Gap : RegMaskGaps)
+        GapWeight[Gap] = huge_valf;
 
     // Try to find the best sequence of gaps to close.
     // The new spill weight must be larger than any gap interference.
