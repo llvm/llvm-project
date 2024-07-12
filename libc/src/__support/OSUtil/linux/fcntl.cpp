@@ -15,12 +15,14 @@
 #include "hdr/types/struct_flock64.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
 #include <stdarg.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE::internal {
+namespace LIBC_NAMESPACE_DECL {
+namespace internal {
 
 int fcntl(int fd, int cmd, void *arg) {
 #if SYS_fcntl
@@ -97,4 +99,5 @@ int fcntl(int fd, int cmd, void *arg) {
   }
 }
 
-} // namespace LIBC_NAMESPACE::internal
+} // namespace internal
+} // namespace LIBC_NAMESPACE_DECL
