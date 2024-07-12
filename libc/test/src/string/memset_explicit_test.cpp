@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "memory_utils/memory_check_utils.h"
-#include "src/__support/macros/config.h"
 #include "src/string/memset_explicit.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 // Apply the same tests as memset
 
@@ -29,4 +28,4 @@ TEST(LlvmLibcmemsetExplicitTest, SizeSweep) {
   }
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

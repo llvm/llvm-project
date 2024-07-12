@@ -9,12 +9,11 @@
 #include "src/math/nextafterf.h"
 #include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, nextafterf, (float x, float y)) {
   return fputil::nextafter(x, y);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

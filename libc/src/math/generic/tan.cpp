@@ -17,7 +17,6 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
@@ -53,7 +52,7 @@ LIBC_INLINE constexpr bool NO_FMA = true;
 #define LIBC_MATH_TAN_SKIP_ACCURATE_PASS
 #endif
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 using DoubleDouble = fputil::DoubleDouble;
 using Float128 = typename fputil::DyadicFloat<128>;
@@ -317,4 +316,4 @@ LLVM_LIBC_FUNCTION(double, tan, (double x)) {
 #endif // !LIBC_MATH_TAN_SKIP_ACCURATE_PASS
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

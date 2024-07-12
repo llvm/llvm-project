@@ -8,11 +8,10 @@
 
 #include "src/stdio/fseek.h"
 #include "file.h"
-#include "src/__support/macros/config.h"
 
 #include "hdr/types/FILE.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, fseek, (::FILE * stream, long offset, int whence)) {
   int ret;
@@ -28,4 +27,4 @@ LLVM_LIBC_FUNCTION(int, fseek, (::FILE * stream, long offset, int whence)) {
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

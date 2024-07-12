@@ -8,11 +8,10 @@
 
 #include "src/stdlib/atof.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/str_to_float.h"
 #include "src/errno/libc_errno.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, atof, (const char *str)) {
   auto result = internal::strtofloatingpoint<double>(str);
@@ -22,4 +21,4 @@ LLVM_LIBC_FUNCTION(double, atof, (const char *str)) {
   return result.value;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

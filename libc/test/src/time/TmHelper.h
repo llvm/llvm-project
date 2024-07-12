@@ -11,12 +11,11 @@
 
 #include <time.h>
 
-#include "src/__support/macros/config.h"
 #include "src/time/time_utils.h"
 
 using LIBC_NAMESPACE::time_utils::TimeConstants;
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace tmhelper {
 namespace testing {
 
@@ -39,6 +38,6 @@ static inline void initialize_tm_data(struct tm *tm_data, int year, int month,
 
 } // namespace testing
 } // namespace tmhelper
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_TEST_SRC_TIME_TMHELPER_H

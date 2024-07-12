@@ -15,13 +15,12 @@
 #define LLVM_LIBC_SRC_STRING_STRING_UTILS_H
 
 #include "src/__support/CPP/bitset.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/string/memory_utils/inline_bzero.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include <stddef.h> // For size_t
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace internal {
 
 template <typename Word> LIBC_INLINE constexpr Word repeat_byte(Word byte) {
@@ -247,6 +246,6 @@ LIBC_INLINE constexpr static char *strrchr_implementation(const char *src,
 }
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif //  LLVM_LIBC_SRC_STRING_STRING_UTILS_H

@@ -9,9 +9,7 @@
 #ifndef LLVM_LIBC_TEST_UNITTEST_TESTLOGGER_H
 #define LLVM_LIBC_TEST_UNITTEST_TESTLOGGER_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace testing {
 
 // A class to log to standard output in the context of hermetic tests.
@@ -24,6 +22,6 @@ struct TestLogger {
 extern TestLogger tlog;
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif /* LLVM_LIBC_TEST_UNITTEST_TESTLOGGER_H */

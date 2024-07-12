@@ -9,13 +9,11 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRTOK_R_H
 #define LLVM_LIBC_SRC_STRING_STRTOK_R_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 char *strtok_r(char *__restrict src, const char *__restrict delimiter_string,
                char **__restrict saveptr);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_STRTOK_R_H

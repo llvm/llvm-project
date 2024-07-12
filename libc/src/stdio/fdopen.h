@@ -10,12 +10,11 @@
 #define LLVM_LIBC_SRC_STDIO_FDOPEN_H
 
 #include "hdr/types/FILE.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 ::FILE *fdopen(int fd, const char *mode);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_FDOPEN_H

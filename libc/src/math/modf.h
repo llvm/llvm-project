@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_MODF_H
 #define LLVM_LIBC_SRC_MATH_MODF_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 double modf(double x, double *iptr);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_MODF_H

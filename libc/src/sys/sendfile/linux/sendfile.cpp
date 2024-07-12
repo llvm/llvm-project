@@ -11,12 +11,11 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
-#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include <sys/sendfile.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(ssize_t, sendfile,
                    (int out_fd, int in_fd, off_t *offset, size_t count)) {
@@ -38,4 +37,4 @@ LLVM_LIBC_FUNCTION(ssize_t, sendfile,
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

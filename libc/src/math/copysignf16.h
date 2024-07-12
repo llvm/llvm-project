@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_MATH_COPYSIGNF16_H
 #define LLVM_LIBC_SRC_MATH_COPYSIGNF16_H
 
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 float16 copysignf16(float16 x, float16 y);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_COPYSIGNF16_H

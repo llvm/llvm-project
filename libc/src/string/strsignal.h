@@ -10,12 +10,10 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRSIGNAL_H
 #define LLVM_LIBC_SRC_STRING_STRSIGNAL_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 char *strsignal(int sig_num);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_STRSIGNAL_H

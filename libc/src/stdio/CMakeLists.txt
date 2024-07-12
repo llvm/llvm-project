@@ -209,6 +209,7 @@ add_entrypoint_object(
     libc.src.stdio.printf_core.vfprintf_internal
 )
 
+
 add_subdirectory(printf_core)
 add_subdirectory(scanf_core)
 
