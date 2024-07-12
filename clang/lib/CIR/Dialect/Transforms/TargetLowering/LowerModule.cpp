@@ -11,10 +11,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "LowerModule.h"
+// FIXME(cir): This header file is not exposed to the public API, but can be
+// reused by CIR ABI lowering since it holds target-specific information.
+#include "../../../../Basic/Targets.h"
+#include "clang/Basic/TargetOptions.h"
+
 #include "CIRLowerContext.h"
 #include "LowerFunction.h"
+#include "LowerModule.h"
 #include "TargetInfo.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/PatternMatch.h"
@@ -206,6 +212,30 @@ LogicalResult LowerModule::rewriteFunctionCall(CallOp callOp, FuncOp funcOp) {
     return failure();
 
   return success();
+}
+
+// TODO: not to create it every time
+LowerModule createLowerModule(ModuleOp module, PatternRewriter &rewriter) {
+  // Fetch the LLVM data layout string.
+  auto dataLayoutStr = cast<StringAttr>(
+      module->getAttr(LLVM::LLVMDialect::getDataLayoutAttrName()));
+
+  // Fetch target information.
+  llvm::Triple triple(
+      cast<StringAttr>(module->getAttr("cir.triple")).getValue());
+  clang::TargetOptions targetOptions;
+  targetOptions.Triple = triple.str();
+  auto targetInfo = clang::targets::AllocateTarget(triple, targetOptions);
+
+  // FIXME(cir): This just uses the default language options. We need to account
+  // for custom options.
+  // Create context.
+  assert(!::cir::MissingFeatures::langOpts());
+  clang::LangOptions langOpts;
+  auto context = CIRLowerContext(module, langOpts);
+  context.initBuiltinTypes(*targetInfo);
+
+  return LowerModule(context, module, dataLayoutStr, *targetInfo, rewriter);
 }
 
 } // namespace cir
