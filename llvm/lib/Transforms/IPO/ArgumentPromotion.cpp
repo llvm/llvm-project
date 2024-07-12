@@ -755,10 +755,6 @@ static bool areTypesABICompatible(ArrayRef<Type *> Types, const Function &F,
 /// calls the DoPromotion method.
 static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
                                   unsigned MaxElements, bool IsRecursive) {
-  // Due to complexity of handling cases where the SCC has more than one
-  // component. We want to limit argument promotion of recursive calls to
-  // just functions that directly call themselves.
-  bool IsSelfRecursive = false;
   // Don't perform argument promotion for naked functions; otherwise we can end
   // up removing parameters that are seemingly 'not used' as they are referred
   // to in the assembly.
@@ -804,10 +800,8 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
     if (CB->isMustTailCall())
       return nullptr;
 
-    if (CB->getFunction() == F) {
+    if (CB->getFunction() == F)
       IsRecursive = true;
-      IsSelfRecursive = true;
-    }
   }
 
   // Can't change signature of musttail caller
