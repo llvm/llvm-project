@@ -673,6 +673,9 @@ public:
   /// Whether this declaration comes from explicit global module.
   bool isFromExplicitGlobalModule() const;
 
+  /// Whether this declaration comes from a named module.
+  bool isInNamedModule() const;
+
   /// Return true if this declaration has an attribute which acts as
   /// definition of the entity, such as 'alias' or 'ifunc'.
   bool hasDefiningAttr() const;

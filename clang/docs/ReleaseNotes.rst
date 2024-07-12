@@ -40,6 +40,8 @@ code bases.
 - Setting the deprecated CMake variable ``GCC_INSTALL_PREFIX`` (which sets the
   default ``--gcc-toolchain=``) now leads to a fatal error.
 
+- The ``le32`` and ``le64`` targets have been removed.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
@@ -103,7 +105,7 @@ ABI Changes in This Version
   ifuncs. Its purpose was to preserve backwards compatibility when the ".ifunc"
   suffix got removed from the name mangling. The alias interacts badly with
   GlobalOpt (see the issue #96197).
-  
+
 - Fixed Microsoft name mangling for auto non-type template arguments of pointer
   type for MSVC 1920+. This change resolves incompatibilities with code compiled
   by MSVC 1920+ but will introduce incompatibilities with code compiled by
@@ -165,6 +167,7 @@ Clang Python Bindings Potentially Breaking Changes
   of variant 271.
 - Renamed ``TypeKind`` variant 162 from ``OBJCCLASS`` to ``OBJCTYPEPARAM``.
   The previous name was incorrect, it was a duplicate of variant 28.
+- Refactored enum implementation, switching to the standard library `Enum` type.
 
 What's New in Clang |release|?
 ==============================
@@ -309,6 +312,10 @@ Resolutions to C++ Defect Reports
 
 - Clang now considers ``noexcept(typeid(expr))`` more carefully, instead of always assuming that ``std::bad_typeid`` can be thrown.
   (`CWG2191: Incorrect result for noexcept(typeid(v)) <https://cplusplus.github.io/CWG/issues/2191.html>`_).
+
+- Clang now correctly implements lookup for the terminal name of a member-qualified nested-name-specifier.
+  (`CWG1835: Dependent member lookup before < <https://cplusplus.github.io/CWG/issues/1835.html>`_).
+  The warning can be disabled via `-Wno-missing-dependent-template-keyword`.
 
 C Language Changes
 ------------------
@@ -599,6 +606,9 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Clang now emits an error instead of a warning for ``-Wundefined-internal``
+  when compiling with `-pedantic-errors` to conform to the C standard
+
 - Clang now applies syntax highlighting to the code snippets it
   prints.
 
@@ -712,6 +722,8 @@ Improvements to Clang's diagnostics
 
 - For the ARM target, calling an interrupt handler from another function is now an error. #GH95359.
 
+- Clang now diagnoses integer constant expressions that are folded to a constant value as an extension in more circumstances. Fixes #GH59863
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -819,6 +831,8 @@ Bug Fixes in This Version
   Fixes #GH92775
 
 - Fixed `static_cast` to array of unknown bound. Fixes (#GH62863).
+
+- Fixed Clang crashing when failing to perform some C++ Initialization Sequences. (#GH98102)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1008,7 +1022,7 @@ Bug Fixes to C++ Support
 - Fixed a type constraint substitution issue involving a generic lambda expression. (#GH93821)
 - Fix a crash caused by improper use of ``__array_extent``. (#GH80474)
 - Fixed several bugs in capturing variables within unevaluated contexts. (#GH63845), (#GH67260), (#GH69307),
-  (#GH88081), (#GH89496), (#GH90669) and (#GH91633).
+  (#GH88081), (#GH89496), (#GH90669), (#GH91633) and (#GH97453).
 - Fixed a crash in constraint instantiation under nested lambdas with dependent parameters.
 - Fixed handling of brace ellison when building deduction guides. (#GH64625), (#GH83368).
 - Clang now instantiates local constexpr functions eagerly for constant evaluators. (#GH35052), (#GH94849)
@@ -1027,6 +1041,9 @@ Bug Fixes to C++ Support
 - Fixed a bug where references to lambda capture inside a ``noexcept`` specifier were not correctly
   instantiated. (#GH95735).
 - Fixed a CTAD substitution bug involving type aliases that reference outer template parameters. (#GH94614).
+- Clang now correctly handles unexpanded packs in the template parameter list of a generic lambda expression
+  (#GH48937)
+- Fix a crash when parsing an invalid type-requirement in a requires expression. (#GH51868)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
