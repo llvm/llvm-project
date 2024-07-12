@@ -3123,10 +3123,19 @@ class AMDGPUMfmaIntrinsic<LLVMType DestTy, LLVMType SrcABTy> :
              ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]>;
 
 
-class AMDGPUMfmaScaleIntrinsic<LLVMType DestTy, LLVMType SrcABTy> :
-  ClangBuiltin<!subst("int", "__builtin", NAME)>,
+// srcA's format is determined by cbsz. srcB's format is determined by
+// blgp.
+//
+// These should be <8 x i32> for f8 formats, <6 x i32> for f6 formats,
+// and <4 x i32> for f4 formats. If the format control bits imply a
+// smaller type than used, the high elements will be truncated.
+//
+// If the format control bits imply a larger type than used, the high
+// elements are padded with undef.
+
+class AMDGPUMfmaScaleIntrinsic<LLVMType DestTy> :
   DefaultAttrsIntrinsic<[DestTy],
-            [SrcABTy, SrcABTy, DestTy,
+            [llvm_anyvector_ty, llvm_anyvector_ty, DestTy,
              llvm_i32_ty, // cbsz
              llvm_i32_ty, // abid
              llvm_i32_ty, // blgp
@@ -3306,8 +3315,8 @@ def int_amdgcn_mfma_i32_16x16x64_i8 : AMDGPUMfmaIntrinsic<llvm_v4i32_ty, llvm_v4
 def int_amdgcn_mfma_i32_32x32x32_i8 : AMDGPUMfmaIntrinsic<llvm_v16i32_ty, llvm_v4i32_ty>;
 def int_amdgcn_mfma_f32_16x16x32_bf16 : AMDGPUMfmaIntrinsic<llvm_v4f32_ty, llvm_v8bf16_ty>;
 def int_amdgcn_mfma_f32_32x32x16_bf16 : AMDGPUMfmaIntrinsic<llvm_v16f32_ty, llvm_v8bf16_ty>;
-def int_amdgcn_mfma_scale_f32_16x16x128_f8f6f4 : AMDGPUMfmaScaleIntrinsic<llvm_v4f32_ty, llvm_v8i32_ty>;
-def int_amdgcn_mfma_scale_f32_32x32x64_f8f6f4 : AMDGPUMfmaScaleIntrinsic<llvm_v16f32_ty, llvm_v8i32_ty>;
+def int_amdgcn_mfma_scale_f32_16x16x128_f8f6f4 : AMDGPUMfmaScaleIntrinsic<llvm_v4f32_ty>;
+def int_amdgcn_mfma_scale_f32_32x32x64_f8f6f4 : AMDGPUMfmaScaleIntrinsic<llvm_v16f32_ty>;
 def int_amdgcn_smfmac_f32_16x16x64_f16 : AMDGPUMSmfmacIntrinsic<llvm_v4f32_ty, llvm_v8f16_ty, llvm_v16f16_ty>;
 def int_amdgcn_smfmac_f32_32x32x32_f16 : AMDGPUMSmfmacIntrinsic<llvm_v16f32_ty, llvm_v8f16_ty, llvm_v16f16_ty>;
 def int_amdgcn_smfmac_f32_16x16x64_bf16 : AMDGPUMSmfmacIntrinsic<llvm_v4f32_ty, llvm_v8bf16_ty, llvm_v16bf16_ty>;

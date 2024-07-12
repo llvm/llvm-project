@@ -1304,7 +1304,7 @@ class getVOP3ClampPat<VOPProfile P, SDPatternOperator node> {
 }
 
 class getVOP3MAIPat<VOPProfile P, SDPatternOperator node> {
-  list<dag> ret = !if(!eq(P.Src0VT, P.Src1VT),
+  list<dag> ret = !if(!not(P.IsSMFMAC),
                       // mfma
                       [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2,
                                             timm:$cbsz, timm:$abid, timm:$blgp))],
@@ -1314,7 +1314,7 @@ class getVOP3MAIPat<VOPProfile P, SDPatternOperator node> {
 }
 
 class getVOP3MAIScaledPat<VOPProfile P, SDPatternOperator node> {
-  list<dag> ret = !if(!eq(P.Src0VT, P.Src1VT),
+  list<dag> ret = !if(!not(P.IsSMFMAC),
                       // mfma
                       [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2,
                                             timm:$cbsz, timm:$abid, timm:$blgp,
