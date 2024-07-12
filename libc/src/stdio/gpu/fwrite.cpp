@@ -9,7 +9,7 @@
 #include "src/stdio/fwrite.h"
 #include "file.h"
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
 
 namespace LIBC_NAMESPACE {
 

@@ -52,11 +52,10 @@ void Benchmark::run_benchmarks() {
   uint64_t id = gpu::get_thread_id();
   gpu::sync_threads();
 
-  for (Benchmark *b : benchmarks)
+  for (Benchmark *b : benchmarks) {
     results[id] = b->run();
-  gpu::sync_threads();
-  if (id == 0) {
-    for (Benchmark const *b : benchmarks) {
+    gpu::sync_threads();
+    if (id == 0) {
       BenchmarkResult all_results = reduce_results(results);
       constexpr auto GREEN = "\033[32m";
       constexpr auto RESET = "\033[0m";
