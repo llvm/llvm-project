@@ -91,6 +91,10 @@ private:
   uint64_t CurrentUnitOffset = 0;
   const DWARFUnit *CurrentUnit = nullptr;
   std::unordered_map<uint32_t, uint32_t> AbbrevTagToIndexMap;
+  /// Contains a map of TU hashes to a Foreign TU indecies.
+  /// This is used to reduce the size of Foreign TU list since there could be
+  /// multiple TUs with the same hash.
+  DenseMap<uint64_t, uint32_t> TUHashToIndexMap;
 
   /// Represents a group of entries with identical name (and hence, hash value).
   struct HashData {

@@ -1,9 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98-11,cxx98-14,cxx98-17,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx98-11,cxx98-14,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx98-14,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx17,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx23,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 %s -verify=expected,cxx98-23,cxx98-11,cxx98-14,cxx98-17,cxx98 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 %s -verify=expected,cxx98-23,cxx98-11,cxx98-14,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 %s -verify=expected,cxx98-23,cxx98-14,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx98-23,since-cxx17,cxx98-17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 %s -verify=expected,cxx98-23,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 %s -verify=expected,cxx98-23,since-cxx23,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx26,since-cxx23,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -901,7 +902,8 @@ namespace cwg573 { // cwg573: no
   void *d = reinterpret_cast<void*>(c);
   // cxx98-error@-1 {{cast between pointer-to-function and pointer-to-object is an extension}}
   void f() { delete a; }
-  // expected-error@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
+  // cxx98-23-error@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
+  // since-cxx26-error@-2 {{cannot delete pointer to incomplete type 'void'}}
   int n = d - a;
   // expected-error@-1 {{arithmetic on pointers to void}}
   // FIXME: This is ill-formed.
@@ -1238,11 +1240,13 @@ namespace cwg599 { // cwg599: partial
   struct V { operator int*(); operator Fn*(); };
   void f(void *p, void (*q)(), S s, T t, U u, V v) {
     delete p;
-    // expected-error@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
+    // cxx98-23-error@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
+    // since-cxx26-error@-2 {{cannot delete pointer to incomplete type 'void'}}
     delete q;
     // expected-error@-1 {{cannot delete expression of type 'void (*)()'}}
     delete s;
-    // expected-error@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
+    // cxx98-23-error@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
+    // since-cxx26-error@-2 {{cannot delete pointer to incomplete type 'void'}}
     delete t;
     // expected-error@-1 {{cannot delete expression of type 'T'}}
     // FIXME: This is valid, but is rejected due to a non-conforming GNU

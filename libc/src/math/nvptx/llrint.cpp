@@ -13,6 +13,8 @@
 
 namespace LIBC_NAMESPACE {
 
-LLVM_LIBC_FUNCTION(long long, llrint, (double x)) { return __nv_llrint(x); }
+LLVM_LIBC_FUNCTION(long long, llrint, (double x)) {
+  return static_cast<long long>(__builtin_rint(x));
+}
 
 } // namespace LIBC_NAMESPACE

@@ -19,15 +19,21 @@ namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(ssize_t, pread,
                    (int fd, void *buf, size_t count, off_t offset)) {
-#ifdef LIBC_TARGET_ARCH_IS_RISCV32
-  static_assert(sizeof(off_t) == 8);
-  ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(
-      SYS_pread64, fd, buf, count, (long)offset,
-      (long)(((uint64_t)(offset)) >> 32));
-#else
-  ssize_t ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_pread64, fd, buf,
-                                                      count, offset);
-#endif
+  ssize_t ret;
+  if constexpr (sizeof(long) == sizeof(uint32_t) &&
+                sizeof(off_t) == sizeof(uint64_t)) {
+    // This is a 32-bit system with a 64-bit offset, offset must be split.
+    const uint64_t bits = cpp::bit_cast<uint64_t>(offset);
+    const uint32_t lo = bits & UINT32_MAX;
+    const uint32_t hi = bits >> 32;
+    const long offset_low = cpp::bit_cast<long>(static_cast<long>(lo));
+    const long offset_high = cpp::bit_cast<long>(static_cast<long>(hi));
+    ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_pread64, fd, buf, count,
+                                                offset_low, offset_high);
+  } else {
+    ret = LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_pread64, fd, buf, count,
+                                                offset);
+  }
   // The cast is important since there is a check that dereferences the pointer
   // which fails on void*.
   MSAN_UNPOISON(reinterpret_cast<char *>(buf), count);

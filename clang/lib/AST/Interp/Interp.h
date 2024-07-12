@@ -1309,7 +1309,8 @@ inline bool InitGlobalTempComp(InterpState &S, CodePtr OpPC,
   S.SeenGlobalTemporaries.push_back(
       std::make_pair(P.getDeclDesc()->asExpr(), Temp));
 
-  if (std::optional<APValue> APV = P.toRValue(S.getCtx())) {
+  if (std::optional<APValue> APV =
+          P.toRValue(S.getCtx(), Temp->getTemporaryExpr()->getType())) {
     *Cached = *APV;
     return true;
   }

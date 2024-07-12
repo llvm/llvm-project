@@ -67,6 +67,12 @@ LIBC_INLINE int set_env(const fenv_t *) { return 0; }
 
 namespace LIBC_NAMESPACE::fputil {
 
+LIBC_INLINE int clear_except_if_required(int excepts) {
+  if (math_errhandling & MATH_ERREXCEPT)
+    return clear_except(excepts);
+  return 0;
+}
+
 LIBC_INLINE int set_except_if_required(int excepts) {
   if (math_errhandling & MATH_ERREXCEPT)
     return set_except(excepts);

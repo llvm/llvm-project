@@ -1,6 +1,6 @@
 header: stdlib.h
 standards: 
-      - stdc
+  - stdc
 macros: []
 types:
   - type_name: __atexithandler_t
@@ -31,7 +31,7 @@ functions:
       - stdc
     return_type: double
     arguments:
-      - type: const char * __restrict
+      - type: const char *__restrict
   - name: atol
     standards: 
       - stdc
@@ -110,7 +110,8 @@ functions:
     standards: 
       - stdc
     return_type: int
-    arguments: []
+    arguments:
+      - type: void
   - name: srand
     standards: 
       - stdc
@@ -122,80 +123,80 @@ functions:
       - stdc
     return_type: int
     arguments:
-      - type: char * __restrict
+      - type: char *__restrict
       - type: size_t
-      - type: const char * __restrict
+      - type: const char *__restrict
       - type: double
   - name: strfromf
     standards: 
       - stdc
     return_type: int
     arguments:
-      - type: char * __restrict
+      - type: char *__restrict
       - type: size_t
-      - type: const char * __restrict
+      - type: const char *__restrict
       - type: float
   - name: strfroml
     standards: 
       - stdc
     return_type: int
     arguments:
-      - type: char * __restrict
+      - type: char *__restrict
       - type: size_t
-      - type: const char * __restrict
+      - type: const char *__restrict
       - type: long double
   - name: strtod
     standards: 
       - stdc
     return_type: double
     arguments:
-      - type: const char * __restrict
-      - type: char * * __restrict
+      - type: const char *__restrict
+      - type: char **__restrict
   - name: strtof
     standards: 
       - stdc
     return_type: float
     arguments:
-      - type: const char * __restrict
-      - type: char * * __restrict
+      - type: const char *__restrict
+      - type: char **__restrict
   - name: strtol
     standards: 
       - stdc
     return_type: long
     arguments:
-      - type: const char * __restrict
-      - type: char * * __restrict
+      - type: const char *__restrict
+      - type: char **__restrict
       - type: int
   - name: strtold
     standards: 
       - stdc
     return_type: long double
     arguments:
-      - type: const char * __restrict
-      - type: char * * __restrict
+      - type: const char *__restrict
+      - type: char **__restrict
   - name: strtoll
     standards: 
       - stdc
     return_type: long long
     arguments:
-      - type: const char * __restrict
-      - type: char * * __restrict
+      - type: const char *__restrict
+      - type: char **__restrict
       - type: int
   - name: strtoul
     standards: 
       - stdc
     return_type: unsigned long
     arguments:
-      - type: const char * __restrict
-      - type: char * * __restrict
+      - type: const char *__restrict
+      - type: char **__restrict
       - type: int
   - name: strtoull
     standards: 
       - stdc
     return_type: unsigned long long
     arguments:
-      - type: const char * __restrict
-      - type: char * * __restrict
+      - type: const char *__restrict
+      - type: char **__restrict
       - type: int
   - name: malloc
     standards: 
@@ -240,7 +241,8 @@ functions:
     standards: 
       - stdc
     return_type: _Noreturn void
-    arguments: []
+    arguments:
+      - type: void
   - name: at_quick_exit
     standards: 
       - stdc

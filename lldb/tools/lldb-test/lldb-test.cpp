@@ -509,8 +509,8 @@ Error opts::symbols::findFunctions(lldb_private::Module &Module) {
         ContextOr->IsValid() ? *ContextOr : CompilerDeclContext();
 
     List.Clear();
-    Module::LookupInfo lookup_info(ConstString(Name), getFunctionNameFlags(),
-                                   eLanguageTypeUnknown);
+    lldb_private::Module::LookupInfo lookup_info(
+        ConstString(Name), getFunctionNameFlags(), eLanguageTypeUnknown);
     Symfile.FindFunctions(lookup_info, ContextPtr, true, List);
   }
   outs() << formatv("Found {0} functions:\n", List.GetSize());
