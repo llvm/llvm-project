@@ -117,6 +117,7 @@ public:
   bool tryFoldRegSequence(MachineInstr &MI);
   bool tryFoldPhiAGPR(MachineInstr &MI);
   bool tryFoldLoad(MachineInstr &MI);
+  bool tryFoldVLoadStoreIdxOffset(MachineInstr &MI, MachineInstr *&SMovImmZero);
 
   bool tryOptimizeAGPRPhis(MachineBasicBlock &MBB);
 
@@ -2093,6 +2094,41 @@ bool SIFoldOperands::tryFoldLoad(MachineInstr &MI) {
   return true;
 }
 
+// when index operand of v_load_idx is a known constant, fold it
+// into the offset operand
+bool SIFoldOperands::tryFoldVLoadStoreIdxOffset(MachineInstr &MI,
+                                                MachineInstr *&SMovImmZero) {
+  auto IdxOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::idx);
+  auto OffOpnd = TII->getNamedOperand(MI, AMDGPU::OpName::offset);
+
+  auto DefMI = MRI->getVRegDef(IdxOpnd->getReg());
+  if (DefMI->getOpcode() == AMDGPU::S_MOV_B32) {
+    auto ImmOpnd = DefMI->getOperand(1);
+    if (ImmOpnd.isImm() && ImmOpnd.getImm()) {
+      auto Offset =
+          (ImmOpnd.getImm() + OffOpnd->getImm()) % ST->getAddressableNumVGPRs();
+      OffOpnd->setImm(Offset);
+      Register IdxReg;
+      if (!SMovImmZero) {
+        IdxReg = MRI->createVirtualRegister(&AMDGPU::SGPR_32RegClass);
+        SMovImmZero =
+            BuildMI(*DefMI->getParent(), DefMI->getIterator(),
+                    DefMI->getDebugLoc(), TII->get(AMDGPU::S_MOV_B32), IdxReg)
+                .addImm(0);
+      } else {
+        IdxReg = SMovImmZero->getOperand(0).getReg();
+      }
+      IdxOpnd->setReg(IdxReg);
+      IdxOpnd->setSubReg(AMDGPU::NoSubRegister);
+      if (MRI->use_nodbg_empty(DefMI->getOperand(0).getReg())) {
+        DefMI->eraseFromParent();
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
 // tryFoldPhiAGPR will aggressively try to create AGPR PHIs.
 // For GFX90A and later, this is pretty much always a good thing, but for GFX908
 // there's cases where it can create a lot more AGPR-AGPR copies, which are
@@ -2210,6 +2246,7 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   for (MachineBasicBlock *MBB : depth_first(&MF)) {
     MachineOperand *CurrentKnownM0Val = nullptr;
+    MachineInstr *SMovImmZero = nullptr;
     for (auto &MI : make_early_inc_range(*MBB)) {
       Changed |= tryFoldCndMask(MI);
 
@@ -2231,6 +2268,14 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
       if (MI.mayLoad() && tryFoldLoad(MI)) {
         Changed = true;
         continue;
+      }
+
+      if ((&MI)->getOpcode() == AMDGPU::V_LOAD_IDX ||
+          (&MI)->getOpcode() == AMDGPU::V_STORE_IDX) {
+        if (tryFoldVLoadStoreIdxOffset(MI, SMovImmZero)) {
+          Changed = true;
+          continue;
+        }
       }
 
       if (TII->isFoldableCopy(MI)) {
