@@ -366,13 +366,13 @@ void Index::sort() {
 
 ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
                                  StringRef ProjectName, bool PublicOnly,
-                                 bool FTimeTrace, int Granularity,
                                  StringRef OutDirectory, StringRef SourceRoot,
                                  StringRef RepositoryUrl,
-                                 std::vector<std::string> UserStylesheets)
+                                 std::vector<std::string> UserStylesheets,
+                                 bool FTimeTrace)
     : ECtx(ECtx), ProjectName(ProjectName), PublicOnly(PublicOnly),
-      FTimeTrace(FTimeTrace), Granularity(Granularity),
-      OutDirectory(OutDirectory), UserStylesheets(UserStylesheets) {
+      OutDirectory(OutDirectory), UserStylesheets(UserStylesheets),
+      FTimeTrace(FTimeTrace) {
   llvm::SmallString<128> SourceRootDir(SourceRoot);
   if (SourceRoot.empty())
     // If no SourceRoot was provided the current path is used as the default

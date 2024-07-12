@@ -480,10 +480,10 @@ mergeInfos(std::vector<std::unique_ptr<Info>> &Values);
 struct ClangDocContext {
   ClangDocContext() = default;
   ClangDocContext(tooling::ExecutionContext *ECtx, StringRef ProjectName,
-                  bool PublicOnly, bool FTimeTrace, int Granularity,
-                  StringRef OutDirectory, StringRef SourceRoot,
+                  bool PublicOnly, StringRef OutDirectory, StringRef SourceRoot,
                   StringRef RepositoryUrl,
-                  std::vector<std::string> UserStylesheets);
+                  std::vector<std::string> UserStylesheets,
+                  bool FTimeTrace = false);
   tooling::ExecutionContext *ECtx;
   std::string ProjectName; // Name of project clang-doc is documenting.
   bool PublicOnly; // Indicates if only public declarations are documented.

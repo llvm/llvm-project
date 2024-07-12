@@ -20,7 +20,7 @@ namespace doc {
 
 void MapASTVisitor::HandleTranslationUnit(ASTContext &Context) {
   if (CDCtx.FTimeTrace)
-    llvm::timeTraceProfilerInitialize(CDCtx.Granularity, "clang-doc");
+    llvm::timeTraceProfilerInitialize(200, "clang-doc");
   TraverseDecl(Context.getTranslationUnitDecl());
   if (CDCtx.FTimeTrace)
     llvm::timeTraceProfilerFinishThread();
@@ -35,7 +35,7 @@ template <typename T> bool MapASTVisitor::mapDecl(const T *D) {
   if (D->getParentFunctionOrMethod())
     return true;
 
-  llvm::timeTraceProfilerBegin("emit info phase", "emit info");
+  llvm::timeTraceProfilerBegin("emitInfo", "emit info from ast node");
   llvm::SmallString<128> USR;
   // If there is an error generating a USR for the decl, skip this decl.
   if (index::generateUSRForDecl(D, USR))
@@ -48,7 +48,7 @@ template <typename T> bool MapASTVisitor::mapDecl(const T *D) {
                                IsFileInRootDir, CDCtx.PublicOnly);
   llvm::timeTraceProfilerEnd();
 
-  llvm::timeTraceProfilerBegin("serializing info", "serializing");
+  llvm::timeTraceProfilerBegin("serialize", "serialize info");
   // A null in place of I indicates that the serializer is skipping this decl
   // for some reason (e.g. we're only reporting public decls).
   if (I.first)

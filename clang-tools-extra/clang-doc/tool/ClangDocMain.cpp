@@ -105,11 +105,6 @@ Turn on time profiler. Generates clang-doc-tracing.json)"),
                                       llvm::cl::init(false),
                                       llvm::cl::cat(ClangDocCategory));
 
-static llvm::cl::opt<int> FTimeGranularity("ftime-gran", llvm::cl::desc(R"(
-Specify granularity for ftime-trace defaults to 200)"),
-                                           llvm::cl::init(200),
-                                           llvm::cl::cat(ClangDocCategory));
-
 enum OutputFormatTy {
   md,
   yaml,
@@ -242,9 +237,9 @@ Example usage for a project using a compile commands database:
 
   // turns on ftime trace profiling
   if (FTimeTrace)
-    llvm::timeTraceProfilerInitialize(FTimeGranularity, "clang-doc");
+    llvm::timeTraceProfilerInitialize(200, "clang-doc");
 
-  llvm::TimeTraceScope("clang-doc", "main");
+  llvm::TimeTraceScope("main", "clang-doc");
 
   // Fail early if an invalid format was provided.
   std::string Format = getFormatString();
@@ -266,12 +261,11 @@ Example usage for a project using a compile commands database:
       Executor->get()->getExecutionContext(),
       ProjectName,
       PublicOnly,
-      FTimeTrace,
-      FTimeGranularity,
       OutDirectory,
       SourceRoot,
       RepositoryUrl,
-      {UserStylesheets.begin(), UserStylesheets.end()}};
+      {UserStylesheets.begin(), UserStylesheets.end()},
+      FTimeTrace};
 
   if (Format == "html") {
     if (auto Err = getHtmlAssetFiles(argv[0], CDCtx)) {
@@ -280,7 +274,7 @@ Example usage for a project using a compile commands database:
     }
   }
 
-  llvm::timeTraceProfilerBegin("mapping phase", "mapping");
+  llvm::timeTraceProfilerBegin("mapping decls", "clang-doc");
   // Mapping phase
   llvm::outs() << "Mapping decls...\n";
   auto Err =
@@ -300,7 +294,7 @@ Example usage for a project using a compile commands database:
   // Collect values into output by key.
   // In ToolResults, the Key is the hashed USR and the value is the
   // bitcode-encoded representation of the Info object.
-  llvm::timeTraceProfilerBegin("clang-doc", "collection phase");
+  llvm::timeTraceProfilerBegin("collecting infos", "clang-doc");
   llvm::outs() << "Collecting infos...\n";
   llvm::StringMap<std::vector<StringRef>> USRToBitcode;
   Executor->get()->getToolResults()->forEachResult(
@@ -316,7 +310,7 @@ Example usage for a project using a compile commands database:
   llvm::StringMap<std::unique_ptr<doc::Info>> USRToInfo;
 
   // First reducing phase (reduce all decls into one info per decl).
-  llvm::timeTraceProfilerBegin("reduction phase", "reducing");
+  llvm::timeTraceProfilerBegin("reducing infos", "clang-doc");
   llvm::outs() << "Reducing " << USRToBitcode.size() << " infos...\n";
   std::atomic<bool> Error;
   Error = false;
@@ -326,9 +320,9 @@ Example usage for a project using a compile commands database:
   for (auto &Group : USRToBitcode) {
     Pool.async([&]() {
       if (FTimeTrace)
-        llvm::timeTraceProfilerInitialize(FTimeGranularity, "clang-doc");
+        llvm::timeTraceProfilerInitialize(200, "clang-doc");
 
-      llvm::timeTraceProfilerBegin("decoding bitcode phase", "decoding");
+      llvm::timeTraceProfilerBegin("decoding bitcode", "decoding");
       std::vector<std::unique_ptr<doc::Info>> Infos;
       for (auto &Bitcode : Group.getValue()) {
         llvm::BitstreamCursor Stream(Bitcode);
@@ -344,7 +338,7 @@ Example usage for a project using a compile commands database:
       }
       llvm::timeTraceProfilerEnd();
 
-      llvm::timeTraceProfilerBegin("merging bitcode phase", "merging");
+      llvm::timeTraceProfilerBegin("merging infos", "clang-doc");
       auto Reduced = doc::mergeInfos(Infos);
       if (!Reduced) {
         llvm::errs() << llvm::toString(Reduced.takeError());
@@ -358,6 +352,7 @@ Example usage for a project using a compile commands database:
         clang::doc::Generator::addInfoToIndex(CDCtx.Idx, Reduced.get().get());
       }
       // Save in the result map (needs a lock due to threaded access).
+
       {
         std::lock_guard<llvm::sys::Mutex> Guard(USRToInfoMutex);
         USRToInfo[Group.getKey()] = std::move(Reduced.get());
@@ -374,7 +369,7 @@ Example usage for a project using a compile commands database:
   if (Error)
     return 1;
 
-  llvm::timeTraceProfilerBegin("generating phase", "generating");
+  llvm::timeTraceProfilerBegin("generating docs", "clang-doc");
   // Ensure the root output directory exists.
   if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory);
       Err != std::error_code()) {
@@ -401,11 +396,11 @@ Example usage for a project using a compile commands database:
     std::error_code EC;
     llvm::raw_fd_ostream OS("clang-doc-tracing.json", EC,
                             llvm::sys::fs::OF_Text);
-    if (!EC) {
+    if (!EC)
       llvm::timeTraceProfilerWrite(OS);
-    } else {
-      llvm::errs() << "Error opening file: " << EC.message() << "\n";
-    }
+    else
+      return 1;
+
   }
   return 0;
 }
