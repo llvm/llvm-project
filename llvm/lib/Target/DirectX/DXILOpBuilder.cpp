@@ -342,16 +342,6 @@ CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
 
 Type *DXILOpBuilder::getOverloadType(dxil::OpCode OpCode, FunctionType *FT) {
 
-  std::string TTStr = M.getTargetTriple();
-  // No extra checks need be performed to verify that the Triple is
-  // well-formed or the target is supported since these checks would have
-  // been done at the time the module M is constructed in the earlier stages of
-  // compilation.
-  auto Major = Triple(TTStr).getOSVersion().getMajor();
-  auto MinorOrErr = Triple(TTStr).getOSVersion().getMinor();
-  uint32_t Minor = MinorOrErr.has_value() ? *MinorOrErr : 0;
-  VersionTuple SMVer(Major, Minor);
-
   const OpCodeProperty *Prop = getOpCodeProperty(OpCode);
   // If DXIL Op has no overload parameter, just return the
   // precise return type specified.
