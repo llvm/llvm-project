@@ -1309,7 +1309,8 @@ inline bool InitGlobalTempComp(InterpState &S, CodePtr OpPC,
   S.SeenGlobalTemporaries.push_back(
       std::make_pair(P.getDeclDesc()->asExpr(), Temp));
 
-  if (std::optional<APValue> APV = P.toRValue(S.getCtx())) {
+  if (std::optional<APValue> APV =
+          P.toRValue(S.getCtx(), Temp->getTemporaryExpr()->getType())) {
     *Cached = *APV;
     return true;
   }
@@ -2567,6 +2568,12 @@ inline bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
     return false;
 
   assert(F);
+
+  // This happens when the call expression has been cast to
+  // something else, but we don't support that.
+  if (S.Ctx.classify(F->getDecl()->getReturnType()) !=
+      S.Ctx.classify(CE->getType()))
+    return false;
 
   // Check argument nullability state.
   if (F->hasNonNullAttr()) {

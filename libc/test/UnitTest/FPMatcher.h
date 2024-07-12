@@ -14,13 +14,14 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/StringUtils.h"
 #include "test/UnitTest/Test.h"
 
 #include "hdr/math_macros.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 template <typename T, TestCond Condition> class FPMatcher : public Matcher<T> {
@@ -87,7 +88,7 @@ template <typename T> struct FPTest : public Test {
 };
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #define DECLARE_SPECIAL_CONSTANTS(T)                                           \
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;                            \

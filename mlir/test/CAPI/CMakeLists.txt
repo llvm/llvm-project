@@ -10,6 +10,7 @@ function(_add_capi_test_executable name)
     PARTIAL_SOURCES_INTENDED
     ${ARG_UNPARSED_ARGUMENTS})
   set_target_properties(${name} PROPERTIES FOLDER "MLIR/Tests")
+  set_target_properties(${name} PROPERTIES EXCLUDE_FROM_ALL ON)
 
   llvm_update_compile_flags(${name})
   if(MLIR_BUILD_MLIR_C_DYLIB)

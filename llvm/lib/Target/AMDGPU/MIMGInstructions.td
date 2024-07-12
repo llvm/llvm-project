@@ -15,7 +15,8 @@
 // - MIMGEncGfx10Default: gfx10 default (non-NSA) encoding
 // - MIMGEncGfx10NSA: gfx10 NSA encoding
 // - MIMGEncGfx11Default: gfx11 default (non-NSA) encoding
-// - MIMGEncGfx11NSA: gfx11 NSA encoding
+// - MIMGEncGfx11NSA: gfx11 partial NSA encoding
+// - MIMGEncGfx12: gfx12 encoding (partial NSA)
 class MIMGEncoding;
 
 def MIMGEncGfx6 : MIMGEncoding;

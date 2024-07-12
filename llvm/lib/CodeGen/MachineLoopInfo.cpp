@@ -30,29 +30,57 @@ using namespace llvm;
 template class llvm::LoopBase<MachineBasicBlock, MachineLoop>;
 template class llvm::LoopInfoBase<MachineBasicBlock, MachineLoop>;
 
-char MachineLoopInfo::ID = 0;
-MachineLoopInfo::MachineLoopInfo() : MachineFunctionPass(ID) {
-  initializeMachineLoopInfoPass(*PassRegistry::getPassRegistry());
+AnalysisKey MachineLoopAnalysis::Key;
+
+MachineLoopAnalysis::Result
+MachineLoopAnalysis::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  return MachineLoopInfo(MFAM.getResult<MachineDominatorTreeAnalysis>(MF));
 }
-INITIALIZE_PASS_BEGIN(MachineLoopInfo, "machine-loops",
-                "Machine Natural Loop Construction", true, true)
+
+PreservedAnalyses
+MachineLoopPrinterPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  OS << "Machine loop info for machine function '" << MF.getName() << "':\n";
+  MFAM.getResult<MachineLoopAnalysis>(MF).print(OS);
+  return PreservedAnalyses::all();
+}
+
+char MachineLoopInfoWrapperPass::ID = 0;
+MachineLoopInfoWrapperPass::MachineLoopInfoWrapperPass()
+    : MachineFunctionPass(ID) {
+  initializeMachineLoopInfoWrapperPassPass(*PassRegistry::getPassRegistry());
+}
+INITIALIZE_PASS_BEGIN(MachineLoopInfoWrapperPass, "machine-loops",
+                      "Machine Natural Loop Construction", true, true)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(MachineLoopInfo, "machine-loops",
-                "Machine Natural Loop Construction", true, true)
+INITIALIZE_PASS_END(MachineLoopInfoWrapperPass, "machine-loops",
+                    "Machine Natural Loop Construction", true, true)
 
-char &llvm::MachineLoopInfoID = MachineLoopInfo::ID;
+char &llvm::MachineLoopInfoID = MachineLoopInfoWrapperPass::ID;
 
-bool MachineLoopInfo::runOnMachineFunction(MachineFunction &) {
-  calculate(getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree());
+bool MachineLoopInfoWrapperPass::runOnMachineFunction(MachineFunction &) {
+  LI.calculate(getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree());
   return false;
+}
+
+bool MachineLoopInfo::invalidate(
+    MachineFunction &, const PreservedAnalyses &PA,
+    MachineFunctionAnalysisManager::Invalidator &) {
+  // Check whether the analysis, all analyses on functions, or the function's
+  // CFG have been preserved.
+  auto PAC = PA.getChecker<MachineLoopAnalysis>();
+  return !PAC.preserved() &&
+         !PAC.preservedSet<AllAnalysesOn<MachineFunction>>() &&
+         !PAC.preservedSet<CFGAnalyses>();
 }
 
 void MachineLoopInfo::calculate(MachineDominatorTree &MDT) {
   releaseMemory();
-  LI.analyze(MDT.getBase());
+  analyze(MDT.getBase());
 }
 
-void MachineLoopInfo::getAnalysisUsage(AnalysisUsage &AU) const {
+void MachineLoopInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);

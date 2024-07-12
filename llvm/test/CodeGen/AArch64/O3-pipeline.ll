@@ -227,7 +227,6 @@
 ; CHECK-NEXT:       Machine Sanitizer Binary Metadata
 ; CHECK-NEXT:     Machine Outliner
 ; CHECK-NEXT:     FunctionPass Manager
-; CHECK-NEXT:       AArch64 Indirect Thunks
 ; CHECK-NEXT:       AArch64 sls hardening pass
 ; CHECK-NEXT:       AArch64 Pointer Authentication
 ; CHECK-NEXT:       AArch64 Branch Targets

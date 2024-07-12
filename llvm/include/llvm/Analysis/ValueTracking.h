@@ -276,6 +276,8 @@ struct KnownFPClass {
     return (KnownFPClasses & Mask) == fcNone;
   }
 
+  bool isKnownAlways(FPClassTest Mask) const { return isKnownNever(~Mask); }
+
   bool isUnknown() const {
     return KnownFPClasses == fcAllFlags && !SignBit;
   }
@@ -284,6 +286,9 @@ struct KnownFPClass {
   bool isKnownNeverNaN() const {
     return isKnownNever(fcNan);
   }
+
+  /// Return true if it's known this must always be a nan.
+  bool isKnownAlwaysNaN() const { return isKnownAlways(fcNan); }
 
   /// Return true if it's known this can never be an infinity.
   bool isKnownNeverInfinity() const {
@@ -903,9 +908,6 @@ bool isOverflowIntrinsicNoWrap(const WithOverflowInst *WO,
 /// Determine the possible constant range of vscale with the given bit width,
 /// based on the vscale_range function attribute.
 ConstantRange getVScaleRange(const Function *F, unsigned BitWidth);
-
-/// Determine the possible constant range of a vector constant.
-ConstantRange getVectorConstantRange(const Constant *C);
 
 /// Determine the possible constant range of an integer or vector of integer
 /// value. This is intended as a cheap, non-recursive check.

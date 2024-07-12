@@ -3,27 +3,18 @@ import unittest
 from pathlib import Path
 import os
 import argparse
+import sys
 
 
 class TestHeaderGenIntegration(unittest.TestCase):
     def setUp(self):
-        parser = argparse.ArgumentParser(
-            description="TestHeaderGenIntegration arguments"
-        )
-        parser.add_argument(
-            "--output_dir", type=str, help="Output directory for generated headers"
-        )
-        args, _ = parser.parse_known_args()
-        output_dir_env = os.getenv("TEST_OUTPUT_DIR")
 
         self.output_dir = Path(
-            args.output_dir
-            if args.output_dir
-            else output_dir_env if output_dir_env else "libc/newhdrgen/tests/output"
+            args.output_dir if args.output_dir else "libc/newhdrgen/tests/output"
         )
 
         self.maxDiff = None
-        # Adjust based on your directory structure such as being in build etc.
+
         self.source_dir = Path(__file__).resolve().parent.parent.parent.parent
 
     def run_script(self, yaml_file, h_def_file, output_dir):
@@ -71,4 +62,14 @@ class TestHeaderGenIntegration(unittest.TestCase):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="TestHeaderGenIntegration arguments")
+    parser.add_argument(
+        "--output_dir", type=str, help="Output directory for generated headers"
+    )
+    args, remaining_argv = parser.parse_known_args()
+
+    TestHeaderGenIntegration.output_dir = args.output_dir
+
+    sys.argv[1:] = remaining_argv
+
     unittest.main()
