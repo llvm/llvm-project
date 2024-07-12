@@ -736,14 +736,16 @@ public:
 /// Struct to hold various analysis needed for cost computations.
 struct VPCostContext {
   const TargetTransformInfo &TTI;
+  const TargetLibraryInfo &TLI;
   VPTypeAnalysis Types;
   LLVMContext &LLVMCtx;
   LoopVectorizationCostModel &CM;
   SmallPtrSet<Instruction *, 8> SkipCostComputation;
 
-  VPCostContext(const TargetTransformInfo &TTI, Type *CanIVTy,
-                LLVMContext &LLVMCtx, LoopVectorizationCostModel &CM)
-      : TTI(TTI), Types(CanIVTy, LLVMCtx), LLVMCtx(LLVMCtx), CM(CM) {}
+  VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
+                Type *CanIVTy, LLVMContext &LLVMCtx,
+                LoopVectorizationCostModel &CM)
+      : TTI(TTI), TLI(TLI), Types(CanIVTy, LLVMCtx), LLVMCtx(LLVMCtx), CM(CM) {}
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as
   /// fallback until computing the cost of all recipes migrates to VPlan.
@@ -862,7 +864,8 @@ public:
 protected:
   /// Compute the cost of this recipe using the legacy cost model and the
   /// underlying instructions.
-  InstructionCost computeCost(ElementCount VF, VPCostContext &Ctx) const;
+  virtual InstructionCost computeCost(ElementCount VF,
+                                      VPCostContext &Ctx) const;
 };
 
 // Helper macro to define common classof implementations for recipes.
@@ -1422,6 +1425,10 @@ public:
 
   /// Produce widened copies of all Ingredients.
   void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPWidenRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
   unsigned getOpcode() const { return Opcode; }
 

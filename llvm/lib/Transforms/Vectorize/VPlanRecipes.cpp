@@ -1137,6 +1137,80 @@ void VPWidenRecipe::execute(VPTransformState &State) {
 #endif
 }
 
+InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
+                                           VPCostContext &Ctx) const {
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  switch (Opcode) {
+  case Instruction::FNeg: {
+    Type *VectorTy =
+        ToVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
+    return Ctx.TTI.getArithmeticInstrCost(
+        Opcode, VectorTy, CostKind,
+        {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
+        {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None});
+  }
+
+  case Instruction::UDiv:
+  case Instruction::SDiv:
+  case Instruction::SRem:
+  case Instruction::URem:
+    // More complex computation, let the legacy cost-model handle this for now.
+    return Ctx.getLegacyCost(cast<Instruction>(getUnderlyingValue()), VF);
+  case Instruction::Add:
+  case Instruction::FAdd:
+  case Instruction::Sub:
+  case Instruction::FSub:
+  case Instruction::Mul:
+  case Instruction::FMul:
+  case Instruction::FDiv:
+  case Instruction::FRem:
+  case Instruction::Shl:
+  case Instruction::LShr:
+  case Instruction::AShr:
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor: {
+    VPValue *Op2 = getOperand(1);
+    // Certain instructions can be cheaper to vectorize if they have a constant
+    // second vector operand. One example of this are shifts on x86.
+    TargetTransformInfo::OperandValueInfo Op2Info = {
+        TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None};
+    if (Op2->isLiveIn())
+      Op2Info = Ctx.TTI.getOperandInfo(Op2->getLiveInIRValue());
+
+    if (Op2Info.Kind == TargetTransformInfo::OK_AnyValue &&
+        getOperand(1)->isDefinedOutsideVectorRegions())
+      Op2Info.Kind = TargetTransformInfo::OK_UniformValue;
+    Type *VectorTy =
+        ToVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
+    Instruction *CtxI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
+
+    SmallVector<const Value *, 4> Operands;
+    if (CtxI)
+      Operands.append(CtxI->value_op_begin(), CtxI->value_op_end());
+    return Ctx.TTI.getArithmeticInstrCost(
+        Opcode, VectorTy, CostKind,
+        {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
+        Op2Info, Operands, CtxI, &Ctx.TLI);
+  }
+  case Instruction::Freeze: {
+    // This opcode is unknown. Assume that it is the same as 'mul'.
+    Type *VectorTy =
+        ToVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
+    return Ctx.TTI.getArithmeticInstrCost(Instruction::Mul, VectorTy, CostKind);
+  }
+  case Instruction::ICmp:
+  case Instruction::FCmp: {
+    Instruction *CtxI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
+    Type *VectorTy = ToVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
+    return Ctx.TTI.getCmpSelInstrCost(Opcode, VectorTy, nullptr, getPredicate(),
+                                      CostKind, CtxI);
+  }
+  default:
+    llvm_unreachable("Unsupported opcode for instruction");
+  }
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
