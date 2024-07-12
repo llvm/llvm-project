@@ -615,7 +615,7 @@ bool ConstStructBuilder::AppendBitField(const FieldDecl *Field,
 
   llvm::ConstantInt *CI = dyn_cast<llvm::ConstantInt>(C);
   if (!CI) {
-    // Constants long _BitInt types are sometimes split into individual bytes.
+    // Constants for long _BitInt types are sometimes split into individual bytes.
     // Try to fold these back into an integer constant. If that doesn't work
     // out, then we are trying to initialize a bitfield with a non-trivial
     // constant, this must require run-time code.
