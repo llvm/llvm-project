@@ -15,7 +15,7 @@
 using namespace __asan;
 
 #if SANITIZER_CAN_USE_PREINIT_ARRAY
-// This section is linked into the main executable when -fsanitize=hwaddress is
+// This section is linked into the main executable when -fsanitize=address is
 // specified to perform initialization at a very early stage.
 __attribute__((section(".preinit_array"), used)) static auto preinit =
     __asan_init;
