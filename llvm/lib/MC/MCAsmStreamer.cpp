@@ -254,7 +254,7 @@ public:
   void emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
                 SMLoc Loc = SMLoc()) override;
 
-  void emitAlignmentDirective(unsigned ByteAlignment,
+  void emitAlignmentDirective(uint64_t ByteAlignment,
                               std::optional<int64_t> Value, unsigned ValueSize,
                               unsigned MaxBytesToEmit);
 
@@ -1478,23 +1478,23 @@ void MCAsmStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
   EmitEOL();
 }
 
-void MCAsmStreamer::emitAlignmentDirective(unsigned ByteAlignment,
+void MCAsmStreamer::emitAlignmentDirective(uint64_t ByteAlignment,
                                            std::optional<int64_t> Value,
                                            unsigned ValueSize,
                                            unsigned MaxBytesToEmit) {
   if (MAI->useDotAlignForAlignment()) {
-    if (!isPowerOf2_32(ByteAlignment))
+    if (!isPowerOf2_64(ByteAlignment))
       report_fatal_error("Only power-of-two alignments are supported "
                          "with .align.");
     OS << "\t.align\t";
-    OS << Log2_32(ByteAlignment);
+    OS << Log2_64(ByteAlignment);
     EmitEOL();
     return;
   }
 
   // Some assemblers don't support non-power of two alignments, so we always
   // emit alignments as a power of two if possible.
-  if (isPowerOf2_32(ByteAlignment)) {
+  if (isPowerOf2_64(ByteAlignment)) {
     switch (ValueSize) {
     default:
       llvm_unreachable("Invalid size for machine code value!");
@@ -1511,7 +1511,7 @@ void MCAsmStreamer::emitAlignmentDirective(unsigned ByteAlignment,
       llvm_unreachable("Unsupported alignment size!");
     }
 
-    OS << Log2_32(ByteAlignment);
+    OS << Log2_64(ByteAlignment);
 
     if (Value.has_value() || MaxBytesToEmit) {
       if (Value.has_value()) {
