@@ -1976,13 +1976,11 @@ vectorizeScalableVectorPrecondition(Operation *op,
   bool seenParalell = false;
   auto iterators = linalgOp.getIteratorTypesArray();
   SmallVector<bool> scalableFlags(inputScalableVecDims);
-  if (!scalableFlags.back()) {
-    while (!scalableFlags.back()) {
-      seenParalell |= (iterators.back() == utils::IteratorType::parallel);
+  while (!scalableFlags.back()) {
+    seenParalell |= (iterators.back() == utils::IteratorType::parallel);
 
-      iterators.pop_back();
-      scalableFlags.pop_back();
-    }
+    iterators.pop_back();
+    scalableFlags.pop_back();
   }
 
   // TODO: Support scalable vectorisation for reduction dims
@@ -2006,7 +2004,7 @@ vectorizeScalableVectorPrecondition(Operation *op,
       return failure();
   }
 
-  // Cond 4: Only element-wise and 1d depthwise conv ops supported in the
+  // Cond 4: Only the following ops are supported in the
   // presence of scalable vectors
   return success(isElementwise(linalgOp) || isa<linalg::MatmulOp>(op) ||
                  isa<linalg::MatmulTransposeAOp>(op) ||
