@@ -42,7 +42,8 @@ Decl *SemaHLSL::ActOnStartBuffer(Scope *BufferScope, bool CBuffer,
                     : llvm::hlsl::ResourceClass::SRV;
   auto RK = CBuffer ? llvm::hlsl::ResourceKind::CBuffer
                     : llvm::hlsl::ResourceKind::TBuffer;
-  Result->addAttr(HLSLResourceAttr::CreateImplicit(getASTContext(), RC, RK,
+  Result->addAttr(HLSLResourceClassAttr::CreateImplicit(getASTContext(), RC));
+  Result->addAttr(HLSLResourceAttr::CreateImplicit(getASTContext(), RK,
                                                    /*IsROV=*/false));
 
   SemaRef.PushOnScopeChains(Result, BufferScope);
@@ -511,6 +512,24 @@ const CXXRecordDecl *getRecordDeclFromVarDecl(VarDecl *VD) {
   return TheRecordDecl;
 }
 
+const HLSLResourceClassAttr *
+getHLSLResourceClassAttrFromEitherDecl(VarDecl *VD,
+                                       HLSLBufferDecl *CBufferOrTBuffer) {
+
+  if (VD) {
+    const CXXRecordDecl *TheRecordDecl = getRecordDeclFromVarDecl(VD);
+    if (!TheRecordDecl)
+      return nullptr;
+    const auto *Attr = TheRecordDecl->getAttr<HLSLResourceClassAttr>();
+    return Attr;
+  } else if (CBufferOrTBuffer) {
+    const auto *Attr = CBufferOrTBuffer->getAttr<HLSLResourceClassAttr>();
+    return Attr;
+  }
+  llvm_unreachable("one of the two conditions should be true.");
+  return nullptr;
+}
+
 const HLSLResourceAttr *
 getHLSLResourceAttrFromEitherDecl(VarDecl *VD,
                                   HLSLBufferDecl *CBufferOrTBuffer) {
@@ -542,7 +561,7 @@ void traverseType(QualType TheQualTy, RegisterBindingFlags &Flags) {
   if (auto TDecl = dyn_cast<ClassTemplateSpecializationDecl>(SubRecordDecl)) {
     auto TheRecordDecl = TDecl->getSpecializedTemplate()->getTemplatedDecl();
     TheRecordDecl = TheRecordDecl->getCanonicalDecl();
-    const auto *Attr = TheRecordDecl->getAttr<HLSLResourceAttr>();
+    const auto *Attr = TheRecordDecl->getAttr<HLSLResourceClassAttr>();
     llvm::hlsl::ResourceClass DeclResourceClass = Attr->getResourceClass();
     switch (DeclResourceClass) {
     case llvm::hlsl::ResourceClass::SRV:
@@ -610,11 +629,11 @@ RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S, Decl *TheDecl) {
     else
       Flags.SRV = true;
   } else if (TheVarDecl) {
-    const HLSLResourceAttr *res_attr =
-        getHLSLResourceAttrFromEitherDecl(TheVarDecl, CBufferOrTBuffer);
-    if (res_attr) {
+    const HLSLResourceClassAttr *resClassAttr =
+        getHLSLResourceClassAttrFromEitherDecl(TheVarDecl, CBufferOrTBuffer);
+    if (resClassAttr) {
       llvm::hlsl::ResourceClass DeclResourceClass =
-          res_attr->getResourceClass();
+          resClassAttr->getResourceClass();
       Flags.Resource = true;
       switch (DeclResourceClass) {
       case llvm::hlsl::ResourceClass::SRV:
@@ -741,12 +760,15 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
   // next, if resource is set, make sure the register type in the register
   // annotation is compatible with the variable's resource type.
   if (Flags.Resource) {
-    const HLSLResourceAttr *res_attr =
+    const HLSLResourceAttr *resAttr =
         getHLSLResourceAttrFromEitherDecl(TheVarDecl, CBufferOrTBuffer);
-    assert(res_attr && "any decl that set the resource flag on analysis should "
-                       "have a resource attribute attached.");
+    const HLSLResourceClassAttr *resClassAttr =
+        getHLSLResourceClassAttrFromEitherDecl(TheVarDecl, CBufferOrTBuffer);
+    assert(resAttr && resClassAttr &&
+           "any decl that set the resource flag on analysis should "
+           "have a resource attribute and resource class attribute attached.");
     const llvm::hlsl::ResourceClass DeclResourceClass =
-        res_attr->getResourceClass();
+        resClassAttr->getResourceClass();
 
     switch (DeclResourceClass) {
     case llvm::hlsl::ResourceClass::SRV:
