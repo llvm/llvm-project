@@ -782,11 +782,11 @@ static unsigned int getCodeMemorySemantic(MemSDNode *N,
   //      behavior due to lack of Independent Forward Progress. Lowering these
   //      to weak memory operations in sm_60- is therefore fine.
   //
-  //      TODO: lower atomic and volatile operatios to memory locations
-  //      in local, const, and param to two PTX operations in sm_70+:
-  //        - the "weak" memory operation we are currently lowering to, and
-  //        - some other memory operation that preserves the side-effect, e.g.,
-  //          a dummy volatile load.
+  //      TODO: lower atomic and volatile operations to memory locations
+  //      in local, const, and param to two PTX instructions in sm_70+:
+  //        - the "weak" memory instruction we are currently lowering to, and
+  //        - some other instruction that preserves the side-effect, e.g.,
+  //          a dead dummy volatile load.
 
   if (CodeAddrSpace == NVPTX::PTXLdStInstCode::LOCAL ||
       CodeAddrSpace == NVPTX::PTXLdStInstCode::CONSTANT ||
