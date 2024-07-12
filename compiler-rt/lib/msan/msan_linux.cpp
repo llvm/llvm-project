@@ -74,7 +74,7 @@ static bool ProtectMemoryRange(uptr beg, uptr size, const char *name) {
       uptr end = beg + size - 1;
       Printf(
           "FATAL: MemorySanitizer: Cannot protect memory range %p-%p (%s).\n",
-          (void *)beg, (void *)end);
+          (void *)beg, (void *)end, name);
       return false;
     }
   }
