@@ -226,6 +226,9 @@ public:
   /// Needs to be invoked before each \p CU is processed.
   void virtual initSection(DWARFUnit &CU){};
 
+  /// Initializes Ranges section with empty list.
+  void initSection();
+
 protected:
   std::unique_ptr<DebugBufferVector> RangesBuffer;
 

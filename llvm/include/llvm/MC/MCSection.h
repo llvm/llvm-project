@@ -68,7 +68,6 @@ public:
       F = F->Next;
       return *this;
     }
-    iterator operator++(int) { return iterator(F->Next); }
   };
 
   struct FragList {
