@@ -389,7 +389,7 @@ private:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineBlockFrequencyInfo>();
-    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     RegAllocEvictionAdvisorAnalysis::getAnalysisUsage(AU);
   }
 
@@ -407,7 +407,7 @@ private:
     }
     return std::make_unique<MLEvictAdvisor>(
         MF, RA, Runner.get(), getAnalysis<MachineBlockFrequencyInfo>(),
-        getAnalysis<MachineLoopInfo>());
+        getAnalysis<MachineLoopInfoWrapperPass>().getLI());
   }
   std::unique_ptr<MLModelRunner> Runner;
 };
@@ -496,7 +496,7 @@ private:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineBlockFrequencyInfo>();
-    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     RegAllocEvictionAdvisorAnalysis::getAnalysisUsage(AU);
   }
 
@@ -545,7 +545,7 @@ private:
       Log->switchContext(MF.getName());
     return std::make_unique<DevelopmentModeEvictAdvisor>(
         MF, RA, Runner.get(), getAnalysis<MachineBlockFrequencyInfo>(),
-        getAnalysis<MachineLoopInfo>(), Log.get());
+        getAnalysis<MachineLoopInfoWrapperPass>().getLI(), Log.get());
   }
 
   std::unique_ptr<MLModelRunner> Runner;

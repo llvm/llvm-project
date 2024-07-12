@@ -485,7 +485,8 @@ int SelectedCharKind(const std::string &, int defaultKind);
 std::optional<DynamicType> ComparisonType(
     const DynamicType &, const DynamicType &);
 
-bool IsInteroperableIntrinsicType(const DynamicType &,
+// Returns nullopt for deferred, assumed, and non-constant lengths.
+std::optional<bool> IsInteroperableIntrinsicType(const DynamicType &,
     const common::LanguageFeatureControl * = nullptr,
     bool checkCharLength = true);
 bool IsCUDAIntrinsicType(const DynamicType &);

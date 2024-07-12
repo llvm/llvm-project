@@ -1394,6 +1394,21 @@ void CodeGenModule::Release() {
   // that might affect the DLL storage class or the visibility, and
   // before anything that might act on these.
   setVisibilityFromDLLStorageClass(LangOpts, getModule());
+
+  // Check the tail call symbols are truly undefined.
+  if (getTriple().isPPC() && !MustTailCallUndefinedGlobals.empty()) {
+    for (auto &I : MustTailCallUndefinedGlobals) {
+      if (!I.first->isDefined())
+        getDiags().Report(I.second, diag::err_ppc_impossible_musttail) << 2;
+      else {
+        StringRef MangledName = getMangledName(GlobalDecl(I.first));
+        llvm::GlobalValue *Entry = GetGlobalValue(MangledName);
+        if (!Entry || Entry->isWeakForLinker() ||
+            Entry->isDeclarationForLinker())
+          getDiags().Report(I.second, diag::err_ppc_impossible_musttail) << 2;
+      }
+    }
+  }
 }
 
 void CodeGenModule::EmitOpenCLMetadata() {
@@ -7149,6 +7164,9 @@ void CodeGenModule::AddDeferredUnusedCoverageMapping(Decl *D) {
       break;
     SourceManager &SM = getContext().getSourceManager();
     if (LimitedCoverage && SM.getMainFileID() != SM.getFileID(D->getBeginLoc()))
+      break;
+    if (!llvm::coverage::SystemHeadersCoverage &&
+        SM.isInSystemHeader(D->getBeginLoc()))
       break;
     DeferredEmptyCoverageMappingDecls.try_emplace(D, true);
     break;

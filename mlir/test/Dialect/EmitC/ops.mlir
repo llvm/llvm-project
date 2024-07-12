@@ -248,3 +248,9 @@ func.func @use_global(%i: index) -> f32 {
   %1 = emitc.subscript %0[%i] : (!emitc.array<2xf32>, index) -> f32
   return %1 : f32
 }
+
+func.func @assign_global(%arg0 : i32) {
+  %0 = emitc.get_global @myglobal_int : i32
+  emitc.assign %arg0 : i32 to %0 : i32
+  return
+}

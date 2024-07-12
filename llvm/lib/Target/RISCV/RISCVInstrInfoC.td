@@ -716,29 +716,29 @@ let EmitPriority = 0 in {
 let Predicates = [HasStdExtCOrZca] in {
 def : InstAlias<"c.lw $rd, (${rs1})", (C_LW GPRC:$rd, GPRCMem:$rs1, 0)>;
 def : InstAlias<"c.sw $rs2, (${rs1})", (C_SW GPRC:$rs2, GPRCMem:$rs1, 0)>;
-def : InstAlias<"c.lwsp $rd, (${rs1})", (C_LWSP GPRC:$rd, SPMem:$rs1, 0)>;
-def : InstAlias<"c.swsp $rs2, (${rs1})", (C_SWSP GPRC:$rs2, SPMem:$rs1, 0)>;
+def : InstAlias<"c.lwsp $rd, (${rs1})", (C_LWSP GPRNoX0:$rd, SPMem:$rs1, 0)>;
+def : InstAlias<"c.swsp $rs2, (${rs1})", (C_SWSP GPRNoX0:$rs2, SPMem:$rs1, 0)>;
 }
 
 let Predicates = [HasStdExtCOrZca, IsRV64] in {
 def : InstAlias<"c.ld $rd, (${rs1})", (C_LD GPRC:$rd, GPRCMem:$rs1, 0)>;
 def : InstAlias<"c.sd $rs2, (${rs1})", (C_SD GPRC:$rs2, GPRCMem:$rs1, 0)>;
-def : InstAlias<"c.ldsp $rd, (${rs1})", (C_LDSP GPRC:$rd, SPMem:$rs1, 0)>;
-def : InstAlias<"c.sdsp $rs2, (${rs1})", (C_SDSP GPRC:$rs2, SPMem:$rs1, 0)>;
+def : InstAlias<"c.ldsp $rd, (${rs1})", (C_LDSP GPRNoX0:$rd, SPMem:$rs1, 0)>;
+def : InstAlias<"c.sdsp $rs2, (${rs1})", (C_SDSP GPRNoX0:$rs2, SPMem:$rs1, 0)>;
 }
 
 let Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in {
 def : InstAlias<"c.flw $rd, (${rs1})", (C_FLW FPR32C:$rd, GPRCMem:$rs1, 0)>;
 def : InstAlias<"c.fsw $rs2, (${rs1})", (C_FSW FPR32C:$rs2, GPRCMem:$rs1, 0)>;
-def : InstAlias<"c.flwsp $rd, (${rs1})", (C_FLWSP FPR32C:$rd, SPMem:$rs1, 0)>;
-def : InstAlias<"c.fswsp $rs2, (${rs1})", (C_FSWSP FPR32C:$rs2, SPMem:$rs1, 0)>;
+def : InstAlias<"c.flwsp $rd, (${rs1})", (C_FLWSP FPR32:$rd, SPMem:$rs1, 0)>;
+def : InstAlias<"c.fswsp $rs2, (${rs1})", (C_FSWSP FPR32:$rs2, SPMem:$rs1, 0)>;
 }
 
 let Predicates = [HasStdExtCOrZcd, HasStdExtD] in {
 def : InstAlias<"c.fld $rd, (${rs1})", (C_FLD FPR64C:$rd, GPRCMem:$rs1, 0)>;
 def : InstAlias<"c.fsd $rs2, (${rs1})", (C_FSD FPR64C:$rs2, GPRCMem:$rs1, 0)>;
-def : InstAlias<"c.fldsp $rd, (${rs1})", (C_FLDSP FPR64C:$rd, SPMem:$rs1, 0)>;
-def : InstAlias<"c.fsdsp $rs2, (${rs1})", (C_FSDSP FPR64C:$rs2, SPMem:$rs1, 0)>;
+def : InstAlias<"c.fldsp $rd, (${rs1})", (C_FLDSP FPR64:$rd, SPMem:$rs1, 0)>;
+def : InstAlias<"c.fsdsp $rs2, (${rs1})", (C_FSDSP FPR64:$rs2, SPMem:$rs1, 0)>;
 }
 } // EmitPriority = 0
 
@@ -801,6 +801,12 @@ def InsnCJ : DirectiveInsnCJ<(outs), (ins uimm2_opcode:$opcode,
                                           uimm3:$funct3,
                                           simm12_lsb0:$imm11),
                              "$opcode, $funct3, $imm11">;
+def Insn16 : RVInst16<(outs), (ins uimm16:$value), "", "", [], InstFormatOther> {
+  bits<16> value;
+
+  let Inst{15-0} = value;
+  let AsmString = ".insn 0x2, $value";
+}
 }
 
 // Use InstAliases to match these so that we can combine the insn and format

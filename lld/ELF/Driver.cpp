@@ -631,7 +631,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // of Libtool. We cannot convince every software developer to migrate to
   // the latest version and re-generate scripts. So we have this hack.
   if (args.hasArg(OPT_v) || args.hasArg(OPT_version))
-    message(getLLDVersion() + ", compatible with GNU linkers");
+    message(getLLDVersion() + " (compatible with GNU linkers)");
 
   if (const char *path = getReproduceOption(args)) {
     // Note that --reproduce is a debug option so you can ignore it
@@ -2551,8 +2551,12 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
     // If __real_ is referenced, pull in the symbol if it is lazy. Do this after
     // processing __wrap_ as that may have referenced __real_.
     StringRef realName = saver().save("__real_" + name);
-    if (symtab.find(realName))
+    if (Symbol *real = symtab.find(realName)) {
       symtab.addUnusedUndefined(name, sym->binding);
+      // Update sym's binding, which will replace real's later in
+      // SymbolTable::wrap.
+      sym->binding = real->binding;
+    }
 
     Symbol *real = symtab.addUnusedUndefined(realName);
     v.push_back({sym, real, wrap});

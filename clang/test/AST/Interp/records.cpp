@@ -495,7 +495,7 @@ namespace DeclRefs {
   static_assert(b.a.m == 100, "");
   static_assert(b.a.f == 100, "");
 
-  constexpr B b2;
+  constexpr B b2{};
   static_assert(b2.a.m == 100, "");
   static_assert(b2.a.f == 100, "");
   static_assert(b2.a.f == 101, ""); // both-error {{failed}} \

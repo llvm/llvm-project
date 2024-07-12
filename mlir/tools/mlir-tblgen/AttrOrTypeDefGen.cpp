@@ -89,6 +89,8 @@ private:
   void emitTopLevelDeclarations();
   /// Emit the function that returns the type or attribute name.
   void emitName();
+  /// Emit the dialect name as a static member variable.
+  void emitDialectName();
   /// Emit attribute or type builders.
   void emitBuilders();
   /// Emit a verifier for the def.
@@ -184,6 +186,8 @@ DefGen::DefGen(const AttrOrTypeDef &def)
     emitBuilders();
   // Emit the type name.
   emitName();
+  // Emit the dialect name.
+  emitDialectName();
   // Emit the verifier.
   if (storageCls && def.genVerifyDecl())
     emitVerifier();
@@ -279,6 +283,13 @@ void DefGen::emitName() {
   std::string nameDecl =
       strfmt("static constexpr ::llvm::StringLiteral name = \"{0}\";\n", name);
   defCls.declare<ExtraClassDeclaration>(std::move(nameDecl));
+}
+
+void DefGen::emitDialectName() {
+  std::string decl =
+      strfmt("static constexpr ::llvm::StringLiteral dialectName = \"{0}\";\n",
+             def.getDialect().getName());
+  defCls.declare<ExtraClassDeclaration>(std::move(decl));
 }
 
 void DefGen::emitBuilders() {

@@ -500,7 +500,8 @@ public:
     OpRegister,
     OpWindowSave,
     OpNegateRAState,
-    OpGnuArgsSize
+    OpGnuArgsSize,
+    OpLabel,
   };
 
 private:
@@ -519,6 +520,7 @@ private:
       unsigned Register;
       unsigned Register2;
     } RR;
+    MCSymbol *CfiLabel;
   } U;
   OpType Operation;
   SMLoc Loc;
@@ -542,6 +544,12 @@ private:
       : Label(L), Operation(Op), Loc(Loc) {
     assert(Op == OpLLVMDefAspaceCfa);
     U.RIA = {R, O, AS};
+  }
+
+  MCCFIInstruction(OpType Op, MCSymbol *L, MCSymbol *CfiLabel, SMLoc Loc)
+      : Label(L), Operation(Op), Loc(Loc) {
+    assert(Op == OpLabel);
+    U.CfiLabel = CfiLabel;
   }
 
 public:
@@ -664,6 +672,11 @@ public:
     return MCCFIInstruction(OpGnuArgsSize, L, 0, Size, Loc);
   }
 
+  static MCCFIInstruction createLabel(MCSymbol *L, MCSymbol *CfiLabel,
+                                      SMLoc Loc) {
+    return MCCFIInstruction(OpLabel, L, CfiLabel, Loc);
+  }
+
   OpType getOperation() const { return Operation; }
   MCSymbol *getLabel() const { return Label; }
 
@@ -696,6 +709,11 @@ public:
            Operation == OpRelOffset || Operation == OpDefCfaOffset ||
            Operation == OpAdjustCfaOffset || Operation == OpGnuArgsSize);
     return U.RI.Offset;
+  }
+
+  MCSymbol *getCfiLabel() const {
+    assert(Operation == OpLabel);
+    return U.CfiLabel;
   }
 
   StringRef getValues() const {

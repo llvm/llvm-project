@@ -1760,6 +1760,45 @@ bool DIExpression::extractIfOffset(int64_t &Offset) const {
   return false;
 }
 
+bool DIExpression::extractLeadingOffset(
+    int64_t &OffsetInBytes, SmallVectorImpl<uint64_t> &RemainingOps) const {
+  OffsetInBytes = 0;
+  RemainingOps.clear();
+
+  auto SingleLocEltsOpt = getSingleLocationExpressionElements();
+  if (!SingleLocEltsOpt)
+    return false;
+
+  auto ExprOpEnd = expr_op_iterator(SingleLocEltsOpt->end());
+  auto ExprOpIt = expr_op_iterator(SingleLocEltsOpt->begin());
+  while (ExprOpIt != ExprOpEnd) {
+    uint64_t Op = ExprOpIt->getOp();
+    if (Op == dwarf::DW_OP_deref || Op == dwarf::DW_OP_deref_size ||
+        Op == dwarf::DW_OP_deref_type || Op == dwarf::DW_OP_LLVM_fragment ||
+        Op == dwarf::DW_OP_LLVM_extract_bits_zext ||
+        Op == dwarf::DW_OP_LLVM_extract_bits_sext) {
+      break;
+    } else if (Op == dwarf::DW_OP_plus_uconst) {
+      OffsetInBytes += ExprOpIt->getArg(0);
+    } else if (Op == dwarf::DW_OP_constu) {
+      uint64_t Value = ExprOpIt->getArg(0);
+      ++ExprOpIt;
+      if (ExprOpIt->getOp() == dwarf::DW_OP_plus)
+        OffsetInBytes += Value;
+      else if (ExprOpIt->getOp() == dwarf::DW_OP_minus)
+        OffsetInBytes -= Value;
+      else
+        return false;
+    } else {
+      // Not a const plus/minus operation or deref.
+      return false;
+    }
+    ++ExprOpIt;
+  }
+  RemainingOps.append(ExprOpIt.getBase(), ExprOpEnd.getBase());
+  return true;
+}
+
 bool DIExpression::hasAllLocationOps(unsigned N) const {
   SmallDenseSet<uint64_t, 4> SeenOps;
   for (auto ExprOp : expr_ops())

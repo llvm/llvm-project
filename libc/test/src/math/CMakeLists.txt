@@ -2213,6 +2213,18 @@ add_fp_unittest(
     libc.src.math.f16sqrtl
 )
 
+add_fp_unittest(
+  cbrtf_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    cbrtf_test.cpp
+  DEPENDS
+    libc.src.math.cbrtf
+    libc.src.__support.FPUtil.fp_bits
+)
+
 add_subdirectory(generic)
 add_subdirectory(smoke)
 

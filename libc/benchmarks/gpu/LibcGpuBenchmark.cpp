@@ -5,9 +5,10 @@
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/fixedvector.h"
+#include "src/__support/macros/config.h"
 #include "src/time/gpu/time_utils.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace benchmarks {
 
 FixedVector<Benchmark *, 64> benchmarks;
@@ -52,11 +53,10 @@ void Benchmark::run_benchmarks() {
   uint64_t id = gpu::get_thread_id();
   gpu::sync_threads();
 
-  for (Benchmark *b : benchmarks)
+  for (Benchmark *b : benchmarks) {
     results[id] = b->run();
-  gpu::sync_threads();
-  if (id == 0) {
-    for (Benchmark const *b : benchmarks) {
+    gpu::sync_threads();
+    if (id == 0) {
       BenchmarkResult all_results = reduce_results(results);
       constexpr auto GREEN = "\033[32m";
       constexpr auto RESET = "\033[0m";
@@ -136,4 +136,4 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
 };
 
 } // namespace benchmarks
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

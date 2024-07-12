@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DbgVariableFragmentInfo.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/Support/Casting.h"
@@ -2886,29 +2887,7 @@ public:
   /// Return whether there is exactly one operator and it is a DW_OP_deref;
   bool isDeref() const;
 
-  /// Holds the characteristics of one fragment of a larger variable.
-  struct FragmentInfo {
-    FragmentInfo() = default;
-    FragmentInfo(uint64_t SizeInBits, uint64_t OffsetInBits)
-        : SizeInBits(SizeInBits), OffsetInBits(OffsetInBits) {}
-    uint64_t SizeInBits;
-    uint64_t OffsetInBits;
-    /// Return the index of the first bit of the fragment.
-    uint64_t startInBits() const { return OffsetInBits; }
-    /// Return the index of the bit after the end of the fragment, e.g. for
-    /// fragment offset=16 and size=32 return their sum, 48.
-    uint64_t endInBits() const { return OffsetInBits + SizeInBits; }
-
-    /// Returns a zero-sized fragment if A and B don't intersect.
-    static DIExpression::FragmentInfo intersect(DIExpression::FragmentInfo A,
-                                                DIExpression::FragmentInfo B) {
-      uint64_t StartInBits = std::max(A.OffsetInBits, B.OffsetInBits);
-      uint64_t EndInBits = std::min(A.endInBits(), B.endInBits());
-      if (EndInBits <= StartInBits)
-        return {0, 0};
-      return DIExpression::FragmentInfo(EndInBits - StartInBits, StartInBits);
-    }
-  };
+  using FragmentInfo = DbgVariableFragmentInfo;
 
   /// Return the number of bits that have an active value, i.e. those that
   /// aren't known to be zero/sign (depending on the type of Var) and which
@@ -3002,6 +2981,16 @@ public:
   /// If this is a constant offset, extract it. If there is no expression,
   /// return true with an offset of zero.
   bool extractIfOffset(int64_t &Offset) const;
+
+  /// Assuming that the expression operates on an address, extract a constant
+  /// offset and the successive ops. Return false if the expression contains
+  /// any incompatible ops (including non-zero DW_OP_LLVM_args - only a single
+  /// address operand to the expression is permitted).
+  ///
+  /// We don't try very hard to interpret the expression because we assume that
+  /// foldConstantMath has canonicalized the expression.
+  bool extractLeadingOffset(int64_t &OffsetInBytes,
+                            SmallVectorImpl<uint64_t> &RemainingOps) const;
 
   /// Returns true iff this DIExpression contains at least one instance of
   /// `DW_OP_LLVM_arg, n` for all n in [0, N).
