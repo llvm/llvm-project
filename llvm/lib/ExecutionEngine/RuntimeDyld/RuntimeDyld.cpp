@@ -1097,8 +1097,7 @@ void RuntimeDyldImpl::reassignSectionAddress(unsigned SectionID,
 
 void RuntimeDyldImpl::resolveRelocationList(const RelocationList &Relocs,
                                             uint64_t Value) {
-  for (unsigned i = 0, e = Relocs.size(); i != e; ++i) {
-    const RelocationEntry &RE = Relocs[i];
+  for (const RelocationEntry &RE : Relocs) {
     // Ignore relocations for sections that were not loaded
     if (RE.SectionID != AbsoluteSymbolSection &&
         Sections[RE.SectionID].getAddress() == nullptr)

@@ -245,6 +245,9 @@ struct CommonConfig {
   // Symbol info specified by --add-symbol option.
   SmallVector<NewSymbolInfo, 0> SymbolsToAdd;
 
+  // Integer options
+  int64_t ChangeSectionLMAValAll = 0;
+
   // Boolean options
   bool DeterministicArchives = true;
   bool ExtractDWO = false;

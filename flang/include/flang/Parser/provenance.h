@@ -176,11 +176,11 @@ public:
       const std::string &message, const std::string &prefix,
       llvm::raw_ostream::Colors color, bool echoSourceLine = false) const;
   const SourceFile *GetSourceFile(
-      Provenance, std::size_t *offset = nullptr) const;
+      Provenance, std::size_t *offset = nullptr, bool topLevel = false) const;
   const char *GetSource(ProvenanceRange) const;
   std::optional<SourcePosition> GetSourcePosition(Provenance) const;
   std::optional<ProvenanceRange> GetFirstFileProvenance() const;
-  std::string GetPath(Provenance) const; // __FILE__
+  std::string GetPath(Provenance, bool topLevel = false) const; // __FILE__
   int GetLineNumber(Provenance) const; // __LINE__
   Provenance CompilerInsertionProvenance(char ch);
   ProvenanceRange IntersectionWithSourceFiles(ProvenanceRange) const;

@@ -2589,6 +2589,14 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
     --pc;
 #endif
 
+#if !(defined(_LIBUNWIND_SUPPORT_SEH_UNWIND) && defined(_WIN32))
+  // In case of this is frame of signal handler, the IP saved in the signal
+  // handler points to first non-executed instruction, while FDE/CIE expects IP
+  // to be after the first non-executed instruction.
+  if (_isSignalFrame)
+    ++pc;
+#endif
+
   // Ask address space object to find unwind sections for this pc.
   UnwindInfoSections sects;
   if (_addressSpace.findUnwindSections(pc, sects)) {

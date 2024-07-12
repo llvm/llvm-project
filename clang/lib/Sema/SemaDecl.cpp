@@ -1676,6 +1676,15 @@ bool Sema::CheckRedeclarationExported(NamedDecl *New, NamedDecl *Old) {
   if (IsOldExported)
     return false;
 
+  // If the Old declaration are not attached to named modules
+  // and the New declaration are attached to global module.
+  // It should be fine to allow the export since it doesn't change
+  // the linkage of declarations. See
+  // https://github.com/llvm/llvm-project/issues/98583 for details.
+  if (!Old->isInNamedModule() && New->getOwningModule() &&
+      New->getOwningModule()->isImplicitGlobalModule())
+    return false;
+
   assert(IsNewExported);
 
   auto Lk = Old->getFormalLinkage();
@@ -13313,7 +13322,8 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   if (getLangOpts().CPlusPlusModules && currentModuleIsHeaderUnit() &&
       !VDecl->isInvalidDecl() && VDecl->isThisDeclarationADefinition() &&
       VDecl->getFormalLinkage() == Linkage::External && !VDecl->isInline() &&
-      !VDecl->isTemplated() && !isa<VarTemplateSpecializationDecl>(VDecl)) {
+      !VDecl->isTemplated() && !isa<VarTemplateSpecializationDecl>(VDecl) &&
+      !VDecl->getInstantiatedFromStaticDataMember()) {
     Diag(VDecl->getLocation(), diag::err_extern_def_in_header_unit);
     VDecl->setInvalidDecl();
   }
@@ -15221,6 +15231,9 @@ ShouldWarnAboutMissingPrototype(const FunctionDecl *FD,
     if (IdentifierInfo *II = FD->getIdentifier())
       if (II->isStr("main") || II->isStr("efi_main"))
         return false;
+
+  if (FD->isMSVCRTEntryPoint())
+    return false;
 
   // Don't warn about inline functions.
   if (FD->isInlined())
@@ -18028,15 +18041,6 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
       if (NumInitMethods > 1 || !Def->hasInitMethod())
         Diag(RD->getLocation(), diag::err_sycl_special_type_num_init_method);
     }
-
-    // If we're defining a dynamic class in a module interface unit, we always
-    // need to produce the vtable for it even if the vtable is not used in the
-    // current TU.
-    //
-    // The case that the current class is not dynamic is handled in
-    // MarkVTableUsed.
-    if (getCurrentModule() && getCurrentModule()->isInterfaceOrPartition())
-      MarkVTableUsed(RD->getLocation(), RD, /*DefinitionRequired=*/true);
   }
 
   // Exit this scope of this tag's definition.

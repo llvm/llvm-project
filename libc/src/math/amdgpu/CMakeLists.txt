@@ -457,59 +457,35 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  lrint
-  SRCS
-    lrint.cpp
-  HDRS
-    ../lrint.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-  VENDOR
-)
-
-add_entrypoint_object(
-  lrintf
-  SRCS
-    lrintf.cpp
-  HDRS
-    ../lrintf.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-  VENDOR
-)
-
-add_entrypoint_object(
-  llrint
-  SRCS
-    llrint.cpp
-  HDRS
-    ../llrint.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-  VENDOR
-)
-
-add_entrypoint_object(
-  llrintf
-  SRCS
-    llrintf.cpp
-  HDRS
-    ../llrintf.h
-  COMPILE_OPTIONS
-    ${bitcode_link_flags}
-    -O2
-  VENDOR
-)
-
-add_entrypoint_object(
   pow
   SRCS
     pow.cpp
   HDRS
     ../pow.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+  VENDOR
+)
+
+add_entrypoint_object(
+  powi
+  SRCS
+    powi.cpp
+  HDRS
+    ../powi.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+  VENDOR
+)
+
+add_entrypoint_object(
+  powif
+  SRCS
+    powif.cpp
+  HDRS
+    ../powif.h
   COMPILE_OPTIONS
     ${bitcode_link_flags}
     -O2

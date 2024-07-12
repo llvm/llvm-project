@@ -1703,10 +1703,11 @@ void AsmPrinter::emitFunctionBody() {
     }
 
     // Get MachineLoopInfo or compute it on the fly if it's unavailable
-    MLI = getAnalysisIfAvailable<MachineLoopInfo>();
+    auto *MLIWrapper = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
+    MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
     if (!MLI) {
       OwnedMLI = std::make_unique<MachineLoopInfo>();
-      OwnedMLI->getBase().analyze(MDT->getBase());
+      OwnedMLI->analyze(MDT->getBase());
       MLI = OwnedMLI.get();
     }
   }
@@ -2995,8 +2996,7 @@ void AsmPrinter::emitModuleIdents(Module &M) {
     return;
 
   if (const NamedMDNode *NMD = M.getNamedMetadata("llvm.ident")) {
-    for (unsigned i = 0, e = NMD->getNumOperands(); i != e; ++i) {
-      const MDNode *N = NMD->getOperand(i);
+    for (const MDNode *N : NMD->operands()) {
       assert(N->getNumOperands() == 1 &&
              "llvm.ident metadata entry can have only one operand");
       const MDString *S = cast<MDString>(N->getOperand(0));
@@ -3017,8 +3017,7 @@ void AsmPrinter::emitModuleCommandLines(Module &M) {
   OutStreamer->pushSection();
   OutStreamer->switchSection(CommandLine);
   OutStreamer->emitZeros(1);
-  for (unsigned i = 0, e = NMD->getNumOperands(); i != e; ++i) {
-    const MDNode *N = NMD->getOperand(i);
+  for (const MDNode *N : NMD->operands()) {
     assert(N->getNumOperands() == 1 &&
            "llvm.commandline metadata entry can have only one operand");
     const MDString *S = cast<MDString>(N->getOperand(0));
