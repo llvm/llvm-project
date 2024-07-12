@@ -138,6 +138,10 @@
     ret void
   }
 
+  define void @clobberred_forwarded_phi_avl() {
+    ret void
+  }
+
   declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
 
   declare <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, i64) #1
@@ -1034,4 +1038,64 @@ body: |
     liveins: $v8m2
     renamable $v10m2 = PseudoVADD_VV_M2 undef renamable $v10m2, renamable $v8m2, renamable $v8m2, -1, 5, 0
     renamable $v8m2 = PseudoVADD_VV_M2 undef renamable $v8m2, killed renamable $v10m2, killed renamable $v8m2, %outvl:gprnox0, 5, 0
+    PseudoRET implicit $v8m2
+...
+---
+name: clobberred_forwarded_phi_avl
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: clobberred_forwarded_phi_avl
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $x10, $x11, $v8m2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %v:vrm2 = COPY $v8m2
+  ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gprnox0 = ADDI $x0, 1
+  ; CHECK-NEXT:   %x:gpr = COPY $x10
+  ; CHECK-NEXT:   %y:gpr = COPY $x11
+  ; CHECK-NEXT:   BEQ %x, %y, %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gprnox0 = ADDI $x0, 2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   dead %outvl:gprnox0 = PseudoVSETVLI [[ADDI]], 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprnox0 = COPY [[ADDI]]
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors: %bb.4(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   dead [[ADDI:%[0-9]+]]:gprnox0 = ADDI [[ADDI]], 1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4:
+  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_:%[0-9]+]]:gpr = PseudoVSETVLIX0 killed $x0, 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   renamable $v10m2 = PseudoVADD_VV_M2 undef renamable $v10m2, %v, %v, -1, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETVLI [[COPY]], 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   renamable $v8m2 = PseudoVADD_VV_M2 undef renamable $v8m2, killed renamable $v10m2, %v, $noreg, 5 /* e32 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   PseudoRET implicit $v8m2
+  bb.0:
+    liveins: $x10, $x11, $v8m2
+    %v:vrm2 = COPY $v8m2
+    %a:gpr = ADDI $x0, 1
+    %x:gpr = COPY $x10
+    %y:gpr = COPY $x11
+    BEQ %x, %y, %bb.2
+
+  bb.1:
+    %b:gpr = ADDI $x0, 2
+
+  bb.2:
+    %avl:gprnox0 = PHI %a, %bb.0, %b, %bb.1
+    %outvl:gprnox0 = PseudoVSETVLI %avl:gprnox0, 209, implicit-def dead $vl, implicit-def dead $vtype
+
+  bb.3:
+    %avl:gprnox0 = ADDI %avl:gprnox0, 1
+
+  bb.4:
+    renamable $v10m2 = PseudoVADD_VV_M2 undef renamable $v10m2, %v, %v, -1, 5, 0
+    renamable $v8m2 = PseudoVADD_VV_M2 undef renamable $v8m2, killed renamable $v10m2, killed %v, %outvl:gprnox0, 5, 0
     PseudoRET implicit $v8m2

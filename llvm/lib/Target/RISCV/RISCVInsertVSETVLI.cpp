@@ -1153,9 +1153,13 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
       else {
         Register AVLCopyReg =
             MRI->createVirtualRegister(&RISCV::GPRNoX0RegClass);
-        MachineBasicBlock::iterator AVLDef =
-            LIS->getInstructionFromIndex(Info.getAVLVNInfo()->def);
-        auto AVLCopy = BuildMI(*AVLDef->getParent(), std::next(AVLDef), DL,
+        MachineBasicBlock::iterator II;
+        if (Info.getAVLVNInfo()->isPHIDef())
+          II = LIS->getMBBFromIndex(Info.getAVLVNInfo()->def)->getFirstNonPHI();
+        else
+          II = LIS->getInstructionFromIndex(Info.getAVLVNInfo()->def);
+        assert(II.isValid());
+        auto AVLCopy = BuildMI(*II->getParent(), std::next(II), DL,
                                TII->get(RISCV::COPY), AVLCopyReg)
                            .addReg(AVLReg);
         LIS->InsertMachineInstrInMaps(*AVLCopy);
