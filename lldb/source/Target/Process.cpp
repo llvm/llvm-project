@@ -4254,7 +4254,7 @@ bool Process::ProcessEventData::ForwardEventToPendingListeners(
   if (event_ptr->GetType() != Process::eBroadcastBitStateChanged)
     return true;
 
-  // For state changed events, if the update state is one, we are handling
+  // For state changed events, if the update state is zero, we are handling
   // this on the private state thread.  We should wait for the public event.
   return m_update_state == 1;
 }
