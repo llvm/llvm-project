@@ -11350,7 +11350,6 @@ cc_library(
         ":TensorTransforms",
         ":TensorUtils",
         ":TilingInterface",
-        ":TosaDialect",
         ":TransformUtils",
         ":ValueBoundsOpInterface",
         ":VectorDialect",
