@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: darwin
 // REQUIRES: stdlib=libc++ && !stdlib=apple-libc++
 
 // This file checks various properties of the installation of libc++abi when built under
-// a vanilla upstream configuration.
+// a vanilla upstream configuration on Darwin platforms.
 
 // Make sure we install the libc++abi headers in the right location.
 //
