@@ -3958,7 +3958,7 @@ verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
                            "as permutation_map results: ")
            << AffineMapAttr::get(permutationMap)
            << " vs inBounds of size: " << inBounds.size();
-  for (unsigned int i = 0; i < permutationMap.getNumResults(); ++i)
+  for (unsigned int i = 0, e = permutationMap.getNumResults(); i < e; ++i)
     if (isa<AffineConstantExpr>(permutationMap.getResult(i)) &&
         !llvm::cast<BoolAttr>(inBounds.getValue()[i]).getValue())
       return op->emitOpError("requires broadcast dimensions to be in-bounds");

@@ -1235,7 +1235,7 @@ static Operation *vectorizeAffineLoad(AffineLoadOp loadOp,
 
   auto transfer = state.builder.create<vector::TransferReadOp>(
       loadOp.getLoc(), vectorType, loadOp.getMemRef(), indices, permutationMap,
-      ArrayRef<bool>(inBounds));
+      inBounds);
 
   // Register replacement for future uses in the scope.
   state.registerOpVectorReplacement(loadOp, transfer);
