@@ -362,6 +362,7 @@ CIRGenCXXABI *cir::CreateCIRGenItaniumCXXABI(CIRGenModule &CGM) {
   case TargetCXXABI::AppleARM64:
     // TODO: this isn't quite right, clang uses AppleARM64CXXABI which inherits
     // from ARMCXXABI. We'll have to follow suit.
+    assert(!MissingFeatures::appleArm64CXXABI());
     return new CIRGenItaniumCXXABI(CGM);
 
   default:
