@@ -9315,7 +9315,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           function_ref<InstructionCost(InstructionCost)> VectorCost) {
         // Calculate the cost of this instruction.
         InstructionCost ScalarCost = 0;
-        if (isa<CastInst, CmpInst, SelectInst, CallInst>(VL0)) {
+        if (isa<CastInst, CallInst>(VL0)) {
           // For some of the instructions no need to calculate cost for each
           // particular instruction, we can use the cost of the single
           // instruction x total number of scalar instructions.
@@ -9636,9 +9636,27 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                        ? CmpInst::BAD_FCMP_PREDICATE
                                        : CmpInst::BAD_ICMP_PREDICATE;
 
-      return TTI->getCmpSelInstrCost(E->getOpcode(), OrigScalarTy,
+      InstructionCost ScalarCost = TTI->getCmpSelInstrCost(E->getOpcode(), OrigScalarTy,
                                      Builder.getInt1Ty(), CurrentPred, CostKind,
                                      VI);
+      auto IntrinsicAndUse = canConvertToMinOrMaxIntrinsic(VI);
+      if (IntrinsicAndUse.first != Intrinsic::not_intrinsic) {
+        IntrinsicCostAttributes CostAttrs(IntrinsicAndUse.first, OrigScalarTy,
+                                          {OrigScalarTy, OrigScalarTy});
+        InstructionCost IntrinsicCost =
+            TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
+        // If the selects are the only uses of the compares, they will be
+        // dead and we can adjust the cost by removing their cost.
+        if (IntrinsicAndUse.second) {
+          auto *CI = cast<CmpInst>(VI->getOperand(0));
+          IntrinsicCost -= TTI->getCmpSelInstrCost(CI->getOpcode(), OrigScalarTy,
+                                                   Builder.getInt1Ty(),
+                                                   CI->getPredicate(), CostKind, CI);
+        }
+        ScalarCost = std::min(ScalarCost, IntrinsicCost);
+      }
+
+      return ScalarCost;
     };
     auto GetVectorCost = [&](InstructionCost CommonCost) {
       auto *MaskTy = getWidenedType(Builder.getInt1Ty(), VL.size());
@@ -9656,9 +9674,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
             TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
         // If the selects are the only uses of the compares, they will be
         // dead and we can adjust the cost by removing their cost.
-        if (IntrinsicAndUse.second)
-          IntrinsicCost -= TTI->getCmpSelInstrCost(Instruction::ICmp, VecTy,
+        if (IntrinsicAndUse.second) {
+          auto *CI = cast<CmpInst>(cast<Instruction>(VL.front())->getOperand(0));
+          IntrinsicCost -= TTI->getCmpSelInstrCost(CI->getOpcode(), VecTy,
                                                    MaskTy, VecPred, CostKind);
+        }
         VecCost = std::min(VecCost, IntrinsicCost);
       }
       return VecCost + CommonCost;
