@@ -362,6 +362,8 @@ void presburger::normalizeDiv(MutableArrayRef<DynamicAPInt> num,
                               DynamicAPInt &denom) {
   assert(denom > 0 && "denom must be positive!");
   DynamicAPInt gcd = llvm::gcd(gcdRange(num), denom);
+  if (gcd == 1)
+    return;
   for (DynamicAPInt &coeff : num)
     coeff /= gcd;
   denom /= gcd;

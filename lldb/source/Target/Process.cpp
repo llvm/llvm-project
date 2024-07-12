@@ -460,12 +460,10 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_private_state_listener_sp(
           Listener::MakeListener("lldb.process.internal_state_listener")),
       m_mod_id(), m_process_unique_id(0), m_thread_index_id(0),
-      m_thread_id_to_index_id_map(), m_exit_status(-1), m_exit_string(),
-      m_exit_status_mutex(), m_thread_mutex(), m_thread_list_real(this),
-      m_thread_list(this), m_thread_plans(*this), m_extended_thread_list(this),
-      m_extended_thread_stop_id(0), m_queue_list(this), m_queue_list_stop_id(0),
-      m_watchpoint_resource_list(), m_notifications(), m_image_tokens(),
-      m_breakpoint_site_list(), m_dynamic_checkers_up(),
+      m_thread_id_to_index_id_map(), m_exit_status(-1),
+      m_thread_list_real(*this), m_thread_list(*this), m_thread_plans(*this),
+      m_extended_thread_list(*this), m_extended_thread_stop_id(0),
+      m_queue_list(this), m_queue_list_stop_id(0),
       m_unix_signals_sp(unix_signals_sp), m_abi_sp(), m_process_input_reader(),
       m_stdio_communication("process.stdio"), m_stdio_communication_mutex(),
       m_stdin_forward(false), m_stdout_data(), m_stderr_data(),
@@ -1183,8 +1181,8 @@ void Process::UpdateThreadListIfNeeded() {
       // mutex between the call to UpdateThreadList(...) and the
       // os->UpdateThreadList(...) so it doesn't change on us
       ThreadList &old_thread_list = m_thread_list;
-      ThreadList real_thread_list(this);
-      ThreadList new_thread_list(this);
+      ThreadList real_thread_list(*this);
+      ThreadList new_thread_list(*this);
       // Always update the thread list with the protocol specific thread list,
       // but only update if "true" is returned
       if (UpdateThreadList(m_thread_list_real, real_thread_list)) {
@@ -4152,7 +4150,6 @@ bool Process::ProcessEventData::ShouldStop(Event *event_ptr,
 
   ThreadList &curr_thread_list = process_sp->GetThreadList();
   uint32_t num_threads = curr_thread_list.GetSize();
-  uint32_t idx;
 
   // The actions might change one of the thread's stop_info's opinions about
   // whether we should stop the process, so we need to query that as we go.
@@ -4162,23 +4159,18 @@ bool Process::ProcessEventData::ShouldStop(Event *event_ptr,
   // get that wrong (which is possible) then the thread list might have
   // changed, and that would cause our iteration here to crash.  We could
   // make a copy of the thread list, but we'd really like to also know if it
-  // has changed at all, so we make up a vector of the thread ID's and check
-  // what we get back against this list & bag out if anything differs.
-  ThreadList not_suspended_thread_list(process_sp.get());
-  std::vector<uint32_t> thread_index_array(num_threads);
-  uint32_t not_suspended_idx = 0;
-  for (idx = 0; idx < num_threads; ++idx) {
+  // has changed at all, so we store the original thread ID's of all threads and
+  // check what we get back against this list & bag out if anything differs.
+  std::vector<std::pair<ThreadSP, size_t>> not_suspended_threads;
+  for (uint32_t idx = 0; idx < num_threads; ++idx) {
     lldb::ThreadSP thread_sp = curr_thread_list.GetThreadAtIndex(idx);
 
     /*
      Filter out all suspended threads, they could not be the reason
      of stop and no need to perform any actions on them.
      */
-    if (thread_sp->GetResumeState() != eStateSuspended) {
-      not_suspended_thread_list.AddThread(thread_sp);
-      thread_index_array[not_suspended_idx] = thread_sp->GetIndexID();
-      not_suspended_idx++;
-    }
+    if (thread_sp->GetResumeState() != eStateSuspended)
+      not_suspended_threads.emplace_back(thread_sp, thread_sp->GetIndexID());
   }
 
   // Use this to track whether we should continue from here.  We will only
@@ -4194,8 +4186,7 @@ bool Process::ProcessEventData::ShouldStop(Event *event_ptr,
   // is, and it's better to let the user decide than continue behind their
   // backs.
 
-  for (idx = 0; idx < not_suspended_thread_list.GetSize(); ++idx) {
-    curr_thread_list = process_sp->GetThreadList();
+  for (auto [thread_sp, thread_index] : not_suspended_threads) {
     if (curr_thread_list.GetSize() != num_threads) {
       Log *log(GetLog(LLDBLog::Step | LLDBLog::Process));
       LLDB_LOGF(
@@ -4205,14 +4196,11 @@ bool Process::ProcessEventData::ShouldStop(Event *event_ptr,
       break;
     }
 
-    lldb::ThreadSP thread_sp = not_suspended_thread_list.GetThreadAtIndex(idx);
-
-    if (thread_sp->GetIndexID() != thread_index_array[idx]) {
+    if (thread_sp->GetIndexID() != thread_index) {
       Log *log(GetLog(LLDBLog::Step | LLDBLog::Process));
-      LLDB_LOGF(log,
-                "The thread at position %u changed from %u to %u while "
-                "processing event.",
-                idx, thread_index_array[idx], thread_sp->GetIndexID());
+      LLDB_LOG(log,
+               "The thread {0} changed from {1} to {2} while processing event.",
+               thread_sp.get(), thread_index, thread_sp->GetIndexID());
       break;
     }
 

@@ -10,6 +10,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -19,6 +20,7 @@
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
+#include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -62,7 +64,7 @@ private:
 
   void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
-  void emitDataRegion(DataRegionData::KindTy Kind);
+  void emitDataRegion(MachO::DataRegionType Kind);
   void emitDataRegionEnd();
 
 public:
@@ -80,6 +82,10 @@ public:
     CreatedADWARFSection = false;
     HasSectionLabel.clear();
     MCObjectStreamer::reset();
+  }
+
+  MachObjectWriter &getWriter() {
+    return static_cast<MachObjectWriter &>(getAssembler().getWriter());
   }
 
   /// @name MCStreamer Interface
@@ -161,6 +167,10 @@ static bool canGoAfterDWARF(const MCSectionMachO &MSec) {
     return true;
   if (SegName == "__LLVM" && (SecName == "__cg_profile"))
     return true;
+
+  if (SegName == "__DATA" && SecName == "__auth_ptr")
+    return true;
+
   return false;
 }
 
@@ -226,20 +236,18 @@ void MCMachOStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
   MCObjectStreamer::emitAssignment(Symbol, Value);
 }
 
-void MCMachOStreamer::emitDataRegion(DataRegionData::KindTy Kind) {
+void MCMachOStreamer::emitDataRegion(MachO::DataRegionType Kind) {
   // Create a temporary label to mark the start of the data region.
   MCSymbol *Start = getContext().createTempSymbol();
   emitLabel(Start);
   // Record the region for the object writer to use.
-  DataRegionData Data = { Kind, Start, nullptr };
-  std::vector<DataRegionData> &Regions = getAssembler().getDataRegions();
-  Regions.push_back(Data);
+  getWriter().getDataRegions().push_back({Kind, Start, nullptr});
 }
 
 void MCMachOStreamer::emitDataRegionEnd() {
-  std::vector<DataRegionData> &Regions = getAssembler().getDataRegions();
+  auto &Regions = getWriter().getDataRegions();
   assert(!Regions.empty() && "Mismatched .end_data_region!");
-  DataRegionData &Data = Regions.back();
+  auto &Data = Regions.back();
   assert(!Data.End && "Mismatched .end_data_region!");
   // Create a temporary label to mark the end of the data region.
   Data.End = getContext().createTempSymbol();
@@ -268,16 +276,16 @@ void MCMachOStreamer::emitLinkerOptions(ArrayRef<std::string> Options) {
 void MCMachOStreamer::emitDataRegion(MCDataRegionType Kind) {
   switch (Kind) {
   case MCDR_DataRegion:
-    emitDataRegion(DataRegionData::Data);
+    emitDataRegion(MachO::DataRegionType::DICE_KIND_DATA);
     return;
   case MCDR_DataRegionJT8:
-    emitDataRegion(DataRegionData::JumpTable8);
+    emitDataRegion(MachO::DataRegionType::DICE_KIND_JUMP_TABLE8);
     return;
   case MCDR_DataRegionJT16:
-    emitDataRegion(DataRegionData::JumpTable16);
+    emitDataRegion(MachO::DataRegionType::DICE_KIND_JUMP_TABLE16);
     return;
   case MCDR_DataRegionJT32:
-    emitDataRegion(DataRegionData::JumpTable32);
+    emitDataRegion(MachO::DataRegionType::DICE_KIND_JUMP_TABLE32);
     return;
   case MCDR_DataRegionEnd:
     emitDataRegionEnd();
@@ -321,10 +329,8 @@ bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym,
   if (Attribute == MCSA_IndirectSymbol) {
     // Note that we intentionally cannot use the symbol data here; this is
     // important for matching the string table that 'as' generates.
-    IndirectSymbolData ISD;
-    ISD.Symbol = Symbol;
-    ISD.Section = getCurrentSectionOnly();
-    getAssembler().getIndirectSymbols().push_back(ISD);
+    getWriter().getIndirectSymbols().push_back(
+        {Symbol, getCurrentSectionOnly()});
     return true;
   }
 

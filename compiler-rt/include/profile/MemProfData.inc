@@ -39,6 +39,8 @@
 #define MEMPROF_RAW_SUPPORTED_VERSIONS                                         \
   { 3ULL, 4ULL }
 
+#define MEMPROF_V3_MIB_SIZE 132ULL;
+
 #define MEMPROF_BUILDID_MAX_SIZE 32ULL
 
 namespace llvm {

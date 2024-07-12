@@ -36,7 +36,7 @@ LLVM_LIBC_FUNCTION(int, sched_rr_get_interval,
                                             tid, &ts32);
     if (ret == 0) {
       tp->tv_sec = ts32.tv_sec;
-      tp->tv_nsec = ts32.tv_nsec;
+      tp->tv_nsec = static_cast<long int>(ts32.tv_nsec);
     }
   } else
     // When tp is a nullptr, we still do the syscall to set ret and errno

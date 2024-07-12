@@ -100,6 +100,15 @@ public:
 
   bool checkFullyInitialized(InterpState &S, const Pointer &Ptr) const;
 
+  QualType getSourceType() const {
+    if (const auto *D =
+            dyn_cast_if_present<ValueDecl>(Source.dyn_cast<const Decl *>()))
+      return D->getType();
+    else if (const auto *E = Source.dyn_cast<const Expr *>())
+      return E->getType();
+    return QualType();
+  }
+
   /// Dump to stderr.
   void dump() const;
 

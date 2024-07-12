@@ -11,10 +11,16 @@
 
 #ifdef LIBC_FULL_BUILD
 
+#include "include/llvm-libc-macros/math-function-macros.h"
 #include "include/llvm-libc-macros/math-macros.h"
 
 #else // Overlay mode
 
+// GCC will include CXX headers when __cplusplus is defined. This behavior
+// can be suppressed by defining _GLIBCXX_INCLUDE_NEXT_C_HEADERS.
+#if defined(__GNUC__) && !defined(__clang__)
+#define _GLIBCXX_INCLUDE_NEXT_C_HEADERS
+#endif
 #include <math.h>
 
 // Some older math.h header does not have FP_INT_* constants yet.

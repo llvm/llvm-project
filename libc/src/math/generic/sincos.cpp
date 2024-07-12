@@ -63,7 +63,7 @@ LLVM_LIBC_FUNCTION(void, sincos, (double x, double *sin_x, double *cos_x)) {
 
   DoubleDouble y;
   unsigned k;
-  generic::LargeRangeReduction<NO_FMA> range_reduction_large;
+  generic::LargeRangeReduction<NO_FMA> range_reduction_large{};
 
   // |x| < 2^32 (with FMA) or |x| < 2^23 (w/o FMA)
   if (LIBC_LIKELY(x_e < FPBits::EXP_BIAS + FAST_PASS_EXPONENT)) {

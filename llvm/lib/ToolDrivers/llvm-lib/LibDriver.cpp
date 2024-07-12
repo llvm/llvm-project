@@ -145,7 +145,7 @@ static void doList(opt::InputArgList &Args) {
     return;
 
   Error Err = Error::success();
-  object::Archive Archive(B.get()->getMemBufferRef(), Err);
+  object::Archive Archive(B->getMemBufferRef(), Err);
   fatalOpenError(std::move(Err), B->getBufferIdentifier());
 
   std::vector<StringRef> Names;

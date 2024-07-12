@@ -109,6 +109,14 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT: Successor(s): middle.block
 ; DBG-EMPTY:
 ; DBG-NEXT: middle.block:
+; DBG-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VEC_TC]]>
+; DBG-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
+; DBG-NEXT: Successor(s): ir-bb<exit>, scalar.ph
+; DBG-EMPTY:
+; DBG-NEXT: ir-bb<exit>:
+; DBG-NEXT: No successors
+; DBG-EMPTY:
+; DBG-NEXT: scalar.ph:
 ; DBG-NEXT: No successors
 ; DBG-NEXT: }
 
@@ -203,9 +211,18 @@ exit:
 ; DBG-EMPTY:
 ; DBG-NEXT: middle.block:
 ; DBG-NEXT:   EMIT vp<[[RESUME_1:%.+]]> = extract-from-end vp<[[SCALAR_STEPS]]>, ir<1>
+; DBG-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq vp<[[TC]]>, vp<[[VEC_TC]]>
+; DBG-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
+; DBG-NEXT: Successor(s): ir-bb<exit>, scalar.ph
+; DBG-EMPTY:
+; DBG-NEXT: ir-bb<exit>:
 ; DBG-NEXT: No successors
 ; DBG-EMPTY:
-; DBG-NEXT: Live-out i32 %for = vp<[[RESUME_1]]>
+; DBG-NEXT: scalar.ph:
+; DBG-NEXT:  EMIT vp<[[RESUME_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<0>
+; DBG-NEXT: No successors
+; DBG-EMPTY:
+; DBG-NEXT: Live-out i32 %for = vp<[[RESUME_P]]>
 ; DBG-NEXT: }
 
 define void @first_order_recurrence_using_induction(i32 %n, ptr %dst) {

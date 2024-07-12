@@ -451,6 +451,18 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE(COS_F);
   case TargetOpcode::G_FTAN:
     RTLIBCASE(TAN_F);
+  case TargetOpcode::G_FASIN:
+    RTLIBCASE(ASIN_F);
+  case TargetOpcode::G_FACOS:
+    RTLIBCASE(ACOS_F);
+  case TargetOpcode::G_FATAN:
+    RTLIBCASE(ATAN_F);
+  case TargetOpcode::G_FSINH:
+    RTLIBCASE(SINH_F);
+  case TargetOpcode::G_FCOSH:
+    RTLIBCASE(COSH_F);
+  case TargetOpcode::G_FTANH:
+    RTLIBCASE(TANH_F);
   case TargetOpcode::G_FLOG10:
     RTLIBCASE(LOG10_F);
   case TargetOpcode::G_FLOG:
@@ -1040,6 +1052,12 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_FCOS:
   case TargetOpcode::G_FSIN:
   case TargetOpcode::G_FTAN:
+  case TargetOpcode::G_FACOS:
+  case TargetOpcode::G_FASIN:
+  case TargetOpcode::G_FATAN:
+  case TargetOpcode::G_FCOSH:
+  case TargetOpcode::G_FSINH:
+  case TargetOpcode::G_FTANH:
   case TargetOpcode::G_FLOG10:
   case TargetOpcode::G_FLOG:
   case TargetOpcode::G_FLOG2:
@@ -2461,13 +2479,22 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
       NewOpc = TargetOpcode::G_CTTZ_ZERO_UNDEF;
     }
 
+    unsigned SizeDiff = WideTy.getSizeInBits() - CurTy.getSizeInBits();
+
+    if (MI.getOpcode() == TargetOpcode::G_CTLZ_ZERO_UNDEF) {
+      // An optimization where the result is the CTLZ after the left shift by
+      // (Difference in widety and current ty), that is,
+      // MIBSrc = MIBSrc << (sizeinbits(WideTy) - sizeinbits(CurTy))
+      // Result = ctlz MIBSrc
+      MIBSrc = MIRBuilder.buildShl(WideTy, MIBSrc,
+                                   MIRBuilder.buildConstant(WideTy, SizeDiff));
+    }
+
     // Perform the operation at the larger size.
     auto MIBNewOp = MIRBuilder.buildInstr(NewOpc, {WideTy}, {MIBSrc});
     // This is already the correct result for CTPOP and CTTZs
-    if (MI.getOpcode() == TargetOpcode::G_CTLZ ||
-        MI.getOpcode() == TargetOpcode::G_CTLZ_ZERO_UNDEF) {
+    if (MI.getOpcode() == TargetOpcode::G_CTLZ) {
       // The correct result is NewOp - (Difference in widety and current ty).
-      unsigned SizeDiff = WideTy.getSizeInBits() - CurTy.getSizeInBits();
       MIBNewOp = MIRBuilder.buildSub(
           WideTy, MIBNewOp, MIRBuilder.buildConstant(WideTy, SizeDiff));
     }
@@ -2895,6 +2922,12 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_FCOS:
   case TargetOpcode::G_FSIN:
   case TargetOpcode::G_FTAN:
+  case TargetOpcode::G_FACOS:
+  case TargetOpcode::G_FASIN:
+  case TargetOpcode::G_FATAN:
+  case TargetOpcode::G_FCOSH:
+  case TargetOpcode::G_FSINH:
+  case TargetOpcode::G_FTANH:
   case TargetOpcode::G_FLOG10:
   case TargetOpcode::G_FLOG:
   case TargetOpcode::G_FLOG2:
