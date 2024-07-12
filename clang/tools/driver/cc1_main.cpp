@@ -147,7 +147,7 @@ static int PrintSupportedExtensions(std::string TargetStr) {
     DescMap.insert({feature.Key, feature.Desc});
 
   if (MachineTriple.isRISCV())
-    llvm::riscvExtensionsHelp(DescMap);
+    llvm::RISCVISAInfo::printSupportedExtensions(DescMap);
   else if (MachineTriple.isAArch64())
     llvm::AArch64::PrintSupportedExtensions();
   else if (MachineTriple.isARM())
@@ -190,13 +190,20 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
   for (const llvm::SubtargetFeatureKV &feature : Features)
     EnabledFeatureNames.insert(feature.Key);
 
-  if (!MachineTriple.isAArch64()) {
+  if (MachineTriple.isAArch64())
+    llvm::AArch64::printEnabledExtensions(EnabledFeatureNames);
+  else if (MachineTriple.isRISCV()) {
+    llvm::StringMap<llvm::StringRef> DescMap;
+    for (const llvm::SubtargetFeatureKV &feature : Features)
+      DescMap.insert({feature.Key, feature.Desc});
+    llvm::RISCVISAInfo::printEnabledExtensions(MachineTriple.isArch64Bit(),
+                                               EnabledFeatureNames, DescMap);
+  } else {
     // The option was already checked in Driver::HandleImmediateArgs,
     // so we do not expect to get here if we are not a supported architecture.
     assert(0 && "Unhandled triple for --print-enabled-extensions option.");
     return 1;
   }
-  llvm::AArch64::printEnabledExtensions(EnabledFeatureNames);
 
   return 0;
 }

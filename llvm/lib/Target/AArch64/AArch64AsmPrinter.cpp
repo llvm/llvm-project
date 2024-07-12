@@ -272,17 +272,17 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   unsigned Flags = 0;
   if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("branch-target-enforcement")))
-    if (BTE->getZExtValue())
+    if (!BTE->isZero())
       Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
 
   if (const auto *GCS = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("guarded-control-stack")))
-    if (GCS->getZExtValue())
+    if (!GCS->isZero())
       Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
 
   if (const auto *Sign = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("sign-return-address")))
-    if (Sign->getZExtValue())
+    if (!Sign->isZero())
       Flags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
 
   uint64_t PAuthABIPlatform = -1;
@@ -848,13 +848,12 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
   }
 }
 
-template <typename MachineModuleInfoTarget>
-static void emitAuthenticatedPointer(
-    MCStreamer &OutStreamer, MCSymbol *StubLabel,
-    const typename MachineModuleInfoTarget::AuthStubInfo &StubInfo) {
+static void emitAuthenticatedPointer(MCStreamer &OutStreamer,
+                                     MCSymbol *StubLabel,
+                                     const MCExpr *StubAuthPtrRef) {
   // sym$auth_ptr$key$disc:
   OutStreamer.emitLabel(StubLabel);
-  OutStreamer.emitValue(StubInfo.AuthPtrRef, /*size=*/8);
+  OutStreamer.emitValue(StubAuthPtrRef, /*size=*/8);
 }
 
 void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
@@ -862,6 +861,25 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
 
   const Triple &TT = TM.getTargetTriple();
   if (TT.isOSBinFormatMachO()) {
+    // Output authenticated pointers as indirect symbols, if we have any.
+    MachineModuleInfoMachO &MMIMacho =
+        MMI->getObjFileInfo<MachineModuleInfoMachO>();
+
+    auto Stubs = MMIMacho.getAuthGVStubList();
+
+    if (!Stubs.empty()) {
+      // Switch to the "__auth_ptr" section.
+      OutStreamer->switchSection(
+          OutContext.getMachOSection("__DATA", "__auth_ptr", MachO::S_REGULAR,
+                                     SectionKind::getMetadata()));
+      emitAlignment(Align(8));
+
+      for (const auto &Stub : Stubs)
+        emitAuthenticatedPointer(*OutStreamer, Stub.first, Stub.second);
+
+      OutStreamer->addBlankLine();
+    }
+
     // Funny Darwin hack: This flag tells the linker that no global symbols
     // contain code that falls through to other global symbols (e.g. the obvious
     // implementation of multiple entry points).  If this doesn't occur, the
@@ -882,8 +900,7 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
       emitAlignment(Align(8));
 
       for (const auto &Stub : Stubs)
-        emitAuthenticatedPointer<MachineModuleInfoELF>(*OutStreamer, Stub.first,
-                                                       Stub.second);
+        emitAuthenticatedPointer(*OutStreamer, Stub.first, Stub.second);
 
       OutStreamer->addBlankLine();
     }
@@ -1676,16 +1693,29 @@ void AArch64AsmPrinter::LowerLOADauthptrstatic(const MachineInstr &MI) {
   //
   // Where the $auth_ptr$ symbol is the stub slot containing the signed pointer
   // to symbol.
-  assert(TM.getTargetTriple().isOSBinFormatELF() &&
-         "LOADauthptrstatic is implemented only for ELF");
-  const auto &TLOF =
-      static_cast<const AArch64_ELFTargetObjectFile &>(getObjFileLowering());
+  MCSymbol *AuthPtrStubSym;
+  if (TM.getTargetTriple().isOSBinFormatELF()) {
+    const auto &TLOF =
+        static_cast<const AArch64_ELFTargetObjectFile &>(getObjFileLowering());
 
-  assert(GAOp.getOffset() == 0 &&
-         "non-zero offset for $auth_ptr$ stub slots is not supported");
-  const MCSymbol *GASym = TM.getSymbol(GAOp.getGlobal());
-  MCSymbol *AuthPtrStubSym =
-      TLOF.getAuthPtrSlotSymbol(TM, &MF->getMMI(), GASym, Key, Disc);
+    assert(GAOp.getOffset() == 0 &&
+           "non-zero offset for $auth_ptr$ stub slots is not supported");
+    const MCSymbol *GASym = TM.getSymbol(GAOp.getGlobal());
+    AuthPtrStubSym =
+        TLOF.getAuthPtrSlotSymbol(TM, &MF->getMMI(), GASym, Key, Disc);
+  } else {
+    assert(TM.getTargetTriple().isOSBinFormatMachO() &&
+           "LOADauthptrstatic is implemented only for MachO/ELF");
+
+    const auto &TLOF = static_cast<const AArch64_MachoTargetObjectFile &>(
+        getObjFileLowering());
+
+    assert(GAOp.getOffset() == 0 &&
+           "non-zero offset for $auth_ptr$ stub slots is not supported");
+    const MCSymbol *GASym = TM.getSymbol(GAOp.getGlobal());
+    AuthPtrStubSym =
+        TLOF.getAuthPtrSlotSymbol(TM, &MF->getMMI(), GASym, Key, Disc);
+  }
 
   MachineOperand StubMOHi =
       MachineOperand::CreateMCSymbol(AuthPtrStubSym, AArch64II::MO_PAGE);

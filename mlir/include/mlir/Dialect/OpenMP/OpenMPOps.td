@@ -223,7 +223,10 @@ def SectionOp : OpenMP_Op<"section", [HasParent<"SectionsOp">],
   let description = [{
     A section operation encloses a region which represents one section in a
     sections construct. A section op should always be surrounded by an
-    `omp.sections` operation.
+    `omp.sections` operation. The section operation may have block args
+    which corespond to the block arguments of the surrounding `omp.sections`
+    operation. This is done to reflect situations where these block arguments
+    represent variables private to each section.
   }];
   let assemblyFormat = "$region attr-dict";
 }
@@ -242,6 +245,8 @@ def SectionsOp : OpenMP_Op<"sections", traits = [
     distributed among and executed by the threads in a team. Each `omp.section`
     is executed once by one of the threads in the team in the context of its
     implicit task.
+    Block arguments for reduction variables should be mirrored in enclosed
+    `omp.section` operations.
   }] # clausesDescription;
 
   // Override region definition.
@@ -354,7 +359,7 @@ def LoopNestOp : OpenMP_Op<"loop_nest", traits = [
 
 def WsloopOp : OpenMP_Op<"wsloop", traits = [
     AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopWrapperInterface>,
-    RecursiveMemoryEffects, SingleBlockImplicitTerminator<"TerminatorOp">
+    RecursiveMemoryEffects, SingleBlock
   ], clauses = [
     // TODO: Complete clause list (allocate, private).
     // TODO: Sort clauses alphabetically.
@@ -418,7 +423,7 @@ def WsloopOp : OpenMP_Op<"wsloop", traits = [
 
 def SimdOp : OpenMP_Op<"simd", traits = [
     AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopWrapperInterface>,
-    RecursiveMemoryEffects, SingleBlockImplicitTerminator<"TerminatorOp">
+    RecursiveMemoryEffects, SingleBlock
   ], clauses = [
     // TODO: Complete clause list (linear, private, reduction).
     OpenMP_AlignedClause, OpenMP_IfClause, OpenMP_NontemporalClause,
@@ -485,7 +490,7 @@ def YieldOp : OpenMP_Op<"yield",
 //===----------------------------------------------------------------------===//
 def DistributeOp : OpenMP_Op<"distribute", traits = [
     AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopWrapperInterface>,
-    RecursiveMemoryEffects, SingleBlockImplicitTerminator<"TerminatorOp">
+    RecursiveMemoryEffects, SingleBlock
   ], clauses = [
     // TODO: Complete clause list (private).
     // TODO: Sort clauses alphabetically.
@@ -575,7 +580,7 @@ def TaskOp : OpenMP_Op<"task", traits = [
 def TaskloopOp : OpenMP_Op<"taskloop", traits = [
     AttrSizedOperandSegments, AutomaticAllocationScope,
     DeclareOpInterfaceMethods<LoopWrapperInterface>, RecursiveMemoryEffects,
-    SingleBlockImplicitTerminator<"TerminatorOp">
+    SingleBlock
   ], clauses = [
     // TODO: Complete clause list (private).
     // TODO: Sort clauses alphabetically.

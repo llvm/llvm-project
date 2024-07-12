@@ -85,8 +85,12 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::FABS:
+  case ISD::FACOS:
+  case ISD::FASIN:
+  case ISD::FATAN:
   case ISD::FCEIL:
   case ISD::FCOS:
+  case ISD::FCOSH:
   case ISD::FEXP:
   case ISD::FEXP2:
   case ISD::FEXP10:
@@ -107,8 +111,10 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
   case ISD::FSIN:
+  case ISD::FSINH:
   case ISD::FSQRT:
   case ISD::FTAN:
+  case ISD::FTANH:
   case ISD::FTRUNC:
   case ISD::SIGN_EXTEND:
   case ISD::SINT_TO_FP:
@@ -1146,9 +1152,13 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::CTPOP:
   case ISD::VP_CTPOP:
   case ISD::FABS: case ISD::VP_FABS:
+  case ISD::FACOS:
+  case ISD::FASIN:
+  case ISD::FATAN:
   case ISD::FCEIL:
   case ISD::VP_FCEIL:
   case ISD::FCOS:
+  case ISD::FCOSH:
   case ISD::FEXP:
   case ISD::FEXP2:
   case ISD::FEXP10:
@@ -1181,8 +1191,10 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FROUNDEVEN:
   case ISD::VP_FROUNDEVEN:
   case ISD::FSIN:
+  case ISD::FSINH:
   case ISD::FSQRT: case ISD::VP_SQRT:
   case ISD::FTAN:
+  case ISD::FTANH:
   case ISD::FTRUNC:
   case ISD::VP_FROUNDTOZERO:
   case ISD::SINT_TO_FP:
@@ -4479,8 +4491,12 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     break;
 
   case ISD::FABS:
+  case ISD::FACOS:
+  case ISD::FASIN:
+  case ISD::FATAN:
   case ISD::FCEIL:
   case ISD::FCOS:
+  case ISD::FCOSH:
   case ISD::FEXP:
   case ISD::FEXP2:
   case ISD::FEXP10:
@@ -4493,8 +4509,10 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
   case ISD::FSIN:
+  case ISD::FSINH:
   case ISD::FSQRT:
   case ISD::FTAN:
+  case ISD::FTANH:
   case ISD::FTRUNC:
     if (unrollExpandedOp())
       break;

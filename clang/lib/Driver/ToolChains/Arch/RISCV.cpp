@@ -72,7 +72,7 @@ static void getRISCFeaturesFromMcpu(const Driver &D, const Arg *A,
 void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                    const ArgList &Args,
                                    std::vector<StringRef> &Features) {
-  StringRef MArch = getRISCVArch(Args, Triple);
+  std::string MArch = getRISCVArch(Args, Triple);
 
   if (!getArchFeatures(D, MArch, Features, Args))
     return;
@@ -227,7 +227,7 @@ StringRef riscv::getRISCVABI(const ArgList &Args, const llvm::Triple &Triple) {
   // rv64g | rv64*d -> lp64d
   // rv64e -> lp64e
   // rv64* -> lp64
-  StringRef Arch = getRISCVArch(Args, Triple);
+  std::string Arch = getRISCVArch(Args, Triple);
 
   auto ParseResult = llvm::RISCVISAInfo::parseArchString(
       Arch, /* EnableExperimentalExtension */ true);
@@ -253,8 +253,8 @@ StringRef riscv::getRISCVABI(const ArgList &Args, const llvm::Triple &Triple) {
   }
 }
 
-StringRef riscv::getRISCVArch(const llvm::opt::ArgList &Args,
-                              const llvm::Triple &Triple) {
+std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
+                                const llvm::Triple &Triple) {
   assert(Triple.isRISCV() && "Unexpected triple");
 
   // GCC's logic around choosing a default `-march=` is complex. If GCC is not
@@ -295,7 +295,7 @@ StringRef riscv::getRISCVArch(const llvm::opt::ArgList &Args,
     StringRef MArch = llvm::RISCV::getMArchFromMcpu(CPU);
     // Bypass if target cpu's default march is empty.
     if (MArch != "")
-      return MArch;
+      return MArch.str();
   }
 
   // 3. Choose a default based on `-mabi=`

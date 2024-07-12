@@ -71,14 +71,6 @@ define void @memset_inline_is_volatile(ptr %dest, i8 %value, i1 %is.volatile) {
   ret void
 }
 
-define void @memset_inline_variable_size(ptr %dest, i8 %value, i32 %size) {
-  ; CHECK: immarg operand has non-immediate parameter
-  ; CHECK-NEXT: i32 %size
-  ; CHECK-NEXT: call void @llvm.memset.inline.p0.i32(ptr %dest, i8 %value, i32 %size, i1 true)
-  call void @llvm.memset.inline.p0.i32(ptr %dest, i8 %value, i32 %size, i1 true)
-  ret void
-}
-
 
 declare i64 @llvm.objectsize.i64.p0(ptr, i1, i1, i1)
 define void @objectsize(ptr %ptr, i1 %a, i1 %b, i1 %c) {
