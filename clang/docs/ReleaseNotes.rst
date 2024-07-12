@@ -976,9 +976,6 @@ Bug Fixes to C++ Support
 - Fixed a bug where references to lambda capture inside a ``noexcept`` specifier were not correctly
   instantiated. (#GH95735).
 
-- Fixed a crash when substituting into constraint expressions for invalid variable templates.
-  Fixes: (`#73885 <https://github.com/llvm/llvm-project/issues/73885>`_)
-
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Clang now properly preserves ``FoundDecls`` within a ``ConceptReference``. (#GH82628)
