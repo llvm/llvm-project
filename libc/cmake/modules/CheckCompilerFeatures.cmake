@@ -50,15 +50,18 @@ set(AVAILABLE_COMPILER_FEATURES "")
 foreach(feature IN LISTS ALL_COMPILER_FEATURES)
   set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
   set(compile_options ${LIBC_COMPILE_OPTIONS_NATIVE})
+  set(link_options "")
   if(${feature} STREQUAL "fixed_point")
     list(APPEND compile_options "-ffixed-point")
   elseif(${feature} MATCHES "^builtin_")
     set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT})
+    set(link_options -nostdlib)
     # The compiler might handle calls to rounding builtins by generating calls
     # to the respective libc math functions, in which case we cannot use these
     # builtins in our implementations of these functions. We check that this is
     # not the case by trying to link an executable, since linking would fail due
-    # to unresolved references if calls to libc functions were generated.
+    # to unresolved references with -nostdlib if calls to libc functions were
+    # generated.
     set(CMAKE_TRY_COMPILE_TARGET_TYPE EXECUTABLE)
   endif()
 
@@ -67,6 +70,7 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
     ${CMAKE_CURRENT_BINARY_DIR}/compiler_features
     SOURCES ${LIBC_SOURCE_DIR}/cmake/modules/compiler_features/check_${feature}.cpp
     COMPILE_DEFINITIONS -I${LIBC_SOURCE_DIR} ${compile_options}
+    LINK_OPTIONS ${link_options}
   )
   if(has_feature)
     list(APPEND AVAILABLE_COMPILER_FEATURES ${feature})
