@@ -206,7 +206,7 @@ def parse_args():
     )
     execution_test_time_group = execution_group.add_mutually_exclusive_group()
     execution_test_time_group.add_argument(
-        "--skip-test-recording",
+        "--skip-test-time-recording",
         help="Do not track elapsed wall time for each test",
         action="store_true",
     )
