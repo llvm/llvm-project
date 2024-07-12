@@ -1892,7 +1892,9 @@ bool RISCVTargetLowering::isTruncateFree(SDValue Val, EVT VT2) const {
       SrcVT.isVector() && VT2.isVector()) {
     unsigned SrcBits = SrcVT.getVectorElementType().getSizeInBits();
     unsigned DestBits = VT2.getVectorElementType().getSizeInBits();
-    return (SrcBits == DestBits * 2);
+    if (SrcBits == DestBits * 2) {
+      return true;
+    }
   }
   return TargetLowering::isTruncateFree(Val, VT2);
 }
