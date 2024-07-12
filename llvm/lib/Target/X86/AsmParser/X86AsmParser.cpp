@@ -3749,26 +3749,26 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   return false;
 }
 
-static void replaceSSE2AVXOpcode(MCInst &Inst) {
+static bool convertSSEToAVX(MCInst &Inst) {
   ArrayRef<X86TableEntry> Table{X86SSE2AVXTable};
   unsigned Opcode = Inst.getOpcode();
   const auto I = llvm::lower_bound(Table, Opcode);
-  if (I != Table.end() && I->OldOpc == Opcode)
-    Inst.setOpcode(I->NewOpc);
+  if (I == Table.end() || I->OldOpc != Opcode)
+    return false;
 
+  Inst.setOpcode(I->NewOpc);
+  // AVX variant of BLENDVPD/BLENDVPS/PBLENDVB instructions has more
+  // operand compare to SSE variant, which is added below
   if (X86::isBLENDVPD(Opcode) || X86::isBLENDVPS(Opcode) ||
-      X86::isPBLENDVB(Opcode)) {
-    unsigned RegNo = Inst.getOperand(2).getReg();
-    Inst.addOperand(MCOperand::createReg(RegNo));
-  }
+      X86::isPBLENDVB(Opcode))
+    Inst.addOperand(Inst.getOperand(2));
+
+  return true;
 }
 
 bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
-  // When "-msse2avx" option is enabled replaceSSE2AVXOpcode method will
-  // replace SSE instruction with equivalent AVX instruction using mapping given
-  // in table GET_X86_SSE2AVX_TABLE
-  if (MCOptions.X86Sse2Avx)
-    replaceSSE2AVXOpcode(Inst);
+  if (MCOptions.X86Sse2Avx && convertSSEToAVX(Inst))
+    return true;
 
   if (ForcedOpcodePrefix != OpcodePrefix_VEX3 &&
       X86::optimizeInstFromVEX3ToVEX2(Inst, MII.get(Inst.getOpcode())))

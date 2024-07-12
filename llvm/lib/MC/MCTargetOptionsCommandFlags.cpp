@@ -142,7 +142,8 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
   MCBINDOPT(X86RelaxRelocations);
 
   static cl::opt<bool> X86Sse2Avx(
-      "x86-sse2avx", cl::desc("Convert SSE Instructions to AVX Instructions"));
+      "x86-sse2avx", cl::desc("Specify that the assembler should encode SSE "
+                              "instructions with VEX prefix"));
   MCBINDOPT(X86Sse2Avx);
 
   static cl::opt<std::string> ABIName(
