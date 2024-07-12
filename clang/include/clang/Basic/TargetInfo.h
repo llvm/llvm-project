@@ -32,9 +32,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
-#include "llvm/IR/Attributes.h"
 #include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Function.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
@@ -1410,7 +1408,6 @@ public:
     bool BranchProtectionPAuthLR;
     bool GuardedControlStack;
 
-  protected:
     const char *getSignReturnAddrStr() const {
       switch (SignReturnAddr) {
       case LangOptions::SignReturnAddressScopeKind::None:
@@ -1433,7 +1430,6 @@ public:
       llvm_unreachable("Unexpected SignReturnAddressKeyKind");
     }
 
-  public:
     BranchProtectionInfo()
         : SignReturnAddr(LangOptions::SignReturnAddressScopeKind::None),
           SignKey(LangOptions::SignReturnAddressKeyKind::AKey),
@@ -1453,25 +1449,6 @@ public:
       BranchTargetEnforcement = LangOpts.BranchTargetEnforcement;
       BranchProtectionPAuthLR = LangOpts.BranchProtectionPAuthLR;
       GuardedControlStack = LangOpts.GuardedControlStack;
-    }
-
-    void setFnAttributes(llvm::Function &F) {
-      llvm::AttrBuilder FuncAttrs(F.getContext());
-      setFnAttributes(FuncAttrs);
-      F.addFnAttrs(FuncAttrs);
-    }
-
-    void setFnAttributes(llvm::AttrBuilder &FuncAttrs) {
-      if (SignReturnAddr != LangOptions::SignReturnAddressScopeKind::None) {
-        FuncAttrs.addAttribute("sign-return-address", getSignReturnAddrStr());
-        FuncAttrs.addAttribute("sign-return-address-key", getSignKeyStr());
-      }
-      if (BranchTargetEnforcement)
-        FuncAttrs.addAttribute("branch-target-enforcement");
-      if (BranchProtectionPAuthLR)
-        FuncAttrs.addAttribute("branch-protection-pauth-lr");
-      if (GuardedControlStack)
-        FuncAttrs.addAttribute("guarded-control-stack");
     }
   };
 
