@@ -59,7 +59,6 @@ class HeaderFile:
 
         current_guard = None
         for function in self.functions:
-            # due to sorting, all guarded functions will be at the end
             if function.guard == None:
                 content.append(str(function))
                 content.append("")
