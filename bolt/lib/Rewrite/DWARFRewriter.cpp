@@ -620,8 +620,10 @@ void DWARFRewriter::updateDebugInfo() {
     AddrWriter = std::make_unique<DebugAddrWriter>(&BC);
   }
 
-  if (BC.isDWARFLegacyUsed())
+  if (BC.isDWARFLegacyUsed()) {
     LegacyRangesSectionWriter = std::make_unique<DebugRangesSectionWriter>();
+    LegacyRangesSectionWriter->initSection();
+  }
 
   DebugLoclistWriter::setAddressWriter(AddrWriter.get());
 
@@ -651,7 +653,6 @@ void DWARFRewriter::updateDebugInfo() {
                "LegacyRangeLists writer for DWO unit already exists.");
         auto LegacyRangesSectionWriterByCU =
             std::make_unique<DebugRangesSectionWriter>();
-        LegacyRangesSectionWriterByCU->initSection(CU);
         LegacyRangesWritersByCU[*DWOId] =
             std::move(LegacyRangesSectionWriterByCU);
       }
@@ -1342,10 +1343,7 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
       assert(RangesWriterIterator != LegacyRangesWritersByCU.end() &&
              "RangesWriter does not exist for DWOId");
       RangesWriterIterator->second->setDie(&Die);
-    } else if (Unit.getVersion() == 5) {
-      DIEBldr.addValue(&Die, dwarf::DW_AT_rnglists_base,
-                       dwarf::DW_FORM_sec_offset, DIEInteger(*RangesBase));
-    } else {
+    } else if (Unit.getVersion() >= 5) {
       DIEBldr.addValue(&Die, dwarf::DW_AT_rnglists_base,
                        dwarf::DW_FORM_sec_offset, DIEInteger(*RangesBase));
     }
@@ -1638,14 +1636,13 @@ void DWARFRewriter::finalizeCompileUnits(DIEBuilder &DIEBlder,
            "RangesWriter does not exist for DWOId");
     std::unique_ptr<DebugRangesSectionWriter> &LegacyRangesWriter =
         RangesWriterIterator->second;
-    std::optional<DIE *> Die = LegacyRangesWriter->getDie();
-    if (!Die || !Die.value())
+    DIE *Die = LegacyRangesWriter->getDie();
+    if (!Die)
       continue;
-    DIEValue DvalGNUBase =
-        Die.value()->findAttribute(dwarf::DW_AT_GNU_ranges_base);
+    DIEValue DvalGNUBase = Die->findAttribute(dwarf::DW_AT_GNU_ranges_base);
     assert(DvalGNUBase && "GNU_ranges_base attribute does not exist for DWOId");
     DIEBlder.replaceValue(
-        Die.value(), dwarf::DW_AT_GNU_ranges_base, DvalGNUBase.getForm(),
+        Die, dwarf::DW_AT_GNU_ranges_base, DvalGNUBase.getForm(),
         DIEInteger(LegacyRangesSectionWriter->getSectionOffset()));
     std::unique_ptr<DebugBufferVector> RangesWritersContents =
         LegacyRangesWriter->releaseBuffer();
@@ -2165,21 +2162,21 @@ void DWARFRewriter::convertToRangesPatchDebugInfo(
       DIEBldr.replaceValue(&Die, LowPCAttrInfo.getAttribute(),
                            LowPCAttrInfo.getForm(), DIEInteger(0));
     }
-  }
-  // Original CU didn't have DW_AT_*_base. We converted it's children (or
-  // dwo), so need to insert it into CU.
-  if (RangesBase) {
-    if (Unit.getVersion() >= 5) {
-      DIEBldr.addValue(&Die, RangeBaseAttribute, dwarf::DW_FORM_sec_offset,
-                       DIEInteger(*RangesBase));
-    } else {
-      DIEBldr.addValue(&Die, RangeBaseAttribute, dwarf::DW_FORM_sec_offset,
-                       DIEInteger(INT_MAX));
-      auto RangesWriterIterator =
-          LegacyRangesWritersByCU.find(*Unit.getDWOId());
-      assert(RangesWriterIterator != LegacyRangesWritersByCU.end() &&
-             "RangesWriter does not exist for DWOId");
-      RangesWriterIterator->second->setDie(&Die);
+    // Original CU didn't have DW_AT_*_base. We converted it's children (or
+    // dwo), so need to insert it into CU.
+    if (RangesBase) {
+      if (Unit.getVersion() >= 5) {
+        DIEBldr.addValue(&Die, RangeBaseAttribute, dwarf::DW_FORM_sec_offset,
+                         DIEInteger(*RangesBase));
+      } else {
+        DIEBldr.addValue(&Die, RangeBaseAttribute, dwarf::DW_FORM_sec_offset,
+                         DIEInteger(INT_MAX));
+        auto RangesWriterIterator =
+            LegacyRangesWritersByCU.find(*Unit.getDWOId());
+        assert(RangesWriterIterator != LegacyRangesWritersByCU.end() &&
+               "RangesWriter does not exist for DWOId");
+        RangesWriterIterator->second->setDie(&Die);
+      }
     }
   }
 

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// test libc++'s implementation of align_val_t, and the relevant new/delete
+// Test libc++'s implementation of align_val_t, and the relevant new/delete
 // overloads in all dialects when -faligned-allocation is present.
 
 // Libc++ when built for z/OS doesn't contain the aligned allocation functions,
@@ -20,9 +20,6 @@
 
 // GCC doesn't support the aligned-allocation flags.
 // XFAIL: gcc
-
-// These compiler versions do not have proper sized deallocation support.
-// UNSUPPORTED: clang-17, clang-18
 
 // RUN: %{build} -faligned-allocation -fsized-deallocation
 // RUN: %{run}

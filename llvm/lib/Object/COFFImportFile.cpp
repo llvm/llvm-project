@@ -691,7 +691,9 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
       }
 
       if (!E.ImportName.empty() && Name != E.ImportName) {
-        Members.push_back(OF.createWeakExternal(E.ImportName, Name, false, M));
+        if (ImportType == IMPORT_CODE)
+          Members.push_back(
+              OF.createWeakExternal(E.ImportName, Name, false, M));
         Members.push_back(OF.createWeakExternal(E.ImportName, Name, true, M));
         continue;
       }

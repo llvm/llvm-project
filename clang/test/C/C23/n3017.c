@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -verify -fsyntax-only --embed-dir=%S/Inputs -std=c2x %s -Wno-constant-logical-operand
+// RUN: %clang_cc1 -verify -fsyntax-only --embed-dir=%S/Inputs -std=c2x %s -Wno-constant-logical-operand -fexperimental-new-constant-interpreter
 
 /* WG14 N3017: full
  * #embed - a scannable, tooling-friendly binary resource inclusion mechanism

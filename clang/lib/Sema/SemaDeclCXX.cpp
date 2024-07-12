@@ -1275,9 +1275,11 @@ static bool checkTupleLikeDecomposition(Sema &S,
     if (UseMemberGet) {
       //   if [lookup of member get] finds at least one declaration, the
       //   initializer is e.get<i-1>().
-      E = S.BuildMemberReferenceExpr(E.get(), DecompType, Loc, false,
-                                     CXXScopeSpec(), SourceLocation(), nullptr,
-                                     MemberGet, &Args, nullptr);
+      E = S.BuildMemberReferenceExpr(E.get(), DecompType, Loc,
+                                     /*IsArrow=*/false,
+                                     /*SS=*/CXXScopeSpec(),
+                                     /*TemplateKWLoc=*/SourceLocation(),
+                                     MemberGet, &Args, /*S=*/nullptr);
       if (E.isInvalid())
         return true;
 
@@ -4901,16 +4903,12 @@ BuildImplicitMemberInitializer(Sema &SemaRef, CXXConstructorDecl *Constructor,
     MemberLookup.addDecl(Indirect ? cast<ValueDecl>(Indirect)
                                   : cast<ValueDecl>(Field), AS_public);
     MemberLookup.resolveKind();
-    ExprResult CtorArg
-      = SemaRef.BuildMemberReferenceExpr(MemberExprBase,
-                                         ParamType, Loc,
-                                         /*IsArrow=*/false,
-                                         SS,
-                                         /*TemplateKWLoc=*/SourceLocation(),
-                                         /*FirstQualifierInScope=*/nullptr,
-                                         MemberLookup,
-                                         /*TemplateArgs=*/nullptr,
-                                         /*S*/nullptr);
+    ExprResult CtorArg = SemaRef.BuildMemberReferenceExpr(
+        MemberExprBase, ParamType, Loc,
+        /*IsArrow=*/false, SS,
+        /*TemplateKWLoc=*/SourceLocation(), MemberLookup,
+        /*TemplateArgs=*/nullptr,
+        /*S=*/nullptr);
     if (CtorArg.isInvalid())
       return true;
 
@@ -14336,8 +14334,10 @@ class MemberBuilder: public ExprBuilder {
 public:
   Expr *build(Sema &S, SourceLocation Loc) const override {
     return assertNotNull(S.BuildMemberReferenceExpr(
-        Builder.build(S, Loc), Type, Loc, IsArrow, SS, SourceLocation(),
-        nullptr, MemberLookup, nullptr, nullptr).get());
+                              Builder.build(S, Loc), Type, Loc, IsArrow, SS,
+                              /*TemplateKwLoc=*/SourceLocation(), MemberLookup,
+                              /*TemplateArgs=*/nullptr, /*S=*/nullptr)
+                             .get());
   }
 
   MemberBuilder(const ExprBuilder &Builder, QualType Type, bool IsArrow,
@@ -14543,13 +14543,11 @@ buildSingleCopyAssignRecursively(Sema &S, SourceLocation Loc, QualType T,
                    Loc);
 
     // Create the reference to operator=.
-    ExprResult OpEqualRef
-      = S.BuildMemberReferenceExpr(To.build(S, Loc), T, Loc, /*IsArrow=*/false,
-                                   SS, /*TemplateKWLoc=*/SourceLocation(),
-                                   /*FirstQualifierInScope=*/nullptr,
-                                   OpLookup,
-                                   /*TemplateArgs=*/nullptr, /*S*/nullptr,
-                                   /*SuppressQualifierCheck=*/true);
+    ExprResult OpEqualRef = S.BuildMemberReferenceExpr(
+        To.build(S, Loc), T, Loc, /*IsArrow=*/false, SS,
+        /*TemplateKWLoc=*/SourceLocation(), OpLookup,
+        /*TemplateArgs=*/nullptr, /*S*/ nullptr,
+        /*SuppressQualifierCheck=*/true);
     if (OpEqualRef.isInvalid())
       return StmtError();
 
@@ -17155,8 +17153,9 @@ bool Sema::EvaluateStaticAssertMessageAsString(Expr *Message,
 
   auto BuildExpr = [&](LookupResult &LR) {
     ExprResult Res = BuildMemberReferenceExpr(
-        Message, Message->getType(), Message->getBeginLoc(), false,
-        CXXScopeSpec(), SourceLocation(), nullptr, LR, nullptr, nullptr);
+        Message, Message->getType(), Message->getBeginLoc(), /*IsArrow=*/false,
+        /*SS=*/CXXScopeSpec(), /*TemplateKWLoc=*/SourceLocation(), LR,
+        /*TemplateArgs=*/nullptr, /*S=*/nullptr);
     if (Res.isInvalid())
       return ExprError();
     Res = BuildCallExpr(nullptr, Res.get(), Loc, std::nullopt, Loc, nullptr,
@@ -18456,15 +18455,11 @@ bool Sema::DefineUsedVTables() {
 
     bool DefineVTable = true;
 
+    // If this class has a key function, but that key function is
+    // defined in another translation unit, we don't need to emit the
+    // vtable even though we're using it.
     const CXXMethodDecl *KeyFunction = Context.getCurrentKeyFunction(Class);
-    // V-tables for non-template classes with an owning module are always
-    // uniquely emitted in that module.
-    if (Class->isInCurrentModuleUnit())
-      DefineVTable = true;
-    else if (KeyFunction && !KeyFunction->hasBody()) {
-      // If this class has a key function, but that key function is
-      // defined in another translation unit, we don't need to emit the
-      // vtable even though we're using it.
+    if (KeyFunction && !KeyFunction->hasBody()) {
       // The key function is in another translation unit.
       DefineVTable = false;
       TemplateSpecializationKind TSK =
@@ -18509,7 +18504,7 @@ bool Sema::DefineUsedVTables() {
     DefinedAnything = true;
     MarkVirtualMembersReferenced(Loc, Class);
     CXXRecordDecl *Canonical = Class->getCanonicalDecl();
-    if (VTablesUsed[Canonical] && !Class->shouldEmitInExternalSource())
+    if (VTablesUsed[Canonical])
       Consumer.HandleVTable(Class);
 
     // Warn if we're emitting a weak vtable. The vtable will be weak if there is

@@ -135,3 +135,30 @@ add_proxy_header_library(
     libc.include.llvm-libc-types.struct_sigaction
     libc.include.signal
 )
+
+add_proxy_header_library(
+  FILE
+  HDRS
+    FILE.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.FILE
+    libc.include.stdio
+)
+
+add_proxy_header_library(
+  off_t
+  HDRS
+    off_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.off_t
+    libc.include.stdio
+)
+
+add_proxy_header_library(
+  cookie_io_functions_t
+  HDRS
+    cookie_io_functions_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.cookie_io_functions_t
+    libc.include.stdio
+)

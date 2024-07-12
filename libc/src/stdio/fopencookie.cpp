@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/fopencookie.h"
+#include "hdr/stdio_macros.h"
+#include "hdr/types/FILE.h"
+#include "hdr/types/cookie_io_functions_t.h"
+#include "hdr/types/off_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
 
 #include "src/errno/libc_errno.h"
-#include <stdio.h>
-#include <stdlib.h>
 
 namespace LIBC_NAMESPACE {
 
@@ -24,7 +26,7 @@ class CookieFile : public LIBC_NAMESPACE::File {
 
   static FileIOResult cookie_write(File *f, const void *data, size_t size);
   static FileIOResult cookie_read(File *f, void *data, size_t size);
-  static ErrorOr<long> cookie_seek(File *f, long offset, int whence);
+  static ErrorOr<off_t> cookie_seek(File *f, off_t offset, int whence);
   static int cookie_close(File *f);
 
 public:
@@ -52,7 +54,7 @@ FileIOResult CookieFile::cookie_read(File *f, void *data, size_t size) {
                                reinterpret_cast<char *>(data), size);
 }
 
-ErrorOr<long> CookieFile::cookie_seek(File *f, long offset, int whence) {
+ErrorOr<off_t> CookieFile::cookie_seek(File *f, off_t offset, int whence) {
   auto cookie_file = reinterpret_cast<CookieFile *>(f);
   if (cookie_file->ops.seek == nullptr) {
     return Error(EINVAL);
@@ -61,8 +63,7 @@ ErrorOr<long> CookieFile::cookie_seek(File *f, long offset, int whence) {
   int result = cookie_file->ops.seek(cookie_file->cookie, &offset64, whence);
   if (result == 0)
     return offset64;
-  else
-    return -1;
+  return -1;
 }
 
 int CookieFile::cookie_close(File *f) {
