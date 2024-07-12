@@ -1,5 +1,5 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx82 | FileCheck %s
-; RUN: %if ptxas-12.2 %{ llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx82 | %ptxas-verify %}
+; RUN: %if ptxas-12.2 %{ llc < %s -march=nvptx64 -mcpu=sm_70 -mattr=+ptx82 | %ptxas-verify -arch=sm_70 %}
 
 ; CHECK-LABEL: generic_plain
 define void @generic_plain(ptr %a, ptr %b, ptr %c, ptr %d) local_unnamed_addr {
