@@ -318,7 +318,7 @@ void llvm::collectEphemeralRecipesForVPlan(
   }
 }
 
-const SCEV *VPScalarEvolution::getSCEV(VPValue *V) {
+const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
   if (V->isLiveIn())
     return SE.getSCEV(V->getLiveInIRValue());
 
@@ -326,6 +326,5 @@ const SCEV *VPScalarEvolution::getSCEV(VPValue *V) {
   return TypeSwitch<const VPRecipeBase *, const SCEV *>(V->getDefiningRecipe())
       .Case<VPExpandSCEVRecipe>(
           [](const VPExpandSCEVRecipe *R) { return R->getSCEV(); })
-      .Default(
-          [this](const VPRecipeBase *) { return SE.getCouldNotCompute(); });
+      .Default([&SE](const VPRecipeBase *) { return SE.getCouldNotCompute(); });
 }

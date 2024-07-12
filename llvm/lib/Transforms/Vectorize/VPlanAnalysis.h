@@ -70,18 +70,14 @@ public:
 void collectEphemeralRecipesForVPlan(VPlan &Plan,
                                      DenseSet<VPRecipeBase *> &EphRecipes);
 
-/// A light wrapper over ScalarEvolution to construct SCEV expressions for
-/// VPValues and recipes.
-class VPScalarEvolution {
-  ScalarEvolution &SE;
+namespace vputils {
 
-public:
-  VPScalarEvolution(ScalarEvolution &SE) : SE(SE) {}
+/// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
+/// SCEV expression could be constructed.
+const SCEV *getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE);
 
-  /// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
-  /// SCEV expression could be constructed.
-  const SCEV *getSCEV(VPValue *V);
-};
+} // namespace vputils
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLANANALYSIS_H
