@@ -2754,29 +2754,29 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
           ((Mask & fcPosInf) && Op1V.isPosInfinity());
         return ConstantInt::get(Ty, Result);
       }
+      case Intrinsic::powi: {
+        int exp = static_cast<int>(Op2C->getZExtValue());
+        switch (Ty->getTypeID()) {
+        case Type::HalfTyID:
+        case Type::FloatTyID: {
+          APFloat Res(std::pow(Op1V.convertToFloat(), exp));
+          if (Ty->isHalfTy()) {
+            bool Unused;
+            Res.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven,
+                        &Unused);
+          }
+          return ConstantFP::get(Ty->getContext(), Res);
+        }
+        case Type::DoubleTyID:
+          return ConstantFP::get(
+              Ty->getContext(), APFloat(std::pow(Op1V.convertToDouble(), exp)));
+        default:
+          return nullptr;
+        }
+      }
       default:
         break;
       }
-
-      if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
-        return nullptr;
-      if (IntrinsicID == Intrinsic::powi && Ty->isHalfTy()) {
-        APFloat Res((float)std::pow((float)Op1V.convertToDouble(),
-                                    (int)Op2C->getZExtValue()));
-        bool unused;
-        Res.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &unused);
-        return ConstantFP::get(Ty->getContext(), Res);
-      }
-      if (IntrinsicID == Intrinsic::powi && Ty->isFloatTy())
-        return ConstantFP::get(
-            Ty->getContext(),
-            APFloat((float)std::pow((float)Op1V.convertToDouble(),
-                                    (int)Op2C->getZExtValue())));
-      if (IntrinsicID == Intrinsic::powi && Ty->isDoubleTy())
-        return ConstantFP::get(
-            Ty->getContext(),
-            APFloat((double)std::pow(Op1V.convertToDouble(),
-                                     (int)Op2C->getZExtValue())));
     }
     return nullptr;
   }
