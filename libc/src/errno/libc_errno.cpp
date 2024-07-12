@@ -10,10 +10,18 @@
 #include "src/errno/errno.h"
 #include "src/__support/macros/config.h"
 
+// libc never stores a value; `errno` macro uses get link-time failure.
 #define LIBC_ERRNO_MODE_UNDEFINED 1
+// libc maintains per-thread state (requires C++ `thread_local` support).
 #define LIBC_ERRNO_MODE_THREAD_LOCAL 2
+// libc maintains shared state used by all threads, contrary to standard C
+// semantics unless always single-threaded; nothing prevents data races.
 #define LIBC_ERRNO_MODE_SHARED 3
+// libc doesn't maintain any internal state, instead the embedder must define
+// `int *__llvm_libc_errno(void);` C function.
 #define LIBC_ERRNO_MODE_EXTERNAL 4
+// libc uses system `<errno.h>` `errno` macro directly in the overlay mode; in
+// fullbuild mode, effectively the same as `LIBC_ERRNO_MODE_EXTERNAL`.
 #define LIBC_ERRNO_MODE_SYSTEM 5
 
 #ifndef LIBC_ERRNO_MODE

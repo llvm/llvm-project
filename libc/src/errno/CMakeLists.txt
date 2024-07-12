@@ -18,6 +18,7 @@ add_entrypoint_object(
   SRCS
     libc_errno.cpp
   HDRS
+    errno.h
     libc_errno.h     # Include this
   COMPILE_OPTIONS
     ${full_build_flag}
