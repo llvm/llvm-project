@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Test that weof as a wchar_t value can be set as the fill character.
+// Test that WCHAR_MAX as a wchar_t value can be set as the fill character.
 
 // UNSUPPORTED: no-wide-characters
 
@@ -23,8 +23,8 @@ struct testbuf : public std::basic_streambuf<CharT> {
 int main(int, char**) {
   testbuf<wchar_t> sb;
   std::wostream os(&sb);
-  os << std::setfill((wchar_t)std::char_traits<wchar_t>::eof());
-  assert(os.fill() == (wchar_t)std::char_traits<wchar_t>::eof());
+  os << std::setfill((wchar_t)WCHAR_MAX);
+  assert(os.fill() == (wchar_t)WCHAR_MAX);
 
   return 0;
 }
