@@ -36,6 +36,7 @@
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
@@ -1106,7 +1107,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
 
   // Eventually, we want to run LiveIntervals before PHI elimination.
   if (Opt.EarlyLiveIntervals)
-    addPass(LiveIntervalsPass());
+    addPass(RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>());
 
   addPass(TwoAddressInstructionPass());
   addPass(RegisterCoalescerPass());

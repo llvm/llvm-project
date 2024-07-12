@@ -202,9 +202,8 @@ define <4 x i32> @test_bit_sink_operand(<4 x i32> %src, <4 x i32> %dst, <4 x i32
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    sub sp, sp, #32
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-SD-NEXT:    cmp w0, #0
+; CHECK-SD-NEXT:    add w8, w0, w0, lsr #31
 ; CHECK-SD-NEXT:    mov w9, wzr
-; CHECK-SD-NEXT:    cinc w8, w0, lt
 ; CHECK-SD-NEXT:    asr w8, w8, #1
 ; CHECK-SD-NEXT:  .LBB11_1: // %do.body
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1

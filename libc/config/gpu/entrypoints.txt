@@ -313,6 +313,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.nexttowardf
     libc.src.math.pow
     libc.src.math.powf
+    libc.src.math.powi
+    libc.src.math.powif
     libc.src.math.remainder
     libc.src.math.remainderf
     libc.src.math.remquo

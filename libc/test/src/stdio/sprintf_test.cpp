@@ -3351,7 +3351,7 @@ TEST_F(LlvmLibcSPrintfTest, FixedConv) {
       LIBC_NAMESPACE::sprintf(buff, "%hR", 0xff); // unsigned short fract max
   ASSERT_STREQ_LEN(written, buff, "0.996094");
 
-  written = LIBC_NAMESPACE::sprintf(buff, "%lk", 0x0); // 0.0
+  written = LIBC_NAMESPACE::sprintf(buff, "%lk", 0x0ll); // 0.0
   ASSERT_STREQ_LEN(written, buff, "0.000000");
 
   written = LIBC_NAMESPACE::sprintf(buff, "%lk",
@@ -3365,7 +3365,7 @@ TEST_F(LlvmLibcSPrintfTest, FixedConv) {
                                     0xffffffff); //-long fract max
   ASSERT_STREQ_LEN(written, buff, "-1.000000");
 
-  written = LIBC_NAMESPACE::sprintf(buff, "%lK", 0x0); // 0.0
+  written = LIBC_NAMESPACE::sprintf(buff, "%lK", 0x0ll); // 0.0
   ASSERT_STREQ_LEN(written, buff, "0.000000");
 
   written =
@@ -3493,7 +3493,7 @@ TEST_F(LlvmLibcSPrintfTest, FixedConv) {
   ASSERT_STREQ_LEN(written, buff, "       0.100 256.000     ");
 
   written =
-      LIBC_NAMESPACE::sprintf(buff, "%+-#12.3lk % 012.3k", 0x000000001013a92a,
+      LIBC_NAMESPACE::sprintf(buff, "%+-#12.3lk % 012.3k", 0x000000001013a92all,
                               0x02740000); // 0.126, 1256.0
   ASSERT_STREQ_LEN(written, buff, "+0.126        0001256.000");
 }
