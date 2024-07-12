@@ -21,6 +21,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
+#include <string>
 
 namespace {
 
@@ -403,6 +404,42 @@ TEST_F(EnvironmentTest,
   Env.initialize();
   EXPECT_THAT(DAContext.getModeledFields(QualType(Struct->getTypeForDecl(), 0)),
               Contains(Member));
+}
+
+// This is a repro of a failure case seen in the wild.
+TEST_F(EnvironmentTest, CXXDefaultInitExprResultObjIsWrappedExprResultObj) {
+  using namespace ast_matchers;
+
+  std::string Code = R"cc(
+      struct Inner {};
+
+      struct S {
+        S() {}
+
+        Inner i = {};
+      };
+  )cc";
+
+  auto Unit =
+      tooling::buildASTFromCodeWithArgs(Code, {"-fsyntax-only", "-std=c++11"});
+  auto &Context = Unit->getASTContext();
+
+  ASSERT_EQ(Context.getDiagnostics().getClient()->getNumErrors(), 0U);
+
+  auto Results =
+      match(cxxConstructorDecl(
+                hasAnyConstructorInitializer(cxxCtorInitializer(
+                    withInitializer(expr().bind("default_init_expr")))))
+                .bind("ctor"),
+            Context);
+  const auto *Constructor = selectFirst<CXXConstructorDecl>("ctor", Results);
+  const auto *DefaultInit =
+      selectFirst<CXXDefaultInitExpr>("default_init_expr", Results);
+
+  Environment Env(DAContext, *Constructor);
+  Env.initialize();
+  EXPECT_EQ(&Env.getResultObjectLocation(*DefaultInit),
+            &Env.getResultObjectLocation(*DefaultInit->getExpr()));
 }
 
 TEST_F(EnvironmentTest, Stmt) {
