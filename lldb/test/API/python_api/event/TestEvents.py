@@ -345,10 +345,9 @@ class EventAPITestCase(TestBase):
                 self.assertEqual(
                     stop_hook.StopHook.counter[self.instance],
                     self.stop_counter,
-                    "matching stop hook"
+                    "matching stop hook",
                 )
-                
-            
+
         if expected_state is not None:
             self.assertEqual(
                 state, expected_state, "Primary thread got the correct event"
@@ -360,14 +359,10 @@ class EventAPITestCase(TestBase):
         self.assertTrue(success, "Shadow listener got event too")
         shadow_event_type = event.GetType()
         self.assertEqual(
-            primary_event_type,
-            shadow_event_type,
-            "It was the same event type"
-        ) 
+            primary_event_type, shadow_event_type, "It was the same event type"
+        )
         self.assertEqual(
-            state,
-            lldb.SBProcess.GetStateFromEvent(event),
-            "It was the same state"
+            state, lldb.SBProcess.GetStateFromEvent(event), "It was the same state"
         )
         self.assertEqual(
             restart,
@@ -415,9 +410,12 @@ class EventAPITestCase(TestBase):
         stop_hook_path = os.path.join(self.getSourceDir(), "stop_hook.py")
         self.runCmd(f"command script import {stop_hook_path}")
         import stop_hook
-        self.runCmd(f"target stop-hook add -P stop_hook.StopHook -k instance -v {self.instance}")
+
+        self.runCmd(
+            f"target stop-hook add -P stop_hook.StopHook -k instance -v {self.instance}"
+        )
         self.stop_counter = 0
-        
+
         self.process = target.Launch(launch_info, error)
         self.assertSuccess(error, "Process launched successfully")
 
@@ -427,13 +425,13 @@ class EventAPITestCase(TestBase):
         # Events in the launch sequence might be platform dependent, so don't
         # expect any particular event till we get the stopped:
         state = lldb.eStateInvalid
-        
+
         while state != lldb.eStateStopped:
             state, restart = self.wait_for_next_event(None, False)
-        
+
         # Okay, we're now at a good stop, so try a next:
         self.cur_thread = self.process.threads[0]
-        
+
         # Make sure we're at our expected breakpoint:
         self.assertTrue(self.cur_thread.IsValid(), "Got a zeroth thread")
         self.assertEqual(self.cur_thread.stop_reason, lldb.eStopReasonBreakpoint)
@@ -474,7 +472,6 @@ class EventAPITestCase(TestBase):
         # Put in a counter to make sure we don't spin forever if there is some
         # error in the logic.
         counter = 0
-        run_wo_stop = False
         while state != lldb.eStateExited:
             counter += 1
             self.assertLess(
