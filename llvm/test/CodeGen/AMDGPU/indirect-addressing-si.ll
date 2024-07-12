@@ -547,10 +547,10 @@ bb8:                                              ; preds = %bb2
 ; GCN: v_mov_b32_e32 v[[#VIDX:]], 0
 
 ; MOVREL: s_mov_b32 m0, s{{[0-9]+}}
-; MOVREL: v_movreld_b32_e32 v[[#VIDX]], v{{[0-9]+}}
+; MOVREL: v_movreld_b32_e32 v[[#VIDX + 1]], v{{[0-9]+}}
 
 ; IDXMODE: s_set_gpr_idx_on s{{[0-9]+}}, gpr_idx(DST)
-; IDXMODE: v_mov_b32_e32 v[[#VIDX]], v{{[0-9]+}}
+; IDXMODE: v_mov_b32_e32 v[[#VIDX + 1]], v{{[0-9]+}}
 ; IDXMODE: s_set_gpr_idx_off
 define amdgpu_cs void @insert_or_disj_index(ptr addrspace(1) %out, ptr addrspace(4) %in, i32 %val, <4 x i32> inreg %desc, i32 inreg %A) {
 entry:
