@@ -26,5 +26,5 @@ int testfn() noexcept {
 // CHECK: define {{.*}} @_ZTW4var2() [[ATTR1]]
 // CHECK: define {{.*}} @__tls_init() [[ATTR1]]
 
-// CHECK: attributes [[ATTR1]] = { {{.*}}"branch-target-enforcement"="true"{{.*}}"sign-return-address"="all" "sign-return-address-key"="a_key"
-// CHECK: attributes [[ATTR2]] = { {{.*}}"branch-target-enforcement"="true"{{.*}}"sign-return-address"="all" "sign-return-address-key"="a_key"
+// CHECK: attributes [[ATTR1]] = { {{.*}}"branch-target-enforcement" {{.*}}"sign-return-address"="all" "sign-return-address-key"="a_key"
+// CHECK: attributes [[ATTR2]] = { {{.*}}"branch-target-enforcement" {{.*}}"sign-return-address"="all" "sign-return-address-key"="a_key"
