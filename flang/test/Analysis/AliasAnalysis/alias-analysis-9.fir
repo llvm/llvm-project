@@ -52,12 +52,8 @@
 // CHECK-DAG: xnext1#0 <-> xnext2#0: MayAlias
 // CHECK-DAG: xnext1.fir#0 <-> xnext2.fir#0: MayAlias
 
-// TODO: These should be NoAlias.  However, AliasAnalysis currently
-// indiscriminately treats all pointers as aliasing.  That makes sense for the
-// addresses within the pointers but not necessarily for the addresses of the
-// pointers.
-// CHECK-DAG: xnext1#0 <-> ynext#0: MayAlias
-// CHECK-DAG: xnext1.fir#0 <-> ynext.fir#0: MayAlias
+// CHECK-DAG: xnext1#0 <-> ynext#0: NoAlias
+// CHECK-DAG: xnext1.fir#0 <-> ynext.fir#0: NoAlias
 
 func.func @_QMmPfoo(%arg0: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>> {fir.bindc_name = "x"}, %arg1: !fir.ref<!fir.type<_QMmTt{next:!fir.box<!fir.ptr<!fir.type<_QMmTt>>>,i:i32}>> {fir.bindc_name = "y"}) {
   %0 = fir.alloca i32 {bindc_name = "i1", uniq_name = "_QMmFfooEi1"}
@@ -391,16 +387,11 @@ func.func @_QMmPtest.fir() {
 
 // Check when composite is a local and thus cannot alias a dummy arg.
 //
-// TODO: The argp vs. loc%p cases should be NoAlias.  However, AliasAnalysis
-// currently indiscriminately treats all pointers as aliasing.  That makes sense
-// for the addresses within the pointers but not necessarily for the addresses
-// of the pointers here.
-//
 // CHECK-DAG: argp#0 <-> loc#0: NoAlias
-// CHECK-DAG: argp#0 <-> loc%p#0: MayAlias
+// CHECK-DAG: argp#0 <-> loc%p#0: NoAlias
 // CHECK-DAG: argp#0 <-> loc%i#0: NoAlias
 // CHECK-DAG: argp.fir#0 <-> loc.fir#0: NoAlias
-// CHECK-DAG: argp.fir#0 <-> loc%p.fir#0: MayAlias
+// CHECK-DAG: argp.fir#0 <-> loc%p.fir#0: NoAlias
 // CHECK-DAG: argp.fir#0 <-> loc%i.fir#0: NoAlias
 //
 // CHECK-DAG: argp.tgt#0 <-> loc#0: NoAlias
@@ -519,13 +510,10 @@ func.func @_QMmPtest.fir(%arg0: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_nam
 // CHECK-DAG: argp.tgt.fir#0 <-> arg%p.fir#0: MayAlias
 // CHECK-DAG: argp.tgt.fir#0 <-> arg%i.fir#0: MayAlias
 //
-// TODO: Shouldn't the arga vs. arg%p cases be NoAlias?  However, arga is
-// treated like a target because it's HostAssoc and arg is Argument, and arg%p
-// is treated like a pointer.
 // CHECK-DAG: arga#0 <-> arg#0: NoAlias
-// CHECK-DAG: arga#0 <-> arg%p#0: MayAlias
+// CHECK-DAG: arga#0 <-> arg%p#0: NoAlias
 // CHECK-DAG: arga.fir#0 <-> arg.fir#0: NoAlias
-// CHECK-DAG: arga.fir#0 <-> arg%p.fir#0: MayAlias
+// CHECK-DAG: arga.fir#0 <-> arg%p.fir#0: NoAlias
 
 // Check when composite is a global.
 //
@@ -552,16 +540,11 @@ func.func @_QMmPtest.fir(%arg0: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_nam
 
 // Check when composite is a local and thus cannot alias a dummy arg.
 //
-// TODO: The argp vs. loc%p case should be NoAlias.  However, AliasAnalysis
-// currently indiscriminately treats all pointers as aliasing.  That makes sense
-// for the addresses within the pointers but not necessarily for the addresses
-// of the pointers here.
-//
 // CHECK-DAG: argp#0 <-> loc#0: NoAlias
-// CHECK-DAG: argp#0 <-> loc%p#0: MayAlias
+// CHECK-DAG: argp#0 <-> loc%p#0: NoAlias
 // CHECK-DAG: argp#0 <-> loc%i#0: NoAlias
 // CHECK-DAG: argp.fir#0 <-> loc.fir#0: NoAlias
-// CHECK-DAG: argp.fir#0 <-> loc%p.fir#0: MayAlias
+// CHECK-DAG: argp.fir#0 <-> loc%p.fir#0: NoAlias
 // CHECK-DAG: argp.fir#0 <-> loc%i.fir#0: NoAlias
 //
 // TODO: Shouldn't these be NoAlias?  However, argp.tgt is currently handled as

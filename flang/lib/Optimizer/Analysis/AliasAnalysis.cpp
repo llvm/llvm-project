@@ -118,8 +118,13 @@ bool AliasAnalysis::Source::canBeActualArgWithPtr(
   // Must not be local.
   if (!canBeActualArg())
     return false;
-  // Must be address of a composite with a pointer component.
-  return isRecordWithPointerComponent(val->getType());
+  // Can be address *of* (not *in*) a pointer.
+  if (attributes.test(Attribute::Pointer) && !isData())
+    return true;
+  // Can be address of a composite with a pointer component.
+  if (isRecordWithPointerComponent(val->getType()))
+    return true;
+  return false;
 }
 
 AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
@@ -222,16 +227,18 @@ AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
     src2->attributes.set(Attribute::Target);
   }
 
-  // Two TARGET/POINTERs may alias.
+  // Two TARGET/POINTERs may alias.  The logic here focuses on data.  Handling
+  // of non-data is included below.
   if (src1->isTargetOrPointer() && src2->isTargetOrPointer() &&
-      src1->isData() == src2->isData()) {
+      src1->isData() && src2->isData()) {
     LLVM_DEBUG(llvm::dbgs() << "  aliasing because of target or pointer\n");
     return AliasResult::MayAlias;
   }
 
-  // A pointer dummy arg (but not a pointer component of a dummy arg) may alias
-  // a pointer component and thus the associated composite.  That composite
-  // might be a global or another dummy arg.  This is an example of the global
+  // The address of a pointer dummy arg (but not a pointer component of a dummy
+  // arg) may alias the address of either (1) a non-local pointer or (2) thus a
+  // non-local composite with a pointer component.  A non-local might be a
+  // global or another dummy arg.  The following is an example of the global
   // composite case:
   //
   // module m
@@ -276,8 +283,8 @@ AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   if ((src1->aliasesLikePtrDummyArg() && src2->canBeActualArgWithPtr(val2)) ||
       (src2->aliasesLikePtrDummyArg() && src1->canBeActualArgWithPtr(val1))) {
     LLVM_DEBUG(llvm::dbgs()
-               << "  aliasing between pointer dummy arg and composite with "
-               << "pointer component\n");
+               << "  aliasing between pointer dummy arg and either pointer or "
+               << "composite with pointer component\n");
     return AliasResult::MayAlias;
   }
 
