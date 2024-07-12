@@ -583,6 +583,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"back", asValue, handleDynamicOptional},
        {"kind", asValue}}},
      /*isElemental=*/true},
+    {"second",
+     &I::genSecond,
+     {{{"time", asAddr}}},
+     /*isElemental=*/false},
     {"selected_char_kind",
      &I::genSelectedCharKind,
      {{{"name", asAddr}}},
@@ -6138,6 +6142,27 @@ IntrinsicLibrary::genScan(mlir::Type resultType,
 
   // Handle cleanup of allocatable result descriptor and return
   return readAndAddCleanUp(resultMutableBox, resultType, "SCAN");
+}
+
+// SECOND
+fir::ExtendedValue
+IntrinsicLibrary::genSecond(std::optional<mlir::Type> resultType,
+                            mlir::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1 && !resultType || args.empty() && resultType);
+
+  fir::ExtendedValue result;
+
+  if (resultType)
+    result = builder.createTemporary(loc, *resultType);
+  else
+    result = args[0];
+
+  llvm::SmallVector<fir::ExtendedValue, 1> subroutineArgs(1, result);
+  genCpuTime(subroutineArgs);
+
+  if (resultType)
+    return result;
+  return {};
 }
 
 // SELECTED_CHAR_KIND
