@@ -1011,7 +1011,7 @@ Bug Fixes to C++ Support
 - Fixed a type constraint substitution issue involving a generic lambda expression. (#GH93821)
 - Fix a crash caused by improper use of ``__array_extent``. (#GH80474)
 - Fixed several bugs in capturing variables within unevaluated contexts. (#GH63845), (#GH67260), (#GH69307),
-  (#GH88081), (#GH89496), (#GH90669) and (#GH91633).
+  (#GH88081), (#GH89496), (#GH90669), (#GH91633) and (#GH97453).
 - Fixed a crash in constraint instantiation under nested lambdas with dependent parameters.
 - Fixed handling of brace ellison when building deduction guides. (#GH64625), (#GH83368).
 - Clang now instantiates local constexpr functions eagerly for constant evaluators. (#GH35052), (#GH94849)
