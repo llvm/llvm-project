@@ -287,7 +287,7 @@ mlir::ChangeResult LatticePoint::join(const AbstractDenseLattice &lattice) {
 
 void LatticePoint::print(llvm::raw_ostream &os) const {
   for (const auto &[value, state] : stateMap) {
-    os << value << ": ";
+    os << "\n * " << value << ": ";
     ::print(os, state);
   }
 }
@@ -361,6 +361,13 @@ void AllocationAnalysis::visitOperation(mlir::Operation *op,
   } else if (mlir::isa<fir::FreeMemOp>(op)) {
     assert(op->getNumOperands() == 1 && "fir.freemem has one operand");
     mlir::Value operand = op->getOperand(0);
+
+    // Note: StackArrays is scheduled in the pass pipeline after lowering hlfir
+    // to fir. Therefore, we only need to handle `fir::DeclareOp`s.
+    if (auto declareOp =
+            llvm::dyn_cast_if_present<fir::DeclareOp>(operand.getDefiningOp()))
+      operand = declareOp.getMemref();
+
     std::optional<AllocationState> operandState = before.get(operand);
     if (operandState && *operandState == AllocationState::Allocated) {
       // don't tag things not allocated in this function as freed, so that we
@@ -452,6 +459,9 @@ StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
   };
   func->walk([&](mlir::func::ReturnOp child) { joinOperationLattice(child); });
   func->walk([&](fir::UnreachableOp child) { joinOperationLattice(child); });
+  func->walk(
+      [&](mlir::omp::TerminatorOp child) { joinOperationLattice(child); });
+
   llvm::DenseSet<mlir::Value> freedValues;
   point.appendFreedValues(freedValues);
 
@@ -518,9 +528,18 @@ AllocMemConversion::matchAndRewrite(fir::AllocMemOp allocmem,
 
   // remove freemem operations
   llvm::SmallVector<mlir::Operation *> erases;
-  for (mlir::Operation *user : allocmem.getOperation()->getUsers())
+  for (mlir::Operation *user : allocmem.getOperation()->getUsers()) {
+    if (auto declareOp = mlir::dyn_cast_if_present<fir::DeclareOp>(user)) {
+      for (mlir::Operation *user : declareOp->getUsers()) {
+        if (mlir::isa<fir::FreeMemOp>(user))
+          erases.push_back(user);
+      }
+    }
+
     if (mlir::isa<fir::FreeMemOp>(user))
       erases.push_back(user);
+  }
+
   // now we are done iterating the users, it is safe to mutate them
   for (mlir::Operation *erase : erases)
     rewriter.eraseOp(erase);

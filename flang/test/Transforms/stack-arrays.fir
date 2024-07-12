@@ -339,13 +339,10 @@ func.func @omp_placement1() {
   return
 }
 // CHECK:      func.func @omp_placement1() {
+// CHECK-NEXT:   %[[MEM:.*]] = fir.alloca !fir.array<42xi32>
+// CHECK-NEXT:   %[[MEM_CONV:.*]] = fir.convert %[[MEM]] : (!fir.ref<!fir.array<42xi32>>) -> !fir.heap<!fir.array<42xi32>>
 // CHECK-NEXT:   omp.sections {
 // CHECK-NEXT:     omp.section {
-// CHECK-NEXT:       %[[MEM:.*]] = fir.allocmem !fir.array<42xi32>
-// TODO: this allocation should be moved to the stack. Unfortunately, the data
-// flow analysis fails to propogate the lattice out of the omp region to the
-// return satement.
-// CHECK-NEXT:       fir.freemem %[[MEM]] : !fir.heap<!fir.array<42xi32>>
 // CHECK-NEXT:       omp.terminator
 // CHECK-NEXT:     }
 // CHECK-NEXT:     omp.terminator
