@@ -2768,8 +2768,7 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
           return ConstantFP::get(Ty->getContext(), Res);
         }
         case Type::DoubleTyID:
-          return ConstantFP::get(
-              Ty->getContext(), APFloat(std::pow(Op1V.convertToDouble(), exp)));
+          return ConstantFP::get(Ty, std::pow(Op1V.convertToDouble(), exp));
         default:
           return nullptr;
         }
