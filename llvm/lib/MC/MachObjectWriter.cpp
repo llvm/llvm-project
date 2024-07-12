@@ -282,6 +282,8 @@ void MachObjectWriter::writeSection(const MCAssembler &Asm,
   W.write<uint32_t>(FileOffset);
 
   W.write<uint32_t>(Log2(Section.getAlign()));
+  if (NumRelocations && !isUInt<32>(RelocationsStart))
+    report_fatal_error("Cannot encode offset of relocations");
   W.write<uint32_t>(NumRelocations ? RelocationsStart : 0);
   W.write<uint32_t>(NumRelocations);
   W.write<uint32_t>(Flags);
