@@ -16,7 +16,7 @@
 // CHECK-NEXT:     FEAT_FHM                                               Enable FP16 FML instructions
 // CHECK-NEXT:     FEAT_FP                                                Enable Armv8.0-A Floating Point Extensions
 // CHECK-NEXT:     FEAT_FP16                                              Enable half-precision floating-point data processing
-// CHECK-NEXT:     FEAT_FlagM                                             Enable Armv8.4-A Flag Manipulation Instructions
+// CHECK-NEXT:     FEAT_FlagM                                             Enable Armv8.4-A Flag Manipulation instructions
 // CHECK-NEXT:     FEAT_JSCVT                                             Enable Armv8.3-A JavaScript FP conversion instructions
 // CHECK-NEXT:     FEAT_LRCPC                                             Enable support for RCPC extension
 // CHECK-NEXT:     FEAT_LRCPC2                                            Enable Armv8.4-A RCPC instructions with Immediate Offsets
@@ -29,7 +29,7 @@
 // CHECK-NEXT:     FEAT_SB                                                Enable Armv8.5-A Speculation Barrier
 // CHECK-NEXT:     FEAT_SEL2                                              Enable Armv8.4-A Secure Exception Level 2 extension
 // CHECK-NEXT:     FEAT_SSBS, FEAT_SSBS2                                  Enable Speculative Store Bypass Safe bit
-// CHECK-NEXT:     FEAT_TLBIOS, FEAT_TLBIRANGE                            Enable Armv8.4-A TLB Range and Maintenance Instructions
+// CHECK-NEXT:     FEAT_TLBIOS, FEAT_TLBIRANGE                            Enable Armv8.4-A TLB Range and Maintenance instructions
 // CHECK-NEXT:     FEAT_TRBE                                              Enable Trace Buffer Extension
 // CHECK-NEXT:     FEAT_TRF                                               Enable Armv8.4-A Trace extension
 // CHECK-NEXT:     FEAT_UAO                                               Enable Armv8.2-A UAO PState

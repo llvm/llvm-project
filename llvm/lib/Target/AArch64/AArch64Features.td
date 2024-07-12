@@ -96,7 +96,7 @@ def FeatureCRC : ExtensionWithMArch<"crc", "CRC", "FEAT_CRC32",
 // `FEAT_PMUv3*` system registers are always available for assembly/disassembly.
 let UserVisibleName = "pmuv3" in
 def FeaturePerfMon : ExtensionWithMArch<"perfmon", "PerfMon", "FEAT_PMUv3",
-  "Enable Armv8.0-A Code Generation for PMUv3 Performance Monitors extension">;
+  "Enable Armv8.0-A PMUv3 Performance Monitors extension">;
 
 def FeatureSpecRestrict : Extension<"specrestrict", "SpecRestrict", "FEAT_CSV2_2",
   "Enable architectural speculation restriction">;
@@ -226,10 +226,10 @@ def FeatureSEL2 : Extension<"sel2", "SEL2", "FEAT_SEL2",
 
 def FeatureTLB_RMI : Extension<"tlb-rmi", "TLB_RMI",
   "FEAT_TLBIOS, FEAT_TLBIRANGE",
-  "Enable Armv8.4-A TLB Range and Maintenance Instructions">;
+  "Enable Armv8.4-A TLB Range and Maintenance instructions">;
 
 def FeatureFlagM : ExtensionWithMArch<"flagm", "FlagM", "FEAT_FlagM",
-  "Enable Armv8.4-A Flag Manipulation Instructions">;
+  "Enable Armv8.4-A Flag Manipulation instructions">;
 
 def FeatureRCPC_IMMO : Extension<"rcpc-immo", "RCPC_IMMO", "FEAT_LRCPC2",
   "Enable Armv8.4-A RCPC instructions with Immediate Offsets",
@@ -447,7 +447,7 @@ def FeatureITE : ExtensionWithMArch<"ite", "ITE", "FEAT_ITE",
   "Enable Armv9.4-A Instrumentation Extension", [FeatureETE, FeatureTRBE]>;
 
 def FeatureLSE128 : ExtensionWithMArch<"lse128", "LSE128", "FEAT_LSE128",
-  "Enable Armv9.4-A 128-bit Atomic Instructions",
+  "Enable Armv9.4-A 128-bit Atomic instructions",
   [FeatureLSE]>;
 
 // FEAT_D128, FEAT_LVA3, FEAT_SYSREG128, and FEAT_SYSINSTR128 are mutually implicit.
@@ -455,7 +455,7 @@ def FeatureLSE128 : ExtensionWithMArch<"lse128", "LSE128", "FEAT_LSE128",
 def FeatureD128 : ExtensionWithMArch<"d128", "D128",
   "FEAT_D128, FEAT_LVA3, FEAT_SYSREG128, FEAT_SYSINSTR128",
   "Enable Armv9.4-A 128-bit Page Table Descriptors, System Registers "
-  "and Instructions",
+  "and instructions",
   [FeatureLSE128]>;
 
 //===----------------------------------------------------------------------===//
@@ -472,7 +472,7 @@ def FeatureFP8 : ExtensionWithMArch<"fp8", "FP8", "FEAT_FP8",
   "Enable FP8 instructions", [FeatureFAMINMAX, FeatureLUT, FeatureBF16]>;
   
 def FeatureFP8FMA : ExtensionWithMArch<"fp8fma", "FP8FMA", "FEAT_FP8FMA",
-  "Enable FP8 multiply-add instructions", [FeatureFP8]>;
+  "Enable Armv9.5-A FP8 multiply-add instructions", [FeatureFP8]>;
 
 def FeatureSSVE_FP8FMA : ExtensionWithMArch<"ssve-fp8fma", "SSVE_FP8FMA", "FEAT_SSVE_FP8FMA",
   "Enable SVE2 FP8 multiply-add instructions", [FeatureSME2, FeatureFP8]>;

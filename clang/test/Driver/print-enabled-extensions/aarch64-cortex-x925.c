@@ -24,7 +24,7 @@
 // CHECK-NEXT:     FEAT_FP                                                Enable Armv8.0-A Floating Point Extensions
 // CHECK-NEXT:     FEAT_FP16                                              Enable half-precision floating-point data processing
 // CHECK-NEXT:     FEAT_FRINTTS                                           Enable FRInt[32|64][Z|X] instructions that round a floating-point number to an integer (in FP format) forcing it to fit into a 32- or 64-bit int
-// CHECK-NEXT:     FEAT_FlagM                                             Enable Armv8.4-A Flag Manipulation Instructions
+// CHECK-NEXT:     FEAT_FlagM                                             Enable Armv8.4-A Flag Manipulation instructions
 // CHECK-NEXT:     FEAT_FlagM2                                            Enable alternative NZCV format for floating point comparisons
 // CHECK-NEXT:     FEAT_HCX                                               Enable Armv8.7-A HCRX_EL2 system register
 // CHECK-NEXT:     FEAT_I8MM                                              Enable Matrix Multiply Int8 Extension
@@ -40,7 +40,7 @@
 // CHECK-NEXT:     FEAT_PAN                                               Enable Armv8.1-A Privileged Access-Never extension
 // CHECK-NEXT:     FEAT_PAN2                                              Enable Armv8.2-A PAN s1e1R and s1e1W Variants
 // CHECK-NEXT:     FEAT_PAuth                                             Enable Armv8.3-A Pointer Authentication extension
-// CHECK-NEXT:     FEAT_PMUv3                                             Enable Armv8.0-A Code Generation for PMUv3 Performance Monitors extension
+// CHECK-NEXT:     FEAT_PMUv3                                             Enable Armv8.0-A PMUv3 Performance Monitors extension
 // CHECK-NEXT:     FEAT_RAS, FEAT_RASv1p1                                 Enable Armv8.0-A Reliability, Availability and Serviceability Extensions
 // CHECK-NEXT:     FEAT_RDM                                               Enable Armv8.1-A Rounding Double Multiply Add/Subtract instructions
 // CHECK-NEXT:     FEAT_SB                                                Enable Armv8.5-A Speculation Barrier
@@ -52,7 +52,7 @@
 // CHECK-NEXT:     FEAT_SVE                                               Enable Scalable Vector Extension (SVE) instructions
 // CHECK-NEXT:     FEAT_SVE2                                              Enable Scalable Vector Extension 2 (SVE2) instructions
 // CHECK-NEXT:     FEAT_SVE_BitPerm                                       Enable bit permutation SVE2 instructions
-// CHECK-NEXT:     FEAT_TLBIOS, FEAT_TLBIRANGE                            Enable Armv8.4-A TLB Range and Maintenance Instructions
+// CHECK-NEXT:     FEAT_TLBIOS, FEAT_TLBIRANGE                            Enable Armv8.4-A TLB Range and Maintenance instructions
 // CHECK-NEXT:     FEAT_TRBE                                              Enable Trace Buffer Extension
 // CHECK-NEXT:     FEAT_TRF                                               Enable Armv8.4-A Trace extension
 // CHECK-NEXT:     FEAT_UAO                                               Enable Armv8.2-A UAO PState

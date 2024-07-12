@@ -22,7 +22,7 @@
 // CHECK-NEXT:     FEAT_FGT                                               Enable fine grained virtualization traps extension
 // CHECK-NEXT:     FEAT_FP                                                Enable Armv8.0-A Floating Point Extensions
 // CHECK-NEXT:     FEAT_FRINTTS                                           Enable FRInt[32|64][Z|X] instructions that round a floating-point number to an integer (in FP format) forcing it to fit into a 32- or 64-bit int
-// CHECK-NEXT:     FEAT_FlagM                                             Enable Armv8.4-A Flag Manipulation Instructions
+// CHECK-NEXT:     FEAT_FlagM                                             Enable Armv8.4-A Flag Manipulation instructions
 // CHECK-NEXT:     FEAT_FlagM2                                            Enable alternative NZCV format for floating point comparisons
 // CHECK-NEXT:     FEAT_HCX                                               Enable Armv8.7-A HCRX_EL2 system register
 // CHECK-NEXT:     FEAT_I8MM                                              Enable Matrix Multiply Int8 Extension
@@ -43,7 +43,7 @@
 // CHECK-NEXT:     FEAT_SEL2                                              Enable Armv8.4-A Secure Exception Level 2 extension
 // CHECK-NEXT:     FEAT_SPECRES                                           Enable Armv8.5-A execution and data prediction invalidation instructions
 // CHECK-NEXT:     FEAT_SSBS, FEAT_SSBS2                                  Enable Speculative Store Bypass Safe bit
-// CHECK-NEXT:     FEAT_TLBIOS, FEAT_TLBIRANGE                            Enable Armv8.4-A TLB Range and Maintenance Instructions
+// CHECK-NEXT:     FEAT_TLBIOS, FEAT_TLBIRANGE                            Enable Armv8.4-A TLB Range and Maintenance instructions
 // CHECK-NEXT:     FEAT_TRBE                                              Enable Trace Buffer Extension
 // CHECK-NEXT:     FEAT_TRF                                               Enable Armv8.4-A Trace extension
 // CHECK-NEXT:     FEAT_UAO                                               Enable Armv8.2-A UAO PState

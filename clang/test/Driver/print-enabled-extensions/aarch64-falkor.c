@@ -8,6 +8,6 @@
 // CHECK-NEXT:     FEAT_AdvSIMD                                           Enable Advanced SIMD instructions
 // CHECK-NEXT:     FEAT_CRC32                                             Enable Armv8.0-A CRC-32 checksum instructions
 // CHECK-NEXT:     FEAT_FP                                                Enable Armv8.0-A Floating Point Extensions
-// CHECK-NEXT:     FEAT_PMUv3                                             Enable Armv8.0-A Code Generation for PMUv3 Performance Monitors extension
+// CHECK-NEXT:     FEAT_PMUv3                                             Enable Armv8.0-A PMUv3 Performance Monitors extension
 // CHECK-NEXT:     FEAT_RDM                                               Enable Armv8.1-A Rounding Double Multiply Add/Subtract instructions
 // CHECK-NEXT:     FEAT_SHA1, FEAT_SHA256                                 Enable SHA1 and SHA256 support

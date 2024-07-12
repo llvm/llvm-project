@@ -14,7 +14,7 @@
 // CHECK-NEXT:     FEAT_ETE                                               Enable Embedded Trace Extension
 // CHECK-NEXT:     FEAT_FCMA                                              Enable Armv8.3-A Floating-point complex number support
 // CHECK-NEXT:     FEAT_FP                                                Enable Armv8.0-A Floating Point Extensions
-// CHECK-NEXT:     FEAT_FlagM                                             Enable Armv8.4-A Flag Manipulation Instructions
+// CHECK-NEXT:     FEAT_FlagM                                             Enable Armv8.4-A Flag Manipulation instructions
 // CHECK-NEXT:     FEAT_JSCVT                                             Enable Armv8.3-A JavaScript FP conversion instructions
 // CHECK-NEXT:     FEAT_LOR                                               Enable Armv8.1-A Limited Ordering Regions extension
 // CHECK-NEXT:     FEAT_LRCPC                                             Enable support for RCPC extension
@@ -29,7 +29,7 @@
 // CHECK-NEXT:     FEAT_RAS, FEAT_RASv1p1                                 Enable Armv8.0-A Reliability, Availability and Serviceability Extensions
 // CHECK-NEXT:     FEAT_RDM                                               Enable Armv8.1-A Rounding Double Multiply Add/Subtract instructions
 // CHECK-NEXT:     FEAT_SEL2                                              Enable Armv8.4-A Secure Exception Level 2 extension
-// CHECK-NEXT:     FEAT_TLBIOS, FEAT_TLBIRANGE                            Enable Armv8.4-A TLB Range and Maintenance Instructions
+// CHECK-NEXT:     FEAT_TLBIOS, FEAT_TLBIRANGE                            Enable Armv8.4-A TLB Range and Maintenance instructions
 // CHECK-NEXT:     FEAT_TRBE                                              Enable Trace Buffer Extension
 // CHECK-NEXT:     FEAT_TRF                                               Enable Armv8.4-A Trace extension
 // CHECK-NEXT:     FEAT_UAO                                               Enable Armv8.2-A UAO PState

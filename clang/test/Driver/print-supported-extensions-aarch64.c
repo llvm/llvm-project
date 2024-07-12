@@ -14,19 +14,19 @@
 // CHECK-NEXT:     crc                 FEAT_CRC32                                             Enable Armv8.0-A CRC-32 checksum instructions
 // CHECK-NEXT:     crypto              FEAT_Crypto                                            Enable cryptographic instructions
 // CHECK-NEXT:     cssc                FEAT_CSSC                                              Enable Common Short Sequence Compression (CSSC) instructions
-// CHECK-NEXT:     d128                FEAT_D128, FEAT_LVA3, FEAT_SYSREG128, FEAT_SYSINSTR128 Enable Armv9.4-A 128-bit Page Table Descriptors, System Registers and Instructions
+// CHECK-NEXT:     d128                FEAT_D128, FEAT_LVA3, FEAT_SYSREG128, FEAT_SYSINSTR128 Enable Armv9.4-A 128-bit Page Table Descriptors, System Registers and instructions
 // CHECK-NEXT:     dit                 FEAT_DIT                                               Enable Armv8.4-A Data Independent Timing instructions
 // CHECK-NEXT:     dotprod             FEAT_DotProd                                           Enable dot product support
 // CHECK-NEXT:     f32mm               FEAT_F32MM                                             Enable Matrix Multiply FP32 Extension
 // CHECK-NEXT:     f64mm               FEAT_F64MM                                             Enable Matrix Multiply FP64 Extension
 // CHECK-NEXT:     faminmax            FEAT_FAMINMAX                                          Enable FAMIN and FAMAX instructions
-// CHECK-NEXT:     flagm               FEAT_FlagM                                             Enable Armv8.4-A Flag Manipulation Instructions
+// CHECK-NEXT:     flagm               FEAT_FlagM                                             Enable Armv8.4-A Flag Manipulation instructions
 // CHECK-NEXT:     fp                  FEAT_FP                                                Enable Armv8.0-A Floating Point Extensions
 // CHECK-NEXT:     fp16fml             FEAT_FHM                                               Enable FP16 FML instructions
 // CHECK-NEXT:     fp8                 FEAT_FP8                                               Enable FP8 instructions
 // CHECK-NEXT:     fp8dot2             FEAT_FP8DOT2                                           Enable FP8 2-way dot instructions
 // CHECK-NEXT:     fp8dot4             FEAT_FP8DOT4                                           Enable FP8 4-way dot instructions
-// CHECK-NEXT:     fp8fma              FEAT_FP8FMA                                            Enable FP8 multiply-add instructions
+// CHECK-NEXT:     fp8fma              FEAT_FP8FMA                                            Enable Armv9.5-A FP8 multiply-add instructions
 // CHECK-NEXT:     fp16                FEAT_FP16                                              Enable half-precision floating-point data processing
 // CHECK-NEXT:     gcs                 FEAT_GCS                                               Enable Armv9.4-A Guarded Call Stack Extension
 // CHECK-NEXT:     hbc                 FEAT_HBC                                               Enable Armv8.8-A Hinted Conditional Branches Extension
@@ -35,14 +35,14 @@
 // CHECK-NEXT:     jscvt               FEAT_JSCVT                                             Enable Armv8.3-A JavaScript FP conversion instructions
 // CHECK-NEXT:     ls64                FEAT_LS64, FEAT_LS64_V, FEAT_LS64_ACCDATA              Enable Armv8.7-A LD64B/ST64B Accelerator Extension
 // CHECK-NEXT:     lse                 FEAT_LSE                                               Enable Armv8.1-A Large System Extension (LSE) atomic instructions
-// CHECK-NEXT:     lse128              FEAT_LSE128                                            Enable Armv9.4-A 128-bit Atomic Instructions
+// CHECK-NEXT:     lse128              FEAT_LSE128                                            Enable Armv9.4-A 128-bit Atomic instructions
 // CHECK-NEXT:     lut                 FEAT_LUT                                               Enable Lookup Table instructions
 // CHECK-NEXT:     mops                FEAT_MOPS                                              Enable Armv8.8-A memcpy and memset acceleration instructions
 // CHECK-NEXT:     memtag              FEAT_MTE, FEAT_MTE2                                    Enable Memory Tagging Extension
 // CHECK-NEXT:     simd                FEAT_AdvSIMD                                           Enable Advanced SIMD instructions
 // CHECK-NEXT:     pauth               FEAT_PAuth                                             Enable Armv8.3-A Pointer Authentication extension
 // CHECK-NEXT:     pauth-lr            FEAT_PAuth_LR                                          Enable Armv9.5-A PAC enhancements
-// CHECK-NEXT:     pmuv3               FEAT_PMUv3                                             Enable Armv8.0-A Code Generation for PMUv3 Performance Monitors extension
+// CHECK-NEXT:     pmuv3               FEAT_PMUv3                                             Enable Armv8.0-A PMUv3 Performance Monitors extension
 // CHECK-NEXT:     predres             FEAT_SPECRES                                           Enable Armv8.5-A execution and data prediction invalidation instructions
 // CHECK-NEXT:     rng                 FEAT_RNG                                               Enable Random Number generation instructions
 // CHECK-NEXT:     ras                 FEAT_RAS, FEAT_RASv1p1                                 Enable Armv8.0-A Reliability, Availability and Serviceability Extensions
