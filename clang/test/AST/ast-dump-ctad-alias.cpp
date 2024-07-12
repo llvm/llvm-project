@@ -53,6 +53,33 @@ Out2<double>::AInner t(1.0);
 // CHECK-NEXT: |       | `-BuiltinType {{.*}} 'double'
 // CHECK-NEXT: |       `-ParmVarDecl {{.*}} 'double'
 
+// GH92596
+template <typename T0>
+struct Out3 {
+  template<class T1, typename T2>
+  struct Foo {
+    // Deduction guide:
+    //   template <typename T1, typename T2, typename V>
+    //   Foo(V, T1) -> Foo<T1, T2>;
+    template<class V> requires Concept<T0, V> // V in require clause of Foo deduction guide: depth 1, index: 2
+    Foo(V, T1);
+  };
+};
+template<class T3>
+using AFoo3 = Out3<int>::Foo<T3, T3>;
+AFoo3 afoo3{0, 1};
+// Verify occurrence V in the require-clause is transformed (depth: 1 => 0, index: 2 => 1) correctly.
+
+// CHECK:      FunctionTemplateDecl {{.*}} implicit <deduction guide for AFoo3>
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.*}} class depth 0 index 0 T3
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.*}} class depth 0 index 1 V
+// CHECK-NEXT: |-BinaryOperator {{.*}} '<dependent type>' '&&'
+// CHECK-NEXT: | |-UnresolvedLookupExpr {{.*}} '<dependent type>' lvalue (no ADL) = 'Concept'
+// CHECK-NEXT: | | |-TemplateArgument type 'int'
+// CHECK-NEXT: | | | `-BuiltinType {{.*}} 'int'
+// CHECK-NEXT: | | `-TemplateArgument type 'type-parameter-0-1'
+// CHECK-NEXT: | |   `-TemplateTypeParmType {{.*}} 'type-parameter-0-1' dependent depth 0 index 1
+
 template <typename... T1>
 struct Foo {
   Foo(T1...);
@@ -72,3 +99,58 @@ BFoo b2(1.0, 2.0);
 // CHECK-NEXT: | | |-ParmVarDecl {{.*}} 'type-parameter-0-0'
 // CHECK-NEXT: | | `-ParmVarDecl {{.*}} 'type-parameter-0-0'
 // CHECK-NEXT: | `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for BFoo> 'auto (double, double) -> Foo<double, double>' implicit_instantiation
+
+namespace GH90209 {
+// Case 1: type template parameter
+template <class Ts>
+struct List1 {
+  List1(int);
+};
+
+template <class T1>
+struct TemplatedClass1 {
+  TemplatedClass1(T1);
+};
+
+template <class T1>
+TemplatedClass1(T1) -> TemplatedClass1<List1<T1>>;
+
+template <class T2>
+using ATemplatedClass1 = TemplatedClass1<List1<T2>>;
+
+ATemplatedClass1 test1(1);
+// Verify that we have a correct template parameter list for the deduction guide.
+//
+// CHECK:      FunctionTemplateDecl {{.*}} <deduction guide for ATemplatedClass1>
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.*}} class depth 0 index 0 T2
+// CHECK-NEXT: |-TypeTraitExpr {{.*}} 'bool' __is_deducible
+
+// Case 2: template template parameter
+template<typename K> struct Foo{};
+
+template <template<typename> typename Ts>
+struct List2 {
+  List2(int);
+};
+
+template <typename T1>
+struct TemplatedClass2 {
+  TemplatedClass2(T1);
+};
+
+template <template<typename> typename T1>
+TemplatedClass2(T1<int>) -> TemplatedClass2<List2<T1>>;
+
+template <template<typename> typename T2>
+using ATemplatedClass2 = TemplatedClass2<List2<T2>>;
+
+List2<Foo> list(1);
+ATemplatedClass2 test2(list);
+// Verify that we have a correct template parameter list for the deduction guide.
+//
+// CHECK:      FunctionTemplateDecl {{.*}} <deduction guide for ATemplatedClass2>
+// CHECK-NEXT: |-TemplateTemplateParmDecl {{.*}} depth 0 index 0 T2
+// CHECK-NEXT: | `-TemplateTypeParmDecl {{.*}} typename depth 0 index 0
+// CHECK-NEXT: |-TypeTraitExpr {{.*}} 'bool' __is_deducible
+
+} // namespace GH90209

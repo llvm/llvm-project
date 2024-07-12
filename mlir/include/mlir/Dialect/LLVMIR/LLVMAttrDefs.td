@@ -1077,4 +1077,13 @@ def LLVM_PoisonAttr : LLVM_Attr<"Poison", "poison">;
 /// Folded into from LLVM::ZeroOp.
 def LLVM_ZeroAttr : LLVM_Attr<"Zero", "zero">;
 
+//===----------------------------------------------------------------------===//
+// TailCallKindAttr
+//===----------------------------------------------------------------------===//
+
+def TailCallKindAttr : LLVM_Attr<"TailCallKind", "tailcallkind"> {
+  let parameters = (ins "TailCallKind":$tailCallKind);
+  let assemblyFormat = "`<` $tailCallKind `>`";
+}
+
 #endif // LLVMIR_ATTRDEFS

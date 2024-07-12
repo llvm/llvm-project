@@ -437,5 +437,5 @@ Please see :ref:`Testing documentation <testing-hardening-assertions>`.
 Further reading
 ===============
 
-- ``_Hardening RFC <https://discourse.llvm.org/t/rfc-hardening-in-libc/73925>``:
+- `Hardening RFC <https://discourse.llvm.org/t/rfc-hardening-in-libc/73925>`_:
   contains some of the design rationale.

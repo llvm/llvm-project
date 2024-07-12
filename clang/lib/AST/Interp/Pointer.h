@@ -131,7 +131,8 @@ public:
   }
 
   /// Converts the pointer to an APValue that is an rvalue.
-  std::optional<APValue> toRValue(const Context &Ctx) const;
+  std::optional<APValue> toRValue(const Context &Ctx,
+                                  QualType ResultType) const;
 
   /// Offsets a pointer inside an array.
   [[nodiscard]] Pointer atIndex(uint64_t Idx) const {
@@ -210,6 +211,9 @@ public:
 
   /// Expands a pointer to the containing array, undoing narrowing.
   [[nodiscard]] Pointer expand() const {
+    assert(isBlockPointer());
+    Block *Pointee = asBlockPointer().Pointee;
+
     if (isElementPastEnd()) {
       // Revert to an outer one-past-end pointer.
       unsigned Adjust;
@@ -217,7 +221,7 @@ public:
         Adjust = sizeof(InitMapPtr);
       else
         Adjust = sizeof(InlineDescriptor);
-      return Pointer(asBlockPointer().Pointee, asBlockPointer().Base,
+      return Pointer(Pointee, asBlockPointer().Base,
                      asBlockPointer().Base + getSize() + Adjust);
     }
 
@@ -227,15 +231,17 @@ public:
 
     // If at base, point to an array of base types.
     if (isRoot())
-      return Pointer(asBlockPointer().Pointee, RootPtrMark, 0);
+      return Pointer(Pointee, RootPtrMark, 0);
 
     // Step into the containing array, if inside one.
     unsigned Next = asBlockPointer().Base - getInlineDesc()->Offset;
     const Descriptor *Desc =
-        Next == 0 ? getDeclDesc() : getDescriptor(Next)->Desc;
+        (Next == Pointee->getDescriptor()->getMetadataSize())
+            ? getDeclDesc()
+            : getDescriptor(Next)->Desc;
     if (!Desc->IsArray)
       return *this;
-    return Pointer(asBlockPointer().Pointee, Next, Offset);
+    return Pointer(Pointee, Next, Offset);
   }
 
   /// Checks if the pointer is null.
@@ -556,8 +562,16 @@ public:
     if (isUnknownSizeArray())
       return false;
 
-    return isElementPastEnd() ||
+    return isElementPastEnd() || isPastEnd() ||
            (getSize() == getOffset() && !isZeroSizeArray());
+  }
+
+  /// Checks if the pointer points past the end of the object.
+  bool isPastEnd() const {
+    if (isIntegralPointer())
+      return false;
+
+    return !isZero() && Offset > PointeeStorage.BS.Pointee->getSize();
   }
 
   /// Checks if the pointer is an out-of-bounds element pointer.
@@ -629,6 +643,7 @@ private:
   /// Returns the embedded descriptor preceding a field.
   InlineDescriptor *getInlineDesc() const {
     assert(asBlockPointer().Base != sizeof(GlobalInlineDescriptor));
+    assert(asBlockPointer().Base <= asBlockPointer().Pointee->getSize());
     return getDescriptor(asBlockPointer().Base);
   }
 

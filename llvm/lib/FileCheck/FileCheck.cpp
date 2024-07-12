@@ -1488,7 +1488,7 @@ std::string Check::FileCheckType::getModifiersDescription() const {
   if (isLiteralMatch())
     OS << "LITERAL";
   OS << '}';
-  return OS.str();
+  return Ret;
 }
 
 std::string Check::FileCheckType::getDescription(StringRef Prefix) const {

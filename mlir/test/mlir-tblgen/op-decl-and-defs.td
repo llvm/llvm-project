@@ -84,7 +84,7 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK: class AOpAdaptor : public AOpGenericAdaptor<::mlir::ValueRange> {
 // CHECK: public:
 // CHECK:   AOpAdaptor(AOp
-// CHECK:   ::mlir::LogicalResult verify(
+// CHECK:   ::llvm::LogicalResult verify(
 // CHECK: };
 
 // CHECK: class AOp : public ::mlir::Op<AOp, ::mlir::OpTrait::AtLeastNRegions<1>::Impl, ::mlir::OpTrait::AtLeastNResults<1>::Impl, ::mlir::OpTrait::ZeroSuccessors, ::mlir::OpTrait::AtLeastNOperands<1>::Impl, ::mlir::OpTrait::OpInvariants, ::mlir::OpTrait::IsIsolatedFromAbove
@@ -120,9 +120,9 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:   static void build(::mlir::OpBuilder &, ::mlir::OperationState &odsState, ::mlir::TypeRange resultTypes, ::mlir::ValueRange operands, ::llvm::ArrayRef<::mlir::NamedAttribute> attributes, unsigned numRegions)
 // CHECK:   static ::mlir::ParseResult parse(::mlir::OpAsmParser &parser, ::mlir::OperationState &result);
 // CHECK:   void print(::mlir::OpAsmPrinter &p);
-// CHECK:   ::mlir::LogicalResult verifyInvariants();
+// CHECK:   ::llvm::LogicalResult verifyInvariants();
 // CHECK:   static void getCanonicalizationPatterns(::mlir::RewritePatternSet &results, ::mlir::MLIRContext *context);
-// CHECK:   ::mlir::LogicalResult fold(FoldAdaptor adaptor, ::llvm::SmallVectorImpl<::mlir::OpFoldResult> &results);
+// CHECK:   ::llvm::LogicalResult fold(FoldAdaptor adaptor, ::llvm::SmallVectorImpl<::mlir::OpFoldResult> &results);
 // CHECK:   // Display a graph for debugging purposes.
 // CHECK:   void displayGraph();
 // CHECK: };
@@ -205,7 +205,7 @@ def NS_FOp : NS_Op<"op_with_all_types_constraint",
 }
 
 // CHECK-LABEL: class FOp :
-// CHECK: static ::mlir::LogicalResult inferReturnTypes
+// CHECK: static ::llvm::LogicalResult inferReturnTypes
 
 def NS_GOp : NS_Op<"op_with_fixed_return_type", []> {
   let arguments = (ins AnyType:$a);
@@ -213,7 +213,7 @@ def NS_GOp : NS_Op<"op_with_fixed_return_type", []> {
 }
 
 // CHECK-LABEL: class GOp :
-// CHECK: static ::mlir::LogicalResult inferReturnTypes
+// CHECK: static ::llvm::LogicalResult inferReturnTypes
 
 // Check default value for collective params builder. Check that other builders
 // are generated as well.

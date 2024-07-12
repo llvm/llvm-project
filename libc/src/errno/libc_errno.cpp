@@ -7,16 +7,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "libc_errno.h"
+#include "src/__support/CPP/atomic.h"
+#include "src/__support/macros/config.h"
 
 #ifdef LIBC_TARGET_ARCH_IS_GPU
-// LIBC_THREAD_LOCAL on GPU currently does nothing.  So essentially this is just
+// LIBC_THREAD_LOCAL on GPU currently does nothing. So essentially this is just
 // a global errno for gpu to use for now.
 extern "C" {
-LIBC_THREAD_LOCAL int __llvmlibc_gpu_errno;
+LIBC_THREAD_LOCAL LIBC_NAMESPACE::cpp::Atomic<int> __llvmlibc_errno;
 }
 
-void LIBC_NAMESPACE::Errno::operator=(int a) { __llvmlibc_gpu_errno = a; }
-LIBC_NAMESPACE::Errno::operator int() { return __llvmlibc_gpu_errno; }
+void LIBC_NAMESPACE::Errno::operator=(int a) {
+  __llvmlibc_errno.store(a, cpp::MemoryOrder::RELAXED);
+}
+LIBC_NAMESPACE::Errno::operator int() {
+  return __llvmlibc_errno.load(cpp::MemoryOrder::RELAXED);
+}
 
 #elif !defined(LIBC_COPT_PUBLIC_PACKAGING)
 // This mode is for unit testing.  We just use our internal errno.
@@ -41,7 +47,7 @@ LIBC_NAMESPACE::Errno::operator int() { return errno; }
 
 #endif // LIBC_FULL_BUILD
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 // Define the global `libc_errno` instance.
 Errno libc_errno;
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

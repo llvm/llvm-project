@@ -331,6 +331,9 @@ public:
     MemoryType = NewTy;
   }
 
+  /// Unset the tracked range metadata.
+  void clearRanges() { Ranges = nullptr; }
+
   /// Support for operator<<.
   /// @{
   void print(raw_ostream &OS, ModuleSlotTracker &MST,

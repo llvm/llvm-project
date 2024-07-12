@@ -523,8 +523,8 @@ void ScalarizerVisitor::transferMetadataAndIRFlags(Instruction *Op,
                                                    const ValueVector &CV) {
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
   Op->getAllMetadataOtherThanDebugLoc(MDs);
-  for (unsigned I = 0, E = CV.size(); I != E; ++I) {
-    if (Instruction *New = dyn_cast<Instruction>(CV[I])) {
+  for (Value *V : CV) {
+    if (Instruction *New = dyn_cast<Instruction>(V)) {
       for (const auto &MD : MDs)
         if (canTransferMetadata(MD.first))
           New->setMetadata(MD.first, MD.second);

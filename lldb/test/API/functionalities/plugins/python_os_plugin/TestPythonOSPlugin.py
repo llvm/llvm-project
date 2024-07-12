@@ -5,6 +5,7 @@ Test that the Python operating system plugin works correctly
 
 import os
 import lldb
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
@@ -17,6 +18,7 @@ class PluginPythonOSPlugin(TestBase):
         self.build()
         self.run_python_os_funcionality()
 
+    @skipIfWindows  # This is flaky on Windows
     def test_run_python_os_step(self):
         """Test that the Python operating system plugin works correctly when single stepping a virtual thread"""
         self.build()

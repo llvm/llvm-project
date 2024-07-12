@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -46,7 +47,6 @@ class MCRelaxableFragment;
 class MCSymbolRefExpr;
 class raw_ostream;
 class MCAsmBackend;
-class MCAsmLayout;
 class MCContext;
 class MCCodeEmitter;
 class MCFragment;
@@ -54,46 +54,10 @@ class MCObjectWriter;
 class MCSection;
 class MCValue;
 
-// FIXME: This really doesn't belong here. See comments below.
-struct IndirectSymbolData {
-  MCSymbol *Symbol;
-  MCSection *Section;
-};
-
-// FIXME: Ditto this. Purely so the Streamer and the ObjectWriter can talk
-// to one another.
-struct DataRegionData {
-  // This enum should be kept in sync w/ the mach-o definition in
-  // llvm/Object/MachOFormat.h.
-  enum KindTy { Data = 1, JumpTable8, JumpTable16, JumpTable32 } Kind;
-  MCSymbol *Start;
-  MCSymbol *End;
-};
-
 class MCAssembler {
-  friend class MCAsmLayout;
-
 public:
-  using SectionListType = std::vector<MCSection *>;
-  using SymbolDataListType = std::vector<const MCSymbol *>;
-
+  using SectionListType = SmallVector<MCSection *, 0>;
   using const_iterator = pointee_iterator<SectionListType::const_iterator>;
-  using iterator = pointee_iterator<SectionListType::iterator>;
-
-  using const_symbol_iterator =
-      pointee_iterator<SymbolDataListType::const_iterator>;
-  using symbol_iterator = pointee_iterator<SymbolDataListType::iterator>;
-
-  using symbol_range = iterator_range<symbol_iterator>;
-  using const_symbol_range = iterator_range<const_symbol_iterator>;
-
-  using const_indirect_symbol_iterator =
-      std::vector<IndirectSymbolData>::const_iterator;
-  using indirect_symbol_iterator = std::vector<IndirectSymbolData>::iterator;
-
-  using const_data_region_iterator =
-      std::vector<DataRegionData>::const_iterator;
-  using data_region_iterator = std::vector<DataRegionData>::iterator;
 
   /// MachO specific deployment target version info.
   // A Major version of 0 indicates that no version information was supplied
@@ -115,18 +79,17 @@ private:
   MCContext &Context;
 
   std::unique_ptr<MCAsmBackend> Backend;
-
   std::unique_ptr<MCCodeEmitter> Emitter;
-
   std::unique_ptr<MCObjectWriter> Writer;
+
+  bool HasLayout = false;
+  bool RelaxAll = false;
+  bool SubsectionsViaSymbols = false;
+  bool IncrementalLinkerCompatible = false;
 
   SectionListType Sections;
 
-  SymbolDataListType Symbols;
-
-  std::vector<IndirectSymbolData> IndirectSymbols;
-
-  std::vector<DataRegionData> DataRegions;
+  SmallVector<const MCSymbol *, 0> Symbols;
 
   /// The list of linker options to propagate into the object file.
   std::vector<std::vector<std::string>> LinkerOptions;
@@ -150,18 +113,14 @@ private:
   /// The bundle alignment size currently set in the assembler.
   ///
   /// By default it's 0, which means bundling is disabled.
-  unsigned BundleAlignSize;
-
-  bool RelaxAll : 1;
-  bool SubsectionsViaSymbols : 1;
-  bool IncrementalLinkerCompatible : 1;
+  unsigned BundleAlignSize = 0;
 
   /// ELF specific e_header flags
   // It would be good if there were an MCELFAssembler class to hold this.
   // ELF header flags are used both by the integrated and standalone assemblers.
   // Access to the flags is necessary in cases where assembler directives affect
   // which flags to be set.
-  unsigned ELFHeaderEFlags;
+  unsigned ELFHeaderEFlags = 0;
 
   /// Used to communicate Linker Optimization Hint information between
   /// the Streamer and the .o writer
@@ -173,7 +132,6 @@ private:
   /// Evaluate a fixup to a relocatable expression and the value which should be
   /// placed into the fixup.
   ///
-  /// \param Layout The layout to use for evaluation.
   /// \param Fixup The fixup to evaluate.
   /// \param DF The fragment the fixup is inside.
   /// \param Target [out] On return, the relocatable expression the fixup
@@ -185,45 +143,35 @@ private:
   /// \return Whether the fixup value was fully resolved. This is true if the
   /// \p Value result is fixed, otherwise the value may change due to
   /// relocation.
-  bool evaluateFixup(const MCAsmLayout &Layout, const MCFixup &Fixup,
-                     const MCFragment *DF, MCValue &Target,
-                     const MCSubtargetInfo *STI, uint64_t &Value,
-                     bool &WasForced) const;
+  bool evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
+                     MCValue &Target, const MCSubtargetInfo *STI,
+                     uint64_t &Value, bool &WasForced) const;
 
   /// Check whether a fixup can be satisfied, or whether it needs to be relaxed
   /// (increased in size, in order to hold its value correctly).
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const;
+  bool fixupNeedsRelaxation(const MCFixup &Fixup, const MCRelaxableFragment *DF) const;
 
   /// Check whether the given fragment needs relaxation.
-  bool fragmentNeedsRelaxation(const MCRelaxableFragment *IF,
-                               const MCAsmLayout &Layout) const;
+  bool fragmentNeedsRelaxation(const MCRelaxableFragment *IF) const;
 
   /// Perform one layout iteration and return true if any offsets
   /// were adjusted.
-  bool layoutOnce(MCAsmLayout &Layout);
+  bool layoutOnce();
 
   /// Perform relaxation on a single fragment - returns true if the fragment
   /// changes as a result of relaxation.
-  bool relaxFragment(MCAsmLayout &Layout, MCFragment &F);
-  bool relaxInstruction(MCAsmLayout &Layout, MCRelaxableFragment &IF);
-  bool relaxLEB(MCAsmLayout &Layout, MCLEBFragment &IF);
-  bool relaxBoundaryAlign(MCAsmLayout &Layout, MCBoundaryAlignFragment &BF);
-  bool relaxDwarfLineAddr(MCAsmLayout &Layout, MCDwarfLineAddrFragment &DF);
-  bool relaxDwarfCallFrameFragment(MCAsmLayout &Layout,
-                                   MCDwarfCallFrameFragment &DF);
-  bool relaxCVInlineLineTable(MCAsmLayout &Layout,
-                              MCCVInlineLineTableFragment &DF);
-  bool relaxCVDefRange(MCAsmLayout &Layout, MCCVDefRangeFragment &DF);
-  bool relaxPseudoProbeAddr(MCAsmLayout &Layout, MCPseudoProbeAddrFragment &DF);
+  bool relaxFragment(MCFragment &F);
+  bool relaxInstruction(MCRelaxableFragment &IF);
+  bool relaxLEB(MCLEBFragment &IF);
+  bool relaxBoundaryAlign(MCBoundaryAlignFragment &BF);
+  bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF);
+  bool relaxDwarfCallFrameFragment(MCDwarfCallFrameFragment &DF);
+  bool relaxCVInlineLineTable(MCCVInlineLineTableFragment &DF);
+  bool relaxCVDefRange(MCCVDefRangeFragment &DF);
+  bool relaxPseudoProbeAddr(MCPseudoProbeAddrFragment &DF);
 
-  /// finishLayout - Finalize a layout, including fragment lowering.
-  void finishLayout(MCAsmLayout &Layout);
-
-  std::tuple<MCValue, uint64_t, bool> handleFixup(const MCAsmLayout &Layout,
-                                                  MCFragment &F,
-                                                  const MCFixup &Fixup,
-                                                  const MCSubtargetInfo *STI);
+  std::tuple<MCValue, uint64_t, bool>
+  handleFixup(MCFragment &F, const MCFixup &Fixup, const MCSubtargetInfo *STI);
 
 public:
   struct Symver {
@@ -248,24 +196,31 @@ public:
   MCAssembler &operator=(const MCAssembler &) = delete;
   ~MCAssembler();
 
-  /// Compute the effective fragment size assuming it is laid out at the given
-  /// \p SectionAddress and \p FragmentOffset.
-  uint64_t computeFragmentSize(const MCAsmLayout &Layout,
-                               const MCFragment &F) const;
+  /// Compute the effective fragment size.
+  uint64_t computeFragmentSize(const MCFragment &F) const;
 
-  /// Find the symbol which defines the atom containing the given symbol, or
-  /// null if there is no such symbol.
-  const MCSymbol *getAtom(const MCSymbol &S) const;
+  void layoutBundle(MCFragment *Prev, MCFragment *F) const;
+  void ensureValid(MCSection &Sec) const;
 
-  /// Check whether a particular symbol is visible to the linker and is required
-  /// in the symbol table, or whether it can be discarded by the assembler. This
-  /// also effects whether the assembler treats the label as potentially
-  /// defining a separate atom.
-  bool isSymbolLinkerVisible(const MCSymbol &SD) const;
+  // Get the offset of the given fragment inside its containing section.
+  uint64_t getFragmentOffset(const MCFragment &F) const;
+
+  uint64_t getSectionAddressSize(const MCSection &Sec) const;
+  uint64_t getSectionFileSize(const MCSection &Sec) const;
+
+  // Get the offset of the given symbol, as computed in the current
+  // layout.
+  // \return True on success.
+  bool getSymbolOffset(const MCSymbol &S, uint64_t &Val) const;
+
+  // Variant that reports a fatal error if the offset is not computable.
+  uint64_t getSymbolOffset(const MCSymbol &S) const;
+
+  // If this symbol is equivalent to A + Constant, return A.
+  const MCSymbol *getBaseSymbol(const MCSymbol &Symbol) const;
 
   /// Emit the section contents to \p OS.
-  void writeSectionData(raw_ostream &OS, const MCSection *Section,
-                        const MCAsmLayout &Layout) const;
+  void writeSectionData(raw_ostream &OS, const MCSection *Section) const;
 
   /// Check whether a given symbol has been flagged with .thumb_func.
   bool isThumbFunc(const MCSymbol *Func) const;
@@ -342,7 +297,7 @@ public:
   void Finish();
 
   // Layout all section and prepare them for emission.
-  void layout(MCAsmLayout &Layout);
+  void layout();
 
   // FIXME: This does not belong here.
   bool getSubsectionsViaSymbols() const { return SubsectionsViaSymbols; }
@@ -355,6 +310,7 @@ public:
     IncrementalLinkerCompatible = Value;
   }
 
+  bool hasLayout() const { return HasLayout; }
   bool getRelaxAll() const { return RelaxAll; }
   void setRelaxAll(bool Value) { RelaxAll = Value; }
 
@@ -368,59 +324,14 @@ public:
     BundleAlignSize = Size;
   }
 
-  /// \name Section List Access
-  /// @{
-
-  iterator begin() { return Sections.begin(); }
   const_iterator begin() const { return Sections.begin(); }
-
-  iterator end() { return Sections.end(); }
   const_iterator end() const { return Sections.end(); }
 
-  size_t size() const { return Sections.size(); }
-
-  /// @}
-  /// \name Symbol List Access
-  /// @{
-  symbol_iterator symbol_begin() { return Symbols.begin(); }
-  const_symbol_iterator symbol_begin() const { return Symbols.begin(); }
-
-  symbol_iterator symbol_end() { return Symbols.end(); }
-  const_symbol_iterator symbol_end() const { return Symbols.end(); }
-
-  symbol_range symbols() { return make_range(symbol_begin(), symbol_end()); }
-  const_symbol_range symbols() const {
-    return make_range(symbol_begin(), symbol_end());
+  iterator_range<pointee_iterator<
+      typename SmallVector<const MCSymbol *, 0>::const_iterator>>
+  symbols() const {
+    return make_pointee_range(Symbols);
   }
-
-  size_t symbol_size() const { return Symbols.size(); }
-
-  /// @}
-  /// \name Indirect Symbol List Access
-  /// @{
-
-  // FIXME: This is a total hack, this should not be here. Once things are
-  // factored so that the streamer has direct access to the .o writer, it can
-  // disappear.
-  std::vector<IndirectSymbolData> &getIndirectSymbols() {
-    return IndirectSymbols;
-  }
-
-  indirect_symbol_iterator indirect_symbol_begin() {
-    return IndirectSymbols.begin();
-  }
-  const_indirect_symbol_iterator indirect_symbol_begin() const {
-    return IndirectSymbols.begin();
-  }
-
-  indirect_symbol_iterator indirect_symbol_end() {
-    return IndirectSymbols.end();
-  }
-  const_indirect_symbol_iterator indirect_symbol_end() const {
-    return IndirectSymbols.end();
-  }
-
-  size_t indirect_symbol_size() const { return IndirectSymbols.size(); }
 
   /// @}
   /// \name Linker Option List Access
@@ -429,31 +340,6 @@ public:
   std::vector<std::vector<std::string>> &getLinkerOptions() {
     return LinkerOptions;
   }
-
-  /// @}
-  /// \name Data Region List Access
-  /// @{
-
-  // FIXME: This is a total hack, this should not be here. Once things are
-  // factored so that the streamer has direct access to the .o writer, it can
-  // disappear.
-  std::vector<DataRegionData> &getDataRegions() { return DataRegions; }
-
-  data_region_iterator data_region_begin() { return DataRegions.begin(); }
-  const_data_region_iterator data_region_begin() const {
-    return DataRegions.begin();
-  }
-
-  data_region_iterator data_region_end() { return DataRegions.end(); }
-  const_data_region_iterator data_region_end() const {
-    return DataRegions.end();
-  }
-
-  size_t data_region_size() const { return DataRegions.size(); }
-
-  /// @}
-  /// \name Data Region List Access
-  /// @{
 
   // FIXME: This is a total hack, this should not be here. Once things are
   // factored so that the streamer has direct access to the .o writer, it can

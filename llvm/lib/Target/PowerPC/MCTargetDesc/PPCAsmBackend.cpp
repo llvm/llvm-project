@@ -191,14 +191,6 @@ public:
     }
   }
 
-  bool fixupNeedsRelaxation(const MCFixup &Fixup,
-                            uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
-    // FIXME.
-    llvm_unreachable("relaxInstruction() unimplemented");
-  }
-
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override {
     // FIXME.

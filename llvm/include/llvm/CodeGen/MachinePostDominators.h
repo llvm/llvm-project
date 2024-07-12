@@ -81,9 +81,10 @@ class MachinePostDominatorTreePrinterPass
   raw_ostream &OS;
 
 public:
-  MachinePostDominatorTreePrinterPass(raw_ostream &OS) : OS(OS) {}
+  explicit MachinePostDominatorTreePrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
 };
 
 class MachinePostDominatorTreeWrapperPass : public MachineFunctionPass {

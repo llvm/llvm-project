@@ -539,6 +539,16 @@ static bool LinearizeExprTree(Instruction *I,
     Ops.push_back(std::make_pair(V, Weight));
     if (Opcode == Instruction::Add && Flags.AllKnownNonNegative && Flags.HasNSW)
       Flags.AllKnownNonNegative &= isKnownNonNegative(V, SimplifyQuery(DL));
+    else if (Opcode == Instruction::Mul) {
+      // To preserve NUW we need all inputs non-zero.
+      // To preserve NSW we need all inputs strictly positive.
+      if (Flags.AllKnownNonZero &&
+          (Flags.HasNUW || (Flags.HasNSW && Flags.AllKnownNonNegative))) {
+        Flags.AllKnownNonZero &= isKnownNonZero(V, SimplifyQuery(DL));
+        if (Flags.HasNSW && Flags.AllKnownNonNegative)
+          Flags.AllKnownNonNegative &= isKnownNonNegative(V, SimplifyQuery(DL));
+      }
+    }
   }
 
   // For nilpotent operations or addition there may be no operands, for example
@@ -722,10 +732,9 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
           ExpressionChangedStart->setFastMathFlags(Flags);
         } else {
           ExpressionChangedStart->clearSubclassOptionalData();
-          // Note that it doesn't hold for mul if one of the operands is zero.
-          // TODO: We can preserve NUW flag if we prove that all mul operands
-          // are non-zero.
-          if (ExpressionChangedStart->getOpcode() == Instruction::Add) {
+          if (ExpressionChangedStart->getOpcode() == Instruction::Add ||
+              (ExpressionChangedStart->getOpcode() == Instruction::Mul &&
+               Flags.AllKnownNonZero)) {
             if (Flags.HasNUW)
               ExpressionChangedStart->setHasNoUnsignedWrap();
             if (Flags.HasNSW && (Flags.AllKnownNonNegative || Flags.HasNUW))
@@ -1390,8 +1399,8 @@ Value *ReassociatePass::OptimizeXor(Instruction *I,
   //  the "OpndPtrs" as well. For the similar reason, do not fuse this loop
   //  with the previous loop --- the iterator of the "Opnds" may be invalidated
   //  when new elements are added to the vector.
-  for (unsigned i = 0, e = Opnds.size(); i != e; ++i)
-    OpndPtrs.push_back(&Opnds[i]);
+  for (XorOpnd &Op : Opnds)
+    OpndPtrs.push_back(&Op);
 
   // Step 2: Sort the Xor-Operands in a way such that the operands containing
   //  the same symbolic value cluster together. For instance, the input operand

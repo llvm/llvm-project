@@ -57,6 +57,7 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
                                             bool CheckFullyInitialized) {
   this->CheckFullyInitialized = CheckFullyInitialized;
   S.EvaluatingDecl = VD;
+  EvalResult.setSource(VD);
 
   if (const Expr *Init = VD->getAnyInitializer()) {
     QualType T = VD->getType();
@@ -67,7 +68,7 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
 
   EvalResult.setSource(VD);
 
-  if (!this->visitDecl(VD, S.inConstantContext()) && EvalResult.empty())
+  if (!this->visitDeclAndReturn(VD, S.inConstantContext()))
     EvalResult.setInvalid();
 
   S.EvaluatingDecl = nullptr;
@@ -84,7 +85,7 @@ EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }
 Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   // Allocate memory for a local.
   auto Memory = std::make_unique<char[]>(sizeof(Block) + D->getAllocSize());
-  auto *B = new (Memory.get()) Block(D, /*isStatic=*/false);
+  auto *B = new (Memory.get()) Block(Ctx.getEvalID(), D, /*isStatic=*/false);
   B->invokeCtor();
 
   // Initialize local variable inline descriptor.
@@ -151,7 +152,13 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
 
   // Implicitly convert lvalue to rvalue, if requested.
   if (ConvertResultToRValue) {
-    if (std::optional<APValue> V = Ptr.toRValue(Ctx)) {
+    // Never allow reading from a non-const pointer, unless the memory
+    // has been created in this evaluation.
+    if (!Ptr.isConst() && Ptr.block()->getEvalID() != Ctx.getEvalID())
+      return false;
+
+    if (std::optional<APValue> V =
+            Ptr.toRValue(Ctx, EvalResult.getSourceType())) {
       EvalResult.setValue(*V);
     } else {
       return false;
@@ -181,7 +188,8 @@ bool EvalEmitter::emitRetValue(const SourceInfo &Info) {
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;
 
-  if (std::optional<APValue> APV = Ptr.toRValue(S.getCtx())) {
+  if (std::optional<APValue> APV =
+          Ptr.toRValue(S.getCtx(), EvalResult.getSourceType())) {
     EvalResult.setValue(*APV);
     return true;
   }
@@ -252,7 +260,8 @@ void EvalEmitter::updateGlobalTemporaries() {
       if (std::optional<PrimType> T = Ctx.classify(E->getType())) {
         TYPE_SWITCH(*T, { *Cached = Ptr.deref<T>().toAPValue(); });
       } else {
-        if (std::optional<APValue> APV = Ptr.toRValue(Ctx))
+        if (std::optional<APValue> APV =
+                Ptr.toRValue(Ctx, Temp->getTemporaryExpr()->getType()))
           *Cached = *APV;
       }
     }

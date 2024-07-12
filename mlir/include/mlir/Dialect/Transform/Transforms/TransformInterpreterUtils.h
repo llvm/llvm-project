@@ -16,7 +16,6 @@
 #include <memory>
 
 namespace mlir {
-struct LogicalResult;
 class MLIRContext;
 class ModuleOp;
 class Operation;

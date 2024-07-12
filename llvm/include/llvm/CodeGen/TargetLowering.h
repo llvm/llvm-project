@@ -400,14 +400,10 @@ public:
   virtual MVT getScalarShiftAmountTy(const DataLayout &, EVT) const;
 
   /// Returns the type for the shift amount of a shift opcode. For vectors,
-  /// returns the input type. For scalars, behavior depends on \p LegalTypes. If
-  /// \p LegalTypes is true, calls getScalarShiftAmountTy, otherwise uses
-  /// pointer type. If getScalarShiftAmountTy or pointer type cannot represent
-  /// all possible shift amounts, returns MVT::i32. In general, \p LegalTypes
-  /// should be set to true for calls during type legalization and after type
-  /// legalization has been completed.
-  EVT getShiftAmountTy(EVT LHSTy, const DataLayout &DL,
-                       bool LegalTypes = true) const;
+  /// returns the input type. For scalars, calls getScalarShiftAmountTy.
+  /// If getScalarShiftAmountTy type cannot represent all possible shift
+  /// amounts, returns MVT::i32.
+  EVT getShiftAmountTy(EVT LHSTy, const DataLayout &DL) const;
 
   /// Return the preferred type to use for a shift opcode, given the shifted
   /// amount type is \p ShiftValueTy.

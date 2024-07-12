@@ -7,8 +7,8 @@
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Rectangle.html -check-prefix=HTML-RECTANGLE
 // RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/Circle.html -check-prefix=HTML-CIRCLE
 
-// JSON-INDEX: var JsonIndex = `
-// JSON-INDEX-NEXT: {
+// JSON-INDEX: async function LoadIndex() {
+// JSON-INDEX-NEXT: return{
 // JSON-INDEX-NEXT:   "USR": "{{([0-9A-F]{40})}}",
 // JSON-INDEX-NEXT:   "Name": "",
 // JSON-INDEX-NEXT:   "RefType": "default",
@@ -51,7 +51,8 @@
 // JSON-INDEX-NEXT:       ]
 // JSON-INDEX-NEXT:     }
 // JSON-INDEX-NEXT:   ]
-// JSON-INDEX-NEXT: }`;
+// JSON-INDEX-NEXT: };
+// JSON-INDEX-NEXT: }
 
 // HTML-SHAPE: <!DOCTYPE html>
 // HTML-SHAPE-NEXT: <meta charset="utf-8"/>

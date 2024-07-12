@@ -84,3 +84,18 @@ typedef int v[2];
 struct Z { int &&x, y; };
 Z z = { v{1,2}[0], z.x = 10 };
 
+// CHECK: @_ZGR2z2_ ={{.*}} global %struct.R { i64 10 }
+// @z = {{.}} global %struct.Z { ptr @_ZGR1z_, %struct.R { i64 10 } }
+struct R { mutable long x; };
+struct Z2 { const R &x, y; };
+Z2 z2 = { R{1}, z2.x.x = 10 };
+
+// CHECK: __cxa_atexit({{.*}} @_ZN1BD1Ev, {{.*}} @b
+
+// CHECK: define
+// CHECK-NOT: @_ZGRN21ModifyStaticTemporary1cE_
+// CHECK: store {{.*}} @_ZGRN21ModifyStaticTemporary1cE_, {{.*}} @_ZN21ModifyStaticTemporary1cE
+// CHECK: add
+// CHECK: store
+// CHECK: load {{.*}} @_ZN21ModifyStaticTemporary1bE
+// CHECK: store {{.*}} @_ZN21ModifyStaticTemporary1cE

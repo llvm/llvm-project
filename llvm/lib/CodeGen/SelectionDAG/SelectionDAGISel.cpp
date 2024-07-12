@@ -311,15 +311,6 @@ namespace llvm {
 
 } // end namespace llvm
 
-// EmitInstrWithCustomInserter - This method should be implemented by targets
-// that mark instructions with the 'usesCustomInserter' flag.  These
-// instructions are special in various ways, which require special support to
-// insert.  The specified MachineInstr is created but not inserted into any
-// basic blocks, and this method is called to expand it into a sequence of
-// instructions, potentially also creating new basic blocks and control flow.
-// When new basic blocks are inserted and the edges from MBB to its successors
-// are modified, the method should insert pairs of <OldSucc, NewSucc> into the
-// DenseMap.
 MachineBasicBlock *
 TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                             MachineBasicBlock *MBB) const {
@@ -1787,7 +1778,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
             raw_string_ostream InstStr(InstStrStorage);
             InstStr << *Inst;
 
-            R << ": " << InstStr.str();
+            R << ": " << InstStrStorage;
           }
 
           reportFastISelFailure(*MF, *ORE, R, EnableFastISelAbort > 2);
@@ -1836,7 +1827,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
           std::string InstStrStorage;
           raw_string_ostream InstStr(InstStrStorage);
           InstStr << *Inst;
-          R << ": " << InstStr.str();
+          R << ": " << InstStrStorage;
         }
 
         reportFastISelFailure(*MF, *ORE, R, ShouldAbort);
@@ -4379,5 +4370,5 @@ void SelectionDAGISel::CannotYetSelect(SDNode *N) {
     else
       Msg << "unknown intrinsic #" << iid;
   }
-  report_fatal_error(Twine(Msg.str()));
+  report_fatal_error(Twine(msg));
 }

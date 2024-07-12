@@ -10,6 +10,7 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
+#include "../bugprone/PointerArithmeticOnPolymorphicObjectCheck.h"
 #include "../bugprone/ReservedIdentifierCheck.h"
 #include "../bugprone/SignalHandlerCheck.h"
 #include "../bugprone/SignedCharMisuseCheck.h"
@@ -238,6 +239,10 @@ public:
     // CON
     CheckFactories.registerCheck<bugprone::SpuriouslyWakeUpFunctionsCheck>(
         "cert-con54-cpp");
+    // CTR
+    CheckFactories
+        .registerCheck<bugprone::PointerArithmeticOnPolymorphicObjectCheck>(
+            "cert-ctr56-cpp");
     // DCL
     CheckFactories.registerCheck<VariadicFunctionDefCheck>("cert-dcl50-cpp");
     CheckFactories.registerCheck<bugprone::ReservedIdentifierCheck>(

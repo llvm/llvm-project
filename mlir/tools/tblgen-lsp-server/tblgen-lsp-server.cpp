@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Tools/tblgen-lsp-server/TableGenLspServerMain.h"
 
 using namespace mlir;

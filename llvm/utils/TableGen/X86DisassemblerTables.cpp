@@ -1062,11 +1062,11 @@ void DisassemblerTables::emit(raw_ostream &o) const {
   i1--;
   emitContextDecisions(o1, o2, i1, i2, ModRMTableNum);
 
-  o << o1.str();
+  o << s1;
   o << "  0x0\n";
   o << "};\n";
   o << "\n";
-  o << o2.str();
+  o << s2;
   o << "\n";
   o << "\n";
 }

@@ -650,7 +650,8 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
                   DefaultValuedAttr<LLVM_FastmathFlagsAttr,
                                    "{}">:$fastmathFlags,
                   OptionalAttr<DenseI32ArrayAttr>:$branch_weights,
-                  DefaultValuedAttr<CConv, "CConv::C">:$CConv);
+                  DefaultValuedAttr<CConv, "CConv::C">:$CConv,
+                  DefaultValuedAttr<TailCallKind, "TailCallKind::None">:$TailCallKind);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs Optional<LLVM_Type>:$result);
@@ -1425,6 +1426,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     UnitAttr:$dso_local,
     DefaultValuedAttr<CConv, "CConv::C">:$CConv,
     OptionalAttr<SymbolRefAttr>:$comdat,
+    OptionalAttr<UnitAttr>:$convergent,
     OptionalAttr<FlatSymbolRefAttr>:$personality,
     OptionalAttr<StrAttr>:$garbageCollector,
     OptionalAttr<ArrayAttr>:$passthrough,
@@ -1453,6 +1455,9 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<BoolAttr>:$no_nans_fp_math,
     OptionalAttr<BoolAttr>:$approx_func_fp_math,
     OptionalAttr<BoolAttr>:$no_signed_zeros_fp_math,
+    OptionalAttr<StrAttr>:$denormal_fp_math,
+    OptionalAttr<StrAttr>:$denormal_fp_math_f32,
+    OptionalAttr<StrAttr>:$fp_contract,
     OptionalAttr<UnitAttr>:$no_inline,
     OptionalAttr<UnitAttr>:$always_inline,
     OptionalAttr<UnitAttr>:$optimize_none

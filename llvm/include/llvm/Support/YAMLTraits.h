@@ -1026,7 +1026,7 @@ yamlize(IO &YamlIO, T &Val, bool, EmptyContext &Ctx) {
     std::string Storage;
     raw_string_ostream Buffer(Storage);
     BlockScalarTraits<T>::output(Val, YamlIO.getContext(), Buffer);
-    StringRef Str = Buffer.str();
+    StringRef Str(Storage);
     YamlIO.blockScalarString(Str);
   } else {
     StringRef Str;
@@ -1046,8 +1046,8 @@ yamlize(IO &io, T &Val, bool, EmptyContext &Ctx) {
     raw_string_ostream ScalarBuffer(ScalarStorage), TagBuffer(TagStorage);
     TaggedScalarTraits<T>::output(Val, io.getContext(), ScalarBuffer,
                                   TagBuffer);
-    io.scalarTag(TagBuffer.str());
-    StringRef ScalarStr = ScalarBuffer.str();
+    io.scalarTag(TagStorage);
+    StringRef ScalarStr(ScalarStorage);
     io.scalarString(ScalarStr,
                     TaggedScalarTraits<T>::mustQuote(Val, ScalarStr));
   } else {

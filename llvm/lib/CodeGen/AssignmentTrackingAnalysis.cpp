@@ -572,11 +572,10 @@ class MemLocFragmentFill {
     bool FirstMeet = true;
     // LiveIn locs for BB is the meet of the already-processed preds' LiveOut
     // locs.
-    for (auto I = pred_begin(&BB), E = pred_end(&BB); I != E; I++) {
+    for (const BasicBlock *Pred : predecessors(&BB)) {
       // Ignore preds that haven't been processed yet. This is essentially the
       // same as initialising all variables to implicit top value (⊤) which is
       // the identity value for the meet operation.
-      const BasicBlock *Pred = *I;
       if (!Visited.count(Pred))
         continue;
 
@@ -941,10 +940,10 @@ public:
             LLVM_DEBUG(dbgs() << BB->getName()
                               << " has new OutLocs, add succs to worklist: [ ");
             LiveOut[BB] = std::move(LiveSet);
-            for (auto I = succ_begin(BB), E = succ_end(BB); I != E; I++) {
-              if (OnPending.insert(*I).second) {
-                LLVM_DEBUG(dbgs() << I->getName() << " ");
-                Pending.push(BBToOrder[*I]);
+            for (BasicBlock *Succ : successors(BB)) {
+              if (OnPending.insert(Succ).second) {
+                LLVM_DEBUG(dbgs() << Succ->getName() << " ");
+                Pending.push(BBToOrder[Succ]);
               }
             }
             LLVM_DEBUG(dbgs() << "]\n");
@@ -2360,10 +2359,10 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
           LLVM_DEBUG(dbgs() << BB->getName()
                             << " has new OutLocs, add succs to worklist: [ ");
           LiveOut[BB] = std::move(LiveSet);
-          for (auto I = succ_begin(BB), E = succ_end(BB); I != E; I++) {
-            if (OnPending.insert(*I).second) {
-              LLVM_DEBUG(dbgs() << I->getName() << " ");
-              Pending.push(BBToOrder[*I]);
+          for (BasicBlock *Succ : successors(BB)) {
+            if (OnPending.insert(Succ).second) {
+              LLVM_DEBUG(dbgs() << Succ->getName() << " ");
+              Pending.push(BBToOrder[Succ]);
             }
           }
           LLVM_DEBUG(dbgs() << "]\n");

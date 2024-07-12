@@ -72,11 +72,8 @@ void DataSharingProcessor::processStep2(mlir::Operation *op, bool isLoop) {
     firOpBuilder.setInsertionPointAfter(op);
     insertDeallocs();
   } else {
-    // insert dummy instruction to mark the insertion position
-    mlir::Value undefMarker = firOpBuilder.create<fir::UndefOp>(
-        op->getLoc(), firOpBuilder.getIndexType());
+    mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
     insertDeallocs();
-    firOpBuilder.setInsertionPointAfter(undefMarker.getDefiningOp());
   }
 }
 

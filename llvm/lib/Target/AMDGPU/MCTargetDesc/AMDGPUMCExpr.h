@@ -48,13 +48,13 @@ private:
   AMDGPUMCExpr(VariantKind Kind, ArrayRef<const MCExpr *> Args, MCContext &Ctx);
   ~AMDGPUMCExpr();
 
-  bool evaluateExtraSGPRs(MCValue &Res, const MCAsmLayout *Layout,
+  bool evaluateExtraSGPRs(MCValue &Res, const MCAssembler *Asm,
                           const MCFixup *Fixup) const;
-  bool evaluateTotalNumVGPR(MCValue &Res, const MCAsmLayout *Layout,
+  bool evaluateTotalNumVGPR(MCValue &Res, const MCAssembler *Asm,
                             const MCFixup *Fixup) const;
-  bool evaluateAlignTo(MCValue &Res, const MCAsmLayout *Layout,
+  bool evaluateAlignTo(MCValue &Res, const MCAssembler *Asm,
                        const MCFixup *Fixup) const;
-  bool evaluateOccupancy(MCValue &Res, const MCAsmLayout *Layout,
+  bool evaluateOccupancy(MCValue &Res, const MCAssembler *Asm,
                          const MCFixup *Fixup) const;
 
 public:
@@ -94,7 +94,7 @@ public:
   const MCExpr *getSubExpr(size_t Index) const;
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAsmLayout *Layout,
+  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                  const MCFixup *Fixup) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
   MCFragment *findAssociatedFragment() const override;
