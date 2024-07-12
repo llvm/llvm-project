@@ -94,6 +94,34 @@ bool AliasAnalysis::Source::isBoxData() const {
          origin.isData;
 }
 
+bool AliasAnalysis::Source::aliasesLikeDummyArg() const {
+  return kind != SourceKind::Allocate && kind != SourceKind::Global;
+}
+
+bool AliasAnalysis::Source::aliasesLikePtrDummyArg() const {
+  // Must alias like dummy arg (or HostAssoc).
+  if (!aliasesLikeDummyArg())
+    return false;
+  // Must be address of the dummy arg not of a dummy arg component.
+  if (isRecordWithPointerComponent(valueType))
+    return false;
+  // Must be address *of* (not *in*) a pointer.
+  return attributes.test(Attribute::Pointer) && !isData();
+}
+
+bool AliasAnalysis::Source::canBeActualArg() const {
+  return kind != SourceKind::Allocate;
+}
+
+bool AliasAnalysis::Source::canBeActualArgWithPtr(
+    const mlir::Value *val) const {
+  // Must not be local.
+  if (!canBeActualArg())
+    return false;
+  // Must be address of a composite with a pointer component.
+  return isRecordWithPointerComponent(val->getType());
+}
+
 AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   // TODO: alias() has to be aware of the function scopes.
   // After MLIR inlining, the current implementation may
@@ -220,7 +248,7 @@ AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   //     print *, p
   //   end subroutine
   // end module
-  // program
+  // program main
   //   use m
   //   real, target :: x1 = 1
   //   real, target :: x2 = 2
@@ -245,19 +273,11 @@ AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   //     print *, p
   //   end subroutine
   // end subroutine
-  if ((isRecordWithPointerComponent(val1->getType()) &&
-       src1->kind != SourceKind::Allocate &&
-       src2->kind != SourceKind::Allocate && src2->kind != SourceKind::Global &&
-       src2->attributes.test(Attribute::Pointer) && !src2->isData() &&
-       !isRecordWithPointerComponent(src2->valueType)) ||
-      (isRecordWithPointerComponent(val2->getType()) &&
-       src2->kind != SourceKind::Allocate &&
-       src1->kind != SourceKind::Allocate && src1->kind != SourceKind::Global &&
-       src1->attributes.test(Attribute::Pointer) && !src1->isData() &&
-       !isRecordWithPointerComponent(src1->valueType))) {
+  if ((src1->aliasesLikePtrDummyArg() && src2->canBeActualArgWithPtr(val2)) ||
+      (src2->aliasesLikePtrDummyArg() && src1->canBeActualArgWithPtr(val1))) {
     LLVM_DEBUG(llvm::dbgs()
-               << "  aliasing between pointer arg and composite with pointer "
-               << "component\n");
+               << "  aliasing between pointer dummy arg and composite with "
+               << "pointer component\n");
     return AliasResult::MayAlias;
   }
 
