@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_SYS_SOCKET_BIND_H
 #define LLVM_LIBC_SRC_SYS_SOCKET_BIND_H
 
-#include "src/__support/macros/config.h"
 #include <sys/socket.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int bind(int domain, const struct sockaddr *address, socklen_t address_len);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SYS_SOCKET_BIND_H

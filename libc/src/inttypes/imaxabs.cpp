@@ -9,10 +9,9 @@
 #include "src/inttypes/imaxabs.h"
 #include "src/__support/common.h"
 #include "src/__support/integer_operations.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(intmax_t, imaxabs, (intmax_t j)) { return integer_abs(j); }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

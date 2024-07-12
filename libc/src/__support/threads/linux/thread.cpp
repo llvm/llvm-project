@@ -14,7 +14,6 @@
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_utils.h" // For FutexWordType
 #include "src/errno/libc_errno.h"                    // For error macros
 
@@ -30,7 +29,7 @@
 #include <sys/mman.h>    // For PROT_* and MAP_* definitions.
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 #ifdef SYS_mmap2
 static constexpr long MMAP_SYSCALL_NUMBER = SYS_mmap2;
@@ -518,4 +517,4 @@ void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
   __builtin_unreachable();
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

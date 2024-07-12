@@ -9,12 +9,11 @@
 #include "src/math/canonicalize.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, canonicalize, (double *cx, const double *x)) {
   return fputil::canonicalize(*cx, *x);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

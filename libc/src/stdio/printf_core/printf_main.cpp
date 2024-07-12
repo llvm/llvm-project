@@ -9,7 +9,6 @@
 #include "src/stdio/printf_core/printf_main.h"
 
 #include "src/__support/arg_list.h"
-#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/converter.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/parser.h"
@@ -17,7 +16,7 @@
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace printf_core {
 
 int printf_main(Writer *writer, const char *__restrict str,
@@ -40,4 +39,4 @@ int printf_main(Writer *writer, const char *__restrict str,
 }
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

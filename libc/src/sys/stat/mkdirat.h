@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_SYS_STAT_MKDIRAT_H
 #define LLVM_LIBC_SRC_SYS_STAT_MKDIRAT_H
 
-#include "src/__support/macros/config.h"
 #include <sys/stat.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int mkdirat(int dfd, const char *path, mode_t mode);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SYS_STAT_MKDIRAT_H

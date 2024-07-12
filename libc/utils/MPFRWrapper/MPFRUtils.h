@@ -10,13 +10,12 @@
 #define LLVM_LIBC_UTILS_MPFRWRAPPER_MPFRUTILS_H
 
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/macros/config.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace testing {
 namespace mpfr {
 
@@ -373,7 +372,7 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
 
 } // namespace mpfr
 } // namespace testing
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 // GET_MPFR_DUMMY_ARG is going to be added to the end of GET_MPFR_MACRO as a
 // simple way to avoid the compiler warning `gnu-zero-variadic-macro-arguments`.

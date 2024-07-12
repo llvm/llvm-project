@@ -10,13 +10,12 @@
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(unsigned long long, stdc_bit_ceil_ull,
                    (unsigned long long value)) {
   return cpp::bit_ceil(value);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

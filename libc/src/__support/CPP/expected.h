@@ -10,10 +10,8 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_EXPECTED_H
 
 #include "src/__support/macros/attributes.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
-namespace cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // This is used to hold an unexpected value so that a different constructor is
 // selected.
@@ -54,7 +52,6 @@ public:
   LIBC_INLINE constexpr const T *operator->() const { return &exp; }
 };
 
-} // namespace cpp
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_EXPECTED_H

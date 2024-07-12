@@ -12,10 +12,9 @@
 #include "hdr/time_macros.h"
 #include "hdr/types/struct_timespec.h"
 #include "src/__support/CPP/expected.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/time/units.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace internal {
 // We use AbsTimeout to remind ourselves that the timeout is an absolute time.
 // This is a simple wrapper around the timespec struct that also keeps track of
@@ -45,6 +44,6 @@ public:
   }
 };
 } // namespace internal
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_ABS_TIMEOUT_H

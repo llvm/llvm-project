@@ -9,12 +9,11 @@
 #include "src/math/fminimum_magf.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, fminimum_magf, (float x, float y)) {
   return fputil::fminimum_mag(x, y);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

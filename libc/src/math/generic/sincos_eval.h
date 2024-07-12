@@ -14,9 +14,8 @@
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/integer_literals.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 namespace generic {
 
@@ -120,6 +119,6 @@ LIBC_INLINE void sincos_eval(const Float128 &u, Float128 &sin_u,
 
 } // namespace generic
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_SINCOSF_EVAL_H

@@ -8,11 +8,10 @@
 
 #include "src/stdlib/atol.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
 #include "src/errno/libc_errno.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(long, atol, (const char *str)) {
   auto result = internal::strtointeger<long>(str, 10);
@@ -22,4 +21,4 @@ LLVM_LIBC_FUNCTION(long, atol, (const char *str)) {
   return result;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

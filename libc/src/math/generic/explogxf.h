@@ -17,12 +17,11 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/cpu_features.h"
 
 #include <errno.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 struct ExpBase {
   // Base = e
@@ -380,6 +379,6 @@ LIBC_INLINE cpp::optional<double> ziv_test_denorm(int hi, double mid, double lo,
   return cpp::nullopt;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_EXPLOGXF_H

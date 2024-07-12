@@ -15,13 +15,12 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
 #include <errno.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 // Exceptional cases for tanf.
 constexpr size_t N_EXCEPTS = 6;
@@ -140,4 +139,4 @@ LLVM_LIBC_FUNCTION(float, tanf, (float x)) {
       multiply_add(sin_y, -sin_k, multiply_add(cosm1_y, cos_k, cos_k)));
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

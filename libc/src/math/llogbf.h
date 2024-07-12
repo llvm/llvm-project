@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_MATH_LLOGBF_H
 #define LLVM_LIBC_SRC_MATH_LLOGBF_H
 
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 long llogbf(float x);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_LLOGBF_H

@@ -13,10 +13,8 @@
 #include "src/__support/macros/attributes.h"
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
-namespace cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // is_fixed_point
 #ifdef LIBC_COMPILER_HAS_FIXED_POINT
@@ -43,7 +41,6 @@ template <typename T> struct is_fixed_point : false_type {};
 template <typename T>
 LIBC_INLINE_VAR constexpr bool is_fixed_point_v = is_fixed_point<T>::value;
 
-} // namespace cpp
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_FIXED_POINT_H

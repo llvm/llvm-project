@@ -9,14 +9,13 @@
 #include "src/string/strpbrk.h"
 
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/string/string_utils.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(char *, strpbrk, (const char *src, const char *breakset)) {
   src += internal::complementary_span(src, breakset);
   return *src ? const_cast<char *>(src) : nullptr;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

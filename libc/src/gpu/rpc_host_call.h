@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_GPU_RPC_HOST_CALL_H
 #define LLVM_LIBC_SRC_GPU_RPC_HOST_CALL_H
 
-#include "src/__support/macros/config.h"
 #include <stddef.h> // size_t
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 void rpc_host_call(void *fn, void *buffer, size_t size);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_GPU_RPC_HOST_CALL_H

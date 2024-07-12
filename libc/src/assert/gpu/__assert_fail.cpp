@@ -11,10 +11,9 @@
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/libc_assert.h"
-#include "src/__support/macros/config.h"
 #include "src/stdlib/abort.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 // A single-use lock to allow only a single thread to print the assertion.
 static cpp::Atomic<uint32_t> lock = 0;
@@ -38,4 +37,4 @@ LLVM_LIBC_FUNCTION(void, __assert_fail,
   LIBC_NAMESPACE::abort();
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

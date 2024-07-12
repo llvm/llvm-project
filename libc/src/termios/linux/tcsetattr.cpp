@@ -11,14 +11,13 @@
 
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
 #include <asm/ioctls.h> // Safe to include without the risk of name pollution.
 #include <sys/syscall.h> // For syscall numbers
 #include <termios.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, tcsetattr,
                    (int fd, int actions, const struct termios *t)) {
@@ -60,4 +59,4 @@ LLVM_LIBC_FUNCTION(int, tcsetattr,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

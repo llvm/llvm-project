@@ -7,12 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/integer_literals.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/math_extras.h"
 #include "src/__support/uint128.h" // UInt<128>
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 // TODO: add UInt<128> support.
 using UnsignedTypesNoBigInt = testing::TypeList<
@@ -159,4 +158,4 @@ TYPED_TEST(LlvmLibcBlockMathExtrasTest, sub_overflow, UnsignedTypes) {
   }
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

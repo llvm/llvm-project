@@ -17,10 +17,8 @@
 #include "src/__support/CPP/type_traits/remove_cv.h"
 #include "src/__support/CPP/type_traits/remove_extent.h"
 #include "src/__support/CPP/type_traits/remove_reference.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
-namespace cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // decay
 template <class T> class decay {
@@ -34,7 +32,6 @@ public:
 };
 template <class T> using decay_t = typename decay<T>::type;
 
-} // namespace cpp
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_DECAY_H

@@ -18,7 +18,6 @@
 #define LLVM_LIBC_SRC_STDLIB_STRFROM_UTIL_H
 
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
 #include "src/stdio/printf_core/converter_atlas.h"
 #include "src/stdio/printf_core/core_structs.h"
@@ -26,8 +25,7 @@
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
-namespace internal {
+namespace LIBC_NAMESPACE::internal {
 
 template <typename T>
 using storage_type = typename fputil::FPBits<T>::StorageType;
@@ -135,7 +133,6 @@ int strfromfloat_convert(printf_core::Writer *writer,
   return -1;
 }
 
-} // namespace internal
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE::internal
 
 #endif // LLVM_LIBC_SRC_STDLIB_STRFROM_UTIL_H

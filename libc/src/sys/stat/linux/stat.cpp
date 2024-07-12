@@ -8,7 +8,6 @@
 
 #include "src/sys/stat/stat.h"
 #include "kernel_statx.h"
-#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
 #include "src/__support/common.h"
@@ -16,7 +15,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, stat,
                    (const char *__restrict path,
@@ -29,4 +28,4 @@ LLVM_LIBC_FUNCTION(int, stat,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

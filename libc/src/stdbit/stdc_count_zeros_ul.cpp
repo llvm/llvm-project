@@ -9,13 +9,12 @@
 #include "src/stdbit/stdc_count_zeros_ul.h"
 
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/math_extras.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(unsigned, stdc_count_zeros_ul, (unsigned long value)) {
   return static_cast<unsigned>(count_zeros(value));
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

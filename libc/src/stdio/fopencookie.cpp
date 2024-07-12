@@ -14,10 +14,9 @@
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
 
-#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 namespace {
 
@@ -98,4 +97,4 @@ LLVM_LIBC_FUNCTION(::FILE *, fopencookie,
   return reinterpret_cast<::FILE *>(file);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_ARM_SYSCALL_H
 
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
 #ifdef __thumb__
 #define R7 long r7 = number
@@ -61,7 +60,7 @@
 #define REGISTER_CONSTRAINT_5 REGISTER_CONSTRAINT_4, "r"(r4)
 #define REGISTER_CONSTRAINT_6 REGISTER_CONSTRAINT_5, "r"(r5)
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE long syscall_impl(long number) {
   REGISTER_DECL_0;
@@ -108,7 +107,7 @@ LIBC_INLINE long syscall_impl(long number, long arg1, long arg2, long arg3,
   return r0;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #undef REGISTER_DECL_0
 #undef REGISTER_DECL_1

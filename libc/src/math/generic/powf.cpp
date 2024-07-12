@@ -19,7 +19,6 @@
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/FPUtil/sqrt.h" // Speedup for powf(x, 1/2) = sqrtf(x)
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include "exp10f_impl.h" // Speedup for powf(10, y) = exp10f(y)
@@ -27,7 +26,7 @@
 
 #include <errno.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 using fputil::DoubleDouble;
 using fputil::TripleDouble;
@@ -857,4 +856,4 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
          0.0f;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

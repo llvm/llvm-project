@@ -14,10 +14,8 @@
 #include "src/__support/CPP/type_traits/is_scalar.h"
 #include "src/__support/CPP/type_traits/is_union.h"
 #include "src/__support/macros/attributes.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
-namespace cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // is_object
 template <class T>
@@ -27,7 +25,6 @@ struct is_object
 template <class T>
 LIBC_INLINE_VAR constexpr bool is_object_v = is_object<T>::value;
 
-} // namespace cpp
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_OBJECT_H

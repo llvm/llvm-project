@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_CANONICALIZEL_H
 #define LLVM_LIBC_SRC_MATH_CANONICALIZEL_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int canonicalizel(long double *cx, const long double *x);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_CANONICALIZEL_H

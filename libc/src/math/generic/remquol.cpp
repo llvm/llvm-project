@@ -9,13 +9,12 @@
 #include "src/math/remquol.h"
 #include "src/__support/FPUtil/DivisionAndRemainderOperations.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(long double, remquol,
                    (long double x, long double y, int *exp)) {
   return fputil::remquo(x, y, *exp);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

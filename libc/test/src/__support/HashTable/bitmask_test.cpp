@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/HashTable/bitmask.h"
-#include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace internal {
 
 using ShortBitMask = BitMaskAdaptor<uint16_t, 1>;
@@ -67,4 +66,4 @@ TEST(LlvmLibcHashTableBitMaskTest, MultiBitStrideIteration) {
   }
 }
 } // namespace internal
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

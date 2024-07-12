@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_TIME_DIFFTIME_H
 #define LLVM_LIBC_SRC_TIME_DIFFTIME_H
 
-#include "src/__support/macros/config.h"
 #include <time.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 double difftime(time_t end, time_t beginning);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_TIME_DIFFTIME_H

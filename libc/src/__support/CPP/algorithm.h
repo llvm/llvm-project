@@ -13,9 +13,8 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_ALGORITHM_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace cpp {
 
 template <class T> LIBC_INLINE constexpr const T &max(const T &a, const T &b) {
@@ -42,6 +41,6 @@ LIBC_INLINE constexpr bool all_of(InputIt first, InputIt last, UnaryPred p) {
 }
 
 } // namespace cpp
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_ALGORITHM_H

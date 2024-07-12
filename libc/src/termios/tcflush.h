@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_TERMIOS_TCFLUSH_H
 #define LLVM_LIBC_SRC_TERMIOS_TCFLUSH_H
 
-#include "src/__support/macros/config.h"
 #include <termios.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int tcflush(int fd, int queue_selector);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_TERMIOS_TCFLUSH_H

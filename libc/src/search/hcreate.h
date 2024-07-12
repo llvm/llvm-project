@@ -9,11 +9,10 @@
 #ifndef LLVM_LIBC_SRC_SEARCH_HCREATE_H
 #define LLVM_LIBC_SRC_SEARCH_HCREATE_H
 
-#include "src/__support/macros/config.h"
 #include <search.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 int hcreate(size_t capacity);
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SEARCH_HCREATE_H

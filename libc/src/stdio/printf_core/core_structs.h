@@ -19,7 +19,7 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace printf_core {
 
 // These length modifiers match the length modifiers in the format string, which
@@ -136,6 +136,6 @@ constexpr int INT_CONVERSION_ERROR = -4;
 constexpr int FIXED_POINT_CONVERSION_ERROR = -5;
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CORE_STRUCTS_H

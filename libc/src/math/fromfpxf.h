@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_FROMFPXF_H
 #define LLVM_LIBC_SRC_MATH_FROMFPXF_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 float fromfpxf(float x, int rnd, unsigned int width);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_FROMFPXF_H

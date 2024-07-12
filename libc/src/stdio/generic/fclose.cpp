@@ -10,10 +10,9 @@
 #include "src/__support/File/file.h"
 
 #include "hdr/types/FILE.h"
-#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, fclose, (::FILE * stream)) {
   int result = reinterpret_cast<LIBC_NAMESPACE::File *>(stream)->close();
@@ -24,4 +23,4 @@ LLVM_LIBC_FUNCTION(int, fclose, (::FILE * stream)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

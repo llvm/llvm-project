@@ -10,13 +10,12 @@
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(unsigned, stdc_trailing_zeros_ull,
                    (unsigned long long value)) {
   return static_cast<unsigned>(cpp::countr_zero(value));
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

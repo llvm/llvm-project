@@ -9,10 +9,9 @@
 #include "src/math/logb.h"
 #include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, logb, (double x)) { return fputil::logb(x); }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

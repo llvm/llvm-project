@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_RAND_H
 #define LLVM_LIBC_SRC_STDLIB_RAND_H
 
-#include "src/__support/macros/config.h"
 #include <stdlib.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int rand(void);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDLIB_RAND_H

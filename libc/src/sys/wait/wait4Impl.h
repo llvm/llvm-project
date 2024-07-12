@@ -12,14 +12,13 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
-#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
 #include <signal.h>
 #include <sys/syscall.h> // For syscall numbers.
 #include <sys/wait.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace internal {
 
 // The implementation of wait here is very minimal. We will add more
@@ -81,6 +80,6 @@ LIBC_INLINE ErrorOr<pid_t> wait4impl(pid_t pid, int *wait_status, int options,
 }
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SYS_WAIT_WAIT4IMPL_H

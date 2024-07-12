@@ -7,13 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/macros/config.h"
 #include "test/src/math/performance_testing/Timer.h"
 
 #include <cstddef>
 #include <fstream>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace testing {
 
 template <typename T> class BinaryOpSingleOutputPerf {
@@ -122,7 +121,7 @@ public:
 };
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #define BINARY_OP_SINGLE_OUTPUT_PERF(T, myFunc, otherFunc, filename)           \
   int main() {                                                                 \

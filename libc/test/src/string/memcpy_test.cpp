@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "memory_utils/memory_check_utils.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/os.h" // LIBC_TARGET_OS_IS_LINUX
 #include "src/string/memcpy.h"
 #include "test/UnitTest/Test.h"
@@ -16,7 +15,7 @@
 #include "memory_utils/protected_pages.h"
 #endif // !defined(LIBC_FULL_BUILD) && defined(LIBC_TARGET_OS_IS_LINUX)
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 // Adapt CheckMemcpy signature to memcpy.
 static inline void Adaptor(cpp::span<char> dst, cpp::span<char> src,
@@ -72,4 +71,4 @@ TEST(LlvmLibcMemcpyTest, CheckAccess) {
 
 #endif // !defined(LIBC_FULL_BUILD) && defined(LIBC_TARGET_OS_IS_LINUX)
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

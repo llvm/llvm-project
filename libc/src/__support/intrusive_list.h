@@ -14,9 +14,8 @@
 #define LLVM_LIBC_SRC___SUPPORT_INTRUSIVE_LIST_H
 
 #include "common.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace internal {
 
 class IntrusiveList {
@@ -61,6 +60,6 @@ public:
 };
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_INTRUSIVE_LIST_H

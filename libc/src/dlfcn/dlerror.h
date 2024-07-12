@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_DLFCN_DLERROR_H
 #define LLVM_LIBC_SRC_DLFCN_DLERROR_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 char *dlerror();
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_DLFCN_DLERROR_H

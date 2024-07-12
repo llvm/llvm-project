@@ -9,9 +9,8 @@
 #include "src/stdlib/exit.h"
 #include "src/__support/OSUtil/exit.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 extern "C" void __cxa_finalize(void *);
 
@@ -20,4 +19,4 @@ extern "C" void __cxa_finalize(void *);
   internal::exit(status);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

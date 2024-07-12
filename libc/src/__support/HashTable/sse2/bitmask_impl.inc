@@ -7,10 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <immintrin.h>
-
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace internal {
 // With SSE2, every bitmask is iteratable as
 // we use single bit to encode the data.
@@ -49,4 +46,4 @@ struct Group {
   }
 };
 } // namespace internal
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

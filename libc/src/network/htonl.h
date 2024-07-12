@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_NETWORK_HTONL_H
 #define LLVM_LIBC_SRC_NETWORK_HTONL_H
 
-#include "src/__support/macros/config.h"
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 uint32_t htonl(uint32_t hostlong);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_NETWORK_HTONL_H

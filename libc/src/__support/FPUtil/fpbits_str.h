@@ -14,9 +14,8 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/macros/attributes.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 namespace details {
 
@@ -71,6 +70,6 @@ template <typename T> LIBC_INLINE cpp::string str(fputil::FPBits<T> x) {
   return s;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_STR_H

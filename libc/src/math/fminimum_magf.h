@@ -10,12 +10,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_FMINIMUM_MAGF_H
 #define LLVM_LIBC_SRC_MATH_FMINIMUM_MAGF_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 float fminimum_magf(float x, float y);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_FMINIMUM_MAGF_H

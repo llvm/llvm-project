@@ -11,17 +11,14 @@
 #include "src/__support/CPP/type_traits/is_same.h"
 #include "src/__support/CPP/type_traits/remove_cv.h"
 #include "src/__support/macros/attributes.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
-namespace cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // is_void
 template <typename T> struct is_void : is_same<void, remove_cv_t<T>> {};
 template <typename T>
 LIBC_INLINE_VAR constexpr bool is_void_v = is_void<T>::value;
 
-} // namespace cpp
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_VOID_H

@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_UTILS_UNITTEST_ZXTEST_H
 #define LLVM_LIBC_UTILS_UNITTEST_ZXTEST_H
 
-#include "src/__support/macros/config.h"
 #include <zxtest/zxtest.h>
 
 #define WITH_SIGNAL(X) #X
@@ -29,13 +28,11 @@
 #define EXPECT_DEATH(FUNC, SIG) ([&] { ASSERT_DEATH(FUNC, SIG); }())
 #endif
 
-namespace LIBC_NAMESPACE_DECL {
-namespace testing {
+namespace LIBC_NAMESPACE::testing {
 
 using Test = ::zxtest::Test;
 
-} // namespace testing
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE::testing
 
 // zxtest does not have gmock-style matchers.
 #define LIBC_TEST_HAS_MATCHERS() (0)

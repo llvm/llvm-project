@@ -15,13 +15,12 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
 #include "src/__support/integer_literals.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include "common_constants.h"
 #include "log_range_reduction.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 // 128-bit precision dyadic floating point numbers.
 using Float128 = typename fputil::DyadicFloat<128>;
@@ -899,4 +898,4 @@ LLVM_LIBC_FUNCTION(double, log10, (double x)) {
   return log10_accurate(x_e, index, u);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

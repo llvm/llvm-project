@@ -10,13 +10,12 @@
 
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
 #include <stdint.h>      // For int64_t.
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, nanosleep,
                    (const struct timespec *req, struct timespec *rem)) {
@@ -39,4 +38,4 @@ LLVM_LIBC_FUNCTION(int, nanosleep,
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

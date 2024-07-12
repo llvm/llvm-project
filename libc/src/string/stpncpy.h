@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_STRING_STPNCPY_H
 #define LLVM_LIBC_SRC_STRING_STPNCPY_H
 
-#include "src/__support/macros/config.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 char *stpncpy(char *__restrict dest, const char *__restrict src, size_t n);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_STPNCPY_H

@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_THREADS_THRD_CREATE_H
 #define LLVM_LIBC_SRC_THREADS_THRD_CREATE_H
 
-#include "src/__support/macros/config.h"
 #include <threads.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int thrd_create(thrd_t *thread, thrd_start_t func, void *arg);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_THREADS_THRD_CREATE_H

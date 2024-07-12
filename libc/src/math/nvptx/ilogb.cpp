@@ -10,10 +10,9 @@
 #include "src/__support/common.h"
 
 #include "declarations.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, ilogb, (double x)) { return __nv_ilogb(x); }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

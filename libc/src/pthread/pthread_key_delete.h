@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_KEY_DELETE_H
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_KEY_DELETE_H
 
-#include "src/__support/macros/config.h"
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int pthread_key_delete(pthread_key_t key);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_KEY_DELETE_H

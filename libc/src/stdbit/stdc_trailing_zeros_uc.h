@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STDBIT_STDC_TRAILING_ZEROS_UC_H
 #define LLVM_LIBC_SRC_STDBIT_STDC_TRAILING_ZEROS_UC_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 unsigned stdc_trailing_zeros_uc(unsigned char value);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDBIT_STDC_TRAILING_ZEROS_UC_H

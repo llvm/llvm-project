@@ -7,12 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Timer.h"
-#include "src/__support/macros/config.h"
 
 #include <chrono>
 #include <fstream>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace testing {
 
 struct TimerImplementation {
@@ -40,4 +39,4 @@ uint64_t Timer::nanoseconds() const {
 }
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

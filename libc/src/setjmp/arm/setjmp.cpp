@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/setjmp/setjmp_impl.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 #if defined(__thumb__) && __ARM_ARCH_ISA_THUMB == 1
 
@@ -62,4 +61,4 @@ LLVM_LIBC_FUNCTION(int, setjmp, (__jmp_buf * buf)) {
 
 #endif
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

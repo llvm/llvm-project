@@ -9,12 +9,11 @@
 #include "src/math/fmodf16.h"
 #include "src/__support/FPUtil/generic/FMod.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float16, fmodf16, (float16 x, float16 y)) {
   return fputil::generic::FMod<float16, uint32_t>::eval(x, y);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

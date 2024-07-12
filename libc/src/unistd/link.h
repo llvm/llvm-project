@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_LINK_H
 #define LLVM_LIBC_SRC_UNISTD_LINK_H
 
-#include "src/__support/macros/config.h"
 #include <unistd.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int link(const char *, const char *);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_UNISTD_LINK_H

@@ -14,7 +14,6 @@
 #include "src/__support/CPP/stringstream.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 
 #include <stdint.h>
@@ -23,7 +22,7 @@
 
 template <typename T> using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace testing {
 namespace mpfr {
 
@@ -1300,4 +1299,4 @@ template float16 round<float16>(float16, RoundingMode);
 
 } // namespace mpfr
 } // namespace testing
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

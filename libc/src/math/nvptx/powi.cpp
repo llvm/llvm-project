@@ -8,12 +8,11 @@
 
 #include "src/math/powi.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
 #include "declarations.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, powi, (double x, int y)) { return __nv_powi(x, y); }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

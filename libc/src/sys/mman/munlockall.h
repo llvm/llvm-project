@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_SYS_MMAN_MUNLOCKALL_H
 #define LLVM_LIBC_SRC_SYS_MMAN_MUNLOCKALL_H
 
-#include "src/__support/macros/config.h"
 #include <sys/mman.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int munlockall(void);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SYS_MMAN_MUNLOCKALL_H

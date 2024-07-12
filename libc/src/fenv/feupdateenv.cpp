@@ -11,9 +11,8 @@
 #include "src/__support/common.h"
 
 #include "hdr/types/fenv_t.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, feupdateenv, (const fenv_t *envp)) {
   int current_excepts = fputil::test_except(FE_ALL_EXCEPT);
@@ -22,4 +21,4 @@ LLVM_LIBC_FUNCTION(int, feupdateenv, (const fenv_t *envp)) {
   return fputil::raise_except(current_excepts);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

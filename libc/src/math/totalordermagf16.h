@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_MATH_TOTALORDERMAGF16_H
 #define LLVM_LIBC_SRC_MATH_TOTALORDERMAGF16_H
 
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int totalordermagf16(const float16 *x, const float16 *y);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_TOTALORDERMAGF16_H

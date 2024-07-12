@@ -10,9 +10,8 @@
 #define LLVM_LIBC_SRC___SUPPORT_CTYPE_UTILS_H
 
 #include "src/__support/macros/attributes.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace internal {
 
 // ------------------------------------------------------
@@ -56,6 +55,6 @@ LIBC_INLINE static constexpr int tolower(int ch) {
 }
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif //  LLVM_LIBC_SRC___SUPPORT_CTYPE_UTILS_H

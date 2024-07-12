@@ -9,13 +9,12 @@
 #include "src/math/totalordermagf16.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, totalordermagf16,
                    (const float16 *x, const float16 *y)) {
   return static_cast<int>(fputil::totalordermag(*x, *y));
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

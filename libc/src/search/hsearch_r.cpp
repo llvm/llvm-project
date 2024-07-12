@@ -8,10 +8,9 @@
 
 #include "src/search/hsearch_r.h"
 #include "src/__support/HashTable/table.h"
-#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 LLVM_LIBC_FUNCTION(int, hsearch_r,
                    (ENTRY item, ACTION action, ENTRY **retval,
                     struct hsearch_data *htab)) {
@@ -41,4 +40,4 @@ LLVM_LIBC_FUNCTION(int, hsearch_r,
   return 1;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

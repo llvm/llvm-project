@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STDBIT_STDC_BIT_CEIL_UC_H
 #define LLVM_LIBC_SRC_STDBIT_STDC_BIT_CEIL_UC_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 unsigned char stdc_bit_ceil_uc(unsigned char value);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDBIT_STDC_BIT_CEIL_UC_H

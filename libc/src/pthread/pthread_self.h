@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_SELF_H
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_SELF_H
 
-#include "src/__support/macros/config.h"
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 pthread_t pthread_self();
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_SELF_H

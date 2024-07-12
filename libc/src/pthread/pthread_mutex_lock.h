@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEX_LOCK_H
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEX_LOCK_H
 
-#include "src/__support/macros/config.h"
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int pthread_mutex_lock(pthread_mutex_t *mutex);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEX_LOCK_H

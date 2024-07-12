@@ -9,12 +9,11 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRXFRM_H
 #define LLVM_LIBC_SRC_STRING_STRXFRM_H
 
-#include "src/__support/macros/config.h"
 #include <stddef.h> // For size_t
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 size_t strxfrm(char *__restrict dest, const char *__restrict src, size_t n);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_STRXFRM_H

@@ -12,10 +12,9 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/uint128.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
   auto x_bits = fputil::FPBits<double>(x);
@@ -126,4 +125,4 @@ LLVM_LIBC_FUNCTION(float, fmul, (double x, double y)) {
   return result_bits.get_val();
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

@@ -9,11 +9,9 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_ALIGNED_STORAGE_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_ALIGNED_STORAGE_H
 
-#include "src/__support/macros/config.h"
 #include <stddef.h> // size_t
 
-namespace LIBC_NAMESPACE_DECL {
-namespace cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 template <size_t Len, size_t Align> struct aligned_storage {
   struct type {
@@ -24,7 +22,6 @@ template <size_t Len, size_t Align> struct aligned_storage {
 template <size_t Len, size_t Align>
 using aligned_storage_t = typename aligned_storage<Len, Align>::type;
 
-} // namespace cpp
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_ALIGNED_STORAGE_H

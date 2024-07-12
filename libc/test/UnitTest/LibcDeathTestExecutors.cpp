@@ -8,13 +8,12 @@
 
 #include "LibcTest.h"
 
-#include "src/__support/macros/config.h"
 #include "test/UnitTest/ExecuteFunction.h"
 #include "test/UnitTest/TestLogger.h"
 
 #include <cassert>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace testing {
 
 bool Test::testProcessKilled(testutils::FunctionCaller *Func, int Signal,
@@ -102,4 +101,4 @@ bool Test::testProcessExits(testutils::FunctionCaller *Func, int ExitCode,
 }
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_THREADS_MTX_INIT_H
 #define LLVM_LIBC_SRC_THREADS_MTX_INIT_H
 
-#include "src/__support/macros/config.h"
 #include <threads.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int mtx_init(mtx_t *mutex, int type);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_THREADS_MTX_INIT_H

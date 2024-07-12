@@ -8,12 +8,11 @@
 
 #include "src/stdlib/qsort.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/stdlib/qsort_util.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void, qsort,
                    (void *array, size_t array_size, size_t elem_size,
@@ -25,4 +24,4 @@ LLVM_LIBC_FUNCTION(void, qsort,
                                       array_size, elem_size, c));
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

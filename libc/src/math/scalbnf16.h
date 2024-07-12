@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_MATH_SCALBNF16_H
 #define LLVM_LIBC_SRC_MATH_SCALBNF16_H
 
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 float16 scalbnf16(float16 x, int n);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_SCALBNF16_H

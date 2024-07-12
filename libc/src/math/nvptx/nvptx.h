@@ -12,9 +12,8 @@
 #include "declarations.h"
 
 #include "src/__support/macros/attributes.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace internal {
 LIBC_INLINE double acos(double x) { return __nv_acos(x); }
 LIBC_INLINE float acosf(float x) { return __nv_acosf(x); }
@@ -98,6 +97,6 @@ LIBC_INLINE double tgamma(double x) { return __nv_tgamma(x); }
 LIBC_INLINE float tgammaf(float x) { return __nv_tgammaf(x); }
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_NVPTX_NVPTX_H

@@ -10,12 +10,11 @@
 #include "src/__support/common.h"
 
 #include "declarations.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void, sincosf, (float x, float *sinptr, float *cosptr)) {
   *sinptr = __ocml_sincos_f32(x, cosptr);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

@@ -8,10 +8,9 @@
 
 #include "src/time/asctime_r.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/time/time_utils.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 using LIBC_NAMESPACE::time_utils::TimeConstants;
 
@@ -20,4 +19,4 @@ LLVM_LIBC_FUNCTION(char *, asctime_r,
   return time_utils::asctime(timeptr, buffer, TimeConstants::ASCTIME_MAX_BYTES);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

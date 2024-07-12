@@ -9,14 +9,13 @@
 #define LIBC_SRC_STRING_MEMORY_UTILS_RISCV_INLINE_MEMSET_H
 
 #include "src/__support/macros/attributes.h"               // LIBC_INLINE
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h" // LIBC_TARGET_ARCH_IS_RISCV64
 #include "src/string/memory_utils/generic/aligned_access.h"
 #include "src/string/memory_utils/utils.h" // Ptr, CPtr
 
 #include <stddef.h> // size_t
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE static void inline_memset_riscv(Ptr dst, uint8_t value,
                                             size_t count) {
@@ -29,6 +28,6 @@ LIBC_INLINE static void inline_memset_riscv(Ptr dst, uint8_t value,
 #endif
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LIBC_SRC_STRING_MEMORY_UTILS_RISCV_INLINE_MEMSET_H

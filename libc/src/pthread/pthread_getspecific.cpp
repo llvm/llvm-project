@@ -9,16 +9,15 @@
 #include "pthread_getspecific.h"
 
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
 
 #include <pthread.h>
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void *, pthread_getspecific, (pthread_key_t key)) {
   return get_tss_value(key);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/time/clock.h"
-#include "src/__support/macros/config.h"
 #include "src/time/gpu/time_utils.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(clock_t, clock, ()) {
   if (!GPU_CLOCKS_PER_SEC)
@@ -26,4 +25,4 @@ LLVM_LIBC_FUNCTION(clock_t, clock, ()) {
   return clock_t(ticks * (CLOCKS_PER_SEC / GPU_CLOCKS_PER_SEC));
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATTR_INIT_H
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATTR_INIT_H
 
-#include "src/__support/macros/config.h"
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int pthread_attr_init(pthread_attr_t *attr);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATTR_INIT_H

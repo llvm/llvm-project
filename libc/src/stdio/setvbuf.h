@@ -10,14 +10,13 @@
 #define LLVM_LIBC_SRC_STDIO_SETVBUF_H
 
 #include "hdr/types/FILE.h"
-#include "src/__support/macros/config.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int setvbuf(::FILE *__restrict stream, char *__restrict buf, int type,
             size_t size);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_SETVBUF_H

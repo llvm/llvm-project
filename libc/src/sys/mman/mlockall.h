@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_SYS_MMAN_MLOCKALL_H
 #define LLVM_LIBC_SRC_SYS_MMAN_MLOCKALL_H
 
-#include "src/__support/macros/config.h"
 #include <sys/mman.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int mlockall(int flags);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SYS_MMAN_MLOCKALL_H

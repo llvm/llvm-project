@@ -14,7 +14,6 @@
 #endif
 
 #include "src/__support/macros/attributes.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #ifndef LLVM_LIBC_FUNCTION_ATTR
@@ -36,7 +35,7 @@
 #define LLVM_LIBC_FUNCTION(type, name, arglist)                                \
   LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace internal {
 LIBC_INLINE constexpr bool same_string(char const *lhs, char const *rhs) {
   for (; *lhs || *rhs; ++lhs, ++rhs)
@@ -45,7 +44,7 @@ LIBC_INLINE constexpr bool same_string(char const *lhs, char const *rhs) {
   return true;
 }
 } // namespace internal
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #define __LIBC_MACRO_TO_STRING(str) #str
 #define LIBC_MACRO_TO_STRING(str) __LIBC_MACRO_TO_STRING(str)

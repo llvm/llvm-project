@@ -9,10 +9,9 @@
 #include "src/stdio/fseeko.h"
 #include "src/__support/File/file.h"
 
-#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, fseeko, (::FILE * stream, off_t offset, int whence)) {
   auto result =
@@ -24,4 +23,4 @@ LLVM_LIBC_FUNCTION(int, fseeko, (::FILE * stream, off_t offset, int whence)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

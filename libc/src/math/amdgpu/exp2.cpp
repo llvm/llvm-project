@@ -10,10 +10,9 @@
 #include "src/__support/common.h"
 
 #include "declarations.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, exp2, (double x)) { return __ocml_exp2_f64(x); }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

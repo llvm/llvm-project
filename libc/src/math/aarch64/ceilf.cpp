@@ -8,9 +8,8 @@
 
 #include "src/math/ceilf.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, ceilf, (float x)) {
   float y;
@@ -18,4 +17,4 @@ LLVM_LIBC_FUNCTION(float, ceilf, (float x)) {
   return y;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

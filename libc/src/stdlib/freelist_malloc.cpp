@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/freelist_heap.h"
-#include "src/__support/macros/config.h"
 #include "src/stdlib/aligned_alloc.h"
 #include "src/stdlib/calloc.h"
 #include "src/stdlib/free.h"
@@ -16,7 +15,7 @@
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 namespace {
 #ifdef LIBC_FREELIST_MALLOC_SIZE
@@ -48,4 +47,4 @@ LLVM_LIBC_FUNCTION(void *, aligned_alloc, (size_t alignment, size_t size)) {
   return freelist_heap->aligned_allocate(alignment, size);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

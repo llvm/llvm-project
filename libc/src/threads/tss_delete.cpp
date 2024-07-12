@@ -9,15 +9,14 @@
 #include "tss_delete.h"
 
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
 
 #include <threads.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void, tss_delete, (tss_t key)) {
   LIBC_NAMESPACE::tss_key_delete(key);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

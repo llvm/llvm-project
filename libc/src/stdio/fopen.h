@@ -10,12 +10,11 @@
 #define LLVM_LIBC_SRC_STDIO_FOPEN_H
 
 #include "hdr/types/FILE.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 ::FILE *fopen(const char *__restrict name, const char *__restrict mode);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_FOPEN_H

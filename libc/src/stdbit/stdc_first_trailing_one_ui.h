@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STDBIT_STDC_FIRST_TRAILING_ONE_UI_H
 #define LLVM_LIBC_SRC_STDBIT_STDC_FIRST_TRAILING_ONE_UI_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 unsigned stdc_first_trailing_one_ui(unsigned value);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDBIT_STDC_FIRST_TRAILING_ONE_UI_H

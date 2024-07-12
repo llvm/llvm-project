@@ -9,14 +9,13 @@
 #ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_RWLOCK_TIMEDWRLOCK_H
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_RWLOCK_TIMEDWRLOCK_H
 
-#include "src/__support/macros/config.h"
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int pthread_rwlock_timedwrlock(pthread_rwlock_t *__restrict rwlock,
                                const struct timespec *__restrict abs_timeout);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_RWLOCK_TIMEDWRLOCK_H

@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_FENVIMPL_H
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #if !defined(LIBC_TARGET_ARCH_IS_X86)
@@ -22,7 +21,7 @@
 #include "hdr/types/fenv_t.h"
 #include "src/__support/macros/sanitizer.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 namespace internal {
@@ -643,6 +642,6 @@ LIBC_INLINE int set_env(const fenv_t *envp) {
 #endif
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_X86_64_FENVIMPL_H

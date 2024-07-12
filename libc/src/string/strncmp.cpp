@@ -9,12 +9,11 @@
 #include "src/string/strncmp.h"
 
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_strcmp.h"
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, strncmp,
                    (const char *left, const char *right, size_t n)) {
@@ -22,4 +21,4 @@ LLVM_LIBC_FUNCTION(int, strncmp,
   return inline_strncmp(left, right, n, comp);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

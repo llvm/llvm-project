@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_GETCWD_H
 #define LLVM_LIBC_SRC_UNISTD_GETCWD_H
 
-#include "src/__support/macros/config.h"
 #include <unistd.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 char *getcwd(char *buf, size_t size);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_UNISTD_GETCWD_H

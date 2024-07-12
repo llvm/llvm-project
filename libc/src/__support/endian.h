@@ -10,11 +10,10 @@
 #define LLVM_LIBC_SRC___SUPPORT_ENDIAN_H
 
 #include "common.h"
-#include "src/__support/macros/config.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 // We rely on compiler preprocessor defines to allow for cross compilation.
 #if !defined(__BYTE_ORDER__) || !defined(__ORDER_LITTLE_ENDIAN__) ||           \
@@ -141,6 +140,6 @@ Endian<__ORDER_BIG_ENDIAN__>::to_little_endian<uint64_t>(uint64_t v) {
 
 using Endian = internal::Endian<__BYTE_ORDER__>;
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_ENDIAN_H

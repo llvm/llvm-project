@@ -12,9 +12,8 @@
 #include <signal.h> // For signal numbers
 
 #include "src/__support/StringUtil/message_mapper.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE_VAR constexpr const MsgTable<6> STDC_SIGNALS = {
     MsgMapping(SIGINT, "Interrupt"),
@@ -25,6 +24,6 @@ LIBC_INLINE_VAR constexpr const MsgTable<6> STDC_SIGNALS = {
     MsgMapping(SIGTERM, "Terminated"),
 };
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_STDC_SIGNALS_H

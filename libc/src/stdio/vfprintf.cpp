@@ -10,13 +10,12 @@
 
 #include "src/__support/File/file.h"
 #include "src/__support/arg_list.h"
-#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/vfprintf_internal.h"
 
 #include "hdr/types/FILE.h"
 #include <stdarg.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, vfprintf,
                    (::FILE *__restrict stream, const char *__restrict format,
@@ -28,4 +27,4 @@ LLVM_LIBC_FUNCTION(int, vfprintf,
   return ret_val;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

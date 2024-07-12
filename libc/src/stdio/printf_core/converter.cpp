@@ -8,7 +8,6 @@
 
 #include "src/stdio/printf_core/converter.h"
 
-#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/printf_config.h"
 #include "src/stdio/printf_core/writer.h"
@@ -23,7 +22,7 @@
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace printf_core {
 
 int convert(Writer *writer, const FormatSection &to_conv) {
@@ -97,4 +96,4 @@ int convert(Writer *writer, const FormatSection &to_conv) {
 }
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

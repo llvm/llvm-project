@@ -10,11 +10,10 @@
 #define LLVM_LIBC_SRC_MATH_AMDGPU_PLATFORM_H
 
 #include "src/__support/macros/attributes.h"
-#include "src/__support/macros/config.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 // The ROCm device library uses control globals to alter codegen for the
 // different targets. To avoid needing to link them in manually we simply
@@ -50,6 +49,6 @@ extern const LIBC_INLINE_VAR uint32_t __oclc_ISA_version = 9000;
 [[gnu::alias("__oclc_finite_only_opt")]] const uint8_t __oclc_finite_only_opt__;
 [[gnu::alias("__oclc_ISA_version")]] const uint32_t __oclc_ISA_version__;
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_AMDGPU_PLATFORM_H

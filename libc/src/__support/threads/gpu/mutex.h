@@ -10,10 +10,9 @@
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_GPU_MUTEX_H
 
 #include "src/__support/macros/attributes.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/threads/mutex_common.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 /// Implementation of a simple passthrough mutex which guards nothing. A
 /// complete Mutex locks in general cannot be implemented on the GPU. We simply
@@ -27,6 +26,6 @@ struct Mutex {
   LIBC_INLINE MutexError reset() { return MutexError::NONE; }
 };
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_GPU_MUTEX_H

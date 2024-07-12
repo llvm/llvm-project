@@ -13,11 +13,10 @@
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 // A class which stores the normalized form of a floating point value.
@@ -268,6 +267,6 @@ template <> LIBC_INLINE NormalFloat<long double>::operator long double() const {
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_NORMALFLOAT_H

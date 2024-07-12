@@ -11,13 +11,11 @@
 #include <stddef.h> // For size_t
 
 #include "array.h"       // For array
-#include "src/__support/macros/config.h"
 #include "type_traits.h" // For remove_cv_t, enable_if_t, is_same_v, is_const_v
 
 #include "src/__support/macros/attributes.h"
 
-namespace LIBC_NAMESPACE_DECL {
-namespace cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // A trimmed down implementation of std::span.
 // Missing features:
@@ -121,7 +119,6 @@ private:
   size_t span_size;
 };
 
-} // namespace cpp
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_SPAN_H

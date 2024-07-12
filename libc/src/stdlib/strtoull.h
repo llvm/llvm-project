@@ -9,13 +9,11 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_STRTOULL_H
 #define LLVM_LIBC_SRC_STDLIB_STRTOULL_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 unsigned long long strtoull(const char *__restrict str,
                             char **__restrict str_end, int base);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDLIB_STRTOULL_H

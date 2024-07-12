@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_SCHED_SCHED_RR_GET_INTERVAL_H
 #define LLVM_LIBC_SRC_SCHED_SCHED_RR_GET_INTERVAL_H
 
-#include "src/__support/macros/config.h"
 #include <sched.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int sched_rr_get_interval(pid_t tid, struct timespec *tp);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SCHED_SCHED_RR_GET_INTERVAL_H

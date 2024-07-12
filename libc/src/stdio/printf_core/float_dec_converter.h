@@ -16,7 +16,6 @@
 #include "src/__support/float_to_string.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/libc_assert.h"
-#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/float_inf_nan_converter.h"
@@ -25,7 +24,7 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace printf_core {
 
 using StorageType = fputil::FPBits<long double>::StorageType;
@@ -1171,6 +1170,6 @@ LIBC_INLINE int convert_float_dec_auto(Writer *writer,
 }
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_FLOAT_DEC_CONVERTER_H

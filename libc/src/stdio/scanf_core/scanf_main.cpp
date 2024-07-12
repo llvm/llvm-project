@@ -9,7 +9,6 @@
 #include "src/stdio/scanf_core/scanf_main.h"
 
 #include "src/__support/arg_list.h"
-#include "src/__support/macros/config.h"
 #include "src/stdio/scanf_core/converter.h"
 #include "src/stdio/scanf_core/core_structs.h"
 #include "src/stdio/scanf_core/parser.h"
@@ -17,7 +16,7 @@
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace scanf_core {
 
 int scanf_main(Reader *reader, const char *__restrict str,
@@ -43,4 +42,4 @@ int scanf_main(Reader *reader, const char *__restrict str,
 }
 
 } // namespace scanf_core
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

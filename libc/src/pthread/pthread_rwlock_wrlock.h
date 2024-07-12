@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_RWLOCK_WRLOCK_H
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_RWLOCK_WRLOCK_H
 
-#include "src/__support/macros/config.h"
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int pthread_rwlock_wrlock(pthread_rwlock_t *rwlock);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_RWLOCK_WRLOCK_H

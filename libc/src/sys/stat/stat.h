@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_SYS_STAT_STAT_H
 #define LLVM_LIBC_SRC_SYS_STAT_STAT_H
 
-#include "src/__support/macros/config.h"
 #include <sys/stat.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int stat(const char *__restrict path, struct stat *__restrict statbuf);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SYS_STAT_STAT_H

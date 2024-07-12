@@ -9,12 +9,11 @@
 #include "roundk.h"
 #include "src/__support/common.h"
 #include "src/__support/fixed_point/fx_bits.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(accum, roundk, (accum x, int n)) {
   return fixed_point::round(x, n);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

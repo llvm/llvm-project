@@ -13,10 +13,9 @@
 #include "src/__support/CPP/type_traits/is_integral.h"
 #include "src/__support/CPP/type_traits/is_signed.h"
 #include "src/__support/macros/attributes.h"       // LIBC_INLINE
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace cpp {
 
 namespace internal {
@@ -87,6 +86,6 @@ struct numeric_limits<__uint128_t>
 #endif
 
 } // namespace cpp
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_LIMITS_H

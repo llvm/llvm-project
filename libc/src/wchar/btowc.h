@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_WCHAR_BTOWC_H
 #define LLVM_LIBC_SRC_WCHAR_BTOWC_H
 
-#include "src/__support/macros/config.h"
 #include <wchar.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 wint_t btowc(int c);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_WCHAR_BTOWC_H

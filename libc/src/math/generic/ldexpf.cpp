@@ -9,12 +9,11 @@
 #include "src/math/ldexpf.h"
 #include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, ldexpf, (float x, int exp)) {
   return fputil::ldexp(x, exp);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

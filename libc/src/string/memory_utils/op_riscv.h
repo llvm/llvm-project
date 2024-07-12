@@ -12,7 +12,6 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_RISCV_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_RISCV_H
 
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 
 #if defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
@@ -20,8 +19,7 @@
 #include "src/__support/common.h"
 #include "src/string/memory_utils/op_generic.h"
 
-namespace LIBC_NAMESPACE_DECL {
-namespace generic {
+namespace LIBC_NAMESPACE::generic {
 
 ///////////////////////////////////////////////////////////////////////////////
 // Specializations for uint16_t
@@ -80,8 +78,7 @@ LIBC_INLINE MemcmpReturnType cmp_neq<uint64_t>(CPtr p1, CPtr p2,
   return cmp_neq_uint64_t(a, b);
 }
 
-} // namespace generic
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE::generic
 
 #endif // LIBC_TARGET_ARCH_IS_ANY_RISCV
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_RISCV_H

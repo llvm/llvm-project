@@ -10,10 +10,8 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_ALWAYS_FALSE_H
 
 #include "src/__support/macros/attributes.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
-namespace cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // This is technically not part of the standard but it come often enough that
 // it's convenient to have around.
@@ -26,7 +24,6 @@ namespace cpp {
 // Usage `static_assert(cpp::always_false<T>, "error message");`
 template <typename...> LIBC_INLINE_VAR constexpr bool always_false = false;
 
-} // namespace cpp
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_ALWAYS_FALSE_H

@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_THREADS_CND_WAIT_H
 #define LLVM_LIBC_SRC_THREADS_CND_WAIT_H
 
-#include "src/__support/macros/config.h"
 #include <threads.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int cnd_wait(cnd_t *cond, mtx_t *mutex);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_THREADS_CND_WAIT_H

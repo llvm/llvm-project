@@ -12,10 +12,8 @@
 
 #include "src/__support/CPP/string.h"
 #include "src/__support/c_string.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
-namespace testing {
+namespace LIBC_NAMESPACE::testing {
 
 CString libc_make_test_file_path_func(const char *file_name) {
   // This is the path to the folder bazel wants the test outputs written to.
@@ -24,5 +22,4 @@ CString libc_make_test_file_path_func(const char *file_name) {
   return cpp::string(UNDECLARED_OUTPUTS_PATH) + file_name;
 }
 
-} // namespace testing
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE::testing

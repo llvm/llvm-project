@@ -10,12 +10,11 @@
 #define LLVM_LIBC_SRC_SIGNAL_SIGEMPTYSET_H
 
 #include "hdr/types/sigset_t.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int sigemptyset(sigset_t *set);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SIGNAL_SIGEMPTYSET_H

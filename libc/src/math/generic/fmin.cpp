@@ -9,12 +9,11 @@
 #include "src/math/fmin.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, fmin, (double x, double y)) {
   return fputil::fmin(x, y);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

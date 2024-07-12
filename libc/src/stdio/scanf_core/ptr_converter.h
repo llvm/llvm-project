@@ -9,18 +9,17 @@
 #ifndef LLVM_LIBC_SRC_STDIO_SCANF_CORE_PTR_CONVERTER_H
 #define LLVM_LIBC_SRC_STDIO_SCANF_CORE_PTR_CONVERTER_H
 
-#include "src/__support/macros/config.h"
 #include "src/stdio/scanf_core/core_structs.h"
 #include "src/stdio/scanf_core/reader.h"
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace scanf_core {
 
 int convert_pointer(Reader *reader, const FormatSection &to_conv);
 
 } // namespace scanf_core
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_SCANF_CORE_PTR_CONVERTER_H

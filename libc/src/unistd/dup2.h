@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_DUP2_H
 #define LLVM_LIBC_SRC_UNISTD_DUP2_H
 
-#include "src/__support/macros/config.h"
 #include <unistd.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int dup2(int oldfd, int newfd);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_UNISTD_DUP2_H

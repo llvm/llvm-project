@@ -7,12 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strlen.h"
-#include "src/__support/macros/config.h"
 #include "src/string/string_utils.h"
 
 #include "src/__support/common.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 // TODO: investigate the performance of this function.
 // There might be potential for compiler optimization.
@@ -20,4 +19,4 @@ LLVM_LIBC_FUNCTION(size_t, strlen, (const char *src)) {
   return internal::string_length(src);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

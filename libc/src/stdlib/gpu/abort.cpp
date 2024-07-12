@@ -8,11 +8,10 @@
 
 #include "src/__support/RPC/rpc_client.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
 #include "src/stdlib/abort.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void, abort, ()) {
   // We want to first make sure the server is listening before we abort.
@@ -24,4 +23,4 @@ LLVM_LIBC_FUNCTION(void, abort, ()) {
   gpu::end_program();
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

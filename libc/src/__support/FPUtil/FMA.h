@@ -11,11 +11,10 @@
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/generic/FMA.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 template <typename OutType, typename InType>
@@ -34,6 +33,6 @@ template <> LIBC_INLINE double fma(double x, double y, double z) {
 #endif // LIBC_TARGET_CPU_HAS_FMA
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FMA_H

@@ -8,12 +8,11 @@
 
 #include "writer.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/string/memory_utils/inline_memset.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace printf_core {
 
 int Writer::pad(char new_char, size_t length) {
@@ -43,4 +42,4 @@ int Writer::pad(char new_char, size_t length) {
 }
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

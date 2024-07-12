@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PUTS_H
 #define LLVM_LIBC_SRC_STDIO_PUTS_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int puts(const char *__restrict str);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_PUTS_H

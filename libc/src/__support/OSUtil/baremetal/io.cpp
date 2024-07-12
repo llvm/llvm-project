@@ -9,9 +9,8 @@
 #include "io.h"
 
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 // This is intended to be provided by the vendor.
 
@@ -29,4 +28,4 @@ void write_to_stderr(cpp::string_view msg) {
   __llvm_libc_log_write(msg.data(), msg.size());
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

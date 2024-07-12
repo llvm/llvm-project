@@ -12,7 +12,6 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/rounding_mode.h"
-#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/float_inf_nan_converter.h"
@@ -21,7 +20,7 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace printf_core {
 
 LIBC_INLINE int convert_float_hex_exp(Writer *writer,
@@ -256,6 +255,6 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
 }
 
 } // namespace printf_core
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_FLOAT_HEX_CONVERTER_H

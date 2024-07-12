@@ -10,11 +10,10 @@
 #include "config/linux/app.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
 #include <stddef.h> // For size_t.
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(char *, getenv, (const char *name)) {
   char **env_ptr = reinterpret_cast<char **>(LIBC_NAMESPACE::app.env_ptr);
@@ -42,4 +41,4 @@ LLVM_LIBC_FUNCTION(char *, getenv, (const char *name)) {
   return nullptr;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

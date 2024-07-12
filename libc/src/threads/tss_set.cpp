@@ -9,12 +9,11 @@
 #include "tss_set.h"
 
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/threads/thread.h"
 
 #include <threads.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, tss_set, (tss_t key, void *data)) {
   if (set_tss_value(key, data))
@@ -23,4 +22,4 @@ LLVM_LIBC_FUNCTION(int, tss_set, (tss_t key, void *data)) {
     return thrd_error;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

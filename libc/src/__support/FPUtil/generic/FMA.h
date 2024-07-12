@@ -18,12 +18,11 @@
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/big_int.h"
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include "hdr/fenv_macros.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 namespace generic {
 
@@ -273,6 +272,6 @@ fma(InType x, InType y, InType z) {
 
 } // namespace generic
 } // namespace fputil
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_FMA_H

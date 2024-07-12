@@ -10,9 +10,8 @@
 #include "pthread_mutexattr.h"
 
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, pthread_mutexattr_init, (pthread_mutexattr_t * attr)) {
   // Set the default attributes and mark the attribute object as initiliazed
@@ -21,4 +20,4 @@ LLVM_LIBC_FUNCTION(int, pthread_mutexattr_init, (pthread_mutexattr_t * attr)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

@@ -12,9 +12,7 @@
 #include "hdr/time_macros.h"
 #include "hdr/types/clock_t.h"
 #include "src/__support/GPU/utils.h"
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 #if defined(LIBC_TARGET_ARCH_IS_AMDGPU)
 // AMDGPU does not have a single set frequency. Different architectures and
@@ -38,6 +36,6 @@ extern gpu::Constant<uint64_t> __llvm_libc_clock_freq;
 #error "Unsupported target"
 #endif
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_TIME_GPU_TIME_UTILS_H

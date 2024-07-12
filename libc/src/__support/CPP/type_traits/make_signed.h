@@ -9,11 +9,9 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_MAKE_SIGNED_H
 
 #include "src/__support/CPP/type_traits/type_identity.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
-namespace LIBC_NAMESPACE_DECL {
-namespace cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // make_signed
 template <typename T> struct make_signed;
@@ -35,7 +33,6 @@ template <> struct make_signed<__uint128_t> : type_identity<__int128_t> {};
 #endif
 template <typename T> using make_signed_t = typename make_signed<T>::type;
 
-} // namespace cpp
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_MAKE_SIGNED_H

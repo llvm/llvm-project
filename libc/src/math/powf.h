@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_POWF_H
 #define LLVM_LIBC_SRC_MATH_POWF_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 float powf(float x, float y);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_POWF_H

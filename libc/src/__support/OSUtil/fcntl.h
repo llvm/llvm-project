@@ -8,14 +8,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_FCNTL_H
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_FCNTL_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
-namespace internal {
+namespace LIBC_NAMESPACE::internal {
 
 int fcntl(int fd, int cmd, void *arg = nullptr);
 
-} // namespace internal
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE::internal
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_FCNTL_H
