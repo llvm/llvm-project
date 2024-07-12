@@ -37,7 +37,7 @@
 # RUN: llvm-mc -triple=riscv32 -filetype=obj d.s -o d.32.o --defsym ELF32=1
 # RUN: ld.lld -shared -soname=d.32.so -o d.32.so d.32.o --fatal-warnings
 
-## The output has no TLS section.
+## The output has a TLS reference but no TLS section.
 # RUN: llvm-mc -filetype=obj -triple=riscv64 a1.s -o a1.64.o
 # RUN: ld.lld -pie a1.64.o c.64.so -o a1.64
 # RUN: llvm-objdump --no-show-raw-insn -M no-aliases -Rd a1.64 | FileCheck %s --check-prefix=IE64A
