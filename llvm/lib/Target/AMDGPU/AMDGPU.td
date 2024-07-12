@@ -939,6 +939,30 @@ def FeatureGFX1211GEMMInsts : SubtargetFeature<"gfx1211-gemm-insts",
   "Has additional gfx1211 DGEMM and F16 GEMM instructions"
 >;
 
+def FeatureFlatBufferGlobalAtomicFaddF64Inst
+  : SubtargetFeature<"flat-buffer-global-fadd-f64-inst",
+  "HasFlatBufferGlobalAtomicFaddF64Inst",
+  "true",
+  "Has flat, buffer, and global instructions for f64 atomic fadd"
+>;
+
+def FeatureMemoryAtomicFAddF32DenormalSupport
+  : SubtargetFeature<"memory-atomic-fadd-f32-denormal-support",
+  "HasMemoryAtomicFaddF32DenormalSupport",
+  "true",
+  "global/flat/buffer atomic fadd for float supports denormal handling"
+>;
+
+def FeatureAgentScopeFineGrainedRemoteMemoryAtomics
+  : SubtargetFeature<"agent-scope-fine-grained-remote-memory-atomics",
+  "HasAgentScopeFineGrainedRemoteMemoryAtomics",
+  "true",
+  "Agent (device) scoped atomic operations, excluding those directly "
+  "supported by PCIe (i.e. integer atomic add, exchange, and "
+  "compare-and-swap), are functional for allocations in host or peer "
+  "device memory."
+>;
+
 def FeatureDefaultComponentZero : SubtargetFeature<"default-component-zero",
   "HasDefaultComponentZero",
   "true",
@@ -1421,7 +1445,8 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureTrue16BitInsts, FeatureDefaultComponentBroadcast,
    FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
-   FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16
+   FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
+   FeatureAgentScopeFineGrainedRemoteMemoryAtomics
   ]
 >;
 
@@ -1586,7 +1611,8 @@ def FeatureISAVersion9_0_A : FeatureSet<
      FeatureBackOffBarrier,
      FeatureKernargPreload,
      FeatureAtomicFMinFMaxF64GlobalInsts,
-     FeatureAtomicFMinFMaxF64FlatInsts
+     FeatureAtomicFMinFMaxF64FlatInsts,
+     FeatureFlatBufferGlobalAtomicFaddF64Inst
      ])>;
 
 def FeatureISAVersion9_0_C : FeatureSet<
@@ -1629,7 +1655,10 @@ def FeatureISAVersion9_4_Common : FeatureSet<
    FeatureBackOffBarrier,
    FeatureKernargPreload,
    FeatureAtomicFMinFMaxF64GlobalInsts,
-   FeatureAtomicFMinFMaxF64FlatInsts
+   FeatureAtomicFMinFMaxF64FlatInsts,
+   FeatureAgentScopeFineGrainedRemoteMemoryAtomics,
+   FeatureMemoryAtomicFAddF32DenormalSupport,
+   FeatureFlatBufferGlobalAtomicFaddF64Inst
    ]>;
 
 def FeatureISAVersion9_5_Common : FeatureSet<
@@ -1760,7 +1789,8 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureFlatAtomicFaddF32Inst,
    FeatureImageInsts,
    FeaturePackedTID,
-   FeatureVcmpxPermlaneHazard]>;
+   FeatureVcmpxPermlaneHazard,
+   FeatureMemoryAtomicFAddF32DenormalSupport]>;
 
 // There are few workarounds that need to be
 // added to all targets. This pessimizes codegen
@@ -1854,7 +1884,8 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureScalarDwordx3Loads,
    FeatureDPPSrc1SGPR,
    FeatureMaxHardClauseLength32,
-   Feature1_5xVGPRs
+   Feature1_5xVGPRs,
+   FeatureMemoryAtomicFAddF32DenormalSupport
 ]>;
 
 def FeatureISAVersion12_10 : FeatureSet<
@@ -1909,6 +1940,7 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeatureWaitXcnt,
    FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF64FlatInsts,
+   FeatureFlatBufferGlobalAtomicFaddF64Inst
 ]>;
 
 def FeatureISAVersion12_11 : FeatureSet<
@@ -2261,11 +2293,9 @@ def HasMinimum3Maximum3PKF16 :
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
   AssemblerPredicate<(all_of FeatureFlatAddressSpace)>;
 
-
-def HasBufferFlatGlobalAtomicsF64 : // FIXME: Rename to show it's only for fadd
-  Predicate<"Subtarget->hasBufferFlatGlobalAtomicsF64()">,
-  // FIXME: This is too coarse, and working around using pseudo's predicates on real instruction.
-  AssemblerPredicate<(any_of FeatureGFX90AInsts, (all_of FeatureGFX10Insts, (not FeatureGFX12Insts)), FeatureSouthernIslands, FeatureSeaIslands, FeatureGFX1210Insts)>;
+def HasFlatBufferGlobalAtomicFaddF64Inst :
+  Predicate<"Subtarget->hasFlatBufferGlobalAtomicFaddF64Inst()">,
+  AssemblerPredicate<(any_of FeatureFlatBufferGlobalAtomicFaddF64Inst)>;
 
 def HasAtomicFMinFMaxF32GlobalInsts :
   Predicate<"Subtarget->hasAtomicFMinFMaxF32GlobalInsts()">,
