@@ -15,9 +15,9 @@
 #ifndef MLIR_SUPPORT_CYCLICREPLACERCACHE_H
 #define MLIR_SUPPORT_CYCLICREPLACERCACHE_H
 
-#include "mlir/IR/Visitors.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/MapVector.h"
+#include <optional>
 #include <set>
 
 namespace mlir {
@@ -116,7 +116,7 @@ private:
   void finalizeReplacement(InT element, OutT result);
 
   CycleBreakerFn cycleBreaker;
-  DenseMap<InT, OutT> standaloneCache;
+  llvm::DenseMap<InT, OutT> standaloneCache;
 
   struct DependentReplacement {
     OutT replacement;
@@ -124,22 +124,22 @@ private:
     /// on.
     size_t highestDependentFrame;
   };
-  DenseMap<InT, DependentReplacement> dependentCache;
+  llvm::DenseMap<InT, DependentReplacement> dependentCache;
 
   struct ReplacementFrame {
     /// The set of elements that is only legal while under this current frame.
     /// They need to be removed from the cache when this frame is popped off the
     /// replacement stack.
-    DenseSet<InT> dependingReplacements;
+    llvm::DenseSet<InT> dependingReplacements;
     /// The set of frame indices that this current frame's replacement is
     /// dependent on, ordered from highest to lowest.
     std::set<size_t, std::greater<size_t>> dependentFrames;
   };
   /// Every element currently in the progress of being replaced pushes a frame
   /// onto this stack.
-  SmallVector<ReplacementFrame> replacementStack;
+  llvm::SmallVector<ReplacementFrame> replacementStack;
   /// Maps from each input element to its indices on the replacement stack.
-  DenseMap<InT, SmallVector<size_t, 2>> cyclicElementFrame;
+  llvm::DenseMap<InT, llvm::SmallVector<size_t, 2>> cyclicElementFrame;
   /// If set to true, we are currently asking an element to break a cycle. No
   /// more recursive invocations is allowed while this is true (the replacement
   /// stack can no longer grow).
