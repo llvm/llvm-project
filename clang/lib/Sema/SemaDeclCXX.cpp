@@ -18352,7 +18352,7 @@ bool Sema::CheckOverridingFunctionAttributes(CXXMethodDecl *New,
           FunctionProtoType::ExtProtoInfo EPI = NewFT->getExtProtoInfo();
           EPI.FunctionEffects = FunctionEffectsRef(NewFX);
           QualType ModQT = Context.getFunctionType(NewFT->getReturnType(),
-                                                  NewFT->getParamTypes(), EPI);
+                                                   NewFT->getParamTypes(), EPI);
           New->setType(ModQT);
           break;
         }
@@ -18360,7 +18360,7 @@ bool Sema::CheckOverridingFunctionAttributes(CXXMethodDecl *New,
       }
       if (!Errs.empty())
         diagnoseFunctionEffectMergeConflicts(Errs, New->getLocation(),
-                                            Old->getLocation());
+                                             Old->getLocation());
     }
   }
 

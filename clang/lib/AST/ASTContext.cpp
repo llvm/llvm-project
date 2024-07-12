@@ -4607,8 +4607,7 @@ QualType ASTContext::getFunctionTypeInternal(
       EPI.requiresFunctionProtoTypeArmAttributes(), ESH.NumExceptionType,
       ESH.NumExprPtr, ESH.NumFunctionDeclPtr,
       EPI.ExtParameterInfos ? NumArgs : 0,
-      EPI.TypeQuals.hasNonFastQualifiers() ? 1 : 0,
-      EPI.FunctionEffects.size(),
+      EPI.TypeQuals.hasNonFastQualifiers() ? 1 : 0, EPI.FunctionEffects.size(),
       EPI.FunctionEffects.conditions().size());
 
   auto *FTP = (FunctionProtoType *)Allocate(Size, alignof(FunctionProtoType));

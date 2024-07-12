@@ -3861,15 +3861,14 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   unsigned EffectCount = epi.FunctionEffects.size();
   bool HasConds = !epi.FunctionEffects.Conditions.empty();
 
-  ID.AddInteger(
-      (EffectCount << 3) | (HasConds << 2) |
-      (epi.AArch64SMEAttributes << 1) | epi.HasTrailingReturn);
+  ID.AddInteger((EffectCount << 3) | (HasConds << 2) |
+                (epi.AArch64SMEAttributes << 1) | epi.HasTrailingReturn);
 
   for (unsigned Idx = 0; Idx != EffectCount; ++Idx) {
-		ID.AddInteger(epi.FunctionEffects.Effects[Idx].toOpaqueInt32());
-		if (HasConds)
-		  ID.AddPointer(epi.FunctionEffects.Conditions[Idx].getCondition());
-	}
+    ID.AddInteger(epi.FunctionEffects.Effects[Idx].toOpaqueInt32());
+    if (HasConds)
+      ID.AddPointer(epi.FunctionEffects.Conditions[Idx].getCondition());
+  }
 }
 
 void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID,
