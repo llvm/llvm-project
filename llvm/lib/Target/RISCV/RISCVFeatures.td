@@ -1210,6 +1210,16 @@ def HasVendorXCVbi
       AssemblerPredicate<(all_of FeatureVendorXCVbi),
                          "'XCVbi' (CORE-V Immediate Branching)">;
 
+// WCH / Nanjing Qinheng Microelectronics Extension(s)
+
+def FeatureVendorXwchc
+    : RISCVExtension<"xwchc", 2, 2,
+                     "'Xwchc' (WCH/QingKe additional compressed opcodes)">;
+def HasVendorXwchc
+    : Predicate<"Subtarget->hasVendorXwchc()">,
+      AssemblerPredicate<(all_of FeatureVendorXwchc),
+                         "'Xwchc' (WCH/QingKe additional compressed opcodes)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//

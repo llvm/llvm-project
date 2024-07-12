@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STDIO_FLOCKFILE_H
 #define LLVM_LIBC_SRC_STDIO_FLOCKFILE_H
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
 
 namespace LIBC_NAMESPACE {
 

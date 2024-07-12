@@ -151,6 +151,20 @@ foldConstantsIntoIntrinsics(MachineFunction &MF,
     MI->eraseFromParent();
 }
 
+static MachineInstr *findAssignTypeInstr(Register Reg,
+                                         MachineRegisterInfo *MRI) {
+  for (MachineRegisterInfo::use_instr_iterator I = MRI->use_instr_begin(Reg),
+                                               IE = MRI->use_instr_end();
+       I != IE; ++I) {
+    MachineInstr *UseMI = &*I;
+    if ((isSpvIntrinsic(*UseMI, Intrinsic::spv_assign_ptr_type) ||
+         isSpvIntrinsic(*UseMI, Intrinsic::spv_assign_type)) &&
+        UseMI->getOperand(1).getReg() == Reg)
+      return UseMI;
+  }
+  return nullptr;
+}
+
 static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                            MachineIRBuilder MIB) {
   // Get access to information about available extensions
@@ -177,9 +191,12 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           BaseTy, MI, *MF.getSubtarget<SPIRVSubtarget>().getInstrInfo(),
           addressSpaceToStorageClass(MI.getOperand(4).getImm(), *ST));
 
-      // If the bitcast would be redundant, replace all uses with the source
+      // If the ptrcast would be redundant, replace all uses with the source
       // register.
       if (GR->getSPIRVTypeForVReg(Source) == AssignedPtrType) {
+        // Erase Def's assign type instruction if we are going to replace Def.
+        if (MachineInstr *AssignMI = findAssignTypeInstr(Def, MIB.getMRI()))
+          ToErase.push_back(AssignMI);
         MIB.getMRI()->replaceRegWith(Def, Source);
       } else {
         GR->assignSPIRVTypeToVReg(AssignedPtrType, Def, MF);
@@ -224,8 +241,8 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
       case TargetOpcode::G_GLOBAL_VALUE: {
         MIB.setInsertPt(*MI->getParent(), MI);
         const GlobalValue *Global = MI->getOperand(1).getGlobal();
-        Type *ElementTy = GR->getDeducedGlobalValueType(Global);
-        auto *Ty = TypedPointerType::get(toTypedPointer(ElementTy),
+        Type *ElementTy = toTypedPointer(GR->getDeducedGlobalValueType(Global));
+        auto *Ty = TypedPointerType::get(ElementTy,
                                          Global->getType()->getAddressSpace());
         SpirvTy = GR->getOrCreateSPIRVType(Ty, MIB);
         break;
