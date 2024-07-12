@@ -1398,9 +1398,7 @@ define i32 @uadd_sat(i32 %x, i32 %y) {
 
 define i32 @uadd_sat_flipped(i32 %x) {
 ; CHECK-LABEL: @uadd_sat_flipped(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], -11
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 9
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 -1, i32 [[ADD]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X:%.*]], i32 9)
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %cmp = icmp uge i32 %x, -10
@@ -1411,9 +1409,7 @@ define i32 @uadd_sat_flipped(i32 %x) {
 
 define i32 @uadd_sat_flipped2(i32 %x) {
 ; CHECK-LABEL: @uadd_sat_flipped2(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], -10
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 9
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 -1, i32 [[ADD]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X:%.*]], i32 9)
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %cmp = icmp ugt i32 %x, -10
@@ -1424,9 +1420,7 @@ define i32 @uadd_sat_flipped2(i32 %x) {
 
 define i32 @uadd_sat_flipped3(i32 %x) {
 ; CHECK-LABEL: @uadd_sat_flipped3(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], -11
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 9
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 -1, i32 [[ADD]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X:%.*]], i32 9)
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %cmp = icmp ugt i32 %x, -11
@@ -1437,9 +1431,7 @@ define i32 @uadd_sat_flipped3(i32 %x) {
 
 define i32 @uadd_sat_flipped4(i32 %x) {
 ; CHECK-LABEL: @uadd_sat_flipped4(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], -10
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 9
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 -1, i32 [[ADD]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X:%.*]], i32 9)
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %cmp = icmp uge i32 %x, -9
@@ -1450,9 +1442,7 @@ define i32 @uadd_sat_flipped4(i32 %x) {
 
 define i32 @uadd_sat_flipped5(i32 %x) {
 ; CHECK-LABEL: @uadd_sat_flipped5(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], -9
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 9
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 -1
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X:%.*]], i32 9)
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %cmp = icmp ult i32 %x, -9
@@ -1474,9 +1464,7 @@ define i32 @uadd_sat_flipped6(i32 %x) {
 
 define i32 @uadd_sat_flipped7(i32 %x) {
 ; CHECK-LABEL: @uadd_sat_flipped7(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], -9
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], 9
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[ADD]], i32 -1
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X:%.*]], i32 9)
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %cmp = icmp ule i32 %x, -10
@@ -1957,9 +1945,7 @@ define i32 @uadd_sat_not_commute_select_uge_commute_add(i32 %x, i32 %y) {
 
 define i32 @uadd_sat_constant(i32 %x) {
 ; CHECK-LABEL: @uadd_sat_constant(
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[X:%.*]], 42
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[X]], -43
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 -1, i32 [[A]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X:%.*]], i32 42)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %x, 42
@@ -2025,9 +2011,7 @@ define i32 @uadd_sat_canon_y_nuw(i32 %x, i32 %y) {
 
 define <4 x i32> @uadd_sat_constant_vec(<4 x i32> %x) {
 ; CHECK-LABEL: @uadd_sat_constant_vec(
-; CHECK-NEXT:    [[A:%.*]] = add <4 x i32> [[X:%.*]], <i32 42, i32 42, i32 42, i32 42>
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt <4 x i32> [[X]], <i32 -43, i32 -43, i32 -43, i32 -43>
-; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[C]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, <4 x i32> [[A]]
+; CHECK-NEXT:    [[R:%.*]] = call <4 x i32> @llvm.uadd.sat.v4i32(<4 x i32> [[X:%.*]], <4 x i32> <i32 42, i32 42, i32 42, i32 42>)
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %a = add <4 x i32> %x, <i32 42, i32 42, i32 42, i32 42>
