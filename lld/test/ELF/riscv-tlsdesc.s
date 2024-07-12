@@ -169,7 +169,9 @@
 # IE32-NEXT:         lw      a0, 0x80(a0)
 # IE32-NEXT:         add     a0, a0, tp
 
-# IE64A-LABEL: 0000000000002340 R_RISCV_TLS_TPREL64      c
+# IE64A:       OFFSET           TYPE                     VALUE
+# IE64A-NEXT:  0000000000002340 R_RISCV_TLS_TPREL64      c
+# IE64A-EMPTY:
 ## &.got[c]-. = 0x2340 - 0x1258 = 0x10e8
 # IE64A-LABEL: <.Ltlsdesc_hi2>:
 # IE64A-NEXT:         addi    zero, zero, 0x0

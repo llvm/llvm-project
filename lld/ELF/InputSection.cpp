@@ -665,7 +665,7 @@ static int64_t getTlsTpOffset(const Symbol &s) {
     // `tls` may be null, the return value is ignored.
     if (s.type != STT_TLS)
       return 0;
-    return s.getVA(0) + (tls ? tls->p_vaddr & (tls->p_align - 1) : 0);
+    return s.getVA(0) + (tls->p_vaddr & (tls->p_align - 1));
 
     // Variant 2.
   case EM_HEXAGON:
