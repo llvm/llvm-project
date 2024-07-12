@@ -1487,8 +1487,7 @@ void AddUnalignedAccessWarning(ArgStringList &CmdArgs) {
 // Each combination of options here forms a signing schema, and in most cases
 // each signing schema is its own incompatible ABI. The default values of the
 // options represent the default signing schema.
-static void handlePAuthABIOption(const ArgList &DriverArgs,
-                                 ArgStringList &CC1Args) {
+static void handlePAuthABI(const ArgList &DriverArgs, ArgStringList &CC1Args) {
   if (!DriverArgs.hasArg(options::OPT_fptrauth_intrinsics,
                          options::OPT_fno_ptrauth_intrinsics))
     CC1Args.push_back("-fptrauth-intrinsics");
@@ -1573,30 +1572,37 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
     if (!isAArch64 && PBP.Key == "b_key")
       D.Diag(diag::warn_unsupported_branch_protection)
           << "b-key" << A->getAsString(Args);
-    if (!isAArch64 && PBP.HasPauthABI)
-      D.Diag(diag::warn_unsupported_branch_protection)
-          << "pauthabi" << A->getAsString(Args);
     Scope = PBP.Scope;
     Key = PBP.Key;
     BranchProtectionPAuthLR = PBP.BranchProtectionPAuthLR;
     IndirectBranches = PBP.BranchTargetEnforcement;
     GuardedControlStack = PBP.GuardedControlStack;
-    if (isAArch64 && PBP.HasPauthABI)
-      handlePAuthABIOption(Args, CmdArgs);
   }
 
   CmdArgs.push_back(
       Args.MakeArgString(Twine("-msign-return-address=") + Scope));
-  if (Scope != "none")
+  if (Scope != "none") {
+    if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << Triple.getTriple();
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-msign-return-address-key=") + Key));
-  if (BranchProtectionPAuthLR)
+  }
+  if (BranchProtectionPAuthLR) {
+    if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << Triple.getTriple();
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-mbranch-protection-pauth-lr")));
+  }
   if (IndirectBranches)
     CmdArgs.push_back("-mbranch-target-enforce");
-  if (GuardedControlStack)
+  if (GuardedControlStack) {
+    if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << Triple.getTriple();
     CmdArgs.push_back("-mguarded-control-stack");
+  }
 }
 
 void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,
@@ -1740,6 +1746,8 @@ void RenderAArch64ABI(const llvm::Triple &Triple, const ArgList &Args,
     ABIName = A->getValue();
   else if (Triple.isOSDarwin())
     ABIName = "darwinpcs";
+  else if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
+    ABIName = "pauthtest";
   else
     ABIName = "aapcs";
 
@@ -1775,6 +1783,9 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
 
   // Enable/disable return address signing and indirect branch targets.
   CollectARMPACBTIOptions(getToolChain(), Args, CmdArgs, true /*isAArch64*/);
+
+  if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
+    handlePAuthABI(Args, CmdArgs);
 
   // Handle -msve_vector_bits=<bits>
   if (Arg *A = Args.getLastArg(options::OPT_msve_vector_bits_EQ)) {

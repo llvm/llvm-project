@@ -1,5 +1,7 @@
+// REQUIRES: aarch64-registered-target
+
 // RUN: %clang -### -c --target=aarch64 %s 2>&1 | FileCheck %s --check-prefix NONE
-// NONE: "-cc1"
+// NONE:     "-cc1"
 // NONE-NOT: "-fptrauth-
 
 // RUN: %clang -### -c --target=aarch64 \
@@ -13,14 +15,21 @@
 // RUN:   %s 2>&1 | FileCheck %s --check-prefix=ALL
 // ALL: "-cc1"{{.*}} "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-init-fini"
 
-// RUN: %clang -### -c --target=aarch64 -mbranch-protection=pauthabi %s 2>&1 | \
-// RUN:   FileCheck %s --check-prefix=PAUTHABI1
-// PAUTHABI1: "-cc1"{{.*}} "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-init-fini"
+// RUN: %clang -### -c --target=aarch64-linux -mabi=pauthtest %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI1
+// RUN: %clang -### -c --target=aarch64-linux-pauthtest %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI1
+// PAUTHABI1:      "-cc1"{{.*}} "-triple" "aarch64-unknown-linux-pauthtest"
+// PAUTHABI1-SAME: "-target-abi" "pauthtest"
+// PAUTHABI1-SAME: "-fptrauth-intrinsics" "-fptrauth-calls" "-fptrauth-returns" "-fptrauth-auth-traps" "-fptrauth-vtable-pointer-address-discrimination" "-fptrauth-vtable-pointer-type-discrimination" "-fptrauth-init-fini"
 
-// RUN: %clang -### -c --target=aarch64 -mbranch-protection=pauthabi -fno-ptrauth-intrinsics \
+// RUN: %clang -### -c --target=aarch64 -mabi=pauthtest -fno-ptrauth-intrinsics \
 // RUN:   -fno-ptrauth-calls -fno-ptrauth-returns -fno-ptrauth-auth-traps \
 // RUN:   -fno-ptrauth-vtable-pointer-address-discrimination -fno-ptrauth-vtable-pointer-type-discrimination \
 // RUN:   -fno-ptrauth-init-fini %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI2
+// RUN: %clang -### -c --target=aarch64-pauthtest -fno-ptrauth-intrinsics \
+// RUN:   -fno-ptrauth-calls -fno-ptrauth-returns -fno-ptrauth-auth-traps \
+// RUN:   -fno-ptrauth-vtable-pointer-address-discrimination -fno-ptrauth-vtable-pointer-type-discrimination \
+// RUN:   -fno-ptrauth-init-fini %s 2>&1 | FileCheck %s --check-prefix=PAUTHABI2
+// PAUTHABI2:     "-cc1"
 // PAUTHABI2-NOT: "-fptrauth-
 
 // RUN: not %clang -### -c --target=x86_64 -fptrauth-intrinsics -fptrauth-calls -fptrauth-returns -fptrauth-auth-traps \
@@ -34,16 +43,50 @@
 // ERR1-NEXT: error: unsupported option '-fptrauth-vtable-pointer-type-discrimination' for target '{{.*}}'
 // ERR1-NEXT: error: unsupported option '-fptrauth-init-fini' for target '{{.*}}'
 
-// RUN: not %clang -### -c --target=x86_64 -mbranch-protection=pauthabi %s 2>&1 | \
-// RUN:   FileCheck %s --check-prefix=ERR2
-// ERR2: error: unsupported option '-mbranch-protection=' for target 'x86_64'
+//// Only support PAuth ABI for Linux as for now.
+// RUN: not %clang -c --target=aarch64-unknown -mabi=pauthtest %s 2>&1 | FileCheck %s --check-prefix=ERR2
+// RUN: not %clang -c --target=aarch64-unknown-pauthtest       %s 2>&1 | FileCheck %s --check-prefix=ERR2
+// ERR2: error: ABI 'pauthtest' is not supported for 'aarch64-unknown-unknown-pauthtest'
 
-// RUN: not %clang -### -c --target=aarch64 -mbranch-protection=pauthabi+pac-ret %s 2>&1 | \
-// RUN:   FileCheck %s --check-prefix=ERR3
-// ERR3: error: unsupported argument 'pauthabi+pac-ret' to option '-mbranch-protection='
+//// PAuth ABI is encoded as environment part of the triple, so don't allow to explicitly set other environments.
+// RUN: not %clang -c --target=aarch64-linux-gnu -mabi=pauthtest %s 2>&1 | FileCheck %s --check-prefix=ERR3
+// ERR3: error: unsupported option '-mabi=pauthtest' for target 'aarch64-unknown-linux-gnu'
+// RUN: %clang -c --target=aarch64-linux-pauthtest -mabi=pauthtest %s
 
-// RUN: not %clang -### -c --target=aarch64 -mbranch-protection=gcs+pauthabi %s 2>&1 | \
+//// The only branch protection option compatible with PAuthABI is BTI.
+// RUN: not %clang -### -c --target=aarch64-linux -mabi=pauthtest -mbranch-protection=pac-ret %s 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=ERR4
-// ERR4: error: unsupported argument 'pauthabi+gcs' to option '-mbranch-protection='
+// RUN: not %clang -### -c --target=aarch64-linux-pauthtest       -mbranch-protection=pac-ret %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=ERR4
+// ERR4: error: unsupported option '-mbranch-protection=pac-ret' for target 'aarch64-unknown-linux-pauthtest'
 
-// RUN: %clang -### -c --target=aarch64 -mbranch-protection=bti+pauthabi %s 2>&1
+// RUN: not %clang -### -c --target=aarch64-linux -mabi=pauthtest -mbranch-protection=gcs %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=ERR5
+// RUN: not %clang -### -c --target=aarch64-linux-pauthtest       -mbranch-protection=gcs %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=ERR5
+// ERR5: error: unsupported option '-mbranch-protection=gcs' for target 'aarch64-unknown-linux-pauthtest'
+
+// RUN: not %clang -### -c --target=aarch64-linux -mabi=pauthtest -mbranch-protection=standard %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=ERR6
+// RUN: not %clang -### -c --target=aarch64-linux-pauthtest       -mbranch-protection=standard %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=ERR6
+// ERR6: error: unsupported option '-mbranch-protection=standard' for target 'aarch64-unknown-linux-pauthtest'
+
+// RUN: not %clang -### -c --target=aarch64-linux -mabi=pauthtest -msign-return-address=all %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=ERR7
+// RUN: not %clang -### -c --target=aarch64-linux-pauthtest       -msign-return-address=all %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=ERR7
+// ERR7: error: unsupported option '-msign-return-address=all' for target 'aarch64-unknown-linux-pauthtest'
+
+// RUN: not %clang -### -c --target=aarch64-linux -mabi=pauthtest -msign-return-address=non-leaf %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=ERR8
+// RUN: not %clang -### -c --target=aarch64-linux-pauthtest       -msign-return-address=non-leaf %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=ERR8
+// ERR8: error: unsupported option '-msign-return-address=non-leaf' for target 'aarch64-unknown-linux-pauthtest'
+
+// RUN: %clang -### -c --target=aarch64-linux -mabi=pauthtest -msign-return-address=none %s
+// RUN: %clang -### -c --target=aarch64-linux-pauthtest       -msign-return-address=none %s
+// RUN: %clang -### -c --target=aarch64-linux -mabi=pauthtest -mbranch-protection=bti %s
+// RUN: %clang -### -c --target=aarch64-linux-pauthtest       -mbranch-protection=bti %s
+// RUN: %clang -### -c --target=aarch64-linux -mabi=pauthtest -mbranch-protection=none %s
+// RUN: %clang -### -c --target=aarch64-linux-pauthtest       -mbranch-protection=none %s
