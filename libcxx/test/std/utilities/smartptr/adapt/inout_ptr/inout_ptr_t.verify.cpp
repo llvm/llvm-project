@@ -21,7 +21,7 @@ int main(int, char**) {
   {
     std::shared_ptr<int> sPtr;
 
-    // expected-error-re@*:* {{{{(static_assert|static assertion)}} failed due to requirement '!__is_specialization_v<std::shared_ptr<int>, std::shared_ptr>'{{.*}}std::shared_ptr<> is not supported}}
+    // expected-error@*:* {{static assertion failed due to requirement '!__is_specialization_v<std::shared_ptr<int>, shared_ptr>': std::shared_ptr<> is not supported}}
     std::inout_ptr_t<std::shared_ptr<int>, int*>{sPtr};
   }
 
