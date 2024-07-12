@@ -235,6 +235,28 @@ AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
     return AliasResult::MayAlias;
   }
 
+  // Aliasing for dummy arg with target attribute.
+  //
+  // The address of a dummy arg (or HostAssoc) may alias the address of a
+  // non-local (global or another dummy arg) when both have target attributes.
+  // If either is a composite, addresses of components may alias as well.
+  //
+  // The previous "if" calling isTargetOrPointer casts a very wide net and so
+  // reports MayAlias for many such cases that would otherwise be reported here.
+  // It specifically skips such cases where one or both values have !isData()
+  // (e.g., address *of* pointer/allocatable component vs. address of
+  // composite), so this "if" catches those cases.
+  if (src1->attributes.test(Attribute::Target) &&
+      src2->attributes.test(Attribute::Target) &&
+      ((src1->aliasesLikeDummyArg() && src2->canBeActualArg()) ||
+       (src2->aliasesLikeDummyArg() && src1->canBeActualArg()))) {
+    LLVM_DEBUG(llvm::dbgs()
+               << "  aliasing between targets where one is a dummy arg\n");
+    return AliasResult::MayAlias;
+  }
+
+  // Aliasing for dummy arg that is a pointer.
+  //
   // The address of a pointer dummy arg (but not a pointer component of a dummy
   // arg) may alias the address of either (1) a non-local pointer or (2) thus a
   // non-local composite with a pointer component.  A non-local might be a

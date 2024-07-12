@@ -632,3 +632,211 @@ func.func private @_QMmFparentPtest.fir(%arg0: !fir.ref<!fir.type<_QMmTt{p:!fir.
 
   return
 }
+
+// -----
+
+// Dummy arg with target attribute and pointer component.
+
+// The address of a dummy arg (arg0) may alias the address of a global (glob0)
+// or another dummy arg (arg1) when both have target attributes.  If either is a
+// composite, the addresses of components (whether data like r, or non-data like
+// p and a) may also alias the composite or the same component.  However, target
+// attributes do not permit two globals (glob0 and glob1) to alias.
+
+// module m
+//   type t
+//     real, pointer :: p
+//     real, allocatable :: a
+//     real :: r
+//   end type
+//   type(t), target :: glob0
+//   type(t), target :: glob1
+// contains
+//   subroutine test(arg0, arg1)
+//     type(t), target :: arg0
+//     type(t), target :: arg1
+//   end subroutine
+// end module
+
+// TODO: All glob0 vs. glob1 cases can be NoAlias.  However, AliasAnalysis
+// currently indiscriminately treats all targets that are data (addresses of
+// glob[01] and glob[01]%r but not glob[01]%p and glob[01]%a) as aliasing.
+
+// Check composite vs. composite.
+//
+// CHECK-DAG: arg0#0 <-> arg1#0: MayAlias
+// CHECK-DAG: arg0.fir#0 <-> arg1.fir#0: MayAlias
+//
+// CHECK-DAG: arg0#0 <-> glob0#0: MayAlias
+// CHECK-DAG: arg0.fir#0 <-> glob0.fir#0: MayAlias
+//
+// CHECK-DAG: glob0#0 <-> glob1#0: MayAlias
+// CHECK-DAG: glob0.fir#0 <-> glob1.fir#0: MayAlias
+
+// Check component vs. composite.
+//
+// CHECK-DAG: arg0%p#0 <-> arg1#0: MayAlias
+// CHECK-DAG: arg0%a#0 <-> arg1#0: MayAlias
+// CHECK-DAG: arg0%r#0 <-> arg1#0: MayAlias
+// CHECK-DAG: arg0%p.fir#0 <-> arg1.fir#0: MayAlias
+// CHECK-DAG: arg0%a.fir#0 <-> arg1.fir#0: MayAlias
+// CHECK-DAG: arg0%r.fir#0 <-> arg1.fir#0: MayAlias
+//
+// CHECK-DAG: arg0%p#0 <-> glob0#0: MayAlias
+// CHECK-DAG: arg0%a#0 <-> glob0#0: MayAlias
+// CHECK-DAG: arg0%r#0 <-> glob0#0: MayAlias
+// CHECK-DAG: arg0%p.fir#0 <-> glob0.fir#0: MayAlias
+// CHECK-DAG: arg0%a.fir#0 <-> glob0.fir#0: MayAlias
+// CHECK-DAG: arg0%r.fir#0 <-> glob0.fir#0: MayAlias
+//
+// CHECK-DAG: glob0%p#0 <-> glob1#0: NoAlias
+// CHECK-DAG: glob0%a#0 <-> glob1#0: NoAlias
+// CHECK-DAG: glob0%r#0 <-> glob1#0: MayAlias
+// CHECK-DAG: glob0%p.fir#0 <-> glob1.fir#0: NoAlias
+// CHECK-DAG: glob0%a.fir#0 <-> glob1.fir#0: NoAlias
+// CHECK-DAG: glob0%r.fir#0 <-> glob1.fir#0: MayAlias
+
+// Check composite vs. component.
+//
+// CHECK-DAG: arg0#0 <-> arg1%p#0: MayAlias
+// CHECK-DAG: arg0#0 <-> arg1%a#0: MayAlias
+// CHECK-DAG: arg0#0 <-> arg1%r#0: MayAlias
+// CHECK-DAG: arg0.fir#0 <-> arg1%p.fir#0: MayAlias
+// CHECK-DAG: arg0.fir#0 <-> arg1%a.fir#0: MayAlias
+// CHECK-DAG: arg0.fir#0 <-> arg1%r.fir#0: MayAlias
+//
+// CHECK-DAG: arg0#0 <-> glob0%p#0: MayAlias
+// CHECK-DAG: arg0#0 <-> glob0%a#0: MayAlias
+// CHECK-DAG: arg0#0 <-> glob0%r#0: MayAlias
+// CHECK-DAG: arg0.fir#0 <-> glob0%p.fir#0: MayAlias
+// CHECK-DAG: arg0.fir#0 <-> glob0%a.fir#0: MayAlias
+// CHECK-DAG: arg0.fir#0 <-> glob0%r.fir#0: MayAlias
+//
+// CHECK-DAG: glob0#0 <-> glob1%p#0: NoAlias
+// CHECK-DAG: glob0#0 <-> glob1%a#0: NoAlias
+// CHECK-DAG: glob0#0 <-> glob1%r#0: MayAlias
+// CHECK-DAG: glob0.fir#0 <-> glob1%p.fir#0: NoAlias
+// CHECK-DAG: glob0.fir#0 <-> glob1%a.fir#0: NoAlias
+// CHECK-DAG: glob0.fir#0 <-> glob1%r.fir#0: MayAlias
+
+// Check component vs. component.
+//
+// CHECK-DAG: arg0%p#0 <-> arg1%p#0: MayAlias
+// CHECK-DAG: arg0%a#0 <-> arg1%a#0: MayAlias
+// CHECK-DAG: arg0%r#0 <-> arg1%r#0: MayAlias
+// CHECK-DAG: arg0%p.fir#0 <-> arg1%p.fir#0: MayAlias
+// CHECK-DAG: arg0%a.fir#0 <-> arg1%a.fir#0: MayAlias
+// CHECK-DAG: arg0%r.fir#0 <-> arg1%r.fir#0: MayAlias
+//
+// CHECK-DAG: arg0%p.fir#0 <-> glob0%p.fir#0: MayAlias
+// CHECK-DAG: arg0%a.fir#0 <-> glob0%a.fir#0: MayAlias
+// CHECK-DAG: arg0%r.fir#0 <-> glob0%r.fir#0: MayAlias
+//
+// CHECK-DAG: glob0%p.fir#0 <-> glob1%p.fir#0: NoAlias
+// CHECK-DAG: glob0%a.fir#0 <-> glob1%a.fir#0: NoAlias
+// CHECK-DAG: glob0%r.fir#0 <-> glob1%r.fir#0: MayAlias
+
+func.func @_QMmPtest(%arg0: !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>> {fir.bindc_name = "arg0", fir.target}, %arg1: !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>> {fir.bindc_name = "arg1", fir.target}) {
+  %0 = fir.dummy_scope : !fir.dscope
+
+  %10:2 = hlfir.declare %arg0 dummy_scope %0 {test.ptr="arg0", fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMmFtestEarg0"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>)
+  %11 = hlfir.designate %10#0{"p"}   {test.ptr="arg0%p", fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %12 = hlfir.designate %10#0{"a"}   {test.ptr="arg0%a", fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  %13 = hlfir.designate %10#0{"r"}   {test.ptr="arg0%r"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<f32>
+
+  %20:2 = hlfir.declare %arg1 dummy_scope %0 {test.ptr="arg1", fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMmFtestEarg1"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>)
+  %21 = hlfir.designate %20#0{"p"}   {test.ptr="arg1%p", fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %22 = hlfir.designate %20#0{"a"}   {test.ptr="arg1%a", fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  %23 = hlfir.designate %20#0{"r"}   {test.ptr="arg1%r"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<f32>
+
+  %30 = fir.address_of(@_QMmEglob0) : !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>
+  %31:2 = hlfir.declare %30 {test.ptr="glob0", fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMmEglob0"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>)
+  %32 = hlfir.designate %31#0{"p"}   {test.ptr="glob0%p", fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %33 = hlfir.designate %31#0{"a"}   {test.ptr="glob0%a", fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  %34 = hlfir.designate %31#0{"r"}   {test.ptr="glob0%r"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<f32>
+
+  %40 = fir.address_of(@_QMmEglob1) : !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>
+  %41:2 = hlfir.declare %40 {test.ptr="glob1", fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMmEglob1"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>)
+  %42 = hlfir.designate %41#0{"p"}   {test.ptr="glob1%p", fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %43 = hlfir.designate %41#0{"a"}   {test.ptr="glob1%a", fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  %44 = hlfir.designate %41#0{"r"}   {test.ptr="glob1%r"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<f32>
+
+  return
+}
+
+func.func @_QMmPtest.fir(%arg0: !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>> {fir.bindc_name = "arg0", fir.target}, %arg1: !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>> {fir.bindc_name = "arg1", fir.target}) {
+  %0 = fir.dummy_scope : !fir.dscope
+
+  %1 = fir.declare %arg0 dummy_scope %0 {test.ptr="arg0.fir", fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMmFtestEarg0"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.dscope) -> !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>
+  %2 = fir.field_index p, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
+  %3 = fir.coordinate_of %1, %2 {test.ptr="arg0%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %4 = fir.field_index a, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
+  %5 = fir.coordinate_of %1, %4 {test.ptr="arg0%a.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  %6 = fir.field_index r, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
+  %7 = fir.coordinate_of %1, %6 {test.ptr="arg0%r.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<f32>
+
+  %8 = fir.declare %arg1 dummy_scope %0 {test.ptr="arg1.fir", fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMmFtestEarg1"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.dscope) -> !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>
+  %9 = fir.field_index p, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
+  %10 = fir.coordinate_of %8, %9 {test.ptr="arg1%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %11 = fir.field_index a, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
+  %12 = fir.coordinate_of %8, %11 {test.ptr="arg1%a.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  %13 = fir.field_index r, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
+  %14 = fir.coordinate_of %8, %13 {test.ptr="arg1%r.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<f32>
+
+  %15 = fir.address_of(@_QMmEglob0) : !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>
+  %16 = fir.declare %15 {test.ptr="glob0.fir", fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMmEglob0"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>
+  %17 = fir.field_index p, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
+  %18 = fir.coordinate_of %16, %17 {test.ptr="glob0%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %19 = fir.field_index a, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
+  %20 = fir.coordinate_of %16, %19 {test.ptr="glob0%a.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  %21 = fir.field_index r, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
+  %22 = fir.coordinate_of %16, %21 {test.ptr="glob0%r.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<f32>
+
+  %23 = fir.address_of(@_QMmEglob1) : !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>
+  %24 = fir.declare %23 {test.ptr="glob1.fir", fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QMmEglob1"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>) -> !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>
+  %25 = fir.field_index p, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
+  %26 = fir.coordinate_of %24, %25 {test.ptr="glob1%p.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<f32>>>
+  %27 = fir.field_index a, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
+  %28 = fir.coordinate_of %24, %27 {test.ptr="glob1%a.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  %29 = fir.field_index r, !fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>
+  %30 = fir.coordinate_of %24, %29 {test.ptr="glob1%r.fir"} : (!fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.ptr<f32>>,a:!fir.box<!fir.heap<f32>>,r:f32}>>, !fir.field) -> !fir.ref<f32>
+
+  return
+}
+
+// -----
+
+// Allocatable dummy arg with target attribute.
+
+// This case is like the previous one except that the non-data is the address
+// of the dummy arg itself rather than of a pointer component of the dummy arg.
+// The goal is to check that logic introduced into AliasAnalysis to handle the
+// pointer component case doesn't break this related one.
+
+// module m
+//   real, allocatable, target :: glob0
+//   real, allocatable, target :: glob1
+// contains
+//   subroutine test(arg0, arg1)
+//     real, allocatable, target :: arg0
+//     real, allocatable, target :: arg1
+//   end subroutine
+// end module
+
+// CHECK-DAG: arg0#0 <-> arg1#0: MayAlias
+// CHECK-DAG: arg0#0 <-> glob0#0: MayAlias
+// CHECK-DAG: glob0#0 <-> glob1#0: NoAlias
+
+func.func @_QMmPtest(%arg0: !fir.ref<!fir.box<!fir.heap<f32>>> {fir.bindc_name = "arg0", fir.target}, %arg1: !fir.ref<!fir.box<!fir.heap<f32>>> {fir.bindc_name = "arg1", fir.target}) {
+  %0 = fir.dummy_scope : !fir.dscope
+
+  %10:2 = hlfir.declare %arg0 dummy_scope %0 {test.ptr="arg0", fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QMmFtestEarg0"} : (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+  %11:2 = hlfir.declare %arg1 dummy_scope %0 {test.ptr="arg1", fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QMmFtestEarg1"} : (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+
+  %20 = fir.address_of(@_QMmEglob0) : !fir.ref<!fir.box<!fir.heap<f32>>>
+  %21:2 = hlfir.declare %20 {test.ptr="glob0", fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QMmEglob0"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+  %22 = fir.address_of(@_QMmEglob1) : !fir.ref<!fir.box<!fir.heap<f32>>>
+  %23:2 = hlfir.declare %22 {test.ptr="glob1", fortran_attrs = #fir.var_attrs<allocatable, target>, uniq_name = "_QMmEglob1"} : (!fir.ref<!fir.box<!fir.heap<f32>>>) -> (!fir.ref<!fir.box<!fir.heap<f32>>>, !fir.ref<!fir.box<!fir.heap<f32>>>)
+
+  return
+}
