@@ -4617,6 +4617,8 @@ QualType ASTContext::getFunctionTypeInternal(
   Types.push_back(FTP);
   if (!Unique)
     FunctionProtoTypes.InsertNode(FTP, InsertPos);
+  if (!EPI.FunctionEffects.empty())
+    AnyFunctionEffects = true;
   return QualType(FTP, 0);
 }
 

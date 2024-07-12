@@ -728,7 +728,7 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
 
   diagnoseNullableToNonnullConversion(Ty, E->getType(), E->getBeginLoc());
   diagnoseZeroToNullptrConversion(Kind, E);
-  if (!isCast(CCK) && Kind != CK_NullToPointer &&
+  if (Context.hasAnyFunctionEffects() && !isCast(CCK) && Kind != CK_NullToPointer &&
       Kind != CK_NullToMemberPointer)
     diagnoseFunctionEffectConversion(Ty, E->getType(), E->getBeginLoc());
 
