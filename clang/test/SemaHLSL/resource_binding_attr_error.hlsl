@@ -37,6 +37,9 @@ cbuffer D : register(b 2, space 3) {}
 // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
 static RWBuffer<float> U : register(u5);
 
+// expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
+static float sa : register(c1);
+
 void foo() {
   // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
   RWBuffer<float> U : register(u3);
