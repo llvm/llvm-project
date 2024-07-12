@@ -282,7 +282,7 @@ private:
 };
 } // end anonymous namespace
 
-/// Return true iff Op is an addrspacecast whose src addrspace
+/// Return true iff addrspacecast is found whose src addrspace
 /// is that of the root and whose dst addrspace is that of
 /// the select.
 bool PointerReplacer::foundASC(const Value *Op, const SelectInst *SI) const {
@@ -305,8 +305,8 @@ bool PointerReplacer::foundASC(const Value *Op, const SelectInst *SI) const {
   return false;
 }
 
-/// Return true iff there is only one ASC from root's addrspace
-/// as an operand to the select.
+/// Return true iff valid ASC is found on one
+/// path from the select to the root.
 bool PointerReplacer::hasConflictingAS(const SelectInst *SI) const {
   auto *TI = SI->getTrueValue();
   auto *FI = SI->getFalseValue();
