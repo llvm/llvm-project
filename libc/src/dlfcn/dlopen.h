@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_DLFCN_DLOPEN_H
 #define LLVM_LIBC_SRC_DLFCN_DLOPEN_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 void *dlopen(const char *, int);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_DLFCN_DLOPEN_H

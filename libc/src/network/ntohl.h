@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_NETWORK_NTOHL_H
 #define LLVM_LIBC_SRC_NETWORK_NTOHL_H
 
-#include "src/__support/macros/config.h"
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 uint32_t ntohl(uint32_t netlong);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_NETWORK_NTOHL_H

@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_FENV_FESETEXCEPT_H
 #define LLVM_LIBC_SRC_FENV_FESETEXCEPT_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int fesetexcept(int excepts);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_FENV_FESETEXCEPT_H

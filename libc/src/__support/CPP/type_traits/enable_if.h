@@ -9,10 +9,8 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_ENABLE_IF_H
 
 #include "src/__support/CPP/type_traits/type_identity.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
-namespace cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // enable_if
 template <bool B, typename T = void> struct enable_if;
@@ -20,7 +18,6 @@ template <typename T> struct enable_if<true, T> : type_identity<T> {};
 template <bool B, typename T = void>
 using enable_if_t = typename enable_if<B, T>::type;
 
-} // namespace cpp
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_ENABLE_IF_H

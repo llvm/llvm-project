@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STDBIT_STDC_BIT_FLOOR_UL_H
 #define LLVM_LIBC_SRC_STDBIT_STDC_BIT_FLOOR_UL_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 unsigned long stdc_bit_floor_ul(unsigned long value);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDBIT_STDC_BIT_FLOOR_UL_H
