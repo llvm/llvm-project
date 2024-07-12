@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -o - %s -verify
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -ast-dump -o - %s -verify
 
 // expected-error@+1{{'resource_class' attribute takes one argument}}
 struct [[hlsl::resource_class()]] Eg1 {
@@ -13,6 +13,3 @@ struct [[hlsl::resource_class(gibberish)]] Eg2 {
 };
 
 Eg2 e2;
-
-[numthreads(1,1,1)]
-void main() {}

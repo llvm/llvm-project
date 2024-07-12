@@ -30,7 +30,3 @@ struct [[hlsl::resource_class(Sampler)]] Eg4 {
 Eg4 e4;
 
 RWBuffer<int> In : register(u1);
-
-
-[numthreads(1,1,1)]
-void main() {}
