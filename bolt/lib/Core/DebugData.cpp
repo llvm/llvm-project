@@ -137,10 +137,12 @@ DebugRangesSectionWriter::DebugRangesSectionWriter() {
   RangesBuffer = std::make_unique<DebugBufferVector>();
   RangesStream = std::make_unique<raw_svector_ostream>(*RangesBuffer);
 
-  // Add an empty range as the first entry;
-  SectionOffset +=
-      writeAddressRanges(*RangesStream.get(), DebugAddressRangesVector{});
   Kind = RangesWriterKind::DebugRangesWriter;
+}
+
+void DebugRangesSectionWriter::initSection() {
+  // Adds an empty range to the buffer.
+  writeAddressRanges(*RangesStream.get(), DebugAddressRangesVector{});
 }
 
 uint64_t DebugRangesSectionWriter::addRanges(
@@ -166,21 +168,20 @@ uint64_t DebugRangesSectionWriter::addRanges(DebugAddressRangesVector &Ranges) {
   // Reading the SectionOffset and updating it should be atomic to guarantee
   // unique and correct offsets in patches.
   std::lock_guard<std::mutex> Lock(WriterMutex);
-  const uint32_t EntryOffset = SectionOffset;
-  SectionOffset += writeAddressRanges(*RangesStream.get(), Ranges);
+  const uint32_t EntryOffset = RangesBuffer->size();
+  writeAddressRanges(*RangesStream.get(), Ranges);
 
   return EntryOffset;
 }
 
 uint64_t DebugRangesSectionWriter::getSectionOffset() {
   std::lock_guard<std::mutex> Lock(WriterMutex);
-  return SectionOffset;
+  return RangesBuffer->size();
 }
 
 void DebugRangesSectionWriter::appendToRangeBuffer(
     const DebugBufferVector &CUBuffer) {
   *RangesStream << CUBuffer;
-  SectionOffset = RangesBuffer->size();
 }
 
 DebugAddrWriter *DebugRangeListsSectionWriter::AddrWriter = nullptr;
@@ -327,7 +328,6 @@ void DebugRangeListsSectionWriter::finalizeSection() {
   *RangesStream << *Header;
   *RangesStream << *CUArrayBuffer;
   *RangesStream << *CUBodyBuffer;
-  SectionOffset = RangesBuffer->size();
 }
 
 void DebugRangeListsSectionWriter::initSection(DWARFUnit &Unit) {

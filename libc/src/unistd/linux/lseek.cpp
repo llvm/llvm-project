@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/unistd/lseek.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 
 #include "src/__support/File/linux/lseekImpl.h"
@@ -16,7 +17,7 @@
 #include <sys/syscall.h> // For syscall numbers.
 #include <unistd.h>      // For off_t.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(off_t, lseek, (int fd, off_t offset, int whence)) {
   auto result = internal::lseekimpl(fd, offset, whence);
@@ -27,4 +28,4 @@ LLVM_LIBC_FUNCTION(off_t, lseek, (int fd, off_t offset, int whence)) {
   return result.value();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

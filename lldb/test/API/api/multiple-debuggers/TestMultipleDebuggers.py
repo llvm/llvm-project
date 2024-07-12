@@ -12,6 +12,9 @@ from lldbsuite.test import lldbutil
 class TestMultipleSimultaneousDebuggers(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    # This test has been flaky lately on Linux buildbots and Github/Buildkite CI
+    # runs.
+    @skipIfLinux
     @skipIfNoSBHeaders
     @skipIfWindows
     @skipIfHostIncompatibleWithTarget
