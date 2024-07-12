@@ -9,14 +9,13 @@
 #include "src/termios/cfgetospeed.h"
 
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
 #include <termios.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(speed_t, cfgetospeed, (const struct termios *t)) {
   return t->c_cflag & CBAUD;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

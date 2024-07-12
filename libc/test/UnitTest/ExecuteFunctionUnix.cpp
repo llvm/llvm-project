@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ExecuteFunction.h"
-#include "src/__support/macros/config.h"
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
@@ -18,7 +17,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace testutils {
 
 bool ProcessStatus::exited_normally() { return WIFEXITED(platform_defined); }
@@ -79,4 +78,4 @@ ProcessStatus invoke_in_subprocess(FunctionCaller *func, unsigned timeout_ms) {
 const char *signal_as_string(int signum) { return ::strsignal(signum); }
 
 } // namespace testutils
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

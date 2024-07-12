@@ -8,11 +8,10 @@
 
 #include "src/stdio/clearerr.h"
 #include "file.h"
-#include "src/__support/macros/config.h"
 
 #include "hdr/types/FILE.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void, clearerr, (::FILE * stream)) {
   rpc::Client::Port port = rpc::client.open<RPC_CLEARERR>();
@@ -22,4 +21,4 @@ LLVM_LIBC_FUNCTION(void, clearerr, (::FILE * stream)) {
   port.close();
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

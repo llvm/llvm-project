@@ -12,10 +12,8 @@
 #include "src/__support/CPP/type_traits/is_floating_point.h"
 #include "src/__support/CPP/type_traits/is_integral.h"
 #include "src/__support/macros/attributes.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
-namespace cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // is_arithmetic
 template <typename T>
@@ -24,7 +22,6 @@ struct is_arithmetic : cpp::bool_constant<(cpp::is_integral_v<T> ||
 template <typename T>
 LIBC_INLINE_VAR constexpr bool is_arithmetic_v = is_arithmetic<T>::value;
 
-} // namespace cpp
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_ARITHMETIC_H

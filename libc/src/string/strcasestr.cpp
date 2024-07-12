@@ -10,10 +10,9 @@
 
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
-#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_strstr.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 // TODO: This is a simple brute force implementation. This can be
 // improved upon using well known string matching algorithms.
@@ -26,4 +25,4 @@ LLVM_LIBC_FUNCTION(char *, strcasestr,
   return inline_strstr(haystack, needle, case_cmp);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
