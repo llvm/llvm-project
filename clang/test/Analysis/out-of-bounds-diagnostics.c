@@ -6,7 +6,7 @@ int TenElements[10];
 void arrayUnderflow(void) {
   TenElements[-3] = 5;
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at negative byte offset}}
+  // expected-note@-2 {{Access of 'TenElements' at negative byte offset -12}}
 }
 
 int underflowWithDeref(void) {
@@ -14,7 +14,7 @@ int underflowWithDeref(void) {
   --p;
   return *p;
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at negative byte offset}}
+  // expected-note@-2 {{Access of 'TenElements' at negative byte offset -4}}
 }
 
 int rng(void);
@@ -36,7 +36,7 @@ void gh86959(void) {
   while (rng())
     TenElements[getIndex()] = 10;
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at negative byte offset}}
+  // expected-note@-2 {{Access of 'TenElements' at negative byte offset -688}}
 }
 
 int scanf(const char *restrict fmt, ...);

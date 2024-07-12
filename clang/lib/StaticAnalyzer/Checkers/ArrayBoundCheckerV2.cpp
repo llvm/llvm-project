@@ -373,15 +373,14 @@ static std::optional<int64_t> getConcreteValue(std::optional<NonLoc> SV) {
 }
 
 static Messages getPrecedesMsgs(const SubRegion *Region, NonLoc Offset) {
-  std::string RegName = getRegionName(Region);
+  std::string RegName = getRegionName(Region), OffsetStr = "";
 
-  // We're not reporting the Offset, because we don't want to spam the user
-  // with similar reports that differ only in different offset values.
-  // See https://github.com/llvm/llvm-project/issues/86969 for details.
-  (void)Offset;
+  if (auto ConcreteOffset = getConcreteValue(Offset))
+    OffsetStr = formatv(" {0}", ConcreteOffset);
 
-  return {formatv("Out of bound access to memory preceding {0}", RegName),
-          formatv("Access of {0} at negative byte offset", RegName)};
+  return {
+      formatv("Out of bound access to memory preceding {0}", RegName),
+      formatv("Access of {0} at negative byte offset{1}", RegName, OffsetStr)};
 }
 
 /// Try to divide `Val1` and `Val2` (in place) by `Divisor` and return true if
