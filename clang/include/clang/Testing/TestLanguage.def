@@ -7,6 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// The TESTLANGUAGE(-C/-CXX) macros have four parameters:
+// the language, the standard version, the corresponding compile-flag,
+// and an index of the language version for each language.
+// The standard version is used to compare a standard version numerically,
+// and the index is used to impose ordering for the language versions
+// with respect to each language.
+
 #ifndef TESTLANGUAGE
 #error "TESTLANGUAGE must be defined before including this file"
 #endif
