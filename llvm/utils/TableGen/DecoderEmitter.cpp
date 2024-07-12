@@ -2268,9 +2268,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       return MCDisassembler::Fail;
     case MCD::OPC_ExtractField: {
       // Decode the start value.
-      unsigned DecodedLen;
-      unsigned Start = decodeULEB128(++Ptr, &DecodedLen);
-      Ptr += DecodedLen;
+      unsigned Start = decodeULEB128AndIncUnsafe(++Ptr);
       unsigned Len = *Ptr++;)";
   if (IsVarLenInst)
     OS << "\n      makeUp(insn, Start + Len);";
@@ -2282,9 +2280,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     }
     case MCD::OPC_FilterValue: {
       // Decode the field value.
-      unsigned Len;
-      uint64_t Val = decodeULEB128(++Ptr, &Len);
-      Ptr += Len;
+      uint64_t Val = decodeULEB128AndIncUnsafe(++Ptr);
       // NumToSkip is a plain 24-bit integer.
       unsigned NumToSkip = *Ptr++;
       NumToSkip |= (*Ptr++) << 8;
