@@ -270,6 +270,20 @@ struct ArchiveFileInfo {
 
 static DenseMap<StringRef, ArchiveFileInfo> loadedArchives;
 
+static void saveThinArchiveToRepro(ArchiveFile const *file) {
+  assert(tar && file->getArchive().isThin());
+
+  Error e = Error::success();
+  for (const object::Archive::Child &c : file->getArchive().children(e)) {
+    MemoryBufferRef mb = CHECK(c.getMemoryBufferRef(),
+                               toString(file) + ": failed to get buffer");
+    tar->append(relativeToRoot(CHECK(c.getFullName(), file)), mb.getBuffer());
+  }
+  if (e)
+    error(toString(file) +
+          ": Archive::children failed: " + toString(std::move(e)));
+}
+
 static InputFile *addFile(StringRef path, LoadType loadType,
                           bool isLazy = false, bool isExplicit = true,
                           bool isBundleLoader = false,
@@ -301,6 +315,9 @@ static InputFile *addFile(StringRef path, LoadType loadType,
       if (!archive->isEmpty() && !archive->hasSymbolTable())
         error(path + ": archive has no index; run ranlib to add one");
       file = make<ArchiveFile>(std::move(archive), isForceHidden);
+
+      if (tar && file->getArchive().isThin())
+        saveThinArchiveToRepro(file);
     } else {
       file = entry->second.file;
       // Command-line loads take precedence. If file is previously loaded via
