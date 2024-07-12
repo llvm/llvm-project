@@ -123,6 +123,13 @@ inline bool isInstanceMethod(const Decl *D) {
   return false;
 }
 
+inline bool checkIfMethodHasImplicitObjectParameter(const Decl *D) {
+  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(D))
+    return MethodDecl->isInstance() &&
+           !MethodDecl->hasCXXExplicitFunctionObjectParameter();
+  return false;
+}
+
 /// Diagnose mutually exclusive attributes when present on a given
 /// declaration. Returns true if diagnosed.
 template <typename AttrTy>

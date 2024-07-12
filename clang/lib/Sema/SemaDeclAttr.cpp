@@ -3508,7 +3508,7 @@ static void handleFormatAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   // In C++ the implicit 'this' function parameter also counts, and they are
   // counted from one.
-  bool HasImplicitThisParam = isInstanceMethod(D);
+  bool HasImplicitThisParam = checkIfMethodHasImplicitObjectParameter(D);
   unsigned NumArgs = getFunctionOrMethodNumParams(D) + HasImplicitThisParam;
 
   IdentifierInfo *II = AL.getArgAsIdent(0)->Ident;
@@ -3621,7 +3621,7 @@ static void handleCallbackAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  bool HasImplicitThisParam = isInstanceMethod(D);
+  bool HasImplicitThisParam = checkIfMethodHasImplicitObjectParameter(D);
   int32_t NumArgs = getFunctionOrMethodNumParams(D);
 
   FunctionDecl *FD = D->getAsFunction();
@@ -5318,6 +5318,221 @@ static void handlePreferredTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                         diag::err_incomplete_type);
 
   D->addAttr(::new (S.Context) PreferredTypeAttr(S.Context, AL, ParmTSI));
+}
+
+// This function is called only if function call is not inside template body.
+// TODO: Add call for function calls inside template body.
+// Emit warnings if parent function misses format attributes.
+void Sema::DiagnoseMissingFormatAttributes(Stmt *Body,
+                                           const FunctionDecl *FDecl) {
+  assert(FDecl);
+
+  // If there are no function body, exit.
+  if (!Body)
+    return;
+
+  // Get missing format attributes
+  std::vector<FormatAttr *> MissingFormatAttributes =
+      GetMissingFormatAttributes(Body, FDecl);
+  if (MissingFormatAttributes.empty())
+    return;
+
+  // Check if there are more than one format type found. In that case do not
+  // emit diagnostic.
+  const FormatAttr *FirstAttr = MissingFormatAttributes[0];
+  if (llvm::any_of(MissingFormatAttributes, [&](const FormatAttr *Attr) {
+        return FirstAttr->getType() != Attr->getType();
+      }))
+    return;
+
+  for (const FormatAttr *FA : MissingFormatAttributes) {
+    // If format index and first-to-check argument index are negative, it means
+    // that this attribute is only saved for multiple format types checking.
+    if (FA->getFormatIdx() < 0 || FA->getFirstArg() < 0)
+      continue;
+
+    // Emit diagnostic
+    SourceLocation Loc = FDecl->getLocation();
+    Diag(Loc, diag::warn_missing_format_attribute)
+        << FA->getType() << FDecl
+        << FixItHint::CreateInsertion(Loc,
+                                      (llvm::Twine("__attribute__((format(") +
+                                       FA->getType()->getName() + ", " +
+                                       llvm::Twine(FA->getFormatIdx()) + ", " +
+                                       llvm::Twine(FA->getFirstArg()) + ")))")
+                                          .str());
+  }
+}
+
+// Returns vector of format attributes. There are no two attributes with same
+// arguments in returning vector. There can be attributes that effectivelly only
+// store information about format type.
+std::vector<FormatAttr *>
+Sema::GetMissingFormatAttributes(Stmt *Body, const FunctionDecl *FDecl) {
+  unsigned int FunctionFormatArgumentIndexOffset =
+      checkIfMethodHasImplicitObjectParameter(FDecl) ? 2 : 1;
+
+  std::vector<FormatAttr *> MissingAttributes;
+
+  // Iterate over body statements.
+  for (auto *Child : Body->children()) {
+    // If child statement is compound statement, recursively get missing
+    // attributes.
+    if (dyn_cast_or_null<CompoundStmt>(Child)) {
+      std::vector<FormatAttr *> CompoundStmtMissingAttributes =
+          GetMissingFormatAttributes(Child, FDecl);
+
+      // If there are already missing attributes with same arguments, do not add
+      // duplicates.
+      for (FormatAttr *FA : CompoundStmtMissingAttributes) {
+        if (!llvm::any_of(MissingAttributes, [&](const FormatAttr *Attr) {
+              return FA->getType() == Attr->getType() &&
+                     FA->getFormatIdx() == Attr->getFormatIdx() &&
+                     FA->getFirstArg() == Attr->getFirstArg();
+            }))
+          MissingAttributes.push_back(FA);
+      }
+
+      continue;
+    }
+
+    ValueStmt *VS = dyn_cast_or_null<ValueStmt>(Child);
+    if (!VS)
+      continue;
+    Expr *TheExpr = VS->getExprStmt();
+    if (!TheExpr)
+      continue;
+    CallExpr *TheCall = dyn_cast_or_null<CallExpr>(TheExpr);
+    if (!TheCall)
+      continue;
+    const FunctionDecl *ChildFunction =
+        dyn_cast_or_null<FunctionDecl>(TheCall->getCalleeDecl());
+    if (!ChildFunction)
+      continue;
+
+    Expr **Args = TheCall->getArgs();
+    unsigned int NumArgs = TheCall->getNumArgs();
+
+    // If child expression is function, check if it is format function.
+    // If it is, check if parent function misses format attributes.
+
+    // If child function is format function and format arguments are not
+    // relevant to emit diagnostic, save only information about format type
+    // (format index and first-to-check argument index are set to -1).
+    // Information about format type is later used to determine if there are
+    // more than one format type found.
+
+    unsigned int ChildFunctionFormatArgumentIndexOffset =
+        checkIfMethodHasImplicitObjectParameter(ChildFunction) ? 2 : 1;
+
+    // Check if function has format attribute with forwarded format string.
+    IdentifierInfo *AttrType;
+    const ParmVarDecl *FormatArg;
+    if (!llvm::any_of(ChildFunction->specific_attrs<FormatAttr>(),
+                      [&](const FormatAttr *Attr) {
+                        AttrType = Attr->getType();
+
+                        int OffsetFormatIndex =
+                            Attr->getFormatIdx() -
+                            ChildFunctionFormatArgumentIndexOffset;
+                        if (OffsetFormatIndex < 0 ||
+                            (unsigned)OffsetFormatIndex >= NumArgs)
+                          return false;
+
+                        const auto *FormatArgExpr = dyn_cast<DeclRefExpr>(
+                            Args[OffsetFormatIndex]->IgnoreParenCasts());
+                        if (!FormatArgExpr)
+                          return false;
+
+                        FormatArg = dyn_cast_or_null<ParmVarDecl>(
+                            FormatArgExpr->getReferencedDeclOfCallee());
+                        if (!FormatArg)
+                          return false;
+
+                        return true;
+                      })) {
+      MissingAttributes.push_back(
+          FormatAttr::CreateImplicit(getASTContext(), AttrType, -1, -1));
+      continue;
+    }
+
+    // Do not add in a vector format attributes whose type is different than
+    // parent function attribute type.
+    if (llvm::any_of(FDecl->specific_attrs<FormatAttr>(),
+                     [&](const FormatAttr *FunctionAttr) {
+                       return AttrType != FunctionAttr->getType();
+                     }))
+      continue;
+
+    // Check if format string argument is parent function parameter.
+    unsigned int StringIndex = 0;
+    if (!llvm::any_of(FDecl->parameters(), [&](const ParmVarDecl *Param) {
+          if (Param != FormatArg)
+            return false;
+
+          StringIndex = Param->getFunctionScopeIndex() +
+                        FunctionFormatArgumentIndexOffset;
+
+          return true;
+        })) {
+      MissingAttributes.push_back(
+          FormatAttr::CreateImplicit(getASTContext(), AttrType, -1, -1));
+      continue;
+    }
+
+    unsigned NumOfParentFunctionParams = FDecl->getNumParams();
+
+    // Compare parent and calling function format attribute arguments (archetype
+    // and format string).
+    if (llvm::any_of(
+            FDecl->specific_attrs<FormatAttr>(), [&](const FormatAttr *Attr) {
+              if (Attr->getType() != AttrType)
+                return false;
+              int OffsetFormatIndex =
+                  Attr->getFormatIdx() - FunctionFormatArgumentIndexOffset;
+
+              if (OffsetFormatIndex < 0 ||
+                  (unsigned)OffsetFormatIndex >= NumOfParentFunctionParams)
+                return false;
+
+              if (FDecl->parameters()[OffsetFormatIndex] != FormatArg)
+                return false;
+
+              return true;
+            })) {
+      MissingAttributes.push_back(
+          FormatAttr::CreateImplicit(getASTContext(), AttrType, -1, -1));
+      continue;
+    }
+
+    // Get first argument index
+    unsigned FirstToCheck = [&]() -> unsigned {
+      if (!FDecl->isVariadic())
+        return 0;
+      const auto *FirstToCheckArg =
+          dyn_cast<DeclRefExpr>(Args[NumArgs - 1]->IgnoreParenCasts());
+      if (!FirstToCheckArg)
+        return 0;
+
+      if (FirstToCheckArg->getType().getCanonicalType() !=
+          Context.getBuiltinVaListType().getCanonicalType())
+        return 0;
+      return NumOfParentFunctionParams + FunctionFormatArgumentIndexOffset;
+    }();
+
+    // If there are already attributes which arguments matches arguments
+    // detected in this iteration, do not add new attribute as it would be
+    // duplicate.
+    if (!llvm::any_of(MissingAttributes, [&](const FormatAttr *Attr) {
+          return Attr->getType() == AttrType &&
+                 Attr->getFormatIdx() == StringIndex &&
+                 Attr->getFirstArg() == FirstToCheck;
+        }))
+      MissingAttributes.push_back(FormatAttr::CreateImplicit(
+          getASTContext(), AttrType, StringIndex, FirstToCheck));
+  }
+
+  return MissingAttributes;
 }
 
 //===----------------------------------------------------------------------===//
