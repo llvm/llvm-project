@@ -205,8 +205,7 @@ define void @pr98675(ptr noalias %p1, ptr noalias %p2) {
 ; CHECK-SAME: ptr noalias [[P1:%.*]], ptr noalias [[P2:%.*]]) {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P1]], ptr @buf, i64 26, i1 false)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P1]], i64 10
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr @buf, i64 10
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P2]], ptr [[TMP1]], i64 1, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[P2]], ptr getelementptr inbounds (i8, ptr @buf, i64 10), i64 1, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i64(ptr %p1, ptr @buf, i64 26, i1 false)
