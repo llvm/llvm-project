@@ -94,17 +94,6 @@ subscribe, it is highly recommended that you set up email filters or some other
 mechanism to not flood your inbox. More sophisticated notifications, e.g. only
 on status change or routed based on blamelist are TODO (contributions welcome).
 
-# Pre-merge Testing
-
-A Buildkite pipeline runs the full Bazel build as a pre-merge test using the 
-[LLVM pre-merge testing](https://github.com/google/llvm-premerge-checks/). It
-is triggered on all changes to the utils/bazel directory and when the patch
-author is a member of the
-[Bazel Phabricator project](https://reviews.llvm.org/project/members/107/). If
-you use or benefit from the Bazel build, please join the project so that you
-can help keep it green. As a bonus, it runs in under 5 minutes, much faster
-than any of the other pre-merge builds.
-
 # Usage in Downstream Projects
 
 To use in dependent projects using Bazel, you can import LLVM and then use the
