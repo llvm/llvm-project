@@ -1468,9 +1468,8 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   if (Opcode == TargetOpcode::INLINEASM ||
       Opcode == TargetOpcode::INLINEASM_BR) {
     const MachineFunction &MF = *MI.getParent()->getParent();
-    const auto &TM = static_cast<const RISCVTargetMachine &>(MF.getTarget());
     return getInlineAsmLength(MI.getOperand(0).getSymbolName(),
-                              *TM.getMCAsmInfo());
+                              *MF.getTarget().getMCAsmInfo());
   }
 
   if (!MI.memoperands_empty()) {

@@ -398,8 +398,6 @@ public:
     return true;
   }
 
-  bool shouldDropLSRSolutionIfLessProfitable() const { return true; }
-
   std::optional<unsigned> getMinPageSize() const { return 4096; }
 };
 

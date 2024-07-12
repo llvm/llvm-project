@@ -3390,7 +3390,6 @@ void InnerLoopVectorizer::fixFixedOrderRecurrence(VPLiveOut *LO,
   }
   ScalarHeaderPhi->setIncomingValueForBlock(LoopScalarPreHeader,
                                             ScalarPreheaderPhi);
-  ScalarHeaderPhi->setName("scalar.recur");
 }
 
 void InnerLoopVectorizer::sinkScalarOperands(Instruction *PredInst) {
