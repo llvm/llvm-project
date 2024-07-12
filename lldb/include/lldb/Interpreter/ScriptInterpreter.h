@@ -13,8 +13,10 @@
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBData.h"
 #include "lldb/API/SBError.h"
+#include "lldb/API/SBEvent.h"
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
+#include "lldb/API/SBStream.h"
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SearchFilter.h"
@@ -250,50 +252,6 @@ public:
     return lldb::ValueObjectListSP();
   }
 
-  virtual StructuredData::ObjectSP
-  CreateScriptedThreadPlan(const char *class_name,
-                           const StructuredDataImpl &args_data,
-                           std::string &error_str,
-                           lldb::ThreadPlanSP thread_plan_sp) {
-    return StructuredData::ObjectSP();
-  }
-
-  virtual bool
-  ScriptedThreadPlanExplainsStop(StructuredData::ObjectSP implementor_sp,
-                                 Event *event, bool &script_error) {
-    script_error = true;
-    return true;
-  }
-
-  virtual bool
-  ScriptedThreadPlanShouldStop(StructuredData::ObjectSP implementor_sp,
-                               Event *event, bool &script_error) {
-    script_error = true;
-    return true;
-  }
-
-  virtual bool
-  ScriptedThreadPlanIsStale(StructuredData::ObjectSP implementor_sp,
-                            bool &script_error) {
-    script_error = true;
-    return true;
-  }
-
-  virtual lldb::StateType
-  ScriptedThreadPlanGetRunState(StructuredData::ObjectSP implementor_sp,
-                                bool &script_error) {
-    script_error = true;
-    return lldb::eStateStepping;
-  }
-
-  virtual bool
-  ScriptedThreadPlanGetStopDescription(StructuredData::ObjectSP implementor_sp,
-                                       lldb_private::Stream *stream,
-                                       bool &script_error) {
-    script_error = true;
-    return false;
-  }
-
   virtual StructuredData::GenericSP
   CreateScriptedBreakpointResolver(const char *class_name,
                                    const StructuredDataImpl &args_data,
@@ -481,6 +439,12 @@ public:
     return false;
   }
 
+  virtual std::optional<std::string>
+  GetRepeatCommandForScriptedCommand(StructuredData::GenericSP impl_obj_sp,
+                                     Args &args) {
+    return std::nullopt;
+  }
+
   virtual bool RunScriptFormatKeyword(const char *impl_function,
                                       Process *process, std::string &output,
                                       Status &error) {
@@ -592,6 +556,11 @@ public:
     return {};
   }
 
+  virtual lldb::ScriptedThreadPlanInterfaceSP
+  CreateScriptedThreadPlanInterface() {
+    return {};
+  }
+
   virtual lldb::OperatingSystemInterfaceSP CreateOperatingSystemInterface() {
     return {};
   }
@@ -609,6 +578,10 @@ public:
   GetDataExtractorFromSBData(const lldb::SBData &data) const;
 
   Status GetStatusFromSBError(const lldb::SBError &error) const;
+
+  Event *GetOpaqueTypeFromSBEvent(const lldb::SBEvent &event) const;
+
+  lldb::StreamSP GetOpaqueTypeFromSBStream(const lldb::SBStream &stream) const;
 
   lldb::BreakpointSP
   GetOpaqueTypeFromSBBreakpoint(const lldb::SBBreakpoint &breakpoint) const;

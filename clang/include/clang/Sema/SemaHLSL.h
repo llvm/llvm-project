@@ -58,6 +58,8 @@ public:
   void handleShaderAttr(Decl *D, const ParsedAttr &AL);
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
+
+  bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
 };
 
 } // namespace clang

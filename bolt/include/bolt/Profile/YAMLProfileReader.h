@@ -40,6 +40,9 @@ public:
   /// Check if the file contains YAML.
   static bool isYAML(StringRef Filename);
 
+  using ProfileLookupMap =
+      DenseMap<uint32_t, yaml::bolt::BinaryFunctionProfile *>;
+
 private:
   /// Adjustments for basic samples profiles (without LBR).
   bool NormalizeByInsnCount{false};
@@ -55,6 +58,10 @@ private:
   /// To keep track of functions that have a matched profile before the profile
   /// is attributed.
   FunctionSet ProfiledFunctions;
+
+  /// Maps profiled function id to function, for function matching with calls as
+  /// anchors.
+  ProfileLookupMap IdToYamLBF;
 
   /// For LTO symbol resolution.
   /// Map a common LTO prefix to a list of YAML profiles matching the prefix.
@@ -73,12 +80,28 @@ private:
   bool parseFunctionProfile(BinaryFunction &Function,
                             const yaml::bolt::BinaryFunctionProfile &YamlBF);
 
+  /// Checks if a function profile matches a binary function.
+  bool profileMatches(const yaml::bolt::BinaryFunctionProfile &Profile,
+                      const BinaryFunction &BF);
+
   /// Infer function profile from stale data (collected on older binaries).
   bool inferStaleProfile(BinaryFunction &Function,
                          const yaml::bolt::BinaryFunctionProfile &YamlBF);
 
   /// Initialize maps for profile matching.
   void buildNameMaps(BinaryContext &BC);
+
+  /// Matches functions using exact name.
+  size_t matchWithExactName();
+
+  /// Matches function using LTO comomon name.
+  size_t matchWithLTOCommonName();
+
+  /// Matches functions using exact hash.
+  size_t matchWithHash(BinaryContext &BC);
+
+  /// Matches functions with similarly named profiled functions.
+  size_t matchWithNameSimilarity(BinaryContext &BC);
 
   /// Update matched YAML -> BinaryFunction pair.
   void matchProfileToFunction(yaml::bolt::BinaryFunctionProfile &YamlBF,

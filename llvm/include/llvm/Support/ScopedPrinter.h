@@ -86,7 +86,7 @@ template <class T> std::string to_string(const T &Value) {
   std::string number;
   raw_string_ostream stream(number);
   stream << Value;
-  return stream.str();
+  return number;
 }
 
 template <typename T, typename TEnum>

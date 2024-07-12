@@ -993,4 +993,42 @@ define void @maximal_legal_fpmath(ptr %addr1, ptr %addr2, ptr %result, float %va
   ret void
 }
 
+define void @bitcast_srcty_mismatch() {
+; CHECK-LABEL: @bitcast_srcty_mismatch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHUFFLE_I_I:%.*]] = shufflevector <2 x i64> zeroinitializer, <2 x i64> zeroinitializer, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> zeroinitializer to <4 x float>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[SHUFFLE_I_I]] to <4 x float>
+; CHECK-NEXT:    [[SHUFP_I196:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> [[TMP1]], <4 x i32> <i32 2, i32 1, i32 4, i32 7>
+; CHECK-NEXT:    store <4 x float> [[SHUFP_I196]], ptr null, align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %shuffle.i.i = shufflevector <2 x i64> zeroinitializer, <2 x i64> zeroinitializer, <2 x i32> <i32 1, i32 3>
+  %0 = bitcast <4 x i32> zeroinitializer to <4 x float>
+  %1 = bitcast <2 x i64> %shuffle.i.i to <4 x float>
+  %shufp.i196 = shufflevector <4 x float> %0, <4 x float> %1, <4 x i32> <i32 2, i32 1, i32 4, i32 7>
+  store <4 x float> %shufp.i196, ptr null, align 16
+  ret void
+}
+
+define <2 x float> @first_scalar_select(<2 x float> %0, <2 x float> %1, float %x) {
+; CHECK-LABEL: @first_scalar_select(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP_I903:%.*]] = fcmp ogt float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[SEL1639:%.*]] = select i1 [[CMP_I903]], <2 x float> [[TMP0:%.*]], <2 x float> [[TMP1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp ogt <2 x float> [[TMP0]], zeroinitializer
+; CHECK-NEXT:    [[SEL48_I913:%.*]] = select <2 x i1> [[TMP2]], <2 x float> [[TMP0]], <2 x float> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[SEL1639]], <2 x float> [[SEL48_I913]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    ret <2 x float> [[TMP3]]
+;
+entry:
+  %cmp.i903 = fcmp ogt float %x, 0.000000e+00
+  %sel1639 = select i1 %cmp.i903, <2 x float> %0, <2 x float> %1
+  %3 = fcmp ogt <2 x float> %0, zeroinitializer
+  %sel48.i913 = select <2 x i1> %3, <2 x float> %0, <2 x float> %1
+  %4 = shufflevector <2 x float> %sel1639, <2 x float> %sel48.i913, <2 x i32> <i32 0, i32 3>
+  ret <2 x float> %4
+}
+
 declare void @use(<4 x i8>)

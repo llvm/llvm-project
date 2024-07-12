@@ -2271,7 +2271,7 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
     return /*Changed*/ false;
 
   bool Changed = false;
-  auto *DL = &F.getParent()->getDataLayout();
+  auto *DL = &F.getDataLayout();
   // Collect a map of {backing storage : dbg.declares} (currently "backing
   // storage" is limited to Allocas). We'll use this to find dbg.declares to
   // delete after running `trackAssignments`.

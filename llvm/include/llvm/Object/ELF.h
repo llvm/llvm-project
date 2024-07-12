@@ -21,11 +21,13 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -207,6 +209,47 @@ bool isSectionInSegment(const typename ELFT::Phdr &Phdr,
          checkSectionVMA<ELFT>(Phdr, Sec);
 }
 
+// HdrHandler is called once with the number of relocations and whether the
+// relocations have addends. EntryHandler is called once per decoded relocation.
+template <bool Is64>
+Error decodeCrel(
+    ArrayRef<uint8_t> Content,
+    function_ref<void(uint64_t /*relocation count*/, bool /*explicit addends*/)>
+        HdrHandler,
+    function_ref<void(Elf_Crel_Impl<Is64>)> EntryHandler) {
+  DataExtractor Data(Content, true, 8); // endian and address size are unused
+  DataExtractor::Cursor Cur(0);
+  const uint64_t Hdr = Data.getULEB128(Cur);
+  size_t Count = Hdr / 8;
+  const size_t FlagBits = Hdr & ELF::CREL_HDR_ADDEND ? 3 : 2;
+  const size_t Shift = Hdr % ELF::CREL_HDR_ADDEND;
+  using uint = typename Elf_Crel_Impl<Is64>::uint;
+  uint Offset = 0, Addend = 0;
+  HdrHandler(Count, Hdr & ELF::CREL_HDR_ADDEND);
+  uint32_t SymIdx = 0, Type = 0;
+  for (; Count; --Count) {
+    // The delta offset and flags member may be larger than uint64_t. Special
+    // case the first byte (2 or 3 flag bits; the rest are offset bits). Other
+    // ULEB128 bytes encode the remaining delta offset bits.
+    const uint8_t B = Data.getU8(Cur);
+    Offset += B >> FlagBits;
+    if (B >= 0x80)
+      Offset += (Data.getULEB128(Cur) << (7 - FlagBits)) - (0x80 >> FlagBits);
+    // Delta symidx/type/addend members (SLEB128).
+    if (B & 1)
+      SymIdx += Data.getSLEB128(Cur);
+    if (B & 2)
+      Type += Data.getSLEB128(Cur);
+    if (B & 4 & Hdr)
+      Addend += Data.getSLEB128(Cur);
+    if (!Cur)
+      break;
+    EntryHandler(
+        {Offset << Shift, SymIdx, Type, std::make_signed_t<uint>(Addend)});
+  }
+  return Cur.takeError();
+}
+
 template <class ELFT>
 class ELFFile {
 public:
@@ -320,6 +363,11 @@ public:
   }
 
   std::vector<Elf_Rel> decode_relrs(Elf_Relr_Range relrs) const;
+
+  Expected<uint64_t> getCrelHeader(ArrayRef<uint8_t> Content) const;
+  using RelsOrRelas = std::pair<std::vector<Elf_Rel>, std::vector<Elf_Rela>>;
+  Expected<RelsOrRelas> decodeCrel(ArrayRef<uint8_t> Content) const;
+  Expected<RelsOrRelas> crels(const Elf_Shdr &Sec) const;
 
   Expected<std::vector<Elf_Rela>> android_relas(const Elf_Shdr &Sec) const;
 

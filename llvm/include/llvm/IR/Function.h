@@ -47,6 +47,7 @@ typedef unsigned ID;
 class AssemblyAnnotationWriter;
 class Constant;
 class ConstantRange;
+class DataLayout;
 struct DenormalMode;
 class DISubprogram;
 enum LibFunc : unsigned;
@@ -213,6 +214,11 @@ public:
   /// getContext - Return a reference to the LLVMContext associated with this
   /// function.
   LLVMContext &getContext() const;
+
+  /// Get the data layout of the module this function belongs to.
+  ///
+  /// Requires the function to have a parent module.
+  const DataLayout &getDataLayout() const;
 
   /// isVarArg - Return true if this function takes a variable number of
   /// arguments.

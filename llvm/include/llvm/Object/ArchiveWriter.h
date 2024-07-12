@@ -50,6 +50,14 @@ enum class SymtabWritingMode {
 
 void warnToStderr(Error Err);
 
+// Write an archive directly to an output stream.
+Error writeArchiveToStream(raw_ostream &Out,
+                           ArrayRef<NewArchiveMember> NewMembers,
+                           SymtabWritingMode WriteSymtab,
+                           object::Archive::Kind Kind, bool Deterministic,
+                           bool Thin, std::optional<bool> IsEC = std::nullopt,
+                           function_ref<void(Error)> Warn = warnToStderr);
+
 Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
                    SymtabWritingMode WriteSymtab, object::Archive::Kind Kind,
                    bool Deterministic, bool Thin,

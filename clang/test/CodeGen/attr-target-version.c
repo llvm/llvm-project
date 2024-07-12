@@ -428,13 +428,6 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@fmv_default
-// CHECK-SAME: () #[[ATTR11]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 111
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@fmv_c._Mssbs
 // CHECK-SAME: () #[[ATTR11]] {
 // CHECK-NEXT:  entry:
@@ -637,22 +630,18 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@fmv_default
+// CHECK-SAME: () #[[ATTR11]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 111
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
 // CHECK-LABEL: define {{[^@]+}}@recur
 // CHECK-SAME: () #[[ATTR11]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @reca()
 // CHECK-NEXT:    ret void
-//
-//
-// CHECK: Function Attrs: noinline nounwind optnone
-// CHECK-LABEL: define {{[^@]+}}@main
-// CHECK-SAME: () #[[ATTR11]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK-NEXT:    call void @recur()
-// CHECK-NEXT:    [[CALL:%.*]] = call i32 @goo()
-// CHECK-NEXT:    ret i32 [[CALL]]
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
@@ -815,6 +804,17 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 // CHECK-NEXT:    ret ptr @used_decl_without_default_decl._Mrdm
 // CHECK:       resolver_else2:
 // CHECK-NEXT:    ret ptr @used_decl_without_default_decl.default
+//
+//
+// CHECK: Function Attrs: noinline nounwind optnone
+// CHECK-LABEL: define {{[^@]+}}@main
+// CHECK-SAME: () #[[ATTR11]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
+// CHECK-NEXT:    call void @recur()
+// CHECK-NEXT:    [[CALL:%.*]] = call i32 @goo()
+// CHECK-NEXT:    ret i32 [[CALL]]
 //
 //
 // CHECK: Function Attrs: noinline nounwind optnone
@@ -1020,20 +1020,6 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 //
 //
 // CHECK-NOFMV: Function Attrs: noinline nounwind optnone
-// CHECK-NOFMV-LABEL: define {{[^@]+}}@fmv_default
-// CHECK-NOFMV-SAME: () #[[ATTR0]] {
-// CHECK-NOFMV-NEXT:  entry:
-// CHECK-NOFMV-NEXT:    ret i32 111
-//
-//
-// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
-// CHECK-NOFMV-LABEL: define {{[^@]+}}@fmv_c
-// CHECK-NOFMV-SAME: () #[[ATTR0]] {
-// CHECK-NOFMV-NEXT:  entry:
-// CHECK-NOFMV-NEXT:    ret void
-//
-//
-// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@goo
 // CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
@@ -1053,22 +1039,25 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 //
 //
 // CHECK-NOFMV: Function Attrs: noinline nounwind optnone
+// CHECK-NOFMV-LABEL: define {{[^@]+}}@fmv_c
+// CHECK-NOFMV-SAME: () #[[ATTR0]] {
+// CHECK-NOFMV-NEXT:  entry:
+// CHECK-NOFMV-NEXT:    ret void
+//
+//
+// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
+// CHECK-NOFMV-LABEL: define {{[^@]+}}@fmv_default
+// CHECK-NOFMV-SAME: () #[[ATTR0]] {
+// CHECK-NOFMV-NEXT:  entry:
+// CHECK-NOFMV-NEXT:    ret i32 111
+//
+//
+// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
 // CHECK-NOFMV-LABEL: define {{[^@]+}}@recur
 // CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
 // CHECK-NOFMV-NEXT:    call void @reca()
 // CHECK-NOFMV-NEXT:    ret void
-//
-//
-// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
-// CHECK-NOFMV-LABEL: define {{[^@]+}}@main
-// CHECK-NOFMV-SAME: () #[[ATTR0]] {
-// CHECK-NOFMV-NEXT:  entry:
-// CHECK-NOFMV-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK-NOFMV-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK-NOFMV-NEXT:    call void @recur()
-// CHECK-NOFMV-NEXT:    [[CALL:%.*]] = call i32 @goo()
-// CHECK-NOFMV-NEXT:    ret i32 [[CALL]]
 //
 //
 // CHECK-NOFMV: Function Attrs: noinline nounwind optnone
@@ -1086,13 +1075,6 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 // CHECK-NOFMV-NEXT:    [[CALL1:%.*]] = call i32 [[TMP1]]()
 // CHECK-NOFMV-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL]], [[CALL1]]
 // CHECK-NOFMV-NEXT:    ret i32 [[ADD]]
-//
-//
-// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
-// CHECK-NOFMV-LABEL: define {{[^@]+}}@unused_with_default_def
-// CHECK-NOFMV-SAME: () #[[ATTR0]] {
-// CHECK-NOFMV-NEXT:  entry:
-// CHECK-NOFMV-NEXT:    ret i32 1
 //
 //
 // CHECK-NOFMV: Function Attrs: noinline nounwind optnone
@@ -1114,6 +1096,24 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 // CHECK-NOFMV-SAME: () #[[ATTR0]] {
 // CHECK-NOFMV-NEXT:  entry:
 // CHECK-NOFMV-NEXT:    ret i32 0
+//
+//
+// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
+// CHECK-NOFMV-LABEL: define {{[^@]+}}@main
+// CHECK-NOFMV-SAME: () #[[ATTR0]] {
+// CHECK-NOFMV-NEXT:  entry:
+// CHECK-NOFMV-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// CHECK-NOFMV-NEXT:    store i32 0, ptr [[RETVAL]], align 4
+// CHECK-NOFMV-NEXT:    call void @recur()
+// CHECK-NOFMV-NEXT:    [[CALL:%.*]] = call i32 @goo()
+// CHECK-NOFMV-NEXT:    ret i32 [[CALL]]
+//
+//
+// CHECK-NOFMV: Function Attrs: noinline nounwind optnone
+// CHECK-NOFMV-LABEL: define {{[^@]+}}@unused_with_default_def
+// CHECK-NOFMV-SAME: () #[[ATTR0]] {
+// CHECK-NOFMV-NEXT:  entry:
+// CHECK-NOFMV-NEXT:    ret i32 1
 //
 //.
 // CHECK: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+flagm,+fp-armv8,+fp16fml,+fullfp16,+neon,+rand,-v9.5a" }

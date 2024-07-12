@@ -355,11 +355,11 @@ Descriptor::Descriptor(const DeclTy &D)
 }
 
 QualType Descriptor::getType() const {
-  if (auto *E = asExpr())
+  if (const auto *E = asExpr())
     return E->getType();
-  if (auto *D = asValueDecl())
+  if (const auto *D = asValueDecl())
     return D->getType();
-  if (auto *T = dyn_cast<TypeDecl>(asDecl()))
+  if (const auto *T = dyn_cast<TypeDecl>(asDecl()))
     return QualType(T->getTypeForDecl(), 0);
   llvm_unreachable("Invalid descriptor type");
 }

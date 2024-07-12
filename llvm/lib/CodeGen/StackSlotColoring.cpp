@@ -148,8 +148,8 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.setPreservesCFG();
-      AU.addRequired<SlotIndexes>();
-      AU.addPreserved<SlotIndexes>();
+      AU.addRequired<SlotIndexesWrapperPass>();
+      AU.addPreserved<SlotIndexesWrapperPass>();
       AU.addRequired<LiveStacks>();
       AU.addRequired<MachineBlockFrequencyInfo>();
       AU.addPreserved<MachineBlockFrequencyInfo>();
@@ -159,7 +159,7 @@ namespace {
       // split into multiple phases based on register class. So, this pass
       // may be invoked multiple times requiring it to save these analyses to be
       // used by RA later.
-      AU.addPreserved<LiveIntervals>();
+      AU.addPreserved<LiveIntervalsWrapperPass>();
       AU.addPreserved<LiveDebugVariables>();
 
       MachineFunctionPass::getAnalysisUsage(AU);
@@ -185,9 +185,9 @@ char &llvm::StackSlotColoringID = StackSlotColoring::ID;
 
 INITIALIZE_PASS_BEGIN(StackSlotColoring, DEBUG_TYPE,
                 "Stack Slot Coloring", false, false)
-INITIALIZE_PASS_DEPENDENCY(SlotIndexes)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveStacks)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(StackSlotColoring, DEBUG_TYPE,
                 "Stack Slot Coloring", false, false)
 
@@ -528,7 +528,7 @@ bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
   TII = MF.getSubtarget().getInstrInfo();
   LS = &getAnalysis<LiveStacks>();
   MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
-  Indexes = &getAnalysis<SlotIndexes>();
+  Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
 
   bool Changed = false;
 

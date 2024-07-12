@@ -6430,26 +6430,9 @@ define void @buffer_fat_ptr_agent_atomic_fadd_noret_v2f16__offset__amdgpu_no_fin
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_mov_b32_e32 v1, s8
-; GFX908-NEXT:    buffer_load_dword v2, v1, s[4:7], 0 offen offset:1024
-; GFX908-NEXT:    s_add_i32 s10, s8, 0x400
-; GFX908-NEXT:    s_mov_b64 s[8:9], 0
-; GFX908-NEXT:    v_mov_b32_e32 v3, s10
-; GFX908-NEXT:  .LBB20_1: ; %atomicrmw.start
-; GFX908-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    v_pk_add_f16 v1, v2, v0
-; GFX908-NEXT:    v_mov_b32_e32 v5, v2
-; GFX908-NEXT:    v_mov_b32_e32 v4, v1
-; GFX908-NEXT:    buffer_atomic_cmpswap v[4:5], v3, s[4:7], 0 offen glc
+; GFX908-NEXT:    buffer_atomic_pk_add_f16 v0, v1, s[4:7], 0 offen offset:1024
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    buffer_wbinvl1
-; GFX908-NEXT:    v_cmp_eq_u32_e32 vcc, v4, v2
-; GFX908-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
-; GFX908-NEXT:    v_mov_b32_e32 v2, v4
-; GFX908-NEXT:    s_andn2_b64 exec, exec, s[8:9]
-; GFX908-NEXT:    s_cbranch_execnz .LBB20_1
-; GFX908-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GFX908-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: buffer_fat_ptr_agent_atomic_fadd_noret_v2f16__offset__amdgpu_no_fine_grained_memory:
@@ -7912,26 +7895,9 @@ define void @buffer_fat_ptr_agent_atomic_fadd_noret_v2f16__offset__amdgpu_no_rem
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX908-NEXT:    v_mov_b32_e32 v1, s8
-; GFX908-NEXT:    buffer_load_dword v2, v1, s[4:7], 0 offen offset:1024
-; GFX908-NEXT:    s_add_i32 s10, s8, 0x400
-; GFX908-NEXT:    s_mov_b64 s[8:9], 0
-; GFX908-NEXT:    v_mov_b32_e32 v3, s10
-; GFX908-NEXT:  .LBB25_1: ; %atomicrmw.start
-; GFX908-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX908-NEXT:    s_waitcnt vmcnt(0)
-; GFX908-NEXT:    v_pk_add_f16 v1, v2, v0
-; GFX908-NEXT:    v_mov_b32_e32 v5, v2
-; GFX908-NEXT:    v_mov_b32_e32 v4, v1
-; GFX908-NEXT:    buffer_atomic_cmpswap v[4:5], v3, s[4:7], 0 offen glc
+; GFX908-NEXT:    buffer_atomic_pk_add_f16 v0, v1, s[4:7], 0 offen offset:1024
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    buffer_wbinvl1
-; GFX908-NEXT:    v_cmp_eq_u32_e32 vcc, v4, v2
-; GFX908-NEXT:    s_or_b64 s[8:9], vcc, s[8:9]
-; GFX908-NEXT:    v_mov_b32_e32 v2, v4
-; GFX908-NEXT:    s_andn2_b64 exec, exec, s[8:9]
-; GFX908-NEXT:    s_cbranch_execnz .LBB25_1
-; GFX908-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GFX908-NEXT:    s_or_b64 exec, exec, s[8:9]
 ; GFX908-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: buffer_fat_ptr_agent_atomic_fadd_noret_v2f16__offset__amdgpu_no_remote_memory:

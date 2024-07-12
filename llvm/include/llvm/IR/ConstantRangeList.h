@@ -72,6 +72,8 @@ public:
                          APInt(64, Upper, /*isSigned=*/true)));
   }
 
+  void subtract(const ConstantRange &SubRange);
+
   /// Return the range list that results from the union of this
   /// ConstantRangeList with another ConstantRangeList, "CRL".
   ConstantRangeList unionWith(const ConstantRangeList &CRL) const;

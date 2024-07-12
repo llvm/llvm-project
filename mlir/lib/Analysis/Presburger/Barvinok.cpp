@@ -10,7 +10,6 @@
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/ADT/Sequence.h"
 #include <algorithm>
-#include <bitset>
 
 using namespace mlir;
 using namespace presburger;

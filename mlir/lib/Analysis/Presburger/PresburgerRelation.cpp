@@ -12,11 +12,10 @@
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
-#include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <functional>
@@ -943,9 +942,7 @@ LogicalResult SetCoalescer::typeEquality(ArrayRef<DynamicAPInt> eq,
     return failure();
   negEqs.push_back(getNegatedCoeffs(eq));
   ArrayRef<DynamicAPInt> inv(negEqs.back());
-  if (typeInequality(inv, simp).failed())
-    return failure();
-  return success();
+  return typeInequality(inv, simp);
 }
 
 void SetCoalescer::eraseDisjunct(unsigned i) {
@@ -1016,10 +1013,7 @@ LogicalResult SetCoalescer::coalescePair(unsigned i, unsigned j) {
   }
 
   // Try to apply the cut case
-  if (coalescePairCutCase(j, i).succeeded())
-    return success();
-
-  return failure();
+  return coalescePairCutCase(j, i);
 }
 
 PresburgerRelation PresburgerRelation::coalesce() const {

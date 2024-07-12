@@ -14,13 +14,7 @@
 ; can get earlier expanded values invalidated when casts are used.  This test
 ; ensure that we are not using the invalidated values.
 
-target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
-
-define void @f(ptr %a1, ptr %a2,
-               ptr %b,
-               ptr %c1, ptr %c2,
-               ptr %d,
-               ptr %e) {
+define void @f(ptr %a1, ptr %a2, ptr %b, ptr %c1, ptr %c2, ptr %d, ptr %e) {
 entry:
 
   %cond = icmp eq ptr %e, null

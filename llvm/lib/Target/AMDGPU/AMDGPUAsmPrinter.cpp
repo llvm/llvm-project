@@ -324,7 +324,7 @@ void AMDGPUAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
       report_fatal_error("symbol '" + Twine(GVSym->getName()) +
                          "' is already defined");
 
-    const DataLayout &DL = GV->getParent()->getDataLayout();
+    const DataLayout &DL = GV->getDataLayout();
     uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
     Align Alignment = GV->getAlign().value_or(Align(4));
 
@@ -862,7 +862,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
     // FIXME: We should be using the number of registers determined during
     // calling convention lowering to legalize the types.
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
     unsigned PSArgCount = 0;
     unsigned IntermediateVGPR = 0;
     for (auto &Arg : F.args()) {

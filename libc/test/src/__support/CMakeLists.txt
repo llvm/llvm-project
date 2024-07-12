@@ -1,19 +1,20 @@
 add_custom_target(libc-support-tests)
 
-add_libc_test(
-  block_test
-  SUITE
-    libc-support-tests
-  SRCS
-    block_test.cpp
-  DEPENDS
-    libc.src.__support.CPP.array
-    libc.src.__support.CPP.span
-    libc.src.__support.block
-    libc.src.string.memcpy
-)
-
 if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+  add_libc_test(
+    block_test
+    SUITE
+      libc-support-tests
+    SRCS
+      block_test.cpp
+    DEPENDS
+      libc.src.__support.CPP.array
+      libc.src.__support.CPP.bit
+      libc.src.__support.CPP.span
+      libc.src.__support.block
+      libc.src.string.memcpy
+  )
+
   add_libc_test(
     freelist_test
     SUITE
@@ -238,7 +239,7 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
 
   add_custom_command(TARGET libc_str_to_float_comparison_test
                      POST_BUILD
-                     COMMAND $<TARGET_FILE:libc_str_to_float_comparison_test> ${float_test_file}
+                     COMMAND ${CMAKE_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:libc_str_to_float_comparison_test> ${float_test_file}
                      DEPENDS ${float_test_file}
                      COMMENT "Test the strtof and strtod implementations against precomputed results."
                      VERBATIM)

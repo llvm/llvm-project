@@ -13,18 +13,12 @@
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
-#include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
-#include <cstddef>
 #include <cstdint>
-#include <functional>
-#include <numeric>
-
 #include <numeric>
 #include <optional>
 
@@ -246,7 +240,7 @@ MaybeLocalRepr presburger::computeSingleVarRepr(
   for (unsigned ubPos : ubIndices) {
     for (unsigned lbPos : lbIndices) {
       // Attempt to get divison representation from ubPos, lbPos.
-      if (failed(getDivRepr(cst, pos, ubPos, lbPos, dividend, divisor)))
+      if (getDivRepr(cst, pos, ubPos, lbPos, dividend, divisor).failed())
         continue;
 
       if (!checkExplicitRepresentation(cst, foundRepr, dividend, pos))
@@ -259,7 +253,7 @@ MaybeLocalRepr presburger::computeSingleVarRepr(
   }
   for (unsigned eqPos : eqIndices) {
     // Attempt to get divison representation from eqPos.
-    if (failed(getDivRepr(cst, pos, eqPos, dividend, divisor)))
+    if (getDivRepr(cst, pos, eqPos, dividend, divisor).failed())
       continue;
 
     if (!checkExplicitRepresentation(cst, foundRepr, dividend, pos))
@@ -368,6 +362,8 @@ void presburger::normalizeDiv(MutableArrayRef<DynamicAPInt> num,
                               DynamicAPInt &denom) {
   assert(denom > 0 && "denom must be positive!");
   DynamicAPInt gcd = llvm::gcd(gcdRange(num), denom);
+  if (gcd == 1)
+    return;
   for (DynamicAPInt &coeff : num)
     coeff /= gcd;
   denom /= gcd;

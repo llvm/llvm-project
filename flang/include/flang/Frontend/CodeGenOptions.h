@@ -133,6 +133,13 @@ public:
   /// transformation.
   OptRemark OptimizationRemarkAnalysis;
 
+  /// The code model to use (-mcmodel).
+  std::string CodeModel;
+
+  /// The code model-specific large data threshold to use
+  /// (-mlarge-data-threshold).
+  uint64_t LargeDataThreshold;
+
   // Define accessors/mutators for code generation options of enumeration type.
 #define CODEGENOPT(Name, Bits, Default)
 #define ENUM_CODEGENOPT(Name, Type, Bits, Default)                             \
@@ -142,6 +149,8 @@ public:
 
   CodeGenOptions();
 };
+
+std::optional<llvm::CodeModel::Model> getCodeModel(llvm::StringRef string);
 
 } // end namespace Fortran::frontend
 

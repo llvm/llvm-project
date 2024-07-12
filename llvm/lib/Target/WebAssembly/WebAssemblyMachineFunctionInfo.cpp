@@ -56,7 +56,7 @@ void llvm::computeLegalValueVTs(const WebAssemblyTargetLowering &TLI,
 
 void llvm::computeLegalValueVTs(const Function &F, const TargetMachine &TM,
                                 Type *Ty, SmallVectorImpl<MVT> &ValueVTs) {
-  const DataLayout &DL(F.getParent()->getDataLayout());
+  const DataLayout &DL(F.getDataLayout());
   const WebAssemblyTargetLowering &TLI =
       *TM.getSubtarget<WebAssemblySubtarget>(F).getTargetLowering();
   computeLegalValueVTs(TLI, F.getContext(), DL, Ty, ValueVTs);

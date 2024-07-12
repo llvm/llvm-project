@@ -154,8 +154,9 @@ add_header_library(
   HDRS
     multiply_add.h
   DEPENDS
-    .fma
     libc.src.__support.common
+  FLAGS
+    FMA_OPT
 )
 
 add_header_library(

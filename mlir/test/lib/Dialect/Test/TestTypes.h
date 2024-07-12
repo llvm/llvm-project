@@ -108,7 +108,7 @@ struct TestRecursiveTypeStorage : public ::mlir::TypeStorage {
         TestRecursiveTypeStorage(allocator.copyInto(key));
   }
 
-  ::mlir::LogicalResult mutate(::mlir::TypeStorageAllocator &allocator,
+  ::llvm::LogicalResult mutate(::mlir::TypeStorageAllocator &allocator,
                                ::mlir::Type newBody) {
     // Cannot set a different body than before.
     if (body && body != newBody)
@@ -140,7 +140,7 @@ public:
   }
 
   /// Body getter and setter.
-  ::mlir::LogicalResult setBody(Type body) { return Base::mutate(body); }
+  ::llvm::LogicalResult setBody(Type body) { return Base::mutate(body); }
   ::mlir::Type getBody() const { return getImpl()->body; }
 
   /// Name/key getter.

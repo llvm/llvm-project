@@ -88,14 +88,37 @@ define <4 x i32> @combine_pmaddwd_demandedelts(<8 x i16> %a0, <8 x i16> %a1) {
   ret <4 x i32> %4
 }
 
-define i32 @combine_pmaddwd_constant() {
-; CHECK-LABEL: combine_pmaddwd_constant:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $-155, %eax
-; CHECK-NEXT:    retq
+; [2]: (-5*13)+(6*-15) = -155 = 4294967141
+define <4 x i32> @combine_pmaddwd_constant() {
+; SSE-LABEL: combine_pmaddwd_constant:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [19,17,4294967141,271]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_pmaddwd_constant:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [19,17,4294967141,271]
+; AVX-NEXT:    retq
   %1 = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> <i16 -1, i16 2, i16 3, i16 -4, i16 -5, i16 6, i16 7, i16 -8>, <8 x i16> <i16 -5, i16 7, i16 -9, i16 -11, i16 13, i16 -15, i16 17, i16 -19>)
-  %2 = extractelement <4 x i32> %1, i32 2 ; (-5*13)+(6*-15) = -155
-  ret i32 %2
+  ret <4 x i32> %1
+}
+
+; ensure we don't assume pmaddwd performs add nsw
+; [0]: (-32768*-32768)+(-32768*-32768) = 0x80000000 = 2147483648
+define <4 x i32> @combine_pmaddwd_constant_nsw() {
+; SSE-LABEL: combine_pmaddwd_constant_nsw:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [2147483648,2147483648,2147483648,2147483648]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_pmaddwd_constant_nsw:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [2147483648,2147483648,2147483648,2147483648]
+; AVX-NEXT:    retq
+  %1 = insertelement <8 x i16> undef, i16 32768, i32 0
+  %2 = shufflevector <8 x i16> %1, <8 x i16> undef, <8 x i32> zeroinitializer
+  %3 = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %2, <8 x i16> %2)
+  ret <4 x i32> %3
 }
 
 define <8 x i16> @combine_pmaddubsw_zero(<16 x i8> %a0, <16 x i8> %a1) {
@@ -180,25 +203,44 @@ define <8 x i16> @combine_pmaddubsw_demandedelts(<16 x i8> %a0, <16 x i8> %a1) {
   ret <8 x i16> %4
 }
 
+; [3]: ((uint16_t)-6*7)+(7*-8) = (250*7)+(7*-8) = 1694
 define i32 @combine_pmaddubsw_constant() {
 ; CHECK-LABEL: combine_pmaddubsw_constant:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $1694, %eax # imm = 0x69E
 ; CHECK-NEXT:    retq
   %1 = call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 -6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>, <16 x i8> <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 -8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16>)
-  %2 = extractelement <8 x i16> %1, i32 3 ; ((uint16_t)-6*7)+(7*-8) = (250*7)+(7*-8) = 1694
+  %2 = extractelement <8 x i16> %1, i32 3
   %3 = sext i16 %2 to i32
   ret i32 %3
 }
 
+; [0]: add_sat_i16(((uint16_t)-1*-128),((uint16_t)-1*-128)_ = add_sat_i16(255*-128),(255*-128)) = sat_i16(-65280) = -32768
 define i32 @combine_pmaddubsw_constant_sat() {
 ; CHECK-LABEL: combine_pmaddubsw_constant_sat:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $-32768, %eax # imm = 0x8000
 ; CHECK-NEXT:    retq
   %1 = call <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8> <i8 -1, i8 -1, i8 2, i8 3, i8 4, i8 5, i8 -6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>, <16 x i8> <i8 -128, i8 -128, i8 3, i8 4, i8 5, i8 6, i8 7, i8 -8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16>)
-  %2 = extractelement <8 x i16> %1, i32 0 ; add_sat_i16(((uint16_t)-1*-128),((uint16_t)-1*-128)_ = add_sat_i16(255*-128),(255*-128)) = sat_i16(-65280) = -32768
+  %2 = extractelement <8 x i16> %1, i32 0
   %3 = sext i16 %2 to i32
   ret i32 %3
 }
 
+; Constant folding PMADDWD was causing an infinite loop in the PCMPGT commuting between 2 constant values.
+define i1 @pmaddwd_pcmpgt_infinite_loop() {
+; CHECK-LABEL: pmaddwd_pcmpgt_infinite_loop:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movb $1, %al
+; CHECK-NEXT:    retq
+  %1 = tail call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> <i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768>, <8 x i16> <i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768, i16 -32768>)
+  %2 = icmp eq <4 x i32> %1, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
+  %3 = select <4 x i1> %2, <4 x i32> <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>, <4 x i32> zeroinitializer
+  %4 = add <4 x i32> %3, <i32 -8, i32 -9, i32 -10, i32 -11>
+  %.not = trunc <4 x i32> %3 to <4 x i1>
+  %5 = icmp sgt <4 x i32> %4, <i32 2147483640, i32 2147483639, i32 2147483638, i32 2147483637>
+  %6 = select <4 x i1> %.not, <4 x i1> %5, <4 x i1> zeroinitializer
+  %7 = bitcast <4 x i1> %6 to i4
+  %8 = icmp eq i4 %7, 0
+  ret i1 %8
+}

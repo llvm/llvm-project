@@ -101,7 +101,7 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
   Value *Remainders[3]  = {nullptr, nullptr, nullptr};
   Value *GridSizes[3]   = {nullptr, nullptr, nullptr};
 
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
 
   // We expect to see several GEP users, casted to the appropriate type and
   // loaded.

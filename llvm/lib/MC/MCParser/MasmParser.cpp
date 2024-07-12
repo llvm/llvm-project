@@ -2843,7 +2843,7 @@ bool MasmParser::expandMacro(raw_svector_ostream &OS, StringRef Body,
     raw_string_ostream LocalName(Name);
     LocalName << "??"
               << format_hex_no_prefix(LocalCounter++, 4, /*Upper=*/true);
-    LocalSymbols.insert({Local, LocalName.str()});
+    LocalSymbols.insert({Local, Name});
     Name.clear();
   }
 

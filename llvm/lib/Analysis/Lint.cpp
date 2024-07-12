@@ -563,22 +563,22 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
 }
 
 void Lint::visitSDiv(BinaryOperator &I) {
-  Check(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
+  Check(!isZero(I.getOperand(1), I.getDataLayout(), DT, AC),
         "Undefined behavior: Division by zero", &I);
 }
 
 void Lint::visitUDiv(BinaryOperator &I) {
-  Check(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
+  Check(!isZero(I.getOperand(1), I.getDataLayout(), DT, AC),
         "Undefined behavior: Division by zero", &I);
 }
 
 void Lint::visitSRem(BinaryOperator &I) {
-  Check(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
+  Check(!isZero(I.getOperand(1), I.getDataLayout(), DT, AC),
         "Undefined behavior: Division by zero", &I);
 }
 
 void Lint::visitURem(BinaryOperator &I) {
-  Check(!isZero(I.getOperand(1), I.getModule()->getDataLayout(), DT, AC),
+  Check(!isZero(I.getOperand(1), I.getDataLayout(), DT, AC),
         "Undefined behavior: Division by zero", &I);
 }
 
@@ -709,7 +709,7 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
 
 PreservedAnalyses LintPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto *Mod = F.getParent();
-  auto *DL = &F.getParent()->getDataLayout();
+  auto *DL = &F.getDataLayout();
   auto *AA = &AM.getResult<AAManager>(F);
   auto *AC = &AM.getResult<AssumptionAnalysis>(F);
   auto *DT = &AM.getResult<DominatorTreeAnalysis>(F);

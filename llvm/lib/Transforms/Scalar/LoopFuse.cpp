@@ -1684,7 +1684,7 @@ private:
           PHINode::Create(LCV->getType(), 2, LCPHI->getName() + ".afterFC0");
       L1HeaderPHI->insertBefore(L1HeaderIP);
       L1HeaderPHI->addIncoming(LCV, FC0.Latch);
-      L1HeaderPHI->addIncoming(UndefValue::get(LCV->getType()),
+      L1HeaderPHI->addIncoming(PoisonValue::get(LCV->getType()),
                                FC0.ExitingBlock);
 
       LCPHI->setIncomingValue(L1LatchBBIdx, L1HeaderPHI);
@@ -2072,7 +2072,7 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   const TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   // Ensure loops are in simplifed form which is a pre-requisite for loop fusion
   // pass. Added only for new PM since the legacy PM has already added

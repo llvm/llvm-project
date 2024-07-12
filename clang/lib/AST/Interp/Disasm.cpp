@@ -25,6 +25,7 @@
 #include "Program.h"
 #include "clang/AST/ASTDumperUtils.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Format.h"
 
@@ -154,6 +155,32 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
       OS << (GP.isInitialized() ? "initialized " : "uninitialized ");
     }
     Desc->dump(OS);
+
+    if (GP.isInitialized() && Desc->IsTemporary) {
+      if (const auto *MTE =
+              dyn_cast_if_present<MaterializeTemporaryExpr>(Desc->asExpr());
+          MTE && MTE->getLifetimeExtendedTemporaryDecl()) {
+        if (const APValue *V =
+                MTE->getLifetimeExtendedTemporaryDecl()->getValue()) {
+          OS << " (global temporary value: ";
+          {
+            ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_MAGENTA, true});
+            std::string VStr;
+            llvm::raw_string_ostream SS(VStr);
+            V->dump(SS, Ctx.getASTContext());
+
+            for (unsigned I = 0; I != VStr.size(); ++I) {
+              if (VStr[I] == '\n')
+                VStr[I] = ' ';
+            }
+            VStr.pop_back(); // Remove the newline (or now space) at the end.
+            OS << VStr;
+          }
+          OS << ')';
+        }
+      }
+    }
+
     OS << "\n";
     if (GP.isInitialized() && Desc->isPrimitive() && !Desc->isDummy()) {
       OS << "   ";
@@ -191,7 +218,7 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
     if (const auto *ND = dyn_cast_if_present<NamedDecl>(asDecl()))
       ND->printQualifiedName(OS);
     else if (asExpr())
-      OS << "expr (TODO)";
+      OS << "Expr " << (const void *)asExpr();
   }
 
   // Print a few interesting bits about the descriptor.
@@ -298,8 +325,11 @@ LLVM_DUMP_METHOD void Record::dump(llvm::raw_ostream &OS, unsigned Indentation,
 LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
   {
     ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_BLUE, true});
-    OS << "Block " << (const void *)this << "\n";
+    OS << "Block " << (const void *)this;
   }
+  OS << " (";
+  Desc->dump(OS);
+  OS << ")\n";
   unsigned NPointers = 0;
   for (const Pointer *P = Pointers; P; P = P->Next) {
     ++NPointers;

@@ -21,6 +21,7 @@
 namespace clang {
 
 class CXXMethodDecl;
+class Type;
 
 /// A return adjustment.
 struct ReturnAdjustment {
