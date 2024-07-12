@@ -6,24 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: linux
 // REQUIRES: stdlib=libc++ && !stdlib=apple-libc++
 
-// DEFINE: %{versioned-library-name}=%if target={{.+}}-apple-{{.+}} %{libc++.1.dylib%} %else %{libc++.so.1%}
-// DEFINE: %{library-name}=%if target={{.+}}-apple-{{.+}} %{libc++.dylib%} %else %{libc++.so%}
-
 // This file checks various properties of the installation of libc++ when built under
-// a vanilla upstream configuration.
+// a vanilla upstream configuration on Linux platforms.
 
 // Make sure we install the libc++ headers in the right location.
 //
 // RUN: stat "%{include-dir}/__config"
 
-// Make sure we install libc++.1.dylib and libc++experimental.a in the right location.
+// Make sure we install libc++.so.1.0 and libc++experimental.a in the right location.
 //
-// RUN: stat "%{lib-dir}/%{versioned-library-name}"
+// RUN: stat "%{lib-dir}/libc++.so.1.0"
 // RUN: stat "%{lib-dir}/libc++experimental.a"
 
-// Make sure we install a symlink from libc++.dylib to libc++.1.dylib.
+// Make sure we install a symlink from libc++.so to libc++.so.1.0.
 //
-// RUN: stat "%{lib-dir}/%{library-name}"
-// RUN: readlink "%{lib-dir}/%{library-name}" | grep "%{versioned-library-name}"
+// RUN: stat "%{lib-dir}/libc++.so"
+// RUN: readlink "%{lib-dir}/libc++.so" | grep "libc++.so.1.0"
+//
+// RUN: stat "%{lib-dir}/libc++.so.1"
+// RUN: readlink "%{lib-dir}/libc++.so.1" | grep "libc++.so.1.0"
