@@ -22,8 +22,14 @@ LLVM_LIBC_FUNCTION(void, qsort_r,
   if (array == nullptr || array_size == 0 || elem_size == 0)
     return;
   internal::Comparator c(compare, arg);
-  internal::quicksort(internal::Array(reinterpret_cast<uint8_t *>(array),
-                                      array_size, elem_size, c));
+  auto arr = internal::Array(reinterpret_cast<uint8_t *>(array), array_size,
+                             elem_size, c);
+
+#if LIBC_QSORT_IMPL == LIBC_QSORT_QUICK_SORT
+  internal::quick_sort(arr);
+#elif LIBC_QSORT_IMPL == LIBC_QSORT_HEAP_SORT
+  internal::heap_sort(arr);
+#endif
 }
 
 } // namespace LIBC_NAMESPACE_DECL

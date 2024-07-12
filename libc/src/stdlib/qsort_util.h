@@ -12,7 +12,18 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include <stdint.h>
-#include <stdlib.h>
+
+#define LIBC_QSORT_QUICK_SORT 1
+#define LIBC_QSORT_HEAP_SORT 2
+
+#ifndef LIBC_QSORT_IMPL
+#define LIBC_QSORT_IMPL LIBC_QSORT_QUICK_SORT
+#endif // LIBC_QSORT_IMPL
+
+#if (LIBC_QSORT_IMPL != LIBC_QSORT_QUICK_SORT &&                               \
+     LIBC_QSORT_IMPL != LIBC_QSORT_HEAP_SORT)
+#error "LIBC_QSORT_IMPL is not recognized."
+#endif
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -136,7 +147,7 @@ static size_t partition(const Array &array) {
   }
 }
 
-LIBC_INLINE void quicksort(const Array &array) {
+LIBC_INLINE void quick_sort(const Array &array) {
   const size_t array_size = array.size();
   if (array_size <= 1)
     return;
@@ -145,8 +156,8 @@ LIBC_INLINE void quicksort(const Array &array) {
     // The partition operation sorts the two element array.
     return;
   }
-  quicksort(array.make_array(0, split_index));
-  quicksort(array.make_array(split_index, array.size() - split_index));
+  quick_sort(array.make_array(0, split_index));
+  quick_sort(array.make_array(split_index, array.size() - split_index));
 }
 
 } // namespace internal
