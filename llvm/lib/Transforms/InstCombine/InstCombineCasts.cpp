@@ -2025,25 +2025,6 @@ Instruction *InstCombinerImpl::visitIntToPtr(IntToPtrInst &CI) {
   return nullptr;
 }
 
-// Whether we should convert ptrtoint(gep P, X) to ptrtoint(P) + X
-static bool shouldPushPtrToIntThroughGEP(GEPOperator *GEP, Type *IntTy,
-                                         const DataLayout &DL) {
-  if (!GEP->hasOneUse())
-    return false;
-
-  // Skip cases whether there is a mismatch between the pointer integer type
-  // and the index type, or the GEP performs an implicit splat operation.
-  if (DL.getIndexType(GEP->getType()) != IntTy ||
-      GEP->getType() != GEP->getPointerOperand()->getType())
-    return false;
-
-  // (ptrtoint (gep (inttoptr Base), Offset)) -> Base + Offset
-  if (match(GEP->getPointerOperand(), m_OneUse(m_IntToPtr(m_Value()))))
-    return true;
-
-  return false;
-}
-
 Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
   // If the destination integer type is not the intptr_t type for this target,
   // do a ptrtoint to intptr_t then do a trunc or zext.  This allows the cast
@@ -2083,8 +2064,10 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
     }
 
     // (ptrtoint (gep (inttoptr Base), ...)) -> Base + Offset
-    if (shouldPushPtrToIntThroughGEP(GEP, Ty, DL)) {
-      Value *Base = Builder.CreatePtrToInt(GEP->getPointerOperand(), Ty);
+    Value *Base;
+    if (GEP->hasOneUse() &&
+        match(GEP->getPointerOperand(), m_OneUse(m_IntToPtr(m_Value(Base)))) &&
+        Base->getType() == Ty) {
       Value *Offset = EmitGEPOffset(GEP);
       auto *NewOp = BinaryOperator::CreateAdd(Base, Offset);
       if (GEP->hasNoUnsignedWrap() ||
