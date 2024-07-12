@@ -434,7 +434,7 @@ class DebugCommunication(object):
             return [
                 body for body in self.thread_events_body if body["reason"] == reason
             ]
-        
+
     def get_stopped_events(self):
         return self.stopped_events
 
