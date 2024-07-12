@@ -1585,6 +1585,14 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
           getResult().getType()))
     return reshapedSource;
 
+  // If the producer of operand 'source' is another 'tensor.reshape' op, use the
+  // producer's input instead as the original tensor to reshape. This could
+  // render such producer dead code.
+  if (auto producer = getSource().getDefiningOp<ReshapeOp>()) {
+    setOperand(0, producer.getSource());
+    return getResult();
+  }
+
   auto source = getSource();
   auto sourceTy = dyn_cast<RankedTensorType>(source.getType());
   auto resultTy = dyn_cast<RankedTensorType>(getType());
