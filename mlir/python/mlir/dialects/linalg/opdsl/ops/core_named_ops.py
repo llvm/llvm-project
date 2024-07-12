@@ -389,24 +389,6 @@ def matmul(
 
 
 @linalg_structured_op
-def matmul_unsigned(
-    A=TensorDef(T1, S.M, S.K),
-    B=TensorDef(T2, S.K, S.N),
-    C=TensorDef(U, S.M, S.N, output=True),
-):
-    """Performs an unsigned matrix multiplication of two 2D inputs.
-
-    Numeric casting is performed on the operands to the inner multiply, promoting
-    them to the same data type as the accumulator/output.
-    """
-    domain(D.m, D.n, D.k)
-    implements(ContractionOpInterface)
-    C[D.m, D.n] += TypeFn.cast_unsigned(U, A[D.m, D.k]) * TypeFn.cast_unsigned(
-        U, B[D.k, D.n]
-    )
-
-
-@linalg_structured_op
 def quantized_matmul(
     A=TensorDef(T1, S.M, S.K),
     B=TensorDef(T2, S.K, S.N),
