@@ -3092,17 +3092,26 @@ def TryOp : CIR_Op<"try",
        [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
         RecursivelySpeculatable, AutomaticAllocationScope,
         NoRegionArguments]> {
-  let summary = "";
+  let summary = "C++ try block";
   let description = [{
     ```mlir
-    TBD
-    ```
 
-    Note that variables declared inside a `try {}` in C++ will
-    have their allocas places in the surrounding (parent) scope.
+    Holds the lexical scope of `try {}`. Note that resources used on catch
+    clauses are usually allocated in the same parent as `cir.try`.
+
+    Example:
+    %5 = cir.alloca !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>, ["msg"]
+    ...
+    %10 = cir.try {
+      %11 = cir.alloca !cir.ptr<!cir.eh.info>, !cir.ptr<!cir.ptr<!cir.eh.info>>, ["__exception_ptr"]
+      ... // cir.try_call's
+      %20 = cir.load %11 : !cir.ptr<!cir.ptr<!cir.eh.info>>, !cir.ptr<!cir.eh.info>
+      cir.yield %20 : !cir.ptr<!cir.eh.info>
+    } : () -> !cir.ptr<!cir.eh.info>
+    ```
   }];
 
-  let regions = (region SizedRegion<1>:$body);
+  let regions = (region AnyRegion:$body);
   let results = (outs ExceptionInfoPtr:$result);
 
   let assemblyFormat = [{
