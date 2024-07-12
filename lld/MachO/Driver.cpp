@@ -350,9 +350,13 @@ static InputFile *addFile(StringRef path, LoadType loadType,
         for (const object::Archive::Child &c : file->getArchive().children(e)) {
           Expected<MemoryBufferRef> mb = c.getMemoryBufferRef();
           if (!mb) {
-            // Thin archives from repro tarballs can contain missing members
-            // if the member was not loaded later during the initial link.
-            llvm::consumeError(mb.takeError());
+            // For a long time, only referenced object files were included in
+            // from thin archives in repro tarballs.
+            if (config->warnThinArchiveMissingMembers)
+              warn(toString(file) + ": -ObjC failed to open archive member: " +
+                   toString(mb.takeError()));
+            else
+              llvm::consumeError(mb.takeError());
             continue;
           }
 
@@ -1688,6 +1692,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->csProfilePath = args.getLastArgValue(OPT_cs_profile_path);
   config->pgoWarnMismatch =
       args.hasFlag(OPT_pgo_warn_mismatch, OPT_no_pgo_warn_mismatch, true);
+  config->warnThinArchiveMissingMembers =
+      args.hasFlag(OPT_warn_thin_archive_missing_members,
+                   OPT_no_warn_thin_archive_missing_members, true);
   config->generateUuid = !args.hasArg(OPT_no_uuid);
 
   for (const Arg *arg : args.filtered(OPT_alias)) {
