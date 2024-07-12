@@ -4294,9 +4294,8 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   return From;
 }
 
-// GetIntermediateVectorType - Compute the intermediate cast type casting
-// elements of the from type to the elements of the to type without resizing the
-// vector.
+// adjustVectorType - Compute the intermediate cast type casting elements of the
+// from type to the elements of the to type without resizing the vector.
 static QualType adjustVectorType(ASTContext &Context, QualType FromTy,
                                  QualType ToType, QualType *ElTy = nullptr) {
   auto *ToVec = ToType->castAs<VectorType>();
