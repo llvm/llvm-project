@@ -510,7 +510,8 @@ namespace {
       // The first bit indicates whether this identifier is interesting.
       // That's all we care about.
       using namespace llvm::support;
-      unsigned RawID = endian::readNext<uint32_t, llvm::endianness::little>(d);
+      IdentifierID RawID =
+          endian::readNext<IdentifierID, llvm::endianness::little>(d);
       bool IsInteresting = RawID & 0x01;
       return std::make_pair(k, IsInteresting);
     }

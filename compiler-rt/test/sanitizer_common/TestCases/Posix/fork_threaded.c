@@ -6,9 +6,6 @@
 // FIXME: It probably hangs on this platform.
 // UNSUPPORTED: ppc
 
-// FIXME: TSAN does not lock allocator.
-// UNSUPPORTED: tsan
-
 // FIXME: False stack overflow report
 // UNSUPPORTED: android && asan
 

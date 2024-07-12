@@ -10,6 +10,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANANALYSIS_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 
 namespace llvm {
 
@@ -23,6 +24,8 @@ class VPWidenIntOrFpInductionRecipe;
 class VPWidenMemoryRecipe;
 struct VPWidenSelectRecipe;
 class VPReplicateRecipe;
+class VPRecipeBase;
+class VPlan;
 class SCEV;
 class ScalarEvolution;
 class Type;
@@ -63,6 +66,10 @@ public:
   LLVMContext &getContext() { return Ctx; }
 };
 
+// Collect a VPlan's ephemeral recipes (those used only by an assume).
+void collectEphemeralRecipesForVPlan(VPlan &Plan,
+                                     DenseSet<VPRecipeBase *> &EphRecipes);
+
 /// A light wrapper over ScalarEvolution to construct SCEV expressions for
 /// VPValues and recipes.
 class VPScalarEvolution {
@@ -75,7 +82,6 @@ public:
   /// SCEV expression could be constructed.
   const SCEV *getSCEV(VPValue *V);
 };
-
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLANANALYSIS_H

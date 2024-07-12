@@ -1066,6 +1066,21 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     break;
   }
 
+  case tok::annot_embed: {
+    // We've met #embed in a context where a single value is expected. Take last
+    // element from #embed data as if it were a comma expression.
+    EmbedAnnotationData *Data =
+        reinterpret_cast<EmbedAnnotationData *>(Tok.getAnnotationValue());
+    SourceLocation StartLoc = ConsumeAnnotationToken();
+    ASTContext &Context = Actions.getASTContext();
+    Res = IntegerLiteral::Create(Context,
+                                 llvm::APInt(CHAR_BIT, Data->BinaryData.back()),
+                                 Context.UnsignedCharTy, StartLoc);
+    if (Data->BinaryData.size() > 1)
+      Diag(StartLoc, diag::warn_unused_comma_left_operand);
+    break;
+  }
+
   case tok::kw___super:
   case tok::kw_decltype:
     // Annotate the token and tail recurse.
@@ -2328,10 +2343,9 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       }
 
       if (!LHS.isInvalid())
-        LHS = Actions.ActOnMemberAccessExpr(getCurScope(), LHS.get(), OpLoc,
-                                            OpKind, SS, TemplateKWLoc, Name,
-                                 CurParsedObjCImpl ? CurParsedObjCImpl->Dcl
-                                                   : nullptr);
+        LHS = Actions.ActOnMemberAccessExpr(
+            getCurScope(), LHS.get(), OpLoc, OpKind, SS, TemplateKWLoc, Name,
+            CurParsedObjCImpl ? CurParsedObjCImpl->Dcl : nullptr);
       if (!LHS.isInvalid()) {
         if (Tok.is(tok::less))
           checkPotentialAngleBracket(LHS);
@@ -3434,7 +3448,8 @@ ExprResult Parser::ParseGenericSelectionExpression() {
     }
     const auto *LIT = cast<LocInfoType>(ControllingType.get().get());
     SourceLocation Loc = LIT->getTypeSourceInfo()->getTypeLoc().getBeginLoc();
-    Diag(Loc, diag::ext_generic_with_type_arg);
+    Diag(Loc, getLangOpts().C2y ? diag::warn_c2y_compat_generic_with_type_arg
+                                : diag::ext_c2y_generic_with_type_arg);
   } else {
     // C11 6.5.1.1p3 "The controlling expression of a generic selection is
     // not evaluated."
@@ -3563,6 +3578,17 @@ ExprResult Parser::ParseFoldExpression(ExprResult LHS,
                                   T.getCloseLocation());
 }
 
+void Parser::ExpandEmbedDirective(SmallVectorImpl<Expr *> &Exprs) {
+  EmbedAnnotationData *Data =
+      reinterpret_cast<EmbedAnnotationData *>(Tok.getAnnotationValue());
+  SourceLocation StartLoc = ConsumeAnnotationToken();
+  ASTContext &Context = Actions.getASTContext();
+  for (auto Byte : Data->BinaryData) {
+    Exprs.push_back(IntegerLiteral::Create(Context, llvm::APInt(CHAR_BIT, Byte),
+                                           Context.UnsignedCharTy, StartLoc));
+  }
+}
+
 /// ParseExpressionList - Used for C/C++ (argument-)expression-list.
 ///
 /// \verbatim
@@ -3598,8 +3624,17 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
     if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
       Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
       Expr = ParseBraceInitializer();
-    } else
+    } else if (Tok.is(tok::annot_embed)) {
+      ExpandEmbedDirective(Exprs);
+      if (Tok.isNot(tok::comma))
+        break;
+      Token Comma = Tok;
+      ConsumeToken();
+      checkPotentialAngleBracketDelimiter(Comma);
+      continue;
+    } else {
       Expr = ParseAssignmentExpression();
+    }
 
     if (EarlyTypoCorrection)
       Expr = Actions.CorrectDelayedTyposInExpr(Expr);

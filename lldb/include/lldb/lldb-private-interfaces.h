@@ -99,10 +99,10 @@ typedef std::optional<FileSpec> (*SymbolLocatorLocateExecutableSymbolFile)(
 typedef bool (*SymbolLocatorDownloadObjectAndSymbolFile)(
     ModuleSpec &module_spec, Status &error, bool force_lookup,
     bool copy_executable);
-typedef bool (*BreakpointHitCallback)(void *baton,
-                                      StoppointCallbackContext *context,
-                                      lldb::user_id_t break_id,
-                                      lldb::user_id_t break_loc_id);
+using BreakpointHitCallback =
+    std::function<bool(void *baton, StoppointCallbackContext *context,
+                       lldb::user_id_t break_id, lldb::user_id_t break_loc_id)>;
+
 typedef bool (*WatchpointHitCallback)(void *baton,
                                       StoppointCallbackContext *context,
                                       lldb::user_id_t watch_id);

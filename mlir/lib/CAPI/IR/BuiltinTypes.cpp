@@ -16,7 +16,6 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Types.h"
-#include "mlir/Support/LogicalResult.h"
 
 #include <algorithm>
 

@@ -2627,7 +2627,7 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg32_neg32(ptr addrspace(1) %out,
 ; VI-GISEL:       ; %bb.0:
 ; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
-; VI-GISEL-NEXT:    v_mov_b32_e32 v4, 0xffffffe0
+; VI-GISEL-NEXT:    v_not_b32_e32 v4, 31
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s3
@@ -2758,7 +2758,7 @@ define amdgpu_kernel void @v_test_v2i16_x_add_0_neg32(ptr addrspace(1) %out, ptr
 ; VI-GISEL-NEXT:    flat_load_dword v3, v[0:1]
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-GISEL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0xffffffe0
+; VI-GISEL-NEXT:    v_not_b32_e32 v2, 31
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -3963,7 +3963,7 @@ define amdgpu_kernel void @v_test_v2i16_x_add_undef_neg32(ptr addrspace(1) %out,
 ; VI-GISEL-NEXT:    flat_load_dword v3, v[0:1]
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-GISEL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
-; VI-GISEL-NEXT:    v_mov_b32_e32 v2, 0xffffffe0
+; VI-GISEL-NEXT:    v_not_b32_e32 v2, 31
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
 ; VI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -4106,7 +4106,7 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg32_undef(ptr addrspace(1) %out,
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GFX9-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0xffffffe0
+; GFX9-GISEL-NEXT:    v_not_b32_e32 v2, 31
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    global_load_dword v1, v0, s[2:3]
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)

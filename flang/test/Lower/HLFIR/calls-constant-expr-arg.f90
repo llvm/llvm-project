@@ -37,10 +37,10 @@ end subroutine sub
 ! CHECK:           %[[VAL_18:.*]] = arith.select %[[VAL_17]], %[[VAL_16]], %[[VAL_13]] : index
 ! CHECK:           %[[VAL_19:.*]] = fir.shape %[[VAL_18]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_20:.*]] = hlfir.designate %[[VAL_10]]#0 (%[[VAL_11]]:%[[VAL_8]]:%[[VAL_12]])  shape %[[VAL_19]] : (!fir.box<!fir.array<?xi32>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
-! CHECK:           %[[VAL_21:.*]]:2 = hlfir.copy_in %[[VAL_20]] : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, i1)
+! CHECK:           %[[VAL_21:.*]]:2 = hlfir.copy_in %[[VAL_20]] to %[[TMP_BOX:.*]] : (!fir.box<!fir.array<?xi32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.box<!fir.array<?xi32>>, i1)
 ! CHECK:           %[[VAL_22:.*]] = fir.box_addr %[[VAL_21]]#0 : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
 ! CHECK:           fir.call @_QPsub2(%[[VAL_22]]) fastmath<contract> : (!fir.ref<!fir.array<?xi32>>) -> ()
-! CHECK:           hlfir.copy_out %[[VAL_21]]#0, %[[VAL_21]]#1 to %[[VAL_20]] : (!fir.box<!fir.array<?xi32>>, i1, !fir.box<!fir.array<?xi32>>) -> ()
+! CHECK:           hlfir.copy_out %[[TMP_BOX]], %[[VAL_21]]#1 to %[[VAL_20]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, i1, !fir.box<!fir.array<?xi32>>) -> ()
 ! CHECK:           return
 ! CHECK:         }
 

@@ -45,7 +45,8 @@ public:
     // but primitive arrays might have an InitMap* heap allocated and
     // that needs to be freed.
     for (Global *G : Globals)
-      G->block()->invokeDtor();
+      if (Block *B = G->block(); B->isInitialized())
+        B->invokeDtor();
 
     // Records might actually allocate memory themselves, but they
     // are allocated using a BumpPtrAllocator. Call their desctructors
@@ -76,6 +77,7 @@ public:
 
   /// Finds a global's index.
   std::optional<unsigned> getGlobal(const ValueDecl *VD);
+  std::optional<unsigned> getGlobal(const Expr *E);
 
   /// Returns or creates a global an creates an index to it.
   std::optional<unsigned> getOrCreateGlobal(const ValueDecl *VD,

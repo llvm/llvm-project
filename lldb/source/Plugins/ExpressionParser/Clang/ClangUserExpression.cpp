@@ -698,21 +698,6 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   if (!parse_success)
     return false;
 
-  if (exe_ctx.GetProcessPtr() && execution_policy == eExecutionPolicyTopLevel) {
-    Status static_init_error =
-        m_parser->RunStaticInitializers(m_execution_unit_sp, exe_ctx);
-
-    if (!static_init_error.Success()) {
-      const char *error_cstr = static_init_error.AsCString();
-      if (error_cstr && error_cstr[0])
-        diagnostic_manager.Printf(lldb::eSeverityError, "%s\n", error_cstr);
-      else
-        diagnostic_manager.PutString(lldb::eSeverityError,
-                                     "couldn't run static initializers\n");
-      return false;
-    }
-  }
-
   if (m_execution_unit_sp) {
     bool register_execution_unit = false;
 

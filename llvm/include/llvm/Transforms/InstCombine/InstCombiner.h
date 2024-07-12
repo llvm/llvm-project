@@ -504,7 +504,14 @@ public:
 
   virtual bool SimplifyDemandedBits(Instruction *I, unsigned OpNo,
                                     const APInt &DemandedMask, KnownBits &Known,
-                                    unsigned Depth = 0) = 0;
+                                    unsigned Depth, const SimplifyQuery &Q) = 0;
+
+  bool SimplifyDemandedBits(Instruction *I, unsigned OpNo,
+                            const APInt &DemandedMask, KnownBits &Known) {
+    return SimplifyDemandedBits(I, OpNo, DemandedMask, Known,
+                                /*Depth=*/0, SQ.getWithInstruction(I));
+  }
+
   virtual Value *
   SimplifyDemandedVectorElts(Value *V, APInt DemandedElts, APInt &UndefElts,
                              unsigned Depth = 0,

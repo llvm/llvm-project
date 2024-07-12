@@ -3083,6 +3083,7 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
   if (registers_count)
     response.IndentMore();
 
+  llvm::StringSet<> field_enums_seen;
   for (int reg_index = 0; reg_index < registers_count; reg_index++) {
     const RegisterInfo *reg_info =
         reg_context.GetRegisterInfoAtIndex(reg_index);
@@ -3096,6 +3097,7 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
 
     if (reg_info->flags_type) {
       response.IndentMore();
+      reg_info->flags_type->EnumsToXML(response, field_enums_seen);
       reg_info->flags_type->ToXML(response);
       response.IndentLess();
     }

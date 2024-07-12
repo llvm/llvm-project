@@ -98,16 +98,12 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
   if (CPU == "native")
     CPU = llvm::sys::getHostCPUName();
 
-  if (CPU == "generic") {
-    Extensions.enable(llvm::AArch64::AEK_SIMD);
-  } else {
-    const std::optional<llvm::AArch64::CpuInfo> CpuInfo =
-        llvm::AArch64::parseCpu(CPU);
-    if (!CpuInfo)
-      return false;
+  const std::optional<llvm::AArch64::CpuInfo> CpuInfo =
+      llvm::AArch64::parseCpu(CPU);
+  if (!CpuInfo)
+    return false;
 
-    Extensions.addCPUDefaults(*CpuInfo);
-  }
+  Extensions.addCPUDefaults(*CpuInfo);
 
   if (Split.second.size() &&
       !DecodeAArch64Features(D, Split.second, Extensions))
@@ -401,6 +397,9 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
 
   if (Args.hasArg(options::OPT_ffixed_x28))
     Features.push_back("+reserve-x28");
+
+  if (Args.hasArg(options::OPT_mlr_for_calls_only))
+    Features.push_back("+reserve-lr-for-ra");
 
   if (Args.hasArg(options::OPT_fcall_saved_x8))
     Features.push_back("+call-saved-x8");

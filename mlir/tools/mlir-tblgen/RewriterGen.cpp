@@ -366,7 +366,7 @@ std::string PatternEmitter::handleConstantAttr(Attribute attr,
 
 void PatternEmitter::emitStaticMatcher(DagNode tree, std::string funcName) {
   os << formatv(
-      "static ::mlir::LogicalResult {0}(::mlir::PatternRewriter &rewriter, "
+      "static ::llvm::LogicalResult {0}(::mlir::PatternRewriter &rewriter, "
       "::mlir::Operation *op0, ::llvm::SmallVector<::mlir::Operation "
       "*, 4> &tblgen_ops",
       funcName);
@@ -1081,7 +1081,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
   {
     auto classScope = os.scope();
     os.printReindented(R"(
-    ::mlir::LogicalResult matchAndRewrite(::mlir::Operation *op0,
+    ::llvm::LogicalResult matchAndRewrite(::mlir::Operation *op0,
         ::mlir::PatternRewriter &rewriter) const override {)")
         << '\n';
     {
@@ -1117,7 +1117,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
 
       os << "return ::mlir::success();\n";
     }
-    os << "};\n";
+    os << "}\n";
   }
   os << "};\n\n";
 }
@@ -1261,20 +1261,23 @@ std::string PatternEmitter::handleResultPattern(DagNode resultTree,
 std::string PatternEmitter::handleVariadic(DagNode tree, int depth) {
   assert(tree.isVariadic());
 
+  std::string output;
+  llvm::raw_string_ostream oss(output);
   auto name = std::string(formatv("tblgen_variadic_values_{0}", nextValueId++));
   symbolInfoMap.bindValue(name);
-  os << "::llvm::SmallVector<::mlir::Value, 4> " << name << ";\n";
+  oss << "::llvm::SmallVector<::mlir::Value, 4> " << name << ";\n";
   for (int i = 0, e = tree.getNumArgs(); i != e; ++i) {
     if (auto child = tree.getArgAsNestedDag(i)) {
-      os << name << ".push_back(" << handleResultPattern(child, i, depth + 1)
-         << ");\n";
+      oss << name << ".push_back(" << handleResultPattern(child, i, depth + 1)
+          << ");\n";
     } else {
-      os << name << ".push_back("
-         << handleOpArgument(tree.getArgAsLeaf(i), tree.getArgName(i))
-         << ");\n";
+      oss << name << ".push_back("
+          << handleOpArgument(tree.getArgAsLeaf(i), tree.getArgName(i))
+          << ");\n";
     }
   }
 
+  os << oss.str();
   return name;
 }
 

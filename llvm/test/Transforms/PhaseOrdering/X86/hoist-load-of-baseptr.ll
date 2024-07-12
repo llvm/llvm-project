@@ -53,6 +53,9 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O2-NEXT:    br i1 [[CMP24_NOT]], label [[FOR_COND_CLEANUP3]], label [[FOR_BODY4_PREHEADER:%.*]]
 ; O2:       for.body4.preheader:
 ; O2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY4_PREHEADER9:%.*]], label [[VECTOR_BODY:%.*]]
+; O2:       for.body4.preheader9:
+; O2-NEXT:    [[J_05_PH:%.*]] = phi i64 [ 0, [[FOR_BODY4_PREHEADER]] ], [ [[N_VEC]], [[MIDDLE_BLOCK:%.*]] ]
+; O2-NEXT:    br label [[FOR_BODY4:%.*]]
 ; O2:       vector.body:
 ; O2-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ], [ 0, [[FOR_BODY4_PREHEADER]] ]
 ; O2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 [[INDEX]]
@@ -65,12 +68,9 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O2-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP2]], align 4, !tbaa [[TBAA0]]
 ; O2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; O2-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; O2-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; O2-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; O2:       middle.block:
 ; O2-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP3]], label [[FOR_BODY4_PREHEADER9]]
-; O2:       for.body4.preheader9:
-; O2-NEXT:    [[J_05_PH:%.*]] = phi i64 [ 0, [[FOR_BODY4_PREHEADER]] ], [ [[N_VEC]], [[MIDDLE_BLOCK]] ]
-; O2-NEXT:    br label [[FOR_BODY4:%.*]]
 ; O2:       for.cond.cleanup:
 ; O2-NEXT:    ret void
 ; O2:       for.cond.cleanup3:

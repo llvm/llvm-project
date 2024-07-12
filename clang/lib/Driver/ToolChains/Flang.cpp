@@ -35,18 +35,26 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
 
 void Flang::addFortranDialectOptions(const ArgList &Args,
                                      ArgStringList &CmdArgs) const {
-  Args.addAllArgs(
-      CmdArgs, {options::OPT_ffixed_form, options::OPT_ffree_form,
-                options::OPT_ffixed_line_length_EQ, options::OPT_fopenacc,
-                options::OPT_finput_charset_EQ, options::OPT_fimplicit_none,
-                options::OPT_fno_implicit_none, options::OPT_fbackslash,
-                options::OPT_fno_backslash, options::OPT_flogical_abbreviations,
-                options::OPT_fno_logical_abbreviations,
-                options::OPT_fxor_operator, options::OPT_fno_xor_operator,
-                options::OPT_falternative_parameter_statement,
-                options::OPT_fdefault_real_8, options::OPT_fdefault_integer_8,
-                options::OPT_fdefault_double_8, options::OPT_flarge_sizes,
-                options::OPT_fno_automatic});
+  Args.addAllArgs(CmdArgs, {options::OPT_ffixed_form,
+                            options::OPT_ffree_form,
+                            options::OPT_ffixed_line_length_EQ,
+                            options::OPT_fopenacc,
+                            options::OPT_finput_charset_EQ,
+                            options::OPT_fimplicit_none,
+                            options::OPT_fno_implicit_none,
+                            options::OPT_fbackslash,
+                            options::OPT_fno_backslash,
+                            options::OPT_flogical_abbreviations,
+                            options::OPT_fno_logical_abbreviations,
+                            options::OPT_fxor_operator,
+                            options::OPT_fno_xor_operator,
+                            options::OPT_falternative_parameter_statement,
+                            options::OPT_fdefault_real_8,
+                            options::OPT_fdefault_integer_8,
+                            options::OPT_fdefault_double_8,
+                            options::OPT_flarge_sizes,
+                            options::OPT_fno_automatic,
+                            options::OPT_fhermetic_module_files});
 }
 
 void Flang::addPreprocessingOptions(const ArgList &Args,
@@ -204,7 +212,7 @@ void Flang::AddRISCVTargetArgs(const ArgList &Args,
 
     // Get minimum VLen from march.
     unsigned MinVLen = 0;
-    StringRef Arch = riscv::getRISCVArch(Args, Triple);
+    std::string Arch = riscv::getRISCVArch(Args, Triple);
     auto ISAInfo = llvm::RISCVISAInfo::parseArchString(
         Arch, /*EnableExperimentalExtensions*/ true);
     // Ignore parsing error.
@@ -735,6 +743,11 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Add target args, features, etc.
   addTargetOptions(Args, CmdArgs);
 
+  llvm::Reloc::Model RelocationModel =
+      std::get<0>(ParsePICArgs(getToolChain(), Args));
+  // Add MCModel information
+  addMCModel(D, Args, Triple, RelocationModel, CmdArgs);
+
   // Add Codegen options
   addCodegenOptions(Args, CmdArgs);
 
@@ -764,6 +777,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
       // Clang can generate useful OpenMP code for these two runtime libraries.
       CmdArgs.push_back("-fopenmp");
       Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_version_EQ);
+
+      if (Args.hasArg(options::OPT_fopenmp_force_usm))
+        CmdArgs.push_back("-fopenmp-force-usm");
 
       // FIXME: Clang supports a whole bunch more flags here.
       break;
@@ -798,6 +814,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   switch (FPKeepKind) {
   case CodeGenOptions::FramePointerKind::None:
     FPKeepKindStr = "-mframe-pointer=none";
+    break;
+   case CodeGenOptions::FramePointerKind::Reserved:
+    FPKeepKindStr = "-mframe-pointer=reserved";
     break;
   case CodeGenOptions::FramePointerKind::NonLeaf:
     FPKeepKindStr = "-mframe-pointer=non-leaf";

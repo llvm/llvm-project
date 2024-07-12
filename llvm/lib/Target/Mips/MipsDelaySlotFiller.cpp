@@ -236,7 +236,7 @@ namespace {
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineBranchProbabilityInfo>();
+      AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -872,7 +872,7 @@ MipsDelaySlotFiller::selectSuccBB(MachineBasicBlock &B) const {
     return nullptr;
 
   // Select the successor with the larget edge weight.
-  auto &Prob = getAnalysis<MachineBranchProbabilityInfo>();
+  auto &Prob = getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   MachineBasicBlock *S = *std::max_element(
       B.succ_begin(), B.succ_end(),
       [&](const MachineBasicBlock *Dst0, const MachineBasicBlock *Dst1) {

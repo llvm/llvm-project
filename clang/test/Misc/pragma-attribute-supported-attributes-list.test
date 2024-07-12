@@ -201,6 +201,7 @@
 // CHECK-NEXT: Uninitialized (SubjectMatchRule_variable_is_local)
 // CHECK-NEXT: UnsafeBufferUsage (SubjectMatchRule_function)
 // CHECK-NEXT: UseHandle (SubjectMatchRule_variable_is_parameter)
+// CHECK-NEXT: VTablePointerAuthentication (SubjectMatchRule_record)
 // CHECK-NEXT: VecReturn (SubjectMatchRule_record)
 // CHECK-NEXT: VecTypeHint (SubjectMatchRule_function)
 // CHECK-NEXT: WarnUnused (SubjectMatchRule_record)

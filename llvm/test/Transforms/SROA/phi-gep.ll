@@ -363,6 +363,35 @@ exit:
   ret void
 }
 
+define void @test_sroa_gep_phi_select_same_block_nuw(i1 %c1, i1 %c2, ptr %ptr) {
+; CHECK-LABEL: @test_sroa_gep_phi_select_same_block_nuw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [[PAIR:%.*]], align 8
+; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
+; CHECK:       while.body:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[ALLOCA]], [[ENTRY:%.*]] ], [ [[SELECT:%.*]], [[WHILE_BODY]] ]
+; CHECK-NEXT:    [[SELECT]] = select i1 [[C1:%.*]], ptr [[PHI]], ptr [[PTR:%.*]]
+; CHECK-NEXT:    [[PHI_SROA_GEP:%.*]] = getelementptr nuw [[PAIR]], ptr [[PHI]], i64 1
+; CHECK-NEXT:    [[PTR_SROA_GEP:%.*]] = getelementptr nuw [[PAIR]], ptr [[PTR]], i64 1
+; CHECK-NEXT:    [[SELECT_SROA_SEL:%.*]] = select i1 [[C1]], ptr [[PHI_SROA_GEP]], ptr [[PTR_SROA_GEP]]
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[EXIT:%.*]], label [[WHILE_BODY]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %alloca = alloca %pair, align 8
+  br label %while.body
+
+while.body:
+  %phi = phi ptr [ %alloca, %entry ], [ %select, %while.body ]
+  %select = select i1 %c1, ptr %phi, ptr %ptr
+  %gep = getelementptr nuw %pair, ptr %select, i64 1
+  br i1 %c2, label %exit, label %while.body
+
+exit:
+  ret void
+}
+
 define i32 @test_sroa_gep_cast_phi_gep(i1 %cond) {
 ; CHECK-LABEL: @test_sroa_gep_cast_phi_gep(
 ; CHECK-NEXT:  entry:

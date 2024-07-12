@@ -144,7 +144,7 @@ LLVM_LIBC_FUNCTION(float, asinf, (float x)) {
   double sign = SIGN[x_sign];
   double xd = static_cast<double>(xbits.get_val());
   double u = fputil::multiply_add(-0.5, xd, 0.5);
-  double c1 = sign * (-2 * fputil::sqrt(u));
+  double c1 = sign * (-2 * fputil::sqrt<double>(u));
   double c2 = fputil::multiply_add(sign, M_MATH_PI_2, c1);
   double c3 = c1 * u;
 

@@ -95,12 +95,19 @@ out_file.write('''\
   <link type="text/css" rel="stylesheet" href="content.css">
   <style type="text/css">
     .none { background-color: #FFCCCC }
+    .none-superseded { background-color: rgba(255, 204, 204, 0.65) }
     .unknown { background-color: #EBCAFE }
+    .unknown-superseded { background-color: rgba(234, 200, 254, 0.65) }
     .partial { background-color: #FFE0B0 }
+    .partial-superseded { background-color: rgba(255, 224, 179, 0.65) }
     .unreleased { background-color: #FFFF99 }
+    .unreleased-superseded { background-color: rgba(255, 255, 153, 0.65) }
     .full { background-color: #CCFF99 }
+    .full-superseded { background-color: rgba(214, 255, 173, 0.65) }
     .na { background-color: #DDDDDD }
+    .na-superseded { background-color: rgba(222, 222, 222, 0.65) }
     .open * { color: #AAAAAA }
+    .open-superseded * { color: rgba(171, 171, 171, 0.65) }
     //.open { filter: opacity(0.2) }
     tr:target { background-color: #FFFFBB }
     th { background-color: #FFDDAA }
@@ -149,6 +156,8 @@ def availability(issue):
     status = status[:-1-len(unresolved_status)]
 
   avail_suffix = ''
+  avail_style = ''
+  tooltip = ''
   if status.endswith(' c++11'):
     status = status[:-6]
     avail_suffix = ' (C++11 onwards)'
@@ -163,66 +172,67 @@ def availability(issue):
     avail_suffix = ' (C++20 onwards)'
   if status == 'unknown':
     avail = 'Unknown'
-    avail_style = ' class="unknown"'
+    avail_style = 'unknown'
   elif re.match(r'^[0-9]+\.?[0-9]*', status):
     if not proposed_resolution:
       avail = 'Clang %s' % status
       if float(status) > latest_release:
-        avail_style = ' class="unreleased"'
+        avail_style = 'unreleased'
       else:
-        avail_style = ' class="full"'
+        avail_style = 'full'
     else: 
       avail = 'Not Resolved*'
-      avail_style = f' title="Clang {status} implements {proposed_resolution} resolution"'
+      tooltip = f' title="Clang {status} implements {proposed_resolution} resolution"'
   elif status == 'yes':
     if not proposed_resolution:
       avail = 'Yes'
-      avail_style = ' class="full"'
+      avail_style = 'full'
     else:
       avail = 'Not Resolved*'
-      avail_style = f' title="Clang implements {proposed_resolution} resolution"'
+      tooltip = f' title="Clang implements {proposed_resolution} resolution"'
   elif status == 'partial':
     if not proposed_resolution:
       avail = 'Partial'
-      avail_style = ' class="partial"'
+      avail_style = 'partial'
     else:
       avail = 'Not Resolved*'
-      avail_style = f' title="Clang partially implements {proposed_resolution} resolution"'
+      tooltip = f' title="Clang partially implements {proposed_resolution} resolution"'
   elif status == 'no':
     if not proposed_resolution:
       avail = 'No'
-      avail_style = ' class="none"'
+      avail_style = 'none'
     else:
       avail = 'Not Resolved*'
-      avail_style = f' title="Clang does not implement {proposed_resolution} resolution"'
+      tooltip = f' title="Clang does not implement {proposed_resolution} resolution"'
   elif status == 'na':
     avail = 'N/A'
-    avail_style = ' class="na"'
+    avail_style = 'na'
   elif status == 'na lib':
     avail = 'N/A (Library DR)'
-    avail_style = ' class="na"'
+    avail_style = 'na'
   elif status == 'na abi':
     avail = 'N/A (ABI constraint)'
-    avail_style = ' class="na"'
+    avail_style = 'na'
   elif status.startswith('sup '):
     dup = status.split(' ', 1)[1]
     if dup.startswith('P'):
       avail = 'Superseded by <a href="https://wg21.link/%s">%s</a>' % (dup, dup)
-      avail_style = ' class="na"'
+      avail_style = 'na'
     else:
       avail = 'Superseded by <a href="#%s">%s</a>' % (dup, dup)
       try:
-        _, avail_style, _ = availability(int(dup))
+        _, avail_style, _, _ = availability(int(dup))
+        avail_style += '-superseded'
       except:
         print("issue %s marked as sup %s" % (issue, dup), file=sys.stderr)
-        avail_style = ' class="none"'
+        avail_style = 'none'
   elif status.startswith('dup '):
     dup = int(status.split(' ', 1)[1])
     avail = 'Duplicate of <a href="#%s">%s</a>' % (dup, dup)
-    _, avail_style, _ = availability(dup)
+    _, avail_style, _, _ = availability(dup)
   else:
     raise AvailabilityError('Unknown status %s for issue %s' % (status, dr.issue))
-  return (avail + avail_suffix, avail_style, unresolved_status)
+  return (avail + avail_suffix, avail_style, unresolved_status, tooltip)
 
 count = {}
 for dr in drs:
@@ -239,7 +249,7 @@ for dr in drs:
   elif dr.status in ('open', 'drafting', 'review', 'tentatively ready'):
     row_style = ' class="open"'
     try:
-      avail, avail_style, unresolved_status = availability(dr.issue)
+      avail, avail_style, unresolved_status, tooltip = availability(dr.issue)
     except AvailabilityError as e:
       availability_error_occurred = True
       print(e.args[0])
@@ -257,7 +267,7 @@ for dr in drs:
   else:
     row_style = ''
     try:
-      avail, avail_style, unresolved_status = availability(dr.issue)
+      avail, avail_style, unresolved_status, tooltip = availability(dr.issue)
     except AvailabilityError as e:
       availability_error_occurred = True
       print(e.args[0])
@@ -272,13 +282,15 @@ for dr in drs:
   if not avail.startswith('Sup') and not avail.startswith('Dup'):
     count[avail] = count.get(avail, 0) + 1
 
+  if avail_style != '':
+    avail_style = ' class="{}"'.format(avail_style)
   out_file.write('''
   <tr%s id="%s">
     <td><a href="https://cplusplus.github.io/CWG/issues/%s.html">%s</a></td>
     <td>%s</td>
     <td>%s</td>
-    <td%s align="center">%s</td>
-  </tr>''' % (row_style, dr.issue, dr.issue, dr.issue, dr.status, dr.title, avail_style, avail))
+    <td%s%s align="center">%s</td>
+  </tr>''' % (row_style, dr.issue, dr.issue, dr.issue, dr.status, dr.title, avail_style, tooltip, avail))
 
 if availability_error_occurred:
   exit(1)

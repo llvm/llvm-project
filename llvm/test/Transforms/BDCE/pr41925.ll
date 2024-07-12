@@ -18,8 +18,8 @@
 
 define dso_local i32 @main() local_unnamed_addr !dbg !13 {
 entry:
-;CHECK: call void @llvm.dbg.value(metadata i8 2
-;CHECK: call void @llvm.dbg.value(metadata i8 2
+;CHECK: #dbg_value(i8 2
+;CHECK: #dbg_value(i8 2
   call void @llvm.dbg.value(metadata i8 2, metadata !17, metadata !DIExpression()), !dbg !18
   %.pr = load i8, ptr @b, align 1, !dbg !19
   call void @llvm.dbg.value(metadata i8 2, metadata !17, metadata !DIExpression()), !dbg !18
@@ -29,10 +29,10 @@ entry:
 for.cond2thread-pre-split.preheader:              ; preds = %entry
   br label %for.cond2thread-pre-split, !dbg !23
 for.cond2thread-pre-split:                        ; preds = %for.cond2thread-pre-split.preheader, %for.inc7
-;CHECK: call void @llvm.dbg.value(metadata i8 poison
+;CHECK: #dbg_value(i8 poison
   %l_177.06 = phi i8 [ %l_177.1.lcssa, %for.inc7 ], [ 2, %for.cond2thread-pre-split.preheader ]
   call void @llvm.dbg.value(metadata i8 %l_177.06, metadata !17, metadata !DIExpression()), !dbg !18
-;CHECK: call void @llvm.dbg.value(metadata i8 poison
+;CHECK: #dbg_value(i8 poison
   %.pr1 = load i8, ptr @a, align 1, !dbg !24
   call void @llvm.dbg.value(metadata i8 %l_177.06, metadata !17, metadata !DIExpression()), !dbg !18
   %cmp42 = icmp sgt i8 %.pr1, -1, !dbg !27
@@ -42,8 +42,8 @@ for.body6.preheader:                              ; preds = %for.cond2thread-pre
   br label %for.body6, !dbg !28
 
 for.body6:                                        ; preds = %for.body6.preheader, %for.body6
-;CHECK: call void @llvm.dbg.value(metadata i8 poison
-;CHECK: call void @llvm.dbg.value(metadata i8 poison
+;CHECK: #dbg_value(i8 poison
+;CHECK: #dbg_value(i8 poison
   %l_177.13 = phi i8 [ %inc, %for.body6 ], [ %l_177.06, %for.body6.preheader ]
   call void @llvm.dbg.value(metadata i8 %l_177.13, metadata !17, metadata !DIExpression()), !dbg !18
   call void @llvm.dbg.value(metadata i8 %l_177.13, metadata !17, metadata !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value)), !dbg !18
@@ -61,7 +61,7 @@ for.inc7.loopexit:                                ; preds = %for.body6
   br label %for.inc7, !dbg !35
 
 for.inc7:                                         ; preds = %for.inc7.loopexit, %for.cond2thread-pre-split
-;CHECK: call void @llvm.dbg.value(metadata i8 poison
+;CHECK: #dbg_value(i8 poison
   %l_177.1.lcssa = phi i8 [ %l_177.06, %for.cond2thread-pre-split ], [ %inc.lcssa, %for.inc7.loopexit ], !dbg !18
   %1 = load i8, ptr @b, align 1, !dbg !35
   %inc8 = add i8 %1, 1, !dbg !35

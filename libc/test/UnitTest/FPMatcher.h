@@ -97,8 +97,10 @@ template <typename T> struct FPTest : public Test {
       LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();                 \
   const T zero = FPBits::zero(Sign::POS).get_val();                            \
   const T neg_zero = FPBits::zero(Sign::NEG).get_val();                        \
-  const T aNaN = FPBits::quiet_nan().get_val();                                \
-  const T sNaN = FPBits::signaling_nan().get_val();                            \
+  const T aNaN = FPBits::quiet_nan(Sign::POS).get_val();                       \
+  const T neg_aNaN = FPBits::quiet_nan(Sign::NEG).get_val();                   \
+  const T sNaN = FPBits::signaling_nan(Sign::POS).get_val();                   \
+  const T neg_sNaN = FPBits::signaling_nan(Sign::NEG).get_val();               \
   const T inf = FPBits::inf(Sign::POS).get_val();                              \
   const T neg_inf = FPBits::inf(Sign::NEG).get_val();                          \
   const T min_normal = FPBits::min_normal().get_val();                         \

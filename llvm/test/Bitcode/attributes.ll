@@ -541,6 +541,11 @@ define void @wide_range_attribute(i128 range(i128 618970019642690137449562111, 6
   ret void
 }
 
+; CHECK: define void @initializes(ptr initializes((-4, 0), (4, 8)) %a)
+define void @initializes(ptr initializes((-4, 0), (4, 8)) %a) {
+  ret void
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { memory(none) }

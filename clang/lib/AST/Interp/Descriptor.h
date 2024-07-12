@@ -47,6 +47,18 @@ using BlockMoveFn = void (*)(Block *Storage, const std::byte *SrcFieldPtr,
                              std::byte *DstFieldPtr,
                              const Descriptor *FieldDesc);
 
+enum class GlobalInitState {
+  Initialized,
+  NoInitializer,
+  InitializerFailed,
+};
+
+/// Descriptor used for global variables.
+struct alignas(void *) GlobalInlineDescriptor {
+  GlobalInitState InitState = GlobalInitState::InitializerFailed;
+};
+static_assert(sizeof(GlobalInlineDescriptor) == sizeof(void *), "");
+
 /// Inline descriptor embedded in structures and arrays.
 ///
 /// Such descriptors precede all composite array elements and structure fields.
@@ -86,6 +98,7 @@ struct InlineDescriptor {
   void dump() const { dump(llvm::errs()); }
   void dump(llvm::raw_ostream &OS) const;
 };
+static_assert(sizeof(GlobalInlineDescriptor) != sizeof(InlineDescriptor), "");
 
 /// Describes a memory block created by an allocation site.
 struct Descriptor final {
@@ -110,6 +123,7 @@ public:
 
   using MetadataSize = std::optional<unsigned>;
   static constexpr MetadataSize InlineDescMD = sizeof(InlineDescriptor);
+  static constexpr MetadataSize GlobalMD = sizeof(GlobalInlineDescriptor);
 
   /// Pointer to the record, if block contains records.
   const Record *const ElemRecord = nullptr;

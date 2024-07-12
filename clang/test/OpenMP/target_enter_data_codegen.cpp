@@ -209,7 +209,7 @@ void foo(int arg) {
 
 
 // CK1:     define internal {{.*}}i32 [[OMP_TASK_ENTRY]](i32 {{.*}}%0, ptr noalias noundef %1)
-// CK1-DAG: call void @__tgt_target_data_begin_nowait_mapper(ptr @{{.+}}, i64 %{{[^,]+}}, i32 1, ptr [[BPADDR:%[^,]+]], ptr [[PADDR:%[^,]+]], ptr [[SZADDR:%[^,]+]], ptr [[MTYPE00]], ptr null, ptr null)
+// CK1-DAG: call void @__tgt_target_data_begin_nowait_mapper(ptr @{{.+}}, i64 %{{[^,]+}}, i32 1, ptr [[BPADDR:%[^,]+]], ptr [[PADDR:%[^,]+]], ptr [[SZADDR:%[^,]+]], ptr [[MTYPE00]], ptr null, ptr null, i32 0, ptr null, i32 0, ptr null)
 // CK1-DAG: [[BPADDR]] = load ptr, ptr [[FPBP:%[^,]+]], align
 // CK1-DAG: [[PADDR]] = load ptr, ptr [[FPP:%[^,]+]], align
 // CK1-DAG: [[SZADDR]] = load ptr, ptr [[FPSZ:%[^,]+]], align

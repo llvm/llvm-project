@@ -16,6 +16,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `[parallel.simd.whereexpr] <https://wg21.link/N4808>`_, "Where expression class templates", None, Yin Zhang, |In Progress|
 | `[parallel.simd.reference] <https://wg21.link/N4808>`_, "`Element references operator value_type() <https://github.com/llvm/llvm-project/pull/68960>`_", None, Yin Zhang, |Complete|
 | `[parallel.simd.reference] <https://wg21.link/N4808>`_, "`Element references operator= <https://github.com/llvm/llvm-project/pull/70020>`_", None, Yin Zhang, |Complete|
+| `[parallel.simd.reference] <https://wg21.link/N4808>`_, "`Element references swap functions <https://github.com/llvm/llvm-project/pull/86478>`_", None, Yin Zhang, |Complete|
 | `[parallel.simd.class] <https://wg21.link/N4808>`_, "`Class template simd declaration and alias <https://reviews.llvm.org/D144362>`_", [parallel.simd.abi], Yin Zhang, |Complete|
 | `[parallel.simd.class] <https://wg21.link/N4808>`_, "`simd<>::size() <https://reviews.llvm.org/D144363>`_", [parallel.simd.traits] simd_size[_v], Yin Zhang, |Complete|
 | `[parallel.simd.class] <https://wg21.link/N4808>`_, "`simd default constructor <https://github.com/llvm/llvm-project/pull/70424>`_", None, Yin Zhang, |Complete|

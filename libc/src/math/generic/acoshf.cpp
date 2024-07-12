@@ -66,8 +66,8 @@ LLVM_LIBC_FUNCTION(float, acoshf, (float x)) {
 
   double x_d = static_cast<double>(x);
   // acosh(x) = log(x + sqrt(x^2 - 1))
-  return static_cast<float>(
-      log_eval(x_d + fputil::sqrt(fputil::multiply_add(x_d, x_d, -1.0))));
+  return static_cast<float>(log_eval(
+      x_d + fputil::sqrt<double>(fputil::multiply_add(x_d, x_d, -1.0))));
 }
 
 } // namespace LIBC_NAMESPACE

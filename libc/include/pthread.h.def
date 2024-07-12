@@ -17,6 +17,7 @@
 #define PTHREAD_STACK_MIN (1 << 14) // 16KB
 
 #define PTHREAD_MUTEX_INITIALIZER {0}
+#define PTHREAD_RWLOCK_INITIALIZER {}
 #define PTHREAD_ONCE_INIT {0}
 
 enum {

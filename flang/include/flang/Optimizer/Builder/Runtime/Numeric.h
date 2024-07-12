@@ -18,6 +18,10 @@ class FirOpBuilder;
 
 namespace fir::runtime {
 
+/// Generate call to ErfcScaled intrinsic runtime routine.
+mlir::Value genErfcScaled(fir::FirOpBuilder &builder, mlir::Location loc,
+                          mlir::Value x);
+
 /// Generate call to Exponent intrinsic runtime routine.
 mlir::Value genExponent(fir::FirOpBuilder &builder, mlir::Location loc,
                         mlir::Type resultType, mlir::Value x);

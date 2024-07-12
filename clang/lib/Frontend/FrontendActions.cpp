@@ -841,9 +841,16 @@ static StringRef ModuleKindName(Module::ModuleKind MK) {
 }
 
 void DumpModuleInfoAction::ExecuteAction() {
-  assert(isCurrentFileAST() && "dumping non-AST?");
-  // Set up the output file.
   CompilerInstance &CI = getCompilerInstance();
+
+  // Don't process files of type other than module to avoid crash
+  if (!isCurrentFileAST()) {
+    CI.getDiagnostics().Report(diag::err_file_is_not_module)
+        << getCurrentFile();
+    return;
+  }
+
+  // Set up the output file.
   StringRef OutputFileName = CI.getFrontendOpts().OutputFile;
   if (!OutputFileName.empty() && OutputFileName != "-") {
     std::error_code EC;
@@ -1169,8 +1176,8 @@ void PrintDependencyDirectivesSourceMinimizerAction::ExecuteAction() {
   llvm::SmallVector<dependency_directives_scan::Token, 16> Tokens;
   llvm::SmallVector<dependency_directives_scan::Directive, 32> Directives;
   if (scanSourceForDependencyDirectives(
-          FromFile.getBuffer(), Tokens, Directives, CI.getLangOpts(),
-          &CI.getDiagnostics(), SM.getLocForStartOfFile(SM.getMainFileID()))) {
+          FromFile.getBuffer(), Tokens, Directives, &CI.getDiagnostics(),
+          SM.getLocForStartOfFile(SM.getMainFileID()))) {
     assert(CI.getDiagnostics().hasErrorOccurred() &&
            "no errors reported for failure");
 

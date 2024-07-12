@@ -93,15 +93,20 @@ public:
   /// \param[in] add_to_history
   ///    If \b true add the commands to the command history. If \b false, don't
   ///    add them.
+  /// \param[in] handle_repeats
+  ///    If \b true then treat empty lines as repeat commands even if the
+  ///    interpreter is non-interactive.
   CommandInterpreterRunOptions(LazyBool stop_on_continue,
                                LazyBool stop_on_error, LazyBool stop_on_crash,
                                LazyBool echo_commands, LazyBool echo_comments,
                                LazyBool print_results, LazyBool print_errors,
-                               LazyBool add_to_history)
+                               LazyBool add_to_history,
+                               LazyBool handle_repeats)
       : m_stop_on_continue(stop_on_continue), m_stop_on_error(stop_on_error),
         m_stop_on_crash(stop_on_crash), m_echo_commands(echo_commands),
         m_echo_comment_commands(echo_comments), m_print_results(print_results),
-        m_print_errors(print_errors), m_add_to_history(add_to_history) {}
+        m_print_errors(print_errors), m_add_to_history(add_to_history),
+        m_allow_repeats(handle_repeats) {}
 
   CommandInterpreterRunOptions() = default;
 
@@ -183,6 +188,12 @@ public:
     m_spawn_thread = spawn_thread ? eLazyBoolYes : eLazyBoolNo;
   }
 
+  bool GetAllowRepeats() const { return DefaultToNo(m_allow_repeats); }
+
+  void SetAllowRepeats(bool allow_repeats) {
+    m_allow_repeats = allow_repeats ? eLazyBoolYes : eLazyBoolNo;
+  }
+
   LazyBool m_stop_on_continue = eLazyBoolCalculate;
   LazyBool m_stop_on_error = eLazyBoolCalculate;
   LazyBool m_stop_on_crash = eLazyBoolCalculate;
@@ -193,6 +204,7 @@ public:
   LazyBool m_add_to_history = eLazyBoolCalculate;
   LazyBool m_auto_handle_events;
   LazyBool m_spawn_thread;
+  LazyBool m_allow_repeats = eLazyBoolCalculate;
 
 private:
   static bool DefaultToYes(LazyBool flag) {

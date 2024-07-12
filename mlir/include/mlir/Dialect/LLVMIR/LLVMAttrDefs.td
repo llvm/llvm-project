@@ -677,6 +677,25 @@ def LLVM_DILabelAttr : LLVM_Attr<"DILabel", "di_label",
 }
 
 //===----------------------------------------------------------------------===//
+// DIStringTypeAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DIStringTypeAttr : LLVM_Attr<"DIStringType", "di_string_type",
+                                     /*traits=*/[], "DITypeAttr"> {
+  let parameters = (ins
+    LLVM_DITagParameter:$tag,
+    "StringAttr":$name,
+    OptionalParameter<"uint64_t">:$sizeInBits,
+    OptionalParameter<"uint32_t">:$alignInBits,
+    OptionalParameter<"DIVariableAttr">:$stringLength,
+    OptionalParameter<"DIExpressionAttr">:$stringLengthExp,
+    OptionalParameter<"DIExpressionAttr">:$stringLocationExp,
+    LLVM_DIEncodingParameter:$encoding
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // MemoryEffectsAttr
 //===----------------------------------------------------------------------===//
 
@@ -1057,5 +1076,14 @@ def LLVM_PoisonAttr : LLVM_Attr<"Poison", "poison">;
 
 /// Folded into from LLVM::ZeroOp.
 def LLVM_ZeroAttr : LLVM_Attr<"Zero", "zero">;
+
+//===----------------------------------------------------------------------===//
+// TailCallKindAttr
+//===----------------------------------------------------------------------===//
+
+def TailCallKindAttr : LLVM_Attr<"TailCallKind", "tailcallkind"> {
+  let parameters = (ins "TailCallKind":$tailCallKind);
+  let assemblyFormat = "`<` $tailCallKind `>`";
+}
 
 #endif // LLVMIR_ATTRDEFS

@@ -49,6 +49,7 @@ config.test_exec_root = os.path.join(config.mlir_obj_root, "test")
 
 config.substitutions.append(("%PATH%", config.environment["PATH"]))
 config.substitutions.append(("%shlibext", config.llvm_shlib_ext))
+config.substitutions.append(("%llvm_src_root", config.llvm_src_root))
 config.substitutions.append(("%mlir_src_root", config.mlir_src_root))
 config.substitutions.append(("%host_cxx", config.host_cxx))
 config.substitutions.append(("%host_cc", config.host_cc))
@@ -250,3 +251,6 @@ if config.run_nvptx_tests:
 
 if config.run_rocm_tests:
     config.available_features.add("host-supports-amdgpu")
+
+if config.arm_emulator_executable:
+    config.available_features.add("arm-emulator")

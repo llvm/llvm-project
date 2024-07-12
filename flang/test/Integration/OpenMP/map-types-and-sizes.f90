@@ -231,6 +231,31 @@ subroutine mapType_char
   !$omp end target
 end subroutine mapType_char
 
+!CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [1 x i64] [i64 8]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [1 x i64] [i64 35]
+subroutine mapType_common_block
+  implicit none
+  common /var_common/ var1, var2
+  integer :: var1, var2
+!$omp target map(tofrom: /var_common/)
+  var1 = var1 + 20
+  var2 = var2 + 30
+!$omp end target
+end subroutine mapType_common_block
+
+!CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [2 x i64] [i64 4, i64 4]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [2 x i64] [i64 35, i64 35]
+subroutine mapType_common_block_members
+  implicit none
+  common /var_common/ var1, var2
+  integer :: var1, var2
+
+!$omp target map(tofrom: var1, var2)
+  var2 = var1
+!$omp end target
+end subroutine mapType_common_block_members
+
+
 !CHECK-LABEL: define {{.*}} @{{.*}}maptype_ptr_explicit_{{.*}}
 !CHECK: %[[ALLOCA:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }, i64 1, align 8
 !CHECK: %[[ALLOCA_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8 }, ptr %[[ALLOCA]], i32 1
@@ -346,3 +371,19 @@ end subroutine mapType_char
 !CHECK: store ptr %[[ALLOCA]], ptr %[[BASE_PTR_ARR]], align 8
 !CHECK: %[[OFFLOAD_PTR_ARR:.*]] = getelementptr inbounds [1 x ptr], ptr %.offload_ptrs, i32 0, i32 0
 !CHECK: store ptr %[[ARR_OFF]], ptr %[[OFFLOAD_PTR_ARR]], align 8
+
+!CHECK-LABEL: define {{.*}} @{{.*}}maptype_common_block_{{.*}}
+!CHECK: %[[BASE_PTR_ARR:.*]] = getelementptr inbounds [1 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
+!CHECK: store ptr @var_common_, ptr %[[BASE_PTR_ARR]], align 8
+!CHECK: %[[OFFLOAD_PTR_ARR:.*]] = getelementptr inbounds [1 x ptr], ptr %.offload_ptrs, i32 0, i32 0
+!CHECK: store ptr @var_common_, ptr %[[OFFLOAD_PTR_ARR]], align 8
+
+!CHECK-LABEL: define {{.*}} @{{.*}}maptype_common_block_members_{{.*}}
+!CHECK: %[[BASE_PTR_ARR:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 0
+!CHECK: store ptr @var_common_, ptr %[[BASE_PTR_ARR]], align 8
+!CHECK: %[[OFFLOAD_PTR_ARR:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i32 0, i32 0
+!CHECK: store ptr @var_common_, ptr %[[OFFLOAD_PTR_ARR]], align 8
+!CHECK: %[[BASE_PTR_ARR_1:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i32 0, i32 1
+!CHECK: store ptr getelementptr (i8, ptr @var_common_, i64 4), ptr %[[BASE_PTR_ARR_1]], align 8
+!CHECK: %[[OFFLOAD_PTR_ARR_1:.*]] = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i32 0, i32 1
+!CHECK: store ptr getelementptr (i8, ptr @var_common_, i64 4), ptr %[[OFFLOAD_PTR_ARR_1]], align 8

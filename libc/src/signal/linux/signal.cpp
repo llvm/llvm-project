@@ -7,11 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/signal/signal.h"
-#include "src/signal/sigaction.h"
-
+#include "hdr/signal_macros.h"
 #include "src/__support/common.h"
-
-#include <signal.h>
+#include "src/signal/sigaction.h"
 
 namespace LIBC_NAMESPACE {
 

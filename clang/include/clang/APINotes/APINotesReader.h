@@ -101,7 +101,7 @@ public:
   /// \param Name The name of the class we're looking for.
   ///
   /// \returns The information about the class, if known.
-  VersionedInfo<ObjCContextInfo> lookupObjCClassInfo(llvm::StringRef Name);
+  VersionedInfo<ContextInfo> lookupObjCClassInfo(llvm::StringRef Name);
 
   /// Look for the context ID of the given Objective-C protocol.
   ///
@@ -115,7 +115,7 @@ public:
   /// \param Name The name of the protocol we're looking for.
   ///
   /// \returns The information about the protocol, if known.
-  VersionedInfo<ObjCContextInfo> lookupObjCProtocolInfo(llvm::StringRef Name);
+  VersionedInfo<ContextInfo> lookupObjCProtocolInfo(llvm::StringRef Name);
 
   /// Look for information regarding the given Objective-C property in
   /// the given context.

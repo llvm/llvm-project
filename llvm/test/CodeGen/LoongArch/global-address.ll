@@ -14,40 +14,40 @@ define void @foo() nounwind {
 ; LA32NOPIC:       # %bb.0:
 ; LA32NOPIC-NEXT:    pcalau12i $a0, %got_pc_hi20(G)
 ; LA32NOPIC-NEXT:    ld.w $a0, $a0, %got_pc_lo12(G)
-; LA32NOPIC-NEXT:    ld.w $a0, $a0, 0
+; LA32NOPIC-NEXT:    ld.w $zero, $a0, 0
 ; LA32NOPIC-NEXT:    pcalau12i $a0, %pc_hi20(g)
 ; LA32NOPIC-NEXT:    addi.w $a0, $a0, %pc_lo12(g)
-; LA32NOPIC-NEXT:    ld.w $a0, $a0, 0
+; LA32NOPIC-NEXT:    ld.w $zero, $a0, 0
 ; LA32NOPIC-NEXT:    ret
 ;
 ; LA32PIC-LABEL: foo:
 ; LA32PIC:       # %bb.0:
 ; LA32PIC-NEXT:    pcalau12i $a0, %got_pc_hi20(G)
 ; LA32PIC-NEXT:    ld.w $a0, $a0, %got_pc_lo12(G)
-; LA32PIC-NEXT:    ld.w $a0, $a0, 0
+; LA32PIC-NEXT:    ld.w $zero, $a0, 0
 ; LA32PIC-NEXT:    pcalau12i $a0, %pc_hi20(.Lg$local)
 ; LA32PIC-NEXT:    addi.w $a0, $a0, %pc_lo12(.Lg$local)
-; LA32PIC-NEXT:    ld.w $a0, $a0, 0
+; LA32PIC-NEXT:    ld.w $zero, $a0, 0
 ; LA32PIC-NEXT:    ret
 ;
 ; LA64NOPIC-LABEL: foo:
 ; LA64NOPIC:       # %bb.0:
 ; LA64NOPIC-NEXT:    pcalau12i $a0, %got_pc_hi20(G)
 ; LA64NOPIC-NEXT:    ld.d $a0, $a0, %got_pc_lo12(G)
-; LA64NOPIC-NEXT:    ld.w $a0, $a0, 0
+; LA64NOPIC-NEXT:    ld.w $zero, $a0, 0
 ; LA64NOPIC-NEXT:    pcalau12i $a0, %pc_hi20(g)
 ; LA64NOPIC-NEXT:    addi.d $a0, $a0, %pc_lo12(g)
-; LA64NOPIC-NEXT:    ld.w $a0, $a0, 0
+; LA64NOPIC-NEXT:    ld.w $zero, $a0, 0
 ; LA64NOPIC-NEXT:    ret
 ;
 ; LA64PIC-LABEL: foo:
 ; LA64PIC:       # %bb.0:
 ; LA64PIC-NEXT:    pcalau12i $a0, %got_pc_hi20(G)
 ; LA64PIC-NEXT:    ld.d $a0, $a0, %got_pc_lo12(G)
-; LA64PIC-NEXT:    ld.w $a0, $a0, 0
+; LA64PIC-NEXT:    ld.w $zero, $a0, 0
 ; LA64PIC-NEXT:    pcalau12i $a0, %pc_hi20(.Lg$local)
 ; LA64PIC-NEXT:    addi.d $a0, $a0, %pc_lo12(.Lg$local)
-; LA64PIC-NEXT:    ld.w $a0, $a0, 0
+; LA64PIC-NEXT:    ld.w $zero, $a0, 0
 ; LA64PIC-NEXT:    ret
 ;
 ; LA64LARGENOPIC-LABEL: foo:
@@ -57,13 +57,13 @@ define void @foo() nounwind {
 ; LA64LARGENOPIC-NEXT:    lu32i.d $t8, %got64_pc_lo20(G)
 ; LA64LARGENOPIC-NEXT:    lu52i.d $t8, $t8, %got64_pc_hi12(G)
 ; LA64LARGENOPIC-NEXT:    ldx.d $a0, $t8, $a0
-; LA64LARGENOPIC-NEXT:    ld.w $a0, $a0, 0
+; LA64LARGENOPIC-NEXT:    ld.w $zero, $a0, 0
 ; LA64LARGENOPIC-NEXT:    pcalau12i $a0, %pc_hi20(g)
 ; LA64LARGENOPIC-NEXT:    addi.d $t8, $zero, %pc_lo12(g)
 ; LA64LARGENOPIC-NEXT:    lu32i.d $t8, %pc64_lo20(g)
 ; LA64LARGENOPIC-NEXT:    lu52i.d $t8, $t8, %pc64_hi12(g)
 ; LA64LARGENOPIC-NEXT:    add.d $a0, $t8, $a0
-; LA64LARGENOPIC-NEXT:    ld.w $a0, $a0, 0
+; LA64LARGENOPIC-NEXT:    ld.w $zero, $a0, 0
 ; LA64LARGENOPIC-NEXT:    ret
 ;
 ; LA64LARGEPIC-LABEL: foo:
@@ -73,13 +73,13 @@ define void @foo() nounwind {
 ; LA64LARGEPIC-NEXT:    lu32i.d $t8, %got64_pc_lo20(G)
 ; LA64LARGEPIC-NEXT:    lu52i.d $t8, $t8, %got64_pc_hi12(G)
 ; LA64LARGEPIC-NEXT:    ldx.d $a0, $t8, $a0
-; LA64LARGEPIC-NEXT:    ld.w $a0, $a0, 0
+; LA64LARGEPIC-NEXT:    ld.w $zero, $a0, 0
 ; LA64LARGEPIC-NEXT:    pcalau12i $a0, %pc_hi20(.Lg$local)
 ; LA64LARGEPIC-NEXT:    addi.d $t8, $zero, %pc_lo12(.Lg$local)
 ; LA64LARGEPIC-NEXT:    lu32i.d $t8, %pc64_lo20(.Lg$local)
 ; LA64LARGEPIC-NEXT:    lu52i.d $t8, $t8, %pc64_hi12(.Lg$local)
 ; LA64LARGEPIC-NEXT:    add.d $a0, $t8, $a0
-; LA64LARGEPIC-NEXT:    ld.w $a0, $a0, 0
+; LA64LARGEPIC-NEXT:    ld.w $zero, $a0, 0
 ; LA64LARGEPIC-NEXT:    ret
   %V = load volatile i32, ptr @G
   %v = load volatile i32, ptr @g

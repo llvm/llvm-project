@@ -155,6 +155,7 @@ void SetSigProcMask(__sanitizer_sigset_t *set, __sanitizer_sigset_t *oldset) {
   CHECK_EQ(0, internal_sigprocmask(SIG_SETMASK, set, oldset));
 }
 
+// Block asynchronous signals
 void BlockSignals(__sanitizer_sigset_t *oldset) {
   __sanitizer_sigset_t set;
   internal_sigfillset(&set);
@@ -169,7 +170,17 @@ void BlockSignals(__sanitizer_sigset_t *oldset) {
   // If this signal is blocked, such calls cannot be handled and the process may
   // hang.
   internal_sigdelset(&set, 31);
+
+  // Don't block synchronous signals
+  internal_sigdelset(&set, SIGSEGV);
+  internal_sigdelset(&set, SIGBUS);
+  internal_sigdelset(&set, SIGILL);
+  internal_sigdelset(&set, SIGTRAP);
+  internal_sigdelset(&set, SIGABRT);
+  internal_sigdelset(&set, SIGFPE);
+  internal_sigdelset(&set, SIGPIPE);
 #  endif
+
   SetSigProcMask(&set, oldset);
 }
 
@@ -1136,7 +1147,7 @@ uptr GetMaxUserVirtualAddress() {
   return addr;
 }
 
-#  if !SANITIZER_ANDROID
+#  if !SANITIZER_ANDROID || defined(__aarch64__)
 uptr GetPageSize() {
 #    if SANITIZER_LINUX && (defined(__x86_64__) || defined(__i386__)) && \
         defined(EXEC_PAGESIZE)
@@ -1155,7 +1166,7 @@ uptr GetPageSize() {
   return sysconf(_SC_PAGESIZE);  // EXEC_PAGESIZE may not be trustworthy.
 #    endif
 }
-#  endif  // !SANITIZER_ANDROID
+#  endif
 
 uptr ReadBinaryName(/*out*/ char *buf, uptr buf_len) {
 #  if SANITIZER_SOLARIS
@@ -1180,7 +1191,7 @@ uptr ReadBinaryName(/*out*/ char *buf, uptr buf_len) {
   uptr module_name_len = internal_readlink(default_module_name, buf, buf_len);
   int readlink_error;
   bool IsErr = internal_iserror(module_name_len, &readlink_error);
-#    endif  // SANITIZER_SOLARIS
+#    endif
   if (IsErr) {
     // We can't read binary name for some reason, assume it's unknown.
     Report(
@@ -1845,18 +1856,18 @@ HandleSignalMode GetHandleSignalMode(int signum) {
 
 #  if !SANITIZER_GO
 void *internal_start_thread(void *(*func)(void *arg), void *arg) {
-  if (&real_pthread_create == 0)
+  if (&internal_pthread_create == 0)
     return nullptr;
   // Start the thread with signals blocked, otherwise it can steal user signals.
   ScopedBlockSignals block(nullptr);
   void *th;
-  real_pthread_create(&th, nullptr, func, arg);
+  internal_pthread_create(&th, nullptr, func, arg);
   return th;
 }
 
 void internal_join_thread(void *th) {
-  if (&real_pthread_join)
-    real_pthread_join(th, nullptr);
+  if (&internal_pthread_join)
+    internal_pthread_join(th, nullptr);
 }
 #  else
 void *internal_start_thread(void *(*func)(void *), void *arg) { return 0; }

@@ -187,6 +187,9 @@ private:
   DenseMap<MCRegister, int> L2SEHRegs;        // LLVM to SEH regs mapping
   DenseMap<MCRegister, int> L2CVRegs;         // LLVM to CV regs mapping
 
+  mutable std::vector<std::vector<MCPhysReg>> RegAliasesCache;
+  ArrayRef<MCPhysReg> getCachedAliasesOf(MCPhysReg R) const;
+
   /// Iterator class that can traverse the differentially encoded values in
   /// DiffLists. Don't use this class directly, use one of the adaptors below.
   class DiffListIterator
@@ -263,6 +266,7 @@ public:
   friend class MCRegUnitIterator;
   friend class MCRegUnitMaskIterator;
   friend class MCRegUnitRootIterator;
+  friend class MCRegAliasIterator;
 
   /// Initialize MCRegisterInfo, called by TableGen
   /// auto-generated routines. *DO NOT USE*.
@@ -298,6 +302,8 @@ public:
     EHDwarf2LRegsSize = 0;
     Dwarf2LRegs = nullptr;
     Dwarf2LRegsSize = 0;
+
+    RegAliasesCache.resize(NumRegs);
   }
 
   /// Used to initialize LLVM register to Dwarf
@@ -723,63 +729,30 @@ public:
   }
 };
 
-/// MCRegAliasIterator enumerates all registers aliasing Reg.  If IncludeSelf is
-/// set, Reg itself is included in the list.  This iterator does not guarantee
-/// any ordering or that entries are unique.
+/// MCRegAliasIterator enumerates all registers aliasing Reg.
 class MCRegAliasIterator {
 private:
-  MCRegister Reg;
-  const MCRegisterInfo *MCRI;
-  bool IncludeSelf;
-
-  MCRegUnitIterator RI;
-  MCRegUnitRootIterator RRI;
-  MCSuperRegIterator SI;
+  const MCPhysReg *It = nullptr;
+  const MCPhysReg *End = nullptr;
 
 public:
   MCRegAliasIterator(MCRegister Reg, const MCRegisterInfo *MCRI,
-                     bool IncludeSelf)
-    : Reg(Reg), MCRI(MCRI), IncludeSelf(IncludeSelf) {
-    // Initialize the iterators.
-    for (RI = MCRegUnitIterator(Reg, MCRI); RI.isValid(); ++RI) {
-      for (RRI = MCRegUnitRootIterator(*RI, MCRI); RRI.isValid(); ++RRI) {
-        for (SI = MCSuperRegIterator(*RRI, MCRI, true); SI.isValid(); ++SI) {
-          if (!(!IncludeSelf && Reg == *SI))
-            return;
-        }
-      }
-    }
+                     bool IncludeSelf) {
+    ArrayRef<MCPhysReg> Cache = MCRI->getCachedAliasesOf(Reg);
+    assert(Cache.back() == Reg);
+    It = Cache.begin();
+    End = Cache.end();
+    if (!IncludeSelf)
+      --End;
   }
 
-  bool isValid() const { return RI.isValid(); }
+  bool isValid() const { return It != End; }
 
-  MCRegister operator*() const {
-    assert(SI.isValid() && "Cannot dereference an invalid iterator.");
-    return *SI;
-  }
-
-  void advance() {
-    // Assuming SI is valid.
-    ++SI;
-    if (SI.isValid()) return;
-
-    ++RRI;
-    if (RRI.isValid()) {
-      SI = MCSuperRegIterator(*RRI, MCRI, true);
-      return;
-    }
-
-    ++RI;
-    if (RI.isValid()) {
-      RRI = MCRegUnitRootIterator(*RI, MCRI);
-      SI = MCSuperRegIterator(*RRI, MCRI, true);
-    }
-  }
+  MCRegister operator*() const { return *It; }
 
   MCRegAliasIterator &operator++() {
     assert(isValid() && "Cannot move off the end of the list.");
-    do advance();
-    while (!IncludeSelf && isValid() && *SI == Reg);
+    ++It;
     return *this;
   }
 };

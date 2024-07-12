@@ -15,10 +15,9 @@
 /// SplitModule: load-balance the module's functions across a set of N
 /// partitions to allow parallel codegen. However, it does it very
 /// differently than the target-agnostic variant:
-///   - Kernels are used as the module's "roots".
-///     They're known entry points on AMDGPU, and everything else is often
-///     internal only.
-///   - Each kernel has a set of dependencies, and when a kernel and its
+///   - The module has "split roots", which are kernels in the vast
+//      majority of cases.
+///   - Each root has a set of dependencies, and when a root and its
 ///     dependencies is considered "big", we try to put it in a partition where
 ///     most dependencies are already imported, to avoid duplicating large
 ///     amounts of code.
@@ -67,20 +66,22 @@ using namespace llvm;
 
 namespace {
 
-static cl::opt<float> LargeKernelFactor(
-    "amdgpu-module-splitting-large-kernel-threshold", cl::init(2.0f),
+static cl::opt<float> LargeFnFactor(
+    "amdgpu-module-splitting-large-function-threshold", cl::init(2.0f),
     cl::Hidden,
     cl::desc(
-        "consider a kernel as large and needing special treatment when it "
+        "consider a function as large and needing special treatment when the "
+        "cost of importing it into a partition"
         "exceeds the average cost of a partition by this factor; e;g. 2.0 "
-        "means if the kernel and its dependencies is 2 times bigger than "
-        "an average partition; 0 disables large kernels handling entirely"));
+        "means if the function and its dependencies is 2 times bigger than "
+        "an average partition; 0 disables large functions handling entirely"));
 
-static cl::opt<float> LargeKernelOverlapForMerge(
-    "amdgpu-module-splitting-large-kernel-merge-overlap", cl::init(0.8f),
+static cl::opt<float> LargeFnOverlapForMerge(
+    "amdgpu-module-splitting-large-function-merge-overlap", cl::init(0.8f),
     cl::Hidden,
-    cl::desc("defines how much overlap between two large kernel's dependencies "
-             "is needed to put them in the same partition"));
+    cl::desc(
+        "defines how much overlap between two large function's dependencies "
+        "is needed to put them in the same partition"));
 
 static cl::opt<bool> NoExternalizeGlobals(
     "amdgpu-module-splitting-no-externalize-globals", cl::Hidden,
@@ -98,6 +99,7 @@ static cl::opt<bool>
 
 using CostType = InstructionCost::CostType;
 using PartitionID = unsigned;
+using GetTTIFn = function_ref<const TargetTransformInfo &(Function &)>;
 
 static bool isEntryPoint(const Function *F) {
   return AMDGPU::isEntryFunctionCC(F->getCallingConv());
@@ -214,13 +216,12 @@ static SplitModuleLogger &operator<<(SplitModuleLogger &SML, const Ty &Val) {
 
 /// Calculate the cost of each function in \p M
 /// \param SML Log Helper
-/// \param TM TargetMachine instance used to retrieve TargetTransformInfo.
+/// \param GetTTI Abstract getter for TargetTransformInfo.
 /// \param M Module to analyze.
 /// \param CostMap[out] Resulting Function -> Cost map.
 /// \return The module's total cost.
 static CostType
-calculateFunctionCosts(SplitModuleLogger &SML, const AMDGPUTargetMachine &TM,
-                       Module &M,
+calculateFunctionCosts(SplitModuleLogger &SML, GetTTIFn GetTTI, Module &M,
                        DenseMap<const Function *, CostType> &CostMap) {
   CostType ModuleCost = 0;
   CostType KernelCost = 0;
@@ -230,8 +231,7 @@ calculateFunctionCosts(SplitModuleLogger &SML, const AMDGPUTargetMachine &TM,
       continue;
 
     CostType FnCost = 0;
-    TargetTransformInfo TTI = TM.getTargetTransformInfo(Fn);
-
+    const auto &TTI = GetTTI(Fn);
     for (const auto &BB : Fn) {
       for (const auto &I : BB) {
         auto Cost =
@@ -277,9 +277,9 @@ static bool canBeIndirectlyCalled(const Function &F) {
                            /*IgnoreCastedDirectCall=*/true);
 }
 
-/// When a kernel or any of its callees performs an indirect call, this function
+/// When a function or any of its callees performs an indirect call, this
 /// takes over \ref addAllDependencies and adds all potentially callable
-/// functions to \p Fns so they can be counted as dependencies of the kernel.
+/// functions to \p Fns so they can be counted as dependencies of the function.
 ///
 /// This is needed due to how AMDGPUResourceUsageAnalysis operates: in the
 /// presence of an indirect call, the function's resource usage is the same as
@@ -301,13 +301,14 @@ static void addAllIndirectCallDependencies(const Module &M,
 /// \param CG Call graph for \p Fn's module.
 /// \param Fn Current function to look at.
 /// \param Fns[out] Resulting list of functions.
+/// \param OnlyDirect Whether to only consider direct callees.
 /// \param HadIndirectCall[out] Set to true if an indirect call was seen at some
 /// point, either in \p Fn or in one of the function it calls. When that
 /// happens, we fall back to adding all callable functions inside \p Fn's module
 /// to \p Fns.
 static void addAllDependencies(SplitModuleLogger &SML, const CallGraph &CG,
                                const Function &Fn,
-                               DenseSet<const Function *> &Fns,
+                               DenseSet<const Function *> &Fns, bool OnlyDirect,
                                bool &HadIndirectCall) {
   assert(!Fn.isDeclaration());
 
@@ -325,6 +326,9 @@ static void addAllDependencies(SplitModuleLogger &SML, const CallGraph &CG,
       auto *CGNode = CGEntry.second;
       auto *Callee = CGNode->getFunction();
       if (!Callee) {
+        if (OnlyDirect)
+          continue;
+
         // Functions have an edge towards CallsExternalNode if they're external
         // declarations, or if they do an indirect call. As we only process
         // definitions here, we know this means the function has an indirect
@@ -353,13 +357,19 @@ static void addAllDependencies(SplitModuleLogger &SML, const CallGraph &CG,
   }
 }
 
-/// Contains information about a kernel and its dependencies.
-struct KernelWithDependencies {
-  KernelWithDependencies(SplitModuleLogger &SML, CallGraph &CG,
-                         const DenseMap<const Function *, CostType> &FnCosts,
-                         const Function *Fn)
+/// Contains information about a function and its dependencies.
+/// This is a splitting root. The splitting algorithm works by
+/// assigning these to partitions.
+struct FunctionWithDependencies {
+  FunctionWithDependencies(SplitModuleLogger &SML, CallGraph &CG,
+                           const DenseMap<const Function *, CostType> &FnCosts,
+                           const Function *Fn)
       : Fn(Fn) {
-    addAllDependencies(SML, CG, *Fn, Dependencies, HasIndirectCall);
+    // When Fn is not a kernel, we don't need to collect indirect callees.
+    // Resource usage analysis is only performed on kernels, and we collect
+    // indirect callees for resource usage analysis.
+    addAllDependencies(SML, CG, *Fn, Dependencies,
+                       /*OnlyDirect*/ !isEntryPoint(Fn), HasIndirectCall);
     TotalCost = FnCosts.at(Fn);
     for (const auto *Dep : Dependencies) {
       TotalCost += FnCosts.at(Dep);
@@ -380,8 +390,8 @@ struct KernelWithDependencies {
 
   CostType TotalCost = 0;
 
-  /// \returns true if this kernel and its dependencies can be considered large
-  /// according to \p Threshold.
+  /// \returns true if this function and its dependencies can be considered
+  /// large according to \p Threshold.
   bool isLarge(CostType Threshold) const {
     return TotalCost > Threshold && !Dependencies.empty();
   }
@@ -420,39 +430,39 @@ static float calculateOverlap(const DenseSet<const Function *> &A,
 /// \param NumParts Number of partitions to create.
 /// \param ModuleCost Total cost of all functions in \p M.
 /// \param FnCosts Map of Function -> Cost
-/// \param WorkList Kernels and their dependencies to process in order.
+/// \param WorkList Functions and their dependencies to process in order.
 /// \returns The created partitions (a vector of size \p NumParts )
 static std::vector<DenseSet<const Function *>>
 doPartitioning(SplitModuleLogger &SML, Module &M, unsigned NumParts,
                CostType ModuleCost,
                const DenseMap<const Function *, CostType> &FnCosts,
-               const SmallVector<KernelWithDependencies> &WorkList) {
+               const SmallVector<FunctionWithDependencies> &WorkList) {
 
   SML << "\n--Partitioning Starts--\n";
 
-  // Calculate a "large kernel threshold". When more than one kernel's total
-  // import cost exceeds this value, we will try to merge it with other,
-  // similarly large kernels.
+  // Calculate a "large function threshold". When more than one function's total
+  // import cost exceeds this value, we will try to assign it to an existing
+  // partition to reduce the amount of duplication needed.
   //
-  // e.g. let two kernels X and Y have a import cost of ~10% of the module, we
+  // e.g. let two functions X and Y have a import cost of ~10% of the module, we
   // assign X to a partition as usual, but when we get to Y, we check if it's
   // worth also putting it in Y's partition.
-  const CostType LargeKernelThreshold =
-      LargeKernelFactor ? CostType(((ModuleCost / NumParts) * LargeKernelFactor))
-                        : std::numeric_limits<CostType>::max();
+  const CostType LargeFnThreshold =
+      LargeFnFactor ? CostType(((ModuleCost / NumParts) * LargeFnFactor))
+                    : std::numeric_limits<CostType>::max();
 
   std::vector<DenseSet<const Function *>> Partitions;
   Partitions.resize(NumParts);
 
-  // Assign a partition to each kernel, and try to keep the partitions more or
+  // Assign functions to partitions, and try to keep the partitions more or
   // less balanced. We do that through a priority queue sorted in reverse, so we
   // can always look at the partition with the least content.
   //
   // There are some cases where we will be deliberately unbalanced though.
-  //  - Large kernels: we try to merge with existing partitions to reduce code
+  //  - Large functions: we try to merge with existing partitions to reduce code
   //  duplication.
-  //  - Kernels with indirect or external calls always go in the first partition
-  //  (P0).
+  //  - Functions with indirect or external calls always go in the first
+  //  partition (P0).
   auto ComparePartitions = [](const std::pair<PartitionID, CostType> &a,
                               const std::pair<PartitionID, CostType> &b) {
     // When two partitions have the same cost, assign to the one with the
@@ -471,17 +481,17 @@ doPartitioning(SplitModuleLogger &SML, Module &M, unsigned NumParts,
   for (unsigned I = 0; I < NumParts; ++I)
     BalancingQueue.push_back(std::make_pair(I, 0));
 
-  // Helper function to handle assigning a kernel to a partition. This takes
+  // Helper function to handle assigning a function to a partition. This takes
   // care of updating the balancing queue.
   const auto AssignToPartition = [&](PartitionID PID,
-                                     const KernelWithDependencies &KWD) {
+                                     const FunctionWithDependencies &FWD) {
     auto &FnsInPart = Partitions[PID];
-    FnsInPart.insert(KWD.Fn);
-    FnsInPart.insert(KWD.Dependencies.begin(), KWD.Dependencies.end());
+    FnsInPart.insert(FWD.Fn);
+    FnsInPart.insert(FWD.Dependencies.begin(), FWD.Dependencies.end());
 
-    SML << "assign " << getName(*KWD.Fn) << " to P" << PID << "\n  ->  ";
-    if (!KWD.Dependencies.empty()) {
-      SML << KWD.Dependencies.size() << " dependencies added\n";
+    SML << "assign " << getName(*FWD.Fn) << " to P" << PID << "\n  ->  ";
+    if (!FWD.Dependencies.empty()) {
+      SML << FWD.Dependencies.size() << " dependencies added\n";
     };
 
     // Update the balancing queue. we scan backwards because in the common case
@@ -506,44 +516,43 @@ doPartitioning(SplitModuleLogger &SML, Module &M, unsigned NumParts,
     sort(BalancingQueue, ComparePartitions);
   };
 
-  for (auto &CurKernel : WorkList) {
-    // When a kernel has indirect calls, it must stay in the first partition
+  for (auto &CurFn : WorkList) {
+    // When a function has indirect calls, it must stay in the first partition
     // alongside every reachable non-entry function. This is a nightmare case
     // for splitting as it severely limits what we can do.
-    if (CurKernel.HasIndirectCall) {
-      SML << "Kernel with indirect call(s): " << getName(*CurKernel.Fn)
+    if (CurFn.HasIndirectCall) {
+      SML << "Function with indirect call(s): " << getName(*CurFn.Fn)
           << " defaulting to P0\n";
-      AssignToPartition(0, CurKernel);
+      AssignToPartition(0, CurFn);
       continue;
     }
 
-    // When a kernel has non duplicatable dependencies, we have to keep it in
+    // When a function has non duplicatable dependencies, we have to keep it in
     // the first partition as well. This is a conservative approach, a
     // finer-grained approach could keep track of which dependencies are
     // non-duplicatable exactly and just make sure they're grouped together.
-    if (CurKernel.HasNonDuplicatableDependecy) {
-      SML << "Kernel with externally visible dependency "
-          << getName(*CurKernel.Fn) << " defaulting to P0\n";
-      AssignToPartition(0, CurKernel);
+    if (CurFn.HasNonDuplicatableDependecy) {
+      SML << "Function with externally visible dependency "
+          << getName(*CurFn.Fn) << " defaulting to P0\n";
+      AssignToPartition(0, CurFn);
       continue;
     }
 
-    // Be smart with large kernels to avoid duplicating their dependencies.
-    if (CurKernel.isLarge(LargeKernelThreshold)) {
-      assert(LargeKernelOverlapForMerge >= 0.0f &&
-             LargeKernelOverlapForMerge <= 1.0f);
-      SML << "Large Kernel: " << getName(*CurKernel.Fn)
+    // Be smart with large functions to avoid duplicating their dependencies.
+    if (CurFn.isLarge(LargeFnThreshold)) {
+      assert(LargeFnOverlapForMerge >= 0.0f && LargeFnOverlapForMerge <= 1.0f);
+      SML << "Large Function: " << getName(*CurFn.Fn)
           << " - looking for partition with at least "
-          << format("%0.2f", LargeKernelOverlapForMerge * 100) << "% overlap\n";
+          << format("%0.2f", LargeFnOverlapForMerge * 100) << "% overlap\n";
 
       bool Assigned = false;
       for (const auto &[PID, Fns] : enumerate(Partitions)) {
-        float Overlap = calculateOverlap(CurKernel.Dependencies, Fns);
+        float Overlap = calculateOverlap(CurFn.Dependencies, Fns);
         SML << "  => " << format("%0.2f", Overlap * 100) << "% overlap with P"
             << PID << '\n';
-        if (Overlap > LargeKernelOverlapForMerge) {
+        if (Overlap > LargeFnOverlapForMerge) {
           SML << "  selecting P" << PID << '\n';
-          AssignToPartition(PID, CurKernel);
+          AssignToPartition(PID, CurFn);
           Assigned = true;
         }
       }
@@ -554,41 +563,34 @@ doPartitioning(SplitModuleLogger &SML, Module &M, unsigned NumParts,
 
     // Normal "load-balancing", assign to partition with least pressure.
     auto [PID, CurCost] = BalancingQueue.back();
-    AssignToPartition(PID, CurKernel);
+    AssignToPartition(PID, CurFn);
   }
 
-  // Work is mostly done now, verify the partioning and add all functions we may
-  // have missed (= unreachable, or we don't understand how they're reached) to
-  // P0.
-  DenseSet<const Function *> AllFunctions;
-  for (const auto &[Idx, Part] : enumerate(Partitions)) {
-    CostType Cost = 0;
-    for (auto *Fn : Part) {
-      // external linkage functions should exclusively be in the first partition
-      // at this stage. In theory, we should only ever see external linkage
-      // functions here if they're kernels, or if they've been added due to a
-      // kernel using indirect calls somewhere in its CallGraph.
-      assert(Idx == 0 || (!Fn->hasExternalLinkage() || isEntryPoint(Fn)));
-      Cost += FnCosts.at(Fn);
+  if (SML) {
+    for (const auto &[Idx, Part] : enumerate(Partitions)) {
+      CostType Cost = 0;
+      for (auto *Fn : Part)
+        Cost += FnCosts.at(Fn);
+      SML << "P" << Idx << " has a total cost of " << Cost << " ("
+          << format("%0.2f", (float(Cost) / ModuleCost) * 100)
+          << "% of source module)\n";
     }
-    SML << "P" << Idx << " has a total cost of " << Cost << " ("
-        << format("%0.2f", (float(Cost) / ModuleCost) * 100)
-        << "% of source module)\n";
-    AllFunctions.insert(Part.begin(), Part.end());
+
+    SML << "--Partitioning Done--\n\n";
   }
 
-  // Add missed functions to P0. This will take care of adding things like
-  // external functions with no callers in the module to P0. This should be
-  // fairly rare as AMDGPU internalizes everything in most cases, so unused
-  // internal functions would get removed.
+  // Check no functions were missed.
+#ifndef NDEBUG
+  DenseSet<const Function *> AllFunctions;
+  for (const auto &Part : Partitions)
+    AllFunctions.insert(Part.begin(), Part.end());
+
   for (auto &Fn : M) {
     if (!Fn.isDeclaration() && !AllFunctions.contains(&Fn)) {
-      SML << getName(Fn) << " has no partition assigned, defaulting to P0\n";
-      Partitions[0].insert(&Fn);
+      assert(AllFunctions.contains(&Fn) && "Missed a function?!");
     }
   }
-
-  SML << "--Partitioning Done--\n\n";
+#endif
 
   return Partitions;
 }
@@ -604,10 +606,17 @@ static void externalize(GlobalValue &GV) {
   if (!GV.hasName())
     GV.setName("__llvmsplit_unnamed");
 }
-} // end anonymous namespace
 
-void llvm::splitAMDGPUModule(
-    const AMDGPUTargetMachine &TM, Module &M, unsigned N,
+static bool hasDirectCaller(const Function &Fn) {
+  for (auto &U : Fn.uses()) {
+    if (auto *CB = dyn_cast<CallBase>(U.getUser()); CB && CB->isCallee(&U))
+      return true;
+  }
+  return false;
+}
+
+static void splitAMDGPUModule(
+    GetTTIFn GetTTI, Module &M, unsigned N,
     function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback) {
 
   SplitModuleLogger SML(M);
@@ -648,15 +657,36 @@ void llvm::splitAMDGPUModule(
   // Start by calculating the cost of every function in the module, as well as
   // the module's overall cost.
   DenseMap<const Function *, CostType> FnCosts;
-  const CostType ModuleCost = calculateFunctionCosts(SML, TM, M, FnCosts);
+  const CostType ModuleCost = calculateFunctionCosts(SML, GetTTI, M, FnCosts);
 
-  // Gather every kernel into a WorkList, then sort it by descending total cost
-  // of the kernel so the biggest kernels are seen first.
-  SmallVector<KernelWithDependencies> WorkList;
+  // First, gather ever kernel into the worklist.
+  SmallVector<FunctionWithDependencies> WorkList;
   for (auto &Fn : M) {
     if (isEntryPoint(&Fn) && !Fn.isDeclaration())
       WorkList.emplace_back(SML, CG, FnCosts, &Fn);
   }
+
+  // Then, find missing functions that need to be considered as additional
+  // roots. These can't be called in theory, but in practice we still have to
+  // handle them to avoid linker errors.
+  {
+    DenseSet<const Function *> SeenFunctions;
+    for (const auto &FWD : WorkList) {
+      SeenFunctions.insert(FWD.Fn);
+      SeenFunctions.insert(FWD.Dependencies.begin(), FWD.Dependencies.end());
+    }
+
+    for (auto &Fn : M) {
+      // If this function is not part of any kernel's dependencies and isn't
+      // directly called, consider it as a root.
+      if (!Fn.isDeclaration() && !isEntryPoint(&Fn) &&
+          !SeenFunctions.count(&Fn) && !hasDirectCaller(Fn)) {
+        WorkList.emplace_back(SML, CG, FnCosts, &Fn);
+      }
+    }
+  }
+
+  // Sort the worklist so the most expensive roots are seen first.
   sort(WorkList, [&](auto &A, auto &B) {
     // Sort by total cost, and if the total cost is identical, sort
     // alphabetically.
@@ -667,13 +697,20 @@ void llvm::splitAMDGPUModule(
 
   if (SML) {
     SML << "Worklist\n";
-    for (const auto &KWD : WorkList) {
-      SML << "[Kernel] " << getName(*KWD.Fn) << " (totalCost:" << KWD.TotalCost
-          << " indirect:" << KWD.HasIndirectCall
-          << " hasNonDuplicatableDep:" << KWD.HasNonDuplicatableDependecy
+    for (const auto &FWD : WorkList) {
+      SML << "[root] " << getName(*FWD.Fn) << " (totalCost:" << FWD.TotalCost
+          << " indirect:" << FWD.HasIndirectCall
+          << " hasNonDuplicatableDep:" << FWD.HasNonDuplicatableDependecy
           << ")\n";
-      for (const auto *Dep : KWD.Dependencies)
-        SML << "  [Dep] " << getName(*Dep) << '\n';
+      // Sort function names before printing to ensure determinism.
+      SmallVector<std::string> SortedDepNames;
+      SortedDepNames.reserve(FWD.Dependencies.size());
+      for (const auto *Dep : FWD.Dependencies)
+        SortedDepNames.push_back(getName(*Dep));
+      sort(SortedDepNames);
+
+      for (const auto &Name : SortedDepNames)
+        SML << "  [dependency] " << Name << '\n';
     }
   }
 
@@ -700,16 +737,8 @@ void llvm::splitAMDGPUModule(
     std::unique_ptr<Module> MPart(
         CloneModule(M, VMap, [&](const GlobalValue *GV) {
           // Functions go in their assigned partition.
-          if (const auto *Fn = dyn_cast<Function>(GV)) {
-// Check we don't import an external linkage function in any
-// partition other than P0.
-#ifndef NDEBUG
-            if (Fn->hasExternalLinkage() && !isEntryPoint(Fn)) {
-              assert((I == 0) == FnsInPart.contains(Fn));
-            }
-#endif
+          if (const auto *Fn = dyn_cast<Function>(GV))
             return FnsInPart.contains(Fn);
-          }
 
           if (NeedsConservativeImport(GV))
             return true;
@@ -741,4 +770,17 @@ void llvm::splitAMDGPUModule(
   SML << TotalFnImpls << " function definitions across all modules ("
       << format("%0.2f", (float(TotalFnImpls) / FnCosts.size()) * 100)
       << "% of original module)\n";
+}
+} // namespace
+
+PreservedAnalyses AMDGPUSplitModulePass::run(Module &M,
+                                             ModuleAnalysisManager &MAM) {
+  FunctionAnalysisManager &FAM =
+      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  const auto TTIGetter = [&FAM](Function &F) -> const TargetTransformInfo & {
+    return FAM.getResult<TargetIRAnalysis>(F);
+  };
+  splitAMDGPUModule(TTIGetter, M, N, ModuleCallback);
+  // We don't change the original module.
+  return PreservedAnalyses::all();
 }

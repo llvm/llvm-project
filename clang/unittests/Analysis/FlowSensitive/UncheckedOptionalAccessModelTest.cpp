@@ -552,6 +552,7 @@ namespace std {
 template <typename T>
 class initializer_list {
  public:
+  const T *a, *b;
   initializer_list() noexcept;
 };
 
@@ -1336,15 +1337,17 @@ protected:
             [](ASTContext &Ctx, Environment &Env) {
               return UncheckedOptionalAccessModel(Ctx, Env);
             })
-            .withPostVisitCFG(
-                [&Diagnostics,
-                 Diagnoser = UncheckedOptionalAccessDiagnoser(Options)](
-                    ASTContext &Ctx, const CFGElement &Elt,
-                    const TransferStateForDiagnostics<NoopLattice>
-                        &State) mutable {
-                  auto EltDiagnostics = Diagnoser(Elt, Ctx, State);
-                  llvm::move(EltDiagnostics, std::back_inserter(Diagnostics));
-                })
+            .withDiagnosisCallbacks(
+                {/*Before=*/[&Diagnostics,
+                             Diagnoser =
+                                 UncheckedOptionalAccessDiagnoser(Options)](
+                                ASTContext &Ctx, const CFGElement &Elt,
+                                const TransferStateForDiagnostics<NoopLattice>
+                                    &State) mutable {
+                   auto EltDiagnostics = Diagnoser(Elt, Ctx, State);
+                   llvm::move(EltDiagnostics, std::back_inserter(Diagnostics));
+                 },
+                 /*After=*/nullptr})
             .withASTBuildArgs(
                 {"-fsyntax-only", CxxMode, "-Wno-undefined-inline"})
             .withASTBuildVirtualMappedFiles(

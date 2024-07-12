@@ -294,7 +294,7 @@ void llvm::findArrayDimensions(ScalarEvolution &SE,
 
   // Remove duplicates.
   array_pod_sort(Terms.begin(), Terms.end());
-  Terms.erase(std::unique(Terms.begin(), Terms.end()), Terms.end());
+  Terms.erase(llvm::unique(Terms), Terms.end());
 
   // Put larger terms first.
   llvm::sort(Terms, [](const SCEV *LHS, const SCEV *RHS) {

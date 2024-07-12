@@ -131,6 +131,9 @@ private:
   _LIBCPP_HIDE_FROM_ABI explicit basic_format_context(_OutIt __out_it, basic_format_args<basic_format_context> __args)
       : __out_it_(std::move(__out_it)), __args_(__args) {}
 #  endif
+
+  basic_format_context(const basic_format_context&)            = delete;
+  basic_format_context& operator=(const basic_format_context&) = delete;
 };
 
 // A specialization for __retarget_buffer

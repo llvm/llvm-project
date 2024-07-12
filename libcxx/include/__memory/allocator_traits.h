@@ -16,6 +16,7 @@
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_empty.h>
+#include <__type_traits/is_same.h>
 #include <__type_traits/make_unsigned.h>
 #include <__type_traits/remove_reference.h>
 #include <__type_traits/void_t.h>
@@ -371,6 +372,14 @@ using __rebind_alloc _LIBCPP_NODEBUG = typename _Traits::template rebind_alloc<_
 template <class _Traits, class _Tp>
 using __rebind_alloc = typename _Traits::template rebind_alloc<_Tp>::other;
 #endif
+
+template <class _Alloc>
+struct __check_valid_allocator : true_type {
+  using _Traits = std::allocator_traits<_Alloc>;
+  static_assert(is_same<_Alloc, __rebind_alloc<_Traits, typename _Traits::value_type> >::value,
+                "[allocator.requirements] states that rebinding an allocator to the same type should result in the "
+                "original allocator");
+};
 
 // __is_default_allocator
 template <class _Tp>

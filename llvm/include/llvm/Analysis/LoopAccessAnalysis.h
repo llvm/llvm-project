@@ -269,6 +269,11 @@ public:
 
   const Loop *getInnermostLoop() const { return InnermostLoop; }
 
+  DenseMap<const SCEV *, std::pair<const SCEV *, const SCEV *>> &
+  getPointerBounds() {
+    return PointerBounds;
+  }
+
 private:
   /// A wrapper around ScalarEvolution, used to add runtime SCEV checks, and
   /// applies dynamic knowledge to simplify SCEV expressions and convert them
@@ -326,6 +331,10 @@ private:
   /// backwards dependence with non-constant stride should be classified as
   /// backwards-vectorizable or unknown (triggering a runtime check).
   unsigned MaxTargetVectorWidthInBits = 0;
+
+  /// Mapping of SCEV expressions to their expanded pointer bounds (pair of
+  /// start and end pointer expressions).
+  DenseMap<const SCEV *, std::pair<const SCEV *, const SCEV *>> PointerBounds;
 
   /// Check whether there is a plausible dependence between the two
   /// accesses.
@@ -704,9 +713,10 @@ public:
   const PredicatedScalarEvolution &getPSE() const { return *PSE; }
 
 private:
-  /// Analyze the loop.
-  void analyzeLoop(AAResults *AA, LoopInfo *LI,
-                   const TargetLibraryInfo *TLI, DominatorTree *DT);
+  /// Analyze the loop. Returns true if all memory access in the loop can be
+  /// vectorized.
+  bool analyzeLoop(AAResults *AA, LoopInfo *LI, const TargetLibraryInfo *TLI,
+                   DominatorTree *DT);
 
   /// Check if the structure of the loop allows it to be analyzed by this
   /// pass.
@@ -853,7 +863,7 @@ public:
 
   const LoopAccessInfo &getInfo(Loop &L);
 
-  void clear() { LoopAccessInfoMap.clear(); }
+  void clear();
 
   bool invalidate(Function &F, const PreservedAnalyses &PA,
                   FunctionAnalysisManager::Invalidator &Inv);

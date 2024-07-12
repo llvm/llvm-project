@@ -286,12 +286,15 @@ public:
   /// MemoryBuffer if successful, otherwise returning null.
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(FileEntryRef Entry, bool isVolatile = false,
-                   bool RequiresNullTerminator = true);
+                   bool RequiresNullTerminator = true,
+                   std::optional<int64_t> MaybeLimit = std::nullopt);
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(StringRef Filename, bool isVolatile = false,
-                   bool RequiresNullTerminator = true) const {
-    return getBufferForFileImpl(Filename, /*FileSize=*/-1, isVolatile,
-                                RequiresNullTerminator);
+                   bool RequiresNullTerminator = true,
+                   std::optional<int64_t> MaybeLimit = std::nullopt) const {
+    return getBufferForFileImpl(Filename,
+                                /*FileSize=*/(MaybeLimit ? *MaybeLimit : -1),
+                                isVolatile, RequiresNullTerminator);
   }
 
 private:

@@ -8,9 +8,9 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// FIXME: Fatal error with following targets (remove XFAIL when fixed):
+// Older versions of clang may encounter a backend error (see 0295c2ad):
 //   Pass-by-value arguments with alignment greater than register width are not supported.
-// XFAIL: target=powerpc{{.*}}-ibm-aix7.2.5.7
+// XFAIL: target=powerpc{{.*}}-ibm-{{.*}} && (clang-17 || clang-18)
 
 // <experimental/simd>
 //

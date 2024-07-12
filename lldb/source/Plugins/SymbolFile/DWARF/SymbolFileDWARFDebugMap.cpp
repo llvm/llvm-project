@@ -1147,14 +1147,13 @@ SymbolFileDWARFDebugMap::ParseCallEdgesInFunction(
   return {};
 }
 
-TypeSP SymbolFileDWARFDebugMap::FindDefinitionTypeForDWARFDeclContext(
-    const DWARFDIE &die) {
-  TypeSP type_sp;
+DWARFDIE SymbolFileDWARFDebugMap::FindDefinitionDIE(const DWARFDIE &die) {
+  DWARFDIE result;
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) {
-    type_sp = oso_dwarf->FindDefinitionTypeForDWARFDeclContext(die);
-    return type_sp ? IterationAction::Stop : IterationAction::Continue;
+    result = oso_dwarf->FindDefinitionDIE(die);
+    return result ? IterationAction::Stop : IterationAction::Continue;
   });
-  return type_sp;
+  return result;
 }
 
 bool SymbolFileDWARFDebugMap::Supports_DW_AT_APPLE_objc_complete_type(

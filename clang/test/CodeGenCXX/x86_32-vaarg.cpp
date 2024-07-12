@@ -8,7 +8,6 @@ typedef struct {} empty;
 // CHECK-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[Z_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[LIST:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_EMPTY:%.*]], align 1
 // CHECK-NEXT:    store ptr [[AGG_RESULT:%.*]], ptr [[RESULT_PTR]], align 4
 // CHECK-NEXT:    store i32 [[Z:%.*]], ptr [[Z_ADDR]], align 4
 // CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[LIST]])

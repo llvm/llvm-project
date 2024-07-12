@@ -2302,48 +2302,14 @@ bool MIParser::parseMDNode(MDNode *&Node) {
 }
 
 bool MIParser::parseDIExpression(MDNode *&Expr) {
-  assert(Token.is(MIToken::md_diexpr));
+  unsigned Read;
+  Expr = llvm::parseDIExpressionBodyAtBeginning(
+      CurrentSource, Read, Error, *PFS.MF.getFunction().getParent(),
+      &PFS.IRSlots);
+  CurrentSource = CurrentSource.slice(Read, StringRef::npos);
   lex();
-
-  // FIXME: Share this parsing with the IL parser.
-  SmallVector<uint64_t, 8> Elements;
-
-  if (expectAndConsume(MIToken::lparen))
-    return true;
-
-  if (Token.isNot(MIToken::rparen)) {
-    do {
-      if (Token.is(MIToken::Identifier)) {
-        if (unsigned Op = dwarf::getOperationEncoding(Token.stringValue())) {
-          lex();
-          Elements.push_back(Op);
-          continue;
-        }
-        if (unsigned Enc = dwarf::getAttributeEncoding(Token.stringValue())) {
-          lex();
-          Elements.push_back(Enc);
-          continue;
-        }
-        return error(Twine("invalid DWARF op '") + Token.stringValue() + "'");
-      }
-
-      if (Token.isNot(MIToken::IntegerLiteral) ||
-          Token.integerValue().isSigned())
-        return error("expected unsigned integer");
-
-      auto &U = Token.integerValue();
-      if (U.ugt(UINT64_MAX))
-        return error("element too large, limit is " + Twine(UINT64_MAX));
-      Elements.push_back(U.getZExtValue());
-      lex();
-
-    } while (consumeIfPresent(MIToken::comma));
-  }
-
-  if (expectAndConsume(MIToken::rparen))
-    return true;
-
-  Expr = DIExpression::get(MF.getFunction().getContext(), Elements);
+  if (!Expr)
+    return error(Error.getMessage());
   return false;
 }
 
@@ -2916,6 +2882,7 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
   case MIToken::IntegerLiteral:
     return parseImmediateOperand(Dest);
   case MIToken::kw_half:
+  case MIToken::kw_bfloat:
   case MIToken::kw_float:
   case MIToken::kw_double:
   case MIToken::kw_x86_fp80:

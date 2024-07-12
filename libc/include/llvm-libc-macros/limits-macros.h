@@ -148,7 +148,7 @@
 #endif // INT_MAX
 
 #ifndef UINT_MAX
-#define UINT_MAX (~0U)
+#define UINT_MAX (INT_MAX * 2U + 1U)
 #endif // UINT_MAX
 
 #ifndef LONG_MAX
@@ -160,7 +160,7 @@
 #endif // LONG_MAX
 
 #ifndef ULONG_MAX
-#define ULONG_MAX (~0UL)
+#define ULONG_MAX (LONG_MAX * 2UL + 1UL)
 #endif // ULONG_MAX
 
 #ifndef LLONG_MAX
@@ -172,7 +172,7 @@
 #endif // LLONG_MAX
 
 #ifndef ULLONG_MAX
-#define ULLONG_MAX (~0ULL)
+#define ULLONG_MAX (LLONG_MAX * 2ULL + 1ULL)
 #endif // ULLONG_MAX
 
 // *_MIN macros
@@ -224,5 +224,17 @@
 #ifndef ULLONG_MIN
 #define ULLONG_MIN 0ULL
 #endif // ULLONG_MIN
+
+#ifndef _POSIX_MAX_CANON
+#define _POSIX_MAX_CANON 255
+#endif
+
+#ifndef _POSIX_MAX_INPUT
+#define _POSIX_MAX_INPUT 255
+#endif
+
+#ifndef _POSIX_NAME_MAX
+#define _POSIX_PATH_MAX 256
+#endif
 
 #endif // LLVM_LIBC_MACROS_LIMITS_MACROS_H

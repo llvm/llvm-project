@@ -199,8 +199,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   InlineAsmLoweringInfo.reset(new InlineAsmLowering(getTargetLowering()));
   Legalizer.reset(new AMDGPULegalizerInfo(*this, TM));
   RegBankInfo.reset(new AMDGPURegisterBankInfo(*this));
-  InstSelector.reset(new AMDGPUInstructionSelector(
-  *this, *static_cast<AMDGPURegisterBankInfo *>(RegBankInfo.get()), TM));
+  InstSelector.reset(new AMDGPUInstructionSelector(*this, *RegBankInfo, TM));
 }
 
 unsigned GCNSubtarget::getConstantBusLimit(unsigned Opcode) const {
@@ -560,10 +559,16 @@ bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
   else
     ++MaxSize;
 
-  MDBuilder MDB(I->getContext());
-  MDNode *MaxWorkGroupSizeRange = MDB.createRange(APInt(32, MinSize),
-                                                  APInt(32, MaxSize));
-  I->setMetadata(LLVMContext::MD_range, MaxWorkGroupSizeRange);
+  APInt Lower{32, MinSize};
+  APInt Upper{32, MaxSize};
+  if (auto *CI = dyn_cast<CallBase>(I)) {
+    ConstantRange Range(Lower, Upper);
+    CI->addRangeRetAttr(Range);
+  } else {
+    MDBuilder MDB(I->getContext());
+    MDNode *MaxWorkGroupSizeRange = MDB.createRange(Lower, Upper);
+    I->setMetadata(LLVMContext::MD_range, MaxWorkGroupSizeRange);
+  }
   return true;
 }
 
@@ -591,7 +596,7 @@ uint64_t AMDGPUSubtarget::getExplicitKernArgSize(const Function &F,
   assert(F.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
          F.getCallingConv() == CallingConv::SPIR_KERNEL);
 
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   uint64_t ExplicitArgBytes = 0;
   MaxAlign = Align(1);
 
@@ -1098,6 +1103,9 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
 
   if (hasFlatScratchInit())
     NumUsedUserSGPRs += getNumUserSGPRForField(FlatScratchInitID);
+
+  if (hasPrivateSegmentSize())
+    NumUsedUserSGPRs += getNumUserSGPRForField(PrivateSegmentSizeID);
 }
 
 void GCNUserSGPRUsageInfo::allocKernargPreloadSGPRs(unsigned NumSGPRs) {

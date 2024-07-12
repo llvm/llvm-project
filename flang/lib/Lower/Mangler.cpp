@@ -110,7 +110,7 @@ std::string Fortran::lower::mangle::mangleName(
     return fir::NameUniquer::doVariable(modules, procs, blockId, symbolName);
   };
 
-  return std::visit(
+  return Fortran::common::visit(
       Fortran::common::visitors{
           [&](const Fortran::semantics::MainProgramDetails &) {
             return fir::NameUniquer::doProgramEntry().str();

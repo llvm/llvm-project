@@ -165,12 +165,15 @@ static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   if (fir::GlobalOp global = builder.getNamedGlobal(globalName))
     return global;
+  const Fortran::semantics::Symbol &sym = var.getSymbol();
+  cuf::DataAttributeAttr dataAttr =
+      Fortran::lower::translateSymbolCUFDataAttribute(
+          converter.getFirOpBuilder().getContext(), sym);
   // Always define linkonce data since it may be optimized out from the module
   // that actually owns the variable if it does not refers to it.
   if (linkage == builder.createLinkOnceODRLinkage() ||
       linkage == builder.createLinkOnceLinkage())
-    return defineGlobal(converter, var, globalName, linkage);
-  const Fortran::semantics::Symbol &sym = var.getSymbol();
+    return defineGlobal(converter, var, globalName, linkage, dataAttr);
   mlir::Location loc = genLocation(converter, sym);
   // Resolve potential host and module association before checking that this
   // symbol is an object of a function pointer.
@@ -179,9 +182,6 @@ static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
       !Fortran::semantics::IsProcedurePointer(ultimate))
     mlir::emitError(loc, "processing global declaration: symbol '")
         << toStringRef(sym.name()) << "' has unexpected details\n";
-  cuf::DataAttributeAttr dataAttr =
-      Fortran::lower::translateSymbolCUFDataAttribute(
-          converter.getFirOpBuilder().getContext(), sym);
   return builder.createGlobal(loc, converter.genType(var), globalName, linkage,
                               mlir::Attribute{}, isConstant(ultimate),
                               var.isTarget(), dataAttr);
@@ -510,7 +510,7 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
       if (details->init()) {
         global = Fortran::lower::tryCreatingDenseGlobal(
             builder, loc, symTy, globalName, linkage, isConst,
-            details->init().value());
+            details->init().value(), dataAttr);
         if (global) {
           global.setVisibility(mlir::SymbolTable::Visibility::Public);
           return global;
@@ -2036,11 +2036,6 @@ void Fortran::lower::mapSymbolAttributes(
     if (isUnusedEntryDummy) {
       assert(!Fortran::semantics::IsAllocatableOrPointer(sym) &&
              "handled above");
-      // Need to add support for allocatable assumed-rank to use
-      // logic below, or to simplify it and add codegen for fir.zero
-      // !fir.box<> instead.
-      if (isAssumedRank)
-        TODO(loc, "assumed rank in ENTRY");
       // The box is read right away because lowering code does not expect
       // a non pointer/allocatable symbol to be mapped to a MutableBox.
       mlir::Type ty = converter.genType(var);

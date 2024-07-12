@@ -514,7 +514,7 @@ generic-optimized-speed)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-optimized-speed.cmake"
     check-runtimes
 ;;
-apple-system)
+apple-configuration)
     clean
 
     arch="$(uname -m)"
@@ -703,22 +703,13 @@ clang-cl-static-crt)
 ;;
 mingw-dll)
     clean
-    # Explicitly specify the compiler with a triple prefix. The CI
-    # environment has got two installations of Clang; the default one
-    # defaults to MSVC mode, while there's an installation of llvm-mingw
-    # further back in PATH. By calling the compiler with an explicit
-    # triple prefix, we use the one that is bundled with a mingw sysroot.
     generate-cmake \
-          -DCMAKE_C_COMPILER=x86_64-w64-mingw32-clang \
-          -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-clang++ \
           -C "${MONOREPO_ROOT}/libcxx/cmake/caches/MinGW.cmake"
     check-runtimes
 ;;
 mingw-static)
     clean
     generate-cmake \
-          -DCMAKE_C_COMPILER=x86_64-w64-mingw32-clang \
-          -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-clang++ \
           -C "${MONOREPO_ROOT}/libcxx/cmake/caches/MinGW.cmake" \
           -DLIBCXX_ENABLE_SHARED=OFF \
           -DLIBUNWIND_ENABLE_SHARED=OFF

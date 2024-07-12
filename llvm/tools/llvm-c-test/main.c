@@ -110,11 +110,8 @@ int main(int argc, char **argv) {
   } else if (argc == 2 && !strcmp(argv[1], "--test-diagnostic-handler")) {
     return llvm_test_diagnostic_handler();
   } else if (argc == 2 &&
-             !strcmp(argv[1], "--test-dibuilder-old-debuginfo-format")) {
-    return llvm_test_dibuilder(false);
-  } else if (argc == 2 &&
-             !strcmp(argv[1], "--test-dibuilder-new-debuginfo-format")) {
-    return llvm_test_dibuilder(true);
+             !strcmp(argv[1], "--test-dibuilder-debuginfo-format")) {
+    return llvm_test_dibuilder();
   } else {
     print_usage();
   }

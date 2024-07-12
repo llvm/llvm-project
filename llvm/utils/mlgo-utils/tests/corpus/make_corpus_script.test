@@ -1,4 +1,4 @@
-# REQUIRES: python-38, system-linux
+# REQUIRES: system-linux
 
 ## Testing that the make_corpus script works as expected when invoked.
 

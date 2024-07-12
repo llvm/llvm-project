@@ -35,12 +35,9 @@ LogicalResult mlir::scf::forallToParallelLoop(RewriterBase &rewriter,
         "only fully bufferized scf.forall ops can be lowered to scf.parallel");
 
   // Convert mixed bounds and steps to SSA values.
-  SmallVector<Value> lbs = getValueOrCreateConstantIndexOp(
-      rewriter, loc, forallOp.getMixedLowerBound());
-  SmallVector<Value> ubs = getValueOrCreateConstantIndexOp(
-      rewriter, loc, forallOp.getMixedUpperBound());
-  SmallVector<Value> steps =
-      getValueOrCreateConstantIndexOp(rewriter, loc, forallOp.getMixedStep());
+  SmallVector<Value> lbs = forallOp.getLowerBound(rewriter);
+  SmallVector<Value> ubs = forallOp.getUpperBound(rewriter);
+  SmallVector<Value> steps = forallOp.getStep(rewriter);
 
   // Create empty scf.parallel op.
   auto parallelOp = rewriter.create<scf::ParallelOp>(loc, lbs, ubs, steps);

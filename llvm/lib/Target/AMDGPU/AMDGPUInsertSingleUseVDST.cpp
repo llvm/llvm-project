@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUGenSearchableTables.inc"
 #include "GCNSubtarget.h"
 #include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
@@ -214,12 +215,14 @@ public:
           RegisterUseCount[Unit]++;
 
         // Do not attempt to optimise across exec mask changes.
-        if (MI.modifiesRegister(AMDGPU::EXEC, TRI)) {
+        if (MI.modifiesRegister(AMDGPU::EXEC, TRI) ||
+            AMDGPU::isInvalidSingleUseConsumerInst(MI.getOpcode())) {
           for (auto &UsedReg : RegisterUseCount)
             UsedReg.second = 2;
         }
 
-        if (!SIInstrInfo::isVALU(MI))
+        if (!SIInstrInfo::isVALU(MI) ||
+            AMDGPU::isInvalidSingleUseProducerInst(MI.getOpcode()))
           continue;
         if (AllProducerOperandsAreSingleUse) {
           SingleUseProducerPositions.push_back({VALUInstrCount, &MI});

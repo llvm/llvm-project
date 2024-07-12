@@ -43,13 +43,6 @@ static CXXRecordDecl *getCurrentInstantiationOf(QualType T,
     return nullptr;
 }
 
-/// Compute the DeclContext that is associated with the given type.
-///
-/// \param T the type for which we are attempting to find a DeclContext.
-///
-/// \returns the declaration context represented by the type T,
-/// or NULL if the declaration context cannot be computed (e.g., because it is
-/// dependent and not the current instantiation).
 DeclContext *Sema::computeDeclContext(QualType T) {
   if (!T->isDependentType())
     if (const TagType *Tag = T->getAs<TagType>())
@@ -58,19 +51,6 @@ DeclContext *Sema::computeDeclContext(QualType T) {
   return ::getCurrentInstantiationOf(T, CurContext);
 }
 
-/// Compute the DeclContext that is associated with the given
-/// scope specifier.
-///
-/// \param SS the C++ scope specifier as it appears in the source
-///
-/// \param EnteringContext when true, we will be entering the context of
-/// this scope specifier, so we can retrieve the declaration context of a
-/// class template or class template partial specialization even if it is
-/// not the current instantiation.
-///
-/// \returns the declaration context represented by the scope specifier @p SS,
-/// or NULL if the declaration context cannot be computed (e.g., because it is
-/// dependent and not the current instantiation).
 DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
                                       bool EnteringContext) {
   if (!SS.isSet() || SS.isInvalid())
@@ -190,11 +170,6 @@ bool Sema::isDependentScopeSpecifier(const CXXScopeSpec &SS) {
   return SS.getScopeRep()->isDependent();
 }
 
-/// If the given nested name specifier refers to the current
-/// instantiation, return the declaration that corresponds to that
-/// current instantiation (C++0x [temp.dep.type]p1).
-///
-/// \param NNS a dependent nested name specifier.
 CXXRecordDecl *Sema::getCurrentInstantiationOf(NestedNameSpecifier *NNS) {
   assert(getLangOpts().CPlusPlus && "Only callable in C++");
   assert(NNS->isDependent() && "Only dependent nested-name-specifier allowed");
@@ -341,11 +316,6 @@ bool Sema::ActOnSuperScopeSpecifier(SourceLocation SuperLoc,
   return false;
 }
 
-/// Determines whether the given declaration is an valid acceptable
-/// result for name lookup of a nested-name-specifier.
-/// \param SD Declaration checked for nested-name-specifier.
-/// \param IsExtension If not null and the declaration is accepted as an
-/// extension, the pointed variable is assigned true.
 bool Sema::isAcceptableNestedNameSpecifier(const NamedDecl *SD,
                                            bool *IsExtension) {
   if (!SD)
@@ -390,29 +360,37 @@ bool Sema::isAcceptableNestedNameSpecifier(const NamedDecl *SD,
 /// (e.g., Base::), perform name lookup for that identifier as a
 /// nested-name-specifier within the given scope, and return the result of that
 /// name lookup.
-NamedDecl *Sema::FindFirstQualifierInScope(Scope *S, NestedNameSpecifier *NNS) {
-  if (!S || !NNS)
-    return nullptr;
+bool Sema::LookupFirstQualifierInScope(Scope *S, NestedNameSpecifier *NNS,
+                                       UnresolvedSetImpl &R) {
+  if (!S)
+    return false;
 
   while (NNS->getPrefix())
     NNS = NNS->getPrefix();
 
-  if (NNS->getKind() != NestedNameSpecifier::Identifier)
-    return nullptr;
-
-  LookupResult Found(*this, NNS->getAsIdentifier(), SourceLocation(),
-                     LookupNestedNameSpecifierName);
+  // FIXME: This is a rather nasty hack! Ideally we should get the results
+  // from LookupTemplateName/BuildCXXNestedNameSpecifier.
+  const IdentifierInfo *II = NNS->getAsIdentifier();
+  if (!II) {
+    if (const auto *DTST =
+            dyn_cast_if_present<DependentTemplateSpecializationType>(
+                NNS->getAsType()))
+      II = DTST->getIdentifier();
+    else
+      return false;
+  }
+  assert(II && "Missing first qualifier in scope");
+  LookupResult Found(*this, II, SourceLocation(),
+                     NNS->getAsIdentifier() ? LookupNestedNameSpecifierName
+                                            : LookupOrdinaryName);
   LookupName(Found, S);
-  assert(!Found.isAmbiguous() && "Cannot handle ambiguities here yet");
 
-  if (!Found.isSingleResult())
-    return nullptr;
+  if (Found.empty())
+    return false;
 
-  NamedDecl *Result = Found.getFoundDecl();
-  if (isAcceptableNestedNameSpecifier(Result))
-    return Result;
-
-  return nullptr;
+  R.addAllDecls(Found.asUnresolvedSet().pairs());
+  Found.suppressDiagnostics();
+  return true;
 }
 
 namespace {
@@ -439,145 +417,84 @@ public:
 
 }
 
-/// Build a new nested-name-specifier for "identifier::", as described
-/// by ActOnCXXNestedNameSpecifier.
-///
-/// \param S Scope in which the nested-name-specifier occurs.
-/// \param IdInfo Parser information about an identifier in the
-///        nested-name-spec.
-/// \param EnteringContext If true, enter the context specified by the
-///        nested-name-specifier.
-/// \param SS Optional nested name specifier preceding the identifier.
-/// \param ScopeLookupResult Provides the result of name lookup within the
-///        scope of the nested-name-specifier that was computed at template
-///        definition time.
-/// \param ErrorRecoveryLookup Specifies if the method is called to improve
-///        error recovery and what kind of recovery is performed.
-/// \param IsCorrectedToColon If not null, suggestion of replace '::' -> ':'
-///        are allowed.  The bool value pointed by this parameter is set to
-///       'true' if the identifier is treated as if it was followed by ':',
-///        not '::'.
-/// \param OnlyNamespace If true, only considers namespaces in lookup.
-///
-/// This routine differs only slightly from ActOnCXXNestedNameSpecifier, in
-/// that it contains an extra parameter \p ScopeLookupResult, which provides
-/// the result of name lookup within the scope of the nested-name-specifier
-/// that was computed at template definition time.
-///
-/// If ErrorRecoveryLookup is true, then this call is used to improve error
-/// recovery.  This means that it should not emit diagnostics, it should
-/// just return true on failure.  It also means it should only return a valid
-/// scope if it *knows* that the result is correct.  It should not return in a
-/// dependent context, for example. Nor will it extend \p SS with the scope
-/// specifier.
 bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
                                        bool EnteringContext, CXXScopeSpec &SS,
-                                       NamedDecl *ScopeLookupResult,
                                        bool ErrorRecoveryLookup,
                                        bool *IsCorrectedToColon,
                                        bool OnlyNamespace) {
   if (IdInfo.Identifier->isEditorPlaceholder())
     return true;
+  if (IsCorrectedToColon)
+    *IsCorrectedToColon = false;
+
+  QualType ObjectType = GetTypeFromParser(IdInfo.ObjectType);
   LookupResult Found(*this, IdInfo.Identifier, IdInfo.IdentifierLoc,
                      OnlyNamespace ? LookupNamespaceName
                                    : LookupNestedNameSpecifierName);
-  QualType ObjectType = GetTypeFromParser(IdInfo.ObjectType);
 
-  // Determine where to perform name lookup
-  DeclContext *LookupCtx = nullptr;
-  bool isDependent = false;
-  if (IsCorrectedToColon)
-    *IsCorrectedToColon = false;
-  if (!ObjectType.isNull()) {
-    // This nested-name-specifier occurs in a member access expression, e.g.,
-    // x->B::f, and we are looking into the type of the object.
-    assert(!SS.isSet() && "ObjectType and scope specifier cannot coexist");
-    LookupCtx = computeDeclContext(ObjectType);
-    isDependent = ObjectType->isDependentType();
-  } else if (SS.isSet()) {
-    // This nested-name-specifier occurs after another nested-name-specifier,
-    // so look into the context associated with the prior nested-name-specifier.
-    LookupCtx = computeDeclContext(SS, EnteringContext);
-    isDependent = isDependentScopeSpecifier(SS);
-    Found.setContextRange(SS.getRange());
+  // C++ [basic.lookup.qual.general]p3:
+  //   Qualified name lookup in a class, namespace, or enumeration performs a
+  //   search of the scope associated with it except as specified below.
+  LookupParsedName(Found, S, &SS, ObjectType,
+                   /*AllowBuiltinCreation=*/false, EnteringContext);
+
+  // C++ [basic.lookup.qual.general]p3:
+  //   [...] Unless otherwise specified, a qualified name undergoes qualified
+  //   name lookup in its lookup context from the point where it appears unless
+  //   the lookup context either is dependent and is not the current
+  //   instantiation or is not a class or class template.
+  if (Found.wasNotFoundInCurrentInstantiation()) {
+    // Don't speculate if we're just trying to improve error recovery.
+    if (ErrorRecoveryLookup)
+      return true;
+
+    // The lookup context is dependent and either:
+    // - it is not the current instantiation, or
+    // - it is the current instantiation, it has at least one dependent base
+    //   class, and qualified lookup found nothing.
+    // Build a dependent nested-name-specifier. We will lookup the name again
+    // during instantiation.
+    SS.Extend(Context, IdInfo.Identifier, IdInfo.IdentifierLoc, IdInfo.CCLoc);
+    return false;
   }
 
   bool ObjectTypeSearchedInScope = false;
-  if (LookupCtx) {
-    // Perform "qualified" name lookup into the declaration context we
-    // computed, which is either the type of the base of a member access
-    // expression or the declaration context associated with a prior
-    // nested-name-specifier.
 
-    // The declaration context must be complete.
-    if (!LookupCtx->isDependentContext() &&
-        RequireCompleteDeclContext(SS, LookupCtx))
-      return true;
-
-    LookupQualifiedName(Found, LookupCtx);
-
-    if (!ObjectType.isNull() && Found.empty()) {
-      // C++ [basic.lookup.classref]p4:
-      //   If the id-expression in a class member access is a qualified-id of
-      //   the form
-      //
-      //        class-name-or-namespace-name::...
-      //
-      //   the class-name-or-namespace-name following the . or -> operator is
-      //   looked up both in the context of the entire postfix-expression and in
-      //   the scope of the class of the object expression. If the name is found
-      //   only in the scope of the class of the object expression, the name
-      //   shall refer to a class-name. If the name is found only in the
-      //   context of the entire postfix-expression, the name shall refer to a
-      //   class-name or namespace-name. [...]
-      //
-      // Qualified name lookup into a class will not find a namespace-name,
-      // so we do not need to diagnose that case specifically. However,
-      // this qualified name lookup may find nothing. In that case, perform
-      // unqualified name lookup in the given scope (if available) or
-      // reconstruct the result from when name lookup was performed at template
-      // definition time.
-      if (S)
-        LookupName(Found, S);
-      else if (ScopeLookupResult)
-        Found.addDecl(ScopeLookupResult);
-
-      ObjectTypeSearchedInScope = true;
+  // C++ [basic.lookup.qual.general]p2:
+  //   A member-qualified name is the (unique) component name, if any, of
+  //   - an unqualified-id or
+  //   - a nested-name-specifier of the form type-name :: or namespace-name ::
+  //   in the id-expression of a class member access expression.
+  //
+  // C++ [basic.lookup.qual.general]p3:
+  //   [...] If nothing is found by qualified lookup for a member-qualified
+  //   name that is the terminal name of a nested-name-specifier and is not
+  //   dependent, it undergoes unqualified lookup.
+  //
+  // In 'x.A::B::y', 'A' will undergo unqualified lookup if qualified lookup
+  // in the type of 'x' finds nothing. If the lookup context is dependent,
+  // we perform the unqualified lookup in the template definition context
+  // and store the results so we can replicate the lookup during instantiation.
+  if (Found.empty() && !ObjectType.isNull()) {
+    if (S) {
+      LookupName(Found, S);
+    } else if (!SS.getUnqualifiedLookups().empty()) {
+      Found.addAllDecls(SS.getUnqualifiedLookups());
+      Found.resolveKind();
     }
-  } else if (!isDependent) {
-    // Perform unqualified name lookup in the current scope.
-    LookupName(Found, S);
+    ObjectTypeSearchedInScope = true;
   }
 
   if (Found.isAmbiguous())
     return true;
 
-  // If we performed lookup into a dependent context and did not find anything,
-  // that's fine: just build a dependent nested-name-specifier.
-  if (Found.empty() && isDependent &&
-      !(LookupCtx && LookupCtx->isRecord() &&
-        (!cast<CXXRecordDecl>(LookupCtx)->hasDefinition() ||
-         !cast<CXXRecordDecl>(LookupCtx)->hasAnyDependentBases()))) {
-    // Don't speculate if we're just trying to improve error recovery.
-    if (ErrorRecoveryLookup)
-      return true;
-
-    // We were not able to compute the declaration context for a dependent
-    // base object type or prior nested-name-specifier, so this
-    // nested-name-specifier refers to an unknown specialization. Just build
-    // a dependent nested-name-specifier.
-    SS.Extend(Context, IdInfo.Identifier, IdInfo.IdentifierLoc, IdInfo.CCLoc);
-    return false;
-  }
-
   if (Found.empty() && !ErrorRecoveryLookup) {
     // If identifier is not found as class-name-or-namespace-name, but is found
     // as other entity, don't look for typos.
     LookupResult R(*this, Found.getLookupNameInfo(), LookupOrdinaryName);
-    if (LookupCtx)
-      LookupQualifiedName(R, LookupCtx);
-    else if (S && !isDependent)
-      LookupName(R, S);
+    LookupParsedName(R, S, &SS, ObjectType,
+                     /*AllowBuiltinCreation=*/false, EnteringContext);
+
     if (!R.empty()) {
       // Don't diagnose problems with this speculative lookup.
       R.suppressDiagnostics();
@@ -603,6 +520,11 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
       return true;
     }
   }
+
+  DeclContext *LookupCtx =
+      SS.isSet()
+          ? computeDeclContext(SS, EnteringContext)
+          : (!ObjectType.isNull() ? computeDeclContext(ObjectType) : nullptr);
 
   if (Found.empty() && !ErrorRecoveryLookup && !getLangOpts().MSVCCompat) {
     // We haven't found anything, and we're not recovering from a
@@ -659,14 +581,14 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
       // scope, reconstruct the result from the template instantiation itself.
       //
       // Note that C++11 does *not* perform this redundant lookup.
-      NamedDecl *OuterDecl;
+      NamedDecl *OuterDecl = nullptr;
       if (S) {
         LookupResult FoundOuter(*this, IdInfo.Identifier, IdInfo.IdentifierLoc,
                                 LookupNestedNameSpecifierName);
         LookupName(FoundOuter, S);
         OuterDecl = FoundOuter.getAsSingle<NamedDecl>();
-      } else
-        OuterDecl = ScopeLookupResult;
+      } else if (!SS.getUnqualifiedLookups().empty())
+        OuterDecl = SS.getUnqualifiedLookups().front().getDecl();
 
       if (isAcceptableNestedNameSpecifier(OuterDecl) &&
           OuterDecl->getCanonicalDecl() != SD->getCanonicalDecl() &&
@@ -844,7 +766,7 @@ bool Sema::ActOnCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
     return true;
 
   return BuildCXXNestedNameSpecifier(S, IdInfo, EnteringContext, SS,
-                                     /*ScopeLookupResult=*/nullptr, false,
+                                     /*ErrorRecoveryLookup=*/false,
                                      IsCorrectedToColon, OnlyNamespace);
 }
 
@@ -898,12 +820,6 @@ bool Sema::ActOnCXXNestedNameSpecifierIndexedPack(CXXScopeSpec &SS,
   return false;
 }
 
-/// IsInvalidUnlessNestedName - This method is used for error recovery
-/// purposes to determine whether the specified identifier is only valid as
-/// a nested name specifier, for example a namespace name.  It is
-/// conservatively correct to always return false from this method.
-///
-/// The arguments are the same as those passed to ActOnCXXNestedNameSpecifier.
 bool Sema::IsInvalidUnlessNestedName(Scope *S, CXXScopeSpec &SS,
                                      NestedNameSpecInfo &IdInfo,
                                      bool EnteringContext) {
@@ -911,7 +827,7 @@ bool Sema::IsInvalidUnlessNestedName(Scope *S, CXXScopeSpec &SS,
     return false;
 
   return !BuildCXXNestedNameSpecifier(S, IdInfo, EnteringContext, SS,
-                                      /*ScopeLookupResult=*/nullptr, true);
+                                      /*ErrorRecoveryLookup=*/true);
 }
 
 bool Sema::ActOnCXXNestedNameSpecifier(Scope *S,
@@ -974,7 +890,7 @@ bool Sema::ActOnCXXNestedNameSpecifier(Scope *S,
       R.setBegin(SS.getRange().getBegin());
 
     Diag(CCLoc, diag::err_non_type_template_in_nested_name_specifier)
-      << (TD && isa<VarTemplateDecl>(TD)) << Template << R;
+        << isa_and_nonnull<VarTemplateDecl>(TD) << Template << R;
     NoteAllFoundTemplates(Template);
     return true;
   }
@@ -1088,12 +1004,6 @@ bool Sema::ShouldEnterDeclaratorScope(Scope *S, const CXXScopeSpec &SS) {
   llvm_unreachable("Invalid NestedNameSpecifier::Kind!");
 }
 
-/// ActOnCXXEnterDeclaratorScope - Called when a C++ scope specifier (global
-/// scope or nested-name-specifier) is parsed, part of a declarator-id.
-/// After this method is called, according to [C++ 3.4.3p3], names should be
-/// looked up in the declarator-id's scope, until the declarator is parsed and
-/// ActOnCXXExitDeclaratorScope is called.
-/// The 'SS' should be a non-empty valid CXXScopeSpec.
 bool Sema::ActOnCXXEnterDeclaratorScope(Scope *S, CXXScopeSpec &SS) {
   assert(SS.isSet() && "Parser passed invalid CXXScopeSpec.");
 
@@ -1116,11 +1026,6 @@ bool Sema::ActOnCXXEnterDeclaratorScope(Scope *S, CXXScopeSpec &SS) {
   return false;
 }
 
-/// ActOnCXXExitDeclaratorScope - Called when a declarator that previously
-/// invoked ActOnCXXEnterDeclaratorScope(), is finished. 'SS' is the same
-/// CXXScopeSpec that was passed to ActOnCXXEnterDeclaratorScope as well.
-/// Used to indicate that names should revert to being looked up in the
-/// defining scope.
 void Sema::ActOnCXXExitDeclaratorScope(Scope *S, const CXXScopeSpec &SS) {
   assert(SS.isSet() && "Parser passed invalid CXXScopeSpec.");
   if (SS.isInvalid())

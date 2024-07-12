@@ -150,9 +150,6 @@ bool LLVMTargetMachine::addAsmPrinter(PassManagerBase &PM,
 Expected<std::unique_ptr<MCStreamer>> LLVMTargetMachine::createMCStreamer(
     raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
     MCContext &Context) {
-  if (Options.MCOptions.MCSaveTempLabels)
-    Context.setAllowTemporaryLabels(false);
-
   const MCSubtargetInfo &STI = *getMCSubtargetInfo();
   const MCAsmInfo &MAI = *getMCAsmInfo();
   const MCRegisterInfo &MRI = *getMCRegisterInfo();
@@ -272,8 +269,6 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
   // libunwind is unable to load compact unwind dynamically, so we must generate
   // DWARF unwind info for the JIT.
   Options.MCOptions.EmitDwarfUnwind = EmitDwarfUnwindType::Always;
-  if (Options.MCOptions.MCSaveTempLabels)
-    Ctx->setAllowTemporaryLabels(false);
 
   // Create the code emitter for the target if it exists.  If not, .o file
   // emission fails.

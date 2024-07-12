@@ -12,8 +12,8 @@
 ; be.
 ;
 ; RUN-ONCE-LABEL: @t1(
-; RUN-ONCE-NEXT: llvm.dbg.value(metadata i32 %0, metadata [[t1_arg0:![0-9]+]], metadata !DIExpression())
-; RUN-ONCE-NEXT: llvm.dbg.value(metadata ptr poison, metadata [[t1_fake_ptr:![0-9]+]], metadata !DIExpression())
+; RUN-ONCE-NEXT: #dbg_value(i32 %0, [[t1_arg0:![0-9]+]], !DIExpression(),
+; RUN-ONCE-NEXT: #dbg_value(ptr poison, [[t1_fake_ptr:![0-9]+]], !DIExpression(),
 ; RUN-ONCE-NEXT: ret void
 define void @t1(i32) !dbg !9 {
   %2 = alloca i32, align 4

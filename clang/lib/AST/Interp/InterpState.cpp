@@ -33,6 +33,8 @@ InterpState::~InterpState() {
   }
 }
 
+void InterpState::cleanup() {}
+
 Frame *InterpState::getCurrentFrame() {
   if (Current && Current->Caller)
     return Current;

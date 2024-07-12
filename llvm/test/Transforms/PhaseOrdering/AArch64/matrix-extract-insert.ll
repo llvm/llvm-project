@@ -182,11 +182,11 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK:       vector.body.1:
 ; CHECK-NEXT:    [[INDEX_1:%.*]] = phi i64 [ 0, [[VECTOR_PH_1]] ], [ [[INDEX_NEXT_1:%.*]], [[VECTOR_BODY_1]] ]
 ; CHECK-NEXT:    [[TMP33:%.*]] = add nuw nsw i64 [[INDEX_1]], 15
-; CHECK-NEXT:    [[TMP34:%.*]] = add i64 [[INDEX_1]], 16
+; CHECK-NEXT:    [[TMP34:%.*]] = add nuw nsw i64 [[INDEX_1]], 16
 ; CHECK-NEXT:    [[TMP35:%.*]] = insertelement <2 x i64> poison, i64 [[TMP33]], i64 0
 ; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <2 x i64> [[TMP35]], i64 [[TMP34]], i64 1
-; CHECK-NEXT:    [[TMP37:%.*]] = add i64 [[INDEX_1]], 17
-; CHECK-NEXT:    [[TMP38:%.*]] = add i64 [[INDEX_1]], 18
+; CHECK-NEXT:    [[TMP37:%.*]] = add nuw nsw i64 [[INDEX_1]], 17
+; CHECK-NEXT:    [[TMP38:%.*]] = add nuw nsw i64 [[INDEX_1]], 18
 ; CHECK-NEXT:    [[TMP39:%.*]] = insertelement <2 x i64> poison, i64 [[TMP37]], i64 0
 ; CHECK-NEXT:    [[TMP40:%.*]] = insertelement <2 x i64> [[TMP39]], i64 [[TMP38]], i64 1
 ; CHECK-NEXT:    [[TMP41:%.*]] = icmp ult <2 x i64> [[TMP36]], <i64 225, i64 225>
@@ -259,11 +259,11 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK:       vector.body.2:
 ; CHECK-NEXT:    [[INDEX_2:%.*]] = phi i64 [ 0, [[VECTOR_PH_2]] ], [ [[INDEX_NEXT_2:%.*]], [[VECTOR_BODY_2]] ]
 ; CHECK-NEXT:    [[TMP64:%.*]] = add nuw nsw i64 [[INDEX_2]], 30
-; CHECK-NEXT:    [[TMP65:%.*]] = add i64 [[INDEX_2]], 31
+; CHECK-NEXT:    [[TMP65:%.*]] = add nuw nsw i64 [[INDEX_2]], 31
 ; CHECK-NEXT:    [[TMP66:%.*]] = insertelement <2 x i64> poison, i64 [[TMP64]], i64 0
 ; CHECK-NEXT:    [[TMP67:%.*]] = insertelement <2 x i64> [[TMP66]], i64 [[TMP65]], i64 1
-; CHECK-NEXT:    [[TMP68:%.*]] = add i64 [[INDEX_2]], 32
-; CHECK-NEXT:    [[TMP69:%.*]] = add i64 [[INDEX_2]], 33
+; CHECK-NEXT:    [[TMP68:%.*]] = add nuw nsw i64 [[INDEX_2]], 32
+; CHECK-NEXT:    [[TMP69:%.*]] = add nuw nsw i64 [[INDEX_2]], 33
 ; CHECK-NEXT:    [[TMP70:%.*]] = insertelement <2 x i64> poison, i64 [[TMP68]], i64 0
 ; CHECK-NEXT:    [[TMP71:%.*]] = insertelement <2 x i64> [[TMP70]], i64 [[TMP69]], i64 1
 ; CHECK-NEXT:    [[TMP72:%.*]] = icmp ult <2 x i64> [[TMP67]], <i64 225, i64 225>
@@ -336,11 +336,11 @@ define void @matrix_extract_insert_loop(i32 %i, ptr nonnull align 8 dereferencea
 ; CHECK:       vector.body.3:
 ; CHECK-NEXT:    [[INDEX_3:%.*]] = phi i64 [ 0, [[VECTOR_PH_3]] ], [ [[INDEX_NEXT_3:%.*]], [[VECTOR_BODY_3]] ]
 ; CHECK-NEXT:    [[TMP95:%.*]] = add nuw nsw i64 [[INDEX_3]], 45
-; CHECK-NEXT:    [[TMP96:%.*]] = add i64 [[INDEX_3]], 46
+; CHECK-NEXT:    [[TMP96:%.*]] = add nuw nsw i64 [[INDEX_3]], 46
 ; CHECK-NEXT:    [[TMP97:%.*]] = insertelement <2 x i64> poison, i64 [[TMP95]], i64 0
 ; CHECK-NEXT:    [[TMP98:%.*]] = insertelement <2 x i64> [[TMP97]], i64 [[TMP96]], i64 1
-; CHECK-NEXT:    [[TMP99:%.*]] = add i64 [[INDEX_3]], 47
-; CHECK-NEXT:    [[TMP100:%.*]] = add i64 [[INDEX_3]], 48
+; CHECK-NEXT:    [[TMP99:%.*]] = add nuw nsw i64 [[INDEX_3]], 47
+; CHECK-NEXT:    [[TMP100:%.*]] = add nuw nsw i64 [[INDEX_3]], 48
 ; CHECK-NEXT:    [[TMP101:%.*]] = insertelement <2 x i64> poison, i64 [[TMP99]], i64 0
 ; CHECK-NEXT:    [[TMP102:%.*]] = insertelement <2 x i64> [[TMP101]], i64 [[TMP100]], i64 1
 ; CHECK-NEXT:    [[TMP103:%.*]] = icmp ult <2 x i64> [[TMP98]], <i64 225, i64 225>

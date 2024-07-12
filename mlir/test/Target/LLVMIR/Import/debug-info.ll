@@ -761,3 +761,35 @@ define void @class_field(ptr %arg1) !dbg !18 {
 !11 = !{!6, !7, !8} ; C -> A, B, C
 
 !18 = distinct !DISubprogram(name: "SP", scope: !3, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+
+; // -----
+
+; Verify the string type is handled correctly
+
+define void @string_type(ptr %arg1) {
+  call void @llvm.dbg.value(metadata ptr %arg1, metadata !4, metadata !DIExpression()), !dbg !10
+  call void @llvm.dbg.value(metadata ptr %arg1, metadata !9, metadata !DIExpression()), !dbg !10
+  ret void
+}
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "debug-info.ll", directory: "/")
+!3 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!4 = !DILocalVariable(scope: !5, name: "string_size", file: !2, type: !3);
+!5 = distinct !DISubprogram(name: "test", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!6 = !DIStringType(name: "character(*)", stringLength: !4, size: 32, align: 8, stringLengthExpression: !8, stringLocationExpression: !7)
+!7 = !DIExpression(DW_OP_push_object_address, DW_OP_deref)
+!8 = !DIExpression(DW_OP_push_object_address, DW_OP_plus_uconst, 8)
+!9 = !DILocalVariable(scope: !5, name: "str", file: !2, type: !6);
+!10 = !DILocation(line: 1, column: 2, scope: !5)
+
+; CHECK: #[[VAR:.+]] = #llvm.di_local_variable<{{.*}}name = "string_size"{{.*}}>
+; CHECK: #llvm.di_string_type<tag = DW_TAG_string_type, name = "character(*)"
+; CHECK-SAME: sizeInBits = 32
+; CHECK-SAME: alignInBits = 8
+; CHECK-SAME: stringLength = #[[VAR]]
+; CHECK-SAME: stringLengthExp = <[DW_OP_push_object_address, DW_OP_plus_uconst(8)]>
+; CHECK-SAME: stringLocationExp = <[DW_OP_push_object_address, DW_OP_deref]>>

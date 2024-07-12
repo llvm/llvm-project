@@ -10,12 +10,12 @@
 // OBJDUMP-NEXT: 0000 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0010 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0020 00000000 00000000 00000000 00000100
-// OBJDUMP-NEXT: 0030 0000ac04 81000000 00000000 00000000
+// OBJDUMP-NEXT: 0030 4000ac04 81000000 00000000 00000000
 // expr_defined
 // OBJDUMP-NEXT: 0040 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0050 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0060 00000000 00000000 00000000 00000100
-// OBJDUMP-NEXT: 0070 0000ac04 81000000 00000000 00000000
+// OBJDUMP-NEXT: 0070 4000ac04 81000000 00000000 00000000
 
 .text
 // ASM: .text
@@ -43,9 +43,11 @@ expr_defined:
   .amdhsa_ieee_mode defined_boolean
   .amdhsa_fp16_overflow defined_boolean
   .amdhsa_tg_split defined_boolean
-  .amdhsa_next_free_vgpr 0
-  .amdhsa_next_free_sgpr 0
+  .amdhsa_next_free_vgpr defined_boolean+1
+  .amdhsa_next_free_sgpr defined_boolean+2
   .amdhsa_accum_offset 4
+  .amdhsa_reserve_vcc defined_boolean
+  .amdhsa_reserve_flat_scratch defined_boolean
 .end_amdhsa_kernel
 
 .set defined_boolean, 1
@@ -57,9 +59,11 @@ expr_defined:
   .amdhsa_ieee_mode defined_boolean
   .amdhsa_fp16_overflow defined_boolean
   .amdhsa_tg_split defined_boolean
-  .amdhsa_next_free_vgpr 0
-  .amdhsa_next_free_sgpr 0
+  .amdhsa_next_free_vgpr defined_boolean+1
+  .amdhsa_next_free_sgpr defined_boolean+2
   .amdhsa_accum_offset 4
+  .amdhsa_reserve_vcc defined_boolean
+  .amdhsa_reserve_flat_scratch defined_boolean
 .end_amdhsa_kernel
 
 // ASM: .amdhsa_kernel expr_defined_later
@@ -82,18 +86,20 @@ expr_defined:
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_z (((((((0&(~128))|(1<<7))&(~1))|(defined_boolean<<0))&(~62))|(0<<1))&512)>>9
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_info (((((((0&(~128))|(1<<7))&(~1))|(defined_boolean<<0))&(~62))|(0<<1))&1024)>>10
 // ASM-NEXT: .amdhsa_system_vgpr_workitem_id (((((((0&(~128))|(1<<7))&(~1))|(defined_boolean<<0))&(~62))|(0<<1))&6144)>>11
-// ASM-NEXT: .amdhsa_next_free_vgpr 0
-// ASM-NEXT: .amdhsa_next_free_sgpr 0
-// ASM-NEXT: .amdhsa_accum_offset (((((((0&(~65536))|(defined_boolean<<16))&(~63))|(0<<0))&63)>>0)+1)*4
+// ASM-NEXT: .amdhsa_next_free_vgpr defined_boolean+1
+// ASM-NEXT: .amdhsa_next_free_sgpr defined_boolean+2
+// ASM-NEXT: .amdhsa_accum_offset (((((((0&(~65536))|(defined_boolean<<16))&(~63))|(((4/4)-1)<<0))&63)>>0)+1)*4
+// ASM-NEXT: .amdhsa_reserve_vcc defined_boolean
+// ASM-NEXT: .amdhsa_reserve_flat_scratch defined_boolean
 // ASM-NEXT: .amdhsa_reserve_xnack_mask 1
-// ASM-NEXT: .amdhsa_float_round_mode_32 (((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~2097152))|(defined_boolean<<21))&(~8388608))|(defined_boolean<<23))&(~67108864))|(defined_boolean<<26))&(~63))|(0<<0))&(~960))|(0<<6))&12288)>>12
-// ASM-NEXT: .amdhsa_float_round_mode_16_64 (((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~2097152))|(defined_boolean<<21))&(~8388608))|(defined_boolean<<23))&(~67108864))|(defined_boolean<<26))&(~63))|(0<<0))&(~960))|(0<<6))&49152)>>14
-// ASM-NEXT: .amdhsa_float_denorm_mode_32 (((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~2097152))|(defined_boolean<<21))&(~8388608))|(defined_boolean<<23))&(~67108864))|(defined_boolean<<26))&(~63))|(0<<0))&(~960))|(0<<6))&196608)>>16
-// ASM-NEXT: .amdhsa_float_denorm_mode_16_64 (((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~2097152))|(defined_boolean<<21))&(~8388608))|(defined_boolean<<23))&(~67108864))|(defined_boolean<<26))&(~63))|(0<<0))&(~960))|(0<<6))&786432)>>18
-// ASM-NEXT: .amdhsa_dx10_clamp (((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~2097152))|(defined_boolean<<21))&(~8388608))|(defined_boolean<<23))&(~67108864))|(defined_boolean<<26))&(~63))|(0<<0))&(~960))|(0<<6))&2097152)>>21
-// ASM-NEXT: .amdhsa_ieee_mode (((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~2097152))|(defined_boolean<<21))&(~8388608))|(defined_boolean<<23))&(~67108864))|(defined_boolean<<26))&(~63))|(0<<0))&(~960))|(0<<6))&8388608)>>23
-// ASM-NEXT: .amdhsa_fp16_overflow (((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~2097152))|(defined_boolean<<21))&(~8388608))|(defined_boolean<<23))&(~67108864))|(defined_boolean<<26))&(~63))|(0<<0))&(~960))|(0<<6))&67108864)>>26
-// ASM-NEXT: .amdhsa_tg_split (((((0&(~65536))|(defined_boolean<<16))&(~63))|(0<<0))&65536)>>16
+// ASM-NEXT: .amdhsa_float_round_mode_32 (((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~2097152))|(defined_boolean<<21))&(~8388608))|(defined_boolean<<23))&(~67108864))|(defined_boolean<<26))&(~63))|((((alignto(max(defined_boolean+1, 1), 8))/8)-1)<<0))&(~960))|((((alignto(max((defined_boolean+2)+(extrasgprs(defined_boolean, defined_boolean, 1)), 1), 8))/8)-1)<<6))&12288)>>12
+// ASM-NEXT: .amdhsa_float_round_mode_16_64 (((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~2097152))|(defined_boolean<<21))&(~8388608))|(defined_boolean<<23))&(~67108864))|(defined_boolean<<26))&(~63))|((((alignto(max(defined_boolean+1, 1), 8))/8)-1)<<0))&(~960))|((((alignto(max((defined_boolean+2)+(extrasgprs(defined_boolean, defined_boolean, 1)), 1), 8))/8)-1)<<6))&49152)>>14
+// ASM-NEXT: .amdhsa_float_denorm_mode_32 (((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~2097152))|(defined_boolean<<21))&(~8388608))|(defined_boolean<<23))&(~67108864))|(defined_boolean<<26))&(~63))|((((alignto(max(defined_boolean+1, 1), 8))/8)-1)<<0))&(~960))|((((alignto(max((defined_boolean+2)+(extrasgprs(defined_boolean, defined_boolean, 1)), 1), 8))/8)-1)<<6))&196608)>>16
+// ASM-NEXT: .amdhsa_float_denorm_mode_16_64 (((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~2097152))|(defined_boolean<<21))&(~8388608))|(defined_boolean<<23))&(~67108864))|(defined_boolean<<26))&(~63))|((((alignto(max(defined_boolean+1, 1), 8))/8)-1)<<0))&(~960))|((((alignto(max((defined_boolean+2)+(extrasgprs(defined_boolean, defined_boolean, 1)), 1), 8))/8)-1)<<6))&786432)>>18
+// ASM-NEXT: .amdhsa_dx10_clamp (((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~2097152))|(defined_boolean<<21))&(~8388608))|(defined_boolean<<23))&(~67108864))|(defined_boolean<<26))&(~63))|((((alignto(max(defined_boolean+1, 1), 8))/8)-1)<<0))&(~960))|((((alignto(max((defined_boolean+2)+(extrasgprs(defined_boolean, defined_boolean, 1)), 1), 8))/8)-1)<<6))&2097152)>>21
+// ASM-NEXT: .amdhsa_ieee_mode (((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~2097152))|(defined_boolean<<21))&(~8388608))|(defined_boolean<<23))&(~67108864))|(defined_boolean<<26))&(~63))|((((alignto(max(defined_boolean+1, 1), 8))/8)-1)<<0))&(~960))|((((alignto(max((defined_boolean+2)+(extrasgprs(defined_boolean, defined_boolean, 1)), 1), 8))/8)-1)<<6))&8388608)>>23
+// ASM-NEXT: .amdhsa_fp16_overflow (((((((((((((((((0&(~786432))|(3<<18))&(~2097152))|(1<<21))&(~8388608))|(1<<23))&(~2097152))|(defined_boolean<<21))&(~8388608))|(defined_boolean<<23))&(~67108864))|(defined_boolean<<26))&(~63))|((((alignto(max(defined_boolean+1, 1), 8))/8)-1)<<0))&(~960))|((((alignto(max((defined_boolean+2)+(extrasgprs(defined_boolean, defined_boolean, 1)), 1), 8))/8)-1)<<6))&67108864)>>26
+// ASM-NEXT: .amdhsa_tg_split (((((0&(~65536))|(defined_boolean<<16))&(~63))|(((4/4)-1)<<0))&65536)>>16 
 // ASM-NEXT: .amdhsa_exception_fp_ieee_invalid_op (((((((0&(~128))|(1<<7))&(~1))|(defined_boolean<<0))&(~62))|(0<<1))&16777216)>>24
 // ASM-NEXT: .amdhsa_exception_fp_denorm_src (((((((0&(~128))|(1<<7))&(~1))|(defined_boolean<<0))&(~62))|(0<<1))&33554432)>>25
 // ASM-NEXT: .amdhsa_exception_fp_ieee_div_zero (((((((0&(~128))|(1<<7))&(~1))|(defined_boolean<<0))&(~62))|(0<<1))&67108864)>>26
@@ -126,9 +132,11 @@ expr_defined:
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_z 0
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_info 0
 // ASM-NEXT: .amdhsa_system_vgpr_workitem_id 0
-// ASM-NEXT: .amdhsa_next_free_vgpr 0
-// ASM-NEXT: .amdhsa_next_free_sgpr 0
+// ASM-NEXT: .amdhsa_next_free_vgpr 2
+// ASM-NEXT: .amdhsa_next_free_sgpr 3
 // ASM-NEXT: .amdhsa_accum_offset 4
+// ASM-NEXT: .amdhsa_reserve_vcc 1
+// ASM-NEXT: .amdhsa_reserve_flat_scratch 1
 // ASM-NEXT: .amdhsa_reserve_xnack_mask 1
 // ASM-NEXT: .amdhsa_float_round_mode_32 0
 // ASM-NEXT: .amdhsa_float_round_mode_16_64 0

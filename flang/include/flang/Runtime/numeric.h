@@ -73,6 +73,20 @@ CppTypeFor<TypeCategory::Integer, 16> RTDECL(Ceiling16_16)(
 #endif
 #endif
 
+// ERFC_SCALED
+CppTypeFor<TypeCategory::Real, 4> RTDECL(ErfcScaled4)(
+    CppTypeFor<TypeCategory::Real, 4>);
+CppTypeFor<TypeCategory::Real, 8> RTDECL(ErfcScaled8)(
+    CppTypeFor<TypeCategory::Real, 8>);
+#if LDBL_MANT_DIG == 64
+CppTypeFor<TypeCategory::Real, 10> RTDECL(ErfcScaled10)(
+    CppTypeFor<TypeCategory::Real, 10>);
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+CppTypeFor<TypeCategory::Real, 16> RTDECL(ErfcScaled16)(
+    CppTypeFor<TypeCategory::Real, 16>);
+#endif
+
 // EXPONENT is defined to return default INTEGER; support INTEGER(4 & 8)
 CppTypeFor<TypeCategory::Integer, 4> RTDECL(Exponent4_4)(
     CppTypeFor<TypeCategory::Real, 4>);

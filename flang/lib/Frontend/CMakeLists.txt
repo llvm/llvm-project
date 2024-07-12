@@ -50,6 +50,7 @@ add_flang_library(flangFrontend
   Passes
   Analysis
   Extensions
+  IRPrinter
   IRReader
   Option
   Support

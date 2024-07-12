@@ -26,6 +26,8 @@ def err_unsupported_environment : Error<"environment '%0' is not supported: '%1'
 def err_unsupported_os : Error<"os '%0' is not supported: '%1'">;
 def err_cannot_read_input_list : Error<"could not read %0 input list '%1': %2">;
 def err_invalid_label: Error<"label '%0' is reserved: use a different label name for -X<label>">;
+def err_directory_scanning: Error<"could not read directory '%0': %1">;
+def err_more_than_one_library: Error<"more than one framework/dynamic library found">;
 } // end of command line category.
 
 let CategoryName = "Verification" in {

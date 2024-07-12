@@ -670,15 +670,11 @@ public:
   /// Whether this declaration comes from another module unit.
   bool isInAnotherModuleUnit() const;
 
-  /// Whether the definition of the declaration should be emitted in external
-  /// sources.
-  bool shouldEmitInExternalSource() const;
-
-  /// Whether this declaration comes from a named module;
-  bool isInNamedModule() const;
-
   /// Whether this declaration comes from explicit global module.
   bool isFromExplicitGlobalModule() const;
+
+  /// Whether this declaration comes from a named module.
+  bool isInNamedModule() const;
 
   /// Return true if this declaration has an attribute which acts as
   /// definition of the entity, such as 'alias' or 'ifunc'.
@@ -708,10 +704,7 @@ public:
 
   /// Set the owning module ID.  This may only be called for
   /// deserialized Decls.
-  void setOwningModuleID(unsigned ID) {
-    assert(isFromASTFile() && "Only works on a deserialized declaration");
-    *((unsigned*)this - 2) = ID;
-  }
+  void setOwningModuleID(unsigned ID);
 
 public:
   /// Determine the availability of the given declaration.
@@ -784,19 +777,11 @@ public:
 
   /// Retrieve the global declaration ID associated with this
   /// declaration, which specifies where this Decl was loaded from.
-  GlobalDeclID getGlobalID() const {
-    if (isFromASTFile())
-      return (*((const GlobalDeclID *)this - 1));
-    return GlobalDeclID();
-  }
+  GlobalDeclID getGlobalID() const;
 
   /// Retrieve the global ID of the module that owns this particular
   /// declaration.
-  unsigned getOwningModuleID() const {
-    if (isFromASTFile())
-      return *((const unsigned*)this - 2);
-    return 0;
-  }
+  unsigned getOwningModuleID() const;
 
 private:
   Module *getOwningModuleSlow() const;
@@ -843,10 +828,7 @@ public:
 
   /// Get the module that owns this declaration for linkage purposes.
   /// There only ever is such a standard C++ module.
-  ///
-  /// \param IgnoreLinkage Ignore the linkage of the entity; assume that
-  /// all declarations in a global module fragment are unowned.
-  Module *getOwningModuleForLinkage(bool IgnoreLinkage = false) const;
+  Module *getOwningModuleForLinkage() const;
 
   /// Determine whether this declaration is definitely visible to name lookup,
   /// independent of whether the owning module is visible.

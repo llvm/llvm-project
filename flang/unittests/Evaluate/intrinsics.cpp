@@ -344,6 +344,7 @@ void TestIntrinsics() {
   TEST(table.GetGenericIntrinsicName("dcos") == "cos");
   TEST(table.GetGenericIntrinsicName("dcosh") == "cosh");
   TEST(table.GetGenericIntrinsicName("ddim") == "dim");
+  TEST(table.GetGenericIntrinsicName("derf") == "erf");
   TEST(table.GetGenericIntrinsicName("dexp") == "exp");
   TEST(table.GetGenericIntrinsicName("dint") == "aint");
   TEST(table.GetGenericIntrinsicName("dlog") == "log");

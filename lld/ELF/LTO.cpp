@@ -147,7 +147,7 @@ static lto::Config createConfig() {
   c.PGOWarnMismatch = config->ltoPGOWarnMismatch;
 
   if (config->emitLLVM) {
-    c.PostInternalizeModuleHook = [](size_t task, const Module &m) {
+    c.PreCodeGenModuleHook = [](size_t task, const Module &m) {
       if (std::unique_ptr<raw_fd_ostream> os =
               openLTOOutputFile(config->outputFile))
         WriteBitcodeToFile(m, *os, false);

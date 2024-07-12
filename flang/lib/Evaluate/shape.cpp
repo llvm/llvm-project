@@ -1037,7 +1037,7 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
       } else if (context_) {
         if (auto moldTypeAndShape{characteristics::TypeAndShape::Characterize(
                 call.arguments().at(1), *context_)}) {
-          if (GetRank(moldTypeAndShape->shape()) == 0) {
+          if (moldTypeAndShape->Rank() == 0) {
             // SIZE= is absent and MOLD= is scalar: result is scalar
             return ScalarShape();
           } else {

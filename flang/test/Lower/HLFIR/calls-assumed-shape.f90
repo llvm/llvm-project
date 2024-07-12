@@ -42,10 +42,10 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_ptr_to_contiguous_assumed(
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_ptr_to_contiguous_assumedEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
 ! CHECK:  %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
-! CHECK:  %[[VAL_3:.*]]:2 = hlfir.copy_in %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> (!fir.box<!fir.ptr<!fir.array<?xf32>>>, i1)
+! CHECK:  %[[VAL_3:.*]]:2 = hlfir.copy_in %[[VAL_2]] to %[[TMP_BOX:.*]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.box<!fir.ptr<!fir.array<?xf32>>>, i1)
 ! CHECK:  %[[VAL_4:.*]] = fir.rebox %[[VAL_3]]#0 : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.box<!fir.array<?xf32>>
 ! CHECK:  fir.call @_QPtakes_contiguous_assumed(%[[VAL_4]]) {{.*}} : (!fir.box<!fir.array<?xf32>>) -> ()
-! CHECK:  hlfir.copy_out %[[VAL_3]]#0, %[[VAL_3]]#1 to %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, i1, !fir.box<!fir.ptr<!fir.array<?xf32>>>) -> ()
+! CHECK:  hlfir.copy_out %[[TMP_BOX]], %[[VAL_3]]#1 to %[[VAL_2]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, i1, !fir.box<!fir.ptr<!fir.array<?xf32>>>) -> ()
 
 subroutine test_ptr_to_contiguous_assumed_classstar(p)
   interface
@@ -59,10 +59,10 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPtest_ptr_to_contiguous_assumed_classstar(
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_ptr_to_contiguous_assumed_classstarEp"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)
 ! CHECK:  %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
-! CHECK:  %[[VAL_3:.*]]:2 = hlfir.copy_in %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> (!fir.box<!fir.ptr<!fir.array<?xf32>>>, i1)
+! CHECK:  %[[VAL_3:.*]]:2 = hlfir.copy_in %[[VAL_2]] to %[[TMP_BOX:.*]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> (!fir.box<!fir.ptr<!fir.array<?xf32>>>, i1)
 ! CHECK:  %[[VAL_4:.*]] = fir.rebox %[[VAL_3]]#0 : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.class<!fir.array<?xnone>>
 ! CHECK:  fir.call @_QPtakes_contiguous_assumed_classstar(%[[VAL_4]]) {{.*}} : (!fir.class<!fir.array<?xnone>>) -> ()
-! CHECK:  hlfir.copy_out %[[VAL_3]]#0, %[[VAL_3]]#1 to %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, i1, !fir.box<!fir.ptr<!fir.array<?xf32>>>) -> ()
+! CHECK:  hlfir.copy_out %[[TMP_BOX]], %[[VAL_3]]#1 to %[[VAL_2]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, i1, !fir.box<!fir.ptr<!fir.array<?xf32>>>) -> ()
 
 subroutine test_ptr_to_assumed_typestar(p)
   interface

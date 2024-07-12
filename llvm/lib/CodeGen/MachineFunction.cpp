@@ -307,7 +307,7 @@ void MachineFunction::clear() {
 }
 
 const DataLayout &MachineFunction::getDataLayout() const {
-  return F.getParent()->getDataLayout();
+  return F.getDataLayout();
 }
 
 /// Get the JumpTableInfo for this function.

@@ -219,30 +219,10 @@ if (IA32 OR INTEL64)
   set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
 endif()
 
-# Find perl executable
-# Perl is used to create omp.h (and other headers) along with kmp_i18n_id.inc and kmp_i18n_default.inc
-find_package(Perl REQUIRED)
-# The perl scripts take the --os=/--arch= flags which expect a certain format for operating systems and arch's.
-# Until the perl scripts are removed, the most portable way to handle this is to have all operating systems that
-# are neither Windows nor Mac (Most Unix flavors) be considered lin to the perl scripts.  This is rooted
-# in that all the Perl scripts check the operating system and will fail if it isn't "valid".  This
-# temporary solution lets us avoid trying to enumerate all the possible OS values inside the Perl modules.
-if(WIN32)
-  set(LIBOMP_PERL_SCRIPT_OS win)
-elseif(APPLE)
-  set(LIBOMP_PERL_SCRIPT_OS mac)
-else()
-  set(LIBOMP_PERL_SCRIPT_OS lin)
-endif()
-if(IA32)
-  set(LIBOMP_PERL_SCRIPT_ARCH 32)
-elseif(MIC)
-  set(LIBOMP_PERL_SCRIPT_ARCH mic)
-elseif(INTEL64)
-  set(LIBOMP_PERL_SCRIPT_ARCH 32e)
-else()
-  set(LIBOMP_PERL_SCRIPT_ARCH ${LIBOMP_ARCH})
-endif()
+# Find python3 executable
+# Python3 is used to create kmp_i18n_id.inc and
+# kmp_i18n_default.inc and for Windows the *.def files.
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
 # Checking features
 # Check if version symbol assembler directives are supported

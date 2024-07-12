@@ -341,6 +341,7 @@ SanitizerMask Solaris::getSupportedSanitizers() const {
     Res |= SanitizerKind::PointerCompare;
     Res |= SanitizerKind::PointerSubtract;
   }
+  Res |= SanitizerKind::SafeStack;
   Res |= SanitizerKind::Vptr;
   return Res;
 }

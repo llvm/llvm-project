@@ -158,6 +158,27 @@ public:
 
   IdentifierInfo *getNSErrorIdent();
 
+  bool GetFormatNSStringIdx(const FormatAttr *Format, unsigned &Idx);
+
+  /// Diagnose use of %s directive in an NSString which is being passed
+  /// as formatting string to formatting method.
+  void DiagnoseCStringFormatDirectiveInCFAPI(const NamedDecl *FDecl,
+                                             Expr **Args, unsigned NumArgs);
+
+  bool isSignedCharBool(QualType Ty);
+
+  void adornBoolConversionDiagWithTernaryFixit(
+      Expr *SourceExpr, const Sema::SemaDiagnosticBuilder &Builder);
+
+  /// Check an Objective-C dictionary literal being converted to the given
+  /// target type.
+  void checkDictionaryLiteral(QualType TargetType,
+                              ObjCDictionaryLiteral *DictionaryLiteral);
+
+  /// Check an Objective-C array literal being converted to the given
+  /// target type.
+  void checkArrayLiteral(QualType TargetType, ObjCArrayLiteral *ArrayLiteral);
+
 private:
   IdentifierInfo *Ident_NSError = nullptr;
 
@@ -383,7 +404,7 @@ public:
   void AddAnyMethodToGlobalPool(Decl *D);
 
   void ActOnStartOfObjCMethodDef(Scope *S, Decl *D);
-  bool isObjCMethodDecl(Decl *D) { return D && isa<ObjCMethodDecl>(D); }
+  bool isObjCMethodDecl(Decl *D) { return isa_and_nonnull<ObjCMethodDecl>(D); }
 
   /// CheckImplementationIvars - This routine checks if the instance variables
   /// listed in the implelementation match those listed in the interface.

@@ -1901,11 +1901,6 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setLibcallName(RTLIB::FPROUND_F32_F16, "__truncsfhf2");
   setLibcallName(RTLIB::FPROUND_F64_F16, "__truncdfhf2");
   setLibcallName(RTLIB::FPEXT_F16_F32, "__extendhfsf2");
-
-  // These cause problems when the shift amount is non-constant.
-  setLibcallName(RTLIB::SHL_I128, nullptr);
-  setLibcallName(RTLIB::SRL_I128, nullptr);
-  setLibcallName(RTLIB::SRA_I128, nullptr);
 }
 
 const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -2110,7 +2105,7 @@ bool HexagonTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::hexagon_L2_loadrb_pbr:
   case Intrinsic::hexagon_L2_loadrub_pbr: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
-    auto &DL = I.getCalledFunction()->getParent()->getDataLayout();
+    auto &DL = I.getDataLayout();
     auto &Cont = I.getCalledFunction()->getParent()->getContext();
     // The intrinsic function call is of the form { ElTy, i8* }
     // @llvm.hexagon.L2.loadXX.pbr(i8*, i32). The pointer and memory access type

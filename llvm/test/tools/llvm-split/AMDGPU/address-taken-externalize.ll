@@ -1,4 +1,4 @@
-; RUN: llvm-split -o %t %s -j 2 -mtriple amdgcn-amd-amdhsa -amdgpu-module-splitting-large-kernel-threshold=0
+; RUN: llvm-split -o %t %s -j 2 -mtriple amdgcn-amd-amdhsa -amdgpu-module-splitting-large-function-threshold=0
 ; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 %s
 ; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 %s
 

@@ -54,7 +54,13 @@ llvm::SmallBitVector getPositionsOfShapeOne(unsigned rank,
                                             ArrayRef<int64_t> shape);
 
 /// Converts an OpFoldResult to a Value. Returns the fold result if it casts to
-/// a Value or creates a ConstantIndexOp if it casts to an IntegerAttribute.
+/// a Value or creates a ConstantOp if it casts to an Integer Attribute.
+/// Other attribute types are not supported.
+Value getValueOrCreateConstantIntOp(OpBuilder &b, Location loc,
+                                    OpFoldResult ofr);
+
+/// Converts an OpFoldResult to a Value. Returns the fold result if it casts to
+/// a Value or creates a ConstantIndexOp if it casts to an Integer Attribute.
 /// Other attribute types are not supported.
 Value getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
                                       OpFoldResult ofr);
@@ -87,6 +93,10 @@ Value createScalarOrSplatConstant(OpBuilder &builder, Location loc, Type type,
                                   int64_t value);
 Value createScalarOrSplatConstant(OpBuilder &builder, Location loc, Type type,
                                   const APFloat &value);
+
+/// Returns the int type of the integer in ofr.
+/// Other attribute types are not supported.
+Type getType(OpFoldResult ofr);
 
 /// Helper struct to build simple arithmetic quantities with minimal type
 /// inference support.

@@ -82,6 +82,8 @@ auto IsVariableHelper::operator()(const Symbol &symbol) const -> Result {
   const Symbol &ultimate{symbol.GetUltimate()};
   return !IsNamedConstant(ultimate) &&
       (ultimate.has<semantics::ObjectEntityDetails>() ||
+          (ultimate.has<semantics::EntityDetails>() &&
+              ultimate.attrs().test(semantics::Attr::TARGET)) ||
           ultimate.has<semantics::AssocEntityDetails>());
 }
 auto IsVariableHelper::operator()(const Component &x) const -> Result {
@@ -998,6 +1000,35 @@ template semantics::UnorderedSymbolSet CollectSymbols(
 template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SubscriptInteger> &);
 
+struct CollectCudaSymbolsHelper : public SetTraverse<CollectCudaSymbolsHelper,
+                                      semantics::UnorderedSymbolSet> {
+  using Base =
+      SetTraverse<CollectCudaSymbolsHelper, semantics::UnorderedSymbolSet>;
+  CollectCudaSymbolsHelper() : Base{*this} {}
+  using Base::operator();
+  semantics::UnorderedSymbolSet operator()(const Symbol &symbol) const {
+    return {symbol};
+  }
+  // Overload some of the operator() to filter out the symbols that are not
+  // of interest for CUDA data transfer logic.
+  semantics::UnorderedSymbolSet operator()(const Subscript &) const {
+    return {};
+  }
+  semantics::UnorderedSymbolSet operator()(const ProcedureRef &) const {
+    return {};
+  }
+};
+template <typename A>
+semantics::UnorderedSymbolSet CollectCudaSymbols(const A &x) {
+  return CollectCudaSymbolsHelper{}(x);
+}
+template semantics::UnorderedSymbolSet CollectCudaSymbols(
+    const Expr<SomeType> &);
+template semantics::UnorderedSymbolSet CollectCudaSymbols(
+    const Expr<SomeInteger> &);
+template semantics::UnorderedSymbolSet CollectCudaSymbols(
+    const Expr<SubscriptInteger> &);
+
 // HasVectorSubscript()
 struct HasVectorSubscriptHelper
     : public AnyTraverse<HasVectorSubscriptHelper, bool,
@@ -1754,13 +1785,34 @@ bool IsSequenceOrBindCType(const DerivedTypeSpec *derived) {
           derived->typeSymbol().get<DerivedTypeDetails>().sequence());
 }
 
+static bool IsSameModule(const Scope *x, const Scope *y) {
+  if (x == y) {
+    return true;
+  } else if (x && y) {
+    // Allow for a builtin module to be read from distinct paths
+    const Symbol *xSym{x->symbol()};
+    const Symbol *ySym{y->symbol()};
+    if (xSym && ySym && xSym->name() == ySym->name()) {
+      const auto *xMod{xSym->detailsIf<ModuleDetails>()};
+      const auto *yMod{ySym->detailsIf<ModuleDetails>()};
+      if (xMod && yMod) {
+        auto xHash{xMod->moduleFileHash()};
+        auto yHash{yMod->moduleFileHash()};
+        return xHash && yHash && *xHash == *yHash;
+      }
+    }
+  }
+  return false;
+}
+
 bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name) {
-  if (!derived) {
-    return false;
-  } else {
+  if (derived) {
     const auto &symbol{derived->typeSymbol()};
-    return &symbol.owner() == symbol.owner().context().GetBuiltinsScope() &&
-        symbol.name() == "__builtin_"s + name;
+    const Scope &scope{symbol.owner()};
+    return symbol.name() == "__builtin_"s + name &&
+        IsSameModule(&scope, scope.context().GetBuiltinsScope());
+  } else {
+    return false;
   }
 }
 
@@ -1788,6 +1840,14 @@ bool IsLockType(const DerivedTypeSpec *derived) {
 
 bool IsNotifyType(const DerivedTypeSpec *derived) {
   return IsBuiltinDerivedType(derived, "notify_type");
+}
+
+bool IsIeeeFlagType(const DerivedTypeSpec *derived) {
+  return IsBuiltinDerivedType(derived, "ieee_flag_type");
+}
+
+bool IsIeeeRoundType(const DerivedTypeSpec *derived) {
+  return IsBuiltinDerivedType(derived, "ieee_round_type");
 }
 
 bool IsTeamType(const DerivedTypeSpec *derived) {

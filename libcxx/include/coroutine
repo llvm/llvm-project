@@ -41,10 +41,10 @@ struct suspend_always;
 #include <__config>
 
 #if _LIBCPP_STD_VER >= 20
-#include <__coroutine/coroutine_handle.h>
-#include <__coroutine/coroutine_traits.h>
-#include <__coroutine/noop_coroutine_handle.h>
-#include <__coroutine/trivial_awaitables.h>
+#  include <__coroutine/coroutine_handle.h>
+#  include <__coroutine/coroutine_traits.h>
+#  include <__coroutine/noop_coroutine_handle.h>
+#  include <__coroutine/trivial_awaitables.h>
 #endif // _LIBCPP_STD_VER >= 20
 
 #include <version>

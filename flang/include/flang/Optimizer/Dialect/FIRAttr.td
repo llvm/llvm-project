@@ -67,6 +67,36 @@ def fir_BoxFieldAttr : I32EnumAttr<
   let cppNamespace = "fir";
 }
 
+def fir_ReduceOperationEnum : I32BitEnumAttr<"ReduceOperationEnum",
+    "intrinsic operations and functions supported by DO CONCURRENT REDUCE",
+    [
+      I32BitEnumAttrCaseBit<"Add", 0, "add">,
+      I32BitEnumAttrCaseBit<"Multiply", 1, "multiply">,
+      I32BitEnumAttrCaseBit<"AND", 2, "and">,
+      I32BitEnumAttrCaseBit<"OR", 3, "or">,
+      I32BitEnumAttrCaseBit<"EQV", 4, "eqv">,
+      I32BitEnumAttrCaseBit<"NEQV", 5, "neqv">,
+      I32BitEnumAttrCaseBit<"MAX", 6, "max">,
+      I32BitEnumAttrCaseBit<"MIN", 7, "min">,
+      I32BitEnumAttrCaseBit<"IAND", 8, "iand">,
+      I32BitEnumAttrCaseBit<"IOR", 9, "ior">,
+      I32BitEnumAttrCaseBit<"EIOR", 10, "eior">
+    ]> {
+  let separator = ", ";
+  let cppNamespace = "::fir";
+  let printBitEnumPrimaryGroups = 1;
+}
+
+def fir_ReduceAttr : fir_Attr<"Reduce"> {
+  let mnemonic = "reduce_attr";
+
+  let parameters = (ins
+    "ReduceOperationEnum":$reduce_operation
+  );
+
+  let assemblyFormat = "`<` $reduce_operation `>`";
+}
+
 // mlir::SideEffects::Resource for modelling operations which add debugging information
 def DebuggingResource : Resource<"::fir::DebuggingResource">;
 

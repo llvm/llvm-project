@@ -321,14 +321,19 @@ void AllSources::EmitMessage(llvm::raw_ostream &o,
 }
 
 const SourceFile *AllSources::GetSourceFile(
-    Provenance at, std::size_t *offset) const {
+    Provenance at, std::size_t *offset, bool topLevel) const {
   const Origin &origin{MapToOrigin(at)};
   return common::visit(common::visitors{
                            [&](const Inclusion &inc) {
-                             if (offset) {
-                               *offset = origin.covers.MemberOffset(at);
+                             if (topLevel && !origin.replaces.empty()) {
+                               return GetSourceFile(
+                                   origin.replaces.start(), offset, topLevel);
+                             } else {
+                               if (offset) {
+                                 *offset = origin.covers.MemberOffset(at);
+                               }
+                               return &inc.source;
                              }
-                             return &inc.source;
                            },
                            [&](const Macro &) {
                              return GetSourceFile(
@@ -380,9 +385,9 @@ std::optional<ProvenanceRange> AllSources::GetFirstFileProvenance() const {
   return std::nullopt;
 }
 
-std::string AllSources::GetPath(Provenance at) const {
+std::string AllSources::GetPath(Provenance at, bool topLevel) const {
   std::size_t offset{0};
-  const SourceFile *source{GetSourceFile(at, &offset)};
+  const SourceFile *source{GetSourceFile(at, &offset, topLevel)};
   return source ? *source->GetSourcePosition(offset).path : ""s;
 }
 
@@ -513,6 +518,16 @@ void CookedSource::Marshal(AllCookedSources &allCookedSources) {
       "(after end of source)"));
   data_ = buffer_.Marshal();
   buffer_.clear();
+  for (std::size_t ffStart : possibleFixedFormContinuations_) {
+    if (ffStart > 0 && ffStart + 1 < data_.size() &&
+        data_[ffStart - 1] == '\n' && data_[ffStart] == ' ') {
+      // This fixed form include line is the first source line in an
+      // #include file (or after an empty one).  Connect it with the previous
+      // source line by deleting its terminal newline.
+      data_[ffStart - 1] = ' ';
+    }
+  }
+  possibleFixedFormContinuations_.clear();
   allCookedSources.Register(*this);
 }
 

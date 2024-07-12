@@ -36,12 +36,15 @@
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SelectOptimize.h"
@@ -881,7 +884,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
   } else {
     // If the target requests it, assign local variables to stack slots relative
     // to one another and simplify frame index references where possible.
-    addPass(LocalStackSlotPass());
+    addPass(LocalStackSlotAllocationPass());
   }
 
   if (TM.Options.EnableIPRA)
@@ -995,7 +998,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addMachineSSAOptimization(
 
   // If the target requests it, assign local variables to stack slots relative
   // to one another and simplify frame index references where possible.
-  addPass(LocalStackSlotPass());
+  addPass(LocalStackSlotAllocationPass());
 
   // With optimization, dead code should already be eliminated. However
   // there is one known exception: lowered code for arguments that are only
@@ -1037,7 +1040,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addTargetRegisterAllocator(
   if (Optimized)
     addPass(RAGreedyPass());
   else
-    addPass(RAFastPass());
+    addPass(RegAllocFastPass());
 }
 
 /// Find and instantiate the register allocation pass requested by this target
@@ -1104,7 +1107,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
 
   // Eventually, we want to run LiveIntervals before PHI elimination.
   if (Opt.EarlyLiveIntervals)
-    addPass(LiveIntervalsPass());
+    addPass(RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>());
 
   addPass(TwoAddressInstructionPass());
   addPass(RegisterCoalescerPass());

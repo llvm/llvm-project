@@ -199,7 +199,7 @@ let SubRegIndices = [sub_vsx0, sub_vsx1] in {
     def VSRp#!add(!srl(Index, 1), 16) :
       VSRPair<!add(!srl(Index, 1), 16), "vsp"#!add(Index, 32),
               [!cast<VR>("V"#Index), !cast<VR>("V"#!add(Index, 1))]>,
-      DwarfRegNum<[-1, -1]>;
+              DwarfRegAlias<!cast<VR>("V"#Index)>;
   }
 }
 

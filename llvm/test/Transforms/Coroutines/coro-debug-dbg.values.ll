@@ -5,21 +5,21 @@
 ; This file is based on coro-debug-frame-variable.ll.
 ; CHECK-LABEL: define void @f(
 ; CHECK:       %[[frame:.*]] = call {{.*}} @llvm.coro.begin
-; CHECK:       call void @llvm.dbg.value(metadata ptr %[[frame]]
-; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetX:[0-9]*]]))
+; CHECK:       #dbg_value(ptr %[[frame]]
+; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetX:[0-9]*]]),
 ;                                                                   ^ No deref at the end, as this variable ("x") is an array;
 ;                                                                     its value is its address. The entire array is in the frame.
-; CHECK:       call void @llvm.dbg.assign(metadata ptr %[[frame]]
+; CHECK:       #dbg_assign(ptr %[[frame]]
 ; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetX]])
 ;; FIXME: Should we be updating the addresses on assigns here as well?
-; CHECK-SAME:    , metadata ptr %[[frame]], metadata !DIExpression())
+; CHECK-SAME:    , ptr %[[frame]], !DIExpression(),
 
-; CHECK:       call void @llvm.dbg.value(metadata ptr %[[frame]]
-; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetSpill:[0-9]*]], DW_OP_deref))
-; CHECK:       call void @llvm.dbg.value(metadata ptr %[[frame]]
-; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetI:[0-9]*]], DW_OP_deref))
-; CHECK:       call void @llvm.dbg.value(metadata ptr %[[frame]]
-; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetJ:[0-9]*]], DW_OP_deref))
+; CHECK:       #dbg_value(ptr %[[frame]]
+; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetSpill:[0-9]*]], DW_OP_deref),
+; CHECK:       #dbg_value(ptr %[[frame]]
+; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetI:[0-9]*]], DW_OP_deref),
+; CHECK:       #dbg_value(ptr %[[frame]]
+; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetJ:[0-9]*]], DW_OP_deref),
 
 ; CHECK-LABEL: void @f.resume(
 ; CHECK-SAME:                 ptr {{.*}} %[[frame:.*]])
@@ -27,14 +27,14 @@
 ; CHECK:         %[[frame_alloca:.*]] = alloca ptr
 ; CHECK-NEXT:    store ptr %[[frame]], ptr %[[frame_alloca]]
 ; CHECK:       init.ready:
-; CHECK:         call void @llvm.dbg.value(metadata ptr %[[frame_alloca]], metadata ![[XVAR_RESUME:[0-9]+]],
+; CHECK:         #dbg_value(ptr %[[frame_alloca]], ![[XVAR_RESUME:[0-9]+]],
 ; CHECK-SAME:        !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[OffsetX]])
 ; CHECK:       await.ready:
-; CHECK:         call void @llvm.dbg.value(metadata ptr %[[frame_alloca]], metadata ![[SPILL_RESUME:[0-9]+]]
+; CHECK:         #dbg_value(ptr %[[frame_alloca]], ![[SPILL_RESUME:[0-9]+]]
 ; CHECK-SAME:        !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[OffsetSpill]], DW_OP_deref)
-; CHECK:         call void @llvm.dbg.value(metadata ptr %[[frame_alloca]], metadata ![[IVAR_RESUME:[0-9]+]],
+; CHECK:         #dbg_value(ptr %[[frame_alloca]], ![[IVAR_RESUME:[0-9]+]],
 ; CHECK-SAME:        !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[OffsetI]], DW_OP_deref)
-; CHECK:         call void @llvm.dbg.value(metadata ptr %[[frame_alloca]], metadata ![[JVAR_RESUME:[0-9]+]],
+; CHECK:         #dbg_value(ptr %[[frame_alloca]], ![[JVAR_RESUME:[0-9]+]],
 ; CHECK-SAME:        !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[OffsetJ]], DW_OP_deref)
 ;
 ; CHECK: ![[RESUME_FN_DBG_NUM]] = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov"

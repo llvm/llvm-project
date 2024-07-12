@@ -1570,8 +1570,7 @@ static void addSymbolizer(
   LabelAddrs.insert(LabelAddrs.end(), LabelAddrsRef.begin(),
                     LabelAddrsRef.end());
   llvm::sort(LabelAddrs);
-  LabelAddrs.resize(std::unique(LabelAddrs.begin(), LabelAddrs.end()) -
-                    LabelAddrs.begin());
+  LabelAddrs.resize(llvm::unique(LabelAddrs) - LabelAddrs.begin());
   // Add the labels.
   for (unsigned LabelNum = 0; LabelNum != LabelAddrs.size(); ++LabelNum) {
     auto Name = std::make_unique<std::string>();
@@ -2688,6 +2687,16 @@ void Dumper::printRelocations() {
            << "VALUE\n";
 
     for (SectionRef Section : P.second) {
+      // CREL sections require decoding, each section may have its own specific
+      // decode problems.
+      if (O.isELF() && ELFSectionRef(Section).getType() == ELF::SHT_CREL) {
+        StringRef Err =
+            cast<const ELFObjectFileBase>(O).getCrelDecodeProblem(Section);
+        if (!Err.empty()) {
+          reportUniqueWarning(Err);
+          continue;
+        }
+      }
       for (const RelocationRef &Reloc : Section.relocations()) {
         uint64_t Address = Reloc.getOffset();
         SmallString<32> RelocName;
@@ -3152,7 +3161,7 @@ void Dumper::printPrivateHeaders() {
 }
 
 static void printFileHeaders(const ObjectFile *O) {
-  if (!O->isELF() && !O->isCOFF())
+  if (!O->isELF() && !O->isCOFF() && !O->isXCOFF())
     reportError(O->getFileName(), "Invalid/Unsupported object file format");
 
   Triple::ArchType AT = O->getArch();

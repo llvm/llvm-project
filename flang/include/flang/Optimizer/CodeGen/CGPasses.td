@@ -61,7 +61,6 @@ def TargetRewritePass : Pass<"target-rewrite", "mlir::ModuleOp"> {
       Certain abstractions in the FIR dialect need to be rewritten to reflect
       representations that may differ based on the target machine.
   }];
-  let constructor = "::fir::createFirTargetRewritePass()";
   let dependentDialects = [ "fir::FIROpsDialect", "mlir::func::FuncDialect",
                             "mlir::DLTIDialect" ];
   let options = [

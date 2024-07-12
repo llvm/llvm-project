@@ -48,10 +48,10 @@ DominatingValue<RValue>::saved_type::save(CodeGenFunction &CGF, RValue rv) {
 
   assert(rv.isAggregate());
   Address V = rv.getAggregateAddress();
-  return saved_type(
-      DominatingValue<Address>::save(CGF, V), rv.isVolatileQualified(),
-      DominatingValue<Address>::needsSaving(V) ? AggregateAddress
-                                               : AggregateLiteral);
+  return saved_type(DominatingValue<Address>::save(CGF, V),
+                    DominatingValue<Address>::needsSaving(V)
+                        ? AggregateAddress
+                        : AggregateLiteral);
 }
 
 /// Given a saved r-value produced by SaveRValue, perform the code
@@ -65,7 +65,7 @@ RValue DominatingValue<RValue>::saved_type::restore(CodeGenFunction &CGF) {
   case AggregateLiteral:
   case AggregateAddress:
     return RValue::getAggregate(
-        DominatingValue<Address>::restore(CGF, AggregateAddr), IsVolatile);
+        DominatingValue<Address>::restore(CGF, AggregateAddr));
   case ComplexAddress: {
     llvm::Value *real = DominatingLLVMValue::restore(CGF, Vals.first);
     llvm::Value *imag = DominatingLLVMValue::restore(CGF, Vals.second);

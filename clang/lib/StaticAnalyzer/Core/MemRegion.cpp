@@ -630,6 +630,17 @@ bool MemRegion::canPrintPrettyAsExpr() const {
   return false;
 }
 
+StringRef MemRegion::getKindStr() const {
+  switch (getKind()) {
+#define REGION(Id, Parent)                                                     \
+  case Id##Kind:                                                               \
+    return #Id;
+#include "clang/StaticAnalyzer/Core/PathSensitive/Regions.def"
+#undef REGION
+  }
+  llvm_unreachable("Unkown kind!");
+}
+
 void MemRegion::printPretty(raw_ostream &os) const {
   assert(canPrintPretty() && "This region cannot be printed pretty.");
   os << "'";
@@ -1155,10 +1166,10 @@ MemRegionManager::getCompoundLiteralRegion(const CompoundLiteralExpr *CL,
   return getSubRegion<CompoundLiteralRegion>(CL, sReg);
 }
 
-const ElementRegion*
+const ElementRegion *
 MemRegionManager::getElementRegion(QualType elementType, NonLoc Idx,
-                                   const SubRegion* superRegion,
-                                   ASTContext &Ctx){
+                                   const SubRegion *superRegion,
+                                   const ASTContext &Ctx) {
   QualType T = Ctx.getCanonicalType(elementType).getUnqualifiedType();
 
   llvm::FoldingSetNodeID ID;

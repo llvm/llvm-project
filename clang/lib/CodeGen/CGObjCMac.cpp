@@ -4072,7 +4072,7 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
 
     llvm::MDBuilder MDHelper(CGM.getLLVMContext());
     Builder.CreateCondBr(Builder.CreateICmpEQ(selfValue, Zero), SelfIsNilBlock,
-                         ContBlock, MDHelper.createBranchWeights(1, 1 << 20));
+                         ContBlock, MDHelper.createUnlikelyBranchWeights());
 
     CGF.EmitBlock(SelfIsNilBlock);
 

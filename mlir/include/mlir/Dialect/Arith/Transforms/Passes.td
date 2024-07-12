@@ -40,9 +40,14 @@ def ArithIntRangeOpts : Pass<"int-range-optimizations"> {
   let summary = "Do optimizations based on integer range analysis";
   let description = [{
     This pass runs integer range analysis and apllies optimizations based on its
-    results. e.g. replace arith.cmpi with const if it can be inferred from
-    args ranges.
+    results. It replaces operations with known-constant results with said constants,
+    rewrites `(0 <= %x < D) mod D` to `%x`.
   }];
+  // Explicitly depend on "arith" because this pass could create operations in
+  // `arith` out of thin air in some cases.
+  let dependentDialects = [
+    "::mlir::arith::ArithDialect"
+  ];
 }
 
 def ArithEmulateUnsupportedFloats : Pass<"arith-emulate-unsupported-floats"> {

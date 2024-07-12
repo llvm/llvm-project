@@ -575,6 +575,10 @@ public:
   // implementation on real-world examples.
   std::string OpenACCMacroOverride;
 
+  // Indicates if the wasm-opt binary must be ignored in the case of a
+  // WebAssembly target.
+  bool NoWasmOpt = false;
+
   LangOptions();
 
   /// Set language defaults for the given input language and

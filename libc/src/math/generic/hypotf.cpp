@@ -42,7 +42,7 @@ LLVM_LIBC_FUNCTION(float, hypotf, (float x, float y)) {
   double err = (x_sq >= y_sq) ? (sum_sq - x_sq) - y_sq : (sum_sq - y_sq) - x_sq;
 
   // Take sqrt in double precision.
-  DoubleBits result(fputil::sqrt(sum_sq));
+  DoubleBits result(fputil::sqrt<double>(sum_sq));
 
   if (!DoubleBits(sum_sq).is_inf_or_nan()) {
     // Correct rounding.

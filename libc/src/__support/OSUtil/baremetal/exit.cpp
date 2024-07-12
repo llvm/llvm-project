@@ -8,10 +8,10 @@
 
 #include "src/__support/OSUtil/exit.h"
 
+namespace LIBC_NAMESPACE::internal {
+
 // This is intended to be provided by the vendor.
 extern "C" [[noreturn]] void __llvm_libc_exit(int status);
-
-namespace LIBC_NAMESPACE::internal {
 
 [[noreturn]] void exit(int status) { __llvm_libc_exit(status); }
 

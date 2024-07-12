@@ -391,10 +391,11 @@ public:
       return true;
     }
     if (O == Option::MaxCacheEntriesCount) {
-      const u32 MaxCount = static_cast<u32>(Value);
-      if (MaxCount > Config::getEntriesArraySize())
+      if (Value < 0)
         return false;
-      atomic_store_relaxed(&MaxEntriesCount, MaxCount);
+      atomic_store_relaxed(
+          &MaxEntriesCount,
+          Min<u32>(static_cast<u32>(Value), Config::getEntriesArraySize()));
       return true;
     }
     if (O == Option::MaxCacheEntrySize) {

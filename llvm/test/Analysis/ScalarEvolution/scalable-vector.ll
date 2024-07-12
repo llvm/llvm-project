@@ -91,13 +91,14 @@ define void @vscale_step_ne_tripcount(i64 %N) vscale_range(2, 1024) {
 ; CHECK-NEXT:    %n.vec = sub i64 %n.rnd.up, %n.mod.vf
 ; CHECK-NEXT:    --> (4 * vscale * ((-1 + (4 * vscale)<nuw><nsw> + %N) /u (4 * vscale)<nuw><nsw>)) U: [0,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK-NEXT:    --> {0,+,(4 * vscale)<nuw><nsw>}<nuw><%vector.body> U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: <<Unknown>> LoopDispositions: { %vector.body: Computable }
+; CHECK-NEXT:    --> {0,+,(4 * vscale)<nuw><nsw>}<nuw><%vector.body> U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: (4 * vscale * ((-1 * vscale * (4 + (-4 * ((-1 + (4 * vscale)<nuw><nsw> + %N) /u (4 * vscale)<nuw><nsw>))<nsw>)<nsw>) /u (4 * vscale)<nuw><nsw>)) LoopDispositions: { %vector.body: Computable }
 ; CHECK-NEXT:    %index.next = add nuw i64 %index, %2
-; CHECK-NEXT:    --> {(4 * vscale)<nuw><nsw>,+,(4 * vscale)<nuw><nsw>}<nuw><%vector.body> U: [8,-3) S: [-9223372036854775808,9223372036854775805) Exits: <<Unknown>> LoopDispositions: { %vector.body: Computable }
+; CHECK-NEXT:    --> {(4 * vscale)<nuw><nsw>,+,(4 * vscale)<nuw><nsw>}<nuw><%vector.body> U: [8,-3) S: [-9223372036854775808,9223372036854775805) Exits: (vscale * (4 + (4 * ((-1 * vscale * (4 + (-4 * ((-1 + (4 * vscale)<nuw><nsw> + %N) /u (4 * vscale)<nuw><nsw>))<nsw>)<nsw>) /u (4 * vscale)<nuw><nsw>))<nuw><nsw>)<nuw>) LoopDispositions: { %vector.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @vscale_step_ne_tripcount
-; CHECK-NEXT:  Loop %vector.body: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %vector.body: Unpredictable constant max backedge-taken count.
-; CHECK-NEXT:  Loop %vector.body: Unpredictable symbolic max backedge-taken count.
+; CHECK-NEXT:  Loop %vector.body: backedge-taken count is ((-1 * vscale * (4 + (-4 * ((-1 + (4 * vscale)<nuw><nsw> + %N) /u (4 * vscale)<nuw><nsw>))<nsw>)<nsw>) /u (4 * vscale)<nuw><nsw>)
+; CHECK-NEXT:  Loop %vector.body: constant max backedge-taken count is i64 2305843009213693951
+; CHECK-NEXT:  Loop %vector.body: symbolic max backedge-taken count is ((-1 * vscale * (4 + (-4 * ((-1 + (4 * vscale)<nuw><nsw> + %N) /u (4 * vscale)<nuw><nsw>))<nsw>)<nsw>) /u (4 * vscale)<nuw><nsw>)
+; CHECK-NEXT:  Loop %vector.body: Trip multiple is 1
 ;
 entry:
   %0 = sub i64 -1, %N

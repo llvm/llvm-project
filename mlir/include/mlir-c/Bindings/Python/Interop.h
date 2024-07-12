@@ -39,6 +39,7 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/IntegerSet.h"
 #include "mlir-c/Pass.h"
+#include "mlir-c/Rewrite.h"
 
 // The 'mlir' Python package is relocatable and supports co-existing in multiple
 // projects. Each project must define its outer package prefix with this define
@@ -282,6 +283,26 @@ static inline MlirModule mlirPythonCapsuleToModule(PyObject *capsule) {
   void *ptr = PyCapsule_GetPointer(capsule, MLIR_PYTHON_CAPSULE_MODULE);
   MlirModule module = {ptr};
   return module;
+}
+
+/** Creates a capsule object encapsulating the raw C-API
+ * MlirFrozenRewritePatternSet.
+ * The returned capsule does not extend or affect ownership of any Python
+ * objects that reference the module in any way. */
+static inline PyObject *
+mlirPythonFrozenRewritePatternSetToCapsule(MlirFrozenRewritePatternSet pm) {
+  return PyCapsule_New(MLIR_PYTHON_GET_WRAPPED_POINTER(pm),
+                       MLIR_PYTHON_CAPSULE_PASS_MANAGER, NULL);
+}
+
+/** Extracts an MlirFrozenRewritePatternSet from a capsule as produced from
+ * mlirPythonFrozenRewritePatternSetToCapsule. If the capsule is not of the
+ * right type, then a null module is returned. */
+static inline MlirFrozenRewritePatternSet
+mlirPythonCapsuleToFrozenRewritePatternSet(PyObject *capsule) {
+  void *ptr = PyCapsule_GetPointer(capsule, MLIR_PYTHON_CAPSULE_PASS_MANAGER);
+  MlirFrozenRewritePatternSet pm = {ptr};
+  return pm;
 }
 
 /** Creates a capsule object encapsulating the raw C-API MlirPassManager.
