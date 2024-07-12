@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_NEW_H
 
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
 #include <stddef.h> // For size_t
 #include <stdlib.h> // For malloc, free etc.
@@ -24,7 +23,7 @@ enum class align_val_t : size_t {};
 
 } // namespace std
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 class AllocChecker {
   bool success = false;
@@ -53,7 +52,7 @@ public:
   }
 };
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 LIBC_INLINE void *operator new(size_t size,
                                LIBC_NAMESPACE::AllocChecker &ac) noexcept {
