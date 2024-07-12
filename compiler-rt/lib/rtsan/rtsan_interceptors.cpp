@@ -14,6 +14,7 @@
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 
 #include "interception/interception.h"
+#include "rtsan/rtsan.h"
 #include "rtsan/rtsan_context.h"
 
 #if SANITIZER_APPLE
@@ -34,6 +35,30 @@
 #include <unistd.h>
 
 using namespace __sanitizer;
+
+using __rtsan::rtsan_init_is_running;
+using __rtsan::rtsan_initialized;
+
+constexpr uptr kEarlyAllocBufSize = 16384;
+static uptr allocated_bytes;
+static char early_alloc_buf[kEarlyAllocBufSize];
+
+static bool IsInEarlyAllocBuf(const void *ptr) {
+  return ((uptr)ptr >= (uptr)early_alloc_buf &&
+          ((uptr)ptr - (uptr)early_alloc_buf) < sizeof(early_alloc_buf));
+}
+
+template <typename T> T min(T a, T b) { return a < b ? a : b; }
+
+// Handle allocation requests early (before all interceptors are setup). dlsym,
+// for example, calls calloc.
+static void *HandleEarlyAlloc(uptr size) {
+  void *Mem = (void *)&early_alloc_buf[allocated_bytes];
+  allocated_bytes += size;
+  CHECK_LT(allocated_bytes, kEarlyAllocBufSize);
+  return Mem;
+}
+
 
 void ExpectNotRealtime(const char *intercepted_function_name) {
   __rtsan::GetContextForThisThread().ExpectNotRealtime(
@@ -238,11 +263,19 @@ INTERCEPTOR(int, nanosleep, const struct timespec *rqtp,
 // Memory
 
 INTERCEPTOR(void *, calloc, SIZE_T num, SIZE_T size) {
+  if (rtsan_init_is_running && REAL(calloc) == nullptr) {
+    // Note: EarlyAllocBuf is initialized with zeros.
+    return HandleEarlyAlloc(num * size);
+  }
+
   ExpectNotRealtime("calloc");
   return REAL(calloc)(num, size);
 }
 
 INTERCEPTOR(void, free, void *ptr) {
+  if (IsInEarlyAllocBuf(ptr))
+    return;
+
   if (ptr != NULL) {
     ExpectNotRealtime("free");
   }
@@ -250,6 +283,10 @@ INTERCEPTOR(void, free, void *ptr) {
 }
 
 INTERCEPTOR(void *, malloc, SIZE_T size) {
+  if (rtsan_init_is_running && REAL(malloc) == nullptr) {
+    return HandleEarlyAlloc(size);
+  }
+
   ExpectNotRealtime("malloc");
   return REAL(malloc)(size);
 }
