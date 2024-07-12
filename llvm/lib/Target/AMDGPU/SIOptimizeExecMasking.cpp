@@ -84,7 +84,7 @@ public:
 
 INITIALIZE_PASS_BEGIN(SIOptimizeExecMasking, DEBUG_TYPE,
                       "SI optimize exec mask operations", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(SIOptimizeExecMasking, DEBUG_TYPE,
                     "SI optimize exec mask operations", false, false)
 

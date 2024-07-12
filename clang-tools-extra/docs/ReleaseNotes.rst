@@ -131,6 +131,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`boost-use-ranges
+  <clang-tidy/checks/boost/use-ranges>` check.
+
+  Detects calls to standard library iterator algorithms that could be replaced
+  with a Boost ranges version instead.
+
 - New :doc:`bugprone-crtp-constructor-accessibility
   <clang-tidy/checks/bugprone/crtp-constructor-accessibility>` check.
 
@@ -173,6 +179,12 @@ New checks
 
   Finds initializer lists for aggregate types that could be
   written as designated initializers instead.
+
+- New :doc:`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` check.
+
+  Detects calls to standard library iterator algorithms that could be replaced
+  with a ranges version instead.
 
 - New :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check.
@@ -219,6 +231,10 @@ Changes in existing checks
 - Improved :doc:`bugprone-assert-side-effect
   <clang-tidy/checks/bugprone/assert-side-effect>` check by detecting side
   effect from calling a method with non-const reference parameters.
+
+- Improved :doc:`bugprone-assignment-in-if-condition
+  <clang-tidy/checks/bugprone/assignment-in-if-condition>` check by ignoring
+  assignments in the C++20 ``requires`` clause.
 
 - Improved :doc:`bugprone-casting-through-void
   <clang-tidy/checks/bugprone/casting-through-void>` check by ignoring casts
@@ -277,7 +293,10 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-use-after-move
   <clang-tidy/checks/bugprone/use-after-move>` check to also handle
-  calls to ``std::forward``.
+  calls to ``std::forward``. Fixed sequencing of designated initializers. Fixed
+  sequencing of callees: In C++17 and later, the callee of a function is guaranteed
+  to be sequenced before the arguments, so don't warn if the use happens in the
+  callee and the move happens in one of the arguments.
 
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check

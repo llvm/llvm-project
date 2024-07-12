@@ -145,7 +145,7 @@ bool PointerAssignmentChecker::CheckLeftHandSide(const SomeExpr &lhs) {
           DefinabilityFlags{DefinabilityFlag::PointerDefinition}, lhs)}) {
     if (auto *msg{Say(
             "The left-hand side of a pointer assignment is not definable"_err_en_US)}) {
-      msg->Attach(std::move(*whyNot));
+      msg->Attach(std::move(whyNot->set_severity(parser::Severity::Because)));
     }
     return false;
   } else if (evaluate::IsAssumedRank(lhs)) {
@@ -226,7 +226,8 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
             foldingContext_.messages().at(), scope_, {}, rhs)}) {
       if (auto *msg{
               Say("Pointer target is not a definable variable"_warn_en_US)}) {
-        msg->Attach(std::move(*because));
+        msg->Attach(
+            std::move(because->set_severity(parser::Severity::Because)));
       }
       return false;
     }

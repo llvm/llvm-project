@@ -71,7 +71,7 @@ iOS, watchOS, and tvOS, Google Search, the Android operating system, and FreeBSD
 user base of over 1 billion daily active users.
 
 Since its inception, libc++ has focused on delivering high performance, standards-conformance, and portability. It has
-been extensively tested and optimized, making it robust and production ready. libc++ fully implements C++11 and C++14, 
+been extensively tested and optimized, making it robust and production ready. libc++ fully implements C++11 and C++14,
 with C++17, C++20, C++23, and C++26 features being actively developed and making steady progress.
 
 libc++ is continuously integrated and tested on a wide range of platforms and configurations, ensuring its reliability
@@ -137,7 +137,7 @@ Compiler     Versions        Restrictions               Support policy
 Clang        17, 18, 19-git                             latest two stable releases per `LLVM's release page <https://releases.llvm.org>`_ and the development version
 AppleClang   15                                         latest stable release per `Xcode's release page <https://developer.apple.com/documentation/xcode-release-notes>`_
 Open XL      17.1 (AIX)                                 latest stable release per `Open XL's documentation page <https://www.ibm.com/docs/en/openxl-c-and-cpp-aix>`_
-GCC          13              In C++11 or later only     latest stable release per `GCC's release page <https://gcc.gnu.org/releases.html>`_
+GCC          14              In C++11 or later only     latest stable release per `GCC's release page <https://gcc.gnu.org/releases.html>`_
 ============ =============== ========================== =====================
 
 Libc++ also supports common platforms and architectures:

@@ -1079,38 +1079,28 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
   if (!RD->isExternallyVisible())
     return llvm::GlobalVariable::InternalLinkage;
 
-  bool IsInNamedModule = RD->isInNamedModule();
-  // If the CXXRecordDecl are not in a module unit, we need to get
-  // its key function. We're at the end of the translation unit, so the current
-  // key function is fully correct.
-  const CXXMethodDecl *keyFunction =
-      IsInNamedModule ? nullptr : Context.getCurrentKeyFunction(RD);
-  if (IsInNamedModule || (keyFunction && !RD->hasAttr<DLLImportAttr>())) {
+  // We're at the end of the translation unit, so the current key
+  // function is fully correct.
+  const CXXMethodDecl *keyFunction = Context.getCurrentKeyFunction(RD);
+  if (keyFunction && !RD->hasAttr<DLLImportAttr>()) {
     // If this class has a key function, use that to determine the
     // linkage of the vtable.
     const FunctionDecl *def = nullptr;
-    if (keyFunction && keyFunction->hasBody(def))
+    if (keyFunction->hasBody(def))
       keyFunction = cast<CXXMethodDecl>(def);
 
-    bool IsExternalDefinition =
-        IsInNamedModule ? RD->shouldEmitInExternalSource() : !def;
-
-    TemplateSpecializationKind Kind =
-        IsInNamedModule ? RD->getTemplateSpecializationKind()
-                        : keyFunction->getTemplateSpecializationKind();
-
-    switch (Kind) {
-    case TSK_Undeclared:
-    case TSK_ExplicitSpecialization:
+    switch (keyFunction->getTemplateSpecializationKind()) {
+      case TSK_Undeclared:
+      case TSK_ExplicitSpecialization:
       assert(
-          (IsInNamedModule || def || CodeGenOpts.OptimizationLevel > 0 ||
+          (def || CodeGenOpts.OptimizationLevel > 0 ||
            CodeGenOpts.getDebugInfo() != llvm::codegenoptions::NoDebugInfo) &&
-          "Shouldn't query vtable linkage without the class in module units, "
-          "key function, optimizations, or debug info");
-      if (IsExternalDefinition && CodeGenOpts.OptimizationLevel > 0)
+          "Shouldn't query vtable linkage without key function, "
+          "optimizations, or debug info");
+      if (!def && CodeGenOpts.OptimizationLevel > 0)
         return llvm::GlobalVariable::AvailableExternallyLinkage;
 
-      if (keyFunction && keyFunction->isInlined())
+      if (keyFunction->isInlined())
         return !Context.getLangOpts().AppleKext
                    ? llvm::GlobalVariable::LinkOnceODRLinkage
                    : llvm::Function::InternalLinkage;
@@ -1129,7 +1119,7 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
 
       case TSK_ExplicitInstantiationDeclaration:
         llvm_unreachable("Should not have been asked to emit this");
-      }
+    }
   }
 
   // -fapple-kext mode does not support weak linkage, so we must use
@@ -1223,21 +1213,6 @@ bool CodeGenVTables::isVTableExternal(const CXXRecordDecl *RD) {
       TSK == TSK_ExplicitInstantiationDefinition)
     return false;
 
-  // Itanium C++ ABI [5.2.3]:
-  // Virtual tables for dynamic classes are emitted as follows:
-  //
-  // - If the class is templated, the tables are emitted in every object that
-  // references any of them.
-  // - Otherwise, if the class is attached to a module, the tables are uniquely
-  // emitted in the object for the module unit in which it is defined.
-  // - Otherwise, if the class has a key function (see below), the tables are
-  // emitted in the object for the translation unit containing the definition of
-  // the key function. This is unique if the key function is not inline.
-  // - Otherwise, the tables are emitted in every object that references any of
-  // them.
-  if (RD->isInNamedModule())
-    return RD->shouldEmitInExternalSource();
-
   // Otherwise, if the class doesn't have a key function (possibly
   // anymore), the vtable must be defined here.
   const CXXMethodDecl *keyFunction = CGM.getContext().getCurrentKeyFunction(RD);
@@ -1247,7 +1222,13 @@ bool CodeGenVTables::isVTableExternal(const CXXRecordDecl *RD) {
   const FunctionDecl *Def;
   // Otherwise, if we don't have a definition of the key function, the
   // vtable must be defined somewhere else.
-  return !keyFunction->hasBody(Def);
+  if (!keyFunction->hasBody(Def))
+    return true;
+
+  assert(Def && "The body of the key function is not assigned to Def?");
+  // If the non-inline key function comes from another module unit, the vtable
+  // must be defined there.
+  return Def->isInAnotherModuleUnit() && !Def->isInlineSpecified();
 }
 
 /// Given that we're currently at the end of the translation unit, and

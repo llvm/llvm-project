@@ -67,7 +67,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `[func.wrap.func] <https://wg21.link/func.wrap.func>`_
 | `[func.wrap.func.nullptr] <https://wg21.link/func.wrap.func.nullptr>`_",| remove ops `function <https://reviews.llvm.org/D152704>`_,None,Hristo Hristov,|Complete|
 | `[meta.unary.prop] <https://wg21.link/meta.unary.prop>`_,| replaced by `issue LWG3354 <https://wg21.link/LWG3354>`_,None,Unassigned,|Nothing To Do|
-| `[meta.trans.other] <https://wg21.link/meta.trans.other>`_,|,None,Unassigned,|Not Started|
+| `[meta.trans.other] <https://wg21.link/meta.trans.other>`_,| removed by `issue LWG3380 <https://wg21.link/LWG3380>`_,None,Unassigned,|Nothing To Do|
 "| `[type.index.overview] <https://wg21.link/type.index.overview>`_
 | `[type.index.members] <https://wg21.link/type.index.members>`_",| `type_index <https://reviews.llvm.org/D131357>`_,None,Adrian Vogelsgesang,|Complete|
 | `[charconv.syn] <https://wg21.link/charconv.syn>`_,| `to_chars_result <https://reviews.llvm.org/D112366>`_,None,Mark de Wever,|Complete|
@@ -140,7 +140,7 @@ Section,Description,Dependencies,Assignee,Complete
 "| `[class.slice.overview] <https://wg21.link/class.slice.overview>`_
 | `[slice.ops] <https://wg21.link/slice.ops>`_",| `slice <https://reviews.llvm.org/D152617>`_,None,Hristo Hristov,|Complete|
 - `5.12 Clause 27: Time library <https://wg21.link/p1614r2#clause-27-time-library>`_,,,,
-| `[time.syn] <https://wg21.link/time.syn>`_,|,None,Mark de Wever,|In Progress|
+| `[time.syn] <https://wg21.link/time.syn>`_,|,None,Mark de Wever,|Complete|
 | `[time.duration.comparisons] <https://wg21.link/time.duration.comparisons>`_, `chrono::duration <https://reviews.llvm.org/D145881>`_, None, Hristo Hristov, |Complete|
 | `[time.point.comparisons] <https://wg21.link/time.point.comparisons>`_, `chrono::time_point <https://reviews.llvm.org/D146250>`_, None, Hristo Hristov, |Complete|
 "| `[time.cal.day.nonmembers] <https://wg21.link/time.cal.day.nonmembers>`_
@@ -172,7 +172,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `year_month_weekday <https://reviews.llvm.org/D152699>`_
 | `year_month_weekday_last <https://reviews.llvm.org/D152699>`_",None,Hristo Hristov,|Complete|
 `[time.zone.nonmembers] <https://wg21.link/time.zone.nonmembers>`_,"`chrono::time_zone`",,Mark de Wever,|Complete|
-`[time.zone.zonedtime.nonmembers] <https://wg21.link/time.zone.zonedtime.nonmembers>`_,"`chrono::zoned_time`",A ``<chrono>`` implementation,Mark de Wever,|In Progress|
+`[time.zone.zonedtime.nonmembers] <https://wg21.link/time.zone.zonedtime.nonmembers>`_,"`chrono::zoned_time`",,Mark de Wever,|Complete|
 `[time.zone.leap.nonmembers] <https://wg21.link/time.zone.leap.nonmembers>`_,"`chrono::time_leap_seconds`",,Mark de Wever,|Complete|
 `[time.zone.link.nonmembers] <https://wg21.link/time.zone.link.nonmembers>`_,"`chrono::time_zone_link`",,Mark de Wever,|Complete|
 - `5.13 Clause 28: Localization library <https://wg21.link/p1614r2#clause-28-localization-library>`_,,,,

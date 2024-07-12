@@ -282,7 +282,8 @@ bool HexagonTfrCleanup::runOnMachineFunction(MachineFunction &MF) {
   // Map: 32-bit register -> immediate value.
   // 64-bit registers are stored through their subregisters.
   ImmediateMap IMap;
-  SlotIndexes *Indexes = this->getAnalysisIfAvailable<SlotIndexes>();
+  auto *SIWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>();
+  SlotIndexes *Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
 
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   HII = HST.getInstrInfo();

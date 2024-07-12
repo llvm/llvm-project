@@ -325,8 +325,11 @@ LLVM_DUMP_METHOD void Record::dump(llvm::raw_ostream &OS, unsigned Indentation,
 LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
   {
     ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_BLUE, true});
-    OS << "Block " << (const void *)this << "\n";
+    OS << "Block " << (const void *)this;
   }
+  OS << " (";
+  Desc->dump(OS);
+  OS << ")\n";
   unsigned NPointers = 0;
   for (const Pointer *P = Pointers; P; P = P->Next) {
     ++NPointers;

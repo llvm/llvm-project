@@ -290,13 +290,11 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
         case AMDGPU::SRC_PRIVATE_BASE:
         case AMDGPU::SRC_PRIVATE_LIMIT_LO:
         case AMDGPU::SRC_PRIVATE_LIMIT:
+        case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
         case AMDGPU::SGPR_NULL:
         case AMDGPU::SGPR_NULL64:
         case AMDGPU::MODE:
           continue;
-
-        case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
-          llvm_unreachable("src_pops_exiting_wave_id should not be used");
 
         case AMDGPU::NoRegister:
           assert(MI.isDebugInstr() &&

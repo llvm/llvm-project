@@ -3719,8 +3719,11 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       // The C++ standard bans deleting a pointer to a non-object type, which
       // effectively bans deletion of "void*". However, most compilers support
       // this, so we treat it as a warning unless we're in a SFINAE context.
-      Diag(StartLoc, diag::ext_delete_void_ptr_operand)
-        << Type << Ex.get()->getSourceRange();
+      // But we still prohibit this since C++26.
+      Diag(StartLoc, LangOpts.CPlusPlus26 ? diag::err_delete_incomplete
+                                          : diag::ext_delete_void_ptr_operand)
+          << (LangOpts.CPlusPlus26 ? Pointee : Type)
+          << Ex.get()->getSourceRange();
     } else if (Pointee->isFunctionType() || Pointee->isVoidType() ||
                Pointee->isSizelessType()) {
       return ExprError(Diag(StartLoc, diag::err_delete_operand)
@@ -3729,7 +3732,10 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       // FIXME: This can result in errors if the definition was imported from a
       // module but is hidden.
       if (!RequireCompleteType(StartLoc, Pointee,
-                               diag::warn_delete_incomplete, Ex.get())) {
+                               LangOpts.CPlusPlus26
+                                   ? diag::err_delete_incomplete
+                                   : diag::warn_delete_incomplete,
+                               Ex.get())) {
         if (const RecordType *RT = PointeeElem->getAs<RecordType>())
           PointeeRD = cast<CXXRecordDecl>(RT->getDecl());
       }
@@ -5123,6 +5129,83 @@ static bool HasNoThrowOperator(const RecordType *RT, OverloadedOperatorKind Op,
   return false;
 }
 
+static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
+                                                     const CXXRecordDecl *Decl,
+                                                     SourceLocation KeyLoc) {
+  if (Decl->isUnion())
+    return false;
+  if (Decl->isLambda())
+    return Decl->isCapturelessLambda();
+
+  {
+    EnterExpressionEvaluationContext UnevaluatedContext(
+        S, Sema::ExpressionEvaluationContext::Unevaluated);
+    Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/true);
+    Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
+
+    // const ClassT& obj;
+    OpaqueValueExpr Operand(
+        {}, Decl->getTypeForDecl()->getCanonicalTypeUnqualified().withConst(),
+        ExprValueKind::VK_LValue);
+    UnresolvedSet<16> Functions;
+    // obj == obj;
+    S.LookupBinOp(S.TUScope, {}, BinaryOperatorKind::BO_EQ, Functions);
+
+    auto Result = S.CreateOverloadedBinOp(KeyLoc, BinaryOperatorKind::BO_EQ,
+                                          Functions, &Operand, &Operand);
+    if (Result.isInvalid() || SFINAE.hasErrorOccurred())
+      return false;
+
+    const auto *CallExpr = dyn_cast<CXXOperatorCallExpr>(Result.get());
+    if (!CallExpr)
+      return false;
+    const auto *Callee = CallExpr->getDirectCallee();
+    auto ParamT = Callee->getParamDecl(0)->getType();
+    if (!Callee->isDefaulted())
+      return false;
+    if (!ParamT->isReferenceType() && !Decl->isTriviallyCopyable())
+      return false;
+    if (ParamT.getNonReferenceType()->getUnqualifiedDesugaredType() !=
+        Decl->getTypeForDecl())
+      return false;
+  }
+
+  return llvm::all_of(Decl->bases(),
+                      [&](const CXXBaseSpecifier &BS) {
+                        if (const auto *RD = BS.getType()->getAsCXXRecordDecl())
+                          return HasNonDeletedDefaultedEqualityComparison(
+                              S, RD, KeyLoc);
+                        return true;
+                      }) &&
+         llvm::all_of(Decl->fields(), [&](const FieldDecl *FD) {
+           auto Type = FD->getType();
+           if (Type->isArrayType())
+             Type = Type->getBaseElementTypeUnsafe()
+                        ->getCanonicalTypeUnqualified();
+
+           if (Type->isReferenceType() || Type->isEnumeralType())
+             return false;
+           if (const auto *RD = Type->getAsCXXRecordDecl())
+             return HasNonDeletedDefaultedEqualityComparison(S, RD, KeyLoc);
+           return true;
+         });
+}
+
+static bool isTriviallyEqualityComparableType(Sema &S, QualType Type, SourceLocation KeyLoc) {
+  QualType CanonicalType = Type.getCanonicalType();
+  if (CanonicalType->isIncompleteType() || CanonicalType->isDependentType() ||
+      CanonicalType->isEnumeralType() || CanonicalType->isArrayType())
+    return false;
+
+  if (const auto *RD = CanonicalType->getAsCXXRecordDecl()) {
+    if (!HasNonDeletedDefaultedEqualityComparison(S, RD, KeyLoc))
+      return false;
+  }
+
+  return S.getASTContext().hasUniqueObjectRepresentations(
+      CanonicalType, /*CheckIfTriviallyCopyable=*/false);
+}
+
 static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
                                    SourceLocation KeyLoc,
                                    TypeSourceInfo *TInfo) {
@@ -5555,7 +5638,7 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     Self.Diag(KeyLoc, diag::err_builtin_pass_in_regs_non_class) << T;
     return false;
   case UTT_IsTriviallyEqualityComparable:
-    return T.isTriviallyEqualityComparableType(C);
+    return isTriviallyEqualityComparableType(Self, T, KeyLoc);
   }
 }
 
