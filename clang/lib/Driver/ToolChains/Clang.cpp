@@ -3295,16 +3295,17 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   }
 
   // Handle __FINITE_MATH_ONLY__ similarly.
-  bool InfValues, NanValues = true;
+  bool InfValues = true;
+  bool NanValues = true;
   auto processArg = [&](const auto *Arg) {
     if (StringRef(Arg->getValue()) == "-menable-no-nans")
       NanValues = false;
     if (StringRef(Arg->getValue()) == "-menable-no-infs")
       InfValues = false;
   };
-  for (auto *Arg : Args.filtered(options::OPT_Xclang)) {
+  for (auto *Arg : Args.filtered(options::OPT_Xclang))
     processArg(Arg);
-  }
+
   if ((!HonorINFs && !HonorNaNs) || (!NanValues && !InfValues))
     CmdArgs.push_back("-ffinite-math-only");
 
