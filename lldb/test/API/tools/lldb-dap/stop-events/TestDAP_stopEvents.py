@@ -9,7 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestDAP_stopEvents(lldbdap_testcase.DAPTestCaseBase):
-
     @skipIfWindows
     @skipIfRemote
     def test_single_stop_event(self):
