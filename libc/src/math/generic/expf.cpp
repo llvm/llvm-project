@@ -16,11 +16,12 @@
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include <errno.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, expf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
@@ -105,4 +106,4 @@ LLVM_LIBC_FUNCTION(float, expf, (float x)) {
   return static_cast<float>(exp_hi * exp_mid * exp_lo);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

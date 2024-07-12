@@ -14,7 +14,7 @@
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace gpu {
 
 /// Type aliases to the address spaces used by the AMDGPU backend.
@@ -178,6 +178,6 @@ LIBC_INLINE uint64_t fixed_frequency_clock() {
 LIBC_INLINE uint32_t get_cluster_id() { return 0; }
 
 } // namespace gpu
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif
