@@ -19,7 +19,7 @@ int foo(void) {
 // LLVM: define i32 @foo(
 
 static int var = 0;
-// CIR: cir.global "private" internal @var = #cir.int<0> : !s32i
+// CIR: cir.global "private" internal dsolocal @var = #cir.int<0> : !s32i
 int get_var(void) {
   return var;
 }
