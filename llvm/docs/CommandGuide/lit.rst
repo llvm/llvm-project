@@ -151,12 +151,12 @@ EXECUTION OPTIONS
  feature that can be used to conditionally disable (or expect failure in)
  certain tests.
 
-.. option:: --no-time-tests
+.. option:: --skip-test-recording
 
  Disable tracking the wall time individual tests take to execute. This allows
  external build systems to orchestrate the scheduled tests.
 
-.. option:: --time-tests-histogram
+.. option:: --time-tests
 
  Track the wall time individual tests take to execute and includes the results
  in the summary output.  This is useful for determining which tests in a test
