@@ -171,8 +171,9 @@ static void _initializeAvailabilityCheck(bool LoadPlist) {
   strcat(FullPath, PListPath);
   PListPath = FullPath;
 #endif
-  FILE *PropertyList = fopen(PListPath, "r");
-  if (!PropertyList)
+  FILE *PropertyList;
+  errno_t FileOpenResult = fopen_s(PropertyList, PListPath, "r");
+  if (FileOpenResult != 0)
     return;
 
   // Dynamically allocated stuff.
@@ -186,7 +187,7 @@ static void _initializeAvailabilityCheck(bool LoadPlist) {
     goto Fail;
   rewind(PropertyList);
 
-  PListBuf = malloc((size_t)PListFileSize);
+  PListBuf = calloc((size_t)PListFileSize, 1);
   if (!PListBuf)
     goto Fail;
 
@@ -224,7 +225,7 @@ static void _initializeAvailabilityCheck(bool LoadPlist) {
   if (!(*CFStringGetCStringFunc)((CFStringRef)OpaqueValue, VersionStr,
                                  sizeof(VersionStr), CF_STRING_ENCODING_UTF8))
     goto Fail;
-  sscanf(VersionStr, "%d.%d.%d", &GlobalMajor, &GlobalMinor, &GlobalSubminor);
+  sscanf_s(VersionStr, "%d.%d.%d", &GlobalMajor, &GlobalMinor, &GlobalSubminor);
 
 Fail:
   if (PListRef)
