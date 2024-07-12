@@ -125,39 +125,19 @@ entry:
   ret ptr %memchr
 }
 
+; negative tests
+
 define ptr @test_memchr_larger_n(i32 %x) {
 ; CHECK-LABEL: define ptr @test_memchr_larger_n(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[X]] to i8
-; CHECK-NEXT:    switch i8 [[TMP0]], label %[[ENTRY_SPLIT:.*]] [
-; CHECK-NEXT:      i8 48, label %[[BB1:.*]]
-; CHECK-NEXT:      i8 49, label %[[BB2:.*]]
-; CHECK-NEXT:      i8 0, label %[[BB3:.*]]
-; CHECK-NEXT:      i8 50, label %[[BB4:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[BB1]]:
-; CHECK-NEXT:    br label %[[BB6:.*]]
-; CHECK:       [[BB2]]:
-; CHECK-NEXT:    br label %[[BB6]]
-; CHECK:       [[BB3]]:
-; CHECK-NEXT:    br label %[[BB6]]
-; CHECK:       [[BB4]]:
-; CHECK-NEXT:    br label %[[BB6]]
-; CHECK:       [[ENTRY_SPLIT]]:
-; CHECK-NEXT:    [[MEMCHR:%.*]] = phi ptr [ null, %[[ENTRY]] ], [ [[TMP8:%.*]], %[[BB6]] ]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[MEMCHR:%.*]] = call ptr @memchr(ptr @str, i32 [[X]], i64 6)
 ; CHECK-NEXT:    ret ptr [[MEMCHR]]
-; CHECK:       [[BB6]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi i64 [ 0, %[[BB1]] ], [ 1, %[[BB2]] ], [ 2, %[[BB3]] ], [ 3, %[[BB4]] ]
-; CHECK-NEXT:    [[TMP8]] = getelementptr inbounds i8, ptr @str, i64 [[TMP7]]
-; CHECK-NEXT:    br label %[[ENTRY_SPLIT]]
 ;
 entry:
   %memchr = call ptr @memchr(ptr @str, i32 %x, i64 6)
   ret ptr %memchr
 }
-
-; negative tests
 
 define ptr @test_strchr_non_constant(i32 %x, ptr %str) {
 ; CHECK-LABEL: define ptr @test_strchr_non_constant(

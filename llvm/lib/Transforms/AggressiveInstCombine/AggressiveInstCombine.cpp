@@ -1123,9 +1123,13 @@ static bool foldStrChr(CallInst *Call, LibFunc Func, DomTreeUpdater *DTU,
 
   uint64_t N = Str.size();
   if (Func == LibFunc_memchr) {
-    if (auto *ConstInt = dyn_cast<ConstantInt>(Call->getArgOperand(2)))
-      N = std::min(N, ConstInt->getZExtValue());
-    else
+    if (auto *ConstInt = dyn_cast<ConstantInt>(Call->getArgOperand(2))) {
+      uint64_t Val = ConstInt->getZExtValue();
+      /// Ignore the case that n is larger than the size of string.
+      if (Val > N)
+        return false;
+      N = Val;
+    } else
       return false;
   }
 
