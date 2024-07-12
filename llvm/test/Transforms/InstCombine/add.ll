@@ -955,8 +955,8 @@ define i64 @test41_multiuse_constants_cancel(i32 %a) {
 ; CHECK-LABEL: @test41_multiuse_constants_cancel(
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[A:%.*]], 1
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[ADD]] to i64
-; CHECK-NEXT:    [[REASS_ADD:%.*]] = shl nuw nsw i64 [[ZEXT]], 1
-; CHECK-NEXT:    [[EXTRAUSE:%.*]] = add nsw i64 [[REASS_ADD]], -1
+; CHECK-NEXT:    [[SUB:%.*]] = zext i32 [[A]] to i64
+; CHECK-NEXT:    [[EXTRAUSE:%.*]] = add nuw nsw i64 [[ZEXT]], [[SUB]]
 ; CHECK-NEXT:    ret i64 [[EXTRAUSE]]
 ;
   %add = add nuw i32 %a, 1
