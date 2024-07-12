@@ -6461,7 +6461,7 @@ let Predicates = [HasLUT] in {
                    v8i8:$Rm, i32:$idx)),
               (Instr (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub), 
               (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rm, dsub),  VectorIndexS32b_timm:$idx)>;
-    def : Pat<(VT128 (int_aarch64_neon_vluti2_lane VT64:$Rn, 
+    def : Pat<(VT128 (int_aarch64_neon_vluti2_laneq VT64:$Rn,
                    v16i8:$Rm, i32:$idx)),
               (Instr (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rn, dsub), 
               V128:$Rm,  VectorIndexS32b_timm:$idx)>;
@@ -6469,7 +6469,7 @@ let Predicates = [HasLUT] in {
                    v8i8:$Rm, i32:$idx)),
               (Instr V128:$Rn, (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rm, dsub),  
               VectorIndexS32b_timm:$idx)>;
-    def : Pat<(VT128 (int_aarch64_neon_vluti2_lane VT128:$Rn, 
+    def : Pat<(VT128 (int_aarch64_neon_vluti2_laneq VT128:$Rn,
                    v16i8:$Rm, i32:$idx)),
               (Instr V128:$Rn, V128:$Rm,  VectorIndexS32b_timm:$idx)>;
   }
@@ -6478,15 +6478,22 @@ let Predicates = [HasLUT] in {
   defm : Luti2_patterns<LUT2_H, v4i16, v8i16>;
   defm : Luti2_patterns<LUT2_H, v4f16, v8f16>;
   defm : Luti2_patterns<LUT2_H, v4bf16, v8bf16>;
-
+ 
   def : Pat<(v16i8 (int_aarch64_neon_vluti4q_laneq v16i8:$Rn, 
                     v16i8:$Rm, i32:$idx)),
             (LUT4_B VecListOne16b:$Rn, V128:$Rm,  VectorIndexD32b_timm:$idx)>;
+  def : Pat<(v16i8 (int_aarch64_neon_vluti4q_lane v16i8:$Rn,
+                    v8i8:$Rm, i32:$idx)),
+            (LUT4_B VecListOne16b:$Rn, (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rm, dsub),  VectorIndexD32b_timm:$idx)>;
 
   foreach VT = [v8i16, v8f16, v8bf16] in {
     def : Pat<(VT (int_aarch64_neon_vluti4q_laneq_x2 VT:$Rn1, 
                    VT:$Rn2, v16i8:$Rm, i32:$idx)),
               (LUT4_H (REG_SEQUENCE QQ, VecListOne8h:$Rn1, qsub0, VecListOne8h:$Rn2, qsub1), V128:$Rm,  VectorIndexS32b_timm:$idx)>;
+    def : Pat<(VT (int_aarch64_neon_vluti4q_lane_x2 VT:$Rn1,
+                   VT:$Rn2, v8i8:$Rm, i32:$idx)),
+              (LUT4_H (REG_SEQUENCE QQ, VecListOne8h:$Rn1, qsub0, VecListOne8h:$Rn2, qsub1),
+                      (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rm, dsub),  VectorIndexS32b_timm:$idx)>;
   }
 }
 

@@ -547,7 +547,17 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
 
 let TargetPrefix = "aarch64" in {
 def int_aarch64_neon_vluti2_lane : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                                       [llvm_anyvector_ty, llvm_anyvector_ty,
+                                       [llvm_anyvector_ty, llvm_v8i8_ty,
+                                        llvm_i32_ty],
+                                       [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+def int_aarch64_neon_vluti2_laneq : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                       [llvm_anyvector_ty, llvm_v16i8_ty,
+                                        llvm_i32_ty],
+                                       [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+
+def int_aarch64_neon_vluti4q_lane: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                       [LLVMMatchType<0>, llvm_v8i8_ty,
                                         llvm_i32_ty],
                                        [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
@@ -556,6 +566,12 @@ def int_aarch64_neon_vluti4q_laneq: DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                                         llvm_i32_ty],
                                        [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
+
+def int_aarch64_neon_vluti4q_lane_x2:
+    DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                          [LLVMMatchType<0>, LLVMMatchType<0>,
+                           llvm_v8i8_ty, llvm_i32_ty],
+                          [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
 def int_aarch64_neon_vluti4q_laneq_x2:
     DefaultAttrsIntrinsic<[llvm_anyvector_ty],
