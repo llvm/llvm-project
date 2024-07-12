@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "memory_check_utils.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT64
 #include "src/string/memory_utils/op_aarch64.h"
 #include "src/string/memory_utils/op_builtin.h"
@@ -15,7 +16,7 @@
 #include "src/string/memory_utils/op_x86.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 template <typename T> struct has_head_tail {
   template <typename C> static char sfinae(decltype(&C::head_tail));
@@ -344,4 +345,4 @@ TYPED_TEST(LlvmLibcOpTest, Memcmp, MemcmpImplementations) {
   }
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

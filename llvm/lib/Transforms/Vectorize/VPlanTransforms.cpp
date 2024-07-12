@@ -937,7 +937,9 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
     Type *IntTy = Plan.getCanonicalIV()->getScalarType();
 
     // Extract the penultimate value of the recurrence and update VPLiveOut
-    // users of the recurrence splice.
+    // users of the recurrence splice. Note that the extract of the final value
+    // used to resume in the scalar loop is created earlier during VPlan
+    // construction.
     auto *Penultimate = cast<VPInstruction>(MiddleBuilder.createNaryOp(
         VPInstruction::ExtractFromEnd,
         {FOR->getBackedgeValue(),
@@ -945,14 +947,6 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
         {}, "vector.recur.extract.for.phi"));
     RecurSplice->replaceUsesWithIf(
         Penultimate, [](VPUser &U, unsigned) { return isa<VPLiveOut>(&U); });
-
-    // Extract the resume value and create a new VPLiveOut for it.
-    auto *Resume = MiddleBuilder.createNaryOp(
-        VPInstruction::ExtractFromEnd,
-        {FOR->getBackedgeValue(),
-         Plan.getOrAddLiveIn(ConstantInt::get(IntTy, 1))},
-        {}, "vector.recur.extract");
-    Plan.addLiveOut(cast<PHINode>(FOR->getUnderlyingInstr()), Resume);
   }
   return true;
 }
