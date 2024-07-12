@@ -99,7 +99,7 @@ function(add_benchmark_test name source_file)
   endif()
   set_target_properties(${libcxx_target}
     PROPERTIES
-          OUTPUT_NAME "${name}.out"
+          OUTPUT_NAME "${name}.bench.out"
           RUNTIME_OUTPUT_DIRECTORY "${BENCHMARK_OUTPUT_DIR}"
           CXX_EXTENSIONS NO)
   cxx_link_system_libraries(${libcxx_target})
