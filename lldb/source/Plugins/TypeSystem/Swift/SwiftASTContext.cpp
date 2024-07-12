@@ -1937,7 +1937,9 @@ static std::string GetSDKPath(std::string m_description, XcodeSDK sdk) {
 /// Force parsing of the CUs to extract the SDK info.
 static std::string GetSDKPathFromDebugInfo(std::string m_description,
                                            Module &module) {
-
+#if !defined(__APPLE__)
+  return {};
+#else
   auto sdk_or_err = PlatformDarwin::GetSDKPathFromDebugInfo(module);
   if (!sdk_or_err) {
     Debugger::ReportError("Error while parsing SDK path from debug-info: " +
@@ -1954,6 +1956,7 @@ static std::string GetSDKPathFromDebugInfo(std::string m_description,
                       module.GetFileSpec().GetFilename().GetCString());
 
   return GetSDKPath(m_description, std::move(sdk));
+#endif
 }
 
 static std::vector<llvm::StringRef>
