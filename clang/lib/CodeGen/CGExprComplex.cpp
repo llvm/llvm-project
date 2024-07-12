@@ -332,10 +332,17 @@ public:
                             bool IsDivOpCode = false) {
     if (auto *CT = Ty->getAs<ComplexType>()) {
       QualType ElementType = CT->getElementType();
-      if (IsDivOpCode && ElementType->isFloatingType() &&
-          CGF.getLangOpts().getComplexRange() ==
-              LangOptions::ComplexRangeKind::CX_Promoted &&
-          !Features.hasComplexRangeOverride())
+      bool isFloatingType = ElementType->isFloatingType();
+      bool isComplexRangePromoted = CGF.getLangOpts().getComplexRange() ==
+                                    LangOptions::ComplexRangeKind::CX_Promoted;
+      bool hasNoComplexRangeOverride = !Features.hasComplexRangeOverride();
+      bool hasMatchingComplexRange =
+          Features.hasComplexRangeOverride() &&
+          Features.getComplexRangeOverride() ==
+              CGF.getLangOpts().getComplexRange();
+
+      if (IsDivOpCode && isFloatingType && isComplexRangePromoted &&
+          (hasNoComplexRangeOverride || hasMatchingComplexRange))
         return HigherPrecisionTypeForComplexArithmetic(ElementType,
                                                        IsDivOpCode);
       if (ElementType.UseExcessPrecision(CGF.getContext()))
