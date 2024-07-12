@@ -9636,9 +9636,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                        ? CmpInst::BAD_FCMP_PREDICATE
                                        : CmpInst::BAD_ICMP_PREDICATE;
 
-      InstructionCost ScalarCost = TTI->getCmpSelInstrCost(E->getOpcode(), OrigScalarTy,
-                                     Builder.getInt1Ty(), CurrentPred, CostKind,
-                                     VI);
+      InstructionCost ScalarCost = TTI->getCmpSelInstrCost(
+          E->getOpcode(), OrigScalarTy, Builder.getInt1Ty(), CurrentPred,
+          CostKind, VI);
       auto IntrinsicAndUse = canConvertToMinOrMaxIntrinsic(VI);
       if (IntrinsicAndUse.first != Intrinsic::not_intrinsic) {
         IntrinsicCostAttributes CostAttrs(IntrinsicAndUse.first, OrigScalarTy,
@@ -9649,9 +9649,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         // dead and we can adjust the cost by removing their cost.
         if (IntrinsicAndUse.second) {
           auto *CI = cast<CmpInst>(VI->getOperand(0));
-          IntrinsicCost -= TTI->getCmpSelInstrCost(CI->getOpcode(), OrigScalarTy,
-                                                   Builder.getInt1Ty(),
-                                                   CI->getPredicate(), CostKind, CI);
+          IntrinsicCost -= TTI->getCmpSelInstrCost(
+              CI->getOpcode(), OrigScalarTy, Builder.getInt1Ty(),
+              CI->getPredicate(), CostKind, CI);
         }
         ScalarCost = std::min(ScalarCost, IntrinsicCost);
       }
@@ -9675,7 +9675,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         // If the selects are the only uses of the compares, they will be
         // dead and we can adjust the cost by removing their cost.
         if (IntrinsicAndUse.second) {
-          auto *CI = cast<CmpInst>(cast<Instruction>(VL.front())->getOperand(0));
+          auto *CI =
+              cast<CmpInst>(cast<Instruction>(VL.front())->getOperand(0));
           IntrinsicCost -= TTI->getCmpSelInstrCost(CI->getOpcode(), VecTy,
                                                    MaskTy, VecPred, CostKind);
         }
