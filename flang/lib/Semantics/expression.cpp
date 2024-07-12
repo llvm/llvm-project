@@ -1584,8 +1584,7 @@ private:
   std::optional<Expr<SubscriptInteger>> LengthIfGood() const {
     if (type_) {
       auto len{type_->LEN()};
-      if (explicitType_ ||
-          (len && IsConstantExpr(*len) && !ContainsAnyImpliedDoIndex(*len))) {
+      if (len && IsConstantExpr(*len) && !ContainsAnyImpliedDoIndex(*len)) {
         return len;
       }
     }
