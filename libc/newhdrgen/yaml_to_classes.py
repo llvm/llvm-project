@@ -238,6 +238,8 @@ def main(yaml_file, h_def_file, output_dir, add_function=None):
     # header_name = yaml_data[header]
     # if len(header_name) >= 6 and header_name[0:4] == "sys-":
     #     output_file_path = Path(output_dir) / sys / output_file_name
+    #   or maybe:
+    #     output_file_path = Path(other_output_dir) / output_file_name
 
     with open(output_file_path, "w") as f:
         f.write(final_header_content)
