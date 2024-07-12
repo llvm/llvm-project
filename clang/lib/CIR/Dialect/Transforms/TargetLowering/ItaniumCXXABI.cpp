@@ -65,6 +65,10 @@ CIRCXXABI *CreateItaniumCXXABI(LowerModule &LM) {
   // include the other 32-bit ARM oddities: constructor/destructor return values
   // and array cookies.
   case clang::TargetCXXABI::GenericAArch64:
+  case clang::TargetCXXABI::AppleARM64:
+    // TODO: this isn't quite right, clang uses AppleARM64CXXABI which inherits
+    // from ARMCXXABI. We'll have to follow suit.
+    assert(!::cir::MissingFeatures::appleArm64CXXABI());
     return new ItaniumCXXABI(LM, /*UseARMMethodPtrABI=*/true,
                              /*UseARMGuardVarABI=*/true);
 
