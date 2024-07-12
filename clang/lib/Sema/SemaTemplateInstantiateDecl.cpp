@@ -3420,6 +3420,10 @@ Decl *TemplateDeclInstantiator::VisitUsingEnumDecl(UsingEnumDecl *D) {
 
   TypeSourceInfo *TSI = SemaRef.SubstType(D->getEnumType(), TemplateArgs,
                                           D->getLocation(), D->getDeclName());
+
+  if (!TSI)
+    return nullptr;
+
   UsingEnumDecl *NewUD =
       UsingEnumDecl::Create(SemaRef.Context, Owner, D->getUsingLoc(),
                             D->getEnumLoc(), D->getLocation(), TSI);

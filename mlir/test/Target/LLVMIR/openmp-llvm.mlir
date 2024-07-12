@@ -2099,6 +2099,8 @@ llvm.func @omp_sections_empty() -> () {
   omp.sections {
     omp.terminator
   }
+  // CHECK-NEXT: br label %entry
+  // CHECK: entry:
   // CHECK-NEXT: ret void
   llvm.return
 }

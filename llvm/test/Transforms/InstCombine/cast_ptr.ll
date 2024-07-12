@@ -342,6 +342,43 @@ define i32 @ptr_add_in_int_not_inbounds(i32 %x, i32 %y) {
   ret i32 %r
 }
 
+define i32 @ptr_add_in_int_nuw(i32 %x, i32 %y) {
+; CHECK-LABEL: @ptr_add_in_int_nuw(
+; CHECK-NEXT:    [[R:%.*]] = add nuw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ptr = inttoptr i32 %x to ptr
+  %p2 = getelementptr nuw i8, ptr %ptr, i32 %y
+  %r = ptrtoint ptr %p2 to i32
+  ret i32 %r
+}
+
+define i32 @ptr_add_in_int_nusw(i32 %x, i32 %y) {
+; CHECK-LABEL: @ptr_add_in_int_nusw(
+; CHECK-NEXT:    [[R:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %ptr = inttoptr i32 %x to ptr
+  %p2 = getelementptr nusw i8, ptr %ptr, i32 %y
+  %r = ptrtoint ptr %p2 to i32
+  ret i32 %r
+}
+
+define i32 @ptr_add_in_int_nusw_nneg(i32 %x, i32 %y) {
+; CHECK-LABEL: @ptr_add_in_int_nusw_nneg(
+; CHECK-NEXT:    [[NNEG:%.*]] = icmp sgt i32 [[Y:%.*]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NNEG]])
+; CHECK-NEXT:    [[R:%.*]] = add nuw i32 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %nneg = icmp sge i32 %y, 0
+  call void @llvm.assume(i1 %nneg)
+  %ptr = inttoptr i32 %x to ptr
+  %p2 = getelementptr nusw i8, ptr %ptr, i32 %y
+  %r = ptrtoint ptr %p2 to i32
+  ret i32 %r
+}
+
 define i32 @ptr_add_in_int_const(i32 %x) {
 ; CHECK-LABEL: @ptr_add_in_int_const(
 ; CHECK-NEXT:    [[R:%.*]] = add nuw i32 [[X:%.*]], 4096
