@@ -86,7 +86,8 @@ LogicalResult ExtFOnFloat8RewritePattern::match(arith::ExtFOp op) const {
       return failure();
     inType = inVecType.getElementType();
   }
-  return success(isa<Float8E5M2FNUZType, Float8E4M3FNUZType>(inType));
+  return success(isa<Float8E5M2FNUZType, Float8E4M3FNUZType, Float8E5M2Type,
+                     Float8E4M3FNType>(inType));
 }
 
 void ExtFOnFloat8RewritePattern::rewrite(arith::ExtFOp op,
@@ -219,7 +220,11 @@ LogicalResult TruncFToFloat8RewritePattern::match(arith::TruncFOp op) const {
   if (inType && inType.getWidth() <= 8 && saturateFP8)
     // Conversion between 8-bit floats is not supported with truncation enabled.
     return failure();
-  return success(isa<Float8E5M2FNUZType, Float8E4M3FNUZType>(outType));
+
+  return success((
+      (isa<Float8E5M2FNUZType, Float8E4M3FNUZType>(outType) &&
+       chipset.isGfx940()) ||
+      (isa<Float8E5M2Type, Float8E4M3FNType>(outType) && chipset.hasOcpFp8())));
 }
 
 void TruncFToFloat8RewritePattern::rewrite(arith::TruncFOp op,
