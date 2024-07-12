@@ -1664,13 +1664,9 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
   Type *type = GetDIEToType().lookup(decl_die.GetDIE());
   if (decl_die != def_die) {
     GetDIEToType()[def_die.GetDIE()] = type;
-    // Need to update Type ID to refer to the definition DIE. because
-    // it's used in ParseCXXMethod to determine if we need to copy cxx
-    // method types from a declaration DIE to this definition DIE.
-    type->SetID(def_die.GetID());
-    if (DWARFASTParserClang *ast_parser =
-            static_cast<DWARFASTParserClang *>(dwarf_ast))
-      ast_parser->MappingDeclDIEToDefDIE(decl_die, def_die);
+    DWARFASTParserClang *ast_parser =
+        static_cast<DWARFASTParserClang *>(dwarf_ast);
+    ast_parser->MapDeclDIEToDefDIE(decl_die, def_die);
   }
 
   Log *log = GetLog(DWARFLog::DebugInfo | DWARFLog::TypeCompletion);

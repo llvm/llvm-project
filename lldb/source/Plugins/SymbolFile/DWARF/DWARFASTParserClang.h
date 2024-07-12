@@ -109,9 +109,8 @@ public:
   std::string GetDIEClassTemplateParams(
       const lldb_private::plugin::dwarf::DWARFDIE &die) override;
 
-  void MappingDeclDIEToDefDIE(
-      const lldb_private::plugin::dwarf::DWARFDIE &decl_die,
-      const lldb_private::plugin::dwarf::DWARFDIE &def_die);
+  void MapDeclDIEToDefDIE(const lldb_private::plugin::dwarf::DWARFDIE &decl_die,
+                          const lldb_private::plugin::dwarf::DWARFDIE &def_die);
 
 protected:
   /// Protected typedefs and members.

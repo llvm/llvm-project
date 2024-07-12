@@ -824,7 +824,7 @@ DWARFASTParserClang::GetDIEClassTemplateParams(const DWARFDIE &die) {
   return {};
 }
 
-void DWARFASTParserClang::MappingDeclDIEToDefDIE(
+void DWARFASTParserClang::MapDeclDIEToDefDIE(
     const lldb_private::plugin::dwarf::DWARFDIE &decl_die,
     const lldb_private::plugin::dwarf::DWARFDIE &def_die) {
   LinkDeclContextToDIE(GetCachedClangDeclContextForDIE(decl_die), def_die);
@@ -845,12 +845,14 @@ void DWARFASTParserClang::MappingDeclDIEToDefDIE(
               unique_typename, decl_die, decl_declaration,
               decl_attrs.byte_size.value_or(0),
               decl_attrs.is_forward_declaration)) {
-    unique_ast_entry_type->m_die = def_die;
-    if (int32_t def_byte_size = def_attrs.byte_size.value_or(0))
-      unique_ast_entry_type->m_byte_size = def_byte_size;
-    if (def_attrs.decl.IsValid())
-      unique_ast_entry_type->m_declaration = def_attrs.decl;
-    unique_ast_entry_type->m_is_forward_declaration = false;
+    unique_ast_entry_type->UpdateToDefDIE(def_die, def_attrs.decl,
+                                          def_attrs.byte_size.value_or(0));
+  } else if (Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups)) {
+    const dw_tag_t tag = decl_die.Tag();
+    LLDB_LOG(log,
+             "Failed to find {0:x16} {1} ({2}) type \"{3}\" in "
+             "UniqueDWARFASTTypeMap",
+             decl_die.GetID(), DW_TAG_value_to_name(tag), tag, unique_typename);
   }
 }
 
@@ -1683,16 +1685,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
         // to point to the definition DIE.
         if (!attrs.is_forward_declaration &&
             unique_ast_entry_type->m_is_forward_declaration) {
-          unique_ast_entry_type->m_die = die;
-          if (byte_size)
-            unique_ast_entry_type->m_byte_size = byte_size;
-          if (unique_decl.IsValid())
-            unique_ast_entry_type->m_declaration = unique_decl;
-          unique_ast_entry_type->m_is_forward_declaration = false;
-          // Need to update Type ID to refer to the definition DIE. because
-          // it's used in ParseCXXMethod to determine if we need to copy cxx
-          // method types from a declaration DIE to this definition DIE.
-          type_sp->SetID(die.GetID());
+          unique_ast_entry_type->UpdateToDefDIE(die, unique_decl, byte_size);
           clang_type = type_sp->GetForwardCompilerType();
 
           CompilerType compiler_type_no_qualifiers =
