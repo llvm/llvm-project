@@ -239,7 +239,7 @@ Example usage for a project using a compile commands database:
   if (FTimeTrace)
     llvm::timeTraceProfilerInitialize(200, "clang-doc");
 
-  llvm::TimeTraceScope("main", "clang-doc");
+  llvm::TimeTraceScope("main");
 
   // Fail early if an invalid format was provided.
   std::string Format = getFormatString();
@@ -400,7 +400,6 @@ Example usage for a project using a compile commands database:
       llvm::timeTraceProfilerWrite(OS);
     else
       return 1;
-
   }
   return 0;
 }
