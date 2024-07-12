@@ -20,16 +20,16 @@ struct Holder1 {
   polymorphic_base a{};
 } g_holder1;
 
-// CHECK: @{{.*}}Holder1{{.*}} = {{.*}} global %struct.Holder1 { %struct.polymorphic_base { ptr {{.*}} } }
+// CHECK: @{{.*}} = {{.*}} global %struct.Holder1 { %struct.polymorphic_base { ptr {{.*}} } }
 
 struct Holder2 {
   derived_virtual a{};
 } g_holder2;
 
-// CHECK: @{{.*}}Holder2{{.*}} = {{.*}} global %struct.Holder2 zeroinitializer, align 8
+// CHECK: @{{.*}} = {{.*}} global %struct.Holder2 zeroinitializer, align 8
 
 struct Holder3 {
   derived a{};
 } g_holder3;
 
-// CHECK: @{{.*}}Holder3{{.*}} = {{.*}} global { { ptr } } { { ptr } { ptr {{.*}} } }
+// CHECK: @{{.*}} = {{.*}} global { { ptr } } { { ptr } { ptr {{.*}} } }
