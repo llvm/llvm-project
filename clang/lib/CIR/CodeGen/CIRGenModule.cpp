@@ -366,10 +366,13 @@ bool CIRGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
 }
 
 static bool hasDefaultVisibility(CIRGlobalValueInterface GV) {
-  // TODO: we need to have a precise definition of what is a default visibility.
-  // in the context of MILR and CIR, now we default to
-  assert(!MissingFeatures::setDefaultVisibility());
-  return true;
+  // Since we do not support hidden visibility and private visibility,
+  // we can assume that the default visibility is public or private.
+  // The way we use private visibility now simply is just treating it
+  // as either local or private linkage, or just default for declarations
+  assert(!MissingFeatures::hiddenVisibility());
+  assert(!MissingFeatures::protectedVisibility());
+  return GV.isPublic() || GV.isPrivate();
 }
 
 static bool shouldAssumeDSOLocal(const CIRGenModule &CGM,
@@ -1292,7 +1295,7 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
       GV.setLinkage(mlir::cir::GlobalLinkageKind::WeakAnyLinkage);
   }
 
-  // TODO(cir): setNonAliasAttributes(D, GV);
+  setNonAliasAttributes(D, GV);
 
   if (D->getTLSKind() && !GV.getTlsModelAttr()) {
     if (D->getTLSKind() == VarDecl::TLS_Dynamic)

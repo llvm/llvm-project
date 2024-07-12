@@ -253,7 +253,7 @@ mlir::cir::FuncOp CIRGenModule::codegenCXXStructor(GlobalDecl GD) {
   }
   CurCGF = nullptr;
 
-  // TODO: setNonAliasAttributes
+  setNonAliasAttributes(GD, Fn);
   // TODO: SetLLVMFunctionAttributesForDefinition
   return Fn;
 }
