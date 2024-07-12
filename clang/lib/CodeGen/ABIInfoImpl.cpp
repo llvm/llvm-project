@@ -38,6 +38,10 @@ ABIArgInfo DefaultABIInfo::classifyArgumentType(QualType Ty) const {
                                 : Context.LongLongTy))
       return getNaturalAlignIndirect(Ty);
 
+  if (Ty->getAs<VectorType>() &&
+      Context.getTypeSize(Ty) > getTarget().getMaxPossibleAlign())
+    return getNaturalAlignIndirect(Ty);
+
   return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
                                             : ABIArgInfo::getDirect());
 }
@@ -59,6 +63,10 @@ ABIArgInfo DefaultABIInfo::classifyReturnType(QualType RetTy) const {
                                      ? getContext().Int128Ty
                                      : getContext().LongLongTy))
       return getNaturalAlignIndirect(RetTy);
+
+  if (RetTy->getAs<VectorType>() &&
+      getContext().getTypeSize(RetTy) > getTarget().getMaxPossibleAlign())
+    return getNaturalAlignIndirect(RetTy);
 
   return (isPromotableIntegerTypeForABI(RetTy) ? ABIArgInfo::getExtend(RetTy)
                                                : ABIArgInfo::getDirect());
