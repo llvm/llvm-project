@@ -6308,11 +6308,11 @@ TypeResult Sema::ActOnTypeName(Declarator &D) {
     CheckExtraCXXDefaultArguments(D);
   }
 
-  if (const AutoType *AutoT = T->getAs<AutoType>())
-    CheckConstrainedAuto(
-        AutoT,
-        TInfo->getTypeLoc().getContainedAutoTypeLoc().getConceptNameLoc());
-
+  if (const AutoType *AutoT = T->getAs<AutoType>()) {
+    AutoTypeLoc Loc = TInfo->getTypeLoc().getContainedAutoTypeLoc();
+    CheckConstrainedAuto(AutoT,
+                         Loc ? Loc.getConceptNameLoc() : SourceLocation());
+  }
   return CreateParsedType(T, TInfo);
 }
 
