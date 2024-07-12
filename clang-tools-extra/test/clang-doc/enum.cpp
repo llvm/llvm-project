@@ -1,31 +1,25 @@
-// RUN: clang-doc --format=html --doxygen --output=%t/docs --executor=standalone %s
-// RUN: clang-doc --format=md --doxygen --output=%t/docs --executor=standalone %s
-// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/index.html -check-prefix=HTML-INDEX
-// RUN: FileCheck %s -input-file=%t/docs/GlobalNamespace/index.md -check-prefix=MD-INDEX
+// RUN: rm -rf %t && mkdir -p %t
+// RUN: clang-doc --format=html --doxygen --output=%t --executor=standalone %s
+// RUN: clang-doc --format=md --doxygen --output=%t --executor=standalone %s
+// RUN: FileCheck %s < %t/GlobalNamespace/index.html -check-prefix=HTML-INDEX
+// RUN: FileCheck %s < %t/GlobalNamespace/index.md -check-prefix=MD-INDEX
 
 /**
  * @brief For specifying RGB colors
  */
 enum Color {
-  Red, // Red enums
-  Green, // Green enums
-  Blue // Blue enums
+  Red,
+  Green,
+  Blue
 };
 
 // HTML-INDEX: <h1>Global Namespace</h1>
 // HTML-INDEX: <h2 id="Enums">Enums</h2>
-// HTML-INDEX: <div>
-// HTML-INDEX:   <h3 id="{{([0-9A-F]{40})}}">enum Color</h3>
-// HTML-INDEX:   <ul>
-// HTML-INDEX:     <li>Red</li>
-// HTML-INDEX:     <li>Green</li>
-// HTML-INDEX:     <li>Blue</li>
-// HTML-INDEX:   </ul>
-// HTML-INDEX:   <p>Defined at line 9 of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
-// HTML-INDEX:   <div>
-// HTML-INDEX:     <div></div>
-// HTML-INDEX:   </div>
-// HTML-INDEX: </div>
+// HTML-INDEX: <h3 id="{{([0-9A-F]{40})}}">enum Color</h3>
+// HTML-INDEX: <li>Red</li>
+// HTML-INDEX: <li>Green</li>
+// HTML-INDEX: <li>Blue</li>
+// HTML-INDEX: <p>Defined at line 10 of file {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp</p>
 
 // MD-INDEX: # Global Namespace
 // MD-INDEX: ## Enums
@@ -34,5 +28,5 @@ enum Color {
 // MD-INDEX: | Red |
 // MD-INDEX: | Green |
 // MD-INDEX: | Blue |
-// MD-INDEX: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#9*
+// MD-INDEX: *Defined at {{.*}}clang-tools-extra{{[\/]}}test{{[\/]}}clang-doc{{[\/]}}enum.cpp#10*
 // MD-INDEX: **brief** For specifying RGB colors
