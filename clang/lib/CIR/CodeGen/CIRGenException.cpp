@@ -508,7 +508,6 @@ void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
 
   // If the catch was not required, bail out now.
   if (!CatchScope.hasEHBranches()) {
-    llvm_unreachable("NYI");
     CatchScope.clearHandlerBlocks();
     EHStack.popCatch();
     return;

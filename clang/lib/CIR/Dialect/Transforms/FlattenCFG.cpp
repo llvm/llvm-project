@@ -172,6 +172,55 @@ public:
   }
 };
 
+class CIRTryOpFlattening : public mlir::OpRewritePattern<mlir::cir::TryOp> {
+public:
+  using OpRewritePattern<mlir::cir::TryOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::TryOp tryOp,
+                  mlir::PatternRewriter &rewriter) const override {
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
+    auto loc = tryOp.getLoc();
+
+    // Empty scope: just remove it.
+    if (tryOp.getRegion().empty()) {
+      rewriter.eraseOp(tryOp);
+      return mlir::success();
+    }
+
+    // Split the current block before the TryOp to create the inlining
+    // point.
+    auto *currentBlock = rewriter.getInsertionBlock();
+    auto *remainingOpsBlock =
+        rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
+    mlir::Block *continueBlock;
+    continueBlock = remainingOpsBlock;
+
+    // Inline body region.
+    auto *beforeBody = &tryOp.getRegion().front();
+    auto *afterBody = &tryOp.getRegion().back();
+    rewriter.inlineRegionBefore(tryOp.getRegion(), continueBlock);
+
+    // Branch into the body of the region.
+    rewriter.setInsertionPointToEnd(currentBlock);
+    rewriter.create<mlir::cir::BrOp>(loc, mlir::ValueRange(), beforeBody);
+
+    // Replace the tryOp return with a branch that jumps out of the body.
+    rewriter.setInsertionPointToEnd(afterBody);
+    auto yieldOp = cast<mlir::cir::YieldOp>(afterBody->getTerminator());
+    assert(yieldOp.getOperands().size() == 1 && "expect one exact value");
+    auto br = rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
+        yieldOp, yieldOp.getArgs(), continueBlock);
+
+    // Replace the op with values return from the body region.
+    continueBlock->addArgument(br.getDestOperands()[0].getType(),
+                               tryOp.getLoc());
+    rewriter.replaceOp(tryOp, continueBlock->getArguments());
+
+    return mlir::success();
+  }
+};
+
 class CIRLoopOpInterfaceFlattening
     : public mlir::OpInterfaceRewritePattern<mlir::cir::LoopOpInterface> {
 public:
@@ -482,7 +531,7 @@ public:
 void populateFlattenCFGPatterns(RewritePatternSet &patterns) {
   patterns
       .add<CIRIfFlattening, CIRLoopOpInterfaceFlattening, CIRScopeOpFlattening,
-           CIRSwitchOpFlattening, CIRTernaryOpFlattening>(
+           CIRSwitchOpFlattening, CIRTernaryOpFlattening, CIRTryOpFlattening>(
           patterns.getContext());
 }
 
@@ -493,7 +542,7 @@ void FlattenCFGPass::runOnOperation() {
   // Collect operations to apply patterns.
   SmallVector<Operation *, 16> ops;
   getOperation()->walk<mlir::WalkOrder::PostOrder>([&](Operation *op) {
-    if (isa<IfOp, ScopeOp, SwitchOp, LoopOpInterface, TernaryOp>(op))
+    if (isa<IfOp, ScopeOp, SwitchOp, LoopOpInterface, TernaryOp, TryOp>(op))
       ops.push_back(op);
   });
 
