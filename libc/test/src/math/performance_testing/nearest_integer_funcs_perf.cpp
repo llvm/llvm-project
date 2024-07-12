@@ -152,10 +152,10 @@ int main() {
                        FLOAT16_ROUNDS, "ceilf16_perf.log")
   NEAREST_INTEGER_PERF(float16, LIBC_NAMESPACE::floorf16, ::placeholderf16,
                        FLOAT16_ROUNDS, "floorf16_perf.log")
-  NEAREST_INTEGER_PERF(float16, LIBC_NAMESPACE::roundevenf16, ::placeholderf16,
-                       FLOAT16_ROUNDS, "roundevenf16_perf.log")
   NEAREST_INTEGER_PERF(float16, LIBC_NAMESPACE::roundf16, ::placeholderf16,
                        FLOAT16_ROUNDS, "roundf16_perf.log")
+  NEAREST_INTEGER_PERF(float16, LIBC_NAMESPACE::roundevenf16, ::placeholderf16,
+                       FLOAT16_ROUNDS, "roundevenf16_perf.log")
   NEAREST_INTEGER_PERF(float16, LIBC_NAMESPACE::truncf16, ::placeholderf16,
                        FLOAT16_ROUNDS, "truncf16_perf.log")
 
@@ -163,10 +163,10 @@ int main() {
                        "ceilf_perf.log")
   NEAREST_INTEGER_PERF(float, LIBC_NAMESPACE::floorf, ::floorf, FLOAT_ROUNDS,
                        "floorf_perf.log")
-  NEAREST_INTEGER_PERF(float, LIBC_NAMESPACE::roundevenf, ::placeholderf,
-                       FLOAT_ROUNDS, "roundevenf_perf.log")
   NEAREST_INTEGER_PERF(float, LIBC_NAMESPACE::roundf, ::roundf, FLOAT_ROUNDS,
                        "roundf_perf.log")
+  NEAREST_INTEGER_PERF(float, LIBC_NAMESPACE::roundevenf, ::placeholderf,
+                       FLOAT_ROUNDS, "roundevenf_perf.log")
   NEAREST_INTEGER_PERF(float, LIBC_NAMESPACE::truncf, ::truncf, FLOAT_ROUNDS,
                        "truncf_perf.log")
 

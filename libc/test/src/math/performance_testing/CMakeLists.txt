@@ -391,10 +391,10 @@ add_perf_binary(
     libc.src.math.floorf16
     libc.src.math.rintf
     libc.src.math.rintf16
-    libc.src.math.roundevenf
-    libc.src.math.roundevenf16
     libc.src.math.roundf
     libc.src.math.roundf16
+    libc.src.math.roundevenf
+    libc.src.math.roundevenf16
     libc.src.math.truncf
     libc.src.math.truncf16
   COMPILE_OPTIONS
