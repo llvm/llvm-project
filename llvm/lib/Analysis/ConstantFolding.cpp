@@ -2760,11 +2760,13 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
 
       if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
         return nullptr;
-      if (IntrinsicID == Intrinsic::powi && Ty->isHalfTy())
-        return ConstantFP::get(
-            Ty->getContext(),
-            APFloat((float)std::pow((float)Op1V.convertToDouble(),
-                                    (int)Op2C->getZExtValue())));
+      if (IntrinsicID == Intrinsic::powi && Ty->isHalfTy()) {
+        APFloat Res((float)std::pow((float)Op1V.convertToDouble(),
+                                    (int)Op2C->getZExtValue()));
+        bool unused;
+        Res.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &unused);
+        return ConstantFP::get(Ty->getContext(), Res);
+      }
       if (IntrinsicID == Intrinsic::powi && Ty->isFloatTy())
         return ConstantFP::get(
             Ty->getContext(),
