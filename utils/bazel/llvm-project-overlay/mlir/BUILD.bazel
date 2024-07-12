@@ -8643,7 +8643,11 @@ gentbl_cc_library(
 
 cc_library(
     name = "BytecodeOpInterface",
-    srcs = ["lib/Bytecode/BytecodeOpInterface.cpp"],
+    srcs = [
+        "include/mlir/Bytecode/BytecodeReader.h",
+        "include/mlir/Bytecode/BytecodeWriter.h",
+        "lib/Bytecode/BytecodeOpInterface.cpp",
+    ],
     hdrs = [
         "include/mlir/Bytecode/BytecodeImplementation.h",
         "include/mlir/Bytecode/BytecodeOpInterface.h",
