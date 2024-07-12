@@ -15,10 +15,11 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/dyadic_float.h"
-#include "src/__support/UInt.h"
+#include "src/__support/big_int.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
 // This file has 5 compile-time flags to allow the user to configure the float
 // to string behavior. These were used to explore tradeoffs during the design
@@ -105,7 +106,7 @@ constexpr size_t MID_INT_SIZE = 192;
 // Any block that is all 9s adds one to the max block counter and doesn't clear
 // the buffer because they can cause the block above them to be rounded up.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using BlockInt = uint32_t;
 constexpr uint32_t BLOCK_SIZE = 9;
@@ -689,7 +690,7 @@ template <> class FloatToString<long double> {
 
       wide_int float_as_int = mantissa;
 
-      float_as_int.shift_left(exponent);
+      float_as_int <<= exponent;
       int_block_index = 0;
 
       while (float_as_int > 0) {
@@ -708,10 +709,11 @@ template <> class FloatToString<long double> {
 
       const int SHIFT_AMOUNT = FLOAT_AS_INT_WIDTH + exponent;
       static_assert(EXTRA_INT_WIDTH >= sizeof(long double) * 8);
-      float_as_fixed.shift_left(SHIFT_AMOUNT);
+      float_as_fixed <<= SHIFT_AMOUNT;
 
       // If there are still digits above the decimal point, handle those.
-      if (float_as_fixed.clz() < static_cast<int>(EXTRA_INT_WIDTH)) {
+      if (cpp::countl_zero(float_as_fixed) <
+          static_cast<int>(EXTRA_INT_WIDTH)) {
         UInt<EXTRA_INT_WIDTH> above_decimal_point =
             float_as_fixed >> FLOAT_AS_INT_WIDTH;
 
@@ -838,6 +840,6 @@ public:
 #endif // !LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64 &&
        // !LIBC_COPT_FLOAT_TO_STR_NO_SPECIALIZE_LD
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FLOAT_TO_STRING_H

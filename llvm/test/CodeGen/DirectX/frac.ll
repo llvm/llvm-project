@@ -29,6 +29,3 @@ entry:
   %dx.frac = call half @llvm.dx.frac.f16(half %0)
   ret half %dx.frac
 }
-
-; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
-declare half @llvm.dx.frac.f16(half) #1

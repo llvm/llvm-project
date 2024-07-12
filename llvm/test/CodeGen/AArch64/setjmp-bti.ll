@@ -72,4 +72,4 @@ declare i32 @setjmp(ptr noundef) #0
 declare void @notsetjmp()
 
 attributes #0 = { returns_twice }
-attributes #1 = { "branch-target-enforcement"="true" }
+attributes #1 = { "branch-target-enforcement" }

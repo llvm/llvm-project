@@ -18,7 +18,7 @@
 
 @buf = global [20 x i64] zeroinitializer, align 8
 
-define i32 @foo(i32 %x)  "branch-target-enforcement"="true" {
+define i32 @foo(i32 %x)  "branch-target-enforcement" {
 ; BTI-LABEL: foo:
 ; BTI:       bl setjmp
 ; BTI-NEXT:  bti

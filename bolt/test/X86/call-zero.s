@@ -1,4 +1,4 @@
-# Verifies that llvm-bolt ignores function calls to 0.
+## Verifies that llvm-bolt ignores function calls to 0.
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe

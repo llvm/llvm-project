@@ -24,7 +24,7 @@ entry:
 define zeroext i8 @umul_i8_no_ovf(i8 signext %a, i8 signext %b) nounwind ssp {
 ; CHECK-LABEL: umul_i8_no_ovf:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    move.l #42, %d0
+; CHECK-NEXT:    moveq #42, %d0
 ; CHECK-NEXT:    rts
 entry:
   %umul = tail call { i8, i1 } @llvm.umul.with.overflow.i8(i8 %a, i8 %b)
@@ -59,7 +59,7 @@ declare {i32, i1} @llvm.umul.with.overflow.i32(i32 %a, i32 %b)
 define i1 @a(i32 %x)  nounwind {
 ; CHECK-LABEL: a:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    move.l #3, %d0
+; CHECK-NEXT:    moveq #3, %d0
 ; CHECK-NEXT:    move.l (4,%sp), %d1
 ; CHECK-NEXT:    mulu.l %d0, %d1
 ; CHECK-NEXT:    svs %d0
@@ -90,7 +90,7 @@ define i32 @test3(i32 %a, i32 %b) nounwind readnone {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    move.l (8,%sp), %d0
 ; CHECK-NEXT:    add.l (4,%sp), %d0
-; CHECK-NEXT:    move.l #4, %d1
+; CHECK-NEXT:    moveq #4, %d1
 ; CHECK-NEXT:    mulu.l %d1, %d0
 ; CHECK-NEXT:    rts
 entry:

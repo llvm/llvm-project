@@ -418,7 +418,7 @@ bool SourceManager::GetDefaultFileAndLine(FileSpec &file_spec, uint32_t &line) {
             if (sc.function->GetAddressRange()
                     .GetBaseAddress()
                     .CalculateSymbolContextLineEntry(line_entry)) {
-              SetDefaultFileAndLine(line_entry.file, line_entry.line);
+              SetDefaultFileAndLine(line_entry.GetFile(), line_entry.line);
               file_spec = m_last_file_spec;
               line = m_last_line;
               return true;

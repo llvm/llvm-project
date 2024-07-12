@@ -61,7 +61,7 @@ public:
 
   IntegralAP(APInt V) : V(V) {}
   /// Arbitrary value for uninitialized variables.
-  IntegralAP() : IntegralAP(-1, 1024) {}
+  IntegralAP() : IntegralAP(-1, 3) {}
 
   IntegralAP operator-() const { return IntegralAP(-V); }
   IntegralAP operator-(const IntegralAP &Other) const {
@@ -154,7 +154,10 @@ public:
   }
 
   IntegralAP truncate(unsigned BitWidth) const {
-    return IntegralAP(V.trunc(BitWidth));
+    if constexpr (Signed)
+      return IntegralAP(V.trunc(BitWidth).sextOrTrunc(this->bitWidth()));
+    else
+      return IntegralAP(V.trunc(BitWidth).zextOrTrunc(this->bitWidth()));
   }
 
   IntegralAP<false> toUnsigned() const {

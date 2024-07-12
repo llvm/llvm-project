@@ -8,18 +8,19 @@
 
 #include "LibcTest.h"
 
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/ExecuteFunction.h"
 #include "test/UnitTest/TestLogger.h"
 
 #include <cassert>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 bool Test::testProcessKilled(testutils::FunctionCaller *Func, int Signal,
                              const char *LHSStr, const char *RHSStr,
                              internal::Location Loc) {
-  testutils::ProcessStatus Result = testutils::invoke_in_subprocess(Func, 500);
+  testutils::ProcessStatus Result = testutils::invoke_in_subprocess(Func, 1000);
 
   if (const char *error = Result.get_error()) {
     Ctx->markFail();
@@ -31,7 +32,7 @@ bool Test::testProcessKilled(testutils::FunctionCaller *Func, int Signal,
   if (Result.timed_out()) {
     Ctx->markFail();
     tlog << Loc;
-    tlog << "Process timed out after " << 500 << " milliseconds.\n";
+    tlog << "Process timed out after " << 1000 << " milliseconds.\n";
     return false;
   }
 
@@ -62,7 +63,7 @@ bool Test::testProcessKilled(testutils::FunctionCaller *Func, int Signal,
 bool Test::testProcessExits(testutils::FunctionCaller *Func, int ExitCode,
                             const char *LHSStr, const char *RHSStr,
                             internal::Location Loc) {
-  testutils::ProcessStatus Result = testutils::invoke_in_subprocess(Func, 500);
+  testutils::ProcessStatus Result = testutils::invoke_in_subprocess(Func, 1000);
 
   if (const char *error = Result.get_error()) {
     Ctx->markFail();
@@ -74,7 +75,7 @@ bool Test::testProcessExits(testutils::FunctionCaller *Func, int ExitCode,
   if (Result.timed_out()) {
     Ctx->markFail();
     tlog << Loc;
-    tlog << "Process timed out after " << 500 << " milliseconds.\n";
+    tlog << "Process timed out after " << 1000 << " milliseconds.\n";
     return false;
   }
 
@@ -101,4 +102,4 @@ bool Test::testProcessExits(testutils::FunctionCaller *Func, int ExitCode,
 }
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

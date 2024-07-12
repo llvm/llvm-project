@@ -12,7 +12,8 @@
 
 #include "llvm/TextAPI/DylibReader.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringMap.h"
+#include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Support/Endian.h"
@@ -293,8 +294,11 @@ static Error readSymbols(MachOObjectFile *Obj, RecordsSlice &Slice,
     RecordLinkage Linkage = RecordLinkage::Unknown;
     SymbolFlags RecordFlags = SymbolFlags::None;
 
-    if (Opt.Undefineds && (Flags & SymbolRef::SF_Undefined)) {
-      Linkage = RecordLinkage::Undefined;
+    if (Flags & SymbolRef::SF_Undefined) {
+      if (Opt.Undefineds)
+        Linkage = RecordLinkage::Undefined;
+      else
+        continue;
       if (Flags & SymbolRef::SF_Weak)
         RecordFlags |= SymbolFlags::WeakReferenced;
     } else if (Flags & SymbolRef::SF_Exported) {
@@ -428,4 +432,112 @@ DylibReader::get(MemoryBufferRef Buffer) {
     return SlicesOrErr.takeError();
 
   return convertToInterfaceFile(*SlicesOrErr);
+}
+
+static void DWARFErrorHandler(Error Err) { /**/ }
+
+static SymbolToSourceLocMap
+accumulateLocs(MachOObjectFile &Obj,
+               const std::unique_ptr<DWARFContext> &DiCtx) {
+  SymbolToSourceLocMap LocMap;
+  for (const auto &Symbol : Obj.symbols()) {
+    Expected<uint32_t> FlagsOrErr = Symbol.getFlags();
+    if (!FlagsOrErr) {
+      consumeError(FlagsOrErr.takeError());
+      continue;
+    }
+
+    if (!(*FlagsOrErr & SymbolRef::SF_Exported))
+      continue;
+
+    Expected<uint64_t> AddressOrErr = Symbol.getAddress();
+    if (!AddressOrErr) {
+      consumeError(AddressOrErr.takeError());
+      continue;
+    }
+    const uint64_t Address = *AddressOrErr;
+
+    auto TypeOrErr = Symbol.getType();
+    if (!TypeOrErr) {
+      consumeError(TypeOrErr.takeError());
+      continue;
+    }
+    const bool IsCode = (*TypeOrErr & SymbolRef::ST_Function);
+
+    auto *DWARFCU = IsCode ? DiCtx->getCompileUnitForCodeAddress(Address)
+                           : DiCtx->getCompileUnitForDataAddress(Address);
+    if (!DWARFCU)
+      continue;
+
+    const DWARFDie &DIE = IsCode ? DWARFCU->getSubroutineForAddress(Address)
+                                 : DWARFCU->getVariableForAddress(Address);
+    const std::string File = DIE.getDeclFile(
+        llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath);
+    const uint64_t Line = DIE.getDeclLine();
+
+    auto NameOrErr = Symbol.getName();
+    if (!NameOrErr) {
+      consumeError(NameOrErr.takeError());
+      continue;
+    }
+    auto Name = *NameOrErr;
+    auto Sym = parseSymbol(Name);
+
+    if (!File.empty() && Line != 0)
+      LocMap.insert({Sym.Name, RecordLoc(File, Line)});
+  }
+
+  return LocMap;
+}
+
+SymbolToSourceLocMap
+DylibReader::accumulateSourceLocFromDSYM(const StringRef DSYM,
+                                         const Target &T) {
+  // Find sidecar file.
+  auto DSYMsOrErr = MachOObjectFile::findDsymObjectMembers(DSYM);
+  if (!DSYMsOrErr) {
+    consumeError(DSYMsOrErr.takeError());
+    return SymbolToSourceLocMap();
+  }
+  if (DSYMsOrErr->empty())
+    return SymbolToSourceLocMap();
+
+  const StringRef Path = DSYMsOrErr->front();
+  auto BufOrErr = MemoryBuffer::getFile(Path);
+  if (auto Err = BufOrErr.getError())
+    return SymbolToSourceLocMap();
+
+  auto BinOrErr = createBinary(*BufOrErr.get());
+  if (!BinOrErr) {
+    consumeError(BinOrErr.takeError());
+    return SymbolToSourceLocMap();
+  }
+  // Handle single arch.
+  if (auto *Single = dyn_cast<MachOObjectFile>(BinOrErr->get())) {
+    auto DiCtx = DWARFContext::create(
+        *Single, DWARFContext::ProcessDebugRelocations::Process, nullptr, "",
+        DWARFErrorHandler, DWARFErrorHandler);
+
+    return accumulateLocs(*Single, DiCtx);
+  }
+  // Handle universal companion file.
+  if (auto *Fat = dyn_cast<MachOUniversalBinary>(BinOrErr->get())) {
+    auto ObjForArch = Fat->getObjectForArch(getArchitectureName(T.Arch));
+    if (!ObjForArch) {
+      consumeError(ObjForArch.takeError());
+      return SymbolToSourceLocMap();
+    }
+    auto MachOOrErr = ObjForArch->getAsObjectFile();
+    if (!MachOOrErr) {
+      consumeError(MachOOrErr.takeError());
+      return SymbolToSourceLocMap();
+    }
+    auto &Obj = **MachOOrErr;
+    auto DiCtx = DWARFContext::create(
+        Obj, DWARFContext::ProcessDebugRelocations::Process, nullptr, "",
+        DWARFErrorHandler, DWARFErrorHandler);
+
+    return accumulateLocs(Obj, DiCtx);
+  }
+  return SymbolToSourceLocMap();
 }

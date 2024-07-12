@@ -45,13 +45,13 @@ static std::pair<bool, bool> GetSignReturnAddress(const Function &F) {
     return {false, false};
 
   StringRef Scope = F.getFnAttribute("sign-return-address").getValueAsString();
-  if (Scope.equals("none"))
+  if (Scope == "none")
     return {false, false};
 
-  if (Scope.equals("all"))
+  if (Scope == "all")
     return {true, true};
 
-  assert(Scope.equals("non-leaf"));
+  assert(Scope == "non-leaf");
   return {true, false};
 }
 
@@ -80,10 +80,8 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
   IsMTETagged = F.hasFnAttribute(Attribute::SanitizeMemTag);
 
   // BTI/PAuthLR are set on the function attribute.
-  BranchTargetEnforcement =
-      F.getFnAttribute("branch-target-enforcement").getValueAsBool();
-  BranchProtectionPAuthLR =
-      F.getFnAttribute("branch-protection-pauth-lr").getValueAsBool();
+  BranchTargetEnforcement = F.hasFnAttribute("branch-target-enforcement");
+  BranchProtectionPAuthLR = F.hasFnAttribute("branch-protection-pauth-lr");
 
   // The default stack probe size is 4096 if the function has no
   // stack-probe-size attribute. This is a safe default because it is the
@@ -169,12 +167,14 @@ bool AArch64FunctionInfo::needsAsyncDwarfUnwindInfo(
     const MachineFunction &MF) const {
   if (!NeedsAsyncDwarfUnwindInfo) {
     const Function &F = MF.getFunction();
+    const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     //  The check got "minsize" is because epilogue unwind info is not emitted
     //  (yet) for homogeneous epilogues, outlined functions, and functions
     //  outlined from.
-    NeedsAsyncDwarfUnwindInfo = needsDwarfUnwindInfo(MF) &&
-                                F.getUWTableKind() == UWTableKind::Async &&
-                                !F.hasMinSize();
+    NeedsAsyncDwarfUnwindInfo =
+        needsDwarfUnwindInfo(MF) &&
+        ((F.getUWTableKind() == UWTableKind::Async && !F.hasMinSize()) ||
+         AFI->hasStreamingModeChanges());
   }
   return *NeedsAsyncDwarfUnwindInfo;
 }

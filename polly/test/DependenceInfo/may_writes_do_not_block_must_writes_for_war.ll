@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-dependences -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-dependences>' -disable-output < %s | FileCheck %s
 ;
 ; Verify that the presence of a may-write (S1) between a read (S0) and a
 ; must-write (S2) does not block the generation of RAW dependences. This makes

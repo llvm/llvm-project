@@ -1,0 +1,36 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Test CUDA Fortran procedures available in cudadevice module
+
+attributes(global) subroutine devsub()
+  implicit none
+  integer :: ret
+
+  call syncthreads()
+  call syncwarp(1)
+  call threadfence()
+  call threadfence_block()
+  call threadfence_system()
+  ret = syncthreads_and(1)
+  ret = syncthreads_count(1)
+  ret = syncthreads_or(1)
+end
+
+! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
+! CHECK: fir.call @__syncthreads()
+! CHECK: fir.call @__syncwarp(%{{.*}}) fastmath<contract> {is_bind_c} : (!fir.ref<i32>) -> ()
+! CHECK: fir.call @__threadfence()
+! CHECK: fir.call @__threadfence_block()
+! CHECK: fir.call @__threadfence_system()
+! CHECK: %{{.*}} = fir.call @__syncthreads_and(%{{.*}}) fastmath<contract> {is_bind_c} : (!fir.ref<i32>) -> i32
+! CHECK: %{{.*}} = fir.call @__syncthreads_count(%{{.*}}) fastmath<contract> {is_bind_c} : (!fir.ref<i32>) -> i32
+! CHECK: %{{.*}} = fir.call @__syncthreads_or(%{{.*}}) fastmath<contract> {is_bind_c} : (!fir.ref<i32>) -> i32
+
+! CHECK: func.func private @__syncthreads() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncthreads"}
+! CHECK: func.func private @__syncwarp(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncwarp"}
+! CHECK: func.func private @__threadfence() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__threadfence"}
+! CHECK: func.func private @__threadfence_block() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__threadfence_block"}
+! CHECK: func.func private @__threadfence_system() attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__threadfence_system"}
+! CHECK: func.func private @__syncthreads_and(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) -> i32 attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncthreads_and"}
+! CHECK: func.func private @__syncthreads_count(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) -> i32 attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncthreads_count"}
+! CHECK: func.func private @__syncthreads_or(!fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>}) -> i32 attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.bindc_name = "__syncthreads_or"}

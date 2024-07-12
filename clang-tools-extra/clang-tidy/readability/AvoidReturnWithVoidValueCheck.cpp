@@ -7,19 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "AvoidReturnWithVoidValueCheck.h"
-#include "clang/AST/Stmt.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/ASTMatchers/ASTMatchers.h"
+#include "../utils/BracesAroundStatement.h"
+#include "../utils/LexerUtils.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
-static constexpr auto IgnoreMacrosName = "IgnoreMacros";
-static constexpr auto IgnoreMacrosDefault = true;
+static constexpr char IgnoreMacrosName[] = "IgnoreMacros";
+static const bool IgnoreMacrosDefault = true;
 
-static constexpr auto StrictModeName = "StrictMode";
-static constexpr auto StrictModeDefault = true;
+static constexpr char StrictModeName[] = "StrictMode";
+static const bool StrictModeDefault = true;
 
 AvoidReturnWithVoidValueCheck::AvoidReturnWithVoidValueCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -32,7 +31,10 @@ void AvoidReturnWithVoidValueCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       returnStmt(
           hasReturnValue(allOf(hasType(voidType()), unless(initListExpr()))),
-          optionally(hasParent(compoundStmt().bind("compound_parent"))))
+          optionally(hasParent(
+              compoundStmt(
+                  optionally(hasParent(functionDecl().bind("function_parent"))))
+                  .bind("compound_parent"))))
           .bind("void_return"),
       this);
 }
@@ -42,10 +44,33 @@ void AvoidReturnWithVoidValueCheck::check(
   const auto *VoidReturn = Result.Nodes.getNodeAs<ReturnStmt>("void_return");
   if (IgnoreMacros && VoidReturn->getBeginLoc().isMacroID())
     return;
-  if (!StrictMode && !Result.Nodes.getNodeAs<CompoundStmt>("compound_parent"))
+  const auto *SurroundingBlock =
+      Result.Nodes.getNodeAs<CompoundStmt>("compound_parent");
+  if (!StrictMode && !SurroundingBlock)
     return;
-  diag(VoidReturn->getBeginLoc(), "return statement within a void function "
-                                  "should not have a specified return value");
+  DiagnosticBuilder Diag = diag(VoidReturn->getBeginLoc(),
+                                "return statement within a void function "
+                                "should not have a specified return value");
+  const SourceLocation SemicolonPos = utils::lexer::findNextTerminator(
+      VoidReturn->getEndLoc(), *Result.SourceManager, getLangOpts());
+  if (SemicolonPos.isInvalid())
+    return;
+  if (!SurroundingBlock) {
+    const auto BraceInsertionHints = utils::getBraceInsertionsHints(
+        VoidReturn, getLangOpts(), *Result.SourceManager,
+        VoidReturn->getBeginLoc());
+    if (BraceInsertionHints)
+      Diag << BraceInsertionHints.openingBraceFixIt()
+           << BraceInsertionHints.closingBraceFixIt();
+  }
+  Diag << FixItHint::CreateRemoval(VoidReturn->getReturnLoc());
+  const auto *FunctionParent =
+      Result.Nodes.getNodeAs<FunctionDecl>("function_parent");
+  if (!FunctionParent ||
+      (SurroundingBlock && SurroundingBlock->body_back() != VoidReturn))
+    // If this is not the last statement in a function body, we add a `return`.
+    Diag << FixItHint::CreateInsertion(SemicolonPos.getLocWithOffset(1),
+                                       " return;", true);
 }
 
 void AvoidReturnWithVoidValueCheck::storeOptions(

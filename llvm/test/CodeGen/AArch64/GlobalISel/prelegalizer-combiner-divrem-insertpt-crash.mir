@@ -24,8 +24,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-  ; CHECK-NEXT:   [[FREEZE:%[0-9]+]]:_(s64) = G_FREEZE [[C1]]
-  ; CHECK-NEXT:   [[UDIV:%[0-9]+]]:_(s64) = G_UDIV [[FREEZE]], [[C]]
+  ; CHECK-NEXT:   [[UDIV:%[0-9]+]]:_(s64) = G_UDIV [[C1]], [[C]]
   ; CHECK-NEXT:   G_STORE [[UDIV]](s64), [[COPY]](p0) :: (store (s64))
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:

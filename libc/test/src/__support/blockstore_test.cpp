@@ -19,7 +19,7 @@ class LlvmLibcBlockStoreTest : public LIBC_NAMESPACE::testing::Test {
 public:
   template <size_t BLOCK_SIZE, size_t ELEMENT_COUNT, bool REVERSE>
   void populate_and_iterate() {
-    LIBC_NAMESPACE::cpp::BlockStore<Element, BLOCK_SIZE, REVERSE> block_store;
+    LIBC_NAMESPACE::BlockStore<Element, BLOCK_SIZE, REVERSE> block_store;
     for (int i = 0; i < int(ELEMENT_COUNT); ++i)
       ASSERT_TRUE(block_store.push_back({i, 2 * i, 3 * unsigned(i)}));
     auto end = block_store.end();
@@ -38,12 +38,12 @@ public:
       }
     }
     ASSERT_EQ(i, int(ELEMENT_COUNT));
-    LIBC_NAMESPACE::cpp::BlockStore<Element, BLOCK_SIZE, REVERSE>::destroy(
+    LIBC_NAMESPACE::BlockStore<Element, BLOCK_SIZE, REVERSE>::destroy(
         &block_store);
   }
 
   template <bool REVERSE> void back_test() {
-    using LIBC_NAMESPACE::cpp::BlockStore;
+    using LIBC_NAMESPACE::BlockStore;
     BlockStore<int, 4, REVERSE> block_store;
     for (int i = 0; i < 20; i++)
       ASSERT_TRUE(block_store.push_back(i));
@@ -53,7 +53,7 @@ public:
   }
 
   template <bool REVERSE> void empty_test() {
-    using LIBC_NAMESPACE::cpp::BlockStore;
+    using LIBC_NAMESPACE::BlockStore;
     BlockStore<int, 2, REVERSE> block_store;
 
     ASSERT_TRUE(block_store.empty());

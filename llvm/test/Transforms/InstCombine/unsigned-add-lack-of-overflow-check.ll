@@ -214,7 +214,7 @@ define <2 x i1> @low_bitmask_uge(<2 x i8> %x) {
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
-  %a = add <2 x i8> %x, <i8 15, i8 undef>
+  %a = add <2 x i8> %x, <i8 15, i8 poison>
   %m = and <2 x i8> %a, <i8 15, i8 15>
   %r = icmp uge <2 x i8> %m, %x
   ret <2 x i1> %r

@@ -14,7 +14,6 @@ define i256 @test1(i256 %a) nounwind {
 ; ILP:       # %bb.0:
 ; ILP-NEXT:    movq %rdi, %rax
 ; ILP-NEXT:    leal (%rsi,%rsi), %ecx
-; ILP-NEXT:    addb $3, %cl
 ; ILP-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; ILP-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; ILP-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
@@ -23,6 +22,7 @@ define i256 @test1(i256 %a) nounwind {
 ; ILP-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; ILP-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
 ; ILP-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
+; ILP-NEXT:    addb $3, %cl
 ; ILP-NEXT:    movl %ecx, %edx
 ; ILP-NEXT:    shrb $3, %dl
 ; ILP-NEXT:    andb $7, %cl

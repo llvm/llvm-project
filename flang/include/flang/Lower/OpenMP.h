@@ -19,7 +19,6 @@
 #include <utility>
 
 namespace mlir {
-class Value;
 class Operation;
 class Location;
 namespace omp {
@@ -30,7 +29,6 @@ enum class DeclareTargetCaptureClause : uint32_t;
 
 namespace fir {
 class FirOpBuilder;
-class ConvertOp;
 } // namespace fir
 
 namespace Fortran {
@@ -84,16 +82,6 @@ void genOpenMPSymbolProperties(AbstractConverter &converter,
 int64_t getCollapseValue(const Fortran::parser::OmpClauseList &clauseList);
 void genThreadprivateOp(AbstractConverter &, const pft::Variable &);
 void genDeclareTargetIntGlobal(AbstractConverter &, const pft::Variable &);
-void genOpenMPReduction(AbstractConverter &,
-                        Fortran::semantics::SemanticsContext &,
-                        const Fortran::parser::OmpClauseList &clauseList);
-
-mlir::Operation *findReductionChain(mlir::Value, mlir::Value * = nullptr);
-fir::ConvertOp getConvertFromReductionOp(mlir::Operation *, mlir::Value);
-void updateReduction(mlir::Operation *, fir::FirOpBuilder &, mlir::Value,
-                     mlir::Value, fir::ConvertOp * = nullptr);
-void removeStoreOp(mlir::Operation *, mlir::Value);
-
 bool isOpenMPTargetConstruct(const parser::OpenMPConstruct &);
 bool isOpenMPDeviceDeclareTarget(Fortran::lower::AbstractConverter &,
                                  Fortran::semantics::SemanticsContext &,

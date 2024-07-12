@@ -869,13 +869,13 @@ body: |
   $ymm0 = VSHUFPSZ256rmi                       $ymm0, $rdi, 1, $noreg, 0, $noreg, -24
   ; CHECK: $ymm0 = VSHUFPSYrri                 $ymm0, $ymm1, -24
   $ymm0 = VSHUFPSZ256rri                       $ymm0, $ymm1, -24
-  ; CHECK: $ymm0 = VROUNDPDYm                  $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
+  ; CHECK: $ymm0 = VROUNDPDYmi                 $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
   $ymm0 = VRNDSCALEPDZ256rmi                   $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
-  ; CHECK: $ymm0 = VROUNDPDYr                  $ymm0, 15, implicit $mxcsr
+  ; CHECK: $ymm0 = VROUNDPDYri                 $ymm0, 15, implicit $mxcsr
   $ymm0 = VRNDSCALEPDZ256rri                   $ymm0, 15, implicit $mxcsr
-  ; CHECK: $ymm0 = VROUNDPSYm                  $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
+  ; CHECK: $ymm0 = VROUNDPSYmi                 $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
   $ymm0 = VRNDSCALEPSZ256rmi                   $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
-  ; CHECK: $ymm0 = VROUNDPSYr                  $ymm0, 15, implicit $mxcsr
+  ; CHECK: $ymm0 = VROUNDPSYri                 $ymm0, 15, implicit $mxcsr
   $ymm0 = VRNDSCALEPSZ256rri                   $ymm0, 15, implicit $mxcsr
   ; CHECK: $ymm0 = VPERM2F128rm                $ymm0, $rip, 1, $noreg, 0, $noreg, 32
   $ymm0 = VSHUFF32X4Z256rmi                    $ymm0, $rip, 1, $noreg, 0, $noreg, 228
@@ -1751,13 +1751,13 @@ body: |
   $xmm0 = VALIGNQZ128rmi                       $xmm0, $rip, 1, $noreg, 0, $noreg, 1
   ; CHECK: $xmm0 = VPALIGNRrri                 $xmm0, $xmm1, 8
   $xmm0 = VALIGNQZ128rri                       $xmm0, $xmm1, 1
-  ; CHECK: $xmm0 = VROUNDPDm                   $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
+  ; CHECK: $xmm0 = VROUNDPDmi                  $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
   $xmm0 = VRNDSCALEPDZ128rmi                   $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
-  ; CHECK: $xmm0 = VROUNDPDr                   $xmm0, 15, implicit $mxcsr
+  ; CHECK: $xmm0 = VROUNDPDri                  $xmm0, 15, implicit $mxcsr
   $xmm0 = VRNDSCALEPDZ128rri                   $xmm0, 15, implicit $mxcsr
-  ; CHECK: $xmm0 = VROUNDPSm                   $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
+  ; CHECK: $xmm0 = VROUNDPSmi                  $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
   $xmm0 = VRNDSCALEPSZ128rmi                   $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
-  ; CHECK: $xmm0 = VROUNDPSr                   $xmm0, 15, implicit $mxcsr
+  ; CHECK: $xmm0 = VROUNDPSri                  $xmm0, 15, implicit $mxcsr
   $xmm0 = VRNDSCALEPSZ128rri                   $xmm0, 15, implicit $mxcsr
 
   RET64
@@ -2308,21 +2308,21 @@ body: |
   $xmm0 = VINSERTPSZrm                         $xmm0, $rdi, 1, $noreg, 0, $noreg, 1
   ; CHECK: $xmm0 = VINSERTPSrr                 $xmm0, $xmm0, 1
   $xmm0 = VINSERTPSZrr                         $xmm0, $xmm0, 1
-  ; CHECK: $xmm0 = VROUNDSDm                   $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
+  ; CHECK: $xmm0 = VROUNDSDmi                  $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
   $xmm0 = VRNDSCALESDZm                        $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
-  ; CHECK: $xmm0 = VROUNDSDr                   $xmm0, $xmm1, 15, implicit $mxcsr
+  ; CHECK: $xmm0 = VROUNDSDri                  $xmm0, $xmm1, 15, implicit $mxcsr
   $xmm0 = VRNDSCALESDZr                        $xmm0, $xmm1, 15, implicit $mxcsr
-  ; CHECK: $xmm0 = VROUNDSSm                   $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
+  ; CHECK: $xmm0 = VROUNDSSmi                  $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
   $xmm0 = VRNDSCALESSZm                        $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
-  ; CHECK: $xmm0 = VROUNDSSr                   $xmm0, $xmm1, 15, implicit $mxcsr
+  ; CHECK: $xmm0 = VROUNDSSri                  $xmm0, $xmm1, 15, implicit $mxcsr
   $xmm0 = VRNDSCALESSZr                        $xmm0, $xmm1, 15, implicit $mxcsr
-  ; CHECK: $xmm0 = VROUNDSDm_Int               $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
+  ; CHECK: $xmm0 = VROUNDSDmi_Int              $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
   $xmm0 = VRNDSCALESDZm_Int                    $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
-  ; CHECK: $xmm0 = VROUNDSDr_Int               $xmm0, $xmm1, 15, implicit $mxcsr
+  ; CHECK: $xmm0 = VROUNDSDri_Int              $xmm0, $xmm1, 15, implicit $mxcsr
   $xmm0 = VRNDSCALESDZr_Int                    $xmm0, $xmm1, 15, implicit $mxcsr
-  ; CHECK: $xmm0 = VROUNDSSm_Int               $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
+  ; CHECK: $xmm0 = VROUNDSSmi_Int              $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
   $xmm0 = VRNDSCALESSZm_Int                    $xmm0, $rip, 1, $noreg, 0, $noreg, 15, implicit $mxcsr
-  ; CHECK: $xmm0 = VROUNDSSr_Int               $xmm0, $xmm1, 15, implicit $mxcsr
+  ; CHECK: $xmm0 = VROUNDSSri_Int              $xmm0, $xmm1, 15, implicit $mxcsr
   $xmm0 = VRNDSCALESSZr_Int                    $xmm0, $xmm1, 15, implicit $mxcsr
 
   RET64

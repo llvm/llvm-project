@@ -457,9 +457,8 @@ SymbolFileOnDemand::GetTypeSystemForLanguage(LanguageType language) {
     Log *log = GetLog();
     LLDB_LOG(log, "[{0}] {1} is skipped for language type {2}",
              GetSymbolFileName(), __FUNCTION__, language);
-    return llvm::make_error<llvm::StringError>(
-        "GetTypeSystemForLanguage is skipped by SymbolFileOnDemand",
-        llvm::inconvertibleErrorCode());
+    return llvm::createStringError(
+        "GetTypeSystemForLanguage is skipped by SymbolFileOnDemand");
   }
   return m_sym_file_impl->GetTypeSystemForLanguage(language);
 }

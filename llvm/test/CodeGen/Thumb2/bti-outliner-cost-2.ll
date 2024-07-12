@@ -44,4 +44,4 @@ entry:
 
 ; CHECK-NOT: OUTLINED_FUNCTION
 
-attributes #0 = { minsize nofree norecurse nounwind optsize "branch-target-enforcement"="true"  }
+attributes #0 = { minsize nofree norecurse nounwind optsize "branch-target-enforcement" }

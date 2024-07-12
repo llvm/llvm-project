@@ -83,6 +83,13 @@ filegroup(
 )
 
 filegroup(
+    name = "RewritePyFiles",
+    srcs = [
+        "mlir/rewrite.py",
+    ],
+)
+
+filegroup(
     name = "RuntimePyFiles",
     srcs = glob([
         "mlir/runtime/*.py",
@@ -332,6 +339,46 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# Async dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "AsyncOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=async",
+            ],
+            "mlir/dialects/_async_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/AsyncOps.td",
+    deps = [
+        "//mlir:AsyncOpsTdFiles",
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+filegroup(
+    name = "AsyncOpsPyFiles",
+    srcs = [
+        ":AsyncOpsPyGen",
+    ],
+)
+
+filegroup(
+    name = "AsyncOpsPackagePyFiles",
+    srcs = glob(["mlir/dialects/async_dialect/*.py"]),
+)
+
+filegroup(
+    name = "AsyncOpsPackagePassesPyFiles",
+    srcs = glob(["mlir/dialects/async_dialect/passes/*.py"]),
+)
+
+##---------------------------------------------------------------------------##
 # Arith dialect.
 ##---------------------------------------------------------------------------##
 
@@ -489,6 +536,44 @@ filegroup(
     srcs = [
         "mlir/dialects/cf.py",
         ":ControlFlowOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# Index dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "IndexOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-enum-bindings",
+                "-bind-dialect=index",
+            ],
+            "mlir/dialects/_index_enum_gen.py",
+        ),
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=index",
+            ],
+            "mlir/dialects/_index_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/IndexOps.td",
+    deps = [
+        "//mlir:IndexOpsTdFiles",
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+filegroup(
+    name = "IndexOpsPyFiles",
+    srcs = [
+        "mlir/dialects/index.py",
+        ":IndexOpsPyGen",
     ],
 )
 

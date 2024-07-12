@@ -1260,8 +1260,6 @@ define amdgpu_ps void @phi_use_def_before_kill(float inreg %x) #0 {
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:  .LBB11_5: ; %end
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ; GFX11-NEXT:  .LBB11_6:
 ; GFX11-NEXT:    s_mov_b64 exec, 0
@@ -1525,8 +1523,6 @@ define amdgpu_ps void @if_after_kill_block(float %arg, float %arg1, float %arg2,
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:  .LBB13_5: ; %UnifiedReturnBlock
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ; GFX11-NEXT:  .LBB13_6:
 ; GFX11-NEXT:    s_mov_b64 exec, 0
@@ -1701,7 +1697,7 @@ live:
 
 export:
   %proxy = phi float [ undef, %kill ], [ %scale, %live ]
-  call void @llvm.amdgcn.exp.f32(i32 immarg 0, i32 immarg 15, float %proxy, float %proxy, float %proxy, float %proxy, i1 immarg true, i1 immarg true) #3
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %proxy, float %proxy, float %proxy, float %proxy, i1 true, i1 true) #3
   ret void
 }
 
@@ -1911,7 +1907,7 @@ latch:
 ._crit_edge:
   %tmp = phi i32 [ -1, %.entry ], [ %ctr.next, %latch ]
   %out = bitcast i32 %tmp to float
-  call void @llvm.amdgcn.exp.f32(i32 immarg 0, i32 immarg 15, float %out, float %out, float undef, float undef, i1 immarg true, i1 immarg true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %out, float %out, float undef, float undef, i1 true, i1 true)
   ret void
 }
 

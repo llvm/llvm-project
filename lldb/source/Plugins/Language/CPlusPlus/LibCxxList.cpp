@@ -136,7 +136,7 @@ class ForwardListFrontEnd : public AbstractListFrontEnd {
 public:
   ForwardListFrontEnd(ValueObject &valobj);
 
-  uint32_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
   ValueObjectSP GetChildAtIndex(uint32_t idx) override;
   lldb::ChildCacheState Update() override;
 };
@@ -147,7 +147,7 @@ public:
 
   ~ListFrontEnd() override = default;
 
-  uint32_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
@@ -240,7 +240,7 @@ ForwardListFrontEnd::ForwardListFrontEnd(ValueObject &valobj)
   Update();
 }
 
-uint32_t ForwardListFrontEnd::CalculateNumChildren() {
+llvm::Expected<uint32_t> ForwardListFrontEnd::CalculateNumChildren() {
   if (m_count != UINT32_MAX)
     return m_count;
 
@@ -254,7 +254,7 @@ uint32_t ForwardListFrontEnd::CalculateNumChildren() {
 }
 
 ValueObjectSP ForwardListFrontEnd::GetChildAtIndex(uint32_t idx) {
-  if (idx >= CalculateNumChildren())
+  if (idx >= CalculateNumChildrenIgnoringErrors())
     return nullptr;
 
   if (!m_head)
@@ -308,7 +308,7 @@ ListFrontEnd::ListFrontEnd(lldb::ValueObjectSP valobj_sp)
     Update();
 }
 
-uint32_t ListFrontEnd::CalculateNumChildren() {
+llvm::Expected<uint32_t> ListFrontEnd::CalculateNumChildren() {
   if (m_count != UINT32_MAX)
     return m_count;
   if (!m_head || !m_tail || m_node_address == 0)
@@ -347,7 +347,7 @@ lldb::ValueObjectSP ListFrontEnd::GetChildAtIndex(uint32_t idx) {
   static ConstString g_value("__value_");
   static ConstString g_next("__next_");
 
-  if (idx >= CalculateNumChildren())
+  if (idx >= CalculateNumChildrenIgnoringErrors())
     return lldb::ValueObjectSP();
 
   if (!m_head || !m_tail || m_node_address == 0)

@@ -85,7 +85,7 @@ define void @f3(ptr noundef %x) #1 {
 }
 
 attributes #0 = { returns_twice }
-attributes #1 = { "branch-target-enforcement"="true" }
+attributes #1 = { "branch-target-enforcement" }
 
 !llvm.module.flags = !{!0, !1}
 !0 = !{i32 8, !"branch-target-enforcement", i32 1}

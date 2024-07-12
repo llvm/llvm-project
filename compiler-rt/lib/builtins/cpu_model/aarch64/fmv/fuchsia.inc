@@ -2,7 +2,7 @@
 #include <zircon/syscalls.h>
 
 void __init_cpu_features_resolver() {
-  if (__aarch64_cpu_features.features)
+  if (__atomic_load_n(&__aarch64_cpu_features.features, __ATOMIC_RELAXED))
     return;
 
     // This ensures the vDSO is a direct link-time dependency of anything that
@@ -13,8 +13,8 @@ void __init_cpu_features_resolver() {
   if (status != ZX_OK)
     return;
 
-#define setCPUFeature(cpu_feature)                                             \
-  __aarch64_cpu_features.features |= 1ULL << cpu_feature
+  unsigned long long feat = 0;
+#define setCPUFeature(cpu_feature) feat |= 1ULL << cpu_feature
 
   if (features & ZX_ARM64_FEATURE_ISA_FP)
     setCPUFeature(FEAT_FP);
@@ -48,4 +48,6 @@ void __init_cpu_features_resolver() {
     setCPUFeature(FEAT_SVE);
 
   setCPUFeature(FEAT_INIT);
+
+  __atomic_store_n(&__aarch64_cpu_features.features, feat, __ATOMIC_RELAXED);
 }

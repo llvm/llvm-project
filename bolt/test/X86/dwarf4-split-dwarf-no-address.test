@@ -9,7 +9,7 @@
 ; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.exe.bolt | FileCheck -check-prefix=BOLT %s
 
-; Testing that there are no asserts/crashes when one of the DWARF4 CUs does not modify .debug_addr
+;; Testing that there are no asserts/crashes when one of the DWARF4 CUs does not modify .debug_addr
 
 ; BOLT: DW_TAG_compile_unit
 ; BOLT: DW_TAG_compile_unit

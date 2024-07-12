@@ -34,24 +34,30 @@ struct TestClangConfig {
   bool isCXX() const {
     return Language == Lang_CXX03 || Language == Lang_CXX11 ||
            Language == Lang_CXX14 || Language == Lang_CXX17 ||
-           Language == Lang_CXX20;
+           Language == Lang_CXX20 || Language == Lang_CXX23;
   }
 
   bool isCXX11OrLater() const {
     return Language == Lang_CXX11 || Language == Lang_CXX14 ||
-           Language == Lang_CXX17 || Language == Lang_CXX20;
+           Language == Lang_CXX17 || Language == Lang_CXX20 ||
+           Language == Lang_CXX23;
   }
 
   bool isCXX14OrLater() const {
     return Language == Lang_CXX14 || Language == Lang_CXX17 ||
-           Language == Lang_CXX20;
+           Language == Lang_CXX20 || Language == Lang_CXX23;
   }
 
   bool isCXX17OrLater() const {
-    return Language == Lang_CXX17 || Language == Lang_CXX20;
+    return Language == Lang_CXX17 || Language == Lang_CXX20 ||
+           Language == Lang_CXX23;
   }
 
-  bool isCXX20OrLater() const { return Language == Lang_CXX20; }
+  bool isCXX20OrLater() const {
+    return Language == Lang_CXX20 || Language == Lang_CXX23;
+  }
+
+  bool isCXX23OrLater() const { return Language == Lang_CXX23; }
 
   bool supportsCXXDynamicExceptionSpecification() const {
     return Language == Lang_CXX03 || Language == Lang_CXX11 ||

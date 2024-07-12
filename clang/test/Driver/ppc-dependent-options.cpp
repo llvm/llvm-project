@@ -1,4 +1,3 @@
-// REQUIRES: powerpc-registered-target
 // RUN: not %clang -target powerpc64le-unknown-unknown -fsyntax-only \
 // RUN: -mcpu=power8 -std=c++11 %s 2>&1 | FileCheck %s \
 // RUN: -check-prefix=CHECK-DEFAULT

@@ -38,11 +38,11 @@ env:
   # LLVM POST-BRANCH bump version
   # LLVM POST-BRANCH add compiler test for ToT - 1, e.g. "Clang 17"
   # LLVM RELEASE bump remove compiler ToT - 3, e.g. "Clang 15"
-  LLVM_HEAD_VERSION: "18"   # Used compiler, update POST-BRANCH.
-  LLVM_PREVIOUS_VERSION: "17"
-  LLVM_OLDEST_VERSION: "16"
+  LLVM_HEAD_VERSION: "19"   # Used compiler, update POST-BRANCH.
+  LLVM_PREVIOUS_VERSION: "18"
+  LLVM_OLDEST_VERSION: "17"
   GCC_STABLE_VERSION: "13"
-  LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-18"
+  LLVM_SYMBOLIZER_PATH: "/usr/bin/llvm-symbolizer-19"
   CLANG_CRASH_DIAGNOSTICS_DIR: "crash_diagnostics"
 
 
@@ -59,14 +59,12 @@ jobs:
           'generic-cxx26',
           'generic-modules'
         ]
-        cc: [  'clang-18' ]
-        cxx: [ 'clang++-18' ]
-        clang_tidy: [ 'ON' ]
+        cc: [  'clang-19' ]
+        cxx: [ 'clang++-19' ]
         include:
           - config: 'generic-gcc'
-            cc: 'gcc-13'
-            cxx: 'g++-13'
-            clang_tidy: 'OFF'
+            cc: 'gcc-14'
+            cxx: 'g++-14'
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}.${{ matrix.cxx }}
@@ -74,7 +72,6 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-          ENABLE_CLANG_TIDY: ${{ matrix.clang_tidy }}
       - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: always()
         with:
@@ -100,22 +97,18 @@ jobs:
           'generic-cxx20',
           'generic-cxx23'
         ]
-        cc: [ 'clang-18' ]
-        cxx: [ 'clang++-18' ]
-        clang_tidy: [ 'ON' ]
+        cc: [ 'clang-19' ]
+        cxx: [ 'clang++-19' ]
         include:
           - config: 'generic-gcc-cxx11'
-            cc: 'gcc-13'
-            cxx: 'g++-13'
-            clang_tidy: 'OFF'
-          - config: 'generic-cxx23'
-            cc: 'clang-16'
-            cxx: 'clang++-16'
-            clang_tidy: 'OFF'
+            cc: 'gcc-14'
+            cxx: 'g++-14'
           - config: 'generic-cxx23'
             cc: 'clang-17'
             cxx: 'clang++-17'
-            clang_tidy: 'OFF'
+          - config: 'generic-cxx26'
+            cc: 'clang-18'
+            cxx: 'clang++-18'
     steps:
       - uses: actions/checkout@v4
       - name: ${{ matrix.config }}
@@ -123,7 +116,6 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-          ENABLE_CLANG_TIDY: ${{ matrix.clang_tidy }}
       - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: always()  # Upload artifacts even if the build or test suite fails
         with:
@@ -186,9 +178,8 @@ jobs:
       - name: ${{ matrix.config }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
-          CC: clang-18
-          CXX: clang++-18
-          ENABLE_CLANG_TIDY: "OFF"
+          CC: clang-19
+          CXX: clang++-19
       - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
         if: always()
         with:
@@ -218,16 +209,16 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
-          choco install -y ninja wget
+          choco install -y ninja
           pip install psutil
       - name: Install a current LLVM
         if: ${{ matrix.mingw != true }}
         run: |
-          choco install -y llvm --version=17.0.6
+          choco install -y llvm --version=18.1.6 --allow-downgrade
       - name: Install llvm-mingw
         if: ${{ matrix.mingw == true }}
         run: |
-          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20231128/llvm-mingw-20231128-ucrt-x86_64.zip
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20240606/llvm-mingw-20240606-ucrt-x86_64.zip
           powershell Expand-Archive llvm-mingw*.zip -DestinationPath .
           del llvm-mingw*.zip
           mv llvm-mingw* c:\llvm-mingw

@@ -1,0 +1,11 @@
+## This verifies that functions where an exit block has a landing pad are covered by stale profile inference.
+# RUN: %clangxx %cxxflags %p/Inputs/infer_no_exits.s -o %t.exe
+# RUN: link_fdata %s %t.exe %t.preagg PREAGG
+# RUN: perf2bolt %t.exe -p %t.preagg --pa -o %t.fdata -w %t.yaml
+# RUN: sed -i '0,/hash:/s/0x[0-9A-Fa-f]\{16\}/0x0000000000000000/' %t.yaml
+# RUN: llvm-bolt %t.exe -data %t.yaml -o %t.null -v=1 -infer-stale-profile 2>&1 \
+# RUN:   | FileCheck %s
+
+# PREAGG: B X:0 #main# 1 0
+
+# CHECK: BOLT-INFO: inferred profile for 1 (100.00% of profiled, 100.00% of stale) functions

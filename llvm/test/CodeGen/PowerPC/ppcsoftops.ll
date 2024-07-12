@@ -312,8 +312,68 @@ define dso_local zeroext i32 @func(double noundef %0, double noundef %1) #0 {
   ret i32 %9
 }
 
+; To check ppc_fp128 soften without crash
+define zeroext i1 @ppcf128_soften(ppc_fp128 %a) #0 {
+; PPC-LABEL: ppcf128_soften:
+; PPC:       # %bb.0: # %entry
+; PPC-NEXT:    stwu 1, -16(1)
+; PPC-NEXT:    stw 5, 8(1) # 4-byte Folded Spill
+; PPC-NEXT:    mr 5, 4
+; PPC-NEXT:    lwz 4, 8(1) # 4-byte Folded Reload
+; PPC-NEXT:    stw 5, 12(1) # 4-byte Folded Spill
+; PPC-NEXT:    mr 5, 3
+; PPC-NEXT:    lwz 3, 12(1) # 4-byte Folded Reload
+; PPC-NEXT:    # kill: def $r4 killed $r3
+; PPC-NEXT:    # kill: def $r4 killed $r5
+; PPC-NEXT:    xoris 4, 5, 65520
+; PPC-NEXT:    or 4, 3, 4
+; PPC-NEXT:    cntlzw 4, 4
+; PPC-NEXT:    clrlwi 5, 5, 1
+; PPC-NEXT:    or 3, 3, 5
+; PPC-NEXT:    cntlzw 3, 3
+; PPC-NEXT:    or 3, 3, 4
+; PPC-NEXT:    srwi 3, 3, 5
+; PPC-NEXT:    addi 1, 1, 16
+; PPC-NEXT:    blr
+;
+; PPC64-LABEL: ppcf128_soften:
+; PPC64:       # %bb.0: # %entry
+; PPC64-NEXT:    li 4, 4095
+; PPC64-NEXT:    rldic 4, 4, 52, 0
+; PPC64-NEXT:    cmpld 7, 3, 4
+; PPC64-NEXT:    mfcr 4 # cr7
+; PPC64-NEXT:    rlwinm 4, 4, 31, 31, 31
+; PPC64-NEXT:    clrldi 3, 3, 1
+; PPC64-NEXT:    cmpldi 7, 3, 0
+; PPC64-NEXT:    mfcr 3 # cr7
+; PPC64-NEXT:    rlwinm 3, 3, 31, 31, 31
+; PPC64-NEXT:    or 4, 3, 4
+; PPC64-NEXT:    # implicit-def: $x3
+; PPC64-NEXT:    mr 3, 4
+; PPC64-NEXT:    clrldi 3, 3, 32
+; PPC64-NEXT:    blr
+;
+; PPC64LE-LABEL: ppcf128_soften:
+; PPC64LE:       # %bb.0: # %entry
+; PPC64LE-NEXT:    li 3, 4095
+; PPC64LE-NEXT:    rldic 3, 3, 52, 0
+; PPC64LE-NEXT:    cmpd 4, 3
+; PPC64LE-NEXT:    crmove 21, 2
+; PPC64LE-NEXT:    clrldi. 3, 4, 1
+; PPC64LE-NEXT:    crmove 20, 2
+; PPC64LE-NEXT:    cror 20, 20, 21
+; PPC64LE-NEXT:    li 4, 0
+; PPC64LE-NEXT:    li 3, 1
+; PPC64LE-NEXT:    isel 3, 3, 4, 20
+; PPC64LE-NEXT:    blr
+entry:
+  %fpclass = tail call i1 @llvm.is.fpclass.ppcf128(ppc_fp128 %a, i32 100)
+  ret i1 %fpclass
+}
+
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare double @llvm.fmuladd.f64(double, double, double) #1
+declare i1 @llvm.is.fpclass.ppcf128(ppc_fp128, i32 immarg) #1
 
 attributes #0 = {"use-soft-float"="true" nounwind }
 attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

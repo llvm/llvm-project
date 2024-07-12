@@ -58,7 +58,7 @@ class Token {
   ///  Annotations (resolved type names, C++ scopes, etc): isAnnotation().
   ///    This is a pointer to sema-specific data for the annotation token.
   ///  Eof:
-  //     This is a pointer to a Decl.
+  ///    This is a pointer to a Decl.
   ///  Other:
   ///    This is null.
   void *PtrData;

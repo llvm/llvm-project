@@ -151,9 +151,9 @@
 // RUN:   --target=riscv64-unknown-elf --rtlib=compiler-rt --unwindlib=compiler-rt 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV64-RTLIB-COMPILERRT-LP64 %s
 // C-RV64-RTLIB-COMPILERRT-LP64: "{{.*}}crt0.o"
-// C-RV64-RTLIB-COMPILERRT-LP64: "{{.*}}clang_rt.crtbegin-riscv64.o"
-// C-RV64-RTLIB-COMPILERRT-LP64: "--start-group" "-lc" "-lgloss" "--end-group" "{{.*}}libclang_rt.builtins-riscv64.a"
-// C-RV64-RTLIB-COMPILERRT-LP64: "{{.*}}clang_rt.crtend-riscv64.o"
+// C-RV64-RTLIB-COMPILERRT-LP64: "{{.*}}clang_rt.crtbegin.o"
+// C-RV64-RTLIB-COMPILERRT-LP64: "--start-group" "-lc" "-lgloss" "--end-group" "{{.*}}libclang_rt.builtins.a"
+// C-RV64-RTLIB-COMPILERRT-LP64: "{{.*}}clang_rt.crtend.o"
 
 // RUN: %clang -### %s --target=riscv64 \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree --sysroot= \

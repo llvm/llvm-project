@@ -170,14 +170,14 @@ public:
     } else {
       // Otherwise, if `n` is non-negative, while `bool(i != bound_sentinel)` is true, increments `i` but at
       // most `n` times.
-      while (__i != __bound_sentinel && __n > 0) {
+      while (__n > 0 && __i != __bound_sentinel) {
         ++__i;
         --__n;
       }
 
       // Otherwise, while `bool(i != bound_sentinel)` is true, decrements `i` but at most `-n` times.
       if constexpr (bidirectional_iterator<_Ip> && same_as<_Ip, _Sp>) {
-        while (__i != __bound_sentinel && __n < 0) {
+        while (__n < 0 && __i != __bound_sentinel) {
           --__i;
           ++__n;
         }

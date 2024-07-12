@@ -448,19 +448,6 @@ llvm.func @store_load_forward() -> i32 {
 
 // -----
 
-// CHECK-LABEL: llvm.func @store_load_wrong_type
-llvm.func @store_load_wrong_type() -> i16 {
-  %0 = llvm.mlir.constant(1 : i32) : i32
-  %1 = llvm.mlir.constant(0 : i32) : i32
-  // CHECK: = llvm.alloca
-  %2 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i32) -> !llvm.ptr
-  llvm.store %1, %2 {alignment = 4 : i64} : i32, !llvm.ptr
-  %3 = llvm.load %2 {alignment = 2 : i64} : !llvm.ptr -> i16
-  llvm.return %3 : i16
-}
-
-// -----
-
 // CHECK-LABEL: llvm.func @merge_point_cycle
 llvm.func @merge_point_cycle() {
   // CHECK: %[[UNDEF:.*]] = llvm.mlir.undef : i32
@@ -696,4 +683,477 @@ llvm.func @transitive_reaching_def() -> !llvm.ptr {
   llvm.store %2, %1 {alignment = 8 : i64} : !llvm.ptr, !llvm.ptr
   %3 = llvm.load %1 {alignment = 8 : i64} : !llvm.ptr -> !llvm.ptr
   llvm.return %3 : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: @load_int_from_float
+llvm.func @load_int_from_float() -> i32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x f32 {alignment = 4 : i64} : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i32
+  // CHECK: %[[UNDEF:.*]] = llvm.mlir.undef
+  // CHECK: %[[BITCAST:.*]] = llvm.bitcast %[[UNDEF]] : f32 to i32
+  // CHECK: llvm.return %[[BITCAST:.*]]
+  llvm.return %2 : i32
+}
+
+// -----
+
+// CHECK-LABEL: @load_float_from_int
+llvm.func @load_float_from_int() -> f32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> f32
+  // CHECK: %[[UNDEF:.*]] = llvm.mlir.undef
+  // CHECK: %[[BITCAST:.*]] = llvm.bitcast %[[UNDEF]] : i32 to f32
+  // CHECK: llvm.return %[[BITCAST:.*]]
+  llvm.return %2 : f32
+}
+
+// -----
+
+// CHECK-LABEL: @load_int_from_vector
+llvm.func @load_int_from_vector() -> i32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x vector<2xi16> : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i32
+  // CHECK: %[[UNDEF:.*]] = llvm.mlir.undef
+  // CHECK: %[[BITCAST:.*]] = llvm.bitcast %[[UNDEF]] : vector<2xi16> to i32
+  // CHECK: llvm.return %[[BITCAST:.*]]
+  llvm.return %2 : i32
+}
+
+// -----
+
+// LLVM arrays cannot be bitcasted, so the following cannot be promoted.
+
+// CHECK-LABEL: @load_int_from_array
+llvm.func @load_int_from_array() -> i32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: llvm.alloca
+  %1 = llvm.alloca %0 x !llvm.array<2 x i16> : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i32
+  // CHECK-NOT: llvm.bitcast
+  llvm.return %2 : i32
+}
+
+// -----
+
+// CHECK-LABEL: @store_int_to_float
+// CHECK-SAME: %[[ARG:.*]]: i32
+llvm.func @store_int_to_float(%arg: i32) -> i32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x f32 {alignment = 4 : i64} : (i32) -> !llvm.ptr
+  llvm.store %arg, %1 {alignment = 4 : i64} : i32, !llvm.ptr
+  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i32
+  // CHECK: llvm.return %[[ARG]]
+  llvm.return %2 : i32
+}
+
+// -----
+
+// CHECK-LABEL: @store_float_to_int
+// CHECK-SAME: %[[ARG:.*]]: f32
+llvm.func @store_float_to_int(%arg: f32) -> i32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i32) -> !llvm.ptr
+  llvm.store %arg, %1 {alignment = 4 : i64} : f32, !llvm.ptr
+  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i32
+  // CHECK: %[[BITCAST:.*]] = llvm.bitcast %[[ARG]] : f32 to i32
+  // CHECK: llvm.return %[[BITCAST]]
+  llvm.return %2 : i32
+}
+
+// -----
+
+// CHECK-LABEL: @store_int_to_vector
+// CHECK-SAME: %[[ARG:.*]]: i32
+llvm.func @store_int_to_vector(%arg: i32) -> vector<4xi8> {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x vector<2xi16> {alignment = 4 : i64} : (i32) -> !llvm.ptr
+  llvm.store %arg, %1 {alignment = 4 : i64} : i32, !llvm.ptr
+  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> vector<4xi8>
+  // CHECK: %[[BITCAST:.*]] = llvm.bitcast %[[ARG]] : i32 to vector<4xi8>
+  // CHECK: llvm.return %[[BITCAST]]
+  llvm.return %2 : vector<4xi8>
+}
+
+// -----
+
+// CHECK-LABEL: @load_ptr_from_int
+llvm.func @load_ptr_from_int() -> !llvm.ptr {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x i64 {alignment = 4 : i64} : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> !llvm.ptr
+  // CHECK: %[[UNDEF:.*]] = llvm.mlir.undef
+  // CHECK: %[[CAST:.*]] = llvm.inttoptr %[[UNDEF]] : i64 to !llvm.ptr
+  // CHECK: llvm.return %[[CAST:.*]]
+  llvm.return %2 : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: @load_int_from_ptr
+llvm.func @load_int_from_ptr() -> i64 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x !llvm.ptr {alignment = 4 : i64} : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i64
+  // CHECK: %[[UNDEF:.*]] = llvm.mlir.undef
+  // CHECK: %[[CAST:.*]] = llvm.ptrtoint %[[UNDEF]] : !llvm.ptr to i64
+  // CHECK: llvm.return %[[CAST:.*]]
+  llvm.return %2 : i64
+}
+
+// -----
+
+// CHECK-LABEL: @load_ptr_addrspace_cast
+llvm.func @load_ptr_addrspace_cast() -> !llvm.ptr<2> {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x !llvm.ptr<1> {alignment = 4 : i64} : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> !llvm.ptr<2>
+  // CHECK: %[[UNDEF:.*]] = llvm.mlir.undef
+  // CHECK: %[[CAST:.*]] = llvm.addrspacecast %[[UNDEF]] : !llvm.ptr<1> to !llvm.ptr<2>
+  // CHECK: llvm.return %[[CAST:.*]]
+  llvm.return %2 : !llvm.ptr<2>
+}
+
+// -----
+
+// CHECK-LABEL: @stores_with_different_types
+// CHECK-SAME: %[[ARG0:.*]]: i64
+// CHECK-SAME: %[[ARG1:.*]]: f64
+llvm.func @stores_with_different_types(%arg0: i64, %arg1: f64, %cond: i1) -> f64 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x i64 {alignment = 4 : i64} : (i32) -> !llvm.ptr
+  llvm.cond_br %cond, ^bb1, ^bb2
+^bb1:
+  llvm.store %arg0, %1 {alignment = 4 : i64} : i64, !llvm.ptr
+  // CHECK: llvm.br ^[[BB3:.*]](%[[ARG0]]
+  llvm.br ^bb3
+^bb2:
+  llvm.store %arg1, %1 {alignment = 4 : i64} : f64, !llvm.ptr
+  // CHECK: %[[BITCAST:.*]] = llvm.bitcast %[[ARG1]] : f64 to i64
+  // CHECK: llvm.br ^[[BB3]](%[[BITCAST]]
+  llvm.br ^bb3
+// CHECK: ^[[BB3]](%[[BLOCK_ARG:.*]]: i64)
+^bb3:
+  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> f64
+  // CHECK: %[[BITCAST:.*]] = llvm.bitcast %[[BLOCK_ARG]] : i64 to f64
+  // CHECK: llvm.return %[[BITCAST]]
+  llvm.return %2 : f64
+}
+
+// -----
+
+// CHECK-LABEL: @load_smaller_int
+llvm.func @load_smaller_int() -> i16 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i16
+  llvm.return %2 : i16
+}
+
+// -----
+
+// CHECK-LABEL: @load_different_type_same_size
+llvm.func @load_different_type_same_size() -> f32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x i64 {alignment = 8 : i64} : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> f32
+  llvm.return %2 : f32
+}
+
+// -----
+
+// This alloca is too small for the load, still, mem2reg should not touch it.
+
+// CHECK-LABEL: @impossible_load
+llvm.func @impossible_load() -> f64 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: llvm.alloca
+  %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> f64
+  llvm.return %2 : f64
+}
+
+// -----
+
+// Verifies that mem2reg does not introduce address space casts of pointers
+// with different bitsize.
+
+module attributes { dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<!llvm.ptr<1>, dense<[32, 64, 64]> : vector<3xi64>>,
+  #dlti.dl_entry<!llvm.ptr<2>, dense<[64, 64, 64]> : vector<3xi64>>
+>} {
+
+  // CHECK-LABEL: @load_ptr_addrspace_cast_different_size
+  llvm.func @load_ptr_addrspace_cast_different_size() -> !llvm.ptr<2> {
+    %0 = llvm.mlir.constant(1 : i32) : i32
+    // CHECK: llvm.alloca
+    %1 = llvm.alloca %0 x !llvm.ptr<1> {alignment = 4 : i64} : (i32) -> !llvm.ptr
+    %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> !llvm.ptr<2>
+    llvm.return %2 : !llvm.ptr<2>
+  }
+
+  // CHECK-LABEL: @load_ptr_addrspace_cast_different_size2
+  llvm.func @load_ptr_addrspace_cast_different_size2() -> !llvm.ptr<1> {
+    %0 = llvm.mlir.constant(1 : i32) : i32
+    // CHECK: llvm.alloca
+    %1 = llvm.alloca %0 x !llvm.ptr<2> {alignment = 4 : i64} : (i32) -> !llvm.ptr
+    %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> !llvm.ptr<1>
+    llvm.return %2 : !llvm.ptr<1>
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @load_smaller_int_type
+llvm.func @load_smaller_int_type() -> i32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x i64 : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 : !llvm.ptr -> i32
+  // CHECK: %[[RES:.*]] = llvm.trunc %{{.*}} : i64 to i32
+  // CHECK: llvm.return %[[RES]] : i32
+  llvm.return %2 : i32
+}
+
+// -----
+
+module attributes { dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<"dlti.endianness", "big">
+>} {
+  // CHECK-LABEL: @load_smaller_int_type_big_endian
+  llvm.func @load_smaller_int_type_big_endian() -> i8 {
+    %0 = llvm.mlir.constant(1 : i32) : i32
+    // CHECK-NOT: llvm.alloca
+    %1 = llvm.alloca %0 x i64 : (i32) -> !llvm.ptr
+    %2 = llvm.load %1 : !llvm.ptr -> i8
+    // CHECK: %[[SHIFT_WIDTH:.*]] = llvm.mlir.constant(56 : i64) : i64
+    // CHECK: %[[SHIFT:.*]] = llvm.lshr %{{.*}}, %[[SHIFT_WIDTH]]
+    // CHECK: %[[RES:.*]] = llvm.trunc %[[SHIFT]] : i64 to i8
+    // CHECK: llvm.return %[[RES]] : i8
+    llvm.return %2 : i8
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @load_different_type_smaller
+llvm.func @load_different_type_smaller() -> f32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x i64 : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 : !llvm.ptr -> f32
+  // CHECK: %[[TRUNC:.*]] = llvm.trunc %{{.*}} : i64 to i32
+  // CHECK: %[[RES:.*]] = llvm.bitcast %[[TRUNC]] : i32 to f32
+  // CHECK: llvm.return %[[RES]] : f32
+  llvm.return %2 : f32
+}
+
+// -----
+
+// CHECK-LABEL: @load_smaller_float_type
+llvm.func @load_smaller_float_type() -> f32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x f64 : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 : !llvm.ptr -> f32
+  // CHECK: %[[CAST:.*]] = llvm.bitcast %{{.*}} : f64 to i64
+  // CHECK: %[[TRUNC:.*]] = llvm.trunc %[[CAST]] : i64 to i32
+  // CHECK: %[[RES:.*]] = llvm.bitcast %[[TRUNC]] : i32 to f32
+  // CHECK: llvm.return %[[RES]] : f32
+  llvm.return %2 : f32
+}
+
+// -----
+
+// CHECK-LABEL: @load_first_vector_elem
+llvm.func @load_first_vector_elem() -> i16 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  %1 = llvm.alloca %0 x vector<4xi16> : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 : !llvm.ptr -> i16
+  // CHECK: %[[TRUNC:.*]] = llvm.bitcast %{{.*}} : vector<4xi16> to i64
+  // CHECK: %[[RES:.*]] = llvm.trunc %[[TRUNC]] : i64 to i16
+  // CHECK: llvm.return %[[RES]] : i16
+  llvm.return %2 : i16
+}
+
+// -----
+
+// CHECK-LABEL: @load_first_llvm_vector_elem
+llvm.func @load_first_llvm_vector_elem() -> i16 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: llvm.alloca
+  %1 = llvm.alloca %0 x !llvm.vec<4 x ptr> : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 : !llvm.ptr -> i16
+  llvm.return %2 : i16
+}
+
+// -----
+
+// CHECK-LABEL: @scalable_vector
+llvm.func @scalable_vector() -> i16 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: llvm.alloca
+  %1 = llvm.alloca %0 x vector<[4]xi16> : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 : !llvm.ptr -> i16
+  llvm.return %2 : i16
+}
+
+// -----
+
+// CHECK-LABEL: @scalable_llvm_vector
+llvm.func @scalable_llvm_vector() -> i16 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: llvm.alloca
+  %1 = llvm.alloca %0 x !llvm.vec<? x 4 x ppc_fp128> : (i32) -> !llvm.ptr
+  %2 = llvm.load %1 : !llvm.ptr -> i16
+  llvm.return %2 : i16
+}
+
+// -----
+
+// CHECK-LABEL: @smaller_store_forwarding
+// CHECK-SAME: %[[ARG:.+]]: i16
+llvm.func @smaller_store_forwarding(%arg : i16) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  // CHECK: %[[UNDEF:.+]] = llvm.mlir.undef : i32
+  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+
+  // CHECK: %[[ZEXT:.+]] = llvm.zext %[[ARG]] : i16 to i32
+  // CHECK: %[[MASK:.+]] = llvm.mlir.constant(-65536 : i32) : i32
+  // CHECK: %[[MASKED:.+]] = llvm.and %[[UNDEF]], %[[MASK]]
+  // CHECK: %[[NEW_DEF:.+]] = llvm.or %[[MASKED]], %[[ZEXT]]
+  llvm.store %arg, %1 : i16, !llvm.ptr
+  llvm.return
+}
+
+// -----
+
+module attributes { dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<"dlti.endianness", "big">
+>} {
+  // CHECK-LABEL: @smaller_store_forwarding_big_endian
+  // CHECK-SAME: %[[ARG:.+]]: i16
+  llvm.func @smaller_store_forwarding_big_endian(%arg : i16) {
+    %0 = llvm.mlir.constant(1 : i32) : i32
+    // CHECK-NOT: llvm.alloca
+    // CHECK: %[[UNDEF:.+]] = llvm.mlir.undef : i32
+    %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+
+    // CHECK: %[[ZEXT:.+]] = llvm.zext %[[ARG]] : i16 to i32
+    // CHECK: %[[SHIFT_WIDTH:.+]] = llvm.mlir.constant(16 : i32) : i32
+    // CHECK: %[[SHIFTED:.+]] = llvm.shl %[[ZEXT]], %[[SHIFT_WIDTH]]
+    // CHECK: %[[MASK:.+]] = llvm.mlir.constant(65535 : i32) : i32
+    // CHECK: %[[MASKED:.+]] = llvm.and %[[UNDEF]], %[[MASK]]
+    // CHECK: %[[NEW_DEF:.+]] = llvm.or %[[MASKED]], %[[SHIFTED]]
+    llvm.store %arg, %1 : i16, !llvm.ptr
+    llvm.return
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @smaller_store_forwarding_type_mix
+// CHECK-SAME: %[[ARG:.+]]: vector<1xi8>
+llvm.func @smaller_store_forwarding_type_mix(%arg : vector<1xi8>) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  // CHECK: %[[UNDEF:.+]] = llvm.mlir.undef : f32
+  %1 = llvm.alloca %0 x f32 : (i32) -> !llvm.ptr
+
+  // CHECK: %[[CASTED_DEF:.+]] = llvm.bitcast %[[UNDEF]] : f32 to i32
+  // CHECK: %[[CASTED_ARG:.+]] = llvm.bitcast %[[ARG]] : vector<1xi8> to i8
+  // CHECK: %[[ZEXT:.+]] = llvm.zext %[[CASTED_ARG]] : i8 to i32
+  // CHECK: %[[MASK:.+]] = llvm.mlir.constant(-256 : i32) : i32
+  // CHECK: %[[MASKED:.+]] = llvm.and %[[CASTED_DEF]], %[[MASK]]
+  // CHECK: %[[NEW_DEF:.+]] = llvm.or %[[MASKED]], %[[ZEXT]]
+  // CHECK: %[[CASTED_NEW_DEF:.+]] = llvm.bitcast %[[NEW_DEF]] : i32 to f32
+  llvm.store %arg, %1 : vector<1xi8>, !llvm.ptr
+  llvm.return
+}
+
+// -----
+
+module attributes { dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<"dlti.endianness", "big">
+>} {
+  // CHECK-LABEL: @smaller_store_forwarding_type_mix
+  // CHECK-SAME: %[[ARG:.+]]: vector<1xi8>
+  llvm.func @smaller_store_forwarding_type_mix(%arg : vector<1xi8>) {
+    %0 = llvm.mlir.constant(1 : i32) : i32
+    // CHECK-NOT: llvm.alloca
+    // CHECK: %[[UNDEF:.+]] = llvm.mlir.undef : f32
+    %1 = llvm.alloca %0 x f32 : (i32) -> !llvm.ptr
+
+    // CHECK: %[[CASTED_DEF:.+]] = llvm.bitcast %[[UNDEF]] : f32 to i32
+    // CHECK: %[[CASTED_ARG:.+]] = llvm.bitcast %[[ARG]] : vector<1xi8> to i8
+    // CHECK: %[[ZEXT:.+]] = llvm.zext %[[CASTED_ARG]] : i8 to i32
+    // CHECK: %[[SHIFT_WIDTH:.+]] = llvm.mlir.constant(24 : i32) : i32
+    // CHECK: %[[SHIFTED:.+]] = llvm.shl %[[ZEXT]], %[[SHIFT_WIDTH]]
+    // CHECK: %[[MASK:.+]] = llvm.mlir.constant(16777215 : i32) : i32
+    // CHECK: %[[MASKED:.+]] = llvm.and %[[CASTED_DEF]], %[[MASK]]
+    // CHECK: %[[NEW_DEF:.+]] = llvm.or %[[MASKED]], %[[SHIFTED]]
+    // CHECK: %[[CASTED_NEW_DEF:.+]] = llvm.bitcast %[[NEW_DEF]] : i32 to f32
+    llvm.store %arg, %1 : vector<1xi8>, !llvm.ptr
+    llvm.return
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @stores_with_different_types_branches
+// CHECK-SAME: %[[ARG0:.+]]: i64
+// CHECK-SAME: %[[ARG1:.+]]: f32
+llvm.func @stores_with_different_types_branches(%arg0: i64, %arg1: f32, %cond: i1) -> f64 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  // CHECK: %[[UNDEF:.+]] = llvm.mlir.undef : i64
+  %1 = llvm.alloca %0 x i64 {alignment = 4 : i64} : (i32) -> !llvm.ptr
+  llvm.cond_br %cond, ^bb1, ^bb2
+^bb1:
+  llvm.store %arg0, %1 {alignment = 4 : i64} : i64, !llvm.ptr
+  // CHECK: llvm.br ^[[BB3:.+]](%[[ARG0]] : i64)
+  llvm.br ^bb3
+^bb2:
+  llvm.store %arg1, %1 {alignment = 4 : i64} : f32, !llvm.ptr
+  // CHECK: %[[CAST:.+]] = llvm.bitcast %[[ARG1]] : f32 to i32
+  // CHECK: %[[ZEXT:.+]] = llvm.zext %[[CAST]] : i32 to i64
+  // CHECK: %[[MASK:.+]] = llvm.mlir.constant(-4294967296 : i64) : i64
+  // CHECK: %[[MASKED:.+]] = llvm.and %[[UNDEF]], %[[MASK]]
+  // CHECK: %[[NEW_DEF:.+]] = llvm.or %[[MASKED]], %[[ZEXT]]
+  // CHECK: llvm.br ^[[BB3]](%[[NEW_DEF]] : i64)
+  llvm.br ^bb3
+^bb3:
+  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> f64
+  llvm.return %2 : f64
+}
+
+// -----
+
+// Verifiy that mem2reg does not touch stores with undefined semantics.
+
+// CHECK-LABEL: @store_out_of_bounds
+llvm.func @store_out_of_bounds(%arg : i64) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: llvm.alloca
+  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+  llvm.store %arg, %1 : i64, !llvm.ptr
+  llvm.return
 }

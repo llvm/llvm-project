@@ -9,21 +9,6 @@
 #ifndef LLVM_LIBC_MACROS_FLOAT_MACROS_H
 #define LLVM_LIBC_MACROS_FLOAT_MACROS_H
 
-// Suppress `#include_next is a language extension` warnings.
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wgnu-include-next"
-#pragma clang diagnostic ignored "-Winclude-next-absolute-path"
-#else // gcc
-#pragma GCC system_header
-#endif //__clang__
-
-#include_next <float.h>
-
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif //__clang__
-
 #ifndef FLT_RADIX
 #define FLT_RADIX __FLT_RADIX__
 #endif // FLT_RADIX
@@ -32,9 +17,13 @@
 #define FLT_EVAL_METHOD __FLT_EVAL_METHOD__
 #endif // FLT_EVAL_METHOD
 
-#ifndef DECIMAL_DIG
-#define DECIMAL_DIG __DECIMAL_DIG__
-#endif // DECIMAL_DIG
+#ifndef FLT_ROUNDS
+#if __has_builtin(__builtin_flt_rounds)
+#define FLT_ROUNDS __builtin_flt_rounds()
+#else
+#define FLT_ROUNDS 1
+#endif
+#endif // FLT_ROUNDS
 
 #ifndef FLT_DECIMAL_DIG
 #define FLT_DECIMAL_DIG __FLT_DECIMAL_DIG__
@@ -47,6 +36,10 @@
 #ifndef LDBL_DECIMAL_DIG
 #define LDBL_DECIMAL_DIG __LDBL_DECIMAL_DIG__
 #endif // LDBL_DECIMAL_DIG
+
+#ifndef DECIMAL_DIG
+#define DECIMAL_DIG __DECIMAL_DIG__
+#endif // DECIMAL_DIG
 
 #ifndef FLT_DIG
 #define FLT_DIG __FLT_DIG__
@@ -97,15 +90,15 @@
 #endif // LDBL_MAX
 
 #ifndef FLT_TRUE_MIN
-#define FLT_TRUE_MIN __FLT_TRUE_MIN__
+#define FLT_TRUE_MIN __FLT_DENORM_MIN__
 #endif // FLT_TRUE_MIN
 
 #ifndef DBL_TRUE_MIN
-#define DBL_TRUE_MIN __DBL_TRUE_MIN__
+#define DBL_TRUE_MIN __DBL_DENORM_MIN__
 #endif // DBL_TRUE_MIN
 
 #ifndef LDBL_TRUE_MIN
-#define LDBL_TRUE_MIN __LDBL_TRUE_MIN__
+#define LDBL_TRUE_MIN __LDBL_DENORM_MIN__
 #endif // LDBL_TRUE_MIN
 
 #ifndef FLT_EPSILON

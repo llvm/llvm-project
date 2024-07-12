@@ -1446,7 +1446,7 @@ def : InstRW<[V1Write_3c_1V01], (instregex "^[SU]DOT_ZZZI?_S$")>;
 def : InstRW<[V1Write_3c_1V], (instrs SUDOT_ZZZI, USDOT_ZZZ, USDOT_ZZZI)>;
 
 // Dot product, 16 bit
-def : InstRW<[V1Write_4c_1V01], (instregex "^[SU]DOT_ZZZI?_D$")>;
+def : InstRW<[V1Write_4c_1V0], (instregex "^[SU]DOT_ZZZI?_D$")>;
 
 // Duplicate, immediate and indexed form
 def : InstRW<[V1Write_2c_1V01], (instregex "^DUP_ZI_[BHSD]$",

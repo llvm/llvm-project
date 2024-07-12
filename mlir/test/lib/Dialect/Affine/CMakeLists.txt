@@ -30,5 +30,13 @@ add_mlir_library(MLIRAffineTransformsTestPasses
   MLIRSupport
   MLIRMemRefDialect
   MLIRTensorDialect
+  MLIRTestDialect
   MLIRVectorUtils
   )
+
+target_include_directories(MLIRAffineTransformsTestPasses
+  PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/../Test
+  ${CMAKE_CURRENT_BINARY_DIR}/../Test
+  )
+

@@ -47,6 +47,7 @@ public:
 
   bool hasFP(const MachineFunction &MF) const override;
   bool isFPReserved(const MachineFunction &MF) const;
+  bool requiresAAPCSFrameRecord(const MachineFunction &MF) const;
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
   bool canSimplifyCallFramePseudos(const MachineFunction &MF) const override;
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,

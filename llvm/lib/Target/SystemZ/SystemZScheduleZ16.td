@@ -1719,7 +1719,7 @@ def : InstRW<[WLat30, MCD], (instregex "(M|S|ST|T)SCH$")>;
 def : InstRW<[WLat30, MCD], (instregex "RCHP$")>;
 def : InstRW<[WLat30, MCD], (instregex "SCHM$")>;
 def : InstRW<[WLat30, MCD], (instregex "STC(PS|RW)$")>;
-def : InstRW<[WLat30, MCD], (instregex "TPI$")>;
+def : InstRW<[WLat30, MCD], (instregex "TPE?I$")>;
 def : InstRW<[WLat30, MCD], (instregex "SAL$")>;
 
 }

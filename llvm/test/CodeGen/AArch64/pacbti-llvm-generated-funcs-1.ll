@@ -22,7 +22,7 @@ define internal void @asan.module_ctor() #0 {
 ;; CHECK-LABEL: asan.module_ctor:
 ;; CHECK: hint #34
 
-attributes #0 = { noinline nounwind optnone sanitize_address uwtable "branch-target-enforcement"="true" }
+attributes #0 = { noinline nounwind optnone sanitize_address uwtable "branch-target-enforcement" }
 
 !llvm.module.flags = !{!0, !1, !2, !3, !4}
 

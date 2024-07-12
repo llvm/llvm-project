@@ -23,7 +23,7 @@ define void @vector_interleave_store_v32i1_v16i1(<16 x i1> %a, <16 x i1> %b, ptr
 ; CHECK-NEXT:    vmsne.vi v8, v12, 0
 ; CHECK-NEXT:    vsm.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %res = call <32 x i1> @llvm.experimental.vector.interleave2.v32i1(<16 x i1> %a, <16 x i1> %b)
+  %res = call <32 x i1> @llvm.vector.interleave2.v32i1(<16 x i1> %a, <16 x i1> %b)
   store <32 x i1> %res, ptr %p
   ret void
 }
@@ -40,7 +40,7 @@ define void @vector_interleave_store_v16i16_v8i16_align1(<8 x i16> %a, <8 x i16>
 ; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-NEXT:    vse8.v v10, (a0)
 ; CHECK-NEXT:    ret
-  %res = call <16 x i16> @llvm.experimental.vector.interleave2.v16i16(<8 x i16> %a, <8 x i16> %b)
+  %res = call <16 x i16> @llvm.vector.interleave2.v16i16(<8 x i16> %a, <8 x i16> %b)
   store <16 x i16> %res, ptr %p, align 1
   ret void
 }
@@ -51,7 +51,7 @@ define void @vector_interleave_store_v16i16_v8i16(<8 x i16> %a, <8 x i16> %b, pt
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %res = call <16 x i16> @llvm.experimental.vector.interleave2.v16i16(<8 x i16> %a, <8 x i16> %b)
+  %res = call <16 x i16> @llvm.vector.interleave2.v16i16(<8 x i16> %a, <8 x i16> %b)
   store <16 x i16> %res, ptr %p
   ret void
 }
@@ -62,7 +62,7 @@ define void @vector_interleave_store_v8i32_v4i32(<4 x i32> %a, <4 x i32> %b, ptr
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg2e32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %res = call <8 x i32> @llvm.experimental.vector.interleave2.v8i32(<4 x i32> %a, <4 x i32> %b)
+  %res = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> %a, <4 x i32> %b)
   store <8 x i32> %res, ptr %p
   ret void
 }
@@ -73,15 +73,15 @@ define void @vector_interleave_store_v4i64_v2i64(<2 x i64> %a, <2 x i64> %b, ptr
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vsseg2e64.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %res = call <4 x i64> @llvm.experimental.vector.interleave2.v4i64(<2 x i64> %a, <2 x i64> %b)
+  %res = call <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64> %a, <2 x i64> %b)
   store <4 x i64> %res, ptr %p
   ret void
 }
 
-declare <32 x i1> @llvm.experimental.vector.interleave2.v32i1(<16 x i1>, <16 x i1>)
-declare <16 x i16> @llvm.experimental.vector.interleave2.v16i16(<8 x i16>, <8 x i16>)
-declare <8 x i32> @llvm.experimental.vector.interleave2.v8i32(<4 x i32>, <4 x i32>)
-declare <4 x i64> @llvm.experimental.vector.interleave2.v4i64(<2 x i64>, <2 x i64>)
+declare <32 x i1> @llvm.vector.interleave2.v32i1(<16 x i1>, <16 x i1>)
+declare <16 x i16> @llvm.vector.interleave2.v16i16(<8 x i16>, <8 x i16>)
+declare <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32>, <4 x i32>)
+declare <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64>, <2 x i64>)
 
 ; Floats
 
@@ -91,7 +91,7 @@ define void @vector_interleave_store_v4f16_v2f16(<2 x half> %a, <2 x half> %b, p
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %res = call <4 x half> @llvm.experimental.vector.interleave2.v4f16(<2 x half> %a, <2 x half> %b)
+  %res = call <4 x half> @llvm.vector.interleave2.v4f16(<2 x half> %a, <2 x half> %b)
   store <4 x half> %res, ptr %p
   ret void
 }
@@ -102,7 +102,7 @@ define void @vector_interleave_store_v8f16_v4f16(<4 x half> %a, <4 x half> %b, p
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %res = call <8 x half> @llvm.experimental.vector.interleave2.v8f16(<4 x half> %a, <4 x half> %b)
+  %res = call <8 x half> @llvm.vector.interleave2.v8f16(<4 x half> %a, <4 x half> %b)
   store <8 x half> %res, ptr %p
   ret void
 }
@@ -113,7 +113,7 @@ define void @vector_interleave_store_v4f32_v2f32(<2 x float> %a, <2 x float> %b,
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsseg2e32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %res = call <4 x float> @llvm.experimental.vector.interleave2.v4f32(<2 x float> %a, <2 x float> %b)
+  %res = call <4 x float> @llvm.vector.interleave2.v4f32(<2 x float> %a, <2 x float> %b)
   store <4 x float> %res, ptr %p
   ret void
 }
@@ -124,7 +124,7 @@ define void @vector_interleave_store_v16f16_v8f16(<8 x half> %a, <8 x half> %b, 
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %res = call <16 x half> @llvm.experimental.vector.interleave2.v16f16(<8 x half> %a, <8 x half> %b)
+  %res = call <16 x half> @llvm.vector.interleave2.v16f16(<8 x half> %a, <8 x half> %b)
   store <16 x half> %res, ptr %p
   ret void
 }
@@ -135,7 +135,7 @@ define void @vector_interleave_store_v8f32_v4f32(<4 x float> %a, <4 x float> %b,
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vsseg2e32.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %res = call <8 x float> @llvm.experimental.vector.interleave2.v8f32(<4 x float> %a, <4 x float> %b)
+  %res = call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> %a, <4 x float> %b)
   store <8 x float> %res, ptr %p
   ret void
 }
@@ -146,15 +146,15 @@ define void @vector_interleave_store_v4f64_v2f64(<2 x double> %a, <2 x double> %
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vsseg2e64.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %res = call <4 x double> @llvm.experimental.vector.interleave2.v4f64(<2 x double> %a, <2 x double> %b)
+  %res = call <4 x double> @llvm.vector.interleave2.v4f64(<2 x double> %a, <2 x double> %b)
   store <4 x double> %res, ptr %p
   ret void
 }
 
 
-declare <4 x half> @llvm.experimental.vector.interleave2.v4f16(<2 x half>, <2 x half>)
-declare <8 x half> @llvm.experimental.vector.interleave2.v8f16(<4 x half>, <4 x half>)
-declare <4 x float> @llvm.experimental.vector.interleave2.v4f32(<2 x float>, <2 x float>)
-declare <16 x half> @llvm.experimental.vector.interleave2.v16f16(<8 x half>, <8 x half>)
-declare <8 x float> @llvm.experimental.vector.interleave2.v8f32(<4 x float>, <4 x float>)
-declare <4 x double> @llvm.experimental.vector.interleave2.v4f64(<2 x double>, <2 x double>)
+declare <4 x half> @llvm.vector.interleave2.v4f16(<2 x half>, <2 x half>)
+declare <8 x half> @llvm.vector.interleave2.v8f16(<4 x half>, <4 x half>)
+declare <4 x float> @llvm.vector.interleave2.v4f32(<2 x float>, <2 x float>)
+declare <16 x half> @llvm.vector.interleave2.v16f16(<8 x half>, <8 x half>)
+declare <8 x float> @llvm.vector.interleave2.v8f32(<4 x float>, <4 x float>)
+declare <4 x double> @llvm.vector.interleave2.v4f64(<2 x double>, <2 x double>)

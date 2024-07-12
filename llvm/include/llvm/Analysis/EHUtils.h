@@ -79,7 +79,6 @@ static void computeEHOnlyBlocks(FunctionT &F, DenseSet<BlockT *> &EHBlocks) {
     }
   }
 
-  EHBlocks.clear();
   for (auto Entry : Statuses) {
     if (Entry.second == EH)
       EHBlocks.insert(Entry.first);

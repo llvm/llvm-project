@@ -13,7 +13,7 @@ L1_header:
 
 ; CHECK: L2_header:
 ; CHECK: %[[INDVAR:.*]] = phi i64
-; CHECK: %[[TRUNC:.*]] = trunc i64 %[[INDVAR]] to i32
+; CHECK: %[[TRUNC:.*]] = trunc nuw nsw i64 %[[INDVAR]] to i32
 L2_header:
   %i = phi i32 [ 0, %L1_header ], [ %i_next, %L2_latch ]
   %i_prom = sext i32 %i to i64

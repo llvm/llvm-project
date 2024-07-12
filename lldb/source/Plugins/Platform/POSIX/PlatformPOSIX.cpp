@@ -678,8 +678,8 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
     loaded_image->Clear();
 
   std::string path;
-  path = remote_file.GetPath();
-  
+  path = remote_file.GetPath(false);
+
   ThreadSP thread_sp = process->GetThreadList().GetExpressionExecutionThread();
   if (!thread_sp) {
     error.SetErrorString("dlopen error: no thread available to call dlopen.");

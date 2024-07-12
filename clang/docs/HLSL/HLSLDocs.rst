@@ -16,3 +16,4 @@ HLSL Design and Implementation
    ResourceTypes
    EntryFunctions
    FunctionCalls
+   AvailabilityDiagnostics

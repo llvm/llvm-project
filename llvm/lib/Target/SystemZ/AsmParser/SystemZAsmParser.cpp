@@ -227,7 +227,7 @@ public:
   bool isReg(RegisterKind RegKind) const {
     return Kind == KindReg && Reg.Kind == RegKind;
   }
-  unsigned getReg() const override {
+  MCRegister getReg() const override {
     assert(Kind == KindReg && "Not a register");
     return Reg.Num;
   }

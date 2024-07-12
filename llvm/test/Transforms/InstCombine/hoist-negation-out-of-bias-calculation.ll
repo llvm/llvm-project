@@ -55,14 +55,14 @@ define <2 x i8> @t2_vec(<2 x i8> %x, <2 x i8> %y) {
   ret <2 x i8> %negbias
 }
 
-define <2 x i8> @t3_vec_undef(<2 x i8> %x, <2 x i8> %y) {
-; CHECK-LABEL: @t3_vec_undef(
+define <2 x i8> @t3_vec_poison(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @t3_vec_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[Y:%.*]], <i8 -1, i8 -1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i8> [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    [[NEGBIAS:%.*]] = sub <2 x i8> zeroinitializer, [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i8> [[NEGBIAS]]
 ;
-  %negy = sub <2 x i8> <i8 0, i8 undef>, %y
+  %negy = sub <2 x i8> <i8 0, i8 poison>, %y
   %unbiasedx = and <2 x i8> %negy, %x
   %negbias = sub <2 x i8> %unbiasedx, %x
   ret <2 x i8> %negbias

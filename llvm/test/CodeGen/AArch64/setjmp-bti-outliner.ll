@@ -76,5 +76,5 @@ entry:
 ; NOBTI:       OUTLINED_FUNCTION_1:
 ; NOBTI-LABEL:   ret
 
-attributes #0 = { "branch-target-enforcement"="true" }
+attributes #0 = { "branch-target-enforcement" }
 attributes #1 = { returns_twice }

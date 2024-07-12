@@ -208,7 +208,7 @@ BasicBlock *NewLeafBlock(CaseRange &Leaf, Value *Val, ConstantInt *LowerBound,
     PHINode *PN = cast<PHINode>(I);
     // Remove all but one incoming entries from the cluster
     APInt Range = Leaf.High->getValue() - Leaf.Low->getValue();
-    for (APInt j(Range.getBitWidth(), 0, true); j.slt(Range); ++j) {
+    for (APInt j(Range.getBitWidth(), 0, false); j.ult(Range); ++j) {
       PN->removeIncomingValue(OrigBlock);
     }
 
@@ -407,7 +407,7 @@ void ProcessSwitchInst(SwitchInst *SI,
     // 2. even if limited to icmp instructions only, it will have to process
     //    roughly C icmp's per switch, where C is the number of cases in the
     //    switch, while LowerSwitch only needs to call LVI once per switch.
-    const DataLayout &DL = F->getParent()->getDataLayout();
+    const DataLayout &DL = F->getDataLayout();
     KnownBits Known = computeKnownBits(Val, DL, /*Depth=*/0, AC, SI);
     // TODO Shouldn't this create a signed range?
     ConstantRange KnownBitsRange =

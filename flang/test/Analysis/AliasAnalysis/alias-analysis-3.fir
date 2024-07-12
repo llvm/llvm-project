@@ -23,8 +23,8 @@
 // FIXME: a's box cannot alias with raw reference to f32 (x), so MayAlias below must be NoAlias:
 // CHECK: a#0 <-> func.region0#1: MayAlias
 
-// FIXME: pointer_dummy's box cannot alias with raw reference to f32 (x), so MayAlias below must be NoAlias:
-// CHECK: func.region0#0 <-> func.region0#1: MayAlias
+// pointer_dummy's box cannot alias with raw reference to f32 (x)
+// CHECK: func.region0#0 <-> func.region0#1: NoAlias
 
 fir.global @_QMmEa : !fir.type<_QMmTt{pointer_component:!fir.box<!fir.ptr<f32>>}> {
   %0 = fir.undefined !fir.type<_QMmTt{pointer_component:!fir.box<!fir.ptr<f32>>}>

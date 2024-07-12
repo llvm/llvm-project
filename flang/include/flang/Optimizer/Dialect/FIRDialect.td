@@ -21,7 +21,7 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-def fir_Dialect : Dialect {
+def FIROpsDialect : Dialect {
   let name = "fir";
   let cppNamespace = "::fir";
   let useDefaultTypePrinterParser = 0;
@@ -30,10 +30,33 @@ def fir_Dialect : Dialect {
   let dependentDialects = [
     // Arith dialect provides FastMathFlagsAttr
     // supported by some FIR operations.
-    "arith::ArithDialect",
+    "mlir::arith::ArithDialect",
     // TBAA Tag types
-    "LLVM::LLVMDialect"
+    "mlir::LLVM::LLVMDialect"
   ];
+  let extraClassDeclaration = [{
+  private:
+    // Register the builtin Attributes.
+    void registerAttributes();
+    // Register the builtin Types.
+    void registerTypes();
+    // Register external interfaces on operations of
+    // this dialect.
+    void registerOpExternalInterfaces();
+  public:
+    mlir::Type parseType(mlir::DialectAsmParser &parser) const override;
+    void printType(mlir::Type ty, mlir::DialectAsmPrinter &p) const override;
+ 
+    mlir::Attribute parseAttribute(mlir::DialectAsmParser &parser,
+                                   mlir::Type type) const override;
+    void printAttribute(mlir::Attribute attr,
+                        mlir::DialectAsmPrinter &p) const override;
+
+    // Return string name of fir.runtime attribute.
+    static constexpr llvm::StringRef getFirRuntimeAttrName() {
+      return "fir.runtime";
+    }
+  }];
 }
 
 #endif // FORTRAN_DIALECT_FIR_DIALECT

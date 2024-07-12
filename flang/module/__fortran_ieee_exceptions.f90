@@ -14,25 +14,22 @@
 include '../include/flang/Runtime/magic-numbers.h'
 
 module __fortran_ieee_exceptions
+  use __fortran_builtins, only: &
+    ieee_flag_type => __builtin_ieee_flag_type, &
+    ieee_support_flag => __builtin_ieee_support_flag, &
+    ieee_support_halting => __builtin_ieee_support_halting, &
+    ieee_invalid => __builtin_ieee_invalid, &
+    ieee_overflow => __builtin_ieee_overflow, &
+    ieee_divide_by_zero => __builtin_ieee_divide_by_zero, &
+    ieee_underflow => __builtin_ieee_underflow, &
+    ieee_inexact => __builtin_ieee_inexact, &
+    ieee_denorm => __builtin_ieee_denorm
   implicit none
-
-  ! Set PRIVATE by default to explicitly only export what is meant
-  ! to be exported by this MODULE.
   private
 
-  type, public :: ieee_flag_type ! Fortran 2018, 17.2 & 17.3
-    private
-    integer(kind=1) :: flag = 0
-  end type ieee_flag_type
-
-  type(ieee_flag_type), parameter, public :: &
-    ieee_invalid = ieee_flag_type(_FORTRAN_RUNTIME_IEEE_INVALID), &
-    ieee_overflow = ieee_flag_type(_FORTRAN_RUNTIME_IEEE_OVERFLOW), &
-    ieee_divide_by_zero = &
-        ieee_flag_type(_FORTRAN_RUNTIME_IEEE_DIVIDE_BY_ZERO), &
-    ieee_underflow = ieee_flag_type(_FORTRAN_RUNTIME_IEEE_UNDERFLOW), &
-    ieee_inexact = ieee_flag_type(_FORTRAN_RUNTIME_IEEE_INEXACT), &
-    ieee_denorm = ieee_flag_type(_FORTRAN_RUNTIME_IEEE_DENORM) ! extension
+  public :: ieee_flag_type, ieee_support_flag, ieee_support_halting
+  public :: ieee_invalid, ieee_overflow, ieee_divide_by_zero, ieee_underflow, &
+            ieee_inexact, ieee_denorm
 
   type(ieee_flag_type), parameter, public :: &
     ieee_usual(*) = [ ieee_overflow, ieee_divide_by_zero, ieee_invalid ], &
@@ -138,29 +135,5 @@ module __fortran_ieee_exceptions
     end subroutine ieee_set_status_0
   end interface
   public :: ieee_set_status
-
-#define IEEE_SUPPORT_FLAG_R(XKIND) \
-  pure logical function ieee_support_flag_a##XKIND(flag, x); \
-    import ieee_flag_type; \
-    type(ieee_flag_type), intent(in) :: flag; \
-    real(XKIND), intent(in) :: x(..); \
-  end function ieee_support_flag_a##XKIND;
-  interface ieee_support_flag
-    pure logical function ieee_support_flag_0(flag)
-      import ieee_flag_type
-      type(ieee_flag_type), intent(in) :: flag
-    end function ieee_support_flag_0
-    SPECIFICS_R(IEEE_SUPPORT_FLAG_R)
-  end interface ieee_support_flag
-  public :: ieee_support_flag
-#undef IEEE_SUPPORT_FLAG_R
-
-  interface ieee_support_halting
-    pure logical function ieee_support_halting_0(flag)
-      import ieee_flag_type
-      type(ieee_flag_type), intent(in) :: flag
-    end function ieee_support_halting_0
-  end interface
-  public :: ieee_support_halting
 
 end module __fortran_ieee_exceptions

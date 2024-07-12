@@ -118,9 +118,10 @@ private:
   bool Scan(const parser::DataIDoObject &);
 
   // Initializes all elements of a designator, which can be an array or section.
-  bool InitDesignator(const SomeExpr &);
+  bool InitDesignator(const SomeExpr &, const Scope &);
   // Initializes a single scalar object.
-  bool InitElement(const evaluate::OffsetSymbol &, const SomeExpr &designator);
+  bool InitElement(const evaluate::OffsetSymbol &, const SomeExpr &designator,
+      const Scope &);
   // If the returned flag is true, emit a warning about CHARACTER misusage.
   std::optional<std::pair<SomeExpr, bool>> ConvertElement(
       const SomeExpr &, const evaluate::DynamicType &);
@@ -128,7 +129,6 @@ private:
   DataInitializations &inits_;
   evaluate::ExpressionAnalyzer &exprAnalyzer_;
   ValueListIterator<DSV> values_;
-  const Scope *scope_{nullptr};
 };
 
 template <typename DSV>
@@ -149,8 +149,7 @@ bool DataInitializationCompiler<DSV>::Scan(const parser::Variable &var) {
   if (const auto *expr{GetExpr(exprAnalyzer_.context(), var)}) {
     parser::CharBlock at{var.GetSource()};
     exprAnalyzer_.GetFoldingContext().messages().SetLocation(at);
-    scope_ = &exprAnalyzer_.context().FindScope(at);
-    if (InitDesignator(*expr)) {
+    if (InitDesignator(*expr, exprAnalyzer_.context().FindScope(at))) {
       return true;
     }
   }
@@ -170,8 +169,7 @@ bool DataInitializationCompiler<DSV>::Scan(
   if (expr) {
     parser::CharBlock at{parser::FindSourceLocation(designator)};
     exprAnalyzer_.GetFoldingContext().messages().SetLocation(at);
-    scope_ = &exprAnalyzer_.context().FindScope(at);
-    if (InitDesignator(*expr)) {
+    if (InitDesignator(*expr, exprAnalyzer_.context().FindScope(at))) {
       return true;
     }
   }
@@ -254,12 +252,12 @@ template <typename DSV>
 bool DataInitializationCompiler<DSV>::Scan(const Symbol &symbol) {
   auto designator{exprAnalyzer_.Designate(evaluate::DataRef{symbol})};
   CHECK(designator.has_value());
-  return InitDesignator(*designator);
+  return InitDesignator(*designator, symbol.owner());
 }
 
 template <typename DSV>
 bool DataInitializationCompiler<DSV>::InitDesignator(
-    const SomeExpr &designator) {
+    const SomeExpr &designator, const Scope &scope) {
   evaluate::FoldingContext &context{exprAnalyzer_.GetFoldingContext()};
   evaluate::DesignatorFolder folder{context};
   while (auto offsetSymbol{folder.FoldDesignator(designator)}) {
@@ -274,7 +272,7 @@ bool DataInitializationCompiler<DSV>::InitDesignator(
             designator.AsFortran());
       }
       return false;
-    } else if (!InitElement(*offsetSymbol, designator)) {
+    } else if (!InitElement(*offsetSymbol, designator, scope)) {
       return false;
     } else {
       ++values_;
@@ -314,7 +312,8 @@ DataInitializationCompiler<DSV>::ConvertElement(
 
 template <typename DSV>
 bool DataInitializationCompiler<DSV>::InitElement(
-    const evaluate::OffsetSymbol &offsetSymbol, const SomeExpr &designator) {
+    const evaluate::OffsetSymbol &offsetSymbol, const SomeExpr &designator,
+    const Scope &scope) {
   const Symbol &symbol{offsetSymbol.symbol()};
   const Symbol *lastSymbol{GetLastSymbol(designator)};
   bool isPointer{lastSymbol && IsPointer(*lastSymbol)};
@@ -388,9 +387,9 @@ bool DataInitializationCompiler<DSV>::InitElement(
       // nothing to do; rely on zero initialization
       return true;
     } else if (isProcPointer) {
-      if (evaluate::IsProcedure(*expr)) {
+      if (evaluate::IsProcedureDesignator(*expr)) {
         if (CheckPointerAssignment(exprAnalyzer_.context(), designator, *expr,
-                DEREF(scope_),
+                scope,
                 /*isBoundsRemapping=*/false, /*isAssumedRank=*/false)) {
           if (lastSymbol->has<ProcEntityDetails>()) {
             GetImage().AddPointer(offsetSymbol.offset(), *expr);
@@ -413,14 +412,14 @@ bool DataInitializationCompiler<DSV>::InitElement(
           "Procedure '%s' may not be used to initialize '%s', which is not a procedure pointer"_err_en_US,
           expr->AsFortran(), DescribeElement());
     } else if (CheckInitialDataPointerTarget(
-                   exprAnalyzer_.context(), designator, *expr, DEREF(scope_))) {
+                   exprAnalyzer_.context(), designator, *expr, scope)) {
       GetImage().AddPointer(offsetSymbol.offset(), *expr);
       return true;
     }
   } else if (evaluate::IsNullPointer(*expr)) {
     exprAnalyzer_.Say("Initializer for '%s' must not be a pointer"_err_en_US,
         DescribeElement());
-  } else if (evaluate::IsProcedure(*expr)) {
+  } else if (evaluate::IsProcedureDesignator(*expr)) {
     exprAnalyzer_.Say("Initializer for '%s' must not be a procedure"_err_en_US,
         DescribeElement());
   } else if (auto designatorType{designator.GetType()}) {
@@ -463,9 +462,12 @@ bool DataInitializationCompiler<DSV>::InitElement(
       } else if (status == evaluate::InitialImage::OutOfRange) {
         OutOfRangeError();
       } else if (status == evaluate::InitialImage::LengthMismatch) {
-        exprAnalyzer_.Say(
-            "DATA statement value '%s' for '%s' has the wrong length"_warn_en_US,
-            folded.AsFortran(), DescribeElement());
+        if (exprAnalyzer_.context().ShouldWarn(
+                common::UsageWarning::DataLength)) {
+          exprAnalyzer_.Say(
+              "DATA statement value '%s' for '%s' has the wrong length"_warn_en_US,
+              folded.AsFortran(), DescribeElement());
+        }
         return true;
       } else if (status == evaluate::InitialImage::TooManyElems) {
         exprAnalyzer_.Say("DATA statement has too many elements"_err_en_US);
@@ -901,7 +903,13 @@ void ConstructInitializer(const Symbol &symbol,
       if (const auto *procDesignator{
               std::get_if<evaluate::ProcedureDesignator>(&expr->u)}) {
         CHECK(!procDesignator->GetComponent());
-        mutableProc.set_init(DEREF(procDesignator->GetSymbol()));
+        if (const auto *intrin{procDesignator->GetSpecificIntrinsic()}) {
+          const Symbol *intrinSymbol{
+              symbol.owner().FindSymbol(SourceName{intrin->name})};
+          mutableProc.set_init(DEREF(intrinSymbol));
+        } else {
+          mutableProc.set_init(DEREF(procDesignator->GetSymbol()));
+        }
       } else {
         CHECK(evaluate::IsNullProcedurePointer(*expr));
         mutableProc.set_init(nullptr);

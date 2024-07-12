@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 \
-// RUN:   -fcoro-aligned-allocation -S -emit-llvm %s -o - -disable-llvm-passes \
+// RUN:   -fcoro-aligned-allocation -emit-llvm %s -o - -disable-llvm-passes \
 // RUN:   | FileCheck %s
 
 #include "Inputs/coroutine.h"
@@ -26,8 +26,9 @@ struct task {
 // CHECK: %[[aligned_new:.+]] = call{{.*}}@_ZnwmSt11align_val_t({{.*}}%[[coro_size]],{{.*}}%[[coro_align]])
 
 // CHECK: coro.free:
+// CHECK: %[[coro_size_for_free:.+]] = call{{.*}}@llvm.coro.size
 // CHECK: %[[coro_align_for_free:.+]] = call{{.*}}@llvm.coro.align
-// CHECK: call void @_ZdlPvSt11align_val_t({{.*}}[[coro_align_for_free]]
+// CHECK: call void @_ZdlPvmSt11align_val_t({{.*}}%[[coro_size_for_free]],{{.*}}%[[coro_align_for_free]])
 
 task f() {
     co_return 43;
@@ -58,8 +59,9 @@ void *operator new(std::size_t, std::align_val_t, std::nothrow_t) noexcept;
 // CHECK: %[[aligned_new:.+]] = call{{.*}}@_ZnwmSt11align_val_tSt9nothrow_t({{.*}}%[[coro_size]],{{.*}}%[[coro_align]])
 
 // CHECK: coro.free:
+// CHECK: %[[coro_size_for_free:.+]] = call{{.*}}@llvm.coro.size
 // CHECK: %[[coro_align_for_free:.+]] = call{{.*}}@llvm.coro.align
-// CHECK: call void @_ZdlPvSt11align_val_t({{.*}}[[coro_align_for_free]]
+// CHECK: call void @_ZdlPvmSt11align_val_t({{.*}}%[[coro_size_for_free]],{{.*}}%[[coro_align_for_free]])
 
 task2 f2() {
     co_return 43;

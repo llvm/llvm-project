@@ -26,6 +26,10 @@ static_assert(foo[2][2] == nullptr, "");
 static_assert(foo[2][3] == &m, "");
 static_assert(foo[2][4] == nullptr, "");
 
+constexpr int afterEnd[] = {1,2,3};
+static_assert(&afterEnd[3] == afterEnd + 3, "");
+
+constexpr int ZeroSizeArray[] = {};
 
 constexpr int SomeInt[] = {1};
 constexpr int getSomeInt() { return *SomeInt; }
@@ -52,6 +56,10 @@ constexpr int derefPtr(const int *d) {
   return *d;
 }
 static_assert(derefPtr(data) == 5, "");
+
+/// Make sure we can refer to the one-past-the-end element
+/// and then return back to the end of the array.
+static_assert((&data[5])[-1] == 1, "");
 
 constexpr int storePtr() {
   int b[] = {1,2,3,4};
@@ -429,18 +437,13 @@ namespace Incomplete {
                           // both-note {{array-to-pointer decay of array member without known bound}}
 
   /// These are from test/SemaCXX/constant-expression-cxx11.cpp
-  /// and are the only tests using the 'indexing of array without known bound' diagnostic.
-  /// We currently diagnose them differently.
-  extern int arr[]; // expected-note 3{{declared here}}
+  extern int arr[];
   constexpr int *c = &arr[1]; // both-error  {{must be initialized by a constant expression}} \
-                              // ref-note {{indexing of array without known bound}} \
-                              // expected-note {{read of non-constexpr variable 'arr'}}
+                              // both-note {{indexing of array without known bound}}
   constexpr int *d = &arr[1]; // both-error  {{must be initialized by a constant expression}} \
-                              // ref-note {{indexing of array without known bound}} \
-                              // expected-note {{read of non-constexpr variable 'arr'}}
+                              // both-note {{indexing of array without known bound}}
   constexpr int *e = arr + 1; // both-error  {{must be initialized by a constant expression}} \
-                              // ref-note {{indexing of array without known bound}} \
-                              // expected-note {{read of non-constexpr variable 'arr'}}
+                              // both-note {{indexing of array without known bound}}
 }
 
 namespace GH69115 {
@@ -510,11 +513,9 @@ namespace NonConstReads {
             // both-note {{read of non-const variable 'z'}}
 #else
   void *p = nullptr;
-  int arr[!p]; // ref-error {{not allowed at file scope}} \
-               // expected-error {{not allowed at file scope}}
+  int arr[!p]; // both-error {{not allowed at file scope}}
   int z;
-  int a[z]; // ref-error {{not allowed at file scope}} \
-            // expected-error {{not allowed at file scope}}
+  int a[z]; // both-error {{not allowed at file scope}}
 #endif
 
   const int y = 0;
@@ -565,9 +566,69 @@ namespace LocalVLA {
      // both-note@-4 {{function parameter 'size' with unknown value}}
 #endif
   }
+
+  void f (unsigned int m) {
+    int e[2][m];
+#if __cplusplus >= 202002L
+     // both-note@-3 {{declared here}}
+     // both-warning@-3 2{{variable length array}}
+     // both-note@-4 {{function parameter 'm' with unknown value}}
+#endif
+    e[0][0] = 0;
+  }
 }
 
-char melchizedek[2200000000];
+char melchizedek[2];
 typedef decltype(melchizedek[1] - melchizedek[0]) ptrdiff_t;
-constexpr ptrdiff_t d1 = &melchizedek[0x7fffffff] - &melchizedek[0]; // ok
-constexpr ptrdiff_t d3 = &melchizedek[0] - &melchizedek[0x80000000u]; // ok
+constexpr ptrdiff_t d1 = &melchizedek[1] - &melchizedek[0]; // ok
+constexpr ptrdiff_t d3 = &melchizedek[0] - &melchizedek[1]; // ok
+
+/// GH#88018
+const int SZA[] = {};
+void testZeroSizedArrayAccess() { unsigned c = SZA[4]; }
+
+#if __cplusplus >= 202002L
+constexpr int test_multiarray2() { // both-error {{never produces a constant expression}}
+  int multi2[2][1]; // both-note {{declared here}}
+  return multi2[2][0]; // both-note {{cannot access array element of pointer past the end of object}} \
+                       // both-warning {{array index 2 is past the end of the array (that has type 'int[2][1]')}}
+}
+
+/// Same but with a dummy pointer.
+int multi22[2][2]; // both-note {{declared here}}
+int test_multiarray22() {
+  return multi22[2][0]; // both-warning {{array index 2 is past the end of the array (that has type 'int[2][2]')}}
+}
+
+#endif
+
+namespace ArrayMemberAccess {
+  struct A {
+    int x;
+  };
+  void f(const A (&a)[]) {
+    bool cond = a->x;
+  }
+}
+
+namespace OnePastEndSub {
+  struct A {};
+  constexpr A a[3][3];
+  constexpr int diff2 = &a[1][3] - &a[1][0]; /// Used to crash.
+}
+
+static int same_entity_2[3];
+constexpr int *get2() {
+  // This is a redeclaration of the same entity, even though it doesn't
+  // inherit the type of the prior declaration.
+  extern int same_entity_2[];
+  return same_entity_2;
+}
+static_assert(get2() == same_entity_2, "failed to find previous decl");
+
+constexpr int zs[2][2][2][2] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+constexpr int fail(const int &p) {
+  return (&p)[64]; // both-note {{cannot refer to element 64 of array of 2 elements}}
+}
+static_assert(fail(*(&(&(*(*&(&zs[2] - 1)[0] + 2 - 2))[2])[-1][2] - 2)) == 11, ""); // both-error {{not an integral constant expression}} \
+                                                                                    // both-note {{in call to}}

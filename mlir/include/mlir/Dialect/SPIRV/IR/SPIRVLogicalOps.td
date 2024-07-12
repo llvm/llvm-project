@@ -659,6 +659,8 @@ def SPIRV_SGreaterThanOp : SPIRV_LogicalBinaryOp<"SGreaterThan",
 
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -688,6 +690,8 @@ def SPIRV_SGreaterThanEqualOp : SPIRV_LogicalBinaryOp<"SGreaterThanEqual",
     %5 = spirv.SGreaterThanEqual %2, %3 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -716,6 +720,8 @@ def SPIRV_SLessThanOp : SPIRV_LogicalBinaryOp<"SLessThan",
 
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -745,6 +751,8 @@ def SPIRV_SLessThanEqualOp : SPIRV_LogicalBinaryOp<"SLessThanEqual",
     %5 = spirv.SLessThanEqual %2, %3 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -800,6 +808,8 @@ def SPIRV_SelectOp : SPIRV_Op<"Select",
   // These ops require dynamic availability specification based on operand and
   // result types.
   bit autogenAvailability = 0;
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -828,6 +838,8 @@ def SPIRV_UGreaterThanOp : SPIRV_LogicalBinaryOp<"UGreaterThan",
     %5 = spirv.UGreaterThan %2, %3 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -857,6 +869,8 @@ def SPIRV_UGreaterThanEqualOp : SPIRV_LogicalBinaryOp<"UGreaterThanEqual",
     %5 = spirv.UGreaterThanEqual %2, %3 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -884,6 +898,8 @@ def SPIRV_ULessThanOp : SPIRV_LogicalBinaryOp<"ULessThan",
     %5 = spirv.ULessThan %2, %3 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 // -----
@@ -947,6 +963,8 @@ def SPIRV_ULessThanEqualOp : SPIRV_LogicalBinaryOp<"ULessThanEqual",
     %5 = spirv.ULessThanEqual %2, %3 : vector<4xi32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 #endif // MLIR_DIALECT_SPIRV_IR_LOGICAL_OPS

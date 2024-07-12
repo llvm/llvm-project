@@ -14,8 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenSchedule.h"
-#include "CodeGenTarget.h"
+#include "Common/CodeGenSchedule.h"
+#include "Common/CodeGenTarget.h"
 #include "DFAEmitter.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"

@@ -393,7 +393,7 @@ define i8 @smax_of_nots(i8 %x, i8 %y) {
   ret i8 %m
 }
 
-; Vectors are ok (including undef lanes of not ops)
+; Vectors are ok (including poison lanes of not ops)
 
 define <3 x i8> @smin_of_nots(<3 x i8> %x, <3 x i8> %y) {
 ; CHECK-LABEL: @smin_of_nots(
@@ -401,8 +401,8 @@ define <3 x i8> @smin_of_nots(<3 x i8> %x, <3 x i8> %y) {
 ; CHECK-NEXT:    [[M:%.*]] = xor <3 x i8> [[TMP1]], <i8 -1, i8 -1, i8 -1>
 ; CHECK-NEXT:    ret <3 x i8> [[M]]
 ;
-  %notx = xor <3 x i8> %x, <i8 -1, i8 undef, i8 -1>
-  %noty = xor <3 x i8> %y, <i8 -1, i8 -1, i8 undef>
+  %notx = xor <3 x i8> %x, <i8 -1, i8 poison, i8 -1>
+  %noty = xor <3 x i8> %y, <i8 -1, i8 -1, i8 poison>
   %m = call <3 x i8> @llvm.smin.v3i8(<3 x i8> %notx, <3 x i8> %noty)
   ret <3 x i8> %m
 }
@@ -473,16 +473,16 @@ define i8 @smax_of_not_and_const(i8 %x) {
   ret i8 %m
 }
 
-; Vectors are ok (including undef lanes of not ops and min/max constant operand)
+; Vectors are ok (including poison lanes of not ops and min/max constant operand)
 
 define <3 x i8> @smin_of_not_and_const(<3 x i8> %x) {
 ; CHECK-LABEL: @smin_of_not_and_const(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i8> @llvm.smax.v3i8(<3 x i8> [[X:%.*]], <3 x i8> <i8 -43, i8 undef, i8 -44>)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i8> @llvm.smax.v3i8(<3 x i8> [[X:%.*]], <3 x i8> <i8 -43, i8 poison, i8 -44>)
 ; CHECK-NEXT:    [[M:%.*]] = xor <3 x i8> [[TMP1]], <i8 -1, i8 -1, i8 -1>
 ; CHECK-NEXT:    ret <3 x i8> [[M]]
 ;
-  %notx = xor <3 x i8> %x, <i8 -1, i8 -1, i8 undef>
-  %m = call <3 x i8> @llvm.smin.v3i8(<3 x i8> <i8 42, i8 undef, i8 43>, <3 x i8> %notx)
+  %notx = xor <3 x i8> %x, <i8 -1, i8 -1, i8 poison>
+  %m = call <3 x i8> @llvm.smin.v3i8(<3 x i8> <i8 42, i8 poison, i8 43>, <3 x i8> %notx)
   ret <3 x i8> %m
 }
 
@@ -706,7 +706,7 @@ define <3 x i8> @smax_negation_vec(<3 x i8> %x) {
 ; CHECK-NEXT:    [[R:%.*]] = call <3 x i8> @llvm.abs.v3i8(<3 x i8> [[X:%.*]], i1 false)
 ; CHECK-NEXT:    ret <3 x i8> [[R]]
 ;
-  %s = sub <3 x i8> <i8 0, i8 undef, i8 0>, %x
+  %s = sub <3 x i8> <i8 0, i8 poison, i8 0>, %x
   %r = call <3 x i8> @llvm.smax.v3i8(<3 x i8> %x, <3 x i8> %s)
   ret <3 x i8> %r
 }
@@ -912,7 +912,7 @@ define <3 x i8> @umin_non_zero_idiom4(<3 x i8> %a) {
 ; CHECK-NEXT:    [[RES:%.*]] = zext <3 x i1> [[TMP1]] to <3 x i8>
 ; CHECK-NEXT:    ret <3 x i8> [[RES]]
 ;
-  %res = call <3 x i8> @llvm.umin.v3i8(<3 x i8> %a, <3 x i8> <i8 1, i8 undef, i8 undef>)
+  %res = call <3 x i8> @llvm.umin.v3i8(<3 x i8> %a, <3 x i8> <i8 1, i8 poison, i8 poison>)
   ret <3 x i8> %res
 }
 
@@ -2118,15 +2118,15 @@ define i8 @umin_offset_uses(i8 %x) {
   ret i8 %m
 }
 
-; TODO: This could transform, but undef element must not propagate to the new add.
+; TODO: This could transform
 
-define <3 x i8> @umax_vector_splat_undef(<3 x i8> %x) {
-; CHECK-LABEL: @umax_vector_splat_undef(
-; CHECK-NEXT:    [[A:%.*]] = add nuw <3 x i8> [[X:%.*]], <i8 undef, i8 64, i8 64>
+define <3 x i8> @umax_vector_splat_poison(<3 x i8> %x) {
+; CHECK-LABEL: @umax_vector_splat_poison(
+; CHECK-NEXT:    [[A:%.*]] = add nuw <3 x i8> [[X:%.*]], <i8 poison, i8 64, i8 64>
 ; CHECK-NEXT:    [[R:%.*]] = call <3 x i8> @llvm.umax.v3i8(<3 x i8> [[A]], <3 x i8> <i8 13, i8 -126, i8 -126>)
 ; CHECK-NEXT:    ret <3 x i8> [[R]]
 ;
-  %a = add nuw <3 x i8> %x, <i8 undef, i8 64, i8 64>
+  %a = add nuw <3 x i8> %x, <i8 poison, i8 64, i8 64>
   %r = call <3 x i8> @llvm.umax.v3i8(<3 x i8> %a, <3 x i8> <i8 13, i8 130, i8 130>)
   ret <3 x i8> %r
 }
@@ -2506,8 +2506,8 @@ entry:
   ret i8 %val
 }
 
-define <3 x i8> @fold_umax_with_knownbits_info_undef_in_splat(<3 x i8> %a, <3 x i8> %b) {
-; CHECK-LABEL: @fold_umax_with_knownbits_info_undef_in_splat(
+define <3 x i8> @fold_umax_with_knownbits_info_poison_in_splat(<3 x i8> %a, <3 x i8> %b) {
+; CHECK-LABEL: @fold_umax_with_knownbits_info_poison_in_splat(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A1:%.*]] = or <3 x i8> [[A:%.*]], <i8 1, i8 1, i8 1>
 ; CHECK-NEXT:    [[A2:%.*]] = shl <3 x i8> [[B:%.*]], <i8 1, i8 1, i8 1>
@@ -2518,7 +2518,7 @@ entry:
   %a1 = or <3 x i8> %a, <i8 1, i8 1, i8 1>
   %a2 = shl <3 x i8> %b, <i8 1, i8 1, i8 1>
   %sub = sub <3 x i8> %a1, %a2
-  %val = call <3 x i8> @llvm.umax.v3i8(<3 x i8> %sub, <3 x i8> <i8 1, i8 undef, i8 1>)
+  %val = call <3 x i8> @llvm.umax.v3i8(<3 x i8> %sub, <3 x i8> <i8 1, i8 poison, i8 1>)
   ret <3 x i8> %val
 }
 
@@ -2535,8 +2535,8 @@ entry:
   ret i8 %val
 }
 
-define <3 x i8> @fold_umin_with_knownbits_info_undef_in_splat(<3 x i8> %a, <3 x i8> %b) {
-; CHECK-LABEL: @fold_umin_with_knownbits_info_undef_in_splat(
+define <3 x i8> @fold_umin_with_knownbits_info_poison_in_splat(<3 x i8> %a, <3 x i8> %b) {
+; CHECK-LABEL: @fold_umin_with_knownbits_info_poison_in_splat(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret <3 x i8> <i8 3, i8 3, i8 3>
 ;
@@ -2544,7 +2544,7 @@ entry:
   %a1 = or <3 x i8> %a, <i8 3, i8 3, i8 3>
   %a2 = shl <3 x i8> %b, <i8 2, i8 2, i8 2>
   %sub = sub <3 x i8> %a1, %a2
-  %val = call <3 x i8> @llvm.umin.v3i8(<3 x i8> %sub, <3 x i8> <i8 3, i8 undef, i8 3>)
+  %val = call <3 x i8> @llvm.umin.v3i8(<3 x i8> %sub, <3 x i8> <i8 3, i8 poison, i8 3>)
   ret <3 x i8> %val
 }
 
@@ -2580,4 +2580,93 @@ entry:
   %sub = sub i8 %a1, %a2
   %val = call i8 @llvm.umin.i8(i8 %sub, i8 3)
   ret i8 %val
+}
+
+define i8 @test_umax_and(i8 %x, i8 %y) {
+; CHECK-LABEL: @test_umax_and(
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.umax.i8(i8 [[X1:%.*]], i8 [[Y1:%.*]])
+; CHECK-NEXT:    [[RES1:%.*]] = and i8 [[RES]], -64
+; CHECK-NEXT:    ret i8 [[RES1]]
+;
+  %x1 = and i8 %x, -64
+  %y1 = and i8 %y, -64
+  %res = call i8 @llvm.umax.i8(i8 %x1, i8 %y1)
+  ret i8 %res
+}
+
+define i8 @test_umin_and(i8 %x, i8 %y) {
+; CHECK-LABEL: @test_umin_and(
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.umin.i8(i8 [[X1:%.*]], i8 [[Y1:%.*]])
+; CHECK-NEXT:    [[RES1:%.*]] = and i8 [[RES]], -64
+; CHECK-NEXT:    ret i8 [[RES1]]
+;
+  %x1 = and i8 %x, -64
+  %y1 = and i8 %y, -64
+  %res = call i8 @llvm.umin.i8(i8 %x1, i8 %y1)
+  ret i8 %res
+}
+
+define i8 @test_smax_and(i8 %x, i8 %y) {
+; CHECK-LABEL: @test_smax_and(
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.smax.i8(i8 [[X1:%.*]], i8 [[Y1:%.*]])
+; CHECK-NEXT:    [[RES1:%.*]] = and i8 [[RES]], -64
+; CHECK-NEXT:    ret i8 [[RES1]]
+;
+  %x1 = and i8 %x, -64
+  %y1 = and i8 %y, -64
+  %res = call i8 @llvm.smax.i8(i8 %x1, i8 %y1)
+  ret i8 %res
+}
+
+define i8 @test_smin_and(i8 %x, i8 %y) {
+; CHECK-LABEL: @test_smin_and(
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.smin.i8(i8 [[X1:%.*]], i8 [[Y1:%.*]])
+; CHECK-NEXT:    [[RES1:%.*]] = and i8 [[RES]], -64
+; CHECK-NEXT:    ret i8 [[RES1]]
+;
+  %x1 = and i8 %x, -64
+  %y1 = and i8 %y, -64
+  %res = call i8 @llvm.smin.i8(i8 %x1, i8 %y1)
+  ret i8 %res
+}
+
+define i8 @test_smin_and_mismatch(i8 %x, i8 %y) {
+; CHECK-LABEL: @test_smin_and_mismatch(
+; CHECK-NEXT:    [[X1:%.*]] = and i8 [[X:%.*]], -64
+; CHECK-NEXT:    [[Y1:%.*]] = and i8 [[Y:%.*]], -32
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.smin.i8(i8 [[X1]], i8 [[Y1]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %x1 = and i8 %x, -64
+  %y1 = and i8 %y, -32
+  %res = call i8 @llvm.smin.i8(i8 %x1, i8 %y1)
+  ret i8 %res
+}
+
+define i8 @test_smin_and_non_negated_pow2(i8 %x, i8 %y) {
+; CHECK-LABEL: @test_smin_and_non_negated_pow2(
+; CHECK-NEXT:    [[X1:%.*]] = and i8 [[X:%.*]], 31
+; CHECK-NEXT:    [[Y1:%.*]] = and i8 [[Y:%.*]], 31
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.smin.i8(i8 [[X1]], i8 [[Y1]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %x1 = and i8 %x, 31
+  %y1 = and i8 %y, 31
+  %res = call i8 @llvm.smin.i8(i8 %x1, i8 %y1)
+  ret i8 %res
+}
+
+define i8 @test_smin_and_multiuse(i8 %x, i8 %y) {
+; CHECK-LABEL: @test_smin_and_multiuse(
+; CHECK-NEXT:    [[X1:%.*]] = and i8 [[X:%.*]], 31
+; CHECK-NEXT:    [[Y1:%.*]] = and i8 [[Y:%.*]], 31
+; CHECK-NEXT:    call void @use(i8 [[Y1]])
+; CHECK-NEXT:    [[RES:%.*]] = call i8 @llvm.smin.i8(i8 [[X1]], i8 [[Y1]])
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %x1 = and i8 %x, 31
+  %y1 = and i8 %y, 31
+  call void @use(i8 %y1)
+  %res = call i8 @llvm.smin.i8(i8 %x1, i8 %y1)
+  ret i8 %res
 }

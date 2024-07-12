@@ -36,6 +36,10 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ThreadPool.h"
 
+#if defined(__FreeBSD__)
+#include <sys/sysctl.h>
+#endif
+
 // From MacOSX system header "mach/machine.h"
 typedef int cpu_type_t;
 typedef int cpu_subtype_t;
@@ -141,6 +145,24 @@ std::optional<FileSpec> SymbolLocatorDefault::LocateExecutableSymbolFile(
       FileSystem::Instance().Resolve(file_spec);
       debug_file_search_paths.AppendIfUnique(file_spec);
     }
+#if defined(__FreeBSD__)
+    // Add $LOCALBASE/lib/debug directory, where LOCALBASE is
+    // usually /usr/local, but may be adjusted by the end user.
+    {
+      int mib[2];
+      char buf[PATH_MAX];
+      size_t len = PATH_MAX;
+
+      mib[0] = CTL_USER;
+      mib[1] = USER_LOCALBASE;
+      if (::sysctl(mib, 2, buf, &len, NULL, 0) == 0) {
+        FileSpec file_spec("/lib/debug");
+        file_spec.PrependPathComponent(llvm::StringRef(buf));
+        FileSystem::Instance().Resolve(file_spec);
+        debug_file_search_paths.AppendIfUnique(file_spec);
+      }
+    }
+#endif // __FreeBSD__
 #endif
 #endif // _WIN32
   }

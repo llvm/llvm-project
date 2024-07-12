@@ -1,34 +1,47 @@
-! This test checks lowering of OpenMP DO Directive(Worksharing) with
-! simd schedule modifier.
+! This test checks lowering of OpenMP DO SIMD composite constructs.
 
 ! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
 
-program wsloop_dynamic
-  integer :: i
-!CHECK-LABEL: func @_QQmain()
+! CHECK-LABEL: func.func @_QPdo_simd_aligned(
+subroutine do_simd_aligned(A)
+  use iso_c_binding
+  type(c_ptr) :: A
+  
+  ! CHECK:      omp.wsloop
+  ! CHECK-NOT:  aligned({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.simd
+  ! CHECK-SAME: aligned({{.*}})
+  !$omp do simd aligned(A:256)
+    do index_ = 1, 10
+      call c_test_call(A)
+    end do
+  !$omp end do simd
+end subroutine do_simd_aligned
 
-!$OMP PARALLEL
-!CHECK:  omp.parallel {
+! CHECK-LABEL: func.func @_QPdo_simd_safelen(
+subroutine do_simd_safelen()
+  ! CHECK:      omp.wsloop
+  ! CHECK-NOT:  safelen({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.simd
+  ! CHECK-SAME: safelen({{.*}})
+  !$omp do simd safelen(4)
+    do index_ = 1, 10
+    end do
+  !$omp end do simd
+end subroutine do_simd_safelen
 
-!$OMP DO SCHEDULE(simd: runtime)
-!CHECK:     %[[WS_LB:.*]] = arith.constant 1 : i32
-!CHECK:     %[[WS_UB:.*]] = arith.constant 9 : i32
-!CHECK:     %[[WS_STEP:.*]] = arith.constant 1 : i32
-!CHECK:     omp.wsloop schedule(runtime, simd) nowait for (%[[I:.*]]) : i32 = (%[[WS_LB]]) to (%[[WS_UB]]) inclusive step (%[[WS_STEP]])
-!CHECK:       fir.store %[[I]] to %[[STORE:.*]]#1 : !fir.ref<i32>
-
-  do i=1, 9
-    print*, i
-!CHECK:    %[[RTBEGIN:.*]] = fir.call @_FortranAioBeginExternalListOutput
-!CHECK:    %[[LOAD:.*]] = fir.load %[[STORE]]#0 : !fir.ref<i32>
-!CHECK:    fir.call @_FortranAioOutputInteger32(%[[RTBEGIN]], %[[LOAD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
-!CHECK:    fir.call @_FortranAioEndIoStatement(%[[RTBEGIN]]) {{.*}}: (!fir.ref<i8>) -> i32
-  end do
-!CHECK:       omp.yield
-!CHECK:         }
-!CHECK:       omp.terminator
-!CHECK:     }
-
-!$OMP END DO NOWAIT
-!$OMP END PARALLEL
-end
+! CHECK-LABEL: func.func @_QPdo_simd_simdlen(
+subroutine do_simd_simdlen()
+  ! CHECK:      omp.wsloop
+  ! CHECK-NOT:  simdlen({{.*}})
+  ! CHECK-SAME: {
+  ! CHECK-NEXT: omp.simd
+  ! CHECK-SAME: simdlen({{.*}})
+  !$omp do simd simdlen(4)
+    do index_ = 1, 10
+    end do
+  !$omp end do simd
+end subroutine do_simd_simdlen

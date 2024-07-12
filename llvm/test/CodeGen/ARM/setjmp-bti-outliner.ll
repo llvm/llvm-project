@@ -24,7 +24,7 @@
 
 @buf = global [20 x i64] zeroinitializer, align 8
 
-define i32 @f(i32 %a, i32 %b, i32 %c, i32 %d) "branch-target-enforcement"="true" {
+define i32 @f(i32 %a, i32 %b, i32 %c, i32 %d) "branch-target-enforcement" {
 ; BTI-LABEL: f:
 ; BTI:       bl OUTLINED_FUNCTION_0
 ; BTI-NEXT:  bti
@@ -53,7 +53,7 @@ return:                                           ; preds = %entry, %if.end
   ret i32 %retval.0
 }
 
-define i32 @g(i32 %a, i32 %b, i32 %c, i32 %d) "branch-target-enforcement"="true" {
+define i32 @g(i32 %a, i32 %b, i32 %c, i32 %d) "branch-target-enforcement" {
 ; BTI-LABEL: g:
 ; BTI:       bl OUTLINED_FUNCTION_0
 ; BTI-NEXT:  bti

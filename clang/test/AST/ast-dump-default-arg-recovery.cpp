@@ -1,4 +1,4 @@
-// RUN: not %clang_cc1 -triple x86_64-unknown-unknown -fsyntax-only -ast-dump -frecovery-ast %s | FileCheck %s
+// RUN: not %clang_cc1 -triple x86_64-unknown-unknown -ast-dump -frecovery-ast %s | FileCheck %s
 
 void foo();
 void fun(int arg = foo());

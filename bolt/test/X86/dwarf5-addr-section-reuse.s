@@ -6,8 +6,8 @@
 # RUN: llvm-bolt %t.exe -o %t.exe.bolt --update-debug-sections
 # RUN: llvm-dwarfdump --debug-info %t.exe.bolt | FileCheck --check-prefix=POSTCHECK %s
 
-# This test checks that when a binary is bolted if CU is not modified and has DW_AT_addr_base that is shared
-# after being bolted CUs still share same entry in .debug_addr.
+## This test checks that when a binary is bolted if CU is not modified and has DW_AT_addr_base that is shared
+## after being bolted CUs still share same entry in .debug_addr.
 
 # PRECHECK: DW_AT_addr_base (0x00000008)
 # PRECHECK: DW_AT_addr_base (0x00000008)

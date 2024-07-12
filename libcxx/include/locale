@@ -84,7 +84,7 @@ template <class charT> charT tolower(charT c, const locale& loc);
 template<class Codecvt, class Elem = wchar_t,
          class Wide_alloc = allocator<Elem>,
          class Byte_alloc = allocator<char>>
-class wstring_convert
+class wstring_convert                                      // Removed in C++26
 {
 public:
     typedef basic_string<char, char_traits<char>, Byte_alloc> byte_string;
@@ -119,7 +119,7 @@ public:
 };
 
 template <class Codecvt, class Elem = wchar_t, class Tr = char_traits<Elem>>
-class wbuffer_convert
+class wbuffer_convert                                               // Removed in C++26
     : public basic_streambuf<Elem, Tr>
 {
 public:
@@ -368,7 +368,11 @@ struct _LIBCPP_EXPORTED_FROM_ABI __num_get_base {
   static const int __num_get_buf_sz = 40;
 
   static int __get_base(ios_base&);
-  static const char __src[33];
+  static const char __src[33]; // "0123456789abcdefABCDEFxX+-pPiInN"
+  // count of leading characters in __src used for parsing integers ("012..X+-")
+  static const size_t __int_chr_cnt = 26;
+  // count of leading characters in __src used for parsing floating-point values ("012..-pP")
+  static const size_t __fp_chr_cnt = 28;
 };
 
 _LIBCPP_EXPORTED_FROM_ABI void
@@ -431,7 +435,7 @@ private:
   template <typename _Tp>
   const _Tp* __do_widen_p(ios_base& __iob, _Tp* __atoms) const {
     locale __loc = __iob.getloc();
-    use_facet<ctype<_Tp> >(__loc).widen(__src, __src + 26, __atoms);
+    use_facet<ctype<_Tp> >(__loc).widen(__src, __src + __int_chr_cnt, __atoms);
     return __atoms;
   }
 
@@ -447,7 +451,7 @@ private:
 template <class _CharT>
 string __num_get<_CharT>::__stage2_int_prep(ios_base& __iob, _CharT* __atoms, _CharT& __thousands_sep) {
   locale __loc = __iob.getloc();
-  std::use_facet<ctype<_CharT> >(__loc).widen(__src, __src + 26, __atoms);
+  std::use_facet<ctype<_CharT> >(__loc).widen(__src, __src + __int_chr_cnt, __atoms);
   const numpunct<_CharT>& __np = std::use_facet<numpunct<_CharT> >(__loc);
   __thousands_sep              = __np.thousands_sep();
   return __np.grouping();
@@ -458,7 +462,7 @@ template <class _CharT>
 string __num_get<_CharT>::__stage2_float_prep(
     ios_base& __iob, _CharT* __atoms, _CharT& __decimal_point, _CharT& __thousands_sep) {
   locale __loc = __iob.getloc();
-  std::use_facet<ctype<_CharT> >(__loc).widen(__src, __src + 32, __atoms);
+  std::use_facet<ctype<_CharT> >(__loc).widen(__src, __src + __fp_chr_cnt, __atoms);
   const numpunct<_CharT>& __np = std::use_facet<numpunct<_CharT> >(__loc);
   __decimal_point              = __np.decimal_point();
   __thousands_sep              = __np.thousands_sep();
@@ -490,7 +494,7 @@ __num_get<_CharT>::__stage2_int_loop(_CharT __ct, int __base, char* __a, char*& 
     }
     return 0;
   }
-  ptrdiff_t __f = std::find(__atoms, __atoms + 26, __ct) - __atoms;
+  ptrdiff_t __f = std::find(__atoms, __atoms + __int_chr_cnt, __ct) - __atoms;
   if (__f >= 24)
     return -1;
   switch (__base) {
@@ -546,8 +550,8 @@ int __num_get<_CharT>::__stage2_float_loop(
     }
     return 0;
   }
-  ptrdiff_t __f = std::find(__atoms, __atoms + 32, __ct) - __atoms;
-  if (__f >= 32)
+  ptrdiff_t __f = std::find(__atoms, __atoms + __num_get_base::__fp_chr_cnt, __ct) - __atoms;
+  if (__f >= static_cast<ptrdiff_t>(__num_get_base::__fp_chr_cnt))
     return -1;
   char __x = __src[__f];
   if (__x == '-' || __x == '+') {
@@ -846,7 +850,7 @@ _InputIterator num_get<_CharT, _InputIterator>::__do_get_signed(
   int __base = this->__get_base(__iob);
   // Stage 2
   char_type __thousands_sep;
-  const int __atoms_size = 26;
+  const int __atoms_size = __num_get_base::__int_chr_cnt;
 #ifdef _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET
   char_type __atoms1[__atoms_size];
   const char_type* __atoms = this->__do_widen(__iob, __atoms1);
@@ -895,7 +899,7 @@ _InputIterator num_get<_CharT, _InputIterator>::__do_get_unsigned(
   int __base = this->__get_base(__iob);
   // Stage 2
   char_type __thousands_sep;
-  const int __atoms_size = 26;
+  const int __atoms_size = __num_get_base::__int_chr_cnt;
 #ifdef _LIBCPP_ABI_OPTIMIZED_LOCALE_NUM_GET
   char_type __atoms1[__atoms_size];
   const char_type* __atoms = this->__do_widen(__iob, __atoms1);
@@ -942,7 +946,7 @@ _InputIterator num_get<_CharT, _InputIterator>::__do_get_floating_point(
     iter_type __b, iter_type __e, ios_base& __iob, ios_base::iostate& __err, _Fp& __v) const {
   // Stage 1, nothing to do
   // Stage 2
-  char_type __atoms[32];
+  char_type __atoms[__num_get_base::__fp_chr_cnt];
   char_type __decimal_point;
   char_type __thousands_sep;
   string __grouping = this->__stage2_float_prep(__iob, __atoms, __decimal_point, __thousands_sep);
@@ -951,10 +955,11 @@ _InputIterator num_get<_CharT, _InputIterator>::__do_get_floating_point(
   char* __a     = &__buf[0];
   char* __a_end = __a;
   unsigned __g[__num_get_base::__num_get_buf_sz];
-  unsigned* __g_end = __g;
-  unsigned __dc     = 0;
-  bool __in_units   = true;
-  char __exp        = 'E';
+  unsigned* __g_end        = __g;
+  unsigned __dc            = 0;
+  bool __in_units          = true;
+  char __exp               = 'E';
+  bool __is_leading_parsed = false;
   for (; __b != __e; ++__b) {
     if (__a_end == __a + __buf.size()) {
       size_t __tmp = __buf.size();
@@ -977,6 +982,21 @@ _InputIterator num_get<_CharT, _InputIterator>::__do_get_floating_point(
             __dc,
             __atoms))
       break;
+
+    // the leading character excluding the sign must be a decimal digit
+    if (!__is_leading_parsed) {
+      if (__a_end - __a >= 1 && __a[0] != '-' && __a[0] != '+') {
+        if (('0' <= __a[0] && __a[0] <= '9') || __a[0] == '.')
+          __is_leading_parsed = true;
+        else
+          break;
+      } else if (__a_end - __a >= 2 && (__a[0] == '-' || __a[0] == '+')) {
+        if (('0' <= __a[1] && __a[1] <= '9') || __a[1] == '.')
+          __is_leading_parsed = true;
+        else
+          break;
+      }
+    }
   }
   if (__grouping.size() != 0 && __in_units && __g_end - __g < __num_get_base::__num_get_buf_sz)
     *__g_end++ = __dc;
@@ -996,10 +1016,11 @@ _InputIterator num_get<_CharT, _InputIterator>::do_get(
   // Stage 1
   int __base = 16;
   // Stage 2
-  char_type __atoms[26];
+  char_type __atoms[__num_get_base::__int_chr_cnt];
   char_type __thousands_sep = char_type();
   string __grouping;
-  std::use_facet<ctype<_CharT> >(__iob.getloc()).widen(__num_get_base::__src, __num_get_base::__src + 26, __atoms);
+  std::use_facet<ctype<_CharT> >(__iob.getloc())
+      .widen(__num_get_base::__src, __num_get_base::__src + __num_get_base::__int_chr_cnt, __atoms);
   string __buf;
   __buf.resize(__buf.capacity());
   char* __a     = &__buf[0];
@@ -3107,6 +3128,8 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages_byname<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages_byname<wchar_t>;
 #endif
 
+#if _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT)
+
 template <class _Codecvt,
           class _Elem      = wchar_t,
           class _WideAlloc = allocator<_Elem>,
@@ -3125,24 +3148,24 @@ private:
   state_type __cvtstate_;
   size_t __cvtcount_;
 
-  wstring_convert(const wstring_convert& __wc);
-  wstring_convert& operator=(const wstring_convert& __wc);
-
 public:
-#ifndef _LIBCPP_CXX03_LANG
+#  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI wstring_convert() : wstring_convert(new _Codecvt) {}
   _LIBCPP_HIDE_FROM_ABI explicit wstring_convert(_Codecvt* __pcvt);
-#else
+#  else
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_EXPLICIT_SINCE_CXX14 wstring_convert(_Codecvt* __pcvt = new _Codecvt);
-#endif
+#  endif
 
   _LIBCPP_HIDE_FROM_ABI wstring_convert(_Codecvt* __pcvt, state_type __state);
   _LIBCPP_EXPLICIT_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
   wstring_convert(const byte_string& __byte_err, const wide_string& __wide_err = wide_string());
-#ifndef _LIBCPP_CXX03_LANG
+#  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI wstring_convert(wstring_convert&& __wc);
-#endif
+#  endif
   _LIBCPP_HIDE_FROM_ABI ~wstring_convert();
+
+  wstring_convert(const wstring_convert& __wc)            = delete;
+  wstring_convert& operator=(const wstring_convert& __wc) = delete;
 
   _LIBCPP_HIDE_FROM_ABI wide_string from_bytes(char __byte) { return from_bytes(&__byte, &__byte + 1); }
   _LIBCPP_HIDE_FROM_ABI wide_string from_bytes(const char* __ptr) {
@@ -3183,7 +3206,7 @@ wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::wstring_convert(
   __cvtptr_ = new _Codecvt;
 }
 
-#ifndef _LIBCPP_CXX03_LANG
+#  ifndef _LIBCPP_CXX03_LANG
 
 template <class _Codecvt, class _Elem, class _WideAlloc, class _ByteAlloc>
 inline wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::wstring_convert(wstring_convert&& __wc)
@@ -3195,7 +3218,7 @@ inline wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::wstring_convert
   __wc.__cvtptr_ = nullptr;
 }
 
-#endif // _LIBCPP_CXX03_LANG
+#  endif // _LIBCPP_CXX03_LANG
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Codecvt, class _Elem, class _WideAlloc, class _ByteAlloc>
@@ -3348,18 +3371,15 @@ private:
   bool __owns_ib_;
   bool __always_noconv_;
 
-  wbuffer_convert(const wbuffer_convert&);
-  wbuffer_convert& operator=(const wbuffer_convert&);
-
 public:
-#ifndef _LIBCPP_CXX03_LANG
+#  ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI wbuffer_convert() : wbuffer_convert(nullptr) {}
   explicit _LIBCPP_HIDE_FROM_ABI
   wbuffer_convert(streambuf* __bytebuf, _Codecvt* __pcvt = new _Codecvt, state_type __state = state_type());
-#else
+#  else
   _LIBCPP_EXPLICIT_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
   wbuffer_convert(streambuf* __bytebuf = nullptr, _Codecvt* __pcvt = new _Codecvt, state_type __state = state_type());
-#endif
+#  endif
 
   _LIBCPP_HIDE_FROM_ABI ~wbuffer_convert();
 
@@ -3369,6 +3389,9 @@ public:
     __bufptr_      = __bytebuf;
     return __r;
   }
+
+  wbuffer_convert(const wbuffer_convert&)            = delete;
+  wbuffer_convert& operator=(const wbuffer_convert&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI state_type state() const { return __st_; }
 
@@ -3711,6 +3734,8 @@ wbuffer_convert<_Codecvt, _Elem, _Tr>* wbuffer_convert<_Codecvt, _Elem, _Tr>::__
 }
 
 _LIBCPP_SUPPRESS_DEPRECATED_POP
+
+#endif // _LIBCPP_STD_VER < 26 || defined(_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT)
 
 _LIBCPP_END_NAMESPACE_STD
 

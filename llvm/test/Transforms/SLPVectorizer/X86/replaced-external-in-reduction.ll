@@ -5,8 +5,8 @@ define void @test(i32 %0, ptr %p) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: i32 [[TMP0:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> <i32 0, i32 1, i32 0, i32 poison>, i32 [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> [[TMP1]], <i32 1, i32 0, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 0, i32 poison>, i32 [[TMP0]], i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> [[TMP1]], <i32 1, i32 1, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
 ; CHECK-NEXT:    br i1 false, label [[EXIT:%.*]], label [[PH:%.*]]
 ; CHECK:       ph:

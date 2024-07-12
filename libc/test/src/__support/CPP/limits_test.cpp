@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/limits.h"
-#include "src/__support/UInt.h"
+#include "src/__support/big_int.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // This just checks against the C spec, almost all implementations will surpass
 // this.
@@ -36,9 +38,9 @@ TEST(LlvmLibcLimitsTest, UInt128Limits) {
   auto umax64 = LIBC_NAMESPACE::UInt<128>(cpp::numeric_limits<uint64_t>::max());
   EXPECT_GT(umax128, umax64);
   ASSERT_EQ(~LIBC_NAMESPACE::UInt<128>(0), umax128);
-#ifdef __SIZEOF_INT128__
+#ifdef LIBC_TYPES_HAS_INT128
   ASSERT_EQ(~__uint128_t(0), cpp::numeric_limits<__uint128_t>::max());
-#endif
+#endif // LIBC_TYPES_HAS_INT128
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -15,7 +15,6 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 namespace fir {
-#define GEN_PASS_DECL_FUNCTIONATTR
 #define GEN_PASS_DEF_FUNCTIONATTR
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
@@ -75,23 +74,4 @@ void FunctionAttrPass::runOnOperation() {
         mlir::BoolAttr::get(context, true));
 
   LLVM_DEBUG(llvm::dbgs() << "=== End " DEBUG_TYPE " ===\n");
-}
-
-std::unique_ptr<mlir::Pass> fir::createFunctionAttrPass(
-    fir::FunctionAttrTypes &functionAttr, bool noInfsFPMath, bool noNaNsFPMath,
-    bool approxFuncFPMath, bool noSignedZerosFPMath, bool unsafeFPMath) {
-  FunctionAttrOptions opts;
-  // Frame pointer
-  opts.framePointerKind = functionAttr.framePointerKind;
-  opts.noInfsFPMath = noInfsFPMath;
-  opts.noNaNsFPMath = noNaNsFPMath;
-  opts.approxFuncFPMath = approxFuncFPMath;
-  opts.noSignedZerosFPMath = noSignedZerosFPMath;
-  opts.unsafeFPMath = unsafeFPMath;
-
-  return std::make_unique<FunctionAttrPass>(opts);
-}
-
-std::unique_ptr<mlir::Pass> fir::createFunctionAttrPass() {
-  return std::make_unique<FunctionAttrPass>();
 }

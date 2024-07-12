@@ -3,11 +3,11 @@
 // Test that emitting a landing pad does not affect the line table
 // entries for the code that triggered it.
 
-// CHECK: call void @llvm.dbg.declare
-// CHECK: call void @llvm.dbg.declare(metadata {{.*}}, metadata ![[CURRENT_ADDR:.*]], metadata !{{.*}}), !dbg ![[DBG1:.*]]
+// CHECK: #dbg_declare
+// CHECK: #dbg_declare({{.*}}, ![[CURRENT_ADDR:.*]], !{{.*}},  ![[DBG1:[0-9]+]]
 // CHECK: unwind label %{{.*}}, !dbg ![[DBG1]]
 // CHECK: store i64 %{{.*}}, ptr %current_address, align 8, !dbg ![[DBG4:.*]]
-// CHECK-NEXT: call void @llvm.dbg.declare(metadata {{.*}}, metadata ![[FOUND_IT:.*]], metadata !{{.*}}), !dbg ![[DBG2:.*]]
+// CHECK-NEXT: #dbg_declare({{.*}}, ![[FOUND_IT:.*]], !{{.*}},  ![[DBG2:[0-9]+]]
 // CHECK: = landingpad
 // CHECK-NEXT: cleanup, !dbg ![[DBG3:.*]]
 // CHECK-DAG: ![[CURRENT_ADDR]] = {{.*}}name: "current_address"

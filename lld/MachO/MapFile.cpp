@@ -77,8 +77,8 @@ static MapInfo gatherMapInfo() {
           // Only emit the prevailing definition of a symbol. Also, don't emit
           // the symbol if it is part of a cstring section (we use the literal
           // value instead, similar to ld64)
-          if (d->isec && d->getFile() == file &&
-              !isa<CStringInputSection>(d->isec)) {
+          if (d->isec() && d->getFile() == file &&
+              !isa<CStringInputSection>(d->isec())) {
             isReferencedFile = true;
             if (!d->isLive())
               info.deadSymbols.push_back(d);
@@ -155,6 +155,12 @@ static void printNonLazyPointerSection(raw_fd_ostream &os,
                  target->wordSize, sym->getName().str().data());
 }
 
+static uint64_t getSymSizeForMap(Defined *sym) {
+  if (sym->wasIdenticalCodeFolded)
+    return 0;
+  return sym->size;
+}
+
 void macho::writeMapFile() {
   if (config->mapFile.empty())
     return;
@@ -197,18 +203,25 @@ void macho::writeMapFile() {
                    seg->name.str().c_str(), osec->name.str().c_str());
     }
 
+  // Shared function to print an array of symbols.
+  auto printIsecArrSyms = [&](const std::vector<ConcatInputSection *> &arr) {
+    for (const ConcatInputSection *isec : arr) {
+      for (Defined *sym : isec->symbols) {
+        if (!(isPrivateLabel(sym->getName()) && getSymSizeForMap(sym) == 0))
+          os << format("0x%08llX\t0x%08llX\t[%3u] %s\n", sym->getVA(),
+                       getSymSizeForMap(sym),
+                       readerToFileOrdinal[sym->getFile()],
+                       sym->getName().str().data());
+      }
+    }
+  };
+
   os << "# Symbols:\n";
   os << "# Address\tSize    \tFile  Name\n";
   for (const OutputSegment *seg : outputSegments) {
     for (const OutputSection *osec : seg->getSections()) {
       if (auto *concatOsec = dyn_cast<ConcatOutputSection>(osec)) {
-        for (const InputSection *isec : concatOsec->inputs) {
-          for (Defined *sym : isec->symbols)
-            if (!(isPrivateLabel(sym->getName()) && sym->size == 0))
-              os << format("0x%08llX\t0x%08llX\t[%3u] %s\n", sym->getVA(),
-                           sym->size, readerToFileOrdinal[sym->getFile()],
-                           sym->getName().str().data());
-        }
+        printIsecArrSyms(concatOsec->inputs);
       } else if (osec == in.cStringSection || osec == in.objcMethnameSection) {
         const auto &liveCStrings = info.liveCStringsForSection.lookup(osec);
         uint64_t lastAddr = 0; // strings will never start at address 0, so this
@@ -237,6 +250,8 @@ void macho::writeMapFile() {
         printNonLazyPointerSection(os, in.got);
       } else if (osec == in.tlvPointers) {
         printNonLazyPointerSection(os, in.tlvPointers);
+      } else if (osec == in.objcMethList) {
+        printIsecArrSyms(in.objcMethList->getInputs());
       }
       // TODO print other synthetic sections
     }
@@ -247,7 +262,7 @@ void macho::writeMapFile() {
     os << "#        \tSize    \tFile  Name\n";
     for (Defined *sym : info.deadSymbols) {
       assert(!sym->isLive());
-      os << format("<<dead>>\t0x%08llX\t[%3u] %s\n", sym->size,
+      os << format("<<dead>>\t0x%08llX\t[%3u] %s\n", getSymSizeForMap(sym),
                    readerToFileOrdinal[sym->getFile()],
                    sym->getName().str().data());
     }

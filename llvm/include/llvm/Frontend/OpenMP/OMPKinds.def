@@ -327,6 +327,7 @@ __OMP_RTL(__kmpc_dispatch_fini_4, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_dispatch_fini_4u, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_dispatch_fini_8, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_dispatch_fini_8u, false, Void, IdentPtr, Int32)
+__OMP_RTL(__kmpc_dispatch_deinit, false, Void, IdentPtr, Int32)
 __OMP_RTL(__kmpc_team_static_init_4, false, Void, IdentPtr, Int32, Int32Ptr,
           Int32Ptr, Int32Ptr, Int32Ptr, Int32, Int32)
 __OMP_RTL(__kmpc_team_static_init_4u, false, Void, IdentPtr, Int32, Int32Ptr,
@@ -436,22 +437,24 @@ __OMP_RTL(__tgt_target_kernel, false, Int32, IdentPtr, Int64, Int32, Int32,
           VoidPtr, KernelArgsPtr)
 __OMP_RTL(__tgt_target_kernel_nowait, false, Int32, IdentPtr, Int64, Int32,
           Int32, VoidPtr, KernelArgsPtr, Int32, VoidPtr, Int32, VoidPtr)
-__OMP_RTL(__tgt_register_requires, false, Void, Int64)
 __OMP_RTL(__tgt_target_data_begin_mapper, false, Void, IdentPtr, Int64, Int32, VoidPtrPtr,
           VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr)
-__OMP_RTL(__tgt_target_data_begin_nowait_mapper, false, Void, IdentPtr, Int64, Int32,
-          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr)
+__OMP_RTL(__tgt_target_data_begin_nowait_mapper, false, Void, IdentPtr, Int64,
+          Int32, VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr,
+          VoidPtrPtr, Int32, VoidPtr, Int32, VoidPtr)
 __OMP_RTL(__tgt_target_data_begin_mapper_issue, false, Void, IdentPtr, Int64, Int32,
           VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr, AsyncInfoPtr)
 __OMP_RTL(__tgt_target_data_begin_mapper_wait, false, Void, Int64, AsyncInfoPtr)
 __OMP_RTL(__tgt_target_data_end_mapper, false, Void, IdentPtr, Int64, Int32, VoidPtrPtr,
           VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr)
-__OMP_RTL(__tgt_target_data_end_nowait_mapper, false, Void, IdentPtr, Int64, Int32,
-          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr)
+__OMP_RTL(__tgt_target_data_end_nowait_mapper, false, Void, IdentPtr, Int64,
+          Int32, VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr,
+          VoidPtrPtr, Int32, VoidPtr, Int32, VoidPtr)
 __OMP_RTL(__tgt_target_data_update_mapper, false, Void, IdentPtr, Int64, Int32,
           VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr)
-__OMP_RTL(__tgt_target_data_update_nowait_mapper, false, Void, IdentPtr, Int64, Int32,
-          VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr)
+__OMP_RTL(__tgt_target_data_update_nowait_mapper, false, Void, IdentPtr, Int64,
+          Int32, VoidPtrPtr, VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr,
+          VoidPtrPtr, Int32, VoidPtr, Int32, VoidPtr)
 __OMP_RTL(__tgt_mapper_num_components, false, Int64, VoidPtr)
 __OMP_RTL(__tgt_push_mapper_component, false, Void, VoidPtr, VoidPtr, VoidPtr,
           Int64, Int64, VoidPtr)
@@ -862,6 +865,8 @@ __OMP_RTL_ATTRS(__kmpc_dispatch_fini_8, InaccessibleArgOnlyAttrs,
                 AttributeSet(), ParamAttrs(ReadOnlyPtrAttrs, SExt))
 __OMP_RTL_ATTRS(__kmpc_dispatch_fini_8u, InaccessibleArgOnlyAttrs,
                 AttributeSet(), ParamAttrs(ReadOnlyPtrAttrs, SExt))
+__OMP_RTL_ATTRS(__kmpc_dispatch_deinit, InaccessibleArgOnlyAttrs,
+                AttributeSet(), ParamAttrs(ReadOnlyPtrAttrs, SExt))
 __OMP_RTL_ATTRS(__kmpc_team_static_init_4, GetterArgWriteAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs, SExt, ArgPtrAttrs, ArgPtrAttrs,
                            ArgPtrAttrs, ArgPtrAttrs, SExt, SExt))
@@ -1025,14 +1030,14 @@ __OMP_RTL_ATTRS(__tgt_target_kernel_nowait, ForkAttrs, SExt,
                 ParamAttrs(AttributeSet(), AttributeSet(), SExt, SExt,
                            AttributeSet(), AttributeSet(), SExt, AttributeSet(),
                            SExt))
-__OMP_RTL_ATTRS(__tgt_register_requires, ForkAttrs, AttributeSet(),
-                ParamAttrs())
 __OMP_RTL_ATTRS(__tgt_target_data_begin_mapper, ForkAttrs, AttributeSet(),
                 ParamAttrs(AttributeSet(), AttributeSet(), SExt))
-__OMP_RTL_ATTRS(__tgt_target_data_begin_nowait_mapper, ForkAttrs, AttributeSet(),
+__OMP_RTL_ATTRS(__tgt_target_data_begin_nowait_mapper, ForkAttrs,
+                AttributeSet(),
                 ParamAttrs(AttributeSet(), AttributeSet(), SExt, AttributeSet(),
                            AttributeSet(), AttributeSet(), AttributeSet(),
-                           AttributeSet(), AttributeSet()))
+                           AttributeSet(), AttributeSet(), SExt, AttributeSet(),
+                           SExt, AttributeSet()))
 __OMP_RTL_ATTRS(__tgt_target_data_begin_mapper_issue, AttributeSet(),
                 AttributeSet(),
                 ParamAttrs(AttributeSet(), AttributeSet(), SExt))
@@ -1041,13 +1046,16 @@ __OMP_RTL_ATTRS(__tgt_target_data_end_mapper, ForkAttrs, AttributeSet(),
 __OMP_RTL_ATTRS(__tgt_target_data_end_nowait_mapper, ForkAttrs, AttributeSet(),
                 ParamAttrs(AttributeSet(), AttributeSet(), SExt, AttributeSet(),
                            AttributeSet(), AttributeSet(), AttributeSet(),
-                           AttributeSet(), AttributeSet()))
+                           AttributeSet(), AttributeSet(), SExt, AttributeSet(),
+                           SExt, AttributeSet()))
 __OMP_RTL_ATTRS(__tgt_target_data_update_mapper, ForkAttrs, AttributeSet(),
                 ParamAttrs(AttributeSet(), AttributeSet(), SExt))
-__OMP_RTL_ATTRS(__tgt_target_data_update_nowait_mapper, ForkAttrs, AttributeSet(),
+__OMP_RTL_ATTRS(__tgt_target_data_update_nowait_mapper, ForkAttrs,
+                AttributeSet(),
                 ParamAttrs(AttributeSet(), AttributeSet(), SExt, AttributeSet(),
                            AttributeSet(), AttributeSet(), AttributeSet(),
-                           AttributeSet(), AttributeSet()))
+                           AttributeSet(), AttributeSet(), SExt, AttributeSet(),
+                           SExt, AttributeSet()))
 __OMP_RTL_ATTRS(__tgt_mapper_num_components, ForkAttrs, AttributeSet(),
                 ParamAttrs())
 __OMP_RTL_ATTRS(__tgt_push_mapper_component, ForkAttrs, AttributeSet(),

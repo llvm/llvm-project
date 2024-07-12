@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s \
-// RUN:   -func-bufferize -arith-bufferize --canonicalize \
+// RUN: -func-bufferize -one-shot-bufferize="bufferize-function-boundaries" --canonicalize \
 // RUN:   -convert-vector-to-scf -convert-scf-to-cf -convert-vector-to-llvm -finalize-memref-to-llvm\
 // RUN:   -convert-func-to-llvm -reconcile-unrealized-casts |\
 // RUN: mlir-cpu-runner \

@@ -2517,7 +2517,6 @@ define amdgpu_kernel void @mul64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX10-NEXT:    s_add_i32 s7, s8, s7
 ; GFX10-NEXT:    s_mul_i32 s4, s4, s6
 ; GFX10-NEXT:    s_add_i32 s5, s7, s5
-; GFX10-NEXT:    s_mov_b32 s6, 0
 ; GFX10-NEXT:    s_cbranch_execnz .LBB16_4
 ; GFX10-NEXT:  .LBB16_2: ; %if
 ; GFX10-NEXT:    s_mov_b32 s7, 0x31016000
@@ -2527,7 +2526,6 @@ define amdgpu_kernel void @mul64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX10-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
 ; GFX10-NEXT:    s_branch .LBB16_5
 ; GFX10-NEXT:  .LBB16_3:
-; GFX10-NEXT:    s_mov_b32 s6, -1
 ; GFX10-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GFX10-NEXT:    s_branch .LBB16_2
 ; GFX10-NEXT:  .LBB16_4:
@@ -2553,7 +2551,6 @@ define amdgpu_kernel void @mul64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX11-NEXT:    s_add_i32 s7, s8, s7
 ; GFX11-NEXT:    s_mul_i32 s4, s4, s6
 ; GFX11-NEXT:    s_add_i32 s5, s7, s5
-; GFX11-NEXT:    s_mov_b32 s6, 0
 ; GFX11-NEXT:    s_cbranch_execnz .LBB16_4
 ; GFX11-NEXT:  .LBB16_2: ; %if
 ; GFX11-NEXT:    s_mov_b32 s7, 0x31016000
@@ -2563,7 +2560,6 @@ define amdgpu_kernel void @mul64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[4:7], 0
 ; GFX11-NEXT:    s_branch .LBB16_5
 ; GFX11-NEXT:  .LBB16_3:
-; GFX11-NEXT:    s_mov_b32 s6, -1
 ; GFX11-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GFX11-NEXT:    s_branch .LBB16_2
 ; GFX11-NEXT:  .LBB16_4:
@@ -2585,7 +2581,6 @@ define amdgpu_kernel void @mul64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB16_3
 ; GFX12-NEXT:  ; %bb.1: ; %else
 ; GFX12-NEXT:    s_mul_u64 s[4:5], s[4:5], s[6:7]
-; GFX12-NEXT:    s_mov_b32 s6, 0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB16_4
 ; GFX12-NEXT:  .LBB16_2: ; %if
 ; GFX12-NEXT:    s_mov_b32 s7, 0x31016000
@@ -2595,7 +2590,6 @@ define amdgpu_kernel void @mul64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX12-NEXT:    buffer_load_b64 v[0:1], off, s[4:7], null
 ; GFX12-NEXT:    s_branch .LBB16_5
 ; GFX12-NEXT:  .LBB16_3:
-; GFX12-NEXT:    s_mov_b32 s6, -1
 ; GFX12-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GFX12-NEXT:    s_branch .LBB16_2
 ; GFX12-NEXT:  .LBB16_4:

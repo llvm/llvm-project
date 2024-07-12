@@ -387,16 +387,21 @@ func.func @dead_dealloc_fold() {
 
 // CHECK-LABEL: func @dead_dealloc_fold_multi_use
 func.func @dead_dealloc_fold_multi_use(%cond : i1) {
-  // CHECK-NEXT: return
+  // CHECK-NOT: alloc
   %a = memref.alloc() : memref<4xf32>
+  // CHECK: cond_br
   cf.cond_br %cond, ^bb1, ^bb2
 
 ^bb1:
+  // CHECK-NOT: alloc
   memref.dealloc %a: memref<4xf32>
+  // CHECK: return
   return
 
 ^bb2:
+  // CHECK-NOT: alloc
   memref.dealloc %a: memref<4xf32>
+  // CHECK: return
   return
 }
 
@@ -500,9 +505,9 @@ func.func @dim_op_fold(%arg0: index, %arg1: index, %arg2: index, %BUF: memref<?x
       affine.for %arg5 = %l to %u {
         "foo"() : () -> ()
       }
-      %sv2 = memref.subview %0[0, 0][17, %arg4][1, 1] : memref<?x?xf32> to memref<17x?xf32, strided<[?, 1], offset: ?>>
+      %sv2 = memref.subview %0[0, 0][17, %arg4][1, 1] : memref<?x?xf32> to memref<17x?xf32, strided<[?, 1]>>
       %l2 = memref.dim %v, %c1 : memref<?x?xf32>
-      %u2 = memref.dim %sv2, %c1 : memref<17x?xf32, strided<[?, 1], offset: ?>>
+      %u2 = memref.dim %sv2, %c1 : memref<17x?xf32, strided<[?, 1]>>
       scf.for %arg5 = %l2 to %u2 step %c1 {
         "foo"() : () -> ()
       }
@@ -719,7 +724,7 @@ func.func @view(%arg0 : index) -> (f32, f32, f32, f32) {
   %r2 = memref.load %3[%c0, %c0] : memref<?x4xf32>
 
   // Test: folding static alloc and memref.cast into a view.
-  // CHECK memref.view %[[ALLOC_MEM]][%[[C15]]][] : memref<2048xi8> to memref<15x7xf32>
+  // CHECK: memref.view %[[ALLOC_MEM]][%[[C15]]][] : memref<2048xi8> to memref<15x7xf32>
   %4 = memref.cast %0 : memref<2048xi8> to memref<?xi8>
   %5 = memref.view %4[%c15][%c15, %c7] : memref<?xi8> to memref<?x?xf32>
   %r3 = memref.load %5[%c0, %c0] : memref<?x?xf32>
@@ -989,6 +994,15 @@ func.func @tensor_arith.floordivsi_by_one(%arg0: tensor<4x5xi32>) -> tensor<4x5x
   return %res : tensor<4x5xi32>
 }
 
+// CHECK-LABEL: func @arith.floordivsi_by_one_overflow
+func.func @arith.floordivsi_by_one_overflow() -> i64 {
+  %neg_one = arith.constant -1 : i64
+  %min_int = arith.constant -9223372036854775808 : i64
+  // CHECK: arith.floordivsi
+  %poision = arith.floordivsi %min_int, %neg_one : i64
+  return %poision : i64
+}
+
 // -----
 
 // CHECK-LABEL: func @arith.ceildivsi_by_one
@@ -1043,13 +1057,13 @@ func.func @memref_cast_folding_subview(%arg0: memref<4x5xf32>, %i: index) -> (me
 
 // CHECK-LABEL: func @memref_cast_folding_subview_static(
 func.func @memref_cast_folding_subview_static(%V: memref<16x16xf32>, %a: index, %b: index)
-  -> memref<3x4xf32, strided<[?, 1], offset: ?>>
+  -> memref<3x4xf32, strided<[?, 1]>>
 {
   %0 = memref.cast %V : memref<16x16xf32> to memref<?x?xf32>
-  %1 = memref.subview %0[0, 0][3, 4][1, 1] : memref<?x?xf32> to memref<3x4xf32, strided<[?, 1], offset: ?>>
+  %1 = memref.subview %0[0, 0][3, 4][1, 1] : memref<?x?xf32> to memref<3x4xf32, strided<[?, 1]>>
 
   // CHECK:  memref.subview{{.*}}: memref<16x16xf32> to memref<3x4xf32, strided<[16, 1]>>
-  return %1: memref<3x4xf32, strided<[?, 1], offset: ?>>
+  return %1: memref<3x4xf32, strided<[?, 1]>>
 }
 
 // -----

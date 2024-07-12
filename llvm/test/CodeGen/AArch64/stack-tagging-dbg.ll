@@ -21,8 +21,8 @@ entry:
 
 ; CHECK-LABEL: define void @DbgIntrinsics(
 ; CHECK:  [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
-; CHECK:  call void @llvm.dbg.declare(metadata ptr [[X]],
-; CHECK:  call void @llvm.dbg.value(metadata !DIArgList(ptr [[X]], ptr [[X]])
+; CHECK:  #dbg_declare(ptr [[X]],
+; CHECK:  #dbg_value(!DIArgList(ptr [[X]], ptr [[X]])
 
 
 !llvm.dbg.cu = !{!0}

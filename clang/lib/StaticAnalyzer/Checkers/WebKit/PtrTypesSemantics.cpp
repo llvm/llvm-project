@@ -271,6 +271,43 @@ public:
 
   TrivialFunctionAnalysisVisitor(CacheTy &Cache) : Cache(Cache) {}
 
+  bool IsFunctionTrivial(const Decl *D) {
+    auto CacheIt = Cache.find(D);
+    if (CacheIt != Cache.end())
+      return CacheIt->second;
+
+    // Treat a recursive function call to be trivial until proven otherwise.
+    auto [RecursiveIt, IsNew] = RecursiveFn.insert(std::make_pair(D, true));
+    if (!IsNew)
+      return RecursiveIt->second;
+
+    bool Result = [&]() {
+      if (auto *CtorDecl = dyn_cast<CXXConstructorDecl>(D)) {
+        for (auto *CtorInit : CtorDecl->inits()) {
+          if (!Visit(CtorInit->getInit()))
+            return false;
+        }
+      }
+      const Stmt *Body = D->getBody();
+      if (!Body)
+        return false;
+      return Visit(Body);
+    }();
+
+    if (!Result) {
+      // D and its mutually recursive callers are all non-trivial.
+      for (auto &It : RecursiveFn)
+        It.second = false;
+    }
+    RecursiveIt = RecursiveFn.find(D);
+    assert(RecursiveIt != RecursiveFn.end());
+    Result = RecursiveIt->second;
+    RecursiveFn.erase(RecursiveIt);
+    Cache[D] = Result;
+
+    return Result;
+  }
+
   bool VisitStmt(const Stmt *S) {
     // All statements are non-trivial unless overriden later.
     // Don't even recurse into children by default.
@@ -308,27 +345,30 @@ public:
   bool VisitCaseStmt(const CaseStmt *CS) { return VisitChildren(CS); }
   bool VisitDefaultStmt(const DefaultStmt *DS) { return VisitChildren(DS); }
 
-  bool VisitUnaryOperator(const UnaryOperator *UO) {
-    // Operator '*' and '!' are allowed as long as the operand is trivial.
-    auto op = UO->getOpcode();
-    if (op == UO_Deref || op == UO_AddrOf || op == UO_LNot)
-      return Visit(UO->getSubExpr());
+  // break, continue, goto, and label statements are always trivial.
+  bool VisitBreakStmt(const BreakStmt *) { return true; }
+  bool VisitContinueStmt(const ContinueStmt *) { return true; }
+  bool VisitGotoStmt(const GotoStmt *) { return true; }
+  bool VisitLabelStmt(const LabelStmt *) { return true; }
 
-    if (UO->isIncrementOp() || UO->isDecrementOp()) {
-      // Allow increment or decrement of a POD type.
-      if (auto *RefExpr = dyn_cast<DeclRefExpr>(UO->getSubExpr())) {
-        if (auto *Decl = dyn_cast<VarDecl>(RefExpr->getDecl()))
-          return Decl->isLocalVarDeclOrParm() &&
-                 Decl->getType().isPODType(Decl->getASTContext());
-      }
-    }
-    // Other operators are non-trivial.
-    return false;
+  bool VisitUnaryOperator(const UnaryOperator *UO) {
+    // Unary operators are trivial if its operand is trivial except co_await.
+    return UO->getOpcode() != UO_Coawait && Visit(UO->getSubExpr());
   }
 
   bool VisitBinaryOperator(const BinaryOperator *BO) {
     // Binary operators are trivial if their operands are trivial.
     return Visit(BO->getLHS()) && Visit(BO->getRHS());
+  }
+
+  bool VisitCompoundAssignOperator(const CompoundAssignOperator *CAO) {
+    // Compound assignment operator such as |= is trivial if its
+    // subexpresssions are trivial.
+    return VisitChildren(CAO);
+  }
+
+  bool VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE) {
+    return VisitChildren(ASE);
   }
 
   bool VisitConditionalOperator(const ConditionalOperator *CO) {
@@ -352,12 +392,30 @@ public:
       return false;
     const auto &Name = safeGetName(Callee);
 
-    if (Name == "WTFCrashWithInfo" || Name == "WTFBreakpointTrap" ||
-        Name == "WTFReportAssertionFailure" ||
-        Name == "compilerFenceForCrash" || Name == "__builtin_unreachable")
+    if (Callee->isInStdNamespace() &&
+        (Name == "addressof" || Name == "forward" || Name == "move"))
       return true;
 
-    return TrivialFunctionAnalysis::isTrivialImpl(Callee, Cache);
+    if (Name == "WTFCrashWithInfo" || Name == "WTFBreakpointTrap" ||
+        Name == "WTFCrashWithSecurityImplication" || Name == "WTFCrash" ||
+        Name == "WTFReportAssertionFailure" || Name == "isMainThread" ||
+        Name == "isMainThreadOrGCThread" || Name == "isMainRunLoop" ||
+        Name == "isWebThread" || Name == "isUIThread" ||
+        Name == "mayBeGCThread" || Name == "compilerFenceForCrash" ||
+        Name == "bitwise_cast" || Name.find("__builtin") == 0)
+      return true;
+
+    return IsFunctionTrivial(Callee);
+  }
+
+  bool
+  VisitSubstNonTypeTemplateParmExpr(const SubstNonTypeTemplateParmExpr *E) {
+    // Non-type template paramter is compile time constant and trivial.
+    return true;
+  }
+
+  bool VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *E) {
+    return VisitChildren(E);
   }
 
   bool VisitPredefinedExpr(const PredefinedExpr *E) {
@@ -382,7 +440,17 @@ public:
       return true;
 
     // Recursively descend into the callee to confirm that it's trivial as well.
-    return TrivialFunctionAnalysis::isTrivialImpl(Callee, Cache);
+    return IsFunctionTrivial(Callee);
+  }
+
+  bool VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
+    if (!checkArguments(OCE))
+      return false;
+    auto *Callee = OCE->getCalleeDecl();
+    if (!Callee)
+      return false;
+    // Recursively descend into the callee to confirm that it's trivial as well.
+    return IsFunctionTrivial(Callee);
   }
 
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) {
@@ -408,8 +476,10 @@ public:
     }
 
     // Recursively descend into the callee to confirm that it's trivial.
-    return TrivialFunctionAnalysis::isTrivialImpl(CE->getConstructor(), Cache);
+    return IsFunctionTrivial(CE->getConstructor());
   }
+
+  bool VisitCXXNewExpr(const CXXNewExpr *NE) { return VisitChildren(NE); }
 
   bool VisitImplicitCastExpr(const ImplicitCastExpr *ICE) {
     return Visit(ICE->getSubExpr());
@@ -421,6 +491,14 @@ public:
 
   bool VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *VMT) {
     return Visit(VMT->getSubExpr());
+  }
+
+  bool VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE) {
+    if (auto *Temp = BTE->getTemporary()) {
+      if (!TrivialFunctionAnalysis::isTrivialImpl(Temp->getDestructor(), Cache))
+        return false;
+    }
+    return Visit(BTE->getSubExpr());
   }
 
   bool VisitExprWithCleanups(const ExprWithCleanups *EWC) {
@@ -463,6 +541,7 @@ public:
   bool VisitFixedPointLiteral(const FixedPointLiteral *E) { return true; }
   bool VisitCharacterLiteral(const CharacterLiteral *E) { return true; }
   bool VisitStringLiteral(const StringLiteral *E) { return true; }
+  bool VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E) { return true; }
 
   bool VisitConstantExpr(const ConstantExpr *CE) {
     // Constant expressions are trivial.
@@ -471,28 +550,13 @@ public:
 
 private:
   CacheTy &Cache;
+  CacheTy RecursiveFn;
 };
 
 bool TrivialFunctionAnalysis::isTrivialImpl(
     const Decl *D, TrivialFunctionAnalysis::CacheTy &Cache) {
-  // If the function isn't in the cache, conservatively assume that
-  // it's not trivial until analysis completes. This makes every recursive
-  // function non-trivial. This also guarantees that each function
-  // will be scanned at most once.
-  auto [It, IsNew] = Cache.insert(std::make_pair(D, false));
-  if (!IsNew)
-    return It->second;
-
-  const Stmt *Body = D->getBody();
-  if (!Body)
-    return false;
-
   TrivialFunctionAnalysisVisitor V(Cache);
-  bool Result = V.Visit(Body);
-  if (Result)
-    Cache[D] = true;
-
-  return Result;
+  return V.IsFunctionTrivial(D);
 }
 
 bool TrivialFunctionAnalysis::isTrivialImpl(

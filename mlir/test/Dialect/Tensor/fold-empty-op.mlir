@@ -1,7 +1,8 @@
 // RUN: mlir-opt -split-input-file -transform-interpreter %s | FileCheck %s
 
 module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+  transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op {
       transform.apply_patterns.tensor.fold_tensor_empty
     } : !transform.op<"func.func">
@@ -12,10 +13,9 @@ module attributes {transform.with_named_sequence} {
 // CHECK: #[[$MAP:.+]] = affine_map<()[s0] -> (s0 floordiv 28)>
 // CHECK: #[[$MAP2:.+]] = affine_map<()[s0] -> (s0 * 28)>
 
-func.func @empty_reshape_expansion(%arg0 : index) -> tensor<2x3x5x4x?x7xf32> {
+func.func @empty_reshape_expansion(%arg0 : index, %sz0: index) -> tensor<2x3x5x4x?x7xf32> {
   %0 = tensor.empty(%arg0) : tensor<6x5x?xf32>
-  %1 = tensor.expand_shape %0 [[0, 1], [2], [3, 4, 5]]
-      : tensor<6x5x?xf32> into tensor<2x3x5x4x?x7xf32>
+  %1 = tensor.expand_shape %0 [[0, 1], [2], [3, 4, 5]] output_shape [2, 3, 5, 4, %sz0, 7] : tensor<6x5x?xf32> into tensor<2x3x5x4x?x7xf32>
   return %1 : tensor<2x3x5x4x?x7xf32>
 }
 // CHECK-LABEL: func @empty_reshape_expansion
@@ -64,10 +64,84 @@ func.func @rank_reducing_empty_tensor_extract(%sz : index, %idx : index) -> tens
   return %r: tensor<2xf32>
 }
 
+func.func @pack_empty(%arg0: tensor<8x8x32x32xf32>) -> tensor<8x8x32x32xf32> {
+  %empty_unpacked = tensor.empty() : tensor<256x256xf32>
+  %packed = tensor.pack %empty_unpacked
+    inner_dims_pos = [0, 1] inner_tiles = [32, 32]
+    into %arg0 : tensor<256x256xf32> -> tensor<8x8x32x32xf32>
+  return %packed : tensor<8x8x32x32xf32>
+}
+
+// CHECK-LABEL: func.func @pack_empty(
+// CHECK-SAME:   %[[T:.+]]: tensor<8x8x32x32xf32>
+// CHECK-NOT:    tensor.pack
+// CHECK:        return %[[T]] : tensor<8x8x32x32xf32>
+
+func.func @pack_empty_dynamic(%arg0: tensor<?x?x?x?xf32>, %dim0: index, %dim1: index) -> tensor<?x?x?x?xf32> {
+  %empty_unpacked = tensor.empty(%dim0, %dim1) : tensor<?x?xf32>
+  %packed = tensor.pack %empty_unpacked
+    inner_dims_pos = [0, 1] inner_tiles = [32, 32]
+    into %arg0 : tensor<?x?xf32> -> tensor<?x?x?x?xf32>
+  return %packed : tensor<?x?x?x?xf32>
+}
+
+// CHECK-LABEL: func.func @pack_empty_dynamic(
+// CHECK-SAME:   %[[T:.+]]: tensor<?x?x?x?xf32>,
+// CHECK-SAME:   %[[DIM0:[a-zA-Z0-9_]+]]: index,
+// CHECK-SAME:   %[[DIM1:[a-zA-Z0-9_]+]]: index
+// CHECK-NOT:    tensor.pack
+// CHECK:        return %[[T]] : tensor<?x?x?x?xf32>
+
+func.func @unpack_empty(%arg0: tensor<256x256xf32>) -> tensor<256x256xf32> {
+  %empty_packed = tensor.empty() : tensor<8x8x32x32xf32>
+  %unpacked = tensor.unpack %empty_packed
+    inner_dims_pos = [0, 1] inner_tiles = [32, 32]
+    into %arg0 : tensor<8x8x32x32xf32> -> tensor<256x256xf32>
+  return %unpacked : tensor<256x256xf32>
+}
+
+// CHECK-LABEL: func.func @unpack_empty(
+// CHECK-SAME:   %[[T:.+]]: tensor<256x256xf32>
+// CHECK-NOT:    tensor.unpack
+// CHECK:        return %[[T]] : tensor<256x256xf32>
+
+func.func @unpack_empty_dynamic(%arg0: tensor<?x?xf32>, %dim0: index, %dim1: index, %dim2: index, %dim3: index) -> tensor<?x?xf32> {
+  %empty_packed = tensor.empty(%dim0, %dim1, %dim2, %dim3) : tensor<?x?x?x?xf32>
+  %unpacked = tensor.unpack %empty_packed
+    inner_dims_pos = [0, 1] inner_tiles = [32, 32]
+    into %arg0 : tensor<?x?x?x?xf32> -> tensor<?x?xf32>
+  return %unpacked : tensor<?x?xf32>
+}
+
+// CHECK-LABEL: func.func @unpack_empty_dynamic(
+// CHECK-SAME:   %[[T:.+]]: tensor<?x?xf32>,
+// CHECK-SAME:   %[[DIM0:[a-zA-Z0-9_]+]]: index,
+// CHECK-SAME:   %[[DIM1:[a-zA-Z0-9_]+]]: index,
+// CHECK-SAME:   %[[DIM2:[a-zA-Z0-9_]+]]: index,
+// CHECK-SAME:   %[[DIM3:[a-zA-Z0-9_]+]]: index
+// CHECK-NOT:    tensor.unpack
+// CHECK:        return %[[T]] : tensor<?x?xf32>
+
+func.func @pack_padded_empty(%arg0: tensor<8x8x32x32xf32>) -> tensor<8x8x32x32xf32> {
+  %pad = arith.constant 1.0 : f32
+  %empty_unpacked = tensor.empty() : tensor<256x256xf32>
+  %packed = tensor.pack %empty_unpacked
+    padding_value(%pad : f32)
+    inner_dims_pos = [0, 1] inner_tiles = [32, 32]
+    into %arg0 : tensor<256x256xf32> -> tensor<8x8x32x32xf32>
+  return %packed : tensor<8x8x32x32xf32>
+}
+
+// CHECK-LABEL: func.func @pack_padded_empty(
+// CHECK-SAME:   %[[T:.+]]: tensor<8x8x32x32xf32>
+// CHECK:        %[[PACK:.+]] = tensor.pack
+// CHECK:        return %[[PACK]] : tensor<8x8x32x32xf32>
+
 // -----
 
 module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
+  transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
     transform.apply_patterns to %func_op {
       transform.apply_patterns.tensor.fold_tensor_empty
           {fold_single_use_only = true}

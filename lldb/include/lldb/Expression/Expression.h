@@ -47,11 +47,8 @@ public:
   /// expression.  Text() should contain the definition of this function.
   virtual const char *FunctionName() = 0;
 
-  /// Return the language that should be used when parsing.  To use the
-  /// default, return eLanguageTypeUnknown.
-  virtual lldb::LanguageType Language() const {
-    return lldb::eLanguageTypeUnknown;
-  }
+  /// Return the language that should be used when parsing.
+  virtual SourceLanguage Language() const { return {}; }
 
   /// Return the Materializer that the parser should use when registering
   /// external values.

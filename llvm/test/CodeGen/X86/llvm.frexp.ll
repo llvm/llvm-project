@@ -42,55 +42,21 @@ define { half, i32 } @test_frexp_f16_i32(half %a) {
 ; WIN32-LABEL: test_frexp_f16_i32:
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    pushl %esi
-; WIN32-NEXT:    subl $16, %esp
+; WIN32-NEXT:    subl $20, %esp
 ; WIN32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl %eax, (%esp)
 ; WIN32-NEXT:    calll ___gnu_h2f_ieee
-; WIN32-NEXT:    fld %st(0)
-; WIN32-NEXT:    fmuls __real@4c000000
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _frexp
 ; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fsts {{[0-9]+}}(%esp)
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; WIN32-NEXT:    movl %edx, %ecx
-; WIN32-NEXT:    andl $2147483647, %ecx # imm = 0x7FFFFFFF
-; WIN32-NEXT:    cmpl $8388608, %ecx # imm = 0x800000
-; WIN32-NEXT:    jb LBB0_1
-; WIN32-NEXT:  # %bb.2:
-; WIN32-NEXT:    movl %ecx, %eax
-; WIN32-NEXT:    jmp LBB0_3
-; WIN32-NEXT:  LBB0_1:
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; WIN32-NEXT:    movl %edx, %eax
-; WIN32-NEXT:    andl $2139095040, %eax # imm = 0x7F800000
-; WIN32-NEXT:  LBB0_3:
-; WIN32-NEXT:    shrl $23, %eax
-; WIN32-NEXT:    cmpl $8388608, %ecx # imm = 0x800000
-; WIN32-NEXT:    jae LBB0_5
-; WIN32-NEXT:  # %bb.4:
-; WIN32-NEXT:    addl $-25, %eax
-; WIN32-NEXT:  LBB0_5:
-; WIN32-NEXT:    andl $-2139095041, %edx # imm = 0x807FFFFF
-; WIN32-NEXT:    orl $1056964608, %edx # imm = 0x3F000000
-; WIN32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
-; WIN32-NEXT:    addl $-126, %eax
-; WIN32-NEXT:    addl $-2139095040, %ecx # imm = 0x80800000
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    xorl %esi, %esi
-; WIN32-NEXT:    cmpl $-2139095040, %ecx # imm = 0x80800000
-; WIN32-NEXT:    jbe LBB0_7
-; WIN32-NEXT:  # %bb.6:
-; WIN32-NEXT:    fstp %st(1)
-; WIN32-NEXT:    fldz
-; WIN32-NEXT:  LBB0_7:
-; WIN32-NEXT:    fstp %st(0)
 ; WIN32-NEXT:    fstps (%esp)
-; WIN32-NEXT:    jbe LBB0_9
-; WIN32-NEXT:  # %bb.8:
-; WIN32-NEXT:    movl %eax, %esi
-; WIN32-NEXT:  LBB0_9:
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; WIN32-NEXT:    calll ___gnu_f2h_ieee
 ; WIN32-NEXT:    movl %esi, %edx
-; WIN32-NEXT:    addl $16, %esp
+; WIN32-NEXT:    addl $20, %esp
 ; WIN32-NEXT:    popl %esi
 ; WIN32-NEXT:    retl
   %result = call { half, i32 } @llvm.frexp.f16.i32(half %a)
@@ -126,37 +92,19 @@ define half @test_frexp_f16_i32_only_use_fract(half %a) {
 ;
 ; WIN32-LABEL: test_frexp_f16_i32_only_use_fract:
 ; WIN32:       # %bb.0:
-; WIN32-NEXT:    subl $16, %esp
+; WIN32-NEXT:    subl $20, %esp
 ; WIN32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl %eax, (%esp)
 ; WIN32-NEXT:    calll ___gnu_h2f_ieee
-; WIN32-NEXT:    fsts {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fld %st(0)
-; WIN32-NEXT:    fmuls __real@4c000000
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _frexp
 ; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; WIN32-NEXT:    movl %ecx, %eax
-; WIN32-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; WIN32-NEXT:    cmpl $8388608, %eax # imm = 0x800000
-; WIN32-NEXT:    jae LBB1_2
-; WIN32-NEXT:  # %bb.1:
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; WIN32-NEXT:  LBB1_2:
-; WIN32-NEXT:    andl $-2139095041, %ecx # imm = 0x807FFFFF
-; WIN32-NEXT:    orl $1056964608, %ecx # imm = 0x3F000000
-; WIN32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; WIN32-NEXT:    addl $-2139095040, %eax # imm = 0x80800000
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    cmpl $-2139095040, %eax # imm = 0x80800000
-; WIN32-NEXT:    jbe LBB1_4
-; WIN32-NEXT:  # %bb.3:
-; WIN32-NEXT:    fstp %st(1)
-; WIN32-NEXT:    fldz
-; WIN32-NEXT:  LBB1_4:
-; WIN32-NEXT:    fstp %st(0)
 ; WIN32-NEXT:    fstps (%esp)
 ; WIN32-NEXT:    calll ___gnu_f2h_ieee
-; WIN32-NEXT:    addl $16, %esp
+; WIN32-NEXT:    addl $20, %esp
 ; WIN32-NEXT:    retl
   %result = call { half, i32 } @llvm.frexp.f16.i32(half %a)
   %result.0 = extractvalue { half, i32 } %result, 0
@@ -195,41 +143,17 @@ define i32 @test_frexp_f16_i32_only_use_exp(half %a) {
 ;
 ; WIN32-LABEL: test_frexp_f16_i32_only_use_exp:
 ; WIN32:       # %bb.0:
-; WIN32-NEXT:    subl $8, %esp
+; WIN32-NEXT:    subl $16, %esp
 ; WIN32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; WIN32-NEXT:    pushl %eax
+; WIN32-NEXT:    movl %eax, (%esp)
 ; WIN32-NEXT:    calll ___gnu_h2f_ieee
-; WIN32-NEXT:    addl $4, %esp
-; WIN32-NEXT:    fld %st(0)
-; WIN32-NEXT:    fmuls __real@4c000000
-; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fstps (%esp)
-; WIN32-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
-; WIN32-NEXT:    andl (%esp), %ecx
-; WIN32-NEXT:    cmpl $8388608, %ecx # imm = 0x800000
-; WIN32-NEXT:    jb LBB2_1
-; WIN32-NEXT:  # %bb.2:
-; WIN32-NEXT:    movl %ecx, %edx
-; WIN32-NEXT:    jmp LBB2_3
-; WIN32-NEXT:  LBB2_1:
-; WIN32-NEXT:    movl $2139095040, %edx # imm = 0x7F800000
-; WIN32-NEXT:    andl {{[0-9]+}}(%esp), %edx
-; WIN32-NEXT:  LBB2_3:
-; WIN32-NEXT:    shrl $23, %edx
-; WIN32-NEXT:    cmpl $8388608, %ecx # imm = 0x800000
-; WIN32-NEXT:    jae LBB2_5
-; WIN32-NEXT:  # %bb.4:
-; WIN32-NEXT:    addl $-25, %edx
-; WIN32-NEXT:  LBB2_5:
-; WIN32-NEXT:    addl $-2139095040, %ecx # imm = 0x80800000
-; WIN32-NEXT:    xorl %eax, %eax
-; WIN32-NEXT:    cmpl $-2139095040, %ecx # imm = 0x80800000
-; WIN32-NEXT:    jbe LBB2_7
-; WIN32-NEXT:  # %bb.6:
-; WIN32-NEXT:    addl $-126, %edx
-; WIN32-NEXT:    movl %edx, %eax
-; WIN32-NEXT:  LBB2_7:
-; WIN32-NEXT:    addl $8, %esp
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _frexp
+; WIN32-NEXT:    fstp %st(0)
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    addl $16, %esp
 ; WIN32-NEXT:    retl
   %result = call { half, i32 } @llvm.frexp.f16.i32(half %a)
   %result.0 = extractvalue { half, i32 } %result, 1
@@ -268,50 +192,16 @@ define { float, i32 } @test_frexp_f32_i32(float %a) {
 ;
 ; WIN32-LABEL: test_frexp_f32_i32:
 ; WIN32:       # %bb.0:
-; WIN32-NEXT:    subl $12, %esp
-; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fld %st(0)
-; WIN32-NEXT:    fmuls __real@4c000000
-; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fsts (%esp)
-; WIN32-NEXT:    movl (%esp), %eax
-; WIN32-NEXT:    movl %eax, %ecx
-; WIN32-NEXT:    andl $2147483647, %ecx # imm = 0x7FFFFFFF
-; WIN32-NEXT:    cmpl $8388608, %ecx # imm = 0x800000
-; WIN32-NEXT:    jb LBB3_1
-; WIN32-NEXT:  # %bb.2:
-; WIN32-NEXT:    movl %ecx, %edx
-; WIN32-NEXT:    jmp LBB3_3
-; WIN32-NEXT:  LBB3_1:
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; WIN32-NEXT:    movl %eax, %edx
-; WIN32-NEXT:    andl $2139095040, %edx # imm = 0x7F800000
-; WIN32-NEXT:  LBB3_3:
-; WIN32-NEXT:    shrl $23, %edx
-; WIN32-NEXT:    cmpl $8388608, %ecx # imm = 0x800000
-; WIN32-NEXT:    jae LBB3_5
-; WIN32-NEXT:  # %bb.4:
-; WIN32-NEXT:    addl $-25, %edx
-; WIN32-NEXT:  LBB3_5:
-; WIN32-NEXT:    andl $-2139095041, %eax # imm = 0x807FFFFF
-; WIN32-NEXT:    orl $1056964608, %eax # imm = 0x3F000000
+; WIN32-NEXT:    subl $20, %esp
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; WIN32-NEXT:    addl $-126, %edx
-; WIN32-NEXT:    addl $-2139095040, %ecx # imm = 0x80800000
-; WIN32-NEXT:    xorl %eax, %eax
-; WIN32-NEXT:    cmpl $-2139095040, %ecx # imm = 0x80800000
-; WIN32-NEXT:    jbe LBB3_7
-; WIN32-NEXT:  # %bb.6:
-; WIN32-NEXT:    movl %edx, %eax
-; WIN32-NEXT:  LBB3_7:
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    jbe LBB3_9
-; WIN32-NEXT:  # %bb.8:
-; WIN32-NEXT:    fstp %st(1)
-; WIN32-NEXT:    fldz
-; WIN32-NEXT:  LBB3_9:
-; WIN32-NEXT:    fstp %st(0)
-; WIN32-NEXT:    addl $12, %esp
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _frexp
+; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    addl $20, %esp
 ; WIN32-NEXT:    retl
   %result = call { float, i32 } @llvm.frexp.f32.i32(float %a)
   ret { float, i32 } %result
@@ -330,33 +220,15 @@ define float @test_frexp_f32_i32_only_use_fract(float %a) {
 ;
 ; WIN32-LABEL: test_frexp_f32_i32_only_use_fract:
 ; WIN32:       # %bb.0:
-; WIN32-NEXT:    subl $12, %esp
+; WIN32-NEXT:    subl $20, %esp
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fsts (%esp)
-; WIN32-NEXT:    fld %st(0)
-; WIN32-NEXT:    fmuls __real@4c000000
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _frexp
 ; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    movl (%esp), %ecx
-; WIN32-NEXT:    movl %ecx, %eax
-; WIN32-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; WIN32-NEXT:    cmpl $8388608, %eax # imm = 0x800000
-; WIN32-NEXT:    jae LBB4_2
-; WIN32-NEXT:  # %bb.1:
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; WIN32-NEXT:  LBB4_2:
-; WIN32-NEXT:    andl $-2139095041, %ecx # imm = 0x807FFFFF
-; WIN32-NEXT:    orl $1056964608, %ecx # imm = 0x3F000000
-; WIN32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; WIN32-NEXT:    addl $-2139095040, %eax # imm = 0x80800000
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    cmpl $-2139095040, %eax # imm = 0x80800000
-; WIN32-NEXT:    jbe LBB4_4
-; WIN32-NEXT:  # %bb.3:
-; WIN32-NEXT:    fstp %st(1)
-; WIN32-NEXT:    fldz
-; WIN32-NEXT:  LBB4_4:
-; WIN32-NEXT:    fstp %st(0)
-; WIN32-NEXT:    addl $12, %esp
+; WIN32-NEXT:    addl $20, %esp
 ; WIN32-NEXT:    retl
   %result = call { float, i32 } @llvm.frexp.f32.i32(float %a)
   %result.0 = extractvalue { float, i32 } %result, 0
@@ -377,38 +249,15 @@ define i32 @test_frexp_f32_i32_only_use_exp(float %a) {
 ;
 ; WIN32-LABEL: test_frexp_f32_i32_only_use_exp:
 ; WIN32:       # %bb.0:
-; WIN32-NEXT:    subl $8, %esp
+; WIN32-NEXT:    subl $16, %esp
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fld %st(0)
-; WIN32-NEXT:    fmuls __real@4c000000
-; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fstps (%esp)
-; WIN32-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
-; WIN32-NEXT:    andl (%esp), %ecx
-; WIN32-NEXT:    cmpl $8388608, %ecx # imm = 0x800000
-; WIN32-NEXT:    jb LBB5_1
-; WIN32-NEXT:  # %bb.2:
-; WIN32-NEXT:    movl %ecx, %edx
-; WIN32-NEXT:    jmp LBB5_3
-; WIN32-NEXT:  LBB5_1:
-; WIN32-NEXT:    movl $2139095040, %edx # imm = 0x7F800000
-; WIN32-NEXT:    andl {{[0-9]+}}(%esp), %edx
-; WIN32-NEXT:  LBB5_3:
-; WIN32-NEXT:    shrl $23, %edx
-; WIN32-NEXT:    cmpl $8388608, %ecx # imm = 0x800000
-; WIN32-NEXT:    jae LBB5_5
-; WIN32-NEXT:  # %bb.4:
-; WIN32-NEXT:    addl $-25, %edx
-; WIN32-NEXT:  LBB5_5:
-; WIN32-NEXT:    addl $-2139095040, %ecx # imm = 0x80800000
-; WIN32-NEXT:    xorl %eax, %eax
-; WIN32-NEXT:    cmpl $-2139095040, %ecx # imm = 0x80800000
-; WIN32-NEXT:    jbe LBB5_7
-; WIN32-NEXT:  # %bb.6:
-; WIN32-NEXT:    addl $-126, %edx
-; WIN32-NEXT:    movl %edx, %eax
-; WIN32-NEXT:  LBB5_7:
-; WIN32-NEXT:    addl $8, %esp
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _frexp
+; WIN32-NEXT:    fstp %st(0)
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    addl $16, %esp
 ; WIN32-NEXT:    retl
   %result = call { float, i32 } @llvm.frexp.f32.i32(float %a)
   %result.0 = extractvalue { float, i32 } %result, 1
@@ -476,206 +325,58 @@ define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) {
 ;
 ; WIN32-LABEL: test_frexp_v4f32_v4i32:
 ; WIN32:       # %bb.0:
-; WIN32-NEXT:    pushl %ebp
-; WIN32-NEXT:    pushl %ebx
 ; WIN32-NEXT:    pushl %edi
 ; WIN32-NEXT:    pushl %esi
-; WIN32-NEXT:    subl $68, %esp
-; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    flds __real@4c000000
-; WIN32-NEXT:    fld %st(1)
-; WIN32-NEXT:    fmul %st(1), %st
-; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fxch %st(1)
-; WIN32-NEXT:    fsts {{[0-9]+}}(%esp)
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; WIN32-NEXT:    movl %ebx, %eax
-; WIN32-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; WIN32-NEXT:    cmpl $8388608, %eax # imm = 0x800000
-; WIN32-NEXT:    jb LBB6_1
-; WIN32-NEXT:  # %bb.2:
-; WIN32-NEXT:    movl %eax, %ecx
-; WIN32-NEXT:    jmp LBB6_3
-; WIN32-NEXT:  LBB6_1:
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; WIN32-NEXT:    movl %ebx, %ecx
-; WIN32-NEXT:    andl $2139095040, %ecx # imm = 0x7F800000
-; WIN32-NEXT:  LBB6_3:
-; WIN32-NEXT:    shrl $23, %ecx
-; WIN32-NEXT:    cmpl $8388608, %eax # imm = 0x800000
-; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fld %st(0)
-; WIN32-NEXT:    fmul %st(3), %st
-; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fsts {{[0-9]+}}(%esp)
-; WIN32-NEXT:    jae LBB6_5
-; WIN32-NEXT:  # %bb.4:
-; WIN32-NEXT:    addl $-25, %ecx
-; WIN32-NEXT:  LBB6_5:
-; WIN32-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; WIN32-NEXT:    movl %ecx, %edx
-; WIN32-NEXT:    andl $2147483647, %edx # imm = 0x7FFFFFFF
-; WIN32-NEXT:    cmpl $8388608, %edx # imm = 0x800000
-; WIN32-NEXT:    jb LBB6_6
-; WIN32-NEXT:  # %bb.7:
-; WIN32-NEXT:    movl %edx, %esi
-; WIN32-NEXT:    jmp LBB6_8
-; WIN32-NEXT:  LBB6_6:
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; WIN32-NEXT:    movl %ecx, %esi
-; WIN32-NEXT:    andl $2139095040, %esi # imm = 0x7F800000
-; WIN32-NEXT:  LBB6_8:
-; WIN32-NEXT:    shrl $23, %esi
-; WIN32-NEXT:    cmpl $8388608, %edx # imm = 0x800000
-; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fld %st(0)
-; WIN32-NEXT:    fmul %st(4), %st
-; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fsts {{[0-9]+}}(%esp)
-; WIN32-NEXT:    jae LBB6_10
-; WIN32-NEXT:  # %bb.9:
-; WIN32-NEXT:    addl $-25, %esi
-; WIN32-NEXT:  LBB6_10:
-; WIN32-NEXT:    movl %esi, (%esp) # 4-byte Spill
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN32-NEXT:    movl %edi, %ebp
-; WIN32-NEXT:    andl $2147483647, %ebp # imm = 0x7FFFFFFF
-; WIN32-NEXT:    cmpl $8388608, %ebp # imm = 0x800000
-; WIN32-NEXT:    jb LBB6_11
-; WIN32-NEXT:  # %bb.12:
-; WIN32-NEXT:    movl %ebp, %esi
-; WIN32-NEXT:    jmp LBB6_13
-; WIN32-NEXT:  LBB6_11:
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN32-NEXT:    movl %edi, %esi
-; WIN32-NEXT:    andl $2139095040, %esi # imm = 0x7F800000
-; WIN32-NEXT:  LBB6_13:
-; WIN32-NEXT:    shrl $23, %esi
-; WIN32-NEXT:    cmpl $8388608, %ebp # imm = 0x800000
-; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fmul %st, %st(4)
-; WIN32-NEXT:    fxch %st(4)
-; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fxch %st(3)
-; WIN32-NEXT:    fsts {{[0-9]+}}(%esp)
-; WIN32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; WIN32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; WIN32-NEXT:    jae LBB6_15
-; WIN32-NEXT:  # %bb.14:
-; WIN32-NEXT:    addl $-25, %esi
-; WIN32-NEXT:  LBB6_15:
-; WIN32-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; WIN32-NEXT:    movl %eax, %edx
-; WIN32-NEXT:    andl $2147483647, %edx # imm = 0x7FFFFFFF
-; WIN32-NEXT:    cmpl $8388608, %edx # imm = 0x800000
-; WIN32-NEXT:    jb LBB6_16
-; WIN32-NEXT:  # %bb.17:
-; WIN32-NEXT:    movl %edx, %esi
-; WIN32-NEXT:    jmp LBB6_18
-; WIN32-NEXT:  LBB6_16:
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; WIN32-NEXT:    movl %eax, %esi
-; WIN32-NEXT:    andl $2139095040, %esi # imm = 0x7F800000
-; WIN32-NEXT:  LBB6_18:
-; WIN32-NEXT:    shrl $23, %esi
-; WIN32-NEXT:    cmpl $8388608, %edx # imm = 0x800000
-; WIN32-NEXT:    jae LBB6_20
-; WIN32-NEXT:  # %bb.19:
-; WIN32-NEXT:    addl $-25, %esi
-; WIN32-NEXT:  LBB6_20:
-; WIN32-NEXT:    andl $-2139095041, %eax # imm = 0x807FFFFF
-; WIN32-NEXT:    orl $1056964608, %eax # imm = 0x3F000000
+; WIN32-NEXT:    subl $60, %esp
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; WIN32-NEXT:    andl $-2139095041, %ebx # imm = 0x807FFFFF
-; WIN32-NEXT:    orl $1056964608, %ebx # imm = 0x3F000000
-; WIN32-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
-; WIN32-NEXT:    andl $-2139095041, %ecx # imm = 0x807FFFFF
-; WIN32-NEXT:    orl $1056964608, %ecx # imm = 0x3F000000
-; WIN32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; WIN32-NEXT:    andl $-2139095041, %edi # imm = 0x807FFFFF
-; WIN32-NEXT:    orl $1056964608, %edi # imm = 0x3F000000
-; WIN32-NEXT:    movl %edi, {{[0-9]+}}(%esp)
-; WIN32-NEXT:    addl $-126, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; WIN32-NEXT:    addl $-126, (%esp) # 4-byte Folded Spill
-; WIN32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; WIN32-NEXT:    addl $-126, %ecx
-; WIN32-NEXT:    addl $-126, %esi
-; WIN32-NEXT:    addl $-2139095040, %edx # imm = 0x80800000
-; WIN32-NEXT:    xorl %edi, %edi
-; WIN32-NEXT:    cmpl $-2139095040, %edx # imm = 0x80800000
-; WIN32-NEXT:    movl $0, %ebx
-; WIN32-NEXT:    jbe LBB6_22
-; WIN32-NEXT:  # %bb.21:
-; WIN32-NEXT:    movl %esi, %ebx
-; WIN32-NEXT:  LBB6_22:
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; WIN32-NEXT:    jbe LBB6_24
-; WIN32-NEXT:  # %bb.23:
-; WIN32-NEXT:    fstp %st(1)
-; WIN32-NEXT:    fldz
-; WIN32-NEXT:  LBB6_24:
-; WIN32-NEXT:    fstp %st(0)
-; WIN32-NEXT:    addl $-2139095040, %eax # imm = 0x80800000
-; WIN32-NEXT:    cmpl $-2139095040, %eax # imm = 0x80800000
-; WIN32-NEXT:    movl $0, %edx
-; WIN32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
-; WIN32-NEXT:    jbe LBB6_26
-; WIN32-NEXT:  # %bb.25:
-; WIN32-NEXT:    movl %ecx, %edx
-; WIN32-NEXT:  LBB6_26:
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _frexp
+; WIN32-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    jbe LBB6_28
-; WIN32-NEXT:  # %bb.27:
-; WIN32-NEXT:    fstp %st(3)
-; WIN32-NEXT:    fldz
-; WIN32-NEXT:  LBB6_28:
-; WIN32-NEXT:    fstp %st(0)
-; WIN32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; WIN32-NEXT:    addl $-2139095040, %eax # imm = 0x80800000
-; WIN32-NEXT:    cmpl $-2139095040, %eax # imm = 0x80800000
-; WIN32-NEXT:    movl $0, %ecx
-; WIN32-NEXT:    jbe LBB6_30
-; WIN32-NEXT:  # %bb.29:
-; WIN32-NEXT:    movl (%esp), %ecx # 4-byte Reload
-; WIN32-NEXT:  LBB6_30:
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _frexp
+; WIN32-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    jbe LBB6_32
-; WIN32-NEXT:  # %bb.31:
-; WIN32-NEXT:    fstp %st(2)
-; WIN32-NEXT:    fldz
-; WIN32-NEXT:  LBB6_32:
-; WIN32-NEXT:    fstp %st(0)
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _frexp
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
+; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
+; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
+; WIN32-NEXT:    calll _frexp
+; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
+; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; WIN32-NEXT:    addl $-2139095040, %ebp # imm = 0x80800000
-; WIN32-NEXT:    cmpl $-2139095040, %ebp # imm = 0x80800000
-; WIN32-NEXT:    jbe LBB6_34
-; WIN32-NEXT:  # %bb.33:
-; WIN32-NEXT:    movl %esi, %edi
-; WIN32-NEXT:  LBB6_34:
-; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    jbe LBB6_36
-; WIN32-NEXT:  # %bb.35:
-; WIN32-NEXT:    fstp %st(4)
-; WIN32-NEXT:    fldz
-; WIN32-NEXT:  LBB6_36:
-; WIN32-NEXT:    fstp %st(0)
-; WIN32-NEXT:    movl %edi, 28(%eax)
-; WIN32-NEXT:    movl %ecx, 24(%eax)
-; WIN32-NEXT:    movl %edx, 20(%eax)
-; WIN32-NEXT:    movl %ebx, 16(%eax)
-; WIN32-NEXT:    fxch %st(3)
-; WIN32-NEXT:    fstps 12(%eax)
-; WIN32-NEXT:    fstps 8(%eax)
-; WIN32-NEXT:    fstps 4(%eax)
-; WIN32-NEXT:    fstps (%eax)
-; WIN32-NEXT:    addl $68, %esp
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; WIN32-NEXT:    movl %edi, 28(%esi)
+; WIN32-NEXT:    movl %edx, 24(%esi)
+; WIN32-NEXT:    movl %ecx, 20(%esi)
+; WIN32-NEXT:    movl %eax, 16(%esi)
+; WIN32-NEXT:    fstps 12(%esi)
+; WIN32-NEXT:    fstps 8(%esi)
+; WIN32-NEXT:    fstps 4(%esi)
+; WIN32-NEXT:    fstps (%esi)
+; WIN32-NEXT:    movl %esi, %eax
+; WIN32-NEXT:    addl $60, %esp
 ; WIN32-NEXT:    popl %esi
 ; WIN32-NEXT:    popl %edi
-; WIN32-NEXT:    popl %ebx
-; WIN32-NEXT:    popl %ebp
 ; WIN32-NEXT:    retl
   %result = call { <4 x float>, <4 x i32> } @llvm.frexp.v4f32.v4i32(<4 x float> %a)
   ret { <4 x float>, <4 x i32> } %result
@@ -717,123 +418,48 @@ define <4 x float> @test_frexp_v4f32_v4i32_only_use_fract(<4 x float> %a) {
 ;
 ; WIN32-LABEL: test_frexp_v4f32_v4i32_only_use_fract:
 ; WIN32:       # %bb.0:
-; WIN32-NEXT:    pushl %edi
 ; WIN32-NEXT:    pushl %esi
-; WIN32-NEXT:    subl $48, %esp
-; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fsts {{[0-9]+}}(%esp)
-; WIN32-NEXT:    flds __real@4c000000
-; WIN32-NEXT:    fld %st(1)
-; WIN32-NEXT:    fmul %st(1), %st
-; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fxch %st(2)
-; WIN32-NEXT:    fsts {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fld %st(0)
-; WIN32-NEXT:    fmul %st(3), %st
-; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fxch %st(3)
-; WIN32-NEXT:    fsts {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fld %st(0)
-; WIN32-NEXT:    fmul %st(3), %st
-; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fxch %st(4)
-; WIN32-NEXT:    fsts (%esp)
-; WIN32-NEXT:    fmul %st, %st(2)
-; WIN32-NEXT:    fxch %st(2)
-; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; WIN32-NEXT:    movl %ecx, %eax
-; WIN32-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; WIN32-NEXT:    cmpl $8388608, %eax # imm = 0x800000
-; WIN32-NEXT:    jae LBB7_2
-; WIN32-NEXT:  # %bb.1:
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; WIN32-NEXT:  LBB7_2:
-; WIN32-NEXT:    andl $-2139095041, %ecx # imm = 0x807FFFFF
-; WIN32-NEXT:    orl $1056964608, %ecx # imm = 0x3F000000
-; WIN32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; WIN32-NEXT:    movl %edx, %ecx
-; WIN32-NEXT:    andl $2147483647, %ecx # imm = 0x7FFFFFFF
-; WIN32-NEXT:    cmpl $8388608, %ecx # imm = 0x800000
-; WIN32-NEXT:    jae LBB7_4
-; WIN32-NEXT:  # %bb.3:
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; WIN32-NEXT:  LBB7_4:
-; WIN32-NEXT:    andl $-2139095041, %edx # imm = 0x807FFFFF
-; WIN32-NEXT:    orl $1056964608, %edx # imm = 0x3F000000
-; WIN32-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    subl $60, %esp
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; WIN32-NEXT:    movl %esi, %edx
-; WIN32-NEXT:    andl $2147483647, %edx # imm = 0x7FFFFFFF
-; WIN32-NEXT:    cmpl $8388608, %edx # imm = 0x800000
-; WIN32-NEXT:    jae LBB7_6
-; WIN32-NEXT:  # %bb.5:
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; WIN32-NEXT:  LBB7_6:
-; WIN32-NEXT:    andl $-2139095041, %esi # imm = 0x807FFFFF
-; WIN32-NEXT:    orl $1056964608, %esi # imm = 0x3F000000
-; WIN32-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; WIN32-NEXT:    movl (%esp), %edi
-; WIN32-NEXT:    movl %edi, %esi
-; WIN32-NEXT:    andl $2147483647, %esi # imm = 0x7FFFFFFF
-; WIN32-NEXT:    cmpl $8388608, %esi # imm = 0x800000
-; WIN32-NEXT:    jae LBB7_8
-; WIN32-NEXT:  # %bb.7:
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN32-NEXT:  LBB7_8:
-; WIN32-NEXT:    andl $-2139095041, %edi # imm = 0x807FFFFF
-; WIN32-NEXT:    orl $1056964608, %edi # imm = 0x3F000000
-; WIN32-NEXT:    movl %edi, {{[0-9]+}}(%esp)
-; WIN32-NEXT:    addl $-2139095040, %eax # imm = 0x80800000
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    cmpl $-2139095040, %eax # imm = 0x80800000
-; WIN32-NEXT:    jbe LBB7_10
-; WIN32-NEXT:  # %bb.9:
-; WIN32-NEXT:    fstp %st(1)
-; WIN32-NEXT:    fldz
-; WIN32-NEXT:  LBB7_10:
-; WIN32-NEXT:    fstp %st(0)
-; WIN32-NEXT:    addl $-2139095040, %ecx # imm = 0x80800000
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _frexp
+; WIN32-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    cmpl $-2139095040, %ecx # imm = 0x80800000
-; WIN32-NEXT:    jbe LBB7_12
-; WIN32-NEXT:  # %bb.11:
-; WIN32-NEXT:    fstp %st(3)
-; WIN32-NEXT:    fldz
-; WIN32-NEXT:  LBB7_12:
-; WIN32-NEXT:    fstp %st(0)
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; WIN32-NEXT:    addl $-2139095040, %edx # imm = 0x80800000
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _frexp
+; WIN32-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    cmpl $-2139095040, %edx # imm = 0x80800000
-; WIN32-NEXT:    jbe LBB7_14
-; WIN32-NEXT:  # %bb.13:
-; WIN32-NEXT:    fstp %st(4)
-; WIN32-NEXT:    fldz
-; WIN32-NEXT:  LBB7_14:
-; WIN32-NEXT:    fstp %st(0)
-; WIN32-NEXT:    addl $-2139095040, %esi # imm = 0x80800000
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _frexp
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    cmpl $-2139095040, %esi # imm = 0x80800000
-; WIN32-NEXT:    jbe LBB7_16
-; WIN32-NEXT:  # %bb.15:
-; WIN32-NEXT:    fstp %st(2)
-; WIN32-NEXT:    fldz
-; WIN32-NEXT:  LBB7_16:
-; WIN32-NEXT:    fstp %st(0)
-; WIN32-NEXT:    fxch %st(1)
-; WIN32-NEXT:    fstps 12(%eax)
-; WIN32-NEXT:    fxch %st(2)
-; WIN32-NEXT:    fstps 8(%eax)
-; WIN32-NEXT:    fstps 4(%eax)
-; WIN32-NEXT:    fstps (%eax)
-; WIN32-NEXT:    addl $48, %esp
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
+; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
+; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
+; WIN32-NEXT:    calll _frexp
+; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
+; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fstps 12(%esi)
+; WIN32-NEXT:    fstps 8(%esi)
+; WIN32-NEXT:    fstps 4(%esi)
+; WIN32-NEXT:    fstps (%esi)
+; WIN32-NEXT:    movl %esi, %eax
+; WIN32-NEXT:    addl $60, %esp
 ; WIN32-NEXT:    popl %esi
-; WIN32-NEXT:    popl %edi
 ; WIN32-NEXT:    retl
   %result = call { <4 x float>, <4 x i32> } @llvm.frexp.v4f32.v4i32(<4 x float> %a)
   %result.0 = extractvalue { <4 x float>, <4 x i32> } %result, 0
@@ -873,146 +499,46 @@ define <4 x i32> @test_frexp_v4f32_v4i32_only_use_exp(<4 x float> %a) {
 ;
 ; WIN32-LABEL: test_frexp_v4f32_v4i32_only_use_exp:
 ; WIN32:       # %bb.0:
-; WIN32-NEXT:    pushl %ebp
-; WIN32-NEXT:    pushl %ebx
 ; WIN32-NEXT:    pushl %edi
 ; WIN32-NEXT:    pushl %esi
-; WIN32-NEXT:    subl $36, %esp
-; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    flds __real@4c000000
-; WIN32-NEXT:    fld %st(1)
-; WIN32-NEXT:    fmul %st(1), %st
-; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fxch %st(1)
-; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    movl $2139095040, %ecx # imm = 0x7F800000
-; WIN32-NEXT:    movl $2147483647, %edx # imm = 0x7FFFFFFF
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; WIN32-NEXT:    andl %edx, %eax
-; WIN32-NEXT:    cmpl $8388608, %eax # imm = 0x800000
-; WIN32-NEXT:    jb LBB8_1
-; WIN32-NEXT:  # %bb.2:
-; WIN32-NEXT:    movl %eax, %esi
-; WIN32-NEXT:    jmp LBB8_3
-; WIN32-NEXT:  LBB8_1:
+; WIN32-NEXT:    subl $28, %esp
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; WIN32-NEXT:    andl %ecx, %esi
-; WIN32-NEXT:  LBB8_3:
-; WIN32-NEXT:    shrl $23, %esi
-; WIN32-NEXT:    cmpl $8388608, %eax # imm = 0x800000
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fld %st(0)
-; WIN32-NEXT:    fmul %st(2), %st
-; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    jae LBB8_5
-; WIN32-NEXT:  # %bb.4:
-; WIN32-NEXT:    addl $-25, %esi
-; WIN32-NEXT:  LBB8_5:
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _frexp
+; WIN32-NEXT:    fstp %st(0)
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _frexp
+; WIN32-NEXT:    fstp %st(0)
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _frexp
+; WIN32-NEXT:    fstp %st(0)
+; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _frexp
+; WIN32-NEXT:    fstp %st(0)
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN32-NEXT:    andl %edx, %edi
-; WIN32-NEXT:    cmpl $8388608, %edi # imm = 0x800000
-; WIN32-NEXT:    jb LBB8_6
-; WIN32-NEXT:  # %bb.7:
-; WIN32-NEXT:    movl %edi, %ebx
-; WIN32-NEXT:    jmp LBB8_8
-; WIN32-NEXT:  LBB8_6:
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; WIN32-NEXT:    andl %ecx, %ebx
-; WIN32-NEXT:  LBB8_8:
-; WIN32-NEXT:    shrl $23, %ebx
-; WIN32-NEXT:    cmpl $8388608, %edi # imm = 0x800000
-; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fld %st(0)
-; WIN32-NEXT:    fmul %st(2), %st
-; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    jae LBB8_10
-; WIN32-NEXT:  # %bb.9:
-; WIN32-NEXT:    addl $-25, %ebx
-; WIN32-NEXT:  LBB8_10:
-; WIN32-NEXT:    movl %esi, (%esp) # 4-byte Spill
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; WIN32-NEXT:    andl %edx, %ebp
-; WIN32-NEXT:    cmpl $8388608, %ebp # imm = 0x800000
-; WIN32-NEXT:    jb LBB8_11
-; WIN32-NEXT:  # %bb.12:
-; WIN32-NEXT:    movl %ebp, %esi
-; WIN32-NEXT:    jmp LBB8_13
-; WIN32-NEXT:  LBB8_11:
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; WIN32-NEXT:    andl %ecx, %esi
-; WIN32-NEXT:  LBB8_13:
-; WIN32-NEXT:    shrl $23, %esi
-; WIN32-NEXT:    cmpl $8388608, %ebp # imm = 0x800000
-; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fmul %st, %st(1)
-; WIN32-NEXT:    fxch %st(1)
-; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    jae LBB8_15
-; WIN32-NEXT:  # %bb.14:
-; WIN32-NEXT:    addl $-25, %esi
-; WIN32-NEXT:  LBB8_15:
-; WIN32-NEXT:    andl {{[0-9]+}}(%esp), %edx
-; WIN32-NEXT:    cmpl $8388608, %edx # imm = 0x800000
-; WIN32-NEXT:    jb LBB8_16
-; WIN32-NEXT:  # %bb.17:
-; WIN32-NEXT:    movl %edx, %ecx
-; WIN32-NEXT:    jmp LBB8_18
-; WIN32-NEXT:  LBB8_16:
-; WIN32-NEXT:    andl {{[0-9]+}}(%esp), %ecx
-; WIN32-NEXT:  LBB8_18:
-; WIN32-NEXT:    shrl $23, %ecx
-; WIN32-NEXT:    cmpl $8388608, %edx # imm = 0x800000
-; WIN32-NEXT:    jae LBB8_20
-; WIN32-NEXT:  # %bb.19:
-; WIN32-NEXT:    addl $-25, %ecx
-; WIN32-NEXT:  LBB8_20:
-; WIN32-NEXT:    addl $-2139095040, %eax # imm = 0x80800000
-; WIN32-NEXT:    cmpl $-2139095040, %eax # imm = 0x80800000
-; WIN32-NEXT:    movl $0, %eax
-; WIN32-NEXT:    jbe LBB8_22
-; WIN32-NEXT:  # %bb.21:
-; WIN32-NEXT:    movl (%esp), %eax # 4-byte Reload
-; WIN32-NEXT:    addl $-126, %eax
-; WIN32-NEXT:  LBB8_22:
-; WIN32-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; WIN32-NEXT:    addl $-2139095040, %edi # imm = 0x80800000
-; WIN32-NEXT:    cmpl $-2139095040, %edi # imm = 0x80800000
-; WIN32-NEXT:    movl $0, %edi
-; WIN32-NEXT:    jbe LBB8_24
-; WIN32-NEXT:  # %bb.23:
-; WIN32-NEXT:    addl $-126, %ebx
-; WIN32-NEXT:    movl %ebx, %edi
-; WIN32-NEXT:  LBB8_24:
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; WIN32-NEXT:    addl $-2139095040, %ebp # imm = 0x80800000
-; WIN32-NEXT:    cmpl $-2139095040, %ebp # imm = 0x80800000
-; WIN32-NEXT:    movl $0, %ebx
-; WIN32-NEXT:    jbe LBB8_26
-; WIN32-NEXT:  # %bb.25:
-; WIN32-NEXT:    addl $-126, %esi
-; WIN32-NEXT:    movl %esi, %ebx
-; WIN32-NEXT:  LBB8_26:
-; WIN32-NEXT:    addl $-2139095040, %edx # imm = 0x80800000
-; WIN32-NEXT:    cmpl $-2139095040, %edx # imm = 0x80800000
-; WIN32-NEXT:    movl $0, %edx
-; WIN32-NEXT:    jbe LBB8_28
-; WIN32-NEXT:  # %bb.27:
-; WIN32-NEXT:    addl $-126, %ecx
-; WIN32-NEXT:    movl %ecx, %edx
-; WIN32-NEXT:  LBB8_28:
-; WIN32-NEXT:    movl %edx, 12(%eax)
-; WIN32-NEXT:    movl %ebx, 8(%eax)
-; WIN32-NEXT:    movl %edi, 4(%eax)
-; WIN32-NEXT:    movl (%esp), %ecx # 4-byte Reload
-; WIN32-NEXT:    movl %ecx, (%eax)
-; WIN32-NEXT:    addl $36, %esp
+; WIN32-NEXT:    movl %edi, 12(%esi)
+; WIN32-NEXT:    movl %edx, 8(%esi)
+; WIN32-NEXT:    movl %ecx, 4(%esi)
+; WIN32-NEXT:    movl %eax, (%esi)
+; WIN32-NEXT:    movl %esi, %eax
+; WIN32-NEXT:    addl $28, %esp
 ; WIN32-NEXT:    popl %esi
 ; WIN32-NEXT:    popl %edi
-; WIN32-NEXT:    popl %ebx
-; WIN32-NEXT:    popl %ebp
 ; WIN32-NEXT:    retl
   %result = call { <4 x float>, <4 x i32> } @llvm.frexp.v4f32.v4i32(<4 x float> %a)
   %result.1 = extractvalue { <4 x float>, <4 x i32> } %result, 1

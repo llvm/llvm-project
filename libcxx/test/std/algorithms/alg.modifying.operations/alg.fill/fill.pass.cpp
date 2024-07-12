@@ -14,62 +14,91 @@
 //   fill(Iter first, Iter last, const T& value);
 
 #include <algorithm>
+#include <array>
 #include <cassert>
+#include <vector>
 
 #include "test_macros.h"
 #include "test_iterators.h"
 
-#if TEST_STD_VER > 17
-TEST_CONSTEXPR bool test_constexpr() {
-    int ia[] = {0, 1, 2, 3, 4};
+template <class Iter, class Container>
+TEST_CONSTEXPR_CXX20 void
+test(Container in, size_t from, size_t to, typename Container::value_type value, Container expected) {
+  std::fill(Iter(in.data() + from), Iter(in.data() + to), value);
+  assert(in == expected);
+}
 
-    std::fill(std::begin(ia), std::end(ia), 5);
-
-    return std::all_of(std::begin(ia), std::end(ia), [](int a) {return a == 5; })
-        ;
+template <class T>
+struct Test {
+  template <class Iter>
+  TEST_CONSTEXPR_CXX20 void operator()() {
+    {
+      std::array<T, 4> in       = {1, 2, 3, 4};
+      std::array<T, 4> expected = {5, 5, 5, 5};
+      test<Iter>(in, 0, 4, 5, expected);
     }
-#endif
+    {
+      std::array<T, 4> in       = {1, 2, 3, 4};
+      std::array<T, 4> expected = {1, 5, 5, 4};
+      test<Iter>(in, 1, 3, 5, expected);
+    }
+  }
+};
 
-template <class Iter>
-void
-test_char()
-{
-    const unsigned n = 4;
-    char ca[n] = {0};
-    std::fill(Iter(ca), Iter(ca+n), char(1));
-    assert(ca[0] == 1);
-    assert(ca[1] == 1);
-    assert(ca[2] == 1);
-    assert(ca[3] == 1);
+TEST_CONSTEXPR_CXX20 bool test() {
+  types::for_each(types::forward_iterator_list<char*>(), Test<char>());
+  types::for_each(types::forward_iterator_list<int*>(), Test<int>());
+  {   // test vector<bool>::iterator optimization
+    { // simple case
+      std::vector<bool> in(4, false);
+      std::vector<bool> expected(4, true);
+      std::fill(in.begin(), in.end(), true);
+      assert(in == expected);
+    }
+    { // partial byte in the front is not filled
+      std::vector<bool> in(8, false);
+      std::vector<bool> expected(8, true);
+      expected[0] = false;
+      expected[1] = false;
+      std::fill(in.begin() + 2, in.end(), true);
+      assert(in == expected);
+    }
+    { // partial byte in the back is not filled
+      std::vector<bool> in(8, false);
+      std::vector<bool> expected(8, true);
+      expected[6] = false;
+      expected[7] = false;
+      std::fill(in.begin(), in.end() - 2, true);
+      assert(in == expected);
+    }
+    { // partial byte in the front and back is not filled
+      std::vector<bool> in(16, false);
+      std::vector<bool> expected(16, true);
+      expected[0]  = false;
+      expected[1]  = false;
+      expected[14] = false;
+      expected[15] = false;
+      std::fill(in.begin() + 2, in.end() - 2, true);
+      assert(in == expected);
+    }
+    { // only a few bits of a byte are set
+      std::vector<bool> in(8, false);
+      std::vector<bool> expected(8, true);
+      expected[0] = false;
+      expected[1] = false;
+      expected[6] = false;
+      expected[7] = false;
+      std::fill(in.begin() + 2, in.end() - 2, true);
+      assert(in == expected);
+    }
+  }
+  return true;
 }
 
-template <class Iter>
-void
-test_int()
-{
-    const unsigned n = 4;
-    int ia[n] = {0};
-    std::fill(Iter(ia), Iter(ia+n), 1);
-    assert(ia[0] == 1);
-    assert(ia[1] == 1);
-    assert(ia[2] == 1);
-    assert(ia[3] == 1);
-}
-
-int main(int, char**)
-{
-    test_char<forward_iterator<char*> >();
-    test_char<bidirectional_iterator<char*> >();
-    test_char<random_access_iterator<char*> >();
-    test_char<char*>();
-
-    test_int<forward_iterator<int*> >();
-    test_int<bidirectional_iterator<int*> >();
-    test_int<random_access_iterator<int*> >();
-    test_int<int*>();
-
-#if TEST_STD_VER > 17
-    static_assert(test_constexpr());
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 20
+  static_assert(test());
 #endif
 
   return 0;

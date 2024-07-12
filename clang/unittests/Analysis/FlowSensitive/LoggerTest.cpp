@@ -57,7 +57,7 @@ public:
 private:
   llvm::raw_string_ostream OS;
 
-  void beginAnalysis(const ControlFlowContext &,
+  void beginAnalysis(const AdornedCFG &,
                      TypeErasedDataflowAnalysis &) override {
     logText("beginAnalysis()");
   }

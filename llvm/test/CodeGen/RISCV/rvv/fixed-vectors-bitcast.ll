@@ -416,8 +416,8 @@ define double @bitcast_v1i64_f64(<1 x i64> %a) {
 ; RV32ELEN32:       # %bb.0:
 ; RV32ELEN32-NEXT:    addi sp, sp, -16
 ; RV32ELEN32-NEXT:    .cfi_def_cfa_offset 16
-; RV32ELEN32-NEXT:    sw a1, 12(sp)
 ; RV32ELEN32-NEXT:    sw a0, 8(sp)
+; RV32ELEN32-NEXT:    sw a1, 12(sp)
 ; RV32ELEN32-NEXT:    fld fa0, 8(sp)
 ; RV32ELEN32-NEXT:    addi sp, sp, 16
 ; RV32ELEN32-NEXT:    ret

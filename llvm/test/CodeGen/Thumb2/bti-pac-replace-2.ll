@@ -3,7 +3,7 @@
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv8.1m.main-arm-unknown-eabi"
 
-define hidden i32 @_Z1fi(i32 %x) "sign-return-address"="non-leaf" "sign-return-address-key"="a_key" "branch-target-enforcement"="true" {
+define hidden i32 @_Z1fi(i32 %x) "sign-return-address"="non-leaf" "sign-return-address-key"="a_key" "branch-target-enforcement" {
 entry:
   %add = add nsw i32 %x, 1
   %call = tail call i32 @_Z1gi(i32 %add)

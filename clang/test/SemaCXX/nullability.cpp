@@ -4,6 +4,10 @@
 #else
 #  error nullability feature should be defined
 #endif
+#if __has_feature(nullability_on_classes)
+#else
+#  error smart-pointer feature should be defined
+#endif
 
 #include "nullability-completeness.h"
 
@@ -27,6 +31,7 @@ template<typename T>
 struct AddNonNull {
   typedef _Nonnull T type; // expected-error{{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'int'}}
   // expected-error@-1{{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'std::nullptr_t'}}
+  // expected-error@-2{{nullability specifier '_Nonnull' cannot be applied to non-pointer type 'NotPtr'}}
 };
 
 typedef AddNonNull<int *>::type nonnull_int_ptr_1;
@@ -34,6 +39,33 @@ typedef AddNonNull<int * _Nullable>::type nonnull_int_ptr_2; // FIXME: check tha
 typedef AddNonNull<nullptr_t>::type nonnull_int_ptr_3; // expected-note{{in instantiation of template class}}
 
 typedef AddNonNull<int>::type nonnull_non_pointer_1; // expected-note{{in instantiation of template class 'AddNonNull<int>' requested here}}
+
+// Nullability on C++ class types (smart pointers).
+struct NotPtr{};
+typedef AddNonNull<NotPtr>::type nonnull_non_pointer_2; // expected-note{{in instantiation}}
+struct _Nullable SmartPtr{
+  SmartPtr();
+  SmartPtr(nullptr_t);
+  SmartPtr(const SmartPtr&);
+  SmartPtr(SmartPtr&&);
+  SmartPtr &operator=(const SmartPtr&);
+  SmartPtr &operator=(SmartPtr&&);
+};
+typedef AddNonNull<SmartPtr>::type nonnull_smart_pointer_1;
+template<class> struct _Nullable SmartPtrTemplate{};
+typedef AddNonNull<SmartPtrTemplate<int>>::type nonnull_smart_pointer_2;
+namespace std { inline namespace __1 {
+  template <class> class unique_ptr {};
+  template <class> class function;
+  template <class Ret, class... Args> class function<Ret(Args...)> {};
+} }
+typedef AddNonNull<std::unique_ptr<int>>::type nonnull_smart_pointer_3;
+typedef AddNonNull<std::function<int()>>::type nonnull_smart_pointer_4;
+
+class Derived : public SmartPtr {};
+Derived _Nullable x; // expected-error {{'_Nullable' cannot be applied}}
+class DerivedPrivate : private SmartPtr {};
+DerivedPrivate _Nullable y; // expected-error {{'_Nullable' cannot be applied}}
 
 // Non-null checking within a template.
 template<typename T>
@@ -54,6 +86,7 @@ void (*& accepts_nonnull_2)(_Nonnull int *ptr) = accepts_nonnull_1;
 void (X::* accepts_nonnull_3)(_Nonnull int *ptr);
 void accepts_nonnull_4(_Nonnull int *ptr);
 void (&accepts_nonnull_5)(_Nonnull int *ptr) = accepts_nonnull_4;
+void accepts_nonnull_6(SmartPtr _Nonnull);
 
 void test_accepts_nonnull_null_pointer_literal(X *x) {
   accepts_nonnull_1(0); // expected-warning{{null passed to a callee that requires a non-null argument}}
@@ -61,6 +94,8 @@ void test_accepts_nonnull_null_pointer_literal(X *x) {
   (x->*accepts_nonnull_3)(0); // expected-warning{{null passed to a callee that requires a non-null argument}}
   accepts_nonnull_4(0); // expected-warning{{null passed to a callee that requires a non-null argument}}
   accepts_nonnull_5(0); // expected-warning{{null passed to a callee that requires a non-null argument}}
+
+  accepts_nonnull_6(nullptr); // expected-warning{{null passed to a callee that requires a non-null argument}}
 }
 
 template<void FP(_Nonnull int*)> 
@@ -71,6 +106,7 @@ void test_accepts_nonnull_null_pointer_literal_template() {
 template void test_accepts_nonnull_null_pointer_literal_template<&accepts_nonnull_4>(); // expected-note{{instantiation of function template specialization}}
 
 void TakeNonnull(void *_Nonnull);
+void TakeSmartNonnull(SmartPtr _Nonnull);
 // Check different forms of assignment to a nonull type from a nullable one.
 void AssignAndInitNonNull() {
   void *_Nullable nullable;
@@ -81,12 +117,26 @@ void AssignAndInitNonNull() {
   void *_Nonnull nonnull;
   nonnull = nullable; // expected-warning{{implicit conversion from nullable pointer 'void * _Nullable' to non-nullable pointer type 'void * _Nonnull'}}
   nonnull = {nullable}; // expected-warning{{implicit conversion from nullable pointer 'void * _Nullable' to non-nullable pointer type 'void * _Nonnull'}}
-
   TakeNonnull(nullable); //expected-warning{{implicit conversion from nullable pointer 'void * _Nullable' to non-nullable pointer type 'void * _Nonnull}}
   TakeNonnull(nonnull); // OK
+  nonnull = (void *_Nonnull)nullable; // explicit cast OK
+
+  SmartPtr _Nullable s_nullable;
+  SmartPtr _Nonnull s(s_nullable); // expected-warning{{implicit conversion from nullable pointer 'SmartPtr _Nullable' to non-nullable pointer type 'SmartPtr _Nonnull'}}
+  SmartPtr _Nonnull s2{s_nullable}; // expected-warning{{implicit conversion from nullable pointer 'SmartPtr _Nullable' to non-nullable pointer type 'SmartPtr _Nonnull'}}
+  SmartPtr _Nonnull s3 = {s_nullable}; // expected-warning{{implicit conversion from nullable pointer 'SmartPtr _Nullable' to non-nullable pointer type 'SmartPtr _Nonnull'}}
+  SmartPtr _Nonnull s4 = s_nullable; // expected-warning{{implicit conversion from nullable pointer 'SmartPtr _Nullable' to non-nullable pointer type 'SmartPtr _Nonnull'}}
+  SmartPtr _Nonnull s_nonnull;
+  s_nonnull = s_nullable; // expected-warning{{implicit conversion from nullable pointer 'SmartPtr _Nullable' to non-nullable pointer type 'SmartPtr _Nonnull'}}
+  s_nonnull = {s_nullable}; // no warning here - might be nice?
+  TakeSmartNonnull(s_nullable); //expected-warning{{implicit conversion from nullable pointer 'SmartPtr _Nullable' to non-nullable pointer type 'SmartPtr _Nonnull}}
+  TakeSmartNonnull(s_nonnull); // OK
+  s_nonnull = (SmartPtr _Nonnull)s_nullable; // explicit cast OK
+  s_nonnull = static_cast<SmartPtr _Nonnull>(s_nullable); // explicit cast OK
 }
 
 void *_Nullable ReturnNullable();
+SmartPtr _Nullable ReturnSmartNullable();
 
 void AssignAndInitNonNullFromFn() {
   void *_Nonnull p(ReturnNullable()); // expected-warning{{implicit conversion from nullable pointer 'void * _Nullable' to non-nullable pointer type 'void * _Nonnull'}}
@@ -96,8 +146,16 @@ void AssignAndInitNonNullFromFn() {
   void *_Nonnull nonnull;
   nonnull = ReturnNullable(); // expected-warning{{implicit conversion from nullable pointer 'void * _Nullable' to non-nullable pointer type 'void * _Nonnull'}}
   nonnull = {ReturnNullable()}; // expected-warning{{implicit conversion from nullable pointer 'void * _Nullable' to non-nullable pointer type 'void * _Nonnull'}}
-
   TakeNonnull(ReturnNullable()); //expected-warning{{implicit conversion from nullable pointer 'void * _Nullable' to non-nullable pointer type 'void * _Nonnull}}
+
+  SmartPtr _Nonnull s(ReturnSmartNullable()); // expected-warning{{implicit conversion from nullable pointer 'SmartPtr _Nullable' to non-nullable pointer type 'SmartPtr _Nonnull'}}
+  SmartPtr _Nonnull s2{ReturnSmartNullable()}; // expected-warning{{implicit conversion from nullable pointer 'SmartPtr _Nullable' to non-nullable pointer type 'SmartPtr _Nonnull'}}
+  SmartPtr _Nonnull s3 = {ReturnSmartNullable()}; // expected-warning{{implicit conversion from nullable pointer 'SmartPtr _Nullable' to non-nullable pointer type 'SmartPtr _Nonnull'}}
+  SmartPtr _Nonnull s4 = ReturnSmartNullable(); // expected-warning{{implicit conversion from nullable pointer 'SmartPtr _Nullable' to non-nullable pointer type 'SmartPtr _Nonnull'}}
+  SmartPtr _Nonnull s_nonnull;
+  s_nonnull = ReturnSmartNullable(); // expected-warning{{implicit conversion from nullable pointer 'SmartPtr _Nullable' to non-nullable pointer type 'SmartPtr _Nonnull'}}
+  s_nonnull = {ReturnSmartNullable()};
+  TakeSmartNonnull(ReturnSmartNullable()); // expected-warning{{implicit conversion from nullable pointer 'SmartPtr _Nullable' to non-nullable pointer type 'SmartPtr _Nonnull'}}
 }
 
 void ConditionalExpr(bool c) {

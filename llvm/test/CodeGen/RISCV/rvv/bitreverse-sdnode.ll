@@ -8,10 +8,9 @@ define <vscale x 1 x i8> @bitreverse_nxv1i8(<vscale x 1 x i8> %va) {
 ; CHECK-LABEL: bitreverse_nxv1i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vsrl.vi v9, v8, 4
-; CHECK-NEXT:    vand.vi v8, v8, 15
-; CHECK-NEXT:    vsll.vi v8, v8, 4
-; CHECK-NEXT:    vor.vv v8, v9, v8
+; CHECK-NEXT:    vsll.vi v9, v8, 4
+; CHECK-NEXT:    vsrl.vi v8, v8, 4
+; CHECK-NEXT:    vor.vv v8, v8, v9
 ; CHECK-NEXT:    vsrl.vi v9, v8, 2
 ; CHECK-NEXT:    li a0, 51
 ; CHECK-NEXT:    vand.vx v9, v9, a0
@@ -40,10 +39,9 @@ define <vscale x 2 x i8> @bitreverse_nxv2i8(<vscale x 2 x i8> %va) {
 ; CHECK-LABEL: bitreverse_nxv2i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vsrl.vi v9, v8, 4
-; CHECK-NEXT:    vand.vi v8, v8, 15
-; CHECK-NEXT:    vsll.vi v8, v8, 4
-; CHECK-NEXT:    vor.vv v8, v9, v8
+; CHECK-NEXT:    vsll.vi v9, v8, 4
+; CHECK-NEXT:    vsrl.vi v8, v8, 4
+; CHECK-NEXT:    vor.vv v8, v8, v9
 ; CHECK-NEXT:    vsrl.vi v9, v8, 2
 ; CHECK-NEXT:    li a0, 51
 ; CHECK-NEXT:    vand.vx v9, v9, a0
@@ -72,10 +70,9 @@ define <vscale x 4 x i8> @bitreverse_nxv4i8(<vscale x 4 x i8> %va) {
 ; CHECK-LABEL: bitreverse_nxv4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vsrl.vi v9, v8, 4
-; CHECK-NEXT:    vand.vi v8, v8, 15
-; CHECK-NEXT:    vsll.vi v8, v8, 4
-; CHECK-NEXT:    vor.vv v8, v9, v8
+; CHECK-NEXT:    vsll.vi v9, v8, 4
+; CHECK-NEXT:    vsrl.vi v8, v8, 4
+; CHECK-NEXT:    vor.vv v8, v8, v9
 ; CHECK-NEXT:    vsrl.vi v9, v8, 2
 ; CHECK-NEXT:    li a0, 51
 ; CHECK-NEXT:    vand.vx v9, v9, a0
@@ -104,10 +101,9 @@ define <vscale x 8 x i8> @bitreverse_nxv8i8(<vscale x 8 x i8> %va) {
 ; CHECK-LABEL: bitreverse_nxv8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vsrl.vi v9, v8, 4
-; CHECK-NEXT:    vand.vi v8, v8, 15
-; CHECK-NEXT:    vsll.vi v8, v8, 4
-; CHECK-NEXT:    vor.vv v8, v9, v8
+; CHECK-NEXT:    vsll.vi v9, v8, 4
+; CHECK-NEXT:    vsrl.vi v8, v8, 4
+; CHECK-NEXT:    vor.vv v8, v8, v9
 ; CHECK-NEXT:    vsrl.vi v9, v8, 2
 ; CHECK-NEXT:    li a0, 51
 ; CHECK-NEXT:    vand.vx v9, v9, a0
@@ -136,10 +132,9 @@ define <vscale x 16 x i8> @bitreverse_nxv16i8(<vscale x 16 x i8> %va) {
 ; CHECK-LABEL: bitreverse_nxv16i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vsrl.vi v10, v8, 4
-; CHECK-NEXT:    vand.vi v8, v8, 15
-; CHECK-NEXT:    vsll.vi v8, v8, 4
-; CHECK-NEXT:    vor.vv v8, v10, v8
+; CHECK-NEXT:    vsll.vi v10, v8, 4
+; CHECK-NEXT:    vsrl.vi v8, v8, 4
+; CHECK-NEXT:    vor.vv v8, v8, v10
 ; CHECK-NEXT:    vsrl.vi v10, v8, 2
 ; CHECK-NEXT:    li a0, 51
 ; CHECK-NEXT:    vand.vx v10, v10, a0
@@ -168,10 +163,9 @@ define <vscale x 32 x i8> @bitreverse_nxv32i8(<vscale x 32 x i8> %va) {
 ; CHECK-LABEL: bitreverse_nxv32i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vsrl.vi v12, v8, 4
-; CHECK-NEXT:    vand.vi v8, v8, 15
-; CHECK-NEXT:    vsll.vi v8, v8, 4
-; CHECK-NEXT:    vor.vv v8, v12, v8
+; CHECK-NEXT:    vsll.vi v12, v8, 4
+; CHECK-NEXT:    vsrl.vi v8, v8, 4
+; CHECK-NEXT:    vor.vv v8, v8, v12
 ; CHECK-NEXT:    vsrl.vi v12, v8, 2
 ; CHECK-NEXT:    li a0, 51
 ; CHECK-NEXT:    vand.vx v12, v12, a0
@@ -200,10 +194,9 @@ define <vscale x 64 x i8> @bitreverse_nxv64i8(<vscale x 64 x i8> %va) {
 ; CHECK-LABEL: bitreverse_nxv64i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
-; CHECK-NEXT:    vsrl.vi v16, v8, 4
-; CHECK-NEXT:    vand.vi v8, v8, 15
-; CHECK-NEXT:    vsll.vi v8, v8, 4
-; CHECK-NEXT:    vor.vv v8, v16, v8
+; CHECK-NEXT:    vsll.vi v16, v8, 4
+; CHECK-NEXT:    vsrl.vi v8, v8, 4
+; CHECK-NEXT:    vor.vv v8, v8, v16
 ; CHECK-NEXT:    vsrl.vi v16, v8, 2
 ; CHECK-NEXT:    li a0, 51
 ; CHECK-NEXT:    vand.vx v16, v16, a0

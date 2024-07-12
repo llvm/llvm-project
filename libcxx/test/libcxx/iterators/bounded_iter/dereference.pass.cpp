@@ -58,15 +58,15 @@ void test_death() {
   std::__bounded_iter<Iter> const oob  = std::__make_bounded_iter(Iter(e), Iter(b), Iter(e));
 
   // operator*
-  TEST_LIBCPP_ASSERT_FAILURE(*oob, "__bounded_iter::operator*: Attempt to dereference an out-of-range iterator");
+  TEST_LIBCPP_ASSERT_FAILURE(*oob, "__bounded_iter::operator*: Attempt to dereference an iterator at the end");
   // operator->
-  TEST_LIBCPP_ASSERT_FAILURE(oob->x, "__bounded_iter::operator->: Attempt to dereference an out-of-range iterator");
+  TEST_LIBCPP_ASSERT_FAILURE(oob->x, "__bounded_iter::operator->: Attempt to dereference an iterator at the end");
   // operator[]
-  TEST_LIBCPP_ASSERT_FAILURE(iter[-1], "__bounded_iter::operator[]: Attempt to index an iterator out-of-range");
-  TEST_LIBCPP_ASSERT_FAILURE(iter[5], "__bounded_iter::operator[]: Attempt to index an iterator out-of-range");
-  TEST_LIBCPP_ASSERT_FAILURE(oob[0], "__bounded_iter::operator[]: Attempt to index an iterator out-of-range");
-  TEST_LIBCPP_ASSERT_FAILURE(oob[1], "__bounded_iter::operator[]: Attempt to index an iterator out-of-range");
-  TEST_LIBCPP_ASSERT_FAILURE(oob[-6], "__bounded_iter::operator[]: Attempt to index an iterator out-of-range");
+  TEST_LIBCPP_ASSERT_FAILURE(iter[-1], "__bounded_iter::operator[]: Attempt to index an iterator past the start");
+  TEST_LIBCPP_ASSERT_FAILURE(iter[5], "__bounded_iter::operator[]: Attempt to index an iterator at or past the end");
+  TEST_LIBCPP_ASSERT_FAILURE(oob[0], "__bounded_iter::operator[]: Attempt to index an iterator at or past the end");
+  TEST_LIBCPP_ASSERT_FAILURE(oob[1], "__bounded_iter::operator[]: Attempt to index an iterator at or past the end");
+  TEST_LIBCPP_ASSERT_FAILURE(oob[-6], "__bounded_iter::operator[]: Attempt to index an iterator past the start");
 }
 
 int main(int, char**) {

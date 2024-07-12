@@ -1482,9 +1482,7 @@ bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII) {
 
   MFMAChains = 0;
   for (auto &MFMAPipeSU : MFMAPipeSUs) {
-    if (MFMAChainSeeds.size() &&
-        std::find(MFMAChainSeeds.begin(), MFMAChainSeeds.end(), MFMAPipeSU) !=
-            MFMAChainSeeds.end())
+    if (is_contained(MFMAChainSeeds, MFMAPipeSU))
       continue;
     if (!std::any_of(MFMAPipeSU->Preds.begin(), MFMAPipeSU->Preds.end(),
                      [&TII](SDep &Succ) {

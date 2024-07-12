@@ -70,7 +70,7 @@ subroutine host4()
   call internal_proc_a()
 contains
 ! CHECK-LABEL: func private @_QFhost4Pinternal_proc_a
-! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) attributes {fir.internal_proc, llvm.linkage = #llvm.linkage<internal>} {
+! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) attributes {fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
   subroutine internal_proc_a()
     call takes_array(return_array())
 ! CHECK:  %[[VAL_1:.*]] = arith.constant 0 : i32
@@ -94,7 +94,7 @@ subroutine host5()
   implicit none
   call internal_proc_a()
 contains
-! CHECK-LABEL: func private @_QFhost5Pinternal_proc_a() attributes {fir.internal_proc, llvm.linkage = #llvm.linkage<internal>} {
+! CHECK-LABEL: func private @_QFhost5Pinternal_proc_a() attributes {fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
   subroutine internal_proc_a()
     call takes_array(return_array())
 ! CHECK:  %[[VAL_0:.*]] = fir.address_of(@_QMsome_moduleEn_module) : !fir.ref<i32>

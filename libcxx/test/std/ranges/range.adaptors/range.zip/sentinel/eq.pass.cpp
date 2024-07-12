@@ -18,6 +18,7 @@
 #include <tuple>
 
 #include "../types.h"
+#include "test_range.h"
 
 using Iterator = random_access_iterator<int*>;
 using ConstIterator = random_access_iterator<const int*>;
@@ -53,11 +54,6 @@ struct ConstIncompatibleView : std::ranges::view_base {
   sentinel_wrapper<cpp17_input_iterator<int*>> end();
   sentinel_wrapper<forward_iterator<const int*>> end() const;
 };
-
-// clang-format off
-template <class Iter, class Sent>
-concept EqualComparable = std::invocable<std::equal_to<>, const Iter&, const Sent&>;
-// clang-format on
 
 constexpr bool test() {
   int buffer1[4] = {1, 2, 3, 4};
@@ -95,10 +91,10 @@ constexpr bool test() {
     using ConstSentinel = std::ranges::sentinel_t<const decltype(v)>;
     static_assert(!std::is_same_v<Sentinel, ConstSentinel>);
 
-    static_assert(EqualComparable<Iter, Sentinel>);
-    static_assert(!EqualComparable<ConstIter, Sentinel>);
-    static_assert(EqualComparable<Iter, ConstSentinel>);
-    static_assert(EqualComparable<ConstIter, ConstSentinel>);
+    static_assert(weakly_equality_comparable_with<Iter, Sentinel>);
+    static_assert(!weakly_equality_comparable_with<ConstIter, Sentinel>);
+    static_assert(weakly_equality_comparable_with<Iter, ConstSentinel>);
+    static_assert(weakly_equality_comparable_with<ConstIter, ConstSentinel>);
   }
 
   {
@@ -120,10 +116,10 @@ constexpr bool test() {
     using ConstSentinel = std::ranges::sentinel_t<const decltype(v)>;
     static_assert(!std::is_same_v<Sentinel, ConstSentinel>);
 
-    static_assert(EqualComparable<Iter, Sentinel>);
-    static_assert(EqualComparable<ConstIter, Sentinel>);
-    static_assert(EqualComparable<Iter, ConstSentinel>);
-    static_assert(EqualComparable<ConstIter, ConstSentinel>);
+    static_assert(weakly_equality_comparable_with<Iter, Sentinel>);
+    static_assert(weakly_equality_comparable_with<ConstIter, Sentinel>);
+    static_assert(weakly_equality_comparable_with<Iter, ConstSentinel>);
+    static_assert(weakly_equality_comparable_with<ConstIter, ConstSentinel>);
   }
 
   {
@@ -139,10 +135,10 @@ constexpr bool test() {
     using ConstSentinel = std::ranges::sentinel_t<const decltype(v)>;
     static_assert(!std::is_same_v<Sentinel, ConstSentinel>);
 
-    static_assert(EqualComparable<Iter, Sentinel>);
-    static_assert(!EqualComparable<ConstIter, Sentinel>);
-    static_assert(!EqualComparable<Iter, ConstSentinel>);
-    static_assert(EqualComparable<ConstIter, ConstSentinel>);
+    static_assert(weakly_equality_comparable_with<Iter, Sentinel>);
+    static_assert(!weakly_equality_comparable_with<ConstIter, Sentinel>);
+    static_assert(!weakly_equality_comparable_with<Iter, ConstSentinel>);
+    static_assert(weakly_equality_comparable_with<ConstIter, ConstSentinel>);
   }
   return true;
 }

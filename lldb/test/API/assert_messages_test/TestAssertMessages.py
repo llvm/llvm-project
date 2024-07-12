@@ -30,7 +30,7 @@ class AssertMessagesTestCase(TestBase):
         except AssertionError as e:
             self.assertIn(
                 "Couldn't create target for path 'doesnt_exist': "
-                "error: unable to find executable for 'doesnt_exist'",
+                "error: 'doesnt_exist' does not exist",
                 str(e),
             )
 

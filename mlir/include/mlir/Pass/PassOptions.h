@@ -15,7 +15,6 @@
 #define MLIR_PASS_PASSOPTIONS_H_
 
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
@@ -60,6 +59,20 @@ using has_stream_operator = llvm::is_detected<has_stream_operator_trait, T>;
 template <typename ParserT>
 static void printOptionValue(raw_ostream &os, const bool &value) {
   os << (value ? StringRef("true") : StringRef("false"));
+}
+template <typename ParserT>
+static void printOptionValue(raw_ostream &os, const std::string &str) {
+  // Check if the string needs to be escaped before writing it to the ostream.
+  const size_t spaceIndex = str.find_first_of(' ');
+  const size_t escapeIndex =
+      std::min({str.find_first_of('{'), str.find_first_of('\''),
+                str.find_first_of('"')});
+  const bool requiresEscape = spaceIndex < escapeIndex;
+  if (requiresEscape)
+    os << "{";
+  os << str;
+  if (requiresEscape)
+    os << "}";
 }
 template <typename ParserT, typename DataT>
 static std::enable_if_t<has_stream_operator<DataT>::value>
@@ -293,7 +306,8 @@ public:
   /// Parse options out as key=value pairs that can then be handed off to the
   /// `llvm::cl` command line passing infrastructure. Everything is space
   /// separated.
-  LogicalResult parseFromString(StringRef options);
+  LogicalResult parseFromString(StringRef options,
+                                raw_ostream &errorStream = llvm::errs());
 
   /// Print the options held by this struct in a form that can be parsed via
   /// 'parseFromString'.

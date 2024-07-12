@@ -147,9 +147,14 @@ def main():
             # now, we just ignore all but the last.
             prefix_list.append((check_prefixes, tool_cmd_args, preprocess_cmd))
 
+        ginfo = common.make_ir_generalizer(ti.args.version)
         global_vars_seen_dict = {}
         builder = common.FunctionTestBuilder(
-            run_list=prefix_list, flags=ti.args, scrubber_args=[], path=ti.path
+            run_list=prefix_list,
+            flags=ti.args,
+            scrubber_args=[],
+            path=ti.path,
+            ginfo=ginfo,
         )
 
         tool_binary = ti.args.tool_binary
@@ -172,7 +177,6 @@ def main():
                 common.scrub_body,
                 raw_tool_output,
                 prefixes,
-                False,
             )
             builder.processed_prefixes(prefixes)
 
@@ -217,6 +221,7 @@ def main():
                         ";",
                         prefix_list,
                         output_lines,
+                        ginfo,
                         global_vars_seen_dict,
                         args.preserve_names,
                         True,
@@ -239,7 +244,7 @@ def main():
                         func,
                         False,
                         args.function_signature,
-                        args.version,
+                        ginfo,
                         global_vars_seen_dict,
                         is_filtered=builder.is_filtered(),
                         original_check_lines=original_check_lines.get(func, {}),
@@ -271,7 +276,7 @@ def main():
                             func_name,
                             args.preserve_names,
                             args.function_signature,
-                            args.version,
+                            ginfo,
                             global_vars_seen_dict,
                             is_filtered=builder.is_filtered(),
                             original_check_lines=original_check_lines.get(
@@ -290,6 +295,7 @@ def main():
                                 ";",
                                 prefix_list,
                                 output_lines,
+                                ginfo,
                                 global_vars_seen_dict,
                                 args.preserve_names,
                                 True,
@@ -337,6 +343,7 @@ def main():
                     ";",
                     prefix_list,
                     output_lines,
+                    ginfo,
                     global_vars_seen_dict,
                     args.preserve_names,
                     False,

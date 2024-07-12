@@ -884,9 +884,9 @@ void StackFrameList::SetDefaultFileAndLineToSelectedFrame() {
         GetFrameAtIndex(GetSelectedFrameIndex(DoNoSelectMostRelevantFrame)));
     if (frame_sp) {
       SymbolContext sc = frame_sp->GetSymbolContext(eSymbolContextLineEntry);
-      if (sc.line_entry.file)
+      if (sc.line_entry.GetFile())
         m_thread.CalculateTarget()->GetSourceManager().SetDefaultFileAndLine(
-            sc.line_entry.file, sc.line_entry.line);
+            sc.line_entry.GetFile(), sc.line_entry.line);
     }
   }
 }
@@ -966,9 +966,9 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
     // Check for interruption here.  If we're fetching arguments, this loop
     // can go slowly:
     Debugger &dbg = m_thread.GetProcess()->GetTarget().GetDebugger();
-    if (INTERRUPT_REQUESTED(dbg, 
-          "Interrupted dumping stack for thread {0:hex} with {1} shown.",
-          m_thread.GetID(), num_frames_displayed))
+    if (INTERRUPT_REQUESTED(
+            dbg, "Interrupted dumping stack for thread {0:x} with {1} shown.",
+            m_thread.GetID(), num_frames_displayed))
       break;
 
 

@@ -88,8 +88,7 @@ determineIncludeKind(StringRef CanonicalFile, StringRef IncludeFile,
     if (FileCopy.consume_front(Parts.first) &&
         FileCopy.consume_back(Parts.second)) {
       // Determine the kind of this inclusion.
-      if (FileCopy.equals("/internal/") ||
-          FileCopy.equals("/proto/")) {
+      if (FileCopy == "/internal/" || FileCopy == "/proto/") {
         return IncludeSorter::IK_MainTUInclude;
       }
     }
@@ -108,7 +107,7 @@ int compareHeaders(StringRef LHS, StringRef RHS,
                    IncludeSorter::IncludeStyle Style) {
   if (Style == IncludeSorter::IncludeStyle::IS_Google_ObjC) {
     const std::pair<const char *, const char *> &Mismatch =
-        std::mismatch(LHS.begin(), LHS.end(), RHS.begin());
+        std::mismatch(LHS.begin(), LHS.end(), RHS.begin(), RHS.end());
     if ((Mismatch.first != LHS.end()) && (Mismatch.second != RHS.end())) {
       if ((*Mismatch.first == '.') && (*Mismatch.second == '+')) {
         return -1;

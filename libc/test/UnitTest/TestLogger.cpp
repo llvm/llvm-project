@@ -1,13 +1,15 @@
 #include "test/UnitTest/TestLogger.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/OSUtil/io.h" // write_to_stderr
-#include "src/__support/UInt.h"      // is_big_int
-#include "src/__support/UInt128.h"
+#include "src/__support/OSUtil/io.h"               // write_to_stderr
+#include "src/__support/big_int.h"                 // is_big_int
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
+#include "src/__support/uint128.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 // cpp::string_view specialization
@@ -72,9 +74,9 @@ template TestLogger &TestLogger::operator<< <unsigned long>(unsigned long);
 template TestLogger &
     TestLogger::operator<< <unsigned long long>(unsigned long long);
 
-#ifdef __SIZEOF_INT128__
+#ifdef LIBC_TYPES_HAS_INT128
 template TestLogger &TestLogger::operator<< <__uint128_t>(__uint128_t);
-#endif
+#endif // LIBC_TYPES_HAS_INT128
 template TestLogger &TestLogger::operator<< <UInt<128>>(UInt<128>);
 template TestLogger &TestLogger::operator<< <UInt<192>>(UInt<192>);
 template TestLogger &TestLogger::operator<< <UInt<256>>(UInt<256>);
@@ -85,4 +87,4 @@ template TestLogger &TestLogger::operator<< <UInt<320>>(UInt<320>);
 TestLogger tlog;
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

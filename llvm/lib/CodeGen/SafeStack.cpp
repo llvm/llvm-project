@@ -886,7 +886,7 @@ public:
     if (!TL)
       report_fatal_error("TargetLowering instance is required");
 
-    auto *DL = &F.getParent()->getDataLayout();
+    auto *DL = &F.getDataLayout();
     auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
     auto &ACT = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
 
@@ -946,7 +946,7 @@ PreservedAnalyses SafeStackPass::run(Function &F,
   if (!TL)
     report_fatal_error("TargetLowering instance is required");
 
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
 
   // preserve DominatorTree
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);

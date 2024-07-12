@@ -15,6 +15,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringExtras.h"
 
 using namespace clang;
 
@@ -106,9 +107,12 @@ void ConceptReference::print(llvm::raw_ostream &OS,
   ConceptName.printName(OS, Policy);
   if (hasExplicitTemplateArgs()) {
     OS << "<";
+    llvm::ListSeparator Sep(", ");
     // FIXME: Find corresponding parameter for argument
-    for (auto &ArgLoc : ArgsAsWritten->arguments())
+    for (auto &ArgLoc : ArgsAsWritten->arguments()) {
+      OS << Sep;
       ArgLoc.getArgument().print(Policy, OS, /*IncludeType*/ false);
+    }
     OS << ">";
   }
 }

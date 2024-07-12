@@ -45,7 +45,7 @@ static bool fnegFoldsIntoMI(const MachineInstr &MI) {
   case AMDGPU::G_AMDGPU_FMAX_LEGACY:
     return true;
   case AMDGPU::G_INTRINSIC: {
-    unsigned IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
+    Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
     switch (IntrinsicID) {
     case Intrinsic::amdgcn_rcp:
     case Intrinsic::amdgcn_rcp_legacy:
@@ -96,7 +96,7 @@ static bool hasSourceMods(const MachineInstr &MI) {
     return false;
   case AMDGPU::G_INTRINSIC:
   case AMDGPU::G_INTRINSIC_CONVERGENT: {
-    unsigned IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
+    Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
     switch (IntrinsicID) {
     case Intrinsic::amdgcn_interp_p1:
     case Intrinsic::amdgcn_interp_p2:
@@ -239,7 +239,7 @@ bool AMDGPUCombinerHelper::matchFoldableFneg(MachineInstr &MI,
     return true;
   case AMDGPU::G_INTRINSIC:
   case AMDGPU::G_INTRINSIC_CONVERGENT: {
-    unsigned IntrinsicID = cast<GIntrinsic>(MatchInfo)->getIntrinsicID();
+    Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MatchInfo)->getIntrinsicID();
     switch (IntrinsicID) {
     case Intrinsic::amdgcn_rcp:
     case Intrinsic::amdgcn_rcp_legacy:
@@ -341,7 +341,7 @@ void AMDGPUCombinerHelper::applyFoldableFneg(MachineInstr &MI,
     break;
   case AMDGPU::G_INTRINSIC:
   case AMDGPU::G_INTRINSIC_CONVERGENT: {
-    unsigned IntrinsicID = cast<GIntrinsic>(MatchInfo)->getIntrinsicID();
+    Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MatchInfo)->getIntrinsicID();
     switch (IntrinsicID) {
     case Intrinsic::amdgcn_rcp:
     case Intrinsic::amdgcn_rcp_legacy:
@@ -432,8 +432,6 @@ void AMDGPUCombinerHelper::applyExpandPromotedF16FMed3(MachineInstr &MI,
                                                        Register Src0,
                                                        Register Src1,
                                                        Register Src2) {
-  Builder.setInstrAndDebugLoc(MI);
-
   // We expect fptrunc (fpext x) to fold out, and to constant fold any constant
   // sources.
   Src0 = Builder.buildFPTrunc(LLT::scalar(16), Src0).getReg(0);

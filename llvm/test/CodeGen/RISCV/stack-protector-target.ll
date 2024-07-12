@@ -2,9 +2,32 @@
 
 ;; Test target-specific stack cookie location.
 ;
+; RUN: llc -mtriple=riscv64-linux < %s | FileCheck --check-prefix=LINUX-RISCV64 %s
 ; RUN: llc -mtriple=riscv64-fuchsia < %s | FileCheck --check-prefix=FUCHSIA-RISCV64 %s
+; RUN: llc -mtriple=riscv64-android < %s | FileCheck --check-prefix=ANDROID-RISCV64 %s
 
 define void @func() sspreq nounwind {
+; LINUX-RISCV64-LABEL: func:
+; LINUX-RISCV64:       # %bb.0:
+; LINUX-RISCV64-NEXT:    addi sp, sp, -32
+; LINUX-RISCV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; LINUX-RISCV64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; LINUX-RISCV64-NEXT:    lui s0, %hi(__stack_chk_guard)
+; LINUX-RISCV64-NEXT:    ld a0, %lo(__stack_chk_guard)(s0)
+; LINUX-RISCV64-NEXT:    sd a0, 8(sp)
+; LINUX-RISCV64-NEXT:    addi a0, sp, 4
+; LINUX-RISCV64-NEXT:    call capture
+; LINUX-RISCV64-NEXT:    ld a0, %lo(__stack_chk_guard)(s0)
+; LINUX-RISCV64-NEXT:    ld a1, 8(sp)
+; LINUX-RISCV64-NEXT:    bne a0, a1, .LBB0_2
+; LINUX-RISCV64-NEXT:  # %bb.1:
+; LINUX-RISCV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; LINUX-RISCV64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; LINUX-RISCV64-NEXT:    addi sp, sp, 32
+; LINUX-RISCV64-NEXT:    ret
+; LINUX-RISCV64-NEXT:  .LBB0_2:
+; LINUX-RISCV64-NEXT:    call __stack_chk_fail
+;
 ; FUCHSIA-RISCV64-LABEL: func:
 ; FUCHSIA-RISCV64:       # %bb.0:
 ; FUCHSIA-RISCV64-NEXT:    addi sp, sp, -32
@@ -22,6 +45,24 @@ define void @func() sspreq nounwind {
 ; FUCHSIA-RISCV64-NEXT:    ret
 ; FUCHSIA-RISCV64-NEXT:  .LBB0_2: # %CallStackCheckFailBlk
 ; FUCHSIA-RISCV64-NEXT:    call __stack_chk_fail
+;
+; ANDROID-RISCV64-LABEL: func:
+; ANDROID-RISCV64:       # %bb.0:
+; ANDROID-RISCV64-NEXT:    addi sp, sp, -32
+; ANDROID-RISCV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; ANDROID-RISCV64-NEXT:    ld a0, -24(tp)
+; ANDROID-RISCV64-NEXT:    sd a0, 16(sp)
+; ANDROID-RISCV64-NEXT:    addi a0, sp, 12
+; ANDROID-RISCV64-NEXT:    call capture
+; ANDROID-RISCV64-NEXT:    ld a0, -24(tp)
+; ANDROID-RISCV64-NEXT:    ld a1, 16(sp)
+; ANDROID-RISCV64-NEXT:    bne a0, a1, .LBB0_2
+; ANDROID-RISCV64-NEXT:  # %bb.1: # %SP_return
+; ANDROID-RISCV64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; ANDROID-RISCV64-NEXT:    addi sp, sp, 32
+; ANDROID-RISCV64-NEXT:    ret
+; ANDROID-RISCV64-NEXT:  .LBB0_2: # %CallStackCheckFailBlk
+; ANDROID-RISCV64-NEXT:    call __stack_chk_fail
   %1 = alloca i32, align 4
   call void @capture(ptr %1)
   ret void

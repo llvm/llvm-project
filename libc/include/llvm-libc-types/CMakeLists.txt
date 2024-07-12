@@ -7,7 +7,8 @@ add_header(__call_once_func_t HDR __call_once_func_t.h)
 add_header(__exec_argv_t HDR __exec_argv_t.h)
 add_header(__exec_envp_t HDR __exec_envp_t.h)
 add_header(__futex_word HDR __futex_word.h)
-add_header(__mutex_type HDR __mutex_type.h DEPENDS .__futex_word)
+add_header(pid_t HDR pid_t.h)
+add_header(__mutex_type HDR __mutex_type.h DEPENDS .__futex_word .pid_t)
 add_header(__pthread_once_func_t HDR __pthread_once_func_t.h)
 add_header(__pthread_start_t HDR __pthread_start_t.h)
 add_header(__pthread_tss_dtor_t HDR __pthread_tss_dtor_t.h)
@@ -20,7 +21,7 @@ add_header(blksize_t HDR blksize_t.h)
 add_header(cc_t HDR cc_t.h)
 add_header(clock_t HDR clock_t.h)
 add_header(clockid_t HDR clockid_t.h)
-add_header(cnd_t HDR cnd_t.h)
+add_header(cnd_t HDR cnd_t.h DEPENDS .__futex_word)
 add_header(cookie_io_functions_t HDR cookie_io_functions_t.h DEPENDS .off64_t .ssize_t)
 add_header(cpu_set_t HDR cpu_set_t.h)
 add_header(double_t HDR double_t.h)
@@ -39,24 +40,30 @@ add_header(uid_t HDR uid_t.h)
 add_header(imaxdiv_t HDR imaxdiv_t.h)
 add_header(ino_t HDR ino_t.h)
 add_header(jmp_buf HDR jmp_buf.h)
+add_header(mbstate_t HDR mbstate_t.h)
 add_header(mode_t HDR mode_t.h)
 add_header(mtx_t HDR mtx_t.h DEPENDS .__futex_word .__mutex_type)
 add_header(nlink_t HDR nlink_t.h)
 add_header(off_t HDR off_t.h)
 add_header(once_flag HDR once_flag.h DEPENDS .__futex_word)
-add_header(pid_t HDR pid_t.h)
 add_header(posix_spawn_file_actions_t HDR posix_spawn_file_actions_t.h)
 add_header(posix_spawnattr_t HDR posix_spawnattr_t.h)
 add_header(pthread_attr_t HDR pthread_attr_t.h DEPENDS .size_t)
+add_header(pthread_condattr_t HDR pthread_condattr_t.h DEPENDS .clockid_t)
 add_header(pthread_key_t HDR pthread_key_t.h)
 add_header(pthread_mutex_t HDR pthread_mutex_t.h DEPENDS .__futex_word .__mutex_type)
-add_header(pthread_t HDR pthread_t.h DEPENDS .__thread_type)
 add_header(pthread_mutexattr_t HDR pthread_mutexattr_t.h)
 add_header(pthread_once_t HDR pthread_once_t.h DEPENDS .__futex_word)
+add_header(pthread_rwlock_t HDR pthread_rwlock_t.h DEPENDS .__futex_word .pid_t)
+add_header(pthread_rwlockattr_t HDR pthread_rwlockattr_t.h)
+add_header(pthread_t HDR pthread_t.h DEPENDS .__thread_type)
 add_header(rlim_t HDR rlim_t.h)
 add_header(time_t HDR time_t.h)
-add_header(stack_t HDR stack_t.h)
+add_header(stack_t HDR stack_t.h DEPENDS .size_t)
 add_header(suseconds_t HDR suseconds_t.h)
+add_header(struct_flock HDR struct_flock.h DEPENDS .off_t .pid_t)
+add_header(struct_flock64 HDR struct_flock64.h DEPENDS .off64_t .pid_t)
+add_header(struct_f_owner_ex HDR struct_f_owner_ex.h DEPENDS .pid_t)
 add_header(struct_timeval HDR struct_timeval.h DEPENDS .suseconds_t .time_t)
 add_header(struct_rlimit HDR struct_rlimit.h DEPENDS .rlim_t)
 add_header(struct_rusage HDR struct_rusage.h DEPENDS .struct_timeval)
@@ -87,6 +94,21 @@ add_header(tcflag_t HDR tcflag_t.h)
 add_header(struct_termios HDR struct_termios.h DEPENDS .cc_t .speed_t .tcflag_t)
 add_header(__getoptargv_t HDR __getoptargv_t.h)
 add_header(wchar_t HDR wchar_t.h)
+add_header(char8_t HDR char8_t.h)
+add_header(
+    char16_t 
+  HDR 
+    char16_t.h
+  DEPENDS
+    libc.include.llvm-libc-macros.stdint_macros
+)
+add_header(
+    char32_t 
+  HDR 
+    char32_t.h
+  DEPENDS
+    libc.include.llvm-libc-macros.stdint_macros
+)
 add_header(wint_t HDR wint_t.h)
 add_header(sa_family_t HDR sa_family_t.h)
 add_header(socklen_t HDR socklen_t.h)
@@ -104,4 +126,14 @@ add_header(
     float128.h
   DEPENDS
     libc.include.llvm-libc-macros.float_macros
+)
+add_header(fsblkcnt_t HDR fsblkcnt_t.h)
+add_header(fsfilcnt_t HDR fsfilcnt_t.h)
+add_header(
+  struct_statvfs 
+HDR 
+  struct_statvfs.h
+DEPENDS
+  .fsblkcnt_t
+  .fsfilcnt_t
 )

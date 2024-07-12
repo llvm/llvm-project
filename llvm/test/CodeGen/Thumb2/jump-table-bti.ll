@@ -23,8 +23,8 @@
 
 declare i32 @llvm.arm.space(i32, i32)
 
-attributes #0 = { "branch-target-enforcement"="false" }
-attributes #1 = { "branch-target-enforcement"="true"  }
+attributes #0 = { norecurse }
+attributes #1 = { norecurse "branch-target-enforcement" }
 
 define ptr @test_jumptable(ptr %src, ptr %dst) {
 entry:

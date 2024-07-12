@@ -66,8 +66,13 @@ stages there is no ABI stability in any form.
    strings
    stdio
    stdbit
+   fenv
    libc_search
    c23
+   ctype
+   signal
+   threads
+   setjmp
 
 .. toctree::
    :hidden:

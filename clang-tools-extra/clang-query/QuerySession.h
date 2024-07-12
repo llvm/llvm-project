@@ -25,15 +25,14 @@ class QuerySession {
 public:
   QuerySession(llvm::ArrayRef<std::unique_ptr<ASTUnit>> ASTs)
       : ASTs(ASTs), PrintOutput(false), DiagOutput(true),
-        DetailedASTOutput(false), SrcLocOutput(false), BindRoot(true),
-        PrintMatcher(false), Terminate(false), TK(TK_AsIs) {}
+        DetailedASTOutput(false), BindRoot(true), PrintMatcher(false),
+        Terminate(false), TK(TK_AsIs) {}
 
   llvm::ArrayRef<std::unique_ptr<ASTUnit>> ASTs;
 
   bool PrintOutput;
   bool DiagOutput;
   bool DetailedASTOutput;
-  bool SrcLocOutput;
 
   bool BindRoot;
   bool PrintMatcher;

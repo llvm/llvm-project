@@ -26,4 +26,5 @@ add_custom_command(OUTPUT HTMLForestResources.inc
   DEPENDS ${CLANG_SOURCE_DIR}/utils/bundle_resources.py HTMLForest.css HTMLForest.js HTMLForest.html
   VERBATIM)
 add_custom_target(clang-pseudo-resources DEPENDS HTMLForestResources.inc)
+set_target_properties(clang-pseudo-resources PROPERTIES FOLDER "Clang Tools Extra/Resources")
 add_dependencies(clang-pseudo clang-pseudo-resources)

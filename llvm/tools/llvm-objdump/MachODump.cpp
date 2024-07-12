@@ -2148,7 +2148,7 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
       else
         consumeError(NameOrErr.takeError());
 
-      if (SectName.equals("__text")) {
+      if (SectName == "__text") {
         DataRefImpl Ref = Section.getRawDataRefImpl();
         StringRef SegName = MachOOF->getSectionFinalSegmentName(Ref);
         DisassembleMachO(FileName, MachOOF, SegName, SectName);
@@ -3661,6 +3661,10 @@ struct class_ro32_t {
 #define RO_ROOT (1 << 1)
 #define RO_HAS_CXX_STRUCTORS (1 << 2)
 
+/* Values for method_list{64,32}_t->entsize */
+#define ML_HAS_RELATIVE_PTRS (1 << 31)
+#define ML_ENTSIZE_MASK 0xFFFF
+
 struct method_list64_t {
   uint32_t entsize;
   uint32_t count;
@@ -3683,6 +3687,12 @@ struct method32_t {
   uint32_t name;  /* SEL (32-bit pointer) */
   uint32_t types; /* const char * (32-bit pointer) */
   uint32_t imp;   /* IMP (32-bit pointer) */
+};
+
+struct method_relative_t {
+  int32_t name;  /* SEL (32-bit relative) */
+  int32_t types; /* const char * (32-bit relative) */
+  int32_t imp;   /* IMP (32-bit relative) */
 };
 
 struct protocol_list64_t {
@@ -3981,6 +3991,12 @@ inline void swapStruct(struct method64_t &m) {
 }
 
 inline void swapStruct(struct method32_t &m) {
+  sys::swapByteOrder(m.name);
+  sys::swapByteOrder(m.types);
+  sys::swapByteOrder(m.imp);
+}
+
+inline void swapStruct(struct method_relative_t &m) {
   sys::swapByteOrder(m.name);
   sys::swapByteOrder(m.types);
   sys::swapByteOrder(m.imp);
@@ -4440,6 +4456,88 @@ static void print_layout_map32(uint32_t p, struct DisassembleInfo *info) {
   print_layout_map(layout_map, left);
 }
 
+static void print_relative_method_list(uint32_t structSizeAndFlags,
+                                       uint32_t structCount, uint64_t p,
+                                       struct DisassembleInfo *info,
+                                       const char *indent,
+                                       uint32_t pointerBits) {
+  struct method_relative_t m;
+  const char *r, *name;
+  uint32_t offset, xoffset, left, i;
+  SectionRef S, xS;
+
+  assert(((structSizeAndFlags & ML_HAS_RELATIVE_PTRS) != 0) &&
+         "expected structSizeAndFlags to have ML_HAS_RELATIVE_PTRS flag");
+
+  outs() << indent << "\t\t   entsize "
+         << (structSizeAndFlags & ML_ENTSIZE_MASK) << " (relative) \n";
+  outs() << indent << "\t\t     count " << structCount << "\n";
+
+  for (i = 0; i < structCount; i++) {
+    r = get_pointer_64(p, offset, left, S, info);
+    memset(&m, '\0', sizeof(struct method_relative_t));
+    if (left < sizeof(struct method_relative_t)) {
+      memcpy(&m, r, left);
+      outs() << indent << "   (method_t extends past the end of the section)\n";
+    } else
+      memcpy(&m, r, sizeof(struct method_relative_t));
+    if (info->O->isLittleEndian() != sys::IsLittleEndianHost)
+      swapStruct(m);
+
+    outs() << indent << "\t\t      name " << format("0x%" PRIx32, m.name);
+    uint64_t relNameRefVA = p + offsetof(struct method_relative_t, name);
+    uint64_t absNameRefVA = relNameRefVA + m.name;
+    outs() << " (" << format("0x%" PRIx32, absNameRefVA) << ")";
+
+    // since this is a relative list, absNameRefVA is the address of the
+    // __objc_selrefs entry, so a pointer, not the actual name
+    const char *nameRefPtr =
+        get_pointer_64(absNameRefVA, xoffset, left, xS, info);
+    if (nameRefPtr) {
+      uint32_t pointerSize = pointerBits / CHAR_BIT;
+      if (left < pointerSize)
+        outs() << indent << " (nameRefPtr extends past the end of the section)";
+      else {
+        if (pointerSize == 64) {
+          uint64_t nameOff_64 = *reinterpret_cast<const uint64_t *>(nameRefPtr);
+          if (info->O->isLittleEndian() != sys::IsLittleEndianHost)
+            sys::swapByteOrder(nameOff_64);
+          name = get_pointer_64(nameOff_64, xoffset, left, xS, info);
+        } else {
+          uint32_t nameOff_32 = *reinterpret_cast<const uint32_t *>(nameRefPtr);
+          if (info->O->isLittleEndian() != sys::IsLittleEndianHost)
+            sys::swapByteOrder(nameOff_32);
+          name = get_pointer_32(nameOff_32, xoffset, left, xS, info);
+        }
+        if (name != nullptr)
+          outs() << format(" %.*s", left, name);
+      }
+    }
+    outs() << "\n";
+
+    outs() << indent << "\t\t     types " << format("0x%" PRIx32, m.types);
+    uint64_t relTypesVA = p + offsetof(struct method_relative_t, types);
+    uint64_t absTypesVA = relTypesVA + m.types;
+    outs() << " (" << format("0x%" PRIx32, absTypesVA) << ")";
+    name = get_pointer_32(absTypesVA, xoffset, left, xS, info);
+    if (name != nullptr)
+      outs() << format(" %.*s", left, name);
+    outs() << "\n";
+
+    outs() << indent << "\t\t       imp " << format("0x%" PRIx32, m.imp);
+    uint64_t relImpVA = p + offsetof(struct method_relative_t, imp);
+    uint64_t absImpVA = relImpVA + m.imp;
+    outs() << " (" << format("0x%" PRIx32, absImpVA) << ")";
+    name = GuessSymbolName(absImpVA, info->AddrMap);
+    if (name != nullptr)
+      outs() << " " << name;
+    outs() << "\n";
+
+    p += sizeof(struct method_relative_t);
+    offset += sizeof(struct method_relative_t);
+  }
+}
+
 static void print_method_list64_t(uint64_t p, struct DisassembleInfo *info,
                                   const char *indent) {
   struct method_list64_t ml;
@@ -4461,10 +4559,17 @@ static void print_method_list64_t(uint64_t p, struct DisassembleInfo *info,
     memcpy(&ml, r, sizeof(struct method_list64_t));
   if (info->O->isLittleEndian() != sys::IsLittleEndianHost)
     swapStruct(ml);
+  p += sizeof(struct method_list64_t);
+
+  if ((ml.entsize & ML_HAS_RELATIVE_PTRS) != 0) {
+    print_relative_method_list(ml.entsize, ml.count, p, info, indent,
+                               /*pointerBits=*/64);
+    return;
+  }
+
   outs() << indent << "\t\t   entsize " << ml.entsize << "\n";
   outs() << indent << "\t\t     count " << ml.count << "\n";
 
-  p += sizeof(struct method_list64_t);
   offset += sizeof(struct method_list64_t);
   for (i = 0; i < ml.count; i++) {
     r = get_pointer_64(p, offset, left, S, info);
@@ -4552,10 +4657,17 @@ static void print_method_list32_t(uint64_t p, struct DisassembleInfo *info,
     memcpy(&ml, r, sizeof(struct method_list32_t));
   if (info->O->isLittleEndian() != sys::IsLittleEndianHost)
     swapStruct(ml);
+  p += sizeof(struct method_list32_t);
+
+  if ((ml.entsize & ML_HAS_RELATIVE_PTRS) != 0) {
+    print_relative_method_list(ml.entsize, ml.count, p, info, indent,
+                               /*pointerBits=*/32);
+    return;
+  }
+
   outs() << indent << "\t\t   entsize " << ml.entsize << "\n";
   outs() << indent << "\t\t     count " << ml.count << "\n";
 
-  p += sizeof(struct method_list32_t);
   offset += sizeof(struct method_list32_t);
   for (i = 0; i < ml.count; i++) {
     r = get_pointer_32(p, offset, left, S, info);
@@ -7067,7 +7179,7 @@ objdump::getMachODSymObject(const MachOObjectFile *MachOOF, StringRef Filename,
     DSYMBuf = std::move(BufOrErr.get());
 
     Expected<std::unique_ptr<Binary>> BinaryOrErr =
-        createBinary(DSYMBuf.get()->getMemBufferRef());
+        createBinary(DSYMBuf->getMemBufferRef());
     if (!BinaryOrErr) {
       reportError(BinaryOrErr.takeError(), DSYMPath);
       return nullptr;

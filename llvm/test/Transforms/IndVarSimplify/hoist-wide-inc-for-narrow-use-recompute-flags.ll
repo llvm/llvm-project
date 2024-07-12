@@ -15,7 +15,7 @@ define void @test_pr82243(ptr %f) {
 ; CHECK-NEXT:    [[GEP_IV_EXT:%.*]] = getelementptr i32, ptr [[F]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i32 1, ptr [[GEP_IV_EXT]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], -1
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw nsw i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 123, [[TMP0]]
 ; CHECK-NEXT:    [[GEP_SHL:%.*]] = getelementptr i32, ptr [[F]], i32 [[SHL]]
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]

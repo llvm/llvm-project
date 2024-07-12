@@ -13,9 +13,11 @@
 //   requires pair-like-convertible-from<PairLike, const I&, const S&>
 // constexpr operator PairLike() const;
 
+#include <array>
 #include <cassert>
 #include <concepts>
 #include <ranges>
+#include <utility>
 
 #include "test_macros.h"
 

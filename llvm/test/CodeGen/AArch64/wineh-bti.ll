@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=aarch64-windows -aarch64-min-jump-table-entries=4 | FileCheck %s
 
-define dso_local i32 @func(i32 %in) "sign-return-address"="non-leaf" "sign-return-address-key"="a_key" "branch-target-enforcement"="true" {
+define dso_local i32 @func(i32 %in) "sign-return-address"="non-leaf" "sign-return-address-key"="a_key" "branch-target-enforcement" {
 entry:
   call void asm sideeffect "", "~{x19}"()
   switch i32 %in, label %def [

@@ -15,7 +15,8 @@
 // - MIMGEncGfx10Default: gfx10 default (non-NSA) encoding
 // - MIMGEncGfx10NSA: gfx10 NSA encoding
 // - MIMGEncGfx11Default: gfx11 default (non-NSA) encoding
-// - MIMGEncGfx11NSA: gfx11 NSA encoding
+// - MIMGEncGfx11NSA: gfx11 partial NSA encoding
+// - MIMGEncGfx12: gfx12 encoding (partial NSA)
 class MIMGEncoding;
 
 def MIMGEncGfx6 : MIMGEncoding;
@@ -210,6 +211,7 @@ class MIMG <dag outs, string dns = "">
   : MIMG_Base <outs, dns> {
 
   let hasPostISelHook = 1;
+  let usesCustomInserter = 1;
 
   Instruction Opcode = !cast<Instruction>(NAME);
   MIMGBaseOpcode BaseOpcode;
@@ -493,7 +495,7 @@ class MIMG_NoSampler_nsa_gfx11<mimgopc op, string opcode,
 class VIMAGE_NoSampler_gfx12<mimgopc op, string opcode,
                              RegisterClass DataRC, int num_addrs,
                              string dns="">
-  : VIMAGE_gfx12<op.GFX11, (outs DataRC:$vdata), num_addrs, dns> {
+  : VIMAGE_gfx12<op.GFX12, (outs DataRC:$vdata), num_addrs, dns> {
   let InOperandList = !con(AddrIns,
                            (ins SReg_256:$rsrc, DMask:$dmask, Dim:$dim,
                                 CPol:$cpol, R128A16:$r128, A16:$a16, TFE:$tfe),
@@ -962,11 +964,10 @@ class VIMAGE_Atomic_gfx12<mimgopc op, string opcode, RegisterClass DataRC,
   let AsmString = opcode#" $vdata, "#AddrAsm#", $rsrc$dmask$dim$cpol$r128$a16$tfe";
 }
 
-class VIMAGE_Atomic_gfx12_Renamed<mimgopc op, string opcode, string renamed,
+class VIMAGE_Atomic_gfx12_Renamed<mimgopc op, string renamed,
                                   RegisterClass DataRC, int num_addrs,
                                   bit enableDisasm = 0>
-   : VIMAGE_Atomic_gfx12<op, renamed, DataRC, num_addrs, enableDisasm>,
-     MnemonicAlias<opcode, renamed>, Requires<[isGFX12Plus, HasImageInsts]>;
+  : VIMAGE_Atomic_gfx12<op, renamed, DataRC, num_addrs, enableDisasm>;
 
 multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
                                       RegisterClass data_rc,
@@ -997,7 +998,7 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
         if !empty(renamed) then
           def _V1_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 1, enableDasm>;
         else
-          def _V1_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, asm, renamed, data_rc, 1, enableDasm>;
+          def _V1_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 1, enableDasm>;
       }
     }
     let VAddrDwords = 2 in {
@@ -1022,7 +1023,7 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
         if !empty(renamed) then
           def _V2_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 2, 0>;
         else
-          def _V2_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, asm, renamed, data_rc, 2, 0>;
+          def _V2_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 2, 0>;
       }
     }
     let VAddrDwords = 3 in {
@@ -1047,7 +1048,7 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
         if !empty(renamed) then
           def _V3_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 3, 0>;
         else
-          def _V3_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, asm, renamed, data_rc, 3, 0>;
+          def _V3_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 3, 0>;
       }
     }
     let VAddrDwords = 4 in {
@@ -1072,10 +1073,17 @@ multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
         if !empty(renamed) then
           def _V4_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 4, enableDasm>;
         else
-          def _V4_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, asm, renamed, data_rc, 4, enableDasm>;
+          def _V4_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, renamed, data_rc, 4, enableDasm>;
       }
     }
   }
+  if !and(op.HAS_GFX12, !not(!empty(renamed))) then
+    def : AMDGPUMnemonicAlias<asm, renamed> {
+      let AssemblerPredicate = isGFX12Plus;
+      bit IsAtomicRet; // Unused
+      MIMGBaseOpcode BaseOpcode; // Unused
+      int VDataDwords; // Unused
+    }
 }
 
 multiclass MIMG_Atomic <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0,
@@ -1094,6 +1102,10 @@ multiclass MIMG_Atomic <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0,
       defm _V1 : MIMG_Atomic_Addr_Helper_m <op, asm, !if(isCmpSwap, VReg_64, VGPR_32), 1, isFP, renamed>;
       let VDataDwords = !if(isCmpSwap, 4, 2) in
       defm _V2 : MIMG_Atomic_Addr_Helper_m <op, asm, !if(isCmpSwap, VReg_128, VReg_64), 0, isFP, renamed>;
+      let VDataDwords = !if(isCmpSwap, 2, 2) in
+      defm _V3 : MIMG_Atomic_Addr_Helper_m <op, asm, VReg_96, 0, isFP, renamed>;
+      let VDataDwords = !if(isCmpSwap, 4, 4) in
+      defm _V4 : MIMG_Atomic_Addr_Helper_m <op, asm, VReg_160, 0, isFP, renamed>;
     }
   } // End IsAtomicRet = 1
 }

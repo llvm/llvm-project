@@ -205,7 +205,7 @@ void ErrnoChecker::checkPreCall(const CallEvent &Call,
   // Probably 'strerror'?
   if (CallF->isExternC() && CallF->isGlobal() &&
       C.getSourceManager().isInSystemHeader(CallF->getLocation()) &&
-      !isErrno(CallF)) {
+      !isErrnoLocationCall(Call)) {
     if (getErrnoState(C.getState()) == MustBeChecked) {
       std::optional<ento::Loc> ErrnoLoc = getErrnoLoc(C.getState());
       assert(ErrnoLoc && "ErrnoLoc should exist if an errno state is set.");

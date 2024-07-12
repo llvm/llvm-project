@@ -131,8 +131,6 @@ define amdgpu_kernel void @is_local_sgpr(ptr %ptr) {
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:  .LBB1_2: ; %bb1
-; GFX11-NEXT:    s_nop 0
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %val = call i1 @llvm.amdgcn.is.shared(ptr %ptr)
   br i1 %val, label %bb0, label %bb1

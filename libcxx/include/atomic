@@ -599,6 +599,7 @@ template <class T>
 #include <__atomic/atomic_flag.h>
 #include <__atomic/atomic_init.h>
 #include <__atomic/atomic_lock_free.h>
+#include <__atomic/atomic_ref.h>
 #include <__atomic/atomic_sync.h>
 #include <__atomic/check_memory_order.h>
 #include <__atomic/contention_t.h>

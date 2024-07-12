@@ -58,3 +58,13 @@ namespace overloadCheck{
   }
 }
 #endif
+
+namespace GH93076 {
+template <typename ...a> int b(a..., int); // expected-note-re 3 {{candidate function template not viable: no known conversion from 'int ()' to 'int' for {{.*}} argument}}
+int d() {
+  (void)b<int, int>(0, 0, d); // expected-error {{no matching function for call to 'b'}}
+  (void)b<int, int>(0, d, 0); // expected-error {{no matching function for call to 'b'}}
+  (void)b<int, int>(d, 0, 0); // expected-error {{no matching function for call to 'b'}}
+  return 0;
+ }
+}

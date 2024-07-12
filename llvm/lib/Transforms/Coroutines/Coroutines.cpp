@@ -47,8 +47,8 @@ coro::LowererBase::LowererBase(Module &M)
 //
 //    call ptr @llvm.coro.subfn.addr(ptr %Arg, i8 %index)
 
-Value *coro::LowererBase::makeSubFnCall(Value *Arg, int Index,
-                                        Instruction *InsertPt) {
+CallInst *coro::LowererBase::makeSubFnCall(Value *Arg, int Index,
+                                           Instruction *InsertPt) {
   auto *IndexVal = ConstantInt::get(Type::getInt8Ty(Context), Index);
   auto *Fn = Intrinsic::getDeclaration(&TheModule, Intrinsic::coro_subfn_addr);
 
@@ -67,6 +67,9 @@ static const char *const CoroIntrinsics[] = {
     "llvm.coro.async.resume",
     "llvm.coro.async.size.replace",
     "llvm.coro.async.store_resume",
+    "llvm.coro.await.suspend.bool",
+    "llvm.coro.await.suspend.handle",
+    "llvm.coro.await.suspend.void",
     "llvm.coro.begin",
     "llvm.coro.destroy",
     "llvm.coro.done",
@@ -174,7 +177,11 @@ void coro::Shape::buildFrom(Function &F) {
   SmallVector<CoroSaveInst *, 2> UnusedCoroSaves;
 
   for (Instruction &I : instructions(F)) {
-    if (auto II = dyn_cast<IntrinsicInst>(&I)) {
+    // FIXME: coro_await_suspend_* are not proper `IntrinisicInst`s
+    // because they might be invoked
+    if (auto AWS = dyn_cast<CoroAwaitSuspendInst>(&I)) {
+      CoroAwaitSuspends.push_back(AWS);
+    } else if (auto II = dyn_cast<IntrinsicInst>(&I)) {
       switch (II->getIntrinsicID()) {
       default:
         continue;

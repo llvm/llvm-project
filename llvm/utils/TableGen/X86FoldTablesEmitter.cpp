@@ -11,11 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenInstruction.h"
-#include "CodeGenTarget.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenTarget.h"
 #include "X86RecognizableInstr.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/X86FoldTablesUtils.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -33,10 +32,8 @@ struct ManualMapEntry {
 };
 
 // List of instructions requiring explicitly aligned memory.
-const char *ExplicitAlign[] = {
-    "MOVDQA",    "MOVAPS",     "MOVAPD",     "MOVNTPS",    "MOVNTPD",
-    "MOVNTDQ",   "MOVNTDQA",   "SHA1MSG1",   "SHA1MSG2",   "SHA1NEXTE",
-    "SHA1RNDS4", "SHA256MSG1", "SHA256MSG2", "SHA256RNDS2"};
+const char *ExplicitAlign[] = {"MOVDQA",  "MOVAPS",  "MOVAPD",  "MOVNTPS",
+                               "MOVNTPD", "MOVNTDQ", "MOVNTDQA"};
 
 // List of instructions NOT requiring explicit memory alignment.
 const char *ExplicitUnalign[] = {"MOVDQU",    "MOVUPS",    "MOVUPD",
@@ -97,7 +94,7 @@ class X86FoldTablesEmitter {
                       const CodeGenInstruction *MemInst)
         : RegInst(RegInst), MemInst(MemInst) {}
 
-    void print(formatted_raw_ostream &OS) const {
+    void print(raw_ostream &OS) const {
       OS.indent(2);
       OS << "{X86::" << RegInst->TheDef->getName() << ", ";
       OS << "X86::" << MemInst->TheDef->getName() << ", ";
@@ -224,7 +221,7 @@ private:
   // Print the given table as a static const C++ array of type
   // X86FoldTableEntry.
   void printTable(const FoldTable &Table, StringRef TableName,
-                  formatted_raw_ostream &OS) {
+                  raw_ostream &OS) {
     OS << "static const X86FoldTableEntry " << TableName << "[] = {\n";
 
     for (auto &E : Table)
@@ -621,9 +618,7 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
   }
 }
 
-void X86FoldTablesEmitter::run(raw_ostream &O) {
-  formatted_raw_ostream OS(O);
-
+void X86FoldTablesEmitter::run(raw_ostream &OS) {
   // Holds all memory instructions
   std::vector<const CodeGenInstruction *> MemInsts;
   // Holds all register instructions - divided according to opcode.

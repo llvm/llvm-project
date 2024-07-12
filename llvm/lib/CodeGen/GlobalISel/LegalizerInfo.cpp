@@ -154,7 +154,8 @@ static bool mutationIsSane(const LegalizeRule &Rule,
   case WidenScalar: {
     if (OldTy.isVector()) {
       // Number of elements should not change.
-      if (!NewTy.isVector() || OldTy.getNumElements() != NewTy.getNumElements())
+      if (!NewTy.isVector() ||
+          OldTy.getElementCount() != NewTy.getElementCount())
         return false;
     } else {
       // Both types must be vectors

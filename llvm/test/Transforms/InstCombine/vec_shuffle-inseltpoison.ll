@@ -92,6 +92,23 @@ define <4 x float> @test8(<4 x float> %x, <4 x float> %y) {
   %t2 = extractelement <4 x float> %x, i32 3
   %t1 = extractelement <4 x float> %y, i32 0
   %t128 = insertelement <4 x float> poison, float %t4, i32 0
+  %t130 = insertelement <4 x float> %t128, float poison, i32 1
+  %t132 = insertelement <4 x float> %t130, float %t2, i32 2
+  %t134 = insertelement <4 x float> %t132, float %t1, i32 3
+  ret <4 x float> %t134
+}
+
+; This shouldn't turn into a single shuffle
+define <4 x float> @test8_undef(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: @test8_undef(
+; CHECK-NEXT:    [[T132:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> <float poison, float undef, float poison, float poison>, <4 x i32> <i32 1, i32 5, i32 3, i32 poison>
+; CHECK-NEXT:    [[T134:%.*]] = shufflevector <4 x float> [[T132]], <4 x float> [[Y:%.*]], <4 x i32> <i32 0, i32 1, i32 2, i32 4>
+; CHECK-NEXT:    ret <4 x float> [[T134]]
+;
+  %t4 = extractelement <4 x float> %x, i32 1
+  %t2 = extractelement <4 x float> %x, i32 3
+  %t1 = extractelement <4 x float> %y, i32 0
+  %t128 = insertelement <4 x float> poison, float %t4, i32 0
   %t130 = insertelement <4 x float> %t128, float undef, i32 1
   %t132 = insertelement <4 x float> %t130, float %t2, i32 2
   %t134 = insertelement <4 x float> %t132, float %t1, i32 3

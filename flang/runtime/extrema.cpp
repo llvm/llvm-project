@@ -18,7 +18,6 @@
 #include <cfloat>
 #include <cinttypes>
 #include <cmath>
-#include <optional>
 #include <type_traits>
 
 namespace Fortran::runtime {

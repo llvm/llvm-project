@@ -419,6 +419,7 @@ struct Tag {
   std::optional<EnumExtensibilityKind> EnumExtensibility;
   std::optional<bool> FlagEnum;
   std::optional<EnumConvenienceAliasKind> EnumConvenienceKind;
+  std::optional<bool> SwiftCopyable;
 };
 
 typedef std::vector<Tag> TagsSeq;
@@ -452,6 +453,7 @@ template <> struct MappingTraits<Tag> {
     IO.mapOptional("EnumExtensibility", T.EnumExtensibility);
     IO.mapOptional("FlagEnum", T.FlagEnum);
     IO.mapOptional("EnumKind", T.EnumConvenienceKind);
+    IO.mapOptional("SwiftCopyable", T.SwiftCopyable);
   }
 };
 } // namespace yaml
@@ -784,7 +786,7 @@ public:
   void convertContext(std::optional<ContextID> ParentContextID, const Class &C,
                       ContextKind Kind, VersionTuple SwiftVersion) {
     // Write the class.
-    ObjCContextInfo CI;
+    ContextInfo CI;
     convertCommonType(C, CI, C.Name);
 
     if (C.AuditedForNullability)
@@ -795,7 +797,7 @@ public:
       CI.setSwiftObjCMembers(*C.SwiftObjCMembers);
 
     ContextID CtxID =
-        Writer.addObjCContext(ParentContextID, C.Name, Kind, CI, SwiftVersion);
+        Writer.addContext(ParentContextID, C.Name, Kind, CI, SwiftVersion);
 
     // Write all methods.
     llvm::StringMap<std::pair<bool, bool>> KnownMethods;
@@ -861,12 +863,12 @@ public:
                                const Namespace &TheNamespace,
                                VersionTuple SwiftVersion) {
     // Write the namespace.
-    ObjCContextInfo CI;
+    ContextInfo CI;
     convertCommonEntity(TheNamespace, CI, TheNamespace.Name);
 
     ContextID CtxID =
-        Writer.addObjCContext(ParentContextID, TheNamespace.Name,
-                              ContextKind::Namespace, CI, SwiftVersion);
+        Writer.addContext(ParentContextID, TheNamespace.Name,
+                          ContextKind::Namespace, CI, SwiftVersion);
 
     convertTopLevelItems(Context(CtxID, ContextKind::Namespace),
                          TheNamespace.Items, SwiftVersion);
@@ -1008,6 +1010,9 @@ public:
         TI.SwiftRetainOp = Tag.SwiftRetainOp;
       if (Tag.SwiftReleaseOp)
         TI.SwiftReleaseOp = Tag.SwiftReleaseOp;
+
+      if (Tag.SwiftCopyable)
+        TI.setSwiftCopyable(Tag.SwiftCopyable);
 
       if (Tag.EnumConvenienceKind) {
         if (Tag.EnumExtensibility) {

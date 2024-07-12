@@ -4,14 +4,11 @@
 // - Host/device-only compilation;
 // - User-requested final phase - binary or assembly.
 
-// REQUIRES: powerpc-registered-target
-// REQUIRES: nvptx-registered-target
-//
 // Test single gpu architecture with complete compilation.
 //
 // Test CUDA NVPTX phases.
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 %s 2>&1 \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=BIN %s
 //
 // BIN-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (host-[[T]])
@@ -34,7 +31,7 @@
 // Test single gpu architecture up to the assemble phase.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 %s -S 2>&1 \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 %s -S 2>&1 \
 // RUN: | FileCheck -check-prefixes=ASM %s
 // ASM-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (device-[[T]], [[ARCH:sm_30]])
 // ASM-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
@@ -50,7 +47,7 @@
 // Test two gpu architectures with complete compilation.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s 2>&1 \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=BIN2 %s
 // BIN2-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (host-[[T]])
 // BIN2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (host-[[T]])
@@ -79,7 +76,7 @@
 // Test two gpu architecturess up to the assemble phase.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s -S 2>&1 \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s -S 2>&1 \
 // RUN: | FileCheck -check-prefixes=ASM2 %s
 // ASM2-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (device-[[T]], [[ARCH1:sm_30]])
 // ASM2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH1]])
@@ -101,7 +98,7 @@
 // compilation mode.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 %s --cuda-host-only 2>&1 \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 %s --cuda-host-only 2>&1 \
 // RUN: | FileCheck -check-prefixes=HBIN %s
 // HBIN-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (host-[[T]])
 // HBIN-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (host-[[T]])
@@ -115,7 +112,7 @@
 // compilation mode.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 %s --cuda-host-only -S 2>&1 \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 %s --cuda-host-only -S 2>&1 \
 // RUN: | FileCheck -check-prefixes=HASM %s
 // HASM-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (host-[[T]])
 // HASM-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (host-[[T]])
@@ -128,7 +125,7 @@
 // compilation mode.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s --cuda-host-only 2>&1 \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s --cuda-host-only 2>&1 \
 // RUN: | FileCheck -check-prefixes=HBIN2 %s
 // HBIN2-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (host-[[T]])
 // HBIN2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (host-[[T]])
@@ -143,7 +140,7 @@
 // compilation mode.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s --cuda-host-only -S \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s --cuda-host-only -S \
 // RUN: 2>&1 | FileCheck -check-prefixes=HASM2 %s
 // HASM2-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (host-[[T]])
 // HASM2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (host-[[T]])
@@ -156,7 +153,7 @@
 // compilation mode.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 %s --cuda-device-only 2>&1 \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 %s --cuda-device-only 2>&1 \
 // RUN: | FileCheck -check-prefixes=DBIN %s
 // DBIN-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (device-[[T]], [[ARCH:sm_30]])
 // DBIN-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
@@ -170,7 +167,7 @@
 // compilation mode.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 %s --cuda-device-only -S 2>&1 \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 %s --cuda-device-only -S 2>&1 \
 // RUN: | FileCheck -check-prefixes=DASM %s
 // DASM-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (device-[[T]], [[ARCH:sm_30]])
 // DASM-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
@@ -184,7 +181,7 @@
 // compilation mode.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s --cuda-device-only 2>&1 \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s --cuda-device-only 2>&1 \
 // RUN: | FileCheck -check-prefixes=DBIN2 %s
 // DBIN2-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (device-[[T]], [[ARCH:sm_30]])
 // DBIN2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
@@ -204,7 +201,7 @@
 // compilation mode.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s --cuda-device-only -S \
+// RUN:   --no-offload-new-driver --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s --cuda-device-only -S \
 // RUN: 2>&1 | FileCheck -check-prefixes=DASM2 %s
 // DASM2-DAG: [[P0:[0-9]+]]: input, "{{.*}}cuda-phases.cu", [[T:cuda]], (device-[[T]], [[ARCH:sm_30]])
 // DASM2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])

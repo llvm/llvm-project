@@ -110,8 +110,47 @@ def getSizeOptimizationFlag(cfg):
         )
 
 
+def testClangTidy(cfg, version, executable):
+    try:
+        if version in commandOutput(cfg, [f"{executable} --version"]):
+            return executable
+    except ConfigurationRuntimeError:
+        return None
+
+
+def getSuitableClangTidy(cfg):
+    # If we didn't build the libcxx-tidy plugin via CMake, we can't run the clang-tidy tests.
+    if (
+        runScriptExitCode(
+            cfg, ["stat %{test-tools-dir}/clang_tidy_checks/libcxx-tidy.plugin"]
+        )
+        != 0
+    ):
+        return None
+
+    version = "{__clang_major__}.{__clang_minor__}.{__clang_patchlevel__}".format(
+        **compilerMacros(cfg)
+    )
+    exe = testClangTidy(
+        cfg, version, "clang-tidy-{__clang_major__}".format(**compilerMacros(cfg))
+    )
+
+    if not exe:
+        exe = testClangTidy(cfg, version, "clang-tidy")
+
+    return exe
+
+
 # fmt: off
 DEFAULT_PARAMETERS = [
+    Parameter(
+        name="compiler",
+        type=str,
+        help="The path of the compiler to use for testing.",
+        actions=lambda cxx: [
+            AddSubstitution("%{cxx}", shlex.quote(cxx)),
+        ],
+    ),
     Parameter(
         name="target_triple",
         type=str,
@@ -226,6 +265,19 @@ DEFAULT_PARAMETERS = [
         ),
     ),
     Parameter(
+        name="using_system_stdlib",
+        choices=[True, False],
+        type=bool,
+        default=False,
+        help="""Whether the Standard Library being tested is the one that shipped with the system by default.
+
+                This is different from the 'stdlib' parameter, which describes the flavor of libc++ being
+                tested. 'using_system_stdlib' describes whether the target system passed with 'target_triple'
+                also corresponds to the version of the library being tested.
+             """,
+        actions=lambda is_system: [AddFeature("stdlib=system")] if is_system else [],
+    ),
+    Parameter(
         name="enable_warnings",
         choices=[True, False],
         type=bool,
@@ -300,7 +352,7 @@ DEFAULT_PARAMETERS = [
         else [
             AddFeature("libcpp-has-no-incomplete-pstl"),
             AddFeature("libcpp-has-no-experimental-stop_token"),
-            AddFeature("libcpp-has-no-incomplete-tzdb"),
+            AddFeature("libcpp-has-no-experimental-tzdb"),
             AddFeature("libcpp-has-no-experimental-syncstream"),
         ],
     ),
@@ -322,11 +374,12 @@ DEFAULT_PARAMETERS = [
     ),
     Parameter(
         name="hardening_mode",
-        choices=["none", "fast", "extensive", "debug"],
+        choices=["none", "fast", "extensive", "debug", "undefined"],
         type=str,
-        default="none",
+        default="undefined",
         help="Whether to enable one of the hardening modes when compiling the test suite. This is only "
-        "meaningful when running the tests against libc++.",
+        "meaningful when running the tests against libc++. By default, no hardening mode is specified "
+        "so the default hardening mode of the standard library will be used (if any).",
         actions=lambda hardening_mode: filter(
             None,
             [
@@ -334,7 +387,7 @@ DEFAULT_PARAMETERS = [
                 AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST")      if hardening_mode == "fast" else None,
                 AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE") if hardening_mode == "extensive" else None,
                 AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG")     if hardening_mode == "debug" else None,
-                AddFeature("libcpp-hardening-mode={}".format(hardening_mode)),
+                AddFeature("libcpp-hardening-mode={}".format(hardening_mode))               if hardening_mode != "undefined" else None,
             ],
         ),
     ),
@@ -366,6 +419,16 @@ DEFAULT_PARAMETERS = [
         default=f"{shlex.quote(sys.executable)} {shlex.quote(str(Path(__file__).resolve().parent.parent.parent / 'run.py'))}",
         help="Custom executor to use instead of the configured default.",
         actions=lambda executor: [AddSubstitution("%{executor}", executor)],
-    )
+    ),
+    Parameter(
+        name='clang-tidy-executable',
+        type=str,
+        default=lambda cfg: getSuitableClangTidy(cfg),
+        help="Selects the clang-tidy executable to use.",
+        actions=lambda exe: [] if exe is None else [
+            AddFeature('has-clang-tidy'),
+            AddSubstitution('%{clang-tidy}', exe),
+        ]
+    ),
 ]
 # fmt: on

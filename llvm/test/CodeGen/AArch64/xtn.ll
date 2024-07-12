@@ -298,7 +298,6 @@ define <3 x i16> @xtn_v3i32_v3i16(<3 x i32> %a) {
 ; CHECK-GI-NEXT:    mov s2, v0.s[2]
 ; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-GI-NEXT:    mov v0.h[2], v2.h[0]
-; CHECK-GI-NEXT:    mov v0.h[3], v0.h[0]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -327,7 +326,6 @@ define <3 x i16> @xtn_v3i64_v3i16(<3 x i64> %a) {
 ; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-GI-NEXT:    fmov s1, w8
 ; CHECK-GI-NEXT:    mov v0.h[2], v1.h[0]
-; CHECK-GI-NEXT:    mov v0.h[3], v0.h[0]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -353,7 +351,6 @@ define <3 x i32> @xtn_v3i64_v3i32(<3 x i64> %a) {
 ; CHECK-GI-NEXT:    fmov x8, d2
 ; CHECK-GI-NEXT:    mov v0.s[1], w9
 ; CHECK-GI-NEXT:    mov v0.s[2], w8
-; CHECK-GI-NEXT:    mov v0.s[3], w8
 ; CHECK-GI-NEXT:    ret
 entry:
   %arg1 = trunc <3 x i64> %a to <3 x i32>

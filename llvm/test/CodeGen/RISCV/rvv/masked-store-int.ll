@@ -258,8 +258,6 @@ define void @masked_store_allones_mask(<vscale x 2 x i8> %val, ptr %a) nounwind 
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %insert = insertelement <vscale x 2 x i1> poison, i1 1, i32 0
-  %mask = shufflevector <vscale x 2 x i1> %insert, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-  call void @llvm.masked.store.v2i8.p0(<vscale x 2 x i8> %val, ptr %a, i32 1, <vscale x 2 x i1> %mask)
+  call void @llvm.masked.store.v2i8.p0(<vscale x 2 x i8> %val, ptr %a, i32 1, <vscale x 2 x i1> splat (i1 1))
   ret void
 }

@@ -62,7 +62,7 @@ define internal ptr @side_effects(i8 %v) {
 define internal ptr @no_side_effects(i8 %v) readonly nounwind willreturn {
 ; CHECK-LABEL: define {{[^@]+}}@no_side_effects
 ; CHECK-SAME: (i8 [[V:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    ret ptr undef
+; CHECK-NEXT:    ret ptr poison
 ;
   ret ptr null
 }

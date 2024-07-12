@@ -96,6 +96,18 @@ bool isPotentiallyReachableFromMany(
     const SmallPtrSetImpl<BasicBlock *> *ExclusionSet,
     const DominatorTree *DT = nullptr, const LoopInfo *LI = nullptr);
 
+/// Determine whether there is a potentially a path from at least one block in
+/// 'Worklist' to at least one block in 'StopSet' within a single function
+/// without passing through any of the blocks in 'ExclusionSet'. Returns false
+/// only if we can prove that once any block in 'Worklist' has been reached then
+/// no blocks in 'StopSet' can be executed without passing through any blocks in
+/// 'ExclusionSet'. Conservatively returns true.
+bool isManyPotentiallyReachableFromMany(
+    SmallVectorImpl<BasicBlock *> &Worklist,
+    const SmallPtrSetImpl<const BasicBlock *> &StopSet,
+    const SmallPtrSetImpl<BasicBlock *> *ExclusionSet,
+    const DominatorTree *DT = nullptr, const LoopInfo *LI = nullptr);
+
 /// Return true if the control flow in \p RPOTraversal is irreducible.
 ///
 /// This is a generic implementation to detect CFG irreducibility based on loop

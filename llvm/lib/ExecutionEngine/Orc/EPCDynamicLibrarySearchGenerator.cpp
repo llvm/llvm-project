@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
+#include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/Support/Error.h"
+
+#define DEBUG_TYPE "orc"
 
 namespace llvm {
 namespace orc {
@@ -31,6 +34,11 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
   if (Symbols.empty())
     return Error::success();
 
+  LLVM_DEBUG({
+      dbgs() << "EPCDynamicLibrarySearchGenerator trying to generate "
+             << Symbols << "\n";
+    });
+
   SymbolLookupSet LookupSymbols;
 
   for (auto &KV : Symbols) {
@@ -44,8 +52,12 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
   // Copy-capture LookupSymbols, since LookupRequest keeps a reference.
   EPC.lookupSymbolsAsync(Request, [this, &JD, LS = std::move(LS),
                                    LookupSymbols](auto Result) mutable {
-    if (!Result)
+    if (!Result) {
+      LLVM_DEBUG({
+        dbgs() << "EPCDynamicLibrarySearchGenerator lookup failed due to error";
+      });
       return LS.continueLookup(Result.takeError());
+    }
 
     assert(Result->size() == 1 && "Results for more than one library returned");
     assert(Result->front().size() == LookupSymbols.size() &&
@@ -58,6 +70,11 @@ Error EPCDynamicLibrarySearchGenerator::tryToGenerate(
         NewSymbols[KV.first] = *ResultI;
       ++ResultI;
     }
+
+    LLVM_DEBUG({
+      dbgs() << "EPCDynamicLibrarySearchGenerator lookup returned "
+             << NewSymbols << "\n";
+    });
 
     // If there were no resolved symbols bail out.
     if (NewSymbols.empty())

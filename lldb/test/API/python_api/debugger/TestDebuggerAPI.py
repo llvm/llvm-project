@@ -91,6 +91,10 @@ class DebuggerAPITestCase(TestBase):
         # Test the local property again, is it set to new_cache_line_size?
         self.assertEqual(get_cache_line_size(), new_cache_line_size)
 
+    @expectedFailureAll(
+        remote=True,
+        bugnumber="github.com/llvm/llvm-project/issues/92419",
+    )
     def test_CreateTarget_platform(self):
         exe = self.getBuildArtifact("a.out")
         self.yaml2obj("elf.yaml", exe)
@@ -161,3 +165,124 @@ class DebuggerAPITestCase(TestBase):
         original_dbg_id = self.dbg.GetID()
         self.dbg.Destroy(self.dbg)
         self.assertEqual(destroy_dbg_id, original_dbg_id)
+
+    def test_AddDestroyCallback(self):
+        original_dbg_id = self.dbg.GetID()
+        called = []
+
+        def foo(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal called
+            called += [('foo', dbg_id)]
+
+        def bar(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal called
+            called += [('bar', dbg_id)]
+
+        token_foo = self.dbg.AddDestroyCallback(foo)
+        token_bar = self.dbg.AddDestroyCallback(bar)
+        self.dbg.Destroy(self.dbg)
+
+        # Should call both `foo()` and `bar()`.
+        self.assertEqual(called, [
+            ('foo', original_dbg_id),
+            ('bar', original_dbg_id),
+        ])
+
+    def test_RemoveDestroyCallback(self):
+        original_dbg_id = self.dbg.GetID()
+        called = []
+
+        def foo(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal called
+            called += [('foo', dbg_id)]
+
+        def bar(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal called
+            called += [('bar', dbg_id)]
+
+        token_foo = self.dbg.AddDestroyCallback(foo)
+        token_bar = self.dbg.AddDestroyCallback(bar)
+        ret = self.dbg.RemoveDestroyCallback(token_foo)
+        self.dbg.Destroy(self.dbg)
+
+        # `Remove` should be successful
+        self.assertTrue(ret)
+        # Should only call `bar()`
+        self.assertEqual(called, [('bar', original_dbg_id)])
+
+    def test_RemoveDestroyCallback_invalid_token(self):
+        original_dbg_id = self.dbg.GetID()
+        magic_token_that_should_not_exist = 32413
+        called = []
+
+        def foo(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal called
+            called += [('foo', dbg_id)]
+
+        token_foo = self.dbg.AddDestroyCallback(foo)
+        ret = self.dbg.RemoveDestroyCallback(magic_token_that_should_not_exist)
+        self.dbg.Destroy(self.dbg)
+
+        # `Remove` should be unsuccessful
+        self.assertFalse(ret)
+        # Should call `foo()`
+        self.assertEqual(called, [('foo', original_dbg_id)])
+
+    def test_HandleDestroyCallback(self):
+        """
+        Validates:
+        1. AddDestroyCallback and RemoveDestroyCallback work during debugger destroy.
+        2. HandleDestroyCallback invokes all callbacks in FIFO order.
+        """
+        original_dbg_id = self.dbg.GetID()
+        events = []
+        bar_token = None
+
+        def foo(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal events
+            events.append(('foo called', dbg_id))
+
+        def bar(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal events
+            events.append(('bar called', dbg_id))
+
+        def add_foo(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal events
+            events.append(('add_foo called', dbg_id))
+            events.append(('foo token', self.dbg.AddDestroyCallback(foo)))
+
+        def remove_bar(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal events
+            events.append(('remove_bar called', dbg_id))
+            events.append(('remove bar ret', self.dbg.RemoveDestroyCallback(bar_token)))
+
+        # Setup
+        events.append(('add_foo token', self.dbg.AddDestroyCallback(add_foo)))
+        bar_token = self.dbg.AddDestroyCallback(bar)
+        events.append(('bar token', bar_token))
+        events.append(('remove_bar token', self.dbg.AddDestroyCallback(remove_bar)))
+        # Destroy
+        self.dbg.Destroy(self.dbg)
+
+        self.assertEqual(events, [
+            # Setup
+            ('add_foo token', 0), # add_foo should be added
+            ('bar token', 1), # bar should be added
+            ('remove_bar token', 2), # remove_bar should be added
+            # Destroy
+            ('add_foo called', original_dbg_id), # add_foo should be called
+            ('foo token', 3), # foo should be added
+            ('bar called', original_dbg_id), # bar should be called
+            ('remove_bar called', original_dbg_id), # remove_bar should be called
+            ('remove bar ret', False), # remove_bar should fail, because it's already invoked and removed
+            ('foo called', original_dbg_id), # foo should be called
+        ])

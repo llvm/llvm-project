@@ -268,7 +268,7 @@ void fooTemp() {
 
   //PRINT: #pragma omp interop init(prefer_type(3,4,"level_one"), target : interop_var)
   //DUMP: FunctionDecl{{.*}}fooTemp
-  //DUMP: TemplateArgument integral 3
+  //DUMP: TemplateArgument integral '3'
   //DUMP: OMPInteropDirective
   //DUMP: OMPInitClause
   //DUMP: DeclRefExpr{{.*}}'omp_interop_t'{{.*}}'interop_var'

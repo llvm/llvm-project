@@ -374,6 +374,7 @@ bool trackExpressionValue(const ExplodedNode *N, const Expr *E,
 /// from.
 ///
 /// \param V We're searching for the store where \c R received this value.
+///        It may be either defined or undefined, but should not be unknown.
 /// \param R The region we're tracking.
 /// \param Opts Tracking options specifying how we want to track the value.
 /// \param Origin Only adds notes when the last store happened in a
@@ -383,7 +384,7 @@ bool trackExpressionValue(const ExplodedNode *N, const Expr *E,
 ///        changes to its value in a nested stackframe could be pruned, and
 ///        this visitor can prevent that without polluting the bugpath too
 ///        much.
-void trackStoredValue(KnownSVal V, const MemRegion *R,
+void trackStoredValue(SVal V, const MemRegion *R,
                       PathSensitiveBugReport &Report, TrackingOptions Opts = {},
                       const StackFrameContext *Origin = nullptr);
 
@@ -594,29 +595,6 @@ public:
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *Succ,
                                    BugReporterContext &BRC,
                                    PathSensitiveBugReport &BR) override;
-};
-
-/// The bug visitor will walk all the nodes in a path and collect all the
-/// constraints. When it reaches the root node, will create a refutation
-/// manager and check if the constraints are satisfiable
-class FalsePositiveRefutationBRVisitor final : public BugReporterVisitor {
-private:
-  /// Holds the constraints in a given path
-  ConstraintMap Constraints;
-
-public:
-  FalsePositiveRefutationBRVisitor();
-
-  void Profile(llvm::FoldingSetNodeID &ID) const override;
-
-  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
-                                   BugReporterContext &BRC,
-                                   PathSensitiveBugReport &BR) override;
-
-  void finalizeVisitor(BugReporterContext &BRC, const ExplodedNode *EndPathNode,
-                       PathSensitiveBugReport &BR) override;
-  void addConstraints(const ExplodedNode *N,
-                      bool OverwriteConstraintsOnExistingSyms);
 };
 
 /// The visitor detects NoteTags and displays the event notes they contain.

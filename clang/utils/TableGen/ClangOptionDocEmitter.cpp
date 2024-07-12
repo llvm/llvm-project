@@ -359,8 +359,38 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
 
   // Emit the description, if we have one.
   const Record *R = Option.Option;
-  std::string Description =
-      getRSTStringWithTextFallback(R, "DocBrief", "HelpText");
+  std::string Description;
+
+  // Prefer a program specific help string.
+  // This is a list of (visibilities, string) pairs.
+  std::vector<Record *> VisibilitiesHelp =
+      R->getValueAsListOfDefs("HelpTextsForVariants");
+  for (Record *VisibilityHelp : VisibilitiesHelp) {
+    // This is a list of visibilities.
+    ArrayRef<Init *> Visibilities =
+        VisibilityHelp->getValueAsListInit("Visibilities")->getValues();
+
+    // See if any of the program's visibilities are in the list.
+    for (StringRef DocInfoMask :
+         DocInfo->getValueAsListOfStrings("VisibilityMask")) {
+      for (Init *Visibility : Visibilities) {
+        if (Visibility->getAsUnquotedString() == DocInfoMask) {
+          // Use the first one we find.
+          Description = escapeRST(VisibilityHelp->getValueAsString("Text"));
+          break;
+        }
+      }
+      if (!Description.empty())
+        break;
+    }
+
+    if (!Description.empty())
+      break;
+  }
+
+  // If there's not a program specific string, use the default one.
+  if (Description.empty())
+    Description = getRSTStringWithTextFallback(R, "DocBrief", "HelpText");
 
   if (!isa<UnsetInit>(R->getValueInit("Values"))) {
     if (!Description.empty() && Description.back() != '.')

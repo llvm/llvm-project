@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s 2>&1 | not FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s 2>&1 | not FileCheck %s
 
 ;#include <string.h>
 ;#include <stdio.h>

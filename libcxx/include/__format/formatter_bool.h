@@ -12,7 +12,6 @@
 
 #include <__algorithm/copy.h>
 #include <__assert>
-#include <__availability>
 #include <__config>
 #include <__format/concepts.h>
 #include <__format/format_parse_context.h>

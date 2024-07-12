@@ -117,6 +117,9 @@ def FeatureFrecipe
                        "Support frecipe.{s/d} and frsqrte.{s/d} instructions.">;
 def HasFrecipe : Predicate<"Subtarget->hasFrecipe()">;
 
+def TunePreferWInst
+    : SubtargetFeature<"prefer-w-inst", "PreferWInst", "true",
+                       "Prefer instructions with W suffix">;
 
 //===----------------------------------------------------------------------===//
 // Registers, instruction descriptions ...

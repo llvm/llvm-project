@@ -32,6 +32,7 @@ template <class ELFT> struct Elf_Sym_Impl;
 template <class ELFT> struct Elf_Dyn_Impl;
 template <class ELFT> struct Elf_Phdr_Impl;
 template <class ELFT, bool isRela> struct Elf_Rel_Impl;
+template <bool Is64> struct Elf_Crel_Impl;
 template <class ELFT> struct Elf_Verdef_Impl;
 template <class ELFT> struct Elf_Verdaux_Impl;
 template <class ELFT> struct Elf_Verneed_Impl;
@@ -51,7 +52,7 @@ private:
   using packed = support::detail::packed_endian_specific_integral<Ty, E, 1>;
 
 public:
-  static const endianness TargetEndianness = E;
+  static const endianness Endianness = E;
   static const bool Is64Bits = Is64;
 
   using uint = std::conditional_t<Is64, uint64_t, uint32_t>;
@@ -62,6 +63,7 @@ public:
   using Phdr = Elf_Phdr_Impl<ELFType<E, Is64>>;
   using Rel = Elf_Rel_Impl<ELFType<E, Is64>, false>;
   using Rela = Elf_Rel_Impl<ELFType<E, Is64>, true>;
+  using Crel = Elf_Crel_Impl<Is64>;
   using Relr = packed<uint>;
   using Verdef = Elf_Verdef_Impl<ELFType<E, Is64>>;
   using Verdaux = Elf_Verdaux_Impl<ELFType<E, Is64>>;
@@ -117,6 +119,7 @@ using ELF64BE = ELFType<llvm::endianness::big, true>;
   using Elf_Phdr = typename ELFT::Phdr;                                        \
   using Elf_Rel = typename ELFT::Rel;                                          \
   using Elf_Rela = typename ELFT::Rela;                                        \
+  using Elf_Crel = typename ELFT::Crel;                                        \
   using Elf_Relr = typename ELFT::Relr;                                        \
   using Elf_Verdef = typename ELFT::Verdef;                                    \
   using Elf_Verdaux = typename ELFT::Verdaux;                                  \
@@ -145,9 +148,9 @@ using ELF64BE = ELFType<llvm::endianness::big, true>;
 // Section header.
 template <class ELFT> struct Elf_Shdr_Base;
 
-template <endianness TargetEndianness>
-struct Elf_Shdr_Base<ELFType<TargetEndianness, false>> {
-  LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
+template <endianness Endianness>
+struct Elf_Shdr_Base<ELFType<Endianness, false>> {
+  LLVM_ELF_IMPORT_TYPES(Endianness, false)
   Elf_Word sh_name;      // Section name (index into string table)
   Elf_Word sh_type;      // Section type (SHT_*)
   Elf_Word sh_flags;     // Section flags (SHF_*)
@@ -160,9 +163,9 @@ struct Elf_Shdr_Base<ELFType<TargetEndianness, false>> {
   Elf_Word sh_entsize;   // Size of records contained within the section
 };
 
-template <endianness TargetEndianness>
-struct Elf_Shdr_Base<ELFType<TargetEndianness, true>> {
-  LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
+template <endianness Endianness>
+struct Elf_Shdr_Base<ELFType<Endianness, true>> {
+  LLVM_ELF_IMPORT_TYPES(Endianness, true)
   Elf_Word sh_name;       // Section name (index into string table)
   Elf_Word sh_type;       // Section type (SHT_*)
   Elf_Xword sh_flags;     // Section flags (SHF_*)
@@ -190,9 +193,9 @@ struct Elf_Shdr_Impl : Elf_Shdr_Base<ELFT> {
 
 template <class ELFT> struct Elf_Sym_Base;
 
-template <endianness TargetEndianness>
-struct Elf_Sym_Base<ELFType<TargetEndianness, false>> {
-  LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
+template <endianness Endianness>
+struct Elf_Sym_Base<ELFType<Endianness, false>> {
+  LLVM_ELF_IMPORT_TYPES(Endianness, false)
   Elf_Word st_name;       // Symbol name (index into string table)
   Elf_Addr st_value;      // Value or address associated with the symbol
   Elf_Word st_size;       // Size of the symbol
@@ -201,9 +204,9 @@ struct Elf_Sym_Base<ELFType<TargetEndianness, false>> {
   Elf_Half st_shndx;      // Which section (header table index) it's defined in
 };
 
-template <endianness TargetEndianness>
-struct Elf_Sym_Base<ELFType<TargetEndianness, true>> {
-  LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
+template <endianness Endianness>
+struct Elf_Sym_Base<ELFType<Endianness, true>> {
+  LLVM_ELF_IMPORT_TYPES(Endianness, true)
   Elf_Word st_name;       // Symbol name (index into string table)
   unsigned char st_info;  // Symbol's type and binding attributes
   unsigned char st_other; // Must be zero; reserved
@@ -349,9 +352,9 @@ struct Elf_Vernaux_Impl {
 ///               table section (.dynamic) look like.
 template <class ELFT> struct Elf_Dyn_Base;
 
-template <endianness TargetEndianness>
-struct Elf_Dyn_Base<ELFType<TargetEndianness, false>> {
-  LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
+template <endianness Endianness>
+struct Elf_Dyn_Base<ELFType<Endianness, false>> {
+  LLVM_ELF_IMPORT_TYPES(Endianness, false)
   Elf_Sword d_tag;
   union {
     Elf_Word d_val;
@@ -359,9 +362,9 @@ struct Elf_Dyn_Base<ELFType<TargetEndianness, false>> {
   } d_un;
 };
 
-template <endianness TargetEndianness>
-struct Elf_Dyn_Base<ELFType<TargetEndianness, true>> {
-  LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
+template <endianness Endianness>
+struct Elf_Dyn_Base<ELFType<Endianness, true>> {
+  LLVM_ELF_IMPORT_TYPES(Endianness, true)
   Elf_Sxword d_tag;
   union {
     Elf_Xword d_val;
@@ -381,10 +384,11 @@ struct Elf_Dyn_Impl : Elf_Dyn_Base<ELFT> {
   uintX_t getPtr() const { return d_un.d_ptr; }
 };
 
-template <endianness TargetEndianness>
-struct Elf_Rel_Impl<ELFType<TargetEndianness, false>, false> {
-  LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
-  static const bool IsRela = false;
+template <endianness Endianness>
+struct Elf_Rel_Impl<ELFType<Endianness, false>, false> {
+  LLVM_ELF_IMPORT_TYPES(Endianness, false)
+  static const bool HasAddend = false;
+  static const bool IsCrel = false;
   Elf_Addr r_offset; // Location (file byte offset, or program virtual addr)
   Elf_Word r_info;   // Symbol table index and type of relocation to apply
 
@@ -416,18 +420,20 @@ struct Elf_Rel_Impl<ELFType<TargetEndianness, false>, false> {
   }
 };
 
-template <endianness TargetEndianness>
-struct Elf_Rel_Impl<ELFType<TargetEndianness, false>, true>
-    : public Elf_Rel_Impl<ELFType<TargetEndianness, false>, false> {
-  LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
-  static const bool IsRela = true;
+template <endianness Endianness>
+struct Elf_Rel_Impl<ELFType<Endianness, false>, true>
+    : public Elf_Rel_Impl<ELFType<Endianness, false>, false> {
+  LLVM_ELF_IMPORT_TYPES(Endianness, false)
+  static const bool HasAddend = true;
+  static const bool IsCrel = false;
   Elf_Sword r_addend; // Compute value for relocatable field by adding this
 };
 
-template <endianness TargetEndianness>
-struct Elf_Rel_Impl<ELFType<TargetEndianness, true>, false> {
-  LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
-  static const bool IsRela = false;
+template <endianness Endianness>
+struct Elf_Rel_Impl<ELFType<Endianness, true>, false> {
+  LLVM_ELF_IMPORT_TYPES(Endianness, true)
+  static const bool HasAddend = false;
+  static const bool IsCrel = false;
   Elf_Addr r_offset; // Location (file byte offset, or program virtual addr)
   Elf_Xword r_info;  // Symbol table index and type of relocation to apply
 
@@ -469,12 +475,32 @@ struct Elf_Rel_Impl<ELFType<TargetEndianness, true>, false> {
   }
 };
 
-template <endianness TargetEndianness>
-struct Elf_Rel_Impl<ELFType<TargetEndianness, true>, true>
-    : public Elf_Rel_Impl<ELFType<TargetEndianness, true>, false> {
-  LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
-  static const bool IsRela = true;
+template <endianness Endianness>
+struct Elf_Rel_Impl<ELFType<Endianness, true>, true>
+    : public Elf_Rel_Impl<ELFType<Endianness, true>, false> {
+  LLVM_ELF_IMPORT_TYPES(Endianness, true)
+  static const bool HasAddend = true;
+  static const bool IsCrel = false;
   Elf_Sxword r_addend; // Compute value for relocatable field by adding this.
+};
+
+// In-memory representation. The serialized representation uses LEB128.
+template <bool Is64> struct Elf_Crel_Impl {
+  using uint = std::conditional_t<Is64, uint64_t, uint32_t>;
+  static const bool HasAddend = true;
+  static const bool IsCrel = true;
+  uint r_offset;
+  uint32_t r_symidx;
+  uint32_t r_type;
+  std::conditional_t<Is64, int64_t, int32_t> r_addend;
+
+  // Dummy bool parameter is for compatibility with Elf_Rel_Impl.
+  uint32_t getType(bool) const { return r_type; }
+  uint32_t getSymbol(bool) const { return r_symidx; }
+  void setSymbolAndType(uint32_t s, unsigned char t, bool) {
+    r_symidx = s;
+    r_type = t;
+  }
 };
 
 template <class ELFT>
@@ -504,9 +530,9 @@ struct Elf_Ehdr_Impl {
   unsigned char getDataEncoding() const { return e_ident[ELF::EI_DATA]; }
 };
 
-template <endianness TargetEndianness>
-struct Elf_Phdr_Impl<ELFType<TargetEndianness, false>> {
-  LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
+template <endianness Endianness>
+struct Elf_Phdr_Impl<ELFType<Endianness, false>> {
+  LLVM_ELF_IMPORT_TYPES(Endianness, false)
   Elf_Word p_type;   // Type of segment
   Elf_Off p_offset;  // FileOffset where segment is located, in bytes
   Elf_Addr p_vaddr;  // Virtual Address of beginning of segment
@@ -517,9 +543,9 @@ struct Elf_Phdr_Impl<ELFType<TargetEndianness, false>> {
   Elf_Word p_align;  // Segment alignment constraint
 };
 
-template <endianness TargetEndianness>
-struct Elf_Phdr_Impl<ELFType<TargetEndianness, true>> {
-  LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
+template <endianness Endianness>
+struct Elf_Phdr_Impl<ELFType<Endianness, true>> {
+  LLVM_ELF_IMPORT_TYPES(Endianness, true)
   Elf_Word p_type;    // Type of segment
   Elf_Word p_flags;   // Segment flags
   Elf_Off p_offset;   // FileOffset where segment is located, in bytes
@@ -574,17 +600,17 @@ struct Elf_GnuHash_Impl {
 
 // Compressed section headers.
 // http://www.sco.com/developers/gabi/latest/ch4.sheader.html#compression_header
-template <endianness TargetEndianness>
-struct Elf_Chdr_Impl<ELFType<TargetEndianness, false>> {
-  LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
+template <endianness Endianness>
+struct Elf_Chdr_Impl<ELFType<Endianness, false>> {
+  LLVM_ELF_IMPORT_TYPES(Endianness, false)
   Elf_Word ch_type;
   Elf_Word ch_size;
   Elf_Word ch_addralign;
 };
 
-template <endianness TargetEndianness>
-struct Elf_Chdr_Impl<ELFType<TargetEndianness, true>> {
-  LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
+template <endianness Endianness>
+struct Elf_Chdr_Impl<ELFType<Endianness, true>> {
+  LLVM_ELF_IMPORT_TYPES(Endianness, true)
   Elf_Word ch_type;
   Elf_Word ch_reserved;
   Elf_Xword ch_size;
@@ -742,17 +768,17 @@ template <class ELFT> struct Elf_CGProfile_Impl {
 template <class ELFT>
 struct Elf_Mips_RegInfo;
 
-template <llvm::endianness TargetEndianness>
-struct Elf_Mips_RegInfo<ELFType<TargetEndianness, false>> {
-  LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
+template <llvm::endianness Endianness>
+struct Elf_Mips_RegInfo<ELFType<Endianness, false>> {
+  LLVM_ELF_IMPORT_TYPES(Endianness, false)
   Elf_Word ri_gprmask;     // bit-mask of used general registers
   Elf_Word ri_cprmask[4];  // bit-mask of used co-processor registers
   Elf_Addr ri_gp_value;    // gp register value
 };
 
-template <llvm::endianness TargetEndianness>
-struct Elf_Mips_RegInfo<ELFType<TargetEndianness, true>> {
-  LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
+template <llvm::endianness Endianness>
+struct Elf_Mips_RegInfo<ELFType<Endianness, true>> {
+  LLVM_ELF_IMPORT_TYPES(Endianness, true)
   Elf_Word ri_gprmask;     // bit-mask of used general registers
   Elf_Word ri_pad;         // unused padding field
   Elf_Word ri_cprmask[4];  // bit-mask of used co-processor registers

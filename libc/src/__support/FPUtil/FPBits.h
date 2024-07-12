@@ -11,16 +11,18 @@
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/UInt128.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_assert.h"       // LIBC_ASSERT
 #include "src/__support/macros/attributes.h" // LIBC_INLINE, LIBC_INLINE_VAR
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_FLOAT128
 #include "src/__support/math_extras.h"             // mask_trailing_ones
+#include "src/__support/sign.h"                    // Sign
+#include "src/__support/uint128.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 // The supported floating point types.
@@ -31,32 +33,6 @@ enum class FPType {
   IEEE754_Binary128,
   X86_Binary80,
 };
-
-// A type to interact with floating point type signs.
-// This may be moved outside of 'fputil' if useful.
-struct Sign {
-  LIBC_INLINE constexpr bool is_pos() const { return !is_negative; }
-  LIBC_INLINE constexpr bool is_neg() const { return is_negative; }
-
-  LIBC_INLINE friend constexpr bool operator==(Sign a, Sign b) {
-    return a.is_negative == b.is_negative;
-  }
-  LIBC_INLINE friend constexpr bool operator!=(Sign a, Sign b) {
-    return !(a == b);
-  }
-
-  static const Sign POS;
-  static const Sign NEG;
-
-private:
-  LIBC_INLINE constexpr explicit Sign(bool is_negative)
-      : is_negative(is_negative) {}
-
-  bool is_negative;
-};
-
-LIBC_INLINE_VAR constexpr Sign Sign::NEG = Sign(true);
-LIBC_INLINE_VAR constexpr Sign Sign::POS = Sign(false);
 
 // The classes hierarchy is as follows:
 //
@@ -640,6 +616,7 @@ public:
   using UP::EXP_MASK;
   using UP::FRACTION_MASK;
   using UP::SIG_LEN;
+  using UP::SIG_MASK;
   using UP::SIGN_MASK;
   LIBC_INLINE_VAR static constexpr int MAX_BIASED_EXPONENT =
       (1 << UP::EXP_LEN) - 1;
@@ -675,7 +652,7 @@ public:
 
   // Modifiers
   LIBC_INLINE constexpr RetT abs() const {
-    return RetT(bits & UP::EXP_SIG_MASK);
+    return RetT(static_cast<StorageType>(bits & UP::EXP_SIG_MASK));
   }
 
   // Observers
@@ -729,6 +706,9 @@ public:
     bits = UP::merge(bits, mantVal, FRACTION_MASK);
   }
 
+  LIBC_INLINE constexpr void set_significand(StorageType sigVal) {
+    bits = UP::merge(bits, sigVal, SIG_MASK);
+  }
   // Unsafe function to create a floating point representation.
   // It simply packs the sign, biased exponent and mantissa values without
   // checking bound nor normalization.
@@ -755,20 +735,19 @@ public:
   //   4) "number" zero value is not processed correctly.
   //   5) Number is unsigned, so the result can be only positive.
   LIBC_INLINE static constexpr RetT make_value(StorageType number, int ep) {
-    static_assert(fp_type != FPType::X86_Binary80,
-                  "This function is not tested for X86 Extended Precision");
-    FPRepImpl result;
-    // offset: +1 for sign, but -1 for implicit first bit
-    int lz = cpp::countl_zero(number) - UP::EXP_LEN;
+    FPRepImpl result(0);
+    int lz =
+        UP::FRACTION_LEN + 1 - (UP::STORAGE_LEN - cpp::countl_zero(number));
+
     number <<= lz;
     ep -= lz;
 
     if (LIBC_LIKELY(ep >= 0)) {
       // Implicit number bit will be removed by mask
-      result.set_mantissa(number);
-      result.set_biased_exponent(ep + 1);
+      result.set_significand(number);
+      result.set_biased_exponent(static_cast<StorageType>(ep + 1));
     } else {
-      result.set_mantissa(number >> -ep);
+      result.set_significand(number >> -ep);
     }
     return RetT(result.uintval());
   }
@@ -846,6 +825,6 @@ struct FPBits final : public internal::FPRepImpl<get_fp_type<T>(), FPBits<T>> {
 };
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FPBITS_H

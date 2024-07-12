@@ -919,6 +919,10 @@ public:
         reinterpret_cast<Stmt **>(&const_cast<CXXTypeidExpr *>(this)->Operand);
     return const_child_range(begin, begin + 1);
   }
+
+  /// Whether this is of a form like "typeid(*ptr)" that can throw a
+  /// std::bad_typeid if a pointer is a null pointer ([expr.typeid]p2)
+  bool hasNullCheck() const;
 };
 
 /// A member reference to an MSPropertyDecl.
@@ -1149,6 +1153,7 @@ class CXXThisExpr : public Expr {
   CXXThisExpr(SourceLocation L, QualType Ty, bool IsImplicit, ExprValueKind VK)
       : Expr(CXXThisExprClass, Ty, VK, OK_Ordinary) {
     CXXThisExprBits.IsImplicit = IsImplicit;
+    CXXThisExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = false;
     CXXThisExprBits.Loc = L;
     setDependence(computeDependence(this));
   }
@@ -1169,6 +1174,15 @@ public:
 
   bool isImplicit() const { return CXXThisExprBits.IsImplicit; }
   void setImplicit(bool I) { CXXThisExprBits.IsImplicit = I; }
+
+  bool isCapturedByCopyInLambdaWithExplicitObjectParameter() const {
+    return CXXThisExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter;
+  }
+
+  void setCapturedByCopyInLambdaWithExplicitObjectParameter(bool Set) {
+    CXXThisExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = Set;
+    setDependence(computeDependence(this));
+  }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CXXThisExprClass;
@@ -1472,6 +1486,8 @@ public:
 ///     const S &s_ref = S(); // Requires a CXXBindTemporaryExpr.
 ///   }
 /// \endcode
+///
+/// Destructor might be null if destructor declaration is not valid.
 class CXXBindTemporaryExpr : public Expr {
   CXXTemporary *Temp = nullptr;
   Stmt *SubExpr = nullptr;
@@ -2549,7 +2565,7 @@ public:
 class PseudoDestructorTypeStorage {
   /// Either the type source information or the name of the type, if
   /// it couldn't be resolved due to type-dependence.
-  llvm::PointerUnion<TypeSourceInfo *, IdentifierInfo *> Type;
+  llvm::PointerUnion<TypeSourceInfo *, const IdentifierInfo *> Type;
 
   /// The starting source location of the pseudo-destructor type.
   SourceLocation Location;
@@ -2557,7 +2573,7 @@ class PseudoDestructorTypeStorage {
 public:
   PseudoDestructorTypeStorage() = default;
 
-  PseudoDestructorTypeStorage(IdentifierInfo *II, SourceLocation Loc)
+  PseudoDestructorTypeStorage(const IdentifierInfo *II, SourceLocation Loc)
       : Type(II), Location(Loc) {}
 
   PseudoDestructorTypeStorage(TypeSourceInfo *Info);
@@ -2566,8 +2582,8 @@ public:
     return Type.dyn_cast<TypeSourceInfo *>();
   }
 
-  IdentifierInfo *getIdentifier() const {
-    return Type.dyn_cast<IdentifierInfo *>();
+  const IdentifierInfo *getIdentifier() const {
+    return Type.dyn_cast<const IdentifierInfo *>();
   }
 
   SourceLocation getLocation() const { return Location; }
@@ -2698,7 +2714,7 @@ public:
   /// In a dependent pseudo-destructor expression for which we do not
   /// have full type information on the destroyed type, provides the name
   /// of the destroyed type.
-  IdentifierInfo *getDestroyedTypeIdentifier() const {
+  const IdentifierInfo *getDestroyedTypeIdentifier() const {
     return DestroyedType.getIdentifier();
   }
 
@@ -3013,9 +3029,10 @@ protected:
 
 public:
   struct FindResult {
-    OverloadExpr *Expression;
-    bool IsAddressOfOperand;
-    bool HasFormOfMemberPointer;
+    OverloadExpr *Expression = nullptr;
+    bool IsAddressOfOperand = false;
+    bool IsAddressOfOperandWithParen = false;
+    bool HasFormOfMemberPointer = false;
   };
 
   /// Finds the overloaded expression in the given expression \p E of
@@ -3027,6 +3044,7 @@ public:
     assert(E->getType()->isSpecificBuiltinType(BuiltinType::Overload));
 
     FindResult Result;
+    bool HasParen = isa<ParenExpr>(E);
 
     E = E->IgnoreParens();
     if (isa<UnaryOperator>(E)) {
@@ -3036,10 +3054,9 @@ public:
 
       Result.HasFormOfMemberPointer = (E == Ovl && Ovl->getQualifier());
       Result.IsAddressOfOperand = true;
+      Result.IsAddressOfOperandWithParen = HasParen;
       Result.Expression = Ovl;
     } else {
-      Result.HasFormOfMemberPointer = false;
-      Result.IsAddressOfOperand = false;
       Result.Expression = cast<OverloadExpr>(E);
     }
 
@@ -3151,8 +3168,30 @@ public:
 /// This arises in several ways:
 ///   * we might be waiting for argument-dependent lookup;
 ///   * the name might resolve to an overloaded function;
+///   * the name might resolve to a non-function template; for example, in the
+///   following snippet, the return expression of the member function
+///   'foo()' might remain unresolved until instantiation:
+///
+/// \code
+/// struct P {
+///   template <class T> using I = T;
+/// };
+///
+/// struct Q {
+///   template <class T> int foo() {
+///     return T::template I<int>;
+///   }
+/// };
+/// \endcode
+///
+/// ...which is distinct from modeling function overloads, and therefore we use
+/// a different builtin type 'UnresolvedTemplate' to avoid confusion. This is
+/// done in Sema::BuildTemplateIdExpr.
+///
 /// and eventually:
 ///   * the lookup might have included a function template.
+///   * the unresolved template gets transformed in an instantiation or gets
+///   diagnosed for its direct use.
 ///
 /// These never include UnresolvedUsingValueDecls, which are always class
 /// members and therefore appear only in UnresolvedMemberLookupExprs.
@@ -3188,7 +3227,6 @@ class UnresolvedLookupExpr final
                        NestedNameSpecifierLoc QualifierLoc,
                        SourceLocation TemplateKWLoc,
                        const DeclarationNameInfo &NameInfo, bool RequiresADL,
-                       bool Overloaded,
                        const TemplateArgumentListInfo *TemplateArgs,
                        UnresolvedSetIterator Begin, UnresolvedSetIterator End,
                        bool KnownDependent);
@@ -3208,8 +3246,9 @@ public:
   static UnresolvedLookupExpr *
   Create(const ASTContext &Context, CXXRecordDecl *NamingClass,
          NestedNameSpecifierLoc QualifierLoc,
-         const DeclarationNameInfo &NameInfo, bool RequiresADL, bool Overloaded,
-         UnresolvedSetIterator Begin, UnresolvedSetIterator End);
+         const DeclarationNameInfo &NameInfo, bool RequiresADL,
+         UnresolvedSetIterator Begin, UnresolvedSetIterator End,
+         bool KnownDependent);
 
   // After canonicalization, there may be dependent template arguments in
   // CanonicalConverted But none of Args is dependent. When any of
@@ -3229,9 +3268,6 @@ public:
   /// True if this declaration should be extended by
   /// argument-dependent lookup.
   bool requiresADL() const { return UnresolvedLookupExprBits.RequiresADL; }
-
-  /// True if this lookup is overloaded.
-  bool isOverloaded() const { return UnresolvedLookupExprBits.Overloaded; }
 
   /// Gets the 'naming class' (in the sense of C++0x
   /// [class.access.base]p5) of the lookup.  This is the scope
@@ -3640,9 +3676,9 @@ public:
 /// an implicit access if a qualifier is provided.
 class CXXDependentScopeMemberExpr final
     : public Expr,
-      private llvm::TrailingObjects<CXXDependentScopeMemberExpr,
-                                    ASTTemplateKWAndArgsInfo,
-                                    TemplateArgumentLoc, NamedDecl *> {
+      private llvm::TrailingObjects<
+          CXXDependentScopeMemberExpr, NestedNameSpecifierLoc, DeclAccessPair,
+          ASTTemplateKWAndArgsInfo, TemplateArgumentLoc> {
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
   friend TrailingObjects;
@@ -3655,16 +3691,14 @@ class CXXDependentScopeMemberExpr final
   /// implicit accesses.
   QualType BaseType;
 
-  /// The nested-name-specifier that precedes the member name, if any.
-  /// FIXME: This could be in principle store as a trailing object.
-  /// However the performance impact of doing so should be investigated first.
-  NestedNameSpecifierLoc QualifierLoc;
-
   /// The member to which this member expression refers, which
   /// can be name, overloaded operator, or destructor.
   ///
   /// FIXME: could also be a template-id
   DeclarationNameInfo MemberNameInfo;
+
+  /// The location of the '->' or '.' operator.
+  SourceLocation OperatorLoc;
 
   // CXXDependentScopeMemberExpr is followed by several trailing objects,
   // some of which optional. They are in order:
@@ -3685,8 +3719,16 @@ class CXXDependentScopeMemberExpr final
     return CXXDependentScopeMemberExprBits.HasTemplateKWAndArgsInfo;
   }
 
-  bool hasFirstQualifierFoundInScope() const {
-    return CXXDependentScopeMemberExprBits.HasFirstQualifierFoundInScope;
+  unsigned getNumUnqualifiedLookups() const {
+    return CXXDependentScopeMemberExprBits.NumUnqualifiedLookups;
+  }
+
+  unsigned numTrailingObjects(OverloadToken<NestedNameSpecifierLoc>) const {
+    return hasQualifier();
+  }
+
+  unsigned numTrailingObjects(OverloadToken<DeclAccessPair>) const {
+    return getNumUnqualifiedLookups();
   }
 
   unsigned numTrailingObjects(OverloadToken<ASTTemplateKWAndArgsInfo>) const {
@@ -3697,33 +3739,32 @@ class CXXDependentScopeMemberExpr final
     return getNumTemplateArgs();
   }
 
-  unsigned numTrailingObjects(OverloadToken<NamedDecl *>) const {
-    return hasFirstQualifierFoundInScope();
-  }
-
   CXXDependentScopeMemberExpr(const ASTContext &Ctx, Expr *Base,
                               QualType BaseType, bool IsArrow,
                               SourceLocation OperatorLoc,
                               NestedNameSpecifierLoc QualifierLoc,
                               SourceLocation TemplateKWLoc,
-                              NamedDecl *FirstQualifierFoundInScope,
+                              ArrayRef<DeclAccessPair> UnqualifiedLookups,
                               DeclarationNameInfo MemberNameInfo,
                               const TemplateArgumentListInfo *TemplateArgs);
 
-  CXXDependentScopeMemberExpr(EmptyShell Empty, bool HasTemplateKWAndArgsInfo,
-                              bool HasFirstQualifierFoundInScope);
+  CXXDependentScopeMemberExpr(EmptyShell Empty, bool HasQualifier,
+                              unsigned NumUnqualifiedLookups,
+                              bool HasTemplateKWAndArgsInfo);
 
 public:
   static CXXDependentScopeMemberExpr *
   Create(const ASTContext &Ctx, Expr *Base, QualType BaseType, bool IsArrow,
          SourceLocation OperatorLoc, NestedNameSpecifierLoc QualifierLoc,
-         SourceLocation TemplateKWLoc, NamedDecl *FirstQualifierFoundInScope,
+         SourceLocation TemplateKWLoc,
+         ArrayRef<DeclAccessPair> UnqualifiedLookups,
          DeclarationNameInfo MemberNameInfo,
          const TemplateArgumentListInfo *TemplateArgs);
 
   static CXXDependentScopeMemberExpr *
-  CreateEmpty(const ASTContext &Ctx, bool HasTemplateKWAndArgsInfo,
-              unsigned NumTemplateArgs, bool HasFirstQualifierFoundInScope);
+  CreateEmpty(const ASTContext &Ctx, bool HasQualifier,
+              unsigned NumUnqualifiedLookups, bool HasTemplateKWAndArgsInfo,
+              unsigned NumTemplateArgs);
 
   /// True if this is an implicit access, i.e. one in which the
   /// member being accessed was not written in the source.  The source
@@ -3748,34 +3789,35 @@ public:
   bool isArrow() const { return CXXDependentScopeMemberExprBits.IsArrow; }
 
   /// Retrieve the location of the '->' or '.' operator.
-  SourceLocation getOperatorLoc() const {
-    return CXXDependentScopeMemberExprBits.OperatorLoc;
+  SourceLocation getOperatorLoc() const { return OperatorLoc; }
+
+  /// Determines whether this member expression had a nested-name-specifier
+  /// prior to the name of the member, e.g., x->Base::foo.
+  bool hasQualifier() const {
+    return CXXDependentScopeMemberExprBits.HasQualifier;
   }
 
-  /// Retrieve the nested-name-specifier that qualifies the member name.
+  /// If the member name was qualified, retrieves the nested-name-specifier
+  /// that precedes the member name, with source-location information.
+  NestedNameSpecifierLoc getQualifierLoc() const {
+    if (!hasQualifier())
+      return NestedNameSpecifierLoc();
+    return *getTrailingObjects<NestedNameSpecifierLoc>();
+  }
+
+  /// If the member name was qualified, retrieves the
+  /// nested-name-specifier that precedes the member name. Otherwise, returns
+  /// NULL.
   NestedNameSpecifier *getQualifier() const {
-    return QualifierLoc.getNestedNameSpecifier();
+    return getQualifierLoc().getNestedNameSpecifier();
   }
 
-  /// Retrieve the nested-name-specifier that qualifies the member
-  /// name, with source location information.
-  NestedNameSpecifierLoc getQualifierLoc() const { return QualifierLoc; }
-
-  /// Retrieve the first part of the nested-name-specifier that was
-  /// found in the scope of the member access expression when the member access
-  /// was initially parsed.
-  ///
-  /// This function only returns a useful result when member access expression
-  /// uses a qualified member name, e.g., "x.Base::f". Here, the declaration
-  /// returned by this function describes what was found by unqualified name
-  /// lookup for the identifier "Base" within the scope of the member access
-  /// expression itself. At template instantiation time, this information is
-  /// combined with the results of name lookup into the type of the object
-  /// expression itself (the class type of x).
-  NamedDecl *getFirstQualifierFoundInScope() const {
-    if (!hasFirstQualifierFoundInScope())
-      return nullptr;
-    return *getTrailingObjects<NamedDecl *>();
+  /// Retrieve the declarations found by unqualified lookup for the first
+  /// component name of the nested-name-specifier, if any.
+  ArrayRef<DeclAccessPair> unqualified_lookups() const {
+    if (!getNumUnqualifiedLookups())
+      return std::nullopt;
+    return {getTrailingObjects<DeclAccessPair>(), getNumUnqualifiedLookups()};
   }
 
   /// Retrieve the name of the member that this expression refers to.
@@ -4346,15 +4388,21 @@ class PackIndexingExpr final
   // The pack being indexed, followed by the index
   Stmt *SubExprs[2];
 
-  size_t TransformedExpressions;
+  // The size of the trailing expressions.
+  unsigned TransformedExpressions : 31;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ExpandedToEmptyPack : 1;
 
   PackIndexingExpr(QualType Type, SourceLocation EllipsisLoc,
                    SourceLocation RSquareLoc, Expr *PackIdExpr, Expr *IndexExpr,
-                   ArrayRef<Expr *> SubstitutedExprs = {})
+                   ArrayRef<Expr *> SubstitutedExprs = {},
+                   bool ExpandedToEmptyPack = false)
       : Expr(PackIndexingExprClass, Type, VK_LValue, OK_Ordinary),
         EllipsisLoc(EllipsisLoc), RSquareLoc(RSquareLoc),
         SubExprs{PackIdExpr, IndexExpr},
-        TransformedExpressions(SubstitutedExprs.size()) {
+        TransformedExpressions(SubstitutedExprs.size()),
+        ExpandedToEmptyPack(ExpandedToEmptyPack) {
 
     auto *Exprs = getTrailingObjects<Expr *>();
     std::uninitialized_copy(SubstitutedExprs.begin(), SubstitutedExprs.end(),
@@ -4377,9 +4425,13 @@ public:
                                   SourceLocation EllipsisLoc,
                                   SourceLocation RSquareLoc, Expr *PackIdExpr,
                                   Expr *IndexExpr, std::optional<int64_t> Index,
-                                  ArrayRef<Expr *> SubstitutedExprs = {});
+                                  ArrayRef<Expr *> SubstitutedExprs = {},
+                                  bool ExpandedToEmptyPack = false);
   static PackIndexingExpr *CreateDeserialized(ASTContext &Context,
                                               unsigned NumTransformedExprs);
+
+  /// Determine if the expression was expanded to empty.
+  bool expandsToEmptyPack() const { return ExpandedToEmptyPack; }
 
   /// Determine the location of the 'sizeof' keyword.
   SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
@@ -4414,6 +4466,7 @@ public:
     return getTrailingObjects<Expr *>()[*Index];
   }
 
+  /// Return the trailing expressions, regardless of the expansion.
   ArrayRef<Expr *> getExpressions() const {
     return {getTrailingObjects<Expr *>(), TransformedExpressions};
   }
@@ -5038,6 +5091,9 @@ class CoroutineSuspendExpr : public Expr {
   OpaqueValueExpr *OpaqueValue = nullptr;
 
 public:
+  // These types correspond to the three C++ 'await_suspend' return variants
+  enum class SuspendReturnType { SuspendVoid, SuspendBool, SuspendHandle };
+
   CoroutineSuspendExpr(StmtClass SC, SourceLocation KeywordLoc, Expr *Operand,
                        Expr *Common, Expr *Ready, Expr *Suspend, Expr *Resume,
                        OpaqueValueExpr *OpaqueValue)
@@ -5095,6 +5151,24 @@ public:
   // The syntactic operand written in the code
   Expr *getOperand() const {
     return static_cast<Expr *>(SubExprs[SubExpr::Operand]);
+  }
+
+  SuspendReturnType getSuspendReturnType() const {
+    auto *SuspendExpr = getSuspendExpr();
+    assert(SuspendExpr);
+
+    auto SuspendType = SuspendExpr->getType();
+
+    if (SuspendType->isVoidType())
+      return SuspendReturnType::SuspendVoid;
+    if (SuspendType->isBooleanType())
+      return SuspendReturnType::SuspendBool;
+
+    // Void pointer is the type of handle.address(), which is returned
+    // from the await suspend wrapper so that the temporary coroutine handle
+    // value won't go to the frame by mistake
+    assert(SuspendType->isVoidPointerType());
+    return SuspendReturnType::SuspendHandle;
   }
 
   SourceLocation getKeywordLoc() const { return KeywordLoc; }
