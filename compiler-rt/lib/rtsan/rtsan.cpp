@@ -17,7 +17,6 @@ using namespace __rtsan;
 bool __rtsan::rtsan_initialized;
 bool __rtsan::rtsan_init_is_running;
 
-
 extern "C" {
 
 SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_init() {

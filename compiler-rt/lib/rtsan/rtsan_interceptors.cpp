@@ -59,7 +59,6 @@ static void *HandleEarlyAlloc(uptr size) {
   return Mem;
 }
 
-
 void ExpectNotRealtime(const char *intercepted_function_name) {
   __rtsan::GetContextForThisThread().ExpectNotRealtime(
       intercepted_function_name);
