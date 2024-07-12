@@ -476,7 +476,7 @@ static AffineMap reindexIndexingMap(AffineMap map) {
   assert(map.isProjectedPermutation(/*allowZeroInResults=*/true) &&
          "expected projected permutation");
   auto res = compressUnusedDims(map);
-  assert(res.getNumDims() == res.getNumResults() &&
+  assert(res.getNumDims() == (res.getNumResults() - res.numOfZeroResults()) &&
          "expected reindexed map with same number of dims and results");
   return res;
 }
@@ -639,7 +639,21 @@ static Value buildVectorWrite(RewriterBase &rewriter, Value value,
         loc, value, outputOperand->get(), ValueRange{});
   }
 
-  write = state.maskOperation(rewriter, write, linalgOp, opOperandMap);
+  // The operand map may contain "zero" results, e.g.:
+  //    (d0, d1, d2, d3) -> (d0, d1, d2, 0)
+  // When applied to canonical vector shapes like these:
+  //    (1, 16, 16, 4)
+  // we would get:
+  //    (1, 16, 16, 0)
+  // Instead, we should extract the following map:
+  //    (d0, d1, d2, d3) -> (d0, d1, d2)
+  // This way, the corresponding vector/mask type will be:
+  //    vector<1x16x16xty>
+  // rather than:
+  //    vector<1x16x16x0xty>
+  auto opOperantMapWithoutZeros = opOperandMap.dropZeros();
+  write =
+      state.maskOperation(rewriter, write, linalgOp, opOperantMapWithoutZeros);
 
   // If masked, set in-bounds to true. Masking guarantees that the access will
   // be in-bounds.

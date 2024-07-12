@@ -354,6 +354,10 @@ public:
   /// returns the resulting values. `this` must be symbol-less.
   SmallVector<int64_t, 4> compose(ArrayRef<int64_t> values) const;
 
+  size_t numOfZeroResults() const;
+
+  AffineMap dropZeros();
+
   /// Returns true if the AffineMap represents a subset (i.e. a projection) of a
   /// symbol-less permutation map. `allowZeroInResults` allows projected
   /// permutation maps with constant zero result expressions.
