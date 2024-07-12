@@ -230,13 +230,8 @@ void DwarfFDECache<A>::iterateCacheEntries(void (*func)(
 }
 #endif // defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 
-template <typename TYPE, typename FIELD>
-__attribute__((no_sanitize("undefined"))) static inline size_t
-_arrayoffsetof(int index, FIELD TYPE::*field) {
-  return ((size_t)(&(((TYPE *)0)[index].*field)));
-}
 #define arrayoffsetof(type, index, field)                                      \
-  _arrayoffsetof<struct type>(index, &type::field)
+  (sizeof(type) * (index) + offsetof(type, field))
 
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
 template <typename A> class UnwindSectionHeader {
