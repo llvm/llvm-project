@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/threads/thread.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/threads/mutex.h"
 
 #include "src/__support/CPP/array.h"
@@ -16,7 +15,7 @@
 #include "src/__support/fixedvector.h"
 #include "src/__support/macros/attributes.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LIBC_THREAD_LOCAL Thread self;
 
@@ -189,4 +188,4 @@ void *get_tss_value(unsigned int key) {
   return u.payload;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

@@ -9,14 +9,13 @@
 #ifndef LLVM_LIBC_SRC_MATH_GENERIC_EXP_UTILS_H
 #define LLVM_LIBC_SRC_MATH_GENERIC_EXP_UTILS_H
 
-#include "src/__support/macros/config.h"
 #include <stdint.h>
 
 #define EXP2F_TABLE_BITS 5
 #define EXP2F_POLY_ORDER 3
 #define N (1 << EXP2F_TABLE_BITS)
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 struct Exp2fDataTable {
   uint64_t tab[1 << EXP2F_TABLE_BITS];
@@ -29,6 +28,6 @@ struct Exp2fDataTable {
 
 extern const Exp2fDataTable exp2f_data;
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_EXP_UTILS_H

@@ -10,11 +10,10 @@
 #define LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_POSIX_ERRORS_H
 
 #include "src/__support/StringUtil/message_mapper.h"
-#include "src/__support/macros/config.h"
 
 #include <errno.h> // For error macros
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LIBC_INLINE_VAR constexpr MsgTable<76> POSIX_ERRORS = {
     MsgMapping(EPERM, "Operation not permitted"),
@@ -95,6 +94,6 @@ LIBC_INLINE_VAR constexpr MsgTable<76> POSIX_ERRORS = {
     MsgMapping(ENOTRECOVERABLE, "State not recoverable"),
 };
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_TABLES_POSIX_ERRORS_H
