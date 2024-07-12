@@ -9,10 +9,9 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_QSORT_R_H
 #define LLVM_LIBC_SRC_STDLIB_QSORT_R_H
 
-#include "src/__support/macros/config.h"
 #include <stdlib.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 // This qsort_r uses the glibc argument ordering instead of the BSD argument
 // ordering (which puts arg before the function pointer). Putting arg after the
@@ -22,6 +21,6 @@ namespace LIBC_NAMESPACE_DECL {
 void qsort_r(void *array, size_t array_size, size_t elem_size,
              int (*compare)(const void *, const void *, void *), void *arg);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDLIB_QSORT_R_H

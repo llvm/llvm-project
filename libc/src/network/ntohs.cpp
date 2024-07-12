@@ -9,9 +9,8 @@
 #include "src/network/ntohs.h"
 #include "src/__support/common.h"
 #include "src/__support/endian.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(uint16_t, ntohs, (uint16_t netshort)) {
   if constexpr (Endian::IS_LITTLE)
@@ -20,4 +19,4 @@ LLVM_LIBC_FUNCTION(uint16_t, ntohs, (uint16_t netshort)) {
     return netshort;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

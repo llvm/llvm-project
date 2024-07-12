@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/macros/config.h"
 #include "src/string/memmove.h"
 
 #include "memory_utils/memory_check_utils.h"
@@ -17,7 +16,7 @@
 using LIBC_NAMESPACE::cpp::array;
 using LIBC_NAMESPACE::cpp::span;
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 TEST(LlvmLibcMemmoveTest, MoveZeroByte) {
   char Buffer[] = {'a', 'b', 'y', 'z'};
@@ -102,4 +101,4 @@ TEST(LlvmLibcMemmoveTest, SizeSweep) {
     }
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

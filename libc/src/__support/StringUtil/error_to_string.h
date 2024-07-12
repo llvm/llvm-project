@@ -11,14 +11,13 @@
 
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 cpp::string_view get_error_string(int err_num);
 
 cpp::string_view get_error_string(int err_num, cpp::span<char> buffer);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_ERROR_TO_STRING_H

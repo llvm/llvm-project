@@ -7,13 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/signal/raise.h"
 #include "src/stdlib/_Exit.h"
 
 #include "src/stdlib/abort.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void, abort, ()) {
   // TODO: When sigprocmask and sigaction land:
@@ -28,4 +27,4 @@ LLVM_LIBC_FUNCTION(void, abort, ()) {
   LIBC_NAMESPACE::_Exit(127);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

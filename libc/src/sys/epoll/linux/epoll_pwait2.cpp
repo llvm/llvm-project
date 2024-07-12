@@ -14,13 +14,12 @@
 #include "hdr/types/struct_timespec.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/sanitizer.h"
 #include "src/errno/libc_errno.h"
 
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, epoll_pwait2,
                    (int epfd, struct epoll_event *events, int maxevents,
@@ -42,4 +41,4 @@ LLVM_LIBC_FUNCTION(int, epoll_pwait2,
   return ret;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

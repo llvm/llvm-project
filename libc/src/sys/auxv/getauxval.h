@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_SYS_AUXV_GETAUXVAL_H
 #define LLVM_LIBC_SRC_SYS_AUXV_GETAUXVAL_H
 
-#include "src/__support/macros/config.h"
 #include <sys/auxv.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 unsigned long getauxval(unsigned long id);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SYS_AUXV_GETAUXVAL_H
