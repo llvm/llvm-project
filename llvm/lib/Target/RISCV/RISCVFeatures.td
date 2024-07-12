@@ -139,7 +139,8 @@ def HasStdExtZifencei : Predicate<"Subtarget->hasStdExtZifencei()">,
 
 def FeatureStdExtZihintpause
     : RISCVExtension<"zihintpause", 2, 0,
-                     "'Zihintpause' (Pause Hint)">;
+                     "'Zihintpause' (Pause Hint)">,
+      RISCVExtensionBitmask<0, 40>;
 def HasStdExtZihintpause : Predicate<"Subtarget->hasStdExtZihintpause()">,
                            AssemblerPredicate<(all_of FeatureStdExtZihintpause),
                                               "'Zihintpause' (Pause Hint)">;
