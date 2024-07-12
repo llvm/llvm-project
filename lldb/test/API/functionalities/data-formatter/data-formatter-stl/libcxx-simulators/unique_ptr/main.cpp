@@ -14,14 +14,9 @@ public:
   typedef _Dp deleter_type;
   typedef _Tp *pointer;
 
-#if COMPRESSED_PAIR_REV == 0
   std::__lldb::__compressed_pair<pointer, deleter_type> __ptr_;
   explicit unique_ptr(pointer __p) noexcept
       : __ptr_(__p, std::__lldb::__value_init_tag()) {}
-#elif COMPRESSED_PAIR_REV == 1 || COMPRESSED_PAIR_REV == 2
-  _LLDB_COMPRESSED_PAIR(pointer, __ptr_, deleter_type, __deleter_);
-  explicit unique_ptr(pointer __p) noexcept : __ptr_(__p), __deleter_() {}
-#endif
 };
 } // namespace __lldb
 } // namespace std
@@ -37,5 +32,6 @@ struct StatefulDeleter {
 int main() {
   std::__lldb::unique_ptr<int> var_up(new int(5));
   std::__lldb::unique_ptr<int, StatefulDeleter> var_with_deleter_up(new int(5));
-  return 0; // Break here
+  __builtin_printf("Break here\n");
+  return 0;
 }
