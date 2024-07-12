@@ -1676,6 +1676,15 @@ bool Sema::CheckRedeclarationExported(NamedDecl *New, NamedDecl *Old) {
   if (IsOldExported)
     return false;
 
+  // If the Old declaration are not attached to named modules
+  // and the New declaration are attached to global module.
+  // It should be fine to allow the export since it doesn't change
+  // the linkage of declarations. See
+  // https://github.com/llvm/llvm-project/issues/98583 for details.
+  if (!Old->isInNamedModule() && New->getOwningModule() &&
+      New->getOwningModule()->isImplicitGlobalModule())
+    return false;
+
   assert(IsNewExported);
 
   auto Lk = Old->getFormalLinkage();
