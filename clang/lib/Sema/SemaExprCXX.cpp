@@ -4660,8 +4660,8 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
       ElTy = FromType->castAs<VectorType>()->getElementType();
     }
 
-    From = ImpCastExprToType(From, StepTy,
-                             ScalarTypeToBooleanCastKind(ElTy), VK_PRValue,
+    From = ImpCastExprToType(From, StepTy, ScalarTypeToBooleanCastKind(ElTy),
+                             VK_PRValue,
                              /*BasePath=*/nullptr, CCK)
                .get();
     break;

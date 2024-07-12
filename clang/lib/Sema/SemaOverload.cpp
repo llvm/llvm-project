@@ -183,7 +183,7 @@ clang::GetDimensionConversionRank(ImplicitConversionRank Base,
       return ICR_HLSL_Scalar_Widening_Conversion;
   }
   if (Rank == ICR_HLSL_Dimension_Reduction) {
-    if(Base == ICR_Promotion)
+    if (Base == ICR_Promotion)
       return ICR_HLSL_Dimension_Reduction_Promotion;
     if (Base == ICR_Conversion)
       return ICR_HLSL_Dimension_Reduction_Conversion;
