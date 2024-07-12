@@ -23,8 +23,9 @@ function(_get_compile_options_from_flags output_var)
         # have SSE4.1.
         list(APPEND compile_options "-msse4.2")
       endif()
-      if(LIBC_COMPILER_HAS_BUILTIN_CEIL_FLOOR_TRUNC)
-        list(APPEND compile_options "-D__LIBC_USE_BUILTIN_CEIL_FLOOR_TRUNC")
+      if(LIBC_COMPILER_HAS_BUILTIN_CEIL_FLOOR_RINT_TRUNC)
+        list(APPEND compile_options
+             "-D__LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC")
       endif()
       if(LIBC_COMPILER_HAS_BUILTIN_ROUND)
         list(APPEND compile_options "-D__LIBC_USE_BUILTIN_ROUND")

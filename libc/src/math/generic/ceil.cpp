@@ -14,7 +14,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(double, ceil, (double x)) {
-#ifdef __LIBC_USE_BUILTIN_CEIL_FLOOR_TRUNC
+#ifdef __LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC
   return __builtin_ceil(x);
 #else
   return fputil::ceil(x);

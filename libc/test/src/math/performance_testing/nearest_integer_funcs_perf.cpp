@@ -11,16 +11,22 @@
 #include "src/math/ceilf16.h"
 #include "src/math/floorf.h"
 #include "src/math/floorf16.h"
+#include "src/math/rintf.h"
+#include "src/math/rintf16.h"
 #include "src/math/roundevenf.h"
 #include "src/math/roundevenf16.h"
 #include "src/math/roundf.h"
 #include "src/math/roundf16.h"
 #include "src/math/truncf.h"
 #include "src/math/truncf16.h"
+#include "test/UnitTest/RoundingModeUtils.h"
 #include "test/src/math/performance_testing/Timer.h"
 
 #include <fstream>
 #include <math.h>
+
+using LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
+using LIBC_NAMESPACE::fputil::testing::RoundingMode;
 
 namespace LIBC_NAMESPACE::testing {
 
@@ -163,6 +169,31 @@ int main() {
                        "roundf_perf.log")
   NEAREST_INTEGER_PERF(float, LIBC_NAMESPACE::truncf, ::truncf, FLOAT_ROUNDS,
                        "truncf_perf.log")
+
+  if (ForceRoundingMode r(RoundingMode::Upward); r.success) {
+    NEAREST_INTEGER_PERF(float16, LIBC_NAMESPACE::rintf16, ::placeholderf16,
+                         FLOAT16_ROUNDS, "rintf16_upward_perf.log")
+    NEAREST_INTEGER_PERF(float, LIBC_NAMESPACE::rintf, ::rintf, FLOAT_ROUNDS,
+                         "rintf_upward_perf.log")
+  }
+  if (ForceRoundingMode r(RoundingMode::Downward); r.success) {
+    NEAREST_INTEGER_PERF(float16, LIBC_NAMESPACE::rintf16, ::placeholderf16,
+                         FLOAT16_ROUNDS, "rintf16_downward_perf.log")
+    NEAREST_INTEGER_PERF(float, LIBC_NAMESPACE::rintf, ::rintf, FLOAT_ROUNDS,
+                         "rintf_downward_perf.log")
+  }
+  if (ForceRoundingMode r(RoundingMode::TowardZero); r.success) {
+    NEAREST_INTEGER_PERF(float16, LIBC_NAMESPACE::rintf16, ::placeholderf16,
+                         FLOAT16_ROUNDS, "rintf16_towardzero_perf.log")
+    NEAREST_INTEGER_PERF(float, LIBC_NAMESPACE::rintf, ::rintf, FLOAT_ROUNDS,
+                         "rintf_towardzero_perf.log")
+  }
+  if (ForceRoundingMode r(RoundingMode::Nearest); r.success) {
+    NEAREST_INTEGER_PERF(float16, LIBC_NAMESPACE::rintf16, ::placeholderf16,
+                         FLOAT16_ROUNDS, "rintf16_nearest_perf.log")
+    NEAREST_INTEGER_PERF(float, LIBC_NAMESPACE::rintf, ::rintf, FLOAT_ROUNDS,
+                         "rintf_nearest_perf.log")
+  }
 
   return 0;
 }
