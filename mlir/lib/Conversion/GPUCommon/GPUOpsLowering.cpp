@@ -630,7 +630,7 @@ LogicalResult GPUDynamicSharedMemoryOpLowering::matchAndRewrite(
     }
     addressSpace = maybeAddressSpace.value();
   } else {
-    auto ptr = dyn_cast<LLVM::LLVMPointerType>(op.getResult().getType());
+    auto ptr = cast<LLVM::LLVMPointerType>(op.getResult().getType());
     addressSpace = ptr.getAddressSpace();
     elementType = IntegerType::get(op->getContext(), 8);
     alignmentByte = alignmentBit / elementType.getIntOrFloatBitWidth();
