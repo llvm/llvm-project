@@ -17,10 +17,11 @@
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/macros/config.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace internal {
 // Types of corrupted blocks, and functions to crash with an error message
@@ -599,6 +600,6 @@ internal::BlockStatus Block<OffsetType, kAlign>::check_status() const {
   return internal::BlockStatus::VALID;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_BLOCK_H

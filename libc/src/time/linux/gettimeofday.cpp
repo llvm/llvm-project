@@ -10,11 +10,12 @@
 #include "hdr/time_macros.h"
 #include "hdr/types/suseconds_t.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/time/linux/clock_gettime.h"
 #include "src/__support/time/units.h"
 #include "src/errno/libc_errno.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // TODO(michaelrj): Move this into time/linux with the other syscalls.
 LLVM_LIBC_FUNCTION(int, gettimeofday,
@@ -38,4 +39,4 @@ LLVM_LIBC_FUNCTION(int, gettimeofday,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
