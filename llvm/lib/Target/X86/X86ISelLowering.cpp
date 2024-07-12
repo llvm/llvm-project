@@ -46181,6 +46181,32 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // Exploits AVX2 VSHLV/VSRLV instructions for efficient unsigned vector shifts
+  // with out-of-bounds clamping.
+
+  // Unlike general shift instructions (SHL/SRL), AVX2's VSHLV/VSRLV handle
+  // shift amounts exceeding the element bitwidth. VSHLV/VSRLV clamps the amount
+  // to bitwidth-1 for unsigned shifts, effectively performing a maximum left
+  // shift of bitwidth-1 positions. and returns zero for unsigned right shifts
+  // exceeding bitwidth-1.
+  if (N->getOpcode() == ISD::VSELECT &&
+      (LHS.getOpcode() == ISD::SRL || LHS.getOpcode() == ISD::SHL) &&
+      supportedVectorVarShift(VT, Subtarget, LHS.getOpcode())) {
+    APInt SV;
+    // fold select(icmp_ult(amt,BW),shl(x,amt),0) -> avx2 psllv(x,amt)
+    // fold select(icmp_ult(amt,BW),srl(x,amt),0) -> avx2 psrlv(x,amt)
+    if (Cond.getOpcode() == ISD::SETCC &&
+        Cond.getOperand(0) == LHS.getOperand(1) &&
+        cast<CondCodeSDNode>(Cond.getOperand(2))->get() == ISD::SETULT &&
+        ISD::isConstantSplatVector(Cond.getOperand(1).getNode(), SV) &&
+        ISD::isConstantSplatVectorAllZeros(RHS.getNode()) &&
+        SV == VT.getScalarSizeInBits()) {
+      return DAG.getNode(LHS.getOpcode() == ISD::SRL ? X86ISD::VSRLV
+                                                     : X86ISD::VSHLV,
+                         DL, VT, LHS.getOperand(0), LHS.getOperand(1));
+    }
+  }
+
   // Early exit check
   if (!TLI.isTypeLegal(VT) || isSoftF16(VT, Subtarget))
     return SDValue();
@@ -47991,11 +48017,31 @@ static SDValue combineShiftToPMULH(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ExtOpc, DL, VT, Mulh);
 }
 
-static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG,
+                                const X86Subtarget &Subtarget) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
   EVT VT = N0.getValueType();
+
+  // Exploits AVX2 VSHLV/VSRLV instructions for efficient unsigned vector shifts
+  // with out-of-bounds clamping.
+  if (N0.getOpcode() == ISD::VSELECT &&
+      supportedVectorVarShift(VT, Subtarget, ISD::SHL)) {
+    SDValue Cond = N0.getOperand(0);
+    SDValue N00 = N0.getOperand(1);
+    SDValue N01 = N0.getOperand(2);
+    APInt SV;
+    // fold shl(select(icmp_ult(amt,BW),x,0),amt) -> avx2 psllv(x,amt)
+    if (Cond.getOpcode() == ISD::SETCC && Cond.getOperand(0) == N1 &&
+        cast<CondCodeSDNode>(Cond.getOperand(2))->get() == ISD::SETULT &&
+        ISD::isConstantSplatVector(Cond.getOperand(1).getNode(), SV) &&
+        ISD::isConstantSplatVectorAllZeros(N01.getNode()) &&
+        SV == VT.getScalarSizeInBits()) {
+      SDLoc DL(N);
+      return DAG.getNode(X86ISD::VSHLV, DL, VT, N00, N1);
+    }
+  }
 
   // fold (shl (and (setcc_c), c1), c2) -> (and setcc_c, (c1 << c2))
   // since the result of setcc_c is all zero's or all ones.
@@ -48114,6 +48160,25 @@ static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue V = combineShiftToPMULH(N, DAG, Subtarget))
     return V;
+
+  // Exploits AVX2 VSHLV/VSRLV instructions for efficient unsigned vector shifts
+  // with out-of-bounds clamping.
+  if (N0.getOpcode() == ISD::VSELECT &&
+      supportedVectorVarShift(VT, Subtarget, ISD::SRL)) {
+    SDValue Cond = N0.getOperand(0);
+    SDValue N00 = N0.getOperand(1);
+    SDValue N01 = N0.getOperand(2);
+    APInt SV;
+    // fold srl(select(icmp_ult(amt,BW),x,0),amt) -> avx2 psrlv(x,amt)
+    if (Cond.getOpcode() == ISD::SETCC && Cond.getOperand(0) == N1 &&
+        cast<CondCodeSDNode>(Cond.getOperand(2))->get() == ISD::SETULT &&
+        ISD::isConstantSplatVector(Cond.getOperand(1).getNode(), SV) &&
+        ISD::isConstantSplatVectorAllZeros(N01.getNode()) &&
+        SV == VT.getScalarSizeInBits()) {
+      SDLoc DL(N);
+      return DAG.getNode(X86ISD::VSRLV, DL, VT, N00, N1);
+    }
+  }
 
   // Only do this on the last DAG combine as it can interfere with other
   // combines.
@@ -57613,7 +57678,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::SBB:         return combineSBB(N, DAG);
   case X86ISD::ADC:         return combineADC(N, DAG, DCI);
   case ISD::MUL:            return combineMul(N, DAG, DCI, Subtarget);
-  case ISD::SHL:            return combineShiftLeft(N, DAG);
+  case ISD::SHL:            return combineShiftLeft(N, DAG, Subtarget);
   case ISD::SRA:            return combineShiftRightArithmetic(N, DAG, Subtarget);
   case ISD::SRL:            return combineShiftRightLogical(N, DAG, DCI, Subtarget);
   case ISD::AND:            return combineAnd(N, DAG, DCI, Subtarget);
