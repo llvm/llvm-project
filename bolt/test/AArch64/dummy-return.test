@@ -4,7 +4,7 @@
 
 REQUIRES: system-linux
 
-RUN: %clang %p/../Inputs/main.c -o %t -Wl,-q -static
+RUN: %clang %cflags %p/../Inputs/main.c -o %t -Wl,-q -static
 RUN: llvm-bolt -instrument -instrumentation-sleep-time=1 %t -o %t.instr 2>&1 | FileCheck %s
 RUN: llvm-objdump --disassemble-symbols=__bolt_fini_trampoline %t.instr -D | FileCheck %s -check-prefix=CHECK-ASM
 
