@@ -607,7 +607,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
       context
           .Say(name_.source,
               "Name in ALLOCATE statement is not definable"_err_en_US)
-          .Attach(std::move(*whyNot));
+          .Attach(std::move(whyNot->set_severity(parser::Severity::Because)));
       return false;
     }
   }

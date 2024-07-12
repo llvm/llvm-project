@@ -151,15 +151,15 @@ namespace {
       AU.addRequired<SlotIndexesWrapperPass>();
       AU.addPreserved<SlotIndexesWrapperPass>();
       AU.addRequired<LiveStacks>();
-      AU.addRequired<MachineBlockFrequencyInfo>();
-      AU.addPreserved<MachineBlockFrequencyInfo>();
+      AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+      AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
       AU.addPreservedID(MachineDominatorsID);
 
       // In some Target's pipeline, register allocation (RA) might be
       // split into multiple phases based on register class. So, this pass
       // may be invoked multiple times requiring it to save these analyses to be
       // used by RA later.
-      AU.addPreserved<LiveIntervals>();
+      AU.addPreserved<LiveIntervalsWrapperPass>();
       AU.addPreserved<LiveDebugVariables>();
 
       MachineFunctionPass::getAnalysisUsage(AU);
@@ -527,7 +527,7 @@ bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
   MFI = &MF.getFrameInfo();
   TII = MF.getSubtarget().getInstrInfo();
   LS = &getAnalysis<LiveStacks>();
-  MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
+  MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
 
   bool Changed = false;
