@@ -148,6 +148,7 @@ MACHINE_FUNCTION_PASS("print<slot-indexes>", SlotIndexesPrinterPass(dbgs()))
 MACHINE_FUNCTION_PASS("require-all-machine-function-properties",
                       RequireAllMachineFunctionPropertiesPass())
 MACHINE_FUNCTION_PASS("trigger-verifier-error", TriggerVerifierErrorPass())
+MACHINE_FUNCTION_PASS("verify", MachineVerifierPass())
 #undef MACHINE_FUNCTION_PASS
 
 #ifndef MACHINE_FUNCTION_PASS_WITH_PARAMS
