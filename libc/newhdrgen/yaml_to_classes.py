@@ -232,6 +232,13 @@ def main(yaml_file, h_def_file, output_dir, add_function=None):
     output_file_name = Path(h_def_file).stem
     output_file_path = Path(output_dir) / output_file_name
 
+    # with open(yaml_file, "r") as f:
+    #     yaml_data = yaml.safe_load(f)
+
+    # header_name = yaml_data[header]
+    # if len(header_name) >= 6 and header_name[0:4] == "sys-":
+    #     output_file_path = Path(output_dir) / sys / output_file_name
+
     with open(output_file_path, "w") as f:
         f.write(final_header_content)
 
