@@ -4282,10 +4282,9 @@ static void writeFunctionHeapProfileRecords(
     // Per module alloc versions should always have a single entry of
     // value 0.
     assert(!PerModule || (AI.Versions.size() == 1 && AI.Versions[0] == 0));
-    if (!PerModule) {
-      Record.push_back(AI.MIBs.size());
+    Record.push_back(AI.MIBs.size());
+    if (!PerModule)
       Record.push_back(AI.Versions.size());
-    }
     for (auto &MIB : AI.MIBs) {
       Record.push_back((uint8_t)MIB.AllocType);
       Record.push_back(MIB.StackIdIndices.size());
@@ -4295,6 +4294,11 @@ static void writeFunctionHeapProfileRecords(
     if (!PerModule) {
       for (auto V : AI.Versions)
         Record.push_back(V);
+    }
+    assert(AI.TotalSizes.empty() || AI.TotalSizes.size() == AI.MIBs.size());
+    if (!AI.TotalSizes.empty()) {
+      for (auto Size : AI.TotalSizes)
+        Record.push_back(Size);
     }
     Stream.EmitRecord(PerModule ? bitc::FS_PERMODULE_ALLOC_INFO
                                 : bitc::FS_COMBINED_ALLOC_INFO,
@@ -4525,7 +4529,9 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
 
   Abbv = std::make_shared<BitCodeAbbrev>();
   Abbv->Add(BitCodeAbbrevOp(bitc::FS_PERMODULE_ALLOC_INFO));
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4)); // nummib
   // n x (alloc type, numstackids, numstackids x stackidindex)
+  // optional: nummib x total size
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
   unsigned AllocAbbrev = Stream.EmitAbbrev(std::move(Abbv));
@@ -4669,6 +4675,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4)); // numver
   // nummib x (alloc type, numstackids, numstackids x stackidindex),
   // numver x version
+  // optional: nummib x total size
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
   unsigned AllocAbbrev = Stream.EmitAbbrev(std::move(Abbv));
@@ -4768,7 +4775,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     writeFunctionHeapProfileRecords(
         Stream, FS, CallsiteAbbrev, AllocAbbrev,
         /*PerModule*/ false,
-        /*GetValueId*/ [&](const ValueInfo &VI) -> unsigned {
+        /*GetValueId*/
+        [&](const ValueInfo &VI) -> unsigned {
           std::optional<unsigned> ValueID = GetValueId(VI);
           // This can happen in shared index files for distributed ThinLTO if
           // the callee function summary is not included. Record 0 which we
@@ -4778,7 +4786,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
             return 0;
           return *ValueID;
         },
-        /*GetStackIndex*/ [&](unsigned I) {
+        /*GetStackIndex*/
+        [&](unsigned I) {
           // Get the corresponding index into the list of StackIds actually
           // being written for this combined index (which may be a subset in
           // the case of distributed indexes).

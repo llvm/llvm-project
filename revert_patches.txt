@@ -107,4 +107,7 @@ Reverts: breaks hipBlender* tests in compilation step
 Revert: more Sema:
 9e1f1cfa59c4 [Clang][Sema] Handle class member access expressions with valid nested-name-specifiers that become invalid after lookup (#98167)
 RonL
-==
+---
+Reverts: breaks clang-offload-wrapper test
+fb5a38bb4930 [llvm-objcopy] Add verification of added .note section format 
+---

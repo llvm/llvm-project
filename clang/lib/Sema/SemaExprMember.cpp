@@ -552,11 +552,9 @@ static Decl *FindGetterSetterNameDecl(const ObjCObjectPointerType *QIdTy,
 }
 
 ExprResult
-Sema::ActOnDependentMemberExpr(Expr *BaseExpr, QualType BaseType,
-                               bool IsArrow, SourceLocation OpLoc,
-                               const CXXScopeSpec &SS,
+Sema::ActOnDependentMemberExpr(Expr *BaseExpr, QualType BaseType, bool IsArrow,
+                               SourceLocation OpLoc, const CXXScopeSpec &SS,
                                SourceLocation TemplateKWLoc,
-                               NamedDecl *FirstQualifierInScope,
                                const DeclarationNameInfo &NameInfo,
                                const TemplateArgumentListInfo *TemplateArgs) {
   // Even in dependent contexts, try to diagnose base expressions with
@@ -590,8 +588,8 @@ Sema::ActOnDependentMemberExpr(Expr *BaseExpr, QualType BaseType,
   // must have pointer type, and the accessed type is the pointee.
   return CXXDependentScopeMemberExpr::Create(
       Context, BaseExpr, BaseType, IsArrow, OpLoc,
-      SS.getWithLocInContext(Context), TemplateKWLoc, FirstQualifierInScope,
-      NameInfo, TemplateArgs);
+      SS.getWithLocInContext(Context), TemplateKWLoc,
+      SS.getUnqualifiedLookups(), NameInfo, TemplateArgs);
 }
 
 /// We know that the given qualified member reference points only to
@@ -767,8 +765,9 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
           R.addDecl(ND);
         R.resolveKind();
         return SemaRef.BuildMemberReferenceExpr(
-            BaseExpr, BaseExpr->getType(), OpLoc, IsArrow, SS, SourceLocation(),
-            nullptr, R, nullptr, nullptr);
+            BaseExpr, BaseExpr->getType(), OpLoc, IsArrow, SS,
+            /*TemplateKWLoc=*/SourceLocation(), R, /*TemplateArgs=*/nullptr,
+            /*S=*/nullptr);
       },
       Sema::CTK_ErrorRecovery, DC);
 
@@ -784,7 +783,7 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
 ExprResult Sema::BuildMemberReferenceExpr(
     Expr *Base, QualType BaseType, SourceLocation OpLoc, bool IsArrow,
     CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
-    NamedDecl *FirstQualifierInScope, const DeclarationNameInfo &NameInfo,
+    const DeclarationNameInfo &NameInfo,
     const TemplateArgumentListInfo *TemplateArgs, const Scope *S,
     ActOnMemberAccessExtraArgs *ExtraArgs) {
   LookupResult R(*this, NameInfo, LookupMemberName);
@@ -826,10 +825,9 @@ ExprResult Sema::BuildMemberReferenceExpr(
     BaseType = Base->getType();
   }
 
-  return BuildMemberReferenceExpr(Base, BaseType,
-                                  OpLoc, IsArrow, SS, TemplateKWLoc,
-                                  FirstQualifierInScope, R, TemplateArgs, S,
-                                  false, ExtraArgs);
+  return BuildMemberReferenceExpr(Base, BaseType, OpLoc, IsArrow, SS,
+                                  TemplateKWLoc, R, TemplateArgs, S,
+                                  /*SuppressQualifierCheck=*/false, ExtraArgs);
 }
 
 ExprResult
@@ -967,17 +965,11 @@ static bool IsInFnTryBlockHandler(const Scope *S) {
   return false;
 }
 
-ExprResult
-Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
-                               SourceLocation OpLoc, bool IsArrow,
-                               const CXXScopeSpec &SS,
-                               SourceLocation TemplateKWLoc,
-                               NamedDecl *FirstQualifierInScope,
-                               LookupResult &R,
-                               const TemplateArgumentListInfo *TemplateArgs,
-                               const Scope *S,
-                               bool SuppressQualifierCheck,
-                               ActOnMemberAccessExtraArgs *ExtraArgs) {
+ExprResult Sema::BuildMemberReferenceExpr(
+    Expr *BaseExpr, QualType BaseExprType, SourceLocation OpLoc, bool IsArrow,
+    const CXXScopeSpec &SS, SourceLocation TemplateKWLoc, LookupResult &R,
+    const TemplateArgumentListInfo *TemplateArgs, const Scope *S,
+    bool SuppressQualifierCheck, ActOnMemberAccessExtraArgs *ExtraArgs) {
   assert(!SS.isInvalid() && "nested-name-specifier cannot be invalid");
   // If the member wasn't found in the current instantiation, or if the
   // arrow operator was used with a dependent non-pointer object expression,
@@ -986,8 +978,8 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
       (IsArrow && !BaseExprType->isPointerType() &&
        BaseExprType->isDependentType()))
     return ActOnDependentMemberExpr(BaseExpr, BaseExprType, IsArrow, OpLoc, SS,
-                                    TemplateKWLoc, FirstQualifierInScope,
-                                    R.getLookupNameInfo(), TemplateArgs);
+                                    TemplateKWLoc, R.getLookupNameInfo(),
+                                    TemplateArgs);
 
   QualType BaseType = BaseExprType;
   if (IsArrow) {
@@ -1192,9 +1184,9 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
 
     // Non-dependent member, but dependent template arguments.
     if (!VDecl.get())
-      return ActOnDependentMemberExpr(
-          BaseExpr, BaseExpr->getType(), IsArrow, OpLoc, SS, TemplateKWLoc,
-          FirstQualifierInScope, MemberNameInfo, TemplateArgs);
+      return ActOnDependentMemberExpr(BaseExpr, BaseExpr->getType(), IsArrow,
+                                      OpLoc, SS, TemplateKWLoc, MemberNameInfo,
+                                      TemplateArgs);
 
     VarDecl *Var = cast<VarDecl>(VDecl.get());
     if (!Var->getTemplateSpecializationKind())
@@ -1765,15 +1757,16 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
   const TemplateArgumentListInfo *TemplateArgs;
   DecomposeUnqualifiedId(Id, TemplateArgsBuffer,
                          NameInfo, TemplateArgs);
-
-  bool IsArrow = (OpKind == tok::arrow);
+  bool IsArrow = OpKind == tok::arrow;
 
   if (getLangOpts().HLSL && IsArrow)
     return ExprError(Diag(OpLoc, diag::err_hlsl_operator_unsupported) << 2);
 
-  NamedDecl *FirstQualifierInScope
-    = (!SS.isSet() ? nullptr : FindFirstQualifierInScope(S, SS.getScopeRep()));
-
+  UnresolvedSet<4> UnqualifiedLookups;
+  if (SS.isValid() &&
+      LookupFirstQualifierInScope(S, SS.getScopeRep(), UnqualifiedLookups)) {
+    SS.setUnqualifiedLookups(UnqualifiedLookups.pairs());
+  }
   // This is a postfix expression, so get rid of ParenListExprs.
   ExprResult Result = MaybeConvertParenListExprToParenExpr(S, Base);
   if (Result.isInvalid()) return ExprError();
@@ -1781,8 +1774,8 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
 
   ActOnMemberAccessExtraArgs ExtraArgs = {S, Id, ObjCImpDecl};
   ExprResult Res = BuildMemberReferenceExpr(
-      Base, Base->getType(), OpLoc, IsArrow, SS, TemplateKWLoc,
-      FirstQualifierInScope, NameInfo, TemplateArgs, S, &ExtraArgs);
+      Base, Base->getType(), OpLoc, IsArrow, SS, TemplateKWLoc, NameInfo,
+      TemplateArgs, S, &ExtraArgs);
 
   if (!Res.isInvalid() && isa<MemberExpr>(Res.get()))
     CheckMemberAccessOfNoDeref(cast<MemberExpr>(Res.get()));
@@ -1926,9 +1919,8 @@ Sema::BuildImplicitMemberExpr(const CXXScopeSpec &SS,
     baseExpr = BuildCXXThisExpr(loc, ThisTy, /*IsImplicit=*/true);
   }
 
-  return BuildMemberReferenceExpr(
-      baseExpr, ThisTy,
-      /*OpLoc=*/SourceLocation(),
-      /*IsArrow=*/!getLangOpts().HLSL, SS, TemplateKWLoc,
-      /*FirstQualifierInScope=*/nullptr, R, TemplateArgs, S);
+  return BuildMemberReferenceExpr(baseExpr, ThisTy,
+                                  /*OpLoc=*/SourceLocation(),
+                                  /*IsArrow=*/!getLangOpts().HLSL, SS,
+                                  TemplateKWLoc, R, TemplateArgs, S);
 }

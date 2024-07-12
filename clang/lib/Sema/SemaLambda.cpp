@@ -1379,6 +1379,8 @@ void Sema::ActOnLambdaClosureParameters(
     AddTemplateParametersToLambdaCallOperator(LSI->CallOperator, LSI->Lambda,
                                               TemplateParams);
     LSI->Lambda->setLambdaIsGeneric(true);
+    LSI->ContainsUnexpandedParameterPack |=
+        TemplateParams->containsUnexpandedParameterPack();
   }
   LSI->AfterParameterList = true;
 }
