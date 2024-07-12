@@ -65,7 +65,7 @@ static long syscall_impl_5_args(long number, long arg1, long arg2, long arg3,
 #define RISCV_HWPROBE_EXT_ZTSO (1ULL << 33)
 #define RISCV_HWPROBE_EXT_ZACAS (1ULL << 34)
 #define RISCV_HWPROBE_EXT_ZICOND (1ULL << 35)
-#define	RISCV_HWPROBE_EXT_ZIHINTPAUSE	(1ULL << 36)
+#define RISCV_HWPROBE_EXT_ZIHINTPAUSE (1ULL << 36)
 #define RISCV_HWPROBE_KEY_CPUPERF_0 5
 #define RISCV_HWPROBE_MISALIGNED_UNKNOWN (0 << 0)
 #define RISCV_HWPROBE_MISALIGNED_EMULATED (1ULL << 0)
@@ -199,17 +199,19 @@ struct {
 
 #define HWPROBE_LENGTH 3
 
-#define SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(EXTNAME) \
+#define SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(EXTNAME)                    \
   SET_SINGLE_IMAEXT_RISCV_FEATURE(RISCV_HWPROBE_EXT_##EXTNAME, EXTNAME)
 
-#define SET_SINGLE_IMAEXT_RISCV_FEATURE(HWPROBE_BITMASK, EXT) \
-  SET_SINGLE_RISCV_FEATURE(IMAEXT0Value & HWPROBE_BITMASK, EXT)
+#define SET_SINGLE_IMAEXT_RISCV_FEATURE(HWPROBE_BITMASK, EXT)                  \
+  SET_SINGLE_RISCV_FEATURE(IMAEXT0Value &HWPROBE_BITMASK, EXT)
 
-#define SET_SINGLE_RISCV_FEATURE(COND, EXT) \
-  if (COND) { SET_RISCV_FEATURE(EXT); }
+#define SET_SINGLE_RISCV_FEATURE(COND, EXT)                                    \
+  if (COND) {                                                                  \
+    SET_RISCV_FEATURE(EXT);                                                    \
+  }
 
-#define SET_RISCV_FEATURE(EXT) \
-    __riscv_feature_bits.features[EXT##_GROUPID] |= EXT##_BITMASK
+#define SET_RISCV_FEATURE(EXT)                                                 \
+  __riscv_feature_bits.features[EXT##_GROUPID] |= EXT##_BITMASK
 
 static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
 
@@ -291,7 +293,7 @@ void __init_riscv_features_bit() {
       {RISCV_HWPROBE_KEY_MVENDORID, 0},
   };
   if (initHwProbe(Hwprobes, sizeof(Hwprobes) / sizeof(Hwprobes[0])))
-    return ;
+    return;
 
   initRISCVFeature(Hwprobes);
 #endif // defined(__linux__)
