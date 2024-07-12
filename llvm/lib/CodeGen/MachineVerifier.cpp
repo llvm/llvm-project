@@ -2909,7 +2909,8 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
 void MachineVerifier::visitMachineBundleAfter(const MachineInstr *MI) {
   BBInfo &MInfo = MBBInfoMap[MI->getParent()];
   set_union(MInfo.regsKilled, regsKilled);
-  set_subtract(regsLive, regsKilled); regsKilled.clear();
+  set_subtract_vec(regsLive, regsKilled);
+  regsKilled.clear();
   // Kill any masked registers.
   while (!regMasks.empty()) {
     const uint32_t *Mask = regMasks.pop_back_val();
@@ -2918,7 +2919,8 @@ void MachineVerifier::visitMachineBundleAfter(const MachineInstr *MI) {
           MachineOperand::clobbersPhysReg(Mask, Reg.asMCReg()))
         regsDead.push_back(Reg);
   }
-  set_subtract(regsLive, regsDead);   regsDead.clear();
+  set_subtract_vec(regsLive, regsDead);
+  regsDead.clear();
   set_union(regsLive, regsDefined);   regsDefined.clear();
 }
 
