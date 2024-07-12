@@ -18,6 +18,7 @@ class MachineRegisterInfo;
 class GCNSubtarget;
 class GISelKnownBits;
 class LLT;
+class MachineMemOperand;
 
 namespace AMDGPU {
 
@@ -26,7 +27,9 @@ std::pair<Register, unsigned>
 getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
                           GISelKnownBits *KnownBits = nullptr,
                           bool CheckNUW = false);
-}
-}
+
+bool IsLaneSharedInVGPR(const MachineMemOperand *MemOpnd);
+} // namespace AMDGPU
+} // namespace llvm
 
 #endif

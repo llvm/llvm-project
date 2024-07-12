@@ -4772,6 +4772,38 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_perm_pk16_b4_u4:
     case Intrinsic::amdgcn_perm_pk16_b6_u4:
     case Intrinsic::amdgcn_perm_pk16_b8_u4:
+    case Intrinsic::amdgcn_convolve_bf16_bf16_1x1:
+    case Intrinsic::amdgcn_convolve_bf16_bf16_3x3:
+    case Intrinsic::amdgcn_convolve_bf16_bf8_1x1:
+    case Intrinsic::amdgcn_convolve_bf16_bf8_3x3:
+    case Intrinsic::amdgcn_convolve_f16_f16_1x1:
+    case Intrinsic::amdgcn_convolve_f16_f16_3x3:
+    case Intrinsic::amdgcn_convolve_f16_fp8_1x1:
+    case Intrinsic::amdgcn_convolve_f16_fp8_3x3:
+    case Intrinsic::amdgcn_convolve_f16_iu4_1x1:
+    case Intrinsic::amdgcn_convolve_f16_iu4_3x3:
+    case Intrinsic::amdgcn_convolve_f16_iu8_1x1:
+    case Intrinsic::amdgcn_convolve_f16_iu8_3x3:
+    case Intrinsic::amdgcn_convolve_f32_bf16_1x1:
+    case Intrinsic::amdgcn_convolve_f32_bf16_3x3:
+    case Intrinsic::amdgcn_convolve_f32_bf8_1x1:
+    case Intrinsic::amdgcn_convolve_f32_bf8_3x3:
+    case Intrinsic::amdgcn_convolve_f32_f16_1x1:
+    case Intrinsic::amdgcn_convolve_f32_f16_3x3:
+    case Intrinsic::amdgcn_convolve_f32_fp8_1x1:
+    case Intrinsic::amdgcn_convolve_f32_fp8_3x3:
+    case Intrinsic::amdgcn_convolve_f32_iu4_1x1:
+    case Intrinsic::amdgcn_convolve_f32_iu4_3x3:
+    case Intrinsic::amdgcn_convolve_f32_iu8_1x1:
+    case Intrinsic::amdgcn_convolve_f32_iu8_3x3:
+    case Intrinsic::amdgcn_convolve_f32i32_iu4_1x1:
+    case Intrinsic::amdgcn_convolve_f32i32_iu4_3x3:
+    case Intrinsic::amdgcn_convolve_f32i32_iu8_1x1:
+    case Intrinsic::amdgcn_convolve_f32i32_iu8_3x3:
+    case Intrinsic::amdgcn_convolve_i32_iu4_1x1:
+    case Intrinsic::amdgcn_convolve_i32_iu4_3x3:
+    case Intrinsic::amdgcn_convolve_i32_iu8_1x1:
+    case Intrinsic::amdgcn_convolve_i32_iu8_3x3:
       return getDefaultMappingVOP(MI);
     case Intrinsic::amdgcn_log:
     case Intrinsic::amdgcn_exp2:

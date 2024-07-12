@@ -31,17 +31,9 @@ entry:
 ; VIDX-NEXT: [[MATB:%[0-9]+]]:vreg_128_align2 = V_LOAD_IDX $idx1, 0, 1, implicit $exec
 ; VIDX-NEXT: early-clobber [[MATD:%[0-9]+]]:vreg_256_align2 = contract V_WMMA_F32_16X16X16_F16_w32_threeaddr 8, [[MATA]], 8, [[MATB]], 8, 0, 0, 0, implicit $exec
 ; VIDX-NEXT: [[OFF3:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 0
-; VIDX-NEXT: [[DAT0:%[0-9]+]]:vreg_128_align2 = COPY [[MATD]].sub0_sub1_sub2_sub3
-; VIDX-NEXT: [[DAT1:%[0-9]+]]:vreg_128_align2 = COPY [[MATD]].sub4_sub5_sub6_sub7
 ; VIDX-NEXT: [[SFR3:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[OFF3]], 2, implicit-def $scc
 ; VIDX-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[SFR3]]
-; VIDX-NEXT: V_STORE_IDX [[DAT0]], $idx1, 0, 1, implicit $exec
-; VIDX-NEXT: [[OFF4:%[0-9]+]]:sreg_32 = S_MOV_B32 16
-; VIDX-NEXT: [[OFF5:%[0-9]+]]:sreg_32_xexec_hi = COPY [[OFF4]]
-; VIDX-NEXT: [[SFR4:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[OFF5]], 2, implicit-def $scc
-; VIDX-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[SFR4]]
-; VIDX-NEXT: V_STORE_IDX [[DAT1]], $idx1, 0, 1, implicit $exec
-
+; VIDX-NEXT: V_STORE_IDX [[MATD]], $idx1, 0, 1, implicit $exec
   ret void
 }
 

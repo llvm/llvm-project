@@ -1501,6 +1501,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Actions.customIf([=](const LegalityQuery &Query) -> bool {
       return hasBufferRsrcWorkaround(Query.Types[0]);
     });
+    // lane-shared load/store with more than 4 dwords needs custom action
+    Actions.customIf([=](const LegalityQuery &Query) -> bool {
+      const LLT PtrTy = Query.Types[1];
+      return PtrTy.getAddressSpace() == AMDGPUAS::LANE_SHARED;
+    });
 
     // Constant 32-bit is handled by addrspacecasting the 32-bit pointer to
     // 64-bits.
@@ -3114,6 +3119,28 @@ static LLT widenToNextPowerOf2(LLT Ty) {
   return LLT::scalar(PowerOf2Ceil(Ty.getSizeInBits()));
 }
 
+static bool legalizeLaneShared(LegalizerHelper &Helper, MachineInstr &MI,
+                               MachineMemOperand &MMO) {
+  const LLT MemTy = MMO.getMemoryType();
+  const unsigned MemSize = MemTy.getSizeInBits();
+  assert((MemSize % 32) == 0);
+  auto NumDW = MemSize / 32;
+  if (NumDW <= 4)
+    return true;
+  assert(MemTy.isVector());
+  if (AMDGPU::IsLaneSharedInVGPR(&MMO) &&
+      (NumDW <= 6 || NumDW == 8 || NumDW == 9 || NumDW == 16 || NumDW == 18)) {
+    return true;
+  }
+  unsigned SplitSize = 128;
+  for (; SplitSize > 0 && MemTy.getSizeInBits() % SplitSize; SplitSize -= 32)
+    ;
+  unsigned NumSplitParts = MemTy.getSizeInBits() / SplitSize;
+  const LLT SplitTy = MemTy.divide(NumSplitParts);
+  return (Helper.fewerElementsVector(MI, 0, SplitTy) ==
+          LegalizerHelper::Legalized);
+}
+
 bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
                                        MachineInstr &MI) const {
   MachineIRBuilder &B = Helper.MIRBuilder;
@@ -3152,6 +3179,10 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
   const Align MemAlign = MMO->getAlign();
   const unsigned MemSize = MemTy.getSizeInBits();
   const uint64_t AlignInBits = 8 * MemAlign.value();
+
+  if (MMO->getAddrSpace() == AMDGPUAS::LANE_SHARED) {
+    return legalizeLaneShared(Helper, MI, *MMO);
+  }
 
   // Widen non-power-of-2 loads to the alignment if needed
   if (shouldWidenLoad(ST, MemTy, AlignInBits, AddrSpace, MI.getOpcode())) {
@@ -3209,9 +3240,13 @@ bool AMDGPULegalizerInfo::legalizeStore(LegalizerHelper &Helper,
   MachineRegisterInfo &MRI = *B.getMRI();
   GISelChangeObserver &Observer = Helper.Observer;
 
+  MachineMemOperand *MMO = *MI.memoperands_begin();
+  if (MMO->getAddrSpace() == AMDGPUAS::LANE_SHARED) {
+    return legalizeLaneShared(Helper, MI, *MMO);
+  }
+
   Register DataReg = MI.getOperand(0).getReg();
   LLT DataTy = MRI.getType(DataReg);
-
   if (hasBufferRsrcWorkaround(DataTy)) {
     Observer.changingInstr(MI);
     castBufferRsrcArgToV4I32(MI, B, 0);
