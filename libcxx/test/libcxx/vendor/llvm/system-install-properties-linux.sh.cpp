@@ -21,10 +21,12 @@
 // RUN: stat "%{lib-dir}/libc++.so.1.0"
 // RUN: stat "%{lib-dir}/libc++experimental.a"
 
-// Make sure we install a symlink from libc++.so to libc++.so.1.0.
-//
-// RUN: stat "%{lib-dir}/libc++.so"
-// RUN: readlink "%{lib-dir}/libc++.so" | grep "libc++.so.1.0"
+// Make sure we install a symlink from libc++.so.1 to libc++.so.1.0.
 //
 // RUN: stat "%{lib-dir}/libc++.so.1"
 // RUN: readlink "%{lib-dir}/libc++.so.1" | grep "libc++.so.1.0"
+
+// Make sure we install libc++.so in the right location. That may be a symlink or
+// a linker script, so we don't check anything specific about that file.
+//
+// RUN: stat "%{lib-dir}/libc++.so"
