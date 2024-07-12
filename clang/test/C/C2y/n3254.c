@@ -80,9 +80,9 @@ struct T {
 // CHECK-LABEL: define dso_local signext i8 @quux(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[T:%.*]] = alloca [[STRUCT_T:%.*]], align 1
+// CHECK-NEXT:    [[T:%.*]] = alloca [[STRUCT_T:%.*]], align 4
 // CHECK-NEXT:    [[S_PTR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[T]], i8 0, i64 12, i1 false)
+// CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[T]], i8 0, i64 12, i1 false)
 // CHECK-NEXT:    [[BUFFER:%.*]] = getelementptr inbounds [[STRUCT_T]], ptr [[T]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [12 x i8], ptr [[BUFFER]], i64 0, i64 0
 // CHECK-NEXT:    store ptr [[ARRAYDECAY]], ptr [[S_PTR]], align 8
