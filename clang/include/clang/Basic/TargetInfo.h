@@ -1434,7 +1434,12 @@ public:
     }
 
   public:
-    BranchProtectionInfo() = default;
+    BranchProtectionInfo()
+        : SignReturnAddr(LangOptions::SignReturnAddressScopeKind::None),
+          SignKey(LangOptions::SignReturnAddressKeyKind::AKey),
+          BranchTargetEnforcement(false), BranchProtectionPAuthLR(false),
+          GuardedControlStack(false) {}
+
     BranchProtectionInfo(const LangOptions &LangOpts) {
       SignReturnAddr =
           LangOpts.hasSignReturnAddress()

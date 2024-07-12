@@ -141,7 +141,7 @@ public:
       ParsedTargetAttr Attr =
           CGM.getTarget().parseTargetAttr(TA->getFeaturesStr());
       if (!Attr.BranchProtection.empty()) {
-        TargetInfo::BranchProtectionInfo BPI;
+        TargetInfo::BranchProtectionInfo BPI{};
         StringRef DiagMsg;
         StringRef Arch =
             Attr.CPU.empty() ? CGM.getTarget().getTargetOpts().CPU : Attr.CPU;

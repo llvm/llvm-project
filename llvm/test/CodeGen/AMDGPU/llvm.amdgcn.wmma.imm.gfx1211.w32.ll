@@ -34,7 +34,7 @@ define amdgpu_ps void @test_wmma_f64_16x16x4_f64_non_splat(<2 x double> %A, <2 x
 ; GFX1211-LABEL: test_wmma_f64_16x16x4_f64_non_splat:
 ; GFX1211:       ; %bb.0: ; %bb
 ; GFX1211-NEXT:    v_dual_mov_b32 v10, 0 :: v_dual_mov_b32 v11, 0x3ff00000
-; GFX1211-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1211-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1211-NEXT:    v_dual_mov_b32 v15, 2.0 :: v_dual_mov_b32 v12, v10
 ; GFX1211-NEXT:    v_dual_mov_b32 v13, v11 :: v_dual_mov_b32 v14, v10
 ; GFX1211-NEXT:    v_dual_mov_b32 v16, v10 :: v_dual_mov_b32 v17, v11
@@ -173,7 +173,7 @@ define amdgpu_ps void @test_wmma_f64_16x16x8_f64_non_splat(<4 x double> %A, <4 x
 ; GFX1211-LABEL: test_wmma_f64_16x16x8_f64_non_splat:
 ; GFX1211:       ; %bb.0: ; %bb
 ; GFX1211-NEXT:    v_dual_mov_b32 v18, 0 :: v_dual_mov_b32 v19, 0x3ff00000
-; GFX1211-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1211-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1211-NEXT:    v_dual_mov_b32 v23, 2.0 :: v_dual_mov_b32 v20, v18
 ; GFX1211-NEXT:    v_dual_mov_b32 v21, v19 :: v_dual_mov_b32 v22, v18
 ; GFX1211-NEXT:    v_dual_mov_b32 v24, v18 :: v_dual_mov_b32 v25, v19

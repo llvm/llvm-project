@@ -1669,11 +1669,11 @@ define hidden void @ashr_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX13-NEXT:    s_wait_loadcnt 0x1
 ; GFX13-NEXT:    v_bfe_i32 v1, v10, 0, 8
 ; GFX13-NEXT:    v_dual_ashrrev_i32 v2, 26, v10 :: v_dual_ashrrev_i32 v3, 24, v10
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-NEXT:    v_lshlrev_b16 v1, 7, v1
+; GFX13-NEXT:    v_lshlrev_b16 v2, 8, v2
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    v_ashrrev_i16 v4, 10, v0
-; GFX13-NEXT:    v_lshlrev_b16 v2, 8, v2
 ; GFX13-NEXT:    v_lshrrev_b16 v3, 1, v3
 ; GFX13-NEXT:    v_perm_b32 v0, v10, v0, 0x4010707
 ; GFX13-NEXT:    v_and_b32_e32 v1, 0xffffff00, v1

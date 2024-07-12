@@ -14,23 +14,24 @@ define amdgpu_kernel void @test_move_load_address_to_vgpr(ptr addrspace(1) nocap
 ; GCN-LABEL: test_move_load_address_to_vgpr:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
+; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    global_load_b32 v0, v1, s[0:1] scope:SCOPE_SYS
+; GCN-NEXT:    global_load_b32 v2, v3, s[0:1] scope:SCOPE_SYS
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    v_add_nc_u32_e32 v2, 0xffffff00, v0
-; GCN-NEXT:    v_lshlrev_b64_e32 v[4:5], 2, v[0:1]
-; GCN-NEXT:    s_wait_xcnt 0x0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GCN-NEXT:    v_add_nc_u64_e32 v[0:1], s[2:3], v[4:5]
+; GCN-NEXT:    v_lshlrev_b64_e32 v[0:1], 2, v[2:3]
+; GCN-NEXT:    v_add_nc_u32_e32 v2, 0xffffff00, v2
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GCN-NEXT:    v_add_nc_u64_e32 v[0:1], s[2:3], v[0:1]
 ; GCN-NEXT:  .LBB0_1: ; %bb3
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    s_wait_dscnt 0x0
 ; GCN-NEXT:    flat_load_b32 v3, v[0:1] scope:SCOPE_SYS
 ; GCN-NEXT:    s_wait_loadcnt 0x0
-; GCN-NEXT:    v_add_co_u32 v2, s0, v2, 1
 ; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    v_add_nc_u64_e32 v[0:1], 4, v[0:1]
+; GCN-NEXT:    v_add_co_u32 v2, s0, v2, 1
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GCN-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
 ; GCN-NEXT:    s_cbranch_vccz .LBB0_1
 ; GCN-NEXT:  ; %bb.2: ; %bb2
