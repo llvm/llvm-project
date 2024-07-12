@@ -551,6 +551,12 @@ CINDEX_LINKAGE CXCStringArray
     clang_experimental_DepGraphModule_getBuildArguments(CXDepGraphModule);
 
 /**
+ * @returns the CASID of the include-tree for this module, if any.
+ */
+CINDEX_LINKAGE const char *
+    clang_experimental_DepGraphModule_getIncludeTreeID(CXDepGraphModule);
+
+/**
  * \returns the \c ActionCache key for this module, if any.
  */
 CINDEX_LINKAGE
@@ -618,6 +624,12 @@ CXCStringArray clang_experimental_DepGraph_getTUFileDeps(CXDepGraph);
  */
 CINDEX_LINKAGE
 CXCStringArray clang_experimental_DepGraph_getTUModuleDeps(CXDepGraph);
+
+/**
+ * @returns the CASID of the include-tree for this TU, if any.
+ */
+CINDEX_LINKAGE
+const char *clang_experimental_DepGraph_getTUIncludeTreeID(CXDepGraph);
 
 /**
  * \returns the context hash of the C++20 module this translation unit exports.

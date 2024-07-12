@@ -760,11 +760,13 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
       char *Output, size_t MaxLen)>(LookupOutput);
 
   unsigned CommandIndex = 0;
-  auto HandleCommand = [&](const char *ContextHash, CXCStringArray ModuleDeps,
-                           CXCStringArray FileDeps, CXCStringArray Args,
-                           const char *CacheKey) {
+  auto HandleCommand = [&](const char *ContextHash, const char *IncludeTreeID,
+                           CXCStringArray ModuleDeps, CXCStringArray FileDeps,
+                           CXCStringArray Args, const char *CacheKey) {
     llvm::outs() << "  command " << CommandIndex++ << ":\n";
     llvm::outs() << "    context-hash: " << ContextHash << "\n";
+    if (IncludeTreeID)
+      llvm::outs() << "    include-tree-id: " << IncludeTreeID << "\n";
     if (CacheKey)
       llvm::outs() << "    cache-key: " << CacheKey << "\n";
     llvm::outs() << "    module-deps:\n";
@@ -805,6 +807,8 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
           clang_experimental_DepGraphModule_getContextHash(Mod);
       const char *ModuleMapPath =
           clang_experimental_DepGraphModule_getModuleMapPath(Mod);
+      const char *ModuleIncludeTreeID =
+          clang_experimental_DepGraphModule_getIncludeTreeID(Mod);
       const char *ModuleCacheKey =
           clang_experimental_DepGraphModule_getCacheKey(Mod);
       CXCStringArray ModuleDeps =
@@ -820,6 +824,8 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
                    << "    context-hash: " << ContextHash << "\n"
                    << "    module-map-path: "
                    << (ModuleMapPath ? ModuleMapPath : "<none>") << "\n";
+      if (ModuleIncludeTreeID)
+        llvm::outs() << "    include-tree-id: " << ModuleIncludeTreeID << "\n";
       if (ModuleCacheKey)
         llvm::outs() << "    cache-key: " << ModuleCacheKey << "\n";
       llvm::outs() << "    module-deps:\n";
@@ -837,6 +843,8 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
     }
 
     llvm::outs() << "dependencies:\n";
+    const char *TUIncludeTreeID =
+        clang_experimental_DepGraph_getTUIncludeTreeID(Graph);
     const char *TUContextHash =
         clang_experimental_DepGraph_getTUContextHash(Graph);
     CXCStringArray TUModuleDeps =
@@ -853,7 +861,8 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
           clang_experimental_DepGraphTUCommand_getCacheKey(Cmd);
       auto Dispose = llvm::make_scope_exit(
           [&]() { clang_experimental_DepGraphTUCommand_dispose(Cmd); });
-      HandleCommand(TUContextHash, TUModuleDeps, TUFileDeps, Args, CacheKey);
+      HandleCommand(TUContextHash, TUIncludeTreeID, TUModuleDeps, TUFileDeps,
+                    Args, CacheKey);
     }
     return 0;
   }
