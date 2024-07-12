@@ -660,7 +660,12 @@ static int64_t getTlsTpOffset(const Symbol &s) {
     return s.getVA(0) + (tls->p_vaddr & (tls->p_align - 1)) - 0x7000;
   case EM_LOONGARCH:
   case EM_RISCV:
-    return s.getVA(0) + (tls->p_vaddr & (tls->p_align - 1));
+    // See the comment in handleTlsRelocation. For TLSDESC=>IE,
+    // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} also reach here. While
+    // `tls` may be null, the return value is ignored.
+    if (s.type != STT_TLS)
+      return 0;
+    return s.getVA(0) + (tls ? tls->p_vaddr & (tls->p_align - 1) : 0);
 
     // Variant 2.
   case EM_HEXAGON:
