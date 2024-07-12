@@ -1519,8 +1519,10 @@ void LowerTypeTestsModule::createJumpTable(
   // for the function to avoid double BTI. This is a no-op without
   // -mbranch-protection=.
   if (JumpTableArch == Triple::aarch64 || JumpTableArch == Triple::thumb) {
-    F->addFnAttr("branch-target-enforcement", "false");
-    F->addFnAttr("sign-return-address", "none");
+    if (F->hasFnAttribute("branch-target-enforcement"))
+      F->removeFnAttr("branch-target-enforcement");
+    if (F->hasFnAttribute("sign-return-address"))
+      F->removeFnAttr("sign-return-address");
   }
   if (JumpTableArch == Triple::riscv32 || JumpTableArch == Triple::riscv64) {
     // Make sure the jump table assembly is not modified by the assembler or

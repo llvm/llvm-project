@@ -5576,6 +5576,10 @@ static void TryOrBuildParenListInitialization(
       ExprResult ER;
       ER = IS.Perform(S, SubEntity, SubKind,
                       Arg ? MultiExprArg(Arg) : std::nullopt);
+
+      if (ER.isInvalid())
+        return false;
+
       if (InitExpr)
         *InitExpr = ER.get();
       else

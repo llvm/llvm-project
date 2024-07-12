@@ -110,3 +110,27 @@ func.func @arith_extsi_i1_to_i32(%arg0: i1) {
   %idx = arith.extsi %arg0 : i1 to i32
   return
 }
+
+// -----
+
+func.func @arith_shli_i1(%arg0: i1, %arg1: i1) {
+  // expected-error @+1 {{failed to legalize operation 'arith.shli'}}
+  %shli = arith.shli %arg0, %arg1 : i1
+  return
+}
+
+// -----
+
+func.func @arith_shrsi_i1(%arg0: i1, %arg1: i1) {
+  // expected-error @+1 {{failed to legalize operation 'arith.shrsi'}}
+  %shrsi = arith.shrsi %arg0, %arg1 : i1
+  return
+}
+
+// -----
+
+func.func @arith_shrui_i1(%arg0: i1, %arg1: i1) {
+  // expected-error @+1 {{failed to legalize operation 'arith.shrui'}}
+  %shrui = arith.shrui %arg0, %arg1 : i1
+  return
+}

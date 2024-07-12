@@ -46,6 +46,7 @@ Implemented Papers
 - P2872R3 - Remove ``wstring_convert`` From C++26
 - P3142R0 - Printing Blank Lines with ``println`` (as DR against C++23)
 - P2944R3 - Comparisons for ``reference_wrapper`` (comparison operators for ``reference_wrapper`` only)
+- P2968R2 - Make ``std::ignore`` a first-class object
 - P2302R4 - ``std::ranges::contains``
 - P1659R3 - ``std::ranges::starts_with`` and ``std::ranges::ends_with``
 - P3029R1 - Better ``mdspan``'s CTAD
@@ -73,6 +74,9 @@ Improvements and New Features
   available.
 
 - The formatting library is updated to Unicode 15.1.0.
+
+- ``std::ignore``\s ``const __ignore_t& operator=(_Tp&&) const`` was changed to
+  ``const __ignore_type& operator=(const _Tp&) const noexcept`` for all language versions.
 
 Deprecations and Removals
 -------------------------
@@ -139,6 +143,8 @@ LLVM 20
 
 - The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable and the ``_LIBCPP_ENABLE_ASSERTIONS`` macro that were used to enable
   the safe mode will be removed in LLVM 20.
+
+- The C++20 synchronization library will be removed entirely in language modes prior to C++20 in LLVM 20.
 
 LLVM 21
 ~~~~~~~

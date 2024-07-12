@@ -153,7 +153,7 @@ int main(int argc, char **argv) {
   if (!DisableVerify) {
     std::string ErrorStr;
     raw_string_ostream OS(ErrorStr);
-    if (verifyModule(*M.get(), &OS)) {
+    if (verifyModule(*M, &OS)) {
       errs() << argv[0]
              << ": assembly parsed, but does not verify as correct!\n";
       errs() << OS.str();
@@ -163,7 +163,7 @@ int main(int argc, char **argv) {
   }
 
   if (DumpAsm) {
-    errs() << "Here's the assembly:\n" << *M.get();
+    errs() << "Here's the assembly:\n" << *M;
     if (Index.get() && Index->begin() != Index->end())
       Index->print(errs());
   }

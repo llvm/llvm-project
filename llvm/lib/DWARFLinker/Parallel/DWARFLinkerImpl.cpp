@@ -142,7 +142,7 @@ Error DWARFLinkerImpl::link() {
     // twice. And then following handling might be removed.
     for (const std::unique_ptr<DWARFUnit> &OrigCU :
          Context->InputDWARFFile.Dwarf->compile_units()) {
-      DWARFDie UnitDie = OrigCU.get()->getUnitDIE();
+      DWARFDie UnitDie = OrigCU->getUnitDIE();
 
       if (!Language) {
         if (std::optional<DWARFFormValue> Val =
