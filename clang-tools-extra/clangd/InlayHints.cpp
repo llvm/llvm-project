@@ -566,12 +566,14 @@ public:
     // auto [value] = bar;
     //
     // The type of value is modeled as a RecordType here.
-    CXXRecordDecl *Pattern = CXXRD->getTemplateInstantiationPattern();
-    if (!Pattern)
-      return addLabel(
-          [&](llvm::raw_ostream &OS) { return CXXRD->printName(OS, PP); },
-          nameLocation(CXXRD, SM));
 
+    // The ClassTemplateSpecializationDecl could be of TSK_Undeclared
+    // kind. So handle the ClassTemplateSpecializationDecl case first for
+    // template arguments.
+    // E.g. when we're inside a range-based for loop:
+    //   template <class T, class U> struct Pair;
+    //   for (auto p : SmallVector<Pair<SourceLocation, SourceRange>>()) {}
+    // (Pair is of TSK_Undeclared kind here.)
     // FIXME: Do we have other kinds of specializations?
     if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(CXXRD)) {
       std::string TemplateId;
@@ -581,6 +583,12 @@ public:
           TemplateId, CTSD->getTemplateArgs().asArray(),
           getPreferredLocationFromSpecialization(CTSD));
     }
+
+    // We don't have a template arguments now. Find the name and its location.
+    if (!CXXRD->getTemplateSpecializationKind())
+      return addLabel(
+          [&](llvm::raw_ostream &OS) { return CXXRD->printName(OS, PP); },
+          nameLocation(CXXRD, SM));
 
     return VisitType(TT);
   }
