@@ -166,6 +166,15 @@ utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
   return Result;
 }
 
+UseRangesCheck::UseRangesCheck(StringRef Name, ClangTidyContext *Context)
+    : utils::UseRangesCheck(Name, Context),
+      UseReversePipe(Options.get("UseReversePipe", false)) {}
+
+void UseRangesCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  utils::UseRangesCheck::storeOptions(Opts);
+  Options.store(Opts, "UseReversePipe", UseReversePipe);
+}
+
 bool UseRangesCheck::isLanguageVersionSupported(
     const LangOptions &LangOpts) const {
   return LangOpts.CPlusPlus20;
@@ -180,6 +189,8 @@ std::optional<UseRangesCheck::ReverseIteratorDescriptor>
 UseRangesCheck::getReverseDescriptor() const {
   static const std::pair<StringRef, StringRef> Refs[] = {
       {"::std::rbegin", "::std::rend"}, {"::std::crbegin", "::std::crend"}};
-  return ReverseIteratorDescriptor{"std::views::reverse", "<ranges>", Refs};
+  return ReverseIteratorDescriptor{UseReversePipe ? "std::views::reverse"
+                                                  : "std::ranges::reverse_view",
+                                   "<ranges>", Refs, UseReversePipe};
 }
 } // namespace clang::tidy::modernize
