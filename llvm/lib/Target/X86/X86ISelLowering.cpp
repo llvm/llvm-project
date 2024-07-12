@@ -45962,6 +45962,8 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       (LHS.getOpcode() == ISD::SRL || LHS.getOpcode() == ISD::SHL) &&
       supportedVectorVarShift(VT, Subtarget, LHS.getOpcode())) {
     APInt SV;
+    // fold select(icmp_ult(amt,BW),shl(x,amt),0) -> avx2 psllv(x,amt)
+    // fold select(icmp_ult(amt,BW),srl(x,amt),0) -> avx2 psrlv(x,amt)
     if (Cond.getOpcode() == ISD::SETCC &&
         Cond.getOperand(0) == LHS.getOperand(1) &&
         cast<CondCodeSDNode>(Cond.getOperand(2))->get() == ISD::SETULT &&
@@ -47740,6 +47742,7 @@ static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG,
     SDValue N00 = N0.getOperand(1);
     SDValue N01 = N0.getOperand(2);
     APInt SV;
+    // fold shl(select(icmp_ult(amt,BW),x,0),amt) -> avx2 psllv(x,amt)
     if (Cond.getOpcode() == ISD::SETCC && Cond.getOperand(0) == N1 &&
         cast<CondCodeSDNode>(Cond.getOperand(2))->get() == ISD::SETULT &&
         ISD::isConstantSplatVector(Cond.getOperand(1).getNode(), SV) &&
@@ -47876,6 +47879,7 @@ static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG,
     SDValue N00 = N0.getOperand(1);
     SDValue N01 = N0.getOperand(2);
     APInt SV;
+    // fold srl(select(icmp_ult(amt,BW),x,0),amt) -> avx2 psrlv(x,amt)
     if (Cond.getOpcode() == ISD::SETCC && Cond.getOperand(0) == N1 &&
         cast<CondCodeSDNode>(Cond.getOperand(2))->get() == ISD::SETULT &&
         ISD::isConstantSplatVector(Cond.getOperand(1).getNode(), SV) &&
