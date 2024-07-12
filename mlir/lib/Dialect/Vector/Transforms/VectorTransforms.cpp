@@ -1623,10 +1623,10 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
 };
 
 // Helper function dropping unit non-scalable dimension from a VectorType
-// keeping at least 1 dimension. Scalable unit dimensions are not dropped.
-// Folding such dimensions would require "shifting" the scalable flag onto some
-// other fixed-width dim (e.g. vector<[1]x4xf32> -> vector<[4]xf32>). This could
-// be implemented in the future.
+// keeping at least 1 dimension to avoid generating 0-D vectors. Scalable unit
+// dimensions are not dropped. Folding such dimensions would require "shifting"
+// the scalable flag onto some other fixed-width dim (e.g. vector<[1]x4xf32> ->
+// vector<[4]xf32>). This could be implemented in the future.
 static VectorType dropNonScalableUnitDimFromType(VectorType inVecTy) {
   auto inVecShape = inVecTy.getShape();
   SmallVector<int64_t> newShape;
