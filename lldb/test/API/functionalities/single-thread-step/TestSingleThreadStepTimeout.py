@@ -218,7 +218,7 @@ class SingleThreadStepTimeoutTestCase(TestBase):
 
     @skipIfWindows
     def test_step_over_deadlock_with_user_async_interrupt(self):
-        """Test step over deadlock function with large timeout then send async interrupt 
+        """Test step over deadlock function with large timeout then send async interrupt
         should report correct stop reason
         """
 

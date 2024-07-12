@@ -50,7 +50,7 @@ uint64_t ThreadPlanSingleThreadTimeout::GetRemainingTimeoutMilliSeconds() {
 
 void ThreadPlanSingleThreadTimeout::GetDescription(
     Stream *s, lldb::DescriptionLevel level) {
-  s->Printf("Single thread timeout, state(%s), remaining %lld ms",
+  s->Printf("Single thread timeout, state(%s), remaining %" PRIu64 " ms",
             StateToString(m_state).c_str(), GetRemainingTimeoutMilliSeconds());
 }
 
@@ -81,7 +81,9 @@ void ThreadPlanSingleThreadTimeout::PushNewWithTimeout(Thread &thread,
                                        /*abort_other_plans*/ false);
   Log *log = GetLog(LLDBLog::Step);
   LLDB_LOGF(
-      log, "ThreadPlanSingleThreadTimeout pushing a brand new one with %llu ms",
+      log,
+      "ThreadPlanSingleThreadTimeout pushing a brand new one with %" PRIu64
+      " ms",
       timeout_in_ms);
 }
 
@@ -106,7 +108,8 @@ void ThreadPlanSingleThreadTimeout::ResumeFromPrevState(Thread &thread,
   Log *log = GetLog(LLDBLog::Step);
   LLDB_LOGF(
       log,
-      "ThreadPlanSingleThreadTimeout reset from previous state with %llu ms",
+      "ThreadPlanSingleThreadTimeout reset from previous state with %" PRIu64
+      " ms",
       timeout_in_ms);
 }
 
@@ -137,7 +140,7 @@ bool ThreadPlanSingleThreadTimeout::DoPlanExplainsStop(Event *event_ptr) {
   Log *log = GetLog(LLDBLog::Step);
   LLDB_LOGF(log,
             "ThreadPlanSingleThreadTimeout::DoPlanExplainsStop() returns %d. "
-            "%llu ms remaining.",
+            "%" PRIu64 " ms remaining.",
             is_timeout_interrupt, GetRemainingTimeoutMilliSeconds());
   return is_timeout_interrupt;
 }
@@ -156,7 +159,8 @@ void ThreadPlanSingleThreadTimeout::TimeoutThreadFunc(
   self->m_timeout_start = std::chrono::steady_clock::now();
   LLDB_LOGF(
       log,
-      "ThreadPlanSingleThreadTimeout::TimeoutThreadFunc(), wait for %llu ms",
+      "ThreadPlanSingleThreadTimeout::TimeoutThreadFunc(), wait for %" PRIu64
+      " ms",
       timeout_in_ms);
   self->m_wakeup_cv.wait_for(lock, std::chrono::milliseconds(timeout_in_ms),
                              [self] { return !self->m_info.m_isAlive; });
