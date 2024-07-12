@@ -796,10 +796,13 @@ readConstraintSatisfaction(ASTRecordReader &Record) {
       if (/* IsDiagnostic */Record.readInt()) {
         SourceLocation DiagLocation = Record.readSourceLocation();
         std::string DiagMessage = Record.readString();
+        char *DBuf = new (Record.getContext()) char[DiagMessage.size()];
+        std::copy(DiagMessage.begin(), DiagMessage.end(), DBuf);
+
         Satisfaction.Details.emplace_back(
             new (Record.getContext())
                 ConstraintSatisfaction::SubstitutionDiagnostic(DiagLocation,
-                                                               DiagMessage));
+                                                               StringRef(DBuf, DiagMessage.size())));
       } else
         Satisfaction.Details.emplace_back(Record.readExpr());
     }
@@ -821,11 +824,18 @@ void ASTStmtReader::VisitConceptSpecializationExpr(
 static concepts::Requirement::SubstitutionDiagnostic *
 readSubstitutionDiagnostic(ASTRecordReader &Record) {
   std::string SubstitutedEntity = Record.readString();
+  char *SBuf = new (Record.getContext()) char[SubstitutedEntity.size()];
+  std::copy(SubstitutedEntity.begin(), SubstitutedEntity.end(), SBuf);
+
   SourceLocation DiagLoc = Record.readSourceLocation();
   std::string DiagMessage = Record.readString();
+  char *DBuf = new (Record.getContext()) char[DiagMessage.size()];
+  std::copy(DiagMessage.begin(), DiagMessage.end(), DBuf);
+
   return new (Record.getContext())
-      concepts::Requirement::SubstitutionDiagnostic{SubstitutedEntity, DiagLoc,
-                                                    DiagMessage};
+      concepts::Requirement::SubstitutionDiagnostic{
+          StringRef(SBuf, SubstitutedEntity.size()), DiagLoc,
+          StringRef(DBuf, DiagMessage.size())};
 }
 
 void ASTStmtReader::VisitRequiresExpr(RequiresExpr *E) {
