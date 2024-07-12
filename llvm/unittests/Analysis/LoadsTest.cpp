@@ -179,12 +179,11 @@ loop.end:
   auto *F1 = dyn_cast<Function>(GV1);
   auto *F2 = dyn_cast<Function>(GV2);
   ASSERT_TRUE(F1 && F2);
-  Function *FNs[2] = { F1, F2 };
 
   TargetLibraryInfoImpl TLII;
   TargetLibraryInfo TLI(TLII);
-  for (unsigned I = 0; I < 2; I++) {
-    Function *F = FNs[I];
+
+  auto IsDerefReadOnlyLoop = [&TLI](Function *F) -> bool {
     AssumptionCache AC(*F);
     DominatorTree DT(*F);
     LoopInfo LI(DT);
@@ -196,9 +195,9 @@ loop.end:
     assert(Header->getName() == "loop");
     Loop *L = LI.getLoopFor(Header);
 
-    if (I == 0)
-      ASSERT_TRUE(isDereferenceableReadOnlyLoop(L, &SE, &DT, &AC));
-    else
-      ASSERT_FALSE(isDereferenceableReadOnlyLoop(L, &SE, &DT, &AC));
-  }
+    return isDereferenceableReadOnlyLoop(L, &SE, &DT, &AC);
+  };
+
+  ASSERT_TRUE(IsDerefReadOnlyLoop(F1));
+  ASSERT_FALSE(IsDerefReadOnlyLoop(F2));
 }

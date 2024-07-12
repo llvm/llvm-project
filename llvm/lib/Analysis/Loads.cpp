@@ -775,8 +775,7 @@ bool llvm::isDereferenceableReadOnlyLoop(Loop *L, ScalarEvolution *SE,
                                          AssumptionCache *AC) {
   for (BasicBlock *BB : L->blocks()) {
     for (Instruction &I : *BB) {
-      LoadInst *LI = dyn_cast<LoadInst>(&I);
-      if (LI) {
+      if (auto *LI = dyn_cast<LoadInst>(&I)) {
         if (!isDereferenceableAndAlignedInLoop(LI, L, *SE, *DT, AC))
           return false;
       } else if (I.mayReadFromMemory() || I.mayWriteToMemory() || I.mayThrow())
