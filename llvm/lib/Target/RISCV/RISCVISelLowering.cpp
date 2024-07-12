@@ -295,13 +295,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       }
     }
     setOperationAction(ISD::SADDO, MVT::i32, Custom);
-  } else {
-    setLibcallName(
-        {RTLIB::SHL_I128, RTLIB::SRL_I128, RTLIB::SRA_I128, RTLIB::MUL_I128},
-        nullptr);
-    setLibcallName(RTLIB::MULO_I64, nullptr);
   }
-
   if (!Subtarget.hasStdExtZmmul()) {
     setOperationAction({ISD::MUL, ISD::MULHS, ISD::MULHU}, XLenVT, Expand);
     if (RV64LegalI32 && Subtarget.is64Bit())
@@ -5327,60 +5321,22 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     return convertFromScalableVector(VT, Gather, DAG, Subtarget);
   }
 
-  // By default we preserve the original operand order, and use a mask to
-  // select LHS as true and RHS as false. However, since RVV vector selects may
-  // feature splats but only on the LHS, we may choose to invert our mask and
-  // instead select between RHS and LHS.
-  bool SwapOps = DAG.isSplatValue(V2) && !DAG.isSplatValue(V1);
-
-  // Detect shuffles which can be re-expressed as vector selects; these are
-  // shuffles in which each element in the destination is taken from an element
-  // at the corresponding index in either source vectors.
-  bool IsSelect = all_of(enumerate(Mask), [&](const auto &MaskIdx) {
-    int MaskIndex = MaskIdx.value();
-    return MaskIndex < 0 || MaskIdx.index() == (unsigned)MaskIndex % NumElts;
-  });
-  if (IsSelect) {
-    // Now construct the mask that will be used by the vselect operation.
-    SmallVector<SDValue> MaskVals;
-    for (int MaskIndex : Mask) {
-      bool SelectMaskVal = (MaskIndex < (int)NumElts) ^ SwapOps;
-      MaskVals.push_back(DAG.getConstant(SelectMaskVal, DL, XLenVT));
-    }
-
-    if (SwapOps)
-      std::swap(V1, V2);
-
-    assert(MaskVals.size() == NumElts && "Unexpected select-like shuffle");
-    MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
-    SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
-    return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V1, V2);
-  }
-
   // As a backup, shuffles can be lowered via a vrgather instruction, possibly
   // merged with a second vrgather.
   SmallVector<int> ShuffleMaskLHS, ShuffleMaskRHS;
-  SmallVector<SDValue> MaskVals;
 
   // Now construct the mask that will be used by the blended vrgather operation.
-  // Cconstruct the appropriate indices into each vector.
+  // Construct the appropriate indices into each vector.
   for (int MaskIndex : Mask) {
-    bool SelectMaskVal = (MaskIndex < (int)NumElts) ^ !SwapOps;
-    MaskVals.push_back(DAG.getConstant(SelectMaskVal, DL, XLenVT));
     bool IsLHSOrUndefIndex = MaskIndex < (int)NumElts;
     ShuffleMaskLHS.push_back(IsLHSOrUndefIndex && MaskIndex >= 0
                              ? MaskIndex : -1);
     ShuffleMaskRHS.push_back(IsLHSOrUndefIndex ? -1 : (MaskIndex - NumElts));
   }
 
-  if (SwapOps) {
-    std::swap(V1, V2);
-    std::swap(ShuffleMaskLHS, ShuffleMaskRHS);
-  }
-
-  assert(MaskVals.size() == NumElts && "Unexpected select-like shuffle");
-  MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
-  SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
+  // Try to pick a profitable operand order.
+  bool SwapOps = DAG.isSplatValue(V2) && !DAG.isSplatValue(V1);
+  SwapOps = SwapOps ^ ShuffleVectorInst::isIdentityMask(ShuffleMaskRHS, NumElts);
 
   // Recursively invoke lowering for each operand if we had two
   // independent single source shuffles, and then combine the result via a
@@ -5388,6 +5344,19 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   // second permute (vrgather, or other) by the post-isel combine.
   V1 = DAG.getVectorShuffle(VT, DL, V1, DAG.getUNDEF(VT), ShuffleMaskLHS);
   V2 = DAG.getVectorShuffle(VT, DL, V2, DAG.getUNDEF(VT), ShuffleMaskRHS);
+
+  SmallVector<SDValue> MaskVals;
+  for (int MaskIndex : Mask) {
+    bool SelectMaskVal = (MaskIndex < (int)NumElts) ^ !SwapOps;
+    MaskVals.push_back(DAG.getConstant(SelectMaskVal, DL, XLenVT));
+  }
+
+  assert(MaskVals.size() == NumElts && "Unexpected select-like shuffle");
+  MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
+  SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, MaskVals);
+
+  if (SwapOps)
+    return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V1, V2);
   return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V2, V1);
 }
 

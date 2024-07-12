@@ -62,7 +62,8 @@ FunctionPass *createSMEABIPass();
 ModulePass *createSVEIntrinsicOptsPass();
 InstructionSelector *
 createAArch64InstructionSelector(const AArch64TargetMachine &,
-                                 AArch64Subtarget &, AArch64RegisterBankInfo &);
+                                 const AArch64Subtarget &,
+                                 const AArch64RegisterBankInfo &);
 FunctionPass *createAArch64O0PreLegalizerCombiner();
 FunctionPass *createAArch64PreLegalizerCombiner();
 FunctionPass *createAArch64PostLegalizerCombiner(bool IsOptNone);
