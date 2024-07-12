@@ -277,6 +277,8 @@ void MachObjectWriter::writeSection(const MCAssembler &Asm,
     W.write<uint32_t>(VMAddr);      // address
     W.write<uint32_t>(SectionSize); // size
   }
+  if (!isUInt<32>(FileOffset))
+    report_fatal_error("Cannot encode offset of section");
   W.write<uint32_t>(FileOffset);
 
   W.write<uint32_t>(Log2(Section.getAlign()));
