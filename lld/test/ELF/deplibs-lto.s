@@ -1,4 +1,4 @@
-# REQUIRES: x86
+# REQUIRES: aarch64
 
 # RUN: rm -rf %t && split-file %s %t && cd %t
 # RUN: llvm-mc -filetype=obj -triple=aarch64 -o deplibs.o deplibs.s
@@ -7,15 +7,13 @@
 # RUN: llvm-ar rc libdeplibs.a deplibs.o
 # RUN: llvm-ar rc libfoo.a foo.o
 
-## LTO emits a libcall (`__aarch64_ldadd4_relax`) that is resolved using a
-## library (libdeplibc.a) that contains a `.deplibs` section pointing to a file
-## not yet added to the link.
-
+## LTO emits a libcall (__aarch64_ldadd4_relax) that is resolved using a
+## library (libdeplibs.a) that contains a .deplibs section pointing to a file
+## (libfoo.a) not yet added to the link.
 # RUN: not ld.lld lto.o -u a -L. -ldeplibs 2>&1 | FileCheck %s
 # CHECK: error: input file 'foo.o' added after LTO
 
 ## Including the file before LTO prevents the issue.
-
 # RUN: ld.lld lto.o -u a -L. -ldeplibs -lfoo
 
 #--- foo.s

@@ -2993,7 +2993,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // ELF dependent libraries may have introduced new input files after LTO has
   // completed. This is an error if the files haven't already been parsed, since
-  // it's no longer legal to change the symbol table by parsing them.
+  // changing the symbol table could break the semantic assumptions of LTO.
   auto newInputFiles = ArrayRef(ctx.driver.files).slice(numInputFilesBeforeLTO);
   if (!newInputFiles.empty()) {
     DenseSet<StringRef> oldFilenames;
