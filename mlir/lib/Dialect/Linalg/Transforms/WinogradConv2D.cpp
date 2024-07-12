@@ -214,68 +214,121 @@ Value create2DTransformMatrix(OpBuilder &builder, Location loc,
                constVec));
 }
 
-/// Extract height x width data from 4D or 6D tensors.
-Value extract2DData(OpBuilder &builder, Location loc, Value source,
-                    Value outLoopIndex, Value inLoopIndex, int64_t outLoopIdx,
-                    int64_t inLoopIdx, int64_t heightIdx, int64_t widthIdx,
-                    int64_t srcSize) {
+/// Extract height x width data from 4D tensors.
+Value extract2DDataFrom4D(OpBuilder &builder, Location loc, Value source,
+                          Value loopNorFIndex, Value loopCorFIndex,
+                          Value heightOffset, Value widthOffset,
+                          int64_t extractHeight, int64_t extractWidth,
+                          int64_t loopNorFIdx, int64_t loopCorFIdx,
+                          int64_t heightIdx, int64_t widthIdx) {
+  auto sourceType = cast<ShapedType>(source.getType());
+  Type elementType = sourceType.getElementType();
+  int64_t srcSize = sourceType.getRank();
+
+  auto oneIndex = builder.getIndexAttr(1);
+  SmallVector<OpFoldResult> offsets;
+  offsets.resize(srcSize);
+  offsets[loopNorFIdx] = loopNorFIndex;
+  offsets[loopCorFIdx] = loopCorFIndex;
+  offsets[heightIdx] = heightOffset;
+  offsets[widthIdx] = widthOffset;
+  SmallVector<OpFoldResult> sizes(srcSize, oneIndex);
+  sizes[heightIdx] = builder.getIndexAttr(extractHeight);
+  sizes[widthIdx] = builder.getIndexAttr(extractWidth);
+  SmallVector<OpFoldResult> strides(srcSize, oneIndex);
+
+  auto extractFilterType =
+      RankedTensorType::get({extractHeight, extractWidth}, elementType);
+  auto extractFilterOp = builder.create<tensor::ExtractSliceOp>(
+      loc, extractFilterType, source, offsets, sizes, strides);
+
+  return extractFilterOp;
+}
+
+/// Extract height x width data from 6D tensors.
+Value extract2DDataFrom6D(OpBuilder &builder, Location loc, Value source,
+                          Value tileHIndex, Value tileWIndex,
+                          Value loopNorFIndex, Value loopCorFIndex,
+                          int64_t tileHIdx, int64_t tileWIdx,
+                          int64_t loopNorFIdx, int64_t loopCorFIdx,
+                          int64_t heightIdx, int64_t widthIdx) {
   auto sourceType = cast<ShapedType>(source.getType());
   Type elementType = sourceType.getElementType();
   auto sourceShape = sourceType.getShape();
+  int64_t srcSize = sourceType.getRank();
   int64_t height = sourceShape[heightIdx];
   int64_t width = sourceShape[widthIdx];
 
   auto zeroIndex = builder.getIndexAttr(0);
   auto oneIndex = builder.getIndexAttr(1);
-  SmallVector<OpFoldResult, 6> offsets(srcSize, zeroIndex);
-  offsets[outLoopIdx] = outLoopIndex;
-  offsets[inLoopIdx] = inLoopIndex;
-  SmallVector<OpFoldResult, 6> sizes(srcSize, oneIndex);
+  SmallVector<OpFoldResult> offsets(srcSize, zeroIndex);
+  offsets.resize(srcSize);
+  offsets[tileHIdx] = tileHIndex;
+  offsets[tileWIdx] = tileWIndex;
+  offsets[loopNorFIdx] = loopNorFIndex;
+  offsets[loopCorFIdx] = loopCorFIndex;
+  SmallVector<OpFoldResult> sizes(srcSize, oneIndex);
   sizes[heightIdx] = builder.getIndexAttr(height);
   sizes[widthIdx] = builder.getIndexAttr(width);
-  SmallVector<OpFoldResult, 6> strides(srcSize, oneIndex);
-  SmallVector<int64_t> targetShape(srcSize, 1);
-  targetShape[heightIdx] = height;
-  targetShape[widthIdx] = width;
-
-  auto targetType = RankedTensorType::get(targetShape, elementType);
-  auto extractFilterOp = builder.create<tensor::ExtractSliceOp>(
-      loc, targetType, source, offsets, sizes, strides);
+  SmallVector<OpFoldResult> strides(srcSize, oneIndex);
 
   auto extractFilterType = RankedTensorType::get({height, width}, elementType);
-  auto extractFilter = tensor::createCanonicalRankReducingExtractSliceOp(
-      builder, loc, extractFilterOp, extractFilterType);
+  auto extractFilterOp = builder.create<tensor::ExtractSliceOp>(
+      loc, extractFilterType, source, offsets, sizes, strides);
 
-  return extractFilter;
+  return extractFilterOp;
 }
 
-/// Insert transformed height x width data to 4D or 6D tensors which it is
+/// Insert transformed height x width data to 4D tensors which it is
 /// extracted from.
-Value insert2DData(OpBuilder &builder, Location loc, Value source, Value dest,
-                   Value outLoopIndex, Value inLoopIndex, int64_t height,
-                   int64_t width, int64_t outLoopIdx, int64_t inLoopIdx,
-                   int64_t heightIdx, int64_t widthIdx, int64_t destSize) {
-  auto sourceType = cast<ShapedType>(source.getType());
-  Type elementType = sourceType.getElementType();
-  SmallVector<int64_t> sliceShape(destSize, 1);
-  sliceShape[heightIdx] = height;
-  sliceShape[widthIdx] = width;
-  auto init = builder.create<tensor::EmptyOp>(loc, sliceShape, elementType);
-  auto result = tensor::createCanonicalRankReducingInsertSliceOp(builder, loc,
-                                                                 source, init);
-
-  auto zeroIndex = builder.getIndexAttr(0);
+Value insert2DDataTo4D(OpBuilder &builder, Location loc, Value source,
+                       Value dest, Value loopNorFIndex, Value loopCorFIndex,
+                       Value heightOffset, Value widthOffset, int64_t height,
+                       int64_t width, int64_t loopNorFIdx, int64_t loopCorFIdx,
+                       int64_t heightIdx, int64_t widthIdx) {
+  int64_t destSize = cast<ShapedType>(dest.getType()).getRank();
   auto oneIndex = builder.getIndexAttr(1);
-  SmallVector<OpFoldResult, 6> retOffsets(destSize, zeroIndex);
-  retOffsets[outLoopIdx] = outLoopIndex;
-  retOffsets[inLoopIdx] = inLoopIndex;
-  SmallVector<OpFoldResult, 6> retSizes(destSize, oneIndex);
+  SmallVector<OpFoldResult> retOffsets;
+  retOffsets.resize(destSize);
+  retOffsets[loopNorFIdx] = loopNorFIndex;
+  retOffsets[loopCorFIdx] = loopCorFIndex;
+  retOffsets[heightIdx] = heightOffset;
+  retOffsets[widthIdx] = widthOffset;
+  SmallVector<OpFoldResult> retSizes(destSize, oneIndex);
   retSizes[heightIdx] = builder.getIndexAttr(height);
   retSizes[widthIdx] = builder.getIndexAttr(width);
-  SmallVector<OpFoldResult, 6> strides(destSize, oneIndex);
+  SmallVector<OpFoldResult> strides(destSize, oneIndex);
 
   auto insertSliceOp = builder.create<tensor::InsertSliceOp>(
-      loc, result, dest, retOffsets, retSizes, strides);
+      loc, source, dest, retOffsets, retSizes, strides);
+
+  return insertSliceOp;
+}
+
+/// Insert transformed height x width data to 6D tensors which it is
+/// extracted from.
+Value insert2DDataTo6D(OpBuilder &builder, Location loc, Value source,
+                       Value dest, Value tileHIndex, Value tileWIndex,
+                       Value loopNorFIndex, Value loopCorFIndex, int64_t height,
+                       int64_t width, int64_t tileHIdx, int64_t tileWIdx,
+                       int64_t loopNorFIdx, int64_t loopCorFIdx,
+                       int64_t heightIdx, int64_t widthIdx) {
+  int64_t destSize = cast<ShapedType>(dest.getType()).getRank();
+  auto zeroIndex = builder.getIndexAttr(0);
+  auto oneIndex = builder.getIndexAttr(1);
+  SmallVector<OpFoldResult> retOffsets(destSize, zeroIndex);
+  retOffsets.resize(destSize);
+  retOffsets[tileHIdx] = tileHIndex;
+  retOffsets[tileWIdx] = tileWIndex;
+  retOffsets[loopNorFIdx] = loopNorFIndex;
+  retOffsets[loopCorFIdx] = loopCorFIndex;
+  SmallVector<OpFoldResult> retSizes(destSize, oneIndex);
+  retSizes[heightIdx] = builder.getIndexAttr(height);
+  retSizes[widthIdx] = builder.getIndexAttr(width);
+  SmallVector<OpFoldResult> strides(destSize, oneIndex);
+
+  auto insertSliceOp = builder.create<tensor::InsertSliceOp>(
+      loc, source, dest, retOffsets, retSizes, strides);
 
   return insertSliceOp;
 }
@@ -323,15 +376,17 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
   if (filterW != r && filterW != 1)
     return Value();
 
+  Value zeroIdx = rewriter.create<arith::ConstantIndexOp>(loc, 0);
   auto buildBody = [&](OpBuilder &builder, Location loc, ValueRange ivs,
                        ValueRange args) -> scf::ValueVector {
     Value FIter = ivs[0];
     Value CIter = ivs[1];
 
     // Extract (H, W) from (F, H, W, C).
-    auto extractFilter = extract2DData(
-        builder, loc, filter, FIter, CIter, /*outLoopIdx=*/0,
-        /*inLoopIdx=*/3, /*heightIdx=*/1, /*widthIdx=*/2, /*srcSize=*/4);
+    auto extractFilter =
+        extract2DDataFrom4D(builder, loc, filter, FIter, CIter, zeroIdx,
+                            zeroIdx, filterH, filterW, /*loopNorFIdx=*/0,
+                            /*loopCorFIdx=*/3, /*heightIdx=*/1, /*widthIdx=*/2);
 
     TransformMapKeyTy key = {m, r};
     int64_t retRows = 1;
@@ -377,16 +432,16 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
     // Insert (H, W) to (H, W, C, F).
     int64_t retHeight = leftTransform ? m + r - 1 : 1;
     int64_t retWidth = rightTransform ? m + r - 1 : 1;
-    auto insertSliceOp = insert2DData(builder, loc, matmulRetValue, args[0],
-                                      FIter, CIter, retHeight, retWidth,
-                                      /*outLoopIdx=*/3, /*inLoopIdx=*/2,
-                                      /*heightIdx=*/0, /*widthIdx=*/1,
-                                      /*destSize=*/4);
+
+    auto insertSliceOp =
+        insert2DDataTo4D(builder, loc, matmulRetValue, args[0], FIter, CIter,
+                         zeroIdx, zeroIdx, retHeight, retWidth,
+                         /*loopNorFIdx=*/3, /*loopCorFIdx=*/2,
+                         /*heightIdx=*/0, /*widthIdx=*/1);
 
     return {insertSliceOp};
   };
 
-  auto zeroIdx = rewriter.create<arith::ConstantIndexOp>(loc, 0);
   auto fUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, filterF);
   auto cUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, filterC);
   auto oneStep = rewriter.create<arith::ConstantIndexOp>(loc, 1);
@@ -401,12 +456,18 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
 /// NHWC first. We need to generate 2 levels of loops to iterate on N and C.
 /// After the transformation, we get
 ///
-/// scf.for %n = lo_n to hi_n step 1
-///   scf.for %c = lo_c to hi_c step 1
-///     %extracted = extract input<h x w> from input<n x h x w x c>
-///     %ret = linalg.matmul BT, %extracted
-///     %ret = linalg.matmul %ret, B
-///     %inserted = insert %ret into input<h x w x n x c>
+/// scf.for %h = 0 to HTile step 1
+///   scf.for %w = 0 to WTile step 1
+///     scf.for %n = 0 to N step 1
+///       scf.for %c = 0 to C step 1
+///         %extracted = extract input<alphaH x alphaW> from
+///                              input<N x H x W x C>
+///                              at [%n, (%h x m), (%w x m), %c]
+///         %ret = linalg.matmul BT, %extracted
+///         %ret = linalg.matmul %ret, B
+///         %inserted = insert %ret into
+///                            input<alphaH x alphaW x tileH x tileW x N x C>
+///                            at [0, 0, %h, %w, %n, %c]
 Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
                      Value retValue, int64_t m, int64_t r,
                      bool leftTransform = true, bool rightTransform = true) {
@@ -433,23 +494,38 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
   int64_t inputH = inputShape[1];
   int64_t inputW = inputShape[2];
   int64_t inputC = inputShape[3];
+  auto valueType = cast<ShapedType>(retValue.getType());
+  auto valueShape = valueType.getShape(); // alphaH, alphaW, HTile, WTile, N, C
+  int64_t tileH = valueShape[2];
+  int64_t tileW = valueShape[3];
   int64_t alphaH = leftTransform ? m + r - 1 : 1;
   int64_t alphaW = rightTransform ? m + r - 1 : 1;
 
-  if (inputH != alphaH && inputH != 1)
+  if ((inputH != (tileH * m) + (r - 1)) && inputH != 1)
     return Value();
-  if (inputW != alphaW && inputW != 1)
+  if ((inputW != (tileW * m) + (r - 1)) && inputW != 1)
     return Value();
 
   auto buildBody = [&](OpBuilder &builder, Location loc, ValueRange ivs,
                        ValueRange args) -> scf::ValueVector {
-    Value NIter = ivs[0];
-    Value CIter = ivs[1];
+    Value tileHIter = ivs[0];
+    Value tileWIter = ivs[1];
+    Value NIter = ivs[2];
+    Value CIter = ivs[3];
+
+    auto context = builder.getContext();
+    auto affineMap =
+        AffineMap::get(1, 0, {builder.getAffineDimExpr(0) * m}, context);
+    Value heightOffset =
+        builder.create<affine::AffineApplyOp>(loc, affineMap, tileHIter);
+    Value widthOffset =
+        builder.create<affine::AffineApplyOp>(loc, affineMap, tileWIter);
 
     // Extract (H, W) from (N, H, W, C).
-    auto extractInput = extract2DData(
-        builder, loc, input, NIter, CIter, /*outLoopIdx=*/0,
-        /*inLoopIdx=*/3, /*heightIdx=*/1, /*widthIdx=*/2, /*srcSize=*/4);
+    auto extractInput =
+        extract2DDataFrom4D(builder, loc, input, NIter, CIter, heightOffset,
+                            widthOffset, alphaH, alphaW, /*loopNorFIdx=*/0,
+                            /*loopCorFIdx=*/3, /*heightIdx=*/1, /*widthIdx=*/2);
 
     TransformMapKeyTy key = {m, r};
     int64_t retRows = 1;
@@ -463,7 +539,7 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
       const TransformMatrix &BTMatrix = it->second;
 
       retRows = BTMatrix.rows;
-      auto matmulType = RankedTensorType::get({retRows, inputW}, elementType);
+      auto matmulType = RankedTensorType::get({retRows, alphaW}, elementType);
       auto init = builder.create<tensor::EmptyOp>(loc, matmulType.getShape(),
                                                   elementType);
 
@@ -494,22 +570,25 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
       matmulRetValue = matmulOp.getResult(0);
     }
 
-    // Insert (H, W) to (H, W, 1, 1, N, C).
-    auto combinedVal = insert2DData(
-        builder, loc, matmulRetValue, args[0], NIter, CIter, retRows, retCols,
-        /*outLoopIdx=*/4, /*inLoopIdx=*/5, /*heightIdx=*/0, /*widthIdx=*/1,
-        /*destSize=*/6);
+    // Insert (H, W) to (H, W, tileH, tileW, N, C).
+    auto combinedVal = insert2DDataTo6D(
+        builder, loc, matmulRetValue, args[0], tileHIter, tileWIter, NIter,
+        CIter, retRows, retCols, 2, 3, /*loopNorFIdx=*/4, /*loopCorFIdx=*/5,
+        /*heightIdx=*/0, /*widthIdx=*/1);
 
     return {combinedVal};
   };
 
   auto zeroIdx = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+  auto tileHBound = rewriter.create<arith::ConstantIndexOp>(loc, tileH);
+  auto tileWBound = rewriter.create<arith::ConstantIndexOp>(loc, tileW);
   auto nUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, inputN);
   auto cUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, inputC);
   auto oneStep = rewriter.create<arith::ConstantIndexOp>(loc, 1);
   scf::LoopNest loops = scf::buildLoopNest(
-      rewriter, loc, {zeroIdx, zeroIdx}, {nUpperBound, cUpperBound},
-      {oneStep, oneStep}, {retValue}, buildBody);
+      rewriter, loc, {zeroIdx, zeroIdx, zeroIdx, zeroIdx},
+      {tileHBound, tileWBound, nUpperBound, cUpperBound},
+      {oneStep, oneStep, oneStep, oneStep}, {retValue}, buildBody);
   return loops.results[0];
 }
 
@@ -631,13 +710,16 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
 
   auto buildBody = [&](OpBuilder &builder, Location loc, ValueRange ivs,
                        ValueRange args) -> scf::ValueVector {
-    Value NIter = ivs[0];
-    Value FIter = ivs[1];
+    Value tileHIter = ivs[0];
+    Value tileWIter = ivs[1];
+    Value NIter = ivs[2];
+    Value FIter = ivs[3];
 
-    // Extract (H, W) from (H, W, 1, 1, N, F).
-    auto extractValue = extract2DData(
-        builder, loc, value, NIter, FIter, /*outLoopIdx=*/4,
-        /*inLoopIdx=*/5, /*heightIdx=*/0, /*widthIdx=*/1, /*srcSize=*/6);
+    // Extract (H, W) from (H, W, tileH, tileW, N, F).
+    auto extractValue =
+        extract2DDataFrom6D(builder, loc, value, tileHIter, tileWIter, NIter,
+                            FIter, 2, 3, /*loopNorFIdx=*/4,
+                            /*loopCorFIdx=*/5, /*heightIdx=*/0, /*widthIdx=*/1);
 
     TransformMapKeyTy key = {m, r};
     int64_t retRows = 1;
@@ -720,23 +802,37 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
                            .getResult(0);
     }
 
+    auto context = builder.getContext();
+    auto affineMap =
+        AffineMap::get(1, 0, {builder.getAffineDimExpr(0) * m}, context);
+    Value heightOffset =
+        builder.create<affine::AffineApplyOp>(loc, affineMap, tileHIter);
+    Value widthOffset =
+        builder.create<affine::AffineApplyOp>(loc, affineMap, tileWIter);
+
     // Insert (H, W) to (N, H, W, F).
-    Value combinedVal = insert2DData(builder, loc, matmulRetValue, args[0],
-                                     NIter, FIter, retRows, retCols,
-                                     /*outLoopIdx=*/0,
-                                     /*inLoopIdx=*/3, /*heightIdx=*/1,
-                                     /*widthIdx=*/2, /*destSize=*/4);
+    Value combinedVal =
+        insert2DDataTo4D(builder, loc, matmulRetValue, args[0], NIter, FIter,
+                         heightOffset, widthOffset, retRows, retCols,
+                         /*loopNorFIdx=*/0,
+                         /*loopCorFIdx=*/3, /*heightIdx=*/1,
+                         /*widthIdx=*/2);
 
     return {combinedVal};
   };
 
+  int64_t tilwH = valueShape[2];
+  int64_t tileW = valueShape[3];
   auto zeroIdx = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+  auto tileHBound = rewriter.create<arith::ConstantIndexOp>(loc, tilwH);
+  auto tileWBound = rewriter.create<arith::ConstantIndexOp>(loc, tileW);
   auto nUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, valueN);
   auto fUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, valueF);
   auto oneStep = rewriter.create<arith::ConstantIndexOp>(loc, 1);
   scf::LoopNest loops = scf::buildLoopNest(
-      rewriter, loc, {zeroIdx, zeroIdx}, {nUpperBound, fUpperBound},
-      {oneStep, oneStep}, {output}, buildBody);
+      rewriter, loc, {zeroIdx, zeroIdx, zeroIdx, zeroIdx},
+      {tileHBound, tileWBound, nUpperBound, fUpperBound},
+      {oneStep, oneStep, oneStep, oneStep}, {output}, buildBody);
   return loops.results[0];
 }
 
