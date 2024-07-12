@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Support/CyclicReplacerCache.h"
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SetVector.h"
 #include "gmock/gmock.h"
 #include <map>
