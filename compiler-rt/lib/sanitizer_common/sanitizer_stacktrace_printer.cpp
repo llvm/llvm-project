@@ -192,7 +192,7 @@ void FormattedStackTracePrinter::RenderFrame(InternalScopedString *buffer,
       buffer->AppendF("%u", frame_no);
       break;
     case 'p':
-      buffer->AppendF("0x%zx", address);
+      buffer->AppendF("%p", (void *)address);
       break;
     case 'm':
       buffer->AppendF("%s", StripPathPrefix(info->module, strip_path_prefix));

@@ -109,6 +109,15 @@ static void InitializeShadowBaseAddress(uptr shadow_size_bytes) {
   // FIXME: Android should init flags before shadow.
   if (!SANITIZER_ANDROID && flags()->fixed_shadow_base != (uptr)-1) {
     __hwasan_shadow_memory_dynamic_address = flags()->fixed_shadow_base;
+    uptr beg = __hwasan_shadow_memory_dynamic_address;
+    uptr end = beg + shadow_size_bytes;
+    if (!MemoryRangeIsAvailable(beg, end)) {
+      Report(
+          "FATAL: HWAddressSanitizer: Shadow range %p-%p is not available.\n",
+          (void *)beg, (void *)end);
+      DumpProcessMap();
+      CHECK(MemoryRangeIsAvailable(beg, end));
+    }
   } else {
     __hwasan_shadow_memory_dynamic_address =
         FindDynamicShadowStart(shadow_size_bytes);
