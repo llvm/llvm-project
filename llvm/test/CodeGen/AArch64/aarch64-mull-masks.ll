@@ -997,7 +997,7 @@ define i64 @umull_ldr2_d(ptr %x0, i64 %x1) {
 ; CHECK-LABEL: umull_ldr2_d:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    and x9, x1, #0xffffffff
+; CHECK-NEXT:    mov w9, w1
 ; CHECK-NEXT:    umull x0, w8, w9
 ; CHECK-NEXT:    ret
 entry:
@@ -1110,7 +1110,7 @@ define i64 @umaddl_ldr2_d(ptr %x0, i64 %x1, i64 %x2) {
 ; CHECK-LABEL: umaddl_ldr2_d:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    and x9, x1, #0xffffffff
+; CHECK-NEXT:    mov w9, w1
 ; CHECK-NEXT:    umaddl x0, w8, w9, x2
 ; CHECK-NEXT:    ret
 entry:
@@ -1224,7 +1224,7 @@ define i64 @umnegl_ldr2_d(ptr %x0, i64 %x1) {
 ; CHECK-LABEL: umnegl_ldr2_d:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    and x9, x1, #0xffffffff
+; CHECK-NEXT:    mov w9, w1
 ; CHECK-NEXT:    umnegl x0, w8, w9
 ; CHECK-NEXT:    ret
 entry:
@@ -1338,7 +1338,7 @@ define i64 @umsubl_ldr2_d(ptr %x0, i64 %x1, i64 %x2) {
 ; CHECK-LABEL: umsubl_ldr2_d:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    and x9, x1, #0xffffffff
+; CHECK-NEXT:    mov w9, w1
 ; CHECK-NEXT:    umsubl x0, w8, w9, x2
 ; CHECK-NEXT:    ret
 entry:
@@ -1400,7 +1400,7 @@ define i64 @umull_and_lshr(i64 %x) {
 ; CHECK-LABEL: umull_and_lshr:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr x8, x0, #32
-; CHECK-NEXT:    and x9, x0, #0xffffffff
+; CHECK-NEXT:    mov w9, w0
 ; CHECK-NEXT:    umull x0, w9, w8
 ; CHECK-NEXT:    ret
     %lo = and i64 %x, u0xffffffff
@@ -1424,7 +1424,7 @@ define i64 @umaddl_and_lshr(i64 %x, i64 %a) {
 ; CHECK-LABEL: umaddl_and_lshr:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    lsr x8, x0, #32
-; CHECK-NEXT:    and x9, x0, #0xffffffff
+; CHECK-NEXT:    mov w9, w0
 ; CHECK-NEXT:    umaddl x0, w9, w8, x1
 ; CHECK-NEXT:    ret
     %lo = and i64 %x, u0xffffffff
@@ -1437,8 +1437,8 @@ define i64 @umaddl_and_lshr(i64 %x, i64 %a) {
 define i64 @umaddl_and_and(i64 %x, i64 %y, i64 %a) {
 ; CHECK-LABEL: umaddl_and_and:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and x8, x0, #0xffffffff
-; CHECK-NEXT:    and x9, x1, #0xffffffff
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    mov w9, w1
 ; CHECK-NEXT:    umaddl x0, w8, w9, x2
 ; CHECK-NEXT:    ret
     %lo = and i64 %x, u0xffffffff
