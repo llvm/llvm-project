@@ -27,7 +27,7 @@ namespace LIBC_NAMESPACE {
 // FILE *stdout = fopencookie(&__llvm_libc_stdout_cookie, "w", stdout_func);
 // ...
 // struct __llvm_libc_stdio_cookie __llvm_libc_stderr_cookie;
-// cookie_io_functions_t stdout_func = { .write = __llvm_libc_stdio_write };
+// cookie_io_functions_t stderr_func = { .write = __llvm_libc_stdio_write };
 // FILE *stderr = fopencookie(&__llvm_libc_stderr_cookie, "w", stderr_func);
 // ```
 //
@@ -42,7 +42,8 @@ extern struct __llvm_libc_stdio_cookie __llvm_libc_stdout_cookie;
 extern struct __llvm_libc_stdio_cookie __llvm_libc_stderr_cookie;
 
 extern "C" ssize_t __llvm_libc_stdio_read(void *cookie, char *buf, size_t size);
-extern "C" ssize_t __llvm_libc_stdio_write(void *cookie, const char *buf, size_t size);
+extern "C" ssize_t __llvm_libc_stdio_write(void *cookie, const char *buf,
+                                           size_t size);
 
 ssize_t read_from_stdin(char *buf, size_t size) {
   return __llvm_libc_stdio_read(static_cast<void *>(&__llvm_libc_stdin_cookie),
@@ -51,12 +52,12 @@ ssize_t read_from_stdin(char *buf, size_t size) {
 
 void write_to_stdout(cpp::string_view msg) {
   __llvm_libc_stdio_write(static_cast<void *>(&__llvm_libc_stdout_cookie),
-                                 msg.data(), msg.size());
+                          msg.data(), msg.size());
 }
 
 void write_to_stderr(cpp::string_view msg) {
   __llvm_libc_stdio_write(static_cast<void *>(&__llvm_libc_stderr_cookie),
-                                 msg.data(), msg.size());
+                          msg.data(), msg.size());
 }
 
 } // namespace LIBC_NAMESPACE
