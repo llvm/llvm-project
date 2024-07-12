@@ -165,6 +165,7 @@ Clang Python Bindings Potentially Breaking Changes
   of variant 271.
 - Renamed ``TypeKind`` variant 162 from ``OBJCCLASS`` to ``OBJCTYPEPARAM``.
   The previous name was incorrect, it was a duplicate of variant 28.
+- Refactored enum implementation, switching to the standard library `Enum` type.
 
 What's New in Clang |release|?
 ==============================
@@ -712,6 +713,9 @@ Improvements to Clang's diagnostics
 - For the ARM target, calling an interrupt handler from another function is now an error. #GH95359.
 
 - Clang now diagnoses integer constant expressions that are folded to a constant value as an extension in more circumstances. Fixes #GH59863
+
+- Clang now diagnoses missing format attributes for non-template functions and
+  class/struct/union members. Fixes #GH60718
 
 Improvements to Clang's time-trace
 ----------------------------------
