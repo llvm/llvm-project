@@ -381,7 +381,7 @@ bool SBTypeSummary::CopyOnWrite_Impl() {
   if (!IsValid())
     return false;
 
-  if (m_opaque_sp.unique())
+  if (m_opaque_sp.use_count() == 1)
     return true;
 
   TypeSummaryImplSP new_sp;

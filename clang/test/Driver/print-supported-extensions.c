@@ -4,8 +4,8 @@
 // RUN: %if aarch64-registered-target %{ %clang --target=aarch64-linux-gnu \
 // RUN:   --print-supported-extensions 2>&1 | FileCheck %s --check-prefix AARCH64 %}
 // AARCH64: All available -march extensions for AArch64
-// AARCH64:     Name                Description
-// AARCH64:     aes                 Enable AES support (FEAT_AES, FEAT_PMULL)
+// AARCH64:     Name                Architecture Feature(s)                                Description
+// AARCH64:     aes                 FEAT_AES, FEAT_PMULL                                   Enable AES support
 
 // RUN: %if riscv-registered-target %{ %clang --target=riscv64-linux-gnu \
 // RUN:   --print-supported-extensions 2>&1 | FileCheck %s --check-prefix RISCV %}

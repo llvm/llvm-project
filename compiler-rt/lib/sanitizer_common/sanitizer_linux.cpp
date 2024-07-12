@@ -58,7 +58,6 @@
 #  include <sched.h>
 #  include <signal.h>
 #  include <sys/mman.h>
-#  include <sys/param.h>
 #  if !SANITIZER_SOLARIS
 #    include <sys/ptrace.h>
 #  endif
@@ -136,9 +135,7 @@ const int FUTEX_WAKE_PRIVATE = FUTEX_WAKE | FUTEX_PRIVATE_FLAG;
 #    define SANITIZER_LINUX_USES_64BIT_SYSCALLS 0
 #  endif
 
-// Note : FreeBSD had implemented both
-// Linux apis, available from
-// future 12.x version most likely
+// Note : FreeBSD implemented both Linux and OpenBSD apis.
 #  if SANITIZER_LINUX && defined(__NR_getrandom)
 #    if !defined(GRND_NONBLOCK)
 #      define GRND_NONBLOCK 1
@@ -148,10 +145,8 @@ const int FUTEX_WAKE_PRIVATE = FUTEX_WAKE | FUTEX_PRIVATE_FLAG;
 #    define SANITIZER_USE_GETRANDOM 0
 #  endif  // SANITIZER_LINUX && defined(__NR_getrandom)
 
-#  if SANITIZER_FREEBSD && __FreeBSD_version >= 1200000
+#  if SANITIZER_FREEBSD
 #    define SANITIZER_USE_GETENTROPY 1
-#  else
-#    define SANITIZER_USE_GETENTROPY 0
 #  endif
 
 namespace __sanitizer {
@@ -1141,7 +1136,7 @@ uptr GetMaxUserVirtualAddress() {
   return addr;
 }
 
-#  if !SANITIZER_ANDROID
+#  if !SANITIZER_ANDROID || defined(__aarch64__)
 uptr GetPageSize() {
 #    if SANITIZER_LINUX && (defined(__x86_64__) || defined(__i386__)) && \
         defined(EXEC_PAGESIZE)
@@ -1160,7 +1155,7 @@ uptr GetPageSize() {
   return sysconf(_SC_PAGESIZE);  // EXEC_PAGESIZE may not be trustworthy.
 #    endif
 }
-#  endif  // !SANITIZER_ANDROID
+#  endif
 
 uptr ReadBinaryName(/*out*/ char *buf, uptr buf_len) {
 #  if SANITIZER_SOLARIS
@@ -1185,7 +1180,7 @@ uptr ReadBinaryName(/*out*/ char *buf, uptr buf_len) {
   uptr module_name_len = internal_readlink(default_module_name, buf, buf_len);
   int readlink_error;
   bool IsErr = internal_iserror(module_name_len, &readlink_error);
-#    endif  // SANITIZER_SOLARIS
+#    endif
   if (IsErr) {
     // We can't read binary name for some reason, assume it's unknown.
     Report(
@@ -1850,18 +1845,18 @@ HandleSignalMode GetHandleSignalMode(int signum) {
 
 #  if !SANITIZER_GO
 void *internal_start_thread(void *(*func)(void *arg), void *arg) {
-  if (&real_pthread_create == 0)
+  if (&internal_pthread_create == 0)
     return nullptr;
   // Start the thread with signals blocked, otherwise it can steal user signals.
   ScopedBlockSignals block(nullptr);
   void *th;
-  real_pthread_create(&th, nullptr, func, arg);
+  internal_pthread_create(&th, nullptr, func, arg);
   return th;
 }
 
 void internal_join_thread(void *th) {
-  if (&real_pthread_join)
-    real_pthread_join(th, nullptr);
+  if (&internal_pthread_join)
+    internal_pthread_join(th, nullptr);
 }
 #  else
 void *internal_start_thread(void *(*func)(void *), void *arg) { return 0; }

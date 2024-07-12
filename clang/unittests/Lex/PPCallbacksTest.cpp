@@ -37,7 +37,8 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override {
     this->HashLoc = HashLoc;
     this->IncludeTok = IncludeTok;
@@ -47,7 +48,8 @@ public:
     this->File = File;
     this->SearchPath = SearchPath.str();
     this->RelativePath = RelativePath.str();
-    this->Imported = Imported;
+    this->SuggestedModule = SuggestedModule;
+    this->ModuleImported = ModuleImported;
     this->FileType = FileType;
   }
 
@@ -59,7 +61,8 @@ public:
   OptionalFileEntryRef File;
   SmallString<16> SearchPath;
   SmallString<16> RelativePath;
-  const Module* Imported;
+  const Module *SuggestedModule;
+  bool ModuleImported;
   SrcMgr::CharacteristicKind FileType;
 };
 

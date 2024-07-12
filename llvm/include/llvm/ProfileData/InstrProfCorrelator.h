@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// This file defines InstrProfCorrelator used to generate PGO profiles from
-// raw profile data and debug info.
+// This file defines InstrProfCorrelator used to generate PGO/coverage profiles
+// from raw profile data and debug info/binary file.
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_PROFILEDATA_INSTRPROFCORRELATOR_H
@@ -31,8 +31,9 @@ class ObjectFile;
 /// to their functions.
 class InstrProfCorrelator {
 public:
-  /// Indicate which kind correlator to use.
-  enum ProfCorrelatorKind { NONE, DEBUG_INFO };
+  /// Indicate if we should use the debug info or profile metadata sections to
+  /// correlate.
+  enum ProfCorrelatorKind { NONE, DEBUG_INFO, BINARY };
 
   static llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
   get(StringRef Filename, ProfCorrelatorKind FileKind);
@@ -71,11 +72,18 @@ public:
 protected:
   struct Context {
     static llvm::Expected<std::unique_ptr<Context>>
-    get(std::unique_ptr<MemoryBuffer> Buffer, const object::ObjectFile &Obj);
+    get(std::unique_ptr<MemoryBuffer> Buffer, const object::ObjectFile &Obj,
+        ProfCorrelatorKind FileKind);
     std::unique_ptr<MemoryBuffer> Buffer;
     /// The address range of the __llvm_prf_cnts section.
     uint64_t CountersSectionStart;
     uint64_t CountersSectionEnd;
+    /// The pointer points to start/end of profile data/name sections if
+    /// FileKind is Binary.
+    const char *DataStart;
+    const char *DataEnd;
+    const char *NameStart;
+    size_t NameSize;
     /// True if target and host have different endian orders.
     bool ShouldSwapBytes;
   };
@@ -145,19 +153,20 @@ protected:
 
   Error dumpYaml(int MaxWarnings, raw_ostream &OS) override;
 
-  void addProbe(StringRef FunctionName, uint64_t CFGHash, IntPtrT CounterOffset,
-                IntPtrT FunctionPtr, uint32_t NumCounters);
+  void addDataProbe(uint64_t FunctionName, uint64_t CFGHash,
+                    IntPtrT CounterOffset, IntPtrT FunctionPtr,
+                    uint32_t NumCounters);
+
+  // Byte-swap the value if necessary.
+  template <class T> T maybeSwap(T Value) const {
+    return Ctx->ShouldSwapBytes ? llvm::byteswap(Value) : Value;
+  }
 
 private:
   InstrProfCorrelatorImpl(InstrProfCorrelatorKind Kind,
                           std::unique_ptr<InstrProfCorrelator::Context> Ctx)
       : InstrProfCorrelator(Kind, std::move(Ctx)){};
   llvm::DenseSet<IntPtrT> CounterOffsets;
-
-  // Byte-swap the value if necessary.
-  template <class T> T maybeSwap(T Value) const {
-    return Ctx->ShouldSwapBytes ? llvm::byteswap(Value) : Value;
-  }
 };
 
 /// DwarfInstrProfCorrelator - A child of InstrProfCorrelatorImpl that takes
@@ -207,6 +216,28 @@ private:
   /// \endcode
   /// \param MaxWarnings the maximum number of warnings to emit (0 = no limit)
   /// \param Data if provided, populate with the correlation data found
+  void correlateProfileDataImpl(
+      int MaxWarnings,
+      InstrProfCorrelator::CorrelationData *Data = nullptr) override;
+
+  Error correlateProfileNameImpl() override;
+};
+
+/// BinaryInstrProfCorrelator - A child of InstrProfCorrelatorImpl that
+/// takes an object file as input to correlate profiles.
+template <class IntPtrT>
+class BinaryInstrProfCorrelator : public InstrProfCorrelatorImpl<IntPtrT> {
+public:
+  BinaryInstrProfCorrelator(std::unique_ptr<InstrProfCorrelator::Context> Ctx)
+      : InstrProfCorrelatorImpl<IntPtrT>(std::move(Ctx)) {}
+
+  /// Return a pointer to the names string that this class constructs.
+  const char *getNamesPointer() const { return this->Ctx.NameStart; }
+
+  /// Return the number of bytes in the names string.
+  size_t getNamesSize() const { return this->Ctx.NameSize; }
+
+private:
   void correlateProfileDataImpl(
       int MaxWarnings,
       InstrProfCorrelator::CorrelationData *Data = nullptr) override;

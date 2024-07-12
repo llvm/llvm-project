@@ -9,49 +9,103 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_FMATEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_FMATEST_H
 
-#include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-template <typename T>
-class FmaTestTemplate : public LIBC_NAMESPACE::testing::Test {
-private:
-  using Func = T (*)(T, T, T);
-  using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
-  const T nan = T(LIBC_NAMESPACE::fputil::FPBits<T>::build_quiet_nan(1));
-  const T inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::inf());
-  const T neg_inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_inf());
-  const T zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::zero());
-  const T neg_zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_zero());
+template <typename OutType, typename InType = OutType>
+class FmaTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
+
+  struct OutConstants {
+    DECLARE_SPECIAL_CONSTANTS(OutType)
+  };
+
+  struct InConstants {
+    DECLARE_SPECIAL_CONSTANTS(InType)
+  };
+
+  using OutFPBits = typename OutConstants::FPBits;
+  using OutStorageType = typename OutConstants::StorageType;
+  using InFPBits = typename InConstants::FPBits;
+  using InStorageType = typename InConstants::StorageType;
+
+  static constexpr OutStorageType OUT_MIN_NORMAL_U =
+      OutFPBits::min_normal().uintval();
+  static constexpr InStorageType IN_MIN_NORMAL_U =
+      InFPBits::min_normal().uintval();
+
+  OutConstants out;
+  InConstants in;
 
 public:
-  void test_special_numbers(Func func) {
-    EXPECT_FP_EQ(func(zero, zero, zero), zero);
-    EXPECT_FP_EQ(func(zero, neg_zero, neg_zero), neg_zero);
-    EXPECT_FP_EQ(func(inf, inf, zero), inf);
-    EXPECT_FP_EQ(func(neg_inf, inf, neg_inf), neg_inf);
-    EXPECT_FP_EQ(func(inf, zero, zero), nan);
-    EXPECT_FP_EQ(func(inf, neg_inf, inf), nan);
-    EXPECT_FP_EQ(func(nan, zero, inf), nan);
-    EXPECT_FP_EQ(func(inf, neg_inf, nan), nan);
+  using FmaFunc = OutType (*)(InType, InType, InType);
+
+  void test_special_numbers(FmaFunc func) {
+    EXPECT_FP_EQ(out.zero, func(in.zero, in.zero, in.zero));
+    EXPECT_FP_EQ(out.neg_zero, func(in.zero, in.neg_zero, in.neg_zero));
+    EXPECT_FP_EQ(out.inf, func(in.inf, in.inf, in.zero));
+    EXPECT_FP_EQ(out.neg_inf, func(in.neg_inf, in.inf, in.neg_inf));
+    EXPECT_FP_EQ(out.aNaN, func(in.inf, in.zero, in.zero));
+    EXPECT_FP_EQ(out.aNaN, func(in.inf, in.neg_inf, in.inf));
+    EXPECT_FP_EQ(out.aNaN, func(in.aNaN, in.zero, in.inf));
+    EXPECT_FP_EQ(out.aNaN, func(in.inf, in.neg_inf, in.aNaN));
 
     // Test underflow rounding up.
-    EXPECT_FP_EQ(func(T(0.5), T(FPBits(FPBits::MIN_SUBNORMAL)),
-                      T(FPBits(FPBits::MIN_SUBNORMAL))),
-                 T(FPBits(UIntType(2))));
+    EXPECT_FP_EQ(OutFPBits(OutStorageType(2)).get_val(),
+                 func(OutType(0.5), out.min_denormal, out.min_denormal));
+
+    if constexpr (sizeof(OutType) < sizeof(InType)) {
+      EXPECT_FP_EQ(out.zero,
+                   func(InType(0.5), in.min_denormal, in.min_denormal));
+    }
+
     // Test underflow rounding down.
-    T v = T(FPBits(FPBits::MIN_NORMAL + UIntType(1)));
-    EXPECT_FP_EQ(func(T(1) / T(FPBits::MIN_NORMAL << 1), v,
-                      T(FPBits(FPBits::MIN_NORMAL))),
-                 v);
+    OutType v = OutFPBits(static_cast<OutStorageType>(OUT_MIN_NORMAL_U +
+                                                      OutStorageType(1)))
+                    .get_val();
+    EXPECT_FP_EQ(v, func(OutType(1) / OutType(OUT_MIN_NORMAL_U << 1), v,
+                         out.min_normal));
+
+    if constexpr (sizeof(OutType) < sizeof(InType)) {
+      InType v = InFPBits(static_cast<InStorageType>(IN_MIN_NORMAL_U +
+                                                     InStorageType(1)))
+                     .get_val();
+      EXPECT_FP_EQ(
+          out.min_normal,
+          func(InType(1) / InType(IN_MIN_NORMAL_U << 1), v, out.min_normal));
+    }
+
     // Test overflow.
-    T z = T(FPBits(FPBits::MAX_NORMAL));
-    EXPECT_FP_EQ(func(T(1.75), z, -z), T(0.75) * z);
+    OutType z = out.max_normal;
+    EXPECT_FP_EQ_ALL_ROUNDING(OutType(0.75) * z, func(InType(1.75), z, -z));
+
     // Exact cancellation.
-    EXPECT_FP_EQ(func(T(3.0), T(5.0), -T(15.0)), T(0.0));
-    EXPECT_FP_EQ(func(T(-3.0), T(5.0), T(15.0)), T(0.0));
+    EXPECT_FP_EQ_ROUNDING_NEAREST(
+        out.zero, func(InType(3.0), InType(5.0), InType(-15.0)));
+    EXPECT_FP_EQ_ROUNDING_UPWARD(out.zero,
+                                 func(InType(3.0), InType(5.0), InType(-15.0)));
+    EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(
+        out.zero, func(InType(3.0), InType(5.0), InType(-15.0)));
+    EXPECT_FP_EQ_ROUNDING_DOWNWARD(
+        out.neg_zero, func(InType(3.0), InType(5.0), InType(-15.0)));
+
+    EXPECT_FP_EQ_ROUNDING_NEAREST(
+        out.zero, func(InType(-3.0), InType(5.0), InType(15.0)));
+    EXPECT_FP_EQ_ROUNDING_UPWARD(out.zero,
+                                 func(InType(-3.0), InType(5.0), InType(15.0)));
+    EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(
+        out.zero, func(InType(-3.0), InType(5.0), InType(15.0)));
+    EXPECT_FP_EQ_ROUNDING_DOWNWARD(
+        out.neg_zero, func(InType(-3.0), InType(5.0), InType(15.0)));
   }
 };
+
+#define LIST_FMA_TESTS(T, func)                                                \
+  using LlvmLibcFmaTest = FmaTestTemplate<T>;                                  \
+  TEST_F(LlvmLibcFmaTest, SpecialNumbers) { test_special_numbers(&func); }
+
+#define LIST_NARROWING_FMA_TESTS(OutType, InType, func)                        \
+  using LlvmLibcFmaTest = FmaTestTemplate<OutType, InType>;                    \
+  TEST_F(LlvmLibcFmaTest, SpecialNumbers) { test_special_numbers(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_FMATEST_H

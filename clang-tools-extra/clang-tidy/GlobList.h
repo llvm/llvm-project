@@ -44,8 +44,12 @@ private:
   struct GlobListItem {
     bool IsPositive;
     llvm::Regex Regex;
+    llvm::StringRef Text;
   };
   SmallVector<GlobListItem, 0> Items;
+
+public:
+  const SmallVectorImpl<GlobListItem> &getItems() const { return Items; };
 };
 
 /// A \p GlobList that caches search results, so that search is performed only

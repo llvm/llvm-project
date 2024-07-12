@@ -1,15 +1,17 @@
-"""report.py - Utilities for reporting statistics about benchmark results
+# type: ignore
+
+"""
+report.py - Utilities for reporting statistics about benchmark results
 """
 
-import unittest
-import os
-import re
 import copy
+import os
 import random
+import re
+import unittest
 
-from scipy.stats import mannwhitneyu, gmean
 from numpy import array
-from pandas import Timedelta
+from scipy.stats import gmean, mannwhitneyu
 
 
 class BenchmarkColor(object):
@@ -42,6 +44,13 @@ UTEST_MIN_REPETITIONS = 2
 UTEST_OPTIMAL_REPETITIONS = 9  # Lowest reasonable number, More is better.
 UTEST_COL_NAME = "_pvalue"
 
+_TIME_UNIT_TO_SECONDS_MULTIPLIER = {
+    "s": 1.0,
+    "ms": 1e-3,
+    "us": 1e-6,
+    "ns": 1e-9,
+}
+
 
 def color_format(use_color, fmt_str, *args, **kwargs):
     """
@@ -52,7 +61,10 @@ def color_format(use_color, fmt_str, *args, **kwargs):
     """
     assert use_color is True or use_color is False
     if not use_color:
-        args = [arg if not isinstance(arg, BenchmarkColor) else BC_NONE for arg in args]
+        args = [
+            arg if not isinstance(arg, BenchmarkColor) else BC_NONE
+            for arg in args
+        ]
         kwargs = {
             key: arg if not isinstance(arg, BenchmarkColor) else BC_NONE
             for key, arg in kwargs.items()
@@ -165,9 +177,9 @@ def get_timedelta_field_as_seconds(benchmark, field_name):
     Get value of field_name field of benchmark, which is time with time unit
     time_unit, as time in seconds.
     """
-    time_unit = benchmark["time_unit"] if "time_unit" in benchmark else "s"
-    dt = Timedelta(benchmark[field_name], time_unit)
-    return dt / Timedelta(1, "s")
+    timedelta = benchmark[field_name]
+    time_unit = benchmark.get("time_unit", "s")
+    return timedelta * _TIME_UNIT_TO_SECONDS_MULTIPLIER.get(time_unit)
 
 
 def calculate_geomean(json):
@@ -273,6 +285,7 @@ def get_difference_report(json1, json2, utest=False):
     partitions = partition_benchmarks(json1, json2)
     for partition in partitions:
         benchmark_name = partition[0][0]["name"]
+        label = partition[0][0]["label"] if "label" in partition[0][0] else ""
         time_unit = partition[0][0]["time_unit"]
         measurements = []
         utest_results = {}
@@ -286,8 +299,12 @@ def get_difference_report(json1, json2, utest=False):
                     "cpu_time": bn["cpu_time"],
                     "real_time_other": other_bench["real_time"],
                     "cpu_time_other": other_bench["cpu_time"],
-                    "time": calculate_change(bn["real_time"], other_bench["real_time"]),
-                    "cpu": calculate_change(bn["cpu_time"], other_bench["cpu_time"]),
+                    "time": calculate_change(
+                        bn["real_time"], other_bench["real_time"]
+                    ),
+                    "cpu": calculate_change(
+                        bn["cpu_time"], other_bench["cpu_time"]
+                    ),
                 }
             )
 
@@ -298,7 +315,7 @@ def get_difference_report(json1, json2, utest=False):
             have_optimal_repetitions, cpu_pvalue, time_pvalue = calc_utest(
                 timings_cpu, timings_time
             )
-            if cpu_pvalue and time_pvalue:
+            if cpu_pvalue is not None and time_pvalue is not None:
                 utest_results = {
                     "have_optimal_repetitions": have_optimal_repetitions,
                     "cpu_pvalue": cpu_pvalue,
@@ -313,16 +330,20 @@ def get_difference_report(json1, json2, utest=False):
         # benchmark suite.
         if measurements:
             run_type = (
-                partition[0][0]["run_type"] if "run_type" in partition[0][0] else ""
+                partition[0][0]["run_type"]
+                if "run_type" in partition[0][0]
+                else ""
             )
             aggregate_name = (
                 partition[0][0]["aggregate_name"]
-                if run_type == "aggregate" and "aggregate_name" in partition[0][0]
+                if run_type == "aggregate"
+                and "aggregate_name" in partition[0][0]
                 else ""
             )
             diff_report.append(
                 {
                     "name": benchmark_name,
+                    "label": label,
                     "measurements": measurements,
                     "time_unit": time_unit,
                     "run_type": run_type,
@@ -337,6 +358,7 @@ def get_difference_report(json1, json2, utest=False):
         diff_report.append(
             {
                 "name": "OVERALL_GEOMEAN",
+                "label": "",
                 "measurements": [
                     {
                         "real_time": lhs_gmean[0],
@@ -392,7 +414,7 @@ def print_difference_report(
         # and if it is non-aggregate, then don't print it.
         if (
             not include_aggregates_only
-            or not "run_type" in benchmark
+            or "run_type" not in benchmark
             or benchmark["run_type"] == "aggregate"
         ):
             for measurement in benchmark["measurements"]:
@@ -438,7 +460,9 @@ class TestGetUniqueBenchmarkNames(unittest.TestCase):
     def load_results(self):
         import json
 
-        testInputs = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Inputs")
+        testInputs = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), "Inputs"
+        )
         testOutput = os.path.join(testInputs, "test3_run0.json")
         with open(testOutput, "r") as f:
             json = json.load(f)
@@ -485,16 +509,73 @@ class TestReportDifference(unittest.TestCase):
             ["BM_SameTimes", "+0.0000", "+0.0000", "10", "10", "10", "10"],
             ["BM_2xFaster", "-0.5000", "-0.5000", "50", "25", "50", "25"],
             ["BM_2xSlower", "+1.0000", "+1.0000", "50", "100", "50", "100"],
-            ["BM_1PercentFaster", "-0.0100", "-0.0100", "100", "99", "100", "99"],
-            ["BM_1PercentSlower", "+0.0100", "+0.0100", "100", "101", "100", "101"],
-            ["BM_10PercentFaster", "-0.1000", "-0.1000", "100", "90", "100", "90"],
-            ["BM_10PercentSlower", "+0.1000", "+0.1000", "100", "110", "100", "110"],
-            ["BM_100xSlower", "+99.0000", "+99.0000", "100", "10000", "100", "10000"],
-            ["BM_100xFaster", "-0.9900", "-0.9900", "10000", "100", "10000", "100"],
-            ["BM_10PercentCPUToTime", "+0.1000", "-0.1000", "100", "110", "100", "90"],
+            [
+                "BM_1PercentFaster",
+                "-0.0100",
+                "-0.0100",
+                "100",
+                "99",
+                "100",
+                "99",
+            ],
+            [
+                "BM_1PercentSlower",
+                "+0.0100",
+                "+0.0100",
+                "100",
+                "101",
+                "100",
+                "101",
+            ],
+            [
+                "BM_10PercentFaster",
+                "-0.1000",
+                "-0.1000",
+                "100",
+                "90",
+                "100",
+                "90",
+            ],
+            [
+                "BM_10PercentSlower",
+                "+0.1000",
+                "+0.1000",
+                "100",
+                "110",
+                "100",
+                "110",
+            ],
+            [
+                "BM_100xSlower",
+                "+99.0000",
+                "+99.0000",
+                "100",
+                "10000",
+                "100",
+                "10000",
+            ],
+            [
+                "BM_100xFaster",
+                "-0.9900",
+                "-0.9900",
+                "10000",
+                "100",
+                "10000",
+                "100",
+            ],
+            [
+                "BM_10PercentCPUToTime",
+                "+0.1000",
+                "-0.1000",
+                "100",
+                "110",
+                "100",
+                "90",
+            ],
             ["BM_ThirdFaster", "-0.3333", "-0.3334", "100", "67", "100", "67"],
             ["BM_NotBadTimeUnit", "-0.9000", "+0.2000", "0", "0", "0", "1"],
-            ["OVERALL_GEOMEAN", "-0.8344", "-0.8026", "0", "0", "0", "0"],
+            ["BM_hasLabel", "+0.0000", "+0.0000", "1", "1", "1", "1"],
+            ["OVERALL_GEOMEAN", "-0.8113", "-0.7779", "0", "0", "0", "0"],
         ]
         output_lines_with_header = print_difference_report(
             self.json_diff_report, use_color=False
@@ -512,6 +593,7 @@ class TestReportDifference(unittest.TestCase):
         expected_output = [
             {
                 "name": "BM_SameTimes",
+                "label": "",
                 "measurements": [
                     {
                         "time": 0.0000,
@@ -527,6 +609,7 @@ class TestReportDifference(unittest.TestCase):
             },
             {
                 "name": "BM_2xFaster",
+                "label": "",
                 "measurements": [
                     {
                         "time": -0.5000,
@@ -542,6 +625,7 @@ class TestReportDifference(unittest.TestCase):
             },
             {
                 "name": "BM_2xSlower",
+                "label": "",
                 "measurements": [
                     {
                         "time": 1.0000,
@@ -557,6 +641,7 @@ class TestReportDifference(unittest.TestCase):
             },
             {
                 "name": "BM_1PercentFaster",
+                "label": "",
                 "measurements": [
                     {
                         "time": -0.0100,
@@ -572,6 +657,7 @@ class TestReportDifference(unittest.TestCase):
             },
             {
                 "name": "BM_1PercentSlower",
+                "label": "",
                 "measurements": [
                     {
                         "time": 0.0100,
@@ -587,6 +673,7 @@ class TestReportDifference(unittest.TestCase):
             },
             {
                 "name": "BM_10PercentFaster",
+                "label": "",
                 "measurements": [
                     {
                         "time": -0.1000,
@@ -602,6 +689,7 @@ class TestReportDifference(unittest.TestCase):
             },
             {
                 "name": "BM_10PercentSlower",
+                "label": "",
                 "measurements": [
                     {
                         "time": 0.1000,
@@ -617,6 +705,7 @@ class TestReportDifference(unittest.TestCase):
             },
             {
                 "name": "BM_100xSlower",
+                "label": "",
                 "measurements": [
                     {
                         "time": 99.0000,
@@ -632,6 +721,7 @@ class TestReportDifference(unittest.TestCase):
             },
             {
                 "name": "BM_100xFaster",
+                "label": "",
                 "measurements": [
                     {
                         "time": -0.9900,
@@ -647,6 +737,7 @@ class TestReportDifference(unittest.TestCase):
             },
             {
                 "name": "BM_10PercentCPUToTime",
+                "label": "",
                 "measurements": [
                     {
                         "time": 0.1000,
@@ -662,6 +753,7 @@ class TestReportDifference(unittest.TestCase):
             },
             {
                 "name": "BM_ThirdFaster",
+                "label": "",
                 "measurements": [
                     {
                         "time": -0.3333,
@@ -677,6 +769,7 @@ class TestReportDifference(unittest.TestCase):
             },
             {
                 "name": "BM_NotBadTimeUnit",
+                "label": "",
                 "measurements": [
                     {
                         "time": -0.9000,
@@ -691,15 +784,32 @@ class TestReportDifference(unittest.TestCase):
                 "utest": {},
             },
             {
-                "name": "OVERALL_GEOMEAN",
+                "name": "BM_hasLabel",
+                "label": "a label",
                 "measurements": [
                     {
-                        "real_time": 1.193776641714438e-06,
-                        "cpu_time": 1.2144445585302297e-06,
+                        "time": 0.0000,
+                        "cpu": 0.0000,
+                        "real_time": 1,
+                        "real_time_other": 1,
+                        "cpu_time": 1,
+                        "cpu_time_other": 1,
+                    }
+                ],
+                "time_unit": "s",
+                "utest": {},
+            },
+            {
+                "name": "OVERALL_GEOMEAN",
+                "label": "",
+                "measurements": [
+                    {
+                        "real_time": 3.1622776601683826e-06,
+                        "cpu_time": 3.2130844755623912e-06,
                         "real_time_other": 1.9768988699420897e-07,
                         "cpu_time_other": 2.397447755209533e-07,
-                        "time": -0.834399601997324,
-                        "cpu": -0.8025889499549471,
+                        "time": -0.8112976497120911,
+                        "cpu": -0.7778551721181174,
                     }
                 ],
                 "time_unit": "s",
@@ -711,6 +821,7 @@ class TestReportDifference(unittest.TestCase):
         self.assertEqual(len(self.json_diff_report), len(expected_output))
         for out, expected in zip(self.json_diff_report, expected_output):
             self.assertEqual(out["name"], expected["name"])
+            self.assertEqual(out["label"], expected["label"])
             self.assertEqual(out["time_unit"], expected["time_unit"])
             assert_utest(self, out, expected)
             assert_measurements(self, out, expected)
@@ -1086,7 +1197,9 @@ class TestReportDifferenceWithUTest(unittest.TestCase):
             assert_measurements(self, out, expected)
 
 
-class TestReportDifferenceWithUTestWhileDisplayingAggregatesOnly(unittest.TestCase):
+class TestReportDifferenceWithUTestWhileDisplayingAggregatesOnly(
+    unittest.TestCase
+):
     @classmethod
     def setUpClass(cls):
         def load_results():
@@ -1369,10 +1482,106 @@ class TestReportSorting(unittest.TestCase):
 
         for n in range(len(self.json["benchmarks"]) ** 2):
             random.shuffle(self.json["benchmarks"])
-            sorted_benchmarks = util.sort_benchmark_results(self.json)["benchmarks"]
+            sorted_benchmarks = util.sort_benchmark_results(self.json)[
+                "benchmarks"
+            ]
             self.assertEqual(len(expected_names), len(sorted_benchmarks))
             for out, expected in zip(sorted_benchmarks, expected_names):
                 self.assertEqual(out["name"], expected)
+
+
+class TestReportDifferenceWithUTestWhileDisplayingAggregatesOnly2(
+    unittest.TestCase
+):
+    @classmethod
+    def setUpClass(cls):
+        def load_results():
+            import json
+
+            testInputs = os.path.join(
+                os.path.dirname(os.path.realpath(__file__)), "Inputs"
+            )
+            testOutput1 = os.path.join(testInputs, "test5_run0.json")
+            testOutput2 = os.path.join(testInputs, "test5_run1.json")
+            with open(testOutput1, "r") as f:
+                json1 = json.load(f)
+                json1["benchmarks"] = [
+                    json1["benchmarks"][0] for i in range(1000)
+                ]
+            with open(testOutput2, "r") as f:
+                json2 = json.load(f)
+                json2["benchmarks"] = [
+                    json2["benchmarks"][0] for i in range(1000)
+                ]
+            return json1, json2
+
+        json1, json2 = load_results()
+        cls.json_diff_report = get_difference_report(json1, json2, utest=True)
+
+    def test_json_diff_report_pretty_printing(self):
+        expect_line = [
+            "BM_ManyRepetitions_pvalue",
+            "0.0000",
+            "0.0000",
+            "U",
+            "Test,",
+            "Repetitions:",
+            "1000",
+            "vs",
+            "1000",
+        ]
+        output_lines_with_header = print_difference_report(
+            self.json_diff_report, utest=True, utest_alpha=0.05, use_color=False
+        )
+        output_lines = output_lines_with_header[2:]
+        found = False
+        for i in range(0, len(output_lines)):
+            parts = [x for x in output_lines[i].split(" ") if x]
+            found = expect_line == parts
+            if found:
+                break
+        self.assertTrue(found)
+
+    def test_json_diff_report(self):
+        expected_output = [
+            {
+                "name": "BM_ManyRepetitions",
+                "label": "",
+                "time_unit": "s",
+                "run_type": "",
+                "aggregate_name": "",
+                "utest": {
+                    "have_optimal_repetitions": True,
+                    "cpu_pvalue": 0.0,
+                    "time_pvalue": 0.0,
+                    "nr_of_repetitions": 1000,
+                    "nr_of_repetitions_other": 1000,
+                },
+            },
+            {
+                "name": "OVERALL_GEOMEAN",
+                "label": "",
+                "measurements": [
+                    {
+                        "real_time": 1.0,
+                        "cpu_time": 1000.000000000069,
+                        "real_time_other": 1000.000000000069,
+                        "cpu_time_other": 1.0,
+                        "time": 999.000000000069,
+                        "cpu": -0.9990000000000001,
+                    }
+                ],
+                "time_unit": "s",
+                "run_type": "aggregate",
+                "aggregate_name": "geomean",
+                "utest": {},
+            },
+        ]
+        self.assertEqual(len(self.json_diff_report), len(expected_output))
+        for out, expected in zip(self.json_diff_report, expected_output):
+            self.assertEqual(out["name"], expected["name"])
+            self.assertEqual(out["time_unit"], expected["time_unit"])
+            assert_utest(self, out, expected)
 
 
 def assert_utest(unittest_instance, lhs, rhs):

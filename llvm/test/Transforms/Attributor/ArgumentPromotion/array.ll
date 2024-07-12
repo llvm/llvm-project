@@ -11,10 +11,10 @@ define void @caller() {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[LEFT:%.*]] = alloca [3 x i32], align 4
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[LEFT]], align 4
-; TUNIT-NEXT:    [[LEFT_0_1:%.*]] = getelementptr [3 x i32], ptr [[LEFT]], i64 0, i64 1
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[LEFT_0_1]], align 4
-; TUNIT-NEXT:    [[LEFT_0_2:%.*]] = getelementptr [3 x i32], ptr [[LEFT]], i64 0, i64 2
-; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[LEFT_0_2]], align 4
+; TUNIT-NEXT:    [[LEFT_B4:%.*]] = getelementptr i8, ptr [[LEFT]], i64 4
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[LEFT_B4]], align 4
+; TUNIT-NEXT:    [[LEFT_B8:%.*]] = getelementptr i8, ptr [[LEFT]], i64 8
+; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[LEFT_B8]], align 4
 ; TUNIT-NEXT:    call void @callee(i32 [[TMP0]], i32 [[TMP1]], i32 [[TMP2]])
 ; TUNIT-NEXT:    ret void
 ;
@@ -36,10 +36,10 @@ define internal void @callee(ptr noalias %arg) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARG_PRIV:%.*]] = alloca [3 x i32], align 4
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[ARG_PRIV]], align 4
-; CHECK-NEXT:    [[ARG_PRIV_0_1:%.*]] = getelementptr [3 x i32], ptr [[ARG_PRIV]], i64 0, i64 1
-; CHECK-NEXT:    store i32 [[TMP1]], ptr [[ARG_PRIV_0_1]], align 4
-; CHECK-NEXT:    [[ARG_PRIV_0_2:%.*]] = getelementptr [3 x i32], ptr [[ARG_PRIV]], i64 0, i64 2
-; CHECK-NEXT:    store i32 [[TMP2]], ptr [[ARG_PRIV_0_2]], align 4
+; CHECK-NEXT:    [[ARG_PRIV_B4:%.*]] = getelementptr i8, ptr [[ARG_PRIV]], i64 4
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[ARG_PRIV_B4]], align 4
+; CHECK-NEXT:    [[ARG_PRIV_B8:%.*]] = getelementptr i8, ptr [[ARG_PRIV]], i64 8
+; CHECK-NEXT:    store i32 [[TMP2]], ptr [[ARG_PRIV_B8]], align 4
 ; CHECK-NEXT:    call void @use(ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(12) [[ARG_PRIV]])
 ; CHECK-NEXT:    ret void
 ;
@@ -48,5 +48,7 @@ entry:
   ret void
 }
 ;.
-; CHECK: attributes #[[ATTR0]] = { memory(readwrite, argmem: none) }
+; TUNIT: attributes #[[ATTR0]] = { memory(readwrite, argmem: none) }
+;.
+; CGSCC: attributes #[[ATTR0]] = { memory(readwrite, argmem: none) }
 ;.

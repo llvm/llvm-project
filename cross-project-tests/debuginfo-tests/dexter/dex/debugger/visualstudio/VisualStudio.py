@@ -10,6 +10,7 @@ import abc
 import imp
 import os
 import sys
+from enum import IntEnum
 from pathlib import PurePath, Path
 from collections import defaultdict, namedtuple
 
@@ -36,6 +37,26 @@ def _load_com_module():
 # properties we set through dexter currently.
 VSBreakpoint = namedtuple("VSBreakpoint", "path, line, col, cond")
 
+
+# Visual Studio events.
+# https://learn.microsoft.com/en-us/dotnet/api/envdte.dbgeventreason?view=visualstudiosdk-2022
+class DbgEvent(IntEnum):
+    dbgEventReasonNone = 1
+    dbgEventReasonGo = 2
+    dbgEventReasonAttachProgram = 3
+    dbgEventReasonDetachProgram = 4
+    dbgEventReasonLaunchProgram = 5
+    dbgEventReasonEndProgram = 6
+    dbgEventReasonStopDebugging = 7
+    dbgEventReasonStep = 8
+    dbgEventReasonBreakpoint = 9
+    dbgEventReasonExceptionThrown = 10
+    dbgEventReasonExceptionNotHandled = 11
+    dbgEventReasonUserBreak = 12
+    dbgEventReasonContextSwitch = 13
+
+    first = dbgEventReasonNone
+    last = dbgEventReasonContextSwitch
 
 class VisualStudio(
     DebuggerBase, metaclass=abc.ABCMeta
@@ -276,6 +297,13 @@ class VisualStudio(
             project.Properties, "ActiveConfiguration"
         ).Object
         ActiveConfiguration.DebugSettings.CommandArguments = cmdline_str
+        ConfigurationName = ActiveConfiguration.ConfigurationName
+        SolConfig = self._fetch_property(
+            self._interface.Solution.SolutionBuild.SolutionConfigurations,
+            ConfigurationName,
+        )
+        for Context in SolConfig.SolutionContexts:
+            Context.ShouldBuild = False
 
         self.context.logger.note("Launching VS debugger...")
         self._fn_go(False)
@@ -299,6 +327,20 @@ class VisualStudio(
                     idx, len(stack_frames)
                 )
             )
+
+    def _translate_stop_reason(self, reason):
+        if reason == DbgEvent.dbgEventReasonNone:
+            return None
+        if reason == DbgEvent.dbgEventReasonBreakpoint:
+            return StopReason.BREAKPOINT
+        if reason == DbgEvent.dbgEventReasonStep:
+            return StopReason.STEP
+        if reason == DbgEvent.dbgEventReasonEndProgram:
+            return StopReason.PROGRAM_EXIT
+        if reason == DbgEvent.dbgEventReasonExceptionNotHandled:
+            return StopReason.ERROR
+        assert reason <= DbgEvent.last and reason >= DbgEvent.first
+        return StopReason.OTHER
 
     def _get_step_info(self, watches, step_index):
         thread = self._debugger.CurrentThread
@@ -340,16 +382,13 @@ class VisualStudio(
             frames[0].loc = loc
             state_frames[0].location = SourceLocation(**self._location)
 
-        reason = StopReason.BREAKPOINT
-        if loc.path is None:  # pylint: disable=no-member
-            reason = StopReason.STEP
-
+        stop_reason = self._translate_stop_reason(self._debugger.LastBreakReason)
         program_state = ProgramState(frames=state_frames)
 
         return StepIR(
             step_index=step_index,
             frames=frames,
-            stop_reason=reason,
+            stop_reason=stop_reason,
             program_state=program_state,
         )
 

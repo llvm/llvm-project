@@ -9,7 +9,7 @@
 // RUN: %clang_cc1 -triple arm64-apple-tvos12 -verify -fsyntax-only -std=c++11 -fcxx-exceptions -fexceptions %s
 // RUN: %clang_cc1 -triple arm64-apple-watchos5 -verify -fsyntax-only -std=c++11 -fcxx-exceptions -fexceptions %s
 // RUN: %clang_cc1 -triple arm-linux-androideabi -verify -fsyntax-only -std=c++11 -fcxx-exceptions -fexceptions %s
-// RUN: %clang_cc1 -triple aarch64-linux-gnueabi -verify -fsyntax-only -std=c++11 -fcxx-exceptions -fexceptions %s
+// RUN: %clang_cc1 -triple aarch64 -verify -fsyntax-only -std=c++11 -fcxx-exceptions -fexceptions %s
 // RUN: %clang_cc1 -triple mipsel-linux-gnu -verify -fsyntax-only -std=c++11 -fcxx-exceptions -fexceptions %s
 // RUN: %clang_cc1 -triple mips64el-linux-gnu -verify -fsyntax-only -std=c++11 -fcxx-exceptions -fexceptions %s
 // RUN: %clang_cc1 -triple wasm32-unknown-unknown -verify -fsyntax-only -std=c++11 -fcxx-exceptions -fexceptions %s

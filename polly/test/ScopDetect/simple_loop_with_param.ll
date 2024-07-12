@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-print-detect -disable-output < %s | FileCheck %s -check-prefix=PHI
+; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s -check-prefix=PHI
 
 ; void f(long A[], long N, long *init_ptr) {
 ;   long i, j;

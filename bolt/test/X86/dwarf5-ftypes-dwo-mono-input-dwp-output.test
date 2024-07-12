@@ -13,9 +13,9 @@
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-tu-index main.exe.bolt.dwp | FileCheck -check-prefix=BOLT-DWP-TU-INDEX %s
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-cu-index main.exe.bolt.dwp | FileCheck -check-prefix=BOLT-DWP-CU-INDEX %s
 
-; Test input into bolt a .dwo file with TU Index.
-; Test split-dwarf and monolithic TUs.
-; Make sure the output .dwp file has a type and cu information.
+;; Test input into bolt a .dwo file with TU Index.
+;; Test split-dwarf and monolithic TUs.
+;; Make sure the output .dwp file has a type and cu information.
 
 ; PRE-BOLT: Type Unit
 ; PRE-BOLT-SAME: 0x675d23e4f33235f2

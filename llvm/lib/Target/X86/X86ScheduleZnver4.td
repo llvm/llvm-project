@@ -28,17 +28,11 @@ def Znver4Model : SchedMachineModel {
   // AMD SOG 19h, 2.9.1 Op Cache
   // The op cache is organized as an associative cache with 64 sets and 8 ways.
   // At each set-way intersection is an entry containing up to 8 macro ops.
-  // The maximum capacity of the op cache is 4K ops.
-  // Agner, 22.5 µop cache
-  // The size of the µop cache is big enough for holding most critical loops.
-  // FIXME: PR50584: MachineScheduler/PostRAScheduler have quadradic complexity,
-  //        with large values here the compilation of certain loops
-  //        ends up taking way too long.
-  // Ideally for znver4, we should have 6.75K. However we don't add that
-  // considerting the impact compile time and prefer using default values 
-  // instead.
-  // Retaining minimal value to influence unrolling as we did for znver3.
-  let LoopMicroOpBufferSize = 512;
+  // The maximum capacity of the op cache is 6.75K ops.
+  // Assuming a maximum dispatch of 9 ops/cy and a mispredict cost of 12cy from
+  // the op-cache, we limit the loop buffer to 9*12 = 108 to avoid loop
+  // unrolling leading to excessive filling of the op-cache from frontend.
+  let LoopMicroOpBufferSize = 108;
   // AMD SOG 19h, 2.6.2 L1 Data Cache
   // The L1 data cache has a 4- or 5- cycle integer load-to-use latency.
   // AMD SOG 19h, 2.12 L1 Data Cache
@@ -1637,17 +1631,25 @@ def : InstRW<[Zn4WriteFCmp64], (instregex
 	)>;
 
 // MOV Instructions
-def Zn4MOVS: SchedWriteRes<[Zn4FPFMisc12]> {
+def Zn4MOVDUPZ: SchedWriteRes<[Zn4FPFMisc12]> {
   let Latency = 2;
   let ReleaseAtCycles = [2];
+  let NumMicroOps = 1;
+}
+def : InstRW<[Zn4MOVDUPZ], (instregex
+        "(V?)VMOVDDUP(Z|Z128|Z256)(rr|rrk|rrkz)"
+	)>;
+
+def Zn4MOVS: SchedWriteRes<[Zn4FPFMisc12]> {
+  let Latency = 2;
+  let ReleaseAtCycles = [1];
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4MOVS], (instregex
         "(V?)PMOV(SX|ZX)(BD|BQ|BW|WD|WQ|DQ)(Z128?|Z256?)(rr|rrk|rrkz)",
         "(V?)PMOV(SX|QD|UZ|ZX)(BD|BQ|BW?)(Y|Z128?)(rr|rrk|rrkz)",
         "(V?)PMOV(SX|US|ZX)(DQ|WD|QW|WQ?)(Y|Z128?)(rr|rrk|rrkz)",
-        "(V?)VMOVDDUP(Z|Z128|Z256)(rr|rrk|rrkz)",
-        "VPMOV(DB|DW|QB|QD|QW|SDB|SDW|SQB|SQD|SQW|SWB|USDB|USDW|USQB|USQD|USWB|WB)(Z128?)(rr|rrk|rrkz)"
+        "VPMOV(DB|DW|QB|QD|QW|SDB|SDW|SQB|SQD|SQW|SWB|USDB|USDW|USQB|USQD|USWB|WB)(Z128?|Z256?)(rr|rrk|rrkz)"
 	)>;
 
 def Zn4MOVSZ: SchedWriteRes<[Zn4FPFMisc12]> {
@@ -1743,8 +1745,8 @@ def Zn4PERMIT2_128: SchedWriteRes<[Zn4FPFMisc12]> {
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4PERMIT2_128], (instregex
-        "VPERM(I2|T2)(PS|PD|W)128(rr|rrk|rrkz)",
-        "VPERM(I2|T2)(B|D|Q)128(rr|rrk|rrkz)"
+	"VPERM(I2|T2)(PS|PD|W)Z128(rr|rrk|rrkz)",
+	"VPERM(I2|T2)(B|D|Q)Z128(rr|rrk|rrkz)"
 	)>;
 
 def Zn4PERMIT2_128rr:SchedWriteRes<[Zn4FPFMisc12]> {
@@ -1763,11 +1765,11 @@ def Zn4PERMIT2_256: SchedWriteRes<[Zn4FPFMisc12]> {
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4PERMIT2_256], (instregex
-        "VPERM(I2|T2)(PS|PD|W)256(rr|rrk|rrkz)",
+	"VPERM(I2|T2)(PS|PD|W)Z256(rr|rrk|rrkz)",
 	"VPERMP(S|D)Z256(rr|rrk|rrkz)",
 	"V(P?)COMPRESS(B|W|D|Q|PD|PS|SD|SQ)Z256(rr|rrk|rrkz)",
 	"VPERM(B|D|Q|W)Z256(rr|rrk|rrkz)",
-	"VPERM(I2|Q|T2)(B|D|Q)(Z?)256(rr|rrk|rrkz)",
+	"VPERM(I2|Q|T2)(B|D|Q)Z256(rr|rrk|rrkz)",
 	"VPEXPAND(B|W)Z256(rr|rrk|rrkz)"
 	)>;
 
@@ -1777,12 +1779,12 @@ def Zn4PERMIT2Z: SchedWriteRes<[Zn4FPFMisc12]> {
   let NumMicroOps = 1;
 }
 def : InstRW<[Zn4PERMIT2Z], (instregex
-        "VPERM(I2|T2)(PS|PD|W)(rr|rrk|rrkz)",
+	"VPERM(I2|T2)(PS|PD|W)Z(rr|rrk|rrkz)",
 	"VPERM(B|D|W)Z(rr|rrk|rrkz)",
-	"VPERM(I2|Q|T2)(B|D|Q)(Z?)(rr|rrk|rrkz)",
+	"VPERM(I2|Q|T2)(B|D|Q)Z(rr|rrk|rrkz)",
 	"V(P?)COMPRESS(B|W|D|Q|PD|PS|SD|SQ)Z(rr|rrk|rrkz)",
 	"VPEXPAND(B|W)Z(rr|rrk|rrkz)",
-        "VPERMP(S|D)Z(rr|rrk|rrkz)"
+	"VPERMP(S|D)Z(rr|rrk|rrkz)"
 	)>;
 
 // ALU SLOW Misc Instructions

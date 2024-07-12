@@ -1166,7 +1166,7 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
 
       // Compute lower and upper offsets for region within array.
       if (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(AT))
-        NumElements = CAT->getSize().getZExtValue();
+        NumElements = CAT->getZExtSize();
       if (!NumElements) // We are not dealing with a constant size array
         goto conjure_default;
       QualType ElementTy = AT->getElementType();
@@ -1613,7 +1613,7 @@ getConstantArrayExtents(const ConstantArrayType *CAT) {
   CAT = cast<ConstantArrayType>(CAT->getCanonicalTypeInternal());
   SmallVector<uint64_t, 2> Extents;
   do {
-    Extents.push_back(CAT->getSize().getZExtValue());
+    Extents.push_back(CAT->getZExtSize());
   } while ((CAT = dyn_cast<ConstantArrayType>(CAT->getElementType())));
   return Extents;
 }
@@ -2016,7 +2016,7 @@ std::optional<SVal> RegionStoreManager::getBindingForDerivedDefaultValue(
     const TypedValueRegion *R, QualType Ty) {
 
   if (const std::optional<SVal> &D = B.getDefaultBinding(superR)) {
-    const SVal &val = *D;
+    SVal val = *D;
     if (SymbolRef parentSym = val.getAsSymbol())
       return svalBuilder.getDerivedRegionValueSymbolVal(parentSym, R);
 
@@ -2331,7 +2331,7 @@ bool RegionStoreManager::includedInBindings(Store store,
     const ClusterBindings &Cluster = RI.getData();
     for (ClusterBindings::iterator CI = Cluster.begin(), CE = Cluster.end();
          CI != CE; ++CI) {
-      const SVal &D = CI.getData();
+      SVal D = CI.getData();
       if (const MemRegion *R = D.getAsRegion())
         if (R->getBaseRegion() == region)
           return true;
@@ -2358,11 +2358,12 @@ StoreRef RegionStoreManager::killBinding(Store ST, Loc L) {
 
 RegionBindingsRef
 RegionStoreManager::bind(RegionBindingsConstRef B, Loc L, SVal V) {
-  if (L.getAs<loc::ConcreteInt>())
+  // We only care about region locations.
+  auto MemRegVal = L.getAs<loc::MemRegionVal>();
+  if (!MemRegVal)
     return B;
 
-  // If we get here, the location should be a region.
-  const MemRegion *R = L.castAs<loc::MemRegionVal>().getRegion();
+  const MemRegion *R = MemRegVal->getRegion();
 
   // Check if the region is a struct region.
   if (const TypedValueRegion* TR = dyn_cast<TypedValueRegion>(R)) {
@@ -2436,7 +2437,7 @@ std::optional<RegionBindingsRef> RegionStoreManager::tryBindSmallArray(
     return std::nullopt;
 
   // If the array is too big, create a LCV instead.
-  uint64_t ArrSize = CAT->getSize().getLimitedValue();
+  uint64_t ArrSize = CAT->getLimitedSize();
   if (ArrSize > SmallArrayLimit)
     return std::nullopt;
 
@@ -2465,7 +2466,7 @@ RegionStoreManager::bindArray(RegionBindingsConstRef B,
   std::optional<uint64_t> Size;
 
   if (const ConstantArrayType* CAT = dyn_cast<ConstantArrayType>(AT))
-    Size = CAT->getSize().getZExtValue();
+    Size = CAT->getZExtSize();
 
   // Check if the init expr is a literal. If so, bind the rvalue instead.
   // FIXME: It's not responsibility of the Store to transform this lvalue
@@ -2500,7 +2501,7 @@ RegionStoreManager::bindArray(RegionBindingsConstRef B,
     if (VI == VE)
       break;
 
-    const NonLoc &Idx = svalBuilder.makeArrayIndex(i);
+    NonLoc Idx = svalBuilder.makeArrayIndex(i);
     const ElementRegion *ER = MRMgr.getElementRegion(ElementTy, Idx, R, Ctx);
 
     if (ElementTy->isStructureOrClassType())
@@ -2570,7 +2571,7 @@ std::optional<RegionBindingsRef> RegionStoreManager::tryBindSmallStruct(
       return std::nullopt;
 
   for (const auto *FD : RD->fields()) {
-    if (FD->isUnnamedBitfield())
+    if (FD->isUnnamedBitField())
       continue;
 
     // If there are too many fields, or if any of the fields are aggregates,
@@ -2697,7 +2698,7 @@ RegionBindingsRef RegionStoreManager::bindStruct(RegionBindingsConstRef B,
       break;
 
     // Skip any unnamed bitfields to stay in sync with the initializers.
-    if (FI->isUnnamedBitfield())
+    if (FI->isUnnamedBitField())
       continue;
 
     QualType FTy = FI->getType();

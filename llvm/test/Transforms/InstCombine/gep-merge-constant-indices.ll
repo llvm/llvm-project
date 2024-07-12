@@ -12,7 +12,7 @@ target datalayout = "i24:8:8"
 ; result = (ptr) p + 3
 define ptr @mergeBasic(ptr %p) {
 ; CHECK-LABEL: @mergeBasic(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 3
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 12
 ; CHECK-NEXT:    ret ptr [[TMP1]]
 ;
   %1 = getelementptr inbounds i32, ptr %p, i64 1
@@ -58,7 +58,7 @@ define ptr @zeroSum(ptr %p) {
 ; result = (ptr) ((ptr) p + 1) + 17
 define ptr @array1(ptr %p) {
 ; CHECK-LABEL: @array1(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [20 x i8], ptr [[P:%.*]], i64 1, i64 17
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 37
 ; CHECK-NEXT:    ret ptr [[TMP1]]
 ;
   %1 = getelementptr inbounds [20 x i8], ptr %p, i64 1, i64 1
@@ -93,7 +93,7 @@ define ptr @struct1(ptr %p) {
 ; result = &((struct.A*) p - 1).member1
 define ptr @struct2(ptr %p) {
 ; CHECK-LABEL: @struct2(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_A:%.*]], ptr [[P:%.*]], i64 -1, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 -4
 ; CHECK-NEXT:    ret ptr [[TMP1]]
 ;
   %1 = getelementptr inbounds %struct.A, ptr %p, i64 0, i32 1
@@ -104,7 +104,7 @@ define ptr @struct2(ptr %p) {
 ; result = (ptr) &((struct.B) p)[0].member2.member0 + 7
 define ptr @structStruct(ptr %p) {
 ; CHECK-LABEL: @structStruct(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_B:%.*]], ptr [[P:%.*]], i64 0, i32 2, i32 0, i64 7
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 15
 ; CHECK-NEXT:    ret ptr [[TMP1]]
 ;
   %1 = getelementptr inbounds %struct.B, ptr %p, i64 0, i32 2, i32 0, i64 3
@@ -144,7 +144,7 @@ define ptr @notDivisible(ptr %p) {
 ; or divisible by the other's size.
 define ptr @partialConstant2(ptr %p, i64 %a) {
 ; CHECK-LABEL: @partialConstant2(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i64], ptr [[TMP1]], i64 [[A:%.*]], i64 2
 ; CHECK-NEXT:    ret ptr [[TMP2]]
 ;
@@ -157,7 +157,7 @@ define ptr @partialConstant2(ptr %p, i64 %a) {
 ; first GEP by the second GEP.
 define ptr @partialConstant3(ptr %p) {
 ; CHECK-LABEL: @partialConstant3(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [4 x i64], ptr [[TMP1]], i64 [[TMP2]], i64 2
 ; CHECK-NEXT:    ret ptr [[TMP3]]
@@ -200,7 +200,7 @@ define ptr @partialConstantMemberAliasing2(ptr %p, i64 %a) {
 define ptr @partialConstantMemberAliasing3(ptr %p, i64 %a) {
 ; CHECK-LABEL: @partialConstantMemberAliasing3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[STRUCT_C:%.*]], ptr [[P:%.*]], i64 [[A:%.*]], i32 2
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 4
 ; CHECK-NEXT:    ret ptr [[TMP2]]
 ;
   %1 = getelementptr inbounds %struct.C, ptr %p, i64 %a, i32 2

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 #include "sanitizer_common/sanitizer_stackdepot.h"
 
+#include <algorithm>
 #include <atomic>
 #include <numeric>
 #include <regex>
@@ -148,6 +149,10 @@ static struct StackDepotBenchmarkParams {
     {500000, 10, 16, true, false},
     {1500000, 10, 4, true, true},
     {800000, 10, 16, true, true},
+    // Go crazy, and create too many unique stacks, such that StackStore runs
+    // out of space.
+    {1000000, 1, 128, true, true},
+    {100000000, 1, 1, true, true},
 };
 
 static std::string PrintStackDepotBenchmarkParams(

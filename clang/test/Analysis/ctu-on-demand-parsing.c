@@ -11,7 +11,7 @@
 //
 // RUN: cd "%t" && %clang_extdef_map "%t/ctu-other.c" > externalDefMap.txt
 //
-// RUN: cd "%t" && %clang_cc1 -fsyntax-only -std=c89 -analyze \
+// RUN: cd "%t" && %clang_cc1 -std=c89 -analyze \
 // RUN:   -analyzer-checker=core,debug.ExprInspection \
 // RUN:   -analyzer-config experimental-enable-naive-ctu-analysis=true \
 // RUN:   -analyzer-config ctu-dir=. \

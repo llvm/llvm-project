@@ -1,4 +1,4 @@
-//===--- AtomicChange.cpp - AtomicChange implementation -----------------*- C++ -*-===//
+//===--- AtomicChange.cpp - AtomicChange implementation ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -150,7 +150,7 @@ createReplacementsForHeaders(llvm::StringRef FilePath, llvm::StringRef Code,
   for (const auto &Change : Changes) {
     for (llvm::StringRef Header : Change.getInsertedHeaders()) {
       std::string EscapedHeader =
-          Header.startswith("<") || Header.startswith("\"")
+          Header.starts_with("<") || Header.starts_with("\"")
               ? Header.str()
               : ("\"" + Header + "\"").str();
       std::string ReplacementText = "#include " + EscapedHeader;

@@ -1,4 +1,4 @@
-; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2>&1 | FileCheck %s --check-prefix=CHECK-LOG
+; RUN: llvm-reduce --abort-on-invalid-reduction --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2>&1 | FileCheck %s --check-prefix=CHECK-LOG
 ; RUN: FileCheck --check-prefixes=CHECK-FINAL --input-file=%t %s
 
 ; CHECK-INTERESTINGNESS: ret i32

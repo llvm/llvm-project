@@ -3,7 +3,6 @@ Test that "memory region" lookup uses the ABI plugin to remove
 non address bits from addresses before lookup.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -57,7 +56,7 @@ class AArch64LinuxTaggedMemoryRegionTestCase(TestBase):
             if result.Succeeded():
                 repeats += 1
             else:
-                self.assertRegexpMatches(result.GetError(), "Usage: memory region")
+                self.assertRegex(result.GetError(), "Usage: memory region")
                 break
 
         # This time repeat until we get the last region. At that

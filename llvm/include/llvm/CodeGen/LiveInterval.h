@@ -731,6 +731,12 @@ namespace llvm {
       T *P;
 
     public:
+      using difference_type = ptrdiff_t;
+      using value_type = T;
+      using pointer = T *;
+      using reference = T &;
+      using iterator_category = std::forward_iterator_tag;
+
       SingleLinkedListIterator(T *P) : P(P) {}
 
       SingleLinkedListIterator<T> &operator++() {

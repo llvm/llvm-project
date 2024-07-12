@@ -1,4 +1,4 @@
-; RUN: llc -mtriple aarch64-eabi -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64 -o - %s | FileCheck %s
 
 declare void @llvm.aarch64.hint(i32) nounwind
 

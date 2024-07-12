@@ -1,9 +1,6 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
-// Check only -Xoffload-linker -mllvm=* options are passed
-// to device lld linker.
-// -mllvm options are passed to clang only.
+// Check -Xoffload-linker -mllvm=* options are passed
+// to device lld linker only.
+// -mllvm options are passed to clang and device lld linker.
 
 // RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   --offload-arch=gfx803 --offload-arch=gfx900 \
@@ -33,15 +30,15 @@
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: {{.*}} "-target-cpu" "gfx803"
 // CHECK-SAME: {{.*}} "-mllvm" "-unroll-count=10" {{.*}}
-// CHECK: [[LLD:".*lld.*"]] {{.*}}"-m" "elf64_amdgpu"{{.*}} "-plugin-opt=-inline-threshold=100"
+// CHECK: [[LLD:".*lld.*"]] {{.*}}"-m" "elf64_amdgpu"{{.*}} "-plugin-opt=-unroll-count=10"{{.*}} "-plugin-opt=-inline-threshold=100"
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: {{.*}} "-target-cpu" "gfx900"
 // CHECK-SAME: {{.*}} "-mllvm" "-unroll-count=10" {{.*}}
-// CHECK: [[LLD:".*lld.*"]] {{.*}} "-plugin-opt=-inline-threshold=100"
+// CHECK: [[LLD:".*lld.*"]] {{.*}} "-plugin-opt=-unroll-count=10"{{.*}} "-plugin-opt=-inline-threshold=100"
 
 // NEG-NOT: {{".*opt"}}
 // NEG-NOT: {{".*llc"}}
-// NEG-NOT: "-plugin-opt=-unroll-count=10"
+// NEG-NOT: "-m" "elf_x86_64"{{.*}} "-plugin-opt=-unroll-count=10"
 // NEG-NOT: "-m" "elf_x86_64"{{.*}} "-plugin-opt=-inline-threshold=100"

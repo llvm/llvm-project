@@ -24,16 +24,16 @@
 //
 // RUN: rm -f %t/foo.pcm
 // RUN: %clang_cc1 -std=c++20 -fmodules -fmodules-cache-path=%t -fprebuilt-module-path=%t \
-// RUN:   -fmodule-map-file=%t/module.map %t/Use7.cpp -verify -fsyntax-only
+// RUN:   -fmodule-map-file=%t/module.modulemap %t/Use7.cpp -verify -fsyntax-only
 // RUN: %clang_cc1 -std=c++20 -fmodules -fmodules-cache-path=%t -fprebuilt-module-path=%t \
-// RUN:   -fmodule-map-file=%t/module.map %t/Use7.cpp -verify -fsyntax-only
+// RUN:   -fmodule-map-file=%t/module.modulemap %t/Use7.cpp -verify -fsyntax-only
 // Testing module map modules with named modules.
-// RUN: %clang_cc1 -std=c++20 -fmodules -fmodules-cache-path=%t -fmodule-map-file=%t/module.map \
+// RUN: %clang_cc1 -std=c++20 -fmodules -fmodules-cache-path=%t -fmodule-map-file=%t/module.modulemap \
 // RUN:   %t/A.cppm -o %t/A.pcm
 // RUN: %clang_cc1 -std=c++20 -fmodules -fmodules-cache-path=%t -fprebuilt-module-path=%t \
-// RUN:   -fmodule-map-file=%t/module.map %t/Use7.cpp -verify -fsyntax-only
+// RUN:   -fmodule-map-file=%t/module.modulemap %t/Use7.cpp -verify -fsyntax-only
 // RUN: %clang_cc1 -std=c++20 -fmodules -fmodules-cache-path=%t -fprebuilt-module-path=%t \
-// RUN:   -fmodule-map-file=%t/module.map %t/Use7.cpp -verify -fsyntax-only
+// RUN:   -fmodule-map-file=%t/module.modulemap %t/Use7.cpp -verify -fsyntax-only
 
 //
 //--- foo.h
@@ -158,7 +158,7 @@ template <class T> void foo()
   requires same_as<T, int>
 {}
 
-//--- module.map
+//--- module.modulemap
 module "foo" {
   export * 
   header "foo.h"

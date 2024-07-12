@@ -10,19 +10,19 @@ define void @test(ptr %ref_array, ptr %sad_array) {
 ; RV32-NEXT:    th.lwd a2, a3, (a0), 0, 3
 ; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; RV32-NEXT:    vle8.v v8, (a2)
-; RV32-NEXT:    vmv.v.i v9, 0
 ; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV32-NEXT:    vzext.vf4 v12, v8
 ; RV32-NEXT:    vmv.s.x v8, zero
-; RV32-NEXT:    vredsum.vs v10, v12, v8
-; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    vredsum.vs v9, v12, v8
+; RV32-NEXT:    vmv.x.s a0, v9
 ; RV32-NEXT:    th.swia a0, (a1), 4, 0
 ; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV32-NEXT:    vle8.v v10, (a3)
-; RV32-NEXT:    vsetivli zero, 8, e8, m1, tu, ma
-; RV32-NEXT:    vslideup.vi v10, v9, 4
+; RV32-NEXT:    vle8.v v9, (a3)
+; RV32-NEXT:    vmv.v.i v10, 0
+; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV32-NEXT:    vslideup.vi v9, v10, 4
 ; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV32-NEXT:    vzext.vf4 v12, v10
+; RV32-NEXT:    vzext.vf4 v12, v9
 ; RV32-NEXT:    vredsum.vs v8, v12, v8
 ; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vse32.v v8, (a1)
@@ -33,19 +33,19 @@ define void @test(ptr %ref_array, ptr %sad_array) {
 ; RV64-NEXT:    th.ldd a2, a3, (a0), 0, 4
 ; RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; RV64-NEXT:    vle8.v v8, (a2)
-; RV64-NEXT:    vmv.v.i v9, 0
 ; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; RV64-NEXT:    vzext.vf4 v12, v8
 ; RV64-NEXT:    vmv.s.x v8, zero
-; RV64-NEXT:    vredsum.vs v10, v12, v8
-; RV64-NEXT:    vmv.x.s a0, v10
+; RV64-NEXT:    vredsum.vs v9, v12, v8
+; RV64-NEXT:    vmv.x.s a0, v9
 ; RV64-NEXT:    th.swia a0, (a1), 4, 0
 ; RV64-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; RV64-NEXT:    vle8.v v10, (a3)
-; RV64-NEXT:    vsetivli zero, 8, e8, m1, tu, ma
-; RV64-NEXT:    vslideup.vi v10, v9, 4
+; RV64-NEXT:    vle8.v v9, (a3)
+; RV64-NEXT:    vmv.v.i v10, 0
+; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV64-NEXT:    vslideup.vi v9, v10, 4
 ; RV64-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV64-NEXT:    vzext.vf4 v12, v10
+; RV64-NEXT:    vzext.vf4 v12, v9
 ; RV64-NEXT:    vredsum.vs v8, v12, v8
 ; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vse32.v v8, (a1)

@@ -6,7 +6,7 @@ declare void @llvm.trap()
 define void @unreachable() {
   ; CHECK-LABEL: name: unreachable
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+  ; CHECK-NEXT:   G_TRAP
   unreachable
   ret void
 }

@@ -350,7 +350,7 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::NEAREST(bool upward) const {
         isNegative = !isNegative;
       } else {
         auto sub1{fraction.SubtractSigned(one)};
-        if (sub1.overflow) {
+        if (sub1.overflow && expo > 1) {
           nearest = Fraction{0}.NOT();
           --expo;
         } else {
@@ -401,48 +401,59 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::HYPOT(
   return result;
 }
 
-// MOD(x,y) = x - AINT(x/y)*y
+// MOD(x,y) = x - AINT(x/y)*y in the standard; unfortunately, this definition
+// can be pretty inaccurate when x is much larger than y in magnitude due to
+// cancellation.  Implement instead with (essentially) arbitrary precision
+// long division, discarding the quotient and returning the remainder.
+// See runtime/numeric.cpp for more details.
 template <typename W, int P>
 ValueWithRealFlags<Real<W, P>> Real<W, P>::MOD(
-    const Real &y, Rounding rounding) const {
+    const Real &p, Rounding rounding) const {
   ValueWithRealFlags<Real> result;
-  auto quotient{Divide(y, rounding)};
-  if (quotient.value.IsInfinite() && IsFinite() && y.IsFinite() &&
-      !y.IsZero()) {
-    // x/y overflowed -- so it must be an integer in this representation and
-    // the result must be a zero.
-    if (IsNegative()) {
-      result.value = Real{}.Negate(); // -0.
-    }
+  if (IsNotANumber() || p.IsNotANumber() || IsInfinite()) {
+    result.flags.set(RealFlag::InvalidArgument);
+    result.value = NotANumber();
+  } else if (p.IsZero()) {
+    result.flags.set(RealFlag::DivideByZero);
+    result.value = NotANumber();
+  } else if (p.IsInfinite()) {
+    result.value = *this;
   } else {
-    Real toInt{quotient.AccumulateFlags(result.flags)
-                   .ToWholeNumber(common::RoundingMode::ToZero)
-                   .AccumulateFlags(result.flags)};
-    Real product{toInt.Multiply(y, rounding).AccumulateFlags(result.flags)};
-    result.value = Subtract(product, rounding).AccumulateFlags(result.flags);
+    result.value = ABS();
+    auto pAbs{p.ABS()};
+    Real half, adj;
+    half.Normalize(false, exponentBias - 1, Fraction::MASKL(1)); // 0.5
+    for (adj.Normalize(false, Exponent(), pAbs.GetFraction());
+         result.value.Compare(pAbs) != Relation::Less;
+         adj = adj.Multiply(half).value) {
+      if (result.value.Compare(adj) != Relation::Less) {
+        result.value =
+            result.value.Subtract(adj, rounding).AccumulateFlags(result.flags);
+        if (result.value.IsZero()) {
+          break;
+        }
+      }
+    }
+    if (IsNegative()) {
+      result.value = result.value.Negate();
+    }
   }
   return result;
 }
 
-// MODULO(x,y) = x - FLOOR(x/y)*y
+// MODULO(x,y) = x - FLOOR(x/y)*y in the standard; here, it is defined
+// in terms of MOD() with adjustment of the result.
 template <typename W, int P>
 ValueWithRealFlags<Real<W, P>> Real<W, P>::MODULO(
-    const Real &y, Rounding rounding) const {
-  ValueWithRealFlags<Real> result;
-  auto quotient{Divide(y, rounding)};
-  if (quotient.value.IsInfinite() && IsFinite() && y.IsFinite() &&
-      !y.IsZero()) {
-    // x/y overflowed -- so it must be an integer in this representation and
-    // the result must be a zero.
-    if (y.IsNegative()) {
-      result.value = Real{}.Negate(); // -0.
+    const Real &p, Rounding rounding) const {
+  ValueWithRealFlags<Real> result{MOD(p, rounding)};
+  if (IsNegative() != p.IsNegative()) {
+    if (result.value.IsZero()) {
+      result.value = result.value.Negate();
+    } else {
+      result.value =
+          result.value.Add(p, rounding).AccumulateFlags(result.flags);
     }
-  } else {
-    Real toInt{quotient.AccumulateFlags(result.flags)
-                   .ToWholeNumber(common::RoundingMode::Down)
-                   .AccumulateFlags(result.flags)};
-    Real product{toInt.Multiply(y, rounding).AccumulateFlags(result.flags)};
-    result.value = Subtract(product, rounding).AccumulateFlags(result.flags);
   }
   return result;
 }
@@ -777,6 +788,6 @@ template class Real<Integer<16>, 11>;
 template class Real<Integer<16>, 8>;
 template class Real<Integer<32>, 24>;
 template class Real<Integer<64>, 53>;
-template class Real<Integer<80>, 64>;
+template class Real<X87IntegerContainer, 64>;
 template class Real<Integer<128>, 113>;
 } // namespace Fortran::evaluate::value

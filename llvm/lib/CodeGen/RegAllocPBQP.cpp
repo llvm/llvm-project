@@ -557,8 +557,8 @@ void RegAllocPBQP::getAnalysisUsage(AnalysisUsage &au) const {
   au.addPreserved<MachineBlockFrequencyInfo>();
   au.addRequired<MachineLoopInfo>();
   au.addPreserved<MachineLoopInfo>();
-  au.addRequired<MachineDominatorTree>();
-  au.addPreserved<MachineDominatorTree>();
+  au.addRequired<MachineDominatorTreeWrapperPass>();
+  au.addPreserved<MachineDominatorTreeWrapperPass>();
   au.addRequired<VirtRegMap>();
   au.addPreserved<VirtRegMap>();
   MachineFunctionPass::getAnalysisUsage(au);
@@ -809,7 +809,7 @@ bool RegAllocPBQP::runOnMachineFunction(MachineFunction &MF) {
   std::unique_ptr<Spiller> VRegSpiller(
       createInlineSpiller(*this, MF, VRM, DefaultVRAI));
 
-  MF.getRegInfo().freezeReservedRegs(MF);
+  MF.getRegInfo().freezeReservedRegs();
 
   LLVM_DEBUG(dbgs() << "PBQP Register Allocating for " << MF.getName() << "\n");
 

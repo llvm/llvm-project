@@ -37,6 +37,13 @@ TEST(LlvmLibcMemcmpTest, LhsAfterRhsLexically) {
   EXPECT_GT(LIBC_NAMESPACE::memcmp(lhs, rhs, 2), 0);
 }
 
+TEST(LlvmLibcMemcmpTest, Issue77080) {
+  // https://github.com/llvm/llvm-project/issues/77080
+  constexpr char lhs[35] = "1.069cd68bbe76eb2143a3284d27ebe220";
+  constexpr char rhs[35] = "1.0500185b5d966a544e2d0fa40701b0f3";
+  ASSERT_GE(LIBC_NAMESPACE::memcmp(lhs, rhs, 34), 1);
+}
+
 // Adapt CheckMemcmp signature to memcmp.
 static inline int Adaptor(cpp::span<char> p1, cpp::span<char> p2, size_t size) {
   return LIBC_NAMESPACE::memcmp(p1.begin(), p2.begin(), size);

@@ -42,7 +42,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
@@ -900,7 +899,7 @@ static char getSymbolNMTypeChar(ELFObjectFileBase &Obj,
       consumeError(NameOrErr.takeError());
       return '?';
     }
-    if ((*NameOrErr).startswith(".debug"))
+    if ((*NameOrErr).starts_with(".debug"))
       return 'N';
     if (!(Flags & ELF::SHF_WRITE))
       return 'n';
@@ -939,7 +938,7 @@ static char getSymbolNMTypeChar(COFFObjectFile &Obj, symbol_iterator I) {
     const coff_section *Section = Obj.getCOFFSection(*SecI);
     Characteristics = Section->Characteristics;
     if (Expected<StringRef> NameOrErr = Obj.getSectionName(Section))
-      if (NameOrErr->startswith(".idata"))
+      if (NameOrErr->starts_with(".idata"))
         return 'i';
   }
 
@@ -1738,13 +1737,13 @@ static void getXCOFFExports(XCOFFObjectFile *XCOFFObj,
     StringRef SymName = cantFail(Sym.getName());
     if (SymName.empty())
       continue;
-    if (SymName.startswith("__sinit") || SymName.startswith("__sterm") ||
+    if (SymName.starts_with("__sinit") || SymName.starts_with("__sterm") ||
         SymName.front() == '.' || SymName.front() == '(')
       continue;
 
     // Check the SymName regex matching with "^__[0-9]+__".
-    if (SymName.size() > 4 && SymName.startswith("__") &&
-        SymName.endswith("__")) {
+    if (SymName.size() > 4 && SymName.starts_with("__") &&
+        SymName.ends_with("__")) {
       if (std::all_of(SymName.begin() + 2, SymName.end() - 2, isDigit))
         continue;
     }
@@ -1752,9 +1751,9 @@ static void getXCOFFExports(XCOFFObjectFile *XCOFFObj,
     if (SymName == "__rsrc" && NoRsrc)
       continue;
 
-    if (SymName.startswith("__tf1"))
+    if (SymName.starts_with("__tf1"))
       SymName = SymName.substr(6);
-    else if (SymName.startswith("__tf9"))
+    else if (SymName.starts_with("__tf9"))
       SymName = SymName.substr(14);
 
     NMSymbol S = {};
@@ -1855,11 +1854,8 @@ static bool getSymbolNamesFromObject(SymbolicFile &Obj,
               dyn_cast<const XCOFFObjectFile>(&Obj))
         S.Size = XCOFFObj->getSymbolSize(Sym.getRawDataRefImpl());
 
-      if (const WasmObjectFile *WasmObj = dyn_cast<WasmObjectFile>(&Obj)) {
-        const WasmSymbol &WasmSym = WasmObj->getWasmSymbol(Sym);
-        if (WasmSym.isTypeData() && !WasmSym.isUndefined())
-          S.Size = WasmSym.Info.DataRef.Size;
-      }
+      if (const WasmObjectFile *WasmObj = dyn_cast<WasmObjectFile>(&Obj))
+        S.Size = WasmObj->getSymbolSize(Sym);
 
       if (PrintAddress && isa<ObjectFile>(Obj)) {
         SymbolRef SymRef(Sym);
@@ -2399,13 +2395,11 @@ exportSymbolNamesFromFiles(const std::vector<std::string> &InputFilenames) {
   llvm::erase_if(SymbolList,
                  [](const NMSymbol &s) { return !s.shouldPrint(); });
   sortSymbolList(SymbolList);
-  SymbolList.erase(std::unique(SymbolList.begin(), SymbolList.end()),
-                   SymbolList.end());
+  SymbolList.erase(llvm::unique(SymbolList), SymbolList.end());
   printExportSymbolList(SymbolList);
 }
 
 int llvm_nm_main(int argc, char **argv, const llvm::ToolContext &) {
-  InitLLVM X(argc, argv);
   BumpPtrAllocator A;
   StringSaver Saver(A);
   NmOptTable Tbl;

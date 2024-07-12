@@ -8,8 +8,8 @@ define i16 @test(ptr %tmp179) nounwind  {
 ; CHECK-NEXT:    movzwl (%eax), %eax
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    andl $64512, %ecx ## imm = 0xFC00
-; CHECK-NEXT:    cmpl $32768, %ecx ## imm = 0x8000
-; CHECK-NEXT:    jne LBB0_2
+; CHECK-NEXT:    negw %cx
+; CHECK-NEXT:    jno LBB0_2
 ; CHECK-NEXT:  ## %bb.1: ## %bb189
 ; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retl

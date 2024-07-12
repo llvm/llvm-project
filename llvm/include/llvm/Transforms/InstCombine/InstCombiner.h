@@ -76,6 +76,7 @@ protected:
   SimplifyQuery SQ;
   OptimizationRemarkEmitter &ORE;
   BlockFrequencyInfo *BFI;
+  BranchProbabilityInfo *BPI;
   ProfileSummaryInfo *PSI;
   DomConditionCache DC;
 
@@ -96,13 +97,13 @@ public:
                bool MinimizeSize, AAResults *AA, AssumptionCache &AC,
                TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
                DominatorTree &DT, OptimizationRemarkEmitter &ORE,
-               BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
-               const DataLayout &DL, LoopInfo *LI)
+               BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
+               ProfileSummaryInfo *PSI, const DataLayout &DL, LoopInfo *LI)
       : TTI(TTI), Builder(Builder), Worklist(Worklist),
         MinimizeSize(MinimizeSize), AA(AA), AC(AC), TLI(TLI), DT(DT), DL(DL),
         SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
            /*CanUseUndef*/ true, &DC),
-        ORE(ORE), BFI(BFI), PSI(PSI), LI(LI) {}
+        ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), LI(LI) {}
 
   virtual ~InstCombiner() = default;
 
@@ -167,45 +168,6 @@ public:
       return false;
     default:
       return true;
-    }
-  }
-
-  /// Given an exploded icmp instruction, return true if the comparison only
-  /// checks the sign bit. If it only checks the sign bit, set TrueIfSigned if
-  /// the result of the comparison is true when the input value is signed.
-  static bool isSignBitCheck(ICmpInst::Predicate Pred, const APInt &RHS,
-                             bool &TrueIfSigned) {
-    switch (Pred) {
-    case ICmpInst::ICMP_SLT: // True if LHS s< 0
-      TrueIfSigned = true;
-      return RHS.isZero();
-    case ICmpInst::ICMP_SLE: // True if LHS s<= -1
-      TrueIfSigned = true;
-      return RHS.isAllOnes();
-    case ICmpInst::ICMP_SGT: // True if LHS s> -1
-      TrueIfSigned = false;
-      return RHS.isAllOnes();
-    case ICmpInst::ICMP_SGE: // True if LHS s>= 0
-      TrueIfSigned = false;
-      return RHS.isZero();
-    case ICmpInst::ICMP_UGT:
-      // True if LHS u> RHS and RHS == sign-bit-mask - 1
-      TrueIfSigned = true;
-      return RHS.isMaxSignedValue();
-    case ICmpInst::ICMP_UGE:
-      // True if LHS u>= RHS and RHS == sign-bit-mask (2^7, 2^15, 2^31, etc)
-      TrueIfSigned = true;
-      return RHS.isMinSignedValue();
-    case ICmpInst::ICMP_ULT:
-      // True if LHS u< RHS and RHS == sign-bit-mask (2^7, 2^15, 2^31, etc)
-      TrueIfSigned = false;
-      return RHS.isMinSignedValue();
-    case ICmpInst::ICMP_ULE:
-      // True if LHS u<= RHS and RHS == sign-bit-mask - 1
-      TrueIfSigned = false;
-      return RHS.isMaxSignedValue();
-    default:
-      return false;
     }
   }
 
@@ -499,9 +461,10 @@ public:
 
   OverflowResult computeOverflowForUnsignedMul(const Value *LHS,
                                                const Value *RHS,
-                                               const Instruction *CxtI) const {
-    return llvm::computeOverflowForUnsignedMul(LHS, RHS,
-                                               SQ.getWithInstruction(CxtI));
+                                               const Instruction *CxtI,
+                                               bool IsNSW = false) const {
+    return llvm::computeOverflowForUnsignedMul(
+        LHS, RHS, SQ.getWithInstruction(CxtI), IsNSW);
   }
 
   OverflowResult computeOverflowForSignedMul(const Value *LHS, const Value *RHS,
@@ -541,7 +504,14 @@ public:
 
   virtual bool SimplifyDemandedBits(Instruction *I, unsigned OpNo,
                                     const APInt &DemandedMask, KnownBits &Known,
-                                    unsigned Depth = 0) = 0;
+                                    unsigned Depth, const SimplifyQuery &Q) = 0;
+
+  bool SimplifyDemandedBits(Instruction *I, unsigned OpNo,
+                            const APInt &DemandedMask, KnownBits &Known) {
+    return SimplifyDemandedBits(I, OpNo, DemandedMask, Known,
+                                /*Depth=*/0, SQ.getWithInstruction(I));
+  }
+
   virtual Value *
   SimplifyDemandedVectorElts(Value *V, APInt DemandedElts, APInt &UndefElts,
                              unsigned Depth = 0,

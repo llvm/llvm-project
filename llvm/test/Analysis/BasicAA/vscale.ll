@@ -51,8 +51,8 @@ define void @gep_alloca_const_offset_3() {
 ; CHECK-DAG:  MustAlias:    <vscale x 4 x i32>* %gep1, i32* %gep2
 define void @gep_alloca_const_offset_4() {
   %alloc = alloca <vscale x 4 x i32>
-  %gep1 = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* %alloc, i64 0
-  %gep2 = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* %alloc, i64 0, i64 0
+  %gep1 = getelementptr <vscale x 4 x i32>, ptr %alloc, i64 0
+  %gep2 = getelementptr <vscale x 4 x i32>, ptr %alloc, i64 0, i64 0
   load <vscale x 4 x i32>, ptr %alloc
   load <vscale x 4 x i32>, ptr %gep1
   load i32, ptr %gep2
@@ -117,6 +117,36 @@ define void @gep_different_base_const_offset(ptr noalias %p1, ptr noalias %p2) {
   ret void
 }
 
+; getelementptr @llvm.vscale tests
+; CHECK-LABEL: gep_llvm_vscale_no_alias
+; CHECK-DAG: MayAlias:     <vscale x 4 x i32>* %gep1, <vscale x 4 x i32>* %gep2
+; CHECK-DAG: MayAlias:     <vscale x 4 x i32>* %gep1, <vscale x 4 x i32>* %gep3
+; CHECK-DAG: MayAlias:     <vscale x 4 x i32>* %gep2, <vscale x 4 x i32>* %gep3
+define void @gep_llvm_vscale_no_alias(ptr %p) {
+  %t1 = tail call i64 @llvm.vscale.i64()
+  %t2 = shl nuw nsw i64 %t1, 3
+  %gep1 = getelementptr i32, ptr %p, i64 %t2
+  %gep2 = getelementptr <vscale x 4 x i32>, ptr %p, i64 1
+  %gep3 = getelementptr <vscale x 4 x i32>, ptr %p, i64 2
+  load <vscale x 4 x i32>, ptr %gep1
+  load <vscale x 4 x i32>, ptr %gep2
+  load <vscale x 4 x i32>, ptr %gep3
+  ret void
+}
+
+declare i64 @llvm.vscale.i64()
+
+; CHECK-LABEL: gep_llvm_vscale_squared_may_alias
+; CHECK-DAG: MayAlias:      <vscale x 4 x i32>* %gep1, <vscale x 4 x i32>* %gep2
+define void @gep_llvm_vscale_squared_may_alias(ptr %p) {
+  %t1 = tail call i64 @llvm.vscale.i64()
+  %gep1 = getelementptr <vscale x 4 x i32>, ptr %p, i64 %t1
+  %gep2 = getelementptr i32, ptr %p, i64 1
+  load <vscale x 4 x i32>, ptr %gep1
+  load <vscale x 4 x i32>, ptr %gep2
+  ret void
+}
+
 ; getelementptr + bitcast
 
 ; CHECK-LABEL: gep_bitcast_1
@@ -150,6 +180,329 @@ define void @gep_bitcast_2(ptr %p) {
   load float, ptr %gep2
   load <vscale x 4 x i32>, ptr %p
   load <vscale x 4 x float>, ptr %p
+  ret void
+}
+
+; negative offset tests
+
+; CHECK-LABEL: gep_neg_notscalable
+; CHECK-DAG:   MayAlias:    <4 x i32>* %p, <4 x i32>* %vm16
+; CHECK-DAG:   NoAlias:     <4 x i32>* %m16, <4 x i32>* %p
+; CHECK-DAG:   MayAlias:    <4 x i32>* %m16, <4 x i32>* %vm16
+; CHECK-DAG:   MayAlias:    <4 x i32>* %p, <4 x i32>* %vm16m16
+; CHECK-DAG:   NoAlias:     <4 x i32>* %vm16, <4 x i32>* %vm16m16
+; CHECK-DAG:   MayAlias:    <4 x i32>* %m16, <4 x i32>* %vm16m16
+; CHECK-DAG:   MayAlias:    <4 x i32>* %m16pv16, <4 x i32>* %p
+; CHECK-DAG:   MayAlias:    <4 x i32>* %m16pv16, <4 x i32>* %vm16
+; CHECK-DAG:   MayAlias:    <4 x i32>* %m16, <4 x i32>* %m16pv16
+; CHECK-DAG:   MayAlias:    <4 x i32>* %m16pv16, <4 x i32>* %vm16m16
+define void @gep_neg_notscalable(ptr %p) vscale_range(1,16) {
+  %vm16 = getelementptr <vscale x 4 x i32>, ptr %p, i64 -1
+  %m16 = getelementptr <4 x i32>, ptr %p, i64 -1
+  %vm16m16 = getelementptr <4 x i32>, ptr %vm16, i64 -1
+  %m16pv16 = getelementptr <vscale x 4 x i32>, ptr %m16, i64 1
+  load <4 x i32>, ptr %p
+  load <4 x i32>, ptr %vm16
+  load <4 x i32>, ptr %m16
+  load <4 x i32>, ptr %vm16m16
+  load <4 x i32>, ptr %m16pv16
+  ret void
+}
+
+; CHECK-LABEL: gep_neg_scalable
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %p
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16m16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %vm16, <vscale x 4 x i32>* %vm16m16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %vm16m16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %p
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %m16pv16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %vm16m16
+define void @gep_neg_scalable(ptr %p) vscale_range(1,16) {
+  %vm16 = getelementptr <vscale x 4 x i32>, ptr %p, i64 -1
+  %m16 = getelementptr <4 x i32>, ptr %p, i64 -1
+  %vm16m16 = getelementptr <4 x i32>, ptr %vm16, i64 -1
+  %m16pv16 = getelementptr <vscale x 4 x i32>, ptr %vm16, i64 1
+  load <vscale x 4 x i32>, ptr %p
+  load <vscale x 4 x i32>, ptr %vm16
+  load <vscale x 4 x i32>, ptr %m16
+  load <vscale x 4 x i32>, ptr %vm16m16
+  load <vscale x 4 x i32>, ptr %m16pv16
+  ret void
+}
+
+; CHECK-LABEL: gep_pos_notscalable
+; CHECK-DAG:   MayAlias:     <4 x i32>* %p, <4 x i32>* %vm16
+; CHECK-DAG:   NoAlias:      <4 x i32>* %m16, <4 x i32>* %p
+; CHECK-DAG:   MayAlias:     <4 x i32>* %m16, <4 x i32>* %vm16
+; CHECK-DAG:   MayAlias:     <4 x i32>* %p, <4 x i32>* %vm16m16
+; CHECK-DAG:   NoAlias:      <4 x i32>* %vm16, <4 x i32>* %vm16m16
+; CHECK-DAG:   MayAlias:     <4 x i32>* %m16, <4 x i32>* %vm16m16
+; CHECK-DAG:   MayAlias:     <4 x i32>* %m16pv16, <4 x i32>* %p
+; CHECK-DAG:   MayAlias:     <4 x i32>* %m16pv16, <4 x i32>* %vm16
+; CHECK-DAG:   MayAlias:     <4 x i32>* %m16, <4 x i32>* %m16pv16
+; CHECK-DAG:   MayAlias:     <4 x i32>* %m16pv16, <4 x i32>* %vm16m16
+define void @gep_pos_notscalable(ptr %p) vscale_range(1,16) {
+  %vm16 = getelementptr <vscale x 4 x i32>, ptr %p, i64 1
+  %m16 = getelementptr <4 x i32>, ptr %p, i64 1
+  %vm16m16 = getelementptr <4 x i32>, ptr %vm16, i64 1
+  %m16pv16 = getelementptr <vscale x 4 x i32>, ptr %vm16, i64 -1
+  load <4 x i32>, ptr %p
+  load <4 x i32>, ptr %vm16
+  load <4 x i32>, ptr %m16
+  load <4 x i32>, ptr %vm16m16
+  load <4 x i32>, ptr %m16pv16
+  ret void
+}
+
+; CHECK-LABEL: gep_pos_scalable
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %p
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16m16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %vm16, <vscale x 4 x i32>* %vm16m16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %vm16m16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %p
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %m16pv16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %vm16m16
+define void @gep_pos_scalable(ptr %p) vscale_range(1,16) {
+  %vm16 = getelementptr <vscale x 4 x i32>, ptr %p, i64 1
+  %m16 = getelementptr <4 x i32>, ptr %p, i64 1
+  %vm16m16 = getelementptr <4 x i32>, ptr %vm16, i64 1
+  %m16pv16 = getelementptr <vscale x 4 x i32>, ptr %vm16, i64 -1
+  load <vscale x 4 x i32>, ptr %p
+  load <vscale x 4 x i32>, ptr %vm16
+  load <vscale x 4 x i32>, ptr %m16
+  load <vscale x 4 x i32>, ptr %vm16m16
+  load <vscale x 4 x i32>, ptr %m16pv16
+  ret void
+}
+
+; CHECK-LABEL: v1v2types
+; CHECK-DAG:  MustAlias:    <4 x i32>* %p, <vscale x 4 x i32>* %p
+; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:  MayAlias:     <4 x i32>* %p, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %p, <4 x i32>* %vm16
+; CHECK-DAG:  MayAlias:     <4 x i32>* %p, <4 x i32>* %vm16
+; CHECK-DAG:  MustAlias:    <4 x i32>* %vm16, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %p
+; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %m16, <4 x i32>* %p
+; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %m16, <4 x i32>* %vm16
+; CHECK-DAG:  NoAlias:      <4 x i32>* %m16, <vscale x 4 x i32>* %p
+; CHECK-DAG:  NoAlias:      <4 x i32>* %m16, <4 x i32>* %p
+; CHECK-DAG:  MayAlias:     <4 x i32>* %m16, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:  MayAlias:     <4 x i32>* %m16, <4 x i32>* %vm16
+; CHECK-DAG:  MustAlias:    <4 x i32>* %m16, <vscale x 4 x i32>* %m16
+define void @v1v2types(ptr %p) vscale_range(1,16) {
+  %vm16 = getelementptr <vscale x 4 x i32>, ptr %p, i64 -1
+  %m16 = getelementptr <4 x i32>, ptr %p, i64 -1
+  load <vscale x 4 x i32>, ptr %p
+  load <4 x i32>, ptr %p
+  load <vscale x 4 x i32>, ptr %vm16
+  load <4 x i32>, ptr %vm16
+  load <vscale x 4 x i32>, ptr %m16
+  load <4 x i32>, ptr %m16
+  ret void
+}
+
+; VScale intrinsic offset tests
+
+; CHECK-LABEL: vscale_neg_notscalable
+; CHECK-DAG:   NoAlias:     <4 x i32>* %p, <4 x i32>* %vm16
+; CHECK-DAG:   NoAlias:     <4 x i32>* %m16, <4 x i32>* %p
+; CHECK-DAG:   MayAlias:    <4 x i32>* %m16, <4 x i32>* %vm16
+; CHECK-DAG:   MayAlias:    <4 x i32>* %p, <4 x i32>* %vm16m16
+; CHECK-DAG:   NoAlias:     <4 x i32>* %vm16, <4 x i32>* %vm16m16
+; CHECK-DAG:   NoAlias:     <4 x i32>* %m16, <4 x i32>* %vm16m16
+; CHECK-DAG:   MayAlias:    <4 x i32>* %m16pv16, <4 x i32>* %p
+; CHECK-DAG:   NoAlias:     <4 x i32>* %m16pv16, <4 x i32>* %vm16
+; CHECK-DAG:   NoAlias:     <4 x i32>* %m16, <4 x i32>* %m16pv16
+; CHECK-DAG:   MayAlias:    <4 x i32>* %m16pv16, <4 x i32>* %vm16m16
+define void @vscale_neg_notscalable(ptr %p) {
+  %v = call i64 @llvm.vscale.i64()
+  %vp = mul nsw i64 %v, 16
+  %vm = mul nsw i64 %v, -16
+  %vm16 = getelementptr i8, ptr %p, i64 %vm
+  %m16 = getelementptr <4 x i32>, ptr %p, i64 -1
+  %vm16m16 = getelementptr <4 x i32>, ptr %vm16, i64 -1
+  %m16pv16 = getelementptr i8, ptr %m16, i64 %vp
+  load <4 x i32>, ptr %p
+  load <4 x i32>, ptr %vm16
+  load <4 x i32>, ptr %m16
+  load <4 x i32>, ptr %vm16m16
+  load <4 x i32>, ptr %m16pv16
+  ret void
+}
+
+; CHECK-LABEL: vscale_neg_scalable
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %p
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16m16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %vm16, <vscale x 4 x i32>* %vm16m16
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %vm16m16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %p
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %m16pv16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %vm16m16
+define void @vscale_neg_scalable(ptr %p) {
+  %v = call i64 @llvm.vscale.i64()
+  %vp = mul nsw i64 %v, 16
+  %vm = mul nsw i64 %v, -16
+  %vm16 = getelementptr i8, ptr %p, i64 %vm
+  %m16 = getelementptr <4 x i32>, ptr %p, i64 -1
+  %vm16m16 = getelementptr <4 x i32>, ptr %vm16, i64 -1
+  %m16pv16 = getelementptr i8, ptr %m16, i64 %vp
+  load <vscale x 4 x i32>, ptr %p
+  load <vscale x 4 x i32>, ptr %vm16
+  load <vscale x 4 x i32>, ptr %m16
+  load <vscale x 4 x i32>, ptr %vm16m16
+  load <vscale x 4 x i32>, ptr %m16pv16
+  ret void
+}
+
+; CHECK-LABEL: vscale_pos_notscalable
+; CHECK-DAG:   NoAlias:      <4 x i32>* %p, <4 x i32>* %vm16
+; CHECK-DAG:   NoAlias:      <4 x i32>* %m16, <4 x i32>* %p
+; CHECK-DAG:   MayAlias:     <4 x i32>* %m16, <4 x i32>* %vm16
+; CHECK-DAG:   MayAlias:     <4 x i32>* %p, <4 x i32>* %vm16m16
+; CHECK-DAG:   NoAlias:      <4 x i32>* %vm16, <4 x i32>* %vm16m16
+; CHECK-DAG:   NoAlias:      <4 x i32>* %m16, <4 x i32>* %vm16m16
+; CHECK-DAG:   MayAlias:     <4 x i32>* %m16pv16, <4 x i32>* %p
+; CHECK-DAG:   NoAlias:      <4 x i32>* %m16pv16, <4 x i32>* %vm16
+; CHECK-DAG:   NoAlias:      <4 x i32>* %m16, <4 x i32>* %m16pv16
+; CHECK-DAG:   MayAlias:     <4 x i32>* %m16pv16, <4 x i32>* %vm16m16
+define void @vscale_pos_notscalable(ptr %p) {
+  %v = call i64 @llvm.vscale.i64()
+  %vp = mul nsw i64 %v, 16
+  %vm = mul nsw i64 %v, -16
+  %vm16 = getelementptr i8, ptr %p, i64 %vp
+  %m16 = getelementptr <4 x i32>, ptr %p, i64 1
+  %vm16m16 = getelementptr <4 x i32>, ptr %vm16, i64 1
+  %m16pv16 = getelementptr i8, ptr %m16, i64 %vm
+  load <4 x i32>, ptr %p
+  load <4 x i32>, ptr %vm16
+  load <4 x i32>, ptr %m16
+  load <4 x i32>, ptr %vm16m16
+  load <4 x i32>, ptr %m16pv16
+  ret void
+}
+
+; CHECK-LABEL: vscale_pos_scalable
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %p
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16m16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %vm16, <vscale x 4 x i32>* %vm16m16
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %vm16m16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %p
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %m16pv16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %vm16m16
+define void @vscale_pos_scalable(ptr %p) {
+  %v = call i64 @llvm.vscale.i64()
+  %vp = mul nsw i64 %v, 16
+  %vm = mul nsw i64 %v, -16
+  %vm16 = getelementptr i8, ptr %p, i64 %vp
+  %m16 = getelementptr <4 x i32>, ptr %p, i64 1
+  %vm16m16 = getelementptr <4 x i32>, ptr %vm16, i64 1
+  %m16pv16 = getelementptr i8, ptr %m16, i64 %vm
+  load <vscale x 4 x i32>, ptr %p
+  load <vscale x 4 x i32>, ptr %vm16
+  load <vscale x 4 x i32>, ptr %m16
+  load <vscale x 4 x i32>, ptr %vm16m16
+  load <vscale x 4 x i32>, ptr %m16pv16
+  ret void
+}
+
+; CHECK-LABEL: vscale_v1v2types
+; CHECK-DAG:   MustAlias:    <4 x i32>* %p, <vscale x 4 x i32>* %p
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:   NoAlias:      <4 x i32>* %p, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %p, <4 x i32>* %vm16
+; CHECK-DAG:   NoAlias:      <4 x i32>* %p, <4 x i32>* %vm16
+; CHECK-DAG:   MustAlias:    <4 x i32>* %vm16, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %p
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <4 x i32>* %p
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <4 x i32>* %vm16
+; CHECK-DAG:   NoAlias:      <4 x i32>* %m16, <vscale x 4 x i32>* %p
+; CHECK-DAG:   NoAlias:      <4 x i32>* %m16, <4 x i32>* %p
+; CHECK-DAG:   MayAlias:     <4 x i32>* %m16, <vscale x 4 x i32>* %vm16
+; CHECK-DAG:   MayAlias:     <4 x i32>* %m16, <4 x i32>* %vm16
+; CHECK-DAG:   MustAlias:    <4 x i32>* %m16, <vscale x 4 x i32>* %m16
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vp16
+; CHECK-DAG:   NoAlias:      <4 x i32>* %p, <vscale x 4 x i32>* %vp16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %vm16, <vscale x 4 x i32>* %vp16
+; CHECK-DAG:   MayAlias:     <4 x i32>* %vm16, <vscale x 4 x i32>* %vp16
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %vp16
+; CHECK-DAG:   MayAlias:     <4 x i32>* %m16, <vscale x 4 x i32>* %vp16
+define void @vscale_v1v2types(ptr %p) {
+  %v = call i64 @llvm.vscale.i64()
+  %vp = mul nsw i64 %v, 16
+  %vm = mul nsw i64 %v, -16
+  %vp16 = getelementptr i8, ptr %p, i64 %vp
+  %vm16 = getelementptr i8, ptr %p, i64 %vm
+  %m16 = getelementptr <4 x i32>, ptr %p, i64 -1
+  load <vscale x 4 x i32>, ptr %p
+  load <4 x i32>, ptr %p
+  load <vscale x 4 x i32>, ptr %vm16
+  load <4 x i32>, ptr %vm16
+  load <vscale x 4 x i32>, ptr %m16
+  load <4 x i32>, ptr %m16
+  load <vscale x 4 x i32>, ptr %vp16
+  ret void
+}
+
+; CHECK-LABEL: vscale_negativescale
+; CHECK-DAG:   MayAlias:    <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16
+define void @vscale_negativescale(ptr %p) vscale_range(1,16) {
+  %v = call i64 @llvm.vscale.i64()
+  %vm = mul nsw i64 %v, -15
+  %vm16 = getelementptr i8, ptr %p, i64 %vm
+  load <vscale x 4 x i32>, ptr %vm16
+  load <vscale x 4 x i32>, ptr %p
+  ret void
+}
+
+; CHECK-LABEL: onevscale
+; CHECK-DAG:   MustAlias:    <vscale x 4 x i32>* %vp161, <vscale x 4 x i32>* %vp162
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %vp161, <vscale x 4 x i32>* %vp161b
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %vp161b, <vscale x 4 x i32>* %vp162
+define void @onevscale(ptr %p) vscale_range(1,16) {
+  %v1 = call i64 @llvm.vscale.i64()
+  %vp1 = mul nsw i64 %v1, 16
+  %vp2 = mul nsw i64 %v1, 16
+  %vp3 = mul nsw i64 %v1, 17
+  %vp161 = getelementptr i8, ptr %p, i64 %vp1
+  %vp162 = getelementptr i8, ptr %p, i64 %vp2
+  %vp161b = getelementptr i8, ptr %vp161, i64 %vp3
+  load <vscale x 4 x i32>, ptr %vp161
+  load <vscale x 4 x i32>, ptr %vp162
+  load <vscale x 4 x i32>, ptr %vp161b
+  ret void
+}
+
+; CHECK-LABEL: twovscales
+; CHECK-DAG:   MustAlias:    <vscale x 4 x i32>* %vp161, <vscale x 4 x i32>* %vp162
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %vp161, <vscale x 4 x i32>* %vp161b
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %vp161b, <vscale x 4 x i32>* %vp162
+define void @twovscales(ptr %p) vscale_range(1,16) {
+  %v1 = call i64 @llvm.vscale.i64()
+  %v2 = call i64 @llvm.vscale.i64()
+  %vp1 = mul nsw i64 %v1, 16
+  %vp2 = mul nsw i64 %v2, 16
+  %vp3 = mul nsw i64 %v1, 17
+  %vp161 = getelementptr i8, ptr %p, i64 %vp1
+  %vp162 = getelementptr i8, ptr %p, i64 %vp2
+  %vp161b = getelementptr i8, ptr %vp161, i64 %vp3
+  load <vscale x 4 x i32>, ptr %vp161
+  load <vscale x 4 x i32>, ptr %vp162
+  load <vscale x 4 x i32>, ptr %vp161b
   ret void
 }
 
@@ -267,5 +620,53 @@ define void @gep_recursion_max_lookup_depth_reached(ptr %a, ptr %p) {
   load i32, ptr %gep_rec_4
   load i32, ptr %gep_rec_5
   load i32, ptr %gep_rec_6
+  ret void
+}
+
+; CHECK-LABEL: gep_2048
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %off255, <vscale x 4 x i32>* %p
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %noff255, <vscale x 4 x i32>* %p
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %noff255, <vscale x 4 x i32>* %off255
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %off256, <vscale x 4 x i32>* %p
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %off255, <vscale x 4 x i32>* %off256
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %noff255, <vscale x 4 x i32>* %off256
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %noff256, <vscale x 4 x i32>* %p
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %noff256, <vscale x 4 x i32>* %off255
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %noff255, <vscale x 4 x i32>* %noff256
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %noff256, <vscale x 4 x i32>* %off256
+define void @gep_2048(ptr %p) {
+  %off255 = getelementptr i8, ptr %p, i64 255
+  %noff255 = getelementptr i8, ptr %p, i64 -255
+  %off256 = getelementptr i8, ptr %p, i64 256
+  %noff256 = getelementptr i8, ptr %p, i64 -256
+  load <vscale x 4 x i32>, ptr %p
+  load <vscale x 4 x i32>, ptr %off255
+  load <vscale x 4 x i32>, ptr %noff255
+  load <vscale x 4 x i32>, ptr %off256
+  load <vscale x 4 x i32>, ptr %noff256
+  ret void
+}
+
+; CHECK-LABEL: gep_2048_vscalerange
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %off255, <vscale x 4 x i32>* %p
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %noff255, <vscale x 4 x i32>* %p
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %noff255, <vscale x 4 x i32>* %off255
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %off256, <vscale x 4 x i32>* %p
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %off255, <vscale x 4 x i32>* %off256
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %noff255, <vscale x 4 x i32>* %off256
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %noff256, <vscale x 4 x i32>* %p
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %noff256, <vscale x 4 x i32>* %off255
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %noff255, <vscale x 4 x i32>* %noff256
+; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %noff256, <vscale x 4 x i32>* %off256
+define void @gep_2048_vscalerange(ptr %p) vscale_range(1,16) {
+  %off255 = getelementptr i8, ptr %p, i64 255
+  %noff255 = getelementptr i8, ptr %p, i64 -255
+  %off256 = getelementptr i8, ptr %p, i64 256
+  %noff256 = getelementptr i8, ptr %p, i64 -256
+  load <vscale x 4 x i32>, ptr %p
+  load <vscale x 4 x i32>, ptr %off255
+  load <vscale x 4 x i32>, ptr %noff255
+  load <vscale x 4 x i32>, ptr %off256
+  load <vscale x 4 x i32>, ptr %noff256
   ret void
 }

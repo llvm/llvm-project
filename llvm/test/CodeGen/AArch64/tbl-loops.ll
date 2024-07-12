@@ -41,8 +41,8 @@ define void @loop1(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
 ; CHECK-NEXT:    xtn v1.4h, v1.4s
 ; CHECK-NEXT:    xtn v2.4h, v2.4s
-; CHECK-NEXT:    xtn v1.8b, v1.8h
-; CHECK-NEXT:    xtn v2.8b, v2.8h
+; CHECK-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
+; CHECK-NEXT:    uzp1 v2.8b, v2.8b, v0.8b
 ; CHECK-NEXT:    mov v1.s[1], v2.s[0]
 ; CHECK-NEXT:    stur d1, [x12, #-4]
 ; CHECK-NEXT:    add x12, x12, #8
@@ -562,25 +562,25 @@ define void @loop4(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    fcmp s3, s1
 ; CHECK-NEXT:    fcsel s4, s1, s3, gt
 ; CHECK-NEXT:    fcmp s3, #0.0
-; CHECK-NEXT:    ldp s3, s5, [x8, #8]
 ; CHECK-NEXT:    fcvtzs w11, s2
+; CHECK-NEXT:    ldp s3, s5, [x8, #8]
 ; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    fcsel s4, s0, s4, mi
 ; CHECK-NEXT:    fcmp s3, s1
 ; CHECK-NEXT:    strb w11, [x9]
+; CHECK-NEXT:    fcvtzs w12, s4
 ; CHECK-NEXT:    fcsel s6, s1, s3, gt
 ; CHECK-NEXT:    fcmp s3, #0.0
-; CHECK-NEXT:    fcvtzs w12, s4
 ; CHECK-NEXT:    fcsel s3, s0, s6, mi
 ; CHECK-NEXT:    fcmp s5, s1
 ; CHECK-NEXT:    strb w12, [x9, #1]
 ; CHECK-NEXT:    fcsel s6, s1, s5, gt
 ; CHECK-NEXT:    fcmp s5, #0.0
 ; CHECK-NEXT:    fcvtzs w13, s3
-; CHECK-NEXT:    fcsel s5, s0, s6, mi
+; CHECK-NEXT:    fcsel s2, s0, s6, mi
 ; CHECK-NEXT:    subs w10, w10, #1
 ; CHECK-NEXT:    strb w13, [x9, #2]
-; CHECK-NEXT:    fcvtzs w14, s5
+; CHECK-NEXT:    fcvtzs w14, s2
 ; CHECK-NEXT:    strb w14, [x9, #3]
 ; CHECK-NEXT:    add x9, x9, #4
 ; CHECK-NEXT:    b.ne .LBB3_6

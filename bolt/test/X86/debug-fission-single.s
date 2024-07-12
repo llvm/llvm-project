@@ -1,4 +1,4 @@
-# Checks debug fission support in BOLT
+## Checks debug fission support in BOLT
 
 # REQUIRES: system-linux
 

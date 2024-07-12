@@ -92,17 +92,24 @@ static bool isAMXIntrinsic(Value *I) {
   return false;
 }
 
+static bool containsAMXCode(Function &F) {
+  for (BasicBlock &BB : F)
+    for (Instruction &I : BB)
+      if (I.getType()->isX86_AMXTy())
+        return true;
+  return false;
+}
+
 static AllocaInst *createAllocaInstAtEntry(IRBuilder<> &Builder, BasicBlock *BB,
                                            Type *Ty) {
   Function &F = *BB->getParent();
-  Module *M = BB->getModule();
-  const DataLayout &DL = M->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   LLVMContext &Ctx = Builder.getContext();
   auto AllocaAlignment = DL.getPrefTypeAlign(Type::getX86_AMXTy(Ctx));
   unsigned AllocaAS = DL.getAllocaAddrSpace();
   AllocaInst *AllocaRes =
-      new AllocaInst(Ty, AllocaAS, "", &F.getEntryBlock().front());
+      new AllocaInst(Ty, AllocaAS, "", F.getEntryBlock().begin());
   AllocaRes->setAlignment(AllocaAlignment);
   return AllocaRes;
 }
@@ -446,14 +453,13 @@ bool X86LowerAMXType::visit() {
 } // anonymous namespace
 
 static Value *getAllocaPos(BasicBlock *BB) {
-  Module *M = BB->getModule();
   Function *F = BB->getParent();
   IRBuilder<> Builder(&F->getEntryBlock().front());
-  const DataLayout &DL = M->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
   unsigned AllocaAS = DL.getAllocaAddrSpace();
   Type *V256I32Ty = VectorType::get(Builder.getInt32Ty(), 256, false);
   AllocaInst *AllocaRes =
-      new AllocaInst(V256I32Ty, AllocaAS, "", &F->getEntryBlock().front());
+      new AllocaInst(V256I32Ty, AllocaAS, "", F->getEntryBlock().begin());
   BasicBlock::iterator Iter = AllocaRes->getIterator();
   ++Iter;
   Builder.SetInsertPoint(&*Iter);
@@ -1230,6 +1236,14 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
+    // Performance optimization: most code doesn't use AMX, so return early if
+    // there are no instructions that produce AMX values. This is sufficient, as
+    // AMX arguments and constants are not allowed -- so any producer of an AMX
+    // value must be an instruction.
+    // TODO: find a cheaper way for this, without looking at all instructions.
+    if (!containsAMXCode(F))
+      return false;
+
     bool C = false;
     TargetMachine *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
     TargetLibraryInfo *TLI =

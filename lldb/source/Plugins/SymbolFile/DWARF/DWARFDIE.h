@@ -69,12 +69,24 @@ public:
   DWARFDIE
   GetParentDeclContextDIE() const;
 
-  // DeclContext related functions
-  std::vector<DWARFDIE> GetDeclContextDIEs() const;
-
   /// Return this DIE's decl context as it is needed to look up types
-  /// in Clang's -gmodules debug info format.
+  /// in Clang modules. This context will include any modules or functions that
+  /// the type is declared in so an exact module match can be efficiently made.
   std::vector<CompilerContext> GetDeclContext() const;
+
+  /// Get a context to a type so it can be looked up.
+  ///
+  /// This function uses the current DIE to fill in a CompilerContext array
+  /// that is suitable for type lookup for comparison to a TypeQuery's compiler
+  /// context (TypeQuery::GetContextRef()). If this DIE represents a named type,
+  /// it should fill out the compiler context with the type itself as the last
+  /// entry. The declaration context should be above the type and stop at an
+  /// appropriate time, like either the translation unit or at a function
+  /// context. This is designed to allow users to efficiently look for types
+  /// using a full or partial CompilerContext array.
+  std::vector<CompilerContext> GetTypeLookupContext() const;
+
+  DWARFDeclContext GetDWARFDeclContext() const;
 
   // Getting attribute values from the DIE.
   //

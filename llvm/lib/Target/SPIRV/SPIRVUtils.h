@@ -15,6 +15,7 @@
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/TypedPointerType.h"
 #include <string>
 
 namespace llvm {
@@ -27,6 +28,7 @@ class MachineRegisterInfo;
 class Register;
 class StringRef;
 class SPIRVInstrInfo;
+class SPIRVSubtarget;
 
 // Add the given string as a series of integer operand, inserting null
 // terminators and padding to make sure the operands all have 32-bit
@@ -57,12 +59,16 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
                      const std::vector<uint32_t> &DecArgs,
                      StringRef StrImm = "");
 
+// Add an OpDecorate instruction by "spirv.Decorations" metadata node.
+void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
+                             const MDNode *GVarMD);
+
 // Convert a SPIR-V storage class to the corresponding LLVM IR address space.
 unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC);
 
 // Convert an LLVM IR address space to a SPIR-V storage class.
 SPIRV::StorageClass::StorageClass
-addressSpaceToStorageClass(unsigned AddrSpace);
+addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI);
 
 SPIRV::MemorySemantics::MemorySemantics
 getMemSemanticsForStorageClass(SPIRV::StorageClass::StorageClass SC);
@@ -79,7 +85,7 @@ MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
 uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI);
 
 // Check if MI is a SPIR-V specific intrinsic call.
-bool isSpvIntrinsic(MachineInstr &MI, Intrinsic::ID IntrinsicID);
+bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID);
 
 // Get type of i-th operand of the metadata node.
 Type *getMDOperandAsType(const MDNode *N, unsigned I);
@@ -88,14 +94,95 @@ Type *getMDOperandAsType(const MDNode *N, unsigned I);
 // name, otherwise return an empty string.
 std::string getOclOrSpirvBuiltinDemangledName(StringRef Name);
 
-// If Type is a pointer type and it is not opaque pointer, return its
-// element type, otherwise return Type.
-const Type *getTypedPtrEltType(const Type *Type);
-
 // Check if a string contains a builtin prefix.
 bool hasBuiltinTypePrefix(StringRef Name);
 
 // Check if given LLVM type is a special opaque builtin type.
 bool isSpecialOpaqueType(const Type *Ty);
+
+// Check if the function is an SPIR-V entry point
+bool isEntryPoint(const Function &F);
+
+// Parse basic scalar type name, substring TypeName, and return LLVM type.
+Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx);
+
+// True if this is an instance of TypedPointerType.
+inline bool isTypedPointerTy(const Type *T) {
+  return T->getTypeID() == Type::TypedPointerTyID;
+}
+
+// True if this is an instance of PointerType.
+inline bool isUntypedPointerTy(const Type *T) {
+  return T && T->getTypeID() == Type::PointerTyID;
+}
+
+// True if this is an instance of PointerType or TypedPointerType.
+inline bool isPointerTy(const Type *T) {
+  return isUntypedPointerTy(T) || isTypedPointerTy(T);
+}
+
+// Get the address space of this pointer or pointer vector type for instances of
+// PointerType or TypedPointerType.
+inline unsigned getPointerAddressSpace(const Type *T) {
+  Type *SubT = T->getScalarType();
+  return SubT->getTypeID() == Type::PointerTyID
+             ? cast<PointerType>(SubT)->getAddressSpace()
+             : cast<TypedPointerType>(SubT)->getAddressSpace();
+}
+
+// Return true if the Argument is decorated with a pointee type
+inline bool hasPointeeTypeAttr(Argument *Arg) {
+  return Arg->hasByValAttr() || Arg->hasByRefAttr() || Arg->hasStructRetAttr();
+}
+
+// Return the pointee type of the argument or nullptr otherwise
+inline Type *getPointeeTypeByAttr(Argument *Arg) {
+  if (Arg->hasByValAttr())
+    return Arg->getParamByValType();
+  if (Arg->hasStructRetAttr())
+    return Arg->getParamStructRetType();
+  if (Arg->hasByRefAttr())
+    return Arg->getParamByRefType();
+  return nullptr;
+}
+
+inline Type *reconstructFunctionType(Function *F) {
+  SmallVector<Type *> ArgTys;
+  for (unsigned i = 0; i < F->arg_size(); ++i)
+    ArgTys.push_back(F->getArg(i)->getType());
+  return FunctionType::get(F->getReturnType(), ArgTys, F->isVarArg());
+}
+
+inline Type *toTypedPointer(Type *Ty) {
+  return isUntypedPointerTy(Ty)
+             ? TypedPointerType::get(IntegerType::getInt8Ty(Ty->getContext()),
+                                     getPointerAddressSpace(Ty))
+             : Ty;
+}
+
+inline Type *toTypedFunPointer(FunctionType *FTy) {
+  Type *OrigRetTy = FTy->getReturnType();
+  Type *RetTy = toTypedPointer(OrigRetTy);
+  bool IsUntypedPtr = false;
+  for (Type *PTy : FTy->params()) {
+    if (isUntypedPointerTy(PTy)) {
+      IsUntypedPtr = true;
+      break;
+    }
+  }
+  if (!IsUntypedPtr && RetTy == OrigRetTy)
+    return FTy;
+  SmallVector<Type *> ParamTys;
+  for (Type *PTy : FTy->params())
+    ParamTys.push_back(toTypedPointer(PTy));
+  return FunctionType::get(RetTy, ParamTys, FTy->isVarArg());
+}
+
+inline const Type *unifyPtrType(const Type *Ty) {
+  if (auto FTy = dyn_cast<FunctionType>(Ty))
+    return toTypedFunPointer(const_cast<FunctionType *>(FTy));
+  return toTypedPointer(const_cast<Type *>(Ty));
+}
+
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

@@ -122,7 +122,7 @@ Configuring the Module
 
 We're now ready to configure our module, to specify the target and
 data layout. This isn't strictly necessary, but the `frontend
-performance guide <../Frontend/PerformanceTips.html>`_ recommends
+performance guide <../../Frontend/PerformanceTips.html>`_ recommends
 this. Optimizations benefit from knowing about the target and data
 layout.
 

@@ -89,8 +89,9 @@ uint8_t ifs::convertIFSSymbolTypeToELF(IFSSymbolType SymbolType) {
   case IFSSymbolType::TLS:
     return ELF::STT_TLS;
   case IFSSymbolType::NoType:
-  default:
     return ELF::STT_NOTYPE;
+  default:
+    llvm_unreachable("unknown symbol type");
   }
 }
 

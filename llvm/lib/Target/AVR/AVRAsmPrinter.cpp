@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -134,8 +135,8 @@ bool AVRAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
     Reg = MI->getOperand(OpNum + RegIdx).getReg();
 
     if (BytesPerReg == 2) {
-      Reg = TRI.getSubReg(Reg,
-                          ByteNumber % BytesPerReg ? AVR::sub_hi : AVR::sub_lo);
+      Reg = TRI.getSubReg(Reg, (ByteNumber % BytesPerReg) ? AVR::sub_hi
+                                                          : AVR::sub_lo);
     }
 
     O << AVRInstPrinter::getPrettyRegisterName(Reg, MRI);
@@ -251,13 +252,13 @@ bool AVRAsmPrinter::doFinalization(Module &M) {
     }
 
     auto *Section = cast<MCSectionELF>(TLOF.SectionForGlobal(&GO, TM));
-    if (Section->getName().startswith(".data"))
+    if (Section->getName().starts_with(".data"))
       NeedsCopyData = true;
-    else if (Section->getName().startswith(".rodata") && SubTM->hasLPM())
+    else if (Section->getName().starts_with(".rodata") && SubTM->hasLPM())
       // AVRs that have a separate program memory (that's most AVRs) store
       // .rodata sections in RAM.
       NeedsCopyData = true;
-    else if (Section->getName().startswith(".bss"))
+    else if (Section->getName().starts_with(".bss"))
       NeedsClearBSS = true;
   }
 

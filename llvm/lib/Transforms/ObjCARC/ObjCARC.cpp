@@ -23,7 +23,7 @@ using namespace llvm::objcarc;
 
 CallInst *objcarc::createCallInstWithColors(
     FunctionCallee Func, ArrayRef<Value *> Args, const Twine &NameStr,
-    Instruction *InsertBefore,
+    BasicBlock::iterator InsertBefore,
     const DenseMap<BasicBlock *, ColorVector> &BlockColors) {
   FunctionType *FTy = Func.getFunctionType();
   Value *Callee = Func.getCallee();
@@ -64,23 +64,23 @@ BundledRetainClaimRVs::insertAfterInvokes(Function &F, DominatorTree *DT) {
 
     // We don't have to call insertRVCallWithColors since DestBB is the normal
     // destination of the invoke.
-    insertRVCall(&*DestBB->getFirstInsertionPt(), I);
+    insertRVCall(DestBB->getFirstInsertionPt(), I);
     Changed = true;
   }
 
   return std::make_pair(Changed, CFGChanged);
 }
 
-CallInst *BundledRetainClaimRVs::insertRVCall(Instruction *InsertPt,
+CallInst *BundledRetainClaimRVs::insertRVCall(BasicBlock::iterator InsertPt,
                                               CallBase *AnnotatedCall) {
   DenseMap<BasicBlock *, ColorVector> BlockColors;
   return insertRVCallWithColors(InsertPt, AnnotatedCall, BlockColors);
 }
 
 CallInst *BundledRetainClaimRVs::insertRVCallWithColors(
-    Instruction *InsertPt, CallBase *AnnotatedCall,
+    BasicBlock::iterator InsertPt, CallBase *AnnotatedCall,
     const DenseMap<BasicBlock *, ColorVector> &BlockColors) {
-  IRBuilder<> Builder(InsertPt);
+  IRBuilder<> Builder(InsertPt->getParent(), InsertPt);
   Function *Func = *objcarc::getAttachedARCFunction(AnnotatedCall);
   assert(Func && "operand isn't a Function");
   Type *ParamTy = Func->getArg(0)->getType();

@@ -105,6 +105,13 @@ subroutine s6(x)
   x(:) = [1, 2, 3]
   !ERROR: Whole assumed-size array 'x' may not appear here without subscripts
   x = [1, 2, 3]
+  associate (y => x) ! ok
+    !ERROR: Whole assumed-size array 'y' may not appear here without subscripts
+    y = [1, 2, 3]
+  end associate
+  !ERROR: Whole assumed-size array 'x' may not appear here without subscripts
+  associate (y => (x))
+  end associate
 end
 
 module m7

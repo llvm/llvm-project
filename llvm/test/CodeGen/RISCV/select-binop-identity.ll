@@ -7,9 +7,9 @@
 ; RUN:   | FileCheck -check-prefix=SFB64 %s
 ; RUN: llc -mtriple=riscv64 -mattr=+xventanacondops -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=VTCONDOPS64 %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-zicond -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+zicond -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV32,ZICOND,ZICOND32 %s
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-zicond -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+zicond -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=ZICOND,ZICOND64 %s
 
 ; InstCombine canonicalizes (c ? x | y : x) to (x | (c ? y : 0)) similar for

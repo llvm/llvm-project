@@ -59,16 +59,6 @@ struct VectorTransformsOptions {
     vectorTransferSplit = opt;
     return *this;
   }
-
-  /// Option to control if vector.transpose can lower to a vector.shape_cast.
-  /// TODO: ATM it's not possible to lower `vector.shape_cast` to SPIR-V
-  /// and hence the need for this opt-out. Once the missing support has been
-  /// added, this option can be removed.
-  bool useShapeCast = true;
-  VectorTransformsOptions &setUseShapeCast(bool opt = true) {
-    useShapeCast = opt;
-    return *this;
-  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -120,8 +110,10 @@ void transferOpflowOpt(RewriterBase &rewriter, Operation *rootOp);
 
 /// Cast away the leading unit dim, if exists, for the given contract op.
 /// Return success if the transformation applies; return failure otherwise.
-LogicalResult castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
-                                               RewriterBase &rewriter);
+FailureOr<Value>
+castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
+                                 MaskingOpInterface maskingOp,
+                                 RewriterBase &rewriter);
 
 } // namespace vector
 } // namespace mlir

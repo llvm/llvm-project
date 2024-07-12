@@ -61,26 +61,26 @@ static const char R11LVIThunkName[] = "__llvm_lvi_thunk_r11";
 namespace {
 struct RetpolineThunkInserter : ThunkInserter<RetpolineThunkInserter> {
   const char *getThunkPrefix() { return RetpolineNamePrefix; }
-  bool mayUseThunk(const MachineFunction &MF, bool InsertedThunks) {
-    if (InsertedThunks)
-      return false;
+  bool mayUseThunk(const MachineFunction &MF) {
     const auto &STI = MF.getSubtarget<X86Subtarget>();
     return (STI.useRetpolineIndirectCalls() ||
             STI.useRetpolineIndirectBranches()) &&
            !STI.useRetpolineExternalThunk();
   }
-  bool insertThunks(MachineModuleInfo &MMI, MachineFunction &MF);
+  bool insertThunks(MachineModuleInfo &MMI, MachineFunction &MF,
+                    bool ExistingThunks);
   void populateThunk(MachineFunction &MF);
 };
 
 struct LVIThunkInserter : ThunkInserter<LVIThunkInserter> {
   const char *getThunkPrefix() { return LVIThunkNamePrefix; }
-  bool mayUseThunk(const MachineFunction &MF, bool InsertedThunks) {
-    if (InsertedThunks)
-      return false;
+  bool mayUseThunk(const MachineFunction &MF) {
     return MF.getSubtarget<X86Subtarget>().useLVIControlFlowIntegrity();
   }
-  bool insertThunks(MachineModuleInfo &MMI, MachineFunction &MF) {
+  bool insertThunks(MachineModuleInfo &MMI, MachineFunction &MF,
+                    bool ExistingThunks) {
+    if (ExistingThunks)
+      return false;
     createThunkFunction(MMI, R11LVIThunkName);
     return true;
   }
@@ -104,41 +104,23 @@ struct LVIThunkInserter : ThunkInserter<LVIThunkInserter> {
   }
 };
 
-class X86IndirectThunks : public MachineFunctionPass {
+class X86IndirectThunks
+    : public ThunkInserterPass<RetpolineThunkInserter, LVIThunkInserter> {
 public:
   static char ID;
 
-  X86IndirectThunks() : MachineFunctionPass(ID) {}
+  X86IndirectThunks() : ThunkInserterPass(ID) {}
 
   StringRef getPassName() const override { return "X86 Indirect Thunks"; }
-
-  bool doInitialization(Module &M) override;
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-private:
-  std::tuple<RetpolineThunkInserter, LVIThunkInserter> TIs;
-
-  // FIXME: When LLVM moves to C++17, these can become folds
-  template <typename... ThunkInserterT>
-  static void initTIs(Module &M,
-                      std::tuple<ThunkInserterT...> &ThunkInserters) {
-    (void)std::initializer_list<int>{
-        (std::get<ThunkInserterT>(ThunkInserters).init(M), 0)...};
-  }
-  template <typename... ThunkInserterT>
-  static bool runTIs(MachineModuleInfo &MMI, MachineFunction &MF,
-                     std::tuple<ThunkInserterT...> &ThunkInserters) {
-    bool Modified = false;
-    (void)std::initializer_list<int>{
-        Modified |= std::get<ThunkInserterT>(ThunkInserters).run(MMI, MF)...};
-    return Modified;
-  }
 };
 
 } // end anonymous namespace
 
 bool RetpolineThunkInserter::insertThunks(MachineModuleInfo &MMI,
-                                          MachineFunction &MF) {
+                                          MachineFunction &MF,
+                                          bool ExistingThunks) {
+  if (ExistingThunks)
+    return false;
   if (MMI.getTarget().getTargetTriple().getArch() == Triple::x86_64)
     createThunkFunction(MMI, R11RetpolineName);
   else
@@ -264,14 +246,3 @@ FunctionPass *llvm::createX86IndirectThunksPass() {
 }
 
 char X86IndirectThunks::ID = 0;
-
-bool X86IndirectThunks::doInitialization(Module &M) {
-  initTIs(M, TIs);
-  return false;
-}
-
-bool X86IndirectThunks::runOnMachineFunction(MachineFunction &MF) {
-  LLVM_DEBUG(dbgs() << getPassName() << '\n');
-  auto &MMI = getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
-  return runTIs(MMI, MF, TIs);
-}

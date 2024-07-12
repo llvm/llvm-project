@@ -66,81 +66,50 @@ from ctypes import *
 
 import clang.enumerations
 
+import collections.abc
 import os
-import sys
 
-if sys.version_info[0] == 3:
-    # Python 3 strings are unicode, translate them to/from utf8 for C-interop.
-    class c_interop_string(c_char_p):
-        def __init__(self, p=None):
-            if p is None:
-                p = ""
-            if isinstance(p, str):
-                p = p.encode("utf8")
-            super(c_char_p, self).__init__(p)
 
-        def __str__(self):
-            return self.value
+# Python 3 strings are unicode, translate them to/from utf8 for C-interop.
+class c_interop_string(c_char_p):
+    def __init__(self, p=None):
+        if p is None:
+            p = ""
+        if isinstance(p, str):
+            p = p.encode("utf8")
+        super(c_char_p, self).__init__(p)
 
-        @property
-        def value(self):
-            if super(c_char_p, self).value is None:
-                return None
-            return super(c_char_p, self).value.decode("utf8")
+    def __str__(self):
+        return self.value
 
-        @classmethod
-        def from_param(cls, param):
-            if isinstance(param, str):
-                return cls(param)
-            if isinstance(param, bytes):
-                return cls(param)
-            if param is None:
-                # Support passing null to C functions expecting char arrays
-                return None
-            raise TypeError(
-                "Cannot convert '{}' to '{}'".format(type(param).__name__, cls.__name__)
-            )
+    @property
+    def value(self):
+        if super(c_char_p, self).value is None:
+            return None
+        return super(c_char_p, self).value.decode("utf8")
 
-        @staticmethod
-        def to_python_string(x, *args):
-            return x.value
+    @classmethod
+    def from_param(cls, param):
+        if isinstance(param, str):
+            return cls(param)
+        if isinstance(param, bytes):
+            return cls(param)
+        if param is None:
+            # Support passing null to C functions expecting char arrays
+            return None
+        raise TypeError(
+            "Cannot convert '{}' to '{}'".format(type(param).__name__, cls.__name__)
+        )
 
-    def b(x):
-        if isinstance(x, bytes):
-            return x
-        return x.encode("utf8")
+    @staticmethod
+    def to_python_string(x, *args):
+        return x.value
 
-elif sys.version_info[0] == 2:
-    # Python 2 strings are utf8 byte strings, no translation is needed for
-    # C-interop.
-    c_interop_string = c_char_p
 
-    def _to_python_string(x, *args):
+def b(x):
+    if isinstance(x, bytes):
         return x
-
-    c_interop_string.to_python_string = staticmethod(_to_python_string)
-
-    def b(x):
-        return x
-
-
-# Importing ABC-s directly from collections is deprecated since Python 3.7,
-# will stop working in Python 3.8.
-# See: https://docs.python.org/dev/whatsnew/3.7.html#id3
-if sys.version_info[:2] >= (3, 7):
-    from collections import abc as collections_abc
-else:
-    import collections as collections_abc
-
-# We only support PathLike objects on Python version with os.fspath present
-# to be consistent with the Python standard library. On older Python versions
-# we only support strings and we have dummy fspath to just pass them through.
-try:
-    fspath = os.fspath
-except AttributeError:
-
-    def fspath(x):
-        return x
+    return x.encode("utf8")
 
 
 # ctypes doesn't implicitly convert c_void_p to the appropriate wrapper
@@ -202,7 +171,7 @@ class TranslationUnitSaveError(Exception):
 ### Structures and Utility Classes ###
 
 
-class CachedProperty(object):
+class CachedProperty:
     """Decorator that lazy-loads the value of a property.
 
     The first time the property is accessed, the original property function is
@@ -392,7 +361,7 @@ class SourceRange(Structure):
         return "<SourceRange start %r, end %r>" % (self.start, self.end)
 
 
-class Diagnostic(object):
+class Diagnostic:
     """
     A Diagnostic is a single instance of a Clang diagnostic. It includes the
     diagnostic severity, the message, the location the diagnostic occurred, as
@@ -433,7 +402,7 @@ class Diagnostic(object):
 
     @property
     def ranges(self):
-        class RangeIterator(object):
+        class RangeIterator:
             def __init__(self, diag):
                 self.diag = diag
 
@@ -449,7 +418,7 @@ class Diagnostic(object):
 
     @property
     def fixits(self):
-        class FixItIterator(object):
+        class FixItIterator:
             def __init__(self, diag):
                 self.diag = diag
 
@@ -468,7 +437,7 @@ class Diagnostic(object):
 
     @property
     def children(self):
-        class ChildDiagnosticsIterator(object):
+        class ChildDiagnosticsIterator:
             def __init__(self, diag):
                 self.diag_set = conf.lib.clang_getChildDiagnostics(diag)
 
@@ -532,10 +501,10 @@ class Diagnostic(object):
         return self.ptr
 
 
-class FixIt(object):
+class FixIt:
     """
     A FixIt represents a transformation to be applied to the source to
-    "fix-it". The fix-it shouldbe applied by replacing the given source range
+    "fix-it". The fix-it should be applied by replacing the given source range
     with the given value.
     """
 
@@ -547,7 +516,7 @@ class FixIt(object):
         return "<FixIt range %r, value %r>" % (self.range, self.value)
 
 
-class TokenGroup(object):
+class TokenGroup:
     """Helper class to facilitate token management.
 
     Tokens are allocated from libclang in chunks. They must be disposed of as a
@@ -603,7 +572,7 @@ class TokenGroup(object):
             yield token
 
 
-class TokenKind(object):
+class TokenKind:
     """Describes a specific type of a Token."""
 
     _value_map = {}  # int -> TokenKind
@@ -642,7 +611,7 @@ class TokenKind(object):
 
 
 ### Cursor Kinds ###
-class BaseEnumeration(object):
+class BaseEnumeration:
     """
     Common base class for named enumerations held in sync with Index.h values.
 
@@ -680,7 +649,7 @@ class BaseEnumeration(object):
 
     @classmethod
     def from_id(cls, id):
-        if id >= len(cls._kinds) or cls._kinds[id] is None:
+        if id < 0 or id >= len(cls._kinds) or cls._kinds[id] is None:
             raise ValueError("Unknown template argument kind %d" % id)
         return cls._kinds[id]
 
@@ -1122,6 +1091,29 @@ CursorKind.OMP_ARRAY_SECTION_EXPR = CursorKind(147)
 # Represents an @available(...) check.
 CursorKind.OBJC_AVAILABILITY_CHECK_EXPR = CursorKind(148)
 
+# Fixed point literal.
+CursorKind.FIXED_POINT_LITERAL = CursorKind(149)
+
+# OpenMP 5.0 [2.1.4, Array Shaping].
+CursorKind.OMP_ARRAY_SHAPING_EXPR = CursorKind(150)
+
+# OpenMP 5.0 [2.1.6 Iterators].
+CursorKind.OMP_ITERATOR_EXPR = CursorKind(151)
+
+# OpenCL's addrspace_cast<> expression.
+CursorKind.CXX_ADDRSPACE_CAST_EXPR = CursorKind(152)
+
+# Expression that references a C++20 concept.
+CursorKind.CONCEPT_SPECIALIZATION_EXPR = CursorKind(153)
+
+# Expression that references a C++20 requires expression.
+CursorKind.REQUIRES_EXPR = CursorKind(154)
+
+# Expression that references a C++20 parenthesized list aggregate initializer.
+CursorKind.CXX_PAREN_LIST_INIT_EXPR = CursorKind(155)
+
+# Represents a C++26 pack indexing expression.
+CursorKind.PACK_INDEXING_EXPR = CursorKind(156)
 
 # A statement whose specific kind is not exposed via this interface.
 #
@@ -1343,6 +1335,114 @@ CursorKind.OMP_TARGET_SIMD_DIRECTIVE = CursorKind(270)
 # OpenMP teams distribute directive.
 CursorKind.OMP_TEAMS_DISTRIBUTE_DIRECTIVE = CursorKind(271)
 
+# OpenMP teams distribute simd directive.
+CursorKind.OMP_TEAMS_DISTRIBUTE_SIMD_DIRECTIVE = CursorKind(272)
+
+# OpenMP teams distribute parallel for simd directive.
+CursorKind.OMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_SIMD_DIRECTIVE = CursorKind(273)
+
+# OpenMP teams distribute parallel for directive.
+CursorKind.OMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_DIRECTIVE = CursorKind(274)
+
+# OpenMP target teams directive.
+CursorKind.OMP_TARGET_TEAMS_DIRECTIVE = CursorKind(275)
+
+# OpenMP target teams distribute directive.
+CursorKind.OMP_TARGET_TEAMS_DISTRIBUTE_DIRECTIVE = CursorKind(276)
+
+# OpenMP target teams distribute parallel for directive.
+CursorKind.OMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_DIRECTIVE = CursorKind(277)
+
+# OpenMP target teams distribute parallel for simd directive.
+CursorKind.OMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_SIMD_DIRECTIVE = CursorKind(278)
+
+# OpenMP target teams distribute simd directive.
+CursorKind.OMP_TARGET_TEAMS_DISTRIBUTE_SIMD_DIRECTIVE = CursorKind(279)
+
+# C++2a std::bit_cast expression.
+CursorKind.BUILTIN_BIT_CAST_EXPR = CursorKind(280)
+
+# OpenMP master taskloop directive.
+CursorKind.OMP_MASTER_TASK_LOOP_DIRECTIVE = CursorKind(281)
+
+# OpenMP parallel master taskloop directive.
+CursorKind.OMP_PARALLEL_MASTER_TASK_LOOP_DIRECTIVE = CursorKind(282)
+
+# OpenMP master taskloop simd directive.
+CursorKind.OMP_MASTER_TASK_LOOP_SIMD_DIRECTIVE = CursorKind(283)
+
+# OpenMP parallel master taskloop simd directive.
+CursorKind.OMP_PARALLEL_MASTER_TASK_LOOP_SIMD_DIRECTIVE = CursorKind(284)
+
+# OpenMP parallel master directive.
+CursorKind.OMP_PARALLEL_MASTER_DIRECTIVE = CursorKind(285)
+
+# OpenMP depobj directive.
+CursorKind.OMP_DEPOBJ_DIRECTIVE = CursorKind(286)
+
+# OpenMP scan directive.
+CursorKind.OMP_SCAN_DIRECTIVE = CursorKind(287)
+
+# OpenMP tile directive.
+CursorKind.OMP_TILE_DIRECTIVE = CursorKind(288)
+
+# OpenMP canonical loop.
+CursorKind.OMP_CANONICAL_LOOP = CursorKind(289)
+
+# OpenMP interop directive.
+CursorKind.OMP_INTEROP_DIRECTIVE = CursorKind(290)
+
+# OpenMP dispatch directive.
+CursorKind.OMP_DISPATCH_DIRECTIVE = CursorKind(291)
+
+# OpenMP masked directive.
+CursorKind.OMP_MASKED_DIRECTIVE = CursorKind(292)
+
+# OpenMP unroll directive.
+CursorKind.OMP_UNROLL_DIRECTIVE = CursorKind(293)
+
+# OpenMP metadirective directive.
+CursorKind.OMP_META_DIRECTIVE = CursorKind(294)
+
+# OpenMP loop directive.
+CursorKind.OMP_GENERIC_LOOP_DIRECTIVE = CursorKind(295)
+
+# OpenMP teams loop directive.
+CursorKind.OMP_TEAMS_GENERIC_LOOP_DIRECTIVE = CursorKind(296)
+
+# OpenMP target teams loop directive.
+CursorKind.OMP_TARGET_TEAMS_GENERIC_LOOP_DIRECTIVE = CursorKind(297)
+
+# OpenMP parallel loop directive.
+CursorKind.OMP_PARALLEL_GENERIC_LOOP_DIRECTIVE = CursorKind(298)
+
+# OpenMP target parallel loop directive.
+CursorKind.OMP_TARGET_PARALLEL_GENERIC_LOOP_DIRECTIVE = CursorKind(299)
+
+# OpenMP parallel masked directive.
+CursorKind.OMP_PARALLEL_MASKED_DIRECTIVE = CursorKind(300)
+
+# OpenMP masked taskloop directive.
+CursorKind.OMP_MASKED_TASK_LOOP_DIRECTIVE = CursorKind(301)
+
+# OpenMP masked taskloop simd directive.
+CursorKind.OMP_MASKED_TASK_LOOP_SIMD_DIRECTIVE = CursorKind(302)
+
+# OpenMP parallel masked taskloop directive.
+CursorKind.OMP_PARALLEL_MASKED_TASK_LOOP_DIRECTIVE = CursorKind(303)
+
+# OpenMP parallel masked taskloop simd directive.
+CursorKind.OMP_PARALLEL_MASKED_TASK_LOOP_SIMD_DIRECTIVE = CursorKind(304)
+
+# OpenMP error directive.
+CursorKind.OMP_ERROR_DIRECTIVE = CursorKind(305)
+
+# OpenMP scope directive.
+CursorKind.OMP_SCOPE_DIRECTIVE = CursorKind(306)
+
+# OpenACC Compute Construct.
+CursorKind.OPEN_ACC_COMPUTE_DIRECTIVE = CursorKind(320)
+
 ###
 # Other Kinds
 
@@ -1380,6 +1480,24 @@ CursorKind.VISIBILITY_ATTR = CursorKind(417)
 
 CursorKind.DLLEXPORT_ATTR = CursorKind(418)
 CursorKind.DLLIMPORT_ATTR = CursorKind(419)
+CursorKind.NS_RETURNS_RETAINED = CursorKind(420)
+CursorKind.NS_RETURNS_NOT_RETAINED = CursorKind(421)
+CursorKind.NS_RETURNS_AUTORELEASED = CursorKind(422)
+CursorKind.NS_CONSUMES_SELF = CursorKind(423)
+CursorKind.NS_CONSUMED = CursorKind(424)
+CursorKind.OBJC_EXCEPTION = CursorKind(425)
+CursorKind.OBJC_NSOBJECT = CursorKind(426)
+CursorKind.OBJC_INDEPENDENT_CLASS = CursorKind(427)
+CursorKind.OBJC_PRECISE_LIFETIME = CursorKind(428)
+CursorKind.OBJC_RETURNS_INNER_POINTER = CursorKind(429)
+CursorKind.OBJC_REQUIRES_SUPER = CursorKind(430)
+CursorKind.OBJC_ROOT_CLASS = CursorKind(431)
+CursorKind.OBJC_SUBCLASSING_RESTRICTED = CursorKind(432)
+CursorKind.OBJC_EXPLICIT_PROTOCOL_IMPL = CursorKind(433)
+CursorKind.OBJC_DESIGNATED_INITIALIZER = CursorKind(434)
+CursorKind.OBJC_RUNTIME_VISIBLE = CursorKind(435)
+CursorKind.OBJC_BOXABLE = CursorKind(436)
+CursorKind.FLAG_ENUM = CursorKind(437)
 CursorKind.CONVERGENT_ATTR = CursorKind(438)
 CursorKind.WARN_UNUSED_ATTR = CursorKind(439)
 CursorKind.WARN_UNUSED_RESULT_ATTR = CursorKind(440)
@@ -1426,6 +1544,11 @@ TemplateArgumentKind.TYPE = TemplateArgumentKind(1)
 TemplateArgumentKind.DECLARATION = TemplateArgumentKind(2)
 TemplateArgumentKind.NULLPTR = TemplateArgumentKind(3)
 TemplateArgumentKind.INTEGRAL = TemplateArgumentKind(4)
+TemplateArgumentKind.TEMPLATE = TemplateArgumentKind(5)
+TemplateArgumentKind.TEMPLATE_EXPANSION = TemplateArgumentKind(6)
+TemplateArgumentKind.EXPRESSION = TemplateArgumentKind(7)
+TemplateArgumentKind.PACK = TemplateArgumentKind(8)
+TemplateArgumentKind.INVALID = TemplateArgumentKind(9)
 
 ### Exception Specification Kinds ###
 class ExceptionSpecificationKind(BaseEnumeration):
@@ -2059,7 +2182,7 @@ class Cursor(Structure):
         return res
 
 
-class StorageClass(object):
+class StorageClass:
     """
     Describes the storage class of a declaration
     """
@@ -2092,7 +2215,7 @@ class StorageClass(object):
 
     @staticmethod
     def from_id(id):
-        if id >= len(StorageClass._kinds) or not StorageClass._kinds[id]:
+        if id < 0 or id >= len(StorageClass._kinds) or not StorageClass._kinds[id]:
             raise ValueError("Unknown storage class %d" % id)
         return StorageClass._kinds[id]
 
@@ -2271,9 +2394,26 @@ TypeKind.OCLEVENT = TypeKind(158)
 TypeKind.OCLQUEUE = TypeKind(159)
 TypeKind.OCLRESERVEID = TypeKind(160)
 
+TypeKind.OBJCOBJECT = TypeKind(161)
+TypeKind.OBJCTYPEPARAM = TypeKind(162)
+TypeKind.ATTRIBUTED = TypeKind(163)
+
+TypeKind.OCLINTELSUBGROUPAVCMCEPAYLOAD = TypeKind(164)
+TypeKind.OCLINTELSUBGROUPAVCIMEPAYLOAD = TypeKind(165)
+TypeKind.OCLINTELSUBGROUPAVCREFPAYLOAD = TypeKind(166)
+TypeKind.OCLINTELSUBGROUPAVCSICPAYLOAD = TypeKind(167)
+TypeKind.OCLINTELSUBGROUPAVCMCERESULT = TypeKind(168)
+TypeKind.OCLINTELSUBGROUPAVCIMERESULT = TypeKind(169)
+TypeKind.OCLINTELSUBGROUPAVCREFRESULT = TypeKind(170)
+TypeKind.OCLINTELSUBGROUPAVCSICRESULT = TypeKind(171)
+TypeKind.OCLINTELSUBGROUPAVCIMERESULTSINGLEREFERENCESTREAMOUT = TypeKind(172)
+TypeKind.OCLINTELSUBGROUPAVCIMERESULTSDUALREFERENCESTREAMOUT = TypeKind(173)
+TypeKind.OCLINTELSUBGROUPAVCIMERESULTSSINGLEREFERENCESTREAMIN = TypeKind(174)
+TypeKind.OCLINTELSUBGROUPAVCIMEDUALREFERENCESTREAMIN = TypeKind(175)
+
 TypeKind.EXTVECTOR = TypeKind(176)
 TypeKind.ATOMIC = TypeKind(177)
-
+TypeKind.BTFTAGATTRIBUTED = TypeKind(178)
 
 class RefQualifierKind(BaseEnumeration):
     """Describes a specific ref-qualifier of a type."""
@@ -2353,7 +2493,7 @@ class Type(Structure):
         container is a Type instance.
         """
 
-        class ArgumentsIterator(collections_abc.Sequence):
+        class ArgumentsIterator(collections.abc.Sequence):
             def __init__(self, parent):
                 self.parent = parent
                 self.length = None
@@ -2608,7 +2748,7 @@ class Type(Structure):
 # a void*.
 
 
-class ClangObject(object):
+class ClangObject:
     """
     A helper for Clang objects. This class helps act as an intermediary for
     the ctypes library and the Clang CIndex library.
@@ -2656,8 +2796,8 @@ SpellingCache = {
 }
 
 
-class CompletionChunk(object):
-    class Kind(object):
+class CompletionChunk:
+    class Kind:
         def __init__(self, name):
             self.name = name
 
@@ -2747,7 +2887,7 @@ completionChunkKindMap = {
 
 
 class CompletionString(ClangObject):
-    class Availability(object):
+    class Availability:
         def __init__(self, name):
             self.name = name
 
@@ -2849,7 +2989,7 @@ class CodeCompletionResults(ClangObject):
 
     @property
     def diagnostics(self):
-        class DiagnosticsItr(object):
+        class DiagnosticsItr:
             def __init__(self, ccr):
                 self.ccr = ccr
 
@@ -3003,13 +3143,13 @@ class TranslationUnit(ClangObject):
                 if hasattr(contents, "read"):
                     contents = contents.read()
                 contents = b(contents)
-                unsaved_array[i].name = b(fspath(name))
+                unsaved_array[i].name = b(os.fspath(name))
                 unsaved_array[i].contents = contents
                 unsaved_array[i].length = len(contents)
 
         ptr = conf.lib.clang_parseTranslationUnit(
             index,
-            fspath(filename) if filename is not None else None,
+            os.fspath(filename) if filename is not None else None,
             args_array,
             len(args),
             unsaved_array,
@@ -3040,7 +3180,7 @@ class TranslationUnit(ClangObject):
         if index is None:
             index = Index.create()
 
-        ptr = conf.lib.clang_createTranslationUnit(index, fspath(filename))
+        ptr = conf.lib.clang_createTranslationUnit(index, os.fspath(filename))
         if not ptr:
             raise TranslationUnitLoadError(filename)
 
@@ -3159,7 +3299,7 @@ class TranslationUnit(ClangObject):
         Return an iterable (and indexable) object containing the diagnostics.
         """
 
-        class DiagIterator(object):
+        class DiagIterator:
             def __init__(self, tu):
                 self.tu = tu
 
@@ -3193,7 +3333,7 @@ class TranslationUnit(ClangObject):
                 if hasattr(contents, "read"):
                     contents = contents.read()
                 contents = b(contents)
-                unsaved_files_array[i].name = b(fspath(name))
+                unsaved_files_array[i].name = b(os.fspath(name))
                 unsaved_files_array[i].contents = contents
                 unsaved_files_array[i].length = len(contents)
         ptr = conf.lib.clang_reparseTranslationUnit(
@@ -3217,7 +3357,11 @@ class TranslationUnit(ClangObject):
         """
         options = conf.lib.clang_defaultSaveOptions(self)
         result = int(
-            conf.lib.clang_saveTranslationUnit(self, fspath(filename), options)
+            conf.lib.clang_saveTranslationUnit(
+                self,
+                os.fspath(filename),
+                options,
+            )
         )
         if result != 0:
             raise TranslationUnitSaveError(result, "Error saving TranslationUnit.")
@@ -3261,12 +3405,12 @@ class TranslationUnit(ClangObject):
                 if hasattr(contents, "read"):
                     contents = contents.read()
                 contents = b(contents)
-                unsaved_files_array[i].name = b(fspath(name))
+                unsaved_files_array[i].name = b(os.fspath(name))
                 unsaved_files_array[i].contents = contents
                 unsaved_files_array[i].length = len(contents)
         ptr = conf.lib.clang_codeCompleteAt(
             self,
-            fspath(path),
+            os.fspath(path),
             line,
             column,
             unsaved_files_array,
@@ -3300,7 +3444,9 @@ class File(ClangObject):
     @staticmethod
     def from_name(translation_unit, file_name):
         """Retrieve a file handle within the given translation unit."""
-        return File(conf.lib.clang_getFile(translation_unit, fspath(file_name)))
+        return File(
+            conf.lib.clang_getFile(translation_unit, os.fspath(file_name)),
+        )
 
     @property
     def name(self):
@@ -3328,7 +3474,7 @@ class File(ClangObject):
         return res
 
 
-class FileInclusion(object):
+class FileInclusion:
     """
     The FileInclusion class represents the inclusion of one source file by
     another via a '#include' directive or as the input file for the translation
@@ -3377,7 +3523,7 @@ class CompilationDatabaseError(Exception):
         Exception.__init__(self, "Error %d: %s" % (enumeration, message))
 
 
-class CompileCommand(object):
+class CompileCommand:
     """Represents the compile command used to build a file"""
 
     def __init__(self, cmd, ccmds):
@@ -3409,7 +3555,7 @@ class CompileCommand(object):
             yield conf.lib.clang_CompileCommand_getArg(self.cmd, i)
 
 
-class CompileCommands(object):
+class CompileCommands:
     """
     CompileCommands is an iterable object containing all CompileCommand
     that can be used for building a specific file.
@@ -3460,7 +3606,7 @@ class CompilationDatabase(ClangObject):
         errorCode = c_uint()
         try:
             cdb = conf.lib.clang_CompilationDatabase_fromDirectory(
-                fspath(buildDir), byref(errorCode)
+                os.fspath(buildDir), byref(errorCode)
             )
         except CompilationDatabaseError as e:
             raise CompilationDatabaseError(
@@ -3474,7 +3620,7 @@ class CompilationDatabase(ClangObject):
         build filename. Returns None if filename is not found in the database.
         """
         return conf.lib.clang_CompilationDatabase_getCompileCommands(
-            self, fspath(filename)
+            self, os.fspath(filename)
         )
 
     def getAllCompileCommands(self):
@@ -3529,6 +3675,65 @@ class Token(Structure):
         conf.lib.clang_annotateTokens(self._tu, byref(self), 1, byref(cursor))
 
         return cursor
+
+
+class Rewriter(ClangObject):
+    """
+    The Rewriter is a wrapper class around clang::Rewriter
+
+    It enables rewriting buffers.
+    """
+
+    @staticmethod
+    def create(tu):
+        """
+        Creates a new Rewriter
+        Parameters:
+        tu -- The translation unit for the target AST.
+        """
+        return Rewriter(conf.lib.clang_CXRewriter_create(tu))
+
+    def __init__(self, ptr):
+        ClangObject.__init__(self, ptr)
+
+    def __del__(self):
+        conf.lib.clang_CXRewriter_dispose(self)
+
+    def insert_text_before(self, loc, insert):
+        """
+        Insert the specified string at the specified location in
+        the original buffer.
+        """
+        conf.lib.clang_CXRewriter_insertTextBefore(self, loc, insert)
+
+    def replace_text(self, extent, replacement):
+        """
+        This method replaces a range of characters in the input buffer with
+        a new string.
+        """
+        conf.lib.clang_CXRewriter_replaceText(self, extent, replacement)
+
+    def remove_text(self, extent):
+        """
+        Remove the specified text region.
+        """
+        conf.lib.clang_CXRewriter_removeText(self, extent)
+
+    def overwrite_changed_files(self):
+        """
+        Save all changed files to disk.
+
+        Returns 1 if any files were not saved successfully,
+        returns 0 otherwise.
+        """
+        return conf.lib.clang_CXRewriter_overwriteChangedFiles(self)
+
+    def write_main_file_to_stdout(self):
+        """
+        Writes the main file to stdout.
+        """
+        sys.stdout.flush()
+        conf.lib.clang_CXRewriter_writeMainFileToStdOut(self)
 
 
 # Now comes the plumbing to hook up the C library.
@@ -3596,6 +3801,13 @@ functionList = [
     ("clang_codeCompleteGetNumDiagnostics", [CodeCompletionResults], c_int),
     ("clang_createIndex", [c_int, c_int], c_object_p),
     ("clang_createTranslationUnit", [Index, c_interop_string], c_object_p),
+    ("clang_CXRewriter_create", [TranslationUnit], c_object_p),
+    ("clang_CXRewriter_dispose", [Rewriter]),
+    ("clang_CXRewriter_insertTextBefore", [Rewriter, SourceLocation, c_interop_string]),
+    ("clang_CXRewriter_overwriteChangedFiles", [Rewriter], c_int),
+    ("clang_CXRewriter_removeText", [Rewriter, SourceRange]),
+    ("clang_CXRewriter_replaceText", [Rewriter, SourceRange, c_interop_string]),
+    ("clang_CXRewriter_writeMainFileToStdOut", [Rewriter]),
     ("clang_CXXConstructor_isConvertingConstructor", [Cursor], bool),
     ("clang_CXXConstructor_isCopyConstructor", [Cursor], bool),
     ("clang_CXXConstructor_isDefaultConstructor", [Cursor], bool),
@@ -3865,7 +4077,7 @@ def register_functions(lib, ignore_errors):
         register(f)
 
 
-class Config(object):
+class Config:
     library_path = None
     library_file = None
     compatibility_check = True
@@ -3880,7 +4092,7 @@ class Config(object):
                 "any other functionalities in libclang."
             )
 
-        Config.library_path = fspath(path)
+        Config.library_path = os.fspath(path)
 
     @staticmethod
     def set_library_file(filename):
@@ -3891,7 +4103,7 @@ class Config(object):
                 "any other functionalities in libclang."
             )
 
-        Config.library_file = fspath(filename)
+        Config.library_file = os.fspath(filename)
 
     @staticmethod
     def set_compatibility_check(check_status):

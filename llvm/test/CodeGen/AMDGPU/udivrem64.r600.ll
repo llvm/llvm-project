@@ -1,4 +1,4 @@
-;RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG %s
+;RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG %s
 
 ;EG-LABEL: {{^}}test_udiv:
 ;EG: RECIP_UINT

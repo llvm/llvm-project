@@ -20,9 +20,9 @@
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
-#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicsX86.h"
@@ -116,8 +117,8 @@ private:
   bool selectImplicitDefOrPHI(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectMulDivRem(MachineInstr &I, MachineRegisterInfo &MRI,
                        MachineFunction &MF) const;
-  bool selectIntrinsicWSideEffects(MachineInstr &I, MachineRegisterInfo &MRI,
-                                   MachineFunction &MF) const;
+  bool selectSelect(MachineInstr &I, MachineRegisterInfo &MRI,
+                    MachineFunction &MF) const;
 
   // emit insert subreg instruction and insert it before MachineInstr &I
   bool emitInsertSubreg(unsigned DstReg, unsigned SrcReg, MachineInstr &I,
@@ -429,8 +430,8 @@ bool X86InstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_SREM:
   case TargetOpcode::G_UREM:
     return selectMulDivRem(I, MRI, MF);
-  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
-    return selectIntrinsicWSideEffects(I, MRI, MF);
+  case TargetOpcode::G_SELECT:
+    return selectSelect(I, MRI, MF);
   }
 
   return false;
@@ -547,7 +548,7 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
   unsigned Opc = I.getOpcode();
 
   assert((Opc == TargetOpcode::G_STORE || Opc == TargetOpcode::G_LOAD) &&
-         "unexpected instruction");
+         "Only G_STORE and G_LOAD are expected for selection");
 
   const Register DefReg = I.getOperand(0).getReg();
   LLT Ty = MRI.getType(DefReg);
@@ -575,11 +576,32 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
   if (NewOpc == Opc)
     return false;
 
-  X86AddressMode AM;
-  X86SelectAddress(*MRI.getVRegDef(I.getOperand(1).getReg()), MRI, AM);
-
   I.setDesc(TII.get(NewOpc));
   MachineInstrBuilder MIB(MF, I);
+  const MachineInstr *Ptr = MRI.getVRegDef(I.getOperand(1).getReg());
+
+  if (Ptr->getOpcode() == TargetOpcode::G_CONSTANT_POOL) {
+    assert(Opc == TargetOpcode::G_LOAD &&
+           "Only G_LOAD from constant pool is expected");
+    // TODO: Need a separate move for Large model
+    if (TM.getCodeModel() == CodeModel::Large)
+      return false;
+
+    unsigned char OpFlag = STI.classifyLocalReference(nullptr);
+    unsigned PICBase = 0;
+    if (OpFlag == X86II::MO_GOTOFF)
+      PICBase = TII.getGlobalBaseReg(&MF);
+    else if (STI.is64Bit())
+      PICBase = X86::RIP;
+
+    I.removeOperand(1);
+    addConstantPoolReference(MIB, Ptr->getOperand(1).getIndex(), PICBase,
+                             OpFlag);
+    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+  }
+
+  X86AddressMode AM;
+  X86SelectAddress(*Ptr, MRI, AM);
   if (Opc == TargetOpcode::G_LOAD) {
     I.removeOperand(1);
     addFullAddress(MIB, AM);
@@ -1773,12 +1795,9 @@ bool X86InstructionSelector::selectMulDivRem(MachineInstr &I,
         .addImm(8);
 
     // Now reference the 8-bit subreg of the result.
-    BuildMI(*I.getParent(), I, I.getDebugLoc(),
-            TII.get(TargetOpcode::SUBREG_TO_REG))
-        .addDef(DstReg)
-        .addImm(0)
-        .addReg(ResultSuperReg)
-        .addImm(X86::sub_8bit);
+    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
+            DstReg)
+        .addReg(ResultSuperReg, 0, X86::sub_8bit);
   } else {
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
             DstReg)
@@ -1789,18 +1808,46 @@ bool X86InstructionSelector::selectMulDivRem(MachineInstr &I,
   return true;
 }
 
-bool X86InstructionSelector::selectIntrinsicWSideEffects(
-    MachineInstr &I, MachineRegisterInfo &MRI, MachineFunction &MF) const {
+bool X86InstructionSelector::selectSelect(MachineInstr &I,
+                                          MachineRegisterInfo &MRI,
+                                          MachineFunction &MF) const {
+  GSelect &Sel = cast<GSelect>(I);
+  unsigned DstReg = Sel.getReg(0);
+  BuildMI(*Sel.getParent(), Sel, Sel.getDebugLoc(), TII.get(X86::TEST32rr))
+      .addReg(Sel.getCondReg())
+      .addReg(Sel.getCondReg());
 
-  assert(I.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS &&
-         "unexpected instruction");
-
-  if (I.getOperand(0).getIntrinsicID() != Intrinsic::trap)
+  unsigned OpCmp;
+  LLT Ty = MRI.getType(DstReg);
+  switch (Ty.getSizeInBits()) {
+  default:
     return false;
+  case 8:
+    OpCmp = X86::CMOV_GR8;
+    break;
+  case 16:
+    OpCmp = STI.canUseCMOV() ? X86::CMOV16rr : X86::CMOV_GR16;
+    break;
+  case 32:
+    OpCmp = STI.canUseCMOV() ? X86::CMOV32rr : X86::CMOV_GR32;
+    break;
+  case 64:
+    assert(STI.is64Bit() && STI.canUseCMOV());
+    OpCmp = X86::CMOV64rr;
+    break;
+  }
+  BuildMI(*Sel.getParent(), Sel, Sel.getDebugLoc(), TII.get(OpCmp), DstReg)
+      .addReg(Sel.getTrueReg())
+      .addReg(Sel.getFalseReg())
+      .addImm(X86::COND_E);
 
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::TRAP));
+  const TargetRegisterClass *DstRC = getRegClass(Ty, DstReg, MRI);
+  if (!RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
+    LLVM_DEBUG(dbgs() << "Failed to constrain CMOV\n");
+    return false;
+  }
 
-  I.eraseFromParent();
+  Sel.eraseFromParent();
   return true;
 }
 

@@ -18,6 +18,7 @@
 
 #include "test_macros.h"
 #include "test_iterators.h"
+#include "test_range.h"
 #include "types.h"
 
 template<class T>
@@ -82,9 +83,47 @@ constexpr bool test() {
   static_assert(!BeginInvocable<const ForwardView>);
 
   {
+    // non-common non-simple view,
+    // The wording of the standard is:
+    // Returns: ranges::next(ranges::begin(base_), count_, ranges::end(base_))
+    // Note that "Returns" is used here, meaning that we don't have to do it this way.
+    // In fact, this will use ranges::advance that has O(n) on non-common range.
+    // but [range.range] requires "amortized constant time" for ranges::begin and ranges::end
+    // Here, we test that begin() is indeed constant time, by creating a customized
+    // sentinel and counting how many times the sentinel eq function is called.
+    // It should be 0 times, but since this test (or any test under libcxx/test/std) is
+    // also used by other implementations, we relax the condition to that
+    // sentinel_cmp_calls is a constant number.
+    int sentinel_cmp_calls_1 = 0;
+    int sentinel_cmp_calls_2 = 0;
+    using NonCommonView      = MaybeSimpleNonCommonView<false>;
+    static_assert(std::ranges::random_access_range<NonCommonView>);
+    static_assert(std::ranges::sized_range<NonCommonView>);
+    std::ranges::drop_view dropView9_1(NonCommonView{{}, 0, &sentinel_cmp_calls_1}, 4);
+    std::ranges::drop_view dropView9_2(NonCommonView{{}, 0, &sentinel_cmp_calls_2}, 6);
+    assert(dropView9_1.begin() == globalBuff + 4);
+    assert(dropView9_2.begin() == globalBuff + 6);
+    assert(sentinel_cmp_calls_1 == sentinel_cmp_calls_2);
+  }
+
+  {
+    // non-common simple view, same as above.
+    int sentinel_cmp_calls_1 = 0;
+    int sentinel_cmp_calls_2 = 0;
+    using NonCommonView      = MaybeSimpleNonCommonView<true>;
+    static_assert(std::ranges::random_access_range<NonCommonView>);
+    static_assert(std::ranges::sized_range<NonCommonView>);
+    std::ranges::drop_view dropView10_1(NonCommonView{{}, 0, &sentinel_cmp_calls_1}, 4);
+    std::ranges::drop_view dropView10_2(NonCommonView{{}, 0, &sentinel_cmp_calls_2}, 6);
+    assert(dropView10_1.begin() == globalBuff + 4);
+    assert(dropView10_2.begin() == globalBuff + 6);
+    assert(sentinel_cmp_calls_1 == sentinel_cmp_calls_2);
+  }
+
+  {
     static_assert(std::ranges::random_access_range<const SimpleView>);
     static_assert(std::ranges::sized_range<const SimpleView>);
-    LIBCPP_STATIC_ASSERT(std::ranges::__simple_view<SimpleView>);
+    static_assert(simple_view<SimpleView>);
     int non_const_calls = 0;
     int const_calls = 0;
     std::ranges::drop_view dropView(SimpleView{{}, &non_const_calls, &const_calls}, 4);
@@ -99,7 +138,7 @@ constexpr bool test() {
   {
     static_assert(std::ranges::random_access_range<const NonSimpleView>);
     static_assert(std::ranges::sized_range<const NonSimpleView>);
-    LIBCPP_STATIC_ASSERT(!std::ranges::__simple_view<NonSimpleView>);
+    static_assert(!simple_view<NonSimpleView>);
     int non_const_calls = 0;
     int const_calls = 0;
     std::ranges::drop_view dropView(NonSimpleView{{}, &non_const_calls, &const_calls}, 4);

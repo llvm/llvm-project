@@ -27,7 +27,6 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -211,6 +210,15 @@ public:
   static bool classof(const DebugRangesSectionWriter *Writer) {
     return Writer->getKind() == RangesWriterKind::DebugRangesWriter;
   }
+  
+  /// Append a range to the main buffer.
+  void appendToRangeBuffer(const DebugBufferVector &CUBuffer);
+
+  /// Sets Unit DIE to be updated for CU.
+  void setDie(DIE *Die) { this->Die = Die; }
+
+  /// Returns Unit DIE to be updated for CU.
+  DIE *getDie() const { return Die; }
 
   /// Writes out range lists for a current CU being processed.
   void virtual finalizeSection(){};
@@ -233,6 +241,9 @@ protected:
   static constexpr uint64_t EmptyRangesOffset{0};
 
 private:
+  /// Stores Unit DIE to be updated for CU.
+  DIE *Die{0};
+
   RangesWriterKind Kind;
 };
 
@@ -431,18 +442,16 @@ protected:
 using DebugStrOffsetsBufferVector = SmallVector<char, 16>;
 class DebugStrOffsetsWriter {
 public:
-  DebugStrOffsetsWriter() {
+  DebugStrOffsetsWriter(BinaryContext &BC) : BC(BC) {
     StrOffsetsBuffer = std::make_unique<DebugStrOffsetsBufferVector>();
     StrOffsetsStream = std::make_unique<raw_svector_ostream>(*StrOffsetsBuffer);
   }
 
-  /// Initializes Buffer and Stream.
-  void initialize(const DWARFSection &StrOffsetsSection,
-                  const std::optional<StrOffsetsContributionDescriptor> Contr);
-
   /// Update Str offset in .debug_str in .debug_str_offsets.
   void updateAddressMap(uint32_t Index, uint32_t Address);
 
+  /// Get offset for given index in original .debug_str_offsets section.
+  uint64_t getOffset(uint32_t Index) const { return StrOffsets[Index]; }
   /// Writes out current sections entry into .debug_str_offsets.
   void finalizeSection(DWARFUnit &Unit, DIEBuilder &DIEBldr);
 
@@ -454,21 +463,36 @@ public:
     return std::move(StrOffsetsBuffer);
   }
 
+  /// Initializes Buffer and Stream.
+  void initialize(DWARFUnit &Unit);
+
+  /// Clear data.
+  void clear() {
+    IndexToAddressMap.clear();
+    StrOffsets.clear();
+  }
+
+  bool isStrOffsetsSectionModified() const {
+    return StrOffsetSectionWasModified;
+  }
+
 private:
   std::unique_ptr<DebugStrOffsetsBufferVector> StrOffsetsBuffer;
   std::unique_ptr<raw_svector_ostream> StrOffsetsStream;
   std::map<uint32_t, uint32_t> IndexToAddressMap;
+  SmallVector<uint32_t, 5> StrOffsets;
   std::unordered_map<uint64_t, uint64_t> ProcessedBaseOffsets;
-  // Section size not including header.
-  uint32_t CurrentSectionSize{0};
   bool StrOffsetSectionWasModified = false;
+  BinaryContext &BC;
 };
 
 using DebugStrBufferVector = SmallVector<char, 16>;
 class DebugStrWriter {
 public:
   DebugStrWriter() = delete;
-  DebugStrWriter(BinaryContext &BC) : BC(BC) { create(); }
+  DebugStrWriter(DWARFContext &DwCtx, bool IsDWO) : DwCtx(DwCtx), IsDWO(IsDWO) {
+    create();
+  }
   std::unique_ptr<DebugStrBufferVector> releaseBuffer() {
     return std::move(StrBuffer);
   }
@@ -480,16 +504,18 @@ public:
   /// Returns False if no strings were added to .debug_str.
   bool isInitialized() const { return !StrBuffer->empty(); }
 
+  /// Initializes Buffer and Stream.
+  void initialize();
+
 private:
   /// Mutex used for parallel processing of debug info.
   std::mutex WriterMutex;
-  /// Initializes Buffer and Stream.
-  void initialize();
   /// Creates internal data structures.
   void create();
   std::unique_ptr<DebugStrBufferVector> StrBuffer;
   std::unique_ptr<raw_svector_ostream> StrStream;
-  BinaryContext &BC;
+  DWARFContext &DwCtx;
+  bool IsDWO;
 };
 
 enum class LocWriterKind { DebugLocWriter, DebugLoclistWriter };

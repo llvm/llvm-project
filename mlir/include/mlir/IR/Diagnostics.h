@@ -25,7 +25,6 @@ class SourceMgr;
 
 namespace mlir {
 class DiagnosticEngine;
-struct LogicalResult;
 class MLIRContext;
 class Operation;
 class OperationName;

@@ -1,20 +1,52 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/addr.s -o %t
-# RUN: ld.lld %t --script %s -o %t1
-# RUN: llvm-objdump --section-headers %t1 | FileCheck %s
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
+# RUN: ld.lld a.o -T a.lds -o a
+# RUN: llvm-readelf -Ss a | FileCheck %s
 
-# CHECK:      Sections:
-# CHECK-NEXT: Idx Name          Size     VMA              Type
-# CHECK-NEXT:   0               00000000 0000000000000000
-# CHECK-NEXT:   1 .text         00000000 0000000000001000 TEXT
-# CHECK-NEXT:   2 .foo.1        00000008 0000000000001000 DATA
-# CHECK-NEXT:   3 .foo.2        00000008 0000000000001100 DATA
-# CHECK-NEXT:   4 .foo.3        00000008 0000000000001108 DATA
+# CHECK:      .text      PROGBITS  0000000000001000 001000
+# CHECK-NEXT: .foo-1     PROGBITS  0000000000001001 001001
+# CHECK-NEXT: .foo-2     PROGBITS  0000000000001101 001101
+# CHECK-NEXT: .foo-3     PROGBITS  0000000000001102 001102
 
+# CHECK:      0000000000001001    0 NOTYPE GLOBAL DEFAULT   1 x1
+# CHECK-NEXT: 0000000000001001    0 NOTYPE GLOBAL DEFAULT   1 x2
+# CHECK-NEXT: 0000000000001000    0 NOTYPE GLOBAL DEFAULT   1 x3
+
+# RUN: not ld.lld a.o -T absent.lds 2>&1 | FileCheck %s --check-prefix=ABSENT --implicit-check-not=error:
+# ABSENT: error: absent.lds:3: undefined section .aaa
+
+# RUN: not ld.lld a.o -T absolute.lds 2>&1 | FileCheck %s --check-prefix=ABSOLUTE --implicit-check-not=error:
+# ABSOLUTE: error: absolute.lds:2: at least one side of the expression must be absolute
+
+#--- a.s
+.globl _start
+_start: nop
+
+.section .foo-1,"a"; .byte 1
+.section .foo-2,"a"; .byte 2
+.section .foo-3,"a"; .byte 3
+
+#--- a.lds
 SECTIONS {
   . = 0x1000;
-  .text  : { *(.text*) }
-  .foo.1 : { *(.foo.1) }
-  .foo.2 ADDR(.foo.1) + 0x100 : { *(.foo.2) }
-  .foo.3 : { *(.foo.3) }
+  .text  : {
+    *(.text*)
+    x1 = ADDR(.text) + 1; x2 = 1 + ADDR(.text);
+    x3 = ADDR(.text) & 0xffff;
+  }
+  .foo-1 : { *(.foo-1) }
+  .foo-2 ADDR(.foo-1) + 0x100 : { *(.foo-2) }
+  .foo-3 : { *(.foo-3) }
+}
+
+#--- absent.lds
+SECTIONS {
+  . = 0x1000;
+  _aaa = ADDR(.aaa);
+}
+
+#--- absolute.lds
+SECTIONS {
+  foo = ADDR(.text) + ADDR(.text);
 }

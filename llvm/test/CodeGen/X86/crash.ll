@@ -438,7 +438,7 @@ entry:
   %conv = uitofp i64 %sub to float
   %div = fmul float %conv, 5.000000e-01
   %conv2 = fpext float %div to double
-  tail call void (...) @_Z6PrintFz(ptr getelementptr inbounds ({ [1 x i8], [63 x i8] }, ptr @.str, i64 0, i32 0, i64 0), double %conv2)
+  tail call void (...) @_Z6PrintFz(ptr @.str, double %conv2)
   ret void
 }
 declare void @_Z6PrintFz(...)

@@ -64,6 +64,45 @@ XtensaTargetMachine::XtensaTargetMachine(const Target &T, const Triple &TT,
                                          CodeGenOptLevel OL, bool JIT)
     : XtensaTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, true) {}
 
+const XtensaSubtarget *
+XtensaTargetMachine::getSubtargetImpl(const Function &F) const {
+  Attribute CPUAttr = F.getFnAttribute("target-cpu");
+  Attribute FSAttr = F.getFnAttribute("target-features");
+
+  auto CPU = CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
+  auto FS = FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
+
+  auto &I = SubtargetMap[CPU + FS];
+  if (!I) {
+    // This needs to be done before we create a new subtarget since any
+    // creation will depend on the TM and the code generation flags on the
+    // function that reside in TargetOptions.
+    resetTargetOptions(F);
+    I = std::make_unique<XtensaSubtarget>(TargetTriple, CPU, FS, *this);
+  }
+  return I.get();
+}
+
+namespace {
+/// Xtensa Code Generator Pass Configuration Options.
+class XtensaPassConfig : public TargetPassConfig {
+public:
+  XtensaPassConfig(XtensaTargetMachine &TM, PassManagerBase &PM)
+      : TargetPassConfig(TM, PM) {}
+
+  XtensaTargetMachine &getXtensaTargetMachine() const {
+    return getTM<XtensaTargetMachine>();
+  }
+
+  bool addInstSelector() override;
+};
+} // end anonymous namespace
+
+bool XtensaPassConfig::addInstSelector() {
+  addPass(createXtensaISelDag(getXtensaTargetMachine(), getOptLevel()));
+  return false;
+}
+
 TargetPassConfig *XtensaTargetMachine::createPassConfig(PassManagerBase &PM) {
-  return new TargetPassConfig(*this, PM);
+  return new XtensaPassConfig(*this, PM);
 }

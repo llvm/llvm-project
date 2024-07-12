@@ -12,7 +12,6 @@
 #include "mlir/IR/Action.h"
 #include "mlir/Pass/AnalysisManager.h"
 #include "mlir/Pass/PassRegistry.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/Statistic.h"
 #include <optional>
@@ -114,7 +113,9 @@ public:
   /// Derived classes may override this method to hook into the point at which
   /// options are initialized, but should generally always invoke this base
   /// class variant.
-  virtual LogicalResult initializeOptions(StringRef options);
+  virtual LogicalResult
+  initializeOptions(StringRef options,
+                    function_ref<LogicalResult(const Twine &)> errorHandler);
 
   /// Prints out the pass in the textual representation of pipelines. If this is
   /// an adaptor pass, print its pass managers.
@@ -161,6 +162,9 @@ protected:
   explicit Pass(TypeID passID, std::optional<StringRef> opName = std::nullopt)
       : passID(passID), opName(opName) {}
   Pass(const Pass &other) : Pass(other.passID, other.opName) {}
+  Pass &operator=(const Pass &) = delete;
+  Pass(Pass &&) = delete;
+  Pass &operator=(Pass &&) = delete;
 
   /// Returns the current pass state.
   detail::PassExecutionState &getPassState() {
@@ -349,9 +353,15 @@ private:
 ///   - A 'std::unique_ptr<Pass> clonePass() const' method.
 template <typename OpT = void>
 class OperationPass : public Pass {
+public:
+  ~OperationPass() override = default;
+
 protected:
   OperationPass(TypeID passID) : Pass(passID, OpT::getOperationName()) {}
   OperationPass(const OperationPass &) = default;
+  OperationPass &operator=(const OperationPass &) = delete;
+  OperationPass(OperationPass &&) = delete;
+  OperationPass &operator=(OperationPass &&) = delete;
 
   /// Support isa/dyn_cast functionality.
   static bool classof(const Pass *pass) {
@@ -388,9 +398,15 @@ protected:
 ///   - A 'std::unique_ptr<Pass> clonePass() const' method.
 template <>
 class OperationPass<void> : public Pass {
+public:
+  ~OperationPass() override = default;
+
 protected:
   OperationPass(TypeID passID) : Pass(passID) {}
   OperationPass(const OperationPass &) = default;
+  OperationPass &operator=(const OperationPass &) = delete;
+  OperationPass(OperationPass &&) = delete;
+  OperationPass &operator=(OperationPass &&) = delete;
 
   /// Indicate if the current pass can be scheduled on the given operation type.
   /// By default, generic operation passes can be scheduled on any operation.
@@ -444,10 +460,14 @@ public:
   static bool classof(const Pass *pass) {
     return pass->getTypeID() == TypeID::get<PassT>();
   }
+  ~PassWrapper() override = default;
 
 protected:
   PassWrapper() : BaseT(TypeID::get<PassT>()) {}
   PassWrapper(const PassWrapper &) = default;
+  PassWrapper &operator=(const PassWrapper &) = delete;
+  PassWrapper(PassWrapper &&) = delete;
+  PassWrapper &operator=(PassWrapper &&) = delete;
 
   /// Returns the derived pass name.
   StringRef getName() const override { return llvm::getTypeName<PassT>(); }

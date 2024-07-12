@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=aarch64-linux-gnu -run-pass=greedy %s -o - | FileCheck %s
-# RUN: llc -mtriple=aarch64-linux-gnu -start-before=greedy -stop-after=aarch64-expand-pseudo %s -o - | FileCheck %s --check-prefix=EXPAND
+# RUN: llc -mtriple=aarch64-linux-gnu -start-before=greedy -stop-after=aarch64-expand-pseudo -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=EXPAND
 --- |
   ; ModuleID = '<stdin>'
   source_filename = "<stdin>"
@@ -7,6 +7,8 @@
   target triple = "aarch64--linux-gnu"
 
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_ppr() #0 { entry: unreachable }
+  define aarch64_sve_vector_pcs void @spills_fills_stack_id_ppr2() #0 { entry: unreachable }
+  define aarch64_sve_vector_pcs void @spills_fills_stack_id_ppr2mul2() #0 { entry: unreachable }
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_pnr() #1 { entry: unreachable }
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_virtreg_pnr() #1 { entry: unreachable }
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr() #0 { entry: unreachable }
@@ -64,6 +66,96 @@ body:             |
     RET_ReallyLR
 ...
 ---
+name: spills_fills_stack_id_ppr2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: ppr2 }
+stack:
+liveins:
+  - { reg: '$p0_p1', virtual-reg: '%0' }
+body:             |
+  bb.0.entry:
+    liveins: $p0_p1
+
+    ; CHECK-LABEL: name: spills_fills_stack_id_ppr2
+    ; CHECK: stack:
+    ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 4, alignment: 2
+    ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register: ''
+
+    ; EXPAND-LABEL: name: spills_fills_stack_id_ppr2
+    ; EXPAND: STR_PXI $p0, $sp, 6
+    ; EXPAND: STR_PXI $p1, $sp, 7
+    ; EXPAND: $p0 = LDR_PXI $sp, 6
+    ; EXPAND: $p1 = LDR_PXI $sp, 7
+
+    %0:ppr2 = COPY $p0_p1
+
+    $p0 = IMPLICIT_DEF
+    $p1 = IMPLICIT_DEF
+    $p2 = IMPLICIT_DEF
+    $p3 = IMPLICIT_DEF
+    $p4 = IMPLICIT_DEF
+    $p5 = IMPLICIT_DEF
+    $p6 = IMPLICIT_DEF
+    $p7 = IMPLICIT_DEF
+    $p8 = IMPLICIT_DEF
+    $p9 = IMPLICIT_DEF
+    $p10 = IMPLICIT_DEF
+    $p11 = IMPLICIT_DEF
+    $p12 = IMPLICIT_DEF
+    $p13 = IMPLICIT_DEF
+    $p14 = IMPLICIT_DEF
+    $p15 = IMPLICIT_DEF
+
+    $p0_p1 = COPY %0
+    RET_ReallyLR
+...
+---
+name: spills_fills_stack_id_ppr2mul2
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: ppr2mul2 }
+stack:
+liveins:
+  - { reg: '$p0_p1', virtual-reg: '%0' }
+body:             |
+  bb.0.entry:
+    liveins: $p0_p1
+
+    ; CHECK-LABEL: name: spills_fills_stack_id_ppr2
+    ; CHECK: stack:
+    ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 4, alignment: 2
+    ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register: ''
+
+    ; EXPAND-LABEL: name: spills_fills_stack_id_ppr2mul2
+    ; EXPAND: STR_PXI $p0, $sp, 6
+    ; EXPAND: STR_PXI $p1, $sp, 7
+    ; EXPAND: $p0 = LDR_PXI $sp, 6
+    ; EXPAND: $p1 = LDR_PXI $sp, 7
+
+    %0:ppr2mul2 = COPY $p0_p1
+
+    $p0 = IMPLICIT_DEF
+    $p1 = IMPLICIT_DEF
+    $p2 = IMPLICIT_DEF
+    $p3 = IMPLICIT_DEF
+    $p4 = IMPLICIT_DEF
+    $p5 = IMPLICIT_DEF
+    $p6 = IMPLICIT_DEF
+    $p7 = IMPLICIT_DEF
+    $p8 = IMPLICIT_DEF
+    $p9 = IMPLICIT_DEF
+    $p10 = IMPLICIT_DEF
+    $p11 = IMPLICIT_DEF
+    $p12 = IMPLICIT_DEF
+    $p13 = IMPLICIT_DEF
+    $p14 = IMPLICIT_DEF
+    $p15 = IMPLICIT_DEF
+
+    $p0_p1 = COPY %0
+    RET_ReallyLR
+...
+---
 name: spills_fills_stack_id_pnr
 tracksRegLiveness: true
 registers:
@@ -81,8 +173,8 @@ body:             |
     ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register: ''
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_pnr
-    ; EXPAND: STR_PXI $p0, $sp, 7
-    ; EXPAND: $p0 = LDR_PXI $sp, 7, implicit-def $pn0
+    ; EXPAND: STR_PXI $pn0, $sp, 7
+    ; EXPAND: $pn0 = LDR_PXI $sp, 7, implicit-def $pn0
 
     %0:pnr = COPY $pn0
 
@@ -121,11 +213,9 @@ body:             |
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_virtreg_pnr
     ; EXPAND: renamable $pn8 = WHILEGE_CXX_B
-    ; EXPAND: $p0 = ORR_PPzPP $p8, $p8, killed $p8
-    ; EXPAND: STR_PXI killed renamable $p0, $sp, 7
+    ; EXPAND: STR_PXI killed renamable $pn8, $sp, 7
     ;
-    ; EXPAND: renamable $p0 = LDR_PXI $sp, 7
-    ; EXPAND: $p8 = ORR_PPzPP $p0, $p0, killed $p0, implicit-def $pn8
+    ; EXPAND: renamable $pn8 = LDR_PXI $sp, 7
     ; EXPAND: $p0 = PEXT_PCI_B killed renamable $pn8, 0
 
 

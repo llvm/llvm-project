@@ -22,14 +22,11 @@ static const u64 kDefaultShadowScale = 3;
 
 #define SHADOW_GRANULARITY (1ULL << SHADOW_SCALE)
 #define MEMPROF_ALIGNMENT 32
-
 namespace __memprof {
 
 extern uptr kHighMemEnd; // Initialized in __memprof_init.
 
 } // namespace __memprof
-
-#define SHADOW_ENTRY_SIZE 8
 
 // Size of memory block mapped to a single shadow location
 #define MEM_GRANULARITY 64ULL
@@ -38,6 +35,36 @@ extern uptr kHighMemEnd; // Initialized in __memprof_init.
 
 #define MEM_TO_SHADOW(mem)                                                     \
   ((((mem) & SHADOW_MASK) >> SHADOW_SCALE) + (SHADOW_OFFSET))
+
+// Histogram shadow memory is laid different to the standard configuration:
+
+//             8 bytes
+//         +---+---+---+  +---+---+---+  +---+---+---+
+//  Memory |     a     |  |     b     |  |     c     |
+//         +---+---+---+  +---+---+---+  +---+---+---+
+
+//             +---+          +---+          +---+
+//  Shadow     | a |          | b |          | c |
+//             +---+          +---+          +---+
+//            1 byte
+//
+// Where we have a 1 byte counter for each 8 bytes. HISTOGRAM_MEM_TO_SHADOW
+// translates a memory address to the address of its corresponding shadow
+// counter memory address. The same data is still provided in MIB whether
+// histograms are used or not. Total access counts per allocations are
+// computed by summing up all individual 1 byte counters. This can incur an
+// accuracy penalty.
+
+#define HISTOGRAM_GRANULARITY 8U
+
+#define HISTOGRAM_MAX_COUNTER 255U
+
+#define HISTOGRAM_SHADOW_MASK ~(HISTOGRAM_GRANULARITY - 1)
+
+#define HISTOGRAM_MEM_TO_SHADOW(mem)                                           \
+  ((((mem) & HISTOGRAM_SHADOW_MASK) >> SHADOW_SCALE) + (SHADOW_OFFSET))
+
+#define SHADOW_ENTRY_SIZE (MEM_GRANULARITY >> SHADOW_SCALE)
 
 #define kLowMemBeg 0
 #define kLowMemEnd (SHADOW_OFFSET ? SHADOW_OFFSET - 1 : 0)
@@ -106,6 +133,14 @@ inline void RecordAccess(uptr a) {
   CHECK_EQ(SHADOW_ENTRY_SIZE, 8);
   u64 *shadow_address = (u64 *)MEM_TO_SHADOW(a);
   (*shadow_address)++;
+}
+
+inline void RecordAccessHistogram(uptr a) {
+  CHECK_EQ(SHADOW_ENTRY_SIZE, 8);
+  u8 *shadow_address = (u8 *)HISTOGRAM_MEM_TO_SHADOW(a);
+  if (*shadow_address < HISTOGRAM_MAX_COUNTER) {
+    (*shadow_address)++;
+  }
 }
 
 } // namespace __memprof

@@ -67,12 +67,12 @@ define i32 @test_03(ptr %p, i32 %x, i1 %cond) {
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB:%.*]], label [[PRED:%.*]]
 ; CHECK:       pred:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[UNREACHABLE:%.*]] [
-; CHECK-NEXT:    i32 42, label [[COMMON_RET:%.*]]
-; CHECK-NEXT:    i32 123456, label [[COMMON_RET]]
-; CHECK-NEXT:    i32 -654321, label [[COMMON_RET]]
-; CHECK-NEXT:    i32 1, label [[DO_1:%.*]]
-; CHECK-NEXT:    i32 2, label [[DO_2:%.*]]
-; CHECK-NEXT:    i32 3, label [[DO_3:%.*]]
+; CHECK-NEXT:      i32 42, label [[COMMON_RET:%.*]]
+; CHECK-NEXT:      i32 123456, label [[COMMON_RET]]
+; CHECK-NEXT:      i32 -654321, label [[COMMON_RET]]
+; CHECK-NEXT:      i32 1, label [[DO_1:%.*]]
+; CHECK-NEXT:      i32 2, label [[DO_2:%.*]]
+; CHECK-NEXT:      i32 3, label [[DO_3:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[R:%.*]], [[BB]] ], [ 1, [[DO_1]] ], [ 1, [[DO_2]] ], [ 1, [[DO_3]] ], [ 0, [[PRED]] ], [ 0, [[PRED]] ], [ 0, [[PRED]] ]
@@ -130,9 +130,9 @@ define i32 @test_04(ptr %p, i32 %x, i1 %cond) {
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB:%.*]], label [[PRED:%.*]]
 ; CHECK:       pred:
 ; CHECK-NEXT:    switch i32 [[X:%.*]], label [[COMMON_RET:%.*]] [
-; CHECK-NEXT:    i32 3, label [[DO_3:%.*]]
-; CHECK-NEXT:    i32 2, label [[DO_2:%.*]]
-; CHECK-NEXT:    i32 1, label [[DO_1:%.*]]
+; CHECK-NEXT:      i32 3, label [[DO_3:%.*]]
+; CHECK-NEXT:      i32 2, label [[DO_2:%.*]]
+; CHECK-NEXT:      i32 1, label [[DO_1:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[R:%.*]], [[BB]] ], [ 1, [[DO_1]] ], [ 1, [[DO_2]] ], [ 1, [[DO_3]] ], [ 0, [[PRED]] ]

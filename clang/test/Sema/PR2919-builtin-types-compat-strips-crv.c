@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only %s
+// RUN: %clang_cc1 -fsyntax-only %s -fexperimental-new-constant-interpreter
 
 typedef struct foo T0;
 typedef const struct foo T1;

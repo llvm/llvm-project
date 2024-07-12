@@ -3024,3 +3024,6 @@
 	wledb	%v0, %v0, -1, 0
 	wledb	%v0, %v0, 16, 0
 
+ #CHECK: error: instruction requires: test-pending-external-interrupt
+ #CHECK: tpei %r0, %r1
+	tpei	%r0, %r1

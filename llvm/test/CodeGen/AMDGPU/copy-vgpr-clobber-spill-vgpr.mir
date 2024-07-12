@@ -333,7 +333,7 @@
     ret void
   }
 
-  attributes #0 = { "amdgpu-waves-per-eu"="4,4" }
+  attributes #0 = { "amdgpu-waves-per-eu"="4,4" "amdgpu-no-agpr" }
 
 ...
 ---

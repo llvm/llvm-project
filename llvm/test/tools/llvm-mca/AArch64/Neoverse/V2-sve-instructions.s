@@ -4278,9 +4278,9 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      3     0.25                        fscale	z0.d, p7/m, z0.d, z31.d
 # CHECK-NEXT:  1      3     0.25                        fscale	z0.h, p7/m, z0.h, z31.h
 # CHECK-NEXT:  1      3     0.25                        fscale	z0.s, p7/m, z0.s, z31.s
-# CHECK-NEXT:  1      16    14.00                       fsqrt	z31.d, p7/m, z31.d
-# CHECK-NEXT:  1      13    12.00                       fsqrt	z31.h, p7/m, z31.h
-# CHECK-NEXT:  1      10    9.00                        fsqrt	z31.s, p7/m, z31.s
+# CHECK-NEXT:  1      16    7.00                        fsqrt	z31.d, p7/m, z31.d
+# CHECK-NEXT:  1      13    6.00                        fsqrt	z31.h, p7/m, z31.h
+# CHECK-NEXT:  1      10    4.50                        fsqrt	z31.s, p7/m, z31.s
 # CHECK-NEXT:  1      2     0.25                        fsub	z0.d, p0/m, z0.d, #0.5
 # CHECK-NEXT:  1      2     0.25                        fsub	z0.d, p7/m, z0.d, z31.d
 # CHECK-NEXT:  1      2     0.25                        fsub	z0.d, z1.d, z31.d
@@ -5374,10 +5374,10 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.25                        rbit	z0.d, p7/m, z31.d
 # CHECK-NEXT:  1      2     0.25                        rbit	z0.h, p7/m, z31.h
 # CHECK-NEXT:  1      2     0.25                        rbit	z0.s, p7/m, z31.s
-# CHECK-NEXT:  1      2     1.00                  U     rdffr	p0.b
-# CHECK-NEXT:  2      4     1.00                  U     rdffr	p0.b, p0/z
-# CHECK-NEXT:  1      2     1.00                  U     rdffr	p15.b
-# CHECK-NEXT:  2      4     1.00                  U     rdffr	p15.b, p15/z
+# CHECK-NEXT:  1      2     1.00    *             U     rdffr	p0.b
+# CHECK-NEXT:  2      4     1.00    *             U     rdffr	p0.b, p0/z
+# CHECK-NEXT:  1      2     1.00    *             U     rdffr	p15.b
+# CHECK-NEXT:  2      4     1.00    *             U     rdffr	p15.b, p15/z
 # CHECK-NEXT:  4      5     2.00                  U     rdffrs	p0.b, p0/z
 # CHECK-NEXT:  4      5     2.00                  U     rdffrs	p15.b, p15/z
 # CHECK-NEXT:  1      2     0.50                        rdvl	x0, #0
@@ -6861,7 +6861,7 @@ zip2	z31.s, z31.s, z31.s
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT:  -      -      -      -     245.00 651.00 651.00 570.50 272.50 83.75  83.75  81.75  81.75  1554.25 1281.75 776.75 748.25
+# CHECK-NEXT:  -      -      -      -     245.00 651.00 651.00 570.50 272.50 83.75  83.75  81.75  81.75  1536.75 1281.75 794.25 748.25
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2]    [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
@@ -7718,9 +7718,9 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fscale	z0.d, p7/m, z0.d, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fscale	z0.h, p7/m, z0.h, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fscale	z0.s, p7/m, z0.s, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     14.00   -      -      -     fsqrt	z31.d, p7/m, z31.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     12.00   -      -      -     fsqrt	z31.h, p7/m, z31.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     9.00    -      -      -     fsqrt	z31.s, p7/m, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     7.00    -     7.00    -     fsqrt	z31.d, p7/m, z31.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     6.00    -     6.00    -     fsqrt	z31.h, p7/m, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     4.50    -     4.50    -     fsqrt	z31.s, p7/m, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fsub	z0.d, p0/m, z0.d, #0.5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fsub	z0.d, p7/m, z0.d, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fsub	z0.d, z1.d, z31.d

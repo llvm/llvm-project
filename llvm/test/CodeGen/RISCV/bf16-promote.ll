@@ -45,7 +45,7 @@ define void @test_fptrunc_float(float %f, ptr %p) nounwind {
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    mv s0, a0
-; RV64-NEXT:    call __truncsfbf2@plt
+; RV64-NEXT:    call __truncsfbf2
 ; RV64-NEXT:    fmv.x.w a0, fa0
 ; RV64-NEXT:    sh a0, 0(s0)
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -59,7 +59,7 @@ define void @test_fptrunc_float(float %f, ptr %p) nounwind {
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    mv s0, a0
-; RV32-NEXT:    call __truncsfbf2@plt
+; RV32-NEXT:    call __truncsfbf2
 ; RV32-NEXT:    fmv.x.w a0, fa0
 ; RV32-NEXT:    sh a0, 0(s0)
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -78,7 +78,7 @@ define void @test_fptrunc_double(double %d, ptr %p) nounwind {
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    mv s0, a0
-; RV64-NEXT:    call __truncdfbf2@plt
+; RV64-NEXT:    call __truncdfbf2
 ; RV64-NEXT:    fmv.x.w a0, fa0
 ; RV64-NEXT:    sh a0, 0(s0)
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -92,7 +92,7 @@ define void @test_fptrunc_double(double %d, ptr %p) nounwind {
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    mv s0, a0
-; RV32-NEXT:    call __truncdfbf2@plt
+; RV32-NEXT:    call __truncdfbf2
 ; RV32-NEXT:    fmv.x.w a0, fa0
 ; RV32-NEXT:    sh a0, 0(s0)
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -118,7 +118,7 @@ define void @test_fadd(ptr %p, ptr %q) nounwind {
 ; RV64-NEXT:    slli a0, a0, 16
 ; RV64-NEXT:    fmv.w.x fa4, a0
 ; RV64-NEXT:    fadd.s fa0, fa4, fa5
-; RV64-NEXT:    call __truncsfbf2@plt
+; RV64-NEXT:    call __truncsfbf2
 ; RV64-NEXT:    fmv.x.w a0, fa0
 ; RV64-NEXT:    sh a0, 0(s0)
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
@@ -139,7 +139,7 @@ define void @test_fadd(ptr %p, ptr %q) nounwind {
 ; RV32-NEXT:    slli a0, a0, 16
 ; RV32-NEXT:    fmv.w.x fa4, a0
 ; RV32-NEXT:    fadd.s fa0, fa4, fa5
-; RV32-NEXT:    call __truncsfbf2@plt
+; RV32-NEXT:    call __truncsfbf2
 ; RV32-NEXT:    fmv.x.w a0, fa0
 ; RV32-NEXT:    sh a0, 0(s0)
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload

@@ -80,7 +80,6 @@ void ReplaceSystemMalloc();
 
 // asan_linux.cpp / asan_mac.cpp / asan_win.cpp
 uptr FindDynamicShadowStart();
-void *AsanDoesNotSupportStaticLinkage();
 void AsanCheckDynamicRTPrereqs();
 void AsanCheckIncompatibleRT();
 
@@ -126,6 +125,7 @@ void *AsanDlSymNext(const char *sym);
 bool HandleDlopenInit();
 
 void InstallAtExitCheckLeaks();
+void InstallAtForkHandler();
 
 #define ASAN_ON_ERROR() \
   if (&__asan_on_error) \

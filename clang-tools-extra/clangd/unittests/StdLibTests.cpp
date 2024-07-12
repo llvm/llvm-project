@@ -126,7 +126,7 @@ TEST(StdLibTests, StdLibSet) {
 
 MATCHER_P(StdlibSymbol, Name, "") {
   return arg.Name == Name && arg.Includes.size() == 1 &&
-         llvm::StringRef(arg.Includes.front().Header).startswith("<");
+         llvm::StringRef(arg.Includes.front().Header).starts_with("<");
 }
 
 TEST(StdLibTests, EndToEnd) {

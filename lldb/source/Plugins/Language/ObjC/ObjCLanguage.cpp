@@ -81,9 +81,9 @@ ObjCLanguage::MethodName::Create(llvm::StringRef name, bool strict) {
 
   // Figure out type
   Type type = eTypeUnspecified;
-  if (name.startswith("+["))
+  if (name.starts_with("+["))
     type = eTypeClassMethod;
-  else if (name.startswith("-["))
+  else if (name.starts_with("-["))
     type = eTypeInstanceMethod;
 
   // If there's no type and it's strict, this is invalid

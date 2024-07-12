@@ -93,9 +93,9 @@ public:
   // .subsections_via_symbols, there is typically only one element here.
   llvm::TinyPtrVector<Defined *> symbols;
 
-protected:
   const Section &section;
 
+protected:
   const Defined *getContainingSymbol(uint64_t off) const;
 };
 
@@ -149,6 +149,7 @@ public:
 };
 
 // Initialize a fake InputSection that does not belong to any InputFile.
+// The created ConcatInputSection will always have 'live=true'
 ConcatInputSection *makeSyntheticInputSection(StringRef segName,
                                               StringRef sectName,
                                               uint32_t flags = 0,
@@ -302,6 +303,8 @@ bool isEhFrameSection(const InputSection *);
 bool isGccExceptTabSection(const InputSection *);
 
 extern std::vector<ConcatInputSection *> inputSections;
+// This is used as a counter for specyfing input order for input sections
+extern int inputSectionsOrder;
 
 namespace section_names {
 
@@ -340,6 +343,7 @@ constexpr const char moduleTermFunc[] = "__mod_term_func";
 constexpr const char nonLazySymbolPtr[] = "__nl_symbol_ptr";
 constexpr const char objcCatList[] = "__objc_catlist";
 constexpr const char objcClassList[] = "__objc_classlist";
+constexpr const char objcMethList[] = "__objc_methlist";
 constexpr const char objcClassRefs[] = "__objc_classrefs";
 constexpr const char objcConst[] = "__objc_const";
 constexpr const char objCImageInfo[] = "__objc_imageinfo";
@@ -369,6 +373,7 @@ constexpr const char addrSig[] = "__llvm_addrsig";
 
 } // namespace section_names
 
+void addInputSection(InputSection *inputSection);
 } // namespace macho
 
 std::string toString(const macho::InputSection *);

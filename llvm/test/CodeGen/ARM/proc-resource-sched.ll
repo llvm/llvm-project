@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=arm-eabi -mcpu=cortex-r52 -debug-only=machine-scheduler %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-R52
+; RUN: llc -mtriple=arm-eabi -mcpu=cortex-r52plus -debug-only=machine-scheduler %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-R52
 ; REQUIRES: asserts
 
 ; source_filename = "sched-2.c"

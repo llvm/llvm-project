@@ -221,7 +221,7 @@ struct SequenceOp : public SetTheory::Operator {
       std::string Name;
       raw_string_ostream OS(Name);
       OS << format(Format.c_str(), unsigned(From));
-      Record *Rec = Records.getDef(OS.str());
+      Record *Rec = Records.getDef(Name);
       if (!Rec)
         PrintFatalError(Loc, "No def named '" + Name + "': " +
           Expr->getAsString());

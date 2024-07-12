@@ -3,7 +3,7 @@
 
 --- |
   define void @add_scalable_offset(
-            <vscale x 1 x i64> *%pa,
+            ptr %pa,
             i64 %vl)
   {
     ret void
@@ -57,8 +57,7 @@ body: |
     ; CHECK-NEXT: PseudoRET
     %1:gprnox0 = COPY $x11
     %0:gpr = COPY $x10
-    %pt:vr = IMPLICIT_DEF
-    %2:vr = PseudoVLE64_V_M1 %pt, %0, %1, 6, 0 :: (load unknown-size from %ir.pa, align 8)
+    %2:vr = PseudoVLE64_V_M1 undef $noreg, %0, %1, 6, 0 :: (load unknown-size from %ir.pa, align 8)
     %3:gpr = ADDI %stack.2, 0
     VS1R_V killed %2:vr, %3:gpr
     PseudoRET

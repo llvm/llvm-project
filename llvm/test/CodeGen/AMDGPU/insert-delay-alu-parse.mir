@@ -1,0 +1,217 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs -start-after=amdgpu-insert-delay-alu %s -o - | FileCheck %s
+
+---
+name: valu_dep_1
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}valu_dep_1:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    S_DELAY_ALU .id0_VALU_DEP_1
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: valu_dep_2
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}valu_dep_2:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: v_add_nc_u32_e32 v1, v1, v1
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_2)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
+    S_DELAY_ALU .id0_VALU_DEP_2
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: valu_dep_3
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}valu_dep_3:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: v_add_nc_u32_e32 v1, v1, v1
+    ; CHECK-NEXT: v_add_nc_u32_e32 v2, v2, v2
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_3)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
+    $vgpr2 = V_ADD_U32_e32 $vgpr2, $vgpr2, implicit $exec
+    S_DELAY_ALU .id0_VALU_DEP_3
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: valu_dep_4
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}valu_dep_4:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: v_add_nc_u32_e32 v1, v1, v1
+    ; CHECK-NEXT: v_add_nc_u32_e32 v2, v2, v2
+    ; CHECK-NEXT: v_add_nc_u32_e32 v3, v3, v3
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_4)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
+    $vgpr2 = V_ADD_U32_e32 $vgpr2, $vgpr2, implicit $exec
+    $vgpr3 = V_ADD_U32_e32 $vgpr3, $vgpr3, implicit $exec
+    S_DELAY_ALU .id0_VALU_DEP_4
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: trans32_dep_1
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}trans32_dep_1:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_exp_f32_e32 v0, v0
+    ; CHECK-NEXT: s_delay_alu instid0(TRANS32_DEP_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
+    S_DELAY_ALU .id0_TRANS32_DEP_1
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: trans32_dep_2
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}trans32_dep_2:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_exp_f32_e32 v0, v0
+    ; CHECK-NEXT: v_exp_f32_e32 v1, v1
+    ; CHECK-NEXT: s_delay_alu instid0(TRANS32_DEP_2)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
+    $vgpr1 = V_EXP_F32_e32 $vgpr1, implicit $exec, implicit $mode
+    S_DELAY_ALU .id0_TRANS32_DEP_2
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: trans32_dep_3
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}trans32_dep_3:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_exp_f32_e32 v0, v0
+    ; CHECK-NEXT: v_exp_f32_e32 v1, v1
+    ; CHECK-NEXT: v_exp_f32_e32 v2, v2
+    ; CHECK-NEXT: s_delay_alu instid0(TRANS32_DEP_3)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
+    $vgpr1 = V_EXP_F32_e32 $vgpr1, implicit $exec, implicit $mode
+    $vgpr2 = V_EXP_F32_e32 $vgpr2, implicit $exec, implicit $mode
+    S_DELAY_ALU .id0_TRANS32_DEP_3
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: salu_cycle_1
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}salu_cycle_1:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: s_mov_b32 s0, 0
+    ; CHECK-NEXT: s_delay_alu instid0(SALU_CYCLE_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, s0, v0
+    $sgpr0 = S_MOV_B32 0
+    S_DELAY_ALU .id0_SALU_CYCLE_1
+    $vgpr0 = V_ADD_U32_e32 $sgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: valu_dep_1_same_trans32_dep_1
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}valu_dep_1_same_trans32_dep_1:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_exp_f32_e32 v0, v0
+    ; CHECK-NEXT: v_add_nc_u32_e32 v1, v1, v1
+    ; CHECK-NEXT: s_delay_alu instid0(TRANS32_DEP_1) | instid1(VALU_DEP_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v1
+    $vgpr0 = V_EXP_F32_e32 $vgpr0, implicit $exec, implicit $mode
+    $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
+    S_DELAY_ALU .id0_TRANS32_DEP_1_skip_SAME_id1_VALU_DEP_1
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr1, implicit $exec
+...
+
+---
+name: valu_dep_1_same_salu_cycle_1
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}valu_dep_1_same_salu_cycle_1:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: s_mov_b32 s0, 0
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, s0, v0
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    $sgpr0 = S_MOV_B32 0
+    S_DELAY_ALU .id0_VALU_DEP_1_skip_SAME_id1_SALU_CYCLE_1
+    $vgpr0 = V_ADD_U32_e32 $sgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: valu_dep_1_next_valu_dep_1
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}valu_dep_1_next_valu_dep_1:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    S_DELAY_ALU .id0_VALU_DEP_1_skip_NEXT_id1_VALU_DEP_1
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+...
+
+---
+name: valu_dep_2_next_valu_dep_2
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}valu_dep_2_next_valu_dep_2:
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: v_add_nc_u32_e32 v1, v1, v1
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: v_add_nc_u32_e32 v1, v1, v1
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
+    S_DELAY_ALU .id0_VALU_DEP_2_skip_NEXT_id1_VALU_DEP_2
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
+...
+
+---
+name: valu_dep_2_skip_valu_dep_2
+body: |
+  bb.0:
+    ; CHECK-LABEL: {{^}}valu_dep_2_skip_valu_dep_2
+    ; CHECK: %bb.0:
+    ; CHECK-NEXT: v_add_nc_u32_e32 v0, v0, v0
+    ; CHECK-NEXT: v_add_nc_u32_e32 v2, v1, v1
+    ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+    ; CHECK-NEXT: v_add_nc_u32_e32 v1, v0, v1
+    ; CHECK-NEXT: v_add_nc_u32_e32 v4, v3, v3
+    ; CHECK-NEXT: v_add_nc_u32_e32 v1, v1, v1
+    $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    $vgpr2 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
+    S_DELAY_ALU .id0_VALU_DEP_2_skip_SKIP_1_id1_VALU_DEP_2
+    $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr1, implicit $exec
+    $vgpr4 = V_ADD_U32_e32 $vgpr3, $vgpr3, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
+...

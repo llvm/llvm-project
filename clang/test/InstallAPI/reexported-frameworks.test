@@ -1,0 +1,638 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+; RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
+
+; RUN: yaml2obj %t/Umbrella.yaml -o %t/Umbrella
+; RUN: mkdir -p %t/System/Library/Frameworks/Bar.framework
+; RUN: yaml2obj %t/Bar.yaml -o %t/System/Library/Frameworks/Bar.framework/Bar
+
+; RUN: clang-installapi -target x86_64-apple-macosx13 -install_name \
+; RUN: /System/Library/Frameworks/Umbrella3.framework/Versions/A/Umbrella3 \
+; RUN: -current_version 1 -compatibility_version 1 \
+; RUN: --verify-against=%t/Umbrella \
+; RUN: -F %t/System/Library/Frameworks -L %t/usr/lib \
+; RUN: %t/inputs.json --verify-mode=Pedantic \
+; RUN: -reexport_framework Foo -reexport_framework Bar -reexport-lBaz \
+; RUN: -o %t/Umbrella.tbd 2>&1 | FileCheck -allow-empty %s
+; RUN: llvm-readtapi -compare %t/Umbrella.tbd %t/expected.tbd 2>&1 | FileCheck -allow-empty %s
+
+// Checks that one of the reexported frameworks found earlier doesn't resolve 
+// a missing export from a declaration.
+; RUN: not clang-installapi -target x86_64-apple-macosx13 -install_name \
+; RUN: /System/Library/Frameworks/Umbrella3.framework/Versions/A/Umbrella3 \
+; RUN: -current_version 1 -compatibility_version 1 \
+; RUN: --verify-against=%t/Umbrella \
+; RUN: %t/inputs.json -F %t/BadFoo \
+; RUN: -F %t/System/Library/Frameworks -L %t/usr/lib \
+; RUN: --verify-mode=ErrorsOnly \
+; RUN: -reexport_framework Foo -reexport_framework Bar -reexport-lBaz \
+; RUN: -o %t/Umbrella.tbd 2>&1 | FileCheck %s --check-prefix MISSING_SYMBOL
+
+; MISSING_SYMBOL: error: declaration has external linkage, but dynamic library doesn't have symbol 'foo'
+; MISSING_SYMBOL-NEXT: extern int foo();
+
+
+; CHECK-NOT: error
+; CHECK-NOT: warning
+
+;--- System/Library/Frameworks/Umbrella.framework/Headers/Bar.h
+extern int bar();
+
+;--- System/Library/Frameworks/Umbrella.framework/Headers/Baz.h
+extern int baz();
+
+;--- System/Library/Frameworks/Umbrella.framework/Headers/Foo.h
+extern int foo();
+
+;--- System/Library/Frameworks/Umbrella.framework/Headers/Umbrella.h
+#import <Umbrella/Bar.h>
+#import <Umbrella/Baz.h>
+#import <Umbrella/Foo.h>
+
+;--- inputs.json.in
+{
+  "headers": [ {
+    "path" : "DSTROOT/System/Library/Frameworks/Umbrella.framework/Headers/Bar.h",
+    "type" : "public"
+  }, 
+  {
+    "path" : "DSTROOT/System/Library/Frameworks/Umbrella.framework/Headers/Baz.h",
+    "type" : "public"
+  },
+  {
+    "path" : "DSTROOT/System/Library/Frameworks/Umbrella.framework/Headers/Umbrella.h",
+    "type" : "public"
+  },
+  {
+    "path" : "DSTROOT/System/Library/Frameworks/Umbrella.framework/Headers/Foo.h",
+    "type" : "public"
+  }
+  ],
+  "version": "3"
+}
+
+;--- Umbrella.yaml
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x1000007
+  cpusubtype:      0x3
+  filetype:        0x6
+  ncmds:           18
+  sizeofcmds:      1184
+  flags:           0x85
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          12288
+    fileoff:         0
+    filesize:        12288
+    maxprot:         5
+    initprot:        5
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x24C0
+        size:            0
+        offset:          0x24C0
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         ''
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __DATA_CONST
+    vmaddr:          12288
+    vmsize:          4096
+    fileoff:         12288
+    filesize:        4096
+    maxprot:         3
+    initprot:        3
+    nsects:          1
+    flags:           16
+    Sections:
+      - sectname:        __objc_imageinfo
+        segname:         __DATA_CONST
+        addr:            0x3000
+        size:            8
+        offset:          0x3000
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '0000000040000000'
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          16384
+    vmsize:          48
+    fileoff:         16384
+    filesize:        48
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      0
+    rebase_size:     0
+    bind_off:        0
+    bind_size:       0
+    weak_bind_off:   0
+    weak_bind_size:  0
+    lazy_bind_off:   0
+    lazy_bind_size:  0
+    export_off:      0
+    export_size:     0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          16392
+    nsyms:           1
+    stroff:          16408
+    strsize:         24
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       0
+    iextdefsym:      0
+    nextdefsym:      0
+    iundefsym:       0
+    nundefsym:       1
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_ID_DYLIB
+    cmdsize:         96
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 65536
+      compatibility_version: 65536
+    Content:         '/System/Library/Frameworks/Umbrella3.framework/Versions/A/Umbrella3'
+    ZeroPadBytes:    5
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            4C4C44AE-5555-3144-A1D3-33A5C6F7B36A
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           851968
+    sdk:             983040
+    ntools:          1
+    Tools:
+      - tool:            4
+        version:         1245184
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         80
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 65536
+      compatibility_version: 65536
+    Content:         '/System/Library/Frameworks/Foo.framework/Versions/A/Foo'
+    ZeroPadBytes:    1
+  - cmd:             LC_REEXPORT_DYLIB
+    cmdsize:         80
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 0
+      compatibility_version: 0
+    Content:         '/System/Library/Frameworks/Foo.framework/Versions/A/Foo'
+    ZeroPadBytes:    1
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         80
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 65536
+      compatibility_version: 65536
+    Content:         '/System/Library/Frameworks/Bar.framework/Versions/A/Bar'
+    ZeroPadBytes:    1
+  - cmd:             LC_REEXPORT_DYLIB
+    cmdsize:         80
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 0
+      compatibility_version: 0
+    Content:         '/System/Library/Frameworks/Bar.framework/Versions/A/Bar'
+    ZeroPadBytes:    1
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         48
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 65536
+      compatibility_version: 65536
+    Content:         '/usr/lib/libBaz.1.dylib'
+    ZeroPadBytes:    1
+  - cmd:             LC_REEXPORT_DYLIB
+    cmdsize:         48
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 0
+      compatibility_version: 0
+    Content:         '/usr/lib/libBaz.1.dylib'
+    ZeroPadBytes:    1
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 88539136
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    6
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         16384
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         16392
+    datasize:        0
+LinkEditData:
+  NameList:
+    - n_strx:          2
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          1024
+      n_value:         0
+  StringTable:
+    - ' '
+    - dyld_stub_binder
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+...
+
+;--- System/Library/Frameworks/Foo.framework/Foo.tbd
+{
+  "main_library": {
+    "exported_symbols": [
+      {
+        "text": {
+          "global": [
+            "_foo"
+          ]
+        }
+      }
+    ],
+    "flags": [
+      {
+        "attributes": [
+          "not_app_extension_safe"
+        ]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "/System/Library/Frameworks/Foo.framework/Versions/A/Foo"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "13",
+        "target": "x86_64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}
+
+;--- Bar.yaml
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x1000007
+  cpusubtype:      0x3
+  filetype:        0x6
+  ncmds:           12
+  sizeofcmds:      912
+  flags:           0x100085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         312
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          8192
+    fileoff:         0
+    filesize:        8192
+    maxprot:         5
+    initprot:        5
+    nsects:          3
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0xBB0
+        size:            8
+        offset:          0xBB0
+        align:           4
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         554889E531C05DC3
+      - sectname:        __unwind_info
+        segname:         __TEXT
+        addr:            0xBB8
+        size:            4152
+        offset:          0xBB8
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         010000001C000000010000002000000000000000200000000200000000000001B00B00003800000038000000B80B00000000000038000000030000000C0001001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+      - sectname:        __eh_frame
+        segname:         __TEXT
+        addr:            0x1BF0
+        size:            24
+        offset:          0x1BF0
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x6000000B
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         1400000000000000017A520001781001100C070890010000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __DATA_CONST
+    vmaddr:          8192
+    vmsize:          4096
+    fileoff:         8192
+    filesize:        4096
+    maxprot:         3
+    initprot:        3
+    nsects:          1
+    flags:           16
+    Sections:
+      - sectname:        __objc_imageinfo
+        segname:         __DATA_CONST
+        addr:            0x2000
+        size:            8
+        offset:          0x2000
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '0000000040000000'
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          12288
+    vmsize:          80
+    fileoff:         12288
+    filesize:        80
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_DYLD_INFO_ONLY
+    cmdsize:         48
+    rebase_off:      0
+    rebase_size:     0
+    bind_off:        0
+    bind_size:       0
+    weak_bind_off:   0
+    weak_bind_size:  0
+    lazy_bind_off:   0
+    lazy_bind_size:  0
+    export_off:      12288
+    export_size:     16
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          12312
+    nsyms:           2
+    stroff:          12344
+    strsize:         24
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       0
+    iextdefsym:      0
+    nextdefsym:      1
+    iundefsym:       1
+    nundefsym:       1
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+  - cmd:             LC_ID_DYLIB
+    cmdsize:         80
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 65536
+      compatibility_version: 65536
+    Content:         '/System/Library/Frameworks/Bar.framework/Versions/A/Bar'
+    ZeroPadBytes:    1
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            4C4C4415-5555-3144-A11E-3C68D85CC061
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         32
+    platform:        1
+    minos:           851968
+    sdk:             983040
+    ntools:          1
+    Tools:
+      - tool:            4
+        version:         1245184
+  - cmd:             LC_LOAD_DYLIB
+    cmdsize:         56
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 88539136
+      compatibility_version: 65536
+    Content:         '/usr/lib/libSystem.B.dylib'
+    ZeroPadBytes:    6
+  - cmd:             LC_FUNCTION_STARTS
+    cmdsize:         16
+    dataoff:         12304
+    datasize:        8
+  - cmd:             LC_DATA_IN_CODE
+    cmdsize:         16
+    dataoff:         12312
+    datasize:        0
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0
+    Address:         0x0
+    Other:           0x0
+    ImportName:      ''
+    Children:
+      - TerminalSize:    3
+        NodeOffset:      8
+        Name:            _bar
+        Flags:           0x0
+        Address:         0xBB0
+        Other:           0x0
+        ImportName:      ''
+  NameList:
+    - n_strx:          2
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         2992
+    - n_strx:          7
+      n_type:          0x1
+      n_sect:          0
+      n_desc:          256
+      n_value:         0
+  StringTable:
+    - ' '
+    - _bar
+    - dyld_stub_binder
+  FunctionStarts:  [ 0xBB0 ]
+...
+
+;--- usr/lib/libBaz.tbd
+{
+  "main_library": {
+    "exported_symbols": [
+      {
+        "text": {
+          "global": [
+            "_baz"
+          ]
+        }
+      }
+    ],
+    "flags": [
+      {
+        "attributes": [
+          "not_app_extension_safe"
+        ]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "/usr/lib/libBaz.1.dylib"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "13",
+        "target": "x86_64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}
+
+;--- BadFoo/Foo.framework/Foo.tbd
+{
+  "main_library": {
+    "exported_symbols": [
+      {
+        "text": {
+          "global": [
+            "_not_so_foo"
+          ]
+        }
+      }
+    ],
+    "flags": [
+      {
+        "attributes": [
+          "not_app_extension_safe"
+        ]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "/System/Library/Frameworks/Foo.framework/Versions/A/Foo"
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "13",
+        "target": "x86_64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}
+
+;--- expected.tbd
+{
+  "main_library": {
+    "flags": [
+      {
+        "attributes": [
+          "not_app_extension_safe"
+        ]
+      }
+    ],
+    "install_names": [
+      {
+        "name": "/System/Library/Frameworks/Umbrella3.framework/Versions/A/Umbrella3"
+      }
+    ],
+    "reexported_libraries": [
+      {
+        "names": [
+          "/System/Library/Frameworks/Bar.framework/Versions/A/Bar",
+          "/System/Library/Frameworks/Foo.framework/Versions/A/Foo",
+          "/usr/lib/libBaz.1.dylib"
+        ]
+      }
+    ],
+    "target_info": [
+      {
+        "min_deployment": "13",
+        "target": "x86_64-macos"
+      }
+    ]
+  },
+  "tapi_tbd_version": 5
+}

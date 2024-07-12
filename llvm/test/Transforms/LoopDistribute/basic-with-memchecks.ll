@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: opt -aa-pipeline=basic-aa -passes=loop-distribute -enable-loop-distribute -verify-loop-info -verify-dom-info -S \
 ; RUN:   < %s | FileCheck %s
 
@@ -79,6 +80,8 @@ entry:
 
 
 ; VECTORIZE: mul <4 x i32>
+; VECTORIZE: mul <4 x i32>
+; VECTORIZE-NOT: mul <4 x i32>
 
 for.body:                                         ; preds = %for.body, %entry
   %ind = phi i64 [ 0, %entry ], [ %add, %for.body ]

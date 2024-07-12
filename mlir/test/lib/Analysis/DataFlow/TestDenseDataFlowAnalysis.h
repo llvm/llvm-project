@@ -57,6 +57,62 @@ private:
   std::optional<Value> underlyingValue;
 };
 
+class AdjacentAccess {
+public:
+  using DeterministicSetVector =
+      SetVector<Operation *, SmallVector<Operation *, 2>,
+                SmallPtrSet<Operation *, 2>>;
+
+  ArrayRef<Operation *> get() const { return accesses.getArrayRef(); }
+  bool isKnown() const { return !unknown; }
+
+  ChangeResult merge(const AdjacentAccess &other) {
+    if (unknown)
+      return ChangeResult::NoChange;
+    if (other.unknown) {
+      unknown = true;
+      accesses.clear();
+      return ChangeResult::Change;
+    }
+
+    size_t sizeBefore = accesses.size();
+    accesses.insert(other.accesses.begin(), other.accesses.end());
+    return accesses.size() == sizeBefore ? ChangeResult::NoChange
+                                         : ChangeResult::Change;
+  }
+
+  ChangeResult set(Operation *op) {
+    if (!unknown && accesses.size() == 1 && *accesses.begin() == op)
+      return ChangeResult::NoChange;
+
+    unknown = false;
+    accesses.clear();
+    accesses.insert(op);
+    return ChangeResult::Change;
+  }
+
+  ChangeResult setUnknown() {
+    if (unknown)
+      return ChangeResult::NoChange;
+
+    accesses.clear();
+    unknown = true;
+    return ChangeResult::Change;
+  }
+
+  bool operator==(const AdjacentAccess &other) const {
+    return unknown == other.unknown && accesses == other.accesses;
+  }
+
+  bool operator!=(const AdjacentAccess &other) const {
+    return !operator==(other);
+  }
+
+private:
+  bool unknown = false;
+  DeterministicSetVector accesses;
+};
+
 /// This lattice represents, for a given memory resource, the potential last
 /// operations that modified the resource.
 class AccessLatticeBase {
@@ -73,40 +129,42 @@ public:
   ChangeResult merge(const AccessLatticeBase &rhs) {
     ChangeResult result = ChangeResult::NoChange;
     for (const auto &mod : rhs.adjAccesses) {
-      auto &lhsMod = adjAccesses[mod.first];
-      if (lhsMod != mod.second) {
-        lhsMod.insert(mod.second.begin(), mod.second.end());
-        result |= ChangeResult::Change;
-      }
+      AdjacentAccess &lhsMod = adjAccesses[mod.first];
+      result |= lhsMod.merge(mod.second);
     }
     return result;
   }
 
   /// Set the last modification of a value.
   ChangeResult set(Value value, Operation *op) {
-    auto &lastMod = adjAccesses[value];
+    AdjacentAccess &lastMod = adjAccesses[value];
+    return lastMod.set(op);
+  }
+
+  ChangeResult setKnownToUnknown() {
     ChangeResult result = ChangeResult::NoChange;
-    if (lastMod.size() != 1 || *lastMod.begin() != op) {
-      result = ChangeResult::Change;
-      lastMod.clear();
-      lastMod.insert(op);
-    }
+    for (auto &[value, adjacent] : adjAccesses)
+      result |= adjacent.setUnknown();
     return result;
   }
 
   /// Get the adjacent accesses to a value. Returns std::nullopt if they
   /// are not known.
-  std::optional<ArrayRef<Operation *>> getAdjacentAccess(Value value) const {
+  const AdjacentAccess *getAdjacentAccess(Value value) const {
     auto it = adjAccesses.find(value);
     if (it == adjAccesses.end())
-      return {};
-    return it->second.getArrayRef();
+      return nullptr;
+    return &it->getSecond();
   }
 
   void print(raw_ostream &os) const {
     for (const auto &lastMod : adjAccesses) {
       os << lastMod.first << ":\n";
-      for (Operation *op : lastMod.second)
+      if (!lastMod.second.isKnown()) {
+        os << "  <unknown>\n";
+        return;
+      }
+      for (Operation *op : lastMod.second.get())
         os << "  " << *op << "\n";
     }
   }
@@ -114,9 +172,7 @@ public:
 private:
   /// The potential adjacent accesses to a memory resource. Use a set vector to
   /// keep the results deterministic.
-  DenseMap<Value, SetVector<Operation *, SmallVector<Operation *, 2>,
-                            SmallPtrSet<Operation *, 2>>>
-      adjAccesses;
+  DenseMap<Value, AdjacentAccess> adjAccesses;
 };
 
 /// Define the lattice class explicitly to provide a type ID.
@@ -148,7 +204,7 @@ public:
   }
 
   /// Look for the most underlying value of a value.
-  static Value
+  static std::optional<Value>
   getMostUnderlyingValue(Value value,
                          function_ref<const UnderlyingValueLattice *(Value)>
                              getUnderlyingValueFn) {
@@ -156,7 +212,7 @@ public:
     do {
       underlying = getUnderlyingValueFn(value);
       if (!underlying || underlying->getValue().isUninitialized())
-        return {};
+        return std::nullopt;
       Value underlyingValue = underlying->getValue().getUnderlyingValue();
       if (underlyingValue == value)
         break;

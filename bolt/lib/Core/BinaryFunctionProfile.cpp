@@ -225,6 +225,7 @@ void BinaryFunction::mergeProfileDataInto(BinaryFunction &BF) const {
     for (const BinaryBasicBlock *BBSucc : BB->successors()) {
       (void)BBSucc;
       assert(getIndex(BBSucc) == BF.getIndex(*BBMergeSI));
+      (void)BBMergeSI;
 
       // At this point no branch count should be set to COUNT_NO_PROFILE.
       assert(BII->Count != BinaryBasicBlock::COUNT_NO_PROFILE &&

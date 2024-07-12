@@ -31,6 +31,7 @@
 #include <iterator>
 #include <memory>
 #include <string>
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -48,6 +49,16 @@ void test_iterator_sentinel() {
   assert(s.size() == std::size(arr));
   assert(s.data() == std::data(arr));
   }
+
+#if _LIBCPP_STD_VER >= 26
+  // P3029R1: deduction from `integral_constant`
+  {
+    std::span s{std::begin(arr), std::integral_constant<size_t, 3>{}};
+    ASSERT_SAME_TYPE(decltype(s), std::span<int, 3>);
+    assert(s.size() == std::size(arr));
+    assert(s.data() == std::data(arr));
+  }
+#endif
 }
 
 void test_c_array() {

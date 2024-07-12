@@ -36,7 +36,6 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MD5.h"
@@ -263,7 +262,7 @@ RawCoverage::read(const std::string &FileName) {
   // to compactify the data.
   Addrs->erase(0);
 
-  return std::unique_ptr<RawCoverage>(new RawCoverage(std::move(Addrs)));
+  return std::make_unique<RawCoverage>(std::move(Addrs));
 }
 
 // Print coverage addresses.
@@ -461,8 +460,7 @@ static std::unique_ptr<symbolize::LLVMSymbolizer> createSymbolizer() {
   symbolize::LLVMSymbolizer::Options SymbolizerOptions;
   SymbolizerOptions.Demangle = ClDemangle;
   SymbolizerOptions.UseSymbolTable = true;
-  return std::unique_ptr<symbolize::LLVMSymbolizer>(
-      new symbolize::LLVMSymbolizer(SymbolizerOptions));
+  return std::make_unique<symbolize::LLVMSymbolizer>(SymbolizerOptions);
 }
 
 static std::string normalizeFilename(const std::string &FileName) {
@@ -1215,8 +1213,6 @@ static void parseArgs(int Argc, char **Argv) {
 }
 
 int sancov_main(int Argc, char **Argv, const llvm::ToolContext &) {
-  llvm::InitLLVM X(Argc, Argv);
-
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllDisassemblers();

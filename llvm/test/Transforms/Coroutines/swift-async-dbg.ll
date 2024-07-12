@@ -2,6 +2,13 @@
 ; RUN: opt -mtriple='x86_64' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s
 ; RUN: opt -mtriple='i386-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s --check-prefix=NOENTRY
 ; RUN: opt -mtriple='armv7-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s --check-prefix=NOENTRY
+
+;; Replicate those tests with non-instruction debug markers.
+; RUN: opt --try-experimental-debuginfo-iterators -mtriple='arm64-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -mtriple='x86_64' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -mtriple='i386-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s --check-prefix=NOENTRY
+; RUN: opt --try-experimental-debuginfo-iterators -mtriple='armv7-' %s -S -passes='module(coro-early),cgscc(coro-split,simplifycfg)' -o - | FileCheck %s --check-prefix=NOENTRY
+
 ; NOENTRY-NOT: OP_llvm_entry_value
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
@@ -22,9 +29,9 @@ define swifttailcc void @coroutineA(ptr swiftasync %arg) !dbg !48 {
   %i3 = call ptr @llvm.coro.begin(token %i2, ptr null)
 ; CHECK-LABEL: define {{.*}} @coroutineA(
 ; CHECK-SAME:    ptr swiftasync %[[frame_ptr:.*]])
-; CHECK:      @llvm.dbg.declare(metadata ptr %[[frame_ptr]], {{.*}} !DIExpression(
+; CHECK:      #dbg_declare(ptr %[[frame_ptr]], {{.*}} !DIExpression(
 ; CHECK-SAME:                   DW_OP_plus_uconst, 16, DW_OP_plus_uconst, 8)
-; CHECK:      @llvm.dbg.value(metadata ptr %[[frame_ptr]], {{.*}} !DIExpression(
+; CHECK:      #dbg_value(ptr %[[frame_ptr]], {{.*}} !DIExpression(
 ; CHECK-SAME:                 DW_OP_plus_uconst, 16, DW_OP_deref)
 ; CHECK:      call {{.*}} @swift_task_switch
 
@@ -41,11 +48,11 @@ define swifttailcc void @coroutineA(ptr swiftasync %arg) !dbg !48 {
 ; CHECK-NOT: define
 ; CHECK-LABEL: define {{.*}} @coroutineATY0_(
 ; CHECK-SAME:    ptr swiftasync %[[frame_ptr:.*]])
-; CHECK:      @llvm.dbg.declare(metadata ptr %[[frame_ptr]], {{.*}} !DIExpression(
+; CHECK:      #dbg_declare(ptr %[[frame_ptr]], {{.*}} !DIExpression(
 ; CHECK-SAME:                   DW_OP_LLVM_entry_value, 1, DW_OP_plus_uconst, 16, DW_OP_plus_uconst, 8)
-; CHECK:      @llvm.dbg.value(metadata ptr %[[frame_ptr]], {{.*}} !DIExpression(
+; CHECK:      #dbg_value(ptr %[[frame_ptr]], {{.*}} !DIExpression(
 ; CHECK-SAME:                 DW_OP_LLVM_entry_value, 1, DW_OP_plus_uconst, 16, DW_OP_deref)
-; CHECK:      @llvm.dbg.value(metadata !DIArgList(ptr %[[frame_ptr]], i32 %{{.*}}), {{.*}} !DIExpression(
+; CHECK:      #dbg_value(!DIArgList(ptr %[[frame_ptr]], i32 %{{.*}}), {{.*}} !DIExpression(
 ; CHECK-SAME:                 DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 16, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_deref)
 ; CHECK:      call {{.*}} @coroutineB
 
@@ -62,9 +69,9 @@ define swifttailcc void @coroutineA(ptr swiftasync %arg) !dbg !48 {
 ; CHECK-LABEL: define {{.*}} @coroutineATQ1_(
 ; CHECK-SAME:    ptr swiftasync %[[frame_ptr:.*]])
 ; Note the extra level of indirection that shows up here!
-; CHECK:      @llvm.dbg.declare(metadata ptr %[[frame_ptr]], {{.*}} !DIExpression(
+; CHECK:      #dbg_declare(ptr %[[frame_ptr]], {{.*}} !DIExpression(
 ; CHECK-SAME:                   DW_OP_LLVM_entry_value, 1, DW_OP_deref, DW_OP_plus_uconst, 16, DW_OP_plus_uconst, 8)
-; CHECK:      @llvm.dbg.value(metadata ptr %[[frame_ptr]], {{.*}} !DIExpression(
+; CHECK:      #dbg_value(ptr %[[frame_ptr]], {{.*}} !DIExpression(
 ; CHECK-SAME:                 DW_OP_LLVM_entry_value, 1, DW_OP_deref, DW_OP_plus_uconst, 16, DW_OP_deref)
 ; CHECK:      call {{.*}} @swift_task_switch
 
@@ -77,7 +84,7 @@ define swifttailcc void @coroutineA(ptr swiftasync %arg) !dbg !48 {
 ; CHECK-NOT: define
 ; CHECK-LABEL: define {{.*}} @coroutineATY2_(
 ; CHECK-SAME:    ptr swiftasync %[[frame_ptr:.*]])
-; CHECK:      @llvm.dbg.declare(metadata ptr %[[frame_ptr]], {{.*}} !DIExpression(
+; CHECK:      #dbg_declare(ptr %[[frame_ptr]], {{.*}} !DIExpression(
 ; CHECK-SAME:                   DW_OP_LLVM_entry_value, 1, DW_OP_plus_uconst, 16, DW_OP_plus_uconst, 8)
 }
 

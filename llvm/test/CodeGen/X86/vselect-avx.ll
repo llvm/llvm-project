@@ -71,7 +71,7 @@ define void @test2(ptr %call1559, i64 %indvars.iv4198, <4 x i1> %tmp1895) {
 ; AVX512-NEXT:    vptestmd %xmm0, %xmm0, %k1
 ; AVX512-NEXT:    movq (%rdi,%rsi,8), %rax
 ; AVX512-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [5.0E-1,5.0E-1,5.0E-1,5.0E-1]
-; AVX512-NEXT:    vbroadcastsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0 {%k1}
+; AVX512-NEXT:    vbroadcastsd {{.*#+}} ymm0 {%k1} = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; AVX512-NEXT:    vmovupd %ymm0, (%rax)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -257,6 +257,50 @@ define void @blendv_split(ptr %p, <8 x i32> %cond, <8 x i32> %a, <8 x i32> %x, <
   %sel = select <8 x i1> %bool, <8 x i32> %sh1, <8 x i32> %sh2
   store <8 x i32> %sel, ptr %p, align 4
   ret void
+}
+
+; Concatenate 128-bit pblendvb back together on AVX2+ targets (hidden by SSE __m128i bitcasts)
+define <4 x i64> @vselect_concat_split_v16i8(<4 x i64> %a, <4 x i64> %b, <4 x i64>  %c, <4 x i64> %d) {
+; AVX1-LABEL: vselect_concat_split_v16i8:
+; AVX1:       ## %bb.0:
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm5
+; AVX1-NEXT:    vpcmpgtb %xmm4, %xmm5, %xmm4
+; AVX1-NEXT:    vpcmpgtb %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vpblendvb %xmm4, %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: vselect_concat_split_v16i8:
+; AVX2:       ## %bb.0:
+; AVX2-NEXT:    vpcmpgtb %ymm2, %ymm3, %ymm2
+; AVX2-NEXT:    vpblendvb %ymm2, %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: vselect_concat_split_v16i8:
+; AVX512:       ## %bb.0:
+; AVX512-NEXT:    vpcmpgtb %ymm2, %ymm3, %ymm2
+; AVX512-NEXT:    vpternlogq $216, %ymm2, %ymm1, %ymm0
+; AVX512-NEXT:    retq
+  %a.bc = bitcast <4 x i64> %a to <32 x i8>
+  %b.bc = bitcast <4 x i64> %b to <32 x i8>
+  %c.bc = bitcast <4 x i64> %c to <32 x i8>
+  %d.bc = bitcast <4 x i64> %d to <32 x i8>
+  %cmp = icmp slt <32 x i8> %c.bc, %d.bc
+  %a.lo = shufflevector <32 x i8> %a.bc, <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %b.lo = shufflevector <32 x i8> %b.bc, <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %cmp.lo = shufflevector <32 x i1> %cmp, <32 x i1> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %lo = select <16 x i1> %cmp.lo, <16 x i8> %b.lo, <16 x i8> %a.lo
+  %a.hi = shufflevector <32 x i8> %a.bc, <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %b.hi = shufflevector <32 x i8> %b.bc, <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %cmp.hi = shufflevector <32 x i1> %cmp, <32 x i1> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %hi = select <16 x i1> %cmp.hi, <16 x i8> %b.hi, <16 x i8> %a.hi
+  %concat = shufflevector <16 x i8> %lo, <16 x i8> %hi, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  %result = bitcast <32 x i8> %concat to <4 x i64>
+  ret <4 x i64> %result
 }
 
 ; Regression test for rGea8fb3b60196

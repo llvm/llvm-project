@@ -15,6 +15,6 @@
 
 #include "test_range.h"
 
-static_assert(std::ranges::borrowed_range<std::ranges::ref_view<BorrowedRange>>);
+static_assert(std::ranges::borrowed_range<std::ranges::ref_view<BorrowedRange<>>>);
 static_assert(std::ranges::borrowed_range<std::ranges::ref_view<BorrowedView>>);
 static_assert(std::ranges::borrowed_range<std::ranges::ref_view<NonBorrowedView>>);

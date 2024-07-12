@@ -73,8 +73,9 @@ mkdir -p "${picolibc_build_dir}"
 # Following changes are required and were introduced after version 1.8.5:
 # - updated semihost arguments handling,
 # - added missing macros in stdio.h
+# - external linkage for isblank
 # Version following 1.8.5, was not released by the time of writing.
-picolibc_commit="4b9b8ef01d18cf0563348ad4af4ae89a7277e7ca"
+picolibc_commit="04a90c56d7aac61880f205ec29b3dce6a9de0342"
 curl -L "https://github.com/picolibc/picolibc/archive/${picolibc_commit}.zip" --output "${picolibc_source_dir}/picolibc.zip"
 unzip -q "${picolibc_source_dir}/picolibc.zip" -d "${picolibc_source_dir}"
 mv "${picolibc_source_dir}/picolibc-${picolibc_commit}"/* "${picolibc_source_dir}"

@@ -2,11 +2,6 @@
 ; RUN: opt < %s -passes=attributor -attributor-annotate-decl-cs   -S | FileCheck %s
 
 ; CHECK-NOT: Function
-; CHECK: declare i32 @foo1()
-; CHECK-NOT: Function
-; CHECK: declare i32 @foo2()
-; CHECK-NOT: Function
-; CHECK: declare i32 @foo3()
 declare i32 @foo1()
 declare i32 @foo2()
 declare i32 @foo3()

@@ -10,7 +10,7 @@
 #define TENSOR_TRANSFORM_OPS
 
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
-include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
+include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
@@ -114,12 +114,14 @@ def ApplyReassociativeReshapeFoldingPatternsOp : Op<Transform_Dialect,
 def ApplyRewriteTensorOpsAsConstantPatternsOp : Op<Transform_Dialect,
     "apply_patterns.tensor.rewrite_as_constant",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let arguments = (ins UnitAttr:$aggressive);
   let description = [{
     Indicates that tensor ops (such as tensor.generate) should be replaced with
     constants (arith.constant) when possible.
   }];
 
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat =
+      "(`aggressive` $aggressive^)? attr-dict";
 }
 
 def Transform_TensorPadOp : Transform_ConcreteOpType<"tensor.pad">;
@@ -167,6 +169,24 @@ def MakeLoopIndependentOp
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
   }];
+}
+
+def TypeConversionCastShapeDynamicDimsOp : Op<Transform_Dialect,
+    "type_conversion.tensor.cast_shape_dynamic_dims",
+    [DeclareOpInterfaceMethods<TypeConverterBuilderOpInterface,
+                               ["populateTypeMaterializations"]>]> {
+  let description = [{
+    Populates a type converter with conversion materialization functions that
+    cast a tensor value between two cast-compatible tensors. See `tensor.cast`
+    for more information on cast compatibility between tensors.
+
+    If `ignore_dynamic_info` is not set, this will set an additional constraint
+    that source materializations do not cast dynamic dimensions to static ones.
+  }];
+  let arguments = (ins UnitAttr:$ignore_dynamic_info);
+
+  let assemblyFormat =
+      "(`ignore_dynamic_info` $ignore_dynamic_info^)? attr-dict";
 }
 
 #endif // TENSOR_TRANSFORM_OPS

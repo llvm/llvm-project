@@ -1,4 +1,4 @@
-; RUN: opt -codegenprepare -S -mtriple=x86_64-linux < %s | FileCheck %s
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -S -mtriple=x86_64-linux < %s | FileCheck %s
 
 declare void @llvm.assume(i1 noundef) nounwind willreturn
 

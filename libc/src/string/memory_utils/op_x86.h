@@ -14,7 +14,7 @@
 
 #include "src/__support/macros/properties/architectures.h"
 
-#if defined(LIBC_TARGET_ARCH_IS_X86_64)
+#if defined(LIBC_TARGET_ARCH_IS_X86)
 
 #include "src/__support/common.h"
 #include "src/string/memory_utils/op_builtin.h"
@@ -40,12 +40,12 @@
 namespace LIBC_NAMESPACE::x86 {
 
 // A set of constants to check compile time features.
-LIBC_INLINE_VAR constexpr bool kSse2 = LLVM_LIBC_IS_DEFINED(__SSE2__);
-LIBC_INLINE_VAR constexpr bool kSse41 = LLVM_LIBC_IS_DEFINED(__SSE4_1__);
-LIBC_INLINE_VAR constexpr bool kAvx = LLVM_LIBC_IS_DEFINED(__AVX__);
-LIBC_INLINE_VAR constexpr bool kAvx2 = LLVM_LIBC_IS_DEFINED(__AVX2__);
-LIBC_INLINE_VAR constexpr bool kAvx512F = LLVM_LIBC_IS_DEFINED(__AVX512F__);
-LIBC_INLINE_VAR constexpr bool kAvx512BW = LLVM_LIBC_IS_DEFINED(__AVX512BW__);
+LIBC_INLINE_VAR constexpr bool K_SSE2 = LLVM_LIBC_IS_DEFINED(__SSE2__);
+LIBC_INLINE_VAR constexpr bool K_SSE41 = LLVM_LIBC_IS_DEFINED(__SSE4_1__);
+LIBC_INLINE_VAR constexpr bool K_AVX = LLVM_LIBC_IS_DEFINED(__AVX__);
+LIBC_INLINE_VAR constexpr bool K_AVX2 = LLVM_LIBC_IS_DEFINED(__AVX2__);
+LIBC_INLINE_VAR constexpr bool K_AVX512_F = LLVM_LIBC_IS_DEFINED(__AVX512F__);
+LIBC_INLINE_VAR constexpr bool K_AVX512_BW = LLVM_LIBC_IS_DEFINED(__AVX512BW__);
 
 ///////////////////////////////////////////////////////////////////////////////
 // Memcpy repmovsb implementation
@@ -116,6 +116,14 @@ LIBC_INLINE MemcmpReturnType cmp_neq<uint64_t>(CPtr p1, CPtr p2,
   return cmp_neq_uint64_t(a, b);
 }
 
+// SIMD types are defined with attributes. e.g., '__m128i' is defined as
+// long long  __attribute__((__vector_size__(16), __aligned__(16)))
+// When we use these SIMD types in template specialization GCC complains:
+// "ignoring attributes on template argument ‘__m128i’ [-Wignored-attributes]"
+// Therefore, we disable this warning in this file.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-attributes"
+
 ///////////////////////////////////////////////////////////////////////////////
 // Specializations for __m128i
 #if defined(__SSE4_1__)
@@ -129,7 +137,8 @@ LIBC_INLINE __m128i bytewise_reverse(__m128i value) {
                                               8, 9, 10, 11, 12, 13, 14, 15));
 }
 LIBC_INLINE uint16_t big_endian_cmp_mask(__m128i max, __m128i value) {
-  return static_cast<uint16_t>(_mm_movemask_epi8(bytewise_reverse(_mm_cmpeq_epi8(max, value))));
+  return static_cast<uint16_t>(
+      _mm_movemask_epi8(bytewise_reverse(_mm_cmpeq_epi8(max, value))));
 }
 template <> LIBC_INLINE bool eq<__m128i>(CPtr p1, CPtr p2, size_t offset) {
   const auto a = load<__m128i>(p1, offset);
@@ -180,15 +189,41 @@ template <> LIBC_INLINE uint32_t neq<__m256i>(CPtr p1, CPtr p2, size_t offset) {
 LIBC_INLINE __m256i bytewise_max(__m256i a, __m256i b) {
   return _mm256_max_epu8(a, b);
 }
-LIBC_INLINE __m256i bytewise_reverse(__m256i value) {
-  return _mm256_shuffle_epi8(value,
-                             _mm256_set_epi8(0, 1, 2, 3, 4, 5, 6, 7,         //
-                                             8, 9, 10, 11, 12, 13, 14, 15,   //
-                                             16, 17, 18, 19, 20, 21, 22, 23, //
-                                             24, 25, 26, 27, 28, 29, 30, 31));
-}
 LIBC_INLINE uint32_t big_endian_cmp_mask(__m256i max, __m256i value) {
-  return _mm256_movemask_epi8(bytewise_reverse(_mm256_cmpeq_epi8(max, value)));
+  // Bytewise comparison of 'max' and 'value'.
+  const __m256i little_endian_byte_mask = _mm256_cmpeq_epi8(max, value);
+  // Because x86 is little endian, bytes in the vector must be reversed before
+  // using movemask.
+#if defined(__AVX512VBMI__) && defined(__AVX512VL__)
+  // When AVX512BMI is available we can completely reverse the vector through
+  // VPERMB __m256i _mm256_permutexvar_epi8( __m256i idx, __m256i a);
+  const __m256i big_endian_byte_mask =
+      _mm256_permutexvar_epi8(_mm256_set_epi8(0, 1, 2, 3, 4, 5, 6, 7,         //
+                                              8, 9, 10, 11, 12, 13, 14, 15,   //
+                                              16, 17, 18, 19, 20, 21, 22, 23, //
+                                              24, 25, 26, 27, 28, 29, 30, 31),
+                              little_endian_byte_mask);
+  // And turn the byte vector mask into an 'uint32_t' for direct scalar
+  // comparison.
+  return _mm256_movemask_epi8(big_endian_byte_mask);
+#else
+  // We can't byte-reverse '__m256i' in a single instruction with AVX2.
+  // '_mm256_shuffle_epi8' can only shuffle within each 16-byte lane
+  // leading to:
+  // ymm = ymm[15,14,13,12,11,10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
+  //           31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16]
+  // So we first shuffle each 16-byte lane leading to half-reversed vector mask.
+  const __m256i half_reversed = _mm256_shuffle_epi8(
+      little_endian_byte_mask, _mm256_set_epi8(0, 1, 2, 3, 4, 5, 6, 7,       //
+                                               8, 9, 10, 11, 12, 13, 14, 15, //
+                                               0, 1, 2, 3, 4, 5, 6, 7,       //
+                                               8, 9, 10, 11, 12, 13, 14, 15));
+  // Then we turn the vector into an uint32_t.
+  const uint32_t half_reversed_scalar = _mm256_movemask_epi8(half_reversed);
+  // And swap the lower and upper parts. This is optimized into a single `rorx`
+  // instruction.
+  return (half_reversed_scalar << 16) | (half_reversed_scalar >> 16);
+#endif
 }
 template <>
 LIBC_INLINE MemcmpReturnType cmp_neq<__m256i>(CPtr p1, CPtr p2, size_t offset) {
@@ -198,7 +233,7 @@ LIBC_INLINE MemcmpReturnType cmp_neq<__m256i>(CPtr p1, CPtr p2, size_t offset) {
   const auto le = big_endian_cmp_mask(vmax, b);
   const auto ge = big_endian_cmp_mask(vmax, a);
   static_assert(cpp::is_same_v<cpp::remove_cv_t<decltype(le)>, uint32_t>);
-  return cmp_uint32_t(ge, le);
+  return cmp_neq_uint64_t(ge, le);
 }
 #endif // __AVX2__
 
@@ -210,19 +245,48 @@ template <> struct cmp_is_expensive<__m512i> : cpp::true_type {};
 LIBC_INLINE __m512i bytewise_max(__m512i a, __m512i b) {
   return _mm512_max_epu8(a, b);
 }
-LIBC_INLINE __m512i bytewise_reverse(__m512i value) {
-  return _mm512_shuffle_epi8(value,
-                             _mm512_set_epi8(0, 1, 2, 3, 4, 5, 6, 7,         //
-                                             8, 9, 10, 11, 12, 13, 14, 15,   //
-                                             16, 17, 18, 19, 20, 21, 22, 23, //
-                                             24, 25, 26, 27, 28, 29, 30, 31, //
-                                             32, 33, 34, 35, 36, 37, 38, 39, //
-                                             40, 41, 42, 43, 44, 45, 46, 47, //
-                                             48, 49, 50, 51, 52, 53, 54, 55, //
-                                             56, 57, 58, 59, 60, 61, 62, 63));
-}
 LIBC_INLINE uint64_t big_endian_cmp_mask(__m512i max, __m512i value) {
-  return _mm512_cmpeq_epi8_mask(bytewise_reverse(max), bytewise_reverse(value));
+  // The AVX512BMI version is disabled due to bad codegen.
+  // https://github.com/llvm/llvm-project/issues/77459
+  // https://github.com/llvm/llvm-project/pull/77081
+  // TODO: Re-enable when clang version meets the fixed version.
+#if false && defined(__AVX512VBMI__)
+  // When AVX512BMI is available we can completely reverse the vector through
+  // VPERMB __m512i _mm512_permutexvar_epi8( __m512i idx, __m512i a);
+  const auto indices = _mm512_set_epi8(0, 1, 2, 3, 4, 5, 6, 7,         //
+                                       8, 9, 10, 11, 12, 13, 14, 15,   //
+                                       16, 17, 18, 19, 20, 21, 22, 23, //
+                                       24, 25, 26, 27, 28, 29, 30, 31, //
+                                       32, 33, 34, 35, 36, 37, 38, 39, //
+                                       40, 41, 42, 43, 44, 45, 46, 47, //
+                                       48, 49, 50, 51, 52, 53, 54, 55, //
+                                       56, 57, 58, 59, 60, 61, 62, 63);
+  // Then we compute the mask for equal bytes.
+  return _mm512_cmpeq_epi8_mask(_mm512_permutexvar_epi8(indices, max), //
+                                _mm512_permutexvar_epi8(indices, value));
+#else
+  // We can't byte-reverse '__m512i' in a single instruction with __AVX512BW__.
+  // '_mm512_shuffle_epi8' can only shuffle within each 16-byte lane.
+  // So we only reverse groups of 8 bytes, these groups are necessarily within a
+  // 16-byte lane.
+  // zmm = | 16 bytes  | 16 bytes  | 16 bytes  | 16 bytes  |
+  // zmm = | <8> | <8> | <8> | <8> | <8> | <8> | <8> | <8> |
+  const __m512i indices = _mm512_set_epi8(8, 9, 10, 11, 12, 13, 14, 15, //
+                                          0, 1, 2, 3, 4, 5, 6, 7,       //
+                                          8, 9, 10, 11, 12, 13, 14, 15, //
+                                          0, 1, 2, 3, 4, 5, 6, 7,       //
+                                          8, 9, 10, 11, 12, 13, 14, 15, //
+                                          0, 1, 2, 3, 4, 5, 6, 7,       //
+                                          8, 9, 10, 11, 12, 13, 14, 15, //
+                                          0, 1, 2, 3, 4, 5, 6, 7);
+  // Then we compute the mask for equal bytes. In this mask the bits of each
+  // byte are already reversed but the byte themselves should be reversed, this
+  // is done by using a bswap instruction.
+  return __builtin_bswap64(
+      _mm512_cmpeq_epi8_mask(_mm512_shuffle_epi8(max, indices), //
+                             _mm512_shuffle_epi8(value, indices)));
+
+#endif
 }
 template <> LIBC_INLINE bool eq<__m512i>(CPtr p1, CPtr p2, size_t offset) {
   const auto a = load<__m512i>(p1, offset);
@@ -233,7 +297,8 @@ template <> LIBC_INLINE uint32_t neq<__m512i>(CPtr p1, CPtr p2, size_t offset) {
   const auto a = load<__m512i>(p1, offset);
   const auto b = load<__m512i>(p2, offset);
   const uint64_t xored = _mm512_cmpneq_epi8_mask(a, b);
-  return (xored >> 32) | (xored & 0xFFFFFFFF);
+  return static_cast<uint32_t>(xored >> 32) |
+         static_cast<uint32_t>(xored & 0xFFFFFFFF);
 }
 template <>
 LIBC_INLINE MemcmpReturnType cmp_neq<__m512i>(CPtr p1, CPtr p2, size_t offset) {
@@ -247,8 +312,10 @@ LIBC_INLINE MemcmpReturnType cmp_neq<__m512i>(CPtr p1, CPtr p2, size_t offset) {
 }
 #endif // __AVX512BW__
 
+#pragma GCC diagnostic pop
+
 } // namespace LIBC_NAMESPACE::generic
 
-#endif // LIBC_TARGET_ARCH_IS_X86_64
+#endif // LIBC_TARGET_ARCH_IS_X86
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_X86_H

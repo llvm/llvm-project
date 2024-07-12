@@ -20,7 +20,7 @@ map.
 :program:`modularize` also has an assistant mode option for generating
 a module map file based on the provided header list. The generated file
 is a functional module map that can be used as a starting point for a
-module.map file.
+module.modulemap file.
 
 Getting Started
 ===============

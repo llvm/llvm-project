@@ -426,11 +426,12 @@ bfloat16_t test_vcvth_bf16_f32(float32_t a) {
 // CHECK-NEXT:    [[__REINT_I:%.*]] = alloca bfloat, align 2
 // CHECK-NEXT:    [[__REINT1_I:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store bfloat [[A:%.*]], ptr [[__REINT_I]], align 2
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[__REINT_I]], align 2
-// CHECK-NEXT:    [[SHL_I:%.*]] = shl i32 [[TMP1]], 16
+// CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[__REINT_I]], align 2
+// CHECK-NEXT:    [[CONV_I:%.*]] = sext i16 [[TMP0]] to i32
+// CHECK-NEXT:    [[SHL_I:%.*]] = shl i32 [[CONV_I]], 16
 // CHECK-NEXT:    store i32 [[SHL_I]], ptr [[__REINT1_I]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[__REINT1_I]], align 4
-// CHECK-NEXT:    ret float [[TMP3]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[__REINT1_I]], align 4
+// CHECK-NEXT:    ret float [[TMP1]]
 //
 float32_t test_vcvtah_f32_bf16(bfloat16_t a) {
   return vcvtah_f32_bf16(a);

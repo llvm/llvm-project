@@ -11,7 +11,7 @@
 #ifndef FORTRAN_RUNTIME_DERIVED_H_
 #define FORTRAN_RUNTIME_DERIVED_H_
 
-#include "flang/Runtime/api-attrs.h"
+#include "flang/Common/api-attrs.h"
 
 namespace Fortran::runtime::typeInfo {
 class DerivedType;

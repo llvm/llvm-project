@@ -1,5 +1,6 @@
 ; Tests that debug information is sane after coro-split
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 source_filename = "simple-repro.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -174,26 +175,26 @@ attributes #7 = { noduplicate }
 ; CHECK: define internal fastcc void @f.resume(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[RESUME:[0-9]+]]
 ; CHECK: entry.resume:
 ; CHECK: %[[DBG_PTR:.*]] = alloca ptr
-; CHECK: call void @llvm.dbg.declare(metadata ptr %[[DBG_PTR]], metadata ![[RESUME_COROHDL:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst,
-; CHECK: call void @llvm.dbg.declare(metadata ptr %[[DBG_PTR]], metadata ![[RESUME_X:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[EXPR_TAIL:.*]])
-; CHECK: call void @llvm.dbg.declare(metadata ptr %[[DBG_PTR]], metadata ![[RESUME_DIRECT:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[EXPR_TAIL]])
+; CHECK: #dbg_declare(ptr %[[DBG_PTR]], ![[RESUME_COROHDL:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst,
+; CHECK: #dbg_declare(ptr %[[DBG_PTR]], ![[RESUME_X:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[EXPR_TAIL:.*]])
+; CHECK: #dbg_declare(ptr %[[DBG_PTR]], ![[RESUME_DIRECT:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, [[EXPR_TAIL]])
 ; CHECK: store ptr {{.*}}, ptr %[[DBG_PTR]]
 ; CHECK-NOT: alloca ptr
-; CHECK: call void @llvm.dbg.declare(metadata i8 0, metadata ![[RESUME_CONST:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed))
+; CHECK: #dbg_declare(i8 0, ![[RESUME_CONST:[0-9]+]], !DIExpression(DW_OP_LLVM_convert, 8, DW_ATE_signed, DW_OP_LLVM_convert, 32, DW_ATE_signed),
 ; Note that keeping the undef value here could be acceptable, too.
-; CHECK-NOT: call void @llvm.dbg.declare(metadata ptr undef, metadata !{{[0-9]+}}, metadata !DIExpression())
+; CHECK-NOT: #dbg_declare(ptr undef, !{{[0-9]+}}, !DIExpression(),
 ; CHECK: call void @coro.devirt.trigger(ptr null)
-; CHECK: call void @llvm.dbg.value(metadata ptr {{.*}}, metadata ![[RESUME_DIRECT_VALUE:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_plus_uconst, {{[0-9]+}}, DW_OP_deref))
+; CHECK: #dbg_value(ptr {{.*}}, ![[RESUME_DIRECT_VALUE:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, {{[0-9]+}}, DW_OP_deref),
 ; Check that the dbg.declare intrinsic of invoke instruction is hanled correctly.
 ; CHECK: %[[ALLOCATED_STORAGE:.+]] = invoke ptr @allocate()
 ; CHECK-NEXT: to label %[[NORMAL_DEST:.+]] unwind
 ; CHECK: [[NORMAL_DEST]]
-; CHECK-NEXT: call void @llvm.dbg.declare(metadata ptr %[[ALLOCATED_STORAGE]]
+; CHECK-NEXT: #dbg_declare(ptr %[[ALLOCATED_STORAGE]]
 ; CHECK: %[[CALLBR_RES:.+]] = callbr i32 asm
 ; CHECK-NEXT: to label %[[DEFAULT_DEST:.+]] [label
 ; CHECK: [[DEFAULT_DEST]]:
 ; CHECK-NOT: {{.*}}:
-; CHECK: call void @llvm.dbg.declare(metadata i32 %[[CALLBR_RES]]
+; CHECK: #dbg_declare(i32 %[[CALLBR_RES]]
 ; CHECK: define internal fastcc void @f.destroy(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[DESTROY:[0-9]+]]
 ; CHECK: define internal fastcc void @f.cleanup(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[CLEANUP:[0-9]+]]
 

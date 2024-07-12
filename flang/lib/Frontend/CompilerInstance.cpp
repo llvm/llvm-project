@@ -80,7 +80,7 @@ static std::string getOutputFilePath(llvm::StringRef outputFilename,
   if (!extension.empty() && (inputFilename != "-")) {
     llvm::SmallString<128> path(inputFilename);
     llvm::sys::path::replace_extension(path, extension);
-    outFile = std::string(path.str());
+    outFile = std::string(path);
   }
 
   return outFile;
@@ -257,7 +257,7 @@ getExplicitAndImplicitNVPTXTargetFeatures(clang::DiagnosticsEngine &diags,
     llvm::StringRef userKeyString(llvm::StringRef(userFeature).drop_front(1));
     implicitFeaturesMap[userKeyString.str()] = (userFeature[0] == '+');
     // Check if the user provided a PTX version
-    if (userKeyString.startswith("ptx"))
+    if (userKeyString.starts_with("ptx"))
       ptxVer = true;
   }
 
@@ -321,11 +321,19 @@ bool CompilerInstance::setUpTargetMachine() {
   assert(OptLevelOrNone && "Invalid optimization level!");
   llvm::CodeGenOptLevel OptLevel = *OptLevelOrNone;
   std::string featuresStr = getTargetFeatures();
+  std::optional<llvm::CodeModel::Model> cm = getCodeModel(CGOpts.CodeModel);
   targetMachine.reset(theTarget->createTargetMachine(
       theTriple, /*CPU=*/targetOpts.cpu,
       /*Features=*/featuresStr, llvm::TargetOptions(),
       /*Reloc::Model=*/CGOpts.getRelocationModel(),
-      /*CodeModel::Model=*/std::nullopt, OptLevel));
+      /*CodeModel::Model=*/cm, OptLevel));
   assert(targetMachine && "Failed to create TargetMachine");
+  if (cm.has_value()) {
+    const llvm::Triple triple(theTriple);
+    if ((cm == llvm::CodeModel::Medium || cm == llvm::CodeModel::Large) &&
+        triple.getArch() == llvm::Triple::x86_64) {
+      targetMachine->setLargeDataThreshold(CGOpts.LargeDataThreshold);
+    }
+  }
   return true;
 }

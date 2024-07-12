@@ -229,133 +229,6 @@ PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateCommandObject
   return pfunc(SWIGBridge::ToSWIGWrapper(std::move(debugger_sp)), dict);
 }
 
-PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateScriptedThreadPlan(
-    const char *python_class_name, const char *session_dictionary_name,
-    const lldb_private::StructuredDataImpl &args_impl,
-    std::string &error_string, const lldb::ThreadPlanSP &thread_plan_sp) {
-  if (python_class_name == NULL || python_class_name[0] == '\0' ||
-      !session_dictionary_name)
-    return PythonObject();
-
-  PyErr_Cleaner py_err_cleaner(true);
-
-  auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(
-      session_dictionary_name);
-  auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(
-      python_class_name, dict);
-
-  if (!pfunc.IsAllocated()) {
-    error_string.append("could not find script class: ");
-    error_string.append(python_class_name);
-    return PythonObject();
-  }
-
-  PythonObject tp_arg = SWIGBridge::ToSWIGWrapper(thread_plan_sp);
-
-  llvm::Expected<PythonCallable::ArgInfo> arg_info = pfunc.GetArgInfo();
-  if (!arg_info) {
-    llvm::handleAllErrors(
-        arg_info.takeError(),
-        [&](PythonException &E) { error_string.append(E.ReadBacktrace()); },
-        [&](const llvm::ErrorInfoBase &E) {
-          error_string.append(E.message());
-        });
-    return PythonObject();
-  }
-
-  PythonObject result = {};
-  auto args_sb = std::unique_ptr<lldb::SBStructuredData>(new lldb::SBStructuredData(args_impl));
-  if (arg_info.get().max_positional_args == 2) {
-    if (args_sb->IsValid()) {
-      error_string.assign(
-          "args passed, but __init__ does not take an args dictionary");
-      return PythonObject();
-    }
-    result = pfunc(tp_arg, dict);
-  } else if (arg_info.get().max_positional_args >= 3) {
-    result = pfunc(tp_arg, SWIGBridge::ToSWIGWrapper(std::move(args_sb)), dict);
-  } else {
-    error_string.assign("wrong number of arguments in __init__, should be 2 or "
-                        "3 (not including self)");
-    return PythonObject();
-  }
-
-  // FIXME: At this point we should check that the class we found supports all
-  // the methods that we need.
-
-  return result;
-}
-
-bool lldb_private::python::SWIGBridge::LLDBSWIGPythonCallThreadPlan(
-    void *implementor, const char *method_name, lldb_private::Event *event,
-    bool &got_error) {
-  got_error = false;
-
-  PyErr_Cleaner py_err_cleaner(false);
-  PythonObject self(PyRefType::Borrowed, static_cast<PyObject *>(implementor));
-  auto pfunc = self.ResolveName<PythonCallable>(method_name);
-
-  if (!pfunc.IsAllocated())
-    return false;
-
-  PythonObject result;
-  if (event != nullptr) {
-    ScopedPythonObject<SBEvent> event_arg = SWIGBridge::ToSWIGWrapper(event);
-    result = pfunc(event_arg.obj());
-  } else
-    result = pfunc();
-
-  if (PyErr_Occurred()) {
-    got_error = true;
-    printf("Return value was neither false nor true for call to %s.\n",
-           method_name);
-    PyErr_Print();
-    return false;
-  }
-
-  if (result.get() == Py_True)
-    return true;
-  else if (result.get() == Py_False)
-    return false;
-
-  // Somebody returned the wrong thing...
-  got_error = true;
-  printf("Wrong return value type for call to %s.\n", method_name);
-  return false;
-}
-
-bool lldb_private::python::SWIGBridge::LLDBSWIGPythonCallThreadPlan(
-    void *implementor, const char *method_name, lldb_private::Stream *stream,
-    bool &got_error) {
-  got_error = false;
-
-  PyErr_Cleaner py_err_cleaner(false);
-  PythonObject self(PyRefType::Borrowed, static_cast<PyObject *>(implementor));
-  auto pfunc = self.ResolveName<PythonCallable>(method_name);
-
-  if (!pfunc.IsAllocated()) 
-    return false;
-
-  auto *sb_stream = new lldb::SBStream();
-  PythonObject sb_stream_arg =
-      SWIGBridge::ToSWIGWrapper(std::unique_ptr<lldb::SBStream>(sb_stream));
-
-  PythonObject result;
-  result = pfunc(sb_stream_arg);
-
-  if (PyErr_Occurred()) {
-    printf("Error occured for call to %s.\n",
-           method_name);
-    PyErr_Print();
-    got_error = true;
-    return false;
-  }
-  if (stream)
-    stream->PutCString(sb_stream->GetData());
-  return true;
-
-}
-
 PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateScriptedBreakpointResolver(
     const char *python_class_name, const char *session_dictionary_name,
     const StructuredDataImpl &args_impl,
@@ -500,9 +373,8 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonStopHookCallHandleStop(
   if (!pfunc.IsAllocated())
     return true;
 
-  auto *sb_stream = new lldb::SBStream();
-  PythonObject sb_stream_arg =
-      SWIGBridge::ToSWIGWrapper(std::unique_ptr<lldb::SBStream>(sb_stream));
+  std::shared_ptr<lldb::SBStream> sb_stream = std::make_shared<lldb::SBStream>();
+  PythonObject sb_stream_arg = SWIGBridge::ToSWIGWrapper(sb_stream);
   PythonObject result =
       pfunc(SWIGBridge::ToSWIGWrapper(std::move(exc_ctx_sp)), sb_stream_arg);
 
@@ -517,6 +389,7 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonStopHookCallHandleStop(
   // makes an internally help StreamString which I can't interpose, so I
   // have to copy it over here.
   stream->PutCString(sb_stream->GetData());
+  sb_stream_arg.release();
 
   if (result.get() == Py_False)
     return false;
@@ -753,6 +626,30 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBError(PyObject * data
   return sb_ptr;
 }
 
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBEvent(PyObject * data) {
+  lldb::SBEvent *sb_ptr = nullptr;
+
+  int valid_cast =
+      SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBEvent, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBStream(PyObject * data) {
+  lldb::SBStream *sb_ptr = nullptr;
+
+  int valid_cast =
+      SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBStream, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
 void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBValue(PyObject * data) {
   lldb::SBValue *sb_ptr = NULL;
 
@@ -827,6 +724,51 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommandObject(
 
   pfunc(SWIGBridge::ToSWIGWrapper(std::move(debugger)), PythonString(args),
         SWIGBridge::ToSWIGWrapper(exe_ctx_ref_sp), cmd_retobj_arg.obj());
+
+  return true;
+}
+
+std::optional<std::string>
+lldb_private::python::SWIGBridge::LLDBSwigPythonGetRepeatCommandForScriptedCommand(PyObject *implementor,
+                                               std::string &command) {
+  PyErr_Cleaner py_err_cleaner(true);
+
+  PythonObject self(PyRefType::Borrowed, implementor);
+  auto pfunc = self.ResolveName<PythonCallable>("get_repeat_command");
+  // If not implemented, repeat the exact command.
+  if (!pfunc.IsAllocated())
+    return std::nullopt;
+
+  PythonString command_str(command);
+  PythonObject result = pfunc(command_str);
+
+  // A return of None is the equivalent of nullopt - means repeat
+  // the command as is:
+  if (result.IsNone())
+    return std::nullopt;
+
+  return result.Str().GetString().str();
+}
+
+#include "lldb/Interpreter/CommandReturnObject.h"
+
+bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
+    PyObject *implementor, lldb::DebuggerSP debugger, lldb_private::StructuredDataImpl &args_impl,
+    lldb_private::CommandReturnObject &cmd_retobj,
+    lldb::ExecutionContextRefSP exe_ctx_ref_sp) {
+
+  PyErr_Cleaner py_err_cleaner(true);
+
+  PythonObject self(PyRefType::Borrowed, implementor);
+  auto pfunc = self.ResolveName<PythonCallable>("__call__");
+
+  if (!pfunc.IsAllocated()) {
+    cmd_retobj.AppendError("Could not find '__call__' method in implementation class"); 
+    return false;
+  }
+
+  pfunc(SWIGBridge::ToSWIGWrapper(std::move(debugger)), SWIGBridge::ToSWIGWrapper(args_impl),
+        SWIGBridge::ToSWIGWrapper(exe_ctx_ref_sp), SWIGBridge::ToSWIGWrapper(cmd_retobj).obj());
 
   return true;
 }
@@ -1074,6 +1016,28 @@ static void LLDBSwigPythonCallPythonSBDebuggerTerminateCallback(lldb::user_id_t 
     Py_XDECREF(result);
     SWIG_PYTHON_THREAD_END_BLOCK;
   }
+}
+
+static bool LLDBSwigPythonCallPythonSBCommandInterpreterSetCommandOverrideCallback(void *baton, const char **argv) {
+  bool ret_val = false;
+  if (baton != Py_None) {
+    SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+    // Create a PyList of items since we're going to pass it to the callback as a tuple
+    // of arguments.
+    PyObject *py_argv = PyList_New(0);
+    for (const char **arg = argv; arg && *arg; arg++) {
+      std::string arg_string = *arg;
+      PyObject *py_string = PyUnicode_FromStringAndSize(arg_string.c_str(), arg_string.size());
+      PyList_Append(py_argv, py_string);
+    }
+
+    PyObject *result = PyObject_CallObject(
+        reinterpret_cast<PyObject *>(baton), PyList_AsTuple(py_argv));
+    ret_val = result ? PyObject_IsTrue(result) : false;
+    Py_XDECREF(result);
+    SWIG_PYTHON_THREAD_END_BLOCK;
+  }
+  return ret_val;
 }
 
 static SBError LLDBSwigPythonCallLocateModuleCallback(

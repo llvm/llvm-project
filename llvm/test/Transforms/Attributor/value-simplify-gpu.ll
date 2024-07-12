@@ -11,12 +11,12 @@ target triple = "amdgcn-amd-amdhsa"
 @AS3OneKernelAtATime = internal addrspace(3) global i32 42, align 4
 
 ;.
-; CHECK: @[[REACHABLEKERNEL:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 3, align 4
-; CHECK: @[[UNREACHABLEKERNEL:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 42, align 4
-; CHECK: @[[REACHABLEKERNELAS0:[a-zA-Z0-9_$"\\.-]+]] = internal global i32 7, align 4
-; CHECK: @[[AS3ONEKERNELATATIME:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 42, align 4
-; CHECK: @[[REACHABLENONKERNEL:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 0, align 4
-; CHECK: @[[UNREACHABLENONKERNEL:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 0, align 4
+; CHECK: @ReachableKernel = internal addrspace(3) global i32 3, align 4
+; CHECK: @UnreachableKernel = internal addrspace(3) global i32 42, align 4
+; CHECK: @ReachableKernelAS0 = internal global i32 7, align 4
+; CHECK: @AS3OneKernelAtATime = internal addrspace(3) global i32 42, align 4
+; CHECK: @ReachableNonKernel = internal addrspace(3) global i32 0, align 4
+; CHECK: @UnreachableNonKernel = internal addrspace(3) global i32 0, align 4
 ;.
 define dso_local void @kernel(i32 %C) norecurse "kernel" {
 ; TUNIT: Function Attrs: norecurse nosync nounwind

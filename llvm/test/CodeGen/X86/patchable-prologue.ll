@@ -1,10 +1,10 @@
 ; RUN: llc -verify-machineinstrs -filetype=obj -o - -mtriple=x86_64-apple-macosx < %s | llvm-objdump --no-print-imm-hex --triple=x86_64-apple-macosx -d - | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mtriple=x86_64-apple-macosx < %s | FileCheck %s --check-prefix=CHECK-ALIGN
-; RUN: llc -verify-machineinstrs -show-mc-encoding -mtriple=i386 < %s | FileCheck %s --check-prefixes=32,32CFI,XCHG
-; RUN: llc -verify-machineinstrs -show-mc-encoding -mtriple=i386-windows-msvc < %s | FileCheck %s --check-prefixes=32,MOV
-; RUN: llc -verify-machineinstrs -show-mc-encoding -mtriple=i386-windows-msvc -mcpu=pentium3 < %s | FileCheck %s --check-prefixes=32,MOV
-; RUN: llc -verify-machineinstrs -show-mc-encoding -mtriple=i386-windows-msvc -mcpu=pentium4 < %s | FileCheck %s --check-prefixes=32,XCHG
-; RUN: llc -verify-machineinstrs -show-mc-encoding -mtriple=x86_64-windows-msvc < %s | FileCheck %s --check-prefix=64
+; RUN: llc -verify-machineinstrs -show-mc-encoding -mtriple=i386 < %s | FileCheck %s --check-prefixes=X86,X86CFI,XCHG
+; RUN: llc -verify-machineinstrs -show-mc-encoding -mtriple=i386-windows-msvc < %s | FileCheck %s --check-prefixes=X86,MOV
+; RUN: llc -verify-machineinstrs -show-mc-encoding -mtriple=i386-windows-msvc -mcpu=pentium3 < %s | FileCheck %s --check-prefixes=X86,MOV
+; RUN: llc -verify-machineinstrs -show-mc-encoding -mtriple=i386-windows-msvc -mcpu=pentium4 < %s | FileCheck %s --check-prefixes=X86,XCHG
+; RUN: llc -verify-machineinstrs -show-mc-encoding -mtriple=x86_64-windows-msvc < %s | FileCheck %s --check-prefix=X64
 
 declare void @callee(ptr)
 
@@ -15,40 +15,42 @@ define void @f0() "patchable-function"="prologue-short-redirect" {
 ; CHECK-ALIGN: 	.p2align	4, 0x90
 ; CHECK-ALIGN: _f0:
 
-; 32: f0:
-; 32CFI-NEXT: .cfi_startproc
-; 32-NEXT: # %bb.0:
+; X86: f0:
+; X86CFI-NEXT: .cfi_startproc
+; X86-NEXT: # %bb.0:
 ; XCHG-NEXT: xchgw   %ax, %ax                # encoding: [0x66,0x90]
 ; MOV-NEXT: movl    %edi, %edi              # encoding: [0x8b,0xff]
-; 32-NEXT: retl
+; X86-NEXT: retl
 
-; 64: f0:
-; 64-NEXT: # %bb.0:
-; 64-NEXT: xchgw   %ax, %ax                # encoding: [0x66,0x90]
-; 64-NEXT: retq
-		
+; X64: f0:
+; X64-NEXT: # %bb.0:
+; X64-NEXT: xchgw   %ax, %ax                # encoding: [0x66,0x90]
+; X64-NEXT: retq
+
   ret void
 }
 
 define void @f1() "patchable-function"="prologue-short-redirect" "frame-pointer"="all" {
 ; CHECK-LABEL: _f1
-; CHECK-NEXT: ff f5 	pushq	%rbp
+; CHECK-NEXT: 66 90     nop
+; CHECK-NEXT: 55		pushq	%rbp
 
 ; CHECK-ALIGN: 	.p2align	4, 0x90
 ; CHECK-ALIGN: _f1:
 
-; 32: f1:
-; 32CFI-NEXT: .cfi_startproc
-; 32-NEXT: # %bb.0:
+; X86: f1:
+; X86CFI-NEXT: .cfi_startproc
+; X86-NEXT: # %bb.0:
 ; XCHG-NEXT: xchgw   %ax, %ax                # encoding: [0x66,0x90]
 ; MOV-NEXT: movl    %edi, %edi              # encoding: [0x8b,0xff]
-; 32-NEXT: pushl   %ebp
+; X86-NEXT: pushl   %ebp
 
-; 64: f1:
-; 64-NEXT: .seh_proc f1
-; 64-NEXT: # %bb.0:
-; 64-NEXT: pushq   %rbp
-		
+; X64: f1:
+; X64-NEXT: .seh_proc f1
+; X64-NEXT: # %bb.0:
+; X64-NEXT: xchgw %ax, %ax
+; X64-NEXT: pushq   %rbp
+
   ret void
 }
 
@@ -59,18 +61,18 @@ define void @f2() "patchable-function"="prologue-short-redirect" {
 ; CHECK-ALIGN: 	.p2align	4, 0x90
 ; CHECK-ALIGN: _f2:
 
-; 32: f2:
-; 32CFI-NEXT: .cfi_startproc
-; 32-NEXT: # %bb.0:
+; X86: f2:
+; X86CFI-NEXT: .cfi_startproc
+; X86-NEXT: # %bb.0:
 ; XCHG-NEXT: xchgw   %ax, %ax                # encoding: [0x66,0x90]
 ; MOV-NEXT: movl    %edi, %edi              # encoding: [0x8b,0xff]
-; 32-NEXT: pushl   %ebp
+; X86-NEXT: pushl   %ebp
 
-; 64: f2:
-; 64-NEXT: .seh_proc f2
-; 64-NEXT: # %bb.0:
-; 64-NEXT: subq    $200, %rsp
-		
+; X64: f2:
+; X64-NEXT: .seh_proc f2
+; X64-NEXT: # %bb.0:
+; X64-NEXT: subq    $200, %rsp
+
   %ptr = alloca i64, i32 20
   call void @callee(ptr %ptr)
   ret void
@@ -83,17 +85,17 @@ define void @f3() "patchable-function"="prologue-short-redirect" optsize {
 ; CHECK-ALIGN: 	.p2align	4, 0x90
 ; CHECK-ALIGN: _f3:
 
-; 32: f3:
-; 32CFI-NEXT: .cfi_startproc
-; 32-NEXT: # %bb.0:
+; X86: f3:
+; X86CFI-NEXT: .cfi_startproc
+; X86-NEXT: # %bb.0:
 ; XCHG-NEXT: xchgw   %ax, %ax
 ; MOV-NEXT: movl   %edi, %edi
-; 32-NEXT: retl
+; X86-NEXT: retl
 
-; 64: f3:
-; 64-NEXT: # %bb.0:
-; 64-NEXT: xchgw   %ax, %ax
-; 64-NEXT: retq
+; X64: f3:
+; X64-NEXT: # %bb.0:
+; X64-NEXT: xchgw   %ax, %ax
+; X64-NEXT: retq
 
   ret void
 }
@@ -103,16 +105,16 @@ define void @f3() "patchable-function"="prologue-short-redirect" optsize {
 ; patchable one.
 ; CHECK-LABEL: f4{{>?}}:
 ; CHECK-NEXT: 8b 0c 37  movl  (%rdi,%rsi), %ecx
-; 32: f4:
-; 32CFI-NEXT: .cfi_startproc
-; 32-NEXT: # %bb.0:
+; X86: f4:
+; X86CFI-NEXT: .cfi_startproc
+; X86-NEXT: # %bb.0:
 ; XCHG-NEXT: xchgw   %ax, %ax
 ; MOV-NEXT: movl   %edi, %edi
-; 32-NEXT: pushl   %ebx
+; X86-NEXT: pushl   %ebx
 
-; 64: f4:
-; 64-NEXT: # %bb.0:
-; 64-NOT: xchgw   %ax, %ax
+; X64: f4:
+; X64-NEXT: # %bb.0:
+; X64-NOT: xchgw   %ax, %ax
 
 define i32 @f4(ptr %arg1, i64 %arg2, i32 %arg3) "patchable-function"="prologue-short-redirect" {
 bb:
@@ -141,15 +143,15 @@ bb21:
 ; CHECK-ALIGN: 	.p2align	4, 0x90
 ; CHECK-ALIGN: _emptyfunc:
 
-; 32: emptyfunc:
-; 32CFI-NEXT: .cfi_startproc
-; 32-NEXT: # %bb.0:
+; X86: emptyfunc:
+; X86CFI-NEXT: .cfi_startproc
+; X86-NEXT: # %bb.0:
 ; XCHG-NEXT: xchgw   %ax, %ax
 ; MOV-NEXT: movl   %edi, %edi
 
-; 64: emptyfunc:
-; 64-NEXT: # %bb.0:
-; 64-NEXT: xchgw   %ax, %ax
+; X64: emptyfunc:
+; X64-NEXT: # %bb.0:
+; X64-NEXT: xchgw   %ax, %ax
 
 ; From code: int emptyfunc() {}
 define i32 @emptyfunc() "patchable-function"="prologue-short-redirect" {
@@ -167,15 +169,15 @@ define i32 @emptyfunc() "patchable-function"="prologue-short-redirect" {
 ; CHECK-ALIGN: 	.p2align	4, 0x90
 ; CHECK-ALIGN: _jmp_to_start:
 
-; 32: jmp_to_start:
-; 32CFI-NEXT: .cfi_startproc
-; 32-NEXT: # %bb.0:
+; X86: jmp_to_start:
+; X86CFI-NEXT: .cfi_startproc
+; X86-NEXT: # %bb.0:
 ; XCHG-NEXT: xchgw   %ax, %ax
 ; MOV-NEXT: movl   %edi, %edi
 
-; 64: jmp_to_start:
-; 64-NEXT: # %bb.0:
-; 64-NEXT: xchgw   %ax, %ax
+; X64: jmp_to_start:
+; X64-NEXT: # %bb.0:
+; X64-NEXT: xchgw   %ax, %ax
 
 define dso_local void @jmp_to_start(ptr inreg nocapture noundef %b) "patchable-function"="prologue-short-redirect" {
 entry:
@@ -189,5 +191,22 @@ do.body:                                          ; preds = %do.body, %entry
   %tobool.not = icmp eq i8 %inc, 0
   br i1 %tobool.not, label %do.end, label %do.body
 do.end:                                           ; preds = %do.body
+  ret void
+}
+
+
+; Test that inline asm is properly hotpatched. We currently don't examine the
+; asm instruction when printing it, thus we always emit patching NOPs.
+
+; X64: inline_asm:
+; X64-NEXT: # %bb.0:
+; X64-NEXT: xchgw   %ax, %ax                        # encoding: [0x66,0x90]
+; X64-NEXT: #APP
+; X64-NEXT: int3                                    # encoding: [0xcc]
+; X64-NEXT: #NO_APP
+
+define dso_local void @inline_asm() "patchable-function"="prologue-short-redirect" {
+entry:
+  call void asm sideeffect "int3", "~{dirflag},~{fpsr},~{flags}"()
   ret void
 }

@@ -19,7 +19,7 @@ using namespace llvm::wasm;
 namespace lld::wasm {
 
 static bool requiresGOTAccess(const Symbol *sym) {
-  if (!config->isPic &&
+  if (!ctx.isPic &&
       config->unresolvedSymbols != UnresolvedPolicy::ImportDynamic)
     return false;
   if (sym->isHidden() || sym->isLocal())
@@ -42,32 +42,33 @@ static bool allowUndefined(const Symbol* sym) {
   return config->allowUndefinedSymbols.count(sym->getName()) != 0;
 }
 
-static void reportUndefined(Symbol *sym) {
+static void reportUndefined(ObjFile *file, Symbol *sym) {
   if (!allowUndefined(sym)) {
     switch (config->unresolvedSymbols) {
     case UnresolvedPolicy::ReportError:
-      error(toString(sym->getFile()) + ": undefined symbol: " + toString(*sym));
+      error(toString(file) + ": undefined symbol: " + toString(*sym));
       break;
     case UnresolvedPolicy::Warn:
-      warn(toString(sym->getFile()) + ": undefined symbol: " + toString(*sym));
+      warn(toString(file) + ": undefined symbol: " + toString(*sym));
       break;
     case UnresolvedPolicy::Ignore:
       LLVM_DEBUG(dbgs() << "ignoring undefined symbol: " + toString(*sym) +
                                "\n");
-      if (!config->importUndefined) {
-        if (auto *f = dyn_cast<UndefinedFunction>(sym)) {
-          if (!f->stubFunction) {
-            f->stubFunction = symtab->createUndefinedStub(*f->getSignature());
-            f->stubFunction->markLive();
-            // Mark the function itself as a stub which prevents it from being
-            // assigned a table entry.
-            f->isStub = true;
-          }
-        }
-      }
       break;
     case UnresolvedPolicy::ImportDynamic:
       break;
+    }
+
+    if (auto *f = dyn_cast<UndefinedFunction>(sym)) {
+      if (!f->stubFunction &&
+          config->unresolvedSymbols != UnresolvedPolicy::ImportDynamic &&
+          !config->importUndefined) {
+        f->stubFunction = symtab->createUndefinedStub(*f->getSignature());
+        f->stubFunction->markLive();
+        // Mark the function itself as a stub which prevents it from being
+        // assigned a table entry.
+        f->isStub = true;
+      }
     }
   }
 }
@@ -141,7 +142,7 @@ void scanRelocations(InputChunk *chunk) {
       break;
     }
 
-    if (config->isPic ||
+    if (ctx.isPic ||
         (sym->isUndefined() &&
          config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic)) {
       switch (reloc.Type) {
@@ -170,7 +171,7 @@ void scanRelocations(InputChunk *chunk) {
       }
     } else if (sym->isUndefined() && !config->relocatable && !sym->isWeak()) {
       // Report undefined symbols
-      reportUndefined(sym);
+      reportUndefined(file, sym);
     }
   }
 }

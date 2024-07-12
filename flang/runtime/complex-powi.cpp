@@ -6,6 +6,7 @@
  *
  * ===-----------------------------------------------------------------------===
  */
+#include "flang/Common/float128.h"
 #include "flang/Runtime/entry-names.h"
 #include <cstdint>
 #include <cstdio>
@@ -79,6 +80,30 @@ extern "C" double _Complex RTNAME(zpowk)(
     double _Complex base, std::int64_t exp) {
   return tgpowi(base, exp);
 }
+
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+// Duplicate CFloat128ComplexType definition from flang/Common/float128.h.
+// float128.h does not define it for C++, because _Complex triggers
+// c99-extension warnings. We decided to disable warnings for this
+// particular file, so we can use _Complex here.
+#if LDBL_MANT_DIG == 113
+typedef long double _Complex Qcomplex;
+#elif HAS_FLOAT128
+#if !defined(_ARCH_PPC) || defined(__LONG_DOUBLE_IEEE128__)
+typedef _Complex float __attribute__((mode(TC))) Qcomplex;
+#else
+typedef _Complex float __attribute__((mode(KC))) Qcomplex;
+#endif
+#endif
+
+extern "C" Qcomplex RTNAME(cqpowi)(Qcomplex base, std::int32_t exp) {
+  return tgpowi(base, exp);
+}
+extern "C" Qcomplex RTNAME(cqpowk)(Qcomplex base, std::int64_t exp) {
+  return tgpowi(base, exp);
+}
+#endif
+
 #else
 // on MSVC, C complex is always just a struct of two members as it is not
 // supported as a builtin type. So we use C++ complex here as that has the
@@ -116,10 +141,28 @@ extern "C" Fcomplex RTNAME(cpowk)(Fcomplex base, std::int64_t exp) {
   return *(Fcomplex *)(&cppres);
 }
 
-extern "C" Dcomplex RTNAME(zpowk)(Dcomplex base, std::int32_t exp) {
+extern "C" Dcomplex RTNAME(zpowk)(Dcomplex base, std::int64_t exp) {
   auto cppbase = *(std::complex<double> *)(&base);
   auto cppres = tgpowi(cppbase, exp);
   return *(Dcomplex *)(&cppres);
 }
 
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+struct Qcomplex {
+  CFloat128Type re;
+  CFloat128Type im;
+};
+
+extern "C" Dcomplex RTNAME(cqpowi)(Qcomplex base, std::int32_t exp) {
+  auto cppbase = *(std::complex<CFloat128Type> *)(&base);
+  auto cppres = tgpowi(cppbase, exp);
+  return *(Qcomplex *)(&cppres);
+}
+
+extern "C" Dcomplex RTNAME(cqpowk)(Qcomplex base, std::int64_t exp) {
+  auto cppbase = *(std::complex<CFloat128Type> *)(&base);
+  auto cppres = tgpowi(cppbase, exp);
+  return *(Qcomplex *)(&cppres);
+}
+#endif
 #endif

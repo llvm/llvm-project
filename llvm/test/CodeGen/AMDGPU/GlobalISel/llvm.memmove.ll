@@ -36,11 +36,11 @@ define amdgpu_cs void @memmove_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src
 ; LOOP-NEXT:    s_andn2_saveexec_b64 s[0:1], s[4:5]
 ; LOOP-NEXT:    s_cbranch_execz .LBB0_6
 ; LOOP-NEXT:  ; %bb.4: ; %copy_backwards
-; LOOP-NEXT:    s_mov_b32 s0, -4
 ; LOOP-NEXT:    v_add_i32_e32 v0, vcc, 3, v0
 ; LOOP-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; LOOP-NEXT:    v_add_i32_e32 v2, vcc, 3, v2
 ; LOOP-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
+; LOOP-NEXT:    s_mov_b32 s0, -4
 ; LOOP-NEXT:    s_mov_b32 s6, 0
 ; LOOP-NEXT:    s_mov_b32 s7, 0xf000
 ; LOOP-NEXT:    s_mov_b64 s[4:5], 0

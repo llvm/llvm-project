@@ -155,8 +155,8 @@ void test_ds_fmaxf(local float *out, float src, int a) {
 void test_fence() {
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST + 1, "workgroup"); // expected-warning {{memory order argument to atomic operation is invalid}}
   __builtin_amdgcn_fence(__ATOMIC_ACQUIRE - 1, "workgroup"); // expected-warning {{memory order argument to atomic operation is invalid}}
-  __builtin_amdgcn_fence(4); // expected-error {{too few arguments to function call, expected 2}}
-  __builtin_amdgcn_fence(4, 4, 4); // expected-error {{too many arguments to function call, expected 2}}
+  __builtin_amdgcn_fence(4); // expected-error {{too few arguments to function call, expected at least 2, have 1}}
+  __builtin_amdgcn_fence(4, 4, 4); // expected-error {{incompatible integer to pointer conversion passing 'int' to parameter of type 'const char *'}}
   __builtin_amdgcn_fence(3.14, ""); // expected-warning {{implicit conversion from 'double' to 'unsigned int' changes value from 3.14 to 3}}
   __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, 5); // expected-error {{incompatible integer to pointer conversion passing 'int' to parameter of type 'const char *'}}
   const char ptr[] = "workgroup";

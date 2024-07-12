@@ -90,6 +90,8 @@ unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_LARCH_TLS_LE64_LO20;
   case LoongArch::fixup_loongarch_tls_le64_hi12:
     return ELF::R_LARCH_TLS_LE64_HI12;
+  case LoongArch::fixup_loongarch_call36:
+    return ELF::R_LARCH_CALL36;
     // TODO: Handle more fixup-kinds.
   }
 }

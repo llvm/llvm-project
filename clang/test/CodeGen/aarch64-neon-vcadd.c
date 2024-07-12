@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature +neon \
-// RUN:  -target-feature +v8.3a -target-feature +fullfp16 -S -emit-llvm -o - %s \
+// RUN:  -target-feature +v8.3a -target-feature +fullfp16 -emit-llvm -o - %s \
 // RUN:  | FileCheck %s
 
 // REQUIRES: aarch64-registered-target || arm-registered-target

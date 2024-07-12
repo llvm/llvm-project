@@ -334,9 +334,16 @@ void RenameIndependentSubregs::computeMainRangesFixFlags(
                                                DebugLoc(), MCDesc, Reg);
           SlotIndex DefIdx = LIS->InsertMachineInstrInMaps(*ImpDef);
           SlotIndex RegDefIdx = DefIdx.getRegSlot();
+          LaneBitmask Mask = MRI->getMaxLaneMaskForVReg(Reg);
           for (LiveInterval::SubRange &SR : LI.subranges()) {
+            Mask = Mask & ~SR.LaneMask;
             VNInfo *SRVNI = SR.getNextValue(RegDefIdx, Allocator);
             SR.addSegment(LiveRange::Segment(RegDefIdx, PredEnd, SRVNI));
+          }
+
+          if (!Mask.none()) {
+            LiveInterval::SubRange *SR = LI.createSubRange(Allocator, Mask);
+            SR->createDeadDef(RegDefIdx, Allocator);
           }
         }
       }

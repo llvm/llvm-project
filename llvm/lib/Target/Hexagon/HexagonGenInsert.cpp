@@ -515,8 +515,8 @@ namespace {
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineDominatorTree>();
-      AU.addPreserved<MachineDominatorTree>();
+      AU.addRequired<MachineDominatorTreeWrapperPass>();
+      AU.addPreserved<MachineDominatorTreeWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -1314,7 +1314,7 @@ void HexagonGenInsert::selectCandidates() {
     // element found is adequate, we will put it back on the list, other-
     // wise the list will remain empty, and the entry for this register
     // will be removed (i.e. this register will not be replaced by insert).
-    IFListType::iterator MinI = std::min_element(LL.begin(), LL.end(), IFO);
+    IFListType::iterator MinI = llvm::min_element(LL, IFO);
     assert(MinI != LL.end());
     IFRecordWithRegSet M = *MinI;
     LL.clear();
@@ -1497,7 +1497,7 @@ bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
   HRI = ST.getRegisterInfo();
   MFN = &MF;
   MRI = &MF.getRegInfo();
-  MDT = &getAnalysis<MachineDominatorTree>();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   // Clean up before any further processing, so that dead code does not
   // get used in a newly generated "insert" instruction. Have a custom
@@ -1607,6 +1607,6 @@ FunctionPass *llvm::createHexagonGenInsert() {
 
 INITIALIZE_PASS_BEGIN(HexagonGenInsert, "hexinsert",
   "Hexagon generate \"insert\" instructions", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(HexagonGenInsert, "hexinsert",
   "Hexagon generate \"insert\" instructions", false, false)

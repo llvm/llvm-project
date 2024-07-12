@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -verify -std=c++11 %s
 // RUN: %clang_cc1 -verify -std=c++11 -fdelayed-template-parsing %s
+// RUN: %clang_cc1 -verify -std=c++20 -fsyntax-only %s
 
 template<typename T>
 void f0() {
@@ -473,8 +474,7 @@ namespace rdar23721638 {
   template <typename T> void bar() {
     auto lambda = [](T a = "") {}; // expected-error {{conversion function from 'const char[1]' to 'rdar23721638::A' invokes a deleted function}} \
                                    // expected-note  {{in instantiation of default function argument expression for 'operator()<rdar23721638::A>' required here}} \
-                                   // expected-note  {{passing argument to parameter 'a' here}} \
-                                   // expected-note {{while substituting into a lambda}}
+                                   // expected-note  {{passing argument to parameter 'a' here}}
     lambda();
   }
   template void bar<A>(); // expected-note {{in instantiation}}
@@ -497,7 +497,6 @@ namespace PR45000 {
   // expected-error@-1 {{cannot initialize a parameter of type 'int' with an rvalue of type 'std::nullptr_t'}}
   // expected-note@-2  {{in instantiation of default function argument expression for 'operator()<int>' required here}}
   // expected-note@-3  {{passing argument to parameter 'x' here}}
-  // expected-note@-4  {{while substituting into a lambda}}
 
   void g() { f<int>(); }
   // expected-note@-1 {{in instantiation of default function argument expression for 'f<int>' required here}}
@@ -511,3 +510,26 @@ namespace LambdaInDefaultMemberInitializer {
   }
   template void f<int>();
 }
+
+#if __cplusplus >= 201703L
+namespace GH35052 {
+
+template <typename F> constexpr int func(F f) {
+  if constexpr (f(1UL)) {
+    return 1;
+  }
+  return 0;
+}
+
+int main() {
+  auto predicate = [](auto v) /*implicit constexpr*/ -> bool {
+    return v == 1;
+  };
+
+  static_assert(predicate(1));
+  return func(predicate);
+}
+
+} // namespace GH35052
+
+#endif

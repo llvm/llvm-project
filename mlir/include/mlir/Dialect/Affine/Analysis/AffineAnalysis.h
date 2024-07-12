@@ -15,6 +15,7 @@
 #ifndef MLIR_DIALECT_AFFINE_ANALYSIS_AFFINEANALYSIS_H
 #define MLIR_DIALECT_AFFINE_ANALYSIS_AFFINEANALYSIS_H
 
+#include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/SmallVector.h"
@@ -115,7 +116,7 @@ struct MemRefAccess {
   ///
   /// Returns failure for yet unimplemented/unsupported cases (see docs of
   /// mlir::getIndexSet and mlir::getRelationFromMap for these cases).
-  LogicalResult getAccessRelation(FlatAffineRelation &accessRel) const;
+  LogicalResult getAccessRelation(presburger::IntegerRelation &accessRel) const;
 
   /// Populates 'accessMap' with composition of AffineApplyOps reachable from
   /// 'indices'.

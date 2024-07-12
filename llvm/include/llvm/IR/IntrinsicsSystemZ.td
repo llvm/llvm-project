@@ -114,7 +114,7 @@ multiclass SystemZBinaryExtBHF<string name> {
 }
 
 multiclass SystemZBinaryExtBHFG<string name> : SystemZBinaryExtBHF<name> {
-  def g : SystemZBinaryConv<name#"g", llvm_v16i8_ty, llvm_v2i64_ty>;
+  def g : SystemZBinaryConv<name#"g", llvm_i128_ty, llvm_v2i64_ty>;
 }
 
 multiclass SystemZBinaryBHF<string name> {
@@ -147,7 +147,7 @@ multiclass SystemZTernaryExtBHF<string name> {
 }
 
 multiclass SystemZTernaryExtBHFG<string name> : SystemZTernaryExtBHF<name> {
-  def g : SystemZTernaryConv<name#"g", llvm_v16i8_ty, llvm_v2i64_ty>;
+  def g : SystemZTernaryConv<name#"g", llvm_i128_ty, llvm_v2i64_ty>;
 }
 
 multiclass SystemZTernaryBHF<string name> {
@@ -265,10 +265,10 @@ let TargetPrefix = "s390" in {
 
   defm int_s390_vacc : SystemZBinaryBHFG<"vacc">;
 
-  def int_s390_vaq    : SystemZBinary<"vaq",     llvm_v16i8_ty>;
-  def int_s390_vacq   : SystemZTernary<"vacq",   llvm_v16i8_ty>;
-  def int_s390_vaccq  : SystemZBinary<"vaccq",   llvm_v16i8_ty>;
-  def int_s390_vacccq : SystemZTernary<"vacccq", llvm_v16i8_ty>;
+  def int_s390_vaq    : SystemZBinary<"vaq",     llvm_i128_ty>;
+  def int_s390_vacq   : SystemZTernary<"vacq",   llvm_i128_ty>;
+  def int_s390_vaccq  : SystemZBinary<"vaccq",   llvm_i128_ty>;
+  def int_s390_vacccq : SystemZTernary<"vacccq", llvm_i128_ty>;
 
   defm int_s390_vavg  : SystemZBinaryBHFG<"vavg">;
   defm int_s390_vavgl : SystemZBinaryBHFG<"vavgl">;
@@ -308,10 +308,10 @@ let TargetPrefix = "s390" in {
 
   defm int_s390_vscbi : SystemZBinaryBHFG<"vscbi">;
 
-  def int_s390_vsq     : SystemZBinary<"vsq",      llvm_v16i8_ty>;
-  def int_s390_vsbiq   : SystemZTernary<"vsbiq",   llvm_v16i8_ty>;
-  def int_s390_vscbiq  : SystemZBinary<"vscbiq",   llvm_v16i8_ty>;
-  def int_s390_vsbcbiq : SystemZTernary<"vsbcbiq", llvm_v16i8_ty>;
+  def int_s390_vsq     : SystemZBinary<"vsq",      llvm_i128_ty>;
+  def int_s390_vsbiq   : SystemZTernary<"vsbiq",   llvm_i128_ty>;
+  def int_s390_vscbiq  : SystemZBinary<"vscbiq",   llvm_i128_ty>;
+  def int_s390_vsbcbiq : SystemZTernary<"vsbcbiq", llvm_i128_ty>;
 
   def int_s390_vsumb : SystemZBinaryConv<"vsumb", llvm_v4i32_ty, llvm_v16i8_ty>;
   def int_s390_vsumh : SystemZBinaryConv<"vsumh", llvm_v4i32_ty, llvm_v8i16_ty>;
@@ -321,9 +321,9 @@ let TargetPrefix = "s390" in {
   def int_s390_vsumgf : SystemZBinaryConv<"vsumgf", llvm_v2i64_ty,
                                           llvm_v4i32_ty>;
 
-  def int_s390_vsumqf : SystemZBinaryConv<"vsumqf", llvm_v16i8_ty,
+  def int_s390_vsumqf : SystemZBinaryConv<"vsumqf", llvm_i128_ty,
                                           llvm_v4i32_ty>;
-  def int_s390_vsumqg : SystemZBinaryConv<"vsumqg", llvm_v16i8_ty,
+  def int_s390_vsumqg : SystemZBinaryConv<"vsumqg", llvm_i128_ty,
                                           llvm_v2i64_ty>;
 
   def int_s390_vtm : SystemZBinaryConv<"vtm", llvm_i32_ty, llvm_v16i8_ty>;
@@ -370,8 +370,8 @@ let TargetPrefix = "s390" in {
                                           llvm_v16i8_ty>;
 
   def int_s390_vmslg  : ClangBuiltin<"__builtin_s390_vmslg">,
-                        Intrinsic<[llvm_v16i8_ty],
-                                  [llvm_v2i64_ty, llvm_v2i64_ty, llvm_v16i8_ty,
+                        Intrinsic<[llvm_i128_ty],
+                                  [llvm_v2i64_ty, llvm_v2i64_ty, llvm_i128_ty,
                                    llvm_i32_ty], [IntrNoMem, ImmArg<ArgIndex<3>>]>;
 
   def int_s390_vfmaxdb : Intrinsic<[llvm_v2f64_ty],

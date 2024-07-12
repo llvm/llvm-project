@@ -7,19 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/scalbnf.h"
+#include "hdr/float_macros.h"
 #include "src/__support/FPUtil/ManipulationFunctions.h"
 #include "src/__support/common.h"
+
+#if FLT_RADIX != 2
+#error "FLT_RADIX != 2 is not supported."
+#endif
 
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, scalbnf, (float x, int n)) {
-#if !defined(__FLT_RADIX__)
-#error __FLT_RADIX__ undefined.
-#elif __FLT_RADIX__ != 2
-#error __FLT_RADIX__!=2, unimplemented.
-#else
   return fputil::ldexp(x, n);
-#endif
 }
 
 } // namespace LIBC_NAMESPACE

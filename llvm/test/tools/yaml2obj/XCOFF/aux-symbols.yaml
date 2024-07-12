@@ -579,3 +579,28 @@ Symbols:
     AuxEntries:
       - Type: AUX_FILE
         FileNameOrString: foo
+
+## Case10: Specify a SymbolType outside the range of field definition.
+# RUN: not yaml2obj %s -DSYMTYPE=8 --docnum=8 -o %t10 2>&1 | \ 
+# RUN:   FileCheck %s --check-prefix BADSYMTYPE
+
+# BADSYMTYPE: error: symbol type must be less than 8
+
+## Case11: Specify a SymbolType outside the range of its enumeration.
+# RUN: yaml2obj %s -DSYMTYPE=7 --docnum=8 -o %t11
+# RUN: llvm-readobj --syms %t11 | FileCheck %s --check-prefix=STYPE
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Symbols:
+  - Name:               aux_fcn_csect
+    StorageClass:       C_EXT
+    Type:               0x20
+    AuxEntries:
+      - Type:                   AUX_CSECT
+        SymbolAlignment: 4
+        SymbolType: [[SYMTYPE=<none>]]
+
+# STYPE:      SymbolAlignmentLog2: 4
+# STYPE-NEXT:   SymbolType: 0x7

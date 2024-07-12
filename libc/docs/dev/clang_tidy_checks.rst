@@ -64,6 +64,11 @@ This check that ensures any function call resolves to a function within the
         void LLVM_LIBC_ENTRYPOINT(strcpy)(char *dest, const char *src) {}
     }
 
+..
+  TODO(97655): The clang-tidy check should be updated to ensure the namespace
+  declaration uses LIBC_NAMESPACE_DECL as opposed to LIBC_NAMESPACE. The former
+  should be used for accessing globals in LIBC_NAMESPACE rather than declaration.
+
 
 callee-namespace
 ----------------
@@ -75,7 +80,7 @@ a public header with non-namespaced functions like ``string.h`` is included.
 This check ensures any function call resolves to a function within the
 LIBC_NAMESPACE namespace.
 
-There are exceptions for the following functions: 
+There are exceptions for the following functions:
 ``__errno_location`` so that ``errno`` can be set;
 ``malloc``, ``calloc``, ``realloc``, ``aligned_alloc``, and ``free`` since they
 are always external and can be intercepted.

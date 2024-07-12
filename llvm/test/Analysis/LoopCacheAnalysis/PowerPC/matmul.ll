@@ -11,10 +11,10 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ; }
 
 ; CHECK:Loop 'for.i' has cost = 2010000
-; CHECK-NEXT:Loop 'for.k' has cost = 1040000
-; CHECK-NEXT:Loop 'for.j' has cost = 70000
+; CHECK-NEXT:Loop 'for.k' has cost = 1050000
+; CHECK-NEXT:Loop 'for.j' has cost = 90000
     
-define void @matmul(i64 %n, i64 %m, i64 %o, i32* %A, i32* %B, i32* %C) {
+define void @matmul(i64 %n, i64 %m, i64 %o, ptr %A, ptr %B, ptr %C) {
 entry:
   br label %for.i
 
@@ -34,24 +34,24 @@ for.k:                                        ; preds = %for.j, %for.inc.k
 
   ; A[i][k]
   %arrayidx3 = add i64 %k, %muli
-  %arrayidx4 = getelementptr inbounds i32, i32* %A, i64 %arrayidx3
-  %elem_A = load i32, i32* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds i32, ptr %A, i64 %arrayidx3
+  %elem_A = load i32, ptr %arrayidx4, align 4
 
   ; B[k][j]
   %mulk = mul i64 %k, %o
   %arrayidx5 = add i64 %j, %mulk
-  %arrayidx6 = getelementptr inbounds i32, i32* %B, i64 %arrayidx5
-  %elem_B = load i32, i32* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds i32, ptr %B, i64 %arrayidx5
+  %elem_B = load i32, ptr %arrayidx6, align 4
 
   ; C[i][k]
   %arrayidx7 = add i64 %j, %muli
-  %arrayidx8 = getelementptr inbounds i32, i32* %C, i64 %arrayidx7
-  %elem_C = load i32, i32* %arrayidx8, align 4
+  %arrayidx8 = getelementptr inbounds i32, ptr %C, i64 %arrayidx7
+  %elem_C = load i32, ptr %arrayidx8, align 4
 
   ; C[i][j] = C[i][j] + A[i][k] * B[k][j];
   %mul = mul nsw i32 %elem_A, %elem_B
   %add = add nsw i32 %elem_C, %mul
-  store i32 %add, i32* %arrayidx8, align 4
+  store i32 %add, ptr %arrayidx8, align 4
 
   br label %for.inc.k
 

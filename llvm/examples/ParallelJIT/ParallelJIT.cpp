@@ -104,7 +104,7 @@ static Function *CreateFibFunction(Module *M) {
   BasicBlock *RecurseBB = BasicBlock::Create(Context, "recurse", FibF);
 
   // Create the "if (arg < 2) goto exitbb"
-  Value *CondInst = new ICmpInst(*BB, ICmpInst::ICMP_SLE, ArgX, Two, "cond");
+  Value *CondInst = new ICmpInst(BB, ICmpInst::ICMP_SLE, ArgX, Two, "cond");
   BranchInst::Create(RetBB, RecurseBB, CondInst, BB);
 
   // Create: ret int 1

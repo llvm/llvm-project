@@ -75,9 +75,9 @@ static int handle(MemoryBuffer &inputBuf, StringRef input) {
   for (line_iterator i(inputBuf, /*SkipBlanks=*/false, '\0'); !i.is_at_eof();) {
     const int64_t lineNo = i.line_number();
     const StringRef line = *i++;
-    const size_t markerLen = line.startswith("//") ? 6 : 5;
+    const size_t markerLen = line.starts_with("//") ? 6 : 5;
     if (!(line.size() >= markerLen &&
-          line.substr(markerLen - 4).startswith("--- ")))
+          line.substr(markerLen - 4).starts_with("--- ")))
       continue;
     separator = line.substr(0, markerLen);
     const StringRef partName = line.substr(markerLen);

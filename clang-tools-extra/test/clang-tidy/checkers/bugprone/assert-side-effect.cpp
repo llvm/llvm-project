@@ -108,3 +108,27 @@ int main() {
 
   return 0;
 }
+
+namespace parameter_anaylysis {
+
+struct S {
+  bool value(int) const;
+  bool leftValueRef(int &) const;
+  bool constRef(int const &) const;
+  bool rightValueRef(int &&) const;
+};
+
+void foo() {
+  S s{};
+  int i = 0;
+  assert(s.value(0));
+  assert(s.value(i));
+  assert(s.leftValueRef(i));
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: side effect in assert() condition discarded in release builds
+  assert(s.constRef(0));
+  assert(s.constRef(i));
+  assert(s.rightValueRef(0));
+  assert(s.rightValueRef(static_cast<int &&>(i)));
+}
+
+} // namespace parameter_anaylysis

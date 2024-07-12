@@ -189,7 +189,8 @@ void unsynchronized_pool_resource::__adhoc_pool::__do_deallocate(
         return;
       }
     }
-    _LIBCPP_ASSERT_UNCATEGORIZED(false, "deallocating a block that was not allocated with this allocator");
+    // The request to deallocate memory ends up being a no-op, likely resulting in a memory leak.
+    _LIBCPP_ASSERT_VALID_DEALLOCATION(false, "deallocating a block that was not allocated with this allocator");
   }
 }
 
@@ -230,7 +231,7 @@ public:
   }
 
   void* __allocate_in_new_chunk(memory_resource* upstream, size_t block_size, size_t chunk_size) {
-    _LIBCPP_ASSERT_UNCATEGORIZED(chunk_size % block_size == 0, "");
+    _LIBCPP_ASSERT_INTERNAL(chunk_size % block_size == 0, "");
     static_assert(__default_alignment >= alignof(std::max_align_t), "");
     static_assert(__default_alignment >= alignof(__chunk_footer), "");
     static_assert(__default_alignment >= alignof(__vacancy_header), "");

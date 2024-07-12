@@ -211,7 +211,7 @@ define i64 @variable_shl_not_masked_enough_i64(i64 %x, i64 %n) {
 define i16 @test7(i32 %A) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[A:%.*]], 16
-; CHECK-NEXT:    [[D:%.*]] = trunc i32 [[TMP1]] to i16
+; CHECK-NEXT:    [[D:%.*]] = trunc nuw i32 [[TMP1]] to i16
 ; CHECK-NEXT:    ret i16 [[D]]
 ;
   %B = tail call i32 @llvm.bswap.i32(i32 %A) nounwind
@@ -223,7 +223,7 @@ define i16 @test7(i32 %A) {
 define <2 x i16> @test7_vector(<2 x i32> %A) {
 ; CHECK-LABEL: @test7_vector(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[A:%.*]], <i32 16, i32 16>
-; CHECK-NEXT:    [[D:%.*]] = trunc <2 x i32> [[TMP1]] to <2 x i16>
+; CHECK-NEXT:    [[D:%.*]] = trunc nuw <2 x i32> [[TMP1]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[D]]
 ;
   %B = tail call <2 x i32> @llvm.bswap.v2i32(<2 x i32> %A) nounwind
@@ -235,7 +235,7 @@ define <2 x i16> @test7_vector(<2 x i32> %A) {
 define i16 @test8(i64 %A) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[A:%.*]], 48
-; CHECK-NEXT:    [[D:%.*]] = trunc i64 [[TMP1]] to i16
+; CHECK-NEXT:    [[D:%.*]] = trunc nuw i64 [[TMP1]] to i16
 ; CHECK-NEXT:    ret i16 [[D]]
 ;
   %B = tail call i64 @llvm.bswap.i64(i64 %A) nounwind
@@ -247,7 +247,7 @@ define i16 @test8(i64 %A) {
 define <2 x i16> @test8_vector(<2 x i64> %A) {
 ; CHECK-LABEL: @test8_vector(
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i64> [[A:%.*]], <i64 48, i64 48>
-; CHECK-NEXT:    [[D:%.*]] = trunc <2 x i64> [[TMP1]] to <2 x i16>
+; CHECK-NEXT:    [[D:%.*]] = trunc nuw <2 x i64> [[TMP1]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[D]]
 ;
   %B = tail call <2 x i64> @llvm.bswap.v2i64(<2 x i64> %A) nounwind
@@ -498,8 +498,8 @@ define i64 @bs_and64_multiuse1(i64 %a, i64 %b) #0 {
 define i64 @bs_and64_multiuse2(i64 %a, i64 %b) #0 {
 ; CHECK-LABEL: @bs_and64_multiuse2(
 ; CHECK-NEXT:    [[T1:%.*]] = tail call i64 @llvm.bswap.i64(i64 [[A:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[A]], [[B:%.*]]
-; CHECK-NEXT:    [[T3:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP1]])
+; CHECK-NEXT:    [[T2:%.*]] = tail call i64 @llvm.bswap.i64(i64 [[B:%.*]])
+; CHECK-NEXT:    [[T3:%.*]] = and i64 [[T1]], [[T2]]
 ; CHECK-NEXT:    [[T4:%.*]] = mul i64 [[T3]], [[T1]]
 ; CHECK-NEXT:    ret i64 [[T4]]
 ;
@@ -512,9 +512,9 @@ define i64 @bs_and64_multiuse2(i64 %a, i64 %b) #0 {
 
 define i64 @bs_and64_multiuse3(i64 %a, i64 %b) #0 {
 ; CHECK-LABEL: @bs_and64_multiuse3(
+; CHECK-NEXT:    [[T1:%.*]] = tail call i64 @llvm.bswap.i64(i64 [[A:%.*]])
 ; CHECK-NEXT:    [[T2:%.*]] = tail call i64 @llvm.bswap.i64(i64 [[B:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[A:%.*]], [[B]]
-; CHECK-NEXT:    [[T3:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP1]])
+; CHECK-NEXT:    [[T3:%.*]] = and i64 [[T1]], [[T2]]
 ; CHECK-NEXT:    [[T4:%.*]] = mul i64 [[T3]], [[T2]]
 ; CHECK-NEXT:    ret i64 [[T4]]
 ;
@@ -870,13 +870,13 @@ define <2 x i64> @bs_active_high_different_negative(<2 x i64> %0) {
 }
 
 ; TODO: This should fold to 'and'.
-define <2 x i64> @bs_active_high_undef(<2 x i64> %0) {
-; CHECK-LABEL: @bs_active_high_undef(
+define <2 x i64> @bs_active_high_poison(<2 x i64> %0) {
+; CHECK-LABEL: @bs_active_high_poison(
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> [[TMP0:%.*]])
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr <2 x i64> [[TMP2]], <i64 56, i64 undef>
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr <2 x i64> [[TMP2]], <i64 56, i64 poison>
 ; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
 ;
-  %2 = shl <2 x i64> %0, <i64 56, i64 undef>
+  %2 = shl <2 x i64> %0, <i64 56, i64 poison>
   %3 = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> %2)
   ret <2 x i64> %3
 }

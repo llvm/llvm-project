@@ -131,7 +131,7 @@ configure is used for three classes of feature checks:
 
 For the last two points, it would be nice if LLVM didn't have a single
 ``config.h`` header, but one header per toggle. That way, when e.g.
-``llvm_enable_terminfo`` is toggled, only the 3 files caring about that setting
+``llvm_enable_zlib`` is toggled, only the 3 files caring about that setting
 would need to be rebuilt, instead of everything including ``config.h``.
 
 GN doesn't believe in users setting arbitrary cflags from an environment

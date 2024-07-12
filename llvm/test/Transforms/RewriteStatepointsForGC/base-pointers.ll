@@ -39,9 +39,9 @@ define ptr addrspace(1) @test1(i32 %caller, ptr addrspace(1) %a, ptr addrspace(1
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CHECK:       left:
 ; CHECK-NEXT:    switch i32 [[UNKNOWN:%.*]], label [[RIGHT]] [
-; CHECK-NEXT:    i32 0, label [[MERGE:%.*]]
-; CHECK-NEXT:    i32 1, label [[MERGE]]
-; CHECK-NEXT:    i32 5, label [[MERGE]]
+; CHECK-NEXT:      i32 0, label [[MERGE:%.*]]
+; CHECK-NEXT:      i32 1, label [[MERGE]]
+; CHECK-NEXT:      i32 5, label [[MERGE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       right:
 ; CHECK-NEXT:    br label [[MERGE]]
@@ -219,6 +219,34 @@ merge:
 next:
   call void @foo() [ "deopt"(ptr addrspace(1) %bdv) ]
   ret ptr addrspace(1) %bdv
+}
+
+declare i32 @snork()
+
+define void @test7() gc "statepoint-example" {
+; CHECK-LABEL: @test7(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i8, <2 x ptr addrspace(1)> zeroinitializer, <2 x i64> <i64 888, i64 908>
+; CHECK-NEXT:    [[SHUFFLEVECTOR_BASE:%.*]] = shufflevector <2 x ptr addrspace(1)> zeroinitializer, <2 x ptr addrspace(1)> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>, !is_base_value !0
+; CHECK-NEXT:    [[SHUFFLEVECTOR:%.*]] = shufflevector <2 x ptr addrspace(1)> [[GETELEMENTPTR]], <2 x ptr addrspace(1)> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[SHUFFLEVECTOR1_BASE:%.*]] = shufflevector <2 x ptr addrspace(1)> zeroinitializer, <2 x ptr addrspace(1)> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>, !is_base_value !0
+; CHECK-NEXT:    [[SHUFFLEVECTOR1:%.*]] = shufflevector <2 x ptr addrspace(1)> [[GETELEMENTPTR]], <2 x ptr addrspace(1)> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[SELECT_BASE:%.*]] = select i1 false, <4 x ptr addrspace(1)> [[SHUFFLEVECTOR1_BASE]], <4 x ptr addrspace(1)> [[SHUFFLEVECTOR_BASE]], !is_base_value !0
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 false, <4 x ptr addrspace(1)> [[SHUFFLEVECTOR1]], <4 x ptr addrspace(1)> [[SHUFFLEVECTOR]]
+; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(i32 ()) @snork, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(<4 x ptr addrspace(1)> [[SELECT]], <4 x ptr addrspace(1)> [[SELECT_BASE]]) ]
+; CHECK-NEXT:    [[SELECT_RELOCATED:%.*]] = call coldcc <4 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v4p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
+; CHECK-NEXT:    [[SELECT_BASE_RELOCATED:%.*]] = call coldcc <4 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v4p1(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
+; CHECK-NEXT:    [[EXTRACTELEMENT:%.*]] = extractelement <4 x ptr addrspace(1)> [[SELECT_RELOCATED]], i32 0
+; CHECK-NEXT:    ret void
+;
+bb:
+  %getelementptr = getelementptr i8, <2 x ptr addrspace(1)> zeroinitializer, <2 x i64> <i64 888, i64 908>
+  %shufflevector = shufflevector <2 x ptr addrspace(1)> %getelementptr, <2 x ptr addrspace(1)> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %shufflevector1 = shufflevector <2 x ptr addrspace(1)> %getelementptr, <2 x ptr addrspace(1)> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %select = select i1 false, <4 x ptr addrspace(1)> %shufflevector1, <4 x ptr addrspace(1)> %shufflevector
+  %call = call i32 @snork()
+  %extractelement = extractelement <4 x ptr addrspace(1)> %select, i32 0
+  ret void
 }
 
 declare void @foo()

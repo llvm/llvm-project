@@ -111,7 +111,7 @@ def InvalidTypeN : InvalidType<"InvalidTypeN", "invalid_n"> {
 
 def InvalidTypeO : InvalidType<"InvalidTypeO", "invalid_o"> {
   let parameters = (ins "int":$a);
-  // CHECK: `ref` is only allowed inside custom directives
+  // CHECK: 'ref' is only valid within a `custom` directive
   let assemblyFormat = "$a ref($a)";
 }
 

@@ -39,7 +39,7 @@
 #
 # 0x00000066:   NULL
 
-# RUN: yaml2obj %s | not llvm-dwarfdump --verify - | FileCheck %s --implicit-check-not=error:
+# RUN: yaml2obj %s | not llvm-dwarfdump --error-display=details --verify - | FileCheck %s --implicit-check-not=error:
 
 # CHECK: error: DIE has overlapping ranges in DW_AT_ranges attribute: [0x0000000000000000, 0x0000000000000020) and [0x0000000000000000, 0x0000000000000030)
 

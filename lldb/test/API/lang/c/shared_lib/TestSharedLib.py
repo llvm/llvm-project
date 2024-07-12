@@ -1,7 +1,7 @@
 """Test that types defined in shared libraries work correctly."""
 
 
-import unittest2
+import unittest
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -35,7 +35,7 @@ class SharedLibTestCase(TestBase):
         """Test that types work when defined in a shared library and forward-declared in the main executable, but with preloading disabled"""
         self.common_test_expr(False)
 
-    @unittest2.expectedFailure  # llvm.org/PR36712
+    @unittest.expectedFailure  # llvm.org/PR36712
     def test_frame_variable(self):
         """Test that types work when defined in a shared library and forward-declared in the main executable"""
         self.build()

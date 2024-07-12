@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx908 %s -run-pass=post-RA-sched -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx908 %s -run-pass=post-RA-sched -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: test
 # GCN: V_MFMA_F32_32X32X1F32

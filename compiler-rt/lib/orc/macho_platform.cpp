@@ -825,6 +825,10 @@ void *MachOPlatformRuntimeState::dlsym(void *DSOHandle, const char *Symbol) {
     return nullptr;
   }
 
+  // Sign callable symbols as functions, to match dyld.
+  if ((Result.second & MachOExecutorSymbolFlags::Callable) ==
+      MachOExecutorSymbolFlags::Callable)
+    return reinterpret_cast<void *>(Result.first.toPtr<void(void)>());
   return Result.first.toPtr<void *>();
 }
 

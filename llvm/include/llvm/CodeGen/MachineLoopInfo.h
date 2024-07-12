@@ -79,12 +79,18 @@ public:
   /// I.e., all virtual register operands are defined outside of the loop,
   /// physical registers aren't accessed explicitly, and there are no side
   /// effects that aren't captured by the operands or other flags.
-  bool isLoopInvariant(MachineInstr &I) const;
+  /// ExcludeReg can be used to exclude the given register from the check
+  /// i.e. when we're considering hoisting it's definition but not hoisted it
+  /// yet
+  bool isLoopInvariant(MachineInstr &I, const Register ExcludeReg = 0) const;
 
   void dump() const;
 
 private:
   friend class LoopInfoBase<MachineBasicBlock, MachineLoop>;
+
+  /// Returns true if the given physreg has no defs inside the loop.
+  bool isLoopInvariantImplicitPhysReg(Register Reg) const;
 
   explicit MachineLoop(MachineBasicBlock *MBB)
     : LoopBase<MachineBasicBlock, MachineLoop>(MBB) {}

@@ -38,7 +38,7 @@ public:
   llvm::Expected<std::string>
   getAbsolutePath(llvm::StringRef Authority, llvm::StringRef Body,
                   llvm::StringRef /*HintPath*/) const override {
-    if (!Body.startswith("/"))
+    if (!Body.starts_with("/"))
       return error("File scheme: expect body to be an absolute path starting "
                    "with '/': {0}",
                    Body);
@@ -153,7 +153,7 @@ URI::URI(llvm::StringRef Scheme, llvm::StringRef Authority,
          llvm::StringRef Body)
     : Scheme(Scheme), Authority(Authority), Body(Body) {
   assert(!Scheme.empty());
-  assert((Authority.empty() || Body.startswith("/")) &&
+  assert((Authority.empty() || Body.starts_with("/")) &&
          "URI body must start with '/' when authority is present.");
 }
 
@@ -165,8 +165,7 @@ std::string URI::toString() const {
     return Result;
   // If authority if empty, we only print body if it starts with "/"; otherwise,
   // the URI is invalid.
-  if (!Authority.empty() || llvm::StringRef(Body).startswith("/"))
-  {
+  if (!Authority.empty() || llvm::StringRef(Body).starts_with("/")) {
     Result.append("//");
     percentEncode(Authority, Result);
   }

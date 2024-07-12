@@ -111,10 +111,10 @@ for.end:
 ; VF8-LABEL: @doit2
 ; VF8: vector.body:
 ; VF8-NEXT:  [[INDEX:%.+]] = phi i64 [ 0, %vector.ph ]
-; VF8-NEXT:  [[I0:%.+]] = add i64 [[INDEX]], 0
 ; VF8-NEXT:  [[OFFSET_IDX:%.+]] = mul i64 [[INDEX]], %step
 ; VF8-NEXT:  [[MUL0:%.+]] = mul i64 0, %step
 ; VF8-NEXT:  [[ADD:%.+]] = add i64 [[OFFSET_IDX]], [[MUL0]]
+; VF8:       [[I0:%.+]] = add i64 [[INDEX]], 0
 ; VF8:       getelementptr inbounds i32, ptr %in, i64 [[ADD]]
 ; VF8: middle.block:
 

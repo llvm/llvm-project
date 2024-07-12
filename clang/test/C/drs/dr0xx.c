@@ -73,6 +73,10 @@
  * WG14 DR085: yes
  * Returning from main
  *
+ * WG14 DR087: yes
+ * Order of evaluation
+ * Note: this DR is covered by C/C11/n1282.c
+ *
  * WG14 DR086: yes
  * Object-like macros in system headers
  *
@@ -214,7 +218,7 @@ _Static_assert(__builtin_types_compatible_p(struct S { int a; }, union U { int a
  */
 void dr031(int i) {
   switch (i) {
-  case __INT_MAX__ + 1: break; /* expected-warning {{overflow in expression; result is -2147483648 with type 'int'}} */
+  case __INT_MAX__ + 1: break; /* expected-warning {{overflow in expression; result is -2'147'483'648 with type 'int'}} */
   #pragma clang diagnostic push
   #pragma clang diagnostic ignored "-Wswitch"
   /* Silence the targets which issue:

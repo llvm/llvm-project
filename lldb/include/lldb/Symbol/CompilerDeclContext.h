@@ -11,6 +11,7 @@
 
 #include <vector>
 
+#include "lldb/Symbol/Type.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
 
@@ -55,6 +56,13 @@ public:
   bool IsValid() const {
     return m_type_system != nullptr && m_opaque_decl_ctx != nullptr;
   }
+
+  /// Populate a valid compiler context from the current decl context.
+  ///
+  /// \returns A valid vector of CompilerContext entries that describes
+  /// this declaration context. The first entry in the vector is the parent of
+  /// the subsequent entry, so the topmost entry is the global namespace.
+  std::vector<lldb_private::CompilerContext> GetCompilerContext() const;
 
   std::vector<CompilerDecl> FindDeclByName(ConstString name,
                                            const bool ignore_using_decls);

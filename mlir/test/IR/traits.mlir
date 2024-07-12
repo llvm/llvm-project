@@ -572,15 +572,13 @@ func.func @failedHasDominanceScopeOutsideDominanceFreeScope() -> () {
 
 // Ensure that SSACFG regions of operations in GRAPH regions are
 // checked for dominance
-func.func @illegalInsideDominanceFreeScope() -> () {
+func.func @illegalInsideDominanceFreeScope(%cond: i1) -> () {
   test.graph_region {
-    func.func @test() -> i1 {
-    ^bb1:
+    scf.if %cond {
       // expected-error @+1 {{operand #0 does not dominate this use}}
       %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
       // expected-note @+1 {{operand defined here}}
-	   %1 = "baz"(%2#0) : (i1) -> (i64)
-      return %2#1 : i1
+      %1 = "baz"(%2#0) : (i1) -> (i64)
     }
     "terminator"() : () -> ()
   }
@@ -591,20 +589,21 @@ func.func @illegalInsideDominanceFreeScope() -> () {
 
 // Ensure that SSACFG regions of operations in GRAPH regions are
 // checked for dominance
-func.func @illegalCDFGInsideDominanceFreeScope() -> () {
+func.func @illegalCFGInsideDominanceFreeScope(%cond: i1) -> () {
   test.graph_region {
-    func.func @test() -> i1 {
-    ^bb1:
-      // expected-error @+1 {{operand #0 does not dominate this use}}
-      %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
-      cf.br ^bb4
-    ^bb2:
-      cf.br ^bb2
-    ^bb4:
-      %1 = "foo"() : ()->i64   // expected-note {{operand defined here}}
-		return %2#1 : i1
+    scf.if %cond {
+      "test.ssacfg_region"() ({
+      ^bb1:
+        // expected-error @+1 {{operand #0 does not dominate this use}}
+        %2:3 = "bar"(%1) : (i64) -> (i1,i1,i1)
+        cf.br ^bb4
+      ^bb2:
+        cf.br ^bb2
+      ^bb4:
+        %1 = "foo"() : ()->i64   // expected-note {{operand defined here}}
+      }) : () -> ()
     }
-     "terminator"() : () -> ()
+    "terminator"() : () -> ()
   }
   return
 }

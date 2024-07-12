@@ -1008,7 +1008,7 @@ TEST_F(AArch64GISelMITest, TestVectorMetadata) {
   auto *NewMDNode = MDNode::get(Context, LowAndHigh);
   const MachineMemOperand *OldMMO = *Load->memoperands_begin();
   MachineMemOperand NewMMO(OldMMO->getPointerInfo(), OldMMO->getFlags(),
-                           OldMMO->getSizeInBits(), OldMMO->getAlign(),
+                           OldMMO->getMemoryType(), OldMMO->getAlign(),
                            OldMMO->getAAInfo(), NewMDNode);
   MachineIRBuilder MIB(*Load);
   MIB.buildLoad(Load->getOperand(0), Load->getOperand(1), NewMMO);

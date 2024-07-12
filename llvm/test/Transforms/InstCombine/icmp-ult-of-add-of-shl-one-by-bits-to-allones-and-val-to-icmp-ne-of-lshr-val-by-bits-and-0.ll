@@ -56,8 +56,8 @@ define <3 x i1> @p2_vec_undef0(<3 x i8> %val, <3 x i8> %bits) {
 ; CHECK-LABEL: @p2_vec_undef0(
 ; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i8> <i8 1, i8 undef, i8 1>, [[BITS:%.*]]
 ; CHECK-NEXT:    call void @use3i8(<3 x i8> [[T0]])
-; CHECK-NEXT:    [[VAL_HIGHBITS:%.*]] = lshr <3 x i8> [[VAL:%.*]], [[BITS]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <3 x i8> [[VAL_HIGHBITS]], zeroinitializer
+; CHECK-NEXT:    [[T1:%.*]] = add <3 x i8> [[T0]], <i8 -1, i8 -1, i8 -1>
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <3 x i8> [[T1]], [[VAL:%.*]]
 ; CHECK-NEXT:    ret <3 x i1> [[R]]
 ;
   %t0 = shl <3 x i8> <i8 1, i8 undef, i8 1>, %bits

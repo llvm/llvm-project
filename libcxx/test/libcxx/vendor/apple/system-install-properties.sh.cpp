@@ -13,17 +13,17 @@
 
 // Make sure we install the libc++ headers in the right location.
 //
-// RUN: stat "%{include}/__config"
+// RUN: stat "%{include-dir}/__config"
 
 // Make sure we install libc++.1.dylib and libc++experimental.a in the right location.
 //
-// RUN: stat "%{lib}/libc++.1.dylib"
-// RUN: stat "%{lib}/libc++experimental.a"
+// RUN: stat "%{lib-dir}/libc++.1.dylib"
+// RUN: stat "%{lib-dir}/libc++experimental.a"
 
 // Make sure we install a symlink from libc++.dylib to libc++.1.dylib.
 //
-// RUN: stat "%{lib}/libc++.dylib"
-// RUN: readlink "%{lib}/libc++.dylib" | grep "libc++.1.dylib"
+// RUN: stat "%{lib-dir}/libc++.dylib"
+// RUN: readlink "%{lib-dir}/libc++.dylib" | grep "libc++.1.dylib"
 
 // Make sure the install_name is /usr/lib.
 //
@@ -34,15 +34,15 @@
 //
 // TODO: We currently don't do that correctly in the CMake build.
 //
-// XRUNX: otool -L "%{lib}/libc++.1.dylib" | grep '/usr/lib/libc++.1.dylib'
-// XRUNX: ! otool -l "%{lib}/libc++.1.dylib" | grep -E "LC_RPATH|@loader_path|@rpath"
+// XRUNX: otool -L "%{lib-dir}/libc++.1.dylib" | grep '/usr/lib/libc++.1.dylib'
+// XRUNX: ! otool -l "%{lib-dir}/libc++.1.dylib" | grep -E "LC_RPATH|@loader_path|@rpath"
 
 // Make sure the compatibility_version of libc++ is 1.0.0.
 // Failure to respect this can result in applications not being able to find libc++
 // when they are loaded by dyld, if the compatibility version was bumped.
 //
-// RUN: otool -L "%{lib}/libc++.1.dylib" | grep "libc++.1.dylib" | grep "compatibility version 1.0.0"
+// RUN: otool -L "%{lib-dir}/libc++.1.dylib" | grep "libc++.1.dylib" | grep "compatibility version 1.0.0"
 
 // Make sure we use the libdispatch backend for the PSTL.
 //
-// RUN: grep "%{include}/__config_site" -e '#define _LIBCPP_PSTL_CPU_BACKEND_LIBDISPATCH'
+// RUN: grep "%{include-dir}/__config_site" -e '#define _LIBCPP_PSTL_BACKEND_LIBDISPATCH'

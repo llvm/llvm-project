@@ -47,11 +47,9 @@ define void @merge_values_with_ranges_looped(ptr %a_len_ptr, ptr %b_len_ptr) {
 ; CHECK-NEXT:    %iv.next = add i32 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,101) S: [1,101) Exits: 100 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @merge_values_with_ranges_looped
-; CHECK-NEXT:  Loop %loop: backedge-taken count is 99
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 99
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 99
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 99
-; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 99
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 99
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 99
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 100
 ;
 

@@ -1,5 +1,7 @@
 ; RUN: opt %s -passes=loop-deletion -S -o - \
 ; RUN: | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -passes=loop-deletion -S -o - \
+; RUN: | FileCheck %s
 
 ;; $ cat test.cpp:
 ;; void esc(int*);
@@ -18,7 +20,7 @@
 ;; mistake.
 
 ; CHECK: for.end:
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i32 undef,{{.+}}, metadata !DIExpression({{.+}}), metadata ![[ID:[0-9]+]], metadata ptr %Counter, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(i32 undef,{{.+}}, !DIExpression({{.+}}), ![[ID:[0-9]+]], ptr %Counter, !DIExpression(),
 ; CHECK-NEXT: store i32 2, ptr %Counter, align 4,{{.*}}!DIAssignID ![[ID]]
 
 define dso_local void @_Z3funv() local_unnamed_addr #0 !dbg !7 {
@@ -38,9 +40,9 @@ for.end:                                          ; preds = %for.cond
   ret void, !dbg !28
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 declare !dbg !29 dso_local void @_Z3escPi(ptr noundef) local_unnamed_addr
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}

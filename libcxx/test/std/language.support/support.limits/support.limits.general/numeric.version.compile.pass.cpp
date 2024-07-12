@@ -15,12 +15,13 @@
 
 // Test the feature test macros defined by <numeric>
 
-/*  Constant                        Value
-    __cpp_lib_constexpr_numeric     201911L [C++20]
-    __cpp_lib_gcd_lcm               201606L [C++17]
-    __cpp_lib_interpolate           201902L [C++20]
-    __cpp_lib_parallel_algorithm    201603L [C++17]
-    __cpp_lib_ranges_iota           202202L [C++23]
+/*  Constant                           Value
+    __cpp_lib_constexpr_numeric        201911L [C++20]
+    __cpp_lib_gcd_lcm                  201606L [C++17]
+    __cpp_lib_interpolate              201902L [C++20]
+    __cpp_lib_parallel_algorithm       201603L [C++17]
+    __cpp_lib_ranges_iota              202202L [C++23]
+    __cpp_lib_saturation_arithmetic    202311L [C++26]
 */
 
 #include <numeric>
@@ -48,6 +49,10 @@
 #   error "__cpp_lib_ranges_iota should not be defined before c++23"
 # endif
 
+# ifdef __cpp_lib_saturation_arithmetic
+#   error "__cpp_lib_saturation_arithmetic should not be defined before c++26"
+# endif
+
 #elif TEST_STD_VER == 14
 
 # ifdef __cpp_lib_constexpr_numeric
@@ -68,6 +73,10 @@
 
 # ifdef __cpp_lib_ranges_iota
 #   error "__cpp_lib_ranges_iota should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_saturation_arithmetic
+#   error "__cpp_lib_saturation_arithmetic should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 17
@@ -102,6 +111,10 @@
 
 # ifdef __cpp_lib_ranges_iota
 #   error "__cpp_lib_ranges_iota should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_saturation_arithmetic
+#   error "__cpp_lib_saturation_arithmetic should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 20
@@ -142,6 +155,10 @@
 
 # ifdef __cpp_lib_ranges_iota
 #   error "__cpp_lib_ranges_iota should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_saturation_arithmetic
+#   error "__cpp_lib_saturation_arithmetic should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 23
@@ -193,6 +210,10 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_saturation_arithmetic
+#   error "__cpp_lib_saturation_arithmetic should not be defined before c++26"
+# endif
+
 #elif TEST_STD_VER > 23
 
 # ifndef __cpp_lib_constexpr_numeric
@@ -240,6 +261,13 @@
 #   ifdef __cpp_lib_ranges_iota
 #     error "__cpp_lib_ranges_iota should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifndef __cpp_lib_saturation_arithmetic
+#   error "__cpp_lib_saturation_arithmetic should be defined in c++26"
+# endif
+# if __cpp_lib_saturation_arithmetic != 202311L
+#   error "__cpp_lib_saturation_arithmetic should have the value 202311L in c++26"
 # endif
 
 #endif // TEST_STD_VER > 23

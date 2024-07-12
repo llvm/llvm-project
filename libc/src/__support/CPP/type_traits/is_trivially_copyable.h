@@ -9,7 +9,6 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_TRIVIALLY_COPYABLE_H
 
 #include "src/__support/CPP/type_traits/integral_constant.h"
-#include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE::cpp {
 

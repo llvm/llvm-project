@@ -1,4 +1,4 @@
-﻿"""Test that lldb picks the correct DWARF location list entry with a return-pc out of bounds."""
+"""Test that lldb picks the correct DWARF location list entry with a return-pc out of bounds."""
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -43,6 +43,8 @@ class LocationListLookupTestCase(TestBase):
         self.build()
         self.check_local_vars(self.launch(), check_expr=False)
 
+    @skipIf(dwarf_version=["<", "3"])
+    @skipIf(compiler="clang", compiler_version=["<", "12.0"])
     @skipUnlessDarwin
     def test_loclist_expr(self):
         self.build()

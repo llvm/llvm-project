@@ -19,6 +19,31 @@ llvm.func @omp_teams_simple() {
 
 // -----
 
+llvm.func @foo()
+
+// CHECK-LABEL: @omp_teams_func_attrs
+// CHECK: call void {{.*}} @__kmpc_fork_teams(ptr @{{.+}}, i32 0, ptr @[[OUTLINED_FN:.+]])
+llvm.func @omp_teams_func_attrs() attributes {
+    target_cpu = "x86-64",
+    target_features = #llvm.target_features<["+mmx", "+sse"]>
+} {
+    omp.teams {
+        llvm.call @foo() : () -> ()
+        omp.terminator
+    }
+    llvm.return
+}
+
+// CHECK:      define internal void @[[OUTLINED_FN]](ptr {{.+}}, ptr {{.+}})
+// CHECK-SAME: #[[ATTR:[0-9]+]]
+// CHECK:      call void @foo()
+
+// CHECK: attributes #[[ATTR]] = {
+// CHECK-SAME: "target-cpu"="x86-64"
+// CHECK-SAME: "target-features"="+mmx,+sse"
+
+// -----
+
 llvm.func @foo(i32) -> ()
 
 // CHECK-LABEL: @omp_teams_shared_simple

@@ -537,4 +537,3 @@ define half @select_icmp_sgt_zero(i32 signext %a) {
   %2 = select i1 %1, half 0.000000e+00, half 1.000000e+00
   ret half %2
 }
-

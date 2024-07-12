@@ -10,7 +10,7 @@ define i64 @callee_float_in_regs(i64 %a, float %b) nounwind {
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    st.d $fp, $sp, 0 # 8-byte Folded Spill
 ; CHECK-NEXT:    move $fp, $a0
-; CHECK-NEXT:    bstrpick.d $a0, $a1, 31, 0
+; CHECK-NEXT:    move $a0, $a1
 ; CHECK-NEXT:    bl %plt(__fixsfdi)
 ; CHECK-NEXT:    add.d $a0, $fp, $a0
 ; CHECK-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload
@@ -27,8 +27,8 @@ define i64 @caller_float_in_regs() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    lu12i.w $a1, 262144
+; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    bl %plt(callee_float_in_regs)
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
@@ -54,12 +54,12 @@ define i64 @caller_float_on_stack() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    lu12i.w $a0, 264704
-; CHECK-NEXT:    st.d $a0, $sp, 0
+; CHECK-NEXT:    lu12i.w $a1, 264704
 ; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    ori $a2, $zero, 2
 ; CHECK-NEXT:    ori $a4, $zero, 3
 ; CHECK-NEXT:    ori $a6, $zero, 4
+; CHECK-NEXT:    st.d $a1, $sp, 0
 ; CHECK-NEXT:    move $a1, $zero
 ; CHECK-NEXT:    move $a3, $zero
 ; CHECK-NEXT:    move $a5, $zero

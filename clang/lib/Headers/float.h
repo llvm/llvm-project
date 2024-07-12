@@ -10,6 +10,10 @@
 #ifndef __CLANG_FLOAT_H
 #define __CLANG_FLOAT_H
 
+#if defined(__MVS__) && __has_include_next(<float.h>)
+#include_next <float.h>
+#else
+
 /* If we're on MinGW, fall back to the system's float.h, which might have
  * additional definitions provided for Windows.
  * For more details see http://msdn.microsoft.com/en-us/library/y0ybw9fy.aspx
@@ -84,6 +88,12 @@
 #  endif
 #endif
 
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) ||              \
+    !defined(__STRICT_ANSI__)
+#  undef INFINITY
+#  undef NAN
+#endif
+
 /* Characteristics of floating point types, C99 5.2.4.2.2 */
 
 #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) ||              \
@@ -151,6 +161,13 @@
 #  define LDBL_HAS_SUBNORM __LDBL_HAS_DENORM__
 #endif
 
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) ||              \
+    !defined(__STRICT_ANSI__)
+   /* C23 5.2.5.3.3p29-30 */
+#  define INFINITY (__builtin_inf())
+#  define NAN (__builtin_nan(""))
+#endif
+
 #ifdef __STDC_WANT_IEC_60559_TYPES_EXT__
 #  define FLT16_MANT_DIG    __FLT16_MANT_DIG__
 #  define FLT16_DECIMAL_DIG __FLT16_DECIMAL_DIG__
@@ -165,4 +182,5 @@
 #  define FLT16_TRUE_MIN    __FLT16_TRUE_MIN__
 #endif /* __STDC_WANT_IEC_60559_TYPES_EXT__ */
 
+#endif /* __MVS__ */
 #endif /* __CLANG_FLOAT_H */

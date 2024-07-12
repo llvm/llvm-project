@@ -275,6 +275,12 @@ llvm::SmallVector<Header> headersForSymbol(const Symbol &S,
     // are already ranked in the stdlib mapping.
     if (H.kind() == Header::Standard)
       continue;
+    // Don't apply name match hints to exporting headers. As they usually have
+    // names similar to the original header, e.g. foo_wrapper/foo.h vs
+    // foo/foo.h, but shouldn't be preferred (unless marked as the public
+    // interface).
+    if ((H.Hint & Hints::OriginHeader) == Hints::None)
+      continue;
     if (nameMatch(SymbolName, H))
       H.Hint |= Hints::PreferredHeader;
   }

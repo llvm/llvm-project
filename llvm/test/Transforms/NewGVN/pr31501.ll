@@ -52,30 +52,30 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 define weak_odr hidden ptr @quux(ptr %arg, ptr %arg1) local_unnamed_addr #0 align 2 {
 ; CHECK-LABEL: @quux(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds %struct.barney, ptr %arg, i64 0, i32 3, i32 0, i32 0, i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP]], align 8, !tbaa !2
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds %struct.barney, ptr %arg, i64 0, i32 3, i32 0, i32 0, i32 0, i32 0, i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP4]], align 8, !tbaa !7
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds [[STRUCT_BARNEY:%.*]], ptr [[ARG:%.*]], i64 0, i32 3, i32 0, i32 0, i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP]], align 8, !tbaa [[TBAA2:![0-9]+]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_BARNEY]], ptr [[ARG]], i64 0, i32 3, i32 0, i32 0, i32 0, i32 0, i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP4]], align 8, !tbaa [[TBAA7:![0-9]+]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq ptr [[TMP3]], [[TMP6]]
-; CHECK-NEXT:    br i1 [[TMP7]], label %bb21, label %bb8
+; CHECK-NEXT:    br i1 [[TMP7]], label [[BB21:%.*]], label [[BB8:%.*]]
 ; CHECK:       bb8:
-; CHECK-NEXT:    br label %bb11
+; CHECK-NEXT:    br label [[BB11:%.*]]
 ; CHECK:       bb9:
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq ptr [[TMP18:%.*]], [[TMP6]]
-; CHECK-NEXT:    br i1 [[TMP10]], label %bb19, label %bb11
+; CHECK-NEXT:    br i1 [[TMP10]], label [[BB19:%.*]], label [[BB11]]
 ; CHECK:       bb11:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[TMP17:%.*]], %bb9 ], [ undef, %bb8 ]
-; CHECK-NEXT:    [[TMP13:%.*]] = phi ptr [ [[TMP18]], %bb9 ], [ [[TMP3]], %bb8 ]
-; CHECK-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[TMP13]], align 8, !tbaa !8
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq ptr [[TMP15]], %arg1
+; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[TMP17:%.*]], [[BB9:%.*]] ], [ undef, [[BB8]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi ptr [ [[TMP18]], [[BB9]] ], [ [[TMP3]], [[BB8]] ]
+; CHECK-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[TMP13]], align 8, !tbaa [[TBAA8:![0-9]+]]
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq ptr [[TMP15]], [[ARG1:%.*]]
 ; CHECK-NEXT:    [[TMP17]] = select i1 [[TMP16]], ptr [[TMP13]], ptr [[TMP12]]
-; CHECK-NEXT:    [[TMP18]] = getelementptr inbounds %struct.foo, ptr [[TMP13]], i64 1
-; CHECK-NEXT:    br i1 [[TMP16]], label %bb19, label %bb9
+; CHECK-NEXT:    [[TMP18]] = getelementptr inbounds [[STRUCT_FOO:%.*]], ptr [[TMP13]], i64 1
+; CHECK-NEXT:    br i1 [[TMP16]], label [[BB19]], label [[BB9]]
 ; CHECK:       bb19:
-; CHECK-NEXT:    [[TMP20:%.*]] = phi ptr [ null, %bb9 ], [ [[TMP17]], %bb11 ]
-; CHECK-NEXT:    br label %bb21
+; CHECK-NEXT:    [[TMP20:%.*]] = phi ptr [ null, [[BB9]] ], [ [[TMP17]], [[BB11]] ]
+; CHECK-NEXT:    br label [[BB21]]
 ; CHECK:       bb21:
-; CHECK-NEXT:    [[TMP22:%.*]] = phi ptr [ null, %bb ], [ [[TMP20]], %bb19 ]
+; CHECK-NEXT:    [[TMP22:%.*]] = phi ptr [ null, [[BB:%.*]] ], [ [[TMP20]], [[BB19]] ]
 ; CHECK-NEXT:    ret ptr [[TMP22]]
 ;
 bb:

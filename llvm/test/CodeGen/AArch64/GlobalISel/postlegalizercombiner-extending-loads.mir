@@ -4,11 +4,11 @@
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64--"
-  define void @test_zeroext(i8* %addr) {
+  define void @test_zeroext(ptr %addr) {
   entry:
     ret void
   }
-  define void @test_no_anyext(i8* %addr) {
+  define void @test_s32_to_s64(ptr %addr) {
   entry:
     ret void
   }
@@ -21,9 +21,11 @@ body: |
   bb.0.entry:
     liveins: $x0
     ; CHECK-LABEL: name: test_zeroext
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8) from %ir.addr)
-    ; CHECK: $w0 = COPY [[ZEXTLOAD]](s32)
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load (s8) from %ir.addr)
+    ; CHECK-NEXT: $w0 = COPY [[ZEXTLOAD]](s32)
     %0:_(p0) = COPY $x0
     %1:_(s8) = G_LOAD %0 :: (load (s8) from %ir.addr)
     %2:_(s32) = G_ZEXT %1
@@ -31,18 +33,17 @@ body: |
 ...
 
 ---
-name:            test_no_anyext
+name:            test_s32_to_s64
 legalized:       true
 body: |
   bb.0.entry:
     liveins: $x0
-    ; Check that we don't try to do an anyext combine. We don't want to do this
-    ; because an anyexting load like s64 = G_LOAD %p (load 4) isn't legal.
-    ; CHECK-LABEL: name: test_no_anyext
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.addr)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s32)
-    ; CHECK: $x0 = COPY [[ANYEXT]](s64)
+    ; CHECK-LABEL: name: test_s32_to_s64
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p0) :: (load (s32) from %ir.addr)
+    ; CHECK-NEXT: $x0 = COPY [[LOAD]](s64)
     %0:_(p0) = COPY $x0
     %1:_(s32) = G_LOAD %0 :: (load (s32) from %ir.addr)
     %2:_(s64) = G_ANYEXT %1

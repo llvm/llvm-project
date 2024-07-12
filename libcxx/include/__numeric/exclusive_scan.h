@@ -37,7 +37,7 @@ exclusive_scan(_InputIterator __first, _InputIterator __last, _OutputIterator __
       if (__first == __last)
         break;
       __init = std::move(__tmp);
-      __tmp = __b(__init, *__first);
+      __tmp  = __b(__init, *__first);
     }
   }
   return __result;

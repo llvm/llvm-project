@@ -642,6 +642,7 @@ Value *InferAddressSpacesImpl::cloneInstructionWithNewAddressSpace(
     Type *NewPtrTy = getPtrOrVecOfPtrsWithNewAS(I->getType(), AS);
     auto *NewI = new AddrSpaceCastInst(I, NewPtrTy);
     NewI->insertAfter(I);
+    NewI->setDebugLoc(I->getDebugLoc());
     return NewI;
   }
 
@@ -821,7 +822,7 @@ unsigned InferAddressSpacesImpl::joinAddressSpaces(unsigned AS1,
 }
 
 bool InferAddressSpacesImpl::run(Function &F) {
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
 
   if (AssumeDefaultIsFlatAddressSpace)
     FlatAddrSpace = 0;
@@ -1221,6 +1222,7 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
     Value::use_iterator I, E, Next;
     for (I = V->use_begin(), E = V->use_end(); I != E;) {
       Use &U = *I;
+      User *CurUser = U.getUser();
 
       // Some users may see the same pointer operand in multiple operands. Skip
       // to the next instruction.
@@ -1231,11 +1233,10 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
         // If V is used as the pointer operand of a compatible memory operation,
         // sets the pointer operand to NewV. This replacement does not change
         // the element type, so the resultant load/store is still valid.
-        U.set(NewV);
+        CurUser->replaceUsesOfWith(V, NewV);
         continue;
       }
 
-      User *CurUser = U.getUser();
       // Skip if the current user is the new value itself.
       if (CurUser == NewV)
         continue;
@@ -1311,10 +1312,13 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
 
           while (isa<PHINode>(InsertPos))
             ++InsertPos;
-          U.set(new AddrSpaceCastInst(NewV, V->getType(), "", &*InsertPos));
+          // This instruction may contain multiple uses of V, update them all.
+          CurUser->replaceUsesOfWith(
+              V, new AddrSpaceCastInst(NewV, V->getType(), "", InsertPos));
         } else {
-          U.set(ConstantExpr::getAddrSpaceCast(cast<Constant>(NewV),
-                                               V->getType()));
+          CurUser->replaceUsesOfWith(
+              V, ConstantExpr::getAddrSpaceCast(cast<Constant>(NewV),
+                                                V->getType()));
         }
       }
     }

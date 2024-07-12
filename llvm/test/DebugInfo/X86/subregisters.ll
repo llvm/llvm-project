@@ -1,5 +1,8 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin %s -o %t.o -filetype=obj -O0
 ; RUN: llvm-dwarfdump -v %t.o | FileCheck %s
+
+; RUN: llc --try-experimental-debuginfo-iterators -mtriple=x86_64-apple-darwin %s -o %t.o -filetype=obj -O0
+; RUN: llvm-dwarfdump -v %t.o | FileCheck %s
 ;
 ; Test that on x86_64, the 32-bit subregister esi is emitted as
 ; subregister of the 64-bit rsi.

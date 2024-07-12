@@ -23,18 +23,9 @@ config.recursiveExpansionLimit = 10
 config.test_exec_root = os.path.join('@CMAKE_BINARY_DIR@', 'test')
 
 # Add substitutions for bootstrapping the test suite configuration
-import shlex
-config.substitutions.append(('%{cxx}', shlex.quote('@CMAKE_CXX_COMPILER@')))
-config.substitutions.append(('%{libcxx}', '@LIBCXX_SOURCE_DIR@'))
-config.substitutions.append(('%{include}', '@LIBCXX_GENERATED_INCLUDE_DIR@'))
-config.substitutions.append(('%{target-include}', '@LIBCXX_GENERATED_INCLUDE_TARGET_DIR@'))
-config.substitutions.append(('%{lib}', '@LIBCXX_LIBRARY_DIR@'))
-config.substitutions.append(('%{module}', '@LIBCXX_GENERATED_MODULE_DIR@'))
-config.substitutions.append(('%{test-tools}', '@LIBCXX_TEST_TOOLS_PATH@'))
-
-# The test needs to manually rebuild the module. The compiler flags used in the
-# test need to be the same as the compiler flags used to generate the module.
-# In the future, when CMake can generated modules this may no longer be
-# necessary.
-# TODO MODULES whether it's possible to remove this substitution.
-config.substitutions.append(('%{cmake}', '@CMAKE_COMMAND@'))
+config.substitutions.append(('%{libcxx-dir}', '@LIBCXX_SOURCE_DIR@'))
+config.substitutions.append(('%{include-dir}', '@LIBCXX_GENERATED_INCLUDE_DIR@'))
+config.substitutions.append(('%{target-include-dir}', '@LIBCXX_GENERATED_INCLUDE_TARGET_DIR@'))
+config.substitutions.append(('%{lib-dir}', '@LIBCXX_LIBRARY_DIR@'))
+config.substitutions.append(('%{module-dir}', '@LIBCXX_GENERATED_MODULE_DIR@'))
+config.substitutions.append(('%{test-tools-dir}', '@LIBCXX_TEST_TOOLS_PATH@'))

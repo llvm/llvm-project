@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx908 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx908 -start-before postrapseudos -asm-verbose=0 -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: {{^}}lo_to_lo_agpr_to_agpr:
 # GCN:      v_accvgpr_read_b32 [[TMP:v[0-9]+]], a0

@@ -31,6 +31,14 @@ TEST(Numeric, Floor) {
   EXPECT_EQ(RTNAME(Floor4_1)(Real<4>{0}), 0);
 }
 
+TEST(Numeric, Erfc_scaled) {
+  EXPECT_NEAR(RTNAME(ErfcScaled4)(Real<4>{20.0}), 0.02817434874, 1.0e-8);
+  EXPECT_NEAR(RTNAME(ErfcScaled8)(Real<8>{20.0}), 0.02817434874, 1.0e-11);
+#if LDBL_MANT_DIG == 64
+  EXPECT_NEAR(RTNAME(ErfcScaled10)(Real<10>{20.0}), 0.02817434874, 1.0e-8);
+#endif
+}
+
 TEST(Numeric, Exponent) {
   EXPECT_EQ(RTNAME(Exponent4_4)(Real<4>{0}), 0);
   EXPECT_EQ(RTNAME(Exponent4_8)(Real<4>{1.0}), 1);
@@ -65,6 +73,30 @@ TEST(Numeric, Mod) {
   EXPECT_EQ(RTNAME(ModReal4)(Real<4>{-8.0}, Real<4>(5.0)), -3.0);
   EXPECT_EQ(RTNAME(ModReal8)(Real<8>{8.0}, Real<8>(-5.0)), 3.0);
   EXPECT_EQ(RTNAME(ModReal8)(Real<8>{-8.0}, Real<8>(-5.0)), -3.0);
+  EXPECT_EQ(
+      RTNAME(ModReal4)(Real<4>{0.5}, std::numeric_limits<Real<4>>::infinity()),
+      0.5);
+  EXPECT_EQ(
+      RTNAME(ModReal4)(Real<4>{-0.5}, std::numeric_limits<Real<4>>::infinity()),
+      -0.5);
+  EXPECT_EQ(
+      RTNAME(ModReal4)(Real<4>{0.5}, -std::numeric_limits<Real<4>>::infinity()),
+      0.5);
+  EXPECT_EQ(RTNAME(ModReal4)(
+                Real<4>{-0.5}, -std::numeric_limits<Real<4>>::infinity()),
+      -0.5);
+  EXPECT_EQ(
+      RTNAME(ModReal8)(Real<8>{0.5}, std::numeric_limits<Real<8>>::infinity()),
+      0.5);
+  EXPECT_EQ(
+      RTNAME(ModReal8)(Real<8>{-0.5}, std::numeric_limits<Real<8>>::infinity()),
+      -0.5);
+  EXPECT_EQ(
+      RTNAME(ModReal8)(Real<8>{0.5}, -std::numeric_limits<Real<8>>::infinity()),
+      0.5);
+  EXPECT_EQ(RTNAME(ModReal8)(
+                Real<8>{-0.5}, -std::numeric_limits<Real<8>>::infinity()),
+      -0.5);
 }
 
 TEST(Numeric, Modulo) {
@@ -76,6 +108,28 @@ TEST(Numeric, Modulo) {
   EXPECT_EQ(RTNAME(ModuloReal4)(Real<4>{-8.0}, Real<4>(5.0)), 2.0);
   EXPECT_EQ(RTNAME(ModuloReal8)(Real<8>{8.0}, Real<8>(-5.0)), -2.0);
   EXPECT_EQ(RTNAME(ModuloReal8)(Real<8>{-8.0}, Real<8>(-5.0)), -3.0);
+  // MODULO(x, INF) == NaN
+  EXPECT_TRUE(std::isnan(RTNAME(ModuloReal4)(
+      Real<4>{0.5}, std::numeric_limits<Real<4>>::infinity())));
+  EXPECT_TRUE(std::isnan(RTNAME(ModuloReal4)(
+      Real<4>{-0.5}, std::numeric_limits<Real<4>>::infinity())));
+  EXPECT_TRUE(std::isnan(RTNAME(ModuloReal4)(
+      Real<4>{0.5}, -std::numeric_limits<Real<4>>::infinity())));
+  EXPECT_TRUE(std::isnan(RTNAME(ModuloReal4)(
+      Real<4>{-0.5}, -std::numeric_limits<Real<4>>::infinity())));
+  EXPECT_TRUE(std::isnan(RTNAME(ModuloReal8)(
+      Real<8>{-0.5}, std::numeric_limits<Real<8>>::infinity())));
+  EXPECT_TRUE(std::isnan(RTNAME(ModuloReal8)(
+      Real<8>{0.5}, std::numeric_limits<Real<8>>::infinity())));
+  EXPECT_TRUE(std::isnan(RTNAME(ModuloReal8)(
+      Real<8>{-0.5}, -std::numeric_limits<Real<8>>::infinity())));
+  EXPECT_TRUE(std::isnan(RTNAME(ModuloReal8)(
+      Real<8>{0.5}, -std::numeric_limits<Real<8>>::infinity())));
+  // MODULO(x, y) for integer values of x and y with 0 remainder.
+  EXPECT_EQ(RTNAME(ModuloReal4)(Real<4>{5.0}, Real<4>(1.0)), 0.0);
+  EXPECT_EQ(RTNAME(ModuloReal4)(Real<4>{5.0}, Real<4>(-1.0)), -0.0);
+  EXPECT_EQ(RTNAME(ModuloReal4)(Real<4>{-5.0}, Real<4>(1.0)), 0.0);
+  EXPECT_EQ(RTNAME(ModuloReal4)(Real<4>{-5.0}, Real<4>(-1.0)), -0.0);
 }
 
 TEST(Numeric, Nearest) {
@@ -86,7 +140,7 @@ TEST(Numeric, Nearest) {
   EXPECT_EQ(RTNAME(Nearest8)(Real<8>{1.0}, true),
       Real<8>{1.0} + std::ldexp(Real<8>{1.0}, -52));
   EXPECT_EQ(RTNAME(Nearest8)(Real<8>{1.0}, false),
-      Real<8>{1.0} - std::ldexp(Real<8>{1.0}, -52));
+      Real<8>{1.0} - 0.5 * std::ldexp(Real<8>{1.0}, -52));
 }
 
 TEST(Numeric, Nint) {

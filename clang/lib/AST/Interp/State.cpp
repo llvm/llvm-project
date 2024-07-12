@@ -155,7 +155,8 @@ void State::addCallStack(unsigned Limit) {
     SmallString<128> Buffer;
     llvm::raw_svector_ostream Out(Buffer);
     F->describe(Out);
-    addDiag(CallRange.getBegin(), diag::note_constexpr_call_here)
-        << Out.str() << CallRange;
+    if (!Buffer.empty())
+      addDiag(CallRange.getBegin(), diag::note_constexpr_call_here)
+          << Out.str() << CallRange;
   }
 }

@@ -10,7 +10,7 @@ define <32 x half> @dump_vec() {
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %cond.load
 ; CHECK-NEXT:    vpinsrw $0, (%rax), %xmm0, %xmm0
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm1 = [65535,0,0,0]
+; CHECK-NEXT:    vmovd {{.*#+}} xmm1 = [65535,0,0,0]
 ; CHECK-NEXT:    vpand %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vinserti64x4 $0, %ymm0, %zmm1, %zmm0

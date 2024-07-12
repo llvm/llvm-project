@@ -187,10 +187,8 @@ template <class NodeT>
 void PrintDomTree(const DomTreeNodeBase<NodeT> *N, raw_ostream &O,
                   unsigned Lev) {
   O.indent(2 * Lev) << "[" << Lev << "] " << N;
-  for (typename DomTreeNodeBase<NodeT>::const_iterator I = N->begin(),
-                                                       E = N->end();
-       I != E; ++I)
-    PrintDomTree<NodeT>(*I, O, Lev + 1);
+  for (const auto &I : *N)
+    PrintDomTree<NodeT>(I, O, Lev + 1);
 }
 
 namespace DomTreeBuilder {
@@ -850,17 +848,16 @@ protected:
   void Split(typename GraphTraits<N>::NodeRef NewBB) {
     using GraphT = GraphTraits<N>;
     using NodeRef = typename GraphT::NodeRef;
-    assert(std::distance(GraphT::child_begin(NewBB),
-                         GraphT::child_end(NewBB)) == 1 &&
+    assert(llvm::hasSingleElement(children<N>(NewBB)) &&
            "NewBB should have a single successor!");
     NodeRef NewBBSucc = *GraphT::child_begin(NewBB);
 
-    SmallVector<NodeRef, 4> PredBlocks(children<Inverse<N>>(NewBB));
+    SmallVector<NodeRef, 4> PredBlocks(inverse_children<N>(NewBB));
 
     assert(!PredBlocks.empty() && "No predblocks?");
 
     bool NewBBDominatesNewBBSucc = true;
-    for (auto *Pred : children<Inverse<N>>(NewBBSucc)) {
+    for (auto *Pred : inverse_children<N>(NewBBSucc)) {
       if (Pred != NewBB && !dominates(NewBBSucc, Pred) &&
           isReachableFromEntry(Pred)) {
         NewBBDominatesNewBBSucc = false;

@@ -94,6 +94,20 @@ using HlfirAnyLowering = HlfirReductionIntrinsic<hlfir::AnyOp, false>;
 using HlfirAllLowering = HlfirReductionIntrinsic<hlfir::AllOp, false>;
 
 template <typename OP>
+class HlfirMinMaxLocIntrinsic : public HlfirTransformationalIntrinsic {
+public:
+  using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
+
+protected:
+  mlir::Value
+  lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
+            const fir::IntrinsicArgumentLoweringRules *argLowering,
+            mlir::Type stmtResultType) override;
+};
+using HlfirMinlocLowering = HlfirMinMaxLocIntrinsic<hlfir::MinlocOp>;
+using HlfirMaxlocLowering = HlfirMinMaxLocIntrinsic<hlfir::MaxlocOp>;
+
+template <typename OP>
 class HlfirProductIntrinsic : public HlfirTransformationalIntrinsic {
 public:
   using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
@@ -180,6 +194,31 @@ mlir::Value HlfirTransformationalIntrinsic::loadBoxAddress(
   return boxOrAbsent;
 }
 
+static mlir::Value loadOptionalValue(
+    mlir::Location loc, fir::FirOpBuilder &builder,
+    const std::optional<Fortran::lower::PreparedActualArgument> &arg,
+    hlfir::Entity actual) {
+  if (!arg->handleDynamicOptional())
+    return hlfir::loadTrivialScalar(loc, builder, actual);
+
+  mlir::Value isPresent = arg->getIsPresent();
+  mlir::Type eleType = hlfir::getFortranElementType(actual.getType());
+  return builder
+      .genIfOp(loc, {eleType}, isPresent,
+               /*withElseRegion=*/true)
+      .genThen([&]() {
+        assert(actual.isScalar() && fir::isa_trivial(eleType) &&
+               "must be a numerical or logical scalar");
+        hlfir::Entity val = hlfir::loadTrivialScalar(loc, builder, actual);
+        builder.create<fir::ResultOp>(loc, val);
+      })
+      .genElse([&]() {
+        mlir::Value zero = fir::factory::createZeroValue(builder, loc, eleType);
+        builder.create<fir::ResultOp>(loc, zero);
+      })
+      .getResults()[0];
+}
+
 llvm::SmallVector<mlir::Value> HlfirTransformationalIntrinsic::getOperandVector(
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering) {
@@ -206,6 +245,9 @@ llvm::SmallVector<mlir::Value> HlfirTransformationalIntrinsic::getOperandVector(
       else if (!argRules.handleDynamicOptional &&
                argRules.lowerAs != fir::LowerIntrinsicArgAs::Inquired)
         valArg = hlfir::derefPointersAndAllocatables(loc, builder, actual);
+      else if (argRules.handleDynamicOptional &&
+               argRules.lowerAs == fir::LowerIntrinsicArgAs::Value)
+        valArg = loadOptionalValue(loc, builder, arg, actual);
       else if (argRules.handleDynamicOptional)
         TODO(loc, "hlfir transformational intrinsic dynamically optional "
                   "argument without box lowering");
@@ -223,7 +265,7 @@ HlfirTransformationalIntrinsic::computeResultType(mlir::Value argArray,
                                                   mlir::Type stmtResultType) {
   mlir::Type normalisedResult =
       hlfir::getFortranElementOrSequenceType(stmtResultType);
-  if (auto array = normalisedResult.dyn_cast<fir::SequenceType>()) {
+  if (auto array = mlir::dyn_cast<fir::SequenceType>(normalisedResult)) {
     hlfir::ExprType::Shape resultShape =
         hlfir::ExprType::Shape{array.getShape()};
     mlir::Type elementType = array.getEleTy();
@@ -261,6 +303,27 @@ mlir::Value HlfirReductionIntrinsic<OP, HAS_MASK>::lowerImpl(
 }
 
 template <typename OP>
+mlir::Value HlfirMinMaxLocIntrinsic<OP>::lowerImpl(
+    const Fortran::lower::PreparedActualArguments &loweredActuals,
+    const fir::IntrinsicArgumentLoweringRules *argLowering,
+    mlir::Type stmtResultType) {
+  auto operands = getOperandVector(loweredActuals, argLowering);
+  mlir::Value array = operands[0];
+  mlir::Value dim = operands[1];
+  mlir::Value mask = operands[2];
+  mlir::Value back = operands[4];
+  // dim, mask and back can be NULL if these arguments are not given.
+  if (dim)
+    dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
+  if (back)
+    back = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{back});
+
+  mlir::Type resultTy = computeResultType(array, stmtResultType);
+
+  return createOp<OP>(resultTy, array, dim, mask, back);
+}
+
+template <typename OP>
 mlir::Value HlfirProductIntrinsic<OP>::lowerImpl(
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering,
@@ -278,7 +341,7 @@ mlir::Value HlfirTransposeLowering::lowerImpl(
   hlfir::ExprType::Shape resultShape;
   mlir::Type normalisedResult =
       hlfir::getFortranElementOrSequenceType(stmtResultType);
-  auto array = normalisedResult.cast<fir::SequenceType>();
+  auto array = mlir::cast<fir::SequenceType>(normalisedResult);
   llvm::ArrayRef<int64_t> arrayShape = array.getShape();
   assert(arrayShape.size() == 2 && "arguments to transpose have a rank of 2");
   mlir::Type elementType = array.getEleTy();
@@ -311,9 +374,8 @@ mlir::Value HlfirCountLowering::lowerImpl(
   mlir::Value dim = operands[1];
   if (dim)
     dim = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{dim});
-  mlir::Value kind = operands[2];
   mlir::Type resultType = computeResultType(array, stmtResultType);
-  return createOp<hlfir::CountOp>(resultType, array, dim, kind);
+  return createOp<hlfir::CountOp>(resultType, array, dim);
 }
 
 mlir::Value HlfirCharExtremumLowering::lowerImpl(
@@ -363,6 +425,12 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
                                                    stmtResultType);
   if (name == "minval")
     return HlfirMinvalLowering{builder, loc}.lower(loweredActuals, argLowering,
+                                                   stmtResultType);
+  if (name == "minloc")
+    return HlfirMinlocLowering{builder, loc}.lower(loweredActuals, argLowering,
+                                                   stmtResultType);
+  if (name == "maxloc")
+    return HlfirMaxlocLowering{builder, loc}.lower(loweredActuals, argLowering,
                                                    stmtResultType);
   if (mlir::isa<fir::CharacterType>(stmtResultType)) {
     if (name == "min")

@@ -506,6 +506,12 @@ following fixed keys:
   specified by the TableGen input (if it is ``false``), or invented by
   TableGen itself (if ``true``).
 
+* ``!locs``: an array of strings giving the source locations associated with
+  this record. For records instantiated from a ``multiclass``, this gives the
+  location of each ``def`` or ``defm``, starting with the inner-most
+  ``multiclass``, and ending with the top-level ``defm``. Each string contains
+  the file name and line number, separated by a colon.
+
 For each variable defined in a record, the ``def`` object for that
 record also has a key for the variable name. The corresponding value
 is a translation into JSON of the variable's value, using the
@@ -811,7 +817,9 @@ The table entries in ``ATable`` are sorted in order by ``Val1``, and within
 each of those values, by ``Val2``. This allows a binary search of the table,
 which is performed in the lookup function by ``std::lower_bound``. The
 lookup function returns a reference to the found table entry, or the null
-pointer if no entry is found.
+pointer if no entry is found. If the table has a single primary key field
+which is integral and densely numbered, a direct lookup is generated rather
+than a binary search.
 
 This example includes a field whose type TableGen cannot deduce. The ``Kind``
 field uses the enumerated type ``CEnum`` defined above. To inform TableGen

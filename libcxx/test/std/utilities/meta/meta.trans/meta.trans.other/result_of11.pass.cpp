@@ -23,9 +23,10 @@
 
 // Ignore warnings about volatile in parameters being deprecated.
 // We know it is, but we still have to test it.
-#if defined(TEST_COMPILER_GCC)
-#   pragma GCC diagnostic ignored "-Wvolatile"
-#endif
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-volatile")
+TEST_GCC_DIAGNOSTIC_IGNORED("-Wvolatile")
+// MSVC warning C5215: a function parameter with a volatile qualified type is deprecated in C++20
+TEST_MSVC_DIAGNOSTIC_IGNORED(5215)
 
 struct wat
 {
@@ -64,9 +65,6 @@ void test_result_of_imp()
     test_invoke_result<T, U>::call();
 #endif
 }
-
-// Do not warn on deprecated uses of 'volatile' below.
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 
 int main(int, char**)
 {
@@ -184,5 +182,3 @@ int main(int, char**)
 
   return 0;
 }
-
-_LIBCPP_SUPPRESS_DEPRECATED_POP

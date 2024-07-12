@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-scops \
-; RUN: -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-codegen \
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=print<polly-function-scops>' \
+; RUN: -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb -passes=polly-codegen \
 ; RUN: -polly-invariant-load-hoisting=true -disable-output < %s
 
 ; The loop for.body is a scop with invariant load hoisting, but does not

@@ -21,8 +21,8 @@ template <TypeCategory CAT1, int KIND1, TypeCategory CAT2, int KIND2>
 struct Equality {
   using Type1 = CppTypeFor<CAT1, KIND1>;
   using Type2 = CppTypeFor<CAT2, KIND2>;
-  bool operator()(const Descriptor &array, const SubscriptValue at[],
-      const Descriptor &target) const {
+  RT_API_ATTRS bool operator()(const Descriptor &array,
+      const SubscriptValue at[], const Descriptor &target) const {
     return *array.Element<Type1>(at) == *target.OffsetElement<Type2>();
   }
 };
@@ -31,8 +31,8 @@ template <int KIND1, int KIND2>
 struct Equality<TypeCategory::Complex, KIND1, TypeCategory::Complex, KIND2> {
   using Type1 = CppTypeFor<TypeCategory::Complex, KIND1>;
   using Type2 = CppTypeFor<TypeCategory::Complex, KIND2>;
-  bool operator()(const Descriptor &array, const SubscriptValue at[],
-      const Descriptor &target) const {
+  RT_API_ATTRS bool operator()(const Descriptor &array,
+      const SubscriptValue at[], const Descriptor &target) const {
     const Type1 &xz{*array.Element<Type1>(at)};
     const Type2 &tz{*target.OffsetElement<Type2>()};
     return xz.real() == tz.real() && xz.imag() == tz.imag();
@@ -43,8 +43,8 @@ template <int KIND1, TypeCategory CAT2, int KIND2>
 struct Equality<TypeCategory::Complex, KIND1, CAT2, KIND2> {
   using Type1 = CppTypeFor<TypeCategory::Complex, KIND1>;
   using Type2 = CppTypeFor<CAT2, KIND2>;
-  bool operator()(const Descriptor &array, const SubscriptValue at[],
-      const Descriptor &target) const {
+  RT_API_ATTRS bool operator()(const Descriptor &array,
+      const SubscriptValue at[], const Descriptor &target) const {
     const Type1 &z{*array.Element<Type1>(at)};
     return z.imag() == 0 && z.real() == *target.OffsetElement<Type2>();
   }
@@ -54,8 +54,8 @@ template <TypeCategory CAT1, int KIND1, int KIND2>
 struct Equality<CAT1, KIND1, TypeCategory::Complex, KIND2> {
   using Type1 = CppTypeFor<CAT1, KIND1>;
   using Type2 = CppTypeFor<TypeCategory::Complex, KIND2>;
-  bool operator()(const Descriptor &array, const SubscriptValue at[],
-      const Descriptor &target) const {
+  RT_API_ATTRS bool operator()(const Descriptor &array,
+      const SubscriptValue at[], const Descriptor &target) const {
     const Type2 &z{*target.OffsetElement<Type2>()};
     return *array.Element<Type1>(at) == z.real() && z.imag() == 0;
   }
@@ -63,8 +63,8 @@ struct Equality<CAT1, KIND1, TypeCategory::Complex, KIND2> {
 
 template <int KIND> struct CharacterEquality {
   using Type = CppTypeFor<TypeCategory::Character, KIND>;
-  bool operator()(const Descriptor &array, const SubscriptValue at[],
-      const Descriptor &target) const {
+  RT_API_ATTRS bool operator()(const Descriptor &array,
+      const SubscriptValue at[], const Descriptor &target) const {
     return CharacterScalarCompare<Type>(array.Element<Type>(at),
                target.OffsetElement<Type>(),
                array.ElementBytes() / static_cast<unsigned>(KIND),
@@ -73,8 +73,8 @@ template <int KIND> struct CharacterEquality {
 };
 
 struct LogicalEquivalence {
-  bool operator()(const Descriptor &array, const SubscriptValue at[],
-      const Descriptor &target) const {
+  RT_API_ATTRS bool operator()(const Descriptor &array,
+      const SubscriptValue at[], const Descriptor &target) const {
     return IsLogicalElementTrue(array, at) ==
         IsLogicalElementTrue(target, at /*ignored*/);
   }
@@ -82,29 +82,31 @@ struct LogicalEquivalence {
 
 template <typename EQUALITY> class LocationAccumulator {
 public:
-  LocationAccumulator(
+  RT_API_ATTRS LocationAccumulator(
       const Descriptor &array, const Descriptor &target, bool back)
-      : array_{array}, target_{target}, back_{back} {
-    Reinitialize();
-  }
-  void Reinitialize() {
-    // per standard: result indices are all zero if no data
-    for (int j{0}; j < rank_; ++j) {
-      location_[j] = 0;
-    }
-  }
-  template <typename A> void GetResult(A *p, int zeroBasedDim = -1) {
+      : array_{array}, target_{target}, back_{back} {}
+  RT_API_ATTRS void Reinitialize() { gotAnything_ = false; }
+  template <typename A>
+  RT_API_ATTRS void GetResult(A *p, int zeroBasedDim = -1) {
     if (zeroBasedDim >= 0) {
-      *p = location_[zeroBasedDim] -
-          array_.GetDimension(zeroBasedDim).LowerBound() + 1;
-    } else {
+      *p = gotAnything_ ? location_[zeroBasedDim] -
+              array_.GetDimension(zeroBasedDim).LowerBound() + 1
+                        : 0;
+    } else if (gotAnything_) {
       for (int j{0}; j < rank_; ++j) {
         p[j] = location_[j] - array_.GetDimension(j).LowerBound() + 1;
       }
+    } else {
+      // no unmasked hits? result is all zeroes
+      for (int j{0}; j < rank_; ++j) {
+        p[j] = 0;
+      }
     }
   }
-  template <typename IGNORED> bool AccumulateAt(const SubscriptValue at[]) {
+  template <typename IGNORED>
+  RT_API_ATTRS bool AccumulateAt(const SubscriptValue at[]) {
     if (equality_(array_, at, target_)) {
+      gotAnything_ = true;
       for (int j{0}; j < rank_; ++j) {
         location_[j] = at[j];
       }
@@ -119,6 +121,7 @@ private:
   const Descriptor &target_;
   const bool back_{false};
   const int rank_{array_.rank()};
+  bool gotAnything_{false};
   SubscriptValue location_[maxRank];
   const EQUALITY equality_{};
 };
@@ -126,7 +129,7 @@ private:
 template <TypeCategory XCAT, int XKIND, TypeCategory TARGET_CAT>
 struct TotalNumericFindlocHelper {
   template <int TARGET_KIND> struct Functor {
-    void operator()(Descriptor &result, const Descriptor &x,
+    RT_API_ATTRS void operator()(Descriptor &result, const Descriptor &x,
         const Descriptor &target, int kind, int dim, const Descriptor *mask,
         bool back, Terminator &terminator) const {
       using Eq = Equality<XCAT, XKIND, TARGET_CAT, TARGET_KIND>;
@@ -144,9 +147,10 @@ template <TypeCategory CAT,
     class HELPER>
 struct NumericFindlocHelper {
   template <int KIND> struct Functor {
-    void operator()(TypeCategory targetCat, int targetKind, Descriptor &result,
-        const Descriptor &x, const Descriptor &target, int kind, int dim,
-        const Descriptor *mask, bool back, Terminator &terminator) const {
+    RT_API_ATTRS void operator()(TypeCategory targetCat, int targetKind,
+        Descriptor &result, const Descriptor &x, const Descriptor &target,
+        int kind, int dim, const Descriptor *mask, bool back,
+        Terminator &terminator) const {
       switch (targetCat) {
       case TypeCategory::Integer:
         ApplyIntegerKind<
@@ -176,7 +180,7 @@ struct NumericFindlocHelper {
 };
 
 template <int KIND> struct CharacterFindlocHelper {
-  void operator()(Descriptor &result, const Descriptor &x,
+  RT_API_ATTRS void operator()(Descriptor &result, const Descriptor &x,
       const Descriptor &target, int kind, const Descriptor *mask, bool back,
       Terminator &terminator) {
     using Accumulator = LocationAccumulator<CharacterEquality<KIND>>;
@@ -187,9 +191,9 @@ template <int KIND> struct CharacterFindlocHelper {
   }
 };
 
-static void LogicalFindlocHelper(Descriptor &result, const Descriptor &x,
-    const Descriptor &target, int kind, const Descriptor *mask, bool back,
-    Terminator &terminator) {
+static RT_API_ATTRS void LogicalFindlocHelper(Descriptor &result,
+    const Descriptor &x, const Descriptor &target, int kind,
+    const Descriptor *mask, bool back, Terminator &terminator) {
   using Accumulator = LocationAccumulator<LogicalEquivalence>;
   Accumulator accumulator{x, target, back};
   DoTotalReduction<void>(x, 0, mask, accumulator, "FINDLOC", terminator);
@@ -198,7 +202,9 @@ static void LogicalFindlocHelper(Descriptor &result, const Descriptor &x,
 }
 
 extern "C" {
-void RTNAME(Findloc)(Descriptor &result, const Descriptor &x,
+RT_EXT_API_GROUP_BEGIN
+
+void RTDEF(Findloc)(Descriptor &result, const Descriptor &x,
     const Descriptor &target, int kind, const char *source, int line,
     const Descriptor *mask, bool back) {
   int rank{x.rank()};
@@ -250,6 +256,8 @@ void RTNAME(Findloc)(Descriptor &result, const Descriptor &x,
         "FINDLOC: bad data type code (%d) for array", x.type().raw());
   }
 }
+
+RT_EXT_API_GROUP_END
 } // extern "C"
 
 // FINDLOC with DIM=
@@ -257,7 +265,7 @@ void RTNAME(Findloc)(Descriptor &result, const Descriptor &x,
 template <TypeCategory XCAT, int XKIND, TypeCategory TARGET_CAT>
 struct PartialNumericFindlocHelper {
   template <int TARGET_KIND> struct Functor {
-    void operator()(Descriptor &result, const Descriptor &x,
+    RT_API_ATTRS void operator()(Descriptor &result, const Descriptor &x,
         const Descriptor &target, int kind, int dim, const Descriptor *mask,
         bool back, Terminator &terminator) const {
       using Eq = Equality<XCAT, XKIND, TARGET_CAT, TARGET_KIND>;
@@ -271,7 +279,7 @@ struct PartialNumericFindlocHelper {
 };
 
 template <int KIND> struct PartialCharacterFindlocHelper {
-  void operator()(Descriptor &result, const Descriptor &x,
+  RT_API_ATTRS void operator()(Descriptor &result, const Descriptor &x,
       const Descriptor &target, int kind, int dim, const Descriptor *mask,
       bool back, Terminator &terminator) {
     using Accumulator = LocationAccumulator<CharacterEquality<KIND>>;
@@ -282,9 +290,9 @@ template <int KIND> struct PartialCharacterFindlocHelper {
   }
 };
 
-static void PartialLogicalFindlocHelper(Descriptor &result, const Descriptor &x,
-    const Descriptor &target, int kind, int dim, const Descriptor *mask,
-    bool back, Terminator &terminator) {
+static RT_API_ATTRS void PartialLogicalFindlocHelper(Descriptor &result,
+    const Descriptor &x, const Descriptor &target, int kind, int dim,
+    const Descriptor *mask, bool back, Terminator &terminator) {
   using Accumulator = LocationAccumulator<LogicalEquivalence>;
   Accumulator accumulator{x, target, back};
   ApplyIntegerKind<PartialLocationHelper<Accumulator>::template Functor, void>(
@@ -293,7 +301,9 @@ static void PartialLogicalFindlocHelper(Descriptor &result, const Descriptor &x,
 }
 
 extern "C" {
-void RTNAME(FindlocDim)(Descriptor &result, const Descriptor &x,
+RT_EXT_API_GROUP_BEGIN
+
+void RTDEF(FindlocDim)(Descriptor &result, const Descriptor &x,
     const Descriptor &target, int kind, int dim, const char *source, int line,
     const Descriptor *mask, bool back) {
   Terminator terminator{source, line};
@@ -337,5 +347,7 @@ void RTNAME(FindlocDim)(Descriptor &result, const Descriptor &x,
         "FINDLOC: bad data type code (%d) for array", x.type().raw());
   }
 }
+
+RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::runtime

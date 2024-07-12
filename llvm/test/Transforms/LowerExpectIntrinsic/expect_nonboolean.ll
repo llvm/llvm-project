@@ -99,6 +99,5 @@ attributes #1 = { nounwind readnone }
 
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{!"clang version 5.0.0 (trunk 304373)"}
-; CHECK: [[LIKELY]] = !{!"branch_weights", i32 2000, i32 1}
-; CHECK: [[UNLIKELY]] = !{!"branch_weights", i32 1, i32 2000}
-
+; CHECK: [[LIKELY]] = !{!"branch_weights", !"expected", i32 2000, i32 1}
+; CHECK: [[UNLIKELY]] = !{!"branch_weights", !"expected", i32 1, i32 2000}

@@ -205,11 +205,50 @@ namespace LiveDebugValues {
 using namespace llvm;
 
 /// Type for a table of values in a block.
-using ValueTable = std::unique_ptr<ValueIDNum[]>;
+using ValueTable = SmallVector<ValueIDNum, 0>;
 
-/// Type for a table-of-table-of-values, i.e., the collection of either
-/// live-in or live-out values for each block in the function.
-using FuncValueTable = std::unique_ptr<ValueTable[]>;
+/// A collection of ValueTables, one per BB in a function, with convenient
+/// accessor methods.
+struct FuncValueTable {
+  FuncValueTable(int NumBBs, int NumLocs) {
+    Storage.reserve(NumBBs);
+    for (int i = 0; i != NumBBs; ++i)
+      Storage.push_back(
+          std::make_unique<ValueTable>(NumLocs, ValueIDNum::EmptyValue));
+  }
+
+  /// Returns the ValueTable associated with MBB.
+  ValueTable &operator[](const MachineBasicBlock &MBB) const {
+    return (*this)[MBB.getNumber()];
+  }
+
+  /// Returns the ValueTable associated with the MachineBasicBlock whose number
+  /// is MBBNum.
+  ValueTable &operator[](int MBBNum) const {
+    auto &TablePtr = Storage[MBBNum];
+    assert(TablePtr && "Trying to access a deleted table");
+    return *TablePtr;
+  }
+
+  /// Returns the ValueTable associated with the entry MachineBasicBlock.
+  ValueTable &tableForEntryMBB() const { return (*this)[0]; }
+
+  /// Returns true if the ValueTable associated with MBB has not been freed.
+  bool hasTableFor(MachineBasicBlock &MBB) const {
+    return Storage[MBB.getNumber()] != nullptr;
+  }
+
+  /// Frees the memory of the ValueTable associated with MBB.
+  void ejectTableForBlock(const MachineBasicBlock &MBB) {
+    Storage[MBB.getNumber()].reset();
+  }
+
+private:
+  /// ValueTables are stored as unique_ptrs to allow for deallocation during
+  /// LDV; this was measured to have a significant impact on compiler memory
+  /// usage.
+  SmallVector<std::unique_ptr<ValueTable>, 0> Storage;
+};
 
 /// Thin wrapper around an integer -- designed to give more type safety to
 /// spill location numbers.
@@ -885,7 +924,7 @@ public:
   LocIdx getRegMLoc(Register R) {
     unsigned ID = getLocID(R);
     assert(ID < LocIDToLocIdx.size());
-    assert(LocIDToLocIdx[ID] != UINT_MAX); // Sentinal for IndexedMap.
+    assert(LocIDToLocIdx[ID] != UINT_MAX); // Sentinel for IndexedMap.
     return LocIDToLocIdx[ID];
   }
 
@@ -901,7 +940,7 @@ public:
 
   // Get LocIdx of a spill ID.
   LocIdx getSpillMLoc(unsigned SpillID) {
-    assert(LocIDToLocIdx[SpillID] != UINT_MAX); // Sentinal for IndexedMap.
+    assert(LocIDToLocIdx[SpillID] != UINT_MAX); // Sentinel for IndexedMap.
     return LocIDToLocIdx[SpillID];
   }
 
@@ -1200,12 +1239,12 @@ private:
   /// exists, otherwise returns std::nullopt.
   std::optional<ValueIDNum> getValueForInstrRef(unsigned InstNo, unsigned OpNo,
                                                 MachineInstr &MI,
-                                                const ValueTable *MLiveOuts,
-                                                const ValueTable *MLiveIns);
+                                                const FuncValueTable *MLiveOuts,
+                                                const FuncValueTable *MLiveIns);
 
   /// Observe a single instruction while stepping through a block.
-  void process(MachineInstr &MI, const ValueTable *MLiveOuts,
-               const ValueTable *MLiveIns);
+  void process(MachineInstr &MI, const FuncValueTable *MLiveOuts,
+               const FuncValueTable *MLiveIns);
 
   /// Examines whether \p MI is a DBG_VALUE and notifies trackers.
   /// \returns true if MI was recognized and processed.
@@ -1213,8 +1252,8 @@ private:
 
   /// Examines whether \p MI is a DBG_INSTR_REF and notifies trackers.
   /// \returns true if MI was recognized and processed.
-  bool transferDebugInstrRef(MachineInstr &MI, const ValueTable *MLiveOuts,
-                             const ValueTable *MLiveIns);
+  bool transferDebugInstrRef(MachineInstr &MI, const FuncValueTable *MLiveOuts,
+                             const FuncValueTable *MLiveIns);
 
   /// Stores value-information about where this PHI occurred, and what
   /// instruction number is associated with it.
@@ -1246,14 +1285,14 @@ private:
   /// \p InstrNum Debug instruction number defined by DBG_PHI instructions.
   /// \returns The machine value number at position Here, or std::nullopt.
   std::optional<ValueIDNum> resolveDbgPHIs(MachineFunction &MF,
-                                           const ValueTable *MLiveOuts,
-                                           const ValueTable *MLiveIns,
+                                           const FuncValueTable &MLiveOuts,
+                                           const FuncValueTable &MLiveIns,
                                            MachineInstr &Here,
                                            uint64_t InstrNum);
 
   std::optional<ValueIDNum> resolveDbgPHIsImpl(MachineFunction &MF,
-                                               const ValueTable *MLiveOuts,
-                                               const ValueTable *MLiveIns,
+                                               const FuncValueTable &MLiveOuts,
+                                               const FuncValueTable &MLiveIns,
                                                MachineInstr &Here,
                                                uint64_t InstrNum);
 

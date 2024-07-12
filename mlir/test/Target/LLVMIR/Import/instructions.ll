@@ -370,6 +370,19 @@ define void @load_store(ptr %ptr) {
 
 ; // -----
 
+; CHECK-LABEL: @invariant_load
+; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
+define float @invariant_load(ptr %ptr) {
+  ; CHECK:  %[[V:[0-9]+]] = llvm.load %[[PTR]] invariant {alignment = 4 : i64} : !llvm.ptr -> f32
+  %1 = load float, ptr %ptr, align 4, !invariant.load !0
+  ; CHECK:  llvm.return %[[V]]
+  ret float %1
+}
+
+!0 = !{}
+
+; // -----
+
 ; CHECK-LABEL: @atomic_load_store
 ; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
 define void @atomic_load_store(ptr %ptr) {

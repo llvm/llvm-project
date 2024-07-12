@@ -13,7 +13,7 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(long double, sqrtl, (long double x)) {
-  return fputil::sqrt(x);
+  return fputil::sqrt<long double>(x);
 }
 
 } // namespace LIBC_NAMESPACE

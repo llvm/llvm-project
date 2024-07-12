@@ -1,6 +1,7 @@
 ; Test 128-bit compare and swap.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-Z10
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-Z13
 
 ; Check CDSG without a displacement.
 define i128 @f1(i128 %cmp, i128 %swap, ptr %src) {
@@ -118,10 +119,12 @@ define i128 @f9(i128 %cmp, ptr %ptr) {
 ; CHECK-DAG: lg %r0, 0(%r3)
 ; CHECK-DAG: lg %r13, 8(%r2)
 ; CHECK-DAG: lg %r12, 0(%r2)
+; CHECK-Z13: lhi %r2, 0
 ; CHECK:     cdsg %r12, %r0, 0(%r4)
-; CHECK-NEXT: ipm %r2
-; CHECK-NEXT: afi %r2, -268435456
-; CHECK-NEXT: srl %r2, 31
+; CHECK-Z10-NEXT: ipm %r2
+; CHECK-Z10-NEXT: afi %r2, -268435456
+; CHECK-Z10-NEXT: srl %r2, 31
+; CHECK-Z13-NEXT: lochie %r2, 1
 ; CHECK: br %r14
 define i32 @f10(i128 %cmp, i128 %swap, ptr %src) {
   %pairval = cmpxchg ptr %src, i128 %cmp, i128 %swap seq_cst seq_cst

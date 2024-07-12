@@ -16,4 +16,16 @@ module __CUDA_builtins
     blockIdx => __builtin_blockIdx, &
     gridDim => __builtin_gridDim, &
     warpsize => __builtin_warpsize
+
+  implicit none
+
+  ! Set PRIVATE by default to explicitly only export what is meant
+  ! to be exported by this MODULE.
+  private
+
+  public :: threadIdx, &
+    blockDim, &
+    blockIdx, &
+    gridDim, &
+    warpsize
 end module

@@ -52,14 +52,14 @@ template <class OutIt>
   requires std::output_iterator<OutIt, const char&>
 void test_encode(OutIt& out_it, char16_t value) {
   if (value < 0x80)
-    *out_it++ = value;
+    *out_it++ = static_cast<char>(value);
   else if (value < 0x800) {
-    *out_it++ = 0b11000000 | (value >> 6);
-    *out_it++ = 0b10000000 | (value & 0b00111111);
+    *out_it++ = static_cast<char>(0b11000000 | (value >> 6));
+    *out_it++ = static_cast<char>(0b10000000 | (value & 0b00111111));
   } else {
-    *out_it++ = 0b11100000 | (value >> 12);
-    *out_it++ = 0b10000000 | ((value) >> 6 & 0b00111111);
-    *out_it++ = 0b10000000 | (value & 0b00111111);
+    *out_it++ = static_cast<char>(0b11100000 | (value >> 12));
+    *out_it++ = static_cast<char>(0b10000000 | ((value) >> 6 & 0b00111111));
+    *out_it++ = static_cast<char>(0b10000000 | (value & 0b00111111));
   }
 }
 
@@ -69,10 +69,10 @@ void test_encode(OutIt& out_it, char32_t value) {
   if ((value & 0xffff0000) == 0)
     test_encode(out_it, static_cast<char16_t>(value));
   else {
-    *out_it++ = 0b11100000 | (value >> 18);
-    *out_it++ = 0b10000000 | ((value) >> 12 & 0b00111111);
-    *out_it++ = 0b10000000 | ((value) >> 6 & 0b00111111);
-    *out_it++ = 0b10000000 | (value & 0b00111111);
+    *out_it++ = static_cast<char>(0b11100000 | (value >> 18));
+    *out_it++ = static_cast<char>(0b10000000 | ((value) >> 12 & 0b00111111));
+    *out_it++ = static_cast<char>(0b10000000 | ((value) >> 6 & 0b00111111));
+    *out_it++ = static_cast<char>(0b10000000 | (value & 0b00111111));
   }
 }
 

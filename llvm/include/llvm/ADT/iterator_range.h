@@ -43,14 +43,15 @@ class iterator_range {
   IteratorT begin_iterator, end_iterator;
 
 public:
-#if __GNUC__ == 7
-  // Be careful no to break gcc-7 on the mlir target.
+#if __GNUC__ == 7 || (__GNUC__ == 8 && __GNUC_MINOR__ < 4)
+  // Be careful no to break gcc-7 and gcc-8 < 8.4 on the mlir target.
   // See https://github.com/llvm/llvm-project/issues/63843
   template <typename Container>
 #else
-  template <typename Container,
-            std::enable_if_t<explicitly_convertible<
-                detail::IterOfRange<Container>, IteratorT>::value> * = nullptr>
+  template <
+      typename Container,
+      std::enable_if_t<explicitly_convertible<
+          llvm::detail::IterOfRange<Container>, IteratorT>::value> * = nullptr>
 #endif
   iterator_range(Container &&c)
       : begin_iterator(adl_begin(c)), end_iterator(adl_end(c)) {
@@ -65,7 +66,8 @@ public:
 };
 
 template <typename Container>
-iterator_range(Container &&) -> iterator_range<detail::IterOfRange<Container>>;
+iterator_range(Container &&)
+    -> iterator_range<llvm::detail::IterOfRange<Container>>;
 
 /// Convenience function for iterating over sub-ranges.
 ///

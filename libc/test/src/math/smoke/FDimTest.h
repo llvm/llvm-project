@@ -6,20 +6,26 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "src/__support/FPUtil/BasicOperations.h"
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <math.h>
 
 template <typename T>
-class FDimTestTemplate : public LIBC_NAMESPACE::testing::Test {
+class FDimTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
   using FuncPtr = T (*)(T, T);
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
 
-  void test_na_n_arg(FuncPtr func) {
+  const T inf = FPBits::inf(Sign::POS).get_val();
+  const T neg_inf = FPBits::inf(Sign::NEG).get_val();
+  const T zero = FPBits::zero(Sign::POS).get_val();
+  const T neg_zero = FPBits::zero(Sign::NEG).get_val();
+  const T nan = FPBits::quiet_nan().get_val();
+
+  void test_nan_arg(FuncPtr func) {
     EXPECT_FP_EQ(nan, func(nan, inf));
     EXPECT_FP_EQ(nan, func(neg_inf, nan));
     EXPECT_FP_EQ(nan, func(nan, zero));
@@ -53,15 +59,21 @@ public:
   }
 
   void test_in_range(FuncPtr func) {
-    constexpr UIntType COUNT = 100'001;
-    constexpr UIntType STEP = UIntType(-1) / COUNT;
-    for (UIntType i = 0, v = 0, w = UIntType(-1); i <= COUNT;
-         ++i, v += STEP, w -= STEP) {
-      T x = T(FPBits(v)), y = T(FPBits(w));
-      if (isnan(x) || isinf(x))
+    constexpr StorageType STORAGE_MAX =
+        LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();
+    constexpr int COUNT = 100'001;
+    constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
+        static_cast<StorageType>(STORAGE_MAX / COUNT), StorageType(1));
+    StorageType v = 0, w = STORAGE_MAX;
+    for (int i = 0; i <= COUNT; ++i, v += STEP, w -= STEP) {
+      FPBits xbits(v), ybits(w);
+      if (xbits.is_inf_or_nan())
         continue;
-      if (isnan(y) || isinf(y))
+      if (ybits.is_inf_or_nan())
         continue;
+
+      T x = xbits.get_val();
+      T y = ybits.get_val();
 
       if (x > y) {
         EXPECT_FP_EQ(x - y, func(x, y));
@@ -70,13 +82,13 @@ public:
       }
     }
   }
-
-private:
-  // constexpr does not work on FPBits yet, so we cannot have these constants as
-  // static.
-  const T nan = T(LIBC_NAMESPACE::fputil::FPBits<T>::build_quiet_nan(1));
-  const T inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::inf());
-  const T neg_inf = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_inf());
-  const T zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::zero());
-  const T neg_zero = T(LIBC_NAMESPACE::fputil::FPBits<T>::neg_zero());
 };
+
+#define LIST_FDIM_TESTS(T, func)                                               \
+  using LlvmLibcFDimTest = FDimTestTemplate<T>;                                \
+  TEST_F(LlvmLibcFDimTest, NaNArg) { test_nan_arg(&func); }                    \
+  TEST_F(LlvmLibcFDimTest, InfArg) { test_inf_arg(&func); }                    \
+  TEST_F(LlvmLibcFDimTest, NegInfArg) { test_neg_inf_arg(&func); }             \
+  TEST_F(LlvmLibcFDimTest, BothZero) { test_both_zero(&func); }                \
+  TEST_F(LlvmLibcFDimTest, InFloatRange) { test_in_range(&func); }             \
+  static_assert(true, "Require semicolon.")

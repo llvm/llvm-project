@@ -54,7 +54,7 @@ void *__asan_memmove(void *dest, const void *src, uptr n) {
 
 // Functions concerning RTL startup and initialization
 void __asan_init(void) {
-  static_assert(sizeof(uptr) == 8);
+  static_assert(sizeof(uptr) == 8 || sizeof(uptr) == 4);
   static_assert(sizeof(u64) == 8);
   static_assert(sizeof(u32) == 4);
 

@@ -89,7 +89,6 @@ entry:
 define zeroext i8 @test_mm_aesenc256kl_u8(ptr %odata, <2 x i64> %idata, ptr %h) {
 ; CHECK-LABEL: test_mm_aesenc256kl_u8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    aesenc256kl (%rsi), %xmm0
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    movaps %xmm0, (%rdi)
@@ -105,7 +104,6 @@ entry:
 define zeroext i8 @test_mm_aesdec256kl_u8(ptr %odata, <2 x i64> %idata, ptr %h) {
 ; CHECK-LABEL: test_mm_aesdec256kl_u8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    aesdec256kl (%rsi), %xmm0
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    movaps %xmm0, (%rdi)
@@ -121,7 +119,6 @@ entry:
 define zeroext i8 @test_mm_aesenc128kl_u8(ptr %odata, <2 x i64> %idata, ptr %h) {
 ; CHECK-LABEL: test_mm_aesenc128kl_u8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    aesenc128kl (%rsi), %xmm0
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    movaps %xmm0, (%rdi)
@@ -137,7 +134,6 @@ entry:
 define zeroext i8 @test_mm_aesdec128kl_u8(ptr %odata, <2 x i64> %idata, ptr %h) {
 ; CHECK-LABEL: test_mm_aesdec128kl_u8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    aesdec128kl (%rsi), %xmm0
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    movaps %xmm0, (%rdi)
@@ -161,7 +157,6 @@ define zeroext i8 @test__mm_aesencwide128kl_u8(ptr %odata, ptr %idata, ptr %h) {
 ; CHECK-NEXT:    movaps 80(%rsi), %xmm5
 ; CHECK-NEXT:    movaps 96(%rsi), %xmm6
 ; CHECK-NEXT:    movaps 112(%rsi), %xmm7
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    aesencwide128kl (%rdx)
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    movaps %xmm0, (%rdi)
@@ -228,7 +223,6 @@ define zeroext i8 @test__mm_aesdecwide128kl_u8(ptr %odata, ptr %idata, ptr %h) {
 ; CHECK-NEXT:    movaps 80(%rsi), %xmm5
 ; CHECK-NEXT:    movaps 96(%rsi), %xmm6
 ; CHECK-NEXT:    movaps 112(%rsi), %xmm7
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    aesdecwide128kl (%rdx)
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    movaps %xmm0, (%rdi)
@@ -295,7 +289,6 @@ define zeroext i8 @test__mm_aesencwide256kl_u8(ptr %odata, ptr %idata, ptr %h) {
 ; CHECK-NEXT:    movaps 80(%rsi), %xmm5
 ; CHECK-NEXT:    movaps 96(%rsi), %xmm6
 ; CHECK-NEXT:    movaps 112(%rsi), %xmm7
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    aesencwide256kl (%rdx)
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    movaps %xmm0, (%rdi)
@@ -362,7 +355,6 @@ define zeroext i8 @test__mm_aesdecwide256kl_u8(ptr %odata, ptr %idata, ptr %h) {
 ; CHECK-NEXT:    movaps 80(%rsi), %xmm5
 ; CHECK-NEXT:    movaps 96(%rsi), %xmm6
 ; CHECK-NEXT:    movaps 112(%rsi), %xmm7
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    aesdecwide256kl (%rdx)
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    movaps %xmm0, (%rdi)

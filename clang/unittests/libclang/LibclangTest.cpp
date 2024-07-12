@@ -451,8 +451,8 @@ public:
 
       const auto Filename = llvm::sys::path::filename(File->path());
       EXPECT_EQ(Filename.size(), std::strlen("preamble-%%%%%%.pch"));
-      EXPECT_TRUE(Filename.startswith("preamble-"));
-      EXPECT_TRUE(Filename.endswith(".pch"));
+      EXPECT_TRUE(Filename.starts_with("preamble-"));
+      EXPECT_TRUE(Filename.ends_with(".pch"));
 
       const auto Status = File->status();
       ASSERT_TRUE(Status);
@@ -659,7 +659,7 @@ TEST_F(LibclangReparseTest, FileName) {
   clang_disposeString(cxname);
 
   cxname = clang_File_tryGetRealPathName(cxf);
-  ASSERT_TRUE(llvm::StringRef(clang_getCString(cxname)).endswith("main.cpp"));
+  ASSERT_TRUE(llvm::StringRef(clang_getCString(cxname)).ends_with("main.cpp"));
   clang_disposeString(cxname);
 }
 
@@ -1290,6 +1290,37 @@ void func() {}
       });
 
   EXPECT_EQ(attrCount, 1);
+}
+
+TEST_F(LibclangParseTest, clang_getSpellingLocation) {
+  std::string fileName = "main.c";
+  WriteFile(fileName, "#define X(value) int x = value;\nX(42)\n");
+
+  ClangTU = clang_parseTranslationUnit(Index, fileName.c_str(), nullptr, 0,
+                                       nullptr, 0, TUFlags);
+
+  int declarationCount = 0;
+  Traverse([&declarationCount](CXCursor cursor,
+                               CXCursor parent) -> CXChildVisitResult {
+    if (cursor.kind == CXCursor_VarDecl) {
+      declarationCount++;
+
+      CXSourceLocation cxl = clang_getCursorLocation(cursor);
+      unsigned line;
+
+      // We expect clang_getFileLocation to return the expansion location,
+      // whereas clang_getSpellingLocation should resolve the macro expansion
+      // and return the location of the macro definition.
+      clang_getFileLocation(cxl, nullptr, &line, nullptr, nullptr);
+      EXPECT_EQ(line, 2U);
+      clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
+      EXPECT_EQ(line, 1U);
+    }
+
+    return CXChildVisit_Recurse;
+  });
+
+  EXPECT_EQ(declarationCount, 1);
 }
 
 class LibclangRewriteTest : public LibclangParseTest {

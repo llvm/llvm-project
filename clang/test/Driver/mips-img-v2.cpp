@@ -1,5 +1,3 @@
-// REQUIRES: mips-registered-target
-
 // Check frontend and linker invocations on the IMG v2 MIPS toolchain.
 
 // -EB -mips32r6 -mhard-float -mabi=32

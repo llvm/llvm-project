@@ -89,12 +89,12 @@ define <8 x i32> @t1_vec_splat(<8 x i64> %x, <8 x i32> %nbits) {
   ret <8 x i32> %t6
 }
 
-define <8 x i32> @t2_vec_splat_undef(<8 x i64> %x, <8 x i32> %nbits) {
-; CHECK-LABEL: @t2_vec_splat_undef(
+define <8 x i32> @t2_vec_splat_poison(<8 x i64> %x, <8 x i32> %nbits) {
+; CHECK-LABEL: @t2_vec_splat_poison(
 ; CHECK-NEXT:    [[T0:%.*]] = zext <8 x i32> [[NBITS:%.*]] to <8 x i64>
-; CHECK-NEXT:    [[T1:%.*]] = shl <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 undef, i64 -1>, [[T0]]
-; CHECK-NEXT:    [[T2:%.*]] = xor <8 x i64> [[T1]], <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 undef, i64 -1>
-; CHECK-NEXT:    [[T3:%.*]] = sub <8 x i32> <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 undef, i32 32>, [[NBITS]]
+; CHECK-NEXT:    [[T1:%.*]] = shl nsw <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 poison, i64 -1>, [[T0]]
+; CHECK-NEXT:    [[T2:%.*]] = xor <8 x i64> [[T1]], <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 poison, i64 -1>
+; CHECK-NEXT:    [[T3:%.*]] = sub <8 x i32> <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 poison, i32 32>, [[NBITS]]
 ; CHECK-NEXT:    [[T4:%.*]] = and <8 x i64> [[T2]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use8xi32(<8 x i32> [[NBITS]])
 ; CHECK-NEXT:    call void @use8xi64(<8 x i64> [[T0]])
@@ -107,9 +107,9 @@ define <8 x i32> @t2_vec_splat_undef(<8 x i64> %x, <8 x i32> %nbits) {
 ; CHECK-NEXT:    ret <8 x i32> [[T6]]
 ;
   %t0 = zext <8 x i32> %nbits to <8 x i64>
-  %t1 = shl <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 undef, i64 -1>, %t0
-  %t2 = xor <8 x i64> %t1, <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 undef, i64 -1>
-  %t3 = sub <8 x i32> <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 undef, i32 32>, %nbits
+  %t1 = shl <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 poison, i64 -1>, %t0
+  %t2 = xor <8 x i64> %t1, <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 poison, i64 -1>
+  %t3 = sub <8 x i32> <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 poison, i32 32>, %nbits
   %t4 = and <8 x i64> %t2, %x
 
   call void @use8xi32(<8 x i32> %nbits)

@@ -1,5 +1,7 @@
 ; RUN: opt -passes=mem2reg -S %s -o - \
 ; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
+; RUN: opt --try-experimental-debuginfo-iterators -passes=mem2reg -S %s -o - \
+; RUN: | FileCheck %s --implicit-check-not="call void @llvm.dbg"
 
 ;; Test assignment tracking debug info when mem2reg promotes a single-block
 ;; alloca. Check the output when the stores are tagged and also untagged (test
@@ -7,11 +9,11 @@
 ;; "b" to the alloca).
 
 ; CHECK: entry:
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a, metadata ![[B:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a, metadata ![[A:[0-9]+]]
+; CHECK-NEXT: #dbg_value(i32 %a, ![[B:[0-9]+]]
+; CHECK-NEXT: #dbg_value(i32 %a, ![[A:[0-9]+]]
 ; CHECK-NEXT: %add =
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %add, metadata ![[B]]
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %add, metadata ![[A]]
+; CHECK-NEXT: #dbg_value(i32 %add, ![[B]]
+; CHECK-NEXT: #dbg_value(i32 %add, ![[A]]
 
 ; CHECK-DAG: ![[A]] = !DILocalVariable(name: "a",
 ; CHECK-DAG: ![[B]] = !DILocalVariable(name: "b",

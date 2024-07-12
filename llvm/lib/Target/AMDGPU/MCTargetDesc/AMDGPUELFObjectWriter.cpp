@@ -18,8 +18,7 @@ namespace {
 
 class AMDGPUELFObjectWriter : public MCELFObjectTargetWriter {
 public:
-  AMDGPUELFObjectWriter(bool Is64Bit, uint8_t OSABI, bool HasRelocationAddend,
-                        uint8_t ABIVersion);
+  AMDGPUELFObjectWriter(bool Is64Bit, uint8_t OSABI, bool HasRelocationAddend);
 
 protected:
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
@@ -29,12 +28,10 @@ protected:
 
 } // end anonymous namespace
 
-AMDGPUELFObjectWriter::AMDGPUELFObjectWriter(bool Is64Bit,
-                                             uint8_t OSABI,
-                                             bool HasRelocationAddend,
-                                             uint8_t ABIVersion)
-  : MCELFObjectTargetWriter(Is64Bit, OSABI, ELF::EM_AMDGPU,
-                            HasRelocationAddend, ABIVersion) {}
+AMDGPUELFObjectWriter::AMDGPUELFObjectWriter(bool Is64Bit, uint8_t OSABI,
+                                             bool HasRelocationAddend)
+    : MCELFObjectTargetWriter(Is64Bit, OSABI, ELF::EM_AMDGPU,
+                              HasRelocationAddend) {}
 
 unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
                                              const MCValue &Target,
@@ -100,9 +97,7 @@ unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
 
 std::unique_ptr<MCObjectTargetWriter>
 llvm::createAMDGPUELFObjectWriter(bool Is64Bit, uint8_t OSABI,
-                                  bool HasRelocationAddend,
-                                  uint8_t ABIVersion) {
+                                  bool HasRelocationAddend) {
   return std::make_unique<AMDGPUELFObjectWriter>(Is64Bit, OSABI,
-                                                  HasRelocationAddend,
-                                                  ABIVersion);
+                                                 HasRelocationAddend);
 }

@@ -56,11 +56,13 @@ endfunction()
 #     Use provided strip tool instead of the default one.
 #   TARGET_TRIPLE triple
 #     Optional target triple to pass to the compiler
+#   FOLDER
+#     For IDEs, the Folder to put the targets into.
 #   )
 function(llvm_ExternalProject_Add name source_dir)
   cmake_parse_arguments(ARG
     "USE_TOOLCHAIN;EXCLUDE_FROM_ALL;NO_INSTALL;ALWAYS_CLEAN"
-    "SOURCE_DIR"
+    "SOURCE_DIR;FOLDER"
     "CMAKE_ARGS;TOOLCHAIN_TOOLS;RUNTIME_LIBRARIES;DEPENDS;EXTRA_TARGETS;PASSTHROUGH_PREFIXES;STRIP_TOOL;TARGET_TRIPLE"
     ${ARGN})
   canonicalize_tool_name(${name} nameCanon)
@@ -83,7 +85,7 @@ function(llvm_ExternalProject_Add name source_dir)
     set(target_triple ${ARG_TARGET_TRIPLE})
   endif()
 
-  is_msvc_triple(is_msvc_target ${target_triple})
+  is_msvc_triple(is_msvc_target "${target_triple}")
 
   if(NOT ARG_TOOLCHAIN_TOOLS)
     set(ARG_TOOLCHAIN_TOOLS clang)
@@ -150,6 +152,9 @@ function(llvm_ExternalProject_Add name source_dir)
     COMMENT "Clobbering ${name} build and stamp directories"
     USES_TERMINAL
     )
+  if (ARG_FOLDER)
+    set_target_properties(${name}-clear PROPERTIES FOLDER "${ARG_FOLDER}")
+  endif ()
 
   # Find all variables that start with a prefix and propagate them through
   get_cmake_property(variableNames VARIABLES)
@@ -235,6 +240,11 @@ function(llvm_ExternalProject_Add name source_dir)
       list(APPEND compiler_args -DCMAKE_RC_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-rc${CMAKE_EXECUTABLE_SUFFIX})
     endif()
     list(APPEND ARG_DEPENDS ${TOOLCHAIN_TOOLS})
+    # Add LLVMgold.so dependency if it is available, as clang may need it for
+    # LTO.
+    if(CLANG_IN_TOOLCHAIN AND TARGET LLVMgold)
+      list(APPEND ARG_DEPENDS LLVMgold)
+    endif()
   endif()
 
   if(ARG_STRIP_TOOL)
@@ -252,6 +262,9 @@ function(llvm_ExternalProject_Add name source_dir)
 
   add_custom_target(${name}-clobber
     DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${name}-clobber-stamp)
+  if (ARG_FOLDER)
+    set_target_properties(${name}-clobber PROPERTIES FOLDER "${ARG_FOLDER}")
+  endif ()
 
   if(ARG_EXCLUDE_FROM_ALL)
     set(exclude EXCLUDE_FROM_ALL 1)
@@ -261,7 +274,7 @@ function(llvm_ExternalProject_Add name source_dir)
     set(sysroot_arg -DCMAKE_SYSROOT=${CMAKE_SYSROOT})
   endif()
 
-  if(CMAKE_CROSSCOMPILING OR _cmake_system_name STREQUAL AIX)
+  if(CMAKE_CROSSCOMPILING)
     set(compiler_args -DCMAKE_ASM_COMPILER=${CMAKE_ASM_COMPILER}
                       -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
                       -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
@@ -273,8 +286,6 @@ function(llvm_ExternalProject_Add name source_dir)
                       -DCMAKE_OBJDUMP=${CMAKE_OBJDUMP}
                       -DCMAKE_STRIP=${CMAKE_STRIP}
                       -DCMAKE_READELF=${CMAKE_READELF})
-  endif()
-  if(CMAKE_CROSSCOMPILING)
     set(llvm_config_path ${LLVM_CONFIG_PATH})
 
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -287,7 +298,7 @@ function(llvm_ExternalProject_Add name source_dir)
       endif()
       set(flag_types ASM C CXX MODULE_LINKER SHARED_LINKER EXE_LINKER)
       foreach(type ${flag_types})
-        set(${type}_flag -DCMAKE_${type}_FLAGS=-resource-dir=${resource_dir})
+        set(${type}_flag -DCMAKE_${type}_FLAGS_INIT=-resource-dir=${resource_dir})
       endforeach()
       string(REPLACE ";" "|" flag_string "${flag_types}")
       foreach(arg ${ARG_CMAKE_ARGS})
@@ -319,6 +330,10 @@ function(llvm_ExternalProject_Add name source_dir)
     list(APPEND compiler_args -DCMAKE_ASM_COMPILER_TARGET=${ARG_TARGET_TRIPLE})
   endif()
 
+  if(CMAKE_VERBOSE_MAKEFILE)
+    set(verbose -DCMAKE_VERBOSE_MAKEFILE=ON)
+  endif()
+
   ExternalProject_Add(${name}
     DEPENDS ${ARG_DEPENDS} llvm-config
     ${name}-clobber
@@ -330,6 +345,7 @@ function(llvm_ExternalProject_Add name source_dir)
     CMAKE_ARGS ${${nameCanon}_CMAKE_ARGS}
                --no-warn-unused-cli
                ${compiler_args}
+               ${verbose}
                -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
                ${sysroot_arg}
                -DLLVM_BINARY_DIR=${PROJECT_BINARY_DIR}
@@ -355,6 +371,12 @@ function(llvm_ExternalProject_Add name source_dir)
     USES_TERMINAL_INSTALL 1
     LIST_SEPARATOR |
     )
+  if (ARG_FOLDER)
+    set_target_properties(
+      ${name} ${name}-clobber ${name}-build ${name}-configure
+      PROPERTIES FOLDER "${ARG_FOLDER}"
+    )
+  endif ()
 
   if(ARG_USE_TOOLCHAIN)
     set(force_deps DEPENDS ${TOOLCHAIN_BINS})
@@ -371,6 +393,9 @@ function(llvm_ExternalProject_Add name source_dir)
     USES_TERMINAL 1
     )
   ExternalProject_Add_StepTargets(${name} clean)
+  if (ARG_FOLDER)
+    set_target_properties(${name}-clean PROPERTIES FOLDER "${ARG_FOLDER}")
+  endif ()
 
   if(ARG_USE_TOOLCHAIN)
     add_dependencies(${name}-clean ${name}-clobber)
@@ -385,6 +410,9 @@ function(llvm_ExternalProject_Add name source_dir)
     add_llvm_install_targets(install-${name}
                              DEPENDS ${name}
                              COMPONENT ${name})
+    if (ARG_FOLDER)
+       set_target_properties(install-${name} PROPERTIES FOLDER "${ARG_FOLDER}")
+    endif ()
   endif()
 
   # Add top-level targets
@@ -401,5 +429,8 @@ function(llvm_ExternalProject_Add name source_dir)
       WORKING_DIRECTORY ${BINARY_DIR}
       VERBATIM
       USES_TERMINAL)
+    if (ARG_FOLDER)
+      set_target_properties(${target} PROPERTIES FOLDER "${ARG_FOLDER}")
+    endif ()
   endforeach()
 endfunction()

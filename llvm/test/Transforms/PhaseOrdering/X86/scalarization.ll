@@ -26,7 +26,7 @@ define <4 x i32> @square(<4 x i32> %num, i32 %y, i32 %x, i32 %h, i32 %k, i32 %w,
 ; CHECK-NEXT:    [[OP_RDX13:%.*]] = add i32 [[OP_RDX10]], [[OP_RDX11]]
 ; CHECK-NEXT:    [[OP_RDX14:%.*]] = add i32 [[OP_RDX12]], [[OP_RDX13]]
 ; CHECK-NEXT:    [[OP_RDX15:%.*]] = add i32 [[OP_RDX14]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> <i32 undef, i32 poison, i32 poison, i32 poison>, i32 [[OP_RDX15]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[OP_RDX15]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[ADD29:%.*]] = add <4 x i32> [[TMP2]], [[NUM:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[ADD29]]

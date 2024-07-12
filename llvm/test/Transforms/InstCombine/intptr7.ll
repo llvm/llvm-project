@@ -6,7 +6,7 @@ define void @matching_phi(i64 %a, ptr %b, i1 %cond) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB2:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[ADDB:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 2
+; CHECK-NEXT:    [[ADDB:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i64 8
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[ADD_INT:%.*]] = add i64 [[A:%.*]], 1
@@ -48,7 +48,7 @@ define void @no_matching_phi(i64 %a, ptr %b, i1 %cond) {
 ; CHECK-LABEL: @no_matching_phi(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD_INT:%.*]] = add i64 [[A:%.*]], 1
-; CHECK-NEXT:    [[ADDB:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 2
+; CHECK-NEXT:    [[ADDB:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], i64 8
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[B:%.*]], label [[A:%.*]]
 ; CHECK:       A:
 ; CHECK-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[ADD_INT]] to ptr

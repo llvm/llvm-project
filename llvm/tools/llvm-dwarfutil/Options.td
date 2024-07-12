@@ -22,7 +22,7 @@ def h : Flag<["-"], "h">,
 
 def linker: Separate<["--", "-"], "linker">,
   MetaVarName<"<DWARF linker type>">,
-  HelpText<"Specify the desired type of DWARF linker. Defaults to 'apple'">;
+  HelpText<"Specify the desired type of DWARF linker. Defaults to 'classic'">;
 def: Joined<["--", "-"], "linker=">, Alias<linker>;
 
 defm odr_deduplication : BB<"odr-deduplication",

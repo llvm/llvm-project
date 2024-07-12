@@ -22,9 +22,9 @@ bool lldb_private::NameMatches(llvm::StringRef name, NameMatch match_type,
   case NameMatch::Contains:
     return name.contains(match);
   case NameMatch::StartsWith:
-    return name.startswith(match);
+    return name.starts_with(match);
   case NameMatch::EndsWith:
-    return name.endswith(match);
+    return name.ends_with(match);
   case NameMatch::RegularExpression: {
     RegularExpression regex(match);
     return regex.Execute(name);

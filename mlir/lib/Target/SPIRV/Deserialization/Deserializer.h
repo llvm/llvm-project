@@ -233,6 +233,19 @@ private:
     return globalVariableMap.lookup(id);
   }
 
+  /// Sets the function argument's attributes. |argID| is the function
+  /// argument's result <id>, and |argIndex| is its index in the function's
+  /// argument list.
+  LogicalResult setFunctionArgAttrs(uint32_t argID,
+                                    SmallVectorImpl<Attribute> &argAttrs,
+                                    size_t argIndex);
+
+  /// Gets the symbol name from the name of decoration.
+  StringAttr getSymbolDecoration(StringRef decorationName) {
+    auto attrName = llvm::convertToSnakeFromCamelCase(decorationName);
+    return opBuilder.getStringAttr(attrName);
+  }
+
   //===--------------------------------------------------------------------===//
   // Type
   //===--------------------------------------------------------------------===//

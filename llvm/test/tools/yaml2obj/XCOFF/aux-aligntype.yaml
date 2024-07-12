@@ -1,0 +1,114 @@
+## Check that yaml2obj can parse SymbolAlignmentAndType, SymbolAlignment,
+## and SymbolType.
+
+# RUN: yaml2obj %s --docnum=1 -DMAGIC=0x01DF -o %t32
+# RUN: obj2yaml %t32 | FileCheck %s --check-prefix=CHECK
+# RUN: yaml2obj %s --docnum=1 -DMAGIC=0x01F7 -o %t64
+# RUN: obj2yaml %t64 | FileCheck %s --check-prefix=CHECK
+
+# CHECK:        --- !XCOFF
+# CHECK-NEXT: FileHeader:
+# CHECK-NEXT:   MagicNumber:
+# CHECK:      Symbols:
+# CHECK:       - Name:            .fcn1
+# CHECK:         NumberOfAuxEntries: 1
+# CHECK-NEXT:    AuxEntries:
+# CHECK-NEXT:      - Type:            AUX_CSECT
+# CHECK:             SymbolType:      XTY_ER
+# CHECK-NEXT:        SymbolAlignment: 4
+# CHECK:       - Name:            .fcn2
+# CHECK:         NumberOfAuxEntries: 1
+# CHECK-NEXT:    AuxEntries:
+# CHECK-NEXT:      - Type:            AUX_CSECT
+# CHECK:             SymbolType:      XTY_SD
+# CHECK-NEXT:        SymbolAlignment: 2
+# CHECK:       - Name:            .fcn3
+# CHECK:         NumberOfAuxEntries: 1
+# CHECK-NEXT:    AuxEntries:
+# CHECK-NEXT:      - Type:            AUX_CSECT
+# CHECK:             SymbolType:      XTY_SD
+# CHECK-NEXT:        SymbolAlignment: 0
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: [[MAGIC]]
+Symbols:
+  - StorageClass: C_EXT
+    Name: .fcn1
+    AuxEntries:
+      - Type: AUX_CSECT
+        SymbolAlignment: 4
+  - StorageClass: C_EXT
+    Name: .fcn2
+    AuxEntries:
+      - Type: AUX_CSECT
+        SymbolAlignment: 2
+        SymbolType: XTY_SD
+  - StorageClass:    C_EXT
+    Name: .fcn3
+    AuxEntries:
+      - Type: AUX_CSECT
+        SymbolType: XTY_SD
+
+## Ensure that SymbolAlignment is in range.
+# RUN: not yaml2obj %s --docnum=2 -o %t 2>&1 | FileCheck %s --check-prefix=ERROR1
+# ERROR1: symbol alignment must be less than 32
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:     0x1F7
+Symbols:
+  - StorageClass:    C_EXT
+    Name:               .fcn1
+    AuxEntries:
+      - Type:               AUX_CSECT
+        SymbolType: XTY_SD
+        SymbolAlignment: 32
+        SectionOrLengthLo:    4
+
+## Ensure that neither SymbolAlignment nor SymbolType can be specified if
+## SymbolAlignmentAndType is specified.
+# RUN: not yaml2obj %s --docnum=3 -o %t 2>&1 | FileCheck %s --check-prefix=ERROR2
+# ERROR2: cannot specify SymbolType or SymbolAlignment if SymbolAlignmentAndType is specified
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Symbols:
+  - StorageClass: C_EXT
+    Name: .fcn1
+    AuxEntries:
+      - Type: AUX_CSECT
+        SymbolAlignmentAndType: 17
+        SymbolAlignment: 4
+        SectionOrLength: 4
+
+# RUN: not yaml2obj %s --docnum=4 -o %t 2>&1 | FileCheck %s --check-prefix=ERROR2
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Symbols:
+  - StorageClass: C_EXT
+    Name: .fcn1
+    AuxEntries:
+      - Type: AUX_CSECT
+        SymbolAlignmentAndType: 17
+        SymbolAlignment: 4
+        SymbolType: XTY_CM
+        SectionOrLength: 4
+
+# RUN: not yaml2obj %s --docnum=5 -o %t 2>&1 | FileCheck %s --check-prefix=ERROR2
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1F7
+Symbols:
+  - StorageClass: C_EXT
+  - StorageClass: C_EXT
+    Name: .fcn2
+    AuxEntries:
+      - Type: AUX_CSECT
+        SymbolAlignmentAndType: 18
+        SymbolType: XTY_SD
+        SectionOrLengthLo: 4

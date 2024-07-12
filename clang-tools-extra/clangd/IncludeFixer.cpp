@@ -416,7 +416,7 @@ std::optional<CheapUnresolvedName> extractUnresolvedNameCheaply(
         //     namespace clang { clangd::X; }
         // In this case, we use the "typo" specifier as extra scope instead
         // of using the scope assumed by sema.
-        if (!Spelling || llvm::StringRef(SpecifiedNS).endswith(*Spelling)) {
+        if (!Spelling || llvm::StringRef(SpecifiedNS).ends_with(*Spelling)) {
           Result.ResolvedScope = std::move(SpecifiedNS);
         } else {
           Result.UnresolvedScope = std::move(*Spelling);

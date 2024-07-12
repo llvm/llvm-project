@@ -10104,10 +10104,10 @@ define void @fmadd_ss_mask_memfold(ptr %a, ptr %b, i8 %c) {
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x0c]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx ## encoding: [0x8b,0x4c,0x24,0x08]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx ## encoding: [0x8b,0x54,0x24,0x04]
-; X86-NEXT:    vmovss (%edx), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x02]
-; X86-NEXT:    ## xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    vmovss (%ecx), %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x09]
-; X86-NEXT:    ## xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x02]
+; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x09]
 ; X86-NEXT:    vfmadd213ss %xmm0, %xmm0, %xmm1 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0xa9,0xc8]
 ; X86-NEXT:    ## xmm1 = (xmm0 * xmm1) + xmm0
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
@@ -10117,10 +10117,10 @@ define void @fmadd_ss_mask_memfold(ptr %a, ptr %b, i8 %c) {
 ;
 ; X64-LABEL: fmadd_ss_mask_memfold:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vmovss (%rdi), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x07]
-; X64-NEXT:    ## xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    vmovss (%rsi), %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x0e]
-; X64-NEXT:    ## xmm1 = mem[0],zero,zero,zero
+; X64-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x07]
+; X64-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X64-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x0e]
 ; X64-NEXT:    vfmadd213ss %xmm0, %xmm0, %xmm1 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0xa9,0xc8]
 ; X64-NEXT:    ## xmm1 = (xmm0 * xmm1) + xmm0
 ; X64-NEXT:    kmovw %edx, %k1 ## encoding: [0xc5,0xf8,0x92,0xca]
@@ -10152,8 +10152,8 @@ define void @fmadd_ss_maskz_memfold(ptr %a, ptr %b, i8 %c) {
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x0c]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx ## encoding: [0x8b,0x4c,0x24,0x08]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx ## encoding: [0x8b,0x54,0x24,0x04]
-; X86-NEXT:    vmovss (%edx), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x02]
-; X86-NEXT:    ## xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x02]
 ; X86-NEXT:    vfmadd231ss (%ecx), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0xb9,0x01]
 ; X86-NEXT:    ## xmm0 = (xmm0 * mem) + xmm0
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
@@ -10163,8 +10163,8 @@ define void @fmadd_ss_maskz_memfold(ptr %a, ptr %b, i8 %c) {
 ;
 ; X64-LABEL: fmadd_ss_maskz_memfold:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vmovss (%rdi), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x07]
-; X64-NEXT:    ## xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xfa,0x10,0x07]
 ; X64-NEXT:    vfmadd231ss (%rsi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0xb9,0x06]
 ; X64-NEXT:    ## xmm0 = (xmm0 * mem) + xmm0
 ; X64-NEXT:    kmovw %edx, %k1 ## encoding: [0xc5,0xf8,0x92,0xca]
@@ -10196,10 +10196,10 @@ define void @fmadd_sd_mask_memfold(ptr %a, ptr %b, i8 %c) {
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x0c]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx ## encoding: [0x8b,0x4c,0x24,0x08]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx ## encoding: [0x8b,0x54,0x24,0x04]
-; X86-NEXT:    vmovsd (%edx), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x10,0x02]
-; X86-NEXT:    ## xmm0 = mem[0],zero
-; X86-NEXT:    vmovsd (%ecx), %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x10,0x09]
-; X86-NEXT:    ## xmm1 = mem[0],zero
+; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x10,0x02]
+; X86-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X86-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x10,0x09]
 ; X86-NEXT:    vfmadd213sd %xmm0, %xmm0, %xmm1 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf9,0xa9,0xc8]
 ; X86-NEXT:    ## xmm1 = (xmm0 * xmm1) + xmm0
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
@@ -10209,10 +10209,10 @@ define void @fmadd_sd_mask_memfold(ptr %a, ptr %b, i8 %c) {
 ;
 ; X64-LABEL: fmadd_sd_mask_memfold:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vmovsd (%rdi), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x10,0x07]
-; X64-NEXT:    ## xmm0 = mem[0],zero
-; X64-NEXT:    vmovsd (%rsi), %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x10,0x0e]
-; X64-NEXT:    ## xmm1 = mem[0],zero
+; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x10,0x07]
+; X64-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X64-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x10,0x0e]
 ; X64-NEXT:    vfmadd213sd %xmm0, %xmm0, %xmm1 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf9,0xa9,0xc8]
 ; X64-NEXT:    ## xmm1 = (xmm0 * xmm1) + xmm0
 ; X64-NEXT:    kmovw %edx, %k1 ## encoding: [0xc5,0xf8,0x92,0xca]
@@ -10240,8 +10240,8 @@ define void @fmadd_sd_maskz_memfold(ptr %a, ptr %b, i8 %c) {
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax ## encoding: [0x0f,0xb6,0x44,0x24,0x0c]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx ## encoding: [0x8b,0x4c,0x24,0x08]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx ## encoding: [0x8b,0x54,0x24,0x04]
-; X86-NEXT:    vmovsd (%edx), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x10,0x02]
-; X86-NEXT:    ## xmm0 = mem[0],zero
+; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x10,0x02]
 ; X86-NEXT:    vfmadd231sd (%ecx), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf9,0xb9,0x01]
 ; X86-NEXT:    ## xmm0 = (xmm0 * mem) + xmm0
 ; X86-NEXT:    kmovw %eax, %k1 ## encoding: [0xc5,0xf8,0x92,0xc8]
@@ -10251,8 +10251,8 @@ define void @fmadd_sd_maskz_memfold(ptr %a, ptr %b, i8 %c) {
 ;
 ; X64-LABEL: fmadd_sd_maskz_memfold:
 ; X64:       ## %bb.0:
-; X64-NEXT:    vmovsd (%rdi), %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x10,0x07]
-; X64-NEXT:    ## xmm0 = mem[0],zero
+; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    ## EVEX TO VEX Compression encoding: [0xc5,0xfb,0x10,0x07]
 ; X64-NEXT:    vfmadd231sd (%rsi), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc4,0xe2,0xf9,0xb9,0x06]
 ; X64-NEXT:    ## xmm0 = (xmm0 * mem) + xmm0
 ; X64-NEXT:    kmovw %edx, %k1 ## encoding: [0xc5,0xf8,0x92,0xca]

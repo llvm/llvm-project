@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -std=c++20 -verify %s
-// expected-no-diagnostics
 
 template<class T> struct S {
     template<class U> struct N {
@@ -36,11 +35,14 @@ using NonTypeParam = decltype(ntp);
 using NonTypeParam = non_type_param<int>::B<int>;
 
 template<typename A, typename T>
-concept C = (sizeof(T) == sizeof(A));
+concept True = true;
+
+template<typename T>
+concept False = false;
 
 template<class X> struct concepts {
     template<class Y> struct B {
-        template<class K = X, C<K> Z> B(Y, Z);
+        template<class K = X, True<K> Z> B(Y, Z);
     };
 };
 
@@ -50,7 +52,7 @@ using Concepts = concepts<int>::B<int>;
 
 template<class X> struct requires_clause {
     template<class Y> struct B {
-        template<class Z> requires (sizeof(Z) == sizeof(X))
+        template<class Z> requires true
             B(Y, Z);
     };
 };
@@ -58,3 +60,44 @@ template<class X> struct requires_clause {
 requires_clause<int>::B req(1, 2);
 using RC = decltype(req);
 using RC = requires_clause<int>::B<int>;
+
+template<typename X> struct nested_init_list {
+    template<True<X> Y>
+    struct B {
+        X x;
+        Y y;
+    };
+
+    template<False F>
+    struct concept_fail { // #INIT_LIST_INNER_INVALID
+        X x;
+        F f;
+    };
+};
+
+nested_init_list<int>::B nil {1, 2};
+using NIL = decltype(nil);
+using NIL = nested_init_list<int>::B<int>;
+
+// expected-error@+1 {{no viable constructor or deduction guide for deduction of template arguments of 'nested_init_list<int>::concept_fail'}}
+nested_init_list<int>::concept_fail nil_invalid{1, ""};
+// expected-note@#INIT_LIST_INNER_INVALID {{candidate template ignored: substitution failure [with F = const char *]: constraints not satisfied for class template 'concept_fail' [with F = const char *]}}
+// expected-note@#INIT_LIST_INNER_INVALID {{implicit deduction guide declared as 'template <False F> concept_fail(int, F) -> concept_fail<F>'}}
+// expected-note@#INIT_LIST_INNER_INVALID {{candidate function template not viable: requires 1 argument, but 2 were provided}}
+// expected-note@#INIT_LIST_INNER_INVALID {{implicit deduction guide declared as 'template <False F> concept_fail(concept_fail<F>) -> concept_fail<F>'}}
+// expected-note@#INIT_LIST_INNER_INVALID {{candidate function template not viable: requires 0 arguments, but 2 were provided}}
+// expected-note@#INIT_LIST_INNER_INVALID {{implicit deduction guide declared as 'template <False F> concept_fail() -> concept_fail<F>'}}
+
+namespace GH88142 {
+
+template <typename, typename...> struct X {
+  template <typename> struct Y {
+    template <typename T> Y(T) {}
+  };
+
+  template <typename T> Y(T) -> Y<T>;
+};
+
+X<int>::Y y(42);
+
+} // namespace PR88142

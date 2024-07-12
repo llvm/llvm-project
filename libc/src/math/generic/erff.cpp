@@ -127,20 +127,11 @@ LLVM_LIBC_FUNCTION(float, erff, (float x)) {
   uint32_t x_u = xbits.uintval();
   uint32_t x_abs = x_u & 0x7fff'ffffU;
 
-  // Exceptional values
-  if (LIBC_UNLIKELY(x_abs == 0x3f65'9229U)) // |x| = 0x1.cb2452p-1f
-    return x < 0.0f ? fputil::round_result_slightly_down(-0x1.972ea8p-1f)
-                    : fputil::round_result_slightly_up(0x1.972ea8p-1f);
-  if (LIBC_UNLIKELY(x_abs == 0x4004'1e6aU)) // |x| = 0x1.083cd4p+1f
-    return x < 0.0f ? fputil::round_result_slightly_down(-0x1.fe3462p-1f)
-                    : fputil::round_result_slightly_up(0x1.fe3462p-1f);
-
-  // if (LIBC_UNLIKELY(x_abs > 0x407a'd444U)) {
   if (LIBC_UNLIKELY(x_abs >= 0x4080'0000U)) {
     const float ONE[2] = {1.0f, -1.0f};
     const float SMALL[2] = {-0x1.0p-25f, 0x1.0p-25f};
 
-    int sign = static_cast<int>(xbits.get_sign());
+    int sign = xbits.is_neg() ? 1 : 0;
 
     if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
       return (x_abs > 0x7f80'0000) ? x : ONE[sign];
@@ -149,12 +140,27 @@ LLVM_LIBC_FUNCTION(float, erff, (float x)) {
     return ONE[sign] + SMALL[sign];
   }
 
+  // Exceptional mask = common 0 bits of 2 exceptional values.
+  constexpr uint32_t EXCEPT_MASK = 0x809a'6184U;
+
+  if (LIBC_UNLIKELY((x_abs & EXCEPT_MASK) == 0)) {
+    // Exceptional values
+    if (LIBC_UNLIKELY(x_abs == 0x3f65'9229U)) // |x| = 0x1.cb2452p-1f
+      return x < 0.0f ? fputil::round_result_slightly_down(-0x1.972ea8p-1f)
+                      : fputil::round_result_slightly_up(0x1.972ea8p-1f);
+    if (LIBC_UNLIKELY(x_abs == 0x4004'1e6aU)) // |x| = 0x1.083cd4p+1f
+      return x < 0.0f ? fputil::round_result_slightly_down(-0x1.fe3462p-1f)
+                      : fputil::round_result_slightly_up(0x1.fe3462p-1f);
+    if (x_abs == 0U)
+      return x;
+  }
+
   // Polynomial approximation:
   //   erf(x) ~ x * (c0 + c1 * x^2 + c2 * x^4 + ... + c7 * x^14)
   double xd = static_cast<double>(x);
   double xsq = xd * xd;
 
-  const uint32_t EIGHT = 3 << FPBits::FloatProp::MANTISSA_WIDTH;
+  const uint32_t EIGHT = 3 << FPBits::FRACTION_LEN;
   int idx = static_cast<int>(FPBits(x_abs + EIGHT).get_val());
 
   double x4 = xsq * xsq;

@@ -227,8 +227,8 @@ LogicalResult WMMAOp::verify() {
   Type sourceAType = getSourceA().getType();
   Type destType = getDestC().getType();
 
-  VectorType sourceVectorAType = sourceAType.dyn_cast<VectorType>();
-  VectorType destVectorType = destType.dyn_cast<VectorType>();
+  VectorType sourceVectorAType = dyn_cast<VectorType>(sourceAType);
+  VectorType destVectorType = dyn_cast<VectorType>(destType);
 
   Type sourceAElemType = sourceVectorAType.getElementType();
   Type destElemType = destVectorType.getElementType();

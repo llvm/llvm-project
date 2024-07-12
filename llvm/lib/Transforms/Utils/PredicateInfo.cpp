@@ -478,10 +478,8 @@ void PredicateInfoBuilder::processSwitch(
 
   // Remember how many outgoing edges there are to every successor.
   SmallDenseMap<BasicBlock *, unsigned, 16> SwitchEdges;
-  for (unsigned i = 0, e = SI->getNumSuccessors(); i != e; ++i) {
-    BasicBlock *TargetBlock = SI->getSuccessor(i);
+  for (BasicBlock *TargetBlock : successors(BranchBB))
     ++SwitchEdges[TargetBlock];
-  }
 
   // Now propagate info for each case value
   for (auto C : SI->cases()) {

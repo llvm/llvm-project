@@ -24,6 +24,20 @@
 // RUN:		-fmodule-file=c=%t/c.pcm -fmodule-file=d=%t/d.pcm -fmodule-file=e=%t/e.pcm \
 // RUN:		-fmodule-file=f=%t/f.pcm -verify -fsyntax-only 
 
+// Test again with reduced BMI
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+// RUN: split-file %s %t
+//
+// RUN: %clang_cc1 -std=c++20 %t/a.cppm -emit-reduced-module-interface -o %t/a.pcm
+// RUN: %clang_cc1 -std=c++20 %t/b.cppm -emit-reduced-module-interface -fprebuilt-module-path=%t -o %t/b.pcm
+// RUN: %clang_cc1 -std=c++20 %t/c.cppm -emit-reduced-module-interface -fprebuilt-module-path=%t -o %t/c.pcm
+// RUN: %clang_cc1 -std=c++20 %t/d.cppm -emit-reduced-module-interface -fprebuilt-module-path=%t -o %t/d.pcm
+// RUN: %clang_cc1 -std=c++20 %t/e.cppm -emit-reduced-module-interface -fprebuilt-module-path=%t -o %t/e.pcm
+// RUN: %clang_cc1 -std=c++20 %t/f.cppm -emit-reduced-module-interface -fprebuilt-module-path=%t -o %t/f.pcm
+// RUN: %clang_cc1 -std=c++20 %t/g.cppm -fprebuilt-module-path=%t -verify -fsyntax-only 
+
+
 //--- a.cppm
 export module a;
 

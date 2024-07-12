@@ -1,5 +1,5 @@
 ;RUN: llc < %s -mtriple=amdgcn-- -verify-machineinstrs | FileCheck -check-prefixes=CHECK,GCN %s
-;RUN: llc < %s -march=r600 -mtriple=r600-- -verify-machineinstrs | FileCheck -check-prefixes=CHECK,R600 %s
+;RUN: llc < %s -mtriple=r600-- -verify-machineinstrs | FileCheck -check-prefixes=CHECK,R600 %s
 
 %struct.S = type { ptr addrspace(5), ptr addrspace(1), ptr addrspace(4), ptr addrspace(3), ptr, ptr addrspace(2)}
 
@@ -38,9 +38,9 @@
 ; FIXME-R600-NEXT: .long 0
 ; FIXME @nullptr8 = global ptr addrspace(8) addrspacecast (ptr null to ptr addrspace(8))
 
-; CHECK-LABEL: nullptr9:
-; R600-NEXT: .long 0
-@nullptr9 = global ptr addrspace(9) addrspacecast (ptr null to ptr addrspace(9))
+; FIXME-LABEL: nullptr9:
+; FIXME-R600-NEXT: .long 0
+; FIXME @nullptr9 = global ptr addrspace(9) addrspacecast (ptr null to ptr addrspace(9))
 
 ; CHECK-LABEL: nullptr10:
 ; R600-NEXT: .long 0

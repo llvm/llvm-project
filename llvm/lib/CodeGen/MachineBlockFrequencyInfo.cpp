@@ -163,7 +163,7 @@ struct DOTGraphTraits<MachineBlockFrequencyInfo *>
 
 INITIALIZE_PASS_BEGIN(MachineBlockFrequencyInfo, DEBUG_TYPE,
                       "Machine Block Frequency Analysis", true, true)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_END(MachineBlockFrequencyInfo, DEBUG_TYPE,
                     "Machine Block Frequency Analysis", true, true)
@@ -185,7 +185,7 @@ MachineBlockFrequencyInfo::MachineBlockFrequencyInfo(
 MachineBlockFrequencyInfo::~MachineBlockFrequencyInfo() = default;
 
 void MachineBlockFrequencyInfo::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<MachineBranchProbabilityInfo>();
+  AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
   AU.addRequired<MachineLoopInfo>();
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -198,19 +198,18 @@ void MachineBlockFrequencyInfo::calculate(
     MBFI.reset(new ImplType);
   MBFI->calculate(F, MBPI, MLI);
   if (ViewMachineBlockFreqPropagationDAG != GVDT_None &&
-      (ViewBlockFreqFuncName.empty() ||
-       F.getName().equals(ViewBlockFreqFuncName))) {
+      (ViewBlockFreqFuncName.empty() || F.getName() == ViewBlockFreqFuncName)) {
     view("MachineBlockFrequencyDAGS." + F.getName());
   }
   if (PrintMachineBlockFreq &&
-      (PrintBFIFuncName.empty() || F.getName().equals(PrintBFIFuncName))) {
+      (PrintBFIFuncName.empty() || F.getName() == PrintBFIFuncName)) {
     MBFI->print(dbgs());
   }
 }
 
 bool MachineBlockFrequencyInfo::runOnMachineFunction(MachineFunction &F) {
   MachineBranchProbabilityInfo &MBPI =
-      getAnalysis<MachineBranchProbabilityInfo>();
+      getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   MachineLoopInfo &MLI = getAnalysis<MachineLoopInfo>();
   calculate(F, MBPI, MLI);
   return false;
@@ -280,7 +279,7 @@ BlockFrequency MachineBlockFrequencyInfo::getEntryFreq() const {
 Printable llvm::printBlockFreq(const MachineBlockFrequencyInfo &MBFI,
                                BlockFrequency Freq) {
   return Printable([&MBFI, Freq](raw_ostream &OS) {
-    printBlockFreqImpl(OS, MBFI.getEntryFreq(), Freq);
+    printRelativeBlockFreq(OS, MBFI.getEntryFreq(), Freq);
   });
 }
 

@@ -16,7 +16,6 @@
 namespace llvm {
 
 class MCAsmInfo;
-class MCAsmLayout;
 class MCAssembler;
 class MCContext;
 class MCFixup;
@@ -54,7 +53,6 @@ private:
   SMLoc Loc;
 
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
-                          const MCAsmLayout *Layout,
                           const SectionAddrMap *Addrs, bool InSet) const;
 
 protected:
@@ -65,7 +63,6 @@ protected:
   }
 
   bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCAsmLayout *Layout,
                                  const MCFixup *Fixup,
                                  const SectionAddrMap *Addrs, bool InSet) const;
 
@@ -96,27 +93,26 @@ public:
   /// Try to evaluate the expression to an absolute value.
   ///
   /// \param Res - The absolute value, if evaluation succeeds.
-  /// \param Layout - The assembler layout object to use for evaluating symbol
-  /// values. If not given, then only non-symbolic expressions will be
-  /// evaluated.
   /// \return - True on success.
-  bool evaluateAsAbsolute(int64_t &Res, const MCAsmLayout &Layout,
+  bool evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm,
                           const SectionAddrMap &Addrs) const;
   bool evaluateAsAbsolute(int64_t &Res) const;
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler &Asm) const;
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm) const;
-  bool evaluateAsAbsolute(int64_t &Res, const MCAsmLayout &Layout) const;
 
-  bool evaluateKnownAbsolute(int64_t &Res, const MCAsmLayout &Layout) const;
+  /// Aggressive variant of evaluateAsRelocatable when relocations are
+  /// unavailable (e.g. .fill). Expects callers to handle errors when true is
+  /// returned.
+  bool evaluateKnownAbsolute(int64_t &Res, const MCAssembler &Asm) const;
 
   /// Try to evaluate the expression to a relocatable value, i.e. an
   /// expression of the fixed form (a - b + constant).
   ///
   /// \param Res - The relocatable value, if evaluation succeeds.
-  /// \param Layout - The assembler layout object to use for evaluating values.
+  /// \param Asm - The assembler object to use for evaluating values.
   /// \param Fixup - The Fixup object if available.
   /// \return - True on success.
-  bool evaluateAsRelocatable(MCValue &Res, const MCAsmLayout *Layout,
+  bool evaluateAsRelocatable(MCValue &Res, const MCAssembler *Asm,
                              const MCFixup *Fixup) const;
 
   /// Try to evaluate the expression to the form (a - b + constant) where
@@ -124,7 +120,7 @@ public:
   ///
   /// This is a more aggressive variant of evaluateAsRelocatable. The intended
   /// use is for when relocations are not available, like the .size directive.
-  bool evaluateAsValue(MCValue &Res, const MCAsmLayout &Layout) const;
+  bool evaluateAsValue(MCValue &Res, const MCAssembler &Asm) const;
 
   /// Find the "associated section" for this expression, which is
   /// currently defined as the absolute section for constants, or
@@ -223,6 +219,12 @@ public:
     VK_SECREL,
     VK_SIZE,    // symbol@SIZE
     VK_WEAKREF, // The link between the symbols in .weakref foo, bar
+    VK_FUNCDESC,
+    VK_GOTFUNCDESC,
+    VK_GOTOFFFUNCDESC,
+    VK_TLSGD_FDPIC,
+    VK_TLSLDM_FDPIC,
+    VK_GOTTPOFF_FDPIC,
 
     VK_X86_ABS8,
     VK_X86_PLTOFF,
@@ -301,6 +303,8 @@ public:
     VK_PPC_AIX_TLSGDM,      // symbol@m
     VK_PPC_AIX_TLSIE,       // symbol@ie
     VK_PPC_AIX_TLSLE,       // symbol@le
+    VK_PPC_AIX_TLSLD,       // symbol@ld
+    VK_PPC_AIX_TLSML,       // symbol@ml
     VK_PPC_GOT_TLSLD,       // symbol@got@tlsld
     VK_PPC_GOT_TLSLD_LO,    // symbol@got@tlsld@l
     VK_PPC_GOT_TLSLD_HI,    // symbol@got@tlsld@h
@@ -654,8 +658,7 @@ protected:
 
 public:
   virtual void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const = 0;
-  virtual bool evaluateAsRelocatableImpl(MCValue &Res,
-                                         const MCAsmLayout *Layout,
+  virtual bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                          const MCFixup *Fixup) const = 0;
   // allow Target Expressions to be checked for equality
   virtual bool isEqualTo(const MCExpr *x) const { return false; }

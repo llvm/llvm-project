@@ -27,25 +27,25 @@
     %b.addr = alloca i32, align 4
     %idx.addr = alloca i32, align 4
     %n.addr = alloca i32, align 4
-    %a = alloca i32*, align 8
-    store i32 %c, i32* %c.addr, align 4
-    store i32 %b, i32* %b.addr, align 4
-    store i32 %idx, i32* %idx.addr, align 4
-    store i32 %n, i32* %n.addr, align 4
-    %0 = load i32, i32* %n.addr, align 4
+    %a = alloca ptr, align 8
+    store i32 %c, ptr %c.addr, align 4
+    store i32 %b, ptr %b.addr, align 4
+    store i32 %idx, ptr %idx.addr, align 4
+    store i32 %n, ptr %n.addr, align 4
+    %0 = load i32, ptr %n.addr, align 4
     %conv = sext i32 %0 to i64
     %1 = alloca i8, i64 %conv, align 16
-    %2 = bitcast i8* %1 to i32*
-    store i32* %2, i32** %a, align 8
-    %3 = load i32*, i32** %a, align 8
-    call void @"?init@@YAXPEAH@Z"(i32* %3)
+    %2 = bitcast ptr %1 to ptr
+    store ptr %2, ptr %a, align 8
+    %3 = load ptr, ptr %a, align 8
+    call void @"?init@@YAXPEAH@Z"(ptr %3)
     ret i32 0
   }
 
-  declare dso_local void @"?init@@YAXPEAH@Z"(i32*) #1
+  declare dso_local void @"?init@@YAXPEAH@Z"(ptr) #1
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #2
+  declare void @llvm.stackprotector(ptr, ptr) #2
 
   attributes #0 = { noinline optnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+neon" "unsafe-fp-math"="false" "use-soft-float"="false" }
   attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+neon" "unsafe-fp-math"="false" "use-soft-float"="false" }

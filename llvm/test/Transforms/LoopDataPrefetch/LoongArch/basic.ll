@@ -1,6 +1,6 @@
 ;; Tag this 'XFAIL' because we need a few more TTIs and ISels.
 ; XFAIL: *
-; RUN: opt --mtriple=loongarch64 --passes=loop-data-prefetch -loongarch-enable-loop-data-prefetch -S < %s | FileCheck %s
+; RUN: opt --mtriple=loongarch64 -mattr=+d --passes=loop-data-prefetch -loongarch-enable-loop-data-prefetch -S < %s | FileCheck %s
 
 define void @foo(ptr %a, ptr %b) {
 entry:

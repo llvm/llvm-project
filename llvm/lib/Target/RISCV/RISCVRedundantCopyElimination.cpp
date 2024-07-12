@@ -77,9 +77,11 @@ guaranteesZeroRegInBlock(MachineBasicBlock &MBB,
   assert(Cond.size() == 3 && "Unexpected number of operands");
   assert(TBB != nullptr && "Expected branch target basic block");
   auto CC = static_cast<RISCVCC::CondCode>(Cond[0].getImm());
-  if (CC == RISCVCC::COND_EQ && Cond[2].getReg() == RISCV::X0 && TBB == &MBB)
+  if (CC == RISCVCC::COND_EQ && Cond[2].isReg() &&
+      Cond[2].getReg() == RISCV::X0 && TBB == &MBB)
     return true;
-  if (CC == RISCVCC::COND_NE && Cond[2].getReg() == RISCV::X0 && TBB != &MBB)
+  if (CC == RISCVCC::COND_NE && Cond[2].isReg() &&
+      Cond[2].getReg() == RISCV::X0 && TBB != &MBB)
     return true;
   return false;
 }

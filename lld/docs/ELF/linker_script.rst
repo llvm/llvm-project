@@ -197,3 +197,14 @@ the current location to a max-page-size boundary, ensuring that the next
 
 LLD will insert ``.relro_padding`` immediately before the symbol assignment
 using ``DATA_SEGMENT_RELRO_END``.
+
+Non-contiguous regions
+~~~~~~~~~~~~~~~~~~~~~~
+
+The flag ``--enable-non-contiguous-regions`` allows input sections to spill to
+later matches rather than causing the link to fail by overflowing a memory
+region. Unlike GNU ld, ``/DISCARD/`` only matches previously-unmatched sections
+(i.e., the flag does not affect it). Also, if a section fails to fit at any of
+its matches, the link fails instead of discarding the section. Accordingly, the
+GNU flag ``--enable-non-contiguous-regions-warnings`` is not implemented, as it
+exists to warn about such occurrences.

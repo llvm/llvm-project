@@ -25,7 +25,7 @@ struct Indirect indirect_func(void);
 void Indirect_test(void) {
   struct Indirect i;
   
-  // CHECK: call void @indirect_func(ptr sret
+  // CHECK: call void @indirect_func(ptr dead_on_unwind writable sret
   // CHECK: call ptr @objc_memmove_collectable(
   i = indirect_func();
 }

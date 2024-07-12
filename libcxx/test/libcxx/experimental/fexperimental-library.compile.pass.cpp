@@ -24,7 +24,7 @@
 #  error "-fexperimental-library should enable the stop_token"
 #endif
 
-#ifdef _LIBCPP_HAS_NO_INCOMPLETE_TZDB
+#ifdef _LIBCPP_HAS_NO_EXPERIMENTAL_TZDB
 #  error "-fexperimental-library should enable the chrono TZDB"
 #endif
 

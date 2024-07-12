@@ -39,7 +39,7 @@ struct NonTbpDefinedIo {
 };
 
 struct NonTbpDefinedIoTable {
-  const NonTbpDefinedIo *Find(
+  RT_API_ATTRS const NonTbpDefinedIo *Find(
       const typeInfo::DerivedType &, common::DefinedIo) const;
   std::size_t items{0};
   const NonTbpDefinedIo *item{nullptr};

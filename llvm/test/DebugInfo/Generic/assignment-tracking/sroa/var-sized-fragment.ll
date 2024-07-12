@@ -1,4 +1,5 @@
 ; RUN: opt -S %s -o - -passes=sroa | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -S %s -o - -passes=sroa | FileCheck %s
 
 ;; SROA splits the alloca into two. Each slice already has a 32-bit variable
 ;; associated with it (the structured binding variables). Check SROA doesn't
@@ -21,8 +22,8 @@
 ;; FIXME: Variable 'b' gets an incorrect location (value and expression) - see
 ;; llvm.org/PR61981. This check just ensures that no fragment info is added to
 ;; the dbg.value.
-; CHECK: dbg.value(metadata i32 %.sroa.0.0.extract.trunc, metadata ![[B:[0-9]+]], metadata !DIExpression(DW_OP_plus_uconst, 4))
-; CHECK: dbg.value(metadata i32 %.sroa.0.0.extract.trunc, metadata ![[A:[0-9]+]], metadata !DIExpression())
+; CHECK: #dbg_value(i32 %.sroa.0.0.extract.trunc, ![[B:[0-9]+]], !DIExpression(DW_OP_plus_uconst, 4),
+; CHECK: #dbg_value(i32 %.sroa.0.0.extract.trunc, ![[A:[0-9]+]], !DIExpression(),
 ; CHECK: ![[A]] = !DILocalVariable(name: "a",
 ; CHECK: ![[B]] = !DILocalVariable(name: "b",
 

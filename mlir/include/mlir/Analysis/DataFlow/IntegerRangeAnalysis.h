@@ -24,51 +24,6 @@
 namespace mlir {
 namespace dataflow {
 
-/// This lattice value represents the integer range of an SSA value.
-class IntegerValueRange {
-public:
-  /// Create a maximal range ([0, uint_max(t)] / [int_min(t), int_max(t)])
-  /// range that is used to mark the value as unable to be analyzed further,
-  /// where `t` is the type of `value`.
-  static IntegerValueRange getMaxRange(Value value);
-
-  /// Create an integer value range lattice value.
-  IntegerValueRange(std::optional<ConstantIntRanges> value = std::nullopt)
-      : value(std::move(value)) {}
-
-  /// Whether the range is uninitialized. This happens when the state hasn't
-  /// been set during the analysis.
-  bool isUninitialized() const { return !value.has_value(); }
-
-  /// Get the known integer value range.
-  const ConstantIntRanges &getValue() const {
-    assert(!isUninitialized());
-    return *value;
-  }
-
-  /// Compare two ranges.
-  bool operator==(const IntegerValueRange &rhs) const {
-    return value == rhs.value;
-  }
-
-  /// Take the union of two ranges.
-  static IntegerValueRange join(const IntegerValueRange &lhs,
-                                const IntegerValueRange &rhs) {
-    if (lhs.isUninitialized())
-      return rhs;
-    if (rhs.isUninitialized())
-      return lhs;
-    return IntegerValueRange{lhs.getValue().rangeUnion(rhs.getValue())};
-  }
-
-  /// Print the integer value range.
-  void print(raw_ostream &os) const { os << value; }
-
-private:
-  /// The known integer value range.
-  std::optional<ConstantIntRanges> value;
-};
-
 /// This lattice element represents the integer value range of an SSA value.
 /// When this lattice is updated, it automatically updates the constant value
 /// of the SSA value (if the range can be narrowed to one).

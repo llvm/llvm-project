@@ -67,7 +67,7 @@ private:
                            llvm::opt::ArgStringList &CmdArgs) const override;
   SanitizerMask getSupportedSanitizers() const override;
 
-  const char *getDefaultLinker() const override { return "wasm-ld"; }
+  const char *getDefaultLinker() const override;
 
   CXXStdlibType GetDefaultCXXStdlibType() const override {
     return ToolChain::CST_Libcxx;

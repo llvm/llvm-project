@@ -1,4 +1,5 @@
 ; RUN: opt -mtriple=x86_64-pc-linux-gnu -pre-isel-intrinsic-lowering -S -o - %s | FileCheck %s
+; RUN: opt -mtriple=x86_64-pc-linux-gnu -passes=pre-isel-intrinsic-lowering -S -o - %s | FileCheck %s
 
 ; CHECK: define ptr @foo32(ptr [[P:%.*]], i32 [[O:%.*]])
 define ptr @foo32(ptr %p, i32 %o) {

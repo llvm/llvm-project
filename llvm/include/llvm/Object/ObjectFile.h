@@ -302,6 +302,7 @@ protected:
 public:
   ObjectFile() = delete;
   ObjectFile(const ObjectFile &other) = delete;
+  ObjectFile &operator=(const ObjectFile &other) = delete;
 
   uint64_t getCommonSymbolSize(DataRefImpl Symb) const {
     Expected<uint32_t> SymbolFlagsOrErr = getSymbolFlags(Symb);
@@ -337,6 +338,7 @@ public:
 
   virtual StringRef getFileFormatName() const = 0;
   virtual Triple::ArchType getArch() const = 0;
+  virtual Triple::OSType getOS() const { return Triple::UnknownOS; }
   virtual Expected<SubtargetFeatures> getFeatures() const = 0;
   virtual std::optional<StringRef> tryGetCPUName() const {
     return std::nullopt;

@@ -29,4 +29,7 @@ public:
   int get_fd() const { return fd; }
 };
 
+// Create a File object and associate it with a fd.
+ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode);
+
 } // namespace LIBC_NAMESPACE

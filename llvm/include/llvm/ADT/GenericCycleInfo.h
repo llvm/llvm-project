@@ -126,6 +126,10 @@ public:
   /// branched to.
   void getExitBlocks(SmallVectorImpl<BlockT *> &TmpStorage) const;
 
+  /// Return all blocks of this cycle that have successor outside of this cycle.
+  /// These blocks have cycle exit branch.
+  void getExitingBlocks(SmallVectorImpl<BlockT *> &TmpStorage) const;
+
   /// Return the preheader block for this cycle. Pre-header is well-defined for
   /// reducible cycle in docs/LoopTerminology.rst as: the only one entering
   /// block and its only edge is to the entry block. Return null for irreducible

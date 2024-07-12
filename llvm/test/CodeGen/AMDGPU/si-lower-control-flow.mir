@@ -11,7 +11,7 @@ body: |
     ; GCN: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
     ; GCN-NEXT: [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]], 16, 0
     ; GCN-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32_xm0 = S_AND_B32 [[S_LOAD_DWORD_IMM]], 255, implicit-def $scc
-    ; GCN-NEXT: dead %3:sreg_32_xm0 = S_AND_B32 65535, [[S_AND_B32_]], implicit-def $scc
+    ; GCN-NEXT: dead [[S_AND_B32_1:%[0-9]+]]:sreg_32_xm0 = S_AND_B32 65535, [[S_AND_B32_]], implicit-def $scc
     ; GCN-NEXT: S_ENDPGM 0
     %0:sgpr_64 = COPY $sgpr4_sgpr5
     %1:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 16, 0
@@ -30,14 +30,13 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
   ; GCN-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY]], undef %1:sreg_64, implicit-def dead $scc
-  ; GCN-NEXT:   dead %0:sreg_64 = S_XOR_B64 [[S_AND_B64_]], [[COPY]], implicit-def dead $scc
+  ; GCN-NEXT:   dead [[S_XOR_B64_:%[0-9]+]]:sreg_64 = S_XOR_B64 [[S_AND_B64_]], [[COPY]], implicit-def dead $scc
   ; GCN-NEXT:   $exec = S_MOV_B64_term [[S_AND_B64_]]
   ; GCN-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
-  ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
@@ -196,7 +195,7 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
-  ; GCN-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5, $sgpr8_sgpr9
+  ; GCN-NEXT:   liveins: $vgpr0, $sgpr4_sgpr5, $sgpr8_sgpr9_sgpr10
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   S_SLEEP 3
   ; GCN-NEXT:   S_NOP 0
@@ -369,7 +368,7 @@ body:             |
   ; GCN-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[COPY]], [[COPY1]], implicit $exec
   ; GCN-NEXT:   [[V_CMP_EQ_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[COPY]], [[COPY2]], implicit $exec
-  ; GCN-NEXT:   dead %5:sreg_64_xexec = S_MOV_B64 0
+  ; GCN-NEXT:   dead [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 0
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
@@ -384,7 +383,7 @@ body:             |
   ; GCN-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY4]], [[V_CMP_EQ_U32_e64_1]], implicit-def dead $scc
   ; GCN-NEXT:   [[S_XOR_B64_:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_AND_B64_]], [[COPY4]], implicit-def dead $scc
   ; GCN-NEXT:   $exec = S_MOV_B64_term [[S_AND_B64_]]
-  ; GCN-NEXT:   dead %8:sreg_64_xexec = S_MOV_B64_term [[S_XOR_B64_]], implicit $exec
+  ; GCN-NEXT:   dead [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term [[S_XOR_B64_]], implicit $exec
   ; GCN-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:

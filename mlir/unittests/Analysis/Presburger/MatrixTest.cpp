@@ -194,13 +194,21 @@ TEST(MatrixTest, resize) {
       EXPECT_EQ(mat(row, col), row >= 3 || col >= 3 ? 0 : int(10 * row + col));
 }
 
+template <typename T>
+static void checkMatEqual(const Matrix<T> m1, const Matrix<T> m2) {
+  EXPECT_EQ(m1.getNumRows(), m2.getNumRows());
+  EXPECT_EQ(m1.getNumColumns(), m2.getNumColumns());
+
+  for (unsigned row = 0, rows = m1.getNumRows(); row < rows; ++row)
+    for (unsigned col = 0, cols = m1.getNumColumns(); col < cols; ++col)
+      EXPECT_EQ(m1(row, col), m2(row, col));
+}
+
 static void checkHermiteNormalForm(const IntMatrix &mat,
                                    const IntMatrix &hermiteForm) {
   auto [h, u] = mat.computeHermiteNormalForm();
 
-  for (unsigned row = 0; row < mat.getNumRows(); row++)
-    for (unsigned col = 0; col < mat.getNumColumns(); col++)
-      EXPECT_EQ(h(row, col), hermiteForm(row, col));
+  checkMatEqual(h, hermiteForm);
 }
 
 TEST(MatrixTest, computeHermiteNormalForm) {
@@ -251,6 +259,9 @@ TEST(MatrixTest, computeHermiteNormalForm) {
 }
 
 TEST(MatrixTest, inverse) {
+  IntMatrix mat1 = makeIntMatrix(2, 2, {{2, 1}, {7, 0}});
+  EXPECT_EQ(mat1.determinant(), -7);
+
   FracMatrix mat = makeFracMatrix(
       2, 2, {{Fraction(2), Fraction(1)}, {Fraction(7), Fraction(0)}});
   FracMatrix inverse = makeFracMatrix(
@@ -306,7 +317,160 @@ TEST(MatrixTest, intInverse) {
 
   mat = makeIntMatrix(2, 2, {{0, 0}, {1, 2}});
 
-  MPInt det = mat.determinant(&inv);
+  DynamicAPInt det = mat.determinant(&inv);
 
   EXPECT_EQ(det, 0);
+}
+
+TEST(MatrixTest, gramSchmidt) {
+  FracMatrix mat =
+      makeFracMatrix(3, 5,
+                     {{Fraction(3, 1), Fraction(4, 1), Fraction(5, 1),
+                       Fraction(12, 1), Fraction(19, 1)},
+                      {Fraction(4, 1), Fraction(5, 1), Fraction(6, 1),
+                       Fraction(13, 1), Fraction(20, 1)},
+                      {Fraction(7, 1), Fraction(8, 1), Fraction(9, 1),
+                       Fraction(16, 1), Fraction(24, 1)}});
+
+  FracMatrix gramSchmidt = makeFracMatrix(
+      3, 5,
+      {{Fraction(3, 1), Fraction(4, 1), Fraction(5, 1), Fraction(12, 1),
+        Fraction(19, 1)},
+       {Fraction(142, 185), Fraction(383, 555), Fraction(68, 111),
+        Fraction(13, 185), Fraction(-262, 555)},
+       {Fraction(53, 463), Fraction(27, 463), Fraction(1, 463),
+        Fraction(-181, 463), Fraction(100, 463)}});
+
+  FracMatrix gs = mat.gramSchmidt();
+
+  EXPECT_EQ_FRAC_MATRIX(gs, gramSchmidt);
+  for (unsigned i = 0; i < 3u; i++)
+    for (unsigned j = i + 1; j < 3u; j++)
+      EXPECT_EQ(dotProduct(gs.getRow(i), gs.getRow(j)), 0);
+
+  mat = makeFracMatrix(3, 3,
+                       {{Fraction(20, 1), Fraction(17, 1), Fraction(10, 1)},
+                        {Fraction(20, 1), Fraction(18, 1), Fraction(6, 1)},
+                        {Fraction(15, 1), Fraction(14, 1), Fraction(10, 1)}});
+
+  gramSchmidt = makeFracMatrix(
+      3, 3,
+      {{Fraction(20, 1), Fraction(17, 1), Fraction(10, 1)},
+       {Fraction(460, 789), Fraction(1180, 789), Fraction(-2926, 789)},
+       {Fraction(-2925, 3221), Fraction(3000, 3221), Fraction(750, 3221)}});
+
+  gs = mat.gramSchmidt();
+
+  EXPECT_EQ_FRAC_MATRIX(gs, gramSchmidt);
+  for (unsigned i = 0; i < 3u; i++)
+    for (unsigned j = i + 1; j < 3u; j++)
+      EXPECT_EQ(dotProduct(gs.getRow(i), gs.getRow(j)), 0);
+
+  mat = makeFracMatrix(
+      4, 4,
+      {{Fraction(1, 26), Fraction(13, 12), Fraction(34, 13), Fraction(7, 10)},
+       {Fraction(40, 23), Fraction(34, 1), Fraction(11, 19), Fraction(15, 1)},
+       {Fraction(21, 22), Fraction(10, 9), Fraction(4, 11), Fraction(14, 11)},
+       {Fraction(35, 22), Fraction(1, 15), Fraction(5, 8), Fraction(30, 1)}});
+
+  gs = mat.gramSchmidt();
+
+  // The integers involved are too big to construct the actual matrix.
+  // but we can check that the result is linearly independent.
+  ASSERT_FALSE(mat.determinant(nullptr) == 0);
+
+  for (unsigned i = 0; i < 4u; i++)
+    for (unsigned j = i + 1; j < 4u; j++)
+      EXPECT_EQ(dotProduct(gs.getRow(i), gs.getRow(j)), 0);
+
+  mat = FracMatrix::identity(/*dim=*/10);
+
+  gs = mat.gramSchmidt();
+
+  EXPECT_EQ_FRAC_MATRIX(gs, FracMatrix::identity(10));
+}
+
+void checkReducedBasis(FracMatrix mat, Fraction delta) {
+  FracMatrix gsOrth = mat.gramSchmidt();
+
+  // Size-reduced check.
+  for (unsigned i = 0, e = mat.getNumRows(); i < e; i++) {
+    for (unsigned j = 0; j < i; j++) {
+      Fraction mu = dotProduct(mat.getRow(i), gsOrth.getRow(j)) /
+                    dotProduct(gsOrth.getRow(j), gsOrth.getRow(j));
+      EXPECT_TRUE(abs(mu) <= Fraction(1, 2));
+    }
+  }
+
+  // Lovasz condition check.
+  for (unsigned i = 1, e = mat.getNumRows(); i < e; i++) {
+    Fraction mu = dotProduct(mat.getRow(i), gsOrth.getRow(i - 1)) /
+                  dotProduct(gsOrth.getRow(i - 1), gsOrth.getRow(i - 1));
+    EXPECT_TRUE(dotProduct(mat.getRow(i), mat.getRow(i)) >
+                (delta - mu * mu) *
+                    dotProduct(gsOrth.getRow(i - 1), gsOrth.getRow(i - 1)));
+  }
+}
+
+TEST(MatrixTest, LLL) {
+  FracMatrix mat =
+      makeFracMatrix(3, 3,
+                     {{Fraction(1, 1), Fraction(1, 1), Fraction(1, 1)},
+                      {Fraction(-1, 1), Fraction(0, 1), Fraction(2, 1)},
+                      {Fraction(3, 1), Fraction(5, 1), Fraction(6, 1)}});
+  mat.LLL(Fraction(3, 4));
+
+  checkReducedBasis(mat, Fraction(3, 4));
+
+  mat = makeFracMatrix(
+      2, 2,
+      {{Fraction(12, 1), Fraction(2, 1)}, {Fraction(13, 1), Fraction(4, 1)}});
+  mat.LLL(Fraction(3, 4));
+
+  checkReducedBasis(mat, Fraction(3, 4));
+
+  mat = makeFracMatrix(3, 3,
+                       {{Fraction(1, 1), Fraction(0, 1), Fraction(2, 1)},
+                        {Fraction(0, 1), Fraction(1, 3), -Fraction(5, 3)},
+                        {Fraction(0, 1), Fraction(0, 1), Fraction(1, 1)}});
+  mat.LLL(Fraction(3, 4));
+
+  checkReducedBasis(mat, Fraction(3, 4));
+}
+
+TEST(MatrixTest, moveColumns) {
+  IntMatrix mat =
+      makeIntMatrix(3, 4, {{0, 1, 2, 3}, {4, 5, 6, 7}, {8, 9, 4, 2}});
+
+  {
+    IntMatrix movedMat =
+        makeIntMatrix(3, 4, {{0, 3, 1, 2}, {4, 7, 5, 6}, {8, 2, 9, 4}});
+
+    movedMat.moveColumns(2, 2, 1);
+    checkMatEqual(mat, movedMat);
+  }
+
+  {
+    IntMatrix movedMat =
+        makeIntMatrix(3, 4, {{0, 3, 1, 2}, {4, 7, 5, 6}, {8, 2, 9, 4}});
+
+    movedMat.moveColumns(1, 1, 3);
+    checkMatEqual(mat, movedMat);
+  }
+
+  {
+    IntMatrix movedMat =
+        makeIntMatrix(3, 4, {{1, 2, 0, 3}, {5, 6, 4, 7}, {9, 4, 8, 2}});
+
+    movedMat.moveColumns(0, 2, 1);
+    checkMatEqual(mat, movedMat);
+  }
+
+  {
+    IntMatrix movedMat =
+        makeIntMatrix(3, 4, {{1, 0, 2, 3}, {5, 4, 6, 7}, {9, 8, 4, 2}});
+
+    movedMat.moveColumns(0, 1, 1);
+    checkMatEqual(mat, movedMat);
+  }
 }

@@ -24,10 +24,10 @@ module LLVM_CodeGenTypes {
   requires cplusplus
 
   module LLT {
-    header "llvm/CodeGen/LowLevelType.h" export *
+    header "llvm/CodeGenTypes/LowLevelType.h" export *
   }
   module MVT {
-    header "llvm/CodeGen/MachineValueType.h" export *
+    header "llvm/CodeGenTypes/MachineValueType.h" export *
     extern module LLVM_Extern_CodeGenTypes_Gen "module.extern.modulemap"
   }
 }
@@ -46,11 +46,8 @@ module LLVM_Backend {
     exclude header "llvm/CodeGen/LinkAllAsmWriterComponents.h"
     exclude header "llvm/CodeGen/LinkAllCodegenComponents.h"
 
-    exclude header "llvm/CodeGen/CodeGenPassBuilder.h"
-
     // These are intended for (repeated) textual inclusion.
     textual header "llvm/CodeGen/DIEValue.def"
-    textual header "llvm/CodeGen/MachinePassRegistry.def"
   }
 }
 
@@ -348,6 +345,11 @@ extern module LLVM_Extern_Utils_DataTypes "module.extern.modulemap"
 // Build the module with the tablegen-generated files needed by the
 // TargetParser module before building the TargetParser module itself.
 module TargetParserGen {
+  module AArch64TargetParserDef {
+    header "llvm/TargetParser/AArch64TargetParser.h"
+    extern module LLVM_Extern_TargetParser_Gen "module.extern.modulemap"
+    export *
+  }
   module RISCVTargetParserDef {
     header "llvm/TargetParser/RISCVTargetParser.h"
     extern module LLVM_Extern_TargetParser_Gen "module.extern.modulemap"
@@ -401,6 +403,7 @@ module LLVM_Utils {
     textual header "llvm/TargetParser/CSKYTargetParser.def"
     textual header "llvm/TargetParser/X86TargetParser.def"
     textual header "llvm/TargetParser/LoongArchTargetParser.def"
+    textual header "llvm/TargetParser/PPCTargetParser.def"
   }
 
   // This part of the module is usable from both C and C++ code.

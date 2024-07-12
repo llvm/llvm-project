@@ -60,6 +60,42 @@ fir::KindMapping fir::getKindMapping(mlir::Operation *op) {
   return getKindMapping(moduleOp);
 }
 
+static constexpr const char *targetCpuName = "fir.target_cpu";
+
+void fir::setTargetCPU(mlir::ModuleOp mod, llvm::StringRef cpu) {
+  if (cpu.empty())
+    return;
+
+  auto *ctx = mod.getContext();
+  mod->setAttr(targetCpuName, mlir::StringAttr::get(ctx, cpu));
+}
+
+llvm::StringRef fir::getTargetCPU(mlir::ModuleOp mod) {
+  if (auto attr = mod->getAttrOfType<mlir::StringAttr>(targetCpuName))
+    return attr.getValue();
+
+  return {};
+}
+
+static constexpr const char *targetFeaturesName = "fir.target_features";
+
+void fir::setTargetFeatures(mlir::ModuleOp mod, llvm::StringRef features) {
+  if (features.empty())
+    return;
+
+  auto *ctx = mod.getContext();
+  mod->setAttr(targetFeaturesName,
+               mlir::LLVM::TargetFeaturesAttr::get(ctx, features));
+}
+
+mlir::LLVM::TargetFeaturesAttr fir::getTargetFeatures(mlir::ModuleOp mod) {
+  if (auto attr = mod->getAttrOfType<mlir::LLVM::TargetFeaturesAttr>(
+          targetFeaturesName))
+    return attr;
+
+  return {};
+}
+
 std::string fir::determineTargetTriple(llvm::StringRef triple) {
   // Treat "" or "default" as stand-ins for the default machine.
   if (triple.empty() || triple == "default")

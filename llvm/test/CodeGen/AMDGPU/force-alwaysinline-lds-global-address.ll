@@ -59,7 +59,8 @@ define i32 @load_lds_cycle() {
 
 ; ALL-LABEL: define i1 @icmp_lds_address() #0 {
 define i1 @icmp_lds_address() {
-  ret i1 icmp eq (ptr addrspace(3) @lds0, ptr addrspace(3) null)
+  %cmp = icmp eq ptr addrspace(3) @lds0, null
+  ret i1 %cmp
 }
 
 ; ALL-LABEL: define i32 @transitive_call() #0 {

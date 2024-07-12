@@ -407,10 +407,43 @@ define ptr addrspace(2) @load_non_integral_ptr_from_i8_data() {
 
 define i8 @load_i8_from_i1() {
 ; CHECK-LABEL: @load_i8_from_i1(
-; CHECK-NEXT:    ret i8 -1
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr @g_i1, align 1
+; CHECK-NEXT:    ret i8 [[V]]
 ;
   %v = load i8, ptr @g_i1
   ret i8 %v
+}
+
+@global9 = internal constant i9 -1
+
+; Reproducer for https://github.com/llvm/llvm-project/issues/81793
+define i8 @load_i8_from_i9() {
+; CHECK-LABEL: @load_i8_from_i9(
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr @global9, align 1
+; CHECK-NEXT:    ret i8 [[V]]
+;
+  %v = load i8, ptr @global9
+  ret i8 %v
+}
+
+define i9 @load_i9_from_i9() {
+; CHECK-LABEL: @load_i9_from_i9(
+; CHECK-NEXT:    ret i9 -1
+;
+  %v = load i9, ptr @global9
+  ret i9 %v
+}
+
+; Reproducer for https://github.com/llvm/llvm-project/issues/81793
+define i16 @load_i16_from_i17_store(ptr %p) {
+; CHECK-LABEL: @load_i16_from_i17_store(
+; CHECK-NEXT:    store i17 -1, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load i16, ptr @global9, align 2
+; CHECK-NEXT:    ret i16 [[V]]
+;
+  store i17 -1, ptr %p
+  %v = load i16, ptr @global9
+  ret i16 %v
 }
 
 @global128 = internal constant i128 1125899906842625

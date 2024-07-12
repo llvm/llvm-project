@@ -12,5 +12,6 @@ ByNameFunction
 ; CHECK-NEXT: Symbol: __imp__ByOrdinalFunction
 ; CHECK-NEXT: Symbol: _ByOrdinalFunction
 ; CHECK:      Name type: noprefix
+; CHECK-NEXT: Export name: ByNameFunction
 ; CHECK-NEXT: Symbol: __imp__ByNameFunction
 ; CHECK-NEXT: Symbol: _ByNameFunction

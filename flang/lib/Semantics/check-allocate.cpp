@@ -539,7 +539,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
   // Shape related checks
   if (ultimate_ && evaluate::IsAssumedRank(*ultimate_)) {
     context.Say(name_.source,
-        "An assumed-rank object may not appear in an ALLOCATE statement"_err_en_US);
+        "An assumed-rank dummy argument may not appear in an ALLOCATE statement"_err_en_US);
     return false;
   }
   if (ultimate_ && IsAssumedSizeArray(*ultimate_) && context.AnyFatalError()) {
@@ -609,6 +609,20 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
               "Name in ALLOCATE statement is not definable"_err_en_US)
           .Attach(std::move(*whyNot));
       return false;
+    }
+  }
+  if (allocateInfo_.gotPinned) {
+    std::optional<common::CUDADataAttr> cudaAttr{GetCUDADataAttr(ultimate_)};
+    if (!cudaAttr || *cudaAttr != common::CUDADataAttr::Pinned) {
+      context.Say(name_.source,
+          "Object in ALLOCATE must have PINNED attribute when PINNED option is specified"_err_en_US);
+    }
+  }
+  if (allocateInfo_.gotStream) {
+    std::optional<common::CUDADataAttr> cudaAttr{GetCUDADataAttr(ultimate_)};
+    if (!cudaAttr || *cudaAttr != common::CUDADataAttr::Device) {
+      context.Say(name_.source,
+          "Object in ALLOCATE must have DEVICE attribute when STREAM option is specified"_err_en_US);
     }
   }
   return RunCoarrayRelatedChecks(context);

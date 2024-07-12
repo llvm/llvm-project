@@ -8,15 +8,16 @@
 
 #include "file.h"
 
-#include "src/__support/File/file.h"
-
 #include "src/__support/CPP/new.h"
+#include "src/__support/File/file.h"
 #include "src/__support/File/linux/lseekImpl.h"
+#include "src/__support/OSUtil/fcntl.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/errno/libc_errno.h"         // For error macros
 
 #include <fcntl.h> // For mode_t and other flags to the open syscall
 #include <stdio.h>
+#include <sys/stat.h>    // For S_IS*, S_IF*, and S_IR* flags.
 #include <sys/syscall.h> // For syscall numbers
 
 namespace LIBC_NAMESPACE {
@@ -115,6 +116,60 @@ ErrorOr<File *> openfile(const char *path, const char *mode) {
       LinuxFile(fd, buffer, File::DEFAULT_BUFFER_SIZE, _IOFBF, true, modeflags);
   if (!ac)
     return Error(ENOMEM);
+  return file;
+}
+
+ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
+  using ModeFlags = File::ModeFlags;
+  ModeFlags modeflags = File::mode_flags(mode);
+  if (modeflags == 0) {
+    return Error(EINVAL);
+  }
+
+  int fd_flags = internal::fcntl(fd, F_GETFL);
+  if (fd_flags == -1) {
+    return Error(EBADF);
+  }
+
+  using OpenMode = File::OpenMode;
+  if (((fd_flags & O_ACCMODE) == O_RDONLY &&
+       !(modeflags & static_cast<ModeFlags>(OpenMode::READ))) ||
+      ((fd_flags & O_ACCMODE) == O_WRONLY &&
+       !(modeflags & static_cast<ModeFlags>(OpenMode::WRITE)))) {
+    return Error(EINVAL);
+  }
+
+  bool do_seek = false;
+  if ((modeflags & static_cast<ModeFlags>(OpenMode::APPEND)) &&
+      !(fd_flags & O_APPEND)) {
+    do_seek = true;
+    if (internal::fcntl(fd, F_SETFL,
+                        reinterpret_cast<void *>(fd_flags | O_APPEND)) == -1) {
+      return Error(EBADF);
+    }
+  }
+
+  uint8_t *buffer;
+  {
+    AllocChecker ac;
+    buffer = new (ac) uint8_t[File::DEFAULT_BUFFER_SIZE];
+    if (!ac) {
+      return Error(ENOMEM);
+    }
+  }
+  AllocChecker ac;
+  auto *file = new (ac)
+      LinuxFile(fd, buffer, File::DEFAULT_BUFFER_SIZE, _IOFBF, true, modeflags);
+  if (!ac) {
+    return Error(ENOMEM);
+  }
+  if (do_seek) {
+    auto result = file->seek(0, SEEK_END);
+    if (!result.has_value()) {
+      free(file);
+      return Error(result.error());
+    }
+  }
   return file;
 }
 

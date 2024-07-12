@@ -146,7 +146,7 @@ private:
             ento::cocoa::isRefType(E->getSubExpr()->getType(), "CF",
                                    FD->getIdentifier()->getName())) {
           StringRef fname = FD->getIdentifier()->getName();
-          if (fname.endswith("Retain") || fname.contains("Create") ||
+          if (fname.ends_with("Retain") || fname.contains("Create") ||
               fname.contains("Copy")) {
             // Do not migrate to couple of bridge transfer casts which
             // cancel each other out. Leave it unchanged so error gets user
@@ -371,7 +371,7 @@ private:
       Stmt *parent = E;
       do {
         parent = StmtMap->getParentIgnoreParenImpCasts(parent);
-      } while (parent && isa<FullExpr>(parent));
+      } while (isa_and_nonnull<FullExpr>(parent));
 
       if (ReturnStmt *retS = dyn_cast_or_null<ReturnStmt>(parent)) {
         std::string note = "remove the cast and change return type of function "

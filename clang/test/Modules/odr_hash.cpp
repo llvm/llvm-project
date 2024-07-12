@@ -13,19 +13,19 @@
 // RUN: cat %s                >> %t/Inputs/second.h
 
 // Test that each header can compile
-// RUN: %clang_cc1 -fsyntax-only -x c++ -std=c++1z %t/Inputs/first.h
-// RUN: %clang_cc1 -fsyntax-only -x c++ -std=c++1z %t/Inputs/second.h
+// RUN: %clang_cc1 -fsyntax-only -x c++ -std=c++20 %t/Inputs/first.h
+// RUN: %clang_cc1 -fsyntax-only -x c++ -std=c++20 %t/Inputs/second.h
 
 // Build module map file
-// RUN: echo "module FirstModule {"     >> %t/Inputs/module.map
-// RUN: echo "    header \"first.h\""   >> %t/Inputs/module.map
-// RUN: echo "}"                        >> %t/Inputs/module.map
-// RUN: echo "module SecondModule {"    >> %t/Inputs/module.map
-// RUN: echo "    header \"second.h\""  >> %t/Inputs/module.map
-// RUN: echo "}"                        >> %t/Inputs/module.map
+// RUN: echo "module FirstModule {"     >> %t/Inputs/module.modulemap
+// RUN: echo "    header \"first.h\""   >> %t/Inputs/module.modulemap
+// RUN: echo "}"                        >> %t/Inputs/module.modulemap
+// RUN: echo "module SecondModule {"    >> %t/Inputs/module.modulemap
+// RUN: echo "    header \"second.h\""  >> %t/Inputs/module.modulemap
+// RUN: echo "}"                        >> %t/Inputs/module.modulemap
 
 // Run test
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -x c++ -std=c++1z \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -x c++ -std=c++20 \
 // RUN:   -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache \
 // RUN:   -I%t/Inputs -verify %s
 
@@ -2091,6 +2091,193 @@ struct S21 {
 };
 #else
 S21 s21;
+#endif
+
+#if defined(FIRST)
+struct S22 {
+  template <double> void f(){};
+  template <> void f<1.5>(){};
+};
+#elif defined(SECOND)
+struct S22 {
+  template <double> void f(){};
+  template <> void f<1.7>(){};
+};
+#else
+S22 s22;
+// expected-error@second.h:* {{'TemplateArgument::S22' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'f' with 1.700000e+00 for 1st template argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'f' with 1.500000e+00 for 1st template argument}}
+#endif
+
+#if defined(FIRST)
+struct S23 {
+  template <double> void f(){};
+  template <> void f<2.7>(){};
+};
+#elif defined(SECOND)
+struct S23 {
+  template <double> void f(){};
+  template <> void f<2.7>(){};
+};
+#else
+S23 s23;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct Composite {
+  int n1[4];
+  int n2[4];
+};
+extern Composite composite;
+#endif
+
+#if defined(FIRST)
+struct S24 {
+  template <int&> void f(){};
+  template <> void f<composite.n1[1]>(){};
+};
+#elif defined(SECOND)
+struct S24 {
+  template <int&> void f(){};
+  template <> void f<composite.n1[2]>(){};
+};
+#else
+S24 s24;
+// expected-error@second.h:* {{'TemplateArgument::S24' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'f' with composite.n1[2] for 1st template argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'f' with composite.n1[1] for 1st template argument}}
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct S25 {
+  template <int&> void f();
+  template <> void f<composite.n1[2]>();
+};
+#else
+S25 s25;
+#endif
+
+#if defined(FIRST)
+struct S26 {
+  template <int*> void f(){};
+  template <> void f<&composite.n1[4]>(){}; // Past-the-end pointer.
+};
+#elif defined(SECOND)
+struct S26 {
+  template <int*> void f(){};
+  template <> void f<&composite.n2[0]>(){};
+};
+#else
+S26 s26;
+// expected-error@second.h:* {{'TemplateArgument::S26' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'f' with &composite.n2[0] for 1st template argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'f' with &composite.n1[4] for 1st template argument}}
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+union Union {
+  int i1;
+  int i2;
+};
+extern Union u;
+#endif
+
+#if defined(FIRST)
+struct S27 {
+  template <int&> void f(){};
+  template <> void f<u.i1>(){};
+};
+#elif defined(SECOND)
+struct S27 {
+  template <int&> void f(){};
+  template <> void f<u.i2>(){};
+};
+#else
+S27 s27;
+// expected-error@second.h:* {{'TemplateArgument::S27' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'f' with u.i2 for 1st template argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'f' with u.i1 for 1st template argument}}
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct S28 {
+  template <int&> void f(){};
+  template <> void f<u.i1>(){};
+};
+#else
+S28 s28;
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct A {
+  int a;
+};
+struct B : A {};
+struct C : A {};
+struct D : B, C {};
+#endif
+
+#if defined(FIRST)
+struct S29 {
+  template <int D::*> void f(){};
+  template <> void f<(int D::*)(int B::*)&A::a>(){};
+};
+#elif defined(SECOND)
+struct S29 {
+  template <int D::*> void f(){};
+  template <> void f<(int D::*)(int C::*)&A::a>(){};
+};
+#else
+S29 s29;
+// expected-error@second.h:* {{'TemplateArgument::S29' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'f' with &A::a for 1st template argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'f' with &A::a for 1st template argument}}
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct S30 {
+  template <int D::*> void f(){};
+  template <> void f<(int D::*)(int B::*)&A::a>(){};
+};
+#else
+S30 s30;
+#endif
+
+#if defined(FIRST)
+struct S31 {
+  template <auto*> void f(){};
+  template <> void f<&composite.n1[2]>(){};
+};
+#elif defined(SECOND)
+struct S31 {
+  template <auto*> void f(){};
+  template <> void f<(void*)&composite.n1[2]>(){};
+};
+#else
+S31 s31;
+// expected-error@second.h:* {{'TemplateArgument::S31' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'f' with &composite.n1[2] for 1st template argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'f' with &composite.n1[2] for 1st template argument}}
+#endif
+
+#if defined(FIRST)
+struct S32 {
+  template <int*> void f(){};
+  template <> void f<__builtin_constant_p(0) ? (int*)1 : (int*)1>(){};
+};
+#elif defined(SECOND)
+struct S32 {
+  template <int*> void f(){};
+  template <> void f<__builtin_constant_p(0) ? (int*)2 : (int*)2>(){};
+};
+#else
+S32 s32;
+// expected-error@second.h:* {{'TemplateArgument::S32' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'f' with (int *)2 for 1st template argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'f' with (int *)1 for 1st template argument}}
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+struct S33 {
+  template <int*> void f(){};
+  template <> void f<__builtin_constant_p(0) ? (int*)1 : (int*)1>(){};
+};
+#else
+S33 s33;
 #endif
 
 #define DECLS                   \

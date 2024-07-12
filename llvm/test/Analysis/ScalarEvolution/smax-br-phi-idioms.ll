@@ -82,7 +82,6 @@ define i32 @f3(i32 %x, i32 %init, i32 %lim) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   br label %loop
@@ -121,7 +120,6 @@ define i32 @f4(i32 %x, i32 %init, i32 %lim) {
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
-; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
   %c = icmp sge i32 %init, 0
@@ -154,15 +152,13 @@ define i32 @f5(ptr %val) {
 ; CHECK-NEXT:    %init = phi i32 [ 0, %for.condt ], [ %inc, %for.end ]
 ; CHECK-NEXT:    --> %inc U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @f5
-; CHECK-NEXT:  Loop %for.end: <multiple exits> backedge-taken count is false
-; CHECK-NEXT:    exit count for for.end: false
-; CHECK-NEXT:    exit count for for.condt: false
-; CHECK-NEXT:  Loop %for.end: constant max backedge-taken count is false
-; CHECK-NEXT:  Loop %for.end: symbolic max backedge-taken count is false
-; CHECK-NEXT:    symbolic max exit count for for.end: false
-; CHECK-NEXT:    symbolic max exit count for for.condt: false
-; CHECK-NEXT:  Loop %for.end: Predicated backedge-taken count is false
-; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:  Loop %for.end: <multiple exits> backedge-taken count is i1 false
+; CHECK-NEXT:    exit count for for.end: i1 false
+; CHECK-NEXT:    exit count for for.condt: i1 false
+; CHECK-NEXT:  Loop %for.end: constant max backedge-taken count is i1 false
+; CHECK-NEXT:  Loop %for.end: symbolic max backedge-taken count is i1 false
+; CHECK-NEXT:    symbolic max exit count for for.end: i1 false
+; CHECK-NEXT:    symbolic max exit count for for.condt: i1 false
 ; CHECK-NEXT:  Loop %for.end: Trip multiple is 1
 ;
 entry:

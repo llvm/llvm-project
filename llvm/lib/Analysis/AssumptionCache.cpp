@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
@@ -60,79 +61,38 @@ findAffectedValues(CallBase *CI, TargetTransformInfo *TTI,
   // Note: This code must be kept in-sync with the code in
   // computeKnownBitsFromAssume in ValueTracking.
 
-  auto AddAffected = [&Affected](Value *V, unsigned Idx =
-                                               AssumptionCache::ExprResultIdx) {
-    if (isa<Argument>(V) || isa<GlobalValue>(V)) {
-      Affected.push_back({V, Idx});
-    } else if (auto *I = dyn_cast<Instruction>(V)) {
-      Affected.push_back({I, Idx});
+  auto InsertAffected = [&Affected](Value *V) {
+    Affected.push_back({V, AssumptionCache::ExprResultIdx});
+  };
 
-      // Peek through unary operators to find the source of the condition.
-      Value *Op;
-      if (match(I, m_PtrToInt(m_Value(Op)))) {
-        if (isa<Instruction>(Op) || isa<Argument>(Op))
-          Affected.push_back({Op, Idx});
-      }
+  auto AddAffectedVal = [&Affected](Value *V, unsigned Idx) {
+    if (isa<Argument>(V) || isa<GlobalValue>(V) || isa<Instruction>(V)) {
+      Affected.push_back({V, Idx});
     }
   };
 
   for (unsigned Idx = 0; Idx != CI->getNumOperandBundles(); Idx++) {
-    if (CI->getOperandBundleAt(Idx).Inputs.size() > ABA_WasOn &&
-        CI->getOperandBundleAt(Idx).getTagName() != IgnoreBundleTag)
-      AddAffected(CI->getOperandBundleAt(Idx).Inputs[ABA_WasOn], Idx);
+    OperandBundleUse Bundle = CI->getOperandBundleAt(Idx);
+    if (Bundle.getTagName() == "separate_storage") {
+      assert(Bundle.Inputs.size() == 2 &&
+             "separate_storage must have two args");
+      AddAffectedVal(getUnderlyingObject(Bundle.Inputs[0]), Idx);
+      AddAffectedVal(getUnderlyingObject(Bundle.Inputs[1]), Idx);
+    } else if (Bundle.Inputs.size() > ABA_WasOn &&
+               Bundle.getTagName() != IgnoreBundleTag)
+      AddAffectedVal(Bundle.Inputs[ABA_WasOn], Idx);
   }
 
-  Value *Cond = CI->getArgOperand(0), *A, *B;
-  AddAffected(Cond);
-  if (match(Cond, m_Not(m_Value(A))))
-    AddAffected(A);
-
-  CmpInst::Predicate Pred;
-  if (match(Cond, m_Cmp(Pred, m_Value(A), m_Value(B)))) {
-    AddAffected(A);
-    AddAffected(B);
-
-    if (Pred == ICmpInst::ICMP_EQ) {
-      if (match(B, m_ConstantInt())) {
-        Value *X;
-        // (X & C) or (X | C) or (X ^ C).
-        // (X << C) or (X >>_s C) or (X >>_u C).
-        if (match(A, m_BitwiseLogic(m_Value(X), m_ConstantInt())) ||
-            match(A, m_Shift(m_Value(X), m_ConstantInt())))
-          AddAffected(X);
-      }
-    } else if (Pred == ICmpInst::ICMP_NE) {
-      Value *X;
-      // Handle (X & pow2 != 0).
-      if (match(A, m_And(m_Value(X), m_Power2())) && match(B, m_Zero()))
-        AddAffected(X);
-    } else if (Pred == ICmpInst::ICMP_ULT) {
-      Value *X;
-      // Handle (A + C1) u< C2, which is the canonical form of A > C3 && A < C4,
-      // and recognized by LVI at least.
-      if (match(A, m_Add(m_Value(X), m_ConstantInt())) &&
-          match(B, m_ConstantInt()))
-        AddAffected(X);
-    } else if (CmpInst::isFPPredicate(Pred)) {
-      // fcmp fneg(x), y
-      // fcmp fabs(x), y
-      // fcmp fneg(fabs(x)), y
-      if (match(A, m_FNeg(m_Value(A))))
-        AddAffected(A);
-      if (match(A, m_FAbs(m_Value(A))))
-        AddAffected(A);
-    }
-  } else if (match(Cond, m_Intrinsic<Intrinsic::is_fpclass>(m_Value(A),
-                                                            m_Value(B)))) {
-    AddAffected(A);
-  }
+  Value *Cond = CI->getArgOperand(0);
+  findValuesAffectedByCondition(Cond, /*IsAssume=*/true, InsertAffected);
 
   if (TTI) {
     const Value *Ptr;
     unsigned AS;
     std::tie(Ptr, AS) = TTI->getPredicatedAddrSpace(Cond);
     if (Ptr)
-      AddAffected(const_cast<Value *>(Ptr->stripInBoundsOffsets()));
+      AddAffectedVal(const_cast<Value *>(Ptr->stripInBoundsOffsets()),
+                     AssumptionCache::ExprResultIdx);
   }
 }
 

@@ -240,6 +240,10 @@ static void prettyPrintBaseTypeRef(DWARFUnit *U, raw_ostream &OS,
                                    ArrayRef<uint64_t> Operands,
                                    unsigned Operand) {
   assert(Operand < Operands.size() && "operand out of bounds");
+  if (!U) {
+    OS << format(" <base_type ref: 0x%" PRIx64 ">", Operands[Operand]);
+    return;
+  }
   auto Die = U->getDIEForOffset(U->getOffset() + Operands[Operand]);
   if (Die && Die.getTag() == dwarf::DW_TAG_base_type) {
     OS << " (";
@@ -249,8 +253,7 @@ static void prettyPrintBaseTypeRef(DWARFUnit *U, raw_ostream &OS,
     if (auto Name = dwarf::toString(Die.find(dwarf::DW_AT_name)))
       OS << " \"" << *Name << "\"";
   } else {
-    OS << format(" <invalid base_type ref: 0x%" PRIx64 ">",
-                 Operands[Operand]);
+    OS << format(" <invalid base_type ref: 0x%" PRIx64 ">", Operands[Operand]);
   }
 }
 

@@ -313,4 +313,3 @@ define <vscale x 8 x i32> @vtrunc_nxv8i64_nxv8i32(<vscale x 8 x i64> %va) {
   %tvec = trunc <vscale x 8 x i64> %va to <vscale x 8 x i32>
   ret <vscale x 8 x i32> %tvec
 }
-

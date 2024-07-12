@@ -78,7 +78,7 @@ class ModulePass;
   void initializePPCMIPeepholePass(PassRegistry&);
   void initializePPCExpandAtomicPseudoPass(PassRegistry &);
   void initializePPCCTRLoopsPass(PassRegistry &);
-  void initializePPCDAGToDAGISelPass(PassRegistry &);
+  void initializePPCDAGToDAGISelLegacyPass(PassRegistry &);
   void initializePPCMergeStringPoolPass(PassRegistry &);
 
   extern char &PPCVSXFMAMutateID;
@@ -138,6 +138,12 @@ class ModulePass;
     /// the thread pointer and the symbol can be used for the TLS Initial Exec
     /// and Local Exec models.
     MO_TPREL_FLAG,
+
+    /// MO_TLSLDM_FLAG - on AIX the ML relocation type is only valid for a
+    /// reference to a TOC symbol from the symbol itself, and right now its only
+    /// user is the symbol "_$TLSML". The symbol name is used to decide that
+    /// the R_TLSML relocation is expected.
+    MO_TLSLDM_FLAG,
 
     /// MO_TLSLD_FLAG - If this bit is set the symbol reference is relative to
     /// TLS Local Dynamic model.

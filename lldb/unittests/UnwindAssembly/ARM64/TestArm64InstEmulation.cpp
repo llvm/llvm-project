@@ -77,7 +77,7 @@ TEST_F(TestArm64InstEmulation, TestSimpleDarwinFunction) {
 
   // UnwindPlan we expect:
 
-  // row[0]:    0: CFA=sp +0 =>
+  // row[0]:    0: CFA=sp +0 => fp= <same> lr= <same>
   // row[1]:    4: CFA=sp+16 => fp=[CFA-16] lr=[CFA-8]
   // row[2]:    8: CFA=fp+16 => fp=[CFA-16] lr=[CFA-8]
   // row[2]:   16: CFA=sp+16 => fp=[CFA-16] lr=[CFA-8]
@@ -88,12 +88,18 @@ TEST_F(TestArm64InstEmulation, TestSimpleDarwinFunction) {
   EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
       sample_range, data, sizeof(data), unwind_plan));
 
-  // CFA=sp +0
+  // CFA=sp +0 => fp= <same> lr= <same>
   row_sp = unwind_plan.GetRowForFunctionOffset(0);
   EXPECT_EQ(0ull, row_sp->GetOffset());
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == gpr_sp_arm64);
   EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(gpr_fp_arm64, regloc));
+  EXPECT_TRUE(regloc.IsSame());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(gpr_lr_arm64, regloc));
+  EXPECT_TRUE(regloc.IsSame());
 
   // CFA=sp+16 => fp=[CFA-16] lr=[CFA-8]
   row_sp = unwind_plan.GetRowForFunctionOffset(4);
@@ -146,6 +152,12 @@ TEST_F(TestArm64InstEmulation, TestSimpleDarwinFunction) {
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == gpr_sp_arm64);
   EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
   EXPECT_EQ(0, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(gpr_fp_arm64, regloc));
+  EXPECT_TRUE(regloc.IsSame());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(gpr_lr_arm64, regloc));
+  EXPECT_TRUE(regloc.IsSame());
 }
 
 TEST_F(TestArm64InstEmulation, TestMediumDarwinFunction) {
@@ -381,8 +393,12 @@ TEST_F(TestArm64InstEmulation, TestFramelessThreeEpilogueFunction) {
   EXPECT_FALSE(row_sp->GetRegisterInfo(gpr_x26_arm64, regloc));
   EXPECT_FALSE(row_sp->GetRegisterInfo(gpr_x27_arm64, regloc));
   EXPECT_FALSE(row_sp->GetRegisterInfo(gpr_x28_arm64, regloc));
-  EXPECT_FALSE(row_sp->GetRegisterInfo(gpr_fp_arm64, regloc));
-  EXPECT_FALSE(row_sp->GetRegisterInfo(gpr_lr_arm64, regloc));
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(gpr_fp_arm64, regloc));
+  EXPECT_TRUE(regloc.IsSame());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(gpr_lr_arm64, regloc));
+  EXPECT_TRUE(regloc.IsSame());
 
   row_sp = unwind_plan.GetRowForFunctionOffset(36);
   EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == gpr_sp_arm64);

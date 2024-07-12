@@ -61,7 +61,7 @@ protected:
 
     assert(ExclusionSet.empty());
     for (auto I = F->begin(), E = F->end(); I != E; ++I) {
-      if (I->hasName() && I->getName().startswith("excluded"))
+      if (I->hasName() && I->getName().starts_with("excluded"))
         ExclusionSet.insert(&*I);
     }
   }

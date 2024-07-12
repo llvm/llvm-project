@@ -114,6 +114,4 @@ if(SANITIZER_COMMON_TESTSUITES)
   add_lit_testsuite(check-sanitizer "Running sanitizer_common tests"
     ${SANITIZER_COMMON_TESTSUITES}
     DEPENDS ${SANITIZER_COMMON_TEST_DEPS})
-  set_target_properties(check-sanitizer PROPERTIES FOLDER
-                        "Compiler-RT Misc")
 endif()

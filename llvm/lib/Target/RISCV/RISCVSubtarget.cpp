@@ -16,8 +16,9 @@
 #include "GISel/RISCVRegisterBankInfo.h"
 #include "RISCV.h"
 #include "RISCVFrameLowering.h"
-#include "RISCVMacroFusion.h"
 #include "RISCVTargetMachine.h"
+#include "llvm/CodeGen/MacroFusion.h"
+#include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -29,14 +30,14 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "RISCVGenSubtargetInfo.inc"
 
+#define GET_RISCV_MACRO_FUSION_PRED_IMPL
+#include "RISCVGenMacroFusion.inc"
+
 namespace llvm::RISCVTuneInfoTable {
 
 #define GET_RISCVTuneInfoTable_IMPL
 #include "RISCVGenSearchableTables.inc"
 } // namespace llvm::RISCVTuneInfoTable
-
-static cl::opt<bool> EnableSubRegLiveness("riscv-enable-subreg-liveness",
-                                          cl::init(true), cl::Hidden);
 
 static cl::opt<unsigned> RVVVectorLMULMax(
     "riscv-v-fixed-length-vector-lmul-max",
@@ -179,15 +180,11 @@ bool RISCVSubtarget::useRVVForFixedLengthVectors() const {
   return hasVInstructions() && getMinRVVVectorSizeInBits() != 0;
 }
 
-bool RISCVSubtarget::enableSubRegLiveness() const {
-  // FIXME: Enable subregister liveness by default for RVV to better handle
-  // LMUL>1 and segment load/store.
-  return EnableSubRegLiveness;
-}
+bool RISCVSubtarget::enableSubRegLiveness() const { return true; }
 
 void RISCVSubtarget::getPostRAMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
-  Mutations.push_back(createRISCVMacroFusionDAGMutation());
+  Mutations.push_back(createMacroFusionDAGMutation(getMacroFusions()));
 }
 
   /// Enable use of alias analysis during code generation (during MI

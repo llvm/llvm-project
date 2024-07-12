@@ -60,13 +60,13 @@ define i64 @shift_i64_i64(i64 %a, i64 %b) {
 ; CHECK-NEXT:    breq .LBB3_3
 ; CHECK-NEXT:  ; %bb.1: ; %shift.loop.preheader
 ; CHECK-NEXT:    mov r27, r1
-; CHECK-NEXT:    mov r16, r1
-; CHECK-NEXT:    mov r17, r1
+; CHECK-NEXT:    mov r16, r27
+; CHECK-NEXT:    mov r17, r27
 ; CHECK-NEXT:  .LBB3_2: ; %shift.loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    mov r31, r21
 ; CHECK-NEXT:    lsl r31
-; CHECK-NEXT:    mov r26, r1
+; CHECK-NEXT:    mov r26, r27
 ; CHECK-NEXT:    rol r26
 ; CHECK-NEXT:    lsl r22
 ; CHECK-NEXT:    rol r23

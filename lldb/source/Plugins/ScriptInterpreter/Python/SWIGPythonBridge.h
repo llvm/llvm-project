@@ -32,6 +32,7 @@ class SBStream;
 class SBStructuredData;
 class SBFileSpec;
 class SBModuleSpec;
+class SBStringList;
 } // namespace lldb
 
 namespace lldb_private {
@@ -96,12 +97,14 @@ public:
   static PythonObject ToSWIGWrapper(lldb::ExecutionContextRefSP ctx_sp);
   static PythonObject ToSWIGWrapper(const TypeSummaryOptions &summary_options);
   static PythonObject ToSWIGWrapper(const SymbolContext &sym_ctx);
+  static PythonObject ToSWIGWrapper(const Stream *stream);
+  static PythonObject ToSWIGWrapper(std::shared_ptr<lldb::SBStream> stream_sb);
+  static PythonObject ToSWIGWrapper(Event *event);
 
   static PythonObject ToSWIGWrapper(lldb::ProcessAttachInfoSP attach_info_sp);
   static PythonObject ToSWIGWrapper(lldb::ProcessLaunchInfoSP launch_info_sp);
   static PythonObject ToSWIGWrapper(lldb::DataExtractorSP data_extractor_sp);
 
-  static PythonObject ToSWIGWrapper(std::unique_ptr<lldb::SBStream> stream_sb);
   static PythonObject
   ToSWIGWrapper(std::unique_ptr<lldb::SBStructuredData> data_sb);
   static PythonObject
@@ -111,7 +114,6 @@ public:
 
   static python::ScopedPythonObject<lldb::SBCommandReturnObject>
   ToSWIGWrapper(CommandReturnObject &cmd_retobj);
-  static python::ScopedPythonObject<lldb::SBEvent> ToSWIGWrapper(Event *event);
   // These prototypes are the Pythonic implementations of the required
   // callbacks. Although these are scripting-language specific, their definition
   // depends on the public API.
@@ -145,21 +147,6 @@ public:
   LLDBSwigPythonCreateCommandObject(const char *python_class_name,
                                     const char *session_dictionary_name,
                                     lldb::DebuggerSP debugger_sp);
-
-  static python::PythonObject LLDBSwigPythonCreateScriptedThreadPlan(
-      const char *python_class_name, const char *session_dictionary_name,
-      const StructuredDataImpl &args_data, std::string &error_string,
-      const lldb::ThreadPlanSP &thread_plan_sp);
-
-  static bool LLDBSWIGPythonCallThreadPlan(void *implementor,
-                                           const char *method_name,
-                                           lldb_private::Event *event_sp,
-                                           bool &got_error);
-
-  static bool LLDBSWIGPythonCallThreadPlan(void *implementor,
-                                           const char *method_name,
-                                           lldb_private::Stream *stream,
-                                           bool &got_error);
 
   static python::PythonObject LLDBSwigPythonCreateScriptedBreakpointResolver(
       const char *python_class_name, const char *session_dictionary_name,
@@ -212,6 +199,16 @@ public:
                                   lldb::DebuggerSP debugger, const char *args,
                                   lldb_private::CommandReturnObject &cmd_retobj,
                                   lldb::ExecutionContextRefSP exe_ctx_ref_sp);
+  static bool
+  LLDBSwigPythonCallParsedCommandObject(PyObject *implementor,
+                                  lldb::DebuggerSP debugger,  
+                                  StructuredDataImpl &args_impl,
+                                  lldb_private::CommandReturnObject &cmd_retobj,
+                                  lldb::ExecutionContextRefSP exe_ctx_ref_sp);
+
+  static std::optional<std::string>
+  LLDBSwigPythonGetRepeatCommandForScriptedCommand(PyObject *implementor,
+                                                   std::string &command);
 
   static bool LLDBSwigPythonCallModuleInit(const char *python_module_name,
                                            const char *session_dictionary_name,
@@ -262,6 +259,8 @@ void *LLDBSWIGPython_CastPyObjectToSBBreakpoint(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBAttachInfo(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBLaunchInfo(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBError(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBEvent(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBStream(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBValue(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(PyObject *data);
 } // namespace python

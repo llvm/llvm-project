@@ -132,7 +132,7 @@ func.func @shape_mismatch(%t: tensor<5x6x128xf32>) -> tensor<5x6x128xf32> {
   %cst = arith.constant 8.0 : f32
   %0 = tensor.empty() : tensor<128xf32>
   %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<128xf32>) -> tensor<128xf32>
-  %2 = tensor.expand_shape %1 [[0, 1, 2]]
+  %2 = tensor.expand_shape %1 [[0, 1, 2]] output_shape [1, 1, 128]
       : tensor<128xf32> into tensor<1x1x128xf32>
   %3 = tensor.insert_slice %2 into %t[2, 3, 0][1, 1, 128][1, 1, 1]
       : tensor<1x1x128xf32> into tensor<5x6x128xf32>

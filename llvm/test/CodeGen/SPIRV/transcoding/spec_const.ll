@@ -1,8 +1,9 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --avoid-spirv-capabilities=Shader %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --avoid-spirv-capabilities=Shader %s -o - -filetype=obj | spirv-val %}
 
+; CHECK-SPIRV-DAG: OpCapability Kernel
 ; CHECK-SPIRV-NOT: OpCapability Matrix
 ; CHECK-SPIRV-NOT: OpCapability Shader
-; CHECK-SPIRV:     OpCapability Kernel
 
 ; CHECK-SPIRV-DAG: OpDecorate %[[#SC0:]] SpecId 0
 ; CHECK-SPIRV-DAG: OpDecorate %[[#SC1:]] SpecId 1

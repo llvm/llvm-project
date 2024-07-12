@@ -321,6 +321,11 @@ public:
 
   std::vector<Elf_Rel> decode_relrs(Elf_Relr_Range relrs) const;
 
+  Expected<uint64_t> getCrelHeader(ArrayRef<uint8_t> Content) const;
+  using RelsOrRelas = std::pair<std::vector<Elf_Rel>, std::vector<Elf_Rela>>;
+  Expected<RelsOrRelas> decodeCrel(ArrayRef<uint8_t> Content) const;
+  Expected<RelsOrRelas> crels(const Elf_Shdr &Sec) const;
+
   Expected<std::vector<Elf_Rela>> android_relas(const Elf_Shdr &Sec) const;
 
   /// Iterate over program header table.
@@ -457,8 +462,12 @@ public:
   /// within the text section that the SHT_LLVM_BB_ADDR_MAP section \p Sec
   /// is associated with. If the current ELFFile is relocatable, a corresponding
   /// \p RelaSec must be passed in as an argument.
+  /// Optional out variable to collect all PGO Analyses. New elements are only
+  /// added if no error occurs. If not provided, the PGO Analyses are decoded
+  /// then ignored.
   Expected<std::vector<BBAddrMap>>
-  decodeBBAddrMap(const Elf_Shdr &Sec, const Elf_Shdr *RelaSec = nullptr) const;
+  decodeBBAddrMap(const Elf_Shdr &Sec, const Elf_Shdr *RelaSec = nullptr,
+                  std::vector<PGOAnalysisMap> *PGOAnalyses = nullptr) const;
 
   /// Returns a map from every section matching \p IsMatch to its relocation
   /// section, or \p nullptr if it has no relocation section. This function

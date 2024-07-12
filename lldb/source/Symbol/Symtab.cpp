@@ -124,17 +124,29 @@ void Symtab::Dump(Stream *s, Target *target, SortOrder sort_order,
       DumpSymbolHeader(s);
 
       std::multimap<llvm::StringRef, const Symbol *> name_map;
-      for (const_iterator pos = m_symbols.begin(), end = m_symbols.end();
-           pos != end; ++pos) {
-        const char *name = pos->GetName().AsCString();
-        if (name && name[0])
-          name_map.insert(std::make_pair(name, &(*pos)));
-      }
+      for (const Symbol &symbol : m_symbols)
+        name_map.emplace(symbol.GetName().GetStringRef(), &symbol);
 
       for (const auto &name_to_symbol : name_map) {
         const Symbol *symbol = name_to_symbol.second;
         s->Indent();
         symbol->Dump(s, target, symbol - &m_symbols[0], name_preference);
+      }
+    } break;
+
+    case eSortOrderBySize: {
+      s->PutCString(" (sorted by size):\n");
+      DumpSymbolHeader(s);
+
+      std::multimap<size_t, const Symbol *, std::greater<size_t>> size_map;
+      for (const Symbol &symbol : m_symbols)
+        size_map.emplace(symbol.GetByteSize(), &symbol);
+
+      size_t idx = 0;
+      for (const auto &size_to_symbol : size_map) {
+        const Symbol *symbol = size_to_symbol.second;
+        s->Indent();
+        symbol->Dump(s, target, idx++, name_preference);
       }
     } break;
 
@@ -233,7 +245,7 @@ static bool lldb_skip_name(llvm::StringRef mangled,
                            Mangled::ManglingScheme scheme) {
   switch (scheme) {
   case Mangled::eManglingSchemeItanium: {
-    if (mangled.size() < 3 || !mangled.startswith("_Z"))
+    if (mangled.size() < 3 || !mangled.starts_with("_Z"))
       return true;
 
     // Avoid the following types of symbols in the index.

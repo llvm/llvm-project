@@ -44,8 +44,8 @@ define iXLen @intrinsic_vfirst_mask_m_nxv1i1(<vscale x 1 x i1> %0, <vscale x 1 x
 ; CHECK-LABEL: intrinsic_vfirst_mask_m_nxv1i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v9, v0
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vfirst.m a0, v9, v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -98,8 +98,8 @@ define iXLen @intrinsic_vfirst_mask_m_nxv2i1(<vscale x 2 x i1> %0, <vscale x 2 x
 ; CHECK-LABEL: intrinsic_vfirst_mask_m_nxv2i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v9, v0
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; CHECK-NEXT:    vfirst.m a0, v9, v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -138,8 +138,8 @@ define iXLen @intrinsic_vfirst_mask_m_nxv4i1(<vscale x 4 x i1> %0, <vscale x 4 x
 ; CHECK-LABEL: intrinsic_vfirst_mask_m_nxv4i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v9, v0
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vfirst.m a0, v9, v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -178,8 +178,8 @@ define iXLen @intrinsic_vfirst_mask_m_nxv8i1(<vscale x 8 x i1> %0, <vscale x 8 x
 ; CHECK-LABEL: intrinsic_vfirst_mask_m_nxv8i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v9, v0
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; CHECK-NEXT:    vfirst.m a0, v9, v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -218,8 +218,8 @@ define iXLen @intrinsic_vfirst_mask_m_nxv16i1(<vscale x 16 x i1> %0, <vscale x 1
 ; CHECK-LABEL: intrinsic_vfirst_mask_m_nxv16i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v9, v0
-; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; CHECK-NEXT:    vfirst.m a0, v9, v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -258,8 +258,8 @@ define iXLen @intrinsic_vfirst_mask_m_nxv32i1(<vscale x 32 x i1> %0, <vscale x 3
 ; CHECK-LABEL: intrinsic_vfirst_mask_m_nxv32i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v9, v0
-; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; CHECK-NEXT:    vfirst.m a0, v9, v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -298,8 +298,8 @@ define iXLen @intrinsic_vfirst_mask_m_nxv64i1(<vscale x 64 x i1> %0, <vscale x 6
 ; CHECK-LABEL: intrinsic_vfirst_mask_m_nxv64i1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v9, v0
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vfirst.m a0, v9, v0.t
 ; CHECK-NEXT:    ret
 entry:
