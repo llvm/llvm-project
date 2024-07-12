@@ -212,9 +212,11 @@ public:
         *cur = prev_val;
         prev_val = cur_val;
       }
-      // We will always need to move at least one item (since we know that pos
-      // isn't the last item due to the check above).
-      *cur = prev_val;
+      // As long as this isn't the end we will always need to move at least one
+      // item (since we know that pos isn't the last item due to the check
+      // above).
+      if (range_end != end())
+        *cur = prev_val;
     } else {
       // FORWARD: Iterate from pos to end
       const Iterator range_end = end();
