@@ -336,10 +336,9 @@ public:
       bool isComplexRangePromoted = CGF.getLangOpts().getComplexRange() ==
                                     LangOptions::ComplexRangeKind::CX_Promoted;
       bool hasNoComplexRangeOverride = !Features.hasComplexRangeOverride();
-      bool hasMatchingComplexRange =
-          Features.hasComplexRangeOverride() &&
-          Features.getComplexRangeOverride() ==
-              CGF.getLangOpts().getComplexRange();
+      bool hasMatchingComplexRange = Features.hasComplexRangeOverride() &&
+                                     Features.getComplexRangeOverride() ==
+                                         CGF.getLangOpts().getComplexRange();
 
       if (IsDivOpCode && isFloatingType && isComplexRangePromoted &&
           (hasNoComplexRangeOverride || hasMatchingComplexRange))
