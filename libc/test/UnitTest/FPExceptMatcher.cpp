@@ -8,6 +8,7 @@
 
 #include "FPExceptMatcher.h"
 
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
 
 #include "hdr/types/fenv_t.h"
@@ -18,7 +19,7 @@
 
 #if LIBC_TEST_HAS_MATCHERS()
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 #if defined(_WIN32)
@@ -52,6 +53,6 @@ FPExceptMatcher::FPExceptMatcher(FunctionCaller *func) {
 }
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LIBC_TEST_HAS_MATCHERS()

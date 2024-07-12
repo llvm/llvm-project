@@ -116,8 +116,6 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
   default:
     return createDefaultTargetCodeGenInfo(CGM);
 
-  case llvm::Triple::le32:
-    return createPNaClTargetCodeGenInfo(CGM);
   case llvm::Triple::m68k:
     return createM68kTargetCodeGenInfo(CGM);
   case llvm::Triple::mips:
@@ -5935,7 +5933,8 @@ static void ReplaceUsesOfNonProtoTypeWithRealFunction(llvm::GlobalValue *Old,
 
 void CodeGenModule::HandleCXXStaticMemberVarInstantiation(VarDecl *VD) {
   auto DK = VD->isThisDeclarationADefinition();
-  if (DK == VarDecl::Definition && VD->hasAttr<DLLImportAttr>())
+  if ((DK == VarDecl::Definition && VD->hasAttr<DLLImportAttr>()) ||
+      (LangOpts.CUDA && !shouldEmitCUDAGlobalVar(VD)))
     return;
 
   TemplateSpecializationKind TSK = VD->getTemplateSpecializationKind();
