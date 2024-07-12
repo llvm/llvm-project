@@ -1,4 +1,4 @@
-# RUN: llc --passes='print<machine-block-freq>' -filetype=null 2>&1 %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-gnu-linux --passes='print<machine-block-freq>' -filetype=null 2>&1 %s | FileCheck %s
 
 ---
 name:            is_odd
