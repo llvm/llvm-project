@@ -26,6 +26,7 @@ using namespace mlir::detail;
 
 using llvm::divideCeilSigned;
 using llvm::divideFloorSigned;
+using llvm::divideSignedWouldOverflow;
 using llvm::mod;
 
 MLIRContext *AffineExpr::getContext() const { return expr->context; }
@@ -859,11 +860,8 @@ static AffineExpr simplifyFloorDiv(AffineExpr lhs, AffineExpr rhs) {
     return nullptr;
 
   if (lhsConst) {
-    // divideFloorSigned can only overflow in this case:
-    if (lhsConst.getValue() == std::numeric_limits<int64_t>::min() &&
-        rhsConst.getValue() == -1) {
+    if (divideSignedWouldOverflow(lhsConst.getValue(), rhsConst.getValue()))
       return nullptr;
-    }
     return getAffineConstantExpr(
         divideFloorSigned(lhsConst.getValue(), rhsConst.getValue()),
         lhs.getContext());
@@ -921,11 +919,8 @@ static AffineExpr simplifyCeilDiv(AffineExpr lhs, AffineExpr rhs) {
     return nullptr;
 
   if (lhsConst) {
-    // divideCeilSigned can only overflow in this case:
-    if (lhsConst.getValue() == std::numeric_limits<int64_t>::min() &&
-        rhsConst.getValue() == -1) {
+    if (divideSignedWouldOverflow(lhsConst.getValue(), rhsConst.getValue()))
       return nullptr;
-    }
     return getAffineConstantExpr(
         divideCeilSigned(lhsConst.getValue(), rhsConst.getValue()),
         lhs.getContext());

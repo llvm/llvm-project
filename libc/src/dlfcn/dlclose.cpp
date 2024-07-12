@@ -9,10 +9,11 @@
 #include "dlclose.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // TODO(@izaakschroeder): https://github.com/llvm/llvm-project/issues/97917
 LLVM_LIBC_FUNCTION(int, dlclose, (void *)) { return -1; }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

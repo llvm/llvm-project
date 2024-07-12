@@ -8,6 +8,7 @@
 
 #include "libc_errno.h"
 #include "src/errno/errno.h"
+#include "src/__support/macros/config.h"
 
 #define LIBC_ERRNO_MODE_UNDEFINED 1
 #define LIBC_ERRNO_MODE_THREAD_LOCAL 2
@@ -36,7 +37,7 @@ LIBC_ERRNO_MODE_EXTERNAL, \
 LIBC_ERRNO_MODE_SYSTEM
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // Define the global `libc_errno` instance.
 Errno libc_errno;
@@ -84,4 +85,4 @@ Errno::operator int() { return errno; }
 
 #endif
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
