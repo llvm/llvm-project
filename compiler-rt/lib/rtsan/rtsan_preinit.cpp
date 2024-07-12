@@ -13,8 +13,8 @@
 
 #if SANITIZER_CAN_USE_PREINIT_ARRAY
 
-// This code is linked into the main executable when -fsanitize=realtime is in
-// the link flags. It can only use exported interface functions.
+// This section is linked into the main executable when -fsanitize=realtime is
+// specified to perform initialization at a very early stage.
 __attribute__((section(".preinit_array"), used)) static auto preinit =
     __rtsan_init;
 

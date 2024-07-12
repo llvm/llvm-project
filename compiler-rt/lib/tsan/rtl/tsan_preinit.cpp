@@ -16,8 +16,8 @@
 
 #if SANITIZER_CAN_USE_PREINIT_ARRAY
 
-// This code linked into the main executable when -fsanitize=thread is in
-// the link flags. It can only use exported interface functions.
+// This section is linked into the main executable when -fsanitize=thread is
+// specified to perform initialization at a very early stage.
 __attribute__((section(".preinit_array"), used)) static auto preinit =
     __tsan_init;
 

@@ -15,8 +15,8 @@
 using namespace __asan;
 
 #if SANITIZER_CAN_USE_PREINIT_ARRAY
-// This code linked into the main executable when -fsanitize=address is in
-// the link flags. It can only use exported interface functions.
+// This section is linked into the main executable when -fsanitize=hwaddress is
+// specified to perform initialization at a very early stage.
 __attribute__((section(".preinit_array"), used)) static auto preinit =
     __asan_init;
 #endif
