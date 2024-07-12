@@ -11690,6 +11690,13 @@ Sema::ActOnTypenameType(Scope *S, SourceLocation TypenameLoc,
     // Construct a dependent template specialization type.
     assert(DTN && "dependent template has non-dependent name?");
     assert(DTN->getQualifier() == SS.getScopeRep());
+
+    if (!DTN->isIdentifier()) {
+      Diag(TemplateIILoc, diag::err_template_id_not_a_type) << Template;
+      NoteAllFoundTemplates(Template);
+      return true;
+    }
+
     QualType T = Context.getDependentTemplateSpecializationType(
         ElaboratedTypeKeyword::Typename, DTN->getQualifier(),
         DTN->getIdentifier(), TemplateArgs.arguments());
