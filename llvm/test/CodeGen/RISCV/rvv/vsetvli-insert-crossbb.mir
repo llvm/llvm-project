@@ -1063,8 +1063,8 @@ body: |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   dead %outvl:gprnox0 = PseudoVSETVLI [[ADDI]], 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gprnox0 = COPY [[ADDI]]
+  ; CHECK-NEXT:   dead %outvl:gprnox0 = PseudoVSETVLI [[ADDI]], 209 /* e32, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)

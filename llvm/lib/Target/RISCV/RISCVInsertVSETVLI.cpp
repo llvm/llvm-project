@@ -1156,12 +1156,14 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
         MachineBasicBlock::iterator II;
         if (Info.getAVLVNInfo()->isPHIDef())
           II = LIS->getMBBFromIndex(Info.getAVLVNInfo()->def)->getFirstNonPHI();
-        else
+        else {
           II = LIS->getInstructionFromIndex(Info.getAVLVNInfo()->def);
+          II = std::next(II);
+        }
         assert(II.isValid());
-        auto AVLCopy = BuildMI(*II->getParent(), std::next(II), DL,
-                               TII->get(RISCV::COPY), AVLCopyReg)
-                           .addReg(AVLReg);
+        auto AVLCopy =
+            BuildMI(*II->getParent(), II, DL, TII->get(RISCV::COPY), AVLCopyReg)
+                .addReg(AVLReg);
         LIS->InsertMachineInstrInMaps(*AVLCopy);
         MI->getOperand(1).setReg(AVLCopyReg);
         LIS->createAndComputeVirtRegInterval(AVLCopyReg);
