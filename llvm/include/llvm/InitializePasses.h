@@ -298,7 +298,7 @@ void initializeTargetLibraryInfoWrapperPassPass(PassRegistry&);
 void initializeTargetPassConfigPass(PassRegistry&);
 void initializeTargetTransformInfoWrapperPassPass(PassRegistry&);
 void initializeTLSVariableHoistLegacyPassPass(PassRegistry &);
-void initializeTwoAddressInstructionPassPass(PassRegistry&);
+void initializeTwoAddressInstructionLegacyPassPass(PassRegistry &);
 void initializeTypeBasedAAWrapperPassPass(PassRegistry&);
 void initializeTypePromotionLegacyPass(PassRegistry&);
 void initializeInitUndefPass(PassRegistry &);
