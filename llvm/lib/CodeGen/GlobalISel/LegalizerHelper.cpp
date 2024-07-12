@@ -1011,10 +1011,10 @@ LegalizerHelper::createFCMPLibcall(MachineIRBuilder &MIRBuilder,
                                    LostDebugLocObserver &LocObserver) {
   auto &MF = MIRBuilder.getMF();
   auto &Ctx = MF.getFunction().getContext();
+  const GFCmp *Cmp = cast<GFCmp>(&MI);
 
-  LLT OpLLT = MRI.getType(MI.getOperand(2).getReg());
-  if (OpLLT != LLT::scalar(128) ||
-      OpLLT != MRI.getType(MI.getOperand(3).getReg()))
+  LLT OpLLT = MRI.getType(Cmp->getLHSReg());
+  if (OpLLT != LLT::scalar(128) || OpLLT != MRI.getType(Cmp->getRHSReg()))
     return UnableToLegalize;
 
   Type *OpType = getFloatTypeForLLT(Ctx, OpLLT);
@@ -1023,11 +1023,10 @@ LegalizerHelper::createFCMPLibcall(MachineIRBuilder &MIRBuilder,
   constexpr LLT I32LLT = LLT::scalar(32);
   constexpr LLT PredTy = LLT::scalar(1);
 
-  const Register DstReg = MI.getOperand(0).getReg();
-  const Register Op1 = MI.getOperand(2).getReg();
-  const Register Op2 = MI.getOperand(3).getReg();
-  const auto Pred =
-      static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
+  const Register DstReg = Cmp->getReg(0);
+  const Register Op1 = Cmp->getLHSReg();
+  const Register Op2 = Cmp->getRHSReg();
+  const auto Cond = Cmp->getCond();
 
   // Generates a libcall followed by ICMP
   const auto BuildLibcall = [&](const RTLIB::Libcall Libcall,
@@ -1038,18 +1037,17 @@ LegalizerHelper::createFCMPLibcall(MachineIRBuilder &MIRBuilder,
         createLibcall(MIRBuilder, Libcall, {Temp, Type::getInt32Ty(Ctx), 0},
                       {{Op1, OpType, 0}, {Op2, OpType, 1}}, LocObserver, &MI);
     if (!Status)
-      return MCRegister::NoRegister;
+      return {};
 
     // FCMP libcall always returns an i32, we need to compare it with #0 to get
     // the final result.
-    const Register Res = MRI.createGenericVirtualRegister(PredTy);
-    MIRBuilder.buildICmp(ICmpPred, Res, Temp,
-                         MIRBuilder.buildConstant(I32LLT, 0));
-    return Res;
+    return MIRBuilder
+        .buildICmp(ICmpPred, PredTy, Temp, MIRBuilder.buildConstant(I32LLT, 0))
+        .getReg(0);
   };
 
   // Simple case if we have a direct mapping from predicate to libcall
-  if (const auto [Libcall, ICmpPred] = getFCMPLibcallDesc(Pred);
+  if (const auto [Libcall, ICmpPred] = getFCMPLibcallDesc(Cond);
       Libcall != RTLIB::UNKNOWN_LIBCALL &&
       ICmpPred != CmpInst::BAD_ICMP_PREDICATE) {
     if (const auto Res = BuildLibcall(Libcall, ICmpPred)) {
@@ -1061,7 +1059,7 @@ LegalizerHelper::createFCMPLibcall(MachineIRBuilder &MIRBuilder,
 
   // No direct mapping found, should be generated as combination of libcalls.
 
-  switch (Pred) {
+  switch (Cond) {
   case CmpInst::FCMP_UEQ: {
     // FCMP_UEQ: unordered or equal
     // Convert into (FCMP_OEQ || FCMP_UNO).
@@ -1110,7 +1108,7 @@ LegalizerHelper::createFCMPLibcall(MachineIRBuilder &MIRBuilder,
     //       MIRBuilder.buildFCmp(CmpInst::getInversePredicate(Pred), PredTy,
     //                            Op1, Op2));
     const auto [InversedLibcall, InversedPred] =
-        getFCMPLibcallDesc(CmpInst::getInversePredicate(Pred));
+        getFCMPLibcallDesc(CmpInst::getInversePredicate(Cond));
     MIRBuilder.buildCopy(
         DstReg, BuildLibcall(InversedLibcall,
                              CmpInst::getInversePredicate(InversedPred)));
@@ -1267,7 +1265,8 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
     LegalizeResult Status = createFCMPLibcall(MIRBuilder, MI, LocObserver);
     if (Status != Legalized)
       return Status;
-    break;
+    MI.eraseFromParent();
+    return Status;
   }
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI: {
