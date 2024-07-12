@@ -1,4 +1,3 @@
-// Check that free hook doesn't conflict with Realloc.
 // RUN: %clangxx_hwasan -O2 %s -o %t -DTEST=basic_hook_works && not %run %t \
 // RUN:   |& FileCheck %s -check-prefix=CHECK-BASIC
 // RUN: %clangxx_hwasan -O2 %s -o %t -DTEST=ignore && %run %t \
