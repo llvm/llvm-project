@@ -6016,7 +6016,7 @@ def note_deleted_assign_field : Note<
   "because field %2 is of %select{reference|const-qualified}4 type %3">;
 
 // These should be errors.
-def warn_undefined_internal : Warning<
+def warn_undefined_internal : ExtWarn<
   "%select{function|variable}0 %q1 has internal linkage but is not defined">,
   InGroup<DiagGroup<"undefined-internal">>;
 def err_undefined_internal_type : Error<

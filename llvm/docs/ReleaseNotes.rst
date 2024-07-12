@@ -319,6 +319,13 @@ Changes to the Debug Info
   supported on a best-effort basis from here onwards; for more information, see
   the `migration docs <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_.
 
+* When emitting DWARF v2 and not in strict DWARF mode, LLVM will now add
+  a ``DW_AT_type`` to instances of ``DW_TAG_enumeration_type``. This is actually
+  a DWARF v3 feature which tells tools what the enum's underlying type is.
+  Emitting this for v2 as well will help users who have to build binaries with
+  DWARF v2 but are using tools that understand newer DWARF standards. Older
+  tools will ignore it. (`#98335 <https://github.com/llvm/llvm-project/pull/98335>`_)
+
 Changes to the LLVM tools
 ---------------------------------
 * llvm-nm and llvm-objdump can now print symbol information from linked
@@ -378,6 +385,10 @@ Changes to the LLVM tools
   using buttons on top-right corner of the page or using keys (L/R/B or 
   jumping in reverse direction with shift+L/R/B). (`#95662
   <https://github.com/llvm/llvm-project/pull/95662>`_).
+
+* llvm-objcopy now verifies format of ``.note`` sections for ELF input. This can
+  be disabled by ``--no-verify-note-sections``. (`#90458
+  <https://github.com/llvm/llvm-project/pull/90458>`).
 
 Changes to LLDB
 ---------------------------------

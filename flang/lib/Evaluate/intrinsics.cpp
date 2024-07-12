@@ -2831,7 +2831,8 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
             }
           }
         } else if (!IsInteroperableIntrinsicType(
-                       *type, &context.languageFeatures()) &&
+                       *type, &context.languageFeatures())
+                        .value_or(true) &&
             context.languageFeatures().ShouldWarn(
                 common::UsageWarning::Interoperability)) {
           context.messages().Say(at,
@@ -2933,24 +2934,25 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
         context.messages().Say(arguments[0]->sourceLocation(),
             "C_LOC() argument may not be zero-length character"_err_en_US);
       } else if (typeAndShape->type().category() != TypeCategory::Derived &&
-          !IsInteroperableIntrinsicType(typeAndShape->type()) &&
+          !IsInteroperableIntrinsicType(typeAndShape->type()).value_or(true) &&
           context.languageFeatures().ShouldWarn(
               common::UsageWarning::Interoperability)) {
         context.messages().Say(arguments[0]->sourceLocation(),
             "C_LOC() argument has non-interoperable intrinsic type, kind, or length"_warn_en_US);
       }
 
-      return SpecificCall{SpecificIntrinsic{"__builtin_c_loc"s,
-                              characteristics::Procedure{
-                                  characteristics::FunctionResult{
-                                      DynamicType{GetBuiltinDerivedType(
-                                          builtinsScope_, "__builtin_c_ptr")}},
-                                  characteristics::DummyArguments{
-                                      characteristics::DummyArgument{"x"s,
-                                          characteristics::DummyDataObject{
-                                              std::move(*typeAndShape)}}},
-                                  characteristics::Procedure::Attrs{
-                                      characteristics::Procedure::Attr::Pure}}},
+      characteristics::DummyDataObject ddo{std::move(*typeAndShape)};
+      ddo.intent = common::Intent::In;
+      return SpecificCall{
+          SpecificIntrinsic{"__builtin_c_loc"s,
+              characteristics::Procedure{
+                  characteristics::FunctionResult{
+                      DynamicType{GetBuiltinDerivedType(
+                          builtinsScope_, "__builtin_c_ptr")}},
+                  characteristics::DummyArguments{
+                      characteristics::DummyArgument{"x"s, std::move(ddo)}},
+                  characteristics::Procedure::Attrs{
+                      characteristics::Procedure::Attr::Pure}}},
           std::move(arguments)};
     }
   }
