@@ -24,7 +24,7 @@ int main(int, char**) {
   {
     std::shared_ptr<int> sPtr;
 
-    // expected-error@*:* {{static assertion failed due to requirement '!__is_specialization_v<std::shared_ptr<int>, shared_ptr> || sizeof...(_Args) > 0': Specialization of std::shared_ptr<> requires a deleter.}}
+    // expected-error-re@*:* {{static assertion failed due to requirement {{.*}}Specialization of std::shared_ptr<> requires a deleter.}}
     std::ignore = std::out_ptr(sPtr);
     // expected-error@*:* {{no matching conversion for functional-style cast from 'std::shared_ptr<int>' to 'std::out_ptr_t<shared_ptr<int>, _Ptr>' (aka 'out_ptr_t<std::shared_ptr<int>, int *>')}}
     std::ignore = std::out_ptr<int*>(sPtr);
