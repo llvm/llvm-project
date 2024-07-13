@@ -2755,11 +2755,11 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         return ConstantInt::get(Ty, Result);
       }
       case Intrinsic::powi: {
-        int exp = static_cast<int>(Op2C->getZExtValue());
+        int Exp = static_cast<int>(Op2C->getSExtValue());
         switch (Ty->getTypeID()) {
         case Type::HalfTyID:
         case Type::FloatTyID: {
-          APFloat Res(std::pow(Op1V.convertToFloat(), exp));
+          APFloat Res(std::pow(Op1V.convertToFloat(), Exp));
           if (Ty->isHalfTy()) {
             bool Unused;
             Res.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven,
@@ -2768,7 +2768,7 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
           return ConstantFP::get(Ty->getContext(), Res);
         }
         case Type::DoubleTyID:
-          return ConstantFP::get(Ty, std::pow(Op1V.convertToDouble(), exp));
+          return ConstantFP::get(Ty, std::pow(Op1V.convertToDouble(), Exp));
         default:
           return nullptr;
         }
