@@ -307,11 +307,10 @@ void ScriptParser::readDefsym(StringRef name) {
 void ScriptParser::readNoCrossRefs(bool to) {
   expect("(");
   NoCrossRefCommand cmd{{}, to};
-  while (!atEOF() && !errorCount() && peek() != ")")
-    cmd.outputSections.push_back(next());
+  while (!errorCount() && !consume(")"))
+    cmd.outputSections.push_back(unquote(next()));
   if (cmd.outputSections.size() >= 2)
     script->noCrossRefs.push_back(std::move(cmd));
-  expect(")");
 }
 
 void ScriptParser::addFile(StringRef s) {
