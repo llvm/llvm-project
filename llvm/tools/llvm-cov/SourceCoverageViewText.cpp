@@ -377,7 +377,8 @@ void SourceCoverageViewText::renderMCDCView(raw_ostream &OS, MCDCView &MRV,
     }
     renderLinePrefix(OS, ViewDepth);
     OS << "  MC/DC Coverage for Decision: ";
-    const auto [Coverable, Percent] = Record.getPercentCovered();
+    const auto [Coverable, Percent] =
+        Record.getPercentCovered(Options.MCDCCountedStates);
     if (Coverable) {
       colored_ostream(OS, raw_ostream::RED,
                       getOptions().Colors && Percent < 100.0,

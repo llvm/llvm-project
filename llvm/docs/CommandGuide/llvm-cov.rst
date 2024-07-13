@@ -227,6 +227,12 @@ OPTIONS
  Show modified condition/decision coverage (MC/DC) for each applicable boolean
  expression.
 
+.. option:: -mcdc-exclude
+
+ Set which special states of conditions should be excluded from coverage (MC/DC). Possible
+ values are: "none", "uncoverable", "constant", "unreachable", separated by comma. Default
+ to "constant".
+
 .. option:: -show-line-counts
 
  Show the execution counts for each line. Defaults to true, unless another
@@ -434,6 +440,12 @@ OPTIONS
 .. option:: -show-mcdc-summary
 
  Show MC/DC statistics. Defaults to false.
+
+.. option:: -mcdc-exclude-uncoverable
+
+ MC/DC does not count uncoverable conditions. Default to false.
+ Uncoverable conditions are conditions that may be evaluated but can not affect
+ the outcome of decisions due to constants.
 
 .. option:: -show-functions
 
