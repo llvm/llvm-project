@@ -167,7 +167,6 @@ uint64_t DebugRangesSectionWriter::addRanges(DebugAddressRangesVector &Ranges) {
 
   // Reading the SectionOffset and updating it should be atomic to guarantee
   // unique and correct offsets in patches.
-  std::lock_guard<std::mutex> Lock(WriterMutex);
   const uint32_t EntryOffset = RangesBuffer->size();
   writeAddressRanges(*RangesStream.get(), Ranges);
 
@@ -175,7 +174,6 @@ uint64_t DebugRangesSectionWriter::addRanges(DebugAddressRangesVector &Ranges) {
 }
 
 uint64_t DebugRangesSectionWriter::getSectionOffset() {
-  std::lock_guard<std::mutex> Lock(WriterMutex);
   return RangesBuffer->size();
 }
 
@@ -276,8 +274,6 @@ static bool emitWithBase(raw_ostream &OS, const DebugVector &Entries,
 
 uint64_t
 DebugRangeListsSectionWriter::addRanges(DebugAddressRangesVector &Ranges) {
-  std::lock_guard<std::mutex> Lock(WriterMutex);
-
   RangeEntries.push_back(CurrentOffset);
   std::sort(
       Ranges.begin(), Ranges.end(),
@@ -338,7 +334,6 @@ void DebugRangeListsSectionWriter::initSection(DWARFUnit &Unit) {
 
 void DebugARangesSectionWriter::addCURanges(uint64_t CUOffset,
                                             DebugAddressRangesVector &&Ranges) {
-  std::lock_guard<std::mutex> Lock(CUAddressRangesMutex);
   CUAddressRanges.emplace(CUOffset, std::move(Ranges));
 }
 
@@ -404,7 +399,6 @@ void DebugAddrWriter::AddressForDWOCU::dump() {
     dbgs() << Twine::utohexstr(Pair.second) << "\t" << Pair.first << "\n";
 }
 uint32_t DebugAddrWriter::getIndexFromAddress(uint64_t Address, DWARFUnit &CU) {
-  std::lock_guard<std::mutex> Lock(WriterMutex);
   auto Entry = Map.find(Address);
   if (Entry == Map.end()) {
     auto Index = Map.getNextIndex();
@@ -924,7 +918,6 @@ void DebugStrWriter::initialize() {
 }
 
 uint32_t DebugStrWriter::addString(StringRef Str) {
-  std::lock_guard<std::mutex> Lock(WriterMutex);
   if (StrBuffer->empty())
     initialize();
   auto Offset = StrBuffer->size();
