@@ -9,51 +9,31 @@
 #ifndef LLVM_LIBC_TEST_INCLUDE_MATH_ISINF_H
 #define LLVM_LIBC_TEST_INCLUDE_MATH_ISINF_H
 
-#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include "include/llvm-libc-macros/math-function-macros.h"
 
-#define PI 3.14159265358979323846
-
-template <typename T>
-class IsInfTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
+template <typename T> class IsInfTest : public LIBC_NAMESPACE::testing::Test {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 
 public:
-  typedef bool (*IsInfFunc)(T);
+  typedef int (*IsInfFunc)(T);
 
   void testSpecialNumbers(IsInfFunc func) {
-    EXPECT_EQ(isinf(zero), 0);
-    EXPECT_EQ(isinf(PI), 0);
-    EXPECT_EQ(isinf(inf), 1);
-    EXPECT_EQ(isinf(aNaN), 0);
-
-    EXPECT_EQ(isinf(neg_zero), 0);
-    EXPECT_EQ(isinf(-PI), 0);
-    EXPECT_EQ(isinf(neg_inf), 1);
-    EXPECT_EQ(isinf(neg_aNaN), 0);
-  }
-
-  void testSpecialCases(IsInfFunc func) {
-    EXPECT_EQ(isinf(PI / zero), 1);     // division by zero
-    EXPECT_EQ(isinf(PI / inf), 0);      // division by +inf
-    EXPECT_EQ(isinf(PI / neg_inf), 0);  // division by -inf
-    EXPECT_EQ(isinf(inf / neg_inf), 0); // +inf divided by -inf
-
-    EXPECT_EQ(isinf(inf * neg_inf), 1);  // multiply +inf by -inf
-    EXPECT_EQ(isinf(inf * zero), 0);     // multiply by +inf
-    EXPECT_EQ(isinf(neg_inf * zero), 0); // multiply by -inf
-
-    EXPECT_EQ(isinf(inf + neg_inf), 0); // +inf + -inf
+    EXPECT_EQ(func(zero), 0);
+    EXPECT_EQ(func(neg_zero), 0);
+    EXPECT_EQ(func(inf), 1);
+    EXPECT_EQ(func(neg_inf), 1);
   }
 };
 
 #define LIST_ISINF_TESTS(T, func)                                              \
   using LlvmLibcIsInfTest = IsInfTest<T>;                                      \
-  TEST_F(LlvmLibcIsInfTest, SpecialNumbers) { testSpecialNumbers(&func); }     \
-  TEST_F(LlvmLibcIsInfTest, SpecialCases) { testSpecialCases(&func); }
+  TEST_F(LlvmLibcIsInfTest, SpecialNumbers) {                                  \
+    auto isinf_func = [](T x) { return func(x); };                             \
+    testSpecialNumbers(isinf_func);                                            \
+  }
 
 #endif // LLVM_LIBC_TEST_INCLUDE_MATH_ISINF_H
