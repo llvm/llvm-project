@@ -796,6 +796,12 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_CONSTEXPR_SINCE_CXX23
 #  endif
 
+#  if _LIBCPP_STD_VER >= 26
+#    define _LIBCPP_CONSTEXPR_SINCE_CXX26 constexpr
+#  else
+#    define _LIBCPP_CONSTEXPR_SINCE_CXX26
+#  endif
+
 #  ifndef _LIBCPP_WEAK
 #    define _LIBCPP_WEAK __attribute__((__weak__))
 #  endif
