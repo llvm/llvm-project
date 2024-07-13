@@ -257,7 +257,7 @@ mlir::Block *CIRGenFunction::getEHResumeBlock(bool isCleanup) {
   // pointer but only use it to denote we're tracking things, but there
   // shouldn't be any changes to that block after work done in this function.
   auto catchOp = currLexScope->getExceptionInfo().catchOp;
-  assert(catchOp.getNumRegions() && "expected at least one region");
+  assert(catchOp && catchOp.getNumRegions() && "expected at least one region");
   auto &fallbackRegion = catchOp.getRegion(catchOp.getNumRegions() - 1);
 
   auto *resumeBlock = &fallbackRegion.getBlocks().back();
@@ -510,6 +510,7 @@ void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
   if (!CatchScope.hasEHBranches()) {
     CatchScope.clearHandlerBlocks();
     EHStack.popCatch();
+    currLexScope->getExceptionInfo().catchOp->erase();
     return;
   }
 
