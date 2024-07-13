@@ -7573,13 +7573,25 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
     return false;
 
   if (C->isNullValue() || isa<UndefValue>(C)) {
-    // Only look at the first use, avoid hurting compile time with long uselists
-    auto *Use = cast<Instruction>(*I->user_begin());
-    // Bail out if Use is not in the same BB as I or Use == I or Use comes
-    // before I in the block. The latter two can be the case if Use is a PHI
-    // node.
-    if (Use->getParent() != I->getParent() || Use == I || Use->comesBefore(I))
+    // Only look at the first use we can hanle, avoid hurting compile time with
+    // long uselists
+    auto FindUse = llvm::find_if(I->users(), [&I](auto *U) {
+      auto *Use = cast<Instruction>(U);
+      // Bail out if Use is not in the same BB as I or Use == I or Use comes
+      // before I in the block. The latter two can be the case if Use is a
+      // PHI node.
+      if (Use->getParent() != I->getParent() || Use == I || Use->comesBefore(I))
+        return false;
+      // Change this list when we want to add new instructions.
+      if (!isa<GetElementPtrInst>(Use) && !isa<ReturnInst>(Use) &&
+          !isa<BitCastInst>(Use) && !isa<LoadInst>(Use) &&
+          !isa<StoreInst>(Use) && !isa<AssumeInst>(Use) && !isa<CallBase>(Use))
+        return false;
+      return true;
+    });
+    if (FindUse == I->user_end())
       return false;
+    auto *Use = cast<Instruction>(*FindUse);
 
     // Now make sure that there are no instructions in between that can alter
     // control flow (eg. calls)

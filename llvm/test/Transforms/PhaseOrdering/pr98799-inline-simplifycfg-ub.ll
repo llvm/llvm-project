@@ -20,34 +20,26 @@ bb4:
 define i32 @foo(ptr %arg, i1 %arg1) {
 ; CUSTOM-LABEL: define i32 @foo(
 ; CUSTOM-SAME: ptr [[ARG:%.*]], i1 [[ARG1:%.*]]) {
-; CUSTOM-NEXT:  [[BB:.*]]:
-; CUSTOM-NEXT:    br i1 [[ARG1]], label %[[BAR_EXIT:.*]], label %[[BB2_I:.*]]
-; CUSTOM:       [[BB2_I]]:
+; CUSTOM-NEXT:  [[BB:.*:]]
+; CUSTOM-NEXT:    [[TMP0:%.*]] = xor i1 [[ARG1]], true
+; CUSTOM-NEXT:    call void @llvm.assume(i1 [[TMP0]])
 ; CUSTOM-NEXT:    [[I_I:%.*]] = load ptr, ptr [[ARG]], align 8
 ; CUSTOM-NEXT:    [[I3_I:%.*]] = getelementptr inbounds i8, ptr [[I_I]], i64 1
 ; CUSTOM-NEXT:    store ptr [[I3_I]], ptr [[ARG]], align 8
-; CUSTOM-NEXT:    br label %[[BAR_EXIT]]
-; CUSTOM:       [[BAR_EXIT]]:
-; CUSTOM-NEXT:    [[I5_I:%.*]] = phi ptr [ [[I_I]], %[[BB2_I]] ], [ null, %[[BB]] ]
-; CUSTOM-NEXT:    [[I2:%.*]] = icmp ne ptr [[I5_I]], null
+; CUSTOM-NEXT:    [[I2:%.*]] = icmp ne ptr [[I_I]], null
 ; CUSTOM-NEXT:    call void @llvm.assume(i1 [[I2]])
-; CUSTOM-NEXT:    [[I3:%.*]] = load i32, ptr [[I5_I]], align 4
+; CUSTOM-NEXT:    [[I3:%.*]] = load i32, ptr [[I_I]], align 4
 ; CUSTOM-NEXT:    ret i32 [[I3]]
 ;
 ; O2-LABEL: define i32 @foo(
 ; O2-SAME: ptr nocapture [[ARG:%.*]], i1 [[ARG1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-; O2-NEXT:  [[BB:.*]]:
-; O2-NEXT:    br i1 [[ARG1]], label %[[BAR_EXIT:.*]], label %[[BB2_I:.*]]
-; O2:       [[BB2_I]]:
-; O2-NEXT:    [[I_I:%.*]] = load ptr, ptr [[ARG]], align 8
+; O2-NEXT:  [[BB:.*:]]
+; O2-NEXT:    [[TMP0:%.*]] = xor i1 [[ARG1]], true
+; O2-NEXT:    tail call void @llvm.assume(i1 [[TMP0]])
+; O2-NEXT:    [[I_I:%.*]] = load ptr, ptr [[ARG]], align 8, !nonnull [[META0:![0-9]+]], !noundef [[META0]]
 ; O2-NEXT:    [[I3_I:%.*]] = getelementptr inbounds i8, ptr [[I_I]], i64 1
 ; O2-NEXT:    store ptr [[I3_I]], ptr [[ARG]], align 8
-; O2-NEXT:    br label %[[BAR_EXIT]]
-; O2:       [[BAR_EXIT]]:
-; O2-NEXT:    [[I5_I:%.*]] = phi ptr [ [[I_I]], %[[BB2_I]] ], [ null, %[[BB]] ]
-; O2-NEXT:    [[I2:%.*]] = icmp ne ptr [[I5_I]], null
-; O2-NEXT:    tail call void @llvm.assume(i1 [[I2]])
-; O2-NEXT:    [[I3:%.*]] = load i32, ptr [[I5_I]], align 4
+; O2-NEXT:    [[I3:%.*]] = load i32, ptr [[I_I]], align 4
 ; O2-NEXT:    ret i32 [[I3]]
 ;
 bb:
@@ -59,3 +51,6 @@ bb:
 }
 
 declare void @llvm.assume(i1)
+;.
+; O2: [[META0]] = !{}
+;.

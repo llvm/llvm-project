@@ -857,20 +857,17 @@ exit:
   ret i32 %res
 }
 
-; FIXME: From bb to bb5 is UB.
+; From bb to bb5 is UB.
 define i32 @test9_null_user_order_1(ptr %arg, i1 %arg1, ptr %arg2) {
 ; CHECK-LABEL: @test9_null_user_order_1(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    br i1 [[ARG1:%.*]], label [[BB5:%.*]], label [[BB3:%.*]]
-; CHECK:       bb3:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[ARG1:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
 ; CHECK-NEXT:    [[I:%.*]] = load ptr, ptr [[ARG:%.*]], align 8
 ; CHECK-NEXT:    [[I4:%.*]] = getelementptr inbounds i8, ptr [[I]], i64 1
 ; CHECK-NEXT:    store ptr [[I4]], ptr [[ARG]], align 8
-; CHECK-NEXT:    br label [[BB5]]
-; CHECK:       bb5:
-; CHECK-NEXT:    [[I6:%.*]] = phi ptr [ [[I]], [[BB3]] ], [ null, [[BB:%.*]] ]
-; CHECK-NEXT:    [[I7:%.*]] = load i32, ptr [[I6]], align 4
-; CHECK-NEXT:    [[I8:%.*]] = icmp ne ptr [[I6]], [[ARG2:%.*]]
+; CHECK-NEXT:    [[I7:%.*]] = load i32, ptr [[I]], align 4
+; CHECK-NEXT:    [[I8:%.*]] = icmp ne ptr [[I]], [[ARG2:%.*]]
 ; CHECK-NEXT:    call void @fn_ptr_arg(i1 [[I8]])
 ; CHECK-NEXT:    ret i32 [[I7]]
 ;
