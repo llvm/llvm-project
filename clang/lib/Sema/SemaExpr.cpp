@@ -59,6 +59,7 @@
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -5340,20 +5341,31 @@ bool Sema::CheckCXXDefaultArgExpr(SourceLocation CallLoc, FunctionDecl *FD,
 
 struct ImmediateCallVisitor : public RecursiveASTVisitor<ImmediateCallVisitor> {
   const ASTContext &Context;
-  ImmediateCallVisitor(const ASTContext &Ctx) : Context(Ctx) {}
+  llvm::SmallPtrSetImpl<const FunctionDecl *> *ReferencedFunctions;
+
+  ImmediateCallVisitor(const ASTContext &Ctx,
+                       llvm::SmallPtrSetImpl<const FunctionDecl *>
+                           *ReferencedFunctions = nullptr)
+      : Context(Ctx), ReferencedFunctions(ReferencedFunctions) {}
 
   bool HasImmediateCalls = false;
   bool shouldVisitImplicitCode() const { return true; }
 
   bool VisitCallExpr(CallExpr *E) {
-    if (const FunctionDecl *FD = E->getDirectCallee())
+    if (const FunctionDecl *FD = E->getDirectCallee()) {
       HasImmediateCalls |= FD->isImmediateFunction();
+      if (ReferencedFunctions)
+        ReferencedFunctions->insert(FD);
+    }
     return RecursiveASTVisitor<ImmediateCallVisitor>::VisitStmt(E);
   }
 
   bool VisitCXXConstructExpr(CXXConstructExpr *E) {
-    if (const FunctionDecl *FD = E->getConstructor())
+    if (const FunctionDecl *FD = E->getConstructor()) {
       HasImmediateCalls |= FD->isImmediateFunction();
+      if (ReferencedFunctions)
+        ReferencedFunctions->insert(FD);
+    }
     return RecursiveASTVisitor<ImmediateCallVisitor>::VisitStmt(E);
   }
 
@@ -16983,6 +16995,30 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
   SmallVector<PartialDiagnosticAt, 8> Notes;
   EvalResult.Diag = &Notes;
 
+  // Check if the expression refers to local functions yet to be instantiated.
+  // If so, instantiate them now, as the constant evaluation requires the
+  // function definition.
+  if (!PendingLocalImplicitInstantiations.empty()) {
+    llvm::SmallPtrSet<const FunctionDecl *, 4> ReferencedFunctions;
+    ImmediateCallVisitor V(getASTContext(), &ReferencedFunctions);
+    V.TraverseStmt(E);
+
+    auto Pred = [&](PendingImplicitInstantiation Pair) {
+      ValueDecl *VD = Pair.first;
+      return isa<FunctionDecl>(VD) &&
+             ReferencedFunctions.contains(cast<FunctionDecl>(VD));
+    };
+    // Workaround: A lambda with captures cannot be copy-assigned, which is
+    // required by llvm::make_filter_range().
+    llvm::function_ref<bool(PendingImplicitInstantiation)> PredRef = Pred;
+
+    auto R =
+        llvm::make_filter_range(PendingLocalImplicitInstantiations, PredRef);
+    LocalEagerInstantiationScope InstantiateReferencedLocalFunctions(*this);
+    PendingLocalImplicitInstantiations = {R.begin(), R.end()};
+    InstantiateReferencedLocalFunctions.perform();
+  }
+
   // Try to evaluate the expression, and produce diagnostics explaining why it's
   // not a constant expression as a side-effect.
   bool Folded =
@@ -17938,17 +17974,16 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
 
         if (FirstInstantiation || TSK != TSK_ImplicitInstantiation ||
             Func->isConstexpr()) {
-          if (Func->isConstexpr())
+          if (isa<CXXRecordDecl>(Func->getDeclContext()) &&
+              cast<CXXRecordDecl>(Func->getDeclContext())->isLocalClass() &&
+              CodeSynthesisContexts.size())
+            PendingLocalImplicitInstantiations.push_back(
+                std::make_pair(Func, PointOfInstantiation));
+          else if (Func->isConstexpr())
             // Do not defer instantiations of constexpr functions, to avoid the
             // expression evaluator needing to call back into Sema if it sees a
             // call to such a function.
             InstantiateFunctionDefinition(PointOfInstantiation, Func);
-          else if (isa<CXXRecordDecl>(Func->getDeclContext()) &&
-                   cast<CXXRecordDecl>(Func->getDeclContext())
-                       ->isLocalClass() &&
-                   CodeSynthesisContexts.size())
-            PendingLocalImplicitInstantiations.push_back(
-                std::make_pair(Func, PointOfInstantiation));
           else {
             Func->setInstantiationIsPending(true);
             PendingInstantiations.push_back(

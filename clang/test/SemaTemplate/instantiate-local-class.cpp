@@ -532,4 +532,30 @@ int main() {
 
 } // namespace GH35052
 
+namespace GH98526 {
+
+template <typename F> struct recursive_lambda {
+  template <typename... Args> auto operator()(Args &&...args) const {
+    return fn(*this, args...);
+  }
+  F fn;
+};
+
+template <typename F> recursive_lambda(F) -> recursive_lambda<F>;
+
+struct Tree {
+  Tree *left, *right;
+};
+
+int sumSize(Tree *tree) {
+  auto accumulate =
+      recursive_lambda{[&](auto &self_fn, Tree *element_node) -> int {
+        return 1 + self_fn(tree->left) + self_fn(tree->right);
+      }};
+
+  return accumulate(tree);
+}
+
+} // namespace GH98526
+
 #endif
