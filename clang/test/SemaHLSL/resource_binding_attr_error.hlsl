@@ -40,6 +40,9 @@ static RWBuffer<float> U : register(u5);
 // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
 static float sa : register(c1);
 
+// expected-warning@+1 {{register 'c' used on type with no contents to allocate in a constant buffer}}
+ groupshared float fa[10] : register(c1);
+
 void foo() {
   // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
   RWBuffer<float> U : register(u3);
