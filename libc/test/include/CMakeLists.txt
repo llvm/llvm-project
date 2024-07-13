@@ -88,8 +88,6 @@ add_libc_test(
     signbit_test.cpp
   DEPENDS
     libc.include.llvm-libc-macros.math_function_macros
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
 add_libc_test(
@@ -100,8 +98,6 @@ add_libc_test(
     signbitf_test.cpp
   DEPENDS
     libc.include.llvm-libc-macros.math_function_macros
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
 add_libc_test(
@@ -112,8 +108,6 @@ add_libc_test(
     signbitl_test.cpp
   DEPENDS
     libc.include.llvm-libc-macros.math_function_macros
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
 add_libc_test(
@@ -124,8 +118,6 @@ add_libc_test(
     isnan_test.cpp
   DEPENDS
     libc.include.llvm-libc-macros.math_function_macros
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
 add_libc_test(
@@ -136,8 +128,6 @@ add_libc_test(
     isnanf_test.cpp
   DEPENDS
     libc.include.llvm-libc-macros.math_function_macros
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
 add_libc_test(
@@ -148,8 +138,6 @@ add_libc_test(
     isnanl_test.cpp
   DEPENDS
     libc.include.llvm-libc-macros.math_function_macros
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
 add_libc_test(
@@ -160,8 +148,6 @@ add_libc_test(
     isinf_test.cpp
   DEPENDS
     libc.include.llvm-libc-macros.math_function_macros
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
 add_libc_test(
@@ -172,8 +158,6 @@ add_libc_test(
     isinff_test.cpp
   DEPENDS
     libc.include.llvm-libc-macros.math_function_macros
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
 add_libc_test(
@@ -184,8 +168,6 @@ add_libc_test(
     isinfl_test.cpp
   DEPENDS
     libc.include.llvm-libc-macros.math_function_macros
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
 add_libc_test(
@@ -196,8 +178,6 @@ add_libc_test(
     isfinite_test.cpp
   DEPENDS
     libc.include.llvm-libc-macros.math_function_macros
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
 add_libc_test(
@@ -208,8 +188,6 @@ add_libc_test(
     isfinitef_test.cpp
   DEPENDS
     libc.include.llvm-libc-macros.math_function_macros
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
 add_libc_test(
@@ -220,8 +198,6 @@ add_libc_test(
     isfinitel_test.cpp
   DEPENDS
     libc.include.llvm-libc-macros.math_function_macros
-  LINK_LIBRARIES
-    LibcFPTestHelpers
 )
 
 add_libc_test(

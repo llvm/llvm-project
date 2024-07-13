@@ -289,9 +289,3 @@ add_macro_header(
   HDR
     dlfcn-macros.h
 )
-
-add_macro_header(
-  math_function_macros
-  HDR 
-    math-function-macros.h
-)
