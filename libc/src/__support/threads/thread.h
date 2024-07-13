@@ -235,7 +235,12 @@ struct Thread {
 
   static pid_t get_uncached_tid();
 
-  LIBC_INLINE void refresh_tid() { this->attrib->tid = get_uncached_tid(); }
+  LIBC_INLINE void refresh_tid(pid_t cached = -1) {
+    if (cached >= 0)
+      this->attrib->tid = cached;
+    else
+      this->attrib->tid = get_uncached_tid();
+  }
   LIBC_INLINE void invalidate_tid() { this->attrib->tid = -1; }
 
   LIBC_INLINE pid_t get_tid() {

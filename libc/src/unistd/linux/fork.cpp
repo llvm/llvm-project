@@ -29,6 +29,7 @@ LLVM_LIBC_FUNCTION(pid_t, fork, (void)) {
   // Invalidate tid/pid cache before fork to avoid post fork signal handler from
   // getting wrong values. gettid() is not async-signal-safe, but let's provide
   // our best efforts here.
+  pid_t parent_tid = self.get_tid();
   self.invalidate_tid();
   ProcessIdentity::start_fork();
 
@@ -46,12 +47,9 @@ LLVM_LIBC_FUNCTION(pid_t, fork, (void)) {
     return -1;
   }
 
-  // Common
-  // Refresh tid/pid cache after fork
-  self.refresh_tid();
-
   // Child process
   if (ret == 0) {
+    self.refresh_tid();
     ProcessIdentity::refresh_cache();
     ProcessIdentity::end_fork();
     invoke_child_callbacks();
@@ -59,6 +57,7 @@ LLVM_LIBC_FUNCTION(pid_t, fork, (void)) {
   }
 
   // Parent process
+  self.refresh_tid(parent_tid);
   ProcessIdentity::end_fork();
   invoke_parent_callbacks();
   return ret;
