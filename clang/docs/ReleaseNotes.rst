@@ -470,6 +470,9 @@ New Compiler Flags
 Deprecated Compiler Flags
 -------------------------
 
+- ``-Ofast`` is deprecated in favor of ``-O3``, possibly combined with ``-ffast-math``.
+  See `RFC <https://discourse.llvm.org/t/rfc-deprecate-ofast/78687>`_ for details.
+
 Modified Compiler Flags
 -----------------------
 - Added a new diagnostic flag ``-Wreturn-mismatch`` which is grouped under
