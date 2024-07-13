@@ -26,12 +26,18 @@ public:
                      std::unique_ptr<MCObjectWriter> OW)
       : MCWinCOFFStreamer(C, std::move(AB), std::move(CE), std::move(OW)) {}
 
+  void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
   void emitWinEHHandlerData(SMLoc Loc) override;
   void emitWindowsUnwindTables(WinEH::FrameInfo *Frame) override;
   void emitWindowsUnwindTables() override;
   void emitCVFPOData(const MCSymbol *ProcSym, SMLoc Loc) override;
   void finishImpl() override;
 };
+
+void X86WinCOFFStreamer::emitInstruction(const MCInst &Inst,
+                                         const MCSubtargetInfo &STI) {
+  X86_MC::emitInstruction(*this, Inst, STI);
+}
 
 void X86WinCOFFStreamer::emitWinEHHandlerData(SMLoc Loc) {
   MCStreamer::emitWinEHHandlerData(Loc);

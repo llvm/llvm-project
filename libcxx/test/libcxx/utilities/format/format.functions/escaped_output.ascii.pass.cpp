@@ -11,8 +11,7 @@
 // TODO FMT This test should not require std::to_chars(floating-point)
 // XFAIL: availability-fp_to_chars-missing
 
-// Force unicode to be disabled.
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_HAS_NO_UNICODE
+// REQUIRES: libcpp-has-no-unicode
 
 // <format>
 

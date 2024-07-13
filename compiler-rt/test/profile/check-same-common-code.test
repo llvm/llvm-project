@@ -1,0 +1,7 @@
+;
+; NOTE: if this test fails, please make sure the files are identical
+; copies of each other.
+;
+; RUN: diff %crt_src/include/profile/MIBEntryDef.inc %llvm_src/include/llvm/ProfileData/MIBEntryDef.inc
+; RUN: diff %crt_src/include/profile/MemProfData.inc %llvm_src/include/llvm/ProfileData/MemProfData.inc
+; RUN: diff %crt_src/include/profile/InstrProfData.inc %llvm_src/include/llvm/ProfileData/InstrProfData.inc

@@ -344,7 +344,7 @@ public:
   ~X86MCCodeEmitter() override = default;
 
   void emitPrefix(const MCInst &MI, SmallVectorImpl<char> &CB,
-                  const MCSubtargetInfo &STI) const override;
+                  const MCSubtargetInfo &STI) const;
 
   void encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
@@ -1529,6 +1529,11 @@ void X86MCCodeEmitter::emitPrefix(const MCInst &MI, SmallVectorImpl<char> &CB,
   unsigned CurOp = X86II::getOperandBias(Desc);
 
   emitPrefixImpl(CurOp, MI, STI, CB);
+}
+
+void X86_MC::emitPrefix(MCCodeEmitter &MCE, const MCInst &MI,
+                        SmallVectorImpl<char> &CB, const MCSubtargetInfo &STI) {
+  static_cast<X86MCCodeEmitter &>(MCE).emitPrefix(MI, CB, STI);
 }
 
 void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,

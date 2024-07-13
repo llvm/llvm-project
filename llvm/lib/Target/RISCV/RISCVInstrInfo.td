@@ -233,6 +233,8 @@ def uimm7_opcode : RISCVUImmOp<7> {
 }
 def uimm7 : RISCVUImmOp<7>;
 def uimm8 : RISCVUImmOp<8>;
+def uimm16 : RISCVUImmOp<16>;
+def uimm32 : RISCVUImmOp<32>;
 def simm12 : RISCVSImmLeafOp<12> {
   let MCOperandPredicate = [{
     int64_t Imm;
@@ -1120,6 +1122,12 @@ def InsnS : DirectiveInsnS<(outs), (ins uimm7_opcode:$opcode, uimm3:$funct3,
                                         AnyReg:$rs2, AnyReg:$rs1,
                                         simm12:$imm12),
                            "$opcode, $funct3, $rs2, ${imm12}(${rs1})">;
+def Insn32 : RVInst<(outs), (ins uimm32:$value), "", "", [], InstFormatOther> {
+  bits<32> value;
+
+  let Inst{31-0} = value;
+  let AsmString = ".insn 0x4, $value";
+}
 }
 
 // Use InstAliases to match these so that we can combine the insn and format
@@ -2072,6 +2080,7 @@ include "RISCVInstrInfoXTHead.td"
 include "RISCVInstrInfoXSf.td"
 include "RISCVInstrInfoSFB.td"
 include "RISCVInstrInfoXCV.td"
+include "RISCVInstrInfoXwch.td"
 
 //===----------------------------------------------------------------------===//
 // Global ISel

@@ -192,22 +192,31 @@ bool WindowScheduler::initialize() {
     return false;
   }
   // Check each MI in MBB.
-  SmallVector<Register, 8> PhiDefs;
+  SmallSet<Register, 8> PrevDefs;
+  SmallSet<Register, 8> PrevUses;
+  auto IsLoopCarried = [&](MachineInstr &Phi) {
+    // Two cases are checked here: (1)The virtual register defined by the
+    // preceding phi is used by the succeeding phi;(2)The preceding phi uses the
+    // virtual register defined by the succeeding phi.
+    if (PrevUses.count(Phi.getOperand(0).getReg()))
+      return true;
+    PrevDefs.insert(Phi.getOperand(0).getReg());
+    for (unsigned I = 1, E = Phi.getNumOperands(); I != E; I += 2) {
+      if (PrevDefs.count(Phi.getOperand(I).getReg()))
+        return true;
+      PrevUses.insert(Phi.getOperand(I).getReg());
+    }
+    return false;
+  };
   auto PLI = TII->analyzeLoopForPipelining(MBB);
   for (auto &MI : *MBB) {
     if (MI.isMetaInstruction() || MI.isTerminator())
       continue;
     if (MI.isPHI()) {
-      for (auto Def : PhiDefs)
-        if (MI.readsRegister(Def, TRI)) {
-          LLVM_DEBUG(
-              dbgs()
-              << "Consecutive phis are not allowed in window scheduling!\n");
-          return false;
-        }
-      for (auto Def : MI.defs())
-        if (Def.isReg())
-          PhiDefs.push_back(Def.getReg());
+      if (IsLoopCarried(MI)) {
+        LLVM_DEBUG(dbgs() << "Loop carried phis are not supported yet!\n");
+        return false;
+      }
       ++SchedPhiNum;
       ++BestOffset;
     } else
@@ -422,6 +431,8 @@ int WindowScheduler::calculateMaxCycle(ScheduleDAGInstrs &DAG,
     int ExpectCycle = CurCycle;
     // The predecessors of current MI determine its earliest issue cycle.
     for (auto &Pred : SU->Preds) {
+      if (Pred.isWeak())
+        continue;
       auto *PredMI = Pred.getSUnit()->getInstr();
       int PredCycle = getOriCycle(PredMI);
       ExpectCycle = std::max(ExpectCycle, PredCycle + (int)Pred.getLatency());
@@ -479,7 +490,7 @@ int WindowScheduler::calculateStallCycle(unsigned Offset, int MaxCycle) {
     auto *SU = TripleDAG->getSUnit(&MI);
     int DefCycle = getOriCycle(&MI);
     for (auto &Succ : SU->Succs) {
-      if (Succ.getSUnit() == &TripleDAG->ExitSU)
+      if (Succ.isWeak() || Succ.getSUnit() == &TripleDAG->ExitSU)
         continue;
       // If the expected cycle does not exceed MaxCycle, no check is needed.
       if (DefCycle + (int)Succ.getLatency() <= MaxCycle)
@@ -531,9 +542,12 @@ void WindowScheduler::schedulePhi(int Offset, unsigned &II) {
     // The anti-dependency of phi need to be handled separately in the same way.
     if (Register AntiReg = getAntiRegister(&Phi)) {
       auto *AntiMI = MRI->getVRegDef(AntiReg);
-      auto AntiCycle = getOriCycle(AntiMI);
-      if (getOriStage(getOriMI(AntiMI), Offset) == 0)
-        LateCycle = std::min(LateCycle, AntiCycle);
+      // AntiReg may be defined outside the kernel MBB.
+      if (AntiMI->getParent() == MBB) {
+        auto AntiCycle = getOriCycle(AntiMI);
+        if (getOriStage(getOriMI(AntiMI), Offset) == 0)
+          LateCycle = std::min(LateCycle, AntiCycle);
+      }
     }
     // If there is no limit to the late cycle, a default value is given.
     if (LateCycle == INT_MAX)
@@ -681,7 +695,7 @@ Register WindowScheduler::getAntiRegister(MachineInstr *Phi) {
   for (auto MO : Phi->uses()) {
     if (MO.isReg())
       AntiReg = MO.getReg();
-    else if (MO.isMBB() && MO.getMBB()->getNumber() == MBB->getNumber())
+    else if (MO.isMBB() && MO.getMBB() == MBB)
       return AntiReg;
   }
   return 0;

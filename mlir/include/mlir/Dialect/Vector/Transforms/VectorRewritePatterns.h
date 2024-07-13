@@ -15,7 +15,6 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Support/LogicalResult.h"
 
 #include "mlir/Dialect/Vector/Transforms/VectorTransformsEnums.h.inc"
 

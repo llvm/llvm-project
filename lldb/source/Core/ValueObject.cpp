@@ -989,41 +989,46 @@ ValueObject::ReadPointedString(lldb::WritableDataBufferSP &buffer_sp,
   return {total_bytes_read, was_capped};
 }
 
-const char *ValueObject::GetObjectDescription() {
+llvm::Expected<std::string> ValueObject::GetObjectDescription() {
   if (!UpdateValueIfNeeded(true))
-    return nullptr;
+    return llvm::createStringError("could not update value");
 
   // Return cached value.
   if (!m_object_desc_str.empty())
-    return m_object_desc_str.c_str();
+    return m_object_desc_str;
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
   Process *process = exe_ctx.GetProcessPtr();
   if (!process)
-    return nullptr;
+    return llvm::createStringError("no process");
 
   // Returns the object description produced by one language runtime.
-  auto get_object_description = [&](LanguageType language) -> const char * {
+  auto get_object_description =
+      [&](LanguageType language) -> llvm::Expected<std::string> {
     if (LanguageRuntime *runtime = process->GetLanguageRuntime(language)) {
       StreamString s;
-      if (runtime->GetObjectDescription(s, *this)) {
-        m_object_desc_str.append(std::string(s.GetString()));
-        return m_object_desc_str.c_str();
-      }
+      if (llvm::Error error = runtime->GetObjectDescription(s, *this))
+        return error;
+      m_object_desc_str = s.GetString();
+      return m_object_desc_str;
     }
-    return nullptr;
+    return llvm::createStringError("no native language runtime");
   };
 
   // Try the native language runtime first.
   LanguageType native_language = GetObjectRuntimeLanguage();
-  if (const char *desc = get_object_description(native_language))
+  llvm::Expected<std::string> desc = get_object_description(native_language);
+  if (desc)
     return desc;
 
   // Try the Objective-C language runtime. This fallback is necessary
   // for Objective-C++ and mixed Objective-C / C++ programs.
-  if (Language::LanguageIsCFamily(native_language))
+  if (Language::LanguageIsCFamily(native_language)) {
+    // We're going to try again, so let's drop the first error.
+    llvm::consumeError(desc.takeError());
     return get_object_description(eLanguageTypeObjC);
-  return nullptr;
+  }
+  return desc;
 }
 
 bool ValueObject::GetValueAsCString(const lldb_private::TypeFormatImpl &format,
@@ -1472,9 +1477,16 @@ bool ValueObject::DumpPrintableRepresentation(
       str = GetSummaryAsCString();
       break;
 
-    case eValueObjectRepresentationStyleLanguageSpecific:
-      str = GetObjectDescription();
-      break;
+    case eValueObjectRepresentationStyleLanguageSpecific: {
+      llvm::Expected<std::string> desc = GetObjectDescription();
+      if (!desc) {
+        strm << "error: " << toString(desc.takeError());
+        str = strm.GetString();
+      } else {
+        strm << *desc;
+        str = strm.GetString();
+      }
+    } break;
 
     case eValueObjectRepresentationStyleLocation:
       str = GetLocationAsCString();
@@ -2713,11 +2725,14 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
   }
 }
 
-void ValueObject::Dump(Stream &s) { Dump(s, DumpValueObjectOptions(*this)); }
+llvm::Error ValueObject::Dump(Stream &s) {
+  return Dump(s, DumpValueObjectOptions(*this));
+}
 
-void ValueObject::Dump(Stream &s, const DumpValueObjectOptions &options) {
+llvm::Error ValueObject::Dump(Stream &s,
+                              const DumpValueObjectOptions &options) {
   ValueObjectPrinter printer(*this, &s, options);
-  printer.PrintValueObject();
+  return printer.PrintValueObject();
 }
 
 ValueObjectSP ValueObject::CreateConstantValue(ConstString name) {

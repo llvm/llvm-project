@@ -815,7 +815,10 @@ protected:
           DumpValueObjectOptions options(m_varobj_options.GetAsDumpOptions(
               eLanguageRuntimeDescriptionDisplayVerbosityFull, format));
 
-          valobj_sp->Dump(*output_stream_p, options);
+          if (llvm::Error error = valobj_sp->Dump(*output_stream_p, options)) {
+            result.AppendError(toString(std::move(error)));
+            return;
+          }
         } else {
           result.AppendErrorWithFormat(
               "failed to create a value object for: (%s) %s\n",

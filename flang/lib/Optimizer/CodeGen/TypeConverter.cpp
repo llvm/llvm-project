@@ -170,7 +170,7 @@ mlir::Type LLVMTypeConverter::indexType() const {
 }
 
 // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
-std::optional<mlir::LogicalResult> LLVMTypeConverter::convertRecordType(
+std::optional<llvm::LogicalResult> LLVMTypeConverter::convertRecordType(
     fir::RecordType derived, llvm::SmallVectorImpl<mlir::Type> &results) {
   auto name = fir::NameUniquer::dropTypeConversionMarkers(derived.getName());
   auto st = mlir::LLVM::LLVMStructType::getIdentified(&getContext(), name);

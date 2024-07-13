@@ -5,15 +5,12 @@ typedef struct { struct {} a; } empty;
 
 // CHECK-LABEL: @_Z17empty_record_testiz(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_EMPTY:%.*]], align 1
 // CHECK-NEXT:    [[Z_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[LIST:%.*]] = alloca [1 x %struct.__va_list_tag], align 16
-// CHECK-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_EMPTY]], align 1
 // CHECK-NEXT:    store i32 [[Z:%.*]], ptr [[Z_ADDR]], align 4
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr [[LIST]], i64 0, i64 0
 // CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[ARRAYDECAY]])
 // CHECK-NEXT:    [[ARRAYDECAY1:%.*]] = getelementptr inbounds [1 x %struct.__va_list_tag], ptr [[LIST]], i64 0, i64 0
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[RETVAL]], ptr align 1 [[TMP]], i64 1, i1 false)
 // CHECK-NEXT:    ret void
 //
 empty empty_record_test(int z, ...) {

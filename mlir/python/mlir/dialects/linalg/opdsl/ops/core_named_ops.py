@@ -96,7 +96,7 @@ def floor(
     O[None] = UnaryFn.floor(I[None])
 
 
-@linalg_structured_op
+@linalg_structured_op(op_class_name="NegFOp")
 def negf(
     I=TensorDef(T1),
     O=TensorDef(T1, output=True),
@@ -330,7 +330,7 @@ def min(
     O[None] = BinaryFn.min_signed(lhs[None], rhs[None])
 
 
-@linalg_structured_op
+@linalg_structured_op(op_class_name="PowFOp")
 def powf(
     lhs=TensorDef(T1),
     rhs=TensorDef(T1),

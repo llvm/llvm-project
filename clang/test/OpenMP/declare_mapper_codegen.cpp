@@ -514,7 +514,7 @@ void foo(int a){
 // CK0: }
 
 // CK0: define internal void [[OMP_OUTLINED_16:@.+]](i32{{.*}} %{{[^,]+}}, ptr noalias noundef %{{[^,]+}}, ptr noalias noundef %{{[^,]+}}
-// CK0-DAG: call void @__tgt_target_data_begin_nowait_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr [[BP:%[^,]+]], ptr [[P:%[^,]+]], ptr [[SZ:%[^,]+]], ptr [[EDNWTYPES]], ptr null, ptr [[MPR:%.+]])
+// CK0-DAG: call void @__tgt_target_data_begin_nowait_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr [[BP:%[^,]+]], ptr [[P:%[^,]+]], ptr [[SZ:%[^,]+]], ptr [[EDNWTYPES]], ptr null, ptr [[MPR:%.+]], i32 0, ptr null, i32 0, ptr null)
 // CK0-DAG: [[BP]] = getelementptr inbounds [1 x ptr], ptr [[BPADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
 // CK0-DAG: [[P]] = getelementptr inbounds [1 x ptr], ptr [[PADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
 // CK0-DAG: [[SZ]] = getelementptr inbounds [1 x i64], ptr [[SZADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
@@ -533,7 +533,7 @@ void foo(int a){
 // CK0: }
 
 // CK0: define internal void [[OMP_OUTLINED_23:@.+]](i32{{.*}} %{{[^,]+}}, ptr noalias noundef %{{[^,]+}}, ptr noalias noundef %{{[^,]+}}
-// CK0-DAG: call void @__tgt_target_data_end_nowait_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr [[BP:%[^,]+]], ptr [[P:%[^,]+]], ptr [[SZ:%[^,]+]], ptr [[EXDNWTYPES]], ptr null, ptr [[MPR:%.+]])
+// CK0-DAG: call void @__tgt_target_data_end_nowait_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr [[BP:%[^,]+]], ptr [[P:%[^,]+]], ptr [[SZ:%[^,]+]], ptr [[EXDNWTYPES]], ptr null, ptr [[MPR:%.+]], i32 0, ptr null, i32 0, ptr null)
 // CK0-DAG: [[BP]] = getelementptr inbounds [1 x ptr], ptr [[BPADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
 // CK0-DAG: [[P]] = getelementptr inbounds [1 x ptr], ptr [[PADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
 // CK0-DAG: [[SZ]] = getelementptr inbounds [1 x i64], ptr [[SZADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
@@ -551,7 +551,7 @@ void foo(int a){
 // CK0: }
 
 // CK0: define internal void [[OMP_OUTLINED_32:@.+]](i32{{.*}} %{{[^,]+}}, ptr noalias noundef %{{[^,]+}}, ptr noalias noundef %{{[^,]+}}
-// CK0-DAG: call void @__tgt_target_data_update_nowait_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr [[BP:%[^,]+]], ptr [[P:%[^,]+]], ptr [[SZ:%[^,]+]], ptr [[FNWTYPES]], ptr null, ptr [[MPR:%.+]])
+// CK0-DAG: call void @__tgt_target_data_update_nowait_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr [[BP:%[^,]+]], ptr [[P:%[^,]+]], ptr [[SZ:%[^,]+]], ptr [[FNWTYPES]], ptr null, ptr [[MPR:%.+]], i32 0, ptr null, i32 0, ptr null)
 // CK0-DAG: [[BP]] = getelementptr inbounds [1 x ptr], ptr [[BPADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
 // CK0-DAG: [[P]] = getelementptr inbounds [1 x ptr], ptr [[PADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0
 // CK0-DAG: [[SZ]] = getelementptr inbounds [1 x i64], ptr [[SZADDR:%[^,]+]], i[[sz]] 0, i[[sz]] 0

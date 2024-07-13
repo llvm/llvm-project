@@ -271,7 +271,7 @@ structured_op: !LinalgStructuredOpConfig
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
   name: negf
-  cpp_class_name: NegfOp
+  cpp_class_name: NegFOp
   doc: |-
     Applies negf(x) elementwise.
 

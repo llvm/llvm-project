@@ -10,6 +10,7 @@
 
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolTableEntry.h"
 
 namespace llvm {
 
@@ -33,7 +34,7 @@ class MCSymbolWasm : public MCSymbol {
   const MCExpr *SymbolSize = nullptr;
 
 public:
-  MCSymbolWasm(const StringMapEntry<bool> *Name, bool isTemporary)
+  MCSymbolWasm(const MCSymbolTableEntry *Name, bool isTemporary)
       : MCSymbol(SymbolKindWasm, Name, isTemporary) {}
   static bool classof(const MCSymbol *S) { return S->isWasm(); }
 

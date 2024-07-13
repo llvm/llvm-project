@@ -134,13 +134,15 @@ def main():
                         raw_tool_output,
                         prefixes,
                     )
-            elif re.search(r"LV: Checking a loop in ", raw_tool_outputs) is not None:
-                # Split analysis outputs by "Printing analysis " declarations.
+            elif (
+                re.search(r"(LV|LDist): Checking a loop in ", raw_tool_outputs)
+                is not None
+            ):
                 for raw_tool_output in re.split(
-                    r"LV: Checking a loop in ", raw_tool_outputs
+                    r"(LV|LDist): Checking a loop in ", raw_tool_outputs
                 ):
                     builder.process_run_line(
-                        common.LV_DEBUG_RE,
+                        common.LOOP_PASS_DEBUG_RE,
                         common.scrub_body,
                         raw_tool_output,
                         prefixes,

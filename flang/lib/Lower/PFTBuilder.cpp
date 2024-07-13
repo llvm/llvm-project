@@ -103,7 +103,7 @@ public:
             stmt.unwrapped, pftParentStack.back(), stmt.position, stmt.label});
         return false;
       } else if constexpr (std::is_same_v<T, parser::ActionStmt>) {
-        return std::visit(
+        return Fortran::common::visit(
             common::visitors{
                 [&](const common::Indirection<parser::CallStmt> &x) {
                   addEvaluation(lower::pft::Evaluation{
@@ -239,7 +239,7 @@ public:
 
   // Get rid of production wrapper
   bool Pre(const parser::Statement<parser::ForallAssignmentStmt> &statement) {
-    addEvaluation(std::visit(
+    addEvaluation(Fortran::common::visit(
         [&](const auto &x) {
           return lower::pft::Evaluation{x, pftParentStack.back(),
                                         statement.source, statement.label};
@@ -248,7 +248,7 @@ public:
     return false;
   }
   bool Pre(const parser::WhereBodyConstruct &whereBody) {
-    return std::visit(
+    return Fortran::common::visit(
         common::visitors{
             [&](const parser::Statement<parser::AssignmentStmt> &stmt) {
               // Not caught as other AssignmentStmt because it is not
@@ -469,7 +469,7 @@ private:
   makeEvaluationAction(const parser::ActionStmt &statement,
                        parser::CharBlock position,
                        std::optional<parser::Label> label) {
-    return std::visit(
+    return Fortran::common::visit(
         common::visitors{
             [&](const auto &x) {
               return lower::pft::Evaluation{
@@ -664,7 +664,7 @@ private:
     };
     auto analyzeSpecs{[&](const auto &specList) {
       for (const auto &spec : specList) {
-        std::visit(
+        Fortran::common::visit(
             Fortran::common::visitors{
                 [&](const Fortran::parser::Format &format) {
                   analyzeFormatSpec(format);
@@ -1172,26 +1172,27 @@ public:
   void dumpPFT(llvm::raw_ostream &outputStream,
                const lower::pft::Program &pft) {
     for (auto &unit : pft.getUnits()) {
-      std::visit(common::visitors{
-                     [&](const lower::pft::BlockDataUnit &unit) {
-                       outputStream << getNodeIndex(unit) << " ";
-                       outputStream << "BlockData: ";
-                       outputStream << "\nEnd BlockData\n\n";
-                     },
-                     [&](const lower::pft::FunctionLikeUnit &func) {
-                       dumpFunctionLikeUnit(outputStream, func);
-                     },
-                     [&](const lower::pft::ModuleLikeUnit &unit) {
-                       dumpModuleLikeUnit(outputStream, unit);
-                     },
-                     [&](const lower::pft::CompilerDirectiveUnit &unit) {
-                       dumpCompilerDirectiveUnit(outputStream, unit);
-                     },
-                     [&](const lower::pft::OpenACCDirectiveUnit &unit) {
-                       dumpOpenACCDirectiveUnit(outputStream, unit);
-                     },
-                 },
-                 unit);
+      Fortran::common::visit(
+          common::visitors{
+              [&](const lower::pft::BlockDataUnit &unit) {
+                outputStream << getNodeIndex(unit) << " ";
+                outputStream << "BlockData: ";
+                outputStream << "\nEnd BlockData\n\n";
+              },
+              [&](const lower::pft::FunctionLikeUnit &func) {
+                dumpFunctionLikeUnit(outputStream, func);
+              },
+              [&](const lower::pft::ModuleLikeUnit &unit) {
+                dumpModuleLikeUnit(outputStream, unit);
+              },
+              [&](const lower::pft::CompilerDirectiveUnit &unit) {
+                dumpCompilerDirectiveUnit(outputStream, unit);
+              },
+              [&](const lower::pft::OpenACCDirectiveUnit &unit) {
+                dumpOpenACCDirectiveUnit(outputStream, unit);
+              },
+          },
+          unit);
     }
   }
 

@@ -27,8 +27,9 @@ BB:
 define void @f_undef_15(<8 x i64> %a, ptr %dst) {
 ; CHECK-LABEL: f_undef_15:
 ; CHECK:       // %bb.0: // %BB
-; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
 ; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    mov v1.16b, v0.16b
 ; CHECK-NEXT:    st2 { v0.2d, v1.2d }, [x8], #32
 ; CHECK-NEXT:    st2 { v0.2d, v1.2d }, [x8]
 ; CHECK-NEXT:    add x8, x0, #64
@@ -45,17 +46,19 @@ BB:
 define void @f_undef_1(<8 x i64> %a, ptr %dst) {
 ; CHECK-LABEL: f_undef_1:
 ; CHECK:       // %bb.0: // %BB
-; CHECK-NEXT:    mov v4.16b, v2.16b
-; CHECK-NEXT:    mov v5.16b, v0.16b
+; CHECK-NEXT:    mov v16.16b, v0.16b
+; CHECK-NEXT:    mov v5.16b, v2.16b
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $q1_q2
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $q3_q4
 ; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    mov v6.16b, v0.16b
 ; CHECK-NEXT:    mov v2.16b, v1.16b
-; CHECK-NEXT:    st2 { v5.2d, v6.2d }, [x8], #32
-; CHECK-NEXT:    mov v5.16b, v4.16b
+; CHECK-NEXT:    mov v4.16b, v3.16b
+; CHECK-NEXT:    mov v17.16b, v16.16b
+; CHECK-NEXT:    mov v6.16b, v5.16b
+; CHECK-NEXT:    st2 { v16.2d, v17.2d }, [x8], #32
 ; CHECK-NEXT:    st2 { v1.2d, v2.2d }, [x8]
 ; CHECK-NEXT:    add x8, x0, #64
-; CHECK-NEXT:    st2 { v4.2d, v5.2d }, [x8]
-; CHECK-NEXT:    mov v4.16b, v3.16b
+; CHECK-NEXT:    st2 { v5.2d, v6.2d }, [x8]
 ; CHECK-NEXT:    add x8, x0, #96
 ; CHECK-NEXT:    st2 { v3.2d, v4.2d }, [x8]
 ; CHECK-NEXT:    ret
@@ -70,10 +73,11 @@ define void @noundefs(<8 x i32> %a, <8 x i32> %b, ptr %dst) {
 ; CHECK-LABEL: noundefs:
 ; CHECK:       // %bb.0: // %BB
 ; CHECK-NEXT:    mov v5.16b, v2.16b
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $q2_q3
 ; CHECK-NEXT:    mov v4.16b, v0.16b
-; CHECK-NEXT:    mov v2.16b, v3.16b
+; CHECK-NEXT:    mov v2.16b, v1.16b
 ; CHECK-NEXT:    st2 { v4.4s, v5.4s }, [x0], #32
-; CHECK-NEXT:    st2 { v1.4s, v2.4s }, [x0]
+; CHECK-NEXT:    st2 { v2.4s, v3.4s }, [x0]
 ; CHECK-NEXT:    ret
 BB:
   %S = shufflevector <8 x i32> %a, <8 x i32> %b, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 undef, i32 14, i32 7, i32 15>
@@ -85,10 +89,11 @@ define void @undefs(<8 x i32> %a, <8 x i32> %b, ptr %dst) {
 ; CHECK-LABEL: undefs:
 ; CHECK:       // %bb.0: // %BB
 ; CHECK-NEXT:    mov v5.16b, v2.16b
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $q2_q3
 ; CHECK-NEXT:    mov v4.16b, v0.16b
-; CHECK-NEXT:    mov v2.16b, v3.16b
+; CHECK-NEXT:    mov v2.16b, v1.16b
 ; CHECK-NEXT:    st2 { v4.4s, v5.4s }, [x0], #32
-; CHECK-NEXT:    st2 { v1.4s, v2.4s }, [x0]
+; CHECK-NEXT:    st2 { v2.4s, v3.4s }, [x0]
 ; CHECK-NEXT:    ret
 BB:
   %S = shufflevector <8 x i32> %a, <8 x i32> %b, <16 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 3, i32 11, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 7, i32 15>

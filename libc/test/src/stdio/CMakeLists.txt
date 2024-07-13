@@ -189,6 +189,7 @@ add_libc_test(
     printf_test.cpp
   DEPENDS
     libc.src.stdio.printf
+    libc.src.stdio.stdout
 )
 
 add_fp_unittest(
@@ -234,6 +235,7 @@ add_libc_test(
     vprintf_test.cpp
   DEPENDS
     libc.src.stdio.vprintf
+    libc.src.stdio.stdout
 )
 
 
@@ -366,6 +368,22 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.src.fcntl.open
       libc.src.stdio.rename
       libc.src.unistd.access
+      libc.src.unistd.close
+      libc.test.UnitTest.ErrnoSetterMatcher
+  )
+
+  add_libc_test(
+    fdopen_test
+    SUITE
+      libc_stdio_unittests
+    SRCS
+      fdopen_test.cpp
+    DEPENDS
+      libc.src.fcntl.open
+      libc.src.stdio.fclose
+      libc.src.stdio.fdopen
+      libc.src.stdio.fgets
+      libc.src.stdio.fputs
       libc.src.unistd.close
       libc.test.UnitTest.ErrnoSetterMatcher
   )

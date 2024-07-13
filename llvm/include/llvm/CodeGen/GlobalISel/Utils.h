@@ -585,5 +585,9 @@ bool isGuaranteedNotToBePoison(Register Reg, const MachineRegisterInfo &MRI,
 bool isGuaranteedNotToBeUndef(Register Reg, const MachineRegisterInfo &MRI,
                               unsigned Depth = 0);
 
+/// Get the type back from LLT. It won't be 100 percent accurate but returns an
+/// estimate of the type.
+Type *getTypeForLLT(LLT Ty, LLVMContext &C);
+
 } // End namespace llvm.
 #endif

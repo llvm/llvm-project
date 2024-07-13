@@ -37,14 +37,14 @@ define void @hoge() {
 ; CHECK-NEXT:    [[T30:%.*]] = add nsw i32 [[T22]], -33
 ; CHECK-NEXT:    [[T35:%.*]] = add nsw i32 [[T24]], -33
 ; CHECK-NEXT:    [[T40:%.*]] = add nsw i32 [[T22]], -17
-; CHECK-NEXT:    [[OP_RDX:%.*]] = icmp slt i32 undef, [[T40]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[OP_RDX]], i32 undef, i32 [[T40]]
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = icmp slt i32 [[T35]], [[T30]]
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = select i1 [[OP_RDX2]], i32 [[T35]], i32 [[T30]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = icmp slt i32 undef, [[T25]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[OP_RDX]], i32 undef, i32 [[T25]]
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = icmp slt i32 [[T30]], [[T35]]
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = select i1 [[OP_RDX2]], i32 [[T30]], i32 [[T35]]
 ; CHECK-NEXT:    [[OP_RDX4:%.*]] = icmp slt i32 [[OP_RDX1]], [[OP_RDX3]]
 ; CHECK-NEXT:    [[OP_RDX5:%.*]] = select i1 [[OP_RDX4]], i32 [[OP_RDX1]], i32 [[OP_RDX3]]
-; CHECK-NEXT:    [[OP_RDX6:%.*]] = icmp slt i32 [[OP_RDX5]], [[T25]]
-; CHECK-NEXT:    [[OP_RDX7:%.*]] = select i1 [[OP_RDX6]], i32 [[OP_RDX5]], i32 [[T25]]
+; CHECK-NEXT:    [[OP_RDX6:%.*]] = icmp slt i32 [[OP_RDX5]], [[T40]]
+; CHECK-NEXT:    [[OP_RDX7:%.*]] = select i1 [[OP_RDX6]], i32 [[OP_RDX5]], i32 [[T40]]
 ; CHECK-NEXT:    [[T45:%.*]] = icmp sgt i32 undef, [[OP_RDX7]]
 ; CHECK-NEXT:    unreachable
 ;

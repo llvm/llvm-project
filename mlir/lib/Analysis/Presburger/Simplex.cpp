@@ -12,13 +12,12 @@
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Utils.h"
-#include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <functional>
@@ -1108,7 +1107,7 @@ void SimplexBase::markEmpty() {
 void Simplex::addInequality(ArrayRef<DynamicAPInt> coeffs) {
   unsigned conIndex = addRow(coeffs, /*makeRestricted=*/true);
   LogicalResult result = restoreRow(con[conIndex]);
-  if (failed(result))
+  if (result.failed())
     markEmpty();
 }
 
@@ -1386,7 +1385,7 @@ MaybeOptimum<Fraction> Simplex::computeOptimum(Direction direction,
   MaybeOptimum<Fraction> optimum = computeRowOptimum(direction, row);
   if (u.restricted && direction == Direction::Down &&
       (optimum.isUnbounded() || *optimum < Fraction(0, 1))) {
-    if (failed(restoreRow(u)))
+    if (restoreRow(u).failed())
       llvm_unreachable("Could not restore row!");
   }
   return optimum;
@@ -1455,7 +1454,7 @@ void Simplex::detectRedundant(unsigned offset, unsigned count) {
     if (minimum.isUnbounded() || *minimum < Fraction(0, 1)) {
       // Constraint is unbounded below or can attain negative sample values and
       // hence is not redundant.
-      if (failed(restoreRow(u)))
+      if (restoreRow(u).failed())
         llvm_unreachable("Could not restore non-redundant row!");
       continue;
     }

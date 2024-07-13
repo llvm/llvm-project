@@ -603,7 +603,7 @@ private:
     /// Normal context
     IC_Normal,
 
-    /// Normal context, but allows explicit conversion functionss
+    /// Normal context, but allows explicit conversion functions
     IC_ExplicitConvs,
 
     /// Implicit context (value initialization)

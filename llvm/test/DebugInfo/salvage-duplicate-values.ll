@@ -3,13 +3,13 @@
 ; Tests the results of salvaging variadic dbg.values that use the same SSA value
 ; multiple times.
 
-; CHECK: call void @llvm.dbg.value(metadata !DIArgList(i32 %a, i32 %a),
+; CHECK: #dbg_value(!DIArgList(i32 %a, i32 %a),
 ; CHECK-SAME: ![[VAR_C:[0-9]+]],
-; CHECK-SAME: !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 5, DW_OP_LLVM_arg, 1, DW_OP_plus_uconst, 5, DW_OP_plus, DW_OP_stack_value))
+; CHECK-SAME: !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_plus_uconst, 5, DW_OP_LLVM_arg, 1, DW_OP_plus_uconst, 5, DW_OP_plus, DW_OP_stack_value),
 
-; CHECK: call void @llvm.dbg.value(metadata !DIArgList(i32 %a, i32 %a, i32 %b, i32 %b),
+; CHECK: #dbg_value(!DIArgList(i32 %a, i32 %a, i32 %b, i32 %b),
 ; CHECK-SAME: ![[VAR_C]],
-; CHECK-SAME: !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 2, DW_OP_plus, DW_OP_LLVM_arg, 1, DW_OP_LLVM_arg, 3, DW_OP_plus, DW_OP_plus, DW_OP_stack_value))
+; CHECK-SAME: !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 2, DW_OP_plus, DW_OP_LLVM_arg, 1, DW_OP_LLVM_arg, 3, DW_OP_plus, DW_OP_plus, DW_OP_stack_value),
 
 ; CHECK: ![[VAR_C]] = !DILocalVariable(name: "c"
 

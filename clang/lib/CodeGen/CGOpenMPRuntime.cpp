@@ -30,6 +30,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/Constants.h"
@@ -2551,6 +2552,15 @@ void CGOpenMPRuntime::emitForDispatchInit(
   };
   CGF.EmitRuntimeCall(OMPBuilder.createDispatchInitFunction(IVSize, IVSigned),
                       Args);
+}
+
+void CGOpenMPRuntime::emitForDispatchDeinit(CodeGenFunction &CGF,
+                                            SourceLocation Loc) {
+  if (!CGF.HaveInsertPoint())
+    return;
+  // Call __kmpc_dispatch_deinit(ident_t *loc, kmp_int32 tid);
+  llvm::Value *Args[] = {emitUpdateLocation(CGF, Loc), getThreadID(CGF, Loc)};
+  CGF.EmitRuntimeCall(OMPBuilder.createDispatchDeinitFunction(), Args);
 }
 
 static void emitForStaticInitCall(
@@ -8025,6 +8035,21 @@ private:
       MapCombinedInfoTy StructBaseCurInfo;
       const Decl *D = Data.first;
       const ValueDecl *VD = cast_or_null<ValueDecl>(D);
+      bool HasMapBasePtr = false;
+      bool HasMapArraySec = false;
+      if (VD && VD->getType()->isAnyPointerType()) {
+        for (const auto &M : Data.second) {
+          HasMapBasePtr = any_of(M, [](const MapInfo &L) {
+            return isa_and_present<DeclRefExpr>(L.VarRef);
+          });
+          HasMapArraySec = any_of(M, [](const MapInfo &L) {
+            return isa_and_present<ArraySectionExpr, ArraySubscriptExpr>(
+                L.VarRef);
+          });
+          if (HasMapBasePtr && HasMapArraySec)
+            break;
+        }
+      }
       for (const auto &M : Data.second) {
         for (const MapInfo &L : M) {
           assert(!L.Components.empty() &&
@@ -8041,7 +8066,8 @@ private:
               CurInfo, StructBaseCurInfo, PartialStruct,
               /*IsFirstComponentList=*/false, L.IsImplicit,
               /*GenerateAllInfoForClauses*/ true, L.Mapper, L.ForDeviceAddr, VD,
-              L.VarRef);
+              L.VarRef, /*OverlappedElements*/ std::nullopt,
+              HasMapBasePtr && HasMapArraySec);
 
           // If this entry relates to a device pointer, set the relevant
           // declaration and add the 'return pointer' flag.
@@ -10332,16 +10358,12 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
     // Source location for the ident struct
     llvm::Value *RTLoc = emitUpdateLocation(CGF, D.getBeginLoc());
 
-    llvm::Value *OffloadingArgs[] = {
-        RTLoc,
-        DeviceID,
-        PointerNum,
-        InputInfo.BasePointersArray.emitRawPointer(CGF),
-        InputInfo.PointersArray.emitRawPointer(CGF),
-        InputInfo.SizesArray.emitRawPointer(CGF),
-        MapTypesArray,
-        MapNamesArray,
-        InputInfo.MappersArray.emitRawPointer(CGF)};
+    SmallVector<llvm::Value *, 13> OffloadingArgs(
+        {RTLoc, DeviceID, PointerNum,
+         InputInfo.BasePointersArray.emitRawPointer(CGF),
+         InputInfo.PointersArray.emitRawPointer(CGF),
+         InputInfo.SizesArray.emitRawPointer(CGF), MapTypesArray, MapNamesArray,
+         InputInfo.MappersArray.emitRawPointer(CGF)});
 
     // Select the right runtime function call for each standalone
     // directive.
@@ -10429,6 +10451,12 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
     default:
       llvm_unreachable("Unexpected standalone target data directive.");
       break;
+    }
+    if (HasNowait) {
+      OffloadingArgs.push_back(llvm::Constant::getNullValue(CGF.Int32Ty));
+      OffloadingArgs.push_back(llvm::Constant::getNullValue(CGF.VoidPtrTy));
+      OffloadingArgs.push_back(llvm::Constant::getNullValue(CGF.Int32Ty));
+      OffloadingArgs.push_back(llvm::Constant::getNullValue(CGF.VoidPtrTy));
     }
     CGF.EmitRuntimeCall(
         OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(), RTLFn),
@@ -11993,6 +12021,11 @@ void CGOpenMPSIMDRuntime::emitForDispatchInit(
     CodeGenFunction &CGF, SourceLocation Loc,
     const OpenMPScheduleTy &ScheduleKind, unsigned IVSize, bool IVSigned,
     bool Ordered, const DispatchRTInput &DispatchValues) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitForDispatchDeinit(CodeGenFunction &CGF,
+                                                SourceLocation Loc) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 

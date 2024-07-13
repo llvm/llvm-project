@@ -855,7 +855,6 @@ string_view version
 strstream istream
 strstream ostream
 strstream version
-syncstream cstddef
 syncstream ios
 syncstream iosfwd
 syncstream map
@@ -903,6 +902,7 @@ thread type_traits
 thread version
 tuple compare
 tuple cstddef
+tuple cstdint
 tuple exception
 tuple iosfwd
 tuple new

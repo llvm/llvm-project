@@ -193,6 +193,7 @@ disabled_user_sgpr:
 // ASM: .amdhsa_next_free_vgpr 0
 // ASM-NEXT: .amdhsa_next_free_sgpr 27
 // ASM-NEXT: .amdhsa_reserve_vcc 0
+// ASM-NEXT: .amdhsa_reserve_flat_scratch 1
 // ASM-NEXT: .amdhsa_reserve_xnack_mask 1
 // ASM: .amdhsa_float_denorm_mode_16_64 0
 // ASM-NEXT: .amdhsa_dx10_clamp 0

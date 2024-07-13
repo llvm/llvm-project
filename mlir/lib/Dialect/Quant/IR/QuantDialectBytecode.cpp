@@ -12,7 +12,6 @@
 #include "mlir/Dialect/Quant/QuantOps.h"
 #include "mlir/Dialect/Quant/QuantTypes.h"
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"

@@ -375,6 +375,54 @@ void test_builtin_elementwise_ceil(float f1, float f2, double d1, double d2,
   vf2 = __builtin_elementwise_ceil(vf1);
 }
 
+void test_builtin_elementwise_acos(float f1, float f2, double d1, double d2,
+                                  float4 vf1, float4 vf2) {
+  // CHECK-LABEL: define void @test_builtin_elementwise_acos(
+  // CHECK:      [[F1:%.+]] = load float, ptr %f1.addr, align 4
+  // CHECK-NEXT:  call float @llvm.acos.f32(float [[F1]])
+  f2 = __builtin_elementwise_acos(f1);
+
+  // CHECK:      [[D1:%.+]] = load double, ptr %d1.addr, align 8
+  // CHECK-NEXT: call double @llvm.acos.f64(double [[D1]])
+  d2 = __builtin_elementwise_acos(d1);
+
+  // CHECK:      [[VF1:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
+  // CHECK-NEXT: call <4 x float> @llvm.acos.v4f32(<4 x float> [[VF1]])
+  vf2 = __builtin_elementwise_acos(vf1);
+}
+
+void test_builtin_elementwise_asin(float f1, float f2, double d1, double d2,
+                                  float4 vf1, float4 vf2) {
+  // CHECK-LABEL: define void @test_builtin_elementwise_asin(
+  // CHECK:      [[F1:%.+]] = load float, ptr %f1.addr, align 4
+  // CHECK-NEXT:  call float @llvm.asin.f32(float [[F1]])
+  f2 = __builtin_elementwise_asin(f1);
+
+  // CHECK:      [[D1:%.+]] = load double, ptr %d1.addr, align 8
+  // CHECK-NEXT: call double @llvm.asin.f64(double [[D1]])
+  d2 = __builtin_elementwise_asin(d1);
+
+  // CHECK:      [[VF1:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
+  // CHECK-NEXT: call <4 x float> @llvm.asin.v4f32(<4 x float> [[VF1]])
+  vf2 = __builtin_elementwise_asin(vf1);
+}
+
+void test_builtin_elementwise_atan(float f1, float f2, double d1, double d2,
+                                  float4 vf1, float4 vf2) {
+  // CHECK-LABEL: define void @test_builtin_elementwise_atan(
+  // CHECK:      [[F1:%.+]] = load float, ptr %f1.addr, align 4
+  // CHECK-NEXT:  call float @llvm.atan.f32(float [[F1]])
+  f2 = __builtin_elementwise_atan(f1);
+
+  // CHECK:      [[D1:%.+]] = load double, ptr %d1.addr, align 8
+  // CHECK-NEXT: call double @llvm.atan.f64(double [[D1]])
+  d2 = __builtin_elementwise_atan(d1);
+
+  // CHECK:      [[VF1:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
+  // CHECK-NEXT: call <4 x float> @llvm.atan.v4f32(<4 x float> [[VF1]])
+  vf2 = __builtin_elementwise_atan(vf1);
+}
+
 void test_builtin_elementwise_cos(float f1, float f2, double d1, double d2,
                                   float4 vf1, float4 vf2) {
   // CHECK-LABEL: define void @test_builtin_elementwise_cos(
@@ -389,6 +437,22 @@ void test_builtin_elementwise_cos(float f1, float f2, double d1, double d2,
   // CHECK:      [[VF1:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
   // CHECK-NEXT: call <4 x float> @llvm.cos.v4f32(<4 x float> [[VF1]])
   vf2 = __builtin_elementwise_cos(vf1);
+}
+
+void test_builtin_elementwise_cosh(float f1, float f2, double d1, double d2,
+                                  float4 vf1, float4 vf2) {
+  // CHECK-LABEL: define void @test_builtin_elementwise_cosh(
+  // CHECK:      [[F1:%.+]] = load float, ptr %f1.addr, align 4
+  // CHECK-NEXT:  call float @llvm.cosh.f32(float [[F1]])
+  f2 = __builtin_elementwise_cosh(f1);
+
+  // CHECK:      [[D1:%.+]] = load double, ptr %d1.addr, align 8
+  // CHECK-NEXT: call double @llvm.cosh.f64(double [[D1]])
+  d2 = __builtin_elementwise_cosh(d1);
+
+  // CHECK:      [[VF1:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
+  // CHECK-NEXT: call <4 x float> @llvm.cosh.v4f32(<4 x float> [[VF1]])
+  vf2 = __builtin_elementwise_cosh(vf1);
 }
 
 void test_builtin_elementwise_exp(float f1, float f2, double d1, double d2,
@@ -588,6 +652,22 @@ void test_builtin_elementwise_sin(float f1, float f2, double d1, double d2,
   vf2 = __builtin_elementwise_sin(vf1);
 }
 
+void test_builtin_elementwise_sinh(float f1, float f2, double d1, double d2,
+                                  float4 vf1, float4 vf2) {
+  // CHECK-LABEL: define void @test_builtin_elementwise_sinh(
+  // CHECK:      [[F1:%.+]] = load float, ptr %f1.addr, align 4
+  // CHECK-NEXT:  call float @llvm.sinh.f32(float [[F1]])
+  f2 = __builtin_elementwise_sinh(f1);
+
+  // CHECK:      [[D1:%.+]] = load double, ptr %d1.addr, align 8
+  // CHECK-NEXT: call double @llvm.sinh.f64(double [[D1]])
+  d2 = __builtin_elementwise_sinh(d1);
+
+  // CHECK:      [[VF1:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
+  // CHECK-NEXT: call <4 x float> @llvm.sinh.v4f32(<4 x float> [[VF1]])
+  vf2 = __builtin_elementwise_sinh(vf1);
+}
+
 void test_builtin_elementwise_sqrt(float f1, float f2, double d1, double d2,
                                   float4 vf1, float4 vf2) {
   // CHECK-LABEL: define void @test_builtin_elementwise_sqrt(
@@ -618,6 +698,22 @@ void test_builtin_elementwise_tan(float f1, float f2, double d1, double d2,
   // CHECK:      [[VF1:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
   // CHECK-NEXT: call <4 x float> @llvm.tan.v4f32(<4 x float> [[VF1]])
   vf2 = __builtin_elementwise_tan(vf1);
+}
+
+void test_builtin_elementwise_tanh(float f1, float f2, double d1, double d2,
+                                  float4 vf1, float4 vf2) {
+  // CHECK-LABEL: define void @test_builtin_elementwise_tanh(
+  // CHECK:      [[F1:%.+]] = load float, ptr %f1.addr, align 4
+  // CHECK-NEXT:  call float @llvm.tanh.f32(float [[F1]])
+  f2 = __builtin_elementwise_tanh(f1);
+
+  // CHECK:      [[D1:%.+]] = load double, ptr %d1.addr, align 8
+  // CHECK-NEXT: call double @llvm.tanh.f64(double [[D1]])
+  d2 = __builtin_elementwise_tanh(d1);
+
+  // CHECK:      [[VF1:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
+  // CHECK-NEXT: call <4 x float> @llvm.tanh.v4f32(<4 x float> [[VF1]])
+  vf2 = __builtin_elementwise_tanh(vf1);
 }
 
 void test_builtin_elementwise_trunc(float f1, float f2, double d1, double d2,

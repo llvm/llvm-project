@@ -612,19 +612,26 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
   assert(D->getDeclContext()->getRedeclContext()->isFileContext() &&
          "Not a name having namespace scope");
   ASTContext &Context = D->getASTContext();
+  const auto *Var = dyn_cast<VarDecl>(D);
 
   // C++ [basic.link]p3:
   //   A name having namespace scope (3.3.6) has internal linkage if it
   //   is the name of
 
-  if (getStorageClass(D->getCanonicalDecl()) == SC_Static) {
+  if ((getStorageClass(D->getCanonicalDecl()) == SC_Static) ||
+      (Context.getLangOpts().C23 && Var && Var->isConstexpr())) {
     // - a variable, variable template, function, or function template
     //   that is explicitly declared static; or
     // (This bullet corresponds to C99 6.2.2p3.)
+
+    // C23 6.2.2p3
+    // If the declaration of a file scope identifier for
+    // an object contains any of the storage-class specifiers static or
+    // constexpr then the identifier has internal linkage.
     return LinkageInfo::internal();
   }
 
-  if (const auto *Var = dyn_cast<VarDecl>(D)) {
+  if (Var) {
     // - a non-template variable of non-volatile const-qualified type, unless
     //   - it is explicitly declared extern, or
     //   - it is declared in the purview of a module interface unit
@@ -1614,7 +1621,7 @@ LinkageInfo LinkageComputer::getDeclLinkageAndVisibility(const NamedDecl *D) {
                              : CK);
 }
 
-Module *Decl::getOwningModuleForLinkage(bool IgnoreLinkage) const {
+Module *Decl::getOwningModuleForLinkage() const {
   if (isa<NamespaceDecl>(this))
     // Namespaces never have module linkage.  It is the entities within them
     // that [may] do.
@@ -1637,24 +1644,9 @@ Module *Decl::getOwningModuleForLinkage(bool IgnoreLinkage) const {
 
   case Module::ModuleHeaderUnit:
   case Module::ExplicitGlobalModuleFragment:
-  case Module::ImplicitGlobalModuleFragment: {
-    // External linkage declarations in the global module have no owning module
-    // for linkage purposes. But internal linkage declarations in the global
-    // module fragment of a particular module are owned by that module for
-    // linkage purposes.
-    // FIXME: p1815 removes the need for this distinction -- there are no
-    // internal linkage declarations that need to be referred to from outside
-    // this TU.
-    if (IgnoreLinkage)
-      return nullptr;
-    bool InternalLinkage;
-    if (auto *ND = dyn_cast<NamedDecl>(this))
-      InternalLinkage = !ND->hasExternalFormalLinkage();
-    else
-      InternalLinkage = isInAnonymousNamespace();
-    return InternalLinkage ? M->Kind == Module::ModuleHeaderUnit ? M : M->Parent
-                           : nullptr;
-  }
+  case Module::ImplicitGlobalModuleFragment:
+    // The global module shouldn't change the linkage.
+    return nullptr;
 
   case Module::PrivateModuleFragment:
     // The private module fragment is part of its containing module for linkage
@@ -2390,6 +2382,9 @@ bool VarDecl::hasInit() const {
     if (P->hasUnparsedDefaultArg() || P->hasUninstantiatedDefaultArg())
       return false;
 
+  if (auto *Eval = getEvaluatedStmt())
+    return Eval->Value.isValid();
+
   return !Init.isNull();
 }
 
@@ -2402,10 +2397,8 @@ Expr *VarDecl::getInit() {
 
   auto *Eval = getEvaluatedStmt();
 
-  return cast_if_present<Expr>(
-      Eval->Value.isOffset()
-          ? Eval->Value.get(getASTContext().getExternalSource())
-          : Eval->Value.get(nullptr));
+  return cast<Expr>(Eval->Value.get(
+      Eval->Value.isOffset() ? getASTContext().getExternalSource() : nullptr));
 }
 
 Stmt **VarDecl::getInitAddress() {

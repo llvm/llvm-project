@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsS390.h"
@@ -344,9 +345,6 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SRL_PARTS, MVT::i64, Expand);
   setOperationAction(ISD::SHL_PARTS, MVT::i64, Expand);
   setOperationAction(ISD::SRA_PARTS, MVT::i64, Expand);
-  setLibcallName(RTLIB::SRL_I128, nullptr);
-  setLibcallName(RTLIB::SHL_I128, nullptr);
-  setLibcallName(RTLIB::SRA_I128, nullptr);
 
   // Also expand 256 bit shifts if i128 is a legal type.
   if (isTypeLegal(MVT::i128)) {

@@ -402,6 +402,12 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FSIN:
   case ISD::FCOS:
   case ISD::FTAN:
+  case ISD::FASIN:
+  case ISD::FACOS:
+  case ISD::FATAN:
+  case ISD::FSINH:
+  case ISD::FCOSH:
+  case ISD::FTANH:
   case ISD::FLDEXP:
   case ISD::FPOWI:
   case ISD::FPOW:
@@ -449,6 +455,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
   case ISD::MGATHER:
+  case ISD::SCMP:
+  case ISD::UCMP:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   case ISD::SMULFIX:

@@ -15,7 +15,6 @@
 #define MLIR_CONVERSION_FUNCTOLLVM_CONVERTFUNCTOLLVM_H
 
 #include "mlir/Interfaces/FunctionInterfaces.h"
-#include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
 

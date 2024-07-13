@@ -3029,7 +3029,7 @@ void Darwin::addClangCC1ASTargetOptions(
       std::string Arg;
       llvm::raw_string_ostream OS(Arg);
       OS << "-target-sdk-version=" << V;
-      CC1ASArgs.push_back(Args.MakeArgString(OS.str()));
+      CC1ASArgs.push_back(Args.MakeArgString(Arg));
     };
 
     if (isTargetMacCatalyst()) {
@@ -3052,7 +3052,7 @@ void Darwin::addClangCC1ASTargetOptions(
         std::string Arg;
         llvm::raw_string_ostream OS(Arg);
         OS << "-darwin-target-variant-sdk-version=" << SDKInfo->getVersion();
-        CC1ASArgs.push_back(Args.MakeArgString(OS.str()));
+        CC1ASArgs.push_back(Args.MakeArgString(Arg));
       } else if (const auto *MacOStoMacCatalystMapping =
                      SDKInfo->getVersionMapping(
                          DarwinSDKInfo::OSEnvPair::macOStoMacCatalystPair())) {
@@ -3063,7 +3063,7 @@ void Darwin::addClangCC1ASTargetOptions(
           std::string Arg;
           llvm::raw_string_ostream OS(Arg);
           OS << "-darwin-target-variant-sdk-version=" << *SDKVersion;
-          CC1ASArgs.push_back(Args.MakeArgString(OS.str()));
+          CC1ASArgs.push_back(Args.MakeArgString(Arg));
         }
       }
     }
@@ -3457,7 +3457,6 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
   Res |= SanitizerKind::Leak;
-  Res |= SanitizerKind::NumericalStability;
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
   Res |= SanitizerKind::ObjCCast;
@@ -3474,6 +3473,10 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
        isTargetTvOSSimulator() || isTargetWatchOSSimulator())) {
     Res |= SanitizerKind::Thread;
   }
+
+  if (IsX86_64)
+    Res |= SanitizerKind::NumericalStability;
+
   return Res;
 }
 

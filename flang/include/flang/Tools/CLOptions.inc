@@ -25,6 +25,10 @@
   static llvm::cl::opt<bool> disable##DOName("disable-" DOOption, \
       llvm::cl::desc("disable " DODescription " pass"), llvm::cl::init(false), \
       llvm::cl::Hidden)
+#define EnableOption(EOName, EOOption, EODescription) \
+  static llvm::cl::opt<bool> enable##EOName("enable-" EOOption, \
+      llvm::cl::desc("enable " EODescription " pass"), llvm::cl::init(false), \
+      llvm::cl::Hidden)
 
 /// Shared option in tools to control whether dynamically sized array
 /// allocations should always be on the heap.
@@ -86,6 +90,8 @@ DisableOption(BoxedProcedureRewrite, "boxed-procedure-rewrite",
 
 DisableOption(ExternalNameConversion, "external-name-interop",
     "convert names with external convention");
+EnableOption(ConstantArgumentGlobalisation, "constant-argument-globalisation",
+    "the local constant argument to global constant conversion");
 
 using PassConstructor = std::unique_ptr<mlir::Pass>();
 
@@ -144,7 +150,7 @@ namespace fir {
 static void addCanonicalizerPassWithoutRegionSimplification(
     mlir::OpPassManager &pm) {
   mlir::GreedyRewriteConfig config;
-  config.enableRegionSimplification = false;
+  config.enableRegionSimplification = mlir::GreedySimplifyRegionLevel::Disabled;
   pm.addPass(mlir::createCanonicalizerPass(config));
 }
 
@@ -260,7 +266,7 @@ inline void createDefaultFIROptimizerPassPipeline(
 
   // simplify the IR
   mlir::GreedyRewriteConfig config;
-  config.enableRegionSimplification = false;
+  config.enableRegionSimplification = mlir::GreedySimplifyRegionLevel::Disabled;
   pm.addPass(mlir::createCSEPass());
   fir::addAVC(pm, pc.OptLevel);
   addNestedPassToAllTopLevelOperations(pm, fir::createCharacterConversion);
@@ -270,6 +276,8 @@ inline void createDefaultFIROptimizerPassPipeline(
     // These passes may increase code size.
     pm.addPass(fir::createSimplifyIntrinsics());
     pm.addPass(fir::createAlgebraicSimplificationPass(config));
+    if (enableConstantArgumentGlobalisation)
+      pm.addPass(fir::createConstantArgumentGlobalisationOpt());
   }
 
   if (pc.LoopVersioning)
@@ -295,6 +303,7 @@ inline void createDefaultFIROptimizerPassPipeline(
   if (pc.AliasAnalysis && !disableFirAliasTags && !useOldAliasTags)
     pm.addPass(fir::createAddAliasTags());
 
+  addNestedPassToAllTopLevelOperations(pm, fir::createStackReclaim);
   // convert control flow to CFG form
   fir::addCfgConversionPass(pm, pc);
   pm.addPass(mlir::createConvertSCFToCFPass());

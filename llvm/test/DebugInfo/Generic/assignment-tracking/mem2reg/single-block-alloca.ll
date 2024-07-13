@@ -9,11 +9,11 @@
 ;; "b" to the alloca).
 
 ; CHECK: entry:
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a, metadata ![[B:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a, metadata ![[A:[0-9]+]]
+; CHECK-NEXT: #dbg_value(i32 %a, ![[B:[0-9]+]]
+; CHECK-NEXT: #dbg_value(i32 %a, ![[A:[0-9]+]]
 ; CHECK-NEXT: %add =
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %add, metadata ![[B]]
-; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %add, metadata ![[A]]
+; CHECK-NEXT: #dbg_value(i32 %add, ![[B]]
+; CHECK-NEXT: #dbg_value(i32 %add, ![[A]]
 
 ; CHECK-DAG: ![[A]] = !DILocalVariable(name: "a",
 ; CHECK-DAG: ![[B]] = !DILocalVariable(name: "b",

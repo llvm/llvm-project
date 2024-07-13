@@ -30,22 +30,6 @@ class LetDummies {
   string DecoderNamespace;
 }
 
-//===----------------------------------------------------------------------===//
-// VOP Subtarget info
-//===----------------------------------------------------------------------===//
-
-class GFXGen<Predicate pred, string dn, string suffix, int sub> {
-  Predicate AssemblerPredicate = pred;
-  string DecoderNamespace = dn;
-  string Suffix = suffix;
-  int Subtarget = sub;
-}
-
-def GFX12Gen : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
-def GFX11Gen : GFXGen<isGFX11Only, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
-
-//===----------------------------------------------------------------------===//
-
 class VOP <string opName> {
   string OpName = opName;
 }
@@ -831,13 +815,9 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[],
   dag Ins = P.InsDPP, string asmOps = P.AsmDPP> :
   VOP_Pseudo<OpName, "_dpp", P, P.OutsDPP, Ins, asmOps, pattern> {
 
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
-
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let UseNamedOperandTable = 1;
 
   let VALU = 1;
   let DPP = 1;
@@ -850,7 +830,6 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[],
   let Uses = !if(ReadsModeReg, [MODE, EXEC], [EXEC]);
   let isConvergent = 1;
 
-  string Mnemonic = OpName;
   string AsmOperands = asmOps;
 
   let AsmMatchConverter = !if(P.HasModifiers, "cvtDPP", "");
@@ -863,8 +842,6 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[],
 
   let IsInvalidSingleUseConsumer = !not(VINTERP);
   let IsInvalidSingleUseProducer = !not(VINTERP);
-
-  VOPProfile Pfl = P;
 }
 
 class VOP3_DPP_Pseudo <string OpName, VOPProfile P> :

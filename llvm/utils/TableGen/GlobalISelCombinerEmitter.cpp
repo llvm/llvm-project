@@ -529,7 +529,7 @@ void CombineRuleOperandTypeChecker::getInstEqClasses(
   const auto MCOITypes = getMCOIOperandTypes(*CGP);
   assert(MCOITypes.size() == P.operands_size());
 
-  DenseMap<StringRef, std::vector<unsigned>> TyToOpIdx;
+  MapVector<StringRef, SmallVector<unsigned, 0>> TyToOpIdx;
   for (const auto &[Idx, Ty] : enumerate(MCOITypes))
     TyToOpIdx[Ty].push_back(Idx);
 

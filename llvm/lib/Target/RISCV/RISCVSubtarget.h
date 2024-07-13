@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_RISCV_RISCVSUBTARGET_H
 #define LLVM_LIB_TARGET_RISCV_RISCVSUBTARGET_H
 
+#include "GISel/RISCVRegisterBankInfo.h"
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "RISCVFrameLowering.h"
 #include "RISCVISelLowering.h"
@@ -20,7 +21,6 @@
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
-#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
@@ -245,10 +245,10 @@ public:
 
 protected:
   // GlobalISel related APIs.
-  std::unique_ptr<CallLowering> CallLoweringInfo;
-  std::unique_ptr<InstructionSelector> InstSelector;
-  std::unique_ptr<LegalizerInfo> Legalizer;
-  std::unique_ptr<RegisterBankInfo> RegBankInfo;
+  mutable std::unique_ptr<CallLowering> CallLoweringInfo;
+  mutable std::unique_ptr<InstructionSelector> InstSelector;
+  mutable std::unique_ptr<LegalizerInfo> Legalizer;
+  mutable std::unique_ptr<RISCVRegisterBankInfo> RegBankInfo;
 
   // Return the known range for the bit length of RVV data registers as set
   // at the command line. A value of 0 means nothing is known about that particular
@@ -261,7 +261,7 @@ public:
   const CallLowering *getCallLowering() const override;
   InstructionSelector *getInstructionSelector() const override;
   const LegalizerInfo *getLegalizerInfo() const override;
-  const RegisterBankInfo *getRegBankInfo() const override;
+  const RISCVRegisterBankInfo *getRegBankInfo() const override;
 
   bool isTargetAndroid() const { return getTargetTriple().isAndroid(); }
   bool isTargetFuchsia() const { return getTargetTriple().isOSFuchsia(); }

@@ -28,6 +28,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSymbol.h"

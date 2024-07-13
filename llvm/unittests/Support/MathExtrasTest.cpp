@@ -189,8 +189,13 @@ TEST(MathExtras, AlignTo) {
   EXPECT_EQ(8u, alignTo(5, 8));
   EXPECT_EQ(24u, alignTo(17, 8));
   EXPECT_EQ(0u, alignTo(~0LL, 8));
-  EXPECT_EQ(static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) + 1,
-            alignTo(std::numeric_limits<uint32_t>::max(), 2));
+  EXPECT_EQ(8u, alignTo(5ULL, 8ULL));
+
+  EXPECT_EQ(8u, alignTo<8>(5));
+  EXPECT_EQ(24u, alignTo<8>(17));
+  EXPECT_EQ(0u, alignTo<8>(~0LL));
+  EXPECT_EQ(254u,
+            alignTo<static_cast<uint8_t>(127)>(static_cast<uint8_t>(200)));
 
   EXPECT_EQ(7u, alignTo(5, 8, 7));
   EXPECT_EQ(17u, alignTo(17, 8, 1));
@@ -198,12 +203,21 @@ TEST(MathExtras, AlignTo) {
   EXPECT_EQ(552u, alignTo(321, 255, 42));
   EXPECT_EQ(std::numeric_limits<uint32_t>::max(),
             alignTo(std::numeric_limits<uint32_t>::max(), 2, 1));
+
+  // Overflow.
+  EXPECT_EQ(0u, alignTo(static_cast<uint8_t>(200), static_cast<uint8_t>(128)));
+  EXPECT_EQ(0u, alignTo<static_cast<uint8_t>(128)>(static_cast<uint8_t>(200)));
+  EXPECT_EQ(0u, alignTo(static_cast<uint8_t>(200), static_cast<uint8_t>(128),
+                        static_cast<uint8_t>(0)));
+  EXPECT_EQ(0u, alignTo(std::numeric_limits<uint32_t>::max(), 2));
 }
 
 TEST(MathExtras, AlignToPowerOf2) {
+  EXPECT_EQ(0u, alignToPowerOf2(0u, 8));
   EXPECT_EQ(8u, alignToPowerOf2(5, 8));
   EXPECT_EQ(24u, alignToPowerOf2(17, 8));
   EXPECT_EQ(0u, alignToPowerOf2(~0LL, 8));
+  EXPECT_EQ(240u, alignToPowerOf2(240, 16));
   EXPECT_EQ(static_cast<uint64_t>(std::numeric_limits<uint32_t>::max()) + 1,
             alignToPowerOf2(std::numeric_limits<uint32_t>::max(), 2));
 }
@@ -459,15 +473,37 @@ TEST(MathExtras, DivideNearest) {
   EXPECT_EQ(divideNearest(14, 3), 5u);
   EXPECT_EQ(divideNearest(15, 3), 5u);
   EXPECT_EQ(divideNearest(0, 3), 0u);
+  EXPECT_EQ(divideNearest(5, 4), 1u);
+  EXPECT_EQ(divideNearest(6, 4), 2u);
+  EXPECT_EQ(divideNearest(3, 1), 3u);
+  EXPECT_EQ(divideNearest(3, 6), 1u);
+  EXPECT_EQ(divideNearest(3, 7), 0u);
   EXPECT_EQ(divideNearest(std::numeric_limits<uint32_t>::max(), 2),
-            2147483648u);
+            std::numeric_limits<uint32_t>::max() / 2 + 1);
+  EXPECT_EQ(divideNearest(std::numeric_limits<uint64_t>::max(), 2),
+            std::numeric_limits<uint64_t>::max() / 2 + 1);
+  EXPECT_EQ(divideNearest(std::numeric_limits<uint64_t>::max(), 1),
+            std::numeric_limits<uint64_t>::max());
+  EXPECT_EQ(divideNearest(std::numeric_limits<uint64_t>::max() - 1,
+                          std::numeric_limits<uint64_t>::max()),
+            1u);
 }
 
 TEST(MathExtras, DivideCeil) {
   EXPECT_EQ(divideCeil(14, 3), 5u);
   EXPECT_EQ(divideCeil(15, 3), 5u);
   EXPECT_EQ(divideCeil(0, 3), 0u);
-  EXPECT_EQ(divideCeil(std::numeric_limits<uint32_t>::max(), 2), 2147483648u);
+  EXPECT_EQ(divideCeil(5, 4), 2u);
+  EXPECT_EQ(divideCeil(6, 4), 2u);
+  EXPECT_EQ(divideCeil(3, 1), 3u);
+  EXPECT_EQ(divideCeil(3, 6), 1u);
+  EXPECT_EQ(divideCeil(3, 7), 1u);
+  EXPECT_EQ(divideCeil(std::numeric_limits<uint32_t>::max(), 2),
+            std::numeric_limits<uint32_t>::max() / 2 + 1);
+  EXPECT_EQ(divideCeil(std::numeric_limits<uint64_t>::max(), 2),
+            std::numeric_limits<uint64_t>::max() / 2 + 1);
+  EXPECT_EQ(divideCeil(std::numeric_limits<uint64_t>::max(), 1),
+            std::numeric_limits<uint64_t>::max());
 
   EXPECT_EQ(divideCeilSigned(14, 3), 5);
   EXPECT_EQ(divideCeilSigned(15, 3), 5);
@@ -479,8 +515,20 @@ TEST(MathExtras, DivideCeil) {
   EXPECT_EQ(divideCeilSigned(0, -3), 0);
   EXPECT_EQ(divideCeilSigned(std::numeric_limits<int32_t>::max(), 2),
             std::numeric_limits<int32_t>::max() / 2 + 1);
+  EXPECT_EQ(divideCeilSigned(std::numeric_limits<int64_t>::max(), 2),
+            std::numeric_limits<int64_t>::max() / 2 + 1);
   EXPECT_EQ(divideCeilSigned(std::numeric_limits<int32_t>::max(), -2),
             std::numeric_limits<int32_t>::min() / 2 + 1);
+  EXPECT_EQ(divideCeilSigned(std::numeric_limits<int64_t>::max(), -2),
+            std::numeric_limits<int64_t>::min() / 2 + 1);
+  EXPECT_EQ(divideCeilSigned(std::numeric_limits<int64_t>::min(), 1),
+            std::numeric_limits<int64_t>::min());
+
+  // Overflow.
+  EXPECT_TRUE(
+      divideSignedWouldOverflow(std::numeric_limits<int8_t>::min(), -1));
+  EXPECT_TRUE(
+      divideSignedWouldOverflow(std::numeric_limits<int64_t>::min(), -1));
 }
 
 TEST(MathExtras, DivideFloorSigned) {
@@ -494,8 +542,16 @@ TEST(MathExtras, DivideFloorSigned) {
   EXPECT_EQ(divideFloorSigned(0, -3), 0);
   EXPECT_EQ(divideFloorSigned(std::numeric_limits<int32_t>::max(), 2),
             std::numeric_limits<int32_t>::max() / 2);
+  EXPECT_EQ(divideFloorSigned(std::numeric_limits<int64_t>::max(), 2),
+            std::numeric_limits<int64_t>::max() / 2);
   EXPECT_EQ(divideFloorSigned(std::numeric_limits<int32_t>::max(), -2),
             std::numeric_limits<int32_t>::min() / 2);
+  EXPECT_EQ(divideFloorSigned(std::numeric_limits<int64_t>::max(), -2),
+            std::numeric_limits<int64_t>::min() / 2);
+  EXPECT_EQ(divideFloorSigned(std::numeric_limits<int64_t>::min(), 1),
+            std::numeric_limits<int64_t>::min());
+
+  // Same overflow condition, divideSignedWouldOverflow, applies.
 }
 
 TEST(MathExtras, Mod) {

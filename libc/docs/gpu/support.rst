@@ -190,6 +190,8 @@ strtold        |check|
 strtoll        |check|
 strtoul        |check|
 strtoull       |check|
+srand          |check|
+rand           |check|
 =============  =========  ============
 
 inttypes.h
@@ -225,6 +227,7 @@ puts           |check|    |check|
 fputs          |check|    |check|
 fputc          |check|    |check|
 fwrite         |check|    |check|
+remove         |check|    |check|
 putc           |check|    |check|
 putchar        |check|    |check|
 fclose         |check|    |check|

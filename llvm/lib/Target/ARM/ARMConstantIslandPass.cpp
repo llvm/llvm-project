@@ -388,7 +388,7 @@ static bool AlignBlocks(MachineFunction *MF, const ARMSubtarget *STI) {
 bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;
   MCP = mf.getConstantPool();
-  BBUtils = std::unique_ptr<ARMBasicBlockUtils>(new ARMBasicBlockUtils(mf));
+  BBUtils = std::make_unique<ARMBasicBlockUtils>(mf);
 
   LLVM_DEBUG(dbgs() << "***** ARMConstantIslands: "
                     << MCP->getConstants().size() << " CP entries, aligned to "

@@ -349,7 +349,7 @@ static bool canMoveAboveCall(Instruction *I, CallInst *CI, AliasAnalysis *AA) {
       // does not write to memory and the load provably won't trap.
       // Writes to memory only matter if they may alias the pointer
       // being loaded from.
-      const DataLayout &DL = L->getModule()->getDataLayout();
+      const DataLayout &DL = L->getDataLayout();
       if (isModSet(AA->getModRefInfo(CI, MemoryLocation::get(L))) ||
           !isSafeToLoadUnconditionally(L->getPointerOperand(), L->getType(),
                                        L->getAlign(), DL, L))
@@ -594,7 +594,7 @@ void TailRecursionEliminator::copyByValueOperandIntoLocalTemp(CallInst *CI,
                                                               int OpndIdx) {
   Type *AggTy = CI->getParamByValType(OpndIdx);
   assert(AggTy);
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   // Get alignment of byVal operand.
   Align Alignment(CI->getParamAlign(OpndIdx).valueOrOne());
@@ -621,7 +621,7 @@ void TailRecursionEliminator::copyLocalTempOfByValueOperandIntoArguments(
     CallInst *CI, int OpndIdx) {
   Type *AggTy = CI->getParamByValType(OpndIdx);
   assert(AggTy);
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   // Get alignment of byVal operand.
   Align Alignment(CI->getParamAlign(OpndIdx).valueOrOne());
@@ -749,7 +749,7 @@ void TailRecursionEliminator::cleanupAndFinalize() {
   // call.
   for (PHINode *PN : ArgumentPHIs) {
     // If the PHI Node is a dynamic constant, replace it with the value it is.
-    if (Value *PNV = simplifyInstruction(PN, F.getParent()->getDataLayout())) {
+    if (Value *PNV = simplifyInstruction(PN, F.getDataLayout())) {
       PN->replaceAllUsesWith(PNV);
       PN->eraseFromParent();
     }
@@ -779,6 +779,7 @@ void TailRecursionEliminator::cleanupAndFinalize() {
           AccRecInstrNew->setOperand(AccRecInstr->getOperand(0) == AccPN,
                                      RI->getOperand(0));
           AccRecInstrNew->insertBefore(RI);
+          AccRecInstrNew->dropLocation();
           RI->setOperand(0, AccRecInstrNew);
         }
       }
@@ -807,6 +808,7 @@ void TailRecursionEliminator::cleanupAndFinalize() {
           AccRecInstrNew->setOperand(AccRecInstr->getOperand(0) == AccPN,
                                      SI->getFalseValue());
           AccRecInstrNew->insertBefore(SI);
+          AccRecInstrNew->dropLocation();
           SI->setFalseValue(AccRecInstrNew);
         }
       }

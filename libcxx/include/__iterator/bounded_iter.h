@@ -84,8 +84,8 @@ private:
   //
   // Since it is non-standard for iterators to have this constructor, __bounded_iter must
   // be created via `std::__make_bounded_iter`.
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __bounded_iter(
-      _Iterator __current, _Iterator __begin, _Iterator __end)
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __bounded_iter(_Iterator __current, _Iterator __begin, _Iterator __end)
       : __current_(__current), __begin_(__begin), __end_(__end) {
     _LIBCPP_ASSERT_INTERNAL(
         __begin <= __current, "__bounded_iter(current, begin, end): current and begin are inconsistent");

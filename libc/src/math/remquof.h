@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_SRC_MATH_REMQUOF_H
 #define LLVM_LIBC_SRC_MATH_REMQUOF_H
 
-namespace LIBC_NAMESPACE {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 float remquof(float x, float y, int *exp);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_REMQUOF_H
