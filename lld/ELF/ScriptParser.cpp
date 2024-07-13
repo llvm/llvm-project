@@ -87,6 +87,7 @@ private:
   void readTarget();
   void readVersion();
   void readVersionScriptCommand();
+  void readNoCrossRefs(bool to);
 
   SymbolAssignment *readSymbolAssignment(StringRef name);
   ByteCommand *readByteCommand(StringRef tok);
@@ -280,6 +281,10 @@ void ScriptParser::readLinkerScript() {
       readTarget();
     } else if (tok == "VERSION") {
       readVersion();
+    } else if (tok == "NOCROSSREFS") {
+      readNoCrossRefs(/*to=*/false);
+    } else if (tok == "NOCROSSREFS_TO") {
+      readNoCrossRefs(/*to=*/true);
     } else if (SymbolAssignment *cmd = readAssignment(tok)) {
       script->sectionCommands.push_back(cmd);
     } else {
@@ -297,6 +302,16 @@ void ScriptParser::readDefsym(StringRef name) {
   auto *cmd = make<SymbolAssignment>(
       name, e, 0, getCurrentMB().getBufferIdentifier().str());
   script->sectionCommands.push_back(cmd);
+}
+
+void ScriptParser::readNoCrossRefs(bool to) {
+  expect("(");
+  NoCrossRefCommand cmd{{}, to};
+  while (!atEOF() && !errorCount() && peek() != ")")
+    cmd.outputSections.push_back(next());
+  if (cmd.outputSections.size() >= 2)
+    script->noCrossRefs.push_back(std::move(cmd));
+  expect(")");
 }
 
 void ScriptParser::addFile(StringRef s) {
