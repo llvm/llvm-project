@@ -6098,13 +6098,13 @@ def : Pat<(f64 (uint_to_fp (i64 (vector_extract (v2i64 FPR128:$Rn), (i64 0))))),
 // Actual extraction result is then an in-reg sign-extension of lower 16-bits.
 let Predicates = [HasNEONandIsStreamingSafe, HasFullFP16] in {
 def : Pat<(f16 (sint_to_fp (i32 (sext_inreg (i32 (vector_extract 
-          (v8i16 FPR128:$Rn), (i64 0))), i16)))), 
-              (SCVTFv1i16 (f16 (EXTRACT_SUBREG (v8i16 FPR128:$Rn), hsub)))>;
+                (v8i16 FPR128:$Rn), (i64 0))), i16)))), 
+          (SCVTFv1i16 (f16 (EXTRACT_SUBREG (v8i16 FPR128:$Rn), hsub)))>;
 
 // unsigned 32-bit extracted element is truncated to 16-bits using AND
 def : Pat<(f16 (uint_to_fp (i32 (and (i32 (vector_extract 
-          (v8i16 FPR128:$Rn), (i64 0))), (i32 65535))))),
-              (UCVTFv1i16 (f16 (EXTRACT_SUBREG (v8i16 FPR128:$Rn), hsub)))>;
+                (v8i16 FPR128:$Rn), (i64 0))), (i32 65535))))),
+          (UCVTFv1i16 (f16 (EXTRACT_SUBREG (v8i16 FPR128:$Rn), hsub)))>;
 }
 
 // If an integer is about to be converted to a floating point value,
