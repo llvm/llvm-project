@@ -520,6 +520,7 @@ private:
     DK_CFI_UNDEFINED,
     DK_CFI_REGISTER,
     DK_CFI_WINDOW_SAVE,
+    DK_CFI_LABEL,
     DK_CFI_B_KEY_FRAME,
     DK_MACROS_ON,
     DK_MACROS_OFF,
@@ -622,6 +623,7 @@ private:
   bool parseDirectiveCFIReturnColumn(SMLoc DirectiveLoc);
   bool parseDirectiveCFISignalFrame(SMLoc DirectiveLoc);
   bool parseDirectiveCFIUndefined(SMLoc DirectiveLoc);
+  bool parseDirectiveCFILabel(SMLoc DirectiveLoc);
 
   // macro directives
   bool parseDirectivePurgeMacro(SMLoc DirectiveLoc);
@@ -2224,6 +2226,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveCFIRegister(IDLoc);
     case DK_CFI_WINDOW_SAVE:
       return parseDirectiveCFIWindowSave(IDLoc);
+    case DK_CFI_LABEL:
+      return parseDirectiveCFILabel(IDLoc);
     case DK_MACROS_ON:
     case DK_MACROS_OFF:
       return parseDirectiveMacrosOnOff(IDVal);
@@ -2568,6 +2572,8 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, MCAsmMacro &Macro,
       continue;
     }
 
+    // In Darwin mode, $ is used for macro expansion, not considered an
+    // identifier char.
     if (Body[I] == '$' && I + 1 != End && IsDarwin && !NParameters) {
       // This macro has no parameters, look for $0, $1, etc.
       switch (Body[I + 1]) {
@@ -2596,26 +2602,28 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, MCAsmMacro &Macro,
       }
     }
 
-    if (AltMacroMode && isIdentifierChar(Body[I])) {
-      size_t Len = 1;
-      while (I + Len != End && isIdentifierChar(Body[I + Len]))
-        ++Len;
-      StringRef Argument(Body.data() + I, Len);
+    if (!isIdentifierChar(Body[I]) || IsDarwin) {
+      OS << Body[I++];
+      continue;
+    }
+
+    const size_t Start = I;
+    while (++I && isIdentifierChar(Body[I])) {
+    }
+    StringRef Token(Body.data() + Start, I - Start);
+    if (AltMacroMode) {
       unsigned Index = 0;
       for (; Index != NParameters; ++Index)
-        if (Parameters[Index].Name == Argument)
+        if (Parameters[Index].Name == Token)
           break;
       if (Index != NParameters) {
         expandArg(Index);
-        I += Len;
         if (I != End && Body[I] == '&')
           ++I;
         continue;
       }
     }
-
-    OS << Body[I];
-    ++I;
+    OS << Token;
   }
 
   ++Macro.Count;
@@ -4488,6 +4496,19 @@ bool AsmParser::parseDirectiveCFIUndefined(SMLoc DirectiveLoc) {
   return false;
 }
 
+/// parseDirectiveCFILabel
+/// ::= .cfi_label label
+bool AsmParser::parseDirectiveCFILabel(SMLoc Loc) {
+  StringRef Name;
+  Loc = Lexer.getLoc();
+  if (parseIdentifier(Name))
+    return TokError("expected identifier");
+  if (parseEOL())
+    return true;
+  getStreamer().emitCFILabelDirective(Loc, Name);
+  return false;
+}
+
 /// parseDirectiveAltmacro
 /// ::= .altmacro
 /// ::= .noaltmacro
@@ -5560,6 +5581,7 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".cfi_undefined"] = DK_CFI_UNDEFINED;
   DirectiveKindMap[".cfi_register"] = DK_CFI_REGISTER;
   DirectiveKindMap[".cfi_window_save"] = DK_CFI_WINDOW_SAVE;
+  DirectiveKindMap[".cfi_label"] = DK_CFI_LABEL;
   DirectiveKindMap[".cfi_b_key_frame"] = DK_CFI_B_KEY_FRAME;
   DirectiveKindMap[".cfi_mte_tagged_frame"] = DK_CFI_MTE_TAGGED_FRAME;
   DirectiveKindMap[".macros_on"] = DK_MACROS_ON;
@@ -6098,8 +6120,8 @@ bool AsmParser::parseMSInlineAsm(
   const char *AsmStart = ASMString.begin();
   const char *AsmEnd = ASMString.end();
   array_pod_sort(AsmStrRewrites.begin(), AsmStrRewrites.end(), rewritesSort);
-  for (auto it = AsmStrRewrites.begin(); it != AsmStrRewrites.end(); ++it) {
-    const AsmRewrite &AR = *it;
+  for (auto I = AsmStrRewrites.begin(), E = AsmStrRewrites.end(); I != E; ++I) {
+    const AsmRewrite &AR = *I;
     // Check if this has already been covered by another rewrite...
     if (AR.Done)
       continue;
@@ -6142,7 +6164,7 @@ bool AsmParser::parseMSInlineAsm(
         SMLoc OffsetLoc = SMLoc::getFromPointer(AR.IntelExp.OffsetName.data());
         size_t OffsetLen = OffsetName.size();
         auto rewrite_it = std::find_if(
-            it, AsmStrRewrites.end(), [&](const AsmRewrite &FusingAR) {
+            I, AsmStrRewrites.end(), [&](const AsmRewrite &FusingAR) {
               return FusingAR.Loc == OffsetLoc && FusingAR.Len == OffsetLen &&
                      (FusingAR.Kind == AOK_Input ||
                       FusingAR.Kind == AOK_CallInput);

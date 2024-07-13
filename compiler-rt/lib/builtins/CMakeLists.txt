@@ -228,7 +228,7 @@ option(COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN
   "Skip the atomic builtin (these should normally be provided by a shared library)"
   On)
 
-if(NOT FUCHSIA AND NOT COMPILER_RT_BAREMETAL_BUILD)
+if(NOT FUCHSIA AND NOT COMPILER_RT_BAREMETAL_BUILD AND NOT COMPILER_RT_GPU_BUILD)
   set(GENERIC_SOURCES
     ${GENERIC_SOURCES}
     emutls.c
@@ -627,6 +627,8 @@ if (MINGW)
   )
 endif()
 
+set(amdgcn_SOURCES ${GENERIC_SOURCES})
+
 set(armv4t_SOURCES ${arm_min_SOURCES})
 set(armv5te_SOURCES ${arm_min_SOURCES})
 set(armv6_SOURCES ${arm_min_SOURCES})
@@ -705,6 +707,8 @@ set(mips64_SOURCES ${GENERIC_TF_SOURCES}
                    ${mips_SOURCES})
 set(mips64el_SOURCES ${GENERIC_TF_SOURCES}
                      ${mips_SOURCES})
+
+set(nvptx64_SOURCES ${GENERIC_SOURCES})
 
 set(powerpc_SOURCES ${GENERIC_SOURCES})
 
@@ -808,6 +812,21 @@ else ()
     endif()
     if(NOT COMPILER_RT_DEBUG)
       append_list_if(COMPILER_RT_HAS_OMIT_FRAME_POINTER_FLAG -fomit-frame-pointer BUILTIN_CFLAGS)
+    endif()
+  endif()
+
+  # Directly targeting the GPU requires a few extra flags.
+  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
+    append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding BUILTIN_CFLAGS)
+    append_list_if(COMPILER_RT_HAS_NOGPULIB_FLAG -nogpulib BUILTIN_CFLAGS)
+    append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto BUILTIN_CFLAGS)
+    append_list_if(COMPILER_RT_HAS_FCONVERGENT_FUNCTIONS_FLAG
+                   -fconvergent-functions BUILTIN_CFLAGS)
+
+    # AMDGPU targets want to use a generic ABI.
+    if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
+      append_list_if(COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG
+                     "SHELL:-Xclang -mcode-object-version=none" BUILTIN_CFLAGS)
     endif()
   endif()
 

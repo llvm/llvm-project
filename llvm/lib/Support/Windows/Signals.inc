@@ -167,11 +167,6 @@ static bool isDebugHelpInitialized() {
   return fStackWalk64 && fSymInitialize && fSymSetOptions && fMiniDumpWriteDump;
 }
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
-#endif
-
 static bool load64BitDebugHelp(void) {
   HMODULE hLib =
       ::LoadLibraryExA("Dbghelp.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
@@ -196,10 +191,6 @@ static bool load64BitDebugHelp(void) {
   }
   return isDebugHelpInitialized();
 }
-
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
 
 using namespace llvm;
 

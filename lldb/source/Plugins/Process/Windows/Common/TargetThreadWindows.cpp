@@ -175,11 +175,6 @@ Status TargetThreadWindows::DoResume() {
   return Status();
 }
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
-#endif
-
 const char *TargetThreadWindows::GetName() {
   Log *log = GetLog(LLDBLog::Thread);
   static GetThreadDescriptionFunctionPtr GetThreadDescription = []() {
@@ -205,7 +200,3 @@ const char *TargetThreadWindows::GetName() {
 
   return m_name.c_str();
 }
-
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
