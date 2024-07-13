@@ -1373,6 +1373,19 @@ func.func @shape_of_from_reshape(%arg0: tensor<*xf32>, %arg1: tensor<?xindex>) -
 
 // -----
 
+// CHECK-LABEL: func @shape_of_from_reshape_compatible_types
+// CHECK-SAME: %[[INPUT:.*]]: tensor<*xf32>
+// CHECK-SAME: %[[SHAPE:.*]]: tensor<5xindex>
+func.func @shape_of_from_reshape_compatible_types(%arg0: tensor<*xf32>, %arg1: tensor<5xindex>) -> tensor<?xindex> {
+  // CHECK: %[[CAST_SHAPE:.*]] = tensor.cast %[[SHAPE]] : tensor<5xindex> to tensor<?xindex>
+  // CHECK: return %[[CAST_SHAPE]] : tensor<?xindex>
+  %0 = tensor.reshape %arg0(%arg1) : (tensor<*xf32>, tensor<5xindex>) -> tensor<*xf32>
+  %1 = shape.shape_of %0 : tensor<*xf32> -> tensor<?xindex>
+  return %1 : tensor<?xindex>
+}
+
+// -----
+
 // CHECK-LABEL: func @shape_of_from_reshape_nofold
 // CHECK-SAME: %[[INPUT:.*]]: tensor<*xf32>
 // CHECK-SAME: %[[SHAPE:.*]]: tensor<?xindex>

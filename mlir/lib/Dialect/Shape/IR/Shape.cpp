@@ -1719,11 +1719,19 @@ struct ShapeOfFromReshape : public OpRewritePattern<shape::ShapeOfOp> {
                                 PatternRewriter &rewriter) const override {
     auto tensorReshapeOp = op.getArg().getDefiningOp<tensor::ReshapeOp>();
     if (!tensorReshapeOp)
-      return failure();
-    if (op.getType() != tensorReshapeOp.getShape().getType())
-      return failure();
+      return rewriter.notifyMatchFailure(op, "producer is not tensor.reshape");
+    if (!isa<TensorType>(op.getType()))
+      return rewriter.notifyMatchFailure(op, "result is not a tensor");
 
-    rewriter.replaceOp(op, tensorReshapeOp.getShape());
+    // Operand 'shape' of 'tensor.reshape' may now be used as the result of
+    // 'shape.shape_of'. While its type is guaranteed to be compatible in well-
+    // formed IR, it may not be identical (dynamically vs statically shaped),
+    // in which case it needs to be cast first.
+    Value shape = tensorReshapeOp.getShape();
+    if (op.getType() != shape.getType())
+      shape = rewriter.create<tensor::CastOp>(op.getLoc(), op.getType(), shape);
+
+    rewriter.replaceOp(op, shape);
     return success();
   }
 };
