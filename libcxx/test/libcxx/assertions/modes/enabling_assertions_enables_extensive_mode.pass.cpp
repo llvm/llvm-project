@@ -19,7 +19,7 @@
 // HWASAN replaces TRAP with abort or error exit code.
 // XFAIL: hwasan
 // Note that GCC doesn't support `-Wno-macro-redefined`.
-// ADDITIONAL_COMPILE_FLAGS: -U_LIBCPP_HARDENING_MODE -D_LIBCPP_ENABLE_ASSERTIONS=1
+// ADDITIONAL_COMPILE_FLAGS: -U_LIBCPP_HARDENING_MODE -D_LIBCPP_ENABLE_ASSERTIONS=1 -Wno-#warnings -Wno-cpp
 
 #include <cassert>
 #include "check_assertion.h"
