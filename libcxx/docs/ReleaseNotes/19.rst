@@ -137,8 +137,8 @@ Deprecations and Removals
 - libc++ no longer supports relational comparison for ``std::chrono::weekday``. The relational comparison operators were
   provided as an undocumented extension. If you were using relational comparison on ``std::chrono::weekday``, compare
   the results of ``c_encoding()`` or ``iso_encoding()`` instead. The
-  ``_LIBCPP_ENABLE_REMOVED_WEEKDAY_RELATIONAL_OPERATORS`` macro can be defined to temporarily re-enable this extension
-  as folks transition their code. This macro will be honored for one released and ignored starting in LLVM 20.
+  ``_LIBCPP_ENABLE_REMOVED_WEEKDAY_RELATIONAL_OPERATORS`` macro can be defined to temporarily re-enable this extension.
+  This macro will be honored for one released and ignored starting in LLVM 20.
 
 
 Upcoming Deprecations and Removals
