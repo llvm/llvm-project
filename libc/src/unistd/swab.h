@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_SWAB_H
 #define LLVM_LIBC_SRC_UNISTD_SWAB_H
 
-#include "src/__support/macros/config.h"
 #include <unistd.h> // For ssize_t
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 void swab(const void *__restrict from, void *__restrict to, ssize_t n);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_UNISTD_SWAB_H

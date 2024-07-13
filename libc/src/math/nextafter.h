@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_NEXTAFTER_H
 #define LLVM_LIBC_SRC_MATH_NEXTAFTER_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 double nextafter(double x, double y);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_NEXTAFTER_H

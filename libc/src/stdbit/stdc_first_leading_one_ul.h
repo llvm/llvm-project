@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STDBIT_STDC_FIRST_LEADING_ONE_UL_H
 #define LLVM_LIBC_SRC_STDBIT_STDC_FIRST_LEADING_ONE_UL_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 unsigned stdc_first_leading_one_ul(unsigned long value);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDBIT_STDC_FIRST_LEADING_ONE_UL_H

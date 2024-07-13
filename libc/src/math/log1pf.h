@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_LOG1PF_H
 #define LLVM_LIBC_SRC_MATH_LOG1PF_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 float log1pf(float x);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_LOG1PF_H

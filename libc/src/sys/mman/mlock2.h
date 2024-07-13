@@ -9,16 +9,15 @@
 #ifndef LLVM_LIBC_SRC_SYS_MMAN_MLOCK2_H
 #define LLVM_LIBC_SRC_SYS_MMAN_MLOCK2_H
 
-#include "src/__support/macros/config.h"
 #include <sys/mman.h>
 #include <sys/syscall.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 #ifdef SYS_mlock2
 int mlock2(const void *addr, size_t len, int flags);
 #endif
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SYS_MMAN_MLOCK2_H

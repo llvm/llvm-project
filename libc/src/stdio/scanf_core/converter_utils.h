@@ -10,13 +10,12 @@
 #define LLVM_LIBC_SRC_STDIO_SCANF_CORE_CONVERTER_UTILS_H
 
 #include "src/__support/ctype_utils.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/str_to_float.h"
 #include "src/stdio/scanf_core/core_structs.h"
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace scanf_core {
 
 LIBC_INLINE constexpr char to_lower(char a) { return a | 32; }
@@ -107,6 +106,6 @@ LIBC_INLINE void write_float_with_length(char *str,
 }
 
 } // namespace scanf_core
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_SCANF_CORE_CONVERTER_UTILS_H

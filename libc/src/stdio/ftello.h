@@ -11,12 +11,11 @@
 
 #include "hdr/types/FILE.h"
 #include "hdr/types/off_t.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 off_t ftello(::FILE *f);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_FTELLO_H
