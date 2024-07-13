@@ -16,7 +16,8 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-    ; CHECK-NEXT: [[FADD:%[0-9]+]]:vgpr(s32) = G_FADD [[COPY2]], [[COPY3]]
+    ; CHECK-NEXT: [[FADD:%[0-9]+]]:vgpr_32(s32) = G_FADD [[COPY2]], [[COPY3]]
+    ; CHECK-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32(s32) = V_READFIRSTLANE_B32 [[FADD]](s32), implicit $exec
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = G_FADD %0, %1

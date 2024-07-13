@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUREGISTERBANKINFO_H
 
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
@@ -57,14 +58,32 @@ public:
                               iterator_range<MachineBasicBlock::iterator> Range,
                               SmallSet<Register, 4> &SGPROperandRegs) const;
 
-  Register buildReadFirstLane(MachineIRBuilder &B, MachineRegisterInfo &MRI,
-                              Register Src) const;
+  Register buildReadFirstLaneSrc(MachineIRBuilder &B, Register Src) const;
+
+  void buildReadFirstLaneDst(MachineIRBuilder &B, MachineInstr &MI) const;
+
+  MachineInstrBuilder buildReadFirstLaneForType(MachineIRBuilder &B,
+                                                const DstOp &SgprDst,
+                                                const SrcOp &VgprSrc) const;
+
+  MachineInstrBuilder buildReadFirstLaneB32(MachineIRBuilder &B,
+                                            const DstOp &SgprDst,
+                                            const SrcOp &VgprSrc) const;
+
+  MachineInstrBuilder buildReadFirstLaneSequenceOfB32(MachineIRBuilder &B,
+                                                      const DstOp &SgprDst,
+                                                      const SrcOp &VgprSrc,
+                                                      unsigned NumElts) const;
 
   bool executeInWaterfallLoop(MachineIRBuilder &B, MachineInstr &MI,
                               ArrayRef<unsigned> OpIndices) const;
 
   void constrainOpWithReadfirstlane(MachineIRBuilder &B, MachineInstr &MI,
                                     unsigned OpIdx) const;
+  void
+  constrainVgprDstOpWithReadfirstlane(MachineIRBuilder &B, MachineInstr &MI,
+                                      const OperandsMapper &OpdMapper) const;
+
   bool applyMappingDynStackAlloc(MachineIRBuilder &B,
                                  const OperandsMapper &OpdMapper,
                                  MachineInstr &MI) const;
@@ -116,6 +135,12 @@ public:
                                        const MachineRegisterInfo &MRI,
                                        const TargetRegisterInfo &TRI) const;
 
+  // Return a value mapping for an operand that is same as already assigned
+  // reg bank or corresponds to assigned register class + LLT
+  const ValueMapping *
+  getPreAssignedOpMapping(Register Reg, const MachineRegisterInfo &MRI,
+                          const TargetRegisterInfo &TRI) const;
+
   // Return a value mapping for an operand that is required to be a AGPR.
   const ValueMapping *getAGPROpMapping(Register Reg,
                                        const MachineRegisterInfo &MRI,
@@ -155,6 +180,9 @@ public:
 
   const InstructionMapping &getDefaultMappingSOP(const MachineInstr &MI) const;
   const InstructionMapping &getDefaultMappingVOP(const MachineInstr &MI) const;
+  const InstructionMapping &
+  getDefaultMappingVOPWithPreassignedDef(const MachineInstr &MI) const;
+
   const InstructionMapping &getDefaultMappingAllVGPR(
     const MachineInstr &MI) const;
 
