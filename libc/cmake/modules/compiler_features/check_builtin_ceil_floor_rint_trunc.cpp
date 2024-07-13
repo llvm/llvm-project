@@ -8,4 +8,4 @@ double try_builtin_floor(double x) { return __builtin_floor(x); }
 double try_builtin_rint(double x) { return __builtin_rint(x); }
 double try_builtin_trunc(double x) { return __builtin_trunc(x); }
 
-int main() {}
+extern "C" void _start() {}
