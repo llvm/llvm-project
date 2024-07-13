@@ -2098,9 +2098,7 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
   RetCCInfo.AnalyzeCallResult(Ins, RetCC_SystemZ);
 
   // Copy all of the result registers out of their specified physreg.
-  for (unsigned I = 0, E = RetLocs.size(); I != E; ++I) {
-    CCValAssign &VA = RetLocs[I];
-
+  for (CCValAssign &VA : RetLocs) {
     // Copy the value out, gluing the copy to the end of the call sequence.
     SDValue RetValue = DAG.getCopyFromReg(Chain, DL, VA.getLocReg(),
                                           VA.getLocVT(), Glue);

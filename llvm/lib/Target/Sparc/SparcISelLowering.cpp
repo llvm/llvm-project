@@ -638,8 +638,7 @@ SDValue SparcTargetLowering::LowerFormalArguments_64(
   // The argument array begins at %fp+BIAS+128, after the register save area.
   const unsigned ArgArea = 128;
 
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-    CCValAssign &VA = ArgLocs[i];
+  for (const CCValAssign &VA : ArgLocs) {
     if (VA.isRegLoc()) {
       // This argument is passed in a register.
       // All integer register arguments are promoted by the caller to i64.
@@ -1179,8 +1178,7 @@ Register SparcTargetLowering::getRegisterByName(const char* RegName, LLT VT,
 // AnalyzeCallOperands().
 static void fixupVariableFloatArgs(SmallVectorImpl<CCValAssign> &ArgLocs,
                                    ArrayRef<ISD::OutputArg> Outs) {
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-    CCValAssign &VA = ArgLocs[i];
+  for (CCValAssign &VA : ArgLocs) {
     MVT ValTy = VA.getLocVT();
     // FIXME: What about f32 arguments? C promotes them to f64 when calling
     // varargs functions.

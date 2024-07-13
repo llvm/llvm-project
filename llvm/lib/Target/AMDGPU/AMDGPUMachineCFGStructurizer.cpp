@@ -2596,11 +2596,9 @@ bool AMDGPUMachineCFGStructurizer::structurizeComplexRegion(RegionMRT *Region) {
 
   unsigned BBSelectRegIn;
   unsigned BBSelectRegOut;
-  for (auto CI = Children->begin(), CE = Children->end(); CI != CE; ++CI) {
+  for (MRT *Child : *Children) {
     LLVM_DEBUG(dbgs() << "CurrentRegion: \n");
     LLVM_DEBUG(LRegion->print(dbgs(), TRI));
-
-    MRT *Child = (*CI);
 
     if (Child->isRegion()) {
 

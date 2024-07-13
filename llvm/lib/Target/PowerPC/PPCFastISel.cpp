@@ -1388,8 +1388,7 @@ bool PPCFastISel::processCallArgs(SmallVectorImpl<Value*> &Args,
   CCInfo.AnalyzeCallOperands(ArgVTs, ArgFlags, CC_PPC64_ELF_FIS);
 
   // Bail out if we can't handle any of the arguments.
-  for (unsigned I = 0, E = ArgLocs.size(); I != E; ++I) {
-    CCValAssign &VA = ArgLocs[I];
+  for (const CCValAssign &VA : ArgLocs) {
     MVT ArgVT = ArgVTs[VA.getValNo()];
 
     // Skip vector arguments for now, as well as long double and
@@ -1426,8 +1425,7 @@ bool PPCFastISel::processCallArgs(SmallVectorImpl<Value*> &Args,
   unsigned NextFPR = PPC::F1;
 
   // Process arguments.
-  for (unsigned I = 0, E = ArgLocs.size(); I != E; ++I) {
-    CCValAssign &VA = ArgLocs[I];
+  for (const CCValAssign &VA : ArgLocs) {
     unsigned Arg = ArgRegs[VA.getValNo()];
     MVT ArgVT = ArgVTs[VA.getValNo()];
 
