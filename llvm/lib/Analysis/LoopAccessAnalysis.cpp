@@ -1909,6 +1909,19 @@ isLoopVariantIndirectAddress(ArrayRef<const Value *> UnderlyingObjects,
   });
 }
 
+/// Returns true if \p Expr contains any SCEVUnknown defined in the loop.
+/// Expressions containing SCEVUnknown may overlap with either earlier or later
+/// iterations.
+static bool hasLoopVariantUnknownIndex(const SCEV *Expr, const Loop *L) {
+  return SCEVExprContains(Expr, [L](const SCEV *S) {
+    auto *U = dyn_cast<SCEVUnknown>(S);
+    if (!U)
+      return false;
+    auto *I = dyn_cast<Instruction>(U->getValue());
+    return I && L->contains(I->getParent());
+  });
+}
+
 std::variant<MemoryDepChecker::Dependence::DepType,
              MemoryDepChecker::DepDistanceStrideAndSizeInfo>
 MemoryDepChecker::getDependenceDistanceStrideAndSize(
@@ -1959,11 +1972,13 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
                     << ": " << *Dist << "\n");
 
   // Needs accesses where the addresses of the accessed underlying objects do
-  // not change within the loop.
+  // not change within the loop and if all indices can be analyzed.
   if (isLoopVariantIndirectAddress(UnderlyingObjects.find(APtr)->second, SE,
                                    InnermostLoop) ||
       isLoopVariantIndirectAddress(UnderlyingObjects.find(BPtr)->second, SE,
-                                   InnermostLoop))
+                                   InnermostLoop) ||
+      hasLoopVariantUnknownIndex(Src, InnermostLoop) ||
+      hasLoopVariantUnknownIndex(Sink, InnermostLoop))
     return MemoryDepChecker::Dependence::IndirectUnsafe;
 
   // Check if we can prove that Sink only accesses memory after Src's end or
