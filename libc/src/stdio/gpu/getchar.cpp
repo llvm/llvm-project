@@ -8,13 +8,14 @@
 
 #include "src/stdio/getchar.h"
 #include "file.h"
+#include "src/__support/macros/config.h"
 
 #include "hdr/stdio_macros.h" // for EOF.
 #include "hdr/types/FILE.h"
 
 #include <stdio.h> //needed for stdin
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, getchar, ()) {
   unsigned char c;
@@ -25,4 +26,4 @@ LLVM_LIBC_FUNCTION(int, getchar, ()) {
   return c;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

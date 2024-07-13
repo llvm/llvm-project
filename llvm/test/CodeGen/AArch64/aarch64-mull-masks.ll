@@ -1395,3 +1395,55 @@ entry:
   %sub = sub i64 %c, %mul
   ret i64 %sub
 }
+
+define i64 @umull_and_lshr(i64 %x) {
+; CHECK-LABEL: umull_and_lshr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr x8, x0, #32
+; CHECK-NEXT:    and x9, x0, #0xffffffff
+; CHECK-NEXT:    umull x0, w9, w8
+; CHECK-NEXT:    ret
+    %lo = and i64 %x, u0xffffffff
+    %hi = lshr i64 %x, 32
+    %mul = mul i64 %lo, %hi
+    ret i64 %mul
+}
+
+define i64 @umull_and_and(i64 %x, i64 %y) {
+; CHECK-LABEL: umull_and_and:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umull x0, w0, w1
+; CHECK-NEXT:    ret
+    %lo = and i64 %x, u0xffffffff
+    %hi = and i64 %y, u0xffffffff
+    %mul = mul i64 %lo, %hi
+    ret i64 %mul
+}
+
+define i64 @umaddl_and_lshr(i64 %x, i64 %a) {
+; CHECK-LABEL: umaddl_and_lshr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr x8, x0, #32
+; CHECK-NEXT:    and x9, x0, #0xffffffff
+; CHECK-NEXT:    umaddl x0, w9, w8, x1
+; CHECK-NEXT:    ret
+    %lo = and i64 %x, u0xffffffff
+    %hi = lshr i64 %x, 32
+    %mul = mul i64 %lo, %hi
+    %add = add i64 %a, %mul
+    ret i64 %add
+}
+
+define i64 @umaddl_and_and(i64 %x, i64 %y, i64 %a) {
+; CHECK-LABEL: umaddl_and_and:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and x8, x0, #0xffffffff
+; CHECK-NEXT:    and x9, x1, #0xffffffff
+; CHECK-NEXT:    umaddl x0, w8, w9, x2
+; CHECK-NEXT:    ret
+    %lo = and i64 %x, u0xffffffff
+    %hi = and i64 %y, u0xffffffff
+    %mul = mul i64 %lo, %hi
+    %add = add i64 %a, %mul
+    ret i64 %add
+}

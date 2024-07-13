@@ -312,6 +312,13 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
     }
   }
 
+  // Disable most libcalls on NVPTX.
+  if (TT.isNVPTX()) {
+    for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I)
+      if (I < RTLIB::ATOMIC_LOAD || I > RTLIB::ATOMIC_FETCH_NAND_16)
+        setLibcallName(static_cast<RTLIB::Libcall>(I), nullptr);
+  }
+
   if (TT.isARM() || TT.isThumb()) {
     // These libcalls are not available in 32-bit.
     setLibcallName(RTLIB::SHL_I128, nullptr);

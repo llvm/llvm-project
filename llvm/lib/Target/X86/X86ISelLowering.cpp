@@ -48042,6 +48042,14 @@ static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG,
         SV == VT.getScalarSizeInBits()) {
       return DAG.getNode(X86ISD::VSHLV, DL, VT, N00, N1);
     }
+    // fold shl(select(icmp_uge(amt,BW),0,x),amt) -> avx2 psllv(x,amt)
+    if (Cond.getOpcode() == ISD::SETCC && Cond.getOperand(0) == N1 &&
+        cast<CondCodeSDNode>(Cond.getOperand(2))->get() == ISD::SETUGE &&
+        ISD::isConstantSplatVector(Cond.getOperand(1).getNode(), SV) &&
+        ISD::isConstantSplatVectorAllZeros(N00.getNode()) &&
+        SV == VT.getScalarSizeInBits()) {
+      return DAG.getNode(X86ISD::VSHLV, DL, VT, N01, N1);
+    }
   }
 
   // fold (shl (and (setcc_c), c1), c2) -> (and setcc_c, (c1 << c2))
@@ -48175,6 +48183,14 @@ static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG,
         ISD::isConstantSplatVectorAllZeros(N01.getNode()) &&
         SV == VT.getScalarSizeInBits()) {
       return DAG.getNode(X86ISD::VSRLV, DL, VT, N00, N1);
+    }
+    // fold srl(select(icmp_uge(amt,BW),0,x),amt) -> avx2 psrlv(x,amt)
+    if (Cond.getOpcode() == ISD::SETCC && Cond.getOperand(0) == N1 &&
+        cast<CondCodeSDNode>(Cond.getOperand(2))->get() == ISD::SETUGE &&
+        ISD::isConstantSplatVector(Cond.getOperand(1).getNode(), SV) &&
+        ISD::isConstantSplatVectorAllZeros(N00.getNode()) &&
+        SV == VT.getScalarSizeInBits()) {
+      return DAG.getNode(X86ISD::VSRLV, DL, VT, N01, N1);
     }
   }
 

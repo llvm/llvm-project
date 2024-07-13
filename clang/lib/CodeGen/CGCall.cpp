@@ -2030,6 +2030,9 @@ static void getTrivialDefaultFunctionAttributes(
     std::tie(Var, Value) = Attr.split('=');
     FuncAttrs.addAttribute(Var, Value);
   }
+
+  TargetInfo::BranchProtectionInfo BPI(LangOpts);
+  TargetCodeGenInfo::setBranchProtectionFnAttributes(BPI, FuncAttrs);
 }
 
 /// Merges `target-features` from \TargetOpts and \F, and sets the result in
