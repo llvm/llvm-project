@@ -18,27 +18,29 @@
 //     -> lock_guard<_Mutex>;  // C++17
 
 #include <mutex>
-#include <cstdlib>
 #include <cassert>
-
-#include "make_test_thread.h"
 #include "test_macros.h"
 
-std::mutex m;
+struct TestMutex {
+    bool locked = false;
+    TestMutex() = default;
+    ~TestMutex() { assert(!locked); }
 
-void do_try_lock() {
-  assert(m.try_lock() == false);
-}
+    void lock() { assert(!locked); locked = true; }
+    bool try_lock() { if (locked) return false; locked = true; return true; }
+    void unlock() { assert(locked); locked = false; }
+
+    TestMutex(TestMutex const&) = delete;
+    TestMutex& operator=(TestMutex const&) = delete;
+};
 
 int main(int, char**) {
+  TestMutex m;
   {
-    std::lock_guard<std::mutex> lg(m);
-    std::thread t = support::make_test_thread(do_try_lock);
-    t.join();
+    std::lock_guard<TestMutex> lg(m);
+    assert(m.locked);
   }
-
-  m.lock();
-  m.unlock();
+  assert(!m.locked);
 
 #if TEST_STD_VER >= 17
   std::lock_guard lg(m);
