@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++98 -verify -triple x86_64-apple-darwin %s
 // RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++11 -verify -triple x86_64-apple-darwin %s
+
+// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++98 -verify -triple x86_64-apple-darwin %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++11 -verify -triple x86_64-apple-darwin %s -fexperimental-new-constant-interpreter
+
 enum E { // expected-note{{previous definition is here}}
   Val1,
   Val2
