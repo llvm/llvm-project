@@ -42,7 +42,7 @@ public:
                                 StorageType ending_bit, StorageType step,
                                 size_t rounds, std::ofstream &log) {
     auto runner = [=](Func func) {
-      volatile T result;
+      [[maybe_unused]] volatile T result;
       for (size_t i = 0; i < rounds; i++) {
         for (StorageType bits = starting_bit; bits <= ending_bit;
              bits += step) {
