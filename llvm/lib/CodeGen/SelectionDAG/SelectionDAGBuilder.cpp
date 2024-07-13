@@ -9456,7 +9456,7 @@ void SelectionDAGBuilder::LowerCallSiteWithPtrAuthBundle(
 
   // Look through ptrauth constants to find the raw callee.
   // Do a direct unauthenticated call if we found it and everything matches.
-  if (auto *CalleeCPA = dyn_cast<ConstantPtrAuth>(CalleeV))
+  if (const auto *CalleeCPA = dyn_cast<ConstantPtrAuth>(CalleeV))
     if (CalleeCPA->isKnownCompatibleWith(Key, Discriminator,
                                          DAG.getDataLayout()))
       return LowerCallTo(CB, getValue(CalleeCPA->getPointer()), CB.isTailCall(),

@@ -391,8 +391,6 @@ define i32 @test_direct_call_addr_blend_gep_different_index_types() #0 {
   ret i32 %tmp1
 }
 
-attributes #0 = { nounwind }
-
 @f.ref.ib.42.addr = external global ptr
 @f.ref.ib.0.addr = external global ptr
 @f_struct.ref.ib.0.addr = external global ptr

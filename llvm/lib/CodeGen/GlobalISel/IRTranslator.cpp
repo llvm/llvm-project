@@ -2659,7 +2659,7 @@ bool IRTranslator::translateCallBase(const CallBase &CB,
     // Look through ptrauth constants to try to eliminate the matching bundle
     // and turn this into a direct call with no ptrauth.
     // CallLowering will use the raw pointer if it doesn't find the PAI.
-    auto *CalleeCPA = dyn_cast<ConstantPtrAuth>(CB.getCalledOperand());
+    const auto *CalleeCPA = dyn_cast<ConstantPtrAuth>(CB.getCalledOperand());
     if (!CalleeCPA || !isa<Function>(CalleeCPA->getPointer()) ||
         !CalleeCPA->isKnownCompatibleWith(Key, Discriminator, *DL)) {
       // If we can't make it direct, package the bundle into PAI.
