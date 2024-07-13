@@ -224,18 +224,62 @@ add_libc_test(
     LibcFPTestHelpers
 )
 
+add_libc_test(
+  signbit_c_test
+  C_TEST
+  UNIT_TEST_ONLY
+  SUITE
+    libc_include_tests
+  SRCS
+    signbit_test.c
+  COMPILE_OPTIONS
+    -Wall
+    -Werror
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)
 
-#add_libc_test(
-#  math_function_macros_c_test
-#  C_TEST
-#  UNIT_TEST_ONLY
-#  SUITE
-#    libc_include_tests
-#  SRCS
-#    math-function-macros_test.c
-#  COMPILE_OPTIONS
-#    -Wall
-#    -Werror
-#  DEPENDS
-#    libc.include.llvm-libc-macros.math_function_macros
-#)
+add_libc_test(
+  isnan_c_test
+  C_TEST
+  UNIT_TEST_ONLY
+  SUITE
+    libc_include_tests
+  SRCS
+    isnan_test.c
+  COMPILE_OPTIONS
+    -Wall
+    -Werror
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)
+
+add_libc_test(
+  isinf_c_test
+  C_TEST
+  UNIT_TEST_ONLY
+  SUITE
+    libc_include_tests
+  SRCS
+    isinf_test.c
+  COMPILE_OPTIONS
+    -Wall
+    -Werror
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)  
+
+add_libc_test(
+  isfinite_c_test
+  C_TEST
+  UNIT_TEST_ONLY
+  SUITE
+    libc_include_tests
+  SRCS
+    isfinite_test.c
+  COMPILE_OPTIONS
+    -Wall
+    -Werror
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)
