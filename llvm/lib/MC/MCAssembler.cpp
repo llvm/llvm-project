@@ -97,8 +97,6 @@ void MCAssembler::reset() {
   IncrementalLinkerCompatible = false;
   Sections.clear();
   Symbols.clear();
-  IndirectSymbols.clear();
-  DataRegions.clear();
   LinkerOptions.clear();
   FileNames.clear();
   ThumbFuncs.clear();
@@ -158,17 +156,6 @@ bool MCAssembler::isThumbFunc(const MCSymbol *Symbol) const {
 
   ThumbFuncs.insert(Symbol); // Cache it.
   return true;
-}
-
-bool MCAssembler::isSymbolLinkerVisible(const MCSymbol &Symbol) const {
-  // Non-temporary labels should always be visible to the linker.
-  if (!Symbol.isTemporary())
-    return true;
-
-  if (Symbol.isUsedInReloc())
-    return true;
-
-  return false;
 }
 
 bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
@@ -1352,18 +1339,26 @@ LLVM_DUMP_METHOD void MCAssembler::dump() const{
 
   OS << "<MCAssembler\n";
   OS << "  Sections:[\n    ";
-  for (const_iterator it = begin(), ie = end(); it != ie; ++it) {
-    if (it != begin()) OS << ",\n    ";
-    it->dump();
+  bool First = true;
+  for (const MCSection &Sec : *this) {
+    if (First)
+      First = false;
+    else
+      OS << ",\n    ";
+    Sec.dump();
   }
   OS << "],\n";
   OS << "  Symbols:[";
 
-  for (const_symbol_iterator it = symbol_begin(), ie = symbol_end(); it != ie; ++it) {
-    if (it != symbol_begin()) OS << ",\n           ";
+  First = true;
+  for (const MCSymbol &Sym : symbols()) {
+    if (First)
+      First = false;
+    else
+      OS << ",\n           ";
     OS << "(";
-    it->dump();
-    OS << ", Index:" << it->getIndex() << ", ";
+    Sym.dump();
+    OS << ", Index:" << Sym.getIndex() << ", ";
     OS << ")";
   }
   OS << "]>\n";

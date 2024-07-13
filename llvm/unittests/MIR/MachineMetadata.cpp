@@ -188,8 +188,7 @@ static bool checkOutput(std::string CheckString, std::string Output) {
   SmallString<4096> CheckFileBuffer;
   FileCheckRequest Req;
   FileCheck FC(Req);
-  StringRef CheckFileText =
-      FC.CanonicalizeFile(*CheckBuffer.get(), CheckFileBuffer);
+  StringRef CheckFileText = FC.CanonicalizeFile(*CheckBuffer, CheckFileBuffer);
 
   SourceMgr SM;
   SM.AddNewSourceBuffer(MemoryBuffer::getMemBuffer(CheckFileText, "CheckFile"),

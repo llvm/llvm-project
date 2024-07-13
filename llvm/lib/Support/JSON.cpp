@@ -239,7 +239,7 @@ Error Path::Root::getError() const {
         OS << '[' << S.index() << ']';
     }
   }
-  return createStringError(llvm::inconvertibleErrorCode(), OS.str());
+  return createStringError(llvm::inconvertibleErrorCode(), S);
 }
 
 std::vector<const Object::value_type *> sortedElements(const Object &O) {

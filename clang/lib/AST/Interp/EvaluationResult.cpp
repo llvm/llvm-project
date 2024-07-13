@@ -43,7 +43,7 @@ std::optional<APValue> EvaluationResult::toRValue() const {
 
   // We have a pointer and want an RValue.
   if (const auto *P = std::get_if<Pointer>(&Value))
-    return P->toRValue(*Ctx);
+    return P->toRValue(*Ctx, getSourceType());
   else if (const auto *FP = std::get_if<FunctionPointer>(&Value)) // Nope
     return FP->toAPValue();
   llvm_unreachable("Unhandled lvalue kind");

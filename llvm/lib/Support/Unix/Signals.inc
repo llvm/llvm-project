@@ -289,7 +289,7 @@ static void CreateSigAltStack() {}
 static void RegisterHandlers() { // Not signal-safe.
   // The mutex prevents other threads from registering handlers while we're
   // doing it. We also have to protect the handlers and their count because
-  // a signal handler could fire while we're registeting handlers.
+  // a signal handler could fire while we're registering handlers.
   static ManagedStatic<sys::SmartMutex<true>> SignalHandlerRegistrationMutex;
   sys::SmartScopedLock<true> Guard(*SignalHandlerRegistrationMutex);
 

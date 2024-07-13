@@ -11,11 +11,12 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include <linux/param.h> // For EXEC_PAGESIZE.
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // This function is currently linux only. It has to be refactored suitably if
 // mmap is to be supported on non-linux operating systems also.
@@ -39,9 +40,12 @@ LLVM_LIBC_FUNCTION(void *, mmap,
 #error "mmap or mmap2 syscalls not available."
 #endif
 
+  // We add an explicit cast to silence a "implicit conversion loses integer
+  // precision" warning when compiling for 32-bit systems.
+  long mmap_offset = static_cast<long>(offset);
   long ret =
       LIBC_NAMESPACE::syscall_impl(syscall_number, reinterpret_cast<long>(addr),
-                                   size, prot, flags, fd, offset);
+                                   size, prot, flags, fd, mmap_offset);
 
   // The mmap/mmap2 syscalls return negative values on error. These negative
   // values are actually the negative values of the error codes. So, fix them
@@ -60,4 +64,4 @@ LLVM_LIBC_FUNCTION(void *, mmap,
   return reinterpret_cast<void *>(ret);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -129,6 +129,8 @@ Changes to the AMDGPU Backend
 -----------------------------
 
 * Implemented the ``llvm.get.fpenv`` and ``llvm.set.fpenv`` intrinsics.
+* Added ``!amdgpu.no.fine.grained.memory`` and
+  ``!amdgpu.no.remote.memory`` metadata to control atomic behavior.
 
 * Implemented :ref:`llvm.get.rounding <int_get_rounding>` and :ref:`llvm.set.rounding <int_set_rounding>`
 
@@ -189,6 +191,14 @@ Changes to the RISC-V Backend
 * B (the collection of the Zba, Zbb, Zbs extensions) is supported.
 * Added smcdeleg, ssccfg, smcsrind, and sscsrind extensions to -march.
 * ``-mcpu=syntacore-scr3-rv32`` and ``-mcpu=syntacore-scr3-rv64`` were added.
+* The default atomics mapping was changed to emit an additional trailing fence
+  for sequentially consistent stores, offering compatibility with a future
+  mapping using load-acquire and store-release instructions while remaining
+  fully compatible with objects produced prior to this change. The mapping
+  (ABI) used is recorded as an ELF attribute.
+* Ztso is no longer experimental.
+* The WCH / Nanjing Qinheng Microelectronics QingKe "XW" compressed opcodes are
+  supported under the name "Xwchc".
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -309,6 +319,13 @@ Changes to the Debug Info
   supported on a best-effort basis from here onwards; for more information, see
   the `migration docs <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_.
 
+* When emitting DWARF v2 and not in strict DWARF mode, LLVM will now add
+  a ``DW_AT_type`` to instances of ``DW_TAG_enumeration_type``. This is actually
+  a DWARF v3 feature which tells tools what the enum's underlying type is.
+  Emitting this for v2 as well will help users who have to build binaries with
+  DWARF v2 but are using tools that understand newer DWARF standards. Older
+  tools will ignore it. (`#98335 <https://github.com/llvm/llvm-project/pull/98335>`_)
+
 Changes to the LLVM tools
 ---------------------------------
 * llvm-nm and llvm-objdump can now print symbol information from linked
@@ -354,26 +371,41 @@ Changes to the LLVM tools
   would continue. Additionally, it can now continue when it encounters
   instructions which lack scheduling information. The behaviour can be
   controlled by the newly introduced
-  `--skip-unsupported-instructions=<none|lack-sched|parse-failure|any>`, as
-  documented in `--help` output and the command guide. (`#90474
-  <https://github.com/llvm/llvm-project/pull/90474>`)
+  ``--skip-unsupported-instructions=<none|lack-sched|parse-failure|any>``, as
+  documented in ``--help`` output and the command guide. (`#90474
+  <https://github.com/llvm/llvm-project/pull/90474>`_)
 
 * llvm-readobj's LLVM output format for ELF core files has been changed.
   Similarly, the JSON format has been fixed for this case. The NT_FILE note
   now has a map for the mapped files. (`#92835
-  <https://github.com/llvm/llvm-project/pull/92835>`).
+  <https://github.com/llvm/llvm-project/pull/92835>`_).
 
 * llvm-cov now generates HTML report with JavaScript code to allow simple
   jumping between uncovered parts (lines/regions/branches) of code 
   using buttons on top-right corner of the page or using keys (L/R/B or 
   jumping in reverse direction with shift+L/R/B). (`#95662
-  <https://github.com/llvm/llvm-project/pull/95662>`).
+  <https://github.com/llvm/llvm-project/pull/95662>`_).
+
+* llvm-objcopy now verifies format of ``.note`` sections for ELF input. This can
+  be disabled by ``--no-verify-note-sections``. (`#90458
+  <https://github.com/llvm/llvm-project/pull/90458>`).
 
 Changes to LLDB
 ---------------------------------
 
 * Register field information is now provided on AArch64 FreeBSD for live
   processes and core files (previously only provided on AArch64 Linux).
+
+* Register field information can now include enums to represent field
+  values. Enums have been added for ``fpcr.RMode`` and ``mte_ctrl.TCF``
+  for AArch64 targets::
+
+    (lldb) register read fpcr
+        fpcr = 0x00000000
+             = (AHP = 0, DN = 0, FZ = 0, RMode = RN, <...>)
+
+  If you need to know the values of the enum, these can be found in
+  the output of ``register info`` for the same register.
 
 Changes to BOLT
 ---------------------------------

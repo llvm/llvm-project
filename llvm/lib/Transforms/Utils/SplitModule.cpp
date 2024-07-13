@@ -55,6 +55,18 @@ using ClusterMapType = EquivalenceClasses<const GlobalValue *>;
 using ComdatMembersType = DenseMap<const Comdat *, const GlobalValue *>;
 using ClusterIDMapType = DenseMap<const GlobalValue *, unsigned>;
 
+bool compareClusters(const std::pair<unsigned, unsigned> &A,
+                     const std::pair<unsigned, unsigned> &B) {
+  if (A.second || B.second)
+    return A.second > B.second;
+  return A.first > B.first;
+}
+
+using BalancingQueueType =
+    std::priority_queue<std::pair<unsigned, unsigned>,
+                        std::vector<std::pair<unsigned, unsigned>>,
+                        decltype(compareClusters) *>;
+
 } // end anonymous namespace
 
 static void addNonConstUser(ClusterMapType &GVtoClusterMap,
@@ -154,18 +166,7 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
 
   // Assigned all GVs to merged clusters while balancing number of objects in
   // each.
-  auto CompareClusters = [](const std::pair<unsigned, unsigned> &a,
-                            const std::pair<unsigned, unsigned> &b) {
-    if (a.second || b.second)
-      return a.second > b.second;
-    else
-      return a.first > b.first;
-  };
-
-  std::priority_queue<std::pair<unsigned, unsigned>,
-                      std::vector<std::pair<unsigned, unsigned>>,
-                      decltype(CompareClusters)>
-      BalancingQueue(CompareClusters);
+  BalancingQueueType BalancingQueue(compareClusters);
   // Pre-populate priority queue with N slot blanks.
   for (unsigned i = 0; i < N; ++i)
     BalancingQueue.push(std::make_pair(i, 0));
@@ -254,7 +255,7 @@ static bool isInPartition(const GlobalValue *GV, unsigned I, unsigned N) {
 void llvm::SplitModule(
     Module &M, unsigned N,
     function_ref<void(std::unique_ptr<Module> MPart)> ModuleCallback,
-    bool PreserveLocals) {
+    bool PreserveLocals, bool RoundRobin) {
   if (!PreserveLocals) {
     for (Function &F : M)
       externalize(&F);
@@ -270,6 +271,41 @@ void llvm::SplitModule(
   // always be possible.
   ClusterIDMapType ClusterIDMap;
   findPartitions(M, ClusterIDMap, N);
+
+  // Find functions not mapped to modules in ClusterIDMap and count functions
+  // per module. Map unmapped functions using round-robin so that they skip
+  // being distributed by isInPartition() based on function name hashes below.
+  // This provides better uniformity of distribution of functions to modules
+  // in some cases - for example when the number of functions equals to N.
+  if (RoundRobin) {
+    DenseMap<unsigned, unsigned> ModuleFunctionCount;
+    SmallVector<const GlobalValue *> UnmappedFunctions;
+    for (const auto &F : M.functions()) {
+      if (F.isDeclaration() ||
+          F.getLinkage() != GlobalValue::LinkageTypes::ExternalLinkage)
+        continue;
+      auto It = ClusterIDMap.find(&F);
+      if (It == ClusterIDMap.end())
+        UnmappedFunctions.push_back(&F);
+      else
+        ++ModuleFunctionCount[It->second];
+    }
+    BalancingQueueType BalancingQueue(compareClusters);
+    for (unsigned I = 0; I < N; ++I) {
+      if (auto It = ModuleFunctionCount.find(I);
+          It != ModuleFunctionCount.end())
+        BalancingQueue.push(*It);
+      else
+        BalancingQueue.push({I, 0});
+    }
+    for (const auto *const F : UnmappedFunctions) {
+      const unsigned I = BalancingQueue.top().first;
+      const unsigned Count = BalancingQueue.top().second;
+      BalancingQueue.pop();
+      ClusterIDMap.insert({F, I});
+      BalancingQueue.push({I, Count + 1});
+    }
+  }
 
   // FIXME: We should be able to reuse M as the last partition instead of
   // cloning it. Note that the callers at the moment expect the module to

@@ -2851,6 +2851,9 @@ public:
     Attribute vectorDestCst;
     if (!matchPattern(destVector, m_Constant(&vectorDestCst)))
       return failure();
+    auto denseDest = llvm::dyn_cast<DenseElementsAttr>(vectorDestCst);
+    if (!denseDest)
+      return failure();
 
     VectorType destTy = destVector.getType();
     if (destTy.isScalable())
@@ -2860,8 +2863,6 @@ public:
     if (destTy.getNumElements() > vectorSizeFoldThreshold &&
         !destVector.hasOneUse())
       return failure();
-
-    auto denseDest = llvm::cast<DenseElementsAttr>(vectorDestCst);
 
     Value sourceValue = op.getSource();
     Attribute sourceCst;
@@ -6310,6 +6311,20 @@ OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
 
   // SplatElementsAttr::get treats single value for second arg as being a splat.
   return SplatElementsAttr::get(getType(), {constOperand});
+}
+
+//===----------------------------------------------------------------------===//
+// StepOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult StepOp::fold(FoldAdaptor adaptor) {
+  auto resultType = cast<VectorType>(getType());
+  if (resultType.isScalable())
+    return nullptr;
+  SmallVector<APInt> indices;
+  for (unsigned i = 0; i < resultType.getNumElements(); i++)
+    indices.push_back(APInt(/*width=*/64, i));
+  return DenseElementsAttr::get(resultType, indices);
 }
 
 //===----------------------------------------------------------------------===//

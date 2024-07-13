@@ -297,6 +297,10 @@ public:
   /// \param[in] current_command_args
   ///    The command arguments.
   ///
+  /// \param[in] index
+  ///    This is for internal use - it is how the completion request is tracked
+  ///    in CommandObjectMultiword, and should otherwise be ignored.
+  ///
   /// \return
   ///     std::nullopt if there is no special repeat command - it will use the
   ///     current command line.

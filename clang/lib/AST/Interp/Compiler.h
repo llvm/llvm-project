@@ -47,12 +47,18 @@ public:
   enum {
     K_This = 0,
     K_Field = 1,
-    K_Decl = 2,
+    K_Temp = 2,
+    K_Decl = 3,
   };
 
   static InitLink This() { return InitLink{K_This}; }
   static InitLink Field(unsigned Offset) {
     InitLink IL{K_Field};
+    IL.Offset = Offset;
+    return IL;
+  }
+  static InitLink Temp(unsigned Offset) {
+    InitLink IL{K_Temp};
     IL.Offset = Offset;
     return IL;
   }
@@ -66,7 +72,6 @@ public:
   template <class Emitter>
   bool emit(Compiler<Emitter> *Ctx, const Expr *E) const;
 
-private:
   uint32_t Kind;
   union {
     unsigned Offset;
@@ -207,8 +212,9 @@ public:
 protected:
   bool visitStmt(const Stmt *S);
   bool visitExpr(const Expr *E) override;
-  bool visitDecl(const VarDecl *VD, bool ConstantContext) override;
   bool visitFunc(const FunctionDecl *F) override;
+
+  bool visitDeclAndReturn(const VarDecl *VD, bool ConstantContext) override;
 
 protected:
   /// Emits scope cleanup instructions.
@@ -262,6 +268,7 @@ protected:
   bool delegate(const Expr *E);
   /// Creates and initializes a variable from the given decl.
   VarCreationState visitVarDecl(const VarDecl *VD, bool Toplevel = false);
+  VarCreationState visitDecl(const VarDecl *VD);
   /// Visit an APValue.
   bool visitAPValue(const APValue &Val, PrimType ValType, const Expr *E);
   bool visitAPValueInitializer(const APValue &Val, const Expr *E);
@@ -491,6 +498,8 @@ protected:
 template <class Emitter> class LocalScope : public VariableScope<Emitter> {
 public:
   LocalScope(Compiler<Emitter> *Ctx) : VariableScope<Emitter>(Ctx, nullptr) {}
+  LocalScope(Compiler<Emitter> *Ctx, const ValueDecl *VD)
+      : VariableScope<Emitter>(Ctx, VD) {}
 
   /// Emit a Destroy op for this scope.
   ~LocalScope() override {
@@ -580,20 +589,10 @@ private:
   LocalScope<Emitter> &OtherScope;
 };
 
-/// Like a regular LocalScope, except that the destructors of all local
-/// variables are automatically emitted when the AutoScope is destroyed.
-template <class Emitter> class AutoScope : public LocalScope<Emitter> {
-public:
-  AutoScope(Compiler<Emitter> *Ctx) : LocalScope<Emitter>(Ctx), DS(*this) {}
-
-private:
-  DestructorScope<Emitter> DS;
-};
-
 /// Scope for storage declared in a compound statement.
-template <class Emitter> class BlockScope final : public AutoScope<Emitter> {
+template <class Emitter> class BlockScope final : public LocalScope<Emitter> {
 public:
-  BlockScope(Compiler<Emitter> *Ctx) : AutoScope<Emitter>(Ctx) {}
+  BlockScope(Compiler<Emitter> *Ctx) : LocalScope<Emitter>(Ctx) {}
 
   void addExtended(const Scope::Local &Local) override {
     // If we to this point, just add the variable as a normal local
@@ -601,11 +600,6 @@ public:
     // like all others.
     this->addLocal(Local);
   }
-};
-
-template <class Emitter> class ExprScope final : public AutoScope<Emitter> {
-public:
-  ExprScope(Compiler<Emitter> *Ctx) : AutoScope<Emitter>(Ctx) {}
 };
 
 template <class Emitter> class ArrayIndexScope final {

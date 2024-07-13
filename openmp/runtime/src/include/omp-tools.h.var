@@ -1408,6 +1408,14 @@ typedef ompt_record_ompt_t *(*ompt_get_record_ompt_t) (
   ompt_buffer_cursor_t current
 );
 
+#ifdef _WIN32
+__declspec(dllexport)
+#else
+__attribute__((visibility("default")))
+#endif
+ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
+                                          const char *runtime_version);
+
 #define ompt_id_none 0
 #define ompt_data_none {0}
 #define ompt_time_none 0

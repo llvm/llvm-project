@@ -14,6 +14,7 @@
 #include "src/__support/CPP/stringstream.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/fpbits_str.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 
 #include <stdint.h>
@@ -22,7 +23,7 @@
 
 template <typename T> using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 namespace mpfr {
 
@@ -185,6 +186,12 @@ public:
     return result;
   }
 
+  MPFRNumber add(const MPFRNumber &b) const {
+    MPFRNumber result(*this);
+    mpfr_add(result.value, value, b.value, mpfr_rounding);
+    return result;
+  }
+
   MPFRNumber asin() const {
     MPFRNumber result(*this);
     mpfr_asin(result.value, value, mpfr_rounding);
@@ -215,6 +222,12 @@ public:
     return result;
   }
 
+  MPFRNumber cbrt() const {
+    MPFRNumber result(*this);
+    mpfr_cbrt(result.value, value, mpfr_rounding);
+    return result;
+  }
+
   MPFRNumber ceil() const {
     MPFRNumber result(*this);
     mpfr_ceil(result.value, value);
@@ -231,6 +244,39 @@ public:
     MPFRNumber result(*this);
     mpfr_cosh(result.value, value, mpfr_rounding);
     return result;
+  }
+
+  MPFRNumber cospi() const {
+    MPFRNumber result(*this);
+
+#if MPFR_VERSION_MAJOR > 4 ||                                                  \
+    (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
+    mpfr_cospi(result.value, value, mpfr_rounding);
+    return result;
+#else
+    MPFRNumber value_frac(*this);
+    mpfr_frac(value_frac.value, value, MPFR_RNDN);
+
+    if (mpfr_cmp_si(value_frac.value, 0.0) == 0) {
+      mpz_t integer_part;
+      mpz_init(integer_part);
+      mpfr_get_z(integer_part, value, MPFR_RNDN);
+
+      if (mpz_tstbit(integer_part, 0)) {
+        mpfr_set_si(result.value, -1.0, MPFR_RNDN); // odd
+      } else {
+        mpfr_set_si(result.value, 1.0, MPFR_RNDN); // even
+      }
+      return result;
+    }
+
+    MPFRNumber value_pi(0.0, 1280);
+    mpfr_const_pi(value_pi.value, MPFR_RNDN);
+    mpfr_mul(value_pi.value, value_pi.value, value, MPFR_RNDN);
+    mpfr_cos(result.value, value_pi.value, mpfr_rounding);
+
+    return result;
+#endif
   }
 
   MPFRNumber erf() const {
@@ -463,6 +509,12 @@ public:
     return result;
   }
 
+  MPFRNumber sub(const MPFRNumber &b) const {
+    MPFRNumber result(*this);
+    mpfr_sub(result.value, value, b.value, mpfr_rounding);
+    return result;
+  }
+
   MPFRNumber tan() const {
     MPFRNumber result(*this);
     mpfr_tan(result.value, value, mpfr_rounding);
@@ -657,12 +709,16 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.atan();
   case Operation::Atanh:
     return mpfrInput.atanh();
+  case Operation::Cbrt:
+    return mpfrInput.cbrt();
   case Operation::Ceil:
     return mpfrInput.ceil();
   case Operation::Cos:
     return mpfrInput.cos();
   case Operation::Cosh:
     return mpfrInput.cosh();
+  case Operation::Cospi:
+    return mpfrInput.cospi();
   case Operation::Erf:
     return mpfrInput.erf();
   case Operation::Exp:
@@ -734,6 +790,8 @@ binary_operation_one_output(Operation op, InputType x, InputType y,
   MPFRNumber inputX(x, precision, rounding);
   MPFRNumber inputY(y, precision, rounding);
   switch (op) {
+  case Operation::Add:
+    return inputX.add(inputY);
   case Operation::Atan2:
     return inputX.atan2(inputY);
   case Operation::Div:
@@ -744,6 +802,8 @@ binary_operation_one_output(Operation op, InputType x, InputType y,
     return inputX.hypot(inputY);
   case Operation::Pow:
     return inputX.pow(inputY);
+  case Operation::Sub:
+    return inputX.sub(inputY);
   case Operation::Fmul:
     return inputX.fmul(inputY);
   default:
@@ -1240,4 +1300,4 @@ template float16 round<float16>(float16, RoundingMode);
 
 } // namespace mpfr
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

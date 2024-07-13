@@ -16,13 +16,16 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/memory_utils/inline_memset.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using cpp::optional;
 using cpp::span;
+
+inline constexpr bool IsPow2(size_t x) { return x && (x & (x - 1)) == 0; }
 
 static constexpr cpp::array<size_t, 6> DEFAULT_BUCKETS{16,  32,  64,
                                                        128, 256, 512};
@@ -31,6 +34,9 @@ template <size_t NUM_BUCKETS = DEFAULT_BUCKETS.size()> class FreeListHeap {
 public:
   using BlockType = Block<>;
   using FreeListType = FreeList<NUM_BUCKETS>;
+
+  static constexpr size_t MIN_ALIGNMENT =
+      cpp::max(BlockType::ALIGNMENT, alignof(max_align_t));
 
   struct HeapStats {
     size_t total_bytes;
@@ -55,6 +61,9 @@ public:
   }
 
   void *allocate(size_t size);
+  void *aligned_allocate(size_t alignment, size_t size);
+  // NOTE: All pointers passed to free must come from one of the other
+  // allocation functions: `allocate`, `aligned_allocate`, `realloc`, `calloc`.
   void free(void *ptr);
   void *realloc(void *ptr, size_t size);
   void *calloc(size_t num, size_t size);
@@ -73,6 +82,8 @@ protected:
                                    cpp::span<cpp::byte> chunk) {
     freelist_.set_freelist_node(node, chunk);
   }
+
+  void *allocate_impl(size_t alignment, size_t size);
 
 private:
   span<cpp::byte> block_to_span(BlockType *block) {
@@ -109,20 +120,31 @@ struct FreeListHeapBuffer : public FreeListHeap<NUM_BUCKETS> {
 };
 
 template <size_t NUM_BUCKETS>
-void *FreeListHeap<NUM_BUCKETS>::allocate(size_t size) {
-  // Find a chunk in the freelist. Split it if needed, then return
-  auto chunk = freelist_.find_chunk(size);
+void *FreeListHeap<NUM_BUCKETS>::allocate_impl(size_t alignment, size_t size) {
+  if (size == 0)
+    return nullptr;
+
+  // Find a chunk in the freelist. Split it if needed, then return.
+  auto chunk =
+      freelist_.find_chunk_if([alignment, size](span<cpp::byte> chunk) {
+        BlockType *block = BlockType::from_usable_space(chunk.data());
+        return block->can_allocate(alignment, size);
+      });
 
   if (chunk.data() == nullptr)
     return nullptr;
   freelist_.remove_chunk(chunk);
 
   BlockType *chunk_block = BlockType::from_usable_space(chunk.data());
+  LIBC_ASSERT(!chunk_block->used());
 
   // Split that chunk. If there's a leftover chunk, add it to the freelist
-  optional<BlockType *> result = BlockType::split(chunk_block, size);
-  if (result)
-    freelist_.add_chunk(block_to_span(*result));
+  auto block_info = BlockType::allocate(chunk_block, alignment, size);
+  if (block_info.next)
+    freelist_.add_chunk(block_to_span(block_info.next));
+  if (block_info.prev)
+    freelist_.add_chunk(block_to_span(block_info.prev));
+  chunk_block = block_info.block;
 
   chunk_block->mark_used();
 
@@ -131,6 +153,25 @@ void *FreeListHeap<NUM_BUCKETS>::allocate(size_t size) {
   heap_stats_.total_allocate_calls += 1;
 
   return chunk_block->usable_space();
+}
+
+template <size_t NUM_BUCKETS>
+void *FreeListHeap<NUM_BUCKETS>::allocate(size_t size) {
+  return allocate_impl(MIN_ALIGNMENT, size);
+}
+
+template <size_t NUM_BUCKETS>
+void *FreeListHeap<NUM_BUCKETS>::aligned_allocate(size_t alignment,
+                                                  size_t size) {
+  // The alignment must be an integral power of two.
+  if (!IsPow2(alignment))
+    return nullptr;
+
+  // The size parameter must be an integral multiple of alignment.
+  if (size % alignment != 0)
+    return nullptr;
+
+  return allocate_impl(alignment, size);
 }
 
 template <size_t NUM_BUCKETS> void FreeListHeap<NUM_BUCKETS>::free(void *ptr) {
@@ -218,6 +259,6 @@ void *FreeListHeap<NUM_BUCKETS>::calloc(size_t num, size_t size) {
 
 extern FreeListHeap<> *freelist_heap;
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FREELIST_HEAP_H

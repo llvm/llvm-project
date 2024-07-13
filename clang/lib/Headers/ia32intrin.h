@@ -533,13 +533,6 @@ __rdtscp(unsigned int *__A) {
 /// \see __rdpmc
 #define _rdpmc(A) __rdpmc(A)
 
-/// Invalidates the contents of the processor's internal caches.
-///    This function writes back and invalidates all modified cache lines in
-///    the processor.
-///
-/// \headerfile <x86intrin.h>
-///
-/// This intrinsic corresponds to the \c WBINVD instruction.
 static __inline__ void __DEFAULT_FN_ATTRS
 _wbinvd(void) {
   __builtin_ia32_wbinvd();

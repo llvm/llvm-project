@@ -58,6 +58,7 @@ static_library("bugprone") {
     "NotNullTerminatedResultCheck.cpp",
     "OptionalValueConversionCheck.cpp",
     "ParentVirtualCallCheck.cpp",
+    "PointerArithmeticOnPolymorphicObjectCheck.cpp",
     "PosixReturnCheck.cpp",
     "RedundantBranchConditionCheck.cpp",
     "ReservedIdentifierCheck.cpp",

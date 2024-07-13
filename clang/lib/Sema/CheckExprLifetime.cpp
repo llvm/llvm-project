@@ -1008,7 +1008,19 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
           return true;
       }
     }
+    if (AEntity) {
+      if (!MTE)
+        return false;
+      assert(shouldLifetimeExtendThroughPath(Path) ==
+                 PathLifetimeKind::NoExtend &&
+             "No lifetime extension for assignments");
+      if (!pathContainsInit(Path))
+        SemaRef.Diag(DiagLoc, diag::warn_dangling_pointer_assignment)
+            << AEntity->LHS << DiagRange;
+      return false;
+    }
 
+    assert(InitEntity && "only for initialization");
     switch (LK) {
     case LK_FullExpression:
       llvm_unreachable("already handled this");
@@ -1031,8 +1043,6 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
 
       switch (shouldLifetimeExtendThroughPath(Path)) {
       case PathLifetimeKind::Extend:
-        assert(InitEntity && "Lifetime extension should happen only for "
-                             "initialization and not assignment");
         // Update the storage duration of the materialized temporary.
         // FIXME: Rebuild the expression instead of mutating it.
         MTE->setExtendingDecl(ExtendingEntity->getDecl(),
@@ -1041,8 +1051,6 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
         return true;
 
       case PathLifetimeKind::ShouldExtend:
-        assert(InitEntity && "Lifetime extension should happen only for "
-                             "initialization and not assignment");
         // We're supposed to lifetime-extend the temporary along this path (per
         // the resolution of DR1815), but we don't support that yet.
         //
@@ -1060,23 +1068,16 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
         if (pathContainsInit(Path))
           return false;
 
-        if (InitEntity) {
-          SemaRef.Diag(DiagLoc, diag::warn_dangling_variable)
-              << RK << !InitEntity->getParent()
-              << ExtendingEntity->getDecl()->isImplicit()
-              << ExtendingEntity->getDecl() << Init->isGLValue() << DiagRange;
-        } else {
-          SemaRef.Diag(DiagLoc, diag::warn_dangling_pointer_assignment)
-              << AEntity->LHS << DiagRange;
-        }
+        SemaRef.Diag(DiagLoc, diag::warn_dangling_variable)
+            << RK << !InitEntity->getParent()
+            << ExtendingEntity->getDecl()->isImplicit()
+            << ExtendingEntity->getDecl() << Init->isGLValue() << DiagRange;
         break;
       }
       break;
     }
 
     case LK_MemInitializer: {
-      assert(InitEntity && "Expect only on initializing the entity");
-
       if (MTE) {
         // Under C++ DR1696, if a mem-initializer (or a default member
         // initializer used by the absence of one) would lifetime-extend a
@@ -1151,7 +1152,6 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
     }
 
     case LK_New:
-      assert(InitEntity && "Expect only on initializing the entity");
       if (isa<MaterializeTemporaryExpr>(L)) {
         if (IsGslPtrInitWithGslTempOwner)
           SemaRef.Diag(DiagLoc, diag::warn_dangling_lifetime_pointer)
@@ -1169,7 +1169,6 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
 
     case LK_Return:
     case LK_StmtExprResult:
-      assert(InitEntity && "Expect only on initializing the entity");
       if (auto *DRE = dyn_cast<DeclRefExpr>(L)) {
         // We can't determine if the local variable outlives the statement
         // expression.
