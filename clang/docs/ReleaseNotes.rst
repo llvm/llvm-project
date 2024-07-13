@@ -1040,6 +1040,7 @@ Bug Fixes to C++ Support
 - Clang now correctly handles unexpanded packs in the template parameter list of a generic lambda expression
   (#GH48937)
 - Fix a crash when parsing an invalid type-requirement in a requires expression. (#GH51868)
+- Fix parsing of built-in type-traits such as ``__is_pointer`` in libstdc++ headers. (#GH95598)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
