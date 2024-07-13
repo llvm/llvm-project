@@ -1542,9 +1542,11 @@ ConstantEmitter::emitAbstract(const Expr *E, QualType destType) {
 
 llvm::Constant *
 ConstantEmitter::emitAbstract(SourceLocation loc, const APValue &value,
-                              QualType destType) {
+                              QualType destType,
+                              bool EnablePtrAuthFunctionTypeDiscrimination) {
   auto state = pushAbstract();
-  auto C = tryEmitPrivate(value, destType);
+  auto C =
+      tryEmitPrivate(value, destType, EnablePtrAuthFunctionTypeDiscrimination);
   C = validateAndPopAbstract(C, state);
   if (!C) {
     CGM.Error(loc,
@@ -1938,14 +1940,18 @@ class ConstantLValueEmitter : public ConstStmtVisitor<ConstantLValueEmitter,
   ConstantEmitter &Emitter;
   const APValue &Value;
   QualType DestType;
+  bool EnablePtrAuthFunctionTypeDiscrimination;
 
   // Befriend StmtVisitorBase so that we don't have to expose Visit*.
   friend StmtVisitorBase;
 
 public:
   ConstantLValueEmitter(ConstantEmitter &emitter, const APValue &value,
-                        QualType destType)
-    : CGM(emitter.CGM), Emitter(emitter), Value(value), DestType(destType) {}
+                        QualType destType,
+                        bool EnablePtrAuthFunctionTypeDiscrimination = true)
+      : CGM(emitter.CGM), Emitter(emitter), Value(value), DestType(destType),
+        EnablePtrAuthFunctionTypeDiscrimination(
+            EnablePtrAuthFunctionTypeDiscrimination) {}
 
   llvm::Constant *tryEmit();
 
@@ -2069,7 +2075,10 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
       return CGM.GetWeakRefReference(D).getPointer();
 
     auto PtrAuthSign = [&](llvm::Constant *C) {
-      CGPointerAuthInfo AuthInfo = CGM.getFunctionPointerAuthInfo(DestType);
+      CGPointerAuthInfo AuthInfo;
+
+      if (EnablePtrAuthFunctionTypeDiscrimination)
+        AuthInfo = CGM.getFunctionPointerAuthInfo(DestType);
 
       if (AuthInfo) {
         if (hasNonZeroOffset())
@@ -2220,8 +2229,10 @@ llvm::Constant *ConstantLValueEmitter::emitPointerAuthPointer(const Expr *E) {
 
   // The assertions here are all checked by Sema.
   assert(Result.Val.isLValue());
+  if (isa<FunctionDecl>(Result.Val.getLValueBase().get<const ValueDecl *>()))
+    assert(Result.Val.getLValueOffset().isZero());
   return ConstantEmitter(CGM, Emitter.CGF)
-      .emitAbstract(E->getExprLoc(), Result.Val, E->getType());
+      .emitAbstract(E->getExprLoc(), Result.Val, E->getType(), false);
 }
 
 unsigned ConstantLValueEmitter::emitPointerAuthKey(const Expr *E) {
@@ -2278,15 +2289,18 @@ ConstantLValueEmitter::VisitMaterializeTemporaryExpr(
   return CGM.GetAddrOfGlobalTemporary(E, Inner);
 }
 
-llvm::Constant *ConstantEmitter::tryEmitPrivate(const APValue &Value,
-                                                QualType DestType) {
+llvm::Constant *
+ConstantEmitter::tryEmitPrivate(const APValue &Value, QualType DestType,
+                                bool EnablePtrAuthFunctionTypeDiscrimination) {
   switch (Value.getKind()) {
   case APValue::None:
   case APValue::Indeterminate:
     // Out-of-lifetime and indeterminate values can be modeled as 'undef'.
     return llvm::UndefValue::get(CGM.getTypes().ConvertType(DestType));
   case APValue::LValue:
-    return ConstantLValueEmitter(*this, Value, DestType).tryEmit();
+    return ConstantLValueEmitter(*this, Value, DestType,
+                                 EnablePtrAuthFunctionTypeDiscrimination)
+        .tryEmit();
   case APValue::Int:
     return llvm::ConstantInt::get(CGM.getLLVMContext(), Value.getInt());
   case APValue::FixedPoint:

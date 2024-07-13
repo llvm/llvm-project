@@ -53,10 +53,10 @@ public:
   ///
   /// \returns the ID of the class, protocol, or namespace, which can be used to
   /// add properties and methods to the class/protocol/namespace.
-  ContextID addObjCContext(std::optional<ContextID> ParentCtxID,
-                           llvm::StringRef Name, ContextKind Kind,
-                           const ObjCContextInfo &Info,
-                           llvm::VersionTuple SwiftVersion);
+  ContextID addContext(std::optional<ContextID> ParentCtxID,
+                       llvm::StringRef Name, ContextKind Kind,
+                       const ContextInfo &Info,
+                       llvm::VersionTuple SwiftVersion);
 
   /// Add information about a specific Objective-C property.
   ///

@@ -801,8 +801,3 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_init() {
   nsan_init_is_running = false;
   nsan_initialized = true;
 }
-
-#if SANITIZER_CAN_USE_PREINIT_ARRAY
-__attribute__((section(".preinit_array"),
-               used)) static void (*nsan_init_ptr)() = __nsan_init;
-#endif

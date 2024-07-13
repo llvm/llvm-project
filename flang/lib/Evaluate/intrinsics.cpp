@@ -998,6 +998,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
 // compatibility and builtins.
 static const std::pair<const char *, const char *> genericAlias[]{
     {"and", "iand"},
+    {"getenv", "get_environment_variable"},
     {"imag", "aimag"},
     {"lshift", "shiftl"},
     {"or", "ior"},
@@ -2594,7 +2595,8 @@ bool IntrinsicProcTable::Implementation::IsIntrinsicFunction(
   return name == "__builtin_c_loc" || name == "null";
 }
 bool IntrinsicProcTable::Implementation::IsIntrinsicSubroutine(
-    const std::string &name) const {
+    const std::string &name0) const {
+  const std::string &name{ResolveAlias(name0)};
   auto subrRange{subroutines_.equal_range(name)};
   if (subrRange.first != subrRange.second) {
     return true;
@@ -2829,7 +2831,8 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
             }
           }
         } else if (!IsInteroperableIntrinsicType(
-                       *type, &context.languageFeatures()) &&
+                       *type, &context.languageFeatures())
+                        .value_or(true) &&
             context.languageFeatures().ShouldWarn(
                 common::UsageWarning::Interoperability)) {
           context.messages().Say(at,
@@ -2931,24 +2934,25 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
         context.messages().Say(arguments[0]->sourceLocation(),
             "C_LOC() argument may not be zero-length character"_err_en_US);
       } else if (typeAndShape->type().category() != TypeCategory::Derived &&
-          !IsInteroperableIntrinsicType(typeAndShape->type()) &&
+          !IsInteroperableIntrinsicType(typeAndShape->type()).value_or(true) &&
           context.languageFeatures().ShouldWarn(
               common::UsageWarning::Interoperability)) {
         context.messages().Say(arguments[0]->sourceLocation(),
             "C_LOC() argument has non-interoperable intrinsic type, kind, or length"_warn_en_US);
       }
 
-      return SpecificCall{SpecificIntrinsic{"__builtin_c_loc"s,
-                              characteristics::Procedure{
-                                  characteristics::FunctionResult{
-                                      DynamicType{GetBuiltinDerivedType(
-                                          builtinsScope_, "__builtin_c_ptr")}},
-                                  characteristics::DummyArguments{
-                                      characteristics::DummyArgument{"x"s,
-                                          characteristics::DummyDataObject{
-                                              std::move(*typeAndShape)}}},
-                                  characteristics::Procedure::Attrs{
-                                      characteristics::Procedure::Attr::Pure}}},
+      characteristics::DummyDataObject ddo{std::move(*typeAndShape)};
+      ddo.intent = common::Intent::In;
+      return SpecificCall{
+          SpecificIntrinsic{"__builtin_c_loc"s,
+              characteristics::Procedure{
+                  characteristics::FunctionResult{
+                      DynamicType{GetBuiltinDerivedType(
+                          builtinsScope_, "__builtin_c_ptr")}},
+                  characteristics::DummyArguments{
+                      characteristics::DummyArgument{"x"s, std::move(ddo)}},
+                  characteristics::Procedure::Attrs{
+                      characteristics::Procedure::Attr::Pure}}},
           std::move(arguments)};
     }
   }
@@ -3151,7 +3155,8 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
   }
 
   if (call.isSubroutineCall) {
-    auto subrRange{subroutines_.equal_range(call.name)};
+    const std::string &name{ResolveAlias(call.name)};
+    auto subrRange{subroutines_.equal_range(name)};
     for (auto iter{subrRange.first}; iter != subrRange.second; ++iter) {
       if (auto specificCall{iter->second->Match(
               call, defaults_, arguments, context, builtinsScope_)}) {

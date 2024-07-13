@@ -110,7 +110,7 @@ public:
     AU.setPreservesAll();
     AU.addRequired<RegAllocEvictionAdvisorAnalysis>();
     AU.addRequired<RegAllocPriorityAdvisorAnalysis>();
-    AU.addRequired<MachineBlockFrequencyInfo>();
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -388,7 +388,7 @@ private:
   std::vector<TensorSpec> InputFeatures;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineBlockFrequencyInfo>();
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
     RegAllocEvictionAdvisorAnalysis::getAnalysisUsage(AU);
   }
@@ -406,7 +406,8 @@ private:
             InteractiveChannelBaseName + ".in");
     }
     return std::make_unique<MLEvictAdvisor>(
-        MF, RA, Runner.get(), getAnalysis<MachineBlockFrequencyInfo>(),
+        MF, RA, Runner.get(),
+        getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI(),
         getAnalysis<MachineLoopInfoWrapperPass>().getLI());
   }
   std::unique_ptr<MLModelRunner> Runner;
@@ -495,7 +496,7 @@ private:
   std::vector<TensorSpec> TrainingInputFeatures;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MachineBlockFrequencyInfo>();
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
     RegAllocEvictionAdvisorAnalysis::getAnalysisUsage(AU);
   }
@@ -544,7 +545,8 @@ private:
     if (Log)
       Log->switchContext(MF.getName());
     return std::make_unique<DevelopmentModeEvictAdvisor>(
-        MF, RA, Runner.get(), getAnalysis<MachineBlockFrequencyInfo>(),
+        MF, RA, Runner.get(),
+        getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI(),
         getAnalysis<MachineLoopInfoWrapperPass>().getLI(), Log.get());
   }
 
@@ -1139,7 +1141,8 @@ bool RegAllocScoring::runOnMachineFunction(MachineFunction &MF) {
   auto GetReward = [&]() {
     if (!CachedReward)
       CachedReward = static_cast<float>(
-          calculateRegAllocScore(MF, getAnalysis<MachineBlockFrequencyInfo>())
+          calculateRegAllocScore(
+              MF, getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI())
               .getScore());
     return *CachedReward;
   };

@@ -1789,6 +1789,9 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
       options::OPT_fno_ptrauth_vtable_pointer_type_discrimination);
   Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_init_fini,
                     options::OPT_fno_ptrauth_init_fini);
+  Args.addOptInFlag(
+      CmdArgs, options::OPT_fptrauth_function_pointer_type_discrimination,
+      options::OPT_fno_ptrauth_function_pointer_type_discrimination);
 }
 
 void Clang::AddLoongArchTargetArgs(const ArgList &Args,
@@ -3812,12 +3815,6 @@ static void RenderBuiltinOptions(const ToolChain &TC, const llvm::Triple &T,
     if (UseBuiltins)
       A->render(Args, CmdArgs);
   }
-
-  // le32-specific flags:
-  //  -fno-math-builtin: clang should not convert math builtins to intrinsics
-  //                     by default.
-  if (TC.getArch() == llvm::Triple::le32)
-    CmdArgs.push_back("-fno-math-builtin");
 }
 
 bool Driver::getDefaultModuleCachePath(SmallVectorImpl<char> &Result) {
@@ -6519,6 +6516,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fheinous_gnu_extensions);
   Args.AddLastArg(CmdArgs, options::OPT_fdigraphs, options::OPT_fno_digraphs);
   Args.AddLastArg(CmdArgs, options::OPT_fzero_call_used_regs_EQ);
+  Args.AddLastArg(CmdArgs, options::OPT_fraw_string_literals,
+                  options::OPT_fno_raw_string_literals);
 
   if (Args.hasFlag(options::OPT_femulated_tls, options::OPT_fno_emulated_tls,
                    Triple.hasDefaultEmulatedTLS()))

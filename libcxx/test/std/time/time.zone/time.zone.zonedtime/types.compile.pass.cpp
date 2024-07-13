@@ -23,6 +23,8 @@
 //    zoned_time& operator=(const zoned_time&) = default;
 //
 //  };
+//
+// using zoned_seconds = zoned_time<seconds>;
 
 #include <chrono>
 #include <concepts>
@@ -61,3 +63,6 @@ static_assert(!std::is_copy_constructible_v<std::chrono::zoned_time< std::chrono
 static_assert(!std::is_move_constructible_v<std::chrono::zoned_time< std::chrono::days, std::unique_ptr<int>>>);
 static_assert(!std::is_copy_assignable_v<std::chrono::zoned_time< std::chrono::days, std::unique_ptr<int>>>);
 static_assert(!std::is_move_assignable_v<std::chrono::zoned_time< std::chrono::days, std::unique_ptr<int>>>);
+
+// using zoned_seconds = zoned_time<seconds>;
+static_assert(std::same_as<std::chrono::zoned_seconds, std::chrono::zoned_time<std::chrono::seconds>>);
