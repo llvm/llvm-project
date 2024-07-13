@@ -3454,7 +3454,7 @@ libc_function(
 
 libc_function(
     name = "fprintf",
-    srcs = ["src/stdio/fprintf.cpp"],
+    srcs = ["src/stdio/generic/fprintf.cpp"],
     hdrs = ["src/stdio/fprintf.h"],
     deps = [
         ":__support_arg_list",
@@ -3505,7 +3505,7 @@ libc_function(
 
 libc_function(
     name = "vfprintf",
-    srcs = ["src/stdio/vfprintf.cpp"],
+    srcs = ["src/stdio/generic/vfprintf.cpp"],
     hdrs = ["src/stdio/vfprintf.h"],
     deps = [
         ":__support_arg_list",
