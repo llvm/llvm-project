@@ -139,6 +139,10 @@ Changes to the AMDGPU Backend
   :ref:`atomicrmw <i_atomicrmw>` instruction with `fadd`, `fmin` and
   `fmax` with addrspace(3) instead.
 
+* AMDGPUAttributor is no longer run as part of the codegen pass
+  pipeline. It is expected to run as part of the middle end
+  optimizations.
+
 Changes to the ARM Backend
 --------------------------
 
