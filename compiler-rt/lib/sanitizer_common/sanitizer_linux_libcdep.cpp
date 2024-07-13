@@ -149,6 +149,19 @@ void GetThreadStackTopAndBottom(bool at_initialization, uptr *stack_top,
       stacksize = kMaxThreadStackSize;
     *stack_top = segment.end;
     *stack_bottom = segment.end - stacksize;
+
+    uptr maxAddr = GetMaxUserVirtualAddress();
+    // Edge case: the stack mapping on some systems may be off-by-one e.g.,
+    //     fffffffdf000-1000000000000 rw-p 00000000 00:00 0 [stack]
+    // instead of:
+    //     fffffffdf000- ffffffffffff
+    // The out-of-range stack_top can result in an invalid shadow address
+    // calculation, since those usually assume the parameters are in range.
+    if (*stack_top == maxAddr + 1)
+      *stack_top = maxAddr;
+    else
+      CHECK_LE(*stack_top, maxAddr);
+
     return;
   }
   uptr stacksize = 0;

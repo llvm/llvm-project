@@ -378,8 +378,8 @@ TextInstrProfReader::readValueProfileData(InstrProfRecord &Record) {
         CurrentValues.push_back({Value, TakenCount});
         Line++;
       }
-      Record.addValueData(ValueKind, S, CurrentValues.data(), NumValueData,
-                          nullptr);
+      assert(CurrentValues.size() == NumValueData);
+      Record.addValueData(ValueKind, S, CurrentValues, nullptr);
     }
   }
   return success();

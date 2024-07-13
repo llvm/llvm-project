@@ -27,13 +27,9 @@
 #include "Program.h"
 #include "State.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTDiagnostic.h"
-#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Expr.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/Support/Endian.h"
-#include <limits>
 #include <type_traits>
 
 namespace clang {
@@ -1848,6 +1844,15 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
   else
     Result = WideIndex - WideOffset;
 
+  // When the pointer is one-past-end, going back to index 0 is the only
+  // useful thing we can do. Any other index has been diagnosed before and
+  // we don't get here.
+  if (Result == 0 && Ptr.isOnePastEnd()) {
+    S.Stk.push<Pointer>(Ptr.asBlockPointer().Pointee,
+                        Ptr.asBlockPointer().Base);
+    return true;
+  }
+
   S.Stk.push<Pointer>(Ptr.atIndex(static_cast<uint64_t>(Result)));
   return true;
 }
@@ -2568,6 +2573,12 @@ inline bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
     return false;
 
   assert(F);
+
+  // This happens when the call expression has been cast to
+  // something else, but we don't support that.
+  if (S.Ctx.classify(F->getDecl()->getReturnType()) !=
+      S.Ctx.classify(CE->getType()))
+    return false;
 
   // Check argument nullability state.
   if (F->hasNonNullAttr()) {

@@ -4,11 +4,12 @@
 ; RUN: llc -mtriple=aarch64-apple-tvos7.0 < %s | FileCheck -check-prefix=APPLE %s
 ; RUN: llc -mtriple=aarch64-apple-watchos7.0 < %s | FileCheck -check-prefix=APPLE %s
 ; RUN: llc -mtriple=aarch64-apple-xros7.0 < %s | FileCheck -check-prefix=APPLE %s
+; RUN: llc -mtriple=aarch64-apple-tvos6.0 < %s | FileCheck -check-prefix=APPLE %s
+; RUN: llc -mtriple=aarch64-apple-xros6.0 < %s | FileCheck -check-prefix=APPLE %s
+; RUN: llc -mtriple=aarch64-apple-xros1.0 < %s | FileCheck -check-prefix=APPLE %s
 
 ; RUN: not llc -mtriple=aarch64-apple-macos10.8 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
 ; RUN: not llc -mtriple=aarch64-apple-ios6.0 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: not llc -mtriple=aarch64-apple-tvos6.0 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
-; RUN: not llc -mtriple=aarch64-apple-xros6.0 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
 
 ; Check exp10/exp10f is emitted as __exp10/__exp10f on assorted systems.
 

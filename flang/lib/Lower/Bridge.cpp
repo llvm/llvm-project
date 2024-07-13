@@ -4296,8 +4296,13 @@ private:
           auto [temp, cleanup] =
               hlfir::createTempFromMold(loc, builder, entity);
           auto needCleanup = fir::getIntIfConstant(cleanup);
-          if (needCleanup && *needCleanup)
-            temps.push_back(temp);
+          if (needCleanup && *needCleanup) {
+            if (auto declareOp =
+                    mlir::dyn_cast<hlfir::DeclareOp>(temp.getDefiningOp()))
+              temps.push_back(declareOp.getMemref());
+            else
+              temps.push_back(temp);
+          }
           addSymbol(sym,
                     hlfir::translateToExtendedValue(loc, builder, temp).first,
                     /*forced=*/true);

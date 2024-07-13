@@ -51,6 +51,13 @@ config_setting(
     flag_values = {":mpfr": "system"},
 )
 
+################################## Base Config #################################
+
+cc_library(
+    name = "__support_macros_config",
+    hdrs = ["src/__support/macros/config.h"],
+)
+
 ################################# Include Files ################################
 
 libc_support_library(
@@ -138,6 +145,11 @@ libc_support_library(
     hdrs = ["hdr/float_macros.h"],
 )
 
+libc_support_library(
+    name = "hdr_stdio_macros",
+    hdrs = ["hdr/stdio_macros.h"],
+)
+
 ############################ Type Proxy Header Files ###########################
 
 libc_support_library(
@@ -180,6 +192,16 @@ libc_support_library(
     hdrs = ["hdr/types/pid_t.h"],
 )
 
+libc_support_library(
+    name = "types_off_t",
+    hdrs = ["hdr/types/off_t.h"],
+)
+
+libc_support_library(
+    name = "types_FILE",
+    hdrs = ["hdr/types/FILE.h"],
+)
+
 ############################### Support libraries ##############################
 
 libc_support_library(
@@ -220,11 +242,6 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_macros_config",
-    hdrs = ["src/__support/macros/config.h"],
-)
-
-libc_support_library(
     name = "__support_macros_attributes",
     hdrs = ["src/__support/macros/attributes.h"],
     deps = [
@@ -237,7 +254,6 @@ libc_support_library(
     hdrs = ["src/__support/macros/optimization.h"],
     deps = [
         ":__support_macros_attributes",
-        ":__support_macros_config",
         ":__support_macros_properties_compiler",
     ],
 )
@@ -245,9 +261,6 @@ libc_support_library(
 libc_support_library(
     name = "__support_macros_sanitizer",
     hdrs = ["src/__support/macros/sanitizer.h"],
-    deps = [
-        ":__support_macros_config",
-    ],
 )
 
 libc_support_library(
@@ -667,6 +680,8 @@ libc_support_library(
         ":__support_error_or",
         ":__support_threads_mutex",
         ":errno",
+        ":hdr_stdio_macros",
+        ":types_off_t",
     ],
 )
 
@@ -678,6 +693,7 @@ libc_support_library(
         ":__support_error_or",
         ":__support_osutil_syscall",
         ":errno",
+        ":types_off_t",
     ],
 )
 
@@ -3392,6 +3408,7 @@ libc_support_library(
         ":__support_arg_list",
         ":__support_file_file",
         ":__support_macros_attributes",
+        ":types_FILE",
         ":printf_main",
         ":printf_writer",
     ],
@@ -3430,18 +3447,20 @@ libc_function(
         ":__support_arg_list",
         ":__support_file_file",
         ":errno",
+        ":types_FILE",
         ":vfprintf_internal",
     ],
 )
 
 libc_function(
     name = "fprintf",
-    srcs = ["src/stdio/fprintf.cpp"],
+    srcs = ["src/stdio/generic/fprintf.cpp"],
     hdrs = ["src/stdio/fprintf.h"],
     deps = [
         ":__support_arg_list",
         ":__support_file_file",
         ":errno",
+        ":types_FILE",
         ":vfprintf_internal",
     ],
 )
@@ -3479,18 +3498,20 @@ libc_function(
         ":__support_arg_list",
         ":__support_file_file",
         ":errno",
+        ":types_FILE",
         ":vfprintf_internal",
     ],
 )
 
 libc_function(
     name = "vfprintf",
-    srcs = ["src/stdio/vfprintf.cpp"],
+    srcs = ["src/stdio/generic/vfprintf.cpp"],
     hdrs = ["src/stdio/vfprintf.h"],
     deps = [
         ":__support_arg_list",
         ":__support_file_file",
         ":errno",
+        ":types_FILE",
         ":vfprintf_internal",
     ],
 )
@@ -3503,6 +3524,7 @@ libc_function(
         ":__support_common",
         ":__support_osutil_syscall",
         ":errno",
+        ":types_FILE",
     ],
 )
 
