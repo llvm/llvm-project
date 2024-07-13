@@ -208,6 +208,8 @@ public:
   explicit MachineModuleInfoWrapperPass(const LLVMTargetMachine *TM,
                                         MCContext *ExtContext);
 
+  explicit MachineModuleInfoWrapperPass(MachineModuleInfo &&MMI);
+
   // Initialization and Finalization
   bool doInitialization(Module &) override;
   bool doFinalization(Module &) override;

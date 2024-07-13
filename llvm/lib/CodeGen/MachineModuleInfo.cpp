@@ -180,6 +180,11 @@ MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
   initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
+MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
+    MachineModuleInfo &&MMI): ImmutablePass(ID), MMI(std::move(MMI)) {
+  initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
+}
+
 // Handle the Pass registration stuff necessary to use DataLayout's.
 INITIALIZE_PASS(MachineModuleInfoWrapperPass, "machinemoduleinfo",
                 "Machine Module Information", false, false)
