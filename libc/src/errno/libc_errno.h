@@ -32,6 +32,7 @@
 // - Still depend on libc.src.errno.errno
 
 namespace LIBC_NAMESPACE_DECL {
+
 struct Errno {
   void operator=(int);
   operator int();
