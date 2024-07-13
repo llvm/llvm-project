@@ -43,6 +43,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
+#include "llvm/ADT/PackedVector.h"
 
 using namespace llvm;
 
@@ -51,6 +52,18 @@ using namespace llvm;
 namespace {
 
 class AMDGPULowerVGPREncoding : public MachineFunctionPass {
+  static constexpr unsigned OpNum = 4;
+  static constexpr unsigned BitsPerField = 2;
+  static constexpr unsigned NumFields = 4;
+  using ModeType = PackedVector<unsigned, BitsPerField>;
+
+  class ModeTy : public ModeType {
+  public:
+    ModeTy() : ModeType(NumFields) {}
+
+    operator int64_t() const { return raw_bits().getData()[0]; }
+  };
+
 public:
   static char ID;
 
@@ -68,7 +81,7 @@ private:
   const SIRegisterInfo *TRI;
 
   /// Current mode bits.
-  unsigned Mode;
+  ModeTy Mode;
 
   /// Number of current hard clause instructions.
   unsigned ClauseLen;
@@ -83,10 +96,10 @@ private:
   MachineBasicBlock::instr_iterator Clause;
 
   /// Insert mode change before \p I. \returns true if mode was changed.
-  bool setMode(unsigned NewMode, MachineBasicBlock::instr_iterator I);
+  bool setMode(ModeTy NewMode, MachineBasicBlock::instr_iterator I);
 
   /// Reset mode to default.
-  void resetMode(MachineBasicBlock::instr_iterator I) { setMode(0, I); }
+  void resetMode(MachineBasicBlock::instr_iterator I) { setMode(ModeTy(), I); }
 
   /// If \p MO is a high VGPR \returns offset MSBs and a corresponding low VGPR.
   /// If \p MO is a low VGPR \returns 0 and that register.
@@ -101,7 +114,7 @@ private:
   /// \return true if changed. Optionally takes second array \p Ops2.
   /// If provided and an operand from \p Ops is not a VGPR, then \p Ops2
   /// is checked.
-  bool runOnMachineInstr(MachineInstr &MI, const unsigned Ops[4],
+  bool runOnMachineInstr(MachineInstr &MI, const unsigned Ops[OpNum],
                          const unsigned *Ops2 = nullptr);
 
   /// Check if an instruction \p I is within a clause and returns a suitable
@@ -111,7 +124,7 @@ private:
   handleClause(MachineBasicBlock::instr_iterator I);
 };
 
-bool AMDGPULowerVGPREncoding::setMode(unsigned NewMode,
+bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
                                       MachineBasicBlock::instr_iterator I) {
   if (NewMode == Mode)
     return false;
@@ -145,11 +158,11 @@ AMDGPULowerVGPREncoding::getLowRegister(const MachineOperand &MO) const {
 }
 
 bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI,
-                                                const unsigned Ops[4],
+                                                const unsigned Ops[OpNum],
                                                 const unsigned *Ops2) {
-  unsigned NewMode = Mode;
+  ModeTy NewMode = Mode;
 
-  for (unsigned I = 0; I < 4; ++I) {
+  for (unsigned I = 0; I < OpNum; ++I) {
     MachineOperand *Op = TII->getNamedOperand(MI, Ops[I]);
 
     MCRegister Reg;
@@ -189,8 +202,7 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI,
           TII->hasVALU32BitEncoding(MI.getOpcode()))))
       continue;
 
-    NewMode &= ~(3 << (I * 2));
-    NewMode |= MSBits << (I * 2);
+    NewMode[I] = MSBits;
   }
 
   return setMode(NewMode, MI.getIterator());
@@ -250,7 +262,7 @@ bool AMDGPULowerVGPREncoding::runOnMachineFunction(MachineFunction &MF) {
 
   bool Changed = false;
   ClauseLen = ClauseRemaining = 0;
-  Mode = 0;
+  Mode.reset();
   for (auto &MBB : MF) {
     for (auto &MI : llvm::make_early_inc_range(MBB.instrs())) {
       if (MI.isMetaInstruction())
@@ -259,7 +271,7 @@ bool AMDGPULowerVGPREncoding::runOnMachineFunction(MachineFunction &MF) {
       if (MI.isTerminator() || MI.isCall()) {
         if (MI.getOpcode() == AMDGPU::S_ENDPGM ||
             MI.getOpcode() == AMDGPU::S_ENDPGM_SAVED)
-          Mode = 0;
+          Mode.reset();
         else
           resetMode(MI.getIterator());
         continue;
