@@ -64,7 +64,7 @@ VerboseTrapFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
 
   static auto trap_regex =
       llvm::Regex(llvm::formatv("^{0}\\$(.*)\\$(.*)$", ClangTrapPrefix).str());
-  SmallVector<llvm::StringRef, 2> matches;
+  SmallVector<llvm::StringRef, 3> matches;
   std::string regex_err_msg;
   if (!trap_regex.match(func_name, &matches, &regex_err_msg)) {
     LLDB_LOGF(GetLog(LLDBLog::Unwind),
@@ -81,8 +81,8 @@ VerboseTrapFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
   if (matches.size() != 3) {
     LLDB_LOGF(GetLog(LLDBLog::Unwind),
               "Unexpected function name format. Expected '<trap prefix>$<trap "
-              "category>$<trap message>'$ but got: '%s'. %zu",
-              func_name.data(), matches.size());
+              "category>$<trap message>'$ but got: '%s'.",
+              func_name.data());
 
     return {};
   }
