@@ -8,8 +8,9 @@
 
 #include "src/math/floor.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(double, floor, (double x)) {
   double y;
@@ -17,4 +18,4 @@ LLVM_LIBC_FUNCTION(double, floor, (double x)) {
   return y;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
