@@ -164,18 +164,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  fprintf
-  SRCS
-    fprintf.cpp
-  HDRS
-    fprintf.h
-  DEPENDS
-    libc.hdr.types.FILE
-    libc.src.__support.arg_list
-    libc.src.stdio.printf_core.vfprintf_internal
-)
-
-add_entrypoint_object(
   vsprintf
   SRCS
     vsprintf.cpp
@@ -195,18 +183,6 @@ add_entrypoint_object(
   DEPENDS
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
-)
-
-add_entrypoint_object(
-  vfprintf
-  SRCS
-    vfprintf.cpp
-  HDRS
-    vfprintf.h
-  DEPENDS
-    libc.hdr.types.FILE
-    libc.src.__support.arg_list
-    libc.src.stdio.printf_core.vfprintf_internal
 )
 
 add_subdirectory(printf_core)
@@ -258,6 +234,7 @@ add_stdio_entrypoint_object(fputc)
 add_stdio_entrypoint_object(putc)
 add_stdio_entrypoint_object(putchar)
 add_stdio_entrypoint_object(printf)
+add_stdio_entrypoint_object(fprintf)
 add_stdio_entrypoint_object(fgetc)
 add_stdio_entrypoint_object(fgetc_unlocked)
 add_stdio_entrypoint_object(getc)
@@ -270,3 +247,4 @@ add_stdio_entrypoint_object(stdin)
 add_stdio_entrypoint_object(stdout)
 add_stdio_entrypoint_object(stderr)
 add_stdio_entrypoint_object(vprintf)
+add_stdio_entrypoint_object(vfprintf)

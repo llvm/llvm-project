@@ -363,19 +363,6 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-list(APPEND printf_deps
-      libc.src.__support.arg_list
-      libc.src.stdio.printf_core.vfprintf_internal
-)
-
-if(LLVM_LIBC_FULL_BUILD)
-  list(APPEND printf_deps
-      libc.src.__support.File.file
-      libc.src.__support.File.platform_file
-      libc.src.__support.File.platform_stdout
-  )
-endif()
-
 add_entrypoint_object(
   printf
   SRCS
@@ -393,6 +380,32 @@ add_entrypoint_object(
   HDRS
     ../vprintf.h
   DEPENDS
+    ${printf_deps}
+)
+
+add_entrypoint_object(
+  fprintf
+  SRCS
+    fprintf.cpp
+  HDRS
+    ../fprintf.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.src.__support.arg_list
+    libc.src.stdio.printf_core.vfprintf_internal
+    ${printf_deps}
+)
+
+add_entrypoint_object(
+  vfprintf
+  SRCS
+    vfprintf.cpp
+  HDRS
+    ../vfprintf.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.src.__support.arg_list
+    libc.src.stdio.printf_core.vfprintf_internal
     ${printf_deps}
 )
 

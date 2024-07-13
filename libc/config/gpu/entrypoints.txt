@@ -177,6 +177,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     # stdio.h entrypoints
     libc.src.stdio.clearerr
     libc.src.stdio.fclose
+    libc.src.stdio.printf
+    libc.src.stdio.vprintf
+    libc.src.stdio.fprintf
+    libc.src.stdio.vfprintf
     libc.src.stdio.sprintf
     libc.src.stdio.snprintf
     libc.src.stdio.vsprintf
