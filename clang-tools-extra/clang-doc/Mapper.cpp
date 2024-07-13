@@ -46,7 +46,6 @@ bool MapASTVisitor::mapDecl(const T *D, bool IsDefinition) {
   // If there is an error generating a USR for the decl, skip this decl.
   if (index::generateUSRForDecl(D, USR))
     return true;
-
   // Prevent Visiting USR twice
   {
     std::lock_guard<llvm::sys::Mutex> Guard(USRVisitedGuard);
@@ -57,7 +56,6 @@ bool MapASTVisitor::mapDecl(const T *D, bool IsDefinition) {
     if (IsDefinition)
       USRVisited.insert(Visited);
   }
-
   bool IsFileInRootDir;
   llvm::SmallString<128> File =
       getFile(D, D->getASTContext(), CDCtx.SourceRoot, IsFileInRootDir);
@@ -144,6 +142,8 @@ llvm::SmallString<128> MapASTVisitor::getFile(const NamedDecl *D,
   llvm::sys::path::replace_path_prefix(File, Prefix, "");
   return File;
 }
+
+
 
 } // namespace doc
 } // namespace clang
