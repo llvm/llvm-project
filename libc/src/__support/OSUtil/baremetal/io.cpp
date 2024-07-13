@@ -18,6 +18,8 @@ namespace LIBC_NAMESPACE {
 // which allows the following:
 //
 // ```
+// struct __llvm_libc_stdio_cookie { ... };
+// ...
 // struct __llvm_libc_stdio_cookie __llvm_libc_stdin_cookie;
 // cookie_io_functions_t stdin_func = { .read = __llvm_libc_stdio_read };
 // FILE *stdin = fopencookie(&__llvm_libc_stdin_cookie, "r", stdin_func);
@@ -34,6 +36,10 @@ namespace LIBC_NAMESPACE {
 // At the same time, implementation of functions like `printf` and `scanf` can
 // use `__llvm_libc_stdio_read` and `__llvm_libc_stdio_write` directly to avoid
 // the extra indirection.
+//
+// All three symbols `__llvm_libc_stdin_cookie`, `__llvm_libc_stdout_cookie`,
+// and `__llvm_libc_stderr_cookie` must be provided, even if they don't point
+// at anything.
 
 struct __llvm_libc_stdio_cookie;
 
