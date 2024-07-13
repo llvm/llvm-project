@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "libc_errno.h"
-#include "src/errno/errno.h"
 #include "src/__support/macros/config.h"
 
 // libc never stores a value; `errno` macro uses get link-time failure.
@@ -47,9 +46,6 @@ LIBC_ERRNO_MODE_SYSTEM
 
 namespace LIBC_NAMESPACE_DECL {
 
-// Define the global `libc_errno` instance.
-Errno libc_errno;
-
 #if LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_UNDEFINED
 
 void Errno::operator=(int) {}
@@ -61,9 +57,7 @@ namespace {
 LIBC_THREAD_LOCAL int thread_errno;
 }
 
-extern "C" {
-int *__llvm_libc_errno() { return &thread_errno; }
-}
+extern "C" int *__llvm_libc_errno() { return &thread_errno; }
 
 void Errno::operator=(int a) { thread_errno = a; }
 Errno::operator int() { return thread_errno; }
@@ -74,9 +68,7 @@ namespace {
 int shared_errno;
 }
 
-extern "C" {
-int *__llvm_libc_errno() { return &shared_errno; }
-}
+extern "C" int *__llvm_libc_errno() { return &shared_errno; }
 
 void Errno::operator=(int a) { shared_errno = a; }
 Errno::operator int() { return shared_errno; }
@@ -92,5 +84,8 @@ void Errno::operator=(int a) { errno = a; }
 Errno::operator int() { return errno; }
 
 #endif
+
+// Define the global `libc_errno` instance.
+Errno libc_errno;
 
 } // namespace LIBC_NAMESPACE_DECL
