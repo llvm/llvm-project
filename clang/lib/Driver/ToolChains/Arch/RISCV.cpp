@@ -294,13 +294,17 @@ std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
       CPU = llvm::sys::getHostCPUName();
       // If the target cpu is unrecognized, use target features.
       if (CPU.empty() || CPU.starts_with("generic")) {
-        std::vector<std::string> Features;
-        for (auto &F : llvm::sys::getHostCPUFeatures())
-          Features.push_back(((F.second ? "+" : "-") + F.first()).str());
-        auto ParseResult = llvm::RISCVISAInfo::parseFeatures(
-            Triple.isRISCV32() ? 32 : 64, Features);
-        if (ParseResult)
-          return (*ParseResult)->toString();
+        auto FeatureMap = llvm::sys::getHostCPUFeatures();
+        // hwprobe may be unavailable on older Linux versions.
+        if (!FeatureMap.empty()) {
+          std::vector<std::string> Features;
+          for (auto &F : FeatureMap)
+            Features.push_back(((F.second ? "+" : "-") + F.first()).str());
+          auto ParseResult = llvm::RISCVISAInfo::parseFeatures(
+              Triple.isRISCV32() ? 32 : 64, Features);
+          if (ParseResult)
+            return (*ParseResult)->toString();
+        }
       }
     }
 
