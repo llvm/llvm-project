@@ -9,7 +9,6 @@
 #include "src/stdlib/qsort.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
-#include "src/stdlib/heap_sort.h"
 #include "src/stdlib/qsort_util.h"
 
 #include <stdint.h>
@@ -26,11 +25,7 @@ LLVM_LIBC_FUNCTION(void, qsort,
   auto arr = internal::Array(reinterpret_cast<uint8_t *>(array), array_size,
                              elem_size, c);
 
-#if LIBC_QSORT_IMPL == LIBC_QSORT_QUICK_SORT
-  internal::quick_sort(arr);
-#elif LIBC_QSORT_IMPL == LIBC_QSORT_HEAP_SORT
-  internal::heap_sort(arr);
-#endif
+  internal::sort(arr);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

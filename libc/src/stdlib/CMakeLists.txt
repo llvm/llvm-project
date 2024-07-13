@@ -258,8 +258,10 @@ add_entrypoint_object(
 add_header_library(
   qsort_util
   HDRS
+    qsort_data.h
     qsort_util.h
     heap_sort.h
+    quick_sort.h
   DEPENDS
     libc.include.stdlib
     libc.src.__support.CPP.cstddef

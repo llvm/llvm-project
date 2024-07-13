@@ -1,4 +1,4 @@
-//===-- Unittests for qsort -----------------------------------------------===//
+//===-- Unittests for quick sort ------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "SortingTest.h"
-#include "src/stdlib/qsort.h"
+#include "src/stdlib/quick_sort.h"
 
 void sort(const LIBC_NAMESPACE::internal::Array &array) {
-  LIBC_NAMESPACE::qsort(reinterpret_cast<void *>(array.get(0)), array.size(),
-                        sizeof(int), SortingTest::int_compare);
+  LIBC_NAMESPACE::internal::quick_sort(array);
 }
 
-LIST_SORTING_TESTS(Qsort, sort);
+LIST_SORTING_TESTS(QuickSort, sort);
