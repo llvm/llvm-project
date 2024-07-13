@@ -63,6 +63,8 @@ public:
   bool processDeviceType(mlir::omp::DeviceTypeClauseOps &result) const;
   bool processDistSchedule(lower::StatementContext &stmtCtx,
                            mlir::omp::DistScheduleClauseOps &result) const;
+  bool processFilter(lower::StatementContext &stmtCtx,
+                     mlir::omp::FilterClauseOps &result) const;
   bool processFinal(lower::StatementContext &stmtCtx,
                     mlir::omp::FinalClauseOps &result) const;
   bool processHasDeviceAddr(
