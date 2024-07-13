@@ -34,7 +34,7 @@ uint64_t Pack(uint32_t LowBits, uint32_t HighBits) {
   return (((uint64_t)HighBits) << 32) | (uint64_t)LowBits;
 }
 
-int32_t shuffle(uint64_t Mask, int32_t Var, int32_t SrcLane);
+int32_t shuffle(uint64_t Mask, int32_t Var, int32_t SrcLane, int32_t Width);
 int32_t shuffleDown(uint64_t Mask, int32_t Var, uint32_t LaneDelta,
                     int32_t Width);
 
@@ -45,8 +45,7 @@ uint64_t ballotSync(uint64_t Mask, int32_t Pred);
 ///{
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 
-int32_t shuffle(uint64_t Mask, int32_t Var, int32_t SrcLane) {
-  int Width = mapping::getWarpSize();
+int32_t shuffle(uint64_t Mask, int32_t Var, int32_t SrcLane, int32_t Width) {
   int Self = mapping::getThreadIdInWarp();
   int Index = SrcLane + (Self & ~(Width - 1));
   return __builtin_amdgcn_ds_bpermute(Index << 2, Var);
@@ -82,8 +81,8 @@ bool isThreadLocalMemPtr(const void *Ptr) {
         device = {arch(nvptx, nvptx64)},                                       \
             implementation = {extension(match_any)})
 
-int32_t shuffle(uint64_t Mask, int32_t Var, int32_t SrcLane) {
-  return __nvvm_shfl_sync_idx_i32(Mask, Var, SrcLane, 0x1f);
+int32_t shuffle(uint64_t Mask, int32_t Var, int32_t SrcLane, int32_t Width) {
+  return __nvvm_shfl_sync_idx_i32(Mask, Var, SrcLane, Width);
 }
 
 int32_t shuffleDown(uint64_t Mask, int32_t Var, uint32_t Delta, int32_t Width) {
@@ -111,8 +110,9 @@ void utils::unpack(uint64_t Val, uint32_t &LowBits, uint32_t &HighBits) {
   impl::Unpack(Val, &LowBits, &HighBits);
 }
 
-int32_t utils::shuffle(uint64_t Mask, int32_t Var, int32_t SrcLane) {
-  return impl::shuffle(Mask, Var, SrcLane);
+int32_t utils::shuffle(uint64_t Mask, int32_t Var, int32_t SrcLane,
+                       int32_t Width) {
+  return impl::shuffle(Mask, Var, SrcLane, Width);
 }
 
 int32_t utils::shuffleDown(uint64_t Mask, int32_t Var, uint32_t Delta,

@@ -348,7 +348,7 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
     if (rank == 0) {
       warp_res = atomic::add(&Cnt, change, atomic::seq_cst);
     }
-    warp_res = utils::shuffle(active, warp_res, leader);
+    warp_res = utils::shuffle(active, warp_res, leader, mapping::getWarpSize());
     return warp_res + rank;
   }
 

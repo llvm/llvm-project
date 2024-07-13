@@ -618,7 +618,6 @@ void GPUSanImpl::instrumentAccess(LoopInfo &LI, Instruction &I, int PtrIdx,
   if (Loop *L = LI.getLoopFor(I.getParent())) {
     auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(*I.getFunction());
     const auto &LD = SE.getLoopDisposition(SE.getSCEVAtScope(PtrOp, L), L);
-    LD->
   }
 
   static int32_t ReadAccessId = -1;

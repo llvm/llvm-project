@@ -22,7 +22,7 @@ namespace utils {
 
 /// Return the value \p Var from thread Id \p SrcLane in the warp if the thread
 /// is identified by \p Mask.
-int32_t shuffle(uint64_t Mask, int32_t Var, int32_t SrcLane);
+int32_t shuffle(uint64_t Mask, int32_t Var, int32_t SrcLane, int32_t Width);
 
 int32_t shuffleDown(uint64_t Mask, int32_t Var, uint32_t Delta, int32_t Width);
 

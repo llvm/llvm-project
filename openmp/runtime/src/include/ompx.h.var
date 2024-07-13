@@ -139,6 +139,20 @@ _TGT_KERNEL_LANGUAGE_DECL_GRID_C(grid_dim)
 
 uint64_t ompx_ballot_sync(uint64_t mask, int pred);
 
+/// ompx_shfl_sync_{i,f,l,d}
+///{
+#define _TGT_KERNEL_LANGUAGE_SHFL_SYNC(TYPE, TY)                          \
+  TYPE ompx_shfl_sync_##TY(uint64_t mask, TYPE var, int src,                   \
+                            int width);
+
+_TGT_KERNEL_LANGUAGE_SHFL_SYNC(int, i)
+_TGT_KERNEL_LANGUAGE_SHFL_SYNC(float, f)
+_TGT_KERNEL_LANGUAGE_SHFL_SYNC(long, l)
+_TGT_KERNEL_LANGUAGE_SHFL_SYNC(double, d)
+
+#undef _TGT_KERNEL_LANGUAGE_SHFL_SYNC
+///}
+
 /// ompx_shfl_down_sync_{i,f,l,d}
 ///{
 #define _TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC(TYPE, TY)                          \
@@ -207,6 +221,22 @@ _TGT_KERNEL_LANGUAGE_HOST_IMPL_SYNC_CXX(void, sync_block_divergent,
 static inline uint64_t ballot_sync(uint64_t mask, int pred) {
   return ompx_ballot_sync(mask, pred);
 }
+
+/// shfl_sync
+///{
+#define _TGT_KERNEL_LANGUAGE_SHFL_SYNC(TYPE, TY)                          \
+  static inline TYPE shfl_sync(uint64_t mask, TYPE var, int src,               \
+                                    int width = __WARP_SIZE) {                 \
+    return ompx_shfl_down_sync_##TY(mask, var, int, width);                  \
+  }
+
+_TGT_KERNEL_LANGUAGE_SHFL_SYNC(int, i)
+_TGT_KERNEL_LANGUAGE_SHFL_SYNC(float, f)
+_TGT_KERNEL_LANGUAGE_SHFL_SYNC(long, l)
+_TGT_KERNEL_LANGUAGE_SHFL_SYNC(double, d)
+
+#undef _TGT_KERNEL_LANGUAGE_SHFL_DOWN_SYNC
+///}
 
 /// shfl_down_sync
 ///{

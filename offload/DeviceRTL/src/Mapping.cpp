@@ -376,6 +376,18 @@ uint64_t ompx_ballot_sync(uint64_t mask, int pred) {
   return utils::ballotSync(mask, pred);
 }
 
+#define _TGT_KERNEL_LANGUAGE_SHFL_SYNC(TYPE, TY)                               \
+  int ompx_shfl_sync_##TY(uint64_t mask, TYPE var, int src, int width) {       \
+    return utils::shuffle(mask, var, src, width);                              \
+  }
+
+_TGT_KERNEL_LANGUAGE_SHFL_SYNC(int, i)
+_TGT_KERNEL_LANGUAGE_SHFL_SYNC(float, f)
+_TGT_KERNEL_LANGUAGE_SHFL_SYNC(long, l)
+_TGT_KERNEL_LANGUAGE_SHFL_SYNC(double, d)
+
+#undef _TGT_KERNEL_LANGUAGE_SHFL_SYNC
+
 int ompx_shfl_down_sync_i(uint64_t mask, int var, unsigned delta, int width) {
   return utils::shuffleDown(mask, var, delta, width);
 }
