@@ -254,3 +254,10 @@ func.func @assign_global(%arg0 : i32) {
   emitc.assign %arg0 : i32 to %0 : i32
   return
 }
+
+func.func @member_access(%arg0: !emitc.opaque<"mystruct">, %arg1: !emitc.opaque<"mystruct_ptr">, %arg2: !emitc.ptr<!emitc.opaque<"mystruct">>) {
+  %0 = "emitc.member" (%arg0) {member = "a"} : (!emitc.opaque<"mystruct">) -> i32
+  %1 = "emitc.member_of_ptr" (%arg1) {member = "a"} : (!emitc.opaque<"mystruct_ptr">) -> i32
+  %2 = "emitc.member_of_ptr" (%arg2) {member = "a"} : (!emitc.ptr<!emitc.opaque<"mystruct">>) -> i32
+  return
+}
