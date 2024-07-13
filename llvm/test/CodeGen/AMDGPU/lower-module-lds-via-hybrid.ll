@@ -84,8 +84,8 @@ define void @f2() {
 ; GCN-NEXT:    s_add_u32 s6, s6, llvm.amdgcn.lds.offset.table@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s7, s7, llvm.amdgcn.lds.offset.table@rel32@hi+12
 ; GCN-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
-; GCN-NEXT:    s_add_u32 s4, s4, s6
-; GCN-NEXT:    s_addc_u32 s5, s5, s7
+; GCN-NEXT:    s_add_u32 s4, s6, s4
+; GCN-NEXT:    s_addc_u32 s5, s7, s5
 ; GCN-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v2, s4
@@ -206,14 +206,12 @@ define amdgpu_kernel void @k23() {
 ; GCN-NEXT:    s_addc_u32 s5, s5, f2@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; GCN-NEXT:    s_mov_b32 s15, 1
-
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, f3@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, f3@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    s_endpgm
