@@ -364,6 +364,7 @@ add_entrypoint_object(
 )
 
 list(APPEND printf_deps
+      libc.hdr.types.FILE
       libc.src.__support.arg_list
       libc.src.stdio.printf_core.vfprintf_internal
 )
@@ -392,6 +393,26 @@ add_entrypoint_object(
     vprintf.cpp
   HDRS
     ../vprintf.h
+  DEPENDS
+    ${printf_deps}
+)
+
+add_entrypoint_object(
+  fprintf
+  SRCS
+    fprintf.cpp
+  HDRS
+    ../fprintf.h
+  DEPENDS
+    ${printf_deps}
+)
+
+add_entrypoint_object(
+  vfprintf
+  SRCS
+    vfprintf.cpp
+  HDRS
+    ../vfprintf.h
   DEPENDS
     ${printf_deps}
 )
