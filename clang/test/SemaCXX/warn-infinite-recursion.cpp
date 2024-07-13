@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify -Winfinite-recursion
 
-void a() {  // expected-warning{{call itself}}
+void a() {  // expected-warning{{to understand recursion}}
   a();
 }
 
-void b(int x) {  // expected-warning{{call itself}}
+void b(int x) {  // expected-warning{{to understand recursion}}
   if (x)
     b(x);
   else
@@ -16,7 +16,7 @@ void c(int x) {
     c(5);
 }
 
-void d(int x) {  // expected-warning{{call itself}}
+void d(int x) {  // expected-warning{{to understand recursion}}
   if (x)
     ++x;
   return d(x);
@@ -29,7 +29,7 @@ void f();
 void e() { f(); }
 void f() { e(); }
 
-void g() {  // expected-warning{{call itself}}
+void g() {  // expected-warning{{to understand recursion}}
   while (true)
     g();
 
@@ -42,14 +42,14 @@ void h(int x) {
   }
 }
 
-void i(int x) {  // expected-warning{{call itself}}
+void i(int x) {  // expected-warning{{to understand recursion}}
   while (x < 5) {
     --x;
   }
   i(0);
 }
 
-int j() {  // expected-warning{{call itself}}
+int j() {  // expected-warning{{to understand recursion}}
   return 5 + j();
 }
 
@@ -80,11 +80,11 @@ class S {
   void b();
 };
 
-void S::a() {  // expected-warning{{call itself}}
+void S::a() {  // expected-warning{{to understand recursion}}
   return a();
 }
 
-void S::b() {  // expected-warning{{call itself}}
+void S::b() {  // expected-warning{{to understand recursion}}
   int i = 0;
   do {
     ++i;
@@ -95,8 +95,8 @@ void S::b() {  // expected-warning{{call itself}}
 template<class member>
 struct T {
   member m;
-  void a() { return a(); }  // expected-warning{{call itself}}
-  static void b() { return b(); }  // expected-warning{{call itself}}
+  void a() { return a(); }  // expected-warning{{to understand recursion}}
+  static void b() { return b(); }  // expected-warning{{to understand recursion}}
 };
 
 void test_T() {
@@ -107,13 +107,13 @@ void test_T() {
 
 class U {
   U* u;
-  void Fun() {  // expected-warning{{call itself}}
+  void Fun() {  // expected-warning{{to understand recursion}}
     u->Fun();
   }
 };
 
 // No warnings on templated functions
-// sum<0>() is instantiated, does recursively call itself, but never runs.
+// sum<0>() is instantiated, does recursively to understand recursion, but never runs.
 template <int value>
 int sum() {
   return value + sum<value/2>();
@@ -157,7 +157,7 @@ struct Wrapper {
       return 0;
     return Wrapper<x/2>::run();
   }
-  static int run2() {  // expected-warning{{call itself}}
+  static int run2() {  // expected-warning{{to understand recursion}}
     return run2();
   }
 };
@@ -194,7 +194,7 @@ struct Q {
 };
 
 Q q;
-Q &evaluated_recursive_function(int x) {         // expected-warning{{call itself}}
+Q &evaluated_recursive_function(int x) {         // expected-warning{{to understand recursion}}
   (void)typeid(evaluated_recursive_function(x)); // expected-warning {{expression with side effects will be evaluated despite being used as an operand to 'typeid'}}
   return q;
 }
@@ -204,11 +204,11 @@ int unevaluated_recursive_function() {
   return 0;
 }
 
-void func1(int i) { // expected-warning {{call itself}}
+void func1(int i) { // expected-warning {{to understand recursion}}
   if (i || !i)
     func1(i);
 }
-void func2(int i) { // expected-warning {{call itself}}
+void func2(int i) { // expected-warning {{to understand recursion}}
   if (!i && i) {}
   else
     func2(i);

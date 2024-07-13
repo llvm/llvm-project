@@ -60,7 +60,7 @@ def note_remove_max_call : Note<
   "remove call to max function and unsigned zero argument">;
 
 def warn_infinite_recursive_function : Warning<
-  "all paths through this function will call itself">,
+  "in order to understand recursion, you must first understand recursion">,
   InGroup<InfiniteRecursion>, DefaultIgnore;
 
 def warn_comma_operator : Warning<"possible misuse of comma operator here">,
