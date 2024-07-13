@@ -2013,15 +2013,16 @@ struct RISCVHwProbe {
   int64_t Key;
   uint64_t Value;
 };
-bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
+const StringMap<bool> sys::getHostCPUFeatures() {
   RISCVHwProbe Query[]{{/*RISCV_HWPROBE_KEY_BASE_BEHAVIOR=*/3, 0},
                        {/*RISCV_HWPROBE_KEY_IMA_EXT_0=*/4, 0}};
   int Ret = syscall(/*__NR_riscv_hwprobe=*/258, /*pairs=*/Query,
                     /*pair_count=*/std::size(Query), /*cpu_count=*/0,
                     /*cpus=*/0, /*flags=*/0);
   if (Ret != 0)
-    return false;
+    return {};
 
+  StringMap<bool> Features;
   uint64_t BaseMask = Query[0].Value;
   // Check whether RISCV_HWPROBE_BASE_BEHAVIOR_IMA is set.
   if (BaseMask & 1) {
@@ -2074,7 +2075,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   // TODO: set unaligned-scalar-mem if RISCV_HWPROBE_KEY_MISALIGNED_PERF returns
   // RISCV_HWPROBE_MISALIGNED_FAST.
 
-  return true;
+  return Features;
 }
 #else
 const StringMap<bool> sys::getHostCPUFeatures() { return {}; }
