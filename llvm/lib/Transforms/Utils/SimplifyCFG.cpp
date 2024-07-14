@@ -7575,13 +7575,8 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
   if (C->isNullValue() || isa<UndefValue>(C)) {
     // Only look at the first use we can handle, avoid hurting compile time with
     // long uselists
-    auto FindUse = llvm::find_if(I->users(), [&I](auto *U) {
+    auto FindUse = llvm::find_if(I->users(), [](auto *U) {
       auto *Use = cast<Instruction>(U);
-      // Bail out if Use is not in the same BB as I or Use == I or Use comes
-      // before I in the block. The latter two can be the case if Use is a
-      // PHI node.
-      if (Use->getParent() != I->getParent() || Use == I || Use->comesBefore(I))
-        return false;
       // Change this list when we want to add new instructions.
       switch (Use->getOpcode()) {
       default:
@@ -7600,6 +7595,11 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
     if (FindUse == I->user_end())
       return false;
     auto *Use = cast<Instruction>(*FindUse);
+    // Bail out if Use is not in the same BB as I or Use == I or Use comes
+    // before I in the block. The latter two can be the case if Use is a
+    // PHI node.
+    if (Use->getParent() != I->getParent() || Use == I || Use->comesBefore(I))
+      return false;
 
     // Now make sure that there are no instructions in between that can alter
     // control flow (eg. calls)
