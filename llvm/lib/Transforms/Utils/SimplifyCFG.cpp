@@ -7573,7 +7573,7 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
     return false;
 
   if (C->isNullValue() || isa<UndefValue>(C)) {
-    // Only look at the first use we can hanle, avoid hurting compile time with
+    // Only look at the first use we can handle, avoid hurting compile time with
     // long uselists
     auto FindUse = llvm::find_if(I->users(), [&I](auto *U) {
       auto *Use = cast<Instruction>(U);
