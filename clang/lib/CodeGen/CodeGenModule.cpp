@@ -6113,11 +6113,11 @@ void CodeGenModule::emitIFuncDefinition(GlobalDecl GD) {
 
   // The resolver might not be visited yet. Specify a dummy non-function type to
   // indicate IsIncompleteFunction. Either the type is ignored (if the resolver
-  // was emitted or will be eagerly emitted) or the whole function will replaced
-  // (if the resolver will be inserted into DeferredDeclsToEmit).
-  llvm::Constant *Resolver = GetOrCreateLLVMFunction(
-      IFA->getResolver(), llvm::Type::getVoidTy(getLLVMContext()), {},
-      /*ForVTable=*/false);
+  // was emitted) or the whole function will be replaced (if the resolver has
+  // not be emitted).
+  llvm::Constant *Resolver =
+      GetOrCreateLLVMFunction(IFA->getResolver(), VoidTy, {},
+                              /*ForVTable=*/false);
   llvm::Type *DeclTy = getTypes().ConvertTypeForMem(D->getType());
   llvm::GlobalIFunc *GIF =
       llvm::GlobalIFunc::create(DeclTy, 0, llvm::Function::ExternalLinkage,
