@@ -138,7 +138,7 @@ Deprecations and Removals
   provided as an undocumented extension. If you were using relational comparison on ``std::chrono::weekday``, compare
   the results of ``c_encoding()`` or ``iso_encoding()`` instead. The
   ``_LIBCPP_ENABLE_REMOVED_WEEKDAY_RELATIONAL_OPERATORS`` macro can be defined to temporarily re-enable this extension.
-  This macro will be honored for one released and ignored starting in LLVM 20.
+  This macro will be honored for one release and ignored starting in LLVM 20.
 
 
 Upcoming Deprecations and Removals
