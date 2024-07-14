@@ -13,6 +13,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -757,6 +758,23 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
     const ModuleList &target_images = target.GetImages();
     m_module_sp = target_images.FindModule(m_uuid);
 
+    std::unique_ptr<Progress> progress_up;
+    if (IsKernel()) {
+      StreamString prog_str;
+      // 'mach_kernel' is a fake name we make up to find kernels
+      // that were located by the local filesystem scan.
+      if (GetName() != "mach_kernel")
+        prog_str << GetName() << " ";
+      if (GetUUID().IsValid())
+        prog_str << GetUUID().GetAsString() << " ";
+      if (GetLoadAddress() != LLDB_INVALID_ADDRESS) {
+        prog_str << "at ";
+        prog_str.PutHex64(GetLoadAddress());
+      }
+      progress_up = std::make_unique<Progress>("Loading kernel",
+                                               prog_str.GetString().str());
+    }
+
     // Search for the kext on the local filesystem via the UUID
     if (!m_module_sp && m_uuid.IsValid()) {
       ModuleSpec module_spec;
@@ -1058,12 +1076,9 @@ void DynamicLoaderDarwinKernel::LoadKernelModuleIfNeeded() {
         }
       }
     }
-
-    if (m_kernel.GetLoadAddress() != LLDB_INVALID_ADDRESS) {
-      if (!m_kernel.LoadImageUsingMemoryModule(m_process)) {
+    if (m_kernel.GetLoadAddress() != LLDB_INVALID_ADDRESS)
+      if (!m_kernel.LoadImageUsingMemoryModule(m_process))
         m_kernel.LoadImageAtFileAddress(m_process);
-      }
-    }
 
     // The operating system plugin gets loaded and initialized in
     // LoadImageUsingMemoryModule when we discover the kernel dSYM.  For a core
@@ -1352,14 +1367,17 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
     for (uint32_t new_kext = 0; new_kext < num_of_new_kexts; new_kext++) {
       if (to_be_added[new_kext]) {
         KextImageInfo &image_info = kext_summaries[new_kext];
-        bool kext_successfully_added = true;
         if (load_kexts) {
+          std::string prog_str = kext_summaries[new_kext].GetName();
+          prog_str += " ";
+          prog_str += kext_summaries[new_kext].GetUUID().GetAsString();
+
+          Progress progress("Loading kext", prog_str);
           if (!image_info.LoadImageUsingMemoryModule(m_process)) {
             kexts_failed_to_load.push_back(std::pair<std::string, UUID>(
                 kext_summaries[new_kext].GetName(),
                 kext_summaries[new_kext].GetUUID()));
             image_info.LoadImageAtFileAddress(m_process);
-            kext_successfully_added = false;
           }
         }
 
@@ -1368,13 +1386,6 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
         if (image_info.GetModule() &&
             m_process->GetStopID() == image_info.GetProcessStopId())
           loaded_module_list.AppendIfNeeded(image_info.GetModule());
-
-        if (load_kexts) {
-          if (kext_successfully_added)
-            s.Printf(".");
-          else
-            s.Printf("-");
-        }
 
         if (log)
           kext_summaries[new_kext].PutToLog(log);
