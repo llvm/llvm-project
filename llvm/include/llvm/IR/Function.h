@@ -433,6 +433,9 @@ public:
   /// check if an attributes is in the list of attributes.
   bool hasParamAttribute(unsigned ArgNo, Attribute::AttrKind Kind) const;
 
+  /// Check if an attribute is in the list of attributes.
+  bool hasParamAttribute(unsigned ArgNo, StringRef Kind) const;
+
   /// gets the attribute from the list of attributes.
   Attribute getAttributeAtIndex(unsigned i, Attribute::AttrKind Kind) const;
 
