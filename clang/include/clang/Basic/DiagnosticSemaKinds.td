@@ -336,9 +336,12 @@ def warn_anyx86_excessive_regsave : Warning<
   " with attribute 'no_caller_saved_registers'"
   " or be compiled with '-mgeneral-regs-only'">,
   InGroup<DiagGroup<"excessive-regsave">>;
-def warn_arm_interrupt_calling_convention : Warning<
-   "call to function without interrupt attribute could clobber interruptee's VFP registers">,
-   InGroup<Extra>;
+def warn_arm_interrupt_vfp_clobber : Warning<
+  "interrupt service routine with vfp enabled may clobber the "
+  "interruptee's vfp state">,
+  InGroup<DiagGroup<"arm-interrupt-vfp-clobber">>;
+def err_arm_interrupt_called : Error<
+  "interrupt service routine cannot be called directly">;
 def warn_interrupt_attribute_invalid : Warning<
    "%select{MIPS|MSP430|RISC-V}0 'interrupt' attribute only applies to "
    "functions that have %select{no parameters|a 'void' return type}1">,
@@ -6013,7 +6016,7 @@ def note_deleted_assign_field : Note<
   "because field %2 is of %select{reference|const-qualified}4 type %3">;
 
 // These should be errors.
-def warn_undefined_internal : Warning<
+def warn_undefined_internal : ExtWarn<
   "%select{function|variable}0 %q1 has internal linkage but is not defined">,
   InGroup<DiagGroup<"undefined-internal">>;
 def err_undefined_internal_type : Error<

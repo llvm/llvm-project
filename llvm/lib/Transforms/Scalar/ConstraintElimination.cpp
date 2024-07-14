@@ -1087,6 +1087,8 @@ void State::addInfoFor(BasicBlock &BB) {
     }
     // Enqueue ssub_with_overflow for simplification.
     case Intrinsic::ssub_with_overflow:
+    case Intrinsic::ucmp:
+    case Intrinsic::scmp:
       WorkList.push_back(
           FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
       break;
@@ -1448,6 +1450,28 @@ static bool checkAndReplaceMinMax(MinMaxIntrinsic *MinMax, ConstraintInfo &Info,
   return false;
 }
 
+static bool checkAndReplaceCmp(CmpIntrinsic *I, ConstraintInfo &Info,
+                               SmallVectorImpl<Instruction *> &ToRemove) {
+  Value *LHS = I->getOperand(0);
+  Value *RHS = I->getOperand(1);
+  if (checkCondition(I->getGTPredicate(), LHS, RHS, I, Info).value_or(false)) {
+    I->replaceAllUsesWith(ConstantInt::get(I->getType(), 1));
+    ToRemove.push_back(I);
+    return true;
+  }
+  if (checkCondition(I->getLTPredicate(), LHS, RHS, I, Info).value_or(false)) {
+    I->replaceAllUsesWith(ConstantInt::getSigned(I->getType(), -1));
+    ToRemove.push_back(I);
+    return true;
+  }
+  if (checkCondition(ICmpInst::ICMP_EQ, LHS, RHS, I, Info)) {
+    I->replaceAllUsesWith(ConstantInt::get(I->getType(), 0));
+    ToRemove.push_back(I);
+    return true;
+  }
+  return false;
+}
+
 static void
 removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
                      Module *ReproducerModule,
@@ -1750,6 +1774,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         Changed |= Simplified;
       } else if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(Inst)) {
         Changed |= checkAndReplaceMinMax(MinMax, Info, ToRemove);
+      } else if (auto *CmpIntr = dyn_cast<CmpIntrinsic>(Inst)) {
+        Changed |= checkAndReplaceCmp(CmpIntr, Info, ToRemove);
       }
       continue;
     }

@@ -167,13 +167,16 @@ protected:
   bool HasAtomicFlatPkAdd16Insts = false;
   bool HasAtomicFaddRtnInsts = false;
   bool HasAtomicFaddNoRtnInsts = false;
+  bool HasMemoryAtomicFaddF32DenormalSupport = false;
   bool HasAtomicBufferGlobalPkAddF16NoRtnInsts = false;
   bool HasAtomicBufferGlobalPkAddF16Insts = false;
   bool HasAtomicCSubNoRtnInsts = false;
   bool HasAtomicGlobalPkAddBF16Inst = false;
   bool HasAtomicBufferPkAddBF16Inst = false;
   bool HasFlatAtomicFaddF32Inst = false;
+  bool HasFlatBufferGlobalAtomicFaddF64Inst = false;
   bool HasDefaultComponentZero = false;
+  bool HasAgentScopeFineGrainedRemoteMemoryAtomics = false;
   bool HasDefaultComponentBroadcast = false;
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
   /// which is one greater than the maximum argument to S_CLAUSE. A value of 0
@@ -658,9 +661,6 @@ public:
     return GFX10_BEncoding;
   }
 
-  // BUFFER/FLAT/GLOBAL_ATOMIC_ADD/MIN/MAX_F64
-  bool hasBufferFlatGlobalAtomicsF64() const { return hasGFX90AInsts(); }
-
   bool hasExportInsts() const {
     return !hasGFX940Insts();
   }
@@ -870,6 +870,25 @@ public:
   }
 
   bool hasFlatAtomicFaddF32Inst() const { return HasFlatAtomicFaddF32Inst; }
+
+  /// \return true if the target has flat, global, and buffer atomic fadd for
+  /// double.
+  bool hasFlatBufferGlobalAtomicFaddF64Inst() const {
+    return HasFlatBufferGlobalAtomicFaddF64Inst;
+  }
+
+  /// \return true if the target's flat, global, and buffer atomic fadd for
+  /// float supports denormal handling.
+  bool hasMemoryAtomicFaddF32DenormalSupport() const {
+    return HasMemoryAtomicFaddF32DenormalSupport;
+  }
+
+  /// \return true if atomic operations targeting fine-grained memory work
+  /// correctly at device scope, in allocations in host or peer PCIe device
+  /// memory.
+  bool supportsAgentScopeFineGrainedRemoteMemoryAtomics() const {
+    return HasAgentScopeFineGrainedRemoteMemoryAtomics;
+  }
 
   bool hasDefaultComponentZero() const { return HasDefaultComponentZero; }
 

@@ -793,6 +793,12 @@ template<class T> struct zoned_traits;                                          
 template<class Duration, class TimeZonePtr = const time_zone*>                   // C++20
 class zoned_time;
 
+using zoned_seconds = zoned_time<seconds>;                                       // C++20
+
+template<class Duration1, class Duration2, class TimeZonePtr>                    // C++20
+  bool operator==(const zoned_time<Duration1, TimeZonePtr>& x,
+                  const zoned_time<Duration2, TimeZonePtr>& y);
+
 // [time.zone.leap], leap second support
 class leap_second {                                                              // C++20
 public:

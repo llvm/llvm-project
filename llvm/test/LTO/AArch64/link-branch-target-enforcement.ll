@@ -16,7 +16,7 @@ target triple = "aarch64-unknown-linux-gnu"
 
 declare i32 @foo();
 
-define i32 @main() {
+define i32 @main() "sign-return-address"="non-leaf" "sign-return-address-key"="a_key" {
 entry:
   %add = call i32 @foo()
   ret i32 %add
