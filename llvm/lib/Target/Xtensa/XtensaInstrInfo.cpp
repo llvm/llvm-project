@@ -169,7 +169,7 @@ void XtensaInstrInfo::loadImmediate(MachineBasicBlock &MBB,
     BuildMI(MBB, MBBI, DL, get(Xtensa::MOVI), *Reg).addImm(Low);
     BuildMI(MBB, MBBI, DL, get(Xtensa::ADDMI), *Reg).addReg(*Reg).addImm(High);
   } else if (Value >= -4294967296LL && Value <= 4294967295LL) {
-    // 32 bit arbirary constant
+    // 32 bit arbitrary constant
     MachineConstantPool *MCP = MBB.getParent()->getConstantPool();
     uint64_t UVal = ((uint64_t)Value) & 0xFFFFFFFFLL;
     const Constant *CVal = ConstantInt::get(
