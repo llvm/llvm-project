@@ -18,10 +18,9 @@ This test serves two purposes:
 
 The list of warnings below should NEVER grow.  It should gradually shrink to 0.
 
-CHECK: Warnings without flags (65):
+CHECK: Warnings without flags (64):
 
 CHECK-NEXT:   ext_expected_semi_decl_list
-CHECK-NEXT:   ext_missing_dependent_template_keyword
 CHECK-NEXT:   ext_missing_whitespace_after_macro_name
 CHECK-NEXT:   ext_new_paren_array_nonconst
 CHECK-NEXT:   ext_plain_complex
