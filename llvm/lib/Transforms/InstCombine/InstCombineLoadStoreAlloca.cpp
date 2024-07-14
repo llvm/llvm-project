@@ -255,7 +255,8 @@ public:
   void replacePointer(Value *V);
 
 private:
-  bool collectUsersRecursive(Instruction &I);
+  bool collectUsersRecursive(Instruction &I,
+                             const AddrSpaceCastInst *ASC = nullptr);
   void replace(Instruction *I);
   Value *getReplacement(Value *I);
   bool isAvailable(Instruction *I) const {
@@ -270,8 +271,8 @@ private:
     unsigned ToAS = ASC->getDestAddressSpace();
     return (FromAS == ToAS) || IC.isValidAddrSpaceCast(FromAS, ToAS);
   }
-  bool foundASC(const Value *Op, const SelectInst *SI) const;
-  bool hasConflictingAS(const SelectInst *SI) const;
+  bool hasConflictingAS(const SelectInst *SI,
+                        const AddrSpaceCastInst &ASC) const;
 
   SmallPtrSet<Instruction *, 32> ValuesToRevisit;
   SmallSetVector<Instruction *, 4> Worklist;
@@ -279,46 +280,16 @@ private:
   InstCombinerImpl &IC;
   Instruction &Root;
   unsigned FromAS;
+  using SelectAsc = SmallMapVector<SelectInst *, unsigned, 2>;
+  SelectAsc NumValidAscFound;
 };
 } // end anonymous namespace
 
-/// Return true iff addrspacecast is found whose src addrspace
-/// is that of the root and whose dst addrspace is that of
-/// the select.
-bool PointerReplacer::foundASC(const Value *Op, const SelectInst *SI) const {
-  const Instruction *I;
-  while ((I = dyn_cast<Instruction>(Op)) != &Root) {
-    if (auto *ASC = dyn_cast<AddrSpaceCastInst>(I)) {
-      unsigned SelectOpSrcAS = ASC->getSrcAddressSpace();
-      unsigned RootAS = Root.getType()->getPointerAddressSpace();
-      unsigned SelectOpDstAS = ASC->getDestAddressSpace();
-      unsigned SelectDstAS = SI->getType()->getPointerAddressSpace();
-      return SelectOpSrcAS == RootAS && SelectOpDstAS == SelectDstAS;
-    }
-    if (I && isa<Instruction>(I->getOperand(0)))
-      Op = I->getOperand(0);
-    else if (I)
-      Op = I->getOperand(1);
-    else
-      break;
-  }
-  return false;
-}
-
-/// Return true iff valid ASC is found on one
-/// path from the select to the root.
-bool PointerReplacer::hasConflictingAS(const SelectInst *SI) const {
-  auto *TI = SI->getTrueValue();
-  auto *FI = SI->getFalseValue();
-
-  bool FoundTrueASC = foundASC(TI, SI);
-  bool FoundFalseASC = foundASC(FI, SI);
-
-  bool HasConflictingAS = FoundFalseASC ^ FoundTrueASC;
-  LLVM_DEBUG(dbgs() << "HasConflictingAS: " << HasConflictingAS << "{ False: "
-                    << FoundFalseASC << ", True: " << FoundTrueASC << " }: "
-                    << *SI << '\n');
-  return HasConflictingAS;
+bool PointerReplacer::hasConflictingAS(const SelectInst *SI,
+                                       const AddrSpaceCastInst &ASC) const {
+  unsigned SelectOpDstAS = ASC.getDestAddressSpace();
+  unsigned SelectDstAS = SI->getType()->getPointerAddressSpace();
+  return SelectOpDstAS != SelectDstAS;
 }
 
 bool PointerReplacer::collectUsers() {
@@ -334,9 +305,21 @@ bool PointerReplacer::collectUsers() {
   return true;
 }
 
-bool PointerReplacer::collectUsersRecursive(Instruction &I) {
+bool PointerReplacer::collectUsersRecursive(Instruction &I,
+                                            const AddrSpaceCastInst *ASC) {
   for (auto *U : I.users()) {
     auto *Inst = cast<Instruction>(&*U);
+
+    if (ASC != nullptr)
+      if (const auto *SI = dyn_cast<SelectInst>(Inst))
+        if (!hasConflictingAS(SI, *ASC)) {
+          SelectAsc::iterator it;
+          if ((it = NumValidAscFound.find(SI)) == NumValidAscFound.end())
+            NumValidAscFound.insert(std::make_pair(SI, 1));
+          else
+            ++it->second;
+        }
+
     if (auto *Load = dyn_cast<LoadInst>(Inst)) {
       if (Load->isVolatile())
         return false;
@@ -358,13 +341,11 @@ bool PointerReplacer::collectUsersRecursive(Instruction &I) {
       }
 
       Worklist.insert(PHI);
-      if (!collectUsersRecursive(*PHI))
+      if (!collectUsersRecursive(*PHI, ASC))
         return false;
     } else if (auto *SI = dyn_cast<SelectInst>(Inst)) {
       if (!isa<Instruction>(SI->getTrueValue()) ||
           !isa<Instruction>(SI->getFalseValue()))
-        return false;
-      if (hasConflictingAS(SI))
         return false;
 
       if (!isAvailable(cast<Instruction>(SI->getTrueValue())) ||
@@ -372,20 +353,40 @@ bool PointerReplacer::collectUsersRecursive(Instruction &I) {
         ValuesToRevisit.insert(Inst);
         continue;
       }
+
+      // If only one path has addrspacecast, then transformation is illegal.
+      SelectAsc::iterator it;
+      if ((it = NumValidAscFound.find(cast<SelectInst>(Inst))) !=
+          NumValidAscFound.end()) {
+        assert(it->second <= 2 &&
+               "select has only 2 operands, yet more are found");
+        if (it->second == 1)
+          return false;
+      }
+
       Worklist.insert(SI);
-      if (!collectUsersRecursive(*SI))
+      if (!collectUsersRecursive(*SI, ASC))
         return false;
     } else if (isa<GetElementPtrInst>(Inst)) {
       Worklist.insert(Inst);
-      if (!collectUsersRecursive(*Inst))
+      if (!collectUsersRecursive(*Inst, ASC))
         return false;
     } else if (auto *MI = dyn_cast<MemTransferInst>(Inst)) {
       if (MI->isVolatile())
         return false;
       Worklist.insert(Inst);
     } else if (isEqualOrValidAddrSpaceCast(Inst, FromAS)) {
+      const auto *NextASC = cast<AddrSpaceCastInst>(Inst);
+      if (ASC == nullptr) {
+        if (Root.getType()->getPointerAddressSpace() !=
+            NextASC->getSrcAddressSpace())
+          return false;
+      } else {
+        if (ASC->getDestAddressSpace() != NextASC->getSrcAddressSpace())
+          return false;
+      }
       Worklist.insert(Inst);
-      if (!collectUsersRecursive(*Inst))
+      if (!collectUsersRecursive(*Inst, NextASC))
         return false;
     } else if (Inst->isLifetimeStartOrEnd()) {
       continue;
