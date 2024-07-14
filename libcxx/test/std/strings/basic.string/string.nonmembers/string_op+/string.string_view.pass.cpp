@@ -45,8 +45,6 @@ template <typename CharT, class TraitsT = std::char_traits<CharT>>
 class ConvertibleToStringView {
 public:
   constexpr explicit ConvertibleToStringView(const CharT* cs) : cs_{cs} {}
-  // template <typename AllocT>
-  // constexpr explicit ConvertibleToStringView(std::basic_string<CharT, TraitsT, AllocT> str) : cs_{str.c_str()} {}
 
   constexpr operator std::basic_string_view<CharT, TraitsT>() { return std::basic_string_view<CharT, TraitsT>(cs_); }
   constexpr operator std::basic_string_view<CharT, TraitsT>() const {
@@ -57,37 +55,13 @@ private:
   const CharT* cs_;
 };
 
-// static_assert(!std::constructible_from<std::basic_string_view<char>, ConvertibleToStringView<char>>);
-// static_assert(!std::convertible_to<ConvertibleToStringView<char>, std::basic_string_view<char>>);
-
 static_assert(std::constructible_from<std::basic_string_view<char>, const ConvertibleToStringView<char>>);
 static_assert(std::convertible_to<const ConvertibleToStringView<char>, std::basic_string_view<char>>);
-
-// #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-// static_assert(!std::constructible_from<std::basic_string_view<wchar_t>, ConvertibleToStringView<wchar_t>>);
-// static_assert(!std::convertible_to<ConvertibleToStringView<wchar_t>, std::basic_string_view<wchar_t>>);
-
-// static_assert(std::constructible_from<std::basic_string_view<wchar_t>, const ConvertibleToStringView<wchar_t>>);
-// static_assert(std::convertible_to<const ConvertibleToStringView<wchar_t>, std::basic_string_view<wchar_t>>);
-// #endif
 
 static_assert(std::constructible_from<std::basic_string_view<char>, ConvertibleToStringView<char>>);
 static_assert(std::convertible_to<ConvertibleToStringView<char>, std::basic_string_view<char>>);
 
-// static_assert(!std::constructible_from<std::basic_string_view<char>, const ConvertibleToStringView<char>>);
-// static_assert(!std::convertible_to<const ConvertibleToStringView<char>, std::basic_string_view<char>>);
-
-// #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-// static_assert(std::constructible_from<std::basic_string_view<wchar_t>, ConvertibleToStringView<wchar_t>>);
-// static_assert(std::convertible_to<ConvertibleToStringView<wchar_t>, std::basic_string_view<wchar_t>>);
-
-// static_assert(!std::constructible_from<std::basic_string_view<wchar_t>, const ConvertibleToStringView<wchar_t>>);
-// static_assert(!std::convertible_to<const ConvertibleToStringView<wchar_t>, std::basic_string_view<wchar_t>>);
-// #endif
-
 #define CS(S) MAKE_CSTRING(CharT, S)
-// #define ST(S, a) std::basic_string<CharT, TraitsT, AllocT>(MAKE_CSTRING(CharT, S), MKSTR_LEN(CharT, S), a)
-// #define SV(S) std::basic_string_view<CharT, TraitsT>(MAKE_CSTRING(CharT, S), MKSTR_LEN(CharT, S))
 
 template <template <typename, typename> typename StringViewT, typename CharT, typename TraitsT, typename AllocT>
 constexpr void test(const CharT* x, const CharT* y, const CharT* expected) {
@@ -151,14 +125,6 @@ constexpr void test(const CharT* x, const CharT* y, const CharT* expected) {
     if constexpr (std::same_as<StringViewT<CharT, TraitsT>, std::basic_string_view<CharT, TraitsT>>) {
       std::basic_string<CharT, TraitsT, AllocT> st_{x, allocator};
       StringViewT<CharT, TraitsT> sv{st_};
-      // StringViewT<CharT, TraitsT> sv = [&] {
-      //   if constexpr (std::same_as<StringViewT<CharT, TraitsT>, std::basic_string_view<CharT, TraitsT>>) {
-      //     std::basic_string<CharT, TraitsT, AllocT> st{x, allocator};
-      //     return std::basic_string_view<CharT, TraitsT>{st};
-      //   } else {
-      //     return StringViewT<CharT, TraitsT>{x};
-      //   }
-      // }();
       std::basic_string<CharT, TraitsT, AllocT> st{y, allocator};
 
       std::same_as<std::basic_string<CharT, TraitsT, AllocT>> decltype(auto) result = sv + std::move(st);
