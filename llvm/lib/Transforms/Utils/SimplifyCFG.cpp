@@ -7587,16 +7587,13 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
       default:
         return false;
       case Instruction::GetElementPtr:
-        return true;
       case Instruction::Ret:
-        return true;
       case Instruction::BitCast:
-        return true;
       case Instruction::Load:
-        return true;
       case Instruction::Store:
-        return true;
       case Instruction::Call:
+      case Instruction::CallBr:
+      case Instruction::Invoke:
         return true;
       }
     });
