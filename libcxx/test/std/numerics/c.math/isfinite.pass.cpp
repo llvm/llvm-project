@@ -82,11 +82,22 @@ struct ConvertibleDouble {
     }
 };
 
+struct ConvertibleLongDouble {
+    int value;
+
+    ConvertibleLongDouble(int v) : value(v) {}
+
+    operator long double() const {
+        return static_cast<long double>(value);
+    }
+};
+
 int main(int, char**) {
   types::for_each(types::floating_point_types(), TestFloat());
   types::for_each(types::integral_types(), TestInt());
   assert(std::isfinite(ConvertibleFloat(0)));
   assert(std::isfinite(ConvertibleDouble(0)));
+  assert(std::isfinite(ConvertibleLongDouble(0)));
 
   return 0;
 }
