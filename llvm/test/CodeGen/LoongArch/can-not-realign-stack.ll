@@ -16,7 +16,6 @@ define dso_local noundef signext i32 @main() nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi.d $sp, $sp, -272
 ; CHECK-NEXT:    st.d $ra, $sp, 264 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 256 # 8-byte Folded Spill
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI0_0)
 ; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI0_0)
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
@@ -33,25 +32,23 @@ define dso_local noundef signext i32 @main() nounwind {
 ; CHECK-NEXT:    addi.d $a0, $a0, %pc_lo12(.LCPI0_3)
 ; CHECK-NEXT:    xvld $xr3, $a0, 0
 ; CHECK-NEXT:    xvst $xr3, $sp, 0 # 32-byte Folded Spill
-; CHECK-NEXT:    xvst $xr0, $sp, 128
-; CHECK-NEXT:    xvst $xr1, $sp, 160
-; CHECK-NEXT:    xvst $xr2, $sp, 192
-; CHECK-NEXT:    xvst $xr3, $sp, 224
-; CHECK-NEXT:    addi.d $fp, $sp, 128
-; CHECK-NEXT:    move $a0, $fp
+; CHECK-NEXT:    xvst $xr0, $sp, 136
+; CHECK-NEXT:    xvst $xr1, $sp, 168
+; CHECK-NEXT:    xvst $xr2, $sp, 200
+; CHECK-NEXT:    xvst $xr3, $sp, 232
+; CHECK-NEXT:    addi.d $a0, $sp, 136
 ; CHECK-NEXT:    bl %plt(foo)
 ; CHECK-NEXT:    xvld $xr0, $sp, 96 # 32-byte Folded Reload
-; CHECK-NEXT:    xvst $xr0, $sp, 128
+; CHECK-NEXT:    xvst $xr0, $sp, 136
 ; CHECK-NEXT:    xvld $xr0, $sp, 64 # 32-byte Folded Reload
-; CHECK-NEXT:    xvst $xr0, $sp, 160
+; CHECK-NEXT:    xvst $xr0, $sp, 168
 ; CHECK-NEXT:    xvld $xr0, $sp, 32 # 32-byte Folded Reload
-; CHECK-NEXT:    xvst $xr0, $sp, 192
+; CHECK-NEXT:    xvst $xr0, $sp, 200
 ; CHECK-NEXT:    xvld $xr0, $sp, 0 # 32-byte Folded Reload
-; CHECK-NEXT:    xvst $xr0, $sp, 224
-; CHECK-NEXT:    move $a0, $fp
+; CHECK-NEXT:    xvst $xr0, $sp, 232
+; CHECK-NEXT:    addi.d $a0, $sp, 136
 ; CHECK-NEXT:    bl %plt(bar)
 ; CHECK-NEXT:    move $a0, $zero
-; CHECK-NEXT:    ld.d $fp, $sp, 256 # 8-byte Folded Reload
 ; CHECK-NEXT:    ld.d $ra, $sp, 264 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 272
 ; CHECK-NEXT:    ret

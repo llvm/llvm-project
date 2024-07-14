@@ -35,8 +35,33 @@ private:
                                              mlir::LLVM::DIFileAttr fileAttr,
                                              mlir::LLVM::DIScopeAttr scope,
                                              mlir::Location loc);
+
+  /// The 'genAllocated' is true when we want to generate 'allocated' field
+  /// in the DICompositeType. It is needed for the allocatable arrays.
+  /// Similarly, 'genAssociated' is used with 'pointer' type to generate
+  /// 'associated' field.
+  mlir::LLVM::DITypeAttr
+  convertBoxedSequenceType(fir::SequenceType seqTy,
+                           mlir::LLVM::DIFileAttr fileAttr,
+                           mlir::LLVM::DIScopeAttr scope, mlir::Location loc,
+                           bool genAllocated, bool genAssociated);
+  mlir::LLVM::DITypeAttr convertCharacterType(fir::CharacterType charTy,
+                                              mlir::LLVM::DIFileAttr fileAttr,
+                                              mlir::LLVM::DIScopeAttr scope,
+                                              mlir::Location loc,
+                                              bool hasDescriptor);
+
+  mlir::LLVM::DITypeAttr
+  convertPointerLikeType(mlir::Type elTy, mlir::LLVM::DIFileAttr fileAttr,
+                         mlir::LLVM::DIScopeAttr scope, mlir::Location loc,
+                         bool genAllocated, bool genAssociated);
+
   mlir::ModuleOp module;
   KindMapping kindMapping;
+  std::uint64_t dimsSize;
+  std::uint64_t dimsOffset;
+  std::uint64_t ptrSize;
+  std::uint64_t lenOffset;
 };
 
 } // namespace fir

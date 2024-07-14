@@ -498,6 +498,8 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     Option<"bufferizeFunctionBoundaries", "bufferize-function-boundaries",
            "bool", /*default=*/"0",
            "Bufferize function boundaries (experimental).">,
+    Option<"checkParallelRegions", "check-parallel-regions", "bool",
+           /*default=*/"true", "Account for parallel regions in RaW analysis.">,
     Option<"copyBeforeWrite", "copy-before-write", "bool", /*default=*/"false",
            "Skip the analysis. Make a buffer copy on every write.">,
     ListOption<"dialectFilter", "dialect-filter", "std::string",

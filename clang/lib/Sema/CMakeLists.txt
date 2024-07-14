@@ -15,6 +15,7 @@ clang_tablegen(OpenCLBuiltins.inc -gen-clang-opencl-builtins
 
 add_clang_library(clangSema
   AnalysisBasedWarnings.cpp
+  CheckExprLifetime.cpp
   CodeCompleteConsumer.cpp
   DeclSpec.cpp
   DelayedDiagnostic.cpp

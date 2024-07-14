@@ -163,8 +163,8 @@ struct __invokable_r {
   using _Result = decltype(__try_call<_Fp, _Args...>(0));
 
   using type              = __conditional_t<_IsNotSame<_Result, __nat>::value,
-                               __conditional_t<is_void<_Ret>::value, true_type, __is_core_convertible<_Result, _Ret> >,
-                               false_type>;
+                                            __conditional_t<is_void<_Ret>::value, true_type, __is_core_convertible<_Result, _Ret> >,
+                                            false_type>;
   static const bool value = type::value;
 };
 template <class _Fp, class... _Args>

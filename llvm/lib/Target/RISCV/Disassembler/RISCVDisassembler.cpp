@@ -646,6 +646,9 @@ DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
   TRY_TO_DECODE_FEATURE(
       RISCV::FeatureStdExtZcmp, DecoderTableRVZcmp16,
       "Zcmp table (16-bit Push/Pop & Double Move Instructions)");
+  TRY_TO_DECODE_AND_ADD_SP(STI.hasFeature(RISCV::FeatureVendorXwchc),
+                           DecoderTableXwchc16,
+                           "WCH QingKe XW custom opcode table");
   TRY_TO_DECODE_AND_ADD_SP(true, DecoderTable16,
                            "RISCV_C table (16-bit Instruction)");
 

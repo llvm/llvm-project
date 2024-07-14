@@ -19,7 +19,8 @@ void f1(void) {
 }
 
 void f2(void) {
-  int a[10], b[10], c;
+  int a[10], b[10], c; // expected-note{{Array at the left-hand side of subtraction}} \
+                       // expected-note2{{Array at the right-hand side of subtraction}}
   int *p = &a[2];
   int *q = &a[8];
   int d = q - p; // no-warning (pointers into the same array)
@@ -41,7 +42,8 @@ void f2(void) {
 }
 
 void f3(void) {
-  int a[3][4];
+  int a[3][4]; // expected-note{{Array at the left-hand side of subtraction}} \
+               // expected-note2{{Array at the right-hand side of subtraction}}
   int d;
 
   d = &(a[2]) - &(a[1]);
@@ -74,8 +76,8 @@ void f4(void) {
 typedef struct {
   int a;
   int b;
-  int c[10];
-  int d[10];
+  int c[10]; // expected-note2{{Array at the right-hand side of subtraction}}
+  int d[10]; // expected-note2{{Array at the left-hand side of subtraction}}
 } S;
 
 void f5(void) {
@@ -100,8 +102,8 @@ void f6(void) {
   char *a1 = (char *)&l;
   int d = a1[3] - l;
 
-  long long la1[3];
-  long long la2[3];
+  long long la1[3]; // expected-note{{Array at the right-hand side of subtraction}}
+  long long la2[3]; // expected-note{{Array at the left-hand side of subtraction}}
   char *pla1 = (char *)la1;
   char *pla2 = (char *)la2;
   d = pla1[1] - pla1[0];

@@ -662,15 +662,15 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   tan(f);        tanf(f);       tanl(f);
 
-// NO__ERRNO: declare double @tan(double noundef) [[READNONE]]
-// NO__ERRNO: declare float @tanf(float noundef) [[READNONE]]
-// NO__ERRNO: declare x86_fp80 @tanl(x86_fp80 noundef) [[READNONE]]
+// NO__ERRNO: declare double @llvm.tan.f64(double) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare float @llvm.tan.f32(float) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare x86_fp80 @llvm.tan.f80(x86_fp80) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare double @tan(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @tanf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @tanl(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @tan(double noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare float @tanf(float noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @tanl(x86_fp80 noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare double @llvm.experimental.constrained.tan.f64(
+// HAS_MAYTRAP: declare float @llvm.experimental.constrained.tan.f32(
+// HAS_MAYTRAP: declare x86_fp80 @llvm.experimental.constrained.tan.f80(
 
   tanh(f);       tanhf(f);      tanhl(f);
 

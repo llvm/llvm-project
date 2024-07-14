@@ -14,9 +14,9 @@ declare void @will_return(i32) #1
 define void @test(i32 %a) !dbg !6 {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[B:%.*]] = add i32 [[A:%.*]], 1
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[B]]
+; CHECK-NEXT:    #dbg_value(i32 [[B]]
 ; CHECK-NEXT:    call void @may_not_return(i32 [[B]])
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i32 [[B]], {{.*}}DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value)
+; CHECK-NEXT:    #dbg_value(i32 [[B]], {{.*}}DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value)
 ; CHECK-NEXT:    ret void
 ;
   %b = add i32 %a, 1, !dbg !12

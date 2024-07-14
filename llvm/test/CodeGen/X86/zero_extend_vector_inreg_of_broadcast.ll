@@ -1638,10 +1638,9 @@ define void @vec256_i16_widen_to_i32_factor2_broadcast_to_v8i32_factor8(ptr %in.
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; AVX512BW-NEXT:    vpaddb (%rsi), %zmm0, %zmm0
-; AVX512BW-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512BW-NEXT:    vpmovsxbw {{.*#+}} ymm2 = [0,17,0,19,0,21,0,23,0,25,0,27,0,29,0,31]
-; AVX512BW-NEXT:    vpermi2w %ymm1, %ymm0, %ymm2
-; AVX512BW-NEXT:    vpaddb (%rdx), %zmm2, %zmm0
+; AVX512BW-NEXT:    vpmovsxbw {{.*#+}} ymm1 = [0,17,0,19,0,21,0,23,0,25,0,27,0,29,0,31]
+; AVX512BW-NEXT:    vpermw %zmm0, %zmm1, %zmm0
+; AVX512BW-NEXT:    vpaddb (%rdx), %zmm0, %zmm0
 ; AVX512BW-NEXT:    vmovdqa64 %zmm0, (%rcx)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq

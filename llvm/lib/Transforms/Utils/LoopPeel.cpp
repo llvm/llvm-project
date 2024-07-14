@@ -298,7 +298,7 @@ static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
   BasicBlock *Header = L.getHeader();
   BasicBlock *Latch = L.getLoopLatch();
   SmallPtrSet<Value *, 8> LoadUsers;
-  const DataLayout &DL = L.getHeader()->getModule()->getDataLayout();
+  const DataLayout &DL = L.getHeader()->getDataLayout();
   for (BasicBlock *BB : L.blocks()) {
     for (Instruction &I : *BB) {
       if (I.mayWriteToMemory())
@@ -680,7 +680,7 @@ struct WeightInfo {
 /// To avoid dealing with division rounding we can just multiple both part
 /// of weights to E and use weight as (F - I * E, E).
 static void updateBranchWeights(Instruction *Term, WeightInfo &Info) {
-  setBranchWeights(*Term, Info.Weights);
+  setBranchWeights(*Term, Info.Weights, /*IsExpected=*/false);
   for (auto [Idx, SubWeight] : enumerate(Info.SubWeights))
     if (SubWeight != 0)
       // Don't set the probability of taking the edge from latch to loop header
@@ -1073,7 +1073,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   }
 
   for (const auto &[Term, Info] : Weights) {
-    setBranchWeights(*Term, Info.Weights);
+    setBranchWeights(*Term, Info.Weights, /*IsExpected=*/false);
   }
 
   // Update Metadata for count of peeled off iterations.

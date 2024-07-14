@@ -78,7 +78,7 @@
 "`P1236R1 <https://wg21.link/P1236R1>`__","CWG","Alternative Wording for P0907R4 Signed Integers are Two's Complement","San Diego","* *",""
 "`P1248R1 <https://wg21.link/P1248R1>`__","LWG","Remove CommonReference requirement from StrictWeakOrdering (a.k.a Fixing Relations)","San Diego","|Complete|","13.0"
 "`P1285R0 <https://wg21.link/P1285R0>`__","LWG","Improving Completeness Requirements for Type Traits","San Diego","* *",""
-"`P1353R0 <https://wg21.link/P1353R0>`__","CWG","Missing feature test macros","San Diego","* *",""
+"`P1353R0 <https://wg21.link/P1353R0>`__","CWG","Missing feature test macros","San Diego","|In Progress|",""
 "","","","","","",""
 "`P0339R6 <https://wg21.link/P0339R6>`__","LWG","polymorphic_allocator<> as a vocabulary type","Kona","|Complete|","16.0"
 "`P0340R3 <https://wg21.link/P0340R3>`__","LWG","Making std::underlying_type SFINAE-friendly","Kona","|Complete|","9.0"

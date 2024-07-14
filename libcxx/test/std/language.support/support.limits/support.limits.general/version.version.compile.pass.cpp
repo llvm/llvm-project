@@ -65,6 +65,7 @@
     __cpp_lib_constexpr_iterator                            201811L [C++20]
     __cpp_lib_constexpr_memory                              201811L [C++20]
                                                             202202L [C++23]
+    __cpp_lib_constexpr_new                                 202406L [C++26]
     __cpp_lib_constexpr_numeric                             201911L [C++20]
     __cpp_lib_constexpr_string                              201907L [C++20]
     __cpp_lib_constexpr_string_view                         201811L [C++20]
@@ -87,7 +88,7 @@
                                                             201902L [C++20]
     __cpp_lib_expected                                      202211L [C++23]
     __cpp_lib_filesystem                                    201703L [C++17]
-    __cpp_lib_format                                        202106L [C++20]
+    __cpp_lib_format                                        202110L [C++20]
     __cpp_lib_format_path                                   202403L [C++26]
     __cpp_lib_format_ranges                                 202207L [C++23]
     __cpp_lib_format_uchar                                  202311L [C++20]
@@ -112,6 +113,7 @@
     __cpp_lib_hazard_pointer                                202306L [C++26]
     __cpp_lib_hypot                                         201603L [C++17]
     __cpp_lib_incomplete_container_elements                 201505L [C++17]
+    __cpp_lib_inplace_vector                                202406L [C++26]
     __cpp_lib_int_pow2                                      202002L [C++20]
     __cpp_lib_integer_comparison_functions                  202002L [C++20]
     __cpp_lib_integer_sequence                              201304L [C++14]
@@ -130,6 +132,7 @@
     __cpp_lib_is_pointer_interconvertible                   201907L [C++20]
     __cpp_lib_is_scoped_enum                                202011L [C++23]
     __cpp_lib_is_swappable                                  201603L [C++17]
+    __cpp_lib_is_virtual_base_of                            202406L [C++26]
     __cpp_lib_is_within_lifetime                            202306L [C++26]
     __cpp_lib_jthread                                       201911L [C++20]
     __cpp_lib_latch                                         201907L [C++20]
@@ -145,6 +148,7 @@
     __cpp_lib_math_special_functions                        201603L [C++17]
     __cpp_lib_mdspan                                        202207L [C++23]
     __cpp_lib_memory_resource                               201603L [C++17]
+    __cpp_lib_modules                                       202207L [C++23]
     __cpp_lib_move_iterator_concept                         202207L [C++20]
     __cpp_lib_move_only_function                            202110L [C++23]
     __cpp_lib_node_extract                                  201606L [C++17]
@@ -153,9 +157,11 @@
     __cpp_lib_null_iterators                                201304L [C++14]
     __cpp_lib_optional                                      201606L [C++17]
                                                             202110L [C++23]
+    __cpp_lib_optional_range_support                        202406L [C++26]
     __cpp_lib_out_ptr                                       202106L [C++23]
                                                             202311L [C++26]
     __cpp_lib_parallel_algorithm                            201603L [C++17]
+    __cpp_lib_philox_engine                                 202406L [C++26]
     __cpp_lib_polymorphic_allocator                         201902L [C++20]
     __cpp_lib_print                                         202207L [C++23]
     __cpp_lib_quoted_string_io                              201304L [C++14]
@@ -185,6 +191,7 @@
     __cpp_lib_saturation_arithmetic                         202311L [C++26]
     __cpp_lib_scoped_lock                                   201703L [C++17]
     __cpp_lib_semaphore                                     201907L [C++20]
+    __cpp_lib_senders                                       202406L [C++26]
     __cpp_lib_shared_mutex                                  201505L [C++17]
     __cpp_lib_shared_ptr_arrays                             201611L [C++17]
                                                             201707L [C++20]
@@ -211,7 +218,7 @@
     __cpp_lib_submdspan                                     202306L [C++26]
     __cpp_lib_syncbuf                                       201803L [C++20]
     __cpp_lib_text_encoding                                 202306L [C++26]
-    __cpp_lib_three_way_comparison                          201907L [C++20]
+    __cpp_lib_three_way_comparison                          201711L [C++20]
     __cpp_lib_to_address                                    201711L [C++20]
     __cpp_lib_to_array                                      201907L [C++20]
     __cpp_lib_to_chars                                      201611L [C++17]
@@ -424,6 +431,10 @@
 #   error "__cpp_lib_constexpr_memory should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_constexpr_new
+#   error "__cpp_lib_constexpr_new should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_constexpr_numeric
 #   error "__cpp_lib_constexpr_numeric should not be defined before c++20"
 # endif
@@ -608,6 +619,10 @@
 #   error "__cpp_lib_incomplete_container_elements should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_inplace_vector
+#   error "__cpp_lib_inplace_vector should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_int_pow2
 #   error "__cpp_lib_int_pow2 should not be defined before c++20"
 # endif
@@ -680,6 +695,10 @@
 #   error "__cpp_lib_is_swappable should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_is_virtual_base_of
+#   error "__cpp_lib_is_virtual_base_of should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_is_within_lifetime
 #   error "__cpp_lib_is_within_lifetime should not be defined before c++26"
 # endif
@@ -740,6 +759,10 @@
 #   error "__cpp_lib_memory_resource should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_modules
+#   error "__cpp_lib_modules should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_move_iterator_concept
 #   error "__cpp_lib_move_iterator_concept should not be defined before c++20"
 # endif
@@ -768,12 +791,20 @@
 #   error "__cpp_lib_optional should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_optional_range_support
+#   error "__cpp_lib_optional_range_support should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_out_ptr
 #   error "__cpp_lib_out_ptr should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_parallel_algorithm
 #   error "__cpp_lib_parallel_algorithm should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_philox_engine
+#   error "__cpp_lib_philox_engine should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_polymorphic_allocator
@@ -890,6 +921,10 @@
 
 # ifdef __cpp_lib_semaphore
 #   error "__cpp_lib_semaphore should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_senders
+#   error "__cpp_lib_senders should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_shared_mutex
@@ -1256,6 +1291,10 @@
 #   error "__cpp_lib_constexpr_memory should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_constexpr_new
+#   error "__cpp_lib_constexpr_new should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_constexpr_numeric
 #   error "__cpp_lib_constexpr_numeric should not be defined before c++20"
 # endif
@@ -1446,6 +1485,10 @@
 #   error "__cpp_lib_incomplete_container_elements should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_inplace_vector
+#   error "__cpp_lib_inplace_vector should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_int_pow2
 #   error "__cpp_lib_int_pow2 should not be defined before c++20"
 # endif
@@ -1530,6 +1573,10 @@
 #   error "__cpp_lib_is_swappable should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_is_virtual_base_of
+#   error "__cpp_lib_is_virtual_base_of should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_is_within_lifetime
 #   error "__cpp_lib_is_within_lifetime should not be defined before c++26"
 # endif
@@ -1596,6 +1643,10 @@
 #   error "__cpp_lib_memory_resource should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_modules
+#   error "__cpp_lib_modules should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_move_iterator_concept
 #   error "__cpp_lib_move_iterator_concept should not be defined before c++20"
 # endif
@@ -1627,12 +1678,20 @@
 #   error "__cpp_lib_optional should not be defined before c++17"
 # endif
 
+# ifdef __cpp_lib_optional_range_support
+#   error "__cpp_lib_optional_range_support should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_out_ptr
 #   error "__cpp_lib_out_ptr should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_parallel_algorithm
 #   error "__cpp_lib_parallel_algorithm should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_philox_engine
+#   error "__cpp_lib_philox_engine should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_polymorphic_allocator
@@ -1764,6 +1823,10 @@
 
 # ifdef __cpp_lib_semaphore
 #   error "__cpp_lib_semaphore should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_senders
+#   error "__cpp_lib_senders should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_shared_mutex
@@ -2190,6 +2253,10 @@
 #   error "__cpp_lib_constexpr_memory should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_constexpr_new
+#   error "__cpp_lib_constexpr_new should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_constexpr_numeric
 #   error "__cpp_lib_constexpr_numeric should not be defined before c++20"
 # endif
@@ -2422,6 +2489,10 @@
 #   error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++17"
 # endif
 
+# ifdef __cpp_lib_inplace_vector
+#   error "__cpp_lib_inplace_vector should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_int_pow2
 #   error "__cpp_lib_int_pow2 should not be defined before c++20"
 # endif
@@ -2516,6 +2587,10 @@
 # endif
 # if __cpp_lib_is_swappable != 201603L
 #   error "__cpp_lib_is_swappable should have the value 201603L in c++17"
+# endif
+
+# ifdef __cpp_lib_is_virtual_base_of
+#   error "__cpp_lib_is_virtual_base_of should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_is_within_lifetime
@@ -2614,6 +2689,10 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_modules
+#   error "__cpp_lib_modules should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_move_iterator_concept
 #   error "__cpp_lib_move_iterator_concept should not be defined before c++20"
 # endif
@@ -2657,6 +2736,10 @@
 #   error "__cpp_lib_optional should have the value 201606L in c++17"
 # endif
 
+# ifdef __cpp_lib_optional_range_support
+#   error "__cpp_lib_optional_range_support should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_out_ptr
 #   error "__cpp_lib_out_ptr should not be defined before c++23"
 # endif
@@ -2672,6 +2755,10 @@
 #   ifdef __cpp_lib_parallel_algorithm
 #     error "__cpp_lib_parallel_algorithm should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifdef __cpp_lib_philox_engine
+#   error "__cpp_lib_philox_engine should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_polymorphic_allocator
@@ -2818,6 +2905,10 @@
 
 # ifdef __cpp_lib_semaphore
 #   error "__cpp_lib_semaphore should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_senders
+#   error "__cpp_lib_senders should not be defined before c++26"
 # endif
 
 # if !defined(_LIBCPP_HAS_NO_THREADS)
@@ -3163,17 +3254,11 @@
 #   error "__cpp_lib_atomic_min_max should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_atomic_ref
-#     error "__cpp_lib_atomic_ref should be defined in c++20"
-#   endif
-#   if __cpp_lib_atomic_ref != 201806L
-#     error "__cpp_lib_atomic_ref should have the value 201806L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_atomic_ref
-#     error "__cpp_lib_atomic_ref should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_atomic_ref
+#   error "__cpp_lib_atomic_ref should be defined in c++20"
+# endif
+# if __cpp_lib_atomic_ref != 201806L
+#   error "__cpp_lib_atomic_ref should have the value 201806L in c++20"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -3385,6 +3470,10 @@
 #   error "__cpp_lib_constexpr_memory should have the value 201811L in c++20"
 # endif
 
+# ifdef __cpp_lib_constexpr_new
+#   error "__cpp_lib_constexpr_new should not be defined before c++26"
+# endif
+
 # ifndef __cpp_lib_constexpr_numeric
 #   error "__cpp_lib_constexpr_numeric should be defined in c++20"
 # endif
@@ -3529,17 +3618,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_format
-#     error "__cpp_lib_format should be defined in c++20"
-#   endif
-#   if __cpp_lib_format != 202106L
-#     error "__cpp_lib_format should have the value 202106L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_format
-#     error "__cpp_lib_format should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_format
+#   error "__cpp_lib_format should be defined in c++20"
+# endif
+# if __cpp_lib_format != 202110L
+#   error "__cpp_lib_format should have the value 202110L in c++20"
 # endif
 
 # ifdef __cpp_lib_format_path
@@ -3666,6 +3749,10 @@
 # endif
 # if __cpp_lib_incomplete_container_elements != 201505L
 #   error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++20"
+# endif
+
+# ifdef __cpp_lib_inplace_vector
+#   error "__cpp_lib_inplace_vector should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_int_pow2
@@ -3797,6 +3884,10 @@
 #   error "__cpp_lib_is_swappable should have the value 201603L in c++20"
 # endif
 
+# ifdef __cpp_lib_is_virtual_base_of
+#   error "__cpp_lib_is_virtual_base_of should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_is_within_lifetime
 #   error "__cpp_lib_is_within_lifetime should not be defined before c++26"
 # endif
@@ -3917,6 +4008,10 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_modules
+#   error "__cpp_lib_modules should not be defined before c++23"
+# endif
+
 # ifndef __cpp_lib_move_iterator_concept
 #   error "__cpp_lib_move_iterator_concept should be defined in c++20"
 # endif
@@ -3963,6 +4058,10 @@
 #   error "__cpp_lib_optional should have the value 201606L in c++20"
 # endif
 
+# ifdef __cpp_lib_optional_range_support
+#   error "__cpp_lib_optional_range_support should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_out_ptr
 #   error "__cpp_lib_out_ptr should not be defined before c++23"
 # endif
@@ -3978,6 +4077,10 @@
 #   ifdef __cpp_lib_parallel_algorithm
 #     error "__cpp_lib_parallel_algorithm should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifdef __cpp_lib_philox_engine
+#   error "__cpp_lib_philox_engine should not be defined before c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
@@ -4150,6 +4253,10 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_senders
+#   error "__cpp_lib_senders should not be defined before c++26"
+# endif
+
 # if !defined(_LIBCPP_HAS_NO_THREADS)
 #   ifndef __cpp_lib_shared_mutex
 #     error "__cpp_lib_shared_mutex should be defined in c++20"
@@ -4309,17 +4416,11 @@
 #   error "__cpp_lib_text_encoding should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_three_way_comparison
-#     error "__cpp_lib_three_way_comparison should be defined in c++20"
-#   endif
-#   if __cpp_lib_three_way_comparison != 201907L
-#     error "__cpp_lib_three_way_comparison should have the value 201907L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_three_way_comparison
-#     error "__cpp_lib_three_way_comparison should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_three_way_comparison
+#   error "__cpp_lib_three_way_comparison should be defined in c++20"
+# endif
+# if __cpp_lib_three_way_comparison != 201711L
+#   error "__cpp_lib_three_way_comparison should have the value 201711L in c++20"
 # endif
 
 # ifndef __cpp_lib_to_address
@@ -4562,17 +4663,11 @@
 #   error "__cpp_lib_atomic_min_max should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_atomic_ref
-#     error "__cpp_lib_atomic_ref should be defined in c++23"
-#   endif
-#   if __cpp_lib_atomic_ref != 201806L
-#     error "__cpp_lib_atomic_ref should have the value 201806L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_atomic_ref
-#     error "__cpp_lib_atomic_ref should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_atomic_ref
+#   error "__cpp_lib_atomic_ref should be defined in c++23"
+# endif
+# if __cpp_lib_atomic_ref != 201806L
+#   error "__cpp_lib_atomic_ref should have the value 201806L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -4805,6 +4900,10 @@
 #   error "__cpp_lib_constexpr_memory should have the value 202202L in c++23"
 # endif
 
+# ifdef __cpp_lib_constexpr_new
+#   error "__cpp_lib_constexpr_new should not be defined before c++26"
+# endif
+
 # ifndef __cpp_lib_constexpr_numeric
 #   error "__cpp_lib_constexpr_numeric should be defined in c++23"
 # endif
@@ -4958,17 +5057,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_format
-#     error "__cpp_lib_format should be defined in c++23"
-#   endif
-#   if __cpp_lib_format != 202106L
-#     error "__cpp_lib_format should have the value 202106L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_format
-#     error "__cpp_lib_format should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_format
+#   error "__cpp_lib_format should be defined in c++23"
+# endif
+# if __cpp_lib_format != 202110L
+#   error "__cpp_lib_format should have the value 202110L in c++23"
 # endif
 
 # ifdef __cpp_lib_format_path
@@ -5112,6 +5205,10 @@
 #   error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++23"
 # endif
 
+# ifdef __cpp_lib_inplace_vector
+#   error "__cpp_lib_inplace_vector should not be defined before c++26"
+# endif
+
 # ifndef __cpp_lib_int_pow2
 #   error "__cpp_lib_int_pow2 should be defined in c++23"
 # endif
@@ -5250,6 +5347,10 @@
 #   error "__cpp_lib_is_swappable should have the value 201603L in c++23"
 # endif
 
+# ifdef __cpp_lib_is_virtual_base_of
+#   error "__cpp_lib_is_virtual_base_of should not be defined before c++26"
+# endif
+
 # ifdef __cpp_lib_is_within_lifetime
 #   error "__cpp_lib_is_within_lifetime should not be defined before c++26"
 # endif
@@ -5373,6 +5474,13 @@
 #   endif
 # endif
 
+# ifndef __cpp_lib_modules
+#   error "__cpp_lib_modules should be defined in c++23"
+# endif
+# if __cpp_lib_modules != 202207L
+#   error "__cpp_lib_modules should have the value 202207L in c++23"
+# endif
+
 # ifndef __cpp_lib_move_iterator_concept
 #   error "__cpp_lib_move_iterator_concept should be defined in c++23"
 # endif
@@ -5428,6 +5536,10 @@
 #   error "__cpp_lib_optional should have the value 202110L in c++23"
 # endif
 
+# ifdef __cpp_lib_optional_range_support
+#   error "__cpp_lib_optional_range_support should not be defined before c++26"
+# endif
+
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_out_ptr
 #     error "__cpp_lib_out_ptr should be defined in c++23"
@@ -5452,6 +5564,10 @@
 #   ifdef __cpp_lib_parallel_algorithm
 #     error "__cpp_lib_parallel_algorithm should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifdef __cpp_lib_philox_engine
+#   error "__cpp_lib_philox_engine should not be defined before c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR
@@ -5708,6 +5824,10 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_senders
+#   error "__cpp_lib_senders should not be defined before c++26"
+# endif
+
 # if !defined(_LIBCPP_HAS_NO_THREADS)
 #   ifndef __cpp_lib_shared_mutex
 #     error "__cpp_lib_shared_mutex should be defined in c++23"
@@ -5894,17 +6014,11 @@
 #   error "__cpp_lib_text_encoding should not be defined before c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_three_way_comparison
-#     error "__cpp_lib_three_way_comparison should be defined in c++23"
-#   endif
-#   if __cpp_lib_three_way_comparison != 201907L
-#     error "__cpp_lib_three_way_comparison should have the value 201907L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_three_way_comparison
-#     error "__cpp_lib_three_way_comparison should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_three_way_comparison
+#   error "__cpp_lib_three_way_comparison should be defined in c++23"
+# endif
+# if __cpp_lib_three_way_comparison != 201711L
+#   error "__cpp_lib_three_way_comparison should have the value 201711L in c++23"
 # endif
 
 # ifndef __cpp_lib_to_address
@@ -6180,17 +6294,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_atomic_ref
-#     error "__cpp_lib_atomic_ref should be defined in c++26"
-#   endif
-#   if __cpp_lib_atomic_ref != 201806L
-#     error "__cpp_lib_atomic_ref should have the value 201806L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_atomic_ref
-#     error "__cpp_lib_atomic_ref should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_atomic_ref
+#   error "__cpp_lib_atomic_ref should be defined in c++26"
+# endif
+# if __cpp_lib_atomic_ref != 201806L
+#   error "__cpp_lib_atomic_ref should have the value 201806L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -6426,6 +6534,19 @@
 #   error "__cpp_lib_constexpr_memory should have the value 202202L in c++26"
 # endif
 
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_constexpr_new
+#     error "__cpp_lib_constexpr_new should be defined in c++26"
+#   endif
+#   if __cpp_lib_constexpr_new != 202406L
+#     error "__cpp_lib_constexpr_new should have the value 202406L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_constexpr_new
+#     error "__cpp_lib_constexpr_new should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
 # ifndef __cpp_lib_constexpr_numeric
 #   error "__cpp_lib_constexpr_numeric should be defined in c++26"
 # endif
@@ -6615,17 +6736,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_format
-#     error "__cpp_lib_format should be defined in c++26"
-#   endif
-#   if __cpp_lib_format != 202106L
-#     error "__cpp_lib_format should have the value 202106L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_format
-#     error "__cpp_lib_format should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_format
+#   error "__cpp_lib_format should be defined in c++26"
+# endif
+# if __cpp_lib_format != 202110L
+#   error "__cpp_lib_format should have the value 202110L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -6886,6 +7001,19 @@
 #   error "__cpp_lib_incomplete_container_elements should have the value 201505L in c++26"
 # endif
 
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_inplace_vector
+#     error "__cpp_lib_inplace_vector should be defined in c++26"
+#   endif
+#   if __cpp_lib_inplace_vector != 202406L
+#     error "__cpp_lib_inplace_vector should have the value 202406L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_inplace_vector
+#     error "__cpp_lib_inplace_vector should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
 # ifndef __cpp_lib_int_pow2
 #   error "__cpp_lib_int_pow2 should be defined in c++26"
 # endif
@@ -7022,6 +7150,19 @@
 # endif
 # if __cpp_lib_is_swappable != 201603L
 #   error "__cpp_lib_is_swappable should have the value 201603L in c++26"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_is_virtual_base_of
+#     error "__cpp_lib_is_virtual_base_of should be defined in c++26"
+#   endif
+#   if __cpp_lib_is_virtual_base_of != 202406L
+#     error "__cpp_lib_is_virtual_base_of should have the value 202406L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_is_virtual_base_of
+#     error "__cpp_lib_is_virtual_base_of should not be defined because it is unimplemented in libc++!"
+#   endif
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -7165,6 +7306,13 @@
 #   endif
 # endif
 
+# ifndef __cpp_lib_modules
+#   error "__cpp_lib_modules should be defined in c++26"
+# endif
+# if __cpp_lib_modules != 202207L
+#   error "__cpp_lib_modules should have the value 202207L in c++26"
+# endif
+
 # ifndef __cpp_lib_move_iterator_concept
 #   error "__cpp_lib_move_iterator_concept should be defined in c++26"
 # endif
@@ -7221,6 +7369,19 @@
 # endif
 
 # if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_optional_range_support
+#     error "__cpp_lib_optional_range_support should be defined in c++26"
+#   endif
+#   if __cpp_lib_optional_range_support != 202406L
+#     error "__cpp_lib_optional_range_support should have the value 202406L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_optional_range_support
+#     error "__cpp_lib_optional_range_support should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_out_ptr
 #     error "__cpp_lib_out_ptr should be defined in c++26"
 #   endif
@@ -7243,6 +7404,19 @@
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_parallel_algorithm
 #     error "__cpp_lib_parallel_algorithm should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_philox_engine
+#     error "__cpp_lib_philox_engine should be defined in c++26"
+#   endif
+#   if __cpp_lib_philox_engine != 202406L
+#     error "__cpp_lib_philox_engine should have the value 202406L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_philox_engine
+#     error "__cpp_lib_philox_engine should not be defined because it is unimplemented in libc++!"
 #   endif
 # endif
 
@@ -7527,6 +7701,19 @@
 #   endif
 # endif
 
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_senders
+#     error "__cpp_lib_senders should be defined in c++26"
+#   endif
+#   if __cpp_lib_senders != 202406L
+#     error "__cpp_lib_senders should have the value 202406L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_senders
+#     error "__cpp_lib_senders should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
 # if !defined(_LIBCPP_HAS_NO_THREADS)
 #   ifndef __cpp_lib_shared_mutex
 #     error "__cpp_lib_shared_mutex should be defined in c++26"
@@ -7749,17 +7936,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_three_way_comparison
-#     error "__cpp_lib_three_way_comparison should be defined in c++26"
-#   endif
-#   if __cpp_lib_three_way_comparison != 201907L
-#     error "__cpp_lib_three_way_comparison should have the value 201907L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_three_way_comparison
-#     error "__cpp_lib_three_way_comparison should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_three_way_comparison
+#   error "__cpp_lib_three_way_comparison should be defined in c++26"
+# endif
+# if __cpp_lib_three_way_comparison != 201711L
+#   error "__cpp_lib_three_way_comparison should have the value 201711L in c++26"
 # endif
 
 # ifndef __cpp_lib_to_address

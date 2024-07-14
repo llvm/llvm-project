@@ -642,8 +642,7 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_ZExt(const Opnd &Op) {
 }
 
 template <typename Opnd> inline auto m_SExt(const Opnd &Op) {
-  return m_AnyOf(UnaryOpc_match<Opnd>(ISD::SIGN_EXTEND, Op),
-                 m_Node(ISD::SIGN_EXTEND_INREG, Op, m_Value()));
+  return UnaryOpc_match<Opnd>(ISD::SIGN_EXTEND, Op);
 }
 
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_AnyExt(const Opnd &Op) {

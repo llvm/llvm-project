@@ -13,9 +13,10 @@
 #include "src/__support/blockstore.h"
 #include "src/__support/common.h"
 #include "src/__support/fixedvector.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/mutex.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using AtExitCallback = void(void *);
 using StdCAtExitCallback = void(void);
@@ -48,6 +49,6 @@ void call_exit_callbacks(ExitCallbackList &callbacks);
 
 int add_atexit_unit(ExitCallbackList &callbacks, const AtExitUnit &unit);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDLIB_EXIT_HANDLER_H

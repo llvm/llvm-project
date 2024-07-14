@@ -1,6 +1,6 @@
-; RUN: llc < %s -asm-verbose=false -O2 | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -mattr=-reference-types -O2 | FileCheck %s
 ; RUN: llc < %s -asm-verbose=false -mattr=+reference-types -O2 | FileCheck --check-prefix=REF %s
-; RUN: llc < %s -asm-verbose=false -O2 --filetype=obj | obj2yaml | FileCheck --check-prefix=YAML %s
+; RUN: llc < %s -asm-verbose=false -mattr=-reference-types -O2 --filetype=obj | obj2yaml | FileCheck --check-prefix=YAML %s
 
 ; This tests pointer features that may codegen differently in wasm64.
 

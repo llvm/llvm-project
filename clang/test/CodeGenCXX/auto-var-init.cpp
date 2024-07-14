@@ -146,16 +146,8 @@ struct notlockfree { long long a[4]; };
 // PATTERN-O1-NOT: @__const.test_atomictailpad_uninit.uninit
 // PATTERN-O0: @__const.test_complexfloat_uninit.uninit = private unnamed_addr constant { float, float } { float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000 }, align 4
 // PATTERN-O1-NOT: @__const.test_complexfloat_uninit.uninit
-// PATTERN-O0: @__const.test_complexfloat_braces.braces = private unnamed_addr constant { float, float } { float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000 }, align 4
-// PATTERN-O1-NOT: @__const.test_complexfloat_braces.braces
-// PATTERN-O0: @__const.test_complexfloat_custom.custom = private unnamed_addr constant { float, float } { float 0xFFFFFFFFE0000000, float 0xFFFFFFFFE0000000 }, align 4
-// PATTERN-O1-NOT: @__const.test_complexfloat_custom.custom
 // PATTERN-O0: @__const.test_complexdouble_uninit.uninit = private unnamed_addr constant { double, double } { double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF }, align 8
 // PATTERN-O1-NOT: @__const.test_complexdouble_uninit.uninit
-// PATTERN-O0: @__const.test_complexdouble_braces.braces = private unnamed_addr constant { double, double } { double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF }, align 8
-// PATTERN-O1-NOT: @__const.test_complexdouble_braces.braces
-// PATTERN-O0: @__const.test_complexdouble_custom.custom = private unnamed_addr constant { double, double } { double 0xFFFFFFFFFFFFFFFF, double 0xFFFFFFFFFFFFFFFF }, align 8
-// PATTERN-O1-NOT: @__const.test_complexdouble_custom.custom
 // PATTERN-O0: @__const.test_semivolatile_uninit.uninit = private unnamed_addr constant %struct.semivolatile { i32 [[I32]], i32 [[I32]] }, align 4
 // PATTERN-O0: @__const.test_semivolatile_custom.custom = private unnamed_addr constant %struct.semivolatile { i32 1145324612, i32 1145324612 }, align 4
 // PATTERN-O1-NOT: @__const.test_semivolatile_custom.custom

@@ -1140,7 +1140,7 @@ void TextNodeDumper::dumpTemplateName(TemplateName TN, StringRef Label) {
         llvm::raw_svector_ostream SS(Str);
         TN.print(SS, PrintPolicy);
       }
-      OS << " '" << Str << "'";
+      OS << "'" << Str << "'";
 
       if (Context) {
         if (TemplateName CanonTN = Context->getCanonicalTemplateName(TN);
@@ -2883,4 +2883,9 @@ void TextNodeDumper::VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *S) {
     OS << " <orphan>";
   else
     OS << " parent: " << S->getParentComputeConstruct();
+}
+
+void TextNodeDumper::VisitEmbedExpr(const EmbedExpr *S) {
+  AddChild("begin", [=] { OS << S->getStartingElementPos(); });
+  AddChild("number of elements", [=] { OS << S->getDataElementCount(); });
 }

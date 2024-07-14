@@ -6,8 +6,8 @@
 ; Also show that no salvaging attempt is made for dbg.value that are undef
 ; pre-LSR.
 ;
-; CHECK: call void @llvm.dbg.value(metadata i64 undef, metadata !{{[0-9]+}}, metadata !DIExpression(DW_OP_plus_uconst, 228, DW_OP_stack_value))
-; CHECK: call void @llvm.dbg.value(metadata i64 %var2, metadata !{{[0-9]+}}, metadata !DIExpression(DW_OP_plus_uconst, 228, DW_OP_stack_value))
+; CHECK: #dbg_value(i64 undef, !{{[0-9]+}}, !DIExpression(DW_OP_plus_uconst, 228, DW_OP_stack_value),
+; CHECK: #dbg_value(i64 %var2, !{{[0-9]+}}, !DIExpression(DW_OP_plus_uconst, 228, DW_OP_stack_value),
 
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

@@ -95,18 +95,4 @@ except that locale_t is used instead of the current global locale.
 The variadic functions may be implemented as templates with a parameter pack instead of variadic functions.
 */
 
-/*
-// TODO: These symbols are never actually used, but defined by one or more implementations. They should be removed.
-long strtol_l(const char* str, char** str_end, locale_t);
-unsigned long strtoul_l(const char* str, char** str_end, locale_t);
-long long wcstoll_l(const wchar_t* str, wchar_t** str_end, int base, locale_t);
-unsigned long long wcstoull_l(const wchar_t* str, wchar_t** str_end, int base, locale_t);
-long double wcstold_l(const wchar_t* str, wchar_t** str_end, int base, locale_t);
-int sprintf_l(char* str, const char* format, locale_t, ...);
-int vsprintf_l(char* str, const char* format, locale_t, va_list);
-int vsnprintf_l(char* str, size_t size, const char* format, locale_t, va_list);
-int isblank_l(int ch, locale_t);
-
-*/
-
 #endif // _LIBCPP___LOCALE_DIR_LOCALE_BASE_API_H

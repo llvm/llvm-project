@@ -29,8 +29,8 @@ public:
 
   void computeInfo(CGFunctionInfo &FI) const override;
 
-  Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                    QualType Ty) const override;
+  RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
+                   AggValueSlot Slot) const override;
 };
 
 // Helper for coercing an aggregate argument or return value into an integer
@@ -112,10 +112,11 @@ Address emitVoidPtrDirectVAArg(CodeGenFunction &CGF, Address VAListAddr,
 /// \param ForceRightAdjust - Default is false. On big-endian platform and
 ///   if the argument is smaller than a slot, set this flag will force
 ///   right-adjust the argument in its slot irrespective of the type.
-Address emitVoidPtrVAArg(CodeGenFunction &CGF, Address VAListAddr,
-                         QualType ValueTy, bool IsIndirect,
-                         TypeInfoChars ValueInfo, CharUnits SlotSizeAndAlign,
-                         bool AllowHigherAlign, bool ForceRightAdjust = false);
+RValue emitVoidPtrVAArg(CodeGenFunction &CGF, Address VAListAddr,
+                        QualType ValueTy, bool IsIndirect,
+                        TypeInfoChars ValueInfo, CharUnits SlotSizeAndAlign,
+                        bool AllowHigherAlign, AggValueSlot Slot,
+                        bool ForceRightAdjust = false);
 
 Address emitMergePHI(CodeGenFunction &CGF, Address Addr1,
                      llvm::BasicBlock *Block1, Address Addr2,

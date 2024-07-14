@@ -6,7 +6,7 @@ from ._pdl_ops_gen import *
 from ._pdl_ops_gen import _Dialect
 from .._mlir_libs._mlirDialectsPDL import *
 from .._mlir_libs._mlirDialectsPDL import OperationType
-
+from ..extras.meta import region_op
 
 try:
     from ..ir import *
@@ -127,6 +127,9 @@ class PatternOp(PatternOp):
         return self.regions[0].blocks[0]
 
 
+pattern = region_op(PatternOp.__base__)
+
+
 @_ods_cext.register_operation(_Dialect, replace=True)
 class ReplaceOp(ReplaceOp):
     """Specialization for PDL replace op class."""
@@ -193,6 +196,9 @@ class RewriteOp(RewriteOp):
     def body(self):
         """Return the body (block) of the rewrite."""
         return self.regions[0].blocks[0]
+
+
+rewrite = region_op(RewriteOp)
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)

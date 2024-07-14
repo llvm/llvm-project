@@ -32,14 +32,7 @@ namespace lldb_dap {
 DAP g_dap;
 
 DAP::DAP()
-    : broadcaster("lldb-dap"),
-      exception_breakpoints(
-          {{"cpp_catch", "C++ Catch", lldb::eLanguageTypeC_plus_plus},
-           {"cpp_throw", "C++ Throw", lldb::eLanguageTypeC_plus_plus},
-           {"objc_catch", "Objective-C Catch", lldb::eLanguageTypeObjC},
-           {"objc_throw", "Objective-C Throw", lldb::eLanguageTypeObjC},
-           {"swift_catch", "Swift Catch", lldb::eLanguageTypeSwift},
-           {"swift_throw", "Swift Throw", lldb::eLanguageTypeSwift}}),
+    : broadcaster("lldb-dap"), exception_breakpoints(),
       focus_tid(LLDB_INVALID_THREAD_ID), stop_at_entry(false), is_attach(false),
       enable_auto_variable_summaries(false),
       enable_synthetic_child_debugging(false),
@@ -65,8 +58,101 @@ DAP::DAP()
 
 DAP::~DAP() = default;
 
+/// Return string with first character capitalized.
+static std::string capitalize(llvm::StringRef str) {
+  if (str.empty())
+    return "";
+  return ((llvm::Twine)llvm::toUpper(str[0]) + str.drop_front()).str();
+}
+
+void DAP::PopulateExceptionBreakpoints() {
+  llvm::call_once(init_exception_breakpoints_flag, [this]() {
+    exception_breakpoints = std::vector<ExceptionBreakpoint> {};
+
+    if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeC_plus_plus)) {
+      exception_breakpoints->emplace_back("cpp_catch", "C++ Catch",
+                                          lldb::eLanguageTypeC_plus_plus);
+      exception_breakpoints->emplace_back("cpp_throw", "C++ Throw",
+                                          lldb::eLanguageTypeC_plus_plus);
+    }
+    if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeObjC)) {
+      exception_breakpoints->emplace_back("objc_catch", "Objective-C Catch",
+                                          lldb::eLanguageTypeObjC);
+      exception_breakpoints->emplace_back("objc_throw", "Objective-C Throw",
+                                          lldb::eLanguageTypeObjC);
+    }
+    if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeSwift)) {
+      exception_breakpoints->emplace_back("swift_catch", "Swift Catch",
+                                          lldb::eLanguageTypeSwift);
+      exception_breakpoints->emplace_back("swift_throw", "Swift Throw",
+                                          lldb::eLanguageTypeSwift);
+    }
+    // Besides handling the hardcoded list of languages from above, we try to
+    // find any other languages that support exception breakpoints using the
+    // SB API.
+    for (int raw_lang = lldb::eLanguageTypeUnknown;
+         raw_lang < lldb::eNumLanguageTypes; ++raw_lang) {
+      lldb::LanguageType lang = static_cast<lldb::LanguageType>(raw_lang);
+
+      // We first discard any languages already handled above.
+      if (lldb::SBLanguageRuntime::LanguageIsCFamily(lang) ||
+          lang == lldb::eLanguageTypeSwift)
+        continue;
+
+      if (!lldb::SBDebugger::SupportsLanguage(lang))
+        continue;
+
+      const char *name = lldb::SBLanguageRuntime::GetNameForLanguageType(lang);
+      if (!name)
+        continue;
+      std::string raw_lang_name = name;
+      std::string capitalized_lang_name = capitalize(name);
+
+      if (lldb::SBLanguageRuntime::SupportsExceptionBreakpointsOnThrow(lang)) {
+        const char *raw_throw_keyword =
+            lldb::SBLanguageRuntime::GetThrowKeywordForLanguage(lang);
+        std::string throw_keyword =
+            raw_throw_keyword ? raw_throw_keyword : "throw";
+
+        exception_breakpoints->emplace_back(
+            raw_lang_name + "_" + throw_keyword,
+            capitalized_lang_name + " " + capitalize(throw_keyword), lang);
+      }
+
+      if (lldb::SBLanguageRuntime::SupportsExceptionBreakpointsOnCatch(lang)) {
+        const char *raw_catch_keyword =
+            lldb::SBLanguageRuntime::GetCatchKeywordForLanguage(lang);
+        std::string catch_keyword =
+            raw_catch_keyword ? raw_catch_keyword : "catch";
+
+        exception_breakpoints->emplace_back(
+            raw_lang_name + "_" + catch_keyword,
+            capitalized_lang_name + " " + capitalize(catch_keyword), lang);
+      }
+    }
+    assert(!exception_breakpoints->empty() && "should not be empty");
+  });
+}
+
 ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const std::string &filter) {
-  for (auto &bp : exception_breakpoints) {
+  // PopulateExceptionBreakpoints() is called after g_dap.debugger is created
+  // in a request-initialize.
+  //
+  // But this GetExceptionBreakpoint() method may be called before attaching, in
+  // which case, we may not have populated the filter yet.
+  //
+  // We also cannot call PopulateExceptionBreakpoints() in DAP::DAP() because
+  // we need SBDebugger::Initialize() to have been called before this.
+  //
+  // So just calling PopulateExceptionBreakoints(),which does lazy-populating
+  // seems easiest. Two other options include:
+  //  + call g_dap.PopulateExceptionBreakpoints() in lldb-dap.cpp::main()
+  //    right after the call to SBDebugger::Initialize()
+  //  + Just call PopulateExceptionBreakpoints() to get a fresh list  everytime
+  //    we query (a bit overkill since it's not likely to change?)
+  PopulateExceptionBreakpoints();
+
+  for (auto &bp : *exception_breakpoints) {
     if (bp.filter == filter)
       return &bp;
   }
@@ -74,7 +160,10 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const std::string &filter) {
 }
 
 ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
-  for (auto &bp : exception_breakpoints) {
+  // See comment in the other GetExceptionBreakpoint().
+  PopulateExceptionBreakpoints();
+
+  for (auto &bp : *exception_breakpoints) {
     if (bp.bp.GetID() == bp_id)
       return &bp;
   }
@@ -472,6 +561,12 @@ DAP::RunLaunchCommands(llvm::ArrayRef<std::string> launch_commands) {
 llvm::Error DAP::RunInitCommands() {
   if (!RunLLDBCommands("Running initCommands:", init_commands))
     return createRunLLDBCommandsErrorMessage("initCommands");
+  return llvm::Error::success();
+}
+
+llvm::Error DAP::RunPreInitCommands() {
+  if (!RunLLDBCommands("Running preInitCommands:", pre_init_commands))
+    return createRunLLDBCommandsErrorMessage("preInitCommands");
   return llvm::Error::success();
 }
 

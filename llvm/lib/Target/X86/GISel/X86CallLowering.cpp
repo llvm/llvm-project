@@ -16,6 +16,7 @@
 #include "X86CallingConv.h"
 #include "X86ISelLowering.h"
 #include "X86InstrInfo.h"
+#include "X86MachineFunctionInfo.h"
 #include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -147,12 +148,17 @@ bool X86CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
          "Return value without a vreg");
   MachineFunction &MF = MIRBuilder.getMF();
   auto MIB = MIRBuilder.buildInstrNoInsert(X86::RET).addImm(0);
-  const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
-  bool Is64Bit = STI.is64Bit();
+  auto FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
+  const auto &STI = MF.getSubtarget<X86Subtarget>();
+  Register RetReg = STI.is64Bit() ? X86::RAX : X86::EAX;
 
   if (!FLI.CanLowerReturn) {
     insertSRetStores(MIRBuilder, Val->getType(), VRegs, FLI.DemoteRegister);
-    MIRBuilder.buildCopy(Is64Bit ? X86::RAX : X86::EAX, FLI.DemoteRegister);
+    MIRBuilder.buildCopy(RetReg, FLI.DemoteRegister);
+    MIB.addReg(RetReg);
+  } else if (Register Reg = FuncInfo->getSRetReturnReg()) {
+    MIRBuilder.buildCopy(RetReg, Reg);
+    MIB.addReg(RetReg);
   } else if (!VRegs.empty()) {
     const Function &F = MF.getFunction();
     MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -258,6 +264,7 @@ bool X86CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   MachineFunction &MF = MIRBuilder.getMF();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   auto DL = MF.getDataLayout();
+  auto FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
 
   SmallVector<ArgInfo, 8> SplitArgs;
 
@@ -273,11 +280,16 @@ bool X86CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     // TODO: handle not simple cases.
     if (Arg.hasAttribute(Attribute::ByVal) ||
         Arg.hasAttribute(Attribute::InReg) ||
-        Arg.hasAttribute(Attribute::StructRet) ||
         Arg.hasAttribute(Attribute::SwiftSelf) ||
         Arg.hasAttribute(Attribute::SwiftError) ||
         Arg.hasAttribute(Attribute::Nest) || VRegs[Idx].size() > 1)
       return false;
+
+    if (Arg.hasAttribute(Attribute::StructRet)) {
+      assert(VRegs[Idx].size() == 1 &&
+             "Unexpected amount of registers for sret argument.");
+      FuncInfo->setSRetReturnReg(VRegs[Idx][0]);
+    }
 
     ArgInfo OrigArg(VRegs[Idx], Arg.getType(), Idx);
     setArgFlags(OrigArg, Idx + AttributeList::FirstArgIndex, DL, F);
@@ -309,7 +321,7 @@ bool X86CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
   const X86RegisterInfo *TRI = STI.getRegisterInfo();

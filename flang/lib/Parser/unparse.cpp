@@ -524,7 +524,13 @@ public:
     Word("NULL()");
   }
   void Unparse(const LanguageBindingSpec &x) { // R808 & R1528
-    Word("BIND(C"), Walk(", NAME=", x.v), Put(')');
+    Word("BIND(C");
+    Walk(
+        ", NAME=", std::get<std::optional<ScalarDefaultCharConstantExpr>>(x.t));
+    if (std::get<bool>(x.t)) {
+      Word(", CDEFINED");
+    }
+    Put(')');
   }
   void Unparse(const CoarraySpec &x) { // R809
     common::visit(common::visitors{
@@ -1828,6 +1834,9 @@ public:
               Word("!DIR$ ASSUME_ALIGNED ");
               Walk(" ", assumeAligned, ", ");
             },
+            [&](const CompilerDirective::VectorAlways &valways) {
+              Word("!DIR$ VECTOR ALWAYS");
+            },
             [&](const std::list<CompilerDirective::NameValue> &names) {
               Walk("!DIR$ ", names, " ");
             },
@@ -2198,6 +2207,9 @@ public:
     case llvm::omp::Directive::OMPD_do_simd:
       Word("DO SIMD ");
       break;
+    case llvm::omp::Directive::OMPD_loop:
+      Word("LOOP ");
+      break;
     case llvm::omp::Directive::OMPD_masked_taskloop_simd:
       Word("MASKED TASKLOOP SIMD");
       break;
@@ -2219,11 +2231,17 @@ public:
     case llvm::omp::Directive::OMPD_simd:
       Word("SIMD ");
       break;
+    case llvm::omp::Directive::OMPD_target_loop:
+      Word("TARGET LOOP ");
+      break;
     case llvm::omp::Directive::OMPD_target_parallel_do:
       Word("TARGET PARALLEL DO ");
       break;
     case llvm::omp::Directive::OMPD_target_parallel_do_simd:
       Word("TARGET PARALLEL DO SIMD ");
+      break;
+    case llvm::omp::Directive::OMPD_target_parallel_loop:
+      Word("TARGET PARALLEL LOOP ");
       break;
     case llvm::omp::Directive::OMPD_target_teams_distribute:
       Word("TARGET TEAMS DISTRIBUTE ");
@@ -2236,6 +2254,9 @@ public:
       break;
     case llvm::omp::Directive::OMPD_target_teams_distribute_simd:
       Word("TARGET TEAMS DISTRIBUTE SIMD ");
+      break;
+    case llvm::omp::Directive::OMPD_target_teams_loop:
+      Word("TARGET TEAMS LOOP ");
       break;
     case llvm::omp::Directive::OMPD_target_simd:
       Word("TARGET SIMD ");

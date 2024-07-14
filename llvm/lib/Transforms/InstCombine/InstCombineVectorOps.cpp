@@ -419,6 +419,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   // If extracting a specified index from the vector, see if we can recursively
   // find a previously computed scalar that was inserted into the vector.
   auto *IndexC = dyn_cast<ConstantInt>(Index);
+  bool HasKnownValidIndex = false;
   if (IndexC) {
     // Canonicalize type of constant indices to i64 to simplify CSE
     if (auto *NewIdx = getPreferredVectorIndex(IndexC))
@@ -426,6 +427,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
 
     ElementCount EC = EI.getVectorOperandType()->getElementCount();
     unsigned NumElts = EC.getKnownMinValue();
+    HasKnownValidIndex = IndexC->getValue().ult(NumElts);
 
     if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(SrcVec)) {
       Intrinsic::ID IID = II->getIntrinsicID();
@@ -471,8 +473,11 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
     return UnaryOperator::CreateWithCopiedFlags(UO->getOpcode(), E, UO);
   }
 
+  // If the binop is not speculatable, we cannot hoist the extractelement if
+  // it may make the operand poison.
   BinaryOperator *BO;
-  if (match(SrcVec, m_BinOp(BO)) && cheapToScalarize(SrcVec, Index)) {
+  if (match(SrcVec, m_BinOp(BO)) && cheapToScalarize(SrcVec, Index) &&
+      (HasKnownValidIndex || isSafeToSpeculativelyExecute(BO))) {
     // extelt (binop X, Y), Index --> binop (extelt X, Index), (extelt Y, Index)
     Value *X = BO->getOperand(0), *Y = BO->getOperand(1);
     Value *E0 = Builder.CreateExtractElement(X, Index);
@@ -2063,16 +2068,17 @@ static BinopElts getAlternateBinop(BinaryOperator *BO, const DataLayout &DL) {
   case Instruction::Shl: {
     // shl X, C --> mul X, (1 << C)
     Constant *C;
-    if (match(BO1, m_Constant(C))) {
-      Constant *ShlOne = ConstantExpr::getShl(ConstantInt::get(Ty, 1), C);
+    if (match(BO1, m_ImmConstant(C))) {
+      Constant *ShlOne = ConstantFoldBinaryOpOperands(
+          Instruction::Shl, ConstantInt::get(Ty, 1), C, DL);
+      assert(ShlOne && "Constant folding of immediate constants failed");
       return {Instruction::Mul, BO0, ShlOne};
     }
     break;
   }
   case Instruction::Or: {
-    // or X, C --> add X, C (when X and C have no common bits set)
-    const APInt *C;
-    if (match(BO1, m_APInt(C)) && MaskedValueIsZero(BO0, *C, DL))
+    // or disjoin X, C --> add X, C
+    if (cast<PossiblyDisjointInst>(BO)->isDisjoint())
       return {Instruction::Add, BO0, BO1};
     break;
   }
@@ -2836,15 +2842,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     auto *XType = cast<FixedVectorType>(X->getType());
     unsigned XNumElts = XType->getNumElements();
     SmallVector<int, 16> ScaledMask;
-    if (XNumElts >= VWidth) {
-      assert(XNumElts % VWidth == 0 && "Unexpected vector bitcast");
-      narrowShuffleMaskElts(XNumElts / VWidth, Mask, ScaledMask);
-    } else {
-      assert(VWidth % XNumElts == 0 && "Unexpected vector bitcast");
-      if (!widenShuffleMaskElts(VWidth / XNumElts, Mask, ScaledMask))
-        ScaledMask.clear();
-    }
-    if (!ScaledMask.empty()) {
+    if (scaleShuffleMaskElts(XNumElts, Mask, ScaledMask)) {
       // If the shuffled source vector simplifies, cast that value to this
       // shuffle's type.
       if (auto *V = simplifyShuffleVectorInst(X, UndefValue::get(XType),

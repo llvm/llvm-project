@@ -37,7 +37,7 @@ private:
 
   // CUDA architectures for which we have raised an error in
   // CheckCudaVersionSupportsArch.
-  mutable std::bitset<(int)CudaArch::LAST> ArchsWithBadVersion;
+  mutable std::bitset<(int)OffloadArch::LAST> ArchsWithBadVersion;
 
 public:
   CudaInstallationDetector(const Driver &D, const llvm::Triple &HostTriple,
@@ -50,7 +50,7 @@ public:
   ///
   /// If either Version or Arch is unknown, does not emit an error.  Emits at
   /// most one error per Arch.
-  void CheckCudaVersionSupportsArch(CudaArch Arch) const;
+  void CheckCudaVersionSupportsArch(OffloadArch Arch) const;
 
   /// Check whether we detected a valid Cuda install.
   bool isValid() const { return IsValid; }

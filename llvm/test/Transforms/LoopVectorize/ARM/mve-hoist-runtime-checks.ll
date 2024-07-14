@@ -18,7 +18,8 @@ target triple = "thumbv8.1m.main-none-unknown-eabi"
 ; NOTE: The strides of the starting address values in the inner loop differ, i.e.
 ; '(i * (n + 1))' vs '(i * n)'.
 
-; DEBUG-LABEL: LAA: Found a loop in diff_checks:
+; DEBUG-LABEL: 'diff_checks'
+; DEBUG:      LAA: Found an analyzable loop: inner.loop
 ; DEBUG:      LAA: Not creating diff runtime check, since these  cannot be hoisted out of the outer loop
 ; DEBUG:      LAA: Adding RT check for range:
 ; DEBUG-NEXT: LAA: Expanded RT check for range to include outer loop in order to permit hoisting

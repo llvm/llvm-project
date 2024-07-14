@@ -147,11 +147,11 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addUsedIfAvailable<LiveIntervals>();
+    AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
     // Should preserve the same set that TwoAddressInstructions does.
-    AU.addPreserved<MachineDominatorTree>();
-    AU.addPreserved<SlotIndexes>();
-    AU.addPreserved<LiveIntervals>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
+    AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addPreservedID(LiveVariablesID);
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -761,10 +761,13 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
                         MF.getTarget().getOptLevel() > CodeGenOptLevel::None;
 
   // This doesn't actually need LiveIntervals, but we can preserve them.
-  LIS = getAnalysisIfAvailable<LiveIntervals>();
+  auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+  LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
   // This doesn't actually need LiveVariables, but we can preserve them.
-  LV = getAnalysisIfAvailable<LiveVariables>();
-  MDT = getAnalysisIfAvailable<MachineDominatorTree>();
+  auto *LVWrapper = getAnalysisIfAvailable<LiveVariablesWrapperPass>();
+  LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
+  auto *MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+  MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
   MRI = &MF.getRegInfo();
   BoolRC = TRI->getBoolRC();
 

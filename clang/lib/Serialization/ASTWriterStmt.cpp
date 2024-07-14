@@ -19,6 +19,7 @@
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Lex/Token.h"
+#include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTRecordWriter.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 using namespace clang;
@@ -37,7 +38,7 @@ namespace clang {
     unsigned AbbrevToUse;
 
     /// A helper that can help us to write a packed bit across function
-    /// calls. For example, we may write seperate bits in seperate functions:
+    /// calls. For example, we may write separate bits in separate functions:
     ///
     ///  void VisitA(A* a) {
     ///     Record.push_back(a->isSomething());
@@ -473,14 +474,12 @@ addConstraintSatisfaction(ASTRecordWriter &Record,
   if (!Satisfaction.IsSatisfied) {
     Record.push_back(Satisfaction.NumRecords);
     for (const auto &DetailRecord : Satisfaction) {
-      Record.writeStmtRef(DetailRecord.first);
-      auto *E = DetailRecord.second.dyn_cast<Expr *>();
-      Record.push_back(E == nullptr);
+      auto *E = DetailRecord.dyn_cast<Expr *>();
+      Record.push_back(/* IsDiagnostic */ E == nullptr);
       if (E)
         Record.AddStmt(E);
       else {
-        auto *Diag = DetailRecord.second.get<std::pair<SourceLocation,
-                                                       StringRef> *>();
+        auto *Diag = DetailRecord.get<std::pair<SourceLocation, StringRef> *>();
         Record.AddSourceLocation(Diag->first);
         Record.AddString(Diag->second);
       }
@@ -1262,6 +1261,16 @@ void ASTStmtWriter::VisitSourceLocExpr(SourceLocExpr *E) {
   Code = serialization::EXPR_SOURCE_LOC;
 }
 
+void ASTStmtWriter::VisitEmbedExpr(EmbedExpr *E) {
+  VisitExpr(E);
+  Record.AddSourceLocation(E->getBeginLoc());
+  Record.AddSourceLocation(E->getEndLoc());
+  Record.AddStmt(E->getDataStringLiteral());
+  Record.writeUInt32(E->getStartingElementPos());
+  Record.writeUInt32(E->getDataElementCount());
+  Code = serialization::EXPR_BUILTIN_PP_EMBED;
+}
+
 void ASTStmtWriter::VisitAddrLabelExpr(AddrLabelExpr *E) {
   VisitExpr(E);
   Record.AddSourceLocation(E->getAmpAmpLoc());
@@ -1977,34 +1986,41 @@ void ASTStmtWriter::VisitCXXDependentScopeMemberExpr(
     CXXDependentScopeMemberExpr *E) {
   VisitExpr(E);
 
-  // Don't emit anything here (or if you do you will have to update
-  // the corresponding deserialization function).
-  Record.push_back(E->getNumTemplateArgs());
+  bool HasQualifier = E->hasQualifier();
+  unsigned NumUnqualifiedLookups = E->getNumUnqualifiedLookups();
+  bool HasTemplateInfo = E->hasTemplateKWAndArgsInfo();
+  unsigned NumTemplateArgs = E->getNumTemplateArgs();
+
+  // Write these first for easy access when deserializing, as they affect the
+  // size of the CXXDependentScopeMemberExpr.
   CurrentPackingBits.updateBits();
-  CurrentPackingBits.addBit(E->hasTemplateKWAndArgsInfo());
-  CurrentPackingBits.addBit(E->hasFirstQualifierFoundInScope());
-
-  if (E->hasTemplateKWAndArgsInfo()) {
-    const ASTTemplateKWAndArgsInfo &ArgInfo =
-        *E->getTrailingObjects<ASTTemplateKWAndArgsInfo>();
-    AddTemplateKWAndArgsInfo(ArgInfo,
-                             E->getTrailingObjects<TemplateArgumentLoc>());
-  }
-
-  CurrentPackingBits.addBit(E->isArrow());
+  CurrentPackingBits.addBit(HasQualifier);
+  CurrentPackingBits.addBit(HasTemplateInfo);
+  Record.push_back(NumUnqualifiedLookups);
+  Record.push_back(NumTemplateArgs);
 
   Record.AddTypeRef(E->getBaseType());
-  Record.AddNestedNameSpecifierLoc(E->getQualifierLoc());
+  CurrentPackingBits.addBit(E->isArrow());
   CurrentPackingBits.addBit(!E->isImplicitAccess());
   if (!E->isImplicitAccess())
     Record.AddStmt(E->getBase());
 
   Record.AddSourceLocation(E->getOperatorLoc());
 
-  if (E->hasFirstQualifierFoundInScope())
-    Record.AddDeclRef(E->getFirstQualifierFoundInScope());
-
   Record.AddDeclarationNameInfo(E->MemberNameInfo);
+
+  if (HasQualifier)
+    Record.AddNestedNameSpecifierLoc(E->getQualifierLoc());
+
+  for (DeclAccessPair D : E->unqualified_lookups()) {
+    Record.AddDeclRef(D.getDecl());
+    Record.push_back(D.getAccess());
+  }
+
+  if (HasTemplateInfo)
+    AddTemplateKWAndArgsInfo(*E->getTrailingObjects<ASTTemplateKWAndArgsInfo>(),
+                             E->getTrailingObjects<TemplateArgumentLoc>());
+
   Code = serialization::EXPR_CXX_DEPENDENT_SCOPE_MEMBER;
 }
 
@@ -2089,6 +2105,22 @@ void ASTStmtWriter::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E) {
   CurrentPackingBits.addBit(E->requiresADL());
   Record.AddDeclRef(E->getNamingClass());
   Code = serialization::EXPR_CXX_UNRESOLVED_LOOKUP;
+
+  if (Writer.isWritingStdCXXNamedModules() && Writer.getChain()) {
+    // Referencing all the possible declarations to make sure the change get
+    // propagted.
+    DeclarationName Name = E->getName();
+    for (auto *Found :
+         Writer.getASTContext().getTranslationUnitDecl()->lookup(Name))
+      if (Found->isFromASTFile())
+        Writer.GetDeclRef(Found);
+
+    llvm::SmallVector<NamespaceDecl *> ExternalNSs;
+    Writer.getChain()->ReadKnownNamespaces(ExternalNSs);
+    for (auto *NS : ExternalNSs)
+      for (auto *Found : NS->lookup(Name))
+        Writer.GetDeclRef(Found);
+  }
 }
 
 void ASTStmtWriter::VisitTypeTraitExpr(TypeTraitExpr *E) {

@@ -1262,8 +1262,8 @@ func.func @insert_strided_slice_scalable(%arg0 : vector<1x1x[4]xi32>, %arg1: vec
 // CHECK-SAME:      %[[ARG_0:.*]]: vector<1x1x[4]xi32>,
 // CHECK-SAME:      %[[ARG_1:.*]]: vector<1x4x[4]xi32>) -> vector<1x4x[4]xi32> {
 
-//      CHECK:      %[[CAST_1:.*]] = builtin.unrealized_conversion_cast %[[ARG_0]] : vector<1x1x[4]xi32> to !llvm.array<1 x array<1 x vector<[4]xi32>>>
-//      CHECK:      %[[CAST_2:.*]] = builtin.unrealized_conversion_cast %[[ARG_1]] : vector<1x4x[4]xi32> to !llvm.array<1 x array<4 x vector<[4]xi32>>>
+//  CHECK-DAG:      %[[CAST_1:.*]] = builtin.unrealized_conversion_cast %[[ARG_0]] : vector<1x1x[4]xi32> to !llvm.array<1 x array<1 x vector<[4]xi32>>>
+//  CHECK-DAG:      %[[CAST_2:.*]] = builtin.unrealized_conversion_cast %[[ARG_1]] : vector<1x4x[4]xi32> to !llvm.array<1 x array<4 x vector<[4]xi32>>>
 
 //      CHECK:      %[[EXT_1:.*]] = llvm.extractvalue %[[CAST_2]][0] : !llvm.array<1 x array<4 x vector<[4]xi32>>>
 //      CHECK:      %[[EXT_2:.*]] = llvm.extractvalue %[[CAST_1]][0, 0] : !llvm.array<1 x array<1 x vector<[4]xi32>>>
@@ -2248,6 +2248,19 @@ func.func @gather_op(%arg0: memref<?xf32>, %arg1: vector<3xi32>, %arg2: vector<3
 
 // -----
 
+func.func @gather_op_scalable(%arg0: memref<?xf32>, %arg1: vector<[3]xi32>, %arg2: vector<[3]xi1>, %arg3: vector<[3]xf32>) -> vector<[3]xf32> {
+  %0 = arith.constant 0: index
+  %1 = vector.gather %arg0[%0][%arg1], %arg2, %arg3 : memref<?xf32>, vector<[3]xi32>, vector<[3]xi1>, vector<[3]xf32> into vector<[3]xf32>
+  return %1 : vector<[3]xf32>
+}
+
+// CHECK-LABEL: func @gather_op_scalable
+// CHECK: %[[P:.*]] = llvm.getelementptr %{{.*}}[%{{.*}}] : (!llvm.ptr, vector<[3]xi32>) -> !llvm.vec<? x 3 x ptr>, f32
+// CHECK: %[[G:.*]] = llvm.intr.masked.gather %[[P]], %{{.*}}, %{{.*}} {alignment = 4 : i32} : (!llvm.vec<? x 3 x ptr>, vector<[3]xi1>, vector<[3]xf32>) -> vector<[3]xf32>
+// CHECK: return %[[G]] : vector<[3]xf32>
+
+// -----
+
 func.func @gather_op_global_memory(%arg0: memref<?xf32, 1>, %arg1: vector<3xi32>, %arg2: vector<3xi1>, %arg3: vector<3xf32>) -> vector<3xf32> {
   %0 = arith.constant 0: index
   %1 = vector.gather %arg0[%0][%arg1], %arg2, %arg3 : memref<?xf32, 1>, vector<3xi32>, vector<3xi1>, vector<3xf32> into vector<3xf32>
@@ -2348,6 +2361,18 @@ func.func @scatter_op(%arg0: memref<?xf32>, %arg1: vector<3xi32>, %arg2: vector<
 // CHECK-LABEL: func @scatter_op
 // CHECK: %[[P:.*]] = llvm.getelementptr %{{.*}}[%{{.*}}] : (!llvm.ptr, vector<3xi32>) -> !llvm.vec<3 x ptr>, f32
 // CHECK: llvm.intr.masked.scatter %{{.*}}, %[[P]], %{{.*}} {alignment = 4 : i32} : vector<3xf32>, vector<3xi1> into !llvm.vec<3 x ptr>
+
+// -----
+
+func.func @scatter_op_scalable(%arg0: memref<?xf32>, %arg1: vector<[3]xi32>, %arg2: vector<[3]xi1>, %arg3: vector<[3]xf32>) {
+  %0 = arith.constant 0: index
+  vector.scatter %arg0[%0][%arg1], %arg2, %arg3 : memref<?xf32>, vector<[3]xi32>, vector<[3]xi1>, vector<[3]xf32>
+  return
+}
+
+// CHECK-LABEL: func @scatter_op_scalable
+// CHECK: %[[P:.*]] = llvm.getelementptr %{{.*}}[%{{.*}}] : (!llvm.ptr, vector<[3]xi32>) -> !llvm.vec<? x 3 x ptr>, f32
+// CHECK: llvm.intr.masked.scatter %{{.*}}, %[[P]], %{{.*}} {alignment = 4 : i32} : vector<[3]xf32>, vector<[3]xi1> into !llvm.vec<? x 3 x ptr>
 
 // -----
 
@@ -2491,8 +2516,8 @@ func.func @make_fixed_vector_of_scalable_vector(%f : f64) -> vector<3x[2]xf64>
 // CHECK-LABEL: @vector_interleave_0d
 //  CHECK-SAME:     %[[LHS:.*]]: vector<i8>, %[[RHS:.*]]: vector<i8>)
 func.func @vector_interleave_0d(%a: vector<i8>, %b: vector<i8>) -> vector<2xi8> {
-  // CHECK: %[[LHS_RANK1:.*]] = builtin.unrealized_conversion_cast %[[LHS]] : vector<i8> to vector<1xi8>
-  // CHECK: %[[RHS_RANK1:.*]] = builtin.unrealized_conversion_cast %[[RHS]] : vector<i8> to vector<1xi8>
+  // CHECK-DAG: %[[LHS_RANK1:.*]] = builtin.unrealized_conversion_cast %[[LHS]] : vector<i8> to vector<1xi8>
+  // CHECK-DAG: %[[RHS_RANK1:.*]] = builtin.unrealized_conversion_cast %[[RHS]] : vector<i8> to vector<1xi8>
   // CHECK: %[[ZIP:.*]] = llvm.shufflevector %[[LHS_RANK1]], %[[RHS_RANK1]] [0, 1] : vector<1xi8>
   // CHECK: return %[[ZIP]]
   %0 = vector.interleave %a, %b : vector<i8> -> vector<2xi8>
@@ -2589,4 +2614,46 @@ func.func @vector_deinterleave_2d_scalable(%a: vector<2x[8]xf32>) -> (vector<2x[
 func.func @vector_bitcast_2d(%arg0: vector<2x4xi32>) -> vector<2x2xi64> {
   %0 = vector.bitcast %arg0 : vector<2x4xi32> to vector<2x2xi64>
   return %0 : vector<2x2xi64>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @vector_from_elements_1d(
+//  CHECK-SAME:     %[[a:.*]]: f32, %[[b:.*]]: f32)
+//       CHECK:   %[[undef:.*]] = llvm.mlir.undef : vector<3xf32>
+//       CHECK:   %[[c0:.*]] = llvm.mlir.constant(0 : i64) : i64
+//       CHECK:   %[[insert0:.*]] = llvm.insertelement %[[a]], %[[undef]][%[[c0]] : i64] : vector<3xf32>
+//       CHECK:   %[[c1:.*]] = llvm.mlir.constant(1 : i64) : i64
+//       CHECK:   %[[insert1:.*]] = llvm.insertelement %[[b]], %[[insert0]][%[[c1]] : i64] : vector<3xf32>
+//       CHECK:   %[[c2:.*]] = llvm.mlir.constant(2 : i64) : i64
+//       CHECK:   %[[insert2:.*]] = llvm.insertelement %[[a]], %[[insert1]][%[[c2]] : i64] : vector<3xf32>
+//       CHECK:   return %[[insert2]]
+func.func @vector_from_elements_1d(%a: f32, %b: f32) -> vector<3xf32> {
+  %0 = vector.from_elements %a, %b, %a : vector<3xf32>
+  return %0 : vector<3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @vector_from_elements_0d(
+//  CHECK-SAME:     %[[a:.*]]: f32)
+//       CHECK:   %[[undef:.*]] = llvm.mlir.undef : vector<1xf32>
+//       CHECK:   %[[c0:.*]] = llvm.mlir.constant(0 : i64) : i64
+//       CHECK:   %[[insert0:.*]] = llvm.insertelement %[[a]], %[[undef]][%[[c0]] : i64] : vector<1xf32>
+//       CHECK:   %[[cast:.*]] = builtin.unrealized_conversion_cast %[[insert0]] : vector<1xf32> to vector<f32>
+//       CHECK:   return %[[cast]]
+func.func @vector_from_elements_0d(%a: f32) -> vector<f32> {
+  %0 = vector.from_elements %a : vector<f32>
+  return %0 : vector<f32>
+}
+
+// -----
+
+// CHECK-LABEL: @vector_step_scalable
+// CHECK: %[[STEPVECTOR:.*]] = llvm.intr.experimental.stepvector : vector<[4]xi64>
+// CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[STEPVECTOR]] : vector<[4]xi64> to vector<[4]xindex>
+// CHECK: return %[[CAST]] : vector<[4]xindex>
+func.func @vector_step_scalable() -> vector<[4]xindex> {
+  %0 = vector.step : vector<[4]xindex>
+  return %0 : vector<[4]xindex>
 }

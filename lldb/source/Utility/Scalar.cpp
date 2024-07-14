@@ -753,9 +753,7 @@ bool Scalar::SignExtend(uint32_t sign_bit_pos) {
       return false;
 
     case Scalar::e_int:
-      if (max_bit_pos == sign_bit_pos)
-        return true;
-      else if (sign_bit_pos < (max_bit_pos - 1)) {
+      if (sign_bit_pos < (max_bit_pos - 1)) {
         llvm::APInt sign_bit = llvm::APInt::getSignMask(sign_bit_pos + 1);
         llvm::APInt bitwize_and = m_integer & sign_bit;
         if (bitwize_and.getBoolValue()) {

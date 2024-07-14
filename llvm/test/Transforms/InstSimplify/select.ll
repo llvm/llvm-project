@@ -985,13 +985,13 @@ define i1 @expand_binop_undef(i32 %x, i32 %y) {
 define i32 @pr47322_more_poisonous_replacement(i32 %arg) {
 ; CHECK-LABEL: @pr47322_more_poisonous_replacement(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ARG:%.*]], 0
-; CHECK-NEXT:    [[TRAILING:%.*]] = call i32 @llvm.cttz.i32(i32 [[ARG]], i1 immarg true)
+; CHECK-NEXT:    [[TRAILING:%.*]] = call i32 @llvm.cttz.i32(i32 [[ARG]], i1 true)
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[ARG]], [[TRAILING]]
 ; CHECK-NEXT:    [[R1_SROA_0_1:%.*]] = select i1 [[CMP]], i32 0, i32 [[SHIFTED]]
 ; CHECK-NEXT:    ret i32 [[R1_SROA_0_1]]
 ;
   %cmp = icmp eq i32 %arg, 0
-  %trailing = call i32 @llvm.cttz.i32(i32 %arg, i1 immarg true)
+  %trailing = call i32 @llvm.cttz.i32(i32 %arg, i1 true)
   %shifted = lshr i32 %arg, %trailing
   %r1.sroa.0.1 = select i1 %cmp, i32 0, i32 %shifted
   ret i32 %r1.sroa.0.1

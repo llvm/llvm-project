@@ -1200,7 +1200,7 @@ static void genParsedAttrPropertiesSetter(OperationFormat &fmt, Operator &op,
   paramList.emplace_back("::llvm::function_ref<::mlir::InFlightDiagnostic()>",
                          "emitError");
 
-  Method *method = opClass.addStaticMethod("::mlir::LogicalResult",
+  Method *method = opClass.addStaticMethod("::llvm::LogicalResult",
                                            "setPropertiesFromParsedAttr",
                                            std::move(paramList));
   MethodBody &body = method->body().indent();

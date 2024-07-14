@@ -112,7 +112,7 @@ class getVOP1Pat <SDPatternOperator node, VOPProfile P> : LetDummies {
         !if(P.HasOMod,
             [(set P.DstVT:$vdst, (node (P.Src0VT (VOP3OMods P.Src0VT:$src0,
                                                   i1:$clamp, i32:$omod))))],
-            [(set P.DstVT:$vdst, (node P.Src0RC32:$src0))]
+            [(set P.DstVT:$vdst, (node (P.Src0VT P.Src0RC32:$src0)))]
         )
     );
 }
@@ -249,9 +249,15 @@ def VOP_READFIRSTLANE : VOPProfile <[i32, i32, untyped, untyped]> {
 // FIXME: Specify SchedRW for READFIRSTLANE_B32
 // TODO: There is VOP3 encoding also
 def V_READFIRSTLANE_B32 : VOP1_Pseudo <"v_readfirstlane_b32", VOP_READFIRSTLANE,
-                                       getVOP1Pat<int_amdgcn_readfirstlane,
-                                                  VOP_READFIRSTLANE>.ret, 1> {
+                                       [], 1> {
   let isConvergent = 1;
+  let IsInvalidSingleUseConsumer = 1;
+}
+
+foreach vt = Reg32Types.types in {
+  def : GCNPat<(vt (int_amdgcn_readfirstlane (vt VRegOrLdsSrc_32:$src0))),
+        (V_READFIRSTLANE_B32 (vt VRegOrLdsSrc_32:$src0))
+  >;
 }
 
 let isReMaterializable = 1 in {
@@ -362,6 +368,7 @@ defm V_CLREXCP : VOP1Inst <"v_clrexcp", VOP_NO_EXT<VOP_NONE>>;
 def VOP_MOVRELS : VOPProfile<[i32, i32, untyped, untyped]> {
   let Src0RC32 = VRegSrc_32;
   let Src0RC64 = VRegSrc_32;
+  let IsInvalidSingleUseConsumer = 1;
 }
 
 // Special case because there are no true output operands.  Hack vdst
@@ -405,8 +412,12 @@ class VOP_MOVREL<RegisterOperand Src1RC> : VOPProfile<[untyped, i32, untyped, un
   let EmitDst = 1; // force vdst emission
 }
 
-def VOP_MOVRELD : VOP_MOVREL<VSrc_b32>;
-def VOP_MOVRELSD : VOP_MOVREL<VRegSrc_32>;
+let IsInvalidSingleUseProducer = 1 in {
+  def VOP_MOVRELD : VOP_MOVREL<VSrc_b32>;
+  def VOP_MOVRELSD : VOP_MOVREL<VRegSrc_32> {
+    let IsInvalidSingleUseConsumer = 1;
+  }
+}
 
 let SubtargetPredicate = HasMovrel, Uses = [M0, EXEC] in {
  // v_movreld_b32 is a special case because the destination output
@@ -535,6 +546,7 @@ let SubtargetPredicate = isGFX9Plus in {
     let Constraints = "$vdst = $src1, $vdst1 = $src0";
     let DisableEncoding = "$vdst1,$src1";
     let SchedRW = [Write64Bit, Write64Bit];
+    let IsInvalidSingleUseConsumer = 1;
   }
 
   let isReMaterializable = 1 in
@@ -699,6 +711,8 @@ let SubtargetPredicate = isGFX10Plus in {
       let Constraints = "$vdst = $src1, $vdst1 = $src0";
       let DisableEncoding = "$vdst1,$src1";
       let SchedRW = [Write64Bit, Write64Bit];
+      let IsInvalidSingleUseConsumer = 1;
+      let IsInvalidSingleUseProducer = 1;
     }
   } // End Uses = [M0]
 } // End SubtargetPredicate = isGFX10Plus
@@ -718,14 +732,21 @@ def V_ACCVGPR_MOV_B32 : VOP1_Pseudo<"v_accvgpr_mov_b32", VOPProfileAccMov, [], 1
 let SubtargetPredicate = isGFX11Plus in {
   // Restrict src0 to be VGPR
   def V_PERMLANE64_B32 : VOP1_Pseudo<"v_permlane64_b32", VOP_MOVRELS,
-                                      getVOP1Pat<int_amdgcn_permlane64,
-                                                 VOP_MOVRELS>.ret,
-                                      /*VOP1Only=*/ 1>;
+                                      [], /*VOP1Only=*/ 1> {
+    let IsInvalidSingleUseConsumer = 1;
+    let IsInvalidSingleUseProducer = 1;
+  }
   defm V_MOV_B16_t16    : VOP1Inst<"v_mov_b16_t16", VOPProfile_True16<VOP_I16_I16>>;
   defm V_NOT_B16        : VOP1Inst_t16<"v_not_b16", VOP_I16_I16>;
   defm V_CVT_I32_I16    : VOP1Inst_t16<"v_cvt_i32_i16", VOP_I32_I16>;
   defm V_CVT_U32_U16    : VOP1Inst_t16<"v_cvt_u32_u16", VOP_I32_I16>;
 } // End SubtargetPredicate = isGFX11Plus
+
+foreach vt = Reg32Types.types in {
+  def : GCNPat<(int_amdgcn_permlane64 (vt VRegSrc_32:$src0)),
+        (vt (V_PERMLANE64_B32 (vt VRegSrc_32:$src0)))
+  >;
+}
 
 //===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.

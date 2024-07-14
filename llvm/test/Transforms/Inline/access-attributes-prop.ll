@@ -189,9 +189,10 @@ define dso_local void @foo2_through_obj(ptr %p, ptr %p2) {
 
 define dso_local void @foo_byval_readonly(ptr readonly %p) {
 ; CHECK-LABEL: define {{[^@]+}}@foo_byval_readonly
-; CHECK-SAME: (ptr readonly [[P:%.*]])
-; CHECK-NEXT:   call void @bar4(ptr byval([4 x i32]) [[P]])
-; CHECK-NEXT:   ret void
+; CHECK-SAME: (ptr readonly [[P:%.*]]) {
+; CHECK-NEXT:    call void @bar4(ptr byval([4 x i32]) [[P]])
+; CHECK-NEXT:    ret void
+;
   call void @bar4(ptr byval([4 x i32]) %p)
   ret void
 }
@@ -233,7 +234,7 @@ define void @prop_param_callbase_def_2x_2(ptr %p, ptr %p2) {
 ; CHECK-SAME: (ptr [[P:%.*]], ptr [[P2:%.*]]) {
 ; CHECK-NEXT:    [[PP_I:%.*]] = getelementptr i8, ptr [[P]], i64 9
 ; CHECK-NEXT:    [[P2P_I:%.*]] = getelementptr i8, ptr [[P2]], i64 123
-; CHECK-NEXT:    call void @bar2(ptr writeonly [[P2P_I]], ptr readonly [[PP_I]])
+; CHECK-NEXT:    call void @bar2(ptr [[P2P_I]], ptr readonly [[PP_I]])
 ; CHECK-NEXT:    ret void
 ;
   call void @foo2_through_obj(ptr readonly %p, ptr writeonly %p2)
@@ -552,8 +553,9 @@ define void @prop_no_conflict_writable2(ptr %p) {
 define void @prop_byval_readonly(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_byval_readonly
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:   call void @bar4(ptr byval([4 x i32]) [[P]])
-; CHECK-NEXT:   ret void
+; CHECK-NEXT:    call void @bar4(ptr byval([4 x i32]) [[P]])
+; CHECK-NEXT:    ret void
+;
   call void @foo_byval_readonly(ptr %p)
   ret void
 }

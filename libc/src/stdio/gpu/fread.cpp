@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/fread.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/gpu/file.h"
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(size_t, fread,
                    (void *__restrict buffer, size_t size, size_t nmemb,
@@ -22,4 +23,4 @@ LLVM_LIBC_FUNCTION(size_t, fread,
   return result / size;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

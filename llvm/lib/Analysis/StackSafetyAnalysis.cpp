@@ -152,7 +152,7 @@ raw_ostream &operator<<(raw_ostream &OS, const UseInfo<CalleeTy> &U) {
 /// Calculate the allocation size of a given alloca. Returns empty range
 // in case of confution.
 ConstantRange getStaticAllocaSizeRange(const AllocaInst &AI) {
-  const DataLayout &DL = AI.getModule()->getDataLayout();
+  const DataLayout &DL = AI.getDataLayout();
   TypeSize TS = DL.getTypeAllocSize(AI.getAllocatedType());
   unsigned PointerSize = DL.getPointerTypeSizeInBits(AI.getType());
   // Fallback to empty range for alloca size.
@@ -268,7 +268,7 @@ class StackSafetyLocalAnalysis {
 
 public:
   StackSafetyLocalAnalysis(Function &F, ScalarEvolution &SE)
-      : F(F), DL(F.getParent()->getDataLayout()), SE(SE),
+      : F(F), DL(F.getDataLayout()), SE(SE),
         PointerSize(DL.getPointerSizeInBits()),
         UnknownRange(PointerSize, true) {}
 
@@ -690,7 +690,7 @@ void StackSafetyDataFlowAnalysis<CalleeTy>::runDataFlow() {
         Callees.push_back(CS.first.Callee);
 
     llvm::sort(Callees);
-    Callees.erase(std::unique(Callees.begin(), Callees.end()), Callees.end());
+    Callees.erase(llvm::unique(Callees), Callees.end());
 
     for (auto &Callee : Callees)
       Callers[Callee].push_back(F.first);
@@ -852,7 +852,7 @@ GVToSSI createGlobalStackSafetyInfo(
     }
 
   uint32_t PointerSize =
-      Copy.begin()->first->getParent()->getDataLayout().getPointerSizeInBits();
+      Copy.begin()->first->getDataLayout().getPointerSizeInBits();
   StackSafetyDataFlowAnalysis<GlobalValue> SSDFA(PointerSize, std::move(Copy));
 
   for (const auto &F : SSDFA.run()) {

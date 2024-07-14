@@ -479,8 +479,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
         HasJumpTable = true;
       else if (BC.MIB->isUnconditionalBranch(Inst))
         HasUnconditionalBranch = true;
-      else if ((!BC.MIB->isCall(Inst) && !BC.MIB->isConditionalBranch(Inst)) ||
-               !BC.MIB->isReversibleBranch(Inst))
+      else if (!(BC.MIB->isCall(Inst) || BC.MIB->isConditionalBranch(Inst)))
         continue;
 
       const uint32_t FromOffset = *BC.MIB->getOffset(Inst);

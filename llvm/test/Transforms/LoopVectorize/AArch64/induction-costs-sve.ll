@@ -157,9 +157,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED:       vector.ph:
 ; PRED-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 8
-; PRED-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
-; PRED-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 8
-; PRED-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP7]], 1
+; PRED-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP5]], 1
 ; PRED-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP0]], [[TMP8]]
 ; PRED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP5]]
 ; PRED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]

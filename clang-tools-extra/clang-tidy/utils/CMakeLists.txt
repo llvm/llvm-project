@@ -25,6 +25,7 @@ add_clang_library(clangTidyUtils
   RenamerClangTidyCheck.cpp
   TransformerClangTidyCheck.cpp
   TypeTraits.cpp
+  UseRangesCheck.cpp
   UsingInserter.cpp
 
   LINK_LIBS

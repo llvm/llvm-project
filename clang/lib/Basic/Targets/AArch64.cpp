@@ -221,6 +221,18 @@ bool AArch64TargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
   return true;
 }
 
+bool AArch64TargetInfo::validateGlobalRegisterVariable(
+    StringRef RegName, unsigned RegSize, bool &HasSizeMismatch) const {
+  if ((RegName == "sp") || RegName.starts_with("x")) {
+    HasSizeMismatch = RegSize != 64;
+    return true;
+  } else if (RegName.starts_with("w")) {
+    HasSizeMismatch = RegSize != 32;
+    return true;
+  }
+  return false;
+}
+
 bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
                                                  BranchProtectionInfo &BPI,
                                                  StringRef &Err) const {
@@ -246,7 +258,7 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
 }
 
 bool AArch64TargetInfo::isValidCPUName(StringRef Name) const {
-  return Name == "generic" || llvm::AArch64::parseCpu(Name);
+  return llvm::AArch64::parseCpu(Name).has_value();
 }
 
 bool AArch64TargetInfo::setCPU(const std::string &Name) {
@@ -661,26 +673,22 @@ AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
 unsigned AArch64TargetInfo::multiVersionSortPriority(StringRef Name) const {
   if (Name == "default")
     return 0;
-  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
-    return Ext->FmvPriority;
+  if (auto Ext = llvm::AArch64::parseFMVExtension(Name))
+    return Ext->Priority;
   return 0;
 }
 
 unsigned AArch64TargetInfo::multiVersionFeatureCost() const {
   // Take the maximum priority as per feature cost, so more features win.
-  return llvm::AArch64::ExtensionInfo::MaxFMVPriority;
+  constexpr unsigned MaxFMVPriority = 1000;
+  return MaxFMVPriority;
 }
 
 bool AArch64TargetInfo::doesFeatureAffectCodeGen(StringRef Name) const {
-  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
-    return !Ext->DependentFeatures.empty();
+  // FMV extensions which imply no backend features do not affect codegen.
+  if (auto Ext = llvm::AArch64::parseFMVExtension(Name))
+    return !Ext->Features.empty();
   return false;
-}
-
-StringRef AArch64TargetInfo::getFeatureDependencies(StringRef Name) const {
-  if (auto Ext = llvm::AArch64::parseArchExtension(Name))
-    return Ext->DependentFeatures;
-  return StringRef();
 }
 
 bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
@@ -688,7 +696,7 @@ bool AArch64TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
   llvm::SmallVector<StringRef, 8> Features;
   FeatureStr.split(Features, "+");
   for (auto &Feature : Features)
-    if (!llvm::AArch64::parseArchExtension(Feature.trim()).has_value())
+    if (!llvm::AArch64::parseFMVExtension(Feature.trim()).has_value())
       return false;
   return true;
 }
@@ -1061,9 +1069,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 //
 // A feature may correspond to an Extension (anything with a corresponding
 // AEK_), in which case an ExtensionSet is used to parse it and expand its
-// dependencies. Otherwise the feature is passed through (e.g. +v8.1a,
-// +outline-atomics, -fmv, etc). Features coming from the command line are
-// already parsed, therefore their dependencies do not need expansion.
+// dependencies. If the feature does not yield a successful parse then it
+// is passed through.
 ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
   ParsedTargetAttr Ret;
   if (Features == "default")
@@ -1078,10 +1085,14 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
     SmallVector<StringRef, 8> SplitFeatures;
     FeatString.split(SplitFeatures, StringRef("+"), -1, false);
     for (StringRef Feature : SplitFeatures) {
-      if (FeatureBits.parseModifier(Feature, /* AllowNoDashForm = */ true))
+      if (FeatureBits.parseModifier(Feature))
         continue;
-      // Pass through features that are not extensions, e.g. +v8.1a,
-      // +outline-atomics, -fmv, etc.
+      // Pass through anything that failed to parse so that we can emit
+      // diagnostics, as well as valid internal feature names.
+      //
+      // FIXME: We should consider rejecting internal feature names like
+      //        neon, v8a, etc.
+      // FIXME: We should consider emitting diagnostics here.
       if (Feature.starts_with("no"))
         Features.push_back("-" + Feature.drop_front(2).str());
       else
@@ -1091,7 +1102,8 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
 
   llvm::AArch64::ExtensionSet FeatureBits;
   // Reconstruct the bitset from the command line option features.
-  FeatureBits.reconstructFromParsedFeatures(getTargetOpts().FeaturesAsWritten);
+  FeatureBits.reconstructFromParsedFeatures(getTargetOpts().FeaturesAsWritten,
+                                            Ret.Features);
 
   for (auto &Feature : AttrFeatures) {
     Feature = Feature.trim();
@@ -1142,8 +1154,12 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
     } else {
       if (FeatureBits.parseModifier(Feature, /* AllowNoDashForm = */ true))
         continue;
-      // Pass through features that are not extensions, e.g. +v8.1a,
-      // +outline-atomics, -fmv, etc.
+      // Pass through anything that failed to parse so that we can emit
+      // diagnostics, as well as valid internal feature names.
+      //
+      // FIXME: We should consider rejecting internal feature names like
+      //        neon, v8a, etc.
+      // FIXME: We should consider emitting diagnostics here.
       if (Feature.starts_with("no-"))
         Ret.Features.push_back("-" + Feature.drop_front(3).str());
       else
@@ -1520,6 +1536,7 @@ WindowsARM64TargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_OpenCLKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
+  case CC_PreserveNone:
   case CC_Swift:
   case CC_SwiftAsync:
   case CC_Win64:

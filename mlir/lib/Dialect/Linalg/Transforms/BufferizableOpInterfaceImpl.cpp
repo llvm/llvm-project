@@ -162,6 +162,35 @@ struct LinalgOpInterfaceHelper {
     (Ops::template attachInterface<LinalgOpInterface<Ops>>(*ctx), ...);
   }
 };
+
+struct SoftmaxOpInterface
+    : public DstBufferizableOpInterfaceExternalModel<SoftmaxOpInterface,
+                                                     linalg::SoftmaxOp> {
+  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
+                              const AnalysisState &state) const {
+    // Output operand is not read.
+    auto softmaxOp = cast<linalg::SoftmaxOp>(op);
+    return &opOperand == &softmaxOp.getInputMutable();
+  }
+
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
+                          const BufferizationOptions &options) const {
+    auto softmaxOp = cast<linalg::SoftmaxOp>(op);
+    FailureOr<Value> inputBuffer =
+        getBuffer(rewriter, softmaxOp.getInput(), options);
+    if (failed(inputBuffer))
+      return failure();
+    FailureOr<Value> outputBuffer =
+        getBuffer(rewriter, softmaxOp.getOutput(), options);
+    if (failed(outputBuffer))
+      return failure();
+    rewriter.create<linalg::SoftmaxOp>(softmaxOp.getLoc(),
+                                       /*result=*/TypeRange(), *inputBuffer,
+                                       *outputBuffer, softmaxOp.getDimension());
+    replaceOpWithBufferizedValues(rewriter, op, *outputBuffer);
+    return success();
+  }
+};
 } // namespace
 
 void mlir::linalg::registerBufferizableOpInterfaceExternalModels(
@@ -174,5 +203,7 @@ void mlir::linalg::registerBufferizableOpInterfaceExternalModels(
 #define GET_OP_LIST
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
         >::registerOpInterface(ctx);
+
+    SoftmaxOp::attachInterface<SoftmaxOpInterface>(*ctx);
   });
 }

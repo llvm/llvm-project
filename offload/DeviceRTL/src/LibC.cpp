@@ -49,7 +49,7 @@ int32_t omp_vprintf(const char *Format, void *Arguments, uint32_t) {
 
 extern "C" {
 
-int memcmp(const void *lhs, const void *rhs, size_t count) {
+[[gnu::weak]] int memcmp(const void *lhs, const void *rhs, size_t count) {
   auto *L = reinterpret_cast<const unsigned char *>(lhs);
   auto *R = reinterpret_cast<const unsigned char *>(rhs);
 
@@ -60,7 +60,7 @@ int memcmp(const void *lhs, const void *rhs, size_t count) {
   return 0;
 }
 
-void memset(void *dst, int C, size_t count) {
+[[gnu::weak]] void memset(void *dst, int C, size_t count) {
   auto *dstc = reinterpret_cast<char *>(dst);
   for (size_t I = 0; I < count; ++I)
     dstc[I] = C;

@@ -44,12 +44,15 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %indvars.iv.next = add nsw i64 %indvars.iv, -1
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit, !llvm.loop !0
 ; CHECK-NEXT:  LV: Using user VF vscale x 4.
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
 ; CHECK-NEXT:  LV: Scalarizing: %i.0 = add nsw i32 %i.0.in8, -1
 ; CHECK-NEXT:  LV: Scalarizing: %idxprom = zext i32 %i.0 to i64
 ; CHECK-NEXT:  LV: Scalarizing: %arrayidx = getelementptr inbounds i32, ptr %B, i64 %idxprom
 ; CHECK-NEXT:  LV: Scalarizing: %arrayidx3 = getelementptr inbounds i32, ptr %A, i64 %idxprom
 ; CHECK-NEXT:  LV: Scalarizing: %cmp = icmp ugt i64 %indvars.iv, 1
 ; CHECK-NEXT:  LV: Scalarizing: %indvars.iv.next = add nsw i64 %indvars.iv, -1
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
 ; CHECK-NEXT:  VPlan 'Initial VPlan for VF={vscale x 4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
@@ -78,7 +81,16 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
 ; CHECK:       middle.block:
+; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq vp<[[TC]]>, vp<[[VEC_TC]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
+; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %indvars.iv = phi i64 [ %0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
@@ -112,6 +124,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
 ; CHECK-NEXT:  LV: The target has 31 registers of RISCV::GPRRC register class
 ; CHECK-NEXT:  LV: The target has 32 registers of RISCV::VRRC register class
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
 ; CHECK-NEXT:  LV: Loop cost is 32
 ; CHECK-NEXT:  LV: IC is 1
 ; CHECK-NEXT:  LV: VF is vscale x 4
@@ -119,8 +132,10 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Interleaving is not beneficial.
 ; CHECK-NEXT:  LV: Found a vectorizable loop (vscale x 4) in <stdin>
 ; CHECK-NEXT:  LEV: Epilogue vectorization is not profitable for this loop
+; CHECK-NEXT:  VF picked by VPlan cost model: vscale x 4
 ; CHECK-NEXT:  Executing best plan with VF=vscale x 4, UF=1
 ; CHECK:       LV: Interleaving disabled by the pass manager
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
 ; CHECK-NEXT:  LV: Vectorizing: innermost loop.
 ; CHECK-EMPTY:
 ;
@@ -185,12 +200,15 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Found an estimated cost of 1 for VF vscale x 4 For instruction: %indvars.iv.next = add nsw i64 %indvars.iv, -1
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit, !llvm.loop !0
 ; CHECK-NEXT:  LV: Using user VF vscale x 4.
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
 ; CHECK-NEXT:  LV: Scalarizing: %i.0 = add nsw i32 %i.0.in8, -1
 ; CHECK-NEXT:  LV: Scalarizing: %idxprom = zext i32 %i.0 to i64
 ; CHECK-NEXT:  LV: Scalarizing: %arrayidx = getelementptr inbounds float, ptr %B, i64 %idxprom
 ; CHECK-NEXT:  LV: Scalarizing: %arrayidx3 = getelementptr inbounds float, ptr %A, i64 %idxprom
 ; CHECK-NEXT:  LV: Scalarizing: %cmp = icmp ugt i64 %indvars.iv, 1
 ; CHECK-NEXT:  LV: Scalarizing: %indvars.iv.next = add nsw i64 %indvars.iv, -1
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
 ; CHECK-NEXT:  VPlan 'Initial VPlan for VF={vscale x 4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
@@ -219,7 +237,16 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
 ; CHECK:       middle.block:
+; CHECK-NEXT:    EMIT vp<[[CMP:%.+]]> = icmp eq vp<[[TC]]>, vp<[[VEC_TC]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[CMP]]>
+; CHECK-NEXT:  Successor(s): ir-bb<for.cond.cleanup.loopexit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<for.cond.cleanup.loopexit>:
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  LV: Found an estimated cost of 0 for VF vscale x 4 For instruction: %indvars.iv = phi i64 [ %0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
@@ -253,6 +280,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
 ; CHECK-NEXT:  LV: The target has 31 registers of RISCV::GPRRC register class
 ; CHECK-NEXT:  LV: The target has 32 registers of RISCV::VRRC register class
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
 ; CHECK-NEXT:  LV: Loop cost is 32
 ; CHECK-NEXT:  LV: IC is 1
 ; CHECK-NEXT:  LV: VF is vscale x 4
@@ -260,8 +288,10 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV: Interleaving is not beneficial.
 ; CHECK-NEXT:  LV: Found a vectorizable loop (vscale x 4) in <stdin>
 ; CHECK-NEXT:  LEV: Epilogue vectorization is not profitable for this loop
+; CHECK-NEXT:  VF picked by VPlan cost model: vscale x 4
 ; CHECK-NEXT:  Executing best plan with VF=vscale x 4, UF=1
 ; CHECK:       LV: Interleaving disabled by the pass manager
+; CHECK-NEXT:  LV: Loop does not require scalar epilogue
 ; CHECK-NEXT:  LV: Vectorizing: innermost loop.
 ;
 entry:

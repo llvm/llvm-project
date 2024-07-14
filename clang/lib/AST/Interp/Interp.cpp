@@ -322,7 +322,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   };
 
   if (const auto *D = Desc->asVarDecl();
-      D && D->hasGlobalStorage() && !IsConstType(D)) {
+      D && D->hasGlobalStorage() && D != S.EvaluatingDecl && !IsConstType(D)) {
     diagnoseNonConstVariable(S, OpPC, D);
     return S.inConstantContext();
   }
@@ -341,7 +341,9 @@ bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!Ptr.isZero())
     return true;
   const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_null_subobject) << CSK;
+  S.FFDiag(Loc, diag::note_constexpr_null_subobject)
+      << CSK << S.Current->getRange(OpPC);
+
   return false;
 }
 
@@ -350,7 +352,8 @@ bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!Ptr.isOnePastEnd())
     return true;
   const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_access_past_end) << AK;
+  S.FFDiag(Loc, diag::note_constexpr_access_past_end)
+      << AK << S.Current->getRange(OpPC);
   return false;
 }
 
@@ -359,7 +362,8 @@ bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!Ptr.isElementPastEnd())
     return true;
   const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_past_end_subobject) << CSK;
+  S.FFDiag(Loc, diag::note_constexpr_past_end_subobject)
+      << CSK << S.Current->getRange(OpPC);
   return false;
 }
 
@@ -369,7 +373,8 @@ bool CheckSubobject(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return true;
 
   const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_past_end_subobject) << CSK;
+  S.FFDiag(Loc, diag::note_constexpr_past_end_subobject)
+      << CSK << S.Current->getRange(OpPC);
   return false;
 }
 
@@ -395,7 +400,7 @@ bool CheckDowncast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   assert(Ptr.isLive() && "Pointer is not live");
-  if (!Ptr.isConst())
+  if (!Ptr.isConst() || Ptr.isMutable())
     return true;
 
   // The This pointer is writable in constructors and destructors,
@@ -417,9 +422,14 @@ bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
 bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   assert(Ptr.isLive() && "Pointer is not live");
-  if (!Ptr.isMutable()) {
+  if (!Ptr.isMutable())
     return true;
-  }
+
+  // In C++14 onwards, it is permitted to read a mutable member whose
+  // lifetime began within the evaluation.
+  if (S.getLangOpts().CPlusPlus14 &&
+      Ptr.block()->getEvalID() == S.Ctx.getEvalID())
+    return true;
 
   const SourceInfo &Loc = S.Current->getSource(OpPC);
   const FieldDecl *Field = Ptr.getField();
@@ -471,23 +481,24 @@ bool CheckGlobalInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return false;
 }
 
-bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  if (!CheckLive(S, OpPC, Ptr, AK_Read))
+bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+               AccessKinds AK) {
+  if (!CheckLive(S, OpPC, Ptr, AK))
     return false;
   if (!CheckConstant(S, OpPC, Ptr))
     return false;
 
-  if (!CheckDummy(S, OpPC, Ptr, AK_Read))
+  if (!CheckDummy(S, OpPC, Ptr, AK))
     return false;
   if (!CheckExtern(S, OpPC, Ptr))
     return false;
-  if (!CheckRange(S, OpPC, Ptr, AK_Read))
+  if (!CheckRange(S, OpPC, Ptr, AK))
     return false;
-  if (!CheckActive(S, OpPC, Ptr, AK_Read))
+  if (!CheckActive(S, OpPC, Ptr, AK))
     return false;
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Read))
+  if (!CheckInitialized(S, OpPC, Ptr, AK))
     return false;
-  if (!CheckTemporary(S, OpPC, Ptr, AK_Read))
+  if (!CheckTemporary(S, OpPC, Ptr, AK))
     return false;
   if (!CheckMutable(S, OpPC, Ptr))
     return false;

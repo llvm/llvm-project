@@ -246,7 +246,7 @@ void test_complexity() {
     std::ranges::sort_heap(first, last, &MyInt::Comp);
     LIBCPP_ASSERT(stats.copied == 0);
     LIBCPP_ASSERT(stats.moved <= 2 * n + n * logn);
-#if _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_DEBUG
+#if defined(_LIBCPP_HARDENING_MODE) && _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_DEBUG
     LIBCPP_ASSERT(stats.compared <= n * logn);
 #else
     LIBCPP_ASSERT(stats.compared <= 2 * n * logn + debug_comparisons);

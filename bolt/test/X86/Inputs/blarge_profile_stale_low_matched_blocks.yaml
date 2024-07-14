@@ -1,0 +1,57 @@
+---
+header:
+  profile-version: 1
+  binary-name:     'reader-yaml.test.tmp.exe'
+  binary-build-id: '<unknown>'
+  profile-flags:   [ lbr ]
+  profile-origin:  branch profile reader
+  profile-events:  ''
+  dfs-order:       false
+  hash-func:       xxh3
+functions:
+  - name:            SolveCubic
+    fid:             6
+    hash:            0x0000000000000000
+    exec:            151
+    nblocks:         18
+    blocks:
+      - bid:             0
+        insns:           43
+        hash:            0x4600940a609c0000
+        exec:            151
+        succ:            [ { bid: 1, cnt: 151, mis: 2 }, { bid: 7, cnt: 0 } ]
+      - bid:             1
+        insns:           7
+        hash:            0x167a1f084f130088
+        succ:            [ { bid: 13, cnt: 151 }, { bid: 2, cnt: 0 } ]
+      - bid:             13
+        insns:           26
+        hash:            0xa8d50000f81902a7
+        succ:            [ { bid: 3, cnt: 89 }, { bid: 2, cnt: 10 } ]
+      - bid:             3
+        insns:           9
+        hash:            0xc516000073dc00a0
+        succ:            [ { bid: 5, cnt: 151 } ]
+      - bid:             5
+        insns:           9
+        hash:            0x6446e1ea500111
+  - name:            usqrt
+    fid:             7
+    hash:            0x0000000000000000
+    exec:            20
+    nblocks:         6
+    blocks:
+      - bid:             0
+        insns:           4
+        hash:            0x0000000000000001
+        exec:            20
+        succ:            [ { bid: 1, cnt: 0 } ]
+      - bid:             1
+        insns:           9
+        hash:            0x0000000000000001
+        succ:            [ { bid: 3, cnt: 320, mis: 171 }, { bid: 2, cnt: 0 } ]
+      - bid:             3
+        insns:           2
+        hash:            0x0000000000000001
+        succ:            [ { bid: 1, cnt: 300, mis: 33 }, { bid: 4, cnt: 20 } ]
+...

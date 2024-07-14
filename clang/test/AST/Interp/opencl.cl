@@ -36,3 +36,10 @@ void negativeShift32(int a,int b) {
 
 int2 A = {1,2};
 int4 B = {(int2)(1,2), (int2)(3,4)};
+
+
+constant int sz0 = 5;
+kernel void testvla()
+{
+  int vla0[sz0];
+}

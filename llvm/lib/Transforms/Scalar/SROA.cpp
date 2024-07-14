@@ -501,9 +501,9 @@ class IRBuilderPrefixedInserter final : public IRBuilderDefaultInserter {
 public:
   void SetNamePrefix(const Twine &P) { Prefix = P.str(); }
 
-  void InsertHelper(Instruction *I, const Twine &Name, BasicBlock *BB,
+  void InsertHelper(Instruction *I, const Twine &Name,
                     BasicBlock::iterator InsertPt) const override {
-    IRBuilderDefaultInserter::InsertHelper(I, getNameWithPrefix(Name), BB,
+    IRBuilderDefaultInserter::InsertHelper(I, getNameWithPrefix(Name),
                                            InsertPt);
   }
 };
@@ -1280,7 +1280,7 @@ private:
     SmallVector<std::pair<Instruction *, Instruction *>, 4> Uses;
     Visited.insert(Root);
     Uses.push_back(std::make_pair(cast<Instruction>(*U), Root));
-    const DataLayout &DL = Root->getModule()->getDataLayout();
+    const DataLayout &DL = Root->getDataLayout();
     // If there are no loads or stores, the access is dead. We mark that as
     // a size zero access.
     Size = 0;
@@ -1527,7 +1527,7 @@ findCommonType(AllocaSlices::const_iterator B, AllocaSlices::const_iterator E,
 /// FIXME: This should be hoisted into a generic utility, likely in
 /// Transforms/Util/Local.h
 static bool isSafePHIToSpeculate(PHINode &PN) {
-  const DataLayout &DL = PN.getModule()->getDataLayout();
+  const DataLayout &DL = PN.getDataLayout();
 
   // For now, we can only do this promotion if the load is in the same block
   // as the PHI, and if there are no stores between the phi and load.
@@ -1685,7 +1685,7 @@ isSafeLoadOfSelectToSpeculate(LoadInst &LI, SelectInst &SI, bool PreserveCFG) {
   assert(LI.isSimple() && "Only for simple loads");
   SelectHandSpeculativity Spec;
 
-  const DataLayout &DL = SI.getModule()->getDataLayout();
+  const DataLayout &DL = SI.getDataLayout();
   for (Value *Value : {SI.getTrueValue(), SI.getFalseValue()})
     if (isSafeToLoadUnconditionally(Value, LI.getType(), LI.getAlign(), DL,
                                     &LI))
@@ -2178,8 +2178,7 @@ checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
              cast<FixedVectorType>(LHSTy)->getNumElements();
     };
     llvm::sort(CandidateTys, RankVectorTypesComp);
-    CandidateTys.erase(std::unique(CandidateTys.begin(), CandidateTys.end(),
-                                   RankVectorTypesEq),
+    CandidateTys.erase(llvm::unique(CandidateTys, RankVectorTypesEq),
                        CandidateTys.end());
   } else {
 // The only way to have the same element type in every vector type is to
@@ -3981,15 +3980,15 @@ private:
     SmallVector<Value *> FalseOps = GetNewOps(False);
 
     IRB.SetInsertPoint(&GEPI);
-    bool IsInBounds = GEPI.isInBounds();
+    GEPNoWrapFlags NW = GEPI.getNoWrapFlags();
 
     Type *Ty = GEPI.getSourceElementType();
     Value *NTrue = IRB.CreateGEP(Ty, TrueOps[0], ArrayRef(TrueOps).drop_front(),
-                                 True->getName() + ".sroa.gep", IsInBounds);
+                                 True->getName() + ".sroa.gep", NW);
 
     Value *NFalse =
         IRB.CreateGEP(Ty, FalseOps[0], ArrayRef(FalseOps).drop_front(),
-                      False->getName() + ".sroa.gep", IsInBounds);
+                      False->getName() + ".sroa.gep", NW);
 
     Value *NSel = IRB.CreateSelect(Sel->getCondition(), NTrue, NFalse,
                                    Sel->getName() + ".sroa.sel");
@@ -4069,7 +4068,6 @@ private:
     PHINode *NewPhi = IRB.CreatePHI(GEPI.getType(), Phi->getNumIncomingValues(),
                                     Phi->getName() + ".sroa.phi");
 
-    bool IsInBounds = GEPI.isInBounds();
     Type *SourceTy = GEPI.getSourceElementType();
     // We only handle arguments, constants, and static allocas here, so we can
     // insert GEPs at the end of the entry block.
@@ -4084,7 +4082,7 @@ private:
         SmallVector<Value *> NewOps = GetNewOps(Op);
         NewGEP =
             IRB.CreateGEP(SourceTy, NewOps[0], ArrayRef(NewOps).drop_front(),
-                          Phi->getName() + ".sroa.gep", IsInBounds);
+                          Phi->getName() + ".sroa.gep", GEPI.getNoWrapFlags());
       }
       NewPhi->addIncoming(NewGEP, BB);
     }
@@ -4501,7 +4499,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   // them to the alloca slices.
   SmallDenseMap<LoadInst *, std::vector<LoadInst *>, 1> SplitLoadsMap;
   std::vector<LoadInst *> SplitLoads;
-  const DataLayout &DL = AI.getModule()->getDataLayout();
+  const DataLayout &DL = AI.getDataLayout();
   for (LoadInst *LI : Loads) {
     SplitLoads.clear();
 
@@ -4795,7 +4793,7 @@ AllocaInst *SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS,
   // or an i8 array of an appropriate size.
   Type *SliceTy = nullptr;
   VectorType *SliceVecTy = nullptr;
-  const DataLayout &DL = AI.getModule()->getDataLayout();
+  const DataLayout &DL = AI.getDataLayout();
   std::pair<Type *, IntegerType *> CommonUseTy =
       findCommonType(P.begin(), P.end(), P.endOffset());
   // Do all uses operate on the same type?
@@ -5021,7 +5019,7 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
 
   unsigned NumPartitions = 0;
   bool Changed = false;
-  const DataLayout &DL = AI.getModule()->getDataLayout();
+  const DataLayout &DL = AI.getDataLayout();
 
   // First try to pre-split loads and stores.
   Changed |= presplitLoadsAndStores(AI, AS);
@@ -5227,7 +5225,7 @@ SROA::runOnAlloca(AllocaInst &AI) {
     Changed = true;
     return {Changed, CFGChanged};
   }
-  const DataLayout &DL = AI.getModule()->getDataLayout();
+  const DataLayout &DL = AI.getDataLayout();
 
   // Skip alloca forms that this analysis can't handle.
   auto *AT = AI.getAllocatedType();
@@ -5359,7 +5357,7 @@ bool SROA::promoteAllocas(Function &F) {
 std::pair<bool /*Changed*/, bool /*CFGChanged*/> SROA::runSROA(Function &F) {
   LLVM_DEBUG(dbgs() << "SROA function: " << F.getName() << "\n");
 
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   BasicBlock &EntryBB = F.getEntryBlock();
   for (BasicBlock::iterator I = EntryBB.begin(), E = std::prev(EntryBB.end());
        I != E; ++I) {
