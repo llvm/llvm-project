@@ -1892,6 +1892,28 @@ TEST(TypeHints, LinksForStructureBindings) {
                       ExpectedHintLabelPiece{"<float>"});
 }
 
+TEST(TypeHints, LinksForDeductionGuides) {
+  StringRef Source(R"cpp(
+  template <class T>
+  struct S { S(T); };
+
+  template <>
+  struct $S[[S]]<int> { S(int); };
+
+  template <class U>
+  using SS = S<U>;
+
+  // FIXME: Would better be SS<int>.
+  // (However, TypePrinter doesn't print SS<int> either.)
+  const auto $1[[w]] = S(42);
+  )cpp");
+
+  assertTypeLinkHints(Source, "1", ExpectedHintLabelPiece{": const "},
+                      ExpectedHintLabelPiece{"S", "S"},
+                      ExpectedHintLabelPiece{"<int>"});
+}
+
+
 TEST(TypeHints, TypeDeductionForC) {
   StringRef Source(R"cpp(
     struct $Waldo[[Waldo]] {};

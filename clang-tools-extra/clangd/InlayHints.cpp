@@ -668,6 +668,7 @@ public:
   }
 
   void VisitTemplateSpecializationType(const TemplateSpecializationType *TST) {
+    maybeAddQualifiers();
     SourceLocation Location;
     TemplateName Name = TST->getTemplateName();
     TemplateName::Qualified PrintQual = TemplateName::Qualified::AsWritten;
@@ -694,7 +695,6 @@ public:
       // FIXME: Handle these cases.
       return VisitType(TST);
     }
-    maybeAddQualifiers();
     // Special case the ClassTemplateSpecializationDecl because
     // we want the location of an explicit specialization, if present.
     // FIXME: In practice, populating the location with that of the
@@ -709,6 +709,15 @@ public:
     Name.print(OS, PP, PrintQual);
     return handleTemplateSpecialization(TemplateId, TST->template_arguments(),
                                         Location);
+  }
+
+  void VisitDeducedTemplateSpecializationType(
+      const DeducedTemplateSpecializationType *TST) {
+    maybeAddQualifiers();
+    // FIXME: The TST->getTemplateName() might differ from the name of
+    // DeducedType, e.g. when the deduction guide is formed against a type alias
+    // Decl.
+    return VisitQualType(TST->getDeducedType());
   }
 
   void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *ST) {
