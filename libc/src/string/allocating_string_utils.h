@@ -17,7 +17,7 @@
 
 #include <stddef.h> // For size_t
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 LIBC_INLINE cpp::optional<char *> strdup(const char *src) {
@@ -33,6 +33,6 @@ LIBC_INLINE cpp::optional<char *> strdup(const char *src) {
 }
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_ALLOCATING_STRING_UTILS_H
