@@ -3012,6 +3012,36 @@ struct DecomposedSelect {
 };
 } // namespace
 
+/// Folds patterns like:
+///   select c2 (select c1 a b) (select c1 b a)
+/// into:
+///   select (xor c1 c2) b a
+static Instruction *
+foldSelectOfSymmetricSelect(SelectInst &OuterSelVal,
+                            InstCombiner::BuilderTy &Builder) {
+
+  DecomposedSelect OuterSel, InnerSel1, InnerSel2;
+
+  if (!match(
+          &OuterSelVal,
+          m_Select(m_Value(OuterSel.Cond),
+                   m_Select(m_Value(InnerSel1.Cond), m_Value(InnerSel1.TrueVal),
+                            m_Value(InnerSel1.FalseVal)),
+                   m_Select(m_Value(InnerSel2.Cond), m_Value(InnerSel2.TrueVal),
+                            m_Value(InnerSel2.FalseVal)))))
+    return nullptr;
+
+  bool InnerSelsSymmetric = InnerSel1.Cond == InnerSel2.Cond &&
+                            InnerSel1.TrueVal == InnerSel2.FalseVal &&
+                            InnerSel1.FalseVal == InnerSel2.TrueVal;
+
+  if (!InnerSelsSymmetric)
+    return nullptr;
+
+  Value *Xor = Builder.CreateXor(InnerSel1.Cond, OuterSel.Cond);
+  return SelectInst::Create(Xor, InnerSel1.FalseVal, InnerSel1.TrueVal);
+}
+
 /// Look for patterns like
 ///   %outer.cond = select i1 %inner.cond, i1 %alt.cond, i1 false
 ///   %inner.sel = select i1 %inner.cond, i8 %inner.sel.t, i8 %inner.sel.f
@@ -3986,6 +4016,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       return replaceInstUsesWith(SI, MaskedInst);
     }
   }
+
+  if (Instruction *I = foldSelectOfSymmetricSelect(SI, Builder))
+    return I;
 
   if (Instruction *I = foldNestedSelects(SI, Builder))
     return I;
