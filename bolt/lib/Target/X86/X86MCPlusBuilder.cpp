@@ -1923,14 +1923,14 @@ public:
              MO.SegRegNum == X86::NoRegister;
     };
     LLVM_DEBUG(dbgs() << "Checking for PIC jump table\n");
-    MCInst *MemLocInstr = nullptr;
-    MCInst *MovInstr = nullptr;
-    bool IsFixedBranch = false;
-    // Allow renaming R1/R2 once.
-    bool SwappedRegs = false;
+    MCInst *FirstInstr = nullptr;
+    MCInst *SecondInstr = nullptr;
+    enum {
+      NOMATCH = 0,
+      MATCH_JUMP_TABLE,
+      MATCH_FIXED_BRANCH,
+    } MatchingState = NOMATCH;
     while (++II != IE) {
-      if (MovInstr && MemLocInstr)
-        break;
       MCInst &Instr = *II;
       const MCInstrDesc &InstrDesc = Info->get(Instr.getOpcode());
       if (!InstrDesc.hasDefOfPhysReg(Instr, R1, *RegInfo) &&
@@ -1938,75 +1938,67 @@ public:
         // Ignore instructions that don't affect R1, R2 registers.
         continue;
       }
-      if (isMOVSX64rm32(Instr)) {
-        // Potential redefinition of MovInstr - bail.
-        if (MovInstr)
-          return std::make_tuple(IndirectBranchType::UNKNOWN, nullptr, nullptr);
-        // Check if it's setting %r1 or %r2. In canonical form it sets %r2.
-        // If it sets %r1 - rename the registers so we have to only check
-        // a single form.
-        unsigned MovDestReg = Instr.getOperand(0).getReg();
-        if (!SwappedRegs && MovDestReg != R2) {
-          std::swap(R1, R2);
-          SwappedRegs = true;
-        }
-        if (MovDestReg != R2) {
-          LLVM_DEBUG(dbgs() << "MOV instruction expected to set %r2\n");
+      const bool IsMOVSXInstr = isMOVSX64rm32(Instr);
+      const bool IsLEAInstr = isLEA64r(Instr);
+      if (MatchingState == NOMATCH) {
+        if (IsMOVSXInstr)
+          MatchingState = MATCH_JUMP_TABLE;
+        else if (IsLEAInstr)
+          MatchingState = MATCH_FIXED_BRANCH;
+        else
           break;
-        }
 
-        // Verify operands for MOV.
+        // Check if the first instruction is setting %r1 or %r2. In canonical
+        // form lea sets %r1 and mov sets %r2. If it's the opposite - rename so
+        // we have to only check a single form.
+        unsigned DestReg = Instr.getOperand(0).getReg();
+        MCPhysReg &ExpectReg = MatchingState == MATCH_JUMP_TABLE ? R2 : R1;
+        if (DestReg != ExpectReg)
+          std::swap(R1, R2);
+        if (DestReg != ExpectReg)
+          break;
+
+        // Verify operands
         std::optional<X86MemOperand> MO = evaluateX86MemoryOperand(Instr);
         if (!MO)
           break;
-        if (isRIPRel(*MO))
-          IsFixedBranch = true;
-        else if (isIndexed(*MO, R1))
-          ; // POSSIBLE_PIC_JUMP_TABLE
+        if ((MatchingState == MATCH_JUMP_TABLE && isIndexed(*MO, R1)) ||
+            (MatchingState == MATCH_FIXED_BRANCH && isRIPRel(*MO)))
+          FirstInstr = &Instr;
         else
           break;
-        MovInstr = &Instr;
-        continue;
-      }
-      if (isLEA64r(Instr)) {
-        // Potential redefinition of MemLocInstr - bail.
-        if (MemLocInstr)
-          return std::make_tuple(IndirectBranchType::UNKNOWN, nullptr, nullptr);
-        // Check if it's setting %r1 or %r2. In canonical form it sets %r1.
-        // If it sets %r2 - rename the registers so we have to only check
-        // a single form.
-        unsigned LeaDestReg = Instr.getOperand(0).getReg();
-        if (!SwappedRegs && LeaDestReg != R1) {
-          std::swap(R1, R2);
-          SwappedRegs = true;
-        }
-        if (Instr.getOperand(0).getReg() != R1) {
-          LLVM_DEBUG(dbgs() << "LEA instruction expected to set %r1\n");
+      } else {
+        unsigned ExpectReg = MatchingState == MATCH_JUMP_TABLE ? R1 : R2;
+        if (!InstrDesc.hasDefOfPhysReg(Instr, ExpectReg, *RegInfo))
+          continue;
+        if ((MatchingState == MATCH_JUMP_TABLE && !IsLEAInstr) ||
+            (MatchingState == MATCH_FIXED_BRANCH && !IsMOVSXInstr))
           break;
-        }
+        if (Instr.getOperand(0).getReg() != ExpectReg)
+          break;
 
-        // Verify operands for LEA.
+        // Verify operands.
         std::optional<X86MemOperand> MO = evaluateX86MemoryOperand(Instr);
         if (!MO)
           break;
         if (!isRIPRel(*MO))
           break;
-        MemLocInstr = &Instr;
-        continue;
+        SecondInstr = &Instr;
+        break;
       }
     }
 
-    if (!MemLocInstr)
+    if (!SecondInstr)
       return std::make_tuple(IndirectBranchType::UNKNOWN, nullptr, nullptr);
 
-    LLVM_DEBUG(dbgs() << "checking potential fixed indirect branch\n");
-    if (IsFixedBranch)
+    if (MatchingState == MATCH_FIXED_BRANCH) {
+      LLVM_DEBUG(dbgs() << "checking potential fixed indirect branch\n");
       return std::make_tuple(IndirectBranchType::POSSIBLE_PIC_FIXED_BRANCH,
-                             MemLocInstr, MovInstr);
-
+                             FirstInstr, SecondInstr);
+    }
     LLVM_DEBUG(dbgs() << "checking potential PIC jump table\n");
     return std::make_tuple(IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE,
-                          MemLocInstr, nullptr);
+                           SecondInstr, nullptr);
   }
 
   IndirectBranchType

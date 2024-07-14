@@ -883,8 +883,11 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
   if (FixedEntryLoadInstr) {
     assert(BranchType == IndirectBranchType::POSSIBLE_PIC_FIXED_BRANCH &&
            "Invalid IndirectBranch type");
-    const MCExpr *FixedEntryDispExpr =
-        BC.MIB->getMemOperandDisp(*FixedEntryLoadInstr)->getExpr();
+    MCInst::iterator FixedEntryDispOperand =
+        BC.MIB->getMemOperandDisp(*FixedEntryLoadInstr);
+    assert(FixedEntryDispOperand != FixedEntryLoadInstr->end() &&
+           "Invalid memory instruction");
+    const MCExpr *FixedEntryDispExpr = FixedEntryDispOperand->getExpr();
     const uint64_t EntryAddress = getExprValue(FixedEntryDispExpr);
     uint64_t EntrySize = BC.getJumpTableEntrySize(JumpTable::JTT_PIC);
     ErrorOr<int64_t> Value = BC.getSignedValueAtAddress(EntryAddress, EntrySize);
@@ -901,15 +904,11 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
 
     // Remove spurious JumpTable at EntryAddress caused by PIC reference from
     // the load instruction.
-    JumpTable *JT = BC.getJumpTableContainingAddress(EntryAddress);
-    assert(JT && "Must have a jump table at fixed entry address");
-    BC.deregisterJumpTable(EntryAddress);
-    JumpTables.erase(EntryAddress);
-    delete JT;
+    BC.deleteJumpTable(EntryAddress);
 
     // Replace FixedEntryDispExpr used in target address calculation with outer
     // jump table reference.
-    JT = BC.getJumpTableContainingAddress(ArrayStart);
+    JumpTable *JT = BC.getJumpTableContainingAddress(ArrayStart);
     assert(JT && "Must have a containing jump table for PIC fixed branch");
     BC.MIB->replaceMemOperandDisp(*FixedEntryLoadInstr, JT->getFirstLabel(),
                                   EntryAddress - ArrayStart, &*BC.Ctx);
