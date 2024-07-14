@@ -7583,11 +7583,22 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
       if (Use->getParent() != I->getParent() || Use == I || Use->comesBefore(I))
         return false;
       // Change this list when we want to add new instructions.
-      if (!isa<GetElementPtrInst>(Use) && !isa<ReturnInst>(Use) &&
-          !isa<BitCastInst>(Use) && !isa<LoadInst>(Use) &&
-          !isa<StoreInst>(Use) && !isa<AssumeInst>(Use) && !isa<CallBase>(Use))
+      switch (Use->getOpcode()) {
+      default:
         return false;
-      return true;
+      case Instruction::GetElementPtr:
+        return true;
+      case Instruction::Ret:
+        return true;
+      case Instruction::BitCast:
+        return true;
+      case Instruction::Load:
+        return true;
+      case Instruction::Store:
+        return true;
+      case Instruction::Call:
+        return true;
+      }
     });
     if (FindUse == I->user_end())
       return false;
