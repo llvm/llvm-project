@@ -180,11 +180,14 @@ bool FrontendAction::runSemanticChecks() {
   // so that they are merged and all printed in order.
   auto &semanticsCtx{ci.getSemanticsContext()};
   semanticsCtx.messages().Annex(std::move(ci.getParsing().messages()));
+  semanticsCtx.set_debugModuleWriter(ci.getInvocation().getDebugModuleDir());
 
   // Prepare semantics
-  ci.setSemantics(std::make_unique<Fortran::semantics::Semantics>(
-      semanticsCtx, *parseTree, ci.getInvocation().getDebugModuleDir()));
+  ci.setSemantics(std::make_unique<Fortran::semantics::Semantics>(semanticsCtx,
+                                                                  *parseTree));
   auto &semantics = ci.getSemantics();
+  semantics.set_hermeticModuleFileOutput(
+      ci.getInvocation().getHermeticModuleFileOutput());
 
   // Run semantic checks
   semantics.Perform();

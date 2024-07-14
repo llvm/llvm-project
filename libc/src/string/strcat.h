@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRCAT_H
 #define LLVM_LIBC_SRC_STRING_STRCAT_H
 
+#include "src/__support/macros/config.h"
 #include <string.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 char *strcat(char *__restrict dest, const char *__restrict src);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_STRCAT_H

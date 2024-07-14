@@ -38,7 +38,8 @@ char &llvm::MachineDominanceFrontierID = MachineDominanceFrontier::ID;
 
 bool MachineDominanceFrontier::runOnMachineFunction(MachineFunction &) {
   releaseMemory();
-  Base.analyze(getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree());
+  Base.analyze(
+      getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree().getBase());
   return false;
 }
 

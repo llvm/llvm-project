@@ -306,8 +306,8 @@ static ExprResult buildMemberCall(Sema &S, Expr *Base, SourceLocation Loc,
   // FIXME: Fix BuildMemberReferenceExpr to take a const CXXScopeSpec&.
   CXXScopeSpec SS;
   ExprResult Result = S.BuildMemberReferenceExpr(
-      Base, Base->getType(), Loc, /*IsPtr=*/false, SS,
-      SourceLocation(), nullptr, NameInfo, /*TemplateArgs=*/nullptr,
+      Base, Base->getType(), Loc, /*IsPtr=*/false, SS, SourceLocation(),
+      NameInfo, /*TemplateArgs=*/nullptr,
       /*Scope=*/nullptr);
   if (Result.isInvalid())
     return ExprError();

@@ -36,11 +36,6 @@ LazyMachineBlockFrequencyInfoPass::LazyMachineBlockFrequencyInfoPass()
       *PassRegistry::getPassRegistry());
 }
 
-void LazyMachineBlockFrequencyInfoPass::print(raw_ostream &OS,
-                                              const Module *M) const {
-  getBFI().print(OS, M);
-}
-
 void LazyMachineBlockFrequencyInfoPass::getAnalysisUsage(
     AnalysisUsage &AU) const {
   AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
@@ -56,10 +51,11 @@ void LazyMachineBlockFrequencyInfoPass::releaseMemory() {
 
 MachineBlockFrequencyInfo &
 LazyMachineBlockFrequencyInfoPass::calculateIfNotAvailable() const {
-  auto *MBFI = getAnalysisIfAvailable<MachineBlockFrequencyInfo>();
-  if (MBFI) {
+  auto *MBFIWrapper =
+      getAnalysisIfAvailable<MachineBlockFrequencyInfoWrapperPass>();
+  if (MBFIWrapper) {
     LLVM_DEBUG(dbgs() << "MachineBlockFrequencyInfo is available\n");
-    return *MBFI;
+    return MBFIWrapper->getMBFI();
   }
 
   auto &MBPI = getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
@@ -78,13 +74,13 @@ LazyMachineBlockFrequencyInfoPass::calculateIfNotAvailable() const {
     if (!MDT) {
       LLVM_DEBUG(dbgs() << "Building DominatorTree on the fly\n");
       OwnedMDT = std::make_unique<MachineDominatorTree>();
-      OwnedMDT->recalculate(*MF);
+      OwnedMDT->getBase().recalculate(*MF);
       MDT = OwnedMDT.get();
     }
 
     // Generate LoopInfo from it.
     OwnedMLI = std::make_unique<MachineLoopInfo>();
-    OwnedMLI->analyze(*MDT);
+    OwnedMLI->analyze(MDT->getBase());
     MLI = OwnedMLI.get();
   }
 
