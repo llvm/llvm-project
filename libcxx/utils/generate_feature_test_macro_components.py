@@ -993,7 +993,7 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges",
             "values": {
                 "c++20": 202207,
-                # "c++26": 202406, # P2997R1 Removing the common reference requirement from the indirectly invocable concepts
+                "c++26": 202406, # P2997R1 Removing the common reference requirement from the indirectly invocable concepts
             },
             "headers": ["algorithm", "functional", "iterator", "memory", "ranges"],
         },

@@ -22,6 +22,7 @@
     __cpp_lib_freestanding_algorithm                        202311L [C++26]
     __cpp_lib_parallel_algorithm                            201603L [C++17]
     __cpp_lib_ranges                                        202207L [C++20]
+                                                            202406L [C++26]
     __cpp_lib_ranges_contains                               202207L [C++23]
     __cpp_lib_ranges_starts_ends_with                       202106L [C++23]
     __cpp_lib_robust_nonmodifying_seq_ops                   201304L [C++14]
@@ -401,8 +402,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++26"
 # endif
-# if __cpp_lib_ranges != 202207L
-#   error "__cpp_lib_ranges should have the value 202207L in c++26"
+# if __cpp_lib_ranges != 202406L
+#   error "__cpp_lib_ranges should have the value 202406L in c++26"
 # endif
 
 # ifndef __cpp_lib_ranges_contains
