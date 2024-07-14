@@ -78,27 +78,27 @@ void print_results(Benchmark *b) {
 
   BenchmarkResult result;
   gpu::memory_fence();
-  int num_threads = all_results.active_threads.load(cpp::MemoryOrder::RELAXED);
+  int num_threads = all_results.active_threads.load(cpp::MemoryOrder::RELEASE);
   result.cycles =
-      all_results.cycles_sum.load(cpp::MemoryOrder::RELAXED) / num_threads;
+      all_results.cycles_sum.load(cpp::MemoryOrder::RELEASE) / num_threads;
   result.standard_deviation =
-      all_results.standard_deviation_sum.load(cpp::MemoryOrder::RELAXED) /
+      all_results.standard_deviation_sum.load(cpp::MemoryOrder::RELEASE) /
       num_threads;
-  result.min = all_results.min.load(cpp::MemoryOrder::RELAXED);
-  result.max = all_results.max.load(cpp::MemoryOrder::RELAXED);
+  result.min = all_results.min.load(cpp::MemoryOrder::RELEASE);
+  result.max = all_results.max.load(cpp::MemoryOrder::RELEASE);
   result.samples =
-      all_results.samples_sum.load(cpp::MemoryOrder::RELAXED) / num_threads;
+      all_results.samples_sum.load(cpp::MemoryOrder::RELEASE) / num_threads;
   result.total_iterations =
-      all_results.iterations_sum.load(cpp::MemoryOrder::RELAXED) / num_threads;
+      all_results.iterations_sum.load(cpp::MemoryOrder::RELEASE) / num_threads;
   result.total_time =
-      all_results.time_sum.load(cpp::MemoryOrder::RELAXED) / num_threads;
+      all_results.time_sum.load(cpp::MemoryOrder::RELEASE) / num_threads;
   gpu::memory_fence();
   log << GREEN << "[ RUN      ] " << RESET << b->get_name() << '\n';
   log << GREEN << "[       OK ] " << RESET << b->get_name() << ": "
       << result.cycles << " cycles, " << result.min << " min, " << result.max
       << " max, " << result.total_iterations << " iterations, "
       << result.total_time << " ns, "
-      << static_cast<long>(result.standard_deviation)
+      << static_cast<uint64_t>(result.standard_deviation)
       << " stddev (num threads: " << num_threads << ")\n";
 }
 
