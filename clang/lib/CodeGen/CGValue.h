@@ -79,8 +79,6 @@ public:
     return std::make_pair(Vals.first, Vals.second);
   }
 
-  bool isSignedAggregate() const { return AggregateAddr.isSigned(); }
-
   /// getAggregateAddr() - Return the Value* of the address of the aggregate.
   Address getAggregateAddress() const {
     assert(isAggregate() && "Not an aggregate!");
@@ -88,7 +86,9 @@ public:
   }
 
   llvm::Value *getAggregatePointer(QualType PointeeType,
-                                   CodeGenFunction &CGF) const;
+                                   CodeGenFunction &CGF) const {
+    return getAggregateAddress().getBasePointer();
+  }
 
   static RValue getIgnored() {
     // FIXME: should we make this a more explicit state?
@@ -317,8 +317,6 @@ public:
   }
   bool isNontemporal() const { return Nontemporal; }
   void setNontemporal(bool Value) { Nontemporal = Value; }
-
-  bool isPointerSigned() const { return Addr.isSigned(); }
 
   bool isObjCWeak() const {
     return Quals.getObjCGCAttr() == Qualifiers::Weak;
@@ -639,7 +637,9 @@ public:
 
   llvm::Value *getPointer(QualType PointeeTy, CodeGenFunction &CGF) const;
 
-  llvm::Value *emitRawPointer(CodeGenFunction &CGF) const;
+  llvm::Value *emitRawPointer(CodeGenFunction &CGF) const {
+    return Addr.isValid() ? Addr.emitRawPointer(CGF) : nullptr;
+  }
 
   Address getAddress() const {
     return Addr;

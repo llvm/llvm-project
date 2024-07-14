@@ -986,9 +986,6 @@ public:
                                            GlobalDecl SchemaDecl,
                                            QualType SchemaType);
 
-  llvm::Constant *getConstantSignedPointer(llvm::Constant *Pointer,
-                                           QualType PointeeType);
-
   llvm::Constant *
   getConstantSignedPointer(llvm::Constant *Pointer, unsigned Key,
                            llvm::Constant *StorageAddress,

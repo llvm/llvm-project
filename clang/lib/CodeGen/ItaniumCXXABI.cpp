@@ -4711,7 +4711,7 @@ static void InitCatchParam(CodeGenFunction &CGF,
 
   // Cast that to the appropriate type.
   Address adjustedExn(CGF.Builder.CreateBitCast(rawAdjustedExn, PtrTy),
-                      LLVMCatchTy, caughtExnAlignment, KnownNonNull);
+                      LLVMCatchTy, caughtExnAlignment);
 
   // The copy expression is defined in terms of an OpaqueValueExpr.
   // Find it and map it to the adjusted expression.

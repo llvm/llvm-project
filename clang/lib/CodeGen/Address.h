@@ -134,10 +134,6 @@ class Address {
   /// The expected IR type of the pointer. Carrying accurate element type
   /// information in Address makes it more convenient to work with Address
   /// values and allows frontend assertions to catch simple mistakes.
-  ///
-  /// When the address is a raw pointer, this is currently redundant with the
-  /// pointer's type, but for signed pointers it is useful if the pointer has
-  /// been offsetted or cast from the original type.
   llvm::Type *ElementType = nullptr;
 
   CharUnits Alignment;
@@ -180,11 +176,6 @@ public:
   static Address invalid() { return Address(nullptr); }
   bool isValid() const { return Pointer.getPointer() != nullptr; }
 
-  llvm::Value *getPointerIfNotSigned() const {
-    assert(isValid() && "pointer isn't valid");
-    return !isSigned() ? Pointer.getPointer() : nullptr;
-  }
-
   /// This function is used in situations where the caller is doing some sort of
   /// opaque "laundering" of the pointer.
   void replaceBasePointer(llvm::Value *P) {
@@ -202,11 +193,6 @@ public:
   llvm::Value *getBasePointer() const {
     assert(isValid() && "pointer isn't valid");
     return Pointer.getPointer();
-  }
-
-  llvm::Value *getUnsignedPointer() const {
-    assert(!isSigned() && "cannot call this function if pointer is signed");
-    return getBasePointer();
   }
 
   /// Return the type of the pointer value.
@@ -252,14 +238,6 @@ public:
     return *this;
   }
 
-  /// Add a constant offset.
-  void addOffset(CharUnits V, llvm::Type *Ty, CGBuilderTy &Builder);
-
-  /// Add a variable offset.
-  /// \param V An llvm value holding a variable offset.
-  void addOffset(llvm::Value *V, llvm::Type *Ty, CGBuilderTy &Builder,
-                 CharUnits NewAlignment);
-
   bool hasOffset() const { return Offset; }
 
   llvm::Value *getOffset() const { return Offset; }
@@ -270,9 +248,7 @@ public:
   /// Return the pointer contained in this class after authenticating it and
   /// adding offset to it if necessary.
   llvm::Value *emitRawPointer(CodeGenFunction &CGF) const {
-    if (!isSigned())
-      return getUnsignedPointer();
-    return emitRawPointerSlow(CGF);
+    return getBasePointer();
   }
 
   /// Return address with different pointer, but same element type and
@@ -303,9 +279,9 @@ public:
 };
 
 inline RawAddress::RawAddress(Address Addr)
-    : PointerAndKnownNonNull(
-          Addr.isValid() ? Addr.getUnsignedPointer() : nullptr,
-          Addr.isValid() ? Addr.isKnownNonNull() : NotKnownNonNull),
+    : PointerAndKnownNonNull(Addr.isValid() ? Addr.getBasePointer() : nullptr,
+                             Addr.isValid() ? Addr.isKnownNonNull()
+                                            : NotKnownNonNull),
       ElementType(Addr.isValid() ? Addr.getElementType() : nullptr),
       Alignment(Addr.isValid() ? Addr.getAlignment() : CharUnits::Zero()) {}
 

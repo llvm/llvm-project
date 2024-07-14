@@ -1974,8 +1974,8 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
         // it. It's not quite worth the annoyance to avoid creating it in the
         // first place.
         if (!needsEHCleanup(captureType.isDestructedType()))
-          if (auto *I = cast_or_null<llvm::Instruction>(
-                  dstField.getPointerIfNotSigned()))
+          if (auto *I =
+                  cast_or_null<llvm::Instruction>(dstField.getBasePointer()))
             I->eraseFromParent();
       }
       break;

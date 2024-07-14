@@ -2074,24 +2074,14 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     if (D->hasAttr<WeakRefAttr>())
       return CGM.GetWeakRefReference(D).getPointer();
 
-    auto PtrAuthSign = [&](llvm::Constant *C, bool IsFunction) {
+    auto PtrAuthSign = [&](llvm::Constant *C) {
       CGPointerAuthInfo AuthInfo;
 
       if (EnablePtrAuthFunctionTypeDiscrimination)
         AuthInfo = CGM.getFunctionPointerAuthInfo(DestType);
-      else {
-        // FIXME: getPointerAuthInfoForType should be able to return the pointer
-        //        auth info of reference types.
-        if (auto *RT = DestType->getAs<ReferenceType>())
-          DestType = CGM.getContext().getPointerType(RT->getPointeeType());
-        // Don't emit a signed pointer if the destination is a function pointer
-        // type.
-        if (DestType->isSignableType() && !DestType->isFunctionPointerType())
-          AuthInfo = CGM.getPointerAuthInfoForType(DestType);
-      }
 
       if (AuthInfo) {
-        if (IsFunction && hasNonZeroOffset())
+        if (hasNonZeroOffset())
           return ConstantLValue(nullptr);
 
         C = applyOffset(C);
@@ -2105,7 +2095,7 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     };
 
     if (const auto *FD = dyn_cast<FunctionDecl>(D))
-      return PtrAuthSign(CGM.getRawFunctionPointer(FD), true);
+      return PtrAuthSign(CGM.getRawFunctionPointer(FD));
 
     if (const auto *VD = dyn_cast<VarDecl>(D)) {
       // We can never refer to a variable with local storage.
