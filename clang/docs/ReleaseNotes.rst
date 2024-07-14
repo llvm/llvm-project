@@ -1151,6 +1151,10 @@ RISC-V Support
 - ``__attribute__((rvv_vector_bits(N)))`` is now supported for RVV vbool*_t types.
 - Profile names in ``-march`` option are now supported.
 - Passing empty structs/unions as arguments in C++ is now handled correctly. The behavior is similar to GCC's.
+- ``-m[no-]scalar-strict-align`` and ``-m[no-]vector-strict-align`` options have
+  been added to give separate control of whether scalar or vector misaligned
+  accesses may be created. ``-m[no-]strict-align`` applies to both scalar and
+  vector.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
