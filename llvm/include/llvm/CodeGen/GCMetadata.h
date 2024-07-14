@@ -151,15 +151,46 @@ public:
   size_t live_size(const iterator &p) const { return roots_size(); }
 };
 
-struct GCStrategyMap {
+class GCStrategyMap {
   StringMap<std::unique_ptr<GCStrategy>> StrategyMap;
+  SmallVector<GCStrategy *, 1> StrategyList; // For bidirectional iterator.
+  using StrategyListT = SmallVector<GCStrategy *, 1>;
 
+  FunctionAnalysisManager *FAM = nullptr;
+
+public:
   GCStrategyMap() = default;
   GCStrategyMap(GCStrategyMap &&) = default;
+  GCStrategyMap(FunctionAnalysisManager &FAM) : FAM(&FAM) {}
 
   /// Handle invalidation explicitly.
   bool invalidate(Module &M, const PreservedAnalyses &PA,
                   ModuleAnalysisManager::Invalidator &Inv);
+
+  GCFunctionInfo &getFunctionInfo(Function &F);
+
+  bool empty() const { return StrategyMap.empty(); }
+
+  bool contains(StringRef Name) const { return StrategyMap.contains(Name); }
+
+  /// Insert a new strategy if it is not existed, otherwise do nothing.
+  void insert(StringRef Name, std::unique_ptr<GCStrategy> Strategy) {
+    auto &S = StrategyMap[Name];
+    if (!S) {
+      S = std::move(Strategy);
+      StrategyList.push_back(S.get());
+    }
+  }
+
+  GCStrategy &at(StringRef Name) { return *StrategyMap.at(Name); }
+
+  // This class must support bidirectional iterator which is used by AsmPrinter.
+  using iterator = StrategyListT::iterator;
+  iterator begin() { return StrategyList.begin(); }
+  iterator end() { return StrategyList.end(); }
+  using reverse_iterator = StrategyListT::reverse_iterator;
+  reverse_iterator rbegin() { return StrategyList.rbegin(); }
+  reverse_iterator rend() { return StrategyList.rend(); }
 };
 
 /// An analysis pass which caches information about the entire Module.
