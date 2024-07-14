@@ -3,9 +3,8 @@
 
 define i32 @select_of_symmetric_selects(i32 %a, i32 %b, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: @select_of_symmetric_selects(
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[C1:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[C1]], i32 [[B]], i32 [[A]]
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[C2:%.*]], i32 [[SEL1]], i32 [[SEL2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TMP1]], i32 [[B:%.*]], i32 [[A:%.*]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %sel1 = select i1 %c1, i32 %a, i32 %b
@@ -75,9 +74,8 @@ define i32 @select_of_symmetric_selects_multi_use2(i32 %a, i32 %b, i1 %c1, i1 %c
 
 define i32 @select_of_symmetric_selects_commuted(i32 %a, i32 %b, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: @select_of_symmetric_selects_commuted(
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[C1:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[C1]], i32 [[B]], i32 [[A]]
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[C2:%.*]], i32 [[SEL2]], i32 [[SEL1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TMP1]], i32 [[A:%.*]], i32 [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %sel1 = select i1 %c1, i32 %a, i32 %b
@@ -88,9 +86,8 @@ define i32 @select_of_symmetric_selects_commuted(i32 %a, i32 %b, i1 %c1, i1 %c2)
 
 define <4 x i32> @select_of_symmetric_selects_vector1(<4 x i32> %a, <4 x i32> %b, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: @select_of_symmetric_selects_vector1(
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[C1:%.*]], <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]
-; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[C1]], <4 x i32> [[B]], <4 x i32> [[A]]
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[C2:%.*]], <4 x i32> [[SEL2]], <4 x i32> [[SEL1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TMP1]], <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[RET]]
 ;
   %sel1 = select i1 %c1, <4 x i32> %a, <4 x i32> %b
@@ -101,9 +98,8 @@ define <4 x i32> @select_of_symmetric_selects_vector1(<4 x i32> %a, <4 x i32> %b
 
 define <4 x i32> @select_of_symmetric_selects_vector2(<4 x i32> %a, <4 x i32> %b, <4 x i1> %c1, <4 x i1> %c2) {
 ; CHECK-LABEL: @select_of_symmetric_selects_vector2(
-; CHECK-NEXT:    [[SEL1:%.*]] = select <4 x i1> [[C1:%.*]], <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]
-; CHECK-NEXT:    [[SEL2:%.*]] = select <4 x i1> [[C1]], <4 x i32> [[B]], <4 x i32> [[A]]
-; CHECK-NEXT:    [[RET:%.*]] = select <4 x i1> [[C2:%.*]], <4 x i32> [[SEL2]], <4 x i32> [[SEL1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[C1:%.*]], [[C2:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[RET]]
 ;
   %sel1 = select <4 x i1> %c1, <4 x i32> %a, <4 x i32> %b
