@@ -689,7 +689,7 @@ static unsigned getBestVarToEliminate(const IntegerRelation &cst,
 // using the GCD test (on all equality constraints) and checking for trivially
 // invalid constraints. Returns 'true' if the constraint system is found to be
 // empty; false otherwise.
-bool IntegerRelation::isEmpty() const {
+bool IntegerRelation::isEmptyByFMTest() const {
   if (isEmptyByGCDTest() || hasInvalidConstraint())
     return true;
 
@@ -817,7 +817,26 @@ IntMatrix IntegerRelation::getBoundedDirections() const {
   return dirs;
 }
 
+bool IntegerRelation::isEmpty(SolverKind kind) const {
+  switch (kind) {
+  case SolverKind::IntegerSimplex:
+    return isIntegerEmpty();
+  case SolverKind::RationalSimplex:
+    return isRationalEmpty();
+  case SolverKind::FourierMotzkin:
+    return isEmptyByFMTest();
+  case SolverKind::FastHeuristics:
+    return isObviouslyEmpty();
+  }
+}
+
 bool IntegerRelation::isIntegerEmpty() const { return !findIntegerSample(); }
+
+bool IntegerRelation::isRationalEmpty() const {
+  // TODO: We should cache the simplex at some point.
+  Simplex simplex(*this);
+  return simplex.isEmpty();
+}
 
 /// Let this set be S. If S is bounded then we directly call into the GBR
 /// sampling algorithm. Otherwise, there are some unbounded directions, i.e.,
@@ -1182,7 +1201,7 @@ void IntegerRelation::removeRedundantInequalities() {
     // Change the inequality to its complement.
     tmpCst.inequalities.negateRow(r);
     --tmpCst.atIneq(r, tmpCst.getNumCols() - 1);
-    if (tmpCst.isEmpty()) {
+    if (tmpCst.isEmpty(SolverKind::FourierMotzkin)) {
       redun[r] = true;
       // Zero fill the redundant inequality.
       inequalities.fillRow(r, /*value=*/0);
@@ -2513,7 +2532,7 @@ void IntegerRelation::removeTrivialEqualities() {
 bool IntegerRelation::isFullDim() {
   if (getNumVars() == 0)
     return true;
-  if (isEmpty())
+  if (isEmpty(SolverKind::FourierMotzkin))
     return false;
 
   // If there is a non-trivial equality, the space cannot be full-dimensional.
