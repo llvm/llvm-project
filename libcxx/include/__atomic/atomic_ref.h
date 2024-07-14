@@ -27,6 +27,7 @@
 #include <__memory/addressof.h>
 #include <__type_traits/has_unique_object_representation.h>
 #include <__type_traits/is_trivially_copyable.h>
+#include <__utility/exchange.h>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -161,9 +162,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _Tp
   exchange(_Tp __desired, memory_order __order = memory_order::seq_cst) const noexcept {
     if (__libcpp_is_constant_evaluated()) {
-      _Tp tmp = *__ptr_;
-      *__ptr_ = __desired;
-      return tmp;
+      return std::exchange(*__ptr_, __desired);
     } else {
       alignas(_Tp) byte __mem[sizeof(_Tp)];
       auto* __ret = reinterpret_cast<_Tp*>(__mem);
@@ -286,12 +285,12 @@ public:
     }
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void notify_one() const noexcept {
-    if !consteval {
+    if (!__libcpp_is_constant_evaluated()) {
       std::__atomic_notify_one(*this);
     }
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void notify_all() const noexcept {
-    if !consteval {
+    if (!__libcpp_is_constant_evaluated()) {
       std::__atomic_notify_all(*this);
     }
   }

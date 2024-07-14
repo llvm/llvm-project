@@ -14,6 +14,7 @@
 #include <__config>
 #include <__memory/addressof.h>
 #include <__type_traits/is_assignable.h>
+#include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_trivially_copyable.h>
 #include <__type_traits/remove_const.h>
 #include <cstddef>
@@ -283,11 +284,15 @@ struct __cxx_atomic_base_impl {
 #  define __cxx_atomic_is_lock_free(__s) __c11_atomic_is_lock_free(__s)
 
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR inline void __cxx_atomic_thread_fence(memory_order __order) _NOEXCEPT {
-  __c11_atomic_thread_fence(static_cast<__memory_order_underlying_t>(__order));
+  if (!__libcpp_is_constant_evaluated()) {
+    __c11_atomic_thread_fence(static_cast<__memory_order_underlying_t>(__order));
+  }
 }
 
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR inline void __cxx_atomic_signal_fence(memory_order __order) _NOEXCEPT {
-  __c11_atomic_signal_fence(static_cast<__memory_order_underlying_t>(__order));
+  if (!__libcpp_is_constant_evaluated()) {
+    __c11_atomic_signal_fence(static_cast<__memory_order_underlying_t>(__order));
+  }
 }
 
 template <class _Tp>

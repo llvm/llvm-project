@@ -122,7 +122,7 @@ struct __atomic_base // false
     std::__atomic_notify_one(*this);
   }
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void notify_one() _NOEXCEPT {
-    if !consteval {
+    if (!__libcpp_is_constant_evaluated()) {
       std::__atomic_notify_one(*this);
     }
   }
@@ -130,7 +130,7 @@ struct __atomic_base // false
     std::__atomic_notify_all(*this);
   }
   _LIBCPP_AVAILABILITY_SYNC _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void notify_all() _NOEXCEPT {
-    if !consteval {
+    if (!__libcpp_is_constant_evaluated()) {
       std::__atomic_notify_all(*this);
     }
   }
@@ -138,7 +138,7 @@ struct __atomic_base // false
 #if _LIBCPP_STD_VER >= 20
   _LIBCPP_HIDE_FROM_ABI constexpr __atomic_base() noexcept(is_nothrow_default_constructible_v<_Tp>) : __a_(_Tp()) {}
 #else
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __atomic_base() _NOEXCEPT = default;
+  _LIBCPP_HIDE_FROM_ABI __atomic_base() _NOEXCEPT = default;
 #endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __atomic_base(_Tp __d) _NOEXCEPT : __a_(__d) {}

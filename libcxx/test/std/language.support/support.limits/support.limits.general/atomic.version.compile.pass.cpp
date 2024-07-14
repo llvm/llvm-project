@@ -26,6 +26,7 @@
     __cpp_lib_atomic_value_initialization      201911L [C++20]
     __cpp_lib_atomic_wait                      201907L [C++20]
     __cpp_lib_char8_t                          201907L [C++20]
+    __cpp_lib_constexpr_atomic                 202406L [C++26]
 */
 
 #include <atomic>
@@ -73,6 +74,10 @@
 #   error "__cpp_lib_char8_t should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_constexpr_atomic
+#   error "__cpp_lib_constexpr_atomic should not be defined before c++26"
+# endif
+
 #elif TEST_STD_VER == 14
 
 # ifdef __cpp_lib_atomic_flag_test
@@ -113,6 +118,10 @@
 
 # ifdef __cpp_lib_char8_t
 #   error "__cpp_lib_char8_t should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_constexpr_atomic
+#   error "__cpp_lib_constexpr_atomic should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 17
@@ -158,6 +167,10 @@
 
 # ifdef __cpp_lib_char8_t
 #   error "__cpp_lib_char8_t should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_constexpr_atomic
+#   error "__cpp_lib_constexpr_atomic should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER == 20
@@ -253,6 +266,10 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_constexpr_atomic
+#   error "__cpp_lib_constexpr_atomic should not be defined before c++26"
+# endif
+
 #elif TEST_STD_VER == 23
 
 # ifndef __cpp_lib_atomic_flag_test
@@ -344,6 +361,10 @@
 #   ifdef __cpp_lib_char8_t
 #     error "__cpp_lib_char8_t should not be defined when the requirement 'defined(__cpp_char8_t)' is not met!"
 #   endif
+# endif
+
+# ifdef __cpp_lib_constexpr_atomic
+#   error "__cpp_lib_constexpr_atomic should not be defined before c++26"
 # endif
 
 #elif TEST_STD_VER > 23
@@ -445,6 +466,19 @@
 # else
 #   ifdef __cpp_lib_char8_t
 #     error "__cpp_lib_char8_t should not be defined when the requirement 'defined(__cpp_char8_t)' is not met!"
+#   endif
+# endif
+
+# if __has_constexpr_builtin(__c11_atomic_load)
+#   ifndef __cpp_lib_constexpr_atomic
+#     error "__cpp_lib_constexpr_atomic should be defined in c++26"
+#   endif
+#   if __cpp_lib_constexpr_atomic != 202406L
+#     error "__cpp_lib_constexpr_atomic should have the value 202406L in c++26"
+#   endif
+# else
+#   ifdef __cpp_lib_constexpr_atomic
+#     error "__cpp_lib_constexpr_atomic should not be defined when the requirement '__has_constexpr_builtin(__c11_atomic_load)' is not met!"
 #   endif
 # endif
 

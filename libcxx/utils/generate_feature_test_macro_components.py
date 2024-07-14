@@ -319,6 +319,13 @@ feature_test_macros = [
             "headers": ["algorithm", "utility"],
         },
         {
+            "name": "__cpp_lib_constexpr_atomic",
+            "values": {"c++26": 202406},
+            "headers": ["atomic"],
+            "libcxx_guard": "__has_constexpr_builtin(__c11_atomic_load)",
+            "test_suite_guard": "__has_constexpr_builtin(__c11_atomic_load)",
+        },
+        {
             "name": "__cpp_lib_constexpr_bitset",
             "values": {"c++23": 202207},
             "headers": ["bitset"],
