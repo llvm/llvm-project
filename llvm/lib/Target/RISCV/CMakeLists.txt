@@ -34,7 +34,6 @@ add_llvm_target(RISCVCodeGen
   RISCVMakeCompressible.cpp
   RISCVExpandAtomicPseudoInsts.cpp
   RISCVExpandPseudoInsts.cpp
-  RISCVFoldMasks.cpp
   RISCVFrameLowering.cpp
   RISCVGatherScatterLowering.cpp
   RISCVInsertVSETVLI.cpp
@@ -55,6 +54,7 @@ add_llvm_target(RISCVCodeGen
   RISCVTargetMachine.cpp
   RISCVTargetObjectFile.cpp
   RISCVTargetTransformInfo.cpp
+  RISCVVectorPeephole.cpp
   GISel/RISCVCallLowering.cpp
   GISel/RISCVInstructionSelector.cpp
   GISel/RISCVLegalizerInfo.cpp

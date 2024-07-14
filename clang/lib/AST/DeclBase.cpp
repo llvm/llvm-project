@@ -1145,6 +1145,10 @@ bool Decl::isFromExplicitGlobalModule() const {
   return getOwningModule() && getOwningModule()->isExplicitGlobalModule();
 }
 
+bool Decl::isInNamedModule() const {
+  return getOwningModule() && getOwningModule()->isNamedModule();
+}
+
 static Decl::Kind getKind(const Decl *D) { return D->getKind(); }
 static Decl::Kind getKind(const DeclContext *DC) { return DC->getDeclKind(); }
 

@@ -203,8 +203,8 @@ RAGreedy::RAGreedy(RegClassFilterFunc F):
 
 void RAGreedy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addRequired<MachineBlockFrequencyInfo>();
-  AU.addPreserved<MachineBlockFrequencyInfo>();
+  AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+  AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
   AU.addRequired<LiveIntervalsWrapperPass>();
   AU.addPreserved<LiveIntervalsWrapperPass>();
   AU.addRequired<SlotIndexesWrapperPass>();
@@ -1664,8 +1664,8 @@ unsigned RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
 
     // Remove any gaps with regmask clobbers.
     if (Matrix->checkRegMaskInterference(VirtReg, PhysReg))
-      for (unsigned I = 0, E = RegMaskGaps.size(); I != E; ++I)
-        GapWeight[RegMaskGaps[I]] = huge_valf;
+      for (unsigned Gap : RegMaskGaps)
+        GapWeight[Gap] = huge_valf;
 
     // Try to find the best sequence of gaps to close.
     // The new spill weight must be larger than any gap interference.
@@ -2728,7 +2728,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   // Renumber to get accurate and consistent results from
   // SlotIndexes::getApproxInstrDistance.
   Indexes->packIndexes();
-  MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
+  MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
   Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();

@@ -156,7 +156,6 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
   auto filterType = cast<ShapedType>(filter.getType());
   auto outputType = cast<ShapedType>(output.getType());
 
-  // TODO: Should we support dynamic shapes?
   if (!inputType.hasStaticShape())
     return rewriter.notifyMatchFailure(convOp,
                                        "expected a static shape for the input");
@@ -316,6 +315,12 @@ private:
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
+FailureOr<Operation *> winogradConv2D(RewriterBase &rewriter,
+                                      linalg::Conv2DNhwcFhwcOp op, int64_t m,
+                                      int64_t r) {
+  return winogradConv2DHelper(rewriter, op, m, r);
+}
+
 void populateWinogradConv2DPatterns(RewritePatternSet &patterns, int64_t m,
                                     int64_t r) {
   MLIRContext *context = patterns.getContext();

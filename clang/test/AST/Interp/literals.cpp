@@ -1276,3 +1276,27 @@ namespace ComparisonAgainstOnePastEnd {
 
   static_assert(&a + 1 == &b + 1, ""); // both-error {{static assertion failed}}
 };
+
+namespace NTTP {
+  template <typename _Tp, unsigned _Nm>
+    constexpr unsigned
+    size(const _Tp (&)[_Nm]) noexcept
+    { return _Nm; }
+
+  template <char C>
+  static int write_padding() {
+    static const char Chars[] = {C};
+
+    return size(Chars);
+  }
+}
+
+#if __cplusplus >= 201402L
+namespace UnaryOpError {
+  constexpr int foo() {
+    int f = 0;
+    ++g; // both-error {{use of undeclared identifier 'g'}}
+    return f;
+  }
+}
+#endif
