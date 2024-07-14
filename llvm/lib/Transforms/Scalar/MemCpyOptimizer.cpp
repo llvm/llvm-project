@@ -1188,9 +1188,9 @@ bool MemCpyOptPass::processMemCpyMemCpyDependence(MemCpyInst *M,
     if (MDestOffset == MForwardOffset)
       CopySource = M->getDest();
     else {
-      NewCopySource = cast<Instruction>(Builder.CreateInBoundsPtrAdd(
-          CopySource, Builder.getInt64(MForwardOffset)));
-      CopySource = NewCopySource;
+      CopySource = Builder.CreateInBoundsPtrAdd(
+          CopySource, Builder.getInt64(MForwardOffset));
+      NewCopySource = dyn_cast<Instruction>(CopySource);
     }
     // We need to update `MCopyLoc` if an offset exists.
     MCopyLoc = MCopyLoc.getWithNewPtr(CopySource);

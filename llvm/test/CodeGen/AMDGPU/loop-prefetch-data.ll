@@ -5,12 +5,12 @@
 define amdgpu_kernel void @copy_flat(ptr nocapture %d, ptr nocapture readonly %s, i32 %n) {
 ; GCNES0-LABEL: copy_flat:
 ; GCNES0:       ; %bb.0: ; %entry
-; GCNES0-NEXT:    s_load_b32 s4, s[0:1], 0x34
+; GCNES0-NEXT:    s_load_b32 s4, s[2:3], 0x34
 ; GCNES0-NEXT:    s_wait_kmcnt 0x0
 ; GCNES0-NEXT:    s_cmp_eq_u32 s4, 0
 ; GCNES0-NEXT:    s_cbranch_scc1 .LBB0_3
 ; GCNES0-NEXT:  ; %bb.1: ; %for.body.preheader
-; GCNES0-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GCNES0-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GCNES0-NEXT:    s_wait_kmcnt 0x0
 ; GCNES0-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 0xb0
 ; GCNES0-NEXT:  .LBB0_2: ; %for.body
@@ -34,12 +34,12 @@ define amdgpu_kernel void @copy_flat(ptr nocapture %d, ptr nocapture readonly %s
 ; GCNES2-LABEL: copy_flat:
 ; GCNES2:       ; %bb.0: ; %entry
 ; GCNES2-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_SCHED_MODE, 0, 2), 2
-; GCNES2-NEXT:    s_load_b32 s4, s[0:1], 0x34
+; GCNES2-NEXT:    s_load_b32 s4, s[2:3], 0x34
 ; GCNES2-NEXT:    s_wait_kmcnt 0x0
 ; GCNES2-NEXT:    s_cmp_eq_u32 s4, 0
 ; GCNES2-NEXT:    s_cbranch_scc1 .LBB0_3
 ; GCNES2-NEXT:  ; %bb.1: ; %for.body.preheader
-; GCNES2-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GCNES2-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GCNES2-NEXT:    s_wait_kmcnt 0x0
 ; GCNES2-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 0xb0
 ; GCNES2-NEXT:  .LBB0_2: ; %for.body
@@ -84,12 +84,12 @@ for.end:                                          ; preds = %for.body, %entry
 define amdgpu_kernel void @copy_global(ptr addrspace(1) nocapture %d, ptr addrspace(1) nocapture readonly %s, i32 %n) {
 ; GCNES0-LABEL: copy_global:
 ; GCNES0:       ; %bb.0: ; %entry
-; GCNES0-NEXT:    s_load_b32 s4, s[0:1], 0x34
+; GCNES0-NEXT:    s_load_b32 s4, s[2:3], 0x34
 ; GCNES0-NEXT:    s_wait_kmcnt 0x0
 ; GCNES0-NEXT:    s_cmp_eq_u32 s4, 0
 ; GCNES0-NEXT:    s_cbranch_scc1 .LBB1_3
 ; GCNES0-NEXT:  ; %bb.1: ; %for.body.preheader
-; GCNES0-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GCNES0-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GCNES0-NEXT:    v_mov_b32_e32 v0, 0
 ; GCNES0-NEXT:    s_wait_kmcnt 0x0
 ; GCNES0-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 0xb0
@@ -114,12 +114,12 @@ define amdgpu_kernel void @copy_global(ptr addrspace(1) nocapture %d, ptr addrsp
 ; GCNES2-LABEL: copy_global:
 ; GCNES2:       ; %bb.0: ; %entry
 ; GCNES2-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_SCHED_MODE, 0, 2), 2
-; GCNES2-NEXT:    s_load_b32 s4, s[0:1], 0x34
+; GCNES2-NEXT:    s_load_b32 s4, s[2:3], 0x34
 ; GCNES2-NEXT:    s_wait_kmcnt 0x0
 ; GCNES2-NEXT:    s_cmp_eq_u32 s4, 0
 ; GCNES2-NEXT:    s_cbranch_scc1 .LBB1_3
 ; GCNES2-NEXT:  ; %bb.1: ; %for.body.preheader
-; GCNES2-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GCNES2-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GCNES2-NEXT:    v_mov_b32_e32 v0, 0
 ; GCNES2-NEXT:    s_wait_kmcnt 0x0
 ; GCNES2-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 0xb0
@@ -163,12 +163,12 @@ for.end:                                          ; preds = %for.body, %entry
 define amdgpu_kernel void @copy_constant(ptr addrspace(1) nocapture %d, ptr addrspace(4) nocapture readonly %s, i32 %n) {
 ; GCNES0-LABEL: copy_constant:
 ; GCNES0:       ; %bb.0: ; %entry
-; GCNES0-NEXT:    s_load_b32 s4, s[0:1], 0x34
+; GCNES0-NEXT:    s_load_b32 s4, s[2:3], 0x34
 ; GCNES0-NEXT:    s_wait_kmcnt 0x0
 ; GCNES0-NEXT:    s_cmp_eq_u32 s4, 0
 ; GCNES0-NEXT:    s_cbranch_scc1 .LBB2_3
 ; GCNES0-NEXT:  ; %bb.1: ; %for.body.preheader
-; GCNES0-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GCNES0-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GCNES0-NEXT:    v_mov_b32_e32 v0, 0
 ; GCNES0-NEXT:  .LBB2_2: ; %for.body
 ; GCNES0-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -194,12 +194,12 @@ define amdgpu_kernel void @copy_constant(ptr addrspace(1) nocapture %d, ptr addr
 ; GCNES2-LABEL: copy_constant:
 ; GCNES2:       ; %bb.0: ; %entry
 ; GCNES2-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_SCHED_MODE, 0, 2), 2
-; GCNES2-NEXT:    s_load_b32 s4, s[0:1], 0x34
+; GCNES2-NEXT:    s_load_b32 s4, s[2:3], 0x34
 ; GCNES2-NEXT:    s_wait_kmcnt 0x0
 ; GCNES2-NEXT:    s_cmp_eq_u32 s4, 0
 ; GCNES2-NEXT:    s_cbranch_scc1 .LBB2_3
 ; GCNES2-NEXT:  ; %bb.1: ; %for.body.preheader
-; GCNES2-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GCNES2-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GCNES2-NEXT:    v_mov_b32_e32 v0, 0
 ; GCNES2-NEXT:  .LBB2_2: ; %for.body
 ; GCNES2-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -245,7 +245,7 @@ for.end:                                          ; preds = %for.body, %entry
 define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspace(3) nocapture readonly %s, i32 %n) {
 ; GCNES0-LABEL: copy_local:
 ; GCNES0:       ; %bb.0: ; %entry
-; GCNES0-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
+; GCNES0-NEXT:    s_load_b96 s[0:2], s[2:3], 0x24
 ; GCNES0-NEXT:    s_wait_kmcnt 0x0
 ; GCNES0-NEXT:    s_cmp_eq_u32 s2, 0
 ; GCNES0-NEXT:    s_cbranch_scc1 .LBB3_2
@@ -272,7 +272,7 @@ define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspa
 ; GCNES2-LABEL: copy_local:
 ; GCNES2:       ; %bb.0: ; %entry
 ; GCNES2-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_SCHED_MODE, 0, 2), 2
-; GCNES2-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
+; GCNES2-NEXT:    s_load_b96 s[0:2], s[2:3], 0x24
 ; GCNES2-NEXT:    s_wait_kmcnt 0x0
 ; GCNES2-NEXT:    s_cmp_eq_u32 s2, 0
 ; GCNES2-NEXT:    s_cbranch_scc1 .LBB3_2

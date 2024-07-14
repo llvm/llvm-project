@@ -1,6 +1,4 @@
 header: sys-auxv.h
-standards: 
-  - GNUExtensions
 macros: []
 types: []
 enums: []
