@@ -17,16 +17,18 @@ add_header(
     __llvm-libc-common.h
 )
 
-add_gen_header(
+add_gen_header2(
   ctype
+  YAML_FILE ../libc/newhdrgen/yaml/ctype.yaml
   DEF_FILE ctype.h.def
   GEN_HDR ctype.h
   DEPENDS
     .llvm_libc_common_h
 )
 
-add_gen_header(
+add_gen_header2(
   dirent
+  YAML_FILE ../libc/newhdrgen/yaml/dirent.yaml
   DEF_FILE dirent.h.def
   GEN_HDR dirent.h
   DEPENDS
@@ -36,8 +38,9 @@ add_gen_header(
     .llvm-libc-types.struct_dirent
 )
 
-add_gen_header(
+add_gen_header2(
   fcntl
+  YAML_FILE ../libc/newhdrgen/yaml/fcntl.yaml
   DEF_FILE fcntl.h.def
   GEN_HDR fcntl.h
   DEPENDS
@@ -51,8 +54,9 @@ add_gen_header(
     .llvm_libc_common_h
 )
 
-add_gen_header(
+add_gen_header2(
   dlfcn
+  YAML_FILE ../libc/newhdrgen/yaml/dlfcn.yaml
   DEF_FILE dlfcn.h.def
   GEN_HDR dlfcn.h
   DEPENDS
@@ -60,8 +64,9 @@ add_gen_header(
     .llvm_libc_common_h
 )
 
-add_gen_header(
+add_gen_header2(
   features
+  YAML_FILE ../libc/newhdrgen/yaml/features.yaml
   DEF_FILE features.h.def
   GEN_HDR features.h
   DEPENDS
@@ -69,8 +74,9 @@ add_gen_header(
     .llvm-libc-macros.features_macros
 )
 
-add_gen_header(
+add_gen_header2(
   fenv
+  YAML_FILE ../libc/newhdrgen/yaml/fenv.yaml
   DEF_FILE fenv.h.def
   GEN_HDR fenv.h
   DEPENDS
@@ -80,8 +86,9 @@ add_gen_header(
     .llvm-libc-types.fexcept_t
 )
 
-add_gen_header(
+add_gen_header2(
   inttypes
+  YAML_FILE ../libc/newhdrgen/yaml/inttypes.yaml
   DEF_FILE inttypes.h.def
   GEN_HDR inttypes.h
   DEPENDS
@@ -90,46 +97,50 @@ add_gen_header(
     .llvm-libc-macros.inttypes_macros
 )
 
-add_gen_header(
+add_gen_header2(
   float
+  YAML_FILE ../libc/newhdrgen/yaml/float.yaml
   DEF_FILE float.h.def
   GEN_HDR float.h
   DEPENDS
     .llvm-libc-macros.float_macros
 )
 
-add_gen_header(
+add_gen_header2(
   stdint
+  YAML_FILE ../libc/newhdrgen/yaml/stdint.yaml
   DEF_FILE stdint.h.def
   GEN_HDR stdint.h
   DEPENDS
     .llvm-libc-macros.stdint_macros
 )
 
-add_gen_header(
+add_gen_header2(
   limits
+  YAML_FILE ../libc/newhdrgen/yaml/limits.yaml
   DEF_FILE limits.h.def
   GEN_HDR limits.h
   DEPENDS
     .llvm-libc-macros.limits_macros
 )
 
-add_gen_header(
+add_gen_header2(
   math
+  YAML_FILE ../libc/newhdrgen/yaml/math.yaml
   DEF_FILE math.h.def
   GEN_HDR math.h
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.float16_macros
     .llvm-libc-macros.math_macros
-    .llvm-libc-macros.math_function_macros
     .llvm-libc-types.double_t
     .llvm-libc-types.float_t
     .llvm-libc-types.float128
 )
 
-add_gen_header(
+add_gen_header2(
   stdfix
+  YAML_FILE ../libc/newhdrgen/yaml/stdfix.yaml
   DEF_FILE stdfix.h.def
   GEN_HDR stdfix.h
   DEPENDS
@@ -139,15 +150,16 @@ add_gen_header(
 # TODO: This should be conditional on POSIX networking being included.
 file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/arpa)
 
-add_gen_header(
+add_gen_header2(
   arpa_inet
+  YAML_FILE ../libc/newhdrgen/yaml/arpa_inet.yaml
   DEF_FILE arpa/inet.h.def
   GEN_HDR arpa/inet.h
   DEPENDS
     .llvm_libc_common_h
 )
 
-add_gen_header(
+add_gen_header2(
   assert
   DEF_FILE assert.h.def
   GEN_HDR assert.h
@@ -156,8 +168,9 @@ add_gen_header(
     .llvm-libc-macros.assert_macros
 )
 
-add_gen_header(
+add_gen_header2(
   setjmp
+  YAML_FILE ../libc/newhdrgen/yaml/setjmp.yaml
   DEF_FILE setjmp.h.def
   GEN_HDR setjmp.h
   DEPENDS
@@ -165,8 +178,9 @@ add_gen_header(
     .llvm-libc-types.jmp_buf
 )
 
-add_gen_header(
+add_gen_header2(
   string
+  YAML_FILE ../libc/newhdrgen/yaml/string.yaml
   DEF_FILE string.h.def
   GEN_HDR string.h
   DEPENDS
@@ -175,8 +189,9 @@ add_gen_header(
     .llvm-libc-types.size_t
 )
 
-add_gen_header(
+add_gen_header2(
   strings
+  YAML_FILE ../libc/newhdrgen/yaml/strings.yaml
   DEF_FILE strings.h.def
   GEN_HDR strings.h
   DEPENDS
@@ -184,8 +199,9 @@ add_gen_header(
     .llvm-libc-types.size_t
 )
 
-add_gen_header(
+add_gen_header2(
   search
+  YAML_FILE ../libc/newhdrgen/yaml/search.yaml
   DEF_FILE search.h.def
   GEN_HDR search.h
   DEPENDS
@@ -196,8 +212,9 @@ add_gen_header(
     .llvm-libc-types.size_t
 )
 
-add_gen_header(
+add_gen_header2(
   time
+  YAML_FILE ../libc/newhdrgen/yaml/time.yaml
   DEF_FILE time.h.def
   GEN_HDR time.h
   DEPENDS
@@ -211,8 +228,9 @@ add_gen_header(
     .llvm-libc-types.clockid_t
 )
 
-add_gen_header(
+add_gen_header2(
   threads
+  YAML_FILE ../libc/newhdrgen/yaml/threads.yaml
   DEF_FILE threads.h.def
   GEN_HDR threads.h
   DEPENDS
@@ -227,8 +245,9 @@ add_gen_header(
     .llvm-libc-types.tss_dtor_t
 )
 
-add_gen_header(
+add_gen_header2(
   errno
+  YAML_FILE ../libc/newhdrgen/yaml/errno.yaml
   DEF_FILE errno.h.def
   GEN_HDR errno.h
   DEPENDS
@@ -236,8 +255,9 @@ add_gen_header(
     .llvm-libc-macros.error_number_macros
 )
 
-add_gen_header(
+add_gen_header2(
   signal
+  YAML_FILE ../libc/newhdrgen/yaml/signal.yaml
   DEF_FILE signal.h.def
   GEN_HDR signal.h
   DEPENDS
@@ -251,8 +271,9 @@ add_gen_header(
     .llvm-libc-types.pid_t
 )
 
-add_gen_header(
+add_gen_header2(
   stdbit
+  YAML_FILE ../libc/newhdrgen/yaml/stdbit.yaml
   DEF_FILE stdbit.h.def
   GEN_HDR stdbit.h
   DEPENDS
@@ -260,8 +281,9 @@ add_gen_header(
     .llvm-libc-macros.stdbit_macros
 )
 
-add_gen_header(
+add_gen_header2(
   stdckdint
+  YAML_FILE ../libc/newhdrgen/yaml/stdckdint.yaml
   DEF_FILE stdckdint.h.def
   GEN_HDR stdckdint.h
   DEPENDS
@@ -269,8 +291,9 @@ add_gen_header(
     .llvm-libc-macros.stdckdint_macros
 )
 
-add_gen_header(
+add_gen_header2(
   stdio
+  YAML_FILE ../libc/newhdrgen/yaml/stdio.yaml
   DEF_FILE stdio.h.def
   GEN_HDR stdio.h
   DEPENDS
@@ -284,8 +307,9 @@ add_gen_header(
     .llvm_libc_common_h
 )
 
-add_gen_header(
+add_gen_header2(
   stdlib
+  YAML_FILE ../libc/newhdrgen/yaml/stdlib.yaml
   DEF_FILE stdlib.h.def
   GEN_HDR stdlib.h
   DEPENDS
@@ -301,8 +325,9 @@ add_gen_header(
     .llvm-libc-types.__atexithandler_t
 )
 
-add_gen_header(
+add_gen_header2(
   unistd
+  YAML_FILE ../libc/newhdrgen/yaml/unistd.yaml
   DEF_FILE unistd.h.def
   GEN_HDR unistd.h
   DEPENDS
@@ -319,8 +344,9 @@ add_gen_header(
     .llvm-libc-types.__getoptargv_t
 )
 
-add_gen_header(
+add_gen_header2(
   pthread
+  YAML_FILE ../libc/newhdrgen/yaml/pthread.yaml
   DEF_FILE pthread.h.def
   GEN_HDR pthread.h
   DEPENDS
@@ -340,8 +366,9 @@ add_gen_header(
     .llvm-libc-types.pthread_t
 )
 
-add_gen_header(
+add_gen_header2(
   sched
+  YAML_FILE ../libc/newhdrgen/yaml/sched.yaml
   DEF_FILE sched.h.def
   GEN_HDR sched.h
   DEPENDS
@@ -356,8 +383,9 @@ add_gen_header(
     .llvm-libc-types.struct_timespec
 )
 
-add_gen_header(
+add_gen_header2(
   spawn
+  YAML_FILE ../libc/newhdrgen/yaml/spawn.yaml
   DEF_FILE spawn.h.def
   GEN_HDR spawn.h
   DEPENDS
@@ -373,8 +401,9 @@ add_gen_header(
 # them.
 file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/sys)
 
-add_gen_header(
+add_gen_header2(
   sys_auxv
+  YAML_FILE ../libc/newhdrgen/yaml/sys/sys_auxv.yaml
   DEF_FILE sys/auxv.h.def
   GEN_HDR sys/auxv.h
   DEPENDS
@@ -382,8 +411,9 @@ add_gen_header(
     .llvm-libc-macros.sys_auxv_macros
 )
 
-add_gen_header(
+add_gen_header2(
   sys_epoll
+  YAML_FILE ../libc/newhdrgen/yaml/sys/sys_epoll.yaml
   DEF_FILE sys/epoll.h.def
   GEN_HDR sys/epoll.h
   DEPENDS
@@ -394,8 +424,9 @@ add_gen_header(
     .llvm-libc-macros.sys_epoll_macros
 )
 
-add_gen_header(
+add_gen_header2(
   sys_ioctl
+  YAML_FILE ../libc/newhdrgen/yaml/sys/sys_ioctl.yaml
   DEF_FILE sys/ioctl.h.def
   GEN_HDR sys/ioctl.h
   DEPENDS
@@ -403,8 +434,9 @@ add_gen_header(
     .llvm-libc-macros.sys_ioctl_macros
 )
 
-add_gen_header(
+add_gen_header2(
   sys_mman
+  YAML_FILE ../libc/newhdrgen/yaml/sys/sys_mman.yaml
   DEF_FILE sys/mman.h.def
   GEN_HDR sys/mman.h
   DEPENDS
@@ -415,8 +447,9 @@ add_gen_header(
     .llvm-libc-types.ssize_t
 )
 
-add_gen_header(
+add_gen_header2(
   sys_prctl
+  YAML_FILE ../libc/newhdrgen/yaml/sys_prctl.yaml
   DEF_FILE sys/prctl.h.def
   GEN_HDR sys/prctl.h
   DEPENDS
@@ -431,8 +464,9 @@ add_header(
     .llvm-libc-macros.sys_queue_macros
 )
 
-add_gen_header(
+add_gen_header2(
   sys_random
+  YAML_FILE ../libc/newhdrgen/yaml/sys/sys_random.yaml
   DEF_FILE sys/random.h.def
   GEN_HDR sys/random.h
   DEPENDS
@@ -442,8 +476,9 @@ add_gen_header(
     .llvm-libc-types.ssize_t
 )
 
-add_gen_header(
+add_gen_header2(
   sys_resource
+  YAML_FILE ../libc/newhdrgen/yaml/sys/sys_resource.yaml
   DEF_FILE sys/resource.h.def
   GEN_HDR sys/resource.h
   DEPENDS
@@ -453,8 +488,9 @@ add_gen_header(
     .llvm-libc-types.struct_rlimit
 )
 
-add_gen_header(
+add_gen_header2(
   sys_stat
+  YAML_FILE ../libc/newhdrgen/yaml/sys/sys_stat.yaml
   DEF_FILE sys/stat.h.def
   GEN_HDR sys/stat.h
   DEPENDS
@@ -474,8 +510,9 @@ add_gen_header(
     .llvm-libc-types.struct_stat
 )
 
-add_gen_header(
+add_gen_header2(
   sys_select
+  YAML_FILE ../libc/newhdrgen/yaml/sys/sys_select.yaml
   DEF_FILE sys/select.h.def
   GEN_HDR sys/select.h
   DEPENDS
@@ -489,8 +526,9 @@ add_gen_header(
     .llvm-libc-types.struct_timeval
 )
 
-add_gen_header(
+add_gen_header2(
   sys_sendfile
+  YAML_FILE ../libc/newhdrgen/yaml/sys/sys_sendfile.yaml
   DEF_FILE sys/sendfile.h.def
   GEN_HDR sys/sendfile.h
   DEPENDS
@@ -500,8 +538,9 @@ add_gen_header(
     .llvm-libc-types.ssize_t
 )
 
-add_gen_header(
+add_gen_header2(
   sys_socket
+  YAML_FILE ../libc/newhdrgen/yaml/sys/sys_socket.yaml
   DEF_FILE sys/socket.h.def
   GEN_HDR sys/socket.h
   DEPENDS
@@ -513,8 +552,9 @@ add_gen_header(
     .llvm-libc-types.struct_sockaddr_un
 )
 
-add_gen_header(
+add_gen_header2(
   sys_statvfs
+  YAML_FILE ../libc/newhdrgen/yaml/sys/sys_statvfs.yaml
   DEF_FILE sys/statvfs.h.def
   GEN_HDR sys/statvfs.h
   DEPENDS
@@ -522,14 +562,16 @@ add_gen_header(
     .llvm-libc-types.struct_statvfs
 )
 
-add_gen_header(
+add_gen_header2(
   sys_syscall
+  YAML_FILE ../libc/newhdrgen/yaml/sys/sys_syscall.yaml
   DEF_FILE sys/syscall.h.def
   GEN_HDR sys/syscall.h
 )
 
-add_gen_header(
+add_gen_header2(
   sys_time
+  YAML_FILE ../libc/newhdrgen/yaml/sys/sys_time.yaml
   DEF_FILE sys/time.h.def
   GEN_HDR sys/time.h
   DEPENDS
@@ -538,8 +580,9 @@ add_gen_header(
     .llvm-libc-macros.sys_time_macros
 )
 
-add_gen_header(
+add_gen_header2(
   sys_types
+  YAML_FILE ../libc/newhdrgen/yaml/sys/sys_types.yaml
   DEF_FILE sys/types.h.def
   GEN_HDR sys/types.h
   DEPENDS
@@ -567,8 +610,9 @@ add_gen_header(
     .llvm-libc-types.uid_t
 )
 
-add_gen_header(
+add_gen_header2(
   sys_utsname
+  YAML_FILE ../libc/newhdrgen/yaml/sys/sys_utsname.yaml
   DEF_FILE sys/utsname.h.def
   GEN_HDR sys/utsname.h
   DEPENDS
@@ -576,8 +620,9 @@ add_gen_header(
     .llvm-libc-types.struct_utsname
 )
 
-add_gen_header(
+add_gen_header2(
   sys_wait
+  YAML_FILE ../libc/newhdrgen/yaml/sys/sys_wait.yaml
   DEF_FILE sys/wait.h.def
   GEN_HDR sys/wait.h
   DEPENDS
@@ -588,8 +633,9 @@ add_gen_header(
     .llvm-libc-types.siginfo_t
 )
 
-add_gen_header(
+add_gen_header2(
   termios
+  YAML_FILE ../libc/newhdrgen/yaml/termios.yaml
   DEF_FILE termios.h.def
   GEN_HDR termios.h
   DEPENDS
@@ -602,8 +648,9 @@ add_gen_header(
     .llvm-libc-types.tcflag_t
 )
 
-add_gen_header(
+add_gen_header2(
   uchar
+  YAML_FILE ../libc/newhdrgen/yaml/uchar.yaml
   DEF_FILE uchar.h.def
   GEN_HDR uchar.h
   DEPENDS
@@ -614,8 +661,9 @@ add_gen_header(
     .llvm-libc-types.char32_t
 )
 
-add_gen_header(
+add_gen_header2(
   wchar
+  YAML_FILE ../libc/newhdrgen/yaml/wchar.yaml
   DEF_FILE wchar.h.def
   GEN_HDR wchar.h
   DEPENDS
@@ -630,8 +678,9 @@ add_gen_header(
 if(LIBC_TARGET_OS_IS_GPU)
   file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/gpu)
 
-  add_gen_header(
+  add_gen_header2(
     gpu_rpc
+    YAML_FILE ../libc/newhdrgen/yaml/rpc.yaml
     DEF_FILE gpu/rpc.h.def
     GEN_HDR gpu/rpc.h
     DEPENDS
