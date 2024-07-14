@@ -5968,7 +5968,7 @@ InputInfoList Driver::BuildJobsForActionNoCache(
           CurI};
     }
 
-    if (BoundArch.equals("gnu")) {
+    if (BoundArch == "gnu") {
       BoundArch = StringRef("");
     }
     // Now that we have all the results generated, select the one that should be
