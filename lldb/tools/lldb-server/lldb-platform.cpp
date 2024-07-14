@@ -313,9 +313,11 @@ int main_platform(int argc, char *argv[]) {
       GDBRemoteCommunicationServerPlatform::PortMap portmap_for_child;
       llvm::Expected<uint16_t> available_port =
           gdbserver_portmap.GetNextAvailablePort();
-      if (available_port)
-        portmap_for_child.AllowPort(*available_port);
-      else {
+      if (available_port) {
+        // GetNextAvailablePort() may return 0 if gdbserver_portmap is empty.
+        if (*available_port)
+          portmap_for_child.AllowPort(*available_port);
+      } else {
         llvm::consumeError(available_port.takeError());
         fprintf(stderr,
                 "no available gdbserver port for connection - dropping...\n");
@@ -352,7 +354,7 @@ int main_platform(int argc, char *argv[]) {
     if (platform.IsConnected()) {
       if (inferior_arguments.GetArgumentCount() > 0) {
         lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
-        std::optional<uint16_t> port = 0;
+        std::optional<uint16_t> port;
         std::string socket_name;
         Status error = platform.LaunchGDBServer(inferior_arguments,
                                                 "", // hostname
