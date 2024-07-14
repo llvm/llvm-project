@@ -7423,11 +7423,11 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
   return Cost;
 }
 
-VPlan &LoopVectorizationPlanner::getBestPlan() const {
+std::pair<ElementCount, VPlan &> LoopVectorizationPlanner::getBestPlan() const {
   // If there is a single VPlan with a single VF, return it directly.
   VPlan &FirstPlan = *VPlans[0];
   if (VPlans.size() == 1 && size(FirstPlan.vectorFactors()) == 1)
-    return FirstPlan;
+    return {*FirstPlan.vectorFactors().begin(), FirstPlan};
 
   VPlan *BestPlan = &FirstPlan;
   ElementCount ScalarVF = ElementCount::getFixed(1);
@@ -7466,8 +7466,7 @@ VPlan &LoopVectorizationPlanner::getBestPlan() const {
       }
     }
   }
-  BestPlan->setVF(BestFactor.Width);
-  return *BestPlan;
+  return {BestFactor.Width, *BestPlan};
 }
 
 VPlan &LoopVectorizationPlanner::getBestPlanFor(ElementCount VF) const {
@@ -10287,6 +10286,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     } else {
       // If we decided that it is *legal* to vectorize the loop, then do it.
 
+      const auto &[Width, BestPlan] = LVP.getBestPlan();
+      LLVM_DEBUG(dbgs() << "VF picked by VPlan cost model: " << Width << "\n");
+      assert(VF.Width == Width &&
+             "VPlan cost model and legacy cost model disagreed");
+
       // Consider vectorizing the epilogue too if it's profitable.
       VectorizationFactor EpilogueVF =
           LVP.selectEpilogueVectorizationFactor(VF.Width, IC);
@@ -10395,14 +10399,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                VF.MinProfitableTripCount, IC, &LVL, &CM, BFI,
                                PSI, Checks);
 
-        VPlan &BestPlan = LVP.getBestPlan();
-        assert(size(BestPlan.vectorFactors()) == 1 &&
-               "Plan should have a single VF");
-        ElementCount Width = *BestPlan.vectorFactors().begin();
-        LLVM_DEBUG(dbgs() << "VF picked by VPlan cost model: " << Width
-                          << "\n");
-        assert(VF.Width == Width &&
-               "VPlan cost model and legacy cost model disagreed");
         LVP.executePlan(Width, IC, BestPlan, LB, DT, false);
         ++LoopsVectorized;
 
