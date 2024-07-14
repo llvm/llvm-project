@@ -2209,19 +2209,30 @@ inline bool RVOPtr(InterpState &S, CodePtr OpPC) {
 //===----------------------------------------------------------------------===//
 // Shr, Shl
 //===----------------------------------------------------------------------===//
+enum class ShiftDir { Left, Right };
 
-template <PrimType NameL, PrimType NameR>
-inline bool Shr(InterpState &S, CodePtr OpPC) {
-  using LT = typename PrimConv<NameL>::T;
-  using RT = typename PrimConv<NameR>::T;
-  auto RHS = S.Stk.pop<RT>();
-  const auto &LHS = S.Stk.pop<LT>();
+template <class LT, class RT, ShiftDir Dir>
+inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS) {
   const unsigned Bits = LHS.bitWidth();
 
   // OpenCL 6.3j: shift values are effectively % word size of LHS.
   if (S.getLangOpts().OpenCL)
     RT::bitAnd(RHS, RT::from(LHS.bitWidth() - 1, RHS.bitWidth()),
                RHS.bitWidth(), &RHS);
+
+  if (RHS.isNegative()) {
+    // During constant-folding, a negative shift is an opposite shift. Such a
+    // shift is not a constant expression.
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.CCEDiag(Loc, diag::note_constexpr_negative_shift) << RHS.toAPSInt();
+    if (S.getLangOpts().CPlusPlus11 && S.getEvalStatus().Diag &&
+        !S.getEvalStatus().Diag->empty())
+      return false;
+    RHS = -RHS;
+    return DoShift < LT, RT,
+           Dir == ShiftDir::Left ? ShiftDir::Right
+                                 : ShiftDir::Left > (S, OpPC, LHS, RHS);
+  }
 
   if (!CheckShift(S, OpPC, LHS, RHS, Bits))
     return false;
@@ -2230,14 +2241,34 @@ inline bool Shr(InterpState &S, CodePtr OpPC) {
   // it has already been diagnosed by CheckShift() above,
   // but we still need to handle it.
   typename LT::AsUnsigned R;
-  if (RHS > RT::from(Bits - 1, RHS.bitWidth()))
-    LT::AsUnsigned::shiftRight(LT::AsUnsigned::from(LHS),
-                               LT::AsUnsigned::from(Bits - 1), Bits, &R);
-  else
-    LT::AsUnsigned::shiftRight(LT::AsUnsigned::from(LHS),
-                               LT::AsUnsigned::from(RHS, Bits), Bits, &R);
+  if constexpr (Dir == ShiftDir::Left) {
+    if (RHS > RT::from(Bits - 1, RHS.bitWidth()))
+      LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(LHS),
+                                LT::AsUnsigned::from(Bits - 1), Bits, &R);
+    else
+      LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(LHS),
+                                LT::AsUnsigned::from(RHS, Bits), Bits, &R);
+  } else {
+    if (RHS > RT::from(Bits - 1, RHS.bitWidth()))
+      LT::AsUnsigned::shiftRight(LT::AsUnsigned::from(LHS),
+                                 LT::AsUnsigned::from(Bits - 1), Bits, &R);
+    else
+      LT::AsUnsigned::shiftRight(LT::AsUnsigned::from(LHS),
+                                 LT::AsUnsigned::from(RHS, Bits), Bits, &R);
+  }
+
   S.Stk.push<LT>(LT::from(R));
   return true;
+}
+
+template <PrimType NameL, PrimType NameR>
+inline bool Shr(InterpState &S, CodePtr OpPC) {
+  using LT = typename PrimConv<NameL>::T;
+  using RT = typename PrimConv<NameR>::T;
+  auto RHS = S.Stk.pop<RT>();
+  auto LHS = S.Stk.pop<LT>();
+
+  return DoShift<LT, RT, ShiftDir::Right>(S, OpPC, LHS, RHS);
 }
 
 template <PrimType NameL, PrimType NameR>
@@ -2245,30 +2276,9 @@ inline bool Shl(InterpState &S, CodePtr OpPC) {
   using LT = typename PrimConv<NameL>::T;
   using RT = typename PrimConv<NameR>::T;
   auto RHS = S.Stk.pop<RT>();
-  const auto &LHS = S.Stk.pop<LT>();
-  const unsigned Bits = LHS.bitWidth();
+  auto LHS = S.Stk.pop<LT>();
 
-  // OpenCL 6.3j: shift values are effectively % word size of LHS.
-  if (S.getLangOpts().OpenCL)
-    RT::bitAnd(RHS, RT::from(LHS.bitWidth() - 1, RHS.bitWidth()),
-               RHS.bitWidth(), &RHS);
-
-  if (!CheckShift(S, OpPC, LHS, RHS, Bits))
-    return false;
-
-  // Limit the shift amount to Bits - 1. If this happened,
-  // it has already been diagnosed by CheckShift() above,
-  // but we still need to handle it.
-  typename LT::AsUnsigned R;
-  if (RHS > RT::from(Bits - 1, RHS.bitWidth()))
-    LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(LHS),
-                              LT::AsUnsigned::from(Bits - 1), Bits, &R);
-  else
-    LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(LHS),
-                              LT::AsUnsigned::from(RHS, Bits), Bits, &R);
-
-  S.Stk.push<LT>(LT::from(R));
-  return true;
+  return DoShift<LT, RT, ShiftDir::Left>(S, OpPC, LHS, RHS);
 }
 
 //===----------------------------------------------------------------------===//
