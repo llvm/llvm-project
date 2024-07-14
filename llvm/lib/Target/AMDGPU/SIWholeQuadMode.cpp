@@ -564,6 +564,7 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
           }
         }
         SetInactiveInstrs.push_back(&MI);
+        GlobalFlags |= StateStrictWWM;
       } else if (TII->isDisableWQM(MI)) {
         BBI.Needs |= StateExact;
         if (!(BBI.InNeeds & StateExact)) {
