@@ -566,7 +566,6 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
           }
         }
         SetInactiveInstrs.push_back(&MI);
-        GlobalFlags |= StateStrictWWM;
       } else if (TII->isDisableWQM(MI)) {
         BBI.Needs |= StateExact;
         if (!(BBI.InNeeds & StateExact)) {
@@ -1496,7 +1495,7 @@ bool SIWholeQuadMode::lowerCopyInstrs() {
                                 *MRI, MI->getOperand(0)));
     MI->setDesc(TII->get(CopyOp));
   }
-  return !LowerToCopyInstrs.empty();
+  return !LowerToCopyInstrs.empty() || !LowerToMovInstrs.empty();
 }
 
 bool SIWholeQuadMode::lowerKillInstrs(bool IsWQM) {
