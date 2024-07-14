@@ -6,8 +6,8 @@
 define amdgpu_kernel void @eggs(i1 %arg, ptr addrspace(1) %arg1, ptr %arg2, ptr %arg3, ptr %arg4, ptr %arg5, ptr %arg6, ptr %arg7, ptr %arg8, ptr %arg9) {
 ; CHECK-LABEL: eggs:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x0
-; CHECK-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0x8
+; CHECK-NEXT:    s_load_dword s0, s[6:7], 0x0
+; CHECK-NEXT:    s_load_dwordx16 s[8:23], s[6:7], 0x8
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_bitcmp0_b32 s0, 0
@@ -33,7 +33,7 @@ define amdgpu_kernel void @eggs(i1 %arg, ptr addrspace(1) %arg1, ptr %arg2, ptr 
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v7, 0
 ; CHECK-NEXT:  .LBB0_3: ; %bb41
-; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x48
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x48
 ; CHECK-NEXT:    v_mov_b32_e32 v8, s10
 ; CHECK-NEXT:    v_mov_b32_e32 v9, s11
 ; CHECK-NEXT:    v_mov_b32_e32 v10, s12
