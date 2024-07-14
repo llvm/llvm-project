@@ -3952,12 +3952,11 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
       Register DefReg = DefMI->getOperand(0).getReg();
       if (!MRI.hasOneNonDBGUse(DefReg))
         return;
-      // We cannot just remove the DefMI here, calling pass will crash.
-      DefMI->setDesc(get(AMDGPU::IMPLICIT_DEF));
-      for (unsigned I = DefMI->getNumOperands() - 1; I != 0; --I)
-        DefMI->removeOperand(I);
       if (LV)
         LV->getVarInfo(DefReg).AliveBlocks.clear();
+      if (LIS)
+        LIS->removeInterval(DefReg);
+      DefMI->eraseFromParent();
     };
 
     int64_t Imm;

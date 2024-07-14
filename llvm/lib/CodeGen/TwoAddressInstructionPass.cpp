@@ -713,7 +713,6 @@ bool TwoAddressInstructionPass::isProfitableToConv3Addr(Register RegA,
 bool TwoAddressInstructionPass::convertInstTo3Addr(
     MachineBasicBlock::iterator &mi, MachineBasicBlock::iterator &nmi,
     Register RegA, Register RegB, unsigned &Dist) {
-  MachineInstrSpan MIS(mi, MBB);
   MachineInstr *NewMI = TII->convertToThreeAddress(*mi, LV, LIS);
   if (!NewMI)
     return false;
@@ -736,6 +735,7 @@ bool TwoAddressInstructionPass::convertInstTo3Addr(
                                    std::make_pair(NewInstrNum, NewIdx));
   }
 
+  MachineInstrSpan MIS(mi, MBB);
   MBB->erase(mi); // Nuke the old inst.
 
   for (MachineInstr &MI : MIS)
