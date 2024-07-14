@@ -78,9 +78,7 @@ InstructionSelect::InstructionSelect(CodeGenOptLevel OL, char &PassID)
 class InstructionSelect::MIIteratorMaintainer
     : public MachineFunction::Delegate {
 #ifndef NDEBUG
-  SetVector<const MachineInstr *, SmallVector<const MachineInstr *, 8>,
-            DenseSet<const MachineInstr *>, 8>
-      CreatedInstrs;
+  SmallSetVector<const MachineInstr *, 32> CreatedInstrs;
 #endif
 public:
   MachineBasicBlock::reverse_iterator MII;
