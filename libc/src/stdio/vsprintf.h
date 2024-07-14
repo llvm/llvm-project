@@ -9,14 +9,13 @@
 #ifndef LLVM_LIBC_SRC_STDIO_VSPRINTF_H
 #define LLVM_LIBC_SRC_STDIO_VSPRINTF_H
 
-#include "src/__support/macros/config.h"
 #include <stdarg.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int vsprintf(char *__restrict buffer, const char *__restrict format,
              va_list vlist);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_VSPRINTF_H

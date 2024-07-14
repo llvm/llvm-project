@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_REMAINDERL_H
 #define LLVM_LIBC_SRC_MATH_REMAINDERL_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 long double remainderl(long double x, long double y);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_REMAINDERL_H
