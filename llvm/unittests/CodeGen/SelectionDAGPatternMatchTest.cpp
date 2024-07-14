@@ -137,15 +137,15 @@ TEST_F(SelectionDAGPatternMatchTest, matchTernaryOp) {
   EXPECT_TRUE(
       sd_match(ICMP_UGT, m_SetCC(m_Value(), m_Value(), m_CondCode(CC))));
   EXPECT_TRUE(CC == ISD::SETUGT);
-  EXPECT_FALSE(sd_match(ICMP_UGT, m_SetCC(m_Value(), m_Value(),
-                                         m_SpecificCondCode(ISD::SETLE))));
+  EXPECT_FALSE(sd_match(
+      ICMP_UGT, m_SetCC(m_Value(), m_Value(), m_SpecificCondCode(ISD::SETLE))));
 
   EXPECT_TRUE(sd_match(ICMP_EQ01, m_SetCC(m_Specific(Op0), m_Specific(Op1),
-                                         m_SpecificCondCode(ISD::SETEQ))));
+                                          m_SpecificCondCode(ISD::SETEQ))));
   EXPECT_TRUE(sd_match(ICMP_EQ10, m_SetCC(m_Specific(Op1), m_Specific(Op0),
-                                         m_SpecificCondCode(ISD::SETEQ))));
+                                          m_SpecificCondCode(ISD::SETEQ))));
   EXPECT_FALSE(sd_match(ICMP_EQ01, m_SetCC(m_Specific(Op1), m_Specific(Op0),
-                                         m_SpecificCondCode(ISD::SETEQ))));
+                                           m_SpecificCondCode(ISD::SETEQ))));
   EXPECT_FALSE(sd_match(ICMP_EQ10, m_SetCC(m_Specific(Op0), m_Specific(Op1),
                                            m_SpecificCondCode(ISD::SETEQ))));
   EXPECT_TRUE(sd_match(ICMP_EQ01, m_c_SetCC(m_Specific(Op1), m_Specific(Op0),
