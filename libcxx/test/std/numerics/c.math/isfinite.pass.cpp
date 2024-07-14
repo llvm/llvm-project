@@ -63,33 +63,21 @@ struct TestInt {
 };
 
 struct ConvertibleFloat {
-    int value;
-
-    ConvertibleFloat(int v) : value(v) {}
-
-    operator float() const {
-        return static_cast<float>(value);
-    }
+  int value;
+  ConvertibleFloat(int v) : value(v) {}
+  operator float() const { return static_cast<float>(value); }
 };
 
 struct ConvertibleDouble {
-    int value;
-
-    ConvertibleDouble(int v) : value(v) {}
-
-    operator double() const {
-        return static_cast<double>(value);
-    }
+  int value;
+  ConvertibleDouble(int v) : value(v) {}
+  operator double() const { return static_cast<double>(value); }
 };
 
 struct ConvertibleLongDouble {
-    int value;
-
-    ConvertibleLongDouble(int v) : value(v) {}
-
-    operator long double() const {
-        return static_cast<long double>(value);
-    }
+  int value;
+  ConvertibleLongDouble(int v) : value(v) {}
+  operator long double() const { return static_cast<long double>(value); }
 };
 
 int main(int, char**) {
