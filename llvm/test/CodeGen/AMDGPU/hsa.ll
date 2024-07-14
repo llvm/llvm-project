@@ -106,7 +106,7 @@
 ; HSA: .Lfunc_end0:
 ; HSA: .size   simple, .Lfunc_end0-simple
 
-define amdgpu_kernel void @simple(ptr addrspace(1) %out) {
+define amdgpu_kernel void @simple(ptr addrspace(1) %out) #0 {
 entry:
   store i32 0, ptr addrspace(1) %out
   ret void
@@ -114,11 +114,13 @@ entry:
 
 ; HSA-LABEL: {{^}}simple_no_kernargs:
 ; HSA: .amdhsa_user_sgpr_kernarg_segment_ptr 0
-define amdgpu_kernel void @simple_no_kernargs() {
+define amdgpu_kernel void @simple_no_kernargs() #0 {
 entry:
   store volatile i32 0, ptr addrspace(1) undef
   ret void
 }
+
+attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}
