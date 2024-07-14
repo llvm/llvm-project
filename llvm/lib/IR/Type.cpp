@@ -44,8 +44,7 @@ Type *Type::getPrimitiveType(LLVMContext &C, TypeID IDNumber) {
   case FP128TyID     : return getFP128Ty(C);
   case PPC_FP128TyID : return getPPC_FP128Ty(C);
   case LabelTyID     : return getLabelTy(C);
-  case MetadataTyID:
-    return getMetadataTy(C);
+  case MetadataTyID  : return getMetadataTy(C);
   case X86_AMXTyID   : return getX86_AMXTy(C);
   case TokenTyID     : return getTokenTy(C);
   default:
