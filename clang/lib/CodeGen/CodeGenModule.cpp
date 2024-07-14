@@ -721,6 +721,11 @@ void CodeGenModule::checkAliases() {
           cast<llvm::GlobalAlias>(Alias)->setAliasee(Aliasee);
       }
     }
+    // ifunc resolvers are usually implemented to run before sanitizer
+    // initialization. Disable instrumentation to prevent the ordering issue.
+    if (IsIFunc)
+      cast<llvm::Function>(Aliasee)->addFnAttr(
+          llvm::Attribute::DisableSanitizerInstrumentation);
   }
   if (!Error)
     return;
@@ -6106,11 +6111,14 @@ void CodeGenModule::emitIFuncDefinition(GlobalDecl GD) {
 
   Aliases.push_back(GD);
 
+  // The resolver might not be visited yet. Specify a dummy non-function type to
+  // indicate IsIncompleteFunction. Either the type is ignored (if the resolver
+  // was emitted or will be eagerly emitted) or the whole function will replaced
+  // (if the resolver will be inserted into DeferredDeclsToEmit).
+  llvm::Constant *Resolver = GetOrCreateLLVMFunction(
+      IFA->getResolver(), llvm::Type::getVoidTy(getLLVMContext()), {},
+      /*ForVTable=*/false);
   llvm::Type *DeclTy = getTypes().ConvertTypeForMem(D->getType());
-  llvm::Type *ResolverTy = llvm::GlobalIFunc::getResolverFunctionType(DeclTy);
-  llvm::Constant *Resolver =
-      GetOrCreateLLVMFunction(IFA->getResolver(), ResolverTy, {},
-                              /*ForVTable=*/false);
   llvm::GlobalIFunc *GIF =
       llvm::GlobalIFunc::create(DeclTy, 0, llvm::Function::ExternalLinkage,
                                 "", Resolver, &getModule());
@@ -6134,9 +6142,6 @@ void CodeGenModule::emitIFuncDefinition(GlobalDecl GD) {
     Entry->eraseFromParent();
   } else
     GIF->setName(MangledName);
-  if (auto *F = dyn_cast<llvm::Function>(Resolver)) {
-    F->addFnAttr(llvm::Attribute::DisableSanitizerInstrumentation);
-  }
   SetCommonAttributes(GD, GIF);
 }
 
