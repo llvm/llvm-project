@@ -682,7 +682,8 @@ std::vector<std::string> DiagnosticIDs::getDiagnosticFlags() {
 /// were filtered out due to having the wrong flavor.
 static bool getDiagnosticsInGroup(diag::Flavor Flavor,
                                   const WarningOption *Group,
-                                  SmallVectorImpl<diag::kind> &Diags) {
+                                  SmallVectorImpl<diag::kind> &Diags,
+                                  diag::CustomDiagInfo* CustomDiagInfo) {
   // An empty group is considered to be a warning group: we have empty groups
   // for GCC compatibility, and GCC does not have remarks.
   if (!Group->Members && !Group->SubGroups)
@@ -701,9 +702,14 @@ static bool getDiagnosticsInGroup(diag::Flavor Flavor,
 
   // Add the members of the subgroups.
   const int16_t *SubGroups = DiagSubGroups + Group->SubGroups;
-  for (; *SubGroups != (int16_t)-1; ++SubGroups)
+  for (; *SubGroups != (int16_t)-1; ++SubGroups) {
+    if (CustomDiagInfo)
+      llvm::copy(
+          CustomDiagInfo->getDiagsInGroup(static_cast<diag::Group>(*SubGroups)),
+          std::back_inserter(Diags));
     NotFound &= getDiagnosticsInGroup(Flavor, &OptionTable[(short)*SubGroups],
-                                      Diags);
+                                      Diags, CustomDiagInfo);
+  }
 
   return NotFound;
 }
@@ -715,8 +721,9 @@ DiagnosticIDs::getDiagnosticsInGroup(diag::Flavor Flavor, StringRef Group,
     if (CustomDiagInfo)
       llvm::copy(CustomDiagInfo->getDiagsInGroup(*G),
                  std::back_inserter(Diags));
-    return ::getDiagnosticsInGroup(
-        Flavor, &OptionTable[static_cast<unsigned>(*G)], Diags);
+    return ::getDiagnosticsInGroup(Flavor,
+                                   &OptionTable[static_cast<unsigned>(*G)],
+                                   Diags, CustomDiagInfo.get());
   }
   return true;
 }
@@ -739,9 +746,8 @@ static void forEachSubGroup(diag::Group Group, Func func) {
 
 void DiagnosticIDs::setGroupSeverity(StringRef Group, diag::Severity Sev) {
   if (std::optional<diag::Group> G = getGroupForWarningOption(Group)) {
-    ::forEachSubGroup(*getGroupForWarningOption(Group), [&](size_t SubGroup) {
-      GroupInfos[SubGroup].Severity = Sev;
-    });
+    ::forEachSubGroup(
+        *G, [&](size_t SubGroup) { GroupInfos[SubGroup].Severity = Sev; });
   }
 }
 
@@ -775,7 +781,7 @@ StringRef DiagnosticIDs::getNearestOption(diag::Flavor Flavor,
 
     // Don't suggest groups that are not of this kind.
     llvm::SmallVector<diag::kind, 8> Diags;
-    if (::getDiagnosticsInGroup(Flavor, &O, Diags) || Diags.empty())
+    if (::getDiagnosticsInGroup(Flavor, &O, Diags, nullptr) || Diags.empty())
       continue;
 
     if (Distance == BestDistance) {

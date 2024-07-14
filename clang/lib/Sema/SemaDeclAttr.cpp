@@ -868,10 +868,12 @@ static void handleDiagnoseIfAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (AL.getNumArgs() > 3) {
     if (!S.checkStringLiteralArgumentAttr(AL, 3, WarningGroup))
       return;
-    if (!S.getDiagnostics().getDiagnosticIDs()->getGroupForWarningOption(
+    if (WarningGroup.empty() ||
+        !S.getDiagnostics().getDiagnosticIDs()->getGroupForWarningOption(
             WarningGroup)) {
       S.Diag(AL.getArgAsExpr(3)->getBeginLoc(),
-             diag::err_diagnose_if_unknown_warning);
+             diag::err_diagnose_if_unknown_warning)
+          << WarningGroup;
       return;
     }
   }
