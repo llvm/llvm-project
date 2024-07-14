@@ -449,7 +449,7 @@ add_gen_header2(
 
 add_gen_header2(
   sys_prctl
-  YAML_FILE ../libc/newhdrgen/yaml/sys_prctl.yaml
+  YAML_FILE ../libc/newhdrgen/yaml/sys/sys_prctl.yaml
   DEF_FILE sys/prctl.h.def
   GEN_HDR sys/prctl.h
   DEPENDS
