@@ -2373,7 +2373,7 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
   // on bitvectors, and we have no well-defined ABI for bitvectors, so vectors
   // of bool aren't allowed.
   //
-  // We explictly allow bool elements in ext_vector_type for C/C++.
+  // We explicitly allow bool elements in ext_vector_type for C/C++.
   bool IsNoBoolVecLang = getLangOpts().OpenCL || getLangOpts().OpenCLCPlusPlus;
   if ((!T->isDependentType() && !T->isIntegerType() &&
        !T->isRealFloatingType()) ||
