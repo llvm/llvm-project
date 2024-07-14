@@ -83,11 +83,10 @@ private:
   /// Use a separate location list writer for each compilation unit
   LocWriters LocListWritersByCU;
 
-  using RangeListsDWOWriers =
-      std::unordered_map<uint64_t,
-                         std::unique_ptr<DebugRangeListsSectionWriter>>;
-  /// Store Rangelists writer for each DWO CU.
-  RangeListsDWOWriers RangeListsWritersByCU;
+  /// Stores and serializes information that will be put in to the
+  /// .debug_rnglists DWARF section.
+  /// Instance is created per DWO.
+  std::unique_ptr<DebugRangeListsSectionWriter> RangeListsWriter;
 
   /// Stores ranges writer for each DWO CU.
   std::unordered_map<uint64_t, std::unique_ptr<DebugRangesSectionWriter>>
