@@ -17,43 +17,53 @@
 // OPT: @__oclc_ABI_version = weak_odr hidden local_unnamed_addr addrspace(4) constant i32 500
 // OPT: @llvm.compiler.used = appending addrspace(1) global [1 x ptr] [ptr addrspacecast (ptr addrspace(1) @__hip_cuid_ to ptr)], section "llvm.metadata"
 //.
+__device__ void extern_func();
+
 // OPTNONE: Function Attrs: convergent mustprogress noinline nounwind optnone
 // OPTNONE-LABEL: define {{[^@]+}}@_Z4funcv
 // OPTNONE-SAME: () #[[ATTR0:[0-9]+]] {
 // OPTNONE-NEXT:  entry:
+// OPTNONE-NEXT:    call void @_Z11extern_funcv() #[[ATTR3:[0-9]+]]
 // OPTNONE-NEXT:    ret void
 //
-// OPT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+// OPT: Function Attrs: convergent mustprogress nounwind
 // OPT-LABEL: define {{[^@]+}}@_Z4funcv
 // OPT-SAME: () local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // OPT-NEXT:  entry:
+// OPT-NEXT:    tail call void @_Z11extern_funcv() #[[ATTR3:[0-9]+]]
 // OPT-NEXT:    ret void
 //
 __device__ void func() {
-
+ extern_func();
 }
 
 // OPTNONE: Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 // OPTNONE-LABEL: define {{[^@]+}}@_Z6kernelv
-// OPTNONE-SAME: () #[[ATTR1:[0-9]+]] {
+// OPTNONE-SAME: () #[[ATTR2:[0-9]+]] {
 // OPTNONE-NEXT:  entry:
+// OPTNONE-NEXT:    call void @_Z11extern_funcv() #[[ATTR3]]
 // OPTNONE-NEXT:    ret void
 //
-// OPT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+// OPT: Function Attrs: convergent mustprogress norecurse nounwind
 // OPT-LABEL: define {{[^@]+}}@_Z6kernelv
-// OPT-SAME: () local_unnamed_addr #[[ATTR1:[0-9]+]] {
+// OPT-SAME: () local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // OPT-NEXT:  entry:
+// OPT-NEXT:    tail call void @_Z11extern_funcv() #[[ATTR3]]
 // OPT-NEXT:    ret void
 //
 __global__ void kernel() {
-
+ extern_func();
 }
 //.
 // OPTNONE: attributes #[[ATTR0]] = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// OPTNONE: attributes #[[ATTR1]] = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,1024" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
+// OPTNONE: attributes #[[ATTR1:[0-9]+]] = { convergent nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// OPTNONE: attributes #[[ATTR2]] = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,1024" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
+// OPTNONE: attributes #[[ATTR3]] = { convergent nounwind }
 //.
-// OPT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="false" }
-// OPT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "amdgpu-flat-work-group-size"="1,1024" "amdgpu-no-agpr" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
+// OPT: attributes #[[ATTR0]] = { convergent mustprogress nounwind "amdgpu-waves-per-eu"="4,10" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="false" }
+// OPT: attributes #[[ATTR1:[0-9]+]] = { convergent nounwind "amdgpu-waves-per-eu"="4,10" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="false" }
+// OPT: attributes #[[ATTR2]] = { convergent mustprogress norecurse nounwind "amdgpu-flat-work-group-size"="1,1024" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
+// OPT: attributes #[[ATTR3]] = { convergent nounwind }
 //.
 // OPTNONE: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 500}
 // OPTNONE: [[META1:![0-9]+]] = !{i32 1, !"amdgpu_printf_kind", !"hostcall"}
