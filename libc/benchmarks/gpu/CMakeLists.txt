@@ -10,6 +10,10 @@ function(add_benchmark benchmark_name)
     "LINK_LIBRARIES" # Multi-value arguments
     ${ARGN}
   )
+  # We run benchmarks for a single warp with and give the 
+  # option to run only a single thread
+  set(BENCHMARK_NUM_THREADS 32)
+
   if(NOT libc.src.time.clock IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
     message(FATAL_ERROR "target does not support clock")
   endif()
@@ -19,6 +23,8 @@ function(add_benchmark benchmark_name)
     LINK_LIBRARIES
       LibcGpuBenchmark.hermetic
       ${BENCHMARK_LINK_LIBRARIES}
+    LOADER_ARGS
+      --threads ${BENCHMARK_NUM_THREADS}
     ${BENCHMARK_UNPARSED_ARGUMENTS}
   )
   get_fq_target_name(${benchmark_name} fq_target_name)

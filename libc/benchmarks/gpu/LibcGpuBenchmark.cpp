@@ -114,8 +114,10 @@ void Benchmark::run_benchmarks() {
       all_results.reset();
 
     gpu::sync_threads();
-    auto current_result = b->run();
-    all_results.update(current_result);
+    if (!(b->flags & BenchmarkFlags::SINGLE_THREADED) || id == 0) {
+      auto current_result = b->run();
+      all_results.update(current_result);
+    }
     gpu::sync_threads();
 
     if (id == 0)
