@@ -9,7 +9,7 @@ declare float @llvm.amdgcn.fdot2.f32.bf16(<2 x bfloat> %a, <2 x bfloat> %b, floa
 define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f32_bf16_clamp(
 ; GFX11-LABEL: test_llvm_amdgcn_fdot2_f32_bf16_clamp:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_load_b32 s6, s[6:7], 0x0
 ; GFX11-NEXT:    s_load_b32 s2, s[2:3], 0x0
@@ -25,7 +25,7 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f32_bf16_clamp(
 ;
 ; GFX950-LABEL: test_llvm_amdgcn_fdot2_f32_bf16_clamp:
 ; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
+; GFX950-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
 ; GFX950-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-NEXT:    s_load_dword s8, s[4:5], 0x0
@@ -41,7 +41,7 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f32_bf16_clamp(
 ;
 ; GFX950-ISEL-LABEL: test_llvm_amdgcn_fdot2_f32_bf16_clamp:
 ; GFX950-ISEL:       ; %bb.0: ; %entry
-; GFX950-ISEL-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
+; GFX950-ISEL-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
 ; GFX950-ISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-ISEL-NEXT:    s_load_dword s8, s[4:5], 0x0
 ; GFX950-ISEL-NEXT:    s_load_dword s9, s[6:7], 0x0
@@ -71,7 +71,7 @@ entry:
 define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f32_bf16_no_clamp(
 ; GFX11-LABEL: test_llvm_amdgcn_fdot2_f32_bf16_no_clamp:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_load_b32 s6, s[6:7], 0x0
 ; GFX11-NEXT:    s_load_b32 s2, s[2:3], 0x0
@@ -87,7 +87,7 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f32_bf16_no_clamp(
 ;
 ; GFX950-LABEL: test_llvm_amdgcn_fdot2_f32_bf16_no_clamp:
 ; GFX950:       ; %bb.0: ; %entry
-; GFX950-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
+; GFX950-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
 ; GFX950-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-NEXT:    s_load_dword s8, s[4:5], 0x0
@@ -103,7 +103,7 @@ define amdgpu_kernel void @test_llvm_amdgcn_fdot2_f32_bf16_no_clamp(
 ;
 ; GFX950-ISEL-LABEL: test_llvm_amdgcn_fdot2_f32_bf16_no_clamp:
 ; GFX950-ISEL:       ; %bb.0: ; %entry
-; GFX950-ISEL-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
+; GFX950-ISEL-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
 ; GFX950-ISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX950-ISEL-NEXT:    s_load_dword s8, s[4:5], 0x0
 ; GFX950-ISEL-NEXT:    s_load_dword s9, s[6:7], 0x0
