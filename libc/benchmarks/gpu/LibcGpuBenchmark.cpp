@@ -1,6 +1,7 @@
 #include "LibcGpuBenchmark.h"
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/array.h"
+#include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/GPU/utils.h"
@@ -12,41 +13,81 @@ namespace LIBC_NAMESPACE_DECL {
 namespace benchmarks {
 
 FixedVector<Benchmark *, 64> benchmarks;
-cpp::array<BenchmarkResult, 1024> results;
 
 void Benchmark::add_benchmark(Benchmark *benchmark) {
   benchmarks.push_back(benchmark);
 }
 
-BenchmarkResult
-reduce_results(const cpp::array<BenchmarkResult, 1024> &results) {
-  BenchmarkResult result;
-  uint64_t cycles_sum = 0;
-  double standard_deviation_sum = 0;
-  uint64_t min = UINT64_MAX;
-  uint64_t max = 0;
-  uint32_t samples_sum = 0;
-  uint32_t iterations_sum = 0;
-  clock_t time_sum = 0;
-  uint64_t num_threads = gpu::get_num_threads();
-  for (uint64_t i = 0; i < num_threads; i++) {
-    BenchmarkResult current_result = results[i];
-    cycles_sum += current_result.cycles;
-    standard_deviation_sum += current_result.standard_deviation;
-    min = cpp::min(min, current_result.min);
-    max = cpp::max(max, current_result.max);
-    samples_sum += current_result.samples;
-    iterations_sum += current_result.total_iterations;
-    time_sum += current_result.total_time;
+void update_sums(const BenchmarkResult &current_result,
+                 cpp::Atomic<uint64_t> &active_threads,
+                 cpp::Atomic<uint64_t> &cycles_sum,
+                 cpp::Atomic<uint64_t> &standard_deviation_sum,
+                 cpp::Atomic<uint64_t> &min, cpp::Atomic<uint64_t> &max,
+                 cpp::Atomic<uint32_t> &samples_sum,
+                 cpp::Atomic<uint32_t> &iterations_sum,
+                 cpp::Atomic<clock_t> &time_sum) {
+  gpu::memory_fence();
+  active_threads.fetch_add(1, cpp::MemoryOrder::RELAXED);
+
+  cycles_sum.fetch_add(current_result.cycles, cpp::MemoryOrder::RELAXED);
+  standard_deviation_sum.fetch_add(
+      static_cast<uint64_t>(current_result.standard_deviation),
+      cpp::MemoryOrder::RELAXED);
+
+  // Perform a CAS loop to atomically update the min
+  uint64_t orig_min = min.load(cpp::MemoryOrder::RELAXED);
+  while (!min.compare_exchange_strong(
+      orig_min, cpp::min(orig_min, current_result.min),
+      cpp::MemoryOrder::ACQUIRE, cpp::MemoryOrder::RELAXED)) {
   }
-  result.cycles = cycles_sum / num_threads;
-  result.standard_deviation = standard_deviation_sum / num_threads;
-  result.min = min;
-  result.max = max;
-  result.samples = samples_sum / num_threads;
-  result.total_iterations = iterations_sum / num_threads;
-  result.total_time = time_sum / num_threads;
-  return result;
+
+  // Perform a CAS loop to atomically update the max
+  uint64_t orig_max = max.load(cpp::MemoryOrder::RELAXED);
+  while (!max.compare_exchange_strong(
+      orig_max, cpp::max(orig_max, current_result.max),
+      cpp::MemoryOrder::ACQUIRE, cpp::MemoryOrder::RELAXED)) {
+  }
+
+  samples_sum.fetch_add(current_result.samples, cpp::MemoryOrder::RELAXED);
+  iterations_sum.fetch_add(current_result.total_iterations,
+                           cpp::MemoryOrder::RELAXED);
+  time_sum.fetch_add(current_result.total_time, cpp::MemoryOrder::RELAXED);
+  gpu::memory_fence();
+}
+
+cpp::Atomic<uint64_t> cycles_sum = 0;
+cpp::Atomic<uint64_t> standard_deviation_sum = 0;
+cpp::Atomic<uint64_t> min = UINT64_MAX;
+cpp::Atomic<uint64_t> max = 0;
+cpp::Atomic<uint32_t> samples_sum = 0;
+cpp::Atomic<uint32_t> iterations_sum = 0;
+cpp::Atomic<clock_t> time_sum = 0;
+cpp::Atomic<uint64_t> active_threads = 0;
+
+void print_results(Benchmark *b) {
+  constexpr auto GREEN = "\033[32m";
+  constexpr auto RESET = "\033[0m";
+
+  BenchmarkResult result;
+  gpu::memory_fence();
+  int num_threads = active_threads.load(cpp::MemoryOrder::RELAXED);
+  result.cycles = cycles_sum.load(cpp::MemoryOrder::RELAXED) / num_threads;
+  result.standard_deviation =
+      standard_deviation_sum.load(cpp::MemoryOrder::RELAXED) / num_threads;
+  result.min = min.load(cpp::MemoryOrder::RELAXED);
+  result.max = max.load(cpp::MemoryOrder::RELAXED);
+  result.samples = samples_sum.load(cpp::MemoryOrder::RELAXED) / num_threads;
+  result.total_iterations =
+      iterations_sum.load(cpp::MemoryOrder::RELAXED) / num_threads;
+  result.total_time = time_sum.load(cpp::MemoryOrder::RELAXED) / num_threads;
+  gpu::memory_fence();
+  log << GREEN << "[ RUN      ] " << RESET << b->get_name() << '\n';
+  log << GREEN << "[       OK ] " << RESET << b->get_name() << ": "
+      << result.cycles << " cycles, " << result.min << " min, " << result.max
+      << " max, " << result.total_iterations << " iterations, "
+      << result.total_time << " ns, "
+      << static_cast<long>(result.standard_deviation)
+      << " stddev (num threads: " << num_threads << ")\n";
 }
 
 void Benchmark::run_benchmarks() {
@@ -54,18 +95,28 @@ void Benchmark::run_benchmarks() {
   gpu::sync_threads();
 
   for (Benchmark *b : benchmarks) {
-    results[id] = b->run();
-    gpu::sync_threads();
+    gpu::memory_fence();
     if (id == 0) {
-      BenchmarkResult all_results = reduce_results(results);
-      constexpr auto GREEN = "\033[32m";
-      constexpr auto RESET = "\033[0m";
-      log << GREEN << "[ RUN      ] " << RESET << b->get_name() << '\n';
-      log << GREEN << "[       OK ] " << RESET << b->get_name() << ": "
-          << all_results.cycles << " cycles, " << all_results.min << " min, "
-          << all_results.max << " max, " << all_results.total_iterations
-          << " iterations, " << all_results.total_time << " ns, "
-          << static_cast<long>(all_results.standard_deviation) << " stddev\n";
+      active_threads.store(0, cpp::MemoryOrder::RELAXED);
+      cycles_sum.store(0, cpp::MemoryOrder::RELAXED);
+      standard_deviation_sum.store(0, cpp::MemoryOrder::RELAXED);
+      min.store(UINT64_MAX, cpp::MemoryOrder::RELAXED);
+      max.store(0, cpp::MemoryOrder::RELAXED);
+      samples_sum.store(0, cpp::MemoryOrder::RELAXED);
+      iterations_sum.store(0, cpp::MemoryOrder::RELAXED);
+      time_sum.store(0, cpp::MemoryOrder::RELAXED);
+    }
+    gpu::memory_fence();
+    gpu::sync_threads();
+
+    auto current_result = b->run();
+    update_sums(current_result, active_threads, cycles_sum,
+                standard_deviation_sum, min, max, samples_sum, iterations_sum,
+                time_sum);
+    gpu::sync_threads();
+
+    if (id == 0) {
+      print_results(b);
     }
   }
   gpu::sync_threads();
