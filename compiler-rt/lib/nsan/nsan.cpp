@@ -535,7 +535,10 @@ int32_t checkFT(const FT value, ShadowFT Shadow, CheckTypeT CheckType,
   }
 
   if (flags().halt_on_error) {
-    Printf("Exiting\n");
+    if (common_flags()->abort_on_error)
+      Printf("ABORTING\n");
+    else
+      Printf("Exiting\n");
     Die();
   }
   return flags().resume_after_warning ? kResumeFromValue : kContinueWithShadow;
@@ -776,6 +779,16 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_dump_shadow_args() {
   printf("args tag: %lx\n", __nsan_shadow_args_tag);
 }
 
+static void OnStackUnwind(const SignalContext &sig, const void *,
+                          BufferedStackTrace *stack) {
+  stack->Unwind(StackTrace::GetNextInstructionPc(sig.pc), sig.bp, sig.context,
+                common_flags()->fast_unwind_on_fatal);
+}
+
+static void NsanOnDeadlySignal(int signo, void *siginfo, void *context) {
+  HandleDeadlySignal(siginfo, context, GetTid(), &OnStackUnwind, nullptr);
+}
+
 bool __nsan::nsan_initialized;
 bool __nsan::nsan_init_is_running;
 
@@ -788,6 +801,9 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_init() {
   InitializeFlags();
   InitializeSuppressions();
   InitializePlatformEarly();
+
+  DisableCoreDumperIfNecessary();
+  InstallDeadlySignalHandlers(NsanOnDeadlySignal);
 
   if (!MmapFixedNoReserve(TypesAddr(), UnusedAddr() - TypesAddr()))
     Die();
