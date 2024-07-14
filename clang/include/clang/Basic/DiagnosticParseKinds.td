@@ -896,7 +896,8 @@ def missing_template_arg_list_after_template_kw : Extension<
   DefaultError;
 
 def ext_missing_dependent_template_keyword : ExtWarn<
-  "use 'template' keyword to treat '%0' as a dependent template name">;
+  "use 'template' keyword to treat '%0' as a dependent template name">,
+  InGroup<DiagGroup<"missing-dependent-template-keyword">>;
 
 def ext_extern_template : Extension<
   "extern templates are a C++11 extension">, InGroup<CXX11>;

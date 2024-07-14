@@ -8,7 +8,7 @@
 define amdgpu_kernel void @test_fmax3_olt_0_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
 ; SI-LABEL: test_fmax3_olt_0_f32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s11, 0xf000
 ; SI-NEXT:    s_mov_b32 s10, -1
 ; SI-NEXT:    s_mov_b32 s14, s10
@@ -38,7 +38,7 @@ define amdgpu_kernel void @test_fmax3_olt_0_f32(ptr addrspace(1) %out, ptr addrs
 ;
 ; VI-LABEL: test_fmax3_olt_0_f32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
 ; VI-NEXT:    s_mov_b32 s11, 0xf000
 ; VI-NEXT:    s_mov_b32 s10, -1
 ; VI-NEXT:    s_mov_b32 s14, s10
@@ -68,7 +68,7 @@ define amdgpu_kernel void @test_fmax3_olt_0_f32(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX9-LABEL: test_fmax3_olt_0_f32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
 ; GFX9-NEXT:    s_mov_b32 s11, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s10, -1
 ; GFX9-NEXT:    s_mov_b32 s14, s10
@@ -98,7 +98,7 @@ define amdgpu_kernel void @test_fmax3_olt_0_f32(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX11-LABEL: test_fmax3_olt_0_f32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
 ; GFX11-NEXT:    s_mov_b32 s10, -1
 ; GFX11-NEXT:    s_mov_b32 s11, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s14, s10
@@ -130,7 +130,7 @@ define amdgpu_kernel void @test_fmax3_olt_0_f32(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX1210-LABEL: test_fmax3_olt_0_f32:
 ; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
+; GFX1210-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
 ; GFX1210-NEXT:    s_mov_b32 s10, -1
 ; GFX1210-NEXT:    s_mov_b32 s11, 0x31016000
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
@@ -172,7 +172,7 @@ define amdgpu_kernel void @test_fmax3_olt_0_f32(ptr addrspace(1) %out, ptr addrs
 define amdgpu_kernel void @test_fmax3_olt_1_f32(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
 ; SI-LABEL: test_fmax3_olt_1_f32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s11, 0xf000
 ; SI-NEXT:    s_mov_b32 s10, -1
 ; SI-NEXT:    s_mov_b32 s14, s10
@@ -202,7 +202,7 @@ define amdgpu_kernel void @test_fmax3_olt_1_f32(ptr addrspace(1) %out, ptr addrs
 ;
 ; VI-LABEL: test_fmax3_olt_1_f32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
 ; VI-NEXT:    s_mov_b32 s11, 0xf000
 ; VI-NEXT:    s_mov_b32 s10, -1
 ; VI-NEXT:    s_mov_b32 s14, s10
@@ -232,7 +232,7 @@ define amdgpu_kernel void @test_fmax3_olt_1_f32(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX9-LABEL: test_fmax3_olt_1_f32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
 ; GFX9-NEXT:    s_mov_b32 s11, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s10, -1
 ; GFX9-NEXT:    s_mov_b32 s14, s10
@@ -262,7 +262,7 @@ define amdgpu_kernel void @test_fmax3_olt_1_f32(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX11-LABEL: test_fmax3_olt_1_f32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
 ; GFX11-NEXT:    s_mov_b32 s10, -1
 ; GFX11-NEXT:    s_mov_b32 s11, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s14, s10
@@ -294,7 +294,7 @@ define amdgpu_kernel void @test_fmax3_olt_1_f32(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX1210-LABEL: test_fmax3_olt_1_f32:
 ; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
+; GFX1210-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
 ; GFX1210-NEXT:    s_mov_b32 s10, -1
 ; GFX1210-NEXT:    s_mov_b32 s11, 0x31016000
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
@@ -335,7 +335,7 @@ define amdgpu_kernel void @test_fmax3_olt_1_f32(ptr addrspace(1) %out, ptr addrs
 define amdgpu_kernel void @test_fmax3_olt_0_f16(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
 ; SI-LABEL: test_fmax3_olt_0_f16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s11, 0xf000
 ; SI-NEXT:    s_mov_b32 s10, -1
 ; SI-NEXT:    s_mov_b32 s14, s10
@@ -369,7 +369,7 @@ define amdgpu_kernel void @test_fmax3_olt_0_f16(ptr addrspace(1) %out, ptr addrs
 ;
 ; VI-LABEL: test_fmax3_olt_0_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
 ; VI-NEXT:    s_mov_b32 s11, 0xf000
 ; VI-NEXT:    s_mov_b32 s10, -1
 ; VI-NEXT:    s_mov_b32 s14, s10
@@ -403,7 +403,7 @@ define amdgpu_kernel void @test_fmax3_olt_0_f16(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX9-LABEL: test_fmax3_olt_0_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
 ; GFX9-NEXT:    s_mov_b32 s11, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s10, -1
 ; GFX9-NEXT:    s_mov_b32 s14, s10
@@ -433,7 +433,7 @@ define amdgpu_kernel void @test_fmax3_olt_0_f16(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX11-LABEL: test_fmax3_olt_0_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
 ; GFX11-NEXT:    s_mov_b32 s10, -1
 ; GFX11-NEXT:    s_mov_b32 s11, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s14, s10
@@ -465,7 +465,7 @@ define amdgpu_kernel void @test_fmax3_olt_0_f16(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX1210-LABEL: test_fmax3_olt_0_f16:
 ; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
+; GFX1210-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
 ; GFX1210-NEXT:    s_mov_b32 s10, -1
 ; GFX1210-NEXT:    s_mov_b32 s11, 0x31016000
 ; GFX1210-NEXT:    s_wait_alu 0xfffe
@@ -507,7 +507,7 @@ define amdgpu_kernel void @test_fmax3_olt_0_f16(ptr addrspace(1) %out, ptr addrs
 define amdgpu_kernel void @test_fmax3_olt_1_f16(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
 ; SI-LABEL: test_fmax3_olt_1_f16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s11, 0xf000
 ; SI-NEXT:    s_mov_b32 s10, -1
 ; SI-NEXT:    s_mov_b32 s14, s10
@@ -541,7 +541,7 @@ define amdgpu_kernel void @test_fmax3_olt_1_f16(ptr addrspace(1) %out, ptr addrs
 ;
 ; VI-LABEL: test_fmax3_olt_1_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
 ; VI-NEXT:    s_mov_b32 s11, 0xf000
 ; VI-NEXT:    s_mov_b32 s10, -1
 ; VI-NEXT:    s_mov_b32 s14, s10
@@ -575,7 +575,7 @@ define amdgpu_kernel void @test_fmax3_olt_1_f16(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX9-LABEL: test_fmax3_olt_1_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx8 s[0:7], s[2:3], 0x24
 ; GFX9-NEXT:    s_mov_b32 s11, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s10, -1
 ; GFX9-NEXT:    s_mov_b32 s14, s10
@@ -605,7 +605,7 @@ define amdgpu_kernel void @test_fmax3_olt_1_f16(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX11-LABEL: test_fmax3_olt_1_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
 ; GFX11-NEXT:    s_mov_b32 s10, -1
 ; GFX11-NEXT:    s_mov_b32 s11, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s14, s10
@@ -637,7 +637,7 @@ define amdgpu_kernel void @test_fmax3_olt_1_f16(ptr addrspace(1) %out, ptr addrs
 ;
 ; GFX1210-LABEL: test_fmax3_olt_1_f16:
 ; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
+; GFX1210-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
 ; GFX1210-NEXT:    s_mov_b32 s10, -1
 ; GFX1210-NEXT:    s_mov_b32 s11, 0x31016000
 ; GFX1210-NEXT:    s_wait_alu 0xfffe

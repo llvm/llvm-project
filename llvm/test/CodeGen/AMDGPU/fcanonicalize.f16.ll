@@ -3,7 +3,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX9 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=CI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1300 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX13 %s
 
 declare half @llvm.fabs.f16(half) #0
 declare half @llvm.canonicalize.f16(half) #0
@@ -13,19 +12,16 @@ declare <3 x half> @llvm.canonicalize.v3f16(<3 x half>) #0
 declare <4 x half> @llvm.canonicalize.v4f16(<4 x half>) #0
 declare <6 x half> @llvm.canonicalize.v6f16(<6 x half>) #0
 declare <8 x half> @llvm.canonicalize.v8f16(<8 x half>) #0
-declare <10 x half> @llvm.canonicalize.v10f16(<10 x half>) #0
 declare <12 x half> @llvm.canonicalize.v12f16(<12 x half>) #0
 declare <16 x half> @llvm.canonicalize.v16f16(<16 x half>) #0
-declare <18 x half> @llvm.canonicalize.v18f16(<18 x half>) #0
 declare <32 x half> @llvm.canonicalize.v32f16(<32 x half>) #0
-declare <36 x half> @llvm.canonicalize.v36f16(<36 x half>) #0
 declare <64 x half> @llvm.canonicalize.v64f16(<64 x half>) #0
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 define amdgpu_kernel void @test_fold_canonicalize_undef_value_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_undef_value_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -35,7 +31,7 @@ define amdgpu_kernel void @test_fold_canonicalize_undef_value_f16(ptr addrspace(
 ;
 ; GFX9-LABEL: test_fold_canonicalize_undef_value_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_store_short v0, v0, s[0:1]
@@ -43,7 +39,7 @@ define amdgpu_kernel void @test_fold_canonicalize_undef_value_f16(ptr addrspace(
 ;
 ; CI-LABEL: test_fold_canonicalize_undef_value_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0
@@ -53,22 +49,13 @@ define amdgpu_kernel void @test_fold_canonicalize_undef_value_f16(ptr addrspace(
 ;
 ; GFX11-LABEL: test_fold_canonicalize_undef_value_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v0, v0, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_undef_value_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_mov_b32_e32 v0, 0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b16 v0, v0, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half undef)
   store half %canonicalized, ptr addrspace(1) %out
   ret void
@@ -77,7 +64,7 @@ define amdgpu_kernel void @test_fold_canonicalize_undef_value_f16(ptr addrspace(
 define amdgpu_kernel void @v_test_canonicalize_var_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: v_test_canonicalize_var_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
@@ -89,7 +76,7 @@ define amdgpu_kernel void @v_test_canonicalize_var_f16(ptr addrspace(1) %out) #1
 ;
 ; GFX9-LABEL: v_test_canonicalize_var_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_ushort v0, v0, s[0:1]
@@ -100,7 +87,7 @@ define amdgpu_kernel void @v_test_canonicalize_var_f16(ptr addrspace(1) %out) #1
 ;
 ; CI-LABEL: v_test_canonicalize_var_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -113,7 +100,7 @@ define amdgpu_kernel void @v_test_canonicalize_var_f16(ptr addrspace(1) %out) #1
 ;
 ; GFX11-LABEL: v_test_canonicalize_var_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_load_u16 v0, v0, s[0:1]
@@ -123,18 +110,6 @@ define amdgpu_kernel void @v_test_canonicalize_var_f16(ptr addrspace(1) %out) #1
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: v_test_canonicalize_var_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_mov_b32_e32 v0, 0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_load_u16 v0, v0, s[0:1]
-; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_max_num_f16_e32 v0, v0, v0
-; GFX13-NEXT:    global_store_b16 v[0:1], v0, off
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %val = load half, ptr addrspace(1) %out
   %canonicalized = call half @llvm.canonicalize.f16(half %val)
   store half %canonicalized, ptr addrspace(1) undef
@@ -144,10 +119,10 @@ define amdgpu_kernel void @v_test_canonicalize_var_f16(ptr addrspace(1) %out) #1
 define amdgpu_kernel void @s_test_canonicalize_var_f16(ptr addrspace(1) %out, i16 zeroext %val.arg) #1 {
 ; VI-LABEL: s_test_canonicalize_var_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s2, s[0:1], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dword s4, s[2:3], 0x2c
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_max_f16_e64 v2, s2, s2
+; VI-NEXT:    v_max_f16_e64 v2, s4, s4
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    flat_store_short v[0:1], v2
@@ -155,91 +130,43 @@ define amdgpu_kernel void @s_test_canonicalize_var_f16(ptr addrspace(1) %out, i1
 ;
 ; GFX9-LABEL: s_test_canonicalize_var_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s4, s[0:1], 0x2c
-; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dword s4, s[2:3], 0x2c
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_max_f16_e64 v1, s4, s4
-; GFX9-NEXT:    global_store_short v0, v1, s[2:3]
+; GFX9-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; CI-LABEL: s_test_canonicalize_var_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dword s2, s[0:1], 0xb
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
-; CI-NEXT:    s_mov_b32 s3, 0xf000
+; CI-NEXT:    s_load_dword s0, s[2:3], 0xb
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    v_cvt_f32_f16_e32 v0, s2
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, s0
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
+; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: s_test_canonicalize_var_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x2c
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b32 s4, s[2:3], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_max_f16_e64 v1, s2, s2
+; GFX11-NEXT:    v_max_f16_e64 v1, s4, s4
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: s_test_canonicalize_var_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
-; GFX13-NEXT:    v_mov_b32_e32 v0, 0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_max_num_f16_e64 v1, s2, s2
-; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %val = bitcast i16 %val.arg to half
   %canonicalized = call half @llvm.canonicalize.f16(half %val)
   store half %canonicalized, ptr addrspace(1) %out
   ret void
-}
-
-define half @s_test_canonicalize_arg(half %x) #1 {
-; VI-LABEL: s_test_canonicalize_arg:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-LABEL: s_test_canonicalize_arg:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; CI-LABEL: s_test_canonicalize_arg:
-; CI:       ; %bb.0:
-; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; CI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: s_test_canonicalize_arg:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: s_test_canonicalize_arg:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_max_num_f16_e32 v0, v0, v0
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
-  %canonicalized = call half @llvm.canonicalize.f16(half %x)
-  ret half %canonicalized
 }
 
 define <2 x half> @v_test_canonicalize_build_vector_v2f16(half %lo, half %hi) #1 {
@@ -275,18 +202,6 @@ define <2 x half> @v_test_canonicalize_build_vector_v2f16(half %lo, half %hi) #1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: v_test_canonicalize_build_vector_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-NEXT:    v_pk_max_num_f16 v0, v0, v0
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %ins0 = insertelement <2 x half> undef, half %lo, i32 0
   %ins1 = insertelement <2 x half> %ins0, half %hi, i32 1
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %ins1)
@@ -296,7 +211,7 @@ define <2 x half> @v_test_canonicalize_build_vector_v2f16(half %lo, half %hi) #1
 define amdgpu_kernel void @v_test_canonicalize_fabs_var_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: v_test_canonicalize_fabs_var_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
@@ -308,7 +223,7 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_f16(ptr addrspace(1) %ou
 ;
 ; GFX9-LABEL: v_test_canonicalize_fabs_var_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_ushort v1, v0, s[0:1]
@@ -319,7 +234,7 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_f16(ptr addrspace(1) %ou
 ;
 ; CI-LABEL: v_test_canonicalize_fabs_var_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -332,7 +247,7 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_f16(ptr addrspace(1) %ou
 ;
 ; GFX11-LABEL: v_test_canonicalize_fabs_var_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_load_u16 v1, v0, s[0:1]
@@ -342,18 +257,6 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_f16(ptr addrspace(1) %ou
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: v_test_canonicalize_fabs_var_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_mov_b32_e32 v0, 0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_load_u16 v1, v0, s[0:1]
-; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_max_num_f16_e64 v1, |v1|, |v1|
-; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %val = load half, ptr addrspace(1) %out
   %val.fabs = call half @llvm.fabs.f16(half %val)
   %canonicalized = call half @llvm.canonicalize.f16(half %val.fabs)
@@ -364,7 +267,7 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_f16(ptr addrspace(1) %ou
 define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: v_test_canonicalize_fneg_fabs_var_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
@@ -376,7 +279,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f16(ptr addrspace(1
 ;
 ; GFX9-LABEL: v_test_canonicalize_fneg_fabs_var_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_ushort v1, v0, s[0:1]
@@ -387,7 +290,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f16(ptr addrspace(1
 ;
 ; CI-LABEL: v_test_canonicalize_fneg_fabs_var_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -400,7 +303,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f16(ptr addrspace(1
 ;
 ; GFX11-LABEL: v_test_canonicalize_fneg_fabs_var_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_load_u16 v1, v0, s[0:1]
@@ -410,18 +313,6 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f16(ptr addrspace(1
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: v_test_canonicalize_fneg_fabs_var_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_mov_b32_e32 v0, 0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_load_u16 v1, v0, s[0:1]
-; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_max_num_f16_e64 v1, -|v1|, -|v1|
-; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %val = load half, ptr addrspace(1) %out
   %val.fabs = call half @llvm.fabs.f16(half %val)
   %val.fabs.fneg = fneg half %val.fabs
@@ -433,7 +324,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f16(ptr addrspace(1
 define amdgpu_kernel void @v_test_canonicalize_fneg_var_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: v_test_canonicalize_fneg_var_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
@@ -445,7 +336,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_f16(ptr addrspace(1) %ou
 ;
 ; GFX9-LABEL: v_test_canonicalize_fneg_var_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_ushort v1, v0, s[0:1]
@@ -456,7 +347,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_f16(ptr addrspace(1) %ou
 ;
 ; CI-LABEL: v_test_canonicalize_fneg_var_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -469,7 +360,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_f16(ptr addrspace(1) %ou
 ;
 ; GFX11-LABEL: v_test_canonicalize_fneg_var_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_load_u16 v1, v0, s[0:1]
@@ -479,18 +370,6 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_f16(ptr addrspace(1) %ou
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: v_test_canonicalize_fneg_var_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_mov_b32_e32 v0, 0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_load_u16 v1, v0, s[0:1]
-; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_max_num_f16_e64 v1, -v1, -v1
-; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %val = load half, ptr addrspace(1) %out
   %val.fneg = fneg half %val
   %canonicalized = call half @llvm.canonicalize.f16(half %val.fneg)
@@ -501,7 +380,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_f16(ptr addrspace(1) %ou
 define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_var_f16(ptr addrspace(1) %out) #2 {
 ; VI-LABEL: v_test_no_denormals_canonicalize_fneg_var_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
@@ -513,7 +392,7 @@ define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_var_f16(ptr add
 ;
 ; GFX9-LABEL: v_test_no_denormals_canonicalize_fneg_var_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_ushort v1, v0, s[0:1]
@@ -524,7 +403,7 @@ define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_var_f16(ptr add
 ;
 ; CI-LABEL: v_test_no_denormals_canonicalize_fneg_var_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -537,7 +416,7 @@ define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_var_f16(ptr add
 ;
 ; GFX11-LABEL: v_test_no_denormals_canonicalize_fneg_var_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_load_u16 v1, v0, s[0:1]
@@ -547,18 +426,6 @@ define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_var_f16(ptr add
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: v_test_no_denormals_canonicalize_fneg_var_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_mov_b32_e32 v0, 0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_load_u16 v1, v0, s[0:1]
-; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_max_num_f16_e64 v1, -v1, -v1
-; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %val = load half, ptr addrspace(1) %out
   %val.fneg = fneg half %val
   %canonicalized = call half @llvm.canonicalize.f16(half %val.fneg)
@@ -569,7 +436,7 @@ define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_var_f16(ptr add
 define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_fabs_var_f16(ptr addrspace(1) %out) #2 {
 ; VI-LABEL: v_test_no_denormals_canonicalize_fneg_fabs_var_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
@@ -581,7 +448,7 @@ define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_fabs_var_f16(pt
 ;
 ; GFX9-LABEL: v_test_no_denormals_canonicalize_fneg_fabs_var_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_load_ushort v1, v0, s[0:1]
@@ -592,7 +459,7 @@ define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_fabs_var_f16(pt
 ;
 ; CI-LABEL: v_test_no_denormals_canonicalize_fneg_fabs_var_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -605,7 +472,7 @@ define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_fabs_var_f16(pt
 ;
 ; GFX11-LABEL: v_test_no_denormals_canonicalize_fneg_fabs_var_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_load_u16 v1, v0, s[0:1]
@@ -615,18 +482,6 @@ define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_fabs_var_f16(pt
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: v_test_no_denormals_canonicalize_fneg_fabs_var_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_mov_b32_e32 v0, 0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_load_u16 v1, v0, s[0:1]
-; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_max_num_f16_e64 v1, -|v1|, -|v1|
-; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %val = load half, ptr addrspace(1) %out
   %val.fabs = call half @llvm.fabs.f16(half %val)
   %val.fabs.fneg = fneg half %val.fabs
@@ -638,7 +493,7 @@ define amdgpu_kernel void @v_test_no_denormals_canonicalize_fneg_fabs_var_f16(pt
 define amdgpu_kernel void @test_fold_canonicalize_p0_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_p0_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -648,7 +503,7 @@ define amdgpu_kernel void @test_fold_canonicalize_p0_f16(ptr addrspace(1) %out) 
 ;
 ; GFX9-LABEL: test_fold_canonicalize_p0_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_store_short v0, v0, s[0:1]
@@ -656,7 +511,7 @@ define amdgpu_kernel void @test_fold_canonicalize_p0_f16(ptr addrspace(1) %out) 
 ;
 ; CI-LABEL: test_fold_canonicalize_p0_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0
@@ -666,22 +521,13 @@ define amdgpu_kernel void @test_fold_canonicalize_p0_f16(ptr addrspace(1) %out) 
 ;
 ; GFX11-LABEL: test_fold_canonicalize_p0_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v0, v0, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_p0_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_mov_b32_e32 v0, 0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b16 v0, v0, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 0.0)
   store half %canonicalized, ptr addrspace(1) %out
   ret void
@@ -690,7 +536,7 @@ define amdgpu_kernel void @test_fold_canonicalize_p0_f16(ptr addrspace(1) %out) 
 define amdgpu_kernel void @test_fold_canonicalize_n0_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_n0_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0xffff8000
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -700,7 +546,7 @@ define amdgpu_kernel void @test_fold_canonicalize_n0_f16(ptr addrspace(1) %out) 
 ;
 ; GFX9-LABEL: test_fold_canonicalize_n0_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0xffff8000
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -709,7 +555,7 @@ define amdgpu_kernel void @test_fold_canonicalize_n0_f16(ptr addrspace(1) %out) 
 ;
 ; CI-LABEL: test_fold_canonicalize_n0_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x8000
@@ -719,22 +565,13 @@ define amdgpu_kernel void @test_fold_canonicalize_n0_f16(ptr addrspace(1) %out) 
 ;
 ; GFX11-LABEL: test_fold_canonicalize_n0_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0xffff8000
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_n0_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0xffff8000
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half -0.0)
   store half %canonicalized, ptr addrspace(1) %out
   ret void
@@ -743,7 +580,7 @@ define amdgpu_kernel void @test_fold_canonicalize_n0_f16(ptr addrspace(1) %out) 
 define amdgpu_kernel void @test_fold_canonicalize_p1_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_p1_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x3c00
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -753,7 +590,7 @@ define amdgpu_kernel void @test_fold_canonicalize_p1_f16(ptr addrspace(1) %out) 
 ;
 ; GFX9-LABEL: test_fold_canonicalize_p1_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x3c00
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -762,7 +599,7 @@ define amdgpu_kernel void @test_fold_canonicalize_p1_f16(ptr addrspace(1) %out) 
 ;
 ; CI-LABEL: test_fold_canonicalize_p1_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x3c00
@@ -772,22 +609,13 @@ define amdgpu_kernel void @test_fold_canonicalize_p1_f16(ptr addrspace(1) %out) 
 ;
 ; GFX11-LABEL: test_fold_canonicalize_p1_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x3c00
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_p1_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x3c00
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 1.0)
   store half %canonicalized, ptr addrspace(1) %out
   ret void
@@ -796,7 +624,7 @@ define amdgpu_kernel void @test_fold_canonicalize_p1_f16(ptr addrspace(1) %out) 
 define amdgpu_kernel void @test_fold_canonicalize_n1_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_n1_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0xffffbc00
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -806,7 +634,7 @@ define amdgpu_kernel void @test_fold_canonicalize_n1_f16(ptr addrspace(1) %out) 
 ;
 ; GFX9-LABEL: test_fold_canonicalize_n1_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0xffffbc00
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -815,7 +643,7 @@ define amdgpu_kernel void @test_fold_canonicalize_n1_f16(ptr addrspace(1) %out) 
 ;
 ; CI-LABEL: test_fold_canonicalize_n1_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0xbc00
@@ -825,22 +653,13 @@ define amdgpu_kernel void @test_fold_canonicalize_n1_f16(ptr addrspace(1) %out) 
 ;
 ; GFX11-LABEL: test_fold_canonicalize_n1_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0xffffbc00
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_n1_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0xffffbc00
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half -1.0)
   store half %canonicalized, ptr addrspace(1) %out
   ret void
@@ -849,7 +668,7 @@ define amdgpu_kernel void @test_fold_canonicalize_n1_f16(ptr addrspace(1) %out) 
 define amdgpu_kernel void @test_fold_canonicalize_literal_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_literal_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x4c00
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -859,7 +678,7 @@ define amdgpu_kernel void @test_fold_canonicalize_literal_f16(ptr addrspace(1) %
 ;
 ; GFX9-LABEL: test_fold_canonicalize_literal_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x4c00
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -868,7 +687,7 @@ define amdgpu_kernel void @test_fold_canonicalize_literal_f16(ptr addrspace(1) %
 ;
 ; CI-LABEL: test_fold_canonicalize_literal_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x4c00
@@ -878,22 +697,13 @@ define amdgpu_kernel void @test_fold_canonicalize_literal_f16(ptr addrspace(1) %
 ;
 ; GFX11-LABEL: test_fold_canonicalize_literal_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x4c00
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_literal_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x4c00
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 16.0)
   store half %canonicalized, ptr addrspace(1) %out
   ret void
@@ -902,7 +712,7 @@ define amdgpu_kernel void @test_fold_canonicalize_literal_f16(ptr addrspace(1) %
 define amdgpu_kernel void @test_default_denormals_fold_canonicalize_denormal0_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_default_denormals_fold_canonicalize_denormal0_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x3ff
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -912,7 +722,7 @@ define amdgpu_kernel void @test_default_denormals_fold_canonicalize_denormal0_f1
 ;
 ; GFX9-LABEL: test_default_denormals_fold_canonicalize_denormal0_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x3ff
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -921,7 +731,7 @@ define amdgpu_kernel void @test_default_denormals_fold_canonicalize_denormal0_f1
 ;
 ; CI-LABEL: test_default_denormals_fold_canonicalize_denormal0_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x3ff
@@ -931,22 +741,13 @@ define amdgpu_kernel void @test_default_denormals_fold_canonicalize_denormal0_f1
 ;
 ; GFX11-LABEL: test_default_denormals_fold_canonicalize_denormal0_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x3ff
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_default_denormals_fold_canonicalize_denormal0_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x3ff
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 0xH03FF)
   store half %canonicalized, ptr addrspace(1) %out
   ret void
@@ -955,7 +756,7 @@ define amdgpu_kernel void @test_default_denormals_fold_canonicalize_denormal0_f1
 define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f16(ptr addrspace(1) %out) #3 {
 ; VI-LABEL: test_denormals_fold_canonicalize_denormal0_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x3ff
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -965,7 +766,7 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f16(ptr ad
 ;
 ; GFX9-LABEL: test_denormals_fold_canonicalize_denormal0_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x3ff
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -974,7 +775,7 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f16(ptr ad
 ;
 ; CI-LABEL: test_denormals_fold_canonicalize_denormal0_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x3ff
@@ -984,22 +785,13 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f16(ptr ad
 ;
 ; GFX11-LABEL: test_denormals_fold_canonicalize_denormal0_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x3ff
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_denormals_fold_canonicalize_denormal0_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x3ff
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 0xH03FF)
   store half %canonicalized, ptr addrspace(1) %out
   ret void
@@ -1008,7 +800,7 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f16(ptr ad
 define amdgpu_kernel void @test_default_denormals_fold_canonicalize_denormal1_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_default_denormals_fold_canonicalize_denormal1_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0xffff83ff
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -1018,7 +810,7 @@ define amdgpu_kernel void @test_default_denormals_fold_canonicalize_denormal1_f1
 ;
 ; GFX9-LABEL: test_default_denormals_fold_canonicalize_denormal1_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0xffff83ff
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1027,7 +819,7 @@ define amdgpu_kernel void @test_default_denormals_fold_canonicalize_denormal1_f1
 ;
 ; CI-LABEL: test_default_denormals_fold_canonicalize_denormal1_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x83ff
@@ -1037,22 +829,13 @@ define amdgpu_kernel void @test_default_denormals_fold_canonicalize_denormal1_f1
 ;
 ; GFX11-LABEL: test_default_denormals_fold_canonicalize_denormal1_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0xffff83ff
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_default_denormals_fold_canonicalize_denormal1_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0xffff83ff
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 0xH83FF)
   store half %canonicalized, ptr addrspace(1) %out
   ret void
@@ -1061,7 +844,7 @@ define amdgpu_kernel void @test_default_denormals_fold_canonicalize_denormal1_f1
 define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_f16(ptr addrspace(1) %out) #3 {
 ; VI-LABEL: test_denormals_fold_canonicalize_denormal1_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0xffff83ff
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -1071,7 +854,7 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_f16(ptr ad
 ;
 ; GFX9-LABEL: test_denormals_fold_canonicalize_denormal1_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0xffff83ff
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1080,7 +863,7 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_f16(ptr ad
 ;
 ; CI-LABEL: test_denormals_fold_canonicalize_denormal1_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x83ff
@@ -1090,22 +873,13 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_f16(ptr ad
 ;
 ; GFX11-LABEL: test_denormals_fold_canonicalize_denormal1_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0xffff83ff
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_denormals_fold_canonicalize_denormal1_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0xffff83ff
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 0xH83FF)
   store half %canonicalized, ptr addrspace(1) %out
   ret void
@@ -1114,7 +888,7 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_f16(ptr ad
 define amdgpu_kernel void @test_fold_canonicalize_qnan_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_qnan_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x7c00
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -1124,7 +898,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_f16(ptr addrspace(1) %out
 ;
 ; GFX9-LABEL: test_fold_canonicalize_qnan_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7c00
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1133,7 +907,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_f16(ptr addrspace(1) %out
 ;
 ; CI-LABEL: test_fold_canonicalize_qnan_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x7c00
@@ -1143,22 +917,13 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_f16(ptr addrspace(1) %out
 ;
 ; GFX11-LABEL: test_fold_canonicalize_qnan_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7c00
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_qnan_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7c00
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 0xH7C00)
   store half %canonicalized, ptr addrspace(1) %out
   ret void
@@ -1167,7 +932,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_f16(ptr addrspace(1) %out
 define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_qnan_value_neg1_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x7e00
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -1177,7 +942,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_f16(ptr addrsp
 ;
 ; GFX9-LABEL: test_fold_canonicalize_qnan_value_neg1_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7e00
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1186,7 +951,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_f16(ptr addrsp
 ;
 ; CI-LABEL: test_fold_canonicalize_qnan_value_neg1_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x7e00
@@ -1196,22 +961,13 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_f16(ptr addrsp
 ;
 ; GFX11-LABEL: test_fold_canonicalize_qnan_value_neg1_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e00
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_qnan_value_neg1_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e00
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half bitcast (i16 -1 to half))
   store half %canonicalized, ptr addrspace(1) %out
   ret void
@@ -1220,7 +976,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_f16(ptr addrsp
 define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_qnan_value_neg2_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x7e00
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -1230,7 +986,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_f16(ptr addrsp
 ;
 ; GFX9-LABEL: test_fold_canonicalize_qnan_value_neg2_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7e00
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1239,7 +995,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_f16(ptr addrsp
 ;
 ; CI-LABEL: test_fold_canonicalize_qnan_value_neg2_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x7e00
@@ -1249,22 +1005,13 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_f16(ptr addrsp
 ;
 ; GFX11-LABEL: test_fold_canonicalize_qnan_value_neg2_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e00
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_qnan_value_neg2_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e00
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half bitcast (i16 -2 to half))
   store half %canonicalized, ptr addrspace(1) %out
   ret void
@@ -1273,7 +1020,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_f16(ptr addrsp
 define amdgpu_kernel void @test_fold_canonicalize_snan0_value_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_snan0_value_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x7e00
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -1283,7 +1030,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan0_value_f16(ptr addrspace(
 ;
 ; GFX9-LABEL: test_fold_canonicalize_snan0_value_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7e00
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1292,7 +1039,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan0_value_f16(ptr addrspace(
 ;
 ; CI-LABEL: test_fold_canonicalize_snan0_value_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x7e00
@@ -1302,22 +1049,13 @@ define amdgpu_kernel void @test_fold_canonicalize_snan0_value_f16(ptr addrspace(
 ;
 ; GFX11-LABEL: test_fold_canonicalize_snan0_value_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e00
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_snan0_value_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e00
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 0xH7C01)
   store half %canonicalized, ptr addrspace(1) %out
   ret void
@@ -1326,7 +1064,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan0_value_f16(ptr addrspace(
 define amdgpu_kernel void @test_fold_canonicalize_snan1_value_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_snan1_value_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x7e00
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -1336,7 +1074,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan1_value_f16(ptr addrspace(
 ;
 ; GFX9-LABEL: test_fold_canonicalize_snan1_value_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7e00
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1345,7 +1083,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan1_value_f16(ptr addrspace(
 ;
 ; CI-LABEL: test_fold_canonicalize_snan1_value_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x7e00
@@ -1355,22 +1093,13 @@ define amdgpu_kernel void @test_fold_canonicalize_snan1_value_f16(ptr addrspace(
 ;
 ; GFX11-LABEL: test_fold_canonicalize_snan1_value_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e00
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_snan1_value_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e00
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 0xH7DFF)
   store half %canonicalized, ptr addrspace(1) %out
   ret void
@@ -1379,7 +1108,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan1_value_f16(ptr addrspace(
 define amdgpu_kernel void @test_fold_canonicalize_snan2_value_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_snan2_value_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x7e00
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -1389,7 +1118,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan2_value_f16(ptr addrspace(
 ;
 ; GFX9-LABEL: test_fold_canonicalize_snan2_value_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7e00
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1398,7 +1127,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan2_value_f16(ptr addrspace(
 ;
 ; CI-LABEL: test_fold_canonicalize_snan2_value_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x7e00
@@ -1408,22 +1137,13 @@ define amdgpu_kernel void @test_fold_canonicalize_snan2_value_f16(ptr addrspace(
 ;
 ; GFX11-LABEL: test_fold_canonicalize_snan2_value_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e00
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_snan2_value_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e00
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 0xHFDFF)
   store half %canonicalized, ptr addrspace(1) %out
   ret void
@@ -1432,7 +1152,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan2_value_f16(ptr addrspace(
 define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_snan3_value_f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x7e00
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -1442,7 +1162,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f16(ptr addrspace(
 ;
 ; GFX9-LABEL: test_fold_canonicalize_snan3_value_f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7e00
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1451,7 +1171,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f16(ptr addrspace(
 ;
 ; CI-LABEL: test_fold_canonicalize_snan3_value_f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x7e00
@@ -1461,22 +1181,13 @@ define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f16(ptr addrspace(
 ;
 ; GFX11-LABEL: test_fold_canonicalize_snan3_value_f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e00
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_snan3_value_f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e00
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b16 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call half @llvm.canonicalize.f16(half 0xHFC01)
   store half %canonicalized, ptr addrspace(1) %out
   ret void
@@ -1485,7 +1196,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan3_value_f16(ptr addrspace(
 define amdgpu_kernel void @v_test_canonicalize_var_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: v_test_canonicalize_var_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
@@ -1503,7 +1214,7 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2f16(ptr addrspace(1) %out) 
 ;
 ; GFX9-LABEL: v_test_canonicalize_var_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1515,7 +1226,7 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2f16(ptr addrspace(1) %out) 
 ;
 ; CI-LABEL: v_test_canonicalize_var_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s6, 0
 ; CI-NEXT:    s_mov_b32 s7, s3
@@ -1538,8 +1249,10 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2f16(ptr addrspace(1) %out) 
 ;
 ; GFX11-LABEL: v_test_canonicalize_var_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_load_b32 v0, v0, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -1548,18 +1261,6 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2f16(ptr addrspace(1) %out) 
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: v_test_canonicalize_var_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_mov_b32_e32 v1, 0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_load_b32 v0, v0, s[0:1] scale_offset
-; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_pk_max_num_f16 v0, v0, v0
-; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
   %val = load <2 x half>, ptr addrspace(1) %gep
@@ -1571,7 +1272,7 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2f16(ptr addrspace(1) %out) 
 define amdgpu_kernel void @v_test_canonicalize_fabs_var_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: v_test_canonicalize_fabs_var_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
@@ -1589,7 +1290,7 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_v2f16(ptr addrspace(1) %
 ;
 ; GFX9-LABEL: v_test_canonicalize_fabs_var_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1602,7 +1303,7 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_v2f16(ptr addrspace(1) %
 ;
 ; CI-LABEL: v_test_canonicalize_fabs_var_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s6, 0
 ; CI-NEXT:    s_mov_b32 s7, s3
@@ -1625,32 +1326,19 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_v2f16(ptr addrspace(1) %
 ;
 ; GFX11-LABEL: v_test_canonicalize_fabs_var_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_load_b32 v0, v0, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: v_test_canonicalize_fabs_var_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_mov_b32_e32 v1, 0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_load_b32 v0, v0, s[0:1] scale_offset
-; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-NEXT:    v_pk_max_num_f16 v0, v0, v0
-; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
   %val = load <2 x half>, ptr addrspace(1) %gep
@@ -1663,7 +1351,7 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_v2f16(ptr addrspace(1) %
 define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: v_test_canonicalize_fneg_fabs_var_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
@@ -1681,7 +1369,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_v2f16(ptr addrspace
 ;
 ; GFX9-LABEL: v_test_canonicalize_fneg_fabs_var_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1694,7 +1382,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_v2f16(ptr addrspace
 ;
 ; CI-LABEL: v_test_canonicalize_fneg_fabs_var_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s6, 0
 ; CI-NEXT:    s_mov_b32 s7, s3
@@ -1718,32 +1406,19 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_v2f16(ptr addrspace
 ;
 ; GFX11-LABEL: v_test_canonicalize_fneg_fabs_var_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_load_b32 v0, v0, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_pk_max_f16 v0, v0, v0 neg_lo:[1,1] neg_hi:[1,1]
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: v_test_canonicalize_fneg_fabs_var_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_mov_b32_e32 v1, 0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_load_b32 v0, v0, s[0:1] scale_offset
-; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_and_b32_e32 v0, 0x7fff7fff, v0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-NEXT:    v_pk_max_num_f16 v0, v0, v0 neg_lo:[1,1] neg_hi:[1,1]
-; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
   %val = load <2 x half>, ptr addrspace(1) %gep
@@ -1757,7 +1432,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_v2f16(ptr addrspace
 define amdgpu_kernel void @v_test_canonicalize_fneg_var_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: v_test_canonicalize_fneg_var_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
@@ -1775,7 +1450,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_v2f16(ptr addrspace(1) %
 ;
 ; GFX9-LABEL: v_test_canonicalize_fneg_var_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1787,7 +1462,7 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_v2f16(ptr addrspace(1) %
 ;
 ; CI-LABEL: v_test_canonicalize_fneg_var_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s6, 0
 ; CI-NEXT:    s_mov_b32 s7, s3
@@ -1811,8 +1486,10 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_v2f16(ptr addrspace(1) %
 ;
 ; GFX11-LABEL: v_test_canonicalize_fneg_var_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_load_b32 v0, v0, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -1821,18 +1498,6 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_v2f16(ptr addrspace(1) %
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: v_test_canonicalize_fneg_var_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_mov_b32_e32 v1, 0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_load_b32 v0, v0, s[0:1] scale_offset
-; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_pk_max_num_f16 v0, v0, v0 neg_lo:[1,1] neg_hi:[1,1]
-; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
   %val = load <2 x half>, ptr addrspace(1) %gep
@@ -1845,12 +1510,12 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_v2f16(ptr addrspace(1) %
 define amdgpu_kernel void @s_test_canonicalize_var_v2f16(ptr addrspace(1) %out, i32 zeroext %val.arg) #1 {
 ; VI-LABEL: s_test_canonicalize_var_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s2, s[0:1], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dword s4, s[2:3], 0x2c
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_lshr_b32 s3, s2, 16
-; VI-NEXT:    v_mov_b32_e32 v1, s3
-; VI-NEXT:    v_max_f16_e64 v0, s2, s2
+; VI-NEXT:    s_lshr_b32 s2, s4, 16
+; VI-NEXT:    v_mov_b32_e32 v1, s2
+; VI-NEXT:    v_max_f16_e64 v0, s4, s4
 ; VI-NEXT:    v_max_f16_sdwa v1, v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_e32 v2, v0, v1
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -1860,53 +1525,44 @@ define amdgpu_kernel void @s_test_canonicalize_var_v2f16(ptr addrspace(1) %out, 
 ;
 ; GFX9-LABEL: s_test_canonicalize_var_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s4, s[0:1], 0x2c
-; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dword s4, s[2:3], 0x2c
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_pk_max_f16 v1, s4, s4
-; GFX9-NEXT:    global_store_dword v0, v1, s[2:3]
+; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; CI-LABEL: s_test_canonicalize_var_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dword s2, s[0:1], 0xb
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dword s0, s[2:3], 0xb
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    s_lshr_b32 s3, s2, 16
-; CI-NEXT:    v_cvt_f32_f16_e32 v0, s3
-; CI-NEXT:    v_cvt_f32_f16_e32 v1, s2
+; CI-NEXT:    s_lshr_b32 s1, s0, 16
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, s1
+; CI-NEXT:    v_cvt_f32_f16_e32 v1, s0
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
-; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; CI-NEXT:    v_or_b32_e32 v0, v1, v0
+; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: s_test_canonicalize_var_v2f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b32 s2, s[0:1], 0x2c
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b32 s4, s[2:3], 0x2c
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_pk_max_f16 v1, s2, s2
+; GFX11-NEXT:    v_pk_max_f16 v1, s4, s4
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: s_test_canonicalize_var_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
-; GFX13-NEXT:    v_mov_b32_e32 v0, 0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_pk_max_num_f16 v1, s2, s2
-; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %val = bitcast i32 %val.arg to <2 x half>
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %val)
   store <2 x half> %canonicalized, ptr addrspace(1) %out
@@ -1916,7 +1572,7 @@ define amdgpu_kernel void @s_test_canonicalize_var_v2f16(ptr addrspace(1) %out, 
 define amdgpu_kernel void @test_fold_canonicalize_p0_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_p0_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -1926,7 +1582,7 @@ define amdgpu_kernel void @test_fold_canonicalize_p0_v2f16(ptr addrspace(1) %out
 ;
 ; GFX9-LABEL: test_fold_canonicalize_p0_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_store_dword v0, v0, s[0:1]
@@ -1934,7 +1590,7 @@ define amdgpu_kernel void @test_fold_canonicalize_p0_v2f16(ptr addrspace(1) %out
 ;
 ; CI-LABEL: test_fold_canonicalize_p0_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0
@@ -1944,22 +1600,13 @@ define amdgpu_kernel void @test_fold_canonicalize_p0_v2f16(ptr addrspace(1) %out
 ;
 ; GFX11-LABEL: test_fold_canonicalize_p0_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v0, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_p0_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_mov_b32_e32 v0, 0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b32 v0, v0, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> zeroinitializer)
   store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
@@ -1968,7 +1615,7 @@ define amdgpu_kernel void @test_fold_canonicalize_p0_v2f16(ptr addrspace(1) %out
 define amdgpu_kernel void @test_fold_canonicalize_n0_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_n0_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x80008000
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -1978,7 +1625,7 @@ define amdgpu_kernel void @test_fold_canonicalize_n0_v2f16(ptr addrspace(1) %out
 ;
 ; GFX9-LABEL: test_fold_canonicalize_n0_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x80008000
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1987,7 +1634,7 @@ define amdgpu_kernel void @test_fold_canonicalize_n0_v2f16(ptr addrspace(1) %out
 ;
 ; CI-LABEL: test_fold_canonicalize_n0_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x80008000
@@ -1997,22 +1644,13 @@ define amdgpu_kernel void @test_fold_canonicalize_n0_v2f16(ptr addrspace(1) %out
 ;
 ; GFX11-LABEL: test_fold_canonicalize_n0_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x80008000
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_n0_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x80008000
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half -0.0, half -0.0>)
   store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
@@ -2021,7 +1659,7 @@ define amdgpu_kernel void @test_fold_canonicalize_n0_v2f16(ptr addrspace(1) %out
 define amdgpu_kernel void @test_fold_canonicalize_p1_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_p1_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x3c003c00
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -2031,7 +1669,7 @@ define amdgpu_kernel void @test_fold_canonicalize_p1_v2f16(ptr addrspace(1) %out
 ;
 ; GFX9-LABEL: test_fold_canonicalize_p1_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x3c003c00
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2040,7 +1678,7 @@ define amdgpu_kernel void @test_fold_canonicalize_p1_v2f16(ptr addrspace(1) %out
 ;
 ; CI-LABEL: test_fold_canonicalize_p1_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x3c003c00
@@ -2050,22 +1688,13 @@ define amdgpu_kernel void @test_fold_canonicalize_p1_v2f16(ptr addrspace(1) %out
 ;
 ; GFX11-LABEL: test_fold_canonicalize_p1_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x3c003c00
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_p1_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x3c003c00
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 1.0, half 1.0>)
   store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
@@ -2074,7 +1703,7 @@ define amdgpu_kernel void @test_fold_canonicalize_p1_v2f16(ptr addrspace(1) %out
 define amdgpu_kernel void @test_fold_canonicalize_n1_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_n1_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0xbc00bc00
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -2084,7 +1713,7 @@ define amdgpu_kernel void @test_fold_canonicalize_n1_v2f16(ptr addrspace(1) %out
 ;
 ; GFX9-LABEL: test_fold_canonicalize_n1_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0xbc00bc00
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2093,7 +1722,7 @@ define amdgpu_kernel void @test_fold_canonicalize_n1_v2f16(ptr addrspace(1) %out
 ;
 ; CI-LABEL: test_fold_canonicalize_n1_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0xbc00bc00
@@ -2103,22 +1732,13 @@ define amdgpu_kernel void @test_fold_canonicalize_n1_v2f16(ptr addrspace(1) %out
 ;
 ; GFX11-LABEL: test_fold_canonicalize_n1_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0xbc00bc00
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_n1_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0xbc00bc00
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half -1.0, half -1.0>)
   store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
@@ -2127,7 +1747,7 @@ define amdgpu_kernel void @test_fold_canonicalize_n1_v2f16(ptr addrspace(1) %out
 define amdgpu_kernel void @test_fold_canonicalize_literal_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_literal_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x4c004c00
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -2137,7 +1757,7 @@ define amdgpu_kernel void @test_fold_canonicalize_literal_v2f16(ptr addrspace(1)
 ;
 ; GFX9-LABEL: test_fold_canonicalize_literal_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x4c004c00
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2146,7 +1766,7 @@ define amdgpu_kernel void @test_fold_canonicalize_literal_v2f16(ptr addrspace(1)
 ;
 ; CI-LABEL: test_fold_canonicalize_literal_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x4c004c00
@@ -2156,22 +1776,13 @@ define amdgpu_kernel void @test_fold_canonicalize_literal_v2f16(ptr addrspace(1)
 ;
 ; GFX11-LABEL: test_fold_canonicalize_literal_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x4c004c00
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_literal_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x4c004c00
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 16.0, half 16.0>)
   store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
@@ -2180,7 +1791,7 @@ define amdgpu_kernel void @test_fold_canonicalize_literal_v2f16(ptr addrspace(1)
 define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_no_denormals_fold_canonicalize_denormal0_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x3ff03ff
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -2190,7 +1801,7 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_v2f16(p
 ;
 ; GFX9-LABEL: test_no_denormals_fold_canonicalize_denormal0_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x3ff03ff
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2199,7 +1810,7 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_v2f16(p
 ;
 ; CI-LABEL: test_no_denormals_fold_canonicalize_denormal0_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x3ff03ff
@@ -2209,22 +1820,13 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_v2f16(p
 ;
 ; GFX11-LABEL: test_no_denormals_fold_canonicalize_denormal0_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x3ff03ff
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_no_denormals_fold_canonicalize_denormal0_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x3ff03ff
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 0xH03FF, half 0xH03FF>)
   store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
@@ -2233,7 +1835,7 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_v2f16(p
 define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_v2f16(ptr addrspace(1) %out) #3 {
 ; VI-LABEL: test_denormals_fold_canonicalize_denormal0_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x3ff03ff
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -2243,7 +1845,7 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_v2f16(ptr 
 ;
 ; GFX9-LABEL: test_denormals_fold_canonicalize_denormal0_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x3ff03ff
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2252,7 +1854,7 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_v2f16(ptr 
 ;
 ; CI-LABEL: test_denormals_fold_canonicalize_denormal0_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x3ff03ff
@@ -2262,22 +1864,13 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_v2f16(ptr 
 ;
 ; GFX11-LABEL: test_denormals_fold_canonicalize_denormal0_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x3ff03ff
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_denormals_fold_canonicalize_denormal0_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x3ff03ff
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 0xH03FF, half 0xH03FF>)
   store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
@@ -2286,7 +1879,7 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_v2f16(ptr 
 define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_no_denormals_fold_canonicalize_denormal1_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x83ff83ff
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -2296,7 +1889,7 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_v2f16(p
 ;
 ; GFX9-LABEL: test_no_denormals_fold_canonicalize_denormal1_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x83ff83ff
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2305,7 +1898,7 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_v2f16(p
 ;
 ; CI-LABEL: test_no_denormals_fold_canonicalize_denormal1_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x83ff83ff
@@ -2315,22 +1908,13 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_v2f16(p
 ;
 ; GFX11-LABEL: test_no_denormals_fold_canonicalize_denormal1_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x83ff83ff
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_no_denormals_fold_canonicalize_denormal1_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x83ff83ff
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 0xH83FF, half 0xH83FF>)
   store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
@@ -2339,7 +1923,7 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal1_v2f16(p
 define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_v2f16(ptr addrspace(1) %out) #3 {
 ; VI-LABEL: test_denormals_fold_canonicalize_denormal1_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x83ff83ff
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -2349,7 +1933,7 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_v2f16(ptr 
 ;
 ; GFX9-LABEL: test_denormals_fold_canonicalize_denormal1_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x83ff83ff
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2358,7 +1942,7 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_v2f16(ptr 
 ;
 ; CI-LABEL: test_denormals_fold_canonicalize_denormal1_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x83ff83ff
@@ -2368,22 +1952,13 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_v2f16(ptr 
 ;
 ; GFX11-LABEL: test_denormals_fold_canonicalize_denormal1_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x83ff83ff
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_denormals_fold_canonicalize_denormal1_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x83ff83ff
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 0xH83FF, half 0xH83FF>)
   store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
@@ -2392,7 +1967,7 @@ define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal1_v2f16(ptr 
 define amdgpu_kernel void @test_fold_canonicalize_qnan_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_qnan_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x7c007c00
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -2402,7 +1977,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_v2f16(ptr addrspace(1) %o
 ;
 ; GFX9-LABEL: test_fold_canonicalize_qnan_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7c007c00
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2411,7 +1986,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_v2f16(ptr addrspace(1) %o
 ;
 ; CI-LABEL: test_fold_canonicalize_qnan_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x7c007c00
@@ -2421,22 +1996,13 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_v2f16(ptr addrspace(1) %o
 ;
 ; GFX11-LABEL: test_fold_canonicalize_qnan_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7c007c00
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_qnan_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7c007c00
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 0xH7C00, half 0xH7C00>)
   store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
@@ -2445,7 +2011,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_v2f16(ptr addrspace(1) %o
 define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_qnan_value_neg1_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x7e007e00
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -2455,7 +2021,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_v2f16(ptr addr
 ;
 ; GFX9-LABEL: test_fold_canonicalize_qnan_value_neg1_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7e007e00
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2464,7 +2030,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_v2f16(ptr addr
 ;
 ; CI-LABEL: test_fold_canonicalize_qnan_value_neg1_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x7e007e00
@@ -2474,22 +2040,13 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_v2f16(ptr addr
 ;
 ; GFX11-LABEL: test_fold_canonicalize_qnan_value_neg1_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e007e00
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_qnan_value_neg1_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e007e00
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> bitcast (i32 -1 to <2 x half>))
   store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
@@ -2498,7 +2055,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg1_v2f16(ptr addr
 define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_qnan_value_neg2_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x7e007e00
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -2508,7 +2065,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_v2f16(ptr addr
 ;
 ; GFX9-LABEL: test_fold_canonicalize_qnan_value_neg2_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7e007e00
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2517,7 +2074,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_v2f16(ptr addr
 ;
 ; CI-LABEL: test_fold_canonicalize_qnan_value_neg2_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x7e007e00
@@ -2527,22 +2084,13 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_v2f16(ptr addr
 ;
 ; GFX11-LABEL: test_fold_canonicalize_qnan_value_neg2_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e007e00
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_qnan_value_neg2_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e007e00
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half bitcast (i16 -2 to half), half bitcast (i16 -2 to half)>)
   store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
@@ -2551,7 +2099,7 @@ define amdgpu_kernel void @test_fold_canonicalize_qnan_value_neg2_v2f16(ptr addr
 define amdgpu_kernel void @test_fold_canonicalize_snan0_value_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_snan0_value_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x7e007e00
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -2561,7 +2109,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan0_value_v2f16(ptr addrspac
 ;
 ; GFX9-LABEL: test_fold_canonicalize_snan0_value_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7e007e00
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2570,7 +2118,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan0_value_v2f16(ptr addrspac
 ;
 ; CI-LABEL: test_fold_canonicalize_snan0_value_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x7e007e00
@@ -2580,22 +2128,13 @@ define amdgpu_kernel void @test_fold_canonicalize_snan0_value_v2f16(ptr addrspac
 ;
 ; GFX11-LABEL: test_fold_canonicalize_snan0_value_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e007e00
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_snan0_value_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e007e00
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 0xH7C01, half 0xH7C01>)
   store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
@@ -2604,7 +2143,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan0_value_v2f16(ptr addrspac
 define amdgpu_kernel void @test_fold_canonicalize_snan1_value_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_snan1_value_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x7e007e00
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -2614,7 +2153,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan1_value_v2f16(ptr addrspac
 ;
 ; GFX9-LABEL: test_fold_canonicalize_snan1_value_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7e007e00
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2623,7 +2162,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan1_value_v2f16(ptr addrspac
 ;
 ; CI-LABEL: test_fold_canonicalize_snan1_value_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x7e007e00
@@ -2633,22 +2172,13 @@ define amdgpu_kernel void @test_fold_canonicalize_snan1_value_v2f16(ptr addrspac
 ;
 ; GFX11-LABEL: test_fold_canonicalize_snan1_value_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e007e00
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_snan1_value_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e007e00
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 0xH7DFF, half 0xH7DFF>)
   store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
@@ -2657,7 +2187,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan1_value_v2f16(ptr addrspac
 define amdgpu_kernel void @test_fold_canonicalize_snan2_value_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_snan2_value_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x7e007e00
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -2667,7 +2197,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan2_value_v2f16(ptr addrspac
 ;
 ; GFX9-LABEL: test_fold_canonicalize_snan2_value_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7e007e00
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2676,7 +2206,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan2_value_v2f16(ptr addrspac
 ;
 ; CI-LABEL: test_fold_canonicalize_snan2_value_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x7e007e00
@@ -2686,22 +2216,13 @@ define amdgpu_kernel void @test_fold_canonicalize_snan2_value_v2f16(ptr addrspac
 ;
 ; GFX11-LABEL: test_fold_canonicalize_snan2_value_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e007e00
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_snan2_value_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e007e00
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 0xHFDFF, half 0xHFDFF>)
   store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
@@ -2710,7 +2231,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan2_value_v2f16(ptr addrspac
 define amdgpu_kernel void @test_fold_canonicalize_snan3_value_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: test_fold_canonicalize_snan3_value_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x7e007e00
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -2720,7 +2241,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan3_value_v2f16(ptr addrspac
 ;
 ; GFX9-LABEL: test_fold_canonicalize_snan3_value_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7e007e00
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -2729,7 +2250,7 @@ define amdgpu_kernel void @test_fold_canonicalize_snan3_value_v2f16(ptr addrspac
 ;
 ; CI-LABEL: test_fold_canonicalize_snan3_value_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0x7e007e00
@@ -2739,22 +2260,13 @@ define amdgpu_kernel void @test_fold_canonicalize_snan3_value_v2f16(ptr addrspac
 ;
 ; GFX11-LABEL: test_fold_canonicalize_snan3_value_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e007e00
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: test_fold_canonicalize_snan3_value_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0x7e007e00
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 0xHFC01, half 0xHFC01>)
   store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
@@ -2794,17 +2306,6 @@ define <3 x half> @v_test_canonicalize_var_v3f16(<3 x half> %val) #1 {
 ; GFX11-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX11-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: v_test_canonicalize_var_v3f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_pk_max_num_f16 v0, v0, v0
-; GFX13-NEXT:    v_pk_max_num_f16 v1, v1, v1
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %canonicalized = call <3 x half> @llvm.canonicalize.v3f16(<3 x half> %val)
   ret <3 x half> %canonicalized
 }
@@ -2847,17 +2348,6 @@ define <4 x half> @v_test_canonicalize_var_v4f16(<4 x half> %val) #1 {
 ; GFX11-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX11-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: v_test_canonicalize_var_v4f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_pk_max_num_f16 v0, v0, v0
-; GFX13-NEXT:    v_pk_max_num_f16 v1, v1, v1
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %canonicalized = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> %val)
   ret <4 x half> %canonicalized
 }
@@ -2865,7 +2355,7 @@ define <4 x half> @v_test_canonicalize_var_v4f16(<4 x half> %val) #1 {
 define amdgpu_kernel void @s_test_canonicalize_undef_v2f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: s_test_canonicalize_undef_v2f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v2, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
@@ -2875,7 +2365,7 @@ define amdgpu_kernel void @s_test_canonicalize_undef_v2f16(ptr addrspace(1) %out
 ;
 ; GFX9-LABEL: s_test_canonicalize_undef_v2f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    global_store_dword v0, v0, s[0:1]
@@ -2883,7 +2373,7 @@ define amdgpu_kernel void @s_test_canonicalize_undef_v2f16(ptr addrspace(1) %out
 ;
 ; CI-LABEL: s_test_canonicalize_undef_v2f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
 ; CI-NEXT:    v_mov_b32_e32 v0, 0
@@ -2893,22 +2383,13 @@ define amdgpu_kernel void @s_test_canonicalize_undef_v2f16(ptr addrspace(1) %out
 ;
 ; GFX11-LABEL: s_test_canonicalize_undef_v2f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v0, s[0:1]
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: s_test_canonicalize_undef_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_mov_b32_e32 v0, 0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b32 v0, v0, s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> undef)
   store <2 x half> %canonicalized, ptr addrspace(1) %out
   ret void
@@ -2943,18 +2424,6 @@ define <2 x half> @v_test_canonicalize_reg_undef_v2f16(half %val) #1 {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v0, 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: v_test_canonicalize_reg_undef_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_max_num_f16_e32 v0, v0, v0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-NEXT:    v_pack_b32_f16 v0, v0, 0
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec = insertelement <2 x half> undef, half %val, i32 0
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
   ret <2 x half> %canonicalized
@@ -2988,18 +2457,6 @@ define <2 x half> @v_test_canonicalize_undef_reg_v2f16(half %val) #1 {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: v_test_canonicalize_undef_reg_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_max_num_f16_e32 v0, v0, v0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec = insertelement <2 x half> undef, half %val, i32 1
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
   ret <2 x half> %canonicalized
@@ -3030,16 +2487,6 @@ define <2 x half> @v_test_canonicalize_undef_lo_imm_hi_v2f16() #1 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_bfrev_b32_e32 v0, 60
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: v_test_canonicalize_undef_lo_imm_hi_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_bfrev_b32_e32 v0, 60
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec = insertelement <2 x half> undef, half 1.0, i32 1
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
   ret <2 x half> %canonicalized
@@ -3070,16 +2517,6 @@ define <2 x half> @v_test_canonicalize_imm_lo_undef_hi_v2f16() #1 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0x3c00
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: v_test_canonicalize_imm_lo_undef_hi_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_mov_b32_e32 v0, 0x3c00
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec = insertelement <2 x half> undef, half 1.0, i32 0
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
   ret <2 x half> %canonicalized
@@ -3110,16 +2547,6 @@ define <2 x half> @v_test_canonicalize_undef_lo_k_hi_v2f16() #1 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_bfrev_b32_e32 v0, 50
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: v_test_canonicalize_undef_lo_k_hi_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_bfrev_b32_e32 v0, 50
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec = insertelement <2 x half> undef, half 16.0, i32 1
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
   ret <2 x half> %canonicalized
@@ -3150,16 +2577,6 @@ define <2 x half> @v_test_canonicalize_k_lo_undef_hi_v2f16() #1 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0x4c00
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: v_test_canonicalize_k_lo_undef_hi_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_mov_b32_e32 v0, 0x4c00
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec = insertelement <2 x half> undef, half 16.0, i32 0
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
   ret <2 x half> %canonicalized
@@ -3195,18 +2612,6 @@ define <2 x half> @v_test_canonicalize_reg_k_v2f16(half %val) #1 {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v0, 2.0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: v_test_canonicalize_reg_k_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_max_num_f16_e32 v0, v0, v0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-NEXT:    v_pack_b32_f16 v0, v0, 2.0
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = insertelement <2 x half> undef, half %val, i32 0
   %vec1 = insertelement <2 x half> %vec0, half 2.0, i32 1
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec1)
@@ -3243,18 +2648,6 @@ define <2 x half> @v_test_canonicalize_k_reg_v2f16(half %val) #1 {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_pack_b32_f16 v0, 2.0, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: v_test_canonicalize_k_reg_v2f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_max_num_f16_e32 v0, v0, v0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-NEXT:    v_pack_b32_f16 v0, 2.0, v0
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = insertelement <2 x half> undef, half 2.0, i32 0
   %vec1 = insertelement <2 x half> %vec0, half %val, i32 1
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec1)
@@ -3264,7 +2657,7 @@ define <2 x half> @v_test_canonicalize_k_reg_v2f16(half %val) #1 {
 define amdgpu_kernel void @s_test_canonicalize_undef_v4f16(ptr addrspace(1) %out) #1 {
 ; VI-LABEL: s_test_canonicalize_undef_v4f16:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; VI-NEXT:    v_mov_b32_e32 v0, 0
 ; VI-NEXT:    v_mov_b32_e32 v1, v0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3275,7 +2668,7 @@ define amdgpu_kernel void @s_test_canonicalize_undef_v4f16(ptr addrspace(1) %out
 ;
 ; GFX9-LABEL: s_test_canonicalize_undef_v4f16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
@@ -3284,7 +2677,7 @@ define amdgpu_kernel void @s_test_canonicalize_undef_v4f16(ptr addrspace(1) %out
 ;
 ; CI-LABEL: s_test_canonicalize_undef_v4f16:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; CI-NEXT:    v_mov_b32_e32 v0, 0
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
@@ -3295,7 +2688,7 @@ define amdgpu_kernel void @s_test_canonicalize_undef_v4f16(ptr addrspace(1) %out
 ;
 ; GFX11-LABEL: s_test_canonicalize_undef_v4f16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v0
@@ -3304,17 +2697,6 @@ define amdgpu_kernel void @s_test_canonicalize_undef_v4f16(ptr addrspace(1) %out
 ; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX13-LABEL: s_test_canonicalize_undef_v4f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX13-NEXT:    v_mov_b32_e32 v0, 0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-NEXT:    v_mov_b32_e32 v1, v0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    global_store_b64 v0, v[0:1], s[0:1]
-; GFX13-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX13-NEXT:    s_endpgm
   %canonicalized = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> undef)
   store <4 x half> %canonicalized, ptr addrspace(1) %out
   ret void
@@ -3355,19 +2737,6 @@ define <4 x half> @v_test_canonicalize_reg_undef_undef_undef_v4f16(half %val) #1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v0, 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: v_test_canonicalize_reg_undef_undef_undef_v4f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_max_num_f16_e32 v0, v0, v0
-; GFX13-NEXT:    v_mov_b32_e32 v1, 0x7e007e00
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX13-NEXT:    v_pack_b32_f16 v0, v0, 0
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec = insertelement <4 x half> undef, half %val, i32 0
   %canonicalized = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> %vec)
   ret <4 x half> %canonicalized
@@ -3411,19 +2780,6 @@ define <4 x half> @v_test_canonicalize_reg_reg_undef_undef_v4f16(half %val0, hal
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: v_test_canonicalize_reg_reg_undef_undef_v4f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
-; GFX13-NEXT:    v_mov_b32_e32 v1, 0x7e007e00
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX13-NEXT:    v_pk_max_num_f16 v0, v0, v0
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = insertelement <4 x half> undef, half %val0, i32 0
   %vec1 = insertelement <4 x half> %vec0, half %val1, i32 1
   %canonicalized = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> %vec1)
@@ -3472,20 +2828,6 @@ define <4 x half> @v_test_canonicalize_reg_undef_reg_reg_v4f16(half %val0, half 
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v0, 0
 ; GFX11-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: v_test_canonicalize_reg_undef_reg_reg_v4f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_max_num_f16_e32 v0, v0, v0
-; GFX13-NEXT:    v_perm_b32 v1, v2, v1, 0x5040100
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-NEXT:    v_pack_b32_f16 v0, v0, 0
-; GFX13-NEXT:    v_pk_max_num_f16 v1, v1, v1
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %vec0 = insertelement <4 x half> undef, half %val0, i32 0
   %vec1 = insertelement <4 x half> %vec0, half %val1, i32 2
   %vec2 = insertelement <4 x half> %vec1, half %val2, i32 3
@@ -3540,26 +2882,6 @@ define <6 x half> @v_test_canonicalize_var_v6f16(<6 x half> %val) #1 {
 ; GFX11-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX11-NEXT:    v_pk_max_f16 v2, v2, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: v_test_canonicalize_var_v6f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_alignbit_b32 v3, v2, v1, 16
-; GFX13-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; GFX13-NEXT:    v_pk_max_num_f16 v1, v1, v1
-; GFX13-NEXT:    v_pk_max_num_f16 v0, v0, v0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_pk_max_num_f16 v3, v3, v3
-; GFX13-NEXT:    v_max_num_f16_e32 v2, v2, v2
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-NEXT:    v_pack_b32_f16 v1, v1, v3
-; GFX13-NEXT:    v_alignbit_b32 v2, v2, v3, 16
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
-; TODO-GFX13: Generate a clean sequence of v_pk_max_num_f16 instructions.
   %canonicalized = call <6 x half> @llvm.canonicalize.v6f16(<6 x half> %val)
   ret <6 x half> %canonicalized
 }
@@ -3620,120 +2942,8 @@ define <8 x half> @v_test_canonicalize_var_v8f16(<8 x half> %val) #1 {
 ; GFX11-NEXT:    v_pk_max_f16 v2, v2, v2
 ; GFX11-NEXT:    v_pk_max_f16 v3, v3, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: v_test_canonicalize_var_v8f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_pk_max_num_f16 v0, v0, v0
-; GFX13-NEXT:    v_pk_max_num_f16 v1, v1, v1
-; GFX13-NEXT:    v_pk_max_num_f16 v2, v2, v2
-; GFX13-NEXT:    v_pk_max_num_f16 v3, v3, v3
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %canonicalized = call <8 x half> @llvm.canonicalize.v8f16(<8 x half> %val)
   ret <8 x half> %canonicalized
-}
-
-define <10 x half> @v_test_canonicalize_var_v10f16(<10 x half> %val) #1 {
-; VI-LABEL: v_test_canonicalize_var_v10f16:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v5, v4, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v6, v3, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v7, v2, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v8, v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v9, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v4, v4, v4
-; VI-NEXT:    v_max_f16_e32 v3, v3, v3
-; VI-NEXT:    v_max_f16_e32 v2, v2, v2
-; VI-NEXT:    v_max_f16_e32 v1, v1, v1
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    v_or_b32_e32 v0, v0, v9
-; VI-NEXT:    v_or_b32_e32 v1, v1, v8
-; VI-NEXT:    v_or_b32_e32 v2, v2, v7
-; VI-NEXT:    v_or_b32_e32 v3, v3, v6
-; VI-NEXT:    v_or_b32_e32 v4, v4, v5
-; VI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-LABEL: v_test_canonicalize_var_v10f16:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX9-NEXT:    v_pk_max_f16 v1, v1, v1
-; GFX9-NEXT:    v_pk_max_f16 v2, v2, v2
-; GFX9-NEXT:    v_pk_max_f16 v3, v3, v3
-; GFX9-NEXT:    v_pk_max_f16 v4, v4, v4
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; CI-LABEL: v_test_canonicalize_var_v10f16:
-; CI:       ; %bb.0:
-; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CI-NEXT:    v_cvt_f16_f32_e32 v9, v9
-; CI-NEXT:    v_cvt_f16_f32_e32 v8, v8
-; CI-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; CI-NEXT:    v_cvt_f16_f32_e32 v6, v6
-; CI-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; CI-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; CI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; CI-NEXT:    v_cvt_f32_f16_e32 v9, v9
-; CI-NEXT:    v_cvt_f32_f16_e32 v8, v8
-; CI-NEXT:    v_cvt_f32_f16_e32 v7, v7
-; CI-NEXT:    v_cvt_f32_f16_e32 v6, v6
-; CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
-; CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
-; CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; CI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_test_canonicalize_var_v10f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX11-NEXT:    v_pk_max_f16 v1, v1, v1
-; GFX11-NEXT:    v_pk_max_f16 v2, v2, v2
-; GFX11-NEXT:    v_pk_max_f16 v3, v3, v3
-; GFX11-NEXT:    v_pk_max_f16 v4, v4, v4
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: v_test_canonicalize_var_v10f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_lshrrev_b32 v5, 16, v4 :: v_dual_lshrrev_b32 v6, 16, v3
-; GFX13-NEXT:    v_dual_lshrrev_b32 v7, 16, v2 :: v_dual_lshrrev_b32 v8, 16, v1
-; GFX13-NEXT:    v_lshrrev_b32_e32 v9, 16, v0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-NEXT:    v_max_num_f16_e32 v5, v5, v5
-; GFX13-NEXT:    v_max_num_f16_e32 v6, v6, v6
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4)
-; GFX13-NEXT:    v_max_num_f16_e32 v7, v7, v7
-; GFX13-NEXT:    v_max_num_f16_e32 v8, v8, v8
-; GFX13-NEXT:    v_max_num_f16_e32 v9, v9, v9
-; GFX13-NEXT:    v_max_num_f16_e32 v0, v0, v0
-; GFX13-NEXT:    v_max_num_f16_e32 v1, v1, v1
-; GFX13-NEXT:    v_max_num_f16_e32 v2, v2, v2
-; GFX13-NEXT:    v_max_num_f16_e32 v3, v3, v3
-; GFX13-NEXT:    v_max_num_f16_e32 v4, v4, v4
-; GFX13-NEXT:    v_pack_b32_f16 v0, v0, v9
-; GFX13-NEXT:    v_pack_b32_f16 v1, v1, v8
-; GFX13-NEXT:    v_pack_b32_f16 v2, v2, v7
-; GFX13-NEXT:    v_pack_b32_f16 v3, v3, v6
-; GFX13-NEXT:    v_pack_b32_f16 v4, v4, v5
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
-; TODO-GFX13: Generate a clean sequence of v_pk_max_num_f16 instructions.
-  %canonicalized = call <10 x half> @llvm.canonicalize.v10f16(<10 x half> %val)
-  ret <10 x half> %canonicalized
 }
 
 define <12 x half> @v_test_canonicalize_var_v12f16(<12 x half> %val) #1 {
@@ -3810,21 +3020,6 @@ define <12 x half> @v_test_canonicalize_var_v12f16(<12 x half> %val) #1 {
 ; GFX11-NEXT:    v_pk_max_f16 v4, v4, v4
 ; GFX11-NEXT:    v_pk_max_f16 v5, v5, v5
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: v_test_canonicalize_var_v12f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_pk_max_num_f16 v0, v0, v0
-; GFX13-NEXT:    v_pk_max_num_f16 v1, v1, v1
-; GFX13-NEXT:    v_pk_max_num_f16 v2, v2, v2
-; GFX13-NEXT:    v_pk_max_num_f16 v3, v3, v3
-; GFX13-NEXT:    v_pk_max_num_f16 v4, v4, v4
-; GFX13-NEXT:    v_pk_max_num_f16 v5, v5, v5
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %canonicalized = call <12 x half> @llvm.canonicalize.v12f16(<12 x half> %val)
   ret <12 x half> %canonicalized
 }
@@ -3921,174 +3116,9 @@ define <16 x half> @v_test_canonicalize_var_v16f16(<16 x half> %val) #1 {
 ; GFX11-NEXT:    v_pk_max_f16 v6, v6, v6
 ; GFX11-NEXT:    v_pk_max_f16 v7, v7, v7
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: v_test_canonicalize_var_v16f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_pk_max_num_f16 v0, v0, v0
-; GFX13-NEXT:    v_pk_max_num_f16 v1, v1, v1
-; GFX13-NEXT:    v_pk_max_num_f16 v2, v2, v2
-; GFX13-NEXT:    v_pk_max_num_f16 v3, v3, v3
-; GFX13-NEXT:    v_pk_max_num_f16 v4, v4, v4
-; GFX13-NEXT:    v_pk_max_num_f16 v5, v5, v5
-; GFX13-NEXT:    v_pk_max_num_f16 v6, v6, v6
-; GFX13-NEXT:    v_pk_max_num_f16 v7, v7, v7
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %canonicalized = call <16 x half> @llvm.canonicalize.v16f16(<16 x half> %val)
   ret <16 x half> %canonicalized
 }
-
-define <18 x half> @v_test_canonicalize_var_v18f16(<18 x half> %val) #1 {
-; VI-LABEL: v_test_canonicalize_var_v18f16:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v9, v8, v8 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v10, v7, v7 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v11, v6, v6 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v12, v5, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v13, v4, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v14, v3, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v15, v2, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v16, v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v17, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v8, v8, v8
-; VI-NEXT:    v_max_f16_e32 v7, v7, v7
-; VI-NEXT:    v_max_f16_e32 v6, v6, v6
-; VI-NEXT:    v_max_f16_e32 v5, v5, v5
-; VI-NEXT:    v_max_f16_e32 v4, v4, v4
-; VI-NEXT:    v_max_f16_e32 v3, v3, v3
-; VI-NEXT:    v_max_f16_e32 v2, v2, v2
-; VI-NEXT:    v_max_f16_e32 v1, v1, v1
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    v_or_b32_e32 v0, v0, v17
-; VI-NEXT:    v_or_b32_e32 v1, v1, v16
-; VI-NEXT:    v_or_b32_e32 v2, v2, v15
-; VI-NEXT:    v_or_b32_e32 v3, v3, v14
-; VI-NEXT:    v_or_b32_e32 v4, v4, v13
-; VI-NEXT:    v_or_b32_e32 v5, v5, v12
-; VI-NEXT:    v_or_b32_e32 v6, v6, v11
-; VI-NEXT:    v_or_b32_e32 v7, v7, v10
-; VI-NEXT:    v_or_b32_e32 v8, v8, v9
-; VI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-LABEL: v_test_canonicalize_var_v18f16:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX9-NEXT:    v_pk_max_f16 v1, v1, v1
-; GFX9-NEXT:    v_pk_max_f16 v2, v2, v2
-; GFX9-NEXT:    v_pk_max_f16 v3, v3, v3
-; GFX9-NEXT:    v_pk_max_f16 v4, v4, v4
-; GFX9-NEXT:    v_pk_max_f16 v5, v5, v5
-; GFX9-NEXT:    v_pk_max_f16 v6, v6, v6
-; GFX9-NEXT:    v_pk_max_f16 v7, v7, v7
-; GFX9-NEXT:    v_pk_max_f16 v8, v8, v8
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; CI-LABEL: v_test_canonicalize_var_v18f16:
-; CI:       ; %bb.0:
-; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CI-NEXT:    v_cvt_f16_f32_e32 v17, v17
-; CI-NEXT:    v_cvt_f16_f32_e32 v16, v16
-; CI-NEXT:    v_cvt_f16_f32_e32 v15, v15
-; CI-NEXT:    v_cvt_f16_f32_e32 v14, v14
-; CI-NEXT:    v_cvt_f16_f32_e32 v13, v13
-; CI-NEXT:    v_cvt_f16_f32_e32 v12, v12
-; CI-NEXT:    v_cvt_f16_f32_e32 v11, v11
-; CI-NEXT:    v_cvt_f16_f32_e32 v10, v10
-; CI-NEXT:    v_cvt_f16_f32_e32 v9, v9
-; CI-NEXT:    v_cvt_f16_f32_e32 v8, v8
-; CI-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; CI-NEXT:    v_cvt_f16_f32_e32 v6, v6
-; CI-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; CI-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; CI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; CI-NEXT:    v_cvt_f32_f16_e32 v17, v17
-; CI-NEXT:    v_cvt_f32_f16_e32 v16, v16
-; CI-NEXT:    v_cvt_f32_f16_e32 v15, v15
-; CI-NEXT:    v_cvt_f32_f16_e32 v14, v14
-; CI-NEXT:    v_cvt_f32_f16_e32 v13, v13
-; CI-NEXT:    v_cvt_f32_f16_e32 v12, v12
-; CI-NEXT:    v_cvt_f32_f16_e32 v11, v11
-; CI-NEXT:    v_cvt_f32_f16_e32 v10, v10
-; CI-NEXT:    v_cvt_f32_f16_e32 v9, v9
-; CI-NEXT:    v_cvt_f32_f16_e32 v8, v8
-; CI-NEXT:    v_cvt_f32_f16_e32 v7, v7
-; CI-NEXT:    v_cvt_f32_f16_e32 v6, v6
-; CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
-; CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
-; CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; CI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_test_canonicalize_var_v18f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX11-NEXT:    v_pk_max_f16 v1, v1, v1
-; GFX11-NEXT:    v_pk_max_f16 v2, v2, v2
-; GFX11-NEXT:    v_pk_max_f16 v3, v3, v3
-; GFX11-NEXT:    v_pk_max_f16 v4, v4, v4
-; GFX11-NEXT:    v_pk_max_f16 v5, v5, v5
-; GFX11-NEXT:    v_pk_max_f16 v6, v6, v6
-; GFX11-NEXT:    v_pk_max_f16 v7, v7, v7
-; GFX11-NEXT:    v_pk_max_f16 v8, v8, v8
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: v_test_canonicalize_var_v18f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_lshrrev_b32 v9, 16, v8 :: v_dual_lshrrev_b32 v10, 16, v7
-; GFX13-NEXT:    v_dual_lshrrev_b32 v11, 16, v6 :: v_dual_lshrrev_b32 v12, 16, v5
-; GFX13-NEXT:    v_dual_lshrrev_b32 v13, 16, v4 :: v_dual_lshrrev_b32 v14, 16, v3
-; GFX13-NEXT:    v_dual_lshrrev_b32 v15, 16, v2 :: v_dual_lshrrev_b32 v16, 16, v1
-; GFX13-NEXT:    v_lshrrev_b32_e32 v17, 16, v0
-; GFX13-NEXT:    v_max_num_f16_e32 v9, v9, v9
-; GFX13-NEXT:    v_max_num_f16_e32 v10, v10, v10
-; GFX13-NEXT:    v_max_num_f16_e32 v11, v11, v11
-; GFX13-NEXT:    v_max_num_f16_e32 v12, v12, v12
-; GFX13-NEXT:    v_max_num_f16_e32 v13, v13, v13
-; GFX13-NEXT:    v_max_num_f16_e32 v14, v14, v14
-; GFX13-NEXT:    v_max_num_f16_e32 v15, v15, v15
-; GFX13-NEXT:    v_max_num_f16_e32 v16, v16, v16
-; GFX13-NEXT:    v_max_num_f16_e32 v17, v17, v17
-; GFX13-NEXT:    v_max_num_f16_e32 v8, v8, v8
-; GFX13-NEXT:    v_max_num_f16_e32 v7, v7, v7
-; GFX13-NEXT:    v_max_num_f16_e32 v6, v6, v6
-; GFX13-NEXT:    v_max_num_f16_e32 v5, v5, v5
-; GFX13-NEXT:    v_max_num_f16_e32 v0, v0, v0
-; GFX13-NEXT:    v_max_num_f16_e32 v1, v1, v1
-; GFX13-NEXT:    v_max_num_f16_e32 v2, v2, v2
-; GFX13-NEXT:    v_max_num_f16_e32 v3, v3, v3
-; GFX13-NEXT:    v_max_num_f16_e32 v4, v4, v4
-; GFX13-NEXT:    v_pack_b32_f16 v0, v0, v17
-; GFX13-NEXT:    v_pack_b32_f16 v1, v1, v16
-; GFX13-NEXT:    v_pack_b32_f16 v2, v2, v15
-; GFX13-NEXT:    v_pack_b32_f16 v3, v3, v14
-; GFX13-NEXT:    v_pack_b32_f16 v4, v4, v13
-; GFX13-NEXT:    v_pack_b32_f16 v5, v5, v12
-; GFX13-NEXT:    v_pack_b32_f16 v6, v6, v11
-; GFX13-NEXT:    v_pack_b32_f16 v7, v7, v10
-; GFX13-NEXT:    v_pack_b32_f16 v8, v8, v9
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
-; TODO-GFX13: Generate a clean sequence of v_pk_max_num_f16 instructions.
-  %canonicalized = call <18 x half> @llvm.canonicalize.v18f16(<18 x half> %val)
-  ret <18 x half> %canonicalized
-}
-
 
 define <32 x half> @v_test_canonicalize_var_v32f16(<32 x half> %val) #1 {
 ; VI-LABEL: v_test_canonicalize_var_v32f16:
@@ -4256,411 +3286,8 @@ define <32 x half> @v_test_canonicalize_var_v32f16(<32 x half> %val) #1 {
 ; GFX11-NEXT:    v_pk_max_f16 v14, v14, v14
 ; GFX11-NEXT:    v_pk_max_f16 v15, v15, v15
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: v_test_canonicalize_var_v32f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_pk_max_num_f16 v0, v0, v0
-; GFX13-NEXT:    v_pk_max_num_f16 v1, v1, v1
-; GFX13-NEXT:    v_pk_max_num_f16 v2, v2, v2
-; GFX13-NEXT:    v_pk_max_num_f16 v3, v3, v3
-; GFX13-NEXT:    v_pk_max_num_f16 v4, v4, v4
-; GFX13-NEXT:    v_pk_max_num_f16 v5, v5, v5
-; GFX13-NEXT:    v_pk_max_num_f16 v6, v6, v6
-; GFX13-NEXT:    v_pk_max_num_f16 v7, v7, v7
-; GFX13-NEXT:    v_pk_max_num_f16 v8, v8, v8
-; GFX13-NEXT:    v_pk_max_num_f16 v9, v9, v9
-; GFX13-NEXT:    v_pk_max_num_f16 v10, v10, v10
-; GFX13-NEXT:    v_pk_max_num_f16 v11, v11, v11
-; GFX13-NEXT:    v_pk_max_num_f16 v12, v12, v12
-; GFX13-NEXT:    v_pk_max_num_f16 v13, v13, v13
-; GFX13-NEXT:    v_pk_max_num_f16 v14, v14, v14
-; GFX13-NEXT:    v_pk_max_num_f16 v15, v15, v15
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %canonicalized = call <32 x half> @llvm.canonicalize.v32f16(<32 x half> %val)
   ret <32 x half> %canonicalized
-}
-
-define <36 x half> @v_test_canonicalize_var_v36f16(<36 x half> %val) #1 {
-; VI-LABEL: v_test_canonicalize_var_v36f16:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_max_f16_sdwa v20, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v0, v0, v0
-; VI-NEXT:    v_or_b32_e32 v0, v0, v20
-; VI-NEXT:    v_max_f16_sdwa v20, v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v1, v1, v1
-; VI-NEXT:    v_or_b32_e32 v1, v1, v20
-; VI-NEXT:    v_max_f16_sdwa v20, v2, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v2, v2, v2
-; VI-NEXT:    v_or_b32_e32 v2, v2, v20
-; VI-NEXT:    v_max_f16_sdwa v20, v3, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v3, v3, v3
-; VI-NEXT:    v_or_b32_e32 v3, v3, v20
-; VI-NEXT:    v_max_f16_sdwa v20, v4, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v4, v4, v4
-; VI-NEXT:    v_or_b32_e32 v4, v4, v20
-; VI-NEXT:    v_max_f16_sdwa v20, v5, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v5, v5, v5
-; VI-NEXT:    v_or_b32_e32 v5, v5, v20
-; VI-NEXT:    v_max_f16_sdwa v20, v6, v6 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v6, v6, v6
-; VI-NEXT:    v_or_b32_e32 v6, v6, v20
-; VI-NEXT:    v_max_f16_sdwa v20, v7, v7 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v7, v7, v7
-; VI-NEXT:    v_or_b32_e32 v7, v7, v20
-; VI-NEXT:    v_max_f16_sdwa v20, v8, v8 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v8, v8, v8
-; VI-NEXT:    v_or_b32_e32 v8, v8, v20
-; VI-NEXT:    v_max_f16_sdwa v20, v9, v9 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v9, v9, v9
-; VI-NEXT:    v_or_b32_e32 v9, v9, v20
-; VI-NEXT:    v_max_f16_sdwa v20, v10, v10 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v10, v10, v10
-; VI-NEXT:    v_or_b32_e32 v10, v10, v20
-; VI-NEXT:    v_max_f16_sdwa v20, v11, v11 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v11, v11, v11
-; VI-NEXT:    v_or_b32_e32 v11, v11, v20
-; VI-NEXT:    v_max_f16_sdwa v20, v12, v12 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v12, v12, v12
-; VI-NEXT:    v_or_b32_e32 v12, v12, v20
-; VI-NEXT:    v_max_f16_sdwa v20, v13, v13 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v13, v13, v13
-; VI-NEXT:    v_or_b32_e32 v13, v13, v20
-; VI-NEXT:    v_max_f16_sdwa v20, v14, v14 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v14, v14, v14
-; VI-NEXT:    v_max_f16_sdwa v18, v17, v17 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_sdwa v19, v16, v16 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_or_b32_e32 v14, v14, v20
-; VI-NEXT:    v_max_f16_sdwa v20, v15, v15 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
-; VI-NEXT:    v_max_f16_e32 v17, v17, v17
-; VI-NEXT:    v_max_f16_e32 v16, v16, v16
-; VI-NEXT:    v_max_f16_e32 v15, v15, v15
-; VI-NEXT:    v_or_b32_e32 v15, v15, v20
-; VI-NEXT:    v_or_b32_e32 v16, v16, v19
-; VI-NEXT:    v_or_b32_e32 v17, v17, v18
-; VI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-LABEL: v_test_canonicalize_var_v36f16:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX9-NEXT:    v_pk_max_f16 v1, v1, v1
-; GFX9-NEXT:    v_pk_max_f16 v2, v2, v2
-; GFX9-NEXT:    v_pk_max_f16 v3, v3, v3
-; GFX9-NEXT:    v_pk_max_f16 v4, v4, v4
-; GFX9-NEXT:    v_pk_max_f16 v5, v5, v5
-; GFX9-NEXT:    v_pk_max_f16 v6, v6, v6
-; GFX9-NEXT:    v_pk_max_f16 v7, v7, v7
-; GFX9-NEXT:    v_pk_max_f16 v8, v8, v8
-; GFX9-NEXT:    v_pk_max_f16 v9, v9, v9
-; GFX9-NEXT:    v_pk_max_f16 v10, v10, v10
-; GFX9-NEXT:    v_pk_max_f16 v11, v11, v11
-; GFX9-NEXT:    v_pk_max_f16 v12, v12, v12
-; GFX9-NEXT:    v_pk_max_f16 v13, v13, v13
-; GFX9-NEXT:    v_pk_max_f16 v14, v14, v14
-; GFX9-NEXT:    v_pk_max_f16 v15, v15, v15
-; GFX9-NEXT:    v_pk_max_f16 v16, v16, v16
-; GFX9-NEXT:    v_pk_max_f16 v17, v17, v17
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; CI-LABEL: v_test_canonicalize_var_v36f16:
-; CI:       ; %bb.0:
-; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; CI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; CI-NEXT:    v_cvt_f16_f32_e32 v20, v20
-; CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; CI-NEXT:    v_cvt_f16_f32_e32 v19, v19
-; CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; CI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; CI-NEXT:    v_cvt_f32_f16_e32 v20, v20
-; CI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; CI-NEXT:    v_or_b32_e32 v1, v1, v2
-; CI-NEXT:    v_cvt_f16_f32_e32 v2, v4
-; CI-NEXT:    v_cvt_f16_f32_e32 v4, v5
-; CI-NEXT:    v_cvt_f16_f32_e32 v5, v18
-; CI-NEXT:    v_cvt_f32_f16_e32 v19, v19
-; CI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
-; CI-NEXT:    v_cvt_f16_f32_e32 v22, v22
-; CI-NEXT:    v_cvt_f16_f32_e32 v24, v24
-; CI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; CI-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; CI-NEXT:    v_cvt_f16_f32_e32 v21, v21
-; CI-NEXT:    v_cvt_f16_f32_e32 v23, v23
-; CI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; CI-NEXT:    v_or_b32_e32 v2, v3, v2
-; CI-NEXT:    v_cvt_f16_f32_e32 v3, v6
-; CI-NEXT:    v_cvt_f16_f32_e32 v6, v15
-; CI-NEXT:    v_cvt_f16_f32_e32 v15, v16
-; CI-NEXT:    v_cvt_f16_f32_e32 v20, v20
-; CI-NEXT:    v_cvt_f32_f16_e32 v3, v3
-; CI-NEXT:    v_cvt_f32_f16_e32 v18, v6
-; CI-NEXT:    v_cvt_f16_f32_e32 v6, v11
-; CI-NEXT:    v_cvt_f16_f32_e32 v11, v12
-; CI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; CI-NEXT:    v_cvt_f32_f16_e32 v15, v15
-; CI-NEXT:    v_cvt_f32_f16_e32 v6, v6
-; CI-NEXT:    v_cvt_f32_f16_e32 v11, v11
-; CI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; CI-NEXT:    v_or_b32_e32 v3, v4, v3
-; CI-NEXT:    v_cvt_f16_f32_e32 v4, v17
-; CI-NEXT:    v_cvt_f32_f16_e32 v17, v5
-; CI-NEXT:    v_cvt_f16_f32_e32 v5, v14
-; CI-NEXT:    v_cvt_f16_f32_e32 v6, v6
-; CI-NEXT:    v_cvt_f32_f16_e32 v16, v4
-; CI-NEXT:    v_cvt_f16_f32_e32 v4, v13
-; CI-NEXT:    v_cvt_f32_f16_e32 v13, v5
-; CI-NEXT:    v_cvt_f16_f32_e32 v5, v7
-; CI-NEXT:    v_cvt_f16_f32_e32 v7, v10
-; CI-NEXT:    v_cvt_f32_f16_e32 v12, v4
-; CI-NEXT:    v_cvt_f16_f32_e32 v4, v8
-; CI-NEXT:    v_cvt_f16_f32_e32 v8, v9
-; CI-NEXT:    v_cvt_f32_f16_e32 v5, v5
-; CI-NEXT:    v_cvt_f32_f16_e32 v7, v7
-; CI-NEXT:    v_cvt_f32_f16_e32 v4, v4
-; CI-NEXT:    v_cvt_f32_f16_e32 v8, v8
-; CI-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; CI-NEXT:    v_cvt_f16_f32_e32 v7, v7
-; CI-NEXT:    v_cvt_f16_f32_e32 v4, v4
-; CI-NEXT:    v_cvt_f16_f32_e32 v8, v8
-; CI-NEXT:    v_cvt_f16_f32_e32 v9, v12
-; CI-NEXT:    v_cvt_f16_f32_e32 v10, v17
-; CI-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
-; CI-NEXT:    v_or_b32_e32 v4, v5, v4
-; CI-NEXT:    v_lshlrev_b32_e32 v5, 16, v7
-; CI-NEXT:    v_cvt_f16_f32_e32 v7, v11
-; CI-NEXT:    v_or_b32_e32 v5, v8, v5
-; CI-NEXT:    v_cvt_f16_f32_e32 v8, v13
-; CI-NEXT:    v_cvt_f16_f32_e32 v11, v16
-; CI-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
-; CI-NEXT:    v_or_b32_e32 v6, v6, v7
-; CI-NEXT:    v_lshlrev_b32_e32 v7, 16, v8
-; CI-NEXT:    v_cvt_f16_f32_e32 v8, v15
-; CI-NEXT:    buffer_load_dword v12, off, s[0:3], s32 offset:16
-; CI-NEXT:    buffer_load_dword v13, off, s[0:3], s32 offset:20
-; CI-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:8
-; CI-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:12
-; CI-NEXT:    buffer_load_dword v16, off, s[0:3], s32
-; CI-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:4
-; CI-NEXT:    v_or_b32_e32 v7, v9, v7
-; CI-NEXT:    v_cvt_f16_f32_e32 v9, v18
-; CI-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
-; CI-NEXT:    v_cvt_f16_f32_e32 v19, v19
-; CI-NEXT:    v_cvt_f32_f16_e32 v22, v22
-; CI-NEXT:    v_or_b32_e32 v8, v9, v8
-; CI-NEXT:    v_lshlrev_b32_e32 v9, 16, v10
-; CI-NEXT:    v_or_b32_e32 v9, v11, v9
-; CI-NEXT:    v_cvt_f16_f32_e32 v26, v26
-; CI-NEXT:    v_cvt_f32_f16_e32 v24, v24
-; CI-NEXT:    v_cvt_f32_f16_e32 v21, v21
-; CI-NEXT:    v_cvt_f16_f32_e32 v18, v27
-; CI-NEXT:    v_cvt_f16_f32_e32 v27, v28
-; CI-NEXT:    v_cvt_f16_f32_e32 v25, v25
-; CI-NEXT:    v_cvt_f32_f16_e32 v23, v23
-; CI-NEXT:    v_lshlrev_b32_e32 v20, 16, v20
-; CI-NEXT:    v_or_b32_e32 v19, v19, v20
-; CI-NEXT:    v_cvt_f16_f32_e32 v20, v22
-; CI-NEXT:    v_cvt_f32_f16_e32 v26, v26
-; CI-NEXT:    v_cvt_f16_f32_e32 v21, v21
-; CI-NEXT:    v_cvt_f16_f32_e32 v22, v24
-; CI-NEXT:    v_cvt_f32_f16_e32 v27, v27
-; CI-NEXT:    v_cvt_f32_f16_e32 v25, v25
-; CI-NEXT:    v_cvt_f16_f32_e32 v23, v23
-; CI-NEXT:    v_cvt_f32_f16_e32 v18, v18
-; CI-NEXT:    v_lshlrev_b32_e32 v20, 16, v20
-; CI-NEXT:    v_or_b32_e32 v20, v21, v20
-; CI-NEXT:    v_lshlrev_b32_e32 v21, 16, v22
-; CI-NEXT:    v_cvt_f16_f32_e32 v22, v26
-; CI-NEXT:    v_or_b32_e32 v21, v23, v21
-; CI-NEXT:    v_cvt_f16_f32_e32 v23, v25
-; CI-NEXT:    v_cvt_f16_f32_e32 v24, v27
-; CI-NEXT:    v_cvt_f16_f32_e32 v18, v18
-; CI-NEXT:    v_lshlrev_b32_e32 v22, 16, v22
-; CI-NEXT:    v_or_b32_e32 v22, v23, v22
-; CI-NEXT:    v_lshlrev_b32_e32 v23, 16, v24
-; CI-NEXT:    v_or_b32_e32 v18, v18, v23
-; CI-NEXT:    s_waitcnt vmcnt(5)
-; CI-NEXT:    v_cvt_f16_f32_e32 v10, v12
-; CI-NEXT:    s_waitcnt vmcnt(4)
-; CI-NEXT:    v_cvt_f16_f32_e32 v11, v13
-; CI-NEXT:    s_waitcnt vmcnt(3)
-; CI-NEXT:    v_cvt_f16_f32_e32 v12, v14
-; CI-NEXT:    s_waitcnt vmcnt(2)
-; CI-NEXT:    v_cvt_f16_f32_e32 v13, v15
-; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    v_cvt_f16_f32_e32 v15, v17
-; CI-NEXT:    v_cvt_f16_f32_e32 v14, v16
-; CI-NEXT:    v_cvt_f16_f32_e32 v17, v30
-; CI-NEXT:    v_cvt_f32_f16_e32 v11, v11
-; CI-NEXT:    v_cvt_f16_f32_e32 v16, v29
-; CI-NEXT:    v_cvt_f32_f16_e32 v10, v10
-; CI-NEXT:    v_cvt_f32_f16_e32 v13, v13
-; CI-NEXT:    v_cvt_f32_f16_e32 v12, v12
-; CI-NEXT:    v_cvt_f32_f16_e32 v15, v15
-; CI-NEXT:    v_cvt_f32_f16_e32 v14, v14
-; CI-NEXT:    v_cvt_f32_f16_e32 v17, v17
-; CI-NEXT:    v_cvt_f32_f16_e32 v16, v16
-; CI-NEXT:    v_cvt_f16_f32_e32 v11, v11
-; CI-NEXT:    v_cvt_f16_f32_e32 v13, v13
-; CI-NEXT:    v_cvt_f16_f32_e32 v10, v10
-; CI-NEXT:    v_cvt_f16_f32_e32 v15, v15
-; CI-NEXT:    v_cvt_f16_f32_e32 v12, v12
-; CI-NEXT:    v_cvt_f16_f32_e32 v17, v17
-; CI-NEXT:    v_cvt_f16_f32_e32 v14, v14
-; CI-NEXT:    v_cvt_f16_f32_e32 v16, v16
-; CI-NEXT:    v_lshlrev_b32_e32 v11, 16, v11
-; CI-NEXT:    v_lshlrev_b32_e32 v13, 16, v13
-; CI-NEXT:    v_or_b32_e32 v10, v10, v11
-; CI-NEXT:    v_add_i32_e32 v11, vcc, 0x44, v0
-; CI-NEXT:    v_lshlrev_b32_e32 v15, 16, v15
-; CI-NEXT:    v_or_b32_e32 v12, v12, v13
-; CI-NEXT:    buffer_store_dword v10, v11, s[0:3], 0 offen
-; CI-NEXT:    v_add_i32_e32 v10, vcc, 64, v0
-; CI-NEXT:    v_lshlrev_b32_e32 v17, 16, v17
-; CI-NEXT:    v_or_b32_e32 v14, v14, v15
-; CI-NEXT:    buffer_store_dword v12, v10, s[0:3], 0 offen
-; CI-NEXT:    v_add_i32_e32 v10, vcc, 60, v0
-; CI-NEXT:    v_or_b32_e32 v16, v16, v17
-; CI-NEXT:    buffer_store_dword v14, v10, s[0:3], 0 offen
-; CI-NEXT:    v_add_i32_e32 v10, vcc, 56, v0
-; CI-NEXT:    buffer_store_dword v16, v10, s[0:3], 0 offen
-; CI-NEXT:    v_add_i32_e32 v10, vcc, 52, v0
-; CI-NEXT:    buffer_store_dword v18, v10, s[0:3], 0 offen
-; CI-NEXT:    v_add_i32_e32 v10, vcc, 48, v0
-; CI-NEXT:    buffer_store_dword v22, v10, s[0:3], 0 offen
-; CI-NEXT:    v_add_i32_e32 v10, vcc, 44, v0
-; CI-NEXT:    buffer_store_dword v21, v10, s[0:3], 0 offen
-; CI-NEXT:    v_add_i32_e32 v10, vcc, 40, v0
-; CI-NEXT:    buffer_store_dword v20, v10, s[0:3], 0 offen
-; CI-NEXT:    v_add_i32_e32 v10, vcc, 36, v0
-; CI-NEXT:    buffer_store_dword v19, v10, s[0:3], 0 offen
-; CI-NEXT:    v_add_i32_e32 v10, vcc, 32, v0
-; CI-NEXT:    buffer_store_dword v9, v10, s[0:3], 0 offen
-; CI-NEXT:    v_add_i32_e32 v9, vcc, 28, v0
-; CI-NEXT:    buffer_store_dword v8, v9, s[0:3], 0 offen
-; CI-NEXT:    v_add_i32_e32 v8, vcc, 24, v0
-; CI-NEXT:    buffer_store_dword v7, v8, s[0:3], 0 offen
-; CI-NEXT:    v_add_i32_e32 v7, vcc, 20, v0
-; CI-NEXT:    buffer_store_dword v6, v7, s[0:3], 0 offen
-; CI-NEXT:    v_add_i32_e32 v6, vcc, 16, v0
-; CI-NEXT:    buffer_store_dword v5, v6, s[0:3], 0 offen
-; CI-NEXT:    v_add_i32_e32 v5, vcc, 12, v0
-; CI-NEXT:    buffer_store_dword v4, v5, s[0:3], 0 offen
-; CI-NEXT:    v_add_i32_e32 v4, vcc, 8, v0
-; CI-NEXT:    buffer_store_dword v3, v4, s[0:3], 0 offen
-; CI-NEXT:    v_add_i32_e32 v3, vcc, 4, v0
-; CI-NEXT:    buffer_store_dword v2, v3, s[0:3], 0 offen
-; CI-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
-; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: v_test_canonicalize_var_v36f16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_pk_max_f16 v0, v0, v0
-; GFX11-NEXT:    v_pk_max_f16 v1, v1, v1
-; GFX11-NEXT:    v_pk_max_f16 v2, v2, v2
-; GFX11-NEXT:    v_pk_max_f16 v3, v3, v3
-; GFX11-NEXT:    v_pk_max_f16 v4, v4, v4
-; GFX11-NEXT:    v_pk_max_f16 v5, v5, v5
-; GFX11-NEXT:    v_pk_max_f16 v6, v6, v6
-; GFX11-NEXT:    v_pk_max_f16 v7, v7, v7
-; GFX11-NEXT:    v_pk_max_f16 v8, v8, v8
-; GFX11-NEXT:    v_pk_max_f16 v9, v9, v9
-; GFX11-NEXT:    v_pk_max_f16 v10, v10, v10
-; GFX11-NEXT:    v_pk_max_f16 v11, v11, v11
-; GFX11-NEXT:    v_pk_max_f16 v12, v12, v12
-; GFX11-NEXT:    v_pk_max_f16 v13, v13, v13
-; GFX11-NEXT:    v_pk_max_f16 v14, v14, v14
-; GFX11-NEXT:    v_pk_max_f16 v15, v15, v15
-; GFX11-NEXT:    v_pk_max_f16 v16, v16, v16
-; GFX11-NEXT:    v_pk_max_f16 v17, v17, v17
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: v_test_canonicalize_var_v36f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_lshrrev_b32 v18, 16, v17 :: v_dual_lshrrev_b32 v19, 16, v16
-; GFX13-NEXT:    v_dual_lshrrev_b32 v20, 16, v15 :: v_dual_lshrrev_b32 v21, 16, v14
-; GFX13-NEXT:    v_dual_lshrrev_b32 v22, 16, v13 :: v_dual_lshrrev_b32 v23, 16, v12
-; GFX13-NEXT:    v_dual_lshrrev_b32 v24, 16, v11 :: v_dual_lshrrev_b32 v25, 16, v10
-; GFX13-NEXT:    v_dual_lshrrev_b32 v26, 16, v9 :: v_dual_lshrrev_b32 v27, 16, v8
-; GFX13-NEXT:    v_dual_lshrrev_b32 v28, 16, v7 :: v_dual_lshrrev_b32 v29, 16, v6
-; GFX13-NEXT:    v_dual_lshrrev_b32 v30, 16, v5 :: v_dual_lshrrev_b32 v31, 16, v4
-; GFX13-NEXT:    v_dual_lshrrev_b32 v32, 16, v3 :: v_dual_lshrrev_b32 v33, 16, v2
-; GFX13-NEXT:    v_dual_lshrrev_b32 v34, 16, v1 :: v_dual_lshrrev_b32 v35, 16, v0
-; GFX13-NEXT:    v_max_num_f16_e32 v18, v18, v18
-; GFX13-NEXT:    v_max_num_f16_e32 v19, v19, v19
-; GFX13-NEXT:    v_max_num_f16_e32 v20, v20, v20
-; GFX13-NEXT:    v_max_num_f16_e32 v21, v21, v21
-; GFX13-NEXT:    v_max_num_f16_e32 v22, v22, v22
-; GFX13-NEXT:    v_max_num_f16_e32 v23, v23, v23
-; GFX13-NEXT:    v_max_num_f16_e32 v24, v24, v24
-; GFX13-NEXT:    v_max_num_f16_e32 v25, v25, v25
-; GFX13-NEXT:    v_max_num_f16_e32 v26, v26, v26
-; GFX13-NEXT:    v_max_num_f16_e32 v27, v27, v27
-; GFX13-NEXT:    v_max_num_f16_e32 v28, v28, v28
-; GFX13-NEXT:    v_max_num_f16_e32 v29, v29, v29
-; GFX13-NEXT:    v_max_num_f16_e32 v30, v30, v30
-; GFX13-NEXT:    v_max_num_f16_e32 v31, v31, v31
-; GFX13-NEXT:    v_max_num_f16_e32 v32, v32, v32
-; GFX13-NEXT:    v_max_num_f16_e32 v33, v33, v33
-; GFX13-NEXT:    v_max_num_f16_e32 v34, v34, v34
-; GFX13-NEXT:    v_max_num_f16_e32 v35, v35, v35
-; GFX13-NEXT:    v_max_num_f16_e32 v17, v17, v17
-; GFX13-NEXT:    v_max_num_f16_e32 v16, v16, v16
-; GFX13-NEXT:    v_max_num_f16_e32 v15, v15, v15
-; GFX13-NEXT:    v_max_num_f16_e32 v14, v14, v14
-; GFX13-NEXT:    v_max_num_f16_e32 v13, v13, v13
-; GFX13-NEXT:    v_max_num_f16_e32 v12, v12, v12
-; GFX13-NEXT:    v_max_num_f16_e32 v11, v11, v11
-; GFX13-NEXT:    v_max_num_f16_e32 v10, v10, v10
-; GFX13-NEXT:    v_max_num_f16_e32 v9, v9, v9
-; GFX13-NEXT:    v_max_num_f16_e32 v8, v8, v8
-; GFX13-NEXT:    v_max_num_f16_e32 v7, v7, v7
-; GFX13-NEXT:    v_max_num_f16_e32 v6, v6, v6
-; GFX13-NEXT:    v_max_num_f16_e32 v5, v5, v5
-; GFX13-NEXT:    v_max_num_f16_e32 v0, v0, v0
-; GFX13-NEXT:    v_max_num_f16_e32 v1, v1, v1
-; GFX13-NEXT:    v_max_num_f16_e32 v2, v2, v2
-; GFX13-NEXT:    v_max_num_f16_e32 v3, v3, v3
-; GFX13-NEXT:    v_max_num_f16_e32 v4, v4, v4
-; GFX13-NEXT:    v_pack_b32_f16 v0, v0, v35
-; GFX13-NEXT:    v_pack_b32_f16 v1, v1, v34
-; GFX13-NEXT:    v_pack_b32_f16 v2, v2, v33
-; GFX13-NEXT:    v_pack_b32_f16 v3, v3, v32
-; GFX13-NEXT:    v_pack_b32_f16 v4, v4, v31
-; GFX13-NEXT:    v_pack_b32_f16 v5, v5, v30
-; GFX13-NEXT:    v_pack_b32_f16 v6, v6, v29
-; GFX13-NEXT:    v_pack_b32_f16 v7, v7, v28
-; GFX13-NEXT:    v_pack_b32_f16 v8, v8, v27
-; GFX13-NEXT:    v_pack_b32_f16 v9, v9, v26
-; GFX13-NEXT:    v_pack_b32_f16 v10, v10, v25
-; GFX13-NEXT:    v_pack_b32_f16 v11, v11, v24
-; GFX13-NEXT:    v_pack_b32_f16 v12, v12, v23
-; GFX13-NEXT:    v_pack_b32_f16 v13, v13, v22
-; GFX13-NEXT:    v_pack_b32_f16 v14, v14, v21
-; GFX13-NEXT:    v_pack_b32_f16 v15, v15, v20
-; GFX13-NEXT:    v_pack_b32_f16 v16, v16, v19
-; GFX13-NEXT:    v_pack_b32_f16 v17, v17, v18
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
-; TODO-GFX13: Generate a clean sequence of v_pk_max_num_f16 instructions.
-  %canonicalized = call <36 x half> @llvm.canonicalize.v36f16(<36 x half> %val)
-  ret <36 x half> %canonicalized
 }
 
 define <64 x half> @v_test_canonicalize_var_v64f16(<64 x half> %val) #1 {
@@ -5232,49 +3859,6 @@ define <64 x half> @v_test_canonicalize_var_v64f16(<64 x half> %val) #1 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_pk_max_f16 v31, v31, v31
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX13-LABEL: v_test_canonicalize_var_v64f16:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    scratch_load_b32 v31, off, s32
-; GFX13-NEXT:    v_pk_max_num_f16 v0, v0, v0
-; GFX13-NEXT:    v_pk_max_num_f16 v1, v1, v1
-; GFX13-NEXT:    v_pk_max_num_f16 v2, v2, v2
-; GFX13-NEXT:    v_pk_max_num_f16 v3, v3, v3
-; GFX13-NEXT:    v_pk_max_num_f16 v4, v4, v4
-; GFX13-NEXT:    v_pk_max_num_f16 v5, v5, v5
-; GFX13-NEXT:    v_pk_max_num_f16 v6, v6, v6
-; GFX13-NEXT:    v_pk_max_num_f16 v7, v7, v7
-; GFX13-NEXT:    v_pk_max_num_f16 v8, v8, v8
-; GFX13-NEXT:    v_pk_max_num_f16 v9, v9, v9
-; GFX13-NEXT:    v_pk_max_num_f16 v10, v10, v10
-; GFX13-NEXT:    v_pk_max_num_f16 v11, v11, v11
-; GFX13-NEXT:    v_pk_max_num_f16 v12, v12, v12
-; GFX13-NEXT:    v_pk_max_num_f16 v13, v13, v13
-; GFX13-NEXT:    v_pk_max_num_f16 v14, v14, v14
-; GFX13-NEXT:    v_pk_max_num_f16 v15, v15, v15
-; GFX13-NEXT:    v_pk_max_num_f16 v16, v16, v16
-; GFX13-NEXT:    v_pk_max_num_f16 v17, v17, v17
-; GFX13-NEXT:    v_pk_max_num_f16 v18, v18, v18
-; GFX13-NEXT:    v_pk_max_num_f16 v19, v19, v19
-; GFX13-NEXT:    v_pk_max_num_f16 v20, v20, v20
-; GFX13-NEXT:    v_pk_max_num_f16 v21, v21, v21
-; GFX13-NEXT:    v_pk_max_num_f16 v22, v22, v22
-; GFX13-NEXT:    v_pk_max_num_f16 v23, v23, v23
-; GFX13-NEXT:    v_pk_max_num_f16 v24, v24, v24
-; GFX13-NEXT:    v_pk_max_num_f16 v25, v25, v25
-; GFX13-NEXT:    v_pk_max_num_f16 v26, v26, v26
-; GFX13-NEXT:    v_pk_max_num_f16 v27, v27, v27
-; GFX13-NEXT:    v_pk_max_num_f16 v28, v28, v28
-; GFX13-NEXT:    v_pk_max_num_f16 v29, v29, v29
-; GFX13-NEXT:    v_pk_max_num_f16 v30, v30, v30
-; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_pk_max_num_f16 v31, v31, v31
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %canonicalized = call <64 x half> @llvm.canonicalize.v64f16(<64 x half> %val)
   ret <64 x half> %canonicalized
 }
