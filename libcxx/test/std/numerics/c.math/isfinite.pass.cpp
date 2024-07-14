@@ -72,10 +72,21 @@ struct ConvertibleFloat {
     }
 };
 
+struct ConvertibleDouble {
+    int value;
+
+    ConvertibleDouble(int v) : value(v) {}
+
+    operator double() const {
+        return static_cast<double>(value);
+    }
+};
+
 int main(int, char**) {
   types::for_each(types::floating_point_types(), TestFloat());
   types::for_each(types::integral_types(), TestInt());
   assert(std::isfinite(ConvertibleFloat(0)));
+  assert(std::isfinite(ConvertibleDouble(0)));
 
   return 0;
 }
