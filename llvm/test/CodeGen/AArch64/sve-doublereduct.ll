@@ -126,17 +126,15 @@ define i16 @add_ext_i16(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 define i16 @add_ext_v32i16(<vscale x 32 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: add_ext_v32i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uunpklo z3.h, z1.b
-; CHECK-NEXT:    uunpklo z4.h, z0.b
-; CHECK-NEXT:    uunpkhi z1.h, z1.b
-; CHECK-NEXT:    uunpkhi z0.h, z0.b
-; CHECK-NEXT:    uunpkhi z5.h, z2.b
+; CHECK-NEXT:    uaddlt z3.h, z0.b, z1.b
+; CHECK-NEXT:    uaddlb z0.h, z0.b, z1.b
+; CHECK-NEXT:    uunpkhi z1.h, z2.b
 ; CHECK-NEXT:    uunpklo z2.h, z2.b
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    add z0.h, z0.h, z1.h
-; CHECK-NEXT:    add z1.h, z4.h, z3.h
-; CHECK-NEXT:    add z0.h, z1.h, z0.h
-; CHECK-NEXT:    add z1.h, z2.h, z5.h
+; CHECK-NEXT:    zip2 z4.h, z0.h, z3.h
+; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
+; CHECK-NEXT:    add z1.h, z2.h, z1.h
+; CHECK-NEXT:    add z0.h, z0.h, z4.h
 ; CHECK-NEXT:    add z0.h, z0.h, z1.h
 ; CHECK-NEXT:    uaddv d0, p0, z0.h
 ; CHECK-NEXT:    fmov x0, d0
