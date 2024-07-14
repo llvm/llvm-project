@@ -1,8 +1,10 @@
-#include "GISelMITest.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "GISelMITest.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
+
+namespace {
 
 class EraseMockInstructionSelector : public InstructionSelector {
 public:
@@ -70,3 +72,5 @@ TEST_F(AArch64GISelMITest, TestInstructionSelectErase) {
   ISelPass.selectMachineFunction(*MF);
   EXPECT_EQ(ISel.NumSelected, 3);
 }
+
+} // namespace
