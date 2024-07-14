@@ -2234,6 +2234,20 @@ inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS) {
                                  : ShiftDir::Left > (S, OpPC, LHS, RHS);
   }
 
+  if constexpr (Dir == ShiftDir::Left) {
+    if (LHS.isNegative() && !S.getLangOpts().CPlusPlus20) {
+      // C++11 [expr.shift]p2: A signed left shift must have a non-negative
+      // operand, and must not overflow the corresponding unsigned type.
+      // C++2a [expr.shift]p2: E1 << E2 is the unique value congruent to
+      // E1 x 2^E2 module 2^N.
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.CCEDiag(Loc, diag::note_constexpr_lshift_of_negative) << LHS.toAPSInt();
+      if (S.getLangOpts().CPlusPlus11 && S.getEvalStatus().Diag &&
+          !S.getEvalStatus().Diag->empty())
+        return false;
+    }
+  }
+
   if (!CheckShift(S, OpPC, LHS, RHS, Bits))
     return false;
 
