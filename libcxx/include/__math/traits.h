@@ -60,6 +60,10 @@ _LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI boo
   return __builtin_isfinite(__x);
 }
 
+_LIBCPP_NODISCARD inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI _LIBCPP_PREFERRED_OVERLOAD bool
+isfinite(double __x) _NOEXCEPT {
+  return __builtin_isfinite(__x);
+}
 #endif
 // isinf
 
