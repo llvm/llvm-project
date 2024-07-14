@@ -56,7 +56,7 @@ struct BadInvocable3 {
 };
 static_assert(!std::indirectly_unary_invocable<BadInvocable3, It>);
 
-// P2997R1: Should succeed when the invocable can't be called with (iter_common_reference_t)
+// This case was made valid by P2997R1.
 struct BadInvocable4 {
     template <class T> R1 operator()(T const&) const;
     R1 operator()(std::iter_common_reference_t<It>) const = delete;

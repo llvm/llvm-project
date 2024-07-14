@@ -76,7 +76,7 @@ struct BadPredicate5 {
 };
 static_assert(!std::indirect_binary_predicate<BadPredicate5, It1, It2>);
 
-// P2997R1: Should succeed when the predicate can't be called with (iter_common_reference_t, iter_common_reference_t)
+// This case was made valid by P2997R1.
 struct BadPredicate6 {
     template <class T, class U> bool operator()(T const&, U const&) const;
     bool operator()(std::iter_common_reference_t<It1>, std::iter_common_reference_t<It2>) const = delete;
