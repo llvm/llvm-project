@@ -119,7 +119,8 @@ constexpr void test(const CharT* x, const CharT* y, const CharT* expected) {
   }
   // string_view + string&&
   {
-    // TODO: Create a `basic_string` to workaround clang bug:
+    // TODO: Remove workaround once https://github.com/llvm/llvm-project/issues/92382 is fixed.
+    // Create a `basic_string` to workaround clang bug:
     // https://github.com/llvm/llvm-project/issues/92382
     // Comparison between pointers to a string literal and some other object results in constant evaluation failure.
     if constexpr (std::same_as<StringViewT<CharT, TraitsT>, std::basic_string_view<CharT, TraitsT>>) {
@@ -198,18 +199,18 @@ int main(int, char**) {
   // ConvertibleToStringView
   test<ConvertibleToStringView, char>();
   static_assert(test<ConvertibleToStringView, char>());
-  #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-    test<ConvertibleToStringView, wchar_t>();
-    static_assert(test<ConvertibleToStringView, wchar_t>());
-  #endif
-  #ifndef TEST_HAS_NO_CHAR8_T
-    test<ConvertibleToStringView, char8_t>();
-    static_assert(test<ConvertibleToStringView, char8_t>());
-  #endif
-    test<ConvertibleToStringView, char16_t>();
-    static_assert(test<ConvertibleToStringView, char16_t>());
-    test<ConvertibleToStringView, char32_t>();
-    static_assert(test<ConvertibleToStringView, char32_t>());
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  test<ConvertibleToStringView, wchar_t>();
+  static_assert(test<ConvertibleToStringView, wchar_t>());
+#endif
+#ifndef TEST_HAS_NO_CHAR8_T
+  test<ConvertibleToStringView, char8_t>();
+  static_assert(test<ConvertibleToStringView, char8_t>());
+#endif
+  test<ConvertibleToStringView, char16_t>();
+  static_assert(test<ConvertibleToStringView, char16_t>());
+  test<ConvertibleToStringView, char32_t>();
+  static_assert(test<ConvertibleToStringView, char32_t>());
 
   return 0;
 }
