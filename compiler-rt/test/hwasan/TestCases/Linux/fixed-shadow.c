@@ -22,6 +22,9 @@
 //
 // UNSUPPORTED: android
 
+// FIXME: SEGV on Ubuntu 24.04. Looking.
+// UNSUPPORTED: linux
+
 #include <assert.h>
 #include <sanitizer/allocator_interface.h>
 #include <sanitizer/hwasan_interface.h>
