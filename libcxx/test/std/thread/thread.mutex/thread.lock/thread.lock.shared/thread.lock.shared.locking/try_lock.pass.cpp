@@ -104,9 +104,9 @@ void test() {
 
 int main(int, char**) {
 #ifndef TEST_HAS_NO_THREADS
-#if TEST_STD_VER >= 17
+#  if TEST_STD_VER >= 17
   test<std::shared_mutex>();
-#endif
+#  endif
   test<std::shared_timed_mutex>();
 #endif
   test<TrackedMutex>();

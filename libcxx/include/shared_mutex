@@ -305,7 +305,7 @@ bool shared_timed_mutex::try_lock_shared_until(const chrono::time_point<_Clock, 
   return true;
 }
 
-#  endif   // !_LIBCPP_HAS_NO_THREADS
+#  endif // !_LIBCPP_HAS_NO_THREADS
 
 template <class _Mutex>
 class shared_lock {

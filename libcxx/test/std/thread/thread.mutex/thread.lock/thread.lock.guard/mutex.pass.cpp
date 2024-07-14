@@ -22,16 +22,27 @@
 #include "test_macros.h"
 
 struct TestMutex {
-    bool locked = false;
-    TestMutex() = default;
-    ~TestMutex() { assert(!locked); }
+  bool locked = false;
+  TestMutex() = default;
+  ~TestMutex() { assert(!locked); }
 
-    void lock() { assert(!locked); locked = true; }
-    bool try_lock() { if (locked) return false; locked = true; return true; }
-    void unlock() { assert(locked); locked = false; }
+  void lock() {
+    assert(!locked);
+    locked = true;
+  }
+  bool try_lock() {
+    if (locked)
+      return false;
+    locked = true;
+    return true;
+  }
+  void unlock() {
+    assert(locked);
+    locked = false;
+  }
 
-    TestMutex(TestMutex const&) = delete;
-    TestMutex& operator=(TestMutex const&) = delete;
+  TestMutex(TestMutex const&)            = delete;
+  TestMutex& operator=(TestMutex const&) = delete;
 };
 
 int main(int, char**) {
@@ -44,7 +55,7 @@ int main(int, char**) {
 
 #if TEST_STD_VER >= 17
   std::lock_guard lg(m);
-  static_assert((std::is_same<decltype(lg), std::lock_guard<decltype(m)>>::value), "" );
+  static_assert((std::is_same<decltype(lg), std::lock_guard<decltype(m)>>::value), "");
 #endif
 
   return 0;
