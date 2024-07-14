@@ -461,20 +461,28 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
 void ScriptParser::readOutputFormat() {
   expect("(");
 
-  StringRef s;
-  config->bfdname = unquote(next());
+  StringRef s = unquote(next());
   if (!consume(")")) {
     expect(",");
-    s = unquote(next());
+    StringRef tmp = unquote(next());
     if (config->optEB)
-      config->bfdname = s;
+      s = tmp;
     expect(",");
-    s = unquote(next());
+    tmp = unquote(next());
     if (config->optEL)
-      config->bfdname = s;
+      s = tmp;
     consume(")");
   }
-  s = config->bfdname;
+  // If more than one OUTPUT_FORMAT is specified, only the first is checked.
+  if (!config->bfdname.empty())
+    return;
+  config->bfdname = s;
+
+  if (s == "binary") {
+    config->oFormatBinary = true;
+    return;
+  }
+
   if (s.consume_back("-freebsd"))
     config->osabi = ELFOSABI_FREEBSD;
 
