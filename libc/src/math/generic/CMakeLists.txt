@@ -2849,6 +2849,36 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  isnan
+  SRCS
+    isnan.cpp
+  HDRS
+    ../isnan.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  isnanf
+  SRCS
+    isnanf.cpp
+  HDRS
+    ../isnanf.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  isnanl
+  SRCS
+    isnanl.cpp
+  HDRS
+    ../isnanl.h
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   nan
   SRCS
     nan.cpp

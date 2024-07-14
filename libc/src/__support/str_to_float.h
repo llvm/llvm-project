@@ -21,12 +21,13 @@
 #include "src/__support/ctype_utils.h"
 #include "src/__support/detailed_powers_of_ten.h"
 #include "src/__support/high_precision_decimal.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
 #include "src/__support/str_to_num_result.h"
 #include "src/__support/uint128.h"
 #include "src/errno/libc_errno.h" // For ERANGE
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 template <class T> struct ExpandedFloat {
@@ -1226,6 +1227,6 @@ template <class T> LIBC_INLINE StrToNumResult<T> strtonan(const char *arg) {
 }
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STR_TO_FLOAT_H

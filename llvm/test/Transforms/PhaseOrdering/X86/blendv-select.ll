@@ -273,13 +273,13 @@ define <8 x i64> @x86_pblendvb_v8i64_v4i64(<8 x i64> %a, <8 x i64> %b, <8 x i64>
 
 define <8 x i64> @x86_pblendvb_v16i32_v8i32(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i64> %d) {
 ; CHECK-LABEL: @x86_pblendvb_v16i32_v8i32(
-; CHECK-NEXT:    [[C_BC:%.*]] = bitcast <8 x i64> [[A:%.*]] to <16 x i32>
-; CHECK-NEXT:    [[D_BC:%.*]] = bitcast <8 x i64> [[B:%.*]] to <16 x i32>
+; CHECK-NEXT:    [[C_BC:%.*]] = bitcast <8 x i64> [[C:%.*]] to <16 x i32>
+; CHECK-NEXT:    [[D_BC:%.*]] = bitcast <8 x i64> [[D:%.*]] to <16 x i32>
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <16 x i32> [[C_BC]], [[D_BC]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i1> [[CMP]], <16 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i64> [[A]] to <16 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i64> [[A:%.*]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i32> [[TMP2]], <16 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i64> [[B]] to <16 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i64> [[B:%.*]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <16 x i32> [[TMP4]], <16 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <8 x i1> [[TMP1]], <8 x i32> [[TMP5]], <8 x i32> [[TMP3]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <16 x i1> [[CMP]], <16 x i1> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -294,8 +294,8 @@ define <8 x i64> @x86_pblendvb_v16i32_v8i32(<8 x i64> %a, <8 x i64> %b, <8 x i64
 ;
   %a.bc = bitcast <8 x i64> %a to <64 x i8>
   %b.bc = bitcast <8 x i64> %b to <64 x i8>
-  %c.bc = bitcast <8 x i64> %a to <16 x i32>
-  %d.bc = bitcast <8 x i64> %b to <16 x i32>
+  %c.bc = bitcast <8 x i64> %c to <16 x i32>
+  %d.bc = bitcast <8 x i64> %d to <16 x i32>
   %a.lo = shufflevector <64 x i8> %a.bc, <64 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   %b.lo = shufflevector <64 x i8> %b.bc, <64 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   %a.hi = shufflevector <64 x i8> %a.bc, <64 x i8> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>

@@ -424,6 +424,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ilogb
     libc.src.math.ilogbf
     libc.src.math.ilogbl
+    libc.src.math.isnan
+    libc.src.math.isnanf
+    libc.src.math.isnanl
     libc.src.math.ldexp
     libc.src.math.ldexpf
     libc.src.math.ldexpl
@@ -487,6 +490,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.round
     libc.src.math.roundf
     libc.src.math.roundl
+    libc.src.math.roundeven
+    libc.src.math.roundevenf
+    libc.src.math.roundevenl
     libc.src.math.scalbn
     libc.src.math.scalbnf
     libc.src.math.scalbnl
@@ -619,6 +625,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.remquof128
     libc.src.math.rintf128
     libc.src.math.roundf128
+    libc.src.math.roundevenf128
     libc.src.math.scalbnf128
     libc.src.math.sqrtf128
     libc.src.math.truncf128

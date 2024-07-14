@@ -460,12 +460,10 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_private_state_listener_sp(
           Listener::MakeListener("lldb.process.internal_state_listener")),
       m_mod_id(), m_process_unique_id(0), m_thread_index_id(0),
-      m_thread_id_to_index_id_map(), m_exit_status(-1), m_exit_string(),
-      m_exit_status_mutex(), m_thread_mutex(), m_thread_list_real(this),
-      m_thread_list(this), m_thread_plans(*this), m_extended_thread_list(this),
-      m_extended_thread_stop_id(0), m_queue_list(this), m_queue_list_stop_id(0),
-      m_watchpoint_resource_list(), m_notifications(), m_image_tokens(),
-      m_breakpoint_site_list(), m_dynamic_checkers_up(),
+      m_thread_id_to_index_id_map(), m_exit_status(-1),
+      m_thread_list_real(*this), m_thread_list(*this), m_thread_plans(*this),
+      m_extended_thread_list(*this), m_extended_thread_stop_id(0),
+      m_queue_list(this), m_queue_list_stop_id(0),
       m_unix_signals_sp(unix_signals_sp), m_abi_sp(), m_process_input_reader(),
       m_stdio_communication("process.stdio"), m_stdio_communication_mutex(),
       m_stdin_forward(false), m_stdout_data(), m_stderr_data(),
@@ -1183,8 +1181,8 @@ void Process::UpdateThreadListIfNeeded() {
       // mutex between the call to UpdateThreadList(...) and the
       // os->UpdateThreadList(...) so it doesn't change on us
       ThreadList &old_thread_list = m_thread_list;
-      ThreadList real_thread_list(this);
-      ThreadList new_thread_list(this);
+      ThreadList real_thread_list(*this);
+      ThreadList new_thread_list(*this);
       // Always update the thread list with the protocol specific thread list,
       // but only update if "true" is returned
       if (UpdateThreadList(m_thread_list_real, real_thread_list)) {
