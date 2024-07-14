@@ -130,7 +130,7 @@ function(add_gen_header2 target_name)
       DEPENDS ${yaml_file} ${fq_data_files}
     )
   endif()
-  2
+  
   if(ADD_GEN_HDR2_DEPENDS)
     get_fq_deps_list(f2q_deps_list ${ADD_GEN_HDR2_DEPENDS})
     # Dependencies of a add_header target can only be another add_gen_header target
@@ -239,10 +239,10 @@ function(add_gen_header target_name)
   )
 
   if(LIBC_TARGET_OS_IS_GPU)
-  file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/llvm-libc-decls)
-  file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/llvm-libc-decls/gpu)
-  set(decl_out_file ${LIBC_INCLUDE_DIR}/llvm-libc-decls/${relative_path})
-  add_custom_command(
+    file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/llvm-libc-decls)
+    file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/llvm-libc-decls/gpu)
+    set(decl_out_file ${LIBC_INCLUDE_DIR}/llvm-libc-decls/${relative_path})
+    add_custom_command(
     OUTPUT ${decl_out_file}
     COMMAND ${hdrgen_exe} -o ${decl_out_file}
             --header ${ADD_GEN_HDR_GEN_HDR} --def ${in_file} --export-decls
