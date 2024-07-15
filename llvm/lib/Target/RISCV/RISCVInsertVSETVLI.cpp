@@ -1727,7 +1727,6 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
     MI->eraseFromParent();
     if (OldAVLReg && OldAVLReg.isVirtual())
       afterDroppedAVLUse(OldAVLReg);
-
   }
 }
 
