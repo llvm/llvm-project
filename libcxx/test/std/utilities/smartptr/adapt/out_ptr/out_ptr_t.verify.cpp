@@ -21,7 +21,7 @@ int main(int, char**) {
   {
     std::shared_ptr<int> sPtr;
 
-    // expected-error-re@*:* {{static assertion failed due to requirement {{.*}}Specialization of std::shared_ptr<> requires a deleter.}}
+    // expected-error-re@*:* {{static assertion failed due to requirement {{.*}}Using std::shared_ptr<> without a deleter in std::out_ptr is not supported.}}
     std::out_ptr_t<std::shared_ptr<int>, int*>{sPtr};
   }
 

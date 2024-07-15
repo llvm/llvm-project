@@ -29,15 +29,15 @@ struct MoveOnlyDeleter {
 
 // Custom pointer types.
 
-template <typename _Tp>
+template <typename T>
 struct ConstructiblePtr {
-  using pointer = _Tp*;
-  std::unique_ptr<_Tp> ptr;
+  using pointer = T*;
+  std::unique_ptr<T> ptr;
 
   ConstructiblePtr() = default;
-  explicit ConstructiblePtr(_Tp* p) : ptr{p} {}
+  explicit ConstructiblePtr(T* p) : ptr{p} {}
 
-  auto operator==(_Tp val) { return *ptr == val; }
+  auto operator==(T val) { return *ptr == val; }
 
   auto* get() const { return ptr.get(); }
 
@@ -49,19 +49,19 @@ static_assert(std::is_constructible_v< ConstructiblePtr<int>, int* >);
 
 struct ResetArg {};
 
-template <typename _Tp>
+template <typename T>
 struct ResettablePtr {
-  using element_type = _Tp;
-  std::unique_ptr<_Tp> ptr;
+  using element_type = T;
+  std::unique_ptr<T> ptr;
 
-  explicit ResettablePtr(_Tp* p) : ptr{p} {}
+  explicit ResettablePtr(T* p) : ptr{p} {}
 
   auto operator*() const { return *ptr; }
 
-  auto operator==(_Tp val) { return *ptr == val; }
+  auto operator==(T val) { return *ptr == val; }
 
   void reset() { ptr.reset(); }
-  void reset(_Tp* p, ResetArg) { ptr.reset(p); }
+  void reset(T* p, ResetArg) { ptr.reset(p); }
 
   auto* get() const { return ptr.get(); }
 
@@ -71,11 +71,11 @@ struct ResettablePtr {
 static_assert(std::is_same_v<std::__pointer_of_t< ResettablePtr<int>>, int* >);
 static_assert(std::is_constructible_v< ResettablePtr<int>, int* >);
 
-template <typename _Tp>
-struct NonConstructiblePtr : public ResettablePtr<_Tp> {
-  NonConstructiblePtr() : NonConstructiblePtr::ResettablePtr(nullptr) {};
+template <typename T>
+struct NonConstructiblePtr : public ResettablePtr<T> {
+  NonConstructiblePtr() : NonConstructiblePtr::ResettablePtr(nullptr){};
 
-  void reset(_Tp* p) { ResettablePtr<_Tp>::ptr.reset(p); }
+  void reset(T* p) { ResettablePtr<T>::ptr.reset(p); }
 };
 
 static_assert(std::is_same_v<std::__pointer_of_t< NonConstructiblePtr<int>>, int* >);

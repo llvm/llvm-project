@@ -21,7 +21,7 @@ int main(int, char**) {
   {
     std::shared_ptr<int> sPtr;
 
-    // expected-error-re@*:* {{static assertion failed due to requirement {{.*}}std::shared_ptr<> is not supported}}
+    // expected-error-re@*:* {{static assertion failed due to requirement {{.*}}std::shared_ptr<> is not supported with std::inout_ptr.}}
     std::inout_ptr_t<std::shared_ptr<int>, int*>{sPtr};
   }
 
