@@ -178,6 +178,20 @@ bool AMDGPUAtomicOptimizerImpl::run(Function &F) {
   return Changed;
 }
 
+static bool isLegalCrossLaneType(Type *Ty) {
+  switch (Ty->getTypeID()) {
+  case Type::FloatTyID:
+  case Type::DoubleTyID:
+    return true;
+  case Type::IntegerTyID: {
+    unsigned Size = Ty->getIntegerBitWidth();
+    return (Size == 32 || Size == 64);
+  }
+  default:
+    return false;
+  }
+}
+
 void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
   // Early exit for unhandled address space atomic instructions.
   switch (I.getPointerAddressSpace()) {
@@ -228,11 +242,14 @@ void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
 
   // If the value operand is divergent, each lane is contributing a different
   // value to the atomic calculation. We can only optimize divergent values if
-  // we have DPP available on our subtarget, and the atomic operation is 32
-  // bits.
-  if (ValDivergent &&
-      (!ST->hasDPP() || DL->getTypeSizeInBits(I.getType()) != 32)) {
-    return;
+  // we have DPP available on our subtarget (for DPP strategy), and the atomic
+  // operation is 32 or 64 bits.
+  if (ValDivergent) {
+    if (ScanImpl == ScanOptions::DPP && !ST->hasDPP())
+      return;
+
+    if (!isLegalCrossLaneType(I.getType()))
+      return;
   }
 
   // If we get here, we can optimize the atomic using a single wavefront-wide
@@ -311,11 +328,14 @@ void AMDGPUAtomicOptimizerImpl::visitIntrinsicInst(IntrinsicInst &I) {
 
   // If the value operand is divergent, each lane is contributing a different
   // value to the atomic calculation. We can only optimize divergent values if
-  // we have DPP available on our subtarget, and the atomic operation is 32
-  // bits.
-  if (ValDivergent &&
-      (!ST->hasDPP() || DL->getTypeSizeInBits(I.getType()) != 32)) {
-    return;
+  // we have DPP available on our subtarget (for DPP strategy), and the atomic
+  // operation is 32 or 64 bits.
+  if (ValDivergent) {
+    if (ScanImpl == ScanOptions::DPP && !ST->hasDPP())
+      return;
+
+    if (!isLegalCrossLaneType(I.getType()))
+      return;
   }
 
   // If any of the other arguments to the intrinsic are divergent, we can't
@@ -748,7 +768,6 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
         // of each active lane in the wavefront. This will be our new value
         // which we will provide to the atomic operation.
         Value *const LastLaneIdx = B.getInt32(ST->getWavefrontSize() - 1);
-        assert(TyBitWidth == 32);
         NewV = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_readlane,
                                  {NewV, LastLaneIdx});
       }
