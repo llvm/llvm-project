@@ -1710,8 +1710,11 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsLogPoints", true);
   // The debug adapter supports data watchpoints.
   body.try_emplace("supportsDataBreakpoints", true);
-  // Putting version string. Note: this is not part of DAP spec.
-  body.try_emplace("version", g_dap.debugger.GetVersionString());
+
+  // Put in non-DAP specification lldb specific information.
+  llvm::json::Object lldb_json;
+  lldb_json.try_emplace("version", g_dap.debugger.GetVersionString());
+  body.try_emplace("__lldb", std::move(lldb_json));
 
   response.try_emplace("body", std::move(body));
   g_dap.SendJSON(llvm::json::Value(std::move(response)));
