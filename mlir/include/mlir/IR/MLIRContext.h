@@ -240,6 +240,10 @@ public:
   /// (attributes, operations, types, etc.).
   llvm::hash_code getRegistryHash();
 
+  /// Execute a critical section guarded by the context. This method guarantees
+  /// that calling `function` is thread-safe with respect to the context.
+  void executeCriticalSection(function_ref<void()> function);
+
   //===--------------------------------------------------------------------===//
   // Action API
   //===--------------------------------------------------------------------===//

@@ -9,6 +9,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Debug/BreakpointManagers/TagBreakpointManager.h"
 #include "mlir/Debug/ExecutionContext.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -92,6 +93,12 @@ TEST(PassManagerTest, OpSpecificAnalysis) {
 struct AddAttrFunctionPass
     : public PassWrapper<AddAttrFunctionPass, OperationPass<func::FuncOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(AddAttrFunctionPass)
+
+  void getOpDependentDialects(Operation *op,
+                              DialectRegistry &registry) const override {
+    if (op->hasAttr("didProcess"))
+      registry.insert<arith::ArithDialect>();
+  }
 
   void runOnOperation() override {
     func::FuncOp op = getOperation();
@@ -279,6 +286,36 @@ TEST(PassManagerTest, PassInitialization) {
   // Adding a second copy of the pass, we should also initialize it!
   pm.addPass(std::make_unique<InitializeCheckingPass>());
   EXPECT_TRUE(succeeded(pm.run(module.get())));
+}
+
+TEST(PassManagerTest, OpDependentDialects) {
+  MLIRContext context;
+  context.loadDialect<func::FuncDialect>();
+  Builder builder(&context);
+
+  // Create a module with 1 function.
+  OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
+  auto f =
+      func::FuncOp::create(builder.getUnknownLoc(), "function",
+                           builder.getFunctionType(std::nullopt, std::nullopt));
+  f.setPrivate();
+  module->push_back(f);
+
+  // Instantiate and run our pass the first time.
+  {
+    auto pm = PassManager::on<ModuleOp>(&context);
+    pm.addNestedPass<func::FuncOp>(std::make_unique<AddAttrFunctionPass>());
+    EXPECT_TRUE(succeeded(pm.run(module.get())));
+  }
+  ASSERT_EQ(context.getLoadedDialect<arith::ArithDialect>(), nullptr);
+
+  // Run the pass a second time, this time it should load the arith dialect.
+  {
+    auto pm = PassManager::on<ModuleOp>(&context);
+    pm.addNestedPass<func::FuncOp>(std::make_unique<AddAttrFunctionPass>());
+    EXPECT_TRUE(succeeded(pm.run(module.get())));
+  }
+  ASSERT_NE(context.getLoadedDialect<arith::ArithDialect>(), nullptr);
 }
 
 } // namespace

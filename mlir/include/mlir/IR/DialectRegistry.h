@@ -253,6 +253,9 @@ public:
   /// contains all of the components of this registry.
   bool isSubsetOf(const DialectRegistry &rhs) const;
 
+  /// Returns true if the registry is empty.
+  bool empty() const { return registry.empty() && extensions.empty(); }
+
 private:
   MapTy registry;
   std::vector<std::unique_ptr<DialectExtensionBase>> extensions;

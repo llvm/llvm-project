@@ -70,6 +70,15 @@ public:
   /// register the Affine dialect but does not need to register Linalg.
   virtual void getDependentDialects(DialectRegistry &registry) const {}
 
+  /// Register dependent dialects for the current pass and operation being
+  /// transformed. This function is similar to `getDependentDialects` except
+  /// that it also receives the operation being transformed. When possible, use
+  /// `getDependentDialects` as this method incurs in extra synchronization
+  /// overhead. No transformations to `op` should be performed during this
+  /// method.
+  virtual void getOpDependentDialects(Operation *op,
+                                      DialectRegistry &registry) const {}
+
   /// Return the command line argument used when registering this pass. Return
   /// an empty string if one does not exist.
   virtual StringRef getArgument() const { return ""; }

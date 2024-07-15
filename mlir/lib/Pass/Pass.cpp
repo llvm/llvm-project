@@ -513,6 +513,21 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
   };
   pass->passState.emplace(op, am, dynamicPipelineCallback);
 
+  // Get any op dependent dialects.
+  DialectRegistry dependentDialects;
+  pass->getOpDependentDialects(op, dependentDialects);
+  MLIRContext &context = pass->getContext();
+  // Only append a non-empty non-trivial registry.
+  if (!dependentDialects.empty() &&
+      !dependentDialects.isSubsetOf(context.getDialectRegistry())) {
+    context.executeCriticalSection([&]() {
+      // Load the dialects.
+      context.appendDialectRegistry(dependentDialects);
+      for (StringRef name : dependentDialects.getDialectNames())
+        context.getOrLoadDialect(name);
+    });
+  }
+
   // Instrument before the pass has run.
   if (pi)
     pi->runBeforePass(pass, op);

@@ -199,6 +199,9 @@ public:
   /// A mutex used when accessing operation information.
   llvm::sys::SmartRWMutex<true> operationInfoMutex;
 
+  /// A mutex used when running critical sections.
+  llvm::sys::SmartMutex<true> criticalSectionMutex;
+
   //===--------------------------------------------------------------------===//
   // Affine uniquing
   //===--------------------------------------------------------------------===//
@@ -701,6 +704,24 @@ ArrayRef<RegisteredOperationName> MLIRContext::getRegisteredOperations() {
 
 bool MLIRContext::isOperationRegistered(StringRef name) {
   return RegisteredOperationName::lookup(name, this).has_value();
+}
+
+void MLIRContext::executeCriticalSection(function_ref<void()> function) {
+  if (!function)
+    return;
+  llvm::sys::SmartScopedLock<true> lock(impl->criticalSectionMutex);
+#ifndef NDEBUG
+  // Temporarily disable `multiThreadedExecutionContext` so the context is aware
+  // only a single thread is running.
+  int multiThreadedExecutionContext = impl->multiThreadedExecutionContext;
+  impl->multiThreadedExecutionContext = 0;
+#endif
+  // Execute the critical section.
+  function();
+#ifndef NDEBUG
+  // Reset `multiThreadedExecutionContext` to its original state.
+  impl->multiThreadedExecutionContext = multiThreadedExecutionContext;
+#endif
 }
 
 void Dialect::addType(TypeID typeID, AbstractType &&typeInfo) {
