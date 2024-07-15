@@ -3145,6 +3145,23 @@ TEST_F(FormatTestComments, AlignTrailingCommentsLeave) {
                    "int bar = 1234;       // This is a very long comment\n"
                    "          // which is wrapped arround.",
                    Style));
+
+  Style = getLLVMStyle();
+  Style.AlignTrailingComments.Kind = FormatStyle::TCAS_Leave;
+  Style.TabWidth = 2;
+  Style.UseTab = FormatStyle::UT_ForIndentation;
+  verifyNoChange("{\n"
+                 "\t// f\n"
+                 "\tf();\n"
+                 "\n"
+                 "\t// g\n"
+                 "\tg();\n"
+                 "\t{\n"
+                 "\t\t// h();  // h\n"
+                 "\t\tfoo();  // foo\n"
+                 "\t}\n"
+                 "}",
+                 Style);
 }
 
 TEST_F(FormatTestComments, DontAlignNamespaceComments) {

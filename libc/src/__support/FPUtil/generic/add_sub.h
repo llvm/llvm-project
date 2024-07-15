@@ -20,9 +20,11 @@
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 
-namespace LIBC_NAMESPACE::fputil::generic {
+namespace LIBC_NAMESPACE_DECL {
+namespace fputil::generic {
 
 template <bool IsSub, typename OutType, typename InType>
 LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
@@ -201,6 +203,7 @@ sub(InType x, InType y) {
   return add_or_sub</*IsSub=*/true, OutType>(x, y);
 }
 
-} // namespace LIBC_NAMESPACE::fputil::generic
+} // namespace fputil::generic
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_ADD_SUB_H

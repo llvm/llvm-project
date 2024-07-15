@@ -795,6 +795,10 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"identity", SameType, Rank::scalar, Optionality::optional},
             {"ordered", AnyLogical, Rank::scalar, Optionality::optional}},
         SameType, Rank::scalar, IntrinsicClass::transformationalFunction},
+    {"rename",
+        {{"path1", DefaultChar, Rank::scalar},
+            {"path2", DefaultChar, Rank::scalar}},
+        DefaultInt, Rank::scalar},
     {"repeat",
         {{"string", SameCharNoLen, Rank::scalar},
             {"ncopies", AnyInt, Rank::scalar}},
@@ -1464,6 +1468,12 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"get", DefaultInt, Rank::vector, Optionality::optional,
                 common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"rename",
+        {{"path1", DefaultChar, Rank::scalar},
+            {"path2", DefaultChar, Rank::scalar},
+            {"status", DefaultInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::scalar, IntrinsicClass::impureSubroutine},
     {"system",
         {{"command", DefaultChar, Rank::scalar},
             {"exitstat", DefaultInt, Rank::scalar, Optionality::optional,
@@ -2612,7 +2622,8 @@ bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
     const std::string &name) const {
   // Collection for some intrinsics with function and subroutine form,
   // in order to pass the semantic check.
-  static const std::string dualIntrinsic[]{{"etime"}, {"getcwd"}};
+  static const std::string dualIntrinsic[]{
+      {"etime"s}, {"getcwd"s}, {"rename"s}};
 
   return std::find_if(std::begin(dualIntrinsic), std::end(dualIntrinsic),
              [&name](const std::string &dualName) {
@@ -2831,7 +2842,8 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
             }
           }
         } else if (!IsInteroperableIntrinsicType(
-                       *type, &context.languageFeatures()) &&
+                       *type, &context.languageFeatures())
+                        .value_or(true) &&
             context.languageFeatures().ShouldWarn(
                 common::UsageWarning::Interoperability)) {
           context.messages().Say(at,
@@ -2933,24 +2945,25 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
         context.messages().Say(arguments[0]->sourceLocation(),
             "C_LOC() argument may not be zero-length character"_err_en_US);
       } else if (typeAndShape->type().category() != TypeCategory::Derived &&
-          !IsInteroperableIntrinsicType(typeAndShape->type()) &&
+          !IsInteroperableIntrinsicType(typeAndShape->type()).value_or(true) &&
           context.languageFeatures().ShouldWarn(
               common::UsageWarning::Interoperability)) {
         context.messages().Say(arguments[0]->sourceLocation(),
             "C_LOC() argument has non-interoperable intrinsic type, kind, or length"_warn_en_US);
       }
 
-      return SpecificCall{SpecificIntrinsic{"__builtin_c_loc"s,
-                              characteristics::Procedure{
-                                  characteristics::FunctionResult{
-                                      DynamicType{GetBuiltinDerivedType(
-                                          builtinsScope_, "__builtin_c_ptr")}},
-                                  characteristics::DummyArguments{
-                                      characteristics::DummyArgument{"x"s,
-                                          characteristics::DummyDataObject{
-                                              std::move(*typeAndShape)}}},
-                                  characteristics::Procedure::Attrs{
-                                      characteristics::Procedure::Attr::Pure}}},
+      characteristics::DummyDataObject ddo{std::move(*typeAndShape)};
+      ddo.intent = common::Intent::In;
+      return SpecificCall{
+          SpecificIntrinsic{"__builtin_c_loc"s,
+              characteristics::Procedure{
+                  characteristics::FunctionResult{
+                      DynamicType{GetBuiltinDerivedType(
+                          builtinsScope_, "__builtin_c_ptr")}},
+                  characteristics::DummyArguments{
+                      characteristics::DummyArgument{"x"s, std::move(ddo)}},
+                  characteristics::Procedure::Attrs{
+                      characteristics::Procedure::Attr::Pure}}},
           std::move(arguments)};
     }
   }

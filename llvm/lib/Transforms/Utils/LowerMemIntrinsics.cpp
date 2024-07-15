@@ -262,6 +262,9 @@ void llvm::createMemCpyLoopUnknownSize(
     assert((ResLoopOpSize == AtomicElementSize ? *AtomicElementSize : 1) &&
            "Store size is expected to match type size");
 
+    Align ResSrcAlign(commonAlignment(PartSrcAlign, ResLoopOpSize));
+    Align ResDstAlign(commonAlignment(PartDstAlign, ResLoopOpSize));
+
     Value *RuntimeResidual = getRuntimeLoopRemainder(DL, PLBuilder, CopyLen,
                                                      CILoopOpSize, LoopOpSize);
     Value *RuntimeBytesCopied = PLBuilder.CreateSub(CopyLen, RuntimeResidual);
@@ -303,7 +306,7 @@ void llvm::createMemCpyLoopUnknownSize(
     Value *SrcGEP =
         ResBuilder.CreateInBoundsGEP(ResLoopOpType, SrcAddr, FullOffset);
     LoadInst *Load = ResBuilder.CreateAlignedLoad(ResLoopOpType, SrcGEP,
-                                                  PartSrcAlign, SrcIsVolatile);
+                                                  ResSrcAlign, SrcIsVolatile);
     if (!CanOverlap) {
       // Set alias scope for loads.
       Load->setMetadata(LLVMContext::MD_alias_scope,
@@ -311,8 +314,8 @@ void llvm::createMemCpyLoopUnknownSize(
     }
     Value *DstGEP =
         ResBuilder.CreateInBoundsGEP(ResLoopOpType, DstAddr, FullOffset);
-    StoreInst *Store = ResBuilder.CreateAlignedStore(Load, DstGEP, PartDstAlign,
-                                                     DstIsVolatile);
+    StoreInst *Store =
+        ResBuilder.CreateAlignedStore(Load, DstGEP, ResDstAlign, DstIsVolatile);
     if (!CanOverlap) {
       // Indicate that stores don't overlap loads.
       Store->setMetadata(LLVMContext::MD_noalias, MDNode::get(Ctx, NewScope));

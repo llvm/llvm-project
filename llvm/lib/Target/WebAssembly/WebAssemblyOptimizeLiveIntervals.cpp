@@ -41,7 +41,7 @@ class WebAssemblyOptimizeLiveIntervals final : public MachineFunctionPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<LiveIntervalsWrapperPass>();
-    AU.addPreserved<MachineBlockFrequencyInfo>();
+    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addPreservedID(LiveVariablesID);
