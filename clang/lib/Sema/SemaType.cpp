@@ -4852,7 +4852,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                  isa_and_present<CXXRecordDecl>(S.computeDeclContext(SS));
         };
 
-        // [dcl.fct]p6:
+        // C++23 [dcl.fct]p6:
         //
         // An explicit-object-parameter-declaration is a parameter-declaration
         // with a this specifier. An explicit-object-parameter-declaration shall
