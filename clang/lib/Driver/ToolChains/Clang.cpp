@@ -3298,9 +3298,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   }
 
   // Handle __FINITE_MATH_ONLY__ similarly.
-  if (!HonorINFs && !HonorNaNs)
-    CmdArgs.push_back("-ffinite-math-only");
-  else {
+  // The -ffinite-math-only is added to CmdArgs when !HonorINFs && !HonorNaNs.
+  // Otherwise process the Xclang arguments to determine if -menable-no-infs and
+  // -menable-no-nans are set by the user.
+  auto NaNsAndInfs = [&] {
     bool InfValues = true;
     bool NanValues = true;
     auto processArg = [&](const auto *Arg) {
@@ -3309,12 +3310,15 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       if (StringRef(Arg->getValue()) == "-menable-no-infs")
         InfValues = false;
     };
+
     for (auto *Arg : Args.filtered(options::OPT_Xclang))
       processArg(Arg);
 
-    if (!NanValues && !InfValues)
-      CmdArgs.push_back("-ffinite-math-only");
-  }
+    return InfValues && NanValues;
+  };
+
+  if ((!HonorINFs && !HonorNaNs) || !NaNsAndInfs())
+    CmdArgs.push_back("-ffinite-math-only");
   if (const Arg *A = Args.getLastArg(options::OPT_mfpmath_EQ)) {
     CmdArgs.push_back("-mfpmath");
     CmdArgs.push_back(A->getValue());
