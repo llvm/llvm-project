@@ -8,12 +8,11 @@
 
 #include "src/__support/CPP/span.h"
 #include "src/__support/freelist_heap.h"
-#include "src/__support/macros/config.h"
 #include "src/string/memcmp.h"
 #include "src/string/memcpy.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 using LIBC_NAMESPACE::freelist_heap;
 
@@ -285,4 +284,4 @@ TEST_FOR_EACH_ALLOCATOR(InvalidAlignedAllocAlignment, 2048) {
   EXPECT_EQ(ptr, static_cast<void *>(nullptr));
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

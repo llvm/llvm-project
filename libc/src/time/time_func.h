@@ -10,14 +10,13 @@
 #define LLVM_LIBC_SRC_TIME_TIME_FUNC_H
 
 #include "hdr/types/time_t.h"
-#include "src/__support/macros/config.h"
 
 // Note this header file is named time_func.h to avoid conflicts with the
 // public header file time.h.
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 time_t time(time_t *tp);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_TIME_TIME_FUNC_H

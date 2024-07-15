@@ -9,9 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_MUTEX_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_MUTEX_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace cpp {
 
 // Assume the calling thread has already obtained mutex ownership.
@@ -46,6 +44,6 @@ public:
 template <typename T> lock_guard(T &) -> lock_guard<T>;
 
 } // namespace cpp
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_MUTEX_H

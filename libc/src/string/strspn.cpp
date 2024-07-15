@@ -10,10 +10,9 @@
 
 #include "src/__support/CPP/bitset.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(size_t, strspn, (const char *src, const char *segment)) {
   const char *initial = src;
@@ -27,4 +26,4 @@ LLVM_LIBC_FUNCTION(size_t, strspn, (const char *src, const char *segment)) {
   return src - initial;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

@@ -8,7 +8,6 @@
 
 #include "libc_errno.h"
 #include "src/__support/CPP/atomic.h"
-#include "src/__support/macros/config.h"
 
 #ifdef LIBC_TARGET_ARCH_IS_GPU
 // LIBC_THREAD_LOCAL on GPU currently does nothing. So essentially this is just
@@ -47,7 +46,7 @@ LIBC_NAMESPACE::Errno::operator int() { return errno; }
 
 #endif // LIBC_FULL_BUILD
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 // Define the global `libc_errno` instance.
 Errno libc_errno;
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

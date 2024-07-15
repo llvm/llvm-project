@@ -5,10 +5,9 @@
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/fixedvector.h"
-#include "src/__support/macros/config.h"
 #include "src/time/gpu/time_utils.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace benchmarks {
 
 FixedVector<Benchmark *, 64> benchmarks;
@@ -136,4 +135,4 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
 };
 
 } // namespace benchmarks
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

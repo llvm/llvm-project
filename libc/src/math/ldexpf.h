@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_LDEXPF_H
 #define LLVM_LIBC_SRC_MATH_LDEXPF_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 float ldexpf(float x, int exp);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_LDEXPF_H
