@@ -821,7 +821,7 @@ llvm::Error ClangDocBitcodeReader::readSubBlock(unsigned ID, T I) {
 
 ClangDocBitcodeReader::Cursor
 ClangDocBitcodeReader::skipUntilRecordOrBlock(unsigned &BlockOrRecordID) {
-  llvm::TimeTraceScope("Reducing infos","skipUntilRecordOrBlock");
+  llvm::TimeTraceScope("Reducing infos", "skipUntilRecordOrBlock");
   BlockOrRecordID = 0;
 
   while (!Stream.AtEndOfStream()) {

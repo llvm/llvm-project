@@ -35,8 +35,7 @@ template <typename T> bool MapASTVisitor::mapDecl(const T *D) {
   if (D->getParentFunctionOrMethod())
     return true;
 
-  llvm::timeTraceProfilerBegin("Mapping declaration",
-                               "emit info from astnode");
+  llvm::timeTraceProfilerBegin("Mapping declaration", "emit info from astnode");
   llvm::SmallString<128> USR;
   // If there is an error generating a USR for the decl, skip this decl.
   if (index::generateUSRForDecl(D, USR))
