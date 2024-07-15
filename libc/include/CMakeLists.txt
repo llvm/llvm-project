@@ -162,6 +162,7 @@ if (LIBC_USE_NEW_HEADER_GEN)
 
   add_gen_header2(
     assert
+    YAML_FILE ../libc/newhdrgen/yaml/assert.yaml
     DEF_FILE assert.h.def
     GEN_HDR assert.h
     DEPENDS
