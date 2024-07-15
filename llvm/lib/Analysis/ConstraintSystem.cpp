@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/ConstraintSystem.h"
+#include "llvm/ADT/Matrix.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 
 #include <string>
 
@@ -26,37 +27,38 @@ bool ConstraintSystem::eliminateUsingFM() {
   //  analysis."
   // Supercomputing'91: Proceedings of the 1991 ACM/
   // IEEE conference on Supercomputing. IEEE, 1991.
-  assert(!Constraints.empty() &&
+  assert(!View.empty() &&
          "should only be called for non-empty constraint systems");
 
   unsigned LastIdx = NumVariables - 1;
 
   // First, either remove the variable in place if it is 0 or add the row to
   // RemainingRows and remove it from the system.
-  SmallVector<SmallVector<Entry, 8>, 4> RemainingRows;
-  for (unsigned R1 = 0; R1 < Constraints.size();) {
-    SmallVector<Entry, 8> &Row1 = Constraints[R1];
+  MatrixStorage<Entry, 32> RemainingRows(View.getMaxColSpan());
+  JaggedArrayView<Entry, 8, 32> RemainingRowsView{RemainingRows};
+  for (unsigned R1 = 0; R1 < View.getRowSpan();) {
+    auto &Row1 = View[R1];
     if (getLastCoefficient(Row1, LastIdx) == 0) {
       if (Row1.size() > 0 && Row1.back().Id == LastIdx)
         Row1.pop_back();
       R1++;
     } else {
-      std::swap(Constraints[R1], Constraints.back());
-      RemainingRows.push_back(std::move(Constraints.back()));
-      Constraints.pop_back();
+      View[R1].swap(View.lastRow());
+      RemainingRowsView.addRow(View.lastRow());
+      View.dropLastRow();
     }
   }
 
   // Process rows where the variable is != 0.
-  unsigned NumRemainingConstraints = RemainingRows.size();
+  unsigned NumRemainingConstraints = RemainingRowsView.getRowSpan();
   for (unsigned R1 = 0; R1 < NumRemainingConstraints; R1++) {
     // FIXME do not use copy
     for (unsigned R2 = R1 + 1; R2 < NumRemainingConstraints; R2++) {
       if (R1 == R2)
         continue;
 
-      int64_t UpperLast = getLastCoefficient(RemainingRows[R2], LastIdx);
-      int64_t LowerLast = getLastCoefficient(RemainingRows[R1], LastIdx);
+      int64_t UpperLast = getLastCoefficient(RemainingRowsView[R2], LastIdx);
+      int64_t LowerLast = getLastCoefficient(RemainingRowsView[R1], LastIdx);
       assert(
           UpperLast != 0 && LowerLast != 0 &&
           "RemainingRows should only contain rows where the variable is != 0");
@@ -74,8 +76,8 @@ bool ConstraintSystem::eliminateUsingFM() {
       SmallVector<Entry, 8> NR;
       unsigned IdxUpper = 0;
       unsigned IdxLower = 0;
-      auto &LowerRow = RemainingRows[LowerR];
-      auto &UpperRow = RemainingRows[UpperR];
+      auto &LowerRow = RemainingRowsView[LowerR];
+      auto &UpperRow = RemainingRowsView[UpperR];
       while (true) {
         if (IdxUpper >= UpperRow.size() || IdxLower >= LowerRow.size())
           break;
@@ -112,9 +114,9 @@ bool ConstraintSystem::eliminateUsingFM() {
       }
       if (NR.empty())
         continue;
-      Constraints.push_back(std::move(NR));
+      View.addRow(std::move(NR));
       // Give up if the new system gets too big.
-      if (Constraints.size() > 500)
+      if (size() > 500)
         return false;
     }
   }
@@ -124,15 +126,15 @@ bool ConstraintSystem::eliminateUsingFM() {
 }
 
 bool ConstraintSystem::mayHaveSolutionImpl() {
-  while (!Constraints.empty() && NumVariables > 1) {
+  while (!View.empty() && NumVariables > 1) {
     if (!eliminateUsingFM())
       return true;
   }
 
-  if (Constraints.empty() || NumVariables > 1)
+  if (View.empty() || NumVariables > 1)
     return true;
 
-  return all_of(Constraints, [](auto &R) {
+  return all_of(View, [](auto &R) {
     if (R.empty())
       return true;
     if (R[0].Id == 0)
@@ -158,10 +160,10 @@ SmallVector<std::string> ConstraintSystem::getVarNamesList() const {
 
 void ConstraintSystem::dump() const {
 #ifndef NDEBUG
-  if (Constraints.empty())
+  if (View.empty())
     return;
   SmallVector<std::string> Names = getVarNamesList();
-  for (const auto &Row : Constraints) {
+  for (const auto &Row : View) {
     SmallVector<std::string, 16> Parts;
     for (const Entry &E : Row) {
       if (E.Id >= NumVariables)

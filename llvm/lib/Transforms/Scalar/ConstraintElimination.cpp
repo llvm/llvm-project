@@ -276,8 +276,10 @@ class ConstraintInfo {
   const DataLayout &DL;
 
 public:
-  ConstraintInfo(const DataLayout &DL, ArrayRef<Value *> FunctionArgs)
-      : UnsignedCS(FunctionArgs), SignedCS(FunctionArgs), DL(DL) {
+  ConstraintInfo(const DataLayout &DL, ArrayRef<Value *> FunctionArgs,
+                 unsigned MaxRows, unsigned MaxColumns)
+      : UnsignedCS(FunctionArgs, MaxRows, MaxColumns),
+        SignedCS(FunctionArgs, MaxRows, MaxColumns), DL(DL) {
     auto &Value2Index = getValue2Index(false);
     // Add Arg > -1 constraints to unsigned system for all function arguments.
     for (Value *Arg : FunctionArgs) {
@@ -898,7 +900,7 @@ void ConstraintInfo::transferToOtherSystem(
 
 static void dumpConstraint(ArrayRef<int64_t> C,
                            const DenseMap<Value *, unsigned> &Value2Index) {
-  ConstraintSystem CS(Value2Index);
+  ConstraintSystem CS(Value2Index, C.size());
   CS.addVariableRowFill(C);
   CS.dump();
 }
@@ -1759,7 +1761,8 @@ dryRun(Function &F, DominatorTree &DT, LoopInfo &LI, ScalarEvolution &SE) {
   // EstimatedRowsA corresponds to SignedCS, and EstimatedRowsB corresponds to
   // UnsignedCS.
   unsigned EstimatedRowsA = 0, EstimatedRowsB = 1;
-  ConstraintInfo Info(F.getDataLayout(), FunctionArgs);
+  ConstraintInfo Info(F.getDataLayout(), FunctionArgs, EstimatedRowsB,
+                      EstimatedColumns);
 
   // First, collect conditions implied by branches and blocks with their
   // Dominator DFS in and out numbers.
@@ -1876,7 +1879,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
   SmallVector<Value *> FunctionArgs;
   for (Value &Arg : F.args())
     FunctionArgs.push_back(&Arg);
-  ConstraintInfo Info(F.getDataLayout(), FunctionArgs);
+  ConstraintInfo Info(F.getDataLayout(), FunctionArgs, EstimatedRows,
+                      EstimatedColumns);
   std::unique_ptr<Module> ReproducerModule(
       DumpReproducers ? new Module(F.getName(), F.getContext()) : nullptr);
 
