@@ -1441,6 +1441,10 @@ static void convertFunctionAttributes(LLVMFuncOp func,
     llvmFunc->addFnAttr(llvm::Attribute::OptimizeNone);
   if (func.getConvergentAttr())
     llvmFunc->addFnAttr(llvm::Attribute::Convergent);
+  if (func.getNoUnwind())
+    llvmFunc->addFnAttr(llvm::Attribute::NoUnwind);
+  if (func.getWillReturn())
+    llvmFunc->addFnAttr(llvm::Attribute::WillReturn);
   convertFunctionMemoryAttributes(func, llvmFunc);
 }
 
