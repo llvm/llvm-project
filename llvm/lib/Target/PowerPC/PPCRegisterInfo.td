@@ -185,7 +185,7 @@ let CoveredBySubRegs = 1 in {
 // Vector registers
 foreach Index = 0-31 in {
   def V#Index : VR<!cast<VF>("VF"#Index), !cast<VF>("VFH"#Index), "v"#Index>,
-                DwarfRegNum<[!add(Index, 77)]>;
+                DwarfRegNum<[!add(Index, 77), !add(Index, 77)]>;
 }
 
 // VSX registers
