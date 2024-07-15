@@ -550,12 +550,15 @@ private:
   LLVMContext &Context;
   MappingConfig Config;
   IntegerType *IntptrTy = nullptr;
+
+  // TODO: Use std::array instead?
   FunctionCallee NsanGetShadowPtrForStore[FTValueType::kNumValueTypes] = {};
   FunctionCallee NsanGetShadowPtrForLoad[FTValueType::kNumValueTypes] = {};
   FunctionCallee NsanCheckValue[FTValueType::kNumValueTypes] = {};
   FunctionCallee NsanFCmpFail[FTValueType::kNumValueTypes] = {};
-  FunctionCallee NsanCopyValues;
-  FunctionCallee NsanSetValueUnknown;
+
+  std::array<FunctionCallee, 4> NsanCopyFunction;
+  std::array<FunctionCallee, 4> NsanSetValueUnknownFunction;
   FunctionCallee NsanGetRawShadowTypePtr;
   FunctionCallee NsanGetRawShadowPtr;
   GlobalValue *NsanShadowRetTag = nullptr;
@@ -634,10 +637,27 @@ NumericalStabilitySanitizer::NumericalStabilitySanitizer(Module &M)
         Attr, VoidTy, VTTy, VTTy, ShadowTy, ShadowTy, Int32Ty, Int1Ty, Int1Ty);
   }
 
-  NsanCopyValues = M.getOrInsertFunction("__nsan_copy_values", Attr, VoidTy,
-                                         PtrTy, PtrTy, IntptrTy);
-  NsanSetValueUnknown = M.getOrInsertFunction("__nsan_set_value_unknown", Attr,
-                                              VoidTy, PtrTy, IntptrTy);
+  NsanCopyFunction[0] =
+      M.getOrInsertFunction("__nsan_copy_4", Attr, VoidTy, PtrTy, PtrTy);
+  NsanCopyFunction[1] =
+      M.getOrInsertFunction("__nsan_copy_8", Attr, VoidTy, PtrTy, PtrTy);
+  NsanCopyFunction[2] =
+      M.getOrInsertFunction("__nsan_copy_16", Attr, VoidTy, PtrTy, PtrTy);
+
+  NsanCopyFunction[3] = M.getOrInsertFunction("__nsan_copy_values", Attr,
+                                              VoidTy, PtrTy, PtrTy, IntptrTy);
+
+  NsanSetValueUnknownFunction[0] =
+      M.getOrInsertFunction("__nsan_set_value_unknown_4", Attr, VoidTy, PtrTy);
+
+  NsanSetValueUnknownFunction[1] =
+      M.getOrInsertFunction("__nsan_set_value_unknown_8", Attr, VoidTy, PtrTy);
+
+  NsanSetValueUnknownFunction[2] =
+      M.getOrInsertFunction("__nsan_set_value_unknown_16", Attr, VoidTy, PtrTy);
+
+  NsanSetValueUnknownFunction[3] = M.getOrInsertFunction(
+      "__nsan_set_value_unknown", Attr, VoidTy, PtrTy, IntptrTy);
 
   // TODO: Add attributes nofree, nosync, readnone, readonly,
   NsanGetRawShadowTypePtr = M.getOrInsertFunction(
@@ -1880,7 +1900,7 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
     }
   }
   // All other stores just reset the shadow value to unknown.
-  Builder.CreateCall(NsanSetValueUnknown, {Dst, ValueSize});
+  Builder.CreateCall(NsanSetValueUnknownFunction.back(), {Dst, ValueSize});
 }
 
 void NumericalStabilitySanitizer::propagateShadowValues(
@@ -2123,21 +2143,56 @@ bool NumericalStabilitySanitizer::sanitizeFunction(
   return !ValueToShadow.empty();
 }
 
+static size_t GetInstrumentationCalleeIdxForMemOp(Value *V,
+                                                  std::size_t MaxIdx) {
+  uint64_t OpSize = 0;
+  if (Constant *C = dyn_cast<Constant>(V)) {
+    auto *CInt = dyn_cast<ConstantInt>(C);
+    if (CInt && CInt->getValue().getBitWidth() <= 64)
+      OpSize = CInt->getValue().getZExtValue();
+  }
+
+  size_t CandidateIdx =
+      OpSize == 4 ? 0 : (OpSize == 8 ? 1 : (OpSize == 16 ? 2 : MaxIdx));
+
+  return CandidateIdx <= MaxIdx ? CandidateIdx : MaxIdx;
+}
+
 // Instrument the memory intrinsics so that they properly modify the shadow
 // memory.
 bool NumericalStabilitySanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
   IRBuilder<> Builder(MI);
   if (auto *M = dyn_cast<MemSetInst>(MI)) {
-    Builder.CreateCall(
-        NsanSetValueUnknown,
-        {/*Address=*/M->getArgOperand(0),
-         /*Size=*/Builder.CreateIntCast(M->getArgOperand(2), IntptrTy, false)});
+    Value *OpSizeValue = M->getArgOperand(2);
+    size_t NrSetValueUnknownFns = NsanSetValueUnknownFunction.size();
+    size_t NsanSetValueUnknownFunctionIdx = GetInstrumentationCalleeIdxForMemOp(
+        OpSizeValue, NrSetValueUnknownFns - 1);
+    if (NsanSetValueUnknownFunctionIdx != NrSetValueUnknownFns - 1)
+      Builder.CreateCall(
+          NsanSetValueUnknownFunction[NsanSetValueUnknownFunctionIdx],
+          {/*Address=*/M->getArgOperand(0)});
+    else
+      Builder.CreateCall(NsanSetValueUnknownFunction.back(),
+                         {/*Address=*/M->getArgOperand(0),
+                          /*Size=*/Builder.CreateIntCast(M->getArgOperand(2),
+                                                         IntptrTy, false)});
+
   } else if (auto *M = dyn_cast<MemTransferInst>(MI)) {
-    Builder.CreateCall(
-        NsanCopyValues,
-        {/*Destination=*/M->getArgOperand(0),
-         /*Source=*/M->getArgOperand(1),
-         /*Size=*/Builder.CreateIntCast(M->getArgOperand(2), IntptrTy, false)});
+    Value *OpSizeValue = M->getArgOperand(2);
+    size_t NrCopyFns = NsanCopyFunction.size();
+    size_t NsanCopyFunctionIdx =
+        GetInstrumentationCalleeIdxForMemOp(OpSizeValue, NrCopyFns - 1);
+
+    if (NsanCopyFunctionIdx != NrCopyFns - 1)
+      Builder.CreateCall(NsanCopyFunction[NsanCopyFunctionIdx],
+                         {/*Destination=*/M->getArgOperand(0),
+                          /*Source=*/M->getArgOperand(1)});
+    else
+      Builder.CreateCall(
+          NsanCopyFunction.back(),
+          {/*Destination=*/M->getArgOperand(0),
+           /*Source=*/M->getArgOperand(1),
+           /*Size=*/Builder.CreateIntCast(OpSizeValue, IntptrTy, false)});
   }
   return false;
 }

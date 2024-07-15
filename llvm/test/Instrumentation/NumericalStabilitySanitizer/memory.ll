@@ -7,15 +7,51 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i1)
 
-define void @call_memcpy_intrinsic(i8* nonnull align 8 dereferenceable(16) %a, i8* nonnull align 8 dereferenceable(16) %b) sanitize_numerical_stability {
-; CHECK-LABEL: @call_memcpy_intrinsic(
+define void @call_memcpy_intrinsic_16bytes(i8* nonnull align 8 dereferenceable(16) %a, i8* nonnull align 8 dereferenceable(16) %b) sanitize_numerical_stability {
+; CHECK-LABEL: @call_memcpy_intrinsic_16bytes(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @__nsan_copy_values(ptr [[A:%.*]], ptr [[B:%.*]], i64 16)
+; CHECK-NEXT:    call void @__nsan_copy_16(ptr [[A:%.*]], ptr [[B:%.*]])
 ; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(16) [[A]], ptr nonnull align 8 dereferenceable(16) [[B]], i64 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
   tail call void @llvm.memcpy.p0i8.p0i8.i64(ptr nonnull align 8 dereferenceable(16) %a, ptr nonnull align 8 dereferenceable(16) %b, i64 16, i1 false)
+  ret void
+}
+
+define void @call_memcpy_intrinsic_8bytes(i8* nonnull align 8 dereferenceable(16) %a, i8* nonnull align 8 dereferenceable(16) %b) sanitize_numerical_stability {
+; CHECK-LABEL: @call_memcpy_intrinsic_8bytes(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @__nsan_copy_8(ptr [[A:%.*]], ptr [[B:%.*]])
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(16) [[A]], ptr nonnull align 8 dereferenceable(16) [[B]], i64 8, i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(ptr nonnull align 8 dereferenceable(16) %a, ptr nonnull align 8 dereferenceable(16) %b, i64 8, i1 false)
+  ret void
+}
+
+define void @call_memcpy_intrinsic_4bytes(i8* nonnull align 8 dereferenceable(16) %a, i8* nonnull align 8 dereferenceable(16) %b) sanitize_numerical_stability {
+; CHECK-LABEL: @call_memcpy_intrinsic_4bytes(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @__nsan_copy_4(ptr [[A:%.*]], ptr [[B:%.*]])
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(16) [[A]], ptr nonnull align 8 dereferenceable(16) [[B]], i64 4, i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(ptr nonnull align 8 dereferenceable(16) %a, ptr nonnull align 8 dereferenceable(16) %b, i64 4, i1 false)
+  ret void
+}
+
+define void @call_memcpy_intrinsic(i8* nonnull align 8 dereferenceable(16) %a, i8* nonnull align 8 dereferenceable(16) %b) sanitize_numerical_stability {
+; CHECK-LABEL: @call_memcpy_intrinsic(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @__nsan_copy_values(ptr [[A:%.*]], ptr [[B:%.*]], i64 15)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(16) [[A]], ptr nonnull align 8 dereferenceable(16) [[B]], i64 15, i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(ptr nonnull align 8 dereferenceable(16) %a, ptr nonnull align 8 dereferenceable(16) %b, i64 15, i1 false)
   ret void
 }
 
@@ -32,6 +68,53 @@ entry:
   ret void
 }
 
+define void @call_memset_intrinsic_16bytes(i8* nonnull align 8 dereferenceable(16) %a) sanitize_numerical_stability {
+; CHECK-LABEL: @call_memset_intrinsic_16bytes(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @__nsan_set_value_unknown_16(ptr [[A:%.*]])
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr nonnull align 8 dereferenceable(16) [[A]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memset.p0.i64(ptr nonnull align 8 dereferenceable(16) %a, i8 0, i64 16, i1 false)
+  ret void
+}
+
+define void @call_memset_intrinsic_8bytes(i8* nonnull align 8 dereferenceable(16) %a) sanitize_numerical_stability {
+; CHECK-LABEL: @call_memset_intrinsic_8bytes(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @__nsan_set_value_unknown_8(ptr [[A:%.*]])
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr nonnull align 8 dereferenceable(16) [[A]], i8 0, i64 8, i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memset.p0.i64(ptr nonnull align 8 dereferenceable(16) %a, i8 0, i64 8, i1 false)
+  ret void
+}
+
+define void @call_memset_intrinsic_4bytes(i8* nonnull align 8 dereferenceable(16) %a) sanitize_numerical_stability {
+; CHECK-LABEL: @call_memset_intrinsic_4bytes(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @__nsan_set_value_unknown_4(ptr [[A:%.*]])
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr nonnull align 8 dereferenceable(16) [[A]], i8 0, i64 4, i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memset.p0.i64(ptr nonnull align 8 dereferenceable(16) %a, i8 0, i64 4, i1 false)
+  ret void
+}
+
+define void @call_memset_intrinsic(i8* nonnull align 8 dereferenceable(16) %a) sanitize_numerical_stability {
+; CHECK-LABEL: @call_memset_intrinsic(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @__nsan_set_value_unknown(ptr [[A:%.*]], i64 15)
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr nonnull align 8 dereferenceable(16) [[A]], i8 0, i64 15, i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memset.p0.i64(ptr nonnull align 8 dereferenceable(16) %a, i8 0, i64 15, i1 false)
+  ret void
+}
 
 define void @transfer_float(float* %dst, float* %src) sanitize_numerical_stability {
 ; CHECK-LABEL: @transfer_float(
