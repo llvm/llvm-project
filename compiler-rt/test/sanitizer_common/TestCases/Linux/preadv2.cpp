@@ -1,6 +1,6 @@
 // RUN: %clangxx -O0 %s -o %t
 
-// UNSUPPORTED: android
+// REQUIRES: glibc
 
 #include <assert.h>
 #include <fcntl.h>
