@@ -400,6 +400,14 @@ number of cross compilers, or may only support a native target.
   option is only supported on AArch64 and RISC-V. On RISC-V, this option also
   prints out the ISA string of enabled extensions.
 
+.. option:: --print-supported-extensions
+
+  Prints the list of all extensions that are supported for every CPU target
+  for an architecture (specified through ``--target=<architecture>`` or
+  :option:`-arch` ``<architecture>``). If no target is specified, the system
+  default target will be used. Currently, this option is only supported on
+  AArch64 and RISC-V.
+
 Code Generation Options
 ~~~~~~~~~~~~~~~~~~~~~~~
 
