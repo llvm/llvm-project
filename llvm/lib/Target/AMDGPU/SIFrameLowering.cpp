@@ -679,12 +679,6 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
         break;
       }
     }
-
-    // FIXME: We can spill incoming arguments and restore at the end of the
-    // prolog.
-    if (!ScratchWaveOffsetReg)
-      report_fatal_error(
-          "could not find temporary scratch offset register in prolog");
   } else {
     ScratchWaveOffsetReg = PreloadedScratchWaveOffsetReg;
   }
