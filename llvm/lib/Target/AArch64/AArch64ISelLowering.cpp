@@ -732,10 +732,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   for (auto Op : {ISD::FREM,         ISD::FPOW,          ISD::FPOWI,
                   ISD::FCOS,         ISD::FSIN,          ISD::FSINCOS,
+                  ISD::FACOS,        ISD::FASIN,         ISD::FATAN,
+                  ISD::FCOSH,        ISD::FSINH,         ISD::FTANH,
                   ISD::FTAN,         ISD::FEXP,          ISD::FEXP2,
                   ISD::FEXP10,       ISD::FLOG,          ISD::FLOG2,
                   ISD::FLOG10,       ISD::STRICT_FREM,   ISD::STRICT_FPOW,
                   ISD::STRICT_FPOWI, ISD::STRICT_FCOS,   ISD::STRICT_FSIN,
+                  ISD::STRICT_FACOS, ISD::STRICT_FASIN,  ISD::STRICT_FATAN,
+                  ISD::STRICT_FCOSH, ISD::STRICT_FSINH,  ISD::STRICT_FTANH,
                   ISD::STRICT_FEXP,  ISD::STRICT_FEXP2,  ISD::STRICT_FLOG,
                   ISD::STRICT_FLOG2, ISD::STRICT_FLOG10, ISD::STRICT_FTAN}) {
     setOperationAction(Op, MVT::f16, Promote);
@@ -1176,6 +1180,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
           ISD::FNEG,              ISD::FABS,           ISD::FCEIL,
           ISD::FSQRT,             ISD::FFLOOR,         ISD::FNEARBYINT,
           ISD::FSIN,              ISD::FCOS,           ISD::FTAN,
+          ISD::FASIN,             ISD::FACOS,          ISD::FATAN,
+          ISD::FSINH,             ISD::FCOSH,          ISD::FTANH,
           ISD::FPOW,              ISD::FLOG,           ISD::FLOG2,          
           ISD::FLOG10,            ISD::FEXP,           ISD::FEXP2,
           ISD::FEXP10,            ISD::FRINT,          ISD::FROUND,
@@ -1615,6 +1621,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FSIN, VT, Expand);
       setOperationAction(ISD::FSINCOS, VT, Expand);
       setOperationAction(ISD::FTAN, VT, Expand);
+      setOperationAction(ISD::FACOS, VT, Expand);
+      setOperationAction(ISD::FASIN, VT, Expand);
+      setOperationAction(ISD::FATAN, VT, Expand);
+      setOperationAction(ISD::FCOSH, VT, Expand);
+      setOperationAction(ISD::FSINH, VT, Expand);
+      setOperationAction(ISD::FTANH, VT, Expand);
       setOperationAction(ISD::FEXP, VT, Expand);
       setOperationAction(ISD::FEXP2, VT, Expand);
       setOperationAction(ISD::FEXP10, VT, Expand);
@@ -1822,6 +1834,12 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
     setOperationAction(ISD::FSIN, VT, Expand);
     setOperationAction(ISD::FCOS, VT, Expand);
     setOperationAction(ISD::FTAN, VT, Expand);
+    setOperationAction(ISD::FASIN, VT, Expand);
+    setOperationAction(ISD::FACOS, VT, Expand);
+    setOperationAction(ISD::FATAN, VT, Expand);
+    setOperationAction(ISD::FSINH, VT, Expand);
+    setOperationAction(ISD::FCOSH, VT, Expand);
+    setOperationAction(ISD::FTANH, VT, Expand);
     setOperationAction(ISD::FPOW, VT, Expand);
     setOperationAction(ISD::FLOG, VT, Expand);
     setOperationAction(ISD::FLOG2, VT, Expand);
