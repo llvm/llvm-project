@@ -35,14 +35,14 @@ public:
       DenseMap<uint32_t, yaml::bolt::BinaryFunctionProfile *> &IdToYAMLBF);
 
   /// Adjacency map for binary functions in the call graph.
-  std::unordered_map<BinaryFunction *, std::set<BinaryFunction *>>
+  DenseMap<BinaryFunction *, std::set<BinaryFunction *>>
       BFAdjacencyMap;
 
   /// Maps neighbor hashes to binary functions.
-  std::unordered_map<uint64_t, std::vector<BinaryFunction *>> NeighborHashToBFs;
+  DenseMap<uint64_t, std::vector<BinaryFunction *>> NeighborHashToBFs;
 
   /// Adjacency map for profile functions in the call graph.
-  std::unordered_map<yaml::bolt::BinaryFunctionProfile *,
+  DenseMap<yaml::bolt::BinaryFunctionProfile *,
                      std::set<yaml::bolt::BinaryFunctionProfile *>>
       YamlBFAdjacencyMap;
 };

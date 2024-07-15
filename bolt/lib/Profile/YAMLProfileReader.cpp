@@ -682,21 +682,21 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   // Creates a vector of lamdas that preprocess binary functions for function
   // matching to avoid multiple preprocessing passes over binary functions in
   // different function matching techniques.
-  std::vector<std::function<void(BinaryFunction *)>> BFPreprocessingLambdas;
+  std::vector<std::function<void(BinaryFunction *)>> BFPreprocessingFuncs;
   if (opts::MatchProfileWithFunctionHash) {
-    BFPreprocessingLambdas.push_back([&](BinaryFunction *BF) {
+    BFPreprocessingFuncs.push_back([&](BinaryFunction *BF) {
       BF->computeHash(YamlBP.Header.IsDFSOrder, YamlBP.Header.HashFunction);
     });
   }
   if (opts::MatchWithCallGraph) {
-    BFPreprocessingLambdas.push_back(
+    BFPreprocessingFuncs.push_back(
         [&](BinaryFunction *BF) { CGMatcher.addBFCGEdges(BC, YamlBP, BF); });
   }
 
   // Preprocesses binary functions.
   for (BinaryFunction *BF : BC.getAllBinaryFunctions())
-    for (auto Lambda : BFPreprocessingLambdas)
-      Lambda(BF);
+    for (auto BFPreprocessingFunc : BFPreprocessingFuncs)
+      BFPreprocessingFunc(BF);
 
   if (!opts::MatchProfileWithFunctionHash && !opts::IgnoreHash) {
     for (BinaryFunction *BF : ProfileBFs) {
