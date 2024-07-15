@@ -10,13 +10,14 @@
 // RUN: %clang -Ofast -fno-strict-aliasing -### %s 2>&1 | FileCheck -check-prefix=CHECK-OFAST-NO-STRICT-ALIASING %s
 // RUN: %clang -Ofast -fno-vectorize -### %s 2>&1 | FileCheck -check-prefix=CHECK-OFAST-NO-VECTORIZE %s
 
-// CHECK-OFAST: warning: argument '-Ofast' is deprecated; use '-O3', possibly with '-ffast-math'
+// CHECK-OFAST: argument '-Ofast' is deprecated; use '-O3 -ffast-math' instead, or just '-O3' if you do not intend to enable non-conforming optimizations
 // CHECK-OFAST: -cc1
 // CHECK-OFAST-NOT: -relaxed-aliasing
 // CHECK-OFAST: -ffast-math
 // CHECK-OFAST: -Ofast
 // CHECK-OFAST: -vectorize-loops
 
+// CHECK-OFAST-O2-NOT: argument '-Ofast' is deprecated; use '-O3 -ffast-math' instead, or just '-O3' if you do not intend to enable non-conforming optimizations
 // CHECK-OFAST-O2: -cc1
 // CHECK-OFAST-O2-ALIASING-NOT: -relaxed-aliasing
 // CHECK-OFAST-O2-ALIASING-MSVC: -relaxed-aliasing
@@ -24,21 +25,21 @@
 // CHECK-OFAST-O2-NOT: -Ofast
 // CHECK-OFAST-O2: -vectorize-loops
 
-// CHECK-OFAST-NO-FAST-MATH: warning: argument '-Ofast' is deprecated; use '-O3', possibly with '-ffast-math'
+// CHECK-OFAST-NO-FAST-MATH: argument '-Ofast' is deprecated; use '-O3 -ffast-math' instead, or just '-O3' if you do not intend to enable non-conforming optimizations
 // CHECK-OFAST-NO-FAST-MATH: -cc1
 // CHECK-OFAST-NO-FAST-MATH-NOT: -relaxed-aliasing
 // CHECK-OFAST-NO-FAST-MATH-NOT: -ffast-math
 // CHECK-OFAST-NO-FAST-MATH: -Ofast
 // CHECK-OFAST-NO-FAST-MATH: -vectorize-loops
 
-// CHECK-OFAST-NO-STRICT-ALIASING: warning: argument '-Ofast' is deprecated; use '-O3', possibly with '-ffast-math'
+// CHECK-OFAST-NO-STRICT-ALIASING: argument '-Ofast' is deprecated; use '-O3 -ffast-math' instead, or just '-O3' if you do not intend to enable non-conforming optimizations
 // CHECK-OFAST-NO-STRICT-ALIASING: -cc1
 // CHECK-OFAST-NO-STRICT-ALIASING: -relaxed-aliasing
 // CHECK-OFAST-NO-STRICT-ALIASING: -ffast-math
 // CHECK-OFAST-NO-STRICT-ALIASING: -Ofast
 // CHECK-OFAST-NO-STRICT-ALIASING: -vectorize-loops
 
-// CHECK-OFAST-NO-VECTORIZE: warning: argument '-Ofast' is deprecated; use '-O3', possibly with '-ffast-math'
+// CHECK-OFAST-NO-VECTORIZE: argument '-Ofast' is deprecated; use '-O3 -ffast-math' instead, or just '-O3' if you do not intend to enable non-conforming optimizations
 // CHECK-OFAST-NO-VECTORIZE: -cc1
 // CHECK-OFAST-NO-VECTORIZE-NOT: -relaxed-aliasing
 // CHECK-OFAST-NO-VECTORIZE: -ffast-math

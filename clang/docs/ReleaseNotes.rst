@@ -470,7 +470,11 @@ New Compiler Flags
 Deprecated Compiler Flags
 -------------------------
 
-- ``-Ofast`` is deprecated in favor of ``-O3``, possibly combined with ``-ffast-math``.
+- The ``-Ofast`` command-line option has been deprecated. This option both
+  enables the ``-O3`` optimization-level, as well as enabling non-standard
+  ``-ffast-math`` behaviors. As such, it is somewhat misleading as an
+  "optimization level". Users are advised to switch to ``-O3 -ffast-math`` if
+  the use of non-standard math behavior is intended, and ``-O3`` otherwise.
   See `RFC <https://discourse.llvm.org/t/rfc-deprecate-ofast/78687>`_ for details.
 
 Modified Compiler Flags

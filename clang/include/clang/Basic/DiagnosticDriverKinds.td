@@ -443,7 +443,8 @@ def warn_drv_deprecated_arg_no_relaxed_template_template_args : Warning<
   "argument '-fno-relaxed-template-template-args' is deprecated">,
   InGroup<DeprecatedNoRelaxedTemplateTemplateArgs>;
 def warn_drv_deprecated_arg_ofast : Warning<
-  "argument '-Ofast' is deprecated; use '-O3', possibly with '-ffast-math'">,
+  "argument '-Ofast' is deprecated; use '-O3 -ffast-math' instead,"
+  " or just '-O3' if you do not intend to enable non-conforming optimizations">,
   InGroup<DeprecatedOFast>;
 def warn_drv_deprecated_custom : Warning<
   "argument '%0' is deprecated, %1">, InGroup<Deprecated>;
