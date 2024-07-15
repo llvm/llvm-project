@@ -336,10 +336,7 @@ TEST(UniqueFunctionTest, MovedFromStateIsDestroyedCorrectly) {
   static int NumOfDestructorsCalled = 0;
   struct State {
     State() = default;
-    State(const State &) = delete;
     State(State &&) { ++NumOfMovesCalled; }
-    State &operator=(const State &) = delete;
-    State &operator=(State &&Rhs) { return *new (this) State{std::move(Rhs)}; }
     ~State() { ++NumOfDestructorsCalled; }
   };
   {
@@ -347,6 +344,7 @@ TEST(UniqueFunctionTest, MovedFromStateIsDestroyedCorrectly) {
     unique_function<void()> CapturingFunctionMoved{
         std::move(CapturingFunction)};
   }
+  printf("%i, %i\n", NumOfMovesCalled, NumOfDestructorsCalled);
   EXPECT_EQ(NumOfDestructorsCalled, 1 + NumOfMovesCalled);
 }
 
