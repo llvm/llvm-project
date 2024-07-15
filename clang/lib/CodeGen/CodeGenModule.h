@@ -563,6 +563,9 @@ private:
 
   bool isTriviallyRecursive(const FunctionDecl *F);
   bool shouldEmitFunction(GlobalDecl GD);
+  // Whether a global variable should be emitted by CUDA/HIP host/device
+  // related attributes.
+  bool shouldEmitCUDAGlobalVar(const VarDecl *VD) const;
   bool shouldOpportunisticallyEmitVTables();
   /// Map used to be sure we don't emit the same CompoundLiteral twice.
   llvm::DenseMap<const CompoundLiteralExpr *, llvm::GlobalVariable *>

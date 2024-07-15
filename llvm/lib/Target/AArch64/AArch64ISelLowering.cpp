@@ -1010,12 +1010,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
   }
 
-  if (Subtarget->getTargetTriple().isOSMSVCRT()) {
-    // MSVCRT doesn't have powi; fall back to pow
-    setLibcallName(RTLIB::POWI_F32, nullptr);
-    setLibcallName(RTLIB::POWI_F64, nullptr);
-  }
-
   // Make floating-point constants legal for the large code model, so they don't
   // become loads from the constant pool.
   if (Subtarget->isTargetMachO() && TM.getCodeModel() == CodeModel::Large) {
@@ -9233,10 +9227,24 @@ AArch64TargetLowering::LowerDarwinGlobalTLSAddress(SDValue Op,
   // normal AArch64 call node: x0 takes the address of the descriptor, and
   // returns the address of the variable in this thread.
   Chain = DAG.getCopyToReg(Chain, DL, AArch64::X0, DescAddr, SDValue());
-  Chain =
-      DAG.getNode(AArch64ISD::CALL, DL, DAG.getVTList(MVT::Other, MVT::Glue),
-                  Chain, FuncTLVGet, DAG.getRegister(AArch64::X0, MVT::i64),
-                  DAG.getRegisterMask(Mask), Chain.getValue(1));
+
+  unsigned Opcode = AArch64ISD::CALL;
+  SmallVector<SDValue, 8> Ops;
+  Ops.push_back(Chain);
+  Ops.push_back(FuncTLVGet);
+
+  // With ptrauth-calls, the tlv access thunk pointer is authenticated (IA, 0).
+  if (DAG.getMachineFunction().getFunction().hasFnAttribute("ptrauth-calls")) {
+    Opcode = AArch64ISD::AUTH_CALL;
+    Ops.push_back(DAG.getTargetConstant(AArch64PACKey::IA, DL, MVT::i32));
+    Ops.push_back(DAG.getTargetConstant(0, DL, MVT::i64)); // Integer Disc.
+    Ops.push_back(DAG.getRegister(AArch64::NoRegister, MVT::i64)); // Addr Disc.
+  }
+
+  Ops.push_back(DAG.getRegister(AArch64::X0, MVT::i64));
+  Ops.push_back(DAG.getRegisterMask(Mask));
+  Ops.push_back(Chain.getValue(1));
+  Chain = DAG.getNode(Opcode, DL, DAG.getVTList(MVT::Other, MVT::Glue), Ops);
   return DAG.getCopyFromReg(Chain, DL, AArch64::X0, PtrVT, Chain.getValue(1));
 }
 
@@ -17744,6 +17752,12 @@ AArch64TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
   // fold (sdiv X, pow2)
   if ((VT != MVT::i32 && VT != MVT::i64) ||
       !(Divisor.isPowerOf2() || Divisor.isNegatedPowerOf2()))
+    return SDValue();
+
+  // If the divisor is 2 or -2, the default expansion is better. It will add
+  // (N->getValueType(0) >> (BitWidth - 1)) to it before shifting right.
+  if (Divisor == 2 ||
+      Divisor == APInt(Divisor.getBitWidth(), -2, /*isSigned*/ true))
     return SDValue();
 
   return TargetLowering::buildSDIVPow2WithCMov(N, Divisor, DAG, Created);

@@ -1,11 +1,5 @@
 header: stdio.h
 macros:
-  - macro_name: _IONBF
-    macro_value: 2
-  - macro_name: _IOLBF
-    macro_value: 1
-  - macro_name: _IOFBF
-    macro_value: 0
   - macro_name: stdout
     macro_value: stdout
   - macro_name: stdin

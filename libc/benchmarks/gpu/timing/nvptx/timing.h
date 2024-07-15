@@ -16,7 +16,7 @@
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // Returns the overhead associated with calling the profiling region. This
 // allows us to substract the constant-time overhead from the latency to
@@ -94,6 +94,6 @@ static LIBC_INLINE uint64_t latency(F f, T1 t1, T2 t2) {
 
   return stop - start;
 }
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_UTILS_GPU_TIMING_NVPTX

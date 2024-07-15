@@ -38,6 +38,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/CallingConv.h"
@@ -178,12 +179,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setLibcallName(LC.Op, LC.Name);
       setLibcallCallingConv(LC.Op, LC.CC);
     }
-  }
-
-  if (Subtarget.getTargetTriple().isOSMSVCRT()) {
-    // MSVCRT doesn't have powi; fall back to pow
-    setLibcallName(RTLIB::POWI_F32, nullptr);
-    setLibcallName(RTLIB::POWI_F64, nullptr);
   }
 
   if (Subtarget.canUseCMPXCHG16B())
@@ -839,6 +834,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FCOS   , MVT::f80, Expand);
     setOperationAction(ISD::FSINCOS, MVT::f80, Expand);
     setOperationAction(ISD::FTAN   , MVT::f80, Expand);
+    setOperationAction(ISD::FASIN  , MVT::f80, Expand);
+    setOperationAction(ISD::FACOS  , MVT::f80, Expand);
+    setOperationAction(ISD::FATAN  , MVT::f80, Expand);
+    setOperationAction(ISD::FSINH  , MVT::f80, Expand);
+    setOperationAction(ISD::FCOSH  , MVT::f80, Expand);
+    setOperationAction(ISD::FTANH  , MVT::f80, Expand);
     // clang-format on
 
     setOperationAction(ISD::FFLOOR, MVT::f80, Expand);
@@ -2443,18 +2444,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SADDO_CARRY, VT, Custom);
     setOperationAction(ISD::SSUBO_CARRY, VT, Custom);
   }
-
-  if (!Subtarget.is64Bit()) {
-    // These libcalls are not available in 32-bit.
-    setLibcallName(RTLIB::SHL_I128, nullptr);
-    setLibcallName(RTLIB::SRL_I128, nullptr);
-    setLibcallName(RTLIB::SRA_I128, nullptr);
-    setLibcallName(RTLIB::MUL_I128, nullptr);
-    // The MULO libcall is not part of libgcc, only compiler-rt.
-    setLibcallName(RTLIB::MULO_I64, nullptr);
-  }
-  // The MULO libcall is not part of libgcc, only compiler-rt.
-  setLibcallName(RTLIB::MULO_I128, nullptr);
 
   // Combine sin / cos into _sincos_stret if it is available.
   if (getLibcallName(RTLIB::SINCOS_STRET_F32) != nullptr &&
@@ -46193,6 +46182,32 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // Exploits AVX2 VSHLV/VSRLV instructions for efficient unsigned vector shifts
+  // with out-of-bounds clamping.
+
+  // Unlike general shift instructions (SHL/SRL), AVX2's VSHLV/VSRLV handle
+  // shift amounts exceeding the element bitwidth. VSHLV/VSRLV clamps the amount
+  // to bitwidth-1 for unsigned shifts, effectively performing a maximum left
+  // shift of bitwidth-1 positions. and returns zero for unsigned right shifts
+  // exceeding bitwidth-1.
+  if (N->getOpcode() == ISD::VSELECT &&
+      (LHS.getOpcode() == ISD::SRL || LHS.getOpcode() == ISD::SHL) &&
+      supportedVectorVarShift(VT, Subtarget, LHS.getOpcode())) {
+    APInt SV;
+    // fold select(icmp_ult(amt,BW),shl(x,amt),0) -> avx2 psllv(x,amt)
+    // fold select(icmp_ult(amt,BW),srl(x,amt),0) -> avx2 psrlv(x,amt)
+    if (Cond.getOpcode() == ISD::SETCC &&
+        Cond.getOperand(0) == LHS.getOperand(1) &&
+        cast<CondCodeSDNode>(Cond.getOperand(2))->get() == ISD::SETULT &&
+        ISD::isConstantSplatVector(Cond.getOperand(1).getNode(), SV) &&
+        ISD::isConstantSplatVectorAllZeros(RHS.getNode()) &&
+        SV == VT.getScalarSizeInBits()) {
+      return DAG.getNode(LHS.getOpcode() == ISD::SRL ? X86ISD::VSRLV
+                                                     : X86ISD::VSHLV,
+                         DL, VT, LHS.getOperand(0), LHS.getOperand(1));
+    }
+  }
+
   // Early exit check
   if (!TLI.isTypeLegal(VT) || isSoftF16(VT, Subtarget))
     return SDValue();
@@ -47955,10 +47970,10 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
 // of a MULHU/MULHS. There isn't a way to convey this to the generic DAG
 // combiner.
 static SDValue combineShiftToPMULH(SDNode *N, SelectionDAG &DAG,
+                                   const SDLoc &DL,
                                    const X86Subtarget &Subtarget) {
   assert((N->getOpcode() == ISD::SRL || N->getOpcode() == ISD::SRA) &&
            "SRL or SRA node is required here!");
-  SDLoc DL(N);
 
   if (!Subtarget.hasSSE2())
     return SDValue();
@@ -48003,11 +48018,39 @@ static SDValue combineShiftToPMULH(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ExtOpc, DL, VT, Mulh);
 }
 
-static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG,
+                                const X86Subtarget &Subtarget) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
   EVT VT = N0.getValueType();
+  SDLoc DL(N);
+
+  // Exploits AVX2 VSHLV/VSRLV instructions for efficient unsigned vector shifts
+  // with out-of-bounds clamping.
+  if (N0.getOpcode() == ISD::VSELECT &&
+      supportedVectorVarShift(VT, Subtarget, ISD::SHL)) {
+    SDValue Cond = N0.getOperand(0);
+    SDValue N00 = N0.getOperand(1);
+    SDValue N01 = N0.getOperand(2);
+    APInt SV;
+    // fold shl(select(icmp_ult(amt,BW),x,0),amt) -> avx2 psllv(x,amt)
+    if (Cond.getOpcode() == ISD::SETCC && Cond.getOperand(0) == N1 &&
+        cast<CondCodeSDNode>(Cond.getOperand(2))->get() == ISD::SETULT &&
+        ISD::isConstantSplatVector(Cond.getOperand(1).getNode(), SV) &&
+        ISD::isConstantSplatVectorAllZeros(N01.getNode()) &&
+        SV == VT.getScalarSizeInBits()) {
+      return DAG.getNode(X86ISD::VSHLV, DL, VT, N00, N1);
+    }
+    // fold shl(select(icmp_uge(amt,BW),0,x),amt) -> avx2 psllv(x,amt)
+    if (Cond.getOpcode() == ISD::SETCC && Cond.getOperand(0) == N1 &&
+        cast<CondCodeSDNode>(Cond.getOperand(2))->get() == ISD::SETUGE &&
+        ISD::isConstantSplatVector(Cond.getOperand(1).getNode(), SV) &&
+        ISD::isConstantSplatVectorAllZeros(N00.getNode()) &&
+        SV == VT.getScalarSizeInBits()) {
+      return DAG.getNode(X86ISD::VSHLV, DL, VT, N01, N1);
+    }
+  }
 
   // fold (shl (and (setcc_c), c1), c2) -> (and setcc_c, (c1 << c2))
   // since the result of setcc_c is all zero's or all ones.
@@ -48039,10 +48082,8 @@ static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG) {
                N00.getOperand(0).getOpcode() == X86ISD::SETCC_CARRY) {
       MaskOK = Mask.isIntN(N00.getOperand(0).getValueSizeInBits());
     }
-    if (MaskOK && Mask != 0) {
-      SDLoc DL(N);
+    if (MaskOK && Mask != 0)
       return DAG.getNode(ISD::AND, DL, VT, N00, DAG.getConstant(Mask, DL, VT));
-    }
   }
 
   return SDValue();
@@ -48050,22 +48091,22 @@ static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG) {
 
 static SDValue combineShiftRightArithmetic(SDNode *N, SelectionDAG &DAG,
                                            const X86Subtarget &Subtarget) {
+  using namespace llvm::SDPatternMatch;
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N0.getValueType();
   unsigned Size = VT.getSizeInBits();
+  SDLoc DL(N);
 
-  if (SDValue V = combineShiftToPMULH(N, DAG, Subtarget))
+  if (SDValue V = combineShiftToPMULH(N, DAG, DL, Subtarget))
     return V;
 
-  APInt ShiftAmt;
-  if (supportedVectorVarShift(VT, Subtarget, ISD::SRA) &&
-      N1.getOpcode() == ISD::UMIN &&
-      ISD::isConstantSplatVector(N1.getOperand(1).getNode(), ShiftAmt) &&
-      ShiftAmt == VT.getScalarSizeInBits() - 1) {
-    SDValue ShrAmtVal = N1.getOperand(0);
-    SDLoc DL(N);
-    return DAG.getNode(X86ISD::VSRAV, DL, N->getVTList(), N0, ShrAmtVal);
+  // fold sra(x,umin(amt,bw-1)) -> avx2 psrav(x,amt)
+  if (supportedVectorVarShift(VT, Subtarget, ISD::SRA)) {
+    SDValue ShrAmtVal;
+    if (sd_match(N1, m_UMin(m_Value(ShrAmtVal),
+                            m_SpecificInt(VT.getScalarSizeInBits() - 1))))
+      return DAG.getNode(X86ISD::VSRAV, DL, VT, N0, ShrAmtVal);
   }
 
   // fold (SRA (SHL X, ShlConst), SraConst)
@@ -48103,7 +48144,6 @@ static SDValue combineShiftRightArithmetic(SDNode *N, SelectionDAG &DAG,
     // Only deal with (Size - ShlConst) being equal to 8, 16 or 32.
     if (ShiftSize >= Size || ShlConst != Size - ShiftSize)
       continue;
-    SDLoc DL(N);
     SDValue NN =
         DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, N00, DAG.getValueType(SVT));
     if (SraConst.eq(ShlConst))
@@ -48123,9 +48163,36 @@ static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N0.getValueType();
+  SDLoc DL(N);
 
-  if (SDValue V = combineShiftToPMULH(N, DAG, Subtarget))
+  if (SDValue V = combineShiftToPMULH(N, DAG, DL, Subtarget))
     return V;
+
+  // Exploits AVX2 VSHLV/VSRLV instructions for efficient unsigned vector shifts
+  // with out-of-bounds clamping.
+  if (N0.getOpcode() == ISD::VSELECT &&
+      supportedVectorVarShift(VT, Subtarget, ISD::SRL)) {
+    SDValue Cond = N0.getOperand(0);
+    SDValue N00 = N0.getOperand(1);
+    SDValue N01 = N0.getOperand(2);
+    APInt SV;
+    // fold srl(select(icmp_ult(amt,BW),x,0),amt) -> avx2 psrlv(x,amt)
+    if (Cond.getOpcode() == ISD::SETCC && Cond.getOperand(0) == N1 &&
+        cast<CondCodeSDNode>(Cond.getOperand(2))->get() == ISD::SETULT &&
+        ISD::isConstantSplatVector(Cond.getOperand(1).getNode(), SV) &&
+        ISD::isConstantSplatVectorAllZeros(N01.getNode()) &&
+        SV == VT.getScalarSizeInBits()) {
+      return DAG.getNode(X86ISD::VSRLV, DL, VT, N00, N1);
+    }
+    // fold srl(select(icmp_uge(amt,BW),0,x),amt) -> avx2 psrlv(x,amt)
+    if (Cond.getOpcode() == ISD::SETCC && Cond.getOperand(0) == N1 &&
+        cast<CondCodeSDNode>(Cond.getOperand(2))->get() == ISD::SETUGE &&
+        ISD::isConstantSplatVector(Cond.getOperand(1).getNode(), SV) &&
+        ISD::isConstantSplatVectorAllZeros(N00.getNode()) &&
+        SV == VT.getScalarSizeInBits()) {
+      return DAG.getNode(X86ISD::VSRLV, DL, VT, N01, N1);
+    }
+  }
 
   // Only do this on the last DAG combine as it can interfere with other
   // combines.
@@ -48162,7 +48229,6 @@ static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG,
   if ((OldMaskSize > 8 && NewMaskSize <= 8) ||
       (OldMaskSize > 32 && NewMaskSize <= 32)) {
     // srl (and X, AndC), ShiftC --> and (srl X, ShiftC), (AndC >> ShiftC)
-    SDLoc DL(N);
     SDValue NewMask = DAG.getConstant(NewMaskVal, DL, VT);
     SDValue NewShift = DAG.getNode(ISD::SRL, DL, VT, N0.getOperand(0), N1);
     return DAG.getNode(ISD::AND, DL, VT, NewShift, NewMask);
@@ -57625,7 +57691,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::SBB:         return combineSBB(N, DAG);
   case X86ISD::ADC:         return combineADC(N, DAG, DCI);
   case ISD::MUL:            return combineMul(N, DAG, DCI, Subtarget);
-  case ISD::SHL:            return combineShiftLeft(N, DAG);
+  case ISD::SHL:            return combineShiftLeft(N, DAG, Subtarget);
   case ISD::SRA:            return combineShiftRightArithmetic(N, DAG, Subtarget);
   case ISD::SRL:            return combineShiftRightLogical(N, DAG, DCI, Subtarget);
   case ISD::AND:            return combineAnd(N, DAG, DCI, Subtarget);

@@ -87,17 +87,25 @@ private:
   bool live;
 };
 
+class WasmFileBase : public InputFile {
+public:
+  explicit WasmFileBase(Kind k, MemoryBufferRef m);
+
+  // Returns the underlying wasm file.
+  const WasmObjectFile *getWasmObj() const { return wasmObj.get(); }
+
+protected:
+  std::unique_ptr<WasmObjectFile> wasmObj;
+};
+
 // .o file (wasm object file)
-class ObjFile : public InputFile {
+class ObjFile : public WasmFileBase {
 public:
   ObjFile(MemoryBufferRef m, StringRef archiveName, bool lazy = false);
   static bool classof(const InputFile *f) { return f->kind() == ObjectKind; }
 
   void parse(bool ignoreComdats = false);
   void parseLazy();
-
-  // Returns the underlying wasm file.
-  const WasmObjectFile *getWasmObj() const { return wasmObj.get(); }
 
   uint32_t calcNewIndex(const WasmRelocation &reloc) const;
   uint64_t calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
@@ -139,14 +147,15 @@ private:
 
   bool isExcludedByComdat(const InputChunk *chunk) const;
   void addLegacyIndirectFunctionTableIfNeeded(uint32_t tableSymbolCount);
-
-  std::unique_ptr<WasmObjectFile> wasmObj;
 };
 
 // .so file.
-class SharedFile : public InputFile {
+class SharedFile : public WasmFileBase {
 public:
-  explicit SharedFile(MemoryBufferRef m) : InputFile(SharedKind, m) {}
+  explicit SharedFile(MemoryBufferRef m) : WasmFileBase(SharedKind, m) {}
+
+  void parse();
+
   static bool classof(const InputFile *f) { return f->kind() == SharedKind; }
 };
 

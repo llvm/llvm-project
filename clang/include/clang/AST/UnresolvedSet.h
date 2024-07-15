@@ -97,6 +97,10 @@ public:
     decls().push_back(DeclAccessPair::make(D, AS));
   }
 
+  void addAllDecls(ArrayRef<DeclAccessPair> Other) {
+    append(iterator(Other.begin()), iterator(Other.end()));
+  }
+
   /// Replaces the given declaration with the new one, once.
   ///
   /// \return true if the set changed
