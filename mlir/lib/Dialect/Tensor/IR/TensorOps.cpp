@@ -1589,7 +1589,7 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
   // producer's input instead as the original tensor to reshape. This could
   // render such producer dead code.
   if (auto reshapeOpProducer = getSource().getDefiningOp<ReshapeOp>()) {
-    setOperand(0, reshapeOpProducer.getSource());
+    getSourceMutable().assign(reshapeOpProducer.getSource());
     return getResult();
   }
 
@@ -1600,7 +1600,7 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
     return {};
 
   // If the source and result are both 1D tensors and have the same type, the
-  // reshape has no effect, even if the tensor if dynamically shaped.
+  // reshape has no effect, even if the tensor is dynamically shaped.
   if (sourceTy.getRank() == 1)
     return source;
 
