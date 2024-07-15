@@ -408,6 +408,12 @@ ObjFile::ObjFile(MemoryBufferRef m, StringRef archiveName, bool lazy)
   this->lazy = lazy;
   this->archiveName = std::string(archiveName);
 
+  // Currently we only do this check for regular object file, and not for shared
+  // object files.  This is because architecture detection for shared objects is
+  // currently based on a heuristic, which is fallable:
+  // https://github.com/llvm/llvm-project/issues/98778
+  checkArch(wasmObj->getArch());
+
   // If this isn't part of an archive, it's eagerly linked, so mark it live.
   if (archiveName.empty())
     markLive();
@@ -456,8 +462,6 @@ WasmFileBase::WasmFileBase(Kind k, MemoryBufferRef m) : InputFile(k, m) {
 
   bin.release();
   wasmObj.reset(obj);
-
-  checkArch(obj->getArch());
 }
 
 void ObjFile::parse(bool ignoreComdats) {
