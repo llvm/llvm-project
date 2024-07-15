@@ -124,6 +124,7 @@
 ; GCN-O0-NEXT:        Live Interval Analysis
 ; GCN-O0-NEXT:        Virtual Register Map
 ; GCN-O0-NEXT:        Live Register Matrix
+; GCN-O0-NEXT:        Machine Natural Loop Construction
 ; GCN-O0-NEXT:        SI Pre-allocate WWM Registers
 ; GCN-O0-NEXT:        Fast Register Allocator
 ; GCN-O0-NEXT:        SI Lower WWM Copies
