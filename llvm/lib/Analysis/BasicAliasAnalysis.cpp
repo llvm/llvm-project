@@ -1259,7 +1259,7 @@ AliasResult BasicAAResult::aliasGEP(
 
     bool IndicesFromRight = DecompGEP1.VarIndices.front().IsNegated == Swapped;
     if (IndicesFromRight && DecompRight.NWFlags->hasNoUnsignedWrap())
-      if (!VLeftSize.isScalable() && VLeftSize.hasValue() &&
+      if (VLeftSize.hasValue() && !VLeftSize.isScalable() &&
           Off.abs().uge(VLeftSize.getValue()))
         return AliasResult::NoAlias;
   }
