@@ -40,8 +40,12 @@ static RWBuffer<float> U : register(u5);
 // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
 static float sa : register(c1);
 
-// expected-warning@+1 {{register 'c' used on type with no contents to allocate in a constant buffer}}
- groupshared float fa[10] : register(c1);
+float x[2] : register(c2); // valid
+float y[2][2] : register(c3); // valid
+float z[2][2][3] : register(c4); // valid
+
+// expected-error@+1 {{register binding type 'c' not supported for variable of type 'groupshared float[10]}}
+groupshared float fa[10] : register(c5);
 
 void foo() {
   // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}

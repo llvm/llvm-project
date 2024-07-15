@@ -611,13 +611,24 @@ RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S, Decl *TheDecl) {
          "either VD or CBufferOrTBuffer should be set");
 
   RegisterBindingFlags Flags;
+
+  // check if the decl type is groupshared
+  if (TheDecl->hasAttr<HLSLGroupSharedAddressSpaceAttr>()) {
+    Flags.Other = true;
+    return Flags;
+  }
+
   if (!isDeclaredWithinCOrTBuffer(TheDecl)) {
     // make sure the type is a basic / numeric type
     if (TheVarDecl) {
       QualType TheQualTy = TheVarDecl->getType();
-      // a numeric variable will inevitably end up in $Globals buffer
-      if (TheQualTy->isIntegralType(S.getASTContext()) ||
-          TheQualTy->isFloatingType())
+      // a numeric variable or an array of numeric variables
+      // will inevitably end up in $Globals buffer
+      const clang::Type *TheBaseType = TheQualTy.getTypePtr();
+      while (TheBaseType->isArrayType())
+        TheBaseType = TheBaseType->getArrayElementTypeNoTypeQual();
+      if (TheBaseType->isIntegralType(S.getASTContext()) ||
+          TheBaseType->isFloatingType())
         Flags.DefaultGlobals = true;
     }
   }
@@ -631,6 +642,10 @@ RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S, Decl *TheDecl) {
   } else if (TheVarDecl) {
     const HLSLResourceClassAttr *resClassAttr =
         getHLSLResourceClassAttrFromEitherDecl(TheVarDecl, CBufferOrTBuffer);
+    const clang::Type *TheBaseType = TheVarDecl->getType().getTypePtr();
+    while (TheBaseType->isArrayType())
+      TheBaseType = TheBaseType->getArrayElementTypeNoTypeQual();
+
     if (resClassAttr) {
       llvm::hlsl::ResourceClass DeclResourceClass =
           resClassAttr->getResourceClass();
@@ -650,16 +665,15 @@ RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S, Decl *TheDecl) {
         break;
       }
     } else {
-      if (TheVarDecl->getType()->isBuiltinType())
+      if (TheBaseType->isArithmeticType())
         Flags.Basic = true;
-      else if (TheVarDecl->getType()->isAggregateType()) {
+      else if (TheBaseType->isRecordType()) {
         Flags.UDT = true;
-        QualType TheQualTy = TheVarDecl->getType();
-        if (const RecordType *TheRecordTy = TheQualTy->getAs<RecordType>()) {
-          const RecordDecl *TheRecordDecl = TheRecordTy->getDecl();
-          // recurse through members, set appropriate resource class flags.
-          setResourceClassFlagsFromRecordDecl(Flags, TheRecordDecl);
-        }
+        const RecordType *TheRecordTy = TheBaseType->getAs<RecordType>();
+        assert(TheRecordTy && "The Qual Type should be Record Type");
+        const RecordDecl *TheRecordDecl = TheRecordTy->getDecl();
+        // recurse through members, set appropriate resource class flags.
+        setResourceClassFlagsFromRecordDecl(Flags, TheRecordDecl);
       } else
         Flags.Other = true;
     }
@@ -750,7 +764,7 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
   // first, if "other" is set, emit an error
   if (Flags.Other) {
     S.Diag(ArgLoc, diag::err_hlsl_unsupported_register_type_and_variable_type)
-        << Slot << getHLSLResourceTypeStr(S, TheDecl);
+        << Slot.substr(0, 1) << getHLSLResourceTypeStr(S, TheDecl);
     return;
   }
 
