@@ -1402,7 +1402,8 @@ public:
   /// Returns true if \p I is an instruction that needs to be predicated
   /// at runtime.  The result is independent of the predication mechanism.
   /// Superset of instructions that return true for isScalarWithPredication.
-  bool isPredicatedInst(Instruction *I) const;
+  bool isPredicatedInst(Instruction *I, ElementCount VF,
+                        bool IsKnownUniform = false) const;
 
   /// Return the costs for our two available strategies for lowering a
   /// div/rem operation which requires speculating at least one lane.
@@ -3637,7 +3638,7 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
 
 bool LoopVectorizationCostModel::isScalarWithPredication(
     Instruction *I, ElementCount VF) const {
-  if (!isPredicatedInst(I))
+  if (!isPredicatedInst(I, VF))
     return false;
 
   // Do we have a non-scalar lowering for this predicated
@@ -3676,7 +3677,9 @@ bool LoopVectorizationCostModel::isScalarWithPredication(
   }
 }
 
-bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
+bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I,
+                                                  ElementCount VF,
+                                                  bool IsKnownUniform) const {
   if (!blockNeedsPredicationForAnyReason(I->getParent()))
     return false;
 
@@ -3710,6 +3713,15 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
   case Instruction::SDiv:
   case Instruction::SRem:
   case Instruction::URem:
+    // When folding the tail, at least one of the lanes must execute
+    // unconditionally. If the divisor is loop-invariant no predication is
+    // needed, as predication would not prevent the divide-by-0 on the executed
+    // lane.
+    if (foldTailByMasking() && !Legal->blockNeedsPredication(I->getParent()) &&
+        TheLoop->isLoopInvariant(I->getOperand(1)) &&
+        (IsKnownUniform || isUniformAfterVectorization(I, VF)))
+      return false;
+
     // TODO: We can use the loop-preheader as context point here and get
     // context sensitive reasoning
     return !isSafeToSpeculativelyExecute(I);
@@ -3917,7 +3929,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
                         << *I << "\n");
       return;
     }
-    if (isPredicatedInst(I)) {
+    if (isPredicatedInst(I, VF, true)) {
       LLVM_DEBUG(
           dbgs() << "LV: Found not uniform due to requiring predication: " << *I
                  << "\n");
@@ -5634,7 +5646,7 @@ bool LoopVectorizationCostModel::useEmulatedMaskMemRefHack(Instruction *I,
   // from moving "masked load/store" check from legality to cost model.
   // Masked Load/Gather emulation was previously never allowed.
   // Limited number of Masked Store/Scatter emulation was allowed.
-  assert((isPredicatedInst(I)) &&
+  assert((isPredicatedInst(I, VF)) &&
          "Expecting a scalar emulated instruction");
   return isa<LoadInst>(I) ||
          (isa<StoreInst>(I) &&
@@ -5913,7 +5925,7 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
   // If we have a predicated load/store, it will need extra i1 extracts and
   // conditional branches, but may not be executed for each vector lane. Scale
   // the cost by the probability of executing the predicated block.
-  if (isPredicatedInst(I)) {
+  if (isPredicatedInst(I, VF)) {
     Cost /= getReciprocalPredBlockProb();
 
     // Add the cost of an i1 extract and a branch
@@ -6773,7 +6785,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
   case Instruction::SDiv:
   case Instruction::URem:
   case Instruction::SRem:
-    if (VF.isVector() && isPredicatedInst(I)) {
+    if (VF.isVector() && isPredicatedInst(I, VF)) {
       const auto [ScalarCost, SafeDivisorCost] = getDivRemSpeculationCost(I, VF);
       return isDivRemScalarWithPredication(ScalarCost, SafeDivisorCost) ?
         ScalarCost : SafeDivisorCost;
@@ -8445,7 +8457,7 @@ bool VPRecipeBuilder::shouldWiden(Instruction *I, VFRange &Range) const {
 
 VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
                                            ArrayRef<VPValue *> Operands,
-                                           VPBasicBlock *VPBB) {
+                                           VPBasicBlock *VPBB, VFRange &Range) {
   switch (I->getOpcode()) {
   default:
     return nullptr;
@@ -8455,7 +8467,10 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
   case Instruction::URem: {
     // If not provably safe, use a select to form a safe divisor before widening the
     // div/rem operation itself.  Otherwise fall through to general handling below.
-    if (CM.isPredicatedInst(I)) {
+    bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
+        [&](ElementCount VF) -> bool { return CM.isPredicatedInst(I, VF); },
+        Range);
+    if (IsPredicated) {
       SmallVector<VPValue *> Ops(Operands.begin(), Operands.end());
       VPValue *Mask = getBlockInMask(I->getParent());
       VPValue *One =
@@ -8505,8 +8520,8 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(Instruction *I,
       [&](ElementCount VF) { return CM.isUniformAfterVectorization(I, VF); },
       Range);
 
-  bool IsPredicated = CM.isPredicatedInst(I);
-
+  bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
+      [&](ElementCount VF) { return CM.isPredicatedInst(I, VF); }, Range);
   // Even if the instruction is not marked as uniform, there are certain
   // intrinsic calls that can be effectively treated as such, so we check for
   // them here. Conservatively, we only do this for scalable vectors, since
@@ -8626,7 +8641,7 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
                                  *CI);
   }
 
-  return tryToWiden(Instr, Operands, VPBB);
+  return tryToWiden(Instr, Operands, VPBB, Range);
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
