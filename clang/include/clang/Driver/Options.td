@@ -5179,6 +5179,13 @@ def mvx : Flag<["-"], "mvx">, Group<m_Group>;
 def mno_vx : Flag<["-"], "mno-vx">, Group<m_Group>;
 } // let Flags = [TargetSpecific]
 
+let Flags = [TargetSpecific] in {
+def msse2avx : Flag<["-"], "msse2avx">, Group<m_Group>,
+  Visibility<[ClangOption, CC1Option, CC1AsOption]>,
+  HelpText<"Specify that the assembler should encode SSE instructions with VEX prefix">,
+  MarshallingInfoFlag<CodeGenOpts<"SSE2AVX">>;
+} // let Flags = [TargetSpecific]
+
 defm zvector : BoolFOption<"zvector",
   LangOpts<"ZVector">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -5211,10 +5218,6 @@ def mrelax_all : Flag<["-"], "mrelax-all">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option, CC1AsOption]>,
   HelpText<"(integrated-as) Relax all machine instructions">,
   MarshallingInfoFlag<CodeGenOpts<"RelaxAll">>;
-def msse2avx : Flag<["-"], "msse2avx">, Group<m_Group>,
-  Visibility<[ClangOption, CC1Option, CC1AsOption]>,
-  HelpText<"Specify that the assembler should encode SSE instructions with VEX prefix">,
-  MarshallingInfoFlag<CodeGenOpts<"SSE2AVX">>;
 def mincremental_linker_compatible : Flag<["-"], "mincremental-linker-compatible">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option, CC1AsOption]>,
   HelpText<"(integrated-as) Emit an object file which can be used with an incremental linker">,

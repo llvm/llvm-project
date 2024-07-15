@@ -2545,6 +2545,13 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
       switch (C.getDefaultToolChain().getArch()) {
       default:
         break;
+      case llvm::Triple::x86:
+      case llvm::Triple::x86_64:
+        if (Value == "-msse2avx") {
+          CmdArgs.push_back("-msse2avx");
+          continue;
+        }
+        break;
       case llvm::Triple::wasm32:
       case llvm::Triple::wasm64:
         if (Value == "--no-type-check") {
@@ -2711,8 +2718,6 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   }
   if (!UseRelaxRelocations)
     CmdArgs.push_back("-mrelax-relocations=no");
-  if (Args.hasArg(options::OPT_msse2avx))
-    CmdArgs.push_back("-msse2avx");
   if (UseNoExecStack)
     CmdArgs.push_back("-mnoexecstack");
   if (MipsTargetFeature != nullptr) {
