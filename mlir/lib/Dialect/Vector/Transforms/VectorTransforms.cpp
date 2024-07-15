@@ -1300,9 +1300,9 @@ class DropInnerMostUnitDimsTransferRead
     if (dimsToDrop == 0)
       return failure();
 
-    // Make sure that the indices to be dropped are equal 0.
-    // TODO: Deal with cases when the indices are not 0.
-    if (!llvm::all_of(readOp.getIndices().take_back(dimsToDrop), isZeroIndex))
+    auto inBounds = readOp.getInBoundsValues();
+    auto droppedInBounds = ArrayRef<bool>(inBounds).take_back(dimsToDrop);
+    if (llvm::is_contained(droppedInBounds, false))
       return failure();
 
     auto resultTargetVecType =
@@ -1392,6 +1392,11 @@ class DropInnerMostUnitDimsTransferWrite
 
     size_t dimsToDrop = maybeDimsToDrop.value();
     if (dimsToDrop == 0)
+      return failure();
+
+    auto inBounds = writeOp.getInBoundsValues();
+    auto droppedInBounds = ArrayRef<bool>(inBounds).take_back(dimsToDrop);
+    if (llvm::is_contained(droppedInBounds, false))
       return failure();
 
     auto resultTargetVecType =

@@ -27,13 +27,9 @@
 #include "Program.h"
 #include "State.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ASTDiagnostic.h"
-#include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Expr.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/Support/Endian.h"
-#include <limits>
 #include <type_traits>
 
 namespace clang {
@@ -151,7 +147,7 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
     const APSInt Val = RHS.toAPSInt();
     QualType Ty = E->getType();
     S.CCEDiag(E, diag::note_constexpr_large_shift) << Val << Ty << Bits;
-    return true; // We will do the shift anyway but fix up the shift amount.
+    return !(S.getEvalStatus().Diag && !S.getEvalStatus().Diag->empty() && S.getLangOpts().CPlusPlus11);
   }
 
   if (LHS.isSigned() && !S.getLangOpts().CPlusPlus20) {
@@ -306,15 +302,16 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
     auto Loc = E->getExprLoc();
     S.report(Loc, diag::warn_integer_constant_overflow)
         << Trunc << Type << E->getSourceRange();
-    return true;
-  } else {
-    S.CCEDiag(E, diag::note_constexpr_overflow) << Value << Type;
-    if (!S.noteUndefinedBehavior()) {
-      S.Stk.pop<T>();
-      return false;
-    }
-    return true;
   }
+
+  S.CCEDiag(E, diag::note_constexpr_overflow) << Value << Type;
+
+  if (!S.noteUndefinedBehavior()) {
+    S.Stk.pop<T>();
+    return false;
+  }
+
+  return true;
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -1848,6 +1845,15 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
   else
     Result = WideIndex - WideOffset;
 
+  // When the pointer is one-past-end, going back to index 0 is the only
+  // useful thing we can do. Any other index has been diagnosed before and
+  // we don't get here.
+  if (Result == 0 && Ptr.isOnePastEnd()) {
+    S.Stk.push<Pointer>(Ptr.asBlockPointer().Pointee,
+                        Ptr.asBlockPointer().Base);
+    return true;
+  }
+
   S.Stk.push<Pointer>(Ptr.atIndex(static_cast<uint64_t>(Result)));
   return true;
 }
@@ -2203,19 +2209,44 @@ inline bool RVOPtr(InterpState &S, CodePtr OpPC) {
 //===----------------------------------------------------------------------===//
 // Shr, Shl
 //===----------------------------------------------------------------------===//
+enum class ShiftDir { Left, Right };
 
-template <PrimType NameL, PrimType NameR>
-inline bool Shr(InterpState &S, CodePtr OpPC) {
-  using LT = typename PrimConv<NameL>::T;
-  using RT = typename PrimConv<NameR>::T;
-  auto RHS = S.Stk.pop<RT>();
-  const auto &LHS = S.Stk.pop<LT>();
+template <class LT, class RT, ShiftDir Dir>
+inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS) {
   const unsigned Bits = LHS.bitWidth();
 
   // OpenCL 6.3j: shift values are effectively % word size of LHS.
   if (S.getLangOpts().OpenCL)
     RT::bitAnd(RHS, RT::from(LHS.bitWidth() - 1, RHS.bitWidth()),
                RHS.bitWidth(), &RHS);
+
+  if (RHS.isNegative()) {
+    // During constant-folding, a negative shift is an opposite shift. Such a
+    // shift is not a constant expression.
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.CCEDiag(Loc, diag::note_constexpr_negative_shift) << RHS.toAPSInt();
+    if (S.getLangOpts().CPlusPlus11 && S.getEvalStatus().Diag &&
+        !S.getEvalStatus().Diag->empty())
+      return false;
+    RHS = -RHS;
+    return DoShift < LT, RT,
+           Dir == ShiftDir::Left ? ShiftDir::Right
+                                 : ShiftDir::Left > (S, OpPC, LHS, RHS);
+  }
+
+  if constexpr (Dir == ShiftDir::Left) {
+    if (LHS.isNegative() && !S.getLangOpts().CPlusPlus20) {
+      // C++11 [expr.shift]p2: A signed left shift must have a non-negative
+      // operand, and must not overflow the corresponding unsigned type.
+      // C++2a [expr.shift]p2: E1 << E2 is the unique value congruent to
+      // E1 x 2^E2 module 2^N.
+      const SourceInfo &Loc = S.Current->getSource(OpPC);
+      S.CCEDiag(Loc, diag::note_constexpr_lshift_of_negative) << LHS.toAPSInt();
+      if (S.getLangOpts().CPlusPlus11 && S.getEvalStatus().Diag &&
+          !S.getEvalStatus().Diag->empty())
+        return false;
+    }
+  }
 
   if (!CheckShift(S, OpPC, LHS, RHS, Bits))
     return false;
@@ -2224,14 +2255,34 @@ inline bool Shr(InterpState &S, CodePtr OpPC) {
   // it has already been diagnosed by CheckShift() above,
   // but we still need to handle it.
   typename LT::AsUnsigned R;
-  if (RHS > RT::from(Bits - 1, RHS.bitWidth()))
-    LT::AsUnsigned::shiftRight(LT::AsUnsigned::from(LHS),
-                               LT::AsUnsigned::from(Bits - 1), Bits, &R);
-  else
-    LT::AsUnsigned::shiftRight(LT::AsUnsigned::from(LHS),
-                               LT::AsUnsigned::from(RHS, Bits), Bits, &R);
+  if constexpr (Dir == ShiftDir::Left) {
+    if (RHS > RT::from(Bits - 1, RHS.bitWidth()))
+      LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(LHS),
+                                LT::AsUnsigned::from(Bits - 1), Bits, &R);
+    else
+      LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(LHS),
+                                LT::AsUnsigned::from(RHS, Bits), Bits, &R);
+  } else {
+    if (RHS > RT::from(Bits - 1, RHS.bitWidth()))
+      LT::AsUnsigned::shiftRight(LT::AsUnsigned::from(LHS),
+                                 LT::AsUnsigned::from(Bits - 1), Bits, &R);
+    else
+      LT::AsUnsigned::shiftRight(LT::AsUnsigned::from(LHS),
+                                 LT::AsUnsigned::from(RHS, Bits), Bits, &R);
+  }
+
   S.Stk.push<LT>(LT::from(R));
   return true;
+}
+
+template <PrimType NameL, PrimType NameR>
+inline bool Shr(InterpState &S, CodePtr OpPC) {
+  using LT = typename PrimConv<NameL>::T;
+  using RT = typename PrimConv<NameR>::T;
+  auto RHS = S.Stk.pop<RT>();
+  auto LHS = S.Stk.pop<LT>();
+
+  return DoShift<LT, RT, ShiftDir::Right>(S, OpPC, LHS, RHS);
 }
 
 template <PrimType NameL, PrimType NameR>
@@ -2239,30 +2290,9 @@ inline bool Shl(InterpState &S, CodePtr OpPC) {
   using LT = typename PrimConv<NameL>::T;
   using RT = typename PrimConv<NameR>::T;
   auto RHS = S.Stk.pop<RT>();
-  const auto &LHS = S.Stk.pop<LT>();
-  const unsigned Bits = LHS.bitWidth();
+  auto LHS = S.Stk.pop<LT>();
 
-  // OpenCL 6.3j: shift values are effectively % word size of LHS.
-  if (S.getLangOpts().OpenCL)
-    RT::bitAnd(RHS, RT::from(LHS.bitWidth() - 1, RHS.bitWidth()),
-               RHS.bitWidth(), &RHS);
-
-  if (!CheckShift(S, OpPC, LHS, RHS, Bits))
-    return false;
-
-  // Limit the shift amount to Bits - 1. If this happened,
-  // it has already been diagnosed by CheckShift() above,
-  // but we still need to handle it.
-  typename LT::AsUnsigned R;
-  if (RHS > RT::from(Bits - 1, RHS.bitWidth()))
-    LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(LHS),
-                              LT::AsUnsigned::from(Bits - 1), Bits, &R);
-  else
-    LT::AsUnsigned::shiftLeft(LT::AsUnsigned::from(LHS),
-                              LT::AsUnsigned::from(RHS, Bits), Bits, &R);
-
-  S.Stk.push<LT>(LT::from(R));
-  return true;
+  return DoShift<LT, RT, ShiftDir::Left>(S, OpPC, LHS, RHS);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2568,6 +2598,12 @@ inline bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
     return false;
 
   assert(F);
+
+  // This happens when the call expression has been cast to
+  // something else, but we don't support that.
+  if (S.Ctx.classify(F->getDecl()->getReturnType()) !=
+      S.Ctx.classify(CE->getType()))
+    return false;
 
   // Check argument nullability state.
   if (F->hasNonNullAttr()) {

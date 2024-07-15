@@ -3073,13 +3073,13 @@ bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
     }
 
     assert(S == Result);
-    // This better produces a value (i.e. is an expression).
     if (const Expr *ResultExpr = dyn_cast<Expr>(S)) {
       if (DiscardResult)
         return this->discard(ResultExpr);
       return this->delegate(ResultExpr);
     }
-    return false;
+
+    return this->visitStmt(S);
   }
 
   return BS.destroyLocals();
@@ -3583,7 +3583,19 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD, bool Topleve
         return checkDecl() && this->emitInitGlobal(*VarT, GlobalIndex, VD);
       }
 
-      return checkDecl() && this->visitGlobalInitializer(Init, GlobalIndex);
+      if (!checkDecl())
+        return false;
+
+      if (!this->emitGetPtrGlobal(GlobalIndex, Init))
+        return false;
+
+      if (!visitInitializer(Init))
+        return false;
+
+      if (!this->emitFinishInit(Init))
+        return false;
+
+      return this->emitPopPtr(Init);
     };
 
     // We've already seen and initialized this global.
@@ -3627,7 +3639,16 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD, bool Topleve
         if (!Init)
           return true;
 
-        return this->visitLocalInitializer(Init, *Offset);
+        if (!this->emitGetPtrLocal(*Offset, Init))
+          return false;
+
+        if (!visitInitializer(Init))
+          return false;
+
+        if (!this->emitFinishInit(Init))
+          return false;
+
+        return this->emitPopPtr(Init);
       }
       return false;
     }
@@ -4685,6 +4706,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
   case UO_PostInc: { // x++
     if (!Ctx.getLangOpts().CPlusPlus14)
       return this->emitInvalid(E);
+    if (!T)
+      return this->emitError(E);
 
     if (!this->visit(SubExpr))
       return false;
@@ -4706,6 +4729,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
   case UO_PostDec: { // x--
     if (!Ctx.getLangOpts().CPlusPlus14)
       return this->emitInvalid(E);
+    if (!T)
+      return this->emitError(E);
 
     if (!this->visit(SubExpr))
       return false;
@@ -4727,6 +4752,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
   case UO_PreInc: { // ++x
     if (!Ctx.getLangOpts().CPlusPlus14)
       return this->emitInvalid(E);
+    if (!T)
+      return this->emitError(E);
 
     if (!this->visit(SubExpr))
       return false;
@@ -4774,6 +4801,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
   case UO_PreDec: { // --x
     if (!Ctx.getLangOpts().CPlusPlus14)
       return this->emitInvalid(E);
+    if (!T)
+      return this->emitError(E);
 
     if (!this->visit(SubExpr))
       return false;
@@ -4819,6 +4848,9 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     return E->isGLValue() || this->emitLoadPop(*T, E);
   }
   case UO_LNot: // !x
+    if (!T)
+      return this->emitError(E);
+
     if (DiscardResult)
       return this->discard(SubExpr);
 
@@ -4832,10 +4864,16 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       return this->emitCast(PT_Bool, ET, E);
     return true;
   case UO_Minus: // -x
+    if (!T)
+      return this->emitError(E);
+
     if (!this->visit(SubExpr))
       return false;
     return DiscardResult ? this->emitPop(*T, E) : this->emitNeg(*T, E);
   case UO_Plus:                // +x
+    if (!T)
+      return this->emitError(E);
+
     if (!this->visit(SubExpr)) // noop
       return false;
     return DiscardResult ? this->emitPop(*T, E) : true;
@@ -4852,6 +4890,9 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       return this->discard(SubExpr);
     return this->visit(SubExpr);
   case UO_Not: // ~x
+    if (!T)
+      return this->emitError(E);
+
     if (!this->visit(SubExpr))
       return false;
     return DiscardResult ? this->emitPop(*T, E) : this->emitComp(*T, E);
@@ -5094,9 +5135,10 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     if (E->getType()->isVoidType())
       return true;
     // Convert the dummy pointer to another pointer type if we have to.
-    if (PrimType PT = classifyPrim(E); PT != PT_Ptr && isPtrType(PT)) {
-      if (!this->emitDecayPtr(PT_Ptr, PT, E))
-        return false;
+    if (PrimType PT = classifyPrim(E); PT != PT_Ptr) {
+      if (isPtrType(PT))
+        return this->emitDecayPtr(PT_Ptr, PT, E);
+      return false;
     }
     return true;
   }

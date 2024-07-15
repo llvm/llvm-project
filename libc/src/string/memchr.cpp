@@ -7,12 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/memchr.h"
+#include "src/__support/macros/config.h"
 #include "src/string/string_utils.h"
 
 #include "src/__support/common.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // TODO: Look at performance benefits of comparing words.
 LLVM_LIBC_FUNCTION(void *, memchr, (const void *src, int c, size_t n)) {
@@ -21,4 +22,4 @@ LLVM_LIBC_FUNCTION(void *, memchr, (const void *src, int c, size_t n)) {
       static_cast<unsigned char>(c), n);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
