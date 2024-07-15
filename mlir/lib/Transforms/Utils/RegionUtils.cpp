@@ -701,23 +701,40 @@ static SmallVector<SmallVector<Value, 8>, 2> pruneRedundantArguments(
   // idxToReplacement[3] = 0
   llvm::DenseMap<unsigned, unsigned> idxToReplacement;
 
+  // This is a useful data structure to track the first appearance of a Value
+  // on a given list of arguments
+  DenseMap<Value, unsigned> firstValueToIdx;
+  for (unsigned j = 0; j < numArgs; ++j) {
+    Value newArg = newArguments[0][j];
+    if (!firstValueToIdx.contains(newArg))
+      firstValueToIdx[newArg] = j;
+  }
+
   // Go through the first list of arguments (list 0).
   for (unsigned j = 0; j < numArgs; ++j) {
     bool shouldReplaceJ = false;
     unsigned replacement = 0;
-    // Look back to see if there are possible redundancies in
-    // list 0.
-    for (unsigned k = 0; k < j; k++) {
-      if (newArguments[0][k] == newArguments[0][j]) {
-        shouldReplaceJ = true;
-        replacement = k;
-        // If a possible redundancy is found, then scan the other lists: we
-        // can prune the arguments if and only if they are redundant in every
-        // list.
-        for (unsigned i = 1; i < numLists; ++i)
-          shouldReplaceJ =
-              shouldReplaceJ && (newArguments[i][k] == newArguments[i][j]);
-      }
+    // Look back to see if there are possible redundancies in list 0. Please
+    // note that we are using a map to annotate when an argument was seen first
+    // to avoid a O(N^2) algorithm. This has the drawback that if we have two
+    // lists like:
+    // list0: [%a, %a, %a]
+    // list1: [%c, %b, %b]
+    // We cannot simplify it, because firstVlaueToIdx[%a] = 0, but we cannot
+    // point list1[1](==%b) or list1[2](==%b) to list1[0](==%c).  However, since
+    // the number of arguments can be potentially unbounded we cannot afford a
+    // O(N^2) algorithm (to search to all the possible pairs) and we need to
+    // accept the trade-off.
+    unsigned k = firstValueToIdx[newArguments[0][j]];
+    if (k != j) {
+      shouldReplaceJ = true;
+      replacement = k;
+      // If a possible redundancy is found, then scan the other lists: we
+      // can prune the arguments if and only if they are redundant in every
+      // list.
+      for (unsigned i = 1; i < numLists; ++i)
+        shouldReplaceJ =
+            shouldReplaceJ && (newArguments[i][k] == newArguments[i][j]);
     }
     // Save the replacement.
     if (shouldReplaceJ)
