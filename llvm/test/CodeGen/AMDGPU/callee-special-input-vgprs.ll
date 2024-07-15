@@ -1,6 +1,4 @@
-; RUN: opt -mcpu=kaveri -passes=amdgpu-attributor < %s | llc -enable-ipra=0 | FileCheck -enable-var-scope -check-prefixes=GCN,FIXEDABI %s
-
-target triple = "amdgcn-amd-amdhsa"
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,FIXEDABI %s
 
 ; GCN-LABEL: {{^}}use_workitem_id_x:
 ; GCN: s_waitcnt

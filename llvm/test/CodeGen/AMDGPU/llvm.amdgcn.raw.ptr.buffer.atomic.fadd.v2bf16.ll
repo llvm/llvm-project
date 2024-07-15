@@ -10,7 +10,7 @@ define <2 x bfloat> @raw_ptr_buffer_atomic_add_v2bf16_rtn__vgpr_val__sgpr_rsrc__
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    buffer_atomic_pk_add_bf16 v0, v1, s[0:3], s6 offen offset:128 th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    buffer_atomic_pk_add_bf16 v0, v1, s[0:3], s4 offen offset:128 th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -27,7 +27,7 @@ define <2 x bfloat> @raw_ptr_buffer_atomic_add_v2bf16_rtn__vgpr_val__sgpr_rsrc__
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    buffer_atomic_pk_add_bf16 v0, off, s[0:3], s6 offset:92 th:TH_ATOMIC_NT_RETURN
+; GFX12-NEXT:    buffer_atomic_pk_add_bf16 v0, off, s[0:3], s4 offset:92 th:TH_ATOMIC_NT_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -43,7 +43,7 @@ define void @raw_ptr_buffer_atomic_add_v2bf16_noret__vgpr_val__sgpr_rsrc__vgpr_v
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    buffer_atomic_pk_add_bf16 v0, v1, s[0:3], s6 offen offset:128
+; GFX12-NEXT:    buffer_atomic_pk_add_bf16 v0, v1, s[0:3], s4 offen offset:128
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 128
@@ -59,7 +59,7 @@ define void @raw_ptr_buffer_atomic_add_v2bf16_noret__vgpr_val__sgpr_rsrc__0_voff
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    buffer_atomic_pk_add_bf16 v0, off, s[0:3], s6 offset:92 th:TH_ATOMIC_NT
+; GFX12-NEXT:    buffer_atomic_pk_add_bf16 v0, off, s[0:3], s4 offset:92 th:TH_ATOMIC_NT
 ; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %unused = call <2 x bfloat> @llvm.amdgcn.raw.ptr.buffer.atomic.fadd.v2bf16(<2 x bfloat> %val, ptr addrspace(8) %rsrc, i32 92, i32 %soffset, i32 2)

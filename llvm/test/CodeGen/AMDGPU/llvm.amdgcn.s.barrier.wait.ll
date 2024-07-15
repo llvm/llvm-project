@@ -5,11 +5,10 @@
 define amdgpu_kernel void @test1_s_barrier_signal(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test1_s_barrier_signal:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GCN-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    v_mul_u32_u24_e32 v1, v0, v0
+; GCN-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_store_b32 v3, v2, s[0:1]
@@ -23,11 +22,10 @@ define amdgpu_kernel void @test1_s_barrier_signal(ptr addrspace(1) %out) #0 {
 ;
 ; GLOBAL-ISEL-LABEL: test1_s_barrier_signal:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GLOBAL-ISEL-NEXT:    v_mul_lo_u32 v1, v0, v0
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GLOBAL-ISEL-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    global_store_b32 v3, v2, s[0:1]
@@ -53,11 +51,10 @@ entry:
 define amdgpu_kernel void @test2_s_barrier_signal(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test2_s_barrier_signal:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GCN-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    v_mul_u32_u24_e32 v1, v0, v0
+; GCN-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_store_b32 v3, v2, s[0:1]
@@ -71,11 +68,10 @@ define amdgpu_kernel void @test2_s_barrier_signal(ptr addrspace(1) %out) #0 {
 ;
 ; GLOBAL-ISEL-LABEL: test2_s_barrier_signal:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GLOBAL-ISEL-NEXT:    v_mul_lo_u32 v1, v0, v0
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GLOBAL-ISEL-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    global_store_b32 v3, v2, s[0:1]
@@ -101,11 +97,10 @@ entry:
 define amdgpu_kernel void @test3_s_barrier_signal(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test3_s_barrier_signal:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GCN-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    v_mul_u32_u24_e32 v1, v0, v0
+; GCN-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_store_b32 v3, v2, s[0:1]
@@ -119,11 +114,10 @@ define amdgpu_kernel void @test3_s_barrier_signal(ptr addrspace(1) %out) #0 {
 ;
 ; GLOBAL-ISEL-LABEL: test3_s_barrier_signal:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GLOBAL-ISEL-NEXT:    v_mul_lo_u32 v1, v0, v0
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GLOBAL-ISEL-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    global_store_b32 v3, v2, s[0:1]
@@ -149,12 +143,12 @@ entry:
 define amdgpu_kernel void @test1_s_barrier_signal_var(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test1_s_barrier_signal_var:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
-; GCN-NEXT:    s_mov_b32 m0, 1
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    v_mul_u32_u24_e32 v2, v0, v0
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
+; GCN-NEXT:    s_mov_b32 m0, 1
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GCN-NEXT:    v_sub_nc_u32_e32 v0, v2, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_store_b32 v3, v1, s[0:1]
@@ -168,13 +162,11 @@ define amdgpu_kernel void @test1_s_barrier_signal_var(ptr addrspace(1) %out) #0 
 ;
 ; GLOBAL-ISEL-LABEL: test1_s_barrier_signal_var:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    v_mov_b32_e32 v2, 0
-; GLOBAL-ISEL-NEXT:    s_mov_b32 m0, 1
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GLOBAL-ISEL-NEXT:    v_mul_lo_u32 v1, v0, v0
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_mov_b32 m0, 1
+; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GLOBAL-ISEL-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    global_store_b32 v3, v2, s[0:1]
@@ -232,10 +224,8 @@ define void @test2_s_barrier_signal_var(i32 %arg) {
 define amdgpu_kernel void @test1_s_barrier_signal_isfirst(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test1_s_barrier_signal_isfirst:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
-; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GCN-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
+; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_store_b32 v0, v1, s[6:7]
 ; GCN-NEXT:    s_wait_storecnt 0x0
@@ -254,10 +244,8 @@ define amdgpu_kernel void @test1_s_barrier_signal_isfirst(ptr addrspace(1) %a, p
 ;
 ; GLOBAL-ISEL-LABEL: test1_s_barrier_signal_isfirst:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    global_store_b32 v0, v1, s[6:7]
 ; GLOBAL-ISEL-NEXT:    s_wait_storecnt 0x0
@@ -293,10 +281,8 @@ entry:
 define amdgpu_kernel void @test2_s_barrier_signal_isfirst(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test2_s_barrier_signal_isfirst:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
-; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GCN-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
+; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_store_b32 v0, v1, s[6:7]
 ; GCN-NEXT:    s_wait_storecnt 0x0
@@ -315,10 +301,8 @@ define amdgpu_kernel void @test2_s_barrier_signal_isfirst(ptr addrspace(1) %a, p
 ;
 ; GLOBAL-ISEL-LABEL: test2_s_barrier_signal_isfirst:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    global_store_b32 v0, v1, s[6:7]
 ; GLOBAL-ISEL-NEXT:    s_wait_storecnt 0x0
@@ -354,10 +338,8 @@ entry:
 define amdgpu_kernel void @test3_s_barrier_signal_isfirst(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test3_s_barrier_signal_isfirst:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
-; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GCN-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
+; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_store_b32 v0, v1, s[6:7]
 ; GCN-NEXT:    s_wait_storecnt 0x0
@@ -376,10 +358,8 @@ define amdgpu_kernel void @test3_s_barrier_signal_isfirst(ptr addrspace(1) %a, p
 ;
 ; GLOBAL-ISEL-LABEL: test3_s_barrier_signal_isfirst:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    global_store_b32 v0, v1, s[6:7]
 ; GLOBAL-ISEL-NEXT:    s_wait_storecnt 0x0
@@ -415,11 +395,9 @@ entry:
 define amdgpu_kernel void @test1_s_barrier_signal_isfirst_var(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test1_s_barrier_signal_isfirst_var:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
-; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
+; GCN-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
+; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GCN-NEXT:    s_mov_b32 m0, 1
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_store_b32 v0, v1, s[6:7]
 ; GCN-NEXT:    s_wait_storecnt 0x0
@@ -438,11 +416,9 @@ define amdgpu_kernel void @test1_s_barrier_signal_isfirst_var(ptr addrspace(1) %
 ;
 ; GLOBAL-ISEL-LABEL: test1_s_barrier_signal_isfirst_var:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
+; GLOBAL-ISEL-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GLOBAL-ISEL-NEXT:    s_mov_b32 m0, 1
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    global_store_b32 v0, v1, s[6:7]
 ; GLOBAL-ISEL-NEXT:    s_wait_storecnt 0x0
@@ -552,11 +528,10 @@ define void @test2_s_barrier_signal_isfirst_var(ptr addrspace(1) %a, ptr addrspa
 define amdgpu_kernel void @test1_s_barrier_init(ptr addrspace(1) %out, i32 %mbrCnt) #0 {
 ; GCN-LABEL: test1_s_barrier_init:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b96 s[0:2], s[2:3], 0x24
-; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GCN-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GCN-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; GCN-NEXT:    v_mul_u32_u24_e32 v1, v0, v0
+; GCN-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_lshl_b32 s2, s2, 16
@@ -571,11 +546,10 @@ define amdgpu_kernel void @test1_s_barrier_init(ptr addrspace(1) %out, i32 %mbrC
 ;
 ; GLOBAL-ISEL-LABEL: test1_s_barrier_init:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b96 s[0:2], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; GLOBAL-ISEL-NEXT:    v_mul_lo_u32 v1, v0, v0
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GLOBAL-ISEL-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_lshl_b32 m0, 16, s2
@@ -599,11 +573,10 @@ entry:
 define amdgpu_kernel void @test2_s_barrier_init(ptr addrspace(1) %out, i32 %mbrCnt) #0 {
 ; GCN-LABEL: test2_s_barrier_init:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b96 s[0:2], s[2:3], 0x24
-; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GCN-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GCN-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; GCN-NEXT:    v_mul_u32_u24_e32 v1, v0, v0
+; GCN-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_lshl_b32 s2, s2, 16
@@ -618,11 +591,10 @@ define amdgpu_kernel void @test2_s_barrier_init(ptr addrspace(1) %out, i32 %mbrC
 ;
 ; GLOBAL-ISEL-LABEL: test2_s_barrier_init:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b96 s[0:2], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; GLOBAL-ISEL-NEXT:    v_mul_lo_u32 v1, v0, v0
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GLOBAL-ISEL-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_lshl_b32 m0, 16, s2
@@ -646,11 +618,10 @@ entry:
 define amdgpu_kernel void @test3_s_barrier_init(ptr addrspace(1) %out, i32 %mbrCnt) #0 {
 ; GCN-LABEL: test3_s_barrier_init:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b96 s[0:2], s[2:3], 0x24
-; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GCN-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GCN-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; GCN-NEXT:    v_mul_u32_u24_e32 v1, v0, v0
+; GCN-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_lshl_b32 s2, s2, 16
@@ -665,11 +636,10 @@ define amdgpu_kernel void @test3_s_barrier_init(ptr addrspace(1) %out, i32 %mbrC
 ;
 ; GLOBAL-ISEL-LABEL: test3_s_barrier_init:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b96 s[0:2], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; GLOBAL-ISEL-NEXT:    v_mul_lo_u32 v1, v0, v0
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GLOBAL-ISEL-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_lshl_b32 m0, 16, s2
@@ -693,11 +663,10 @@ entry:
 define amdgpu_kernel void @test4_s_barrier_init(ptr addrspace(1) %out, i32 %bar, i32 %mbrCnt) #0 {
 ; GCN-LABEL: test4_s_barrier_init:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
-; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GCN-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GCN-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GCN-NEXT:    v_mul_u32_u24_e32 v1, v0, v0
+; GCN-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_lshl_b32 s3, s3, 16
@@ -714,11 +683,10 @@ define amdgpu_kernel void @test4_s_barrier_init(ptr addrspace(1) %out, i32 %bar,
 ;
 ; GLOBAL-ISEL-LABEL: test4_s_barrier_init:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GLOBAL-ISEL-NEXT:    v_mul_lo_u32 v1, v0, v0
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GLOBAL-ISEL-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_lshl_b32 s3, 16, s3
@@ -782,12 +750,11 @@ define void @test5_s_barrier_init_m0(i32 %arg1 ,i32 %arg2) {
 define amdgpu_kernel void @test1_s_barrier_join(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test1_s_barrier_join:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GCN-NEXT:    s_barrier_join -1
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    v_mul_u32_u24_e32 v1, v0, v0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; GCN-NEXT:    s_barrier_join -1
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_store_b32 v2, v0, s[0:1]
@@ -797,11 +764,10 @@ define amdgpu_kernel void @test1_s_barrier_join(ptr addrspace(1) %out) #0 {
 ;
 ; GLOBAL-ISEL-LABEL: test1_s_barrier_join:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GLOBAL-ISEL-NEXT:    v_mul_lo_u32 v1, v0, v0
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GLOBAL-ISEL-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    global_store_b32 v3, v2, s[0:1]
@@ -824,12 +790,11 @@ entry:
 define amdgpu_kernel void @test2_s_barrier_join(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test2_s_barrier_join:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GCN-NEXT:    s_barrier_join 1
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    v_mul_u32_u24_e32 v1, v0, v0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; GCN-NEXT:    s_barrier_join 1
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_store_b32 v2, v0, s[0:1]
@@ -839,11 +804,10 @@ define amdgpu_kernel void @test2_s_barrier_join(ptr addrspace(1) %out) #0 {
 ;
 ; GLOBAL-ISEL-LABEL: test2_s_barrier_join:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GLOBAL-ISEL-NEXT:    v_mul_lo_u32 v1, v0, v0
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GLOBAL-ISEL-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    global_store_b32 v3, v2, s[0:1]
@@ -866,12 +830,11 @@ entry:
 define amdgpu_kernel void @test3_s_barrier_join(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test3_s_barrier_join:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GCN-NEXT:    s_barrier_join 0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    v_mul_u32_u24_e32 v1, v0, v0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; GCN-NEXT:    s_barrier_join 0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_store_b32 v2, v0, s[0:1]
@@ -881,11 +844,10 @@ define amdgpu_kernel void @test3_s_barrier_join(ptr addrspace(1) %out) #0 {
 ;
 ; GLOBAL-ISEL-LABEL: test3_s_barrier_join:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GLOBAL-ISEL-NEXT:    v_mul_lo_u32 v1, v0, v0
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GLOBAL-ISEL-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    global_store_b32 v3, v2, s[0:1]
@@ -908,11 +870,11 @@ entry:
 define amdgpu_kernel void @test4_s_barrier_join_m0(ptr addrspace(1) %out, i32 %bar) #0 {
 ; GCN-LABEL: test4_s_barrier_join_m0:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b96 s[0:2], s[2:3], 0x24
-; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GCN-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; GCN-NEXT:    v_mul_u32_u24_e32 v2, v0, v0
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GCN-NEXT:    v_sub_nc_u32_e32 v0, v2, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_mov_b32 m0, s2
@@ -925,11 +887,10 @@ define amdgpu_kernel void @test4_s_barrier_join_m0(ptr addrspace(1) %out, i32 %b
 ;
 ; GLOBAL-ISEL-LABEL: test4_s_barrier_join_m0:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b96 s[0:2], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; GLOBAL-ISEL-NEXT:    v_mul_lo_u32 v1, v0, v0
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GLOBAL-ISEL-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_mov_b32 m0, s2
@@ -983,10 +944,8 @@ define void @test5_s_barrier_join_m0(i32 %arg) {
 define amdgpu_kernel void @test1_s_barrier_leave(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test1_s_barrier_leave:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
-; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GCN-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
+; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_store_b32 v0, v1, s[6:7]
 ; GCN-NEXT:    s_barrier_leave
@@ -1004,10 +963,8 @@ define amdgpu_kernel void @test1_s_barrier_leave(ptr addrspace(1) %a, ptr addrsp
 ;
 ; GLOBAL-ISEL-LABEL: test1_s_barrier_leave:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b256 s[0:7], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b256 s[0:7], s[0:1], 0x24
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    global_store_b32 v0, v1, s[6:7]
 ; GLOBAL-ISEL-NEXT:    s_barrier_leave
@@ -1042,12 +999,11 @@ entry:
 define amdgpu_kernel void @test1_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test1_s_wakeup_barrier:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GCN-NEXT:    s_wakeup_barrier -1
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    v_mul_u32_u24_e32 v1, v0, v0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; GCN-NEXT:    s_wakeup_barrier -1
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_store_b32 v2, v0, s[0:1]
@@ -1057,11 +1013,10 @@ define amdgpu_kernel void @test1_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
 ;
 ; GLOBAL-ISEL-LABEL: test1_s_wakeup_barrier:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GLOBAL-ISEL-NEXT:    v_mul_lo_u32 v1, v0, v0
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GLOBAL-ISEL-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    global_store_b32 v3, v2, s[0:1]
@@ -1084,12 +1039,11 @@ entry:
 define amdgpu_kernel void @test2_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test2_s_wakeup_barrier:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GCN-NEXT:    s_wakeup_barrier 1
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    v_mul_u32_u24_e32 v1, v0, v0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; GCN-NEXT:    s_wakeup_barrier 1
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_store_b32 v2, v0, s[0:1]
@@ -1099,11 +1053,10 @@ define amdgpu_kernel void @test2_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
 ;
 ; GLOBAL-ISEL-LABEL: test2_s_wakeup_barrier:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GLOBAL-ISEL-NEXT:    v_mul_lo_u32 v1, v0, v0
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GLOBAL-ISEL-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    global_store_b32 v3, v2, s[0:1]
@@ -1126,12 +1079,11 @@ entry:
 define amdgpu_kernel void @test3_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test3_s_wakeup_barrier:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GCN-NEXT:    s_wakeup_barrier 0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    v_mul_u32_u24_e32 v1, v0, v0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
+; GCN-NEXT:    s_wakeup_barrier 0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_store_b32 v2, v0, s[0:1]
@@ -1141,11 +1093,10 @@ define amdgpu_kernel void @test3_s_wakeup_barrier(ptr addrspace(1) %out) #0 {
 ;
 ; GLOBAL-ISEL-LABEL: test3_s_wakeup_barrier:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GLOBAL-ISEL-NEXT:    v_mul_lo_u32 v1, v0, v0
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GLOBAL-ISEL-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    global_store_b32 v3, v2, s[0:1]
@@ -1168,11 +1119,11 @@ entry:
 define amdgpu_kernel void @test4_s_wakeup_barrier_m0(ptr addrspace(1) %out, i32 %bar) #0 {
 ; GCN-LABEL: test4_s_wakeup_barrier_m0:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b96 s[0:2], s[2:3], 0x24
-; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GCN-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; GCN-NEXT:    v_mul_u32_u24_e32 v2, v0, v0
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GCN-NEXT:    v_sub_nc_u32_e32 v0, v2, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_mov_b32 m0, s2
@@ -1185,11 +1136,10 @@ define amdgpu_kernel void @test4_s_wakeup_barrier_m0(ptr addrspace(1) %out, i32 
 ;
 ; GLOBAL-ISEL-LABEL: test4_s_wakeup_barrier_m0:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b96 s[0:2], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
 ; GLOBAL-ISEL-NEXT:    v_mul_lo_u32 v1, v0, v0
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GLOBAL-ISEL-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_mov_b32 m0, s2
@@ -1243,13 +1193,11 @@ define void @test5_s_wakeup_barrier_m0(i32 %arg) {
 define amdgpu_kernel void @test1_s_get_barrier_state(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test1_s_get_barrier_state:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_get_barrier_state s4, -1
-; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GCN-NEXT:    s_get_barrier_state s2, -1
+; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_wait_alu 0xfffe
-; GCN-NEXT:    v_dual_mov_b32 v1, s4 :: v_dual_and_b32 v0, 0x3ff, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GCN-NEXT:    v_dual_mov_b32 v1, s2 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GCN-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -1257,10 +1205,8 @@ define amdgpu_kernel void @test1_s_get_barrier_state(ptr addrspace(1) %out) #0 {
 ;
 ; GLOBAL-ISEL-LABEL: test1_s_get_barrier_state:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GLOBAL-ISEL-NEXT:    s_get_barrier_state s2, -1
@@ -1284,13 +1230,11 @@ entry:
 define amdgpu_kernel void @test2_s_get_barrier_state(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test2_s_get_barrier_state:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_get_barrier_state s4, 1
-; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GCN-NEXT:    s_get_barrier_state s2, 1
+; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_wait_alu 0xfffe
-; GCN-NEXT:    v_dual_mov_b32 v1, s4 :: v_dual_and_b32 v0, 0x3ff, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GCN-NEXT:    v_dual_mov_b32 v1, s2 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GCN-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -1298,10 +1242,8 @@ define amdgpu_kernel void @test2_s_get_barrier_state(ptr addrspace(1) %out) #0 {
 ;
 ; GLOBAL-ISEL-LABEL: test2_s_get_barrier_state:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GLOBAL-ISEL-NEXT:    s_get_barrier_state s2, 1
@@ -1325,13 +1267,11 @@ entry:
 define amdgpu_kernel void @test3_s_get_barrier_state(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test3_s_get_barrier_state:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_get_barrier_state s4, 0
-; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GCN-NEXT:    s_get_barrier_state s2, 0
+; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_wait_alu 0xfffe
-; GCN-NEXT:    v_dual_mov_b32 v1, s4 :: v_dual_and_b32 v0, 0x3ff, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GCN-NEXT:    v_dual_mov_b32 v1, s2 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GCN-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -1339,10 +1279,8 @@ define amdgpu_kernel void @test3_s_get_barrier_state(ptr addrspace(1) %out) #0 {
 ;
 ; GLOBAL-ISEL-LABEL: test3_s_get_barrier_state:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GLOBAL-ISEL-NEXT:    s_get_barrier_state s2, 0
@@ -1366,10 +1304,8 @@ entry:
 define amdgpu_kernel void @test4_s_get_barrier_state_m0(ptr addrspace(1) %out, i32 %bar) #0 {
 ; GCN-LABEL: test4_s_get_barrier_state_m0:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b96 s[0:2], s[2:3], 0x24
-; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GCN-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
+; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_mov_b32 m0, s2
 ; GCN-NEXT:    global_store_b32 v0, v1, s[0:1]
@@ -1385,10 +1321,8 @@ define amdgpu_kernel void @test4_s_get_barrier_state_m0(ptr addrspace(1) %out, i
 ;
 ; GLOBAL-ISEL-LABEL: test4_s_get_barrier_state_m0:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b96 s[0:2], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_mov_b32 m0, s2
 ; GLOBAL-ISEL-NEXT:    global_store_b32 v0, v1, s[0:1]
@@ -1450,11 +1384,10 @@ define i32 @test5_s_get_barrier_state_m0(i32 %arg) {
 define amdgpu_kernel void @test_barrier_convert(ptr addrspace(1) %out) #0 {
 ; GCN-LABEL: test_barrier_convert:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GCN-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    v_mul_u32_u24_e32 v1, v0, v0
+; GCN-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GCN-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_store_b32 v3, v2, s[0:1]
@@ -1468,11 +1401,10 @@ define amdgpu_kernel void @test_barrier_convert(ptr addrspace(1) %out) #0 {
 ;
 ; GLOBAL-ISEL-LABEL: test_barrier_convert:
 ; GLOBAL-ISEL:       ; %bb.0: ; %entry
-; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
-; GLOBAL-ISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GLOBAL-ISEL-NEXT:    v_mul_lo_u32 v1, v0, v0
+; GLOBAL-ISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v3, 2, v0
+; GLOBAL-ISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GLOBAL-ISEL-NEXT:    v_sub_nc_u32_e32 v0, v1, v0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    global_store_b32 v3, v2, s[0:1]
