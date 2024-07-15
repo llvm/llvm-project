@@ -1,0 +1,19 @@
+# RUN: not --crash llc -verify-machineinstrs -mtriple=arm64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
+
+---
+name:            test_uscmp
+body:             |
+  bb.0:
+
+    %3:_(<2 x s32>) = G_IMPLICIT_DEF
+    %4:_(<2 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: Generic vector scmp/ucmp must preserve number of lanes
+    %5:_(s1) = G_UCMP  %3, %4
+
+    %12:_(s32) = G_CONSTANT i32 0
+    %13:_(s64) = G_CONSTANT i64 2
+    ; CHECK: Generic scmp/ucmp must have same input types
+    %14:_(s1) = G_SCMP %12, %13
+
+...
