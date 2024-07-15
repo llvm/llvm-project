@@ -758,28 +758,32 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
     const ModuleList &target_images = target.GetImages();
     m_module_sp = target_images.FindModule(m_uuid);
 
-    std::unique_ptr<Progress> progress_up;
-    if (IsKernel()) {
-      StreamString prog_str;
-      // 'mach_kernel' is a fake name we make up to find kernels
-      // that were located by the local filesystem scan.
-      if (GetName() != "mach_kernel")
-        prog_str << GetName() << " ";
-      if (GetUUID().IsValid())
-        prog_str << GetUUID().GetAsString() << " ";
-      if (GetLoadAddress() != LLDB_INVALID_ADDRESS) {
-        prog_str << "at ";
-        prog_str.PutHex64(GetLoadAddress());
-      }
-      progress_up = std::make_unique<Progress>("Loading kernel",
-                                               prog_str.GetString().str());
+    StreamString prog_str;
+    // 'mach_kernel' is a fake name we make up to find kernels
+    // that were located by the local filesystem scan.
+    if (GetName() != "mach_kernel")
+      prog_str << GetName() << " ";
+    if (GetUUID().IsValid())
+      prog_str << GetUUID().GetAsString() << " ";
+    if (GetLoadAddress() != LLDB_INVALID_ADDRESS) {
+      prog_str << "at 0x";
+      prog_str.PutHex64(GetLoadAddress());
     }
+    std::unique_ptr<Progress> progress_wp;
+    if (IsKernel())
+      progress_wp = std::make_unique<Progress>("Loading kernel",
+                                               prog_str.GetString().str());
+    else
+      progress_wp = std::make_unique<Progress>("Loading kext",
+                                               prog_str.GetString().str());
 
     // Search for the kext on the local filesystem via the UUID
     if (!m_module_sp && m_uuid.IsValid()) {
       ModuleSpec module_spec;
       module_spec.GetUUID() = m_uuid;
-      module_spec.GetArchitecture() = target.GetArchitecture();
+      if (!m_uuid.IsValid())
+        module_spec.GetArchitecture() = target.GetArchitecture();
+      module_spec.GetFileSpec() = FileSpec(m_name);
 
       // If the current platform is PlatformDarwinKernel, create a ModuleSpec
       // with the filename set to be the bundle ID for this kext, e.g.
@@ -788,17 +792,9 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       // system.
       PlatformSP platform_sp(target.GetPlatform());
       if (platform_sp) {
-        static ConstString g_platform_name(
-            PlatformDarwinKernel::GetPluginNameStatic());
-        if (platform_sp->GetPluginName() == g_platform_name.GetStringRef()) {
-          ModuleSpec kext_bundle_module_spec(module_spec);
-          FileSpec kext_filespec(m_name.c_str());
-          FileSpecList search_paths = target.GetExecutableSearchPaths();
-          kext_bundle_module_spec.GetFileSpec() = kext_filespec;
-          platform_sp->GetSharedModule(kext_bundle_module_spec, process,
-                                       m_module_sp, &search_paths, nullptr,
-                                       nullptr);
-        }
+        FileSpecList search_paths = target.GetExecutableSearchPaths();
+        platform_sp->GetSharedModule(module_spec, process, m_module_sp,
+                                     &search_paths, nullptr, nullptr);
       }
 
       // Ask the Target to find this file on the local system, if possible.
@@ -1368,11 +1364,6 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
       if (to_be_added[new_kext]) {
         KextImageInfo &image_info = kext_summaries[new_kext];
         if (load_kexts) {
-          std::string prog_str = kext_summaries[new_kext].GetName();
-          prog_str += " ";
-          prog_str += kext_summaries[new_kext].GetUUID().GetAsString();
-
-          Progress progress("Loading kext", prog_str);
           if (!image_info.LoadImageUsingMemoryModule(m_process)) {
             kexts_failed_to_load.push_back(std::pair<std::string, UUID>(
                 kext_summaries[new_kext].GetName(),
