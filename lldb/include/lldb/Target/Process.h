@@ -465,6 +465,8 @@ public:
     static bool SetUpdateStateOnRemoval(Event *event_ptr);
 
   private:
+    bool ForwardEventToPendingListeners(Event *event_ptr) override;
+
     void SetUpdateStateOnRemoval() { m_update_state++; }
 
     void SetRestarted(bool new_value) { m_restarted = new_value; }
