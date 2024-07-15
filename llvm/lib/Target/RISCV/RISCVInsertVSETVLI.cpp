@@ -1644,6 +1644,24 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
   Used.demandVL();
   Used.demandVTYPE();
   SmallVector<MachineInstr*> ToDelete;
+
+  // Update LIS and cleanup dead AVLs given a value which has
+  // has had one use (as an AVL) removed.
+  auto afterDroppedAVLUse = [&](Register OldVLReg) {
+    if (LIS)
+      LIS->shrinkToUses(&LIS->getInterval(OldVLReg));
+
+    MachineInstr *VLOpDef = MRI->getUniqueVRegDef(OldVLReg);
+    if (VLOpDef && TII->isAddImmediate(*VLOpDef, OldVLReg) &&
+        MRI->use_nodbg_empty(OldVLReg)) {
+      if (LIS) {
+        LIS->removeInterval(OldVLReg);
+        LIS->RemoveMachineInstrFromMaps(*VLOpDef);
+      }
+      VLOpDef->eraseFromParent();
+    }
+  };
+
   for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend())) {
 
     if (!isVectorConfigInstr(MI)) {
@@ -1696,22 +1714,9 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
             MI.getOperand(1).ChangeToImmediate(NextMI->getOperand(1).getImm());
           else
             MI.getOperand(1).ChangeToRegister(NextMI->getOperand(1).getReg(), false);
+          if (OldVLReg && OldVLReg.isVirtual())
+            afterDroppedAVLUse(OldVLReg);
 
-          if (OldVLReg && OldVLReg.isVirtual()) {
-            // MI no longer uses OldVLReg so shrink its LiveInterval.
-            if (LIS)
-              LIS->shrinkToUses(&LIS->getInterval(OldVLReg));
-
-            MachineInstr *VLOpDef = MRI->getUniqueVRegDef(OldVLReg);
-            if (VLOpDef && TII->isAddImmediate(*VLOpDef, OldVLReg) &&
-                MRI->use_nodbg_empty(OldVLReg)) {
-              if (LIS) {
-                LIS->removeInterval(OldVLReg);
-                LIS->RemoveMachineInstrFromMaps(*VLOpDef);
-              }
-              VLOpDef->eraseFromParent();
-            }
-          }
           MI.setDesc(NextMI->getDesc());
         }
         MI.getOperand(2).setImm(NextMI->getOperand(2).getImm());
@@ -1731,8 +1736,8 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
     if (MI->getOperand(1).isReg())
       OldAVLReg = MI->getOperand(1).getReg();
     MI->eraseFromParent();
-    if (LIS && OldAVLReg && OldAVLReg.isVirtual())
-      LIS->shrinkToUses(&LIS->getInterval(OldAVLReg));
+    if (OldAVLReg && OldAVLReg.isVirtual())
+      afterDroppedAVLUse(OldAVLReg);
   }
 }
 
