@@ -9,7 +9,7 @@
 #include "src/stdio/getchar.h"
 #include "src/__support/OSUtil/io.h"
 
-#include <stdio.h>
+#include "hdr/stdio_macros.h" // for EOF.
 
 namespace LIBC_NAMESPACE {
 

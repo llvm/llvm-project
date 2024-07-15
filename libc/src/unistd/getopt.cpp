@@ -13,7 +13,7 @@
 #include "src/__support/common.h"
 #include "src/stdio/fprintf.h"
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
 
 // This is POSIX compliant and does not support GNU extensions, mainly this is
 // just the re-ordering of argv elements such that unknown arguments can be

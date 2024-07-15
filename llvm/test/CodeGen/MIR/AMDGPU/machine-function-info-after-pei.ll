@@ -8,6 +8,7 @@
 ; AFTER-PEI-NEXT: maxKernArgAlign: 8
 ; AFTER-PEI-NEXT: ldsSize:         0
 ; AFTER-PEI-NEXT: gdsSize:         0
+; AFTER-PEI-NEXT: laneSharedVGPRSize: 0
 ; AFTER-PEI-NEXT: dynLDSAlign:     1
 ; AFTER-PEI-NEXT: isEntryFunction: true
 ; AFTER-PEI-NEXT: isChainFunction: false

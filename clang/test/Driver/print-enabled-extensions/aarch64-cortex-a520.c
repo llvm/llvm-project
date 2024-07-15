@@ -34,7 +34,6 @@
 // CHECK-NEXT:     FEAT_LRCPC2                                            Enable v8.4-A RCPC instructions with Immediate Offsets
 // CHECK-NEXT:     FEAT_LSE                                               Enable ARMv8.1 Large System Extension (LSE) atomic instructions
 // CHECK-NEXT:     FEAT_LSE2                                              Enable ARMv8.4 Large System Extension 2 (LSE2) atomicity rules
-// CHECK-NEXT:     FEAT_MEC                                               Enable Memory Encryption Contexts Extension
 // CHECK-NEXT:     FEAT_MPAM                                              Enable v8.4-A Memory system Partitioning and Monitoring extension
 // CHECK-NEXT:     FEAT_MTE, FEAT_MTE2                                    Enable Memory Tagging Extension
 // CHECK-NEXT:     FEAT_NV, FEAT_NV2                                      Enable v8.4-A Nested Virtualization Enchancement
@@ -44,7 +43,6 @@
 // CHECK-NEXT:     FEAT_PMUv3                                             Enable Code Generation for ARMv8 PMUv3 Performance Monitors extension
 // CHECK-NEXT:     FEAT_RAS, FEAT_RASv1p1                                 Enable ARMv8 Reliability, Availability and Serviceability Extensions
 // CHECK-NEXT:     FEAT_RDM                                               Enable ARMv8.1 Rounding Double Multiply Add/Subtract instructions
-// CHECK-NEXT:     FEAT_RME                                               Enable Realm Management Extension
 // CHECK-NEXT:     FEAT_SB                                                Enable v8.5 Speculation Barrier
 // CHECK-NEXT:     FEAT_SEL2                                              Enable v8.4-A Secure Exception Level 2 extension
 // CHECK-NEXT:     FEAT_SPECRES                                           Enable v8.5a execution and data prediction invalidation instructions

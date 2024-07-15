@@ -1329,6 +1329,10 @@ void SemaARM::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
+  const TargetInfo &TI = getASTContext().getTargetInfo();
+  if (TI.hasFeature("vfp"))
+    Diag(D->getLocation(), diag::warn_arm_interrupt_vfp_clobber);
+
   D->addAttr(::new (getASTContext())
                  ARMInterruptAttr(getASTContext(), AL, Kind));
 }

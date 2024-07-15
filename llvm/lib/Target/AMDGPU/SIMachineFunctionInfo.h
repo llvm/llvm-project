@@ -276,6 +276,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   Align MaxKernArgAlign;
   uint32_t LDSSize = 0;
   uint32_t GDSSize = 0;
+  uint32_t LaneSharedVGPRSize = 0;
   Align DynLDSAlign;
   bool IsEntryFunction = false;
   bool IsChainFunction = false;
@@ -325,6 +326,7 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("maxKernArgAlign", MFI.MaxKernArgAlign);
     YamlIO.mapOptional("ldsSize", MFI.LDSSize, 0u);
     YamlIO.mapOptional("gdsSize", MFI.GDSSize, 0u);
+    YamlIO.mapOptional("laneSharedVGPRSize", MFI.LaneSharedVGPRSize, 0u);
     YamlIO.mapOptional("dynLDSAlign", MFI.DynLDSAlign, Align());
     YamlIO.mapOptional("isEntryFunction", MFI.IsEntryFunction, false);
     YamlIO.mapOptional("isChainFunction", MFI.IsChainFunction, false);

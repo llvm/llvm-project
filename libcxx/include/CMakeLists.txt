@@ -710,6 +710,7 @@ set(files
   __thread/timed_backoff_policy.h
   __tree
   __tuple/find_index.h
+  __tuple/ignore.h
   __tuple/make_tuple_types.h
   __tuple/sfinae_helpers.h
   __tuple/tuple_element.h

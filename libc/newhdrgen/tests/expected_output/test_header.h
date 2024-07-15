@@ -27,11 +27,11 @@ enum {
 __BEGIN_C_DECLS
 
 #ifdef FUNC_A_16
-void func_a()CONST_FUNC_A;
+CONST_FUNC_A void func_a() __NOEXCEPT;
 #endif // FUNC_A_16
 
 #ifdef FUNC_B_16
-int func_b(int, float)CONST_FUNC_B;
+CONST_FUNC_B int func_b(int, float) __NOEXCEPT;
 #endif // FUNC_B_16
 
 extern obj object_1;

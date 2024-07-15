@@ -59,20 +59,14 @@ bool CallGraphUpdater::finalize() {
         auto *DeadSCC = LCG->lookupSCC(N);
         assert(DeadSCC && DeadSCC->size() == 1 &&
                &DeadSCC->begin()->getFunction() == DeadFn);
-        auto &DeadRC = DeadSCC->getOuterRefSCC();
 
-        FunctionAnalysisManager &FAM =
-            AM->getResult<FunctionAnalysisManagerCGSCCProxy>(*DeadSCC, *LCG)
-                .getManager();
-
-        FAM.clear(*DeadFn, DeadFn->getName());
+        FAM->clear(*DeadFn, DeadFn->getName());
         AM->clear(*DeadSCC, DeadSCC->getName());
         LCG->markDeadFunction(*DeadFn);
 
         // Mark the relevant parts of the call graph as invalid so we don't
         // visit them.
-        UR->InvalidatedSCCs.insert(DeadSCC);
-        UR->InvalidatedRefSCCs.insert(&DeadRC);
+        UR->InvalidatedSCCs.insert(LCG->lookupSCC(N));
         UR->DeadFunctions.push_back(DeadFn);
       } else {
         // The CGSCC infrastructure batch deletes functions at the end of the

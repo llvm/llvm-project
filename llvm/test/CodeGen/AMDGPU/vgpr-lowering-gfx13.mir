@@ -747,3 +747,89 @@ body:             |
     SI_RETURN_TO_EPILOG killed $sgpr0
     S_ENDPGM 0
 ...
+
+# ASM-LABEL: {{^}}idx_sel_mov:
+# DIS-LABEL: <idx_sel_mov>:
+---
+name:            idx_sel_mov
+machineFunctionInfo:
+  laneSharedVGPRSize: 1000
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; ASM: %bb.0:
+
+    ; GCN-NEXT: s_set_gpr_idx_u32 idx1, s2
+    $idx1 = S_SET_GPR_IDX_U32 undef $sgpr2
+
+    ; GCN-NEXT: s_set_vgpr_frames 0x4100
+    ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=1 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=1
+    ; GCN-NEXT: v_mov_b32_e32 v0 /*v256*/, v255 /*v511*/
+    $vgpr256 = V_MOV_B32_e32 undef $vgpr511, implicit $exec
+
+    ; set dst use idx1, reset msb
+    ; GCN-NEXT: s_set_vgpr_frames 64
+    ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+    ; GCN-NEXT: v_mov_b32_e32 v0, v10
+    V_STORE_IDX undef $vgpr10, $idx1, 0, 1, implicit $exec
+
+    ; reset idx, set msb 0 & dst
+    ; GCN-NEXT: s_set_vgpr_frames 0x4100
+    ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=1 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=1
+    ; GCN-NEXT: v_mov_b32_e32 v1 /*v257*/, v254 /*v510*/
+    $vgpr257 = V_MOV_B32_e32 undef $vgpr510, implicit $exec
+
+    ; set dst use idx1, reset dst msb, no modify src0 msb
+    ; GCN-NEXT: s_set_vgpr_frames 0x140
+    ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=1 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+    ; GCN-NEXT: v_mov_b32_e32 v0, v24 /*v280*/
+    V_STORE_IDX undef $vgpr280, $idx1, 0, 1, implicit $exec
+
+    ; reset idx, set dst msb, set src0 msb
+    ; GCN-NEXT: s_set_vgpr_frames 0x4300
+    ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=3 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=1
+    ; GCN-NEXT: v_mov_b32_e32 v1 /*v257*/, v230 /*v998*/
+    $vgpr257 = V_MOV_B32_e32 undef $vgpr998, implicit $exec
+
+    ; set src0 idx, reset dst msb
+    ; GCN-NEXT: s_set_vgpr_frames 0x301
+    ; ASM-SAME:                                         ;  vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=3 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+    ; GCN-NEXT: v_mov_b32_e32 v11, v231 /*v999*/
+    renamable $vgpr11 = V_LOAD_IDX $idx1, 999, 1, implicit $exec
+
+    ; no set_vgpr_frames
+    ; GCN-NEXT: v_mov_b32_e32 v12, v230 /*v998*/
+    renamable $vgpr12 = V_LOAD_IDX $idx1, 998, 1, implicit $exec
+
+    ; FLAT (vaddr, vdata and vdst operands)
+
+    ; GCN-NEXT: s_set_vgpr_frames 0x100
+    ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=1 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+    ; GCN-NEXT: global_load_b32 v2, v[2:3] /*v[258:259]*/, off
+    $vgpr2 = GLOBAL_LOAD_DWORD undef $vgpr258_vgpr259, 0, 0, implicit $exec
+
+    ; set src0 idx, reset src0 msb
+    ; GCN-NEXT: s_set_vgpr_frames 1
+    ; ASM-SAME:                                         ;  vsrc0_idx=1 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+    ; GCN-NEXT: v_mov_b32_e32 v11, v1
+    renamable $vgpr11 = V_LOAD_IDX $idx1, 1, 1, implicit $exec
+
+    ; set dst idx, reset src0 idx, set src0 msb
+    ; GCN-NEXT: s_set_vgpr_frames 0x140
+    ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=1 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+    ; GCN-NEXT: v_mov_b32_e32 v1, v24 /*v280*/
+    V_STORE_IDX undef $vgpr280, $idx1, 1, 1, implicit $exec
+
+    ; reset idx, no mod src0 msb
+    ; GCN-NEXT: s_set_vgpr_frames 0x100
+    ; ASM-SAME:                                         ;  vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=1 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+    ; GCN-NEXT: scratch_load_u8 v0, v255 /*v511*/, s0
+    $vgpr0 = SCRATCH_LOAD_UBYTE_SVS $vgpr511, undef $sgpr0, 0, 0, implicit $exec, implicit $flat_scr
+
+    ; TODO-GFX13 tests with idx bits
+    ; Tuple crossing the 256 boundary
+    ; DPP/tied operand
+    ; DS (addr, data0, and data1 operands)
+    ; VBUFFER (vdata, vaddr operands)
+    ; BUNDLE (and VOP2, VOP3, VOP3P)
+...

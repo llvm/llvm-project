@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_GPU_RPC_HOST_CALL_H
 #define LLVM_LIBC_SRC_GPU_RPC_HOST_CALL_H
 
+#include "hdr/types/FILE.h"
 #include <stddef.h>
-#include <stdio.h>
 
 namespace LIBC_NAMESPACE {
 

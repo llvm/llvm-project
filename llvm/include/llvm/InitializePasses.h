@@ -180,7 +180,7 @@ void initializeMIRAddFSDiscriminatorsPass(PassRegistry &);
 void initializeMIRCanonicalizerPass(PassRegistry &);
 void initializeMIRNamerPass(PassRegistry &);
 void initializeMIRPrintingPassPass(PassRegistry&);
-void initializeMachineBlockFrequencyInfoPass(PassRegistry&);
+void initializeMachineBlockFrequencyInfoWrapperPassPass(PassRegistry &);
 void initializeMachineBlockPlacementPass(PassRegistry&);
 void initializeMachineBlockPlacementStatsPass(PassRegistry&);
 void initializeMachineBranchProbabilityInfoWrapperPassPass(PassRegistry &);

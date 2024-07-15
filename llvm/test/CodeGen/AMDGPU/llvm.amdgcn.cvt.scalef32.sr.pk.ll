@@ -14,9 +14,9 @@ declare <6 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk32.fp6.f32(<32 x float> %src, i
 define amdgpu_ps void @test_scalef32_sr_pk32_bf6_bf16_vv(<32 x bfloat> %src, i32 %sr, float %scale, ptr addrspace(1) %out) {
 ; GFX950-SDAG-LABEL: test_scalef32_sr_pk32_bf6_bf16_vv:
 ; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_bf16 v[0:5], v[0:15], v16, v17
-; GFX950-SDAG-NEXT:    global_store_dwordx2 v[18:19], v[4:5], off offset:16
-; GFX950-SDAG-NEXT:    global_store_dwordx4 v[18:19], v[0:3], off
+; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_bf16 v[20:25], v[0:15], v16, v17
+; GFX950-SDAG-NEXT:    global_store_dwordx2 v[18:19], v[24:25], off offset:16
+; GFX950-SDAG-NEXT:    global_store_dwordx4 v[18:19], v[20:23], off
 ; GFX950-SDAG-NEXT:    s_endpgm
 ;
 ; GFX950-GISEL-LABEL: test_scalef32_sr_pk32_bf6_bf16_vv:
@@ -54,17 +54,17 @@ define amdgpu_ps void @test_scalef32_sr_pk32_bf6_bf16_vv(<32 x bfloat> %src, i32
 ; GFX950-GISEL-NEXT:    v_mov_b32_sdwa v14, v34 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
 ; GFX950-GISEL-NEXT:    v_mov_b32_sdwa v15, v35 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_bf16 v[0:5], v[0:15], v16, v17
-; GFX950-GISEL-NEXT:    global_store_dwordx4 v[18:19], v[0:3], off
-; GFX950-GISEL-NEXT:    global_store_dwordx2 v[18:19], v[4:5], off offset:16
+; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_bf16 v[20:25], v[0:15], v16, v17
+; GFX950-GISEL-NEXT:    global_store_dwordx4 v[18:19], v[20:23], off
+; GFX950-GISEL-NEXT:    global_store_dwordx2 v[18:19], v[24:25], off offset:16
 ; GFX950-GISEL-NEXT:    s_endpgm
 ;
 ; GFX1210-SDAG-LABEL: test_scalef32_sr_pk32_bf6_bf16_vv:
 ; GFX1210-SDAG:       ; %bb.0:
-; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_bf16 v[0:5], v[0:15], v16, v17
+; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_bf16 v[20:25], v[0:15], v16, v17
 ; GFX1210-SDAG-NEXT:    s_clause 0x1
-; GFX1210-SDAG-NEXT:    global_store_b64 v[18:19], v[4:5], off offset:16
-; GFX1210-SDAG-NEXT:    global_store_b128 v[18:19], v[0:3], off
+; GFX1210-SDAG-NEXT:    global_store_b64 v[18:19], v[24:25], off offset:16
+; GFX1210-SDAG-NEXT:    global_store_b128 v[18:19], v[20:23], off
 ; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-SDAG-NEXT:    s_endpgm
 ;
@@ -118,10 +118,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_bf6_bf16_vv(<32 x bfloat> %src, i32
 ; GFX1210-GISEL-NEXT:    v_or_b32_e32 v14, v23, v14
 ; GFX1210-GISEL-NEXT:    v_or_b32_e32 v15, v24, v15
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_bf16 v[0:5], v[0:15], v16, v17
+; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_bf16 v[20:25], v[0:15], v16, v17
 ; GFX1210-GISEL-NEXT:    s_clause 0x1
-; GFX1210-GISEL-NEXT:    global_store_b128 v[18:19], v[0:3], off
-; GFX1210-GISEL-NEXT:    global_store_b64 v[18:19], v[4:5], off offset:16
+; GFX1210-GISEL-NEXT:    global_store_b128 v[18:19], v[20:23], off
+; GFX1210-GISEL-NEXT:    global_store_b64 v[18:19], v[24:25], off offset:16
 ; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-GISEL-NEXT:    s_endpgm
   %cvt = tail call <6 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk32.bf6.bf16(<32 x bfloat> %src, i32 %sr, float %scale)
@@ -148,10 +148,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_bf6_bf16_sl(<32 x bfloat> inreg %sr
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v15, s13
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v16, s14
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v17, s15
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v18, 0x42c80000
-; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_bf16 v[2:7], v[2:17], s16, v18
-; GFX950-SDAG-NEXT:    global_store_dwordx2 v[0:1], v[6:7], off offset:16
-; GFX950-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX950-SDAG-NEXT:    v_mov_b32_e32 v24, 0x42c80000
+; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_bf16 v[18:23], v[2:17], s16, v24
+; GFX950-SDAG-NEXT:    global_store_dwordx2 v[0:1], v[22:23], off offset:16
+; GFX950-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[18:21], off
 ; GFX950-SDAG-NEXT:    s_endpgm
 ;
 ; GFX950-GISEL-LABEL: test_scalef32_sr_pk32_bf6_bf16_sl:
@@ -228,10 +228,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_bf6_bf16_sl(<32 x bfloat> inreg %sr
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v18, 0x42c80000
-; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_bf16 v[2:7], v[2:17], s16, v18
-; GFX950-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; GFX950-GISEL-NEXT:    global_store_dwordx2 v[0:1], v[6:7], off offset:16
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v24, 0x42c80000
+; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_bf16 v[18:23], v[2:17], s16, v24
+; GFX950-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[18:21], off
+; GFX950-GISEL-NEXT:    global_store_dwordx2 v[0:1], v[22:23], off offset:16
 ; GFX950-GISEL-NEXT:    s_endpgm
 ;
 ; GFX1210-SDAG-LABEL: test_scalef32_sr_pk32_bf6_bf16_sl:
@@ -245,10 +245,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_bf6_bf16_sl(<32 x bfloat> inreg %sr
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v14, s12 :: v_dual_mov_b32 v15, s13
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v16, s14 :: v_dual_mov_b32 v17, s15
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_bf16 v[2:7], v[2:17], s16, 0x42c80000
+; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_bf16 v[18:23], v[2:17], s16, 0x42c80000
 ; GFX1210-SDAG-NEXT:    s_clause 0x1
-; GFX1210-SDAG-NEXT:    global_store_b64 v[0:1], v[6:7], off offset:16
-; GFX1210-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX1210-SDAG-NEXT:    global_store_b64 v[0:1], v[22:23], off offset:16
+; GFX1210-SDAG-NEXT:    global_store_b128 v[0:1], v[18:21], off
 ; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-SDAG-NEXT:    s_endpgm
 ;
@@ -328,10 +328,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_bf6_bf16_sl(<32 x bfloat> inreg %sr
 ; GFX1210-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX1210-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_bf16 v[2:7], v[2:17], s16, 0x42c80000
+; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_bf16 v[18:23], v[2:17], s16, 0x42c80000
 ; GFX1210-GISEL-NEXT:    s_clause 0x1
-; GFX1210-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX1210-GISEL-NEXT:    global_store_b64 v[0:1], v[6:7], off offset:16
+; GFX1210-GISEL-NEXT:    global_store_b128 v[0:1], v[18:21], off
+; GFX1210-GISEL-NEXT:    global_store_b64 v[0:1], v[22:23], off offset:16
 ; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-GISEL-NEXT:    s_endpgm
   %cvt = tail call <6 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk32.bf6.bf16(<32 x bfloat> %src, i32 %sr, float 100.0)
@@ -342,33 +342,33 @@ define amdgpu_ps void @test_scalef32_sr_pk32_bf6_bf16_sl(<32 x bfloat> inreg %sr
 define amdgpu_ps void @test_scalef32_sr_pk32_bf6_f16_vv(<32 x half> %src, i32 %sr, float %scale, ptr addrspace(1) %out) {
 ; GFX950-SDAG-LABEL: test_scalef32_sr_pk32_bf6_f16_vv:
 ; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f16 v[0:5], v[0:15], v16, v17
-; GFX950-SDAG-NEXT:    global_store_dwordx2 v[18:19], v[4:5], off offset:16
-; GFX950-SDAG-NEXT:    global_store_dwordx4 v[18:19], v[0:3], off
+; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f16 v[20:25], v[0:15], v16, v17
+; GFX950-SDAG-NEXT:    global_store_dwordx2 v[18:19], v[24:25], off offset:16
+; GFX950-SDAG-NEXT:    global_store_dwordx4 v[18:19], v[20:23], off
 ; GFX950-SDAG-NEXT:    s_endpgm
 ;
 ; GFX950-GISEL-LABEL: test_scalef32_sr_pk32_bf6_f16_vv:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f16 v[0:5], v[0:15], v16, v17
-; GFX950-GISEL-NEXT:    global_store_dwordx4 v[18:19], v[0:3], off
-; GFX950-GISEL-NEXT:    global_store_dwordx2 v[18:19], v[4:5], off offset:16
+; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f16 v[20:25], v[0:15], v16, v17
+; GFX950-GISEL-NEXT:    global_store_dwordx4 v[18:19], v[20:23], off
+; GFX950-GISEL-NEXT:    global_store_dwordx2 v[18:19], v[24:25], off offset:16
 ; GFX950-GISEL-NEXT:    s_endpgm
 ;
 ; GFX1210-SDAG-LABEL: test_scalef32_sr_pk32_bf6_f16_vv:
 ; GFX1210-SDAG:       ; %bb.0:
-; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f16 v[0:5], v[0:15], v16, v17
+; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f16 v[20:25], v[0:15], v16, v17
 ; GFX1210-SDAG-NEXT:    s_clause 0x1
-; GFX1210-SDAG-NEXT:    global_store_b64 v[18:19], v[4:5], off offset:16
-; GFX1210-SDAG-NEXT:    global_store_b128 v[18:19], v[0:3], off
+; GFX1210-SDAG-NEXT:    global_store_b64 v[18:19], v[24:25], off offset:16
+; GFX1210-SDAG-NEXT:    global_store_b128 v[18:19], v[20:23], off
 ; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1210-GISEL-LABEL: test_scalef32_sr_pk32_bf6_f16_vv:
 ; GFX1210-GISEL:       ; %bb.0:
-; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f16 v[0:5], v[0:15], v16, v17
+; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f16 v[20:25], v[0:15], v16, v17
 ; GFX1210-GISEL-NEXT:    s_clause 0x1
-; GFX1210-GISEL-NEXT:    global_store_b128 v[18:19], v[0:3], off
-; GFX1210-GISEL-NEXT:    global_store_b64 v[18:19], v[4:5], off offset:16
+; GFX1210-GISEL-NEXT:    global_store_b128 v[18:19], v[20:23], off
+; GFX1210-GISEL-NEXT:    global_store_b64 v[18:19], v[24:25], off offset:16
 ; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-GISEL-NEXT:    s_endpgm
   %cvt = tail call <6 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk32.bf6.f16(<32 x half> %src, i32 %sr, float %scale)
@@ -395,10 +395,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_bf6_f16_sl(<32 x half> inreg %src, 
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v15, s13
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v16, s14
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v17, s15
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v18, 0x42c80000
-; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f16 v[2:7], v[2:17], s16, v18
-; GFX950-SDAG-NEXT:    global_store_dwordx2 v[0:1], v[6:7], off offset:16
-; GFX950-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX950-SDAG-NEXT:    v_mov_b32_e32 v24, 0x42c80000
+; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f16 v[18:23], v[2:17], s16, v24
+; GFX950-SDAG-NEXT:    global_store_dwordx2 v[0:1], v[22:23], off offset:16
+; GFX950-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[18:21], off
 ; GFX950-SDAG-NEXT:    s_endpgm
 ;
 ; GFX950-GISEL-LABEL: test_scalef32_sr_pk32_bf6_f16_sl:
@@ -411,10 +411,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_bf6_f16_sl(<32 x half> inreg %src, 
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v18, 0x42c80000
-; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f16 v[2:7], v[2:17], s16, v18
-; GFX950-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; GFX950-GISEL-NEXT:    global_store_dwordx2 v[0:1], v[6:7], off offset:16
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v24, 0x42c80000
+; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f16 v[18:23], v[2:17], s16, v24
+; GFX950-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[18:21], off
+; GFX950-GISEL-NEXT:    global_store_dwordx2 v[0:1], v[22:23], off offset:16
 ; GFX950-GISEL-NEXT:    s_endpgm
 ;
 ; GFX1210-SDAG-LABEL: test_scalef32_sr_pk32_bf6_f16_sl:
@@ -428,10 +428,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_bf6_f16_sl(<32 x half> inreg %src, 
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v14, s12 :: v_dual_mov_b32 v15, s13
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v16, s14 :: v_dual_mov_b32 v17, s15
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f16 v[2:7], v[2:17], s16, 0x42c80000
+; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f16 v[18:23], v[2:17], s16, 0x42c80000
 ; GFX1210-SDAG-NEXT:    s_clause 0x1
-; GFX1210-SDAG-NEXT:    global_store_b64 v[0:1], v[6:7], off offset:16
-; GFX1210-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX1210-SDAG-NEXT:    global_store_b64 v[0:1], v[22:23], off offset:16
+; GFX1210-SDAG-NEXT:    global_store_b128 v[0:1], v[18:21], off
 ; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-SDAG-NEXT:    s_endpgm
 ;
@@ -446,10 +446,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_bf6_f16_sl(<32 x half> inreg %src, 
 ; GFX1210-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX1210-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f16 v[2:7], v[2:17], s16, 0x42c80000
+; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f16 v[18:23], v[2:17], s16, 0x42c80000
 ; GFX1210-GISEL-NEXT:    s_clause 0x1
-; GFX1210-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX1210-GISEL-NEXT:    global_store_b64 v[0:1], v[6:7], off offset:16
+; GFX1210-GISEL-NEXT:    global_store_b128 v[0:1], v[18:21], off
+; GFX1210-GISEL-NEXT:    global_store_b64 v[0:1], v[22:23], off offset:16
 ; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-GISEL-NEXT:    s_endpgm
   %cvt = tail call <6 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk32.bf6.f16(<32 x half> %src, i32 %sr, float 100.0)
@@ -460,9 +460,9 @@ define amdgpu_ps void @test_scalef32_sr_pk32_bf6_f16_sl(<32 x half> inreg %src, 
 define amdgpu_ps void @test_scalef32_sr_pk32_fp6_bf16_vv(<32 x bfloat> %src, i32 %sr, float %scale, ptr addrspace(1) %out) {
 ; GFX950-SDAG-LABEL: test_scalef32_sr_pk32_fp6_bf16_vv:
 ; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_bf16 v[0:5], v[0:15], v16, v17
-; GFX950-SDAG-NEXT:    global_store_dwordx2 v[18:19], v[4:5], off offset:16
-; GFX950-SDAG-NEXT:    global_store_dwordx4 v[18:19], v[0:3], off
+; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_bf16 v[20:25], v[0:15], v16, v17
+; GFX950-SDAG-NEXT:    global_store_dwordx2 v[18:19], v[24:25], off offset:16
+; GFX950-SDAG-NEXT:    global_store_dwordx4 v[18:19], v[20:23], off
 ; GFX950-SDAG-NEXT:    s_endpgm
 ;
 ; GFX950-GISEL-LABEL: test_scalef32_sr_pk32_fp6_bf16_vv:
@@ -500,17 +500,17 @@ define amdgpu_ps void @test_scalef32_sr_pk32_fp6_bf16_vv(<32 x bfloat> %src, i32
 ; GFX950-GISEL-NEXT:    v_mov_b32_sdwa v14, v34 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
 ; GFX950-GISEL-NEXT:    v_mov_b32_sdwa v15, v35 dst_sel:WORD_1 dst_unused:UNUSED_PRESERVE src0_sel:WORD_0
 ; GFX950-GISEL-NEXT:    s_nop 0
-; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_bf16 v[0:5], v[0:15], v16, v17
-; GFX950-GISEL-NEXT:    global_store_dwordx4 v[18:19], v[0:3], off
-; GFX950-GISEL-NEXT:    global_store_dwordx2 v[18:19], v[4:5], off offset:16
+; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_bf16 v[20:25], v[0:15], v16, v17
+; GFX950-GISEL-NEXT:    global_store_dwordx4 v[18:19], v[20:23], off
+; GFX950-GISEL-NEXT:    global_store_dwordx2 v[18:19], v[24:25], off offset:16
 ; GFX950-GISEL-NEXT:    s_endpgm
 ;
 ; GFX1210-SDAG-LABEL: test_scalef32_sr_pk32_fp6_bf16_vv:
 ; GFX1210-SDAG:       ; %bb.0:
-; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_bf16 v[0:5], v[0:15], v16, v17
+; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_bf16 v[20:25], v[0:15], v16, v17
 ; GFX1210-SDAG-NEXT:    s_clause 0x1
-; GFX1210-SDAG-NEXT:    global_store_b64 v[18:19], v[4:5], off offset:16
-; GFX1210-SDAG-NEXT:    global_store_b128 v[18:19], v[0:3], off
+; GFX1210-SDAG-NEXT:    global_store_b64 v[18:19], v[24:25], off offset:16
+; GFX1210-SDAG-NEXT:    global_store_b128 v[18:19], v[20:23], off
 ; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-SDAG-NEXT:    s_endpgm
 ;
@@ -564,10 +564,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_fp6_bf16_vv(<32 x bfloat> %src, i32
 ; GFX1210-GISEL-NEXT:    v_or_b32_e32 v14, v23, v14
 ; GFX1210-GISEL-NEXT:    v_or_b32_e32 v15, v24, v15
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_bf16 v[0:5], v[0:15], v16, v17
+; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_bf16 v[20:25], v[0:15], v16, v17
 ; GFX1210-GISEL-NEXT:    s_clause 0x1
-; GFX1210-GISEL-NEXT:    global_store_b128 v[18:19], v[0:3], off
-; GFX1210-GISEL-NEXT:    global_store_b64 v[18:19], v[4:5], off offset:16
+; GFX1210-GISEL-NEXT:    global_store_b128 v[18:19], v[20:23], off
+; GFX1210-GISEL-NEXT:    global_store_b64 v[18:19], v[24:25], off offset:16
 ; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-GISEL-NEXT:    s_endpgm
   %cvt = tail call <6 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk32.fp6.bf16(<32 x bfloat> %src, i32 %sr, float %scale)
@@ -594,10 +594,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_fp6_bf16_sl(<32 x bfloat> inreg %sr
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v15, s13
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v16, s14
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v17, s15
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v18, 0x42c80000
-; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_bf16 v[2:7], v[2:17], s16, v18
-; GFX950-SDAG-NEXT:    global_store_dwordx2 v[0:1], v[6:7], off offset:16
-; GFX950-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX950-SDAG-NEXT:    v_mov_b32_e32 v24, 0x42c80000
+; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_bf16 v[18:23], v[2:17], s16, v24
+; GFX950-SDAG-NEXT:    global_store_dwordx2 v[0:1], v[22:23], off offset:16
+; GFX950-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[18:21], off
 ; GFX950-SDAG-NEXT:    s_endpgm
 ;
 ; GFX950-GISEL-LABEL: test_scalef32_sr_pk32_fp6_bf16_sl:
@@ -674,10 +674,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_fp6_bf16_sl(<32 x bfloat> inreg %sr
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v18, 0x42c80000
-; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_bf16 v[2:7], v[2:17], s16, v18
-; GFX950-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; GFX950-GISEL-NEXT:    global_store_dwordx2 v[0:1], v[6:7], off offset:16
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v24, 0x42c80000
+; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_bf16 v[18:23], v[2:17], s16, v24
+; GFX950-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[18:21], off
+; GFX950-GISEL-NEXT:    global_store_dwordx2 v[0:1], v[22:23], off offset:16
 ; GFX950-GISEL-NEXT:    s_endpgm
 ;
 ; GFX1210-SDAG-LABEL: test_scalef32_sr_pk32_fp6_bf16_sl:
@@ -691,10 +691,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_fp6_bf16_sl(<32 x bfloat> inreg %sr
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v14, s12 :: v_dual_mov_b32 v15, s13
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v16, s14 :: v_dual_mov_b32 v17, s15
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_bf16 v[2:7], v[2:17], s16, 0x42c80000
+; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_bf16 v[18:23], v[2:17], s16, 0x42c80000
 ; GFX1210-SDAG-NEXT:    s_clause 0x1
-; GFX1210-SDAG-NEXT:    global_store_b64 v[0:1], v[6:7], off offset:16
-; GFX1210-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX1210-SDAG-NEXT:    global_store_b64 v[0:1], v[22:23], off offset:16
+; GFX1210-SDAG-NEXT:    global_store_b128 v[0:1], v[18:21], off
 ; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-SDAG-NEXT:    s_endpgm
 ;
@@ -774,10 +774,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_fp6_bf16_sl(<32 x bfloat> inreg %sr
 ; GFX1210-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX1210-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_bf16 v[2:7], v[2:17], s16, 0x42c80000
+; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_bf16 v[18:23], v[2:17], s16, 0x42c80000
 ; GFX1210-GISEL-NEXT:    s_clause 0x1
-; GFX1210-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX1210-GISEL-NEXT:    global_store_b64 v[0:1], v[6:7], off offset:16
+; GFX1210-GISEL-NEXT:    global_store_b128 v[0:1], v[18:21], off
+; GFX1210-GISEL-NEXT:    global_store_b64 v[0:1], v[22:23], off offset:16
 ; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-GISEL-NEXT:    s_endpgm
   %cvt = tail call <6 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk32.fp6.bf16(<32 x bfloat> %src, i32 %sr, float 100.0)
@@ -788,33 +788,33 @@ define amdgpu_ps void @test_scalef32_sr_pk32_fp6_bf16_sl(<32 x bfloat> inreg %sr
 define amdgpu_ps void @test_scalef32_sr_pk32_fp6_f16_vv(<32 x half> %src, i32 %sr, float %scale, ptr addrspace(1) %out) {
 ; GFX950-SDAG-LABEL: test_scalef32_sr_pk32_fp6_f16_vv:
 ; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f16 v[0:5], v[0:15], v16, v17
-; GFX950-SDAG-NEXT:    global_store_dwordx2 v[18:19], v[4:5], off offset:16
-; GFX950-SDAG-NEXT:    global_store_dwordx4 v[18:19], v[0:3], off
+; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f16 v[20:25], v[0:15], v16, v17
+; GFX950-SDAG-NEXT:    global_store_dwordx2 v[18:19], v[24:25], off offset:16
+; GFX950-SDAG-NEXT:    global_store_dwordx4 v[18:19], v[20:23], off
 ; GFX950-SDAG-NEXT:    s_endpgm
 ;
 ; GFX950-GISEL-LABEL: test_scalef32_sr_pk32_fp6_f16_vv:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f16 v[0:5], v[0:15], v16, v17
-; GFX950-GISEL-NEXT:    global_store_dwordx4 v[18:19], v[0:3], off
-; GFX950-GISEL-NEXT:    global_store_dwordx2 v[18:19], v[4:5], off offset:16
+; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f16 v[20:25], v[0:15], v16, v17
+; GFX950-GISEL-NEXT:    global_store_dwordx4 v[18:19], v[20:23], off
+; GFX950-GISEL-NEXT:    global_store_dwordx2 v[18:19], v[24:25], off offset:16
 ; GFX950-GISEL-NEXT:    s_endpgm
 ;
 ; GFX1210-SDAG-LABEL: test_scalef32_sr_pk32_fp6_f16_vv:
 ; GFX1210-SDAG:       ; %bb.0:
-; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f16 v[0:5], v[0:15], v16, v17
+; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f16 v[20:25], v[0:15], v16, v17
 ; GFX1210-SDAG-NEXT:    s_clause 0x1
-; GFX1210-SDAG-NEXT:    global_store_b64 v[18:19], v[4:5], off offset:16
-; GFX1210-SDAG-NEXT:    global_store_b128 v[18:19], v[0:3], off
+; GFX1210-SDAG-NEXT:    global_store_b64 v[18:19], v[24:25], off offset:16
+; GFX1210-SDAG-NEXT:    global_store_b128 v[18:19], v[20:23], off
 ; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1210-GISEL-LABEL: test_scalef32_sr_pk32_fp6_f16_vv:
 ; GFX1210-GISEL:       ; %bb.0:
-; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f16 v[0:5], v[0:15], v16, v17
+; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f16 v[20:25], v[0:15], v16, v17
 ; GFX1210-GISEL-NEXT:    s_clause 0x1
-; GFX1210-GISEL-NEXT:    global_store_b128 v[18:19], v[0:3], off
-; GFX1210-GISEL-NEXT:    global_store_b64 v[18:19], v[4:5], off offset:16
+; GFX1210-GISEL-NEXT:    global_store_b128 v[18:19], v[20:23], off
+; GFX1210-GISEL-NEXT:    global_store_b64 v[18:19], v[24:25], off offset:16
 ; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-GISEL-NEXT:    s_endpgm
   %cvt = tail call <6 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk32.fp6.f16(<32 x half> %src, i32 %sr, float %scale)
@@ -841,10 +841,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_fp6_f16_sl(<32 x half> inreg %src, 
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v15, s13
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v16, s14
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v17, s15
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v18, 0x42c80000
-; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f16 v[2:7], v[2:17], s16, v18
-; GFX950-SDAG-NEXT:    global_store_dwordx2 v[0:1], v[6:7], off offset:16
-; GFX950-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX950-SDAG-NEXT:    v_mov_b32_e32 v24, 0x42c80000
+; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f16 v[18:23], v[2:17], s16, v24
+; GFX950-SDAG-NEXT:    global_store_dwordx2 v[0:1], v[22:23], off offset:16
+; GFX950-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[18:21], off
 ; GFX950-SDAG-NEXT:    s_endpgm
 ;
 ; GFX950-GISEL-LABEL: test_scalef32_sr_pk32_fp6_f16_sl:
@@ -857,10 +857,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_fp6_f16_sl(<32 x half> inreg %src, 
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v18, 0x42c80000
-; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f16 v[2:7], v[2:17], s16, v18
-; GFX950-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; GFX950-GISEL-NEXT:    global_store_dwordx2 v[0:1], v[6:7], off offset:16
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v24, 0x42c80000
+; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f16 v[18:23], v[2:17], s16, v24
+; GFX950-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[18:21], off
+; GFX950-GISEL-NEXT:    global_store_dwordx2 v[0:1], v[22:23], off offset:16
 ; GFX950-GISEL-NEXT:    s_endpgm
 ;
 ; GFX1210-SDAG-LABEL: test_scalef32_sr_pk32_fp6_f16_sl:
@@ -874,10 +874,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_fp6_f16_sl(<32 x half> inreg %src, 
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v14, s12 :: v_dual_mov_b32 v15, s13
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v16, s14 :: v_dual_mov_b32 v17, s15
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f16 v[2:7], v[2:17], s16, 0x42c80000
+; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f16 v[18:23], v[2:17], s16, 0x42c80000
 ; GFX1210-SDAG-NEXT:    s_clause 0x1
-; GFX1210-SDAG-NEXT:    global_store_b64 v[0:1], v[6:7], off offset:16
-; GFX1210-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX1210-SDAG-NEXT:    global_store_b64 v[0:1], v[22:23], off offset:16
+; GFX1210-SDAG-NEXT:    global_store_b128 v[0:1], v[18:21], off
 ; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-SDAG-NEXT:    s_endpgm
 ;
@@ -892,10 +892,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_fp6_f16_sl(<32 x half> inreg %src, 
 ; GFX1210-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX1210-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f16 v[2:7], v[2:17], s16, 0x42c80000
+; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f16 v[18:23], v[2:17], s16, 0x42c80000
 ; GFX1210-GISEL-NEXT:    s_clause 0x1
-; GFX1210-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX1210-GISEL-NEXT:    global_store_b64 v[0:1], v[6:7], off offset:16
+; GFX1210-GISEL-NEXT:    global_store_b128 v[0:1], v[18:21], off
+; GFX1210-GISEL-NEXT:    global_store_b64 v[0:1], v[22:23], off offset:16
 ; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-GISEL-NEXT:    s_endpgm
   %cvt = tail call <6 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk32.fp6.f16(<32 x half> %src, i32 %sr, float 100.0)
@@ -906,33 +906,33 @@ define amdgpu_ps void @test_scalef32_sr_pk32_fp6_f16_sl(<32 x half> inreg %src, 
 define amdgpu_ps void @test_scalef32_sr_pk32_bf6_f32_vv(<32 x float> %src, i32 %sr, float %scale, ptr addrspace(1) %out) {
 ; GFX950-SDAG-LABEL: test_scalef32_sr_pk32_bf6_f32_vv:
 ; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f32 v[0:5], v[0:31], v32, v33
-; GFX950-SDAG-NEXT:    global_store_dwordx2 v[34:35], v[4:5], off offset:16
-; GFX950-SDAG-NEXT:    global_store_dwordx4 v[34:35], v[0:3], off
+; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f32 v[36:41], v[0:31], v32, v33
+; GFX950-SDAG-NEXT:    global_store_dwordx2 v[34:35], v[40:41], off offset:16
+; GFX950-SDAG-NEXT:    global_store_dwordx4 v[34:35], v[36:39], off
 ; GFX950-SDAG-NEXT:    s_endpgm
 ;
 ; GFX950-GISEL-LABEL: test_scalef32_sr_pk32_bf6_f32_vv:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f32 v[0:5], v[0:31], v32, v33
-; GFX950-GISEL-NEXT:    global_store_dwordx4 v[34:35], v[0:3], off
-; GFX950-GISEL-NEXT:    global_store_dwordx2 v[34:35], v[4:5], off offset:16
+; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f32 v[36:41], v[0:31], v32, v33
+; GFX950-GISEL-NEXT:    global_store_dwordx4 v[34:35], v[36:39], off
+; GFX950-GISEL-NEXT:    global_store_dwordx2 v[34:35], v[40:41], off offset:16
 ; GFX950-GISEL-NEXT:    s_endpgm
 ;
 ; GFX1210-SDAG-LABEL: test_scalef32_sr_pk32_bf6_f32_vv:
 ; GFX1210-SDAG:       ; %bb.0:
-; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f32 v[0:5], v[0:31], v32, v33
+; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f32 v[36:41], v[0:31], v32, v33
 ; GFX1210-SDAG-NEXT:    s_clause 0x1
-; GFX1210-SDAG-NEXT:    global_store_b64 v[34:35], v[4:5], off offset:16
-; GFX1210-SDAG-NEXT:    global_store_b128 v[34:35], v[0:3], off
+; GFX1210-SDAG-NEXT:    global_store_b64 v[34:35], v[40:41], off offset:16
+; GFX1210-SDAG-NEXT:    global_store_b128 v[34:35], v[36:39], off
 ; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1210-GISEL-LABEL: test_scalef32_sr_pk32_bf6_f32_vv:
 ; GFX1210-GISEL:       ; %bb.0:
-; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f32 v[0:5], v[0:31], v32, v33
+; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f32 v[36:41], v[0:31], v32, v33
 ; GFX1210-GISEL-NEXT:    s_clause 0x1
-; GFX1210-GISEL-NEXT:    global_store_b128 v[34:35], v[0:3], off
-; GFX1210-GISEL-NEXT:    global_store_b64 v[34:35], v[4:5], off offset:16
+; GFX1210-GISEL-NEXT:    global_store_b128 v[34:35], v[36:39], off
+; GFX1210-GISEL-NEXT:    global_store_b64 v[34:35], v[40:41], off offset:16
 ; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-GISEL-NEXT:    s_endpgm
   %cvt = tail call <6 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk32.bf6.f32(<32 x float> %src, i32 %sr, float %scale)
@@ -975,10 +975,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_bf6_f32_sl(<32 x float> inreg %src,
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v31, s29
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v32, s30
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v33, s31
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v34, 0x42c80000
-; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f32 v[2:7], v[2:33], s32, v34
-; GFX950-SDAG-NEXT:    global_store_dwordx2 v[0:1], v[6:7], off offset:16
-; GFX950-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX950-SDAG-NEXT:    v_mov_b32_e32 v40, 0x42c80000
+; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f32 v[34:39], v[2:33], s32, v40
+; GFX950-SDAG-NEXT:    global_store_dwordx2 v[0:1], v[38:39], off offset:16
+; GFX950-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[34:37], off
 ; GFX950-SDAG-NEXT:    s_endpgm
 ;
 ; GFX950-GISEL-LABEL: test_scalef32_sr_pk32_bf6_f32_sl:
@@ -999,10 +999,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_bf6_f32_sl(<32 x float> inreg %src,
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v34, 0x42c80000
-; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f32 v[2:7], v[2:33], s32, v34
-; GFX950-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; GFX950-GISEL-NEXT:    global_store_dwordx2 v[0:1], v[6:7], off offset:16
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v40, 0x42c80000
+; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f32 v[34:39], v[2:33], s32, v40
+; GFX950-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[34:37], off
+; GFX950-GISEL-NEXT:    global_store_dwordx2 v[0:1], v[38:39], off offset:16
 ; GFX950-GISEL-NEXT:    s_endpgm
 ;
 ; GFX1210-SDAG-LABEL: test_scalef32_sr_pk32_bf6_f32_sl:
@@ -1024,10 +1024,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_bf6_f32_sl(<32 x float> inreg %src,
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v30, s28 :: v_dual_mov_b32 v31, s29
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v32, s30 :: v_dual_mov_b32 v33, s31
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f32 v[2:7], v[2:33], s32, 0x42c80000
+; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f32 v[34:39], v[2:33], s32, 0x42c80000
 ; GFX1210-SDAG-NEXT:    s_clause 0x1
-; GFX1210-SDAG-NEXT:    global_store_b64 v[0:1], v[6:7], off offset:16
-; GFX1210-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX1210-SDAG-NEXT:    global_store_b64 v[0:1], v[38:39], off offset:16
+; GFX1210-SDAG-NEXT:    global_store_b128 v[0:1], v[34:37], off
 ; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-SDAG-NEXT:    s_endpgm
 ;
@@ -1050,10 +1050,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_bf6_f32_sl(<32 x float> inreg %src,
 ; GFX1210-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX1210-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f32 v[2:7], v[2:33], s32, 0x42c80000
+; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_bf6_f32 v[34:39], v[2:33], s32, 0x42c80000
 ; GFX1210-GISEL-NEXT:    s_clause 0x1
-; GFX1210-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX1210-GISEL-NEXT:    global_store_b64 v[0:1], v[6:7], off offset:16
+; GFX1210-GISEL-NEXT:    global_store_b128 v[0:1], v[34:37], off
+; GFX1210-GISEL-NEXT:    global_store_b64 v[0:1], v[38:39], off offset:16
 ; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-GISEL-NEXT:    s_endpgm
   %cvt = tail call <6 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk32.bf6.f32(<32 x float> %src, i32 %sr, float 100.0)
@@ -1064,33 +1064,33 @@ define amdgpu_ps void @test_scalef32_sr_pk32_bf6_f32_sl(<32 x float> inreg %src,
 define amdgpu_ps void @test_scalef32_sr_pk32_fp6_f32_vv(<32 x float> %src, i32 %sr, float %scale, ptr addrspace(1) %out) {
 ; GFX950-SDAG-LABEL: test_scalef32_sr_pk32_fp6_f32_vv:
 ; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f32 v[0:5], v[0:31], v32, v33
-; GFX950-SDAG-NEXT:    global_store_dwordx2 v[34:35], v[4:5], off offset:16
-; GFX950-SDAG-NEXT:    global_store_dwordx4 v[34:35], v[0:3], off
+; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f32 v[36:41], v[0:31], v32, v33
+; GFX950-SDAG-NEXT:    global_store_dwordx2 v[34:35], v[40:41], off offset:16
+; GFX950-SDAG-NEXT:    global_store_dwordx4 v[34:35], v[36:39], off
 ; GFX950-SDAG-NEXT:    s_endpgm
 ;
 ; GFX950-GISEL-LABEL: test_scalef32_sr_pk32_fp6_f32_vv:
 ; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f32 v[0:5], v[0:31], v32, v33
-; GFX950-GISEL-NEXT:    global_store_dwordx4 v[34:35], v[0:3], off
-; GFX950-GISEL-NEXT:    global_store_dwordx2 v[34:35], v[4:5], off offset:16
+; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f32 v[36:41], v[0:31], v32, v33
+; GFX950-GISEL-NEXT:    global_store_dwordx4 v[34:35], v[36:39], off
+; GFX950-GISEL-NEXT:    global_store_dwordx2 v[34:35], v[40:41], off offset:16
 ; GFX950-GISEL-NEXT:    s_endpgm
 ;
 ; GFX1210-SDAG-LABEL: test_scalef32_sr_pk32_fp6_f32_vv:
 ; GFX1210-SDAG:       ; %bb.0:
-; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f32 v[0:5], v[0:31], v32, v33
+; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f32 v[36:41], v[0:31], v32, v33
 ; GFX1210-SDAG-NEXT:    s_clause 0x1
-; GFX1210-SDAG-NEXT:    global_store_b64 v[34:35], v[4:5], off offset:16
-; GFX1210-SDAG-NEXT:    global_store_b128 v[34:35], v[0:3], off
+; GFX1210-SDAG-NEXT:    global_store_b64 v[34:35], v[40:41], off offset:16
+; GFX1210-SDAG-NEXT:    global_store_b128 v[34:35], v[36:39], off
 ; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1210-GISEL-LABEL: test_scalef32_sr_pk32_fp6_f32_vv:
 ; GFX1210-GISEL:       ; %bb.0:
-; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f32 v[0:5], v[0:31], v32, v33
+; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f32 v[36:41], v[0:31], v32, v33
 ; GFX1210-GISEL-NEXT:    s_clause 0x1
-; GFX1210-GISEL-NEXT:    global_store_b128 v[34:35], v[0:3], off
-; GFX1210-GISEL-NEXT:    global_store_b64 v[34:35], v[4:5], off offset:16
+; GFX1210-GISEL-NEXT:    global_store_b128 v[34:35], v[36:39], off
+; GFX1210-GISEL-NEXT:    global_store_b64 v[34:35], v[40:41], off offset:16
 ; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-GISEL-NEXT:    s_endpgm
   %cvt = tail call <6 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk32.fp6.f32(<32 x float> %src, i32 %sr, float %scale)
@@ -1133,10 +1133,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_fp6_f32_sl(<32 x float> inreg %src,
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v31, s29
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v32, s30
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v33, s31
-; GFX950-SDAG-NEXT:    v_mov_b32_e32 v34, 0x42c80000
-; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f32 v[2:7], v[2:33], s32, v34
-; GFX950-SDAG-NEXT:    global_store_dwordx2 v[0:1], v[6:7], off offset:16
-; GFX950-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX950-SDAG-NEXT:    v_mov_b32_e32 v40, 0x42c80000
+; GFX950-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f32 v[34:39], v[2:33], s32, v40
+; GFX950-SDAG-NEXT:    global_store_dwordx2 v[0:1], v[38:39], off offset:16
+; GFX950-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[34:37], off
 ; GFX950-SDAG-NEXT:    s_endpgm
 ;
 ; GFX950-GISEL-LABEL: test_scalef32_sr_pk32_fp6_f32_sl:
@@ -1157,10 +1157,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_fp6_f32_sl(<32 x float> inreg %src,
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX950-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GFX950-GISEL-NEXT:    v_mov_b32_e32 v34, 0x42c80000
-; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f32 v[2:7], v[2:33], s32, v34
-; GFX950-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
-; GFX950-GISEL-NEXT:    global_store_dwordx2 v[0:1], v[6:7], off offset:16
+; GFX950-GISEL-NEXT:    v_mov_b32_e32 v40, 0x42c80000
+; GFX950-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f32 v[34:39], v[2:33], s32, v40
+; GFX950-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[34:37], off
+; GFX950-GISEL-NEXT:    global_store_dwordx2 v[0:1], v[38:39], off offset:16
 ; GFX950-GISEL-NEXT:    s_endpgm
 ;
 ; GFX1210-SDAG-LABEL: test_scalef32_sr_pk32_fp6_f32_sl:
@@ -1182,10 +1182,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_fp6_f32_sl(<32 x float> inreg %src,
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v30, s28 :: v_dual_mov_b32 v31, s29
 ; GFX1210-SDAG-NEXT:    v_dual_mov_b32 v32, s30 :: v_dual_mov_b32 v33, s31
 ; GFX1210-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f32 v[2:7], v[2:33], s32, 0x42c80000
+; GFX1210-SDAG-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f32 v[34:39], v[2:33], s32, 0x42c80000
 ; GFX1210-SDAG-NEXT:    s_clause 0x1
-; GFX1210-SDAG-NEXT:    global_store_b64 v[0:1], v[6:7], off offset:16
-; GFX1210-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX1210-SDAG-NEXT:    global_store_b64 v[0:1], v[38:39], off offset:16
+; GFX1210-SDAG-NEXT:    global_store_b128 v[0:1], v[34:37], off
 ; GFX1210-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-SDAG-NEXT:    s_endpgm
 ;
@@ -1208,10 +1208,10 @@ define amdgpu_ps void @test_scalef32_sr_pk32_fp6_f32_sl(<32 x float> inreg %src,
 ; GFX1210-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX1210-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
 ; GFX1210-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f32 v[2:7], v[2:33], s32, 0x42c80000
+; GFX1210-GISEL-NEXT:    v_cvt_scalef32_sr_pk32_fp6_f32 v[34:39], v[2:33], s32, 0x42c80000
 ; GFX1210-GISEL-NEXT:    s_clause 0x1
-; GFX1210-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
-; GFX1210-GISEL-NEXT:    global_store_b64 v[0:1], v[6:7], off offset:16
+; GFX1210-GISEL-NEXT:    global_store_b128 v[0:1], v[34:37], off
+; GFX1210-GISEL-NEXT:    global_store_b64 v[0:1], v[38:39], off offset:16
 ; GFX1210-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-GISEL-NEXT:    s_endpgm
   %cvt = tail call <6 x i32> @llvm.amdgcn.cvt.scalef32.sr.pk32.fp6.f32(<32 x float> %src, i32 %sr, float 100.0)

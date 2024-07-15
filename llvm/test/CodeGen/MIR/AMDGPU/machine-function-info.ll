@@ -12,6 +12,7 @@
 ; CHECK-NEXT: maxKernArgAlign: 64
 ; CHECK-NEXT: ldsSize: 2048
 ; CHECK-NEXT: gdsSize: 0
+; CHECK-NEXT: laneSharedVGPRSize: 0
 ; CHECK-NEXT: dynLDSAlign: 1
 ; CHECK-NEXT: isEntryFunction: true
 ; CHECK-NEXT: isChainFunction: false
@@ -60,6 +61,7 @@ define amdgpu_kernel void @kernel(i32 %arg0, i64 %arg1, <16 x i32> %arg2) {
 ; CHECK-NEXT: maxKernArgAlign: 4
 ; CHECK-NEXT: ldsSize: 0
 ; CHECK-NEXT: gdsSize: 512
+; CHECK-NEXT: laneSharedVGPRSize: 0
 ; CHECK-NEXT: dynLDSAlign: 1
 ; CHECK-NEXT: isEntryFunction: true
 ; CHECK-NEXT: isChainFunction: false
@@ -119,6 +121,7 @@ define amdgpu_ps void @gds_size_shader(i32 %arg0, i32 inreg %arg1) #5 {
 ; CHECK-NEXT: maxKernArgAlign: 1
 ; CHECK-NEXT: ldsSize: 0
 ; CHECK-NEXT: gdsSize: 0
+; CHECK-NEXT: laneSharedVGPRSize: 0
 ; CHECK-NEXT: dynLDSAlign: 1
 ; CHECK-NEXT: isEntryFunction: false
 ; CHECK-NEXT: isChainFunction: false
@@ -170,6 +173,7 @@ define void @function() {
 ; CHECK-NEXT: maxKernArgAlign: 1
 ; CHECK-NEXT: ldsSize: 0
 ; CHECK-NEXT: gdsSize: 0
+; CHECK-NEXT: laneSharedVGPRSize: 0
 ; CHECK-NEXT: dynLDSAlign: 1
 ; CHECK-NEXT: isEntryFunction: false
 ; CHECK-NEXT: isChainFunction: false

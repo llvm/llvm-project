@@ -329,7 +329,7 @@ def : ProcessorModel<"gfx1210", GFX1210SpeedModel,
   FeatureISAVersion12_10.Features
 >;
 
-def : ProcessorModel<"gfx1211", GFX1210SpeedModel,
+def : ProcessorModel<"gfx1211", GFX1211SpeedModel,
   FeatureISAVersion12_11.Features
 >;
 

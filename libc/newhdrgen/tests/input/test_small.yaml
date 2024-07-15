@@ -24,7 +24,8 @@ functions:
     standards: 
       - stdc
     guard: FUNC_A_16
-    attributes: CONST_FUNC_A
+    attributes: 
+      - CONST_FUNC_A
   - name: func_b
     return_type: int
     arguments:
@@ -33,4 +34,5 @@ functions:
     standards: 
       - stdc
     guard: FUNC_B_16
-    attributes: CONST_FUNC_B
+    attributes: 
+      - CONST_FUNC_B
