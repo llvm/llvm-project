@@ -557,6 +557,44 @@ LogicalResult OpenCLKernelMetadataAttr::verify(
 }
 
 //===----------------------------------------------------------------------===//
+// AddressSpaceAttr definitions
+//===----------------------------------------------------------------------===//
+
+std::optional<int32_t>
+AddressSpaceAttr::getValueFromLangAS(clang::LangAS langAS) {
+  using clang::LangAS;
+  switch (langAS) {
+  case LangAS::Default:
+    // Default address space should be encoded as a null attribute.
+    return std::nullopt;
+  case LangAS::opencl_global:
+  case LangAS::opencl_local:
+  case LangAS::opencl_constant:
+  case LangAS::opencl_private:
+  case LangAS::opencl_generic:
+  case LangAS::opencl_global_device:
+  case LangAS::opencl_global_host:
+  case LangAS::cuda_device:
+  case LangAS::cuda_constant:
+  case LangAS::cuda_shared:
+  case LangAS::sycl_global:
+  case LangAS::sycl_global_device:
+  case LangAS::sycl_global_host:
+  case LangAS::sycl_local:
+  case LangAS::sycl_private:
+  case LangAS::ptr32_sptr:
+  case LangAS::ptr32_uptr:
+  case LangAS::ptr64:
+  case LangAS::hlsl_groupshared:
+  case LangAS::wasm_funcref:
+    llvm_unreachable("NYI");
+  default:
+    // Target address space offset arithmetics
+    return clang::toTargetAddressSpace(langAS) + kFirstTargetASValue;
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // CIR Dialect
 //===----------------------------------------------------------------------===//
 

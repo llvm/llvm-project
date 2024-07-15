@@ -652,19 +652,27 @@ def DynamicCastInfoAttr
 // AddressSpaceAttr
 //===----------------------------------------------------------------------===//
 
-// TODO: other CIR AS cases
-def AS_Target : I32EnumAttrCase<"target", 21>;
+def AS_OffloadPrivate : I32EnumAttrCase<"offload_private", 1>;
+def AS_OffloadLocal : I32EnumAttrCase<"offload_local", 2>;
+def AS_OffloadGlobal : I32EnumAttrCase<"offload_global", 3>;
+def AS_OffloadConstant : I32EnumAttrCase<"offload_constant", 4>;
+def AS_OffloadGeneric : I32EnumAttrCase<"offload_generic", 5>;
+def AS_Target : I32EnumAttrCase<"target", 6>;
 
 def AddressSpaceAttr : CIR_Attr<"AddressSpace", "addrspace"> {
 
   let summary = "Address space attribute for pointer types";
   let description = [{
-    The address space attribute models `clang::LangAS` rather than the LLVM
-    address space, which means it's not yet converted by the address space map
-    to carry target-specific semantics.
+    The address space attribute is used in pointer types. It essentially
+    provides a unified model on top of `clang::LangAS`, rather than LLVM address
+    spaces.
 
-    The representation is one-to-one except for `LangAS::Default`, which
-    corresponds to a null attribute instead.
+    The representation is further simplified: `LangAS::Default` is encoded as
+    a null attribute; many address spaces from different offloading languages
+    are unified as `offload_*`; etc.
+
+    The meaning of `value` parameter is defined as an extensible enum `Kind`,
+    which encodes target AS as offset to the last language AS.
   }];
 
   let parameters = (ins "int32_t":$value);
@@ -690,7 +698,8 @@ def AddressSpaceAttr : CIR_Attr<"AddressSpace", "addrspace"> {
   // simplified assembly format `custom<PointerAddrSpace>`.
 
   list<I32EnumAttrCase> langASCases = [
-    // TODO: includes all non-target CIR AS cases here
+    AS_OffloadPrivate, AS_OffloadLocal, AS_OffloadGlobal, AS_OffloadConstant,
+    AS_OffloadGeneric
   ];
 
   I32EnumAttrCase targetASCase = AS_Target;
@@ -703,9 +712,23 @@ def AddressSpaceAttr : CIR_Attr<"AddressSpace", "addrspace"> {
     bool isTarget() const;
     unsigned getTargetValue() const;
 
-    static std::optional<int32_t> parseValueFromString(llvm::StringRef s);
+    /// Convert a clang LangAS to its corresponding CIR AS storage value. This
+    /// helper does not perform any language-specific mappings (e.g. determining
+    /// the default AS for offloading languages), so these must be handled in
+    /// the caller.
     static std::optional<int32_t> getValueFromLangAS(clang::LangAS v);
+
+    /// Helper methods for the assembly format `custom<PointerAddrSpace>`.
+    static std::optional<int32_t> parseValueFromString(llvm::StringRef s);
     static std::optional<llvm::StringRef> stringifyValue(int32_t v);
+
+    struct Kind {
+    }]#!interleave(
+      !foreach(case, langASCases,
+        "static constexpr int32_t "#case.symbol#" = "#case.value#";"
+      ), "\n"
+    )#[{
+    };
   }];
 
   let extraClassDefinition = [{
@@ -755,31 +778,6 @@ def AddressSpaceAttr : CIR_Attr<"AddressSpace", "addrspace"> {
       default:
         // Target address spaces are not processed here
         return std::nullopt;
-      }
-    }
-
-    std::optional<int32_t>
-    $cppClass::getValueFromLangAS(clang::LangAS langAS) {
-      assert((langAS == clang::LangAS::Default ||
-             clang::isTargetAddressSpace(langAS)) &&
-             "Language-specific address spaces are not supported");
-      switch (langAS) {
-      }]
-      #
-      !interleave(
-        !foreach(case, langASCases,
-          "case clang::LangAS::"#case.symbol
-          # [{: llvm_unreachable("Not Yet Supported");}] ),
-        "\n"
-      )
-      #
-      [{
-      case clang::LangAS::Default:
-        // Default address space should be encoded as a null attribute.
-        return std::nullopt;
-      default:
-        // Target address space offset arithmetics
-        return clang::toTargetAddressSpace(langAS) + kFirstTargetASValue;
       }
     }
   }];
