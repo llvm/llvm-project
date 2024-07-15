@@ -263,13 +263,6 @@ public:
     SwiftObjCMembers = Value.value_or(false);
   }
 
-  /// Strip off any information within the class information structure that is
-  /// module-local, such as 'audited' flags.
-  void stripModuleLocalInfo() {
-    HasDefaultNullability = false;
-    DefaultNullability = 0;
-  }
-
   friend bool operator==(const ContextInfo &, const ContextInfo &);
 
   ContextInfo &operator|=(const ContextInfo &RHS) {
