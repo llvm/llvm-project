@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11
 
 // <shared_mutex>
@@ -103,12 +104,10 @@ void test() {
 }
 
 int main(int, char**) {
-#ifndef TEST_HAS_NO_THREADS
-#  if TEST_STD_VER >= 17
+#if TEST_STD_VER >= 17
   test<std::shared_mutex>();
-#  endif
-  test<std::shared_timed_mutex>();
 #endif
+  test<std::shared_timed_mutex>();
   test<TrackedMutex>();
 
   // Use shared_lock with a dummy mutex class that tracks whether each
