@@ -248,7 +248,8 @@ bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isExtern())
     return true;
 
-  if (Ptr.isInitialized())
+  if (Ptr.isInitialized() ||
+      (Ptr.getDeclDesc()->asVarDecl() == S.EvaluatingDecl))
     return true;
 
   if (!S.checkingPotentialConstantExpression() && S.getLangOpts().CPlusPlus) {
@@ -444,6 +445,27 @@ bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return false;
 }
 
+bool CheckVolatile(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                   AccessKinds AK) {
+  assert(Ptr.isLive());
+
+  // FIXME: This check here might be kinda expensive. Maybe it would be better
+  // to have another field in InlineDescriptor for this?
+  if (!Ptr.isBlockPointer())
+    return true;
+
+  QualType PtrType = Ptr.getType();
+  if (!PtrType.isVolatileQualified())
+    return true;
+
+  const SourceInfo &Loc = S.Current->getSource(OpPC);
+  if (S.getLangOpts().CPlusPlus)
+    S.FFDiag(Loc, diag::note_constexpr_access_volatile_type) << AK << PtrType;
+  else
+    S.FFDiag(Loc);
+  return false;
+}
+
 bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                       AccessKinds AK) {
   assert(Ptr.isLive());
@@ -507,6 +529,8 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!CheckTemporary(S, OpPC, Ptr, AK))
     return false;
   if (!CheckMutable(S, OpPC, Ptr))
+    return false;
+  if (!CheckVolatile(S, OpPC, Ptr, AK))
     return false;
   return true;
 }
@@ -691,58 +715,6 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
   }
 
   return true;
-}
-
-bool CheckDynamicMemoryAllocation(InterpState &S, CodePtr OpPC) {
-  if (S.getLangOpts().CPlusPlus20)
-    return true;
-
-  const SourceInfo &E = S.Current->getSource(OpPC);
-  S.FFDiag(E, diag::note_constexpr_new);
-  return false;
-}
-
-bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC, bool NewWasArray,
-                         bool DeleteIsArray, const Descriptor *D,
-                         const Expr *NewExpr) {
-  if (NewWasArray == DeleteIsArray)
-    return true;
-
-  QualType TypeToDiagnose;
-  // We need to shuffle things around a bit here to get a better diagnostic,
-  // because the expression we allocated the block for was of type int*,
-  // but we want to get the array size right.
-  if (D->isArray()) {
-    QualType ElemQT = D->getType()->getPointeeType();
-    TypeToDiagnose = S.getCtx().getConstantArrayType(
-        ElemQT, APInt(64, static_cast<uint64_t>(D->getNumElems()), false),
-        nullptr, ArraySizeModifier::Normal, 0);
-  } else
-    TypeToDiagnose = D->getType()->getPointeeType();
-
-  const SourceInfo &E = S.Current->getSource(OpPC);
-  S.FFDiag(E, diag::note_constexpr_new_delete_mismatch)
-      << DeleteIsArray << 0 << TypeToDiagnose;
-  S.Note(NewExpr->getExprLoc(), diag::note_constexpr_dynamic_alloc_here)
-      << NewExpr->getSourceRange();
-  return false;
-}
-
-bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
-                       const Pointer &Ptr) {
-  if (Source && isa<CXXNewExpr>(Source))
-    return true;
-
-  // Whatever this is, we didn't heap allocate it.
-  const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_delete_not_heap_alloc)
-      << Ptr.toDiagnosticString(S.getCtx());
-
-  if (Ptr.isTemporary())
-    S.Note(Ptr.getDeclLoc(), diag::note_constexpr_temporary_here);
-  else
-    S.Note(Ptr.getDeclLoc(), diag::note_declared_at);
-  return false;
 }
 
 /// We aleady know the given DeclRefExpr is invalid for some reason,

@@ -6114,7 +6114,7 @@ void CodeGenModule::emitIFuncDefinition(GlobalDecl GD) {
   // The resolver might not be visited yet. Specify a dummy non-function type to
   // indicate IsIncompleteFunction. Either the type is ignored (if the resolver
   // was emitted) or the whole function will be replaced (if the resolver has
-  // not be emitted).
+  // not been emitted).
   llvm::Constant *Resolver =
       GetOrCreateLLVMFunction(IFA->getResolver(), VoidTy, {},
                               /*ForVTable=*/false);

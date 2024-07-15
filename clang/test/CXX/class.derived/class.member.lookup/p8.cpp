@@ -47,8 +47,8 @@ template<typename T>
 void DerivedT<T>::Inner() {
   Derived1T<T>::Foo();
   Derived2T<T>::Member = 42;
-  this->Derived1T<T>::Foo(); // expected-warning{{use 'template' keyword to treat 'Derived1T' as a dependent template name}}
-  this->Derived2T<T>::Member = 42; // expected-warning{{use 'template' keyword to treat 'Derived2T' as a dependent template name}}
+  this->Derived1T<T>::Foo();
+  this->Derived2T<T>::Member = 42;
   this->Foo(); // expected-error{{non-static member 'Foo' found in multiple base-class subobjects of type 'BaseT<int>'}}
 }
 

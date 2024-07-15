@@ -52,14 +52,14 @@ public:
   Block(unsigned EvalID, const std::optional<unsigned> &DeclID,
         const Descriptor *Desc, bool IsStatic = false, bool IsExtern = false)
       : EvalID(EvalID), DeclID(DeclID), IsStatic(IsStatic), IsExtern(IsExtern),
-        IsDynamic(false), Desc(Desc) {
+        Desc(Desc) {
     assert(Desc);
   }
 
   Block(unsigned EvalID, const Descriptor *Desc, bool IsStatic = false,
         bool IsExtern = false)
       : EvalID(EvalID), DeclID((unsigned)-1), IsStatic(IsStatic),
-        IsExtern(IsExtern), IsDynamic(false), Desc(Desc) {
+        IsExtern(IsExtern), Desc(Desc) {
     assert(Desc);
   }
 
@@ -73,7 +73,6 @@ public:
   bool isStatic() const { return IsStatic; }
   /// Checks if the block is temporary.
   bool isTemporary() const { return Desc->IsTemporary; }
-  bool isDynamic() const { return IsDynamic; }
   /// Returns the size of the block.
   unsigned getSize() const { return Desc->getAllocSize(); }
   /// Returns the declaration ID.
@@ -136,12 +135,11 @@ private:
   friend class Pointer;
   friend class DeadBlock;
   friend class InterpState;
-  friend class DynamicAllocator;
 
   Block(unsigned EvalID, const Descriptor *Desc, bool IsExtern, bool IsStatic,
         bool IsDead)
       : EvalID(EvalID), IsStatic(IsStatic), IsExtern(IsExtern), IsDead(true),
-        IsDynamic(false), Desc(Desc) {
+        Desc(Desc) {
     assert(Desc);
   }
 
@@ -171,9 +169,6 @@ private:
   /// Flag indicating if the block contents have been initialized
   /// via invokeCtor.
   bool IsInitialized = false;
-  /// Flag indicating if this block has been allocated via dynamic
-  /// memory allocation (e.g. malloc).
-  bool IsDynamic = false;
   /// Pointer to the stack slot descriptor.
   const Descriptor *Desc;
 };
