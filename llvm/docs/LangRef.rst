@@ -19644,13 +19644,19 @@ in order to get the number of elements to process on each loop iteration. The
 result should be used to decrease the count for the next iteration until the
 count reaches zero.
 
-If the count is larger than the number of lanes in the type described by the
-last 2 arguments, this intrinsic may return a value less than the number of
-lanes implied by the type. The result will be at least as large as the result
-will be on any later loop iteration.
-
-This intrinsic will only return 0 if the input count is also 0. A non-zero input
-count will produce a non-zero result.
+Let ``%max_lanes`` be the number of lanes in the type described by ``%vf`` and
+``%scalable``, here are the constraints on the returned value:
+- If ``%cnt`` equals to 0, returns 0.
+- The returned value is always less or equal to ``%max_lanes``.
+- The returned value is always larger or equal to
+  ``ceil(%cnt / ceil(%cnt / %max_lanes))``.
+  - This implies that if ``%cnt`` is non-zero, the result should be non-zero
+    as well.
+  - This also implies that if ``%cnt`` is less than ``%max_lanes``, it has to
+    return ``%cnt``.
+- The returned values decrease monotonically in each loop iteration. That is,
+  the returned value of a iteration is at least as large as that of any later
+  iterations.
 
 '``llvm.experimental.vector.partial.reduce.add.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
