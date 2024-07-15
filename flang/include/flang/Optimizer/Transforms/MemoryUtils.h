@@ -47,13 +47,13 @@ using DeallocCallBack =
     llvm::function_ref<void(mlir::Location, mlir::OpBuilder &, mlir::Value)>;
 
 /// Utility to replace fir.alloca by dynamic allocations inside \p parentOp.
-/// \p MustRewriteCallBack let the user control which fir.alloca should be
-/// replaced. \p AllocaRewriterCallBack let the user define how the new memory
-/// should be allocated. \p DeallocCallBack let the user decide how the memory
-/// should be deallocated. The boolean result indicate if the utility succeeded
+/// \p MustRewriteCallBack lets the user control which fir.alloca should be
+/// replaced. \p AllocaRewriterCallBack lets the user define how the new memory
+/// should be allocated. \p DeallocCallBack lets the user decide how the memory
+/// should be deallocated. The boolean result indicates if the utility succeeded
 /// to replace all fir.alloca as requested by the user. Causes of failures are
-/// the presence of unregistered operations, or OpenMP/ACC recipe operation that
-/// returns memory allocated inside their region.
+/// the presence of unregistered operations, or OpenMP/ACC recipe operations that
+/// return memory allocated inside their region.
 bool replaceAllocas(mlir::RewriterBase &rewriter, mlir::Operation *parentOp,
                     MustRewriteCallBack, AllocaRewriterCallBack,
                     DeallocCallBack);
