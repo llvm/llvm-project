@@ -1,3 +1,11 @@
+//===- unittests/Support/MemProfTest.cpp ----------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
@@ -239,7 +247,7 @@ TEST(MemProf, FillsValue) {
 TEST(MemProf, PortableWrapper) {
   MemInfoBlock Info(/*size=*/16, /*access_count=*/7, /*alloc_timestamp=*/1000,
                     /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
-                    /*dealloc_cpu=*/4);
+                    /*dealloc_cpu=*/4, /*Histogram=*/0, /*HistogramSize=*/0);
 
   const auto Schema = llvm::memprof::getFullSchema();
   PortableMemInfoBlock WriteBlock(Info, Schema);
@@ -268,7 +276,7 @@ TEST(MemProf, RecordSerializationRoundTripVersion0And1) {
 
   MemInfoBlock Info(/*size=*/16, /*access_count=*/7, /*alloc_timestamp=*/1000,
                     /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
-                    /*dealloc_cpu=*/4);
+                    /*dealloc_cpu=*/4, /*Histogram=*/0, /*HistogramSize=*/0);
 
   llvm::SmallVector<llvm::SmallVector<FrameId>> AllocCallStacks = {
       {0x123, 0x345}, {0x123, 0x567}};
@@ -302,7 +310,7 @@ TEST(MemProf, RecordSerializationRoundTripVerion2) {
 
   MemInfoBlock Info(/*size=*/16, /*access_count=*/7, /*alloc_timestamp=*/1000,
                     /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
-                    /*dealloc_cpu=*/4);
+                    /*dealloc_cpu=*/4, /*Histogram=*/0, /*HistogramSize=*/0);
 
   llvm::SmallVector<llvm::memprof::CallStackId> CallStackIds = {0x123, 0x456};
 
@@ -587,5 +595,194 @@ TEST(MemProf, IndexedMemProfRecordToMemProfRecord) {
   ASSERT_THAT(Record.CallSites[1], SizeIs(2));
   EXPECT_EQ(Record.CallSites[1][0].hash(), F2.hash());
   EXPECT_EQ(Record.CallSites[1][1].hash(), F4.hash());
+}
+
+using FrameIdMapTy =
+    llvm::DenseMap<::llvm::memprof::FrameId, ::llvm::memprof::Frame>;
+using CallStackIdMapTy =
+    llvm::DenseMap<::llvm::memprof::CallStackId,
+                   ::llvm::SmallVector<::llvm::memprof::FrameId>>;
+
+// Populate those fields returned by getHotColdSchema.
+MemInfoBlock makePartialMIB() {
+  MemInfoBlock MIB;
+  MIB.AllocCount = 1;
+  MIB.TotalSize = 5;
+  MIB.TotalLifetime = 10;
+  MIB.TotalLifetimeAccessDensity = 23;
+  return MIB;
+}
+
+TEST(MemProf, MissingCallStackId) {
+  // Use a non-existent CallStackId to trigger a mapping error in
+  // toMemProfRecord.
+  llvm::memprof::IndexedAllocationInfo AI({}, 0xdeadbeefU, makePartialMIB(),
+                                          llvm::memprof::getHotColdSchema());
+
+  IndexedMemProfRecord IndexedMR;
+  IndexedMR.AllocSites.push_back(AI);
+
+  // Create empty maps.
+  const FrameIdMapTy IdToFrameMap;
+  const CallStackIdMapTy CSIdToCallStackMap;
+  llvm::memprof::FrameIdConverter<decltype(IdToFrameMap)> FrameIdConv(
+      IdToFrameMap);
+  llvm::memprof::CallStackIdConverter<decltype(CSIdToCallStackMap)> CSIdConv(
+      CSIdToCallStackMap, FrameIdConv);
+
+  // We are only interested in errors, not the return value.
+  (void)IndexedMR.toMemProfRecord(CSIdConv);
+
+  ASSERT_TRUE(CSIdConv.LastUnmappedId.has_value());
+  EXPECT_EQ(*CSIdConv.LastUnmappedId, 0xdeadbeefU);
+  EXPECT_EQ(FrameIdConv.LastUnmappedId, std::nullopt);
+}
+
+TEST(MemProf, MissingFrameId) {
+  llvm::memprof::IndexedAllocationInfo AI({}, 0x222, makePartialMIB(),
+                                          llvm::memprof::getHotColdSchema());
+
+  IndexedMemProfRecord IndexedMR;
+  IndexedMR.AllocSites.push_back(AI);
+
+  // An empty map to trigger a mapping error.
+  const FrameIdMapTy IdToFrameMap;
+  CallStackIdMapTy CSIdToCallStackMap;
+  CSIdToCallStackMap.insert({0x222, {2, 3}});
+
+  llvm::memprof::FrameIdConverter<decltype(IdToFrameMap)> FrameIdConv(
+      IdToFrameMap);
+  llvm::memprof::CallStackIdConverter<decltype(CSIdToCallStackMap)> CSIdConv(
+      CSIdToCallStackMap, FrameIdConv);
+
+  // We are only interested in errors, not the return value.
+  (void)IndexedMR.toMemProfRecord(CSIdConv);
+
+  EXPECT_EQ(CSIdConv.LastUnmappedId, std::nullopt);
+  ASSERT_TRUE(FrameIdConv.LastUnmappedId.has_value());
+  EXPECT_EQ(*FrameIdConv.LastUnmappedId, 3U);
+}
+
+// Verify CallStackRadixTreeBuilder can handle empty inputs.
+TEST(MemProf, RadixTreeBuilderEmpty) {
+  llvm::DenseMap<FrameId, llvm::memprof::LinearFrameId> MemProfFrameIndexes;
+  llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> MemProfCallStackData;
+  llvm::DenseMap<llvm::memprof::FrameId, llvm::memprof::FrameStat>
+      FrameHistogram =
+          llvm::memprof::computeFrameHistogram(MemProfCallStackData);
+  llvm::memprof::CallStackRadixTreeBuilder Builder;
+  Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
+                FrameHistogram);
+  ASSERT_THAT(Builder.getRadixArray(), testing::IsEmpty());
+  const auto Mappings = Builder.takeCallStackPos();
+  ASSERT_THAT(Mappings, testing::IsEmpty());
+}
+
+// Verify CallStackRadixTreeBuilder can handle one trivial call stack.
+TEST(MemProf, RadixTreeBuilderOne) {
+  llvm::DenseMap<FrameId, llvm::memprof::LinearFrameId> MemProfFrameIndexes = {
+      {11, 1}, {12, 2}, {13, 3}};
+  llvm::SmallVector<llvm::memprof::FrameId> CS1 = {13, 12, 11};
+  llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> MemProfCallStackData;
+  MemProfCallStackData.insert({llvm::memprof::hashCallStack(CS1), CS1});
+  llvm::DenseMap<llvm::memprof::FrameId, llvm::memprof::FrameStat>
+      FrameHistogram =
+          llvm::memprof::computeFrameHistogram(MemProfCallStackData);
+  llvm::memprof::CallStackRadixTreeBuilder Builder;
+  Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
+                FrameHistogram);
+  EXPECT_THAT(Builder.getRadixArray(), testing::ElementsAreArray({
+                                           3U, // Size of CS1,
+                                           3U, // MemProfFrameIndexes[13]
+                                           2U, // MemProfFrameIndexes[12]
+                                           1U  // MemProfFrameIndexes[11]
+                                       }));
+  const auto Mappings = Builder.takeCallStackPos();
+  ASSERT_THAT(Mappings, SizeIs(1));
+  EXPECT_THAT(Mappings, testing::Contains(testing::Pair(
+                            llvm::memprof::hashCallStack(CS1), 0U)));
+}
+
+// Verify CallStackRadixTreeBuilder can form a link between two call stacks.
+TEST(MemProf, RadixTreeBuilderTwo) {
+  llvm::DenseMap<FrameId, llvm::memprof::LinearFrameId> MemProfFrameIndexes = {
+      {11, 1}, {12, 2}, {13, 3}};
+  llvm::SmallVector<llvm::memprof::FrameId> CS1 = {12, 11};
+  llvm::SmallVector<llvm::memprof::FrameId> CS2 = {13, 12, 11};
+  llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> MemProfCallStackData;
+  MemProfCallStackData.insert({llvm::memprof::hashCallStack(CS1), CS1});
+  MemProfCallStackData.insert({llvm::memprof::hashCallStack(CS2), CS2});
+  llvm::DenseMap<llvm::memprof::FrameId, llvm::memprof::FrameStat>
+      FrameHistogram =
+          llvm::memprof::computeFrameHistogram(MemProfCallStackData);
+  llvm::memprof::CallStackRadixTreeBuilder Builder;
+  Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
+                FrameHistogram);
+  EXPECT_THAT(Builder.getRadixArray(),
+              testing::ElementsAreArray({
+                  2U,                        // Size of CS1
+                  static_cast<uint32_t>(-3), // Jump 3 steps
+                  3U,                        // Size of CS2
+                  3U,                        // MemProfFrameIndexes[13]
+                  2U,                        // MemProfFrameIndexes[12]
+                  1U                         // MemProfFrameIndexes[11]
+              }));
+  const auto Mappings = Builder.takeCallStackPos();
+  ASSERT_THAT(Mappings, SizeIs(2));
+  EXPECT_THAT(Mappings, testing::Contains(testing::Pair(
+                            llvm::memprof::hashCallStack(CS1), 0U)));
+  EXPECT_THAT(Mappings, testing::Contains(testing::Pair(
+                            llvm::memprof::hashCallStack(CS2), 2U)));
+}
+
+// Verify CallStackRadixTreeBuilder can form a jump to a prefix that itself has
+// another jump to another prefix.
+TEST(MemProf, RadixTreeBuilderSuccessiveJumps) {
+  llvm::DenseMap<FrameId, llvm::memprof::LinearFrameId> MemProfFrameIndexes = {
+      {11, 1}, {12, 2}, {13, 3}, {14, 4}, {15, 5}, {16, 6}, {17, 7}, {18, 8},
+  };
+  llvm::SmallVector<llvm::memprof::FrameId> CS1 = {14, 13, 12, 11};
+  llvm::SmallVector<llvm::memprof::FrameId> CS2 = {15, 13, 12, 11};
+  llvm::SmallVector<llvm::memprof::FrameId> CS3 = {17, 16, 12, 11};
+  llvm::SmallVector<llvm::memprof::FrameId> CS4 = {18, 16, 12, 11};
+  llvm::MapVector<CallStackId, llvm::SmallVector<FrameId>> MemProfCallStackData;
+  MemProfCallStackData.insert({llvm::memprof::hashCallStack(CS1), CS1});
+  MemProfCallStackData.insert({llvm::memprof::hashCallStack(CS2), CS2});
+  MemProfCallStackData.insert({llvm::memprof::hashCallStack(CS3), CS3});
+  MemProfCallStackData.insert({llvm::memprof::hashCallStack(CS4), CS4});
+  llvm::DenseMap<llvm::memprof::FrameId, llvm::memprof::FrameStat>
+      FrameHistogram =
+          llvm::memprof::computeFrameHistogram(MemProfCallStackData);
+  llvm::memprof::CallStackRadixTreeBuilder Builder;
+  Builder.build(std::move(MemProfCallStackData), MemProfFrameIndexes,
+                FrameHistogram);
+  EXPECT_THAT(Builder.getRadixArray(),
+              testing::ElementsAreArray({
+                  4U,                        // Size of CS1
+                  4U,                        // MemProfFrameIndexes[14]
+                  static_cast<uint32_t>(-3), // Jump 3 steps
+                  4U,                        // Size of CS2
+                  5U,                        // MemProfFrameIndexes[15]
+                  3U,                        // MemProfFrameIndexes[13]
+                  static_cast<uint32_t>(-7), // Jump 7 steps
+                  4U,                        // Size of CS3
+                  7U,                        // MemProfFrameIndexes[17]
+                  static_cast<uint32_t>(-3), // Jump 3 steps
+                  4U,                        // Size of CS4
+                  8U,                        // MemProfFrameIndexes[18]
+                  6U,                        // MemProfFrameIndexes[16]
+                  2U,                        // MemProfFrameIndexes[12]
+                  1U                         // MemProfFrameIndexes[11]
+              }));
+  const auto Mappings = Builder.takeCallStackPos();
+  ASSERT_THAT(Mappings, SizeIs(4));
+  EXPECT_THAT(Mappings, testing::Contains(testing::Pair(
+                            llvm::memprof::hashCallStack(CS1), 0U)));
+  EXPECT_THAT(Mappings, testing::Contains(testing::Pair(
+                            llvm::memprof::hashCallStack(CS2), 3U)));
+  EXPECT_THAT(Mappings, testing::Contains(testing::Pair(
+                            llvm::memprof::hashCallStack(CS3), 7U)));
+  EXPECT_THAT(Mappings, testing::Contains(testing::Pair(
+                            llvm::memprof::hashCallStack(CS4), 10U)));
 }
 } // namespace

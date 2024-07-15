@@ -99,6 +99,7 @@ endif()
 
 if(WIN32)
   list(APPEND LIBCXX_SOURCES
+    support/win32/compiler_rt_shims.cpp
     support/win32/locale_win32.cpp
     support/win32/support.cpp
     )
@@ -275,8 +276,13 @@ if (LIBCXX_ENABLE_SHARED)
     # Since we most likely do not have a mt.exe replacement, disable the
     # manifest bundling.  This allows a normal cmake invocation to pass which
     # will attempt to use the manifest tool to generate the bundled manifest
-    set_target_properties(cxx_shared PROPERTIES
-                          APPEND_STRING PROPERTY LINK_FLAGS " /MANIFEST:NO")
+    if (${CMAKE_CXX_COMPILER_FRONTEND_VARIANT} STREQUAL "MSVC")
+      set_target_properties(cxx_shared PROPERTIES
+                            APPEND_STRING PROPERTY LINK_FLAGS " /MANIFEST:NO")
+    else()
+      set_target_properties(cxx_shared PROPERTIES
+                            APPEND_STRING PROPERTY LINK_FLAGS " -Xlinker /MANIFEST:NO")
+    endif()
   endif()
 endif()
 
@@ -322,6 +328,7 @@ endif()
 
 # Add a meta-target for both libraries.
 add_custom_target(cxx DEPENDS ${LIBCXX_BUILD_TARGETS})
+add_dependencies(cxx-test-depends cxx)
 
 set(LIBCXX_EXPERIMENTAL_SOURCES
   experimental/keep.cpp
@@ -335,13 +342,16 @@ endif()
 
 if (LIBCXX_ENABLE_LOCALIZATION AND LIBCXX_ENABLE_FILESYSTEM AND LIBCXX_ENABLE_TIME_ZONE_DATABASE)
   list(APPEND LIBCXX_EXPERIMENTAL_SOURCES
-    include/tzdb/time_zone_private.h
-    include/tzdb/types_private.h
-    include/tzdb/tzdb_list_private.h
-    include/tzdb/tzdb_private.h
-    time_zone.cpp
-    tzdb.cpp
-    tzdb_list.cpp
+    experimental/include/tzdb/time_zone_private.h
+    experimental/include/tzdb/types_private.h
+    experimental/include/tzdb/tzdb_list_private.h
+    experimental/include/tzdb/tzdb_private.h
+    # TODO TZDB The exception could be moved in chrono once the TZDB library
+    # is no longer experimental.
+    experimental/chrono_exception.cpp
+    experimental/time_zone.cpp
+    experimental/tzdb.cpp
+    experimental/tzdb_list.cpp
     )
 endif()
 
@@ -366,6 +376,7 @@ set_target_properties(cxx_experimental
 )
 cxx_add_common_build_flags(cxx_experimental)
 target_compile_options(cxx_experimental PUBLIC -D_LIBCPP_ENABLE_EXPERIMENTAL)
+add_dependencies(cxx-test-depends cxx_experimental)
 
 if (LIBCXX_INSTALL_SHARED_LIBRARY)
   install(TARGETS cxx_shared

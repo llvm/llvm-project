@@ -1,5 +1,5 @@
-# This test ensures that "unclaimed" jump table entries are accounted later
-# in postProcessIndirectBranches and the function is marked as non-simple.
+## This test ensures that "unclaimed" jump table entries are accounted later
+## in postProcessIndirectBranches and the function is marked as non-simple.
 
 # The test is compiled from the following source using GCC 12.2 -O3:
 # https://godbolt.org/z/YcPG131s6

@@ -145,7 +145,7 @@ public:
   IntOrString(const RCToken &Token)
       : Data(Token), IsInt(Token.kind() == RCToken::Kind::Int) {}
 
-  bool equalsLower(const char *Str) {
+  bool equalsLower(const char *Str) const {
     return !IsInt && Data.String.equals_insensitive(Str);
   }
 

@@ -74,8 +74,7 @@ protected:
 
 public:
   /// Return the underlying Value attached to this VPValue.
-  Value *getUnderlyingValue() { return UnderlyingVal; }
-  const Value *getUnderlyingValue() const { return UnderlyingVal; }
+  Value *getUnderlyingValue() const { return UnderlyingVal; }
 
   /// An enumeration for keeping track of the concrete subclass of VPValue that
   /// are actually instantiated.
@@ -259,11 +258,6 @@ public:
     Operands[I]->removeUser(*this);
     Operands[I] = New;
     New->addUser(*this);
-  }
-
-  void removeLastOperand() {
-    VPValue *Op = Operands.pop_back_val();
-    Op->removeUser(*this);
   }
 
   typedef SmallVectorImpl<VPValue *>::iterator operand_iterator;

@@ -11,6 +11,7 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <stdint.h>
 #include <sys/stat.h>
@@ -67,7 +68,7 @@ constexpr unsigned int STATX_BASIC_STATS_MASK = 0x7FF;
 
 } // Anonymous namespace
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LIBC_INLINE int statx(int dirfd, const char *__restrict path, int flags,
                       struct stat *__restrict statbuf) {
@@ -98,6 +99,6 @@ LIBC_INLINE int statx(int dirfd, const char *__restrict path, int flags,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_STAT_LINUX_KERNEL_STATX_H

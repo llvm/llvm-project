@@ -12,6 +12,7 @@
 #include "src/__support/CPP/type_traits/add_lvalue_reference.h"
 #include "src/__support/CPP/type_traits/add_pointer.h"
 #include "src/__support/CPP/type_traits/add_rvalue_reference.h"
+#include "src/__support/CPP/type_traits/aligned_storage.h"
 #include "src/__support/CPP/type_traits/bool_constant.h"
 #include "src/__support/CPP/type_traits/conditional.h"
 #include "src/__support/CPP/type_traits/decay.h"

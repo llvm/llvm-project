@@ -17,8 +17,6 @@
 #include "SIProgramInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 
-struct amd_kernel_code_t;
-
 namespace llvm {
 
 class AMDGPUMachineFunction;
@@ -29,6 +27,7 @@ class MCOperand;
 
 namespace AMDGPU {
 struct MCKernelDescriptor;
+struct AMDGPUMCKernelCodeT;
 namespace HSAMD {
 class MetadataStreamer;
 }
@@ -50,7 +49,8 @@ private:
   uint64_t getFunctionCodeSize(const MachineFunction &MF) const;
 
   void getSIProgramInfo(SIProgramInfo &Out, const MachineFunction &MF);
-  void getAmdKernelCode(amd_kernel_code_t &Out, const SIProgramInfo &KernelInfo,
+  void getAmdKernelCode(AMDGPU::AMDGPUMCKernelCodeT &Out,
+                        const SIProgramInfo &KernelInfo,
                         const MachineFunction &MF) const;
 
   /// Emit register usage information so that the GPU driver
@@ -65,18 +65,24 @@ private:
                                   uint32_t TotalNumVGPR, uint32_t NumSGPR,
                                   uint64_t ScratchSize, uint64_t CodeSize,
                                   const AMDGPUMachineFunction *MFI);
+  void emitCommonFunctionComments(const MCExpr *NumVGPR, const MCExpr *NumAGPR,
+                                  const MCExpr *TotalNumVGPR,
+                                  const MCExpr *NumSGPR,
+                                  const MCExpr *ScratchSize, uint64_t CodeSize,
+                                  const AMDGPUMachineFunction *MFI);
   void emitResourceUsageRemarks(const MachineFunction &MF,
                                 const SIProgramInfo &CurrentProgramInfo,
                                 bool isModuleEntryFunction, bool hasMAIInsts);
 
-  uint16_t getAmdhsaKernelCodeProperties(
-      const MachineFunction &MF) const;
+  const MCExpr *getAmdhsaKernelCodeProperties(const MachineFunction &MF) const;
 
   AMDGPU::MCKernelDescriptor
   getAmdhsaKernelDescriptor(const MachineFunction &MF,
                             const SIProgramInfo &PI) const;
 
   void initTargetStreamer(Module &M);
+
+  SmallString<128> getMCExprStr(const MCExpr *Value);
 
 public:
   explicit AMDGPUAsmPrinter(TargetMachine &TM,

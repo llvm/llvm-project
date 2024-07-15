@@ -23,13 +23,13 @@ endif()
 add_custom_target(compiler-rt ALL)
 add_custom_target(install-compiler-rt)
 add_custom_target(install-compiler-rt-stripped)
+set_property(TARGET compiler-rt PROPERTY FOLDER "Compiler-RT/Metatargets")
 set_property(
   TARGET
-    compiler-rt
     install-compiler-rt
     install-compiler-rt-stripped
   PROPERTY
-    FOLDER "Compiler-RT Misc"
+    FOLDER "Compiler-RT/Installation"
 )
 
 # Setting these variables from an LLVM build is sufficient that compiler-rt can
@@ -214,6 +214,12 @@ macro(test_targets)
           test_target_arch(x86_64 "" "")
         endif()
       endif()
+    elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
+      test_target_arch(amdgcn "" "--target=amdgcn-amd-amdhsa" "-nogpulib"
+                       "-flto" "-fconvergent-functions"
+                       "-Xclang -mcode-object-version=none")
+    elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "hexagon")
+      test_target_arch(hexagon "" "")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "loongarch64")
       test_target_arch(loongarch64 "" "")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "powerpc64le|ppc64le")
@@ -254,6 +260,9 @@ macro(test_targets)
         test_target_arch(mips "" "-mips32r2" "-mabi=32" "-D_LARGEFILE_SOURCE=1" "-D_FILE_OFFSET_BITS=64")
         test_target_arch(mips64 "" "-mips64r2" "-mabi=64")
       endif()
+    elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "nvptx")
+      test_target_arch(nvptx64 "" "--nvptx64-nvidia-cuda" "-nogpulib" "-flto"
+                       "-fconvergent-functions" "-c")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "arm")
       if(WIN32)
         test_target_arch(arm "" "" "")

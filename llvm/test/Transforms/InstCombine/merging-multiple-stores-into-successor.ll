@@ -34,9 +34,9 @@ define void @_Z4testv() {
 ; CHECK-NEXT:    store i16 [[I4]], ptr @arr_4, align 2
 ; CHECK-NEXT:    [[I8:%.*]] = sext i16 [[I4]] to i32
 ; CHECK-NEXT:    store i32 [[I8]], ptr @arr_3, align 4
-; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr getelementptr inbounds ([0 x i32], ptr @arr_2, i64 0, i64 1), align 4
-; CHECK-NEXT:    store i16 [[I4]], ptr getelementptr inbounds ([0 x i16], ptr @arr_4, i64 0, i64 1), align 2
-; CHECK-NEXT:    store i32 [[I8]], ptr getelementptr inbounds ([8 x i32], ptr @arr_3, i64 0, i64 1), align 4
+; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr getelementptr inbounds (i8, ptr @arr_2, i64 4), align 4
+; CHECK-NEXT:    store i16 [[I4]], ptr getelementptr inbounds (i8, ptr @arr_4, i64 2), align 2
+; CHECK-NEXT:    store i32 [[I8]], ptr getelementptr inbounds (i8, ptr @arr_3, i64 4), align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:

@@ -264,7 +264,7 @@ static bool IsSmallObject(const GlobalValue *GV, const XCoreTargetLowering &XTL)
   if (!ObjType->isSized())
     return false;
 
-  auto &DL = GV->getParent()->getDataLayout();
+  auto &DL = GV->getDataLayout();
   unsigned ObjSize = DL.getTypeAllocSize(ObjType);
   return ObjSize < CodeModelLargeSize && ObjSize != 0;
 }
@@ -973,8 +973,7 @@ static SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                                SmallVectorImpl<SDValue> &InVals) {
   SmallVector<std::pair<int, unsigned>, 4> ResultMemLocs;
   // Copy results out of physical registers.
-  for (unsigned i = 0, e = RVLocs.size(); i != e; ++i) {
-    const CCValAssign &VA = RVLocs[i];
+  for (const CCValAssign &VA : RVLocs) {
     if (VA.isRegLoc()) {
       Chain = DAG.getCopyFromReg(Chain, dl, VA.getLocReg(), VA.getValVT(),
                                  InGlue).getValue(1);

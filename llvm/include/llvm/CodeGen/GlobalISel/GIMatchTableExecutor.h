@@ -212,6 +212,10 @@ enum {
   /// - InsnID(ULEB128) - Instruction ID
   GIM_CheckHasNoUse,
 
+  /// Check if there's one use of the first result.
+  /// - InsnID(ULEB128) - Instruction ID
+  GIM_CheckHasOneUse,
+
   /// Check the type for the specified operand
   /// - InsnID(ULEB128) - Instruction ID
   /// - OpIdx(ULEB128) - Operand index
@@ -471,16 +475,11 @@ enum {
   /// - RendererFnID(2) - Custom renderer function to call
   GIR_CustomRenderer,
 
-  /// Calls a C++ function to perform an action when a match is complete.
-  /// The MatcherState is passed to the function to allow it to modify
-  /// instructions.
-  /// This is less constrained than a custom renderer and can update
-  /// instructions
-  /// in the state.
+  /// Calls a C++ function that concludes the current match.
+  /// The C++ function is free to return false and reject the match, or
+  /// return true and mutate the instruction(s) (or do nothing, even).
   /// - FnID(2) - The function to call.
-  /// TODO: Remove this at some point when combiners aren't reliant on it. It's
-  /// a bit of a hack.
-  GIR_CustomAction,
+  GIR_DoneWithCustomAction,
 
   /// Render operands to the specified instruction using a custom function,
   /// reading from a specific operand.
@@ -688,7 +687,7 @@ protected:
     llvm_unreachable("Subclass does not implement testSimplePredicate!");
   }
 
-  virtual void runCustomAction(unsigned, const MatcherState &State,
+  virtual bool runCustomAction(unsigned, const MatcherState &State,
                                NewMIVector &OutMIs) const {
     llvm_unreachable("Subclass does not implement runCustomAction!");
   }

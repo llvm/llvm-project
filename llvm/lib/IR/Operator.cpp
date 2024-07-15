@@ -42,7 +42,8 @@ bool Operator::hasPoisonGeneratingFlags() const {
   case Instruction::GetElementPtr: {
     auto *GEP = cast<GEPOperator>(this);
     // Note: inrange exists on constexpr only
-    return GEP->isInBounds() || GEP->getInRange() != std::nullopt;
+    return GEP->getNoWrapFlags() != GEPNoWrapFlags::none() ||
+           GEP->getInRange() != std::nullopt;
   }
   case Instruction::UIToFP:
   case Instruction::ZExt:

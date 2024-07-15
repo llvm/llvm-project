@@ -1234,7 +1234,15 @@ body: |
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]], -1, 0 :: (load (s32), addrspace 4)
+    ; GFX10-NEXT: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -1
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
+    ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_MOV_B]].sub0
+    ; GFX10-NEXT: [[COPY3:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
+    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_MOV_B]].sub1
+    ; GFX10-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY1]], [[COPY2]], implicit-def $scc
+    ; GFX10-NEXT: [[S_ADDC_U32_:%[0-9]+]]:sreg_32 = S_ADDC_U32 [[COPY3]], [[COPY4]], implicit-def dead $scc, implicit $scc
+    ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec = REG_SEQUENCE [[S_ADD_U32_]], %subreg.sub0, [[S_ADDC_U32_]], %subreg.sub1
+    ; GFX10-NEXT: [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[REG_SEQUENCE]], 0, 0 :: (load (s32), addrspace 4)
     ; GFX10-NEXT: $sgpr0 = COPY [[S_LOAD_DWORD_IMM]]
     %0:sgpr(p4) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_CONSTANT i64 -1
@@ -1304,7 +1312,15 @@ body: |
     ; GFX10: liveins: $sgpr0_sgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; GFX10-NEXT: [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]], -524288, 0 :: (load (s32), addrspace 4)
+    ; GFX10-NEXT: [[S_MOV_B:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO -524288
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
+    ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_MOV_B]].sub0
+    ; GFX10-NEXT: [[COPY3:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
+    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_MOV_B]].sub1
+    ; GFX10-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY1]], [[COPY2]], implicit-def $scc
+    ; GFX10-NEXT: [[S_ADDC_U32_:%[0-9]+]]:sreg_32 = S_ADDC_U32 [[COPY3]], [[COPY4]], implicit-def dead $scc, implicit $scc
+    ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec = REG_SEQUENCE [[S_ADD_U32_]], %subreg.sub0, [[S_ADDC_U32_]], %subreg.sub1
+    ; GFX10-NEXT: [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[REG_SEQUENCE]], 0, 0 :: (load (s32), addrspace 4)
     ; GFX10-NEXT: $sgpr0 = COPY [[S_LOAD_DWORD_IMM]]
     %0:sgpr(p4) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_CONSTANT i64 -524288

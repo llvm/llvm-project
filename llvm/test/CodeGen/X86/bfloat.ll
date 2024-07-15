@@ -770,12 +770,70 @@ define <32 x bfloat> @pr63017_2() nounwind {
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = [-1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; SSE2-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movdqa %xmm0, %xmm15
+; SSE2-NEXT:    movd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movdqa %xmm0, %xmm13
+; SSE2-NEXT:    movdqa %xmm0, %xmm14
+; SSE2-NEXT:    movdqa %xmm0, %xmm11
+; SSE2-NEXT:    movdqa %xmm0, %xmm12
+; SSE2-NEXT:    movdqa %xmm0, %xmm9
+; SSE2-NEXT:    movdqa %xmm0, %xmm10
+; SSE2-NEXT:    movdqa %xmm0, %xmm7
+; SSE2-NEXT:    movdqa %xmm0, %xmm8
+; SSE2-NEXT:    movdqa %xmm0, %xmm5
+; SSE2-NEXT:    movdqa %xmm0, %xmm6
+; SSE2-NEXT:    movdqa %xmm0, %xmm3
+; SSE2-NEXT:    movdqa %xmm0, %xmm4
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-NEXT:    jmp .LBB12_3
 ; SSE2-NEXT:  .LBB12_1:
-; SSE2-NEXT:    movd {{.*#+}} xmm1 = [-1.0E+0,0.0E+0,0.0E+0,0.0E+0]
-; SSE2-NEXT:    movdqa %xmm1, %xmm0
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd {{.*#+}} xmm2 = [-1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; SSE2-NEXT:    movdqa %xmm2, %xmm0
+; SSE2-NEXT:    movd %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movdqa %xmm2, %xmm15
+; SSE2-NEXT:    movd %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movdqa %xmm2, %xmm13
+; SSE2-NEXT:    movdqa %xmm2, %xmm14
+; SSE2-NEXT:    movdqa %xmm2, %xmm11
+; SSE2-NEXT:    movdqa %xmm2, %xmm12
+; SSE2-NEXT:    movdqa %xmm2, %xmm9
+; SSE2-NEXT:    movdqa %xmm2, %xmm10
+; SSE2-NEXT:    movdqa %xmm2, %xmm7
+; SSE2-NEXT:    movdqa %xmm2, %xmm8
+; SSE2-NEXT:    movdqa %xmm2, %xmm5
+; SSE2-NEXT:    movdqa %xmm2, %xmm6
+; SSE2-NEXT:    movdqa %xmm2, %xmm3
+; SSE2-NEXT:    movdqa %xmm2, %xmm4
+; SSE2-NEXT:    movdqa %xmm2, %xmm1
+; SSE2-NEXT:    movd %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
 ; SSE2-NEXT:  .LBB12_3: # %else
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
@@ -787,299 +845,240 @@ define <32 x bfloat> @pr63017_2() nounwind {
 ; SSE2-NEXT:  .LBB12_5: # %else2
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_6
-; SSE2-NEXT:  # %bb.7: # %cond.load4
-; SSE2-NEXT:    movzwl (%rax), %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movdqa %xmm1, %xmm14
-; SSE2-NEXT:    movdqa %xmm1, %xmm15
-; SSE2-NEXT:    movdqa %xmm1, %xmm12
-; SSE2-NEXT:    movdqa %xmm1, %xmm13
-; SSE2-NEXT:    movdqa %xmm1, %xmm10
-; SSE2-NEXT:    movdqa %xmm1, %xmm11
-; SSE2-NEXT:    movdqa %xmm1, %xmm8
-; SSE2-NEXT:    movdqa %xmm1, %xmm9
-; SSE2-NEXT:    movdqa %xmm1, %xmm6
-; SSE2-NEXT:    movdqa %xmm1, %xmm7
-; SSE2-NEXT:    movdqa %xmm1, %xmm4
-; SSE2-NEXT:    movdqa %xmm1, %xmm5
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
-; SSE2-NEXT:    movdqa %xmm1, %xmm3
-; SSE2-NEXT:    movd %eax, %xmm1
-; SSE2-NEXT:    jmp .LBB12_8
-; SSE2-NEXT:  .LBB12_6:
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movdqa %xmm1, %xmm14
-; SSE2-NEXT:    movdqa %xmm1, %xmm15
-; SSE2-NEXT:    movdqa %xmm1, %xmm12
-; SSE2-NEXT:    movdqa %xmm1, %xmm13
-; SSE2-NEXT:    movdqa %xmm1, %xmm10
-; SSE2-NEXT:    movdqa %xmm1, %xmm11
-; SSE2-NEXT:    movdqa %xmm1, %xmm8
-; SSE2-NEXT:    movdqa %xmm1, %xmm9
-; SSE2-NEXT:    movdqa %xmm1, %xmm6
-; SSE2-NEXT:    movdqa %xmm1, %xmm7
-; SSE2-NEXT:    movdqa %xmm1, %xmm4
-; SSE2-NEXT:    movdqa %xmm1, %xmm5
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
-; SSE2-NEXT:    movdqa %xmm1, %xmm3
-; SSE2-NEXT:  .LBB12_8: # %else5
-; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_10
-; SSE2-NEXT:  # %bb.9: # %cond.load7
+; SSE2-NEXT:    jne .LBB12_7
+; SSE2-NEXT:  # %bb.6: # %cond.load4
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE2-NEXT:  .LBB12_10: # %else8
+; SSE2-NEXT:  .LBB12_7: # %else5
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_12
-; SSE2-NEXT:  # %bb.11: # %cond.load10
+; SSE2-NEXT:    jne .LBB12_9
+; SSE2-NEXT:  # %bb.8: # %cond.load7
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE2-NEXT:  .LBB12_12: # %else11
+; SSE2-NEXT:  .LBB12_9: # %else8
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_14
-; SSE2-NEXT:  # %bb.13: # %cond.load13
+; SSE2-NEXT:    jne .LBB12_11
+; SSE2-NEXT:  # %bb.10: # %cond.load10
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE2-NEXT:  .LBB12_14: # %else14
+; SSE2-NEXT:  .LBB12_11: # %else11
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_16
-; SSE2-NEXT:  # %bb.15: # %cond.load16
+; SSE2-NEXT:    jne .LBB12_13
+; SSE2-NEXT:  # %bb.12: # %cond.load13
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE2-NEXT:  .LBB12_16: # %else17
+; SSE2-NEXT:  .LBB12_13: # %else14
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_18
-; SSE2-NEXT:  # %bb.17: # %cond.load19
+; SSE2-NEXT:    jne .LBB12_15
+; SSE2-NEXT:  # %bb.14: # %cond.load16
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE2-NEXT:  .LBB12_18: # %else20
+; SSE2-NEXT:  .LBB12_15: # %else17
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_20
-; SSE2-NEXT:  # %bb.19: # %cond.load22
+; SSE2-NEXT:    jne .LBB12_17
+; SSE2-NEXT:  # %bb.16: # %cond.load19
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE2-NEXT:  .LBB12_20: # %else23
+; SSE2-NEXT:  .LBB12_17: # %else20
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_22
-; SSE2-NEXT:  # %bb.21: # %cond.load25
+; SSE2-NEXT:    jne .LBB12_19
+; SSE2-NEXT:  # %bb.18: # %cond.load22
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE2-NEXT:  .LBB12_22: # %else26
+; SSE2-NEXT:  .LBB12_19: # %else23
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_24
-; SSE2-NEXT:  # %bb.23: # %cond.load28
+; SSE2-NEXT:    jne .LBB12_21
+; SSE2-NEXT:  # %bb.20: # %cond.load25
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE2-NEXT:  .LBB12_24: # %else29
+; SSE2-NEXT:  .LBB12_21: # %else26
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_26
-; SSE2-NEXT:  # %bb.25: # %cond.load31
+; SSE2-NEXT:    jne .LBB12_23
+; SSE2-NEXT:  # %bb.22: # %cond.load28
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE2-NEXT:  .LBB12_26: # %else32
+; SSE2-NEXT:  .LBB12_23: # %else29
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_28
-; SSE2-NEXT:  # %bb.27: # %cond.load34
+; SSE2-NEXT:    jne .LBB12_25
+; SSE2-NEXT:  # %bb.24: # %cond.load31
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE2-NEXT:  .LBB12_28: # %else35
+; SSE2-NEXT:  .LBB12_25: # %else32
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_30
-; SSE2-NEXT:  # %bb.29: # %cond.load37
+; SSE2-NEXT:    jne .LBB12_27
+; SSE2-NEXT:  # %bb.26: # %cond.load34
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE2-NEXT:  .LBB12_30: # %else38
+; SSE2-NEXT:  .LBB12_27: # %else35
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_32
-; SSE2-NEXT:  # %bb.31: # %cond.load40
+; SSE2-NEXT:    jne .LBB12_29
+; SSE2-NEXT:  # %bb.28: # %cond.load37
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE2-NEXT:  .LBB12_32: # %else41
+; SSE2-NEXT:  .LBB12_29: # %else38
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_34
-; SSE2-NEXT:  # %bb.33: # %cond.load43
+; SSE2-NEXT:    jne .LBB12_31
+; SSE2-NEXT:  # %bb.30: # %cond.load40
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE2-NEXT:  .LBB12_34: # %else44
+; SSE2-NEXT:  .LBB12_31: # %else41
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_36
-; SSE2-NEXT:  # %bb.35: # %cond.load46
+; SSE2-NEXT:    jne .LBB12_33
+; SSE2-NEXT:  # %bb.32: # %cond.load43
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE2-NEXT:  .LBB12_36: # %else47
+; SSE2-NEXT:  .LBB12_33: # %else44
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_38
-; SSE2-NEXT:  # %bb.37: # %cond.load49
-; SSE2-NEXT:    movzwl (%rax), %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE2-NEXT:  .LBB12_38: # %else50
-; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_40
-; SSE2-NEXT:  # %bb.39: # %cond.load52
-; SSE2-NEXT:    movzwl (%rax), %eax
-; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm14
-; SSE2-NEXT:  .LBB12_40: # %else53
-; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_42
-; SSE2-NEXT:  # %bb.41: # %cond.load55
+; SSE2-NEXT:    jne .LBB12_35
+; SSE2-NEXT:  # %bb.34: # %cond.load46
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movd %eax, %xmm15
-; SSE2-NEXT:  .LBB12_42: # %else56
+; SSE2-NEXT:  .LBB12_35: # %else47
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_44
-; SSE2-NEXT:  # %bb.43: # %cond.load58
+; SSE2-NEXT:    jne .LBB12_37
+; SSE2-NEXT:  # %bb.36: # %cond.load49
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm12
-; SSE2-NEXT:  .LBB12_44: # %else59
+; SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; SSE2-NEXT:  .LBB12_37: # %else50
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_46
-; SSE2-NEXT:  # %bb.45: # %cond.load61
+; SSE2-NEXT:    jne .LBB12_39
+; SSE2-NEXT:  # %bb.38: # %cond.load52
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movd %eax, %xmm13
-; SSE2-NEXT:  .LBB12_46: # %else62
+; SSE2-NEXT:  .LBB12_39: # %else53
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_48
-; SSE2-NEXT:  # %bb.47: # %cond.load64
+; SSE2-NEXT:    jne .LBB12_41
+; SSE2-NEXT:  # %bb.40: # %cond.load55
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm10
-; SSE2-NEXT:  .LBB12_48: # %else65
+; SSE2-NEXT:    movd %eax, %xmm14
+; SSE2-NEXT:  .LBB12_41: # %else56
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_50
-; SSE2-NEXT:  # %bb.49: # %cond.load67
+; SSE2-NEXT:    jne .LBB12_43
+; SSE2-NEXT:  # %bb.42: # %cond.load58
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movd %eax, %xmm11
-; SSE2-NEXT:  .LBB12_50: # %else68
+; SSE2-NEXT:  .LBB12_43: # %else59
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_52
-; SSE2-NEXT:  # %bb.51: # %cond.load70
+; SSE2-NEXT:    jne .LBB12_45
+; SSE2-NEXT:  # %bb.44: # %cond.load61
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm8
-; SSE2-NEXT:  .LBB12_52: # %else71
+; SSE2-NEXT:    movd %eax, %xmm12
+; SSE2-NEXT:  .LBB12_45: # %else62
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_54
-; SSE2-NEXT:  # %bb.53: # %cond.load73
+; SSE2-NEXT:    jne .LBB12_47
+; SSE2-NEXT:  # %bb.46: # %cond.load64
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movd %eax, %xmm9
-; SSE2-NEXT:  .LBB12_54: # %else74
+; SSE2-NEXT:  .LBB12_47: # %else65
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_56
-; SSE2-NEXT:  # %bb.55: # %cond.load76
+; SSE2-NEXT:    jne .LBB12_49
+; SSE2-NEXT:  # %bb.48: # %cond.load67
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm6
-; SSE2-NEXT:  .LBB12_56: # %else77
+; SSE2-NEXT:    movd %eax, %xmm10
+; SSE2-NEXT:  .LBB12_49: # %else68
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_58
-; SSE2-NEXT:  # %bb.57: # %cond.load79
+; SSE2-NEXT:    jne .LBB12_51
+; SSE2-NEXT:  # %bb.50: # %cond.load70
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movd %eax, %xmm7
-; SSE2-NEXT:  .LBB12_58: # %else80
+; SSE2-NEXT:  .LBB12_51: # %else71
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_60
-; SSE2-NEXT:  # %bb.59: # %cond.load82
+; SSE2-NEXT:    jne .LBB12_53
+; SSE2-NEXT:  # %bb.52: # %cond.load73
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm4
-; SSE2-NEXT:  .LBB12_60: # %else83
+; SSE2-NEXT:    movd %eax, %xmm8
+; SSE2-NEXT:  .LBB12_53: # %else74
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_62
-; SSE2-NEXT:  # %bb.61: # %cond.load85
+; SSE2-NEXT:    jne .LBB12_55
+; SSE2-NEXT:  # %bb.54: # %cond.load76
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movd %eax, %xmm5
-; SSE2-NEXT:  .LBB12_62: # %else86
+; SSE2-NEXT:  .LBB12_55: # %else77
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    jne .LBB12_64
-; SSE2-NEXT:  # %bb.63: # %cond.load88
+; SSE2-NEXT:    jne .LBB12_57
+; SSE2-NEXT:  # %bb.56: # %cond.load79
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
-; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:  .LBB12_64: # %else89
+; SSE2-NEXT:    movd %eax, %xmm6
+; SSE2-NEXT:  .LBB12_57: # %else80
 ; SSE2-NEXT:    xorl %eax, %eax
 ; SSE2-NEXT:    testb %al, %al
-; SSE2-NEXT:    movd %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    jne .LBB12_59
+; SSE2-NEXT:  # %bb.58: # %cond.load82
+; SSE2-NEXT:    movzwl (%rax), %eax
+; SSE2-NEXT:    shll $16, %eax
+; SSE2-NEXT:    movd %eax, %xmm3
+; SSE2-NEXT:  .LBB12_59: # %else83
+; SSE2-NEXT:    xorl %eax, %eax
+; SSE2-NEXT:    testb %al, %al
+; SSE2-NEXT:    jne .LBB12_61
+; SSE2-NEXT:  # %bb.60: # %cond.load85
+; SSE2-NEXT:    movzwl (%rax), %eax
+; SSE2-NEXT:    shll $16, %eax
+; SSE2-NEXT:    movd %eax, %xmm4
+; SSE2-NEXT:  .LBB12_61: # %else86
+; SSE2-NEXT:    xorl %eax, %eax
+; SSE2-NEXT:    testb %al, %al
+; SSE2-NEXT:    jne .LBB12_63
+; SSE2-NEXT:  # %bb.62: # %cond.load88
+; SSE2-NEXT:    movzwl (%rax), %eax
+; SSE2-NEXT:    shll $16, %eax
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:  .LBB12_63: # %else89
+; SSE2-NEXT:    xorl %eax, %eax
+; SSE2-NEXT:    testb %al, %al
+; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:    movd %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
 ; SSE2-NEXT:    movd %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
 ; SSE2-NEXT:    movd %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
 ; SSE2-NEXT:    movd %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
@@ -1087,21 +1086,20 @@ define <32 x bfloat> @pr63017_2() nounwind {
 ; SSE2-NEXT:    movd %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
 ; SSE2-NEXT:    movd %xmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
 ; SSE2-NEXT:    movd %xmm10, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    movd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
 ; SSE2-NEXT:    movd %xmm11, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
 ; SSE2-NEXT:    movd %xmm12, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
 ; SSE2-NEXT:    movd %xmm13, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
 ; SSE2-NEXT:    movd %xmm14, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
 ; SSE2-NEXT:    movd %xmm15, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:    jne .LBB12_65
-; SSE2-NEXT:  # %bb.66: # %cond.load91
+; SSE2-NEXT:    jne .LBB12_64
+; SSE2-NEXT:  # %bb.65: # %cond.load91
 ; SSE2-NEXT:    movzwl (%rax), %eax
 ; SSE2-NEXT:    shll $16, %eax
 ; SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE2-NEXT:    jmp .LBB12_67
-; SSE2-NEXT:  .LBB12_65:
-; SSE2-NEXT:    movd %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
-; SSE2-NEXT:  .LBB12_67: # %else92
+; SSE2-NEXT:    jmp .LBB12_66
+; SSE2-NEXT:  .LBB12_64:
+; SSE2-NEXT:    movd %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Folded Spill
+; SSE2-NEXT:  .LBB12_66: # %else92
 ; SSE2-NEXT:    callq __truncsfbf2@PLT
 ; SSE2-NEXT:    pextrw $0, %xmm0, %ebx
 ; SSE2-NEXT:    shll $16, %ebx
@@ -2419,4 +2417,101 @@ define <16 x bfloat> @concat_dup_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y) {
 ; AVX-NEXT:    retq
   %a = shufflevector <8 x bfloat> %x, <8 x bfloat> %y, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x bfloat> %a
+}
+
+define float @trunc_ext(float %a) nounwind {
+; X86-LABEL: trunc_ext:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
+; X86-NEXT:    vmovw %xmm0, %eax
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    vmovd %eax, %xmm0
+; X86-NEXT:    vmovd %xmm0, (%esp)
+; X86-NEXT:    flds (%esp)
+; X86-NEXT:    popl %eax
+; X86-NEXT:    retl
+;
+; SSE2-LABEL: trunc_ext:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pushq %rax
+; SSE2-NEXT:    callq __truncsfbf2@PLT
+; SSE2-NEXT:    pextrw $0, %xmm0, %eax
+; SSE2-NEXT:    shll $16, %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    popq %rax
+; SSE2-NEXT:    retq
+;
+; FP16-LABEL: trunc_ext:
+; FP16:       # %bb.0:
+; FP16-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
+; FP16-NEXT:    vmovw %xmm0, %eax
+; FP16-NEXT:    shll $16, %eax
+; FP16-NEXT:    vmovd %eax, %xmm0
+; FP16-NEXT:    retq
+;
+; AVXNC-LABEL: trunc_ext:
+; AVXNC:       # %bb.0:
+; AVXNC-NEXT:    {vex} vcvtneps2bf16 %xmm0, %xmm0
+; AVXNC-NEXT:    vmovd %xmm0, %eax
+; AVXNC-NEXT:    shll $16, %eax
+; AVXNC-NEXT:    vmovd %eax, %xmm0
+; AVXNC-NEXT:    retq
+  %b = fptrunc float %a to bfloat
+  %c = fpext bfloat %b to float
+  ret float %c
+}
+
+define void @PR92471(ptr %0, ptr %1) nounwind {
+; X86-LABEL: PR92471:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vpinsrd $1, 4(%ecx), %xmm0, %xmm0
+; X86-NEXT:    vpinsrd $2, 8(%ecx), %xmm0, %xmm0
+; X86-NEXT:    vpinsrw $6, 12(%ecx), %xmm0, %xmm0
+; X86-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; X86-NEXT:    vpslld $16, %ymm0, %ymm0
+; X86-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; X86-NEXT:    vpextrd $2, %xmm1, 24(%eax)
+; X86-NEXT:    vpextrd $1, %xmm1, 20(%eax)
+; X86-NEXT:    vmovd %xmm1, 16(%eax)
+; X86-NEXT:    vmovdqu %xmm0, (%eax)
+; X86-NEXT:    vzeroupper
+; X86-NEXT:    retl
+;
+; SSE2-LABEL: PR92471:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    pinsrw $2, 12(%rdi), %xmm1
+; SSE2-NEXT:    pxor %xmm2, %xmm2
+; SSE2-NEXT:    pxor %xmm3, %xmm3
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1],xmm3[2],xmm1[2],xmm3[3],xmm1[3]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; SSE2-NEXT:    movdqu %xmm2, (%rsi)
+; SSE2-NEXT:    movq %xmm3, 16(%rsi)
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,2,3]
+; SSE2-NEXT:    movd %xmm0, 24(%rsi)
+; SSE2-NEXT:    retq
+;
+; AVX-LABEL: PR92471:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vpinsrd $2, 8(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrw $6, 12(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX-NEXT:    vpslld $16, %ymm0, %ymm0
+; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX-NEXT:    vpextrd $2, %xmm1, 24(%rsi)
+; AVX-NEXT:    vmovq %xmm1, 16(%rsi)
+; AVX-NEXT:    vmovdqu %xmm0, (%rsi)
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+  %3 = load <7 x bfloat>, ptr %0, align 2
+  %4 = fpext <7 x bfloat> %3 to <7 x float>
+  store <7 x float> %4, ptr %1, align 4
+  ret void
 }

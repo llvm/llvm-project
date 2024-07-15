@@ -433,13 +433,23 @@ void Fuchsia::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
     if (Version.empty())
       return;
 
-    // First add the per-target include path.
+    // First add the per-target multilib include dir.
+    if (!SelectedMultilibs.empty() && !SelectedMultilibs.back().isDefault()) {
+      const Multilib &M = SelectedMultilibs.back();
+      SmallString<128> TargetDir(Path);
+      llvm::sys::path::append(TargetDir, Target, M.gccSuffix(), "c++", Version);
+      if (getVFS().exists(TargetDir)) {
+        addSystemInclude(DriverArgs, CC1Args, TargetDir);
+      }
+    }
+
+    // Second add the per-target include dir.
     SmallString<128> TargetDir(Path);
     llvm::sys::path::append(TargetDir, Target, "c++", Version);
     if (getVFS().exists(TargetDir))
       addSystemInclude(DriverArgs, CC1Args, TargetDir);
 
-    // Second add the generic one.
+    // Third the generic one.
     SmallString<128> Dir(Path);
     llvm::sys::path::append(Dir, "c++", Version);
     addSystemInclude(DriverArgs, CC1Args, Dir);

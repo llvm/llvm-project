@@ -76,20 +76,20 @@ irdl.dialect @testd {
   }
 
   // CHECK: irdl.operation @dyn_type_base {
-  // CHECK:   %[[v1:[^ ]*]] = irdl.base @parametric
+  // CHECK:   %[[v1:[^ ]*]] = irdl.base @testd::@parametric
   // CHECK:   irdl.results(%[[v1]])
   // CHECK: }
   irdl.operation @dyn_type_base {
-    %0 = irdl.base @parametric
+    %0 = irdl.base @testd::@parametric
     irdl.results(%0)
   }
 
   // CHECK: irdl.operation @dyn_attr_base {
-  // CHECK:   %[[v1:[^ ]*]] = irdl.base @parametric_attr
+  // CHECK:   %[[v1:[^ ]*]] = irdl.base @testd::@parametric_attr
   // CHECK:   irdl.attributes {"attr1" = %[[v1]]}
   // CHECK: }
   irdl.operation @dyn_attr_base {
-    %0 = irdl.base @parametric_attr
+    %0 = irdl.base @testd::@parametric_attr
     irdl.attributes {"attr1" = %0}
   }
 
@@ -115,14 +115,14 @@ irdl.dialect @testd {
   // CHECK:   %[[v0:[^ ]*]] = irdl.is i32
   // CHECK:   %[[v1:[^ ]*]] = irdl.is i64
   // CHECK:   %[[v2:[^ ]*]] = irdl.any_of(%[[v0]], %[[v1]])
-  // CHECK:   %[[v3:[^ ]*]] = irdl.parametric @parametric<%[[v2]]>
+  // CHECK:   %[[v3:[^ ]*]] = irdl.parametric @testd::@parametric<%[[v2]]>
   // CHECK:   irdl.results(%[[v3]])
   // CHECK: }
   irdl.operation @dynparams {
     %0 = irdl.is i32
     %1 = irdl.is i64
     %2 = irdl.any_of(%0, %1)
-    %3 = irdl.parametric @parametric<%2>
+    %3 = irdl.parametric @testd::@parametric<%2>
     irdl.results(%3)
   }
 

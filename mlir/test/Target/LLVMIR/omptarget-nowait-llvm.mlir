@@ -6,7 +6,7 @@ llvm.func @_QPopenmp_target_data_update() {
   %2 = omp.map.info var_ptr(%1 : !llvm.ptr, i32)   map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
 
   // CHECK: error: `nowait` is not supported yet
-  omp.target_update motion_entries(%2 : !llvm.ptr) nowait
+  omp.target_update map_entries(%2 : !llvm.ptr) nowait
 
   llvm.return
 }

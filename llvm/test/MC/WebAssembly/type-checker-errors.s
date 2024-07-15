@@ -215,6 +215,22 @@ table_fill_type_mismatch_3:
   table.fill valid_table
   end_function
 
+table_fill_type_mismatch_4:
+  .functype table_fill_type_mismatch_4 () -> ()
+  ref.null_exn
+  i32.const 1
+# CHECK: [[@LINE+1]]:3: error: popped exnref, expected externref
+  table.fill valid_table
+  end_function
+
+table_fill_type_mismatch_5:
+  .functype table_fill_type_mismatch_5 () -> ()
+  ref.null_exn
+  i32.const 1
+# CHECK: [[@LINE+1]]:3: error: popped exnref, expected externref
+  table.fill valid_table
+  end_function
+
 table_grow_non_exist_table:
   .functype table_grow_non_exist_table (externref, i32) -> (i32)
   local.get 0

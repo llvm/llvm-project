@@ -60,10 +60,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "codegenaction"
 
-namespace llvm {
-extern cl::opt<bool> ClRelinkBuiltinBitcodePostop;
-}
-
 namespace clang {
 class BackendConsumer;
 class ClangDiagnosticHandler final : public DiagnosticHandler {
@@ -118,13 +114,12 @@ BackendConsumer::BackendConsumer(
     const HeaderSearchOptions &HeaderSearchOpts,
     const PreprocessorOptions &PPOpts, const CodeGenOptions &CodeGenOpts,
     const TargetOptions &TargetOpts, const LangOptions &LangOpts,
-    const FileManager &FileMgr, const std::string &InFile,
-    SmallVector<LinkModule, 4> LinkModules,
+    const std::string &InFile, SmallVector<LinkModule, 4> LinkModules,
     std::unique_ptr<raw_pwrite_stream> OS, LLVMContext &C,
     CoverageSourceInfo *CoverageInfo)
     : Diags(Diags), Action(Action), HeaderSearchOpts(HeaderSearchOpts),
       CodeGenOpts(CodeGenOpts), TargetOpts(TargetOpts), LangOpts(LangOpts),
-      FileMgr(FileMgr), AsmOutStream(std::move(OS)), Context(nullptr), FS(VFS),
+      AsmOutStream(std::move(OS)), Context(nullptr), FS(VFS),
       LLVMIRGeneration("irgen", "LLVM IR Generation Time"),
       LLVMIRGenerationRefCount(0),
       Gen(CreateLLVMCodeGen(Diags, InFile, std::move(VFS), HeaderSearchOpts,
@@ -144,12 +139,11 @@ BackendConsumer::BackendConsumer(
     const HeaderSearchOptions &HeaderSearchOpts,
     const PreprocessorOptions &PPOpts, const CodeGenOptions &CodeGenOpts,
     const TargetOptions &TargetOpts, const LangOptions &LangOpts,
-    const FileManager &FileMgr, llvm::Module *Module,
-    SmallVector<LinkModule, 4> LinkModules, LLVMContext &C,
-    CoverageSourceInfo *CoverageInfo)
+    llvm::Module *Module, SmallVector<LinkModule, 4> LinkModules,
+    LLVMContext &C, CoverageSourceInfo *CoverageInfo)
     : Diags(Diags), Action(Action), HeaderSearchOpts(HeaderSearchOpts),
       CodeGenOpts(CodeGenOpts), TargetOpts(TargetOpts), LangOpts(LangOpts),
-      FileMgr(FileMgr), Context(nullptr), FS(VFS),
+      Context(nullptr), FS(VFS),
       LLVMIRGeneration("irgen", "LLVM IR Generation Time"),
       LLVMIRGenerationRefCount(0),
       Gen(CreateLLVMCodeGen(Diags, "", std::move(VFS), HeaderSearchOpts, PPOpts,
@@ -232,44 +226,10 @@ void BackendConsumer::HandleInterestingDecl(DeclGroupRef D) {
     HandleTopLevelDecl(D);
 }
 
-bool BackendConsumer::ReloadModules(llvm::Module *M) {
-  for (const CodeGenOptions::BitcodeFileToLink &F :
-       CodeGenOpts.LinkBitcodeFiles) {
-    auto BCBuf = FileMgr.getBufferForFile(F.Filename);
-    if (!BCBuf) {
-      Diags.Report(diag::err_cannot_open_file)
-          << F.Filename << BCBuf.getError().message();
-      LinkModules.clear();
-      return true;
-    }
-
-    LLVMContext &Ctx = getModule()->getContext();
-    Expected<std::unique_ptr<llvm::Module>> ModuleOrErr =
-        getOwningLazyBitcodeModule(std::move(*BCBuf), Ctx);
-
-    if (!ModuleOrErr) {
-      handleAllErrors(ModuleOrErr.takeError(), [&](ErrorInfoBase &EIB) {
-        Diags.Report(diag::err_cannot_open_file) << F.Filename << EIB.message();
-      });
-      LinkModules.clear();
-      return true;
-    }
-    LinkModules.push_back({std::move(ModuleOrErr.get()), F.PropagateAttrs,
-                           F.Internalize, F.LinkFlags});
-  }
-
-  return false; // success
-}
-
-// Links each entry in LinkModules into our module.  Returns true on error.
-bool BackendConsumer::LinkInModules(llvm::Module *M, bool ShouldLinkFiles) {
+// Links each entry in LinkModules into our module. Returns true on error.
+bool BackendConsumer::LinkInModules(llvm::Module *M) {
   for (auto &LM : LinkModules) {
     assert(LM.Module && "LinkModule does not actually have a module");
-
-    // If ShouldLinkFiles is not set, skip files added via the
-    // -mlink-bitcode-files, only linking -mlink-builtin-bitcode
-    if (!LM.Internalize && !ShouldLinkFiles)
-      continue;
 
     if (LM.PropagateAttrs)
       for (Function &F : *LM.Module) {
@@ -334,6 +294,9 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
   Ctx.setDiagnosticHandler(std::make_unique<ClangDiagnosticHandler>(
       CodeGenOpts, this));
 
+  Ctx.setDefaultTargetCPU(TargetOpts.CPU);
+  Ctx.setDefaultTargetFeatures(llvm::join(TargetOpts.Features, ","));
+
   Expected<std::unique_ptr<llvm::ToolOutputFile>> OptRecordFileOrErr =
     setupLLVMOptimizationRemarks(
       Ctx, CodeGenOpts.OptRecordFile, CodeGenOpts.OptRecordPasses,
@@ -362,7 +325,7 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
   }
 
   // Link each LinkModule into our module.
-  if (LinkInModules(getModule()))
+  if (!CodeGenOpts.LinkBitcodePostopt && LinkInModules(getModule()))
     return;
 
   for (auto &F : getModule()->functions()) {
@@ -413,7 +376,7 @@ void BackendConsumer::CompleteTentativeDefinition(VarDecl *D) {
   Gen->CompleteTentativeDefinition(D);
 }
 
-void BackendConsumer::CompleteExternalDeclaration(VarDecl *D) {
+void BackendConsumer::CompleteExternalDeclaration(DeclaratorDecl *D) {
   Gen->CompleteExternalDeclaration(D);
 }
 
@@ -1055,9 +1018,8 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   std::unique_ptr<BackendConsumer> Result(new BackendConsumer(
       BA, CI.getDiagnostics(), &CI.getVirtualFileSystem(),
       CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(), CI.getCodeGenOpts(),
-      CI.getTargetOpts(), CI.getLangOpts(), CI.getFileManager(),
-      std::string(InFile), std::move(LinkModules), std::move(OS), *VMContext,
-      CoverageInfo));
+      CI.getTargetOpts(), CI.getLangOpts(), std::string(InFile),
+      std::move(LinkModules), std::move(OS), *VMContext, CoverageInfo));
   BEConsumer = Result.get();
 
   // Enable generating macro debug info only when debug info is not disabled and
@@ -1228,11 +1190,11 @@ void CodeGenAction::ExecuteAction() {
   BackendConsumer Result(BA, CI.getDiagnostics(), &CI.getVirtualFileSystem(),
                          CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(),
                          CI.getCodeGenOpts(), CI.getTargetOpts(),
-                         CI.getLangOpts(), CI.getFileManager(), TheModule.get(),
+                         CI.getLangOpts(), TheModule.get(),
                          std::move(LinkModules), *VMContext, nullptr);
 
   // Link in each pending link module.
-  if (Result.LinkInModules(&*TheModule))
+  if (!CodeGenOpts.LinkBitcodePostopt && Result.LinkInModules(&*TheModule))
     return;
 
   // PR44896: Force DiscardValueNames as false. DiscardValueNames cannot be
@@ -1240,6 +1202,9 @@ void CodeGenAction::ExecuteAction() {
   Ctx.setDiscardValueNames(false);
   Ctx.setDiagnosticHandler(
       std::make_unique<ClangDiagnosticHandler>(CodeGenOpts, &Result));
+
+  Ctx.setDefaultTargetCPU(TargetOpts.CPU);
+  Ctx.setDefaultTargetFeatures(llvm::join(TargetOpts.Features, ","));
 
   Expected<std::unique_ptr<llvm::ToolOutputFile>> OptRecordFileOrErr =
       setupLLVMOptimizationRemarks(

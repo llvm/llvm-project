@@ -163,15 +163,15 @@ void ConstraintSystem::dump() const {
   SmallVector<std::string> Names = getVarNamesList();
   for (const auto &Row : Constraints) {
     SmallVector<std::string, 16> Parts;
-    for (unsigned I = 0, S = Row.size(); I < S; ++I) {
-      if (Row[I].Id >= NumVariables)
+    for (const Entry &E : Row) {
+      if (E.Id >= NumVariables)
         break;
-      if (Row[I].Id == 0)
+      if (E.Id == 0)
         continue;
       std::string Coefficient;
-      if (Row[I].Coefficient != 1)
-        Coefficient = std::to_string(Row[I].Coefficient) + " * ";
-      Parts.push_back(Coefficient + Names[Row[I].Id - 1]);
+      if (E.Coefficient != 1)
+        Coefficient = std::to_string(E.Coefficient) + " * ";
+      Parts.push_back(Coefficient + Names[E.Id - 1]);
     }
     // assert(!Parts.empty() && "need to have at least some parts");
     int64_t ConstPart = 0;

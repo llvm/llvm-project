@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-detect -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128"
 
@@ -13,7 +13,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; }
 
 define void @f1(ptr %A, i64 %N) nounwind {
-; CHECK-LABEL: 'Polly - Detect static control parts (SCoPs)' for function 'f1'
+; CHECK-LABEL: Detected Scops in Function f1 
 entry:
   fence seq_cst
   br label %for.i.1
@@ -60,7 +60,7 @@ return:
 ;     }
 
 define void @f2(ptr %A, i64 %N) nounwind {
-; CHECK-LABEL: 'Polly - Detect static control parts (SCoPs)' for function 'f2'
+; CHECK-LABEL: Detected Scops in Function f2
 entry:
   fence seq_cst
   br label %for.i.1

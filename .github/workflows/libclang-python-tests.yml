@@ -36,7 +36,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.7", "3.11"]
+        python-version: ["3.8", "3.11"]
     uses: ./.github/workflows/llvm-project-tests.yml
     with:
       build_target: check-clang-python

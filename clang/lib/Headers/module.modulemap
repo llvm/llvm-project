@@ -44,7 +44,6 @@ module _Builtin_intrinsics [system] [extern_c] {
     textual header "avxintrin.h"
     textual header "avx2intrin.h"
     textual header "avx512fintrin.h"
-    textual header "avx512erintrin.h"
     textual header "fmaintrin.h"
 
     header "x86intrin.h"

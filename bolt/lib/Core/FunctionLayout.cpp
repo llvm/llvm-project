@@ -164,14 +164,19 @@ void FunctionLayout::eraseBasicBlocks(
   updateLayoutIndices();
 }
 
-void FunctionLayout::updateLayoutIndices() {
+void FunctionLayout::updateLayoutIndices() const {
   unsigned BlockIndex = 0;
-  for (FunctionFragment &FF : fragments()) {
+  for (const FunctionFragment &FF : fragments()) {
     for (BinaryBasicBlock *const BB : FF) {
       BB->setLayoutIndex(BlockIndex++);
       BB->setFragmentNum(FF.getFragmentNum());
     }
   }
+}
+void FunctionLayout::updateLayoutIndices(
+    ArrayRef<BinaryBasicBlock *> Order) const {
+  for (auto [Index, BB] : llvm::enumerate(Order))
+    BB->setLayoutIndex(Index);
 }
 
 bool FunctionLayout::update(const ArrayRef<BinaryBasicBlock *> NewLayout) {

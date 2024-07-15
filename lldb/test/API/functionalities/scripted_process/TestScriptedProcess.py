@@ -187,6 +187,10 @@ class ScriptedProcesTestCase(TestBase):
             + os.path.join(self.getSourceDir(), scripted_process_example_relpath)
         )
 
+        self.runCmd(
+            "target stop-hook add -k first -v 1 -k second -v 2 -P dummy_scripted_process.DummyStopHook"
+        )
+
         launch_info = lldb.SBLaunchInfo(None)
         launch_info.SetProcessPluginName("ScriptedProcess")
         launch_info.SetScriptedProcessClassName(
@@ -206,6 +210,9 @@ class ScriptedProcesTestCase(TestBase):
         py_impl.my_super_secret_member = 42
         self.assertTrue(hasattr(py_impl, "my_super_secret_member"))
         self.assertEqual(py_impl.my_super_secret_method(), 42)
+
+        self.assertTrue(hasattr(py_impl, "handled_stop"))
+        self.assertTrue(py_impl.handled_stop)
 
         # Try reading from target #0 process ...
         addr = 0x500000000

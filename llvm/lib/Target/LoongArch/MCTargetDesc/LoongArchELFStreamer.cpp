@@ -27,7 +27,8 @@ LoongArchTargetELFStreamer::LoongArchTargetELFStreamer(
   auto &MAB = static_cast<LoongArchAsmBackend &>(
       getStreamer().getAssembler().getBackend());
   setTargetABI(LoongArchABI::computeTargetABI(
-      STI.getTargetTriple(), MAB.getTargetOptions().getABIName()));
+      STI.getTargetTriple(), STI.getFeatureBits(),
+      MAB.getTargetOptions().getABIName()));
 }
 
 MCELFStreamer &LoongArchTargetELFStreamer::getStreamer() {

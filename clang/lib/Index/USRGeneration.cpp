@@ -257,12 +257,20 @@ void USRGenerator::VisitFunctionDecl(const FunctionDecl *D) {
       !D->hasAttr<OverloadableAttr>())
     return;
 
-  if (const TemplateArgumentList *
-        SpecArgs = D->getTemplateSpecializationArgs()) {
+  if (D->isFunctionTemplateSpecialization()) {
     Out << '<';
-    for (unsigned I = 0, N = SpecArgs->size(); I != N; ++I) {
-      Out << '#';
-      VisitTemplateArgument(SpecArgs->get(I));
+    if (const TemplateArgumentList *SpecArgs =
+            D->getTemplateSpecializationArgs()) {
+      for (const auto &Arg : SpecArgs->asArray()) {
+        Out << '#';
+        VisitTemplateArgument(Arg);
+      }
+    } else if (const ASTTemplateArgumentListInfo *SpecArgsWritten =
+                   D->getTemplateSpecializationArgsAsWritten()) {
+      for (const auto &ArgLoc : SpecArgsWritten->arguments()) {
+        Out << '#';
+        VisitTemplateArgument(ArgLoc.getArgument());
+      }
     }
     Out << '>';
   }
@@ -772,6 +780,11 @@ void USRGenerator::VisitType(QualType T) {
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId)                                     \
+  case BuiltinType::Id:                                                        \
+    Out << "@BT@" << #Name;                                                    \
+    break;
+#include "clang/Basic/AMDGPUTypes.def"
         case BuiltinType::ShortAccum:
           Out << "@BT@ShortAccum"; break;
         case BuiltinType::Accum:

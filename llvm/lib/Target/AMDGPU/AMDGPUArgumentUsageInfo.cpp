@@ -115,6 +115,9 @@ AMDGPUFunctionArgInfo::getPreloadedValue(
     return std::tuple(
         PrivateSegmentWaveByteOffset ? &PrivateSegmentWaveByteOffset : nullptr,
         &AMDGPU::SGPR_32RegClass, LLT::scalar(32));
+  case AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_SIZE:
+    return {PrivateSegmentSize ? &PrivateSegmentSize : nullptr,
+            &AMDGPU::SGPR_32RegClass, LLT::scalar(32)};
   case AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR:
     return std::tuple(KernargSegmentPtr ? &KernargSegmentPtr : nullptr,
                       &AMDGPU::SGPR_64RegClass,

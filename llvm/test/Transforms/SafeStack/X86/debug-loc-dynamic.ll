@@ -17,7 +17,7 @@ entry:
   %0 = zext i32 %n to i64, !dbg !16
 
 ; CHECK:  store ptr %[[VLA:.*]], ptr @__safestack_unsafe_stack_ptr
-; CHECK:  tail call void @llvm.dbg.value(metadata ptr %[[VLA]], metadata ![[TYPE:.*]], metadata !DIExpression(DW_OP_deref))
+; CHECK:  #dbg_value(ptr %[[VLA]], ![[TYPE:.*]], !DIExpression(DW_OP_deref),
 ; CHECK:  call void @capture({{.*}} %[[VLA]])
 
   %vla = alloca i8, i64 %0, align 16, !dbg !16

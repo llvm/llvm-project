@@ -281,6 +281,18 @@ public:
     return std::nullopt;
   }
 
+  ConstantRange asConstantRange(Type *Ty, bool UndefAllowed = false) const {
+    assert(Ty->isIntOrIntVectorTy() && "Must be integer type");
+    if (isConstantRange(UndefAllowed))
+      return getConstantRange();
+    if (isConstant())
+      return getConstant()->toConstantRange();
+    unsigned BW = Ty->getScalarSizeInBits();
+    if (isUnknown())
+      return ConstantRange::getEmpty(BW);
+    return ConstantRange::getFull(BW);
+  }
+
   bool markOverdefined() {
     if (isOverdefined())
       return false;

@@ -183,6 +183,14 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c, _
 // CHECK: call x86_fp80 @llvm.experimental.constrained.sqrt.f80(x86_fp80 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // CHECK: call fp128 @llvm.experimental.constrained.sqrt.f128(fp128 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 
+  __builtin_tan(f);        __builtin_tanf(f);       __builtin_tanl(f); __builtin_tanf128(f);
+
+// CHECK: call double @llvm.experimental.constrained.tan.f64(double %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call float @llvm.experimental.constrained.tan.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call x86_fp80 @llvm.experimental.constrained.tan.f80(x86_fp80 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call fp128 @llvm.experimental.constrained.tan.f128(fp128 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+
+
   __builtin_trunc(f);      __builtin_truncf(f);     __builtin_truncl(f); __builtin_truncf128(f);
 
 // CHECK: call double @llvm.experimental.constrained.trunc.f64(double %{{.*}}, metadata !"fpexcept.strict")
@@ -314,6 +322,11 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c, _
 // CHECK: declare float @llvm.experimental.constrained.sqrt.f32(float, metadata, metadata)
 // CHECK: declare x86_fp80 @llvm.experimental.constrained.sqrt.f80(x86_fp80, metadata, metadata)
 // CHECK: declare fp128 @llvm.experimental.constrained.sqrt.f128(fp128, metadata, metadata)
+
+// CHECK: declare double @llvm.experimental.constrained.tan.f64(double, metadata, metadata)
+// CHECK: declare float @llvm.experimental.constrained.tan.f32(float, metadata, metadata)
+// CHECK: declare x86_fp80 @llvm.experimental.constrained.tan.f80(x86_fp80, metadata, metadata)
+// CHECK: declare fp128 @llvm.experimental.constrained.tan.f128(fp128, metadata, metadata)
 
 // CHECK: declare double @llvm.experimental.constrained.trunc.f64(double, metadata)
 // CHECK: declare float @llvm.experimental.constrained.trunc.f32(float, metadata)

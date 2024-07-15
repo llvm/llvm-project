@@ -314,7 +314,7 @@ bb33:                                             ; preds = %bb
 
 bb35:                                             ; preds = %bb33, %.entry
   %tmp36 = phi float [ %tmp34, %bb33 ], [ 1.000000e+00, %.entry ]
-  call void @llvm.amdgcn.exp.f32(i32 immarg 0, i32 immarg 15, float %tmp36, float %tmp36, float %tmp36, float %tmp36, i1 immarg true, i1 immarg true) #3
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %tmp36, float %tmp36, float %tmp36, float %tmp36, i1 true, i1 true) #3
   ret void
 }
 

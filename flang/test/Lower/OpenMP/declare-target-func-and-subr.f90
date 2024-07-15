@@ -154,7 +154,7 @@ END
 !! -----
 
 ! DEVICE-LABEL: func.func @_QPrecursive_declare_target
-! DEVICE-SAME: {{.*}}attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to)>{{.*}}
+! DEVICE-SAME: {{.*}}attributes {fir.func_recursive, omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (to)>{{.*}}
 RECURSIVE FUNCTION RECURSIVE_DECLARE_TARGET(INCREMENT) RESULT(K)
 !$omp declare target to(RECURSIVE_DECLARE_TARGET) device_type(nohost)
     INTEGER :: INCREMENT, K
@@ -166,7 +166,7 @@ RECURSIVE FUNCTION RECURSIVE_DECLARE_TARGET(INCREMENT) RESULT(K)
 END FUNCTION RECURSIVE_DECLARE_TARGET
 
 ! DEVICE-LABEL: func.func @_QPrecursive_declare_target_enter
-! DEVICE-SAME: {{.*}}attributes {omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (enter)>{{.*}}
+! DEVICE-SAME: {{.*}}attributes {fir.func_recursive, omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (enter)>{{.*}}
 RECURSIVE FUNCTION RECURSIVE_DECLARE_TARGET_ENTER(INCREMENT) RESULT(K)
 !$omp declare target enter(RECURSIVE_DECLARE_TARGET_ENTER) device_type(nohost)
     INTEGER :: INCREMENT, K

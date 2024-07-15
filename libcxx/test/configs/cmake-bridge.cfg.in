@@ -23,8 +23,6 @@ config.recursiveExpansionLimit = 10
 config.test_exec_root = os.path.join('@CMAKE_BINARY_DIR@', 'test')
 
 # Add substitutions for bootstrapping the test suite configuration
-import shlex
-config.substitutions.append(('%{cxx}', shlex.quote('@CMAKE_CXX_COMPILER@')))
 config.substitutions.append(('%{libcxx-dir}', '@LIBCXX_SOURCE_DIR@'))
 config.substitutions.append(('%{include-dir}', '@LIBCXX_GENERATED_INCLUDE_DIR@'))
 config.substitutions.append(('%{target-include-dir}', '@LIBCXX_GENERATED_INCLUDE_TARGET_DIR@'))

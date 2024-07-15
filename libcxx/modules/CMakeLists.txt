@@ -202,6 +202,7 @@ add_custom_target(generate-cxx-modules
   ALL DEPENDS
     ${_all_modules}
 )
+add_dependencies(cxx-test-depends generate-cxx-modules)
 
 # Configure the modules manifest.
 # Use the relative path between the installation and the module in the json

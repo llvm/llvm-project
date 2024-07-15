@@ -14,7 +14,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %pad = transform.structured.match ops{["tensor.pad"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b, %c = transform.structured.tile_using_for %pad [2, 3]
+    %a, %b, %c = transform.structured.tile_using_for %pad tile_sizes [2, 3]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -57,7 +57,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %pad = transform.structured.match ops{["tensor.pad"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b = transform.structured.tile_using_for %pad [0, 3]
+    %a, %b = transform.structured.tile_using_for %pad tile_sizes [0, 3]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -97,7 +97,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %pad = transform.structured.match ops{["tensor.pad"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b, %c = transform.structured.tile_using_for %pad [2, 3]
+    %a, %b, %c = transform.structured.tile_using_for %pad tile_sizes [2, 3]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -134,7 +134,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %pad = transform.structured.match ops{["tensor.pad"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b = transform.structured.tile_using_for %pad [0, 3]
+    %a, %b = transform.structured.tile_using_for %pad tile_sizes [0, 3]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -170,7 +170,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %pad = transform.structured.match ops{["tensor.pad"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b, %c = transform.structured.tile_using_for %pad [2, 3]
+    %a, %b, %c = transform.structured.tile_using_for %pad tile_sizes [2, 3]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -192,7 +192,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %pad = transform.structured.match ops{["tensor.pad"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b = transform.structured.tile_using_for %pad [0, 3]
+    %a, %b = transform.structured.tile_using_for %pad tile_sizes [0, 3]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }

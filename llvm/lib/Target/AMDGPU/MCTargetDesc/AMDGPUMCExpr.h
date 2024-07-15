@@ -14,7 +14,10 @@
 
 namespace llvm {
 
-/// AMDGPU target specific variadic MCExpr operations.
+class Function;
+class GCNSubtarget;
+
+/// AMDGPU target specific MCExpr operations.
 ///
 /// Takes in a minimum of 1 argument to be used with an operation. The supported
 /// operations are:
@@ -24,39 +27,74 @@ namespace llvm {
 /// \note If the 'or'/'max' operations are provided only a single argument, the
 /// operation will act as a no-op and simply resolve as the provided argument.
 ///
-class AMDGPUVariadicMCExpr : public MCTargetExpr {
+class AMDGPUMCExpr : public MCTargetExpr {
 public:
-  enum VariadicKind { AGVK_None, AGVK_Or, AGVK_Max };
+  enum VariantKind {
+    AGVK_None,
+    AGVK_Or,
+    AGVK_Max,
+    AGVK_ExtraSGPRs,
+    AGVK_TotalNumVGPRs,
+    AGVK_AlignTo,
+    AGVK_Occupancy
+  };
 
 private:
-  VariadicKind Kind;
+  VariantKind Kind;
   MCContext &Ctx;
   const MCExpr **RawArgs;
   ArrayRef<const MCExpr *> Args;
 
-  AMDGPUVariadicMCExpr(VariadicKind Kind, ArrayRef<const MCExpr *> Args,
-                       MCContext &Ctx);
-  ~AMDGPUVariadicMCExpr();
+  AMDGPUMCExpr(VariantKind Kind, ArrayRef<const MCExpr *> Args, MCContext &Ctx);
+  ~AMDGPUMCExpr();
+
+  bool evaluateExtraSGPRs(MCValue &Res, const MCAssembler *Asm,
+                          const MCFixup *Fixup) const;
+  bool evaluateTotalNumVGPR(MCValue &Res, const MCAssembler *Asm,
+                            const MCFixup *Fixup) const;
+  bool evaluateAlignTo(MCValue &Res, const MCAssembler *Asm,
+                       const MCFixup *Fixup) const;
+  bool evaluateOccupancy(MCValue &Res, const MCAssembler *Asm,
+                         const MCFixup *Fixup) const;
 
 public:
-  static const AMDGPUVariadicMCExpr *
-  create(VariadicKind Kind, ArrayRef<const MCExpr *> Args, MCContext &Ctx);
+  static const AMDGPUMCExpr *
+  create(VariantKind Kind, ArrayRef<const MCExpr *> Args, MCContext &Ctx);
 
-  static const AMDGPUVariadicMCExpr *createOr(ArrayRef<const MCExpr *> Args,
-                                              MCContext &Ctx) {
-    return create(VariadicKind::AGVK_Or, Args, Ctx);
+  static const AMDGPUMCExpr *createOr(ArrayRef<const MCExpr *> Args,
+                                      MCContext &Ctx) {
+    return create(VariantKind::AGVK_Or, Args, Ctx);
   }
 
-  static const AMDGPUVariadicMCExpr *createMax(ArrayRef<const MCExpr *> Args,
-                                               MCContext &Ctx) {
-    return create(VariadicKind::AGVK_Max, Args, Ctx);
+  static const AMDGPUMCExpr *createMax(ArrayRef<const MCExpr *> Args,
+                                       MCContext &Ctx) {
+    return create(VariantKind::AGVK_Max, Args, Ctx);
   }
 
-  VariadicKind getKind() const { return Kind; }
+  static const AMDGPUMCExpr *createExtraSGPRs(const MCExpr *VCCUsed,
+                                              const MCExpr *FlatScrUsed,
+                                              bool XNACKUsed, MCContext &Ctx);
+
+  static const AMDGPUMCExpr *createTotalNumVGPR(const MCExpr *NumAGPR,
+                                                const MCExpr *NumVGPR,
+                                                MCContext &Ctx);
+
+  static const AMDGPUMCExpr *
+  createAlignTo(const MCExpr *Value, const MCExpr *Align, MCContext &Ctx) {
+    return create(VariantKind::AGVK_AlignTo, {Value, Align}, Ctx);
+  }
+
+  static const AMDGPUMCExpr *createOccupancy(unsigned InitOcc,
+                                             const MCExpr *NumSGPRs,
+                                             const MCExpr *NumVGPRs,
+                                             const GCNSubtarget &STM,
+                                             MCContext &Ctx);
+
+  VariantKind getKind() const { return Kind; }
   const MCExpr *getSubExpr(size_t Index) const;
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAsmLayout *Layout,
+  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                  const MCFixup *Fixup) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
   MCFragment *findAssociatedFragment() const override;

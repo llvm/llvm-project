@@ -123,6 +123,44 @@ severe that error recovery won't be able to recover sensibly from them (thus
 spewing a ton of bogus errors).  One example of this class of error are failure
 to ``#include`` a file.
 
+Diagnostic Wording
+^^^^^^^^^^^^^^^^^^
+The wording used for a diagnostic is critical because it is the only way for a
+user to know how to correct their code. Use the following suggestions when
+wording a diagnostic.
+
+* Diagnostics in Clang do not start with a capital letter and do not end with
+  punctuation.
+
+    * This does not apply to proper nouns like ``Clang`` or ``OpenMP``, to
+      acronyms like ``GCC`` or ``ARC``, or to language standards like ``C23``
+      or ``C++17``.
+    * A trailing question mark is allowed. e.g., ``unknown identifier %0; did
+      you mean %1?``.
+
+* Appropriately capitalize proper nouns like ``Clang``, ``OpenCL``, ``GCC``,
+  ``Objective-C``, etc and language standard versions like ``C11`` or ``C++11``.
+* The wording should be succinct. If necessary, use a semicolon to combine
+  sentence fragments instead of using complete sentences. e.g., prefer wording
+  like ``'%0' is deprecated; it will be removed in a future release of Clang``
+  over wording like ``'%0' is deprecated. It will be removed in a future release
+  of Clang``.
+* The wording should be actionable and avoid using standards terms or grammar
+  productions that a new user would not be familiar with. e.g., prefer wording
+  like ``missing semicolon`` over wording like ``syntax error`` (which is not
+  actionable) or ``expected unqualified-id`` (which uses standards terminology).
+* The wording should clearly explain what is wrong with the code rather than
+  restating what the code does. e.g., prefer wording like ``type %0 requires a
+  value in the range %1 to %2`` over wording like ``%0 is invalid``.
+* The wording should have enough contextual information to help the user
+  identify the issue in a complex expression. e.g., prefer wording like
+  ``both sides of the %0 binary operator are identical`` over wording like
+  ``identical operands to binary operator``.
+* Use single quotes to denote syntactic constructs or command line arguments
+  named in a diagnostic message. e.g., prefer wording like ``'this' pointer
+  cannot be null in well-defined C++ code`` over wording like ``this pointer
+  cannot be null in well-defined C++ code``.
+
 The Format String
 ^^^^^^^^^^^^^^^^^
 

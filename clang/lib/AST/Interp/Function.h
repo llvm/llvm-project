@@ -196,6 +196,12 @@ public:
     return ArgSize - (align(primSize(PT_Ptr)) * (hasThisPointer() + hasRVO()));
   }
 
+  bool isThisPointerExplicit() const {
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(F))
+      return MD->isExplicitObjectMemberFunction();
+    return false;
+  }
+
   unsigned getParamOffset(unsigned ParamIndex) const {
     return ParamOffsets[ParamIndex];
   }

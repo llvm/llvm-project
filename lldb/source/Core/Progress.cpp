@@ -172,7 +172,7 @@ void ProgressManager::ReportProgress(
   Debugger::ReportProgress(progress_data.progress_id, progress_data.title, "",
                            completed, Progress::kNonDeterministicTotal,
                            progress_data.debugger_id,
-                           Debugger::eBroadcastBitProgressCategory);
+                           lldb::eBroadcastBitProgressCategory);
 }
 
 void ProgressManager::Expire(llvm::StringRef key) {

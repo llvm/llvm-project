@@ -159,7 +159,7 @@ exit:
 }
 
 define i32 @caller5() {
-; CHECK-LABEL: define range(i32 200, 401) i32 @caller5() {
+; CHECK-LABEL: define i32 @caller5() {
 ; CHECK-NEXT:    [[C1:%.*]] = call i32 @callee5(i32 10, i32 100)
 ; CHECK-NEXT:    [[C2:%.*]] = call i32 @callee5(i32 20, i32 200)
 ; CHECK-NEXT:    [[A:%.*]] = add i32 [[C1]], [[C2]]

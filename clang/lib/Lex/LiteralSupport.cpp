@@ -1123,8 +1123,9 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
         break; // Invalid for floats
       if (HasSize)
         break;
-      if (DoubleUnderscore)
-        break; // Cannot be repeated.
+      // There is currently no way to reach this with DoubleUnderscore set.
+      // If new double underscope literals are added handle it here as above.
+      assert(!DoubleUnderscore && "unhandled double underscore case");
       if (LangOpts.CPlusPlus && s + 2 < ThisTokEnd &&
           s[1] == '_') { // s + 2 < ThisTokEnd to ensure some character exists
                          // after __
@@ -1520,7 +1521,8 @@ bool NumericLiteralParser::GetIntegerValue(llvm::APInt &Val) {
 }
 
 llvm::APFloat::opStatus
-NumericLiteralParser::GetFloatValue(llvm::APFloat &Result) {
+NumericLiteralParser::GetFloatValue(llvm::APFloat &Result,
+                                    llvm::RoundingMode RM) {
   using llvm::APFloat;
 
   unsigned n = std::min(SuffixBegin - ThisTokBegin, ThisTokEnd - ThisTokBegin);
@@ -1534,8 +1536,7 @@ NumericLiteralParser::GetFloatValue(llvm::APFloat &Result) {
     Str = Buffer;
   }
 
-  auto StatusOrErr =
-      Result.convertFromString(Str, APFloat::rmNearestTiesToEven);
+  auto StatusOrErr = Result.convertFromString(Str, RM);
   assert(StatusOrErr && "Invalid floating point representation");
   return !errorToBool(StatusOrErr.takeError()) ? *StatusOrErr
                                                : APFloat::opInvalidOp;

@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
+#include "mlir/Interfaces/MemorySlotInterfaces.h"
 
 using namespace mlir;
 using namespace test;
@@ -328,8 +329,6 @@ void SideEffectOp::getEffects(
   if (!effectsAttr)
     return;
 
-  // If there is one, it is an array of dictionary attributes that hold
-  // information on the effects of this operation.
   for (Attribute element : effectsAttr) {
     DictionaryAttr effectElement = cast<DictionaryAttr>(element);
 
@@ -349,7 +348,7 @@ void SideEffectOp::getEffects(
 
     // Check for a result to affect.
     if (effectElement.get("on_result"))
-      effects.emplace_back(effect, getResult(), resource);
+      effects.emplace_back(effect, getOperation()->getOpResults()[0], resource);
     else if (Attribute ref = effectElement.get("on_reference"))
       effects.emplace_back(effect, cast<SymbolRefAttr>(ref), resource);
     else
@@ -358,6 +357,51 @@ void SideEffectOp::getEffects(
 }
 
 void SideEffectOp::getEffects(
+    SmallVectorImpl<TestEffects::EffectInstance> &effects) {
+  testSideEffectOpGetEffect(getOperation(), effects);
+}
+
+void SideEffectWithRegionOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  // Check for an effects attribute on the op instance.
+  ArrayAttr effectsAttr = (*this)->getAttrOfType<ArrayAttr>("effects");
+  if (!effectsAttr)
+    return;
+
+  for (Attribute element : effectsAttr) {
+    DictionaryAttr effectElement = cast<DictionaryAttr>(element);
+
+    // Get the specific memory effect.
+    MemoryEffects::Effect *effect =
+        StringSwitch<MemoryEffects::Effect *>(
+            cast<StringAttr>(effectElement.get("effect")).getValue())
+            .Case("allocate", MemoryEffects::Allocate::get())
+            .Case("free", MemoryEffects::Free::get())
+            .Case("read", MemoryEffects::Read::get())
+            .Case("write", MemoryEffects::Write::get());
+
+    // Check for a non-default resource to use.
+    SideEffects::Resource *resource = SideEffects::DefaultResource::get();
+    if (effectElement.get("test_resource"))
+      resource = TestResource::get();
+
+    // Check for a result to affect.
+    if (effectElement.get("on_result"))
+      effects.emplace_back(effect, getOperation()->getOpResults()[0], resource);
+    else if (effectElement.get("on_operand"))
+      effects.emplace_back(effect, &getOperation()->getOpOperands()[0],
+                           resource);
+    else if (effectElement.get("on_argument"))
+      effects.emplace_back(effect, getOperation()->getRegion(0).getArgument(0),
+                           resource);
+    else if (Attribute ref = effectElement.get("on_reference"))
+      effects.emplace_back(effect, cast<SymbolRefAttr>(ref), resource);
+    else
+      effects.emplace_back(effect, resource);
+  }
+}
+
+void SideEffectWithRegionOp::getEffects(
     SmallVectorImpl<TestEffects::EffectInstance> &effects) {
   testSideEffectOpGetEffect(getOperation(), effects);
 }
@@ -662,8 +706,7 @@ ParseResult TestWithBoundsRegionOp::parse(OpAsmParser &parser,
 
   // Parse the input argument
   OpAsmParser::Argument argInfo;
-  argInfo.type = parser.getBuilder().getIndexType();
-  if (failed(parser.parseArgument(argInfo)))
+  if (failed(parser.parseArgument(argInfo, true)))
     return failure();
 
   // Parse the body region, and reuse the operand info as the argument info.
@@ -675,7 +718,7 @@ void TestWithBoundsRegionOp::print(OpAsmPrinter &p) {
   p.printOptionalAttrDict((*this)->getAttrs());
   p << ' ';
   p.printRegionArgument(getRegion().getArgument(0), /*argAttrs=*/{},
-                        /*omitType=*/true);
+                        /*omitType=*/false);
   p << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
 }
@@ -706,10 +749,20 @@ void TestReflectBoundsOp::inferResultRanges(
   const ConstantIntRanges &range = argRanges[0];
   MLIRContext *ctx = getContext();
   Builder b(ctx);
-  setUminAttr(b.getIndexAttr(range.umin().getZExtValue()));
-  setUmaxAttr(b.getIndexAttr(range.umax().getZExtValue()));
-  setSminAttr(b.getIndexAttr(range.smin().getSExtValue()));
-  setSmaxAttr(b.getIndexAttr(range.smax().getSExtValue()));
+  Type sIntTy, uIntTy;
+  // For plain `IntegerType`s, we can derive the appropriate signed and unsigned
+  // Types for the Attributes.
+  if (auto intTy = llvm::dyn_cast<IntegerType>(getType())) {
+    unsigned bitwidth = intTy.getWidth();
+    sIntTy = b.getIntegerType(bitwidth, /*isSigned=*/true);
+    uIntTy = b.getIntegerType(bitwidth, /*isSigned=*/false);
+  } else
+    sIntTy = uIntTy = getType();
+
+  setUminAttr(b.getIntegerAttr(uIntTy, range.umin()));
+  setUmaxAttr(b.getIntegerAttr(uIntTy, range.umax()));
+  setSminAttr(b.getIntegerAttr(sIntTy, range.smin()));
+  setSmaxAttr(b.getIntegerAttr(sIntTy, range.smax()));
   setResultRanges(getResult(), range);
 }
 
@@ -1017,7 +1070,7 @@ void ReadBufferOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   // The buffer operand is read.
-  effects.emplace_back(MemoryEffects::Read::get(), getBuffer(),
+  effects.emplace_back(MemoryEffects::Read::get(), &getBufferMutable(),
                        SideEffects::DefaultResource::get());
   // The buffer contents are dumped.
   effects.emplace_back(MemoryEffects::Write::get(),
@@ -1140,7 +1193,7 @@ void TestVersionedOpA::writeProperties(mlir::DialectBytecodeWriter &writer) {
 // TestOpWithVersionedProperties
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult TestOpWithVersionedProperties::readFromMlirBytecode(
+llvm::LogicalResult TestOpWithVersionedProperties::readFromMlirBytecode(
     mlir::DialectBytecodeReader &reader, test::VersionedProperties &prop) {
   uint64_t value1, value2 = 0;
   if (failed(reader.readVarInt(value1)))
@@ -1171,4 +1224,116 @@ void TestOpWithVersionedProperties::writeToMlirBytecode(
     const test::VersionedProperties &prop) {
   writer.writeVarInt(prop.value1);
   writer.writeVarInt(prop.value2);
+}
+
+//===----------------------------------------------------------------------===//
+// TestMultiSlotAlloca
+//===----------------------------------------------------------------------===//
+
+llvm::SmallVector<MemorySlot> TestMultiSlotAlloca::getPromotableSlots() {
+  SmallVector<MemorySlot> slots;
+  for (Value result : getResults()) {
+    slots.push_back(MemorySlot{
+        result, cast<MemRefType>(result.getType()).getElementType()});
+  }
+  return slots;
+}
+
+Value TestMultiSlotAlloca::getDefaultValue(const MemorySlot &slot,
+                                           OpBuilder &builder) {
+  return builder.create<TestOpConstant>(getLoc(), slot.elemType,
+                                        builder.getI32IntegerAttr(42));
+}
+
+void TestMultiSlotAlloca::handleBlockArgument(const MemorySlot &slot,
+                                              BlockArgument argument,
+                                              OpBuilder &builder) {
+  // Not relevant for testing.
+}
+
+/// Creates a new TestMultiSlotAlloca operation, just without the `slot`.
+static std::optional<TestMultiSlotAlloca>
+createNewMultiAllocaWithoutSlot(const MemorySlot &slot, OpBuilder &builder,
+                                TestMultiSlotAlloca oldOp) {
+
+  if (oldOp.getNumResults() == 1) {
+    oldOp.erase();
+    return std::nullopt;
+  }
+
+  SmallVector<Type> newTypes;
+  SmallVector<Value> remainingValues;
+
+  for (Value oldResult : oldOp.getResults()) {
+    if (oldResult == slot.ptr)
+      continue;
+    remainingValues.push_back(oldResult);
+    newTypes.push_back(oldResult.getType());
+  }
+
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPoint(oldOp);
+  auto replacement =
+      builder.create<TestMultiSlotAlloca>(oldOp->getLoc(), newTypes);
+  for (auto [oldResult, newResult] :
+       llvm::zip_equal(remainingValues, replacement.getResults()))
+    oldResult.replaceAllUsesWith(newResult);
+
+  oldOp.erase();
+  return replacement;
+}
+
+std::optional<PromotableAllocationOpInterface>
+TestMultiSlotAlloca::handlePromotionComplete(const MemorySlot &slot,
+                                             Value defaultValue,
+                                             OpBuilder &builder) {
+  if (defaultValue && defaultValue.use_empty())
+    defaultValue.getDefiningOp()->erase();
+  return createNewMultiAllocaWithoutSlot(slot, builder, *this);
+}
+
+SmallVector<DestructurableMemorySlot>
+TestMultiSlotAlloca::getDestructurableSlots() {
+  SmallVector<DestructurableMemorySlot> slots;
+  for (Value result : getResults()) {
+    auto memrefType = cast<MemRefType>(result.getType());
+    auto destructurable = dyn_cast<DestructurableTypeInterface>(memrefType);
+    if (!destructurable)
+      continue;
+
+    std::optional<DenseMap<Attribute, Type>> destructuredType =
+        destructurable.getSubelementIndexMap();
+    if (!destructuredType)
+      continue;
+    slots.emplace_back(
+        DestructurableMemorySlot{{result, memrefType}, *destructuredType});
+  }
+  return slots;
+}
+
+DenseMap<Attribute, MemorySlot> TestMultiSlotAlloca::destructure(
+    const DestructurableMemorySlot &slot,
+    const SmallPtrSetImpl<Attribute> &usedIndices, OpBuilder &builder,
+    SmallVectorImpl<DestructurableAllocationOpInterface> &newAllocators) {
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointAfter(*this);
+
+  DenseMap<Attribute, MemorySlot> slotMap;
+
+  for (Attribute usedIndex : usedIndices) {
+    Type elemType = slot.subelementTypes.lookup(usedIndex);
+    MemRefType elemPtr = MemRefType::get({}, elemType);
+    auto subAlloca = builder.create<TestMultiSlotAlloca>(getLoc(), elemPtr);
+    newAllocators.push_back(subAlloca);
+    slotMap.try_emplace<MemorySlot>(usedIndex,
+                                    {subAlloca.getResult(0), elemType});
+  }
+
+  return slotMap;
+}
+
+std::optional<DestructurableAllocationOpInterface>
+TestMultiSlotAlloca::handleDestructuringComplete(
+    const DestructurableMemorySlot &slot, OpBuilder &builder) {
+  return createNewMultiAllocaWithoutSlot(slot, builder, *this);
 }

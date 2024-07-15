@@ -9,7 +9,8 @@ declare i64 @llvm.expect.i64(i64, i64)
 
 define void @test() {
 ; CHECK: movl $glbl
-  %ext = zext i1 icmp eq (ptr @glbl, ptr null) to i64
+  %cmp2 = icmp eq ptr @glbl, null
+  %ext = zext i1 %cmp2 to i64
   %tmp = call i64 @llvm.expect.i64(i64 %ext, i64 0)
   %tmp2 = icmp ne i64 %tmp, 0
   br i1 %tmp2, label %bb1, label %bb2

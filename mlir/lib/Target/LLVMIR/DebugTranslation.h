@@ -73,6 +73,7 @@ private:
   llvm::DICompileUnit *translateImpl(DICompileUnitAttr attr);
   llvm::DICompositeType *translateImpl(DICompositeTypeAttr attr);
   llvm::DIDerivedType *translateImpl(DIDerivedTypeAttr attr);
+  llvm::DIStringType *translateImpl(DIStringTypeAttr attr);
   llvm::DIFile *translateImpl(DIFileAttr attr);
   llvm::DILabel *translateImpl(DILabelAttr attr);
   llvm::DILexicalBlock *translateImpl(DILexicalBlockAttr attr);
@@ -80,6 +81,7 @@ private:
   llvm::DILocalScope *translateImpl(DILocalScopeAttr attr);
   llvm::DILocalVariable *translateImpl(DILocalVariableAttr attr);
   llvm::DIGlobalVariable *translateImpl(DIGlobalVariableAttr attr);
+  llvm::DIVariable *translateImpl(DIVariableAttr attr);
   llvm::DIModule *translateImpl(DIModuleAttr attr);
   llvm::DINamespace *translateImpl(DINamespaceAttr attr);
   llvm::DIScope *translateImpl(DIScopeAttr attr);
@@ -102,6 +104,10 @@ private:
   /// Constructs a string metadata node from the string attribute. Returns
   /// nullptr if `stringAttr` is null or contains and empty string.
   llvm::MDString *getMDStringOrNull(StringAttr stringAttr);
+
+  /// Constructs a DIExpression metadata node from the DIExpressionAttr. Returns
+  /// nullptr if `DIExpressionAttr` is null.
+  llvm::DIExpression *getExpressionAttrOrNull(DIExpressionAttr attr);
 
   /// A mapping between mlir location+scope and the corresponding llvm debug
   /// metadata.

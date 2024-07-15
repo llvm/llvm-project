@@ -586,21 +586,18 @@ if config.host_os == "Darwin":
     for vers in min_macos_deployment_target_substitutions:
         flag = config.apple_platform_min_deployment_target_flag
         major, minor = get_macos_aligned_version(vers)
-        if "mtargetos" in flag:
+        apple_device = ""
+        sim = ""
+        if "target" in flag:
+            apple_device = config.apple_platform.split("sim")[0]
             sim = "-simulator" if "sim" in config.apple_platform else ""
-            config.substitutions.append(
-                (
-                    "%%min_macos_deployment_target=%s.%s" % vers,
-                    "{}{}.{}{}".format(flag, major, minor, sim),
-                )
+
+        config.substitutions.append(
+            (
+                "%%min_macos_deployment_target=%s.%s" % vers,
+                "{}={}{}.{}{}".format(flag, apple_device, major, minor, sim),
             )
-        else:
-            config.substitutions.append(
-                (
-                    "%%min_macos_deployment_target=%s.%s" % vers,
-                    "{}={}.{}".format(flag, major, minor),
-                )
-            )
+        )
 else:
     for vers in min_macos_deployment_target_substitutions:
         config.substitutions.append(("%%min_macos_deployment_target=%s.%s" % vers, ""))
@@ -744,6 +741,13 @@ def is_binutils_lto_supported():
     return True
 
 
+def is_lld_lto_supported():
+    # LLD does support LTO, but we require it to be built with the latest
+    # changes to claim support. Otherwise older copies of LLD may not
+    # understand new bitcode versions.
+    return os.path.exists(os.path.join(config.llvm_tools_dir, "lld"))
+
+
 def is_windows_lto_supported():
     if not target_is_msvc:
         return True
@@ -755,7 +759,7 @@ if config.host_os == "Darwin" and is_darwin_lto_supported():
     config.lto_flags = ["-Wl,-lto_library," + liblto_path()]
 elif config.host_os in ["Linux", "FreeBSD", "NetBSD"]:
     config.lto_supported = False
-    if config.use_lld:
+    if config.use_lld and is_lld_lto_supported():
         config.lto_supported = True
     if is_binutils_lto_supported():
         config.available_features.add("binutils_lto")
@@ -987,3 +991,9 @@ if config.compiler_id == "GNU":
     gcc_dir = os.path.dirname(config.clang)
     libasan_dir = os.path.join(gcc_dir, "..", "lib" + config.bits)
     push_dynamic_library_lookup_path(config, libasan_dir)
+
+
+# Help tests that make sure certain files are in-sync between compiler-rt and
+# llvm.
+config.substitutions.append(("%crt_src", config.compiler_rt_src_root))
+config.substitutions.append(("%llvm_src", config.llvm_src_root))

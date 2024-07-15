@@ -1122,3 +1122,25 @@ template <typename d> concept f = c< d >;
 template <f> struct e; // expected-note {{}}
 template <f d> struct e<d>; // expected-error {{class template partial specialization is not more specialized than the primary template}}
 }
+
+
+namespace constrained_variadic {
+template <typename T = int>
+struct S {
+    void f(); // expected-note {{candidate}}
+    void f(...) requires true;   // expected-note {{candidate}}
+
+    void g(...);  // expected-note {{candidate}}
+    void g() requires true;  // expected-note {{candidate}}
+
+    consteval void h(...);
+    consteval void h(...) requires true {};
+};
+
+int test() {
+    S{}.f(); // expected-error{{call to member function 'f' is ambiguous}}
+    S{}.g(); // expected-error{{call to member function 'g' is ambiguous}}
+    S{}.h();
+}
+
+}

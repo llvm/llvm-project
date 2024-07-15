@@ -66,12 +66,10 @@ _Static_assert((&a - 100) != 0, ""); // pedantic-ref-warning {{is a GNU extensio
                                      // pedantic-ref-note {{-100 of non-array}} \
                                      // pedantic-expected-note {{-100 of non-array}}
 /// extern variable of a composite type.
-/// FIXME: The 'this conversion is not allowed' note is missing in the new interpreter.
 extern struct Test50S Test50;
 _Static_assert(&Test50 != (void*)0, ""); // all-warning {{always true}} \
-                                         // pedantic-ref-warning {{is a GNU extension}} \
-                                         // pedantic-ref-note {{this conversion is not allowed in a constant expression}} \
-                                         // pedantic-expected-warning {{is a GNU extension}}
+                                         // pedantic-warning {{is a GNU extension}} \
+                                         // pedantic-note {{this conversion is not allowed in a constant expression}}
 
 struct y {int x,y;};
 int a2[(intptr_t)&((struct y*)0)->y]; // all-warning {{folded to constant array}}
@@ -270,3 +268,36 @@ int test3(void) {
   a[0] = test3; // all-error {{incompatible pointer to integer conversion assigning to 'int' from 'int (void)'}}
   return 0;
 }
+/// This tests that we have full type info, even for values we cannot read.
+int dummyarray[5];
+_Static_assert(&dummyarray[0] < &dummyarray[1], ""); // pedantic-warning {{GNU extension}}
+
+void addrlabelexpr(void) {
+ a0: ;
+  static void *ps[] = { &&a0 }; // pedantic-warning {{use of GNU address-of-label extension}}
+}
+
+extern void cv2;
+void *foo5 (void)
+{
+  return &cv2; // pedantic-warning{{address of an expression of type 'void'}}
+}
+
+__attribute__((weak)) const unsigned int test10_bound = 10;
+char test10_global[test10_bound]; // all-error {{variable length array declaration not allowed at file scope}}
+void test10(void) {
+  char test10_local[test10_bound] = "help"; // all-error {{variable-sized object may not be initialized}}
+}
+
+void SuperSpecialFunc(void) {
+const int SuperSpecialCase = 10;
+_Static_assert((sizeof(SuperSpecialCase) == 12 && SuperSpecialCase == 3) || SuperSpecialCase == 10, ""); // pedantic-warning {{GNU extension}}
+}
+
+
+void T1(void) {
+  static int *y[1] = {({ static int _x = 20; (void*)0;})}; // all-error {{initializer element is not a compile-time constant}} \
+                                                           // pedantic-warning {{use of GNU statement expression extension}}
+}
+
+

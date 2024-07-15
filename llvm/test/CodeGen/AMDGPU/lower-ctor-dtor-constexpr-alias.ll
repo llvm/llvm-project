@@ -26,14 +26,14 @@ define void @bar() addrspace(1) {
 }
 
 ;.
-; CHECK: @[[LLVM_GLOBAL_CTORS:[a-zA-Z0-9_$"\\.-]+]] = appending addrspace(1) global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @foo.alias, ptr null }, { i32, ptr, ptr } { i32 1, ptr inttoptr (i64 4096 to ptr), ptr null }]
-; CHECK: @[[LLVM_GLOBAL_DTORS:[a-zA-Z0-9_$"\\.-]+]] = appending addrspace(1) global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr addrspacecast (ptr addrspace(1) @bar to ptr), ptr null }]
-; CHECK: @[[__INIT_ARRAY_START:[a-zA-Z0-9_$"\\.-]+]] = external addrspace(1) constant [0 x ptr addrspace(1)]
-; CHECK: @[[__INIT_ARRAY_END:[a-zA-Z0-9_$"\\.-]+]] = external addrspace(1) constant [0 x ptr addrspace(1)]
-; CHECK: @[[__FINI_ARRAY_START:[a-zA-Z0-9_$"\\.-]+]] = external addrspace(1) constant [0 x ptr addrspace(1)]
-; CHECK: @[[__FINI_ARRAY_END:[a-zA-Z0-9_$"\\.-]+]] = external addrspace(1) constant [0 x ptr addrspace(1)]
-; CHECK: @[[LLVM_USED:[a-zA-Z0-9_$"\\.-]+]] = appending addrspace(1) global [2 x ptr] [ptr @amdgcn.device.init, ptr @amdgcn.device.fini], section "llvm.metadata"
-; CHECK: @[[FOO_ALIAS:[a-zA-Z0-9_$"\\.-]+]] = hidden alias void (), ptr @foo
+; CHECK: @llvm.global_ctors = appending addrspace(1) global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @foo.alias, ptr null }, { i32, ptr, ptr } { i32 1, ptr inttoptr (i64 4096 to ptr), ptr null }]
+; CHECK: @llvm.global_dtors = appending addrspace(1) global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr addrspacecast (ptr addrspace(1) @bar to ptr), ptr null }]
+; CHECK: @__init_array_start = external addrspace(1) constant [0 x ptr addrspace(1)]
+; CHECK: @__init_array_end = external addrspace(1) constant [0 x ptr addrspace(1)]
+; CHECK: @__fini_array_start = external addrspace(1) constant [0 x ptr addrspace(1)]
+; CHECK: @__fini_array_end = external addrspace(1) constant [0 x ptr addrspace(1)]
+; CHECK: @llvm.used = appending addrspace(1) global [2 x ptr] [ptr @amdgcn.device.init, ptr @amdgcn.device.fini], section "llvm.metadata"
+; CHECK: @foo.alias = hidden alias void (), ptr @foo
 ;.
 ; CHECK-LABEL: define void @foo(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
@@ -48,7 +48,8 @@ define void @bar() addrspace(1) {
 ; CHECK-LABEL: define weak_odr amdgpu_kernel void @amdgcn.device.init(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 icmp ne (ptr addrspace(1) @__init_array_start, ptr addrspace(1) @__init_array_end), label [[WHILE_ENTRY:%.*]], label [[WHILE_END:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne ptr addrspace(1) @__init_array_start, @__init_array_end
+; CHECK-NEXT:    br i1 [[TMP0]], label [[WHILE_ENTRY:%.*]], label [[WHILE_END:%.*]]
 ; CHECK:       while.entry:
 ; CHECK-NEXT:    [[PTR:%.*]] = phi ptr addrspace(1) [ @__init_array_start, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[WHILE_ENTRY]] ]
 ; CHECK-NEXT:    [[CALLBACK:%.*]] = load ptr, ptr addrspace(1) [[PTR]], align 8

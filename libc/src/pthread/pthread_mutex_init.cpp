@@ -10,12 +10,13 @@
 #include "pthread_mutexattr.h"
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/threads/mutex.h"
 
 #include <errno.h>
 #include <pthread.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 static_assert(sizeof(Mutex) <= sizeof(pthread_mutex_t),
               "The public pthread_mutex_t type cannot accommodate the internal "
@@ -26,10 +27,11 @@ LLVM_LIBC_FUNCTION(int, pthread_mutex_init,
                     const pthread_mutexattr_t *__restrict attr)) {
   auto mutexattr = attr == nullptr ? DEFAULT_MUTEXATTR : *attr;
   auto err =
-      Mutex::init(reinterpret_cast<Mutex *>(m), false,
+      Mutex::init(reinterpret_cast<Mutex *>(m), /*is_timed=*/true,
                   get_mutexattr_type(mutexattr) & PTHREAD_MUTEX_RECURSIVE,
-                  get_mutexattr_robust(mutexattr) & PTHREAD_MUTEX_ROBUST);
+                  get_mutexattr_robust(mutexattr) & PTHREAD_MUTEX_ROBUST,
+                  get_mutexattr_pshared(mutexattr) & PTHREAD_PROCESS_SHARED);
   return err == MutexError::NONE ? 0 : EAGAIN;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

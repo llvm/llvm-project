@@ -1,4 +1,4 @@
-# Checks debug fission support in BOLT
+## Checks debug fission support in BOLT
 
 # REQUIRES: system-linux
 
@@ -27,9 +27,9 @@
 
 # CHECK-NOT: warning: DWARF unit from offset {{.*}} incl. to offset {{.*}} excl. tries to read DIEs at offset {{.*}}
 
+# CHECK-DWO-DWO: 00000000
 # CHECK-DWO-DWO: 00000010
 # CHECK-DWO-DWO: 00000010
-# CHECK-DWO-DWO: 00000050
 # CHECK-DWO-DWO: DW_TAG_subprogram
 # CHECK-DWO-DWO-NEXT: DW_AT_ranges [DW_FORM_sec_offset] (0x00000000
 # CHECK-DWO-DWO: DW_TAG_subprogram

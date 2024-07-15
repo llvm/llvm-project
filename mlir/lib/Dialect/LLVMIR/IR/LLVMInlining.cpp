@@ -187,7 +187,7 @@ deepCloneAliasScopes(iterator_range<Region::iterator> inlinedBlocks) {
   };
 
   for (Block &block : inlinedBlocks) {
-    for (Operation &op : block) {
+    block.walk([&](Operation *op) {
       if (auto aliasInterface = dyn_cast<LLVM::AliasAnalysisOpInterface>(op)) {
         aliasInterface.setAliasScopes(
             convertScopeList(aliasInterface.getAliasScopesOrNull()));
@@ -202,7 +202,7 @@ deepCloneAliasScopes(iterator_range<Region::iterator> inlinedBlocks) {
         noAliasScope.setScopeAttr(cast<LLVM::AliasScopeAttr>(
             mapping.lookup(noAliasScope.getScopeAttr())));
       }
-    }
+    });
   }
 }
 
@@ -357,9 +357,7 @@ static void createNewAliasScopesFromNoAliasParameter(
   // Go through every instruction and attempt to find which noalias parameters
   // it is definitely based on and definitely not based on.
   for (Block &inlinedBlock : inlinedBlocks) {
-    for (auto aliasInterface :
-         inlinedBlock.getOps<LLVM::AliasAnalysisOpInterface>()) {
-
+    inlinedBlock.walk([&](LLVM::AliasAnalysisOpInterface aliasInterface) {
       // Collect the pointer arguments affected by the alias scopes.
       SmallVector<Value> pointerArgs = aliasInterface.getAccessedOperands();
 
@@ -395,7 +393,7 @@ static void createNewAliasScopesFromNoAliasParameter(
             }
             return true;
           }))
-        continue;
+        return;
 
       // Add all noalias parameter scopes to the noalias scope list that we are
       // not based on.
@@ -438,7 +436,7 @@ static void createNewAliasScopesFromNoAliasParameter(
       // arguments.
       if (aliasesOtherKnownObject ||
           isa<LLVM::CallOp>(aliasInterface.getOperation()))
-        continue;
+        return;
 
       SmallVector<Attribute> aliasScopes;
       for (LLVM::SSACopyOp noAlias : noAliasParams)
@@ -449,7 +447,7 @@ static void createNewAliasScopesFromNoAliasParameter(
         aliasInterface.setAliasScopes(
             concatArrayAttr(aliasInterface.getAliasScopesOrNull(),
                             ArrayAttr::get(call->getContext(), aliasScopes)));
-    }
+    });
   }
 }
 
@@ -472,7 +470,7 @@ appendCallOpAliasScopes(Operation *call,
   // Simply append the call op's alias and noalias scopes to any operation
   // implementing AliasAnalysisOpInterface.
   for (Block &block : inlinedBlocks) {
-    for (auto aliasInterface : block.getOps<LLVM::AliasAnalysisOpInterface>()) {
+    block.walk([&](LLVM::AliasAnalysisOpInterface aliasInterface) {
       if (aliasScopes)
         aliasInterface.setAliasScopes(concatArrayAttr(
             aliasInterface.getAliasScopesOrNull(), aliasScopes));
@@ -480,7 +478,7 @@ appendCallOpAliasScopes(Operation *call,
       if (noAliasScopes)
         aliasInterface.setNoAliasScopes(concatArrayAttr(
             aliasInterface.getNoAliasScopesOrNull(), noAliasScopes));
-    }
+    });
   }
 }
 
@@ -511,6 +509,57 @@ static void handleAccessGroups(Operation *call,
          block.getOps<LLVM::AccessGroupOpInterface>())
       accessGroupOpInterface.setAccessGroups(concatArrayAttr(
           accessGroupOpInterface.getAccessGroupsOrNull(), accessGroups));
+}
+
+/// Updates locations inside loop annotations to reflect that they were inlined.
+static void
+handleLoopAnnotations(Operation *call,
+                      iterator_range<Region::iterator> inlinedBlocks) {
+  // Attempt to extract a DISubprogram from the callee.
+  auto func = call->getParentOfType<FunctionOpInterface>();
+  if (!func)
+    return;
+  LocationAttr funcLoc = func->getLoc();
+  auto fusedLoc = dyn_cast_if_present<FusedLoc>(funcLoc);
+  if (!fusedLoc)
+    return;
+  auto scope =
+      dyn_cast_if_present<LLVM::DISubprogramAttr>(fusedLoc.getMetadata());
+  if (!scope)
+    return;
+
+  // Helper to build a new fused location that reflects the inlining of the loop
+  // annotation.
+  auto updateLoc = [&](FusedLoc loc) -> FusedLoc {
+    if (!loc)
+      return {};
+    Location callSiteLoc = CallSiteLoc::get(loc, call->getLoc());
+    return FusedLoc::get(loc.getContext(), callSiteLoc, scope);
+  };
+
+  AttrTypeReplacer replacer;
+  replacer.addReplacement([&](LLVM::LoopAnnotationAttr loopAnnotation)
+                              -> std::pair<Attribute, WalkResult> {
+    FusedLoc newStartLoc = updateLoc(loopAnnotation.getStartLoc());
+    FusedLoc newEndLoc = updateLoc(loopAnnotation.getEndLoc());
+    if (!newStartLoc && !newEndLoc)
+      return {loopAnnotation, WalkResult::advance()};
+    auto newLoopAnnotation = LLVM::LoopAnnotationAttr::get(
+        loopAnnotation.getContext(), loopAnnotation.getDisableNonforced(),
+        loopAnnotation.getVectorize(), loopAnnotation.getInterleave(),
+        loopAnnotation.getUnroll(), loopAnnotation.getUnrollAndJam(),
+        loopAnnotation.getLicm(), loopAnnotation.getDistribute(),
+        loopAnnotation.getPipeline(), loopAnnotation.getPeeled(),
+        loopAnnotation.getUnswitch(), loopAnnotation.getMustProgress(),
+        loopAnnotation.getIsVectorized(), newStartLoc, newEndLoc,
+        loopAnnotation.getParallelAccesses());
+    // Needs to advance, as loop annotations can be nested.
+    return {newLoopAnnotation, WalkResult::advance()};
+  });
+
+  for (Block &block : inlinedBlocks)
+    for (Operation &op : block)
+      replacer.recursivelyReplaceElementsIn(&op);
 }
 
 /// If `requestedAlignment` is higher than the alignment specified on `alloca`,
@@ -641,8 +690,6 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
         // Cache set of StringAttrs for fast lookup in `isLegalToInline`.
         disallowedFunctionAttrs({
             StringAttr::get(dialect->getContext(), "noduplicate"),
-            StringAttr::get(dialect->getContext(), "noinline"),
-            StringAttr::get(dialect->getContext(), "optnone"),
             StringAttr::get(dialect->getContext(), "presplitcoroutine"),
             StringAttr::get(dialect->getContext(), "returns_twice"),
             StringAttr::get(dialect->getContext(), "strictfp"),
@@ -653,21 +700,27 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     if (!wouldBeCloned)
       return false;
     if (!isa<LLVM::CallOp>(call)) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "Cannot inline: call is not an LLVM::CallOp\n");
+      LLVM_DEBUG(llvm::dbgs() << "Cannot inline: call is not an '"
+                              << LLVM::CallOp::getOperationName() << "' op\n");
       return false;
     }
     auto funcOp = dyn_cast<LLVM::LLVMFuncOp>(callable);
     if (!funcOp) {
       LLVM_DEBUG(llvm::dbgs()
-                 << "Cannot inline: callable is not an LLVM::LLVMFuncOp\n");
+                 << "Cannot inline: callable is not an '"
+                 << LLVM::LLVMFuncOp::getOperationName() << "' op\n");
+      return false;
+    }
+    if (funcOp.isNoInline()) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Cannot inline: function is marked no_inline\n");
       return false;
     }
     if (funcOp.isVarArg()) {
       LLVM_DEBUG(llvm::dbgs() << "Cannot inline: callable is variadic\n");
       return false;
     }
-    // TODO: Generate aliasing metadata from noalias argument/result attributes.
+    // TODO: Generate aliasing metadata from noalias result attributes.
     if (auto attrs = funcOp.getArgAttrs()) {
       for (DictionaryAttr attrDict : attrs->getAsRange<DictionaryAttr>()) {
         if (attrDict.contains(LLVM::LLVMDialect::getInAllocaAttrName())) {
@@ -755,8 +808,7 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
       return handleByValArgument(builder, callable, argument, elementType,
                                  requestedAlignment);
     }
-    if ([[maybe_unused]] std::optional<NamedAttribute> attr =
-            argumentAttrs.getNamed(LLVM::LLVMDialect::getNoAliasAttrName())) {
+    if (argumentAttrs.contains(LLVM::LLVMDialect::getNoAliasAttrName())) {
       if (argument.use_empty())
         return argument;
 
@@ -787,6 +839,7 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     handleInlinedAllocas(call, inlinedBlocks);
     handleAliasScopes(call, inlinedBlocks);
     handleAccessGroups(call, inlinedBlocks);
+    handleLoopAnnotations(call, inlinedBlocks);
   }
 
   // Keeping this (immutable) state on the interface allows us to look up

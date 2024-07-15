@@ -147,12 +147,12 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LiveVariables>();
-    AU.addRequired<MachineDominatorTree>();
-    AU.addRequired<MachineLoopInfo>();
-    AU.addPreserved<LiveVariables>();
-    AU.addPreserved<MachineDominatorTree>();
-    AU.addPreserved<MachineLoopInfo>();
+    AU.addRequired<LiveVariablesWrapperPass>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    AU.addPreserved<LiveVariablesWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -618,9 +618,9 @@ char SIOptimizeVGPRLiveRange::ID = 0;
 
 INITIALIZE_PASS_BEGIN(SIOptimizeVGPRLiveRange, DEBUG_TYPE,
                       "SI Optimize VGPR LiveRange", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
-INITIALIZE_PASS_DEPENDENCY(LiveVariables)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LiveVariablesWrapperPass)
 INITIALIZE_PASS_END(SIOptimizeVGPRLiveRange, DEBUG_TYPE,
                     "SI Optimize VGPR LiveRange", false, false)
 
@@ -635,9 +635,9 @@ bool SIOptimizeVGPRLiveRange::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
-  MDT = &getAnalysis<MachineDominatorTree>();
-  Loops = &getAnalysis<MachineLoopInfo>();
-  LV = &getAnalysis<LiveVariables>();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  LV = &getAnalysis<LiveVariablesWrapperPass>().getLV();
   MRI = &MF.getRegInfo();
 
   if (skipFunction(MF.getFunction()))

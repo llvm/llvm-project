@@ -534,63 +534,63 @@ lldb::SectionType IRExecutionUnit::GetSectionTypeFromSectionName(
   }
 
   if (!name.empty()) {
-    if (name.equals("__text") || name.equals(".text"))
+    if (name == "__text" || name == ".text")
       sect_type = lldb::eSectionTypeCode;
-    else if (name.equals("__data") || name.equals(".data"))
+    else if (name == "__data" || name == ".data")
       sect_type = lldb::eSectionTypeCode;
     else if (name.starts_with("__debug_") || name.starts_with(".debug_")) {
       const uint32_t name_idx = name[0] == '_' ? 8 : 7;
       llvm::StringRef dwarf_name(name.substr(name_idx));
       switch (dwarf_name[0]) {
       case 'a':
-        if (dwarf_name.equals("abbrev"))
+        if (dwarf_name == "abbrev")
           sect_type = lldb::eSectionTypeDWARFDebugAbbrev;
-        else if (dwarf_name.equals("aranges"))
+        else if (dwarf_name == "aranges")
           sect_type = lldb::eSectionTypeDWARFDebugAranges;
-        else if (dwarf_name.equals("addr"))
+        else if (dwarf_name == "addr")
           sect_type = lldb::eSectionTypeDWARFDebugAddr;
         break;
 
       case 'f':
-        if (dwarf_name.equals("frame"))
+        if (dwarf_name == "frame")
           sect_type = lldb::eSectionTypeDWARFDebugFrame;
         break;
 
       case 'i':
-        if (dwarf_name.equals("info"))
+        if (dwarf_name == "info")
           sect_type = lldb::eSectionTypeDWARFDebugInfo;
         break;
 
       case 'l':
-        if (dwarf_name.equals("line"))
+        if (dwarf_name == "line")
           sect_type = lldb::eSectionTypeDWARFDebugLine;
-        else if (dwarf_name.equals("loc"))
+        else if (dwarf_name == "loc")
           sect_type = lldb::eSectionTypeDWARFDebugLoc;
-        else if (dwarf_name.equals("loclists"))
+        else if (dwarf_name == "loclists")
           sect_type = lldb::eSectionTypeDWARFDebugLocLists;
         break;
 
       case 'm':
-        if (dwarf_name.equals("macinfo"))
+        if (dwarf_name == "macinfo")
           sect_type = lldb::eSectionTypeDWARFDebugMacInfo;
         break;
 
       case 'p':
-        if (dwarf_name.equals("pubnames"))
+        if (dwarf_name == "pubnames")
           sect_type = lldb::eSectionTypeDWARFDebugPubNames;
-        else if (dwarf_name.equals("pubtypes"))
+        else if (dwarf_name == "pubtypes")
           sect_type = lldb::eSectionTypeDWARFDebugPubTypes;
         break;
 
       case 's':
-        if (dwarf_name.equals("str"))
+        if (dwarf_name == "str")
           sect_type = lldb::eSectionTypeDWARFDebugStr;
-        else if (dwarf_name.equals("str_offsets"))
+        else if (dwarf_name == "str_offsets")
           sect_type = lldb::eSectionTypeDWARFDebugStrOffsets;
         break;
 
       case 'r':
-        if (dwarf_name.equals("ranges"))
+        if (dwarf_name == "ranges")
           sect_type = lldb::eSectionTypeDWARFDebugRanges;
         break;
 
@@ -599,7 +599,7 @@ lldb::SectionType IRExecutionUnit::GetSectionTypeFromSectionName(
       }
     } else if (name.starts_with("__apple_") || name.starts_with(".apple_"))
       sect_type = lldb::eSectionTypeInvalid;
-    else if (name.equals("__objc_imageinfo"))
+    else if (name == "__objc_imageinfo")
       sect_type = lldb::eSectionTypeOther;
   }
   return sect_type;

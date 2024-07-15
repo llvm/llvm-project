@@ -26,8 +26,8 @@ define dso_local void @_Z6test01v() addrspace(1) #0 {
 ; CHECK-NEXT:    store i32 0, ptr [[J]], align 4, !tbaa [[TBAA2]]
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[J]], align 4, !tbaa [[TBAA2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP2]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[J]], align 4, !tbaa [[TBAA2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], 3
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    call addrspace(1) void @llvm.lifetime.end.p0(i64 4, ptr [[J]]) #[[ATTR2]]
@@ -38,21 +38,21 @@ define dso_local void @_Z6test01v() addrspace(1) #0 {
 ; CHECK-NEXT:    store i32 0, ptr [[I]], align 4, !tbaa [[TBAA2]]
 ; CHECK-NEXT:    br label [[FOR_COND1:%.*]]
 ; CHECK:       for.cond1:
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[I]], align 4, !tbaa [[TBAA2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr @n, align 4, !tbaa [[TBAA2]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[I]], align 4, !tbaa [[TBAA2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr @n, align 4, !tbaa [[TBAA2]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_BODY4:%.*]], label [[FOR_COND_CLEANUP3:%.*]]
 ; CHECK:       for.cond.cleanup3:
 ; CHECK-NEXT:    call addrspace(1) void @llvm.lifetime.end.p0(i64 4, ptr [[I]]) #[[ATTR2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[J]], align 4, !tbaa [[TBAA2]]
-; CHECK-NEXT:    [[INC7:%.*]] = add nsw i32 [[TMP8]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[J]], align 4, !tbaa [[TBAA2]]
+; CHECK-NEXT:    [[INC7:%.*]] = add nsw i32 [[TMP4]], 1
 ; CHECK-NEXT:    store i32 [[INC7]], ptr [[J]], align 4, !tbaa [[TBAA2]]
 ; CHECK-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       for.body4:
-; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[I]], align 4, !tbaa [[TBAA2]]
-; CHECK-NEXT:    store volatile i32 [[TMP9]], ptr @C, align 4, !tbaa [[TBAA2]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[I]], align 4, !tbaa [[TBAA2]]
-; CHECK-NEXT:    [[INC5:%.*]] = add nsw i32 [[TMP10]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[I]], align 4, !tbaa [[TBAA2]]
+; CHECK-NEXT:    store volatile i32 [[TMP5]], ptr @C, align 4, !tbaa [[TBAA2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[I]], align 4, !tbaa [[TBAA2]]
+; CHECK-NEXT:    [[INC5:%.*]] = add nsw i32 [[TMP6]], 1
 ; CHECK-NEXT:    store i32 [[INC5]], ptr [[I]], align 4, !tbaa [[TBAA2]]
 ; CHECK-NEXT:    br label [[FOR_COND1]], !llvm.loop [[LOOP11:![0-9]+]]
 ;

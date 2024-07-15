@@ -340,4 +340,50 @@ TEST(Attributes, ConstantRangeAttributeCAPI) {
   }
 }
 
+TEST(Attributes, CalleeAttributes) {
+  const char *IRString = R"IR(
+    declare void @f1(i32 %i)
+    declare void @f2(i32 range(i32 1, 2) %i)
+
+    define void @g1(i32 %i) {
+      call void @f1(i32 %i)
+      ret void
+    }
+    define void @g2(i32 %i) {
+      call void @f2(i32 %i)
+      ret void
+    }
+    define void @g3(i32 %i) {
+      call void @f1(i32 range(i32 3, 4) %i)
+      ret void
+    }
+    define void @g4(i32 %i) {
+      call void @f2(i32 range(i32 3, 4) %i)
+      ret void
+    }
+  )IR";
+
+  SMDiagnostic Err;
+  LLVMContext Context;
+  std::unique_ptr<Module> M = parseAssemblyString(IRString, Err, Context);
+  ASSERT_TRUE(M);
+
+  {
+    auto *I = cast<CallBase>(&M->getFunction("g1")->getEntryBlock().front());
+    ASSERT_FALSE(I->getParamAttr(0, Attribute::Range).isValid());
+  }
+  {
+    auto *I = cast<CallBase>(&M->getFunction("g2")->getEntryBlock().front());
+    ASSERT_TRUE(I->getParamAttr(0, Attribute::Range).isValid());
+  }
+  {
+    auto *I = cast<CallBase>(&M->getFunction("g3")->getEntryBlock().front());
+    ASSERT_TRUE(I->getParamAttr(0, Attribute::Range).isValid());
+  }
+  {
+    auto *I = cast<CallBase>(&M->getFunction("g4")->getEntryBlock().front());
+    ASSERT_TRUE(I->getParamAttr(0, Attribute::Range).isValid());
+  }
+}
+
 } // end anonymous namespace

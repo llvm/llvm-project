@@ -27,20 +27,18 @@ define <4 x float> @foo(ptr %0) nounwind {
 ; CHECK-NEXT:    fsw fa0, 0(sp)
 ; CHECK-NEXT:    addi a0, sp, 4
 ; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    addi a0, sp, 12
 ; CHECK-NEXT:    vle32.v v9, (a0)
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vi v9, v8, 1
-; CHECK-NEXT:    addi a0, sp, 8
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    addi a0, sp, 12
 ; CHECK-NEXT:    vle32.v v10, (a0)
+; CHECK-NEXT:    addi a0, sp, 8
+; CHECK-NEXT:    vle32.v v11, (a0)
 ; CHECK-NEXT:    mv a0, sp
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 1
+; CHECK-NEXT:    vslideup.vi v10, v9, 1
+; CHECK-NEXT:    vslideup.vi v8, v11, 1
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 2
+; CHECK-NEXT:    vslideup.vi v8, v10, 2
 ; CHECK-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s1, 24(sp) # 8-byte Folded Reload

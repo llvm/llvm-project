@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
 // CHECK-DAG:   [[TMP26:%.+]] = getelementptr inbounds [[T1]], ptr [[GEPARGC]], i32 0, i32 6
 // CHECK-DAG:   call void @llvm.memset.p0.i64(ptr align 8 [[TMP26]], i8 0, i64 4, i1 false)
 // CHECK-DAG:   [[TMP29:%.+]] = call ptr @__kmpc_taskred_init(i32 [[GTID]], i32 3, ptr [[RD_IN1]])
-// DEBUG-DAG:   call void @llvm.dbg.declare(metadata ptr [[TD1]],
+// DEBUG-DAG:   #dbg_declare(ptr [[TD1]],
 // CHECK-DAG:   store ptr [[TMP29]], ptr [[TD1]],
 // CHECK-DAG:   call void @__kmpc_taskgroup(ptr {{[^,]+}}, i32 [[GTID]])
 // CHECK-DAG:   store ptr [[C]], ptr [[TMP30:%[^,]+]],

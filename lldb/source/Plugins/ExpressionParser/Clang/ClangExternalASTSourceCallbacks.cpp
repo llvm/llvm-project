@@ -11,6 +11,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/Basic/Module.h"
 #include <optional>
 
 using namespace lldb_private;

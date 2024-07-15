@@ -357,7 +357,7 @@ void Templ(int i){
   // CHECK-NEXT: FunctionDecl{{.*}} Templ 'void (int)' implicit_instantiation
   // CHECK-NEXT: TemplateArgument{{.*}} 'int'
   // CHECK-NEXT: BuiltinType{{.*}} 'int'
-  // CHECK-NEXT: TemplateArgument integral 3
+  // CHECK-NEXT: TemplateArgument integral '3U'
   // CHECK-NEXT: TemplateArgument decl
   // CHECK-NEXT: Var{{.*}} 'CEArray' 'const int[5]'
   // CHECK-NEXT: ParmVarDecl{{.*}} i 'int'

@@ -7,7 +7,7 @@
 // RUN: %clangxx_host -g -gmodules -fmodules -std=c99 -x c -include-pch %t.pch %s -c -o %t.o
 // RUN: %clangxx_host %t.o -o %t.exe
 // RUN: lldb-test symbols -dump-clang-ast -find type --language=C99 \
-// RUN:   -compiler-context 'AnyModule:*,Struct:TypeFromPCH' %t.exe | FileCheck %s
+// RUN:   -compiler-context 'AnyModule:*,ClassOrStruct:TypeFromPCH' %t.exe | FileCheck %s
 
 anchor_t anchor;
 

@@ -23,7 +23,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r ./llvm/utils/git/requirements.txt
+          pip install --require-hashes -r ./llvm/utils/git/requirements.txt
 
       - name: Version Check
         run: |

@@ -57,8 +57,8 @@ def testTypeEq():
     print("t1 == t2:", t1 == t2)
     # CHECK: t1 == t3: True
     print("t1 == t3:", t1 == t3)
-    # CHECK: t1 == None: False
-    print("t1 == None:", t1 == None)
+    # CHECK: t1 is None: False
+    print("t1 is None:", t1 is None)
 
 
 # CHECK-LABEL: TEST: testTypeHash
@@ -143,9 +143,9 @@ def testTypeEqDoesNotRaise():
     # CHECK: False
     print(t1 == not_a_type)
     # CHECK: False
-    print(t1 == None)
+    print(t1 is None)
     # CHECK: True
-    print(t1 != None)
+    print(t1 is not None)
 
 
 # CHECK-LABEL: TEST: testTypeCapsule

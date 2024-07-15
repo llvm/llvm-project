@@ -1226,7 +1226,7 @@ INTERCEPTOR(int, pthread_timedjoin_np, void *thread, void **retval,
 }
 #endif
 
-DEFINE_REAL_PTHREAD_FUNCTIONS
+DEFINE_INTERNAL_PTHREAD_FUNCTIONS
 
 extern char *tzname[2];
 

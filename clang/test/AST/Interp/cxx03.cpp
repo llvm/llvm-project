@@ -24,3 +24,8 @@ namespace NonLValueMemberExpr {
 
   const int &TT1::subobj_init = PODType().value;
 }
+
+void LambdaAccessingADummy() {
+  int d;
+  int a9[1] = {[d = 0] = 1}; // both-error {{is not an integral constant expression}}
+}

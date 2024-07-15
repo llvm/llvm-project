@@ -68,9 +68,6 @@ static cl::opt<bool>
 ForceFastISel("arm-force-fast-isel",
                cl::init(false), cl::Hidden);
 
-static cl::opt<bool> EnableSubRegLiveness("arm-enable-subreg-liveness",
-                                          cl::init(false), cl::Hidden);
-
 /// initializeSubtargetDependencies - Initializes using a CPU and feature string
 /// so that we can use initializer lists for subtarget initialization.
 ARMSubtarget &ARMSubtarget::initializeSubtargetDependencies(StringRef CPU,
@@ -114,8 +111,7 @@ ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
   // FIXME: At this point, we can't rely on Subtarget having RBI.
   // It's awkward to mix passing RBI and the Subtarget; should we pass
   // TII/TRI as well?
-  InstSelector.reset(createARMInstructionSelector(
-      *static_cast<const ARMBaseTargetMachine *>(&TM), *this, *RBI));
+  InstSelector.reset(createARMInstructionSelector(TM, *this, *RBI));
 
   RegBankInfo.reset(RBI);
 }
@@ -298,6 +294,7 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   case CortexM3:
   case CortexM7:
   case CortexR52:
+  case CortexR52plus:
   case CortexX1:
   case CortexX1C:
     break;
@@ -384,8 +381,6 @@ bool ARMSubtarget::enableMachineScheduler() const {
 }
 
 bool ARMSubtarget::enableSubRegLiveness() const {
-  if (EnableSubRegLiveness.getNumOccurrences())
-    return EnableSubRegLiveness;
   // Enable SubRegLiveness for MVE to better optimize s subregs for mqpr regs
   // and q subregs for qqqqpr regs.
   return hasMVEIntegerOps();

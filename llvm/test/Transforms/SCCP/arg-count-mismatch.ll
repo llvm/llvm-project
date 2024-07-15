@@ -56,7 +56,7 @@ define internal i16 @bar(i16 %p1, i16 %p2) {
 define internal i16 @vararg_prop(i16 %p1, ...) {
 ; CHECK-LABEL: define {{[^@]+}}@vararg_prop
 ; CHECK-SAME: (i16 [[P1:%.*]], ...) {
-; CHECK-NEXT:    ret i16 undef
+; CHECK-NEXT:    ret i16 poison
 ;
   ret i16 %p1
 }

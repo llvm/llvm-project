@@ -51,9 +51,6 @@ build --experimental_cc_shared_library
 build:zlib_external --repo_env=BAZEL_LLVM_ZLIB_STRATEGY=external
 build:zlib_system --repo_env=BAZEL_LLVM_ZLIB_STRATEGY=system
 
-build:terminfo_external --repo_env=BAZEL_LLVM_TERMINFO_STRATEGY=external
-build:terminfo_system --repo_env=BAZEL_LLVM_TERMINFO_STRATEGY=system
-
 ###############################################################################
 # Options for "generic_clang" builds: these options should generally apply to
 # builds using a Clang-based compiler, and default to the `clang` executable on
@@ -203,6 +200,9 @@ build:ci --keep_going
 
 # Show test errors.
 build:ci --test_output=errors
+
+# Only show failing tests to reduce output
+build:ci --test_summary=terse
 
 ###############################################################################
 

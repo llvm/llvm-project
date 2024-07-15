@@ -51,7 +51,8 @@ class EmitC_BinaryOp<string mnemonic, list<Trait> traits = []> :
 def CExpression : NativeOpTrait<"emitc::CExpression">;
 
 // Types only used in binary arithmetic operations.
-def IntegerIndexOrOpaqueType : AnyTypeOf<[EmitCIntegerType, Index, EmitC_OpaqueType]>;
+def IntegerIndexOrOpaqueType : Type<CPred<"emitc::isIntegerIndexOrOpaqueType($_self)">,
+"integer, index or opaque type supported by EmitC">;
 def FloatIntegerIndexOrOpaqueType : AnyTypeOf<[EmitCFloatType, IntegerIndexOrOpaqueType]>;
 
 def EmitC_AddOp : EmitC_BinaryOp<"add", [CExpression]> {
@@ -470,7 +471,7 @@ def EmitC_ForOp : EmitC_Op<"for",
     upper bound and step respectively, and defines an SSA value for its
     induction variable. It has one region capturing the loop body. The induction
     variable is represented as an argument of this region. This SSA value is a
-    signless integer or index. The step is a value of same type.
+    signless integer, or an index. The step is a value of same type.
 
     This operation has no result. The body region must contain exactly one block
     that terminates with `emitc.yield`. Calling ForOp::build will create such a
@@ -905,6 +906,48 @@ def EmitC_SubOp : EmitC_BinaryOp<"sub", [CExpression]> {
   }];
 
   let hasVerifier = 1;
+}
+
+def EmitC_MemberOp : EmitC_Op<"member"> {
+  let summary = "Member operation";
+  let description = [{
+    With the `member` operation the member access operator `.` can be
+    applied.
+
+    Example:
+
+    ```mlir
+    %0 = "emitc.member" (%arg0) {member = "a"}
+        : (!emitc.opaque<"mystruct">) -> i32
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<StrAttr, "the member to access">:$member,
+    EmitC_OpaqueType:$operand
+  );
+  let results = (outs EmitCType);
+}
+
+def EmitC_MemberOfPtrOp : EmitC_Op<"member_of_ptr"> {
+  let summary = "Member of pointer operation";
+  let description = [{
+    With the `member_of_ptr` operation the member access operator `->`
+    can be applied.
+
+    Example:
+
+    ```mlir
+    %0 = "emitc.member_of_ptr" (%arg0) {member = "a"}
+        : (!emitc.ptr<!emitc.opaque<"mystruct">>) -> i32
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<StrAttr, "the member to access">:$member,
+    AnyTypeOf<[EmitC_OpaqueType,EmitC_PointerType]>:$operand
+  );
+  let results = (outs EmitCType);
 }
 
 def EmitC_ConditionalOp : EmitC_Op<"conditional",

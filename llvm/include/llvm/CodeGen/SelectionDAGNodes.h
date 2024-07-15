@@ -479,17 +479,12 @@ private:
   /// The operation that this node performs.
   int32_t NodeType;
 
-public:
-  /// Unique and persistent id per SDNode in the DAG. Used for debug printing.
-  /// We do not place that under `#if LLVM_ENABLE_ABI_BREAKING_CHECKS`
-  /// intentionally because it adds unneeded complexity without noticeable
-  /// benefits (see discussion with @thakis in D120714).
-  uint16_t PersistentId = 0xffff;
+  SDNodeFlags Flags;
 
 protected:
   // We define a set of mini-helper classes to help us interpret the bits in our
   // SubclassData.  These are designed to fit within a uint16_t so they pack
-  // with PersistentId.
+  // with SDNodeFlags.
 
 #if defined(_AIX) && (!defined(__GNUC__) || defined(__clang__))
 // Except for GCC; by default, AIX compilers store bit-fields in 4-byte words
@@ -542,6 +537,7 @@ BEGIN_TWO_BYTE_PACK()
     friend class MaskedLoadStoreSDNode;
     friend class MaskedGatherScatterSDNode;
     friend class VPGatherScatterSDNode;
+    friend class MaskedHistogramSDNode;
 
     uint16_t : NumMemSDNodeBits;
 
@@ -552,6 +548,7 @@ BEGIN_TWO_BYTE_PACK()
     //   MaskedLoadStoreBaseSDNode => enum ISD::MemIndexedMode
     //   VPGatherScatterSDNode => enum ISD::MemIndexType
     //   MaskedGatherScatterSDNode => enum ISD::MemIndexType
+    //   MaskedHistogramSDNode => enum ISD::MemIndexType
     uint16_t AddressingMode : 3;
   };
   enum { NumLSBaseSDNodeBits = NumMemSDNodeBits + 3 };
@@ -564,6 +561,7 @@ BEGIN_TWO_BYTE_PACK()
     friend class MaskedLoadSDNode;
     friend class MaskedGatherSDNode;
     friend class VPGatherSDNode;
+    friend class MaskedHistogramSDNode;
 
     uint16_t : NumLSBaseSDNodeBits;
 
@@ -608,6 +606,14 @@ END_TWO_BYTE_PACK()
   static_assert(sizeof(LoadSDNodeBitfields) <= 2, "field too wide");
   static_assert(sizeof(StoreSDNodeBitfields) <= 2, "field too wide");
 
+public:
+  /// Unique and persistent id per SDNode in the DAG. Used for debug printing.
+  /// We do not place that under `#if LLVM_ENABLE_ABI_BREAKING_CHECKS`
+  /// intentionally because it adds unneeded complexity without noticeable
+  /// benefits (see discussion with @thakis in D120714). Currently, there are
+  /// two padding bytes after this field.
+  uint16_t PersistentId = 0xffff;
+
 private:
   friend class SelectionDAG;
   // TODO: unfriend HandleSDNode once we fix its operand handling.
@@ -643,7 +649,10 @@ private:
   /// Return a pointer to the specified value type.
   static const EVT *getValueTypeList(EVT VT);
 
-  SDNodeFlags Flags;
+  /// Index in worklist of DAGCombiner, or negative if the node is not in the
+  /// worklist. -1 = not in worklist; -2 = not in worklist, but has already been
+  /// combined at least once.
+  int CombinerWorklistIndex = -1;
 
   uint32_t CFIType = 0;
 
@@ -743,6 +752,12 @@ public:
 
   /// Set unique node id.
   void setNodeId(int Id) { NodeId = Id; }
+
+  /// Get worklist index for DAGCombiner
+  int getCombinerWorklistIndex() const { return CombinerWorklistIndex; }
+
+  /// Set worklist index for DAGCombiner
+  void setCombinerWorklistIndex(int Index) { CombinerWorklistIndex = Index; }
 
   /// Return the node ordering.
   unsigned getIROrder() const { return IROrder; }
@@ -1420,6 +1435,7 @@ public:
       return getOperand(2);
     case ISD::MGATHER:
     case ISD::MSCATTER:
+    case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
       return getOperand(3);
     default:
       return getOperand(1);
@@ -1468,6 +1484,7 @@ public:
     case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
     case ISD::GET_FPENV_MEM:
     case ISD::SET_FPENV_MEM:
+    case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
       return true;
     default:
       return N->isMemIntrinsic() || N->isTargetMemoryOpcode();
@@ -1736,6 +1753,9 @@ public:
 
 /// Returns true if \p V is a constant integer zero.
 bool isNullConstant(SDValue V);
+
+/// Returns true if \p V is a constant integer zero or an UNDEF node.
+bool isNullConstantOrUndef(SDValue V);
 
 /// Returns true if \p V is an FP constant with a value of positive zero.
 bool isNullFPConstant(SDValue V);
@@ -2950,6 +2970,34 @@ public:
 
   static bool classof(const SDNode *N) {
     return N->getOpcode() == ISD::MSCATTER;
+  }
+};
+
+class MaskedHistogramSDNode : public MemSDNode {
+public:
+  friend class SelectionDAG;
+
+  MaskedHistogramSDNode(unsigned Order, const DebugLoc &DL, SDVTList VTs,
+                        EVT MemVT, MachineMemOperand *MMO,
+                        ISD::MemIndexType IndexType)
+      : MemSDNode(ISD::EXPERIMENTAL_VECTOR_HISTOGRAM, Order, DL, VTs, MemVT,
+                  MMO) {
+    LSBaseSDNodeBits.AddressingMode = IndexType;
+  }
+
+  ISD::MemIndexType getIndexType() const {
+    return static_cast<ISD::MemIndexType>(LSBaseSDNodeBits.AddressingMode);
+  }
+
+  const SDValue &getBasePtr() const { return getOperand(3); }
+  const SDValue &getIndex() const { return getOperand(4); }
+  const SDValue &getMask() const { return getOperand(2); }
+  const SDValue &getScale() const { return getOperand(5); }
+  const SDValue &getInc() const { return getOperand(1); }
+  const SDValue &getIntID() const { return getOperand(6); }
+
+  static bool classof(const SDNode *N) {
+    return N->getOpcode() == ISD::EXPERIMENTAL_VECTOR_HISTOGRAM;
   }
 };
 

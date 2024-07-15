@@ -41,7 +41,7 @@ TEST_F(LlvmLibcFEnvTest, GetEnvAndSetEnv) {
   }
 }
 
-TEST(LlvmLibcFenvTest, Set_FE_DFL_ENV) {
+TEST_F(LlvmLibcFEnvTest, Set_FE_DFL_ENV) {
   // We will disable all exceptions to prevent invocation of the exception
   // handler.
   LIBC_NAMESPACE::fputil::disable_except(FE_ALL_EXCEPT);

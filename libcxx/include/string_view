@@ -293,10 +293,10 @@ public:
   using difference_type                         = ptrdiff_t;
   static _LIBCPP_CONSTEXPR const size_type npos = -1; // size_type(-1);
 
-  static_assert((!is_array<value_type>::value), "Character type of basic_string_view must not be an array");
-  static_assert((is_standard_layout<value_type>::value), "Character type of basic_string_view must be standard-layout");
-  static_assert((is_trivial<value_type>::value), "Character type of basic_string_view must be trivial");
-  static_assert((is_same<_CharT, typename traits_type::char_type>::value),
+  static_assert(!is_array<value_type>::value, "Character type of basic_string_view must not be an array");
+  static_assert(is_standard_layout<value_type>::value, "Character type of basic_string_view must be standard-layout");
+  static_assert(is_trivial<value_type>::value, "Character type of basic_string_view must be trivial");
+  static_assert(is_same<_CharT, typename traits_type::char_type>::value,
                 "traits_type::char_type must be the same type as CharT");
 
   // [string.view.cons], construct/copy
@@ -394,9 +394,7 @@ public:
     return numeric_limits<size_type>::max() / sizeof(value_type);
   }
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool empty() const _NOEXCEPT {
-    return __size_ == 0;
-  }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool empty() const _NOEXCEPT { return __size_ == 0; }
 
   // [string.view.access], element access
   _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_reference operator[](size_type __pos) const _NOEXCEPT {
@@ -904,32 +902,31 @@ struct hash<basic_string_view<wchar_t, char_traits<wchar_t> > > : __string_view_
 #if _LIBCPP_STD_VER >= 14
 inline namespace literals {
 inline namespace string_view_literals {
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR basic_string_view<char>
-operator""sv(const char* __str, size_t __len) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<char> operator""sv(const char* __str, size_t __len) noexcept {
   return basic_string_view<char>(__str, __len);
 }
 
 #  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR basic_string_view<wchar_t>
-operator""sv(const wchar_t* __str, size_t __len) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<wchar_t>
+operator""sv(const wchar_t* __str, size_t __len) noexcept {
   return basic_string_view<wchar_t>(__str, __len);
 }
 #  endif
 
 #  ifndef _LIBCPP_HAS_NO_CHAR8_T
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR basic_string_view<char8_t>
-operator""sv(const char8_t* __str, size_t __len) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<char8_t>
+operator""sv(const char8_t* __str, size_t __len) noexcept {
   return basic_string_view<char8_t>(__str, __len);
 }
 #  endif
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR basic_string_view<char16_t>
-operator""sv(const char16_t* __str, size_t __len) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<char16_t>
+operator""sv(const char16_t* __str, size_t __len) noexcept {
   return basic_string_view<char16_t>(__str, __len);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR basic_string_view<char32_t>
-operator""sv(const char32_t* __str, size_t __len) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI constexpr basic_string_view<char32_t>
+operator""sv(const char32_t* __str, size_t __len) noexcept {
   return basic_string_view<char32_t>(__str, __len);
 }
 } // namespace string_view_literals

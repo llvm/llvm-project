@@ -159,6 +159,28 @@ define void @test_sin(float %float, double %double, fp128 %fp128) {
 
 }
 
+declare float @llvm.tan.f32(float)
+declare double @llvm.tan.f64(double)
+declare fp128 @llvm.tan.f128(fp128)
+
+define void @test_tan(float %float, double %double, fp128 %fp128) {
+; CHECK-LABEL: test_tan:
+
+   %tanfloat = call float @llvm.tan.f32(float %float)
+   store float %tanfloat, ptr @varfloat
+; CHECK: bl tanf
+
+   %tandouble = call double @llvm.tan.f64(double %double)
+   store double %tandouble, ptr @vardouble
+; CHECK: bl tan
+
+   %tanfp128 = call fp128 @llvm.tan.f128(fp128 %fp128)
+   store fp128 %tanfp128, ptr @varfp128
+; CHECK: bl tanl
+  ret void
+
+}
+
 declare float @llvm.pow.f32(float, float)
 declare double @llvm.pow.f64(double, double)
 declare fp128 @llvm.pow.f128(fp128, fp128)

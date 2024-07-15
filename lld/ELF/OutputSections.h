@@ -75,7 +75,7 @@ public:
 
   void recordSection(InputSectionBase *isec);
   void commitSection(InputSection *isec);
-  void finalizeInputSections();
+  void finalizeInputSections(LinkerScript *script = nullptr);
 
   // The following members are normally only used in linker scripts.
   MemoryRegion *memRegion = nullptr;

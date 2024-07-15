@@ -90,9 +90,6 @@ class LLVMConfig(object):
 
         # Running on Darwin OS
         if platform.system() == "Darwin":
-            # FIXME: lld uses the first, other projects use the second.
-            # We should standardize on the former.
-            features.add("system-linker-mach-o")
             features.add("system-darwin")
         elif platform.system() == "Windows":
             # For tests that require Windows to run.
@@ -131,6 +128,8 @@ class LLVMConfig(object):
             features.add("msan")
         if "undefined" in sanitizers:
             features.add("ubsan")
+        if "thread" in sanitizers:
+            features.add("tsan")
 
         have_zlib = getattr(config, "have_zlib", None)
         if have_zlib:
@@ -588,7 +587,10 @@ class LLVMConfig(object):
             if getattr(self.config, pp, None)
         ]
 
-        self.with_environment("LD_LIBRARY_PATH", lib_paths, append_path=True)
+        if platform.system() == "AIX":
+            self.with_environment("LIBPATH", lib_paths, append_path=True)
+        else:
+            self.with_environment("LD_LIBRARY_PATH", lib_paths, append_path=True)
 
         shl = getattr(self.config, "llvm_shlib_dir", None)
         pext = getattr(self.config, "llvm_plugin_ext", None)

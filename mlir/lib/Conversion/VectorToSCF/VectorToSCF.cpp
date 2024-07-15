@@ -261,7 +261,7 @@ static void maybeApplyPassLabel(OpBuilder &b, OpTy newXferOp,
 template <typename OpTy>
 static bool isTensorOp(OpTy xferOp) {
   if (isa<RankedTensorType>(xferOp.getShapedType())) {
-    if (xferOp.getOperationName().equals(TransferWriteOp::getOperationName())) {
+    if (xferOp.getOperationName() == TransferWriteOp::getOperationName()) {
       // TransferWriteOps on tensors have a result.
       assert(xferOp->getNumResults() > 0);
     }

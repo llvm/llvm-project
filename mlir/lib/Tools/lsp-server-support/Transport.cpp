@@ -41,7 +41,7 @@ public:
   void operator()(llvm::Expected<llvm::json::Value> reply);
 
 private:
-  StringRef method;
+  std::string method;
   std::atomic<bool> replied = {false};
   llvm::json::Value id;
   JSONTransport *transport;

@@ -302,6 +302,7 @@ protected:
 public:
   ObjectFile() = delete;
   ObjectFile(const ObjectFile &other) = delete;
+  ObjectFile &operator=(const ObjectFile &other) = delete;
 
   uint64_t getCommonSymbolSize(DataRefImpl Symb) const {
     Expected<uint32_t> SymbolFlagsOrErr = getSymbolFlags(Symb);

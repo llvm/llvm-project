@@ -317,7 +317,7 @@ public:
   NameMetaMatcher(StringRef N) : Name(N) {}
   bool matchEntity(const Metadata &M, MatcherContext &C) override {
     if (auto *MDS = dyn_cast<MDString>(&M))
-      return MDS->getString().equals(Name);
+      return MDS->getString() == Name;
     return false;
   }
 };

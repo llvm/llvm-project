@@ -29,27 +29,7 @@ class CrashLogScriptedProcess(ScriptedProcess):
         if hasattr(self.crashlog, "asb"):
             self.extended_thread_info = self.crashlog.asb
 
-        if self.load_all_images:
-            for image in self.crashlog.images:
-                image.resolve = True
-        else:
-            for thread in self.crashlog.threads:
-                if thread.did_crash():
-                    for ident in thread.idents:
-                        for image in self.crashlog.find_images_with_identifier(ident):
-                            image.resolve = True
-
-        with tempfile.TemporaryDirectory() as obj_dir:
-            for image in self.crashlog.images:
-                if image not in self.loaded_images:
-                    if image.uuid == uuid.UUID(int=0):
-                        continue
-                    err = image.add_module(self.target, obj_dir)
-                    if err:
-                        # Append to SBCommandReturnObject
-                        print(err)
-                    else:
-                        self.loaded_images.append(image)
+        crashlog.load_images(self.options, self.loaded_images)
 
         for thread in self.crashlog.threads:
             if (
@@ -70,6 +50,11 @@ class CrashLogScriptedProcess(ScriptedProcess):
                 self.app_specific_thread, self.addr_mask, self.target
             )
 
+    class CrashLogOptions:
+        load_all_images = False
+        crashed_only = True
+        no_parallel_image_loading = False
+
     def __init__(self, exe_ctx: lldb.SBExecutionContext, args: lldb.SBStructuredData):
         super().__init__(exe_ctx, args)
 
@@ -88,13 +73,24 @@ class CrashLogScriptedProcess(ScriptedProcess):
             # Return error
             return
 
+        self.options = self.CrashLogOptions()
+
         load_all_images = args.GetValueForKey("load_all_images")
         if load_all_images and load_all_images.IsValid():
             if load_all_images.GetType() == lldb.eStructuredDataTypeBoolean:
-                self.load_all_images = load_all_images.GetBooleanValue()
+                self.options.load_all_images = load_all_images.GetBooleanValue()
 
-        if not self.load_all_images:
-            self.load_all_images = False
+        crashed_only = args.GetValueForKey("crashed_only")
+        if crashed_only and crashed_only.IsValid():
+            if crashed_only.GetType() == lldb.eStructuredDataTypeBoolean:
+                self.options.crashed_only = crashed_only.GetBooleanValue()
+
+        no_parallel_image_loading = args.GetValueForKey("no_parallel_image_loading")
+        if no_parallel_image_loading and no_parallel_image_loading.IsValid():
+            if no_parallel_image_loading.GetType() == lldb.eStructuredDataTypeBoolean:
+                self.options.no_parallel_image_loading = (
+                    no_parallel_image_loading.GetBooleanValue()
+                )
 
         self.pid = super().get_process_id()
         self.crashed_thread_idx = 0
@@ -159,7 +155,7 @@ class CrashLogScriptedThread(ScriptedThread):
         return frames
 
     def create_stackframes(self):
-        if not (self.originating_process.load_all_images or self.has_crashed):
+        if not (self.originating_process.options.load_all_images or self.has_crashed):
             return None
 
         if not self.backing_thread or not len(self.backing_thread.frames):
@@ -177,10 +173,7 @@ class CrashLogScriptedThread(ScriptedThread):
         self.backing_thread = crashlog_thread
         self.idx = self.backing_thread.index
         self.tid = self.backing_thread.id
-        if self.backing_thread.app_specific_backtrace:
-            self.name = "Application Specific Backtrace"
-        else:
-            self.name = self.backing_thread.name
+        self.name = self.backing_thread.name
         self.queue = self.backing_thread.queue
         self.has_crashed = self.originating_process.crashed_thread_idx == self.idx
         self.create_stackframes()

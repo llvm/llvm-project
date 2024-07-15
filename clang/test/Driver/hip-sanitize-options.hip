@@ -1,5 +1,3 @@
-// REQUIRES: x86-registered-target, amdgpu-registered-target
-
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ \
 // RUN:   -fsanitize=address \
 // RUN:   -nogpuinc --rocm-path=%S/Inputs/rocm \

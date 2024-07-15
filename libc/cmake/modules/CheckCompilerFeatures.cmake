@@ -2,7 +2,7 @@
 # Compiler features definition and flags
 # ------------------------------------------------------------------------------
 
-set(ALL_COMPILER_FEATURES "float128" "fixed_point")
+set(ALL_COMPILER_FEATURES "float16" "float128" "fixed_point")
 
 # Making sure ALL_COMPILER_FEATURES is sorted.
 list(SORT ALL_COMPILER_FEATURES)
@@ -54,7 +54,9 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
   )
   if(has_feature)
     list(APPEND AVAILABLE_COMPILER_FEATURES ${feature})
-    if(${feature} STREQUAL "float128")
+    if(${feature} STREQUAL "float16")
+      set(LIBC_TYPES_HAS_FLOAT16 TRUE)
+    elseif(${feature} STREQUAL "float128")
       set(LIBC_TYPES_HAS_FLOAT128 TRUE)
     elseif(${feature} STREQUAL "fixed_point")
       set(LIBC_COMPILER_HAS_FIXED_POINT TRUE)
@@ -71,3 +73,6 @@ check_cxx_compiler_flag("-ftrivial-auto-var-init=pattern" LIBC_CC_SUPPORTS_PATTE
 
 # clang-6+, gcc-13+
 check_cxx_compiler_flag("-nostdlib++" LIBC_CC_SUPPORTS_NOSTDLIBPP)
+
+# clang-3.0+
+check_cxx_compiler_flag("-nostdlibinc" LIBC_CC_SUPPORTS_NOSTDLIBINC)

@@ -683,7 +683,7 @@ void fir::BoxProcType::print(mlir::AsmPrinter &printer) const {
   printer << "<" << getEleTy() << '>';
 }
 
-mlir::LogicalResult
+llvm::LogicalResult
 BoxProcType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                     mlir::Type eleTy) {
   if (mlir::isa<mlir::FunctionType>(eleTy))
@@ -704,7 +704,7 @@ static bool cannotBePointerOrHeapElementType(mlir::Type eleTy) {
 // BoxType
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult
+llvm::LogicalResult
 fir::BoxType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                      mlir::Type eleTy) {
   if (mlir::isa<fir::BaseBoxType>(eleTy))
@@ -773,7 +773,7 @@ void fir::CharacterType::print(mlir::AsmPrinter &printer) const {
 // ClassType
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult
+llvm::LogicalResult
 fir::ClassType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                        mlir::Type eleTy) {
   if (mlir::isa<fir::RecordType, fir::SequenceType, fir::HeapType,
@@ -820,7 +820,7 @@ void fir::HeapType::print(mlir::AsmPrinter &printer) const {
   printer << "<" << getEleTy() << '>';
 }
 
-mlir::LogicalResult
+llvm::LogicalResult
 fir::HeapType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                       mlir::Type eleTy) {
   if (cannotBePointerOrHeapElementType(eleTy))
@@ -868,7 +868,7 @@ void fir::PointerType::print(mlir::AsmPrinter &printer) const {
   printer << "<" << getEleTy() << '>';
 }
 
-mlir::LogicalResult fir::PointerType::verify(
+llvm::LogicalResult fir::PointerType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
     mlir::Type eleTy) {
   if (cannotBePointerOrHeapElementType(eleTy))
@@ -889,7 +889,7 @@ void fir::RealType::print(mlir::AsmPrinter &printer) const {
   printer << "<" << getFKind() << '>';
 }
 
-mlir::LogicalResult
+llvm::LogicalResult
 fir::RealType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                       KindTy fKind) {
   // TODO
@@ -1012,7 +1012,7 @@ detail::RecordTypeStorage const *fir::RecordType::uniqueKey() const {
   return getImpl();
 }
 
-mlir::LogicalResult fir::RecordType::verify(
+llvm::LogicalResult fir::RecordType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
     llvm::StringRef name) {
   if (name.size() == 0)
@@ -1047,7 +1047,7 @@ void fir::ReferenceType::print(mlir::AsmPrinter &printer) const {
   printer << "<" << getEleTy() << '>';
 }
 
-mlir::LogicalResult fir::ReferenceType::verify(
+llvm::LogicalResult fir::ReferenceType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
     mlir::Type eleTy) {
   if (mlir::isa<ShapeType, ShapeShiftType, SliceType, FieldType, LenType,
@@ -1121,7 +1121,7 @@ unsigned fir::SequenceType::getConstantRows() const {
   return count;
 }
 
-mlir::LogicalResult fir::SequenceType::verify(
+llvm::LogicalResult fir::SequenceType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
     llvm::ArrayRef<int64_t> shape, mlir::Type eleTy,
     mlir::AffineMapAttr layoutMap) {
@@ -1196,7 +1196,7 @@ void fir::TypeDescType::print(mlir::AsmPrinter &printer) const {
   printer << "<" << getOfTy() << '>';
 }
 
-mlir::LogicalResult fir::TypeDescType::verify(
+llvm::LogicalResult fir::TypeDescType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
     mlir::Type eleTy) {
   if (mlir::isa<BoxType, BoxCharType, BoxProcType, ShapeType, ShapeShiftType,
@@ -1225,7 +1225,7 @@ void fir::VectorType::print(mlir::AsmPrinter &printer) const {
   printer << "<" << getLen() << ':' << getEleTy() << '>';
 }
 
-mlir::LogicalResult fir::VectorType::verify(
+llvm::LogicalResult fir::VectorType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError, uint64_t len,
     mlir::Type eleTy) {
   if (!(fir::isa_real(eleTy) || fir::isa_integer(eleTy)))
@@ -1322,6 +1322,37 @@ fir::BaseBoxType::getBoxTypeWithNewShape(mlir::Type shapeMold) const {
   if (seqTy)
     newShape = seqTy.getShape();
   return mlir::cast<fir::BaseBoxType>(changeTypeShape(*this, newShape));
+}
+
+fir::BaseBoxType fir::BaseBoxType::getBoxTypeWithNewShape(int rank) const {
+  std::optional<fir::SequenceType::ShapeRef> newShape;
+  fir::SequenceType::Shape shapeVector;
+  if (rank > 0) {
+    shapeVector =
+        fir::SequenceType::Shape(rank, fir::SequenceType::getUnknownExtent());
+    newShape = shapeVector;
+  }
+  return mlir::cast<fir::BaseBoxType>(changeTypeShape(*this, newShape));
+}
+
+fir::BaseBoxType fir::BaseBoxType::getBoxTypeWithNewAttr(
+    fir::BaseBoxType::Attribute attr) const {
+  mlir::Type baseType = fir::unwrapRefType(getEleTy());
+  switch (attr) {
+  case fir::BaseBoxType::Attribute::None:
+    break;
+  case fir::BaseBoxType::Attribute::Allocatable:
+    baseType = fir::HeapType::get(baseType);
+    break;
+  case fir::BaseBoxType::Attribute::Pointer:
+    baseType = fir::PointerType::get(baseType);
+    break;
+  }
+  return llvm::TypeSwitch<fir::BaseBoxType, fir::BaseBoxType>(*this)
+      .Case<fir::BoxType>(
+          [baseType](auto) { return fir::BoxType::get(baseType); })
+      .Case<fir::ClassType>(
+          [baseType](auto) { return fir::ClassType::get(baseType); });
 }
 
 bool fir::BaseBoxType::isAssumedRank() const {

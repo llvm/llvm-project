@@ -21,6 +21,8 @@
 #include "llvm/ADT/DenseSet.h"
 
 namespace clang {
+class Decl;
+class ParsedAttr;
 
 class SemaSYCL : public SemaBase {
 public:
@@ -58,6 +60,8 @@ public:
                                        SourceLocation LParen,
                                        SourceLocation RParen,
                                        ParsedType ParsedTy);
+
+  void handleKernelAttr(Decl *D, const ParsedAttr &AL);
 };
 
 } // namespace clang

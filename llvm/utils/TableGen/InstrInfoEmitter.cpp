@@ -776,9 +776,7 @@ void InstrInfoEmitter::emitFeatureVerifier(raw_ostream &OS,
     }
     return false;
   });
-  FeatureBitsets.erase(
-      std::unique(FeatureBitsets.begin(), FeatureBitsets.end()),
-      FeatureBitsets.end());
+  FeatureBitsets.erase(llvm::unique(FeatureBitsets), FeatureBitsets.end());
   OS << "inline FeatureBitset computeRequiredFeatures(unsigned Opcode) {\n"
      << "  enum : " << getMinimalTypeForRange(FeatureBitsets.size()) << " {\n"
      << "    CEFBS_None,\n";

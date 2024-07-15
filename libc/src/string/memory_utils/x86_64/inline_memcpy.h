@@ -26,7 +26,7 @@
 #error LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE is deprecated use LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE=0 instead.
 #endif // LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace x86 {
 
@@ -107,7 +107,13 @@ inline_memcpy_x86_sse2_ge64_sw_prefetching(Ptr __restrict dst,
       offset += K_THREE_CACHELINES;
     }
   }
-  return builtin::Memcpy<32>::loop_and_tail_offset(dst, src, count, offset);
+  // We don't use 'loop_and_tail_offset' because it assumes at least one
+  // iteration of the loop.
+  while (offset + 32 <= count) {
+    builtin::Memcpy<32>::block_offset(dst, src, offset);
+    offset += 32;
+  }
+  return builtin::Memcpy<32>::tail(dst, src, count);
 }
 
 [[maybe_unused]] LIBC_INLINE void
@@ -139,7 +145,13 @@ inline_memcpy_x86_avx_ge64_sw_prefetching(Ptr __restrict dst,
     builtin::Memcpy<K_THREE_CACHELINES>::block_offset(dst, src, offset);
     offset += K_THREE_CACHELINES;
   }
-  return builtin::Memcpy<64>::loop_and_tail_offset(dst, src, count, offset);
+  // We don't use 'loop_and_tail_offset' because it assumes at least one
+  // iteration of the loop.
+  while (offset + 64 <= count) {
+    builtin::Memcpy<64>::block_offset(dst, src, offset);
+    offset += 64;
+  }
+  return builtin::Memcpy<64>::tail(dst, src, count);
 }
 
 [[maybe_unused]] LIBC_INLINE void
@@ -210,6 +222,6 @@ inline_memcpy_x86_maybe_interpose_repmovsb(Ptr __restrict dst,
   }
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMCPY_H

@@ -178,6 +178,12 @@
 #ifndef HWCAP2_SVE_EBF16
 #define HWCAP2_SVE_EBF16 (1ULL << 33)
 #endif
+#ifndef HWCAP2_SME2
+#define HWCAP2_SME2 (1UL << 37)
+#endif
 #ifndef HWCAP2_MOPS
 #define HWCAP2_MOPS (1ULL << 43)
+#endif
+#ifndef HWCAP2_LRCPC3
+#define HWCAP2_LRCPC3 (1UL << 46)
 #endif

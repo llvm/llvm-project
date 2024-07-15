@@ -68,7 +68,7 @@ bool mlir::emitc::isSupportedEmitCType(Type type) {
     return !llvm::isa<emitc::ArrayType>(elemType) &&
            isSupportedEmitCType(elemType);
   }
-  if (type.isIndex())
+  if (type.isIndex() || emitc::isPointerWideType(type))
     return true;
   if (llvm::isa<IntegerType>(type))
     return isSupportedIntegerType(type);
@@ -110,7 +110,7 @@ bool mlir::emitc::isSupportedIntegerType(Type type) {
 
 bool mlir::emitc::isIntegerIndexOrOpaqueType(Type type) {
   return llvm::isa<IndexType, emitc::OpaqueType>(type) ||
-         isSupportedIntegerType(type);
+         isSupportedIntegerType(type) || isPointerWideType(type);
 }
 
 bool mlir::emitc::isSupportedFloatType(Type type) {
@@ -124,6 +124,11 @@ bool mlir::emitc::isSupportedFloatType(Type type) {
     }
   }
   return false;
+}
+
+bool mlir::emitc::isPointerWideType(Type type) {
+  return isa<emitc::SignedSizeTType, emitc::SizeTType, emitc::PtrDiffTType>(
+      type);
 }
 
 /// Check that the type of the initial value is compatible with the operations
@@ -141,6 +146,9 @@ static LogicalResult verifyInitializationAttribute(Operation *op,
 
   Type resultType = op->getResult(0).getType();
   Type attrType = cast<TypedAttr>(value).getType();
+
+  if (isPointerWideType(resultType) && attrType.isIndex())
+    return success();
 
   if (resultType != attrType)
     return op->emitOpError()
@@ -205,9 +213,11 @@ LogicalResult emitc::AssignOp::verify() {
   Value variable = getVar();
   Operation *variableDef = variable.getDefiningOp();
   if (!variableDef ||
-      !llvm::isa<emitc::VariableOp, emitc::SubscriptOp>(variableDef))
+      !llvm::isa<emitc::GetGlobalOp, emitc::MemberOp, emitc::MemberOfPtrOp,
+                 emitc::SubscriptOp, emitc::VariableOp>(variableDef))
     return emitOpError() << "requires first operand (" << variable
-                         << ") to be a Variable or subscript";
+                         << ") to be a get_global, member, member of pointer, "
+                            "subscript or variable";
 
   Value value = getValue();
   if (variable.getType() != value.getType())
@@ -226,14 +236,15 @@ LogicalResult emitc::AssignOp::verify() {
 bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   Type input = inputs.front(), output = outputs.front();
 
-  return ((llvm::isa<IntegerType, FloatType, IndexType, emitc::OpaqueType,
-                     emitc::PointerType>(input)) &&
-          (llvm::isa<IntegerType, FloatType, IndexType, emitc::OpaqueType,
-                     emitc::PointerType>(output)));
+  return (
+      (emitc::isIntegerIndexOrOpaqueType(input) ||
+       emitc::isSupportedFloatType(input) || isa<emitc::PointerType>(input)) &&
+      (emitc::isIntegerIndexOrOpaqueType(output) ||
+       emitc::isSupportedFloatType(output) || isa<emitc::PointerType>(output)));
 }
 
 //===----------------------------------------------------------------------===//
-// CallOp
+// CallOpaqueOp
 //===----------------------------------------------------------------------===//
 
 LogicalResult emitc::CallOpaqueOp::verify() {
