@@ -3127,12 +3127,10 @@ class AMDGPUMfmaIntrinsic<LLVMType DestTy, LLVMType SrcABTy> :
 // blgp.
 //
 // These should be <8 x i32> for f8 formats, <6 x i32> for f6 formats,
-// and <4 x i32> for f4 formats. If the format control bits imply a
-// smaller type than used, the high elements will be truncated.
-//
-// If the format control bits imply a larger type than used, the high
-// elements are padded with undef.
-
+// and <4 x i32> for f4 formats. It is invalid to use a format that
+// requires more registers than the corresponding vector type (e.g. it
+// is illegal to use <6 x i32> in operand 0 if cbsz specifies an f8
+// format that requires 8 registers).
 class AMDGPUMfmaScaleIntrinsic<LLVMType DestTy> :
   DefaultAttrsIntrinsic<[DestTy],
             [llvm_anyvector_ty, llvm_anyvector_ty, DestTy,
