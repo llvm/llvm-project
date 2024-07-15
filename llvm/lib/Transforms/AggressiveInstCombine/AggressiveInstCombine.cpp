@@ -1125,7 +1125,7 @@ static bool foldStrChr(CallInst *Call, LibFunc Func, DomTreeUpdater *DTU,
   if (Func == LibFunc_memchr) {
     if (auto *ConstInt = dyn_cast<ConstantInt>(Call->getArgOperand(2))) {
       uint64_t Val = ConstInt->getZExtValue();
-      /// Ignore the case that n is larger than the size of string.
+      // Ignore the case that n is larger than the size of string.
       if (Val > N)
         return false;
       N = Val;
@@ -1150,8 +1150,8 @@ static bool foldStrChr(CallInst *Call, LibFunc Func, DomTreeUpdater *DTU,
 
   SmallVector<DominatorTree::UpdateType, 8> Updates;
 
-  BasicBlock *BBSuccess =
-      BasicBlock::Create(Call->getContext(), "", BB->getParent(), BBSuccess);
+  BasicBlock *BBSuccess = BasicBlock::Create(
+      Call->getContext(), "strchr.success", BB->getParent(), BBNext);
   IRB.SetInsertPoint(BBSuccess);
   PHINode *IndexPHI = IRB.CreatePHI(IndexTy, N);
   Value *FirstOccursLocation = IRB.CreateInBoundsPtrAdd(Base, IndexPHI);
@@ -1166,8 +1166,8 @@ static bool foldStrChr(CallInst *Call, LibFunc Func, DomTreeUpdater *DTU,
     if (!Cases.insert(CaseVal).second)
       continue;
 
-    BasicBlock *BBCase =
-        BasicBlock::Create(Call->getContext(), "", BB->getParent(), BBNext);
+    BasicBlock *BBCase = BasicBlock::Create(Call->getContext(), "strchr.case",
+                                            BB->getParent(), BBNext);
     SI->addCase(CaseVal, BBCase);
     IRB.SetInsertPoint(BBCase);
     IndexPHI->addIncoming(ConstantInt::get(IndexTy, I), BBCase);
