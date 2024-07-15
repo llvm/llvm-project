@@ -274,7 +274,7 @@ Example usage for a project using a compile commands database:
     }
   }
 
-  llvm::timeTraceProfilerBegin("mapping decls", "clang-doc");
+  llvm::timeTraceProfilerBegin("Mapping declaration", "total runtime");
   // Mapping phase
   llvm::outs() << "Mapping decls...\n";
   auto Err =
@@ -294,7 +294,7 @@ Example usage for a project using a compile commands database:
   // Collect values into output by key.
   // In ToolResults, the Key is the hashed USR and the value is the
   // bitcode-encoded representation of the Info object.
-  llvm::timeTraceProfilerBegin("collecting infos", "clang-doc");
+  llvm::timeTraceProfilerBegin("Collect Info", "total runtime");
   llvm::outs() << "Collecting infos...\n";
   llvm::StringMap<std::vector<StringRef>> USRToBitcode;
   Executor->get()->getToolResults()->forEachResult(
@@ -310,7 +310,7 @@ Example usage for a project using a compile commands database:
   llvm::StringMap<std::unique_ptr<doc::Info>> USRToInfo;
 
   // First reducing phase (reduce all decls into one info per decl).
-  llvm::timeTraceProfilerBegin("reducing infos", "clang-doc");
+  llvm::timeTraceProfilerBegin("Reducing infos", "total runtime");
   llvm::outs() << "Reducing " << USRToBitcode.size() << " infos...\n";
   std::atomic<bool> Error;
   Error = false;
@@ -322,7 +322,7 @@ Example usage for a project using a compile commands database:
       if (FTimeTrace)
         llvm::timeTraceProfilerInitialize(200, "clang-doc");
 
-      llvm::timeTraceProfilerBegin("decoding bitcode", "decoding");
+      llvm::timeTraceProfilerBegin("Reducing infos", "decoding bitcode");
       std::vector<std::unique_ptr<doc::Info>> Infos;
       for (auto &Bitcode : Group.getValue()) {
         llvm::BitstreamCursor Stream(Bitcode);
@@ -338,7 +338,7 @@ Example usage for a project using a compile commands database:
       }
       llvm::timeTraceProfilerEnd();
 
-      llvm::timeTraceProfilerBegin("merging infos", "clang-doc");
+      llvm::timeTraceProfilerBegin("Reducing infos", "merging bitcode");
       auto Reduced = doc::mergeInfos(Infos);
       if (!Reduced) {
         llvm::errs() << llvm::toString(Reduced.takeError());
@@ -369,7 +369,7 @@ Example usage for a project using a compile commands database:
   if (Error)
     return 1;
 
-  llvm::timeTraceProfilerBegin("generating docs", "clang-doc");
+  llvm::timeTraceProfilerBegin("Writing output", "total runtime");
   // Ensure the root output directory exists.
   if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory);
       Err != std::error_code()) {

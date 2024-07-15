@@ -35,7 +35,8 @@ template <typename T> bool MapASTVisitor::mapDecl(const T *D) {
   if (D->getParentFunctionOrMethod())
     return true;
 
-  llvm::timeTraceProfilerBegin("emitInfo", "emit info from ast node");
+  llvm::timeTraceProfilerBegin("Mapping declaration",
+                               "emit info from astnode");
   llvm::SmallString<128> USR;
   // If there is an error generating a USR for the decl, skip this decl.
   if (index::generateUSRForDecl(D, USR))
@@ -48,7 +49,8 @@ template <typename T> bool MapASTVisitor::mapDecl(const T *D) {
                                IsFileInRootDir, CDCtx.PublicOnly);
   llvm::timeTraceProfilerEnd();
 
-  llvm::timeTraceProfilerBegin("serialize", "serialize info");
+  llvm::timeTraceProfilerBegin("Mapping declaration",
+                               "serialized info into bitcode");
   // A null in place of I indicates that the serializer is skipping this decl
   // for some reason (e.g. we're only reporting public decls).
   if (I.first)
