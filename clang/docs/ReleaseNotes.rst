@@ -40,6 +40,8 @@ code bases.
 - Setting the deprecated CMake variable ``GCC_INSTALL_PREFIX`` (which sets the
   default ``--gcc-toolchain=``) now leads to a fatal error.
 
+- The ``le32`` and ``le64`` targets have been removed.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
@@ -313,6 +315,7 @@ Resolutions to C++ Defect Reports
 
 - Clang now correctly implements lookup for the terminal name of a member-qualified nested-name-specifier.
   (`CWG1835: Dependent member lookup before < <https://cplusplus.github.io/CWG/issues/1835.html>`_).
+  The warning can be disabled via `-Wno-missing-dependent-template-keyword`.
 
 C Language Changes
 ------------------
@@ -714,9 +717,6 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses integer constant expressions that are folded to a constant value as an extension in more circumstances. Fixes #GH59863
 
-- Clang now diagnoses missing format attributes for non-template functions and
-  class/struct/union members. Fixes #GH60718
-
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -826,6 +826,9 @@ Bug Fixes in This Version
 - Fixed `static_cast` to array of unknown bound. Fixes (#GH62863).
 
 - Fixed Clang crashing when failing to perform some C++ Initialization Sequences. (#GH98102)
+
+- ``__is_trivially_equality_comparable`` no longer returns true for types which
+  have a constrained defaulted comparison operator (#GH89293).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1036,6 +1039,9 @@ Bug Fixes to C++ Support
 - Fixed a CTAD substitution bug involving type aliases that reference outer template parameters. (#GH94614).
 - Clang now correctly handles unexpanded packs in the template parameter list of a generic lambda expression
   (#GH48937)
+- Fix a crash when parsing an invalid type-requirement in a requires expression. (#GH51868)
+- Fix parsing of built-in type-traits such as ``__is_pointer`` in libstdc++ headers. (#GH95598)
+- Fixed failed assertion when resolving context of defaulted comparison method outside of struct. (#GH96043).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1146,6 +1152,10 @@ RISC-V Support
 - ``__attribute__((rvv_vector_bits(N)))`` is now supported for RVV vbool*_t types.
 - Profile names in ``-march`` option are now supported.
 - Passing empty structs/unions as arguments in C++ is now handled correctly. The behavior is similar to GCC's.
+- ``-m[no-]scalar-strict-align`` and ``-m[no-]vector-strict-align`` options have
+  been added to give separate control of whether scalar or vector misaligned
+  accesses may be created. ``-m[no-]strict-align`` applies to both scalar and
+  vector.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^

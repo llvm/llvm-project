@@ -1035,7 +1035,10 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_VECREDUCE_SEQ(SDNode *N) {
 SDValue DAGTypeLegalizer::ScalarizeVecOp_CMP(SDNode *N) {
   SDValue LHS = GetScalarizedVector(N->getOperand(0));
   SDValue RHS = GetScalarizedVector(N->getOperand(1));
-  return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0), LHS, RHS);
+
+  EVT ResVT = N->getValueType(0).getVectorElementType();
+  SDValue Cmp = DAG.getNode(N->getOpcode(), SDLoc(N), ResVT, LHS, RHS);
+  return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), N->getValueType(0), Cmp);
 }
 
 //===----------------------------------------------------------------------===//

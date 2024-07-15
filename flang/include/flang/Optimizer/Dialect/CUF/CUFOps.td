@@ -180,7 +180,7 @@ def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
     ```
       // launch simple kernel with no arguments. bytes and stream value are
       // optional in the chevron notation.
-      cuf.kernel_launch @kernel<<<%gx, %gy, %bx, %by, %bz>>>()
+      cuf.kernel_launch @kernel<<<%gx, %gy, %gz, %bx, %by, %bz>>>()
     ```
   }];
 

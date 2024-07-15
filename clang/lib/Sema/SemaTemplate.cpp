@@ -4250,10 +4250,10 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
 
     // C++ [temp.expl.spec]p16:
     //   In an explicit specialization declaration for a member of a class
-    //   template or a member template that ap- pears in namespace scope, the
+    //   template or a member template that appears in namespace scope, the
     //   member template and some of its enclosing class templates may remain
     //   unspecialized, except that the declaration shall not explicitly
-    //   specialize a class member template if its en- closing class templates
+    //   specialize a class member template if its enclosing class templates
     //   are not explicitly specialized as well.
     if (ParamIdx < ParamLists.size()) {
       if (ParamLists[ParamIdx]->size() == 0) {
@@ -11690,6 +11690,13 @@ Sema::ActOnTypenameType(Scope *S, SourceLocation TypenameLoc,
     // Construct a dependent template specialization type.
     assert(DTN && "dependent template has non-dependent name?");
     assert(DTN->getQualifier() == SS.getScopeRep());
+
+    if (!DTN->isIdentifier()) {
+      Diag(TemplateIILoc, diag::err_template_id_not_a_type) << Template;
+      NoteAllFoundTemplates(Template);
+      return true;
+    }
+
     QualType T = Context.getDependentTemplateSpecializationType(
         ElaboratedTypeKeyword::Typename, DTN->getQualifier(),
         DTN->getIdentifier(), TemplateArgs.arguments());
