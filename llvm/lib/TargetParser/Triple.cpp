@@ -44,8 +44,6 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   case hsail:          return "hsail";
   case kalimba:        return "kalimba";
   case lanai:          return "lanai";
-  case le32:           return "le32";
-  case le64:           return "le64";
   case loongarch32:    return "loongarch32";
   case loongarch64:    return "loongarch64";
   case m68k:           return "m68k";
@@ -198,9 +196,6 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
   // NVPTX intrinsics are namespaced under nvvm.
   case nvptx:       return "nvvm";
   case nvptx64:     return "nvvm";
-
-  case le32:        return "le32";
-  case le64:        return "le64";
 
   case amdil:
   case amdil64:     return "amdil";
@@ -432,8 +427,6 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
     .Case("xcore", xcore)
     .Case("nvptx", nvptx)
     .Case("nvptx64", nvptx64)
-    .Case("le32", le32)
-    .Case("le64", le64)
     .Case("amdil", amdil)
     .Case("amdil64", amdil64)
     .Case("hsail", hsail)
@@ -574,8 +567,6 @@ static Triple::ArchType parseArch(StringRef ArchName) {
           .Case("xcore", Triple::xcore)
           .Case("nvptx", Triple::nvptx)
           .Case("nvptx64", Triple::nvptx64)
-          .Case("le32", Triple::le32)
-          .Case("le64", Triple::le64)
           .Case("amdil", Triple::amdil)
           .Case("amdil64", Triple::amdil64)
           .Case("hsail", Triple::hsail)
@@ -905,8 +896,6 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::hsail:
   case Triple::kalimba:
   case Triple::lanai:
-  case Triple::le32:
-  case Triple::le64:
   case Triple::loongarch32:
   case Triple::loongarch64:
   case Triple::m68k:
@@ -1603,7 +1592,6 @@ unsigned Triple::getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   case llvm::Triple::hsail:
   case llvm::Triple::kalimba:
   case llvm::Triple::lanai:
-  case llvm::Triple::le32:
   case llvm::Triple::loongarch32:
   case llvm::Triple::m68k:
   case llvm::Triple::mips:
@@ -1636,7 +1624,6 @@ unsigned Triple::getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   case llvm::Triple::bpfeb:
   case llvm::Triple::bpfel:
   case llvm::Triple::hsail64:
-  case llvm::Triple::le64:
   case llvm::Triple::loongarch64:
   case llvm::Triple::mips64:
   case llvm::Triple::mips64el:
@@ -1695,7 +1682,6 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::hsail:
   case Triple::kalimba:
   case Triple::lanai:
-  case Triple::le32:
   case Triple::loongarch32:
   case Triple::m68k:
   case Triple::mips:
@@ -1726,7 +1712,6 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::aarch64_be:     T.setArch(Triple::armeb);   break;
   case Triple::amdil64:        T.setArch(Triple::amdil);   break;
   case Triple::hsail64:        T.setArch(Triple::hsail);   break;
-  case Triple::le64:           T.setArch(Triple::le32);    break;
   case Triple::loongarch64:    T.setArch(Triple::loongarch32); break;
   case Triple::mips64:
     T.setArch(Triple::mips, getSubArch());
@@ -1781,7 +1766,6 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::bpfeb:
   case Triple::bpfel:
   case Triple::hsail64:
-  case Triple::le64:
   case Triple::loongarch64:
   case Triple::mips64:
   case Triple::mips64el:
@@ -1805,7 +1789,6 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::arm:             T.setArch(Triple::aarch64);    break;
   case Triple::armeb:           T.setArch(Triple::aarch64_be); break;
   case Triple::hsail:           T.setArch(Triple::hsail64);    break;
-  case Triple::le32:            T.setArch(Triple::le64);       break;
   case Triple::loongarch32:     T.setArch(Triple::loongarch64);    break;
   case Triple::mips:
     T.setArch(Triple::mips64, getSubArch());
@@ -1848,8 +1831,6 @@ Triple Triple::getBigEndianArchVariant() const {
   case Triple::hsail64:
   case Triple::hsail:
   case Triple::kalimba:
-  case Triple::le32:
-  case Triple::le64:
   case Triple::loongarch32:
   case Triple::loongarch64:
   case Triple::msp430:
@@ -1953,8 +1934,6 @@ bool Triple::isLittleEndian() const {
   case Triple::hsail64:
   case Triple::hsail:
   case Triple::kalimba:
-  case Triple::le32:
-  case Triple::le64:
   case Triple::loongarch32:
   case Triple::loongarch64:
   case Triple::mips64el:

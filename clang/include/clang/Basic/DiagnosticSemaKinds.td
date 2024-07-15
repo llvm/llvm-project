@@ -1031,9 +1031,6 @@ def err_opencl_invalid_param : Error<
 def err_opencl_invalid_return : Error<
   "declaring function return value of type %0 is not allowed %select{; did you forget * ?|}1">;
 def warn_enum_value_overflow : Warning<"overflow in enumeration value">;
-def warn_missing_format_attribute : Warning<
-  "diagnostic behavior may be improved by adding the %0 format attribute to the declaration of %1">,
-  InGroup<DiagGroup<"missing-format-attribute">>, DefaultIgnore;
 def warn_pragma_options_align_reset_failed : Warning<
   "#pragma options align=reset failed: %0">,
   InGroup<IgnoredPragmas>;
