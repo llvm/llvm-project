@@ -36,6 +36,7 @@
 // function at the end of the file.
 
 #include "automemcpy/CodeGen.h"
+#include "src/__support/macros/config.h"
 #include <cassert>
 #include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/StringSet.h>
@@ -542,11 +543,11 @@ static void Serialize(raw_ostream &Stream,
   Stream << "using llvm::libc_benchmarks::MemmoveConfiguration;\n";
   Stream << "using llvm::libc_benchmarks::MemsetConfiguration;\n";
   Stream << "\n";
-  Stream << "namespace LIBC_NAMESPACE {\n";
+  Stream << "namespace LIBC_NAMESPACE_DECL {\n";
   Stream << "\n";
   codegen::functions::Serialize(Stream, Descriptors);
   Stream << "\n";
-  Stream << "} // namespace LIBC_NAMESPACE\n";
+  Stream << "} // namespace LIBC_NAMESPACE_DECL\n";
   Stream << "\n";
   Stream << "namespace llvm {\n";
   Stream << "namespace automemcpy {\n";
