@@ -2300,24 +2300,12 @@ static bool isTruncateOf(SelectionDAG &DAG, SDValue N, SDValue &Op,
     return true;
   }
 
-  if (N.getOpcode() != ISD::SETCC ||
-      N.getValueType().getScalarType() != MVT::i1 ||
-      cast<CondCodeSDNode>(N.getOperand(2))->get() != ISD::SETNE)
-    return false;
-
-  SDValue Op0 = N->getOperand(0);
-  SDValue Op1 = N->getOperand(1);
-  assert(Op0.getValueType() == Op1.getValueType());
-
-  if (isNullOrNullSplat(Op0))
-    Op = Op1;
-  else if (isNullOrNullSplat(Op1))
-    Op = Op0;
-  else
+  if (N.getValueType().getScalarType() != MVT::i1 ||
+      !sd_match(
+          N, m_c_SetCC(m_Value(Op), m_Zero(), m_SpecificCondCode(ISD::SETNE))))
     return false;
 
   Known = DAG.computeKnownBits(Op);
-
   return (Known.Zero | 1).isAllOnes();
 }
 
@@ -2544,16 +2532,12 @@ static SDValue foldAddSubBoolOfMaskedVal(SDNode *N, const SDLoc &DL,
     return SDValue();
 
   // Match the zext operand as a setcc of a boolean.
-  if (Z.getOperand(0).getOpcode() != ISD::SETCC ||
-      Z.getOperand(0).getValueType() != MVT::i1)
+  if (Z.getOperand(0).getValueType() != MVT::i1)
     return SDValue();
 
   // Match the compare as: setcc (X & 1), 0, eq.
-  SDValue SetCC = Z.getOperand(0);
-  ISD::CondCode CC = cast<CondCodeSDNode>(SetCC->getOperand(2))->get();
-  if (CC != ISD::SETEQ || !isNullConstant(SetCC.getOperand(1)) ||
-      SetCC.getOperand(0).getOpcode() != ISD::AND ||
-      !isOneConstant(SetCC.getOperand(0).getOperand(1)))
+  if (!sd_match(Z.getOperand(0), m_SetCC(m_And(m_Value(), m_One()), m_Zero(),
+                                         m_SpecificCondCode(ISD::SETEQ))))
     return SDValue();
 
   // We are adding/subtracting a constant and an inverted low bit. Turn that
@@ -2561,9 +2545,9 @@ static SDValue foldAddSubBoolOfMaskedVal(SDNode *N, const SDLoc &DL,
   // add (zext i1 (seteq (X & 1), 0)), C --> sub C+1, (zext (X & 1))
   // sub C, (zext i1 (seteq (X & 1), 0)) --> add C-1, (zext (X & 1))
   EVT VT = C.getValueType();
-  SDValue LowBit = DAG.getZExtOrTrunc(SetCC.getOperand(0), DL, VT);
-  SDValue C1 = IsAdd ? DAG.getConstant(CN->getAPIntValue() + 1, DL, VT) :
-                       DAG.getConstant(CN->getAPIntValue() - 1, DL, VT);
+  SDValue LowBit = DAG.getZExtOrTrunc(Z.getOperand(0).getOperand(0), DL, VT);
+  SDValue C1 = IsAdd ? DAG.getConstant(CN->getAPIntValue() + 1, DL, VT)
+                     : DAG.getConstant(CN->getAPIntValue() - 1, DL, VT);
   return DAG.getNode(IsAdd ? ISD::SUB : ISD::ADD, DL, VT, C1, LowBit);
 }
 
@@ -11554,13 +11538,12 @@ static SDValue foldVSelectToSignBitSplatMask(SDNode *N, SelectionDAG &DAG) {
   SDValue N1 = N->getOperand(1);
   SDValue N2 = N->getOperand(2);
   EVT VT = N->getValueType(0);
-  if (N0.getOpcode() != ISD::SETCC || !N0.hasOneUse())
-    return SDValue();
 
-  SDValue Cond0 = N0.getOperand(0);
-  SDValue Cond1 = N0.getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
-  if (VT != Cond0.getValueType())
+  SDValue Cond0, Cond1;
+  ISD::CondCode CC;
+  if (!sd_match(N0, m_OneUse(m_SetCC(m_Value(Cond0), m_Value(Cond1),
+                                     m_CondCode(CC)))) ||
+      VT != Cond0.getValueType())
     return SDValue();
 
   // Match a signbit check of Cond0 as "Cond0 s<0". Swap select operands if the
@@ -20544,8 +20527,8 @@ bool DAGCombiner::checkMergeStoreCandidatesForDependencies(
     //   * (Op 3) -> Represents the pre or post-indexing offset (or undef for
     //               non-indexed stores). Not constant on all targets (e.g. ARM)
     //               and so can participate in a cycle.
-    for (unsigned j = 0; j < N->getNumOperands(); ++j)
-      Worklist.push_back(N->getOperand(j).getNode());
+    for (const SDValue &Op : N->op_values())
+      Worklist.push_back(Op.getNode());
   }
   // Search through DAG. We can stop early if we find a store node.
   for (unsigned i = 0; i < NumStores; ++i)

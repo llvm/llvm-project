@@ -19,7 +19,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
@@ -636,6 +635,7 @@ private:
   friend class Block;
   friend class DeadBlock;
   friend class MemberPointer;
+  friend class InterpState;
   friend struct InitMap;
 
   Pointer(Block *Pointee, unsigned Base, uint64_t Offset);

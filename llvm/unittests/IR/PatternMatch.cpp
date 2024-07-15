@@ -2235,7 +2235,7 @@ typedef ::testing::Types<std::tuple<Value*, Instruction*>,
     MutableConstTestTypes;
 TYPED_TEST_SUITE(MutableConstTest, MutableConstTestTypes, );
 
-TYPED_TEST(MutableConstTest, ICmp) {
+TYPED_TEST(MutableConstTest, /* FIXME: UAR bug */ DISABLED_ICmp) {
   auto &IRB = PatternMatchTest::IRB;
 
   typedef std::tuple_element_t<0, TypeParam> ValueType;
@@ -2319,7 +2319,7 @@ TYPED_TEST(MutableConstTest, ICmp) {
                    .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
 }
 
-TYPED_TEST(MutableConstTest, FCmp) {
+TYPED_TEST(MutableConstTest, /* FIXME: UAR bug */ DISABLED_FCmp) {
   auto &IRB = PatternMatchTest::IRB;
 
   typedef std::tuple_element_t<0, TypeParam> ValueType;
