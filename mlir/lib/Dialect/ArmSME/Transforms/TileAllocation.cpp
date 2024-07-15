@@ -502,16 +502,11 @@ coalesceTileLiveRanges(DenseMap<Value, LiveRange> &initialLiveRanges) {
 }
 
 /// Choose a live range to spill (via some heuristics). This picks either a live
-/// range from `activeRanges`, `inactiveRanges`, or the new live range
-/// `newRange`. Note: All live ranges in `activeRanges` and `inactiveRanges` are
-/// assumed to overlap with `newRange`.
-LiveRange *chooseSpillUsingHeuristics(ArrayRef<LiveRange *> activeRanges,
-                                      ArrayRef<LiveRange *> inactiveRanges,
-                                      LiveRange *newRange) {
-  auto allOverlappingRanges =
-      llvm::concat<LiveRange>(llvm::make_pointee_range(activeRanges),
-                              llvm::make_pointee_range(inactiveRanges));
-
+/// range from `overlappingRanges`, or the new live range `newRange`.
+template <typename OverlappingRangesIterator>
+LiveRange *
+chooseSpillUsingHeuristics(OverlappingRangesIterator overlappingRanges,
+                           LiveRange *newRange) {
   // Heuristic: Spill trivially copyable operations (usually free).
   auto isTrivialSpill = [&](LiveRange &allocatedRange) {
     return isTileTypeGreaterOrEqual(allocatedRange.getTileType(),
@@ -522,8 +517,8 @@ LiveRange *chooseSpillUsingHeuristics(ArrayRef<LiveRange *> activeRanges,
   };
   if (isTrivialSpill(*newRange))
     return newRange;
-  auto trivialSpill = llvm::find_if(allOverlappingRanges, isTrivialSpill);
-  if (trivialSpill != allOverlappingRanges.end())
+  auto trivialSpill = llvm::find_if(overlappingRanges, isTrivialSpill);
+  if (trivialSpill != overlappingRanges.end())
     return &*trivialSpill;
 
   // Heuristic: Spill the range that ends last (with a compatible tile type).
@@ -531,9 +526,9 @@ LiveRange *chooseSpillUsingHeuristics(ArrayRef<LiveRange *> activeRanges,
     return !isTileTypeGreaterOrEqual(a.getTileType(), b.getTileType()) ||
            a.end() < b.end();
   };
-  LiveRange &latestEndingLiveRange = *std::max_element(
-      allOverlappingRanges.begin(), allOverlappingRanges.end(),
-      isSmallerTileTypeOrEndsEarlier);
+  LiveRange &latestEndingLiveRange =
+      *std::max_element(overlappingRanges.begin(), overlappingRanges.end(),
+                        isSmallerTileTypeOrEndsEarlier);
   if (!isSmallerTileTypeOrEndsEarlier(latestEndingLiveRange, *newRange))
     return &latestEndingLiveRange;
   return newRange;
@@ -604,8 +599,13 @@ void allocateTilesToLiveRanges(
     if (succeeded(tileId)) {
       nextRange->tileId = *tileId;
     } else {
-      LiveRange *rangeToSpill = chooseSpillUsingHeuristics(
-          activeRanges.getArrayRef(), overlappingInactiveRanges, nextRange);
+      // Create an iterator over all overlapping live ranges.
+      auto allOverlappingRanges = llvm::concat<LiveRange>(
+          llvm::make_pointee_range(activeRanges.getArrayRef()),
+          llvm::make_pointee_range(overlappingInactiveRanges));
+      // Choose an overlapping live range to spill.
+      LiveRange *rangeToSpill =
+          chooseSpillUsingHeuristics(allOverlappingRanges, nextRange);
       if (rangeToSpill != nextRange) {
         // Spill an (in)active live range (so release its tile ID first).
         tileAllocator.releaseTileId(rangeToSpill->getTileType(),
