@@ -451,8 +451,7 @@ SDValue LanaiTargetLowering::LowerCCCArguments(
     CCInfo.AnalyzeFormalArguments(Ins, CC_Lanai32);
   }
 
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-    CCValAssign &VA = ArgLocs[i];
+  for (const CCValAssign &VA : ArgLocs) {
     if (VA.isRegLoc()) {
       // Arguments passed in registers
       EVT RegVT = VA.getLocVT();
