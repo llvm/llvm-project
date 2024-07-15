@@ -3301,24 +3301,25 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   // The -ffinite-math-only is added to CmdArgs when !HonorINFs && !HonorNaNs.
   // Otherwise process the Xclang arguments to determine if -menable-no-infs and
   // -menable-no-nans are set by the user.
-  auto NaNsAndInfs = [&] {
+  bool shouldAddFiniteMathOnly = false;
+  if (!HonorINFs && !HonorNaNs) {
+    shouldAddFiniteMathOnly = true;
+  } else {
     bool InfValues = true;
     bool NanValues = true;
-    auto processArg = [&](const auto *Arg) {
-      if (StringRef(Arg->getValue()) == "-menable-no-nans")
+    for (const auto *Arg : Args.filtered(options::OPT_Xclang)) {
+      StringRef ArgValue = Arg->getValue();
+      if (ArgValue == "-menable-no-nans")
         NanValues = false;
-      if (StringRef(Arg->getValue()) == "-menable-no-infs")
+      else if (ArgValue == "-menable-no-infs")
         InfValues = false;
-    };
-
-    for (auto *Arg : Args.filtered(options::OPT_Xclang))
-      processArg(Arg);
-
-    return InfValues && NanValues;
-  };
-
-  if ((!HonorINFs && !HonorNaNs) || !NaNsAndInfs())
+    }
+    if (!NanValues && !InfValues)
+      shouldAddFiniteMathOnly = true;
+  }
+  if (shouldAddFiniteMathOnly) {
     CmdArgs.push_back("-ffinite-math-only");
+  }
   if (const Arg *A = Args.getLastArg(options::OPT_mfpmath_EQ)) {
     CmdArgs.push_back("-mfpmath");
     CmdArgs.push_back(A->getValue());
