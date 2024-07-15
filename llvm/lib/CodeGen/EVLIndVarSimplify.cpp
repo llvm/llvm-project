@@ -17,6 +17,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PatternMatch.h"
@@ -28,6 +29,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 #define DEBUG_TYPE "evl-iv-simplify"
 
@@ -134,8 +136,6 @@ bool EVLIndVarSimplifyImpl::run(Loop &L) {
   }
   Value *CanonicalIVInit = &Bounds->getInitialIVValue();
   Value *CanonicalIVFinal = &Bounds->getFinalIVValue();
-  const SCEV *CanonicalIVInitV = SE.getSCEV(CanonicalIVInit);
-  const SCEV *CanonicalIVFinalV = SE.getSCEV(CanonicalIVFinal);
 
   const SCEV *StepV = IVD.getStep();
   uint32_t VF = getVFFromIndVar(StepV, *L.getHeader()->getParent());
@@ -152,7 +152,7 @@ bool EVLIndVarSimplifyImpl::run(Loop &L) {
   BasicBlock *BB = IndVar->getParent();
 
   Value *EVLIndVar = nullptr;
-  Value *RemTC = nullptr, *TC = nullptr;
+  Value *RemTC = nullptr;
   auto IntrinsicMatch = m_Intrinsic<Intrinsic::experimental_get_vector_length>(
       m_Value(RemTC), m_SpecificInt(VF),
       /*Scalable=*/m_SpecificInt(1));
@@ -192,53 +192,42 @@ bool EVLIndVarSimplifyImpl::run(Loop &L) {
     LLVM_DEBUG(dbgs() << "Found candidate PN of EVL-based IndVar: " << PN
                       << "\n");
 
-    // Check 3: Pattern match to find the EVL-based index and total trip count
-    // (TC).
+    // Check 3: Pattern match to find the EVL-based index.
     if (match(RecValue,
               m_c_Add(m_ZExtOrSelf(IntrinsicMatch), m_Specific(&PN))) &&
-        match(RemTC, m_Sub(m_Value(TC), m_Specific(&PN)))) {
+        match(RemTC, m_Sub(m_Value(), m_Specific(&PN)))) {
       EVLIndVar = RecValue;
       break;
     }
   }
 
-  if (!EVLIndVar || !TC)
+  if (!EVLIndVar)
     return false;
 
-  // Make sure TC is related to the original trip count of the canonical IV.
-  // Specifically, if the canonical trip count is derived from TC.
-  const SCEV *TCV = SE.getSCEV(TC);
-  bool MatchTC = false;
-  if (const auto *ConstTCV = dyn_cast<SCEVConstant>(TCV)) {
-    // If TC is a constant and vscale is also a constant, then the canonical
-    // trip count will be constant. Canonical trip count * Step equals to the
-    // round up of TC.
-    if (const auto *ConstStep = dyn_cast<SCEVConstant>(StepV))
-      if (unsigned CanonicalTC = SE.getSmallConstantTripCount(&L)) {
-        APInt Step = ConstStep->getAPInt().abs().zextOrTrunc(64);
-        APInt CanonicalTripCount(64, CanonicalTC);
-        APInt TripCount = ConstTCV->getAPInt().zextOrTrunc(64);
-        MatchTC = (CanonicalTripCount * Step - TripCount).ult(Step);
-      }
-  }
-  // Otherwise, we simply check if the upper or lower bound expression of the
-  // canonical IV contains TC.
-  auto equalsTC = [&](const SCEV *S) -> bool { return S == TCV; };
-  if (!MatchTC && !llvm::SCEVExprContains(CanonicalIVFinalV, equalsTC) &&
-      !llvm::SCEVExprContains(CanonicalIVInitV, equalsTC))
+  const SCEV *BTC = SE.getBackedgeTakenCount(&L);
+  LLVM_DEBUG(dbgs() << "BTC: " << *BTC << "\n");
+  if (isa<SCEVCouldNotCompute>(BTC))
     return false;
 
-  LLVM_DEBUG(dbgs() << "Using " << *EVLIndVar << " for EVL-based IndVar\n");
+  const SCEV *VFV = SE.getConstant(BTC->getType(), VF);
+  VFV = SE.getMulExpr(VFV, SE.getVScale(VFV->getType()));
+  const SCEV *ExitValV = SE.getMulExpr(BTC, VFV);
+  LLVM_DEBUG(dbgs() << "ExitVal: " << *ExitValV << "\n");
 
   // Create an EVL-based comparison and replace the branch to use it as
   // predicate.
   ICmpInst *OrigLatchCmp = L.getLatchCmpInst();
-  ICmpInst::Predicate Pred = OrigLatchCmp->getPredicate();
-  if (!ICmpInst::isEquality(Pred))
+  const DataLayout &DL = L.getHeader()->getDataLayout();
+  SCEVExpander Expander(SE, DL, "evl.iv.exitcondition");
+  if (!Expander.isSafeToExpandAt(ExitValV, OrigLatchCmp))
     return false;
 
+  LLVM_DEBUG(dbgs() << "Using " << *EVLIndVar << " for EVL-based IndVar\n");
+
+  Value *ExitVal =
+      Expander.expandCodeFor(ExitValV, EVLIndVar->getType(), OrigLatchCmp);
   IRBuilder<> Builder(OrigLatchCmp);
-  auto *NewPred = Builder.CreateICmp(Pred, EVLIndVar, TC);
+  auto *NewPred = Builder.CreateICmp(ICmpInst::ICMP_UGT, EVLIndVar, ExitVal);
   OrigLatchCmp->replaceAllUsesWith(NewPred);
 
   // llvm::RecursivelyDeleteDeadPHINode only deletes cycles whose values are
