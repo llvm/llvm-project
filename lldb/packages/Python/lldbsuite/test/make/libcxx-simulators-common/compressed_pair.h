@@ -2,6 +2,7 @@
 #define STD_LLDB_COMPRESSED_PAIR_H
 
 #include <type_traits>
+#include <utility> // for std::forward
 
 namespace std {
 namespace __lldb {
