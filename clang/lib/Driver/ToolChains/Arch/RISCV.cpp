@@ -293,7 +293,7 @@ std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
     if (CPU == "native") {
       CPU = llvm::sys::getHostCPUName();
       // If the target cpu is unrecognized, use target features.
-      if (CPU.empty() || CPU.starts_with("generic")) {
+      if (CPU.starts_with("generic")) {
         auto FeatureMap = llvm::sys::getHostCPUFeatures();
         // hwprobe may be unavailable on older Linux versions.
         if (!FeatureMap.empty()) {
