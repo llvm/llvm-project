@@ -4,4 +4,4 @@
 // CHECK: "-msse2avx"
 
 // RUN: not %clang -### -c --target=aarch64 -march=armv8a -msse2avx %s 2>&1 | FileCheck --check-prefix=ERR %s
-// ERR:      error: unsupported option '-msse2avx' for target 'aarch64'
+// ERR:   error: unsupported option '-msse2avx' for target 'aarch64'
