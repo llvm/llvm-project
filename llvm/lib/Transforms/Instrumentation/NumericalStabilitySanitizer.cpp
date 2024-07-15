@@ -2152,10 +2152,7 @@ static size_t GetInstrumentationCalleeIdxForMemOp(Value *V,
       OpSize = CInt->getValue().getZExtValue();
   }
 
-  size_t CandidateIdx =
-      OpSize == 4 ? 0 : (OpSize == 8 ? 1 : (OpSize == 16 ? 2 : MaxIdx));
-
-  return CandidateIdx <= MaxIdx ? CandidateIdx : MaxIdx;
+  return OpSize == 4 ? 0 : (OpSize == 8 ? 1 : (OpSize == 16 ? 2 : MaxIdx));
 }
 
 // Instrument the memory intrinsics so that they properly modify the shadow
