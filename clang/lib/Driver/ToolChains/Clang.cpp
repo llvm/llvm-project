@@ -3298,20 +3298,23 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   }
 
   // Handle __FINITE_MATH_ONLY__ similarly.
-  bool InfValues = true;
-  bool NanValues = true;
-  auto processArg = [&](const auto *Arg) {
-    if (StringRef(Arg->getValue()) == "-menable-no-nans")
-      NanValues = false;
-    if (StringRef(Arg->getValue()) == "-menable-no-infs")
-      InfValues = false;
-  };
-  for (auto *Arg : Args.filtered(options::OPT_Xclang))
-    processArg(Arg);
-
-  if ((!HonorINFs && !HonorNaNs) || (!NanValues && !InfValues))
+  if (!HonorINFs && !HonorNaNs)
     CmdArgs.push_back("-ffinite-math-only");
+  else {
+    bool InfValues = true;
+    bool NanValues = true;
+    auto processArg = [&](const auto *Arg) {
+      if (StringRef(Arg->getValue()) == "-menable-no-nans")
+        NanValues = false;
+      if (StringRef(Arg->getValue()) == "-menable-no-infs")
+        InfValues = false;
+    };
+    for (auto *Arg : Args.filtered(options::OPT_Xclang))
+      processArg(Arg);
 
+    if (!NanValues && !InfValues)
+      CmdArgs.push_back("-ffinite-math-only");
+  }
   if (const Arg *A = Args.getLastArg(options::OPT_mfpmath_EQ)) {
     CmdArgs.push_back("-mfpmath");
     CmdArgs.push_back(A->getValue());
