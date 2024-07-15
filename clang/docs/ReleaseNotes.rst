@@ -953,7 +953,8 @@ X86 Support
     ``_m_pswapdsi``.
   * The compiler builtins corresponding to each of the above
     intrinsics have also been removed  (``__builtin_ia32_femms``, and so on).
-
+  * "3DNow!" instructions remain supported in assembly code, including
+    inside inline-assembly.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
