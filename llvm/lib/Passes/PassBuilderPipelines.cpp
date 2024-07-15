@@ -852,6 +852,8 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM,
   Options.UseBFIInPromotion = IsCS;
   if (EnableSampledInstr) {
     Options.Sampling = true;
+    // With sampling, there is little beneifit to enable counter promotion.
+    // But note that sampling does work with counter promotion.
     Options.DoCounterPromotion = false;
   }
   Options.Atomic = AtomicCounterUpdate;

@@ -1,5 +1,5 @@
-; RUN: opt < %s -passes=instrprof -sampled-instr -S | FileCheck %s --check-prefixes=SAMPLE-VAR,SAMPLE-CODE,SAMPLE-DURATION
-; RRRRUN: opt < %s -passes=instrprof -sampled-instr -sampled-instr-duration=100 -S| FileCheck %s --check-prefixes=SAMPLE-VAR,SAMPLE-CODE,SAMPLE-DURATION-100
+; RUN: opt < %s --passes=instrprof --sampled-instr -S | FileCheck %s --check-prefixes=SAMPLE-VAR,SAMPLE-CODE,SAMPLE-DURATION,SAMPLE-WEIGHT
+; RUN: opt < %s --passes=instrprof --sampled-instr --sampled-instr-burst-duration=100 -S | FileCheck %s --check-prefixes=SAMPLE-VAR,SAMPLE-CODE,SAMPLE-DURATION100,SAMPLE-WEIGHT100
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -24,7 +24,7 @@ define void @f() {
 ; SAMPLE-CODE:  entry:
 ; SAMPLE-CODE-NEXT:    [[TMP0:%.*]] = load i16, ptr @__llvm_profile_sampling, align 2
 ; SAMPLE-DURATION:         [[TMP1:%.*]] = icmp ule i16 [[TMP0]], 200
-; SAMPLE-DURATION-100:     [[TMP1:%.*]] = icmp ule i16 [[TMP0]], 100
+; SAMPLE-DURATION100:     [[TMP1:%.*]] = icmp ule i16 [[TMP0]], 100
 ; SAMPLE-CODE:         br i1 [[TMP1]], label %[[TMP2:.*]], label %[[TMP4:.*]], !prof !0
 ; SAMPLE-CODE:       [[TMP2]]:
 ; SAMPLE-CODE-NEXT:    [[PGOCOUNT:%.*]] = load i64, ptr @__profc_f
@@ -41,7 +41,7 @@ entry:
   ret void
 }
 
-; SAMPLE-DURATION: !0 = !{!"branch_weights", i32 200, i32 65336}
-; SAMPLE-DURATION-100: !0 = !{!"branch_weights", i32 100, i32 65436}
+; SAMPLE-WEIGHT: !0 = !{!"branch_weights", i32 200, i32 65336}
+; SAMPLE-WEIGHT100: !0 = !{!"branch_weights", i32 100, i32 65436}
 
 declare void @llvm.instrprof.increment(i8*, i64, i32, i32)
