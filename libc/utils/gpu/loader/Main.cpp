@@ -91,13 +91,9 @@ int main(int argc, char **argv, char **envp) {
   fread(image, sizeof(char), size, file);
   fclose(file);
 
-  if (print_resource_usage) {
-    print_resources(image);
-    return 0;
-  }
-
   // Drop the loader from the program arguments.
-  int ret = load(argc - offset, &argv[offset], envp, image, size, params);
+  int ret = load(argc - offset, &argv[offset], envp, image, size, params,
+                 print_resource_usage);
 
   free(image);
   return ret;

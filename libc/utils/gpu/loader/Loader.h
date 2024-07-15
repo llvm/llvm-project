@@ -28,7 +28,6 @@ struct LaunchParameters {
   uint32_t num_blocks_x;
   uint32_t num_blocks_y;
   uint32_t num_blocks_z;
-  bool print_resource_usage;
 };
 
 /// The arguments to the '_begin' kernel.
@@ -51,14 +50,11 @@ struct end_args_t {
   int argc;
 };
 
-/// Generic interface to print resources for all kernels in a GPU binary.
-void print_resources(void *image);
-
 /// Generic interface to load the \p image and launch execution of the _start
 /// kernel on the target device. Copies \p argc and \p argv to the device.
 /// Returns the final value of the `main` function on the device.
 int load(int argc, char **argv, char **evnp, void *image, size_t size,
-         const LaunchParameters &params);
+         const LaunchParameters &params, bool print_resource_usage);
 
 /// Return \p V aligned "upwards" according to \p Align.
 template <typename V, typename A> inline V align_up(V val, A align) {
