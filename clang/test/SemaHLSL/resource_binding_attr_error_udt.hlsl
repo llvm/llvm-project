@@ -8,12 +8,6 @@ struct [[hlsl::resource_class(SRV)]] Buffer {
   T x;
 };
 
-
-template<typename T>
-struct [[hlsl::resource_class(SRV)]] [[hlsl::resource_class(UAV)]] MultiClassBuffer {
-  T x;
-};
-
 // TODO: Implement "SamplerState", we use a substitute UDT
 // to test the 's' binding type for this test.
 struct [[hlsl::resource_class(Sampler)]] SamplerState {
