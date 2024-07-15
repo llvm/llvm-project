@@ -182,7 +182,7 @@ public:
   bool WalkUpFromType(Type *T) { return VisitType(T); }
   bool WalkUpFromTypeLoc(TypeLoc TL) { return VisitTypeLoc(TL); }
 
-  /*/// Invoked before visiting a statement or expression via data recursion.
+  /// Invoked before visiting a statement or expression via data recursion.
   ///
   /// \returns false to skip visiting the node, true otherwise.
   virtual bool dataTraverseStmtPre(Stmt *S) { return true; }
@@ -192,7 +192,7 @@ public:
   /// returned false.
   ///
   /// \returns false if the visitation was terminated early, true otherwise.
-  virtual bool dataTraverseStmtPost(Stmt *S) { return true; }*/
+  virtual bool dataTraverseStmtPost(Stmt *S) { return true; }
 
   /*// Declare Traverse*() and friends for attributes.
 #define DYNAMIC_ATTR_VISITOR_DECLS
