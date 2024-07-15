@@ -1383,7 +1383,7 @@ void ASTDeclWriter::VisitNamespaceDecl(NamespaceDecl *D) {
   Record.AddSourceLocation(D->getBeginLoc());
   Record.AddSourceLocation(D->getRBraceLoc());
 
-  if (D->isOriginalNamespace())
+  if (D->isFirstDecl())
     Record.AddDeclRef(D->getAnonymousNamespace());
   Code = serialization::DECL_NAMESPACE;
 
