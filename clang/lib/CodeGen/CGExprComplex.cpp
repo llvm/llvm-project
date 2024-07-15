@@ -352,12 +352,17 @@ public:
     return QualType();
   }
 
+  template <typename T>
+  FPOptionsOverride getStoredFPFeaturesOrDefault(const T *E,
+                                                 const CodeGenFunction &CGF) {
+    return E->hasStoredFPFeatures() ? E->getStoredFPFeatures()
+                                    : FPOptionsOverride();
+  }
+
 #define HANDLEBINOP(OP)                                                        \
   ComplexPairTy VisitBin##OP(const BinaryOperator *E) {                        \
     QualType promotionTy = getPromotionType(                                   \
-        (E->hasStoredFPFeatures() ? E->getStoredFPFeatures()                   \
-                                  : FPOptionsOverride()),                      \
-        E->getType(),                                                          \
+        getStoredFPFeaturesOrDefault(E, CGF), E->getType(),                    \
         (E->getOpcode() == BinaryOperatorKind::BO_Div) ? true : false);        \
     ComplexPairTy result = EmitBin##OP(EmitBinOps(E, promotionTy));            \
     if (!promotionTy.isNull())                                                 \
@@ -651,12 +656,11 @@ ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
 
 ComplexPairTy ComplexExprEmitter::VisitUnaryPlus(const UnaryOperator *E,
                                                  QualType PromotionType) {
-  QualType promotionTy = PromotionType.isNull()
-                             ? getPromotionType((E->hasStoredFPFeatures()
-                                                     ? E->getStoredFPFeatures()
-                                                     : FPOptionsOverride()),
-                                                E->getSubExpr()->getType())
-                             : PromotionType;
+  QualType promotionTy =
+      PromotionType.isNull()
+          ? getPromotionType(getStoredFPFeaturesOrDefault(E, CGF),
+                             E->getSubExpr()->getType())
+          : PromotionType;
   ComplexPairTy result = VisitPlus(E, promotionTy);
   if (!promotionTy.isNull())
     return CGF.EmitUnPromotedValue(result, E->getSubExpr()->getType());
@@ -674,12 +678,11 @@ ComplexPairTy ComplexExprEmitter::VisitPlus(const UnaryOperator *E,
 
 ComplexPairTy ComplexExprEmitter::VisitUnaryMinus(const UnaryOperator *E,
                                                   QualType PromotionType) {
-  QualType promotionTy = PromotionType.isNull()
-                             ? getPromotionType((E->hasStoredFPFeatures()
-                                                     ? E->getStoredFPFeatures()
-                                                     : FPOptionsOverride()),
-                                                E->getSubExpr()->getType())
-                             : PromotionType;
+  QualType promotionTy =
+      PromotionType.isNull()
+          ? getPromotionType(getStoredFPFeaturesOrDefault(E, CGF),
+                             E->getSubExpr()->getType())
+          : PromotionType;
   ComplexPairTy result = VisitMinus(E, promotionTy);
   if (!promotionTy.isNull())
     return CGF.EmitUnPromotedValue(result, E->getSubExpr()->getType());
@@ -1239,19 +1242,15 @@ EmitCompoundAssignLValue(const CompoundAssignOperator *E,
   // __block variables need to have the rhs evaluated first, plus this should
   // improve codegen a little.
   QualType PromotionTypeCR;
-  PromotionTypeCR =
-      getPromotionType((E->hasStoredFPFeatures() ? E->getStoredFPFeatures()
-                                                 : FPOptionsOverride()),
-                       E->getComputationResultType());
+  PromotionTypeCR = getPromotionType(getStoredFPFeaturesOrDefault(E, CGF),
+                                     E->getComputationResultType());
   if (PromotionTypeCR.isNull())
     PromotionTypeCR = E->getComputationResultType();
   OpInfo.Ty = PromotionTypeCR;
   QualType ComplexElementTy =
       OpInfo.Ty->castAs<ComplexType>()->getElementType();
-  QualType PromotionTypeRHS =
-      getPromotionType((E->hasStoredFPFeatures() ? E->getStoredFPFeatures()
-                                                 : FPOptionsOverride()),
-                       E->getRHS()->getType());
+  QualType PromotionTypeRHS = getPromotionType(
+      getStoredFPFeaturesOrDefault(E, CGF), E->getRHS()->getType());
 
   // The RHS should have been converted to the computation type.
   if (E->getRHS()->getType()->isRealFloatingType()) {
@@ -1279,10 +1278,8 @@ EmitCompoundAssignLValue(const CompoundAssignOperator *E,
 
   // Load from the l-value and convert it.
   SourceLocation Loc = E->getExprLoc();
-  QualType PromotionTypeLHS =
-      getPromotionType((E->hasStoredFPFeatures() ? E->getStoredFPFeatures()
-                                                 : FPOptionsOverride()),
-                       E->getComputationLHSType());
+  QualType PromotionTypeLHS = getPromotionType(
+      getStoredFPFeaturesOrDefault(E, CGF), E->getComputationLHSType());
   if (LHSTy->isAnyComplexType()) {
     ComplexPairTy LHSVal = EmitLoadOfLValue(LHS, Loc);
     if (!PromotionTypeLHS.isNull())
