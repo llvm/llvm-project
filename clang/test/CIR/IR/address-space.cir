@@ -13,4 +13,29 @@ module {
   cir.func @test_format2(%arg0: !cir.ptr<!s32i>) {
     cir.return
   }
+
+  // CHECK: @test_format3(%arg0: !cir.ptr<!s32i, addrspace(offload_private)>)
+  cir.func @test_format3(%arg0: !cir.ptr<!s32i, addrspace(offload_private)>) {
+    cir.return
+  }
+
+  // CHECK: @test_format4(%arg0: !cir.ptr<!s32i, addrspace(offload_local)>)
+  cir.func @test_format4(%arg0: !cir.ptr<!s32i, addrspace(offload_local)>) {
+    cir.return
+  }
+
+  // CHECK: @test_format5(%arg0: !cir.ptr<!s32i, addrspace(offload_global)>)
+  cir.func @test_format5(%arg0: !cir.ptr<!s32i, addrspace(offload_global)>) {
+    cir.return
+  }
+
+  // CHECK: @test_format6(%arg0: !cir.ptr<!s32i, addrspace(offload_constant)>)
+  cir.func @test_format6(%arg0: !cir.ptr<!s32i, addrspace(offload_constant)>) {
+    cir.return
+  }
+
+  // CHECK: @test_format7(%arg0: !cir.ptr<!s32i, addrspace(offload_generic)>)
+  cir.func @test_format7(%arg0: !cir.ptr<!s32i, addrspace(offload_generic)>) {
+    cir.return
+  }
 }
