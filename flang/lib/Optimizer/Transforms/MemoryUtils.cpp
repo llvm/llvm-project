@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Transforms/MemoryUtils.h"
+#include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Dominance.h"
@@ -92,12 +93,9 @@ mlir::Region *AllocaReplaceImpl::findDeallocationPointsAndOwner(
         return nullptr;
       deallocationPoints.push_back(terminator);
     }
-  // If the owningRegion did not adhere to the ReturnLike interface for its
-  // terminators, bail and do not attempt to translate it (we could maybe
-  // fallback to consider terminators with no block successor, but since all
-  // FIR, OpenACC, OpenMP, CUF, SCF operations with IsIsolatedFromAbove,
-  // AutomaticAllocationScope, or LoopLikeOpInterface have such terminators,
-  // avoid any untested complexity for now).
+  // If no block terminators without successors have been found, this is
+  // an odd region we cannot reason about (never seen yet in FIR and
+  // mainstream dialects, but MLIR does not really prevent it).
   if (deallocationPoints.empty())
     return nullptr;
 
@@ -115,13 +113,6 @@ mlir::Region *AllocaReplaceImpl::findDeallocationPointsAndOwner(
   return owningRegion;
 }
 
-static mlir::Value castIfNeeed(mlir::Location loc, mlir::RewriterBase &rewriter,
-                               mlir::Type newType, mlir::Value value) {
-  if (value.getType() != newType)
-    return rewriter.create<fir::ConvertOp>(loc, newType, value);
-  return value;
-}
-
 void AllocaReplaceImpl::genIndirectDeallocation(
     mlir::RewriterBase &rewriter, fir::AllocaOp alloca,
     llvm::ArrayRef<mlir::Operation *> deallocationPoints,
@@ -137,14 +128,14 @@ void AllocaReplaceImpl::genIndirectDeallocation(
   rewriter.create<fir::StoreOp>(loc, nullPtr, ptrVar);
   // TODO: introducing a pointer compare op in FIR would help
   // generating less IR here.
-  mlir::Type intPtrTy = rewriter.getI64Type();
+  mlir::Type intPtrTy = fir::getIntPtrType(rewriter);
   mlir::Value c0 = rewriter.create<mlir::arith::ConstantOp>(
       loc, intPtrTy, rewriter.getIntegerAttr(intPtrTy, 0));
 
   // Store new storage address right after its creation.
   rewriter.restoreInsertionPoint(replacementInsertPoint);
   mlir::Value castReplacement =
-      castIfNeeed(loc, rewriter, heapType, replacement);
+      fir::factory::createConvert(rewriter, loc, heapType, replacement);
   rewriter.create<fir::StoreOp>(loc, castReplacement, ptrVar);
 
   // Generate conditional deallocation at every deallocation point.
@@ -157,8 +148,8 @@ void AllocaReplaceImpl::genIndirectDeallocation(
     auto ifOp = rewriter.create<fir::IfOp>(loc, std::nullopt, isAllocated,
                                            /*withElseRegion=*/false);
     rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
-    mlir::Value cast =
-        castIfNeeed(loc, rewriter, replacement.getType(), ptrVal);
+    mlir::Value cast = fir::factory::createConvert(
+        rewriter, loc, replacement.getType(), ptrVal);
     deallocGenerator(loc, rewriter, cast);
     // Currently there is no need to reset the pointer var because two
     // deallocation points can never be reached without going through the
@@ -178,14 +169,13 @@ bool AllocaReplaceImpl::replace(mlir::RewriterBase &rewriter,
       findDeallocationPointsAndOwner(alloca, deallocationPoints);
   if (!owningRegion)
     return false;
-  // return false;
   rewriter.setInsertionPointAfter(alloca.getOperation());
   bool deallocPointsDominateAlloc =
       allocDominatesDealloc(alloca, deallocationPoints);
   if (mlir::Value replacement =
           allocaRewriter(rewriter, alloca, deallocPointsDominateAlloc)) {
-    mlir::Value castReplacement =
-        castIfNeeed(alloca.getLoc(), rewriter, alloca.getType(), replacement);
+    mlir::Value castReplacement = fir::factory::createConvert(
+        rewriter, alloca.getLoc(), alloca.getType(), replacement);
     if (deallocPointsDominateAlloc)
       for (mlir::Operation *deallocPoint : deallocationPoints) {
         rewriter.setInsertionPoint(deallocPoint);

@@ -38,9 +38,8 @@ using MustRewriteCallBack = llvm::function_ref<bool(fir::AllocaOp)>;
 /// even if the MustRewriteCallBack previously returned true, in which case
 /// it should return a null value.
 /// The callback should not delete the alloca, the utility will do it.
-using AllocaRewriterCallBack =
-    llvm::function_ref<mlir::Value(mlir::OpBuilder &, fir::AllocaOp,
-                                   bool /*allocaDominatesDeallocLocations*/)>;
+using AllocaRewriterCallBack = llvm::function_ref<mlir::Value(
+    mlir::OpBuilder &, fir::AllocaOp, bool allocaDominatesDeallocLocations)>;
 /// Type of callbacks that must generate deallocation of storage obtained via
 /// AllocaRewriterCallBack calls.
 using DeallocCallBack =
