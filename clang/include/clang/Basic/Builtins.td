@@ -83,11 +83,11 @@ class BitInt_Long_LongLongTemplate :
 // - _Constant: Argument has to constant-fold to an integer constant expression
 
 // __fp16 and __float128 builtin variants of libc/libm functions.
-def AcosF128 : Builtin {
-  let Spellings = ["__builtin_acosf128"];
+def AcosF16F128 : Builtin, F16F128MathTemplate {
+  let Spellings = ["__builtin_acos"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow,
                     ConstIgnoringErrnoAndExceptions];
-  let Prototype = "__float128(__float128)";
+  let Prototype = "T(T)";
 }
 
 def AcoshF128 : Builtin {
@@ -97,11 +97,11 @@ def AcoshF128 : Builtin {
   let Prototype = "__float128(__float128)";
 }
 
-def AsinF128 : Builtin {
-  let Spellings = ["__builtin_asinf128"];
+def AsinF16F128 : Builtin, F16F128MathTemplate {
+  let Spellings = ["__builtin_asin"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow,
                     ConstIgnoringErrnoAndExceptions];
-  let Prototype = "__float128(__float128)";
+  let Prototype = "T(T)";
 }
 
 def AsinhF128 : Builtin {
@@ -111,11 +111,11 @@ def AsinhF128 : Builtin {
   let Prototype = "__float128(__float128)";
 }
 
-def AtanF128 : Builtin {
-  let Spellings = ["__builtin_atanf128"];
+def AtanF16F128 : Builtin, F16F128MathTemplate {
+  let Spellings = ["__builtin_atan"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow,
                     ConstIgnoringErrnoAndExceptions];
-  let Prototype = "__float128(__float128)";
+  let Prototype = "T(T)";
 }
 
 def AtanhF128 : Builtin {
@@ -143,10 +143,10 @@ def CosF16F128 : Builtin, F16F128MathTemplate {
   let Prototype = "T(T)";
 }
 
-def CoshF128 : Builtin {
-  let Spellings = ["__builtin_coshf128"];
+def CoshF16F128 : Builtin, F16F128MathTemplate {
+  let Spellings = ["__builtin_cosh"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions];
-  let Prototype = "__float128(__float128)";
+  let Prototype = "T(T)";
 }
 
 def ErfF128 : Builtin {
@@ -468,11 +468,11 @@ def SinF16F128 : Builtin, F16F128MathTemplate {
   let Prototype = "T(T)";
 }
 
-def SinhF128 : Builtin {
-  let Spellings = ["__builtin_sinhf128"];
+def SinhF16F128 : Builtin, F16F128MathTemplate {
+  let Spellings = ["__builtin_sinh"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow,
                     ConstIgnoringErrnoAndExceptions];
-  let Prototype = "__float128(__float128)";
+  let Prototype = "T(T)";
 }
 
 def SqrtF16F128 : Builtin, F16F128MathTemplate {
@@ -489,11 +489,11 @@ def TanF16F128 : Builtin, F16F128MathTemplate {
   let Prototype = "T(T)";
 }
 
-def TanhF128 : Builtin {
-  let Spellings = ["__builtin_tanhf128"];
+def TanhF16F128 : Builtin, F16F128MathTemplate {
+  let Spellings = ["__builtin_tanh"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow,
                     ConstIgnoringErrnoAndExceptions];
-  let Prototype = "__float128(__float128)";
+  let Prototype = "T(T)";
 }
 
 def TgammaF128 : Builtin {
