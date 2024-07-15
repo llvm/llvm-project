@@ -1685,7 +1685,7 @@ static int map_from_llvmopcode(LLVMOpcode code)
     llvm_unreachable("Unhandled Opcode.");
 }
 
-/*-- GEP wrap flag conversions*/
+/*-- GEP wrap flag conversions */
 
 static GEPNoWrapFlags mapFromLLVMGEPNoWrapFlags(LLVMGEPNoWrapFlags GEPFlags) {
   GEPNoWrapFlags NewGEPFlags;

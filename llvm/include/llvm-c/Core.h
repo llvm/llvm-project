@@ -3937,7 +3937,7 @@ LLVMTypeRef LLVMGetGEPSourceElementType(LLVMValueRef GEP);
 LLVMGEPNoWrapFlags LLVMGEPGetNoWrapFlags(LLVMValueRef GEP);
 
 /**
- * Get the no-wrap related flags for the given GEP instruction.
+ * Set the no-wrap related flags for the given GEP instruction.
  *
  * @see llvm::GetElementPtrInst::setNoWrapFlags
  */
