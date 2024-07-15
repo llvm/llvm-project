@@ -1,4 +1,4 @@
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s 2>&1 -o /dev/null | FileCheck -DFILE=%s --strict-whitespace %s --implicit-check-not=valid1_string --implicit-check-not=valid2_string --implicit-check-not=valid3_string --check-prefix=CHECK-WARN
+// RUN: llvm-mc -filetype=obj -triple x86_64 %s 2>&1 -o /dev/null | FileCheck -DFILE=%s --strict-whitespace %s --implicit-check-not=valid1_string --implicit-check-not=valid2_string --implicit-check-not=valid3_string --check-prefix=CHECK-WARN
 
 .string "abcd\xFFefg
 12345678"
