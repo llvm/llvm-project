@@ -488,6 +488,49 @@ class Parser : public CodeCompletionHandler {
   /// a statement expression and builds a suitable expression statement.
   StmtResult handleExprStmt(ExprResult E, ParsedStmtContext StmtCtx);
 
+  class AssumeParseAssociatedStmtRAII {
+    Parser *parent;
+    OpenMPDirectiveKind DKind;
+
+  public:
+    AssumeParseAssociatedStmtRAII(Parser *parent, SourceLocation Loc,
+                                  OpenMPDirectiveKind DKind)
+        : parent(parent), DKind(DKind) {
+
+      if (DKind == llvm::omp::Directive::OMPD_assume) {
+
+        if (parent->Tok.getKind() == clang::tok::annot_pragma_openmp_end)
+          parent->ConsumeAnyToken();
+
+        DeclarationNameInfo DirName;
+        parent->Actions.OpenMP().StartOpenMPDSABlock(
+            DKind, DirName, parent->Actions.getCurScope(), Loc);
+      }
+    }
+
+    StmtResult GetAssociatedStmtAndEndScope(SourceLocation Loc) {
+
+      if (DKind == llvm::omp::Directive::OMPD_assume) {
+        StmtResult AssociatedStmt = parent->ParseStatement();
+        AssociatedStmt =
+            parent->Actions.OpenMP().ActOnFinishedStatementInOpenMPAssumeScope(
+                AssociatedStmt.get());
+
+        parent->ParseOpenMPEndAssumesDirective(Loc);
+
+        return AssociatedStmt;
+      }
+    }
+
+    ~AssumeParseAssociatedStmtRAII() {
+      if (DKind == llvm::omp::Directive::OMPD_assume) {
+        parent->Actions.OpenMP().EndOpenMPDSABlock(nullptr);
+        if (parent->Tok.getKind() == clang::tok::annot_pragma_openmp_end)
+          parent->ConsumeAnyToken();
+      }
+    }
+  };
+
 public:
   Parser(Preprocessor &PP, Sema &Actions, bool SkipFunctionBodies);
   ~Parser() override;

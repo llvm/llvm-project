@@ -1760,33 +1760,17 @@ StmtResult Parser::ParseOpenMPAssumesDirective(OpenMPDirectiveKind DKind,
   }
 
   StmtResult AssociatedStmt;
+  {
+    // Begin marking the scope for assume.
+    AssumeParseAssociatedStmtRAII AssumeParseAssocRAII(this, Loc, DKind);
 
-  // Begin marking the scope for assume.
-  if (DKind == llvm::omp::Directive::OMPD_assume) {
+    Actions.OpenMP().ActOnOpenMPAssumesDirective(Loc, DKind, Assumptions,
+                                                 SkippedClauses);
 
-    if (Tok.getKind() == clang::tok::annot_pragma_openmp_end)
-      ConsumeAnyToken();
-
-    DeclarationNameInfo DirName;
-    Actions.OpenMP().StartOpenMPDSABlock(DKind, DirName, Actions.getCurScope(),
-                                         Loc);
+    // Get the Associated Stmts & End the scope for assume.
+    AssociatedStmt = AssumeParseAssocRAII.GetAssociatedStmtAndEndScope(Loc);
   }
 
-  Actions.OpenMP().ActOnOpenMPAssumesDirective(Loc, DKind, Assumptions,
-                                               SkippedClauses);
-
-  if (DKind == llvm::omp::Directive::OMPD_assume) {
-
-    AssociatedStmt = ParseStatement();
-    AssociatedStmt = Actions.OpenMP().ActOnFinishedStatementInOpenMPAssumeScope(
-        AssociatedStmt.get());
-
-    // Ending the scope for assume.
-    ParseOpenMPEndAssumesDirective(Loc);
-    Actions.OpenMP().EndOpenMPDSABlock(nullptr);
-    if (Tok.getKind() == clang::tok::annot_pragma_openmp_end)
-      ConsumeAnyToken();
-  }
   return AssociatedStmt;
 }
 
