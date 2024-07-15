@@ -322,6 +322,8 @@ bool recursive_timed_mutex::try_lock_until(const chrono::time_point<_Clock, _Dur
   return false;
 }
 
+#endif // !_LIBCPP_HAS_NO_THREADS
+
 template <class _L0, class _L1>
 _LIBCPP_HIDE_FROM_ABI int try_lock(_L0& __l0, _L1& __l1) {
   unique_lock<_L0> __u0(__l0, try_to_lock_t());
@@ -335,7 +337,7 @@ _LIBCPP_HIDE_FROM_ABI int try_lock(_L0& __l0, _L1& __l1) {
   return 0;
 }
 
-#  ifndef _LIBCPP_CXX03_LANG
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _L0, class _L1, class _L2, class... _L3>
 _LIBCPP_HIDE_FROM_ABI int try_lock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3) {
@@ -351,7 +353,7 @@ _LIBCPP_HIDE_FROM_ABI int try_lock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3
   return __r;
 }
 
-#  endif // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_CXX03_LANG
 
 template <class _L0, class _L1>
 _LIBCPP_HIDE_FROM_ABI void lock(_L0& __l0, _L1& __l1) {
@@ -375,7 +377,7 @@ _LIBCPP_HIDE_FROM_ABI void lock(_L0& __l0, _L1& __l1) {
   }
 }
 
-#  ifndef _LIBCPP_CXX03_LANG
+#ifndef _LIBCPP_CXX03_LANG
 
 template <class _L0, class _L1, class _L2, class... _L3>
 void __lock_first(int __i, _L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3) {
@@ -418,8 +420,7 @@ inline _LIBCPP_HIDE_FROM_ABI void lock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... 
   std::__lock_first(0, __l0, __l1, __l2, __l3...);
 }
 
-#  endif // _LIBCPP_CXX03_LANG
-#endif   // !_LIBCPP_HAS_NO_THREADS
+#endif // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER >= 17
 template <class... _Mutexes>
