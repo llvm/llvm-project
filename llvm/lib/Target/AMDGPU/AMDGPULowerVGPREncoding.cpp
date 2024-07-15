@@ -55,13 +55,15 @@ class AMDGPULowerVGPREncoding : public MachineFunctionPass {
   static constexpr unsigned OpNum = 4;
   static constexpr unsigned BitsPerField = 2;
   static constexpr unsigned NumFields = 4;
-  using ModeType = PackedVector<unsigned, BitsPerField>;
+  using ModeType = PackedVector<unsigned, BitsPerField,
+                                std::bitset<BitsPerField * NumFields>>;
 
   class ModeTy : public ModeType {
   public:
-    ModeTy() : ModeType(NumFields) {}
+    // bitset constructor will set all bits to zero
+    ModeTy() : ModeType(0) {}
 
-    operator int64_t() const { return raw_bits().getData()[0]; }
+    operator int64_t() const { return raw_bits().to_ulong(); }
   };
 
 public:
