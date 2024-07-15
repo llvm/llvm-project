@@ -11633,9 +11633,8 @@ RISCVTargetLowering::lowerVPSpliceExperimental(SDValue Op,
   return convertFromScalableVector(VT, Result, DAG, Subtarget);
 }
 
-SDValue
-RISCVTargetLowering::lowerVPSplatExperimental(SDValue Op,
-                                              SelectionDAG &DAG) const {
+SDValue RISCVTargetLowering::lowerVPSplatExperimental(SDValue Op,
+                                                      SelectionDAG &DAG) const {
   SDLoc DL(Op);
   SDValue Val = Op.getOperand(0);
   SDValue Mask = Op.getOperand(1);
@@ -11649,8 +11648,8 @@ RISCVTargetLowering::lowerVPSplatExperimental(SDValue Op,
     Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
   }
 
-  SDValue Result = lowerScalarSplat(SDValue(), Val, VL, ContainerVT, DL,
-                                    DAG, Subtarget);
+  SDValue Result =
+    lowerScalarSplat(SDValue(), Val, VL, ContainerVT, DL, DAG, Subtarget);
 
   if (!VT.isFixedLengthVector())
     return Result;
