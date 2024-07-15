@@ -2456,19 +2456,18 @@ define hidden void @sdiv_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX13-NEXT:    s_delay_alu instid0(TRANS32_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX13-NEXT:    v_dual_mul_f32 v17, v4, v17 :: v_dual_bitop2_b32 v12, 1, v12 bitop3:0x54
 ; GFX13-NEXT:    v_dual_ashrrev_i32 v3, 30, v3 :: v_dual_bitop2_b32 v1, 1, v1 bitop3:0x54
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(TRANS32_DEP_2)
-; GFX13-NEXT:    v_rcp_iflag_f32_e32 v18, v10
+; GFX13-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX13-NEXT:    v_mul_f32_e32 v19, v13, v19
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX13-NEXT:    v_trunc_f32_e32 v17, v17
+; GFX13-NEXT:    v_rcp_iflag_f32_e32 v18, v10
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX13-NEXT:    v_or_b32_e32 v3, 1, v3
 ; GFX13-NEXT:    v_trunc_f32_e32 v16, v16
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX13-NEXT:    v_trunc_f32_e32 v19, v19
 ; GFX13-NEXT:    v_fma_f32 v4, -v17, v5, v4
 ; GFX13-NEXT:    v_cvt_i32_f32_e32 v17, v17
 ; GFX13-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_mul_f32 v18, v14, v18 :: v_dual_fma_f32 v21, -v19, v11, v13
+; GFX13-NEXT:    v_dual_fma_f32 v21, -v19, v11, v13 :: v_dual_mul_f32 v18, v14, v18
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX13-NEXT:    v_cmp_ge_f32_e64 vcc_lo, |v4|, |v5|
 ; GFX13-NEXT:    v_cvt_i32_f32_e32 v19, v19
@@ -3028,8 +3027,8 @@ define hidden void @srem_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
 ; GFX13-NEXT:    v_dual_ashrrev_i32 v17, 30, v17 :: v_dual_bitop2_b32 v12, v14, v12 bitop3:0x14
 ; GFX13-NEXT:    v_rcp_iflag_f32_e32 v20, v11
 ; GFX13-NEXT:    v_cvt_f32_i32_e32 v10, v10
-; GFX13-NEXT:    v_rcp_iflag_f32_e32 v21, v16
 ; GFX13-NEXT:    v_cvt_f32_i32_e32 v14, v14
+; GFX13-NEXT:    v_rcp_iflag_f32_e32 v21, v16
 ; GFX13-NEXT:    v_dual_ashrrev_i32 v12, 30, v12 :: v_dual_bitop2_b32 v17, 1, v17 bitop3:0x54
 ; GFX13-NEXT:    v_or_b32_e32 v15, 1, v15
 ; GFX13-NEXT:    s_delay_alu instid0(TRANS32_DEP_3) | instid1(VALU_DEP_3)
@@ -3523,47 +3522,46 @@ define hidden void @udiv(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i8 %elt, 
 ; GFX13-NEXT:    s_wait_loadcnt 0x1
 ; GFX13-NEXT:    v_cvt_f32_ubyte0_e32 v1, v2
 ; GFX13-NEXT:    v_cvt_f32_ubyte1_e32 v3, v2
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    v_cvt_f32_ubyte3_e32 v11, v0
 ; GFX13-NEXT:    v_cvt_f32_ubyte2_e32 v4, v2
 ; GFX13-NEXT:    v_cvt_f32_ubyte3_e32 v5, v2
-; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    v_cvt_f32_ubyte3_e32 v14, v0
 ; GFX13-NEXT:    v_rcp_iflag_f32_e32 v10, v1
-; GFX13-NEXT:    v_rcp_iflag_f32_e32 v11, v3
-; GFX13-NEXT:    v_rcp_iflag_f32_e32 v12, v4
-; GFX13-NEXT:    v_rcp_iflag_f32_e32 v13, v5
+; GFX13-NEXT:    v_rcp_iflag_f32_e32 v12, v3
 ; GFX13-NEXT:    v_cvt_f32_ubyte0_e32 v15, v0
+; GFX13-NEXT:    v_rcp_iflag_f32_e32 v13, v4
+; GFX13-NEXT:    v_rcp_iflag_f32_e32 v14, v5
 ; GFX13-NEXT:    v_perm_b32 v0, v0, v2, 0x40207
-; GFX13-NEXT:    s_delay_alu instid0(TRANS32_DEP_3)
-; GFX13-NEXT:    v_dual_mul_f32 v10, v14, v10 :: v_dual_mul_f32 v11, v4, v11
-; GFX13-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_mul_f32 v12, v15, v12 :: v_dual_mul_f32 v13, v1, v13
+; GFX13-NEXT:    s_delay_alu instid0(TRANS32_DEP_3) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; GFX13-NEXT:    v_dual_mul_f32 v10, v11, v10 :: v_dual_mul_f32 v12, v4, v12
+; GFX13-NEXT:    v_dual_mul_f32 v13, v15, v13 :: v_dual_mul_f32 v14, v1, v14
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX13-NEXT:    v_trunc_f32_e32 v10, v10
-; GFX13-NEXT:    v_trunc_f32_e32 v11, v11
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX13-NEXT:    v_trunc_f32_e32 v12, v12
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX13-NEXT:    v_trunc_f32_e32 v13, v13
+; GFX13-NEXT:    v_trunc_f32_e32 v14, v14
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX13-NEXT:    v_dual_fma_f32 v14, -v10, v1, v14 :: v_dual_fma_f32 v16, -v11, v3, v4
+; GFX13-NEXT:    v_dual_fma_f32 v11, -v10, v1, v11 :: v_dual_fma_f32 v16, -v12, v3, v4
 ; GFX13-NEXT:    v_cvt_u32_f32_e32 v10, v10
-; GFX13-NEXT:    v_dual_fma_f32 v15, -v12, v4, v15 :: v_dual_fma_f32 v17, -v13, v5, v1
+; GFX13-NEXT:    v_dual_fma_f32 v15, -v13, v4, v15 :: v_dual_fma_f32 v17, -v14, v5, v1
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX13-NEXT:    v_cmp_ge_f32_e64 vcc_lo, |v14|, v1
-; GFX13-NEXT:    v_cvt_u32_f32_e32 v11, v11
-; GFX13-NEXT:    v_cvt_u32_f32_e32 v13, v13
+; GFX13-NEXT:    v_cmp_ge_f32_e64 vcc_lo, |v11|, v1
 ; GFX13-NEXT:    v_cvt_u32_f32_e32 v12, v12
+; GFX13-NEXT:    v_cvt_u32_f32_e32 v14, v14
+; GFX13-NEXT:    v_cvt_u32_f32_e32 v13, v13
 ; GFX13-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v10, vcc_lo
 ; GFX13-NEXT:    v_cmp_ge_f32_e64 vcc_lo, |v16|, v3
-; GFX13-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v11, vcc_lo
+; GFX13-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v12, vcc_lo
 ; GFX13-NEXT:    v_cmp_ge_f32_e64 vcc_lo, |v17|, v5
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
 ; GFX13-NEXT:    v_lshlrev_b16 v3, 8, v3
-; GFX13-NEXT:    v_add_co_ci_u32_e32 v5, vcc_lo, 0, v13, vcc_lo
+; GFX13-NEXT:    v_add_co_ci_u32_e32 v5, vcc_lo, 0, v14, vcc_lo
 ; GFX13-NEXT:    v_cmp_ge_f32_e64 vcc_lo, |v15|, v4
 ; GFX13-NEXT:    v_bitop3_b16 v1, v1, v3, 0xff bitop3:0xec
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX13-NEXT:    v_lshlrev_b16 v5, 8, v5
-; GFX13-NEXT:    v_add_co_ci_u32_e32 v4, vcc_lo, 0, v12, vcc_lo
+; GFX13-NEXT:    v_add_co_ci_u32_e32 v4, vcc_lo, 0, v13, vcc_lo
 ; GFX13-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_bitop3_b16 v3, v4, v5, 0xff bitop3:0xec
