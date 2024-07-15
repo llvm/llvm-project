@@ -99,15 +99,13 @@ S1Ty set_difference(const S1Ty &S1, const S2Ty &S2) {
 ///
 template <class S1Ty, class S2Ty> void set_subtract(S1Ty &S1, const S2Ty &S2) {
   using ElemTy = decltype(*S1.begin());
-  // A couple callers pass a vector for S2, which doesn't support count(), and
-  // wouldn't be efficient if it did. In the absence of a more direct check,
-  // ensure the type supports the contains or find interfaces.
-  if constexpr (detail::HasMemberContains<S2Ty, ElemTy> ||
-                detail::HasMemberFind<S2Ty, ElemTy>) {
+  // A couple callers pass a vector for S2, which doesn't support contains(),
+  // and wouldn't be efficient if it did.
+  if constexpr (detail::HasMemberContains<S2Ty, ElemTy>) {
     if (S1.size() < S2.size()) {
       for (typename S1Ty::iterator SI = S1.begin(), SE = S1.end(); SI != SE;
            ++SI)
-        if (S2.count(*SI))
+        if (S2.contains(*SI))
           S1.erase(SI);
       return;
     }
