@@ -361,6 +361,13 @@ C23 Feature Support
 - Added the ``FLT_NORM_MAX``, ``DBL_NORM_MAX``, and ``LDBL_NORM_MAX`` to the
   freestanding implementation of ``<float.h>`` that ships with Clang.
 
+- Implemented support for
+  `WG14 N2653 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2653.htm>`_
+  which changes the underlying type of ``u8`` character and string constants
+  from ``char`` to ``char8_t``, which is a type defined in ``<uchar.h>`` as
+  being the same type as ``unsigned char``. Also adds support for the type in
+  ``<stdatomic.h>`` in C23 and later modes.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
