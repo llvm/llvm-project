@@ -99,15 +99,22 @@ mlir::Region *AllocaReplaceImpl::findDeallocationPointsAndOwner(
   if (deallocationPoints.empty())
     return nullptr;
 
-  // Step 3: detect loops between the alloc and deallocation points.
-  // If such loop exists, the easy solution is to consider the alloc
-  // as a deallocation point of any previous allocation. This works
-  // because the alloc does not properly dominates itself, so the
-  // inserted deallocation will be conditional.
-  // For now, always assume there may always be a loop if any of the
-  // deallocation point does not dominate the alloca. It is
-  // conservative approach. Bringing lifetime markers above will reduce
-  // the false positive for alloca made inside if like constructs or CFG.
+  // Step 3: detect block based loops between the allocation and deallocation
+  // points, and add a deallocation point on the back edge to avoid memory
+  // leaks.
+  // To avoid complex CFG analysis, the detection uses the fact an alloca
+  // inside a loop does not dominate its deallocation points after the loop. So
+  // dominance can be used as a simple detection method with false positives
+  // (there will be false positives for alloca inside block based if-then-else
+  // for instance).
+  // When a loop is detected, the easiest solution to deallocate on the back
+  // edge is to store the allocated memory address in a variable (that dominates
+  // the loops) and to deallocate the address in that variable if it is set
+  // before executing the allocation. This strategy still leads to correct
+  // execution in the "false positive" cases.
+  // Hence, the alloca is added as a deallocation point when there is no
+  // dominance. Note that bringing lifetime markers above will reduce the
+  // false positives.
   if (!allocDominatesDealloc(alloca, deallocationPoints))
     deallocationPoints.push_back(alloca.getOperation());
   return owningRegion;
