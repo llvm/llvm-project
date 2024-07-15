@@ -18,6 +18,7 @@ using namespace clang;
 using namespace ento;
 using OwnerSet = NoOwnershipChangeVisitor::OwnerSet;
 
+namespace {
 // Collect which entities point to the allocated memory, and could be
 // responsible for deallocating it.
 class OwnershipBindingsHandler : public StoreManager::BindingsHandler {
@@ -46,6 +47,7 @@ public:
     out << "}\n";
   }
 };
+} // namespace
 
 OwnerSet NoOwnershipChangeVisitor::getOwnersAtNode(const ExplodedNode *N) {
   OwnerSet Ret;

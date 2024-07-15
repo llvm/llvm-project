@@ -1910,7 +1910,8 @@ void UnwrappedLineParser::parseStructuralElement(
         } else if (Style.BraceWrapping.AfterFunction) {
           addUnwrappedLine();
         }
-        FormatTok->setFinalizedType(TT_FunctionLBrace);
+        if (!Previous || Previous->isNot(TT_TypeDeclarationParen))
+          FormatTok->setFinalizedType(TT_FunctionLBrace);
         parseBlock();
         IsDecltypeAutoFunction = false;
         addUnwrappedLine();
@@ -2545,10 +2546,10 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
       if (Style.Language == FormatStyle::LK_Java && FormatTok->is(tok::l_brace))
         parseChildBlock();
       break;
-    case tok::r_paren:
+    case tok::r_paren: {
+      const auto *Prev = LeftParen->Previous;
       if (!MightBeStmtExpr && !MightBeFoldExpr && !Line->InMacroBody &&
           Style.RemoveParentheses > FormatStyle::RPS_Leave) {
-        const auto *Prev = LeftParen->Previous;
         const auto *Next = Tokens->peekNextToken();
         const bool DoubleParens =
             Prev && Prev->is(tok::l_paren) && Next && Next->is(tok::r_paren);
@@ -2570,8 +2571,13 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
           FormatTok->Optional = true;
         }
       }
+      if (Prev && Prev->is(TT_TypenameMacro)) {
+        LeftParen->setFinalizedType(TT_TypeDeclarationParen);
+        FormatTok->setFinalizedType(TT_TypeDeclarationParen);
+      }
       nextToken();
       return SeenEqual;
+    }
     case tok::r_brace:
       // A "}" inside parenthesis is an error if there wasn't a matching "{".
       return SeenEqual;

@@ -1,0 +1,62 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("//:vars.bzl", "PACKAGE_VERSION")
+load("//mlir:tblgen.bzl", "gentbl_cc_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
+)
+
+licenses(["notice"])
+
+expand_template(
+    name = "plist",
+    out = "lldb-dap-Info.plist",
+    substitutions = {
+        "${LLDB_VERSION}": PACKAGE_VERSION,
+    },
+    template = "lldb-dap-Info.plist.in",
+)
+
+gentbl_cc_library(
+    name = "lldb_dap_opts_gen",
+    strip_include_prefix = ".",
+    tbl_outs = [(
+        ["-gen-opt-parser-defs"],
+        "Options.inc",
+    )],
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "Options.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
+cc_binary(
+    name = "lldb-dap",
+    srcs = glob([
+        "*.cpp",
+        "*.h",
+    ]),
+    additional_linker_inputs = [
+        ":plist",
+    ],
+    linkopts = select({
+        "@platforms//os:macos": [
+            "-Wl,-sectcreate,__TEXT,__info_plist,$(location :plist)",
+        ],
+        "//conditions:default": [],
+    }),
+    deps = [
+        ":lldb_dap_opts_gen",
+        "//lldb:APIHeaders",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:liblldb.wrapper",
+        "//llvm:Option",
+        "//llvm:Support",
+        "//llvm:config",
+    ],
+)

@@ -197,12 +197,6 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to("plugin load ", [])
 
     def test_log_enable(self):
-        self.complete_from_to("log enable ll", ["lldb"])
-        self.complete_from_to("log enable dw", ["dwarf"])
-        self.complete_from_to("log enable lldb al", ["all"])
-        self.complete_from_to("log enable lldb sym", ["symbol"])
-
-    def test_log_enable(self):
         self.complete_from_to("log disable ll", ["lldb"])
         self.complete_from_to("log disable dw", ["dwarf"])
         self.complete_from_to("log disable lldb al", ["all"])

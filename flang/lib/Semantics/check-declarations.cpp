@@ -252,8 +252,7 @@ void CheckHelper::Check(const Symbol &symbol) {
       &symbol == &symbol.GetUltimate()) {
     if (context_.ShouldWarn(common::LanguageFeature::LongNames)) {
       WarnIfNotInModuleFile(symbol.name(),
-          "%s has length %d, which is greater than the maximum name length "
-          "%d"_port_en_US,
+          "%s has length %d, which is greater than the maximum name length %d"_port_en_US,
           symbol.name(), symbol.name().size(), common::maxNameLen);
     }
   }
@@ -354,7 +353,10 @@ void CheckHelper::Check(const Symbol &symbol) {
       messages_.Say(
           "A pure subprogram may not have a variable with the VOLATILE attribute"_err_en_US);
     }
-    if (IsProcedure(symbol) && !IsPureProcedure(symbol) && IsDummy(symbol)) {
+    if (innermostSymbol_ && innermostSymbol_->name() == "__builtin_c_funloc") {
+      // The intrinsic procedure C_FUNLOC() gets a pass on this check.
+    } else if (IsProcedure(symbol) && !IsPureProcedure(symbol) &&
+        IsDummy(symbol)) {
       messages_.Say(
           "A dummy procedure of a pure subprogram must be pure"_err_en_US);
     }
@@ -463,12 +465,12 @@ void CheckHelper::Check(const Symbol &symbol) {
           symbol.name());
     }
   }
-  if (IsProcedure(symbol) && !symbol.HasExplicitInterface()) {
+  if (IsProcedure(symbol)) {
     if (IsAllocatable(symbol)) {
       messages_.Say(
-          "Procedure '%s' may not be ALLOCATABLE without an explicit interface"_err_en_US,
-          symbol.name());
-    } else if (symbol.Rank() > 0) {
+          "Procedure '%s' may not be ALLOCATABLE"_err_en_US, symbol.name());
+    }
+    if (!symbol.HasExplicitInterface() && symbol.Rank() > 0) {
       messages_.Say(
           "Procedure '%s' may not be an array without an explicit interface"_err_en_US,
           symbol.name());
@@ -760,13 +762,10 @@ void CheckHelper::CheckObjectEntity(
     }
     if (auto ignoreTKR{GetIgnoreTKR(symbol)}; !ignoreTKR.empty()) {
       const Symbol *ownerSymbol{symbol.owner().symbol()};
-      const auto *ownerSubp{ownerSymbol->detailsIf<SubprogramDetails>()};
-      bool inInterface{ownerSubp && ownerSubp->isInterface()};
-      bool inExplicitInterface{
-          inInterface && !IsSeparateModuleProcedureInterface(ownerSymbol)};
-      bool inModuleProc{
-          !inInterface && ownerSymbol && IsModuleProcedure(*ownerSymbol)};
-      if (!inExplicitInterface && !inModuleProc) {
+      bool inModuleProc{ownerSymbol && IsModuleProcedure(*ownerSymbol)};
+      bool inExplicitExternalInterface{
+          InInterface() && !IsSeparateModuleProcedureInterface(ownerSymbol)};
+      if (!InInterface() && !inModuleProc) {
         messages_.Say(
             "!DIR$ IGNORE_TKR may apply only in an interface or a module procedure"_err_en_US);
       }
@@ -777,7 +776,7 @@ void CheckHelper::CheckObjectEntity(
       }
       if (IsPassedViaDescriptor(symbol)) {
         if (IsAllocatableOrObjectPointer(&symbol)) {
-          if (inExplicitInterface) {
+          if (inExplicitExternalInterface) {
             if (context_.ShouldWarn(common::UsageWarning::IgnoreTKRUsage)) {
               WarnIfNotInModuleFile(
                   "!DIR$ IGNORE_TKR should not apply to an allocatable or pointer"_warn_en_US);
@@ -792,7 +791,7 @@ void CheckHelper::CheckObjectEntity(
               WarnIfNotInModuleFile(
                   "!DIR$ IGNORE_TKR(R) is not meaningful for an assumed-rank array"_warn_en_US);
             }
-          } else if (inExplicitInterface) {
+          } else if (inExplicitExternalInterface) {
             if (context_.ShouldWarn(common::UsageWarning::IgnoreTKRUsage)) {
               WarnIfNotInModuleFile(
                   "!DIR$ IGNORE_TKR(R) should not apply to a dummy argument passed via descriptor"_warn_en_US);
@@ -882,7 +881,7 @@ void CheckHelper::CheckObjectEntity(
       if (auto *msg{messages_.Say(
               "'%s' may not be a local variable in a pure subprogram"_err_en_US,
               symbol.name())}) {
-        msg->Attach(std::move(*whyNot));
+        msg->Attach(std::move(whyNot->set_severity(parser::Severity::Because)));
       }
     }
   }
@@ -1325,6 +1324,13 @@ private:
   bool CheckSameAttrs(const Symbol &, const Symbol &, ATTRS, ATTRS);
   bool ShapesAreCompatible(const DummyDataObject &, const DummyDataObject &);
   evaluate::Shape FoldShape(const evaluate::Shape &);
+  std::optional<evaluate::Shape> FoldShape(
+      const std::optional<evaluate::Shape> &shape) {
+    if (shape) {
+      return FoldShape(*shape);
+    }
+    return std::nullopt;
+  }
   std::string AsFortran(DummyDataObject::Attr attr) {
     return parser::ToUpperCaseLetters(DummyDataObject::EnumToString(attr));
   }
@@ -2973,7 +2979,8 @@ parser::Messages CheckHelper::WhyNotInteroperableDerivedType(
             msgs.Annex(std::move(bad));
           }
         } else if (!IsInteroperableIntrinsicType(
-                       *type, context_.languageFeatures())) {
+                       *type, context_.languageFeatures())
+                        .value_or(false)) {
           auto maybeDyType{evaluate::DynamicType::From(*type)};
           if (type->category() == DeclTypeSpec::Logical) {
             if (context_.ShouldWarn(common::UsageWarning::LogicalVsCBool)) {
@@ -3075,7 +3082,8 @@ parser::Messages CheckHelper::WhyNotInteroperableObject(const Symbol &symbol) {
         type->characterTypeSpec().length().isDeferred()) {
       // ok; F'2023 18.3.7 p2(6)
     } else if (derived ||
-        IsInteroperableIntrinsicType(*type, context_.languageFeatures())) {
+        IsInteroperableIntrinsicType(*type, context_.languageFeatures())
+            .value_or(false)) {
       // F'2023 18.3.7 p2(4,5)
     } else if (type->category() == DeclTypeSpec::Logical) {
       if (context_.ShouldWarn(common::UsageWarning::LogicalVsCBool) &&

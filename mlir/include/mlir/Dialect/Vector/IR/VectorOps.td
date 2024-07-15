@@ -680,6 +680,10 @@ def Vector_ExtractOp :
     Takes an n-D vector and a k-D position and extracts the (n-k)-D vector at
     the proper position. Degenerates to an element type if n-k is zero.
 
+    Dynamic indices must be greater or equal to zero and less than the size of
+    the corresponding dimension. The result is undefined if any index is
+    out-of-bounds.
+
     Example:
 
     ```mlir
@@ -861,6 +865,10 @@ def Vector_InsertOp :
     Takes an n-D source vector, an (n+k)-D destination vector and a k-D position
     and inserts the n-D source into the (n+k)-D destination at the proper
     position. Degenerates to a scalar or a 0-d vector source type when n = 0.
+
+    Dynamic indices must be greater or equal to zero and less than the size of
+    the corresponding dimension. The result is undefined if any index is
+    out-of-bounds.
 
     Example:
 
@@ -3007,6 +3015,31 @@ def Vector_ScanOp :
     "$kind `,` $source `,` $initial_value attr-dict `:` "
     "type($source) `,` type($initial_value) ";
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// VectorStepOp
+//===----------------------------------------------------------------------===//
+
+def Vector_StepOp : Vector_Op<"step", [Pure]> {
+  let summary = "A linear sequence of values from 0 to N";
+  let description = [{
+    A `step` operation produces an index vector, i.e. a 1-D vector of values of
+    index type that represents a linear sequence from 0 to N-1, where N is the
+    number of elements in the `result` vector.
+
+    Supports fixed-width and scalable vectors.
+
+    Examples:
+
+    ```mlir
+    %0 = vector.step : vector<4xindex> ; [0, 1, 2, 3]
+    %1 = vector.step : vector<[4]xindex> ; [0, 1, .., <vscale * 4 - 1>]
+    ```
+  }];
+  let hasFolder = 1;
+  let results = (outs VectorOfRankAndType<[1], [Index]>:$result);
+  let assemblyFormat = "attr-dict `:` type($result)";
 }
 
 def Vector_YieldOp : Vector_Op<"yield", [

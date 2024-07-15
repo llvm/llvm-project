@@ -29,7 +29,9 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Allocator.h"
+#include <map>
 #include <optional>
+#include <string>
 
 namespace llvm {
 class MDNode;
@@ -346,6 +348,14 @@ class CGDebugInfo {
       const FieldDecl *BitFieldDecl, const llvm::DIDerivedType *BitFieldDI,
       llvm::ArrayRef<llvm::Metadata *> PreviousFieldsDI, const RecordDecl *RD);
 
+  /// A cache that maps names of artificial inlined functions to subprograms.
+  llvm::StringMap<llvm::DISubprogram *> InlinedTrapFuncMap;
+
+  /// A function that returns the subprogram corresponding to the artificial
+  /// inlined function for traps.
+  llvm::DISubprogram *createInlinedTrapSubprogram(StringRef FuncName,
+                                                  llvm::DIFile *FileScope);
+
   /// Helpers for collecting fields of a record.
   /// @{
   void CollectRecordLambdaFields(const CXXRecordDecl *CXXDecl,
@@ -607,6 +617,18 @@ public:
   ParamDecl2StmtTy &getCoroutineParameterMappings() {
     return CoroutineParameterMappings;
   }
+
+  /// Create a debug location from `TrapLocation` that adds an artificial inline
+  /// frame where the frame name is
+  ///
+  /// * `<Prefix>:<Category>:<FailureMsg>`
+  ///
+  /// `<Prefix>` is "__clang_trap_msg".
+  ///
+  /// This is used to store failure reasons for traps.
+  llvm::DILocation *CreateTrapFailureMessageFor(llvm::DebugLoc TrapLocation,
+                                                StringRef Category,
+                                                StringRef FailureMsg);
 
 private:
   /// Emit call to llvm.dbg.declare for a variable declaration.

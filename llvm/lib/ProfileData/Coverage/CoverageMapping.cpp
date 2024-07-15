@@ -37,6 +37,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <stack>
 #include <string>
 #include <system_error>
 #include <utility>

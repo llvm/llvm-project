@@ -14,6 +14,7 @@ target datalayout = "e-p:64:64-p1:16:16-p2:32:32:32-p3:64:64:64-f16:32"
 @Global_as1 = external addrspace(1) global [10 x i8]
 
 declare void @use(ptr)
+declare void @use.i64(i64)
 
 ; Test noop elimination
 define ptr @test1(ptr %I) {
@@ -592,8 +593,8 @@ define i32 @test21() {
 }
 
 
-@A = global i32 1               ; <ptr> [#uses=1]
-@B = global i32 2               ; <ptr> [#uses=1]
+@A = global i32 1                 ; <ptr> [#uses=1]
+@B = global i32 2                 ; <ptr> [#uses=1]
 
 define i1 @test22() {
 ; CHECK-LABEL: @test22(
@@ -612,8 +613,8 @@ define i1 @test23() {
 ; CHECK-LABEL: @test23(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %A = getelementptr %X, ptr null, i64 0, i32 0, i64 0                ; <ptr> [#uses=1]
-  %B = icmp ne ptr %A, null              ; <i1> [#uses=1]
+  %A = getelementptr %X, ptr null, i64 0, i32 0, i64 0                  ; <ptr> [#uses=1]
+  %B = icmp ne ptr %A, null                ; <i1> [#uses=1]
   ret i1 %B
 }
 
@@ -1014,8 +1015,8 @@ define i8 @test_gep_bitcast_as1(ptr addrspace(1) %arr, i16 %N) {
 ; The element size of the array matches the element size of the pointer
 define i64 @test_gep_bitcast_array_same_size_element(ptr %arr, i64 %N) {
 ; CHECK-LABEL: @test_gep_bitcast_array_same_size_element(
-; CHECK-NEXT:    [[V:%.*]] = shl i64 [[N:%.*]], 3
-; CHECK-NEXT:    [[T:%.*]] = getelementptr i64, ptr [[ARR:%.*]], i64 [[V]]
+; CHECK-NEXT:    [[T_IDX:%.*]] = shl i64 [[N:%.*]], 6
+; CHECK-NEXT:    [[T:%.*]] = getelementptr i8, ptr [[ARR:%.*]], i64 [[T_IDX]]
 ; CHECK-NEXT:    [[X:%.*]] = load i64, ptr [[T]], align 4
 ; CHECK-NEXT:    ret i64 [[X]]
 ;
@@ -1029,8 +1030,8 @@ define i64 @test_gep_bitcast_array_same_size_element(ptr %arr, i64 %N) {
 define i64 @test_gep_bitcast_array_same_size_element_addrspacecast(ptr %arr, i64 %N) {
 ; CHECK-LABEL: @test_gep_bitcast_array_same_size_element_addrspacecast(
 ; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr [[ARR:%.*]] to ptr addrspace(3)
-; CHECK-NEXT:    [[V:%.*]] = shl i64 [[N:%.*]], 3
-; CHECK-NEXT:    [[T:%.*]] = getelementptr i64, ptr addrspace(3) [[CAST]], i64 [[V]]
+; CHECK-NEXT:    [[T_IDX:%.*]] = shl i64 [[N:%.*]], 6
+; CHECK-NEXT:    [[T:%.*]] = getelementptr i8, ptr addrspace(3) [[CAST]], i64 [[T_IDX]]
 ; CHECK-NEXT:    [[X:%.*]] = load i64, ptr addrspace(3) [[T]], align 4
 ; CHECK-NEXT:    ret i64 [[X]]
 ;
@@ -1057,8 +1058,8 @@ define i8 @test_gep_bitcast_array_different_size_element(ptr %arr, i64 %N) {
 
 define i64 @test_gep_bitcast_array_same_size_element_as1(ptr addrspace(1) %arr, i16 %N) {
 ; CHECK-LABEL: @test_gep_bitcast_array_same_size_element_as1(
-; CHECK-NEXT:    [[V:%.*]] = shl i16 [[N:%.*]], 3
-; CHECK-NEXT:    [[T:%.*]] = getelementptr i64, ptr addrspace(1) [[ARR:%.*]], i16 [[V]]
+; CHECK-NEXT:    [[T_IDX:%.*]] = shl i16 [[N:%.*]], 6
+; CHECK-NEXT:    [[T:%.*]] = getelementptr i8, ptr addrspace(1) [[ARR:%.*]], i16 [[T_IDX]]
 ; CHECK-NEXT:    [[X:%.*]] = load i64, ptr addrspace(1) [[T]], align 4
 ; CHECK-NEXT:    ret i64 [[X]]
 ;
@@ -1179,9 +1180,9 @@ define ptr @test45(ptr %c1, ptr %c2) {
 ;
   %ptrtoint1 = ptrtoint ptr %c1 to i64
   %ptrtoint2 = ptrtoint ptr %c2 to i64
-  %sub = sub i64 %ptrtoint2, %ptrtoint1 ; C2 - C1
+  %sub = sub i64 %ptrtoint2, %ptrtoint1   ; C2 - C1
   %shr = sdiv i64 %sub, 7
-  %gep = getelementptr inbounds %struct.C, ptr %c1, i64 %shr ; C1 + (C2 - C1)
+  %gep = getelementptr inbounds %struct.C, ptr %c1, i64 %shr   ; C1 + (C2 - C1)
   ret ptr %gep
 }
 
@@ -1370,8 +1371,8 @@ define ptr @D98588(ptr %c1, i64 %offset) {
   %c2_next = getelementptr inbounds i64, ptr %c1, i64 %offset
   %ptrtoint1 = ptrtoint ptr %c1 to i64
   %ptrtoint2 = ptrtoint ptr %c2_next to i64
-  %sub = sub i64 %ptrtoint2, %ptrtoint1 ; C2 - C1
-  %gep = getelementptr inbounds i8, ptr %c1, i64 %sub ; C1 + (C2 - C1)
+  %sub = sub i64 %ptrtoint2, %ptrtoint1   ; C2 - C1
+  %gep = getelementptr inbounds i8, ptr %c1, i64 %sub   ; C1 + (C2 - C1)
   ret ptr %gep
 }
 
@@ -1789,5 +1790,120 @@ define ptr @gep_sel_const_nuw(i1 %c) {
   %gep = getelementptr nuw i8, ptr %sel, i64 5
   ret ptr %gep
 }
+
+define ptr @gep_of_udiv(ptr %p, i64 %x) {
+; CHECK-LABEL: @gep_of_udiv(
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv exact i64 [[X:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %idx = udiv exact i64 %x, 12
+  %r = getelementptr i32, ptr %p, i64 %idx
+  ret ptr %r
+}
+
+define ptr @gep_of_udiv_fail_not_divisible(ptr %p, i64 %x) {
+; CHECK-LABEL: @gep_of_udiv_fail_not_divisible(
+; CHECK-NEXT:    [[IDX:%.*]] = udiv exact i64 [[X:%.*]], 13
+; CHECK-NEXT:    [[R:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %idx = udiv exact i64 %x, 13
+  %r = getelementptr i32, ptr %p, i64 %idx
+  ret ptr %r
+}
+
+
+define ptr @gep_of_sdiv(ptr %p, i64 %x) {
+; CHECK-LABEL: @gep_of_sdiv(
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv exact i64 [[X:%.*]], -9
+; CHECK-NEXT:    [[R:%.*]] = getelementptr nusw nuw i8, ptr [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %idx = sdiv exact i64 %x, -36
+  %r = getelementptr nusw nuw i32, ptr %p, i64 %idx
+  ret ptr %r
+}
+
+
+define ptr @gep_of_sdiv_fail_not_divisible(ptr %p, i64 %x) {
+; CHECK-LABEL: @gep_of_sdiv_fail_not_divisible(
+; CHECK-NEXT:    [[IDX:%.*]] = sdiv exact i64 [[X:%.*]], -35
+; CHECK-NEXT:    [[R:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %idx = sdiv exact i64 %x, -35
+  %r = getelementptr i32, ptr %p, i64 %idx
+  ret ptr %r
+}
+
+define ptr @gep_of_sdiv_fail_ub(ptr %p, i64 %x) {
+; CHECK-LABEL: @gep_of_sdiv_fail_ub(
+; CHECK-NEXT:    [[IDX:%.*]] = sdiv i64 [[X:%.*]], -4
+; CHECK-NEXT:    [[R:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %idx = sdiv i64 %x, -4
+  %r = getelementptr i32, ptr %p, i64 %idx
+  ret ptr %r
+}
+
+define ptr @gep_of_lshr(ptr %p, i64 %x) {
+; CHECK-LABEL: @gep_of_lshr(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i64 [[X:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %idx = lshr exact i64 %x, 3
+  %r = getelementptr i32, ptr %p, i64 %idx
+  ret ptr %r
+}
+
+define ptr @gep_of_ashr(ptr %p, i64 %x) {
+; CHECK-LABEL: @gep_of_ashr(
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr exact i64 [[X:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %idx = ashr exact i64 %x, 3
+  %r = getelementptr inbounds i32, ptr %p, i64 %idx
+  ret ptr %r
+}
+
+define ptr @gep_of_ashr_fail_multiuse(ptr %p, i64 %x) {
+; CHECK-LABEL: @gep_of_ashr_fail_multiuse(
+; CHECK-NEXT:    [[IDX:%.*]] = ashr exact i64 [[X:%.*]], 3
+; CHECK-NEXT:    call void @use.i64(i64 [[IDX]])
+; CHECK-NEXT:    [[R:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %idx = ashr exact i64 %x, 3
+  call void @use.i64(i64 %idx)
+  %r = getelementptr inbounds i32, ptr %p, i64 %idx
+  ret ptr %r
+}
+
+define ptr @gep_of_lshr_fail_missing_exact(ptr %p, i64 %x) {
+; CHECK-LABEL: @gep_of_lshr_fail_missing_exact(
+; CHECK-NEXT:    [[IDX:%.*]] = lshr i64 [[X:%.*]], 3
+; CHECK-NEXT:    [[R:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %idx = lshr i64 %x, 3
+  %r = getelementptr i32, ptr %p, i64 %idx
+  ret ptr %r
+}
+
+define ptr @gep_of_ashr_fail_not_divisible(ptr %p, i64 %x) {
+; CHECK-LABEL: @gep_of_ashr_fail_not_divisible(
+; CHECK-NEXT:    [[IDX:%.*]] = ashr exact i64 [[X:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %idx = ashr exact i64 %x, 1
+  %r = getelementptr i32, ptr %p, i64 %idx
+  ret ptr %r
+}
+
 
 !0 = !{!"branch_weights", i32 2, i32 10}

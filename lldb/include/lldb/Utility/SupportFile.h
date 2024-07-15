@@ -30,15 +30,37 @@ public:
 
   virtual ~SupportFile() = default;
 
-  /// Return true if both SupportFiles have the same FileSpec and, if both have
-  /// a valid Checksum, the Checksum is the same.
-  bool operator==(const SupportFile &other) const {
-    if (m_checksum && other.m_checksum)
-      return m_file_spec == other.m_file_spec && m_checksum == other.m_checksum;
-    return m_file_spec == other.m_file_spec;
-  }
+  enum SupportFileEquality : uint8_t {
+    eEqualFileSpec = (1u << 1),
+    eEqualChecksum = (1u << 2),
+    eEqualChecksumIfSet = (1u << 3),
+    eEqualFileSpecAndChecksum = eEqualFileSpec | eEqualChecksum,
+    eEqualFileSpecAndChecksumIfSet = eEqualFileSpec | eEqualChecksumIfSet,
+  };
 
-  bool operator!=(const SupportFile &other) const { return !(*this == other); }
+  bool Equal(const SupportFile &other,
+             SupportFileEquality equality = eEqualFileSpecAndChecksum) const {
+    assert(!(equality & eEqualChecksum & eEqualChecksumIfSet) &&
+           "eEqualChecksum and eEqualChecksumIfSet are mutually exclusive");
+
+    if (equality & eEqualFileSpec) {
+      if (m_file_spec != other.m_file_spec)
+        return false;
+    }
+
+    if (equality & eEqualChecksum) {
+      if (m_checksum != other.m_checksum)
+        return false;
+    }
+
+    if (equality & eEqualChecksumIfSet) {
+      if (m_checksum && other.m_checksum)
+        if (m_checksum != other.m_checksum)
+          return false;
+    }
+
+    return true;
+  }
 
   /// Return the file name only. Useful for resolving breakpoints by file name.
   const FileSpec &GetSpecOnly() const { return m_file_spec; };

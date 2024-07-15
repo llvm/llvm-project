@@ -83,6 +83,12 @@ enum NodeType {
   ExternalSymbol,
   BlockAddress,
 
+  /// A ptrauth constant.
+  /// ptr, key, addr-disc, disc
+  /// Note that the addr-disc can be a non-constant value, to allow representing
+  /// a constant global address signed using address-diversification, in code.
+  PtrAuthGlobalAddress,
+
   /// The address of the GOT
   GLOBAL_OFFSET_TABLE,
 
@@ -416,6 +422,12 @@ enum NodeType {
   STRICT_FSIN,
   STRICT_FCOS,
   STRICT_FTAN,
+  STRICT_FASIN,
+  STRICT_FACOS,
+  STRICT_FATAN,
+  STRICT_FSINH,
+  STRICT_FCOSH,
+  STRICT_FTANH,
   STRICT_FEXP,
   STRICT_FEXP2,
   STRICT_FLOG,
@@ -942,6 +954,12 @@ enum NodeType {
   FSIN,
   FCOS,
   FTAN,
+  FASIN,
+  FACOS,
+  FATAN,
+  FSINH,
+  FCOSH,
+  FTANH,
   FPOW,
   FPOWI,
   /// FLDEXP - ldexp, inspired by libm (op0 * 2**op1).

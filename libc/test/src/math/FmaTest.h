@@ -45,9 +45,6 @@ class FmaTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   static constexpr InStorageType IN_MIN_SUBNORMAL_U =
       InFPBits::min_subnormal().uintval();
 
-  OutConstants out;
-  InConstants in;
-
   InStorageType get_random_bit_pattern() {
     InStorageType bits{0};
     for (InStorageType i = 0; i < sizeof(InStorageType) / 2; ++i) {
@@ -91,5 +88,15 @@ public:
     }
   }
 };
+
+#define LIST_FMA_TESTS(T, func)                                                \
+  using LlvmLibcFmaTest = FmaTestTemplate<T>;                                  \
+  TEST_F(LlvmLibcFmaTest, SubnormalRange) { test_subnormal_range(&func); }     \
+  TEST_F(LlvmLibcFmaTest, NormalRange) { test_normal_range(&func); }
+
+#define LIST_NARROWING_FMA_TESTS(OutType, InType, func)                        \
+  using LlvmLibcFmaTest = FmaTestTemplate<OutType, InType>;                    \
+  TEST_F(LlvmLibcFmaTest, SubnormalRange) { test_subnormal_range(&func); }     \
+  TEST_F(LlvmLibcFmaTest, NormalRange) { test_normal_range(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_FMATEST_H

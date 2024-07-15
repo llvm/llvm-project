@@ -3723,6 +3723,23 @@ void ASTDeclReader::attachPreviousDecl(ASTReader &Reader, Decl *D,
 #include "clang/AST/DeclNodes.inc"
   }
 
+  // [basic.link]/p10:
+  //    If two declarations of an entity are attached to different modules,
+  //    the program is ill-formed;
+  //
+  // FIXME: Get rid of the enumeration of decl types once we have an appropriate
+  // abstract for decls of an entity. e.g., the namespace decl and using decl
+  // doesn't introduce an entity.
+  if (Module *M = Previous->getOwningModule();
+      M && M->isNamedModule() &&
+      isa<VarDecl, FunctionDecl, TagDecl, RedeclarableTemplateDecl>(Previous) &&
+      !Reader.getContext().isInSameModule(M, D->getOwningModule())) {
+    Reader.Diag(Previous->getLocation(),
+                diag::err_multiple_decl_in_different_modules)
+        << cast<NamedDecl>(Previous) << M->Name;
+    Reader.Diag(D->getLocation(), diag::note_also_found);
+  }
+
   // If the declaration was visible in one module, a redeclaration of it in
   // another module remains visible even if it wouldn't be visible by itself.
   //
@@ -4198,6 +4215,7 @@ void ASTReader::PassInterestingDeclsToConsumer() {
   };
   std::deque<Decl *> MaybeInterestingDecls =
       std::move(PotentiallyInterestingDecls);
+  PotentiallyInterestingDecls.clear();
   assert(PotentiallyInterestingDecls.empty());
   while (!MaybeInterestingDecls.empty()) {
     Decl *D = MaybeInterestingDecls.front();
@@ -4217,13 +4235,6 @@ void ASTReader::PassInterestingDeclsToConsumer() {
 
   // If we add any new potential interesting decl in the last call, consume it.
   ConsumingPotentialInterestingDecls();
-
-  for (GlobalDeclID ID : VTablesToEmit) {
-    auto *RD = cast<CXXRecordDecl>(GetDecl(ID));
-    assert(!RD->shouldEmitInExternalSource());
-    PassVTableToConsumer(RD);
-  }
-  VTablesToEmit.clear();
 }
 
 void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {

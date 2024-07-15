@@ -44,7 +44,7 @@ void LoongArchMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
 }
 
 bool LoongArchMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                                const MCAsmLayout *Layout,
+                                                const MCAssembler *Asm,
                                                 const MCFixup *Fixup) const {
   // Explicitly drop the layout and assembler to prevent any symbolic folding in
   // the expression handling.  This is required to preserve symbolic difference

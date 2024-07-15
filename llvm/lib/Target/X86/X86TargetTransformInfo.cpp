@@ -176,6 +176,29 @@ unsigned X86TTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   return 8;
 }
 
+bool X86TTIImpl::hasConditionalLoadStoreForType(Type *Ty) const {
+  if (!ST->hasCF())
+    return false;
+  if (!Ty)
+    return true;
+  // Conditional faulting is supported by CFCMOV, which only accepts
+  // 16/32/64-bit operands.
+  // TODO: Support f32/f64 with VMOVSS/VMOVSD with zero mask when it's
+  // profitable.
+  auto *VTy = dyn_cast<FixedVectorType>(Ty);
+  if (!Ty->isIntegerTy() && (!VTy || VTy->getNumElements() != 1))
+    return false;
+  auto *ScalarTy = Ty->getScalarType();
+  switch (cast<IntegerType>(ScalarTy)->getBitWidth()) {
+  default:
+    return false;
+  case 16:
+  case 32:
+  case 64:
+    return true;
+  }
+}
+
 TypeSize
 X86TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   unsigned PreferVectorWidth = ST->getPreferVectorWidth();
@@ -852,8 +875,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SUB,   MVT::v32i16,  {  1,  1, 1, 1 } }, // psubw
 
     { ISD::MUL,   MVT::v16i8,   {  4, 12, 4, 5 } }, // extend/pmullw/trunc
-    { ISD::MUL,   MVT::v32i8,   {  6, 11,10,11 } }, // extend/pmullw/trunc
-    { ISD::MUL,   MVT::v64i8,   {  6, 12,10,11 } }, // unpack/pmullw
+    { ISD::MUL,   MVT::v32i8,   {  3, 10, 7,10 } }, // pmaddubsw
+    { ISD::MUL,   MVT::v64i8,   {  3, 11, 7,10 } }, // pmaddubsw
     { ISD::MUL,   MVT::v32i16,  {  1,  5, 1, 1 } }, // pmullw
 
     { ISD::SUB,   MVT::v32i8,   {  1,  1, 1, 1 } }, // psubb
@@ -1119,7 +1142,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::ADD,  MVT::v4i64,   {  1,  1, 1, 2 } }, // paddq
 
     { ISD::MUL,  MVT::v16i8,   {  5, 18, 6,12 } }, // extend/pmullw/pack
-    { ISD::MUL,  MVT::v32i8,   {  6, 11,10,20 } }, // unpack/pmullw
+    { ISD::MUL,  MVT::v32i8,   {  4,  8, 8,16 } }, // pmaddubsw
     { ISD::MUL,  MVT::v16i16,  {  2,  5, 1, 2 } }, // pmullw
     { ISD::MUL,  MVT::v8i32,   {  4, 10, 1, 2 } }, // pmulld
     { ISD::MUL,  MVT::v4i32,   {  2, 10, 1, 2 } }, // pmulld
@@ -1170,8 +1193,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     // We don't have to scalarize unsupported ops. We can issue two half-sized
     // operations and we only need to extract the upper YMM half.
     // Two ops + 1 extract + 1 insert = 4.
-    { ISD::MUL,     MVT::v32i8,   { 12, 12, 22, 23 } }, // unpack/pmullw + split
-    { ISD::MUL,     MVT::v16i8,   {  5,  6, 10, 12 } }, // unpack/pmullw
+    { ISD::MUL,     MVT::v32i8,   { 10, 11, 18, 19 } }, // pmaddubsw + split
+    { ISD::MUL,     MVT::v16i8,   {  5,  6,  8, 12 } }, // 2*pmaddubsw/3*and/psllw/or
     { ISD::MUL,     MVT::v16i16,  {  4,  8,  5,  6 } }, // pmullw + split
     { ISD::MUL,     MVT::v8i32,   {  5,  8,  5, 10 } }, // pmulld + split
     { ISD::MUL,     MVT::v4i32,   {  2,  5,  1,  3 } }, // pmulld
@@ -1311,12 +1334,20 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SRA,  MVT::v4i32,  { 16, 17,15,19 } }, // Shift each lane + blend.
     { ISD::SRA,  MVT::v2i64,  {  8, 17, 5, 7 } }, // splat+shuffle sequence.
 
-    { ISD::MUL,  MVT::v16i8,  {  6, 18,10,12 } }, // 2*unpack/2*pmullw/2*and/pack
     { ISD::MUL,  MVT::v4i32,  {  2, 11, 1, 1 } }  // pmulld (Nehalem from agner.org)
   };
 
   if (ST->hasSSE41())
     if (const auto *Entry = CostTableLookup(SSE41CostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
+  static const CostKindTblEntry SSSE3CostTable[] = {
+    { ISD::MUL,  MVT::v16i8,  {  5, 18,10,12 } }, // 2*pmaddubsw/3*and/psllw/or
+  };
+
+  if (ST->hasSSSE3())
+    if (const auto *Entry = CostTableLookup(SSSE3CostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
 
@@ -5062,7 +5093,12 @@ X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy, Align Alignment,
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcVTy);
   auto VT = TLI->getValueType(DL, SrcVTy);
   InstructionCost Cost = 0;
-  if (VT.isSimple() && LT.second != VT.getSimpleVT() &&
+  MVT Ty = LT.second;
+  if (Ty == MVT::i16 || Ty == MVT::i32 || Ty == MVT::i64)
+    // APX masked load/store for scalar is cheap.
+    return Cost + LT.first;
+
+  if (VT.isSimple() && Ty != VT.getSimpleVT() &&
       LT.second.getVectorNumElements() == NumElem)
     // Promotion requires extend/truncate for data and a shuffle for mask.
     Cost += getShuffleCost(TTI::SK_PermuteTwoSrc, SrcVTy, std::nullopt,
@@ -5070,9 +5106,9 @@ X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy, Align Alignment,
             getShuffleCost(TTI::SK_PermuteTwoSrc, MaskTy, std::nullopt,
                            CostKind, 0, nullptr);
 
-  else if (LT.first * LT.second.getVectorNumElements() > NumElem) {
+  else if (LT.first * Ty.getVectorNumElements() > NumElem) {
     auto *NewMaskTy = FixedVectorType::get(MaskTy->getElementType(),
-                                           LT.second.getVectorNumElements());
+                                           Ty.getVectorNumElements());
     // Expanding requires fill mask with zeroes
     Cost += getShuffleCost(TTI::SK_InsertSubvector, NewMaskTy, std::nullopt,
                            CostKind, 0, MaskTy);
@@ -5891,14 +5927,14 @@ bool X86TTIImpl::canMacroFuseCmp() {
 }
 
 bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment) {
+  Type *ScalarTy = DataTy->getScalarType();
+
+  // The backend can't handle a single element vector w/o CFCMOV.
+  if (isa<VectorType>(DataTy) && cast<FixedVectorType>(DataTy)->getNumElements() == 1)
+    return ST->hasCF() && hasConditionalLoadStoreForType(ScalarTy);
+
   if (!ST->hasAVX())
     return false;
-
-  // The backend can't handle a single element vector.
-  if (isa<VectorType>(DataTy) &&
-      cast<FixedVectorType>(DataTy)->getNumElements() == 1)
-    return false;
-  Type *ScalarTy = DataTy->getScalarType();
 
   if (ScalarTy->isPointerTy())
     return true;

@@ -1,4 +1,6 @@
 REQUIRES: lsan
+// See https://github.com/llvm/llvm-project/issues/97712.
+UNSUPPORTED: target={{.*}}
 
 RUN: %cpp_compiler %S/LeakTest.cpp -o %t-LeakTest
 RUN: %cpp_compiler %S/ThreadedLeakTest.cpp -o %t-ThreadedLeakTest

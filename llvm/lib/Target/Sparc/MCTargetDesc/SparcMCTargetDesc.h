@@ -34,8 +34,8 @@ MCCodeEmitter *createSparcMCCodeEmitter(const MCInstrInfo &MCII,
 MCAsmBackend *createSparcAsmBackend(const Target &T, const MCSubtargetInfo &STI,
                                     const MCRegisterInfo &MRI,
                                     const MCTargetOptions &Options);
-std::unique_ptr<MCObjectTargetWriter> createSparcELFObjectWriter(bool Is64Bit,
-                                                                 uint8_t OSABI);
+std::unique_ptr<MCObjectTargetWriter>
+createSparcELFObjectWriter(bool Is64Bit, bool HasV9, uint8_t OSABI);
 
 // Defines symbolic names for Sparc v9 ASI tag names.
 namespace SparcASITag {

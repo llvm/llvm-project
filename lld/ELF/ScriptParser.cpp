@@ -158,7 +158,8 @@ static void moveAbsRight(ExprValue &a, ExprValue &b) {
   if (a.sec == nullptr || (a.forceAbsolute && !b.isAbsolute()))
     std::swap(a, b);
   if (!b.isAbsolute())
-    error(a.loc + ": at least one side of the expression must be absolute");
+    script->recordError(
+        a.loc + ": at least one side of the expression must be absolute");
 }
 
 static ExprValue add(ExprValue a, ExprValue b) {
@@ -1384,7 +1385,7 @@ StringRef ScriptParser::readParenLiteral() {
 
 static void checkIfExists(const OutputSection &osec, StringRef location) {
   if (osec.location.empty() && script->errorOnMissingSection)
-    error(location + ": undefined section " + osec.name);
+    script->recordError(location + ": undefined section " + osec.name);
 }
 
 static bool isValidSymbolName(StringRef s) {
@@ -1627,7 +1628,9 @@ unsigned ScriptParser::readPhdrType() {
                      .Case("PT_GNU_EH_FRAME", PT_GNU_EH_FRAME)
                      .Case("PT_GNU_STACK", PT_GNU_STACK)
                      .Case("PT_GNU_RELRO", PT_GNU_RELRO)
+                     .Case("PT_OPENBSD_MUTABLE", PT_OPENBSD_MUTABLE)
                      .Case("PT_OPENBSD_RANDOMIZE", PT_OPENBSD_RANDOMIZE)
+                     .Case("PT_OPENBSD_SYSCALLS", PT_OPENBSD_SYSCALLS)
                      .Case("PT_OPENBSD_WXNEEDED", PT_OPENBSD_WXNEEDED)
                      .Case("PT_OPENBSD_BOOTDATA", PT_OPENBSD_BOOTDATA)
                      .Default(-1);

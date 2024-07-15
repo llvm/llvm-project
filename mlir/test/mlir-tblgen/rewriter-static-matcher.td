@@ -48,11 +48,11 @@ def Foo : NativeCodeCall<"foo($_builder, $0)">;
 // Test static matcher for duplicate DagNode
 // ---
 
-// CHECK: static ::mlir::LogicalResult [[$TYPE_CONSTRAINT:__mlir_ods_local_type_constraint.*]](
+// CHECK: static ::llvm::LogicalResult [[$TYPE_CONSTRAINT:__mlir_ods_local_type_constraint.*]](
 // CHECK-NEXT: {{.*::mlir::Type type}}
-// CHECK: static ::mlir::LogicalResult [[$ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
+// CHECK: static ::llvm::LogicalResult [[$ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
 // CHECK-NEXT: {{.*::mlir::Attribute attr}}
-// CHECK: static ::mlir::LogicalResult [[$DAG_MATCHER:static_dag_matcher.*]](
+// CHECK: static ::llvm::LogicalResult [[$DAG_MATCHER:static_dag_matcher.*]](
 // CHECK: if(::mlir::failed([[$ATTR_CONSTRAINT]]
 // CHECK: if(::mlir::failed([[$TYPE_CONSTRAINT]]
 

@@ -2295,6 +2295,7 @@
 {'is_defined': True, 'name': '__cxa_bad_cast', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__cxa_bad_typeid', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__cxa_begin_catch', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__cxa_call_terminate', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__cxa_call_unexpected', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__cxa_current_exception_type', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__cxa_current_primary_exception', 'type': 'FUNC'}

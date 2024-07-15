@@ -318,7 +318,7 @@ bool LoadStoreOpt::mergeStores(SmallVectorImpl<GStore *> &StoresToMerge) {
     assert(MRI->getType(StoreMI->getValueReg()) == OrigTy);
 #endif
 
-  const auto &DL = MF->getFunction().getParent()->getDataLayout();
+  const auto &DL = MF->getFunction().getDataLayout();
   bool AnyMerged = false;
   do {
     unsigned NumPow2 = llvm::bit_floor(StoresToMerge.size());
@@ -955,7 +955,7 @@ void LoadStoreOpt::initializeStoreMergeTargetInfo(unsigned AddrSpace) {
   // Need to reserve at least MaxStoreSizeToForm + 1 bits.
   BitVector LegalSizes(MaxStoreSizeToForm * 2);
   const auto &LI = *MF->getSubtarget().getLegalizerInfo();
-  const auto &DL = MF->getFunction().getParent()->getDataLayout();
+  const auto &DL = MF->getFunction().getDataLayout();
   Type *IRPtrTy = PointerType::get(MF->getFunction().getContext(), AddrSpace);
   LLT PtrTy = getLLTForType(*IRPtrTy, DL);
   // We assume that we're not going to be generating any stores wider than

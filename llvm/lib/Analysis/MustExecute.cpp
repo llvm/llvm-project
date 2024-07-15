@@ -139,7 +139,7 @@ static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
   auto *RHS = Cond->getOperand(1);
   if (!LHS || LHS->getParent() != CurLoop->getHeader())
     return false;
-  auto DL = ExitBlock->getModule()->getDataLayout();
+  auto DL = ExitBlock->getDataLayout();
   auto *IVStart = LHS->getIncomingValueForBlock(CurLoop->getLoopPreheader());
   auto *SimpleValOrNull = simplifyCmpInst(Cond->getPredicate(),
                                           IVStart, RHS,

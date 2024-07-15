@@ -104,7 +104,7 @@ gpu.module @builtins {
 // -----
 
 gpu.module @barriers {
-  // CHECK:       llvm.func spir_funccc @_Z7barrierj(i32)
+  // CHECK:       llvm.func spir_funccc @_Z7barrierj(i32) attributes {convergent}
 
   // CHECK-LABEL: gpu_barrier
   func.func @gpu_barrier() {
@@ -120,10 +120,10 @@ gpu.module @barriers {
 // Check `gpu.shuffle` conversion with default subgroup size.
 
 gpu.module @shuffles {
-  // CHECK:       llvm.func spir_funccc @_Z22sub_group_shuffle_downdj(f64, i32) -> f64
-  // CHECK:       llvm.func spir_funccc @_Z20sub_group_shuffle_upfj(f32, i32) -> f32
-  // CHECK:       llvm.func spir_funccc @_Z21sub_group_shuffle_xorlj(i64, i32) -> i64
-  // CHECK:       llvm.func spir_funccc @_Z17sub_group_shuffleij(i32, i32) -> i32
+  // CHECK:       llvm.func spir_funccc @_Z22sub_group_shuffle_downdj(f64, i32) -> f64 attributes {convergent}
+  // CHECK:       llvm.func spir_funccc @_Z20sub_group_shuffle_upfj(f32, i32) -> f32 attributes {convergent}
+  // CHECK:       llvm.func spir_funccc @_Z21sub_group_shuffle_xorlj(i64, i32) -> i64 attributes {convergent}
+  // CHECK:       llvm.func spir_funccc @_Z17sub_group_shuffleij(i32, i32) -> i32 attributes {convergent}
 
   // CHECK-LABEL: gpu_shuffles
   // CHECK-SAME:              (%[[VAL_0:.*]]: i32, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: i64, %[[VAL_3:.*]]: i32, %[[VAL_4:.*]]: f32, %[[VAL_5:.*]]: i32, %[[VAL_6:.*]]: f64, %[[VAL_7:.*]]: i32)
@@ -155,10 +155,10 @@ gpu.module @shuffles {
 gpu.module @shuffles attributes {
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.4, [Kernel, Addresses, GroupNonUniformShuffle, Int64], []>, #spirv.resource_limits<subgroup_size = 16>>
 } {
-  // CHECK:       llvm.func spir_funccc @_Z22sub_group_shuffle_downdj(f64, i32) -> f64
-  // CHECK:       llvm.func spir_funccc @_Z20sub_group_shuffle_upfj(f32, i32) -> f32
-  // CHECK:       llvm.func spir_funccc @_Z21sub_group_shuffle_xorlj(i64, i32) -> i64
-  // CHECK:       llvm.func spir_funccc @_Z17sub_group_shuffleij(i32, i32) -> i32
+  // CHECK:       llvm.func spir_funccc @_Z22sub_group_shuffle_downdj(f64, i32) -> f64 attributes {convergent}
+  // CHECK:       llvm.func spir_funccc @_Z20sub_group_shuffle_upfj(f32, i32) -> f32 attributes {convergent}
+  // CHECK:       llvm.func spir_funccc @_Z21sub_group_shuffle_xorlj(i64, i32) -> i64 attributes {convergent}
+  // CHECK:       llvm.func spir_funccc @_Z17sub_group_shuffleij(i32, i32) -> i32 attributes {convergent}
 
   // CHECK-LABEL: gpu_shuffles
   // CHECK-SAME:              (%[[VAL_0:.*]]: i32, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: i64, %[[VAL_3:.*]]: i32, %[[VAL_4:.*]]: f32, %[[VAL_5:.*]]: i32, %[[VAL_6:.*]]: f64, %[[VAL_7:.*]]: i32)

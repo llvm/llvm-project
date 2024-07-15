@@ -81,6 +81,7 @@ set(include_files
   ${include_directory}/Synchronization.h
   ${include_directory}/Types.h
   ${include_directory}/Utils.h
+  ${include_directory}/Workshare.h
 )
 
 set(src_files

@@ -1521,11 +1521,11 @@ void CXXRecordDecl::setCaptures(ASTContext &Context,
   auto *ToCapture = (LambdaCapture *)Context.Allocate(sizeof(LambdaCapture) *
                                                       Captures.size());
   Data.AddCaptureList(Context, ToCapture);
-  for (unsigned I = 0, N = Captures.size(); I != N; ++I) {
-    if (Captures[I].isExplicit())
+  for (const LambdaCapture &C : Captures) {
+    if (C.isExplicit())
       ++Data.NumExplicitCaptures;
 
-    new (ToCapture) LambdaCapture(Captures[I]);
+    new (ToCapture) LambdaCapture(C);
     ToCapture++;
   }
 
@@ -2056,40 +2056,39 @@ void CXXRecordDecl::completeDefinition() {
   completeDefinition(nullptr);
 }
 
+static bool hasPureVirtualFinalOverrider(
+    const CXXRecordDecl &RD, const CXXFinalOverriderMap *FinalOverriders) {
+  if (!FinalOverriders) {
+    CXXFinalOverriderMap MyFinalOverriders;
+    RD.getFinalOverriders(MyFinalOverriders);
+    return hasPureVirtualFinalOverrider(RD, &MyFinalOverriders);
+  }
+
+  for (const CXXFinalOverriderMap::value_type &
+        OverridingMethodsEntry : *FinalOverriders) {
+    for (const auto &[_, SubobjOverrides] : OverridingMethodsEntry.second) {
+      assert(SubobjOverrides.size() > 0 &&
+            "All virtual functions have overriding virtual functions");
+
+      if (SubobjOverrides.front().Method->isPureVirtual())
+        return true;
+    }
+  }
+  return false;
+}
+
 void CXXRecordDecl::completeDefinition(CXXFinalOverriderMap *FinalOverriders) {
   RecordDecl::completeDefinition();
 
   // If the class may be abstract (but hasn't been marked as such), check for
   // any pure final overriders.
-  if (mayBeAbstract()) {
-    CXXFinalOverriderMap MyFinalOverriders;
-    if (!FinalOverriders) {
-      getFinalOverriders(MyFinalOverriders);
-      FinalOverriders = &MyFinalOverriders;
-    }
-
-    bool Done = false;
-    for (CXXFinalOverriderMap::iterator M = FinalOverriders->begin(),
-                                     MEnd = FinalOverriders->end();
-         M != MEnd && !Done; ++M) {
-      for (OverridingMethods::iterator SO = M->second.begin(),
-                                    SOEnd = M->second.end();
-           SO != SOEnd && !Done; ++SO) {
-        assert(SO->second.size() > 0 &&
-               "All virtual functions have overriding virtual functions");
-
-        // C++ [class.abstract]p4:
-        //   A class is abstract if it contains or inherits at least one
-        //   pure virtual function for which the final overrider is pure
-        //   virtual.
-        if (SO->second.front().Method->isPureVirtual()) {
-          data().Abstract = true;
-          Done = true;
-          break;
-        }
-      }
-    }
-  }
+  //
+  // C++ [class.abstract]p4:
+  //   A class is abstract if it contains or inherits at least one
+  //   pure virtual function for which the final overrider is pure
+  //   virtual.
+  if (mayBeAbstract() && hasPureVirtualFinalOverrider(*this, FinalOverriders))
+    markAbstract();
 
   // Set access bits correctly on the directly-declared conversions.
   for (conversion_iterator I = conversion_begin(), E = conversion_end();

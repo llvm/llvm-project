@@ -58,8 +58,7 @@ public:
                              const CGPassBuilderOption &Opts,
                              PassInstrumentationCallbacks *PIC) override;
 
-  void registerPassBuilderCallbacks(PassBuilder &PB,
-                                    bool PopulateClassToPassNames) override;
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
   void registerDefaultAliasAnalyses(AAManager &) override;
 
   /// Get the integer value of a null pointer in the given address space.

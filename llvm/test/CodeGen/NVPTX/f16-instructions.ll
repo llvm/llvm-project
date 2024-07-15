@@ -265,7 +265,10 @@ declare half @test_callee(half %a, half %b) #0
 ; CHECK-DAG:  .param .align 2 .b8 retval0[2];
 ; CHECK:      call.uni (retval0),
 ; CHECK-NEXT:        test_callee,
-; CHECK:      );
+; CHECK-NEXT: (
+; CHECK-NEXT:        param0,
+; CHECK-NEXT:        param1
+; CHECK-NEXT: );
 ; CHECK-NEXT: ld.param.b16    [[R:%rs[0-9]+]], [retval0+0];
 ; CHECK-NEXT: }
 ; CHECK-NEXT: st.param.b16    [func_retval0+0], [[R]];
@@ -286,7 +289,10 @@ define half @test_call(half %a, half %b) #0 {
 ; CHECK-DAG:  .param .align 2 .b8 retval0[2];
 ; CHECK:      call.uni (retval0),
 ; CHECK-NEXT:        test_callee,
-; CHECK:      );
+; CHECK-NEXT: (
+; CHECK-NEXT:        param0,
+; CHECK-NEXT:        param1
+; CHECK-NEXT: );
 ; CHECK-NEXT: ld.param.b16    [[R:%rs[0-9]+]], [retval0+0];
 ; CHECK-NEXT: }
 ; CHECK-NEXT: st.param.b16    [func_retval0+0], [[R]];
@@ -307,7 +313,10 @@ define half @test_call_flipped(half %a, half %b) #0 {
 ; CHECK-DAG:  .param .align 2 .b8 retval0[2];
 ; CHECK:      call.uni (retval0),
 ; CHECK-NEXT:        test_callee,
-; CHECK:      );
+; CHECK-NEXT: (
+; CHECK-NEXT:        param0,
+; CHECK-NEXT:        param1
+; CHECK-NEXT: );
 ; CHECK-NEXT: ld.param.b16    [[R:%rs[0-9]+]], [retval0+0];
 ; CHECK-NEXT: }
 ; CHECK-NEXT: st.param.b16    [func_retval0+0], [[R]];

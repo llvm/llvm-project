@@ -10,6 +10,7 @@
 
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 #include "mlir/Dialect/ArmSME/Utils/Utils.h"
+#include "mlir/Dialect/ArmSVE/IR/ArmSVEDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/Support/Casting.h"
@@ -719,16 +720,86 @@ struct FoldTransferWriteOfExtractTileSlice
   }
 };
 
+/// Lower a `vector.extract` from a 2-D scalable `vector.create_mask` to
+/// `arm_sve.psel`. Note: While psel is under ArmSVE it requires SME (or
+/// SVE 2.1), so this is currently the most logical place for this lowering.
+///
+/// Example:
+/// ```mlir
+/// %mask = vector.create_mask %a, %b : vector<[4]x[8]xi1>
+/// %slice = vector.extract %mask[%index]
+///            : vector<[8]xi1> from vector<[4]x[8]xi1>
+/// ```
+/// Becomes:
+/// ```
+/// %mask_rows = vector.create_mask %a : vector<[4]xi1>
+/// %mask_cols = vector.create_mask %b : vector<[8]xi1>
+/// %slice = arm_sve.psel %mask_cols, %mask_rows[%index]
+///            : vector<[8]xi1>, vector<[4]xi1>
+/// ```
+struct ExtractFromCreateMaskToPselLowering
+    : public OpRewritePattern<vector::ExtractOp> {
+  using OpRewritePattern<vector::ExtractOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    if (extractOp.getNumIndices() != 1)
+      return rewriter.notifyMatchFailure(extractOp, "not single extract index");
+
+    auto resultType = extractOp.getResult().getType();
+    auto resultVectorType = dyn_cast<VectorType>(resultType);
+    if (!resultVectorType)
+      return rewriter.notifyMatchFailure(extractOp, "result not VectorType");
+
+    auto createMaskOp =
+        extractOp.getVector().getDefiningOp<vector::CreateMaskOp>();
+    if (!createMaskOp)
+      return rewriter.notifyMatchFailure(extractOp, "source not CreateMaskOp");
+
+    auto maskType = createMaskOp.getVectorType();
+    if (maskType.getRank() != 2 || !maskType.allDimsScalable())
+      return rewriter.notifyMatchFailure(createMaskOp, "not 2-D scalable mask");
+
+    auto isSVEPredicateSize = [](int64_t size) {
+      return size > 0 && size <= 16 && llvm::isPowerOf2_32(uint32_t(size));
+    };
+
+    auto rowsBaseSize = maskType.getDimSize(0);
+    auto colsBaseSize = maskType.getDimSize(1);
+    if (!isSVEPredicateSize(rowsBaseSize) || !isSVEPredicateSize(colsBaseSize))
+      return rewriter.notifyMatchFailure(
+          createMaskOp, "mask dimensions not SVE predicate-sized");
+
+    auto loc = extractOp.getLoc();
+    VectorType rowMaskType = VectorType::Builder(maskType).dropDim(1);
+    VectorType colMaskType = VectorType::Builder(maskType).dropDim(0);
+
+    // Create the two 1-D masks at the location of the 2-D create_mask (which is
+    // usually outside a loop). This prevents the need for later hoisting.
+    rewriter.setInsertionPoint(createMaskOp);
+    auto rowMask = rewriter.create<vector::CreateMaskOp>(
+        loc, rowMaskType, createMaskOp.getOperand(0));
+    auto colMask = rewriter.create<vector::CreateMaskOp>(
+        loc, colMaskType, createMaskOp.getOperand(1));
+
+    rewriter.setInsertionPoint(extractOp);
+    auto position =
+        vector::getAsValues(rewriter, loc, extractOp.getMixedPosition());
+    rewriter.replaceOpWithNewOp<arm_sve::PselOp>(extractOp, colMask, rowMask,
+                                                 position[0]);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateVectorToArmSMEPatterns(RewritePatternSet &patterns,
                                           MLIRContext &ctx) {
-  patterns
-      .add<BroadcastOpToArmSMELowering, SplatOpToArmSMELowering,
-           TransferReadToArmSMELowering, TransferWriteToArmSMELowering,
-           TransposeOpToArmSMELowering, VectorLoadToArmSMELowering,
-           VectorStoreToArmSMELowering, VectorOuterProductToArmSMELowering,
-           VectorExtractToArmSMELowering, VectorInsertToArmSMELowering,
-           VectorPrintToArmSMELowering, FoldTransferWriteOfExtractTileSlice>(
-          &ctx);
+  patterns.add<BroadcastOpToArmSMELowering, SplatOpToArmSMELowering,
+               TransferReadToArmSMELowering, TransferWriteToArmSMELowering,
+               TransposeOpToArmSMELowering, VectorLoadToArmSMELowering,
+               VectorStoreToArmSMELowering, VectorOuterProductToArmSMELowering,
+               VectorExtractToArmSMELowering, VectorInsertToArmSMELowering,
+               VectorPrintToArmSMELowering, FoldTransferWriteOfExtractTileSlice,
+               ExtractFromCreateMaskToPselLowering>(&ctx);
 }

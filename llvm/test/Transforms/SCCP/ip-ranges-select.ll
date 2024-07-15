@@ -22,7 +22,7 @@ define internal i32 @callee.1(i32 %arg) {
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 false, i32 16, i32 [[ARG]]
 ; CHECK-NEXT:    br label [[BB10:%.*]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %c.1 = icmp slt i32 %arg, 0
   %sel = select i1 %c.1, i32 16, i32 %arg

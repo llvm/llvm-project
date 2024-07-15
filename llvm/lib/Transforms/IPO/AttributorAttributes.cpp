@@ -1621,13 +1621,6 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     return true;
   };
 
-  const auto *F = getAnchorScope();
-  const auto *CI =
-      F ? A.getInfoCache().getAnalysisResultForFunction<CycleAnalysis>(*F)
-        : nullptr;
-  const auto *TLI =
-      F ? A.getInfoCache().getTargetLibraryInfoForFunction(*F) : nullptr;
-
   auto UsePred = [&](const Use &U, bool &Follow) -> bool {
     Value *CurPtr = U.get();
     User *Usr = U.getUser();
@@ -1671,18 +1664,18 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     // For PHIs we need to take care of the recurrence explicitly as the value
     // might change while we iterate through a loop. For now, we give up if
     // the PHI is not invariant.
-    if (isa<PHINode>(Usr)) {
+    if (auto *PHI = dyn_cast<PHINode>(Usr)) {
       // Note the order here, the Usr access might change the map, CurPtr is
       // already in it though.
-      bool IsFirstPHIUser = !OffsetInfoMap.count(Usr);
-      auto &UsrOI = OffsetInfoMap[Usr];
+      bool IsFirstPHIUser = !OffsetInfoMap.count(PHI);
+      auto &UsrOI = OffsetInfoMap[PHI];
       auto &PtrOI = OffsetInfoMap[CurPtr];
 
       // Check if the PHI operand has already an unknown offset as we can't
       // improve on that anymore.
       if (PtrOI.isUnknown()) {
         LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI operand offset unknown "
-                          << *CurPtr << " in " << *Usr << "\n");
+                          << *CurPtr << " in " << *PHI << "\n");
         Follow = !UsrOI.isUnknown();
         UsrOI.setUnknown();
         return true;
@@ -1705,7 +1698,8 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
       auto It = OffsetInfoMap.find(CurPtrBase);
       if (It == OffsetInfoMap.end()) {
         LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI operand is too complex "
-                          << *CurPtr << " in " << *Usr << "\n");
+                          << *CurPtr << " in " << *PHI
+                          << " (base: " << *CurPtrBase << ")\n");
         UsrOI.setUnknown();
         Follow = true;
         return true;
@@ -1718,6 +1712,9 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
       // Cycles reported by CycleInfo. It is sufficient to check the PHIs in
       // every Cycle header; if such a node is marked unknown, this will
       // eventually propagate through the whole net of PHIs in the recurrence.
+      const auto *CI =
+          A.getInfoCache().getAnalysisResultForFunction<CycleAnalysis>(
+              *PHI->getFunction());
       if (mayBeInCycle(CI, cast<Instruction>(Usr), /* HeaderOnly */ true)) {
         auto BaseOI = It->getSecond();
         BaseOI.addToAll(Offset.getZExtValue());
@@ -1729,7 +1726,7 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
 
         LLVM_DEBUG(
             dbgs() << "[AAPointerInfo] PHI operand pointer offset mismatch "
-                   << *CurPtr << " in " << *Usr << "\n");
+                   << *CurPtr << " in " << *PHI << "\n");
         UsrOI.setUnknown();
         Follow = true;
         return true;
@@ -1882,6 +1879,8 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     if (auto *CB = dyn_cast<CallBase>(Usr)) {
       if (CB->isLifetimeStartOrEnd())
         return true;
+      const auto *TLI =
+          A.getInfoCache().getTargetLibraryInfoForFunction(*CB->getFunction());
       if (getFreedOperand(CB, TLI) == U)
         return true;
       if (CB->isArgOperand(&U)) {
@@ -7470,7 +7469,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     assert(PrivType && "Expected privatizable type!");
 
     IRBuilder<NoFolder> IRB(IP->getParent(), IP);
-    const DataLayout &DL = F.getParent()->getDataLayout();
+    const DataLayout &DL = F.getDataLayout();
 
     // Traverse the type, build GEPs and stores.
     if (auto *PrivStructType = dyn_cast<StructType>(PrivType)) {
@@ -7502,7 +7501,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     Instruction *IP = ACS.getInstruction();
 
     IRBuilder<NoFolder> IRB(IP);
-    const DataLayout &DL = IP->getModule()->getDataLayout();
+    const DataLayout &DL = IP->getDataLayout();
 
     // Traverse the type, build GEPs and loads.
     if (auto *PrivStructType = dyn_cast<StructType>(PrivType)) {
@@ -7566,7 +7565,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
             Function &ReplacementFn, Function::arg_iterator ArgIt) {
           BasicBlock &EntryBB = ReplacementFn.getEntryBlock();
           BasicBlock::iterator IP = EntryBB.getFirstInsertionPt();
-          const DataLayout &DL = IP->getModule()->getDataLayout();
+          const DataLayout &DL = IP->getDataLayout();
           unsigned AS = DL.getAllocaAddrSpace();
           Instruction *AI = new AllocaInst(*PrivatizableType, AS,
                                            Arg->getName() + ".priv", IP);
@@ -8866,7 +8865,7 @@ struct AADenormalFPMathImpl : public AADenormalFPMath {
     if (Known.ModeF32.isValid())
       OS << " denormal-fp-math-f32=" << Known.ModeF32;
     OS << ']';
-    return OS.str();
+    return Str;
   }
 };
 
@@ -8979,7 +8978,7 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
     OS << " / ";
     getAssumed().print(OS);
     OS << ">";
-    return OS.str();
+    return Str;
   }
 
   /// Helper function to get a SCEV expr for the associated value at program
@@ -9656,7 +9655,7 @@ struct AAPotentialConstantValuesImpl : AAPotentialConstantValues {
     std::string Str;
     llvm::raw_string_ostream OS(Str);
     OS << getState();
-    return OS.str();
+    return Str;
   }
 
   /// See AbstractAttribute::updateImpl(...).
@@ -10778,7 +10777,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
     std::string Str;
     llvm::raw_string_ostream OS(Str);
     OS << getState();
-    return OS.str();
+    return Str;
   }
 
   template <typename AAType>
@@ -11276,7 +11275,7 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
     const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
     auto *AC = InfoCache.getAnalysisResultForFunction<AssumptionAnalysis>(*F);
 
-    const DataLayout &DL = I.getModule()->getDataLayout();
+    const DataLayout &DL = I.getDataLayout();
     SimplifyQuery Q(DL, TLI, DT, AC, &I);
     Value *NewV = simplifyInstructionWithOperands(&I, NewOps, Q);
     if (!NewV || NewV == &I)
@@ -11739,11 +11738,14 @@ struct AAAssumptionInfoImpl : public AAAssumptionInfo {
       return ChangeStatus::UNCHANGED;
 
     const IRPosition &IRP = getIRPosition();
-    return A.manifestAttrs(
-        IRP,
-        Attribute::get(IRP.getAnchorValue().getContext(), AssumptionAttrKey,
-                       llvm::join(getAssumed().getSet(), ",")),
-        /* ForceReplace */ true);
+    SmallVector<StringRef, 0> Set(getAssumed().getSet().begin(),
+                                  getAssumed().getSet().end());
+    llvm::sort(Set);
+    return A.manifestAttrs(IRP,
+                           Attribute::get(IRP.getAnchorValue().getContext(),
+                                          AssumptionAttrKey,
+                                          llvm::join(Set, ",")),
+                           /*ForceReplace=*/true);
   }
 
   bool hasAssumption(const StringRef Assumption) const override {
@@ -11755,13 +11757,15 @@ struct AAAssumptionInfoImpl : public AAAssumptionInfo {
     const SetContents &Known = getKnown();
     const SetContents &Assumed = getAssumed();
 
-    const std::string KnownStr =
-        llvm::join(Known.getSet().begin(), Known.getSet().end(), ",");
-    const std::string AssumedStr =
-        (Assumed.isUniversal())
-            ? "Universal"
-            : llvm::join(Assumed.getSet().begin(), Assumed.getSet().end(), ",");
+    SmallVector<StringRef, 0> Set(Known.getSet().begin(), Known.getSet().end());
+    llvm::sort(Set);
+    const std::string KnownStr = llvm::join(Set, ",");
 
+    std::string AssumedStr = "Universal";
+    if (!Assumed.isUniversal()) {
+      Set.assign(Assumed.getSet().begin(), Assumed.getSet().end());
+      AssumedStr = llvm::join(Set, ",");
+    }
     return "Known [" + KnownStr + "]," + " Assumed [" + AssumedStr + "]";
   }
 };
