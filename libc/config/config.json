@@ -1,4 +1,10 @@
 {
+  "errno": {
+    "LIBC_CONF_ERRNO_MODE": {
+      "value": "",
+      "doc": "The implementation used for errno, acceptable values are LIBC_ERRNO_MODE_UNDEFINED, LIBC_ERRNO_MODE_THREAD_LOCAL, LIBC_ERRNO_MODE_SHARED, LIBC_ERRNO_MODE_EXTERNAL, and LIBC_ERRNO_MODE_SYSTEM."
+    }
+  },
   "printf": {
     "LIBC_CONF_PRINTF_DISABLE_FLOAT": {
       "value": false,

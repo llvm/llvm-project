@@ -108,6 +108,18 @@ def negf(
     O[None] = UnaryFn.negf(I[None])
 
 
+@linalg_structured_op(op_class_name="ReciprocalOp")
+def reciprocal(
+    I=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Applies reciprocal(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+    """
+    O[None] = UnaryFn.reciprocal(I[None])
+
+
 @linalg_structured_op
 def round(
     I=TensorDef(T1),
@@ -386,24 +398,6 @@ def matmul(
     domain(D.m, D.n, D.k)
     implements(ContractionOpInterface)
     C[D.m, D.n] += cast(U, A[D.m, D.k]) * cast(U, B[D.k, D.n])
-
-
-@linalg_structured_op
-def matmul_unsigned(
-    A=TensorDef(T1, S.M, S.K),
-    B=TensorDef(T2, S.K, S.N),
-    C=TensorDef(U, S.M, S.N, output=True),
-):
-    """Performs an unsigned matrix multiplication of two 2D inputs.
-
-    Numeric casting is performed on the operands to the inner multiply, promoting
-    them to the same data type as the accumulator/output.
-    """
-    domain(D.m, D.n, D.k)
-    implements(ContractionOpInterface)
-    C[D.m, D.n] += TypeFn.cast_unsigned(U, A[D.m, D.k]) * TypeFn.cast_unsigned(
-        U, B[D.k, D.n]
-    )
 
 
 @linalg_structured_op
