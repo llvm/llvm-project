@@ -81,6 +81,13 @@ protected:
 
   bool IsStreaming;
   bool IsStreamingCompatible;
+
+  /// The minimum alignment known to hold of the stack frame on
+  /// entry to the function and which must be maintained by every function.
+  Align stackAlignment = Align(16);
+  /// Override the stack alignment.
+  MaybeAlign StackAlignOverride;
+
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
   unsigned VScaleForTuning = 2;
@@ -89,10 +96,10 @@ protected:
   /// TargetTriple - What processor and OS we're targeting.
   Triple TargetTriple;
 
-  AArch64FrameLowering FrameLowering;
   AArch64InstrInfo InstrInfo;
   AArch64SelectionDAGInfo TSInfo;
   AArch64TargetLowering TLInfo;
+  AArch64FrameLowering FrameLowering;
 
   /// GlobalISel related APIs.
   std::unique_ptr<CallLowering> CallLoweringInfo;
@@ -118,6 +125,7 @@ public:
   /// of the specified triple.
   AArch64Subtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
                    StringRef FS, const TargetMachine &TM, bool LittleEndian,
+                   MaybeAlign StackAlignOverride = Align(16),
                    unsigned MinSVEVectorSizeInBitsOverride = 0,
                    unsigned MaxSVEVectorSizeInBitsOverride = 0,
                    bool IsStreaming = false, bool IsStreamingCompatible = false,
@@ -141,6 +149,7 @@ public:
   const AArch64RegisterInfo *getRegisterInfo() const override {
     return &getInstrInfo()->getRegisterInfo();
   }
+  Align getStackAlignment() const { return stackAlignment; }
   const CallLowering *getCallLowering() const override;
   const InlineAsmLowering *getInlineAsmLowering() const override;
   InstructionSelector *getInstructionSelector() const override;

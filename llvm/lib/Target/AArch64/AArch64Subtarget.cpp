@@ -93,6 +93,10 @@ AArch64Subtarget &AArch64Subtarget::initializeSubtargetDependencies(
   if (TuneCPUString.empty())
     TuneCPUString = CPUString;
 
+  // The default 16-byte is the minimal required alignment.
+  if (StackAlignOverride && stackAlignment < *StackAlignOverride)
+    stackAlignment = *StackAlignOverride;
+
   ParseSubtargetFeatures(CPUString, TuneCPUString, FS);
   initializeProperties(HasMinSize);
 
@@ -320,6 +324,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
 AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
                                    StringRef TuneCPU, StringRef FS,
                                    const TargetMachine &TM, bool LittleEndian,
+                                   MaybeAlign StackAlignOverride,
                                    unsigned MinSVEVectorSizeInBitsOverride,
                                    unsigned MaxSVEVectorSizeInBitsOverride,
                                    bool IsStreaming, bool IsStreamingCompatible,
@@ -330,10 +335,11 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
       CustomCallSavedXRegs(AArch64::GPR64commonRegClass.getNumRegs()),
       IsLittle(LittleEndian), IsStreaming(IsStreaming),
       IsStreamingCompatible(IsStreamingCompatible),
+      StackAlignOverride(StackAlignOverride),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
       MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU, HasMinSize)),
-      TLInfo(TM, *this) {
+      TLInfo(TM, *this), FrameLowering(getStackAlignment()) {
   if (AArch64::isX18ReservedByDefault(TT))
     ReserveXRegister.set(18);
 

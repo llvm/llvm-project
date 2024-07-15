@@ -20,9 +20,7 @@ namespace llvm {
 
 class AArch64FrameLowering : public TargetFrameLowering {
 public:
-  explicit AArch64FrameLowering()
-      : TargetFrameLowering(StackGrowsDown, Align(16), 0, Align(16),
-                            true /*StackRealignable*/) {}
+  AArch64FrameLowering(MaybeAlign StackAlignOverride);
 
   void resetCFIToInitialState(MachineBasicBlock &MBB) const override;
 
