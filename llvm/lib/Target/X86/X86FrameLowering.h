@@ -103,16 +103,7 @@ public:
                               MutableArrayRef<CalleeSavedInfo> CSI,
                               const TargetRegisterInfo *TRI) const override;
 
-  void spillFPBPUsingSP(MachineFunction &MF,
-                        const MachineBasicBlock::iterator BeforeMI,
-                        bool SpillFP, bool SpillBP) const override;
-
-  void restoreFPBPUsingSP(MachineFunction &MF,
-                          const MachineBasicBlock::iterator AfterMI,
-                          bool SpillFP, bool SpillBP) const override;
-
-  bool skipSpillFPBP(MachineFunction &MF,
-                     MachineBasicBlock::reverse_iterator &MI) const override;
+  void spillFPBP(MachineFunction &MF) const override;
 
   bool hasFP(const MachineFunction &MF) const override;
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
@@ -278,6 +269,24 @@ private:
   void emitCatchRetReturnValue(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MBBI,
                                MachineInstr *CatchRet) const;
+
+  /// Issue instructions to allocate stack space and spill frame pointer and/or
+  /// base pointer to stack using stack pointer register.
+  void spillFPBPUsingSP(MachineFunction &MF,
+                        const MachineBasicBlock::iterator BeforeMI,
+                        bool SpillFP, bool SpillBP) const;
+
+  /// Issue instructions to restore frame pointer and/or base pointer from stack
+  /// using stack pointer register, and free stack space.
+  void restoreFPBPUsingSP(MachineFunction &MF,
+                          const MachineBasicBlock::iterator AfterMI,
+                          bool SpillFP, bool SpillBP) const;
+
+  // If MI uses fp/bp, but target can handle it, and doesn't want to be spilled
+  // again, this function should return true, and update MI so we will not check
+  // any instructions from related sequence.
+  bool skipSpillFPBP(MachineFunction &MF,
+                     MachineBasicBlock::reverse_iterator &MI) const;
 };
 
 } // End llvm namespace

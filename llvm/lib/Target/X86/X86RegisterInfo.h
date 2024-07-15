@@ -133,9 +133,6 @@ public:
   void adjustStackMapLiveOutMask(uint32_t *Mask) const override;
 
   bool hasBasePointer(const MachineFunction &MF) const;
-  bool hasBaseRegister(const MachineFunction &MF) const override {
-    return hasBasePointer(MF);
-  }
 
   bool canRealignStack(const MachineFunction &MF) const override;
 
@@ -167,9 +164,6 @@ public:
   unsigned getPtrSizedStackRegister(const MachineFunction &MF) const;
   Register getStackRegister() const { return StackPtr; }
   Register getBaseRegister() const { return BasePtr; }
-  Register getBaseRegister(const MachineFunction &MF) const override {
-    return BasePtr;
-  }
   /// Returns physical register used as frame pointer.
   /// This will always returns the frame pointer register, contrary to
   /// getFrameRegister() which returns the "base pointer" in situations

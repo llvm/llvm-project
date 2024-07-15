@@ -4234,10 +4234,10 @@ void X86FrameLowering::restoreWinEHStackPointersInParent(
 
 static int computeSPAdjust4SpillFPBP(MachineFunction &MF,
                                      const TargetRegisterClass *RC,
-                                     unsigned SpillRegNum) {
+                                     unsigned NumSpilledRegs) {
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  unsigned AllocSize = TRI->getSpillSize(*RC) * SpillRegNum;
-  Align StackAlign = MF.getFrameInfo().getStackAlignment();
+  unsigned AllocSize = TRI->getSpillSize(*RC) * NumSpilledRegs;
+  Align StackAlign = MF.getSubtarget().getFrameLowering()->getStackAlign();
   unsigned AlignedSize = alignTo(AllocSize, StackAlign);
   return AlignedSize - AllocSize;
 }
@@ -4245,8 +4245,10 @@ static int computeSPAdjust4SpillFPBP(MachineFunction &MF,
 void X86FrameLowering::spillFPBPUsingSP(MachineFunction &MF,
                                         MachineBasicBlock::iterator BeforeMI,
                                         bool SpillFP, bool SpillBP) const {
+  assert(SpillFP || SpillBP);
+
   const TargetRegisterClass *RC;
-  unsigned RegNum = 0;
+  unsigned NumRegs = 0;
   MachineBasicBlock *MBB = BeforeMI->getParent();
   DebugLoc DL = BeforeMI->getDebugLoc();
 
@@ -4256,7 +4258,7 @@ void X86FrameLowering::spillFPBPUsingSP(MachineFunction &MF,
     if (STI.isTarget64BitILP32())
       FP = Register(getX86SubSuperRegister(FP, 64));
     RC = TRI->getMinimalPhysRegClass(FP);
-    ++RegNum;
+    ++NumRegs;
 
     BuildMI(*MBB, BeforeMI, DL,
             TII.get(getPUSHOpcode(MF.getSubtarget<X86Subtarget>())))
@@ -4265,11 +4267,11 @@ void X86FrameLowering::spillFPBPUsingSP(MachineFunction &MF,
 
   // Spill BP.
   if (SpillBP) {
-    Register BP = TRI->getBaseRegister(MF);
+    Register BP = TRI->getBaseRegister();
     if (STI.isTarget64BitILP32())
       BP = Register(getX86SubSuperRegister(BP, 64));
     RC = TRI->getMinimalPhysRegClass(BP);
-    ++RegNum;
+    ++NumRegs;
 
     BuildMI(*MBB, BeforeMI, DL,
             TII.get(getPUSHOpcode(MF.getSubtarget<X86Subtarget>())))
@@ -4277,7 +4279,7 @@ void X86FrameLowering::spillFPBPUsingSP(MachineFunction &MF,
   }
 
   // Make sure SP is aligned.
-  int SPAdjust = computeSPAdjust4SpillFPBP(MF, RC, RegNum);
+  int SPAdjust = computeSPAdjust4SpillFPBP(MF, RC, NumRegs);
   if (SPAdjust)
     emitSPUpdate(*MBB, BeforeMI, DL, -SPAdjust, false);
 
@@ -4296,6 +4298,12 @@ void X86FrameLowering::spillFPBPUsingSP(MachineFunction &MF,
     int Offset = SPAdjust;
     if (SpillBP)
       Offset += TRI->getSpillSize(*RC);
+    // If BeforeMI is a frame setup instruction, we need to adjust the position
+    // and offset of the new cfi instruction.
+    if (TII.isFrameSetup(*BeforeMI)) {
+      Offset += alignTo(TII.getFrameSize(*BeforeMI), getStackAlign());
+      BeforeMI = std::next(BeforeMI);
+    }
     Register StackPtr = TRI->getStackRegister();
     if (STI.isTarget64BitILP32())
       StackPtr = Register(getX86SubSuperRegister(StackPtr, 64));
@@ -4320,29 +4328,31 @@ void X86FrameLowering::spillFPBPUsingSP(MachineFunction &MF,
 void X86FrameLowering::restoreFPBPUsingSP(MachineFunction &MF,
                                           MachineBasicBlock::iterator AfterMI,
                                           bool SpillFP, bool SpillBP) const {
+  assert(SpillFP || SpillBP);
+
   Register FP, BP;
   const TargetRegisterClass *RC;
-  unsigned RegNum = 0;
+  unsigned NumRegs = 0;
   if (SpillFP) {
     FP = TRI->getFrameRegister(MF);
     if (STI.isTarget64BitILP32())
       FP = Register(getX86SubSuperRegister(FP, 64));
     RC = TRI->getMinimalPhysRegClass(FP);
-    ++RegNum;
+    ++NumRegs;
   }
   if (SpillBP) {
-    BP = TRI->getBaseRegister(MF);
+    BP = TRI->getBaseRegister();
     if (STI.isTarget64BitILP32())
       BP = Register(getX86SubSuperRegister(BP, 64));
     RC = TRI->getMinimalPhysRegClass(BP);
-    ++RegNum;
+    ++NumRegs;
   }
 
   // Adjust SP so it points to spilled FP or BP.
   MachineBasicBlock *MBB = AfterMI->getParent();
   MachineBasicBlock::iterator Pos = std::next(AfterMI);
   DebugLoc DL = AfterMI->getDebugLoc();
-  int SPAdjust = computeSPAdjust4SpillFPBP(MF, RC, RegNum);
+  int SPAdjust = computeSPAdjust4SpillFPBP(MF, RC, NumRegs);
   if (SPAdjust)
     emitSPUpdate(*MBB, Pos, DL, SPAdjust, false);
 
@@ -4385,4 +4395,161 @@ bool X86FrameLowering::skipSpillFPBP(
     return true;
   }
   return false;
+}
+
+static bool isFPBPAccess(const MachineInstr &MI, Register FP, Register BP,
+                         const TargetRegisterInfo *TRI, bool &AccessFP,
+                         bool &AccessBP) {
+  AccessFP = AccessBP = false;
+  if (FP) {
+    if (MI.findRegisterUseOperandIdx(FP, TRI, false) != -1 ||
+        MI.findRegisterDefOperandIdx(FP, TRI, false, true) != -1)
+      AccessFP = true;
+  }
+  if (BP) {
+    if (MI.findRegisterUseOperandIdx(BP, TRI, false) != -1 ||
+        MI.findRegisterDefOperandIdx(BP, TRI, false, true) != -1)
+      AccessBP = true;
+  }
+  return AccessFP || AccessBP;
+}
+
+// Invoke instruction has been lowered to normal function call. We try to figure
+// out if MI comes from Invoke.
+// Do we have any better method?
+static bool isInvoke(const MachineInstr &MI, bool InsideEHLabels) {
+  if (!MI.isCall())
+    return false;
+  if (InsideEHLabels)
+    return true;
+
+  const MachineBasicBlock *MBB = MI.getParent();
+  if (!MBB->hasEHPadSuccessor())
+    return false;
+
+  // Check if there is another call instruction from MI to the end of MBB.
+  MachineBasicBlock::const_iterator MBBI = MI, ME = MBB->end();
+  for (++MBBI; MBBI != ME; ++MBBI)
+    if (MBBI->isCall())
+      return false;
+  return true;
+}
+
+/// If a function uses base pointer and the base pointer is clobbered by inline
+/// asm, RA doesn't detect this case, and after the inline asm, the base pointer
+/// contains garbage value.
+/// For example if a 32b x86 function uses base pointer esi, and esi is
+/// clobbered by following inline asm
+///     asm("rep movsb" : "+D"(ptr), "+S"(x), "+c"(c)::"memory");
+/// We need to save esi before the asm and restore it after the asm.
+///
+/// The problem can also occur to frame pointer if there is a function call, and
+/// the callee uses a different calling convention and clobbers the fp.
+///
+/// Because normal frame objects (spill slots) are accessed through fp/bp
+/// register, so we can't spill fp/bp to normal spill slots.
+///
+/// FIXME: There are 2 possible enhancements:
+/// 1. In many cases there are different physical registers not clobbered by
+/// inline asm, we can use one of them as base pointer. Or use a virtual
+/// register as base pointer and let RA allocate a physical register to it.
+/// 2. If there is no other instructions access stack with fp/bp from the
+/// inline asm to the epilog, and no cfi requirement for a correct fp, we can
+/// skip the save and restore operations.
+void X86FrameLowering::spillFPBP(MachineFunction &MF) const {
+  Register FP, BP;
+  const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
+  if (TFI.hasFP(MF))
+    FP = TRI->getFrameRegister(MF);
+  if (TRI->hasBasePointer(MF))
+    BP = TRI->getBaseRegister();
+  if (!FP && !BP)
+    return;
+
+  for (MachineBasicBlock &MBB : MF) {
+    bool InsideEHLabels = false;
+    auto MI = MBB.rbegin(), ME = MBB.rend();
+    auto TermMI = MBB.getFirstTerminator();
+    if (TermMI != MBB.begin())
+      MI = *(std::prev(TermMI));
+
+    while (MI != ME) {
+      // Skip frame setup/destroy instructions.
+      // Skip Invoke (call inside try block) instructions.
+      // Skip instructions handled by target.
+      if (MI->getFlag(MachineInstr::MIFlag::FrameSetup) ||
+          MI->getFlag(MachineInstr::MIFlag::FrameDestroy) ||
+          isInvoke(*MI, InsideEHLabels) || skipSpillFPBP(MF, MI)) {
+        ++MI;
+        continue;
+      }
+
+      if (MI->getOpcode() == TargetOpcode::EH_LABEL) {
+        InsideEHLabels = !InsideEHLabels;
+        ++MI;
+        continue;
+      }
+
+      bool AccessFP, AccessBP;
+      // Check if fp or bp is used in MI.
+      if (!isFPBPAccess(*MI, FP, BP, TRI, AccessFP, AccessBP)) {
+        ++MI;
+        continue;
+      }
+
+      // Look for the range [DefMI, KillMI] in which fp or bp is defined and
+      // used.
+      bool FPLive = false, BPLive = false;
+      bool SpillFP = false, SpillBP = false;
+      auto DefMI = MI, KillMI = MI;
+      do {
+        SpillFP |= AccessFP;
+        SpillBP |= AccessBP;
+
+        // Maintain FPLive and BPLive.
+        if (FPLive && MI->findRegisterDefOperandIdx(FP, TRI, false, true) != -1)
+          FPLive = false;
+        if (FP && MI->findRegisterUseOperandIdx(FP, TRI, false) != -1)
+          FPLive = true;
+        if (BPLive && MI->findRegisterDefOperandIdx(BP, TRI, false, true) != -1)
+          BPLive = false;
+        if (BP && MI->findRegisterUseOperandIdx(BP, TRI, false) != -1)
+          BPLive = true;
+
+        DefMI = MI++;
+      } while ((MI != ME) &&
+               (FPLive || BPLive ||
+                isFPBPAccess(*MI, FP, BP, TRI, AccessFP, AccessBP)));
+
+      // Don't need to save/restore if FP is accessed through llvm.frameaddress.
+      if (FPLive && !SpillBP)
+        continue;
+
+      // If the bp is clobbered by a call, we should save and restore outside of
+      // the frame setup instructions.
+      if (KillMI->isCall() && DefMI != ME) {
+        const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+        auto FrameSetup = std::next(DefMI);
+        // Look for frame setup instruction toward the start of the BB.
+        // If we reach another call instruction, it means no frame setup
+        // instruction for the current call instruction.
+        while (FrameSetup != ME && !TII.isFrameSetup(*FrameSetup) &&
+               !FrameSetup->isCall())
+          ++FrameSetup;
+        // If a frame setup instruction is found, we need to find out the
+        // corresponding frame destroy instruction.
+        if (FrameSetup != ME && TII.isFrameSetup(*FrameSetup)) {
+          while (!TII.isFrameInstr(*KillMI))
+            --KillMI;
+          DefMI = FrameSetup;
+          MI = DefMI;
+          ++MI;
+        }
+      }
+
+      // Call target functions to spill and restore FP and BP registers.
+      spillFPBPUsingSP(MF, &(*DefMI), SpillFP, SpillBP);
+      restoreFPBPUsingSP(MF, &(*KillMI), SpillFP, SpillBP);
+    }
+  }
 }
