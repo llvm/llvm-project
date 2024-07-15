@@ -2136,6 +2136,11 @@ bool llvm::LowerDbgDeclare(Function &F) {
         } else if (BitCastInst *BI = dyn_cast<BitCastInst>(U)) {
           if (BI->getType()->isPointerTy())
             WorkList.push_back(BI);
+        } else if (auto *ASC = dyn_cast<AddrSpaceCastInst>(U)) {
+          // Only look through addrspacecasts if the declare uses new
+          // expressions (to avoid a difference with upstream).
+          if (DDI->getExpression()->holdsNewElements())
+            WorkList.push_back(ASC);
         }
       }
     }
