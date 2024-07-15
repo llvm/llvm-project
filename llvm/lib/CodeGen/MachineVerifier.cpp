@@ -1550,6 +1550,12 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
     LLT SrcTy2 = MRI->getType(MI->getOperand(2).getReg());
 
+    if (DstTy.isPointerOrPointerVector() || SrcTy.isPointerOrPointerVector() ||
+        SrcTy2.isPointerOrPointerVector()) {
+      report("Generic scmp/ucmp does not support pointers", MI);
+      break;
+    }
+
     if ((DstTy.isVector() != SrcTy.isVector()) ||
         (DstTy.isVector() &&
          DstTy.getElementCount() != SrcTy.getElementCount())) {

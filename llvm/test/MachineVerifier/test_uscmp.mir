@@ -1,4 +1,4 @@
-# RUN: not --crash llc -verify-machineinstrs -mtriple=arm64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -verify-machineinstrs -run-pass none -mtriple=arm64 -o /dev/null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
 
 ---
@@ -6,14 +6,21 @@ name:            test_uscmp
 body:             |
   bb.0:
 
+    %12:_(p0) = G_IMPLICIT_DEF
+    %13:_(p0) = G_IMPLICIT_DEF
+    ; CHECK: Generic scmp/ucmp does not support pointers
+    %14:_(p0) = G_SCMP %12, %13
+
     %3:_(<2 x s32>) = G_IMPLICIT_DEF
     %4:_(<2 x s32>) = G_IMPLICIT_DEF
     ; CHECK: Generic vector scmp/ucmp must preserve number of lanes
     %5:_(s1) = G_UCMP  %3, %4
 
-    %12:_(s32) = G_CONSTANT i32 0
-    %13:_(s64) = G_CONSTANT i64 2
+    %15:_(s32) = G_CONSTANT i32 0
+    %16:_(s64) = G_CONSTANT i64 2
     ; CHECK: Generic scmp/ucmp must have same input types
-    %14:_(s1) = G_SCMP %12, %13
+    %17:_(s1) = G_SCMP %15, %16
+
+
 
 ...
