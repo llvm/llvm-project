@@ -75,6 +75,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -936,10 +937,12 @@ static void debugVectorizationMessage(const StringRef Prefix,
 /// instruction that prevents vectorization.  Otherwise \p TheLoop is used for
 /// the location of the remark.  \return the remark object that can be
 /// streamed to.
-static OptimizationRemarkAnalysis createLVAnalysis(const char *PassName,
-    StringRef RemarkName, Loop *TheLoop, Instruction *I) {
+static OptimizationRemarkAnalysis
+createLVAnalysis(const char *PassName, StringRef RemarkName, Loop *TheLoop,
+                 Instruction *I, DebugLoc DL = {}) {
   Value *CodeRegion = TheLoop->getHeader();
-  DebugLoc DL = TheLoop->getStartLoc();
+  if (!DL)
+    DL = TheLoop->getStartLoc();
 
   if (I) {
     CodeRegion = I->getParent();
@@ -990,13 +993,14 @@ void reportVectorizationFailure(const StringRef DebugMsg,
 /// as an optimization remark. Uses either \p I as location of the remark, or
 /// otherwise \p TheLoop.
 static void reportVectorizationInfo(const StringRef Msg, const StringRef ORETag,
-                             OptimizationRemarkEmitter *ORE, Loop *TheLoop,
-                             Instruction *I = nullptr) {
+                                    OptimizationRemarkEmitter *ORE,
+                                    Loop *TheLoop, Instruction *I = nullptr,
+                                    DebugLoc DL = {}) {
   LLVM_DEBUG(debugVectorizationMessage("", Msg, I));
   LoopVectorizeHints Hints(TheLoop, true /* doesn't matter */, *ORE);
-  ORE->emit(
-      createLVAnalysis(Hints.vectorizeAnalysisPassName(), ORETag, TheLoop, I)
-      << Msg);
+  ORE->emit(createLVAnalysis(Hints.vectorizeAnalysisPassName(), ORETag, TheLoop,
+                             I, DL)
+            << Msg);
 }
 
 /// Report successful vectorization of the loop. In case an outer loop is
@@ -1586,9 +1590,7 @@ public:
   /// the factor width. If \p Invalid is not nullptr, this function
   /// will add a pair(Instruction*, ElementCount) to \p Invalid for
   /// each instruction that has an Invalid cost for the given VF.
-  InstructionCost
-  expectedCost(ElementCount VF,
-               SmallVectorImpl<InstructionVFPair> *Invalid = nullptr);
+  InstructionCost expectedCost(ElementCount VF);
 
   bool hasPredStores() const { return NumPredStores > 0; }
 
@@ -4694,9 +4696,28 @@ bool LoopVectorizationPlanner::isMoreProfitable(
   return CmpFn(RTCostA, RTCostB);
 }
 
-static void emitInvalidCostRemarks(SmallVector<InstructionVFPair> InvalidCosts,
-                                   OptimizationRemarkEmitter *ORE,
-                                   Loop *TheLoop) {
+void LoopVectorizationPlanner::emitInvalidCostRemarks(
+    OptimizationRemarkEmitter *ORE) {
+  if (VPlans.empty())
+    return;
+
+  using RecipeVFPair = std::pair<VPRecipeBase *, ElementCount>;
+  SmallVector<RecipeVFPair> InvalidCosts;
+  for (const auto &Plan : VPlans) {
+    for (ElementCount VF : Plan->vectorFactors()) {
+      LLVMContext &LLVMCtx = OrigLoop->getHeader()->getContext();
+      VPCostContext CostCtx(CM.TTI, Legal->getWidestInductionType(), LLVMCtx,
+                            CM);
+      auto Iter = vp_depth_first_deep(Plan->getVectorLoopRegion()->getEntry());
+      for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
+        for (auto &R : *VPBB) {
+          if (R.cost(VF, CostCtx).isValid())
+            continue;
+          InvalidCosts.emplace_back(&R, VF);
+        }
+      }
+    }
+  }
   if (InvalidCosts.empty())
     return;
 
@@ -4704,14 +4725,14 @@ static void emitInvalidCostRemarks(SmallVector<InstructionVFPair> InvalidCosts,
 
   // Group the remarks per instruction, keeping the instruction order from
   // InvalidCosts.
-  std::map<Instruction *, unsigned> Numbering;
+  std::map<VPRecipeBase *, unsigned> Numbering;
   unsigned I = 0;
   for (auto &Pair : InvalidCosts)
     if (!Numbering.count(Pair.first))
       Numbering[Pair.first] = I++;
 
   // Sort the list, first on instruction(number) then on VF.
-  sort(InvalidCosts, [&Numbering](InstructionVFPair &A, InstructionVFPair &B) {
+  sort(InvalidCosts, [&Numbering](RecipeVFPair &A, RecipeVFPair &B) {
     if (Numbering[A.first] != Numbering[B.first])
       return Numbering[A.first] < Numbering[B.first];
     const auto &LHS = A.second;
@@ -4725,33 +4746,57 @@ static void emitInvalidCostRemarks(SmallVector<InstructionVFPair> InvalidCosts,
   // Group the instructions together to emit separate remarks for:
   //   load  (vf1, vf2)
   //   store (vf1)
-  auto Tail = ArrayRef<InstructionVFPair>(InvalidCosts);
-  auto Subset = ArrayRef<InstructionVFPair>();
+  auto Tail = ArrayRef<RecipeVFPair>(InvalidCosts);
+  auto Subset = ArrayRef<RecipeVFPair>();
   do {
     if (Subset.empty())
       Subset = Tail.take_front(1);
 
-    Instruction *I = Subset.front().first;
+    VPRecipeBase *R = Subset.front().first;
+
+    unsigned Opcode =
+        TypeSwitch<const VPRecipeBase *, unsigned>(R)
+            .Case<VPHeaderPHIRecipe>(
+                [](const auto *R) { return Instruction::PHI; })
+            .Case<VPWidenSelectRecipe>(
+                [](const auto *R) { return Instruction::Select; })
+            .Case<VPWidenStoreRecipe>(
+                [](const auto *R) { return Instruction::Store; })
+            .Case<VPWidenLoadRecipe>(
+                [](const auto *R) { return Instruction::Load; })
+            .Case<VPWidenCallRecipe>(
+                [](const auto *R) { return Instruction::Call; })
+            .Case<VPInstruction, VPWidenRecipe, VPReplicateRecipe,
+                  VPWidenCastRecipe>(
+                [](const auto *R) { return R->getOpcode(); })
+            .Case<VPInterleaveRecipe>([](const VPInterleaveRecipe *R) {
+              return R->getStoredValues().empty() ? Instruction::Load
+                                                  : Instruction::Store;
+            });
 
     // If the next instruction is different, or if there are no other pairs,
     // emit a remark for the collated subset. e.g.
     //   [(load, vf1), (load, vf2))]
     // to emit:
     //  remark: invalid costs for 'load' at VF=(vf, vf2)
-    if (Subset == Tail || Tail[Subset.size()].first != I) {
+    if (Subset == Tail || Tail[Subset.size()].first != R) {
       std::string OutString;
       raw_string_ostream OS(OutString);
       assert(!Subset.empty() && "Unexpected empty range");
-      OS << "Instruction with invalid costs prevented vectorization at VF=(";
+      OS << "Recipe with invalid costs prevented vectorization at VF=(";
       for (const auto &Pair : Subset)
         OS << (Pair.second == Subset.front().second ? "" : ", ") << Pair.second;
       OS << "):";
-      if (auto *CI = dyn_cast<CallInst>(I))
-        OS << " call to " << CI->getCalledFunction()->getName();
+      if (Opcode == Instruction::Call)
+        OS << " call to "
+           << R->getOperand(R->getNumOperands() - 1)
+                  ->getLiveInIRValue()
+                  ->getName();
       else
-        OS << " " << I->getOpcodeName();
+        OS << " " << Instruction::getOpcodeName(Opcode);
       OS.flush();
-      reportVectorizationInfo(OutString, "InvalidCost", ORE, TheLoop, I);
+      reportVectorizationInfo(OutString, "InvalidCost", ORE, OrigLoop, nullptr,
+                              R->getDebugLoc());
       Tail = Tail.drop_front(Subset.size());
       Subset = {};
     } else
@@ -4880,14 +4925,13 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
     ChosenFactor.Cost = InstructionCost::getMax();
   }
 
-  SmallVector<InstructionVFPair> InvalidCosts;
   for (auto &P : VPlans) {
     for (ElementCount VF : P->vectorFactors()) {
       // The cost for scalar VF=1 is already calculated, so ignore it.
       if (VF.isScalar())
         continue;
 
-      InstructionCost C = CM.expectedCost(VF, &InvalidCosts);
+      InstructionCost C = CM.expectedCost(VF);
       VectorizationFactor Candidate(VF, C, ScalarCost.ScalarCost);
 
 #ifndef NDEBUG
@@ -4921,8 +4965,6 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
         ChosenFactor = Candidate;
     }
   }
-
-  emitInvalidCostRemarks(InvalidCosts, ORE, OrigLoop);
 
   if (!EnableCondStoresVectorization && CM.hasPredStores()) {
     reportVectorizationFailure(
@@ -5828,8 +5870,7 @@ InstructionCost LoopVectorizationCostModel::computePredInstDiscount(
   return Discount;
 }
 
-InstructionCost LoopVectorizationCostModel::expectedCost(
-    ElementCount VF, SmallVectorImpl<InstructionVFPair> *Invalid) {
+InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
   InstructionCost Cost;
 
   // For each block.
@@ -5848,10 +5889,6 @@ InstructionCost LoopVectorizationCostModel::expectedCost(
       // Check if we should override the cost.
       if (C.isValid() && ForceTargetInstructionCost.getNumOccurrences() > 0)
         C = InstructionCost(ForceTargetInstructionCost);
-
-      // Keep a list of instructions with invalid costs.
-      if (Invalid && !C.isValid())
-        Invalid->emplace_back(&I, VF);
 
       BlockCost += C;
       LLVM_DEBUG(dbgs() << "LV: Found an estimated cost of " << C << " for VF "
@@ -7290,6 +7327,7 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   // cost-model and will be retired once the VPlan-based cost-model is
   // stabilized.
   VectorizationFactor VF = selectVectorizationFactor();
+
   assert((VF.Width.isScalar() || VF.ScalarCost > 0) && "when vectorizing, the scalar cost must be non-zero.");
   if (!hasPlanWithVF(VF.Width)) {
     LLVM_DEBUG(dbgs() << "LV: No VPlan could be built for " << VF.Width
@@ -7501,6 +7539,7 @@ VPlan &LoopVectorizationPlanner::getBestPlan() const {
       }
     }
   }
+
   BestPlan->setVF(BestFactor.Width);
   return *BestPlan;
 }
@@ -10188,6 +10227,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Plan how to best vectorize, return the best VF and its cost.
   std::optional<VectorizationFactor> MaybeVF = LVP.plan(UserVF, UserIC);
 
+  if (ORE->allowExtraAnalysis(LV_NAME))
+    LVP.emitInvalidCostRemarks(ORE);
+
   VectorizationFactor VF = VectorizationFactor::Disabled();
   unsigned IC = 1;
 
@@ -10195,6 +10237,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       hasBranchWeightMD(*L->getLoopLatch()->getTerminator());
   GeneratedRTChecks Checks(*PSE.getSE(), DT, LI, TTI,
                            F->getDataLayout(), AddBranchWeights);
+
   if (MaybeVF) {
     VF = *MaybeVF;
     // Select the interleave count.
