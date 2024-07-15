@@ -20,11 +20,11 @@
 #include <cassert>
 #include "test_macros.h"
 
-struct Lock {
+struct MyMutex {
   bool locked = false;
 
-  Lock() = default;
-  ~Lock() { assert(!locked); }
+  MyMutex() = default;
+  ~MyMutex() { assert(!locked); }
 
   void lock() {
     assert(!locked);
@@ -35,21 +35,21 @@ struct Lock {
     locked = false;
   }
 
-  Lock(Lock const&)            = delete;
-  Lock& operator=(Lock const&) = delete;
+  MyMutex(MyMutex const&)            = delete;
+  MyMutex& operator=(MyMutex const&) = delete;
 };
 
 int main(int, char**) {
-  Lock l;
+  MyMutex m;
   {
-    std::lock_guard<Lock> lg(l);
-    assert(l.locked);
+    std::lock_guard<MyMutex> lg(m);
+    assert(m.locked);
   }
-  assert(!l.locked);
+  assert(!m.locked);
 
 #if TEST_STD_VER >= 17
-  std::lock_guard lg(l);
-  static_assert((std::is_same<decltype(l), std::lock_guard<decltype(l)>>::value), "");
+  std::lock_guard lg(m);
+  static_assert((std::is_same<decltype(lg), std::lock_guard<decltype(m)>>::value), "");
 #endif
 
   return 0;
