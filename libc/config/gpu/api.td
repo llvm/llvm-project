@@ -59,11 +59,6 @@ def FenvAPI: PublicAPI<"fenv.h"> {
 }
 
 def StdIOAPI : PublicAPI<"stdio.h"> {
-  let Macros = [
-    SimpleMacroDef<"_IOFBF", "0">,
-    SimpleMacroDef<"_IOLBF", "1">,
-    SimpleMacroDef<"_IONBF", "2">,
-  ];
   let Types = [
     "FILE",
     "off_t",
