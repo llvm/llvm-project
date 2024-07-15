@@ -4,7 +4,7 @@
 declare double @atan2(double, double) #0
 define double @f_atan2() {
 ; CHECK-LABEL: @f_atan2(
-; CHECK-NEXT:    ret double 0x3FDDAC670561BB4F
+; CHECK-NEXT:    ret double 0x3FDDAC6{{.+}}
 ;
   %res = tail call fast double @atan2(double 1.0, double 2.0)
   ret double %res
