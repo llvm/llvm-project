@@ -7205,10 +7205,15 @@ cc_library(
     hdrs = ["include/mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"],
     includes = ["include"],
     deps = [
+        ":ArithDialect",
+        ":DialectUtils",
         ":FuncDialect",
         ":IR",
         ":SPIRVDialect",
+        ":Support",
         ":TransformUtils",
+        ":VectorDialect",
+        ":VectorTransforms",
         "//llvm:Support",
     ],
 )
@@ -9586,6 +9591,7 @@ cc_binary(
         "//mlir/test:TestArmSME",
         "//mlir/test:TestBufferization",
         "//mlir/test:TestControlFlow",
+        "//mlir/test:TestConvertToSPIRV",
         "//mlir/test:TestDLTI",
         "//mlir/test:TestDialect",
         "//mlir/test:TestFunc",

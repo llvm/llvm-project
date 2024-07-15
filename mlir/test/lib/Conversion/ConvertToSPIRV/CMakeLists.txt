@@ -7,9 +7,10 @@ add_mlir_library(MLIRTestConvertToSPIRV
   LINK_LIBS PUBLIC
   MLIRArithDialect
   MLIRFuncDialect
+  MLIRPass
   MLIRSPIRVConversion
   MLIRSPIRVDialect
-  MLIRVectorDialect
-  MLIRPass
+  MLIRTransformUtils
   MLIRTransforms
+  MLIRVectorDialect
   )
