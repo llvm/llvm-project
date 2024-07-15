@@ -449,8 +449,8 @@ define <2 x double> @vfwmul_squared_v2f16_v2f64(ptr %x) {
   ret <2 x double> %c
 }
 
-define <2 x float> @vfwmacc_vf_nxv1f32(<2 x half> %x, half %y) {
-; CHECK-LABEL: vfwmacc_vf_nxv1f32:
+define <2 x float> @vfwmul_vf2_v2f32(<2 x half> %x, half %y) {
+; CHECK-LABEL: vfwmul_vf2_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwmul.vf v9, v8, fa0
