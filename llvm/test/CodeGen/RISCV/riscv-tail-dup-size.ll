@@ -4,7 +4,7 @@
 
 ; RUN: llc -mtriple=riscv64 -mattr=+m -tail-dup-size=4 < %s | FileCheck %s --check-prefix=CHECK-O2
 ; RUN: llc -mtriple=riscv64 -mattr=+m -tail-dup-placement-threshold=4 < %s | FileCheck %s --check-prefix=CHECK-O2
-; RUN: llc -mtriple=riscv64 -mattr=+m -tail-dup-placement-threshold=4 < %s | FileCheck %s --check-prefix=CHECK-O3
+; RUN: llc -mtriple=riscv64 -mattr=+m -tail-dup-placement-threshold=6 < %s | FileCheck %s --check-prefix=CHECK-O3
 
 @a = external dso_local local_unnamed_addr global i32
 @b = external dso_local local_unnamed_addr global i32
@@ -41,12 +41,15 @@ define dso_local i32 @test(i32 %n) {
 ; CHECK-O3-NEXT:    lui a1, %hi(a)
 ; CHECK-O3-NEXT:    lw a1, %lo(a)(a1)
 ; CHECK-O3-NEXT:    mul a0, a1, a0
-; CHECK-O3-NEXT:    j .LBB0_3
+; CHECK-O3-NEXT:    lui a1, %hi(c)
+; CHECK-O3-NEXT:    lw a1, %lo(c)(a1)
+; CHECK-O3-NEXT:    addi a0, a0, -1
+; CHECK-O3-NEXT:    mulw a0, a0, a1
+; CHECK-O3-NEXT:    tail foo
 ; CHECK-O3-NEXT:  .LBB0_2: # %if.else
 ; CHECK-O3-NEXT:    lui a1, %hi(b)
 ; CHECK-O3-NEXT:    lw a1, %lo(b)(a1)
 ; CHECK-O3-NEXT:    divw a0, a1, a0
-; CHECK-O3-NEXT:  .LBB0_3: # %if.end
 ; CHECK-O3-NEXT:    lui a1, %hi(c)
 ; CHECK-O3-NEXT:    lw a1, %lo(c)(a1)
 ; CHECK-O3-NEXT:    addi a0, a0, -1
