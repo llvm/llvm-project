@@ -51,8 +51,8 @@ using DeallocCallBack =
 /// should be allocated. \p DeallocCallBack lets the user decide how the memory
 /// should be deallocated. The boolean result indicates if the utility succeeded
 /// to replace all fir.alloca as requested by the user. Causes of failures are
-/// the presence of unregistered operations, or OpenMP/ACC recipe operations that
-/// return memory allocated inside their region.
+/// the presence of unregistered operations, or OpenMP/ACC recipe operations
+/// that return memory allocated inside their region.
 bool replaceAllocas(mlir::RewriterBase &rewriter, mlir::Operation *parentOp,
                     MustRewriteCallBack, AllocaRewriterCallBack,
                     DeallocCallBack);
