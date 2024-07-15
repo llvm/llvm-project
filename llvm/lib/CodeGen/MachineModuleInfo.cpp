@@ -155,7 +155,9 @@ public:
     return true;
   }
 
-  StringRef getPassName() const override { return "Free MachineFunction"; }
+  StringRef getPassName() const override {
+    return "Free MachineFunction";
+  }
 };
 
 } // end anonymous namespace
@@ -228,8 +230,8 @@ bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
         Ctx.diagnose(
             DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, LocCookie));
       });
-  MMI.DbgInfoAvailable =
-      !DisableDebugInfoPrinting && !M.debug_compile_units().empty();
+  MMI.DbgInfoAvailable = !DisableDebugInfoPrinting &&
+                         !M.debug_compile_units().empty();
   return false;
 }
 
