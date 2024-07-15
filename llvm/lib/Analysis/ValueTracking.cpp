@@ -6609,6 +6609,48 @@ void llvm::getUnderlyingObjects(const Value *V,
   } while (!Worklist.empty());
 }
 
+const Value *
+llvm::getUnderlyingObjectThroughPhisAndSelects(const Value *V,
+                                               unsigned MaxLookup) {
+  const unsigned MaxVisited = 8;
+
+  SmallPtrSet<const Value *, 8> Visited;
+  SmallVector<const Value *, 8> Worklist;
+  Worklist.push_back(V);
+  const Value *Object = nullptr, *FirstObject = nullptr;
+  do {
+    const Value *P = Worklist.pop_back_val();
+    P = getUnderlyingObject(P, MaxLookup);
+
+    if (!FirstObject)
+      FirstObject = P;
+
+    if (!Visited.insert(P).second)
+      continue;
+
+    if (Visited.size() == MaxVisited)
+      return FirstObject;
+
+    if (auto *SI = dyn_cast<SelectInst>(P)) {
+      Worklist.push_back(SI->getTrueValue());
+      Worklist.push_back(SI->getFalseValue());
+      continue;
+    }
+
+    if (auto *PN = dyn_cast<PHINode>(P)) {
+      append_range(Worklist, PN->incoming_values());
+      continue;
+    }
+
+    if (!Object)
+      Object = P;
+    else if (Object != P)
+      return FirstObject;
+  } while (!Worklist.empty());
+
+  return Object;
+}
+
 /// This is the function that does the work of looking through basic
 /// ptrtoint+arithmetic+inttoptr sequences.
 static const Value *getUnderlyingObjectFromInt(const Value *V) {
