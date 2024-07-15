@@ -489,34 +489,34 @@ class Parser : public CodeCompletionHandler {
   StmtResult handleExprStmt(ExprResult E, ParsedStmtContext StmtCtx);
 
   class AssumeParseAssociatedStmtRAII {
-    Parser *parent;
+    Parser *Parent;
     OpenMPDirectiveKind DKind;
 
   public:
-    AssumeParseAssociatedStmtRAII(Parser *parent, SourceLocation Loc,
+    AssumeParseAssociatedStmtRAII(Parser *Parent, SourceLocation Loc,
                                   OpenMPDirectiveKind DKind)
-        : parent(parent), DKind(DKind) {
+        : Parent(Parent), DKind(DKind) {
 
       if (DKind == llvm::omp::Directive::OMPD_assume) {
 
-        if (parent->Tok.getKind() == clang::tok::annot_pragma_openmp_end)
-          parent->ConsumeAnyToken();
+        if (Parent->Tok.getKind() == clang::tok::annot_pragma_openmp_end)
+          Parent->ConsumeAnyToken();
 
         DeclarationNameInfo DirName;
-        parent->Actions.OpenMP().StartOpenMPDSABlock(
-            DKind, DirName, parent->Actions.getCurScope(), Loc);
+        Parent->Actions.OpenMP().StartOpenMPDSABlock(
+            DKind, DirName, Parent->Actions.getCurScope(), Loc);
       }
     }
 
     StmtResult GetAssociatedStmtAndEndScope(SourceLocation Loc) {
 
       if (DKind == llvm::omp::Directive::OMPD_assume) {
-        StmtResult AssociatedStmt = parent->ParseStatement();
+        StmtResult AssociatedStmt = Parent->ParseStatement();
         AssociatedStmt =
-            parent->Actions.OpenMP().ActOnFinishedStatementInOpenMPAssumeScope(
+            Parent->Actions.OpenMP().ActOnFinishedStatementInOpenMPAssumeScope(
                 AssociatedStmt.get());
 
-        parent->ParseOpenMPEndAssumesDirective(Loc);
+        Parent->ParseOpenMPEndAssumesDirective(Loc);
 
         return AssociatedStmt;
       }
@@ -524,9 +524,9 @@ class Parser : public CodeCompletionHandler {
 
     ~AssumeParseAssociatedStmtRAII() {
       if (DKind == llvm::omp::Directive::OMPD_assume) {
-        parent->Actions.OpenMP().EndOpenMPDSABlock(nullptr);
-        if (parent->Tok.getKind() == clang::tok::annot_pragma_openmp_end)
-          parent->ConsumeAnyToken();
+        Parent->Actions.OpenMP().EndOpenMPDSABlock(nullptr);
+        if (Parent->Tok.getKind() == clang::tok::annot_pragma_openmp_end)
+          Parent->ConsumeAnyToken();
       }
     }
   };
