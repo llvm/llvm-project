@@ -24,13 +24,11 @@
 // CHECK-NEXT:   (Outer<'B'>::Inner *) b = 0x{{[0-9A-Fa-f]*}} {}
 // CHECK-NEXT: }
 
-template<char C>
-struct Outer {
+template <char C> struct Outer {
   struct Inner {};
 };
 
-template<char C>
-struct ReferencesBoth {
+template <char C> struct ReferencesBoth {
   Outer<'A'>::Inner *a;
   Outer<'B'>::Inner *b;
 };

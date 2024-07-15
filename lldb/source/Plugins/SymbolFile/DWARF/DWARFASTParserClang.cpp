@@ -833,13 +833,9 @@ void DWARFASTParserClang::MapDeclDIEToDefDIE(
   ParsedDWARFTypeAttributes def_attrs(def_die);
   ConstString unique_typename(decl_attrs.name);
   Declaration decl_declaration(decl_attrs.decl);
-  if (Language::LanguageIsCPlusPlus(
-          SymbolFileDWARF::GetLanguage(*decl_die.GetCU()))) {
-    std::string qualified_name = GetCPlusPlusQualifiedName(decl_die);
-    if (!qualified_name.empty())
-      unique_typename = ConstString(qualified_name);
-    decl_declaration.Clear();
-  }
+  GetUniqueTypeNameAndDeclaration(
+      decl_die, SymbolFileDWARF::GetLanguage(*decl_die.GetCU()),
+      unique_typename, decl_declaration);
   if (UniqueDWARFASTType *unique_ast_entry_type =
           dwarf->GetUniqueDWARFASTTypeMap().Find(
               unique_typename, decl_die, decl_declaration,
@@ -1578,13 +1574,17 @@ TypeSP DWARFASTParserClang::UpdateSymbolContextScopeForType(
   return type_sp;
 }
 
-std::string
-DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
-  if (!die.IsValid())
-    return "";
-  const char *name = die.GetName();
-  if (!name)
-    return "";
+void DWARFASTParserClang::GetUniqueTypeNameAndDeclaration(
+    const lldb_private::plugin::dwarf::DWARFDIE &die,
+    lldb::LanguageType language, lldb_private::ConstString &unique_typename,
+    lldb_private::Declaration &decl_declaration) {
+  // For C++, we rely solely upon the one definition rule that says
+  // only one thing can exist at a given decl context. We ignore the
+  // file and line that things are declared on.
+  if (!die.IsValid() || !Language::LanguageIsCPlusPlus(language) ||
+      unique_typename.IsEmpty())
+    return;
+  decl_declaration.Clear();
   std::string qualified_name;
   DWARFDIE parent_decl_ctx_die = die.GetParentDeclContextDIE();
   // TODO: change this to get the correct decl context parent....
@@ -1627,10 +1627,10 @@ DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
   if (qualified_name.empty())
     qualified_name.append("::");
 
-  qualified_name.append(name);
+  qualified_name.append(unique_typename.GetCString());
   qualified_name.append(GetDIEClassTemplateParams(die));
 
-  return qualified_name;
+  unique_typename = ConstString(qualified_name);
 }
 
 TypeSP
@@ -1662,16 +1662,8 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   }
 
   if (attrs.name) {
-    if (Language::LanguageIsCPlusPlus(cu_language)) {
-      // For C++, we rely solely upon the one definition rule that says
-      // only one thing can exist at a given decl context. We ignore the
-      // file and line that things are declared on.
-      std::string qualified_name = GetCPlusPlusQualifiedName(die);
-      if (!qualified_name.empty())
-        unique_typename = ConstString(qualified_name);
-      unique_decl.Clear();
-    }
-
+    GetUniqueTypeNameAndDeclaration(die, cu_language, unique_typename,
+                                    unique_decl);
     if (UniqueDWARFASTType *unique_ast_entry_type =
             dwarf->GetUniqueDWARFASTTypeMap().Find(
                 unique_typename, die, unique_decl, byte_size,

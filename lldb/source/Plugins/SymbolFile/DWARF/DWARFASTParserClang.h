@@ -171,8 +171,10 @@ protected:
       lldb_private::TypeSystemClang::TemplateParameterInfos
           &template_param_infos);
 
-  std::string
-  GetCPlusPlusQualifiedName(const lldb_private::plugin::dwarf::DWARFDIE &die);
+  void GetUniqueTypeNameAndDeclaration(
+      const lldb_private::plugin::dwarf::DWARFDIE &die,
+      lldb::LanguageType language, lldb_private::ConstString &unique_typename,
+      lldb_private::Declaration &decl_declaration);
 
   bool ParseChildMembers(
       const lldb_private::plugin::dwarf::DWARFDIE &die,
