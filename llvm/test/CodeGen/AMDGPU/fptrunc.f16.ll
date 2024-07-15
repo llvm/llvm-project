@@ -11,7 +11,7 @@
 define amdgpu_kernel void @fptrunc_f32_to_f16(
 ; SI-SDAG-LABEL: fptrunc_f32_to_f16:
 ; SI-SDAG:       ; %bb.0: ; %entry
-; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; SI-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -29,7 +29,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16(
 ;
 ; SI-GISEL-LABEL: fptrunc_f32_to_f16:
 ; SI-GISEL:       ; %bb.0: ; %entry
-; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_load_dword s3, s[2:3], 0x0
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
@@ -41,7 +41,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16(
 ;
 ; VI-SDAG-LABEL: fptrunc_f32_to_f16:
 ; VI-SDAG:       ; %bb.0: ; %entry
-; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; VI-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -59,7 +59,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16(
 ;
 ; VI-GISEL-LABEL: fptrunc_f32_to_f16:
 ; VI-GISEL:       ; %bb.0: ; %entry
-; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    s_load_dword s2, s[2:3], 0x0
 ; VI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
@@ -71,7 +71,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16(
 ;
 ; GFX9-SDAG-LABEL: fptrunc_f32_to_f16:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
-; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX9-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX9-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -89,7 +89,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16(
 ;
 ; GFX9-GISEL-LABEL: fptrunc_f32_to_f16:
 ; GFX9-GISEL:       ; %bb.0: ; %entry
-; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_load_dword s2, s[2:3], 0x0
 ; GFX9-GISEL-NEXT:    s_mov_b32 s3, 0xf000
@@ -101,7 +101,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16(
 ;
 ; GFX11-SDAG-LABEL: fptrunc_f32_to_f16:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
-; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX11-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -121,7 +121,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16(
 ;
 ; GFX11-GISEL-LABEL: fptrunc_f32_to_f16:
 ; GFX11-GISEL:       ; %bb.0: ; %entry
-; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
@@ -144,7 +144,7 @@ entry:
 define amdgpu_kernel void @fptrunc_f64_to_f16(
 ; SI-SDAG-LABEL: fptrunc_f64_to_f16:
 ; SI-SDAG:       ; %bb.0: ; %entry
-; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; SI-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -163,7 +163,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ;
 ; SI-GISEL-LABEL: fptrunc_f64_to_f16:
 ; SI-GISEL:       ; %bb.0: ; %entry
-; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
@@ -176,7 +176,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ;
 ; VI-SDAG-LABEL: fptrunc_f64_to_f16:
 ; VI-SDAG:       ; %bb.0: ; %entry
-; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; VI-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -195,7 +195,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ;
 ; VI-GISEL-LABEL: fptrunc_f64_to_f16:
 ; VI-GISEL:       ; %bb.0: ; %entry
-; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -208,7 +208,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ;
 ; GFX9-SDAG-LABEL: fptrunc_f64_to_f16:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
-; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX9-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX9-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -227,7 +227,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ;
 ; GFX9-GISEL-LABEL: fptrunc_f64_to_f16:
 ; GFX9-GISEL:       ; %bb.0: ; %entry
-; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -240,7 +240,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ;
 ; GFX11-SDAG-LABEL: fptrunc_f64_to_f16:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
-; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX11-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -262,7 +262,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
 ;
 ; GFX11-GISEL-LABEL: fptrunc_f64_to_f16:
 ; GFX11-GISEL:       ; %bb.0: ; %entry
-; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -287,7 +287,7 @@ entry:
 define amdgpu_kernel void @fptrunc_v2f32_to_v2f16(
 ; SI-SDAG-LABEL: fptrunc_v2f32_to_v2f16:
 ; SI-SDAG:       ; %bb.0: ; %entry
-; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; SI-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -308,7 +308,7 @@ define amdgpu_kernel void @fptrunc_v2f32_to_v2f16(
 ;
 ; SI-GISEL-LABEL: fptrunc_v2f32_to_v2f16:
 ; SI-GISEL:       ; %bb.0: ; %entry
-; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
@@ -323,7 +323,7 @@ define amdgpu_kernel void @fptrunc_v2f32_to_v2f16(
 ;
 ; VI-SDAG-LABEL: fptrunc_v2f32_to_v2f16:
 ; VI-SDAG:       ; %bb.0: ; %entry
-; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; VI-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -343,7 +343,7 @@ define amdgpu_kernel void @fptrunc_v2f32_to_v2f16(
 ;
 ; VI-GISEL-LABEL: fptrunc_v2f32_to_v2f16:
 ; VI-GISEL:       ; %bb.0: ; %entry
-; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -358,7 +358,7 @@ define amdgpu_kernel void @fptrunc_v2f32_to_v2f16(
 ;
 ; GFX9-SDAG-LABEL: fptrunc_v2f32_to_v2f16:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
-; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX9-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX9-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -378,7 +378,7 @@ define amdgpu_kernel void @fptrunc_v2f32_to_v2f16(
 ;
 ; GFX9-GISEL-LABEL: fptrunc_v2f32_to_v2f16:
 ; GFX9-GISEL:       ; %bb.0: ; %entry
-; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x0
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -392,7 +392,7 @@ define amdgpu_kernel void @fptrunc_v2f32_to_v2f16(
 ;
 ; GFX11-SDAG-LABEL: fptrunc_v2f32_to_v2f16:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
-; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX11-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -415,7 +415,7 @@ define amdgpu_kernel void @fptrunc_v2f32_to_v2f16(
 ;
 ; GFX11-GISEL-LABEL: fptrunc_v2f32_to_v2f16:
 ; GFX11-GISEL:       ; %bb.0: ; %entry
-; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
@@ -441,7 +441,7 @@ entry:
 define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; SI-SDAG-LABEL: fptrunc_v2f64_to_v2f16:
 ; SI-SDAG:       ; %bb.0: ; %entry
-; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; SI-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -464,7 +464,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ;
 ; SI-GISEL-LABEL: fptrunc_v2f64_to_v2f16:
 ; SI-GISEL:       ; %bb.0: ; %entry
-; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x0
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
@@ -481,7 +481,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ;
 ; VI-SDAG-LABEL: fptrunc_v2f64_to_v2f16:
 ; VI-SDAG:       ; %bb.0: ; %entry
-; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; VI-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -503,7 +503,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ;
 ; VI-GISEL-LABEL: fptrunc_v2f64_to_v2f16:
 ; VI-GISEL:       ; %bb.0: ; %entry
-; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x0
 ; VI-GISEL-NEXT:    s_mov_b32 s2, -1
@@ -519,7 +519,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ;
 ; GFX9-SDAG-LABEL: fptrunc_v2f64_to_v2f16:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
-; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX9-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX9-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -541,7 +541,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ;
 ; GFX9-GISEL-LABEL: fptrunc_v2f64_to_v2f16:
 ; GFX9-GISEL:       ; %bb.0: ; %entry
-; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x0
 ; GFX9-GISEL-NEXT:    s_mov_b32 s2, -1
@@ -557,7 +557,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ;
 ; GFX11-SDAG-LABEL: fptrunc_v2f64_to_v2f16:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
-; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX11-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -584,7 +584,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ;
 ; GFX11-GISEL-LABEL: fptrunc_v2f64_to_v2f16:
 ; GFX11-GISEL:       ; %bb.0: ; %entry
-; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_load_b128 s[4:7], s[2:3], 0x0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s2, -1
@@ -613,7 +613,7 @@ entry:
 define amdgpu_kernel void @fneg_fptrunc_f32_to_f16(
 ; SI-SDAG-LABEL: fneg_fptrunc_f32_to_f16:
 ; SI-SDAG:       ; %bb.0: ; %entry
-; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; SI-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -631,7 +631,7 @@ define amdgpu_kernel void @fneg_fptrunc_f32_to_f16(
 ;
 ; SI-GISEL-LABEL: fneg_fptrunc_f32_to_f16:
 ; SI-GISEL:       ; %bb.0: ; %entry
-; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_load_dword s3, s[2:3], 0x0
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
@@ -643,7 +643,7 @@ define amdgpu_kernel void @fneg_fptrunc_f32_to_f16(
 ;
 ; VI-SDAG-LABEL: fneg_fptrunc_f32_to_f16:
 ; VI-SDAG:       ; %bb.0: ; %entry
-; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; VI-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -661,7 +661,7 @@ define amdgpu_kernel void @fneg_fptrunc_f32_to_f16(
 ;
 ; VI-GISEL-LABEL: fneg_fptrunc_f32_to_f16:
 ; VI-GISEL:       ; %bb.0: ; %entry
-; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    s_load_dword s2, s[2:3], 0x0
 ; VI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
@@ -673,7 +673,7 @@ define amdgpu_kernel void @fneg_fptrunc_f32_to_f16(
 ;
 ; GFX9-SDAG-LABEL: fneg_fptrunc_f32_to_f16:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
-; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX9-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX9-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -691,7 +691,7 @@ define amdgpu_kernel void @fneg_fptrunc_f32_to_f16(
 ;
 ; GFX9-GISEL-LABEL: fneg_fptrunc_f32_to_f16:
 ; GFX9-GISEL:       ; %bb.0: ; %entry
-; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_load_dword s2, s[2:3], 0x0
 ; GFX9-GISEL-NEXT:    s_mov_b32 s3, 0xf000
@@ -703,7 +703,7 @@ define amdgpu_kernel void @fneg_fptrunc_f32_to_f16(
 ;
 ; GFX11-SDAG-LABEL: fneg_fptrunc_f32_to_f16:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
-; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX11-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -723,7 +723,7 @@ define amdgpu_kernel void @fneg_fptrunc_f32_to_f16(
 ;
 ; GFX11-GISEL-LABEL: fneg_fptrunc_f32_to_f16:
 ; GFX11-GISEL:       ; %bb.0: ; %entry
-; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
@@ -747,7 +747,7 @@ entry:
 define amdgpu_kernel void @fabs_fptrunc_f32_to_f16(
 ; SI-SDAG-LABEL: fabs_fptrunc_f32_to_f16:
 ; SI-SDAG:       ; %bb.0: ; %entry
-; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; SI-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -765,7 +765,7 @@ define amdgpu_kernel void @fabs_fptrunc_f32_to_f16(
 ;
 ; SI-GISEL-LABEL: fabs_fptrunc_f32_to_f16:
 ; SI-GISEL:       ; %bb.0: ; %entry
-; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_load_dword s3, s[2:3], 0x0
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
@@ -777,7 +777,7 @@ define amdgpu_kernel void @fabs_fptrunc_f32_to_f16(
 ;
 ; VI-SDAG-LABEL: fabs_fptrunc_f32_to_f16:
 ; VI-SDAG:       ; %bb.0: ; %entry
-; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; VI-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -795,7 +795,7 @@ define amdgpu_kernel void @fabs_fptrunc_f32_to_f16(
 ;
 ; VI-GISEL-LABEL: fabs_fptrunc_f32_to_f16:
 ; VI-GISEL:       ; %bb.0: ; %entry
-; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    s_load_dword s2, s[2:3], 0x0
 ; VI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
@@ -807,7 +807,7 @@ define amdgpu_kernel void @fabs_fptrunc_f32_to_f16(
 ;
 ; GFX9-SDAG-LABEL: fabs_fptrunc_f32_to_f16:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
-; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX9-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX9-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -825,7 +825,7 @@ define amdgpu_kernel void @fabs_fptrunc_f32_to_f16(
 ;
 ; GFX9-GISEL-LABEL: fabs_fptrunc_f32_to_f16:
 ; GFX9-GISEL:       ; %bb.0: ; %entry
-; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_load_dword s2, s[2:3], 0x0
 ; GFX9-GISEL-NEXT:    s_mov_b32 s3, 0xf000
@@ -837,7 +837,7 @@ define amdgpu_kernel void @fabs_fptrunc_f32_to_f16(
 ;
 ; GFX11-SDAG-LABEL: fabs_fptrunc_f32_to_f16:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
-; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX11-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -857,7 +857,7 @@ define amdgpu_kernel void @fabs_fptrunc_f32_to_f16(
 ;
 ; GFX11-GISEL-LABEL: fabs_fptrunc_f32_to_f16:
 ; GFX11-GISEL:       ; %bb.0: ; %entry
-; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
@@ -881,7 +881,7 @@ entry:
 define amdgpu_kernel void @fneg_fabs_fptrunc_f32_to_f16(
 ; SI-SDAG-LABEL: fneg_fabs_fptrunc_f32_to_f16:
 ; SI-SDAG:       ; %bb.0: ; %entry
-; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; SI-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -899,7 +899,7 @@ define amdgpu_kernel void @fneg_fabs_fptrunc_f32_to_f16(
 ;
 ; SI-GISEL-LABEL: fneg_fabs_fptrunc_f32_to_f16:
 ; SI-GISEL:       ; %bb.0: ; %entry
-; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_load_dword s3, s[2:3], 0x0
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
@@ -911,7 +911,7 @@ define amdgpu_kernel void @fneg_fabs_fptrunc_f32_to_f16(
 ;
 ; VI-SDAG-LABEL: fneg_fabs_fptrunc_f32_to_f16:
 ; VI-SDAG:       ; %bb.0: ; %entry
-; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; VI-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -929,7 +929,7 @@ define amdgpu_kernel void @fneg_fabs_fptrunc_f32_to_f16(
 ;
 ; VI-GISEL-LABEL: fneg_fabs_fptrunc_f32_to_f16:
 ; VI-GISEL:       ; %bb.0: ; %entry
-; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    s_load_dword s2, s[2:3], 0x0
 ; VI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
@@ -941,7 +941,7 @@ define amdgpu_kernel void @fneg_fabs_fptrunc_f32_to_f16(
 ;
 ; GFX9-SDAG-LABEL: fneg_fabs_fptrunc_f32_to_f16:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
-; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX9-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX9-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -959,7 +959,7 @@ define amdgpu_kernel void @fneg_fabs_fptrunc_f32_to_f16(
 ;
 ; GFX9-GISEL-LABEL: fneg_fabs_fptrunc_f32_to_f16:
 ; GFX9-GISEL:       ; %bb.0: ; %entry
-; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_load_dword s2, s[2:3], 0x0
 ; GFX9-GISEL-NEXT:    s_mov_b32 s3, 0xf000
@@ -971,7 +971,7 @@ define amdgpu_kernel void @fneg_fabs_fptrunc_f32_to_f16(
 ;
 ; GFX11-SDAG-LABEL: fneg_fabs_fptrunc_f32_to_f16:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
-; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX11-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -991,7 +991,7 @@ define amdgpu_kernel void @fneg_fabs_fptrunc_f32_to_f16(
 ;
 ; GFX11-GISEL-LABEL: fneg_fabs_fptrunc_f32_to_f16:
 ; GFX11-GISEL:       ; %bb.0: ; %entry
-; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
@@ -1016,7 +1016,7 @@ entry:
 define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
 ; SI-SDAG-LABEL: fptrunc_f32_to_f16_zext_i32:
 ; SI-SDAG:       ; %bb.0: ; %entry
-; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; SI-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -1034,7 +1034,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
 ;
 ; SI-GISEL-LABEL: fptrunc_f32_to_f16_zext_i32:
 ; SI-GISEL:       ; %bb.0: ; %entry
-; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_load_dword s3, s[2:3], 0x0
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
@@ -1046,7 +1046,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
 ;
 ; VI-SDAG-LABEL: fptrunc_f32_to_f16_zext_i32:
 ; VI-SDAG:       ; %bb.0: ; %entry
-; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; VI-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -1064,7 +1064,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
 ;
 ; VI-GISEL-LABEL: fptrunc_f32_to_f16_zext_i32:
 ; VI-GISEL:       ; %bb.0: ; %entry
-; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    s_load_dword s2, s[2:3], 0x0
 ; VI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
@@ -1076,7 +1076,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
 ;
 ; GFX9-SDAG-LABEL: fptrunc_f32_to_f16_zext_i32:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
-; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX9-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX9-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -1094,7 +1094,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
 ;
 ; GFX9-GISEL-LABEL: fptrunc_f32_to_f16_zext_i32:
 ; GFX9-GISEL:       ; %bb.0: ; %entry
-; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_load_dword s2, s[2:3], 0x0
 ; GFX9-GISEL-NEXT:    s_mov_b32 s3, 0xf000
@@ -1106,7 +1106,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
 ;
 ; GFX11-SDAG-LABEL: fptrunc_f32_to_f16_zext_i32:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
-; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX11-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -1128,7 +1128,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
 ;
 ; GFX11-GISEL-LABEL: fptrunc_f32_to_f16_zext_i32:
 ; GFX11-GISEL:       ; %bb.0: ; %entry
-; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
@@ -1155,7 +1155,7 @@ entry:
 define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
 ; SI-SDAG-LABEL: fptrunc_fabs_f32_to_f16_zext_i32:
 ; SI-SDAG:       ; %bb.0: ; %entry
-; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; SI-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -1173,7 +1173,7 @@ define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
 ;
 ; SI-GISEL-LABEL: fptrunc_fabs_f32_to_f16_zext_i32:
 ; SI-GISEL:       ; %bb.0: ; %entry
-; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_load_dword s3, s[2:3], 0x0
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
@@ -1185,7 +1185,7 @@ define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
 ;
 ; VI-SDAG-LABEL: fptrunc_fabs_f32_to_f16_zext_i32:
 ; VI-SDAG:       ; %bb.0: ; %entry
-; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; VI-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -1203,7 +1203,7 @@ define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
 ;
 ; VI-GISEL-LABEL: fptrunc_fabs_f32_to_f16_zext_i32:
 ; VI-GISEL:       ; %bb.0: ; %entry
-; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    s_load_dword s2, s[2:3], 0x0
 ; VI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
@@ -1215,7 +1215,7 @@ define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
 ;
 ; GFX9-SDAG-LABEL: fptrunc_fabs_f32_to_f16_zext_i32:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
-; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX9-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX9-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -1233,7 +1233,7 @@ define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
 ;
 ; GFX9-GISEL-LABEL: fptrunc_fabs_f32_to_f16_zext_i32:
 ; GFX9-GISEL:       ; %bb.0: ; %entry
-; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_load_dword s2, s[2:3], 0x0
 ; GFX9-GISEL-NEXT:    s_mov_b32 s3, 0xf000
@@ -1245,7 +1245,7 @@ define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
 ;
 ; GFX11-SDAG-LABEL: fptrunc_fabs_f32_to_f16_zext_i32:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
-; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX11-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -1267,7 +1267,7 @@ define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
 ;
 ; GFX11-GISEL-LABEL: fptrunc_fabs_f32_to_f16_zext_i32:
 ; GFX11-GISEL:       ; %bb.0: ; %entry
-; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
@@ -1295,7 +1295,7 @@ entry:
 define amdgpu_kernel void @fptrunc_f32_to_f16_sext_i32(
 ; SI-SDAG-LABEL: fptrunc_f32_to_f16_sext_i32:
 ; SI-SDAG:       ; %bb.0: ; %entry
-; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; SI-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -1314,7 +1314,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_sext_i32(
 ;
 ; SI-GISEL-LABEL: fptrunc_f32_to_f16_sext_i32:
 ; SI-GISEL:       ; %bb.0: ; %entry
-; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-GISEL-NEXT:    s_load_dword s3, s[2:3], 0x0
 ; SI-GISEL-NEXT:    s_mov_b32 s2, -1
@@ -1327,7 +1327,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_sext_i32(
 ;
 ; VI-SDAG-LABEL: fptrunc_f32_to_f16_sext_i32:
 ; VI-SDAG:       ; %bb.0: ; %entry
-; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-SDAG-NEXT:    s_mov_b32 s6, -1
 ; VI-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -1346,7 +1346,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_sext_i32(
 ;
 ; VI-GISEL-LABEL: fptrunc_f32_to_f16_sext_i32:
 ; VI-GISEL:       ; %bb.0: ; %entry
-; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; VI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-GISEL-NEXT:    s_load_dword s2, s[2:3], 0x0
 ; VI-GISEL-NEXT:    s_mov_b32 s3, 0xf000
@@ -1359,7 +1359,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_sext_i32(
 ;
 ; GFX9-SDAG-LABEL: fptrunc_f32_to_f16_sext_i32:
 ; GFX9-SDAG:       ; %bb.0: ; %entry
-; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX9-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX9-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -1378,7 +1378,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_sext_i32(
 ;
 ; GFX9-GISEL-LABEL: fptrunc_f32_to_f16_sext_i32:
 ; GFX9-GISEL:       ; %bb.0: ; %entry
-; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    s_load_dword s2, s[2:3], 0x0
 ; GFX9-GISEL-NEXT:    s_mov_b32 s3, 0xf000
@@ -1391,7 +1391,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_sext_i32(
 ;
 ; GFX11-SDAG-LABEL: fptrunc_f32_to_f16_sext_i32:
 ; GFX11-SDAG:       ; %bb.0: ; %entry
-; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-SDAG-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX11-SDAG-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX11-SDAG-NEXT:    s_mov_b32 s10, s6
@@ -1413,7 +1413,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16_sext_i32(
 ;
 ; GFX11-GISEL-LABEL: fptrunc_f32_to_f16_sext_i32:
 ; GFX11-GISEL:       ; %bb.0: ; %entry
-; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_load_b32 s2, s[2:3], 0x0
 ; GFX11-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
