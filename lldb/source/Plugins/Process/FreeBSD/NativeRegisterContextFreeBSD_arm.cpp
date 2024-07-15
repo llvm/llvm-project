@@ -29,12 +29,12 @@ using namespace lldb_private::process_freebsd;
 
 NativeRegisterContextFreeBSD *
 NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread) {
+    const ArchSpec &target_arch, NativeThreadFreeBSD &native_thread) {
   return new NativeRegisterContextFreeBSD_arm(target_arch, native_thread);
 }
 
 NativeRegisterContextFreeBSD_arm::NativeRegisterContextFreeBSD_arm(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
+    const ArchSpec &target_arch, NativeThreadFreeBSD &native_thread)
     : NativeRegisterContextRegisterInfo(
           native_thread, new RegisterInfoPOSIX_arm(target_arch)) {}
 

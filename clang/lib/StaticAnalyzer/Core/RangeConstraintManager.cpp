@@ -3283,7 +3283,7 @@ static std::string toString(const SymbolRef &Sym) {
   std::string S;
   llvm::raw_string_ostream O(S);
   Sym->dumpToStream(O);
-  return O.str();
+  return S;
 }
 
 void RangeConstraintManager::printConstraints(raw_ostream &Out,
@@ -3354,7 +3354,7 @@ static std::string toString(ProgramStateRef State, EquivalenceClass Class) {
     Out << "\"" << ClassMember << "\"";
   }
   Out << " ]";
-  return Out.str();
+  return Str;
 }
 
 void RangeConstraintManager::printEquivalenceClasses(raw_ostream &Out,

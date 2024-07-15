@@ -65,6 +65,8 @@ add_math_entrypoint_object(canonicalizel)
 add_math_entrypoint_object(canonicalizef16)
 add_math_entrypoint_object(canonicalizef128)
 
+add_math_entrypoint_object(cbrtf)
+
 add_math_entrypoint_object(ceil)
 add_math_entrypoint_object(ceilf)
 add_math_entrypoint_object(ceill)
@@ -81,6 +83,7 @@ add_math_entrypoint_object(cos)
 add_math_entrypoint_object(cosf)
 add_math_entrypoint_object(cosh)
 add_math_entrypoint_object(coshf)
+add_math_entrypoint_object(cospif)
 
 add_math_entrypoint_object(erf)
 add_math_entrypoint_object(erff)
@@ -99,9 +102,30 @@ add_math_entrypoint_object(exp10f)
 add_math_entrypoint_object(expm1)
 add_math_entrypoint_object(expm1f)
 
-add_math_entrypoint_object(f16fmaf)
+add_math_entrypoint_object(f16add)
+add_math_entrypoint_object(f16addf)
+add_math_entrypoint_object(f16addl)
+add_math_entrypoint_object(f16addf128)
 
+add_math_entrypoint_object(f16div)
+add_math_entrypoint_object(f16divf)
+add_math_entrypoint_object(f16divl)
+add_math_entrypoint_object(f16divf128)
+
+add_math_entrypoint_object(f16fma)
+add_math_entrypoint_object(f16fmaf)
+add_math_entrypoint_object(f16fmal)
+add_math_entrypoint_object(f16fmaf128)
+
+add_math_entrypoint_object(f16sqrt)
 add_math_entrypoint_object(f16sqrtf)
+add_math_entrypoint_object(f16sqrtl)
+add_math_entrypoint_object(f16sqrtf128)
+
+add_math_entrypoint_object(f16sub)
+add_math_entrypoint_object(f16subf)
+add_math_entrypoint_object(f16subl)
+add_math_entrypoint_object(f16subf128)
 
 add_math_entrypoint_object(fabs)
 add_math_entrypoint_object(fabsf)
@@ -210,6 +234,8 @@ add_math_entrypoint_object(fromfpxl)
 add_math_entrypoint_object(fromfpxf16)
 add_math_entrypoint_object(fromfpxf128)
 
+add_math_entrypoint_object(getpayloadf16)
+
 add_math_entrypoint_object(hypot)
 add_math_entrypoint_object(hypotf)
 
@@ -218,6 +244,10 @@ add_math_entrypoint_object(ilogbf)
 add_math_entrypoint_object(ilogbl)
 add_math_entrypoint_object(ilogbf16)
 add_math_entrypoint_object(ilogbf128)
+
+add_math_entrypoint_object(isnan)
+add_math_entrypoint_object(isnanf)
+add_math_entrypoint_object(isnanl)
 
 add_math_entrypoint_object(llogb)
 add_math_entrypoint_object(llogbf)
@@ -228,6 +258,7 @@ add_math_entrypoint_object(llogbf128)
 add_math_entrypoint_object(ldexp)
 add_math_entrypoint_object(ldexpf)
 add_math_entrypoint_object(ldexpl)
+add_math_entrypoint_object(ldexpf16)
 add_math_entrypoint_object(ldexpf128)
 
 add_math_entrypoint_object(log10)
@@ -315,6 +346,8 @@ add_math_entrypoint_object(nextupf128)
 
 add_math_entrypoint_object(pow)
 add_math_entrypoint_object(powf)
+add_math_entrypoint_object(powi)
+add_math_entrypoint_object(powif)
 
 add_math_entrypoint_object(remainder)
 add_math_entrypoint_object(remainderf)
@@ -345,16 +378,24 @@ add_math_entrypoint_object(roundevenl)
 add_math_entrypoint_object(roundevenf16)
 add_math_entrypoint_object(roundevenf128)
 
+add_math_entrypoint_object(scalblnf16)
+
 add_math_entrypoint_object(scalbn)
 add_math_entrypoint_object(scalbnf)
 add_math_entrypoint_object(scalbnl)
+add_math_entrypoint_object(scalbnf16)
 add_math_entrypoint_object(scalbnf128)
+
+add_math_entrypoint_object(setpayloadf16)
+
+add_math_entrypoint_object(setpayloadsigf16)
 
 add_math_entrypoint_object(sincos)
 add_math_entrypoint_object(sincosf)
 
 add_math_entrypoint_object(sin)
 add_math_entrypoint_object(sinf)
+add_math_entrypoint_object(sinpif)
 
 add_math_entrypoint_object(sinh)
 add_math_entrypoint_object(sinhf)

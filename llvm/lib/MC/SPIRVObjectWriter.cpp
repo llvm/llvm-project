@@ -29,14 +29,11 @@ public:
   ~SPIRVObjectWriter() override {}
 
 private:
-  void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
-                        const MCFragment *Fragment, const MCFixup &Fixup,
-                        MCValue Target, uint64_t &FixedValue) override {}
+  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
+                        const MCFixup &Fixup, MCValue Target,
+                        uint64_t &FixedValue) override {}
 
-  void executePostLayoutBinding(MCAssembler &Asm,
-                                const MCAsmLayout &Layout) override {}
-
-  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
+  uint64_t writeObject(MCAssembler &Asm) override;
   void writeHeader(const MCAssembler &Asm);
 };
 } // namespace
@@ -58,12 +55,11 @@ void SPIRVObjectWriter::writeHeader(const MCAssembler &Asm) {
   W.write<uint32_t>(Schema);
 }
 
-uint64_t SPIRVObjectWriter::writeObject(MCAssembler &Asm,
-                                        const MCAsmLayout &Layout) {
+uint64_t SPIRVObjectWriter::writeObject(MCAssembler &Asm) {
   uint64_t StartOffset = W.OS.tell();
   writeHeader(Asm);
   for (const MCSection &S : Asm)
-    Asm.writeSectionData(W.OS, &S, Layout);
+    Asm.writeSectionData(W.OS, &S);
   return W.OS.tell() - StartOffset;
 }
 

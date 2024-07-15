@@ -546,7 +546,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
       if (!*SkipRangePtr) {
         *SkipRangePtr = Hashptr - BeginPtr;
       }
-      assert(*SkipRangePtr == Hashptr - BeginPtr);
+      assert(*SkipRangePtr == unsigned(Hashptr - BeginPtr));
       BeginPtr = nullptr;
       SkipRangePtr = nullptr;
     }

@@ -43,7 +43,7 @@ public:
                            Value *MaybeStride = nullptr)
       : IsWrite(IsWrite), OpType(OpType), Alignment(Alignment),
         MaybeMask(MaybeMask), MaybeEVL(MaybeEVL), MaybeStride(MaybeStride) {
-    const DataLayout &DL = I->getModule()->getDataLayout();
+    const DataLayout &DL = I->getDataLayout();
     TypeStoreSize = DL.getTypeStoreSizeInBits(OpType);
     PtrUse = &I->getOperandUse(OperandNo);
   }

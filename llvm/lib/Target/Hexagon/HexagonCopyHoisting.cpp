@@ -46,10 +46,10 @@ public:
   StringRef getPassName() const override { return "Hexagon Copy Hoisting"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<SlotIndexes>();
-    AU.addRequired<LiveIntervals>();
-    AU.addPreserved<SlotIndexes>();
-    AU.addPreserved<LiveIntervals>();
+    AU.addRequired<SlotIndexesWrapperPass>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
+    AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -107,12 +107,10 @@ bool HexagonCopyHoisting::runOnMachineFunction(MachineFunction &Fn) {
   }
   // Re-compute liveness
   if (Changed) {
-    LiveIntervals &LIS = getAnalysis<LiveIntervals>();
+    LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
     SlotIndexes *SI = LIS.getSlotIndexes();
-    SI->releaseMemory();
-    SI->runOnMachineFunction(Fn);
-    LIS.releaseMemory();
-    LIS.runOnMachineFunction(Fn);
+    SI->reanalyze(Fn);
+    LIS.reanalyze(Fn);
   }
   return Changed;
 }

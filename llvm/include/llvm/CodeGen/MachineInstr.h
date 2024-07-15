@@ -304,6 +304,9 @@ private:
   /// defined by this instruction.
   unsigned DebugInstrNum;
 
+  /// Cached opcode from MCID.
+  uint16_t Opcode;
+
   // Intrusive list support
   friend struct ilist_traits<MachineInstr>;
   friend struct ilist_callback_traits<MachineBasicBlock>;
@@ -563,7 +566,7 @@ public:
   const MCInstrDesc &getDesc() const { return *MCID; }
 
   /// Returns the opcode of this MachineInstr.
-  unsigned getOpcode() const { return MCID->Opcode; }
+  unsigned getOpcode() const { return Opcode; }
 
   /// Retuns the total number of operands.
   unsigned getNumOperands() const { return NumOperands; }

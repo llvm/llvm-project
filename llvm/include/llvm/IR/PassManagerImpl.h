@@ -15,8 +15,11 @@
 #ifndef LLVM_IR_PASSMANAGERIMPL_H
 #define LLVM_IR_PASSMANAGERIMPL_H
 
-#include "llvm/Support/CommandLine.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/PrettyStackTrace.h"
 
 extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 
@@ -25,6 +28,32 @@ namespace llvm {
 template <typename IRUnitT, typename AnalysisManagerT, typename... ExtraArgTs>
 PreservedAnalyses PassManager<IRUnitT, AnalysisManagerT, ExtraArgTs...>::run(
     IRUnitT &IR, AnalysisManagerT &AM, ExtraArgTs... ExtraArgs) {
+  class StackTraceEntry : public PrettyStackTraceEntry {
+    const PassInstrumentation &PI;
+    IRUnitT &IR;
+    PassConceptT *Pass = nullptr;
+
+  public:
+    explicit StackTraceEntry(const PassInstrumentation &PI, IRUnitT &IR)
+        : PI(PI), IR(IR) {}
+
+    void setPass(PassConceptT *P) { Pass = P; }
+
+    void print(raw_ostream &OS) const override {
+      OS << "Running pass \"";
+      if (Pass)
+        Pass->printPipeline(OS, [this](StringRef ClassName) {
+          auto PassName = PI.getPassNameForClassName(ClassName);
+          return PassName.empty() ? ClassName : PassName;
+        });
+      else
+        OS << "unknown";
+      OS << "\" on ";
+      printIRUnitNameForStackTrace(OS, IR);
+      OS << "\n";
+    }
+  };
+
   PreservedAnalyses PA = PreservedAnalyses::all();
 
   // Request PassInstrumentation from analysis manager, will use it to run
@@ -39,7 +68,10 @@ PreservedAnalyses PassManager<IRUnitT, AnalysisManagerT, ExtraArgTs...>::run(
   // for duration of these passes.
   ScopedDbgInfoFormatSetter FormatSetter(IR, UseNewDbgInfoFormat);
 
+  StackTraceEntry Entry(PI, IR);
   for (auto &Pass : Passes) {
+    Entry.setPass(&*Pass);
+
     // Check the PassInstrumentation's BeforePass callbacks before running the
     // pass, skip its execution completely if asked to (callback returns
     // false).

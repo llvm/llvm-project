@@ -11,7 +11,7 @@
 ; RUN: llvm-dis -o - %t.o | llvm-as -o - | llvm-dis -o - | FileCheck %s --check-prefix=DIS
 
 ; CHECK: <GLOBALVAL_SUMMARY_BLOCK
-; CHECK-NEXT:   <VERSION op0=9/>
+; CHECK-NEXT:   <VERSION op0=
 ; CHECK-NEXT:   <FLAGS op0=0/>
 ; The `VALUE_GUID` below represents the "_ZTV4Base" referenced by the instruction
 ; that loads vtable pointers.

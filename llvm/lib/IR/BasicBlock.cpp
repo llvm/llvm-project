@@ -291,6 +291,10 @@ const Module *BasicBlock::getModule() const {
   return getParent()->getParent();
 }
 
+const DataLayout &BasicBlock::getDataLayout() const {
+  return getModule()->getDataLayout();
+}
+
 const CallInst *BasicBlock::getTerminatingMustTailCall() const {
   if (InstList.empty())
     return nullptr;

@@ -31,7 +31,6 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Region.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/STLExtras.h"

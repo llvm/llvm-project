@@ -747,9 +747,6 @@ private:
   /// option.
   void setDriverMode(StringRef DriverModeValue);
 
-  /// Set the resource directory, depending on which driver is being used.
-  void setResourceDirectory();
-
   /// Parse the \p Args list for LTO options and record the type of LTO
   /// compilation based on which -f(no-)?lto(=.*)? option occurs last.
   void setLTOMode(const llvm::opt::ArgList &Args);

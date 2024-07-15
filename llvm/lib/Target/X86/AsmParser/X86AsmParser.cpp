@@ -3849,6 +3849,14 @@ bool X86AsmParser::validateInstruction(MCInst &Inst, const OperandVector &Ops) {
         return Warning(Ops[0]->getStartLoc(), "mask, index, and destination "
                                               "registers should be distinct");
     }
+  } else if (isTCMMIMFP16PS(Opcode) || isTCMMRLFP16PS(Opcode) ||
+             isTDPBF16PS(Opcode) || isTDPFP16PS(Opcode) || isTDPBSSD(Opcode) ||
+             isTDPBSUD(Opcode) || isTDPBUSD(Opcode) || isTDPBUUD(Opcode)) {
+    unsigned SrcDest = Inst.getOperand(0).getReg();
+    unsigned Src1 = Inst.getOperand(2).getReg();
+    unsigned Src2 = Inst.getOperand(3).getReg();
+    if (SrcDest == Src1 || SrcDest == Src2 || Src1 == Src2)
+      return Error(Ops[0]->getStartLoc(), "all tmm registers must be distinct");
   }
 
   // Check that we aren't mixing AH/BH/CH/DH with REX prefix. We only need to

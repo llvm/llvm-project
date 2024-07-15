@@ -482,9 +482,6 @@ public:
   /// the global type ID space.
   serialization::TypeID BaseTypeIndex = 0;
 
-  /// Remapping table for type IDs in this module.
-  ContinuousRangeMap<uint32_t, int, 2> TypeRemap;
-
   // === Miscellaneous ===
 
   /// Diagnostic IDs and their mappings that the user changed.

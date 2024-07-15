@@ -3,10 +3,10 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mlgo"
+name = "mlgo-utils"
 description = "Tooling for ML in LLVM"
 readme = "README.md"
-requires-python = ">=3.8,<3.11"
+requires-python = ">=3.8"
 dynamic = ["version"]
 license = {text = "Apache-2.0 WITH LLVM-exception"}
 classifiers = [

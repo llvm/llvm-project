@@ -121,6 +121,12 @@ public:
   InterpFrame *Current = nullptr;
   /// Source location of the evaluating expression
   SourceLocation EvalLocation;
+  /// Declaration we're initializing/evaluting, if any.
+  const VarDecl *EvaluatingDecl = nullptr;
+
+  llvm::SmallVector<
+      std::pair<const Expr *, const LifetimeExtendedTemporaryDecl *>>
+      SeenGlobalTemporaries;
 };
 
 } // namespace interp

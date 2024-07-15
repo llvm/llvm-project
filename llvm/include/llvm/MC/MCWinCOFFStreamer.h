@@ -40,6 +40,7 @@ public:
   /// \{
 
   void initSections(bool NoExecStack, const MCSubtargetInfo &STI) override;
+  void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void emitAssemblerFlag(MCAssemblerFlag Flag) override;
   void emitThumbFunc(MCSymbol *Func) override;
@@ -77,7 +78,6 @@ protected:
   void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &STI) override;
 
   void finalizeCGProfileEntry(const MCSymbolRefExpr *&S);
-  void finalizeCGProfile();
 
 private:
   void Error(const Twine &Msg) const;

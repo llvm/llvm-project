@@ -133,14 +133,12 @@ entry:
 define i16 @or16ri8(i16 noundef %a) {
 ; CHECK-LABEL: or16ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    orl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xcf,0x7b]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    orw $123, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0xcf,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: or16ri8:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} orl $123, %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x83,0xcf,0x7b]
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    {nf} orw $123, %di, %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x83,0xcf,0x7b]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
     %or = or i16 %a, 123
@@ -195,16 +193,14 @@ entry:
 define i16 @or16ri(i16 noundef %a) {
 ; CHECK-LABEL: or16ri:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    orl $1234, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0xcf,0xd2,0x04,0x00,0x00]
+; CHECK-NEXT:    orw $1234, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x81,0xcf,0xd2,0x04]
 ; CHECK-NEXT:    # imm = 0x4D2
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: or16ri:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} orl $1234, %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0x81,0xcf,0xd2,0x04,0x00,0x00]
+; NF-NEXT:    {nf} orw $1234, %di, %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x81,0xcf,0xd2,0x04]
 ; NF-NEXT:    # imm = 0x4D2
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
     %or = or i16 %a, 1234
@@ -312,16 +308,12 @@ entry:
 define i16 @or16mi8(ptr %a) {
 ; CHECK-LABEL: or16mi8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; CHECK-NEXT:    orl $123, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xc8,0x7b]
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    orw $123, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0x0f,0x7b]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: or16mi8:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; NF-NEXT:    orl $123, %eax # EVEX TO LEGACY Compression encoding: [0x83,0xc8,0x7b]
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    {nf} orw $123, (%rdi), %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x83,0x0f,0x7b]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i16, ptr %a
@@ -380,18 +372,14 @@ entry:
 define i16 @or16mi(ptr %a) {
 ; CHECK-LABEL: or16mi:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; CHECK-NEXT:    orl $1234, %eax # EVEX TO LEGACY Compression encoding: [0x0d,0xd2,0x04,0x00,0x00]
+; CHECK-NEXT:    orw $1234, (%rdi), %ax # encoding: [0x62,0xf4,0x7d,0x18,0x81,0x0f,0xd2,0x04]
 ; CHECK-NEXT:    # imm = 0x4D2
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: or16mi:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; NF-NEXT:    orl $1234, %eax # EVEX TO LEGACY Compression encoding: [0x0d,0xd2,0x04,0x00,0x00]
+; NF-NEXT:    {nf} orw $1234, (%rdi), %ax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7d,0x1c,0x81,0x0f,0xd2,0x04]
 ; NF-NEXT:    # imm = 0x4D2
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i16, ptr %a
@@ -465,7 +453,7 @@ define i1 @orflag8rr(i8 %a, i8 %b) {
 define i1 @orflag16rr(i16 %a, i16 %b) {
 ; CHECK-LABEL: orflag16rr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    notl %esi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xf7,0xd6]
+; CHECK-NEXT:    notw %si, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xf7,0xd6]
 ; CHECK-NEXT:    orw %ax, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x09,0xc7]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
@@ -474,7 +462,7 @@ define i1 @orflag16rr(i16 %a, i16 %b) {
 ;
 ; NF-LABEL: orflag16rr:
 ; NF:       # %bb.0:
-; NF-NEXT:    notl %esi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xf7,0xd6]
+; NF-NEXT:    notw %si, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xf7,0xd6]
 ; NF-NEXT:    orw %ax, %di, %cx # encoding: [0x62,0xf4,0x75,0x18,0x09,0xc7]
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
@@ -560,7 +548,7 @@ define i1 @orflag8rm(ptr %ptr, i8 %b) {
 define i1 @orflag16rm(ptr %ptr, i16 %b) {
 ; CHECK-LABEL: orflag16rm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    notl %esi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xf7,0xd6]
+; CHECK-NEXT:    notw %si, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xf7,0xd6]
 ; CHECK-NEXT:    orw (%rdi), %ax, %cx # encoding: [0x62,0xf4,0x75,0x18,0x0b,0x07]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]
@@ -569,7 +557,7 @@ define i1 @orflag16rm(ptr %ptr, i16 %b) {
 ;
 ; NF-LABEL: orflag16rm:
 ; NF:       # %bb.0:
-; NF-NEXT:    notl %esi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xf7,0xd6]
+; NF-NEXT:    notw %si, %ax # encoding: [0x62,0xf4,0x7d,0x18,0xf7,0xd6]
 ; NF-NEXT:    orw (%rdi), %ax, %cx # encoding: [0x62,0xf4,0x75,0x18,0x0b,0x07]
 ; NF-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; NF-NEXT:    movw %cx, d64(%rip) # encoding: [0x66,0x89,0x0d,A,A,A,A]

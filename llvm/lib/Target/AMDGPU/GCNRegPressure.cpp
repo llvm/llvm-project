@@ -628,7 +628,7 @@ getRegLiveThroughMask(const MachineRegisterInfo &MRI, const LiveIntervals &LIS,
 bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-  const LiveIntervals &LIS = getAnalysis<LiveIntervals>();
+  const LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
 
   auto &OS = dbgs();
 

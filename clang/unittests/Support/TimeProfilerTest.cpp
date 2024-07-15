@@ -12,6 +12,7 @@
 
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/TimeProfiler.h"
+#include <stack>
 
 #include "gtest/gtest.h"
 

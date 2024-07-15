@@ -469,7 +469,8 @@ bool X86_32ABIInfo::canExpandIndirectArgument(QualType Ty) const {
 ABIArgInfo X86_32ABIInfo::getIndirectReturnResult(QualType RetTy, CCState &State) const {
   // If the return value is indirect, then the hidden argument is consuming one
   // integer register.
-  if (State.FreeRegs) {
+  if (State.CC != llvm::CallingConv::X86_FastCall &&
+      State.CC != llvm::CallingConv::X86_VectorCall && State.FreeRegs) {
     --State.FreeRegs;
     if (!IsMCUABI)
       return getNaturalAlignIndirectInReg(RetTy);

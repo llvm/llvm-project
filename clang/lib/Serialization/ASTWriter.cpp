@@ -927,7 +927,6 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(DECLS_TO_CHECK_FOR_DEFERRED_DIAGS);
   RECORD(PP_ASSUME_NONNULL_LOC);
   RECORD(PP_UNSAFE_BUFFER_USAGE);
-  RECORD(VTABLES_TO_EMIT);
 
   // SourceManager Block.
   BLOCK(SOURCE_MANAGER_BLOCK);
@@ -1776,23 +1775,19 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
     Entry.IsTopLevel = getAffectingIncludeLoc(SourceMgr, File).isInvalid();
     Entry.IsModuleMap = isModuleMap(File.getFileCharacteristic());
 
-    auto ContentHash = hash_code(-1);
+    uint64_t ContentHash = 0;
     if (PP->getHeaderSearchInfo()
             .getHeaderSearchOpts()
             .ValidateASTInputFilesContent) {
       auto MemBuff = Cache->getBufferIfLoaded();
       if (MemBuff)
-        ContentHash = hash_value(MemBuff->getBuffer());
+        ContentHash = xxh3_64bits(MemBuff->getBuffer());
       else
         PP->Diag(SourceLocation(), diag::err_module_unable_to_hash_content)
             << Entry.File.getName();
     }
-    auto CH = llvm::APInt(64, ContentHash);
-    Entry.ContentHash[0] =
-        static_cast<uint32_t>(CH.getLoBits(32).getZExtValue());
-    Entry.ContentHash[1] =
-        static_cast<uint32_t>(CH.getHiBits(32).getZExtValue());
-
+    Entry.ContentHash[0] = uint32_t(ContentHash);
+    Entry.ContentHash[1] = uint32_t(ContentHash >> 32);
     if (Entry.IsSystemFile)
       SystemFiles.push_back(Entry);
     else
@@ -1973,9 +1968,15 @@ namespace {
         llvm::PointerIntPair<Module *, 2, ModuleMap::ModuleHeaderRole>;
 
     struct data_type {
-      const HeaderFileInfo &HFI;
+      data_type(const HeaderFileInfo &HFI, bool AlreadyIncluded,
+                ArrayRef<ModuleMap::KnownHeader> KnownHeaders,
+                UnresolvedModule Unresolved)
+          : HFI(HFI), AlreadyIncluded(AlreadyIncluded),
+            KnownHeaders(KnownHeaders), Unresolved(Unresolved) {}
+
+      HeaderFileInfo HFI;
       bool AlreadyIncluded;
-      ArrayRef<ModuleMap::KnownHeader> KnownHeaders;
+      SmallVector<ModuleMap::KnownHeader, 1> KnownHeaders;
       UnresolvedModule Unresolved;
     };
     using data_type_ref = const data_type &;
@@ -1987,7 +1988,10 @@ namespace {
       // The hash is based only on size/time of the file, so that the reader can
       // match even when symlinking or excess path elements ("foo/../", "../")
       // change the form of the name. However, complete path is still the key.
-      return llvm::hash_combine(key.Size, key.ModTime);
+      uint8_t buf[sizeof(key.Size) + sizeof(key.ModTime)];
+      memcpy(buf, &key.Size, sizeof(key.Size));
+      memcpy(buf + sizeof(key.Size), &key.ModTime, sizeof(key.ModTime));
+      return llvm::xxh3_64bits(buf);
     }
 
     std::pair<unsigned, unsigned>
@@ -3270,17 +3274,18 @@ void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
 /// Write the representation of a type to the AST stream.
 void ASTWriter::WriteType(QualType T) {
   TypeIdx &IdxRef = TypeIdxs[T];
-  if (IdxRef.getIndex() == 0) // we haven't seen this type before.
-    IdxRef = TypeIdx(NextTypeID++);
+  if (IdxRef.getValue() == 0) // we haven't seen this type before.
+    IdxRef = TypeIdx(0, NextTypeID++);
   TypeIdx Idx = IdxRef;
 
-  assert(Idx.getIndex() >= FirstTypeID && "Re-writing a type from a prior AST");
+  assert(Idx.getModuleFileIndex() == 0 && "Re-writing a type from a prior AST");
+  assert(Idx.getValue() >= FirstTypeID && "Writing predefined type");
 
   // Emit the type's representation.
   uint64_t Offset = ASTTypeWriter(*this).write(T) - DeclTypesBlockStartOffset;
 
   // Record the offset for this type.
-  unsigned Index = Idx.getIndex() - FirstTypeID;
+  uint64_t Index = Idx.getValue() - FirstTypeID;
   if (TypeOffsets.size() == Index)
     TypeOffsets.emplace_back(Offset);
   else if (TypeOffsets.size() < Index) {
@@ -3353,12 +3358,10 @@ void ASTWriter::WriteTypeDeclOffsets() {
   auto Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(TYPE_OFFSET));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // # of types
-  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // base type index
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // types block
   unsigned TypeOffsetAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
   {
-    RecordData::value_type Record[] = {TYPE_OFFSET, TypeOffsets.size(),
-                                       FirstTypeID - NUM_PREDEF_TYPE_IDS};
+    RecordData::value_type Record[] = {TYPE_OFFSET, TypeOffsets.size()};
     Stream.EmitRecordWithBlob(TypeOffsetAbbrev, Record, bytes(TypeOffsets));
   }
 
@@ -3726,6 +3729,29 @@ static NamedDecl *getDeclForLocalLookup(const LangOptions &LangOpts,
 
 namespace {
 
+bool IsInterestingIdentifier(const IdentifierInfo *II, uint64_t MacroOffset,
+                             bool IsModule, bool IsCPlusPlus) {
+  bool NeedDecls = !IsModule || !IsCPlusPlus;
+
+  bool IsInteresting =
+      II->getNotableIdentifierID() != tok::NotableIdentifierKind::not_notable ||
+      II->getBuiltinID() != Builtin::ID::NotBuiltin ||
+      II->getObjCKeywordID() != tok::ObjCKeywordKind::objc_not_keyword;
+  if (MacroOffset || II->isPoisoned() || (!IsModule && IsInteresting) ||
+      II->hasRevertedTokenIDToIdentifier() ||
+      (NeedDecls && II->getFETokenInfo()))
+    return true;
+
+  return false;
+}
+
+bool IsInterestingNonMacroIdentifier(const IdentifierInfo *II,
+                                     ASTWriter &Writer) {
+  bool IsModule = Writer.isWritingModule();
+  bool IsCPlusPlus = Writer.getLangOpts().CPlusPlus;
+  return IsInterestingIdentifier(II, /*MacroOffset=*/0, IsModule, IsCPlusPlus);
+}
+
 class ASTIdentifierTableTrait {
   ASTWriter &Writer;
   Preprocessor &PP;
@@ -3739,17 +3765,8 @@ class ASTIdentifierTableTrait {
   /// doesn't check whether the name has macros defined; use PublicMacroIterator
   /// to check that.
   bool isInterestingIdentifier(const IdentifierInfo *II, uint64_t MacroOffset) {
-    bool IsInteresting =
-        II->getNotableIdentifierID() !=
-            tok::NotableIdentifierKind::not_notable ||
-        II->getBuiltinID() != Builtin::ID::NotBuiltin ||
-        II->getObjCKeywordID() != tok::ObjCKeywordKind::objc_not_keyword;
-    if (MacroOffset || II->isPoisoned() || (!IsModule && IsInteresting) ||
-        II->hasRevertedTokenIDToIdentifier() ||
-        (NeedDecls && II->getFETokenInfo()))
-      return true;
-
-    return false;
+    return IsInterestingIdentifier(II, MacroOffset, IsModule,
+                                   Writer.getLangOpts().CPlusPlus);
   }
 
 public:
@@ -3778,10 +3795,6 @@ public:
   bool isInterestingIdentifier(const IdentifierInfo *II) {
     auto MacroOffset = Writer.getMacroDirectivesOffset(II);
     return isInterestingIdentifier(II, MacroOffset);
-  }
-
-  bool isInterestingNonMacroIdentifier(const IdentifierInfo *II) {
-    return isInterestingIdentifier(II, 0);
   }
 
   std::pair<unsigned, unsigned>
@@ -3885,21 +3898,6 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
     ASTIdentifierTableTrait Trait(*this, PP, IdResolver, IsModule,
                                   IsModule ? &InterestingIdents : nullptr);
 
-    // Look for any identifiers that were named while processing the
-    // headers, but are otherwise not needed. We add these to the hash
-    // table to enable checking of the predefines buffer in the case
-    // where the user adds new macro definitions when building the AST
-    // file.
-    SmallVector<const IdentifierInfo *, 128> IIs;
-    for (const auto &ID : PP.getIdentifierTable())
-      if (Trait.isInterestingNonMacroIdentifier(ID.second))
-        IIs.push_back(ID.second);
-    // Sort the identifiers lexicographically before getting the references so
-    // that their order is stable.
-    llvm::sort(IIs, llvm::deref<std::less<>>());
-    for (const IdentifierInfo *II : IIs)
-      getIdentifierRef(II);
-
     // Create the on-disk hash table representation. We only store offsets
     // for identifiers that appear here for the first time.
     IdentifierOffsets.resize(NextIdentID - FirstIdentID);
@@ -3961,10 +3959,6 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
   // defined as macros, poisoned, or similar unusual things).
   if (!InterestingIdents.empty())
     Stream.EmitRecord(INTERESTING_IDENTIFIERS, InterestingIdents);
-}
-
-void ASTWriter::handleVTable(CXXRecordDecl *RD) {
-  PendingEmittingVTables.push_back(RD);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4123,16 +4117,24 @@ bool ASTWriter::isLookupResultExternal(StoredDeclsList &Result,
          DC->hasNeedToReconcileExternalVisibleStorage();
 }
 
-bool ASTWriter::isLookupResultEntirelyExternalOrUnreachable(
-    StoredDeclsList &Result, DeclContext *DC) {
+/// Returns ture if all of the lookup result are either external, not emitted or
+/// predefined. In such cases, the lookup result is not interesting and we don't
+/// need to record the result in the current being written module. Return false
+/// otherwise.
+static bool isLookupResultNotInteresting(ASTWriter &Writer,
+                                         StoredDeclsList &Result) {
   for (auto *D : Result.getLookupResult()) {
-    auto *LocalD = getDeclForLocalLookup(getLangOpts(), D);
+    auto *LocalD = getDeclForLocalLookup(Writer.getLangOpts(), D);
     if (LocalD->isFromASTFile())
       continue;
 
     // We can only be sure whether the local declaration is reachable
     // after we done writing the declarations and types.
-    if (DoneWritingDeclsAndTypes && !wasDeclEmitted(LocalD))
+    if (Writer.getDoneWritingDeclsAndTypes() && !Writer.wasDeclEmitted(LocalD))
+      continue;
+
+    // We don't need to emit the predefined decls.
+    if (Writer.isDeclPredefined(LocalD))
       continue;
 
     return false;
@@ -4180,11 +4182,11 @@ ASTWriter::GenerateNameLookupTable(const DeclContext *ConstDC,
     // that entirely external or unreachable.
     //
     // FIMXE: It looks sufficient to test
-    // isLookupResultEntirelyExternalOrUnreachable here. But due to bug we have
+    // isLookupResultNotInteresting here. But due to bug we have
     // to test isLookupResultExternal here. See
     // https://github.com/llvm/llvm-project/issues/61065 for details.
     if ((GeneratingReducedBMI || isLookupResultExternal(Result, DC)) &&
-        isLookupResultEntirelyExternalOrUnreachable(Result, DC))
+        isLookupResultNotInteresting(*this, Result))
       continue;
 
     // We also skip empty results. If any of the results could be external and
@@ -5005,6 +5007,7 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
     if (D) {
       assert(D->isCanonicalDecl() && "predefined decl is not canonical");
       DeclIDs[D] = ID;
+      PredefinedDecls.insert(D);
     }
   };
   RegisterPredefDecl(Context.getTranslationUnitDecl(),
@@ -5160,13 +5163,6 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
   // Write all of the DeclsToCheckForDeferredDiags.
   for (auto *D : SemaRef.DeclsToCheckForDeferredDiags)
     GetDeclRef(D);
-
-  // Write all classes need to emit the vtable definitions if required.
-  if (isWritingStdCXXNamedModules())
-    for (CXXRecordDecl *RD : PendingEmittingVTables)
-      GetDeclRef(RD);
-  else
-    PendingEmittingVTables.clear();
 }
 
 void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
@@ -5321,17 +5317,6 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
   }
   if (!DeleteExprsToAnalyze.empty())
     Stream.EmitRecord(DELETE_EXPRS_TO_ANALYZE, DeleteExprsToAnalyze);
-
-  RecordData VTablesToEmit;
-  for (CXXRecordDecl *RD : PendingEmittingVTables) {
-    if (!wasDeclEmitted(RD))
-      continue;
-
-    AddDeclRef(RD, VTablesToEmit);
-  }
-
-  if (!VTablesToEmit.empty())
-    Stream.EmitRecord(VTABLES_TO_EMIT, VTablesToEmit);
 }
 
 ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
@@ -5353,6 +5338,38 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
 
   writeUnhashedControlBlock(PP, Context);
 
+  // Don't reuse type ID and Identifier ID from readers for C++ standard named
+  // modules since we want to support no-transitive-change model for named
+  // modules. The theory for no-transitive-change model is,
+  // for a user of a named module, the user can only access the indirectly
+  // imported decls via the directly imported module. So that it is possible to
+  // control what matters to the users when writing the module. It would be
+  // problematic if the users can reuse the type IDs and identifier IDs from
+  // indirectly imported modules arbitrarily. So we choose to clear these ID
+  // here.
+  if (isWritingStdCXXNamedModules()) {
+    TypeIdxs.clear();
+    IdentifierIDs.clear();
+  }
+
+  // Look for any identifiers that were named while processing the
+  // headers, but are otherwise not needed. We add these to the hash
+  // table to enable checking of the predefines buffer in the case
+  // where the user adds new macro definitions when building the AST
+  // file.
+  //
+  // We do this before emitting any Decl and Types to make sure the
+  // Identifier ID is stable.
+  SmallVector<const IdentifierInfo *, 128> IIs;
+  for (const auto &ID : PP.getIdentifierTable())
+    if (IsInterestingNonMacroIdentifier(ID.second, *this))
+      IIs.push_back(ID.second);
+  // Sort the identifiers lexicographically before getting the references so
+  // that their order is stable.
+  llvm::sort(IIs, llvm::deref<std::less<>>());
+  for (const IdentifierInfo *II : IIs)
+    getIdentifierRef(II);
+
   // Write the set of weak, undeclared identifiers. We always write the
   // entire table, since later PCH files in a PCH chain are only interested in
   // the results at the end of the chain.
@@ -5366,6 +5383,17 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
       AddSourceLocation(WI.getLocation(), WeakUndeclaredIdentifiers);
     }
   }
+
+  // Form the record of special types.
+  RecordData SpecialTypes;
+  AddTypeRef(Context.getRawCFConstantStringType(), SpecialTypes);
+  AddTypeRef(Context.getFILEType(), SpecialTypes);
+  AddTypeRef(Context.getjmp_bufType(), SpecialTypes);
+  AddTypeRef(Context.getsigjmp_bufType(), SpecialTypes);
+  AddTypeRef(Context.ObjCIdRedefinitionType, SpecialTypes);
+  AddTypeRef(Context.ObjCClassRedefinitionType, SpecialTypes);
+  AddTypeRef(Context.ObjCSelRedefinitionType, SpecialTypes);
+  AddTypeRef(Context.getucontext_tType(), SpecialTypes);
 
   PrepareWritingSpecialDecls(SemaRef);
 
@@ -5397,17 +5425,6 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
     AllSelectors.push_back(SelectorAndID.first);
   for (auto &Selector : AllSelectors)
     SemaRef.ObjC().updateOutOfDateSelector(Selector);
-
-  // Form the record of special types.
-  RecordData SpecialTypes;
-  AddTypeRef(Context.getRawCFConstantStringType(), SpecialTypes);
-  AddTypeRef(Context.getFILEType(), SpecialTypes);
-  AddTypeRef(Context.getjmp_bufType(), SpecialTypes);
-  AddTypeRef(Context.getsigjmp_bufType(), SpecialTypes);
-  AddTypeRef(Context.ObjCIdRedefinitionType, SpecialTypes);
-  AddTypeRef(Context.ObjCClassRedefinitionType, SpecialTypes);
-  AddTypeRef(Context.ObjCSelRedefinitionType, SpecialTypes);
-  AddTypeRef(Context.getucontext_tType(), SpecialTypes);
 
   if (Chain) {
     // Write the mapping information describing our module dependencies and how
@@ -5464,7 +5481,6 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
                           M.NumPreprocessedEntities);
         writeBaseIDOrNone(M.BaseSubmoduleID, M.LocalNumSubmodules);
         writeBaseIDOrNone(M.BaseSelectorID, M.LocalNumSelectors);
-        writeBaseIDOrNone(M.BaseTypeIndex, M.LocalNumTypes);
       }
     }
     RecordData::value_type Record[] = {MODULE_OFFSET_MAP};
@@ -6138,9 +6154,9 @@ static TypeID MakeTypeID(ASTContext &Context, QualType T,
     return TypeIdxFromBuiltin(BT).asTypeID(FastQuals);
 
   if (T == Context.AutoDeductTy)
-    return TypeIdx(PREDEF_TYPE_AUTO_DEDUCT).asTypeID(FastQuals);
+    return TypeIdx(0, PREDEF_TYPE_AUTO_DEDUCT).asTypeID(FastQuals);
   if (T == Context.AutoRRefDeductTy)
-    return TypeIdx(PREDEF_TYPE_AUTO_RREF_DEDUCT).asTypeID(FastQuals);
+    return TypeIdx(0, PREDEF_TYPE_AUTO_RREF_DEDUCT).asTypeID(FastQuals);
 
   return IdxForType(T).asTypeID(FastQuals);
 }
@@ -6153,7 +6169,7 @@ TypeID ASTWriter::GetOrCreateTypeID(QualType T) {
     assert(!T.getLocalFastQualifiers());
 
     TypeIdx &Idx = TypeIdxs[T];
-    if (Idx.getIndex() == 0) {
+    if (Idx.getValue() == 0) {
       if (DoneWritingDeclsAndTypes) {
         assert(0 && "New type seen after serializing all the types to emit!");
         return TypeIdx();
@@ -6161,7 +6177,7 @@ TypeID ASTWriter::GetOrCreateTypeID(QualType T) {
 
       // We haven't seen this type before. Assign it a new ID and put it
       // into the queue of types to emit.
-      Idx = TypeIdx(NextTypeID++);
+      Idx = TypeIdx(0, NextTypeID++);
       DeclTypesToEmit.push(T);
     }
     return Idx;
@@ -6548,12 +6564,10 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
     // computed.
     Record->push_back(D->getODRHash());
 
-  bool ModulesCodegen =
-      !D->isDependentType() &&
-     (Writer->Context->getLangOpts().ModulesDebugInfo ||
-      D->isInNamedModule());
-  Record->push_back(ModulesCodegen);
-  if (ModulesCodegen)
+  bool ModulesDebugInfo =
+      Writer->Context->getLangOpts().ModulesDebugInfo && !D->isDependentType();
+  Record->push_back(ModulesDebugInfo);
+  if (ModulesDebugInfo)
     Writer->AddDeclRef(D, Writer->ModularCodegenDecls);
 
   // IsLambda bit is already saved.
@@ -6658,17 +6672,20 @@ void ASTWriter::ReaderInitialized(ASTReader *Reader) {
 
   // Note, this will get called multiple times, once one the reader starts up
   // and again each time it's done reading a PCH or module.
-  FirstTypeID = NUM_PREDEF_TYPE_IDS + Chain->getTotalNumTypes();
   FirstMacroID = NUM_PREDEF_MACRO_IDS + Chain->getTotalNumMacros();
   FirstSubmoduleID = NUM_PREDEF_SUBMODULE_IDS + Chain->getTotalNumSubmodules();
   FirstSelectorID = NUM_PREDEF_SELECTOR_IDS + Chain->getTotalNumSelectors();
-  NextTypeID = FirstTypeID;
   NextMacroID = FirstMacroID;
   NextSelectorID = FirstSelectorID;
   NextSubmoduleID = FirstSubmoduleID;
 }
 
 void ASTWriter::IdentifierRead(IdentifierID ID, IdentifierInfo *II) {
+  // Don't reuse Type ID from external modules for named modules. See the
+  // comments in WriteASTCore for details.
+  if (isWritingStdCXXNamedModules())
+    return;
+
   IdentifierID &StoredID = IdentifierIDs[II];
   unsigned OriginalModuleFileIndex = StoredID >> 32;
 
@@ -6691,13 +6708,29 @@ void ASTWriter::MacroRead(serialization::MacroID ID, MacroInfo *MI) {
 }
 
 void ASTWriter::TypeRead(TypeIdx Idx, QualType T) {
-  // Always take the highest-numbered type index. This copes with an interesting
+  // Don't reuse Type ID from external modules for named modules. See the
+  // comments in WriteASTCore for details.
+  if (isWritingStdCXXNamedModules())
+    return;
+
+  // Always take the type index that comes in later module files.
+  // This copes with an interesting
   // case for chained AST writing where we schedule writing the type and then,
   // later, deserialize the type from another AST. In this case, we want to
-  // keep the higher-numbered entry so that we can properly write it out to
+  // keep the entry from a later module so that we can properly write it out to
   // the AST file.
   TypeIdx &StoredIdx = TypeIdxs[T];
-  if (Idx.getIndex() >= StoredIdx.getIndex())
+
+  // Ignore it if the type comes from the current being written module file.
+  // Since the current module file being written logically has the highest
+  // index.
+  unsigned ModuleFileIndex = StoredIdx.getModuleFileIndex();
+  if (ModuleFileIndex == 0 && StoredIdx.getValue())
+    return;
+
+  // Otherwise, keep the highest ID since the module file comes later has
+  // higher module file indexes.
+  if (Idx.getModuleFileIndex() >= StoredIdx.getModuleFileIndex())
     StoredIdx = Idx;
 }
 

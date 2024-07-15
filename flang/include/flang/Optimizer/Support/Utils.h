@@ -84,9 +84,10 @@ inline std::string mlirTypeToString(mlir::Type type) {
   return result;
 }
 
-inline std::string numericMlirTypeToFortran(fir::FirOpBuilder &builder,
-                                            mlir::Type type, mlir::Location loc,
-                                            const llvm::Twine &name) {
+inline std::string mlirTypeToIntrinsicFortran(fir::FirOpBuilder &builder,
+                                              mlir::Type type,
+                                              mlir::Location loc,
+                                              const llvm::Twine &name) {
   if (type.isF16())
     return "REAL(KIND=2)";
   else if (type.isBF16())
@@ -123,6 +124,14 @@ inline std::string numericMlirTypeToFortran(fir::FirOpBuilder &builder,
     return "COMPLEX(KIND=10)";
   else if (type == fir::ComplexType::get(builder.getContext(), 16))
     return "COMPLEX(KIND=16)";
+  else if (type == fir::LogicalType::get(builder.getContext(), 1))
+    return "LOGICAL(KIND=1)";
+  else if (type == fir::LogicalType::get(builder.getContext(), 2))
+    return "LOGICAL(KIND=2)";
+  else if (type == fir::LogicalType::get(builder.getContext(), 4))
+    return "LOGICAL(KIND=4)";
+  else if (type == fir::LogicalType::get(builder.getContext(), 8))
+    return "LOGICAL(KIND=8)";
   else
     fir::emitFatalError(loc, "unsupported type in " + name + ": " +
                                  fir::mlirTypeToString(type));
@@ -133,9 +142,76 @@ inline void intrinsicTypeTODO(fir::FirOpBuilder &builder, mlir::Type type,
                               const llvm::Twine &intrinsicName) {
   TODO(loc,
        "intrinsic: " +
-           fir::numericMlirTypeToFortran(builder, type, loc, intrinsicName) +
+           fir::mlirTypeToIntrinsicFortran(builder, type, loc, intrinsicName) +
            " in " + intrinsicName);
 }
+
+inline void intrinsicTypeTODO2(fir::FirOpBuilder &builder, mlir::Type type1,
+                               mlir::Type type2, mlir::Location loc,
+                               const llvm::Twine &intrinsicName) {
+  TODO(loc,
+       "intrinsic: {" +
+           fir::mlirTypeToIntrinsicFortran(builder, type2, loc, intrinsicName) +
+           ", " +
+           fir::mlirTypeToIntrinsicFortran(builder, type2, loc, intrinsicName) +
+           "} in " + intrinsicName);
+}
+
+inline std::pair<Fortran::common::TypeCategory, KindMapping::KindTy>
+mlirTypeToCategoryKind(mlir::Location loc, mlir::Type type) {
+  if (type.isF16())
+    return {Fortran::common::TypeCategory::Real, 2};
+  else if (type.isBF16())
+    return {Fortran::common::TypeCategory::Real, 3};
+  else if (type.isF32())
+    return {Fortran::common::TypeCategory::Real, 4};
+  else if (type.isF64())
+    return {Fortran::common::TypeCategory::Real, 8};
+  else if (type.isF80())
+    return {Fortran::common::TypeCategory::Real, 10};
+  else if (type.isF128())
+    return {Fortran::common::TypeCategory::Real, 16};
+  else if (type.isInteger(8))
+    return {Fortran::common::TypeCategory::Integer, 1};
+  else if (type.isInteger(16))
+    return {Fortran::common::TypeCategory::Integer, 2};
+  else if (type.isInteger(32))
+    return {Fortran::common::TypeCategory::Integer, 4};
+  else if (type.isInteger(64))
+    return {Fortran::common::TypeCategory::Integer, 8};
+  else if (type.isInteger(128))
+    return {Fortran::common::TypeCategory::Integer, 16};
+  else if (auto complexType = mlir::dyn_cast<fir::ComplexType>(type))
+    return {Fortran::common::TypeCategory::Complex, complexType.getFKind()};
+  else if (auto logicalType = mlir::dyn_cast<fir::LogicalType>(type))
+    return {Fortran::common::TypeCategory::Logical, logicalType.getFKind()};
+  else
+    fir::emitFatalError(loc,
+                        "unsupported type: " + fir::mlirTypeToString(type));
+}
+
+/// Find the fir.type_info that was created for this \p recordType in \p module,
+/// if any. \p  symbolTable can be provided to speed-up the lookup. This tool
+/// will match record type even if they have been "altered" in type conversion
+/// passes.
+fir::TypeInfoOp
+lookupTypeInfoOp(fir::RecordType recordType, mlir::ModuleOp module,
+                 const mlir::SymbolTable *symbolTable = nullptr);
+
+/// Find the fir.type_info named \p name in \p module, if any. \p  symbolTable
+/// can be provided to speed-up the lookup. Prefer using the equivalent with a
+/// RecordType argument  unless it is certain \p name has not been altered by a
+/// pass rewriting fir.type (see NameUniquer::dropTypeConversionMarkers).
+fir::TypeInfoOp
+lookupTypeInfoOp(llvm::StringRef name, mlir::ModuleOp module,
+                 const mlir::SymbolTable *symbolTable = nullptr);
+
+/// Returns all lower bounds of \p component if it is an array component of \p
+/// recordType with non default lower bounds. Returns nullopt if this is not an
+/// array componnet of \p recordType or if its lower bounds are all ones.
+std::optional<llvm::ArrayRef<int64_t>> getComponentLowerBoundsIfNonDefault(
+    fir::RecordType recordType, llvm::StringRef component,
+    mlir::ModuleOp module, const mlir::SymbolTable *symbolTable = nullptr);
 
 } // namespace fir
 

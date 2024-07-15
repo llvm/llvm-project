@@ -328,6 +328,7 @@ bool SpeculativeExecutionPass::considerHoistingFromTo(
     ++I;
     if (!NotHoisted.count(&*Current)) {
       Current->moveBefore(ToBlock.getTerminator());
+      Current->dropLocation();
     }
   }
   return true;

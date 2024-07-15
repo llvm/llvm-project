@@ -121,6 +121,10 @@ bool GlobalValue::canBenefitFromLocalAlias() const {
          !isa<GlobalIFunc>(this) && !isDeduplicateComdat(getComdat());
 }
 
+const DataLayout &GlobalValue::getDataLayout() const {
+  return getParent()->getDataLayout();
+}
+
 void GlobalObject::setAlignment(MaybeAlign Align) {
   assert((!Align || *Align <= MaximumAlignment) &&
          "Alignment is greater than MaximumAlignment!");
@@ -165,7 +169,7 @@ std::string GlobalValue::getGlobalIdentifier(StringRef Name,
     else
       GlobalName += FileName;
 
-    GlobalName += kGlobalIdentifierDelimiter;
+    GlobalName += GlobalIdentifierDelimiter;
   }
   GlobalName += Name;
   return GlobalName;

@@ -93,8 +93,7 @@ uint64_t getDefaultStackAlignment(DataLayoutEntryInterface entry);
 
 /// Returns the value of the property from the specified DataLayoutEntry. If the
 /// property is missing from the entry, returns std::nullopt.
-std::optional<int64_t>
-getDevicePropertyValueAsInt(DataLayoutEntryInterface entry);
+std::optional<Attribute> getDevicePropertyValue(DataLayoutEntryInterface entry);
 
 /// Given a list of data layout entries, returns a new list containing the
 /// entries with keys having the given type ID, i.e. belonging to the same type
@@ -246,9 +245,9 @@ public:
 
   /// Returns the value of the specified property if the property is defined for
   /// the given device ID, otherwise returns std::nullopt.
-  std::optional<int64_t>
-  getDevicePropertyValueAsInt(TargetSystemSpecInterface::DeviceID,
-                              StringAttr propertyName) const;
+  std::optional<Attribute>
+  getDevicePropertyValue(TargetSystemSpecInterface::DeviceID,
+                         StringAttr propertyName) const;
 
 private:
   /// Combined layout spec at the given scope.

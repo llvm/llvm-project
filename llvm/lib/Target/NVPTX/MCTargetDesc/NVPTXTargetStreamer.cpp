@@ -83,8 +83,7 @@ static bool isDwarfSection(const MCObjectFileInfo *FI,
 }
 
 void NVPTXTargetStreamer::changeSection(const MCSection *CurSection,
-                                        MCSection *Section,
-                                        const MCExpr *SubSection,
+                                        MCSection *Section, uint32_t SubSection,
                                         raw_ostream &OS) {
   assert(!SubSection && "SubSection is not null!");
   const MCObjectFileInfo *FI = getStreamer().getContext().getObjectFileInfo();
