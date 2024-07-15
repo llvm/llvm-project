@@ -1847,13 +1847,8 @@ void ASTDeclReader::VisitNamespaceDecl(NamespaceDecl *D) {
   // same namespace, and we have an invariant that older declarations
   // get merged before newer ones try to merge.
   GlobalDeclID AnonNamespace;
-  if (Redecl.getFirstID() == ThisDeclID) {
+  if (Redecl.getFirstID() == ThisDeclID)
     AnonNamespace = readDeclID();
-  } else {
-    // Link this namespace back to the first declaration, which has already
-    // been deserialized.
-    D->AnonOrFirstNamespaceAndFlags.setPointer(D->getFirstDecl());
-  }
 
   mergeRedeclarable(D, Redecl);
 
@@ -2974,13 +2969,6 @@ void ASTDeclReader::mergeRedeclarable(Redeclarable<T> *DBase, T *Existing,
     ExistingCanon->Used |= D->Used;
     D->Used = false;
 
-    // When we merge a namespace, update its pointer to the first namespace.
-    // We cannot have loaded any redeclarations of this declaration yet, so
-    // there's nothing else that needs to be updated.
-    if (auto *Namespace = dyn_cast<NamespaceDecl>(D))
-      Namespace->AnonOrFirstNamespaceAndFlags.setPointer(
-          assert_cast<NamespaceDecl *>(ExistingCanon));
-
     // When we merge a template, merge its pattern.
     if (auto *DTemplate = dyn_cast<RedeclarableTemplateDecl>(D))
       mergeTemplatePattern(
@@ -3293,7 +3281,7 @@ ASTDeclReader::getOrFakePrimaryClassDefinition(ASTReader &Reader,
 DeclContext *ASTDeclReader::getPrimaryContextForMerging(ASTReader &Reader,
                                                         DeclContext *DC) {
   if (auto *ND = dyn_cast<NamespaceDecl>(DC))
-    return ND->getOriginalNamespace();
+    return ND->getFirstDecl();
 
   if (auto *RD = dyn_cast<CXXRecordDecl>(DC))
     return getOrFakePrimaryClassDefinition(Reader, RD);
