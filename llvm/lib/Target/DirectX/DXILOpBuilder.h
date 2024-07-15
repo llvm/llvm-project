@@ -14,8 +14,6 @@
 
 #include "DXILConstants.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/DXILABI.h"
-#include "llvm/Support/VersionTuple.h"
 namespace llvm {
 class Module;
 class IRBuilderBase;
@@ -43,7 +41,7 @@ public:
   CallInst *createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
                              Type *OverloadTy, SmallVector<Value *> Args);
 
-  Type *getOverloadType(dxil::OpCode OpCode, FunctionType *FT);
+  Type *getOverloadTy(dxil::OpCode OpCode, FunctionType *FT);
   static const char *getOpCodeName(dxil::OpCode DXILOp);
 
 private:

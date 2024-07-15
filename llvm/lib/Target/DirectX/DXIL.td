@@ -275,7 +275,7 @@ class Stages<list<ShaderStage> st> : Pred {
 }
 
 // Following class represents predicate that evaluates to the payload when
-// specified predicte is true.
+// specified predicate is true.
 
 class Constraints<Pred p, list<Pred> l = []> : Pred {
   Pred pred = p;

@@ -25,6 +25,7 @@
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
+#include <cstddef>
 #include <string>
 #include <vector>
 
@@ -108,7 +109,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   for (auto Ty : ArgTys) {
     ParamTypeRecs.push_back(Ty);
   }
-  unsigned ParamTypeRecsSize = ParamTypeRecs.size();
+  size_t ParamTypeRecsSize = ParamTypeRecs.size();
   // Populate OpTypes with return type and parameter types
 
   // Parameter indices of overloaded parameters.
@@ -120,23 +121,23 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   for (unsigned I = 0; I < ParamTypeRecsSize; I++) {
     auto TR = ParamTypeRecs[I];
     // Track operation parameter indices of any overload types
-    auto IsAny = TR->getValueAsInt("isAny");
-    if (IsAny == 1) {
-      // TODO: At present it is expected that all overload types in a DXIL Op
+    auto isAny = TR->getValueAsInt("isAny");
+    if (isAny == 1) {
+      // It is expected that all overload types in a DXIL Op
       // are of the same type. Hence, OverloadParamIndices will have only one
       // element. This implies we do not need a vector. However, until more
       // (all?) DXIL Ops are added in DXIL.td, a vector is being used to flag
       // cases this assumption would not hold.
       if (!OverloadParamIndices.empty()) {
-        bool KnownType = true;
+        bool knownType = true;
         // Ensure that the same overload type registered earlier is being used
         for (auto Idx : OverloadParamIndices) {
           if (TR != ParamTypeRecs[Idx]) {
-            KnownType = false;
+            knownType = false;
             break;
           }
         }
-        assert(KnownType && "Specification of multiple differing overload "
+        assert(knownType && "Specification of multiple differing overload "
                             "parameter types not yet supported");
       } else {
         OverloadParamIndices.push_back(I);
@@ -506,7 +507,6 @@ static void emitDXILOperationTable(std::vector<DXILOperationDesc> &Ops,
        << Op.OverloadParamIndex << ", " << Op.OpTypes.size() - 1 << ", "
        << Parameters.get(ParameterMap[Op.OpClass]) << " }";
     Prefix = ",\n";
-    // OS << "\n// " << getConstraintString(Op.Constraints) << "\n";
   }
   OS << "  };\n";
 
@@ -599,7 +599,7 @@ static void emitDXILOperationTableDataStructs(RecordKeeper &Records,
   // Emit enum OverloadKind with valid overload types.
   const SmallVector<std::string> OverloadKindList = {
       "VOID", "HALF", "FLOAT", "DOUBLE",          "I1",        "I8",
-      "I16",  "I32",  "I64",   "UserDefinedType", "ObjectType"};
+      "I16",  "I32",  "I64",   "UserDefineType", "ObjectType"};
   // Choose the type of enum OverloadKind based on the number of valid types in
   // OverloadKindList. This gives the flexibility to just add new supported
   // types to the list above, if needed, with no need to change this backend
@@ -667,7 +667,7 @@ static void emitDXILOperationTableDataStructs(RecordKeeper &Records,
     case OverloadKind::UNDEFINED:  \n \
       return \"void\";  \n \
     case OverloadKind::ObjectType: \n \
-    case OverloadKind::UserDefinedType: \n \
+    case OverloadKind::UserDefineType: \n \
       break; \n \
     } \n \
     llvm_unreachable(\"invalid overload type for name\"); \n \

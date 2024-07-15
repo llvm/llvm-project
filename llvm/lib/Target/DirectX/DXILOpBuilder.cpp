@@ -59,7 +59,7 @@ static OverloadKind getOverloadKind(Type *Ty) {
     }
   }
   case Type::PointerTyID:
-    return OverloadKind::UserDefinedType;
+    return OverloadKind::UserDefineType;
   case Type::StructTyID:
     return OverloadKind::ObjectType;
   default:
@@ -69,9 +69,9 @@ static OverloadKind getOverloadKind(Type *Ty) {
 }
 
 static std::string getTypeName(OverloadKind Kind, Type *Ty) {
-  if (Kind < OverloadKind::UserDefinedType) {
+  if (Kind < OverloadKind::UserDefineType) {
     return getOverloadTypeName(Kind);
-  } else if (Kind == OverloadKind::UserDefinedType) {
+  } else if (Kind == OverloadKind::UserDefineType) {
     StructType *ST = cast<StructType>(Ty);
     return ST->getStructName().str();
   } else if (Kind == OverloadKind::ObjectType) {
@@ -100,7 +100,7 @@ static std::string constructOverloadTypeName(OverloadKind Kind,
   if (Kind == OverloadKind::VOID)
     return TypeName.str();
 
-  assert(Kind < OverloadKind::UserDefinedType && "invalid overload kind");
+  assert(Kind < OverloadKind::UserDefineType && "invalid overload kind");
   return (Twine(TypeName) + getOverloadTypeName(Kind)).str();
 }
 
@@ -340,7 +340,7 @@ CallInst *DXILOpBuilder::createDXILOpCall(dxil::OpCode OpCode, Type *ReturnTy,
   return B.CreateCall(DXILFn, Args);
 }
 
-Type *DXILOpBuilder::getOverloadType(dxil::OpCode OpCode, FunctionType *FT) {
+Type *DXILOpBuilder::getOverloadTy(dxil::OpCode OpCode, FunctionType *FT) {
 
   const OpCodeProperty *Prop = getOpCodeProperty(OpCode);
   // If DXIL Op has no overload parameter, just return the

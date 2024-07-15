@@ -22,10 +22,8 @@
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <string>
 
 #define DEBUG_TYPE "dxil-op-lower"
 
@@ -77,7 +75,7 @@ static SmallVector<Value *> argVectorFlatten(CallInst *Orig,
 static void lowerIntrinsic(dxil::OpCode DXILOp, Function &F, Module &M) {
   IRBuilder<> B(M.getContext());
   DXILOpBuilder DXILB(M, B);
-  Type *OverloadTy = DXILB.getOverloadType(DXILOp, F.getFunctionType());
+  Type *OverloadTy = DXILB.getOverloadTy(DXILOp, F.getFunctionType());
   for (User *U : make_early_inc_range(F.users())) {
     CallInst *CI = dyn_cast<CallInst>(U);
     if (!CI)
