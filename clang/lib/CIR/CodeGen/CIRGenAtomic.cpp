@@ -369,6 +369,82 @@ static bool isCstWeak(mlir::Value weakVal, bool &val) {
   return false;
 }
 
+// Functions that help with the creation of compiler-generated switch
+// statements that are used to implement non-constant memory order parameters.
+
+// Create a new region.  Create a block within the region.  Add a "break"
+// statement to the block.  Set the builder's insertion point to before the
+// "break" statement.  Add the new region to the given container.
+template <typename RegionsCont>
+static void startRegion(mlir::OpBuilder &builder, RegionsCont &Regions,
+                        mlir::Location loc) {
+
+  Regions.push_back(std::make_unique<mlir::Region>());
+  mlir::Region *Region = Regions.back().get();
+  mlir::Block *Block = builder.createBlock(Region);
+  builder.setInsertionPointToEnd(Block);
+  auto Break = builder.create<mlir::cir::BreakOp>(loc);
+  builder.setInsertionPoint(Break);
+}
+
+// Create a "default:" label and add it to the given collection of case labels.
+// Create the region that will hold the body of the "default:" block.
+template <typename CaseAttrsCont, typename RegionsCont>
+static void buildDefaultCase(mlir::OpBuilder &builder, CaseAttrsCont &CaseAttrs,
+                             RegionsCont &Regions, mlir::Location loc) {
+
+  auto Context = builder.getContext();
+  auto EmptyArrayAttr = builder.getArrayAttr({});
+  auto DefaultKind =
+      mlir::cir::CaseOpKindAttr::get(Context, mlir::cir::CaseOpKind::Default);
+  auto DefaultAttr =
+      mlir::cir::CaseAttr::get(Context, EmptyArrayAttr, DefaultKind);
+  CaseAttrs.push_back(DefaultAttr);
+  startRegion(builder, Regions, loc);
+}
+
+// Create a single "case" label with the given MemOrder as its value.  Add the
+// "case" label to the given collection of case labels.  Create the region that
+// will hold the body of the "case" block.
+template <typename CaseAttrsCont, typename RegionsCont>
+static void
+buildSingleMemOrderCase(mlir::OpBuilder &builder, CaseAttrsCont &CaseAttrs,
+                        RegionsCont &Regions, mlir::Location loc,
+                        mlir::Type Type, mlir::cir::MemOrder Order) {
+
+  auto Context = builder.getContext();
+  SmallVector<mlir::Attribute, 1> OneOrder{
+      mlir::cir::IntAttr::get(Type, static_cast<int>(Order))};
+  auto OneAttribute = builder.getArrayAttr(OneOrder);
+  auto CaseKind =
+      mlir::cir::CaseOpKindAttr::get(Context, mlir::cir::CaseOpKind::Equal);
+  auto CaseAttr = mlir::cir::CaseAttr::get(Context, OneAttribute, CaseKind);
+  CaseAttrs.push_back(CaseAttr);
+  startRegion(builder, Regions, loc);
+}
+
+// Create a pair of "case" labels with the given MemOrders as their values.
+// Add the combined "case" attribute to the given collection of case labels.
+// Create the region that will hold the body of the "case" block.
+template <typename CaseAttrsCont, typename RegionsCont>
+static void buildDoubleMemOrderCase(mlir::OpBuilder &builder,
+                                    CaseAttrsCont &CaseAttrs,
+                                    RegionsCont &Regions, mlir::Location loc,
+                                    mlir::Type Type, mlir::cir::MemOrder Order1,
+                                    mlir::cir::MemOrder Order2) {
+
+  auto Context = builder.getContext();
+  SmallVector<mlir::Attribute, 2> TwoOrders{
+      mlir::cir::IntAttr::get(Type, static_cast<int>(Order1)),
+      mlir::cir::IntAttr::get(Type, static_cast<int>(Order2))};
+  auto TwoAttributes = builder.getArrayAttr(TwoOrders);
+  auto CaseKind =
+      mlir::cir::CaseOpKindAttr::get(Context, mlir::cir::CaseOpKind::Anyof);
+  auto CaseAttr = mlir::cir::CaseAttr::get(Context, TwoAttributes, CaseKind);
+  CaseAttrs.push_back(CaseAttr);
+  startRegion(builder, Regions, loc);
+}
+
 static void buildAtomicCmpXchg(CIRGenFunction &CGF, AtomicExpr *E, bool IsWeak,
                                Address Dest, Address Ptr, Address Val1,
                                Address Val2, uint64_t Size,
@@ -446,7 +522,49 @@ static void buildAtomicCmpXchgFailureSet(
     return;
   }
 
-  llvm_unreachable("NYI");
+  // The failure memory order is not a compile-time value. The CIR atomic ops
+  // can't handle a runtime value; all memory orders must be hard coded.
+  // Generate a "switch" statement that converts the runtime value into a
+  // compile-time value.
+  CGF.getBuilder().create<mlir::cir::SwitchOp>(
+      FailureOrderVal.getLoc(), FailureOrderVal,
+      [&](mlir::OpBuilder &builder, mlir::Location loc,
+          mlir::OperationState &os) {
+        SmallVector<mlir::Attribute, 3> CaseAttrs;
+        SmallVector<std::unique_ptr<mlir::Region>, 3> Regions;
+
+        // default:
+        // Unsupported memory orders get generated as memory_order_relaxed,
+        // because there is no practical way to report an error at runtime.
+        buildDefaultCase(builder, CaseAttrs, Regions, loc);
+        buildAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2, Size,
+                           SuccessOrder, mlir::cir::MemOrder::Relaxed, Scope);
+
+        // case consume:
+        // case acquire:
+        // memory_order_consume is not implemented and always falls back to
+        // memory_order_acquire
+        buildDoubleMemOrderCase(
+            builder, CaseAttrs, Regions, loc, FailureOrderVal.getType(),
+            mlir::cir::MemOrder::Consume, mlir::cir::MemOrder::Acquire);
+        buildAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2, Size,
+                           SuccessOrder, mlir::cir::MemOrder::Acquire, Scope);
+
+        // A failed compare-exchange is a read-only operation.  So
+        // memory_order_release and memory_order_acq_rel are not supported for
+        // the failure memory order.  They fall back to memory_order_relaxed.
+
+        // case seq_cst:
+        buildSingleMemOrderCase(builder, CaseAttrs, Regions, loc,
+                                FailureOrderVal.getType(),
+                                mlir::cir::MemOrder::SequentiallyConsistent);
+        buildAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2, Size,
+                           SuccessOrder,
+                           mlir::cir::MemOrder::SequentiallyConsistent, Scope);
+
+        os.addRegions(Regions);
+        os.addAttribute("cases", builder.getArrayAttr(CaseAttrs));
+      });
 }
 
 static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
@@ -1149,8 +1267,74 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
                                RValTy, E->getExprLoc());
   }
 
-  // Long case, when Order isn't obviously constant.
-  llvm_unreachable("NYI");
+  // The memory order is not known at compile-time.  The atomic operations
+  // can't handle runtime memory orders; the memory order must be hard coded.
+  // Generate a "switch" statement that converts a runtime value into a
+  // compile-time value.
+  builder.create<mlir::cir::SwitchOp>(
+      Order.getLoc(), Order,
+      [&](mlir::OpBuilder &builder, mlir::Location loc,
+          mlir::OperationState &os) {
+        llvm::SmallVector<mlir::Attribute, 6> CaseAttrs;
+        llvm::SmallVector<std::unique_ptr<mlir::Region>, 6> Regions;
+
+        // default:
+        // Use memory_order_relaxed for relaxed operations and for any memory
+        // order value that is not supported.  There is no good way to report
+        // an unsupported memory order at runtime, hence the fallback to
+        // memory_order_relaxed.
+        buildDefaultCase(builder, CaseAttrs, Regions, loc);
+        buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
+                      mlir::cir::MemOrder::Relaxed, Scope);
+
+        if (!IsStore) {
+          // case consume:
+          // case acquire:
+          // memory_order_consume is not implemented; it is always treated like
+          // memory_order_acquire.  These memory orders are not valid for
+          // write-only operations.
+          buildDoubleMemOrderCase(builder, CaseAttrs, Regions, loc,
+                                  Order.getType(), mlir::cir::MemOrder::Consume,
+                                  mlir::cir::MemOrder::Acquire);
+          buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail,
+                        Size, mlir::cir::MemOrder::Acquire, Scope);
+        }
+
+        if (!IsLoad) {
+          // case release:
+          // memory_order_release is not valid for read-only operations.
+          buildSingleMemOrderCase(builder, CaseAttrs, Regions, loc,
+                                  Order.getType(),
+                                  mlir::cir::MemOrder::Release);
+          buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail,
+                        Size, mlir::cir::MemOrder::Release, Scope);
+        }
+
+        if (!IsLoad && !IsStore) {
+          // case acq_rel:
+          // memory_order_acq_rel is only valid for read-write operations.
+          buildSingleMemOrderCase(builder, CaseAttrs, Regions, loc,
+                                  Order.getType(),
+                                  mlir::cir::MemOrder::AcquireRelease);
+          buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail,
+                        Size, mlir::cir::MemOrder::AcquireRelease, Scope);
+        }
+
+        // case seq_cst:
+        buildSingleMemOrderCase(builder, CaseAttrs, Regions, loc,
+                                Order.getType(),
+                                mlir::cir::MemOrder::SequentiallyConsistent);
+        buildAtomicOp(*this, E, Dest, Ptr, Val1, Val2, IsWeak, OrderFail, Size,
+                      mlir::cir::MemOrder::SequentiallyConsistent, Scope);
+
+        os.addRegions(Regions);
+        os.addAttribute("cases", builder.getArrayAttr(CaseAttrs));
+      });
+
+  if (RValTy->isVoidType())
+    return RValue::get(nullptr);
+  return convertTempToRValue(Dest.withElementType(convertTypeForMem(RValTy)),
+                             RValTy, E->getExprLoc());
 }
 
 void CIRGenFunction::buildAtomicStore(RValue rvalue, LValue lvalue,
