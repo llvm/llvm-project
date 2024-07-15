@@ -46,7 +46,7 @@
 namespace __tsan {
 
 #if !SANITIZER_GO
-static char main_thread_state[sizeof(ThreadState)] ALIGNED(
+static char main_thread_state[sizeof(ThreadState)] alignas(
     SANITIZER_CACHE_LINE_SIZE);
 static ThreadState *dead_thread_state;
 static pthread_key_t thread_state_key;
