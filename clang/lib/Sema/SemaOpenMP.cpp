@@ -9090,14 +9090,15 @@ void SemaOpenMP::ActOnOpenMPLoopInitialization(SourceLocation ForLoc,
           isOpenMPSimdDirective(DKind)
               ? (DSAStack->hasMutipleLoops() ? OMPC_lastprivate : OMPC_linear)
               : OMPC_private;
+      auto IsOpenMPTaskloopDirective = [](OpenMPDirectiveKind DK) {
+        return getLeafConstructsOrSelf(DK).back() == OMPD_taskloop;
+      };
       if (((isOpenMPSimdDirective(DKind) && DVar.CKind != OMPC_unknown &&
             DVar.CKind != PredeterminedCKind && DVar.RefExpr &&
             (getLangOpts().OpenMP <= 45 ||
              (DVar.CKind != OMPC_lastprivate && DVar.CKind != OMPC_private))) ||
-           ((isOpenMPWorksharingDirective(DKind) || DKind == OMPD_taskloop ||
-             DKind == OMPD_master_taskloop || DKind == OMPD_masked_taskloop ||
-             DKind == OMPD_parallel_master_taskloop ||
-             DKind == OMPD_parallel_masked_taskloop ||
+           ((isOpenMPWorksharingDirective(DKind) ||
+             IsOpenMPTaskloopDirective(DKind) ||
              isOpenMPDistributeDirective(DKind)) &&
             !isOpenMPSimdDirective(DKind) && DVar.CKind != OMPC_unknown &&
             DVar.CKind != OMPC_private && DVar.CKind != OMPC_lastprivate)) &&
