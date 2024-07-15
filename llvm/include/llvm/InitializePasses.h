@@ -208,7 +208,7 @@ void initializeMachineSinkingPass(PassRegistry&);
 void initializeMachineTraceMetricsPass(PassRegistry&);
 void initializeMachineUniformityInfoPrinterPassPass(PassRegistry &);
 void initializeMachineUniformityAnalysisPassPass(PassRegistry &);
-void initializeMachineVerifierPassPass(PassRegistry&);
+void initializeMachineVerifierLegacyPassPass(PassRegistry &);
 void initializeMemoryDependenceWrapperPassPass(PassRegistry&);
 void initializeMemorySSAWrapperPassPass(PassRegistry&);
 void initializeMergeICmpsLegacyPassPass(PassRegistry &);
