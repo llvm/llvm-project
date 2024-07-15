@@ -1126,12 +1126,13 @@ exit:
   ret void
 }
 
-; Check that we don't forward an AVL if we wouldn't be able to extend its
-; LiveInterval without clobbering other val nos.
-define <vscale x 4 x i32> @unforwardable_avl(i64 %n, <vscale x 4 x i32> %v, i1 %cmp) {
-; CHECK-LABEL: unforwardable_avl:
+; Check that if we forward an AVL whose value is clobbered in its LiveInterval
+; we emit a copy instead.
+define <vscale x 4 x i32> @clobbered_forwarded_avl(i64 %n, <vscale x 4 x i32> %v, i1 %cmp) {
+; CHECK-LABEL: clobbered_forwarded_avl:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, a0, e32, m2, ta, ma
+; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    andi a1, a1, 1
 ; CHECK-NEXT:  .LBB27_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
