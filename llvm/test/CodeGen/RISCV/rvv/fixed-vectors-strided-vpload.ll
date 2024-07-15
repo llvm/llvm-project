@@ -670,3 +670,15 @@ define <4 x half> @zero_strided_unmasked_vpload_4f16(ptr %ptr) {
   %load = call <4 x half> @llvm.experimental.vp.strided.load.4f16.p0.i32(ptr %ptr, i32 0, <4 x i1> splat (i1 true), i32 3)
   ret <4 x half> %load
 }
+
+define <4 x i64> @zero_strided_vadd.vx(<4 x i64> %v, ptr %ptr) {
+; CHECK-OPT-LABEL: zero_strided_vadd.vx:
+; CHECK-OPT:       # %bb.0:
+; CHECK-OPT-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-OPT-NEXT:    vlse64.v v10, (a0), zero
+; CHECK-OPT-NEXT:    vadd.vv v8, v8, v10
+; CHECK-OPT-NEXT:    ret
+  %load = call <4 x i64> @llvm.experimental.vp.strided.load.v4i64.p0.i32(ptr %ptr, i32 0, <4 x i1> splat (i1 true), i32 4)
+  %w = add <4 x i64> %v, %load
+  ret <4 x i64> %w
+}
