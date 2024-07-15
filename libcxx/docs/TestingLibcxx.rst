@@ -469,8 +469,8 @@ For example:
 .. code-block:: bash
 
   $ cd build/projects/libcxx/benchmarks
-  $ ./algorithms.out # Runs all the benchmarks
-  $ ./algorithms.out --benchmark_filter=BM_Sort.* # Only runs the sort benchmarks
+  $ ./algorithms.bench.out # Runs all the benchmarks
+  $ ./algorithms.bench.out --benchmark_filter=BM_Sort.* # Only runs the sort benchmarks
 
 For more information about running benchmarks see `Google Benchmark`_.
 
