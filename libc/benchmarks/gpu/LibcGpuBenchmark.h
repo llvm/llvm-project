@@ -6,11 +6,12 @@
 #include "src/__support/CPP/functional.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/macros/config.h"
 #include "src/time/clock.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace benchmarks {
 
@@ -87,6 +88,7 @@ public:
   }
 
   static void run_benchmarks();
+  const cpp::string_view get_name() const { return name; }
 
 protected:
   static void add_benchmark(Benchmark *benchmark);
@@ -96,13 +98,12 @@ private:
     BenchmarkOptions options;
     return benchmark(options, func);
   }
-  const cpp::string_view get_name() const { return name; }
 };
 } // namespace benchmarks
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #define BENCHMARK(SuiteName, TestName, Func)                                   \
   LIBC_NAMESPACE::benchmarks::Benchmark SuiteName##_##TestName##_Instance(     \
-      Func, #SuiteName "." #TestName);
+      Func, #SuiteName "." #TestName)
 
 #endif

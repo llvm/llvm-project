@@ -4797,6 +4797,12 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     ShouldBeInTeamsRegion,
     ShouldBeInLoopSimdRegion,
   } Recommend = NoRecommend;
+
+  SmallVector<OpenMPDirectiveKind, 4> LeafOrComposite;
+  ArrayRef<OpenMPDirectiveKind> ParentLOC =
+      getLeafOrCompositeConstructs(ParentRegion, LeafOrComposite);
+  OpenMPDirectiveKind EnclosingConstruct = ParentLOC.back();
+
   if (SemaRef.LangOpts.OpenMP >= 51 && Stack->isParentOrderConcurrent() &&
       CurrentRegion != OMPD_simd && CurrentRegion != OMPD_loop &&
       CurrentRegion != OMPD_parallel &&
@@ -4828,7 +4834,7 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
         << (SemaRef.LangOpts.OpenMP >= 50 ? 1 : 0);
     return CurrentRegion != OMPD_simd;
   }
-  if (ParentRegion == OMPD_atomic) {
+  if (EnclosingConstruct == OMPD_atomic) {
     // OpenMP [2.16, Nesting of Regions]
     // OpenMP constructs may not be nested inside an atomic region.
     SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region_atomic);
@@ -4839,8 +4845,7 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     // Orphaned section directives are prohibited. That is, the section
     // directives must appear within the sections construct and must not be
     // encountered elsewhere in the sections region.
-    if (ParentRegion != OMPD_sections &&
-        ParentRegion != OMPD_parallel_sections) {
+    if (EnclosingConstruct != OMPD_sections) {
       SemaRef.Diag(StartLoc, diag::err_omp_orphaned_section_directive)
           << (ParentRegion != OMPD_unknown)
           << getOpenMPDirectiveName(ParentRegion);
@@ -4861,7 +4866,7 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
   if (SemaRef.LangOpts.OpenMP >= 50 && CurrentRegion == OMPD_loop &&
       (BindKind == OMPC_BIND_parallel || BindKind == OMPC_BIND_teams) &&
       (isOpenMPWorksharingDirective(ParentRegion) ||
-       ParentRegion == OMPD_loop)) {
+       EnclosingConstruct == OMPD_loop)) {
     int ErrorMsgNumber = (BindKind == OMPC_BIND_parallel) ? 1 : 4;
     SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region)
         << true << getOpenMPDirectiveName(ParentRegion) << ErrorMsgNumber
@@ -4881,27 +4886,17 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     // construct-type-clause is not taskgroup must be closely nested inside an
     // OpenMP construct that matches the type specified in
     // construct-type-clause.
-    NestingProhibited =
-        !((CancelRegion == OMPD_parallel &&
-           (ParentRegion == OMPD_parallel ||
-            ParentRegion == OMPD_target_parallel)) ||
-          (CancelRegion == OMPD_for &&
-           (ParentRegion == OMPD_for || ParentRegion == OMPD_parallel_for ||
-            ParentRegion == OMPD_target_parallel_for ||
-            ParentRegion == OMPD_distribute_parallel_for ||
-            ParentRegion == OMPD_teams_distribute_parallel_for ||
-            ParentRegion == OMPD_target_teams_distribute_parallel_for)) ||
-          (CancelRegion == OMPD_taskgroup &&
-           (ParentRegion == OMPD_task ||
-            (SemaRef.getLangOpts().OpenMP >= 50 &&
-             (ParentRegion == OMPD_taskloop ||
-              ParentRegion == OMPD_master_taskloop ||
-              ParentRegion == OMPD_masked_taskloop ||
-              ParentRegion == OMPD_parallel_masked_taskloop ||
-              ParentRegion == OMPD_parallel_master_taskloop)))) ||
-          (CancelRegion == OMPD_sections &&
-           (ParentRegion == OMPD_section || ParentRegion == OMPD_sections ||
-            ParentRegion == OMPD_parallel_sections)));
+    ArrayRef<OpenMPDirectiveKind> Leafs = getLeafConstructsOrSelf(ParentRegion);
+    if (CancelRegion == OMPD_taskgroup) {
+      NestingProhibited = EnclosingConstruct != OMPD_task &&
+                          (SemaRef.getLangOpts().OpenMP < 50 ||
+                           EnclosingConstruct != OMPD_taskloop);
+    } else if (CancelRegion == OMPD_sections) {
+      NestingProhibited = EnclosingConstruct != OMPD_section &&
+                          EnclosingConstruct != OMPD_sections;
+    } else {
+      NestingProhibited = CancelRegion != Leafs.back();
+    }
     OrphanSeen = ParentRegion == OMPD_unknown;
   } else if (CurrentRegion == OMPD_master || CurrentRegion == OMPD_masked) {
     // OpenMP 5.1 [2.22, Nesting of Regions]
@@ -4942,13 +4937,12 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     // OpenMP 5.1 [2.22, Nesting of Regions]
     // A barrier region may not be closely nested inside a worksharing, loop,
     // task, taskloop, critical, ordered, atomic, or masked region.
-    NestingProhibited =
-        isOpenMPWorksharingDirective(ParentRegion) ||
-        isOpenMPGenericLoopDirective(ParentRegion) ||
-        isOpenMPTaskingDirective(ParentRegion) || ParentRegion == OMPD_master ||
-        ParentRegion == OMPD_masked || ParentRegion == OMPD_parallel_master ||
-        ParentRegion == OMPD_parallel_masked || ParentRegion == OMPD_critical ||
-        ParentRegion == OMPD_ordered;
+    NestingProhibited = isOpenMPWorksharingDirective(ParentRegion) ||
+                        isOpenMPGenericLoopDirective(ParentRegion) ||
+                        isOpenMPTaskingDirective(ParentRegion) ||
+                        llvm::is_contained({OMPD_masked, OMPD_master,
+                                            OMPD_critical, OMPD_ordered},
+                                           EnclosingConstruct);
   } else if (isOpenMPWorksharingDirective(CurrentRegion) &&
              !isOpenMPParallelDirective(CurrentRegion) &&
              !isOpenMPTeamsDirective(CurrentRegion)) {
@@ -4956,13 +4950,12 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     // A loop region that binds to a parallel region or a worksharing region
     // may not be closely nested inside a worksharing, loop, task, taskloop,
     // critical, ordered, atomic, or masked region.
-    NestingProhibited =
-        isOpenMPWorksharingDirective(ParentRegion) ||
-        isOpenMPGenericLoopDirective(ParentRegion) ||
-        isOpenMPTaskingDirective(ParentRegion) || ParentRegion == OMPD_master ||
-        ParentRegion == OMPD_masked || ParentRegion == OMPD_parallel_master ||
-        ParentRegion == OMPD_parallel_masked || ParentRegion == OMPD_critical ||
-        ParentRegion == OMPD_ordered;
+    NestingProhibited = isOpenMPWorksharingDirective(ParentRegion) ||
+                        isOpenMPGenericLoopDirective(ParentRegion) ||
+                        isOpenMPTaskingDirective(ParentRegion) ||
+                        llvm::is_contained({OMPD_masked, OMPD_master,
+                                            OMPD_critical, OMPD_ordered},
+                                           EnclosingConstruct);
     Recommend = ShouldBeInParallelRegion;
   } else if (CurrentRegion == OMPD_ordered) {
     // OpenMP [2.16, Nesting of Regions]
@@ -4973,7 +4966,7 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     // OpenMP [2.8.1,simd Construct, Restrictions]
     // An ordered construct with the simd clause is the only OpenMP construct
     // that can appear in the simd region.
-    NestingProhibited = ParentRegion == OMPD_critical ||
+    NestingProhibited = EnclosingConstruct == OMPD_critical ||
                         isOpenMPTaskingDirective(ParentRegion) ||
                         !(isOpenMPSimdDirective(ParentRegion) ||
                           Stack->isParentOrderedRegion());
@@ -4983,26 +4976,28 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     // If specified, a teams construct must be contained within a target
     // construct.
     NestingProhibited =
-        (SemaRef.LangOpts.OpenMP <= 45 && ParentRegion != OMPD_target) ||
-        (SemaRef.LangOpts.OpenMP >= 50 && ParentRegion != OMPD_unknown &&
-         ParentRegion != OMPD_target);
+        (SemaRef.LangOpts.OpenMP <= 45 && EnclosingConstruct != OMPD_target) ||
+        (SemaRef.LangOpts.OpenMP >= 50 && EnclosingConstruct != OMPD_unknown &&
+         EnclosingConstruct != OMPD_target);
     OrphanSeen = ParentRegion == OMPD_unknown;
     Recommend = ShouldBeInTargetRegion;
   } else if (CurrentRegion == OMPD_scan) {
-    // OpenMP [2.16, Nesting of Regions]
-    // If specified, a teams construct must be contained within a target
-    // construct.
-    NestingProhibited =
-        SemaRef.LangOpts.OpenMP < 50 ||
-        (ParentRegion != OMPD_simd && ParentRegion != OMPD_for &&
-         ParentRegion != OMPD_for_simd && ParentRegion != OMPD_parallel_for &&
-         ParentRegion != OMPD_parallel_for_simd);
+    if (SemaRef.LangOpts.OpenMP >= 50) {
+      // OpenMP spec 5.0 and 5.1 require scan to be directly enclosed by for,
+      // simd, or for simd. This has to take into account combined directives.
+      // In 5.2 this seems to be implied by the fact that the specified
+      // separated constructs are do, for, and simd.
+      NestingProhibited = !llvm::is_contained(
+          {OMPD_for, OMPD_simd, OMPD_for_simd}, EnclosingConstruct);
+    } else {
+      NestingProhibited = true;
+    }
     OrphanSeen = ParentRegion == OMPD_unknown;
     Recommend = ShouldBeInLoopSimdRegion;
   }
   if (!NestingProhibited && !isOpenMPTargetExecutionDirective(CurrentRegion) &&
       !isOpenMPTargetDataManagementDirective(CurrentRegion) &&
-      (ParentRegion == OMPD_teams || ParentRegion == OMPD_target_teams)) {
+      EnclosingConstruct == OMPD_teams) {
     // OpenMP [5.1, 2.22, Nesting of Regions]
     // distribute, distribute simd, distribute parallel worksharing-loop,
     // distribute parallel worksharing-loop SIMD, loop, parallel regions,
@@ -5024,17 +5019,15 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
     // If the bind clause is present on the loop construct and binding is
     // teams then the corresponding loop region must be strictly nested inside
     // a teams region.
-    NestingProhibited = BindKind == OMPC_BIND_teams &&
-                        ParentRegion != OMPD_teams &&
-                        ParentRegion != OMPD_target_teams;
+    NestingProhibited =
+        BindKind == OMPC_BIND_teams && EnclosingConstruct != OMPD_teams;
     Recommend = ShouldBeInTeamsRegion;
   }
   if (!NestingProhibited && isOpenMPNestingDistributeDirective(CurrentRegion)) {
     // OpenMP 4.5 [2.17 Nesting of Regions]
     // The region associated with the distribute construct must be strictly
     // nested inside a teams region
-    NestingProhibited =
-        (ParentRegion != OMPD_teams && ParentRegion != OMPD_target_teams);
+    NestingProhibited = EnclosingConstruct != OMPD_teams;
     Recommend = ShouldBeInTeamsRegion;
   }
   if (!NestingProhibited &&
@@ -9051,84 +9044,82 @@ void SemaOpenMP::ActOnOpenMPLoopInitialization(SourceLocation ForLoc,
   assert(getLangOpts().OpenMP && "OpenMP is not active.");
   assert(Init && "Expected loop in canonical form.");
   unsigned AssociatedLoops = DSAStack->getAssociatedLoops();
-  if (AssociatedLoops > 0 &&
-      isOpenMPLoopDirective(DSAStack->getCurrentDirective())) {
-    DSAStack->loopStart();
-    OpenMPIterationSpaceChecker ISC(SemaRef, /*SupportsNonRectangular=*/true,
-                                    *DSAStack, ForLoc);
-    if (!ISC.checkAndSetInit(Init, /*EmitDiags=*/false)) {
-      if (ValueDecl *D = ISC.getLoopDecl()) {
-        auto *VD = dyn_cast<VarDecl>(D);
-        DeclRefExpr *PrivateRef = nullptr;
-        if (!VD) {
-          if (VarDecl *Private = isOpenMPCapturedDecl(D)) {
-            VD = Private;
-          } else {
-            PrivateRef = buildCapture(SemaRef, D, ISC.getLoopDeclRefExpr(),
-                                      /*WithInit=*/false);
-            VD = cast<VarDecl>(PrivateRef->getDecl());
-          }
-        }
-        DSAStack->addLoopControlVariable(D, VD);
-        const Decl *LD = DSAStack->getPossiblyLoopCounter();
-        if (LD != D->getCanonicalDecl()) {
-          DSAStack->resetPossibleLoopCounter();
-          if (auto *Var = dyn_cast_or_null<VarDecl>(LD))
-            SemaRef.MarkDeclarationsReferencedInExpr(buildDeclRefExpr(
-                SemaRef, const_cast<VarDecl *>(Var),
-                Var->getType().getNonLValueExprType(getASTContext()), ForLoc,
-                /*RefersToCapture=*/true));
-        }
-        OpenMPDirectiveKind DKind = DSAStack->getCurrentDirective();
-        // OpenMP [2.14.1.1, Data-sharing Attribute Rules for Variables
-        // Referenced in a Construct, C/C++]. The loop iteration variable in the
-        // associated for-loop of a simd construct with just one associated
-        // for-loop may be listed in a linear clause with a constant-linear-step
-        // that is the increment of the associated for-loop. The loop iteration
-        // variable(s) in the associated for-loop(s) of a for or parallel for
-        // construct may be listed in a private or lastprivate clause.
-        DSAStackTy::DSAVarData DVar =
-            DSAStack->getTopDSA(D, /*FromParent=*/false);
-        // If LoopVarRefExpr is nullptr it means the corresponding loop variable
-        // is declared in the loop and it is predetermined as a private.
-        Expr *LoopDeclRefExpr = ISC.getLoopDeclRefExpr();
-        OpenMPClauseKind PredeterminedCKind =
-            isOpenMPSimdDirective(DKind)
-                ? (DSAStack->hasMutipleLoops() ? OMPC_lastprivate : OMPC_linear)
-                : OMPC_private;
-        if (((isOpenMPSimdDirective(DKind) && DVar.CKind != OMPC_unknown &&
-              DVar.CKind != PredeterminedCKind && DVar.RefExpr &&
-              (getLangOpts().OpenMP <= 45 || (DVar.CKind != OMPC_lastprivate &&
-                                              DVar.CKind != OMPC_private))) ||
-             ((isOpenMPWorksharingDirective(DKind) || DKind == OMPD_taskloop ||
-               DKind == OMPD_master_taskloop || DKind == OMPD_masked_taskloop ||
-               DKind == OMPD_parallel_master_taskloop ||
-               DKind == OMPD_parallel_masked_taskloop ||
-               isOpenMPDistributeDirective(DKind)) &&
-              !isOpenMPSimdDirective(DKind) && DVar.CKind != OMPC_unknown &&
-              DVar.CKind != OMPC_private && DVar.CKind != OMPC_lastprivate)) &&
-            (DVar.CKind != OMPC_private || DVar.RefExpr)) {
-          Diag(Init->getBeginLoc(), diag::err_omp_loop_var_dsa)
-              << getOpenMPClauseName(DVar.CKind)
-              << getOpenMPDirectiveName(DKind)
-              << getOpenMPClauseName(PredeterminedCKind);
-          if (DVar.RefExpr == nullptr)
-            DVar.CKind = PredeterminedCKind;
-          reportOriginalDsa(SemaRef, DSAStack, D, DVar,
-                            /*IsLoopIterVar=*/true);
-        } else if (LoopDeclRefExpr) {
-          // Make the loop iteration variable private (for worksharing
-          // constructs), linear (for simd directives with the only one
-          // associated loop) or lastprivate (for simd directives with several
-          // collapsed or ordered loops).
-          if (DVar.CKind == OMPC_unknown)
-            DSAStack->addDSA(D, LoopDeclRefExpr, PredeterminedCKind,
-                             PrivateRef);
+  OpenMPDirectiveKind DKind = DSAStack->getCurrentDirective();
+  if (AssociatedLoops == 0 || !isOpenMPLoopDirective(DKind))
+    return;
+
+  DSAStack->loopStart();
+  OpenMPIterationSpaceChecker ISC(SemaRef, /*SupportsNonRectangular=*/true,
+                                  *DSAStack, ForLoc);
+  if (!ISC.checkAndSetInit(Init, /*EmitDiags=*/false)) {
+    if (ValueDecl *D = ISC.getLoopDecl()) {
+      auto *VD = dyn_cast<VarDecl>(D);
+      DeclRefExpr *PrivateRef = nullptr;
+      if (!VD) {
+        if (VarDecl *Private = isOpenMPCapturedDecl(D)) {
+          VD = Private;
+        } else {
+          PrivateRef = buildCapture(SemaRef, D, ISC.getLoopDeclRefExpr(),
+                                    /*WithInit=*/false);
+          VD = cast<VarDecl>(PrivateRef->getDecl());
         }
       }
+      DSAStack->addLoopControlVariable(D, VD);
+      const Decl *LD = DSAStack->getPossiblyLoopCounter();
+      if (LD != D->getCanonicalDecl()) {
+        DSAStack->resetPossibleLoopCounter();
+        if (auto *Var = dyn_cast_or_null<VarDecl>(LD))
+          SemaRef.MarkDeclarationsReferencedInExpr(buildDeclRefExpr(
+              SemaRef, const_cast<VarDecl *>(Var),
+              Var->getType().getNonLValueExprType(getASTContext()), ForLoc,
+              /*RefersToCapture=*/true));
+      }
+      // OpenMP [2.14.1.1, Data-sharing Attribute Rules for Variables
+      // Referenced in a Construct, C/C++]. The loop iteration variable in the
+      // associated for-loop of a simd construct with just one associated
+      // for-loop may be listed in a linear clause with a constant-linear-step
+      // that is the increment of the associated for-loop. The loop iteration
+      // variable(s) in the associated for-loop(s) of a for or parallel for
+      // construct may be listed in a private or lastprivate clause.
+      DSAStackTy::DSAVarData DVar =
+          DSAStack->getTopDSA(D, /*FromParent=*/false);
+      // If LoopVarRefExpr is nullptr it means the corresponding loop variable
+      // is declared in the loop and it is predetermined as a private.
+      Expr *LoopDeclRefExpr = ISC.getLoopDeclRefExpr();
+      OpenMPClauseKind PredeterminedCKind =
+          isOpenMPSimdDirective(DKind)
+              ? (DSAStack->hasMutipleLoops() ? OMPC_lastprivate : OMPC_linear)
+              : OMPC_private;
+      auto IsOpenMPTaskloopDirective = [](OpenMPDirectiveKind DK) {
+        return getLeafConstructsOrSelf(DK).back() == OMPD_taskloop;
+      };
+      if (((isOpenMPSimdDirective(DKind) && DVar.CKind != OMPC_unknown &&
+            DVar.CKind != PredeterminedCKind && DVar.RefExpr &&
+            (getLangOpts().OpenMP <= 45 ||
+             (DVar.CKind != OMPC_lastprivate && DVar.CKind != OMPC_private))) ||
+           ((isOpenMPWorksharingDirective(DKind) ||
+             IsOpenMPTaskloopDirective(DKind) ||
+             isOpenMPDistributeDirective(DKind)) &&
+            !isOpenMPSimdDirective(DKind) && DVar.CKind != OMPC_unknown &&
+            DVar.CKind != OMPC_private && DVar.CKind != OMPC_lastprivate)) &&
+          (DVar.CKind != OMPC_private || DVar.RefExpr)) {
+        Diag(Init->getBeginLoc(), diag::err_omp_loop_var_dsa)
+            << getOpenMPClauseName(DVar.CKind) << getOpenMPDirectiveName(DKind)
+            << getOpenMPClauseName(PredeterminedCKind);
+        if (DVar.RefExpr == nullptr)
+          DVar.CKind = PredeterminedCKind;
+        reportOriginalDsa(SemaRef, DSAStack, D, DVar, /*IsLoopIterVar=*/true);
+      } else if (LoopDeclRefExpr) {
+        // Make the loop iteration variable private (for worksharing
+        // constructs), linear (for simd directives with the only one
+        // associated loop) or lastprivate (for simd directives with several
+        // collapsed or ordered loops).
+        if (DVar.CKind == OMPC_unknown)
+          DSAStack->addDSA(D, LoopDeclRefExpr, PredeterminedCKind, PrivateRef);
+      }
     }
-    DSAStack->setAssociatedLoops(AssociatedLoops - 1);
   }
+  DSAStack->setAssociatedLoops(AssociatedLoops - 1);
 }
 
 namespace {
