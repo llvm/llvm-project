@@ -1986,41 +1986,34 @@ void ASTStmtWriter::VisitCXXDependentScopeMemberExpr(
     CXXDependentScopeMemberExpr *E) {
   VisitExpr(E);
 
-  bool HasQualifier = E->hasQualifier();
-  unsigned NumUnqualifiedLookups = E->getNumUnqualifiedLookups();
-  bool HasTemplateInfo = E->hasTemplateKWAndArgsInfo();
-  unsigned NumTemplateArgs = E->getNumTemplateArgs();
-
-  // Write these first for easy access when deserializing, as they affect the
-  // size of the CXXDependentScopeMemberExpr.
+  // Don't emit anything here (or if you do you will have to update
+  // the corresponding deserialization function).
+  Record.push_back(E->getNumTemplateArgs());
   CurrentPackingBits.updateBits();
-  CurrentPackingBits.addBit(HasQualifier);
-  CurrentPackingBits.addBit(HasTemplateInfo);
-  Record.push_back(NumUnqualifiedLookups);
-  Record.push_back(NumTemplateArgs);
+  CurrentPackingBits.addBit(E->hasTemplateKWAndArgsInfo());
+  CurrentPackingBits.addBit(E->hasFirstQualifierFoundInScope());
+
+  if (E->hasTemplateKWAndArgsInfo()) {
+    const ASTTemplateKWAndArgsInfo &ArgInfo =
+        *E->getTrailingObjects<ASTTemplateKWAndArgsInfo>();
+    AddTemplateKWAndArgsInfo(ArgInfo,
+                             E->getTrailingObjects<TemplateArgumentLoc>());
+  }
+
+  CurrentPackingBits.addBit(E->isArrow());
 
   Record.AddTypeRef(E->getBaseType());
-  CurrentPackingBits.addBit(E->isArrow());
+  Record.AddNestedNameSpecifierLoc(E->getQualifierLoc());
   CurrentPackingBits.addBit(!E->isImplicitAccess());
   if (!E->isImplicitAccess())
     Record.AddStmt(E->getBase());
 
   Record.AddSourceLocation(E->getOperatorLoc());
 
+  if (E->hasFirstQualifierFoundInScope())
+    Record.AddDeclRef(E->getFirstQualifierFoundInScope());
+
   Record.AddDeclarationNameInfo(E->MemberNameInfo);
-
-  if (HasQualifier)
-    Record.AddNestedNameSpecifierLoc(E->getQualifierLoc());
-
-  for (DeclAccessPair D : E->unqualified_lookups()) {
-    Record.AddDeclRef(D.getDecl());
-    Record.push_back(D.getAccess());
-  }
-
-  if (HasTemplateInfo)
-    AddTemplateKWAndArgsInfo(*E->getTrailingObjects<ASTTemplateKWAndArgsInfo>(),
-                             E->getTrailingObjects<TemplateArgumentLoc>());
-
   Code = serialization::EXPR_CXX_DEPENDENT_SCOPE_MEMBER;
 }
 
