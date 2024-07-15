@@ -1550,9 +1550,13 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
     LLT SrcTy2 = MRI->getType(MI->getOperand(2).getReg());
 
-    if (DstTy.isPointerOrPointerVector() || SrcTy.isPointerOrPointerVector() ||
-        SrcTy2.isPointerOrPointerVector()) {
-      report("Generic scmp/ucmp does not support pointers", MI);
+    if (SrcTy.isPointerOrPointerVector() || SrcTy2.isPointerOrPointerVector()) {
+      report("Generic scmp/ucmp does not support pointers as operands", MI);
+      break;
+    }
+
+    if (DstTy.isPointerOrPointerVector()) {
+      report("Generic scmp/ucmp does not support pointers as a result", MI);
       break;
     }
 
