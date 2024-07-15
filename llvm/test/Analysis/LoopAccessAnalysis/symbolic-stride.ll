@@ -314,9 +314,9 @@ exit:                                          ; preds = %loop
 ; Check the scenario where we have an unknown Stride, which happens to also be
 ; the loop iteration count. If we speculate Stride==1, it implies that the loop
 ; will iterate no more than a single iteration.
-define i32 @unknown_stride_equalto_tc(i32 %N, ptr %A, ptr %B, i32 %i, i32 %j)  {
+define i32 @unknown_stride_equalto_tc(i32 %N, ptr %A, ptr %B, i32 %j)  {
 ; CHECK-LABEL: 'unknown_stride_equalto_tc'
-; CHECK-NEXT:    for.body:
+; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
@@ -328,40 +328,33 @@ define i32 @unknown_stride_equalto_tc(i32 %N, ptr %A, ptr %B, i32 %i, i32 %j)  {
 ; CHECK-NEXT:      Expressions re-written:
 ;
 entry:
-  %cmp8 = icmp eq i32 %N, 0
-  br i1 %cmp8, label %for.end, label %for.body.lr.ph
+  %cmp = icmp eq i32 %N, 0
+  br i1 %cmp, label %exit, label %loop
 
-for.body.lr.ph:
-  br label %for.body
-
-for.body:
-  %tmp.010 = phi i32 [ 0, %for.body.lr.ph ], [ %add1, %for.body ]
-  %k.09 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
-  %mul = mul i32 %k.09, %N
+loop:
+  %add1 = phi i32 [ 0, %entry ], [ %add1.next, %loop ]
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul = mul i32 %iv, %N
   %add = add i32 %mul, %j
   %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
   %0 = load i16, ptr %arrayidx, align 2
   %conv = sext i16 %0 to i32
-  %add1 = add nsw i32 %tmp.010, %conv
-  %inc = add nuw i32 %k.09, 1
-  %exitcond = icmp eq i32 %inc, %N
-  br i1 %exitcond, label %for.end.loopexit, label %for.body
+  %add1.next = add nsw i32 %add1, %conv
+  %iv.next = add nuw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %N
+  br i1 %exitcond, label %exit, label %loop
 
-for.end.loopexit:
-  %add1.lcssa = phi i32 [ %add1, %for.body ]
-  br label %for.end
-
-for.end:
-  %tmp.0.lcssa = phi i32 [ 0, %entry ], [ %add1.lcssa, %for.end.loopexit ]
-  ret i32 %tmp.0.lcssa
+exit:
+  %ret = phi i32 [ 0, %entry ], [ %add1.next, %loop ]
+  ret i32 %ret
 }
 
 
 ; Check the scenario where we have an unknown Stride, which happens to also be
 ; the loop iteration count, but the TC is zero-extended from a narrower type.
-define i32 @unknown_stride_equalto_zext_tc(i16 zeroext %N, ptr %A, ptr %B, i32 %i, i32 %j) {
+define i32 @unknown_stride_equalto_zext_tc(i16 zeroext %N, ptr %A, ptr %B, i32 %j) {
 ; CHECK-LABEL: 'unknown_stride_equalto_zext_tc'
-; CHECK-NEXT:    for.body:
+; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
@@ -374,39 +367,32 @@ define i32 @unknown_stride_equalto_zext_tc(i16 zeroext %N, ptr %A, ptr %B, i32 %
 ;
 entry:
   %conv = zext i16 %N to i32
-  %cmp11 = icmp eq i16 %N, 0
-  br i1 %cmp11, label %for.end, label %for.body.lr.ph
+  %cmp = icmp eq i16 %N, 0
+  br i1 %cmp, label %exit, label %loop
 
-for.body.lr.ph:
-  br label %for.body
-
-for.body:
-  %tmp.013 = phi i32 [ 0, %for.body.lr.ph ], [ %add4, %for.body ]
-  %k.012 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
-  %mul = mul nuw i32 %k.012, %conv
+loop:
+  %add1 = phi i32 [ 0, %entry ], [ %add1.next, %loop ]
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul = mul nuw i32 %iv, %conv
   %add = add i32 %mul, %j
   %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
   %0 = load i16, ptr %arrayidx, align 2
   %conv3 = sext i16 %0 to i32
-  %add4 = add nsw i32 %tmp.013, %conv3
-  %inc = add nuw nsw i32 %k.012, 1
-  %exitcond = icmp eq i32 %inc, %conv
-  br i1 %exitcond, label %for.end.loopexit, label %for.body
+  %add1.next = add nsw i32 %add1, %conv3
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %conv
+  br i1 %exitcond, label %exit, label %loop
 
-for.end.loopexit:
-  %add4.lcssa = phi i32 [ %add4, %for.body ]
-  br label %for.end
-
-for.end:
-  %tmp.0.lcssa = phi i32 [ 0, %entry ], [ %add4.lcssa, %for.end.loopexit ]
-  ret i32 %tmp.0.lcssa
+exit:
+  %ret = phi i32 [ 0, %entry ], [ %add1.next, %loop ]
+  ret i32 %ret
 }
 
 ; Check the scenario where we have an unknown Stride, which happens to also be
 ; the loop iteration count, but the TC is sign-extended from a narrower type.
-define i32 @unknown_stride_equalto_sext_tc(i16 %N, ptr %A, ptr %B, i32 %i, i32 %j) {
+define i32 @unknown_stride_equalto_sext_tc(i16 %N, ptr %A, ptr %B, i32 %j) {
 ; CHECK-LABEL: 'unknown_stride_equalto_sext_tc'
-; CHECK-NEXT:    for.body:
+; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
@@ -419,39 +405,32 @@ define i32 @unknown_stride_equalto_sext_tc(i16 %N, ptr %A, ptr %B, i32 %i, i32 %
 ;
 entry:
   %conv = sext i16 %N to i32
-  %cmp11 = icmp eq i16 %N, 0
-  br i1 %cmp11, label %for.end, label %for.body.lr.ph
+  %cmp = icmp eq i16 %N, 0
+  br i1 %cmp, label %exit, label %loop
 
-for.body.lr.ph:
-  br label %for.body
-
-for.body:
-  %tmp.013 = phi i32 [ 0, %for.body.lr.ph ], [ %add4, %for.body ]
-  %k.012 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
-  %mul = mul nuw i32 %k.012, %conv
+loop:
+  %add1 = phi i32 [ 0, %entry ], [ %add1.next, %loop ]
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul = mul nuw i32 %iv, %conv
   %add = add i32 %mul, %j
   %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
   %0 = load i16, ptr %arrayidx, align 2
   %conv3 = sext i16 %0 to i32
-  %add4 = add nsw i32 %tmp.013, %conv3
-  %inc = add nuw nsw i32 %k.012, 1
-  %exitcond = icmp eq i32 %inc, %conv
-  br i1 %exitcond, label %for.end.loopexit, label %for.body
+  %add1.next = add nsw i32 %add1, %conv3
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %conv
+  br i1 %exitcond, label %exit, label %loop
 
-for.end.loopexit:
-  %add4.lcssa = phi i32 [ %add4, %for.body ]
-  br label %for.end
-
-for.end:
-  %tmp.0.lcssa = phi i32 [ 0, %entry ], [ %add4.lcssa, %for.end.loopexit ]
-  ret i32 %tmp.0.lcssa
+exit:
+  %ret = phi i32 [ 0, %entry ], [ %add1.next, %loop ]
+  ret i32 %ret
 }
 
 ; Check the scenario where we have an unknown Stride, which happens to also be
 ; the loop iteration count, but the TC is truncated from a wider type.
-define i32 @unknown_stride_equalto_trunc_tc(i64 %N, ptr %A, ptr %B, i32 %i, i32 %j) {
+define i32 @unknown_stride_equalto_trunc_tc(i64 %N, ptr %A, ptr %B, i32 %j) {
 ; CHECK-LABEL: 'unknown_stride_equalto_trunc_tc'
-; CHECK-NEXT:    for.body:
+; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
@@ -464,30 +443,23 @@ define i32 @unknown_stride_equalto_trunc_tc(i64 %N, ptr %A, ptr %B, i32 %i, i32 
 ;
 entry:
   %conv = trunc i64 %N to i32
-  %cmp11 = icmp eq i64 %N, 0
-  br i1 %cmp11, label %for.end, label %for.body.lr.ph
+  %cmp = icmp eq i64 %N, 0
+  br i1 %cmp, label %exit, label %loop
 
-for.body.lr.ph:
-  br label %for.body
-
-for.body:
-  %tmp.013 = phi i32 [ 0, %for.body.lr.ph ], [ %add4, %for.body ]
-  %k.012 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
-  %mul = mul nuw i32 %k.012, %conv
+loop:
+  %add1 = phi i32 [ 0, %entry ], [ %add1.next, %loop ]
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul = mul nuw i32 %iv, %conv
   %add = add i32 %mul, %j
   %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
   %0 = load i16, ptr %arrayidx, align 2
   %conv3 = sext i16 %0 to i32
-  %add4 = add nsw i32 %tmp.013, %conv3
-  %inc = add nuw nsw i32 %k.012, 1
-  %exitcond = icmp eq i32 %inc, %conv
-  br i1 %exitcond, label %for.end.loopexit, label %for.body
+  %add1.next = add nsw i32 %add1, %conv3
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exitcond = icmp eq i32 %iv.next, %conv
+  br i1 %exitcond, label %exit, label %loop
 
-for.end.loopexit:
-  %add4.lcssa = phi i32 [ %add4, %for.body ]
-  br label %for.end
-
-for.end:
-  %tmp.0.lcssa = phi i32 [ 0, %entry ], [ %add4.lcssa, %for.end.loopexit ]
-  ret i32 %tmp.0.lcssa
+exit:
+  %ret = phi i32 [ 0, %entry ], [ %add1.next, %loop ]
+  ret i32 %ret
 }
