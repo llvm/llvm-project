@@ -384,15 +384,18 @@ void TestAllForms() {
   //----------------------------------------------------------------------
   // Test reference forms
   //----------------------------------------------------------------------
-  EXPECT_EQ(RefAddr, toDebugInfoReference(DieDG.find(Attr_DW_FORM_ref_addr), 0));
+  EXPECT_EQ(RefAddr,
+            toDebugInfoReference(DieDG.find(Attr_DW_FORM_ref_addr), 0));
   EXPECT_EQ(Data1, toRelativeReference(DieDG.find(Attr_DW_FORM_ref1), 0));
   EXPECT_EQ(Data2, toRelativeReference(DieDG.find(Attr_DW_FORM_ref2), 0));
   EXPECT_EQ(Data4, toRelativeReference(DieDG.find(Attr_DW_FORM_ref4), 0));
   EXPECT_EQ(Data8, toRelativeReference(DieDG.find(Attr_DW_FORM_ref8), 0));
   if (Version >= 4) {
-    EXPECT_EQ(Data8_2, toSignatureReference(DieDG.find(Attr_DW_FORM_ref_sig8), 0));
+    EXPECT_EQ(Data8_2,
+              toSignatureReference(DieDG.find(Attr_DW_FORM_ref_sig8), 0));
   }
-  EXPECT_EQ(UData[0], toRelativeReference(DieDG.find(Attr_DW_FORM_ref_udata), 0));
+  EXPECT_EQ(UData[0],
+            toRelativeReference(DieDG.find(Attr_DW_FORM_ref_udata), 0));
 
   //----------------------------------------------------------------------
   // Test flag forms

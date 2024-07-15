@@ -1082,7 +1082,7 @@ unsigned DWARFLinker::DIECloner::cloneDieReferenceAttribute(
     CompileUnit &Unit) {
   const DWARFUnit &U = Unit.getOrigUnit();
   uint64_t Ref;
-  if (std::optional<uint64_t> Off = Val.getAsRelativeReference()) 
+  if (std::optional<uint64_t> Off = Val.getAsRelativeReference())
     Ref = Val.getUnit()->getOffset() + *Off;
   else if (Off = Val.getAsDebugInfoReference(); Off)
     Ref = *Off;

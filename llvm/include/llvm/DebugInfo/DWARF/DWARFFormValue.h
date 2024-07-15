@@ -260,7 +260,7 @@ toRelativeReference(const std::optional<DWARFFormValue> &V) {
 /// \returns the extracted reference value or Default if the V doesn't have a
 /// value or the form value's encoding wasn't a relative offset reference form.
 inline uint64_t toRelativeReference(const std::optional<DWARFFormValue> &V,
-                            uint64_t Default) {
+                                    uint64_t Default) {
   return toRelativeReference(V).value_or(Default);
 }
 
@@ -286,7 +286,7 @@ toDebugInfoReference(const std::optional<DWARFFormValue> &V) {
 /// value or the form value's encoding wasn't an absolute debug info offset
 /// reference form.
 inline uint64_t toDebugInfoReference(const std::optional<DWARFFormValue> &V,
-                            uint64_t Default) {
+                                     uint64_t Default) {
   return toDebugInfoReference(V).value_or(Default);
 }
 
@@ -309,7 +309,7 @@ toSignatureReference(const std::optional<DWARFFormValue> &V) {
 /// \returns the extracted reference value or Default if the V doesn't have a
 /// value or the form value's encoding wasn't a signature reference form.
 inline uint64_t toSignatureReference(const std::optional<DWARFFormValue> &V,
-                            uint64_t Default) {
+                                     uint64_t Default) {
   return toSignatureReference(V).value_or(Default);
 }
 
@@ -334,7 +334,7 @@ toSupplementaryReference(const std::optional<DWARFFormValue> &V) {
 /// \returns the extracted reference value or Default if the V doesn't have a
 /// value or the form value's encoding wasn't a supplementary reference form.
 inline uint64_t toSupplementaryReference(const std::optional<DWARFFormValue> &V,
-                            uint64_t Default) {
+                                         uint64_t Default) {
   return toSupplementaryReference(V).value_or(Default);
 }
 

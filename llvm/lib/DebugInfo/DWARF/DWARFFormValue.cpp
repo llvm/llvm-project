@@ -686,7 +686,6 @@ std::optional<uint64_t> DWARFFormValue::getAsDebugInfoReference() const {
   return std::nullopt;
 }
 
-
 std::optional<uint64_t> DWARFFormValue::getAsSignatureReference() const {
   if (Form == DW_FORM_ref_sig8)
     return Value.uval;
