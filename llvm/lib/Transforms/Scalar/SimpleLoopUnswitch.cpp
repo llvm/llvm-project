@@ -667,12 +667,12 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   // Finish updating dominator tree and memory ssa for full unswitch.
   if (FullUnswitch) {
     if (MSSAU) {
-      // Remove the cloned branch instruction.
       Instruction *Term = ParentBB->getTerminator();
-      Term->eraseFromParent();
-      // Create unconditional branch now.
+      // Remove the cloned branch instruction and
+      // create unconditional branch now.
       Instruction *NewBI = BranchInst::Create(ContinueBB, ParentBB);
       NewBI->setDebugLoc(Term->getDebugLoc());
+      Term->eraseFromParent();
       MSSAU->removeEdge(ParentBB, LoopExitBB);
     }
     DT.deleteEdge(ParentBB, LoopExitBB);
@@ -977,9 +977,9 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
                                       /*KeepOneInputPHIs*/ true);
     }
     // Now nuke the switch and replace it with a direct branch.
-    SIW.eraseFromParent();
     Instruction *NewBI = BranchInst::Create(CommonSuccBB, BB);
     NewBI->setDebugLoc(SIW->getDebugLoc());
+    SIW.eraseFromParent();
   } else if (DefaultExitBB) {
     assert(SI.getNumCases() > 0 &&
            "If we had no cases we'd have a common successor!");

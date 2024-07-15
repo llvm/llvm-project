@@ -94,5 +94,3 @@ declare void @some_func()
 !21 = !DILocation(line: 13, column: 1, scope: !15)
 !22 = !DILocation(line: 14, column: 1, scope: !15)
 !23 = !DILocation(line: 15, column: 1, scope: !15)
-
-
