@@ -123,7 +123,9 @@ namespace test1 {
   // CHECK:      landingpad { ptr, i32 }
   // CHECK-NEXT:   cleanup
   // CHECKv03:      invoke void @_ZN5test11AD1Ev(ptr {{[^,]*}} [[Y]])
+  // CHECKv03:      invoke void @_ZN5test11AD1Ev(ptr {{[^,]*}} [[V]])
   // CHECKv11:      call   void @_ZN5test11AD1Ev(ptr {{[^,]*}} [[Y]])
+  // CHECKv11:      call   void @_ZN5test11AD1Ev(ptr {{[^,]*}} [[V]])
 }
 
 namespace test2 {
