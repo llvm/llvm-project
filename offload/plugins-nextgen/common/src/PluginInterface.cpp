@@ -589,6 +589,25 @@ GenericKernelTy::getKernelLaunchEnvironment(
        DPxPTR(&LocalKLE), DPxPTR(*AllocOrErr),
        sizeof(KernelLaunchEnvironmentTy));
 
+  // The OmptEventInfo at this point will have a callback for a kernel launch,
+  // not a data-op. This is due to the "external" operation being a kernel
+  // launch and the data submit here being an implementation detail. We
+  // temporarily set the OmptEventInfo to nullptr, such that we disable the
+  // timing etc further down to not trigger assertions or report implementation
+  // detail.
+  __tgt_async_info *AI = AsyncInfoWrapper;
+  if (AI && AI->OmptEventInfo) {
+    auto LocalOEI = AI->OmptEventInfo;
+    AI->OmptEventInfo = nullptr;
+    auto Err = GenericDevice.dataSubmit(*AllocOrErr, &LocalKLE,
+                                        sizeof(KernelLaunchEnvironmentTy),
+                                        AsyncInfoWrapper);
+    if (Err)
+      return Err;
+    AI->OmptEventInfo = LocalOEI;
+    return static_cast<KernelLaunchEnvironmentTy *>(*AllocOrErr);
+  }
+
   auto Err = GenericDevice.dataSubmit(*AllocOrErr, &LocalKLE,
                                       sizeof(KernelLaunchEnvironmentTy),
                                       AsyncInfoWrapper);

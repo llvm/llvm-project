@@ -148,8 +148,10 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
     Rc = AsyncInfo.synchronize();
 
 #ifdef OMPT_SUPPORT
-  if (__tgt_async_info *AI = AsyncInfo; AI->OmptEventInfo)
+  if (__tgt_async_info *AI = AsyncInfo; AI->OmptEventInfo) {
+    AI->OmptEventInfo->RIFunction = std::monostate();
     delete AI->OmptEventInfo;
+  }
 #endif
 
   handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
@@ -350,8 +352,10 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
     Rc = AsyncInfo.synchronize();
 
 #ifdef OMPT_SUPPORT
-  if (__tgt_async_info *AI = AsyncInfo; AI->OmptEventInfo)
+  if (__tgt_async_info *AI = AsyncInfo; AI->OmptEventInfo) {
+    AI->OmptEventInfo->RIFunction = std::monostate();
     delete AI->OmptEventInfo;
+  }
 #endif
 
   handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
