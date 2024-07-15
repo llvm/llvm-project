@@ -10,6 +10,14 @@
 
 // UNSUPPORTED: no-wide-characters
 
+// Expect the test case to fail on targets where WEOF is the same as
+// WCHAR_MAX with the libcpp ABI version 1 implementation. The libcpp ABI
+// version 2 implementation fixes the problem.
+
+// XFAIL: target={{.*}}-windows{{.*}} && libcpp-abi-version=1
+// XFAIL: target=armv{{71|81}}-linux-gnueabihf && libcpp-abi-version=1
+// XFAIL: target=aarch64-linux-gnu && libcpp-abi-version=1
+
 #include <iomanip>
 #include <ostream>
 #include <cassert>
