@@ -394,12 +394,14 @@ static void emitEnumDoc(const EnumAttr &def, raw_ostream &os) {
 
   // Emit case documentation.
   std::vector<EnumAttrCase> cases = def.getAllCases();
-  os << "\n#### Cases:\n\n";
-  os << "| Symbol | Value | String |\n"
-     << "| :----: | :---: | ------ |\n";
-  for (const auto &it : cases) {
-    os << "| " << it.getSymbol() << " | `" << it.getValue() << "` | "
-       << it.getStr() << " |\n";
+  if (!cases.empty()) {
+    os << "\n#### Cases:\n\n";
+    os << "| Symbol | Value | String |\n"
+       << "| :----: | :---: | ------ |\n";
+    for (const auto &it : cases) {
+      os << "| " << it.getSymbol() << " | `" << it.getValue() << "` | "
+         << it.getStr() << " |\n";
+    }
   }
 
   os << "\n";
@@ -554,10 +556,7 @@ static bool emitDialectDoc(const RecordKeeper &recordKeeper, raw_ostream &os) {
     return false;
   };
   auto addIfInDialect = [&](llvm::Record *record, const auto &def, auto &vec) {
-    if (def.getDialect() == *dialect) {
-      return addIfNotSeen(record, def, vec);
-    }
-    return false;
+    return def.getDialect() == *dialect && addIfNotSeen(record, def, vec);
   };
 
   SmallDenseMap<Record *, OpDocGroup> opDocGroup;
