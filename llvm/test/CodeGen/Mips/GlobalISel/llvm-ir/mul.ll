@@ -117,35 +117,64 @@ define i128 @mul_i128(i128 %a, i128 %b) {
 ; MIPS32-NEXT:    addiu $1, $sp, 28
 ; MIPS32-NEXT:    lw $1, 0($1)
 ; MIPS32-NEXT:    mul $2, $6, $14
-; MIPS32-NEXT:    mul $3, $7, $14
-; MIPS32-NEXT:    mul $4, $6, $13
+; MIPS32-NEXT:    ori $5, $zero, 0
+; MIPS32-NEXT:    mul $4, $7, $14
+; MIPS32-NEXT:    mul $10, $6, $13
 ; MIPS32-NEXT:    multu $6, $14
-; MIPS32-NEXT:    mfhi $5
-; MIPS32-NEXT:    addu $3, $3, $4
+; MIPS32-NEXT:    mfhi $3
+; MIPS32-NEXT:    addu $4, $4, $10
+; MIPS32-NEXT:    sltu $11, $4, $10
+; MIPS32-NEXT:    addu $3, $4, $3
 ; MIPS32-NEXT:    sltu $4, $3, $4
-; MIPS32-NEXT:    addu $3, $3, $5
-; MIPS32-NEXT:    sltu $5, $3, $5
-; MIPS32-NEXT:    addu $10, $4, $5
-; MIPS32-NEXT:    mul $4, $8, $14
-; MIPS32-NEXT:    mul $5, $7, $13
+; MIPS32-NEXT:    addu $3, $3, $11
+; MIPS32-NEXT:    sltiu $10, $3, 1
+; MIPS32-NEXT:    and $10, $10, $11
+; MIPS32-NEXT:    or $4, $4, $10
+; MIPS32-NEXT:    andi $4, $4, 1
+; MIPS32-NEXT:    addu $4, $5, $4
+; MIPS32-NEXT:    mul $25, $8, $14
+; MIPS32-NEXT:    mul $15, $7, $13
 ; MIPS32-NEXT:    mul $24, $6, $12
 ; MIPS32-NEXT:    multu $7, $14
-; MIPS32-NEXT:    mfhi $15
-; MIPS32-NEXT:    multu $6, $13
 ; MIPS32-NEXT:    mfhi $11
-; MIPS32-NEXT:    addu $4, $4, $5
-; MIPS32-NEXT:    sltu $5, $4, $5
-; MIPS32-NEXT:    addu $4, $4, $24
-; MIPS32-NEXT:    sltu $24, $4, $24
+; MIPS32-NEXT:    multu $6, $13
+; MIPS32-NEXT:    mfhi $10
+; MIPS32-NEXT:    addu $25, $25, $15
+; MIPS32-NEXT:    sltu $15, $25, $15
+; MIPS32-NEXT:    addu $24, $25, $24
+; MIPS32-NEXT:    sltu $25, $24, $25
+; MIPS32-NEXT:    addu $24, $24, $15
+; MIPS32-NEXT:    sltiu $gp, $24, 1
+; MIPS32-NEXT:    and $gp, $gp, $15
+; MIPS32-NEXT:    or $25, $25, $gp
+; MIPS32-NEXT:    andi $25, $25, 1
+; MIPS32-NEXT:    addu $5, $5, $25
+; MIPS32-NEXT:    addu $11, $24, $11
+; MIPS32-NEXT:    sltu $24, $11, $24
+; MIPS32-NEXT:    addu $11, $11, $15
+; MIPS32-NEXT:    sltiu $25, $11, 1
+; MIPS32-NEXT:    and $25, $25, $15
+; MIPS32-NEXT:    or $24, $24, $25
+; MIPS32-NEXT:    addiu $5, $5, 0
+; MIPS32-NEXT:    andi $24, $24, 1
 ; MIPS32-NEXT:    addu $5, $5, $24
-; MIPS32-NEXT:    addu $4, $4, $15
-; MIPS32-NEXT:    sltu $15, $4, $15
-; MIPS32-NEXT:    addu $5, $5, $15
-; MIPS32-NEXT:    addu $4, $4, $11
-; MIPS32-NEXT:    sltu $11, $4, $11
+; MIPS32-NEXT:    addu $10, $11, $10
+; MIPS32-NEXT:    sltu $11, $10, $11
+; MIPS32-NEXT:    addu $10, $10, $15
+; MIPS32-NEXT:    sltiu $24, $10, 1
+; MIPS32-NEXT:    and $24, $24, $15
+; MIPS32-NEXT:    or $11, $11, $24
+; MIPS32-NEXT:    addiu $5, $5, 0
+; MIPS32-NEXT:    andi $11, $11, 1
 ; MIPS32-NEXT:    addu $5, $5, $11
-; MIPS32-NEXT:    addu $4, $4, $10
+; MIPS32-NEXT:    addu $4, $10, $4
 ; MIPS32-NEXT:    sltu $10, $4, $10
+; MIPS32-NEXT:    addu $4, $4, $15
+; MIPS32-NEXT:    sltiu $11, $4, 1
+; MIPS32-NEXT:    and $11, $11, $15
+; MIPS32-NEXT:    or $10, $10, $11
+; MIPS32-NEXT:    addiu $5, $5, 0
+; MIPS32-NEXT:    andi $10, $10, 1
 ; MIPS32-NEXT:    addu $5, $5, $10
 ; MIPS32-NEXT:    mul $1, $1, $14
 ; MIPS32-NEXT:    mul $11, $8, $13
