@@ -668,8 +668,8 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   if (FullUnswitch) {
     if (MSSAU) {
       Instruction *Term = ParentBB->getTerminator();
-      // Remove the cloned branch instruction and
-      // create unconditional branch now.
+      // Remove the cloned branch instruction and create unconditional branch
+      // now.
       Instruction *NewBI = BranchInst::Create(ContinueBB, ParentBB);
       NewBI->setDebugLoc(Term->getDebugLoc());
       Term->eraseFromParent();
