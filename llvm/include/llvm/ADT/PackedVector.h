@@ -142,7 +142,7 @@ public:
     return *this;
   }
 
-  operator BitVectorTy() const { return Bits; }
+  const BitVectorTy &raw_bits() const { return Bits; }
 };
 
 // Leave BitNum=0 undefined.
