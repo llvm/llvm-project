@@ -347,6 +347,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genReduce(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genReduceDim(mlir::Type,
                                   llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genRename(std::optional<mlir::Type>,
+                               mlir::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genRepeat(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genReshape(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genRRSpacing(mlir::Type resultType,
