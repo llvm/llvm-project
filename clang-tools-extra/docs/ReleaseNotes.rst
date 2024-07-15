@@ -502,6 +502,12 @@ Changes in existing checks
   usages of ``std::string_view::compare``. Added a `StringLikeClasses` option
   to detect usages of ``compare`` method in custom string-like classes.
 
+- Improved :doc:`readability-redundant-smartptr-get
+  <clang-tidy/checks/readability/readability-redundant-smartptr-get>` identify
+  and fix redundant calls to the `get()` method on smart pointers. This
+  improves code readability and efficiency by removing unnecessary
+  dereferences.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
