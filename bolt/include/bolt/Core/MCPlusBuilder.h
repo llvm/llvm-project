@@ -2041,9 +2041,13 @@ public:
     return InstructionListType();
   }
 
+  /// Returns a function body that contains only a return instruction. An
+  /// example usage is a workaround for the '__bolt_fini_trampoline' of
+  // Instrumentation.
   virtual InstructionListType createDummyReturnFunction(MCContext *Ctx) const {
-    llvm_unreachable("not implemented");
-    return InstructionListType();
+    InstructionListType Insts(1);
+    createReturn(Insts[0]);
+    return Insts;
   }
 
   /// This method takes an indirect call instruction and splits it up into an
