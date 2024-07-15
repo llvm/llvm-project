@@ -297,7 +297,7 @@ struct LiveRange {
         .valid();
   }
 
-  /// Returns true if this range overlaps with `point`.
+  /// Returns true if this range is active at `point` in the program.
   bool overlaps(uint64_t point) const {
     return ranges->lookup(point) == kValidLiveRange;
   }
@@ -531,11 +531,11 @@ LiveRange *chooseSpillUsingHeuristics(ArrayRef<LiveRange *> activeRanges,
     return !isTileTypeGreaterOrEqual(a.getTileType(), b.getTileType()) ||
            a.end() < b.end();
   };
-  LiveRange &lastActiveLiveRange = *std::max_element(
+  LiveRange &latestEndingLiveRange = *std::max_element(
       allOverlappingRanges.begin(), allOverlappingRanges.end(),
       isSmallerTileTypeOrEndsEarlier);
-  if (!isSmallerTileTypeOrEndsEarlier(lastActiveLiveRange, *newRange))
-    return &lastActiveLiveRange;
+  if (!isSmallerTileTypeOrEndsEarlier(latestEndingLiveRange, *newRange))
+    return &latestEndingLiveRange;
   return newRange;
 }
 
@@ -543,17 +543,25 @@ LiveRange *chooseSpillUsingHeuristics(ArrayRef<LiveRange *> activeRanges,
 void allocateTilesToLiveRanges(
     ArrayRef<LiveRange *> liveRangesSortedByStartPoint) {
   TileAllocator tileAllocator;
+  // `activeRanges` = Live ranges that need to be in a tile at the current point
+  // in the program.
   SetVector<LiveRange *> activeRanges;
+  // `inactiveRanges` = Live ranges that _do not_ need to be in a tile
+  // at the current point in the program but could become active again later.
+  // An inactive section of a live range can be seen as a 'hole' in the live
+  // range, where it is possible to re-use the live range's tile ID _before_ has
+  // it has ended. This allows reusing tiles more (so avoids spills).
   SetVector<LiveRange *> inactiveRanges;
   for (LiveRange *nextRange : liveRangesSortedByStartPoint) {
+    // Update the `activeRanges` at `newRange->start()`.
     activeRanges.remove_if([&](LiveRange *activeRange) {
-      // Check for live ranges that have expired.
+      // 1. Check for live ranges that have expired.
       if (activeRange->end() <= nextRange->start()) {
         tileAllocator.releaseTileId(activeRange->getTileType(),
                                     *activeRange->tileId);
         return true;
       }
-      // Check for live ranges that have become inactive.
+      // 2. Check for live ranges that have become inactive.
       if (!activeRange->overlaps(nextRange->start())) {
         tileAllocator.releaseTileId(activeRange->getTileType(),
                                     *activeRange->tileId);
@@ -562,12 +570,13 @@ void allocateTilesToLiveRanges(
       }
       return false;
     });
+    // Update the `inactiveRanges` at `newRange->start()`.
     inactiveRanges.remove_if([&](LiveRange *inactiveRange) {
-      // Check for live ranges that have expired.
+      // 1. Check for live ranges that have expired.
       if (inactiveRange->end() <= nextRange->start()) {
         return true;
       }
-      // Check for live ranges that have become active.
+      // 2. Check for live ranges that have become active.
       if (inactiveRange->overlaps(nextRange->start())) {
         tileAllocator.acquireTileId(inactiveRange->getTileType(),
                                     *inactiveRange->tileId);
@@ -577,9 +586,9 @@ void allocateTilesToLiveRanges(
       return false;
     });
 
-    // Collect inactive live ranges that overlap with the current new live
-    // range. We need to acquire the tile IDs of overlapping inactive ranges to
-    // prevent two (overlapping) live ranges from getting the same tile ID.
+    // Collect inactive live ranges that overlap with the new live range. We
+    // need to reserve the tile IDs of overlapping inactive ranges to prevent
+    // two (overlapping) live ranges from getting the same tile ID.
     SmallVector<LiveRange *> overlappingInactiveRanges;
     for (LiveRange *inactiveRange : inactiveRanges) {
       if (inactiveRange->overlaps(*nextRange)) {
