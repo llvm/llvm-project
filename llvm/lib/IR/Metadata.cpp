@@ -1590,7 +1590,7 @@ void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
   if (!Value::hasMetadata())
     return; // Nothing to remove!
 
-  SmallSet<unsigned, 4> KnownSet;
+  SmallSet<unsigned, 32> KnownSet;
   KnownSet.insert(KnownIDs.begin(), KnownIDs.end());
 
   // A DIAssignID attachment is debug metadata, don't drop it.
