@@ -449,7 +449,6 @@ private:
   mergeCategoriesIntoSingleCategory(std::vector<InfoInputCategory> &categories);
 
   void eraseISec(ConcatInputSection *isec);
-  void removeRefsToErasedIsecs();
   void eraseMergedCategories();
 
   void generateCatListForNonErasedCategories(
@@ -519,8 +518,6 @@ private:
   std::vector<ConcatInputSection *> &allInputSections;
   // Map of base class Symbol to list of InfoInputCategory's for it
   MapVector<const Symbol *, std::vector<InfoInputCategory>> categoryMap;
-  // Set for tracking InputSection erased via eraseISec
-  DenseSet<InputSection *> erasedIsecs;
 
   // Normally, the binary data comes from the input files, but since we're
   // generating binary data ourselves, we use the below array to store it in.
@@ -1272,8 +1269,6 @@ void ObjcCategoryMerger::generateCatListForNonErasedCategories(
 }
 
 void ObjcCategoryMerger::eraseISec(ConcatInputSection *isec) {
-  erasedIsecs.insert(isec);
-
   isec->live = false;
   for (auto &sym : isec->symbols)
     sym->used = false;
@@ -1325,33 +1320,6 @@ void ObjcCategoryMerger::eraseMergedCategories() {
       tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec,
                                   catLayout.instancePropsOffset);
     }
-  }
-
-  removeRefsToErasedIsecs();
-}
-
-// The compiler may generate references to categories inside the addrsig
-// section. This function will erase these references.
-void ObjcCategoryMerger::removeRefsToErasedIsecs() {
-  for (InputSection *isec : inputSections) {
-    if (isec->getName() != section_names::addrSig)
-      continue;
-
-    auto removeRelocs = [this](Reloc &r) {
-      auto *isec = dyn_cast_or_null<ConcatInputSection>(
-          r.referent.dyn_cast<InputSection *>());
-      if (!isec) {
-        Defined *sym =
-            dyn_cast_or_null<Defined>(r.referent.dyn_cast<Symbol *>());
-        if (sym)
-          isec = dyn_cast<ConcatInputSection>(sym->isec());
-      }
-      if (!isec)
-        return false;
-      return erasedIsecs.count(isec) > 0;
-    };
-
-    llvm::erase_if(isec->relocs, removeRelocs);
   }
 }
 

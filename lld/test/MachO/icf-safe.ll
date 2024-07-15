@@ -5,14 +5,14 @@
 ; RUN: llc -filetype=obj %s -O3 -o %t/icf-obj.o -enable-machine-outliner=never -mtriple arm64-apple-macos -addrsig
 ; RUN: %lld -arch arm64 -lSystem --icf=safe -dylib -o %t/icf-safe.dylib %t/icf-obj.o
 ; RUN: %lld -arch arm64 -lSystem --icf=all  -dylib -o %t/icf-all.dylib  %t/icf-obj.o
-; RUN: llvm-objdump %t/icf-safe.dylib -d --macho | FileCheck %s --check-prefix=ICFSAFE
-; RUN: llvm-objdump %t/icf-all.dylib  -d --macho | FileCheck %s --check-prefix=ICFALL
+; RUN: llvm-objdump %t/icf-safe.dylib -d -h --macho | FileCheck %s --check-prefixes=ICFSAFE,CHECK
+; RUN: llvm-objdump %t/icf-all.dylib  -d -h --macho | FileCheck %s --check-prefixes=ICFALL,CHECK
 
 ; RUN: llvm-as %s -o %t/icf-bitcode.o
 ; RUN: %lld -arch arm64 -lSystem --icf=safe -dylib -o %t/icf-safe-bitcode.dylib %t/icf-bitcode.o
 ; RUN: %lld -arch arm64 -lSystem --icf=all  -dylib -o %t/icf-all-bitcode.dylib %t/icf-bitcode.o
-; RUN: llvm-objdump %t/icf-safe-bitcode.dylib -d --macho | FileCheck %s --check-prefix=ICFSAFE
-; RUN: llvm-objdump %t/icf-all-bitcode.dylib  -d --macho | FileCheck %s --check-prefix=ICFALL
+; RUN: llvm-objdump %t/icf-safe-bitcode.dylib -d -h --macho | FileCheck %s --check-prefixes=ICFSAFE,CHECK
+; RUN: llvm-objdump %t/icf-all-bitcode.dylib  -d -h --macho | FileCheck %s --check-prefixes=ICFALL,CHECK
 
 ; ICFSAFE-LABEL:  _callAllFunctions
 ; ICFSAFE:        bl _func02
@@ -23,6 +23,9 @@
 ; ICFALL:         bl _func03_takeaddr
 ; ICFALL-NEXT:    bl _func03_takeaddr
 ; ICFALL-NEXT:    bl _func03_takeaddr
+
+; CHECK-LABEL: Sections:
+; CHECK-NOT:   __llvm_addrsig
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-macos11.0"
