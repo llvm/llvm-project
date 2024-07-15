@@ -45,6 +45,7 @@
 #include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaAVR.h"
 #include "clang/Sema/SemaBPF.h"
+#include "clang/Sema/SemaBoundsSafety.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaConsumer.h"
@@ -224,6 +225,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       AMDGPUPtr(std::make_unique<SemaAMDGPU>(*this)),
       ARMPtr(std::make_unique<SemaARM>(*this)),
       AVRPtr(std::make_unique<SemaAVR>(*this)),
+      BoundsSafetyPtr(std::make_unique<SemaBoundsSafety>(*this)),
       BPFPtr(std::make_unique<SemaBPF>(*this)),
       CodeCompletionPtr(
           std::make_unique<SemaCodeCompletion>(*this, CodeCompleter)),

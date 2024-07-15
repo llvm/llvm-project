@@ -173,6 +173,7 @@ class QualType;
 class SemaAMDGPU;
 class SemaARM;
 class SemaAVR;
+class SemaBoundsSafety;
 class SemaBPF;
 class SemaCodeCompletion;
 class SemaCUDA;
@@ -1151,6 +1152,11 @@ public:
     return *AVRPtr;
   }
 
+  SemaBoundsSafety &BoundsSafety() {
+    assert(BoundsSafetyPtr);
+    return *BoundsSafetyPtr;
+  }
+
   SemaBPF &BPF() {
     assert(BPFPtr);
     return *BPFPtr;
@@ -1294,6 +1300,7 @@ private:
   std::unique_ptr<SemaAMDGPU> AMDGPUPtr;
   std::unique_ptr<SemaARM> ARMPtr;
   std::unique_ptr<SemaAVR> AVRPtr;
+  std::unique_ptr<SemaBoundsSafety> BoundsSafetyPtr;
   std::unique_ptr<SemaBPF> BPFPtr;
   std::unique_ptr<SemaCodeCompletion> CodeCompletionPtr;
   std::unique_ptr<SemaCUDA> CUDAPtr;
