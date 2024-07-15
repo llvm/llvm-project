@@ -13,7 +13,7 @@ declare void @consume.i8.array(ptr)
 define void @HasNoLifetimeEnd() presplitcoroutine {
 ; CHECK-LABEL: define void @HasNoLifetimeEnd() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @HasNoLifetimeEnd.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @{{.*}})
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 16)
 ; CHECK-NEXT:    [[VFRAME:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @HasNoLifetimeEnd.resume, ptr [[VFRAME]], align 8
@@ -50,7 +50,7 @@ exit:
 define void @LifetimeEndAfterCoroEnd() presplitcoroutine {
 ; CHECK-LABEL: define void @LifetimeEndAfterCoroEnd() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @LifetimeEndAfterCoroEnd.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @{{.*}})
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 16)
 ; CHECK-NEXT:    [[VFRAME:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @LifetimeEndAfterCoroEnd.resume, ptr [[VFRAME]], align 8
@@ -88,7 +88,7 @@ exit:
 define void @BranchWithoutLifetimeEnd() presplitcoroutine {
 ; CHECK-LABEL: define void @BranchWithoutLifetimeEnd() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @BranchWithoutLifetimeEnd.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @{{.*}})
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 16)
 ; CHECK-NEXT:    [[VFRAME:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @BranchWithoutLifetimeEnd.resume, ptr [[VFRAME]], align 8

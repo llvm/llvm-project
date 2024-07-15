@@ -5,7 +5,7 @@
 define nonnull ptr @f(i32 %n) presplitcoroutine {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @f.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @{{.*}})
 ; CHECK-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 [[N:%.*]], ptr [[N_ADDR]], align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @malloc(i32 24)

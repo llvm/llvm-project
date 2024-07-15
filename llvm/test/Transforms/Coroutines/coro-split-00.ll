@@ -63,6 +63,13 @@ suspend:
 ; CHECK-NOT: call void @free(
 ; CHECK: ret void
 
+; CHECK-LABEL: @f.noalloc({{.*}})
+; CHECK-NOT: call ptr @malloc
+; CHECK: call void @print(i32 0)
+; CHECK-NOT: call void @print(i32 1)
+; CHECK-NOT: call void @free(
+; CHECK: ret ptr %{{.*}}
+
 declare ptr @llvm.coro.free(token, ptr)
 declare i32 @llvm.coro.size.i32()
 declare i8  @llvm.coro.suspend(token, i1)
