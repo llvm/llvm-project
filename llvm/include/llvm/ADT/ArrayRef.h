@@ -64,14 +64,14 @@ namespace llvm {
     /// @{
 
     /// Construct an empty ArrayRef.
-    /*implicit*/ ArrayRef() = default;
+    /*implicit*/ constexpr ArrayRef() = default;
 
     /// Construct an empty ArrayRef from std::nullopt.
-    /*implicit*/ ArrayRef(std::nullopt_t) {}
+    /*implicit*/ constexpr ArrayRef(std::nullopt_t) {}
 
     /// Construct an ArrayRef from a single element.
-    /*implicit*/ ArrayRef(const T &OneElt)
-      : Data(&OneElt), Length(1) {}
+    /*implicit*/ constexpr ArrayRef(const T &OneElt)
+        : Data(&OneElt), Length(1) {}
 
     /// Construct an ArrayRef from a pointer and length.
     constexpr /*implicit*/ ArrayRef(const T *data, size_t length)
@@ -123,9 +123,10 @@ namespace llvm {
     /// Construct an ArrayRef<const T*> from ArrayRef<T*>. This uses SFINAE to
     /// ensure that only ArrayRefs of pointers can be converted.
     template <typename U>
-    ArrayRef(const ArrayRef<U *> &A,
-             std::enable_if_t<std::is_convertible<U *const *, T const *>::value>
-                 * = nullptr)
+    constexpr ArrayRef(
+        const ArrayRef<U *> &A,
+        std::enable_if_t<std::is_convertible<U *const *, T const *>::value> * =
+            nullptr)
         : Data(A.data()), Length(A.size()) {}
 
     /// Construct an ArrayRef<const T*> from a SmallVector<T*>. This is
@@ -150,28 +151,32 @@ namespace llvm {
     /// @name Simple Operations
     /// @{
 
-    iterator begin() const { return Data; }
-    iterator end() const { return Data + Length; }
+    constexpr iterator begin() const { return Data; }
+    constexpr iterator end() const { return Data + Length; }
 
-    reverse_iterator rbegin() const { return reverse_iterator(end()); }
-    reverse_iterator rend() const { return reverse_iterator(begin()); }
+    constexpr reverse_iterator rbegin() const {
+      return reverse_iterator(end());
+    }
+    constexpr reverse_iterator rend() const {
+      return reverse_iterator(begin());
+    }
 
     /// empty - Check if the array is empty.
-    bool empty() const { return Length == 0; }
+    constexpr bool empty() const { return Length == 0; }
 
-    const T *data() const { return Data; }
+    constexpr const T *data() const { return Data; }
 
     /// size - Get the array size.
-    size_t size() const { return Length; }
+    constexpr size_t size() const { return Length; }
 
     /// front - Get the first element.
-    const T &front() const {
+    constexpr const T &front() const {
       assert(!empty());
       return Data[0];
     }
 
     /// back - Get the last element.
-    const T &back() const {
+    constexpr const T &back() const {
       assert(!empty());
       return Data[Length-1];
     }
@@ -184,7 +189,7 @@ namespace llvm {
     }
 
     /// equals - Check for element-wise equality.
-    bool equals(ArrayRef RHS) const {
+    constexpr bool equals(ArrayRef RHS) const {
       if (Length != RHS.Length)
         return false;
       return std::equal(begin(), end(), RHS.begin());
@@ -192,22 +197,22 @@ namespace llvm {
 
     /// slice(n, m) - Chop off the first N elements of the array, and keep M
     /// elements in the array.
-    ArrayRef<T> slice(size_t N, size_t M) const {
+    constexpr ArrayRef<T> slice(size_t N, size_t M) const {
       assert(N+M <= size() && "Invalid specifier");
       return ArrayRef<T>(data()+N, M);
     }
 
     /// slice(n) - Chop off the first N elements of the array.
-    ArrayRef<T> slice(size_t N) const { return slice(N, size() - N); }
+    constexpr ArrayRef<T> slice(size_t N) const { return slice(N, size() - N); }
 
     /// Drop the first \p N elements of the array.
-    ArrayRef<T> drop_front(size_t N = 1) const {
+    constexpr ArrayRef<T> drop_front(size_t N = 1) const {
       assert(size() >= N && "Dropping more elements than exist");
       return slice(N, size() - N);
     }
 
     /// Drop the last \p N elements of the array.
-    ArrayRef<T> drop_back(size_t N = 1) const {
+    constexpr ArrayRef<T> drop_back(size_t N = 1) const {
       assert(size() >= N && "Dropping more elements than exist");
       return slice(0, size() - N);
     }
@@ -225,14 +230,14 @@ namespace llvm {
     }
 
     /// Return a copy of *this with only the first \p N elements.
-    ArrayRef<T> take_front(size_t N = 1) const {
+    constexpr ArrayRef<T> take_front(size_t N = 1) const {
       if (N >= size())
         return *this;
       return drop_back(size() - N);
     }
 
     /// Return a copy of *this with only the last \p N elements.
-    ArrayRef<T> take_back(size_t N = 1) const {
+    constexpr ArrayRef<T> take_back(size_t N = 1) const {
       if (N >= size())
         return *this;
       return drop_front(size() - N);
@@ -253,7 +258,7 @@ namespace llvm {
     /// @}
     /// @name Operator Overloads
     /// @{
-    const T &operator[](size_t Index) const {
+    constexpr const T &operator[](size_t Index) const {
       assert(Index < Length && "Invalid index!");
       return Data[Index];
     }
@@ -319,20 +324,20 @@ namespace llvm {
     using difference_type = ptrdiff_t;
 
     /// Construct an empty MutableArrayRef.
-    /*implicit*/ MutableArrayRef() = default;
+    /*implicit*/ constexpr MutableArrayRef() = default;
 
     /// Construct an empty MutableArrayRef from std::nullopt.
-    /*implicit*/ MutableArrayRef(std::nullopt_t) : ArrayRef<T>() {}
+    /*implicit*/ constexpr MutableArrayRef(std::nullopt_t) : ArrayRef<T>() {}
 
     /// Construct a MutableArrayRef from a single element.
-    /*implicit*/ MutableArrayRef(T &OneElt) : ArrayRef<T>(OneElt) {}
+    /*implicit*/ constexpr MutableArrayRef(T &OneElt) : ArrayRef<T>(OneElt) {}
 
     /// Construct a MutableArrayRef from a pointer and length.
-    /*implicit*/ MutableArrayRef(T *data, size_t length)
-      : ArrayRef<T>(data, length) {}
+    /*implicit*/ constexpr MutableArrayRef(T *data, size_t length)
+        : ArrayRef<T>(data, length) {}
 
     /// Construct a MutableArrayRef from a range.
-    MutableArrayRef(T *begin, T *end) : ArrayRef<T>(begin, end) {}
+    constexpr MutableArrayRef(T *begin, T *end) : ArrayRef<T>(begin, end) {}
 
     /// Construct a MutableArrayRef from a SmallVector.
     /*implicit*/ MutableArrayRef(SmallVectorImpl<T> &Vec)
@@ -351,45 +356,49 @@ namespace llvm {
     template <size_t N>
     /*implicit*/ constexpr MutableArrayRef(T (&Arr)[N]) : ArrayRef<T>(Arr) {}
 
-    T *data() const { return const_cast<T*>(ArrayRef<T>::data()); }
+    constexpr T *data() const { return const_cast<T *>(ArrayRef<T>::data()); }
 
-    iterator begin() const { return data(); }
-    iterator end() const { return data() + this->size(); }
+    constexpr iterator begin() const { return data(); }
+    constexpr iterator end() const { return data() + this->size(); }
 
-    reverse_iterator rbegin() const { return reverse_iterator(end()); }
-    reverse_iterator rend() const { return reverse_iterator(begin()); }
+    constexpr reverse_iterator rbegin() const {
+      return reverse_iterator(end());
+    }
+    constexpr reverse_iterator rend() const {
+      return reverse_iterator(begin());
+    }
 
     /// front - Get the first element.
-    T &front() const {
+    constexpr T &front() const {
       assert(!this->empty());
       return data()[0];
     }
 
     /// back - Get the last element.
-    T &back() const {
+    constexpr T &back() const {
       assert(!this->empty());
       return data()[this->size()-1];
     }
 
     /// slice(n, m) - Chop off the first N elements of the array, and keep M
     /// elements in the array.
-    MutableArrayRef<T> slice(size_t N, size_t M) const {
+    constexpr MutableArrayRef<T> slice(size_t N, size_t M) const {
       assert(N + M <= this->size() && "Invalid specifier");
       return MutableArrayRef<T>(this->data() + N, M);
     }
 
     /// slice(n) - Chop off the first N elements of the array.
-    MutableArrayRef<T> slice(size_t N) const {
+    constexpr MutableArrayRef<T> slice(size_t N) const {
       return slice(N, this->size() - N);
     }
 
     /// Drop the first \p N elements of the array.
-    MutableArrayRef<T> drop_front(size_t N = 1) const {
+    constexpr MutableArrayRef<T> drop_front(size_t N = 1) const {
       assert(this->size() >= N && "Dropping more elements than exist");
       return slice(N, this->size() - N);
     }
 
-    MutableArrayRef<T> drop_back(size_t N = 1) const {
+    constexpr MutableArrayRef<T> drop_back(size_t N = 1) const {
       assert(this->size() >= N && "Dropping more elements than exist");
       return slice(0, this->size() - N);
     }
@@ -409,14 +418,14 @@ namespace llvm {
     }
 
     /// Return a copy of *this with only the first \p N elements.
-    MutableArrayRef<T> take_front(size_t N = 1) const {
+    constexpr MutableArrayRef<T> take_front(size_t N = 1) const {
       if (N >= this->size())
         return *this;
       return drop_back(this->size() - N);
     }
 
     /// Return a copy of *this with only the last \p N elements.
-    MutableArrayRef<T> take_back(size_t N = 1) const {
+    constexpr MutableArrayRef<T> take_back(size_t N = 1) const {
       if (N >= this->size())
         return *this;
       return drop_front(this->size() - N);
@@ -439,7 +448,7 @@ namespace llvm {
     /// @}
     /// @name Operator Overloads
     /// @{
-    T &operator[](size_t Index) const {
+    constexpr T &operator[](size_t Index) const {
       assert(Index < this->size() && "Invalid index!");
       return data()[Index];
     }
