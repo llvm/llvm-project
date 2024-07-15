@@ -36,7 +36,7 @@ define i32 @test7(i32 %cond1, i32 %x, i32 %y) !dbg !15 {
 ; CHECK-NEXT:      i32 1, label %[[LOOP_EXIT]]
 ; CHECK-NEXT:    ], !dbg [[DBG16:![0-9]+]]
 ; CHECK:       loop_begin:
-; CHECK-NEXT:    br label %[[LATCH:.*]], !dbg [[DBG17:![0-9]+]]
+; CHECK-NEXT:    br label %[[LATCH:.*]], !dbg [[DBG16]]
 ;
 entry:
   br label %loop_begin, !dbg !16
@@ -67,8 +67,7 @@ declare void @some_func()
 
 ; CHECK: [[DBG8]] = !DILocation(line: 2,
 
-; CHECK: [[DBG16]] = !DILocation(line: 8,
-; CHECK: [[DBG17]] = !DILocation(line: 9,
+; CHECK: [[DBG16]] = !DILocation(line: 9,
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
 !1 = !DIFile(filename: "test2.ll", directory: "/")
