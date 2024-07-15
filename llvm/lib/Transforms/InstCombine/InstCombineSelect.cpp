@@ -4049,7 +4049,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (CondVal->getType() == SI.getType() && isKnownInversion(FalseVal, TrueVal))
     return BinaryOperator::CreateXor(CondVal, FalseVal);
 
-  if (SelType->isIntOrIntVectorTy() &&
+  // For vectors, this transform is only safe if the simplification does not
+  // look through any lane-crossing operations. For now, limit to scalars only.
+  if (SelType->isIntegerTy() &&
       (!isa<Constant>(TrueVal) || !isa<Constant>(FalseVal))) {
     // Try to simplify select arms based on KnownBits implied by the condition.
     CondContext CC(CondVal);

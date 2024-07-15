@@ -231,7 +231,7 @@ static std::unique_ptr<Module> loadArFile(const char *Argv0,
       M = getLazyIRModule(MemoryBuffer::getMemBuffer(MemBuf.get(), false),
                           ParseErr, Context);
 
-    if (!M.get()) {
+    if (!M) {
       errs() << Argv0 << ": ";
       WithColor::error() << " parsing member '" << ChildName
                          << "' of archive library failed'" << ArchiveName
@@ -417,7 +417,7 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
         identify_magic(Buffer->getBuffer()) == file_magic::archive
             ? loadArFile(argv0, std::move(Buffer), Context)
             : loadFile(argv0, std::move(Buffer), Context);
-    if (!M.get()) {
+    if (!M) {
       errs() << argv0 << ": ";
       WithColor::error() << " loading file '" << File << "'\n";
       return false;

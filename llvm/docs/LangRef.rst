@@ -15220,7 +15220,6 @@ at the destination location. If the argument is known to be
 aligned to some boundary, this can be specified as an attribute on
 the argument.
 
-``len`` must be a constant expression.
 If ``<len>`` is 0, it is no-op modulo the behavior of attributes attached to
 the arguments.
 If ``<len>`` is not a well-defined value, the behavior is undefined.
@@ -19440,6 +19439,37 @@ will be on any later loop iteration.
 
 This intrinsic will only return 0 if the input count is also 0. A non-zero input
 count will produce a non-zero result.
+
+'``llvm.experimental.vector.partial.reduce.add.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v4i32.v8i32(<4 x i32> %a, <8 x i32> %b)
+      declare <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v4i32.v16i32(<4 x i32> %a, <16 x i32> %b)
+      declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv8i32(<vscale x 4 x i32> %a, <vscale x 8 x i32> %b)
+      declare <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv4i32.nxv16i32(<vscale x 4 x i32> %a, <vscale x 16 x i32> %b)
+
+Overview:
+"""""""""
+
+The '``llvm.vector.experimental.partial.reduce.add.*``' intrinsics reduce the
+concatenation of the two vector operands down to the number of elements dictated
+by the result type. The result type is a vector type that matches the type of the
+first operand vector.
+
+Arguments:
+""""""""""
+
+Both arguments must be vectors of matching element types. The first argument type must
+match the result type, while the second argument type must have a vector length that is a
+positive integer multiple of the first vector/result type. The arguments must be either be
+both fixed or both scalable vectors.
+
 
 '``llvm.experimental.vector.histogram.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -26505,6 +26535,219 @@ This function returns the tangent of the specified argument, returning the
 same values as the libm ``tan`` functions would, and handles error
 conditions in the same way.
 
+'``llvm.experimental.constrained.asin``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type>
+      @llvm.experimental.constrained.asin(<type> <op1>,
+                                          metadata <rounding mode>,
+                                          metadata <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.asin``' intrinsic returns the arcsine of the
+first operand.
+
+Arguments:
+""""""""""
+
+The first argument and the return type are floating-point numbers of the same
+type.
+
+The second and third arguments specify the rounding mode and exception
+behavior as described above.
+
+Semantics:
+""""""""""
+
+This function returns the arcsine of the specified operand, returning the
+same values as the libm ``asin`` functions would, and handles error
+conditions in the same way.
+
+
+'``llvm.experimental.constrained.acos``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type>
+      @llvm.experimental.constrained.acos(<type> <op1>,
+                                          metadata <rounding mode>,
+                                          metadata <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.acos``' intrinsic returns the arccosine of the
+first operand.
+
+Arguments:
+""""""""""
+
+The first argument and the return type are floating-point numbers of the same
+type.
+
+The second and third arguments specify the rounding mode and exception
+behavior as described above.
+
+Semantics:
+""""""""""
+
+This function returns the arccosine of the specified operand, returning the
+same values as the libm ``acos`` functions would, and handles error
+conditions in the same way.
+
+
+'``llvm.experimental.constrained.atan``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type>
+      @llvm.experimental.constrained.atan(<type> <op1>,
+                                          metadata <rounding mode>,
+                                          metadata <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.atan``' intrinsic returns the arctangent of the
+first operand.
+
+Arguments:
+""""""""""
+
+The first argument and the return type are floating-point numbers of the same
+type.
+
+The second and third arguments specify the rounding mode and exception
+behavior as described above.
+
+Semantics:
+""""""""""
+
+This function returns the arctangent of the specified operand, returning the
+same values as the libm ``atan`` functions would, and handles error
+conditions in the same way.
+
+'``llvm.experimental.constrained.sinh``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type>
+      @llvm.experimental.constrained.sinh(<type> <op1>,
+                                          metadata <rounding mode>,
+                                          metadata <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.sinh``' intrinsic returns the hyperbolic sine of the
+first operand.
+
+Arguments:
+""""""""""
+
+The first argument and the return type are floating-point numbers of the same
+type.
+
+The second and third arguments specify the rounding mode and exception
+behavior as described above.
+
+Semantics:
+""""""""""
+
+This function returns the hyperbolic sine of the specified operand, returning the
+same values as the libm ``sinh`` functions would, and handles error
+conditions in the same way.
+
+
+'``llvm.experimental.constrained.cosh``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type>
+      @llvm.experimental.constrained.cosh(<type> <op1>,
+                                          metadata <rounding mode>,
+                                          metadata <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.cosh``' intrinsic returns the hyperbolic cosine of the
+first operand.
+
+Arguments:
+""""""""""
+
+The first argument and the return type are floating-point numbers of the same
+type.
+
+The second and third arguments specify the rounding mode and exception
+behavior as described above.
+
+Semantics:
+""""""""""
+
+This function returns the hyperbolic cosine of the specified operand, returning the
+same values as the libm ``cosh`` functions would, and handles error
+conditions in the same way.
+
+
+'``llvm.experimental.constrained.tanh``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type>
+      @llvm.experimental.constrained.tanh(<type> <op1>,
+                                          metadata <rounding mode>,
+                                          metadata <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.tanh``' intrinsic returns the hyperbolic tangent of the
+first operand.
+
+Arguments:
+""""""""""
+
+The first argument and the return type are floating-point numbers of the same
+type.
+
+The second and third arguments specify the rounding mode and exception
+behavior as described above.
+
+Semantics:
+""""""""""
+
+This function returns the hyperbolic tangent of the specified operand, returning the
+same values as the libm ``tanh`` functions would, and handles error
+conditions in the same way.
 
 '``llvm.experimental.constrained.exp``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

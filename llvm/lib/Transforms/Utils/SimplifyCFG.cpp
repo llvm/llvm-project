@@ -5339,8 +5339,7 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
   std::vector<DominatorTree::UpdateType> Updates;
 
   SmallSetVector<BasicBlock *, 8> Preds(pred_begin(BB), pred_end(BB));
-  for (unsigned i = 0, e = Preds.size(); i != e; ++i) {
-    auto *Predecessor = Preds[i];
+  for (BasicBlock *Predecessor : Preds) {
     Instruction *TI = Predecessor->getTerminator();
     IRBuilder<> Builder(TI);
     if (auto *BI = dyn_cast<BranchInst>(TI)) {

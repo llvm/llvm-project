@@ -361,11 +361,12 @@ ABIArgInfo RISCVABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
                                            CGCXXABI::RAA_DirectInMemory);
   }
 
-  // Ignore empty structs/unions.
-  if (isEmptyRecord(getContext(), Ty, true))
-    return ABIArgInfo::getIgnore();
-
   uint64_t Size = getContext().getTypeSize(Ty);
+
+  // Ignore empty structs/unions whose size is zero. According to the calling
+  // convention empty structs/unions are required to be sized types in C++.
+  if (isEmptyRecord(getContext(), Ty, true) && Size == 0)
+    return ABIArgInfo::getIgnore();
 
   // Pass floating point values via FPRs if possible.
   if (IsFixed && Ty->isFloatingType() && !Ty->isComplexType() &&

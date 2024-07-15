@@ -686,10 +686,12 @@ public:
   }
 
 private:
-  // Force cast these types to uint64 to reduce the number of overloads of
-  // `__clang_Interpreter_SetValueNoAlloc`.
+  // Force cast these types to the uint that fits the register size. That way we
+  // reduce the number of overloads of `__clang_Interpreter_SetValueNoAlloc`.
   void HandleIntegralOrEnumType(const Type *Ty) {
-    TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(Ctx.UnsignedLongLongTy);
+    uint64_t PtrBits = Ctx.getTypeSize(Ctx.VoidPtrTy);
+    QualType UIntTy = Ctx.getBitIntType(/*Unsigned=*/true, PtrBits);
+    TypeSourceInfo *TSI = Ctx.getTrivialTypeSourceInfo(UIntTy);
     ExprResult CastedExpr =
         S.BuildCStyleCastExpr(SourceLocation(), TSI, SourceLocation(), E);
     assert(!CastedExpr.isInvalid() && "Cannot create cstyle cast expr");

@@ -1920,6 +1920,10 @@ private:
     UnaryExprOnly,
     PrimaryExprOnly
   };
+
+  bool isRevertibleTypeTrait(const IdentifierInfo *Id,
+                             clang::tok::TokenKind *Kind = nullptr);
+
   ExprResult ParseCastExpression(CastParseKind ParseKind,
                                  bool isAddressOfOperand,
                                  bool &NotCastExpr,

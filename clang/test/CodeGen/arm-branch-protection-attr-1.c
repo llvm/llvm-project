@@ -29,14 +29,14 @@ __attribute__((target("branch-protection=pac-ret+leaf"))) void leaf() {}
 __attribute__((target("branch-protection=pac-ret+leaf+bti"))) void btileaf() {}
 // CHECK: define{{.*}} void @btileaf() #[[#BTIPACLEAF:]]
 
-// CHECK-DAG: attributes #[[#NONE]] = { {{.*}} "branch-target-enforcement"="false" {{.*}} "sign-return-address"="none"
+// CHECK-DAG: attributes #[[#NONE]] = { {{.*}}
 
-// CHECK-DAG: attributes #[[#STD]] = { {{.*}} "branch-target-enforcement"="true" {{.*}} "sign-return-address"="non-leaf"
+// CHECK-DAG: attributes #[[#STD]] = { {{.*}} "branch-target-enforcement" {{.*}} "sign-return-address"="non-leaf"
 
-// CHECK-DAG: attributes #[[#BTI]] = { {{.*}} "branch-target-enforcement"="true" {{.*}} "sign-return-address"="none"
+// CHECK-DAG: attributes #[[#BTI]] = { {{.*}} "branch-target-enforcement"
 
-// CHECK-DAG: attributes #[[#PAC]] = { {{.*}} "branch-target-enforcement"="false" {{.*}} "sign-return-address"="non-leaf"
+// CHECK-DAG: attributes #[[#PAC]] = { {{.*}} "sign-return-address"="non-leaf"
 
-// CHECK-DAG: attributes #[[#PACLEAF]] = { {{.*}} "branch-target-enforcement"="false" {{.*}}"sign-return-address"="all"
+// CHECK-DAG: attributes #[[#PACLEAF]] = { {{.*}} "sign-return-address"="all"
 
-// CHECK-DAG: attributes #[[#BTIPACLEAF]] = { {{.*}}"branch-target-enforcement"="true" {{.*}} "sign-return-address"="all"
+// CHECK-DAG: attributes #[[#BTIPACLEAF]] = { {{.*}} "branch-target-enforcement" {{.*}} "sign-return-address"="all"

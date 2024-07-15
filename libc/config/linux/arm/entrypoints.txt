@@ -216,6 +216,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atan2f
     libc.src.math.atanf
     libc.src.math.atanhf
+    libc.src.math.cbrtf
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.ceill
@@ -366,6 +367,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.sqrt
     libc.src.math.sqrtf
     libc.src.math.sqrtl
+    libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
     libc.src.math.trunc

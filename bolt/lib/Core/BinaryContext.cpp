@@ -2403,15 +2403,7 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
     Streamer->emitLabel(SplitStartLabel);
     emitFunctionBody(*Streamer, BF, FF, /*EmitCodeOnly=*/true);
     Streamer->emitLabel(SplitEndLabel);
-    // To avoid calling MCObjectStreamer::flushPendingLabels() which is
-    // private
-    Streamer->emitBytes(StringRef(""));
-    Streamer->switchSection(Section);
   }
-
-  // To avoid calling MCObjectStreamer::flushPendingLabels() which is private or
-  // MCStreamer::Finish(), which does more than we want
-  Streamer->emitBytes(StringRef(""));
 
   MCAssembler &Assembler =
       static_cast<MCObjectStreamer *>(Streamer.get())->getAssembler();
