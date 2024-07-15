@@ -248,17 +248,6 @@ class Pred;
 // Following classes represent predicate that evaluate to the payload,
 // if one xists, unconditionally.
 
-// DXIL Op attributes defined as true predicates, if specified
-
-def ReadOnly : Pred;
-def ReadNone : Pred;
-def IsDerivative : Pred;
-def IsGradient : Pred;
-def IsFeedback : Pred;
-def IsWave : Pred;
-def NeedsUniformInputs : Pred;
-def IsBarrier : Pred;
-
 // Predicate that evaluates to specified shader model version unconditionally.
 class SMVersion<Version ver> : Pred {
   Version sm_version = ver;
@@ -281,6 +270,20 @@ class Constraints<Pred p, list<Pred> l = []> : Pred {
   Pred pred = p;
   list<Pred> constraints = l;
 }
+
+// DXIL Op attributes defined as true predicates, if specified
+
+class DXILAttribute;
+
+def ReadOnly : DXILAttribute;
+def ReadNone : DXILAttribute;
+def IsDerivative : DXILAttribute;
+def IsGradient : DXILAttribute;
+def IsFeedback : DXILAttribute;
+def IsWave : DXILAttribute;
+def NeedsUniformInputs : DXILAttribute;
+def IsBarrier : DXILAttribute;
+
 
 // Marker used to identify attribute list.
 def attrs;
@@ -317,7 +320,7 @@ class DXILOp {
   list<Constraints> constraints = [];
 
   // Operation attributes
-  list<Pred> attributes = [];
+  list<DXILAttribute> attributes = [];
 
   Version DXILVersion = ? ;
 }
