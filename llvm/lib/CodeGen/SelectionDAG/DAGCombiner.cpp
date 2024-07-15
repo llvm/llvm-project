@@ -6047,7 +6047,7 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
   }
 
   // logic_op (truncate x), (truncate y) --> truncate (logic_op x, y)
-  if (HandOpcode == ISD::TRUNCATE) {
+  if (HandOpcode == ISD::TRUNCATE && !TLI.shouldReduceRegisterPressure()) {
     // If both operands have other uses, this transform would create extra
     // instructions without eliminating anything.
     if (!N0.hasOneUse() && !N1.hasOneUse())
@@ -15826,7 +15826,8 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   case ISD::OR:
   case ISD::XOR:
     if (!LegalOperations && N0.hasOneUse() &&
-        (isConstantOrConstantVector(N0.getOperand(0), true) ||
+        (TLI.shouldReduceRegisterPressure() ||
+         isConstantOrConstantVector(N0.getOperand(0), true) ||
          isConstantOrConstantVector(N0.getOperand(1), true))) {
       // TODO: We already restricted this to pre-legalization, but for vectors
       // we are extra cautious to not create an unsupported operation.

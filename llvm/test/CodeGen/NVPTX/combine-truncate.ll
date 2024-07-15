@@ -8,14 +8,11 @@ define i32 @trunc(i64 %a, i64 %b) {
 ; CHECK-LABEL: trunc(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
-; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [trunc_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd2, [trunc_param_1];
-; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
-; CHECK-NEXT:    cvt.u32.u64 %r2, %rd1;
-; CHECK-NEXT:    or.b32 %r3, %r2, %r1;
+; CHECK-NEXT:    ld.param.u32 %r1, [trunc_param_0];
+; CHECK-NEXT:    ld.param.u32 %r2, [trunc_param_1];
+; CHECK-NEXT:    or.b32 %r3, %r1, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r3;
 ; CHECK-NEXT:    ret;
   %or = or i64 %a, %b
@@ -48,15 +45,12 @@ define i32 @trunc_cvt(i64 %a, i64 %b) {
 ; CHECK-LABEL: trunc_cvt(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
-; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.u64 %rd1, [trunc_cvt_param_0];
-; CHECK-NEXT:    ld.param.u64 %rd2, [trunc_cvt_param_1];
-; CHECK-NEXT:    cvt.u32.u64 %r1, %rd2;
-; CHECK-NEXT:    cvt.u32.u64 %r2, %rd1;
-; CHECK-NEXT:    add.s32 %r3, %r2, %r1;
-; CHECK-NEXT:    or.b32 %r4, %r3, %r2;
+; CHECK-NEXT:    ld.param.u32 %r1, [trunc_cvt_param_0];
+; CHECK-NEXT:    ld.param.u32 %r2, [trunc_cvt_param_1];
+; CHECK-NEXT:    add.s32 %r3, %r1, %r2;
+; CHECK-NEXT:    or.b32 %r4, %r3, %r1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0+0], %r4;
 ; CHECK-NEXT:    ret;
   %add = add i64 %a, %b

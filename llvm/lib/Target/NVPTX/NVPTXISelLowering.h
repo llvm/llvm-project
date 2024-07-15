@@ -162,6 +162,10 @@ public:
            DstTy->getPrimitiveSizeInBits() == 32;
   }
 
+  bool shouldReduceRegisterPressure() const override {
+    return true;
+  }
+
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Ctx,
                          EVT VT) const override {
     if (VT.isVector())
