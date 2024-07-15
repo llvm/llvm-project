@@ -549,15 +549,25 @@ getHLSLResourceAttrFromEitherDecl(VarDecl *VD,
 }
 
 void traverseType(QualType TheQualTy, RegisterBindingFlags &Flags) {
+  // if the member's type is a numeric type, set the ContainsNumeric flag
   if (TheQualTy->isIntegralOrEnumerationType() || TheQualTy->isFloatingType()) {
     Flags.ContainsNumeric = true;
     return;
   }
-  const RecordType *TheRecordTy = TheQualTy->getAs<RecordType>();
+
+  // otherwise, if the member's base type is not a record type, return
+  const clang::Type *TheBaseType = TheQualTy.getTypePtr();
+  while (TheBaseType->isArrayType())
+    TheBaseType = TheBaseType->getArrayElementTypeNoTypeQual();
+
+  const RecordType *TheRecordTy = TheBaseType->getAs<RecordType>();
   if (!TheRecordTy)
     return;
 
   RecordDecl *SubRecordDecl = TheRecordTy->getDecl();
+  bool resClassSet = false;
+  // if the member's base type is a ClassTemplateSpecializationDecl,
+  // check if it has a resource class attr
   if (auto TDecl = dyn_cast<ClassTemplateSpecializationDecl>(SubRecordDecl)) {
     auto TheRecordDecl = TDecl->getSpecializedTemplate()->getTemplatedDecl();
     TheRecordDecl = TheRecordDecl->getCanonicalDecl();
@@ -577,9 +587,29 @@ void traverseType(QualType TheQualTy, RegisterBindingFlags &Flags) {
       Flags.Sampler = true;
       break;
     }
+    resClassSet = true;
+  }
+  // otherwise, check if the member has a resource class attr
+  else if (auto *Attr = SubRecordDecl->getAttr<HLSLResourceClassAttr>()) {
+    llvm::hlsl::ResourceClass DeclResourceClass = Attr->getResourceClass();
+    switch (DeclResourceClass) {
+    case llvm::hlsl::ResourceClass::SRV:
+      Flags.SRV = true;
+      break;
+    case llvm::hlsl::ResourceClass::UAV:
+      Flags.UAV = true;
+      break;
+    case llvm::hlsl::ResourceClass::CBuffer:
+      Flags.CBV = true;
+      break;
+    case llvm::hlsl::ResourceClass::Sampler:
+      Flags.Sampler = true;
+      break;
+    }
+    resClassSet = true;
   }
 
-  else if (SubRecordDecl->isCompleteDefinition()) {
+  if (!resClassSet) {
     for (auto Field : SubRecordDecl->fields()) {
       traverseType(Field->getType(), Flags);
     }
