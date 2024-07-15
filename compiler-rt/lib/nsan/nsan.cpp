@@ -71,9 +71,9 @@ __nsan_copy_values(const u8 *daddr, const u8 *saddr, uptr size) {
                       GetShadowAddrFor(saddr), N *kShadowScale);               \
   }
 
-NSAN_COPY_VALUES_N(4);
-NSAN_COPY_VALUES_N(8);
-NSAN_COPY_VALUES_N(16);
+NSAN_COPY_VALUES_N(4)
+NSAN_COPY_VALUES_N(8)
+NSAN_COPY_VALUES_N(16)
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
 __nsan_set_value_unknown(const u8 *addr, uptr size) {
@@ -86,9 +86,9 @@ __nsan_set_value_unknown(const u8 *addr, uptr size) {
     __builtin_memset((void *)GetShadowTypeAddrFor(daddr), 0, N);               \
   }
 
-NSAN_SET_VALUE_UNKNOWN_N(4);
-NSAN_SET_VALUE_UNKNOWN_N(8);
-NSAN_SET_VALUE_UNKNOWN_N(16);
+NSAN_SET_VALUE_UNKNOWN_N(4)
+NSAN_SET_VALUE_UNKNOWN_N(8)
+NSAN_SET_VALUE_UNKNOWN_N(16)
 
 const char *FTInfo<float>::kCppTypeName = "float";
 const char *FTInfo<double>::kCppTypeName = "double";
