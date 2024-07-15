@@ -164,6 +164,9 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
 }
 
 bool RISCVCodeGenPrepare::expandVPStrideLoad(IntrinsicInst &II) {
+  if (ST->hasOptimizedZeroStrideLoad())
+    return false;
+
   Value *BasePtr, *VL;
 
   using namespace PatternMatch;
