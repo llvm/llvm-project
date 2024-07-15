@@ -394,14 +394,12 @@ static void emitEnumDoc(const EnumAttr &def, raw_ostream &os) {
 
   // Emit case documentation.
   std::vector<EnumAttrCase> cases = def.getAllCases();
-  if (!cases.empty()) {
-    os << "\n#### Cases:\n\n";
-    os << "| Symbol | Value | String |\n"
-       << "| :----: | :---: | ------ |\n";
-    for (const auto &it : cases) {
-      os << "| " << it.getSymbol() << " | `" << it.getValue() << "` | "
-         << it.getStr() << " |\n";
-    }
+  os << "\n#### Cases:\n\n";
+  os << "| Symbol | Value | String |\n"
+     << "| :----: | :---: | ------ |\n";
+  for (const auto &it : cases) {
+    os << "| " << it.getSymbol() << " | `" << it.getValue() << "` | "
+       << it.getStr() << " |\n";
   }
 
   os << "\n";
