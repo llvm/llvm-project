@@ -868,7 +868,7 @@ feature_test_macros = [
             "name": "__cpp_lib_mdspan",
             "values": {
                 "c++23": 202207,
-                # "c++26": 202406, # P2389R2 dextents Index Type Parameter
+                "c++26": 202406,  # P2389R2 dextents Index Type Parameter
             },
             "headers": ["mdspan"],
         },

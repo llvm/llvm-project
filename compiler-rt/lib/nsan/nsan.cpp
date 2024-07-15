@@ -513,6 +513,8 @@ int32_t checkFT(const FT value, ShadowFT Shadow, CheckTypeT CheckType,
     }
     using ValuePrinter = FTPrinter<FT>;
     using ShadowPrinter = FTPrinter<ShadowFT>;
+    Printf("%s", D.Default());
+
     Printf("\n"
            "%-12s precision  (native): dec: %s  hex: %s\n"
            "%-12s precision  (shadow): dec: %s  hex: %s\n"
@@ -535,7 +537,10 @@ int32_t checkFT(const FT value, ShadowFT Shadow, CheckTypeT CheckType,
   }
 
   if (flags().halt_on_error) {
-    Printf("Exiting\n");
+    if (common_flags()->abort_on_error)
+      Printf("ABORTING\n");
+    else
+      Printf("Exiting\n");
     Die();
   }
   return flags().resume_after_warning ? kResumeFromValue : kContinueWithShadow;
@@ -638,8 +643,9 @@ void fCmpFailFT(const FT Lhs, const FT Rhs, ShadowFT LhsShadow,
   const char *const PredicateName = GetPredicateName(Predicate);
   Printf("%s", D.Warning());
   Printf("WARNING: NumericalStabilitySanitizer: floating-point comparison "
-         "results depend on precision\n"
-         "%-12s precision dec (native): %s %s %s (%s)\n"
+         "results depend on precision\n");
+  Printf("%s", D.Default());
+  Printf("%-12s precision dec (native): %s %s %s (%s)\n"
          "%-12s precision dec (shadow): %s %s %s (%s)\n"
          "%-12s precision hex (native): %s %s %s (%s)\n"
          "%-12s precision hex (shadow): %s %s %s (%s)\n"
@@ -658,7 +664,6 @@ void fCmpFailFT(const FT Lhs, const FT Rhs, ShadowFT LhsShadow,
          FTInfo<ShadowFT>::kCppTypeName, ShadowPrinter::hex(LhsShadow).Buffer,
          PredicateName, ShadowPrinter::hex(RhsShadow).Buffer,
          GetTruthValueName(ShadowResult), D.End());
-  Printf("%s", D.Default());
   stack.Print();
   if (flags().halt_on_error) {
     Printf("Exiting\n");
@@ -788,6 +793,8 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __nsan_init() {
   InitializeFlags();
   InitializeSuppressions();
   InitializePlatformEarly();
+
+  DisableCoreDumperIfNecessary();
 
   if (!MmapFixedNoReserve(TypesAddr(), UnusedAddr() - TypesAddr()))
     Die();

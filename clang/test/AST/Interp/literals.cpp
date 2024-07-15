@@ -568,37 +568,27 @@ namespace IncDec {
     return 1;
   }
   static_assert(uninit<int, true, true>(), ""); // both-error {{not an integral constant expression}} \
-                                                // ref-note {{in call to 'uninit<int, true, true>()'}} \
-                                                // expected-note {{in call to 'uninit()'}}
+                                                // both-note {{in call to 'uninit<int, true, true>()'}}
   static_assert(uninit<int, false, true>(), ""); // both-error {{not an integral constant expression}} \
-                                                 // ref-note {{in call to 'uninit<int, false, true>()'}} \
-                                                 // expected-note {{in call to 'uninit()'}}
+                                                 // both-note {{in call to 'uninit<int, false, true>()'}}
 
   static_assert(uninit<float, true, true>(), ""); // both-error {{not an integral constant expression}} \
-                                                  // ref-note {{in call to 'uninit<float, true, true>()'}} \
-                                                  // expected-note {{in call to 'uninit()'}}
+                                                  // both-note {{in call to 'uninit<float, true, true>()'}}
   static_assert(uninit<float, false, true>(), ""); // both-error {{not an integral constant expression}} \
-                                                   // ref-note {{in call to 'uninit<float, false, true>()'}} \
-                                                   // expected-note {{in call to 'uninit()'}}
+                                                   // both-note {{in call to 'uninit<float, false, true>()'}}
   static_assert(uninit<float, true, false>(), ""); // both-error {{not an integral constant expression}} \
-                                                   // ref-note {{in call to 'uninit<float, true, false>()'}} \
-                                                   // expected-note {{in call to 'uninit()'}}
+                                                   // both-note {{in call to 'uninit<float, true, false>()'}}
   static_assert(uninit<float, false, false>(), ""); // both-error {{not an integral constant expression}} \
-                                                    // ref-note {{in call to 'uninit<float, false, false>()'}} \
-                                                    // expected-note {{in call to 'uninit()'}}
+                                                    // both-note {{in call to 'uninit<float, false, false>()'}}
 
   static_assert(uninit<int*, true, true>(), ""); // both-error {{not an integral constant expression}} \
-                                                 // ref-note {{in call to 'uninit<int *, true, true>()'}} \
-                                                 // expected-note {{in call to 'uninit()'}}
+                                                 // both-note {{in call to 'uninit<int *, true, true>()'}}
   static_assert(uninit<int*, false, true>(), ""); // both-error {{not an integral constant expression}} \
-                                                  // ref-note {{in call to 'uninit<int *, false, true>()'}} \
-                                                  // expected-note {{in call to 'uninit()'}}
+                                                  // both-note {{in call to 'uninit<int *, false, true>()'}}
   static_assert(uninit<int*, true, false>(), ""); // both-error {{not an integral constant expression}} \
-                                                  // ref-note {{in call to 'uninit<int *, true, false>()'}} \
-                                                  // expected-note {{in call to 'uninit()'}}
+                                                  // both-note {{in call to 'uninit<int *, true, false>()'}}
   static_assert(uninit<int*, false, false>(), ""); // both-error {{not an integral constant expression}} \
-                                                   // ref-note {{in call to 'uninit<int *, false, false>()'}} \
-                                                   // expected-note {{in call to 'uninit()'}}
+                                                   // both-note {{in call to 'uninit<int *, false, false>()'}}
 
   constexpr int OverFlow() { // both-error {{never produces a constant expression}}
     int a = INT_MAX;
@@ -1242,6 +1232,13 @@ namespace Extern {
   }
   static_assert(&ExternNonLiteralVarDecl() == &nl, "");
 #endif
+
+  struct A {
+    int b;
+  };
+
+  extern constexpr A a{12};
+  static_assert(a.b == 12, "");
 }
 
 #if __cplusplus >= 201402L
@@ -1300,3 +1297,9 @@ namespace UnaryOpError {
   }
 }
 #endif
+
+namespace VolatileReads {
+  const volatile int b = 1;
+  static_assert(b, ""); // both-error {{not an integral constant expression}} \
+                        // both-note {{read of volatile-qualified type 'const volatile int' is not allowed in a constant expression}}
+}
