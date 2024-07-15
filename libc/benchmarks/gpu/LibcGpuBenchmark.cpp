@@ -110,14 +110,10 @@ void Benchmark::run_benchmarks() {
   gpu::sync_threads();
 
   for (Benchmark *b : benchmarks) {
-    gpu::memory_fence();
-
     if (id == 0)
       all_results.reset();
 
-    gpu::memory_fence();
     gpu::sync_threads();
-
     auto current_result = b->run();
     all_results.update(current_result);
     gpu::sync_threads();
