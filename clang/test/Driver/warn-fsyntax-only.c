@@ -5,4 +5,3 @@
 // CHECK-PP:  warning: argument unused during compilation: '-fsyntax-only' [-Wunused-command-line-argument]
 // CHECK-ASM: warning: argument unused during compilation: '-S' [-Wunused-command-line-argument]
 // CHECK-OBJ: warning: argument unused during compilation: '-c' [-Wunused-command-line-argument]
-
