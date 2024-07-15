@@ -677,6 +677,8 @@ bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
   // will be expanded as memcpy in libc, which returns the first
   // argument. On other platforms like arm-none-eabi, memcpy may be
   // expanded as library call without return value, like __aeabi_memcpy.
+  // Similarly, llvm.memset can be expanded to bzero, which doesn't have a
+  // return value either.
   const CallInst *Call = cast<CallInst>(I);
   if (Function *F = Call->getCalledFunction()) {
     Intrinsic::ID IID = F->getIntrinsicID();
@@ -685,7 +687,10 @@ bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
          (IID == Intrinsic::memmove &&
           TLI.getLibcallName(RTLIB::MEMMOVE) == StringRef("memmove")) ||
          (IID == Intrinsic::memset &&
-          TLI.getLibcallName(RTLIB::MEMSET) == StringRef("memset"))) &&
+          TLI.getLibcallName(RTLIB::MEMSET) == StringRef("memset") &&
+          (!isa<ConstantInt>(Call->getOperand(1)) ||
+           !cast<ConstantInt>(Call->getOperand(1))->isZero() ||
+           !TLI.getLibcallName(RTLIB::BZERO)))) &&
         (RetVal == Call->getArgOperand(0) ||
          isPointerBitcastEqualTo(RetVal, Call->getArgOperand(0))))
       return true;
