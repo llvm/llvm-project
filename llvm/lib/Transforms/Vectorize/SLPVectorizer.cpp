@@ -2493,8 +2493,9 @@ public:
       auto *I = cast<Instruction>(V);
       DeletedInstructions.insert(I);
     }
+    DenseSet<Value *> Processed;
     for (T *V : DeadVals) {
-      if (!V)
+      if (!V || !Processed.insert(V).second)
         continue;
       auto *I = cast<Instruction>(V);
       salvageDebugInfo(*I);
