@@ -261,7 +261,6 @@ if (NOT DEFINED MSVC)
 
     INSTALL_WITH_TOOLCHAIN
   )
-  target_link_libraries(FortranRuntime PRIVATE ${FORTRAN_MODULE_OBJECTS})
 else()
   add_flang_library(FortranRuntime
     ${sources}

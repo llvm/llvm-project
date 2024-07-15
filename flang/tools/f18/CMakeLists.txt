@@ -33,7 +33,7 @@ set(MODULES ${MODULES_WITH_IMPLEMENTATION} ${MODULES_WITHOUT_IMPLEMENTATION})
 
 # Init variable to hold extra object files coming from the Fortran modules;
 # these module files will be contributed from the CMakeLists in flang/tools/f18.
-unset(FORTRAN_MODULE_OBJECTS CACHE)
+set(module_objects "")
 
 # Create module files directly from the top-level module source directory.
 # If CMAKE_CROSSCOMPILING, then the newly built flang-new executable was
@@ -102,9 +102,14 @@ if (NOT CMAKE_CROSSCOMPILING)
     # If a module has been compiled into an object file, add the file to
     # the link line for the FortranRuntime library.
     if(include_in_link)
-      set(FORTRAN_MODULE_OBJECTS "${FORTRAN_MODULE_OBJECTS}" "${object_output}" CACHE INTERNAL "")
+      set(module_objects ${module_} ${object_output})
     endif()
   endforeach()
+
+  # Set a CACHE variable that is visible to the CMakeLists.txt in runtime/, so that
+  # the compiled Fortran modules can be added to the link line of the FortranRuntime
+  # library.
+  set(FORTRAN_MODULE_OBJECTS ${module_objects} CACHE INTERNAL "")
 
   # Special case for omp_lib.mod, because its source comes from openmp/runtime/src/include.
   # It also produces two module files: omp_lib.mod and omp_lib_kinds.mod.  Compile these
