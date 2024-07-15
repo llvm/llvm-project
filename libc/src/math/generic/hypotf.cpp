@@ -10,8 +10,9 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, hypotf, (float x, float y)) {
   using DoubleBits = fputil::FPBits<double>;
@@ -70,4 +71,4 @@ LLVM_LIBC_FUNCTION(float, hypotf, (float x, float y)) {
   return static_cast<float>(result.get_val());
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

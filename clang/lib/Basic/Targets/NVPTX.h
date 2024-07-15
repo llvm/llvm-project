@@ -120,8 +120,7 @@ public:
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
-    // FIXME: implement
-    return TargetInfo::CharPtrBuiltinVaList;
+    return TargetInfo::VoidPtrBuiltinVaList;
   }
 
   bool isValidCPUName(StringRef Name) const override {

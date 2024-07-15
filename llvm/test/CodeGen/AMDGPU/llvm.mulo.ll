@@ -334,7 +334,7 @@ bb:
 define amdgpu_kernel void @umulo_i64_s(i64 %x, i64 %y) {
 ; SI-LABEL: umulo_i64_s:
 ; SI:       ; %bb.0: ; %bb
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s2
@@ -367,7 +367,7 @@ define amdgpu_kernel void @umulo_i64_s(i64 %x, i64 %y) {
 ;
 ; GFX9-LABEL: umulo_i64_s:
 ; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_mul_i32 s7, s0, s3
 ; GFX9-NEXT:    s_mul_hi_u32 s8, s0, s2
@@ -396,7 +396,7 @@ define amdgpu_kernel void @umulo_i64_s(i64 %x, i64 %y) {
 ;
 ; GFX10-LABEL: umulo_i64_s:
 ; GFX10:       ; %bb.0: ; %bb
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_mul_i32 s7, s0, s3
 ; GFX10-NEXT:    s_mul_hi_u32 s8, s0, s2
@@ -425,7 +425,7 @@ define amdgpu_kernel void @umulo_i64_s(i64 %x, i64 %y) {
 ;
 ; GFX11-LABEL: umulo_i64_s:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_mul_i32 s7, s0, s3
 ; GFX11-NEXT:    s_mul_hi_u32 s8, s0, s2
@@ -456,7 +456,7 @@ define amdgpu_kernel void @umulo_i64_s(i64 %x, i64 %y) {
 ;
 ; GFX12-LABEL: umulo_i64_s:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX12-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX12-NEXT:    s_mov_b32 s5, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_mul_hi_u32 s7, s0, s3
@@ -497,7 +497,7 @@ bb:
 define amdgpu_kernel void @smulo_i64_s(i64 %x, i64 %y) {
 ; SI-LABEL: smulo_i64_s:
 ; SI:       ; %bb.0: ; %bb
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x9
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s2
@@ -546,7 +546,7 @@ define amdgpu_kernel void @smulo_i64_s(i64 %x, i64 %y) {
 ;
 ; GFX9-LABEL: smulo_i64_s:
 ; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_mul_i32 s7, s0, s3
 ; GFX9-NEXT:    s_mul_hi_u32 s8, s0, s2
@@ -587,7 +587,7 @@ define amdgpu_kernel void @smulo_i64_s(i64 %x, i64 %y) {
 ;
 ; GFX10-LABEL: smulo_i64_s:
 ; GFX10:       ; %bb.0: ; %bb
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_mul_i32 s7, s0, s3
 ; GFX10-NEXT:    s_mul_hi_u32 s8, s0, s2
@@ -628,7 +628,7 @@ define amdgpu_kernel void @smulo_i64_s(i64 %x, i64 %y) {
 ;
 ; GFX11-LABEL: smulo_i64_s:
 ; GFX11:       ; %bb.0: ; %bb
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_mul_i32 s7, s0, s3
 ; GFX11-NEXT:    s_mul_hi_u32 s8, s0, s2
@@ -673,7 +673,7 @@ define amdgpu_kernel void @smulo_i64_s(i64 %x, i64 %y) {
 ;
 ; GFX12-LABEL: smulo_i64_s:
 ; GFX12:       ; %bb.0: ; %bb
-; GFX12-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX12-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX12-NEXT:    s_mov_b32 s5, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_mul_hi_u32 s7, s0, s3

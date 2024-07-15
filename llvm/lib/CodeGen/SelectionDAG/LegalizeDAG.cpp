@@ -5608,10 +5608,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     MVT MidVT = getPromotedVectorElementType(TLI, EltVT, NewEltVT);
 
     SmallVector<SDValue, 8> NewOps;
-    for (unsigned I = 0, E = Node->getNumOperands(); I != E; ++I) {
-      SDValue Op = Node->getOperand(I);
+    for (const SDValue &Op : Node->op_values())
       NewOps.push_back(DAG.getNode(ISD::BITCAST, SDLoc(Op), MidVT, Op));
-    }
 
     SDLoc SL(Node);
     SDValue Concat =

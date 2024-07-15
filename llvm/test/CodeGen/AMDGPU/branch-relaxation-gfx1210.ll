@@ -22,9 +22,9 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 define amdgpu_kernel void @uniform_conditional_max_short_forward_branch(ptr addrspace(1) %arg, i32 %cnd) #0 {
 ; GCN-LABEL: uniform_conditional_max_short_forward_branch:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_b32 s2, s[0:1], 0x2c
+; GCN-NEXT:    s_load_b32 s0, s[2:3], 0x2c
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_cmp_eq_u32 s2, 0
+; GCN-NEXT:    s_cmp_eq_u32 s0, 0
 ; GCN-NEXT:    s_cbranch_scc0 .LBB0_1
 ; GCN-NEXT:  ; %bb.3: ; %bb
 ; GCN-NEXT:    s_add_pc_i64 .LBB0_2-.Lpost_addpc0
@@ -37,10 +37,10 @@ define amdgpu_kernel void @uniform_conditional_max_short_forward_branch(ptr addr
 ; GCN-NEXT:    s_sleep 0
 ; GCN-NEXT:  .LBB0_2: ; %bb3
 ; GCN-NEXT:    s_wait_xcnt 0x0
-; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GCN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GCN-NEXT:    s_load_b64 s[2:3], s[2:3], 0x24
+; GCN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SYS
+; GCN-NEXT:    global_store_b32 v0, v1, s[2:3] scope:SCOPE_SYS
 ; GCN-NEXT:    s_wait_storecnt 0x0
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
@@ -64,9 +64,9 @@ bb3:
 define amdgpu_kernel void @uniform_conditional_min_long_forward_branch(ptr addrspace(1) %arg, i32 %cnd) #0 {
 ; GCN-LABEL: uniform_conditional_min_long_forward_branch:
 ; GCN:       ; %bb.0: ; %bb0
-; GCN-NEXT:    s_load_b32 s2, s[0:1], 0x2c
+; GCN-NEXT:    s_load_b32 s0, s[2:3], 0x2c
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_cmp_eq_u32 s2, 0
+; GCN-NEXT:    s_cmp_eq_u32 s0, 0
 ; GCN-NEXT:    s_cbranch_scc0 .LBB1_1
 ; GCN-NEXT:  ; %bb.3: ; %bb0
 ; GCN-NEXT:    s_add_pc_i64 .LBB1_2-.Lpost_addpc1
@@ -80,10 +80,10 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_branch(ptr addrs
 ; GCN-NEXT:    s_sleep 0
 ; GCN-NEXT:  .LBB1_2: ; %bb3
 ; GCN-NEXT:    s_wait_xcnt 0x0
-; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GCN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GCN-NEXT:    s_load_b64 s[2:3], s[2:3], 0x24
+; GCN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SYS
+; GCN-NEXT:    global_store_b32 v0, v1, s[2:3] scope:SCOPE_SYS
 ; GCN-NEXT:    s_wait_storecnt 0x0
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
@@ -108,12 +108,12 @@ bb3:
 define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr addrspace(1) %arg, float %cnd) #0 {
 ; GCN-LABEL: uniform_conditional_min_long_forward_vcnd_branch:
 ; GCN:       ; %bb.0: ; %bb0
-; GCN-NEXT:    s_load_b32 s2, s[0:1], 0x2c
+; GCN-NEXT:    s_load_b32 s0, s[2:3], 0x2c
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_cmp_eq_f32 s2, 0
-; GCN-NEXT:    s_cselect_b32 s3, -1, 0
+; GCN-NEXT:    s_cmp_eq_f32 s0, 0
+; GCN-NEXT:    s_cselect_b32 s1, -1, 0
 ; GCN-NEXT:    s_wait_alu 0xfffe
-; GCN-NEXT:    s_and_b32 vcc_lo, exec_lo, s3
+; GCN-NEXT:    s_and_b32 vcc_lo, exec_lo, s1
 ; GCN-NEXT:    s_cbranch_vccz .LBB2_1
 ; GCN-NEXT:  ; %bb.3: ; %bb0
 ; GCN-NEXT:    s_add_pc_i64 .LBB2_2-.Lpost_addpc2
@@ -128,10 +128,10 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GCN-NEXT:    s_sleep 0
 ; GCN-NEXT:  .LBB2_2: ; %bb3
 ; GCN-NEXT:    s_wait_xcnt 0x0
-; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GCN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GCN-NEXT:    s_load_b64 s[2:3], s[2:3], 0x24
+; GCN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SYS
+; GCN-NEXT:    global_store_b32 v0, v1, s[2:3] scope:SCOPE_SYS
 ; GCN-NEXT:    s_wait_storecnt 0x0
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
@@ -155,7 +155,8 @@ bb3:
 define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-LABEL: min_long_forward_vbranch:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_load_b32 v2, v0, s[0:1] scale_offset scope:SCOPE_SYS
@@ -250,25 +251,25 @@ bb3:
 define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(ptr addrspace(1) %arg, i32 %arg1) {
 ; GCN-LABEL: uniform_unconditional_min_long_forward_branch:
 ; GCN:       ; %bb.0: ; %bb0
-; GCN-NEXT:    s_load_b32 s2, s[0:1], 0x2c
+; GCN-NEXT:    s_load_b32 s0, s[2:3], 0x2c
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_cmp_eq_u32 s2, 0
-; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    s_cmp_eq_u32 s0, 0
+; GCN-NEXT:    s_mov_b32 s0, -1
 ; GCN-NEXT:    s_cbranch_scc0 .LBB5_1
 ; GCN-NEXT:  ; %bb.7: ; %bb0
 ; GCN-NEXT:    s_add_pc_i64 .LBB5_4-.Lpost_addpc6
 ; GCN-NEXT:  .Lpost_addpc6:
 ; GCN-NEXT:  .LBB5_1: ; %Flow
 ; GCN-NEXT:    s_wait_alu 0xfffe
-; GCN-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s2
+; GCN-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GCN-NEXT:    s_cbranch_vccnz .LBB5_3
 ; GCN-NEXT:  .LBB5_2: ; %bb2
 ; GCN-NEXT:    v_mov_b32_e32 v0, 17
 ; GCN-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
 ; GCN-NEXT:    s_wait_storecnt 0x0
 ; GCN-NEXT:  .LBB5_3: ; %bb4
+; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GCN-NEXT:    s_wait_xcnt 0x0
-; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
 ; GCN-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 63
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    global_store_b32 v0, v1, s[0:1] scope:SCOPE_SYS
@@ -349,10 +350,9 @@ loop:
 define amdgpu_kernel void @expand_requires_expand(i32 %cond0) #0 {
 ; GCN-LABEL: expand_requires_expand:
 ; GCN:       ; %bb.0: ; %bb0
-; GCN-NEXT:    s_load_b32 s0, s[0:1], 0x24
+; GCN-NEXT:    s_load_b32 s0, s[2:3], 0x24
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_lt_i32 s0, 0
-; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    s_cselect_b32 s0, -1, 0
 ; GCN-NEXT:    s_wait_alu 0xfffe
 ; GCN-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
@@ -418,14 +418,16 @@ bb3:
 define amdgpu_kernel void @uniform_inside_divergent(ptr addrspace(1) %out, i32 %cond) #0 {
 ; GCN-LABEL: uniform_inside_divergent:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_mov_b32 s3, exec_lo
+; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GCN-NEXT:    s_mov_b32 s4, exec_lo
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GCN-NEXT:    v_cmpx_gt_u32_e32 16, v0
 ; GCN-NEXT:    s_cbranch_execnz .LBB8_1
 ; GCN-NEXT:  ; %bb.4: ; %entry
 ; GCN-NEXT:    s_add_pc_i64 .LBB8_3-.Lpost_addpc10
 ; GCN-NEXT:  .Lpost_addpc10:
 ; GCN-NEXT:  .LBB8_1: ; %if
-; GCN-NEXT:    s_load_b96 s[0:2], s[0:1], 0x24
+; GCN-NEXT:    s_load_b96 s[0:2], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_lg_u32 s2, 0
@@ -437,7 +439,7 @@ define amdgpu_kernel void @uniform_inside_divergent(ptr addrspace(1) %out, i32 %
 ; GCN-NEXT:  .LBB8_3: ; %endif
 ; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    s_wait_alu 0xfffe
-; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s3
+; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; GCN-NEXT:    s_sleep 5
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
@@ -537,11 +539,11 @@ ret:
 define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i64 %arg5) #0 {
 ; GCN-LABEL: long_branch_hang:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_b128 s[4:7], s[0:1], 0x2c
-; GCN-NEXT:    s_mov_b32 s3, 0
+; GCN-NEXT:    s_load_b128 s[4:7], s[2:3], 0x2c
+; GCN-NEXT:    s_mov_b32 s1, 0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_eq_u32 s4, 0
-; GCN-NEXT:    s_cselect_b32 s2, -1, 0
+; GCN-NEXT:    s_cselect_b32 s0, -1, 0
 ; GCN-NEXT:    s_cmp_lg_u32 s4, 0
 ; GCN-NEXT:    s_mov_b32 s4, -1
 ; GCN-NEXT:    s_cselect_b32 s8, -1, 0
@@ -559,22 +561,22 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:  .Lpost_addpc15:
 ; GCN-NEXT:  .LBB10_2: ; %Flow5
 ; GCN-NEXT:    s_wait_alu 0xfffe
-; GCN-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s3
+; GCN-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s1
 ; GCN-NEXT:    s_cbranch_vccz .LBB10_3
 ; GCN-NEXT:  ; %bb.14: ; %Flow5
 ; GCN-NEXT:    s_add_pc_i64 .LBB10_6-.Lpost_addpc16
 ; GCN-NEXT:  .Lpost_addpc16:
 ; GCN-NEXT:  .LBB10_3: ; %bb14
 ; GCN-NEXT:    s_cmp_lt_i32 s5, 9
-; GCN-NEXT:    s_cselect_b32 s3, -1, 0
+; GCN-NEXT:    s_cselect_b32 s1, -1, 0
 ; GCN-NEXT:    s_cmp_lt_i32 s6, s7
 ; GCN-NEXT:    s_cselect_b32 s4, -1, 0
 ; GCN-NEXT:    s_wait_alu 0xfffe
-; GCN-NEXT:    s_or_b32 s3, s4, s3
+; GCN-NEXT:    s_or_b32 s1, s4, s1
 ; GCN-NEXT:    s_wait_alu 0xfffe
-; GCN-NEXT:    s_and_b32 s2, s2, s3
+; GCN-NEXT:    s_and_b32 s0, s0, s1
 ; GCN-NEXT:    s_wait_alu 0xfffe
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s2
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GCN-NEXT:  ; %bb.8: ; %bb14
 ; GCN-NEXT:    s_add_pc_i64 .LBB10_7-.Lpost_addpc13
 ; GCN-NEXT:  .Lpost_addpc13:
@@ -585,7 +587,7 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_sleep 0
 ; GCN-NEXT:    s_wait_alu 0xfffe
-; GCN-NEXT:    s_mov_b32 s3, s8
+; GCN-NEXT:    s_mov_b32 s1, s8
 ; GCN-NEXT:    s_sleep 0
 ; GCN-NEXT:    s_cbranch_execz .LBB10_5
 ; GCN-NEXT:  ; %bb.16: ; %bb13
@@ -593,13 +595,13 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:  .Lpost_addpc17:
 ; GCN-NEXT:  .LBB10_5: ; %bb9
 ; GCN-NEXT:    s_cmp_lt_i32 s7, 11
-; GCN-NEXT:    s_cselect_b32 s3, -1, 0
+; GCN-NEXT:    s_cselect_b32 s1, -1, 0
 ; GCN-NEXT:    s_cmp_ge_i32 s6, s7
 ; GCN-NEXT:    s_cselect_b32 s4, -1, 0
 ; GCN-NEXT:    s_wait_alu 0xfffe
-; GCN-NEXT:    s_and_b32 s3, s4, s3
+; GCN-NEXT:    s_and_b32 s1, s4, s1
 ; GCN-NEXT:    s_wait_alu 0xfffe
-; GCN-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s3
+; GCN-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s1
 ; GCN-NEXT:    s_cbranch_vccnz .LBB10_6
 ; GCN-NEXT:  ; %bb.18: ; %bb9
 ; GCN-NEXT:    s_add_pc_i64 .LBB10_3-.Lpost_addpc18
@@ -607,15 +609,14 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:  .LBB10_6:
 ; GCN-NEXT:    ; implicit-def: $vgpr0
 ; GCN-NEXT:  .LBB10_7: ; %bb19
-; GCN-NEXT:    s_load_b64 s[2:3], s[0:1], 0x3c
+; GCN-NEXT:    s_load_b64 s[0:1], s[2:3], 0x3c
 ; GCN-NEXT:    s_wait_xcnt 0x0
-; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GCN-NEXT:    s_load_b64 s[2:3], s[2:3], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
-; GCN-NEXT:    s_lshl_b64 s[2:3], s[2:3], 2
-; GCN-NEXT:    s_wait_xcnt 0x0
+; GCN-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
 ; GCN-NEXT:    s_wait_alu 0xfffe
-; GCN-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
+; GCN-NEXT:    s_add_nc_u64 s[0:1], s[2:3], s[0:1]
 ; GCN-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
