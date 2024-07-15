@@ -92,26 +92,25 @@ S1Ty set_difference(const S1Ty &S1, const S2Ty &S2) {
   return Result;
 }
 
-/// set_subtract_vec(A, B) - Compute A := A - B, where B can be a vector.
-///
-template <class S1Ty, class S2Ty>
-void set_subtract_vec(S1Ty &S1, const S2Ty &S2) {
-  for (typename S2Ty::const_iterator SI = S2.begin(), SE = S2.end(); SI != SE;
-       ++SI)
-    S1.erase(*SI);
-}
-
 /// set_subtract(A, B) - Compute A := A - B
 ///
 /// Selects the set to iterate based on the relative sizes of A and B for better
 /// efficiency.
 ///
 template <class S1Ty, class S2Ty> void set_subtract(S1Ty &S1, const S2Ty &S2) {
-  if (S1.size() < S2.size()) {
-    for (typename S1Ty::iterator SI = S1.begin(), SE = S1.end(); SI != SE; ++SI)
-      if (S2.count(*SI))
-        S1.erase(SI);
-    return;
+  using ElemTy = decltype(*S1.begin());
+  // A couple callers pass a vector for S2, which doesn't support count(), and
+  // wouldn't be efficient if it did. In the absence of a more direct check,
+  // ensure the type supports the contains or find interfaces.
+  if constexpr (detail::HasMemberContains<S2Ty, ElemTy> ||
+                detail::HasMemberFind<S2Ty, ElemTy>) {
+    if (S1.size() < S2.size()) {
+      for (typename S1Ty::iterator SI = S1.begin(), SE = S1.end(); SI != SE;
+           ++SI)
+        if (S2.count(*SI))
+          S1.erase(SI);
+      return;
+    }
   }
   for (typename S2Ty::const_iterator SI = S2.begin(), SE = S2.end(); SI != SE;
        ++SI)
