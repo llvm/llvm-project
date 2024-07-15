@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# ===- HeaderFile Class for libc function headers  -----------*- python -*--==#
+# ===- HeaderFile Class for GPU --export-decls version function headers  -----------*- python -*--==#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
@@ -34,9 +34,6 @@ class HeaderFile:
     def add_function(self, function):
         self.functions.append(function)
 
-    def add_include(self, include):
-        self.includes.append(include)
-
     def __str__(self):
         content = []
 
@@ -65,21 +62,6 @@ class HeaderFile:
         content.append("#ifdef __cplusplus")
         content.append('extern "C" {')
         content.append("#endif\n")
-
-        for include in self.includes:
-            content.append(str(include))
-
-        for macro in self.macros:
-            content.append(f"{macro}\n")
-
-        for type_ in self.types:
-            content.append(f"{type_}")
-
-        if self.enumerations:
-            combined_enum_content = ",\n  ".join(
-                str(enum) for enum in self.enumerations
-            )
-            content.append(f"\nenum {{\n  {combined_enum_content},\n}};")
 
         for function in self.functions:
             content.append(f"{function} __LIBC_ATTRS;\n")

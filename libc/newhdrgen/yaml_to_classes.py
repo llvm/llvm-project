@@ -12,7 +12,7 @@ import yaml
 import argparse
 from pathlib import Path
 from header import HeaderFile
-from header2 import HeaderFile as HeaderFile2
+from gpu_headers import HeaderFile as HeaderFile2
 from class_implementation.classes.macro import Macro
 from class_implementation.classes.type import Type
 from class_implementation.classes.function import Function
