@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// UNSUPPORTED: no-threads
 
 // <mutex>
 
@@ -18,31 +17,39 @@
 //     -> lock_guard<_Mutex>;  // C++17
 
 #include <mutex>
-#include <cstdlib>
 #include <cassert>
-
-#include "make_test_thread.h"
 #include "test_macros.h"
 
-std::mutex m;
+struct Lock {
+  bool locked = false;
 
-void do_try_lock() {
-  assert(m.try_lock() == false);
-}
+  Lock() = default;
+  ~Lock() { assert(!locked); }
 
-int main(int, char**) {
-  {
-    std::lock_guard<std::mutex> lg(m);
-    std::thread t = support::make_test_thread(do_try_lock);
-    t.join();
+  void lock() {
+    assert(!locked);
+    locked = true;
+  }
+  void unlock() {
+    assert(locked);
+    locked = false;
   }
 
-  m.lock();
-  m.unlock();
+  Lock(Lock const&)            = delete;
+  Lock& operator=(Lock const&) = delete;
+};
+
+int main(int, char**) {
+  Lock l;
+  {
+    std::lock_guard<Lock> lg(l);
+    assert(l.locked);
+  }
+  assert(!l.locked);
 
 #if TEST_STD_VER >= 17
-  std::lock_guard lg(m);
-  static_assert((std::is_same<decltype(lg), std::lock_guard<decltype(m)>>::value), "" );
+  std::lock_guard lg(l);
+  static_assert((std::is_same<decltype(l), std::lock_guard<decltype(l)>>::value), "");
 #endif
 
   return 0;

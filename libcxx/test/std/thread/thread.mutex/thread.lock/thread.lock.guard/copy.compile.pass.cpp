@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: no-threads
-
 // <mutex>
 
 // template <class Mutex> class lock_guard;
@@ -16,11 +14,9 @@
 
 #include <mutex>
 
-int main(int, char**)
-{
-    std::mutex m;
-    std::lock_guard<std::mutex> lg0(m);
-    std::lock_guard<std::mutex> lg(lg0);
+class Lock;
 
+int main(int, char**) {
+  static_assert(!std::is_copy_constructible<std::lock_guard<Lock>>::value, "");
   return 0;
 }
