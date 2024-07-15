@@ -309,7 +309,7 @@ class DXILOp {
   list<LLVMType> result = [];
 
   // List of constraints predicated on Shader Model version.
-  // If no contraints are specified,
+  // If no constraints are specified,
   // a) operation is assumed to be supported in Shader Model 6.0 and later.
   // b) has no overload types
   // c) is supported in all shader stage kinds

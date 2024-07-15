@@ -299,14 +299,14 @@ static std::string getOverloadKindStr(const Record *R) {
 static std::string getConstraintString(const SmallVector<Record *> Recs) {
   std::string ConstraintString = "";
   std::string Prefix = "";
-  ConstraintString.append("{{");
+  ConstraintString.append("{");
   // If no constraints were specified, assume the operation
   // a) to be supported in SM 6.0 and later
   // b) has no overload types
   // c) is supported in all shader stage kinds
   if (Recs.empty()) {
     ConstraintString.append(
-        "{6, 0}, OverloadKind::UNDEFINED, ShaderKind::allKinds}");
+        "{{6, 0}, OverloadKind::UNDEFINED, ShaderKind::allKinds}}");
   }
   for (auto ConstrRec : Recs) {
     auto SMConstrRec = ConstrRec->getValueAsDef("pred");
@@ -314,7 +314,7 @@ static std::string getConstraintString(const SmallVector<Record *> Recs) {
         SMConstrRec->getValueAsDef("sm_version")->getValueAsInt("Major");
     unsigned Minor =
         SMConstrRec->getValueAsDef("sm_version")->getValueAsInt("Minor");
-    ConstraintString.append("{")
+    ConstraintString.append(Prefix).append("{{")
         .append(std::to_string(Major))
         .append(", ")
         .append(std::to_string(Minor).append("}, "));
@@ -364,6 +364,7 @@ static std::string getConstraintString(const SmallVector<Record *> Recs) {
         .append(", ")
         .append(StageMaskString);
     ConstraintString.append("}");
+    Prefix = ", ";
   }
   ConstraintString.append("}");
   return ConstraintString;
