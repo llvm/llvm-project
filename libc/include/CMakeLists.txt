@@ -17,7 +17,7 @@ add_header(
     __llvm-libc-common.h
 )
 
-if (USE_NEW_HEADER_GEN)
+if (LIBC_USE_NEW_HEADER_GEN)
   add_gen_header2(
     ctype
     YAML_FILE ../libc/newhdrgen/yaml/ctype.yaml
