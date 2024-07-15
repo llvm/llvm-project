@@ -54,7 +54,6 @@ struct ConvertToSPIRVPass final
       config.strictMode = GreedyRewriteStrictness::ExistingOps;
       if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
         return signalPassFailure();
-      return;
     }
 
     spirv::TargetEnvAttr targetAttr = spirv::lookupTargetEnvOrDefault(op);
