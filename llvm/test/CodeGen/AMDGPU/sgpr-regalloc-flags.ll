@@ -34,6 +34,7 @@
 ; O0-NEXT: Live Interval Analysis
 ; O0-NEXT: Virtual Register Map
 ; O0-NEXT: Live Register Matrix
+; O0-NEXT: Machine Natural Loop Construction
 ; O0-NEXT: SI Pre-allocate WWM Registers
 ; O0-NEXT: Fast Register Allocator
 ; O0-NEXT: SI Lower WWM Copies
