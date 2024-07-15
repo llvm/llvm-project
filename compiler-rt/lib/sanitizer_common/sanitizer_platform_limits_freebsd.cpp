@@ -104,6 +104,8 @@ void *__sanitizer_get_link_map_by_dlopen_handle(void *handle) {
   return internal_dlinfo(handle, RTLD_DI_LINKMAP, &p) == 0 ? p : nullptr;
 }
 
+unsigned struct_ptrace_ptrace_io_desc_struct_sz = sizeof(struct ptrace_io_desc);
+unsigned struct_ptrace_ptrace_lwpinfo_struct_sz = sizeof(struct ptrace_lwpinfo);
 unsigned struct_cpuset_sz = sizeof(cpuset_t);
 unsigned struct_cap_rights_sz = sizeof(cap_rights_t);
 unsigned struct_utsname_sz = sizeof(struct utsname);
@@ -154,6 +156,9 @@ const uptr sig_ign = (uptr)SIG_IGN;
 const uptr sig_dfl = (uptr)SIG_DFL;
 const uptr sig_err = (uptr)SIG_ERR;
 const uptr sa_siginfo = (uptr)SA_SIGINFO;
+
+int ptrace_pt_io = PT_IO;
+int ptrace_pt_lwpstatus = PT_LWPINFO;
 
 int shmctl_ipc_stat = (int)IPC_STAT;
 int shmctl_ipc_info = (int)IPC_INFO;

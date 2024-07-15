@@ -746,6 +746,11 @@ typedef struct __sanitizer_cpuset __sanitizer_cpuset_t;
 extern unsigned struct_cpuset_sz;
 
 typedef unsigned long long __sanitizer_eventfd_t;
+
+extern unsigned struct_ptrace_ptrace_io_desc_struct_sz;
+extern unsigned struct_ptrace_ptrace_lwpinfo_struct_sz;
+extern int ptrace_pt_io;
+extern int ptrace_pt_lwpstatus;
 }  // namespace __sanitizer
 
 #  define CHECK_TYPE_SIZE(TYPE) \
