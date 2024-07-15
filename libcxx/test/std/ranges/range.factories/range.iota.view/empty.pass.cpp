@@ -19,7 +19,7 @@
 #include "types.h"
 
 template <typename R>
-concept HasEmpty = requires(R r) {
+concept HasEmpty = requires(const R r) {
   std::ranges::empty(r);
   { r.empty() } -> std::same_as<bool>;
 };
@@ -27,30 +27,10 @@ concept HasEmpty = requires(R r) {
 constexpr void test_empty_iota_sfinae() {
   std::vector<int> ev;
 
-  // Both parameters are non-const
-  {
-    auto iv = std::views::iota(std::ranges::begin(ev), std::ranges::end(ev));
+  auto iv = std::views::iota(std::ranges::begin(ev), std::ranges::end(ev));
 
-    static_assert(HasEmpty<decltype(iv)>);
-  }
-  // Left parameter is const
-  {
-    auto iv = std::views::iota(std::ranges::begin(std::as_const(ev)), std::ranges::end(ev));
-
-    static_assert(HasEmpty<decltype(iv)>);
-  }
-  // Right parameter is const
-  {
-    auto iv = std::views::iota(std::ranges::begin(ev), std::ranges::end(std::as_const(ev)));
-
-    static_assert(HasEmpty<decltype(iv)>);
-  }
-  // Both parameters are const
-  {
-    auto iv = std::views::iota(std::ranges::begin(std::as_const(ev)), std::ranges::end(std::as_const(ev)));
-
-    static_assert(HasEmpty<decltype(iv)>);
-  }
+  static_assert(HasEmpty<decltype(iv)>);
+  static_assert(HasEmpty<decltype(std::as_const(iv))>);
 }
 
 constexpr void test_nonempty_iota_sfinae() {
@@ -86,30 +66,10 @@ constexpr void test_nonempty_iota_sfinae() {
 constexpr void test_empty_iota() {
   std::vector<int> ev;
 
-  // Both parameters are non-const
-  {
-    auto iv = std::views::iota(std::ranges::begin(ev), std::ranges::end(ev));
+  auto iv = std::views::iota(std::ranges::begin(ev), std::ranges::end(ev));
 
-    assert(iv.empty());
-  }
-  // Left parameter is const
-  {
-    auto iv = std::views::iota(std::ranges::begin(std::as_const(ev)), std::ranges::end(ev));
-
-    assert(iv.empty());
-  }
-  // Right parameter is const
-  {
-    auto iv = std::views::iota(std::ranges::begin(ev), std::ranges::end(std::as_const(ev)));
-
-    assert(iv.empty());
-  }
-  // Both parameters are const
-  {
-    auto iv = std::views::iota(std::ranges::begin(std::as_const(ev)), std::ranges::end(std::as_const(ev)));
-
-    assert(iv.empty());
-  }
+  assert(iv.empty());
+  assert(std::as_const(iv).empty());
 }
 
 constexpr void test_nonempty_iota() {
