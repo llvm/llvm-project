@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
 template<typename T, typename U>
-struct X0 : T::template apply<U> { 
+struct X0 : T::template apply<U> {
   X0(U u) : T::template apply<U>(u) { }
 };
 
 template<typename T, typename U>
-struct X1 : T::apply<U> { }; // expected-error{{use 'template' keyword to treat 'apply' as a dependent template name}}
+struct X1 : T::apply<U> { }; // expected-warning{{use 'template' keyword to treat 'apply' as a dependent template name}}
 
 template<typename T>
 struct X2 : vector<T> { }; // expected-error{{no template named 'vector'}}
@@ -85,7 +85,7 @@ namespace PR6081 {
   struct A { };
 
   template<typename T>
-  class B : public A<T> 
+  class B : public A<T>
   {
   public:
     template< class X >
@@ -109,9 +109,9 @@ namespace PR6081 {
 
 namespace PR6413 {
   template <typename T> class Base_A { };
-  
+
   class Base_B { };
-  
+
   template <typename T>
   class Derived
     : public virtual Base_A<T>
@@ -120,12 +120,12 @@ namespace PR6413 {
 }
 
 namespace PR5812 {
-  template <class T> struct Base { 
-    Base* p; 
-  }; 
+  template <class T> struct Base {
+    Base* p;
+  };
 
-  template <class T> struct Derived: public Base<T> { 
-    typename Derived::Base* p; // meaning Derived::Base<T> 
+  template <class T> struct Derived: public Base<T> {
+    typename Derived::Base* p; // meaning Derived::Base<T>
   };
 
   Derived<int> di;

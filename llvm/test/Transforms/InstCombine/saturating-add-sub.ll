@@ -1062,6 +1062,16 @@ define <2 x i8> @test_vector_usub_add_nuw_no_ov_nonsplat1(<2 x i8> %a) {
   ret <2 x i8> %r
 }
 
+define <3 x i8> @test_vector_usub_add_nuw_no_ov_nonsplat1_poison(<3 x i8> %a) {
+; CHECK-LABEL: @test_vector_usub_add_nuw_no_ov_nonsplat1_poison(
+; CHECK-NEXT:    [[R:%.*]] = add <3 x i8> [[A:%.*]], <i8 0, i8 1, i8 poison>
+; CHECK-NEXT:    ret <3 x i8> [[R]]
+;
+  %b = add nuw <3 x i8> %a, <i8 10, i8 10, i8 10>
+  %r = call <3 x i8> @llvm.usub.sat.v3i8(<3 x i8> %b, <3 x i8> <i8 10, i8 9, i8 poison>)
+  ret <3 x i8> %r
+}
+
 ; Can be optimized if the add nuw RHS constant range handles non-splat vectors.
 define <2 x i8> @test_vector_usub_add_nuw_no_ov_nonsplat2(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_usub_add_nuw_no_ov_nonsplat2(

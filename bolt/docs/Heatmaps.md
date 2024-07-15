@@ -34,6 +34,7 @@ $ llvm-bolt-heatmap -p perf.data <executable>
 By default the heatmap will be dumped to *stdout*. You can change it
 with `-o <heatmapfile>` option.
 
+
 If you prefer to look at the data in a browser (or would like to share
 it that way), then you can use an HTML conversion tool. E.g.:
 

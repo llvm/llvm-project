@@ -497,6 +497,16 @@ add_entrypoint_object(
     .exit_handler
 )
 
+list(APPEND exit_deps
+  libc.src.__support.OSUtil.osutil
+  ._Exit
+)
+if (NOT LIBC_TARGET_OS_IS_BAREMETAL)
+  list(APPEND exit_deps
+    .atexit
+  )
+endif()
+
 add_entrypoint_object(
   exit
   SRCS
@@ -504,10 +514,7 @@ add_entrypoint_object(
   HDRS
     exit.h
   DEPENDS
-    ._Exit
-    .atexit
-    libc.src.__support.OSUtil.osutil
-    .exit_handler
+    ${exit_deps}
 )
 
 add_entrypoint_object(

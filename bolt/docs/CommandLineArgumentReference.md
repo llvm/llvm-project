@@ -694,6 +694,10 @@
 
   Use a modified clustering algorithm geared towards minimizing branches
 
+- `--name-similarity-function-matching-threshold=<uint>`
+
+  Match functions using namespace and edit distance.
+
 - `--no-inline`
 
   Disable all inlining (overrides other inlining options)

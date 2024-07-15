@@ -92,8 +92,8 @@ define i8 @ctlo_i8_undef(i8 %x) {
 ; X86-CLZ-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-CLZ-NEXT:    notb %al
 ; X86-CLZ-NEXT:    movzbl %al, %eax
+; X86-CLZ-NEXT:    shll $24, %eax
 ; X86-CLZ-NEXT:    lzcntl %eax, %eax
-; X86-CLZ-NEXT:    addl $-24, %eax
 ; X86-CLZ-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-CLZ-NEXT:    retl
 ;
@@ -101,8 +101,8 @@ define i8 @ctlo_i8_undef(i8 %x) {
 ; X64-CLZ:       # %bb.0:
 ; X64-CLZ-NEXT:    notb %dil
 ; X64-CLZ-NEXT:    movzbl %dil, %eax
+; X64-CLZ-NEXT:    shll $24, %eax
 ; X64-CLZ-NEXT:    lzcntl %eax, %eax
-; X64-CLZ-NEXT:    addl $-24, %eax
 ; X64-CLZ-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-CLZ-NEXT:    retq
   %tmp1 = xor i8 %x, -1

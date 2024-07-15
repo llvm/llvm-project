@@ -307,10 +307,22 @@ def testOptionalOperandOp():
 # CHECK-LABEL: TEST: testCustomAttribute
 @run
 def testCustomAttribute():
-    with Context() as ctx:
+    with Context() as ctx, Location.unknown():
         a = test.TestAttr.get()
         # CHECK: #python_test.test_attr
         print(a)
+
+        # CHECK: python_test.custom_attributed_op  {
+        # CHECK: #python_test.test_attr
+        # CHECK: }
+        op2 = test.CustomAttributedOp(a)
+        print(f"{op2}")
+
+        # CHECK: #python_test.test_attr
+        print(f"{op2.test_attr}")
+
+        # CHECK: TestAttr(#python_test.test_attr)
+        print(repr(op2.test_attr))
 
         # The following cast must not assert.
         b = test.TestAttr(a)

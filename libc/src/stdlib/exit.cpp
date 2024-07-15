@@ -9,14 +9,15 @@
 #include "src/stdlib/exit.h"
 #include "src/__support/OSUtil/exit.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 extern "C" void __cxa_finalize(void *);
-
-namespace LIBC_NAMESPACE {
 
 [[noreturn]] LLVM_LIBC_FUNCTION(void, exit, (int status)) {
   __cxa_finalize(nullptr);
   internal::exit(status);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

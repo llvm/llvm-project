@@ -45,7 +45,7 @@ public:
 
   bool isForcedToStop() const { return ForceStop; }
   int64_t getLocalCalls(Function &F);
-  const MLModelRunner &getModelRunner() const { return *ModelRunner.get(); }
+  const MLModelRunner &getModelRunner() const { return *ModelRunner; }
   FunctionPropertiesInfo &getCachedFPI(Function &) const;
 
 protected:

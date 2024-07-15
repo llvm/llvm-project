@@ -47,6 +47,8 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
   assert(DeviceOffloadingKind == Action::OFK_OpenMP &&
          "Only OpenMP offloading kinds are supported.");
 
+  CC1Args.push_back("-fcuda-is-device");
+
   if (DriverArgs.hasArg(options::OPT_nogpulib))
     return;
 

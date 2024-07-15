@@ -21,13 +21,17 @@
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/ADT/DynamicAPInt.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/LogicalResult.h"
 #include <optional>
 
 namespace mlir {
 namespace presburger {
 using llvm::DynamicAPInt;
+using llvm::failure;
 using llvm::int64fromDynamicAPInt;
+using llvm::LogicalResult;
 using llvm::SmallVectorImpl;
+using llvm::success;
 
 class IntegerRelation;
 class IntegerPolyhedron;
@@ -478,7 +482,7 @@ public:
   /// equality detection; if successful, the constant is substituted for the
   /// variable everywhere in the constraint system and then removed from the
   /// system.
-  bool constantFoldVar(unsigned pos);
+  LogicalResult constantFoldVar(unsigned pos);
 
   /// This method calls `constantFoldVar` for the specified range of variables,
   /// `num` variables starting at position `pos`.
@@ -501,7 +505,7 @@ public:
   /// 3) this   = {0 <= d0 <= 5, 1 <= d1 <= 9}
   ///    other  = {2 <= d0 <= 6, 5 <= d1 <= 15},
   ///    output = {0 <= d0 <= 6, 1 <= d1 <= 15}
-  bool unionBoundingBox(const IntegerRelation &other);
+  LogicalResult unionBoundingBox(const IntegerRelation &other);
 
   /// Returns the smallest known constant bound for the extent of the specified
   /// variable (pos^th), i.e., the smallest known constant that is greater
@@ -774,8 +778,8 @@ protected:
   /// Eliminates a single variable at `position` from equality and inequality
   /// constraints. Returns `success` if the variable was eliminated, and
   /// `failure` otherwise.
-  inline bool gaussianEliminateVar(unsigned position) {
-    return gaussianEliminateVars(position, position + 1) == 1;
+  inline LogicalResult gaussianEliminateVar(unsigned position) {
+    return success(gaussianEliminateVars(position, position + 1) == 1);
   }
 
   /// Removes local variables using equalities. Each equality is checked if it

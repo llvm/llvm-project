@@ -237,6 +237,11 @@ def ContainingIntPolynomialAttrOp : TEST_Op<"containing_int_polynomial_attr"> {
   let assemblyFormat = "$attr attr-dict";
 }
 
+def ContainingIntPolynomialAttr2Op : TEST_Op<"containing_int_polynomial_attr2"> {
+  let arguments = (ins NestedPolynomialAttr2:$attr);
+  let assemblyFormat = "$attr attr-dict";
+}
+
 // A pattern that updates dense<[3.0, 4.0]> to dense<[5.0, 6.0]>.
 // This tests both matching and generating float elements attributes.
 def UpdateFloatElementsAttr : Pat<

@@ -143,6 +143,7 @@ headers_not_available = [
     "flat_set",
     "generator",
     "hazard_pointer",
+    "inplace_vector",
     "linalg",
     "rcu",
     "spanstream",

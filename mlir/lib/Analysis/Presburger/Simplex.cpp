@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <functional>
@@ -229,7 +230,7 @@ Direction flippedDirection(Direction direction) {
 /// add these to the set of ignored columns and continue to the next row. If we
 /// run out of rows, then A*y is zero and we are done.
 MaybeOptimum<SmallVector<Fraction, 8>> LexSimplex::findRationalLexMin() {
-  if (!restoreRationalConsistency()) {
+  if (restoreRationalConsistency().failed()) {
     markEmpty();
     return OptimumKind::Empty;
   }
@@ -274,7 +275,7 @@ MaybeOptimum<SmallVector<Fraction, 8>> LexSimplex::findRationalLexMin() {
 ///
 /// The constraint is violated when added (it would be useless otherwise)
 /// so we immediately try to move it to a column.
-bool LexSimplexBase::addCut(unsigned row) {
+LogicalResult LexSimplexBase::addCut(unsigned row) {
   DynamicAPInt d = tableau(row, 0);
   unsigned cutRow = addZeroRow(/*makeRestricted=*/true);
   tableau(cutRow, 0) = d;
@@ -301,7 +302,7 @@ std::optional<unsigned> LexSimplex::maybeGetNonIntegralVarRow() const {
 
 MaybeOptimum<SmallVector<DynamicAPInt, 8>> LexSimplex::findIntegerLexMin() {
   // We first try to make the tableau consistent.
-  if (!restoreRationalConsistency())
+  if (restoreRationalConsistency().failed())
     return OptimumKind::Empty;
 
   // Then, if the sample value is integral, we are done.
@@ -316,9 +317,9 @@ MaybeOptimum<SmallVector<DynamicAPInt, 8>> LexSimplex::findIntegerLexMin() {
     //
     // Failure indicates that the tableau became empty, which occurs when the
     // polytope is integer empty.
-    if (!addCut(*maybeRow))
+    if (addCut(*maybeRow).failed())
       return OptimumKind::Empty;
-    if (!restoreRationalConsistency())
+    if (restoreRationalConsistency().failed())
       return OptimumKind::Empty;
   }
 
@@ -411,7 +412,7 @@ bool SymbolicLexSimplex::isSymbolicSampleIntegral(unsigned row) const {
 /// (sum_i (b_i%d)y_i - (-c%d) - sum_i (-a_i%d)s_i + q*d)/d >= 0
 /// This constraint is violated when added so we immediately try to move it to a
 /// column.
-bool SymbolicLexSimplex::addSymbolicCut(unsigned row) {
+LogicalResult SymbolicLexSimplex::addSymbolicCut(unsigned row) {
   DynamicAPInt d = tableau(row, 0);
   if (isRangeDivisibleBy(tableau.getRow(row).slice(3, nSymbol), d)) {
     // The coefficients of symbols in the symbol numerator are divisible
@@ -523,11 +524,11 @@ std::optional<unsigned> SymbolicLexSimplex::maybeGetNonIntegralVarRow() {
 
 /// The non-branching pivots are just the ones moving the rows
 /// that are always violated in the symbol domain.
-bool SymbolicLexSimplex::doNonBranchingPivots() {
+LogicalResult SymbolicLexSimplex::doNonBranchingPivots() {
   while (std::optional<unsigned> row = maybeGetAlwaysViolatedRow())
-    if (!moveRowUnknownToColumn(*row))
-      return false;
-  return true;
+    if (moveRowUnknownToColumn(*row).failed())
+      return failure();
+  return success();
 }
 
 SymbolicLexOpt SymbolicLexSimplex::computeSymbolicIntegerLexMin() {
@@ -567,7 +568,7 @@ SymbolicLexOpt SymbolicLexSimplex::computeSymbolicIntegerLexMin() {
         continue;
       }
 
-      if (!doNonBranchingPivots()) {
+      if (doNonBranchingPivots().failed()) {
         // Could not find pivots for violated constraints; return.
         --level;
         continue;
@@ -627,7 +628,7 @@ SymbolicLexOpt SymbolicLexSimplex::computeSymbolicIntegerLexMin() {
       // The tableau is rationally consistent for the current domain.
       // Now we look for non-integral sample values and add cuts for them.
       if (std::optional<unsigned> row = maybeGetNonIntegralVarRow()) {
-        if (!addSymbolicCut(*row)) {
+        if (addSymbolicCut(*row).failed()) {
           // No integral points; return.
           --level;
           continue;
@@ -661,7 +662,7 @@ SymbolicLexOpt SymbolicLexSimplex::computeSymbolicIntegerLexMin() {
       SmallVector<DynamicAPInt, 8> splitIneq =
           getComplementIneq(getSymbolicSampleIneq(u.pos));
       normalizeRange(splitIneq);
-      if (!moveRowUnknownToColumn(u.pos)) {
+      if (moveRowUnknownToColumn(u.pos).failed()) {
         // The unknown can't be made non-negative; return.
         --level;
         continue;
@@ -699,13 +700,13 @@ std::optional<unsigned> LexSimplex::maybeGetViolatedRow() const {
 /// We simply look for violated rows and keep trying to move them to column
 /// orientation, which always succeeds unless the constraints have no solution
 /// in which case we just give up and return.
-bool LexSimplex::restoreRationalConsistency() {
+LogicalResult LexSimplex::restoreRationalConsistency() {
   if (empty)
-    return false;
+    return failure();
   while (std::optional<unsigned> maybeViolatedRow = maybeGetViolatedRow())
-    if (!moveRowUnknownToColumn(*maybeViolatedRow))
-      return false;
-  return true;
+    if (moveRowUnknownToColumn(*maybeViolatedRow).failed())
+      return failure();
+  return success();
 }
 
 // Move the row unknown to column orientation while preserving lexicopositivity
@@ -770,7 +771,7 @@ bool LexSimplex::restoreRationalConsistency() {
 // which is in contradiction to the fact that B.col(j) / B(i,j) must be
 // lexicographically smaller than B.col(k) / B(i,k), since it lexicographically
 // minimizes the change in sample value.
-bool LexSimplexBase::moveRowUnknownToColumn(unsigned row) {
+LogicalResult LexSimplexBase::moveRowUnknownToColumn(unsigned row) {
   std::optional<unsigned> maybeColumn;
   for (unsigned col = 3 + nSymbol, e = getNumColumns(); col < e; ++col) {
     if (tableau(row, col) <= 0)
@@ -780,10 +781,10 @@ bool LexSimplexBase::moveRowUnknownToColumn(unsigned row) {
   }
 
   if (!maybeColumn)
-    return false;
+    return failure();
 
   pivot(row, *maybeColumn);
-  return true;
+  return success();
 }
 
 unsigned LexSimplexBase::getLexMinPivotColumn(unsigned row, unsigned colA,
@@ -986,7 +987,7 @@ void SimplexBase::pivot(unsigned pivotRow, unsigned pivotCol) {
 /// Perform pivots until the unknown has a non-negative sample value or until
 /// no more upward pivots can be performed. Return success if we were able to
 /// bring the row to a non-negative sample value, and failure otherwise.
-bool Simplex::restoreRow(Unknown &u) {
+LogicalResult Simplex::restoreRow(Unknown &u) {
   assert(u.orientation == Orientation::Row &&
          "unknown should be in row position");
 
@@ -997,9 +998,9 @@ bool Simplex::restoreRow(Unknown &u) {
 
     pivot(*maybePivot);
     if (u.orientation == Orientation::Column)
-      return true; // the unknown is unbounded above.
+      return success(); // the unknown is unbounded above.
   }
-  return tableau(u.pos, 1) >= 0;
+  return success(tableau(u.pos, 1) >= 0);
 }
 
 /// Find a row that can be used to pivot the column in the specified direction.
@@ -1105,8 +1106,8 @@ void SimplexBase::markEmpty() {
 /// empty and we mark it as such.
 void Simplex::addInequality(ArrayRef<DynamicAPInt> coeffs) {
   unsigned conIndex = addRow(coeffs, /*makeRestricted=*/true);
-  bool result = restoreRow(con[conIndex]);
-  if (!result)
+  LogicalResult result = restoreRow(con[conIndex]);
+  if (result.failed())
     markEmpty();
 }
 
@@ -1384,7 +1385,7 @@ MaybeOptimum<Fraction> Simplex::computeOptimum(Direction direction,
   MaybeOptimum<Fraction> optimum = computeRowOptimum(direction, row);
   if (u.restricted && direction == Direction::Down &&
       (optimum.isUnbounded() || *optimum < Fraction(0, 1))) {
-    if (!restoreRow(u))
+    if (restoreRow(u).failed())
       llvm_unreachable("Could not restore row!");
   }
   return optimum;
@@ -1453,7 +1454,7 @@ void Simplex::detectRedundant(unsigned offset, unsigned count) {
     if (minimum.isUnbounded() || *minimum < Fraction(0, 1)) {
       // Constraint is unbounded below or can attain negative sample values and
       // hence is not redundant.
-      if (!restoreRow(u))
+      if (restoreRow(u).failed())
         llvm_unreachable("Could not restore non-redundant row!");
       continue;
     }

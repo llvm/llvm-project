@@ -4,13 +4,11 @@
 
 ; YAML: --- !Missed
 ; YAML-NEXT: Pass:            slp-vectorizer
-; YAML-NEXT: Name:            NotBeneficial
+; YAML-NEXT: Name:            NotPossible
 ; YAML-NEXT: Function:        g
 ; YAML-NEXT: Args:
-; YAML-NEXT:   - String:          'List vectorization was possible but not beneficial with cost '
-; YAML-NEXT:   - Cost:            '0'
-; YAML-NEXT:   - String:          ' >= '
-; YAML-NEXT:   - Treshold:        '0'
+; YAML-NEXT:   - String:          'Cannot SLP vectorize list: vectorization was impossible'
+; YAML-NEXT:   - String:          ' with available vectorization factors'
 
 define <2 x i32> @g(<2 x i32> %x, i32 %a, i32 %b) {
 ; CHECK-LABEL: @g(

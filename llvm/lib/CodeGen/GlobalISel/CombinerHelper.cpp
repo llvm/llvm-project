@@ -446,7 +446,10 @@ void CombinerHelper::applyCombineShuffleConcat(MachineInstr &MI,
     }
   }
 
-  Builder.buildConcatVectors(MI.getOperand(0).getReg(), Ops);
+  if (Ops.size() > 1)
+    Builder.buildConcatVectors(MI.getOperand(0).getReg(), Ops);
+  else
+    Builder.buildCopy(MI.getOperand(0).getReg(), Ops[0]);
   MI.eraseFromParent();
 }
 
