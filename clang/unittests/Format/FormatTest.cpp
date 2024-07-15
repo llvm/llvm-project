@@ -27659,7 +27659,7 @@ TEST_F(FormatTest, BinPackBinaryOperations) {
                Style);
 
   verifyFormat("const int result =\n"
-               "    operand1 + operand2 - (operand3 + operand4);\n",
+               "    operand1 + operand2 - (operand3 + operand4);",
                Style);
 
   Style.BinPackBinaryOperations = false;
@@ -27683,7 +27683,7 @@ TEST_F(FormatTest, BinPackBinaryOperations) {
                Style);
 
   // Arithmetic
-  verifyFormat("const int result = lhs + rhs;\n", Style);
+  verifyFormat("const int result = lhs + rhs;", Style);
 
   verifyFormat("result = loooooooooooooooooooooongop1 +\n"
                "         loooooooooooooooooooooongop2 +\n"
