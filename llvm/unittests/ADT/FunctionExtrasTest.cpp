@@ -332,11 +332,14 @@ TEST(UniqueFunctionTest, InlineStorageWorks) {
 // Check that the moved-from captured state is properly destroyed during
 // move construction/assignment.
 TEST(UniqueFunctionTest, MovedFromStateIsDestroyedCorrectly) {
+  static int NumOfMovesCalled = 0;
   static int NumOfDestructorsCalled = 0;
   struct State {
     State() = default;
-    State(State &&) = default;
-    State &operator=(State &&) = default;
+    State(const State &) = delete;
+    State(State &&) { ++NumOfMovesCalled; }
+    State &operator=(const State &) = delete;
+    State &operator=(State &&Rhs) { return *new (this) State{std::move(Rhs)}; }
     ~State() { ++NumOfDestructorsCalled; }
   };
   {
@@ -344,7 +347,7 @@ TEST(UniqueFunctionTest, MovedFromStateIsDestroyedCorrectly) {
     unique_function<void()> CapturingFunctionMoved{
         std::move(CapturingFunction)};
   }
-  EXPECT_EQ(NumOfDestructorsCalled, 4);
+  EXPECT_EQ(NumOfDestructorsCalled, 1 + NumOfMovesCalled);
 }
 
 } // anonymous namespace
