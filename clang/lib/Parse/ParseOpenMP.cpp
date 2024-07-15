@@ -1762,7 +1762,7 @@ StmtResult Parser::ParseOpenMPAssumesDirective(OpenMPDirectiveKind DKind,
   StmtResult AssociatedStmt;
   {
     // Begin marking the scope for assume.
-    AssumeParseAssociatedStmtRAII AssumeParseAssocRAII(this, Loc, DKind);
+    AssumeParseAssociatedStmtRAII AssumeParseAssocRAII(*this, Loc, DKind);
 
     Actions.OpenMP().ActOnOpenMPAssumesDirective(Loc, DKind, Assumptions,
                                                  SkippedClauses);
