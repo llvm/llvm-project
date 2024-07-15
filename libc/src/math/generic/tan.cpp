@@ -150,7 +150,7 @@ LLVM_LIBC_FUNCTION(double, tan, (double x)) {
 
   DoubleDouble y;
   unsigned k;
-  generic::LargeRangeReduction<NO_FMA> range_reduction_large;
+  generic::LargeRangeReduction<NO_FMA> range_reduction_large{};
 
   // |x| < 2^32 (with FMA) or |x| < 2^23 (w/o FMA)
   if (LIBC_LIKELY(x_e < FPBits::EXP_BIAS + FAST_PASS_EXPONENT)) {
@@ -160,7 +160,7 @@ LLVM_LIBC_FUNCTION(double, tan, (double x)) {
       if (LIBC_UNLIKELY(x == 0.0))
         return x;
 
-      // For |x| < 2^-27, |tan(x) - x| < ulp(x)/2.
+        // For |x| < 2^-27, |tan(x) - x| < ulp(x)/2.
 #ifdef LIBC_TARGET_CPU_HAS_FMA
       return fputil::multiply_add(x, 0x1.0p-54, x);
 #else
