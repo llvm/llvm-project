@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1210 -mattr=+wavefrontsize32,-wavefrontsize64 -disassemble -show-encoding < %s | FileCheck %s --check-prefix=GFX1210
+# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1210 -disassemble -show-encoding < %s | FileCheck %s --check-prefix=GFX1210
 
 # GFX1210: v_dual_add_f32 v255, -1, v4 :: v_dual_add_f32 v6, src_scc, v5 ; encoding: [0xc1,0x08,0x08,0xc9,0xfd,0x0a,0x06,0xff]
 0xc1,0x08,0x08,0xc9,0xfd,0x0a,0x06,0xff
