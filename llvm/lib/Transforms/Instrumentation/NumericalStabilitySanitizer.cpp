@@ -2143,8 +2143,7 @@ bool NumericalStabilitySanitizer::sanitizeFunction(
   return !ValueToShadow.empty();
 }
 
-static size_t GetInstrumentationCalleeIdxForMemOp(Value *V,
-                                                  std::size_t MaxIdx) {
+static size_t GetInstrumentationCalleeIdxForMemOp(Value *V, size_t MaxIdx) {
   uint64_t OpSize = 0;
   if (Constant *C = dyn_cast<Constant>(V)) {
     auto *CInt = dyn_cast<ConstantInt>(C);
