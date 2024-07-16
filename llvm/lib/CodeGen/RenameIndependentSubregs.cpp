@@ -54,8 +54,8 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<LiveIntervals>();
-    AU.addPreserved<LiveIntervals>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
+    AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addRequired<SlotIndexesWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -115,7 +115,7 @@ char &llvm::RenameIndependentSubregsID = RenameIndependentSubregs::ID;
 INITIALIZE_PASS_BEGIN(RenameIndependentSubregs, DEBUG_TYPE,
                       "Rename Independent Subregisters", false, false)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(RenameIndependentSubregs, DEBUG_TYPE,
                     "Rename Independent Subregisters", false, false)
 
@@ -390,7 +390,7 @@ bool RenameIndependentSubregs::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "Renaming independent subregister live ranges in "
                     << MF.getName() << '\n');
 
-  LIS = &getAnalysis<LiveIntervals>();
+  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   TII = MF.getSubtarget().getInstrInfo();
 
   // Iterate over all vregs. Note that we query getNumVirtRegs() the newly

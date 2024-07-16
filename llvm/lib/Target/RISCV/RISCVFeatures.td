@@ -151,7 +151,7 @@ def HasStdExtZimop : Predicate<"Subtarget->hasStdExtZimop()">,
                                         "'Zimop' (May-Be-Operations)">;
 
 def FeatureStdExtZicfilp
-    : RISCVExperimentalExtension<"zicfilp", 0, 4,
+    : RISCVExperimentalExtension<"zicfilp", 1, 0,
                                  "'Zicfilp' (Landing pad)",
                                  [FeatureStdExtZicsr]>;
 def HasStdExtZicfilp : Predicate<"Subtarget->hasStdExtZicfilp()">,
@@ -161,7 +161,7 @@ def NoStdExtZicfilp : Predicate<"!Subtarget->hasStdExtZicfilp()">,
                       AssemblerPredicate<(all_of (not FeatureStdExtZicfilp))>;
 
 def FeatureStdExtZicfiss
-    : RISCVExperimentalExtension<"zicfiss", 0, 4,
+    : RISCVExperimentalExtension<"zicfiss", 1, 0,
                                  "'Zicfiss' (Shadow stack)",
                                  [FeatureStdExtZicsr, FeatureStdExtZimop]>;
 def HasStdExtZicfiss : Predicate<"Subtarget->hasStdExtZicfiss()">,
@@ -1210,6 +1210,16 @@ def HasVendorXCVbi
       AssemblerPredicate<(all_of FeatureVendorXCVbi),
                          "'XCVbi' (CORE-V Immediate Branching)">;
 
+// WCH / Nanjing Qinheng Microelectronics Extension(s)
+
+def FeatureVendorXwchc
+    : RISCVExtension<"xwchc", 2, 2,
+                     "'Xwchc' (WCH/QingKe additional compressed opcodes)">;
+def HasVendorXwchc
+    : Predicate<"Subtarget->hasVendorXwchc()">,
+      AssemblerPredicate<(all_of FeatureVendorXwchc),
+                         "'Xwchc' (WCH/QingKe additional compressed opcodes)">;
+
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
 //===----------------------------------------------------------------------===//
@@ -1264,9 +1274,9 @@ def FeaturePredictableSelectIsExpensive
     : SubtargetFeature<"predictable-select-expensive", "PredictableSelectIsExpensive", "true",
                        "Prefer likely predicted branches over selects">;
 
-def TuneNoOptimizedZeroStrideLoad
-   : SubtargetFeature<"no-optimized-zero-stride-load", "HasOptimizedZeroStrideLoad",
-                      "false", "Hasn't optimized (perform fewer memory operations)"
+def TuneOptimizedZeroStrideLoad
+   : SubtargetFeature<"optimized-zero-stride-load", "HasOptimizedZeroStrideLoad",
+                      "true", "Optimized (perform fewer memory operations)"
                       "zero-stride vector load">;
 
 def Experimental

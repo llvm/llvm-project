@@ -7,17 +7,119 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/SandboxIR/SandboxIR.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/Support/Debug.h"
 #include <sstream>
 
 using namespace llvm::sandboxir;
 
+Value *Use::get() const { return Ctx->getValue(LLVMUse->get()); }
+
+unsigned Use::getOperandNo() const { return Usr->getUseOperandNo(*this); }
+
+#ifndef NDEBUG
+void Use::dump(raw_ostream &OS) const {
+  Value *Def = nullptr;
+  if (LLVMUse == nullptr)
+    OS << "<null> LLVM Use! ";
+  else
+    Def = Ctx->getValue(LLVMUse->get());
+  OS << "Def:  ";
+  if (Def == nullptr)
+    OS << "NULL";
+  else
+    OS << *Def;
+  OS << "\n";
+
+  OS << "User: ";
+  if (Usr == nullptr)
+    OS << "NULL";
+  else
+    OS << *Usr;
+  OS << "\n";
+
+  OS << "OperandNo: ";
+  if (Usr == nullptr)
+    OS << "N/A";
+  else
+    OS << getOperandNo();
+  OS << "\n";
+}
+
+void Use::dump() const { dump(dbgs()); }
+#endif // NDEBUG
+
+Use OperandUseIterator::operator*() const { return Use; }
+
+OperandUseIterator &OperandUseIterator::operator++() {
+  assert(Use.LLVMUse != nullptr && "Already at end!");
+  User *User = Use.getUser();
+  Use = User->getOperandUseInternal(Use.getOperandNo() + 1, /*Verify=*/false);
+  return *this;
+}
+
+UserUseIterator &UserUseIterator::operator++() {
+  llvm::Use *&LLVMUse = Use.LLVMUse;
+  assert(LLVMUse != nullptr && "Already at end!");
+  LLVMUse = LLVMUse->getNext();
+  if (LLVMUse == nullptr) {
+    Use.Usr = nullptr;
+    return *this;
+  }
+  auto *Ctx = Use.Ctx;
+  auto *LLVMUser = LLVMUse->getUser();
+  Use.Usr = cast_or_null<sandboxir::User>(Ctx->getValue(LLVMUser));
+  return *this;
+}
+
 Value::Value(ClassID SubclassID, llvm::Value *Val, Context &Ctx)
     : SubclassID(SubclassID), Val(Val), Ctx(Ctx) {
 #ifndef NDEBUG
   UID = Ctx.getNumValues();
 #endif
+}
+
+Value::use_iterator Value::use_begin() {
+  llvm::Use *LLVMUse = nullptr;
+  if (Val->use_begin() != Val->use_end())
+    LLVMUse = &*Val->use_begin();
+  User *User = LLVMUse != nullptr ? cast_or_null<sandboxir::User>(Ctx.getValue(
+                                        Val->use_begin()->getUser()))
+                                  : nullptr;
+  return use_iterator(Use(LLVMUse, User, Ctx));
+}
+
+Value::user_iterator Value::user_begin() {
+  auto UseBegin = Val->use_begin();
+  auto UseEnd = Val->use_end();
+  bool AtEnd = UseBegin == UseEnd;
+  llvm::Use *LLVMUse = AtEnd ? nullptr : &*UseBegin;
+  User *User =
+      AtEnd ? nullptr
+            : cast_or_null<sandboxir::User>(Ctx.getValue(&*LLVMUse->getUser()));
+  return user_iterator(Use(LLVMUse, User, Ctx), UseToUser());
+}
+
+unsigned Value::getNumUses() const { return range_size(Val->users()); }
+
+void Value::replaceUsesWithIf(
+    Value *OtherV, llvm::function_ref<bool(const Use &)> ShouldReplace) {
+  assert(getType() == OtherV->getType() && "Can't replace with different type");
+  llvm::Value *OtherVal = OtherV->Val;
+  Val->replaceUsesWithIf(
+      OtherVal, [&ShouldReplace, this](llvm::Use &LLVMUse) -> bool {
+        User *DstU = cast_or_null<User>(Ctx.getValue(LLVMUse.getUser()));
+        if (DstU == nullptr)
+          return false;
+        return ShouldReplace(Use(&LLVMUse, DstU, Ctx));
+      });
+}
+
+void Value::replaceAllUsesWith(Value *Other) {
+  assert(getType() == Other->getType() &&
+         "Replacing with Value of different type!");
+  Val->replaceAllUsesWith(Other->Val);
 }
 
 #ifndef NDEBUG
@@ -71,6 +173,24 @@ void Argument::dump() const {
 }
 #endif // NDEBUG
 
+Use User::getOperandUseDefault(unsigned OpIdx, bool Verify) const {
+  assert((!Verify || OpIdx < getNumOperands()) && "Out of bounds!");
+  assert(isa<llvm::User>(Val) && "Non-users have no operands!");
+  llvm::Use *LLVMUse;
+  if (OpIdx != getNumOperands())
+    LLVMUse = &cast<llvm::User>(Val)->getOperandUse(OpIdx);
+  else
+    LLVMUse = cast<llvm::User>(Val)->op_end();
+  return Use(LLVMUse, const_cast<User *>(this), Ctx);
+}
+
+#ifndef NDEBUG
+void User::verifyUserOfLLVMUse(const llvm::Use &Use) const {
+  assert(Ctx.getValue(Use.getUser()) == this &&
+         "Use not found in this SBUser's operands!");
+}
+#endif
+
 bool User::classof(const Value *From) {
   switch (From->getSubclassID()) {
 #define DEF_VALUE(ID, CLASS)
@@ -84,6 +204,15 @@ bool User::classof(const Value *From) {
   default:
     return false;
   }
+}
+
+void User::setOperand(unsigned OperandIdx, Value *Operand) {
+  assert(isa<llvm::User>(Val) && "No operands!");
+  cast<llvm::User>(Val)->setOperand(OperandIdx, Operand->Val);
+}
+
+bool User::replaceUsesOfWith(Value *FromV, Value *ToV) {
+  return cast<llvm::User>(Val)->replaceUsesOfWith(FromV->Val, ToV->Val);
 }
 
 #ifndef NDEBUG
@@ -176,16 +305,16 @@ void Constant::dump() const {
 void Function::dumpNameAndArgs(raw_ostream &OS) const {
   auto *F = cast<llvm::Function>(Val);
   OS << *F->getReturnType() << " @" << F->getName() << "(";
-  auto NumArgs = F->arg_size();
-  for (auto [Idx, Arg] : enumerate(F->args())) {
-    auto *SBArg = cast_or_null<Argument>(Ctx.getValue(&Arg));
-    if (SBArg == nullptr)
-      OS << "NULL";
-    else
-      SBArg->printAsOperand(OS);
-    if (Idx + 1 < NumArgs)
-      OS << ", ";
-  }
+  interleave(
+      F->args(),
+      [this, &OS](const llvm::Argument &LLVMArg) {
+        auto *SBArg = cast_or_null<Argument>(Ctx.getValue(&LLVMArg));
+        if (SBArg == nullptr)
+          OS << "NULL";
+        else
+          SBArg->printAsOperand(OS);
+      },
+      [&] { OS << ", "; });
   OS << ")";
 }
 void Function::dump(raw_ostream &OS) const {
@@ -231,10 +360,11 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     return It->second.get();
 
   if (auto *C = dyn_cast<llvm::Constant>(LLVMV)) {
+    It->second = std::unique_ptr<Constant>(new Constant(C, *this));
+    auto *NewC = It->second.get();
     for (llvm::Value *COp : C->operands())
       getOrCreateValueInternal(COp, C);
-    It->second = std::unique_ptr<Constant>(new Constant(C, *this));
-    return It->second.get();
+    return NewC;
   }
   if (auto *Arg = dyn_cast<llvm::Argument>(LLVMV)) {
     It->second = std::unique_ptr<Argument>(new Argument(Arg, *this));

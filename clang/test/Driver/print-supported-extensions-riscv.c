@@ -166,10 +166,11 @@
 // CHECK-NEXT:     xtheadsync           1.0       'xtheadsync' (T-Head multicore synchronization instructions)
 // CHECK-NEXT:     xtheadvdot           1.0       'xtheadvdot' (T-Head Vector Extensions for Dot)
 // CHECK-NEXT:     xventanacondops      1.0       'XVentanaCondOps' (Ventana Conditional Ops)
+// CHECK-NEXT:     xwchc                2.2       'Xwchc' (WCH/QingKe additional compressed opcodes)
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions
-// CHECK-NEXT:     zicfilp              0.4       'Zicfilp' (Landing pad)
-// CHECK-NEXT:     zicfiss              0.4       'Zicfiss' (Shadow stack)
+// CHECK-NEXT:     zicfilp              1.0       'Zicfilp' (Landing pad)
+// CHECK-NEXT:     zicfiss              1.0       'Zicfiss' (Shadow stack)
 // CHECK-NEXT:     zalasr               0.1       'Zalasr' (Load-Acquire and Store-Release Instructions)
 // CHECK-NEXT:     smmpm                1.0       'Smmpm' (Machine-level Pointer Masking for M-mode)
 // CHECK-NEXT:     smnpm                1.0       'Smnpm' (Machine-level Pointer Masking for next lower privilege mode)

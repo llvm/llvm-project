@@ -631,8 +631,8 @@ void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
       continue;
     case R_RELAX_TLS_GD_TO_LE:
       // See the comment in handleTlsRelocation. For TLSDESC=>IE,
-      // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12,CALL} also reach here. If isToIe is
-      // true, this is actually TLSDESC=>IE optimization.
+      // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12,CALL} also reach here. If isToLe is
+      // false, this is actually TLSDESC=>IE optimization.
       if (rel.type == R_RISCV_TLSDESC_HI20) {
         tlsdescVal = val;
         isToLe = true;

@@ -1044,13 +1044,17 @@ void CodeGenPGO::assignRegionCounters(GlobalDecl GD, llvm::Function *Fn) {
   if (Fn->hasFnAttribute(llvm::Attribute::SkipProfile))
     return;
 
+  SourceManager &SM = CGM.getContext().getSourceManager();
+  if (!llvm::coverage::SystemHeadersCoverage &&
+      SM.isInSystemHeader(D->getLocation()))
+    return;
+
   setFuncName(Fn);
 
   mapRegionCounters(D);
   if (CGM.getCodeGenOpts().CoverageMapping)
     emitCounterRegionMapping(D);
   if (PGOReader) {
-    SourceManager &SM = CGM.getContext().getSourceManager();
     loadRegionCounts(PGOReader, SM.isInMainFile(D->getLocation()));
     computeRegionCounts(D);
     applyFunctionAttributes(PGOReader, Fn);

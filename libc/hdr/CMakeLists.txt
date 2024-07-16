@@ -70,6 +70,16 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  stdio_macros
+  HDRS
+    stdio_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.stdio
+    libc.include.llvm-libc-macros.stdio_macros
+    libc.include.llvm-libc-macros.file_seek_macros
+)
+
+add_proxy_header_library(
   sys_epoll_macros
   HDRS
     sys_epoll_macros.h
