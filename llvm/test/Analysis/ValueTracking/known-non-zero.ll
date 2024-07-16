@@ -1522,11 +1522,7 @@ define <4 x i1> @vec_reverse_non_zero_fail(<4 x i8> %xx) {
 
 define i1 @vec_reverse_non_zero_demanded(<4 x i8> %xx) {
 ; CHECK-LABEL: @vec_reverse_non_zero_demanded(
-; CHECK-NEXT:    [[X:%.*]] = add nuw <4 x i8> [[XX:%.*]], <i8 1, i8 0, i8 0, i8 0>
-; CHECK-NEXT:    [[REV:%.*]] = call <4 x i8> @llvm.vector.reverse.v4i8(<4 x i8> [[X]])
-; CHECK-NEXT:    [[ELE:%.*]] = extractelement <4 x i8> [[REV]], i64 3
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[ELE]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x = add nuw <4 x i8> %xx, <i8 1, i8 0, i8 0, i8 0>
   %rev = call <4 x i8> @llvm.vector.reverse(<4 x i8> %x)
