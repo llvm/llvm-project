@@ -6,10 +6,7 @@ define i8 @scmp.8.8(i8 signext %x, i8 signext %y) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slt $a2, $a0, $a1
 ; CHECK-NEXT:    slt $a0, $a1, $a0
-; CHECK-NEXT:    masknez $a0, $a0, $a2
-; CHECK-NEXT:    addi.w $a1, $zero, -1
-; CHECK-NEXT:    maskeqz $a1, $a1, $a2
-; CHECK-NEXT:    or $a0, $a1, $a0
+; CHECK-NEXT:    sub.d $a0, $a0, $a2
 ; CHECK-NEXT:    ret
   %1 = call i8 @llvm.scmp(i8 %x, i8 %y)
   ret i8 %1
@@ -20,10 +17,7 @@ define i8 @scmp.8.16(i16 signext %x, i16 signext %y) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slt $a2, $a0, $a1
 ; CHECK-NEXT:    slt $a0, $a1, $a0
-; CHECK-NEXT:    masknez $a0, $a0, $a2
-; CHECK-NEXT:    addi.w $a1, $zero, -1
-; CHECK-NEXT:    maskeqz $a1, $a1, $a2
-; CHECK-NEXT:    or $a0, $a1, $a0
+; CHECK-NEXT:    sub.d $a0, $a0, $a2
 ; CHECK-NEXT:    ret
   %1 = call i8 @llvm.scmp(i16 %x, i16 %y)
   ret i8 %1
@@ -36,10 +30,7 @@ define i8 @scmp.8.32(i32 %x, i32 %y) nounwind {
 ; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    slt $a2, $a0, $a1
 ; CHECK-NEXT:    slt $a0, $a1, $a0
-; CHECK-NEXT:    masknez $a0, $a0, $a2
-; CHECK-NEXT:    addi.w $a1, $zero, -1
-; CHECK-NEXT:    maskeqz $a1, $a1, $a2
-; CHECK-NEXT:    or $a0, $a1, $a0
+; CHECK-NEXT:    sub.d $a0, $a0, $a2
 ; CHECK-NEXT:    ret
   %1 = call i8 @llvm.scmp(i32 %x, i32 %y)
   ret i8 %1
@@ -50,10 +41,7 @@ define i8 @scmp.8.64(i64 %x, i64 %y) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slt $a2, $a0, $a1
 ; CHECK-NEXT:    slt $a0, $a1, $a0
-; CHECK-NEXT:    masknez $a0, $a0, $a2
-; CHECK-NEXT:    addi.w $a1, $zero, -1
-; CHECK-NEXT:    maskeqz $a1, $a1, $a2
-; CHECK-NEXT:    or $a0, $a1, $a0
+; CHECK-NEXT:    sub.d $a0, $a0, $a2
 ; CHECK-NEXT:    ret
   %1 = call i8 @llvm.scmp(i64 %x, i64 %y)
   ret i8 %1
@@ -74,12 +62,7 @@ define i8 @scmp.8.128(i128 %x, i128 %y) nounwind {
 ; CHECK-NEXT:    sltu $a0, $a2, $a0
 ; CHECK-NEXT:    maskeqz $a0, $a0, $a5
 ; CHECK-NEXT:    or $a0, $a0, $a1
-; CHECK-NEXT:    ori $a1, $zero, 1
-; CHECK-NEXT:    maskeqz $a0, $a1, $a0
-; CHECK-NEXT:    masknez $a0, $a0, $a4
-; CHECK-NEXT:    addi.w $a1, $zero, -1
-; CHECK-NEXT:    maskeqz $a1, $a1, $a4
-; CHECK-NEXT:    or $a0, $a1, $a0
+; CHECK-NEXT:    sub.d $a0, $a0, $a4
 ; CHECK-NEXT:    ret
   %1 = call i8 @llvm.scmp(i128 %x, i128 %y)
   ret i8 %1
@@ -92,10 +75,7 @@ define i32 @scmp.32.32(i32 %x, i32 %y) nounwind {
 ; CHECK-NEXT:    addi.w $a0, $a0, 0
 ; CHECK-NEXT:    slt $a2, $a0, $a1
 ; CHECK-NEXT:    slt $a0, $a1, $a0
-; CHECK-NEXT:    masknez $a0, $a0, $a2
-; CHECK-NEXT:    addi.w $a1, $zero, -1
-; CHECK-NEXT:    maskeqz $a1, $a1, $a2
-; CHECK-NEXT:    or $a0, $a1, $a0
+; CHECK-NEXT:    sub.d $a0, $a0, $a2
 ; CHECK-NEXT:    ret
   %1 = call i32 @llvm.scmp(i32 %x, i32 %y)
   ret i32 %1
@@ -106,10 +86,7 @@ define i32 @scmp.32.64(i64 %x, i64 %y) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slt $a2, $a0, $a1
 ; CHECK-NEXT:    slt $a0, $a1, $a0
-; CHECK-NEXT:    masknez $a0, $a0, $a2
-; CHECK-NEXT:    addi.w $a1, $zero, -1
-; CHECK-NEXT:    maskeqz $a1, $a1, $a2
-; CHECK-NEXT:    or $a0, $a1, $a0
+; CHECK-NEXT:    sub.d $a0, $a0, $a2
 ; CHECK-NEXT:    ret
   %1 = call i32 @llvm.scmp(i64 %x, i64 %y)
   ret i32 %1
@@ -120,10 +97,7 @@ define i64 @scmp.64.64(i64 %x, i64 %y) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slt $a2, $a0, $a1
 ; CHECK-NEXT:    slt $a0, $a1, $a0
-; CHECK-NEXT:    masknez $a0, $a0, $a2
-; CHECK-NEXT:    addi.w $a1, $zero, -1
-; CHECK-NEXT:    maskeqz $a1, $a1, $a2
-; CHECK-NEXT:    or $a0, $a1, $a0
+; CHECK-NEXT:    sub.d $a0, $a0, $a2
 ; CHECK-NEXT:    ret
   %1 = call i64 @llvm.scmp(i64 %x, i64 %y)
   ret i64 %1
