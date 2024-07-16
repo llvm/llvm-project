@@ -1599,6 +1599,57 @@ createTypePackElementParameterList(const ASTContext &C, DeclContext *DC) {
                                        nullptr);
 }
 
+static TemplateParameterList *createCommonTypeList(const ASTContext &C,
+                                                   DeclContext *DC) {
+  // class... Args
+  auto *Args = TemplateTypeParmDecl::Create(
+      C, DC, {}, {}, /*Depth=*/1, /*Position=*/0, /*Id=*/nullptr,
+      /*Typename=*/false, /*ParameterPack=*/true);
+  Args->setImplicit();
+
+  // <class... Args>
+  auto *BaseTemplateList =
+      TemplateParameterList::Create(C, {}, {}, Args, {}, nullptr);
+
+  // template <class... Args> class BaseTemplate
+  auto *BaseTemplate = TemplateTemplateParmDecl::Create(
+      C, DC, {}, /*Depth=*/0, /*Position=*/0, /*ParameterPack=*/false, {},
+      /*Typename=*/false, BaseTemplateList);
+
+  // class TypeMember
+  auto *TypeMember = TemplateTypeParmDecl::Create(
+      C, DC, {}, {}, /*Depth=*/1, /*Position=*/0, /*Id=*/nullptr,
+      /*Typename=*/false, /*ParameterPack=*/false);
+
+  // <class TypeMember>
+  auto *HasTypeMemberList =
+      TemplateParameterList::Create(C, {}, {}, TypeMember, {}, nullptr);
+
+  // template <class TypeMember> class HasTypeMember
+  auto *HasTypeMember =
+      TemplateTemplateParmDecl::Create(C, DC, {}, /*Depth=*/0, /*Position=*/1,
+                                       /*ParameterPack=*/false, {},
+                                       /*Typename=*/false, HasTypeMemberList);
+
+  // class HasNoTypeMember
+  auto *HasNoTypeMember = TemplateTypeParmDecl::Create(
+      C, DC, {}, {}, /*Depth=*/0, /*Position=*/2, /*Id=*/nullptr,
+      /*Typename=*/false, /*ParameterPack=*/false);
+
+  // class... Ts
+  auto *Ts = TemplateTypeParmDecl::Create(
+      C, DC, {}, {}, /*Depth=*/0, /*Position=*/3,
+      /*Id=*/nullptr, /*Typename=*/false, /*ParameterPack=*/true);
+  Ts->setImplicit();
+
+  // template <template <class... Args> class BaseTemplate,
+  //   template <class TypeMember> class HasTypeMember, class HasNoTypeMember,
+  //   class... Ts>
+  return TemplateParameterList::Create(
+      C, {}, {}, {BaseTemplate, HasTypeMember, HasNoTypeMember, Ts}, {},
+      nullptr);
+}
+
 static TemplateParameterList *createBuiltinTemplateParameterList(
     const ASTContext &C, DeclContext *DC, BuiltinTemplateKind BTK) {
   switch (BTK) {
@@ -1606,6 +1657,8 @@ static TemplateParameterList *createBuiltinTemplateParameterList(
     return createMakeIntegerSeqParameterList(C, DC);
   case BTK__type_pack_element:
     return createTypePackElementParameterList(C, DC);
+  case BTK__common_type:
+    return createCommonTypeList(C, DC);
   }
 
   llvm_unreachable("unhandled BuiltinTemplateKind!");
