@@ -23,10 +23,8 @@
 
 struct MyMutex {};
 
-int main(int, char**)
-{
-  static_assert((std::is_same<std::lock_guard<MyMutex>::mutex_type,
-                 MyMutex>::value), "");
+int main(int, char**) {
+  static_assert((std::is_same<std::lock_guard<MyMutex>::mutex_type, MyMutex>::value), "");
 
   return 0;
 }
