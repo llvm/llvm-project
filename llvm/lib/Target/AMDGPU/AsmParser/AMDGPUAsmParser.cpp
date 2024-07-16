@@ -951,7 +951,7 @@ public:
   bool isEndpgm() const;
 
   auto getPredicate(std::function<bool(const AMDGPUOperand &Op)> P) const {
-    return std::bind(P, *this);
+    return [=](){ return P(*this); };
   }
 
   StringRef getToken() const {
