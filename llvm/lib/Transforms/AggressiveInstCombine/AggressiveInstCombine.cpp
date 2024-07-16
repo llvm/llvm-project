@@ -55,9 +55,9 @@ static cl::opt<unsigned> StrNCmpInlineThreshold(
              "call eligible for inlining. The default value is 3."));
 
 static cl::opt<unsigned>
-    StrChrInlineThreshold("strchr-inline-threshold", cl::init(3), cl::Hidden,
+    MemChrInlineThreshold("memchr-inline-threshold", cl::init(3), cl::Hidden,
                           cl::desc("The maximum length of a constant string to "
-                                   "inline a memchr/strchr call."));
+                                   "inline a memchr call."));
 
 /// Match a pattern for a bitwise funnel/rotate operation that partially guards
 /// against undefined behavior by branching around the funnel-shift/rotation
@@ -1108,32 +1108,28 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
   }
 }
 
-/// Convert strchr/memchr with a small constant string into a switch
-static bool foldStrChr(CallInst *Call, LibFunc Func, DomTreeUpdater *DTU,
+/// Convert memchr with a small constant string into a switch
+static bool foldMemChr(CallInst *Call, DomTreeUpdater *DTU,
                        const DataLayout &DL) {
-  assert((Func == LibFunc_strchr || Func == LibFunc_memchr) &&
-         "Unexpected LibFunc");
   if (isa<Constant>(Call->getArgOperand(1)))
     return false;
 
   StringRef Str;
   Value *Base = Call->getArgOperand(0);
-  if (!getConstantStringInfo(Base, Str, /*TrimAtNul=*/Func == LibFunc_strchr))
+  if (!getConstantStringInfo(Base, Str, /*TrimAtNul=*/false))
     return false;
 
   uint64_t N = Str.size();
-  if (Func == LibFunc_memchr) {
-    if (auto *ConstInt = dyn_cast<ConstantInt>(Call->getArgOperand(2))) {
-      uint64_t Val = ConstInt->getZExtValue();
-      // Ignore the case that n is larger than the size of string.
-      if (Val > N)
-        return false;
-      N = Val;
-    } else
+  if (auto *ConstInt = dyn_cast<ConstantInt>(Call->getArgOperand(2))) {
+    uint64_t Val = ConstInt->getZExtValue();
+    // Ignore the case that n is larger than the size of string.
+    if (Val > N)
       return false;
-  }
+    N = Val;
+  } else
+    return false;
 
-  if (N > StrChrInlineThreshold)
+  if (N > MemChrInlineThreshold)
     return false;
 
   BasicBlock *BB = Call->getParent();
@@ -1144,18 +1140,13 @@ static bool foldStrChr(CallInst *Call, LibFunc Func, DomTreeUpdater *DTU,
   SwitchInst *SI = IRB.CreateSwitch(
       IRB.CreateTrunc(Call->getArgOperand(1), ByteTy), BBNext, N);
   Type *IndexTy = DL.getIndexType(Call->getType());
-
-  PHINode *PHI = PHINode::Create(Call->getType(), 2, "", BBNext->begin());
-  PHI->addIncoming(Constant::getNullValue(Call->getType()), BB);
-
   SmallVector<DominatorTree::UpdateType, 8> Updates;
 
   BasicBlock *BBSuccess = BasicBlock::Create(
-      Call->getContext(), "strchr.success", BB->getParent(), BBNext);
+      Call->getContext(), "memchr.success", BB->getParent(), BBNext);
   IRB.SetInsertPoint(BBSuccess);
   PHINode *IndexPHI = IRB.CreatePHI(IndexTy, N);
   Value *FirstOccursLocation = IRB.CreateInBoundsPtrAdd(Base, IndexPHI);
-  PHI->addIncoming(FirstOccursLocation, BBSuccess);
   IRB.CreateBr(BBNext);
   if (DTU)
     Updates.push_back({DominatorTree::Insert, BBSuccess, BBNext});
@@ -1166,7 +1157,7 @@ static bool foldStrChr(CallInst *Call, LibFunc Func, DomTreeUpdater *DTU,
     if (!Cases.insert(CaseVal).second)
       continue;
 
-    BasicBlock *BBCase = BasicBlock::Create(Call->getContext(), "strchr.case",
+    BasicBlock *BBCase = BasicBlock::Create(Call->getContext(), "memchr.case",
                                             BB->getParent(), BBNext);
     SI->addCase(CaseVal, BBCase);
     IRB.SetInsertPoint(BBCase);
@@ -1177,6 +1168,10 @@ static bool foldStrChr(CallInst *Call, LibFunc Func, DomTreeUpdater *DTU,
       Updates.push_back({DominatorTree::Insert, BBCase, BBSuccess});
     }
   }
+
+  PHINode *PHI = PHINode::Create(Call->getType(), 2, "", BBNext->begin());
+  PHI->addIncoming(Constant::getNullValue(Call->getType()), BB);
+  PHI->addIncoming(FirstOccursLocation, BBSuccess);
 
   Call->replaceAllUsesWith(PHI);
   Call->eraseFromParent();
@@ -1219,9 +1214,8 @@ static bool foldLibCalls(Instruction &I, TargetTransformInfo &TTI,
       return true;
     }
     break;
-  case LibFunc_strchr:
   case LibFunc_memchr:
-    if (foldStrChr(CI, LF, &DTU, DL)) {
+    if (foldMemChr(CI, &DTU, DL)) {
       MadeCFGChange = true;
       return true;
     }
