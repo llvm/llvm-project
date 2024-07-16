@@ -2900,6 +2900,7 @@ cc_library(
         ":IR",
         ":LoopLikeInterface",
         ":SCFDialect",
+        ":SCFToControlFlow",
         ":SCFTransformOpsIncGen",
         ":SCFTransforms",
         ":SCFUtils",

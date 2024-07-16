@@ -8969,8 +8969,6 @@ enum CX_BinaryOperatorKind clang_Cursor_getBinaryOpcode(CXCursor C) {
   const Expr *D = getCursorExpr(C);
   if (const auto *BinOp = dyn_cast<BinaryOperator>(D)) {
     switch (BinOp->getOpcode()) {
-    default:
-      return CX_BO_Invalid;
 #define BINARY_OPERATION(Name, Spelling)                                       \
   case BO_##Name:                                                              \
     return CX_BO_##Name;

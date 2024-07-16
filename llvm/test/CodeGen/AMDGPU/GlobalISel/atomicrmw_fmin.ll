@@ -18,6 +18,7 @@ define float @local_atomic_fmin_ret_f32(ptr addrspace(3) %ptr, float %val) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_wb scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    ds_min_num_rtn_f32 v0, v0, v1
 ; GFX12-NEXT:    s_wait_dscnt 0x0
@@ -90,6 +91,7 @@ define void @local_atomic_fmin_noret_f32(ptr addrspace(3) %ptr, float %val) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_wb scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    ds_min_num_f32 v0, v1
 ; GFX12-NEXT:    s_wait_dscnt 0x0
@@ -162,6 +164,7 @@ define double @local_atomic_fmin_ret_f64(ptr addrspace(3) %ptr, double %val) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_wb scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    ds_min_num_rtn_f64 v[0:1], v0, v[1:2]
 ; GFX12-NEXT:    s_wait_dscnt 0x0
@@ -238,6 +241,7 @@ define void @local_atomic_fmin_noret_f64(ptr addrspace(3) %ptr, double %val) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_wb scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    ds_min_num_f64 v0, v[1:2]
 ; GFX12-NEXT:    s_wait_dscnt 0x0
@@ -324,8 +328,9 @@ define float @global_agent_atomic_fmin_ret_f32__amdgpu_no_fine_grained_memory(pt
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_max_num_f32_e32 v3, v4, v4
 ; GFX12-NEXT:    v_min_num_f32_e32 v3, v3, v2
+; GFX12-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_atomic_cmpswap_b32 v3, v[0:1], v[3:4], off th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    global_atomic_cmpswap_b32 v3, v[0:1], v[3:4], off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
@@ -538,8 +543,9 @@ define void @global_agent_atomic_fmin_noret_f32__amdgpu_no_fine_grained_memory(p
 ; GFX12-NEXT:    v_max_num_f32_e32 v2, v3, v3
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_min_num_f32_e32 v2, v2, v4
+; GFX12-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_atomic_cmpswap_b32 v2, v[0:1], v[2:3], off th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    global_atomic_cmpswap_b32 v2, v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
@@ -746,8 +752,9 @@ define double @global_agent_atomic_fmin_ret_f64__amdgpu_no_fine_grained_memory(p
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_max_num_f64_e32 v[4:5], v[6:7], v[6:7]
 ; GFX12-NEXT:    v_min_num_f64_e32 v[4:5], v[4:5], v[2:3]
+; GFX12-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_atomic_cmpswap_b64 v[4:5], v[0:1], v[4:7], off th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    global_atomic_cmpswap_b64 v[4:5], v[0:1], v[4:7], off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[4:5], v[6:7]
@@ -972,8 +979,9 @@ define void @global_agent_atomic_fmin_noret_f64__amdgpu_no_fine_grained_memory(p
 ; GFX12-NEXT:    v_max_num_f64_e32 v[2:3], v[4:5], v[4:5]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_min_num_f64_e32 v[2:3], v[2:3], v[6:7]
+; GFX12-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_atomic_cmpswap_b64 v[2:3], v[0:1], v[2:5], off th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    global_atomic_cmpswap_b64 v[2:3], v[0:1], v[2:5], off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[2:3], v[4:5]
@@ -1186,8 +1194,9 @@ define float @flat_agent_atomic_fmin_ret_f32__amdgpu_no_fine_grained_memory(ptr 
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_max_num_f32_e32 v3, v4, v4
 ; GFX12-NEXT:    v_min_num_f32_e32 v3, v3, v2
+; GFX12-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    flat_atomic_cmpswap_b32 v3, v[0:1], v[3:4] th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    flat_atomic_cmpswap_b32 v3, v[0:1], v[3:4] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
@@ -1395,8 +1404,9 @@ define void @flat_agent_atomic_fmin_noret_f32__amdgpu_no_fine_grained_memory(ptr
 ; GFX12-NEXT:    v_max_num_f32_e32 v2, v3, v3
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_min_num_f32_e32 v2, v2, v4
+; GFX12-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    flat_atomic_cmpswap_b32 v2, v[0:1], v[2:3] th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    flat_atomic_cmpswap_b32 v2, v[0:1], v[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
@@ -1598,8 +1608,9 @@ define double @flat_agent_atomic_fmin_ret_f64__amdgpu_no_fine_grained_memory(ptr
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_max_num_f64_e32 v[4:5], v[6:7], v[6:7]
 ; GFX12-NEXT:    v_min_num_f64_e32 v[4:5], v[4:5], v[2:3]
+; GFX12-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    flat_atomic_cmpswap_b64 v[4:5], v[0:1], v[4:7] th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    flat_atomic_cmpswap_b64 v[4:5], v[0:1], v[4:7] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[4:5], v[6:7]
@@ -1823,8 +1834,9 @@ define void @flat_agent_atomic_fmin_noret_f64__amdgpu_no_fine_grained_memory(ptr
 ; GFX12-NEXT:    v_max_num_f64_e32 v[2:3], v[4:5], v[4:5]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_min_num_f64_e32 v[2:3], v[2:3], v[6:7]
+; GFX12-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    flat_atomic_cmpswap_b64 v[2:3], v[0:1], v[2:5] th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    flat_atomic_cmpswap_b64 v[2:3], v[0:1], v[2:5] th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[2:3], v[4:5]
@@ -2035,11 +2047,11 @@ define float @buffer_fat_ptr_agent_atomic_fmin_ret_f32__amdgpu_no_fine_grained_m
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v5, v0
+; GFX12-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_max_num_f32_e32 v0, v5, v5
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_min_num_f32_e32 v4, v0, v3
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
 ; GFX12-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], v2, s[0:3], null offen th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -2285,9 +2297,10 @@ define void @buffer_fat_ptr_agent_atomic_fmin_noret_f32__amdgpu_no_fine_grained_
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_max_num_f32_e32 v0, v1, v1
+; GFX12-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_min_num_f32_e32 v0, v0, v3
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v5, v1 :: v_dual_mov_b32 v4, v0
 ; GFX12-NEXT:    buffer_atomic_cmpswap_b32 v[4:5], v2, s[0:3], null offen th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -2527,11 +2540,11 @@ define double @buffer_fat_ptr_agent_atomic_fmin_ret_f64__amdgpu_no_fine_grained_
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_dual_mov_b32 v10, v1 :: v_dual_mov_b32 v9, v0
+; GFX12-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[9:10], v[9:10]
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_min_num_f64_e32 v[7:8], v[0:1], v[4:5]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v0, v7 :: v_dual_mov_b32 v1, v8
 ; GFX12-NEXT:    v_dual_mov_b32 v2, v9 :: v_dual_mov_b32 v3, v10
 ; GFX12-NEXT:    buffer_atomic_cmpswap_b64 v[0:3], v6, s[0:3], null offen th:TH_ATOMIC_RETURN
@@ -2800,10 +2813,11 @@ define void @buffer_fat_ptr_agent_atomic_fmin_noret_f64__amdgpu_no_fine_grained_
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[2:3], v[2:3]
+; GFX12-NEXT:    global_wb scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_min_num_f64_e32 v[0:1], v[0:1], v[4:5]
 ; GFX12-NEXT:    v_dual_mov_b32 v10, v3 :: v_dual_mov_b32 v9, v2
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_dual_mov_b32 v8, v1 :: v_dual_mov_b32 v7, v0
 ; GFX12-NEXT:    buffer_atomic_cmpswap_b64 v[7:10], v6, s[0:3], null offen th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
