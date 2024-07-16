@@ -9,11 +9,10 @@
 #ifndef LLVM_LIBC_SRC_TERMIOS_LINUX_KERNEL_TERMIOS_H
 #define LLVM_LIBC_SRC_TERMIOS_LINUX_KERNEL_TERMIOS_H
 
-#include "src/__support/macros/config.h"
 #include <stddef.h>
 #include <termios.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 // The kernel's struct termios is different from the libc's struct termios. The
 // kernel's syscalls expect the size and layout of its definition of struct
@@ -37,6 +36,6 @@ struct kernel_termios {
   cc_t c_cc[KERNEL_NCCS];
 };
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_TERMIOS_LINUX_KERNEL_TERMIOS_H

@@ -9,16 +9,15 @@
 #ifndef LLVM_LIBC_SRC_SPAWN_POSIX_SPAWN_H
 #define LLVM_LIBC_SRC_SPAWN_POSIX_SPAWN_H
 
-#include "src/__support/macros/config.h"
 #include <spawn.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int posix_spawn(pid_t *__restrict pid, const char *__restrict path,
                 const posix_spawn_file_actions_t *file_actions,
                 const posix_spawnattr_t *__restrict attr,
                 char *const *__restrict argv, char *const *__restrict envp);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SPAWN_POSIX_SPAWN_H

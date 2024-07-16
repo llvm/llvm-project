@@ -10,14 +10,13 @@
 #define LLVM_LIBC_SRC_STDIO_FWRITE_UNLOCKED_H
 
 #include "hdr/types/FILE.h"
-#include "src/__support/macros/config.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 size_t fwrite_unlocked(const void *__restrict ptr, size_t size, size_t nmemb,
                        ::FILE *__restrict stream);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_FWRITE_UNLOCKED_H

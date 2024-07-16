@@ -9,10 +9,8 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_INTEGER_SEQUENCE_H
 
 #include "src/__support/CPP/type_traits/is_integral.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
-namespace cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // integer_sequence
 template <typename T, T... Ints> struct integer_sequence {
@@ -34,7 +32,6 @@ template <typename T, int N>
 using make_integer_sequence =
     typename detail::make_integer_sequence<T, N - 1>::type;
 
-} // namespace cpp
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_INTEGER_SEQUENCE_H

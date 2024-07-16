@@ -9,12 +9,11 @@
 #ifndef LLVM_LIBC_SRC_SEARCH_HSEARCH_R_H
 #define LLVM_LIBC_SRC_SEARCH_HSEARCH_R_H
 
-#include "src/__support/macros/config.h"
 #include <search.h> // ENTRY, ACTION
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 int hsearch_r(ENTRY item, ACTION action, ENTRY **retval,
               struct hsearch_data *htab);
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SEARCH_HSEARCH_R_H

@@ -10,12 +10,11 @@
 #define LLVM_LIBC_SRC_STDFIX_ABSLK_H
 
 #include "include/llvm-libc-macros/stdfix-macros.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 long accum abslk(long accum x);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDFIX_ABSLK_H

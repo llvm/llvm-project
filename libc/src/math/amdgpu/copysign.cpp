@@ -8,12 +8,11 @@
 
 #include "src/math/copysign.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(double, copysign, (double x, double y)) {
   return __builtin_copysign(x, y);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

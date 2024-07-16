@@ -9,14 +9,13 @@
 #ifndef LLVM_LIBC_SRC_SPAWN_POSIX_SPAWN_FILE_ACTIONS_ADDDUP2_H
 #define LLVM_LIBC_SRC_SPAWN_POSIX_SPAWN_FILE_ACTIONS_ADDDUP2_H
 
-#include "src/__support/macros/config.h"
 #include <spawn.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int posix_spawn_file_actions_adddup2(posix_spawn_file_actions_t *actions,
                                      int fd, int newfd);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SPAWN_POSIX_SPAWN_FILE_ACTIONS_ADDDUP2_H

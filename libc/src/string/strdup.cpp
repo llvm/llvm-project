@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strdup.h"
-#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include "src/string/allocating_string_utils.h"
 #include "src/string/memory_utils/inline_memcpy.h"
@@ -16,7 +15,7 @@
 
 #include <stdlib.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(char *, strdup, (const char *src)) {
   auto dup = internal::strdup(src);
@@ -27,4 +26,4 @@ LLVM_LIBC_FUNCTION(char *, strdup, (const char *src)) {
   return nullptr;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

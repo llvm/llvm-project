@@ -9,12 +9,11 @@
 #include "src/ctype/isascii.h"
 
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, isascii, (int c)) {
   return static_cast<int>((c & (~0x7f)) == 0);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

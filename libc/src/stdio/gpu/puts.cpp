@@ -8,7 +8,6 @@
 
 #include "src/stdio/puts.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include "src/stdio/gpu/file.h"
 
@@ -17,7 +16,7 @@
 
 #include <stdio.h> //needed for stdout
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, puts, (const char *__restrict str)) {
   cpp::string_view str_view(str);
@@ -28,4 +27,4 @@ LLVM_LIBC_FUNCTION(int, puts, (const char *__restrict str)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
