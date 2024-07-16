@@ -385,6 +385,7 @@ namespace std {
 #include <__ranges/all.h>
 #include <__ranges/as_rvalue_view.h>
 #include <__ranges/chunk_by_view.h>
+#include <__ranges/chunk_view.h>
 #include <__ranges/common_view.h>
 #include <__ranges/concepts.h>
 #include <__ranges/counted.h>
