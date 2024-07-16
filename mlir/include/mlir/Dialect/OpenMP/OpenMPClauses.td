@@ -108,37 +108,6 @@ class OpenMP_CancelDirectiveNameClauseSkip<
 def OpenMP_CancelDirectiveNameClause : OpenMP_CancelDirectiveNameClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
-// V5.2: [4.4.3] `collapse` clause
-//===----------------------------------------------------------------------===//
-
-class OpenMP_CollapseClauseSkip<
-    bit traits = false, bit arguments = false, bit assemblyFormat = false,
-    bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
-  let traits = [
-    AllTypesMatch<
-      ["collapse_lower_bounds", "collapse_upper_bounds", "collapse_steps"]>
-  ];
-
-  let arguments = (ins
-    Variadic<IntLikeType>:$collapse_lower_bounds,
-    Variadic<IntLikeType>:$collapse_upper_bounds,
-    Variadic<IntLikeType>:$collapse_steps
-  );
-
-  let extraClassDeclaration = [{
-    /// Returns the number of loops in the loop nest.
-    unsigned getNumLoops() { return getCollapseLowerBounds().size(); }
-  }];
-
-  // Description and formatting integrated in the `omp.loop_nest` operation,
-  // which is the only one currently accepting this clause.
-}
-
-def OpenMP_CollapseClause : OpenMP_CollapseClauseSkip<>;
-
-//===----------------------------------------------------------------------===//
 // V5.2: [5.7.2] `copyprivate` clause
 //===----------------------------------------------------------------------===//
 
@@ -563,6 +532,38 @@ class OpenMP_LinearClauseSkip<
 }
 
 def OpenMP_LinearClause : OpenMP_LinearClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// Not in the spec: Clause-like structure to hold loop related information.
+//===----------------------------------------------------------------------===//
+
+class OpenMP_LoopRelatedClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
+                    description, extraClassDeclaration> {
+  let traits = [
+    AllTypesMatch<
+      ["loop_lower_bounds", "loop_upper_bounds", "loop_steps"]>
+  ];
+  
+  let arguments = (ins
+    Variadic<IntLikeType>:$loop_lower_bounds,
+    Variadic<IntLikeType>:$loop_upper_bounds,
+    Variadic<IntLikeType>:$loop_steps,
+    UnitAttr:$loop_inclusive
+  );
+
+  let extraClassDeclaration = [{
+    /// Returns the number of loops in the loop nest.
+    unsigned getNumLoops() { return getLoopLowerBounds().size(); }
+  }];
+
+  // Description and formatting integrated in the `omp.loop_nest` operation,
+  // which is the only one currently accepting this clause.
+}
+
+def OpenMP_LoopRelatedClause : OpenMP_LoopRelatedClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [5.8.3] `map` clause
