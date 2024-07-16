@@ -67,6 +67,7 @@ for.end:                                          ; preds = %for.body, %entry
 define void @print_widen_gep_and_select(i64 %n, ptr noalias %y, ptr noalias %x, ptr %z) nounwind uwtable {
 ; CHECK-LABEL: Checking a loop in 'print_widen_gep_and_select'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<%n> = original trip-count
@@ -77,7 +78,7 @@ define void @print_widen_gep_and_select(i64 %n, ptr noalias %y, ptr noalias %x, 
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi %iv.next, 0, ir<1>
+; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi %iv.next, 0, ir<1>, vp<[[VF]]
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   WIDEN-GEP Inv[Var] ir<%arrayidx> = getelementptr inbounds ir<%y>, ir<%iv>
 ; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx>
@@ -243,6 +244,7 @@ for.end:                                          ; preds = %for.body, %entry
 define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 ; CHECK-LABEL: Checking a loop in 'print_replicate_predicated_phi'
 ; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
@@ -257,7 +259,7 @@ define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:   WIDEN-INDUCTION %i = phi 0, %i.next, ir<1>
+; CHECK-NEXT:   WIDEN-INDUCTION %i = phi 0, %i.next, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:   WIDEN ir<%cmp> = icmp ult ir<%i>, ir<5>
 ; CHECK-NEXT: Successor(s): pred.udiv
@@ -567,6 +569,7 @@ declare float @llvm.fmuladd.f32(float, float, float)
 define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-LABEL: Checking a loop in 'print_expand_scev'
 ; CHECK: VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.*]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
@@ -584,7 +587,7 @@ define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
 ; CHECK-NEXT:     WIDEN-INDUCTION\l" +
 ; CHECK-NEXT:     "  %iv = phi %iv.next, 0\l" +
-; CHECK-NEXT:     "  ir<%v2>, vp<[[EXP_SCEV]]>
+; CHECK-NEXT:     "  ir<%v2>, vp<[[EXP_SCEV]]>, vp<[[VF]]>
 ; CHECK-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<0> + vp<[[CAN_IV]]> * vp<[[EXP_SCEV]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[DERIVED_IV]]>, vp<[[EXP_SCEV]]>
 ; CHECK-NEXT:     WIDEN ir<%v3> = add nuw ir<%v2>, ir<1>
@@ -597,7 +600,7 @@ define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq vp<[[TC]]>, vp<[[VEC_TC]]>
+; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq vp<[[TC]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<loop.exit>, scalar.ph
 ; CHECK-EMPTY:
@@ -631,6 +634,7 @@ loop.exit:
 define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-LABEL: Checking a loop in 'print_exit_value'
 ; CHECK: VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1000> = original trip-count
@@ -641,7 +645,7 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:     WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
+; CHECK-NEXT:     WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr inbounds ir<%ptr>, vp<[[STEPS]]>
 ; CHECK-NEXT:     WIDEN ir<%add> = add ir<%iv>, ir<%off>

@@ -1823,6 +1823,9 @@ public:
   VPValue *getStepValue() { return getOperand(1); }
   const VPValue *getStepValue() const { return getOperand(1); }
 
+  VPValue *getVFValue() { return getOperand(2); }
+  const VPValue *getVFValue() const { return getOperand(2); }
+
   /// Returns the first defined value as TruncInst, if it is one or nullptr
   /// otherwise.
   TruncInst *getTruncInst() { return Trunc; }

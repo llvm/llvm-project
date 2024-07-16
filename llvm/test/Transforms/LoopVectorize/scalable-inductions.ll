@@ -271,9 +271,7 @@ define void @add_unique_indf32(ptr noalias nocapture %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = uitofp <vscale x 4 x i32> [[TMP7]] to <vscale x 4 x float>
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul <vscale x 4 x float> [[TMP8]], shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 2.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = fadd <vscale x 4 x float> [[TMP9]], zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP11:%.*]] = shl i32 [[TMP10]], 2
-; CHECK-NEXT:    [[TMP12:%.*]] = uitofp i32 [[TMP11]] to float
+; CHECK-NEXT:    [[TMP12:%.*]] = uitofp i64 [[TMP6]] to float
 ; CHECK-NEXT:    [[TMP13:%.*]] = fmul float [[TMP12]], 2.000000e+00
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x float> poison, float [[TMP13]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x float> [[DOTSPLATINSERT]], <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer

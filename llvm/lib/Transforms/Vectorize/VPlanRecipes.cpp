@@ -1243,14 +1243,6 @@ static Constant *getSignedIntOrFpConstant(Type *Ty, int64_t C) {
                            : ConstantFP::get(Ty, C);
 }
 
-static Value *getRuntimeVFAsFloat(IRBuilderBase &B, Type *FTy,
-                                  ElementCount VF) {
-  assert(FTy->isFloatingPointTy() && "Expected floating point type!");
-  Type *IntTy = IntegerType::get(FTy->getContext(), FTy->getScalarSizeInBits());
-  Value *RuntimeVF = getRuntimeVF(B, IntTy, VF);
-  return B.CreateUIToFP(RuntimeVF, FTy);
-}
-
 void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   assert(!State.Instance && "Int or FP induction being replicated.");
 
@@ -1308,9 +1300,9 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   // Multiply the vectorization factor by the step using integer or
   // floating-point arithmetic as appropriate.
   Type *StepType = Step->getType();
-  Value *RuntimeVF = State.get(getOperand(2), {0, 0});
+  Value *RuntimeVF = State.get(getVFValue(), {0, 0});
   if (Step->getType()->isFloatingPointTy())
-    RuntimeVF = getRuntimeVFAsFloat(Builder, StepType, State.VF);
+    RuntimeVF = Builder.CreateUIToFP(RuntimeVF, StepType);
   else
     RuntimeVF = Builder.CreateZExtOrTrunc(RuntimeVF, StepType);
   Value *Mul = Builder.CreateBinOp(MulOp, Step, RuntimeVF);
@@ -1366,6 +1358,9 @@ void VPWidenIntOrFpInductionRecipe::print(raw_ostream &O, const Twine &Indent,
 
   O << ", ";
   getStepValue()->printAsOperand(O, SlotTracker);
+
+  O << ", ";
+  getVFValue()->printAsOperand(O, SlotTracker);
 }
 #endif
 

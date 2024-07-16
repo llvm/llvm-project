@@ -932,8 +932,6 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   if (VF.getNumUsers()) {
     RuntimeVF = createStepForVF(Builder, TripCountV->getType(), State.VF, 1);
     VF.setUnderlyingValue(RuntimeVF);
-  }
-  if (RuntimeVF) {
     VFxUF.setUnderlyingValue(
         State.UF > 1 ? Builder.CreateMul(
                            VF.getLiveInIRValue(),
@@ -1104,6 +1102,12 @@ InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPlan::printLiveIns(raw_ostream &O) const {
   VPSlotTracker SlotTracker(this);
+
+  if (VF.getNumUsers() > 0) {
+    O << "\nLive-in ";
+    VF.printAsOperand(O, SlotTracker);
+    O << " = VF";
+  }
 
   if (VFxUF.getNumUsers() > 0) {
     O << "\nLive-in ";
@@ -1560,6 +1564,8 @@ void VPSlotTracker::assignName(const VPValue *V) {
 }
 
 void VPSlotTracker::assignNames(const VPlan &Plan) {
+  if (Plan.VF.getNumUsers() > 0)
+    assignName(&Plan.VF);
   if (Plan.VFxUF.getNumUsers() > 0)
     assignName(&Plan.VFxUF);
   assignName(&Plan.VectorTripCount);

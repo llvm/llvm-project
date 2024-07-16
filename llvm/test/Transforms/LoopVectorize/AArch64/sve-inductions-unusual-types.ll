@@ -25,8 +25,7 @@ define void @induction_i7(ptr %dst) #0 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <vscale x 2 x i7> [[TMP7]], zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul <vscale x 2 x i7> [[TMP8]], shufflevector (<vscale x 2 x i7> insertelement (<vscale x 2 x i7> poison, i7 1, i64 0), <vscale x 2 x i7> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i7> zeroinitializer, [[TMP9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = call i7 @llvm.vscale.i7()
-; CHECK-NEXT:    [[TMP11:%.*]] = mul i7 [[TMP10]], 2
+; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP40]] to i7
 ; CHECK-NEXT:    [[TMP12:%.*]] = mul i7 1, [[TMP11]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i7> poison, i7 [[TMP12]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i7> [[DOTSPLATINSERT]], <vscale x 2 x i7> poison, <vscale x 2 x i32> zeroinitializer
@@ -100,8 +99,7 @@ define void @induction_i3_zext(ptr %dst) #0 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = add <vscale x 2 x i3> [[TMP7]], zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul <vscale x 2 x i3> [[TMP8]], shufflevector (<vscale x 2 x i3> insertelement (<vscale x 2 x i3> poison, i3 1, i64 0), <vscale x 2 x i3> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i3> zeroinitializer, [[TMP9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = call i3 @llvm.vscale.i3()
-; CHECK-NEXT:    [[TMP11:%.*]] = mul i3 [[TMP10]], 2
+; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP40]] to i3
 ; CHECK-NEXT:    [[TMP12:%.*]] = mul i3 1, [[TMP11]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i3> poison, i3 [[TMP12]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i3> [[DOTSPLATINSERT]], <vscale x 2 x i3> poison, <vscale x 2 x i32> zeroinitializer
