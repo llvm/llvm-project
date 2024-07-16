@@ -9475,6 +9475,14 @@ void SelectionDAGBuilder::LowerCallSiteWithPtrAuthBundle(
       return LowerCallTo(CB, getValue(CalleeCPA->getPointer()), CB.isTailCall(),
                          CB.isMustTailCall(), EHPadBB);
 
+  // Look through ptrauth globals to find the raw callee.
+  // Do a direct unauthenticated call if we found it and everything matches.
+  if (auto CalleePAI = GlobalPtrAuthInfo::analyze(CalleeV))
+    // FIXME: bring back a static diagnostic when we can guarantee the mismatch
+    if (CalleePAI->isCompatibleWith(Key, Discriminator, DAG.getDataLayout()))
+      return LowerCallTo(CB, getValue(CalleePAI->getPointer()), CB.isTailCall(),
+                         CB.isMustTailCall(), EHPadBB);
+
   // Functions should never be ptrauth-called directly.
   assert(!isa<Function>(CalleeV) && "invalid direct ptrauth call");
 
