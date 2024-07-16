@@ -132,8 +132,12 @@ CodeCompleteResult completions(const TestTU &TU, Position Point,
     ADD_FAILURE() << "Couldn't build CompilerInvocation";
     return {};
   }
+
+  MockCompilationDatabase CDB;
   auto Preamble = buildPreamble(testPath(TU.Filename), *CI, Inputs,
-                                /*InMemory=*/true, /*Callback=*/nullptr);
+                                /*InMemory=*/true,
+                                /*RequiredModuleBuilder=*/nullptr,
+                                /*Callback=*/nullptr);
   return codeComplete(testPath(TU.Filename), Point, Preamble.get(), Inputs,
                       Opts);
 }
@@ -1363,8 +1367,12 @@ signatures(llvm::StringRef Text, Position Point,
     ADD_FAILURE() << "Couldn't build CompilerInvocation";
     return {};
   }
-  auto Preamble = buildPreamble(testPath(TU.Filename), *CI, Inputs,
-                                /*InMemory=*/true, /*Callback=*/nullptr);
+
+  MockCompilationDatabase CDB;
+  auto Preamble =
+      buildPreamble(testPath(TU.Filename), *CI, Inputs,
+                    /*InMemory=*/true, /*RequiredModuleBuilder=*/nullptr,
+                    /*Callback=*/nullptr);
   if (!Preamble) {
     ADD_FAILURE() << "Couldn't build Preamble";
     return {};
@@ -1662,8 +1670,12 @@ TEST(SignatureHelpTest, StalePreamble) {
   auto Inputs = TU.inputs(FS);
   auto CI = buildCompilerInvocation(Inputs, Diags);
   ASSERT_TRUE(CI);
-  auto EmptyPreamble = buildPreamble(testPath(TU.Filename), *CI, Inputs,
-                                     /*InMemory=*/true, /*Callback=*/nullptr);
+
+  MockCompilationDatabase CDB;
+  auto EmptyPreamble =
+      buildPreamble(testPath(TU.Filename), *CI, Inputs,
+                    /*InMemory=*/true, /*RequiredModuleBuilder=*/nullptr,
+                    /*Callback=*/nullptr);
   ASSERT_TRUE(EmptyPreamble);
 
   TU.AdditionalFiles["a.h"] = "int foo(int x);";

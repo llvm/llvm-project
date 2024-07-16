@@ -97,7 +97,10 @@ add_clang_library(clangDaemon
   IncludeFixer.cpp
   InlayHints.cpp
   JSONTransport.cpp
+  ModuleDependencyScanner.cpp
+  ModulesBuilder.cpp
   PathMapping.cpp
+  ProjectModules.cpp
   Protocol.cpp
   Quality.cpp
   ParsedAST.cpp
@@ -161,6 +164,7 @@ clang_target_link_libraries(clangDaemon
   clangAST
   clangASTMatchers
   clangBasic
+  clangDependencyScanning
   clangDriver
   clangFormat
   clangFrontend

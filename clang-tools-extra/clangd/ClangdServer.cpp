@@ -208,6 +208,7 @@ ClangdServer::Options::operator TUScheduler::Options() const {
   Opts.UpdateDebounce = UpdateDebounce;
   Opts.ContextProvider = ContextProvider;
   Opts.PreambleThrottler = PreambleThrottler;
+  Opts.ExperimentalModulesSupport = ExperimentalModulesSupport;
   return Opts;
 }
 
@@ -228,6 +229,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       DirtyFS(std::make_unique<DraftStoreFS>(TFS, DraftMgr)) {
   if (Opts.AsyncThreadsCount != 0)
     IndexTasks.emplace();
+
   // Pass a callback into `WorkScheduler` to extract symbols from a newly
   // parsed file and rebuild the file index synchronously each time an AST
   // is parsed.

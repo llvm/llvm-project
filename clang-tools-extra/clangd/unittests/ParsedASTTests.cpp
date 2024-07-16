@@ -376,8 +376,10 @@ TEST(ParsedASTTest, PatchesAdditionalIncludes) {
   MockFS FS;
   auto Inputs = TU.inputs(FS);
   auto CI = buildCompilerInvocation(Inputs, Diags);
+  MockCompilationDatabase CDB;
   auto EmptyPreamble =
-      buildPreamble(testPath("foo.cpp"), *CI, Inputs, true, nullptr);
+      buildPreamble(testPath("foo.cpp"), *CI, Inputs, true,
+                    /*RequiredModuleBuilder=*/nullptr, nullptr);
   ASSERT_TRUE(EmptyPreamble);
   EXPECT_THAT(EmptyPreamble->Includes.MainFileIncludes, IsEmpty());
 
@@ -418,8 +420,10 @@ TEST(ParsedASTTest, PatchesDeletedIncludes) {
   MockFS FS;
   auto Inputs = TU.inputs(FS);
   auto CI = buildCompilerInvocation(Inputs, Diags);
+  MockCompilationDatabase CDB;
   auto BaselinePreamble =
-      buildPreamble(testPath("foo.cpp"), *CI, Inputs, true, nullptr);
+      buildPreamble(testPath("foo.cpp"), *CI, Inputs, true,
+                    /*RequiredModuleBuilder=*/nullptr, nullptr);
   ASSERT_TRUE(BaselinePreamble);
   EXPECT_THAT(BaselinePreamble->Includes.MainFileIncludes,
               ElementsAre(testing::Field(&Inclusion::Written, "<foo.h>")));
