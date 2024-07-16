@@ -120,10 +120,52 @@ std::pair<Value, Value> flattenUnrankedTensor(OpBuilder &builder, Location loc,
 
   // Reshape input tensor into 1D
   auto inputType = cast<UnrankedTensorType>(input.getType());
+  auto elementType = inputType.getElementType();
   auto flatInputType =
-      RankedTensorType::get({ShapedType::kDynamic}, inputType.getElementType());
+      RankedTensorType::get({ShapedType::kDynamic}, elementType);
   auto flatInput = builder.create<tensor::ReshapeOp>(
       loc, flatInputType, input, flatInputShape);
+  return std::make_pair(flatInput, inputShape);
+}
+
+std::pair<Value, Value> flattenUnrankedTensorAroundAxis(OpBuilder &builder,
+                                                        Location loc,
+                                                        Value input,
+                                                        int64_t axis) {
+  // Get full tensor shape
+  auto *context = builder.getContext();
+  auto indexType = builder.getIndexType();
+  auto shapeType = shape::getExtentTensorType(context);
+  auto inputShape = builder.create<shape::ShapeOfOp>(loc, shapeType, input);
+
+  // Get shape and sizes on left and right of axis
+  auto axisValue = builder.create<arith::ConstantIndexOp>(loc, axis);
+  auto axisNextValue = builder.create<arith::ConstantIndexOp>(loc, axis + 1);
+  auto shapeLeft = builder.create<shape::SplitAtOp>(
+      loc, TypeRange{shapeType, shapeType}, inputShape, axisValue)
+      .getResult(0);
+  auto sizeLeft = builder.create<shape::NumElementsOp>(
+      loc, indexType, shapeLeft);
+  auto shapeRight = builder.create<shape::SplitAtOp>(
+      loc, TypeRange{shapeType, shapeType}, inputShape, axisNextValue)
+      .getResult(1);
+  auto sizeRight = builder.create<shape::NumElementsOp>(
+      loc, indexType, shapeRight);
+  Value axisSize = builder.create<tensor::DimOp>(loc, input, axisValue);
+
+  // Compute flat input shape as a 3-element 1D tensor
+  auto flatShapeType = shape::getExtentTensorType(context, 3);
+  auto flatInputShape = builder.create<tensor::FromElementsOp>(
+      loc, flatShapeType, ValueRange{sizeLeft, axisSize, sizeRight});
+
+  // Reshape input to 3D tensor
+  auto inputType = cast<UnrankedTensorType>(input.getType());
+  auto elementType = inputType.getElementType();
+  SmallVector<int64_t> flatInputDims(3, ShapedType::kDynamic);
+  auto flatInputType = RankedTensorType::get(flatInputDims, elementType);
+  auto flatInput = builder.create<tensor::ReshapeOp>(
+      loc, flatInputType, input, flatInputShape);
+
   return std::make_pair(flatInput, inputShape);
 }
 
@@ -219,23 +261,23 @@ class QuantizeCastOpConversion : public OpConversionPattern<quant::QuantizeCastO
                         UniformQuantizedType quantizedType) const {
     // Flatten input if unranked
     bool isUnranked = isa<UnrankedTensorType>(input.getType());
-    Value shape;
+    Value inputShape;
     if (isUnranked)
-      std::tie(input, shape) = flattenUnrankedTensor(builder, loc, input);
+      std::tie(input, inputShape) = flattenUnrankedTensor(builder, loc, input);
 
     // Process ranked tensor
     auto result = convertPerLayerRanked(builder, loc, input, quantizedType);
 
     // Restore original shape if unranked
     if (isUnranked)
-      result = restoreUnrankedTensor(builder, loc, result, shape);
+      result = restoreUnrankedTensor(builder, loc, result, inputShape);
 
     return result;
   }
 
   Value convertPerChannelRanked(OpBuilder &builder, Location loc, Value input,
                                 UniformQuantizedPerAxisType quantizedType,
-                                int32_t channelAxis) const {
+                                int64_t channelAxis) const {
     auto *context = builder.getContext();
 
     auto inputType = cast<RankedTensorType>(input.getType());
@@ -283,7 +325,25 @@ class QuantizeCastOpConversion : public OpConversionPattern<quant::QuantizeCastO
 
   Value convertPerChannel(OpBuilder &builder, Location loc, Value input,
                           UniformQuantizedPerAxisType quantizedType) const {
-    return convertPerChannelRanked(builder, loc, input, quantizedType, quantizedType.getQuantizedDimension());
+    // Flatten unranked tensor if necessary
+    bool isUnranked = isa<UnrankedTensorType>(input.getType());
+    int64_t channelAxis = quantizedType.getQuantizedDimension();
+    Value inputShape;
+    if (isUnranked) {
+      std::tie(input, inputShape) =
+          flattenUnrankedTensorAroundAxis(builder, loc, input, channelAxis);
+      channelAxis = 1;
+    }
+
+    // Work on a ranked tensor
+    auto result = convertPerChannelRanked(builder, loc, input, quantizedType,
+                                          channelAxis);
+
+    // Restore original tensor shape if unranked
+    if (isUnranked)
+      result = restoreUnrankedTensor(builder, loc, result, inputShape);
+
+    return result;
   }
 
 public:
