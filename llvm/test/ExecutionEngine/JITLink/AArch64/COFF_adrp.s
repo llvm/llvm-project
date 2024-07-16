@@ -1,6 +1,6 @@
 # REQUIRES: asserts
 # RUN: llvm-mc -filetype=obj -triple=aarch64-windows-msvc %s -o %t
-# RUN: llvm-jitlink --debug-only=jitlink -noexec %t 2>&1 | FileCheck %s
+# RUN: llvm-jitlink -debug-only=jitlink -noexec %t 2>&1 | FileCheck %s
 #
 # Check function  symbol is created with a correct value.
 #
