@@ -388,6 +388,7 @@ if(NOT LIBC_TARGET_OS_IS_GPU)
       freelist_malloc
       SRCS
         freelist_malloc.cpp
+        heap_limit.S
       HDRS
         malloc.h
       DEPENDS

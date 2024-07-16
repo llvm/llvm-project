@@ -20,7 +20,7 @@
   },
   "malloc": {
     "LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE": {
-      "value": 102400
+      "value": 131072
     }
   },
   "qsort": {
