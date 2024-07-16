@@ -44,19 +44,24 @@ struct __set_intersection_result {
 };
 
 // Helper for __set_intersection() with one-sided binary search: populate result and advance input iterators if they
-// haven't advanced in the last 2 calls. This function is very intimately related to the way it is used and doesn't
-// attempt to abstract that, it's not appropriate for general usage outside of its context.
+// are found to potentially contain the same value in two consecutive calls. This function is very intimately related to
+// the way it is used and doesn't attempt to abstract that, it's not appropriate for general usage outside of its
+// context.
 template <class _InForwardIter1, class _InForwardIter2, class _OutIter>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __set_intersection_add_output_unless(
-    bool __advanced, _InForwardIter1& __first1, _InForwardIter2& __first2, _OutIter& __result, bool& __prev_advanced) {
-  if (__advanced || __prev_advanced) {
-    __prev_advanced = __advanced;
-  } else {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __set_intersection_add_output_if_equal(
+    bool __may_be_equal,
+    _InForwardIter1& __first1,
+    _InForwardIter2& __first2,
+    _OutIter& __result,
+    bool& __prev_maybe_equal) {
+  if (__may_be_equal && __prev_maybe_equal) {
     *__result = *__first1;
     ++__result;
     ++__first1;
     ++__first2;
-    __prev_advanced = true;
+    __prev_maybe_equal = false;
+  } else {
+    __prev_maybe_equal = __may_be_equal;
   }
 }
 
@@ -91,20 +96,24 @@ __set_intersection(
     std::forward_iterator_tag,
     std::forward_iterator_tag) {
   _LIBCPP_CONSTEXPR std::__identity __proj;
-  bool __prev_advanced = true;
+  bool __prev_maybe_equal = false;
 
   while (__first2 != __last2) {
     _InForwardIter1 __first1_next =
         std::__lower_bound_onesided<_AlgPolicy>(__first1, __last1, *__first2, __comp, __proj);
     std::swap(__first1_next, __first1);
-    std::__set_intersection_add_output_unless(__first1 != __first1_next, __first1, __first2, __result, __prev_advanced);
+    // keeping in mind that a==b iff !(a<b) && !(b<a):
+    // if we can't advance __first1, that means !(*__first1 < *_first2), therefore __may_be_equal==true
+    std::__set_intersection_add_output_if_equal(
+        __first1 == __first1_next, __first1, __first2, __result, __prev_maybe_equal);
     if (__first1 == __last1)
       break;
 
     _InForwardIter2 __first2_next =
         std::__lower_bound_onesided<_AlgPolicy>(__first2, __last2, *__first1, __comp, __proj);
     std::swap(__first2_next, __first2);
-    std::__set_intersection_add_output_unless(__first2 != __first2_next, __first1, __first2, __result, __prev_advanced);
+    std::__set_intersection_add_output_if_equal(
+        __first2 == __first2_next, __first1, __first2, __result, __prev_maybe_equal);
   }
   return __set_intersection_result<_InForwardIter1, _InForwardIter2, _OutIter>(
       _IterOps<_AlgPolicy>::next(std::move(__first1), std::move(__last1)),
