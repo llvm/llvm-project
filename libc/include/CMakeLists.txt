@@ -587,6 +587,7 @@ add_header_macro(
   ../libc/newhdrgen/yaml/sys/sys_syscall.yaml
   sys/syscall.h.def
   sys/syscall.h
+  DEPENDS
 )
 
 add_header_macro(
