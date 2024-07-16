@@ -40,7 +40,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
-#include "llvm/Support/Mutex.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/raw_ostream.h"
