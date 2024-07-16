@@ -76,9 +76,6 @@ static long syscall_impl_5_args(long number, long arg1, long arg2, long arg3,
 #define RISCV_HWPROBE_KEY_ZICBOZ_BLOCK_SIZE 6
 /* Increase RISCV_HWPROBE_MAX_KEY when adding items. */
 
-/* Flags */
-#define RISCV_HWPROBE_WHICH_CPUS (1ULL << 0)
-
 struct riscv_hwprobe {
   long long key;
   unsigned long long value;
