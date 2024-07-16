@@ -82,7 +82,7 @@ class HeaderFile:
         if current_guard != None:
             content.pop()
             content.append(f"#endif // {current_guard}")
-            content.append("")      
+            content.append("")
 
         for object in self.objects:
             content.append(str(object))
