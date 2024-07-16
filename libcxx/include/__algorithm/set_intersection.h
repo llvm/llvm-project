@@ -53,15 +53,15 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __set_intersection_add_
     _InForwardIter1& __first1,
     _InForwardIter2& __first2,
     _OutIter& __result,
-    bool& __prev_maybe_equal) {
-  if (__may_be_equal && __prev_maybe_equal) {
+    bool& __prev_may_be_equal) {
+  if (__may_be_equal && __prev_may_be_equal) {
     *__result = *__first1;
     ++__result;
     ++__first1;
     ++__first2;
-    __prev_maybe_equal = false;
+    __prev_may_be_equal = false;
   } else {
-    __prev_maybe_equal = __may_be_equal;
+    __prev_may_be_equal = __may_be_equal;
   }
 }
 
@@ -96,7 +96,7 @@ __set_intersection(
     std::forward_iterator_tag,
     std::forward_iterator_tag) {
   _LIBCPP_CONSTEXPR std::__identity __proj;
-  bool __prev_maybe_equal = false;
+  bool __prev_may_be_equal = false;
 
   while (__first2 != __last2) {
     _InForwardIter1 __first1_next =
@@ -105,7 +105,7 @@ __set_intersection(
     // keeping in mind that a==b iff !(a<b) && !(b<a):
     // if we can't advance __first1, that means !(*__first1 < *_first2), therefore __may_be_equal==true
     std::__set_intersection_add_output_if_equal(
-        __first1 == __first1_next, __first1, __first2, __result, __prev_maybe_equal);
+        __first1 == __first1_next, __first1, __first2, __result, __prev_may_be_equal);
     if (__first1 == __last1)
       break;
 
@@ -113,7 +113,7 @@ __set_intersection(
         std::__lower_bound_onesided<_AlgPolicy>(__first2, __last2, *__first1, __comp, __proj);
     std::swap(__first2_next, __first2);
     std::__set_intersection_add_output_if_equal(
-        __first2 == __first2_next, __first1, __first2, __result, __prev_maybe_equal);
+        __first2 == __first2_next, __first1, __first2, __result, __prev_may_be_equal);
   }
   return __set_intersection_result<_InForwardIter1, _InForwardIter2, _OutIter>(
       _IterOps<_AlgPolicy>::next(std::move(__first1), std::move(__last1)),
