@@ -921,14 +921,10 @@ void ASTStmtReader::VisitRequiresExpr(RequiresExpr *E) {
       case concepts::Requirement::RK_Nested: {
         bool HasInvalidConstraint = Record.readInt();
         if (HasInvalidConstraint) {
-          std::string InvalidConstraint = Record.readString();
-          char *InvalidConstraintBuf =
-              new (Record.getContext()) char[InvalidConstraint.size()];
-          std::copy(InvalidConstraint.begin(), InvalidConstraint.end(),
-                    InvalidConstraintBuf);
+          StringRef InvalidConstraint =
+              saveStrToCtx(Record.readString(), Record.getContext());
           R = new (Record.getContext()) concepts::NestedRequirement(
-              Record.getContext(),
-              StringRef(InvalidConstraintBuf, InvalidConstraint.size()),
+              Record.getContext(), InvalidConstraint,
               readConstraintSatisfaction(Record));
           break;
         }
