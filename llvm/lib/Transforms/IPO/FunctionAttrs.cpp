@@ -634,7 +634,7 @@ ArgumentAccessInfo GetArgmentAccessInfo(const Instruction *I,
     return std::nullopt;
   };
   if (auto *SI = dyn_cast<StoreInst>(I)) {
-    if (&SI->getOperandUse(1) == ArgUse.U) {
+    if (!SI->isVolatile() && &SI->getOperandUse(1) == ArgUse.U) {
       // Get the fixed type size of "SI". Since the access range of a write
       // will be unioned, if "SI" doesn't have a fixed type size, we just set
       // the access range to empty.
@@ -646,7 +646,7 @@ ArgumentAccessInfo GetArgmentAccessInfo(const Instruction *I,
               /*IsClobber=*/false, AccessRanges};
     }
   } else if (auto *LI = dyn_cast<LoadInst>(I)) {
-    if (&LI->getOperandUse(0) == ArgUse.U) {
+    if (!LI->isVolatile() && &LI->getOperandUse(0) == ArgUse.U) {
       // Get the fixed type size of "LI". Different from Write, if "LI"
       // doesn't have a fixed type size, we conservatively set as a clobber
       // with an empty access range.

@@ -914,7 +914,7 @@ entry:
 
 define void @sincos_f32_repeated_uses(float %x, ptr addrspace(1) %sin_out, ptr addrspace(1) %cos_out) {
 ; CHECK-LABEL: define void @sincos_f32_repeated_uses
-; CHECK-SAME: (float [[X:%.*]], ptr addrspace(1) initializes((0, 4)) [[SIN_OUT:%.*]], ptr addrspace(1) initializes((0, 4)) [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
+; CHECK-SAME: (float [[X:%.*]], ptr addrspace(1) [[SIN_OUT:%.*]], ptr addrspace(1) [[COS_OUT:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
 ; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]])

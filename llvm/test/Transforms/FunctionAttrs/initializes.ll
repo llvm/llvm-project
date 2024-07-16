@@ -130,7 +130,7 @@ define void @store_offset(ptr %p) {
 define void @store_volatile(ptr %p) {
 ; CHECK: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; CHECK-LABEL: define void @store_volatile(
-; CHECK-SAME: ptr initializes((8, 12)) [[P:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 8
 ; CHECK-NEXT:    store volatile i32 123, ptr [[G]], align 4
 ; CHECK-NEXT:    ret void
