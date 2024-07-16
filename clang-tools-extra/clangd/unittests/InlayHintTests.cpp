@@ -1294,7 +1294,7 @@ TEST(TypeHints, DecltypeAuto) {
                   ExpectedHint{": int &", "z"});
 }
 
-TEST(TypeHints, NoQualifiers) {
+TEST(TypeHints, NoNNS) {
   assertTypeHints(R"cpp(
     namespace A {
       namespace B {
@@ -1913,6 +1913,21 @@ TEST(TypeHints, LinksForDeductionGuides) {
                       ExpectedHintLabelPiece{"<int>"});
 }
 
+TEST(TypeHints, Qualifiers) {
+  StringRef Source(R"cpp(
+  struct Base { virtual ~Base() = default; };
+
+  struct $Derived[[Derived]] : virtual Base {};
+
+  Base *make();
+
+  const auto $1[[ptr]] = dynamic_cast<const Derived *>(make());
+  )cpp");
+
+  assertTypeLinkHints(Source, "1", ExpectedHintLabelPiece{": const "},
+                      ExpectedHintLabelPiece{"Derived", "Derived"},
+                      ExpectedHintLabelPiece{" *const"});
+}
 
 TEST(TypeHints, TypeDeductionForC) {
   StringRef Source(R"cpp(

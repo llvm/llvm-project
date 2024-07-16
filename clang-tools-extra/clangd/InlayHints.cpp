@@ -383,12 +383,15 @@ class TypeHintBuilder : public TypeVisitor<TypeHintBuilder> {
   const PrintingPolicy &PP;
   SourceManager &SM;
   std::vector<InlayHintLabelPart> LabelChunks;
+  bool AppendSpaceToQuals;
 
   void addLabel(llvm::function_ref<void(llvm::raw_ostream &)> NamePrinter,
-                SourceLocation Location) {
+                SourceLocation Location = SourceLocation()) {
     std::string Label;
     llvm::raw_string_ostream OS(Label);
     NamePrinter(OS);
+    if (!Location.isValid())
+      return addLabel(std::move(Label));
     auto &Name = LabelChunks.emplace_back();
     Name.value = std::move(Label);
     Name.location = makeLocation(Context, Location, MainFilePath);
@@ -452,12 +455,11 @@ class TypeHintBuilder : public TypeVisitor<TypeHintBuilder> {
     addLabel(">");
   }
 
-  void maybeAddQualifiers() {
-    auto Quals = CurrentType.split().Quals;
-    if (!Quals.empty()) {
-      addLabel(Quals.getAsString());
-      addLabel(" ");
-    }
+  void maybeAddQualifiers(bool AppendSpaceToQuals) {
+    addLabel([&](llvm::raw_ostream &OS) {
+      CurrentType.split().Quals.print(
+          OS, PP, /*appendSpaceIfNonEmpty=*/AppendSpaceToQuals);
+    });
   }
 
   // When printing a reference, the referenced type might also be a reference.
@@ -497,6 +499,55 @@ class TypeHintBuilder : public TypeVisitor<TypeHintBuilder> {
     return ::clang::clangd::nameLocation(*D, SM);
   }
 
+  // CanPrefixQualifiers - We prefer to print type qualifiers
+  // before the type, so that we get "const int" instead of "int const", but we
+  // can't do this if the type is complex.  For example if the type is "int*",
+  // we *must* print "int * const", printing "const int *" is different.  Only
+  // do this when the type expands to a simple string.
+  // This is similar to the private function \p
+  // TypePrinter::canPrefixQualifiers().
+  // FIXME: Refactor and share the same implementation.
+  static bool canPrefixQualifiers(const Type *T) {
+    bool CanPrefixQualifiers = false;
+    const Type *UnderlyingType = T;
+    if (const auto *AT = dyn_cast<AutoType>(T))
+      UnderlyingType = AT->desugar().getTypePtr();
+    if (const auto *Subst = dyn_cast<SubstTemplateTypeParmType>(T))
+      UnderlyingType = Subst->getReplacementType().getTypePtr();
+    Type::TypeClass TC = UnderlyingType->getTypeClass();
+
+    switch (TC) {
+    case Type::Adjusted:
+    case Type::Decayed:
+    case Type::ArrayParameter:
+    case Type::Pointer:
+    case Type::BlockPointer:
+    case Type::LValueReference:
+    case Type::RValueReference:
+    case Type::MemberPointer:
+    case Type::DependentAddressSpace:
+    case Type::DependentVector:
+    case Type::DependentSizedExtVector:
+    case Type::Vector:
+    case Type::ExtVector:
+    case Type::ConstantMatrix:
+    case Type::DependentSizedMatrix:
+    case Type::FunctionProto:
+    case Type::FunctionNoProto:
+    case Type::Paren:
+    case Type::PackExpansion:
+    case Type::SubstTemplateTypeParm:
+    case Type::MacroQualified:
+    case Type::CountAttributed:
+      CanPrefixQualifiers = false;
+      break;
+    default:
+      CanPrefixQualifiers = true;
+    }
+
+    return CanPrefixQualifiers;
+  }
+
   SourceLocation getPreferredLocationFromSpecialization(
       ClassTemplateSpecializationDecl *Specialization) const {
     SourceLocation Location;
@@ -518,24 +569,39 @@ public:
   TypeHintBuilder(ASTContext &Context, StringRef MainFilePath,
                   const PrintingPolicy &PP, llvm::StringRef Prefix)
       : CurrentNestedNameSpecifier(nullptr), Context(Context),
-        MainFilePath(MainFilePath), PP(PP), SM(Context.getSourceManager()) {
+        MainFilePath(MainFilePath), PP(PP), SM(Context.getSourceManager()),
+        AppendSpaceToQuals(true) {
     LabelChunks.reserve(16);
     if (!Prefix.empty())
       addLabel(Prefix.str());
   }
 
-  void VisitType(const Type *) { addLabel(CurrentType.getAsString(PP)); }
+  void VisitType(const Type *T) {
+    // We should have handled qualifiers in VisitQualType(). Don't print them
+    // twice.
+    addLabel(QualType(T, /*Quals=*/0).getAsString());
+  }
 
-  void VisitQualType(QualType Q, NestedNameSpecifier *NNS = nullptr) {
-    QualType PreviousType = CurrentType;
-    NestedNameSpecifier *PreviousNNS = CurrentNestedNameSpecifier;
-    CurrentType = Q;
-    CurrentNestedNameSpecifier = NNS;
+  void VisitQualType(QualType Q, bool AppendSpaceToTopLevelQuals = true,
+                     NestedNameSpecifier *NNS = nullptr) {
+    QualType PreviousType = this->CurrentType;
+    NestedNameSpecifier *PreviousNNS = this->CurrentNestedNameSpecifier;
+    bool PrevAppendSpaceToQuals = this->AppendSpaceToQuals;
+
+    this->AppendSpaceToQuals = AppendSpaceToTopLevelQuals;
+    this->CurrentType = Q;
+    this->CurrentNestedNameSpecifier = NNS;
+    bool CanPrefixQualifiers = canPrefixQualifiers(CurrentType.getTypePtr());
+    if (CanPrefixQualifiers)
+      maybeAddQualifiers(/*AppendSpaceToQuals=*/true);
 
     TypeVisitor::Visit(Q.getTypePtr());
 
-    CurrentType = PreviousType;
-    CurrentNestedNameSpecifier = PreviousNNS;
+    if (!CanPrefixQualifiers)
+      maybeAddQualifiers(/*AppendSpaceToQuals=*/AppendSpaceToTopLevelQuals);
+    this->CurrentType = PreviousType;
+    this->CurrentNestedNameSpecifier = PreviousNNS;
+    this->AppendSpaceToQuals = PrevAppendSpaceToQuals;
   }
 
   void VisitTagType(const TagType *TT) {
@@ -602,12 +668,11 @@ public:
   void VisitAutoType(const AutoType *AT) {
     if (!AT->isDeduced() || AT->getDeducedType()->isDecltypeType())
       return VisitType(AT);
-    maybeAddQualifiers();
     return VisitQualType(AT->getDeducedType());
   }
 
   void VisitElaboratedType(const ElaboratedType *ET) {
-    maybeAddQualifiers();
+    // maybeAddQualifiers();
     if (auto *NNS = ET->getQualifier()) {
       switch (NNS->getKind()) {
       case NestedNameSpecifier::Identifier:
@@ -633,11 +698,13 @@ public:
         break;
       }
     }
-    return VisitQualType(ET->getNamedType(), ET->getQualifier());
+    return VisitQualType(ET->getNamedType(),
+                         /*AppendSpaceToTopLevelQuals=*/true,
+                         ET->getQualifier());
   }
 
   void VisitReferenceType(const ReferenceType *RT) {
-    maybeAddQualifiers();
+    // maybeAddQualifiers();
     QualType Next = skipTopLevelReferences(RT->getPointeeTypeAsWritten());
     VisitQualType(Next);
     if (Next->getPointeeType().isNull())
@@ -654,7 +721,7 @@ public:
     if (Next->getPointeeType().isNull())
       addLabel(" ");
     addLabel("*");
-    maybeAddQualifiers();
+    // maybeAddQualifiers();
   }
 
   void VisitUsingType(const UsingType *UT) {
@@ -668,7 +735,7 @@ public:
   }
 
   void VisitTemplateSpecializationType(const TemplateSpecializationType *TST) {
-    maybeAddQualifiers();
+    // maybeAddQualifiers();
     SourceLocation Location;
     TemplateName Name = TST->getTemplateName();
     TemplateName::Qualified PrintQual = TemplateName::Qualified::AsWritten;
@@ -713,7 +780,7 @@ public:
 
   void VisitDeducedTemplateSpecializationType(
       const DeducedTemplateSpecializationType *TST) {
-    maybeAddQualifiers();
+    // maybeAddQualifiers();
     // FIXME: The TST->getTemplateName() might differ from the name of
     // DeducedType, e.g. when the deduction guide is formed against a type alias
     // Decl.
@@ -721,7 +788,7 @@ public:
   }
 
   void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *ST) {
-    maybeAddQualifiers();
+    // maybeAddQualifiers();
     return VisitQualType(ST->getReplacementType());
   }
 
@@ -1397,7 +1464,7 @@ private:
   std::vector<InlayHintLabelPart> buildTypeHint(QualType T,
                                                 llvm::StringRef Prefix) {
     TypeHintBuilder Builder(AST, MainFilePath, TypeHintPolicy, Prefix);
-    Builder.VisitQualType(T);
+    Builder.VisitQualType(T, /*AppendSpaceToTopLevelQuals=*/false);
     return Builder.take();
   }
 
