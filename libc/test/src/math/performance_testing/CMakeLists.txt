@@ -402,3 +402,23 @@ add_perf_binary(
   LINK_LIBRARIES
     LibcFPTestHelpers
 )
+
+add_perf_binary(
+  misc_basic_ops_perf
+  SRCS
+    misc_basic_ops_perf.cpp
+  DEPENDS
+    .binary_op_single_output_diff
+    .single_input_single_output_diff
+    libc.src.math.copysignf
+    libc.src.math.copysignf16
+    libc.src.math.fabsf
+    libc.src.math.fabsf16
+    libc.src.math.fmaximum_numf
+    libc.src.math.fmaximum_numf16
+    libc.src.math.fminimum_numf
+    libc.src.math.fminimum_numf16
+    libc.src.math.frexpf16
+  COMPILE_OPTIONS
+    -fno-builtin
+)

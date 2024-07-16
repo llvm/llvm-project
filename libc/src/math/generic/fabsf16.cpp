@@ -13,6 +13,12 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float16, fabsf16, (float16 x)) { return fputil::abs(x); }
+LLVM_LIBC_FUNCTION(float16, fabsf16, (float16 x)) {
+#ifdef __LIBC_MISC_MATH_BASIC_OPS_OPT
+  return __builtin_fabsf16(x);
+#else
+  return fputil::abs(x);
+#endif
+}
 
 } // namespace LIBC_NAMESPACE_DECL

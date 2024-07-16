@@ -1,4 +1,4 @@
-//===-- Implementation of fminimum_numf function---------------------------===//
+//===-- Implementation of fminimum_numf function --------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,7 +14,11 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, fminimum_numf, (float x, float y)) {
+#ifdef __LIBC_USE_BUILTIN_FMAX_FMIN
+  return __builtin_fminf(x, y);
+#else
   return fputil::fminimum_num(x, y);
+#endif
 }
 
 } // namespace LIBC_NAMESPACE_DECL
