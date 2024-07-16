@@ -140,4 +140,3 @@ public:
 } // namespace scudo
 
 #endif // SCUDO_VECTOR_H_
-
