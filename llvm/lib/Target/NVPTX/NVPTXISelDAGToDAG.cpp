@@ -717,10 +717,10 @@ static unsigned int getCodeAddrSpace(MemSDNode *N) {
 struct OperationOrderings {
   NVPTX::OrderingUnderlyingType InstrOrdering;
   NVPTX::OrderingUnderlyingType FenceOrdering;
-  OperationOrderings(NVPTX::Ordering o = NVPTX::Ordering::NotAtomic,
-                     NVPTX::Ordering f = NVPTX::Ordering::NotAtomic)
-      : InstrOrdering(static_cast<NVPTX::OrderingUnderlyingType>(o)),
-        FenceOrdering(static_cast<NVPTX::OrderingUnderlyingType>(f)) {}
+  OperationOrderings(NVPTX::Ordering O = NVPTX::Ordering::NotAtomic,
+                     NVPTX::Ordering F = NVPTX::Ordering::NotAtomic)
+      : InstrOrdering(static_cast<NVPTX::OrderingUnderlyingType>(O)),
+        FenceOrdering(static_cast<NVPTX::OrderingUnderlyingType>(F)) {}
 };
 
 static OperationOrderings
@@ -734,6 +734,8 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
   // clang-format off
 
   // Lowering for Load/Store Operations (note: AcquireRelease Loads or Stores error).
+  // Note: uses of Relaxed in the Atomic column of this table refer
+  // to LLVM AtomicOrdering::Monotonic.
   //
   // | Atomic  | Volatile | Statespace         | PTX sm_60- | PTX sm_70+                   |
   // |---------|----------|--------------------|------------|------------------------------|
@@ -1155,7 +1157,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   case NVPTX::Ordering::SequentiallyConsistent: {
     unsigned Op = Subtarget->hasMemoryOrdering()
                       ? NVPTX::atomic_thread_fence_seq_cst_sys
-                      : NVPTX::atomic_thread_fence_seq_cst_sys_membar;
+                      : NVPTX::INT_MEMBAR_SYS;
     Chain = SDValue(CurDAG->getMachineNode(Op, dl, MVT::Other, Chain), 0);
     break;
   }
@@ -1318,7 +1320,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   case NVPTX::Ordering::SequentiallyConsistent: {
     unsigned Op = Subtarget->hasMemoryOrdering()
                       ? NVPTX::atomic_thread_fence_seq_cst_sys
-                      : NVPTX::atomic_thread_fence_seq_cst_sys_membar;
+                      : NVPTX::INT_MEMBAR_SYS;
     Chain = SDValue(CurDAG->getMachineNode(Op, DL, MVT::Other, Chain), 0);
     break;
   }
@@ -1990,7 +1992,7 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   case NVPTX::Ordering::SequentiallyConsistent: {
     unsigned Op = Subtarget->hasMemoryOrdering()
                       ? NVPTX::atomic_thread_fence_seq_cst_sys
-                      : NVPTX::atomic_thread_fence_seq_cst_sys_membar;
+                      : NVPTX::INT_MEMBAR_SYS;
     Chain = SDValue(CurDAG->getMachineNode(Op, dl, MVT::Other, Chain), 0);
     break;
   }
@@ -2150,7 +2152,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   case NVPTX::Ordering::SequentiallyConsistent: {
     unsigned Op = Subtarget->hasMemoryOrdering()
                       ? NVPTX::atomic_thread_fence_seq_cst_sys
-                      : NVPTX::atomic_thread_fence_seq_cst_sys_membar;
+                      : NVPTX::INT_MEMBAR_SYS;
     Chain = SDValue(CurDAG->getMachineNode(Op, DL, MVT::Other, Chain), 0);
     break;
   }
