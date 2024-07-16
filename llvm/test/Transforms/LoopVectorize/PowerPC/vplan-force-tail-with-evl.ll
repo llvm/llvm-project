@@ -8,9 +8,9 @@
 
 define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; CHECK-LABEL: VPlan 'Initial VPlan for VF={2,4},UF>=1' {
-; CHECK-NEXT: Live-in vp<%0> = VF * UF
-; CHECK-NEXT: Live-in vp<%1> = vector-trip-count
-; CHECK-NEXT: Live-in vp<%2> = backedge-taken count
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
+; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
+; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
 ; CHECK-NEXT: Live-in ir<%N> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
@@ -18,37 +18,37 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<%3> = CANONICAL-INDUCTION ir<0>, vp<%8>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_INC:%.*]]>
 ; CHECK-NEXT:     WIDEN-INDUCTION %iv = phi 0, %iv.next, ir<1>
-; CHECK-NEXT:     EMIT vp<%4> = icmp ule ir<%iv>, vp<%2>
+; CHECK-NEXT:     EMIT vp<[[CMP:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
 ; CHECK-NEXT:   Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <xVFxUF> pred.store: {
 ; CHECK-NEXT:    pred.store.entry:
-; CHECK-NEXT:      BRANCH-ON-MASK vp<%4>
+; CHECK-NEXT:      BRANCH-ON-MASK vp<[[CMP]]>
 ; CHECK-NEXT:    Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    pred.store.if:
-; CHECK-NEXT:      vp<%5> = SCALAR-STEPS vp<%3>, ir<1>
-; CHECK-NEXT:      REPLICATE ir<%arrayidx> = getelementptr inbounds ir<%b>, vp<%5>
+; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:      REPLICATE ir<%arrayidx> = getelementptr inbounds ir<%b>, vp<[[STEPS]]>
 ; CHECK-NEXT:      REPLICATE ir<%0> = load ir<%arrayidx>
-; CHECK-NEXT:      REPLICATE ir<%arrayidx2> = getelementptr inbounds ir<%c>, vp<%5>
+; CHECK-NEXT:      REPLICATE ir<%arrayidx2> = getelementptr inbounds ir<%c>, vp<[[STEPS]]>
 ; CHECK-NEXT:      REPLICATE ir<%1> = load ir<%arrayidx2>
-; CHECK-NEXT:      REPLICATE ir<%arrayidx4> = getelementptr inbounds ir<%a>, vp<%5>
+; CHECK-NEXT:      REPLICATE ir<%arrayidx4> = getelementptr inbounds ir<%a>, vp<[[STEPS]]>
 ; CHECK-NEXT:      REPLICATE ir<%add> = add nsw ir<%1>, ir<%0>
 ; CHECK-NEXT:      REPLICATE store ir<%add>, ir<%arrayidx4>
 ; CHECK-NEXT:    Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    pred.store.continue:
-; CHECK-NEXT:      PHI-PREDICATED-INSTRUCTION vp<%6> = ir<%0>
-; CHECK-NEXT:      PHI-PREDICATED-INSTRUCTION vp<%7> = ir<%1>
+; CHECK-NEXT:      PHI-PREDICATED-INSTRUCTION vp<[[P1:%.+]]> = ir<%0>
+; CHECK-NEXT:      PHI-PREDICATED-INSTRUCTION vp<[[P2:%.+]]> = ir<%1>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): for.body.2
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  for.body.2:
-; CHECK-NEXT:     EMIT vp<%8> = add vp<%3>, vp<%0>
-; CHECK-NEXT:     EMIT branch-on-count vp<%8>, vp<%1>
+; CHECK-NEXT:     EMIT vp<[[CAN_INC:%.+]]> = add vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_INC]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ;
@@ -74,8 +74,8 @@ for.cond.cleanup:
 
 define void @safe_dep(ptr %p) {
 ; CHECK-LABEL: VPlan 'Initial VPlan for VF={2},UF>=1' {
-; CHECK-NEXT: Live-in vp<%0> = VF * UF
-; CHECK-NEXT: Live-in vp<%1> = vector-trip-count
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
+; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<512> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
@@ -83,17 +83,17 @@ define void @safe_dep(ptr %p) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION ir<0>, vp<%6>
-; CHECK-NEXT:     vp<%3> = SCALAR-STEPS vp<%2>, ir<1>
-; CHECK-NEXT:     CLONE ir<%a1> = getelementptr ir<%p>, vp<%3>
-; CHECK-NEXT:     vp<%4> = vector-pointer ir<%a1>
-; CHECK-NEXT:     WIDEN ir<%v> = load vp<%4>
-; CHECK-NEXT:     CLONE ir<%offset> = add vp<%3>, ir<100>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_INC:%.+]]>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     CLONE ir<%a1> = getelementptr ir<%p>, vp<[[STEPS]]>
+; CHECK-NEXT:     vp<[[VPTR1:%.+]]> = vector-pointer ir<%a1>
+; CHECK-NEXT:     WIDEN ir<%v> = load vp<[[VPTR1]]>
+; CHECK-NEXT:     CLONE ir<%offset> = add vp<[[STEPS]]>, ir<100>
 ; CHECK-NEXT:     CLONE ir<%a2> = getelementptr ir<%p>, ir<%offset>
-; CHECK-NEXT:     vp<%5> = vector-pointer ir<%a2>
-; CHECK-NEXT:     WIDEN store vp<%5>, ir<%v>
-; CHECK-NEXT:     EMIT vp<%6> = add nuw vp<%2>, vp<%0>
-; CHECK-NEXT:     EMIT branch-on-count vp<%6>, vp<%1>
+; CHECK-NEXT:     vp<[[VPTR2:%.+]]> = vector-pointer ir<%a2>
+; CHECK-NEXT:     WIDEN store vp<[[VPTR2]]>, ir<%v>
+; CHECK-NEXT:     EMIT vp<[[CAN_INC]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_INC]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ;
