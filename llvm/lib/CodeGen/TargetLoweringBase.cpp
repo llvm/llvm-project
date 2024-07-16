@@ -793,15 +793,15 @@ void TargetLoweringBase::initActions() {
        ISD::FTAN,  ISD::FACOS,  ISD::FASIN,  ISD::FATAN,      ISD::FCOSH,
        ISD::FSINH, ISD::FTANH},
       {MVT::f32, MVT::f64, MVT::f128}, Expand);
-  
+
   // Unless the target expands, default LRINT to LibCall.
   setOperationAction({ISD::LRINT, ISD::LLRINT}, {MVT::f32, MVT::f64, MVT::f128},
                      LibCall);
-  
+
   setOperationAction({ISD::FTAN, ISD::FACOS, ISD::FASIN, ISD::FATAN, ISD::FCOSH,
                       ISD::FSINH, ISD::FTANH},
                      MVT::f16, Promote);
-    // Default ISD::TRAP to expand (which turns it into abort).
+  // Default ISD::TRAP to expand (which turns it into abort).
   setOperationAction(ISD::TRAP, MVT::Other, Expand);
 
   // On most systems, DEBUGTRAP and TRAP have no difference. The "Expand"
