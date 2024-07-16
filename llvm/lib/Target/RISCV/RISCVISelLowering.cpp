@@ -14318,6 +14318,13 @@ struct NodeExtensionHelper {
     case RISCVISD::VMV_V_X_VL:
       return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, NarrowVT,
                          DAG.getUNDEF(NarrowVT), Source.getOperand(1), VL);
+    case RISCVISD::VFMV_V_F_VL:
+      Source = Source.getOperand(1);
+      assert(Source.getOpcode() == ISD::FP_EXTEND && "Unexpected source");
+      Source = Source.getOperand(0);
+      assert(Source.getValueType() == NarrowVT.getVectorElementType());
+      return DAG.getNode(RISCVISD::VFMV_V_F_VL, DL, NarrowVT,
+                         DAG.getUNDEF(NarrowVT), Source, VL);
     default:
       // Other opcodes can only come from the original LHS of VW(ADD|SUB)_W_VL
       // and that operand should already have the right NarrowVT so no
@@ -14475,7 +14482,7 @@ struct NodeExtensionHelper {
     if (ScalarBits < EltBits)
       return;
 
-    unsigned NarrowSize = VT.getScalarSizeInBits() / 2;
+    unsigned NarrowSize = EltBits / 2;
     // If the narrow type cannot be expressed with a legal VMV,
     // this is not a valid candidate.
     if (NarrowSize < 8)
@@ -14533,6 +14540,24 @@ struct NodeExtensionHelper {
     case RISCVISD::VMV_V_X_VL:
       fillUpExtensionSupportForSplat(Root, DAG, Subtarget);
       break;
+    case RISCVISD::VFMV_V_F_VL: {
+      MVT VT = OrigOperand.getSimpleValueType();
+
+      if (!OrigOperand.getOperand(0).isUndef())
+        break;
+
+      SDValue Op = OrigOperand.getOperand(1);
+      if (Op.getOpcode() != ISD::FP_EXTEND)
+        break;
+
+      unsigned NarrowSize = VT.getScalarSizeInBits() / 2;
+      unsigned ScalarBits = Op.getOperand(0).getValueSizeInBits();
+      if (NarrowSize != ScalarBits)
+        break;
+
+      SupportsFPExt = true;
+      break;
+    }
     default:
       break;
     }
@@ -15482,12 +15507,9 @@ static SDValue performVFMADD_VLCombine(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineVFMADD_VLWithVFNEG_VL(N, DAG))
     return V;
 
-  if (N->getValueType(0).isScalableVector() &&
-      N->getValueType(0).getVectorElementType() == MVT::f32 &&
-      (Subtarget.hasVInstructionsF16Minimal() &&
-       !Subtarget.hasVInstructionsF16())) {
+  if (N->getValueType(0).getVectorElementType() == MVT::f32 &&
+      !Subtarget.hasVInstructionsF16())
     return SDValue();
-  }
 
   // FIXME: Ignore strict opcodes for now.
   if (N->isTargetStrictFPOpcode())
@@ -17250,10 +17272,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case RISCVISD::FMUL_VL:
   case RISCVISD::VFWADD_W_VL:
   case RISCVISD::VFWSUB_W_VL: {
-    if (N->getValueType(0).isScalableVector() &&
-        N->getValueType(0).getVectorElementType() == MVT::f32 &&
-        (Subtarget.hasVInstructionsF16Minimal() &&
-         !Subtarget.hasVInstructionsF16()))
+    if (N->getValueType(0).getVectorElementType() == MVT::f32 &&
+        !Subtarget.hasVInstructionsF16())
       return SDValue();
     return combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget);
   }
