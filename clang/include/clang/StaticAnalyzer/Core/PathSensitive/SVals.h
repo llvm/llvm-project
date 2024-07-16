@@ -389,6 +389,14 @@ class LazyCompoundVal : public NonLoc {
   }
 
 public:
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
+  const LazyCompoundValData *getCVData() const {
+    return castDataAs<LazyCompoundValData>();
+  }
+
+  /// It might return null.
+  const void *getStore() const;
+
   /// This function itself is immaterial. It is only an implementation detail.
   /// LazyCompoundVal represents only the rvalue, the data (known or unknown)
   /// that *was* stored in that region *at some point in the past*. The region
@@ -401,14 +409,6 @@ public:
   /// not a valid way to "materialize" the prvalue into a glvalue in C++,
   /// because the region represents the *old* storage (sometimes very old), not
   /// the *future* storage.
-  LLVM_ATTRIBUTE_RETURNS_NONNULL
-  const LazyCompoundValData *getCVData() const {
-    return castDataAs<LazyCompoundValData>();
-  }
-
-  /// It might return null.
-  const void *getStore() const;
-
   LLVM_ATTRIBUTE_RETURNS_NONNULL
   const TypedValueRegion *getRegion() const;
 
