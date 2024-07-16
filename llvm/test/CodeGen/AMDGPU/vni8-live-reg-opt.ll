@@ -425,4 +425,147 @@ bb.2:
 }
 
 
+define amdgpu_kernel void @deletedPHI(i32 %in0, i1 %cmp, <10 x i8> %invec0) {
+; GFX906-LABEL: define amdgpu_kernel void @deletedPHI(
+; GFX906-SAME: i32 [[IN0:%.*]], i1 [[CMP:%.*]], <10 x i8> [[INVEC0:%.*]]) #[[ATTR0]] {
+; GFX906-NEXT:  entry:
+; GFX906-NEXT:    br label [[BB_1:%.*]]
+; GFX906:       bb.1:
+; GFX906-NEXT:    [[PHI0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[BB_11:%.*]] ]
+; GFX906-NEXT:    [[PHI1:%.*]] = phi <10 x i8> [ <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, [[ENTRY]] ], [ [[VEC1:%.*]], [[BB_11]] ]
+; GFX906-NEXT:    br i1 [[CMP]], label [[BB_3:%.*]], label [[BB_2:%.*]]
+; GFX906:       bb.2:
+; GFX906-NEXT:    br label [[BB_3]]
+; GFX906:       bb.3:
+; GFX906-NEXT:    [[PHI2:%.*]] = phi <10 x i8> [ zeroinitializer, [[BB_2]] ], [ [[PHI1]], [[BB_1]] ]
+; GFX906-NEXT:    br i1 [[CMP]], label [[BB_5:%.*]], label [[BB_4:%.*]]
+; GFX906:       bb.4:
+; GFX906-NEXT:    [[VEC0:%.*]] = insertelement <10 x i8> [[PHI2]], i8 0, i64 0
+; GFX906-NEXT:    br label [[BB_5]]
+; GFX906:       bb.5:
+; GFX906-NEXT:    [[PHI3:%.*]] = phi <10 x i8> [ [[VEC0]], [[BB_4]] ], [ [[PHI2]], [[BB_3]] ]
+; GFX906-NEXT:    br i1 [[CMP]], label [[BB_7:%.*]], label [[BB_6:%.*]]
+; GFX906:       bb.6:
+; GFX906-NEXT:    br label [[BB_7]]
+; GFX906:       bb.7:
+; GFX906-NEXT:    [[PHI4:%.*]] = phi <10 x i8> [ [[INVEC0]], [[BB_6]] ], [ [[PHI3]], [[BB_5]] ]
+; GFX906-NEXT:    br i1 [[CMP]], label [[BB_9:%.*]], label [[BB_8:%.*]]
+; GFX906:       bb.8:
+; GFX906-NEXT:    br label [[BB_9]]
+; GFX906:       bb.9:
+; GFX906-NEXT:    [[PHI5:%.*]] = phi <10 x i8> [ [[INVEC0]], [[BB_8]] ], [ [[PHI4]], [[BB_7]] ]
+; GFX906-NEXT:    br i1 [[CMP]], label [[BB_11]], label [[BB_10:%.*]]
+; GFX906:       bb.10:
+; GFX906-NEXT:    br label [[BB_11]]
+; GFX906:       bb.11:
+; GFX906-NEXT:    [[PHI6:%.*]] = phi <10 x i8> [ zeroinitializer, [[BB_10]] ], [ [[PHI5]], [[BB_9]] ]
+; GFX906-NEXT:    [[VEC1]] = shufflevector <10 x i8> [[PHI6]], <10 x i8> zeroinitializer, <10 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 15, i32 16, i32 17, i32 18, i32 19>
+; GFX906-NEXT:    br label [[BB_1]]
+;
+entry:
+  br label %bb.1
+
+bb.1:
+  %phi0 = phi i32 [ 0, %entry ], [ 1, %bb.11 ]
+  %phi1 = phi <10 x i8> [ <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, %entry ], [ %vec1, %bb.11 ]
+  br i1 %cmp, label %bb.3, label %bb.2
+
+bb.2:
+  br label %bb.3
+
+bb.3:
+  %phi2 = phi <10 x i8> [ zeroinitializer, %bb.2 ], [ %phi1, %bb.1 ]
+  br i1 %cmp, label %bb.5, label %bb.4
+
+bb.4:
+  %vec0 = insertelement <10 x i8> %phi2, i8 0, i64 0
+  br label %bb.5
+
+bb.5:                               ; preds = %bb.4, %bb.3
+  %phi3 = phi <10 x i8> [ %vec0, %bb.4 ], [ %phi2, %bb.3 ]
+  br i1 %cmp, label %bb.7, label %bb.6
+
+bb.6:
+  br label %bb.7
+
+bb.7:                               ; preds = %bb.6, %bb.5
+  %phi4 = phi <10 x i8> [ %invec0, %bb.6 ], [ %phi3, %bb.5 ]
+  br i1 %cmp, label %bb.9, label %bb.8
+
+bb.8:
+  br label %bb.9
+
+bb.9:
+  %phi5 = phi <10 x i8> [ %invec0, %bb.8 ], [ %phi4, %bb.7 ]
+  br i1 %cmp, label %bb.11, label %bb.10
+
+bb.10:
+  br label %bb.11
+
+bb.11:
+  %phi6 = phi <10 x i8> [ zeroinitializer, %bb.10 ], [ %phi5, %bb.9 ]
+  %vec1 = shufflevector <10 x i8> %phi6, <10 x i8> zeroinitializer, <10 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 15, i32 16, i32 17, i32 18, i32 19>
+  br label %bb.1
+}
+
+define amdgpu_kernel void @multiple_unwind(i1 %cmp, <10 x i8> %invec) {
+; GFX906-LABEL: define amdgpu_kernel void @multiple_unwind(
+; GFX906-SAME: i1 [[CMP:%.*]], <10 x i8> [[INVEC:%.*]]) #[[ATTR0]] {
+; GFX906-NEXT:  entry:
+; GFX906-NEXT:    br label [[BB_1:%.*]]
+; GFX906:       bb.1:
+; GFX906-NEXT:    [[PHI0:%.*]] = phi <10 x i8> [ <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, [[ENTRY:%.*]] ], [ [[PHI3:%.*]], [[BB_8:%.*]] ]
+; GFX906-NEXT:    br i1 [[CMP]], label [[BB_3:%.*]], label [[BB_2:%.*]]
+; GFX906:       bb.2:
+; GFX906-NEXT:    br label [[BB_3]]
+; GFX906:       bb.3:
+; GFX906-NEXT:    [[PHI1:%.*]] = phi <10 x i8> [ zeroinitializer, [[BB_2]] ], [ [[PHI0]], [[BB_1]] ]
+; GFX906-NEXT:    br i1 [[CMP]], label [[BB_5:%.*]], label [[BB_4:%.*]]
+; GFX906:       bb.4:
+; GFX906-NEXT:    br label [[BB_5]]
+; GFX906:       bb.5:
+; GFX906-NEXT:    [[PHI2:%.*]] = phi <10 x i8> [ [[PHI0]], [[BB_4]] ], [ [[PHI1]], [[BB_3]] ]
+; GFX906-NEXT:    br i1 [[CMP]], label [[BB_7:%.*]], label [[BB_6:%.*]]
+; GFX906:       bb.6:
+; GFX906-NEXT:    br label [[BB_7]]
+; GFX906:       bb.7:
+; GFX906-NEXT:    [[PHI3]] = phi <10 x i8> [ [[INVEC]], [[BB_6]] ], [ [[PHI2]], [[BB_5]] ]
+; GFX906-NEXT:    br label [[BB_8]]
+; GFX906:       bb.8:
+; GFX906-NEXT:    br label [[BB_1]]
+;
+entry:
+  br label %bb.1
+
+bb.1:
+  %phi0 = phi <10 x i8> [ <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, %entry ], [ %phi3, %bb.8 ]
+  br i1 %cmp, label %bb.3, label %bb.2
+
+bb.2:
+  br label %bb.3
+
+bb.3:
+  %phi1 = phi <10 x i8> [ zeroinitializer, %bb.2 ], [ %phi0, %bb.1 ]
+  br i1 %cmp, label %bb.5, label %bb.4
+
+bb.4:
+  br label %bb.5
+
+bb.5:
+  %phi2 = phi <10 x i8> [ %phi0, %bb.4 ], [ %phi1, %bb.3 ]
+  br i1 %cmp, label %bb.7, label %bb.6
+
+bb.6:                              ; preds = %bb.5
+  br label %bb.7
+
+bb.7:
+  %phi3 = phi <10 x i8> [ %invec, %bb.6 ], [ %phi2, %bb.5 ]
+  br label %bb.8
+
+bb.8:
+  br label %bb.1
+}
+
+
+
 declare i32 @llvm.amdgcn.workitem.id.x()
