@@ -1,5 +1,5 @@
-; RUN: opt < %s --passes=instrprof --sampled-instr -S | FileCheck %s --check-prefixes=SAMPLE-VAR,SAMPLE-CODE,SAMPLE-DURATION,SAMPLE-WEIGHT
-; RUN: opt < %s --passes=instrprof --sampled-instr --sampled-instr-burst-duration=100 -S | FileCheck %s --check-prefixes=SAMPLE-VAR,SAMPLE-CODE,SAMPLE-DURATION100,SAMPLE-WEIGHT100
+; RUN: opt < %s --passes=instrprof --sampled-instrumentation -S | FileCheck %s --check-prefixes=SAMPLE-VAR,SAMPLE-CODE,SAMPLE-DURATION,SAMPLE-WEIGHT
+; RUN: opt < %s --passes=instrprof --sampled-instrumentation --sampled-instr-burst-duration=100 -S | FileCheck %s --check-prefixes=SAMPLE-VAR,SAMPLE-CODE,SAMPLE-DURATION100,SAMPLE-WEIGHT100
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

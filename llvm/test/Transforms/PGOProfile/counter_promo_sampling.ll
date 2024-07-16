@@ -1,4 +1,4 @@
-; RUN: opt < %s --passes=pgo-instr-gen,instrprof --do-counter-promotion=true --sampled-instr=true --skip-ret-exit-block=0 -S | FileCheck --check-prefixes=SAMPLING,PROMO %s
+; RUN: opt < %s --passes=pgo-instr-gen,instrprof --do-counter-promotion=true --sampled-instrumentation=true --skip-ret-exit-block=0 -S | FileCheck --check-prefixes=SAMPLING,PROMO %s
 
 ; SAMPLING: $__llvm_profile_sampling = comdat any
 ; SAMPLING: @__llvm_profile_sampling = thread_local global i16 0, comdat

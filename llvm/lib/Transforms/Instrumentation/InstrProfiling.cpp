@@ -170,17 +170,18 @@ cl::opt<bool> SkipRetExitBlock(
     "skip-ret-exit-block", cl::init(true),
     cl::desc("Suppress counter promotion if exit blocks contain ret."));
 
-static cl::opt<bool> SampledInstr("sampled-instr", cl::ZeroOrMore,
+static cl::opt<bool> SampledInstr("sampled-instrumentation", cl::ZeroOrMore,
                                   cl::init(false),
                                   cl::desc("Do PGO instrumentation sampling"));
 
 static cl::opt<unsigned> SampledInstrPeriod(
     "sampled-instr-period",
     cl::desc("Set the profile instrumentation sample period. For each sample "
-             "period, the 'sampled-instr-burst-duration' number of consecutive "
-             "samples will be recorded. The default sample period of 65535 is "
-             "optimized for generating efficient code that leverages unsigned "
-             "integer wrapping in overflow."),
+             "period, a fixed number of consecutive samples will be recorded. "
+             "The number is controlled by 'sampled-instr-burst-duration' flag. "
+             "The default sample period of 65535 is optimized for generating "
+             "efficient code that leverages unsigned integer wrapping in "
+             "overflow."),
     cl::init(65535));
 
 static cl::opt<unsigned> SampledInstrBurstDuration(
@@ -683,10 +684,10 @@ PreservedAnalyses InstrProfilingLoweringPass::run(Module &M,
 // counters (value-instrumentation and edge instrumentation).
 //
 // (2) Fast burst sampling:
-// The value is an unsigned type, meaning it will wrap around to zero when
-// overflows. In this case, a second check (check2) is unnecessary, so we
-// won't generate check2 when the SampledInstrPeriod is set to 65535 (64K - 1).
-// The code after:
+// "__llvm_profile_sampling__" variable is an unsigned type, meaning it will
+// wrap around to zero when overflows. In this case, the second check is
+// unnecessary, so we won't generate check2 when the SampledInstrPeriod is
+// set to 65535 (64K - 1). The code after:
 //   if (__llvm_profile_sampling__ < SampledInstrBurstDuration) {
 //     Increment_Instruction;
 //   }
@@ -714,7 +715,10 @@ void InstrLowerer::doSampling(Instruction *I) {
 
   unsigned SampledBurstDuration = SampledInstrBurstDuration.getValue();
   unsigned SampledPeriod = SampledInstrPeriod.getValue();
-  assert(SampledBurstDuration < SampledPeriod);
+  if (SampledBurstDuration >= SampledPeriod) {
+    report_fatal_error(
+        "SampledPeriod needs to be greater than SampledBurstDuration");
+  }
   bool UseShort = (SampledPeriod <= USHRT_MAX);
   bool IsSimpleSampling = (SampledBurstDuration == 1);
   bool IsFastSampling = (!IsSimpleSampling && SampledPeriod == 65535);

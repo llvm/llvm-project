@@ -3,7 +3,7 @@
 
 ; RUN: opt -module-summary %s -o %t1.bc
 ; RUN: opt -module-summary %S/Inputs/cspgo_bar_sample.ll -o %t2.bc
-; RUN: llvm-lto2 run -lto-cspgo-profile-file=alloc -enable-sampled-instr -lto-cspgo-gen -save-temps -o %t %t1.bc %t2.bc \
+; RUN: llvm-lto2 run -lto-cspgo-profile-file=alloc -enable-sampled-instrumentation -lto-cspgo-gen -save-temps -o %t %t1.bc %t2.bc \
 ; RUN:   -r=%t1.bc,foo,pl \
 ; RUN:   -r=%t1.bc,bar,l \
 ; RUN:   -r=%t1.bc,main,plx \

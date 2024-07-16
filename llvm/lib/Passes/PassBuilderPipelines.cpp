@@ -297,7 +297,7 @@ static cl::opt<AttributorRunOption> AttributorRun(
                           "disable attributor runs")));
 
 static cl::opt<bool> EnableSampledInstr(
-    "enable-sampled-instr", cl::init(false), cl::Hidden,
+    "enable-sampled-instrumentation", cl::init(false), cl::Hidden,
     cl::desc("Enable profile instrumentation sampling (default = off)"));
 static cl::opt<bool> UseLoopVersioningLICM(
     "enable-loop-versioning-licm", cl::init(false), cl::Hidden,
