@@ -24,7 +24,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "structcfg"
 
-#define DEFAULT_VEC_SLOTS 8
+enum { DEFAULT_VEC_SLOTS = 8 };
 
 // TODO: move-begin.
 

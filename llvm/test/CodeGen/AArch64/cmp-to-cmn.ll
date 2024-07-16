@@ -6,7 +6,7 @@ target triple = "arm64"
 define i1 @test_EQ_IllEbT(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_EQ_IllEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmn x1, x0
+; CHECK-NEXT:    cmn x0, x1
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
@@ -72,7 +72,7 @@ entry:
 define i1 @test_EQ_IiiEbT(i32 %a, i32 %b) {
 ; CHECK-LABEL: test_EQ_IiiEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmn w1, w0
+; CHECK-NEXT:    cmn w0, w1
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
@@ -137,8 +137,8 @@ entry:
 define i1 @test_EQ_IssEbT(i16 %a, i16 %b) {
 ; CHECK-LABEL: test_EQ_IssEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sxth w8, w1
-; CHECK-NEXT:    cmn w8, w0, sxth
+; CHECK-NEXT:    sxth w8, w0
+; CHECK-NEXT:    cmn w8, w1, sxth
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
@@ -152,8 +152,8 @@ entry:
 define i1 @test_EQ_IscEbT(i16 %a, i8 %b) {
 ; CHECK-LABEL: test_EQ_IscEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    and w8, w1, #0xff
-; CHECK-NEXT:    cmn w8, w0, sxth
+; CHECK-NEXT:    sxth w8, w0
+; CHECK-NEXT:    cmn w8, w1, uxtb
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
@@ -194,8 +194,8 @@ entry:
 define i1 @test_EQ_IcsEbT(i8 %a, i16 %b) {
 ; CHECK-LABEL: test_EQ_IcsEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sxth w8, w1
-; CHECK-NEXT:    cmn w8, w0, uxtb
+; CHECK-NEXT:    and w8, w0, #0xff
+; CHECK-NEXT:    cmn w8, w1, sxth
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
@@ -209,8 +209,8 @@ entry:
 define i1 @test_EQ_IccEbT(i8 %a, i8 %b) {
 ; CHECK-LABEL: test_EQ_IccEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    and w8, w1, #0xff
-; CHECK-NEXT:    cmn w8, w0, uxtb
+; CHECK-NEXT:    and w8, w0, #0xff
+; CHECK-NEXT:    cmn w8, w1, uxtb
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
 entry:
@@ -224,7 +224,7 @@ entry:
 define i1 @test_NE_IllEbT(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_NE_IllEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmn x1, x0
+; CHECK-NEXT:    cmn x0, x1
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
 entry:
@@ -290,7 +290,7 @@ entry:
 define i1 @test_NE_IiiEbT(i32 %a, i32 %b) {
 ; CHECK-LABEL: test_NE_IiiEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmn w1, w0
+; CHECK-NEXT:    cmn w0, w1
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
 entry:
@@ -355,8 +355,8 @@ entry:
 define i1 @test_NE_IssEbT(i16 %a, i16 %b) {
 ; CHECK-LABEL: test_NE_IssEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sxth w8, w1
-; CHECK-NEXT:    cmn w8, w0, sxth
+; CHECK-NEXT:    sxth w8, w0
+; CHECK-NEXT:    cmn w8, w1, sxth
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
 entry:
@@ -370,8 +370,8 @@ entry:
 define i1 @test_NE_IscEbT(i16 %a, i8 %b) {
 ; CHECK-LABEL: test_NE_IscEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    and w8, w1, #0xff
-; CHECK-NEXT:    cmn w8, w0, sxth
+; CHECK-NEXT:    sxth w8, w0
+; CHECK-NEXT:    cmn w8, w1, uxtb
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
 entry:
@@ -412,8 +412,8 @@ entry:
 define i1 @test_NE_IcsEbT(i8 %a, i16 %b) {
 ; CHECK-LABEL: test_NE_IcsEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sxth w8, w1
-; CHECK-NEXT:    cmn w8, w0, uxtb
+; CHECK-NEXT:    and w8, w0, #0xff
+; CHECK-NEXT:    cmn w8, w1, sxth
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
 entry:
@@ -427,8 +427,8 @@ entry:
 define i1 @test_NE_IccEbT(i8 %a, i8 %b) {
 ; CHECK-LABEL: test_NE_IccEbT:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    and w8, w1, #0xff
-; CHECK-NEXT:    cmn w8, w0, uxtb
+; CHECK-NEXT:    and w8, w0, #0xff
+; CHECK-NEXT:    cmn w8, w1, uxtb
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
 entry:
