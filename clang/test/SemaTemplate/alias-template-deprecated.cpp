@@ -36,6 +36,13 @@ struct S {
 void foo(NoAttr<short> s1, UsingWithAttr<short> s2) {
 }
 
+// expected-note@+2 {{'UsingWithCPPAttr' has been explicitly marked deprecated here}}
+template <typename T>
+using UsingWithCPPAttr [[deprecated]] = NoAttr<T>;
+
+// expected-note@+1 {{'UsingInstWithCPPAttr' has been explicitly marked deprecated here}}
+using UsingInstWithCPPAttr [[deprecated("Do not use this")]] = NoAttr<int>;
+
 void bar() {
   NoAttr<int> obj; // Okay
 
@@ -55,4 +62,11 @@ void bar() {
 
   // expected-warning@+1 {{'UsingTDWithAttr' is deprecated}}
   UsingTDWithAttr objUTDWA;
+
+  // expected-warning@+2 {{'UsingWithCPPAttr' is deprecated}}
+  // expected-note@+1 {{in instantiation of template type alias 'UsingWithCPPAttr' requested here}}
+  UsingWithCPPAttr<int> objUsingWCPPA;
+
+  // expected-warning@+1 {{'UsingInstWithCPPAttr' is deprecated: Do not use this}}
+  UsingInstWithCPPAttr objUICPPWA;
 }
