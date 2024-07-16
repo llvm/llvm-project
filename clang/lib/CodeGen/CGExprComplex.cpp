@@ -671,7 +671,7 @@ ComplexPairTy ComplexExprEmitter::VisitPlus(const UnaryOperator *E,
 }
 
 ComplexPairTy ComplexExprEmitter::VisitUnaryMinus(const UnaryOperator *E,
-                                                      QualType PromotionType) {
+                                                  QualType PromotionType) {
   QualType promotionTy =
       PromotionType.isNull()
           ? getPromotionType(E->getStoredFPFeaturesOrDefault(),
