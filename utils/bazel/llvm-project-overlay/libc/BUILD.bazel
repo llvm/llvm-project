@@ -3410,6 +3410,7 @@ libc_support_library(
         ":__support_arg_list",
         ":__support_file_file",
         ":__support_macros_attributes",
+        ":types_FILE",
         ":printf_main",
         ":printf_writer",
     ],
