@@ -6435,8 +6435,14 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     return;
 
   // Ignore C++11 attributes on declarator chunks: they appertain to the type
-  // instead.
-  if (AL.isCXX11Attribute() && !Options.IncludeCXX11Attributes)
+  // instead. Note, isCXX11Attribute() will look at whether the attribute is
+  // [[]] or alignas, while isC23Attribute() will only look at [[]]. This is
+  // important for ensuring that alignas in C23 is properly handled on a
+  // structure member declaration because it is a type-specifier-qualifier in
+  // C but still applies to the declaration rather than the type.
+  if ((S.getLangOpts().CPlusPlus ? AL.isCXX11Attribute()
+                                 : AL.isC23Attribute()) &&
+      !Options.IncludeCXX11Attributes)
     return;
 
   // Unknown attributes are automatically warned on. Target-specific attributes
@@ -7500,29 +7506,37 @@ void Sema::ProcessDeclAttributes(Scope *S, Decl *D, const Declarator &PD) {
   // Ordering of attributes can be important, so we take care to process
   // attributes in the order in which they appeared in the source code.
 
+  auto ProcessAttributesWithSliding =
+      [&](const ParsedAttributesView &Src,
+          const ProcessDeclAttributeOptions &Options) {
+        ParsedAttributesView NonSlidingAttrs;
+        for (ParsedAttr &AL : Src) {
+          // FIXME: this sliding is specific to standard attributes and should
+          // eventually be deprecated and removed as those are not intended to
+          // slide to anything.
+          if ((AL.isStandardAttributeSyntax() || AL.isAlignas()) &&
+              AL.slidesFromDeclToDeclSpecLegacyBehavior()) {
+            // Skip processing the attribute, but do check if it appertains to
+            // the declaration. This is needed for the `MatrixType` attribute,
+            // which, despite being a type attribute, defines a `SubjectList`
+            // that only allows it to be used on typedef declarations.
+            AL.diagnoseAppertainsTo(*this, D);
+          } else {
+            NonSlidingAttrs.addAtEnd(&AL);
+          }
+        }
+        ProcessDeclAttributeList(S, D, NonSlidingAttrs, Options);
+      };
+
   // First, process attributes that appeared on the declaration itself (but
   // only if they don't have the legacy behavior of "sliding" to the DeclSepc).
-  ParsedAttributesView NonSlidingAttrs;
-  for (ParsedAttr &AL : PD.getDeclarationAttributes()) {
-    if (AL.slidesFromDeclToDeclSpecLegacyBehavior()) {
-      // Skip processing the attribute, but do check if it appertains to the
-      // declaration. This is needed for the `MatrixType` attribute, which,
-      // despite being a type attribute, defines a `SubjectList` that only
-      // allows it to be used on typedef declarations.
-      AL.diagnoseAppertainsTo(*this, D);
-    } else {
-      NonSlidingAttrs.addAtEnd(&AL);
-    }
-  }
-  ProcessDeclAttributeList(S, D, NonSlidingAttrs);
+  ProcessAttributesWithSliding(PD.getDeclarationAttributes(), {});
 
   // Apply decl attributes from the DeclSpec if present.
-  if (!PD.getDeclSpec().getAttributes().empty()) {
-    ProcessDeclAttributeList(S, D, PD.getDeclSpec().getAttributes(),
-                             ProcessDeclAttributeOptions()
-                                 .WithIncludeCXX11Attributes(false)
-                                 .WithIgnoreTypeAttributes(true));
-  }
+  ProcessAttributesWithSliding(PD.getDeclSpec().getAttributes(),
+                               ProcessDeclAttributeOptions()
+                                   .WithIncludeCXX11Attributes(false)
+                                   .WithIgnoreTypeAttributes(true));
 
   // Walk the declarator structure, applying decl attributes that were in a type
   // position to the decl itself.  This handles cases like:

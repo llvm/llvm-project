@@ -4919,16 +4919,6 @@ void Parser::ParseStructDeclaration(
   // Parse the common specifier-qualifiers-list piece.
   ParseSpecifierQualifierList(DS);
 
-  // FIXME: _Alignas has special handling that really shouldn't be necessary.
-  // Loop over all the attributes on the specifier qualifier, find any that
-  // are alignment attributes, and shift those off the specifier qualifier and
-  // onto the declarator.
-  ParsedAttributes &DSAttrs = DS.getAttributes();
-  for (auto &PAttr : DSAttrs) {
-    if (PAttr.isAlignas())
-      Attrs.takeOneFrom(DSAttrs, &PAttr);
-  }
-
   // If there are no declarators, this is a free-standing declaration
   // specifier. Let the actions module cope with it.
   if (Tok.is(tok::semi)) {
