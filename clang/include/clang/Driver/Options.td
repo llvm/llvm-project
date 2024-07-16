@@ -932,7 +932,7 @@ def O_flag : Flag<["-"], "O">, Visibility<[ClangOption, CC1Option, FC1Option]>,
   Alias<O>, AliasArgs<["1"]>;
 def Ofast : Joined<["-"], "Ofast">, Group<O_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption]>,
-  HelpText<"Deprecated; use '-O3 -ffast math' instead,"
+  HelpText<"Deprecated; use '-O3 -ffast-math' instead,"
   " or just '-O3' if you don't intend to enable non-conforming optimizations">;
 def P : Flag<["-"], "P">,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
