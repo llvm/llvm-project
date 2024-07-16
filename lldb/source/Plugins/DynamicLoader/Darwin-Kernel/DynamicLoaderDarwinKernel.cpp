@@ -715,7 +715,7 @@ void DynamicLoaderDarwinKernel::KextImageInfo::SetIsKernel(bool is_kernel) {
 }
 
 bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
-    Process *process) {
+    Process *process, Progress *progress) {
   Log *log = GetLog(LLDBLog::DynamicLoader);
   if (IsLoaded())
     return true;
@@ -769,13 +769,18 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       prog_str << "at 0x";
       prog_str.PutHex64(GetLoadAddress());
     }
-    std::unique_ptr<Progress> progress_wp;
-    if (IsKernel())
-      progress_wp = std::make_unique<Progress>("Loading kernel",
-                                               prog_str.GetString().str());
-    else
-      progress_wp = std::make_unique<Progress>("Loading kext",
-                                               prog_str.GetString().str());
+
+    std::unique_ptr<Progress> progress_up;
+    if (progress)
+      progress->Increment(1, prog_str.GetString().str());
+    else {
+      if (IsKernel())
+        progress_up = std::make_unique<Progress>("Loading kernel",
+                                                 prog_str.GetString().str());
+      else
+        progress_up = std::make_unique<Progress>("Loading kext",
+                                                 prog_str.GetString().str());
+    }
 
     // Search for the kext on the local filesystem via the UUID
     if (!m_module_sp && m_uuid.IsValid()) {
@@ -1358,13 +1363,14 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
   std::vector<std::pair<std::string, UUID>> kexts_failed_to_load;
   if (number_of_new_kexts_being_added > 0) {
     ModuleList loaded_module_list;
+    Progress progress("Loading kext", "", number_of_new_kexts_being_added);
 
     const uint32_t num_of_new_kexts = kext_summaries.size();
     for (uint32_t new_kext = 0; new_kext < num_of_new_kexts; new_kext++) {
       if (to_be_added[new_kext]) {
         KextImageInfo &image_info = kext_summaries[new_kext];
         if (load_kexts) {
-          if (!image_info.LoadImageUsingMemoryModule(m_process)) {
+          if (!image_info.LoadImageUsingMemoryModule(m_process, &progress)) {
             kexts_failed_to_load.push_back(std::pair<std::string, UUID>(
                 kext_summaries[new_kext].GetName(),
                 kext_summaries[new_kext].GetUUID()));
