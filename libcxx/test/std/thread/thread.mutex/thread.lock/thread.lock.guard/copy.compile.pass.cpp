@@ -14,9 +14,9 @@
 
 #include <mutex>
 
-class Lock;
+class MyMutex;
 
 int main(int, char**) {
-  static_assert(!std::is_copy_constructible<std::lock_guard<Lock>>::value, "");
+  static_assert(!std::is_copy_constructible<std::lock_guard<MyMutex> >::value, "");
   return 0;
 }

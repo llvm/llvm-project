@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14
 
 // <mutex>
@@ -19,11 +18,16 @@
 
 #include "test_macros.h"
 
+struct MyMutex {
+  void lock() {}
+  void unlock() {}
+};
+
 int main(int, char**) {
-  std::mutex mutex;
+  MyMutex m;
   {
-    std::lock_guard lock(mutex);
-    ASSERT_SAME_TYPE(decltype(lock), std::lock_guard<std::mutex>);
+    std::lock_guard lg(m);
+    ASSERT_SAME_TYPE(decltype(lg), std::lock_guard<MyMutex>);
   }
 
   return 0;

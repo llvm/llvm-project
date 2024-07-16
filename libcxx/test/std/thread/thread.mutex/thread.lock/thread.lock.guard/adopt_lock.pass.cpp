@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: no-threads
+
 // UNSUPPORTED: c++03
 
 // <mutex>
@@ -19,21 +18,33 @@
 #include <cstdlib>
 #include <cassert>
 
-#include "make_test_thread.h"
 #include "test_macros.h"
 
-std::mutex m;
+struct MyMutex {
+  bool locked = false;
 
-void do_try_lock() {
-  assert(m.try_lock() == false);
-}
+  MyMutex() = default;
+  ~MyMutex() { assert(!locked); }
+
+  void lock() {
+    assert(!locked);
+    locked = true;
+  }
+  void unlock() {
+    assert(locked);
+    locked = false;
+  }
+
+  MyMutex(MyMutex const&)            = delete;
+  MyMutex& operator=(MyMutex const&) = delete;
+};
 
 int main(int, char**) {
+  MyMutex m;
   {
     m.lock();
-    std::lock_guard<std::mutex> lg(m, std::adopt_lock);
-    std::thread t = support::make_test_thread(do_try_lock);
-    t.join();
+    std::lock_guard<MyMutex> lg(m, std::adopt_lock);
+    assert(m.locked);
   }
 
   m.lock();

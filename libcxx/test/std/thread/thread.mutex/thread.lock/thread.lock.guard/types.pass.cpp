@@ -5,8 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// UNSUPPORTED: no-threads
 
 // <mutex>
 
@@ -23,10 +21,12 @@
 
 #include "test_macros.h"
 
+struct MyMutex {};
+
 int main(int, char**)
 {
-    static_assert((std::is_same<std::lock_guard<std::mutex>::mutex_type,
-                   std::mutex>::value), "");
+  static_assert((std::is_same<std::lock_guard<MyMutex>::mutex_type,
+                 MyMutex>::value), "");
 
   return 0;
 }

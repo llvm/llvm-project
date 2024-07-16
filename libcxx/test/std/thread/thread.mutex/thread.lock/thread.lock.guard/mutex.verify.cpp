@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: no-threads
-
 // <mutex>
 
 // template <class Mutex> class lock_guard;
@@ -16,10 +14,12 @@
 
 #include <mutex>
 
+struct MyMutex {};
+
 int main(int, char**)
 {
-    std::mutex m;
-    std::lock_guard<std::mutex> lg = m; // expected-error{{no viable conversion}}
+  MyMutex m;
+  std::lock_guard<MyMutex> lg = m; // expected-error{{no viable conversion}}
 
   return 0;
 }

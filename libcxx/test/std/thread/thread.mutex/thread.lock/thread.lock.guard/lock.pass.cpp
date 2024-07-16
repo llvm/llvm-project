@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
 
 // <mutex>
 
@@ -18,6 +17,7 @@
 
 #include <mutex>
 #include <cassert>
+
 #include "test_macros.h"
 
 struct MyMutex {
@@ -45,7 +45,9 @@ int main(int, char**) {
     std::lock_guard<MyMutex> lg(m);
     assert(m.locked);
   }
-  assert(!m.locked);
+
+  m.lock();
+  m.unlock();
 
 #if TEST_STD_VER >= 17
   std::lock_guard lg(m);
