@@ -20,7 +20,9 @@ namespace clang::tidy::modernize {
 /// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-ranges.html
 class UseRangesCheck : public utils::UseRangesCheck {
 public:
-  using utils::UseRangesCheck::UseRangesCheck;
+  UseRangesCheck(StringRef CheckName, ClangTidyContext *Context);
+
+  void storeOptions(ClangTidyOptions::OptionMap &Options) override;
 
   ReplacerMap getReplacerMap() const override;
 
@@ -31,6 +33,9 @@ public:
   getReverseDescriptor() const override;
 
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override;
+
+private:
+  bool UseReversePipe;
 };
 
 } // namespace clang::tidy::modernize

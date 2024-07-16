@@ -329,6 +329,10 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::LLRINT:
     Res = PromoteIntRes_XRINT(N);
     break;
+
+  case ISD::PATCHPOINT:
+    Res = PromoteIntRes_PATCHPOINT(N);
+    break;
   }
 
   // If the result is null then the sub-method took care of registering it.
@@ -6011,6 +6015,24 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VP_REDUCE(SDNode *N) {
   SDValue Start = PromoteIntOpVectorReduction(N, N->getOperand(0));
   return DAG.getNode(N->getOpcode(), DL, Start.getValueType(), Start,
                      N->getOperand(1), N->getOperand(2), N->getOperand(3));
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_PATCHPOINT(SDNode *N) {
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  SDLoc dl(N);
+
+  assert(N->getNumValues() == 3 && "Expected 3 values for PATCHPOINT");
+  SDVTList VTList = DAG.getVTList({NVT, MVT::Other, MVT::Glue});
+
+  SmallVector<SDValue> Ops(N->ops());
+  SDValue Res = DAG.getNode(ISD::PATCHPOINT, dl, VTList, Ops);
+
+  // Replace chain and glue uses with the new patchpoint.
+  SDValue From[] = {SDValue(N, 1), SDValue(N, 2)};
+  SDValue To[] = {Res.getValue(1), Res.getValue(2)};
+  DAG.ReplaceAllUsesOfValuesWith(From, To, 2);
+
+  return Res.getValue(0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_EXTRACT_VECTOR_ELT(SDNode *N) {

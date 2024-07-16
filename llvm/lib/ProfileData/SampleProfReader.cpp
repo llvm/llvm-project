@@ -355,9 +355,9 @@ std::error_code SampleProfileReaderText::readImpl() {
       SampleContext FContext(FName, CSNameTable);
       if (FContext.hasContext())
         ++CSProfileCount;
-      FunctionSamples &FProfile = Profiles.Create(FContext);
-      MergeResult(Result, FProfile.addTotalSamples(NumSamples));
-      MergeResult(Result, FProfile.addHeadSamples(NumHeadSamples));
+      FunctionSamples &FProfile = Profiles.create(FContext);
+      mergeSampleProfErrors(Result, FProfile.addTotalSamples(NumSamples));
+      mergeSampleProfErrors(Result, FProfile.addHeadSamples(NumHeadSamples));
       InlineStack.clear();
       InlineStack.push_back(&FProfile);
     } else {
@@ -394,7 +394,7 @@ std::error_code SampleProfileReaderText::readImpl() {
         FunctionSamples &FSamples = InlineStack.back()->functionSamplesAt(
             LineLocation(LineOffset, Discriminator))[FunctionId(FName)];
         FSamples.setFunction(FunctionId(FName));
-        MergeResult(Result, FSamples.addTotalSamples(NumSamples));
+        mergeSampleProfErrors(Result, FSamples.addTotalSamples(NumSamples));
         InlineStack.push_back(&FSamples);
         DepthMetadata = 0;
         break;
@@ -405,13 +405,14 @@ std::error_code SampleProfileReaderText::readImpl() {
         }
         FunctionSamples &FProfile = *InlineStack.back();
         for (const auto &name_count : TargetCountMap) {
-          MergeResult(Result, FProfile.addCalledTargetSamples(
-                                  LineOffset, Discriminator,
-                                  FunctionId(name_count.first),
-                                  name_count.second));
+          mergeSampleProfErrors(Result, FProfile.addCalledTargetSamples(
+                                            LineOffset, Discriminator,
+                                            FunctionId(name_count.first),
+                                            name_count.second));
         }
-        MergeResult(Result, FProfile.addBodySamples(LineOffset, Discriminator,
-                                                    NumSamples));
+        mergeSampleProfErrors(
+            Result,
+            FProfile.addBodySamples(LineOffset, Discriminator, NumSamples));
         break;
       }
       case LineType::Metadata: {
@@ -892,12 +893,12 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles() {
         if ((useMD5() && FuncGuidsToUse.count(FName.getHashCode())) ||
             (!useMD5() && (FuncsToUse.count(FNameString) ||
                            (Remapper && Remapper->exist(FNameString))))) {
-          if (!CommonContext || !CommonContext->IsPrefixOf(FContext))
+          if (!CommonContext || !CommonContext->isPrefixOf(FContext))
             CommonContext = &FContext;
         }
 
         if (CommonContext == &FContext ||
-            (CommonContext && CommonContext->IsPrefixOf(FContext))) {
+            (CommonContext && CommonContext->isPrefixOf(FContext))) {
           // Load profile for the current context which originated from
           // the common ancestor.
           const uint8_t *FuncProfileAddr = Start + NameOffset.second;

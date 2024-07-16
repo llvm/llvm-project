@@ -44,7 +44,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -6792,6 +6792,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::sin:
   case Intrinsic::cos:
   case Intrinsic::tan:
+  case Intrinsic::asin:
+  case Intrinsic::acos:
+  case Intrinsic::atan:
+  case Intrinsic::sinh:
+  case Intrinsic::cosh:
+  case Intrinsic::tanh:
   case Intrinsic::exp10:
   case Intrinsic::floor:
   case Intrinsic::ceil:
@@ -6810,6 +6816,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     case Intrinsic::sin:          Opcode = ISD::FSIN;          break;
     case Intrinsic::cos:          Opcode = ISD::FCOS;          break;
     case Intrinsic::tan:          Opcode = ISD::FTAN;          break;
+    case Intrinsic::asin:         Opcode = ISD::FASIN;         break;
+    case Intrinsic::acos:         Opcode = ISD::FACOS;         break;
+    case Intrinsic::atan:         Opcode = ISD::FATAN;         break;
+    case Intrinsic::sinh:         Opcode = ISD::FSINH;         break;
+    case Intrinsic::cosh:         Opcode = ISD::FCOSH;         break;
+    case Intrinsic::tanh:         Opcode = ISD::FTANH;         break;
     case Intrinsic::exp10:        Opcode = ISD::FEXP10;        break;
     case Intrinsic::floor:        Opcode = ISD::FFLOOR;        break;
     case Intrinsic::ceil:         Opcode = ISD::FCEIL;         break;
@@ -9261,6 +9273,42 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
         if (visitUnaryFloatCall(I, ISD::FTAN))
           return;
         break;
+      case LibFunc_asin:
+      case LibFunc_asinf:
+      case LibFunc_asinl:
+        if (visitUnaryFloatCall(I, ISD::FASIN))
+          return;
+        break;
+      case LibFunc_acos:
+      case LibFunc_acosf:
+      case LibFunc_acosl:
+        if (visitUnaryFloatCall(I, ISD::FACOS))
+          return;
+        break;
+      case LibFunc_atan:
+      case LibFunc_atanf:
+      case LibFunc_atanl:
+        if (visitUnaryFloatCall(I, ISD::FATAN))
+          return;
+        break;
+      case LibFunc_sinh:
+      case LibFunc_sinhf:
+      case LibFunc_sinhl:
+        if (visitUnaryFloatCall(I, ISD::FSINH))
+          return;
+        break;
+      case LibFunc_cosh:
+      case LibFunc_coshf:
+      case LibFunc_coshl:
+        if (visitUnaryFloatCall(I, ISD::FCOSH))
+          return;
+        break;
+      case LibFunc_tanh:
+      case LibFunc_tanhf:
+      case LibFunc_tanhl:
+        if (visitUnaryFloatCall(I, ISD::FTANH))
+          return;
+        break;
       case LibFunc_sqrt:
       case LibFunc_sqrtf:
       case LibFunc_sqrtl:
@@ -9405,6 +9453,14 @@ void SelectionDAGBuilder::LowerCallSiteWithPtrAuthBundle(
   assert(Key->getType()->isIntegerTy(32) && "Invalid ptrauth key");
   assert(Discriminator->getType()->isIntegerTy(64) &&
          "Invalid ptrauth discriminator");
+
+  // Look through ptrauth constants to find the raw callee.
+  // Do a direct unauthenticated call if we found it and everything matches.
+  if (const auto *CalleeCPA = dyn_cast<ConstantPtrAuth>(CalleeV))
+    if (CalleeCPA->isKnownCompatibleWith(Key, Discriminator,
+                                         DAG.getDataLayout()))
+      return LowerCallTo(CB, getValue(CalleeCPA->getPointer()), CB.isTailCall(),
+                         CB.isMustTailCall(), EHPadBB);
 
   // Functions should never be ptrauth-called directly.
   assert(!isa<Function>(CalleeV) && "invalid direct ptrauth call");
@@ -12012,17 +12068,7 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
         // table branch.
         if (FallthroughUnreachable) {
           Function &CurFunc = CurMF->getFunction();
-          bool HasBranchTargetEnforcement = false;
-          if (CurFunc.hasFnAttribute("branch-target-enforcement")) {
-            HasBranchTargetEnforcement =
-                CurFunc.getFnAttribute("branch-target-enforcement")
-                    .getValueAsBool();
-          } else {
-            HasBranchTargetEnforcement =
-                CurMF->getMMI().getModule()->getModuleFlag(
-                    "branch-target-enforcement");
-          }
-          if (!HasBranchTargetEnforcement)
+          if (!CurFunc.hasFnAttribute("branch-target-enforcement"))
             JTH->FallthroughUnreachable = true;
         }
 

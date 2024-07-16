@@ -101,7 +101,7 @@ __cpp_lib_execution                                     201902L <execution>
                                                         201603L // C++17
 __cpp_lib_expected                                      202211L <expected>
 __cpp_lib_filesystem                                    201703L <filesystem>
-__cpp_lib_format                                        202106L <format>
+__cpp_lib_format                                        202110L <format>
 __cpp_lib_format_path                                   202403L <filesystem>
 __cpp_lib_format_ranges                                 202207L <format>
 __cpp_lib_format_uchar                                  202311L <format>
@@ -159,7 +159,8 @@ __cpp_lib_make_unique                                   201304L <memory>
 __cpp_lib_map_try_emplace                               201411L <map>
 __cpp_lib_math_constants                                201907L <numbers>
 __cpp_lib_math_special_functions                        201603L <cmath>
-__cpp_lib_mdspan                                        202207L <mdspan>
+__cpp_lib_mdspan                                        202406L <mdspan>
+                                                        202207L // C++23
 __cpp_lib_memory_resource                               201603L <memory_resource>
 __cpp_lib_move_iterator_concept                         202207L <iterator>
 __cpp_lib_move_only_function                            202110L <functional>
@@ -366,7 +367,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_atomic_flag_test                     201907L
 // # define __cpp_lib_atomic_float                         201711L
 # define __cpp_lib_atomic_lock_free_type_aliases        201907L
-// # define __cpp_lib_atomic_ref                           201806L
+# define __cpp_lib_atomic_ref                           201806L
 // # define __cpp_lib_atomic_shared_ptr                    201711L
 # define __cpp_lib_atomic_value_initialization          201911L
 # if _LIBCPP_AVAILABILITY_HAS_SYNC
@@ -403,7 +404,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_erase_if                             202002L
 # undef  __cpp_lib_execution
 // # define __cpp_lib_execution                            201902L
-// # define __cpp_lib_format                               202106L
+# define __cpp_lib_format                               202110L
 # define __cpp_lib_format_uchar                         202311L
 # define __cpp_lib_generic_unordered_lookup             201811L
 # define __cpp_lib_int_pow2                             202002L
@@ -530,6 +531,8 @@ __cpp_lib_void_t                                        201411L <type_traits>
 // # define __cpp_lib_is_virtual_base_of                   202406L
 // # define __cpp_lib_is_within_lifetime                   202306L
 // # define __cpp_lib_linalg                               202311L
+# undef  __cpp_lib_mdspan
+# define __cpp_lib_mdspan                               202406L
 // # define __cpp_lib_optional_range_support               202406L
 # undef  __cpp_lib_out_ptr
 // # define __cpp_lib_out_ptr                              202311L

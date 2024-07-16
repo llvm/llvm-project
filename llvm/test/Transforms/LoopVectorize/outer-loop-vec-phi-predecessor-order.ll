@@ -40,7 +40,7 @@ define void @test(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i64> [[TMP5]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP6]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[LOOP_1_LATCH5]], label [[LOOP_2_HEADER1]]
-; CHECK:       loop.1.latch5:
+; CHECK:       vector.latch:
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw <4 x i64> [[VEC_IND]], <i64 1, i64 1, i64 1, i64 1>
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <4 x i64> [[TMP8]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

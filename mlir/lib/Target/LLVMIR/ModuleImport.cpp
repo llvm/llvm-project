@@ -1468,6 +1468,8 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
       callOp = builder.create<CallOp>(loc, funcTy, operands);
     }
     callOp.setCConv(convertCConvFromLLVM(callInst->getCallingConv()));
+    callOp.setTailCallKind(
+        convertTailCallKindFromLLVM(callInst->getTailCallKind()));
     setFastmathFlagsAttr(inst, callOp);
     if (!callInst->getType()->isVoidTy())
       mapValue(inst, callOp.getResult());
@@ -1676,6 +1678,9 @@ static constexpr std::array kExplicitAttributes{
     StringLiteral("alwaysinline"),
     StringLiteral("approx-func-fp-math"),
     StringLiteral("convergent"),
+    StringLiteral("denormal-fp-math"),
+    StringLiteral("denormal-fp-math-f32"),
+    StringLiteral("fp-contract"),
     StringLiteral("frame-pointer"),
     StringLiteral("no-infs-fp-math"),
     StringLiteral("no-nans-fp-math"),
@@ -1683,6 +1688,7 @@ static constexpr std::array kExplicitAttributes{
     StringLiteral("noinline"),
     StringLiteral("optnone"),
     StringLiteral("target-features"),
+    StringLiteral("tune-cpu"),
     StringLiteral("unsafe-fp-math"),
     StringLiteral("vscale_range"),
 };
@@ -1799,6 +1805,10 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
       attr.isStringAttribute())
     funcOp.setTargetCpuAttr(StringAttr::get(context, attr.getValueAsString()));
 
+  if (llvm::Attribute attr = func->getFnAttribute("tune-cpu");
+      attr.isStringAttribute())
+    funcOp.setTuneCpuAttr(StringAttr::get(context, attr.getValueAsString()));
+
   if (llvm::Attribute attr = func->getFnAttribute("target-features");
       attr.isStringAttribute())
     funcOp.setTargetFeaturesAttr(
@@ -1823,6 +1833,20 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   if (llvm::Attribute attr = func->getFnAttribute("no-signed-zeros-fp-math");
       attr.isStringAttribute())
     funcOp.setNoSignedZerosFpMath(attr.getValueAsBool());
+
+  if (llvm::Attribute attr = func->getFnAttribute("denormal-fp-math");
+      attr.isStringAttribute())
+    funcOp.setDenormalFpMathAttr(
+        StringAttr::get(context, attr.getValueAsString()));
+
+  if (llvm::Attribute attr = func->getFnAttribute("denormal-fp-math-f32");
+      attr.isStringAttribute())
+    funcOp.setDenormalFpMathF32Attr(
+        StringAttr::get(context, attr.getValueAsString()));
+
+  if (llvm::Attribute attr = func->getFnAttribute("fp-contract");
+      attr.isStringAttribute())
+    funcOp.setFpContractAttr(StringAttr::get(context, attr.getValueAsString()));
 }
 
 DictionaryAttr

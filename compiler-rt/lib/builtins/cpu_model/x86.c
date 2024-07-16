@@ -23,10 +23,6 @@
 
 #include <assert.h>
 
-#if defined(__GNUC__) || defined(__clang__)
-#include <cpuid.h>
-#endif
-
 #ifdef _MSC_VER
 #include <intrin.h>
 #endif
@@ -228,6 +224,38 @@ enum ProcessorFeatures {
   CPU_FEATURE_MAX
 };
 
+// The check below for i386 was copied from clang's cpuid.h (__get_cpuid_max).
+// Check motivated by bug reports for OpenSSL crashing on CPUs without CPUID
+// support. Consequently, for i386, the presence of CPUID is checked first
+// via the corresponding eflags bit.
+static bool isCpuIdSupported(void) {
+#if defined(__GNUC__) || defined(__clang__)
+#if defined(__i386__)
+  int __cpuid_supported;
+  __asm__("  pushfl\n"
+          "  popl   %%eax\n"
+          "  movl   %%eax,%%ecx\n"
+          "  xorl   $0x00200000,%%eax\n"
+          "  pushl  %%eax\n"
+          "  popfl\n"
+          "  pushfl\n"
+          "  popl   %%eax\n"
+          "  movl   $0,%0\n"
+          "  cmpl   %%eax,%%ecx\n"
+          "  je     1f\n"
+          "  movl   $1,%0\n"
+          "1:"
+          : "=r"(__cpuid_supported)
+          :
+          : "eax", "ecx");
+  if (!__cpuid_supported)
+    return false;
+#endif
+  return true;
+#endif
+  return true;
+}
+
 // This code is copied from lib/Support/Host.cpp.
 // Changes to either file should be mirrored in the other.
 
@@ -236,7 +264,25 @@ enum ProcessorFeatures {
 static bool getX86CpuIDAndInfo(unsigned value, unsigned *rEAX, unsigned *rEBX,
                                unsigned *rECX, unsigned *rEDX) {
 #if defined(__GNUC__) || defined(__clang__)
-  return !__get_cpuid(value, rEAX, rEBX, rECX, rEDX);
+#if defined(__x86_64__)
+  // gcc doesn't know cpuid would clobber ebx/rbx. Preserve it manually.
+  // FIXME: should we save this for Clang?
+  __asm__("movq\t%%rbx, %%rsi\n\t"
+          "cpuid\n\t"
+          "xchgq\t%%rbx, %%rsi\n\t"
+          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
+          : "a"(value));
+  return false;
+#elif defined(__i386__)
+  __asm__("movl\t%%ebx, %%esi\n\t"
+          "cpuid\n\t"
+          "xchgl\t%%ebx, %%esi\n\t"
+          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
+          : "a"(value));
+  return false;
+#else
+  return true;
+#endif
 #elif defined(_MSC_VER)
   // The MSVC intrinsic is portable across x86 and x64.
   int registers[4];
@@ -257,12 +303,26 @@ static bool getX86CpuIDAndInfo(unsigned value, unsigned *rEAX, unsigned *rEBX,
 static bool getX86CpuIDAndInfoEx(unsigned value, unsigned subleaf,
                                  unsigned *rEAX, unsigned *rEBX, unsigned *rECX,
                                  unsigned *rEDX) {
-  // TODO(boomanaiden154): When the minimum toolchain versions for gcc and clang
-  // are such that __cpuidex is defined within cpuid.h for both, we can remove
-  // the __get_cpuid_count function and share the MSVC implementation between
-  // all three.
 #if defined(__GNUC__) || defined(__clang__)
-  return !__get_cpuid_count(value, subleaf, rEAX, rEBX, rECX, rEDX);
+#if defined(__x86_64__)
+  // gcc doesn't know cpuid would clobber ebx/rbx. Preserve it manually.
+  // FIXME: should we save this for Clang?
+  __asm__("movq\t%%rbx, %%rsi\n\t"
+          "cpuid\n\t"
+          "xchgq\t%%rbx, %%rsi\n\t"
+          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
+          : "a"(value), "c"(subleaf));
+  return false;
+#elif defined(__i386__)
+  __asm__("movl\t%%ebx, %%esi\n\t"
+          "cpuid\n\t"
+          "xchgl\t%%ebx, %%esi\n\t"
+          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
+          : "a"(value), "c"(subleaf));
+  return false;
+#else
+  return true;
+#endif
 #elif defined(_MSC_VER)
   int registers[4];
   __cpuidex(registers, value, subleaf);
@@ -278,9 +338,6 @@ static bool getX86CpuIDAndInfoEx(unsigned value, unsigned subleaf,
 
 // Read control register 0 (XCR0). Used to detect features such as AVX.
 static bool getX86XCR0(unsigned *rEAX, unsigned *rEDX) {
-  // TODO(boomanaiden154): When the minimum toolchain versions for gcc and clang
-  // are such that _xgetbv is supported by both, we can unify the implementation
-  // with MSVC and remove all inline assembly.
 #if defined(__GNUC__) || defined(__clang__)
   // Check xgetbv; this uses a .byte sequence instead of the instruction
   // directly because older assemblers do not include support for xgetbv and
@@ -1087,7 +1144,8 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
   if (__cpu_model.__cpu_vendor)
     return 0;
 
-  if (getX86CpuIDAndInfo(0, &MaxLeaf, &Vendor, &ECX, &EDX) || MaxLeaf < 1) {
+  if (!isCpuIdSupported() ||
+      getX86CpuIDAndInfo(0, &MaxLeaf, &Vendor, &ECX, &EDX) || MaxLeaf < 1) {
     __cpu_model.__cpu_vendor = VENDOR_OTHER;
     return -1;
   }

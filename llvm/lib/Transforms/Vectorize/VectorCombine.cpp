@@ -1859,13 +1859,19 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
     if (!FrontU)
       return false;
 
+    // Helper to peek through bitcasts to the same value.
+    auto IsEquiv = [&](Value *X, Value *Y) {
+      return X->getType() == Y->getType() &&
+             peekThroughBitcasts(X) == peekThroughBitcasts(Y);
+    };
+
     // Look for an identity value.
     if (FrontLane == 0 &&
         cast<FixedVectorType>(FrontU->get()->getType())->getNumElements() ==
             Ty->getNumElements() &&
-        all_of(drop_begin(enumerate(Item)), [Item](const auto &E) {
+        all_of(drop_begin(enumerate(Item)), [IsEquiv, Item](const auto &E) {
           Value *FrontV = Item.front().first->get();
-          return !E.value().first || (E.value().first->get() == FrontV &&
+          return !E.value().first || (IsEquiv(E.value().first->get(), FrontV) &&
                                       E.value().second == (int)E.index());
         })) {
       IdentityLeafs.insert(FrontU);
@@ -1905,6 +1911,9 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
             return false;
           if (auto *CI = dyn_cast<CmpInst>(V))
             if (CI->getPredicate() != cast<CmpInst>(FrontV)->getPredicate())
+              return false;
+          if (auto *CI = dyn_cast<CastInst>(V))
+            if (CI->getSrcTy() != cast<CastInst>(FrontV)->getSrcTy())
               return false;
           if (auto *SI = dyn_cast<SelectInst>(V))
             if (!isa<VectorType>(SI->getOperand(0)->getType()) ||

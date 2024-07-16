@@ -1583,7 +1583,7 @@ void SampleProfileLoader::promoteMergeNotInlinedContextSamples(
               FunctionId(FunctionSamples::getCanonicalFnName(Callee->getName()))];
         OutlineFS->merge(*FS, 1);
         // Set outlined profile to be synthetic to not bias the inliner.
-        OutlineFS->SetContextSynthetic();
+        OutlineFS->setContextSynthetic();
       }
     } else {
       auto pair =
@@ -1597,7 +1597,7 @@ void SampleProfileLoader::promoteMergeNotInlinedContextSamples(
 static SmallVector<InstrProfValueData, 2>
 GetSortedValueDataFromCallTargets(const SampleRecord::CallTargetMap &M) {
   SmallVector<InstrProfValueData, 2> R;
-  for (const auto &I : SampleRecord::SortCallTargets(M)) {
+  for (const auto &I : SampleRecord::sortCallTargets(M)) {
     R.emplace_back(
         InstrProfValueData{I.first.getHashCode(), I.second});
   }

@@ -184,7 +184,6 @@ feature_test_macros = [
             "name": "__cpp_lib_atomic_ref",
             "values": {"c++20": 201806},
             "headers": ["atomic"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_atomic_shared_ptr",
@@ -508,10 +507,7 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_format",
             "values": {
-                # "c++20": 201907 Not implemented P1361R2 Integration of chrono with text formatting
-                # "c++20": 202106 Fully implemented
-                # "c++20": 202110 Not implemented P2372R3 Fixing locale handling in chrono formatters
-                "c++20": 202106,
+                "c++20": 202110,
                 # "c++23": 202207, Not implemented P2419R2 Clarify handling of encodings in localized formatting of chrono types
                 # "c++26": 202306, P2637R3 Member Visit (implemented)
                 # "c++26": 202311, P2918R2 Runtime format strings II (implemented)
@@ -521,7 +517,6 @@ feature_test_macros = [
             # 202305 P2757R3 Type-checking format args
             # 202306 P2637R3 Member Visit
             "headers": ["format"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_format_path",
@@ -873,7 +868,7 @@ feature_test_macros = [
             "name": "__cpp_lib_mdspan",
             "values": {
                 "c++23": 202207,
-                # "c++26": 202406, # P2389R2 dextents Index Type Parameter
+                "c++26": 202406,  # P2389R2 dextents Index Type Parameter
             },
             "headers": ["mdspan"],
         },
