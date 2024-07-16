@@ -366,7 +366,7 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
     // Declare reductions.
     // TODO: consider checking it here is already a compatible reduction
     // declaration and use it instead of redeclaring.
-    SmallVector<Attribute> reductionDeclSymbols;
+    SmallVector<Attribute> reductionSyms;
     SmallVector<omp::DeclareReductionOp> ompReductionDecls;
     auto reduce = cast<scf::ReduceOp>(parallelOp.getBody()->getTerminator());
     for (int64_t i = 0, e = parallelOp.getNumReductions(); i < e; ++i) {
@@ -374,7 +374,7 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
       ompReductionDecls.push_back(decl);
       if (!decl)
         return failure();
-      reductionDeclSymbols.push_back(
+      reductionSyms.push_back(
           SymbolRefAttr::get(rewriter.getContext(), decl.getSymName()));
     }
 
@@ -445,15 +445,15 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
     auto ompParallel = rewriter.create<omp::ParallelOp>(
         loc,
         /* if_expr = */ Value{},
-        /* num_threads_var = */ numThreadsVar,
+        /* num_threads = */ numThreadsVar,
         /* allocate_vars = */ llvm::SmallVector<Value>{},
-        /* allocators_vars = */ llvm::SmallVector<Value>{},
+        /* allocator_vars = */ llvm::SmallVector<Value>{},
         /* reduction_vars = */ llvm::SmallVector<Value>{},
-        /* reduction_vars_isbyref = */ DenseBoolArrayAttr{},
-        /* reductions = */ ArrayAttr{},
-        /* proc_bind_val = */ omp::ClauseProcBindKindAttr{},
+        /* reduction_byref = */ DenseBoolArrayAttr{},
+        /* reduction_syms = */ ArrayAttr{},
+        /* proc_bind_kind = */ omp::ClauseProcBindKindAttr{},
         /* private_vars = */ ValueRange(),
-        /* privatizers = */ nullptr);
+        /* private_syms = */ nullptr);
     {
 
       OpBuilder::InsertionGuard guard(rewriter);
@@ -465,15 +465,15 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
         // Create worksharing loop wrapper.
         auto wsloopOp = rewriter.create<omp::WsloopOp>(parallelOp.getLoc());
         if (!reductionVariables.empty()) {
-          wsloopOp.setReductionsAttr(
-              ArrayAttr::get(rewriter.getContext(), reductionDeclSymbols));
+          wsloopOp.setReductionSymsAttr(
+              ArrayAttr::get(rewriter.getContext(), reductionSyms));
           wsloopOp.getReductionVarsMutable().append(reductionVariables);
-          llvm::SmallVector<bool> byRefVec;
+          llvm::SmallVector<bool> reductionByRef;
           // false because these reductions always reduce scalars and so do
           // not need to pass by reference
-          byRefVec.resize(reductionVariables.size(), false);
-          wsloopOp.setReductionVarsByref(
-              DenseBoolArrayAttr::get(rewriter.getContext(), byRefVec));
+          reductionByRef.resize(reductionVariables.size(), false);
+          wsloopOp.setReductionByref(
+              DenseBoolArrayAttr::get(rewriter.getContext(), reductionByRef));
         }
         rewriter.create<omp::TerminatorOp>(loc); // omp.parallel terminator.
 

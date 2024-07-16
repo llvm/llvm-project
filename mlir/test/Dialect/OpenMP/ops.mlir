@@ -91,7 +91,7 @@ func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i
     }) {operandSegmentSizes = array<i32: 1,1,0,0,0,0>} : (i1, i32) -> ()
 
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 1,1,1,1,0,0>, proc_bind_val = #omp<procbindkind spread>} : (i1, i32, memref<i32>, memref<i32>) -> ()
+  }) {operandSegmentSizes = array<i32: 1,1,1,1,0,0>, proc_bind_kind = #omp<procbindkind spread>} : (i1, i32, memref<i32>, memref<i32>) -> ()
 
   // test with multiple parameters for single variadic argument
   // CHECK: omp.parallel allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>)
@@ -382,7 +382,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
       omp.yield
     }
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 0,0,0,0>, ordered_val = 1} :
+  }) {operandSegmentSizes = array<i32: 0,0,0,0>, ordered = 1} :
     () -> ()
 
   // CHECK: omp.wsloop linear(%{{.*}} = %{{.*}} : memref<i32>) schedule(static) {
@@ -392,7 +392,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
       omp.yield
     }
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 1,1,0,0>, schedule_val = #omp<schedulekind static>} :
+  }) {operandSegmentSizes = array<i32: 1,1,0,0>, schedule_kind = #omp<schedulekind static>} :
     (memref<i32>, i32) -> ()
 
   // CHECK: omp.wsloop linear(%{{.*}} = %{{.*}} : memref<i32>, %{{.*}} = %{{.*}} : memref<i32>) schedule(static) {
@@ -402,7 +402,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
       omp.yield
     }
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 2,2,0,0>, schedule_val = #omp<schedulekind static>} :
+  }) {operandSegmentSizes = array<i32: 2,2,0,0>, schedule_kind = #omp<schedulekind static>} :
     (memref<i32>, memref<i32>, i32, i32) -> ()
 
   // CHECK: omp.wsloop linear(%{{.*}} = %{{.*}} : memref<i32>) schedule(dynamic = %{{.*}}) ordered(2) {
@@ -412,7 +412,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
       omp.yield
     }
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 1,1,0,1>, schedule_val = #omp<schedulekind dynamic>, ordered_val = 2} :
+  }) {operandSegmentSizes = array<i32: 1,1,0,1>, schedule_kind = #omp<schedulekind dynamic>, ordered = 2} :
     (memref<i32>, i32, i32) -> ()
 
   // CHECK: omp.wsloop schedule(auto) nowait {
@@ -422,7 +422,7 @@ func.func @omp_wsloop(%lb : index, %ub : index, %step : index, %data_var : memre
       omp.yield
     }
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 0,0,0,0>, nowait, schedule_val = #omp<schedulekind auto>} :
+  }) {operandSegmentSizes = array<i32: 0,0,0,0>, nowait, schedule_kind = #omp<schedulekind auto>} :
     () -> ()
 
   // CHECK: omp.wsloop {
@@ -574,7 +574,7 @@ func.func @omp_simd_aligned_list(%arg0 : index, %arg1 : index, %arg2 : index,
       "omp.yield"() : () -> ()
     }) : (index, index, index) -> ()
     "omp.terminator"() : () -> ()
-  }) {alignment_values = [32, 128],
+  }) {alignments = [32, 128],
       operandSegmentSizes = array<i32: 2, 0, 0>} : (memref<i32>, memref<i32>) -> ()
   return
 }
@@ -589,7 +589,7 @@ func.func @omp_simd_aligned_single(%arg0 : index, %arg1 : index, %arg2 : index,
       "omp.yield"() : () -> ()
     }) : (index, index, index) -> ()
     "omp.terminator"() : () -> ()
-  }) {alignment_values = [32],
+  }) {alignments = [32],
       operandSegmentSizes = array<i32: 1, 0, 0>} : (memref<i32>) -> ()
   return
 }
@@ -752,8 +752,8 @@ func.func @omp_distribute(%chunk_size : i32, %data_var : memref<i32>, %arg0 : i3
     }
     omp.terminator
   }
-  // CHECK: omp.distribute dist_schedule_static chunk_size(%{{.+}} : i32)
-  omp.distribute dist_schedule_static chunk_size(%chunk_size : i32) {
+  // CHECK: omp.distribute dist_schedule_static dist_schedule_chunk_size(%{{.+}} : i32)
+  omp.distribute dist_schedule_static dist_schedule_chunk_size(%chunk_size : i32) {
     omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
       omp.yield
     }
@@ -1294,11 +1294,11 @@ func.func @omp_ordered(%arg1 : i32, %arg2 : i32, %arg3 : i32,
   omp.wsloop ordered(1) {
     omp.loop_nest (%0) : i32 = (%arg1) to (%arg2) step (%arg3) {
       // Only one DEPEND(SINK: vec) clause
-      // CHECK: omp.ordered depend_type(dependsink) depend_vec(%{{.*}} : i64) {num_loops_val = 1 : i64}
-      omp.ordered depend_type(dependsink) depend_vec(%vec0 : i64) {num_loops_val = 1 : i64}
+      // CHECK: omp.ordered depend_type(dependsink) depend_vec(%{{.*}} : i64) {doacross_num_loops = 1 : i64}
+      omp.ordered depend_type(dependsink) depend_vec(%vec0 : i64) {doacross_num_loops = 1 : i64}
 
-      // CHECK: omp.ordered depend_type(dependsource) depend_vec(%{{.*}} : i64) {num_loops_val = 1 : i64}
-      omp.ordered depend_type(dependsource) depend_vec(%vec0 : i64) {num_loops_val = 1 : i64}
+      // CHECK: omp.ordered depend_type(dependsource) depend_vec(%{{.*}} : i64) {doacross_num_loops = 1 : i64}
+      omp.ordered depend_type(dependsource) depend_vec(%vec0 : i64) {doacross_num_loops = 1 : i64}
 
       omp.yield
     }
@@ -1308,11 +1308,11 @@ func.func @omp_ordered(%arg1 : i32, %arg2 : i32, %arg3 : i32,
   omp.wsloop ordered(2) {
     omp.loop_nest (%0) : i32 = (%arg1) to (%arg2) step (%arg3) {
       // Multiple DEPEND(SINK: vec) clauses
-      // CHECK: omp.ordered depend_type(dependsink) depend_vec(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : i64, i64, i64, i64) {num_loops_val = 2 : i64}
-      omp.ordered depend_type(dependsink) depend_vec(%vec0, %vec1, %vec2, %vec3 : i64, i64, i64, i64) {num_loops_val = 2 : i64}
+      // CHECK: omp.ordered depend_type(dependsink) depend_vec(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : i64, i64, i64, i64) {doacross_num_loops = 2 : i64}
+      omp.ordered depend_type(dependsink) depend_vec(%vec0, %vec1, %vec2, %vec3 : i64, i64, i64, i64) {doacross_num_loops = 2 : i64}
 
-      // CHECK: omp.ordered depend_type(dependsource) depend_vec(%{{.*}}, %{{.*}} : i64, i64) {num_loops_val = 2 : i64}
-      omp.ordered depend_type(dependsource) depend_vec(%vec0, %vec1 : i64, i64) {num_loops_val = 2 : i64}
+      // CHECK: omp.ordered depend_type(dependsource) depend_vec(%{{.*}}, %{{.*}} : i64, i64) {doacross_num_loops = 2 : i64}
+      omp.ordered depend_type(dependsource) depend_vec(%vec0, %vec1 : i64, i64) {doacross_num_loops = 2 : i64}
 
       omp.yield
     }
@@ -1880,7 +1880,7 @@ func.func @omp_sectionsop(%data_var1 : memref<i32>, %data_var2 : memref<i32>,
   "omp.sections" (%redn_var) ({
     // CHECK: omp.terminator
     omp.terminator
-  }) {operandSegmentSizes = array<i32: 1,0,0>, reduction_vars_byref = array<i1: false>, reductions=[@add_f32]} : (!llvm.ptr) -> ()
+  }) {operandSegmentSizes = array<i32: 1,0,0>, reduction_byref = array<i1: false>, reduction_syms=[@add_f32]} : (!llvm.ptr) -> ()
 
   // CHECK: omp.sections nowait {
   omp.sections nowait {
@@ -2421,8 +2421,8 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
   }
 
   %testi64 = "test.i64"() : () -> (i64)
-  // CHECK: omp.taskloop grain_size(%{{[^:]+}}: i64) {
-  omp.taskloop grain_size(%testi64: i64) {
+  // CHECK: omp.taskloop grainsize(%{{[^:]+}}: i64) {
+  omp.taskloop grainsize(%testi64: i64) {
     omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
       // CHECK: omp.yield
       omp.yield

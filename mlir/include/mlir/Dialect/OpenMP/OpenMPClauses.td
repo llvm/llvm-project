@@ -20,6 +20,7 @@
 #define OPENMP_CLAUSES
 
 include "mlir/Dialect/OpenMP/OpenMPOpBase.td"
+include "mlir/IR/SymbolInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // V5.2: [5.11] `aligned` clause
@@ -32,18 +33,18 @@ class OpenMP_AlignedClauseSkip<
                     description, extraClassDeclaration> {
   let arguments = (ins
     Variadic<OpenMP_PointerLikeType>:$aligned_vars,
-    OptionalAttr<I64ArrayAttr>:$alignment_values
+    OptionalAttr<I64ArrayAttr>:$alignments
   );
 
   let assemblyFormat = [{
     `aligned` `(` custom<AlignedClause>($aligned_vars, type($aligned_vars),
-                                        $alignment_values) `)`
+                                        $alignments) `)`
   }];
 
   let description = [{
-    The `alignment_values` attribute additionally specifies alignment of each
-    corresponding aligned operand. Note that `aligned_vars` and
-    `alignment_values` should contain the same number of elements.
+    The `alignments` attribute additionally specifies alignment of each
+    corresponding aligned operand. Note that `aligned_vars` and `alignments`
+    must contain the same number of elements.
   }];
 }
 
@@ -60,22 +61,22 @@ class OpenMP_AllocateClauseSkip<
                     description, extraClassDeclaration> {
   let arguments = (ins
     Variadic<AnyType>:$allocate_vars,
-    Variadic<AnyType>:$allocators_vars
+    Variadic<AnyType>:$allocator_vars
   );
 
   let extraClassDeclaration = [{
     unsigned getNumAllocateVars() { return getAllocateVars().size(); }
-    unsigned getNumAllocatorsVars() { return getAllocatorsVars().size(); }
+    unsigned getNumAllocatorsVars() { return getAllocatorVars().size(); }
   }];
 
   let assemblyFormat = [{
     `allocate` `(`
       custom<AllocateAndAllocator>($allocate_vars, type($allocate_vars),
-                                   $allocators_vars, type($allocators_vars)) `)`
+                                   $allocator_vars, type($allocator_vars)) `)`
   }];
 
   let description = [{
-    The `allocators_vars` and `allocate_vars` parameters are a variadic list of
+    The `allocator_vars` and `allocate_vars` parameters are a variadic list of
     values that specify the memory allocator to be used to obtain storage for
     private values.
   }];
@@ -93,12 +94,12 @@ class OpenMP_CancelDirectiveNameClauseSkip<
   > : OpenMP_Clause</*isRequired=*/true, traits, arguments, assemblyFormat,
                     description, extraClassDeclaration> {
   let arguments = (ins
-    CancellationConstructTypeAttr:$cancellation_construct_type_val
+    CancellationConstructTypeAttr:$cancel_directive
   );
 
   let assemblyFormat = [{
     `cancellation_construct_type` `(`
-      custom<ClauseAttr>($cancellation_construct_type_val) `)`
+      custom<ClauseAttr>($cancel_directive) `)`
   }];
 
   // TODO: Add description.
@@ -116,18 +117,19 @@ class OpenMP_CollapseClauseSkip<
   > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
                     description, extraClassDeclaration> {
   let traits = [
-    AllTypesMatch<["lowerBound", "upperBound", "step"]>
+    AllTypesMatch<
+      ["collapse_lower_bounds", "collapse_upper_bounds", "collapse_steps"]>
   ];
 
   let arguments = (ins
-    Variadic<IntLikeType>:$lowerBound,
-    Variadic<IntLikeType>:$upperBound,
-    Variadic<IntLikeType>:$step
+    Variadic<IntLikeType>:$collapse_lower_bounds,
+    Variadic<IntLikeType>:$collapse_upper_bounds,
+    Variadic<IntLikeType>:$collapse_steps
   );
 
   let extraClassDeclaration = [{
     /// Returns the number of loops in the loop nest.
-    unsigned getNumLoops() { return getLowerBound().size(); }
+    unsigned getNumLoops() { return getCollapseLowerBounds().size(); }
   }];
 
   // Description and formatting integrated in the `omp.loop_nest` operation,
@@ -147,13 +149,13 @@ class OpenMP_CopyprivateClauseSkip<
                     description, extraClassDeclaration> {
   let arguments = (ins
     Variadic<OpenMP_PointerLikeType>:$copyprivate_vars,
-    OptionalAttr<SymbolRefArrayAttr>:$copyprivate_funcs
+    OptionalAttr<SymbolRefArrayAttr>:$copyprivate_syms
   );
 
   let assemblyFormat = [{
     `copyprivate` `(`
-      custom<CopyPrivateVarList>($copyprivate_vars, type($copyprivate_vars),
-                                 $copyprivate_funcs) `)`
+      custom<Copyprivate>($copyprivate_vars, type($copyprivate_vars),
+                          $copyprivate_syms) `)`
   }];
 
   let description = [{
@@ -174,6 +176,10 @@ class OpenMP_CriticalNameClauseSkip<
     bit description = false, bit extraClassDeclaration = false
   > : OpenMP_Clause</*isRequired=*/true, traits, arguments, assemblyFormat,
                     description, extraClassDeclaration> {
+  let traits = [
+    Symbol
+  ];
+
   let arguments = (ins
     SymbolNameAttr:$sym_name
   );
@@ -197,18 +203,19 @@ class OpenMP_DependClauseSkip<
   > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
                     description, extraClassDeclaration> {
   let arguments = (ins
-    OptionalAttr<TaskDependArrayAttr>:$depends,
+    OptionalAttr<TaskDependArrayAttr>:$depend_kinds,
     Variadic<OpenMP_PointerLikeType>:$depend_vars
   );
 
   let assemblyFormat = [{
     `depend` `(`
-      custom<DependVarList>($depend_vars, type($depend_vars), $depends) `)`
+      custom<DependVarList>($depend_vars, type($depend_vars), $depend_kinds) `)`
   }];
 
   let description = [{
-    The `depends` and `depend_vars` arguments are variadic lists of values that
-    specify the dependencies of this particular task in relation to other tasks.
+    The `depend_kinds` and `depend_vars` arguments are variadic lists of values
+    that specify the dependencies of this particular task in relation to other
+    tasks.
   }];
 }
 
@@ -250,19 +257,20 @@ class OpenMP_DistScheduleClauseSkip<
                     description, extraClassDeclaration> {
   let arguments = (ins
     UnitAttr:$dist_schedule_static,
-    Optional<IntLikeType>:$chunk_size
+    Optional<IntLikeType>:$dist_schedule_chunk_size
   );
 
   let assemblyFormat = [{
     `dist_schedule_static` $dist_schedule_static
-    | `chunk_size` `(` $chunk_size `:` type($chunk_size) `)`
+    | `dist_schedule_chunk_size` `(` $dist_schedule_chunk_size `:`
+      type($dist_schedule_chunk_size) `)`
   }];
 
   let description = [{
     The `dist_schedule_static` attribute specifies the schedule for this loop,
     determining how the loop is distributed across the various teams. The
-    optional `chunk_size` associated with this determines further controls this
-    distribution.
+    optional `dist_schedule_chunk_size` associated with this determines further
+    controls this distribution.
   }];
 }
 
@@ -278,24 +286,25 @@ class OpenMP_DoacrossClauseSkip<
   > : OpenMP_Clause</*isRequired=*/true, traits, arguments, assemblyFormat,
                     description, extraClassDeclaration> {
   let arguments = (ins
-    OptionalAttr<ClauseDependAttr>:$depend_type_val,
-    ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$num_loops_val,
-    Variadic<AnyType>:$depend_vec_vars
+    OptionalAttr<ClauseDependAttr>:$doacross_depend_type,
+    ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$doacross_num_loops,
+    Variadic<AnyType>:$doacross_depend_vars
   );
 
   let assemblyFormat = [{
-    ( `depend_type` `` $depend_type_val^ )?
-    ( `depend_vec` `(` $depend_vec_vars^ `:` type($depend_vec_vars) `)` )?
+    ( `depend_type` `` $doacross_depend_type^ )?
+    ( `depend_vec` `(` $doacross_depend_vars^ `:` type($doacross_depend_vars)
+                   `)` )?
   }];
 
   let description = [{
-    The `depend_type_val` attribute refers to either the DEPEND(SOURCE) clause
-    or the DEPEND(SINK: vec) clause.
+    The `doacross_depend_type` attribute refers to either the DEPEND(SOURCE)
+    clause or the DEPEND(SINK: vec) clause.
 
-    The `num_loops_val` attribute specifies the number of loops in the doacross
-    nest.
+    The `doacross_num_loops` attribute specifies the number of loops in the
+    doacross nest.
 
-    The `depend_vec_vars` is a variadic list of operands that specifies the
+    The `doacross_depend_vars` is a variadic list of operands that specifies the
     index of the loop iterator in the doacross nest for the DEPEND(SOURCE)
     clause or the index of the element of "vec" for the DEPEND(SINK: vec)
     clause. It contains the operands in multiple "vec" when multiple
@@ -343,11 +352,11 @@ class OpenMP_FinalClauseSkip<
   > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
                     description, extraClassDeclaration> {
   let arguments = (ins
-    Optional<I1>:$final_expr
+    Optional<I1>:$final
   );
 
   let assemblyFormat = [{
-    `final` `(` $final_expr `)`
+    `final` `(` $final `)`
   }];
 
   let description = [{
@@ -371,11 +380,11 @@ class OpenMP_GrainsizeClauseSkip<
   > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
                     description, extraClassDeclaration> {
   let arguments = (ins
-    Optional<IntLikeType>:$grain_size
+    Optional<IntLikeType>:$grainsize
   );
 
   let assemblyFormat = [{
-    `grain_size` `(` $grain_size `:` type($grain_size) `)`
+    `grainsize` `(` $grainsize `:` type($grainsize) `)`
   }];
 
   let description = [{
@@ -398,17 +407,18 @@ class OpenMP_HasDeviceAddrClauseSkip<
   > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
                     description, extraClassDeclaration> {
   let arguments = (ins
-    Variadic<OpenMP_PointerLikeType>:$has_device_addr
+    Variadic<OpenMP_PointerLikeType>:$has_device_addr_vars
   );
 
   let assemblyFormat = [{
-    `has_device_addr` `(` $has_device_addr `:` type($has_device_addr) `)`
+    `has_device_addr` `(` $has_device_addr_vars `:` type($has_device_addr_vars)
+                      `)`
   }];
 
   let description = [{
-    The optional `has_device_addr` indicates that list items already have device
-    addresses, so they may be directly accessed from the target device. This
-    includes array sections.
+    The optional `has_device_addr_vars` indicates that list items already have
+    device addresses, so they may be directly accessed from the target device.
+    This includes array sections.
   }];
 }
 
@@ -424,11 +434,11 @@ class OpenMP_HintClauseSkip<
   > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
                     description, extraClassDeclaration> {
   let arguments = (ins
-    DefaultValuedOptionalAttr<I64Attr, "0">:$hint_val
+    DefaultValuedOptionalAttr<I64Attr, "0">:$hint
   );
 
   let assemblyFormat = [{
-    `hint` `(` custom<SynchronizationHint>($hint_val) `)`
+    `hint` `(` custom<SynchronizationHint>($hint) `)`
   }];
 
   let description = [{
@@ -477,14 +487,14 @@ class OpenMP_InReductionClauseSkip<
 
   let arguments = (ins
     Variadic<OpenMP_PointerLikeType>:$in_reduction_vars,
-    OptionalAttr<DenseBoolArrayAttr>:$in_reduction_vars_byref,
-    OptionalAttr<SymbolRefArrayAttr>:$in_reductions
+    OptionalAttr<DenseBoolArrayAttr>:$in_reduction_byref,
+    OptionalAttr<SymbolRefArrayAttr>:$in_reduction_syms
   );
 
   let assemblyFormat = [{
     `in_reduction` `(`
       custom<ReductionVarList>($in_reduction_vars, type($in_reduction_vars),
-                               $in_reduction_vars_byref, $in_reductions) `)`
+                               $in_reduction_byref, $in_reduction_syms) `)`
   }];
 
   let extraClassDeclaration = [{
@@ -510,15 +520,15 @@ class OpenMP_IsDevicePtrClauseSkip<
   > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
                     description, extraClassDeclaration> {
   let arguments = (ins
-    Variadic<OpenMP_PointerLikeType>:$is_device_ptr
+    Variadic<OpenMP_PointerLikeType>:$is_device_ptr_vars
   );
 
   let assemblyFormat = [{
-    `is_device_ptr` `(` $is_device_ptr `:` type($is_device_ptr) `)`
+    `is_device_ptr` `(` $is_device_ptr_vars `:` type($is_device_ptr_vars) `)`
   }];
 
   let description = [{
-    The optional `is_device_ptr` indicates list items are device pointers.
+    The optional `is_device_ptr_vars` indicates list items are device pointers.
   }];
 }
 
@@ -568,16 +578,16 @@ class OpenMP_MapClauseSkip<
   ];
 
   let arguments = (ins
-    Variadic<OpenMP_PointerLikeType>:$map_operands
+    Variadic<OpenMP_PointerLikeType>:$map_vars
   );
 
   let assemblyFormat = [{
-    `map_entries` `(` custom<MapEntries>($map_operands, type($map_operands)) `)`
+    `map_entries` `(` custom<MapEntries>($map_vars, type($map_vars)) `)`
   }];
 
   let description = [{
-    The optional `map_operands` maps data from the current task's data
-    environment to the device data environment.
+    The optional `map_vars` maps data from the current task's data environment
+    to the device data environment.
   }];
 }
 
@@ -593,11 +603,11 @@ class OpenMP_MemoryOrderClauseSkip<
   > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
                     description, extraClassDeclaration> {
   let arguments = (ins
-    OptionalAttr<MemoryOrderKindAttr>:$memory_order_val
+    OptionalAttr<MemoryOrderKindAttr>:$memory_order
   );
 
   let assemblyFormat = [{
-    `memory_order` `(` custom<ClauseAttr>($memory_order_val) `)`
+    `memory_order` `(` custom<ClauseAttr>($memory_order) `)`
   }];
 
   let description = [{
@@ -779,16 +789,16 @@ class OpenMP_NumThreadsClauseSkip<
   > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
                     description, extraClassDeclaration> {
   let arguments = (ins
-    Optional<IntLikeType>:$num_threads_var
+    Optional<IntLikeType>:$num_threads
   );
 
   let assemblyFormat = [{
-    `num_threads` `(` $num_threads_var `:` type($num_threads_var) `)`
+    `num_threads` `(` $num_threads `:` type($num_threads) `)`
   }];
 
   let description = [{
-    The optional `num_threads_var` parameter specifies the number of threads
-    which should be used to execute the parallel region.
+    The optional `num_threads` parameter specifies the number of threads which
+    should be used to execute the parallel region.
   }];
 }
 
@@ -804,12 +814,12 @@ class OpenMP_OrderClauseSkip<
   > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
                     description, extraClassDeclaration> {
   let arguments = (ins
-    OptionalAttr<OrderKindAttr>:$order_val,
+    OptionalAttr<OrderKindAttr>:$order,
     OptionalAttr<OrderModifierAttr>:$order_mod
   );
 
   let assemblyFormat = [{
-    `order` `(` custom<OrderClause>($order_val, $order_mod) `)`
+    `order` `(` custom<OrderClause>($order, $order_mod) `)`
   }];
 
   let description = [{
@@ -831,15 +841,15 @@ class OpenMP_OrderedClauseSkip<
   > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
                     description, extraClassDeclaration> {
   let arguments = (ins
-    ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$ordered_val
+    ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$ordered
   );
 
   let assemblyFormat = [{
-    `ordered` `(` $ordered_val `)`
+    `ordered` `(` $ordered `)`
   }];
 
   let description = [{
-    The optional `ordered_val` attribute specifies how many loops are associated
+    The optional `ordered` attribute specifies how many loops are associated
     with the worksharing-loop construct. The value of zero refers to the ordered
     clause specified without parameter.
   }];
@@ -857,17 +867,17 @@ class OpenMP_ParallelizationLevelClauseSkip<
   > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
                     description, extraClassDeclaration> {
   let arguments = (ins
-    UnitAttr:$simd
+    UnitAttr:$par_level_simd
   );
 
   let assemblyFormat = [{
-    `simd` $simd
+    `par_level_simd` $par_level_simd
   }];
 
   let description = [{
-    The `simd` attribute corresponds to the simd clause specified. If it is not
-    present, it behaves as if the threads clause is specified or no clause is
-    specified.
+    The `par_level_simd` attribute corresponds to the simd clause specified. If
+    it is not present, it behaves as if the threads clause is specified or no
+    clause is specified.
   }];
 }
 
@@ -914,12 +924,12 @@ class OpenMP_PrivateClauseSkip<
                     description, extraClassDeclaration> {
   let arguments = (ins
     Variadic<AnyType>:$private_vars,
-    OptionalAttr<SymbolRefArrayAttr>:$privatizers
+    OptionalAttr<SymbolRefArrayAttr>:$private_syms
   );
 
   let assemblyFormat = [{
     `private` `(`
-      custom<PrivateList>($private_vars, type($private_vars), $privatizers) `)`
+      custom<PrivateList>($private_vars, type($private_vars), $private_syms) `)`
   }];
 
   // TODO: Add description.
@@ -937,15 +947,15 @@ class OpenMP_ProcBindClauseSkip<
   > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
                     description, extraClassDeclaration> {
   let arguments = (ins
-    OptionalAttr<ProcBindKindAttr>:$proc_bind_val
+    OptionalAttr<ProcBindKindAttr>:$proc_bind_kind
   );
 
   let assemblyFormat = [{
-    `proc_bind` `(` custom<ClauseAttr>($proc_bind_val) `)`
+    `proc_bind` `(` custom<ClauseAttr>($proc_bind_kind) `)`
   }];
 
   let description = [{
-    The optional `proc_bind_val` attribute controls the thread affinity for the
+    The optional `proc_bind_kind` attribute controls the thread affinity for the
     execution of the parallel region.
   }];
 }
@@ -967,14 +977,14 @@ class OpenMP_ReductionClauseSkip<
 
   let arguments = (ins
     Variadic<OpenMP_PointerLikeType>:$reduction_vars,
-    OptionalAttr<DenseBoolArrayAttr>:$reduction_vars_byref,
-    OptionalAttr<SymbolRefArrayAttr>:$reductions
+    OptionalAttr<DenseBoolArrayAttr>:$reduction_byref,
+    OptionalAttr<SymbolRefArrayAttr>:$reduction_syms
   );
 
   let assemblyFormat = [{
     `reduction` `(`
       custom<ReductionVarList>($reduction_vars, type($reduction_vars),
-                               $reduction_vars_byref, $reductions) `)`
+                               $reduction_byref, $reduction_syms) `)`
   }];
 
   let extraClassDeclaration = [{
@@ -986,10 +996,10 @@ class OpenMP_ReductionClauseSkip<
   let description = [{
     Reductions can be performed by specifying reduction accumulator variables in
     `reduction_vars`, symbols referring to reduction declarations in the
-    `reductions` attribute, and whether the reduction variable should be passed
-    into the reduction region by value or by reference in
-    `reduction_vars_byref`. Each reduction is identified by the accumulator it
-    uses and accumulators must not be repeated in the same reduction. A private
+    `reduction_syms` attribute, and whether the reduction variable should be
+    passed into the reduction region by value or by reference in
+    `reduction_byref`. Each reduction is identified by the accumulator it uses
+    and accumulators must not be repeated in the same reduction. A private
     variable corresponding to the accumulator is used in place of the
     accumulator inside the body of the operation. The reduction declaration
     specifies how to combine the values from each iteration, section, team,
@@ -1036,22 +1046,22 @@ class OpenMP_ScheduleClauseSkip<
   > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
                     description, extraClassDeclaration> {
   let arguments = (ins
-    OptionalAttr<ScheduleKindAttr>:$schedule_val,
-    Optional<AnyType>:$schedule_chunk_var,
-    OptionalAttr<ScheduleModifierAttr>:$schedule_modifier,
-    UnitAttr:$simd_modifier
+    OptionalAttr<ScheduleKindAttr>:$schedule_kind,
+    Optional<AnyType>:$schedule_chunk,
+    OptionalAttr<ScheduleModifierAttr>:$schedule_mod,
+    UnitAttr:$schedule_simd
   );
 
   let assemblyFormat = [{
     `schedule` `(`
-      custom<ScheduleClause>($schedule_val, $schedule_modifier, $simd_modifier,
-                             $schedule_chunk_var, type($schedule_chunk_var)) `)`
+      custom<ScheduleClause>($schedule_kind, $schedule_mod, $schedule_simd,
+                             $schedule_chunk, type($schedule_chunk)) `)`
   }];
 
   let description = [{
-    The optional `schedule_val` attribute specifies the loop schedule for this
+    The optional `schedule_kind` attribute specifies the loop schedule for this
     loop, determining how the loop is distributed across the parallel threads.
-    The optional `schedule_chunk_var` associated with this determines further
+    The optional `schedule_chunk` associated with this determines further
     controls this distribution.
   }];
 }
@@ -1098,14 +1108,14 @@ class OpenMP_TaskReductionClauseSkip<
 
   let arguments = (ins
     Variadic<OpenMP_PointerLikeType>:$task_reduction_vars,
-    OptionalAttr<DenseBoolArrayAttr>:$task_reduction_vars_byref,
-    OptionalAttr<SymbolRefArrayAttr>:$task_reductions
+    OptionalAttr<DenseBoolArrayAttr>:$task_reduction_byref,
+    OptionalAttr<SymbolRefArrayAttr>:$task_reduction_syms
   );
 
   let assemblyFormat = [{
     `task_reduction` `(`
       custom<ReductionVarList>($task_reduction_vars, type($task_reduction_vars),
-                               $task_reduction_vars_byref, $task_reductions) `)`
+                               $task_reduction_byref, $task_reduction_syms) `)`
   }];
 
   let description = [{
@@ -1115,9 +1125,9 @@ class OpenMP_TaskReductionClauseSkip<
     participating in the reduction. After the end of the region, the original
     list item contains the result of the reduction. Similarly to the `reduction`
     clause, accumulator variables must be passed in `task_reduction_vars`,
-    symbols referring to reduction declarations in the `task_reductions`
+    symbols referring to reduction declarations in the `task_reduction_syms`
     attribute, and whether the reduction variable should be passed into the
-    reduction region by value or by reference in `task_reduction_vars_byref`.
+    reduction region by value or by reference in `task_reduction_byref`.
   }];
 
   let extraClassDeclaration = [{
@@ -1176,7 +1186,7 @@ class OpenMP_UntiedClauseSkip<
     If the `untied` clause is present on a task construct, any thread in the
     team can resume the task region after a suspension. The `untied` clause is
     ignored if a `final` clause is present on the same task construct and the
-    `final_expr` evaluates to `true`, or if a task is an included task.
+    `final` expression evaluates to `true`, or if a task is an included task.
   }];
 }
 
@@ -1192,16 +1202,16 @@ class OpenMP_UseDeviceAddrClauseSkip<
   > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
                     description, extraClassDeclaration> {
   let arguments = (ins
-    Variadic<OpenMP_PointerLikeType>:$use_device_addr
+    Variadic<OpenMP_PointerLikeType>:$use_device_addr_vars
   );
 
   let assemblyFormat = [{
-    `use_device_addr` `(` $use_device_addr `:` type($use_device_addr) `)`
+    `use_device_addr` `(` $use_device_addr_vars `:` type($use_device_addr_vars) `)`
   }];
 
   let description = [{
-    The optional `use_device_addr` specifies the address of the objects in the
-    device data environment.
+    The optional `use_device_addr_vars` specifies the address of the objects in
+    the device data environment.
   }];
 }
 
@@ -1217,15 +1227,15 @@ class OpenMP_UseDevicePtrClauseSkip<
   > : OpenMP_Clause</*isRequired=*/false, traits, arguments, assemblyFormat,
                     description, extraClassDeclaration> {
   let arguments = (ins
-    Variadic<OpenMP_PointerLikeType>:$use_device_ptr
+    Variadic<OpenMP_PointerLikeType>:$use_device_ptr_vars
   );
 
   let assemblyFormat = [{
-    `use_device_ptr` `(` $use_device_ptr `:` type($use_device_ptr) `)`
+    `use_device_ptr` `(` $use_device_ptr_vars `:` type($use_device_ptr_vars) `)`
   }];
 
   let description = [{
-    The optional `use_device_ptr` specifies the device pointers to the
+    The optional `use_device_ptr_vars` specifies the device pointers to the
     corresponding list items in the device data environment.
   }];
 }
