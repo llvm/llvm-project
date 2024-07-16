@@ -1,7 +1,7 @@
 // REQUIRES: x86
 
-// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
-// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/shared.s -o %t2.o
+// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-openbsd %s -o %t.o
+// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-openbsd %p/Inputs/shared.s -o %t2.o
 // RUN: ld.lld -shared %t2.o -o %t2.so
 
 // RUN: ld.lld %t.o %t2.so -z now -z norelro -z relro -o %t
@@ -24,8 +24,8 @@
 // CHECK-NEXT: GNU_RELRO
 // CHECK: Section to Segment mapping:
 
-// FULLRELRO:  03     .data.rel.ro .dynamic .got .got.plt .relro_padding {{$}}
-// PARTRELRO:  03     .data.rel.ro .dynamic .got .relro_padding {{$}}
+// FULLRELRO:  03     .openbsd.randomdata .dynamic .got .got.plt .relro_padding {{$}}
+// PARTRELRO:  03     .openbsd.randomdata .dynamic .got .relro_padding {{$}}
 
 
 // NORELRO-NOT: GNU_RELRO
@@ -42,5 +42,5 @@ _start:
 .section .foo,"aw"
 .section .bss,"",@nobits
 
-.section .data.rel.ro, "aw"
+.section .openbsd.randomdata, "aw"
 .quad 0
