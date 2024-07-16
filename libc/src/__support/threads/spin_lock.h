@@ -15,11 +15,14 @@
 #include "src/__support/threads/sleep.h"
 namespace LIBC_NAMESPACE_DECL {
 
+namespace spinlock {
 template <typename LockWord, typename Return>
 using AtomicOp = Return (cpp::Atomic<LockWord>::*)(LockWord, cpp::MemoryOrder,
                                                    cpp::MemoryScope);
-template <typename LockWord, AtomicOp<LockWord, LockWord> Acquire,
-          AtomicOp<LockWord, void> Release>
+}
+
+template <typename LockWord, spinlock::AtomicOp<LockWord, LockWord> Acquire,
+          spinlock::AtomicOp<LockWord, void> Release>
 class SpinLockAdaptor {
   cpp::Atomic<LockWord> flag;
 
