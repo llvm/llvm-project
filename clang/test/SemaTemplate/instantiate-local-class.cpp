@@ -512,24 +512,31 @@ namespace LambdaInDefaultMemberInitializer {
 }
 
 #if __cplusplus >= 201703L
-namespace GH35052 {
 
-template <typename F> constexpr int func(F f) {
-  if constexpr (f(1UL)) {
-    return 1;
+namespace local_recursive_lambda {
+
+template <typename F> struct recursive_lambda {
+  template <typename... Args> auto operator()(Args &&...args) const {
+    return fn(*this, args...);
   }
-  return 0;
+  F fn;
+};
+
+template <typename F> recursive_lambda(F) -> recursive_lambda<F>;
+
+struct Tree {
+  Tree *left, *right;
+};
+
+int sumSize(Tree *tree) {
+  auto accumulate =
+      recursive_lambda{[&](auto &self_fn, Tree *element_node) -> int {
+        return 1 + self_fn(tree->left) + self_fn(tree->right);
+      }};
+
+  return accumulate(tree);
 }
 
-int main() {
-  auto predicate = [](auto v) /*implicit constexpr*/ -> bool {
-    return v == 1;
-  };
-
-  static_assert(predicate(1));
-  return func(predicate);
-}
-
-} // namespace GH35052
+} // namespace local_recursive_lambda
 
 #endif
