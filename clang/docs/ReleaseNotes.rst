@@ -826,6 +826,8 @@ Bug Fixes in This Version
 - ``__is_trivially_equality_comparable`` no longer returns true for types which
   have a constrained defaulted comparison operator (#GH89293).
 
+- Fixed Clang from generating dangling StringRefs when deserializing Exprs & Stmts (#GH98667)
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1017,7 +1019,6 @@ Bug Fixes to C++ Support
   (#GH88081), (#GH89496), (#GH90669), (#GH91633) and (#GH97453).
 - Fixed a crash in constraint instantiation under nested lambdas with dependent parameters.
 - Fixed handling of brace ellison when building deduction guides. (#GH64625), (#GH83368).
-- Clang now instantiates local constexpr functions eagerly for constant evaluators. (#GH35052), (#GH94849)
 - Fixed a failed assertion when attempting to convert an integer representing the difference
   between the addresses of two labels (a GNU extension) to a pointer within a constant expression. (#GH95366).
 - Fix immediate escalation bugs in the presence of dependent call arguments. (#GH94935)
