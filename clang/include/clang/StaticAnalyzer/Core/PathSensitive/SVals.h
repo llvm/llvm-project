@@ -330,8 +330,6 @@ public:
 /// which represents a concrete r-value of an initializer-list or a string.
 /// Internally, it contains an llvm::ImmutableList of SVal's stored inside the
 /// literal.
-///
-/// Source: https://github.com/haoNoQ/clang-analyzer-guide, v0.1, section 5.3.2.
 class CompoundVal : public NonLoc {
   friend class ento::SValBuilder;
 
@@ -352,13 +350,14 @@ public:
   static bool classof(SVal V) { return V.getKind() == CompoundValKind; }
 };
 
-/// While nonloc::CompoundVal covers a few simple use cases, the nonloc::LazyCompoundVal
-/// is a more performant and flexible way to represent an rvalue of record type,
-/// so it shows up much more frequently during analysis. This
-/// value is an r-value that represents a snapshot of any structure "as a whole"
-/// at a given moment during the analysis. Such value is already quite far from
-/// being referred to as "concrete", as many fields inside it would be unknown
-/// or symbolic. nonloc::LazyCompoundVal operates by storing two things:
+/// While nonloc::CompoundVal covers a few simple use cases,
+/// nonloc::LazyCompoundVal is a more performant and flexible way to represent
+/// an rvalue of record type, so it shows up much more frequently during
+/// analysis. This value is an r-value that represents a snapshot of any
+/// structure "as a whole" at a given moment during the analysis. Such value is
+/// already quite far from being referred to as "concrete", as many fields
+/// inside it would be unknown or symbolic. nonloc::LazyCompoundVal operates by
+/// storing two things:
 ///   * a reference to the TypedValueRegion being snapshotted (yes, it is always
 ///     typed), and also
 ///  * a reference to the whole Store object, obtained from the ProgramState in
@@ -376,21 +375,21 @@ public:
 ///
 /// If you ever need inspect the contents of the LazyCompoundVal, you can use
 /// StoreManager::iterBindings(). It'll iterate through all values in the Store,
-/// but you're only interested in the ones that belong to LazyCompoundVal::getRegion();
-/// other bindings are immaterial.
-/// 
-/// NOTE: LazyCompoundVal::getRegion() itself is also immaterial. It is only an
-/// implementation detail. LazyCompoundVal represents only the rvalue, the data (known or unknown)
-/// that *was* stored in that region *at some point in the past*. The region should not be used for
-/// any purpose other than figuring out what part of the frozen Store you're interested in.
-/// The value does not represent the *current* value of that region. Sometimes it may, but
-/// this should not be relied upon. Instead, if you want to figure out what region it represents,
-/// you typically need to see where you got it from in the first place.
-/// The region is absolutely not analogous to the C++ "this" pointer.
-/// It is also not a valid way to "materialize" the prvalue into a glvalue in C++, because the region
-/// represents the *old* storage (sometimes very old), not the *future* storage.
+/// but you're only interested in the ones that belong to
+/// LazyCompoundVal::getRegion(); other bindings are immaterial.
 ///
-/// Source: https://discourse.llvm.org/t/analyzer-for-the-undefined-value-of-array-element-the-tracking-information-is-incomplete/49372/2
+/// NOTE: LazyCompoundVal::getRegion() itself is also immaterial. It is only an
+/// implementation detail. LazyCompoundVal represents only the rvalue, the data
+/// (known or unknown) that *was* stored in that region *at some point in the
+/// past*. The region should not be used for any purpose other than figuring out
+/// what part of the frozen Store you're interested in. The value does not
+/// represent the *current* value of that region. Sometimes it may, but this
+/// should not be relied upon. Instead, if you want to figure out what region it
+/// represents, you typically need to see where you got it from in the first
+/// place. The region is absolutely not analogous to the C++ "this" pointer. It
+/// is also not a valid way to "materialize" the prvalue into a glvalue in C++,
+/// because the region represents the *old* storage (sometimes very old), not
+/// the *future* storage.
 class LazyCompoundVal : public NonLoc {
   friend class ento::SValBuilder;
 
