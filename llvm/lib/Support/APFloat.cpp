@@ -4596,6 +4596,39 @@ void IEEEFloat::makeZero(bool Negative) {
   APInt::tcSet(significandParts(), 0, partCount());
 }
 
+IEEEFloat::ExponentType IEEEFloat::getExponent() const {
+  return exponent;
+}
+
+APInt IEEEFloat::getSignificand() const {
+  APInt result(semantics->precision, ArrayRef<integerPart>(significandParts(), partCount()));
+
+  return result;
+}
+
+bool IEEEFloat::decomposeToIntegerAndPowerOf2(APInt &I, int &exp) const {
+  if (isNaN() || isInfinity())
+    return false;
+
+  if (isZero()) {
+    I = APInt(semantics->precision, 0);
+    exp = 0;
+  } else {
+    // the significant bits are the significand
+    I = getSignificand();
+    // now set up the exp.
+    // In IEEEFloat the radix point is immediately to the right
+    // of the left most bit, i.e., the significand is s.ssssss... .
+    exp = exponent - (semantics->precision - 1);
+
+    // get rid of any trailing zeros
+    int nTrailingZeros = I.countr_zero();
+    exp += nTrailingZeros;
+    I.lshrInPlace(nTrailingZeros);
+  }
+  return true;
+}
+
 void IEEEFloat::makeQuiet() {
   assert(isNaN());
   if (semantics->nonFiniteBehavior != fltNonfiniteBehavior::NanOnly)
@@ -5217,6 +5250,50 @@ bool DoubleAPFloat::getExactInverse(APFloat *inv) const {
   return Ret;
 }
 
+bool DoubleAPFloat::decomposeToIntegerAndPowerOf2(APInt &I, int &exp) const {
+  APInt a, b;
+  int aExp, bExp;
+  bool aOK = Floats[0].decomposeToIntegerAndPowerOf2(a, aExp);
+  bool bOK = Floats[1].decomposeToIntegerAndPowerOf2(b, bExp);
+
+  if (aOK && bOK) {
+    if (aExp > bExp) {
+      int deltaExp = aExp - bExp;
+      // shift a left to reduce its exponent to be the same as b
+      a = a.zext(a.getBitWidth() + deltaExp);
+      a <<= deltaExp;
+      exp = bExp;
+    } else if (bExp > aExp) {
+      int deltaExp = bExp - aExp;
+      // shift b left to reduce its exponent to be the same as a
+      b = b.zext(b.getBitWidth() + deltaExp);
+      b <<= deltaExp;
+      exp = aExp;
+    } else {
+      exp = aExp;
+    }
+    // now do the addition
+
+    // need to extend the operands to be the same length,
+    // and allow a bit for a possible carry (hence the +1).
+    // Note: the +1 means that the new length is greater
+    //       than the lengths of both a and b.
+    //       That means that we can use zext safely.
+    int bw = 1 + std::max(a.getBitWidth(), b.getBitWidth());
+    a = a.zext(bw);
+    b = b.zext(bw);
+    I = a + b;
+
+    // now check for trailing zeros
+    int nTrailingZeros = I.countr_zero();
+    exp += nTrailingZeros;
+    I.lshrInPlace(nTrailingZeros);
+
+    return true;
+  }
+  return false;
+}
+
 int DoubleAPFloat::getExactLog2() const {
   // TODO: Implement me
   return INT_MIN;
@@ -5321,6 +5398,290 @@ APFloat::opStatus APFloat::convert(const fltSemantics &ToSemantics,
 
 APFloat APFloat::getAllOnesValue(const fltSemantics &Semantics) {
   return APFloat(Semantics, APInt::getAllOnes(Semantics.sizeInBits));
+}
+
+SmallVectorImpl<char> &APFloat::format(SmallVectorImpl<char> &strout,
+                                     llvm::FloatStyle style,
+                                     std::optional<size_t> precision_in) {
+  size_t precision = precision_in.value_or(getDefaultPrecision(style));
+
+  // everything that follows assumes that precision >= 0
+  assert(precision >= 0);
+
+  // deal with the special cases
+  if (isNaN()) {
+    detail::append(strout, "nan");
+    return strout;
+  } else if (isInfinity()) {
+    if (isNegative())
+      detail::append(strout, "-INF");
+    else
+      detail::append(strout, "INF");
+    return strout;
+  } else if (isZero()) {
+    if (isNegative())
+      strout.push_back('-');
+    strout.push_back('0');
+    if (precision > 0) {
+      strout.push_back('.');
+      for (size_t i = 0; i < precision; ++i)
+        strout.push_back('0');
+    }  
+    if (style == FloatStyle::Exponent)
+      detail::append(strout, "e+00");
+    else if (style == FloatStyle::ExponentUpper)
+      detail::append(strout, "E+00");
+    else if (style == FloatStyle::Percent)
+      strout.push_back('%');
+    return strout;
+  }
+
+  // check we've dealt with all the special cases
+  assert(!isNaN() && !isInfinity() && !isZero());
+
+  // get as an integer and radix 2 exponent
+  APInt I;
+  int E;
+  decomposeToIntegerAndPowerOf2(I, E);
+
+  // convert from base 2 to base 10
+  if (0 == E) {
+    // then nothing to do --- s is an integer
+  } else if (E > 0) {
+    // shift left and reduce e to 0
+    int numLeadingZeros = I.countl_zero();
+    if (E > numLeadingZeros)
+      I = I.zext(I.getBitWidth() + E - numLeadingZeros);
+    I <<= E;
+    E = 0;
+  } else {
+    // we want to convert a negative base 2 exponent
+    // to a negative base 10 exponent:
+    //   I * 2^-E   = I * 2^-E * 5^E * 5^-E
+    //              = I * 5^E * 2^-E * 5^-E
+    //              = (I * 5^E) * (2*5)^-E
+    //              = (I * 5^E) * 10^-E
+    // that is, we need to multiply I by 5^-exp and treat
+    // the exponent as being base 10
+
+    // 5^13 = 5^(8+4+1)
+    //
+    // Now work our how many bits we need for the product I * 5^E
+    // We need log2(I * 5^E)  = log2(s) + log2(5^E)
+    //                        = log2(s) + e * log2(5)
+    // log2(5) ~ 2.321928096 < 2.322033898 ~ 137/59
+    // log2(I) <= I.getBitWidth()
+
+    I = I.zext(I.getBitWidth() + (137 * -E + 136) / 59);
+    APInt power5(I.getBitWidth(), 5);
+    int exp = -E;
+    assert(exp > 0);
+    for (;;) {
+      if (exp & 1)
+        I *= power5;
+      exp >>= 1;
+      if (0 == exp)
+        break;
+      power5 *= power5;
+    }
+  }
+
+  // at this point s is an intger, and exp is either 0, or is negative
+  assert(E <= 0);
+
+  // convert s to a string
+  SmallVector<char> s;
+  I.toString(s, 10, false);
+
+  // The decimal point is at position -E (recall E is <= 0)
+  // relative to the END of the string.  If E == 0, the decimal
+  // point is to the right of the last position.
+  // Thus, if decimalPoint == s.size() + E, the decimal point is
+  // immediately to the left of s[decimalPoint].
+  // If decimalPoint is 0, the decimal point is immediately
+  // before the start of s.  If it is negative, then there are
+  // implicit zeros to the left of s.
+  int decimalPoint = s.size() + E;
+  E = 0;
+
+  if (style == FloatStyle::Exponent || style == FloatStyle::ExponentUpper) {
+    // this corresponds to printf("%e"), or [-]d[.dd..dd]e(+|-)dd
+    // We need one digit to the left of the decimal point.
+    // In other words, we need to make decimalPoint 1,
+    // and adjust E.
+    E = decimalPoint - 1;
+    decimalPoint = 1;
+
+    // now need to deal with the precision.
+    if (precision < (s.size() - 1) && (s[precision + 1] >= '5')) {
+      // then need to round.  What we do is extract the
+      // the first (precision + 1) digits from s (precision
+      // digits after the decimal point, and one for the
+      // the single dight to the left of the decimal point).
+      // We know that because the next position is at least 5
+      // that the left most place of the digits retain would
+      // be retained.
+      // What we need to do is increment what's left.
+
+      int nDigits = precision + 1;
+      StringRef significantDigits(s.data(), nDigits);
+      // temporarily move the decimal place to the end
+      // We do this to handle the case when the single
+      // digit to the left of the decimal point is 9,
+      // and it rolls over to 10.
+      E -= (nDigits - 1);
+
+      APInt temp(I.getBitWidth(), significantDigits, 10);
+      temp += 1;
+      s.clear();
+      temp.toString(s, 10, false);
+
+      // now move decimal point back
+      E += (s.size() - 1);
+    }
+    if(isNegative())
+      strout.push_back('-');
+    strout.push_back(s[0]);
+    if (precision > 0) {
+      strout.push_back('.');
+      if (precision > (s.size() - 1)) {
+        // then need to print all the digits we have,
+        // and possibly some trailing zeros
+        detail::append(strout, StringRef(s.data() + 1, s.size() - 1));
+        for (auto i = s.size() - 1; i < precision; i++)
+          strout.push_back('0');
+      } else {
+        // need only some of the digits
+        StringRef restOfDigits(s.data() + 1, precision);
+        detail::append(strout, restOfDigits);
+      }
+    }
+    if (style == FloatStyle::Exponent)
+      strout.push_back('e');
+    else
+      strout.push_back('E');
+    if (E < 0) {
+      strout.push_back('-');
+      E = -E;
+    } else {
+      strout.push_back('+');
+    }
+    // need a minimum of two digits for the exponent
+    if (E < 10) {
+      strout.push_back('0');
+      strout.push_back('0' + E);
+    } else {
+      s.clear();
+      while(E) {
+        char c = '0' + E % 10;
+        strout.push_back(c);
+        E /= 10;
+      }
+      std::reverse(s.begin(), s.end());
+      detail::append(strout, StringRef(s.data(), s.size()));
+    }
+    return strout;
+  }
+
+  // output to be formatted along the lines of %f
+  if (style == FloatStyle::Percent)
+    decimalPoint += 2;    // multiply by 100
+
+  int decidingDigit = decimalPoint + precision;
+
+  if (decidingDigit < 0) {
+    // theh value is zero.  The deciding digit is to the left
+    // of the digits in s.  This is in the area of zeros, and
+    // the contents of s can't affect the value.
+  } else if (decidingDigit >= (int) s.size()) {
+    // deciding is beyond the end of s
+  } else if (decidingDigit == 0) {
+    // this is a tricky case, because if the digit at position 0
+    // is >= 5, then the digit to the left, which is an implicit
+    // 0 that is not represented, needs to be incremented.
+    if (s[0] >= '5') {
+      // then need to carry.
+      // What we do is clear s, and insert a '1' at the start of s
+      // (note it must be 1), and increment decimalPoint.
+      // We don't need the rest of the digits because they
+      // don't contribute to the value to be displayed.
+      s.clear();
+      s.push_back('1');
+      decimalPoint++;
+    }
+  } else if (s[decidingDigit] >= '5') {
+    StringRef significantDigits(s.data(), decidingDigit);
+    int distanceBetweenDecimalPointAndDecidingDigit = decidingDigit - decimalPoint;
+    APInt temp (I.getBitWidth(), significantDigits, 10);
+    temp += 1;
+    s.clear();
+    temp.toString(s, 10, false);
+    // readjust decimalPoint in case the addition had a carry out
+    decimalPoint = (int) s.size() - distanceBetweenDecimalPointAndDecidingDigit;
+  }
+
+  if (isNegative())
+    strout.push_back('-');
+
+  // emit the integer part.  There will always be an integet:
+  // if there is a decimal point, then at least one digit
+  // must appear to its left.  If there is no decimal, then
+  // the value is displayed as an integer.
+  if (decimalPoint < 1) {
+    strout.push_back('0');
+  } else {
+    // we need to emit decimalPoint digits
+    int fromS = std::min(decimalPoint, (int) s.size());
+    int i;
+
+    for (i = 0; i < fromS; i++)
+      strout.push_back(s[i]);
+    for (; i < decimalPoint; i++)
+      strout.push_back('0');
+  }
+
+  if (precision > 0 ) {
+    // need to emit precision digits
+    // We need to emit what's to the right of the decimal point.
+    int i;
+    strout.push_back('.');
+    if (decimalPoint < 0) {
+      int numLeadingZeros = std::min((int) precision, -decimalPoint);
+      for (i = 0; i < numLeadingZeros; i++)
+        strout.push_back('0');
+      // update how many digits we have left to emit
+      precision -= numLeadingZeros;
+      // update where we need to emit them from
+      decimalPoint += numLeadingZeros;
+    }
+
+    if ( precision > 0) {
+      // decimalPoint must be >= 0.
+      // If it was < 0 befoew we emitted the integer to the left of the decimal ppint,
+      // then it would have been incremented by numLeadingZeros in the previous block.
+      // It would have been incremented by the smaller of |decimalPoint| and precision.
+      // if |decimalPoint| were smaller, then decimalPoint will now be 0.
+      // If precision were smaller, then precision would have been decremented to 0,
+      // so we wouldn't be in this block.
+      // Hencem if we are in this block, then decimalPoint must be >= 0.
+      assert(decimalPoint >= 0);
+      if (decimalPoint < (int) s.size()) {
+        // we need to emit digits from s
+        int fromS = std::min(precision, s.size() - decimalPoint);
+
+        for (i = 0; i < fromS; i++)
+          strout.push_back(s[decimalPoint + i]);
+        precision -= fromS;
+      }
+      for ( i = 0; i < (int) precision; i++ )
+        strout.push_back('0');
+    }
+  }
+
+  if (style == FloatStyle::Percent)
+    strout.push_back('%');
+
+  return strout;
 }
 
 void APFloat::print(raw_ostream &OS) const {

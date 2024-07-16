@@ -15,10 +15,12 @@
 #ifndef LLVM_ADT_APFLOAT_H
 #define LLVM_ADT_APFLOAT_H
 
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/float128.h"
 #include <memory>
 
@@ -557,6 +559,14 @@ public:
 
   cmpResult compareAbsoluteValue(const IEEEFloat &) const;
 
+  /// returns the exponent in the format's radix
+  ExponentType getExponent() const;
+
+  /// returns the significand
+  APInt getSignificand() const;
+
+  /// decompose to an integer and exponent to radix 2
+  bool decomposeToIntegerAndPowerOf2(APInt &, int &) const;
 private:
   /// \name Simple Queries
   /// @{
@@ -783,6 +793,8 @@ public:
                 unsigned FormatMaxPadding, bool TruncateZero = true) const;
 
   bool getExactInverse(APFloat *inv) const;
+
+  bool decomposeToIntegerAndPowerOf2(APInt &, int &) const;
 
   LLVM_READONLY
   int getExactLog2() const;
@@ -1380,6 +1392,19 @@ public:
     APFLOAT_DISPATCH_ON_SEMANTICS(
         toString(Str, FormatPrecision, FormatMaxPadding, TruncateZero));
   }
+
+  /// Decomposes the value to an integer and an exponent such that
+  /// value = I * 2^exp
+  /// returns true on success, false otherwise (e.g., NaN, Infinity)
+  /// similar to the standard modf, but exponent does not
+  /// have to have the same sign as the value.
+  bool decomposeToIntegerAndPowerOf2 (APInt &I, int &exp) const {
+    APFLOAT_DISPATCH_ON_SEMANTICS( decomposeToIntegerAndPowerOf2(I, exp));
+  }
+
+  SmallVectorImpl<char> &format(SmallVectorImpl<char> &strout,
+              llvm::FloatStyle style = llvm::FloatStyle::Exponent,
+              std::optional<size_t> precision = std::nullopt);
 
   void print(raw_ostream &) const;
   void dump() const;
