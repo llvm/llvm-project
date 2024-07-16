@@ -84,19 +84,9 @@ struct riscv_hwprobe {
   unsigned long long value;
 };
 
-/* Size definition for CPU sets.  */
-#define __CPU_SETSIZE 1024
-#define __NCPUBITS (8 * sizeof(unsigned long int))
-
-/* Data structure to describe CPU mask.  */
-typedef struct {
-  unsigned long int __bits[__CPU_SETSIZE / __NCPUBITS];
-} cpu_set_t;
-
 #define __NR_riscv_hwprobe 258
 static long initHwProbe(struct riscv_hwprobe *Hwprobes, int len) {
-  return syscall_impl_5_args(__NR_riscv_hwprobe, (long)Hwprobes, len, 0,
-                             (long)(cpu_set_t *)((void *)0), 0);
+  return syscall_impl_5_args(__NR_riscv_hwprobe, (long)Hwprobes, len, 0, 0, 0);
 }
 
 #define RISCV_FEATURE_BITS_LENGTH 1
