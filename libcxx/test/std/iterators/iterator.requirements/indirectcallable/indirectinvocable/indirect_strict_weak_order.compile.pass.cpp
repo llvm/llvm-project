@@ -93,8 +93,9 @@ static_assert(!std::indirect_strict_weak_order<BadOrder5, It1, It2>);
 
 // This case was made valid by P2997R1.
 struct GoodOrder6 {
-    template <class T, class U> bool operator()(T const&, U const&) const;
-    bool operator()(std::iter_common_reference_t<It1>, std::iter_common_reference_t<It2>) const = delete;
+  template <class T, class U>
+  bool operator()(T const&, U const&) const;
+  bool operator()(std::iter_common_reference_t<It1>, std::iter_common_reference_t<It2>) const = delete;
 };
 static_assert(std::indirect_strict_weak_order<GoodOrder6, It1, It2>);
 

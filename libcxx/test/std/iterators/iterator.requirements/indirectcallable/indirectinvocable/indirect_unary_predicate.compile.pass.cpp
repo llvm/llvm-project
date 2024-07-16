@@ -59,8 +59,9 @@ static_assert(!std::indirect_unary_predicate<BadPredicate3, It>);
 
 // This case was made valid by P2997R1.
 struct GoodPredicate4 {
-    template <class T> bool operator()(T const&) const;
-    bool operator()(std::iter_common_reference_t<It>) const = delete;
+  template <class T>
+  bool operator()(T const&) const;
+  bool operator()(std::iter_common_reference_t<It>) const = delete;
 };
 static_assert(std::indirect_unary_predicate<GoodPredicate4, It>);
 
