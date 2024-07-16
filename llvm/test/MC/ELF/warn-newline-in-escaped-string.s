@@ -1,5 +1,5 @@
 // RUN: llvm-mc -filetype=obj -triple x86_64 %s 2>&1 -o /dev/null \
-// RUN: | FileCheck %s --implicit-check-not=warning:
+// RUN:   | FileCheck %s --implicit-check-not=warning:
 
 .string "abcd\xFFefg
 12345678"
