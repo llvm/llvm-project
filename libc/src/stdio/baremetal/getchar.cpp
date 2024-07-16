@@ -8,8 +8,11 @@
 
 #include "src/stdio/getchar.h"
 #include "src/__support/OSUtil/io.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+#include "hdr/stdio_macros.h" // for EOF.
+
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, getchar, ()) {
   char buf[1];
@@ -19,4 +22,4 @@ LLVM_LIBC_FUNCTION(int, getchar, ()) {
   return buf[0];
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

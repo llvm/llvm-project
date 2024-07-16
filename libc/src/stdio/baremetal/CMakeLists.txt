@@ -5,6 +5,7 @@ add_entrypoint_object(
   HDRS
     ../getchar.h
   DEPENDS
+    libc.hdr.stdio_macros
     libc.src.__support.OSUtil.osutil
     libc.src.__support.CPP.string_view
 )

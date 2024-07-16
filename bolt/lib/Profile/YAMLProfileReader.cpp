@@ -611,6 +611,10 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
   NormalizeByInsnCount = usesEvent("cycles") || usesEvent("instructions");
   NormalizeByCalls = usesEvent("branches");
 
+  // Map profiled function ids to names.
+  for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions)
+    IdToYamLBF[YamlBF.Id] = &YamlBF;
+
   uint64_t NumUnused = 0;
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions) {
     if (YamlBF.Id >= YamlProfileToFunction.size()) {

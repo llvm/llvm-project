@@ -288,40 +288,41 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   Record::BaseList Bases;
   Record::VirtualBaseList VirtBases;
   if (const auto *CD = dyn_cast<CXXRecordDecl>(RD)) {
-
     for (const CXXBaseSpecifier &Spec : CD->bases()) {
       if (Spec.isVirtual())
         continue;
 
       // In error cases, the base might not be a RecordType.
-      if (const auto *RT = Spec.getType()->getAs<RecordType>()) {
-        const RecordDecl *BD = RT->getDecl();
-        const Record *BR = getOrCreateRecord(BD);
+      const auto *RT = Spec.getType()->getAs<RecordType>();
+      if (!RT)
+        return nullptr;
+      const RecordDecl *BD = RT->getDecl();
+      const Record *BR = getOrCreateRecord(BD);
 
-        if (const Descriptor *Desc = GetBaseDesc(BD, BR)) {
-          BaseSize += align(sizeof(InlineDescriptor));
-          Bases.push_back({BD, BaseSize, Desc, BR});
-          BaseSize += align(BR->getSize());
-          continue;
-        }
-      }
-      return nullptr;
+      const Descriptor *Desc = GetBaseDesc(BD, BR);
+      if (!Desc)
+        return nullptr;
+
+      BaseSize += align(sizeof(InlineDescriptor));
+      Bases.push_back({BD, BaseSize, Desc, BR});
+      BaseSize += align(BR->getSize());
     }
 
     for (const CXXBaseSpecifier &Spec : CD->vbases()) {
+      const auto *RT = Spec.getType()->getAs<RecordType>();
+      if (!RT)
+        return nullptr;
 
-      if (const auto *RT = Spec.getType()->getAs<RecordType>()) {
-        const RecordDecl *BD = RT->getDecl();
-        const Record *BR = getOrCreateRecord(BD);
+      const RecordDecl *BD = RT->getDecl();
+      const Record *BR = getOrCreateRecord(BD);
 
-        if (const Descriptor *Desc = GetBaseDesc(BD, BR)) {
-          VirtSize += align(sizeof(InlineDescriptor));
-          VirtBases.push_back({BD, VirtSize, Desc, BR});
-          VirtSize += align(BR->getSize());
-          continue;
-        }
-      }
-      return nullptr;
+      const Descriptor *Desc = GetBaseDesc(BD, BR);
+      if (!Desc)
+        return nullptr;
+
+      VirtSize += align(sizeof(InlineDescriptor));
+      VirtBases.push_back({BD, VirtSize, Desc, BR});
+      VirtSize += align(BR->getSize());
     }
   }
 

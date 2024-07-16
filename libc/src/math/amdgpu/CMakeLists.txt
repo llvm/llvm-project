@@ -469,6 +469,30 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  powi
+  SRCS
+    powi.cpp
+  HDRS
+    ../powi.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+  VENDOR
+)
+
+add_entrypoint_object(
+  powif
+  SRCS
+    powif.cpp
+  HDRS
+    ../powif.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+  VENDOR
+)
+
+add_entrypoint_object(
   sinh
   SRCS
     sinh.cpp

@@ -10,10 +10,11 @@
 #define LLVM_LIBC_SRC___SUPPORT_GPU_NVPTX_IO_H
 
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace gpu {
 
 /// Type aliases to the address spaces used by the NVPTX backend.
@@ -154,6 +155,6 @@ LIBC_INLINE uint64_t fixed_frequency_clock() {
 LIBC_INLINE uint32_t get_cluster_id() { return __nvvm_read_ptx_sreg_smid(); }
 
 } // namespace gpu
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif
