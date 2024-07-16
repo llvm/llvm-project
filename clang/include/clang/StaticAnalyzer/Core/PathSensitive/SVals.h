@@ -352,21 +352,21 @@ public:
   static bool classof(SVal V) { return V.getKind() == CompoundValKind; }
 };
 
-/// The simplest example of a concrete compound value is nonloc::CompoundVal,
-/// which represents a concrete r-value of an initializer-list or a string.
-/// Internally, it contains an llvm::ImmutableList of SVal's stored inside the
-/// literal.
-///
-/// However, there is another compound value used in the analyzer, which appears
-/// much more often during analysis, which is nonloc::LazyCompoundVal. This
+/// While nonloc::CompoundVal covers a few simple use cases, the nonloc::LazyCompoundVal
+/// is a more performant and flexible way to represent an rvalue of record type,
+/// so it shows up much more frequently during analysis. This
 /// value is an r-value that represents a snapshot of any structure "as a whole"
 /// at a given moment during the analysis. Such value is already quite far from
-/// being re- ferred to as "concrete", as many fields inside it would be unknown
+/// being referred to as "concrete", as many fields inside it would be unknown
 /// or symbolic. nonloc::LazyCompoundVal operates by storing two things:
 ///   * a reference to the TypedValueRegion being snapshotted (yes, it is always
 ///     typed), and also
-///   * a copy of the whole Store object, obtained from the ProgramState in
-///     which it was created.
+///  * a reference to the whole Store object, obtained from the ProgramState in
+///    which the nonloc::LazyCompoundVal was created.
+///
+/// Note that the old ProgramState and its Store is kept alive during the
+/// analysis because these are immutable functional data structures and each new
+/// Store value is represented as "earlier Store" + "additional binding".
 ///
 /// Essentially, nonloc::LazyCompoundVal is a performance optimization for the
 /// analyzer. Because Store is immutable, creating a nonloc::LazyCompoundVal is
@@ -374,15 +374,21 @@ public:
 /// the program state, not only related to the region. Later, if necessary, such
 /// value can be unpacked -- eg. when it is assigned to another variable.
 ///
-/// Source: https://github.com/haoNoQ/clang-analyzer-guide, v0.1, section 5.3.2.
-///
-/// If you ever need to see if a LazyCompoundVal is fully or partially
-/// (un)initialized, you can iterBindings(). This is non-typechecked lookup
-/// (i.e., you cannot figure out which specific sub-region is initialized by the
-/// value you look at, you only get a byte offset). You can also improve
-/// iterBindings() to make it possible to restrict the iteration to a single
-/// cluster, because within the LazyCompoundVal’s Store only the cluster that
-/// corresponds to the LazyCompoundVal’s parent region is relevant.
+/// If you ever need inspect the contents of the LazyCompoundVal, you can use
+/// StoreManager::iterBindings(). It'll iterate through all values in the Store,
+/// but you're only interested in the ones that belong to LazyCompoundVal::getRegion();
+/// other bindings are immaterial.
+/// 
+/// NOTE: LazyCompoundVal::getRegion() itself is also immaterial. It is only an
+/// implementation detail. LazyCompoundVal represents only the rvalue, the data (known or unknown)
+/// that *was* stored in that region *at some point in the past*. The region should not be used for
+/// any purpose other than figuring out what part of the frozen Store you're interested in.
+/// The value does not represent the *current* value of that region. Sometimes it may, but
+/// this should not be relied upon. Instead, if you want to figure out what region it represents,
+/// you typically need to see where you got it from in the first place.
+/// The region is absolutely not analogous to the C++ "this" pointer.
+/// It is also not a valid way to "materialize" the prvalue into a glvalue in C++, because the region
+/// represents the *old* storage (sometimes very old), not the *future* storage.
 ///
 /// Source: https://discourse.llvm.org/t/analyzer-for-the-undefined-value-of-array-element-the-tracking-information-is-incomplete/49372/2
 class LazyCompoundVal : public NonLoc {
