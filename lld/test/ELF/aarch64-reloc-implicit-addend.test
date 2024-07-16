@@ -10,19 +10,17 @@ REQUIRES: aarch64
 ## relocation section. Since all the relocations were made manually with
 ## .reloc directives containing no addend, this succeeds.
 
-# RUN: rm -rf %t
-# RUN: split-file %s %t
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=aarch64 relocs.s -o rela.o
+# RUN: obj2yaml rela.o -o rela.yaml
+# RUN: sed "s/\.rela/\.rel/;s/SHT_RELA/SHT_REL/" rela.yaml > rel.yaml
+# RUN: yaml2obj rel.yaml -o rel.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64 symbols.s -o symbols.o
+# RUN: ld.lld rel.o symbols.o -o a.out --section-start=.data=0x100000 --section-start=.text=0x200000
+# RUN: llvm-objdump -s a.out | FileCheck %s --check-prefix=DATA
+# RUN: llvm-objdump -d a.out | FileCheck %s --check-prefix=CODE
 
-# RUN: llvm-mc -filetype=obj -triple=aarch64 %t/Inputs/relocs.s -o %t/rela.o
-# RUN: obj2yaml %t/rela.o -o %t/rela.yaml
-# RUN: sed "s/\.rela/\.rel/;s/SHT_RELA/SHT_REL/" %t/rela.yaml > %t/rel.yaml
-# RUN: yaml2obj %t/rel.yaml -o %t/rel.o
-# RUN: llvm-mc -filetype=obj -triple=aarch64 %t/Inputs/symbols.s -o %t/symbols.o
-# RUN: ld.lld %t/rel.o %t/symbols.o -o %t/a.out --section-start=.data=0x100000 --section-start=.text=0x200000
-# RUN: llvm-objdump -s %t/a.out | FileCheck %s --check-prefix=DATA
-# RUN: llvm-objdump -d %t/a.out | FileCheck %s --check-prefix=CODE
-
-#--- Inputs/symbols.s
+#--- symbols.s
 
 // Source file containing the values of target symbols for the relocations. If
 // we don't keep these in their own file, then llvm-mc is clever enough to
@@ -50,7 +48,7 @@ REQUIRES: aarch64
 .equ abs64, 0x7777777777777777
 .equ big64, 0x77ffffffffffff77
 
-#--- Inputs/relocs.s
+#--- relocs.s
 
 // Source file containing the test instructions and their relocations, with the
 // FileCheck comments interleaved.
