@@ -2547,6 +2547,8 @@ ModuleSP Process::ReadModuleFromMemory(const FileSpec &file_spec,
   if (module_sp) {
     Status error;
     std::unique_ptr<Progress> progress_up;
+    // Reading an ObjectFile from a local corefile is very fast,
+    // don't print a progress report.  
     if (!GetCoreFile())
       progress_up = std::make_unique<Progress>(
           "Reading binary from memory", file_spec.GetFilename().GetString());
