@@ -2785,7 +2785,7 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     std::pair<InstructionCost, MVT> LT =
         getTypeLegalizationCost(WiderTy.getTypeForEVT(Dst->getContext()));
     unsigned NumElements = AArch64::SVEBitsPerBlock /
-                           LT.second.getVectorElementType().getSizeInBits();
+                           LT.second.getScalarSizeInBits();
     return AdjustCost(
         LT.first *
         getCastInstrCost(
