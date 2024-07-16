@@ -49,7 +49,8 @@ class AddDebugInfoPass : public fir::impl::AddDebugInfoBase<AddDebugInfoPass> {
   void handleDeclareOp(fir::cg::XDeclareOp declOp,
                        mlir::LLVM::DIFileAttr fileAttr,
                        mlir::LLVM::DIScopeAttr scopeAttr,
-                       fir::DebugTypeGenerator &typeGen);
+                       fir::DebugTypeGenerator &typeGen,
+                       mlir::SymbolTable *symbolTable);
 
 public:
   AddDebugInfoPass(fir::AddDebugInfoOptions options) : Base(options) {}
@@ -63,7 +64,8 @@ private:
       mlir::LLVM::DIScopeAttr scope, unsigned line, bool decl);
 
   void handleGlobalOp(fir::GlobalOp glocalOp, mlir::LLVM::DIFileAttr fileAttr,
-                      mlir::LLVM::DIScopeAttr scope);
+                      mlir::LLVM::DIScopeAttr scope,
+                      mlir::SymbolTable *symbolTable);
 };
 
 static uint32_t getLineFromLoc(mlir::Location loc) {
@@ -73,14 +75,20 @@ static uint32_t getLineFromLoc(mlir::Location loc) {
   return line;
 }
 
+bool debugInfoIsAlreadySet(mlir::Location loc) {
+  if (mlir::isa<mlir::FusedLoc>(loc))
+    return true;
+  return false;
+}
+
 } // namespace
 
 void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
                                        mlir::LLVM::DIFileAttr fileAttr,
                                        mlir::LLVM::DIScopeAttr scopeAttr,
-                                       fir::DebugTypeGenerator &typeGen) {
+                                       fir::DebugTypeGenerator &typeGen,
+                                       mlir::SymbolTable *symbolTable) {
   mlir::MLIRContext *context = &getContext();
-  mlir::ModuleOp module = getOperation();
   mlir::OpBuilder builder(context);
   auto result = fir::NameUniquer::deconstruct(declOp.getUniqName());
 
@@ -88,8 +96,8 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
     return;
 
   // If this DeclareOp actually represents a global then treat it as such.
-  if (auto global = module.lookupSymbol<fir::GlobalOp>(declOp.getUniqName())) {
-    handleGlobalOp(global, fileAttr, scopeAttr);
+  if (auto global = symbolTable->lookup<fir::GlobalOp>(declOp.getUniqName())) {
+    handleGlobalOp(global, fileAttr, scopeAttr, symbolTable);
     return;
   }
 
@@ -145,8 +153,9 @@ mlir::LLVM::DIModuleAttr AddDebugInfoPass::getOrCreateModuleAttr(
 
 void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
                                       mlir::LLVM::DIFileAttr fileAttr,
-                                      mlir::LLVM::DIScopeAttr scope) {
-  if (mlir::isa<mlir::FusedLoc>(globalOp.getLoc()))
+                                      mlir::LLVM::DIScopeAttr scope,
+                                      mlir::SymbolTable *symbolTable) {
+  if (debugInfoIsAlreadySet(globalOp.getLoc()))
     return;
   mlir::ModuleOp module = getOperation();
   mlir::MLIRContext *context = &getContext();
@@ -198,6 +207,7 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
 void AddDebugInfoPass::runOnOperation() {
   mlir::ModuleOp module = getOperation();
   mlir::MLIRContext *context = &getContext();
+  mlir::SymbolTable symbolTable(module);
   mlir::OpBuilder builder(context);
   llvm::StringRef fileName;
   std::string filePath;
@@ -238,7 +248,7 @@ void AddDebugInfoPass::runOnOperation() {
     mlir::Location l = funcOp->getLoc();
     // If fused location has already been created then nothing to do
     // Otherwise, create a fused location.
-    if (mlir::dyn_cast<mlir::FusedLoc>(l))
+    if (debugInfoIsAlreadySet(l))
       return;
 
     unsigned int CC = (funcOp.getName() == fir::NameUniquer::doProgramEntry())
@@ -303,14 +313,14 @@ void AddDebugInfoPass::runOnOperation() {
       return;
 
     funcOp.walk([&](fir::cg::XDeclareOp declOp) {
-      handleDeclareOp(declOp, fileAttr, spAttr, typeGen);
+      handleDeclareOp(declOp, fileAttr, spAttr, typeGen, &symbolTable);
     });
   });
   // Process any global which was not processed through DeclareOp.
   if (debugLevel == mlir::LLVM::DIEmissionKind::Full) {
     // Process 'GlobalOp' only if full debug info is requested.
     for (auto globalOp : module.getOps<fir::GlobalOp>())
-      handleGlobalOp(globalOp, fileAttr, cuAttr);
+      handleGlobalOp(globalOp, fileAttr, cuAttr, &symbolTable);
   }
 }
 
