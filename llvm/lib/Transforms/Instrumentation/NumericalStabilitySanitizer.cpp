@@ -45,6 +45,7 @@
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include <cstdint>
+#include <map>
 
 using namespace llvm;
 
@@ -493,6 +494,103 @@ private:
   DenseMap<Value *, Value *> Map;
 };
 
+// Base class for handling some details of __nsan_* functions
+class NsanInstrumentationFunction {
+public:
+  virtual std::pair<FunctionCallee, int>
+  getCalleeAndNumArgsForMemoryOp(const uint64_t MemOpSize) const = 0;
+  virtual FunctionCallee getGeneralFunction() const = 0;
+  virtual ~NsanInstrumentationFunction() = default;
+};
+
+// Helper class for __nsan_copy_* family
+class NsanCopy : public NsanInstrumentationFunction {
+public:
+  NsanCopy(Module &M);
+  std::pair<FunctionCallee, int>
+  getCalleeAndNumArgsForMemoryOp(const uint64_t MemOpSize) const override;
+  FunctionCallee getGeneralFunction() const override;
+
+private:
+  std::array<FunctionCallee, 4> NsanCopyFunction;
+};
+
+NsanCopy::NsanCopy(Module &M) {
+  LLVMContext &Ctx = M.getContext();
+  AttributeList Attr;
+  Attr = Attr.addFnAttribute(Ctx, Attribute::NoUnwind);
+  Type *PtrTy = PointerType::getUnqual(Ctx);
+  Type *VoidTy = Type::getVoidTy(Ctx);
+  IntegerType *IntptrTy = M.getDataLayout().getIntPtrType(Ctx);
+
+  NsanCopyFunction[0] =
+      M.getOrInsertFunction("__nsan_copy_4", Attr, VoidTy, PtrTy, PtrTy);
+  NsanCopyFunction[1] =
+      M.getOrInsertFunction("__nsan_copy_8", Attr, VoidTy, PtrTy, PtrTy);
+  NsanCopyFunction[2] =
+      M.getOrInsertFunction("__nsan_copy_16", Attr, VoidTy, PtrTy, PtrTy);
+
+  NsanCopyFunction[3] = M.getOrInsertFunction("__nsan_copy_values", Attr,
+                                              VoidTy, PtrTy, PtrTy, IntptrTy);
+}
+
+std::pair<FunctionCallee, int>
+NsanCopy::getCalleeAndNumArgsForMemoryOp(const uint64_t MemOpSize) const {
+  size_t Idx =
+      MemOpSize == 4 ? 0 : (MemOpSize == 8 ? 1 : (MemOpSize == 16 ? 2 : 3));
+  return Idx == 3 ? std::make_pair(NsanCopyFunction[Idx], 3)
+                  : std::make_pair(NsanCopyFunction[Idx], 2);
+}
+
+FunctionCallee NsanCopy::getGeneralFunction() const {
+  return NsanCopyFunction.back();
+}
+
+// Helper class for __nsan_set_value_unknown* family
+class NsanSetUnknown : public NsanInstrumentationFunction {
+public:
+  NsanSetUnknown(Module &M);
+  std::pair<FunctionCallee, int>
+  getCalleeAndNumArgsForMemoryOp(const uint64_t MemOpSize) const override;
+  FunctionCallee getGeneralFunction() const override;
+
+private:
+  std::array<FunctionCallee, 4> NsanSetUnknownFunction;
+};
+
+NsanSetUnknown::NsanSetUnknown(Module &M) {
+  LLVMContext &Ctx = M.getContext();
+  AttributeList Attr;
+  Attr = Attr.addFnAttribute(Ctx, Attribute::NoUnwind);
+  Type *PtrTy = PointerType::getUnqual(Ctx);
+  Type *VoidTy = Type::getVoidTy(Ctx);
+  IntegerType *IntptrTy = M.getDataLayout().getIntPtrType(Ctx);
+
+  NsanSetUnknownFunction[0] =
+      M.getOrInsertFunction("__nsan_set_value_unknown_4", Attr, VoidTy, PtrTy);
+
+  NsanSetUnknownFunction[1] =
+      M.getOrInsertFunction("__nsan_set_value_unknown_8", Attr, VoidTy, PtrTy);
+
+  NsanSetUnknownFunction[2] =
+      M.getOrInsertFunction("__nsan_set_value_unknown_16", Attr, VoidTy, PtrTy);
+
+  NsanSetUnknownFunction[3] = M.getOrInsertFunction(
+      "__nsan_set_value_unknown", Attr, VoidTy, PtrTy, IntptrTy);
+}
+
+std::pair<FunctionCallee, int>
+NsanSetUnknown::getCalleeAndNumArgsForMemoryOp(const uint64_t MemOpSize) const {
+  size_t Idx =
+      MemOpSize == 4 ? 0 : (MemOpSize == 8 ? 1 : (MemOpSize == 16 ? 2 : 3));
+  return Idx == 3 ? std::make_pair(NsanSetUnknownFunction[Idx], 2)
+                  : std::make_pair(NsanSetUnknownFunction[Idx], 1);
+}
+
+FunctionCallee NsanSetUnknown::getGeneralFunction() const {
+  return NsanSetUnknownFunction.back();
+}
+
 /// Instantiating NumericalStabilitySanitizer inserts the nsan runtime library
 /// API function declarations into the module if they don't exist already.
 /// Instantiating ensures the __nsan_init function is in the list of global
@@ -557,8 +655,9 @@ private:
   FunctionCallee NsanCheckValue[FTValueType::kNumValueTypes] = {};
   FunctionCallee NsanFCmpFail[FTValueType::kNumValueTypes] = {};
 
-  std::array<FunctionCallee, 4> NsanCopyFunction;
-  std::array<FunctionCallee, 4> NsanSetValueUnknownFunction;
+  NsanCopy NsanCopyFns;
+  NsanSetUnknown NsanSetUnknownFns;
+
   FunctionCallee NsanGetRawShadowTypePtr;
   FunctionCallee NsanGetRawShadowPtr;
   GlobalValue *NsanShadowRetTag = nullptr;
@@ -573,6 +672,7 @@ private:
 
   std::optional<Regex> CheckFunctionsFilter;
 };
+
 } // end anonymous namespace
 
 PreservedAnalyses
@@ -601,7 +701,8 @@ static GlobalValue *createThreadLocalGV(const char *Name, Module &M, Type *Ty) {
 }
 
 NumericalStabilitySanitizer::NumericalStabilitySanitizer(Module &M)
-    : DL(M.getDataLayout()), Context(M.getContext()), Config(Context) {
+    : DL(M.getDataLayout()), Context(M.getContext()), Config(Context),
+      NsanCopyFns(M), NsanSetUnknownFns(M) {
   IntptrTy = DL.getIntPtrType(Context);
   Type *PtrTy = PointerType::getUnqual(Context);
   Type *Int32Ty = Type::getInt32Ty(Context);
@@ -636,28 +737,6 @@ NumericalStabilitySanitizer::NumericalStabilitySanitizer(Module &M)
             ShadowConfig.getNsanTypeId(),
         Attr, VoidTy, VTTy, VTTy, ShadowTy, ShadowTy, Int32Ty, Int1Ty, Int1Ty);
   }
-
-  NsanCopyFunction[0] =
-      M.getOrInsertFunction("__nsan_copy_4", Attr, VoidTy, PtrTy, PtrTy);
-  NsanCopyFunction[1] =
-      M.getOrInsertFunction("__nsan_copy_8", Attr, VoidTy, PtrTy, PtrTy);
-  NsanCopyFunction[2] =
-      M.getOrInsertFunction("__nsan_copy_16", Attr, VoidTy, PtrTy, PtrTy);
-
-  NsanCopyFunction[3] = M.getOrInsertFunction("__nsan_copy_values", Attr,
-                                              VoidTy, PtrTy, PtrTy, IntptrTy);
-
-  NsanSetValueUnknownFunction[0] =
-      M.getOrInsertFunction("__nsan_set_value_unknown_4", Attr, VoidTy, PtrTy);
-
-  NsanSetValueUnknownFunction[1] =
-      M.getOrInsertFunction("__nsan_set_value_unknown_8", Attr, VoidTy, PtrTy);
-
-  NsanSetValueUnknownFunction[2] =
-      M.getOrInsertFunction("__nsan_set_value_unknown_16", Attr, VoidTy, PtrTy);
-
-  NsanSetValueUnknownFunction[3] = M.getOrInsertFunction(
-      "__nsan_set_value_unknown", Attr, VoidTy, PtrTy, IntptrTy);
 
   // TODO: Add attributes nofree, nosync, readnone, readonly,
   NsanGetRawShadowTypePtr = M.getOrInsertFunction(
@@ -1900,7 +1979,7 @@ void NumericalStabilitySanitizer::propagateNonFTStore(
     }
   }
   // All other stores just reset the shadow value to unknown.
-  Builder.CreateCall(NsanSetValueUnknownFunction.back(), {Dst, ValueSize});
+  Builder.CreateCall(NsanSetUnknownFns.getGeneralFunction(), {Dst, ValueSize});
 }
 
 void NumericalStabilitySanitizer::propagateShadowValues(
@@ -2143,7 +2222,7 @@ bool NumericalStabilitySanitizer::sanitizeFunction(
   return !ValueToShadow.empty();
 }
 
-static size_t GetInstrumentationCalleeIdxForMemOp(Value *V, size_t MaxIdx) {
+static uint64_t GetMemOpSize(Value *V) {
   uint64_t OpSize = 0;
   if (Constant *C = dyn_cast<Constant>(V)) {
     auto *CInt = dyn_cast<ConstantInt>(C);
@@ -2151,7 +2230,7 @@ static size_t GetInstrumentationCalleeIdxForMemOp(Value *V, size_t MaxIdx) {
       OpSize = CInt->getValue().getZExtValue();
   }
 
-  return OpSize == 4 ? 0 : (OpSize == 8 ? 1 : (OpSize == 16 ? 2 : MaxIdx));
+  return OpSize;
 }
 
 // Instrument the memory intrinsics so that they properly modify the shadow
@@ -2159,36 +2238,32 @@ static size_t GetInstrumentationCalleeIdxForMemOp(Value *V, size_t MaxIdx) {
 bool NumericalStabilitySanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
   IRBuilder<> Builder(MI);
   if (auto *M = dyn_cast<MemSetInst>(MI)) {
-    Value *OpSizeValue = M->getArgOperand(2);
-    size_t NrSetValueUnknownFns = NsanSetValueUnknownFunction.size();
-    size_t NsanSetValueUnknownFunctionIdx = GetInstrumentationCalleeIdxForMemOp(
-        OpSizeValue, NrSetValueUnknownFns - 1);
-    if (NsanSetValueUnknownFunctionIdx != NrSetValueUnknownFns - 1)
-      Builder.CreateCall(
-          NsanSetValueUnknownFunction[NsanSetValueUnknownFunctionIdx],
-          {/*Address=*/M->getArgOperand(0)});
+    std::pair<FunctionCallee, int> SetUnknownFn =
+        NsanSetUnknownFns.getCalleeAndNumArgsForMemoryOp(
+            GetMemOpSize(M->getArgOperand(2)));
+    if (SetUnknownFn.second == 1)
+      Builder.CreateCall(SetUnknownFn.first, {/*Address=*/M->getArgOperand(0)});
     else
-      Builder.CreateCall(NsanSetValueUnknownFunction.back(),
+      Builder.CreateCall(SetUnknownFn.first,
                          {/*Address=*/M->getArgOperand(0),
                           /*Size=*/Builder.CreateIntCast(M->getArgOperand(2),
                                                          IntptrTy, false)});
 
   } else if (auto *M = dyn_cast<MemTransferInst>(MI)) {
-    Value *OpSizeValue = M->getArgOperand(2);
-    size_t NrCopyFns = NsanCopyFunction.size();
-    size_t NsanCopyFunctionIdx =
-        GetInstrumentationCalleeIdxForMemOp(OpSizeValue, NrCopyFns - 1);
+    std::pair<FunctionCallee, int> CopyFn =
+        NsanCopyFns.getCalleeAndNumArgsForMemoryOp(
+            GetMemOpSize(M->getArgOperand(2)));
 
-    if (NsanCopyFunctionIdx != NrCopyFns - 1)
-      Builder.CreateCall(NsanCopyFunction[NsanCopyFunctionIdx],
-                         {/*Destination=*/M->getArgOperand(0),
-                          /*Source=*/M->getArgOperand(1)});
+    if (CopyFn.second == 2)
+      Builder.CreateCall(CopyFn.first, {/*Destination=*/M->getArgOperand(0),
+                                        /*Source=*/M->getArgOperand(1)});
     else
       Builder.CreateCall(
-          NsanCopyFunction.back(),
+          CopyFn.first,
           {/*Destination=*/M->getArgOperand(0),
            /*Source=*/M->getArgOperand(1),
-           /*Size=*/Builder.CreateIntCast(OpSizeValue, IntptrTy, false)});
+           /*Size=*/
+           Builder.CreateIntCast(M->getArgOperand(2), IntptrTy, false)});
   }
   return false;
 }
