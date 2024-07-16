@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/FunctionExtras.h"
+#include "CountCopyAndMove.h"
 #include "gtest/gtest.h"
 
 #include <memory>
@@ -332,20 +333,15 @@ TEST(UniqueFunctionTest, InlineStorageWorks) {
 // Check that the moved-from captured state is properly destroyed during
 // move construction/assignment.
 TEST(UniqueFunctionTest, MovedFromStateIsDestroyedCorrectly) {
-  static int NumOfMovesCalled = 0;
-  static int NumOfDestructorsCalled = 0;
-  struct State {
-    State() = default;
-    State(State &&) { ++NumOfMovesCalled; }
-    ~State() { ++NumOfDestructorsCalled; }
-  };
+  CountCopyAndMove::ResetCounts();
   {
-    unique_function<void()> CapturingFunction{[state = State{}] {}};
+    unique_function<void()> CapturingFunction{
+        [Counter = CountCopyAndMove{}] {}};
     unique_function<void()> CapturingFunctionMoved{
         std::move(CapturingFunction)};
   }
-  printf("%i, %i\n", NumOfMovesCalled, NumOfDestructorsCalled);
-  EXPECT_EQ(NumOfDestructorsCalled, 1 + NumOfMovesCalled);
+  EXPECT_EQ(CountCopyAndMove::TotalConstructions(),
+            CountCopyAndMove::Destructions);
 }
 
 } // anonymous namespace
