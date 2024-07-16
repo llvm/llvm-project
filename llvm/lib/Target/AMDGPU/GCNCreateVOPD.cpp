@@ -43,7 +43,7 @@ class GCNCreateVOPD : public MachineFunctionPass {
 private:
     class VOPDCombineInfo {
     public:
-      VOPDCombineInfo() {}
+      VOPDCombineInfo() = default;
       VOPDCombineInfo(MachineInstr *First, MachineInstr *Second,
                       bool VOPD3 = false) :
           FirstMI(First), SecondMI(Second), IsVOPD3(VOPD3) {}
