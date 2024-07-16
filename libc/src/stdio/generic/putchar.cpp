@@ -10,10 +10,11 @@
 #include "src/__support/File/file.h"
 
 #include "hdr/types/FILE.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, putchar, (int c)) {
   unsigned char uc = static_cast<unsigned char>(c);
@@ -30,4 +31,4 @@ LLVM_LIBC_FUNCTION(int, putchar, (int c)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

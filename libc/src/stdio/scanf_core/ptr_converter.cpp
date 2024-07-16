@@ -8,6 +8,7 @@
 
 #include "src/stdio/scanf_core/ptr_converter.h"
 
+#include "src/__support/macros/config.h"
 #include "src/stdio/scanf_core/converter_utils.h"
 #include "src/stdio/scanf_core/core_structs.h"
 #include "src/stdio/scanf_core/int_converter.h"
@@ -15,7 +16,7 @@
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
 int convert_pointer(Reader *reader, const FormatSection &to_conv) {
   static const char nullptr_string[] = "(nullptr)";
@@ -40,4 +41,4 @@ int convert_pointer(Reader *reader, const FormatSection &to_conv) {
   return convert_int(reader, to_conv);
 }
 } // namespace scanf_core
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

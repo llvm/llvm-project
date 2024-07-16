@@ -332,6 +332,16 @@ bool ClauseProcessor::processDistSchedule(
   return false;
 }
 
+bool ClauseProcessor::processFilter(lower::StatementContext &stmtCtx,
+                                    mlir::omp::FilterClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Filter>()) {
+    result.filteredThreadIdVar =
+        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processFinal(lower::StatementContext &stmtCtx,
                                    mlir::omp::FinalClauseOps &result) const {
   const parser::CharBlock *source = nullptr;

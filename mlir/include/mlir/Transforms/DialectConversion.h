@@ -174,15 +174,15 @@ public:
   /// where `T` is any subclass of `Type`. This function is responsible for
   /// creating an operation, using the OpBuilder and Location provided, that
   /// "casts" a range of values into a single value of the given type `T`. It
-  /// must return a Value of the converted type on success, an `std::nullopt` if
+  /// must return a Value of the type `T` on success, an `std::nullopt` if
   /// it failed but other materialization can be attempted, and `nullptr` on
-  /// unrecoverable failure. It will only be called for (sub)types of `T`.
-  /// Materialization functions must be provided when a type conversion may
-  /// persist after the conversion has finished.
+  /// unrecoverable failure. Materialization functions must be provided when a
+  /// type conversion may persist after the conversion has finished.
 
   /// This method registers a materialization that will be called when
   /// converting (potentially multiple) block arguments that were the result of
-  /// a signature conversion of a single block argument, to a single SSA value.
+  /// a signature conversion of a single block argument, to a single SSA value
+  /// with the old block argument type.
   template <typename FnT, typename T = typename llvm::function_traits<
                               std::decay_t<FnT>>::template arg_t<1>>
   void addArgumentMaterialization(FnT &&callback) {

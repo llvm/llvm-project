@@ -11,6 +11,14 @@ add_header_library(
     .stderr
 )
 
+add_header_library(
+  vfprintf_utils
+  HDRS
+    vfprintf_utils.h
+  DEPENDS
+    .gpu_file
+)
+
 add_entrypoint_object(
   feof
   SRCS
@@ -244,6 +252,46 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.FILE
     .gpu_file
+)
+
+add_entrypoint_object(
+  printf
+  SRCS
+    printf.cpp
+  HDRS
+    ../printf.h
+  DEPENDS
+    .vfprintf_utils
+)
+
+add_entrypoint_object(
+  vprintf
+  SRCS
+    vprintf.cpp
+  HDRS
+    ../vprintf.h
+  DEPENDS
+    .vfprintf_utils
+)
+
+add_entrypoint_object(
+  fprintf
+  SRCS
+    fprintf.cpp
+  HDRS
+    ../fprintf.h
+  DEPENDS
+    .vfprintf_utils
+)
+
+add_entrypoint_object(
+  vfprintf
+  SRCS
+    vfprintf.cpp
+  HDRS
+    ../vfprintf.h
+  DEPENDS
+    .vfprintf_utils
 )
 
 add_entrypoint_object(

@@ -310,6 +310,26 @@ llvm.func @test_omp_master() -> () {
 
 // -----
 
+// CHECK-LABEL: define void @test_omp_masked({{.*}})
+llvm.func @test_omp_masked(%arg0: i32)-> () {
+// CHECK: call void {{.*}}@__kmpc_fork_call{{.*}} @{{.*}})
+// CHECK: omp.par.region1:
+  omp.parallel {
+    omp.masked filter(%arg0: i32) {
+// CHECK: [[OMP_THREAD_3_4:%.*]] = call i32 @__kmpc_global_thread_num(ptr @{{[0-9]+}})
+// CHECK: {{[0-9]+}} = call i32 @__kmpc_masked(ptr @{{[0-9]+}}, i32 [[OMP_THREAD_3_4]], i32 %{{[0-9]+}})
+// CHECK: omp.masked.region
+// CHECK: call void @__kmpc_end_masked(ptr @{{[0-9]+}}, i32 [[OMP_THREAD_3_4]])
+// CHECK: br label %omp_region.end
+      omp.terminator
+    }
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
 // CHECK: %struct.ident_t = type
 // CHECK: @[[$loc:.*]] = private unnamed_addr constant {{.*}} c";unknown;unknown;{{[0-9]+}};{{[0-9]+}};;\00"
 // CHECK: @[[$loc_struct:.*]] = private unnamed_addr constant %struct.ident_t {{.*}} @[[$loc]] {{.*}}

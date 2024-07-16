@@ -10,10 +10,12 @@
 #ifndef LLVM_LIBC_SRC_MATH_FMINIMUM_MAGL_H
 #define LLVM_LIBC_SRC_MATH_FMINIMUM_MAGL_H
 
-namespace LIBC_NAMESPACE {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 long double fminimum_magl(long double x, long double y);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_MATH_FMINIMUM_MAGL_H
