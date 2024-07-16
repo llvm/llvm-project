@@ -1145,7 +1145,7 @@ static bool foldMemChr(CallInst *Call, DomTreeUpdater *DTU,
   BasicBlock *BBSuccess = BasicBlock::Create(
       Call->getContext(), "memchr.success", BB->getParent(), BBNext);
   IRB.SetInsertPoint(BBSuccess);
-  PHINode *IndexPHI = IRB.CreatePHI(IndexTy, N);
+  PHINode *IndexPHI = IRB.CreatePHI(IndexTy, N, "memchr.idx");
   Value *FirstOccursLocation = IRB.CreateInBoundsPtrAdd(Base, IndexPHI);
   IRB.CreateBr(BBNext);
   if (DTU)
@@ -1158,7 +1158,7 @@ static bool foldMemChr(CallInst *Call, DomTreeUpdater *DTU,
       continue;
 
     BasicBlock *BBCase = BasicBlock::Create(Call->getContext(), "memchr.case",
-                                            BB->getParent(), BBNext);
+                                            BB->getParent(), BBSuccess);
     SI->addCase(CaseVal, BBCase);
     IRB.SetInsertPoint(BBCase);
     IndexPHI->addIncoming(ConstantInt::get(IndexTy, I), BBCase);
@@ -1169,7 +1169,8 @@ static bool foldMemChr(CallInst *Call, DomTreeUpdater *DTU,
     }
   }
 
-  PHINode *PHI = PHINode::Create(Call->getType(), 2, "", BBNext->begin());
+  PHINode *PHI =
+      PHINode::Create(Call->getType(), 2, Call->getName(), BBNext->begin());
   PHI->addIncoming(Constant::getNullValue(Call->getType()), BB);
   PHI->addIncoming(FirstOccursLocation, BBSuccess);
 
