@@ -83,6 +83,12 @@ namespace llvm {
 
 class raw_pwrite_stream;
 
+struct TimeTraceMetadata {
+  std::string Details;
+  // Source file information for the event.
+  std::string Filename; 
+};
+
 struct TimeTraceProfiler;
 TimeTraceProfiler *getTimeTraceProfilerInstance();
 
@@ -128,6 +134,10 @@ TimeTraceProfilerEntry *
 timeTraceProfilerBegin(StringRef Name,
                        llvm::function_ref<std::string()> Detail);
 
+TimeTraceProfilerEntry *
+timeTraceProfilerBegin(StringRef Name,
+                       llvm::function_ref<TimeTraceMetadata()> MetaData);
+
 /// Manually begin a time section, with the given \p Name and \p Detail.
 /// This starts Async Events having \p Name as a category which is shown
 /// separately from other traces. See
@@ -163,6 +173,10 @@ public:
   TimeTraceScope(StringRef Name, llvm::function_ref<std::string()> Detail) {
     if (getTimeTraceProfilerInstance() != nullptr)
       Entry = timeTraceProfilerBegin(Name, Detail);
+  }
+  TimeTraceScope(StringRef Name, llvm::function_ref<TimeTraceMetadata()> Metadata) {
+    if (getTimeTraceProfilerInstance() != nullptr)
+      Entry = timeTraceProfilerBegin(Name, Metadata);
   }
   ~TimeTraceScope() {
     if (getTimeTraceProfilerInstance() != nullptr)

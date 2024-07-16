@@ -73,12 +73,20 @@ struct llvm::TimeTraceProfilerEntry {
   const TimePointType Start;
   TimePointType End;
   const std::string Name;
-  const std::string Detail;
+  TimeTraceMetadata Metadata;
+
   const bool AsyncEvent = false;
   TimeTraceProfilerEntry(TimePointType &&S, TimePointType &&E, std::string &&N,
                          std::string &&Dt, bool Ae)
+      : Start(std::move(S)), End(std::move(E)), Name(std::move(N)), Metadata(),
+        AsyncEvent(Ae) {
+    Metadata.Details = std::move(Dt);
+  }
+
+  TimeTraceProfilerEntry(TimePointType &&S, TimePointType &&E, std::string &&N,
+                         TimeTraceMetadata &&Mt, bool Ae)
       : Start(std::move(S)), End(std::move(E)), Name(std::move(N)),
-        Detail(std::move(Dt)), AsyncEvent(Ae) {}
+        Metadata(std::move(Mt)), AsyncEvent(Ae) {}
 
   // Calculate timings for FlameGraph. Cast time points to microsecond precision
   // rather than casting duration. This avoids truncation issues causing inner
@@ -109,6 +117,15 @@ struct llvm::TimeTraceProfiler {
                                 bool AsyncEvent = false) {
     Stack.emplace_back(std::make_unique<TimeTraceProfilerEntry>(
         ClockType::now(), TimePointType(), std::move(Name), Detail(),
+        AsyncEvent));
+    return Stack.back().get();
+  }
+
+  TimeTraceProfilerEntry *begin(std::string Name,
+                                llvm::function_ref<TimeTraceMetadata()>Metadata,
+                                bool AsyncEvent = false) {
+    Stack.emplace_back(std::make_unique<TimeTraceProfilerEntry>(
+        ClockType::now(), TimePointType(), std::move(Name), Metadata(),
         AsyncEvent));
     return Stack.back().get();
   }
@@ -184,8 +201,13 @@ struct llvm::TimeTraceProfiler {
           J.attribute("dur", DurUs);
         }
         J.attribute("name", E.Name);
-        if (!E.Detail.empty()) {
-          J.attributeObject("args", [&] { J.attribute("detail", E.Detail); });
+        if (!E.Metadata.Details.empty()) {
+          J.attributeObject("args",
+                            [&] { J.attribute("detail", E.Metadata.Details); });
+        }
+        if (!E.Metadata.Filename.empty()) {
+          J.attributeObject(
+              "args", [&] { J.attribute("filename", E.Metadata.Filename); });
         }
       });
 
@@ -378,6 +400,14 @@ llvm::timeTraceProfilerBegin(StringRef Name,
                              llvm::function_ref<std::string()> Detail) {
   if (TimeTraceProfilerInstance != nullptr)
     return TimeTraceProfilerInstance->begin(std::string(Name), Detail, false);
+  return nullptr;
+}
+
+TimeTraceProfilerEntry *
+llvm::timeTraceProfilerBegin(StringRef Name,
+                             llvm::function_ref<TimeTraceMetadata()> Metadata) {
+  if (TimeTraceProfilerInstance != nullptr)
+    return TimeTraceProfilerInstance->begin(std::string(Name), Metadata, false);
   return nullptr;
 }
 

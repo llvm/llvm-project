@@ -17,11 +17,8 @@ def is_before(range1, range2):
     return b <= c
 
 
-instantiation_pattern = re.compile("^.*<.*>, file:.*.cpp$")
-
-
 def is_valid_instantiation(instantiation):
-    return instantiation_pattern.match(instantiation["args"]["detail"])
+    return instantiation["args"]["filename"].endswith(".cpp")
 
 
 log_contents = json.loads(sys.stdin.read())
