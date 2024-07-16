@@ -53,8 +53,6 @@
 namespace clang {
 namespace clangd {
 
-extern llvm::cl::opt<bool> ExperimentalModulesSupport;
-
 namespace {
 // Tracks end-to-end latency of high level lsp calls. Measurements are in
 // seconds.

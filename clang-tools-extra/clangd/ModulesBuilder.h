@@ -22,14 +22,10 @@
 
 #include "GlobalCompilationDatabase.h"
 #include "ProjectModules.h"
-
 #include "support/Path.h"
 #include "support/ThreadsafeFS.h"
-
 #include "clang/Frontend/CompilerInvocation.h"
-
 #include "llvm/ADT/SmallString.h"
-
 #include <memory>
 
 namespace clang {

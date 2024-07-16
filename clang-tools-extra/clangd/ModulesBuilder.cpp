@@ -7,13 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "ModulesBuilder.h"
-
 #include "Compiler.h"
 #include "support/Logger.h"
-
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
-
 #include "clang/Serialization/ASTReader.h"
 
 namespace clang {
@@ -142,8 +139,6 @@ private:
     ModuleFile(llvm::StringRef ModuleName, PathRef ModuleFilePath)
         : ModuleName(ModuleName.str()), ModuleFilePath(ModuleFilePath.str()) {}
 
-    ModuleFile() = delete;
-
     ModuleFile(const ModuleFile &) = delete;
     ModuleFile operator=(const ModuleFile &) = delete;
 
@@ -187,23 +182,21 @@ llvm::Error buildModuleFile(llvm::StringRef ModuleName,
   // third party modules, we should return true instead of false here.
   // Currently we simply bail out.
   if (ModuleUnitFileName.empty())
-    return llvm::createStringError(llvm::formatv(
-        "Failed to build '{0}': Failed to get the primary source", ModuleName));
+    return llvm::createStringError(
+        llvm::formatv("Failed to get the primary source"));
 
   // Try cheap operation earlier to boil-out cheaply if there are problems.
   auto Cmd = CDB.getCompileCommand(ModuleUnitFileName);
   if (!Cmd)
     return llvm::createStringError(
-        llvm::formatv("Failed to build '{0}': No compile command for {1}",
-                      ModuleName, ModuleUnitFileName));
+        llvm::formatv("No compile command for {0}", ModuleUnitFileName));
 
   for (auto &RequiredModuleName : MDB.getRequiredModules(ModuleUnitFileName)) {
     // Return early if there are errors building the module file.
     if (llvm::Error Err = buildModuleFile(RequiredModuleName, CDB, TFS, MDB,
                                           ModuleFilesPrefix, BuiltModuleFiles))
       return llvm::createStringError(
-          llvm::formatv("Failed to build dependency {0}: {1}",
-                        RequiredModuleName, toString(std::move(Err))));
+          llvm::formatv("Failed to build dependency {0}", RequiredModuleName));
   }
 
   Cmd->Output = getModuleFilePath(ModuleName, ModuleFilesPrefix);
@@ -215,16 +208,17 @@ llvm::Error buildModuleFile(llvm::StringRef ModuleName,
   IgnoreDiagnostics IgnoreDiags;
   auto CI = buildCompilerInvocation(Inputs, IgnoreDiags);
   if (!CI)
-    return llvm::createStringError(llvm::formatv(
-        "Failed to build '{0}': Failed to build compiler invocation for {1}",
-        ModuleName, ModuleUnitFileName));
+    return llvm::createStringError(
+        llvm::formatv("Failed to build compiler invocation"));
 
   auto FS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   auto Buf = FS->getBufferForFile(Inputs.CompileCommand.Filename);
   if (!Buf)
-    return llvm::createStringError(
-        llvm::formatv("Failed to build '{0}': Failed to create buffer for {1}",
-                      ModuleName, Inputs.CompileCommand.Filename));
+    return llvm::createStringError(llvm::formatv("Failed to create buffer"));
+
+  // In clang's driver, we will suppress the check for ODR violation in GMF.
+  // See the implementation of RenderModulesOptions in Clang.cpp.
+  CI->getLangOpts().SkipODRCheckInGMF = true;
 
   // Hash the contents of input files and store the hash value to the BMI files.
   // So that we can check if the files are still valid when we want to reuse the
@@ -238,17 +232,14 @@ llvm::Error buildModuleFile(llvm::StringRef ModuleName,
       prepareCompilerInstance(std::move(CI), /*Preamble=*/nullptr,
                               std::move(*Buf), std::move(FS), IgnoreDiags);
   if (!Clang)
-    return llvm::createStringError(llvm::formatv(
-        "Failed to build '{0}': Failed to prepare compiler instance for {0}",
-        ModuleName, ModuleUnitFileName));
+    return llvm::createStringError(
+        llvm::formatv("Failed to prepare compiler instance"));
 
-  GenerateModuleInterfaceAction Action;
+  GenerateReducedModuleInterfaceAction Action;
   Clang->ExecuteAction(Action);
 
   if (Clang->getDiagnostics().hasErrorOccurred())
-    return llvm::createStringError(
-        llvm::formatv("Failed to build '{0}': Compilation for {1} failed",
-                      ModuleName, ModuleUnitFileName));
+    return llvm::createStringError(llvm::formatv("Compilation failed"));
 
   BuiltModuleFiles.addModuleFile(ModuleName, Inputs.CompileCommand.Output);
   return llvm::Error::success();
@@ -317,6 +308,10 @@ bool StandalonePrerequisiteModules::canReuse(
   Clang.createPreprocessor(TU_Complete);
   Clang.getHeaderSearchOpts().ForceCheckCXX20ModulesInputFiles = true;
   Clang.getHeaderSearchOpts().ValidateASTInputFilesContent = true;
+
+  // Following the practice of clang's driver to suppres the checking for ODR
+  // violation in GMF.
+  Clang.getLangOpts().SkipODRCheckInGMF = true;
 
   Clang.createASTReader();
   for (auto &RequiredModule : RequiredModules) {

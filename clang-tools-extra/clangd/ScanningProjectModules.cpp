@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "ProjectModules.h"
-
 #include "support/Logger.h"
-
+#include "clang/Driver/Driver.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 
@@ -98,6 +97,12 @@ ModuleDependencyScanner::scan(PathRef FilePath) {
   // Following the same logic with
   // DirectoryBasedGlobalCompilationDatabase::getCompileCommand.
   tooling::CompileCommand Cmd = std::move(Candidates.front());
+
+  Cmd.CommandLine.push_back("-I");
+  llvm::SmallString<256> ResourceDir(clang::driver::Driver::GetResourcesPath(
+      llvm::sys::fs::getMainExecutable(nullptr, nullptr)));
+  llvm::sys::path::append(ResourceDir, "include");
+  Cmd.CommandLine.push_back((std::string)ResourceDir);
 
   using namespace clang::tooling::dependencies;
 
