@@ -2505,13 +2505,20 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   using OriginCombiner = Combiner<false>;
 
   /// Propagate origin for arbitrary operation.
-  void setOriginForNaryOp(Instruction &I) {
+  void setOriginForNaryOp(Instruction &I, bool skipLastOperand = false) {
     if (!MS.TrackOrigins)
       return;
     IRBuilder<> IRB(&I);
     OriginCombiner OC(this, IRB);
-    for (Use &Op : I.operands())
-      OC.Add(Op.get());
+
+    if (skipLastOperand)
+      assert((I.getNumOperands() > 0)
+             && "Skip last operand requested on instruction with no operands");
+
+    unsigned int i = 0;
+    for (i = 0; i < I.getNumOperands() - (skipLastOperand ? 1 : 0); i++) {
+      OC.Add(I.getOperand (i));
+    }
     OC.Done(&I);
   }
 
@@ -3991,18 +3998,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     std::tie(ShadowPtr, OriginPtr) = getShadowOriginPtr(
         Addr, IRB, interleavedShadow->getType(), Align(1), /*isStore*/ true);
     IRB.CreateAlignedStore(interleavedShadow, ShadowPtr, Align(1));
-//    setShadow (&I, interleavedShadow);
 
     if (MS.TrackOrigins) {
-//      setOrigin(&I, getCleanOrigin());
-
-        errs() << "Inserting origin information ...\n";
-        Value *interleavedOrigin = interleaveShadowOrOrigin (IRB, I, false);
-
-        errs() << "Adding store for origin ...\n";
-        IRB.CreateAlignedStore(interleavedOrigin, OriginPtr, Align(1));
-
-      //      setOriginForNaryIntrinsic(I, true);
+        setOriginForNaryOp(I, true);
     }
 
     if (ClCheckAccessAddress) {
