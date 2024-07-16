@@ -156,6 +156,12 @@ Changes to the C API
   * ``LLVMGetNamedFunctionWithLength``
   * ``LLVMGetNamedGlobalWithLength``
 
+ * The following functions are added to access the ``LLVMContextRef`` associated
+   with ``LLVMValueRef`` and ``LLVMBuilderRef`` objects:
+
+  * ``LLVMGetValueContext``
+  * ``LLVMGetBuilderContext``
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
