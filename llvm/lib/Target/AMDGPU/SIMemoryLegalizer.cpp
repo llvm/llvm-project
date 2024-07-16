@@ -753,7 +753,7 @@ static SIAtomicAddrSpace getFenceAddrSpaceMMRA(const MachineInstr &MI,
   return (Result != SIAtomicAddrSpace::NONE) ? Result : Default;
 }
 
-} // end namespace anonymous
+} // end anonymous namespace
 
 void SIMemOpAccess::reportUnsupported(const MachineBasicBlock::iterator &MI,
                                       const char *Msg) const {
