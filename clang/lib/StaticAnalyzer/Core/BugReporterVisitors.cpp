@@ -315,6 +315,62 @@ static bool isFunctionMacroExpansion(SourceLocation Loc,
   return EInfo.isFunctionMacroExpansion();
 }
 
+static const LocationContext *getFirstNonCtorCall(const LocationContext *LCtx) {
+  while (llvm::isa_and_nonnull<CXXConstructorDecl>(LCtx->getDecl()))
+    LCtx = LCtx->getParent();
+  return LCtx;
+}
+
+static const MemRegion *getInitializerRegion(const PostInitializer &PI) {
+  return reinterpret_cast<const MemRegion *>(PI.getLocationValue());
+}
+
+/// Based largely on isInitializationOfVar(). Checks if N initializes FR.
+static bool isInitializationOfField(const ExplodedNode *N,
+                                    const FieldRegion *FR) {
+  std::optional<PostInitializer> P = N->getLocationAs<PostInitializer>();
+  if (!P)
+    return false;
+
+  const MemRegion *InitR = getInitializerRegion(*P);
+
+  if (FR != InitR)
+    return false;
+
+  const MemSpaceRegion *FRSpace = FR->getMemorySpace();
+  const auto *FRCtx = dyn_cast<StackSpaceRegion>(FRSpace);
+
+  if (!FRCtx)
+    return true;
+
+  // The stack frame of N is the constructor, but the FieldRegion is not local
+  // to the constructor, but rather to the caller function.
+  const LocationContext *CallerCtx =
+      getFirstNonCtorCall(N->getLocationContext());
+
+  return FRCtx->getStackFrame() == CallerCtx->getStackFrame();
+}
+
+static bool isConstructorCallFor(const SubRegion *RegionOfInterest,
+                                 const ExplodedNode *N) {
+
+  if (N->getStackFrame()->inTopFrame())
+    return false;
+
+  ProgramStateRef State = N->getState();
+
+  CallEventRef<> Call =
+      State->getStateManager().getCallEventManager().getCaller(
+          N->getStackFrame(), State);
+
+  if (const CXXConstructorCall *CC = dyn_cast<CXXConstructorCall>(Call)) {
+    if (CC->getCXXThisVal().getAsRegion() == RegionOfInterest) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /// \return Whether \c RegionOfInterest was modified at \p N,
 /// where \p ValueAfter is \c RegionOfInterest's value at the end of the
 /// stack frame.
@@ -324,9 +380,21 @@ static bool wasRegionOfInterestModifiedAt(const SubRegion *RegionOfInterest,
   ProgramStateRef State = N->getState();
   ProgramStateManager &Mgr = N->getState()->getStateManager();
 
+  // If the region of interest is constructed right here, it is obviously
+  // modifying. This gets rid of notes like "Retuning without writing to *this",
+  // which makes no sense right in the constructor call.
+  if (isConstructorCallFor(RegionOfInterest, N))
+    return true;
+
   if (!N->getLocationAs<PostStore>() && !N->getLocationAs<PostInitializer>() &&
       !N->getLocationAs<PostStmt>())
     return false;
+
+  // If we are tracking a field, check if we reached its initialization point
+  // in an initializer list.
+  if (const FieldRegion *FR = RegionOfInterest->getAs<FieldRegion>())
+    if (isInitializationOfField(N, FR))
+      return true;
 
   // Writing into region of interest.
   if (auto PS = N->getLocationAs<PostStmt>())
@@ -335,8 +403,12 @@ static bool wasRegionOfInterestModifiedAt(const SubRegion *RegionOfInterest,
                                       N->getSVal(BO->getLHS()).getAsRegion()))
         return true;
 
-  // SVal after the state is possibly different.
   SVal ValueAtN = N->getState()->getSVal(RegionOfInterest);
+
+  // If ValueAtN and ValueAfter are different, then RegionOfInterest was
+  // modified. We also need to handle the special case of undefined values,
+  // we need to check that the other value is not undefined, only then was
+  // the region modified.
   if (!Mgr.getSValBuilder()
            .areEqual(State, ValueAtN, ValueAfter)
            .isConstrainedTrue() &&
@@ -525,91 +597,6 @@ PathDiagnosticPieceRef NoStateChangeFuncVisitor::VisitNode(
 //===----------------------------------------------------------------------===//
 // Implementation of NoStoreFuncVisitor.
 //===----------------------------------------------------------------------===//
-
-namespace {
-/// Put a diagnostic on return statement of all inlined functions
-/// for which  the region of interest \p RegionOfInterest was passed into,
-/// but not written inside, and it has caused an undefined read or a null
-/// pointer dereference outside.
-class NoStoreFuncVisitor final : public NoStateChangeFuncVisitor {
-  const SubRegion *RegionOfInterest;
-  MemRegionManager &MmrMgr;
-  const SourceManager &SM;
-  const PrintingPolicy &PP;
-
-  /// Recursion limit for dereferencing fields when looking for the
-  /// region of interest.
-  /// The limit of two indicates that we will dereference fields only once.
-  static const unsigned DEREFERENCE_LIMIT = 2;
-
-  using RegionVector = SmallVector<const MemRegion *, 5>;
-
-public:
-  NoStoreFuncVisitor(const SubRegion *R, bugreporter::TrackingKind TKind)
-      : NoStateChangeFuncVisitor(TKind), RegionOfInterest(R),
-        MmrMgr(R->getMemRegionManager()),
-        SM(MmrMgr.getContext().getSourceManager()),
-        PP(MmrMgr.getContext().getPrintingPolicy()) {}
-
-  void Profile(llvm::FoldingSetNodeID &ID) const override {
-    static int Tag = 0;
-    ID.AddPointer(&Tag);
-    ID.AddPointer(RegionOfInterest);
-  }
-
-private:
-  /// \return Whether \c RegionOfInterest was modified at \p CurrN compared to
-  /// the value it holds in \p CallExitBeginN.
-  bool wasModifiedBeforeCallExit(const ExplodedNode *CurrN,
-                                 const ExplodedNode *CallExitBeginN) override;
-
-  /// Attempts to find the region of interest in a given record decl,
-  /// by either following the base classes or fields.
-  /// Dereferences fields up to a given recursion limit.
-  /// Note that \p Vec is passed by value, leading to quadratic copying cost,
-  /// but it's OK in practice since its length is limited to DEREFERENCE_LIMIT.
-  /// \return A chain fields leading to the region of interest or std::nullopt.
-  const std::optional<RegionVector>
-  findRegionOfInterestInRecord(const RecordDecl *RD, ProgramStateRef State,
-                               const MemRegion *R, const RegionVector &Vec = {},
-                               int depth = 0);
-
-  // Region of interest corresponds to an IVar, exiting a method
-  // which could have written into that IVar, but did not.
-  PathDiagnosticPieceRef maybeEmitNoteForObjCSelf(PathSensitiveBugReport &R,
-                                                  const ObjCMethodCall &Call,
-                                                  const ExplodedNode *N) final;
-
-  PathDiagnosticPieceRef maybeEmitNoteForCXXThis(PathSensitiveBugReport &R,
-                                                 const CXXConstructorCall &Call,
-                                                 const ExplodedNode *N) final;
-
-  PathDiagnosticPieceRef
-  maybeEmitNoteForParameters(PathSensitiveBugReport &R, const CallEvent &Call,
-                             const ExplodedNode *N) final;
-
-  /// Consume the information on the no-store stack frame in order to
-  /// either emit a note or suppress the report enirely.
-  /// \return Diagnostics piece for region not modified in the current function,
-  /// if it decides to emit one.
-  PathDiagnosticPieceRef
-  maybeEmitNote(PathSensitiveBugReport &R, const CallEvent &Call,
-                const ExplodedNode *N, const RegionVector &FieldChain,
-                const MemRegion *MatchedRegion, StringRef FirstElement,
-                bool FirstIsReferenceType, unsigned IndirectionLevel);
-
-  bool prettyPrintRegionName(const RegionVector &FieldChain,
-                             const MemRegion *MatchedRegion,
-                             StringRef FirstElement, bool FirstIsReferenceType,
-                             unsigned IndirectionLevel,
-                             llvm::raw_svector_ostream &os);
-
-  StringRef prettyPrintFirstElement(StringRef FirstElement,
-                                    bool MoreItemsExpected,
-                                    int IndirectionLevel,
-                                    llvm::raw_svector_ostream &os);
-};
-} // namespace
 
 /// \return Whether the method declaration \p Parent
 /// syntactically has a binary operation writing into the ivar \p Ivar.

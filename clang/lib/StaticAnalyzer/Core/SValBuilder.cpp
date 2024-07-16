@@ -36,6 +36,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <optional>
 #include <tuple>
@@ -490,6 +491,47 @@ SVal SValBuilder::evalUnaryOp(ProgramStateRef state, UnaryOperator::Opcode opc,
   llvm_unreachable("Unexpected unary operator");
 }
 
+namespace {
+/// Iterate through to store to find the actual value this LazyCompoundVal
+/// corresponds to. Further reading is in LazyCompoundVal's docs.
+struct LazyHandler : public StoreManager::BindingsHandler {
+  nonloc::LazyCompoundVal l;
+  std::optional<SVal> &Ret;
+
+  LazyHandler(nonloc::LazyCompoundVal l, std::optional<SVal> &Ret)
+      : l(l), Ret(Ret) {}
+
+  virtual bool HandleBinding(StoreManager &SMgr, Store Store,
+                             const MemRegion *Region, SVal Val) override {
+    if (const MemRegion *MR = Val.getAsRegion()) {
+      if (MR->isSubRegionOf(l.getRegion()) && MR != l.getAsRegion()) {
+        Ret = Val;
+        return false;
+      }
+    }
+    return true;
+  }
+};
+} // namespace
+
+/// Find the actual value behind a LazyCompoundVal. May return none if the
+/// query fails, or only finds another LazyCompoundVal (e.g. circular
+/// reference).
+static std::optional<SVal> extractActualValueFrom(ProgramStateRef State,
+                                                  nonloc::LazyCompoundVal L) {
+  std::optional<SVal> Ret;
+  LazyHandler handler{L, Ret};
+  State->getStateManager().getStoreManager().iterBindings(State->getStore(),
+                                                          handler);
+  if (Ret) {
+    std::optional<SVal> RVal = Ret = State->getSVal(Ret->getAsRegion());
+    // If our best efforts lead us back to another LazyCompoundValue, give up.
+    if (Ret == RVal)
+      return {};
+  }
+  return Ret;
+}
+
 SVal SValBuilder::evalBinOp(ProgramStateRef state, BinaryOperator::Opcode op,
                             SVal lhs, SVal rhs, QualType type) {
   if (lhs.isUndef() || rhs.isUndef())
@@ -498,8 +540,20 @@ SVal SValBuilder::evalBinOp(ProgramStateRef state, BinaryOperator::Opcode op,
   if (lhs.isUnknown() || rhs.isUnknown())
     return UnknownVal();
 
-  if (isa<nonloc::LazyCompoundVal>(lhs) || isa<nonloc::LazyCompoundVal>(rhs)) {
-    return UnknownVal();
+  if (isa<nonloc::LazyCompoundVal>(lhs)) {
+    std::optional<SVal> LhsVal =
+        extractActualValueFrom(state, lhs.castAs<nonloc::LazyCompoundVal>());
+    if (!LhsVal)
+      return UnknownVal();
+    return evalBinOp(state, op, *LhsVal, rhs, type);
+  }
+
+  if (isa<nonloc::LazyCompoundVal>(rhs)) {
+    std::optional<SVal> RhsVal =
+        extractActualValueFrom(state, rhs.castAs<nonloc::LazyCompoundVal>());
+    if (!RhsVal)
+      return UnknownVal();
+    return evalBinOp(state, op, lhs, *RhsVal, type);
   }
 
   if (op == BinaryOperatorKind::BO_Cmp) {
