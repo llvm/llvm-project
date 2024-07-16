@@ -203,8 +203,8 @@ RAGreedy::RAGreedy(RegClassFilterFunc F):
 
 void RAGreedy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addRequired<MachineBlockFrequencyInfo>();
-  AU.addPreserved<MachineBlockFrequencyInfo>();
+  AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+  AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
   AU.addRequired<LiveIntervalsWrapperPass>();
   AU.addPreserved<LiveIntervalsWrapperPass>();
   AU.addRequired<SlotIndexesWrapperPass>();
@@ -2728,7 +2728,7 @@ bool RAGreedy::runOnMachineFunction(MachineFunction &mf) {
   // Renumber to get accurate and consistent results from
   // SlotIndexes::getApproxInstrDistance.
   Indexes->packIndexes();
-  MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
+  MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
   Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
