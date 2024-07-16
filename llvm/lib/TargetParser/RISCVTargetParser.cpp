@@ -141,11 +141,6 @@ struct LessExtName {
                   StringRef RHS) {
     return StringRef(LHS.Name) < RHS;
   }
-  bool
-  operator()(StringRef LHS,
-             const RISCVExtensionBitmaskTable::RISCVExtensionBitmask &RHS) {
-    return LHS < StringRef(RHS.Name);
-  }
 };
 } // namespace
 
