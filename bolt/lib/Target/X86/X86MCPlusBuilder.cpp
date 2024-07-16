@@ -328,19 +328,19 @@ public:
     return false;
   }
 
-  bool isReversibleBranch(const MCInst &Inst) const override {
-    if (isDynamicBranch(Inst))
-      return false;
-
+  bool isUnsupportedInstruction(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     default:
-      return true;
+      return false;
+
     case X86::LOOP:
     case X86::LOOPE:
     case X86::LOOPNE:
     case X86::JECXZ:
     case X86::JRCXZ:
-      return false;
+      // These have a short displacement, and therefore (often) break after
+      // basic block relayout.
+      return true;
     }
   }
 
@@ -659,40 +659,6 @@ public:
   bool hasEVEXEncoding(const MCInst &Inst) const override {
     const MCInstrDesc &Desc = Info->get(Inst.getOpcode());
     return (Desc.TSFlags & X86II::EncodingMask) == X86II::EVEX;
-  }
-
-  bool isMacroOpFusionPair(ArrayRef<MCInst> Insts) const override {
-    const auto *I = Insts.begin();
-    while (I != Insts.end() && isPrefix(*I))
-      ++I;
-    if (I == Insts.end())
-      return false;
-
-    const MCInst &FirstInst = *I;
-    ++I;
-    while (I != Insts.end() && isPrefix(*I))
-      ++I;
-    if (I == Insts.end())
-      return false;
-    const MCInst &SecondInst = *I;
-
-    if (!isConditionalBranch(SecondInst))
-      return false;
-    // Cannot fuse if the first instruction uses RIP-relative memory.
-    if (hasPCRelOperand(FirstInst))
-      return false;
-
-    const X86::FirstMacroFusionInstKind CmpKind =
-        X86::classifyFirstOpcodeInMacroFusion(FirstInst.getOpcode());
-    if (CmpKind == X86::FirstMacroFusionInstKind::Invalid)
-      return false;
-
-    X86::CondCode CC = static_cast<X86::CondCode>(getCondCode(SecondInst));
-    X86::SecondMacroFusionInstKind BranchKind =
-        X86::classifySecondCondCodeInMacroFusion(CC);
-    if (BranchKind == X86::SecondMacroFusionInstKind::Invalid)
-      return false;
-    return X86::isMacroFused(CmpKind, BranchKind);
   }
 
   std::optional<X86MemOperand>
@@ -1879,11 +1845,9 @@ public:
         continue;
       }
 
-      // Handle conditional branches and ignore indirect branches
-      if (isReversibleBranch(*I) && getCondCode(*I) == X86::COND_INVALID) {
-        // Indirect branch
+      // Ignore indirect branches
+      if (getCondCode(*I) == X86::COND_INVALID)
         return false;
-      }
 
       if (CondBranch == nullptr) {
         const MCSymbol *TargetBB = getTargetSymbol(*I);
@@ -3274,12 +3238,6 @@ public:
                                              MCContext *Ctx) override {
     InstructionListType Insts(1);
     createUncondBranch(Insts[0], TgtSym, Ctx);
-    return Insts;
-  }
-
-  InstructionListType createDummyReturnFunction(MCContext *Ctx) const override {
-    InstructionListType Insts(1);
-    createReturn(Insts[0]);
     return Insts;
   }
 

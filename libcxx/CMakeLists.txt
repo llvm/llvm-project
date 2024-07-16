@@ -553,6 +553,10 @@ function(cxx_add_basic_build_flags target)
     target_add_compile_flags_if_supported(${target} PRIVATE -fvisibility=hidden)
   endif()
 
+  # Build with -fsized-deallocation, which is default in recent versions of Clang.
+  # TODO(LLVM 21): This can be dropped once we only support Clang >= 19.
+  target_add_compile_flags_if_supported(${target} PRIVATE -fsized-deallocation)
+
   # Let the library headers know they are currently being used to build the
   # library.
   target_compile_definitions(${target} PRIVATE -D_LIBCPP_BUILDING_LIBRARY)
@@ -780,8 +784,8 @@ config_define_if_not(LIBCXX_ENABLE_WIDE_CHARACTERS _LIBCPP_HAS_NO_WIDE_CHARACTER
 config_define_if_not(LIBCXX_ENABLE_TIME_ZONE_DATABASE _LIBCPP_HAS_NO_TIME_ZONE_DATABASE)
 config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
 
-# TODO(LLVM 19): Produce a deprecation warning.
 if (LIBCXX_ENABLE_ASSERTIONS)
+  message(DEPRECATION "LIBCXX_ENABLE_ASSERTIONS is deprecated and will be removed in LLVM 20. Please use LIBCXX_HARDENING_MODE instead.")
   set(LIBCXX_HARDENING_MODE "extensive")
 endif()
 if (LIBCXX_HARDENING_MODE STREQUAL "none")

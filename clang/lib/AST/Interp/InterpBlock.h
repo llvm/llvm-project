@@ -49,17 +49,19 @@ enum PrimType : unsigned;
 class Block final {
 public:
   /// Creates a new block.
-  Block(const std::optional<unsigned> &DeclID, const Descriptor *Desc,
-        bool IsStatic = false, bool IsExtern = false)
-      : DeclID(DeclID), IsStatic(IsStatic), IsExtern(IsExtern), Desc(Desc) {
-        assert(Desc);
-      }
-
-  Block(const Descriptor *Desc, bool IsStatic = false, bool IsExtern = false)
-      : DeclID((unsigned)-1), IsStatic(IsStatic), IsExtern(IsExtern),
+  Block(unsigned EvalID, const std::optional<unsigned> &DeclID,
+        const Descriptor *Desc, bool IsStatic = false, bool IsExtern = false)
+      : EvalID(EvalID), DeclID(DeclID), IsStatic(IsStatic), IsExtern(IsExtern),
         Desc(Desc) {
-          assert(Desc);
-        }
+    assert(Desc);
+  }
+
+  Block(unsigned EvalID, const Descriptor *Desc, bool IsStatic = false,
+        bool IsExtern = false)
+      : EvalID(EvalID), DeclID((unsigned)-1), IsStatic(IsStatic),
+        IsExtern(IsExtern), Desc(Desc) {
+    assert(Desc);
+  }
 
   /// Returns the block's descriptor.
   const Descriptor *getDescriptor() const { return Desc; }
@@ -75,7 +77,11 @@ public:
   unsigned getSize() const { return Desc->getAllocSize(); }
   /// Returns the declaration ID.
   std::optional<unsigned> getDeclID() const { return DeclID; }
+  /// Returns whether the data of this block has been initialized via
+  /// invoking the Ctor func.
   bool isInitialized() const { return IsInitialized; }
+  /// The Evaluation ID this block was created in.
+  unsigned getEvalID() const { return EvalID; }
 
   /// Returns a pointer to the stored data.
   /// You are allowed to read Desc->getSize() bytes from this address.
@@ -130,8 +136,10 @@ private:
   friend class DeadBlock;
   friend class InterpState;
 
-  Block(const Descriptor *Desc, bool IsExtern, bool IsStatic, bool IsDead)
-      : IsStatic(IsStatic), IsExtern(IsExtern), IsDead(true), Desc(Desc) {
+  Block(unsigned EvalID, const Descriptor *Desc, bool IsExtern, bool IsStatic,
+        bool IsDead)
+      : EvalID(EvalID), IsStatic(IsStatic), IsExtern(IsExtern), IsDead(true),
+        Desc(Desc) {
     assert(Desc);
   }
 
@@ -146,6 +154,7 @@ private:
   bool hasPointer(const Pointer *P) const;
 #endif
 
+  const unsigned EvalID = ~0u;
   /// Start of the chain of pointers.
   Pointer *Pointers = nullptr;
   /// Unique identifier of the declaration.

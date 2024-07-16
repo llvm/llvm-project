@@ -306,6 +306,10 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned PrintSupportedExtensions : 1;
 
+  /// Print the extensions enabled for the current target.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned PrintEnabledExtensions : 1;
+
   /// Show the -version text.
   LLVM_PREFERRED_TYPE(bool)
   unsigned ShowVersion : 1;

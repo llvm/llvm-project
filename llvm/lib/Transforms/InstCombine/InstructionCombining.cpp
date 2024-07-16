@@ -874,7 +874,7 @@ Instruction *InstCombinerImpl::tryFoldInstWithCtpopWithNot(Instruction *I) {
 //   -> (arithmetic_shift Binop1((not X), Y), Amt)
 
 Instruction *InstCombinerImpl::foldBinOpShiftWithShift(BinaryOperator &I) {
-  const DataLayout &DL = I.getModule()->getDataLayout();
+  const DataLayout &DL = I.getDataLayout();
   auto IsValidBinOpc = [](unsigned Opc) {
     switch (Opc) {
     default:
@@ -1670,7 +1670,7 @@ static Constant *constantFoldOperationIntoSelectOperand(Instruction &I,
     ConstOps.push_back(C);
   }
 
-  return ConstantFoldInstOperands(&I, ConstOps, I.getModule()->getDataLayout());
+  return ConstantFoldInstOperands(&I, ConstOps, I.getDataLayout());
 }
 
 static Value *foldOperationIntoSelectOperand(Instruction &I, SelectInst *SI,
@@ -2787,12 +2787,19 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                     GEP.getNoWrapFlags()));
   }
 
-  // Canonicalize scalable GEPs to an explicit offset using the llvm.vscale
-  // intrinsic. This has better support in BasicAA.
-  if (GEPEltType->isScalableTy()) {
+  // Canonicalize
+  //  - scalable GEPs to an explicit offset using the llvm.vscale intrinsic.
+  //    This has better support in BasicAA.
+  //  - gep i32 p, mul(O, C) -> gep i8, p, mul(O, C*4) to fold the two
+  //    multiplies together.
+  if (GEPEltType->isScalableTy() ||
+      (!GEPEltType->isIntegerTy(8) && GEP.getNumIndices() == 1 &&
+       match(GEP.getOperand(1),
+             m_OneUse(m_CombineOr(m_Mul(m_Value(), m_ConstantInt()),
+                                  m_Shl(m_Value(), m_ConstantInt())))))) {
     Value *Offset = EmitGEPOffset(cast<GEPOperator>(&GEP));
     return replaceInstUsesWith(
-        GEP, Builder.CreatePtrAdd(PtrOp, Offset, "", GEP.isInBounds()));
+        GEP, Builder.CreatePtrAdd(PtrOp, Offset, "", GEP.getNoWrapFlags()));
   }
 
   // Check to see if the inputs to the PHI node are getelementptr instructions.
@@ -2932,18 +2939,57 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           });
           return Changed ? &GEP : nullptr;
         }
-      } else {
+      } else if (auto *ExactIns =
+                     dyn_cast<PossiblyExactOperator>(GEP.getOperand(1))) {
         // Canonicalize (gep T* X, V / sizeof(T)) to (gep i8* X, V)
         Value *V;
-        if ((has_single_bit(TyAllocSize) &&
-             match(GEP.getOperand(1),
-                   m_Exact(m_Shr(m_Value(V),
-                                 m_SpecificInt(countr_zero(TyAllocSize)))))) ||
-            match(GEP.getOperand(1),
-                  m_Exact(m_IDiv(m_Value(V), m_SpecificInt(TyAllocSize))))) {
-          return GetElementPtrInst::Create(Builder.getInt8Ty(),
-                                           GEP.getPointerOperand(), V,
-                                           GEP.getNoWrapFlags());
+        if (ExactIns->isExact()) {
+          if ((has_single_bit(TyAllocSize) &&
+               match(GEP.getOperand(1),
+                     m_Shr(m_Value(V),
+                           m_SpecificInt(countr_zero(TyAllocSize))))) ||
+              match(GEP.getOperand(1),
+                    m_IDiv(m_Value(V), m_SpecificInt(TyAllocSize)))) {
+            return GetElementPtrInst::Create(Builder.getInt8Ty(),
+                                             GEP.getPointerOperand(), V,
+                                             GEP.getNoWrapFlags());
+          }
+        }
+        if (ExactIns->isExact() && ExactIns->hasOneUse()) {
+          // Try to canonicalize non-i8 element type to i8 if the index is an
+          // exact instruction. If the index is an exact instruction (div/shr)
+          // with a constant RHS, we can fold the non-i8 element scale into the
+          // div/shr (similiar to the mul case, just inverted).
+          const APInt *C;
+          std::optional<APInt> NewC;
+          if (has_single_bit(TyAllocSize) &&
+              match(ExactIns, m_Shr(m_Value(V), m_APInt(C))) &&
+              C->uge(countr_zero(TyAllocSize)))
+            NewC = *C - countr_zero(TyAllocSize);
+          else if (match(ExactIns, m_UDiv(m_Value(V), m_APInt(C)))) {
+            APInt Quot;
+            uint64_t Rem;
+            APInt::udivrem(*C, TyAllocSize, Quot, Rem);
+            if (Rem == 0)
+              NewC = Quot;
+          } else if (match(ExactIns, m_SDiv(m_Value(V), m_APInt(C)))) {
+            APInt Quot;
+            int64_t Rem;
+            APInt::sdivrem(*C, TyAllocSize, Quot, Rem);
+            // For sdiv we need to make sure we arent creating INT_MIN / -1.
+            if (!Quot.isAllOnes() && Rem == 0)
+              NewC = Quot;
+          }
+
+          if (NewC.has_value()) {
+            Value *NewOp = Builder.CreateBinOp(
+                static_cast<Instruction::BinaryOps>(ExactIns->getOpcode()), V,
+                ConstantInt::get(V->getType(), *NewC));
+            cast<BinaryOperator>(NewOp)->setIsExact();
+            return GetElementPtrInst::Create(Builder.getInt8Ty(),
+                                             GEP.getPointerOperand(), NewOp,
+                                             GEP.getNoWrapFlags());
+          }
         }
       }
     }
@@ -4353,8 +4399,8 @@ Instruction *InstCombinerImpl::visitLandingPadInst(LandingPadInst &LI) {
   if (MakeNewInstruction) {
     LandingPadInst *NLI = LandingPadInst::Create(LI.getType(),
                                                  NewClauses.size());
-    for (unsigned i = 0, e = NewClauses.size(); i != e; ++i)
-      NLI->addClause(NewClauses[i]);
+    for (Constant *C : NewClauses)
+      NLI->addClause(C);
     // A landing pad with no clauses must have the cleanup flag set.  It is
     // theoretically possible, though highly unlikely, that we eliminated all
     // clauses.  If so, force the cleanup flag to true.
@@ -5073,7 +5119,7 @@ bool InstCombinerImpl::run() {
 #ifndef NDEBUG
     std::string OrigI;
 #endif
-    LLVM_DEBUG(raw_string_ostream SS(OrigI); I->print(SS); OrigI = SS.str(););
+    LLVM_DEBUG(raw_string_ostream SS(OrigI); I->print(SS););
     LLVM_DEBUG(dbgs() << "IC: Visiting: " << OrigI << '\n');
 
     if (Instruction *Result = visit(*I)) {
@@ -5335,7 +5381,7 @@ static bool combineInstructionsOverFunction(
     DominatorTree &DT, OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
     BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI, LoopInfo *LI,
     const InstCombineOptions &Opts) {
-  auto &DL = F.getParent()->getDataLayout();
+  auto &DL = F.getDataLayout();
 
   /// Builder - This is an IRBuilder that automatically inserts new
   /// instructions into the worklist when they are created.

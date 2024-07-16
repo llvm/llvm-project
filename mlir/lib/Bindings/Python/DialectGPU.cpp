@@ -25,6 +25,20 @@ using namespace mlir::python::adaptors;
 
 PYBIND11_MODULE(_mlirDialectsGPU, m) {
   m.doc() = "MLIR GPU Dialect";
+  //===-------------------------------------------------------------------===//
+  // AsyncTokenType
+  //===-------------------------------------------------------------------===//
+
+  auto mlirGPUAsyncTokenType =
+      mlir_type_subclass(m, "AsyncTokenType", mlirTypeIsAGPUAsyncTokenType);
+
+  mlirGPUAsyncTokenType.def_classmethod(
+      "get",
+      [](py::object cls, MlirContext ctx) {
+        return cls(mlirGPUAsyncTokenTypeGet(ctx));
+      },
+      "Gets an instance of AsyncTokenType in the same context", py::arg("cls"),
+      py::arg("ctx") = py::none());
 
   //===-------------------------------------------------------------------===//
   // ObjectAttr

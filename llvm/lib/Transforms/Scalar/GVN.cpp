@@ -420,7 +420,7 @@ GVNPass::ValueTable::createExtractvalueExpr(ExtractValueInst *EI) {
 GVNPass::Expression GVNPass::ValueTable::createGEPExpr(GetElementPtrInst *GEP) {
   Expression E;
   Type *PtrTy = GEP->getType()->getScalarType();
-  const DataLayout &DL = GEP->getModule()->getDataLayout();
+  const DataLayout &DL = GEP->getDataLayout();
   unsigned BitWidth = DL.getIndexTypeSizeInBits(PtrTy);
   MapVector<Value *, APInt> VariableOffsets;
   APInt ConstantOffset(BitWidth, 0);
@@ -1072,7 +1072,7 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
                                                 GVNPass &gvn) const {
   Value *Res;
   Type *LoadTy = Load->getType();
-  const DataLayout &DL = Load->getModule()->getDataLayout();
+  const DataLayout &DL = Load->getDataLayout();
   if (isSimpleValue()) {
     Res = getSimpleValue();
     if (Res->getType() != LoadTy) {
@@ -1238,7 +1238,7 @@ GVNPass::AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
 
   Instruction *DepInst = DepInfo.getInst();
 
-  const DataLayout &DL = Load->getModule()->getDataLayout();
+  const DataLayout &DL = Load->getDataLayout();
   if (DepInfo.isClobber()) {
     // If the dependence is to a store that writes to a superset of the bits
     // read by the load, we can extract the bits we need for the load from the
@@ -1723,7 +1723,7 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
 
   // Check if the load can safely be moved to all the unavailable predecessors.
   bool CanDoPRE = true;
-  const DataLayout &DL = Load->getModule()->getDataLayout();
+  const DataLayout &DL = Load->getDataLayout();
   SmallVector<Instruction*, 8> NewInsts;
   for (auto &PredLoad : PredLoads) {
     BasicBlock *UnavailablePred = PredLoad.first;
@@ -2477,8 +2477,8 @@ bool GVNPass::propagateEquality(Value *LHS, Value *RHS,
     assert((isa<Argument>(LHS) || isa<Instruction>(LHS)) && "Unexpected value!");
     const DataLayout &DL =
         isa<Argument>(LHS)
-            ? cast<Argument>(LHS)->getParent()->getParent()->getDataLayout()
-            : cast<Instruction>(LHS)->getModule()->getDataLayout();
+            ? cast<Argument>(LHS)->getParent()->getDataLayout()
+            : cast<Instruction>(LHS)->getDataLayout();
 
     // If there is no obvious reason to prefer the left-hand side over the
     // right-hand side, ensure the longest lived term is on the right-hand side,
@@ -2621,7 +2621,7 @@ bool GVNPass::processInstruction(Instruction *I) {
   // to value numbering it.  Value numbering often exposes redundancies, for
   // example if it determines that %y is equal to %x then the instruction
   // "%z = and i32 %x, %y" becomes "%z = and i32 %x, %x" which we now simplify.
-  const DataLayout &DL = I->getModule()->getDataLayout();
+  const DataLayout &DL = I->getDataLayout();
   if (Value *V = simplifyInstruction(I, {DL, TLI, DT, AC})) {
     bool Changed = false;
     if (!I->use_empty()) {

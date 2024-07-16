@@ -1847,13 +1847,8 @@ void ASTDeclReader::VisitNamespaceDecl(NamespaceDecl *D) {
   // same namespace, and we have an invariant that older declarations
   // get merged before newer ones try to merge.
   GlobalDeclID AnonNamespace;
-  if (Redecl.getFirstID() == ThisDeclID) {
+  if (Redecl.getFirstID() == ThisDeclID)
     AnonNamespace = readDeclID();
-  } else {
-    // Link this namespace back to the first declaration, which has already
-    // been deserialized.
-    D->AnonOrFirstNamespaceAndFlags.setPointer(D->getFirstDecl());
-  }
 
   mergeRedeclarable(D, Redecl);
 
@@ -2974,13 +2969,6 @@ void ASTDeclReader::mergeRedeclarable(Redeclarable<T> *DBase, T *Existing,
     ExistingCanon->Used |= D->Used;
     D->Used = false;
 
-    // When we merge a namespace, update its pointer to the first namespace.
-    // We cannot have loaded any redeclarations of this declaration yet, so
-    // there's nothing else that needs to be updated.
-    if (auto *Namespace = dyn_cast<NamespaceDecl>(D))
-      Namespace->AnonOrFirstNamespaceAndFlags.setPointer(
-          assert_cast<NamespaceDecl *>(ExistingCanon));
-
     // When we merge a template, merge its pattern.
     if (auto *DTemplate = dyn_cast<RedeclarableTemplateDecl>(D))
       mergeTemplatePattern(
@@ -3293,7 +3281,7 @@ ASTDeclReader::getOrFakePrimaryClassDefinition(ASTReader &Reader,
 DeclContext *ASTDeclReader::getPrimaryContextForMerging(ASTReader &Reader,
                                                         DeclContext *DC) {
   if (auto *ND = dyn_cast<NamespaceDecl>(DC))
-    return ND->getOriginalNamespace();
+    return ND->getFirstDecl();
 
   if (auto *RD = dyn_cast<CXXRecordDecl>(DC))
     return getOrFakePrimaryClassDefinition(Reader, RD);
@@ -3721,6 +3709,23 @@ void ASTDeclReader::attachPreviousDecl(ASTReader &Reader, Decl *D,
     attachPreviousDeclImpl(Reader, cast<TYPE##Decl>(D), Previous, Canon); \
     break;
 #include "clang/AST/DeclNodes.inc"
+  }
+
+  // [basic.link]/p10:
+  //    If two declarations of an entity are attached to different modules,
+  //    the program is ill-formed;
+  //
+  // FIXME: Get rid of the enumeration of decl types once we have an appropriate
+  // abstract for decls of an entity. e.g., the namespace decl and using decl
+  // doesn't introduce an entity.
+  if (Module *M = Previous->getOwningModule();
+      M && M->isNamedModule() &&
+      isa<VarDecl, FunctionDecl, TagDecl, RedeclarableTemplateDecl>(Previous) &&
+      !Reader.getContext().isInSameModule(M, D->getOwningModule())) {
+    Reader.Diag(Previous->getLocation(),
+                diag::err_multiple_decl_in_different_modules)
+        << cast<NamedDecl>(Previous) << M->Name;
+    Reader.Diag(D->getLocation(), diag::note_also_found);
   }
 
   // If the declaration was visible in one module, a redeclaration of it in
@@ -4198,6 +4203,7 @@ void ASTReader::PassInterestingDeclsToConsumer() {
   };
   std::deque<Decl *> MaybeInterestingDecls =
       std::move(PotentiallyInterestingDecls);
+  PotentiallyInterestingDecls.clear();
   assert(PotentiallyInterestingDecls.empty());
   while (!MaybeInterestingDecls.empty()) {
     Decl *D = MaybeInterestingDecls.front();
@@ -4217,13 +4223,6 @@ void ASTReader::PassInterestingDeclsToConsumer() {
 
   // If we add any new potential interesting decl in the last call, consume it.
   ConsumingPotentialInterestingDecls();
-
-  for (GlobalDeclID ID : VTablesToEmit) {
-    auto *RD = cast<CXXRecordDecl>(GetDecl(ID));
-    assert(!RD->shouldEmitInExternalSource());
-    PassVTableToConsumer(RD);
-  }
-  VTablesToEmit.clear();
 }
 
 void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {

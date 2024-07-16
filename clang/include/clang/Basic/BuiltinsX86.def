@@ -37,45 +37,15 @@ TARGET_BUILTIN(__builtin_ia32_undef512, "V8d", "ncV:512:", "")
 TARGET_BUILTIN(__builtin_ia32_readeflags_u32, "Ui", "n", "")
 TARGET_BUILTIN(__builtin_ia32_writeeflags_u32, "vUi", "n", "")
 
-// FIXME: _mm_prefetch is a built-in because it takes a compile-time constant
-// argument and our prior approach of using a #define to __builtin_prefetch
-// doesn't work in the presence of re-declaration of _mm_prefetch in windows
-// headers.
-TARGET_BUILTIN(_mm_prefetch, "vcC*i", "nc", "")
-
-// 3DNow!
+// MMX
 //
-TARGET_BUILTIN(__builtin_ia32_femms, "v", "n", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pavgusb, "V8cV8cV8c", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pf2id, "V2iV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfacc, "V2fV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfadd, "V2fV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfcmpeq, "V2iV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfcmpge, "V2iV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfcmpgt, "V2iV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfmax, "V2fV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfmin, "V2fV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfmul, "V2fV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfrcp, "V2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfrcpit1, "V2fV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfrcpit2, "V2fV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfrsqrt, "V2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfrsqit1, "V2fV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfsub, "V2fV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pfsubr, "V2fV2fV2f", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pi2fd, "V2fV2i", "ncV:64:", "3dnow")
-TARGET_BUILTIN(__builtin_ia32_pmulhrw, "V4sV4sV4s", "ncV:64:", "3dnow")
-// 3DNow! Extensions (3dnowa).
-TARGET_BUILTIN(__builtin_ia32_pf2iw, "V2iV2f", "ncV:64:", "3dnowa")
-TARGET_BUILTIN(__builtin_ia32_pfnacc, "V2fV2fV2f", "ncV:64:", "3dnowa")
-TARGET_BUILTIN(__builtin_ia32_pfpnacc, "V2fV2fV2f", "ncV:64:", "3dnowa")
-TARGET_BUILTIN(__builtin_ia32_pi2fw, "V2fV2i", "ncV:64:", "3dnowa")
-TARGET_BUILTIN(__builtin_ia32_pswapdsf, "V2fV2f", "ncV:64:", "3dnowa")
-TARGET_BUILTIN(__builtin_ia32_pswapdsi, "V2iV2i", "ncV:64:", "3dnowa")
-
-// MMX usage is no longer supported in Clang; all of the formerly "MMX"
-// intrinsic functions are now expanded into SSE2 code in the headers.
-
+// All MMX instructions will be generated via builtins. Any MMX vector
+// types (<1 x i64>, <2 x i32>, etc.) that aren't used by these builtins will be
+// expanded by the back-end.
+// FIXME: _mm_prefetch must be a built-in because it takes a compile-time constant
+// argument and our prior approach of using a #define to the current built-in
+// doesn't work in the presence of re-declaration of _mm_prefetch for windows.
+TARGET_BUILTIN(_mm_prefetch, "vcC*i", "nc", "mmx")
 TARGET_BUILTIN(__builtin_ia32_emms, "v", "n", "mmx")
 TARGET_BUILTIN(__builtin_ia32_vec_ext_v4hi, "sV4sIi", "ncV:64:", "sse")
 TARGET_BUILTIN(__builtin_ia32_vec_set_v4hi, "V4sV4ssIi", "ncV:64:", "sse")

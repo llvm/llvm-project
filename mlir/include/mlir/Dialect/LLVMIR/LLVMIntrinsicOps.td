@@ -900,6 +900,8 @@ def LLVM_masked_gather : LLVM_OneResultIntrOp<"masked.gather"> {
       $_resultType, $ptrs, $mask, $pass_thru, $_int_attr($alignment));
   }];
   list<int> llvmArgIndices = [0, 2, 3, 1];
+
+  let hasVerifier = 1;
 }
 
 /// Create a call to Masked Scatter intrinsic.
@@ -919,6 +921,8 @@ def LLVM_masked_scatter : LLVM_ZeroResultIntrOp<"masked.scatter"> {
       $value, $ptrs, $mask, $_int_attr($alignment));
   }];
   list<int> llvmArgIndices = [0, 1, 3, 2];
+
+  let hasVerifier = 1;
 }
 
 /// Create a call to Masked Expand Load intrinsic.

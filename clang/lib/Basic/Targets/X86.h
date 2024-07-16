@@ -67,12 +67,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
     AVX2,
     AVX512F
   } SSELevel = NoSSE;
-  enum MMX3DNowEnum {
-    NoMMX3DNow,
-    MMX,
-    AMD3DNow,
-    AMD3DNowAthlon
-  } MMX3DNowLevel = NoMMX3DNow;
+  bool HasMMX = false;
   enum XOPEnum { NoXOP, SSE4A, FMA4, XOP } XOPLevel = NoXOP;
   enum AddrSpace { ptr32_sptr = 270, ptr32_uptr = 271, ptr64 = 272 };
 
@@ -172,7 +167,9 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasCCMP = false;
   bool HasNF = false;
   bool HasCF = false;
+  bool HasZU = false;
   bool HasInlineAsmUseGPR32 = false;
+  bool HasBranchHint = false;
 
 protected:
   llvm::X86::CPUKind CPU = llvm::X86::CK_None;
@@ -346,8 +343,7 @@ public:
       return "avx512";
     if (getTriple().getArch() == llvm::Triple::x86_64 && SSELevel >= AVX)
       return "avx";
-    if (getTriple().getArch() == llvm::Triple::x86 &&
-        MMX3DNowLevel == NoMMX3DNow)
+    if (getTriple().getArch() == llvm::Triple::x86 && !HasMMX)
       return "no-mmx";
     return "";
   }

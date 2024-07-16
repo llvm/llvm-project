@@ -132,7 +132,7 @@ public:
   Options *GetOptions() override { return &m_options; }
 
   std::optional<std::string> GetRepeatCommand(Args &current_args,
-                                              uint32_t idx) override {
+                                              uint32_t index) override {
     llvm::StringRef count_opt("--count");
     llvm::StringRef start_opt("--start");
 
@@ -1386,7 +1386,10 @@ public:
     Stream &strm = result.GetOutputStream();
     ValueObjectSP exception_object_sp = thread_sp->GetCurrentException();
     if (exception_object_sp) {
-      exception_object_sp->Dump(strm);
+      if (llvm::Error error = exception_object_sp->Dump(strm)) {
+        result.AppendError(toString(std::move(error)));
+        return false;
+      }
     }
 
     ThreadSP exception_thread_sp = thread_sp->GetCurrentExceptionBacktrace();
@@ -1438,9 +1441,12 @@ public:
       return false;
     }
     ValueObjectSP exception_object_sp = thread_sp->GetSiginfoValue();
-    if (exception_object_sp)
-      exception_object_sp->Dump(strm);
-    else
+    if (exception_object_sp) {
+      if (llvm::Error error = exception_object_sp->Dump(strm)) {
+        result.AppendError(toString(std::move(error)));
+        return false;
+      }
+    } else
       strm.Printf("(no siginfo)\n");
     strm.PutChar('\n');
 

@@ -56,6 +56,7 @@ config.substitutions.append(('%{exec}',
 ))
 
 config.stdlib = 'apple-libc++'
+config.using_system_stdlib = True
 
 libcxx.test.config.configure(
     libcxx.test.params.DEFAULT_PARAMETERS + BACKDEPLOYMENT_PARAMETERS,

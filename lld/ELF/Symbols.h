@@ -115,18 +115,21 @@ public:
   uint8_t partition;
 
   // True if this symbol is preemptible at load time.
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t isPreemptible : 1;
 
   // True if the symbol was used for linking and thus need to be added to the
   // output file's symbol table. This is true for all symbols except for
   // unreferenced DSO symbols, lazy (archive) symbols, and bitcode symbols that
   // are unreferenced except by other bitcode objects.
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t isUsedInRegularObj : 1;
 
   // True if an undefined or shared symbol is used from a live section.
   //
   // NOTE: In Writer.cpp the field is used to mark local defined symbols
   // which are referenced by relocations when -r or --emit-relocs is given.
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t used : 1;
 
   // Used by a Defined symbol with protected or default visibility, to record
@@ -138,27 +141,33 @@ public:
   // - If -shared or --export-dynamic is specified, any symbol in an object
   //   file/bitcode sets this property, unless suppressed by LTO
   //   canBeOmittedFromSymbolTable().
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t exportDynamic : 1;
 
   // True if the symbol is in the --dynamic-list file. A Defined symbol with
   // protected or default visibility with this property is required to be
   // exported into .dynsym.
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t inDynamicList : 1;
 
   // Used to track if there has been at least one undefined reference to the
   // symbol. For Undefined and SharedSymbol, the binding may change to STB_WEAK
   // if the first undefined reference from a non-shared object is weak.
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t referenced : 1;
 
   // Used to track if this symbol will be referenced after wrapping is performed
   // (i.e. this will be true for foo if __real_foo is referenced, and will be
   // true for __wrap_foo if foo is referenced).
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t referencedAfterWrap : 1;
 
   // True if this symbol is specified by --trace-symbol option.
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t traced : 1;
 
   // True if the name contains '@'.
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t hasVersionSuffix : 1;
 
   // Symbol visibility. This is the computed minimum visibility of all
@@ -270,13 +279,16 @@ protected:
 public:
   // True if this symbol is in the Iplt sub-section of the Plt and the Igot
   // sub-section of the .got.plt or .got.
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t isInIplt : 1;
 
   // True if this symbol needs a GOT entry and its GOT entry is actually in
   // Igot. This will be true only for certain non-preemptible ifuncs.
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t gotInIgot : 1;
 
   // True if defined relative to a section discarded by ICF.
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t folded : 1;
 
   // Allow reuse of a bit between architecture-exclusive symbol flags.
@@ -284,6 +296,7 @@ public:
   //   followed by a restore of the toc pointer.
   // - isTagged(): On AArch64, true if the symbol needs special relocation and
   //   metadata semantics because it's tagged, under the AArch64 MemtagABI.
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t archSpecificBit : 1;
   bool needsTocRestore() const { return archSpecificBit; }
   bool isTagged() const { return archSpecificBit; }
@@ -296,13 +309,16 @@ public:
   //
   // LTO shouldn't inline the symbol because it doesn't know the final content
   // of the symbol.
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t scriptDefined : 1;
 
   // True if defined in a DSO. There may also be a definition in a relocatable
   // object file.
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t dsoDefined : 1;
 
   // True if defined in a DSO as protected visibility.
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t dsoProtected : 1;
 
   // Temporary flags used to communicate which symbol entries need PLT and GOT
@@ -319,9 +335,11 @@ public:
   // to a Verneed index in the output. Otherwise, this represents the Verdef
   // index (VER_NDX_LOCAL, VER_NDX_GLOBAL, or a named version).
   uint16_t versionId;
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t versionScriptAssigned : 1;
 
   // True if targeted by a range extension thunk.
+  LLVM_PREFERRED_TYPE(bool)
   uint8_t thunkAccessed : 1;
 
   void setFlags(uint16_t bits) {

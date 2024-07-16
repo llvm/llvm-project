@@ -4,12 +4,12 @@
 define amdgpu_kernel void @copy_to_scc(ptr addrspace(1) %out, ptr addrspace(1) %in, ptr addrspace(4) %addrSrc) {
 ; GCN-LABEL: copy_to_scc:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x34
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x34
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x0
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x0
 ; GCN-NEXT:    s_nop 0
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v0, off, s[4:7], 0 offset:252
 ; GCN-NEXT:    s_load_dword s2, s[2:3], 0x0

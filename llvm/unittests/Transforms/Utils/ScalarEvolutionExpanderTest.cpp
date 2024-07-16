@@ -96,7 +96,7 @@ TEST_F(ScalarEvolutionExpanderTest, ExpandPtrTypeSCEV) {
   //   %bitcast2 = bitcast i8* %select to i32*
   //   br i1 undef, label %loop, label %exit
 
-  const DataLayout &DL = F->getParent()->getDataLayout();
+  const DataLayout &DL = F->getDataLayout();
   BranchInst *Br = BranchInst::Create(
       LoopBB, ExitBB, UndefValue::get(Type::getInt1Ty(Context)), LoopBB);
   AllocaInst *Alloca =

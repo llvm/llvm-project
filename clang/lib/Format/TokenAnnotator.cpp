@@ -127,7 +127,7 @@ public:
                    SmallVector<ScopeType> &Scopes)
       : Style(Style), Line(Line), CurrentToken(Line.First), AutoFound(false),
         IsCpp(Style.isCpp()), LangOpts(getFormattingLangOpts(Style)),
-        Keywords(Keywords), Scopes(Scopes) {
+        Keywords(Keywords), Scopes(Scopes), TemplateDeclarationDepth(0) {
     assert(IsCpp == LangOpts.CXXOperatorNames);
     Contexts.push_back(Context(tok::unknown, 1, /*IsExpression=*/false));
     resetTokenMetadata();
@@ -175,10 +175,6 @@ private:
     FormatToken *Left = CurrentToken->Previous;
     Left->ParentBracket = Contexts.back().ContextKind;
     ScopedContextCreator ContextCreator(*this, tok::less, 12);
-
-    // If this angle is in the context of an expression, we need to be more
-    // hesitant to detect it as opening template parameters.
-    bool InExprContext = Contexts.back().IsExpression;
 
     Contexts.back().IsExpression = false;
     // If there's a template keyword before the opening angle bracket, this is a
@@ -231,11 +227,8 @@ private:
         next();
         continue;
       }
-      if (CurrentToken->isOneOf(tok::r_paren, tok::r_square, tok::r_brace) ||
-          (CurrentToken->isOneOf(tok::colon, tok::question) && InExprContext &&
-           !Style.isCSharp() && !Style.isProto())) {
+      if (CurrentToken->isOneOf(tok::r_paren, tok::r_square, tok::r_brace))
         return false;
-      }
       // If a && or || is found and interpreted as a binary operator, this set
       // of angles is likely part of something like "a < b && c > d". If the
       // angles are inside an expression, the ||/&& might also be a binary
@@ -1266,16 +1259,22 @@ private:
   }
 
   bool parseTemplateDeclaration() {
-    if (CurrentToken && CurrentToken->is(tok::less)) {
-      CurrentToken->setType(TT_TemplateOpener);
-      next();
-      if (!parseAngle())
-        return false;
-      if (CurrentToken)
-        CurrentToken->Previous->ClosesTemplateDeclaration = true;
-      return true;
-    }
-    return false;
+    if (!CurrentToken || CurrentToken->isNot(tok::less))
+      return false;
+
+    CurrentToken->setType(TT_TemplateOpener);
+    next();
+
+    TemplateDeclarationDepth++;
+    const bool WellFormed = parseAngle();
+    TemplateDeclarationDepth--;
+    if (!WellFormed)
+      return false;
+
+    if (CurrentToken && TemplateDeclarationDepth == 0)
+      CurrentToken->Previous->ClosesTemplateDeclaration = true;
+
+    return true;
   }
 
   bool consumeToken() {
@@ -2661,18 +2660,27 @@ private:
 
   /// Determine whether ')' is ending a cast.
   bool rParenEndsCast(const FormatToken &Tok) {
-    // C-style casts are only used in C++, C# and Java.
-    if (!Style.isCSharp() && !IsCpp && Style.Language != FormatStyle::LK_Java)
+    assert(Tok.is(tok::r_paren));
+
+    if (!Tok.MatchingParen || !Tok.Previous)
       return false;
+
+    // C-style casts are only used in C++, C# and Java.
+    if (!IsCpp && !Style.isCSharp() && Style.Language != FormatStyle::LK_Java)
+      return false;
+
+    const auto *LParen = Tok.MatchingParen;
+    const auto *BeforeRParen = Tok.Previous;
+    const auto *AfterRParen = Tok.Next;
 
     // Empty parens aren't casts and there are no casts at the end of the line.
-    if (Tok.Previous == Tok.MatchingParen || !Tok.Next || !Tok.MatchingParen)
+    if (BeforeRParen == LParen || !AfterRParen)
       return false;
 
-    if (Tok.MatchingParen->is(TT_OverloadedOperatorLParen))
+    if (LParen->is(TT_OverloadedOperatorLParen))
       return false;
 
-    FormatToken *LeftOfParens = Tok.MatchingParen->getPreviousNonComment();
+    auto *LeftOfParens = LParen->getPreviousNonComment();
     if (LeftOfParens) {
       // If there is a closing parenthesis left of the current
       // parentheses, look past it as these might be chained casts.
@@ -2728,37 +2736,38 @@ private:
       }
     }
 
-    if (Tok.Next->is(tok::question) ||
-        (Tok.Next->is(tok::ampamp) && !Tok.Previous->isTypeName(LangOpts))) {
+    if (AfterRParen->is(tok::question) ||
+        (AfterRParen->is(tok::ampamp) && !BeforeRParen->isTypeName(LangOpts))) {
       return false;
     }
 
     // `foreach((A a, B b) in someList)` should not be seen as a cast.
-    if (Tok.Next->is(Keywords.kw_in) && Style.isCSharp())
+    if (AfterRParen->is(Keywords.kw_in) && Style.isCSharp())
       return false;
 
     // Functions which end with decorations like volatile, noexcept are unlikely
     // to be casts.
-    if (Tok.Next->isOneOf(tok::kw_noexcept, tok::kw_volatile, tok::kw_const,
-                          tok::kw_requires, tok::kw_throw, tok::arrow,
-                          Keywords.kw_override, Keywords.kw_final) ||
-        isCppAttribute(IsCpp, *Tok.Next)) {
+    if (AfterRParen->isOneOf(tok::kw_noexcept, tok::kw_volatile, tok::kw_const,
+                             tok::kw_requires, tok::kw_throw, tok::arrow,
+                             Keywords.kw_override, Keywords.kw_final) ||
+        isCppAttribute(IsCpp, *AfterRParen)) {
       return false;
     }
 
     // As Java has no function types, a "(" after the ")" likely means that this
     // is a cast.
-    if (Style.Language == FormatStyle::LK_Java && Tok.Next->is(tok::l_paren))
+    if (Style.Language == FormatStyle::LK_Java && AfterRParen->is(tok::l_paren))
       return true;
 
     // If a (non-string) literal follows, this is likely a cast.
-    if (Tok.Next->isOneOf(tok::kw_sizeof, tok::kw_alignof) ||
-        (Tok.Next->Tok.isLiteral() && Tok.Next->isNot(tok::string_literal))) {
+    if (AfterRParen->isOneOf(tok::kw_sizeof, tok::kw_alignof) ||
+        (AfterRParen->Tok.isLiteral() &&
+         AfterRParen->isNot(tok::string_literal))) {
       return true;
     }
 
     // Heuristically try to determine whether the parentheses contain a type.
-    auto IsQualifiedPointerOrReference = [](FormatToken *T,
+    auto IsQualifiedPointerOrReference = [](const FormatToken *T,
                                             const LangOptions &LangOpts) {
       // This is used to handle cases such as x = (foo *const)&y;
       assert(!T->isTypeName(LangOpts) && "Should have already been checked");
@@ -2791,12 +2800,11 @@ private:
       return T && T->is(TT_PointerOrReference);
     };
     bool ParensAreType =
-        !Tok.Previous ||
-        Tok.Previous->isOneOf(TT_TemplateCloser, TT_TypeDeclarationParen) ||
-        Tok.Previous->isTypeName(LangOpts) ||
-        IsQualifiedPointerOrReference(Tok.Previous, LangOpts);
+        BeforeRParen->isOneOf(TT_TemplateCloser, TT_TypeDeclarationParen) ||
+        BeforeRParen->isTypeName(LangOpts) ||
+        IsQualifiedPointerOrReference(BeforeRParen, LangOpts);
     bool ParensCouldEndDecl =
-        Tok.Next->isOneOf(tok::equal, tok::semi, tok::l_brace, tok::greater);
+        AfterRParen->isOneOf(tok::equal, tok::semi, tok::l_brace, tok::greater);
     if (ParensAreType && !ParensCouldEndDecl)
       return true;
 
@@ -2808,49 +2816,54 @@ private:
 
     // Certain token types inside the parentheses mean that this can't be a
     // cast.
-    for (const FormatToken *Token = Tok.MatchingParen->Next; Token != &Tok;
-         Token = Token->Next) {
+    for (const auto *Token = LParen->Next; Token != &Tok; Token = Token->Next)
       if (Token->is(TT_BinaryOperator))
         return false;
-    }
 
     // If the following token is an identifier or 'this', this is a cast. All
     // cases where this can be something else are handled above.
-    if (Tok.Next->isOneOf(tok::identifier, tok::kw_this))
+    if (AfterRParen->isOneOf(tok::identifier, tok::kw_this))
       return true;
 
     // Look for a cast `( x ) (`.
-    if (Tok.Next->is(tok::l_paren) && Tok.Previous && Tok.Previous->Previous) {
-      if (Tok.Previous->is(tok::identifier) &&
-          Tok.Previous->Previous->is(tok::l_paren)) {
+    if (AfterRParen->is(tok::l_paren) && BeforeRParen->Previous) {
+      if (BeforeRParen->is(tok::identifier) &&
+          BeforeRParen->Previous->is(tok::l_paren)) {
         return true;
       }
     }
 
-    if (!Tok.Next->Next)
+    if (!AfterRParen->Next)
       return false;
+
+    if (AfterRParen->is(tok::l_brace) &&
+        AfterRParen->getBlockKind() == BK_BracedInit) {
+      return true;
+    }
 
     // If the next token after the parenthesis is a unary operator, assume
     // that this is cast, unless there are unexpected tokens inside the
     // parenthesis.
-    const bool NextIsAmpOrStar = Tok.Next->isOneOf(tok::amp, tok::star);
-    if (!(Tok.Next->isUnaryOperator() || NextIsAmpOrStar) ||
-        Tok.Next->is(tok::plus) ||
-        !Tok.Next->Next->isOneOf(tok::identifier, tok::numeric_constant)) {
+    const bool NextIsAmpOrStar = AfterRParen->isOneOf(tok::amp, tok::star);
+    if (!(AfterRParen->isUnaryOperator() || NextIsAmpOrStar) ||
+        AfterRParen->is(tok::plus) ||
+        !AfterRParen->Next->isOneOf(tok::identifier, tok::numeric_constant)) {
       return false;
     }
+
     if (NextIsAmpOrStar &&
-        (Tok.Next->Next->is(tok::numeric_constant) || Line.InPPDirective)) {
+        (AfterRParen->Next->is(tok::numeric_constant) || Line.InPPDirective)) {
       return false;
     }
-    if (Line.InPPDirective && Tok.Next->is(tok::minus))
+
+    if (Line.InPPDirective && AfterRParen->is(tok::minus))
       return false;
+
     // Search for unexpected tokens.
-    for (FormatToken *Prev = Tok.Previous; Prev != Tok.MatchingParen;
-         Prev = Prev->Previous) {
+    for (auto *Prev = BeforeRParen; Prev != LParen; Prev = Prev->Previous)
       if (!Prev->isOneOf(tok::kw_const, tok::identifier, tok::coloncolon))
         return false;
-    }
+
     return true;
   }
 
@@ -3077,6 +3090,8 @@ private:
   // same decision irrespective of the decisions for tokens leading up to it.
   // Store this information to prevent this from causing exponential runtime.
   llvm::SmallPtrSet<FormatToken *, 16> NonTemplateLess;
+
+  int TemplateDeclarationDepth;
 };
 
 static const int PrecedenceUnaryOperator = prec::PointerToMember + 1;
@@ -3524,7 +3539,8 @@ static unsigned maxNestingDepth(const AnnotatedLine &Line) {
 
 // Returns the name of a function with no return type, e.g. a constructor or
 // destructor.
-static FormatToken *getFunctionName(const AnnotatedLine &Line) {
+static FormatToken *getFunctionName(const AnnotatedLine &Line,
+                                    FormatToken *&OpeningParen) {
   for (FormatToken *Tok = Line.getFirstNonComment(), *Name = nullptr; Tok;
        Tok = Tok->getNextNonComment()) {
     // Skip C++11 attributes both before and after the function name.
@@ -3537,10 +3553,12 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line) {
 
     // Make sure the name is followed by a pair of parentheses.
     if (Name) {
-      return Tok->is(tok::l_paren) && Tok->isNot(TT_FunctionTypeLParen) &&
-                     Tok->MatchingParen
-                 ? Name
-                 : nullptr;
+      if (Tok->is(tok::l_paren) && Tok->isNot(TT_FunctionTypeLParen) &&
+          Tok->MatchingParen) {
+        OpeningParen = Tok;
+        return Name;
+      }
+      return nullptr;
     }
 
     // Skip keywords that may precede the constructor/destructor name.
@@ -3617,10 +3635,13 @@ void TokenAnnotator::annotate(AnnotatedLine &Line) {
   ExprParser.parse();
 
   if (IsCpp) {
-    auto *Tok = getFunctionName(Line);
+    FormatToken *OpeningParen = nullptr;
+    auto *Tok = getFunctionName(Line, OpeningParen);
     if (Tok && ((!Scopes.empty() && Scopes.back() == ST_Class) ||
                 Line.endsWith(TT_FunctionLBrace) || isCtorOrDtorName(Tok))) {
       Tok->setFinalizedType(TT_CtorDtorDeclName);
+      assert(OpeningParen);
+      OpeningParen->setFinalizedType(TT_FunctionDeclarationLParen);
     }
   }
 
@@ -3849,6 +3870,12 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
         Tok->setFinalizedType(TT_FunctionDeclarationName);
       LineIsFunctionDeclaration = true;
       SeenName = true;
+      if (ClosingParen) {
+        auto *OpeningParen = ClosingParen->MatchingParen;
+        assert(OpeningParen);
+        if (OpeningParen->is(TT_Unknown))
+          OpeningParen->setType(TT_FunctionDeclarationLParen);
+      }
       break;
     }
   }
@@ -4346,6 +4373,15 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
        Right.is(tok::r_brace) && Right.isNot(BK_Block))) {
     return Style.SpacesInParensOptions.InEmptyParentheses;
   }
+  if (Style.SpacesInParens == FormatStyle::SIPO_Custom &&
+      Style.SpacesInParensOptions.ExceptDoubleParentheses &&
+      Left.is(tok::r_paren) && Right.is(tok::r_paren)) {
+    auto *InnerLParen = Left.MatchingParen;
+    if (InnerLParen && InnerLParen->Previous == Right.MatchingParen) {
+      InnerLParen->SpacesRequiredBefore = 0;
+      return false;
+    }
+  }
   if (Style.SpacesInParensOptions.InConditionalStatements) {
     const FormatToken *LeftParen = nullptr;
     if (Left.is(tok::l_paren))
@@ -4677,14 +4713,13 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     if (Right.is(TT_OverloadedOperatorLParen))
       return spaceRequiredBeforeParens(Right);
     // Function declaration or definition
-    if (Line.MightBeFunctionDecl && (Left.is(TT_FunctionDeclarationName))) {
-      if (Line.mightBeFunctionDefinition()) {
-        return Style.SpaceBeforeParensOptions.AfterFunctionDefinitionName ||
-               spaceRequiredBeforeParens(Right);
-      } else {
-        return Style.SpaceBeforeParensOptions.AfterFunctionDeclarationName ||
-               spaceRequiredBeforeParens(Right);
-      }
+    if (Line.MightBeFunctionDecl && Right.is(TT_FunctionDeclarationLParen)) {
+      if (spaceRequiredBeforeParens(Right))
+        return true;
+      const auto &Options = Style.SpaceBeforeParensOptions;
+      return Line.mightBeFunctionDefinition()
+                 ? Options.AfterFunctionDefinitionName
+                 : Options.AfterFunctionDeclarationName;
     }
     // Lambda
     if (Line.Type != LT_PreprocessorDirective && Left.is(tok::r_square) &&

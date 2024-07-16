@@ -641,7 +641,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
       LineOS = &ElidedLinesOS;
     else {
       LineOS = &OS;
-      DumpEllipsisOrElidedLines(OS, ElidedLinesOS.str(), LabelWidth);
+      DumpEllipsisOrElidedLines(OS, ElidedLines, LabelWidth);
     }
 
     // Print right-aligned line number.
@@ -723,7 +723,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
       ++AnnotationItr;
     }
   }
-  DumpEllipsisOrElidedLines(OS, ElidedLinesOS.str(), LabelWidth);
+  DumpEllipsisOrElidedLines(OS, ElidedLines, LabelWidth);
 
   OS << ">>>>>>\n";
 }

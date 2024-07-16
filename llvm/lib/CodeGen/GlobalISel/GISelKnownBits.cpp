@@ -13,11 +13,13 @@
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -32,7 +34,7 @@ INITIALIZE_PASS(GISelKnownBitsAnalysis, DEBUG_TYPE,
 
 GISelKnownBits::GISelKnownBits(MachineFunction &MF, unsigned MaxDepth)
     : MF(MF), MRI(MF.getRegInfo()), TL(*MF.getSubtarget().getTargetLowering()),
-      DL(MF.getFunction().getParent()->getDataLayout()), MaxDepth(MaxDepth) {}
+      DL(MF.getFunction().getDataLayout()), MaxDepth(MaxDepth) {}
 
 Align GISelKnownBits::computeKnownAlignment(Register R, unsigned Depth) {
   const MachineInstr *MI = MRI.getVRegDef(R);
@@ -624,6 +626,33 @@ unsigned GISelKnownBits::computeNumSignBitsMin(Register Src0, Register Src1,
   return std::min(computeNumSignBits(Src0, DemandedElts, Depth), Src1SignBits);
 }
 
+/// Compute the known number of sign bits with attached range metadata in the
+/// memory operand. If this is an extending load, accounts for the behavior of
+/// the high bits.
+static unsigned computeNumSignBitsFromRangeMetadata(const GAnyLoad *Ld,
+                                                    unsigned TyBits) {
+  const MDNode *Ranges = Ld->getRanges();
+  if (!Ranges)
+    return 1;
+
+  ConstantRange CR = getConstantRangeFromMetadata(*Ranges);
+  if (TyBits > CR.getBitWidth()) {
+    switch (Ld->getOpcode()) {
+    case TargetOpcode::G_SEXTLOAD:
+      CR = CR.signExtend(TyBits);
+      break;
+    case TargetOpcode::G_ZEXTLOAD:
+      CR = CR.zeroExtend(TyBits);
+      break;
+    default:
+      break;
+    }
+  }
+
+  return std::min(CR.getSignedMin().getNumSignBits(),
+                  CR.getSignedMax().getNumSignBits());
+}
+
 unsigned GISelKnownBits::computeNumSignBits(Register R,
                                             const APInt &DemandedElts,
                                             unsigned Depth) {
@@ -675,19 +704,38 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
     unsigned InRegBits = TyBits - SrcBits + 1;
     return std::max(computeNumSignBits(Src, DemandedElts, Depth + 1), InRegBits);
   }
+  case TargetOpcode::G_LOAD: {
+    GLoad *Ld = cast<GLoad>(&MI);
+    if (DemandedElts != 1 || !getDataLayout().isLittleEndian())
+      break;
+
+    return computeNumSignBitsFromRangeMetadata(Ld, TyBits);
+  }
   case TargetOpcode::G_SEXTLOAD: {
+    GSExtLoad *Ld = cast<GSExtLoad>(&MI);
+
     // FIXME: We need an in-memory type representation.
     if (DstTy.isVector())
       return 1;
+
+    unsigned NumBits = computeNumSignBitsFromRangeMetadata(Ld, TyBits);
+    if (NumBits != 1)
+      return NumBits;
 
     // e.g. i16->i32 = '17' bits known.
     const MachineMemOperand *MMO = *MI.memoperands_begin();
     return TyBits - MMO->getSizeInBits().getValue() + 1;
   }
   case TargetOpcode::G_ZEXTLOAD: {
+    GZExtLoad *Ld = cast<GZExtLoad>(&MI);
+
     // FIXME: We need an in-memory type representation.
     if (DstTy.isVector())
       return 1;
+
+    unsigned NumBits = computeNumSignBitsFromRangeMetadata(Ld, TyBits);
+    if (NumBits != 1)
+      return NumBits;
 
     // e.g. i16->i32 = '16' bits known.
     const MachineMemOperand *MMO = *MI.memoperands_begin();
@@ -811,5 +859,5 @@ GISelKnownBits &GISelKnownBitsAnalysis::get(MachineFunction &MF) {
         MF.getTarget().getOptLevel() == CodeGenOptLevel::None ? 2 : 6;
     Info = std::make_unique<GISelKnownBits>(MF, MaxDepth);
   }
-  return *Info.get();
+  return *Info;
 }

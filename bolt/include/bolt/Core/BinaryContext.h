@@ -698,10 +698,6 @@ public:
 
   /// Binary-wide aggregated stats.
   struct BinaryStats {
-    /// Stats for macro-fusion.
-    uint64_t MissedMacroFusionPairs{0};
-    uint64_t MissedMacroFusionExecCount{0};
-
     /// Stats for stale profile matching:
     ///   the total number of basic blocks in the profile
     uint32_t NumStaleBlocks{0};
