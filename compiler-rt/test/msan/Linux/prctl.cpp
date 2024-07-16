@@ -1,5 +1,4 @@
 // RUN: %clangxx_msan -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
-// REQUIRES: linux
 
 #include <linux/prctl.h>
 #include <sys/prctl.h>

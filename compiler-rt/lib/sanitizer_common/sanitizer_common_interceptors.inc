@@ -1265,16 +1265,9 @@ INTERCEPTOR(int, prctl, int option, unsigned long arg2, unsigned long arg3,
     internal_strncpy(buff, (char *)arg2, 15);
     buff[15] = 0;
     COMMON_INTERCEPTOR_SET_THREAD_NAME(ctx, buff);
-  } else if (res != 1 && option == PR_GET_NAME) {
-    unsigned long null_index = 0;
+  } else if (res == 0 && option == PR_GET_NAME) {
     char *name = (char *)arg2;
-    while (null_index < 16 && name[null_index]) {
-      ++null_index;
-    }
-    if (null_index > 15) {
-      null_index = 15;
-    }
-    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (u64 *)arg2, null_index + 1);
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, name, internal_strlen(name) + 1);
   } else if (res != -1 && option == PR_SCHED_CORE &&
              arg2 == PR_SCHED_CORE_GET) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, (u64*)(arg5), sizeof(u64));
