@@ -92,7 +92,7 @@
   } while (0)
 
 typedef ompt_set_result_t (*libomptarget_ompt_set_trace_ompt_t)(
-    ompt_device_t *Device, unsigned int Enable, unsigned int EventTy);
+    int Device, unsigned int Enable, unsigned int EventTy);
 typedef int (*libomptarget_ompt_start_trace_t)(int,
                                                ompt_callback_buffer_request_t,
                                                ompt_callback_buffer_complete_t);

@@ -1913,7 +1913,7 @@ private:
            "Invalid RegionInterface pointer in OMPT profiling");
     assert(OmptEventInfo.TraceRecord && "Invalid TraceRecord");
     std::invoke(RIFunc, OmptEventInfo.RegionInterface,
-                OmptEventInfo.TraceRecord, 0, OmptEventInfo.NumTeams, StartTime,
+                OmptEventInfo.TraceRecord, OmptEventInfo.NumTeams, StartTime,
                 EndTime);
 
     return Plugin::success();

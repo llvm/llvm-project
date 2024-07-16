@@ -48,8 +48,11 @@ FOREACH_OMPT_DEVICE_TRACING_FN_IMPLEMENTAIONS(declareOmptTracingFnMutex)
 
 extern std::mutex DeviceIdWritingMutex;
 
-/// Activate / deactivate tracing
-void setTracingState(bool Enabled);
+/// Activate tracing on the given device
+void enableDeviceTracing(int DeviceId);
+
+/// Deactivate tracing on the given device
+void disableDeviceTracing(int DeviceId);
 
 /// Set 'start' and 'stop' in trace records
 void setOmptTimestamp(uint64_t StartTime, uint64_t EndTime);
@@ -69,6 +72,9 @@ void setDeviceId(ompt_device_t *Device, int32_t DeviceId);
 /// Rempve the given device pointer from the current mapping
 void removeDeviceId(ompt_device_t *Device);
 
+/// Check whether the provided device is currently traced.
+bool isTracedDevice(int32_t DeviceId);
+
 /// Provide name based lookup for the device tracing functions
 extern ompt_interface_fn_t
 lookupDeviceTracingFn(const char *InterfaceFunctionName);
@@ -82,10 +88,11 @@ extern double HostToDeviceOffset;
 /// Mapping of device pointers to their corresponding RTL device ID
 extern std::map<ompt_device_t *, int32_t> Devices;
 
-// Keep track of enabled tracing event types
-extern std::atomic<uint64_t> TracingTypesEnabled;
+/// Mapping of RTL device IDs to their currently enabled tracing event types.
+/// Note: Event type '0' (bit position) indicates if this device is traced.
+extern std::map<int32_t, uint64_t> TracedDevices;
 
-/// OMPT tracing status; (Re-)Set via 'setTracingState'
+/// OMPT global tracing status. Indicates if at least one device is traced.
 extern bool TracingActive;
 
 /// Parent library pointer

@@ -1669,15 +1669,17 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
     // No need to guard this with OMPT_IF_BUILT
     InterfaceRAII TargetSubmitRAII(
         RegionInterface.getCallbacks<ompt_callback_target_submit>(), NumTeams);
-    // ToDo: mhalk Do we need a check for TracingActive here?
 
     // Calls "begin" for the OMPT trace record and let the plugin
     // enqueue the stop operation for after the kernel is done. The stop
     // operation completes the trace record entry with the information from
     // within the plugin, eg., kernel timing info.
+    // Only if 'TracedDeviceId' is actually traced, AsyncInfo->OmptEventInfo is
+    // set and a trace record generated. Otherwise: No OMPT device tracing.
     TracerInterfaceRAII TargetTraceRAII(
         RegionInterface.getTraceGenerators<ompt_callback_target_submit>(),
-        AsyncInfo, DeviceId, NumTeams);
+        AsyncInfo, /*TracedDeviceId=*/DeviceId,
+        /*EventType=*/ompt_callback_target_submit, DeviceId, NumTeams);
 #endif
 
     Ret = Device.launchKernel(TgtEntryPtr, TgtArgs.data(), TgtOffsets.data(),

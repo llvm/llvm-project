@@ -85,6 +85,7 @@ Registerer::Registerer(TestCase *TC, const std::string SuiteName) {
 }
 
 int Runner::run() {
+  int ErrorCount = 0;
   for (auto &TS : TestSuites) {
     std::cout << "\n======\nExecuting for " << TS.Name << std::endl;
     TS.setup();
@@ -93,12 +94,13 @@ int Runner::run() {
       if (Error Err = TC->exec()) {
         reportError(Err);
         abortOrKeepGoing();
+        ++ErrorCount;
       }
     }
     TS.teardown();
   }
   printSummary();
-  return 0;
+  return ErrorCount;
 }
 
 void Runner::reportError(const Error &Err) {}

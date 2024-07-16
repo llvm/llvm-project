@@ -13,6 +13,8 @@ int flush_trace(ompt_device_t *Device);
 // Function which calls flush_trace(ompt_device_t *) on all traced devices.
 int flush_traced_devices();
 int stop_trace(ompt_device_t *Device);
+// Function which calls stop_trace(ompt_device_t *) on all traced devices.
+int stop_trace_devices();
 void libomptest_global_eventreporter_set_active(bool State);
 #ifdef __cplusplus
 }

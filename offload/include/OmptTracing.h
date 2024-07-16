@@ -76,56 +76,66 @@ void setOmptHostToDeviceRate(double Slope, double Offset);
 /// Set / store the number of granted teams
 void setOmptGrantedNumTeams(uint64_t NumTeams);
 
-/// Activate / deactivate tracing
-void setTracingState(bool Enabled);
+/// Check if (1) tracing is globally active (2) the given device is actively
+/// traced and (3) the given event type is traced on the device
+bool isTracingEnabled(int DeviceId, unsigned int EventTy);
 
-/// Check if the given tracing type is monitored
-bool isTracingTypeEnabled(unsigned int EventTy);
+/// Check if the given device is actively traced
+bool isTracedDevice(int DeviceId);
 
-/// Set whether the given tracing type should be monitored (or not)
-void setTracingTypeEnabled(unsigned int EventTy, bool Enable);
+/// Check if the given device is monitoring the provided tracing type
+bool isTracingTypeEnabled(int DeviceId, unsigned int EventTy);
+
+/// Check if the given device is monitoring the provided tracing type 'group'
+/// Where group means we will check for both: EMI and non-EMI event types
+bool isTracingTypeGroupEnabled(int DeviceId, unsigned int EventTy);
+
+/// Set whether the given tracing type should be monitored (or not) on the
+/// device
+void setTracingTypeEnabled(uint64_t &TracedEventTy, bool Enable,
+                           unsigned int EventTy);
 
 /// Set / reset the given tracing types (EventTy = 0 corresponds to 'all')
-ompt_set_result_t setTraceEventTy(ompt_device_t *Device, unsigned int Enable,
+ompt_set_result_t setTraceEventTy(int DeviceId, unsigned int Enable,
                                   unsigned int EventTy);
 
 /// Return thread id
 uint64_t getThreadId();
 
-// Mutexes to serialize invocation of device-independent entry points
+/// Mutexes to serialize invocation of device registration and checks
+extern std::mutex DeviceAccessMutex;
+
+/// Mutexes to serialize invocation of device-independent entry points
 extern std::mutex TraceAccessMutex;
 extern std::mutex TraceControlMutex;
 
-// Ensure serialization of calls to std::hash
+/// Ensure serialization of calls to std::hash
 extern std::mutex TraceHashThreadMutex;
 
-// Protect map from device-id to the corresponding buffer-request and
-// buffer-completion callback functions.
+/// Protect map from device-id to the corresponding buffer-request and
+/// buffer-completion callback functions.
 extern std::mutex BufferManagementFnMutex;
 
-// Map from device-id to the corresponding buffer-request and buffer-completion
-// callback functions.
+/// Map from device-id to the corresponding buffer-request and buffer-completion
+/// callback functions.
 extern std::unordered_map<int, std::pair<ompt_callback_buffer_request_t,
                                          ompt_callback_buffer_complete_t>>
     BufferManagementFns;
 
-// Thread local variables used by the plugin to communicate OMPT information
-// that are then used to populate trace records. This method assumes a
-// synchronous implementation, otherwise it won't work.
+/// Thread local variables used by the plugin to communicate OMPT information
+/// that are then used to populate trace records. This method assumes a
+/// synchronous implementation, otherwise it won't work.
 extern thread_local uint32_t TraceRecordNumGrantedTeams;
 extern thread_local uint64_t TraceRecordStartTime;
 extern thread_local uint64_t TraceRecordStopTime;
 
-// Thread local thread-id.
+/// Thread local thread-id.
 extern thread_local uint64_t ThreadId;
 
-// Manage all tracing records in one place
+/// Manage all tracing records in one place.
 extern OmptTracingBufferMgr TraceRecordManager;
 
-// Keep track of enabled tracing event types
-extern std::atomic<uint64_t> TracingTypesEnabled;
-
-/// OMPT tracing status; (Re-)Set via 'setTracingState'
+/// OMPT global tracing status. Indicates if at least one device is traced.
 extern bool TracingActive;
 
 } // namespace ompt

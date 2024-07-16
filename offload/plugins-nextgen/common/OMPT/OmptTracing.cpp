@@ -78,7 +78,7 @@ int llvm::omp::target::ompt::getDeviceId(ompt_device_t *Device) {
   std::unique_lock<std::mutex> Lock(DeviceIdWritingMutex);
   auto DeviceIterator = Devices.find(Device);
   if (Device == nullptr || DeviceIterator == Devices.end()) {
-    REPORT("Failed to get ID for device=%p\n", Device);
+    REPORT("Failed to get ID for Device=%p\n", Device);
     return -1;
   }
   return DeviceIterator->second;
@@ -86,22 +86,34 @@ int llvm::omp::target::ompt::getDeviceId(ompt_device_t *Device) {
 
 void llvm::omp::target::ompt::setDeviceId(ompt_device_t *Device,
                                           int32_t DeviceId) {
-  assert(Device && "Mapping device id to nullptr is not allowed");
-  if (Device == nullptr) {
-    REPORT("Failed to set ID for nullptr device\n");
+  assert(Device && "Mapping device ID to nullptr is not allowed");
+  if (Device == nullptr || DeviceId < 0) {
+    REPORT("Failed to set ID=%d for Device=%p\n", DeviceId, Device);
     return;
   }
   std::unique_lock<std::mutex> Lock(DeviceIdWritingMutex);
+  auto DeviceIterator = Devices.find(Device);
+  if (DeviceIterator != Devices.end()) {
+    auto CurrentDeviceId = DeviceIterator->second;
+    if (DeviceId == CurrentDeviceId)
+      REPORT("Tried to duplicate OMPT Device=%p (ID=%d)\n", Device, DeviceId);
+    else
+      REPORT("Tried to overwrite OMPT Device=%p (ID=%d with new ID=%d)\n",
+             Device, CurrentDeviceId, DeviceId);
+    return;
+  }
   Devices.emplace(Device, DeviceId);
 }
 
 void llvm::omp::target::ompt::removeDeviceId(ompt_device_t *Device) {
-  if (Device == nullptr) {
-    REPORT("Failed to remove ID for nullptr device\n");
+  int DeviceId = getDeviceId(Device);
+  if (DeviceId < 0) {
+    REPORT("Failed to remove Device=%p (ID=%d)\n", Device, DeviceId);
     return;
   }
   std::unique_lock<std::mutex> Lock(DeviceIdWritingMutex);
   Devices.erase(Device);
+  TracedDevices.erase(DeviceId);
 }
 
 OMPT_API_ROUTINE ompt_set_result_t ompt_set_trace_ompt(ompt_device_t *Device,
@@ -109,12 +121,18 @@ OMPT_API_ROUTINE ompt_set_result_t ompt_set_trace_ompt(ompt_device_t *Device,
                                                        unsigned int EventTy) {
   DP("Executing ompt_set_trace_ompt\n");
 
-  // TODO handle device
+  int DeviceId = getDeviceId(Device);
+  if (DeviceId < 0) {
+    REPORT("Failed to set trace events for Device=%p (Unknown device)\n",
+           Device);
+    return ompt_set_never;
+  }
+
   std::unique_lock<std::mutex> Lock(ompt_set_trace_ompt_mutex);
   ensureFuncPtrLoaded<libomptarget_ompt_set_trace_ompt_t>(
       "libomptarget_ompt_set_trace_ompt", &ompt_set_trace_ompt_fn);
   assert(ompt_set_trace_ompt_fn && "libomptarget_ompt_set_trace_ompt loaded");
-  return ompt_set_trace_ompt_fn(Device, Enable, EventTy);
+  return ompt_set_trace_ompt_fn(DeviceId, Enable, EventTy);
 }
 
 OMPT_API_ROUTINE int
@@ -123,12 +141,18 @@ ompt_start_trace(ompt_device_t *Device, ompt_callback_buffer_request_t Request,
   DP("Executing ompt_start_trace\n");
 
   int DeviceId = getDeviceId(Device);
+  if (DeviceId < 0) {
+    REPORT("Failed to start trace for Device=%p (Unknown device)\n", Device);
+    // Indicate failure
+    return 0;
+  }
+
   {
     // Protect the function pointer
     std::unique_lock<std::mutex> Lock(ompt_start_trace_mutex);
 
     if (Request && Complete) {
-      llvm::omp::target::ompt::setTracingState(/*Enabled=*/true);
+      llvm::omp::target::ompt::enableDeviceTracing(DeviceId);
       // Enable asynchronous memory copy profiling
       setOmptAsyncCopyProfile(/*Enable=*/true);
       // Enable queue dispatch profiling
@@ -150,7 +174,6 @@ ompt_start_trace(ompt_device_t *Device, ompt_callback_buffer_request_t Request,
 OMPT_API_ROUTINE int ompt_flush_trace(ompt_device_t *Device) {
   DP("Executing ompt_flush_trace\n");
 
-  // TODO handle device
   std::unique_lock<std::mutex> Lock(ompt_flush_trace_mutex);
   ensureFuncPtrLoaded<libomptarget_ompt_flush_trace_t>(
       "libomptarget_ompt_flush_trace", &ompt_flush_trace_fn);
@@ -161,15 +184,20 @@ OMPT_API_ROUTINE int ompt_flush_trace(ompt_device_t *Device) {
 OMPT_API_ROUTINE int ompt_stop_trace(ompt_device_t *Device) {
   DP("Executing ompt_stop_trace\n");
 
-  // TODO handle device
+  int DeviceId = getDeviceId(Device);
+  if (DeviceId < 0) {
+    REPORT("Failed to stop trace for Device=%p (Unknown device)\n", Device);
+    // Indicate failure
+    return 0;
+  }
+
   {
     // Protect the function pointer
     std::unique_lock<std::mutex> Lock(ompt_stop_trace_mutex);
-    llvm::omp::target::ompt::setTracingState(/*Enabled=*/false);
+    llvm::omp::target::ompt::disableDeviceTracing(DeviceId);
     // Disable asynchronous memory copy profiling
     setOmptAsyncCopyProfile(/*Enable=*/false);
     // Disable queue dispatch profiling
-    int DeviceId = getDeviceId(Device);
     if (DeviceId >= 0)
       setGlobalOmptKernelProfile(Device, /*Enable=*/0);
     else
@@ -179,7 +207,7 @@ OMPT_API_ROUTINE int ompt_stop_trace(ompt_device_t *Device) {
         "libomptarget_ompt_stop_trace", &ompt_stop_trace_fn);
     assert(ompt_stop_trace_fn && "libomptarget_ompt_stop_trace loaded");
   }
-  return ompt_stop_trace_fn(getDeviceId(Device));
+  return ompt_stop_trace_fn(DeviceId);
 }
 
 OMPT_API_ROUTINE ompt_record_ompt_t *

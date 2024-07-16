@@ -15,13 +15,9 @@
 
 // Only provide functionality if target OMPT support is enabled
 #ifdef OMPT_SUPPORT
-#include <functional>
-#include <tuple>
-
-#include "Shared/Debug.h"
-
 #include "Callback.h"
 #include "Shared/APITypes.h"
+#include "Shared/Debug.h"
 #include "omp-tools.h"
 
 #include "llvm/Support/ErrorHandling.h"
@@ -52,7 +48,11 @@ extern ompt_get_task_data_t ompt_get_task_data_fn;
 extern ompt_get_target_task_data_t ompt_get_target_task_data_fn;
 extern ompt_set_frame_enter_t ompt_set_frame_enter_fn;
 
+/// OMPT global tracing status. Indicates if at least one device is traced.
 extern bool TracingActive;
+
+/// Check if this device traces the given event type
+extern bool isTracingEnabled(int DeviceId, unsigned int EventTy);
 
 /// Used to maintain execution state for this thread
 class Interface {
@@ -191,7 +191,6 @@ public:
                                              unsigned int NumTeams = 1);
 
   ompt_record_ompt_t *stopTargetSubmitTraceAsync(ompt_record_ompt_t *DataPtr,
-                                                 int64_t DeviceId,
                                                  unsigned int NumTeams,
                                                  uint64_t NanosStart,
                                                  uint64_t NanosStop);
@@ -485,17 +484,17 @@ struct OmptEventInfoTy {
 /// extends the original with async capabilities. That is: It takes an
 /// additional AsyncInfo reference as argument to populate the relevant fields.
 /// The AsyncInfoTy propagates the info into the RTL / plugins.
+/// TracedDeviceId represents the trace record's device affinity. EventType is
+/// the callback type that needs to be enabled via ompt_set_trace_ompt.
 template <typename FunctionPairTy, typename AsyncInfoTy, typename... ArgsTy>
 class TracerInterfaceRAII {
 public:
   TracerInterfaceRAII(FunctionPairTy Callbacks, AsyncInfoTy &AsyncInfo,
+                      int TracedDeviceId, ompt_callbacks_t EventType,
                       ArgsTy... Args)
       : Arguments(Args...), beginFunction(std::get<0>(Callbacks)) {
     __tgt_async_info *AI = AsyncInfo;
-    if (!llvm::omp::target::ompt::TracingActive) {
-      assert(AI->OmptEventInfo == nullptr &&
-             "The OmptEventInfo was not nullptr");
-    } else {
+    if (isTracingEnabled(TracedDeviceId, EventType)) {
       auto Record = begin();
       // Gets freed in interface.cpp, functions
       // targetKernel and targetData once launching target operations returns.
@@ -505,6 +504,9 @@ public:
       AI->OmptEventInfo->NumTeams = 0;
       AI->OmptEventInfo->RegionInterface = &RegionInterface;
       AI->OmptEventInfo->RIFunction = std::get<1>(Callbacks);
+    } else {
+      // Actively prevent further tracing of this event
+      AI->OmptEventInfo = nullptr;
     }
   }
 

@@ -135,7 +135,6 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
 
       InterfaceRAII TargetDataRAII(CallbackFunctions, DeviceId,
                                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
-      // ToDo: mhalk Do we need a check for TracingActive here?
       InterfaceRAII TargetDataTraceRAII(TraceGenerators, DeviceId,
                                         /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
@@ -340,7 +339,6 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   OMPT_IF_BUILT(InterfaceRAII TargetRAII(
                     RegionInterface.getCallbacks<ompt_target>(), DeviceId,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
-                // ToDo: mhalk Do we need a check for TracingActive here?
                 InterfaceRAII TargetTraceRAII(
                     RegionInterface.getTraceGenerators<ompt_target>(), DeviceId,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
@@ -449,7 +447,6 @@ EXTERN int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId,
   OMPT_IF_BUILT(InterfaceRAII TargetRAII(
                     RegionInterface.getCallbacks<ompt_target>(), DeviceId,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
-                // ToDo: mhalk Do we need a check for TracingActive here?
                 InterfaceRAII TargetTraceRAII(
                     RegionInterface.getTraceGenerators<ompt_target>(), DeviceId,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)

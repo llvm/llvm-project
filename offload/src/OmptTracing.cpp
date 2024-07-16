@@ -34,15 +34,11 @@
 #undef DEBUG_PREFIX
 #define DEBUG_PREFIX "OMPT"
 
-#define isTracingTypeDisabled(TracingType)                                     \
-  (!llvm::omp::target::ompt::TracingActive ||                                  \
-   (!llvm::omp::target::ompt::isTracingTypeEnabled(TracingType) &&             \
-    !llvm::omp::target::ompt::isTracingTypeEnabled(TracingType##_emi)))
-
 using namespace llvm::omp::target::ompt;
 
 OmptTracingBufferMgr llvm::omp::target::ompt::TraceRecordManager;
 
+std::mutex llvm::omp::target::ompt::DeviceAccessMutex;
 std::mutex llvm::omp::target::ompt::TraceAccessMutex;
 std::mutex llvm::omp::target::ompt::TraceControlMutex;
 std::mutex llvm::omp::target::ompt::TraceHashThreadMutex;
@@ -58,7 +54,7 @@ thread_local uint64_t llvm::omp::target::ompt::TraceRecordStopTime = 0;
 thread_local uint64_t llvm::omp::target::ompt::ThreadId =
     std::numeric_limits<uint64_t>::max();
 
-std::atomic<uint64_t> llvm::omp::target::ompt::TracingTypesEnabled{0};
+std::map<int32_t, uint64_t> llvm::omp::target::ompt::TracedDevices;
 
 bool llvm::omp::target::ompt::TracingActive = false;
 
@@ -128,54 +124,159 @@ void llvm::omp::target::ompt::ompt_callback_buffer_complete(
     Fn(DeviceId, Buffer, Bytes, BeginCursor, BufferOwned);
 }
 
-void llvm::omp::target::ompt::setTracingState(bool State) {
-  TracingActive = State;
+inline void setDeviceTracing(uint64_t &TracingTypes) {
+  // Set bit 0 to indicate generally enabled device tracing.
+  TracingTypes |= 1UL;
 }
 
-bool llvm::omp::target::ompt::isTracingTypeEnabled(unsigned int EventTy) {
-  // Make sure we do not shift more than std::numeric_limits<uint64_t>::digits
-  assert(EventTy < 64);
-  if (EventTy < 64)
-    return (TracingTypesEnabled & (1UL << EventTy)) != 0;
+inline void resetDeviceTracing(uint64_t &TracingTypes) {
+  // Reset bit 0 to indicate generally disabled device tracing.
+  TracingTypes &= ~(1UL);
+}
+
+inline bool checkDeviceTracingState(const uint64_t &TracingTypes) {
+  // Return state of bit 0 to indicate if device is actively traced.
+  return TracingTypes & 1UL;
+}
+
+void llvm::omp::target::ompt::enableDeviceTracing(int DeviceId) {
+  std::unique_lock<std::mutex> Lock(DeviceAccessMutex);
+  auto Device = TracedDevices.find(DeviceId);
+  if (Device == TracedDevices.end()) {
+    uint64_t TracingTypes{0};
+    setDeviceTracing(TracingTypes);
+    TracedDevices.emplace(DeviceId, TracingTypes);
+  } else
+    setDeviceTracing(Device->second);
+  // In any case: at least one device is traced
+  TracingActive = true;
+}
+
+void llvm::omp::target::ompt::disableDeviceTracing(int DeviceId) {
+  std::unique_lock<std::mutex> Lock(DeviceAccessMutex);
+  auto Device = TracedDevices.find(DeviceId);
+  if (Device == TracedDevices.end()) {
+    uint64_t TracingTypes{0};
+    resetDeviceTracing(TracingTypes);
+    TracedDevices.emplace(DeviceId, TracingTypes);
+  } else
+    resetDeviceTracing(Device->second);
+
+  // Check for actively traced devices
+  for (auto &Dev : TracedDevices)
+    if (checkDeviceTracingState(Dev.second))
+      return;
+
+  // If no device is currently traced: set global tracing flag to false
+  TracingActive = false;
+}
+
+bool llvm::omp::target::ompt::isTracingEnabled(int DeviceId,
+                                               unsigned int EventTy) {
+  return TracingActive && isTracedDevice(DeviceId) &&
+         isTracingTypeGroupEnabled(DeviceId, EventTy);
+}
+
+bool llvm::omp::target::ompt::isTracedDevice(int DeviceId) {
+  std::unique_lock<std::mutex> Lock(DeviceAccessMutex);
+  auto Device = TracedDevices.find(DeviceId);
+  if (Device != TracedDevices.end())
+    return checkDeviceTracingState(Device->second);
+
   return false;
 }
 
-void llvm::omp::target::ompt::setTracingTypeEnabled(unsigned int EventTy,
-                                                    bool Enable) {
+bool llvm::omp::target::ompt::isTracingTypeEnabled(int DeviceId,
+                                                   unsigned int EventTy) {
+  std::unique_lock<std::mutex> Lock(DeviceAccessMutex);
   // Make sure we do not shift more than std::numeric_limits<uint64_t>::digits
-  assert(EventTy < 64);
+  assert(EventTy < 64 && "Shift limit exceeded: EventTy must be less than 64");
+  auto Device = TracedDevices.find(DeviceId);
+  if (Device != TracedDevices.end() && EventTy < 64)
+    return (Device->second & (1UL << EventTy));
+  return false;
+}
+
+bool llvm::omp::target::ompt::isTracingTypeGroupEnabled(int DeviceId,
+                                                        unsigned int EventTy) {
+  std::unique_lock<std::mutex> Lock(DeviceAccessMutex);
+  // Make sure we do not shift more than std::numeric_limits<uint64_t>::digits
+  assert(EventTy < 64 && "Shift limit exceeded: EventTy must be less than 64");
+  auto Device = TracedDevices.find(DeviceId);
+  if (Device != TracedDevices.end() && EventTy < 64) {
+    auto TracedEvents = Device->second;
+    switch (EventTy) {
+    case ompt_callbacks_t::ompt_callback_target:
+    case ompt_callbacks_t::ompt_callback_target_emi:
+      return ((TracedEvents & (1UL << ompt_callback_target))) ||
+             ((TracedEvents & (1UL << ompt_callback_target_emi)));
+    case ompt_callbacks_t::ompt_callback_target_data_op:
+    case ompt_callbacks_t::ompt_callback_target_data_op_emi:
+      return ((TracedEvents & (1UL << ompt_callback_target_data_op))) ||
+             ((TracedEvents & (1UL << ompt_callback_target_data_op_emi)));
+    case ompt_callbacks_t::ompt_callback_target_submit:
+    case ompt_callbacks_t::ompt_callback_target_submit_emi:
+      return ((TracedEvents & (1UL << ompt_callback_target_submit))) ||
+             ((TracedEvents & (1UL << ompt_callback_target_submit_emi)));
+    // Special case: EventTy == 0 -> Check all EventTy
+    case 0:
+      return ((TracedEvents & (1UL << ompt_callback_target))) ||
+             ((TracedEvents & (1UL << ompt_callback_target_emi))) ||
+             ((TracedEvents & (1UL << ompt_callback_target_data_op))) ||
+             ((TracedEvents & (1UL << ompt_callback_target_data_op_emi))) ||
+             ((TracedEvents & (1UL << ompt_callback_target_submit))) ||
+             ((TracedEvents & (1UL << ompt_callback_target_submit_emi)));
+    }
+  }
+  return false;
+}
+
+void llvm::omp::target::ompt::setTracingTypeEnabled(uint64_t &TracedEventTy,
+                                                    bool Enable,
+                                                    unsigned int EventTy) {
+  // Make sure we do not shift more than std::numeric_limits<uint64_t>::digits
+  assert(EventTy < 64 && "Shift limit exceeded: EventTy must be less than 64");
   if (EventTy < 64) {
     if (Enable)
-      TracingTypesEnabled |= (1UL << EventTy);
+      TracedEventTy |= (1UL << EventTy);
     else
-      TracingTypesEnabled &= ~(1UL << EventTy);
+      TracedEventTy &= ~(1UL << EventTy);
   }
 }
 
-ompt_set_result_t llvm::omp::target::ompt::setTraceEventTy(
-    ompt_device_t *Device, unsigned int Enable, unsigned int EventTy) {
-  // TODO handle device
+ompt_set_result_t
+llvm::omp::target::ompt::setTraceEventTy(int DeviceId, unsigned int Enable,
+                                         unsigned int EventTy) {
+  if (DeviceId < 0) {
+    REPORT("Failed to set trace event type for DeviceId=%d\n", DeviceId);
+    return ompt_set_never;
+  }
 
-  DP("Executing setTraceEventTy: Device=%p Enable=%d EventTy=%d\n", Device,
+  DP("Executing setTraceEventTy: DeviceId=%d Enable=%d EventTy=%d\n", DeviceId,
      Enable, EventTy);
 
-  bool isEventTyEnabled = Enable > 0;
+  std::unique_lock<std::mutex> Lock(DeviceAccessMutex);
+  if (TracedDevices.find(DeviceId) == TracedDevices.end())
+    TracedDevices.emplace(DeviceId, 0UL);
+
+  auto &TracedEventTy = TracedDevices[DeviceId];
+  bool Enabled = Enable > 0;
   if (EventTy == 0) {
     // Set / reset all supported types
-    setTracingTypeEnabled(ompt_callbacks_t::ompt_callback_target,
-                          isEventTyEnabled);
-    setTracingTypeEnabled(ompt_callbacks_t::ompt_callback_target_data_op,
-                          isEventTyEnabled);
-    setTracingTypeEnabled(ompt_callbacks_t::ompt_callback_target_submit,
-                          isEventTyEnabled);
-    setTracingTypeEnabled(ompt_callbacks_t::ompt_callback_target_emi,
-                          isEventTyEnabled);
-    setTracingTypeEnabled(ompt_callbacks_t::ompt_callback_target_data_op_emi,
-                          isEventTyEnabled);
-    setTracingTypeEnabled(ompt_callbacks_t::ompt_callback_target_submit_emi,
-                          isEventTyEnabled);
+    setTracingTypeEnabled(TracedEventTy, Enabled,
+                          ompt_callbacks_t::ompt_callback_target);
+    setTracingTypeEnabled(TracedEventTy, Enabled,
+                          ompt_callbacks_t::ompt_callback_target_data_op);
+    setTracingTypeEnabled(TracedEventTy, Enabled,
+                          ompt_callbacks_t::ompt_callback_target_submit);
+    setTracingTypeEnabled(TracedEventTy, Enabled,
+                          ompt_callbacks_t::ompt_callback_target_emi);
+    setTracingTypeEnabled(TracedEventTy, Enabled,
+                          ompt_callbacks_t::ompt_callback_target_data_op_emi);
+    setTracingTypeEnabled(TracedEventTy, Enabled,
+                          ompt_callbacks_t::ompt_callback_target_submit_emi);
 
-    if (isEventTyEnabled) {
+    if (Enabled) {
       // Event subset is enabled
       return ompt_set_sometimes;
     } else {
@@ -191,11 +292,11 @@ ompt_set_result_t llvm::omp::target::ompt::setTraceEventTy(
   case ompt_callbacks_t::ompt_callback_target_emi:
   case ompt_callbacks_t::ompt_callback_target_data_op_emi:
   case ompt_callbacks_t::ompt_callback_target_submit_emi: {
-    setTracingTypeEnabled(EventTy, isEventTyEnabled);
+    setTracingTypeEnabled(TracedEventTy, Enabled, EventTy);
     return ompt_set_always;
   }
   default: {
-    if (isEventTyEnabled) {
+    if (Enabled) {
       // Unimplemented
       return ompt_set_never;
     } else {
@@ -282,7 +383,7 @@ ompt_record_ompt_t *Interface::stopTargetDataAllocTrace(int64_t DeviceId,
                                                         void **TgtPtrBegin,
                                                         size_t Size,
                                                         void *Code) {
-  if (isTracingTypeDisabled(ompt_callback_target_data_op))
+  if (!isTracingEnabled(DeviceId, ompt_callback_target_data_op))
     return nullptr;
 
   ompt_record_ompt_t *DataPtr =
@@ -301,7 +402,7 @@ ompt_record_ompt_t *Interface::stopTargetDataAllocTrace(int64_t DeviceId,
 
   // The trace record has been created, mark it ready for delivery to the tool
   TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
-  DP("Generated target_data_submit trace record %p\n", DataPtr);
+  DP("Generated trace record: %p (ompt_target_data_alloc)\n", DataPtr);
   return DataPtr;
 }
 
@@ -311,7 +412,7 @@ void Interface::startTargetDataDeleteTrace(int64_t DeviceId, void *TgtPtrBegin,
 ompt_record_ompt_t *Interface::stopTargetDataDeleteTrace(int64_t DeviceId,
                                                          void *TgtPtrBegin,
                                                          void *Code) {
-  if (isTracingTypeDisabled(ompt_callback_target_data_op))
+  if (!isTracingEnabled(DeviceId, ompt_callback_target_data_op))
     return nullptr;
 
   ompt_record_ompt_t *DataPtr =
@@ -330,7 +431,7 @@ ompt_record_ompt_t *Interface::stopTargetDataDeleteTrace(int64_t DeviceId,
 
   // The trace record has been created, mark it ready for delivery to the tool
   TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
-  DP("Generated target_data_submit trace record %p\n", DataPtr);
+  DP("Generated trace record: %p (ompt_target_data_delete)\n", DataPtr);
   return DataPtr;
 }
 
@@ -338,7 +439,7 @@ ompt_record_ompt_t *
 Interface::startTargetDataSubmitTrace(int64_t SrcDeviceId, void *SrcPtrBegin,
                                       int64_t DstDeviceId, void *DstPtrBegin,
                                       size_t Size, void *Code) {
-  if (isTracingTypeDisabled(ompt_callback_target_data_op))
+  if (!isTracingEnabled(DstDeviceId, ompt_callback_target_data_op))
     return nullptr;
 
   ompt_record_ompt_t *DataPtr =
@@ -365,7 +466,7 @@ ompt_record_ompt_t *
 Interface::startTargetDataRetrieveTrace(int64_t SrcDeviceId, void *SrcPtrBegin,
                                         int64_t DstDeviceId, void *DstPtrBegin,
                                         size_t Size, void *Code) {
-  if (isTracingTypeDisabled(ompt_callback_target_data_op))
+  if (!isTracingEnabled(SrcDeviceId, ompt_callback_target_data_op))
     return nullptr;
 
   ompt_record_ompt_t *DataPtr =
@@ -389,9 +490,6 @@ Interface::startTargetDataRetrieveTrace(int64_t SrcDeviceId, void *SrcPtrBegin,
 
 ompt_record_ompt_t *Interface::stopTargetDataMovementTraceAsync(
     ompt_record_ompt_t *DataPtr, uint64_t NanosStart, uint64_t NanosEnd) {
-  if (isTracingTypeDisabled(ompt_callback_target_data_op))
-    return nullptr;
-
   // Finalize the data that comes from the plugin.
   DataPtr->time = NanosStart;
   auto Record = static_cast<ompt_record_target_data_op_t *>(
@@ -406,7 +504,7 @@ ompt_record_ompt_t *Interface::stopTargetDataMovementTraceAsync(
 
 ompt_record_ompt_t *Interface::startTargetSubmitTrace(int64_t DeviceId,
                                                       unsigned int NumTeams) {
-  if (isTracingTypeDisabled(ompt_callback_target_submit))
+  if (!isTracingEnabled(DeviceId, ompt_callback_target_submit))
     return nullptr;
 
   ompt_record_ompt_t *DataPtr =
@@ -427,7 +525,7 @@ ompt_record_ompt_t *Interface::startTargetSubmitTrace(int64_t DeviceId,
 
 ompt_record_ompt_t *
 Interface::stopTargetSubmitTraceAsync(ompt_record_ompt_t *DataPtr,
-                                      int64_t DeviceId, unsigned int NumTeams,
+                                      unsigned int NumTeams,
                                       uint64_t NanosStart, uint64_t NanosStop) {
   // Common fields
   DataPtr->time = NanosStart;
@@ -443,7 +541,7 @@ Interface::stopTargetSubmitTraceAsync(ompt_record_ompt_t *DataPtr,
 
 ompt_record_ompt_t *Interface::startTargetDataEnterTrace(int64_t DeviceId,
                                                          void *CodePtr) {
-  if (isTracingTypeDisabled(ompt_callback_target))
+  if (!isTracingEnabled(DeviceId, ompt_callback_target))
     return nullptr;
 
   ompt_record_ompt_t *DataPtr =
@@ -460,13 +558,13 @@ ompt_record_ompt_t *Interface::startTargetDataEnterTrace(int64_t DeviceId,
 
   // The trace record has been created, mark it ready for delivery to the tool
   TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
-  DP("Generated target trace record %p, completing a kernel\n", DataPtr);
+  DP("Returning trace record buf ptr: %p (ompt_target_enter_data)\n", DataPtr);
   return DataPtr;
 }
 
 ompt_record_ompt_t *Interface::stopTargetDataEnterTrace(int64_t DeviceId,
                                                         void *CodePtr) {
-  if (isTracingTypeDisabled(ompt_callback_target))
+  if (!isTracingEnabled(DeviceId, ompt_callback_target))
     return nullptr;
 
   ompt_record_ompt_t *DataPtr =
@@ -483,13 +581,13 @@ ompt_record_ompt_t *Interface::stopTargetDataEnterTrace(int64_t DeviceId,
 
   // The trace record has been created, mark it ready for delivery to the tool
   TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
-  DP("Generated target trace record %p, completing a kernel\n", DataPtr);
+  DP("Generated trace record: %p (ompt_target_enter_data)\n", DataPtr);
   return DataPtr;
 }
 
 ompt_record_ompt_t *Interface::startTargetDataExitTrace(int64_t DeviceId,
                                                         void *CodePtr) {
-  if (isTracingTypeDisabled(ompt_callback_target))
+  if (!isTracingEnabled(DeviceId, ompt_callback_target))
     return nullptr;
 
   ompt_record_ompt_t *DataPtr =
@@ -506,13 +604,13 @@ ompt_record_ompt_t *Interface::startTargetDataExitTrace(int64_t DeviceId,
 
   // The trace record has been created, mark it ready for delivery to the tool
   TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
-  DP("Generated target trace record %p, completing a kernel\n", DataPtr);
+  DP("Returning trace record buf ptr: %p (ompt_target_exit_data)\n", DataPtr);
   return DataPtr;
 }
 
 ompt_record_ompt_t *Interface::stopTargetDataExitTrace(int64_t DeviceId,
                                                        void *CodePtr) {
-  if (isTracingTypeDisabled(ompt_callback_target))
+  if (!isTracingEnabled(DeviceId, ompt_callback_target))
     return nullptr;
 
   ompt_record_ompt_t *DataPtr =
@@ -529,13 +627,13 @@ ompt_record_ompt_t *Interface::stopTargetDataExitTrace(int64_t DeviceId,
 
   // The trace record has been created, mark it ready for delivery to the tool
   TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
-  DP("Generated target trace record %p, completing a kernel\n", DataPtr);
+  DP("Generated trace record: %p (ompt_target_exit_data)\n", DataPtr);
   return DataPtr;
 }
 
 ompt_record_ompt_t *Interface::startTargetUpdateTrace(int64_t DeviceId,
                                                       void *CodePtr) {
-  if (isTracingTypeDisabled(ompt_callback_target))
+  if (!isTracingEnabled(DeviceId, ompt_callback_target))
     return nullptr;
 
   ompt_record_ompt_t *DataPtr =
@@ -552,13 +650,13 @@ ompt_record_ompt_t *Interface::startTargetUpdateTrace(int64_t DeviceId,
 
   // The trace record has been created, mark it ready for delivery to the tool
   TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
-  DP("Generated target trace record %p, completing a kernel\n", DataPtr);
+  DP("Returning trace record buf ptr: %p (ompt_target_update)\n", DataPtr);
   return DataPtr;
 }
 
 ompt_record_ompt_t *Interface::stopTargetUpdateTrace(int64_t DeviceId,
                                                      void *CodePtr) {
-  if (isTracingTypeDisabled(ompt_callback_target))
+  if (!isTracingEnabled(DeviceId, ompt_callback_target))
     return nullptr;
 
   ompt_record_ompt_t *DataPtr =
@@ -575,13 +673,13 @@ ompt_record_ompt_t *Interface::stopTargetUpdateTrace(int64_t DeviceId,
 
   // The trace record has been created, mark it ready for delivery to the tool
   TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
-  DP("Generated target trace record %p, completing a kernel\n", DataPtr);
+  DP("Generated trace record: %p (ompt_target_update)\n", DataPtr);
   return DataPtr;
 }
 
 ompt_record_ompt_t *Interface::startTargetTrace(int64_t DeviceId,
                                                 void *CodePtr) {
-  if (isTracingTypeDisabled(ompt_callback_target))
+  if (!isTracingEnabled(DeviceId, ompt_callback_target))
     return nullptr;
 
   ompt_record_ompt_t *DataPtr =
@@ -598,13 +696,13 @@ ompt_record_ompt_t *Interface::startTargetTrace(int64_t DeviceId,
 
   // The trace record has been created, mark it ready for delivery to the tool
   TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
-  DP("Generated target trace record %p, completing a kernel\n", DataPtr);
+  DP("Returning trace record buf ptr: %p (ompt_target)\n", DataPtr);
   return DataPtr;
 }
 
 ompt_record_ompt_t *Interface::stopTargetTrace(int64_t DeviceId,
                                                void *CodePtr) {
-  if (isTracingTypeDisabled(ompt_callback_target))
+  if (!isTracingEnabled(DeviceId, ompt_callback_target))
     return nullptr;
 
   ompt_record_ompt_t *DataPtr =
@@ -622,18 +720,17 @@ ompt_record_ompt_t *Interface::stopTargetTrace(int64_t DeviceId,
   // The trace record has been created, mark it ready for delivery to the tool
   TraceRecordManager.setTRStatus(DataPtr, OmptTracingBufferMgr::TR_ready);
 
-  DP("Generated target trace record %p, completing a kernel\n", DataPtr);
-
+  DP("Generated trace record: %p (ompt_target)\n", DataPtr);
   return DataPtr;
 }
 
 extern "C" {
 // Device-independent entry point for ompt_set_trace_ompt
-ompt_set_result_t libomptarget_ompt_set_trace_ompt(ompt_device_t *Device,
+ompt_set_result_t libomptarget_ompt_set_trace_ompt(int DeviceId,
                                                    unsigned int Enable,
                                                    unsigned int EventTy) {
   std::unique_lock<std::mutex> Lock(TraceAccessMutex);
-  return llvm::omp::target::ompt::setTraceEventTy(Device, Enable, EventTy);
+  return llvm::omp::target::ompt::setTraceEventTy(DeviceId, Enable, EventTy);
 }
 
 // Device-independent entry point for ompt_start_trace
@@ -645,7 +742,7 @@ int libomptarget_ompt_start_trace(int DeviceId,
     // Set buffer related functions
     llvm::omp::target::ompt::setBufferManagementFns(DeviceId, Request,
                                                     Complete);
-    llvm::omp::target::ompt::setTracingState(/*Enabled=*/true);
+    llvm::omp::target::ompt::enableDeviceTracing(DeviceId);
     TraceRecordManager.startHelperThreads();
     // Success
     return 1;
@@ -677,7 +774,7 @@ int libomptarget_ompt_stop_trace(int DeviceId) {
   if (isAllDeviceTracingStopped()) {
     // TODO shutdown should perhaps return a status
     TraceRecordManager.shutdownHelperThreads();
-    llvm::omp::target::ompt::setTracingState(/*Enabled=*/false);
+    llvm::omp::target::ompt::disableDeviceTracing(DeviceId);
   }
   return Status;
 }

@@ -675,10 +675,15 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
           printLaunchInfo(GenericDevice, KernelArgs, NumThreads, NumBlocks))
     return Err;
 
-  OMPT_IF_TRACING_ENABLED(setOmptGrantedNumTeams(NumBlocks);
-                          // Set number of granted teams for OMPT
-                          __tgt_async_info *AI = AsyncInfoWrapper;
-                          AI->OmptEventInfo->NumTeams = NumBlocks;);
+  OMPT_IF_TRACING_ENABLED(if (llvm::omp::target::ompt::isTracedDevice(
+                                  getDeviceId(&GenericDevice))) {
+    __tgt_async_info *AI = AsyncInfoWrapper;
+    if (AI->OmptEventInfo != nullptr) {
+      // Set number of granted teams for OMPT
+      setOmptGrantedNumTeams(NumBlocks);
+      AI->OmptEventInfo->NumTeams = NumBlocks;
+    }
+  });
 
   return launchImpl(GenericDevice, NumThreads, NumBlocks, KernelArgs,
                     LaunchParams, AsyncInfoWrapper);
@@ -871,7 +876,7 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
 
 #ifdef OMPT_SUPPORT
   auto DevicePtr = reinterpret_cast<ompt_device_t *>(this);
-  ompt::setDeviceId(DevicePtr, DeviceId);
+  ompt::setDeviceId(DevicePtr, Plugin.getUserId(DeviceId));
   if (ompt::CallbacksInitialized) {
     bool ExpectedStatus = false;
     if (OmptInitialized.compare_exchange_strong(ExpectedStatus, true))
