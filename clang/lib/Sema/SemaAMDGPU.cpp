@@ -77,6 +77,36 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     OrderIndex = 0;
     ScopeIndex = 1;
     break;
+  case AMDGPU::BI__builtin_amdgcn_convolve_bf16_bf16_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_bf16_bf16_4x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_bf16_bf16_8x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_bf16_bf8_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_bf16_bf8_4x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_bf16_bf8_8x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_f16_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_f16_4x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_f16_8x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_4x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_fp8_8x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_iu4_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_iu4_4x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_iu4_8x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_iu8_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_iu8_4x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f16_iu8_8x4:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f32_bf16_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f32_bf8_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f32_f16_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f32_fp8_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f32_iu4_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f32_iu8_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f32i32_iu4_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_f32i32_iu8_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_i32_iu4_4x2:
+  case AMDGPU::BI__builtin_amdgcn_convolve_i32_iu8_4x2:
+    // TODO-GFX13: Add diagnostics.
+    return false;
   default:
     return false;
   }
