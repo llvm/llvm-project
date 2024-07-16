@@ -28,5 +28,5 @@ class Function:
         if attributes_str == "":
             result = f"{self.return_type} {self.name}({arguments_str});"
         else:
-            result = f"{attributes_str} {self.return_type} {self.name}({arguments_str}) __NOEXCEPT;"
+            result = f"{attributes_str} {self.return_type} {self.name}({arguments_str})"
         return result
