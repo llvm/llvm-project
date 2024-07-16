@@ -987,6 +987,10 @@ public:
 
   CGPointerAuthInfo getMemberFunctionPointerAuthInfo(QualType functionType);
 
+  CGPointerAuthInfo getPointerAuthInfoForPointeeType(QualType type);
+
+  CGPointerAuthInfo getPointerAuthInfoForType(QualType type);
+
   bool shouldSignPointer(const PointerAuthSchema &Schema);
   llvm::Constant *getConstantSignedPointer(llvm::Constant *Pointer,
                                            const PointerAuthSchema &Schema,
