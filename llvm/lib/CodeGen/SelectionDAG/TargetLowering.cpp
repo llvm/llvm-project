@@ -10400,7 +10400,7 @@ SDValue TargetLowering::expandCMP(SDNode *Node, SelectionDAG &DAG) const {
   }
 
   if (getBooleanContents(BoolVT) == ZeroOrNegativeOneBooleanContent)
-    std::swap(LHS, RHS);
+    std::swap(IsGT, IsLT);
   return DAG.getSExtOrTrunc(DAG.getNode(ISD::SUB, dl, BoolVT, IsGT, IsLT), dl,
                             ResVT);
 }
