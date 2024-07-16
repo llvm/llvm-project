@@ -8644,7 +8644,10 @@ llvm::canConvertToMinOrMaxIntrinsic(ArrayRef<Value *> VL) {
   if (all_of(VL, [&SelectPattern, &AllCmpSingleUse](Value *I) {
         Value *LHS, *RHS;
         auto CurrentPattern = matchSelectPattern(I, LHS, RHS);
-        if (!SelectPatternResult::isMinOrMax(CurrentPattern.Flavor))
+        if (!SelectPatternResult::isMinOrMax(CurrentPattern.Flavor) ||
+            CurrentPattern.Flavor == SPF_FMINNUM ||
+            CurrentPattern.Flavor == SPF_FMAXNUM ||
+            !I->getType()->isIntOrIntVectorTy())
           return false;
         if (SelectPattern.Flavor != SPF_UNKNOWN &&
             SelectPattern.Flavor != CurrentPattern.Flavor)
@@ -8663,10 +8666,6 @@ llvm::canConvertToMinOrMaxIntrinsic(ArrayRef<Value *> VL) {
       return {Intrinsic::smax, AllCmpSingleUse};
     case SPF_UMAX:
       return {Intrinsic::umax, AllCmpSingleUse};
-    case SPF_FMAXNUM:
-      return {Intrinsic::maxnum, AllCmpSingleUse};
-    case SPF_FMINNUM:
-      return {Intrinsic::minnum, AllCmpSingleUse};
     default:
       llvm_unreachable("unexpected select pattern flavor");
     }
