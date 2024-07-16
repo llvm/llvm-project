@@ -1463,8 +1463,7 @@ def FeatureISAVersion10_Common : FeatureSet<
   [FeatureGFX10,
    FeatureLDSBankCount32,
    FeatureDLInsts,
-   FeatureNSAEncoding,
-   FeatureWavefrontSize32]>;
+   FeatureNSAEncoding]>;
 
 def FeatureISAVersion10_1_Common : FeatureSet<
   !listconcat(FeatureISAVersion10_Common.Features,
@@ -1547,7 +1546,6 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureDot10Insts,
    FeatureNSAEncoding,
    FeaturePartialNSAEncoding,
-   FeatureWavefrontSize32,
    FeatureShaderCyclesRegister,
    FeatureArchitectedFlatScratch,
    FeatureAtomicFaddRtnInsts,
@@ -1624,7 +1622,6 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureDot11Insts,
    FeatureNSAEncoding,
    FeaturePartialNSAEncoding,
-   FeatureWavefrontSize32,
    FeatureShaderCyclesHiLoRegisters,
    FeatureArchitectedFlatScratch,
    FeatureArchitectedSGPRs,

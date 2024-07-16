@@ -1192,6 +1192,19 @@ Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder, Value *Src,
   }
 }
 
+Value *llvm::createSimpleTargetReduction(VectorBuilder &VBuilder, Value *Src,
+                                         const RecurrenceDescriptor &Desc) {
+  RecurKind Kind = Desc.getRecurrenceKind();
+  assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
+         "AnyOf reduction is not supported.");
+  auto *SrcTy = cast<VectorType>(Src->getType());
+  Type *SrcEltTy = SrcTy->getElementType();
+  Value *Iden =
+      Desc.getRecurrenceIdentity(Kind, SrcEltTy, Desc.getFastMathFlags());
+  Value *Ops[] = {Iden, Src};
+  return VBuilder.createSimpleTargetReduction(Kind, SrcTy, Ops);
+}
+
 Value *llvm::createTargetReduction(IRBuilderBase &B,
                                    const RecurrenceDescriptor &Desc, Value *Src,
                                    PHINode *OrigPhi) {
@@ -1218,6 +1231,20 @@ Value *llvm::createOrderedReduction(IRBuilderBase &B,
   assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
 
   return B.CreateFAddReduce(Start, Src);
+}
+
+Value *llvm::createOrderedReduction(VectorBuilder &VBuilder,
+                                    const RecurrenceDescriptor &Desc,
+                                    Value *Src, Value *Start) {
+  assert((Desc.getRecurrenceKind() == RecurKind::FAdd ||
+          Desc.getRecurrenceKind() == RecurKind::FMulAdd) &&
+         "Unexpected reduction kind");
+  assert(Src->getType()->isVectorTy() && "Expected a vector type");
+  assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
+
+  auto *SrcTy = cast<VectorType>(Src->getType());
+  Value *Ops[] = {Start, Src};
+  return VBuilder.createSimpleTargetReduction(RecurKind::FAdd, SrcTy, Ops);
 }
 
 void llvm::propagateIRFlags(Value *I, ArrayRef<Value *> VL, Value *OpValue,
