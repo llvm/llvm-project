@@ -1819,6 +1819,10 @@ unsigned LLVMGetTargetExtTypeIntParam(LLVMTypeRef TargetExtTy, unsigned Idx);
  * @{
  */
 
+// Currently, clang-format tries to format the LLVM_FOR_EACH_VALUE_SUBCLASS
+// macro in a progressively-indented fashion, which is not desired
+// clang-format off
+
 #define LLVM_FOR_EACH_VALUE_SUBCLASS(macro) \
   macro(Argument)                           \
   macro(BasicBlock)                         \
@@ -1909,6 +1913,8 @@ unsigned LLVMGetTargetExtTypeIntParam(LLVMTypeRef TargetExtTy, unsigned Idx);
       macro(AtomicCmpXchgInst)              \
       macro(AtomicRMWInst)                  \
       macro(FenceInst)
+
+// clang-format on
 
 /**
  * @defgroup LLVMCCoreValueGeneral General APIs
