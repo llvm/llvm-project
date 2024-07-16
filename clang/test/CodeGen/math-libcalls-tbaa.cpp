@@ -7,7 +7,7 @@ extern "C" float expf(float);
 
 // Emit int TBAA metadata on FP math libcalls, which is useful for alias analysis
 
-// CHECK-LABEL: define dso_local noundef float @_Z3fooPffi(
+// CHECK-LABEL: define dso_local float @foo(
 // CHECK-SAME: ptr nocapture noundef readonly [[NUM:%.*]], float noundef [[R2INV:%.*]], i32 noundef [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[NUM]], i64 40
@@ -17,7 +17,7 @@ extern "C" float expf(float);
 // CHECK-NEXT:    [[MUL:%.*]] = fmul float [[CALL]], [[TMP1]]
 // CHECK-NEXT:    ret float [[MUL]]
 //
-float foo (float num[], float r2inv, int n) {
+extern "C" float foo (float num[], float r2inv, int n) {
    const float expm2 =  expf(num[10]);  // Emit TBAA metadata on @expf
    float tmp = expm2 * num[10];
    return tmp;
