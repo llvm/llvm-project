@@ -1324,7 +1324,7 @@ void ItaniumCXXABI::emitThrow(CodeGenFunction &CGF, const CXXThrowExpr *E) {
       // __cxa_throw is declared to take its destructor as void (*)(void *). We
       // must match that if function pointers can be authenticated with a
       // discriminator based on their type.
-      ASTContext &Ctx = getContext();
+      const ASTContext &Ctx = getContext();
       QualType DtorTy = Ctx.getFunctionType(Ctx.VoidTy, {Ctx.VoidPtrTy},
                                             FunctionProtoType::ExtProtoInfo());
 
@@ -2707,7 +2707,7 @@ static void emitGlobalDtorWithCXAAtExit(CodeGenFunction &CGF,
   if (llvm::Function *fn = dyn_cast<llvm::Function>(atexit.getCallee()))
     fn->setDoesNotThrow();
 
-  auto &Context = CGF.CGM.getContext();
+  const auto &Context = CGF.CGM.getContext();
   FunctionProtoType::ExtProtoInfo EPI(Context.getDefaultCallingConvention(
       /*IsVariadic=*/false, /*IsCXXMethod=*/false));
   QualType fnType =
