@@ -277,7 +277,7 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
 
 static int FeaturesBitCached = 0;
 
-void __init_riscv_features_bit() {
+void __init_riscv_features_bits() {
 
   if (FeaturesBitCached)
     return;
