@@ -101,5 +101,61 @@ func.func @test_unstructured(%n : index) {
 // CHECK:           return
 // CHECK:         }
 
+func.func @alloca_dominate_return_in_cycle(%arg0: index) {
+  %0 = fir.alloca index
+  %c1 = arith.constant 1 : index
+  fir.store %c1 to %0 : !fir.ref<index>
+  cf.br ^bb1
+^bb1:  // 2 preds: ^bb0, ^bb2
+  %1 = fir.load %0 : !fir.ref<index>
+  %2 = fir.alloca !fir.array<?xf32>, %1
+  fir.call @bar(%2) : (!fir.ref<!fir.array<?xf32>>) -> ()
+  %3 = arith.addi %1, %c1 : index
+  fir.store %3 to %0 : !fir.ref<index>
+  %4 = arith.cmpi slt, %3, %arg0 : index
+  cf.cond_br %4, ^bb2, ^bb3
+^bb2:  // pred: ^bb1
+  cf.br ^bb1
+^bb3:  // pred: ^bb1
+  return
+}
+// CHECK-LABEL:   func.func @alloca_dominate_return_in_cycle(
+// CHECK-SAME:                                               %[[VAL_0:.*]]: index) {
+// CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.heap<!fir.array<?xf32>>
+// CHECK:           %[[VAL_2:.*]] = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+// CHECK:           fir.store %[[VAL_2]] to %[[VAL_1]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
+// CHECK:           %[[VAL_3:.*]] = arith.constant 0 : i64
+// CHECK:           %[[VAL_4:.*]] = fir.alloca index
+// CHECK:           %[[VAL_5:.*]] = arith.constant 1 : index
+// CHECK:           fir.store %[[VAL_5]] to %[[VAL_4]] : !fir.ref<index>
+// CHECK:           cf.br ^bb1
+// CHECK:         ^bb1:
+// CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_4]] : !fir.ref<index>
+// CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
+// CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (!fir.heap<!fir.array<?xf32>>) -> i64
+// CHECK:           %[[VAL_9:.*]] = arith.cmpi ne, %[[VAL_8]], %[[VAL_3]] : i64
+// CHECK:           fir.if %[[VAL_9]] {
+// CHECK:             fir.freemem %[[VAL_7]] : !fir.heap<!fir.array<?xf32>>
+// CHECK:           }
+// CHECK:           %[[VAL_10:.*]] = fir.allocmem !fir.array<?xf32>, %[[VAL_6]] {bindc_name = "", uniq_name = ""}
+// CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (!fir.heap<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+// CHECK:           fir.store %[[VAL_10]] to %[[VAL_1]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
+// CHECK:           fir.call @bar(%[[VAL_11]]) : (!fir.ref<!fir.array<?xf32>>) -> ()
+// CHECK:           %[[VAL_12:.*]] = arith.addi %[[VAL_6]], %[[VAL_5]] : index
+// CHECK:           fir.store %[[VAL_12]] to %[[VAL_4]] : !fir.ref<index>
+// CHECK:           %[[VAL_13:.*]] = arith.cmpi slt, %[[VAL_12]], %[[VAL_0]] : index
+// CHECK:           cf.cond_br %[[VAL_13]], ^bb2, ^bb3
+// CHECK:         ^bb2:
+// CHECK:           cf.br ^bb1
+// CHECK:         ^bb3:
+// CHECK:           %[[VAL_14:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
+// CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_14]] : (!fir.heap<!fir.array<?xf32>>) -> i64
+// CHECK:           %[[VAL_16:.*]] = arith.cmpi ne, %[[VAL_15]], %[[VAL_3]] : i64
+// CHECK:           fir.if %[[VAL_16]] {
+// CHECK:             fir.freemem %[[VAL_14]] : !fir.heap<!fir.array<?xf32>>
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }
+
 func.func private @bar(!fir.ref<!fir.array<?xf32>>)
 func.func private @abort()
