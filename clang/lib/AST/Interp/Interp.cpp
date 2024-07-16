@@ -715,8 +715,8 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC, bool NewWasArray,
   if (D->isArray()) {
     QualType ElemQT = D->getType()->getPointeeType();
     TypeToDiagnose = S.getCtx().getConstantArrayType(
-        ElemQT, APInt(64, D->getNumElems(), false), nullptr,
-        ArraySizeModifier::Normal, 0);
+        ElemQT, APInt(64, static_cast<uint64_t>(D->getNumElems()), false),
+        nullptr, ArraySizeModifier::Normal, 0);
   } else
     TypeToDiagnose = D->getType()->getPointeeType();
 
