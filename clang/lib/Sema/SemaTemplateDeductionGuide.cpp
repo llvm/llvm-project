@@ -951,10 +951,10 @@ Expr *buildIsDeducibleConstraint(Sema &SemaRef,
       Context.getTrivialTypeSourceInfo(
           ReturnType), // type from which template arguments are deduced.
   };
-  return TypeTraitExpr::Create(
-      Context, Context.getLogicalOperationType(), TD->getLocation(),
-      TypeTrait::BTT_IsDeducible, IsDeducibleTypeTraitArgs,
-      TD->getLocation(), /*Value*/ false);
+  return TypeTraitExpr::Create(Context, Context.getLogicalOperationType(),
+                               TD->getLocation(), TypeTrait::BTT_IsDeducible,
+                               IsDeducibleTypeTraitArgs, TD->getLocation(),
+                               /*Value*/ false);
 }
 
 std::pair<TemplateDecl *, llvm::ArrayRef<TemplateArgument>>
@@ -1650,7 +1650,8 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
   }
   if (CXXRecordDecl *DefRecord =
           cast<CXXRecordDecl>(Template->getTemplatedDecl())->getDefinition()) {
-    if (TemplateDecl *DescribedTemplate = DefRecord->getDescribedClassTemplate())
+    if (TemplateDecl *DescribedTemplate =
+            DefRecord->getDescribedClassTemplate())
       Template = DescribedTemplate;
   }
 
