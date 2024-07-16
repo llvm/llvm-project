@@ -196,9 +196,22 @@ void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
                   : VPLane::getLastLaneForVF(State.VF);
   VPBasicBlock *MiddleVPBB =
       cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getSingleSuccessor());
-  BasicBlock *MiddleBB = State.CFG.VPBB2IRBB[MiddleVPBB];
-  Phi->addIncoming(State.get(ExitValue, VPIteration(State.UF - 1, Lane)),
-                   MiddleBB);
+  VPRecipeBase *ExitingRecipe = ExitValue->getDefiningRecipe();
+  auto *ExitingVPBB = ExitingRecipe ? ExitingRecipe->getParent() : nullptr;
+  // Values leaving the vector loop reach live out phi's in the exiting block
+  // via middle block.
+  auto *PredVPBB = !ExitingVPBB || ExitingVPBB->getEnclosingLoopRegion()
+                       ? MiddleVPBB
+                       : ExitingVPBB;
+  BasicBlock *PredBB = State.CFG.VPBB2IRBB[PredVPBB];
+  // Set insertion point in PredBB in case an extract needs to be generated.
+  // TODO: Model extracts explicitly.
+  State.Builder.SetInsertPoint(PredBB, PredBB->getFirstNonPHIIt());
+  Value *V = State.get(ExitValue, VPIteration(State.UF - 1, Lane));
+  if (Phi->getBasicBlockIndex(PredBB) != -1)
+    Phi->setIncomingValueForBlock(PredBB, V);
+  else
+    Phi->addIncoming(V, PredBB);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -337,7 +350,7 @@ bool VPInstruction::doesGeneratePerAllLanes() const {
 bool VPInstruction::canGenerateScalarForFirstLane() const {
   if (Instruction::isBinaryOp(getOpcode()))
     return true;
-  if (isVectorToScalar())
+  if (isSingleScalar() || isVectorToScalar())
     return true;
   switch (Opcode) {
   case Instruction::ICmp:
@@ -637,6 +650,27 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
     Value *Addend = State.get(getOperand(1), Part, /* IsScalar */ true);
     return Builder.CreatePtrAdd(Ptr, Addend, Name);
   }
+  case VPInstruction::ResumePhi: {
+    if (Part != 0)
+      return State.get(this, 0, /*IsScalar*/ true);
+    Value *IncomingFromVPlanPred =
+        State.get(getOperand(0), Part, /* IsScalar */ true);
+    Value *IncomingFromOtherPreds =
+        State.get(getOperand(1), Part, /* IsScalar */ true);
+    auto *NewPhi =
+        Builder.CreatePHI(IncomingFromOtherPreds->getType(), 2, Name);
+    BasicBlock *VPlanPred =
+        State.CFG
+            .VPBB2IRBB[cast<VPBasicBlock>(getParent()->getSinglePredecessor())];
+    NewPhi->addIncoming(IncomingFromVPlanPred, VPlanPred);
+    for (auto *OtherPred : predecessors(Builder.GetInsertBlock())) {
+      assert(OtherPred != VPlanPred &&
+             "VPlan predecessors should not be connected yet");
+      NewPhi->addIncoming(IncomingFromOtherPreds, OtherPred);
+    }
+    return NewPhi;
+  }
+
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -645,6 +679,10 @@ Value *VPInstruction::generatePerPart(VPTransformState &State, unsigned Part) {
 bool VPInstruction::isVectorToScalar() const {
   return getOpcode() == VPInstruction::ExtractFromEnd ||
          getOpcode() == VPInstruction::ComputeReductionResult;
+}
+
+bool VPInstruction::isSingleScalar() const {
+  return getOpcode() == VPInstruction::ResumePhi;
 }
 
 #if !defined(NDEBUG)
@@ -667,9 +705,9 @@ void VPInstruction::execute(VPTransformState &State) {
   if (hasFastMathFlags())
     State.Builder.setFastMathFlags(getFastMathFlags());
   State.setDebugLocFrom(getDebugLoc());
-  bool GeneratesPerFirstLaneOnly =
-      canGenerateScalarForFirstLane() &&
-      (vputils::onlyFirstLaneUsed(this) || isVectorToScalar());
+  bool GeneratesPerFirstLaneOnly = canGenerateScalarForFirstLane() &&
+                                   (vputils::onlyFirstLaneUsed(this) ||
+                                    isVectorToScalar() || isSingleScalar());
   bool GeneratesPerAllLanes = doesGeneratePerAllLanes();
   bool OnlyFirstPartUsed = vputils::onlyFirstPartUsed(this);
   for (unsigned Part = 0; Part < State.UF; ++Part) {
@@ -721,6 +759,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnCond:
+  case VPInstruction::ResumePhi:
     return true;
   };
   llvm_unreachable("switch should return");
@@ -772,6 +811,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ActiveLaneMask:
     O << "active lane mask";
+    break;
+  case VPInstruction::ResumePhi:
+    O << "resume-phi";
     break;
   case VPInstruction::ExplicitVectorLength:
     O << "EXPLICIT-VECTOR-LENGTH";

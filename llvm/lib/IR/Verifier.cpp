@@ -4941,10 +4941,14 @@ void Verifier::visitMemProfMetadata(Instruction &I, MDNode *MD) {
     MDNode *StackMD = dyn_cast<MDNode>(MIB->getOperand(0));
     visitCallStackMetadata(StackMD);
 
-    // Check that remaining operands are MDString.
-    Check(llvm::all_of(llvm::drop_begin(MIB->operands()),
+    // Check that remaining operands, except possibly the last, are MDString.
+    Check(llvm::all_of(MIB->operands().drop_front().drop_back(),
                        [](const MDOperand &Op) { return isa<MDString>(Op); }),
-          "Not all !memprof MemInfoBlock operands 1 to N are MDString", MIB);
+          "Not all !memprof MemInfoBlock operands 1 to N-1 are MDString", MIB);
+    // The last operand might be the total profiled size so can be an integer.
+    auto &LastOperand = MIB->operands().back();
+    Check(isa<MDString>(LastOperand) || mdconst::hasa<ConstantInt>(LastOperand),
+          "Last !memprof MemInfoBlock operand not MDString or int", MIB);
   }
 }
 
