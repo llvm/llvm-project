@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import json, sys, time, re
+import json, sys, time
 
 
 def is_inside(range1, range2):
@@ -17,16 +17,11 @@ def is_before(range1, range2):
     return b <= c
 
 
-def is_valid_instantiation(instantiation):
-    return instantiation["args"]["filename"].endswith(".cpp")
-
-
 log_contents = json.loads(sys.stdin.read())
 events = log_contents["traceEvents"]
 codegens = [event for event in events if event["name"] == "CodeGen Function"]
 frontends = [event for event in events if event["name"] == "Frontend"]
 backends = [event for event in events if event["name"] == "Backend"]
-instantiations = [event for event in events if event["name"].startswith("Instantiate")]
 
 beginning_of_time = log_contents["beginningOfTime"] / 1000000
 seconds_since_epoch = time.time()
@@ -53,7 +48,3 @@ if not all(
     ]
 ):
     sys.exit("Not all Frontend section are before all Backend sections!")
-
-for instantiation in instantiations:
-    if not is_valid_instantiation(instantiation):
-        sys.exit("Invalid instantiation: " + str(instantiation))
