@@ -7,13 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #include "lldb/Symbol/Type.h"
 #include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-enumerations.h"
 
 using namespace lldb;
 using namespace lldb_private;
+using testing::Not;
 
 TEST(Type, GetTypeScopeAndBasename) {
   EXPECT_EQ(Type::GetTypeScopeAndBasename("int"),
@@ -47,40 +50,64 @@ TEST(Type, GetTypeScopeAndBasename) {
   EXPECT_EQ(Type::GetTypeScopeAndBasename("foo<::bar"), std::nullopt);
 }
 
+namespace {
+MATCHER_P(Matches, pattern, "") {
+  TypeQuery query(pattern, TypeQueryOptions::e_none);
+  return query.ContextMatches(arg);
+}
+MATCHER_P(MatchesIgnoringModules, pattern, "") {
+  TypeQuery query(pattern, TypeQueryOptions::e_ignore_modules);
+  return query.ContextMatches(arg);
+}
+} // namespace
+
 TEST(Type, CompilerContextPattern) {
-  std::vector<CompilerContext> mmc = {
-      {CompilerContextKind::Module, ConstString("A")},
-      {CompilerContextKind::Module, ConstString("B")},
-      {CompilerContextKind::ClassOrStruct, ConstString("S")}};
-  std::vector<CompilerContext> mc = {
-      {CompilerContextKind::Module, ConstString("A")},
-      {CompilerContextKind::ClassOrStruct, ConstString("S")}};
-  std::vector<CompilerContext> mac = {
-      {CompilerContextKind::Module, ConstString("A")},
-      {CompilerContextKind::AnyModule, ConstString("*")},
-      {CompilerContextKind::ClassOrStruct, ConstString("S")}};
-  EXPECT_TRUE(contextMatches(mmc, mac));
-  EXPECT_TRUE(contextMatches(mc, mac));
-  EXPECT_FALSE(contextMatches(mac, mc));
-  std::vector<CompilerContext> mmmc = {
-      {CompilerContextKind::Module, ConstString("A")},
-      {CompilerContextKind::Module, ConstString("B")},
-      {CompilerContextKind::Module, ConstString("C")},
-      {CompilerContextKind::ClassOrStruct, ConstString("S")}};
-  EXPECT_TRUE(contextMatches(mmmc, mac));
-  std::vector<CompilerContext> mme = {
-      {CompilerContextKind::Module, ConstString("A")},
-      {CompilerContextKind::Module, ConstString("B")},
-      {CompilerContextKind::Enum, ConstString("S")}};
-  std::vector<CompilerContext> mma = {
-      {CompilerContextKind::Module, ConstString("A")},
-      {CompilerContextKind::Module, ConstString("B")},
-      {CompilerContextKind::AnyType, ConstString("S")}};
-  EXPECT_TRUE(contextMatches(mme, mma));
-  EXPECT_TRUE(contextMatches(mmc, mma));
-  std::vector<CompilerContext> mme2 = {
-      {CompilerContextKind::Module, ConstString("A")},
-      {CompilerContextKind::Module, ConstString("B")},
-      {CompilerContextKind::Enum, ConstString("S2")}};
-  EXPECT_FALSE(contextMatches(mme2, mma));
+  auto make_module = [](llvm::StringRef name) {
+    return CompilerContext(CompilerContextKind::Module, ConstString(name));
+  };
+  auto make_class = [](llvm::StringRef name) {
+    return CompilerContext(CompilerContextKind::ClassOrStruct,
+                           ConstString(name));
+  };
+  auto make_any_type = [](llvm::StringRef name) {
+    return CompilerContext(CompilerContextKind::AnyType, ConstString(name));
+  };
+  auto make_enum = [](llvm::StringRef name) {
+    return CompilerContext(CompilerContextKind::Enum, ConstString(name));
+  };
+  auto make_namespace = [](llvm::StringRef name) {
+    return CompilerContext(CompilerContextKind::Namespace, ConstString(name));
+  };
+
+  EXPECT_THAT(
+      (std::vector{make_module("A"), make_module("B"), make_class("C")}),
+      Matches(
+          std::vector{make_module("A"), make_module("B"), make_class("C")}));
+  EXPECT_THAT(
+      (std::vector{make_module("A"), make_module("B"), make_class("C")}),
+      Not(Matches(std::vector{make_class("C")})));
+  EXPECT_THAT(
+      (std::vector{make_module("A"), make_module("B"), make_class("C")}),
+      MatchesIgnoringModules(std::vector{make_class("C")}));
+  EXPECT_THAT(
+      (std::vector{make_module("A"), make_module("B"), make_class("C")}),
+      MatchesIgnoringModules(std::vector{make_module("B"), make_class("C")}));
+  EXPECT_THAT(
+      (std::vector{make_module("A"), make_module("B"), make_class("C")}),
+      Not(MatchesIgnoringModules(std::vector{make_module("A"), make_class("C")})));
+  EXPECT_THAT((std::vector{make_module("A"), make_module("B"), make_enum("C")}),
+              Matches(std::vector{make_module("A"), make_module("B"),
+                                  make_any_type("C")}));
+  EXPECT_THAT(
+      (std::vector{make_module("A"), make_module("B"), make_class("C")}),
+      Matches(
+          std::vector{make_module("A"), make_module("B"), make_any_type("C")}));
+  EXPECT_THAT(
+      (std::vector{make_module("A"), make_module("B"), make_enum("C2")}),
+      Not(Matches(std::vector{make_module("A"), make_module("B"),
+                              make_any_type("C")})));
+  EXPECT_THAT((std::vector{make_class("C")}),
+              Matches(std::vector{make_class("C")}));
+  EXPECT_THAT((std::vector{make_namespace("NS"), make_class("C")}),
+              Not(Matches(std::vector{make_any_type("C")})));
 }
