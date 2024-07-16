@@ -1852,7 +1852,7 @@ static enum CXChildVisitResult PrintBinOps(CXCursor C, CXCursor p,
   bok = clang_Cursor_getBinaryOpcode(C);
   opstr = clang_Cursor_getBinaryOpcodeStr(bok);
   printf(" BinOp=%s %d\n", clang_getCString(opstr), bok);
-
+  clang_disposeString(opstr);
   return CXChildVisit_Recurse;
 }
 
