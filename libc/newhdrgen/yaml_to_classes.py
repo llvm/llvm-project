@@ -12,7 +12,7 @@ import yaml
 import argparse
 from pathlib import Path
 from header import HeaderFile
-from gpu_headers import HeaderFile as HeaderFile2
+from gpu_headers import GpuHeaderFile as GpuHeader
 from class_implementation.classes.macro import Macro
 from class_implementation.classes.type import Type
 from class_implementation.classes.function import Function
@@ -27,7 +27,7 @@ def yaml_to_classes(yaml_data, header_class, entry_points=None):
 
     Args:
         yaml_data: The YAML data containing header specifications.
-        header_class: The class to use for creating the header (HeaderFile or HeaderFile2).
+        header_class: The class to use for creating the header.
         entry_points: A list of specific function names to include in the header.
 
     Returns:
@@ -115,7 +115,7 @@ def load_yaml_file(yaml_file, header_class, entry_points):
 
     Args:
         yaml_file: Path to the YAML file.
-        header_class: The class to use for creating the header (HeaderFile or HeaderFile2).
+        header_class: The class to use for creating the header (HeaderFile or GpuHeader).
         entry_points: A list of specific function names to include in the header.
 
     Returns:
@@ -230,12 +230,12 @@ def main(
         output_dir: Directory to output the generated header file.
         add_function: Details of the function to be added to the YAML file (if any).
         entry_points: A list of specific function names to include in the header.
-        export_decls: Flag to use HeaderFile2 for exporting declarations.
+        export_decls: Flag to use GpuHeader for exporting declarations.
     """
     if add_function:
         add_function_to_yaml(yaml_file, add_function)
 
-    header_class = HeaderFile2 if export_decls else HeaderFile
+    header_class = GpuHeader if export_decls else HeaderFile
     header = load_yaml_file(yaml_file, header_class, entry_points)
 
     header_str = str(header)
@@ -292,7 +292,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--export-decls",
         action="store_true",
-        help="Flag to use HeaderFile2 for exporting declarations",
+        help="Flag to use GpuHeader for exporting declarations",
     )
     args = parser.parse_args()
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# ===- HeaderFile Class for GPU --export-decls version function headers  -----------*- python -*--==#
+# ===- GPU HeaderFile Class for --export-decls version --------*- python -*--==#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
@@ -9,7 +9,7 @@
 # ==-------------------------------------------------------------------------==#
 
 
-class HeaderFile:
+class GpuHeaderFile:
     def __init__(self, name):
         self.name = name
         self.macros = []
