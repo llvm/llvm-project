@@ -1354,7 +1354,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
               .Case<VPReductionRecipe>([&](VPReductionRecipe *Red) {
                 return new VPReductionEVLRecipe(
                     *Red, GetNewMask(Red->getCondOp()), EVL);
-              });
+              })
+              .Default([&](VPRecipeBase *R) { return nullptr; });
 
       if (NewRecipe) {
         [[maybe_unused]] unsigned NumDefVal = NewRecipe->getNumDefinedValues();
