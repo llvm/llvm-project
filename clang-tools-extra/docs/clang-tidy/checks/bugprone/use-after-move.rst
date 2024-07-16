@@ -200,7 +200,8 @@ An exception to this are objects of type ``std::unique_ptr``,
 (objects of these classes are guaranteed to be empty after they have been moved
 from). Therefore, an object of these classes will only be considered to be used
 if it is dereferenced, i.e. if ``operator*``, ``operator->`` or ``operator[]``
-(in the case of ``std::unique_ptr<T []>``) is called on it.
+(in the case of ``std::unique_ptr<T []>``) is called on it. This behavior can be
+overridden with the option :option:`IgnoreNonDerefSmartPtrs`.
 
 If multiple uses occur after a move, only the first of these is flagged.
 
@@ -250,3 +251,14 @@ For example, if an additional member variable is added to ``S``, it is easy to
 forget to add the reinitialization for this additional member. Instead, it is
 safer to assign to the entire struct in one go, and this will also avoid the
 use-after-move warning.
+
+Options
+-------
+
+.. option:: IgnoreNonDerefSmartPtrs
+
+   If this option is set to `true`, the check will not warn about uses of
+   ``std::unique_ptr``, ``std::shared_ptr`` that are not dereferences. This
+   can be useful if you are using these smart pointers in a way that is not
+   idiomatic, but that you know is safe. Default is `false`.
+

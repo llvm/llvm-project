@@ -48,7 +48,7 @@ struct UseAfterMove {
 /// various internal helper functions).
 class UseAfterMoveFinder {
 public:
-  UseAfterMoveFinder(ASTContext *TheContext);
+  UseAfterMoveFinder(ASTContext *TheContext, bool IgnoreNonDerefSmartPtrs);
 
   // Within the given code block, finds the first use of 'MovedVariable' that
   // occurs after 'MovingCall' (the expression that performs the move). If a
@@ -71,6 +71,7 @@ private:
                   llvm::SmallPtrSetImpl<const DeclRefExpr *> *DeclRefs);
 
   ASTContext *Context;
+  const bool IgnoreNonDerefSmartPtrs;
   std::unique_ptr<ExprSequence> Sequence;
   std::unique_ptr<StmtToBlockMap> BlockMap;
   llvm::SmallPtrSet<const CFGBlock *, 8> Visited;
@@ -92,8 +93,9 @@ static StatementMatcher inDecltypeOrTemplateArg() {
                hasAncestor(expr(hasUnevaluatedContext())));
 }
 
-UseAfterMoveFinder::UseAfterMoveFinder(ASTContext *TheContext)
-    : Context(TheContext) {}
+UseAfterMoveFinder::UseAfterMoveFinder(ASTContext *TheContext,
+                                       bool IgnoreNonDerefSmartPtrs)
+    : Context(TheContext), IgnoreNonDerefSmartPtrs(IgnoreNonDerefSmartPtrs) {}
 
 std::optional<UseAfterMove>
 UseAfterMoveFinder::find(Stmt *CodeBlock, const Expr *MovingCall,
@@ -275,11 +277,13 @@ void UseAfterMoveFinder::getDeclRefs(
                         DeclRefs](const ArrayRef<BoundNodes> Matches) {
       for (const auto &Match : Matches) {
         const auto *DeclRef = Match.getNodeAs<DeclRefExpr>("declref");
-        const auto *Operator = Match.getNodeAs<CXXOperatorCallExpr>("operator");
         if (DeclRef && BlockMap->blockContainingStmt(DeclRef) == Block) {
           // Ignore uses of a standard smart pointer that don't dereference the
           // pointer.
-          if (Operator || !isStandardSmartPointer(DeclRef->getDecl())) {
+          const auto *Operator =
+              Match.getNodeAs<CXXOperatorCallExpr>("operator");
+          if (Operator || !IgnoreNonDerefSmartPtrs ||
+              !isStandardSmartPointer(DeclRef->getDecl())) {
             DeclRefs->insert(DeclRef);
           }
         }
@@ -429,6 +433,13 @@ static void emitDiagnostic(const Expr *MovingCall, const DeclRefExpr *MoveArg,
         << IsMove;
   }
 }
+UseAfterMoveCheck::UseAfterMoveCheck(StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      IgnoreNonDerefSmartPtrs(Options.get("IgnoreNonDerefSmartPtrs", false)) {}
+
+void UseAfterMoveCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreNonDerefSmartPtrs", IgnoreNonDerefSmartPtrs);
+}
 
 void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
   // try_emplace is a common maybe-moving function that returns a
@@ -520,7 +531,7 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   for (Stmt *CodeBlock : CodeBlocks) {
-    UseAfterMoveFinder Finder(Result.Context);
+    UseAfterMoveFinder Finder(Result.Context, IgnoreNonDerefSmartPtrs);
     if (auto Use = Finder.find(CodeBlock, MovingCall, Arg))
       emitDiagnostic(MovingCall, Arg, *Use, this, Result.Context,
                      determineMoveType(MoveDecl));

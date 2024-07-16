@@ -9,9 +9,11 @@ protected:
 public:
   type &operator*() { return *ptr; }
   type *operator->() { return ptr; }
+  type *get() const;
   type *release();
   void reset();
   void reset(type *pt);
+  explicit operator bool() const;
 
 private:
   type *ptr;
