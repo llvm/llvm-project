@@ -256,8 +256,8 @@ struct InsertCommand {
   StringRef where;
 };
 
-// A NOCROSSREFS/NOCROSSREFS_TO command that probits references among certain
-// output sections.
+// A NOCROSSREFS/NOCROSSREFS_TO command that prohibits references between
+// certain output sections.
 struct NoCrossRefCommand {
   SmallVector<StringRef, 0> outputSections;
 

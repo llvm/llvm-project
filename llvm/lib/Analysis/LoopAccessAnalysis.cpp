@@ -206,12 +206,13 @@ RuntimeCheckingPtrGroup::RuntimeCheckingPtrGroup(
 static std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
     const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy,
     PredicatedScalarEvolution &PSE,
-    DenseMap<const SCEV *, std::pair<const SCEV *, const SCEV *>>
-        &PointerBounds) {
+    DenseMap<std::pair<const SCEV *, Type *>,
+             std::pair<const SCEV *, const SCEV *>> &PointerBounds) {
   ScalarEvolution *SE = PSE.getSE();
 
   auto [Iter, Ins] = PointerBounds.insert(
-      {PtrExpr, {SE->getCouldNotCompute(), SE->getCouldNotCompute()}});
+      {{PtrExpr, AccessTy},
+       {SE->getCouldNotCompute(), SE->getCouldNotCompute()}});
   if (!Ins)
     return Iter->second;
 

@@ -2400,7 +2400,8 @@ static void scanCrossRefs(const NoCrossRefCommand &cmd, OutputSection *osec,
 template <class ELFT> void elf::checkNoCrossRefs() {
   for (OutputSection *osec : outputSections) {
     for (const NoCrossRefCommand &noxref : script->noCrossRefs) {
-      if (!llvm::is_contained(noxref.outputSections, osec->name))
+      if (!llvm::is_contained(noxref.outputSections, osec->name) ||
+          (noxref.toFirst && noxref.outputSections[0] == osec->name))
         continue;
       for (SectionCommand *cmd : osec->commands) {
         auto *isd = dyn_cast<InputSectionDescription>(cmd);

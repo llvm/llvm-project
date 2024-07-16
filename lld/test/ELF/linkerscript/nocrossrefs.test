@@ -43,7 +43,7 @@ NOCROSSREFS(.text .text1 .text2 .data .rodata .data .nonalloc)
 
 #--- 3.t
 abs = 42;
-NOCROSSREFS_TO(.text .text1 .text2 .data .nonalloc)
+NOCROSSREFS_TO(.text .text .text1 .text2 .data .nonalloc)
 
 #--- err1.t
 NOCROSSREFS )

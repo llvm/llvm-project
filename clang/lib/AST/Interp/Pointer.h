@@ -19,7 +19,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
@@ -585,6 +584,7 @@ public:
     assert(isLive() && "Invalid pointer");
     assert(isBlockPointer());
     assert(asBlockPointer().Pointee);
+    assert(isDereferencable());
     assert(Offset + sizeof(T) <=
            asBlockPointer().Pointee->getDescriptor()->getAllocSize());
 
@@ -602,6 +602,17 @@ public:
     assert(asBlockPointer().Pointee);
     return reinterpret_cast<T *>(asBlockPointer().Pointee->data() +
                                  sizeof(InitMapPtr))[I];
+  }
+
+  /// Whether this block can be read from at all. This is only true for
+  /// block pointers that point to a valid location inside that block.
+  bool isDereferencable() const {
+    if (!isBlockPointer())
+      return false;
+    if (isPastEnd())
+      return false;
+
+    return true;
   }
 
   /// Initializes a field.
@@ -636,6 +647,7 @@ private:
   friend class Block;
   friend class DeadBlock;
   friend class MemberPointer;
+  friend class InterpState;
   friend struct InitMap;
 
   Pointer(Block *Pointee, unsigned Base, uint64_t Offset);

@@ -49,6 +49,7 @@ MCOPT(bool, NoTypeCheck)
 MCOPT(bool, SaveTempLabels)
 MCOPT(bool, Crel)
 MCOPT(bool, X86RelaxRelocations)
+MCOPT(bool, X86Sse2Avx)
 MCOPT(std::string, ABIName)
 MCOPT(std::string, AsSecureLogFile)
 
@@ -140,6 +141,11 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
       cl::init(true));
   MCBINDOPT(X86RelaxRelocations);
 
+  static cl::opt<bool> X86Sse2Avx(
+      "x86-sse2avx", cl::desc("Specify that the assembler should encode SSE "
+                              "instructions with VEX prefix"));
+  MCBINDOPT(X86Sse2Avx);
+
   static cl::opt<std::string> ABIName(
       "target-abi", cl::Hidden,
       cl::desc("The name of the ABI to be targeted from the backend."),
@@ -169,6 +175,7 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.MCSaveTempLabels = getSaveTempLabels();
   Options.Crel = getCrel();
   Options.X86RelaxRelocations = getX86RelaxRelocations();
+  Options.X86Sse2Avx = getX86Sse2Avx();
   Options.EmitDwarfUnwind = getEmitDwarfUnwind();
   Options.EmitCompactUnwindNonCanonical = getEmitCompactUnwindNonCanonical();
   Options.AsSecureLogFile = getAsSecureLogFile();

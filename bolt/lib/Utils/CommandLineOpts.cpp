@@ -105,6 +105,12 @@ cl::opt<unsigned long long> HeatmapMinAddress(
     cl::desc("minimum address considered valid for heatmap (default 0)"),
     cl::Optional, cl::cat(HeatmapCategory));
 
+cl::opt<bool> HeatmapPrintMappings(
+    "print-mappings", cl::init(false),
+    cl::desc("print mappings in the legend, between characters/blocks and text "
+             "sections (default false)"),
+    cl::Optional, cl::cat(HeatmapCategory));
+
 cl::opt<bool> HotData("hot-data",
                       cl::desc("hot data symbols support (relocation mode)"),
                       cl::cat(BoltCategory));

@@ -273,7 +273,6 @@ calculateConstraintSatisfaction(Sema &S, const Expr *ConstraintExpr,
     char *Mem = new (S.Context) char[MessageSize];
     memcpy(Mem, DiagString.c_str(), MessageSize);
     Satisfaction.Details.emplace_back(
-        ConstraintExpr,
         new (S.Context) ConstraintSatisfaction::SubstitutionDiagnostic{
             SubstitutedAtomicExpr.get()->getBeginLoc(),
             StringRef(Mem, MessageSize)});
@@ -302,8 +301,7 @@ calculateConstraintSatisfaction(Sema &S, const Expr *ConstraintExpr,
          "evaluating bool expression didn't produce int");
   Satisfaction.IsSatisfied = EvalResult.Val.getInt().getBoolValue();
   if (!Satisfaction.IsSatisfied)
-    Satisfaction.Details.emplace_back(ConstraintExpr,
-                                      SubstitutedAtomicExpr.get());
+    Satisfaction.Details.emplace_back(SubstitutedAtomicExpr.get());
 
   return SubstitutedAtomicExpr;
 }
@@ -393,9 +391,8 @@ static ExprResult calculateConstraintSatisfaction(
             char *Mem = new (S.Context) char[MessageSize];
             memcpy(Mem, DiagString.c_str(), MessageSize);
             Satisfaction.Details.emplace_back(
-                AtomicExpr,
                 new (S.Context) ConstraintSatisfaction::SubstitutionDiagnostic{
-                        SubstDiag.first, StringRef(Mem, MessageSize)});
+                    SubstDiag.first, StringRef(Mem, MessageSize)});
             Satisfaction.IsSatisfied = false;
             return ExprEmpty();
           }
@@ -1056,13 +1053,14 @@ static void diagnoseUnsatisfiedRequirement(Sema &S,
                                            concepts::NestedRequirement *Req,
                                            bool First) {
   using SubstitutionDiagnostic = std::pair<SourceLocation, StringRef>;
-  for (auto &Pair : Req->getConstraintSatisfaction()) {
-    if (auto *SubstDiag = Pair.second.dyn_cast<SubstitutionDiagnostic *>())
+  for (auto &Record : Req->getConstraintSatisfaction()) {
+    if (auto *SubstDiag = Record.dyn_cast<SubstitutionDiagnostic *>())
       S.Diag(SubstDiag->first, diag::note_nested_requirement_substitution_error)
-          << (int)First << Req->getInvalidConstraintEntity() << SubstDiag->second;
+          << (int)First << Req->getInvalidConstraintEntity()
+          << SubstDiag->second;
     else
-      diagnoseWellFormedUnsatisfiedConstraintExpr(
-          S, Pair.second.dyn_cast<Expr *>(), First);
+      diagnoseWellFormedUnsatisfiedConstraintExpr(S, Record.dyn_cast<Expr *>(),
+                                                  First);
     First = false;
   }
 }
@@ -1176,12 +1174,11 @@ static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
       << (int)First << SubstExpr;
 }
 
-template<typename SubstitutionDiagnostic>
+template <typename SubstitutionDiagnostic>
 static void diagnoseUnsatisfiedConstraintExpr(
-    Sema &S, const Expr *E,
-    const llvm::PointerUnion<Expr *, SubstitutionDiagnostic *> &Record,
+    Sema &S, const llvm::PointerUnion<Expr *, SubstitutionDiagnostic *> &Record,
     bool First = true) {
-  if (auto *Diag = Record.template dyn_cast<SubstitutionDiagnostic *>()){
+  if (auto *Diag = Record.template dyn_cast<SubstitutionDiagnostic *>()) {
     S.Diag(Diag->first, diag::note_substituted_constraint_expr_is_ill_formed)
         << Diag->second;
     return;
@@ -1196,8 +1193,8 @@ Sema::DiagnoseUnsatisfiedConstraint(const ConstraintSatisfaction& Satisfaction,
                                     bool First) {
   assert(!Satisfaction.IsSatisfied &&
          "Attempted to diagnose a satisfied constraint");
-  for (auto &Pair : Satisfaction.Details) {
-    diagnoseUnsatisfiedConstraintExpr(*this, Pair.first, Pair.second, First);
+  for (auto &Record : Satisfaction.Details) {
+    diagnoseUnsatisfiedConstraintExpr(*this, Record, First);
     First = false;
   }
 }
@@ -1207,8 +1204,8 @@ void Sema::DiagnoseUnsatisfiedConstraint(
     bool First) {
   assert(!Satisfaction.IsSatisfied &&
          "Attempted to diagnose a satisfied constraint");
-  for (auto &Pair : Satisfaction) {
-    diagnoseUnsatisfiedConstraintExpr(*this, Pair.first, Pair.second, First);
+  for (auto &Record : Satisfaction) {
+    diagnoseUnsatisfiedConstraintExpr(*this, Record, First);
     First = false;
   }
 }

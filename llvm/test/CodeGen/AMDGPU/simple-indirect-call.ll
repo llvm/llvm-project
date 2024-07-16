@@ -42,25 +42,30 @@ define amdgpu_kernel void @test_simple_indirect_call() {
 ;
 ; GFX9-LABEL: test_simple_indirect_call:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x4
 ; GFX9-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
 ; GFX9-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
+; GFX9-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; GFX9-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x4
 ; GFX9-NEXT:    s_add_u32 s0, s0, s15
 ; GFX9-NEXT:    s_addc_u32 s1, s1, 0
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_lshr_b32 s4, s4, 16
-; GFX9-NEXT:    s_mul_i32 s4, s4, s5
-; GFX9-NEXT:    v_mul_lo_u32 v0, s4, v0
-; GFX9-NEXT:    s_getpc_b64 s[6:7]
-; GFX9-NEXT:    s_add_u32 s6, s6, indirect@rel32@lo+4
-; GFX9-NEXT:    s_addc_u32 s7, s7, indirect@rel32@hi+12
-; GFX9-NEXT:    v_mov_b32_e32 v3, s6
-; GFX9-NEXT:    v_mov_b32_e32 v4, s7
-; GFX9-NEXT:    v_mad_u32_u24 v0, v1, s5, v0
-; GFX9-NEXT:    v_add_lshl_u32 v0, v0, v2, 3
 ; GFX9-NEXT:    s_mov_b32 s32, 0
-; GFX9-NEXT:    ds_write_b64 v0, v[3:4]
-; GFX9-NEXT:    s_swappc_b64 s[30:31], s[6:7]
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_lshr_b32 s8, s8, 16
+; GFX9-NEXT:    s_mul_i32 s8, s8, s9
+; GFX9-NEXT:    v_mul_lo_u32 v3, s8, v0
+; GFX9-NEXT:    s_getpc_b64 s[16:17]
+; GFX9-NEXT:    s_add_u32 s16, s16, indirect@rel32@lo+4
+; GFX9-NEXT:    s_addc_u32 s17, s17, indirect@rel32@hi+12
+; GFX9-NEXT:    v_mad_u32_u24 v3, v1, s9, v3
+; GFX9-NEXT:    v_add_lshl_u32 v5, v3, v2, 3
+; GFX9-NEXT:    v_mov_b32_e32 v3, s16
+; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GFX9-NEXT:    v_mov_b32_e32 v4, s17
+; GFX9-NEXT:    v_or3_b32 v31, v0, v1, v2
+; GFX9-NEXT:    s_mov_b64 s[8:9], s[6:7]
+; GFX9-NEXT:    ds_write_b64 v5, v[3:4]
+; GFX9-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX9-NEXT:    s_endpgm
   %fptr = alloca ptr, addrspace(5)
   %fptr.cast = addrspacecast ptr addrspace(5) %fptr to ptr
