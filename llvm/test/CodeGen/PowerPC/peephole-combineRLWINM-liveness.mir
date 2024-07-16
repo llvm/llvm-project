@@ -20,6 +20,7 @@ body: |
 
 ...
 
+# CHECK-LABEL: testFoldRLWINM
 # CHECK:       bb.0.entry:
 # CHECK:         dead %0:gprc = COPY killed $r3
 # CHECK:       bb.2:

@@ -1292,7 +1292,7 @@ bool PPCMIPeephole::simplifyCode() {
           if (MI.getOperand(1).isReg())
             addRegToUpdate(MI.getOperand(1).getReg());
           if (ToErase && ToErase->getOperand(1).isReg())
-            for (auto UseReg: ToErase->explicit_uses())
+            for (auto UseReg : ToErase->explicit_uses())
               if (UseReg.isReg())
                 addRegToUpdate(UseReg.getReg());
           ++NumRotatesCollapsed;
