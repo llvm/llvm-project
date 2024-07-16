@@ -108,4 +108,12 @@ define half @pr98665() {
   ret half %x
 }
 
+define float @powi_f32() {
+; CHECK-LABEL: @powi_f32(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %y = call float @llvm.powi.f32.i32(float 0.0, i32 10)
+  ret float %y
+}
+
 attributes #0 = { nofree nounwind willreturn }

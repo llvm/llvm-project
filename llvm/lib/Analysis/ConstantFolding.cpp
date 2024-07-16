@@ -2759,7 +2759,7 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         switch (Ty->getTypeID()) {
         case Type::HalfTyID:
         case Type::FloatTyID: {
-          APFloat Res(std::pow(Op1V.convertToFloat(), Exp));
+          APFloat Res(static_cast<float>(std::pow(Op1V.convertToFloat(), Exp)));
           if (Ty->isHalfTy()) {
             bool Unused;
             Res.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven,
