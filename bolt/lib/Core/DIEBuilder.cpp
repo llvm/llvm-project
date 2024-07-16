@@ -617,14 +617,6 @@ void DIEBuilder::cloneDieReferenceAttribute(
     DIE &Die, const DWARFUnit &U, const DWARFDie &InputDIE,
     const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
     const DWARFFormValue &Val) {
-  uint64_t Ref;
-  if (std::optional<uint64_t> Off = Val.getAsRelativeReference())
-    Ref = Val.getUnit()->getOffset() + *Off;
-  else if (Off = Val.getAsDebugInfoReference(); Off)
-    Ref = *Off;
-  else
-    return;
-
   DIE *NewRefDie = nullptr;
   DWARFUnit *RefUnit = nullptr;
 
@@ -641,8 +633,6 @@ void DIEBuilder::cloneDieReferenceAttribute(
   DIEInfo &DieInfo = getDIEInfo(*UnitId, DIEId);
 
   if (!DieInfo.Die) {
-    assert(Ref > InputDIE.getOffset());
-    (void)Ref;
     BC.errs() << "BOLT-WARNING: [internal-dwarf-error]: encounter unexpected "
                  "unallocated DIE. Should be alloc!\n";
     // We haven't cloned this DIE yet. Just create an empty one and
