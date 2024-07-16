@@ -14078,11 +14078,6 @@ public:
       const DeclarationNameInfo &NameInfo,
       SmallVectorImpl<UnexpandedParameterPack> &Unexpanded);
 
-  /// Collect the set of unexpanded parameter packs within the given
-  /// expression.
-  static void collectUnexpandedParameterPacks(
-      Expr *E, SmallVectorImpl<UnexpandedParameterPack> &Unexpanded);
-
   /// Invoked when parsing a template argument followed by an
   /// ellipsis, which creates a pack expansion.
   ///
