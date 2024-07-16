@@ -349,4 +349,80 @@ bb.2:
   ret void
 }
 
+; Should not produce a broken phi
+
+define void @broken_phi() {
+; GFX906-LABEL: define void @broken_phi(
+; GFX906-SAME: ) #[[ATTR0]] {
+; GFX906-NEXT:  bb:
+; GFX906-NEXT:    br label [[BB1:%.*]]
+; GFX906:       bb1:
+; GFX906-NEXT:    [[I:%.*]] = phi <4 x i8> [ <i8 1, i8 1, i8 1, i8 1>, [[BB:%.*]] ], [ [[I8:%.*]], [[BB7:%.*]] ]
+; GFX906-NEXT:    br i1 false, label [[BB3:%.*]], label [[BB2:%.*]]
+; GFX906:       bb2:
+; GFX906-NEXT:    br label [[BB3]]
+; GFX906:       bb3:
+; GFX906-NEXT:    [[I4:%.*]] = phi <4 x i8> [ zeroinitializer, [[BB2]] ], [ [[I]], [[BB1]] ]
+; GFX906-NEXT:    br i1 false, label [[BB7]], label [[BB5:%.*]]
+; GFX906:       bb5:
+; GFX906-NEXT:    [[I6:%.*]] = call <4 x i8> @llvm.smax.v4i8(<4 x i8> [[I4]], <4 x i8> zeroinitializer)
+; GFX906-NEXT:    br label [[BB7]]
+; GFX906:       bb7:
+; GFX906-NEXT:    [[I8]] = phi <4 x i8> [ zeroinitializer, [[BB5]] ], [ zeroinitializer, [[BB3]] ]
+; GFX906-NEXT:    br label [[BB1]]
+;
+bb:
+  br label %bb1
+bb1:
+  %i = phi <4 x i8> [ <i8 1, i8 1, i8 1, i8 1>, %bb ], [ %i8, %bb7 ]
+  br i1 false, label %bb3, label %bb2
+bb2:
+  br label %bb3
+bb3:
+  %i4 = phi <4 x i8> [ zeroinitializer, %bb2 ], [ %i, %bb1 ]
+  br i1 false, label %bb7, label %bb5
+bb5:
+  %i6 = call <4 x i8> @llvm.smax.v4i8(<4 x i8> %i4, <4 x i8> zeroinitializer)
+  br label %bb7
+bb7:
+  %i8 = phi <4 x i8> [ zeroinitializer, %bb5 ], [ zeroinitializer, %bb3 ]
+  br label %bb1
+}
+
+; %sel1 should just use %sel0 instead of trying to convert back the
+; converted version of %sel0
+
+define amdgpu_kernel void @reuseOp() {
+; GFX906-LABEL: define amdgpu_kernel void @reuseOp(
+; GFX906-SAME: ) #[[ATTR0]] {
+; GFX906-NEXT:  entry:
+; GFX906-NEXT:    [[VEC1:%.*]] = insertelement <16 x i8> zeroinitializer, i8 0, i64 0
+; GFX906-NEXT:    [[VEC1_BC:%.*]] = bitcast <16 x i8> [[VEC1]] to <4 x i32>
+; GFX906-NEXT:    br label [[BB_1:%.*]]
+; GFX906:       bb.1:
+; GFX906-NEXT:    [[VEC1_BC_BC:%.*]] = bitcast <4 x i32> [[VEC1_BC]] to <16 x i8>
+; GFX906-NEXT:    [[SEL0:%.*]] = select i1 false, <16 x i8> zeroinitializer, <16 x i8> zeroinitializer
+; GFX906-NEXT:    [[SEL0_BC:%.*]] = bitcast <16 x i8> [[SEL0]] to <4 x i32>
+; GFX906-NEXT:    [[SEL1:%.*]] = select i1 false, <16 x i8> [[VEC1_BC_BC]], <16 x i8> [[SEL0]]
+; GFX906-NEXT:    br label [[BB_2:%.*]]
+; GFX906:       bb.2:
+; GFX906-NEXT:    [[SEL0_BC_BC:%.*]] = bitcast <4 x i32> [[SEL0_BC]] to <16 x i8>
+; GFX906-NEXT:    [[VAL:%.*]] = extractelement <16 x i8> [[SEL0_BC_BC]], i64 0
+; GFX906-NEXT:    ret void
+;
+entry:
+  %vec1 = insertelement <16 x i8> zeroinitializer, i8 0, i64 0
+  br label %bb.1
+
+bb.1:
+  %sel0 = select i1 false, <16 x i8> zeroinitializer, <16 x i8> zeroinitializer
+  %sel1 = select i1 false, <16 x i8> %vec1, <16 x i8> %sel0
+  br label %bb.2
+
+bb.2:
+  %val = extractelement <16 x i8> %sel0, i64 0
+  ret void
+}
+
+
 declare i32 @llvm.amdgcn.workitem.id.x()
