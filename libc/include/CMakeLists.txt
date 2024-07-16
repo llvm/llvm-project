@@ -17,10 +17,10 @@ add_header(
     __llvm-libc-common.h
 )
 
-macro(add_header_macro TYPE YAML_FILE DEF_FILE GEN_HDR DEPENDS)
+macro(add_header_macro NAME YAML_FILE DEF_FILE GEN_HDR DEPENDS)
   if (LIBC_USE_NEW_HEADER_GEN)
     add_gen_header2(
-      ${TYPE}
+      ${NAME}
       ${YAML_FILE}
       ${DEF_FILE}
       ${GEN_HDR}
@@ -28,7 +28,7 @@ macro(add_header_macro TYPE YAML_FILE DEF_FILE GEN_HDR DEPENDS)
     )
   else()
     add_gen_header(
-      ${TYPE}
+      ${NAME}
       ${DEF_FILE}
       ${GEN_HDR}
       ${DEPENDS}
