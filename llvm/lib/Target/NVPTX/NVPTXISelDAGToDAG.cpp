@@ -1147,6 +1147,26 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   unsigned int PointerSize =
       CurDAG->getDataLayout().getPointerSizeInBits(LD->getAddressSpace());
 
+  // If a fence is required before the operation, insert it:
+  SDValue Chain = N->getOperand(0);
+  switch (NVPTX::Ordering(FenceOrdering)) {
+  case NVPTX::Ordering::NotAtomic:
+    break;
+  case NVPTX::Ordering::SequentiallyConsistent: {
+    unsigned Op = Subtarget->hasMemoryOrdering()
+                      ? NVPTX::atomic_thread_fence_seq_cst_sys
+                      : NVPTX::atomic_thread_fence_seq_cst_sys_membar;
+    Chain = SDValue(CurDAG->getMachineNode(Op, dl, MVT::Other, Chain), 0);
+    break;
+  }
+  default:
+    SmallString<256> Msg;
+    raw_svector_ostream OS(Msg);
+    OS << "Unexpected fence ordering: \"" << NVPTX::Ordering(FenceOrdering)
+       << "\".";
+    report_fatal_error(OS.str());
+  }
+
   // Type Setting: fromType + fromTypeWidth
   //
   // Sign   : ISD::SEXTLOAD
@@ -1174,7 +1194,6 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
     fromType = getLdStRegType(ScalarVT);
 
   // Create the machine instruction DAG
-  SDValue Chain = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   SDValue Addr;
   SDValue Offset, Base;
@@ -1187,8 +1206,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                              NVPTX::LD_f32_avar, NVPTX::LD_f64_avar);
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(FenceOrdering, dl),
-                     getI32Imm(InstructionOrdering, dl),
+    SDValue Ops[] = {getI32Imm(InstructionOrdering, dl),
                      getI32Imm(CodeAddrSpace, dl),
                      getI32Imm(vecType, dl),
                      getI32Imm(fromType, dl),
@@ -1203,8 +1221,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                              NVPTX::LD_f32_asi, NVPTX::LD_f64_asi);
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(FenceOrdering, dl),
-                     getI32Imm(InstructionOrdering, dl),
+    SDValue Ops[] = {getI32Imm(InstructionOrdering, dl),
                      getI32Imm(CodeAddrSpace, dl),
                      getI32Imm(vecType, dl),
                      getI32Imm(fromType, dl),
@@ -1226,8 +1243,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                                NVPTX::LD_f32_ari, NVPTX::LD_f64_ari);
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(FenceOrdering, dl),
-                     getI32Imm(InstructionOrdering, dl),
+    SDValue Ops[] = {getI32Imm(InstructionOrdering, dl),
                      getI32Imm(CodeAddrSpace, dl),
                      getI32Imm(vecType, dl),
                      getI32Imm(fromType, dl),
@@ -1248,8 +1264,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                                NVPTX::LD_f32_areg, NVPTX::LD_f64_areg);
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(FenceOrdering, dl),
-                     getI32Imm(InstructionOrdering, dl),
+    SDValue Ops[] = {getI32Imm(InstructionOrdering, dl),
                      getI32Imm(CodeAddrSpace, dl),
                      getI32Imm(vecType, dl),
                      getI32Imm(fromType, dl),
@@ -1295,6 +1310,25 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   // Memory Semantic Setting
   auto [InstructionOrdering, FenceOrdering] =
       getOperationOrderings(MemSD, Subtarget);
+
+  // If a fence is required before the operation, insert it:
+  switch (NVPTX::Ordering(FenceOrdering)) {
+  case NVPTX::Ordering::NotAtomic:
+    break;
+  case NVPTX::Ordering::SequentiallyConsistent: {
+    unsigned Op = Subtarget->hasMemoryOrdering()
+                      ? NVPTX::atomic_thread_fence_seq_cst_sys
+                      : NVPTX::atomic_thread_fence_seq_cst_sys_membar;
+    Chain = SDValue(CurDAG->getMachineNode(Op, DL, MVT::Other, Chain), 0);
+    break;
+  }
+  default:
+    SmallString<256> Msg;
+    raw_svector_ostream OS(Msg);
+    OS << "Unexpected fence ordering: \"" << NVPTX::Ordering(FenceOrdering)
+       << "\".";
+    report_fatal_error(OS.str());
+  }
 
   // Vector Setting
   MVT SimpleVT = LoadedVT.getSimpleVT();
@@ -1361,8 +1395,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     }
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(FenceOrdering, DL),
-                     getI32Imm(InstructionOrdering, DL),
+    SDValue Ops[] = {getI32Imm(InstructionOrdering, DL),
                      getI32Imm(CodeAddrSpace, DL),
                      getI32Imm(VecType, DL),
                      getI32Imm(FromType, DL),
@@ -1391,8 +1424,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     }
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(FenceOrdering, DL),
-                     getI32Imm(InstructionOrdering, DL),
+    SDValue Ops[] = {getI32Imm(InstructionOrdering, DL),
                      getI32Imm(CodeAddrSpace, DL),
                      getI32Imm(VecType, DL),
                      getI32Imm(FromType, DL),
@@ -1442,8 +1474,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     }
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(FenceOrdering, DL),
-                     getI32Imm(InstructionOrdering, DL),
+    SDValue Ops[] = {getI32Imm(InstructionOrdering, DL),
                      getI32Imm(CodeAddrSpace, DL),
                      getI32Imm(VecType, DL),
                      getI32Imm(FromType, DL),
@@ -1493,8 +1524,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
     }
     if (!Opcode)
       return false;
-    SDValue Ops[] = {getI32Imm(FenceOrdering, DL),
-                     getI32Imm(InstructionOrdering, DL),
+    SDValue Ops[] = {getI32Imm(InstructionOrdering, DL),
                      getI32Imm(CodeAddrSpace, DL),
                      getI32Imm(VecType, DL),
                      getI32Imm(FromType, DL),
@@ -1952,6 +1982,26 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   auto [InstructionOrdering, FenceOrdering] =
       getOperationOrderings(ST, Subtarget);
 
+  // If a fence is required before the operation, insert it:
+  SDValue Chain = ST->getChain();
+  switch (NVPTX::Ordering(FenceOrdering)) {
+  case NVPTX::Ordering::NotAtomic:
+    break;
+  case NVPTX::Ordering::SequentiallyConsistent: {
+    unsigned Op = Subtarget->hasMemoryOrdering()
+                      ? NVPTX::atomic_thread_fence_seq_cst_sys
+                      : NVPTX::atomic_thread_fence_seq_cst_sys_membar;
+    Chain = SDValue(CurDAG->getMachineNode(Op, dl, MVT::Other, Chain), 0);
+    break;
+  }
+  default:
+    SmallString<256> Msg;
+    raw_svector_ostream OS(Msg);
+    OS << "Unexpected fence ordering: \"" << NVPTX::Ordering(FenceOrdering)
+       << "\".";
+    report_fatal_error(OS.str());
+  }
+
   // Vector Setting
   MVT SimpleVT = StoreVT.getSimpleVT();
   unsigned vecType = NVPTX::PTXLdStInstCode::Scalar;
@@ -1971,7 +2021,6 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   unsigned int toType = getLdStRegType(ScalarVT);
 
   // Create the machine instruction DAG
-  SDValue Chain = ST->getChain();
   SDValue Value = PlainStore ? PlainStore->getValue() : AtomicStore->getVal();
   SDValue BasePtr = ST->getBasePtr();
   SDValue Addr;
@@ -1987,7 +2036,6 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
     if (!Opcode)
       return false;
     SDValue Ops[] = {Value,
-                     getI32Imm(FenceOrdering, dl),
                      getI32Imm(InstructionOrdering, dl),
                      getI32Imm(CodeAddrSpace, dl),
                      getI32Imm(vecType, dl),
@@ -2005,7 +2053,6 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
     if (!Opcode)
       return false;
     SDValue Ops[] = {Value,
-                     getI32Imm(FenceOrdering, dl),
                      getI32Imm(InstructionOrdering, dl),
                      getI32Imm(CodeAddrSpace, dl),
                      getI32Imm(vecType, dl),
@@ -2031,7 +2078,6 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
       return false;
 
     SDValue Ops[] = {Value,
-                     getI32Imm(FenceOrdering, dl),
                      getI32Imm(InstructionOrdering, dl),
                      getI32Imm(CodeAddrSpace, dl),
                      getI32Imm(vecType, dl),
@@ -2054,7 +2100,6 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
     if (!Opcode)
       return false;
     SDValue Ops[] = {Value,
-                     getI32Imm(FenceOrdering, dl),
                      getI32Imm(InstructionOrdering, dl),
                      getI32Imm(CodeAddrSpace, dl),
                      getI32Imm(vecType, dl),
@@ -2098,6 +2143,25 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   auto [InstructionOrdering, FenceOrdering] =
       getOperationOrderings(MemSD, Subtarget);
 
+  // If a fence is required before the operation, insert it:
+  switch (NVPTX::Ordering(FenceOrdering)) {
+  case NVPTX::Ordering::NotAtomic:
+    break;
+  case NVPTX::Ordering::SequentiallyConsistent: {
+    unsigned Op = Subtarget->hasMemoryOrdering()
+                      ? NVPTX::atomic_thread_fence_seq_cst_sys
+                      : NVPTX::atomic_thread_fence_seq_cst_sys_membar;
+    Chain = SDValue(CurDAG->getMachineNode(Op, DL, MVT::Other, Chain), 0);
+    break;
+  }
+  default:
+    SmallString<256> Msg;
+    raw_svector_ostream OS(Msg);
+    OS << "Unexpected fence ordering: \"" << NVPTX::Ordering(FenceOrdering)
+       << "\".";
+    report_fatal_error(OS.str());
+  }
+
   // Type Setting: toType + toTypeWidth
   // - for integer type, always use 'u'
   assert(StoreVT.isSimple() && "Store value is not simple");
@@ -2138,7 +2202,6 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
     ToTypeWidth = 32;
   }
 
-  StOps.push_back(getI32Imm(FenceOrdering, DL));
   StOps.push_back(getI32Imm(InstructionOrdering, DL));
   StOps.push_back(getI32Imm(CodeAddrSpace, DL));
   StOps.push_back(getI32Imm(VecType, DL));
