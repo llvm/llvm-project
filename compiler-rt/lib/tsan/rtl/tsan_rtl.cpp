@@ -52,7 +52,7 @@ alignas(SANITIZER_CACHE_LINE_SIZE) THREADLOCAL __attribute__((tls_model(
     "initial-exec"))) char cur_thread_placeholder[sizeof(ThreadState)];
 #endif
 alignas(SANITIZER_CACHE_LINE_SIZE) static char ctx_placeholder[sizeof(Context)];
-Context* ctx;
+Context *ctx;
 
 // Can be overriden by a front-end.
 #ifdef TSAN_EXTERNAL_HOOKS

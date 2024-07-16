@@ -674,17 +674,9 @@ define <4 x half> @zero_strided_unmasked_vpload_4f16(ptr %ptr) {
 define <4 x i64> @zero_strided_vadd.vx(<4 x i64> %v, ptr %ptr) {
 ; CHECK-RV32-LABEL: zero_strided_vadd.vx:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    addi sp, sp, -16
-; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-RV32-NEXT:    lw a1, 4(a0)
-; CHECK-RV32-NEXT:    lw a0, 0(a0)
-; CHECK-RV32-NEXT:    sw a1, 12(sp)
-; CHECK-RV32-NEXT:    sw a0, 8(sp)
-; CHECK-RV32-NEXT:    addi a0, sp, 8
 ; CHECK-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-RV32-NEXT:    vlse64.v v10, (a0), zero
 ; CHECK-RV32-NEXT:    vadd.vv v8, v8, v10
-; CHECK-RV32-NEXT:    addi sp, sp, 16
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: zero_strided_vadd.vx:
