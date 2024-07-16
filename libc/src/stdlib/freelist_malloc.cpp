@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "freelist_heap.h"
+#include "src/__support/freelist_heap.h"
+#include "src/__support/macros/config.h"
+#include "src/stdlib/aligned_alloc.h"
 #include "src/stdlib/calloc.h"
 #include "src/stdlib/free.h"
 #include "src/stdlib/malloc.h"
@@ -14,17 +16,14 @@
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace {
-// Users can define LIBC_FREELIST_MALLOC_SIZE for setting the default buffer
-// size used by freelist malloc.
 #ifdef LIBC_FREELIST_MALLOC_SIZE
+// This is set via the LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE configuration.
 constexpr size_t SIZE = LIBC_FREELIST_MALLOC_SIZE;
 #else
-// TODO: We should probably have something akin to what scudo/sanitizer
-// allocators do where each platform defines this.
-constexpr size_t SIZE = 0x40000000ULL; // 1GB
+#error "LIBC_FREELIST_MALLOC_SIZE was not defined for this build."
 #endif
 LIBC_CONSTINIT FreeListHeapBuffer<SIZE> freelist_heap_buffer;
 } // namespace
@@ -45,4 +44,8 @@ LLVM_LIBC_FUNCTION(void *, realloc, (void *ptr, size_t size)) {
   return freelist_heap->realloc(ptr, size);
 }
 
-} // namespace LIBC_NAMESPACE
+LLVM_LIBC_FUNCTION(void *, aligned_alloc, (size_t alignment, size_t size)) {
+  return freelist_heap->aligned_allocate(alignment, size);
+}
+
+} // namespace LIBC_NAMESPACE_DECL

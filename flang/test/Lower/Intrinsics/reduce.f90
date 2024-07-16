@@ -6,6 +6,17 @@ type :: t1
   integer :: a
 end type
 
+  abstract interface
+    pure function red_int1_interface(a, b)
+      integer(1), intent(in) :: a, b
+      integer(1) :: red_int1_interface
+    end function
+    pure function red_int1_interface_value(a, b)
+      integer(1), value, intent(in) :: a, b
+      integer(1) :: red_int1_interface_value
+    end function
+  end interface
+
 contains
 
 pure function red_int1(a,b)
@@ -20,9 +31,13 @@ pure function red_int1_value(a,b)
   red_int1_value = a + b
 end function
 
-subroutine integer1(a, id)
+subroutine integer1(a, id, d1, d2)
   integer(1), intent(in) :: a(:)
   integer(1) :: res, id
+  procedure(red_int1_interface), pointer :: fptr
+  procedure(red_int1_interface_value), pointer :: fptr_value
+  procedure(red_int1_interface) :: d1
+  procedure(red_int1_interface_value) :: d2
 
   res = reduce(a, red_int1)
 
@@ -33,10 +48,19 @@ subroutine integer1(a, id)
   res = reduce(a, red_int1, [.true., .true., .false.])
   
   res = reduce(a, red_int1_value)
+
+  fptr => red_int1
+  res = reduce(a, fptr)
+
+  fptr_value => red_int1_value
+  res = reduce(a, fptr_value)
+
+  !res = reduce(a, d1)
+  !res = reduce(a, d2)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QMreduce_modPinteger1(
-! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xi8>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<i8> {fir.bindc_name = "id"})
+! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?xi8>> {fir.bindc_name = "a"}, %[[ARG1:.*]]: !fir.ref<i8> {fir.bindc_name = "id"}
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{.*}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QMreduce_modFinteger1Ea"} : (!fir.box<!fir.array<?xi8>>, !fir.dscope) -> (!fir.box<!fir.array<?xi8>>, !fir.box<!fir.array<?xi8>>)
 ! CHECK: %[[ID:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{.*}} {uniq_name = "_QMreduce_modFinteger1Eid"} : (!fir.ref<i8>, !fir.dscope) -> (!fir.ref<i8>, !fir.ref<i8>)
 ! CHECK: %[[ALLOC_RES:.*]] = fir.alloca i8 {bindc_name = "res", uniq_name = "_QMreduce_modFinteger1Eres"}
@@ -64,6 +88,10 @@ end subroutine
 ! CHECK: %[[CONV_MASK:.*]] = fir.convert %[[BOXED_MASK]] : (!fir.box<!fir.array<3x!fir.logical<4>>>) -> !fir.box<none>
 ! CHECK: fir.call @_FortranAReduceInteger1Ref(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[CONV_MASK]], %{{.*}}, %false{{.*}})
 ! CHECK: fir.call @_FortranAReduceInteger1Value
+! CHECK: fir.call @_FortranAReduceInteger1Ref
+! CHECK: fir.call @_FortranAReduceInteger1Value
+! TODO fir.call @_FortranAReduceInteger1Ref
+! TODO fir.call @_FortranAReduceInteger1Value
 
 pure function red_int2(a,b)
   integer(2), intent(in) :: a, b

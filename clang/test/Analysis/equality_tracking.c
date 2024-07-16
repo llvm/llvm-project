@@ -28,6 +28,22 @@ void zeroImpliesEquality(int a, int b) {
   clang_analyzer_eval(b != a);       // expected-warning{{TRUE}}
 }
 
+typedef int I32_A;
+typedef int I32_B;
+void zeroImpliesEqualityWithTypedef(I32_A a, I32_B b) {
+  clang_analyzer_eval((a - b) == 0); // expected-warning{{UNKNOWN}}
+  if ((a - b) == 0) {
+    clang_analyzer_eval(b != a);    // expected-warning{{FALSE}}
+    clang_analyzer_eval(b == a);    // expected-warning{{TRUE}}
+    clang_analyzer_eval(!(a != b)); // expected-warning{{TRUE}}
+    clang_analyzer_eval(!(b == a)); // expected-warning{{FALSE}}
+    return;
+  }
+  clang_analyzer_eval((a - b) == 0); // expected-warning{{FALSE}}
+  clang_analyzer_eval(b == a);       // expected-warning{{FALSE}}
+  clang_analyzer_eval(b != a);       // expected-warning{{TRUE}}
+}
+
 void zeroImpliesReversedEqual(int a, int b) {
   clang_analyzer_eval((b - a) == 0); // expected-warning{{UNKNOWN}}
   if ((b - a) == 0) {

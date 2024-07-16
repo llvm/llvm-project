@@ -1,7 +1,7 @@
 ; RUN: rm -rf %t && mkdir %t && cd %t
 
 ; Generate indexed profiles from text profiles
-RUN: llvm-profdata merge %S/Inputs/vtable-value-prof.proftext -o indexed.profdata
+RUN: llvm-profdata merge --keep-vtable-symbols %S/Inputs/vtable-value-prof.proftext -o indexed.profdata
 
 ; Show indexed profiles
 RUN: llvm-profdata show --function=main --ic-targets --show-vtables indexed.profdata | FileCheck %s --check-prefix=INDEXED
@@ -10,7 +10,7 @@ RUN: llvm-profdata show --function=main --ic-targets --show-vtables indexed.prof
 RUN: llvm-profdata show --function=main --ic-targets --show-vtables --text %S/Inputs/vtable-value-prof.proftext | FileCheck %s --check-prefix=ICTEXT
 
 ; Convert indexed profiles to its textual output and show it.
-RUN: llvm-profdata merge --text -o text-from-indexed.proftext indexed.profdata
+RUN: llvm-profdata merge --keep-vtable-symbols --text -o text-from-indexed.proftext indexed.profdata
 RUN: llvm-profdata show --function=main --ic-targets --show-vtables text-from-indexed.proftext | FileCheck %s --check-prefix=INDEXED
 RUN: llvm-profdata show --function=main --ic-targets --show-vtables --text text-from-indexed.proftext | FileCheck %s --check-prefix=ICTEXT
 

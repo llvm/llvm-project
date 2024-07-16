@@ -18,7 +18,7 @@ namespace gwp_asan {
 void die(const char *Message);
 
 // Checks that `Condition` is true, otherwise dies with `Message`.
-GWP_ASAN_ALWAYS_INLINE void Check(bool Condition, const char *Message) {
+GWP_ASAN_ALWAYS_INLINE void check(bool Condition, const char *Message) {
   if (Condition)
     return;
   die(Message);

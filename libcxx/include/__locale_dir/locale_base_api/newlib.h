@@ -9,14 +9,4 @@
 #ifndef _LIBCPP___LOCALE_LOCALE_BASE_API_NEWLIB_H
 #define _LIBCPP___LOCALE_LOCALE_BASE_API_NEWLIB_H
 
-#if defined(_NEWLIB_VERSION)
-
-#  if !defined(__NEWLIB__) || __NEWLIB__ < 2 || __NEWLIB__ == 2 && __NEWLIB_MINOR__ < 5
-#    include <__support/xlocale/__nop_locale_mgmt.h>
-#    include <__support/xlocale/__posix_l_fallback.h>
-#    include <__support/xlocale/__strtonum_fallback.h>
-#  endif
-
-#endif // _NEWLIB_VERSION
-
 #endif // _LIBCPP___LOCALE_LOCALE_BASE_API_NEWLIB_H

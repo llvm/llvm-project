@@ -11,6 +11,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
@@ -116,6 +117,41 @@ TEST_F(SelectionDAGPatternMatchTest, matchValueType) {
   EXPECT_TRUE(sd_match(Op1, m_FloatingPointVT()));
   EXPECT_TRUE(sd_match(Op2, m_VectorVT()));
   EXPECT_FALSE(sd_match(Op2, m_ScalableVectorVT()));
+}
+
+TEST_F(SelectionDAGPatternMatchTest, matchTernaryOp) {
+  SDLoc DL;
+  auto Int32VT = EVT::getIntegerVT(Context, 32);
+
+  SDValue Op0 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
+  SDValue Op1 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, Int32VT);
+
+  SDValue ICMP_UGT = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETUGT);
+  SDValue ICMP_EQ01 = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETEQ);
+  SDValue ICMP_EQ10 = DAG->getSetCC(DL, MVT::i1, Op1, Op0, ISD::SETEQ);
+
+  using namespace SDPatternMatch;
+  ISD::CondCode CC;
+  EXPECT_TRUE(sd_match(ICMP_UGT, m_SetCC(m_Value(), m_Value(),
+                                         m_SpecificCondCode(ISD::SETUGT))));
+  EXPECT_TRUE(
+      sd_match(ICMP_UGT, m_SetCC(m_Value(), m_Value(), m_CondCode(CC))));
+  EXPECT_TRUE(CC == ISD::SETUGT);
+  EXPECT_FALSE(sd_match(
+      ICMP_UGT, m_SetCC(m_Value(), m_Value(), m_SpecificCondCode(ISD::SETLE))));
+
+  EXPECT_TRUE(sd_match(ICMP_EQ01, m_SetCC(m_Specific(Op0), m_Specific(Op1),
+                                          m_SpecificCondCode(ISD::SETEQ))));
+  EXPECT_TRUE(sd_match(ICMP_EQ10, m_SetCC(m_Specific(Op1), m_Specific(Op0),
+                                          m_SpecificCondCode(ISD::SETEQ))));
+  EXPECT_FALSE(sd_match(ICMP_EQ01, m_SetCC(m_Specific(Op1), m_Specific(Op0),
+                                           m_SpecificCondCode(ISD::SETEQ))));
+  EXPECT_FALSE(sd_match(ICMP_EQ10, m_SetCC(m_Specific(Op0), m_Specific(Op1),
+                                           m_SpecificCondCode(ISD::SETEQ))));
+  EXPECT_TRUE(sd_match(ICMP_EQ01, m_c_SetCC(m_Specific(Op1), m_Specific(Op0),
+                                            m_SpecificCondCode(ISD::SETEQ))));
+  EXPECT_TRUE(sd_match(ICMP_EQ10, m_c_SetCC(m_Specific(Op0), m_Specific(Op1),
+                                            m_SpecificCondCode(ISD::SETEQ))));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {

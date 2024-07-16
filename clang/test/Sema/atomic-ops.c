@@ -671,6 +671,36 @@ void zeroSizeArgError(struct Z *a, struct Z *b, struct Z *c) {
 
 }
 
+struct IncompleteTy IncA, IncB, IncC; // expected-error 3{{tentative definition has type 'struct IncompleteTy' that is never completed}} \
+                                      // expected-note 27{{forward declaration of 'struct IncompleteTy'}}
+void incompleteTypeArgError() {
+  __atomic_exchange(&IncB, &IncB, &IncC, memory_order_relaxed); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_exchange(&IncB, &IncB, &IncC, memory_order_acq_rel); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_exchange(&IncB, &IncB, &IncC, memory_order_acquire); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_exchange(&IncB, &IncB, &IncC, memory_order_consume); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_exchange(&IncB, &IncB, &IncC, memory_order_release); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_exchange(&IncB, &IncB, &IncC, memory_order_seq_cst); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_load(&IncA, &IncB, memory_order_relaxed); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_load(&IncA, &IncB, memory_order_acq_rel); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_load(&IncA, &IncB, memory_order_acquire); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_load(&IncA, &IncB, memory_order_consume); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_load(&IncA, &IncB, memory_order_release); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_load(&IncA, &IncB, memory_order_seq_cst); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_store(&IncA, &IncB, memory_order_relaxed); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_store(&IncA, &IncB, memory_order_acq_rel); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_store(&IncA, &IncB, memory_order_acquire); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_store(&IncA, &IncB, memory_order_consume); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_store(&IncA, &IncB, memory_order_release); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_store(&IncA, &IncB, memory_order_seq_cst); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_compare_exchange(&IncA, &IncB, &IncC, 0, memory_order_relaxed, memory_order_relaxed); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_compare_exchange(&IncA, &IncB, &IncC, 0, memory_order_acq_rel, memory_order_acq_rel); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_compare_exchange(&IncA, &IncB, &IncC, 0, memory_order_acquire, memory_order_acquire); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_compare_exchange(&IncA, &IncB, &IncC, 0, memory_order_consume, memory_order_consume); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_compare_exchange(&IncA, &IncB, &IncC, 0, memory_order_release, memory_order_release); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+  __atomic_compare_exchange(&IncA, &IncB, &IncC, 0, memory_order_seq_cst, memory_order_seq_cst); // expected-error {{incomplete type 'struct IncompleteTy' where a complete type is required}}
+
+}
+
 void nullPointerWarning(void) {
   volatile _Atomic(int) vai;
   _Atomic(int) ai;

@@ -189,3 +189,20 @@ func.func @bufferize_dot(%in: tensor<4xf32>, %out: tensor<f32>) -> tensor<f32> {
   // CHECK: %[[OUT_TENSOR:.*]] = bufferization.to_tensor %[[ALLOC]] : memref<f32>
   // CHECK: return %[[OUT_TENSOR]]
 }
+
+// -----
+
+// CHECK-LABEL: func @bufferize_softmax(
+//  CHECK-SAME:     %[[arg0:.*]]: tensor<2x16x32xf32>, %[[arg1:.*]]: tensor<2x16x32xf32>
+//       CHECK:   %[[m0:.*]] = bufferization.to_memref %[[arg0]]
+//       CHECK:   %[[alloc:.*]] = memref.alloc()
+//   CHECK-NOT:   memref.copy
+//       CHECK:   linalg.softmax dimension(2) ins(%[[m0]] : {{.*}}) outs(%[[alloc:.*]] : {{.*}})
+//       CHECK:   %[[result:.*]] = bufferization.to_tensor %[[alloc]]
+//       CHECK:   return %[[result]]
+func.func @bufferize_softmax(%arg0: tensor<2x16x32xf32>, %arg1: tensor<2x16x32xf32>) -> tensor<2x16x32xf32> {
+  %1 = linalg.softmax dimension(2)
+      ins(%arg0 : tensor<2x16x32xf32>)
+      outs(%arg1: tensor<2x16x32xf32>) -> tensor<2x16x32xf32>
+  return %1 : tensor<2x16x32xf32>
+}

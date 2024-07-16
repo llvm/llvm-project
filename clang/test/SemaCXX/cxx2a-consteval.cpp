@@ -891,13 +891,13 @@ struct S {
 };
 
 void func() {
-  // Explictly defaulted constructor.
+  // Explicitly defaulted constructor.
   S<Foo, 1> s1;
   S<Bar, 1> s2;
   // User provided constructor.
   S<Foo, 2> s3;
   S<Bar, 2> s4;
-  // Consteval explictly defaulted constructor.
+  // Consteval explicitly defaulted constructor.
   S<Foo, 3> s5; // expected-error {{call to consteval function 'multiple_default_constructors::S<multiple_default_constructors::Foo, 3>::S' is not a constant expression}} \
                    expected-note {{in call to 'S()'}}
   S<Bar, 3> s6;
@@ -1195,13 +1195,17 @@ namespace GH66562 {
 
 namespace ns
 {
-    consteval int foo(int x) { return 1; } // expected-note {{declared here}}
+    consteval int foo(int x) { return 1; } // expected-note {{declared here}}  \
+                                           // expected-note {{passing argument to parameter 'x' here}}
 }
 
 template <class A>
 struct T {
-    static constexpr auto xx = ns::foo(A{}); // expected-error {{cannot take address of consteval function 'foo' outside of an immediate invocation}}
+    static constexpr auto xx = ns::foo(A{}); // expected-error {{cannot take address of consteval function 'foo' outside of an immediate invocation}} \
+                                             // expected-error {{cannot initialize a parameter of type 'int' with an rvalue of type 'char *'}}
 };
+
+template class T<char*>; // expected-note {{in instantiation}}
 
 }
 

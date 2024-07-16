@@ -80,3 +80,13 @@ target:
 # CHECK-ASM: encoding: [0bAAAAAA01,0b101AAAAA]
 # CHECK-OBJ: c.j 0x0 <target>
 .insn cj  1, 5, target
+
+# CHECK-ASM: .insn 0x2, 1
+# CHECK-ASM: encoding: [0x01,0x00]
+# CHECK-OBJ: c.nop
+.insn 0x0001
+
+# CHECK-ASM: .insn 0x2, 1
+# CHECK-ASM: encoding: [0x01,0x00]
+# CHECK-OBJ: c.nop
+.insn 0x2, 0x0001

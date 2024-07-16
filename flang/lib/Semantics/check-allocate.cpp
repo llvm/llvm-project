@@ -539,7 +539,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
   // Shape related checks
   if (ultimate_ && evaluate::IsAssumedRank(*ultimate_)) {
     context.Say(name_.source,
-        "An assumed-rank object may not appear in an ALLOCATE statement"_err_en_US);
+        "An assumed-rank dummy argument may not appear in an ALLOCATE statement"_err_en_US);
     return false;
   }
   if (ultimate_ && IsAssumedSizeArray(*ultimate_) && context.AnyFatalError()) {
@@ -607,7 +607,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
       context
           .Say(name_.source,
               "Name in ALLOCATE statement is not definable"_err_en_US)
-          .Attach(std::move(*whyNot));
+          .Attach(std::move(whyNot->set_severity(parser::Severity::Because)));
       return false;
     }
   }

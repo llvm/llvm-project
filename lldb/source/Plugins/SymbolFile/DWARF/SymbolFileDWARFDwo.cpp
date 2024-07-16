@@ -125,9 +125,8 @@ UniqueDWARFASTTypeMap &SymbolFileDWARFDwo::GetUniqueDWARFASTTypeMap() {
   return GetBaseSymbolFile().GetUniqueDWARFASTTypeMap();
 }
 
-lldb::TypeSP
-SymbolFileDWARFDwo::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
-  return GetBaseSymbolFile().FindDefinitionTypeForDWARFDeclContext(die);
+DWARFDIE SymbolFileDWARFDwo::FindDefinitionDIE(const DWARFDIE &die) {
+  return GetBaseSymbolFile().FindDefinitionDIE(die);
 }
 
 lldb::TypeSP SymbolFileDWARFDwo::FindCompleteObjCDefinitionTypeForDIE(
@@ -173,4 +172,9 @@ bool SymbolFileDWARFDwo::GetDebugInfoHadFrameVariableErrors() const {
 }
 void SymbolFileDWARFDwo::SetDebugInfoHadFrameVariableErrors() {
   return GetBaseSymbolFile().SetDebugInfoHadFrameVariableErrors();
+}
+
+SymbolFileDWARF *
+SymbolFileDWARFDwo::GetDIERefSymbolFile(const DIERef &die_ref) {
+  return GetBaseSymbolFile().GetDIERefSymbolFile(die_ref);
 }

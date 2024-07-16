@@ -30,6 +30,7 @@ struct ELFConfig {
   bool AllowBrokenLinks = false;
   bool KeepFileSymbols = false;
   bool LocalizeHidden = false;
+  bool VerifyNoteSections = true;
 };
 
 } // namespace objcopy

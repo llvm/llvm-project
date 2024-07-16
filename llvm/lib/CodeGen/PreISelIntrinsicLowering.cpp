@@ -263,6 +263,19 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(Function &F) const {
 
       break;
     }
+    case Intrinsic::memset_inline: {
+      // Only expand llvm.memset.inline with non-constant length in this
+      // codepath, leaving the current SelectionDAG expansion for constant
+      // length memset intrinsics undisturbed.
+      auto *Memset = cast<MemSetInlineInst>(Inst);
+      if (isa<ConstantInt>(Memset->getLength()))
+        break;
+
+      expandMemSetAsLoop(Memset);
+      Changed = true;
+      Memset->eraseFromParent();
+      break;
+    }
     default:
       llvm_unreachable("unhandled intrinsic");
     }
@@ -280,6 +293,7 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
     case Intrinsic::memcpy:
     case Intrinsic::memmove:
     case Intrinsic::memset:
+    case Intrinsic::memset_inline:
       Changed |= expandMemIntrinsicUses(F);
       break;
     case Intrinsic::load_relative:

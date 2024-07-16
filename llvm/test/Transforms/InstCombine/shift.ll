@@ -1151,7 +1151,7 @@ define void @test61(i128 %arg, i1 %c1, i1 %c2, i1 %c3, i1 %c4) {
 ; CHECK:       bb7:
 ; CHECK-NEXT:    br i1 [[C3:%.*]], label [[BB8]], label [[BB2]]
 ; CHECK:       bb8:
-; CHECK-NEXT:    br i1 undef, label [[BB11:%.*]], label [[BB12]]
+; CHECK-NEXT:    br i1 poison, label [[BB11:%.*]], label [[BB12]]
 ; CHECK:       bb11:
 ; CHECK-NEXT:    br i1 [[C4:%.*]], label [[BB1]], label [[BB12]]
 ; CHECK:       bb12:

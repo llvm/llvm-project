@@ -730,7 +730,7 @@ bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
     // index is compatible with the value we return.
     if (!slotOnlyDiscardsData(RetVal, CallVal, TmpRetPath, TmpCallPath,
                               AllowDifferingSizes, TLI,
-                              F->getParent()->getDataLayout()))
+                              F->getDataLayout()))
       return false;
 
     CallEmpty  = !nextRealType(CallSubTypes, CallPath);

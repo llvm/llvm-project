@@ -65,8 +65,7 @@ add_clang_library(clangAST
   FormatString.cpp
   InheritViz.cpp
   Interp/ByteCodeEmitter.cpp
-  Interp/ByteCodeExprGen.cpp
-  Interp/ByteCodeStmtGen.cpp
+  Interp/Compiler.cpp
   Interp/Context.cpp
   Interp/Descriptor.cpp
   Interp/Disasm.cpp
@@ -139,4 +138,6 @@ add_clang_library(clangAST
   omp_gen
   ClangDriverOptions
   intrinsics_gen
+  # These generated headers are included transitively.
+  AArch64TargetParserTableGen
   )

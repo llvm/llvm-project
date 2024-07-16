@@ -200,6 +200,12 @@ struct SaturatedInteger {
     return SaturatedInteger{false, other.v + v};
   }
   SaturatedInteger operator*(SaturatedInteger other) {
+    // Multiplication with 0 is always 0.
+    if (!other.saturated && other.v == 0)
+      return SaturatedInteger{false, 0};
+    if (!saturated && v == 0)
+      return SaturatedInteger{false, 0};
+    // Otherwise, if this or the other integer is dynamic, so is the result.
     if (saturated || other.saturated)
       return SaturatedInteger{true, 0};
     return SaturatedInteger{false, other.v * v};

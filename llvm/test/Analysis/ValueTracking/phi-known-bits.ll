@@ -375,10 +375,13 @@ F:
 define i8 @phi_ugt_high_bits_and_known(i8 %xx) {
 ; CHECK-LABEL: @phi_ugt_high_bits_and_known(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[XX:%.*]], -65
+; CHECK-NEXT:    [[X:%.*]] = or i8 [[XX:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[XX]], -65
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       T:
-; CHECK-NEXT:    ret i8 65
+; CHECK-NEXT:    [[V:%.*]] = phi i8 [ [[X]], [[ENTRY:%.*]] ], [ -1, [[F]] ]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 65
+; CHECK-NEXT:    ret i8 [[R]]
 ; CHECK:       F:
 ; CHECK-NEXT:    br label [[T]]
 ;

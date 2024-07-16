@@ -7,11 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/common.h"
-#include "src/sys/auxv/getauxval.h"
+#include "src/__support/macros/config.h"
 #include <stddef.h>
 #include <stdint.h>
 
-namespace LIBC_NAMESPACE {
+#ifdef LIBC_TARGET_ARCH_IS_AARCH64
+#include "src/sys/auxv/getauxval.h"
+#endif
+
+namespace LIBC_NAMESPACE_DECL {
 
 int bcmp(const void *lhs, const void *rhs, size_t count);
 void bzero(void *ptr, size_t count);
@@ -27,7 +31,7 @@ int atexit(void (*func)(void));
 // always returns 0 to indicate a failure.
 [[gnu::weak]] unsigned long getauxval(unsigned long id) { return 0; }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 namespace {
 

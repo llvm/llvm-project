@@ -502,9 +502,7 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
 
   // isa<MemSDNode> almost works but is slightly too permissive for some DS
   // intrinsics.
-  if (Opc == ISD::LOAD || Opc == ISD::STORE || isa<AtomicSDNode>(N) ||
-      Opc == AMDGPUISD::ATOMIC_LOAD_FMIN ||
-      Opc == AMDGPUISD::ATOMIC_LOAD_FMAX) {
+  if (Opc == ISD::LOAD || Opc == ISD::STORE || isa<AtomicSDNode>(N)) {
     N = glueCopyToM0LDSInit(N);
     SelectCode(N);
     return;
@@ -2006,12 +2004,31 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
   return true;
 }
 
+// For unbuffered smem loads, it is illegal for the Immediate Offset to be
+// negative if the resulting (Offset + (M0 or SOffset or zero) is negative.
+// Handle the case where the Immediate Offset + SOffset is negative.
+bool AMDGPUDAGToDAGISel::isSOffsetLegalWithImmOffset(SDValue *SOffset,
+                                                     bool Imm32Only,
+                                                     bool IsBuffer,
+                                                     int64_t ImmOffset) const {
+  if (!IsBuffer && !Imm32Only && ImmOffset < 0 &&
+      AMDGPU::hasSMRDSignedImmOffset(*Subtarget)) {
+    KnownBits SKnown = CurDAG->computeKnownBits(*SOffset);
+    if (ImmOffset + SKnown.getMinValue().getSExtValue() < 0)
+      return false;
+  }
+
+  return true;
+}
+
 // Match an immediate (if Offset is not null) or an SGPR (if SOffset is
 // not null) offset. If Imm32Only is true, match only 32-bit immediate
 // offsets available on CI.
 bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDValue ByteOffsetNode,
                                           SDValue *SOffset, SDValue *Offset,
-                                          bool Imm32Only, bool IsBuffer) const {
+                                          bool Imm32Only, bool IsBuffer,
+                                          bool HasSOffset,
+                                          int64_t ImmOffset) const {
   assert((!SOffset || !Offset) &&
          "Cannot match both soffset and offset at the same time!");
 
@@ -2019,15 +2036,18 @@ bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDValue ByteOffsetNode,
   if (!C) {
     if (!SOffset)
       return false;
+
     if (ByteOffsetNode.getValueType().isScalarInteger() &&
         ByteOffsetNode.getValueType().getSizeInBits() == 32) {
       *SOffset = ByteOffsetNode;
-      return true;
+      return isSOffsetLegalWithImmOffset(SOffset, Imm32Only, IsBuffer,
+                                         ImmOffset);
     }
     if (ByteOffsetNode.getOpcode() == ISD::ZERO_EXTEND) {
       if (ByteOffsetNode.getOperand(0).getValueType().getSizeInBits() == 32) {
         *SOffset = ByteOffsetNode.getOperand(0);
-        return true;
+        return isSOffsetLegalWithImmOffset(SOffset, Imm32Only, IsBuffer,
+                                           ImmOffset);
       }
     }
     return false;
@@ -2038,8 +2058,8 @@ bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDValue ByteOffsetNode,
   // GFX9 and GFX10 have signed byte immediate offsets. The immediate
   // offset for S_BUFFER instructions is unsigned.
   int64_t ByteOffset = IsBuffer ? C->getZExtValue() : C->getSExtValue();
-  std::optional<int64_t> EncodedOffset =
-      AMDGPU::getSMRDEncodedOffset(*Subtarget, ByteOffset, IsBuffer);
+  std::optional<int64_t> EncodedOffset = AMDGPU::getSMRDEncodedOffset(
+      *Subtarget, ByteOffset, IsBuffer, HasSOffset);
   if (EncodedOffset && Offset && !Imm32Only) {
     *Offset = CurDAG->getTargetConstant(*EncodedOffset, SL, MVT::i32);
     return true;
@@ -2098,13 +2118,22 @@ SDValue AMDGPUDAGToDAGISel::Expand32BitAddress(SDValue Addr) const {
 // true, match only 32-bit immediate offsets available on CI.
 bool AMDGPUDAGToDAGISel::SelectSMRDBaseOffset(SDValue Addr, SDValue &SBase,
                                               SDValue *SOffset, SDValue *Offset,
-                                              bool Imm32Only,
-                                              bool IsBuffer) const {
+                                              bool Imm32Only, bool IsBuffer,
+                                              bool HasSOffset,
+                                              int64_t ImmOffset) const {
   if (SOffset && Offset) {
     assert(!Imm32Only && !IsBuffer);
     SDValue B;
-    return SelectSMRDBaseOffset(Addr, B, nullptr, Offset) &&
-           SelectSMRDBaseOffset(B, SBase, SOffset, nullptr);
+
+    if (!SelectSMRDBaseOffset(Addr, B, nullptr, Offset, false, false, true))
+      return false;
+
+    int64_t ImmOff = 0;
+    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(*Offset))
+      ImmOff = C->getSExtValue();
+
+    return SelectSMRDBaseOffset(B, SBase, SOffset, nullptr, false, false, true,
+                                ImmOff);
   }
 
   // A 32-bit (address + offset) should not cause unsigned 32-bit integer
@@ -2123,11 +2152,14 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBaseOffset(SDValue Addr, SDValue &SBase,
   }
   if (!N0 || !N1)
     return false;
-  if (SelectSMRDOffset(N1, SOffset, Offset, Imm32Only, IsBuffer)) {
+
+  if (SelectSMRDOffset(N1, SOffset, Offset, Imm32Only, IsBuffer, HasSOffset,
+                       ImmOffset)) {
     SBase = N0;
     return true;
   }
-  if (SelectSMRDOffset(N0, SOffset, Offset, Imm32Only, IsBuffer)) {
+  if (SelectSMRDOffset(N0, SOffset, Offset, Imm32Only, IsBuffer, HasSOffset,
+                       ImmOffset)) {
     SBase = N1;
     return true;
   }
@@ -2551,14 +2583,6 @@ void AMDGPUDAGToDAGISel::SelectDSBvhStackIntrinsic(SDNode *N) {
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(Selected), {MMO});
 }
 
-void AMDGPUDAGToDAGISel::SelectPOPSExitingWaveID(SDNode *N) {
-  // TODO: Select this with a tablegen pattern. This is tricky because the
-  // intrinsic is IntrReadMem/IntrWriteMem but the instruction is not marked
-  // mayLoad/mayStore and tablegen complains about the mismatch.
-  SDValue Reg = CurDAG->getRegister(AMDGPU::SRC_POPS_EXITING_WAVE_ID, MVT::i32);
-  CurDAG->SelectNodeTo(N, AMDGPU::S_MOV_B32, N->getVTList(), Reg);
-}
-
 static unsigned gwsIntrinToOpcode(unsigned IntrID) {
   switch (IntrID) {
   case Intrinsic::amdgcn_ds_gws_init:
@@ -2714,9 +2738,6 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
   }
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
     SelectDSBvhStackIntrinsic(N);
-    return;
-  case Intrinsic::amdgcn_pops_exiting_wave_id:
-    SelectPOPSExitingWaveID(N);
     return;
   }
 

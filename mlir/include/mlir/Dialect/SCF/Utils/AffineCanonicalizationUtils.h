@@ -15,11 +15,9 @@
 #define MLIR_DIALECT_SCF_UTILS_AFFINECANONICALIZATIONUTILS_H_
 
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
 class AffineMap;
-struct LogicalResult;
 class Operation;
 class OpFoldResult;
 class RewriterBase;
