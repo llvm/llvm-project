@@ -7251,14 +7251,14 @@ ASTContext::getCanonicalNestedNameSpecifier(NestedNameSpecifier *NNS) const {
     // A namespace is canonical; build a nested-name-specifier with
     // this namespace and no prefix.
     return NestedNameSpecifier::Create(*this, nullptr,
-                                 NNS->getAsNamespace()->getOriginalNamespace());
+                                       NNS->getAsNamespace()->getFirstDecl());
 
   case NestedNameSpecifier::NamespaceAlias:
     // A namespace is canonical; build a nested-name-specifier with
     // this namespace and no prefix.
-    return NestedNameSpecifier::Create(*this, nullptr,
-                                    NNS->getAsNamespaceAlias()->getNamespace()
-                                                      ->getOriginalNamespace());
+    return NestedNameSpecifier::Create(
+        *this, nullptr,
+        NNS->getAsNamespaceAlias()->getNamespace()->getFirstDecl());
 
   // The difference between TypeSpec and TypeSpecWithTemplate is that the
   // latter will have the 'template' keyword when printed.

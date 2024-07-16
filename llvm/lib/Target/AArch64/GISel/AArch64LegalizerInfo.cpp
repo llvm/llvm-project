@@ -711,7 +711,13 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           {{s32, s128}, {s64, s128}, {s128, s128}, {s128, s32}, {s128, s64}});
 
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
-      .legalForCartesianProduct({s32, s64, v2s64, v4s32, v2s32})
+      .legalFor({{s32, s32},
+                 {s64, s32},
+                 {s32, s64},
+                 {s64, s64},
+                 {v2s64, v2s64},
+                 {v4s32, v4s32},
+                 {v2s32, v2s32}})
       .legalIf([=](const LegalityQuery &Query) {
         return HasFP16 &&
                (Query.Types[0] == s16 || Query.Types[0] == v4s16 ||
@@ -719,26 +725,35 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                (Query.Types[1] == s32 || Query.Types[1] == s64 ||
                 Query.Types[1] == v4s16 || Query.Types[1] == v8s16);
       })
-      .widenScalarToNextPow2(1)
-      .clampScalar(1, s32, s64)
-      .widenScalarToNextPow2(0)
-      .clampScalarOrElt(0, MinFPScalar, s64)
-      .moreElementsToNextPow2(0)
+      .scalarizeIf(scalarOrEltWiderThan(1, 64), 1)
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
+      .moreElementsToNextPow2(1)
+      .widenScalarOrEltToNextPow2OrMinSize(1)
+      .minScalar(1, s32)
+      .widenScalarOrEltToNextPow2OrMinSize(0, /*MinSize=*/HasFP16 ? 16 : 32)
       .widenScalarIf(
           [=](const LegalityQuery &Query) {
-            return Query.Types[0].getScalarSizeInBits() <
-                   Query.Types[1].getScalarSizeInBits();
+            return Query.Types[1].getScalarSizeInBits() <= 64 &&
+                   Query.Types[0].getScalarSizeInBits() <
+                       Query.Types[1].getScalarSizeInBits();
           },
           LegalizeMutations::changeElementSizeTo(0, 1))
       .widenScalarIf(
           [=](const LegalityQuery &Query) {
-            return Query.Types[0].getScalarSizeInBits() >
-                   Query.Types[1].getScalarSizeInBits();
+            return Query.Types[0].getScalarSizeInBits() <= 64 &&
+                   Query.Types[0].getScalarSizeInBits() >
+                       Query.Types[1].getScalarSizeInBits();
           },
           LegalizeMutations::changeElementSizeTo(1, 0))
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
-      .clampMaxNumElements(0, s64, 2);
+      .clampMaxNumElements(0, s64, 2)
+      .libcallFor({{s16, s128},
+                   {s32, s128},
+                   {s64, s128},
+                   {s128, s128},
+                   {s128, s32},
+                   {s128, s64}});
 
   // Control-flow
   getActionDefinitionsBuilder(G_BRCOND)

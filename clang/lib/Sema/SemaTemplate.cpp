@@ -174,12 +174,15 @@ bool Sema::hasAnyAcceptableTemplateNames(LookupResult &R,
   return false;
 }
 
-TemplateNameKind
-Sema::isTemplateName(Scope *S, CXXScopeSpec &SS, bool hasTemplateKeyword,
-                     const UnqualifiedId &Name, ParsedType ObjectTypePtr,
-                     bool EnteringContext, TemplateTy &TemplateResult,
-                     bool &MemberOfUnknownSpecialization, bool Disambiguation,
-                     bool MayBeNNS) {
+TemplateNameKind Sema::isTemplateName(Scope *S,
+                                      CXXScopeSpec &SS,
+                                      bool hasTemplateKeyword,
+                                      const UnqualifiedId &Name,
+                                      ParsedType ObjectTypePtr,
+                                      bool EnteringContext,
+                                      TemplateTy &TemplateResult,
+                                      bool &MemberOfUnknownSpecialization,
+                                      bool Disambiguation) {
   assert(getLangOpts().CPlusPlus && "No template names in C!");
 
   DeclarationName TName;
@@ -210,9 +213,8 @@ Sema::isTemplateName(Scope *S, CXXScopeSpec &SS, bool hasTemplateKeyword,
   if (LookupTemplateName(R, S, SS, ObjectType, EnteringContext,
                          /*RequiredTemplate=*/SourceLocation(),
                          &AssumedTemplate,
-                         /*AllowTypoCorrection=*/!Disambiguation, MayBeNNS))
+                         /*AllowTypoCorrection=*/!Disambiguation))
     return TNK_Non_template;
-
   MemberOfUnknownSpecialization = R.wasNotFoundInCurrentInstantiation();
 
   if (AssumedTemplate != AssumedTemplateKind::None) {
@@ -378,7 +380,7 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
                               QualType ObjectType, bool EnteringContext,
                               RequiredTemplateKind RequiredTemplate,
                               AssumedTemplateKind *ATK,
-                              bool AllowTypoCorrection, bool MayBeNNS) {
+                              bool AllowTypoCorrection) {
   if (ATK)
     *ATK = AssumedTemplateKind::None;
 
@@ -387,89 +389,92 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
 
   Found.setTemplateNameLookup(true);
 
-  // Template names cannot appear inside an Objective-C class or object type
-  // or a vector type.
-  //
-  // FIXME: This is wrong. For example:
-  //
-  //   template<typename T> using Vec = T __attribute__((ext_vector_type(4)));
-  //   Vec<int> vi;
-  //   vi.Vec<int>::~Vec<int>();
-  //
-  // ... should be accepted but we will not treat 'Vec' as a template name
-  // here. The right thing to do would be to check if the name is a valid
-  // vector component name, and look up a template name if not. And similarly
-  // for lookups into Objective-C class and object types, where the same
-  // problem can arise.
-  if (!ObjectType.isNull() && (ObjectType->isVectorType() ||
-                               ObjectType->isObjCObjectOrInterfaceType())) {
-    Found.clear();
-    return false;
+  // Determine where to perform name lookup
+  DeclContext *LookupCtx = nullptr;
+  bool IsDependent = false;
+  if (!ObjectType.isNull()) {
+    // This nested-name-specifier occurs in a member access expression, e.g.,
+    // x->B::f, and we are looking into the type of the object.
+    assert(SS.isEmpty() && "ObjectType and scope specifier cannot coexist");
+    LookupCtx = computeDeclContext(ObjectType);
+    IsDependent = !LookupCtx && ObjectType->isDependentType();
+    assert((IsDependent || !ObjectType->isIncompleteType() ||
+            !ObjectType->getAs<TagType>() ||
+            ObjectType->castAs<TagType>()->isBeingDefined()) &&
+           "Caller should have completed object type");
+
+    // Template names cannot appear inside an Objective-C class or object type
+    // or a vector type.
+    //
+    // FIXME: This is wrong. For example:
+    //
+    //   template<typename T> using Vec = T __attribute__((ext_vector_type(4)));
+    //   Vec<int> vi;
+    //   vi.Vec<int>::~Vec<int>();
+    //
+    // ... should be accepted but we will not treat 'Vec' as a template name
+    // here. The right thing to do would be to check if the name is a valid
+    // vector component name, and look up a template name if not. And similarly
+    // for lookups into Objective-C class and object types, where the same
+    // problem can arise.
+    if (ObjectType->isObjCObjectOrInterfaceType() ||
+        ObjectType->isVectorType()) {
+      Found.clear();
+      return false;
+    }
+  } else if (SS.isNotEmpty()) {
+    // This nested-name-specifier occurs after another nested-name-specifier,
+    // so long into the context associated with the prior nested-name-specifier.
+    LookupCtx = computeDeclContext(SS, EnteringContext);
+    IsDependent = !LookupCtx && isDependentScopeSpecifier(SS);
+
+    // The declaration context must be complete.
+    if (LookupCtx && RequireCompleteDeclContext(SS, LookupCtx))
+      return true;
   }
 
-  LookupParsedName(Found, S, &SS, ObjectType,
-                   /*AllowBuiltinCreation=*/false, EnteringContext);
-
-  // C++ [basic.lookup.qual.general]p3:
-  //   [...] Unless otherwise specified, a qualified name undergoes qualified
-  //   name lookup in its lookup context from the point where it appears unless
-  //   the lookup context either is dependent and is not the current
-  //   instantiation or is not a class or class template.
-  //
-  // The lookup context is dependent and either:
-  // - it is not the current instantiation, or
-  // - it is the current instantiation, it has at least one dependent base
-  //   class, and qualified lookup found nothing.
-  //
-  // If this is a member-qualified name that is the terminal name of a
-  // nested-name-specifier, we perform unqualified lookup and store the results
-  // so we can replicate the lookup during instantiation. The results of the
-  // unqualified loookup are *not* used to determine whether '<' is interpreted
-  // as the delimiter of a template-argument-list.
-  //
-  // For example:
-  //
-  //   template<typename T>
-  //   struct A {
-  //     int x;
-  //   };
-  //
-  //   template<typename T>
-  //   using B = A<T>;
-  //
-  //   template<typename T>
-  //   void f(A<T> a, A<int> b) {
-  //     a.B<T>::x; // error: missing 'template' before 'B'
-  //     b.B<int>::x; // ok, lookup context is not dependent
-  //   }
-  if (Found.wasNotFoundInCurrentInstantiation())
-    return false;
-
   bool ObjectTypeSearchedInScope = false;
+  bool AllowFunctionTemplatesInLookup = true;
+  if (LookupCtx) {
+    // Perform "qualified" name lookup into the declaration context we
+    // computed, which is either the type of the base of a member access
+    // expression or the declaration context associated with a prior
+    // nested-name-specifier.
+    LookupQualifiedName(Found, LookupCtx);
 
-  // C++ [basic.lookup.qual.general]p2:
-  //   A member-qualified name is the (unique) component name, if any, of
-  //   - an unqualified-id or
-  //   - a nested-name-specifier of the form type-name :: or namespace-name ::
-  //   in the id-expression of a class member access expression.
-  //
-  // C++ [basic.lookup.qual.general]p3:
-  //   [...] If nothing is found by qualified lookup for a member-qualified
-  //   name that is the terminal name of a nested-name-specifier and is not
-  //   dependent, it undergoes unqualified lookup.
-  //
-  // In 'x.A::B::y', 'A' will undergo unqualified lookup if qualified lookup
-  // in the type of 'x' finds nothing. If the lookup context is dependent,
-  // we perform the unqualified lookup in the template definition context
-  // and store the results so we can replicate the lookup during instantiation.
-  if (MayBeNNS && Found.empty() && !ObjectType.isNull()) {
-    if (S) {
+    // FIXME: The C++ standard does not clearly specify what happens in the
+    // case where the object type is dependent, and implementations vary. In
+    // Clang, we treat a name after a . or -> as a template-name if lookup
+    // finds a non-dependent member or member of the current instantiation that
+    // is a type template, or finds no such members and lookup in the context
+    // of the postfix-expression finds a type template. In the latter case, the
+    // name is nonetheless dependent, and we may resolve it to a member of an
+    // unknown specialization when we come to instantiate the template.
+    IsDependent |= Found.wasNotFoundInCurrentInstantiation();
+  }
+
+  if (SS.isEmpty() && (ObjectType.isNull() || Found.empty())) {
+    // C++ [basic.lookup.classref]p1:
+    //   In a class member access expression (5.2.5), if the . or -> token is
+    //   immediately followed by an identifier followed by a <, the
+    //   identifier must be looked up to determine whether the < is the
+    //   beginning of a template argument list (14.2) or a less-than operator.
+    //   The identifier is first looked up in the class of the object
+    //   expression. If the identifier is not found, it is then looked up in
+    //   the context of the entire postfix-expression and shall name a class
+    //   template.
+    if (S)
       LookupName(Found, S);
-    } else if (!SS.getUnqualifiedLookups().empty()) {
-      Found.addAllDecls(SS.getUnqualifiedLookups());
-      Found.resolveKind();
+
+    if (!ObjectType.isNull()) {
+      //  FIXME: We should filter out all non-type templates here, particularly
+      //  variable templates and concepts. But the exclusion of alias templates
+      //  and template template parameters is a wording defect.
+      AllowFunctionTemplatesInLookup = false;
+      ObjectTypeSearchedInScope = true;
     }
-    ObjectTypeSearchedInScope = true;
+
+    IsDependent |= Found.wasNotFoundInCurrentInstantiation();
   }
 
   if (Found.isAmbiguous())
@@ -489,7 +494,7 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
         getLangOpts().CPlusPlus20 && llvm::all_of(Found, [](NamedDecl *ND) {
           return isa<FunctionDecl>(ND->getUnderlyingDecl());
         });
-    if (AllFunctions || Found.empty()) {
+    if (AllFunctions || (Found.empty() && !IsDependent)) {
       // If lookup found any functions, or if this is a name that can only be
       // used for a function, then strongly assume this is a function
       // template-id.
@@ -501,15 +506,11 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
     }
   }
 
-  if (Found.empty() && AllowTypoCorrection) {
+  if (Found.empty() && !IsDependent && AllowTypoCorrection) {
     // If we did not find any names, and this is not a disambiguation, attempt
     // to correct any typos.
     DeclarationName Name = Found.getLookupName();
     Found.clear();
-    DeclContext *LookupCtx =
-        SS.isSet()
-            ? computeDeclContext(SS, EnteringContext)
-            : (!ObjectType.isNull() ? computeDeclContext(ObjectType) : nullptr);
     // Simple filter callback that, for keywords, only accepts the C++ *_cast
     DefaultFilterCCC FilterCCC{};
     FilterCCC.WantTypeSpecifiers = false;
@@ -542,8 +543,13 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
 
   NamedDecl *ExampleLookupResult =
       Found.empty() ? nullptr : Found.getRepresentativeDecl();
-  FilterAcceptableTemplateNames(Found);
+  FilterAcceptableTemplateNames(Found, AllowFunctionTemplatesInLookup);
   if (Found.empty()) {
+    if (IsDependent) {
+      Found.setNotFoundInCurrentInstantiation();
+      return false;
+    }
+
     // If a 'template' keyword was used, a lookup that finds only non-template
     // names is an error.
     if (ExampleLookupResult && RequiredTemplate) {
@@ -735,7 +741,7 @@ Sema::ActOnDependentIdExpression(const CXXScopeSpec &SS,
         /*IsArrow=*/!Context.getLangOpts().HLSL,
         /*OperatorLoc=*/SourceLocation(),
         /*QualifierLoc=*/NestedNameSpecifierLoc(), TemplateKWLoc,
-        /*UnqualifiedLookups=*/std::nullopt, NameInfo, TemplateArgs);
+        /*FirstQualifierFoundInScope=*/nullptr, NameInfo, TemplateArgs);
   }
   return BuildDependentDeclRefExpr(SS, TemplateKWLoc, NameInfo, TemplateArgs);
 }
@@ -4471,10 +4477,14 @@ ExprResult Sema::BuildQualifiedTemplateIdExpr(
   return BuildTemplateIdExpr(SS, TemplateKWLoc, R, /*ADL=*/false, TemplateArgs);
 }
 
-TemplateNameKind Sema::ActOnTemplateName(
-    Scope *S, CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
-    const UnqualifiedId &Name, ParsedType ObjectType, bool EnteringContext,
-    TemplateTy &Result, bool AllowInjectedClassName, bool MayBeNNS) {
+TemplateNameKind Sema::ActOnTemplateName(Scope *S,
+                                         CXXScopeSpec &SS,
+                                         SourceLocation TemplateKWLoc,
+                                         const UnqualifiedId &Name,
+                                         ParsedType ObjectType,
+                                         bool EnteringContext,
+                                         TemplateTy &Result,
+                                         bool AllowInjectedClassName) {
   if (TemplateKWLoc.isValid() && S && !S->getTemplateParamParent())
     Diag(TemplateKWLoc,
          getLangOpts().CPlusPlus11 ?
@@ -4509,10 +4519,9 @@ TemplateNameKind Sema::ActOnTemplateName(
   // "template" keyword is now permitted). We follow the C++0x
   // rules, even in C++03 mode with a warning, retroactively applying the DR.
   bool MemberOfUnknownSpecialization;
-  TemplateNameKind TNK =
-      isTemplateName(S, SS, TemplateKWLoc.isValid(), Name, ObjectType,
-                     EnteringContext, Result, MemberOfUnknownSpecialization,
-                     /*Disambiguation=*/false, MayBeNNS);
+  TemplateNameKind TNK = isTemplateName(S, SS, TemplateKWLoc.isValid(), Name,
+                                        ObjectType, EnteringContext, Result,
+                                        MemberOfUnknownSpecialization);
   if (TNK != TNK_Non_template) {
     // We resolved this to a (non-dependent) template name. Return it.
     auto *LookupRD = dyn_cast_or_null<CXXRecordDecl>(LookupCtx);
@@ -4551,8 +4560,7 @@ TemplateNameKind Sema::ActOnTemplateName(
                                    ? RequiredTemplateKind(TemplateKWLoc)
                                    : TemplateNameIsRequired;
     if (!LookupTemplateName(R, S, SS, ObjectType.get(), EnteringContext, RTK,
-                            /*ATK=*/nullptr, /*AllowTypoCorrection=*/false,
-                            MayBeNNS) &&
+                            /*ATK=*/nullptr, /*AllowTypoCorrection=*/false) &&
         !R.isAmbiguous()) {
       if (LookupCtx)
         Diag(Name.getBeginLoc(), diag::err_no_member)

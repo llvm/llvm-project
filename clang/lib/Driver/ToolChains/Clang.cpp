@@ -2599,6 +2599,13 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
       switch (C.getDefaultToolChain().getArch()) {
       default:
         break;
+      case llvm::Triple::x86:
+      case llvm::Triple::x86_64:
+        if (Value == "-msse2avx") {
+          CmdArgs.push_back("-msse2avx");
+          continue;
+        }
+        break;
       case llvm::Triple::wasm32:
       case llvm::Triple::wasm64:
         if (Value == "--no-type-check") {

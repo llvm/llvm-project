@@ -7580,6 +7580,8 @@ def err_explicit_object_lambda_ambiguous_base : Error<
 def err_explicit_object_lambda_inaccessible_base : Error<
   "invalid explicit object parameter type %0 in lambda with capture; "
   "the type must derive publicly from the lambda">;
+def err_explicit_object_parameter_invalid: Error<
+  "an explicit object parameter can only appear as the first parameter of a member function">;
 
 def err_ref_qualifier_overload : Error<
   "cannot overload a member function %select{without a ref-qualifier|with "
