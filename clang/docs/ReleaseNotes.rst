@@ -40,8 +40,14 @@ code bases.
 - Setting the deprecated CMake variable ``GCC_INSTALL_PREFIX`` (which sets the
   default ``--gcc-toolchain=``) now leads to a fatal error.
 
+- The ``le32`` and ``le64`` targets have been removed.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
+
+- Clang now supports raw string literals in ``-std=gnuXY`` mode as an extension in
+  C99 and later. This behaviour can also be overridden using ``-f[no-]raw-string-literals``.
+  Support of raw string literals in C++ is not affected. Fixes (#GH85703).
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
@@ -99,7 +105,7 @@ ABI Changes in This Version
   ifuncs. Its purpose was to preserve backwards compatibility when the ".ifunc"
   suffix got removed from the name mangling. The alias interacts badly with
   GlobalOpt (see the issue #96197).
-  
+
 - Fixed Microsoft name mangling for auto non-type template arguments of pointer
   type for MSVC 1920+. This change resolves incompatibilities with code compiled
   by MSVC 1920+ but will introduce incompatibilities with code compiled by
@@ -161,6 +167,7 @@ Clang Python Bindings Potentially Breaking Changes
   of variant 271.
 - Renamed ``TypeKind`` variant 162 from ``OBJCCLASS`` to ``OBJCTYPEPARAM``.
   The previous name was incorrect, it was a duplicate of variant 28.
+- Refactored enum implementation, switching to the standard library `Enum` type.
 
 What's New in Clang |release|?
 ==============================
@@ -348,6 +355,12 @@ C23 Feature Support
   but C23 added them to ``<float.h>`` in
   `WG14 N2848 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2848.pdf>`_.
 
+- Clang now supports `N3017 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3017.htm>`_
+  ``#embed`` - a scannable, tooling-friendly binary resource inclusion mechanism.
+
+- Added the ``FLT_NORM_MAX``, ``DBL_NORM_MAX``, and ``LDBL_NORM_MAX`` to the
+  freestanding implementation of ``<float.h>`` that ships with Clang.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -442,6 +455,14 @@ New Compiler Flags
 - ``-Wc++2c-compat`` group was added to help migrating existing codebases
   to upcoming C++26.
 
+- ``-fdisable-block-signature-string`` instructs clang not to emit the signature
+  string for blocks. Disabling the string can potentially break existing code
+  that relies on it. Users should carefully consider this possibiilty when using
+  the flag.
+
+- For the ARM target, added ``-Warm-interrupt-vfp-clobber`` that will emit a
+  diagnostic when an interrupt handler is declared and VFP is enabled.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -483,6 +504,13 @@ Modified Compiler Flags
 - Diagnostics groups about compatibility with a particular C++ Standard version
   now include dianostics about C++26 features that are not present in older
   versions.
+
+- Removed the "arm interrupt calling convention" warning that was included in
+  ``-Wextra`` without its own flag. This warning suggested adding
+  ``__attribute__((interrupt))`` to functions that are called from interrupt
+  handlers to prevent clobbering VFP registers. Following this suggestion leads
+  to unpredictable behavior by causing multiple exception returns from one
+  exception. Fixes #GH34876.
 
 Removed Compiler Flags
 -------------------------
@@ -546,6 +574,19 @@ Attribute Changes in Clang
        size_t count;
      };
 
+- The attributes ``sized_by``, ``counted_by_or_null`` and ``sized_by_or_null```
+  have been added as variants on ``counted_by``, each with slightly different semantics.
+  ``sized_by`` takes a byte size parameter instead of an element count, allowing pointees
+  with unknown size. The ``counted_by_or_null`` and ``sized_by_or_null`` variants are equivalent
+  to their base variants, except the pointer can be null regardless of count/size value.
+  If the pointer is null the size is effectively 0. ``sized_by_or_null`` is needed to properly
+  annotate allocator functions like ``malloc`` that return a buffer of a given byte size, but can
+  also return null.
+
+- The ``guarded_by``, ``pt_guarded_by``, ``acquired_after``, ``acquired_before``
+  attributes now support referencing struct members in C. The arguments are also
+  now late parsed when ``-fexperimental-late-parse-attributes`` is passed like
+  for ``counted_by``.
 
 - Introduced new function type attributes ``[[clang::nonblocking]]``, ``[[clang::nonallocating]]``,
   ``[[clang::blocking]]``, and ``[[clang::allocating]]``, with GNU-style variants as well.
@@ -554,6 +595,9 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Clang now emits an error instead of a warning for ``-Wundefined-internal``
+  when compiling with `-pedantic-errors` to conform to the C standard
+
 - Clang now applies syntax highlighting to the code snippets it
   prints.
 
@@ -662,6 +706,13 @@ Improvements to Clang's diagnostics
 
 - Clang now shows implicit deduction guides when diagnosing overload resolution failure. #GH92393.
 
+- Clang no longer emits a "no previous prototype" warning for Win32 entry points under ``-Wmissing-prototypes``.
+  Fixes #GH94366.
+
+- For the ARM target, calling an interrupt handler from another function is now an error. #GH95359.
+
+- Clang now diagnoses integer constant expressions that are folded to a constant value as an extension in more circumstances. Fixes #GH59863
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -769,6 +820,11 @@ Bug Fixes in This Version
   Fixes #GH92775
 
 - Fixed `static_cast` to array of unknown bound. Fixes (#GH62863).
+
+- Fixed Clang crashing when failing to perform some C++ Initialization Sequences. (#GH98102)
+
+- ``__is_trivially_equality_comparable`` no longer returns true for types which
+  have a constrained defaulted comparison operator (#GH89293).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -958,9 +1014,9 @@ Bug Fixes to C++ Support
 - Fixed a type constraint substitution issue involving a generic lambda expression. (#GH93821)
 - Fix a crash caused by improper use of ``__array_extent``. (#GH80474)
 - Fixed several bugs in capturing variables within unevaluated contexts. (#GH63845), (#GH67260), (#GH69307),
-  (#GH88081), (#GH89496), (#GH90669) and (#GH91633).
+  (#GH88081), (#GH89496), (#GH90669), (#GH91633) and (#GH97453).
+- Fixed a crash in constraint instantiation under nested lambdas with dependent parameters.
 - Fixed handling of brace ellison when building deduction guides. (#GH64625), (#GH83368).
-- Clang now instantiates local constexpr functions eagerly for constant evaluators. (#GH35052), (#GH94849)
 - Fixed a failed assertion when attempting to convert an integer representing the difference
   between the addresses of two labels (a GNU extension) to a pointer within a constant expression. (#GH95366).
 - Fix immediate escalation bugs in the presence of dependent call arguments. (#GH94935)
@@ -975,6 +1031,14 @@ Bug Fixes to C++ Support
   evaluated to an integer. (#GH96670).
 - Fixed a bug where references to lambda capture inside a ``noexcept`` specifier were not correctly
   instantiated. (#GH95735).
+- Fixed a CTAD substitution bug involving type aliases that reference outer template parameters. (#GH94614).
+- Clang now correctly handles unexpanded packs in the template parameter list of a generic lambda expression
+  (#GH48937)
+- Fix a crash when parsing an invalid type-requirement in a requires expression. (#GH51868)
+- Fix parsing of built-in type-traits such as ``__is_pointer`` in libstdc++ headers. (#GH95598)
+- Fixed failed assertion when resolving context of defaulted comparison method outside of struct. (#GH96043).
+- Clang now diagnoses explicit object parameters in member pointers and other contexts where they should not appear.
+  Fixes (#GH85992).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1084,6 +1148,11 @@ RISC-V Support
 
 - ``__attribute__((rvv_vector_bits(N)))`` is now supported for RVV vbool*_t types.
 - Profile names in ``-march`` option are now supported.
+- Passing empty structs/unions as arguments in C++ is now handled correctly. The behavior is similar to GCC's.
+- ``-m[no-]scalar-strict-align`` and ``-m[no-]vector-strict-align`` options have
+  been added to give separate control of whether scalar or vector misaligned
+  accesses may be created. ``-m[no-]strict-align`` applies to both scalar and
+  vector.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1120,6 +1189,8 @@ DWARF Support in Clang
 
 Floating Point Support in Clang
 -------------------------------
+
+- Add ``__builtin__fmaf16`` builtin for floating point types.
 
 Fixed Point Support in Clang
 ----------------------------
@@ -1166,26 +1237,55 @@ libclang
 Static Analyzer
 ---------------
 
-- Fixed crashing on loops if the loop variable was declared in switch blocks
-  but not under any case blocks if ``unroll-loops=true`` analyzer config is
-  set. (#GH68819)
-- Support C++23 static operator calls. (#GH84972)
-- Fixed a crash in ``security.cert.env.InvalidPtr`` checker when accidentally
-  matched user-defined ``strerror`` and similar library functions. (GH#88181)
-- Fixed a crash when storing through an address that refers to the address of
-  a label. (GH#89185)
-
 New features
 ^^^^^^^^^^^^
 
+- The attribute ``[[clang::suppress]]`` can now be applied to declarations.
+  (#GH80371)
+
+- Support C++23 static operator calls. (#GH84972)
+
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
+
+- Fixed crashing on loops if the loop variable was declared in switch blocks
+  but not under any case blocks if ``unroll-loops=true`` analyzer config is
+  set. (#GH68819)
+
+- Fixed a crash in ``security.cert.env.InvalidPtr`` checker when accidentally
+  matched user-defined ``strerror`` and similar library functions. (#GH88181)
+
+- Fixed a crash when storing through an address that refers to the address of
+  a label. (#GH89185)
+
+- Z3 crosschecking (aka. Z3 refutation) is now bounded, and can't consume
+  more total time than the eymbolic execution itself. (#GH97298)
 
 Improvements
 ^^^^^^^^^^^^
 
 Moved checkers
 ^^^^^^^^^^^^^^
+
+- Moved ``alpha.cplusplus.ArrayDelete`` out of the ``alpha`` package
+  to ``cplusplus.ArrayDelete``. (#GH83985)
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-arraydelete-c>`__.
+
+- Moved ``alpha.unix.Stream`` out of the ``alpha`` package to
+  ``unix.Stream``. (#GH89247)
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-stream-c>`__.
+
+- Moved ``alpha.unix.BlockInCriticalSection`` out of the ``alpha`` package to
+  ``unix.BlockInCriticalSection``. (#GH93815)
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#unix-blockincriticalsection-c-c>`__.
+
+- Moved ``alpha.security.cert.pos.34c`` out of the ``alpha`` package to
+  ``security.PutenvStackArray``. (#GH92424, #GH93815)
+  `Documentation <https://clang.llvm.org/docs/analyzer/checkers.html#security-putenvstackarray-c>`__.
+
+- Moved ``alpha.core.SizeofPtr`` into ``clang-tidy``
+  ``bugprone-sizeof-expression``. (#GH95118, #GH94356)
+  `Documentation <https://clang.llvm.org/extra/clang-tidy/checks/bugprone/sizeof-expression.html>`__.
 
 .. _release-notes-sanitizers:
 
@@ -1210,6 +1310,8 @@ Python Binding Changes
 - Exposed `CXRewriter` API as `class Rewriter`.
 - Add some missing kinds from Index.h (CursorKind: 149-156, 272-320, 420-437.
   TemplateArgumentKind: 5-9. TypeKind: 161-175 and 178).
+- Add support for retrieving binary operator information through
+  Cursor.binary_operator().
 
 OpenMP Support
 --------------

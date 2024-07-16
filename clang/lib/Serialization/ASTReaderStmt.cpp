@@ -793,16 +793,15 @@ readConstraintSatisfaction(ASTRecordReader &Record) {
   if (!Satisfaction.IsSatisfied) {
     unsigned NumDetailRecords = Record.readInt();
     for (unsigned i = 0; i != NumDetailRecords; ++i) {
-      Expr *ConstraintExpr = Record.readExpr();
       if (/* IsDiagnostic */Record.readInt()) {
         SourceLocation DiagLocation = Record.readSourceLocation();
         std::string DiagMessage = Record.readString();
         Satisfaction.Details.emplace_back(
-            ConstraintExpr, new (Record.getContext())
-                                ConstraintSatisfaction::SubstitutionDiagnostic{
-                                    DiagLocation, DiagMessage});
+            new (Record.getContext())
+                ConstraintSatisfaction::SubstitutionDiagnostic(DiagLocation,
+                                                               DiagMessage));
       } else
-        Satisfaction.Details.emplace_back(ConstraintExpr, Record.readExpr());
+        Satisfaction.Details.emplace_back(Record.readExpr());
     }
   }
   return Satisfaction;

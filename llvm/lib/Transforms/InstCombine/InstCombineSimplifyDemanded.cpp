@@ -411,7 +411,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
     // Only known if known in both the LHS and RHS.
     adjustKnownBitsForSelectArm(LHSKnown, I->getOperand(0), I->getOperand(1),
                                 /*Invert=*/false, Depth, Q);
-    adjustKnownBitsForSelectArm(LHSKnown, I->getOperand(0), I->getOperand(2),
+    adjustKnownBitsForSelectArm(RHSKnown, I->getOperand(0), I->getOperand(2),
                                 /*Invert=*/true, Depth, Q);
     Known = LHSKnown.intersectWith(RHSKnown);
     break;

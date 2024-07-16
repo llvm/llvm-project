@@ -612,19 +612,26 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
   assert(D->getDeclContext()->getRedeclContext()->isFileContext() &&
          "Not a name having namespace scope");
   ASTContext &Context = D->getASTContext();
+  const auto *Var = dyn_cast<VarDecl>(D);
 
   // C++ [basic.link]p3:
   //   A name having namespace scope (3.3.6) has internal linkage if it
   //   is the name of
 
-  if (getStorageClass(D->getCanonicalDecl()) == SC_Static) {
+  if ((getStorageClass(D->getCanonicalDecl()) == SC_Static) ||
+      (Context.getLangOpts().C23 && Var && Var->isConstexpr())) {
     // - a variable, variable template, function, or function template
     //   that is explicitly declared static; or
     // (This bullet corresponds to C99 6.2.2p3.)
+
+    // C23 6.2.2p3
+    // If the declaration of a file scope identifier for
+    // an object contains any of the storage-class specifiers static or
+    // constexpr then the identifier has internal linkage.
     return LinkageInfo::internal();
   }
 
-  if (const auto *Var = dyn_cast<VarDecl>(D)) {
+  if (Var) {
     // - a non-template variable of non-volatile const-qualified type, unless
     //   - it is explicitly declared extern, or
     //   - it is declared in the purview of a module interface unit

@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <cstring>
+#include <type_traits>
 
 namespace llvm {
 namespace ELF {
@@ -1428,6 +1429,14 @@ struct Elf64_Rela {
   void setSymbolAndType(Elf64_Word s, Elf64_Word t) {
     r_info = ((Elf64_Xword)s << 32) + (t & 0xffffffffL);
   }
+};
+
+// In-memory representation of CREL. The serialized representation uses LEB128.
+template <bool Is64> struct Elf_Crel {
+  std::conditional_t<Is64, uint64_t, uint32_t> r_offset;
+  uint32_t r_symidx;
+  uint32_t r_type;
+  std::conditional_t<Is64, int64_t, int32_t> r_addend;
 };
 
 // Relocation entry without explicit addend or info (relative relocations only).

@@ -576,7 +576,7 @@ public:
   void getInlineContextForProbe(const MCDecodedPseudoProbe *Probe,
                                 SampleContextFrameVector &InlineContextStack,
                                 bool IncludeLeaf = false) const {
-    SmallVector<MCPseduoProbeFrameLocation, 16> ProbeInlineContext;
+    SmallVector<MCPseudoProbeFrameLocation, 16> ProbeInlineContext;
     ProbeDecoder.getInlineContextForProbe(Probe, ProbeInlineContext,
                                           IncludeLeaf);
     for (uint32_t I = 0; I < ProbeInlineContext.size(); I++) {

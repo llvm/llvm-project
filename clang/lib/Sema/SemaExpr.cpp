@@ -2666,11 +2666,10 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     return ExprError();
   }
 
-  // BoundsSafety: This specially handles arguments of bounds attributes
-  // appertains to a type of C struct field such that the name lookup
-  // within a struct finds the member name, which is not the case for other
-  // contexts in C.
-  if (isBoundsAttrContext() && !getLangOpts().CPlusPlus && S->isClassScope()) {
+  // This specially handles arguments of attributes appertains to a type of C
+  // struct field such that the name lookup within a struct finds the member
+  // name, which is not the case for other contexts in C.
+  if (isAttrContext() && !getLangOpts().CPlusPlus && S->isClassScope()) {
     // See if this is reference to a field of struct.
     LookupResult R(*this, NameInfo, LookupMemberName);
     // LookupName handles a name lookup from within anonymous struct.
@@ -3279,7 +3278,7 @@ ExprResult Sema::BuildDeclarationNameExpr(
   case Decl::Field:
   case Decl::IndirectField:
   case Decl::ObjCIvar:
-    assert((getLangOpts().CPlusPlus || isBoundsAttrContext()) &&
+    assert((getLangOpts().CPlusPlus || isAttrContext()) &&
            "building reference to field in C?");
 
     // These can't have reference type in well-formed programs, but
@@ -6626,27 +6625,21 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   unsigned BuiltinID = (FDecl ? FDecl->getBuiltinID() : 0);
 
   // Functions with 'interrupt' attribute cannot be called directly.
-  if (FDecl && FDecl->hasAttr<AnyX86InterruptAttr>()) {
-    Diag(Fn->getExprLoc(), diag::err_anyx86_interrupt_called);
-    return ExprError();
+  if (FDecl) {
+    if (FDecl->hasAttr<AnyX86InterruptAttr>()) {
+      Diag(Fn->getExprLoc(), diag::err_anyx86_interrupt_called);
+      return ExprError();
+    }
+    if (FDecl->hasAttr<ARMInterruptAttr>()) {
+      Diag(Fn->getExprLoc(), diag::err_arm_interrupt_called);
+      return ExprError();
+    }
   }
 
-  // Interrupt handlers don't save off the VFP regs automatically on ARM,
-  // so there's some risk when calling out to non-interrupt handler functions
-  // that the callee might not preserve them. This is easy to diagnose here,
-  // but can be very challenging to debug.
-  // Likewise, X86 interrupt handlers may only call routines with attribute
+  // X86 interrupt handlers may only call routines with attribute
   // no_caller_saved_registers since there is no efficient way to
   // save and restore the non-GPR state.
   if (auto *Caller = getCurFunctionDecl()) {
-    if (Caller->hasAttr<ARMInterruptAttr>()) {
-      bool VFP = Context.getTargetInfo().hasFeature("vfp");
-      if (VFP && (!FDecl || !FDecl->hasAttr<ARMInterruptAttr>())) {
-        Diag(Fn->getExprLoc(), diag::warn_arm_interrupt_calling_convention);
-        if (FDecl)
-          Diag(FDecl->getLocation(), diag::note_callee_decl) << FDecl;
-      }
-    }
     if (Caller->hasAttr<AnyX86InterruptAttr>() ||
         Caller->hasAttr<AnyX86NoCallerSavedRegistersAttr>()) {
       const TargetInfo &TI = Context.getTargetInfo();
@@ -11085,7 +11078,7 @@ static void DiagnoseBadShiftValues(Sema& S, ExprResult &LHS, ExprResult &RHS,
   if (Right.isNegative()) {
     S.DiagRuntimeBehavior(Loc, RHS.get(),
                           S.PDiag(diag::warn_shift_negative)
-                            << RHS.get()->getSourceRange());
+                              << RHS.get()->getSourceRange());
     return;
   }
 
@@ -11100,7 +11093,7 @@ static void DiagnoseBadShiftValues(Sema& S, ExprResult &LHS, ExprResult &RHS,
   if (Right.uge(LeftSize)) {
     S.DiagRuntimeBehavior(Loc, RHS.get(),
                           S.PDiag(diag::warn_shift_gt_typewidth)
-                            << RHS.get()->getSourceRange());
+                              << RHS.get()->getSourceRange());
     return;
   }
 
@@ -11133,7 +11126,7 @@ static void DiagnoseBadShiftValues(Sema& S, ExprResult &LHS, ExprResult &RHS,
   if (Left.isNegative()) {
     S.DiagRuntimeBehavior(Loc, LHS.get(),
                           S.PDiag(diag::warn_shift_lhs_negative)
-                            << LHS.get()->getSourceRange());
+                              << LHS.get()->getSourceRange());
     return;
   }
 
@@ -16971,11 +16964,38 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
   // Circumvent ICE checking in C++11 to avoid evaluating the expression twice
   // in the non-ICE case.
   if (!getLangOpts().CPlusPlus11 && E->isIntegerConstantExpr(Context)) {
+    SmallVector<PartialDiagnosticAt, 8> Notes;
     if (Result)
-      *Result = E->EvaluateKnownConstIntCheckOverflow(Context);
+      *Result = E->EvaluateKnownConstIntCheckOverflow(Context, &Notes);
     if (!isa<ConstantExpr>(E))
       E = Result ? ConstantExpr::Create(Context, E, APValue(*Result))
                  : ConstantExpr::Create(Context, E);
+    
+    if (Notes.empty())
+      return E;
+    
+    // If our only note is the usual "invalid subexpression" note, just point
+    // the caret at its location rather than producing an essentially
+    // redundant note.
+    if (Notes.size() == 1 && Notes[0].second.getDiagID() ==
+          diag::note_invalid_subexpr_in_const_expr) {
+      DiagLoc = Notes[0].first;
+      Notes.clear();
+    }
+    
+    if (getLangOpts().CPlusPlus) {
+      if (!Diagnoser.Suppress) {
+        Diagnoser.diagnoseNotICE(*this, DiagLoc) << E->getSourceRange();
+        for (const PartialDiagnosticAt &Note : Notes)
+          Diag(Note.first, Note.second);
+      }
+      return ExprError();
+    }
+
+    Diagnoser.diagnoseFold(*this, DiagLoc) << E->getSourceRange();
+    for (const PartialDiagnosticAt &Note : Notes)
+      Diag(Note.first, Note.second);
+    
     return E;
   }
 
@@ -17938,17 +17958,16 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
 
         if (FirstInstantiation || TSK != TSK_ImplicitInstantiation ||
             Func->isConstexpr()) {
-          if (Func->isConstexpr())
+          if (isa<CXXRecordDecl>(Func->getDeclContext()) &&
+              cast<CXXRecordDecl>(Func->getDeclContext())->isLocalClass() &&
+              CodeSynthesisContexts.size())
+            PendingLocalImplicitInstantiations.push_back(
+                std::make_pair(Func, PointOfInstantiation));
+          else if (Func->isConstexpr())
             // Do not defer instantiations of constexpr functions, to avoid the
             // expression evaluator needing to call back into Sema if it sees a
             // call to such a function.
             InstantiateFunctionDefinition(PointOfInstantiation, Func);
-          else if (isa<CXXRecordDecl>(Func->getDeclContext()) &&
-                   cast<CXXRecordDecl>(Func->getDeclContext())
-                       ->isLocalClass() &&
-                   CodeSynthesisContexts.size())
-            PendingLocalImplicitInstantiations.push_back(
-                std::make_pair(Func, PointOfInstantiation));
           else {
             Func->setInstantiationIsPending(true);
             PendingInstantiations.push_back(

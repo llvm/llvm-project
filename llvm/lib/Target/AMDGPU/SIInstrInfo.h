@@ -967,6 +967,29 @@ public:
     }
   }
 
+  bool isWaitcnt(unsigned Opcode) const {
+    switch (getNonSoftWaitcntOpcode(Opcode)) {
+    case AMDGPU::S_WAITCNT:
+    case AMDGPU::S_WAITCNT_VSCNT:
+    case AMDGPU::S_WAITCNT_VMCNT:
+    case AMDGPU::S_WAITCNT_EXPCNT:
+    case AMDGPU::S_WAITCNT_LGKMCNT:
+    case AMDGPU::S_WAIT_LOADCNT:
+    case AMDGPU::S_WAIT_LOADCNT_DSCNT:
+    case AMDGPU::S_WAIT_STORECNT:
+    case AMDGPU::S_WAIT_STORECNT_DSCNT:
+    case AMDGPU::S_WAIT_SAMPLECNT:
+    case AMDGPU::S_WAIT_BVHCNT:
+    case AMDGPU::S_WAIT_EXPCNT:
+    case AMDGPU::S_WAIT_DSCNT:
+    case AMDGPU::S_WAIT_KMCNT:
+    case AMDGPU::S_WAIT_IDLE:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   bool isVGPRCopy(const MachineInstr &MI) const {
     assert(isCopyInstr(MI));
     Register Dest = MI.getOperand(0).getReg();

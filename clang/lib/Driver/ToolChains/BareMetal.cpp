@@ -37,7 +37,7 @@ static bool findRISCVMultilibs(const Driver &D,
                                const llvm::Triple &TargetTriple,
                                const ArgList &Args, DetectedMultilibs &Result) {
   Multilib::flags_list Flags;
-  StringRef Arch = riscv::getRISCVArch(Args, TargetTriple);
+  std::string Arch = riscv::getRISCVArch(Args, TargetTriple);
   StringRef Abi = tools::riscv::getRISCVABI(Args, TargetTriple);
 
   if (TargetTriple.isRISCV64()) {

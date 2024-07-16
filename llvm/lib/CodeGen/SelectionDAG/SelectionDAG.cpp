@@ -5397,6 +5397,12 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
   case ISD::FSIN:
   case ISD::FCOS:
   case ISD::FTAN:
+  case ISD::FASIN:
+  case ISD::FACOS:
+  case ISD::FATAN:
+  case ISD::FSINH:
+  case ISD::FCOSH:
+  case ISD::FTANH:
   case ISD::FMA:
   case ISD::FMAD: {
     if (SNaN)
@@ -5649,7 +5655,7 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
     const APInt &Multiplier = Op.getConstantOperandAPInt(0);
     ConstantRange CR =
         getVScaleRange(&F, Op.getScalarValueSizeInBits()).multiply(Multiplier);
-    if (!CR.getUnsignedMin().isZero())
+    if (!CR.contains(APInt(CR.getBitWidth(), 0)))
       return true;
     break;
   }
@@ -6982,6 +6988,17 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       if (Opcode == ISD::SSUBSAT || Opcode == ISD::USUBSAT)
         return getNode(ISD::AND, DL, VT, N1, getNOT(DL, N2, VT));
     }
+    break;
+  case ISD::SCMP:
+  case ISD::UCMP:
+    assert(N1.getValueType() == N2.getValueType() &&
+           "Types of operands of UCMP/SCMP must match");
+    assert(N1.getValueType().isVector() == VT.isVector() &&
+           "Operands and return type of must both be scalars or vectors");
+    if (VT.isVector())
+      assert(VT.getVectorElementCount() ==
+                 N1.getValueType().getVectorElementCount() &&
+             "Result and operands must have the same number of elements");
     break;
   case ISD::AVGFLOORS:
   case ISD::AVGFLOORU:

@@ -49,7 +49,7 @@ class WebAssemblyCFGStackify final : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addRequired<MachineLoopInfo>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addRequired<WebAssemblyExceptionInfo>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -397,7 +397,7 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
 /// Insert a LOOP marker for a loop starting at MBB (if it's a loop header).
 void WebAssemblyCFGStackify::placeLoopMarker(MachineBasicBlock &MBB) {
   MachineFunction &MF = *MBB.getParent();
-  const auto &MLI = getAnalysis<MachineLoopInfo>();
+  const auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   const auto &WEI = getAnalysis<WebAssemblyExceptionInfo>();
   SortRegionInfo SRI(MLI, WEI);
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
@@ -467,7 +467,7 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
   MachineFunction &MF = *MBB.getParent();
   auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
-  const auto &MLI = getAnalysis<MachineLoopInfo>();
+  const auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   const auto &WEI = getAnalysis<WebAssemblyExceptionInfo>();
   SortRegionInfo SRI(MLI, WEI);
   const auto &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
