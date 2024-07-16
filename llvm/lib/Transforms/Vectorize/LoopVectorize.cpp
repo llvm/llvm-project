@@ -1516,9 +1516,7 @@ public:
         TTI.hasActiveVectorLength(0, nullptr, Align()) &&
         !EnableVPlanNativePath &&
         // FIXME: implement support for max safe dependency distance.
-        Legal->isSafeForAnyVectorWidth() &&
-        // FIXME: remove this once reductions are supported.
-        Legal->getReductionVars().empty();
+        Legal->isSafeForAnyVectorWidth();
     if (!EVLIsLegal) {
       // If for some reason EVL mode is unsupported, fallback to
       // DataWithoutLaneMask to try to vectorize the loop with folded tail
@@ -10283,7 +10281,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       InnerLoopUnroller Unroller(L, PSE, LI, DT, TLI, TTI, AC, ORE, IC, &LVL,
                                  &CM, BFI, PSI, Checks);
 
-      VPlan &BestPlan = LVP.getBestPlanFor(VF.Width);
+      VPlan &BestPlan = LVP.getBestPlan();
+      assert(BestPlan.hasScalarVFOnly() &&
+             "VPlan cost model and legacy cost model disagreed");
       LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT, false);
 
       ORE->emit([&]() {

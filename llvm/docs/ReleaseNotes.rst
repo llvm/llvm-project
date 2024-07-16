@@ -203,6 +203,8 @@ Changes to the RISC-V Backend
 * Ztso is no longer experimental.
 * The WCH / Nanjing Qinheng Microelectronics QingKe "XW" compressed opcodes are
   supported under the name "Xwchc".
+* ``-mcpu=native`` now detects available features with hwprobe (RISC-V Hardware Probing Interface) on Linux 6.4 or later.
+* The version of Zicfilp/Zicfiss is updated to 1.0.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -306,6 +308,14 @@ They are described in detail in the `debug info migration guide <https://llvm.or
   * ``LLVMGetTargetExtTypeName``
   * ``LLVMGetTargetExtTypeNumTypeParams``/``LLVMGetTargetExtTypeTypeParam``
   * ``LLVMGetTargetExtTypeNumIntParams``/``LLVMGetTargetExtTypeIntParam``
+
+* Added the following functions for accessing/setting the no-wrap flags for a
+  GetElementPtr instruction:
+
+  * ``LLVMBuildGEPWithNoWrapFlags``
+  * ``LLVMConstGEPWithNoWrapFlags``
+  * ``LLVMGEPGetNoWrapFlags``
+  * ``LLVMGEPSetNoWrapFlags``
 
 Changes to the CodeGen infrastructure
 -------------------------------------
