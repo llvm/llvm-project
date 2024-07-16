@@ -13,6 +13,7 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/threads/sleep.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 namespace spinlock {
