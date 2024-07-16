@@ -707,6 +707,7 @@ if(LIBC_TARGET_OS_IS_GPU)
       .llvm_libc_common_h
       .llvm-libc-types.rpc_opcodes_t
   )
+endif()
 
 if(NOT LLVM_LIBC_FULL_BUILD)
   # We don't install headers in non-fullbuild mode.
