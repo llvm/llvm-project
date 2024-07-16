@@ -2614,18 +2614,21 @@ MachineBlockPlacement::collectLoopBlockSet(const MachineLoop &L) {
         LoopFreq += MBFI->getBlockFreq(LoopPred) *
                     MBPI->getEdgeProbability(LoopPred, L.getHeader());
 
-    for (MachineBasicBlock *LoopBB : L.getBlocks()) {
-      if (LoopBlockSet.count(LoopBB))
+    for (auto &MBB : *F) {
+      if (LoopBlockSet.count(&MBB) || !L.contains(&MBB))
         continue;
-      auto Freq = MBFI->getBlockFreq(LoopBB).getFrequency();
+      auto Freq = MBFI->getBlockFreq(&MBB).getFrequency();
       if (Freq == 0 || LoopFreq.getFrequency() / Freq > LoopToColdBlockRatio)
         continue;
-      BlockChain *Chain = BlockToChain[LoopBB];
+      BlockChain *Chain = BlockToChain[&MBB];
       for (MachineBasicBlock *ChainBB : *Chain)
         LoopBlockSet.insert(ChainBB);
     }
-  } else
-    LoopBlockSet.insert(L.block_begin(), L.block_end());
+  } else {
+    for (auto &MBB : *F)
+      if (L.contains(&MBB))
+        LoopBlockSet.insert(&MBB);
+  }
 
   return LoopBlockSet;
 }
