@@ -8,9 +8,8 @@
 
 #include "hdr/types/off_t.h"
 #include "src/__support/File/file.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 FileIOResult linux_file_write(File *, const void *, size_t);
 FileIOResult linux_file_read(File *, void *, size_t);
@@ -34,4 +33,4 @@ public:
 // Create a File object and associate it with a fd.
 ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

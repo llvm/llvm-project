@@ -9,12 +9,11 @@
 #include "src/fenv/fedisableexcept.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, fedisableexcept, (int e)) {
   return fputil::disable_except(e);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
