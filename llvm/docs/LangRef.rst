@@ -22853,26 +22853,26 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <2 x double> @llvm.experimental.vp.splat.v2f64(<2 x double> %vec, <2 x i1> %mask, i32 %evl)
-      declare <vscale x 4 x i32> @llvm.experimental.vp.splat.nxv4i32(<vscale x 4 x i32> %vec, <vscale x 4 x i1> %mask, i32 %evl)
+      declare <2 x double> @llvm.experimental.vp.splat.v2f64(double %scalar, <2 x i1> %mask, i32 %evl)
+      declare <vscale x 4 x i32> @llvm.experimental.vp.splat.nxv4i32(i32 %scalar, <vscale x 4 x i1> %mask, i32 %evl)
 
 Overview:
 """""""""
 
-The '``llvm.experimental.vp.splat.*``' intrinsic is to create a prdicated splat
+The '``llvm.experimental.vp.splat.*``' intrinsic is to create a predicated splat
 with specific effective vector length.
 
 Arguments:
 """"""""""
 
-The result is a vector and it is a splat of the second scalar operand. The
+The result is a vector and it is a splat of the first scalar argument. The
 second argument ``mask`` is a vector mask and has the same number of elements as
 the result. The third argument is the explicit vector length of the operation.
 
 Semantics:
 """"""""""
 
-This intrinsic splats a vector with ``evl`` elements of a scalar operand.
+This intrinsic splats a vector with ``evl`` elements of a scalar argument.
 The lanes in the result vector disabled by ``mask`` are ``poison``. The
 elements past ``evl`` are poison.
 
@@ -22883,7 +22883,9 @@ Examples:
 
       %r = call <4 x float> @llvm.vp.splat.v4f32(float %a, <4 x i1> %mask, i32 %evl)
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
-      %also.r = select <4 x i1> %mask, <4 x float> splat(float %a), <4 x float> poison
+      %e = insertelement <4 x float> poison, float %a, i32 0
+      %s = shufflevector <4 x float> %e, <4 x float> poison, <4 x i32> zeroinitializer
+      %also.r = select <4 x i1> %mask, <4 x float> %s, <4 x float> poison
 
 
 .. _int_experimental_vp_reverse:

@@ -11649,7 +11649,7 @@ SDValue RISCVTargetLowering::lowerVPSplatExperimental(SDValue Op,
   }
 
   SDValue Result =
-    lowerScalarSplat(SDValue(), Val, VL, ContainerVT, DL, DAG, Subtarget);
+      lowerScalarSplat(SDValue(), Val, VL, ContainerVT, DL, DAG, Subtarget);
 
   if (!VT.isFixedLengthVector())
     return Result;

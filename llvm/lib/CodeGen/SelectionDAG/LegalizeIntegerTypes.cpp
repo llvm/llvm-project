@@ -2215,8 +2215,8 @@ SDValue DAGTypeLegalizer::PromoteIntOp_INSERT_VECTOR_ELT(SDNode *N,
 SDValue DAGTypeLegalizer::PromoteIntOp_ScalarOp(SDNode *N) {
   SDValue Op = GetPromotedInteger(N->getOperand(0));
   if (N->getOpcode() == ISD::EXPERIMENTAL_VP_SPLAT)
-    return DAG.getNode(ISD::EXPERIMENTAL_VP_SPLAT, SDLoc(N), N->getValueType(0),
-                       Op, N->getOperand(1), N->getOperand(2));
+    return SDValue(
+        DAG.UpdateNodeOperands(N, Op, N->getOperand(1), N->getOperand(2)), 0);
 
   // Integer SPLAT_VECTOR/SCALAR_TO_VECTOR operands are implicitly truncated,
   // so just promote the operand in place.
@@ -5866,11 +5866,10 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ScalarOp(SDNode *N) {
   EVT NOutElemVT = NOutVT.getVectorElementType();
 
   SDValue Op = DAG.getNode(ISD::ANY_EXTEND, dl, NOutElemVT, N->getOperand(0));
-  if (N->isVPOpcode()) {
-    SDValue Mask = N->getOperand(1);
-    SDValue VL = N->getOperand(2);
-    return DAG.getNode(N->getOpcode(), dl, NOutVT, Op, Mask, VL);
-  }
+  if (N->isVPOpcode())
+    return DAG.getNode(N->getOpcode(), dl, NOutVT, Op, N->getOperand(1),
+                       N->getOperand(2));
+
   return DAG.getNode(N->getOpcode(), dl, NOutVT, Op);
 }
 

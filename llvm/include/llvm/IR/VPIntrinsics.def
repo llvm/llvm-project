@@ -777,7 +777,7 @@ END_REGISTER_VP(experimental_vp_reverse, EXPERIMENTAL_VP_REVERSE)
 
 ///// } Shuffles
 
-// llvm.vp.splat(ptr,val,mask,vlen)
+// llvm.vp.splat(val,mask,vlen)
 BEGIN_REGISTER_VP_INTRINSIC(experimental_vp_splat, 1, 2)
 BEGIN_REGISTER_VP_SDNODE(EXPERIMENTAL_VP_SPLAT, -1, experimental_vp_splat, 1, 2)
 VP_PROPERTY_NO_FUNCTIONAL
