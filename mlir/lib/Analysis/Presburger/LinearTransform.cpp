@@ -51,7 +51,7 @@ IntegerRelation LinearTransform::applyTo(const IntegerRelation &rel) const {
     const DynamicAPInt &c = eq.back();
 
     SmallVector<DynamicAPInt, 8> newEq = preMultiplyWithRow(eq.drop_back());
-    newEq.push_back(c);
+    newEq.emplace_back(c);
     result.addEquality(newEq);
   }
 
@@ -61,7 +61,7 @@ IntegerRelation LinearTransform::applyTo(const IntegerRelation &rel) const {
     const DynamicAPInt &c = ineq.back();
 
     SmallVector<DynamicAPInt, 8> newIneq = preMultiplyWithRow(ineq.drop_back());
-    newIneq.push_back(c);
+    newIneq.emplace_back(c);
     result.addInequality(newIneq);
   }
 

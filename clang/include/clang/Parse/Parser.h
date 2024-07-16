@@ -1877,6 +1877,10 @@ private:
     UnaryExprOnly,
     PrimaryExprOnly
   };
+
+  bool isRevertibleTypeTrait(const IdentifierInfo *Id,
+                             clang::tok::TokenKind *Kind = nullptr);
+
   ExprResult ParseCastExpression(CastParseKind ParseKind,
                                  bool isAddressOfOperand,
                                  bool &NotCastExpr,
@@ -3368,11 +3372,15 @@ private:
   BaseResult ParseBaseSpecifier(Decl *ClassDecl);
   AccessSpecifier getAccessSpecifierIfPresent() const;
 
-  bool ParseUnqualifiedIdTemplateId(
-      CXXScopeSpec &SS, ParsedType ObjectType, bool ObjectHadErrors,
-      SourceLocation TemplateKWLoc, SourceLocation TildeLoc,
-      IdentifierInfo *Name, SourceLocation NameLoc, bool EnteringContext,
-      UnqualifiedId &Id, bool AssumeTemplateId);
+  bool ParseUnqualifiedIdTemplateId(CXXScopeSpec &SS,
+                                    ParsedType ObjectType,
+                                    bool ObjectHadErrors,
+                                    SourceLocation TemplateKWLoc,
+                                    IdentifierInfo *Name,
+                                    SourceLocation NameLoc,
+                                    bool EnteringContext,
+                                    UnqualifiedId &Id,
+                                    bool AssumeTemplateId);
   bool ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
                                   ParsedType ObjectType,
                                   UnqualifiedId &Result);

@@ -40,6 +40,8 @@ code bases.
 - Setting the deprecated CMake variable ``GCC_INSTALL_PREFIX`` (which sets the
   default ``--gcc-toolchain=``) now leads to a fatal error.
 
+- The ``le32`` and ``le64`` targets have been removed.
+
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
@@ -165,6 +167,7 @@ Clang Python Bindings Potentially Breaking Changes
   of variant 271.
 - Renamed ``TypeKind`` variant 162 from ``OBJCCLASS`` to ``OBJCTYPEPARAM``.
   The previous name was incorrect, it was a duplicate of variant 28.
+- Refactored enum implementation, switching to the standard library `Enum` type.
 
 What's New in Clang |release|?
 ==============================
@@ -309,9 +312,6 @@ Resolutions to C++ Defect Reports
 
 - Clang now considers ``noexcept(typeid(expr))`` more carefully, instead of always assuming that ``std::bad_typeid`` can be thrown.
   (`CWG2191: Incorrect result for noexcept(typeid(v)) <https://cplusplus.github.io/CWG/issues/2191.html>`_).
-
-- Clang now correctly implements lookup for the terminal name of a member-qualified nested-name-specifier.
-  (`CWG1835: Dependent member lookup before < <https://cplusplus.github.io/CWG/issues/1835.html>`_).
 
 C Language Changes
 ------------------
@@ -823,6 +823,9 @@ Bug Fixes in This Version
 
 - Fixed Clang crashing when failing to perform some C++ Initialization Sequences. (#GH98102)
 
+- ``__is_trivially_equality_comparable`` no longer returns true for types which
+  have a constrained defaulted comparison operator (#GH89293).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1011,10 +1014,9 @@ Bug Fixes to C++ Support
 - Fixed a type constraint substitution issue involving a generic lambda expression. (#GH93821)
 - Fix a crash caused by improper use of ``__array_extent``. (#GH80474)
 - Fixed several bugs in capturing variables within unevaluated contexts. (#GH63845), (#GH67260), (#GH69307),
-  (#GH88081), (#GH89496), (#GH90669) and (#GH91633).
+  (#GH88081), (#GH89496), (#GH90669), (#GH91633) and (#GH97453).
 - Fixed a crash in constraint instantiation under nested lambdas with dependent parameters.
 - Fixed handling of brace ellison when building deduction guides. (#GH64625), (#GH83368).
-- Clang now instantiates local constexpr functions eagerly for constant evaluators. (#GH35052), (#GH94849)
 - Fixed a failed assertion when attempting to convert an integer representing the difference
   between the addresses of two labels (a GNU extension) to a pointer within a constant expression. (#GH95366).
 - Fix immediate escalation bugs in the presence of dependent call arguments. (#GH94935)
@@ -1032,6 +1034,11 @@ Bug Fixes to C++ Support
 - Fixed a CTAD substitution bug involving type aliases that reference outer template parameters. (#GH94614).
 - Clang now correctly handles unexpanded packs in the template parameter list of a generic lambda expression
   (#GH48937)
+- Fix a crash when parsing an invalid type-requirement in a requires expression. (#GH51868)
+- Fix parsing of built-in type-traits such as ``__is_pointer`` in libstdc++ headers. (#GH95598)
+- Fixed failed assertion when resolving context of defaulted comparison method outside of struct. (#GH96043).
+- Clang now diagnoses explicit object parameters in member pointers and other contexts where they should not appear.
+  Fixes (#GH85992).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1142,6 +1149,10 @@ RISC-V Support
 - ``__attribute__((rvv_vector_bits(N)))`` is now supported for RVV vbool*_t types.
 - Profile names in ``-march`` option are now supported.
 - Passing empty structs/unions as arguments in C++ is now handled correctly. The behavior is similar to GCC's.
+- ``-m[no-]scalar-strict-align`` and ``-m[no-]vector-strict-align`` options have
+  been added to give separate control of whether scalar or vector misaligned
+  accesses may be created. ``-m[no-]strict-align`` applies to both scalar and
+  vector.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1178,6 +1189,8 @@ DWARF Support in Clang
 
 Floating Point Support in Clang
 -------------------------------
+
+- Add ``__builtin__fmaf16`` builtin for floating point types.
 
 Fixed Point Support in Clang
 ----------------------------
@@ -1297,6 +1310,8 @@ Python Binding Changes
 - Exposed `CXRewriter` API as `class Rewriter`.
 - Add some missing kinds from Index.h (CursorKind: 149-156, 272-320, 420-437.
   TemplateArgumentKind: 5-9. TypeKind: 161-175 and 178).
+- Add support for retrieving binary operator information through
+  Cursor.binary_operator().
 
 OpenMP Support
 --------------

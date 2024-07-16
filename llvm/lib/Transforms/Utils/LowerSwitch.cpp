@@ -369,7 +369,7 @@ void ProcessSwitchInst(SwitchInst *SI,
   const unsigned NumSimpleCases = Clusterify(Cases, SI);
   IntegerType *IT = cast<IntegerType>(SI->getCondition()->getType());
   const unsigned BitWidth = IT->getBitWidth();
-  // Explictly use higher precision to prevent unsigned overflow where
+  // Explicitly use higher precision to prevent unsigned overflow where
   // `UnsignedMax - 0 + 1 == 0`
   APInt UnsignedZero(BitWidth + 1, 0);
   APInt UnsignedMax = APInt::getMaxValue(BitWidth);

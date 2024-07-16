@@ -550,8 +550,7 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
                  Opcode == AMDGPU::DS_DIRECT_LOAD) {
         // Mark these STRICTWQM, but only for the instruction, not its operands.
         // This avoid unnecessarily marking M0 as requiring WQM.
-        InstrInfo &II = Instructions[&MI];
-        II.Needs |= StateStrictWQM;
+        III.Needs |= StateStrictWQM;
         GlobalFlags |= StateStrictWQM;
       } else if (Opcode == AMDGPU::V_SET_INACTIVE_B32 ||
                  Opcode == AMDGPU::V_SET_INACTIVE_B64) {

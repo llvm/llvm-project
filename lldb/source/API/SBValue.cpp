@@ -764,6 +764,21 @@ lldb::SBValue SBValue::GetNonSyntheticValue() {
   return value_sb;
 }
 
+lldb::SBValue SBValue::GetSyntheticValue() {
+  LLDB_INSTRUMENT_VA(this);
+
+  SBValue value_sb;
+  if (IsValid()) {
+    ValueImplSP proxy_sp(new ValueImpl(m_opaque_sp->GetRootSP(),
+                                       m_opaque_sp->GetUseDynamic(), true));
+    value_sb.SetSP(proxy_sp);
+    if (!value_sb.IsSynthetic()) {
+      return {};
+    }
+  }
+  return value_sb;
+}
+
 lldb::DynamicValueType SBValue::GetPreferDynamicValue() {
   LLDB_INSTRUMENT_VA(this);
 

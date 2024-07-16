@@ -139,6 +139,10 @@ Changes to the AMDGPU Backend
   :ref:`atomicrmw <i_atomicrmw>` instruction with `fadd`, `fmin` and
   `fmax` with addrspace(3) instead.
 
+* AMDGPUAttributor is no longer run as part of the codegen pass
+  pipeline. It is expected to run as part of the middle end
+  optimizations.
+
 Changes to the ARM Backend
 --------------------------
 
@@ -199,6 +203,8 @@ Changes to the RISC-V Backend
 * Ztso is no longer experimental.
 * The WCH / Nanjing Qinheng Microelectronics QingKe "XW" compressed opcodes are
   supported under the name "Xwchc".
+* ``-mcpu=native`` now detects available features with hwprobe (RISC-V Hardware Probing Interface) on Linux 6.4 or later.
+* The version of Zicfilp/Zicfiss is updated to 1.0.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -303,6 +309,14 @@ They are described in detail in the `debug info migration guide <https://llvm.or
   * ``LLVMGetTargetExtTypeNumTypeParams``/``LLVMGetTargetExtTypeTypeParam``
   * ``LLVMGetTargetExtTypeNumIntParams``/``LLVMGetTargetExtTypeIntParam``
 
+* Added the following functions for accessing/setting the no-wrap flags for a
+  GetElementPtr instruction:
+
+  * ``LLVMBuildGEPWithNoWrapFlags``
+  * ``LLVMConstGEPWithNoWrapFlags``
+  * ``LLVMGEPGetNoWrapFlags``
+  * ``LLVMGEPSetNoWrapFlags``
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
@@ -318,6 +332,13 @@ Changes to the Debug Info
   that interacts with debug intrinsics directly. Debug intrinsics will only be
   supported on a best-effort basis from here onwards; for more information, see
   the `migration docs <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_.
+
+* When emitting DWARF v2 and not in strict DWARF mode, LLVM will now add
+  a ``DW_AT_type`` to instances of ``DW_TAG_enumeration_type``. This is actually
+  a DWARF v3 feature which tells tools what the enum's underlying type is.
+  Emitting this for v2 as well will help users who have to build binaries with
+  DWARF v2 but are using tools that understand newer DWARF standards. Older
+  tools will ignore it. (`#98335 <https://github.com/llvm/llvm-project/pull/98335>`_)
 
 Changes to the LLVM tools
 ---------------------------------

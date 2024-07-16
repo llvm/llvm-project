@@ -127,7 +127,7 @@ void f1() {
   // `dependent` should be type-dependent because the noexcept-expression should be value-dependent
   // (it is true if T is int*, false if T is Polymorphic<false, false>* for example)
   dependent.f<void>();  // This should need to be `.template f` to parse as a template
-  // expected-warning@-1 {{use 'template' keyword to treat 'f' as a dependent template name}}
+  // expected-error@-1 {{use 'template' keyword to treat 'f' as a dependent template name}}
 }
 template<typename... T>
 void f2() {
@@ -135,14 +135,14 @@ void f2() {
   // X<true> when T...[0] is a type with some operator&& which returns int*
   // X<false> when sizeof...(T) == 0
   dependent.f<void>();
-  // expected-warning@-1 {{use 'template' keyword to treat 'f' as a dependent template name}}
+  // expected-error@-1 {{use 'template' keyword to treat 'f' as a dependent template name}}
 }
 template<typename T>
 void f3() {
   X<noexcept(typeid(*static_cast<T*>(nullptr)))> dependent;
   // X<true> when T is int, X<false> when T is Polymorphic<false, false>
   dependent.f<void>();
-  // expected-warning@-1 {{use 'template' keyword to treat 'f' as a dependent template name}}
+  // expected-error@-1 {{use 'template' keyword to treat 'f' as a dependent template name}}
 }
 template<typename T>
 void f4() {
@@ -157,3 +157,21 @@ void f5() {
   // expected-error@-1 {{no member named 'non_existent' in 'typeid_::X<true>'}}
 }
 } // namespace typeid_
+
+namespace GH97453 {
+
+struct UnconstrainedCtor {
+  int value_;
+
+  template <typename T>
+  constexpr UnconstrainedCtor(T value) noexcept(noexcept(value_ = value))
+      : value_(static_cast<int>(value)) {}
+};
+
+UnconstrainedCtor U(42);
+
+struct X {
+  void ICE(int that) noexcept(noexcept([that]() {}));
+};
+
+} // namespace GH97453

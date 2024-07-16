@@ -2493,8 +2493,9 @@ public:
       auto *I = cast<Instruction>(V);
       DeletedInstructions.insert(I);
     }
+    DenseSet<Value *> Processed;
     for (T *V : DeadVals) {
-      if (!V)
+      if (!V || !Processed.insert(V).second)
         continue;
       auto *I = cast<Instruction>(V);
       salvageDebugInfo(*I);
@@ -9639,15 +9640,15 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       InstructionCost ScalarCost = TTI->getCmpSelInstrCost(
           E->getOpcode(), OrigScalarTy, Builder.getInt1Ty(), CurrentPred,
           CostKind, VI);
-      auto IntrinsicAndUse = canConvertToMinOrMaxIntrinsic(VI);
-      if (IntrinsicAndUse.first != Intrinsic::not_intrinsic) {
-        IntrinsicCostAttributes CostAttrs(IntrinsicAndUse.first, OrigScalarTy,
+      auto [MinMaxID, SelectOnly] = canConvertToMinOrMaxIntrinsic(VI);
+      if (MinMaxID != Intrinsic::not_intrinsic) {
+        IntrinsicCostAttributes CostAttrs(MinMaxID, OrigScalarTy,
                                           {OrigScalarTy, OrigScalarTy});
         InstructionCost IntrinsicCost =
             TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
         // If the selects are the only uses of the compares, they will be
         // dead and we can adjust the cost by removing their cost.
-        if (IntrinsicAndUse.second) {
+        if (SelectOnly) {
           auto *CI = cast<CmpInst>(VI->getOperand(0));
           IntrinsicCost -= TTI->getCmpSelInstrCost(
               CI->getOpcode(), OrigScalarTy, Builder.getInt1Ty(),
@@ -9666,15 +9667,14 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // Check if it is possible and profitable to use min/max for selects
       // in VL.
       //
-      auto IntrinsicAndUse = canConvertToMinOrMaxIntrinsic(VL);
-      if (IntrinsicAndUse.first != Intrinsic::not_intrinsic) {
-        IntrinsicCostAttributes CostAttrs(IntrinsicAndUse.first, VecTy,
-                                          {VecTy, VecTy});
+      auto [MinMaxID, SelectOnly] = canConvertToMinOrMaxIntrinsic(VL);
+      if (MinMaxID != Intrinsic::not_intrinsic) {
+        IntrinsicCostAttributes CostAttrs(MinMaxID, VecTy, {VecTy, VecTy});
         InstructionCost IntrinsicCost =
             TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
         // If the selects are the only uses of the compares, they will be
         // dead and we can adjust the cost by removing their cost.
-        if (IntrinsicAndUse.second) {
+        if (SelectOnly) {
           auto *CI =
               cast<CmpInst>(cast<Instruction>(VL.front())->getOperand(0));
           IntrinsicCost -= TTI->getCmpSelInstrCost(CI->getOpcode(), VecTy,
@@ -14221,9 +14221,23 @@ Value *BoUpSLP::vectorizeTree(
     for (Instruction *I : RemovedInsts) {
       if (getTreeEntry(I)->Idx != 0)
         continue;
+      SmallVector<SelectInst *> LogicalOpSelects;
       I->replaceUsesWithIf(PoisonValue::get(I->getType()), [&](Use &U) {
+        // Do not replace condition of the logical op in form select <cond>.
+        bool IsPoisoningLogicalOp = isa<SelectInst>(U.getUser()) &&
+                                    (match(U.getUser(), m_LogicalAnd()) ||
+                                     match(U.getUser(), m_LogicalOr())) &&
+                                    U.getOperandNo() == 0;
+        if (IsPoisoningLogicalOp) {
+          LogicalOpSelects.push_back(cast<SelectInst>(U.getUser()));
+          return false;
+        }
         return UserIgnoreList->contains(U.getUser());
       });
+      // Replace conditions of the poisoning logical ops with the non-poison
+      // constant value.
+      for (SelectInst *SI : LogicalOpSelects)
+        SI->setCondition(Constant::getNullValue(SI->getCondition()->getType()));
     }
   }
   // Retain to-be-deleted instructions for some debug-info bookkeeping and alias
