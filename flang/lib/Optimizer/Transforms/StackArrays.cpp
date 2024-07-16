@@ -652,9 +652,19 @@ AllocMemConversion::findAllocaLoopInsertionPoint(fir::AllocMemOp &oldAlloc) {
 
   // find freemem ops
   llvm::SmallVector<mlir::Operation *, 1> freeOps;
-  for (mlir::Operation *user : oldAllocOp->getUsers())
-    if (mlir::isa<fir::FreeMemOp>(user))
-      freeOps.push_back(user);
+
+  for (mlir::Operation *user : oldAllocOp->getUsers()) {
+    if (auto declareOp = mlir::dyn_cast_if_present<fir::DeclareOp>(user)) {
+      for (mlir::Operation *user : declareOp->getUsers()) {
+        if (mlir::isa<fir::FreeMemOp>(user))
+          freeOps.push_back(user);
+      }
+    }
+
+     if (mlir::isa<fir::FreeMemOp>(user))
+       freeOps.push_back(user);
+  }
+
   assert(freeOps.size() && "DFA should only return freed memory");
 
   // Don't attempt to reason about a stacksave/stackrestore between different
