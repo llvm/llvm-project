@@ -1,8 +1,8 @@
-; RUN: llc %s -stop-after=finalize-isel -o - \
+; RUN: llc %s -stop-after=finalize-isel -o - -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s --implicit-check-not=DBG
 
 
-; RUN: llc --try-experimental-debuginfo-iterators %s -stop-after=finalize-isel -o - \
+; RUN: llc --try-experimental-debuginfo-iterators %s -stop-after=finalize-isel -o - -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s --implicit-check-not=DBG
 
 ;; Tiny loop with a store sunk out of it:

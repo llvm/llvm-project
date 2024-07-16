@@ -1,8 +1,8 @@
-; RUN: llc %s -o - -stop-after=finalize-isel \
+; RUN: llc %s -o - -stop-after=finalize-isel -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s --implicit-check-not=DBG_
 
 
-; RUN: llc --try-experimental-debuginfo-iterators %s -o - -stop-after=finalize-isel \
+; RUN: llc --try-experimental-debuginfo-iterators %s -o - -stop-after=finalize-isel -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s --implicit-check-not=DBG_
 
 ;; Test coalescing of contiguous fragments in adjacent location definitions.

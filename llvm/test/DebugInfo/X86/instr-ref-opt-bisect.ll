@@ -1,23 +1,23 @@
-; RUN: llc %s -o - -stop-after=livedebugvalues -opt-bisect-limit=0 \
+; RUN: llc -experimental-debug-variable-locations=true %s -o - -stop-after=livedebugvalues -opt-bisect-limit=0 \
 ; RUN:   | FileCheck %s
-; RUN: llc %s -o - -stop-after=livedebugvalues -opt-bisect-limit=10 \
+; RUN: llc -experimental-debug-variable-locations=true %s -o - -stop-after=livedebugvalues -opt-bisect-limit=10 \
 ; RUN:   | FileCheck %s
-; RUN: llc %s -o - -stop-after=livedebugvalues -opt-bisect-limit=20 \
+; RUN: llc -experimental-debug-variable-locations=true %s -o - -stop-after=livedebugvalues -opt-bisect-limit=20 \
 ; RUN:   | FileCheck %s
-; RUN: llc %s -o - -stop-after=livedebugvalues -opt-bisect-limit=30 \
+; RUN: llc -experimental-debug-variable-locations=true %s -o - -stop-after=livedebugvalues -opt-bisect-limit=30 \
 ; RUN:   | FileCheck %s
-; RUN: llc %s -o - -stop-after=livedebugvalues -opt-bisect-limit=40 \
+; RUN: llc -experimental-debug-variable-locations=true %s -o - -stop-after=livedebugvalues -opt-bisect-limit=40 \
 ; RUN:   | FileCheck %s
-; RUN: llc %s -o - -stop-after=livedebugvalues -opt-bisect-limit=100 \
+; RUN: llc -experimental-debug-variable-locations=true %s -o - -stop-after=livedebugvalues -opt-bisect-limit=100 \
 ; RUN:   | FileCheck %s
 ;; Test fast-isel for good measure too,
-; RUN: llc %s -o - -stop-after=livedebugvalues -fast-isel=true \
+; RUN: llc -experimental-debug-variable-locations=true %s -o - -stop-after=livedebugvalues -fast-isel=true \
 ; RUN:   | FileCheck %s
-; RUN: llc %s -o - -stop-after=livedebugvalues -fast-isel=true \
+; RUN: llc -experimental-debug-variable-locations=true %s -o - -stop-after=livedebugvalues -fast-isel=true \
 ; RUN:   -opt-bisect-limit=0 | FileCheck %s
-; RUN: llc %s -o - -stop-after=livedebugvalues -fast-isel=true \
+; RUN: llc -experimental-debug-variable-locations=true %s -o - -stop-after=livedebugvalues -fast-isel=true \
 ; RUN:   -opt-bisect-limit=10 | FileCheck %s
-; RUN: llc %s -o - -stop-after=livedebugvalues -fast-isel=true \
+; RUN: llc -experimental-debug-variable-locations=true %s -o - -stop-after=livedebugvalues -fast-isel=true \
 ; RUN:   -opt-bisect-limit=100 | FileCheck %s
 
 ; The function below should be optimised with the "default" optimisation level.

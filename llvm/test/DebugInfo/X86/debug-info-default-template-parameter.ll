@@ -13,8 +13,8 @@
 ;   return 0;
 ; }
 ;
-; RUN: llc -filetype=obj -dwarf-version=4 %s -o - | llvm-dwarfdump - --debug-info | FileCheck %s --check-prefixes=DWARF-DUMP,DWARFv4
-; RUN: llc -filetype=obj -dwarf-version=4 -strict-dwarf=true %s -o - | llvm-dwarfdump - --debug-info | FileCheck %s --check-prefixes=DWARF-DUMP,STRICT
+; RUN: llc -experimental-debug-variable-locations=true -experimental-debug-variable-locations=true -filetype=obj -dwarf-version=4 %s -o - | llvm-dwarfdump - --debug-info | FileCheck %s --check-prefixes=DWARF-DUMP,DWARFv4
+; RUN: llc -experimental-debug-variable-locations=true -filetype=obj -dwarf-version=4 -strict-dwarf=true %s -o - | llvm-dwarfdump - --debug-info | FileCheck %s --check-prefixes=DWARF-DUMP,STRICT
 
 ; DWARF-DUMP:       DW_TAG_class_type
 ; DWARF-DUMP-LABEL:   DW_AT_name      ("foo<char, 3, true, 1>")
