@@ -3072,10 +3072,15 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
 
 DWARFDIE
 SymbolFileDWARF::FindDefinitionDIE(const DWARFDIE &die) {
-  if (!die || !die.GetName())
+  const char *name = die.GetName();
+  if (!name)
     return {};
   if (!die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0))
     return die;
+
+  Progress progress(llvm::formatv(
+      "Searching definition DIE in {0}: '{1}'",
+      GetObjectFile()->GetFileSpec().GetFilename().GetString(), name));
 
   const dw_tag_t tag = die.Tag();
 
@@ -3085,7 +3090,7 @@ SymbolFileDWARF::FindDefinitionDIE(const DWARFDIE &die) {
         log,
         "SymbolFileDWARF::FindDefinitionDIE(tag={0} "
         "({1}), name='{2}')",
-        DW_TAG_value_to_name(tag), tag, die.GetName());
+        DW_TAG_value_to_name(tag), tag, name);
   }
 
   // Get the type system that we are looking to find a type for. We will
@@ -3159,7 +3164,7 @@ SymbolFileDWARF::FindDefinitionDIE(const DWARFDIE &die) {
             log,
             "SymbolFileDWARF::FindDefinitionDIE(tag={0} ({1}), "
             "name='{2}') ignoring die={3:x16} ({4})",
-            DW_TAG_value_to_name(tag), tag, die.GetName(), type_die.GetOffset(),
+            DW_TAG_value_to_name(tag), tag, name, type_die.GetOffset(),
             type_die.GetName());
       }
       return true;
@@ -3171,7 +3176,7 @@ SymbolFileDWARF::FindDefinitionDIE(const DWARFDIE &die) {
           log,
           "SymbolFileDWARF::FindDefinitionTypeDIE(tag={0} ({1}), name='{2}') "
           "trying die={3:x16} ({4})",
-          DW_TAG_value_to_name(tag), tag, die.GetName(), type_die.GetOffset(),
+          DW_TAG_value_to_name(tag), tag, name, type_die.GetOffset(),
           type_dwarf_decl_ctx.GetQualifiedName());
     }
 
