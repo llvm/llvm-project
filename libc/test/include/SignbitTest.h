@@ -23,7 +23,7 @@ public:
 
   void testSpecialNumbers(SignbitFunc func) {
     EXPECT_EQ(func(1), 0);
-    EXPECT_EQ(func(-1), 1);
+    EXPECT_NE(func(-1), 0);
   }
 };
 
