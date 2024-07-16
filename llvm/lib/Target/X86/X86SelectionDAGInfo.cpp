@@ -147,7 +147,7 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
                                 DAG.getConstant(Offset, dl, AddrVT)),
                     Val, DAG.getConstant(BytesLeft, dl, SizeVT), Alignment,
                     isVolatile, AlwaysInline,
-                    /* isTailCall */ false, DstPtrInfo.getWithOffset(Offset)));
+                    /* CI */ nullptr, DstPtrInfo.getWithOffset(Offset)));
 
   return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Results);
 }
