@@ -2118,8 +2118,89 @@ bool SignalContext::IsTrueFaultingAddress() const {
   return si->si_signo == SIGSEGV && si->si_code != 128;
 }
 
+static const char *RegNumToRegName(int reg) {
+#  if defined(__x86_64__)
+  switch (reg) {
+    case REG_RAX:
+      return "rax";
+    case REG_RBX:
+      return "rbx";
+    case REG_RCX:
+      return "rcx";
+    case REG_RDX:
+      return "rdx";
+    case REG_RDI:
+      return "rdi";
+    case REG_RSI:
+      return "rsi";
+    case REG_RBP:
+      return "rbp";
+    case REG_RSP:
+      return "rsp";
+    case REG_R8:
+      return "r8";
+    case REG_R9:
+      return "r9";
+    case REG_R10:
+      return "r10";
+    case REG_R11:
+      return "r11";
+    case REG_R12:
+      return "r12";
+    case REG_R13:
+      return "r13";
+    case REG_R14:
+      return "r14";
+    case REG_R15:
+      return "r15";
+    default:
+      return NULL;
+  }
+#  endif
+  return NULL;
+}
+
 void SignalContext::DumpAllRegisters(void *context) {
-  // FIXME: Implement this.
+#  if SANITIZER_LINUX
+  ucontext_t *ucontext = (ucontext_t *)context;
+#    define DUMPREG64(r)                             \
+      Printf("%s = 0x%016llx  ", RegNumToRegName(r), \
+             ucontext->uc_mcontext.gregs[r]);
+#    define DUMPREG_(r) \
+      Printf(" ");      \
+      DUMPREG(r);
+#    define DUMPREG__(r) \
+      Printf("  ");      \
+      DUMPREG(r);
+#    define DUMPREG___(r) \
+      Printf("   ");      \
+      DUMPREG(r);
+#    if defined(__x86_64__)
+#      define DUMPREG(r) DUMPREG64(r)
+  Report("Register values:\n");
+  DUMPREG(REG_RAX);
+  DUMPREG(REG_RBX);
+  DUMPREG(REG_RCX);
+  DUMPREG(REG_RDX);
+  Printf("\n");
+  DUMPREG(REG_RDI);
+  DUMPREG(REG_RSI);
+  DUMPREG(REG_RBP);
+  DUMPREG(REG_RSP);
+  Printf("\n");
+  DUMPREG_(REG_R8);
+  DUMPREG_(REG_R9);
+  DUMPREG(REG_R10);
+  DUMPREG(REG_R11);
+  Printf("\n");
+  DUMPREG(REG_R12);
+  DUMPREG(REG_R13);
+  DUMPREG(REG_R14);
+  DUMPREG(REG_R15);
+  Printf("\n");
+#    endif
+#  endif
+  // FIXME: Implement this for other OSes and architectures.
 }
 
 static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
