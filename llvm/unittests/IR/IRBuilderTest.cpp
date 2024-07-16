@@ -452,7 +452,8 @@ TEST_F(IRBuilderTest, DetectDefaultStrictFP) {
   // Create an empty constrained FP function.
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(Ctx),
                                         /*isVarArg=*/false);
-  Function *FStrict = Function::Create(FTy, Function::ExternalLinkage, "", M.get());
+  Function *FStrict =
+      Function::Create(FTy, Function::ExternalLinkage, "", M.get());
   FStrict->addFnAttr(Attribute::StrictFP);
   BasicBlock *BBStrict = BasicBlock::Create(Ctx, "", FStrict);
 
