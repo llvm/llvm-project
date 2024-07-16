@@ -764,6 +764,9 @@ module std_private_algorithm_ranges_find_end                             [system
 module std_private_algorithm_ranges_find_first_of                        [system] { header "__algorithm/ranges_find_first_of.h" }
 module std_private_algorithm_ranges_find_if                              [system] { header "__algorithm/ranges_find_if.h" }
 module std_private_algorithm_ranges_find_if_not                          [system] { header "__algorithm/ranges_find_if_not.h" }
+module std_private_algorithm_ranges_find_last                            [system] { header "__algorithm/ranges_find_last.h" }
+module std_private_algorithm_ranges_find_last_if                         [system] { header "__algorithm/ranges_find_last_if.h" }
+module std_private_algorithm_ranges_find_last_if_not                     [system] { header "__algorithm/ranges_find_last_if_not.h" }
 module std_private_algorithm_ranges_for_each                             [system] {
   header "__algorithm/ranges_for_each.h"
   export std_private_algorithm_in_fun_result

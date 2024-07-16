@@ -173,6 +173,7 @@
     __cpp_lib_ranges_chunk_by                               202202L [C++23]
     __cpp_lib_ranges_concat                                 202403L [C++26]
     __cpp_lib_ranges_contains                               202207L [C++23]
+    __cpp_lib_ranges_find_last                              202207L [C++23]
     __cpp_lib_ranges_iota                                   202202L [C++23]
     __cpp_lib_ranges_join_with                              202202L [C++23]
     __cpp_lib_ranges_repeat                                 202207L [C++23]
@@ -846,6 +847,10 @@
 
 # ifdef __cpp_lib_ranges_contains
 #   error "__cpp_lib_ranges_contains should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_find_last
+#   error "__cpp_lib_ranges_find_last should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_iota
@@ -1742,6 +1747,10 @@
 
 # ifdef __cpp_lib_ranges_contains
 #   error "__cpp_lib_ranges_contains should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_find_last
+#   error "__cpp_lib_ranges_find_last should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_iota
@@ -2809,6 +2818,10 @@
 
 # ifdef __cpp_lib_ranges_contains
 #   error "__cpp_lib_ranges_contains should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_find_last
+#   error "__cpp_lib_ranges_find_last should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_iota
@@ -4143,6 +4156,10 @@
 
 # ifdef __cpp_lib_ranges_contains
 #   error "__cpp_lib_ranges_contains should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_find_last
+#   error "__cpp_lib_ranges_find_last should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_iota
@@ -5660,6 +5677,13 @@
 # endif
 # if __cpp_lib_ranges_contains != 202207L
 #   error "__cpp_lib_ranges_contains should have the value 202207L in c++23"
+# endif
+
+# ifndef __cpp_lib_ranges_find_last
+#   error "__cpp_lib_ranges_find_last should be defined in c++23"
+# endif
+# if __cpp_lib_ranges_find_last != 202207L
+#   error "__cpp_lib_ranges_find_last should have the value 202207L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -7519,6 +7543,13 @@
 # endif
 # if __cpp_lib_ranges_contains != 202207L
 #   error "__cpp_lib_ranges_contains should have the value 202207L in c++26"
+# endif
+
+# ifndef __cpp_lib_ranges_find_last
+#   error "__cpp_lib_ranges_find_last should be defined in c++26"
+# endif
+# if __cpp_lib_ranges_find_last != 202207L
+#   error "__cpp_lib_ranges_find_last should have the value 202207L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
