@@ -136,9 +136,64 @@ static cl::opt<bool> VerifyNoAliasScopeDomination(
     cl::desc("Ensure that llvm.experimental.noalias.scope.decl for identical "
              "scopes are not dominating"));
 
+static cl::opt<bool> VerifyWithContext(
+    "verify-with-context", cl::Hidden, cl::init(false),
+    cl::desc("Enable a detailed context reporting for verification errors"));
+
 namespace llvm {
 
-struct VerifierSupport {
+/// Helper type to manage the current context of a Verifier.
+struct VerifierCtxManager {
+  /// Current context.
+  SmallVector<const Value *> ContextPath;
+  /// The number of the current instruction in the current basic block.
+  size_t CurInstNumInThisBlock;
+
+  VerifierCtxManager() : CurInstNumInThisBlock(0) {}
+
+  void pushCtx(const Value *V) {
+    if (isa<Instruction>(V))
+      CurInstNumInThisBlock++;
+    else if (isa<BasicBlock>(V) || isa<Function>(V))
+      CurInstNumInThisBlock = 0;
+    ContextPath.emplace_back(V);
+  }
+  void popCtx() { ContextPath.pop_back(); }
+  void printCtx(raw_ostream &OS, bool NL = false) {
+    if (ContextPath.empty())
+      return;
+    OS << "Context [";
+    for (size_t i = 0; i < ContextPath.size(); ++i) {
+      if (i > 0) {
+        OS << " -> ";
+      }
+      auto C = ContextPath[i];
+      if (isa<Function>(C)) {
+        OS << "Function '";
+      } else if (isa<BasicBlock>(C)) {
+        OS << "BasicBlock '";
+      } else if (isa<Instruction>(C)) {
+        OS << "Instruction '";
+      } else {
+        OS << "Value '";
+      }
+      OS << C->getName() << "'";
+      if (CurInstNumInThisBlock && isa<Instruction>(C)) {
+        OS << " (number " << CurInstNumInThisBlock << " inside BB)";
+      }
+    }
+    OS << "]";
+    if (NL)
+      OS << "\n";
+  }
+
+  void printCtx(raw_ostream &OS, const char *msg, bool NL = false) {
+    OS << msg;
+    printCtx(OS, NL);
+  }
+};
+
+struct VerifierSupport : VerifierCtxManager {
   raw_ostream *OS;
   const Module &M;
   ModuleSlotTracker MST;
@@ -160,6 +215,24 @@ struct VerifierSupport {
 private:
   void Write(const Module *M) {
     *OS << "; ModuleID = '" << M->getModuleIdentifier() << "'\n";
+  }
+
+  void Write(const Instruction &I) {
+    if (VerifyWithContext) {
+      if (auto const *BB = I.getParent()) {
+        VerifierCtxManager ctxMgr;
+        if (auto *F = BB->getParent())
+          ctxMgr.pushCtx(F);
+        ctxMgr.pushCtx(BB);
+        ctxMgr.printCtx(*OS, true);
+      }
+    }
+    Write((const Value &)I);
+  }
+
+  void Write(const Instruction *I) {
+    if (I)
+      Write(*I);
   }
 
   void Write(const Value *V) {
@@ -284,8 +357,12 @@ public:
   /// This provides a nice place to put a breakpoint if you want to see why
   /// something is not correct.
   void CheckFailed(const Twine &Message) {
-    if (OS)
+    if (VerifyWithContext && OS) {
+      *OS << "Verification Error: " << Message << '\n';
+      printCtx(*OS, "Verification Error: ", /* NL */ true);
+    } else if (OS) {
       *OS << Message << '\n';
+    }
     Broken = true;
   }
 
@@ -322,8 +399,10 @@ public:
 
 namespace {
 
-class Verifier : public InstVisitor<Verifier>, VerifierSupport {
-  friend class InstVisitor<Verifier>;
+class Verifier : public InstVisitor<Verifier, void, VerifierSupport>,
+                 VerifierSupport {
+  using VerifierInstVisitor = InstVisitor<Verifier, void, VerifierSupport>;
+  friend VerifierInstVisitor;
 
   // ISD::ArgFlagsTy::MemAlign only have 4 bits for alignment, so
   // the alignment size should not exceed 2^15. Since encode(Align)
@@ -399,7 +478,7 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
 public:
   explicit Verifier(raw_ostream *OS, bool ShouldTreatBrokenDebugInfoAsError,
                     const Module &M)
-      : VerifierSupport(OS, M), LandingPadResultTy(nullptr),
+      : InstVisitor(this), VerifierSupport(OS, M), LandingPadResultTy(nullptr),
         SawFrameEscape(false), TBAAVerifyHelper(this) {
     TreatBrokenDebugInfoAsError = ShouldTreatBrokenDebugInfoAsError;
   }
@@ -549,7 +628,7 @@ private:
   void visit(DbgLabelRecord &DLR);
   void visit(DbgVariableRecord &DVR);
   // InstVisitor overrides...
-  using InstVisitor<Verifier>::visit;
+  using VerifierInstVisitor::visit;
   void visitDbgRecords(Instruction &I);
   void visit(Instruction &I);
 
@@ -709,7 +788,7 @@ void Verifier::visit(Instruction &I) {
   visitDbgRecords(I);
   for (unsigned i = 0, e = I.getNumOperands(); i != e; ++i)
     Check(I.getOperand(i) != nullptr, "Operand is null", &I);
-  InstVisitor<Verifier>::visit(I);
+  VerifierInstVisitor::visit(I);
 }
 
 // Helper to iterate over indirect users. By returning false, the callback can ask to stop traversing further.
@@ -3053,6 +3132,7 @@ void Verifier::visitFunction(const Function &F) {
 void Verifier::visitBasicBlock(BasicBlock &BB) {
   InstsInThisBlock.clear();
   ConvergenceVerifyHelper.visit(BB);
+  CurInstNumInThisBlock = 0;
 
   // Ensure that basic blocks have terminators!
   Check(BB.getTerminator(), "Basic Block does not have terminator!", &BB);
