@@ -513,6 +513,8 @@ namespace LambdaInDefaultMemberInitializer {
 
 #if __cplusplus >= 201703L
 
+// Reduced from https://github.com/llvm/llvm-project/issues/98526
+// This relies on the deferral instantiation of the local lambda, otherwise we would fail in DeduceReturnType().
 namespace local_recursive_lambda {
 
 template <typename F> struct recursive_lambda {
@@ -524,17 +526,10 @@ template <typename F> struct recursive_lambda {
 
 template <typename F> recursive_lambda(F) -> recursive_lambda<F>;
 
-struct Tree {
-  Tree *left, *right;
-};
-
-int sumSize(Tree *tree) {
-  auto accumulate =
-      recursive_lambda{[&](auto &self_fn, Tree *element_node) -> int {
-        return 1 + self_fn(tree->left) + self_fn(tree->right);
-      }};
-
-  return accumulate(tree);
+void foo() {
+  recursive_lambda{[&](auto &self_fn, int) -> int {
+    return self_fn(0);
+  }}(0);
 }
 
 } // namespace local_recursive_lambda
