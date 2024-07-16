@@ -66,7 +66,6 @@ static ThreadAttributes main_thread_attrib;
   auto tid = syscall_impl<long>(SYS_gettid);
   if (tid <= 0)
     syscall_impl<long>(SYS_exit, 1);
-  ProcessIdentity::refresh_cache();
   main_thread_attrib.tid = static_cast<int>(tid);
 
   // After the argv array, is a 8-byte long NULL value before the array of env
@@ -128,6 +127,10 @@ static ThreadAttributes main_thread_attrib;
   init_tls(tls);
   if (tls.size != 0 && !set_thread_ptr(tls.tp))
     syscall_impl<long>(SYS_exit, 1);
+
+  // Validate process identity cache (TLS needed).
+  ProcessIdentity::refresh_cache();
+  ProcessIdentity::end_fork();
 
   self.attrib = &main_thread_attrib;
   main_thread_attrib.atexit_callback_mgr =
