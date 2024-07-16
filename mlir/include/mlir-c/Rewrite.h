@@ -49,8 +49,8 @@ mlirRewriterBaseGetContext(MlirRewriterBase rewriter);
 //===----------------------------------------------------------------------===//
 /// Insertion points methods
 
-// They do not include functions using Block::iterator or Region::iterator, as
-// they are not exposed by the C API yet. This includes methods using
+// These do not include functions using Block::iterator or Region::iterator, as
+// they are not exposed by the C API yet. Similarly for methods using
 // `InsertPoint` directly.
 
 /// Reset the insertion point to no location.  Creating an operation without a
@@ -102,6 +102,9 @@ mlirRewriterBaseGetBlock(MlirRewriterBase rewriter);
 //===----------------------------------------------------------------------===//
 /// Block and operation creation/insertion/cloning
 
+// These functions do not include the IRMapper, as it is not yet exposed by the
+// C API.
+
 /// Add new block with 'argTypes' arguments and set the insertion point to the
 /// end of it. The block is placed before 'insertBefore'. `locs` contains the
 /// locations of the inserted arguments, and should match the size of
@@ -114,15 +117,17 @@ MLIR_CAPI_EXPORTED MlirBlock mlirRewriterBaseCreateBlockBefore(
 MLIR_CAPI_EXPORTED MlirOperation
 mlirRewriterBaseInsert(MlirRewriterBase rewriter, MlirOperation op);
 
-// The IRMapper is not yet exposed in the CAPI
+/// Creates a deep copy of the specified operation.
 MLIR_CAPI_EXPORTED MlirOperation
 mlirRewriterBaseClone(MlirRewriterBase rewriter, MlirOperation op);
 
-// The IRMapper is not yet exposed in the CAPI
+/// Creates a deep copy of this operation but keep the operation regions
+/// empty.
 MLIR_CAPI_EXPORTED MlirOperation mlirRewriterBaseCloneWithoutRegions(
     MlirRewriterBase rewriter, MlirOperation op);
 
-// The IRMapper is not yet exposed in the CAPI, nor Region::iterator.
+/// Clone the blocks that belong to "region" before the given position in
+/// another region "parent".
 MLIR_CAPI_EXPORTED void
 mlirRewriterBaseCloneRegionBefore(MlirRewriterBase rewriter, MlirRegion region,
                                   MlirBlock before);
@@ -183,8 +188,6 @@ MLIR_CAPI_EXPORTED void mlirRewriterBaseMergeBlocks(MlirRewriterBase rewriter,
                                                     MlirBlock dest,
                                                     intptr_t nArgValues,
                                                     MlirValue const *argValues);
-
-// splitBlock is not implemented as Block::iterator is not exposed by the CAPI
 
 /// Unlink this operation from its current block and insert it right before
 /// `existingOp` which may be in the same or another block in the same

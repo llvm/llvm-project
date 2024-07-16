@@ -90,19 +90,16 @@ MlirOperation mlirRewriterBaseInsert(MlirRewriterBase rewriter,
 
 // Other methods of OpBuilder
 
-// The IRMapper is not yet exposed in the CAPI
 MlirOperation mlirRewriterBaseClone(MlirRewriterBase rewriter,
                                     MlirOperation op) {
   return wrap(unwrap(rewriter)->clone(*unwrap(op)));
 }
 
-// The IRMapper is not yet exposed in the CAPI
 MlirOperation mlirRewriterBaseCloneWithoutRegions(MlirRewriterBase rewriter,
                                                   MlirOperation op) {
   return wrap(unwrap(rewriter)->cloneWithoutRegions(*unwrap(op)));
 }
 
-// The IRMapper is not yet exposed in the CAPI, nor Region::iterator.
 void mlirRewriterBaseCloneRegionBefore(MlirRewriterBase rewriter,
                                        MlirRegion region, MlirBlock before) {
 
@@ -113,7 +110,6 @@ void mlirRewriterBaseCloneRegionBefore(MlirRewriterBase rewriter,
 /// RewriterBase API
 //===----------------------------------------------------------------------===//
 
-// Region::iterator is not yet exposed in the CAPI.
 void mlirRewriterBaseInlineRegionBefore(MlirRewriterBase rewriter,
                                         MlirRegion region, MlirBlock before) {
   unwrap(rewriter)->inlineRegionBefore(*unwrap(region), unwrap(before));
@@ -159,8 +155,6 @@ void mlirRewriterBaseMergeBlocks(MlirRewriterBase rewriter, MlirBlock source,
   ArrayRef<Value> unwrappedArgs = unwrapList(nArgValues, argValues, args);
   unwrap(rewriter)->mergeBlocks(unwrap(source), unwrap(dest), unwrappedArgs);
 }
-
-// splitBlock is not implemented as Block::iterator is not exposed by the CAPI
 
 void mlirRewriterBaseMoveOpBefore(MlirRewriterBase rewriter, MlirOperation op,
                                   MlirOperation existingOp) {
