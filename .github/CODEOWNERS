@@ -67,10 +67,10 @@ clang/test/AST/Interp/ @tbaederr
 /mlir/include/mlir/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin
 /mlir/lib/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin
 /mlir/lib/Dialect/Linalg/Transforms/DecomposeLinalgOps.cpp @MaheshRavishankar @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/DropUnitDims.cpp @MaheshRavishankar @nicolasvasilache
+/mlir/lib/Dialect/Linalg/Transforms/DropUnitDims.cpp @dcaballe @MaheshRavishankar @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/ElementwiseOpFusion.cpp @MaheshRavishankar @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/DataLayoutPropagation.cpp @hanhanW @nicolasvasilache
-/mlir/lib/Dialect/Linalg/Transforms/Transforms.cpp @hanhanW @nicolasvasilache
+/mlir/lib/Dialect/Linalg/Transforms/Transforms.cpp @dcaballe @hanhanW @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/Vectorization.cpp @banach-space @dcaballe @hanhanW @nicolasvasilache
 
 # MemRef Dialect in MLIR.
