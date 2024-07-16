@@ -2518,9 +2518,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
              "Skip last operand requested on instruction with no operands");
 
     unsigned int i = 0;
-    for (i = 0; i < I.getNumOperands() - (skipLastOperand ? 1 : 0); i++) {
+    for (i = 0; i < I.getNumOperands() - (skipLastOperand ? 1 : 0); i++)
       OC.Add(I.getOperand(i));
-    }
+
     OC.Done(&I);
   }
 
@@ -3969,9 +3969,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         Addr, IRB, interleavedShadow->getType(), Align(1), /*isStore*/ true);
     IRB.CreateAlignedStore(interleavedShadow, ShadowPtr, Align(1));
 
-    if (MS.TrackOrigins) {
+    if (MS.TrackOrigins)
       setOriginForNaryOp(I, true);
-    }
 
     if (ClCheckAccessAddress)
       insertShadowCheck(Addr, &I);
