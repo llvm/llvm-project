@@ -594,11 +594,10 @@ private:
   void mangleMemberExprBase(const Expr *base, bool isArrow);
   void mangleMemberExpr(const Expr *base, bool isArrow,
                         NestedNameSpecifier *qualifier,
-                        NamedDecl *firstQualifierLookup,
+                        ArrayRef<DeclAccessPair> UnqualifiedLookups,
                         DeclarationName name,
                         const TemplateArgumentLoc *TemplateArgs,
-                        unsigned NumTemplateArgs,
-                        unsigned knownArity);
+                        unsigned NumTemplateArgs, unsigned knownArity);
   void mangleCastExpression(const Expr *E, StringRef CastEncoding);
   void mangleInitListElements(const InitListExpr *InitList);
   void mangleRequirement(SourceLocation RequiresExprLoc,
@@ -4499,14 +4498,11 @@ void CXXNameMangler::mangleMemberExprBase(const Expr *Base, bool IsArrow) {
 }
 
 /// Mangles a member expression.
-void CXXNameMangler::mangleMemberExpr(const Expr *base,
-                                      bool isArrow,
-                                      NestedNameSpecifier *qualifier,
-                                      NamedDecl *firstQualifierLookup,
-                                      DeclarationName member,
-                                      const TemplateArgumentLoc *TemplateArgs,
-                                      unsigned NumTemplateArgs,
-                                      unsigned arity) {
+void CXXNameMangler::mangleMemberExpr(
+    const Expr *base, bool isArrow, NestedNameSpecifier *qualifier,
+    ArrayRef<DeclAccessPair> UnqualifiedLookups, DeclarationName member,
+    const TemplateArgumentLoc *TemplateArgs, unsigned NumTemplateArgs,
+    unsigned arity) {
   // <expression> ::= dt <expression> <unresolved-name>
   //              ::= pt <expression> <unresolved-name>
   if (base)
@@ -4988,11 +4984,9 @@ recurse:
   case Expr::MemberExprClass: {
     NotPrimaryExpr();
     const MemberExpr *ME = cast<MemberExpr>(E);
-    mangleMemberExpr(ME->getBase(), ME->isArrow(),
-                     ME->getQualifier(), nullptr,
-                     ME->getMemberDecl()->getDeclName(),
-                     ME->getTemplateArgs(), ME->getNumTemplateArgs(),
-                     Arity);
+    mangleMemberExpr(ME->getBase(), ME->isArrow(), ME->getQualifier(),
+                     std::nullopt, ME->getMemberDecl()->getDeclName(),
+                     ME->getTemplateArgs(), ME->getNumTemplateArgs(), Arity);
     break;
   }
 
@@ -5000,10 +4994,9 @@ recurse:
     NotPrimaryExpr();
     const UnresolvedMemberExpr *ME = cast<UnresolvedMemberExpr>(E);
     mangleMemberExpr(ME->isImplicitAccess() ? nullptr : ME->getBase(),
-                     ME->isArrow(), ME->getQualifier(), nullptr,
-                     ME->getMemberName(),
-                     ME->getTemplateArgs(), ME->getNumTemplateArgs(),
-                     Arity);
+                     ME->isArrow(), ME->getQualifier(), std::nullopt,
+                     ME->getMemberName(), ME->getTemplateArgs(),
+                     ME->getNumTemplateArgs(), Arity);
     break;
   }
 
@@ -5013,10 +5006,8 @@ recurse:
       = cast<CXXDependentScopeMemberExpr>(E);
     mangleMemberExpr(ME->isImplicitAccess() ? nullptr : ME->getBase(),
                      ME->isArrow(), ME->getQualifier(),
-                     ME->getFirstQualifierFoundInScope(),
-                     ME->getMember(),
-                     ME->getTemplateArgs(), ME->getNumTemplateArgs(),
-                     Arity);
+                     ME->unqualified_lookups(), ME->getMember(),
+                     ME->getTemplateArgs(), ME->getNumTemplateArgs(), Arity);
     break;
   }
 
