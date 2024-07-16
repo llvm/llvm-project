@@ -135,6 +135,8 @@ enum NodeType : unsigned {
   UDIV_PRED,
   UMAX_PRED,
   UMIN_PRED,
+  FAMAX_PRED,
+  FAMIN_PRED,
 
   // Unpredicated vector instructions
   BIC,
