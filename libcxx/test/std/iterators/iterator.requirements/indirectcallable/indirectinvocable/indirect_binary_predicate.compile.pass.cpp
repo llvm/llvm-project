@@ -77,11 +77,11 @@ struct BadPredicate5 {
 static_assert(!std::indirect_binary_predicate<BadPredicate5, It1, It2>);
 
 // This case was made valid by P2997R1.
-struct BadPredicate6 {
+struct GoodPredicate6 {
     template <class T, class U> bool operator()(T const&, U const&) const;
     bool operator()(std::iter_common_reference_t<It1>, std::iter_common_reference_t<It2>) const = delete;
 };
-static_assert(std::indirect_binary_predicate<BadPredicate6, It1, It2>);
+static_assert(std::indirect_binary_predicate<GoodPredicate6, It1, It2>);
 
 // Test ADL-proofing (P2538R1)
 #if TEST_STD_VER >= 26 || defined(_LIBCPP_VERSION)

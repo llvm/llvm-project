@@ -57,11 +57,11 @@ struct BadInvocable3 {
 static_assert(!std::indirectly_regular_unary_invocable<BadInvocable3, It>);
 
 // This case was made valid by P2997R1.
-struct BadInvocable4 {
+struct GoodInvocable4 {
     template <class T> R1 operator()(T const&) const;
     R1 operator()(std::iter_common_reference_t<It>) const = delete;
 };
-static_assert(std::indirectly_regular_unary_invocable<BadInvocable4, It>);
+static_assert(std::indirectly_regular_unary_invocable<GoodInvocable4, It>);
 
 // Should fail when the invocable doesn't have a common reference between its return types
 struct BadInvocable5 {
