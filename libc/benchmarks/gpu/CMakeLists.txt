@@ -6,13 +6,14 @@ function(add_benchmark benchmark_name)
   cmake_parse_arguments(
     "BENCHMARK"
     "" # Optional arguments
-    "" # Single value arguments
+    "NUM_THREADS" # Single value arguments
     "LINK_LIBRARIES" # Multi-value arguments
     ${ARGN}
   )
-  # We run benchmarks for a single warp with and give the 
-  # option to run only a single thread
-  set(BENCHMARK_NUM_THREADS 32)
+
+  if(NOT ${BENCHMARK_NUM_THREADS})
+    set(BENCHMARK_NUM_THREADS 1)
+  endif()
 
   if(NOT libc.src.time.clock IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
     message(FATAL_ERROR "target does not support clock")

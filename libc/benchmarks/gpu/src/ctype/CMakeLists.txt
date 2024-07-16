@@ -8,6 +8,8 @@ add_benchmark(
     isalnum_benchmark.cpp
   DEPENDS
     libc.src.ctype.isalnum
+  NUM_THREADS
+    32
 )
 
 add_benchmark(
@@ -18,4 +20,6 @@ add_benchmark(
     isalpha_benchmark.cpp
   DEPENDS
     libc.src.ctype.isalpha
+  NUM_THREADS
+    32
 )
