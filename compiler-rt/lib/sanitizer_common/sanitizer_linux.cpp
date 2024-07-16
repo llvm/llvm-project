@@ -2118,6 +2118,7 @@ bool SignalContext::IsTrueFaultingAddress() const {
   return si->si_signo == SIGSEGV && si->si_code != 128;
 }
 
+UNUSED
 static const char *RegNumToRegName(int reg) {
 #  if defined(__x86_64__)
   switch (reg) {
@@ -2199,6 +2200,7 @@ void SignalContext::DumpAllRegisters(void *context) {
   DUMPREG(REG_R15);
   Printf("\n");
 #    endif
+  (void)ucontext;
 #  endif
   // FIXME: Implement this for other OSes and architectures.
 }
