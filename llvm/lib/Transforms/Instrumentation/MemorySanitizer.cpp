@@ -2505,6 +2505,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   using OriginCombiner = Combiner<false>;
 
   /// Propagate origin for arbitrary operation.
+  /// skipLastOperand is useful for Arm NEON instructions, which have the
+  /// destination address as the last operand.
   void setOriginForNaryOp(Instruction &I, bool skipLastOperand = false) {
     if (!MS.TrackOrigins)
       return;
@@ -2512,12 +2514,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     OriginCombiner OC(this, IRB);
 
     if (skipLastOperand)
-      assert((I.getNumOperands() > 0)
-             && "Skip last operand requested on instruction with no operands");
+      assert((I.getNumOperands() > 0) &&
+             "Skip last operand requested on instruction with no operands");
 
     unsigned int i = 0;
     for (i = 0; i < I.getNumOperands() - (skipLastOperand ? 1 : 0); i++) {
-      OC.Add(I.getOperand (i));
+      OC.Add(I.getOperand(i));
     }
     OC.Done(&I);
   }
@@ -3910,15 +3912,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return IRB.CreateShuffleVector(left, right, ConstantVector::get(Idxs));
   }
 
-  Value *getShadowOrOrigin (Instruction* I, int i, bool shadowMode) {
-    if (shadowMode)
-      return getShadow (I, i);
-    else
-      return getOrigin (I, i);
-  }
-
-  Value *interleaveShadowOrOrigin(IRBuilder<> &IRB, IntrinsicInst &I,
-                                  bool shadowMode) {
+  Value *interleaveShadowOrOrigin(IRBuilder<> &IRB, IntrinsicInst &I) {
     // Call arguments only
     int numArgOperands = I.getNumOperands() - 1;
     assert(numArgOperands >= 1);
@@ -3931,55 +3925,31 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // Last operand is the destination
     assert(isa<PointerType>(I.getArgOperand(numArgOperands - 1)->getType()));
-    errs() << "Assertions ok\n";
-
-    for (unsigned int i = 0; i < I.getNumOperands(); i++) {
-      errs() << "Operand " << i << ": " << I.getOperand(i)->getName() << "\n";
-    }
 
     uint16_t Width =
         cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements();
-//    Width = Width / 4; // One origin value per 32-bits of app memory
-
-    uint16_t ElemSize = cast<FixedVectorType>(I.getArgOperand(0)->getType())
-                            ->getElementType()
-                            ->getPrimitiveSizeInBits();
-
-    dumpInst(I);
-    errs() << "Num operands: " << I.getNumOperands() << "\n";
-    errs() << "Num arg operands: " << numArgOperands << "\n";
-    errs() << "Num vectors: " << numVectors << "\n";
-    errs() << "Width: " << Width << "\n";
-    errs() << "Elem size: " << ElemSize << "\n";
 
     Value *interleaved = nullptr;
-    if (numVectors == 1) {
-      interleaved = getShadowOrOrigin(&I, 0, shadowMode);
-    } else if (numVectors == 2) {
+    if (numVectors == 2) {
       interleaved =
-          interleaveAB(IRB, getShadowOrOrigin(&I, 0, shadowMode),
-                            getShadowOrOrigin(&I, 1, shadowMode), Width);
+          interleaveAB(IRB, getShadow(&I, 0), getShadow(&I, 1), Width);
     } else if (numVectors == 3) {
-      Value *UndefV = UndefValue::get(getShadowOrOrigin(&I, 0, shadowMode)->getType());
-      Value *AB = interleaveAB(IRB, getShadowOrOrigin(&I, 0, shadowMode),
-                                    getShadowOrOrigin(&I, 1, shadowMode),
-                                    Width);
-      Value *Cx = interleaveAB(IRB, getShadowOrOrigin(&I, 2, shadowMode), UndefV, Width);
+      Value *UndefV = UndefValue::get(getShadow(&I, 0)->getType());
+      Value *AB = interleaveAB(IRB, getShadow(&I, 0), getShadow(&I, 1), Width);
+      Value *Cx = interleaveAB(IRB, getShadow(&I, 2), UndefV, Width);
       interleaved = interleaveABCx(IRB, AB, Cx, Width);
     } else if (numVectors == 4) {
-      Value *AB = interleaveAB(IRB, getShadowOrOrigin(&I, 0, shadowMode),
-                                    getShadowOrOrigin(&I, 1, shadowMode), Width);
-      Value *CD = interleaveAB(IRB, getShadowOrOrigin(&I, 2, shadowMode),
-                                    getShadowOrOrigin(&I, 3, shadowMode), Width);
+      Value *AB = interleaveAB(IRB, getShadow(&I, 0), getShadow(&I, 1), Width);
+      Value *CD = interleaveAB(IRB, getShadow(&I, 2), getShadow(&I, 3), Width);
       interleaved = interleaveAB(IRB, AB, CD, Width * 2);
     } else {
-      //          assert(! "Unexpected number of vectors");
+      assert((numVectors >= 2) && (numVectors <= 4));
     }
 
     return interleaved;
   }
 
-  /// Handle Arm NEON vector store intrinsics (vst{1,2,3,4}).
+  /// Handle Arm NEON vector store intrinsics (vst{2,3,4}).
   ///
   /// Arm NEON vector store intrinsics have the output address (pointer) as the
   /// last argument, with the initial arguments being the inputs. They return
@@ -3987,7 +3957,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void handleNEONVectorStoreIntrinsic(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
 
-    Value *interleavedShadow = interleaveShadowOrOrigin(IRB, I, true);
+    Value *interleavedShadow = interleaveShadowOrOrigin(IRB, I);
 
     // Call arguments only
     int numArgOperands = I.getNumOperands() - 1;
@@ -4000,13 +3970,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     IRB.CreateAlignedStore(interleavedShadow, ShadowPtr, Align(1));
 
     if (MS.TrackOrigins) {
-        setOriginForNaryOp(I, true);
+      setOriginForNaryOp(I, true);
     }
 
-    if (ClCheckAccessAddress) {
-      errs() << "Inserting shadow check ...\n";
+    if (ClCheckAccessAddress)
       insertShadowCheck(Addr, &I);
-    }
   }
 
   void visitIntrinsicInst(IntrinsicInst &I) {
