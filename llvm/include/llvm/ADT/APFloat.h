@@ -15,10 +15,10 @@
 #ifndef LLVM_ADT_APFLOAT_H
 #define LLVM_ADT_APFLOAT_H
 
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/float128.h"
@@ -567,6 +567,7 @@ public:
 
   /// decompose to an integer and exponent to radix 2
   bool decomposeToIntegerAndPowerOf2(APInt &, int &) const;
+
 private:
   /// \name Simple Queries
   /// @{
@@ -1398,13 +1399,14 @@ public:
   /// returns true on success, false otherwise (e.g., NaN, Infinity)
   /// similar to the standard modf, but exponent does not
   /// have to have the same sign as the value.
-  bool decomposeToIntegerAndPowerOf2 (APInt &I, int &exp) const {
-    APFLOAT_DISPATCH_ON_SEMANTICS( decomposeToIntegerAndPowerOf2(I, exp));
+  bool decomposeToIntegerAndPowerOf2(APInt &I, int &exp) const {
+    APFLOAT_DISPATCH_ON_SEMANTICS(decomposeToIntegerAndPowerOf2(I, exp));
   }
 
-  SmallVectorImpl<char> &format(SmallVectorImpl<char> &strout,
-              llvm::FloatStyle style = llvm::FloatStyle::Exponent,
-              std::optional<size_t> precision = std::nullopt);
+  SmallVectorImpl<char> &
+  format(SmallVectorImpl<char> &strout,
+         llvm::FloatStyle style = llvm::FloatStyle::Exponent,
+         std::optional<size_t> precision = std::nullopt);
 
   void print(raw_ostream &) const;
   void dump() const;

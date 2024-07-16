@@ -1379,21 +1379,21 @@ TEST(APFloatTest, toString) {
 }
 
 TEST(APFloatTest, format) {
-  auto doit_precision = [](const fltSemantics &S, const char *value, llvm::FloatStyle style, int precision, const char *expected) {
-
-    SmallString<16>  s;
+  auto doit_precision = [](const fltSemantics &S, const char *value,
+                           llvm::FloatStyle style, int precision,
+                           const char *expected) {
+    SmallString<16> s;
     APFloat apf(S, value);
     apf.format(s, style, precision);
     EXPECT_STREQ(expected, s.c_str());
   };
-  auto doit = [](const fltSemantics &S, const char *value, llvm::FloatStyle style, const char *expected) {
-
-    SmallString<16>  s;
+  auto doit = [](const fltSemantics &S, const char *value,
+                 llvm::FloatStyle style, const char *expected) {
+    SmallString<16> s;
     APFloat apf(S, value);
     apf.format(s, style);
     EXPECT_STREQ(expected, s.c_str());
   };
-
 
   // default precision for Exponent and ExponentUpper is 6
   // and 2 for Fixed and Psercent
@@ -1433,7 +1433,6 @@ TEST(APFloatTest, format) {
     doit(S, "-1.5", llvm::FloatStyle::ExponentUpper, "-1.500000E+00");
     doit(S, "-1.5", llvm::FloatStyle::Fixed, "-1.50");
     doit(S, "-1.5", llvm::FloatStyle::Percent, "-150.00%");
-
 
     // check rounding: 0
     doit_precision(S, "0.0", llvm::FloatStyle::Exponent, 0, "0e+00");
@@ -1476,26 +1475,29 @@ TEST(APFloatTest, format) {
     // check appending fewer than default number of zeros
     if (Precision >= 3) {
       doit_precision(S, "1.75", llvm::FloatStyle::Exponent, 3, "1.750e+00");
-      doit_precision(S, "1.75", llvm::FloatStyle::ExponentUpper, 3, "1.750E+00");
+      doit_precision(S, "1.75", llvm::FloatStyle::ExponentUpper, 3,
+                     "1.750E+00");
       doit_precision(S, "1.75", llvm::FloatStyle::Fixed, 3, "1.750");
       doit_precision(S, "1.75", llvm::FloatStyle::Percent, 3, "175.000%");
     }
 
     // check appending more than default number of zeros
     if (Precision >= 3) {
-      doit_precision(S, "1.75", llvm::FloatStyle::Exponent, 8, "1.75000000e+00");
-      doit_precision(S, "1.75", llvm::FloatStyle::ExponentUpper, 8, "1.75000000E+00");
+      doit_precision(S, "1.75", llvm::FloatStyle::Exponent, 8,
+                     "1.75000000e+00");
+      doit_precision(S, "1.75", llvm::FloatStyle::ExponentUpper, 8,
+                     "1.75000000E+00");
       doit_precision(S, "1.75", llvm::FloatStyle::Fixed, 8, "1.75000000");
       doit_precision(S, "1.75", llvm::FloatStyle::Percent, 8, "175.00000000%");
     }
   }
 
   // test the main types with wider ranges
-  auto sems = { llvm::APFloat::S_IEEEsingle, llvm::APFloat::S_IEEEdouble,
-                llvm::APFloat::S_IEEEquad, llvm::APFloat::S_PPCDoubleDouble,
-                llvm::APFloat::S_x87DoubleExtended};
+  auto sems = {llvm::APFloat::S_IEEEsingle, llvm::APFloat::S_IEEEdouble,
+               llvm::APFloat::S_IEEEquad, llvm::APFloat::S_PPCDoubleDouble,
+               llvm::APFloat::S_x87DoubleExtended};
 
-  for ( auto sem : sems ) {
+  for (auto sem : sems) {
     const auto &S = APFloat::EnumToSemantics(sem);
 
     doit(S, "0.000001", llvm::FloatStyle::Exponent, "1.000000e-06");
@@ -1505,17 +1507,24 @@ TEST(APFloatTest, format) {
 
     // 1/1024 == 0.0009765625
     doit(S, "0.0009765625", llvm::FloatStyle::Exponent, "9.765625e-04");
-    doit_precision(S, "0.0009765625", llvm::FloatStyle::Exponent, 5, "9.76563e-04");
-    doit_precision(S, "0.0009765625", llvm::FloatStyle::Exponent, 4, "9.7656e-04");
-    doit_precision(S, "0.0009765625", llvm::FloatStyle::Exponent, 3, "9.766e-04");
-    doit_precision(S, "0.0009765625", llvm::FloatStyle::Exponent, 2, "9.77e-04");
+    doit_precision(S, "0.0009765625", llvm::FloatStyle::Exponent, 5,
+                   "9.76563e-04");
+    doit_precision(S, "0.0009765625", llvm::FloatStyle::Exponent, 4,
+                   "9.7656e-04");
+    doit_precision(S, "0.0009765625", llvm::FloatStyle::Exponent, 3,
+                   "9.766e-04");
+    doit_precision(S, "0.0009765625", llvm::FloatStyle::Exponent, 2,
+                   "9.77e-04");
     doit_precision(S, "0.0009765625", llvm::FloatStyle::Exponent, 1, "9.8e-04");
     // note change in exponent as the integer 9 goes to 10, and then to 1
     doit_precision(S, "0.0009765625", llvm::FloatStyle::Exponent, 0, "1e-03");
 
-    doit_precision(S, "0.0009765625", llvm::FloatStyle::Fixed, 11, "0.00097656250");
-    doit_precision(S, "0.0009765625", llvm::FloatStyle::Fixed, 10, "0.0009765625");
-    doit_precision(S, "0.0009765625", llvm::FloatStyle::Fixed, 9, "0.000976563");
+    doit_precision(S, "0.0009765625", llvm::FloatStyle::Fixed, 11,
+                   "0.00097656250");
+    doit_precision(S, "0.0009765625", llvm::FloatStyle::Fixed, 10,
+                   "0.0009765625");
+    doit_precision(S, "0.0009765625", llvm::FloatStyle::Fixed, 9,
+                   "0.000976563");
     doit_precision(S, "0.0009765625", llvm::FloatStyle::Fixed, 8, "0.00097656");
     doit_precision(S, "0.0009765625", llvm::FloatStyle::Fixed, 7, "0.0009766");
     doit_precision(S, "0.0009765625", llvm::FloatStyle::Fixed, 6, "0.000977");

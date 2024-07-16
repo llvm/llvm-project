@@ -4596,12 +4596,11 @@ void IEEEFloat::makeZero(bool Negative) {
   APInt::tcSet(significandParts(), 0, partCount());
 }
 
-IEEEFloat::ExponentType IEEEFloat::getExponent() const {
-  return exponent;
-}
+IEEEFloat::ExponentType IEEEFloat::getExponent() const { return exponent; }
 
 APInt IEEEFloat::getSignificand() const {
-  APInt result(semantics->precision, ArrayRef<integerPart>(significandParts(), partCount()));
+  APInt result(semantics->precision,
+               ArrayRef<integerPart>(significandParts(), partCount()));
 
   return result;
 }
@@ -5401,8 +5400,8 @@ APFloat APFloat::getAllOnesValue(const fltSemantics &Semantics) {
 }
 
 SmallVectorImpl<char> &APFloat::format(SmallVectorImpl<char> &strout,
-                                     llvm::FloatStyle style,
-                                     std::optional<size_t> precision_in) {
+                                       llvm::FloatStyle style,
+                                       std::optional<size_t> precision_in) {
   size_t precision = precision_in.value_or(getDefaultPrecision(style));
 
   // everything that follows assumes that precision >= 0
@@ -5426,7 +5425,7 @@ SmallVectorImpl<char> &APFloat::format(SmallVectorImpl<char> &strout,
       strout.push_back('.');
       for (size_t i = 0; i < precision; ++i)
         strout.push_back('0');
-    }  
+    }
     if (style == FloatStyle::Exponent)
       detail::append(strout, "e+00");
     else if (style == FloatStyle::ExponentUpper)
@@ -5539,7 +5538,7 @@ SmallVectorImpl<char> &APFloat::format(SmallVectorImpl<char> &strout,
       // now move decimal point back
       E += (s.size() - 1);
     }
-    if(isNegative())
+    if (isNegative())
       strout.push_back('-');
     strout.push_back(s[0]);
     if (precision > 0) {
@@ -5572,7 +5571,7 @@ SmallVectorImpl<char> &APFloat::format(SmallVectorImpl<char> &strout,
       strout.push_back('0' + E);
     } else {
       s.clear();
-      while(E) {
+      while (E) {
         char c = '0' + E % 10;
         strout.push_back(c);
         E /= 10;
@@ -5585,7 +5584,7 @@ SmallVectorImpl<char> &APFloat::format(SmallVectorImpl<char> &strout,
 
   // output to be formatted along the lines of %f
   if (style == FloatStyle::Percent)
-    decimalPoint += 2;    // multiply by 100
+    decimalPoint += 2; // multiply by 100
 
   int decidingDigit = decimalPoint + precision;
 
@@ -5593,7 +5592,7 @@ SmallVectorImpl<char> &APFloat::format(SmallVectorImpl<char> &strout,
     // theh value is zero.  The deciding digit is to the left
     // of the digits in s.  This is in the area of zeros, and
     // the contents of s can't affect the value.
-  } else if (decidingDigit >= (int) s.size()) {
+  } else if (decidingDigit >= (int)s.size()) {
     // deciding is beyond the end of s
   } else if (decidingDigit == 0) {
     // this is a tricky case, because if the digit at position 0
@@ -5611,13 +5610,14 @@ SmallVectorImpl<char> &APFloat::format(SmallVectorImpl<char> &strout,
     }
   } else if (s[decidingDigit] >= '5') {
     StringRef significantDigits(s.data(), decidingDigit);
-    int distanceBetweenDecimalPointAndDecidingDigit = decidingDigit - decimalPoint;
-    APInt temp (I.getBitWidth(), significantDigits, 10);
+    int distanceBetweenDecimalPointAndDecidingDigit =
+        decidingDigit - decimalPoint;
+    APInt temp(I.getBitWidth(), significantDigits, 10);
     temp += 1;
     s.clear();
     temp.toString(s, 10, false);
     // readjust decimalPoint in case the addition had a carry out
-    decimalPoint = (int) s.size() - distanceBetweenDecimalPointAndDecidingDigit;
+    decimalPoint = (int)s.size() - distanceBetweenDecimalPointAndDecidingDigit;
   }
 
   if (isNegative())
@@ -5631,7 +5631,7 @@ SmallVectorImpl<char> &APFloat::format(SmallVectorImpl<char> &strout,
     strout.push_back('0');
   } else {
     // we need to emit decimalPoint digits
-    int fromS = std::min(decimalPoint, (int) s.size());
+    int fromS = std::min(decimalPoint, (int)s.size());
     int i;
 
     for (i = 0; i < fromS; i++)
@@ -5640,13 +5640,13 @@ SmallVectorImpl<char> &APFloat::format(SmallVectorImpl<char> &strout,
       strout.push_back('0');
   }
 
-  if (precision > 0 ) {
+  if (precision > 0) {
     // need to emit precision digits
     // We need to emit what's to the right of the decimal point.
     int i;
     strout.push_back('.');
     if (decimalPoint < 0) {
-      int numLeadingZeros = std::min((int) precision, -decimalPoint);
+      int numLeadingZeros = std::min((int)precision, -decimalPoint);
       for (i = 0; i < numLeadingZeros; i++)
         strout.push_back('0');
       // update how many digits we have left to emit
@@ -5655,17 +5655,17 @@ SmallVectorImpl<char> &APFloat::format(SmallVectorImpl<char> &strout,
       decimalPoint += numLeadingZeros;
     }
 
-    if ( precision > 0) {
+    if (precision > 0) {
       // decimalPoint must be >= 0.
-      // If it was < 0 befoew we emitted the integer to the left of the decimal ppint,
-      // then it would have been incremented by numLeadingZeros in the previous block.
-      // It would have been incremented by the smaller of |decimalPoint| and precision.
-      // if |decimalPoint| were smaller, then decimalPoint will now be 0.
-      // If precision were smaller, then precision would have been decremented to 0,
-      // so we wouldn't be in this block.
+      // If it was < 0 befoew we emitted the integer to the left of the decimal
+      // ppint, then it would have been incremented by numLeadingZeros in the
+      // previous block. It would have been incremented by the smaller of
+      // |decimalPoint| and precision. If |decimalPoint| were smaller, then
+      // decimalPoint will now be 0. If precision were smaller, then precision
+      // would have been decremented to 0, so we wouldn't be in this block.
       // Hencem if we are in this block, then decimalPoint must be >= 0.
       assert(decimalPoint >= 0);
-      if (decimalPoint < (int) s.size()) {
+      if (decimalPoint < (int)s.size()) {
         // we need to emit digits from s
         int fromS = std::min(precision, s.size() - decimalPoint);
 
@@ -5673,7 +5673,7 @@ SmallVectorImpl<char> &APFloat::format(SmallVectorImpl<char> &strout,
           strout.push_back(s[decimalPoint + i]);
         precision -= fromS;
       }
-      for ( i = 0; i < (int) precision; i++ )
+      for (i = 0; i < (int)precision; i++)
         strout.push_back('0');
     }
   }
