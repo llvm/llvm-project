@@ -710,12 +710,13 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
             .Case("boot_application",
                   COFF::IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION)
             .Case("console", COFF::IMAGE_SUBSYSTEM_WINDOWS_CUI)
-            .Case("efi_application", COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION)
-            .Case("efi_boot_service_driver",
-                  COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
+            .Cases("efi_application", "efi-app",
+                   COFF::IMAGE_SUBSYSTEM_EFI_APPLICATION)
+            .Cases("efi_boot_service_driver", "efi-bsd",
+                   COFF::IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
             .Case("efi_rom", COFF::IMAGE_SUBSYSTEM_EFI_ROM)
-            .Case("efi_runtime_driver",
-                  COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER)
+            .Cases("efi_runtime_driver", "efi-rtd",
+                   COFF::IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER)
             .Case("native", COFF::IMAGE_SUBSYSTEM_NATIVE)
             .Case("posix", COFF::IMAGE_SUBSYSTEM_POSIX_CUI)
             .Case("windows", COFF::IMAGE_SUBSYSTEM_WINDOWS_GUI)
@@ -989,6 +990,10 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
                              ? DiscardType::All
                              : DiscardType::Locals;
   }
+
+  ELFConfig.VerifyNoteSections = InputArgs.hasFlag(
+      OBJCOPY_verify_note_sections, OBJCOPY_no_verify_note_sections, true);
+
   Config.OnlyKeepDebug = InputArgs.hasArg(OBJCOPY_only_keep_debug);
   ELFConfig.KeepFileSymbols = InputArgs.hasArg(OBJCOPY_keep_file_symbols);
   MachOConfig.KeepUndefined = InputArgs.hasArg(OBJCOPY_keep_undefined);

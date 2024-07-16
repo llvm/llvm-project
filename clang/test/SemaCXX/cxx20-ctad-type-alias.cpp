@@ -440,3 +440,44 @@ template<typename...TS>
 using AA = A<int, TS...>;
 AA a{0};
 }
+
+namespace GH94927 {
+template <typename T>
+struct A {
+  A(T);
+};
+A(int) -> A<char>;
+
+template <typename U>
+using B1 = A<U>;
+B1 b1(100); // deduce to A<char>;
+static_assert(__is_same(decltype(b1), A<char>));
+
+template <typename U>
+requires (!__is_same(U, char)) // filter out the explicit deduction guide.
+using B2 = A<U>;
+template <typename V>
+using B3 = B2<V>;
+
+B2 b2(100); // deduced to A<int>;
+static_assert(__is_same(decltype(b2), A<int>));
+B3 b3(100); // decuded to A<int>;
+static_assert(__is_same(decltype(b3), A<int>));
+
+
+// the nested case
+template <typename T1>
+struct Out {
+  template <typename T2>
+  struct A {
+    A(T2);
+  };
+  A(int) -> A<T1>;
+  
+  template <typename T3>
+  using B = A<T3>;
+};
+
+Out<float>::B out(100); // deduced to Out<float>::A<float>;
+static_assert(__is_same(decltype(out), Out<float>::A<float>));
+}

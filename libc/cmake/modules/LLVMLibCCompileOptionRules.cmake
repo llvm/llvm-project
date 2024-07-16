@@ -43,9 +43,11 @@ function(_get_common_compile_options output_var flags)
     list(APPEND compile_options "-fpie")
 
     if(LLVM_LIBC_FULL_BUILD)
+      # Only add -ffreestanding flag in non-GPU full build mode.
+      if(NOT LIBC_TARGET_OS_IS_GPU)
+        list(APPEND compile_options "-ffreestanding")
+      endif()
       list(APPEND compile_options "-DLIBC_FULL_BUILD")
-      # Only add -ffreestanding flag in full build mode.
-      list(APPEND compile_options "-ffreestanding")
       # Manually disable standard include paths to prevent system headers from
       # being included.
       if(LIBC_CC_SUPPORTS_NOSTDLIBINC)
@@ -68,7 +70,19 @@ function(_get_common_compile_options output_var flags)
       list(APPEND compile_options "-ffixed-point")
     endif()
 
-    list(APPEND compile_options "-fno-builtin")
+    # Builtin recognition causes issues when trying to implement the builtin
+    # functions themselves. The GPU backends do not use libcalls so we disable
+    # the known problematic ones. This allows inlining during LTO linking.
+    if(LIBC_TARGET_OS_IS_GPU)
+      set(libc_builtins bcmp strlen memmem bzero memcmp memcpy memmem memmove
+                        memset strcmp strstr)
+      foreach(builtin ${libc_builtins})
+        list(APPEND compile_options "-fno-builtin-${builtin}")
+      endforeach()
+    else()
+      list(APPEND compile_options "-fno-builtin")
+    endif()
+
     list(APPEND compile_options "-fno-exceptions")
     list(APPEND compile_options "-fno-lax-vector-conversions")
     list(APPEND compile_options "-fno-unwind-tables")

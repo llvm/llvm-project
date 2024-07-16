@@ -161,8 +161,8 @@ FunctionPass *createX86InsertX87waitPass();
 FunctionPass *createX86PartialReductionPass();
 
 InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
-                                                  X86Subtarget &,
-                                                  X86RegisterBankInfo &);
+                                                  const X86Subtarget &,
+                                                  const X86RegisterBankInfo &);
 
 FunctionPass *createX86LoadValueInjectionLoadHardeningPass();
 FunctionPass *createX86LoadValueInjectionRetHardeningPass();

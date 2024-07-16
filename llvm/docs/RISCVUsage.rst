@@ -70,6 +70,33 @@ To specify the target triple:
 To select an E variant ISA (e.g. RV32E instead of RV32I), use the base
 architecture string (e.g. ``riscv32``) with the extension ``e``.
 
+Profiles
+========
+
+Supported profile names can be passed using ``-march`` instead of a standard
+ISA naming string. Currently supported profiles:
+
+* ``rvi20u32``
+* ``rvi20u64``
+* ``rva20u64``
+* ``rva20s64``
+* ``rva22u64``
+* ``rva22s64``
+
+Note that you can also append additional extension names to be enable, e.g.
+``rva20u64_zicond`` will enable the ``zicond`` extension in addition to those
+in the ``rva20u64`` profile.
+
+Profiles that are not yet ratified cannot be used unless
+``-menable-experimental-extensions`` (or equivalent for other tools) is
+specified. This applies to the following profiles:
+
+* ``rva23u64``
+* ``rva23s64``
+* ``rvb23u64``
+* ``rvb23s64``
+* ``rvm23u32``
+
 .. _riscv-extensions:
 
 Extensions
@@ -179,6 +206,7 @@ on support follow.
      ``Zks``           Supported
      ``Zkt``           Supported
      ``Zmmul``         Supported
+     ``Ztso``          Supported
      ``Zvbb``          Assembly Support
      ``Zvbc``          Assembly Support
      ``Zve32x``        (`Partially <#riscv-vlen-32-note>`__) Supported
@@ -277,9 +305,6 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-zicfilp``, ``experimental-zicfiss``
   LLVM implements the `0.4 draft specification <https://github.com/riscv/riscv-cfi/releases/tag/v0.4.0>`__.
 
-``experimental-ztso``
-  LLVM implements the `v0.1 proposed specification <https://github.com/riscv/riscv-isa-manual/releases/download/draft-20220723-10eea63/riscv-spec.pdf>`__ (see Chapter 25).  The mapping from the C/C++ memory model to Ztso has not yet been ratified in any standards document.  There are multiple possible mappings, and they are *not* mutually ABI compatible.  The mapping LLVM implements is ABI compatible with the default WMO mapping.  This mapping may change and there is *explicitly* no ABI stability offered while the extension remains in experimental status.  User beware.
-
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 
 Vendor Extensions
@@ -370,6 +395,9 @@ The current vendor extensions supported are:
 
 ``XSfcease``
   LLVM implements `the SiFive sf.cease instruction specified in <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`_ by SiFive.
+
+``Xwchc``
+  LLVM implements `the custom compressed opcodes present in some QingKe cores` by WCH / Nanjing Qinheng Microelectronics. The vendor refers to these opcodes by the name "XW".
 
 Experimental C Intrinsics
 =========================

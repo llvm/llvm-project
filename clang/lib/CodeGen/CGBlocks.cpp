@@ -121,11 +121,15 @@ static std::string getBlockDescriptorName(const CGBlockInfo &BlockInfo,
     Name += "_";
   }
 
-  std::string TypeAtEncoding =
-      CGM.getContext().getObjCEncodingForBlock(BlockInfo.getBlockExpr());
-  /// Replace occurrences of '@' with '\1'. '@' is reserved on ELF platforms as
-  /// a separator between symbol name and symbol version.
-  std::replace(TypeAtEncoding.begin(), TypeAtEncoding.end(), '@', '\1');
+  std::string TypeAtEncoding;
+
+  if (!CGM.getCodeGenOpts().DisableBlockSignatureString) {
+    TypeAtEncoding =
+        CGM.getContext().getObjCEncodingForBlock(BlockInfo.getBlockExpr());
+    /// Replace occurrences of '@' with '\1'. '@' is reserved on ELF platforms
+    /// as a separator between symbol name and symbol version.
+    std::replace(TypeAtEncoding.begin(), TypeAtEncoding.end(), '@', '\1');
+  }
   Name += "e" + llvm::to_string(TypeAtEncoding.size()) + "_" + TypeAtEncoding;
   Name += "l" + CGM.getObjCRuntime().getRCBlockLayoutStr(CGM, BlockInfo);
   return Name;
@@ -201,9 +205,13 @@ static llvm::Constant *buildBlockDescriptor(CodeGenModule &CGM,
   }
 
   // Signature.  Mandatory ObjC-style method descriptor @encode sequence.
-  std::string typeAtEncoding =
-    CGM.getContext().getObjCEncodingForBlock(blockInfo.getBlockExpr());
-  elements.add(CGM.GetAddrOfConstantCString(typeAtEncoding).getPointer());
+  if (CGM.getCodeGenOpts().DisableBlockSignatureString) {
+    elements.addNullPointer(i8p);
+  } else {
+    std::string typeAtEncoding =
+        CGM.getContext().getObjCEncodingForBlock(blockInfo.getBlockExpr());
+    elements.add(CGM.GetAddrOfConstantCString(typeAtEncoding).getPointer());
+  }
 
   // GC layout.
   if (C.getLangOpts().ObjC) {
@@ -814,7 +822,8 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
     descriptor = buildBlockDescriptor(CGM, blockInfo);
 
     // Compute the initial on-stack block flags.
-    flags = BLOCK_HAS_SIGNATURE;
+    if (!CGM.getCodeGenOpts().DisableBlockSignatureString)
+      flags = BLOCK_HAS_SIGNATURE;
     if (blockInfo.HasCapturedVariableLayout)
       flags |= BLOCK_HAS_EXTENDED_LAYOUT;
     if (blockInfo.NeedsCopyDispose)
@@ -1300,7 +1309,9 @@ static llvm::Constant *buildGlobalBlock(CodeGenModule &CGM,
       fields.add(CGM.getNSConcreteGlobalBlock());
 
     // __flags
-    BlockFlags flags = BLOCK_IS_GLOBAL | BLOCK_HAS_SIGNATURE;
+    BlockFlags flags = BLOCK_IS_GLOBAL;
+    if (!CGM.getCodeGenOpts().DisableBlockSignatureString)
+      flags |= BLOCK_HAS_SIGNATURE;
     if (blockInfo.UsesStret)
       flags |= BLOCK_USE_STRET;
 

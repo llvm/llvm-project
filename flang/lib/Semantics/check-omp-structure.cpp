@@ -2564,7 +2564,7 @@ void OmpStructureChecker::CheckIntentInPointerAndDefinable(
                   "Variable '%s' on the %s clause is not definable"_err_en_US,
                   symbol->name(),
                   parser::ToUpperCaseLetters(getClauseName(clause).str()))
-              .Attach(std::move(*msg));
+              .Attach(std::move(msg->set_severity(parser::Severity::Because)));
         }
       }
     }
@@ -3369,7 +3369,7 @@ void OmpStructureChecker::CheckDefinableObjects(
               "Variable '%s' on the %s clause is not definable"_err_en_US,
               symbol->name(),
               parser::ToUpperCaseLetters(getClauseName(clause).str()))
-          .Attach(std::move(*msg));
+          .Attach(std::move(msg->set_severity(parser::Severity::Because)));
     }
   }
 }

@@ -229,7 +229,7 @@ char &llvm::VirtRegRewriterID = VirtRegRewriter::ID;
 INITIALIZE_PASS_BEGIN(VirtRegRewriter, "virtregrewriter",
                       "Virtual Register Rewriter", false, false)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveDebugVariables)
 INITIALIZE_PASS_DEPENDENCY(LiveStacks)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMap)
@@ -238,8 +238,8 @@ INITIALIZE_PASS_END(VirtRegRewriter, "virtregrewriter",
 
 void VirtRegRewriter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addRequired<LiveIntervals>();
-  AU.addPreserved<LiveIntervals>();
+  AU.addRequired<LiveIntervalsWrapperPass>();
+  AU.addPreserved<LiveIntervalsWrapperPass>();
   AU.addRequired<SlotIndexesWrapperPass>();
   AU.addPreserved<SlotIndexesWrapperPass>();
   AU.addRequired<LiveDebugVariables>();
@@ -259,7 +259,7 @@ bool VirtRegRewriter::runOnMachineFunction(MachineFunction &fn) {
   TII = MF->getSubtarget().getInstrInfo();
   MRI = &MF->getRegInfo();
   Indexes = &getAnalysis<SlotIndexesWrapperPass>().getSI();
-  LIS = &getAnalysis<LiveIntervals>();
+  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   VRM = &getAnalysis<VirtRegMap>();
   DebugVars = &getAnalysis<LiveDebugVariables>();
   LLVM_DEBUG(dbgs() << "********** REWRITE VIRTUAL REGISTERS **********\n"

@@ -3,6 +3,7 @@ add_library(
   Timer.cpp
   Timer.h
 )
+add_dependencies(libc_diff_test_utils libc.src.__support.macros.config)
 
 # A convenience target to build all performance tests.
 add_custom_target(libc-math-performance-tests)
@@ -363,6 +364,25 @@ add_perf_binary(
   DEPENDS
     .single_input_single_output_diff
     libc.src.math.fmodf128
+  COMPILE_OPTIONS
+    -fno-builtin
+)
+
+add_perf_binary(
+  nearest_integer_funcs_perf
+  SRCS
+    nearest_integer_funcs_perf.cpp
+  DEPENDS
+    libc.src.math.ceilf
+    libc.src.math.ceilf16
+    libc.src.math.floorf
+    libc.src.math.floorf16
+    libc.src.math.roundevenf
+    libc.src.math.roundevenf16
+    libc.src.math.roundf
+    libc.src.math.roundf16
+    libc.src.math.truncf
+    libc.src.math.truncf16
   COMPILE_OPTIONS
     -fno-builtin
 )

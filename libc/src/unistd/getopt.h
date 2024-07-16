@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_GETOPT_H
 #define LLVM_LIBC_SRC_UNISTD_GETOPT_H
 
-#include <stdio.h>
+#include "hdr/types/FILE.h"
 #include <unistd.h>
 
 namespace LIBC_NAMESPACE {

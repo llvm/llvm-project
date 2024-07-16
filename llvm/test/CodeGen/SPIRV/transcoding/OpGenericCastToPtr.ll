@@ -19,26 +19,17 @@
 
 ; Mangling
 
-; CHECK-SPIRV: OpFunction
-; CHECK-SPIRV: OpPtrCastToGeneric %[[#GenericIntPtr]]
-; CHECK-SPIRV: OpPtrCastToGeneric %[[#GenericCharPtr]]
-; CHECK-SPIRV: OpPtrCastToGeneric %[[#GenericIntPtr]]
-; CHECK-SPIRV: OpGenericCastToPtr %[[#GlobalCharPtr]]
-; CHECK-SPIRV: OpGenericCastToPtr %[[#LocalCharPtr]]
-; CHECK-SPIRV: OpGenericCastToPtr %[[#PrivateCharPtr]]
-; CHECK-SPIRV: OpGenericCastToPtr %[[#GlobalCharPtr]]
-; CHECK-SPIRV: OpGenericCastToPtr %[[#LocalCharPtr]]
-; CHECK-SPIRV: OpGenericCastToPtr %[[#PrivateCharPtr]]
-; CHECK-SPIRV: OpFunctionEnd
-
-; CHECK-SPIRV: OpFunction
-; CHECK-SPIRV: OpPtrCastToGeneric %[[#GenericIntPtr]]
-; CHECK-SPIRV: OpPtrCastToGeneric %[[#GenericCharPtr]]
-; CHECK-SPIRV: OpPtrCastToGeneric %[[#GenericIntPtr]]
-; CHECK-SPIRV: OpGenericCastToPtr %[[#GlobalCharPtr]]
-; CHECK-SPIRV: OpGenericCastToPtr %[[#LocalCharPtr]]
-; CHECK-SPIRV: OpGenericCastToPtr %[[#PrivateCharPtr]]
-; CHECK-SPIRV: OpFunctionEnd
+; CHECK-SPIRV:      OpFunction
+; CHECK-SPIRV:      OpPtrCastToGeneric %[[#GenericIntPtr]]
+; CHECK-SPIRV-NEXT: OpPtrCastToGeneric %[[#GenericCharPtr]]
+; CHECK-SPIRV-NEXT: OpPtrCastToGeneric %[[#GenericIntPtr]]
+; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#GlobalIntPtr]]
+; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#LocalCharPtr]]
+; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#PrivateIntPtr]]
+; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#GlobalIntPtr]]
+; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#LocalCharPtr]]
+; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#PrivateIntPtr]]
+; CHECK-SPIRV:      OpFunctionEnd
 
 define spir_kernel void @test1(ptr addrspace(1) %_arg_GlobalA, ptr byval(%id) %_arg_GlobalId, ptr addrspace(3) %_arg_LocalA) {
 entry:
@@ -58,6 +49,15 @@ entry:
   %PE = call spir_func ptr @_Z42__spirv_GenericCastToPtrExplicit_ToPrivatePvi(ptr addrspace(4) %var3, i32 7)
   ret void
 }
+
+; CHECK-SPIRV:      OpFunction
+; CHECK-SPIRV:      OpPtrCastToGeneric %[[#GenericIntPtr]]
+; CHECK-SPIRV-NEXT: OpPtrCastToGeneric %[[#GenericCharPtr]]
+; CHECK-SPIRV-NEXT: OpPtrCastToGeneric %[[#GenericIntPtr]]
+; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#GlobalIntPtr]]
+; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#LocalCharPtr]]
+; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#PrivateIntPtr]]
+; CHECK-SPIRV:      OpFunctionEnd
 
 define spir_kernel void @test2(ptr addrspace(1) %_arg_GlobalA, ptr byval(%id) %_arg_GlobalId, ptr addrspace(3) %_arg_LocalA) {
 entry:
@@ -88,26 +88,26 @@ declare spir_func ptr @_Z10to_privatePv(ptr addrspace(4))
 
 ; No mangling
 
-; CHECK-SPIRV: OpFunction
-; CHECK-SPIRV: OpPtrCastToGeneric %[[#GenericIntPtr]]
-; CHECK-SPIRV: OpPtrCastToGeneric %[[#GenericCharPtr]]
-; CHECK-SPIRV: OpPtrCastToGeneric %[[#GenericIntPtr]]
-; CHECK-SPIRV: OpGenericCastToPtr %[[#GlobalIntPtr]]
-; CHECK-SPIRV: OpGenericCastToPtr %[[#LocalCharPtr]]
-; CHECK-SPIRV: OpGenericCastToPtr %[[#PrivateIntPtr]]
-; CHECK-SPIRV: OpGenericCastToPtr %[[#GlobalIntPtr]]
-; CHECK-SPIRV: OpGenericCastToPtr %[[#LocalCharPtr]]
-; CHECK-SPIRV: OpGenericCastToPtr %[[#PrivateIntPtr]]
-; CHECK-SPIRV: OpFunctionEnd
+; CHECK-SPIRV:      OpFunction
+; CHECK-SPIRV:      OpPtrCastToGeneric %[[#GenericIntPtr]]
+; CHECK-SPIRV-NEXT: OpPtrCastToGeneric %[[#GenericCharPtr]]
+; CHECK-SPIRV-NEXT: OpPtrCastToGeneric %[[#GenericIntPtr]]
+; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#GlobalIntPtr]]
+; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#LocalCharPtr]]
+; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#PrivateIntPtr]]
+; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#GlobalIntPtr]]
+; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#LocalCharPtr]]
+; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#PrivateIntPtr]]
+; CHECK-SPIRV:      OpFunctionEnd
 
-; CHECK-SPIRV: OpFunction
-; CHECK-SPIRV: OpPtrCastToGeneric %[[#GenericIntPtr]]
-; CHECK-SPIRV: OpPtrCastToGeneric %[[#GenericCharPtr]]
-; CHECK-SPIRV: OpPtrCastToGeneric %[[#GenericIntPtr]]
-; CHECK-SPIRV: OpGenericCastToPtr %[[#GlobalIntPtr]]
-; CHECK-SPIRV: OpGenericCastToPtr %[[#LocalCharPtr]]
-; CHECK-SPIRV: OpGenericCastToPtr %[[#PrivateIntPtr]]
-; CHECK-SPIRV: OpFunctionEnd
+; CHECK-SPIRV:      OpFunction
+; CHECK-SPIRV:      OpPtrCastToGeneric %[[#GenericIntPtr]]
+; CHECK-SPIRV-NEXT: OpPtrCastToGeneric %[[#GenericCharPtr]]
+; CHECK-SPIRV-NEXT: OpPtrCastToGeneric %[[#GenericIntPtr]]
+; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#GlobalIntPtr]]
+; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#LocalCharPtr]]
+; CHECK-SPIRV-NEXT: OpGenericCastToPtr %[[#PrivateIntPtr]]
+; CHECK-SPIRV:      OpFunctionEnd
 
 define spir_kernel void @test3(ptr addrspace(1) %_arg_GlobalA, ptr byval(%id) %_arg_GlobalId, ptr addrspace(3) %_arg_LocalA) {
 entry:

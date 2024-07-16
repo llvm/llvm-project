@@ -1161,7 +1161,8 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
                     << " -- " << printMBBReference(*NMBB) << " -- "
                     << printMBBReference(*Succ) << '\n');
 
-  LiveIntervals *LIS = P.getAnalysisIfAvailable<LiveIntervals>();
+  auto *LISWrapper = P.getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+  LiveIntervals *LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
   auto *SIWrapper = P.getAnalysisIfAvailable<SlotIndexesWrapperPass>();
   SlotIndexes *Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
   if (LIS)

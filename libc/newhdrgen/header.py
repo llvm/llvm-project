@@ -62,6 +62,9 @@ class HeaderFile:
             content.append("")
         for object in self.objects:
             content.append(str(object))
-        content.append("\n__END_C_DECLS")
+        if self.objects:
+            content.append("\n__END_C_DECLS")
+        else:
+            content.append("__END_C_DECLS")
 
         return "\n".join(content)

@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "file.h"
-#include <stdio.h>
+#include "hdr/stdio_macros.h"
+#include "hdr/types/FILE.h"
 
 namespace LIBC_NAMESPACE {
 

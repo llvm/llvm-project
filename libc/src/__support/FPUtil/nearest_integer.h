@@ -17,6 +17,18 @@
 #include "x86_64/nearest_integer.h"
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #include "aarch64/nearest_integer.h"
+#elif defined(LIBC_TARGET_ARCH_IS_GPU)
+
+namespace LIBC_NAMESPACE {
+namespace fputil {
+
+LIBC_INLINE float nearest_integer(float x) { return __builtin_rintf(x); }
+
+LIBC_INLINE double nearest_integer(double x) { return __builtin_rint(x); }
+
+} // namespace fputil
+} // namespace LIBC_NAMESPACE
+
 #else
 
 namespace LIBC_NAMESPACE {

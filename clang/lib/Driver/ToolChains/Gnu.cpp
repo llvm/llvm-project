@@ -2593,9 +2593,11 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
                                                "riscv64-unknown-elf"};
 
   static const char *const SPARCv8LibDirs[] = {"/lib32", "/lib"};
-  static const char *const SPARCv8Triples[] = {"sparcv8-linux-gnu"};
+  static const char *const SPARCv8Triples[] = {"sparc-linux-gnu",
+                                               "sparcv8-linux-gnu"};
   static const char *const SPARCv9LibDirs[] = {"/lib64", "/lib"};
-  static const char *const SPARCv9Triples[] = {"sparcv9-linux-gnu"};
+  static const char *const SPARCv9Triples[] = {"sparc64-linux-gnu",
+                                               "sparcv9-linux-gnu"};
 
   static const char *const SystemZLibDirs[] = {"/lib64", "/lib"};
   static const char *const SystemZTriples[] = {

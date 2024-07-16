@@ -36,7 +36,6 @@
 // CHECK-NEXT:     FEAT_LS64, FEAT_LS64_V, FEAT_LS64_ACCDATA              Enable Armv8.7-A LD64B/ST64B Accelerator Extension
 // CHECK-NEXT:     FEAT_LSE                                               Enable ARMv8.1 Large System Extension (LSE) atomic instructions
 // CHECK-NEXT:     FEAT_LSE2                                              Enable ARMv8.4 Large System Extension 2 (LSE2) atomicity rules
-// CHECK-NEXT:     FEAT_MEC                                               Enable Memory Encryption Contexts Extension
 // CHECK-NEXT:     FEAT_MPAM                                              Enable v8.4-A Memory system Partitioning and Monitoring extension
 // CHECK-NEXT:     FEAT_MTE, FEAT_MTE2                                    Enable Memory Tagging Extension
 // CHECK-NEXT:     FEAT_NV, FEAT_NV2                                      Enable v8.4-A Nested Virtualization Enchancement

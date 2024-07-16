@@ -14,6 +14,7 @@
 #include "src/stdio/printf_core/writer.h"
 
 #include <stdarg.h>
+#include <stddef.h>
 
 namespace LIBC_NAMESPACE {
 

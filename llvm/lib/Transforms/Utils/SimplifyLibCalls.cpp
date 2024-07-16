@@ -27,6 +27,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
@@ -1958,24 +1959,52 @@ static Value *optimizeBinaryDoubleFP(CallInst *CI, IRBuilderBase &B,
 
 // cabs(z) -> sqrt((creal(z)*creal(z)) + (cimag(z)*cimag(z)))
 Value *LibCallSimplifier::optimizeCAbs(CallInst *CI, IRBuilderBase &B) {
-  if (!CI->isFast())
-    return nullptr;
+  Value *Real, *Imag;
+
+  if (CI->arg_size() == 1) {
+
+    if (!CI->isFast())
+      return nullptr;
+
+    Value *Op = CI->getArgOperand(0);
+    assert(Op->getType()->isArrayTy() && "Unexpected signature for cabs!");
+
+    Real = B.CreateExtractValue(Op, 0, "real");
+    Imag = B.CreateExtractValue(Op, 1, "imag");
+
+  } else {
+    assert(CI->arg_size() == 2 && "Unexpected signature for cabs!");
+
+    Real = CI->getArgOperand(0);
+    Imag = CI->getArgOperand(1);
+
+    // if real or imaginary part is zero, simplify to abs(cimag(z))
+    // or abs(creal(z))
+    Value *AbsOp = nullptr;
+    if (ConstantFP *ConstReal = dyn_cast<ConstantFP>(Real)) {
+      if (ConstReal->isZero())
+        AbsOp = Imag;
+
+    } else if (ConstantFP *ConstImag = dyn_cast<ConstantFP>(Imag)) {
+      if (ConstImag->isZero())
+        AbsOp = Real;
+    }
+
+    if (AbsOp) {
+      IRBuilderBase::FastMathFlagGuard Guard(B);
+      B.setFastMathFlags(CI->getFastMathFlags());
+
+      return copyFlags(
+          *CI, B.CreateUnaryIntrinsic(Intrinsic::fabs, AbsOp, nullptr, "cabs"));
+    }
+
+    if (!CI->isFast())
+      return nullptr;
+  }
 
   // Propagate fast-math flags from the existing call to new instructions.
   IRBuilderBase::FastMathFlagGuard Guard(B);
   B.setFastMathFlags(CI->getFastMathFlags());
-
-  Value *Real, *Imag;
-  if (CI->arg_size() == 1) {
-    Value *Op = CI->getArgOperand(0);
-    assert(Op->getType()->isArrayTy() && "Unexpected signature for cabs!");
-    Real = B.CreateExtractValue(Op, 0, "real");
-    Imag = B.CreateExtractValue(Op, 1, "imag");
-  } else {
-    assert(CI->arg_size() == 2 && "Unexpected signature for cabs!");
-    Real = CI->getArgOperand(0);
-    Imag = CI->getArgOperand(1);
-  }
 
   Value *RealReal = B.CreateFMul(Real, Real);
   Value *ImagImag = B.CreateFMul(Imag, Imag);

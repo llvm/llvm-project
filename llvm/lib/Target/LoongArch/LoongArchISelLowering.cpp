@@ -152,15 +152,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::INTRINSIC_VOID, MVT::i64, Custom);
     setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i64, Custom);
     setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i64, Custom);
-
-    // Set libcalls.
-    setLibcallName(RTLIB::MUL_I128, nullptr);
-    // The MULO libcall is not part of libgcc, only compiler-rt.
-    setLibcallName(RTLIB::MULO_I64, nullptr);
   }
-
-  // The MULO libcall is not part of libgcc, only compiler-rt.
-  setLibcallName(RTLIB::MULO_I128, nullptr);
 
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);
 
