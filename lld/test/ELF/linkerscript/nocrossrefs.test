@@ -3,7 +3,10 @@
 
 # RUN: llvm-mc --triple=x86_64 -filetype=obj a.s -o a.o
 # RUN: llvm-mc --triple=x86_64 -filetype=obj data.s -o data.o
-# RUN: ld.lld a.o data.o -T 0.t
+# RUN: ld.lld a.o data.o -T 0.t 2>&1 | FileCheck %s --check-prefix=CHECK0 --implicit-check-not=warning:
+
+# CHECK0:      warning: 0.t:3: ignored with fewer than 2 output sections
+# CHECK0-NEXT: warning: 0.t:4: ignored with fewer than 2 output sections
 
 # RUN: not ld.lld a.o data.o -T 1.t 2>&1 | FileCheck %s --check-prefix=CHECK1 --implicit-check-not=error:
 # CHECK1:      error: a.o:(.text.start+0x11): prohibited cross reference from '.text' to 'data' in '.data'

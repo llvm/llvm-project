@@ -309,7 +309,9 @@ void ScriptParser::readNoCrossRefs(bool to) {
   NoCrossRefCommand cmd{{}, to};
   while (!errorCount() && !consume(")"))
     cmd.outputSections.push_back(unquote(next()));
-  if (cmd.outputSections.size() >= 2)
+  if (cmd.outputSections.size() < 2)
+    warn(getCurrentLocation() + ": ignored with fewer than 2 output sections");
+  else
     script->noCrossRefs.push_back(std::move(cmd));
 }
 

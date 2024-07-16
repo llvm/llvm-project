@@ -2378,8 +2378,9 @@ static void scanCrossRefs(const NoCrossRefCommand &cmd, OutputSection *osec,
                           InputSection *sec, Rels rels) {
   for (const auto &r : rels) {
     Symbol &sym = sec->file->getSymbol(r.getSymbol(config->isMips64EL));
-    // The destination output section can be nullptr, osec, or those described
-    // by the NOCROSSREFS/NOCROSSREFS_TO command.
+    // A legal cross-reference is when the destination output section is
+    // nullptr, osec for a self-reference, or a section that is described by the
+    // NOCROSSREFS/NOCROSSREFS_TO command.
     auto *dstOsec = sym.getOutputSection();
     if (!dstOsec || dstOsec == osec || !matchesRefTo(cmd, dstOsec->name))
       continue;
