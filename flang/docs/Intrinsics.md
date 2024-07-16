@@ -1054,7 +1054,7 @@ function form.
 
 #### Usage and Info
 
-- **Stnadard:** GNU extension
+- **Standard:** GNU extension
 - **Class:** Subroutine, function
 - **Syntax:** `CALL SECOND(TIME)` or `TIME = SECOND()`
 - **Arguments:** `TIME` - a REAL value into which the elapsed CPU time in
