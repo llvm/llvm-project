@@ -25,6 +25,7 @@ class LibcxxUniquePtrDataFormatterSimulatorTestCase(TestBase):
             "frame variable var_with_deleter_up", substrs=["pointer =", "deleter ="]
         )
 
+
 for r in range(3):
     name = "test_r%d" % r
     defines = ["COMPRESSED_PAIR_REV=%d" % r]
