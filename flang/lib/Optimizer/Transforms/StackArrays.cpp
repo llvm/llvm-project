@@ -661,8 +661,8 @@ AllocMemConversion::findAllocaLoopInsertionPoint(fir::AllocMemOp &oldAlloc) {
       }
     }
 
-     if (mlir::isa<fir::FreeMemOp>(user))
-       freeOps.push_back(user);
+    if (mlir::isa<fir::FreeMemOp>(user))
+      freeOps.push_back(user);
   }
 
   assert(freeOps.size() && "DFA should only return freed memory");
