@@ -324,8 +324,7 @@ void SIMachineFunctionInfo::shiftSpillPhysVGPRsToLowestRange(
     MachineFunction &MF) {
   const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  for (unsigned I = 0, E = SpillPhysVGPRs.size(); I < E; ++I) {
-    Register Reg = SpillPhysVGPRs[I];
+  for (Register &Reg : SpillPhysVGPRs) {
     Register NewReg =
         TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass, MF);
     if (!NewReg || NewReg >= Reg)
@@ -334,7 +333,6 @@ void SIMachineFunctionInfo::shiftSpillPhysVGPRsToLowestRange(
     MRI.replaceRegWith(Reg, NewReg);
 
     // Update various tables with the new VGPR.
-    SpillPhysVGPRs[I] = NewReg;
     WWMReservedRegs.remove(Reg);
     WWMReservedRegs.insert(NewReg);
     WWMSpills.insert(std::make_pair(NewReg, WWMSpills[Reg]));
@@ -344,6 +342,8 @@ void SIMachineFunctionInfo::shiftSpillPhysVGPRsToLowestRange(
       MBB.removeLiveIn(Reg);
       MBB.sortUniqueLiveIns();
     }
+
+    Reg = NewReg;
   }
 }
 
