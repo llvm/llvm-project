@@ -833,6 +833,11 @@ static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     res.setDebugModuleDir(true);
   }
 
+  // -fhermetic-module-files option
+  if (args.hasArg(clang::driver::options::OPT_fhermetic_module_files)) {
+    res.setHermeticModuleFileOutput(true);
+  }
+
   // -module-suffix
   if (const auto *moduleSuffix =
           args.getLastArg(clang::driver::options::OPT_module_suffix)) {
