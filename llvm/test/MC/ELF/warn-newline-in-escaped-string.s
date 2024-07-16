@@ -1,5 +1,5 @@
 // RUN: llvm-mc -filetype=obj -triple x86_64 %s 2>&1 -o /dev/null \
-// RUN: | FileCheck %s --implicit-check-not="{{[0-9]+:[0-9]+: warning: unterminated string}}"
+// RUN: | FileCheck %s --implicit-check-not=warning
 
 .string "abcd\xFFefg
 12345678"
