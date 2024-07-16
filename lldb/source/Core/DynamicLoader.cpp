@@ -208,8 +208,6 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
   }
 
   if (!uuid.IsValid() && !value_is_offset) {
-    Progress progress_memread("Reading load commands from memory",
-                              prog_str.GetString().str());
     memory_module_sp = ReadUnnamedMemoryModule(process, value, name);
 
     if (memory_module_sp) {
