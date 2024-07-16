@@ -10381,14 +10381,28 @@ SDValue TargetLowering::expandCMP(SDNode *Node, SelectionDAG &DAG) const {
 
   auto LTPredicate = (Opcode == ISD::UCMP ? ISD::SETULT : ISD::SETLT);
   auto GTPredicate = (Opcode == ISD::UCMP ? ISD::SETUGT : ISD::SETGT);
-
   SDValue IsLT = DAG.getSetCC(dl, BoolVT, LHS, RHS, LTPredicate);
   SDValue IsGT = DAG.getSetCC(dl, BoolVT, LHS, RHS, GTPredicate);
-  SDValue SelectZeroOrOne =
-      DAG.getSelect(dl, ResVT, IsGT, DAG.getConstant(1, dl, ResVT),
-                    DAG.getConstant(0, dl, ResVT));
-  return DAG.getSelect(dl, ResVT, IsLT, DAG.getConstant(-1, dl, ResVT),
-                       SelectZeroOrOne);
+
+  // We can't perform arithmetic on i1 values. Extending them would
+  // probably result in worse codegen, so let's just use two selects instead.
+  // Some targets are also just better off using selects rather than subtraction
+  // because one of the conditions can be merged with one of the selects.
+  // And finally, if we don't know the contents of high bits of a boolean value
+  // we can't perform any arithmetic either.
+  if (shouldExpandCmpUsingSelects() || BoolVT.getScalarSizeInBits() == 1 ||
+      getBooleanContents(BoolVT) == UndefinedBooleanContent) {
+    SDValue SelectZeroOrOne =
+        DAG.getSelect(dl, ResVT, IsGT, DAG.getConstant(1, dl, ResVT),
+                      DAG.getConstant(0, dl, ResVT));
+    return DAG.getSelect(dl, ResVT, IsLT, DAG.getConstant(-1, dl, ResVT),
+                         SelectZeroOrOne);
+  }
+
+  if (getBooleanContents(BoolVT) == ZeroOrNegativeOneBooleanContent)
+    std::swap(LHS, RHS);
+  return DAG.getSExtOrTrunc(DAG.getNode(ISD::SUB, dl, BoolVT, IsGT, IsLT), dl,
+                            ResVT);
 }
 
 SDValue TargetLowering::expandShlSat(SDNode *Node, SelectionDAG &DAG) const {
