@@ -383,6 +383,7 @@ class TypeHintBuilder : public TypeVisitor<TypeHintBuilder> {
   const PrintingPolicy &PP;
   SourceManager &SM;
   std::vector<InlayHintLabelPart> LabelChunks;
+  bool AppendTrailingSpaceBeforeRightQual = true;
 
   void addLabel(llvm::function_ref<void(llvm::raw_ostream &)> NamePrinter,
                 SourceLocation Location = SourceLocation()) {
@@ -588,13 +589,23 @@ public:
     CurrentType = Q;
     CurrentNestedNameSpecifier = NNS;
     bool CanPrefixQualifiers = canPrefixQualifiers(CurrentType.getTypePtr());
+    bool PrevAppendTrailingSpaceBeforeRightQual =
+        AppendTrailingSpaceBeforeRightQual;
     if (CanPrefixQualifiers)
       maybeAddQualifiers(/*AppendSpaceToQuals=*/true);
 
     TypeVisitor::Visit(Q.getTypePtr());
 
-    if (!CanPrefixQualifiers)
+    bool HaveTrailingQuals =
+        !CanPrefixQualifiers && !CurrentType.split().Quals.empty();
+    if (AppendTrailingSpaceBeforeRightQual && HaveTrailingQuals)
+      addLabel(" ");
+    if (HaveTrailingQuals) {
       maybeAddQualifiers(/*AppendSpaceToQuals=*/AppendSpaceToTopLevelQuals);
+      AppendTrailingSpaceBeforeRightQual =
+          PrevAppendTrailingSpaceBeforeRightQual;
+    }
+
     CurrentType = PreviousType;
     CurrentNestedNameSpecifier = PreviousNNS;
   }
@@ -605,10 +616,9 @@ public:
       // This might be a C TagDecl.
       if (auto *RD = dyn_cast<RecordDecl>(TT->getDecl())) {
         // FIXME: Respect SuppressTagKeyword in other cases.
-        if (!PP.SuppressTagKeyword && !RD->getTypedefNameForAnonDecl()) {
-          addLabel(RD->getKindName().str());
-          addLabel(" ");
-        }
+        if (!PP.SuppressTagKeyword && !RD->getTypedefNameForAnonDecl())
+          addLabel(
+              [&](llvm::raw_ostream &OS) { OS << RD->getKindName() << " "; });
         return addLabel(
             [&](llvm::raw_ostream &OS) { return RD->printName(OS, PP); },
             nameLocation(RD, SM));
@@ -709,6 +719,9 @@ public:
   }
 
   void VisitPointerType(const PointerType *PT) {
+    // We don't want a trailing space after the last asterisk, if it is followed
+    // by a qualifier. E.g. 'int *const' rather than 'int * const'.
+    AppendTrailingSpaceBeforeRightQual = false;
     QualType Next = PT->getPointeeType();
     VisitQualType(Next);
     if (Next->getPointeeType().isNull())

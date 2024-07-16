@@ -1913,7 +1913,7 @@ TEST(TypeHints, LinksForDeductionGuides) {
                       ExpectedHintLabelPiece{"<int>"});
 }
 
-TEST(TypeHints, Qualifiers) {
+TEST(TypeHints, LinksWithQualifiers) {
   StringRef Source(R"cpp(
   struct Base { virtual ~Base() = default; };
 
@@ -1922,11 +1922,45 @@ TEST(TypeHints, Qualifiers) {
   Base *make();
 
   const auto $1[[ptr]] = dynamic_cast<const Derived *>(make());
+
+  const Derived *volatile const *volatile *const *volatile p = nullptr;
+  
+  volatile auto $2[[paranoid]] = p;
   )cpp");
 
   assertTypeLinkHints(Source, "1", ExpectedHintLabelPiece{": const "},
                       ExpectedHintLabelPiece{"Derived", "Derived"},
                       ExpectedHintLabelPiece{" *const"});
+  assertTypeLinkHints(
+      Source, "2", ExpectedHintLabelPiece{": const "},
+      ExpectedHintLabelPiece{"Derived", "Derived"},
+      ExpectedHintLabelPiece{" *const volatile *volatile *const *volatile"});
+}
+
+TEST(TypeHints, LinksWithRangeBasedForLoop) {
+  StringRef Source(R"cpp(
+    template <class T>
+    struct vector {
+      struct iterator {
+        T operator *() {}
+        bool operator==(iterator) const;
+        bool operator!=(iterator) const;
+        iterator operator++();
+      };
+
+      iterator begin();
+      iterator end();
+    };
+
+    void foo() {
+      struct $S[[S]] {};
+      for (const auto $1[[i]] : vector<S>()) {
+      }
+    }
+  )cpp");
+  assertTypeLinkHints(Source, "1", ExpectedHintLabelPiece{": "},
+                      ExpectedHintLabelPiece{"S", "S"},
+                      ExpectedHintLabelPiece{" const"});
 }
 
 TEST(TypeHints, TypeDeductionForC) {
