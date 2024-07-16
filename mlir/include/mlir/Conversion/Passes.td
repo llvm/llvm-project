@@ -745,7 +745,6 @@ def ConvertMathToROCDL : Pass<"convert-math-to-rocdl", "ModuleOp"> {
   let dependentDialects = [
     "arith::ArithDialect",
     "func::FuncDialect",
-    "math::MathDialect",
     "ROCDL::ROCDLDialect",
     "vector::VectorDialect",
   ];
