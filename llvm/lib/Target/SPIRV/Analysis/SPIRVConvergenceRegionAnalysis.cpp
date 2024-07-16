@@ -203,7 +203,8 @@ public:
 
 private:
   bool isBackEdge(const BasicBlock *From, const BasicBlock *To) const {
-    assert(From != To && "From == To. This is awkward.");
+    if (From == To)
+      return true;
 
     // We only handle loop in the simplified form. This means:
     // - a single back-edge, a single latch.
@@ -230,8 +231,8 @@ private:
     auto *Terminator = From->getTerminator();
     for (unsigned i = 0; i < Terminator->getNumSuccessors(); ++i) {
       auto *To = Terminator->getSuccessor(i);
-      // Ignore back edges and self edges.
-      if (From == To || isBackEdge(From, To))
+      // Ignore back edges.
+      if (isBackEdge(From, To))
         continue;
 
       auto ChildSet = findPathsToMatch(LI, To, isMatch);

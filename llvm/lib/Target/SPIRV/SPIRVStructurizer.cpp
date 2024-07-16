@@ -137,8 +137,8 @@ MachineInstr *getSelectionMergeInstruction(MachineBasicBlock &MBB) {
   return nullptr;
 }
 
-// Traverses the CFG DFS-style starting from the entry point.
-// Calls |op| on each basic block encountered during the traversal.
+// Do a preorder traversal of the CFG starting from the given function's entry
+// point. Calls |op| on each basic block encountered during the traversal.
 void visit(MachineFunction &MF, std::function<void(MachineBasicBlock *)> op) {
   std::stack<MachineBasicBlock *> ToVisit;
   SmallPtrSet<MachineBasicBlock *, 8> Seen;
@@ -198,7 +198,7 @@ SmallPtrSet<MachineBasicBlock *, 8> getContinueBlocks(MachineFunction &MF) {
 
 // Returns the block immediatly post-dominating every block in |Range| if any,
 // nullptr otherwise.
-MachineBasicBlock *findNearestCommonDominator(
+MachineBasicBlock *findNearestCommonPostDominator(
     const iterator_range<std::vector<MachineBasicBlock *>::iterator> &Range,
     MachinePostDominatorTree &MPDT) {
   assert(!Range.empty());
@@ -374,7 +374,7 @@ public:
         continue;
 
       MachineBasicBlock *Merge =
-          findNearestCommonDominator(MBB.successors(), MPDT);
+          findNearestCommonPostDominator(MBB.successors(), MPDT);
       if (!Merge) {
         // TODO: we should check which block is not another construct merge
         // block, and select this one. For now, tests passes with this strategy,
@@ -509,7 +509,7 @@ public:
       MachineBasicBlock *ConflictingHeader = MergeToHeader[Merge];
       MachineBasicBlock *NewMerge = splitMergeBlock(MDT, MF, *Merge, *MBB);
       // Each selection/loop construct that is not already processed (hence
-      // deeper in the CFG) shall be updated to use the new merge. Conflicts are
+      // deeper in the CFG) is updated to use the new merge. Conflicts are
       // resolved layer by layer.
       for (auto *Header : HeaderBlocks) {
         if (Header == ConflictingHeader)
