@@ -4854,6 +4854,14 @@ def mstrict_align : Flag<["-"], "mstrict-align">, Group<m_Group>,
   HelpText<"Force all memory accesses to be aligned (AArch64/LoongArch/RISC-V only)">;
 def mno_strict_align : Flag<["-"], "mno-strict-align">, Group<m_Group>,
   HelpText<"Allow memory accesses to be unaligned (AArch64/LoongArch/RISC-V only)">;
+def mscalar_strict_align : Flag<["-"], "mscalar-strict-align">, Group<m_Group>,
+  HelpText<"Force all scalar memory accesses to be aligned (RISC-V only)">;
+def mno_scalar_strict_align : Flag<["-"], "mno-scalar-strict-align">, Group<m_Group>,
+  HelpText<"Allow scalar memory accesses to be unaligned (RISC-V only)">;
+def mvector_strict_align : Flag<["-"], "mvector-strict-align">, Group<m_Group>,
+  HelpText<"Force all vector memory accesses to be aligned (RISC-V only)">;
+def mno_vector_strict_align : Flag<["-"], "mno-vector-strict-align">, Group<m_Group>,
+  HelpText<"Allow vector memory accesses to be unaligned (RISC-V only)">;
 def mno_thumb : Flag<["-"], "mno-thumb">, Group<m_arm_Features_Group>;
 def mrestrict_it: Flag<["-"], "mrestrict-it">, Group<m_arm_Features_Group>,
   HelpText<"Disallow generation of complex IT blocks. It is off by default.">;
@@ -5169,6 +5177,13 @@ def mno_xcoff_roptr : Flag<["-"], "mno-xcoff-roptr">, Group<m_Group>, TargetSpec
 let Flags = [TargetSpecific] in {
 def mvx : Flag<["-"], "mvx">, Group<m_Group>;
 def mno_vx : Flag<["-"], "mno-vx">, Group<m_Group>;
+} // let Flags = [TargetSpecific]
+
+let Flags = [TargetSpecific] in {
+def msse2avx : Flag<["-"], "msse2avx">, Group<m_Group>,
+  Visibility<[ClangOption, CC1Option, CC1AsOption]>,
+  HelpText<"Specify that the assembler should encode SSE instructions with VEX prefix">,
+  MarshallingInfoFlag<CodeGenOpts<"SSE2AVX">>;
 } // let Flags = [TargetSpecific]
 
 defm zvector : BoolFOption<"zvector",

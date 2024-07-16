@@ -993,6 +993,41 @@ define void @maximal_legal_fpmath(ptr %addr1, ptr %addr2, ptr %result, float %va
   ret void
 }
 
+; Peek through (repeated) bitcasts to find a common source value.
+define <4 x i64> @bitcast_smax_v8i32_v4i32(<4 x i64> %a, <4 x i64> %b) {
+; CHECK-LABEL: @bitcast_smax_v8i32_v4i32(
+; CHECK-NEXT:    [[A_BC0:%.*]] = bitcast <4 x i64> [[A:%.*]] to <8 x i32>
+; CHECK-NEXT:    [[B_BC0:%.*]] = bitcast <4 x i64> [[B:%.*]] to <8 x i32>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <8 x i32> [[A_BC0]], [[B_BC0]]
+; CHECK-NEXT:    [[A_BC1:%.*]] = bitcast <4 x i64> [[A]] to <8 x i32>
+; CHECK-NEXT:    [[B_BC1:%.*]] = bitcast <4 x i64> [[B]] to <8 x i32>
+; CHECK-NEXT:    [[CONCAT:%.*]] = select <8 x i1> [[CMP]], <8 x i32> [[B_BC1]], <8 x i32> [[A_BC1]]
+; CHECK-NEXT:    [[RES:%.*]] = bitcast <8 x i32> [[CONCAT]] to <4 x i64>
+; CHECK-NEXT:    ret <4 x i64> [[RES]]
+;
+  %a.bc0 = bitcast <4 x i64> %a to <8 x i32>
+  %b.bc0 = bitcast <4 x i64> %b to <8 x i32>
+  %cmp = icmp slt <8 x i32> %a.bc0, %b.bc0
+  %cmp.lo = shufflevector <8 x i1> %cmp, <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %cmp.hi = shufflevector <8 x i1> %cmp, <8 x i1> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+
+  %a.bc1 = bitcast <4 x i64> %a to <8 x i32>
+  %b.bc1 = bitcast <4 x i64> %b to <8 x i32>
+  %a.lo = shufflevector <8 x i32> %a.bc1, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %b.lo = shufflevector <8 x i32> %b.bc1, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %lo = select <4 x i1> %cmp.lo, <4 x i32> %b.lo, <4 x i32> %a.lo
+
+  %a.bc2 = bitcast <4 x i64> %a to <8 x i32>
+  %b.bc2 = bitcast <4 x i64> %b to <8 x i32>
+  %a.hi = shufflevector <8 x i32> %a.bc2, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %b.hi = shufflevector <8 x i32> %b.bc2, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %hi = select <4 x i1> %cmp.hi, <4 x i32> %b.hi, <4 x i32> %a.hi
+
+  %concat = shufflevector <4 x i32> %lo, <4 x i32> %hi, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %res = bitcast <8 x i32> %concat to <4 x i64>
+  ret <4 x i64> %res
+}
+
 define void @bitcast_srcty_mismatch() {
 ; CHECK-LABEL: @bitcast_srcty_mismatch(
 ; CHECK-NEXT:  entry:

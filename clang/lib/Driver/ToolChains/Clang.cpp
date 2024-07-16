@@ -2545,6 +2545,13 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
       switch (C.getDefaultToolChain().getArch()) {
       default:
         break;
+      case llvm::Triple::x86:
+      case llvm::Triple::x86_64:
+        if (Value == "-msse2avx") {
+          CmdArgs.push_back("-msse2avx");
+          continue;
+        }
+        break;
       case llvm::Triple::wasm32:
       case llvm::Triple::wasm64:
         if (Value == "--no-type-check") {
@@ -5819,7 +5826,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // If toolchain choose to use MCAsmParser for inline asm don't pass the
-  // option to disable integrated-as explictly.
+  // option to disable integrated-as explicitly.
   if (!TC.useIntegratedAs() && !TC.parseInlineAsmUsingAsmParser())
     CmdArgs.push_back("-no-integrated-as");
 

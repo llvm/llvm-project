@@ -139,6 +139,10 @@ Changes to the AMDGPU Backend
   :ref:`atomicrmw <i_atomicrmw>` instruction with `fadd`, `fmin` and
   `fmax` with addrspace(3) instead.
 
+* AMDGPUAttributor is no longer run as part of the codegen pass
+  pipeline. It is expected to run as part of the middle end
+  optimizations.
+
 Changes to the ARM Backend
 --------------------------
 
@@ -199,6 +203,7 @@ Changes to the RISC-V Backend
 * Ztso is no longer experimental.
 * The WCH / Nanjing Qinheng Microelectronics QingKe "XW" compressed opcodes are
   supported under the name "Xwchc".
+* ``-mcpu=native`` now detects available features with hwprobe (RISC-V Hardware Probing Interface) on Linux 6.4 or later.
 
 Changes to the WebAssembly Backend
 ----------------------------------

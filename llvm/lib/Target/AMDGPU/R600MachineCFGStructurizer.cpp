@@ -1014,8 +1014,8 @@ int R600MachineCFGStructurizer::mergeLoop(MachineLoop *LoopRep) {
   MBBVector ExitBlks;
   LoopRep->getExitBlocks(ExitBlks);
   SmallPtrSet<MachineBasicBlock *, 2> ExitBlkSet;
-  for (unsigned i = 0, e = ExitBlks.size(); i < e; ++i)
-    ExitBlkSet.insert(ExitBlks[i]);
+  for (MachineBasicBlock *MBB : ExitBlks)
+    ExitBlkSet.insert(MBB);
   assert(ExitBlkSet.size() == 1);
   MachineBasicBlock *ExitBlk = *ExitBlks.begin();
   assert(ExitBlk && "Loop has several exit block");
@@ -1024,10 +1024,10 @@ int R600MachineCFGStructurizer::mergeLoop(MachineLoop *LoopRep) {
     if (LoopRep->contains(LB))
       LatchBlks.push_back(LB);
 
-  for (unsigned i = 0, e = ExitingMBBs.size(); i < e; ++i)
-    mergeLoopbreakBlock(ExitingMBBs[i], ExitBlk);
-  for (unsigned i = 0, e = LatchBlks.size(); i < e; ++i)
-    settleLoopcontBlock(LatchBlks[i], LoopHeader);
+  for (MachineBasicBlock *MBB : ExitingMBBs)
+    mergeLoopbreakBlock(MBB, ExitBlk);
+  for (MachineBasicBlock *MBB : LatchBlks)
+    settleLoopcontBlock(MBB, LoopHeader);
   int Match = 0;
   do {
     Match = 0;
