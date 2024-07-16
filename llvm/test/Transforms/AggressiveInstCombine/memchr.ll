@@ -81,10 +81,9 @@ define ptr @test_memchr_smaller_n(i32 %x) {
 ; CHECK-NEXT:      i8 48, label %[[MEMCHR_CASE:.*]]
 ; CHECK-NEXT:      i8 49, label %[[MEMCHR_CASE1:.*]]
 ; CHECK-NEXT:      i8 0, label %[[MEMCHR_CASE2:.*]]
-; CHECK-NEXT:      i8 50, label %[[MEMCHR_CASE3:.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       [[MEMCHR_SUCCESS:.*]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi i64 [ 0, %[[MEMCHR_CASE]] ], [ 1, %[[MEMCHR_CASE1]] ], [ 2, %[[MEMCHR_CASE2]] ], [ 3, %[[MEMCHR_CASE3]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi i64 [ 0, %[[MEMCHR_CASE]] ], [ 1, %[[MEMCHR_CASE1]] ], [ 2, %[[MEMCHR_CASE2]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr @str, i64 [[TMP7]]
 ; CHECK-NEXT:    br label %[[ENTRY_SPLIT]]
 ; CHECK:       [[MEMCHR_CASE]]:
@@ -93,14 +92,12 @@ define ptr @test_memchr_smaller_n(i32 %x) {
 ; CHECK-NEXT:    br label %[[MEMCHR_SUCCESS]]
 ; CHECK:       [[MEMCHR_CASE2]]:
 ; CHECK-NEXT:    br label %[[MEMCHR_SUCCESS]]
-; CHECK:       [[MEMCHR_CASE3]]:
-; CHECK-NEXT:    br label %[[MEMCHR_SUCCESS]]
 ; CHECK:       [[ENTRY_SPLIT]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi ptr [ null, %[[ENTRY]] ], [ [[TMP8]], %[[MEMCHR_SUCCESS]] ]
 ; CHECK-NEXT:    ret ptr [[TMP3]]
 ;
 entry:
-  %memchr = call ptr @memchr(ptr @str, i32 %x, i64 4)
+  %memchr = call ptr @memchr(ptr @str, i32 %x, i64 3)
   ret ptr %memchr
 }
 
