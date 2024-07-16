@@ -1139,14 +1139,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (!Cseg)
       break;
 
-    APInt Exponent = Fsrc.bitcastToAPInt().ashr(52);
-    Exponent &= 0x7ff;
-    Exponent = Exponent.trunc(32);
-
+    uint64_t Exponent = (Fsrc.bitcastToAPInt().getZExtValue() >> 52) & 0x7ff;
     unsigned SegmentVal = Cseg->getValue().trunc(5).getZExtValue();
     unsigned Shift = SegmentVal * 53;
-    if (Exponent.sgt(1077))
-      Shift += Exponent.getZExtValue() - 1077;
+    if (Exponent > 1077)
+      Shift += Exponent - 1077;
 
     // 2.0/PI table.
     static const uint32_t TwoByPi[] = {
@@ -1166,15 +1163,15 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
 
     unsigned BShift = Shift & 0x1f;
-    APInt Thi = APInt(64, Make_64(TwoByPi[Idx], TwoByPi[Idx + 1]), false);
-    APInt Tlo = APInt(64, Make_64(TwoByPi[Idx + 2], 0), false);
+    uint64_t Thi = ((uint64_t)TwoByPi[Idx] << 32) | (uint64_t)TwoByPi[Idx + 1];
+    uint64_t Tlo = (uint64_t)TwoByPi[Idx + 2] << 32;
     if (BShift)
-      Thi = Thi.shl(BShift) | Tlo.lshr(64 - BShift);
-    Thi = Thi.lshr(11);
-    APFloat Result = APFloat(Thi.roundToDouble());
+      Thi = (Thi << BShift) | (Tlo >> (64 - BShift));
+    Thi = Thi >> 11;
+    APFloat Result = APFloat((double)Thi);
 
     int Scale = -53 - Shift;
-    if (Exponent.sge(1968))
+    if (Exponent >= 1968)
       Scale += 128;
 
     Result = scalbn(Result, Scale, RoundingMode::NearestTiesToEven);
