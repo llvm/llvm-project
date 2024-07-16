@@ -19,7 +19,6 @@
 #include <mutex>
 #include <type_traits>
 
-#include "test_macros.h"
 #include "types.h"
 
-static_assert((std::is_same<std::lock_guard<MyMutex>::mutex_type, MyMutex>::value), "");
+static_assert(std::is_same<std::lock_guard<MyMutex>::mutex_type, MyMutex>::value, "");

@@ -5,44 +5,39 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
+
 // UNSUPPORTED: no-threads
 
-// <mutex>
+// Test the interoperation of std::lock_guard with std::mutex, since that is such
+// a common use case.
 
-// template <class Mutex> class lock_guard;
-
-// explicit lock_guard(mutex_type& m);
-
-// template<class _Mutex> lock_guard(lock_guard<_Mutex>)
-//     -> lock_guard<_Mutex>;  // C++17
-
-#include <mutex>
-#include <cstdlib>
 #include <cassert>
+#include <mutex>
+#include <type_traits>
 
 #include "make_test_thread.h"
 #include "test_macros.h"
 
-std::mutex m;
-
-void do_try_lock() {
-  assert(m.try_lock() == false);
-}
+void do_try_lock(std::mutex& m) { assert(m.try_lock() == false); }
 
 int main(int, char**) {
   {
+    std::mutex m;
     std::lock_guard<std::mutex> lg(m);
-    std::thread t = support::make_test_thread(do_try_lock);
+    std::thread t = support::make_test_thread(do_try_lock, m);
     t.join();
   }
 
+  // This should work because the lock_guard unlocked the mutex when it was destroyed above.
   m.lock();
   m.unlock();
 
+  // Test CTAD
 #if TEST_STD_VER >= 17
-  std::lock_guard lg(m);
-  static_assert((std::is_same<decltype(lg), std::lock_guard<decltype(m)>>::value), "" );
+  {
+    std::lock_guard lg(m);
+    static_assert(std::is_same<decltype(lg), std::lock_guard<std::mutex>>::value, "");
+  }
 #endif
 
   return 0;

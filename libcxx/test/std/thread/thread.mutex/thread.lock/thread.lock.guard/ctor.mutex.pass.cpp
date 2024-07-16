@@ -16,15 +16,15 @@
 #include <mutex>
 #include <type_traits>
 
-#include "test_macros.h"
 #include "types.h"
 
 int main(int, char**) {
   MyMutex m;
-  std::lock_guard<MyMutex> lg(m); // makes sure this compiles and runs
-#if TEST_STD_VER >= 17
-  static_assert(!std::is_convertible_v<MyMutex, std::lock_guard<MyMutex>>, "constructor must be explicit");
-#endif
+  assert(!m.locked);
+  std::lock_guard<MyMutex> lg(m);
+  assert(m.locked);
+
+  static_assert(!std::is_convertible<MyMutex, std::lock_guard<MyMutex>>::value, "constructor must be explicit");
 
   return 0;
 }

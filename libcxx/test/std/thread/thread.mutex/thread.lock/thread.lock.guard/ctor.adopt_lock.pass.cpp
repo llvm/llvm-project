@@ -15,22 +15,18 @@
 // lock_guard(mutex_type& m, adopt_lock_t);
 
 #include <mutex>
-#include <cstdlib>
 #include <cassert>
 
 #include "types.h"
-#include "test_macros.h"
 
 int main(int, char**) {
-  MyMutex m;
   {
+    MyMutex m;
     m.lock();
     std::lock_guard<MyMutex> lg(m, std::adopt_lock);
     assert(m.locked);
   }
-
-  m.lock();
-  m.unlock();
+  assert(!m.locked);
 
   return 0;
 }

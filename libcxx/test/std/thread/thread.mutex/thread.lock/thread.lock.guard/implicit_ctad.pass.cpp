@@ -10,7 +10,7 @@
 
 // <mutex>
 
-// lock_guard
+// template <class Mutex> class lock_guard;
 
 // Make sure that the implicitly-generated CTAD works.
 
