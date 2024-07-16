@@ -193,8 +193,8 @@ std::string internal::DeviceLoad::toString() const {
 
 std::string internal::BufferRequest::toString() const {
   std::string S{"Allocated "};
-  S.append(std::to_string(*Bytes)).append(" bytes at ");
-  S.append(makeHexString((uint64_t)*Buffer));
+  S.append(std::to_string((Bytes != nullptr) ? *Bytes : 0)).append(" bytes at ");
+  S.append(makeHexString((Buffer != nullptr) ? (uint64_t)*Buffer : 0));
   S.append(" in buffer request callback");
   return S;
 }
