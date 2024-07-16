@@ -2176,7 +2176,7 @@ ABIArgInfo X86_64ABIInfo::getIndirectReturnResult(QualType Ty) const {
       return getNaturalAlignIndirect(Ty);
 
     if (Ty->getAs<VectorType>() &&
-        getContext().getTypeSize(Ty) > getTarget().getMaxPossibleAlign())
+        getContext().getTypeSize(Ty) > getTarget().getMaxVectorAlign())
       return getNaturalAlignIndirect(Ty);
 
     return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)

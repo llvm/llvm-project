@@ -133,7 +133,6 @@ struct TransferrableTargetInfo {
   unsigned short SuitableAlign;
   unsigned short NewAlign;
   unsigned MaxVectorAlign;
-  unsigned MaxPossibleAlign;
   unsigned MaxTLSAlign;
 
   const llvm::fltSemantics *HalfFormat, *BFloat16Format, *FloatFormat,
@@ -848,8 +847,6 @@ public:
 
   /// Return the maximum vector alignment supported for the given target.
   unsigned getMaxVectorAlign() const { return MaxVectorAlign; }
-
-  unsigned getMaxPossibleAlign() const { return MaxPossibleAlign; }
 
   unsigned getMaxOpenCLWorkGroupSize() const { return MaxOpenCLWorkGroupSize; }
 

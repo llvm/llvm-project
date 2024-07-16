@@ -120,9 +120,8 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   LargeArrayMinWidth = 0;
   LargeArrayAlign = 0;
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 0;
-  MaxVectorAlign = 0;
   // LLVM can only process alignment up to 2^14 bytes.
-  MaxPossibleAlign = 8 << 14;
+  MaxVectorAlign = 8 << 14;
   MaxTLSAlign = 0;
   SizeType = UnsignedLong;
   PtrDiffType = SignedLong;
