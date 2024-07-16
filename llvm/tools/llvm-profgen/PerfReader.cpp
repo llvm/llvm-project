@@ -1297,11 +1297,11 @@ void PerfScriptReader::warnInvalidRange() {
     // basic blocks/edges. In this mode, don't warn if sampled IPs aren't
     // branches.
     if (!LeadingIPOnly)
-    if (!Binary->addressIsCode(StartAddress) ||
-        !Binary->addressIsTransfer(EndAddress)) {
-      InstNotBoundary += I.second;
-      WarnInvalidRange(StartAddress, EndAddress, EndNotBoundaryMsg);
-    }
+      if (!Binary->addressIsCode(StartAddress) ||
+          !Binary->addressIsTransfer(EndAddress)) {
+        InstNotBoundary += I.second;
+        WarnInvalidRange(StartAddress, EndAddress, EndNotBoundaryMsg);
+      }
 
     auto *FRange = Binary->findFuncRange(StartAddress);
     if (!FRange) {

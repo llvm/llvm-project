@@ -394,20 +394,20 @@ void ProfileGeneratorBase::updateBodySamplesforFunctionProfile(
     // When computing an IP-based profile we take the SUM of counts at the
     // location instead of applying duplication factors.
     FunctionProfile.addBodySamples(LeafLoc.Location.LineOffset, Discriminator,
-        Count);
+                                   Count);
   } else {
     // Otherwise, use duplication factor to compensate for loop
     // unroll/vectorization. Note that this is only needed when we're taking
     // MAX of the counts at the location instead of SUM.
     Count *= getDuplicationFactor(LeafLoc.Location.Discriminator);
 
-    ErrorOr<uint64_t> R =
-      FunctionProfile.findSamplesAt(LeafLoc.Location.LineOffset, Discriminator);
+    ErrorOr<uint64_t> R = FunctionProfile.findSamplesAt(
+        LeafLoc.Location.LineOffset, Discriminator);
 
     uint64_t PreviousCount = R ? R.get() : 0;
     if (PreviousCount <= Count) {
       FunctionProfile.addBodySamples(LeafLoc.Location.LineOffset, Discriminator,
-          Count - PreviousCount);
+                                     Count - PreviousCount);
     }
   }
 }
