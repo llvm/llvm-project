@@ -21,7 +21,7 @@ function(add_perf_binary target_name)
     "PERF"
     "" # No optional arguments
     "SUITE;CXX_STANDARD" # Single value arguments
-    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS" # Multi-value arguments
+    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;LINK_LIBRARIES" # Multi-value arguments
     ${ARGN}
   )
   if(NOT PERF_SRCS)
@@ -64,9 +64,13 @@ function(add_perf_binary target_name)
     )
   endif()
 
+  set(link_libraries ${link_object_files})
+  foreach(lib IN LISTS PERF_LINK_LIBRARIES)
+    list(APPEND link_libraries ${lib}.unit)
+  endforeach()
   target_link_libraries(
       ${fq_target_name}
-      PRIVATE ${link_object_files} libc_diff_test_utils)
+      PRIVATE ${link_libraries} libc_diff_test_utils)
 
   set_target_properties(${fq_target_name}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
@@ -385,12 +389,16 @@ add_perf_binary(
     libc.src.math.ceilf16
     libc.src.math.floorf
     libc.src.math.floorf16
-    libc.src.math.roundevenf
-    libc.src.math.roundevenf16
+    libc.src.math.rintf
+    libc.src.math.rintf16
     libc.src.math.roundf
     libc.src.math.roundf16
+    libc.src.math.roundevenf
+    libc.src.math.roundevenf16
     libc.src.math.truncf
     libc.src.math.truncf16
   COMPILE_OPTIONS
     -fno-builtin
+  LINK_LIBRARIES
+    LibcFPTestHelpers
 )

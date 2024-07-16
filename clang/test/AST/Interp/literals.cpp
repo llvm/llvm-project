@@ -1232,6 +1232,13 @@ namespace Extern {
   }
   static_assert(&ExternNonLiteralVarDecl() == &nl, "");
 #endif
+
+  struct A {
+    int b;
+  };
+
+  extern constexpr A a{12};
+  static_assert(a.b == 12, "");
 }
 
 #if __cplusplus >= 201402L
@@ -1290,3 +1297,9 @@ namespace UnaryOpError {
   }
 }
 #endif
+
+namespace VolatileReads {
+  const volatile int b = 1;
+  static_assert(b, ""); // both-error {{not an integral constant expression}} \
+                        // both-note {{read of volatile-qualified type 'const volatile int' is not allowed in a constant expression}}
+}
