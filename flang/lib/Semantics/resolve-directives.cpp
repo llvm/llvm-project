@@ -2760,10 +2760,20 @@ void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
 
 void OmpAttributeVisitor::IssueNonConformanceWarning(
     llvm::omp::Directive D, parser::CharBlock source) {
+  std::string warnStr = "";
+  std::string dirName = llvm::omp::getOpenMPDirectiveName(D).str();
+  switch (D) {
+  case llvm::omp::OMPD_master:
+    warnStr = "OpenMP directive " + dirName +
+        " has been deprecated, please use masked instead.";
+    break;
+  case llvm::omp::OMPD_target_loop:
+  default:
+    warnStr = "Usage of directive " + dirName +
+        "is non-confirming to OpenMP standard.";
+  }
   if (context_.ShouldWarn(common::UsageWarning::OpenMPUsage)) {
-    context_.Say(source,
-        "Usage of directive %s is non-confirming to OpenMP standard"_warn_en_US,
-        llvm::omp::getOpenMPDirectiveName(D).str());
+    context_.Say(source, "%s"_warn_en_US, warnStr);
   }
 }
 } // namespace Fortran::semantics
