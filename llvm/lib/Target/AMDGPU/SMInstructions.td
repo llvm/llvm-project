@@ -886,94 +886,81 @@ class SMRDAlignedLoadPat<PatFrag Op> : PatFrag <(ops node:$ptr), (Op node:$ptr),
   }];
 }
 
-class SMRDUnalignedLoadPat<PatFrag Op> : PatFrag <(ops node:$ptr), (Op node:$ptr), [{
-  // Do the alignment check if XNACK support is enabled.
-  if (!Subtarget->isXNACKEnabled())
-    return false;
-
-  // Returns true if it is an under aligned multi-dword load.
-  LoadSDNode *Ld = cast<LoadSDNode>(N);
-  unsigned Size = Ld->getMemoryVT().getStoreSize();
-  return Size > 4 && Ld->getAlign().value() < Size;
-}]> {
-  let GISelPredicateCode = [{
-  if (!Subtarget->isXNACKEnabled())
-    return false;
-
-  auto &Ld = cast<GLoad>(MI);
-  TypeSize Size = Ld.getMMO().getSize().getValue();
-  return Size > 4 && Ld.getMMO().getAlign().value() < Size;
-  }];
-}
-
 def aligned_smrd_load : SMRDAlignedLoadPat<smrd_load>;
-def unaligned_smrd_load : SMRDUnalignedLoadPat<smrd_load>;
 
 multiclass SMRD_Pattern <string Instr, ValueType vt, bit immci = true> {
 
-  // 1. IMM offset
-  def : GCNPat <
-    (aligned_smrd_load (SMRDImm i64:$sbase, i32:$offset)),
-    (vt (!cast<SM_Pseudo>(Instr#"_IMM") $sbase, $offset, 0))
-  >;
-  if !gt(vt.Size, 32) then
+  let AddedComplexity = 101 in {
+    // 1. IMM offset
     def : GCNPat <
-      (unaligned_smrd_load (SMRDImm i64:$sbase, i32:$offset)),
-      (vt (!cast<SM_Pseudo>(Instr#"_IMM_ec") $sbase, $offset, 0))
-    >;
+      (aligned_smrd_load (SMRDImm i64:$sbase, i32:$offset)),
+      (vt (!cast<SM_Pseudo>(Instr#"_IMM") $sbase, $offset, 0))>;
 
-  // 2. 32-bit IMM offset on CI
-  if immci then def : GCNPat <
-    (smrd_load (SMRDImm32 i64:$sbase, i32:$offset)),
-    (vt (!cast<InstSI>(Instr#"_IMM_ci") $sbase, $offset, 0))> {
-    let OtherPredicates = [isGFX7Only];
-  }
+    // 2. 32-bit IMM offset on CI
+    if immci then def : GCNPat <
+      (smrd_load (SMRDImm32 i64:$sbase, i32:$offset)),
+      (vt (!cast<InstSI>(Instr#"_IMM_ci") $sbase, $offset, 0))> {
+      let OtherPredicates = [isGFX7Only];
+    }
 
-  // 3. SGPR offset
-  def : GCNPat <
-    (aligned_smrd_load (SMRDSgpr i64:$sbase, i32:$soffset)),
-    (vt (!cast<SM_Pseudo>(Instr#"_SGPR") $sbase, $soffset, 0))> {
-    let OtherPredicates = [isNotGFX9Plus];
-  }
-  def : GCNPat <
-    (aligned_smrd_load (SMRDSgpr i64:$sbase, i32:$soffset)),
-    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, 0, 0))> {
-    let OtherPredicates = [isGFX9Plus];
-  }
-  if !gt(vt.Size, 32) then {
+    // 3. SGPR offset
     def : GCNPat <
-      (unaligned_smrd_load (SMRDSgpr i64:$sbase, i32:$soffset)),
-      (vt (!cast<SM_Pseudo>(Instr#"_SGPR_ec") $sbase, $soffset, 0))> {
+      (aligned_smrd_load (SMRDSgpr i64:$sbase, i32:$soffset)),
+      (vt (!cast<SM_Pseudo>(Instr#"_SGPR") $sbase, $soffset, 0))> {
       let OtherPredicates = [isNotGFX9Plus];
     }
     def : GCNPat <
-      (unaligned_smrd_load (SMRDSgpr i64:$sbase, i32:$soffset)),
-      (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM_ec") $sbase, $soffset, 0, 0))> {
-      let OtherPredicates = [isGFX9Plus];
-    }
-  }
-
-  // 4. SGPR+IMM offset
-  def : GCNPat <
-    (aligned_smrd_load (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset)),
-    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, $offset, 0))> {
-    let OtherPredicates = [isGFX9Plus];
-  }
-  if !gt(vt.Size, 32) then
-    def : GCNPat <
-      (unaligned_smrd_load (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset)),
-      (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM_ec") $sbase, $soffset, $offset, 0))> {
+      (aligned_smrd_load (SMRDSgpr i64:$sbase, i32:$soffset)),
+      (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, 0, 0))> {
       let OtherPredicates = [isGFX9Plus];
     }
 
-  // 5. No offset
-  def : GCNPat <
-    (vt (aligned_smrd_load (i64 SReg_64:$sbase))),
-    (vt (!cast<SM_Pseudo>(Instr#"_IMM") i64:$sbase, 0, 0))>;
-  if !gt(vt.Size, 32) then
+    // 4. SGPR+IMM offset
     def : GCNPat <
-      (vt (unaligned_smrd_load (i64 SReg_64:$sbase))),
-      (vt (!cast<SM_Pseudo>(Instr#"_IMM_ec") i64:$sbase, 0, 0))>;
+      (aligned_smrd_load (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset)),
+      (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, $offset, 0))> {
+      let OtherPredicates = [isGFX9Plus];
+    }
+
+    // 5. No offset
+    def : GCNPat <
+      (vt (aligned_smrd_load (i64 SReg_64:$sbase))),
+      (vt (!cast<SM_Pseudo>(Instr#"_IMM") i64:$sbase, 0, 0))>;
+  }
+
+  // The constrained multi-dword load equivalents.
+  if !gt(vt.Size, 32) then {
+    let AddedComplexity = 100 in {
+      // 1. IMM offset
+      def : GCNPat <
+        (smrd_load (SMRDImm i64:$sbase, i32:$offset)),
+        (vt (!cast<SM_Pseudo>(Instr#"_IMM_ec") $sbase, $offset, 0))>;
+
+      // 2. SGPR offset
+      def : GCNPat <
+        (smrd_load (SMRDSgpr i64:$sbase, i32:$soffset)),
+        (vt (!cast<SM_Pseudo>(Instr#"_SGPR_ec") $sbase, $soffset, 0))> {
+        let OtherPredicates = [isNotGFX9Plus];
+      }
+      def : GCNPat <
+        (smrd_load (SMRDSgpr i64:$sbase, i32:$soffset)),
+        (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM_ec") $sbase, $soffset, 0, 0))> {
+        let OtherPredicates = [isGFX9Plus];
+      }
+
+      // 3. SGPR+IMM offset
+      def : GCNPat <
+        (smrd_load (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset)),
+        (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM_ec") $sbase, $soffset, $offset, 0))> {
+        let OtherPredicates = [isGFX9Plus];
+      }
+
+      // 4. No offset
+      def : GCNPat <
+        (vt (smrd_load (i64 SReg_64:$sbase))),
+        (vt (!cast<SM_Pseudo>(Instr#"_IMM_ec") i64:$sbase, 0, 0))>;
+    }
+  }
 }
 
 multiclass SMLoad_Pattern <string Instr, ValueType vt, bit immci = true> {
@@ -1087,6 +1074,8 @@ defm : ScalarBufferLoadIntrinsicPat <SIsbuffer_load_ubyte, "S_BUFFER_LOAD_U8">;
 defm : ScalarBufferLoadIntrinsicPat <SIsbuffer_load_short, "S_BUFFER_LOAD_I16">;
 defm : ScalarBufferLoadIntrinsicPat <SIsbuffer_load_ushort, "S_BUFFER_LOAD_U16">;
 
+} // End let AddedComplexity = 100
+
 foreach vt = Reg32Types.types in {
 defm : SMRD_Pattern <"S_LOAD_DWORD", vt>;
 }
@@ -1111,7 +1100,6 @@ foreach vt = SReg_512.RegTypes in {
 defm : SMRD_Pattern <"S_LOAD_DWORDX16", vt>;
 }
 
-} // End let AddedComplexity = 100
 
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORD",     i32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX2",   v2i32>;
