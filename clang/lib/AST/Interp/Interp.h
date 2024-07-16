@@ -147,7 +147,7 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
     const APSInt Val = RHS.toAPSInt();
     QualType Ty = E->getType();
     S.CCEDiag(E, diag::note_constexpr_large_shift) << Val << Ty << Bits;
-    return true; // We will do the shift anyway but fix up the shift amount.
+    return !(S.getEvalStatus().Diag && !S.getEvalStatus().Diag->empty() && S.getLangOpts().CPlusPlus11);
   }
 
   if (LHS.isSigned() && !S.getLangOpts().CPlusPlus20) {
