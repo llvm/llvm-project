@@ -41038,7 +41038,7 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
             RHS.getOpcode() == X86ISD::PSHUFB &&
             LHS.getOperand(1) != RHS.getOperand(1) &&
             (LHS.getOperand(1).hasOneUse() || RHS.getOperand(1).hasOneUse()) &&
-            getTargetShuffleMask(N, false, Ops, Mask)) {
+            getTargetShuffleMask(N, /*AllowSentinelZero=*/false, Ops, Mask)) {
           assert(Ops.size() == 2 && LHS == peekThroughOneUseBitcasts(Ops[0]) &&
                  RHS == peekThroughOneUseBitcasts(Ops[1]) &&
                  "BLENDI decode mismatch");
@@ -41047,8 +41047,8 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
           SDValue MaskRHS = RHS.getOperand(1);
           llvm::narrowShuffleMaskElts(EltBits / 8, Mask, ByteMask);
           if (SDValue NewMask = combineX86ShufflesConstants(
-                  ShufVT, {MaskLHS, MaskRHS}, ByteMask, true, DAG, DL,
-                  Subtarget)) {
+                  ShufVT, {MaskLHS, MaskRHS}, ByteMask,
+                  /*HasVariableMask=*/true, DAG, DL, Subtarget)) {
             SDValue NewLHS = DAG.getNode(X86ISD::PSHUFB, DL, ShufVT,
                                          LHS.getOperand(0), NewMask);
             SDValue NewRHS = DAG.getNode(X86ISD::PSHUFB, DL, ShufVT,
