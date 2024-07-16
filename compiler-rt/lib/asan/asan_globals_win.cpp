@@ -17,10 +17,10 @@ namespace __asan {
 
 #pragma section(".ASAN$GA", read, write)
 #pragma section(".ASAN$GZ", read, write)
-extern "C" __declspec(allocate(".ASAN$GA"))
-    ALIGNED(sizeof(__asan_global)) __asan_global __asan_globals_start = {};
-extern "C" __declspec(allocate(".ASAN$GZ"))
-    ALIGNED(sizeof(__asan_global)) __asan_global __asan_globals_end = {};
+extern "C" alignas(sizeof(__asan_global))
+    __declspec(allocate(".ASAN$GA")) __asan_global __asan_globals_start = {};
+extern "C" alignas(sizeof(__asan_global))
+    __declspec(allocate(".ASAN$GZ")) __asan_global __asan_globals_end = {};
 #pragma comment(linker, "/merge:.ASAN=.data")
 
 static void call_on_globals(void (*hook)(__asan_global *, uptr)) {
