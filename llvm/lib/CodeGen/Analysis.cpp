@@ -743,13 +743,13 @@ bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
 }
 
 bool llvm::funcReturnsFirstArgOfCall(const CallInst &CI) {
-    const ReturnInst *Ret = dyn_cast<ReturnInst>(CI.getParent()->getTerminator());
-    Value *RetVal = Ret ? Ret->getReturnValue() : nullptr;
-    bool ReturnsFirstArg = false;
-    if (RetVal && ((RetVal == CI.getArgOperand(0) ||
-                    isPointerBitcastEqualTo(RetVal, CI.getArgOperand(0)))))
-      ReturnsFirstArg = true;
-    return ReturnsFirstArg;
+  const ReturnInst *Ret = dyn_cast<ReturnInst>(CI.getParent()->getTerminator());
+  Value *RetVal = Ret ? Ret->getReturnValue() : nullptr;
+  bool ReturnsFirstArg = false;
+  if (RetVal && ((RetVal == CI.getArgOperand(0) ||
+                  isPointerBitcastEqualTo(RetVal, CI.getArgOperand(0)))))
+    ReturnsFirstArg = true;
+  return ReturnsFirstArg;
 }
 
 static void collectEHScopeMembers(

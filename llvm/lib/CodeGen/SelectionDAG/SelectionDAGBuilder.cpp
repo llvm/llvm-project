@@ -6502,8 +6502,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     bool isVol = MSI.isVolatile();
     SDValue Root = isVol ? getRoot() : getMemoryRoot();
     SDValue MS = DAG.getMemset(
-        Root, sdl, Op1, Op2, Op3, Alignment, isVol, /* AlwaysInline */ false, &I,
-        MachinePointerInfo(I.getArgOperand(0)), I.getAAMetadata());
+        Root, sdl, Op1, Op2, Op3, Alignment, isVol, /* AlwaysInline */ false,
+        &I, MachinePointerInfo(I.getArgOperand(0)), I.getAAMetadata());
     updateDAGForMaybeTailCall(MS);
     return;
   }
