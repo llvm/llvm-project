@@ -227,7 +227,8 @@ LogicalResult OpaqueType::verify(function_ref<InFlightDiagnostic()> emitError,
 
 LogicalResult VectorType::verify(function_ref<InFlightDiagnostic()> emitError,
                                  ArrayRef<int64_t> shape, Type elementType,
-                                 ArrayRef<bool> scalableDims) {
+                                 ArrayRef<bool> scalableDims,
+                                 Attribute encoding) {
   if (!isValidElementType(elementType))
     return emitError()
            << "vector elements must be int/index/float type but got "
@@ -242,6 +243,9 @@ LogicalResult VectorType::verify(function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "number of dims must match, got "
                        << scalableDims.size() << " and " << shape.size();
 
+  if (auto v = llvm::dyn_cast_or_null<VerifiableTensorEncoding>(encoding))
+    if (failed(v.verifyEncoding(shape, elementType, emitError)))
+      return failure();
   return success();
 }
 
@@ -260,7 +264,7 @@ VectorType VectorType::scaleElementBitwidth(unsigned scale) {
 VectorType VectorType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
                                  Type elementType) const {
   return VectorType::get(shape.value_or(getShape()), elementType,
-                         getScalableDims());
+                         getScalableDims(), getEncoding());
 }
 
 //===----------------------------------------------------------------------===//

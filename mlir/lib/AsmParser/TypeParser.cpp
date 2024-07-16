@@ -448,6 +448,7 @@ Type Parser::parseTupleType() {
 /// vector-type ::= `vector` `<` vector-dim-list vector-element-type `>`
 /// vector-dim-list := (static-dim-list `x`)? (`[` static-dim-list `]` `x`)?
 /// static-dim-list ::= decimal-literal (`x` decimal-literal)*
+/// encoding ::= attribute-value
 ///
 VectorType Parser::parseVectorType() {
   consumeToken(Token::kw_vector);
@@ -467,14 +468,29 @@ VectorType Parser::parseVectorType() {
   // Parse the element type.
   auto typeLoc = getToken().getLoc();
   auto elementType = parseType();
+
+  // Parse an optional encoding attribute.
+  Attribute encoding;
+  if (consumeIf(Token::comma)) {
+    auto parseResult = parseOptionalAttribute(encoding);
+    if (parseResult.has_value()) {
+      if (failed(parseResult.value()))
+        return nullptr;
+      if (auto v = dyn_cast_or_null<VerifiableTensorEncoding>(encoding)) {
+        if (failed(v.verifyEncoding(dimensions, elementType,
+                                    [&] { return emitError(); })))
+          return nullptr;
+      }
+    }
+  }
+
   if (!elementType || parseToken(Token::greater, "expected '>' in vector type"))
     return nullptr;
-
   if (!VectorType::isValidElementType(elementType))
     return emitError(typeLoc, "vector elements must be int/index/float type"),
            nullptr;
 
-  return VectorType::get(dimensions, elementType, scalableDims);
+  return VectorType::get(dimensions, elementType, scalableDims, encoding);
 }
 
 /// Parse a dimension list in a vector type. This populates the dimension list.

@@ -2622,6 +2622,11 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
           os << 'x';
         }
         printType(vectorTy.getElementType());
+        // Only print the encoding attribute value if set.
+        if (vectorTy.getEncoding()) {
+          os << ", ";
+          printAttribute(vectorTy.getEncoding());
+        }
         os << '>';
       })
       .Case<RankedTensorType>([&](RankedTensorType tensorTy) {

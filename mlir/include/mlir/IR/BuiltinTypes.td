@@ -1060,6 +1060,7 @@ def Builtin_Vector : Builtin_Type<"Vector", "vector", [ShapedTypeInterface], "Ty
     vector-dim-list := (static-dim-list `x`)?
     static-dim-list ::= static-dim (`x` static-dim)*
     static-dim ::= (decimal-literal | `[` decimal-literal `]`)
+    encoding ::= attribute-value
     ```
 
     The vector type represents a SIMD style vector used by target-specific
@@ -1071,6 +1072,10 @@ def Builtin_Vector : Builtin_Type<"Vector", "vector", [ShapedTypeInterface], "Ty
 
     Vector shapes must be positive decimal integers. 0D vectors are allowed by
     omitting the dimension: `vector<f32>`.
+
+    The `encoding` attribute provides additional information on the vector.
+    An empty attribute denotes a straightforward vector without any specific
+    structure.
 
     Note: hexadecimal integer literals are not allowed in vector type
     declarations, `vector<0x42xi32>` is invalid because it is interpreted as a
@@ -1094,17 +1099,22 @@ def Builtin_Vector : Builtin_Type<"Vector", "vector", [ShapedTypeInterface], "Ty
     // A 3D mixed fixed/scalable vector in which only the inner dimension is
     // scalable.
     vector<2x[4]x8xf32>
+
+    // Vector with an encoding attribute (where #ENCODING is a named alias).
+    vector<4x2xf64, #ENCODING>
     ```
   }];
   let parameters = (ins
     ArrayRefParameter<"int64_t">:$shape,
     "Type":$elementType,
-    ArrayRefParameter<"bool">:$scalableDims
+    ArrayRefParameter<"bool">:$scalableDims,
+    "Attribute":$encoding
   );
   let builders = [
     TypeBuilderWithInferredContext<(ins
       "ArrayRef<int64_t>":$shape, "Type":$elementType,
-      CArg<"ArrayRef<bool>", "{}">:$scalableDims
+      CArg<"ArrayRef<bool>", "{}">:$scalableDims,
+      CArg<"Attribute", "{}">:$encoding
     ), [{
       // While `scalableDims` is optional, its default value should be
       // `false` for every dim in `shape`.
@@ -1113,7 +1123,8 @@ def Builtin_Vector : Builtin_Type<"Vector", "vector", [ShapedTypeInterface], "Ty
         isScalableVec.resize(shape.size(), false);
         scalableDims = isScalableVec;
       }
-      return $_get(elementType.getContext(), shape, elementType, scalableDims);
+      auto ctx = elementType.getContext();
+      return $_get(ctx, shape, elementType, scalableDims, encoding);
     }]>
   ];
   let extraClassDeclaration = [{

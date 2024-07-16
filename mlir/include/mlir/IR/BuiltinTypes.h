@@ -307,12 +307,13 @@ public:
   /// Build from another VectorType.
   explicit Builder(VectorType other)
       : elementType(other.getElementType()), shape(other.getShape()),
-        scalableDims(other.getScalableDims()) {}
+        scalableDims(other.getScalableDims()), encoding(other.getEncoding()) {}
 
   /// Build from scratch.
   Builder(ArrayRef<int64_t> shape, Type elementType,
-          ArrayRef<bool> scalableDims = {})
-      : elementType(elementType), shape(shape), scalableDims(scalableDims) {}
+          ArrayRef<bool> scalableDims = {}, Attribute encoding = nullptr)
+      : elementType(elementType), shape(shape), scalableDims(scalableDims),
+        encoding(encoding) {}
 
   Builder &setShape(ArrayRef<int64_t> newShape,
                     ArrayRef<bool> newIsScalableDim = {}) {
@@ -342,14 +343,20 @@ public:
     return *this;
   }
 
+  Builder &setEncoding(Attribute newEncoding) {
+    encoding = newEncoding;
+    return *this;
+  }
+
   operator VectorType() {
-    return VectorType::get(shape, elementType, scalableDims);
+    return VectorType::get(shape, elementType, scalableDims, encoding);
   }
 
 private:
   Type elementType;
   CopyOnWriteArrayRef<int64_t> shape;
   CopyOnWriteArrayRef<bool> scalableDims;
+  Attribute encoding;
 };
 
 /// Given an `originalShape` and a `reducedShape` assumed to be a subset of

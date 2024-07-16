@@ -73,6 +73,9 @@ func.func private @float_types(f80, f128)
 // CHECK: func private @vectors(vector<f32>, vector<1xf32>, vector<2x4xf32>)
 func.func private @vectors(vector<f32>, vector<1 x f32>, vector<2x4xf32>)
 
+// CHECK: func private @vector_encoding(vector<16x32xf64, "indexed">)
+func.func private @vector_encoding(vector<16x32xf64, "indexed">)
+
 // CHECK: func private @tensors(tensor<*xf32>, tensor<*xvector<2x4xf32>>, tensor<1x?x4x?x?xi32>, tensor<i8>)
 func.func private @tensors(tensor<* x f32>, tensor<* x vector<2x4xf32>>,
                  tensor<1x?x4x?x?xi32>, tensor<i8>)
