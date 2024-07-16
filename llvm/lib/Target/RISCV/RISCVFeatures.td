@@ -38,12 +38,12 @@ class RISCVExtension<string name, int major, int minor, string desc,
 }
 
 // The groupID/bitmask of RISCVExtension is used to retrieve a specific bit value 
-// from __riscv_feature_bit based on the groupID and bitmask.
-// groupID      - groupID of extension
-// bitmaskShift - bitmask shift of extension
-class RISCVExtensionBitmask<bits<3> groupID, int bitmaskShift> {
+// from __riscv_feature_bits based on the groupID and bitmask.
+// groupID - groupID of extension
+// bitPos  - bit position of extension bitmask
+class RISCVExtensionBitmask<bits<3> groupID, int bitPos> {
     int GroupID = groupID;
-    int BitPos = bitmaskShift;
+    int BitPos = bitPos;
 }
 
 // Version of RISCVExtension to be used for Experimental extensions. This
