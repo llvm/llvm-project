@@ -574,7 +574,9 @@ int TgKill(pid_t pid, tid_t tid, int sig) {
   return internal_syscall(SYSCALL(thr_kill2), pid, tid, sig);
 #    elif SANITIZER_SOLARIS
   (void)pid;
-  return thr_kill(tid, sig);
+  errno = thr_kill(tid, sig);
+  // TgKill is expected to return -1 on error, not an errno.
+  return errno != 0 ? -1 : 0;
 #    endif
 }
 #  endif

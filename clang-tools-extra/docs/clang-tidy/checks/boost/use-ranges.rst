@@ -154,8 +154,8 @@ Transforms to:
 
 .. code-block:: c++
 
-  auto AreSame = std::equal(boost::adaptors::reverse(Items1),
-                            boost::adaptors::reverse(Items2));
+  auto AreSame = boost::range::equal(boost::adaptors::reverse(Items1),
+                                     boost::adaptors::reverse(Items2));
 
 Options
 -------
@@ -170,3 +170,18 @@ Options
    If `true` (default value) the boost headers are included as system headers
    with angle brackets (`#include <boost.hpp>`), otherwise quotes are used
    (`#include "boost.hpp"`).
+
+.. option:: UseReversePipe
+
+  When `true` (default `false`), fixes which involve reverse ranges will use the
+  pipe adaptor syntax instead of the function syntax.
+
+  .. code-block:: c++
+
+    std::find(Items.rbegin(), Items.rend(), 0);
+
+  Transforms to:
+
+  .. code-block:: c++
+
+    boost::range::find(Items | boost::adaptors::reversed, 0);

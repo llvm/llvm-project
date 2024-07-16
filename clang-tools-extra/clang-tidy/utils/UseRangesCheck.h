@@ -38,6 +38,7 @@ public:
     StringRef ReverseAdaptorName;
     std::optional<StringRef> ReverseHeader;
     ArrayRef<std::pair<StringRef, StringRef>> FreeReverseNames;
+    bool IsPipeSyntax = false;
   };
 
   class Replacer : public llvm::RefCountedBase<Replacer> {
