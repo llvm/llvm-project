@@ -3921,9 +3921,6 @@ def atomic_thread_fence_acq_rel_sys :
   NVPTXInst<(outs), (ins), "fence.acq_rel.sys;", []>,
   Requires<[hasPTX<60>, hasSM<70>]>;
 
-def atomic_thread_fence_seq_cst_sys_membar :
-  NVPTXInst<(outs), (ins), "membar.sys;", []>;
-
 def : Pat<(atomic_fence (i64 4), (i64 1)), (atomic_thread_fence_acq_rel_sys)>, // acquire(4) sys(1)
       Requires<[hasPTX<60>, hasSM<70>]>;
 def : Pat<(atomic_fence (i64 5), (i64 1)), (atomic_thread_fence_acq_rel_sys)>, // release(5) sys(1)
@@ -3933,7 +3930,7 @@ def : Pat<(atomic_fence (i64 6), (i64 1)), (atomic_thread_fence_acq_rel_sys)>, /
 def : Pat<(atomic_fence (i64 7), (i64 1)), (atomic_thread_fence_seq_cst_sys)>, // seq_cst(7) sys(1)
       Requires<[hasPTX<60>, hasSM<70>]>;
 
-def : Pat<(atomic_fence (i64 4), (i64 1)), (atomic_thread_fence_seq_cst_sys_membar)>; // acquire(4) sys(1)
-def : Pat<(atomic_fence (i64 5), (i64 1)), (atomic_thread_fence_seq_cst_sys_membar)>; // release(5) sys(1)
-def : Pat<(atomic_fence (i64 6), (i64 1)), (atomic_thread_fence_seq_cst_sys_membar)>; // acq_rel(6) sys(1)
-def : Pat<(atomic_fence (i64 7), (i64 1)), (atomic_thread_fence_seq_cst_sys_membar)>; // seq_cst(7) sys(1)
+def : Pat<(atomic_fence (i64 4), (i64 1)), (INT_MEMBAR_SYS)>; // acquire(4) sys(1)
+def : Pat<(atomic_fence (i64 5), (i64 1)), (INT_MEMBAR_SYS)>; // release(5) sys(1)
+def : Pat<(atomic_fence (i64 6), (i64 1)), (INT_MEMBAR_SYS)>; // acq_rel(6) sys(1)
+def : Pat<(atomic_fence (i64 7), (i64 1)), (INT_MEMBAR_SYS)>; // seq_cst(7) sys(1)
