@@ -483,7 +483,7 @@ protected:
   bool OptNone;
 
 public:
-  WaitcntGenerator() {}
+  WaitcntGenerator() = default;
   WaitcntGenerator(const MachineFunction &MF, InstCounterType MaxCounter)
       : ST(&MF.getSubtarget<GCNSubtarget>()), TII(ST->getInstrInfo()),
         IV(AMDGPU::getIsaVersion(ST->getCPU())), MaxCounter(MaxCounter),
@@ -542,7 +542,7 @@ public:
 
 class WaitcntGeneratorPreGFX12 : public WaitcntGenerator {
 public:
-  WaitcntGeneratorPreGFX12() {}
+  WaitcntGeneratorPreGFX12() = default;
   WaitcntGeneratorPreGFX12(const MachineFunction &MF)
       : WaitcntGenerator(MF, NUM_NORMAL_INST_CNTS) {}
 
@@ -579,7 +579,7 @@ public:
 
 class WaitcntGeneratorGFX12Plus : public WaitcntGenerator {
 public:
-  WaitcntGeneratorGFX12Plus() {}
+  WaitcntGeneratorGFX12Plus() = default;
   WaitcntGeneratorGFX12Plus(const MachineFunction &MF,
                             InstCounterType MaxCounter)
       : WaitcntGenerator(MF, MaxCounter) {}

@@ -40,13 +40,11 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "AMDGPUGenInstrInfo.inc"
 
-namespace llvm {
-namespace AMDGPU {
+namespace llvm::AMDGPU {
 #define GET_D16ImageDimIntrinsics_IMPL
 #define GET_ImageDimIntrinsicTable_IMPL
 #define GET_RsrcIntrinsics_IMPL
 #include "AMDGPUGenSearchableTables.inc"
-}
 }
 
 
