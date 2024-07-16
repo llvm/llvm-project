@@ -529,9 +529,8 @@ size_t YAMLProfileReader::matchWithCallGraph(BinaryContext &BC) {
     if (!AdjacentYamlBFs)
       continue;
     std::string AdjacentYamlBFsHashStr;
-    for (auto *AdjacentYamlBF : *AdjacentYamlBFs) {
+    for (auto *AdjacentYamlBF : *AdjacentYamlBFs)
       AdjacentYamlBFsHashStr += AdjacentYamlBF->Name;
-    }
     uint64_t Hash = std::hash<std::string>{}(AdjacentYamlBFsHashStr);
     std::vector<BinaryFunction *> *BFsWithSameHash =
         CGMatcher.getBFsWithNeighborHash(Hash);
