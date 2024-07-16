@@ -313,10 +313,6 @@ Resolutions to C++ Defect Reports
 - Clang now considers ``noexcept(typeid(expr))`` more carefully, instead of always assuming that ``std::bad_typeid`` can be thrown.
   (`CWG2191: Incorrect result for noexcept(typeid(v)) <https://cplusplus.github.io/CWG/issues/2191.html>`_).
 
-- Clang now correctly implements lookup for the terminal name of a member-qualified nested-name-specifier.
-  (`CWG1835: Dependent member lookup before < <https://cplusplus.github.io/CWG/issues/1835.html>`_).
-  The warning can be disabled via `-Wno-missing-dependent-template-keyword`.
-
 C Language Changes
 ------------------
 
@@ -1193,6 +1189,8 @@ DWARF Support in Clang
 Floating Point Support in Clang
 -------------------------------
 
+- Add ``__builtin__fmaf16`` builtin for floating point types.
+
 Fixed Point Support in Clang
 ----------------------------
 
@@ -1311,6 +1309,8 @@ Python Binding Changes
 - Exposed `CXRewriter` API as `class Rewriter`.
 - Add some missing kinds from Index.h (CursorKind: 149-156, 272-320, 420-437.
   TemplateArgumentKind: 5-9. TypeKind: 161-175 and 178).
+- Add support for retrieving binary operator information through
+  Cursor.binary_operator().
 
 OpenMP Support
 --------------
