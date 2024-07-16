@@ -107,7 +107,7 @@ UnusedReturnValueCheck::UnusedReturnValueCheck(llvm::StringRef Name,
                                           // POSIX
                                           "^::access$;"
                                           "^::bind$;"
-                                          "^^::connect$;"
+                                          "^::connect$;"
                                           "^::difftime$;"
                                           "^::dlsym$;"
                                           "^::fnmatch$;"
