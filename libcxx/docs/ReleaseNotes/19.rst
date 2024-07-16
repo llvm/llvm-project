@@ -54,6 +54,7 @@ Implemented Papers
 - P2713R1 - Escaping improvements in ``std::format``
 - P2231R1 - Missing ``constexpr`` in ``std::optional`` and ``std::variant``
 - P0019R8 - ``std::atomic_ref``
+- P2389R2 - Alias template ``dims`` for the ``extents`` of ``mdspan``
 
 Improvements and New Features
 -----------------------------
@@ -89,7 +90,7 @@ Deprecations and Removals
   This decision is based on LEWGs discussion on `P3122 <https://wg21.link/P3122>` and `P3162 <https://wg21.link/P3162>`
   to not use ``[[nodiscard]]`` in the standard.
 
-- TODO: The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable that was used to enable the safe mode has been deprecated and setting
+- The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable that was used to enable the safe mode has been deprecated and setting
   it triggers an error; use the ``LIBCXX_HARDENING_MODE`` CMake variable with the value ``extensive`` instead. Similarly,
   the ``_LIBCPP_ENABLE_ASSERTIONS`` macro has been deprecated (setting it to ``1`` still enables the extensive mode in
   the LLVM 19 release while also issuing a deprecation warning). See :ref:`the hardening documentation
@@ -133,6 +134,12 @@ Deprecations and Removals
   To assist with the clean-up process, consider running your code through Clang Tidy, with
   `std-allocator-const <https://clang.llvm.org/extra/clang-tidy/checks/portability/std-allocator-const.html>`
   enabled.
+
+- When configuring libc++ with localization or threads disabled, the library no longer emits an error when
+  trying to ``#include <locale>`` and other such headers. Instead, those headers have no content. This is
+  consistent with the behavior for all other libc++ carve-outs like filesystem, wide characters, a source
+  of randomness, and others. Users that were checking whether including a header would fail (e.g. via a script
+  or CMake's ``try_compile`` will experience a change in behavior).
 
 
 Upcoming Deprecations and Removals

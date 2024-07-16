@@ -103,6 +103,25 @@ Value::user_iterator Value::user_begin() {
 
 unsigned Value::getNumUses() const { return range_size(Val->users()); }
 
+void Value::replaceUsesWithIf(
+    Value *OtherV, llvm::function_ref<bool(const Use &)> ShouldReplace) {
+  assert(getType() == OtherV->getType() && "Can't replace with different type");
+  llvm::Value *OtherVal = OtherV->Val;
+  Val->replaceUsesWithIf(
+      OtherVal, [&ShouldReplace, this](llvm::Use &LLVMUse) -> bool {
+        User *DstU = cast_or_null<User>(Ctx.getValue(LLVMUse.getUser()));
+        if (DstU == nullptr)
+          return false;
+        return ShouldReplace(Use(&LLVMUse, DstU, Ctx));
+      });
+}
+
+void Value::replaceAllUsesWith(Value *Other) {
+  assert(getType() == Other->getType() &&
+         "Replacing with Value of different type!");
+  Val->replaceAllUsesWith(Other->Val);
+}
+
 #ifndef NDEBUG
 std::string Value::getName() const {
   std::stringstream SS;
@@ -165,6 +184,13 @@ Use User::getOperandUseDefault(unsigned OpIdx, bool Verify) const {
   return Use(LLVMUse, const_cast<User *>(this), Ctx);
 }
 
+#ifndef NDEBUG
+void User::verifyUserOfLLVMUse(const llvm::Use &Use) const {
+  assert(Ctx.getValue(Use.getUser()) == this &&
+         "Use not found in this SBUser's operands!");
+}
+#endif
+
 bool User::classof(const Value *From) {
   switch (From->getSubclassID()) {
 #define DEF_VALUE(ID, CLASS)
@@ -178,6 +204,15 @@ bool User::classof(const Value *From) {
   default:
     return false;
   }
+}
+
+void User::setOperand(unsigned OperandIdx, Value *Operand) {
+  assert(isa<llvm::User>(Val) && "No operands!");
+  cast<llvm::User>(Val)->setOperand(OperandIdx, Operand->Val);
+}
+
+bool User::replaceUsesOfWith(Value *FromV, Value *ToV) {
+  return cast<llvm::User>(Val)->replaceUsesOfWith(FromV->Val, ToV->Val);
 }
 
 #ifndef NDEBUG
@@ -325,10 +360,11 @@ Value *Context::getOrCreateValueInternal(llvm::Value *LLVMV, llvm::User *U) {
     return It->second.get();
 
   if (auto *C = dyn_cast<llvm::Constant>(LLVMV)) {
+    It->second = std::unique_ptr<Constant>(new Constant(C, *this));
+    auto *NewC = It->second.get();
     for (llvm::Value *COp : C->operands())
       getOrCreateValueInternal(COp, C);
-    It->second = std::unique_ptr<Constant>(new Constant(C, *this));
-    return It->second.get();
+    return NewC;
   }
   if (auto *Arg = dyn_cast<llvm::Argument>(LLVMV)) {
     It->second = std::unique_ptr<Argument>(new Argument(Arg, *this));

@@ -200,6 +200,7 @@ protected:
   llvm::Value *Val = nullptr;
 
   friend class Context; // For getting `Val`.
+  friend class User;    // For getting `Val`.
 
   /// All values point to the context.
   Context &Ctx;
@@ -284,6 +285,11 @@ public:
   Type *getType() const { return Val->getType(); }
 
   Context &getContext() const { return Ctx; }
+
+  void replaceUsesWithIf(Value *OtherV,
+                         llvm::function_ref<bool(const Use &)> ShouldReplace);
+  void replaceAllUsesWith(Value *Other);
+
 #ifndef NDEBUG
   /// Should crash if there is something wrong with the instruction.
   virtual void verify() const = 0;
@@ -349,6 +355,10 @@ protected:
   virtual unsigned getUseOperandNo(const Use &Use) const = 0;
   friend unsigned Use::getOperandNo() const; // For getUseOperandNo()
 
+#ifndef NDEBUG
+  void verifyUserOfLLVMUse(const llvm::Use &Use) const;
+#endif // NDEBUG
+
 public:
   /// For isa/dyn_cast.
   static bool classof(const Value *From);
@@ -386,6 +396,11 @@ public:
   virtual unsigned getNumOperands() const {
     return isa<llvm::User>(Val) ? cast<llvm::User>(Val)->getNumOperands() : 0;
   }
+
+  virtual void setOperand(unsigned OperandIdx, Value *Operand);
+  /// Replaces any operands that match \p FromV with \p ToV. Returns whether any
+  /// operands were replaced.
+  bool replaceUsesOfWith(Value *FromV, Value *ToV);
 
 #ifndef NDEBUG
   void verify() const override {

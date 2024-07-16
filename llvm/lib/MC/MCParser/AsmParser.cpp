@@ -2572,6 +2572,8 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, MCAsmMacro &Macro,
       continue;
     }
 
+    // In Darwin mode, $ is used for macro expansion, not considered an
+    // identifier char.
     if (Body[I] == '$' && I + 1 != End && IsDarwin && !NParameters) {
       // This macro has no parameters, look for $0, $1, etc.
       switch (Body[I + 1]) {
@@ -2600,26 +2602,28 @@ bool AsmParser::expandMacro(raw_svector_ostream &OS, MCAsmMacro &Macro,
       }
     }
 
-    if (AltMacroMode && isIdentifierChar(Body[I])) {
-      size_t Len = 1;
-      while (I + Len != End && isIdentifierChar(Body[I + Len]))
-        ++Len;
-      StringRef Argument(Body.data() + I, Len);
+    if (!isIdentifierChar(Body[I]) || IsDarwin) {
+      OS << Body[I++];
+      continue;
+    }
+
+    const size_t Start = I;
+    while (++I && isIdentifierChar(Body[I])) {
+    }
+    StringRef Token(Body.data() + Start, I - Start);
+    if (AltMacroMode) {
       unsigned Index = 0;
       for (; Index != NParameters; ++Index)
-        if (Parameters[Index].Name == Argument)
+        if (Parameters[Index].Name == Token)
           break;
       if (Index != NParameters) {
         expandArg(Index);
-        I += Len;
         if (I != End && Body[I] == '&')
           ++I;
         continue;
       }
     }
-
-    OS << Body[I];
-    ++I;
+    OS << Token;
   }
 
   ++Macro.Count;
@@ -6116,8 +6120,8 @@ bool AsmParser::parseMSInlineAsm(
   const char *AsmStart = ASMString.begin();
   const char *AsmEnd = ASMString.end();
   array_pod_sort(AsmStrRewrites.begin(), AsmStrRewrites.end(), rewritesSort);
-  for (auto it = AsmStrRewrites.begin(); it != AsmStrRewrites.end(); ++it) {
-    const AsmRewrite &AR = *it;
+  for (auto I = AsmStrRewrites.begin(), E = AsmStrRewrites.end(); I != E; ++I) {
+    const AsmRewrite &AR = *I;
     // Check if this has already been covered by another rewrite...
     if (AR.Done)
       continue;
@@ -6160,7 +6164,7 @@ bool AsmParser::parseMSInlineAsm(
         SMLoc OffsetLoc = SMLoc::getFromPointer(AR.IntelExp.OffsetName.data());
         size_t OffsetLen = OffsetName.size();
         auto rewrite_it = std::find_if(
-            it, AsmStrRewrites.end(), [&](const AsmRewrite &FusingAR) {
+            I, AsmStrRewrites.end(), [&](const AsmRewrite &FusingAR) {
               return FusingAR.Loc == OffsetLoc && FusingAR.Len == OffsetLen &&
                      (FusingAR.Kind == AOK_Input ||
                       FusingAR.Kind == AOK_CallInput);

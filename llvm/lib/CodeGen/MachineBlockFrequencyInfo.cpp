@@ -161,30 +161,67 @@ struct DOTGraphTraits<MachineBlockFrequencyInfo *>
 
 } // end namespace llvm
 
-INITIALIZE_PASS_BEGIN(MachineBlockFrequencyInfo, DEBUG_TYPE,
+AnalysisKey MachineBlockFrequencyAnalysis::Key;
+
+MachineBlockFrequencyAnalysis::Result
+MachineBlockFrequencyAnalysis::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MFAM) {
+  auto &MBPI = MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
+  auto &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
+  return Result(MF, MBPI, MLI);
+}
+
+PreservedAnalyses
+MachineBlockFrequencyPrinterPass::run(MachineFunction &MF,
+                                      MachineFunctionAnalysisManager &MFAM) {
+  auto &MBFI = MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+  OS << "Machine block frequency for machine function: " << MF.getName()
+     << '\n';
+  MBFI.print(OS);
+  return PreservedAnalyses::all();
+}
+
+INITIALIZE_PASS_BEGIN(MachineBlockFrequencyInfoWrapperPass, DEBUG_TYPE,
                       "Machine Block Frequency Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
-INITIALIZE_PASS_END(MachineBlockFrequencyInfo, DEBUG_TYPE,
+INITIALIZE_PASS_END(MachineBlockFrequencyInfoWrapperPass, DEBUG_TYPE,
                     "Machine Block Frequency Analysis", true, true)
 
-char MachineBlockFrequencyInfo::ID = 0;
+char MachineBlockFrequencyInfoWrapperPass::ID = 0;
 
-MachineBlockFrequencyInfo::MachineBlockFrequencyInfo()
+MachineBlockFrequencyInfoWrapperPass::MachineBlockFrequencyInfoWrapperPass()
     : MachineFunctionPass(ID) {
-  initializeMachineBlockFrequencyInfoPass(*PassRegistry::getPassRegistry());
+  initializeMachineBlockFrequencyInfoWrapperPassPass(
+      *PassRegistry::getPassRegistry());
 }
 
+MachineBlockFrequencyInfo::MachineBlockFrequencyInfo() = default;
+
 MachineBlockFrequencyInfo::MachineBlockFrequencyInfo(
-      MachineFunction &F,
-      MachineBranchProbabilityInfo &MBPI,
-      MachineLoopInfo &MLI) : MachineFunctionPass(ID) {
+    MachineBlockFrequencyInfo &&) = default;
+
+MachineBlockFrequencyInfo::MachineBlockFrequencyInfo(
+    MachineFunction &F, MachineBranchProbabilityInfo &MBPI,
+    MachineLoopInfo &MLI) {
   calculate(F, MBPI, MLI);
 }
 
 MachineBlockFrequencyInfo::~MachineBlockFrequencyInfo() = default;
 
-void MachineBlockFrequencyInfo::getAnalysisUsage(AnalysisUsage &AU) const {
+bool MachineBlockFrequencyInfo::invalidate(
+    MachineFunction &MF, const PreservedAnalyses &PA,
+    MachineFunctionAnalysisManager::Invalidator &) {
+  // Check whether the analysis, all analyses on machine functions, or the
+  // machine function's CFG have been preserved.
+  auto PAC = PA.getChecker<MachineBlockFrequencyAnalysis>();
+  return !PAC.preserved() &&
+         !PAC.preservedSet<AllAnalysesOn<MachineFunction>>() &&
+         !PAC.preservedSet<CFGAnalyses>();
+}
+
+void MachineBlockFrequencyInfoWrapperPass::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
   AU.setPreservesAll();
@@ -207,13 +244,16 @@ void MachineBlockFrequencyInfo::calculate(
   }
 }
 
-bool MachineBlockFrequencyInfo::runOnMachineFunction(MachineFunction &F) {
+bool MachineBlockFrequencyInfoWrapperPass::runOnMachineFunction(
+    MachineFunction &F) {
   MachineBranchProbabilityInfo &MBPI =
       getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
   MachineLoopInfo &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  calculate(F, MBPI, MLI);
+  MBFI.calculate(F, MBPI, MLI);
   return false;
 }
+
+void MachineBlockFrequencyInfo::print(raw_ostream &OS) { MBFI->print(OS); }
 
 void MachineBlockFrequencyInfo::releaseMemory() { MBFI.reset(); }
 

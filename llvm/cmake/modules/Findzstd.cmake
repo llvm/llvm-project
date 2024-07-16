@@ -36,7 +36,9 @@ if(zstd_FOUND)
     if(MSVC)
       # IMPORTED_LOCATION is the path to the DLL and IMPORTED_IMPLIB is the "library".
       get_filename_component(zstd_DIRNAME "${zstd_LIBRARY}" DIRECTORY)
-      string(REGEX REPLACE "${CMAKE_INSTALL_LIBDIR}$" "${CMAKE_INSTALL_BINDIR}" zstd_DIRNAME "${zstd_DIRNAME}")
+      if(NOT "${CMAKE_INSTALL_LIBDIR}" STREQUAL "" AND NOT "${CMAKE_INSTALL_BINDIR}" STREQUAL "")
+        string(REGEX REPLACE "${CMAKE_INSTALL_LIBDIR}$" "${CMAKE_INSTALL_BINDIR}" zstd_DIRNAME "${zstd_DIRNAME}")
+      endif()
       get_filename_component(zstd_BASENAME "${zstd_LIBRARY}" NAME)
       string(REGEX REPLACE "\\${CMAKE_LINK_LIBRARY_SUFFIX}$" "${CMAKE_SHARED_LIBRARY_SUFFIX}" zstd_BASENAME "${zstd_BASENAME}")
       set_target_properties(zstd::libzstd_shared PROPERTIES

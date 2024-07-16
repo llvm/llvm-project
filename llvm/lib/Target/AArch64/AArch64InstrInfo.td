@@ -2700,6 +2700,11 @@ def : InstAlias<"tst $src1, $src2$sh",
 def : Pat<(not GPR32:$Wm), (ORNWrr WZR, GPR32:$Wm)>;
 def : Pat<(not GPR64:$Xm), (ORNXrr XZR, GPR64:$Xm)>;
 
+// Emit (and 0xFFFFFFFF) as a ORRWrr move which may be eliminated.
+let AddedComplexity = 6 in
+def : Pat<(i64 (and GPR64:$Rn, 0xffffffff)),
+          (SUBREG_TO_REG (i64 0), (ORRWrr WZR, (EXTRACT_SUBREG GPR64:$Rn, sub_32)), sub_32)>;
+
 
 //===----------------------------------------------------------------------===//
 // One operand data processing instructions.
