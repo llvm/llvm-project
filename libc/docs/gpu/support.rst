@@ -229,7 +229,6 @@ fputc          |check|    |check|
 fwrite         |check|    |check|
 remove         |check|    |check|
 putc           |check|    |check|
-putc           |check|    |check|
 printf         |check|    |check|
 vprintf        |check|    |check|
 fprintf        |check|    |check|
