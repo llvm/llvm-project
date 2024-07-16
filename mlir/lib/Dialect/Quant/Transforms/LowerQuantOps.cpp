@@ -49,59 +49,50 @@ public:
 // QuantizeCastOp
 //===----------------------------------------------------------------------===//
 
-// If 'containerType' is a tensor, return its element type. If it is a scalar,
+// If 'inputType' is a tensor, return its element type. If it is a scalar,
 // return it as is.
-Type getScalarType(Type containerType) {
-  if (auto tensorType = dyn_cast<TensorType>(containerType))
+Type getScalarType(Type inputType) {
+  if (auto tensorType = dyn_cast<TensorType>(inputType))
     return tensorType.getElementType();
-  return containerType;
+  return inputType;
 }
 
-// Return the shape of a container as a combination of attributes (static
-// dimensions) and values (dynamic dimensions). If 'container' is a scalar,
-// an empty list is returned. If 'container' is a tensor, its shape is returned.
-SmallVector<OpFoldResult> getContainerShape(OpBuilder &builder, Location loc,
-                                            Value container) {
-  if (isa<TensorType>(container.getType()))
-    return tensor::getMixedSizes(builder, loc, container);
+// Return the shape of an input value as a list of attributes (static dimensions)
+// and values (dynamic dimensions). If 'input' is a scalar, an empty list is
+// returned. If 'input' is a tensor, its shape is returned.
+SmallVector<OpFoldResult>
+getScalarOrTensorShape(OpBuilder &builder, Location loc, Value input) {
+  if (isa<TensorType>(input.getType()))
+    return tensor::getMixedSizes(builder, loc, input);
   return {};
 }
 
-// Clone the given 'containerType' with the new given 'elementType'. If
-// 'containerType' is a scalar type, there is nothing to clone, and
-// 'elementType' itself is returned. If 'constainerType' is a tensor, its
-// shape is cloned but the new element type is used.
-Type cloneContainerType(Type containerType, Type elementType) {
-  if (auto tensorType = dyn_cast<TensorType>(containerType))
+// If 'referenceType' is a scalar, return 'elementType' as is. If
+// 'referenceType' is a tensor, return another tensor with the same shape and
+// elements of type 'elementType'.
+Type getScalarOrTensorType(Type elementType, Type referenceType) {
+  if (auto tensorType = dyn_cast<TensorType>(referenceType))
     return tensorType.clone(elementType);
   return elementType;
 }
 
-// Get a scalar or tensor constant containing the value given in 'attr'.
-// If 'containerType' is a scalar, a scalar constant is returned. If
-// 'containerType' is a tensor, a tensor splat of shape 'containerShape' is
-// returned.
-Value getContainerConstant(OpBuilder &builder, Location loc, TypedAttr attr,
-                           Type containerType,
-                           ArrayRef<OpFoldResult> containerShape) {
-  // A statically shaped tensor can be created with 'arith.constant'
-  auto tensorType = dyn_cast<TensorType>(containerType);
-  if (tensorType && tensorType.hasStaticShape()) {
-    auto denseElementsAttr = DenseElementsAttr::get(tensorType, attr);
-    return builder.create<arith::ConstantOp>(loc, tensorType, denseElementsAttr);
+// Return a constant with the given value. If 'referenceType' is a tensor, a
+// tensor splat of shape 'referenceShape' is returned. If 'referenceType' is a
+// scalar, 'referenceShape' is ignored and a scalar constant is returned.
+Value getScalarOrTensorConstant(OpBuilder &builder, Location loc, Value scalar,
+                                Type referenceType,
+                                ArrayRef<OpFoldResult> referenceShape) {
+  // If the result type is a scalar, return the unmodified scalar constant.
+  auto tensorType = dyn_cast<TensorType>(referenceType);
+  if (!tensorType) {
+    assert(referenceShape.empty());
+    return scalar;
   }
 
-  // Scalar and dynamically shaped tensor containers need the scalar constant
-  // to be first materialized.
-  Value containerConstant =
-      builder.create<arith::ConstantOp>(loc, attr.getType(), attr);
-
-  // Create tensor splat if necessary
-  if (tensorType) {
-    containerConstant =
-        builder.create<tensor::SplatOp>(loc, containerConstant, containerShape);
-  }
-  return containerConstant;
+  // Create tensor splat
+  auto tensorConstant =
+      builder.create<tensor::SplatOp>(loc, scalar, referenceShape);
+  return tensorConstant;
 }
 
 std::pair<Value, Value> flattenUnrankedTensor(OpBuilder &builder, Location loc,
@@ -131,7 +122,8 @@ std::pair<Value, Value> flattenUnrankedTensor(OpBuilder &builder, Location loc,
 std::pair<Value, Value> flattenUnrankedTensorAroundAxis(OpBuilder &builder,
                                                         Location loc,
                                                         Value input,
-                                                        int64_t axis) {
+                                                        int64_t axis,
+                                                        int64_t axisSize) {
   // Get full tensor shape
   auto *context = builder.getContext();
   auto indexType = builder.getIndexType();
@@ -151,34 +143,34 @@ std::pair<Value, Value> flattenUnrankedTensorAroundAxis(OpBuilder &builder,
       .getResult(1);
   auto sizeRight = builder.create<shape::NumElementsOp>(
       loc, indexType, shapeRight);
-  Value axisSize = builder.create<tensor::DimOp>(loc, input, axisValue);
 
   // Compute flat input shape as a 3-element 1D tensor
+  auto axisSizeValue = builder.create<arith::ConstantIndexOp>(loc, axisSize);
   auto flatShapeType = shape::getExtentTensorType(context, 3);
   auto flatInputShape = builder.create<tensor::FromElementsOp>(
-      loc, flatShapeType, ValueRange{sizeLeft, axisSize, sizeRight});
+      loc, flatShapeType, ValueRange{sizeLeft, axisSizeValue, sizeRight});
 
   // Reshape input to 3D tensor
   auto inputType = cast<UnrankedTensorType>(input.getType());
   auto elementType = inputType.getElementType();
-  SmallVector<int64_t> flatInputDims(3, ShapedType::kDynamic);
-  auto flatInputType = RankedTensorType::get(flatInputDims, elementType);
+  auto flatInputType = RankedTensorType::get(
+      {ShapedType::kDynamic, axisSize, ShapedType::kDynamic}, elementType);
   auto flatInput = builder.create<tensor::ReshapeOp>(
       loc, flatInputType, input, flatInputShape);
 
   return std::make_pair(flatInput, inputShape);
 }
 
-Value restoreUnrankedTensor(OpBuilder &builder, Location loc, Value input,
-                            Value shape) {
-  auto inputType = cast<TensorType>(input.getType());
+Value restoreUnrankedTensorShape(OpBuilder &builder, Location loc, Value input,
+                                 Value inputShape) {
+  auto inputType = cast<RankedTensorType>(input.getType());
   auto elementType = inputType.getElementType();
   auto unrankedType = UnrankedTensorType::get(elementType);
-  return builder.create<tensor::ReshapeOp>(loc, unrankedType, input, shape);
+  return builder.create<tensor::ReshapeOp>(loc, unrankedType, input, inputShape);
 }
 
-Value materializeScales(OpBuilder &builder, Location loc,
-                        UniformQuantizedPerAxisType quantizedType) {
+Value materializePerChannelScales(OpBuilder &builder, Location loc,
+                                  UniformQuantizedPerAxisType quantizedType) {
   auto scales = quantizedType.getScales();
   auto expressedType = quantizedType.getExpressedType();
   auto scaleAttrs = llvm::map_to_vector(scales, [&](double scale) -> Attribute {
@@ -189,52 +181,100 @@ Value materializeScales(OpBuilder &builder, Location loc,
   return builder.create<arith::ConstantOp>(loc, tensorType, scalesAttr);
 }
 
-Value materializeZeroPoints(OpBuilder &builder, Location loc,
+Value materializePerChannelZeroPoints(OpBuilder &builder, Location loc,
                             UniformQuantizedPerAxisType quantizedType) {
   auto zeroPoints = quantizedType.getZeroPoints();
-  auto expressedType = quantizedType.getExpressedType();
-  auto zeroPointAttrs = llvm::map_to_vector(zeroPoints, [&](int64_t zeroPoint) -> Attribute {
-    return builder.getFloatAttr(expressedType, static_cast<double>(zeroPoint));
-  });
-  auto tensorType = RankedTensorType::get({(int64_t) zeroPoints.size()}, expressedType);
+  auto storageType = quantizedType.getStorageType();
+  auto zeroPointAttrs = llvm::map_to_vector(
+      zeroPoints,
+      [&](int64_t zeroPoint) -> Attribute {
+        return builder.getIntegerAttr(storageType, zeroPoint);
+      });
+  auto tensorType =
+      RankedTensorType::get({(int64_t)zeroPoints.size()}, storageType);
   auto zeroPointsAttr = DenseElementsAttr::get(tensorType, zeroPointAttrs);
   return builder.create<arith::ConstantOp>(loc, tensorType, zeroPointsAttr);
 }
 
-Value quantizeValue(OpBuilder &builder, Location loc, Value input,
-                    ArrayRef<OpFoldResult> inputShape, Value scale,
-                    Value zeroPoint, QuantizedType quantizedType) {
+Value clampScalarOrTensor(OpBuilder &builder, Location loc, Value input,
+                          ArrayRef<OpFoldResult> inputShape,
+                          QuantizedType quantizedType) {
+  // If quantized type does not narrow down the storage type range, there is
+  // nothing to do.
+  if (!quantizedType.hasStorageTypeBounds())
+    return input;
+
+  // Materialize bounds
   auto inputType = input.getType();
-  auto storageType = cast<IntegerType>(quantizedType.getStorageType());
-  auto storageContainerType = cloneContainerType(inputType, storageType);
+  auto storageType = quantizedType.getStorageType();
+  auto storageMinScalar = builder.create<arith::ConstantIntOp>(
+      loc, quantizedType.getStorageTypeMin(), storageType);
+  auto storageMaxScalar = builder.create<arith::ConstantIntOp>(
+      loc, quantizedType.getStorageTypeMax(), storageType);
+  auto storageMin = getScalarOrTensorConstant(builder, loc, storageMinScalar,
+                                              inputType, inputShape);
+  auto storageMax = getScalarOrTensorConstant(builder, loc, storageMaxScalar,
+                                              inputType, inputShape);
 
-  auto scaledValue = builder.create<arith::DivFOp>(loc, input, scale);
-  auto storedValueAsExpressedType = builder.create<arith::AddFOp>(loc, scaledValue, zeroPoint);
-
-  Value storedValue;
+  // Clamp
   if (quantizedType.isSigned()) {
-    storedValue = builder.create<arith::FPToSIOp>(
-        loc, storageContainerType, storedValueAsExpressedType);
+    input = builder.create<arith::MaxSIOp>(loc, input, storageMin);
+    input = builder.create<arith::MinSIOp>(loc, input, storageMax);
   } else {
-    storedValue = builder.create<arith::FPToUIOp>(
-        loc, storageContainerType, storedValueAsExpressedType);
+    input = builder.create<arith::MaxUIOp>(loc, input, storageMin);
+    input = builder.create<arith::MinUIOp>(loc, input, storageMax);
   }
+  return input;
+}
 
-  // Clamp stored value if needed
-  if (quantizedType.hasStorageTypeBounds()) {
-    auto storageMinAttr = builder.getIntegerAttr(storageType, quantizedType.getStorageTypeMin());
-    auto storageMaxAttr = builder.getIntegerAttr(storageType, quantizedType.getStorageTypeMax());
-    auto storageMin = getContainerConstant(builder, loc, storageMinAttr, inputType, inputShape);
-    auto storageMax = getContainerConstant(builder, loc, storageMaxAttr, inputType, inputShape);
-    if (quantizedType.isSigned()) {
-      storedValue = builder.create<arith::MaxSIOp>(loc, storedValue, storageMin);
-      storedValue = builder.create<arith::MinSIOp>(loc, storedValue, storageMax);
-    } else {
-      storedValue = builder.create<arith::MaxUIOp>(loc, storedValue, storageMin);
-      storedValue = builder.create<arith::MinUIOp>(loc, storedValue, storageMax);
-    }
-  }
+Value convertFloatToInteger(OpBuilder &builder, Location loc, Value input,
+                            Type resultType, bool isSigned) {
+  if (isSigned)
+    return builder.create<arith::FPToSIOp>(loc, resultType, input);
+  return builder.create<arith::FPToUIOp>(loc, resultType, input);
+}
 
+Value convertIntegerToFloat(OpBuilder &builder, Location loc, Value input,
+                            Type resultType, bool isSigned) {
+  if (isSigned)
+    return builder.create<arith::SIToFPOp>(loc, resultType, input);
+  return builder.create<arith::UIToFPOp>(loc, resultType, input);
+}
+
+// Quantize a floating-point input using the given scale, input shape, and
+// storage type bounds in the given quantized type.
+Value quantizeScalarOrTensor(OpBuilder &builder, Location loc, Value input,
+                             ArrayRef<OpFoldResult> inputShape, Value scale,
+                             Value zeroPoint, QuantizedType quantizedType) {
+  // Convert scale and zero point to tensors if necessary
+  auto inputType = input.getType();
+  scale = getScalarOrTensorConstant(
+      builder, loc, scale, inputType, inputShape);
+  zeroPoint = getScalarOrTensorConstant(
+      builder, loc, zeroPoint, inputType, inputShape);
+
+  // Convert zero point from storage to expressed type
+  auto expressedScalarOrTensorType =
+      getScalarOrTensorType(quantizedType.getExpressedType(), inputType);
+  zeroPoint = convertIntegerToFloat(builder, loc, zeroPoint,
+                                    expressedScalarOrTensorType,
+                                    quantizedType.isSigned());
+
+  // Scale input and add zero point
+  auto scaledValue = builder.create<arith::DivFOp>(loc, input, scale);
+  auto storedValueAsExpressedType =
+      builder.create<arith::AddFOp>(loc, scaledValue, zeroPoint);
+
+  // Convert to storage type
+  auto storageScalarOrTensorType =
+      getScalarOrTensorType(quantizedType.getStorageType(), inputType);
+  auto storedValue = convertFloatToInteger(
+      builder, loc, storedValueAsExpressedType, storageScalarOrTensorType,
+      quantizedType.isSigned());
+
+  // Clamp stored value it if the storage type is bound
+  storedValue =
+      clampScalarOrTensor(builder, loc, storedValue, inputShape, quantizedType);
   return storedValue;
 }
 
@@ -243,18 +283,21 @@ class QuantizeCastOpConversion : public OpConversionPattern<quant::QuantizeCastO
   Value convertPerLayerRanked(OpBuilder &builder, Location loc, Value input,
                               UniformQuantizedType quantizedType) const {
 
-    auto inputType = input.getType();
-    auto expressedType = cast<FloatType>(quantizedType.getExpressedType());
-
     // Create scale and zero point constants
-    auto inputShape = getContainerShape(builder, loc, input);
-    auto scaleAttr = builder.getFloatAttr(expressedType, quantizedType.getScale());
-    auto scale = getContainerConstant(builder, loc, scaleAttr, inputType, inputShape);
-    auto zeroPointAttr = builder.getFloatAttr(expressedType, quantizedType.getZeroPoint());
-    auto zeroPoint = getContainerConstant(builder, loc, zeroPointAttr, inputType, inputShape);
+    auto expressedType = quantizedType.getExpressedType();
+    auto storageType = quantizedType.getStorageType();
+    auto scaleAttr =
+        builder.getFloatAttr(expressedType, quantizedType.getScale());
+    auto scale =
+        builder.create<arith::ConstantOp>(loc, expressedType, scaleAttr);
+    auto zeroPointAttr =
+        builder.getIntegerAttr(storageType, quantizedType.getZeroPoint());
+    auto zeroPoint =
+        builder.create<arith::ConstantOp>(loc, storageType, zeroPointAttr);
 
-    return quantizeValue(builder, loc, input, inputShape, scale, zeroPoint,
-                         quantizedType);
+    auto inputShape = getScalarOrTensorShape(builder, loc, input);
+    return quantizeScalarOrTensor(builder, loc, input, inputShape, scale,
+                                  zeroPoint, quantizedType);
   }
 
   Value convertPerLayer(OpBuilder &builder, Location loc, Value input,
@@ -270,7 +313,7 @@ class QuantizeCastOpConversion : public OpConversionPattern<quant::QuantizeCastO
 
     // Restore original shape if unranked
     if (isUnranked)
-      result = restoreUnrankedTensor(builder, loc, result, inputShape);
+      result = restoreUnrankedTensorShape(builder, loc, result, inputShape);
 
     return result;
   }
@@ -283,8 +326,9 @@ class QuantizeCastOpConversion : public OpConversionPattern<quant::QuantizeCastO
     auto inputType = cast<RankedTensorType>(input.getType());
     auto inputRank = inputType.getRank();
 
-    auto scales = materializeScales(builder, loc, quantizedType);
-    auto zeroPoints = materializeZeroPoints(builder, loc, quantizedType);
+    auto scales = materializePerChannelScales(builder, loc, quantizedType);
+    auto zeroPoints =
+        materializePerChannelZeroPoints(builder, loc, quantizedType);
 
     auto storageType = quantizedType.getStorageType();
     auto initShape = tensor::getMixedSizes(builder, loc, input);
@@ -313,10 +357,10 @@ class QuantizeCastOpConversion : public OpConversionPattern<quant::QuantizeCastO
           auto scale = args[1];
           auto zeroPoint = args[2];
 
-          auto storedValue = quantizeValue(builder, loc, expressedValue, {},
-                                           scale, zeroPoint, quantizedType);
+          auto result = quantizeScalarOrTensor(builder, loc, expressedValue, {},
+                                               scale, zeroPoint, quantizedType);
 
-          builder.create<linalg::YieldOp>(loc, storedValue);
+          builder.create<linalg::YieldOp>(loc, result);
         })
         .getResult(0);
 
@@ -325,13 +369,14 @@ class QuantizeCastOpConversion : public OpConversionPattern<quant::QuantizeCastO
 
   Value convertPerChannel(OpBuilder &builder, Location loc, Value input,
                           UniformQuantizedPerAxisType quantizedType) const {
-    // Flatten unranked tensor if necessary
+    // Flatten unranked tensor into a 3D ranked tensor if necessary
     bool isUnranked = isa<UnrankedTensorType>(input.getType());
     int64_t channelAxis = quantizedType.getQuantizedDimension();
+    int64_t channelAxisSize = (int64_t) quantizedType.getScales().size();
     Value inputShape;
     if (isUnranked) {
-      std::tie(input, inputShape) =
-          flattenUnrankedTensorAroundAxis(builder, loc, input, channelAxis);
+      std::tie(input, inputShape) = flattenUnrankedTensorAroundAxis(
+          builder, loc, input, channelAxis, channelAxisSize);
       channelAxis = 1;
     }
 
@@ -341,7 +386,7 @@ class QuantizeCastOpConversion : public OpConversionPattern<quant::QuantizeCastO
 
     // Restore original tensor shape if unranked
     if (isUnranked)
-      result = restoreUnrankedTensor(builder, loc, result, inputShape);
+      result = restoreUnrankedTensorShape(builder, loc, result, inputShape);
 
     return result;
   }
@@ -357,18 +402,19 @@ public:
     auto resultScalarType = getScalarType(op.getResult().getType());
 
     // Flatten unranked tensor input
-    Value storedValue;
+    Value result;
     if (auto quantizedType = dyn_cast<UniformQuantizedType>(resultScalarType)) {
-      storedValue = convertPerLayer(rewriter, loc, input, quantizedType);
-    } else if (auto quantizedType = dyn_cast<UniformQuantizedPerAxisType>(resultScalarType)) {
-      storedValue = convertPerChannel(rewriter, loc, input, quantizedType);
+      result = convertPerLayer(rewriter, loc, input, quantizedType);
+    } else if (auto quantizedType =
+                   dyn_cast<UniformQuantizedPerAxisType>(resultScalarType)) {
+      result = convertPerChannel(rewriter, loc, input, quantizedType);
     } else {
-      llvm_unreachable("unexpected quantized type");
+      llvm_unreachable("unexpected uniform quantized type");
     }
 
     // Cast stored value to result quantized value
     rewriter.replaceOpWithNewOp<quant::StorageCastOp>(
-        op, op.getResult().getType(), storedValue);
+        op, op.getResult().getType(), result);
     return success();
   }
 };
