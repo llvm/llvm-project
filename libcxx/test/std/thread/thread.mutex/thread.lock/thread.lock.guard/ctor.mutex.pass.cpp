@@ -24,7 +24,7 @@ int main(int, char**) {
   std::lock_guard<MyMutex> lg(m);
   assert(m.locked);
 
-  static_assert(!std::is_convertible<MyMutex, std::lock_guard<MyMutex>>::value, "constructor must be explicit");
+  static_assert(!std::is_convertible<MyMutex, std::lock_guard<MyMutex> >::value, "constructor must be explicit");
 
   return 0;
 }

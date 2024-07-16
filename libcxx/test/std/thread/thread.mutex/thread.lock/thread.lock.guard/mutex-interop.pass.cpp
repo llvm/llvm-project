@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: no-threads
+// UNSUPPORTED: c++03
 
 // Test the interoperation of std::lock_guard with std::mutex, since that is such
 // a common use case.
