@@ -679,9 +679,14 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         flags.set(DefinabilityFlag::PointerDefinition);
       }
       if (auto whyNot{WhyNotDefinable(messages.at(), *scope, flags, actual)}) {
-        if (auto *msg{
-                messages.Say(std::move(*undefinableMessage), dummyName)}) {
-          msg->Attach(std::move(*whyNot));
+        if (whyNot->IsFatal()) {
+          if (auto *msg{
+                  messages.Say(std::move(*undefinableMessage), dummyName)}) {
+            msg->Attach(
+                std::move(whyNot->set_severity(parser::Severity::Because)));
+          }
+        } else {
+          messages.Say(std::move(*whyNot));
         }
       }
     }
@@ -1413,9 +1418,14 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
                     *scope,
                     DefinabilityFlags{DefinabilityFlag::PointerDefinition},
                     *pointerExpr)}) {
-              if (auto *msg{messages.Say(pointerArg->sourceLocation(),
-                      "POINTER= argument of ASSOCIATED() is required by some other compilers to be a valid left-hand side of a pointer assignment statement"_port_en_US)}) {
-                msg->Attach(std::move(*whyNot));
+              if (whyNot->IsFatal()) {
+                if (auto *msg{messages.Say(pointerArg->sourceLocation(),
+                        "POINTER= argument of ASSOCIATED() is required by some other compilers to be a valid left-hand side of a pointer assignment statement"_port_en_US)}) {
+                  msg->Attach(std::move(
+                      whyNot->set_severity(parser::Severity::Because)));
+                }
+              } else {
+                messages.Say(std::move(*whyNot));
               }
             }
           }
