@@ -1424,6 +1424,15 @@ public:
       copySTI().ToggleFeature("southern-islands");
     }
 
+    FeatureBitset FB = getFeatureBits();
+    if (!FB[AMDGPU::FeatureWavefrontSize64] &&
+        !FB[AMDGPU::FeatureWavefrontSize32]) {
+      // If there is no default wave size it must be a generation before gfx10,
+      // these have FeatureWavefrontSize64 in their definition already. For
+      // gfx10+ set wave32 as a default.
+      copySTI().ToggleFeature(AMDGPU::FeatureWavefrontSize32);
+    }
+
     setAvailableFeatures(ComputeAvailableFeatures(getFeatureBits()));
 
     AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(getSTI().getCPU());

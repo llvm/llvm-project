@@ -1109,18 +1109,18 @@ def FeatureRequiresCOV6 : SubtargetFeature<"requires-cov6",
   "RequiresCOV6",
   "true",
   "Target Requires Code Object V6"
-#ifdef LLPC_BUILD_GFX12
 >;
 
+#ifdef LLPC_BUILD_GFX12
 // Enable the use of SCRATCH_STORE/LOAD_BLOCK instructions for saving and
 // restoring the callee-saved registers.
 def FeatureUseBlockVGPROpsForCSR : SubtargetFeature<"block-vgpr-csr",
   "UseBlockVGPROpsForCSR",
   "true",
   "Use block load/store for VGPR callee saved registers"
-#endif /* LLPC_BUILD_GFX12 */
 >;
 
+#endif /* LLPC_BUILD_GFX12 */
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -1487,8 +1487,12 @@ def FeatureISAVersion10_Common : FeatureSet<
   [FeatureGFX10,
    FeatureLDSBankCount32,
    FeatureDLInsts,
+#ifdef LLPC_BUILD_GFX12
    FeatureNSAEncoding,
-   FeatureWavefrontSize32]>;
+   FeatureBackOffBarrier]>;
+#else /* LLPC_BUILD_GFX12 */
+   FeatureNSAEncoding]>;
+#endif /* LLPC_BUILD_GFX12 */
 
 def FeatureISAVersion10_1_Common : FeatureSet<
   !listconcat(FeatureISAVersion10_Common.Features,
@@ -1571,7 +1575,6 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureDot10Insts,
    FeatureNSAEncoding,
    FeaturePartialNSAEncoding,
-   FeatureWavefrontSize32,
    FeatureShaderCyclesRegister,
    FeatureArchitectedFlatScratch,
    FeatureAtomicFaddRtnInsts,
@@ -1648,7 +1651,6 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureDot11Insts,
    FeatureNSAEncoding,
    FeaturePartialNSAEncoding,
-   FeatureWavefrontSize32,
    FeatureShaderCyclesHiLoRegisters,
    FeatureArchitectedFlatScratch,
    FeatureArchitectedSGPRs,
