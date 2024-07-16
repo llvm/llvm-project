@@ -368,11 +368,15 @@ public:
   void mangleFunctionEncoding(GlobalDecl GD, bool ShouldMangle);
   void mangleVariableEncoding(const VarDecl *VD);
   void mangleMemberDataPointer(const CXXRecordDecl *RD, const ValueDecl *VD,
+                               const NonTypeTemplateParmDecl *PD,
+                               QualType TemplateArgType,
                                StringRef Prefix = "$");
   void mangleMemberDataPointerInClassNTTP(const CXXRecordDecl *,
                                           const ValueDecl *);
   void mangleMemberFunctionPointer(const CXXRecordDecl *RD,
                                    const CXXMethodDecl *MD,
+                                   const NonTypeTemplateParmDecl *PD,
+                                   QualType TemplateArgType,
                                    StringRef Prefix = "$");
   void mangleFunctionPointer(const FunctionDecl *FD,
                              const NonTypeTemplateParmDecl *PD,
@@ -673,12 +677,17 @@ void MicrosoftCXXNameMangler::mangleVariableEncoding(const VarDecl *VD) {
   }
 }
 
-void MicrosoftCXXNameMangler::mangleMemberDataPointer(const CXXRecordDecl *RD,
-                                                      const ValueDecl *VD,
-                                                      StringRef Prefix) {
+void MicrosoftCXXNameMangler::mangleMemberDataPointer(
+    const CXXRecordDecl *RD, const ValueDecl *VD,
+    const NonTypeTemplateParmDecl *PD, QualType TemplateArgType,
+    StringRef Prefix) {
   // <member-data-pointer> ::= <integer-literal>
   //                       ::= $F <number> <number>
   //                       ::= $G <number> <number> <number>
+  //
+  // <auto-nttp> ::= $ M <type> <integer-literal>
+  // <auto-nttp> ::= $ M <type> F <name> <number>
+  // <auto-nttp> ::= $ M <type> G <name> <number> <number>
 
   int64_t FieldOffset;
   int64_t VBTableOffset;
@@ -707,7 +716,18 @@ void MicrosoftCXXNameMangler::mangleMemberDataPointer(const CXXRecordDecl *RD,
   case MSInheritanceModel::Unspecified: Code = 'G'; break;
   }
 
-  Out << Prefix << Code;
+  Out << Prefix;
+
+  if (VD &&
+      getASTContext().getLangOpts().isCompatibleWithMSVC(
+          LangOptions::MSVC2019) &&
+      PD && PD->getType()->getTypeClass() == Type::Auto &&
+      !TemplateArgType.isNull()) {
+    Out << "M";
+    mangleType(TemplateArgType, SourceRange(), QMM_Drop);
+  }
+
+  Out << Code;
 
   mangleNumber(FieldOffset);
 
@@ -728,7 +748,7 @@ void MicrosoftCXXNameMangler::mangleMemberDataPointerInClassNTTP(
   //                                  ::= 8 <postfix> @ <unqualified-name> @
 
   if (IM != MSInheritanceModel::Single && IM != MSInheritanceModel::Multiple)
-    return mangleMemberDataPointer(RD, VD, "");
+    return mangleMemberDataPointer(RD, VD, nullptr, QualType(), "");
 
   if (!VD) {
     Out << 'N';
@@ -742,14 +762,19 @@ void MicrosoftCXXNameMangler::mangleMemberDataPointerInClassNTTP(
   Out << '@';
 }
 
-void
-MicrosoftCXXNameMangler::mangleMemberFunctionPointer(const CXXRecordDecl *RD,
-                                                     const CXXMethodDecl *MD,
-                                                     StringRef Prefix) {
+void MicrosoftCXXNameMangler::mangleMemberFunctionPointer(
+    const CXXRecordDecl *RD, const CXXMethodDecl *MD,
+    const NonTypeTemplateParmDecl *PD, QualType TemplateArgType,
+    StringRef Prefix) {
   // <member-function-pointer> ::= $1? <name>
   //                           ::= $H? <name> <number>
   //                           ::= $I? <name> <number> <number>
   //                           ::= $J? <name> <number> <number> <number>
+  //
+  // <auto-nttp> ::= $ M <type> 1? <name>
+  // <auto-nttp> ::= $ M <type> H? <name> <number>
+  // <auto-nttp> ::= $ M <type> I? <name> <number> <number>
+  // <auto-nttp> ::= $ M <type> J? <name> <number> <number> <number>
 
   MSInheritanceModel IM = RD->getMSInheritanceModel();
 
@@ -767,7 +792,17 @@ MicrosoftCXXNameMangler::mangleMemberFunctionPointer(const CXXRecordDecl *RD,
   uint64_t VBTableOffset = 0;
   uint64_t VBPtrOffset = 0;
   if (MD) {
-    Out << Prefix << Code << '?';
+    Out << Prefix;
+
+    if (getASTContext().getLangOpts().isCompatibleWithMSVC(
+            LangOptions::MSVC2019) &&
+        PD && PD->getType()->getTypeClass() == Type::Auto &&
+        !TemplateArgType.isNull()) {
+      Out << "M";
+      mangleType(TemplateArgType, SourceRange(), QMM_Drop);
+    }
+
+    Out << Code << '?';
     if (MD->isVirtual()) {
       MicrosoftVTableContext *VTContext =
           cast<MicrosoftVTableContext>(getASTContext().getVTableContext());
@@ -859,7 +894,7 @@ void MicrosoftCXXNameMangler::mangleMemberFunctionPointerInClassNTTP(
 
   if (!MD) {
     if (RD->getMSInheritanceModel() != MSInheritanceModel::Single)
-      return mangleMemberFunctionPointer(RD, MD, "");
+      return mangleMemberFunctionPointer(RD, MD, nullptr, QualType(), "");
 
     Out << 'N';
     return;
@@ -1732,12 +1767,15 @@ void MicrosoftCXXNameMangler::mangleTemplateArg(const TemplateDecl *TD,
     if (isa<FieldDecl>(ND) || isa<IndirectFieldDecl>(ND)) {
       mangleMemberDataPointer(cast<CXXRecordDecl>(ND->getDeclContext())
                                   ->getMostRecentNonInjectedDecl(),
-                              cast<ValueDecl>(ND));
+                              cast<ValueDecl>(ND),
+                              cast<NonTypeTemplateParmDecl>(Parm),
+                              TA.getParamTypeForDecl());
     } else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(ND)) {
       const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD);
       if (MD && MD->isInstance()) {
         mangleMemberFunctionPointer(
-            MD->getParent()->getMostRecentNonInjectedDecl(), MD);
+            MD->getParent()->getMostRecentNonInjectedDecl(), MD,
+            cast<NonTypeTemplateParmDecl>(Parm), TA.getParamTypeForDecl());
       } else {
         mangleFunctionPointer(FD, cast<NonTypeTemplateParmDecl>(Parm),
                               TA.getParamTypeForDecl());
@@ -1767,12 +1805,12 @@ void MicrosoftCXXNameMangler::mangleTemplateArg(const TemplateDecl *TD,
       const CXXRecordDecl *RD = MPT->getMostRecentCXXRecordDecl();
       if (MPT->isMemberFunctionPointerType() &&
           !isa<FunctionTemplateDecl>(TD)) {
-        mangleMemberFunctionPointer(RD, nullptr);
+        mangleMemberFunctionPointer(RD, nullptr, nullptr, QualType());
         return;
       }
       if (MPT->isMemberDataPointer()) {
         if (!isa<FunctionTemplateDecl>(TD)) {
-          mangleMemberDataPointer(RD, nullptr);
+          mangleMemberDataPointer(RD, nullptr, nullptr, QualType());
           return;
         }
         // nullptr data pointers are always represented with a single field
@@ -1979,9 +2017,10 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
                                                cast_or_null<CXXMethodDecl>(D));
     } else {
       if (T->isMemberDataPointerType())
-        mangleMemberDataPointer(RD, D, "");
+        mangleMemberDataPointer(RD, D, nullptr, QualType(), "");
       else
-        mangleMemberFunctionPointer(RD, cast_or_null<CXXMethodDecl>(D), "");
+        mangleMemberFunctionPointer(RD, cast_or_null<CXXMethodDecl>(D), nullptr,
+                                    QualType(), "");
     }
     return;
   }

@@ -123,6 +123,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
@@ -1825,14 +1826,6 @@ struct Attributor {
       identifyDefaultAbstractAttributes(const_cast<Function &>(F));
     if (Configuration.InitializationCallback)
       Configuration.InitializationCallback(*this, F);
-  }
-
-  /// Helper function to remove callsite.
-  void removeCallSite(CallInst *CI) {
-    if (!CI)
-      return;
-
-    Configuration.CGUpdater.removeCallSite(*CI);
   }
 
   /// Record that \p U is to be replaces with \p NV after information was

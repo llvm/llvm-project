@@ -182,13 +182,16 @@ void ThreadPlanPython::GetDescription(Stream *s, lldb::DescriptionLevel level) {
   if (m_implementation_sp) {
     ScriptInterpreter *script_interp = GetScriptInterpreter();
     if (script_interp) {
-      auto desc_or_err = m_interface->GetStopDescription(s);
-      if (!desc_or_err || !*desc_or_err) {
-        LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), desc_or_err.takeError(),
+      lldb::StreamSP stream = std::make_shared<lldb_private::StreamString>();
+      llvm::Error err = m_interface->GetStopDescription(stream);
+      if (err) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), std::move(err),
                        "Can't call ScriptedThreadPlan::GetStopDescription.");
         s->Printf("Python thread plan implemented by class %s.",
             m_class_name.c_str());
-      }
+      } else
+        s->PutCString(
+            reinterpret_cast<StreamString *>(stream.get())->GetData());
     }
     return;
   }

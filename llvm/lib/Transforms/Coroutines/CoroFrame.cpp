@@ -1153,7 +1153,7 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
       llvm::DINodeArray());
   StructType *FrameTy = Shape.FrameTy;
   SmallVector<Metadata *, 16> Elements;
-  DataLayout Layout = F.getParent()->getDataLayout();
+  DataLayout Layout = F.getDataLayout();
 
   DenseMap<Value *, DILocalVariable *> DIVarCache;
   cacheDIVar(FrameData, DIVarCache);
@@ -1300,7 +1300,7 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
 static StructType *buildFrameType(Function &F, coro::Shape &Shape,
                                   FrameDataInfo &FrameData) {
   LLVMContext &C = F.getContext();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   StructType *FrameTy = [&] {
     SmallString<32> Name(F.getName());
     Name.append(".Frame");

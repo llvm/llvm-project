@@ -8,8 +8,8 @@
 define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align4(i32 %n) {
 ; GFX9-LABEL: kernel_dynamic_stackalloc_sgpr_align4:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s4, s[4:5], 0x0
-; GFX9-NEXT:    s_add_u32 s0, s0, s9
+; GFX9-NEXT:    s_load_dword s4, s[6:7], 0x0
+; GFX9-NEXT:    s_add_u32 s0, s0, s15
 ; GFX9-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX9-NEXT:    s_movk_i32 s32, 0x400
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
@@ -25,8 +25,8 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align4(i32 %n) {
 ;
 ; GFX10-LABEL: kernel_dynamic_stackalloc_sgpr_align4:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s4, s[4:5], 0x0
-; GFX10-NEXT:    s_add_u32 s0, s0, s9
+; GFX10-NEXT:    s_load_dword s4, s[6:7], 0x0
+; GFX10-NEXT:    s_add_u32 s0, s0, s15
 ; GFX10-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-NEXT:    s_movk_i32 s32, 0x200
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
@@ -42,7 +42,7 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align4(i32 %n) {
 ;
 ; GFX11-LABEL: kernel_dynamic_stackalloc_sgpr_align4:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_mov_b32 s32, 16
 ; GFX11-NEXT:    s_mov_b32 s33, 0
@@ -143,8 +143,8 @@ define void @func_dynamic_stackalloc_sgpr_align4() {
 define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align16(i32 %n) {
 ; GFX9-LABEL: kernel_dynamic_stackalloc_sgpr_align16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s4, s[4:5], 0x0
-; GFX9-NEXT:    s_add_u32 s0, s0, s9
+; GFX9-NEXT:    s_load_dword s4, s[6:7], 0x0
+; GFX9-NEXT:    s_add_u32 s0, s0, s15
 ; GFX9-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX9-NEXT:    s_movk_i32 s32, 0x400
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
@@ -160,8 +160,8 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align16(i32 %n) {
 ;
 ; GFX10-LABEL: kernel_dynamic_stackalloc_sgpr_align16:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s4, s[4:5], 0x0
-; GFX10-NEXT:    s_add_u32 s0, s0, s9
+; GFX10-NEXT:    s_load_dword s4, s[6:7], 0x0
+; GFX10-NEXT:    s_add_u32 s0, s0, s15
 ; GFX10-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-NEXT:    s_movk_i32 s32, 0x200
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
@@ -177,7 +177,7 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align16(i32 %n) {
 ;
 ; GFX11-LABEL: kernel_dynamic_stackalloc_sgpr_align16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_mov_b32 s32, 16
 ; GFX11-NEXT:    s_mov_b32 s33, 0
@@ -278,8 +278,8 @@ define void @func_dynamic_stackalloc_sgpr_align16() {
 define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align32(i32 %n) {
 ; GFX9-LABEL: kernel_dynamic_stackalloc_sgpr_align32:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s4, s[4:5], 0x0
-; GFX9-NEXT:    s_add_u32 s0, s0, s9
+; GFX9-NEXT:    s_load_dword s4, s[6:7], 0x0
+; GFX9-NEXT:    s_add_u32 s0, s0, s15
 ; GFX9-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX9-NEXT:    s_movk_i32 s32, 0x800
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
@@ -296,8 +296,8 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align32(i32 %n) {
 ;
 ; GFX10-LABEL: kernel_dynamic_stackalloc_sgpr_align32:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dword s4, s[4:5], 0x0
-; GFX10-NEXT:    s_add_u32 s0, s0, s9
+; GFX10-NEXT:    s_load_dword s4, s[6:7], 0x0
+; GFX10-NEXT:    s_add_u32 s0, s0, s15
 ; GFX10-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX10-NEXT:    s_movk_i32 s32, 0x400
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
@@ -314,7 +314,7 @@ define amdgpu_kernel void @kernel_dynamic_stackalloc_sgpr_align32(i32 %n) {
 ;
 ; GFX11-LABEL: kernel_dynamic_stackalloc_sgpr_align32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0
+; GFX11-NEXT:    s_load_b32 s0, s[2:3], 0x0
 ; GFX11-NEXT:    s_mov_b32 s32, 32
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_mov_b32 s33, 0

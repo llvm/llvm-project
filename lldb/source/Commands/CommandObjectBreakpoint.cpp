@@ -308,9 +308,6 @@ public:
         case eLanguageTypeC_plus_plus_14:
           m_exception_language = eLanguageTypeC_plus_plus;
           break;
-        case eLanguageTypeObjC:
-          m_exception_language = eLanguageTypeObjC;
-          break;
         case eLanguageTypeObjC_plus_plus:
           error_context =
               "Set exception breakpoints separately for c++ and objective-c";
@@ -319,6 +316,13 @@ public:
           error_context = "Unknown language type for exception breakpoint";
           break;
         default:
+          if (Language *languagePlugin = Language::FindPlugin(language)) {
+            if (languagePlugin->SupportsExceptionBreakpointsOnThrow() ||
+                languagePlugin->SupportsExceptionBreakpointsOnCatch()) {
+              m_exception_language = language;
+              break;
+            }
+          }
           error_context = "Unsupported language type for exception breakpoint";
         }
         if (!error_context.empty())

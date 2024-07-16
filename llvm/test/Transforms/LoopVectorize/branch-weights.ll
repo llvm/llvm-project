@@ -33,7 +33,7 @@
 ; CHECK:   br i1 %12, label %vec.epilog.middle.block, label %vec.epilog.vector.body, !prof [[PROF_F0_VEC_EPILOG_VECTOR_BODY:![0-9]+]]
 ;
 ; CHECK: vec.epilog.middle.block:
-; CHECK:   br i1 %cmp.n7, label %exit.loopexit, label %vec.epilog.scalar.ph, !prof [[PROF_F0_MIDDLE_BLOCKS:![0-9]+]]
+; CHECK:   br i1 %cmp.n12, label %exit.loopexit, label %vec.epilog.scalar.ph, !prof [[PROF_F0_MIDDLE_BLOCKS:![0-9]+]]
 ;
 ; CHECK: vec.epilog.scalar.ph:
 ; CHECK:   br label %loop

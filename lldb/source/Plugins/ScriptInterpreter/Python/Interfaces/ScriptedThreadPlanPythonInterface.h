@@ -40,7 +40,7 @@ public:
 
   lldb::StateType GetRunState() override;
 
-  llvm::Expected<bool> GetStopDescription(lldb_private::Stream *s) override;
+  llvm::Error GetStopDescription(lldb::StreamSP &stream) override;
 };
 } // namespace lldb_private
 

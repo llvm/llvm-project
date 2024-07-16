@@ -19,7 +19,7 @@
 using namespace llvm;
 
 bool MCAsmInfoDarwin::isSectionAtomizableBySymbols(
-    const MCSection &Section) const {
+    const MCSection &Section) {
   const MCSectionMachO &SMO = static_cast<const MCSectionMachO &>(Section);
 
   // Sections holding 1 byte strings are atomized based on the data they

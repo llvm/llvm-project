@@ -588,11 +588,9 @@ define i32 @n4(i32 %arg) {
 
 define i32 @n5(i32 %arg) {
 ; CHECK-LABEL: @n5(
-; CHECK-NEXT:    [[T:%.*]] = and i32 [[ARG:%.*]], 2
-; CHECK-NEXT:    [[T1:%.*]] = icmp eq i32 [[T]], 0
-; CHECK-NEXT:    [[T2:%.*]] = and i32 [[ARG]], 2
-; CHECK-NEXT:    [[T3:%.*]] = select i1 [[T1]], i32 [[T2]], i32 1
-; CHECK-NEXT:    ret i32 [[T3]]
+; CHECK-NEXT:    [[T:%.*]] = lshr i32 [[ARG:%.*]], 1
+; CHECK-NEXT:    [[T_LOBIT:%.*]] = and i32 [[T]], 1
+; CHECK-NEXT:    ret i32 [[T_LOBIT]]
 ;
   %t = and i32 %arg, 2
   %t1 = icmp eq i32 %t, 0

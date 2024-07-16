@@ -142,11 +142,6 @@ void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
     MCDwarfFrameEmitter::Emit(*this, MAB, false);
 }
 
-MCFragment *MCObjectStreamer::getCurrentFragment() const {
-  assert(CurFrag->getParent() == getCurrentSection().first);
-  return CurFrag;
-}
-
 static bool canReuseDataFragment(const MCDataFragment &F,
                                  const MCAssembler &Assembler,
                                  const MCSubtargetInfo *STI) {
@@ -313,6 +308,11 @@ bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
   return getAssembler().registerSection(*Section);
 }
 
+void MCObjectStreamer::switchSectionNoPrint(MCSection *Section) {
+  MCStreamer::switchSectionNoPrint(Section);
+  changeSection(Section, 0);
+}
+
 void MCObjectStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
   getAssembler().registerSymbol(*Symbol);
   MCStreamer::emitAssignment(Symbol, Value);
@@ -393,10 +393,8 @@ void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
       getContext().allocFragment<MCRelaxableFragment>(Inst, STI);
   insert(IF);
 
-  SmallString<128> Code;
-  getAssembler().getEmitter().encodeInstruction(Inst, Code, IF->getFixups(),
-                                                STI);
-  IF->getContents().append(Code.begin(), Code.end());
+  getAssembler().getEmitter().encodeInstruction(Inst, IF->getContents(),
+                                                IF->getFixups(), STI);
 }
 
 #ifndef NDEBUG

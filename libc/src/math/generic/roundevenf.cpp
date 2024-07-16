@@ -9,11 +9,16 @@
 #include "src/math/roundevenf.h"
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, roundevenf, (float x)) {
+#ifdef __LIBC_USE_BUILTIN_ROUNDEVEN
+  return __builtin_roundevenf(x);
+#else
   return fputil::round_using_specific_rounding_mode(x, FP_INT_TONEAREST);
+#endif
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

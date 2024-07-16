@@ -23,8 +23,8 @@ void test() {
   vector<float,2> f2 = f3; // #f2
 
   // CHECK: VarDecl {{.*}} f2_2 'vector<float, 2>' cinit
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<float, 2>' <FloatingCast>
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<double, 2>' <HLSLVectorTruncation>
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<float, 2>' <HLSLVectorTruncation>
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<float, 4>' <FloatingCast>
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<double, 4>' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<double, 4>' lvalue Var {{.*}} 'd4' 'vector<double, 4>'
   // expected-warning@#f2_2{{implicit conversion truncates vector: 'vector<double, 4>' (vector of 4 'double' values) to 'vector<float, 2>' (vector of 2 'float' values)}}
@@ -39,8 +39,8 @@ void test() {
   vector<int,2> i2 = f2; // #i2
 
   // CHECK: VarDecl {{.*}} i2_2 'vector<int, 2>' cinit
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<int, 2>' <FloatingToIntegral>
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<double, 2>' <HLSLVectorTruncation>
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<int, 2>' <HLSLVectorTruncation>
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<int, 4>' <FloatingToIntegral>
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<double, 4>' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<double, 4>' lvalue Var {{.*}} 'd4' 'vector<double, 4>'
   // expected-warning@#i2_2{{implicit conversion truncates vector: 'vector<double, 4>' (vector of 4 'double' values) to 'vector<int, 2>' (vector of 2 'int' values)}}
@@ -56,8 +56,8 @@ void test() {
   vector<long,4> i64_4 = d4; // #i64_4
 
   // CHECK: VarDecl {{.*}} used i2_3 'vector<int, 2>' cinit
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<int, 2>' <IntegralCast>
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<long, 2>' <HLSLVectorTruncation>
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<int, 2>' <HLSLVectorTruncation>
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<int, 4>' <IntegralCast>
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<long, 4>' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<long, 4>' lvalue Var {{.*}} 'i64_4' 'vector<long, 4>'
   // expected-warning@#i2_3{{implicit conversion loses integer precision: 'vector<long, 4>' (vector of 4 'long' values) to 'vector<int, 2>' (vector of 2 'int' values)}}
@@ -71,8 +71,8 @@ void test() {
   vector<bool, 2> b2 = i2_3; // No warning for integer to bool conversion.
 
   // CHECK: VarDecl {{.*}} b2_2 'vector<bool, 2>' cinit
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<bool, 2>' <FloatingToBoolean>
-  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<double, 2>' <HLSLVectorTruncation>
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<bool, 2>' <HLSLVectorTruncation>
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<bool, 4>' <FloatingToBoolean>
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<double, 4>' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'vector<double, 4>' lvalue Var {{.*}} 'd4' 'vector<double, 4>'
   // expected-warning@#b2_2{{implicit conversion truncates vector: 'vector<double, 4>' (vector of 4 'double' values) to 'vector<bool, 2>' (vector of 2 'bool' values)}}

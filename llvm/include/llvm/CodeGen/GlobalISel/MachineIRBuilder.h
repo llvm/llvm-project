@@ -284,7 +284,7 @@ public:
   }
 
   const DataLayout &getDataLayout() const {
-    return getMF().getFunction().getParent()->getDataLayout();
+    return getMF().getFunction().getDataLayout();
   }
 
   LLVMContext &getContext() const {

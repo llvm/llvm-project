@@ -108,21 +108,6 @@ public:
   static ArchSpec GetAugmentedArchSpec(Platform *platform,
                                        llvm::StringRef triple);
 
-  /// Find a platform plugin for a given process.
-  ///
-  /// Scans the installed Platform plug-ins and tries to find an instance that
-  /// can be used for \a process
-  ///
-  /// \param[in] process
-  ///     The process for which to try and locate a platform
-  ///     plug-in instance.
-  ///
-  /// \param[in] plugin_name
-  ///     An optional name of a specific platform plug-in that
-  ///     should be used. If nullptr, pick the best plug-in.
-  //        static lldb::PlatformSP
-  //        FindPlugin (Process *process, ConstString plugin_name);
-
   /// Set the target's executable based off of the existing architecture
   /// information in \a target given a path to an executable \a exe_file.
   ///

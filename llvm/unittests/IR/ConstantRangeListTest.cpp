@@ -101,6 +101,58 @@ ConstantRangeList GetCRL(ArrayRef<std::pair<APInt, APInt>> Pairs) {
   return ConstantRangeList(Ranges);
 }
 
+TEST_F(ConstantRangeListTest, Subtract) {
+  APInt AP0 = APInt(64, 0, /*isSigned=*/true);
+  APInt AP2 = APInt(64, 2, /*isSigned=*/true);
+  APInt AP3 = APInt(64, 3, /*isSigned=*/true);
+  APInt AP4 = APInt(64, 4, /*isSigned=*/true);
+  APInt AP8 = APInt(64, 8, /*isSigned=*/true);
+  APInt AP10 = APInt(64, 10, /*isSigned=*/true);
+  APInt AP11 = APInt(64, 11, /*isSigned=*/true);
+  APInt AP12 = APInt(64, 12, /*isSigned=*/true);
+  ConstantRangeList CRL = GetCRL({{AP0, AP4}, {AP8, AP12}});
+
+  // Execute ConstantRangeList::subtract(ConstantRange) and check the result
+  // is expected. Pass "CRL" by value so that subtract() does not affect the
+  // argument in caller.
+  auto SubtractAndCheck = [](ConstantRangeList CRL,
+                             const std::pair<int64_t, int64_t> &Range,
+                             const ConstantRangeList &ExpectedCRL) {
+    CRL.subtract(ConstantRange(APInt(64, Range.first, /*isSigned=*/true),
+                               APInt(64, Range.second, /*isSigned=*/true)));
+    EXPECT_EQ(CRL, ExpectedCRL);
+  };
+
+  // No overlap
+  SubtractAndCheck(CRL, {-4, 0}, CRL);
+  SubtractAndCheck(CRL, {4, 8}, CRL);
+  SubtractAndCheck(CRL, {12, 16}, CRL);
+
+  // Overlap (left, right, or both)
+  SubtractAndCheck(CRL, {-4, 2}, GetCRL({{AP2, AP4}, {AP8, AP12}}));
+  SubtractAndCheck(CRL, {-4, 4}, GetCRL({{AP8, AP12}}));
+  SubtractAndCheck(CRL, {-4, 8}, GetCRL({{AP8, AP12}}));
+  SubtractAndCheck(CRL, {0, 2}, GetCRL({{AP2, AP4}, {AP8, AP12}}));
+  SubtractAndCheck(CRL, {0, 4}, GetCRL({{AP8, AP12}}));
+  SubtractAndCheck(CRL, {0, 8}, GetCRL({{AP8, AP12}}));
+  SubtractAndCheck(CRL, {10, 12}, GetCRL({{AP0, AP4}, {AP8, AP10}}));
+  SubtractAndCheck(CRL, {8, 12}, GetCRL({{AP0, AP4}}));
+  SubtractAndCheck(CRL, {6, 12}, GetCRL({{AP0, AP4}}));
+  SubtractAndCheck(CRL, {10, 16}, GetCRL({{AP0, AP4}, {AP8, AP10}}));
+  SubtractAndCheck(CRL, {8, 16}, GetCRL({{AP0, AP4}}));
+  SubtractAndCheck(CRL, {6, 16}, GetCRL({{AP0, AP4}}));
+  SubtractAndCheck(CRL, {2, 10}, GetCRL({{AP0, AP2}, {AP10, AP12}}));
+
+  // Subset
+  SubtractAndCheck(CRL, {2, 3}, GetCRL({{AP0, AP2}, {AP3, AP4}, {AP8, AP12}}));
+  SubtractAndCheck(CRL, {10, 11},
+                   GetCRL({{AP0, AP4}, {AP8, AP10}, {AP11, AP12}}));
+
+  // Superset
+  SubtractAndCheck(CRL, {0, 12}, GetCRL({}));
+  SubtractAndCheck(CRL, {-4, 16}, GetCRL({}));
+}
+
 TEST_F(ConstantRangeListTest, Union) {
   APInt APN4 = APInt(64, -4, /*isSigned=*/true);
   APInt APN2 = APInt(64, -2, /*isSigned=*/true);

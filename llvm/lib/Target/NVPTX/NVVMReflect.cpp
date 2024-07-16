@@ -192,7 +192,7 @@ static bool runNVVMReflect(Function &F, unsigned SmVersion) {
   while (!ToSimplify.empty()) {
     Instruction *I = ToSimplify.pop_back_val();
     if (Constant *C =
-            ConstantFoldInstruction(I, F.getParent()->getDataLayout())) {
+            ConstantFoldInstruction(I, F.getDataLayout())) {
       for (User *U : I->users())
         if (Instruction *I = dyn_cast<Instruction>(U))
           ToSimplify.push_back(I);

@@ -39,6 +39,7 @@ static_library("Sema") {
   ]
   sources = [
     "AnalysisBasedWarnings.cpp",
+    "CheckExprLifetime.cpp",
     "CodeCompleteConsumer.cpp",
     "DeclSpec.cpp",
     "DelayedDiagnostic.cpp",
@@ -105,6 +106,7 @@ static_library("Sema") {
     "SemaSystemZ.cpp",
     "SemaTemplate.cpp",
     "SemaTemplateDeduction.cpp",
+    "SemaTemplateDeductionGuide.cpp",
     "SemaTemplateInstantiate.cpp",
     "SemaTemplateInstantiateDecl.cpp",
     "SemaTemplateVariadic.cpp",

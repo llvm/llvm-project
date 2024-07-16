@@ -1,6 +1,7 @@
 // RUN: %libomptarget-compile-generic -O1 && %libomptarget-run-generic
 // -O1 to run openmp-opt
 // RUN: %libomptarget-compileopt-generic -O1 && %libomptarget-run-generic
+// XFAIL: amdgcn-amd-amdhsa
 
 int main(void) {
   long int aa = 0;

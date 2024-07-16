@@ -96,7 +96,7 @@ public:
 
     // Special case: bail out if BB is unreachable.
     if (BlockList.size() == 0) {
-      ValT V = Traits::GetUndefVal(BB, Updater);
+      ValT V = Traits::GetPoisonVal(BB, Updater);
       (*AvailableVals)[BB] = V;
       return V;
     }
@@ -251,9 +251,9 @@ public:
         for (unsigned p = 0; p != Info->NumPreds; ++p) {
           BBInfo *Pred = Info->Preds[p];
 
-          // Treat an unreachable predecessor as a definition with 'undef'.
+          // Treat an unreachable predecessor as a definition with 'poison'.
           if (Pred->BlkNum == 0) {
-            Pred->AvailableVal = Traits::GetUndefVal(Pred->BB, Updater);
+            Pred->AvailableVal = Traits::GetPoisonVal(Pred->BB, Updater);
             (*AvailableVals)[Pred->BB] = Pred->AvailableVal;
             Pred->DefBB = Pred;
             Pred->BlkNum = PseudoEntry->BlkNum;

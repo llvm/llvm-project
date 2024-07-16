@@ -23,7 +23,9 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
@@ -63,8 +65,7 @@ PPCSubtarget::PPCSubtarget(const Triple &TT, const std::string &CPU,
   auto *RBI = new PPCRegisterBankInfo(*getRegisterInfo());
   RegBankInfo.reset(RBI);
 
-  InstSelector.reset(createPPCInstructionSelector(
-      *static_cast<const PPCTargetMachine *>(&TM), *this, *RBI));
+  InstSelector.reset(createPPCInstructionSelector(TM, *this, *RBI));
 }
 
 void PPCSubtarget::initializeEnvironment() {

@@ -372,7 +372,7 @@ lldb::ThreadSP OperatingSystemPython::CreateThread(lldb::tid_t tid,
 
     std::vector<bool> core_used_map;
     if (thread_info_dict) {
-      ThreadList core_threads(m_process);
+      ThreadList core_threads(*m_process);
       ThreadList &thread_list = m_process->GetThreadList();
       bool did_create = false;
       ThreadSP thread_sp(

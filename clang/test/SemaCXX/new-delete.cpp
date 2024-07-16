@@ -1,8 +1,10 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++98
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++11
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++14
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx17,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++17
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++20
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++98
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++11
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++14
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,cxx17,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++17
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++20
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++23
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,since-cxx26,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++2c
 
 // FIXME Location is (frontend)
 // cxx17-note@*:* {{candidate function not viable: requires 2 arguments, but 3 were provided}}
@@ -172,8 +174,12 @@ void bad_deletes()
 {
   delete 0; // expected-error {{cannot delete expression of type 'int'}}
   delete [0] (int*)0; // expected-error {{expected variable name or 'this' in lambda capture list}}
-  delete (void*)0; // expected-warning {{cannot delete expression with pointer-to-'void' type 'void *'}}
-  delete (T*)0; // expected-warning {{deleting pointer to incomplete type}}
+  delete (void*)0;
+  // cxx98-23-warning@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
+  // since-cxx26-error@-2 {{cannot delete pointer to incomplete type 'void'}}
+  delete (T*)0;
+  // cxx98-23-warning@-1 {{deleting pointer to incomplete type}}
+  // since-cxx26-error@-2 {{cannot delete pointer to incomplete type 'T'}}
   ::S::delete (int*)0; // expected-error {{expected unqualified-id}}
 }
 
@@ -513,8 +519,10 @@ namespace DeleteIncompleteClass {
 
 namespace DeleteIncompleteClassPointerError {
   struct A; // expected-note {{forward declaration}}
-  void f(A *x) { 1+delete x; } // expected-warning {{deleting pointer to incomplete type}} \
-                               // expected-error {{invalid operands to binary expression}}
+  void f(A *x) { 1+delete x; }
+  // expected-error@-1 {{invalid operands to binary expression}}
+  // cxx98-23-warning@-2 {{deleting pointer to incomplete type}}
+  // since-cxx26-error@-3 {{cannot delete pointer to incomplete type 'A'}}
 }
 
 namespace PR10504 {

@@ -733,7 +733,7 @@ bool LoopConstrainer::run() {
   bool Increasing = MainLoopStructure.IndVarIncreasing;
   IntegerType *IVTy = cast<IntegerType>(RangeTy);
 
-  SCEVExpander Expander(SE, F.getParent()->getDataLayout(), "loop-constrainer");
+  SCEVExpander Expander(SE, F.getDataLayout(), "loop-constrainer");
   Instruction *InsertPt = OriginalPreheader->getTerminator();
 
   // It would have been better to make `PreLoop' and `PostLoop'

@@ -13,6 +13,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
@@ -104,15 +105,14 @@ static MCSymbol *getAuthPtrSlotSymbolHelper(
       Twine("$auth_ptr$") + AArch64PACKeyIDToString(Key) + Twine('$') +
       Twine(Discriminator));
 
-  typename MachineModuleInfoTarget::AuthStubInfo &StubInfo =
-      TargetMMI.getAuthPtrStubEntry(StubSym);
+  const MCExpr *&StubAuthPtrRef = TargetMMI.getAuthPtrStubEntry(StubSym);
 
-  if (StubInfo.AuthPtrRef)
+  if (StubAuthPtrRef)
     return StubSym;
 
   const MCExpr *Sym = MCSymbolRefExpr::create(RawSym, Ctx);
 
-  StubInfo.AuthPtrRef =
+  StubAuthPtrRef =
       AArch64AuthMCExpr::create(Sym, Discriminator, Key,
                                 /*HasAddressDiversity=*/false, Ctx);
   return StubSym;
@@ -124,4 +124,12 @@ MCSymbol *AArch64_ELFTargetObjectFile::getAuthPtrSlotSymbol(
   auto &ELFMMI = MMI->getObjFileInfo<MachineModuleInfoELF>();
   return getAuthPtrSlotSymbolHelper(getContext(), TM, MMI, ELFMMI, RawSym, Key,
                                     Discriminator);
+}
+
+MCSymbol *AArch64_MachoTargetObjectFile::getAuthPtrSlotSymbol(
+    const TargetMachine &TM, MachineModuleInfo *MMI, const MCSymbol *RawSym,
+    AArch64PACKey::ID Key, uint16_t Discriminator) const {
+  auto &MachOMMI = MMI->getObjFileInfo<MachineModuleInfoMachO>();
+  return getAuthPtrSlotSymbolHelper(getContext(), TM, MMI, MachOMMI, RawSym,
+                                    Key, Discriminator);
 }

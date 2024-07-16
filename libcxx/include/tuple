@@ -132,7 +132,12 @@ tuple(allocator_arg_t, Alloc, pair<T1, T2>) -> tuple<T1, T2>;       // since C++
 template <class Alloc, class ...T>
 tuple(allocator_arg_t, Alloc, tuple<T...>) -> tuple<T...>;          // since C++17
 
-inline constexpr unspecified ignore;
+struct ignore-type { // exposition only                             // Since C++26
+  constexpr const ignore-type&
+    operator=(const auto &) const noexcept
+      { return *this; }
+};
+inline constexpr ignore-type ignore;
 
 template <class... T> tuple<V...>  make_tuple(T&&...); // constexpr in C++14
 template <class... T> tuple<ATypes...> forward_as_tuple(T&&...) noexcept; // constexpr in C++14
@@ -215,6 +220,7 @@ template <class... Types>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/uses_allocator.h>
 #include <__tuple/find_index.h>
+#include <__tuple/ignore.h>
 #include <__tuple/make_tuple_types.h>
 #include <__tuple/sfinae_helpers.h>
 #include <__tuple/tuple_element.h>
@@ -1111,22 +1117,6 @@ template <class... _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 tuple<_Tp&...> tie(_Tp&... __t) _NOEXCEPT {
   return tuple<_Tp&...>(__t...);
 }
-
-template <class _Up>
-struct __ignore_t {
-  template <class _Tp>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const __ignore_t& operator=(_Tp&&) const {
-    return *this;
-  }
-};
-
-#  if _LIBCPP_STD_VER >= 17
-inline constexpr __ignore_t<unsigned char> ignore = __ignore_t<unsigned char>();
-#  else
-namespace {
-constexpr __ignore_t<unsigned char> ignore = __ignore_t<unsigned char>();
-} // namespace
-#  endif
 
 template <class... _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 tuple<typename __unwrap_ref_decay<_Tp>::type...>

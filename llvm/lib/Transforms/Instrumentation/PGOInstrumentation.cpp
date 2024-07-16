@@ -320,6 +320,8 @@ static cl::opt<unsigned> PGOFunctionCriticalEdgeThreshold(
     cl::desc("Do not instrument functions with the number of critical edges "
              " greater than this threshold."));
 
+extern cl::opt<unsigned> MaxNumVTableAnnotations;
+
 namespace llvm {
 // Command line option to turn on CFG dot dump after profile annotation.
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -pgo-view-counts
@@ -332,6 +334,7 @@ extern cl::opt<std::string> ViewBlockFreqFuncName;
 // Command line option to enable vtable value profiling. Defined in
 // ProfileData/InstrProf.cpp: -enable-vtable-value-profiling=
 extern cl::opt<bool> EnableVTableValueProfiling;
+extern cl::opt<bool> EnableVTableProfileUse;
 extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
 } // namespace llvm
 
@@ -1728,6 +1731,14 @@ void SelectInstVisitor::visitSelectInst(SelectInst &SI) {
   llvm_unreachable("Unknown visiting mode");
 }
 
+static uint32_t getMaxNumAnnotations(InstrProfValueKind ValueProfKind) {
+  if (ValueProfKind == IPVK_MemOPSize)
+    return MaxNumMemOPAnnotations;
+  if (ValueProfKind == llvm::IPVK_VTableTarget)
+    return MaxNumVTableAnnotations;
+  return MaxNumAnnotations;
+}
+
 // Traverse all valuesites and annotate the instructions for all value kind.
 void PGOUseFunc::annotateValueSites() {
   if (isValueProfilingDisabled())
@@ -1762,10 +1773,10 @@ void PGOUseFunc::annotateValueSites(uint32_t Kind) {
     LLVM_DEBUG(dbgs() << "Read one value site profile (kind = " << Kind
                       << "): Index = " << ValueSiteIndex << " out of "
                       << NumValueSites << "\n");
-    annotateValueSite(*M, *I.AnnotatedInst, ProfileRecord,
-                      static_cast<InstrProfValueKind>(Kind), ValueSiteIndex,
-                      Kind == IPVK_MemOPSize ? MaxNumMemOPAnnotations
-                                             : MaxNumAnnotations);
+    annotateValueSite(
+        *M, *I.AnnotatedInst, ProfileRecord,
+        static_cast<InstrProfValueKind>(Kind), ValueSiteIndex,
+        getMaxNumAnnotations(static_cast<InstrProfValueKind>(Kind)));
     ValueSiteIndex++;
   }
 }
@@ -2054,6 +2065,16 @@ static bool annotateAllFunctions(
     return false;
   }
 
+  if (EnableVTableProfileUse) {
+    for (GlobalVariable &G : M.globals()) {
+      if (!G.hasName() || !G.hasMetadata(LLVMContext::MD_type))
+        continue;
+
+      // Create the PGOFuncName meta data.
+      createPGONameMetadata(G, getPGOName(G, false /* InLTO*/));
+    }
+  }
+
   // Add the profile summary (read from the header of the indexed summary) here
   // so that we can use it below when reading counters (which checks if the
   // function should be marked with a cold or inlinehint attribute).
@@ -2229,7 +2250,6 @@ PreservedAnalyses PGOInstrumentationUse::run(Module &M,
   };
 
   auto *PSI = &MAM.getResult<ProfileSummaryAnalysis>(M);
-
   if (!annotateAllFunctions(M, ProfileFileName, ProfileRemappingFileName, *FS,
                             LookupTLI, LookupBPI, LookupBFI, PSI, IsCS))
     return PreservedAnalyses::all();
@@ -2244,7 +2264,7 @@ static std::string getSimpleNodeName(const BasicBlock *Node) {
   std::string SimpleNodeName;
   raw_string_ostream OS(SimpleNodeName);
   Node->printAsOperand(OS, false);
-  return OS.str();
+  return SimpleNodeName;
 }
 
 void llvm::setProfMetadata(Module *M, Instruction *TI,

@@ -84,7 +84,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
         have a single iteration. Returns "success" if the promotion was
         successful.
       }],
-      /*retTy=*/"::mlir::LogicalResult",
+      /*retTy=*/"::llvm::LogicalResult",
       /*methodName=*/"promoteIfSingleIteration",
       /*args=*/(ins "::mlir::RewriterBase &":$rewriter),
       /*methodBody=*/"",

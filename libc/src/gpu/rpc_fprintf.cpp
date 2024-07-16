@@ -12,9 +12,10 @@
 #include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/gpu/file.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 template <uint16_t opcode>
 int fprintf_impl(::FILE *__restrict file, const char *__restrict format,
@@ -29,6 +30,9 @@ int fprintf_impl(::FILE *__restrict file, const char *__restrict format,
   }
 
   port.send_n(format, format_size);
+  port.recv([&](rpc::Buffer *buffer) {
+    args_size = static_cast<size_t>(buffer->data[0]);
+  });
   port.send_n(args, args_size);
 
   uint32_t ret = 0;
@@ -50,7 +54,7 @@ int fprintf_impl(::FILE *__restrict file, const char *__restrict format,
   return ret;
 }
 
-// TODO: This is a stand-in function that uses a struct pointer and size in
+// TODO: Delete this and port OpenMP to use `printf`.
 // place of varargs. Once varargs support is added we will use that to
 // implement the real version.
 LLVM_LIBC_FUNCTION(int, rpc_fprintf,
@@ -68,4 +72,4 @@ LLVM_LIBC_FUNCTION(int, rpc_fprintf,
                                               args, size);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
