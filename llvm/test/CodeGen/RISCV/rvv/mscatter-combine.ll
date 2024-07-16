@@ -99,6 +99,8 @@ define void @strided_store_offset_start(i64 %n, ptr %p) {
   ret void
 }
 
+; TODO: We could emit vs1r instead of vse64.v if we combined the unit strided vp
+; load back to a regular load.
 define void @stride_one_store(i64 %n, ptr %p) {
 ; RV32-LABEL: stride_one_store:
 ; RV32:       # %bb.0:
