@@ -41037,7 +41037,7 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         if (LHS.getOpcode() == X86ISD::PSHUFB &&
             RHS.getOpcode() == X86ISD::PSHUFB &&
             LHS.getOperand(1) != RHS.getOperand(1) &&
-            (LHS.getOperand(1).hasOneUse() || RHS.getOperand(1).hasOneUse()) &&
+            LHS.getOperand(1).hasOneUse() && RHS.getOperand(1).hasOneUse() &&
             getTargetShuffleMask(N, /*AllowSentinelZero=*/false, Ops, Mask)) {
           assert(Ops.size() == 2 && LHS == peekThroughOneUseBitcasts(Ops[0]) &&
                  RHS == peekThroughOneUseBitcasts(Ops[1]) &&
