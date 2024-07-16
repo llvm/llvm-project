@@ -14,6 +14,11 @@
 ; RUN: llvm-objdump %t/icf-safe-bitcode.dylib -d -h --macho | FileCheck %s --check-prefixes=ICFSAFE,CHECK
 ; RUN: llvm-objdump %t/icf-all-bitcode.dylib  -d -h --macho | FileCheck %s --check-prefixes=ICFALL,CHECK
 
+;; Regression test: if we tried writing __llvm_addrsig to the output, -fixup_chains would fail with a "fixups overlap"
+;;                  error, as the relocations (which reference the address-taken functions) are all at offset 0.
+; RUN: %lld -arch arm64 -lSystem --icf=safe -fixup_chains -dylib -o %t/icf-safe-chained.dylib %t/icf-obj.o
+; RUN: llvm-objdump %t/icf-safe-chained.dylib -d -h --macho | FileCheck %s --check-prefixes=ICFSAFE,CHECK
+
 ; ICFSAFE-LABEL:  _callAllFunctions
 ; ICFSAFE:        bl _func02
 ; ICFSAFE-NEXT:   bl _func02
