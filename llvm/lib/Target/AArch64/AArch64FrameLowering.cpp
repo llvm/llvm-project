@@ -3530,8 +3530,7 @@ void AArch64FrameLowering::determineStackHazardSlot(
 
   // Stack hazards are only needed in streaming functions.
   SMEAttrs Attrs(MF.getFunction());
-  if (!StackHazardInNonStreaming &&
-      Attrs.hasNonStreamingInterfaceAndBody())
+  if (!StackHazardInNonStreaming && Attrs.hasNonStreamingInterfaceAndBody())
     return;
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -4651,9 +4650,10 @@ struct FrameObject {
   // ObjectFirst==true) should be placed first.
   bool GroupFirst = false;
 
-  // Used to distinguish between FP and GPR accesses.
-  // 1 = GPR, 2 = FPR, 8 = Hazard Object.
+  // Used to distinguish between FP and GPR accesses. The values are decided so
+  // that they sort FPR < Hazard < GPR and they can be or'd together.
   unsigned Accesses = 0;
+  enum { AccessFPR = 1, AccessHazard = 2, AccessGPR = 4 };
 };
 
 class GroupBuilder {
@@ -4691,7 +4691,7 @@ bool FrameObjectCompare(const FrameObject &A, const FrameObject &B) {
   //
   // If we want to include a stack hazard region, order FPR accesses < the
   // hazard object < GPRs accesses in order to create a separation between the
-  // two. For the Accesses field 1 = GPR, 2 = FPR, 8 = Hazard Object.
+  // two. For the Accesses field 1 = FPR, 2 = Hazard Object, 4 = GPR.
   //
   // Otherwise the "first" object goes first (closest to SP), followed by the
   // members of the "first" group.
@@ -4703,16 +4703,10 @@ bool FrameObjectCompare(const FrameObject &A, const FrameObject &B) {
   //
   // If all else equal, sort by the object index to keep the objects in the
   // original order.
-  if (A.IsValid != B.IsValid)
-    return A.IsValid;
-  if (A.Accesses == 2 && B.Accesses != 2)
-    return true;
-  if (A.Accesses == 8 && B.Accesses != 2)
-    return true;
-  return std::make_tuple(A.ObjectFirst, A.GroupFirst, A.GroupIndex,
-                         A.ObjectIndex) <
-         std::make_tuple(B.ObjectFirst, B.GroupFirst, B.GroupIndex,
-                         B.ObjectIndex);
+  return std::make_tuple(!A.IsValid, A.Accesses, A.ObjectFirst, A.GroupFirst,
+                         A.GroupIndex, A.ObjectIndex) <
+         std::make_tuple(!B.IsValid, B.Accesses, B.ObjectFirst, B.GroupFirst,
+                         B.GroupIndex, B.ObjectIndex);
 }
 } // namespace
 
@@ -4729,12 +4723,24 @@ void AArch64FrameLowering::orderFrameObjects(
     FrameObjects[Obj].ObjectIndex = Obj;
   }
 
-  // Identify stack slots that are tagged at the same time.
+  // Identify FPR vs GPR slots for hazards, and stack slots that are tagged at
+  // the same time.
   GroupBuilder GB(FrameObjects);
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
       if (MI.isDebugInstr())
         continue;
+
+      if (AFI.hasStackHazardSlotIndex()) {
+        std::optional<int> FI = getLdStFrameID(MI, MFI);
+        if (FI && *FI >= 0 && *FI < (int)FrameObjects.size()) {
+          if (MFI.getStackID(*FI) == 2 || AArch64InstrInfo::isFpOrNEON(MI))
+            FrameObjects[*FI].Accesses |= FrameObject::AccessFPR;
+          else
+            FrameObjects[*FI].Accesses |= FrameObject::AccessGPR;
+        }
+      }
+
       int OpIndex;
       switch (MI.getOpcode()) {
       case AArch64::STGloop:
@@ -4768,23 +4774,20 @@ void AArch64FrameLowering::orderFrameObjects(
         GB.AddMember(TaggedFI);
       else
         GB.EndCurrentGroup();
-
-      if (AFI.hasStackHazardSlotIndex()) {
-        std::optional<int> FI = getLdStFrameID(MI, MFI);
-        if (FI && *FI >= 0 && *FI < (int)FrameObjects.size()) {
-          if (MFI.getStackID(*FI) == 2 || AArch64InstrInfo::isFpOrNEON(MI))
-            FrameObjects[*FI].Accesses |= 2;
-          else
-            FrameObjects[*FI].Accesses |= 1;
-        }
-      }
     }
     // Groups should never span multiple basic blocks.
     GB.EndCurrentGroup();
   }
 
-  if (AFI.hasStackHazardSlotIndex())
-    FrameObjects[AFI.getStackHazardSlotIndex()].Accesses = 8;
+  if (AFI.hasStackHazardSlotIndex()) {
+    FrameObjects[AFI.getStackHazardSlotIndex()].Accesses =
+        FrameObject::AccessHazard;
+    // If a stack object is unknown or both GPR and FPR, sort it into GPR.
+    for (auto &Obj : FrameObjects)
+      if (!Obj.Accesses ||
+          Obj.Accesses == (FrameObject::AccessGPR | FrameObject::AccessFPR))
+        Obj.Accesses = FrameObject::AccessGPR;
+  }
 
   // If the function's tagged base pointer is pinned to a stack slot, we want to
   // put that slot first when possible. This will likely place it at SP + 0,
