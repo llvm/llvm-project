@@ -611,6 +611,12 @@ public:
     Args.push_back(ObjcopyPath);
     std::string Option("--add-section=.note.openmp=" + NotesTmpFileName);
     Args.push_back(Option);
+    //
+    // Requires disabling the verification of .note sections inside
+    // llvm-objcopy because the default verification option expects
+    // only one note inside a .note section unlike the case here.
+    std::string DisableVerifyNoteSections("--no-verify-note-sections");
+    Args.push_back(DisableVerifyNoteSections);
     Args.push_back(OriginalFileName);
     Args.push_back(ELFTmpFileName);
     bool ExecutionFailed = false;
