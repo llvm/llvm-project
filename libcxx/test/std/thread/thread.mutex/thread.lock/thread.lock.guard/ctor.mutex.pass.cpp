@@ -14,6 +14,7 @@
 
 #include <cassert>
 #include <mutex>
+#include <type_traits>
 
 #include "types.h"
 
