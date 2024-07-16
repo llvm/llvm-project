@@ -3903,6 +3903,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return IRB.CreateShuffleVector(left, right, ConstantVector::get(Idxs));
   }
 
+  Value *getShadowOrOrigin (Instruction* I, int i, bool shadowMode) {
+    if (shadowMode)
+      return getShadow (I, i);
+    else
+      return getOrigin (I, i);
+  }
+
   Value *interleaveShadowOrOrigin(IRBuilder<> &IRB, IntrinsicInst &I,
                                   bool shadowMode) {
     // Call arguments only
@@ -3925,9 +3932,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     uint16_t Width =
         cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements();
-    if (!shadowMode) {
-      Width = Width / 4; // One origin value per 32-bits of app memory
-    }
+//    Width = Width / 4; // One origin value per 32-bits of app memory
+
     uint16_t ElemSize = cast<FixedVectorType>(I.getArgOperand(0)->getType())
                             ->getElementType()
                             ->getPrimitiveSizeInBits();
@@ -3941,18 +3947,23 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     Value *interleaved = nullptr;
     if (numVectors == 1) {
-      interleaved = getShadow(&I, 0);
+      interleaved = getShadowOrOrigin(&I, 0, shadowMode);
     } else if (numVectors == 2) {
       interleaved =
-          interleaveAB(IRB, getShadow(&I, 0), getShadow(&I, 1), Width);
+          interleaveAB(IRB, getShadowOrOrigin(&I, 0, shadowMode),
+                            getShadowOrOrigin(&I, 1, shadowMode), Width);
     } else if (numVectors == 3) {
-      Value *UndefV = UndefValue::get(getShadow(&I, 0)->getType());
-      Value *AB = interleaveAB(IRB, getShadow(&I, 0), getShadow(&I, 1), Width);
-      Value *Cx = interleaveAB(IRB, getShadow(&I, 2), UndefV, Width);
+      Value *UndefV = UndefValue::get(getShadowOrOrigin(&I, 0, shadowMode)->getType());
+      Value *AB = interleaveAB(IRB, getShadowOrOrigin(&I, 0, shadowMode),
+                                    getShadowOrOrigin(&I, 1, shadowMode),
+                                    Width);
+      Value *Cx = interleaveAB(IRB, getShadowOrOrigin(&I, 2, shadowMode), UndefV, Width);
       interleaved = interleaveABCx(IRB, AB, Cx, Width);
     } else if (numVectors == 4) {
-      Value *AB = interleaveAB(IRB, getShadow(&I, 0), getShadow(&I, 1), Width);
-      Value *CD = interleaveAB(IRB, getShadow(&I, 2), getShadow(&I, 3), Width);
+      Value *AB = interleaveAB(IRB, getShadowOrOrigin(&I, 0, shadowMode),
+                                    getShadowOrOrigin(&I, 1, shadowMode), Width);
+      Value *CD = interleaveAB(IRB, getShadowOrOrigin(&I, 2, shadowMode),
+                                    getShadowOrOrigin(&I, 3, shadowMode), Width);
       interleaved = interleaveAB(IRB, AB, CD, Width * 2);
     } else {
       //          assert(! "Unexpected number of vectors");
@@ -3980,17 +3991,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     std::tie(ShadowPtr, OriginPtr) = getShadowOriginPtr(
         Addr, IRB, interleavedShadow->getType(), Align(1), /*isStore*/ true);
     IRB.CreateAlignedStore(interleavedShadow, ShadowPtr, Align(1));
+//    setShadow (&I, interleavedShadow);
 
     if (MS.TrackOrigins) {
-      setOrigin(&I, getCleanOrigin());
+//      setOrigin(&I, getCleanOrigin());
 
-      /*
-            errs() << "Inserting origin information ...\n";
-            Value *interleavedOrigin = interleaveShadowOrOrigin (IRB, I, false);
+        errs() << "Inserting origin information ...\n";
+        Value *interleavedOrigin = interleaveShadowOrOrigin (IRB, I, false);
 
-            errs() << "Adding store for origin ...\n";
-            IRB.CreateAlignedStore(interleavedOrigin, OriginPtr, Align(1));
-      */
+        errs() << "Adding store for origin ...\n";
+        IRB.CreateAlignedStore(interleavedOrigin, OriginPtr, Align(1));
 
       //      setOriginForNaryIntrinsic(I, true);
     }
