@@ -280,7 +280,7 @@ private:
   InstCombinerImpl &IC;
   Instruction &Root;
   unsigned FromAS;
-  using SelectAsc = SmallMapVector<SelectInst *, unsigned, 2>;
+  using SelectAsc = SmallMapVector<const SelectInst *, unsigned, 2>;
   SelectAsc NumValidAscFound;
 };
 } // end anonymous namespace
