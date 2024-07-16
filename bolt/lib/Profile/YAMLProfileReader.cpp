@@ -520,6 +520,16 @@ size_t YAMLProfileReader::matchWithCallGraph(BinaryContext &BC) {
   size_t MatchedWithCallGraph = 0;
   CallGraphMatcher CGMatcher(BC, YamlBP, IdToYamLBF);
 
+  ItaniumPartialDemangler Demangler;
+  auto GetBaseName = [&](std::string &FunctionName) {
+    if (Demangler.partialDemangle(FunctionName.c_str()))
+      return std::string("");
+    std::vector<char> Buffer(FunctionName.begin(), FunctionName.end());
+    size_t BufferSize;
+    char *BaseName = Demangler.getFunctionBaseName(&Buffer[0], &BufferSize);
+    return std::string(BaseName, BufferSize);
+  };
+
   // Matches YAMLBF to BFs with neighbor hashes.
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions) {
     if (YamlBF.Used)
@@ -536,18 +546,25 @@ size_t YAMLProfileReader::matchWithCallGraph(BinaryContext &BC) {
         CGMatcher.getBFsWithNeighborHash(Hash);
     if (!BFsWithSameHash)
       continue;
-    // Finds the binary function with the closest block size to the profiled
+    // Finds the binary function with the longest common prefix to the profiled
     // function and matches.
     BinaryFunction *ClosestBF = nullptr;
-    size_t MinDistance = std::numeric_limits<size_t>::max();
+    size_t LCP = 0;
+    std::string YamlBFBaseName = GetBaseName(YamlBF.Name);
     for (BinaryFunction *BF : *BFsWithSameHash) {
       if (ProfiledFunctions.count(BF))
         continue;
-      size_t Distance = YamlBF.NumBasicBlocks > BF->size()
-                            ? YamlBF.NumBasicBlocks - BF->size()
-                            : BF->size() - YamlBF.NumBasicBlocks;
-      if (Distance < MinDistance) {
-        MinDistance = Distance;
+      std::string BFName = std::string(BF->getOneName());
+      std::string BFBaseName = GetBaseName(BFName);
+      size_t PrefixLength = 0;
+      size_t N = std::min(YamlBFBaseName.size(), BFBaseName.size());
+      for (size_t I = 0; I < N; ++I) {
+        if (YamlBFBaseName[I] != BFBaseName[I])
+          break;
+        ++PrefixLength;
+      }
+      if (PrefixLength >= LCP) {
+        LCP = PrefixLength;
         ClosestBF = BF;
       }
     }
