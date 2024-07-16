@@ -1648,7 +1648,7 @@ static VectorType dropNonScalableUnitDimFromType(VectorType inVecTy) {
   return VectorType::get(newShape, inVecTy.getElementType(), newScalableDims);
 }
 
-/// For vectors with at least an unit dim, replaces:
+/// For vectors with at least one unit dim, replaces:
 ///   elementwise(a, b)
 /// with:
 ///   sc_a = shape_cast(a)
@@ -1689,7 +1689,9 @@ struct DropUnitDimFromElementwiseOps final
     // guaranteed to have identical shapes (with some exceptions such as
     // `arith.select`) and it suffices to only check one of them.
     auto sourceVectorType = dyn_cast<VectorType>(op->getOperand(0).getType());
-    if (!sourceVectorType || sourceVectorType.getRank() < 2)
+    if (!sourceVectorType)
+      return failure();
+    if (sourceVectorType.getRank() < 2)
       return failure();
 
     SmallVector<Value> newOperands;
