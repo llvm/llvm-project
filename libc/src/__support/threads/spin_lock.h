@@ -11,19 +11,26 @@
 
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "src/__support/threads/sleep.h"
 namespace LIBC_NAMESPACE_DECL {
-class SpinLock {
-  cpp::Atomic<bool> flag;
+
+template <typename LockWord, typename Return>
+using AtomicOp = Return (cpp::Atomic<LockWord>::*)(LockWord, cpp::MemoryOrder,
+                                                   cpp::MemoryScope);
+template <typename LockWord, AtomicOp<LockWord, LockWord> Acquire,
+          AtomicOp<LockWord, void> Release>
+class SpinLockAdaptor {
+  cpp::Atomic<LockWord> flag;
 
 public:
-  LIBC_INLINE constexpr SpinLock() : flag{false} {}
+  LIBC_INLINE constexpr SpinLockAdaptor() : flag{false} {}
   LIBC_INLINE bool try_lock() {
-    return !flag.exchange(true, cpp::MemoryOrder::ACQUIRE);
+    return !flag.*Acquire(static_cast<LockWord>(1), cpp::MemoryOrder::ACQUIRE);
   }
   LIBC_INLINE void lock() {
     // clang-format off
-    // this compiles to the following on armv9a and x86_64:
+    // For normal TTAS, this compiles to the following on armv9a and x86_64:
     //         mov     w8, #1            |          .LBB0_1:
     // .LBB0_1:                          |                  mov     al, 1
     //         swpab   w8, w9, [x0]      |                  xchg    byte ptr [rdi], al
@@ -49,8 +56,22 @@ public:
       while (flag.load(cpp::MemoryOrder::RELAXED))
         sleep_briefly();
   }
-  LIBC_INLINE void unlock() { flag.store(false, cpp::MemoryOrder::RELEASE); }
+  LIBC_INLINE void unlock() {
+    flag.*Release(static_cast<LockWord>(0), cpp::MemoryOrder::RELEASE);
+  }
 };
+
+// It is reported that atomic operations with higher-order semantics
+// lead to better performance on GPUs.
+#ifdef LIBC_TARGET_ARCH_IS_GPU
+using SpinLock =
+    SpinLockAdaptor<unsigned int, &cpp::Atomic<unsigned int>::fetch_or,
+                    &cpp::Atomic<unsigned int>::fetch_and>;
+#else
+using SpinLock = SpinLockAdaptor<bool, &cpp::Atomic<bool>::exchange,
+                                 &cpp::Atomic<bool>::store>;
+#endif
+
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_THREADS_SPIN_LOCK_H
