@@ -9,6 +9,8 @@
 #ifndef SCUDO_VECTOR_H_
 #define SCUDO_VECTOR_H_
 
+#include "common.h"
+#include "internal_defs.h"
 #include "mem_map.h"
 
 #include <string.h>
@@ -121,7 +123,7 @@ private:
 };
 
 template <typename T, size_t StaticCapacity = 8>
-class Vector : public VectorNoCtor<T, StaticCapacity> {
+class Vector : public VectorNoCtor<T, Max<size_t>(1, StaticCapacity)> {
 public:
   constexpr Vector() { VectorNoCtor<T, StaticCapacity>::init(); }
   explicit Vector(uptr Count) {
