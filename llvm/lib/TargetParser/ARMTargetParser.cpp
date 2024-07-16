@@ -562,8 +562,6 @@ StringRef ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
   case Triple::EABIHF:
   case Triple::EABI:
     return "aapcs";
-  case Triple::PAuthTest:
-    return "pauthtest";
   default:
     if (TT.isOSNetBSD())
       return "apcs-gnu";

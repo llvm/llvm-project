@@ -324,9 +324,6 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
     case llvm::Triple::GNU:
       setABI("apcs-gnu");
       break;
-    case llvm::Triple::PAuthTest:
-      setABI("pauthtest");
-      break;
     default:
       if (IsNetBSD)
         setABI("apcs-gnu");
