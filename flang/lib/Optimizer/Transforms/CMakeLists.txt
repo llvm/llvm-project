@@ -8,6 +8,7 @@ add_flang_library(FIRTransforms
   CharacterConversion.cpp
   ConstantArgumentGlobalisation.cpp
   ControlFlowConverter.cpp
+  CufOpConversion.cpp
   ArrayValueCopy.cpp
   ExternalNameConversion.cpp
   MemoryUtils.cpp
