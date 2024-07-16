@@ -20,8 +20,8 @@
 #include "types.h"
 
 int main(int, char**) {
+  MyMutex m;
   {
-    MyMutex m;
     m.lock();
     std::lock_guard<MyMutex> lg(m, std::adopt_lock);
     assert(m.locked);
