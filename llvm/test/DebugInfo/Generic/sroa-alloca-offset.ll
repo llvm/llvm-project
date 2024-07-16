@@ -61,9 +61,9 @@
 define dso_local noundef i32 @_Z4fun1v() #0 !dbg !23 {
 entry:
   %0 = alloca %struct.two, align 4
-  call void @llvm.dbg.declare(metadata ptr %0, metadata !27, metadata !DIExpression()), !dbg !31
-  call void @llvm.dbg.declare(metadata ptr %0, metadata !28, metadata !DIExpression(DW_OP_plus_uconst, 4)), !dbg !31
-  call void @llvm.dbg.declare(metadata ptr %0, metadata !29, metadata !DIExpression()), !dbg !31
+    #dbg_declare(ptr %0, !27, !DIExpression(), !31)
+    #dbg_declare(ptr %0, !28, !DIExpression(DW_OP_plus_uconst, 4), !31)
+    #dbg_declare(ptr %0, !29, !DIExpression(), !31)
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %0, ptr align 4 @gt, i64 8, i1 false), !dbg !31
   %a = getelementptr inbounds %struct.two, ptr %0, i32 0, i32 0, !dbg !31
   %1 = load i32, ptr %a, align 4, !dbg !31
@@ -112,9 +112,9 @@ entry:
 define dso_local noundef i32 @_Z4fun2v() #0 !dbg !48 {
 entry:
   %0 = alloca %struct.four, align 4
-  call void @llvm.dbg.declare(metadata ptr %0, metadata !50, metadata !DIExpression()), !dbg !54
-  call void @llvm.dbg.declare(metadata ptr %0, metadata !51, metadata !DIExpression(DW_OP_plus_uconst, 8)), !dbg !54
-  call void @llvm.dbg.declare(metadata ptr %0, metadata !52, metadata !DIExpression()), !dbg !54
+    #dbg_declare(ptr %0, !50, !DIExpression(), !54)
+    #dbg_declare(ptr %0, !51, !DIExpression(DW_OP_plus_uconst, 8), !54)
+    #dbg_declare(ptr %0, !52, !DIExpression(), !54)
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %0, ptr align 4 @gf, i64 16, i1 false), !dbg !54
   %a = getelementptr inbounds %struct.four, ptr %0, i32 0, i32 0, !dbg !54
   %a1 = getelementptr inbounds %struct.two, ptr %a, i32 0, i32 0, !dbg !54
@@ -153,10 +153,10 @@ entry:
 define dso_local noundef i32 @_Z4fun3v() #0 !dbg !55 {
 entry:
   %0 = alloca %struct.four, align 4
-  call void @llvm.dbg.declare(metadata ptr %0, metadata !61, metadata !DIExpression(DW_OP_plus_uconst, 2)), !dbg !58
-  call void @llvm.dbg.declare(metadata ptr %0, metadata !62, metadata !DIExpression(DW_OP_plus_uconst, 4)), !dbg !58
-  call void @llvm.dbg.declare(metadata ptr %0, metadata !63, metadata !DIExpression(DW_OP_plus_uconst, 6)), !dbg !58
-  call void @llvm.dbg.declare(metadata ptr %0, metadata !64, metadata !DIExpression(DW_OP_plus_uconst, 8)), !dbg !58
+    #dbg_declare(ptr %0, !61, !DIExpression(DW_OP_plus_uconst, 2), !58)
+    #dbg_declare(ptr %0, !62, !DIExpression(DW_OP_plus_uconst, 4), !58)
+    #dbg_declare(ptr %0, !63, !DIExpression(DW_OP_plus_uconst, 6), !58)
+    #dbg_declare(ptr %0, !64, !DIExpression(DW_OP_plus_uconst, 8), !58)
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %0, ptr align 4 @gf, i64 16, i1 false), !dbg !58
   %1 = getelementptr inbounds %struct.four, ptr %0, i32 0, i32 0, !dbg !58
   %2 = getelementptr inbounds %struct.two, ptr %1, i32 0, i32 1, !dbg !58
@@ -187,19 +187,19 @@ entry:
   ;; Simple case - the expression offset (8 bytes) matches the offset of the
   ;; slice into the alloca, so can be discarded away entirely.
   ; COMMON-NEXT: #dbg_value(i32 %p.sroa.0.8.extract.trunc, ![[p:[0-9]+]], !DIExpression(DW_OP_LLVM_extract_bits_zext, 0, 32)
-  call void @llvm.dbg.declare(metadata ptr %p, metadata !67, metadata !DIExpression(DW_OP_plus_uconst, 8, DW_OP_LLVM_extract_bits_zext, 0, 32)), !dbg !66
+    #dbg_declare(ptr %p, !67, !DIExpression(DW_OP_plus_uconst, 8, DW_OP_LLVM_extract_bits_zext, 0, 32), !66)
   ;; The expression offset is 6 bytes, with a bit-extract offset of 32 bits from
   ;; there for a total offset of 80 bits. SROA is going to split the alloca in
   ;; half (at bit 64). The new expression needs a final bit extract offset of
   ;; 80-64=16 bits applied to the mem2reg'd value.
   ; COMMON-NEXT: #dbg_value(i32 %p.sroa.0.8.extract.trunc, ![[q:[0-9]+]], !DIExpression(DW_OP_LLVM_extract_bits_zext, 16, 8)
-  call void @llvm.dbg.declare(metadata ptr %p, metadata !68, metadata !DIExpression(DW_OP_plus_uconst, 6, DW_OP_LLVM_extract_bits_zext, 32, 8)), !dbg !66
+    #dbg_declare(ptr %p, !68, !DIExpression(DW_OP_plus_uconst, 6, DW_OP_LLVM_extract_bits_zext, 32, 8), !66)
   ;; FIXME: Just as in _Z4fun3v, the offset from the new alloca (2 bytes) is
   ;; correct but mem2reg needs to change it from an offset to a shift or
   ;; adjust the bit-extract (e.g., add the 2 byte offset to the existing 8 bit
   ;; offset for a 24 bit total bit-extract offset).
   ; COMMON-NEXT: #dbg_value(i32 %p.sroa.0.8.extract.trunc, ![[r:[0-9]+]], !DIExpression(DW_OP_plus_uconst, 2, DW_OP_LLVM_extract_bits_zext, 8, 8)
-  call void @llvm.dbg.declare(metadata ptr %p, metadata !69, metadata !DIExpression(DW_OP_plus_uconst, 10, DW_OP_LLVM_extract_bits_zext, 8, 8)), !dbg !66
+    #dbg_declare(ptr %p, !69, !DIExpression(DW_OP_plus_uconst, 10, DW_OP_LLVM_extract_bits_zext, 8, 8), !66)
   %2 = load i32, ptr %1, align 4
   ret i32 %2
 }
@@ -221,7 +221,6 @@ entry:
 ; COMMON-DAG: ![[q]] = !DILocalVariable(name: "q"
 ; COMMON-DAG: ![[r]] = !DILocalVariable(name: "r"
 
-declare void @llvm.dbg.declare(metadata, metadata, metadata)
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
 
 !llvm.dbg.cu = !{!2}
