@@ -286,9 +286,10 @@ class MachineDominatorTreePrinterPass
   raw_ostream &OS;
 
 public:
-  MachineDominatorTreePrinterPass(raw_ostream &OS) : OS(OS) {}
+  explicit MachineDominatorTreePrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
 };
 
 /// \brief Analysis pass which computes a \c MachineDominatorTree.

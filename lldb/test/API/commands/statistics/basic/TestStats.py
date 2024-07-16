@@ -702,6 +702,8 @@ class TestCase(TestBase):
                     "targets.moduleIdentifiers": True,
                     "targets.breakpoints": True,
                     "targets.expressionEvaluation": True,
+                    "targets.frameVariable": True,
+                    "targets.totalSharedLibraryEventHitCount": True,
                     "modules": True,
                     "transcript": True,
                 },
@@ -713,10 +715,12 @@ class TestCase(TestBase):
                 },
                 "expect": {
                     "commands": False,
-                    "targets": False,
+                    "targets": True,
                     "targets.moduleIdentifiers": False,
                     "targets.breakpoints": False,
                     "targets.expressionEvaluation": False,
+                    "targets.frameVariable": False,
+                    "targets.totalSharedLibraryEventHitCount": True,
                     "modules": False,
                     "transcript": False,
                 },
@@ -733,7 +737,21 @@ class TestCase(TestBase):
                     "targets.moduleIdentifiers": False,
                     "targets.breakpoints": False,
                     "targets.expressionEvaluation": False,
+                    "targets.frameVariable": False,
                     "targets.totalSharedLibraryEventHitCount": True,
+                    "modules": False,
+                    "transcript": False,
+                },
+            },
+            {  # Summary mode without targets
+                "command_options": " --summary --targets=false",
+                "api_options": {
+                    "SetSummaryOnly": True,
+                    "SetIncludeTargets": False,
+                },
+                "expect": {
+                    "commands": False,
+                    "targets": False,
                     "modules": False,
                     "transcript": False,
                 },
@@ -746,15 +764,17 @@ class TestCase(TestBase):
                 },
                 "expect": {
                     "commands": False,
-                    "targets": False,
+                    "targets": True,
                     "targets.moduleIdentifiers": False,
                     "targets.breakpoints": False,
                     "targets.expressionEvaluation": False,
+                    "targets.frameVariable": False,
+                    "targets.totalSharedLibraryEventHitCount": True,
                     "modules": True,
                     "transcript": False,
                 },
             },
-            {  # Everything mode but without modules and transcript
+            {  # Default mode without modules and transcript
                 "command_options": " --modules=false --transcript=false",
                 "api_options": {
                     "SetIncludeModules": False,
@@ -766,11 +786,13 @@ class TestCase(TestBase):
                     "targets.moduleIdentifiers": False,
                     "targets.breakpoints": True,
                     "targets.expressionEvaluation": True,
+                    "targets.frameVariable": True,
+                    "targets.totalSharedLibraryEventHitCount": True,
                     "modules": False,
                     "transcript": False,
                 },
             },
-            {  # Everything mode but without modules
+            {  # Default mode without modules
                 "command_options": " --modules=false",
                 "api_options": {
                     "SetIncludeModules": False,
@@ -781,6 +803,8 @@ class TestCase(TestBase):
                     "targets.moduleIdentifiers": False,
                     "targets.breakpoints": True,
                     "targets.expressionEvaluation": True,
+                    "targets.frameVariable": True,
+                    "targets.totalSharedLibraryEventHitCount": True,
                     "modules": False,
                     "transcript": True,
                 },

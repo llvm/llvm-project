@@ -15,6 +15,20 @@ entry:
   ret ptr %gep
 }
 
+define ptr @mul4_nuw(ptr %p, i64 %x) {
+; CHECK-LABEL: define ptr @mul4_nuw(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP_IDX:%.*]] = shl i64 [[X]], 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[GEP_IDX]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+entry:
+  %mul = mul i64 %x, 4
+  %gep = getelementptr nuw i32, ptr %p, i64 %mul
+  ret ptr %gep
+}
+
 define ptr @mul5(ptr %p, i64 %x) {
 ; CHECK-LABEL: define ptr @mul5(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[X:%.*]]) {

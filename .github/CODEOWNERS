@@ -120,6 +120,9 @@ clang/test/AST/Interp/ @tbaederr
 /mlir/**/LLVMIR/**/BasicPtxBuilderInterface* @grypp
 /mlir/**/NVVM* @grypp
 
+# MLIR Index Dialect
+/mlir/**/Index* @mogball
+
 # MLIR Python Bindings
 /mlir/test/python/ @ftynse @makslevental @stellaraccident
 /mlir/python/ @ftynse @makslevental @stellaraccident

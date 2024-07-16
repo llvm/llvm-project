@@ -771,6 +771,10 @@ static void computeKnownBitsFromCond(const Value *V, Value *Cond,
 
 void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
                                        unsigned Depth, const SimplifyQuery &Q) {
+  // Handle injected condition.
+  if (Q.CC && Q.CC->AffectedValues.contains(V))
+    computeKnownBitsFromCond(V, Q.CC->Cond, Known, Depth, Q, Q.CC->Invert);
+
   if (!Q.CxtI)
     return;
 
@@ -988,6 +992,40 @@ ConstantRange llvm::getVScaleRange(const Function *F, unsigned BitWidth) {
   return ConstantRange(Min, APInt(BitWidth, *AttrMax) + 1);
 }
 
+void llvm::adjustKnownBitsForSelectArm(KnownBits &Known, Value *Cond,
+                                       Value *Arm, bool Invert, unsigned Depth,
+                                       const SimplifyQuery &Q) {
+  // If we have a constant arm, we are done.
+  if (Known.isConstant())
+    return;
+
+  // See what condition implies about the bits of the select arm.
+  KnownBits CondRes(Known.getBitWidth());
+  computeKnownBitsFromCond(Arm, Cond, CondRes, Depth + 1, Q, Invert);
+  // If we don't get any information from the condition, no reason to
+  // proceed.
+  if (CondRes.isUnknown())
+    return;
+
+  // We can have conflict if the condition is dead. I.e if we have
+  // (x | 64) < 32 ? (x | 64) : y
+  // we will have conflict at bit 6 from the condition/the `or`.
+  // In that case just return. Its not particularly important
+  // what we do, as this select is going to be simplified soon.
+  CondRes = CondRes.unionWith(Known);
+  if (CondRes.hasConflict())
+    return;
+
+  // Finally make sure the information we found is valid. This is relatively
+  // expensive so it's left for the very end.
+  if (!isGuaranteedNotToBeUndef(Arm, Q.AC, Q.CxtI, Q.DT, Depth + 1))
+    return;
+
+  // Finally, we know we get information from the condition and its valid,
+  // so return it.
+  Known = CondRes;
+}
+
 static void computeKnownBitsFromOperator(const Operator *I,
                                          const APInt &DemandedElts,
                                          KnownBits &Known, unsigned Depth,
@@ -1044,36 +1082,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
     auto ComputeForArm = [&](Value *Arm, bool Invert) {
       KnownBits Res(Known.getBitWidth());
       computeKnownBits(Arm, Res, Depth + 1, Q);
-      // If we have a constant arm, we are done.
-      if (Res.isConstant())
-        return Res;
-
-      // See what condition implies about the bits of the two select arms.
-      KnownBits CondRes(Res.getBitWidth());
-      computeKnownBitsFromCond(Arm, I->getOperand(0), CondRes, Depth + 1, Q,
-                               Invert);
-      // If we don't get any information from the condition, no reason to
-      // proceed.
-      if (CondRes.isUnknown())
-        return Res;
-
-      // We can have conflict if the condition is dead. I.e if we have
-      // (x | 64) < 32 ? (x | 64) : y
-      // we will have conflict at bit 6 from the condition/the `or`.
-      // In that case just return. Its not particularly important
-      // what we do, as this select is going to be simplified soon.
-      CondRes = CondRes.unionWith(Res);
-      if (CondRes.hasConflict())
-        return Res;
-
-      // Finally make sure the information we found is valid. This is relatively
-      // expensive so it's left for the very end.
-      if (!isGuaranteedNotToBeUndef(Arm, Q.AC, Q.CxtI, Q.DT, Depth + 1))
-        return Res;
-
-      // Finally, we know we get information from the condition and its valid,
-      // so return it.
-      return CondRes;
+      adjustKnownBitsForSelectArm(Res, I->getOperand(0), Arm, Invert, Depth, Q);
+      return Res;
     };
     // Only known if known in both the LHS and RHS.
     Known =
@@ -1729,6 +1739,20 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Known &= Known2.anyextOrTrunc(BitWidth);
         break;
       }
+      case Intrinsic::x86_sse2_pmulh_w:
+      case Intrinsic::x86_avx2_pmulh_w:
+      case Intrinsic::x86_avx512_pmulh_w_512:
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
+        Known = KnownBits::mulhs(Known, Known2);
+        break;
+      case Intrinsic::x86_sse2_pmulhu_w:
+      case Intrinsic::x86_avx2_pmulhu_w:
+      case Intrinsic::x86_avx512_pmulhu_w_512:
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Depth + 1, Q);
+        Known = KnownBits::mulhu(Known, Known2);
+        break;
       case Intrinsic::x86_sse42_crc32_64_64:
         Known.Zero.setBitsFrom(32);
         break;
@@ -3994,6 +4018,10 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   case LibFunc_cosf:
   case LibFunc_cosl:
     return Intrinsic::cos;
+  case LibFunc_tan:
+  case LibFunc_tanf:
+  case LibFunc_tanl:
+    return Intrinsic::tan;
   case LibFunc_exp:
   case LibFunc_expf:
   case LibFunc_expl:
@@ -4683,7 +4711,7 @@ static KnownFPClass computeKnownFPClassFromContext(const Value *V,
 
     assert(I->getFunction() == Q.CxtI->getParent()->getParent() &&
            "Got assumption for the wrong function!");
-    assert(I->getCalledFunction()->getIntrinsicID() == Intrinsic::assume &&
+    assert(I->getIntrinsicID() == Intrinsic::assume &&
            "must be an assume intrinsic");
 
     if (!isValidAssumeForContext(I, Q.CxtI, Q.DT))
@@ -6111,7 +6139,7 @@ bool llvm::getConstantDataArrayInfo(const Value *V,
     // Fail if V is not based on constant global object.
     return false;
 
-  const DataLayout &DL = GV->getParent()->getDataLayout();
+  const DataLayout &DL = GV->getDataLayout();
   APInt Off(DL.getIndexTypeSizeInBits(V->getType()), 0);
 
   if (GV != V->stripAndAccumulateConstantOffsets(DL, Off,
@@ -6389,9 +6417,10 @@ const Value *llvm::getUnderlyingObject(const Value *V, unsigned MaxLookup) {
       V = GEP->getPointerOperand();
     } else if (Operator::getOpcode(V) == Instruction::BitCast ||
                Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
-      V = cast<Operator>(V)->getOperand(0);
-      if (!V->getType()->isPointerTy())
+      Value *NewV = cast<Operator>(V)->getOperand(0);
+      if (!NewV->getType()->isPointerTy())
         return V;
+      V = NewV;
     } else if (auto *GA = dyn_cast<GlobalAlias>(V)) {
       if (GA->isInterposable())
         return V;
@@ -8843,20 +8872,20 @@ isImpliedCondMatchingOperands(CmpInst::Predicate LPred,
   return std::nullopt;
 }
 
-/// Return true if "icmp LPred X, LC" implies "icmp RPred X, RC" is true.
-/// Return false if "icmp LPred X, LC" implies "icmp RPred X, RC" is false.
+/// Return true if "icmp LPred X, LCR" implies "icmp RPred X, RCR" is true.
+/// Return false if "icmp LPred X, LCR" implies "icmp RPred X, RCR" is false.
 /// Otherwise, return std::nullopt if we can't infer anything.
-static std::optional<bool> isImpliedCondCommonOperandWithConstants(
-    CmpInst::Predicate LPred, const APInt &LC, CmpInst::Predicate RPred,
-    const APInt &RC) {
-  ConstantRange DomCR = ConstantRange::makeExactICmpRegion(LPred, LC);
-  ConstantRange CR = ConstantRange::makeExactICmpRegion(RPred, RC);
-  ConstantRange Intersection = DomCR.intersectWith(CR);
-  ConstantRange Difference = DomCR.difference(CR);
-  if (Intersection.isEmptySet())
-    return false;
-  if (Difference.isEmptySet())
+static std::optional<bool> isImpliedCondCommonOperandWithCR(
+    CmpInst::Predicate LPred, const ConstantRange &LCR,
+    CmpInst::Predicate RPred, const ConstantRange &RCR) {
+  ConstantRange DomCR = ConstantRange::makeAllowedICmpRegion(LPred, LCR);
+  // If all true values for lhs and true for rhs, lhs implies rhs
+  if (DomCR.icmp(RPred, RCR))
     return true;
+
+  // If there is no overlap, lhs implies not rhs
+  if (DomCR.icmp(CmpInst::getInversePredicate(RPred), RCR))
+    return false;
   return std::nullopt;
 }
 
@@ -8896,11 +8925,29 @@ static std::optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
     }
   }
 
-  // Can we infer anything when the 0-operands match and the 1-operands are
-  // constants (not necessarily matching)?
-  const APInt *LC, *RC;
-  if (L0 == R0 && match(L1, m_APInt(LC)) && match(R1, m_APInt(RC)))
-    return isImpliedCondCommonOperandWithConstants(LPred, *LC, RPred, *RC);
+  // See if we can infer anything if operand-0 matches and we have at least one
+  // constant.
+  const APInt *Unused;
+  if (L0 == R0 && (match(L1, m_APInt(Unused)) || match(R1, m_APInt(Unused)))) {
+    // Potential TODO: We could also further use the constant range of L0/R0 to
+    // further constraint the constant ranges. At the moment this leads to
+    // several regressions related to not transforming `multi_use(A + C0) eq/ne
+    // C1` (see discussion: D58633).
+    ConstantRange LCR = computeConstantRange(
+        L1, ICmpInst::isSigned(LPred), /* UseInstrInfo=*/true, /*AC=*/nullptr,
+        /*CxtI=*/nullptr, /*DT=*/nullptr, MaxAnalysisRecursionDepth - 1);
+    ConstantRange RCR = computeConstantRange(
+        R1, ICmpInst::isSigned(RPred), /* UseInstrInfo=*/true, /*AC=*/nullptr,
+        /*CxtI=*/nullptr, /*DT=*/nullptr, MaxAnalysisRecursionDepth - 1);
+    // Even if L1/R1 are not both constant, we can still sometimes deduce
+    // relationship from a single constant. For example X u> Y implies X != 0.
+    if (auto R = isImpliedCondCommonOperandWithCR(LPred, LCR, RPred, RCR))
+      return R;
+    // If both L1/R1 were exact constant ranges and we didn't get anything
+    // here, we won't be able to deduce this.
+    if (match(L1, m_APInt(Unused)) && match(R1, m_APInt(Unused)))
+      return std::nullopt;
+  }
 
   // Can we infer anything when the two compares have matching operands?
   if (L0 == R0 && L1 == R1)
@@ -9476,19 +9523,10 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
   if (Depth == MaxAnalysisRecursionDepth)
     return ConstantRange::getFull(V->getType()->getScalarSizeInBits());
 
-  const APInt *C;
-  if (match(V, m_APInt(C)))
-    return ConstantRange(*C);
+  if (auto *C = dyn_cast<Constant>(V))
+    return C->toConstantRange();
+
   unsigned BitWidth = V->getType()->getScalarSizeInBits();
-
-  if (auto *VC = dyn_cast<ConstantDataVector>(V)) {
-    ConstantRange CR = ConstantRange::getEmpty(BitWidth);
-    for (unsigned ElemIdx = 0, NElem = VC->getNumElements(); ElemIdx < NElem;
-         ++ElemIdx)
-      CR = CR.unionWith(VC->getElementAsAPInt(ElemIdx));
-    return CR;
-  }
-
   InstrInfoQuery IIQ(UseInstrInfo);
   ConstantRange CR = ConstantRange::getFull(BitWidth);
   if (auto *BO = dyn_cast<BinaryOperator>(V)) {
@@ -9533,7 +9571,7 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
       CallInst *I = cast<CallInst>(AssumeVH);
       assert(I->getParent()->getParent() == CtxI->getParent()->getParent() &&
              "Got assumption for the wrong function!");
-      assert(I->getCalledFunction()->getIntrinsicID() == Intrinsic::assume &&
+      assert(I->getIntrinsicID() == Intrinsic::assume &&
              "must be an assume intrinsic");
 
       if (!isValidAssumeForContext(I, CtxI, DT))

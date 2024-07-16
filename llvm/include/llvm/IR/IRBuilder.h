@@ -34,7 +34,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -1022,6 +1021,14 @@ public:
                         const Twine &Name = "") {
     return CreateBinaryIntrinsic(Intrinsic::copysign, LHS, RHS, FMFSource,
                                  Name);
+  }
+
+  /// Create call to the ldexp intrinsic.
+  Value *CreateLdexp(Value *Src, Value *Exp, Instruction *FMFSource = nullptr,
+                     const Twine &Name = "") {
+    assert(!IsFPConstrained && "TODO: Support strictfp");
+    return CreateIntrinsic(Intrinsic::ldexp, {Src->getType(), Exp->getType()},
+                           {Src, Exp}, FMFSource, Name);
   }
 
   /// Create a call to the arithmetic_fence intrinsic.

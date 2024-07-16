@@ -37,7 +37,6 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
-#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ImmutableMap.h"
@@ -1035,10 +1034,9 @@ public:
 
   template <class AttrType>
   void getMutexIDs(CapExprSet &Mtxs, AttrType *Attr, const Expr *Exp,
-                   const NamedDecl *D, const CFGBlock *PredBlock,
-                   const CFGBlock *CurrBlock,
-                   const ASTContext &TrylockAttrContext,
-                   Expr *TrylockAttrSuccessValue, bool Neg);
+                   const NamedDecl *D,
+                   const CFGBlock *PredBlock, const CFGBlock *CurrBlock,
+                   Expr *BrE, bool Neg);
 
   const CallExpr* getTrylockCallExpr(const Stmt *Cond, LocalVarContext C,
                                      bool &Negate);
@@ -1361,18 +1359,17 @@ void ThreadSafetyAnalyzer::getMutexIDs(CapExprSet &Mtxs, AttrType *Attr,
                                        const Expr *Exp, const NamedDecl *D,
                                        const CFGBlock *PredBlock,
                                        const CFGBlock *CurrBlock,
-                                       const ASTContext &TrylockAttrContext,
-                                       Expr *TrylockAttrSuccess,
-                                       bool Neg) {
-  // Evaluate the trylock's success value as a boolean.
-  bool trylockSuccessValue = false;
-  if (!TrylockAttrSuccess->EvaluateAsBooleanCondition(
-          trylockSuccessValue, TrylockAttrContext,
-          /*InConstantContext=*/true)) {
-    llvm_unreachable("Trylock success value could not be evaluated.");
-  }
+                                       Expr *BrE, bool Neg) {
+  // Find out which branch has the lock
+  bool branch = false;
+  if (const auto *BLE = dyn_cast_or_null<CXXBoolLiteralExpr>(BrE))
+    branch = BLE->getValue();
+  else if (const auto *ILE = dyn_cast_or_null<IntegerLiteral>(BrE))
+    branch = ILE->getValue().getBoolValue();
 
-  const int branchnum = Neg ? !!trylockSuccessValue : !trylockSuccessValue;
+  int branchnum = branch ? 0 : 1;
+  if (Neg)
+    branchnum = !branchnum;
 
   // If we've taken the trylock branch, then add the lock
   int i = 0;
@@ -1393,15 +1390,8 @@ static bool getStaticBooleanValue(Expr *E, bool &TCond) {
   } else if (const auto *ILE = dyn_cast<IntegerLiteral>(E)) {
     TCond = ILE->getValue().getBoolValue();
     return true;
-  } else if (auto *CE = dyn_cast<ImplicitCastExpr>(E)) {
+  } else if (auto *CE = dyn_cast<ImplicitCastExpr>(E))
     return getStaticBooleanValue(CE->getSubExpr(), TCond);
-  } else if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
-    if (auto *ECD = dyn_cast<EnumConstantDecl>(DRE->getDecl())) {
-      llvm::APSInt IV = ECD->getInitVal();
-      TCond = IV.getBoolValue();
-      return true;
-    }
-  }
   return false;
 }
 
@@ -1507,27 +1497,27 @@ void ThreadSafetyAnalyzer::getEdgeLockset(FactSet& Result,
   // If the condition is a call to a Trylock function, then grab the attributes
   for (const auto *Attr : FunDecl->attrs()) {
     switch (Attr->getKind()) {
-    case attr::TryAcquireCapability: {
-      auto *A = cast<TryAcquireCapabilityAttr>(Attr);
-      getMutexIDs(A->isShared() ? SharedLocksToAdd : ExclusiveLocksToAdd, A,
-                  Exp, FunDecl, PredBlock, CurrBlock, FunDecl->getASTContext(),
-                  A->getSuccessValue(), Negate);
-      break;
-    };
-    case attr::ExclusiveTrylockFunction: {
-      const auto *A = cast<ExclusiveTrylockFunctionAttr>(Attr);
-      getMutexIDs(ExclusiveLocksToAdd, A, Exp, FunDecl, PredBlock, CurrBlock,
-                  FunDecl->getASTContext(), A->getSuccessValue(), Negate);
-      break;
-    }
-    case attr::SharedTrylockFunction: {
-      const auto *A = cast<SharedTrylockFunctionAttr>(Attr);
-      getMutexIDs(SharedLocksToAdd, A, Exp, FunDecl, PredBlock, CurrBlock,
-                  FunDecl->getASTContext(), A->getSuccessValue(), Negate);
-      break;
-    }
-    default:
-      break;
+      case attr::TryAcquireCapability: {
+        auto *A = cast<TryAcquireCapabilityAttr>(Attr);
+        getMutexIDs(A->isShared() ? SharedLocksToAdd : ExclusiveLocksToAdd, A,
+                    Exp, FunDecl, PredBlock, CurrBlock, A->getSuccessValue(),
+                    Negate);
+        break;
+      };
+      case attr::ExclusiveTrylockFunction: {
+        const auto *A = cast<ExclusiveTrylockFunctionAttr>(Attr);
+        getMutexIDs(ExclusiveLocksToAdd, A, Exp, FunDecl, PredBlock, CurrBlock,
+                    A->getSuccessValue(), Negate);
+        break;
+      }
+      case attr::SharedTrylockFunction: {
+        const auto *A = cast<SharedTrylockFunctionAttr>(Attr);
+        getMutexIDs(SharedLocksToAdd, A, Exp, FunDecl, PredBlock, CurrBlock,
+                    A->getSuccessValue(), Negate);
+        break;
+      }
+      default:
+        break;
     }
   }
 

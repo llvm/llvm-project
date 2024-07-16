@@ -930,9 +930,9 @@ define amdgpu_kernel void @memcpy_global_align4_global_align4_variable(ptr addrs
 ; OPT-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i64 [ 0, [[LOOP_MEMCPY_RESIDUAL_HEADER]] ], [ [[TMP14:%.*]], [[LOOP_MEMCPY_RESIDUAL:%.*]] ]
 ; OPT-NEXT:    [[TMP10:%.*]] = add i64 [[TMP3]], [[RESIDUAL_LOOP_INDEX]]
 ; OPT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[TMP10]]
-; OPT-NEXT:    [[TMP12:%.*]] = load i8, ptr addrspace(1) [[TMP11]], align 4
+; OPT-NEXT:    [[TMP12:%.*]] = load i8, ptr addrspace(1) [[TMP11]], align 1
 ; OPT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[TMP10]]
-; OPT-NEXT:    store i8 [[TMP12]], ptr addrspace(1) [[TMP13]], align 4
+; OPT-NEXT:    store i8 [[TMP12]], ptr addrspace(1) [[TMP13]], align 1
 ; OPT-NEXT:    [[TMP14]] = add i64 [[RESIDUAL_LOOP_INDEX]], 1
 ; OPT-NEXT:    [[TMP15:%.*]] = icmp ult i64 [[TMP14]], [[TMP2]]
 ; OPT-NEXT:    br i1 [[TMP15]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION:%.*]]
@@ -966,9 +966,9 @@ define amdgpu_kernel void @memcpy_global_align2_global_align2_variable(ptr addrs
 ; OPT-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i64 [ 0, [[LOOP_MEMCPY_RESIDUAL_HEADER]] ], [ [[TMP14:%.*]], [[LOOP_MEMCPY_RESIDUAL:%.*]] ]
 ; OPT-NEXT:    [[TMP10:%.*]] = add i64 [[TMP3]], [[RESIDUAL_LOOP_INDEX]]
 ; OPT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[TMP10]]
-; OPT-NEXT:    [[TMP12:%.*]] = load i8, ptr addrspace(1) [[TMP11]], align 2
+; OPT-NEXT:    [[TMP12:%.*]] = load i8, ptr addrspace(1) [[TMP11]], align 1
 ; OPT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[TMP10]]
-; OPT-NEXT:    store i8 [[TMP12]], ptr addrspace(1) [[TMP13]], align 2
+; OPT-NEXT:    store i8 [[TMP12]], ptr addrspace(1) [[TMP13]], align 1
 ; OPT-NEXT:    [[TMP14]] = add i64 [[RESIDUAL_LOOP_INDEX]], 1
 ; OPT-NEXT:    [[TMP15:%.*]] = icmp ult i64 [[TMP14]], [[TMP2]]
 ; OPT-NEXT:    br i1 [[TMP15]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION:%.*]]
@@ -1038,9 +1038,9 @@ define amdgpu_kernel void @memcpy_local_align4_local_align4_variable(ptr addrspa
 ; OPT-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i32 [ 0, [[LOOP_MEMCPY_RESIDUAL_HEADER]] ], [ [[TMP14:%.*]], [[LOOP_MEMCPY_RESIDUAL:%.*]] ]
 ; OPT-NEXT:    [[TMP10:%.*]] = add i32 [[TMP3]], [[RESIDUAL_LOOP_INDEX]]
 ; OPT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[SRC]], i32 [[TMP10]]
-; OPT-NEXT:    [[TMP12:%.*]] = load i8, ptr addrspace(3) [[TMP11]], align 4
+; OPT-NEXT:    [[TMP12:%.*]] = load i8, ptr addrspace(3) [[TMP11]], align 1
 ; OPT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[DST]], i32 [[TMP10]]
-; OPT-NEXT:    store i8 [[TMP12]], ptr addrspace(3) [[TMP13]], align 4
+; OPT-NEXT:    store i8 [[TMP12]], ptr addrspace(3) [[TMP13]], align 1
 ; OPT-NEXT:    [[TMP14]] = add i32 [[RESIDUAL_LOOP_INDEX]], 1
 ; OPT-NEXT:    [[TMP15:%.*]] = icmp ult i32 [[TMP14]], [[TMP2]]
 ; OPT-NEXT:    br i1 [[TMP15]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION:%.*]]
@@ -1074,9 +1074,9 @@ define amdgpu_kernel void @memcpy_local_align2_local_align2_variable(ptr addrspa
 ; OPT-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i32 [ 0, [[LOOP_MEMCPY_RESIDUAL_HEADER]] ], [ [[TMP14:%.*]], [[LOOP_MEMCPY_RESIDUAL:%.*]] ]
 ; OPT-NEXT:    [[TMP10:%.*]] = add i32 [[TMP3]], [[RESIDUAL_LOOP_INDEX]]
 ; OPT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[SRC]], i32 [[TMP10]]
-; OPT-NEXT:    [[TMP12:%.*]] = load i8, ptr addrspace(3) [[TMP11]], align 2
+; OPT-NEXT:    [[TMP12:%.*]] = load i8, ptr addrspace(3) [[TMP11]], align 1
 ; OPT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[DST]], i32 [[TMP10]]
-; OPT-NEXT:    store i8 [[TMP12]], ptr addrspace(3) [[TMP13]], align 2
+; OPT-NEXT:    store i8 [[TMP12]], ptr addrspace(3) [[TMP13]], align 1
 ; OPT-NEXT:    [[TMP14]] = add i32 [[RESIDUAL_LOOP_INDEX]], 1
 ; OPT-NEXT:    [[TMP15:%.*]] = icmp ult i32 [[TMP14]], [[TMP2]]
 ; OPT-NEXT:    br i1 [[TMP15]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION:%.*]]
@@ -1146,9 +1146,9 @@ define amdgpu_kernel void @memcpy_local_align4_global_align4_variable(ptr addrsp
 ; OPT-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i32 [ 0, [[LOOP_MEMCPY_RESIDUAL_HEADER]] ], [ [[TMP14:%.*]], [[LOOP_MEMCPY_RESIDUAL:%.*]] ]
 ; OPT-NEXT:    [[TMP10:%.*]] = add i32 [[TMP3]], [[RESIDUAL_LOOP_INDEX]]
 ; OPT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i32 [[TMP10]]
-; OPT-NEXT:    [[TMP12:%.*]] = load i8, ptr addrspace(1) [[TMP11]], align 4
+; OPT-NEXT:    [[TMP12:%.*]] = load i8, ptr addrspace(1) [[TMP11]], align 1
 ; OPT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[DST]], i32 [[TMP10]]
-; OPT-NEXT:    store i8 [[TMP12]], ptr addrspace(3) [[TMP13]], align 4
+; OPT-NEXT:    store i8 [[TMP12]], ptr addrspace(3) [[TMP13]], align 1
 ; OPT-NEXT:    [[TMP14]] = add i32 [[RESIDUAL_LOOP_INDEX]], 1
 ; OPT-NEXT:    [[TMP15:%.*]] = icmp ult i32 [[TMP14]], [[TMP2]]
 ; OPT-NEXT:    br i1 [[TMP15]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION:%.*]]
@@ -1182,9 +1182,9 @@ define amdgpu_kernel void @memcpy_global_align4_local_align4_variable(ptr addrsp
 ; OPT-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i32 [ 0, [[LOOP_MEMCPY_RESIDUAL_HEADER]] ], [ [[TMP14:%.*]], [[LOOP_MEMCPY_RESIDUAL:%.*]] ]
 ; OPT-NEXT:    [[TMP10:%.*]] = add i32 [[TMP3]], [[RESIDUAL_LOOP_INDEX]]
 ; OPT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr addrspace(3) [[SRC]], i32 [[TMP10]]
-; OPT-NEXT:    [[TMP12:%.*]] = load i8, ptr addrspace(3) [[TMP11]], align 4
+; OPT-NEXT:    [[TMP12:%.*]] = load i8, ptr addrspace(3) [[TMP11]], align 1
 ; OPT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i32 [[TMP10]]
-; OPT-NEXT:    store i8 [[TMP12]], ptr addrspace(1) [[TMP13]], align 4
+; OPT-NEXT:    store i8 [[TMP12]], ptr addrspace(1) [[TMP13]], align 1
 ; OPT-NEXT:    [[TMP14]] = add i32 [[RESIDUAL_LOOP_INDEX]], 1
 ; OPT-NEXT:    [[TMP15:%.*]] = icmp ult i32 [[TMP14]], [[TMP2]]
 ; OPT-NEXT:    br i1 [[TMP15]], label [[LOOP_MEMCPY_RESIDUAL]], label [[POST_LOOP_MEMCPY_EXPANSION:%.*]]
@@ -1773,6 +1773,67 @@ entry:
   %arrayidx = getelementptr [32 x [8 x i64]], ptr %y, i64 0, i64 %idxprom
   %spec.select =  tail call i64 @llvm.umin.i64(i64 sub (i64 ptrtoint (ptr addrspacecast (ptr addrspace(4) inttoptr (i64 32 to ptr addrspace(4)) to ptr) to i64), i64 ptrtoint (ptr addrspacecast (ptr addrspace(4) null to ptr) to i64)), i64 56)
   tail call void @llvm.memcpy.p0.p0.i64(ptr %arrayidx, ptr %x, i64 %spec.select, i1 false)
+  ret void
+}
+
+define amdgpu_kernel void @memmove_volatile(ptr addrspace(1) %dst, ptr addrspace(1) %src) #0 {
+; MAX1024-LABEL: @memmove_volatile(
+; MAX1024-NEXT:    call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 64, i1 true)
+; MAX1024-NEXT:    ret void
+;
+; ALL-LABEL: @memmove_volatile(
+; ALL-NEXT:    [[COMPARE_SRC_DST:%.*]] = icmp ult ptr addrspace(1) [[SRC:%.*]], [[DST:%.*]]
+; ALL-NEXT:    [[COMPARE_N_TO_0:%.*]] = icmp eq i64 64, 0
+; ALL-NEXT:    br i1 [[COMPARE_SRC_DST]], label [[COPY_BACKWARDS:%.*]], label [[COPY_FORWARD:%.*]]
+; ALL:       copy_backwards:
+; ALL-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE:%.*]], label [[COPY_BACKWARDS_LOOP:%.*]]
+; ALL:       copy_backwards_loop:
+; ALL-NEXT:    [[TMP1:%.*]] = phi i64 [ [[INDEX_PTR:%.*]], [[COPY_BACKWARDS_LOOP]] ], [ 64, [[COPY_BACKWARDS]] ]
+; ALL-NEXT:    [[INDEX_PTR]] = sub i64 [[TMP1]], 1
+; ALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[INDEX_PTR]]
+; ALL-NEXT:    [[ELEMENT:%.*]] = load volatile i8, ptr addrspace(1) [[TMP2]], align 1
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[INDEX_PTR]]
+; ALL-NEXT:    store volatile i8 [[ELEMENT]], ptr addrspace(1) [[TMP3]], align 1
+; ALL-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_PTR]], 0
+; ALL-NEXT:    br i1 [[TMP4]], label [[MEMMOVE_DONE]], label [[COPY_BACKWARDS_LOOP]]
+; ALL:       copy_forward:
+; ALL-NEXT:    br i1 [[COMPARE_N_TO_0]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP:%.*]]
+; ALL:       copy_forward_loop:
+; ALL-NEXT:    [[INDEX_PTR1:%.*]] = phi i64 [ [[INDEX_INCREMENT:%.*]], [[COPY_FORWARD_LOOP]] ], [ 0, [[COPY_FORWARD]] ]
+; ALL-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[INDEX_PTR1]]
+; ALL-NEXT:    [[ELEMENT2:%.*]] = load volatile i8, ptr addrspace(1) [[TMP5]], align 1
+; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[INDEX_PTR1]]
+; ALL-NEXT:    store volatile i8 [[ELEMENT2]], ptr addrspace(1) [[TMP6]], align 1
+; ALL-NEXT:    [[INDEX_INCREMENT]] = add i64 [[INDEX_PTR1]], 1
+; ALL-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_INCREMENT]], 64
+; ALL-NEXT:    br i1 [[TMP7]], label [[MEMMOVE_DONE]], label [[COPY_FORWARD_LOOP]]
+; ALL:       memmove_done:
+; ALL-NEXT:    ret void
+;
+  call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) %dst, ptr addrspace(1) %src, i64 64, i1 true)
+  ret void
+}
+
+define amdgpu_kernel void @memcpy_volatile(ptr addrspace(1) %dst, ptr addrspace(1) %src) #0 {
+; MAX1024-LABEL: @memcpy_volatile(
+; MAX1024-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) [[DST:%.*]], ptr addrspace(1) [[SRC:%.*]], i64 64, i1 true)
+; MAX1024-NEXT:    ret void
+;
+; ALL-LABEL: @memcpy_volatile(
+; ALL-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
+; ALL:       load-store-loop:
+; ALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
+; ALL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
+; ALL-NEXT:    [[TMP2:%.*]] = load volatile <4 x i32>, ptr addrspace(1) [[TMP1]], align 1
+; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
+; ALL-NEXT:    store volatile <4 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 1
+; ALL-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 1
+; ALL-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP4]], 4
+; ALL-NEXT:    br i1 [[TMP5]], label [[LOAD_STORE_LOOP]], label [[MEMCPY_SPLIT:%.*]]
+; ALL:       memcpy-split:
+; ALL-NEXT:    ret void
+;
+  call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dst, ptr addrspace(1) %src, i64 64, i1 true)
   ret void
 }
 

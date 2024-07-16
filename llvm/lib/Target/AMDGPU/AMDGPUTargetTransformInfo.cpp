@@ -95,7 +95,7 @@ static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
 }
 
 AMDGPUTTIImpl::AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
-    : BaseT(TM, F.getParent()->getDataLayout()),
+    : BaseT(TM, F.getDataLayout()),
       TargetTriple(TM->getTargetTriple()),
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()) {}
@@ -292,7 +292,7 @@ const FeatureBitset GCNTTIImpl::InlineFeatureIgnoreList = {
     AMDGPU::FeatureFastFMAF32, AMDGPU::HalfRate64Ops};
 
 GCNTTIImpl::GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
-    : BaseT(TM, F.getParent()->getDataLayout()),
+    : BaseT(TM, F.getDataLayout()),
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()), CommonTTI(TM, F),
       IsGraphics(AMDGPU::isGraphics(F.getCallingConv())) {
@@ -978,7 +978,7 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
   if (match(V, m_c_And(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
                        m_Value(Mask)))) {
     const Function *F = cast<Instruction>(V)->getFunction();
-    const DataLayout &DL = F->getParent()->getDataLayout();
+    const DataLayout &DL = F->getDataLayout();
     return computeKnownBits(Mask, DL).countMinTrailingZeros() >=
                ST->getWavefrontSizeLog2() &&
            ST->getMaxWorkitemID(*F, 1) == 0 && ST->getMaxWorkitemID(*F, 2) == 0;

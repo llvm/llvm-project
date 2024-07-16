@@ -38,7 +38,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
-#include "mlir/Support/LogicalResult.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
@@ -1301,9 +1300,9 @@ class DropInnerMostUnitDimsTransferRead
     if (dimsToDrop == 0)
       return failure();
 
-    // Make sure that the indices to be dropped are equal 0.
-    // TODO: Deal with cases when the indices are not 0.
-    if (!llvm::all_of(readOp.getIndices().take_back(dimsToDrop), isZeroIndex))
+    auto inBounds = readOp.getInBoundsValues();
+    auto droppedInBounds = ArrayRef<bool>(inBounds).take_back(dimsToDrop);
+    if (llvm::is_contained(droppedInBounds, false))
       return failure();
 
     auto resultTargetVecType =
@@ -1393,6 +1392,11 @@ class DropInnerMostUnitDimsTransferWrite
 
     size_t dimsToDrop = maybeDimsToDrop.value();
     if (dimsToDrop == 0)
+      return failure();
+
+    auto inBounds = writeOp.getInBoundsValues();
+    auto droppedInBounds = ArrayRef<bool>(inBounds).take_back(dimsToDrop);
+    if (llvm::is_contained(droppedInBounds, false))
       return failure();
 
     auto resultTargetVecType =
@@ -1623,27 +1627,7 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
   }
 };
 
-// Scalable unit dimensions are not supported. Folding such dimensions would
-// require "shifting" the scalable flag onto some other fixed-width dim (e.g.
-// vector<[1]x4xf32> -> vector<[4]xf32>). This could be implemented in the
-// future.
-static VectorType dropNonScalableUnitDimFromType(VectorType inVecTy) {
-  auto inVecShape = inVecTy.getShape();
-  SmallVector<int64_t> newShape;
-  SmallVector<bool> newScalableDims;
-  for (auto [dim, isScalable] :
-       llvm::zip_equal(inVecShape, inVecTy.getScalableDims())) {
-    if (dim == 1 && !isScalable)
-      continue;
-
-    newShape.push_back(dim);
-    newScalableDims.push_back(isScalable);
-  }
-
-  return VectorType::get(newShape, inVecTy.getElementType(), newScalableDims);
-}
-
-/// For vectors with at least an unit dim, replaces:
+/// For vectors with either leading or trailing unit dim, replaces:
 ///   elementwise(a, b)
 /// with:
 ///   sc_a = shape_cast(a)
@@ -1655,16 +1639,20 @@ static VectorType dropNonScalableUnitDimFromType(VectorType inVecTy) {
 /// required to be rank > 1.
 ///
 /// Ex:
+/// ```
 ///  %mul = arith.mulf %B_row, %A_row : vector<1x[4]xf32>
 ///  %cast = vector.shape_cast %mul : vector<1x[4]xf32> to vector<[4]xf32>
+/// ```
 ///
 /// gets converted to:
 ///
+/// ```
 ///  %B_row_sc = vector.shape_cast %B_row : vector<1x[4]xf32> to vector<[4]xf32>
 ///  %A_row_sc = vector.shape_cast %A_row : vector<1x[4]xf32> to vector<[4]xf32>
 ///  %mul = arith.mulf %B_row_sc, %A_row_sc : vector<[4]xf32>
 ///  %cast_new = vector.shape_cast %mul : vector<[4]xf32> to vector<1x[4]xf32>
 ///  %cast = vector.shape_cast %cast_new : vector<1x[4]xf32> to vector<[4]xf32>
+/// ```
 ///
 /// Patterns for folding shape_casts should instantly eliminate `%cast_new` and
 /// `%cast`.
@@ -1684,29 +1672,42 @@ struct DropUnitDimFromElementwiseOps final
     // guaranteed to have identical shapes (with some exceptions such as
     // `arith.select`) and it suffices to only check one of them.
     auto sourceVectorType = dyn_cast<VectorType>(op->getOperand(0).getType());
-    if (!sourceVectorType || sourceVectorType.getRank() < 2)
+    if (!sourceVectorType)
       return failure();
+    if (sourceVectorType.getRank() < 2)
+      return failure();
+
+    bool hasTrailingDimUnitFixed =
+        ((sourceVectorType.getShape().back() == 1) &&
+         (!sourceVectorType.getScalableDims().back()));
+    bool hasLeadingDimUnitFixed =
+        ((sourceVectorType.getShape().front() == 1) &&
+         (!sourceVectorType.getScalableDims().front()));
+    if (!hasLeadingDimUnitFixed && !hasTrailingDimUnitFixed)
+      return failure();
+
+    // Drop leading/trailing unit dim by applying vector.shape_cast to all
+    // operands
+    int64_t dim = hasLeadingDimUnitFixed ? 0 : sourceVectorType.getRank() - 1;
 
     SmallVector<Value> newOperands;
     auto loc = op->getLoc();
     for (auto operand : op->getOperands()) {
       auto opVectorType = cast<VectorType>(operand.getType());
-      auto newVType = dropNonScalableUnitDimFromType(opVectorType);
-      if (newVType == opVectorType)
-        return rewriter.notifyMatchFailure(op, "No unit dimension to remove.");
-
+      VectorType newVType = VectorType::Builder(opVectorType).dropDim(dim);
       auto opSC = rewriter.create<vector::ShapeCastOp>(loc, newVType, operand);
       newOperands.push_back(opSC);
     }
 
     VectorType newResultVectorType =
-        dropNonScalableUnitDimFromType(resultVectorType);
-    // Create an updated elementwise Op without unit dim.
+        VectorType::Builder(resultVectorType).dropDim(dim);
+    // Create an updated elementwise Op without leading/trailing unit dim
     Operation *elementwiseOp =
         rewriter.create(loc, op->getName().getIdentifier(), newOperands,
                         newResultVectorType, op->getAttrs());
 
-    // Restore the unit dim by applying vector.shape_cast to the result.
+    // Restore the leading/trailing unit dim by applying vector.shape_cast
+    // to the result
     rewriter.replaceOpWithNewOp<ShapeCastOp>(op, resultVectorType,
                                              elementwiseOp->getResult(0));
 

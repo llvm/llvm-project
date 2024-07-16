@@ -1618,6 +1618,7 @@ def shared_libsan : Flag<["-"], "shared-libsan">,
 def static_libsan : Flag<["-"], "static-libsan">,
   HelpText<"Statically link the sanitizer runtime (Not supported for ASan, TSan or UBSan on darwin)">;
 def : Flag<["-"], "shared-libasan">, Alias<shared_libsan>;
+def : Flag<["-"], "static-libasan">, Alias<static_libsan>;
 def fasm : Flag<["-"], "fasm">, Group<f_Group>;
 
 defm assume_unique_vtables : BoolFOption<"assume-unique-vtables",
@@ -3477,6 +3478,11 @@ defm objc_avoid_heapify_local_blocks : BoolFOption<"objc-avoid-heapify-local-blo
   PosFlag<SetTrue, [], [ClangOption], "Try">,
   NegFlag<SetFalse, [], [ClangOption], "Don't try">,
   BothFlags<[], [CC1Option], " to avoid heapifying local blocks">>;
+defm disable_block_signature_string : BoolFOption<"disable-block-signature-string",
+  CodeGenOpts<"DisableBlockSignatureString">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Disable">,
+  NegFlag<SetFalse, [], [ClangOption], "Don't disable">,
+  BothFlags<[], [CC1Option], " block signature string)">>;
 
 def fomit_frame_pointer : Flag<["-"], "fomit-frame-pointer">, Group<f_Group>,
   Visibility<[ClangOption, FlangOption]>,
@@ -4228,12 +4234,20 @@ defm ptrauth_vtable_pointer_address_discrimination :
 defm ptrauth_vtable_pointer_type_discrimination :
   OptInCC1FFlag<"ptrauth-vtable-pointer-type-discrimination", "Enable type discrimination of vtable pointers">;
 defm ptrauth_init_fini : OptInCC1FFlag<"ptrauth-init-fini", "Enable signing of function pointers in init/fini arrays">;
+defm ptrauth_function_pointer_type_discrimination : OptInCC1FFlag<"ptrauth-function-pointer-type-discrimination",
+  "Enable type discrimination on C function pointers">;
 }
 
 def fenable_matrix : Flag<["-"], "fenable-matrix">, Group<f_Group>,
     Visibility<[ClangOption, CC1Option]>,
     HelpText<"Enable matrix data type and related builtin functions">,
     MarshallingInfoFlag<LangOpts<"MatrixTypes">>;
+
+defm raw_string_literals : BoolFOption<"raw-string-literals",
+    LangOpts<"RawStringLiterals">, Default<std#".hasRawStringLiterals()">,
+    PosFlag<SetTrue, [], [], "Enable">,
+    NegFlag<SetFalse, [], [], "Disable">,
+    BothFlags<[], [ClangOption, CC1Option], " raw string literals">>;
 
 def fzero_call_used_regs_EQ
     : Joined<["-"], "fzero-call-used-regs=">, Group<f_Group>,
@@ -4612,10 +4626,10 @@ def inline_asm_EQ : Joined<["-"], "inline-asm=">, Group<m_Group>,
   NormalizedValuesScope<"CodeGenOptions">, NormalizedValues<["IAD_ATT", "IAD_Intel"]>,
   MarshallingInfoEnum<CodeGenOpts<"InlineAsmDialect">, "IAD_ATT">;
 def mcmodel_EQ : Joined<["-"], "mcmodel=">, Group<m_Group>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   MarshallingInfoString<TargetOpts<"CodeModel">, [{"default"}]>;
 def mlarge_data_threshold_EQ : Joined<["-"], "mlarge-data-threshold=">, Group<m_Group>,
-  Flags<[TargetSpecific]>, Visibility<[ClangOption, CC1Option]>,
+  Flags<[TargetSpecific]>, Visibility<[ClangOption, CC1Option,FlangOption, FC1Option]>,
   MarshallingInfoInt<TargetOpts<"LargeDataThreshold">, "0">;
 def mtls_size_EQ : Joined<["-"], "mtls-size=">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
@@ -4840,6 +4854,14 @@ def mstrict_align : Flag<["-"], "mstrict-align">, Group<m_Group>,
   HelpText<"Force all memory accesses to be aligned (AArch64/LoongArch/RISC-V only)">;
 def mno_strict_align : Flag<["-"], "mno-strict-align">, Group<m_Group>,
   HelpText<"Allow memory accesses to be unaligned (AArch64/LoongArch/RISC-V only)">;
+def mscalar_strict_align : Flag<["-"], "mscalar-strict-align">, Group<m_Group>,
+  HelpText<"Force all scalar memory accesses to be aligned (RISC-V only)">;
+def mno_scalar_strict_align : Flag<["-"], "mno-scalar-strict-align">, Group<m_Group>,
+  HelpText<"Allow scalar memory accesses to be unaligned (RISC-V only)">;
+def mvector_strict_align : Flag<["-"], "mvector-strict-align">, Group<m_Group>,
+  HelpText<"Force all vector memory accesses to be aligned (RISC-V only)">;
+def mno_vector_strict_align : Flag<["-"], "mno-vector-strict-align">, Group<m_Group>,
+  HelpText<"Allow vector memory accesses to be unaligned (RISC-V only)">;
 def mno_thumb : Flag<["-"], "mno-thumb">, Group<m_arm_Features_Group>;
 def mrestrict_it: Flag<["-"], "mrestrict-it">, Group<m_arm_Features_Group>,
   HelpText<"Disallow generation of complex IT blocks. It is off by default.">;
@@ -4916,6 +4938,9 @@ def mno_bti_at_return_twice : Flag<["-"], "mno-bti-at-return-twice">,
 foreach i = {1-31} in
   def ffixed_x#i : Flag<["-"], "ffixed-x"#i>, Group<m_Group>,
     HelpText<"Reserve the x"#i#" register (AArch64/RISC-V only)">;
+
+def mlr_for_calls_only : Flag<["-"], "mlr-for-calls-only">, Group<m_aarch64_Features_Group>,
+  HelpText<"Do not allocate the LR register for general purpose usage, only for calls. (AArch64 only)">;
 
 foreach i = {8-15,18} in
   def fcall_saved_x#i : Flag<["-"], "fcall-saved-x"#i>, Group<m_aarch64_Features_Group>,
@@ -5154,6 +5179,13 @@ def mvx : Flag<["-"], "mvx">, Group<m_Group>;
 def mno_vx : Flag<["-"], "mno-vx">, Group<m_Group>;
 } // let Flags = [TargetSpecific]
 
+let Flags = [TargetSpecific] in {
+def msse2avx : Flag<["-"], "msse2avx">, Group<m_Group>,
+  Visibility<[ClangOption, CC1Option, CC1AsOption]>,
+  HelpText<"Specify that the assembler should encode SSE instructions with VEX prefix">,
+  MarshallingInfoFlag<CodeGenOpts<"SSE2AVX">>;
+} // let Flags = [TargetSpecific]
+
 defm zvector : BoolFOption<"zvector",
   LangOpts<"ZVector">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -5252,6 +5284,9 @@ def mlasx : Flag<["-"], "mlasx">, Group<m_loongarch_Features_Group>,
   HelpText<"Enable Loongson Advanced SIMD Extension (LASX).">;
 def mno_lasx : Flag<["-"], "mno-lasx">, Group<m_loongarch_Features_Group>,
   HelpText<"Disable Loongson Advanced SIMD Extension (LASX).">;
+def msimd_EQ : Joined<["-"], "msimd=">, Group<m_loongarch_Features_Group>,
+  Flags<[TargetSpecific]>,
+  HelpText<"Select the SIMD extension(s) to be enabled in LoongArch either 'none', 'lsx', 'lasx'.">;
 def mnop_mcount : Flag<["-"], "mnop-mcount">, HelpText<"Generate mcount/__fentry__ calls as nops. To activate they need to be patched in.">,
   Visibility<[ClangOption, CC1Option]>, Group<m_Group>,
   MarshallingInfoFlag<CodeGenOpts<"MNopMCount">>;
@@ -5535,7 +5570,10 @@ def print_prog_name_EQ : Joined<["-", "--"], "print-prog-name=">,
   Visibility<[ClangOption, CLOption]>;
 def print_resource_dir : Flag<["-", "--"], "print-resource-dir">,
   HelpText<"Print the resource directory pathname">,
-  Visibility<[ClangOption, CLOption]>;
+  HelpTextForVariants<[FlangOption],
+                      "Print the resource directory pathname that contains lib and "
+                      "include directories with the runtime libraries and MODULE files.">,
+  Visibility<[ClangOption, CLOption, FlangOption]>;
 def print_search_dirs : Flag<["-", "--"], "print-search-dirs">,
   HelpText<"Print the paths used for finding libraries and programs">,
   Visibility<[ClangOption, CLOption]>;
@@ -5710,6 +5748,11 @@ def print_supported_extensions : Flag<["-", "--"], "print-supported-extensions">
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Print supported -march extensions (RISC-V, AArch64 and ARM only)">,
   MarshallingInfoFlag<FrontendOpts<"PrintSupportedExtensions">>;
+def print_enabled_extensions : Flag<["-", "--"], "print-enabled-extensions">,
+  Visibility<[ClangOption, CC1Option, CLOption]>,
+  HelpText<"Print the extensions enabled by the given target and -march/-mcpu options."
+           " (AArch64 and RISC-V only)">,
+  MarshallingInfoFlag<FrontendOpts<"PrintEnabledExtensions">>;
 def : Flag<["-"], "mcpu=help">, Alias<print_supported_cpus>;
 def : Flag<["-"], "mtune=help">, Alias<print_supported_cpus>;
 def time : Flag<["-"], "time">,
@@ -6311,9 +6354,9 @@ def mno_gather : Flag<["-"], "mno-gather">, Group<m_Group>,
 def mno_scatter : Flag<["-"], "mno-scatter">, Group<m_Group>,
                   HelpText<"Disable generation of scatter instructions in auto-vectorization(x86 only)">;
 def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Features_Group>,
-    HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">;
+    HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">,  Visibility<[ClangOption, CLOption, FlangOption]>;
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
-    HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">;
+    HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">, Visibility<[ClangOption, CLOption, FlangOption]>;
 // For stability, we only add a feature to -mapxf after it passes the validation of llvm-test-suite && cpu2017 on Intel SDE.
 def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf"]>;
 def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>, AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf"]>;
@@ -6659,6 +6702,9 @@ defm stack_arrays : BoolOptionWithoutMarshalling<"f", "stack-arrays",
 defm loop_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-stride",
   PosFlag<SetTrue, [], [ClangOption], "Create unit-strided versions of loops">,
    NegFlag<SetFalse, [], [ClangOption], "Do not create unit-strided loops (default)">>;
+
+def fhermetic_module_files : Flag<["-"], "fhermetic-module-files">, Group<f_Group>,
+  HelpText<"Emit hermetic module files (no nested USE association)">;
 } // let Visibility = [FC1Option, FlangOption]
 
 def J : JoinedOrSeparate<["-"], "J">,
@@ -7019,6 +7065,9 @@ def massembler_no_warn : Flag<["-"], "massembler-no-warn">,
 def massembler_fatal_warnings : Flag<["-"], "massembler-fatal-warnings">,
   HelpText<"Make assembler warnings fatal">,
   MarshallingInfoFlag<CodeGenOpts<"FatalWarnings">>;
+def crel : Flag<["--"], "crel">,
+  HelpText<"Enable CREL relocation format (ELF only)">,
+  MarshallingInfoFlag<CodeGenOpts<"Crel">>;
 def mrelax_relocations_no : Flag<["-"], "mrelax-relocations=no">,
     HelpText<"Disable x86 relax relocations">,
     MarshallingInfoNegativeFlag<CodeGenOpts<"RelaxELFRelocations">>;

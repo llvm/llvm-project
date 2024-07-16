@@ -89,8 +89,8 @@ Register LookForIdenticalPHI(MachineBasicBlock *BB,
     return Register();
 
   AvailableValsTy AVals;
-  for (unsigned i = 0, e = PredValues.size(); i != e; ++i)
-    AVals[PredValues[i].first] = PredValues[i].second;
+  for (const auto &[SrcBB, SrcReg] : PredValues)
+    AVals[SrcBB] = SrcReg;
   while (I != BB->end() && I->isPHI()) {
     bool Same = true;
     for (unsigned i = 1, e = I->getNumOperands(); i != e; i += 2) {
@@ -196,8 +196,8 @@ Register MachineSSAUpdater::GetValueInMiddleOfBlock(MachineBasicBlock *BB,
       InsertNewDef(TargetOpcode::PHI, BB, Loc, RegAttrs, MRI, TII);
 
   // Fill in all the predecessors of the PHI.
-  for (unsigned i = 0, e = PredValues.size(); i != e; ++i)
-    InsertedPHI.addReg(PredValues[i].second).addMBB(PredValues[i].first);
+  for (const auto &[SrcBB, SrcReg] : PredValues)
+    InsertedPHI.addReg(SrcReg).addMBB(SrcBB);
 
   // See if the PHI node can be merged to a single value.  This can happen in
   // loop cases when we get a PHI of itself and one other value.
@@ -306,11 +306,11 @@ public:
     append_range(*Preds, BB->predecessors());
   }
 
-  /// GetUndefVal - Create an IMPLICIT_DEF instruction with a new register.
+  /// GetPoisonVal - Create an IMPLICIT_DEF instruction with a new register.
   /// Add it into the specified block and return the register.
-  static Register GetUndefVal(MachineBasicBlock *BB,
+  static Register GetPoisonVal(MachineBasicBlock *BB,
                               MachineSSAUpdater *Updater) {
-    // Insert an implicit_def to represent an undef value.
+    // Insert an implicit_def to represent a poison value.
     MachineInstr *NewDef =
         InsertNewDef(TargetOpcode::IMPLICIT_DEF, BB, BB->getFirstNonPHI(),
                      Updater->RegAttrs, Updater->MRI, Updater->TII);

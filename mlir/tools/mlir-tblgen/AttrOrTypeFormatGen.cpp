@@ -9,7 +9,6 @@
 #include "AttrOrTypeFormatGen.h"
 #include "FormatGen.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
@@ -424,9 +423,11 @@ void DefFormat::genVariableParser(ParameterElement *el, FmtContext &ctx,
         Dialect dialect(dialectInit->getDef());
         auto cppNamespace = dialect.getCppNamespace();
         std::string name = dialect.getCppClassName();
-        dialectLoading = ("\nodsParser.getContext()->getOrLoadDialect<" +
-                          cppNamespace + "::" + name + ">();")
-                             .str();
+        if (name != "BuiltinDialect" || cppNamespace != "::mlir") {
+          dialectLoading = ("\nodsParser.getContext()->getOrLoadDialect<" +
+                            cppNamespace + "::" + name + ">();")
+                               .str();
+        }
       }
     }
   }

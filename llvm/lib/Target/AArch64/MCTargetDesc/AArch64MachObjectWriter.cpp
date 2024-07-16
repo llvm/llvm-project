@@ -11,7 +11,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCAsmLayout.h"
+#include "llvm/MC/MCAsmInfoDarwin.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -41,9 +41,8 @@ public:
       : MCMachObjectTargetWriter(!IsILP32 /* is64Bit */, CPUType, CPUSubtype) {}
 
   void recordRelocation(MachObjectWriter *Writer, MCAssembler &Asm,
-                        const MCAsmLayout &Layout, const MCFragment *Fragment,
-                        const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue) override;
+                        const MCFragment *Fragment, const MCFixup &Fixup,
+                        MCValue Target, uint64_t &FixedValue) override;
 };
 
 } // end anonymous namespace
@@ -147,13 +146,12 @@ static bool canUseLocalRelocation(const MCSectionMachO &Section,
 }
 
 void AArch64MachObjectWriter::recordRelocation(
-    MachObjectWriter *Writer, MCAssembler &Asm, const MCAsmLayout &Layout,
-    const MCFragment *Fragment, const MCFixup &Fixup, MCValue Target,
-    uint64_t &FixedValue) {
+    MachObjectWriter *Writer, MCAssembler &Asm, const MCFragment *Fragment,
+    const MCFixup &Fixup, MCValue Target, uint64_t &FixedValue) {
   unsigned IsPCRel = Writer->isFixupKindPCRel(Asm, Fixup.getKind());
 
   // See <reloc.h>.
-  uint32_t FixupOffset = Layout.getFragmentOffset(Fragment);
+  uint32_t FixupOffset = Asm.getFragmentOffset(*Fragment);
   unsigned Log2Size = 0;
   int64_t Value = 0;
   unsigned Index = 0;
@@ -216,18 +214,18 @@ void AArch64MachObjectWriter::recordRelocation(
     }
   } else if (Target.getSymB()) { // A - B + constant
     const MCSymbol *A = &Target.getSymA()->getSymbol();
-    const MCSymbol *A_Base = Asm.getAtom(*A);
+    const MCSymbol *A_Base = Writer->getAtom(*A);
 
     const MCSymbol *B = &Target.getSymB()->getSymbol();
-    const MCSymbol *B_Base = Asm.getAtom(*B);
+    const MCSymbol *B_Base = Writer->getAtom(*B);
 
     // Check for "_foo@got - .", which comes through here as:
     // Ltmp0:
     //    ... _foo@got - Ltmp0
     if (Target.getSymA()->getKind() == MCSymbolRefExpr::VK_GOT &&
         Target.getSymB()->getKind() == MCSymbolRefExpr::VK_None &&
-        Layout.getSymbolOffset(*B) ==
-            Layout.getFragmentOffset(Fragment) + Fixup.getOffset()) {
+        Asm.getSymbolOffset(*B) ==
+            Asm.getFragmentOffset(*Fragment) + Fixup.getOffset()) {
       // SymB is the PC, so use a PC-rel pointer-to-GOT relocation.
       Type = MachO::ARM64_RELOC_POINTER_TO_GOT;
       IsPCRel = 1;
@@ -279,12 +277,14 @@ void AArch64MachObjectWriter::recordRelocation(
       return;
     }
 
-    Value += (!A->getFragment() ? 0 : Writer->getSymbolAddress(*A, Layout)) -
-             (!A_Base || !A_Base->getFragment() ? 0 : Writer->getSymbolAddress(
-                                                          *A_Base, Layout));
-    Value -= (!B->getFragment() ? 0 : Writer->getSymbolAddress(*B, Layout)) -
-             (!B_Base || !B_Base->getFragment() ? 0 : Writer->getSymbolAddress(
-                                                          *B_Base, Layout));
+    Value += (!A->getFragment() ? 0 : Writer->getSymbolAddress(*A, Asm)) -
+             (!A_Base || !A_Base->getFragment()
+                  ? 0
+                  : Writer->getSymbolAddress(*A_Base, Asm));
+    Value -= (!B->getFragment() ? 0 : Writer->getSymbolAddress(*B, Asm)) -
+             (!B_Base || !B_Base->getFragment()
+                  ? 0
+                  : Writer->getSymbolAddress(*B_Base, Asm));
 
     Type = MachO::ARM64_RELOC_UNSIGNED;
 
@@ -313,11 +313,12 @@ void AArch64MachObjectWriter::recordRelocation(
         return;
       }
       const MCSection &Sec = Symbol->getSection();
-      if (!Asm.getContext().getAsmInfo()->isSectionAtomizableBySymbols(Sec))
+      if (!MCAsmInfoDarwin::isSectionAtomizableBySymbols(Sec))
         Symbol->setUsedInReloc();
     }
 
-    const MCSymbol *Base = Asm.getAtom(*Symbol);
+    const MCSymbol *Base = Writer->getAtom(*Symbol);
+
     // If the symbol is a variable it can either be in a section and
     // we have a base or it is absolute and should have been expanded.
     assert(!Symbol->isVariable() || Base);
@@ -339,8 +340,7 @@ void AArch64MachObjectWriter::recordRelocation(
 
       // Add the local offset, if needed.
       if (Base != Symbol)
-        Value +=
-            Layout.getSymbolOffset(*Symbol) - Layout.getSymbolOffset(*Base);
+        Value += Asm.getSymbolOffset(*Symbol) - Asm.getSymbolOffset(*Base);
     } else if (Symbol->isInSection()) {
       if (!CanUseLocalRelocation) {
         Asm.getContext().reportError(
@@ -353,11 +353,11 @@ void AArch64MachObjectWriter::recordRelocation(
       // The index is the section ordinal (1-based).
       const MCSection &Sec = Symbol->getSection();
       Index = Sec.getOrdinal() + 1;
-      Value += Writer->getSymbolAddress(*Symbol, Layout);
+      Value += Writer->getSymbolAddress(*Symbol, Asm);
 
       if (IsPCRel)
-        Value -= Writer->getFragmentAddress(Fragment, Layout) +
-                 Fixup.getOffset() + (1ULL << Log2Size);
+        Value -= Writer->getFragmentAddress(Asm, Fragment) + Fixup.getOffset() +
+                 (1ULL << Log2Size);
     } else {
       llvm_unreachable(
           "This constant variable should have been expanded during evaluation");

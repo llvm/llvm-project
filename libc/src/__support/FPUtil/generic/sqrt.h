@@ -14,13 +14,14 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/rounding_mode.h"
+#include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/uint128.h"
 
 #include "hdr/fenv_macros.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 namespace internal {
@@ -78,16 +79,14 @@ sqrt(InType x) {
     return x86::sqrt(x);
   } else {
     // IEEE floating points formats.
-    using OutFPBits = typename fputil::FPBits<OutType>;
-    using OutStorageType = typename OutFPBits::StorageType;
-    using InFPBits = typename fputil::FPBits<InType>;
+    using OutFPBits = FPBits<OutType>;
+    using InFPBits = FPBits<InType>;
     using InStorageType = typename InFPBits::StorageType;
+    using DyadicFloat =
+        DyadicFloat<cpp::bit_ceil(static_cast<size_t>(InFPBits::STORAGE_LEN))>;
+
     constexpr InStorageType ONE = InStorageType(1) << InFPBits::FRACTION_LEN;
     constexpr auto FLT_NAN = OutFPBits::quiet_nan().get_val();
-    constexpr int EXTRA_FRACTION_LEN =
-        InFPBits::FRACTION_LEN - OutFPBits::FRACTION_LEN;
-    constexpr InStorageType EXTRA_FRACTION_MASK =
-        (InStorageType(1) << EXTRA_FRACTION_LEN) - 1;
 
     InFPBits bits(x);
 
@@ -135,6 +134,7 @@ sqrt(InType x) {
       InStorageType y = ONE;
       InStorageType r = x_mant - ONE;
 
+      // TODO: Reduce iteration count to OutFPBits::FRACTION_LEN + 2 or + 3.
       for (InStorageType current_bit = ONE >> 1; current_bit;
            current_bit >>= 1) {
         r <<= 1;
@@ -146,96 +146,24 @@ sqrt(InType x) {
       }
 
       // We compute one more iteration in order to round correctly.
-      bool lsb = (y & (InStorageType(1) << EXTRA_FRACTION_LEN)) !=
-                 0;    // Least significant bit
-      bool rb = false; // Round bit
       r <<= 2;
-      InStorageType tmp = (y << 2) + 1;
+      y <<= 2;
+      InStorageType tmp = y + 1;
       if (r >= tmp) {
         r -= tmp;
-        rb = true;
+        // Rounding bit.
+        y |= 2;
       }
+      // Sticky bit.
+      y |= static_cast<unsigned int>(r != 0);
 
-      bool sticky = false;
-
-      if constexpr (EXTRA_FRACTION_LEN > 0) {
-        sticky = rb || (y & EXTRA_FRACTION_MASK) != 0;
-        rb = (y & (InStorageType(1) << (EXTRA_FRACTION_LEN - 1))) != 0;
-      }
-
-      // Remove hidden bit and append the exponent field.
-      x_exp = ((x_exp >> 1) + OutFPBits::EXP_BIAS);
-
-      OutStorageType y_out = static_cast<OutStorageType>(
-          ((y - ONE) >> EXTRA_FRACTION_LEN) |
-          (static_cast<OutStorageType>(x_exp) << OutFPBits::FRACTION_LEN));
-
-      if constexpr (EXTRA_FRACTION_LEN > 0) {
-        if (x_exp >= OutFPBits::MAX_BIASED_EXPONENT) {
-          switch (quick_get_round()) {
-          case FE_TONEAREST:
-          case FE_UPWARD:
-            return OutFPBits::inf().get_val();
-          default:
-            return OutFPBits::max_normal().get_val();
-          }
-        }
-
-        if (x_exp <
-            -OutFPBits::EXP_BIAS - OutFPBits::SIG_LEN + EXTRA_FRACTION_LEN) {
-          switch (quick_get_round()) {
-          case FE_UPWARD:
-            return OutFPBits::min_subnormal().get_val();
-          default:
-            return OutType(0.0);
-          }
-        }
-
-        if (x_exp <= 0) {
-          int underflow_extra_fraction_len = EXTRA_FRACTION_LEN - x_exp + 1;
-          InStorageType underflow_extra_fraction_mask =
-              (InStorageType(1) << underflow_extra_fraction_len) - 1;
-
-          rb = (y & (InStorageType(1) << (underflow_extra_fraction_len - 1))) !=
-               0;
-          OutStorageType subnormal_mant =
-              static_cast<OutStorageType>(y >> underflow_extra_fraction_len);
-          lsb = (subnormal_mant & 1) != 0;
-          sticky = sticky || (y & underflow_extra_fraction_mask) != 0;
-
-          switch (quick_get_round()) {
-          case FE_TONEAREST:
-            if (rb && (lsb || sticky))
-              ++subnormal_mant;
-            break;
-          case FE_UPWARD:
-            if (rb || sticky)
-              ++subnormal_mant;
-            break;
-          }
-
-          return cpp::bit_cast<OutType>(subnormal_mant);
-        }
-      }
-
-      switch (quick_get_round()) {
-      case FE_TONEAREST:
-        // Round to nearest, ties to even
-        if (rb && (lsb || (r != 0)))
-          ++y_out;
-        break;
-      case FE_UPWARD:
-        if (rb || (r != 0) || sticky)
-          ++y_out;
-        break;
-      }
-
-      return cpp::bit_cast<OutType>(y_out);
+      DyadicFloat yd(Sign::POS, (x_exp >> 1) - 2 - InFPBits::FRACTION_LEN, y);
+      return yd.template as<OutType, /*ShouldSignalExceptions=*/true>();
     }
   }
 }
 
 } // namespace fputil
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_SQRT_H

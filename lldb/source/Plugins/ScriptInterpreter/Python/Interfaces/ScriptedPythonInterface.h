@@ -341,8 +341,8 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
-  python::PythonObject Transform(Stream *arg) {
-    return python::SWIGBridge::ToSWIGWrapper(arg);
+  python::PythonObject Transform(lldb::StreamSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg.get());
   }
 
   python::PythonObject Transform(lldb::DataExtractorSP arg) {
@@ -447,7 +447,8 @@ Event *ScriptedPythonInterface::ExtractValueFromPythonObject<Event *>(
     python::PythonObject &p, Status &error);
 
 template <>
-Stream *ScriptedPythonInterface::ExtractValueFromPythonObject<Stream *>(
+lldb::StreamSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StreamSP>(
     python::PythonObject &p, Status &error);
 
 template <>

@@ -187,7 +187,6 @@ add_llvm_component_library(LLVMSupport
   FormatVariadic.cpp
   GlobPattern.cpp
   GraphWriter.cpp
-  Hashing.cpp
   HexagonAttributeParser.cpp
   HexagonAttributes.cpp
   InitLLVM.cpp

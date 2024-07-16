@@ -1023,6 +1023,60 @@ define float @cos_fabs_unary_fneg_f32(float %x) {
   ret float %cos
 }
 
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.sin
+; --------------------------------------------------------------------
+declare float @llvm.amdgcn.sin.f32(float) nounwind readnone
+
+define float @sin_fneg_f32(float %x) {
+; CHECK-LABEL: @sin_fneg_f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.amdgcn.sin.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[SIN:%.*]] = fneg float [[TMP1]]
+; CHECK-NEXT:    ret float [[SIN]]
+;
+  %x.fneg = fneg float %x
+  %sin = call float @llvm.amdgcn.sin.f32(float %x.fneg)
+  ret float %sin
+}
+
+define float @sin_fabs_f32(float %x) {
+; CHECK-LABEL: @sin_fabs_f32(
+; CHECK-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[SIN:%.*]] = call float @llvm.amdgcn.sin.f32(float [[X_FABS]])
+; CHECK-NEXT:    ret float [[SIN]]
+;
+  %x.fabs = call float @llvm.fabs.f32(float %x)
+  %sin = call float @llvm.amdgcn.sin.f32(float %x.fabs)
+  ret float %sin
+}
+
+define float @sin_fabs_fneg_f32(float %x) {
+; CHECK-LABEL: @sin_fabs_fneg_f32(
+; CHECK-NEXT:    [[X_FABS:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.amdgcn.sin.f32(float [[X_FABS]])
+; CHECK-NEXT:    [[SIN:%.*]] = fneg float [[TMP1]]
+; CHECK-NEXT:    ret float [[SIN]]
+;
+  %x.fabs = call float @llvm.fabs.f32(float %x)
+  %x.fabs.fneg = fneg float %x.fabs
+  %sin = call float @llvm.amdgcn.sin.f32(float %x.fabs.fneg)
+  ret float %sin
+}
+
+define float @sin_fabs_fneg_fast_f32(float %x) {
+; CHECK-LABEL: @sin_fabs_fneg_fast_f32(
+; CHECK-NEXT:    [[X_FABS:%.*]] = call fast float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.amdgcn.sin.f32(float [[X_FABS]])
+; CHECK-NEXT:    [[SIN:%.*]] = fneg fast float [[TMP1]]
+; CHECK-NEXT:    ret float [[SIN]]
+;
+  %x.fabs = call fast float @llvm.fabs.f32(float %x)
+  %x.fabs.fneg = fneg float %x.fabs
+  %sin = call fast float @llvm.amdgcn.sin.f32(float %x.fabs.fneg)
+  ret float %sin
+}
+
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.cvt.pkrtz
 ; --------------------------------------------------------------------

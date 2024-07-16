@@ -259,6 +259,10 @@
 
   Always use long jumps/nops for Linux kernel static keys
 
+- `--match-profile-with-function-hash`
+
+  Match profile with function hash
+
 - `--max-data-relocations=<uint>`
 
   Maximum number of data relocations to process
@@ -278,6 +282,12 @@
 - `--pad-funcs=<func1:pad1,func2:pad2,func3:pad3,...>`
 
   List of functions to pad with amount of bytes
+
+- `--print-mappings`
+
+  Print mappings in the legend, between characters/blocks and text sections
+  (default false).
+
 
 - `--profile-format=<value>`
 
@@ -683,6 +693,10 @@
 - `--min-branch-clusters`
 
   Use a modified clustering algorithm geared towards minimizing branches
+
+- `--name-similarity-function-matching-threshold=<uint>`
+
+  Match functions using namespace and edit distance.
 
 - `--no-inline`
 

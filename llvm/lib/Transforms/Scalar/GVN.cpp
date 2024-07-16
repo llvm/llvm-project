@@ -2477,7 +2477,7 @@ bool GVNPass::propagateEquality(Value *LHS, Value *RHS,
     assert((isa<Argument>(LHS) || isa<Instruction>(LHS)) && "Unexpected value!");
     const DataLayout &DL =
         isa<Argument>(LHS)
-            ? cast<Argument>(LHS)->getParent()->getParent()->getDataLayout()
+            ? cast<Argument>(LHS)->getParent()->getDataLayout()
             : cast<Instruction>(LHS)->getDataLayout();
 
     // If there is no obvious reason to prefer the left-hand side over the

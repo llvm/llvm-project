@@ -10,7 +10,6 @@
 
 
 import yaml
-import re
 import argparse
 
 from pathlib import Path
@@ -39,7 +38,9 @@ def yaml_to_classes(yaml_data):
     for macro_data in yaml_data.get("macros", []):
         header.add_macro(Macro(macro_data["macro_name"], macro_data["macro_value"]))
 
-    for type_data in yaml_data.get("types", []):
+    types = yaml_data.get("types", [])
+    sorted_types = sorted(types, key=lambda x: x["type_name"])
+    for type_data in sorted_types:
         header.add_type(Type(type_data["type_name"]))
 
     for enum_data in yaml_data.get("enums", []):
@@ -47,21 +48,55 @@ def yaml_to_classes(yaml_data):
             Enumeration(enum_data["name"], enum_data.get("value", None))
         )
 
-    for object_data in yaml_data.get("objects", []):
+    functions = yaml_data.get("functions", [])
+    sorted_functions = sorted(functions, key=lambda x: x["name"])
+    guards = []
+    guarded_function_dict = {}
+    for function_data in sorted_functions:
+        guard = function_data.get("guard", None)
+        if guard == None:
+            arguments = [arg["type"] for arg in function_data["arguments"]]
+            attributes = function_data.get("attributes", None)
+            standards = function_data.get("standards", None)
+            header.add_function(
+                Function(
+                    function_data["return_type"],
+                    function_data["name"],
+                    arguments,
+                    standards,
+                    guard,
+                    attributes,
+                )
+            )
+        else:
+            if guard not in guards:
+                guards.append(guard)
+                guarded_function_dict[guard] = []
+                guarded_function_dict[guard].append(function_data)
+            else:
+                guarded_function_dict[guard].append(function_data)
+    sorted_guards = sorted(guards)
+    for guard in sorted_guards:
+        for function_data in guarded_function_dict[guard]:
+            arguments = [arg["type"] for arg in function_data["arguments"]]
+            attributes = function_data.get("attributes", None)
+            standards = function_data.get("standards", None)
+            header.add_function(
+                Function(
+                    function_data["return_type"],
+                    function_data["name"],
+                    arguments,
+                    standards,
+                    guard,
+                    attributes,
+                )
+            )
+
+    objects = yaml_data.get("objects", [])
+    sorted_objects = sorted(objects, key=lambda x: x["object_name"])
+    for object_data in sorted_objects:
         header.add_object(
             Object(object_data["object_name"], object_data["object_type"])
-        )
-
-    for function_data in yaml_data.get("functions", []):
-        arguments = [arg["type"] for arg in function_data["arguments"]]
-        header.add_function(
-            Function(
-                function_data["return_type"],
-                function_data["name"],
-                arguments,
-                function_data.get("guard"),
-                function_data.get("attributes", []),
-            )
         )
 
     for include_data in yaml_data.get("includes", []):
@@ -96,10 +131,83 @@ def fill_public_api(header_str, h_def_content):
     Returns:
         The final header content with the public API filled in.
     """
+    header_str = header_str.strip()
     return h_def_content.replace("%%public_api()", header_str, 1)
 
 
-def main(yaml_file, h_def_file, output_dir):
+def parse_function_details(details):
+    """
+    Parse function details from a list of strings and return a Function object.
+
+    Args:
+        details: A list containing function details
+
+    Returns:
+        Function: An instance of Function initialized with the details.
+    """
+    return_type, name, arguments, standards, guard, attributes = details
+    standards = standards.split(",") if standards != "null" else []
+    arguments = [arg.strip() for arg in arguments.split(",")]
+    attributes = attributes.split(",") if attributes != "null" else []
+
+    return Function(
+        return_type=return_type,
+        name=name,
+        arguments=arguments,
+        standards=standards,
+        guard=guard if guard != "null" else None,
+        attributes=attributes if attributes else [],
+    )
+
+
+def add_function_to_yaml(yaml_file, function_details):
+    """
+    Add a function to the YAML file.
+
+    Args:
+        yaml_file: The path to the YAML file.
+        function_details: A list containing function details (return_type, name, arguments, standards, guard, attributes).
+    """
+    new_function = parse_function_details(function_details)
+
+    with open(yaml_file, "r") as f:
+        yaml_data = yaml.safe_load(f)
+
+    if "functions" not in yaml_data:
+        yaml_data["functions"] = []
+
+    function_dict = {
+        "name": new_function.name,
+        "standards": new_function.standards,
+        "return_type": new_function.return_type,
+        "arguments": [{"type": arg} for arg in new_function.arguments],
+    }
+
+    if new_function.guard:
+        function_dict["guard"] = new_function.guard
+
+    if new_function.attributes:
+        function_dict["attributes"] = new_function.attributes
+
+    yaml_data["functions"].append(function_dict)
+
+    class IndentYamlListDumper(yaml.Dumper):
+        def increase_indent(self, flow=False, indentless=False):
+            return super(IndentYamlListDumper, self).increase_indent(flow, False)
+
+    with open(yaml_file, "w") as f:
+        yaml.dump(
+            yaml_data,
+            f,
+            Dumper=IndentYamlListDumper,
+            default_flow_style=False,
+            sort_keys=False,
+        )
+
+    print(f"Added function {new_function.name} to {yaml_file}")
+
+
+def main(yaml_file, h_def_file, output_dir, add_function=None):
     """
     Main function to generate header files from YAML and .h.def templates.
 
@@ -107,7 +215,11 @@ def main(yaml_file, h_def_file, output_dir):
         yaml_file: Path to the YAML file containing header specification.
         h_def_file: Path to the .h.def template file.
         output_dir: Directory to output the generated header file.
+        add_function: Details of the function to be added to the YAML file (if any).
     """
+
+    if add_function:
+        add_function_to_yaml(yaml_file, add_function)
 
     header = load_yaml_file(yaml_file)
 
@@ -139,6 +251,19 @@ if __name__ == "__main__":
         default=".",
         help="Directory to output the generated header file",
     )
+    parser.add_argument(
+        "--add_function",
+        nargs=6,
+        metavar=(
+            "RETURN_TYPE",
+            "NAME",
+            "ARGUMENTS",
+            "STANDARDS",
+            "GUARD",
+            "ATTRIBUTES",
+        ),
+        help="Add a function to the YAML file",
+    )
     args = parser.parse_args()
 
-    main(args.yaml_file, args.h_def_file, args.output_dir)
+    main(args.yaml_file, args.h_def_file, args.output_dir, args.add_function)

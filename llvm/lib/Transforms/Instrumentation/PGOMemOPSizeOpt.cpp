@@ -247,12 +247,11 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   if (!MemOPOptMemcmpBcmp && (MO.isMemcmp(TLI) || MO.isBcmp(TLI)))
     return false;
 
-  uint32_t NumVals = INSTR_PROF_NUM_BUCKETS;
   uint32_t MaxNumVals = INSTR_PROF_NUM_BUCKETS;
   uint64_t TotalCount;
-  auto ValueDataArray = getValueProfDataFromInst(
-      *MO.I, IPVK_MemOPSize, MaxNumVals, NumVals, TotalCount);
-  if (!ValueDataArray)
+  auto VDs =
+      getValueProfDataFromInst(*MO.I, IPVK_MemOPSize, MaxNumVals, TotalCount);
+  if (VDs.empty())
     return false;
 
   uint64_t ActualCount = TotalCount;
@@ -264,7 +263,6 @@ bool MemOPSizeOpt::perform(MemOp MO) {
     ActualCount = *BBEdgeCount;
   }
 
-  ArrayRef<InstrProfValueData> VDs(ValueDataArray.get(), NumVals);
   LLVM_DEBUG(dbgs() << "Read one memory intrinsic profile with count "
                     << ActualCount << "\n");
   LLVM_DEBUG(
@@ -397,10 +395,10 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   // Clear the value profile data.
   MO.I->setMetadata(LLVMContext::MD_prof, nullptr);
   // If all promoted, we don't need the MD.prof metadata.
-  if (SavedRemainCount > 0 || Version != NumVals) {
+  if (SavedRemainCount > 0 || Version != VDs.size()) {
     // Otherwise we need update with the un-promoted records back.
     annotateValueSite(*Func.getParent(), *MO.I, RemainingVDs, SavedRemainCount,
-                      IPVK_MemOPSize, NumVals);
+                      IPVK_MemOPSize, VDs.size());
   }
 
   LLVM_DEBUG(dbgs() << "\n\n== Basic Block After==\n");

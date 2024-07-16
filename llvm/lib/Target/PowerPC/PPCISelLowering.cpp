@@ -48,7 +48,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -1375,16 +1375,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   if (Subtarget.hasAltivec()) {
     // Altivec instructions set fields to all zeros or all ones.
     setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
-  }
-
-  setLibcallName(RTLIB::MULO_I128, nullptr);
-  if (!isPPC64) {
-    // These libcalls are not available in 32-bit.
-    setLibcallName(RTLIB::SHL_I128, nullptr);
-    setLibcallName(RTLIB::SRL_I128, nullptr);
-    setLibcallName(RTLIB::SRA_I128, nullptr);
-    setLibcallName(RTLIB::MUL_I128, nullptr);
-    setLibcallName(RTLIB::MULO_I64, nullptr);
   }
 
   if (shouldInlineQuadwordAtomics())
@@ -3467,7 +3457,7 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
           IsTLSLocalExecModel) {
         Type *GVType = GV->getValueType();
         if (GVType->isSized() && !GVType->isEmptyTy() &&
-            GV->getParent()->getDataLayout().getTypeAllocSize(GVType) <=
+            GV->getDataLayout().getTypeAllocSize(GVType) <=
                 AIXSmallTlsPolicySizeLimit)
           return DAG.getNode(PPCISD::Lo, dl, PtrVT, VariableOffsetTGA, TLSReg);
       }
@@ -3530,7 +3520,7 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
     if (HasAIXSmallLocalDynamicTLS) {
       Type *GVType = GV->getValueType();
       if (GVType->isSized() && !GVType->isEmptyTy() &&
-          GV->getParent()->getDataLayout().getTypeAllocSize(GVType) <=
+          GV->getDataLayout().getTypeAllocSize(GVType) <=
               AIXSmallTlsPolicySizeLimit)
         return DAG.getNode(PPCISD::Lo, dl, PtrVT, VariableOffsetTGA,
                            ModuleHandle);
@@ -5873,7 +5863,7 @@ bool PPCTargetLowering::supportsTailCallFor(const CallBase *CB) const {
 
   GetReturnInfo(CalleeCC, CalleeFunc->getReturnType(),
                 CalleeFunc->getAttributes(), Outs, *this,
-                CalleeFunc->getParent()->getDataLayout());
+                CalleeFunc->getDataLayout());
 
   return isEligibleForTCO(CalleeGV, CalleeCC, CallerCC, CB,
                           CalleeFunc->isVarArg(), Outs, Ins, CallerFunc,
@@ -17543,7 +17533,7 @@ bool PPCTargetLowering::isProfitableToHoist(Instruction *I) const {
 
     const TargetOptions &Options = getTargetMachine().Options;
     const Function *F = I->getFunction();
-    const DataLayout &DL = F->getParent()->getDataLayout();
+    const DataLayout &DL = F->getDataLayout();
     Type *Ty = User->getOperand(0)->getType();
 
     return !(

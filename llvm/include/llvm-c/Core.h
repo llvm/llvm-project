@@ -511,6 +511,20 @@ enum {
  */
 typedef unsigned LLVMFastMathFlags;
 
+enum {
+  LLVMGEPFlagInBounds = (1 << 0),
+  LLVMGEPFlagNUSW = (1 << 1),
+  LLVMGEPFlagNUW = (1 << 2),
+};
+
+/**
+ * Flags that constrain the allowed wrap semantics of a getelementptr
+ * instruction.
+ *
+ * See https://llvm.org/docs/LangRef.html#getelementptr-instruction
+ */
+typedef unsigned LLVMGEPNoWrapFlags;
+
 /**
  * @}
  */
@@ -2434,6 +2448,17 @@ LLVMValueRef LLVMConstGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
 LLVMValueRef LLVMConstInBoundsGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
                                    LLVMValueRef *ConstantIndices,
                                    unsigned NumIndices);
+/**
+ * Creates a constant GetElementPtr expression. Similar to LLVMConstGEP2, but
+ * allows specifying the no-wrap flags.
+ *
+ * @see llvm::ConstantExpr::getGetElementPtr()
+ */
+LLVMValueRef LLVMConstGEPWithNoWrapFlags(LLVMTypeRef Ty,
+                                         LLVMValueRef ConstantVal,
+                                         LLVMValueRef *ConstantIndices,
+                                         unsigned NumIndices,
+                                         LLVMGEPNoWrapFlags NoWrapFlags);
 LLVMValueRef LLVMConstTrunc(LLVMValueRef ConstantVal, LLVMTypeRef ToType);
 LLVMValueRef LLVMConstPtrToInt(LLVMValueRef ConstantVal, LLVMTypeRef ToType);
 LLVMValueRef LLVMConstIntToPtr(LLVMValueRef ConstantVal, LLVMTypeRef ToType);
@@ -3944,6 +3969,20 @@ void LLVMSetIsInBounds(LLVMValueRef GEP, LLVMBool InBounds);
 LLVMTypeRef LLVMGetGEPSourceElementType(LLVMValueRef GEP);
 
 /**
+ * Get the no-wrap related flags for the given GEP instruction.
+ *
+ * @see llvm::GetElementPtrInst::getNoWrapFlags
+ */
+LLVMGEPNoWrapFlags LLVMGEPGetNoWrapFlags(LLVMValueRef GEP);
+
+/**
+ * Set the no-wrap related flags for the given GEP instruction.
+ *
+ * @see llvm::GetElementPtrInst::setNoWrapFlags
+ */
+void LLVMGEPSetNoWrapFlags(LLVMValueRef GEP, LLVMGEPNoWrapFlags NoWrapFlags);
+
+/**
  * @}
  */
 
@@ -4402,6 +4441,17 @@ LLVMValueRef LLVMBuildGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
 LLVMValueRef LLVMBuildInBoundsGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
                                    LLVMValueRef Pointer, LLVMValueRef *Indices,
                                    unsigned NumIndices, const char *Name);
+/**
+ * Creates a GetElementPtr instruction. Similar to LLVMBuildGEP2, but allows
+ * specifying the no-wrap flags.
+ *
+ * @see llvm::IRBuilder::CreateGEP()
+ */
+LLVMValueRef LLVMBuildGEPWithNoWrapFlags(LLVMBuilderRef B, LLVMTypeRef Ty,
+                                         LLVMValueRef Pointer,
+                                         LLVMValueRef *Indices,
+                                         unsigned NumIndices, const char *Name,
+                                         LLVMGEPNoWrapFlags NoWrapFlags);
 LLVMValueRef LLVMBuildStructGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
                                  LLVMValueRef Pointer, unsigned Idx,
                                  const char *Name);

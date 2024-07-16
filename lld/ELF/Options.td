@@ -614,6 +614,8 @@ def lto_debug_pass_manager: FF<"lto-debug-pass-manager">,
   HelpText<"Debug new pass manager">;
 def lto_emit_asm: FF<"lto-emit-asm">,
   HelpText<"Emit assembly code">;
+def lto_emit_llvm: FF<"lto-emit-llvm">,
+  HelpText<"Emit LLVM-IR bitcode">;
 def lto_newpm_passes: JJ<"lto-newpm-passes=">,
   HelpText<"Passes to run during LTO">;
 def lto_O: JJ<"lto-O">, MetaVarName<"<opt-level>">,
@@ -695,7 +697,8 @@ def plugin_opt_dwo_dir_eq: J<"plugin-opt=dwo_dir=">,
   HelpText<"Directory to store .dwo files when LTO and debug fission are used">;
 def plugin_opt_emit_asm: F<"plugin-opt=emit-asm">,
   Alias<lto_emit_asm>, HelpText<"Alias for --lto-emit-asm">;
-def plugin_opt_emit_llvm: F<"plugin-opt=emit-llvm">;
+def plugin_opt_emit_llvm: F<"plugin-opt=emit-llvm">,
+  Alias<lto_emit_llvm>, HelpText<"Alias for --lto-emit-llvm">;
 def: J<"plugin-opt=jobs=">, Alias<thinlto_jobs_eq>, HelpText<"Alias for --thinlto-jobs=">;
 def: J<"plugin-opt=lto-partitions=">, Alias<lto_partitions>, HelpText<"Alias for --lto-partitions">;
 def plugin_opt_mcpu_eq: J<"plugin-opt=mcpu=">;

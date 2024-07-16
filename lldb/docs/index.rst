@@ -141,6 +141,7 @@ interesting areas to contribute to lldb.
    use/python
    use/python-reference
    Python API <python_api>
+   Python Extensions <python_extensions>
 
 
 .. toctree::

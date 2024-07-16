@@ -100,7 +100,7 @@ public:
                      llvm::ArrayRef<mlir::Operation *> rets)
       : OpRewritePattern(ctx), returnOps(rets) {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::AllocaOp alloca,
                   mlir::PatternRewriter &rewriter) const override {
     auto loc = alloca.getLoc();

@@ -142,10 +142,6 @@ void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
     MCDwarfFrameEmitter::Emit(*this, MAB, false);
 }
 
-MCFragment *MCObjectStreamer::getCurrentFragment() const {
-  return getCurrentSectionOnly()->curFragList()->Tail;
-}
-
 static bool canReuseDataFragment(const MCDataFragment &F,
                                  const MCAssembler &Assembler,
                                  const MCSubtargetInfo *STI) {
@@ -167,7 +163,7 @@ static bool canReuseDataFragment(const MCDataFragment &F,
 
 MCDataFragment *
 MCObjectStreamer::getOrCreateDataFragment(const MCSubtargetInfo *STI) {
-  MCDataFragment *F = dyn_cast_or_null<MCDataFragment>(getCurrentFragment());
+  auto *F = dyn_cast<MCDataFragment>(getCurrentFragment());
   if (!F || !canReuseDataFragment(*F, *Assembler, STI)) {
     F = getContext().allocFragment<MCDataFragment>();
     insert(F);
@@ -294,9 +290,27 @@ bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
   assert(Section && "Cannot switch to a null section!");
   getContext().clearDwarfLocSeen();
 
-  bool Created = getAssembler().registerSection(*Section);
-  Section->switchSubsection(Subsection);
-  return Created;
+  auto &Subsections = Section->Subsections;
+  size_t I = 0, E = Subsections.size();
+  while (I != E && Subsections[I].first < Subsection)
+    ++I;
+  // If the subsection number is not in the sorted Subsections list, create a
+  // new fragment list.
+  if (I == E || Subsections[I].first != Subsection) {
+    auto *F = getContext().allocFragment<MCDataFragment>();
+    F->setParent(Section);
+    Subsections.insert(Subsections.begin() + I,
+                       {Subsection, MCSection::FragList{F, F}});
+  }
+  Section->CurFragList = &Subsections[I].second;
+  CurFrag = Section->CurFragList->Tail;
+
+  return getAssembler().registerSection(*Section);
+}
+
+void MCObjectStreamer::switchSectionNoPrint(MCSection *Section) {
+  MCStreamer::switchSectionNoPrint(Section);
+  changeSection(Section, 0);
 }
 
 void MCObjectStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
@@ -330,9 +344,7 @@ void MCObjectStreamer::emitInstruction(const MCInst &Inst,
                                                 "' cannot have instructions");
     return;
   }
-  getAssembler().getBackend().emitInstructionBegin(*this, Inst, STI);
   emitInstructionImpl(Inst, STI);
-  getAssembler().getBackend().emitInstructionEnd(*this, Inst);
 }
 
 void MCObjectStreamer::emitInstructionImpl(const MCInst &Inst,
@@ -381,10 +393,8 @@ void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
       getContext().allocFragment<MCRelaxableFragment>(Inst, STI);
   insert(IF);
 
-  SmallString<128> Code;
-  getAssembler().getEmitter().encodeInstruction(Inst, Code, IF->getFixups(),
-                                                STI);
-  IF->getContents().append(Code.begin(), Code.end());
+  getAssembler().getEmitter().encodeInstruction(Inst, IF->getContents(),
+                                                IF->getFixups(), STI);
 }
 
 #ifndef NDEBUG

@@ -2719,3 +2719,24 @@ func.func @from_elements_to_splat(%a: f32, %b: f32) -> (vector<2x3xf32>, vector<
   // CHECK: return %[[splat]], %[[from_el]], %[[splat2]]
   return %0, %1, %2 : vector<2x3xf32>, vector<2x3xf32>, vector<f32>
 }
+
+// -----
+
+// CHECK-LABEL: @fold_vector_step_to_constant
+// CHECK: %[[CONSTANT:.*]] = arith.constant dense<[0, 1, 2, 3]> : vector<4xindex>
+// CHECK: return %[[CONSTANT]] : vector<4xindex>
+func.func @fold_vector_step_to_constant() -> vector<4xindex> {
+  %0 = vector.step : vector<4xindex>
+  return %0 : vector<4xindex>
+}
+
+// -----
+
+// CHECK-LABEL: func @vector_insert_const_regression(
+//       CHECK:   llvm.mlir.undef
+//       CHECK:   vector.insert
+func.func @vector_insert_const_regression(%arg0: i8) -> vector<4xi8> {
+  %0 = llvm.mlir.undef : vector<4xi8>
+  %1 = vector.insert %arg0, %0 [0] : i8 into vector<4xi8>
+  return %1 : vector<4xi8>
+}

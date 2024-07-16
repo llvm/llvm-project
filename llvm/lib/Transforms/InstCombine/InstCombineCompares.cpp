@@ -6451,13 +6451,13 @@ Instruction *InstCombinerImpl::foldICmpUsingKnownBits(ICmpInst &I) {
     // Don't use dominating conditions when folding icmp using known bits. This
     // may convert signed into unsigned predicates in ways that other passes
     // (especially IndVarSimplify) may not be able to reliably undo.
-    SQ.DC = nullptr;
-    auto _ = make_scope_exit([&]() { SQ.DC = &DC; });
+    SimplifyQuery Q = SQ.getWithoutDomCondCache().getWithInstruction(&I);
     if (SimplifyDemandedBits(&I, 0, getDemandedBitsLHSMask(I, BitWidth),
-                             Op0Known, 0))
+                             Op0Known, /*Depth=*/0, Q))
       return &I;
 
-    if (SimplifyDemandedBits(&I, 1, APInt::getAllOnes(BitWidth), Op1Known, 0))
+    if (SimplifyDemandedBits(&I, 1, APInt::getAllOnes(BitWidth), Op1Known,
+                             /*Depth=*/0, Q))
       return &I;
   }
 
@@ -8002,6 +8002,53 @@ static Instruction *foldFCmpFNegCommonOp(FCmpInst &I) {
   return new FCmpInst(Pred, Op0, Zero, "", &I);
 }
 
+static Instruction *foldFCmpFSubIntoFCmp(FCmpInst &I, Instruction *LHSI,
+                                         Constant *RHSC, InstCombinerImpl &CI) {
+  const CmpInst::Predicate Pred = I.getPredicate();
+  Value *X = LHSI->getOperand(0);
+  Value *Y = LHSI->getOperand(1);
+  switch (Pred) {
+  default:
+    break;
+  case FCmpInst::FCMP_UGT:
+  case FCmpInst::FCMP_ULT:
+  case FCmpInst::FCMP_UNE:
+  case FCmpInst::FCMP_OEQ:
+  case FCmpInst::FCMP_OGE:
+  case FCmpInst::FCMP_OLE:
+    // The optimization is not valid if X and Y are infinities of the same
+    // sign, i.e. the inf - inf = nan case. If the fsub has the ninf or nnan
+    // flag then we can assume we do not have that case. Otherwise we might be
+    // able to prove that either X or Y is not infinity.
+    if (!LHSI->hasNoNaNs() && !LHSI->hasNoInfs() &&
+        !isKnownNeverInfinity(Y, /*Depth=*/0,
+                              CI.getSimplifyQuery().getWithInstruction(&I)) &&
+        !isKnownNeverInfinity(X, /*Depth=*/0,
+                              CI.getSimplifyQuery().getWithInstruction(&I)))
+      break;
+
+    [[fallthrough]];
+  case FCmpInst::FCMP_OGT:
+  case FCmpInst::FCMP_OLT:
+  case FCmpInst::FCMP_ONE:
+  case FCmpInst::FCMP_UEQ:
+  case FCmpInst::FCMP_UGE:
+  case FCmpInst::FCMP_ULE:
+    // fcmp pred (x - y), 0 --> fcmp pred x, y
+    if (match(RHSC, m_AnyZeroFP()) &&
+        I.getFunction()->getDenormalMode(
+            LHSI->getType()->getScalarType()->getFltSemantics()) ==
+            DenormalMode::getIEEE()) {
+      CI.replaceOperand(I, 0, X);
+      CI.replaceOperand(I, 1, Y);
+      return &I;
+    }
+    break;
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   bool Changed = false;
 
@@ -8171,6 +8218,11 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
         return replaceOperand(I, 0, X);
       if (Instruction *NV = FoldOpIntoSelect(I, cast<SelectInst>(LHSI)))
         return NV;
+      break;
+    case Instruction::FSub:
+      if (LHSI->hasOneUse())
+        if (Instruction *NV = foldFCmpFSubIntoFCmp(I, LHSI, RHSC, *this))
+          return NV;
       break;
     case Instruction::PHI:
       if (Instruction *NV = foldOpIntoPhi(I, cast<PHINode>(LHSI)))

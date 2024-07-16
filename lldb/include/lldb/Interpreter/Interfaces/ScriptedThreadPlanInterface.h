@@ -29,8 +29,8 @@ public:
 
   virtual lldb::StateType GetRunState() { return lldb::eStateStepping; }
 
-  virtual llvm::Expected<bool> GetStopDescription(lldb_private::Stream *s) {
-    return true;
+  virtual llvm::Error GetStopDescription(lldb::StreamSP &stream) {
+    return llvm::Error::success();
   }
 };
 } // namespace lldb_private

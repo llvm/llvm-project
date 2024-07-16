@@ -113,46 +113,69 @@ func.func @contiguous_inner_most_outer_dim_dyn_scalable_inner_dim(%a: index, %b:
 
 // -----
 
-func.func @contiguous_inner_most_dim_non_zero_idx(%A: memref<16x1xf32>, %i:index) -> (vector<8x1xf32>) {
-  %c0 = arith.constant 0 : index
-  %f0 = arith.constant 0.0 : f32
-  %1 = vector.transfer_read %A[%i, %c0], %f0 : memref<16x1xf32>, vector<8x1xf32>
-  return %1 : vector<8x1xf32>
-}
-//      CHECK: func @contiguous_inner_most_dim_non_zero_idx(%[[SRC:.+]]: memref<16x1xf32>, %[[I:.+]]: index) -> vector<8x1xf32>
-//      CHECK:   %[[SRC_0:.+]] = memref.subview %[[SRC]]
-// CHECK-SAME:     memref<16x1xf32> to memref<16xf32, strided<[1]>>
-//      CHECK:   %[[V:.+]] = vector.transfer_read %[[SRC_0]]
-//      CHECK:   %[[RESULT:.+]] = vector.shape_cast %[[V]] : vector<8xf32> to vector<8x1xf32>
-//      CHECK:   return %[[RESULT]]
+// Test the impact of changing the in_bounds attribute. The behaviour will
+// depend on whether the index is == 0 or != 0.
 
-// The index to be dropped is != 0 - this is currently not supported.
-func.func @negative_contiguous_inner_most_dim_non_zero_idxs(%A: memref<16x1xf32>, %i:index) -> (vector<8x1xf32>) {
-  %f0 = arith.constant 0.0 : f32
-  %1 = vector.transfer_read %A[%i, %i], %f0 : memref<16x1xf32>, vector<8x1xf32>
+// The index to be dropped is == 0, so it's safe to collapse. The other index
+// should be preserved correctly.
+func.func @contiguous_inner_most_zero_idx_in_bounds(%A: memref<16x1xf32>, %i:index) -> (vector<8x1xf32>) {
+  %pad = arith.constant 0.0 : f32
+  %c0 = arith.constant 0 : index
+  %1 = vector.transfer_read %A[%i, %c0], %pad {in_bounds = [true, true]} : memref<16x1xf32>, vector<8x1xf32>
   return %1 : vector<8x1xf32>
 }
-// CHECK-LABEL: func @negative_contiguous_inner_most_dim_non_zero_idxs
+// CHECK-LABEL:   func.func @contiguous_inner_most_zero_idx_in_bounds(
+// CHECK-SAME:      %[[MEM:.*]]: memref<16x1xf32>,
+// CHECK-SAME:      %[[IDX:.*]]: index) -> vector<8x1xf32> {
+// CHECK:           %[[PAD:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[SV:.*]] = memref.subview %[[MEM]][0, 0] [16, 1] [1, 1] : memref<16x1xf32> to memref<16xf32, strided<[1]>>
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[SV]]{{\[}}%[[IDX]]], %[[PAD]] {in_bounds = [true]} : memref<16xf32, strided<[1]>>, vector<8xf32>
+// CHECK:           vector.shape_cast %[[READ]] : vector<8xf32> to vector<8x1xf32>
+
+// The index to be dropped is == 0, so it's safe to collapse. The "out of
+// bounds" attribute is too conservative and will be folded to "in bounds"
+// before the pattern runs. The other index should be preserved correctly.
+func.func @contiguous_inner_most_zero_idx_out_of_bounds(%A: memref<16x1xf32>, %i:index) -> (vector<8x1xf32>) {
+  %pad = arith.constant 0.0 : f32
+  %c0 = arith.constant 0 : index
+  %1 = vector.transfer_read %A[%i, %c0], %pad {in_bounds = [true, false]} : memref<16x1xf32>, vector<8x1xf32>
+  return %1 : vector<8x1xf32>
+}
+// CHECK-LABEL:   func.func @contiguous_inner_most_zero_idx_out_of_bounds(
+// CHECK-SAME:      %[[MEM:.*]]: memref<16x1xf32>,
+// CHECK-SAME:      %[[IDX:.*]]: index) -> vector<8x1xf32> {
+// CHECK:           %[[PAD:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[SV:.*]] = memref.subview %[[MEM]][0, 0] [16, 1] [1, 1] : memref<16x1xf32> to memref<16xf32, strided<[1]>>
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[SV]]{{\[}}%[[IDX]]], %[[PAD]] {in_bounds = [true]} : memref<16xf32, strided<[1]>>, vector<8xf32>
+// CHECK:           vector.shape_cast %[[READ]] : vector<8xf32> to vector<8x1xf32>
+
+// The index to be dropped is unknown, but since it's "in bounds", it has to be
+// == 0. It's safe to collapse the corresponding dim.
+func.func @contiguous_inner_most_non_zero_idx_in_bounds(%A: memref<16x1xf32>, %i:index) -> (vector<8x1xf32>) {
+  %pad = arith.constant 0.0 : f32
+  %1 = vector.transfer_read %A[%i, %i], %pad {in_bounds = [true, true]} : memref<16x1xf32>, vector<8x1xf32>
+  return %1 : vector<8x1xf32>
+}
+// CHECK-LABEL:   func.func @contiguous_inner_most_non_zero_idx_in_bounds(
+// CHECK-SAME:      %[[MEM:.*]]: memref<16x1xf32>,
+// CHECK-SAME:      %[[IDX:.*]]: index) -> vector<8x1xf32> {
+// CHECK:           %[[PAD:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[SV:.*]] = memref.subview %[[MEM]][0, 0] [16, 1] [1, 1] : memref<16x1xf32> to memref<16xf32, strided<[1]>>
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[SV]]{{\[}}%[[IDX]]], %[[PAD]] {in_bounds = [true]} : memref<16xf32, strided<[1]>>, vector<8xf32>
+// CHECK:           vector.shape_cast %[[READ]] : vector<8xf32> to vector<8x1xf32>
+
+// The index to be dropped is unknown and "out of bounds" - not safe to
+// collapse.
+func.func @negative_contiguous_inner_most_non_zero_idx_out_of_bounds(%A: memref<16x1xf32>, %i:index) -> (vector<8x1xf32>) {
+  %pad = arith.constant 0.0 : f32
+  %1 = vector.transfer_read %A[%i, %i], %pad {in_bounds = [true, false]} : memref<16x1xf32>, vector<8x1xf32>
+  return %1 : vector<8x1xf32>
+}
+// CHECK-LABEL:   func.func @negative_contiguous_inner_most_non_zero_idx_out_of_bounds(
 // CHECK-NOT:     memref.subview
+// CHECK-NOT:     memref.shape_cast
 // CHECK:         vector.transfer_read
 
-// Same as the top example within this split, but with the outer vector
-// dim scalable. Note that this example only makes sense when "8 = [8]" (i.e.
-// vscale = 1). This is assumed (implicitly) via the `in_bounds` attribute.
-
-func.func @contiguous_inner_most_dim_non_zero_idx_scalable_inner_dim(%A: memref<16x1xf32>, %i:index) -> (vector<[8]x1xf32>) {
-  %c0 = arith.constant 0 : index
-  %f0 = arith.constant 0.0 : f32
-  %1 = vector.transfer_read %A[%i, %c0], %f0 : memref<16x1xf32>, vector<[8]x1xf32>
-  return %1 : vector<[8]x1xf32>
-}
-// CHECK-LABEL: func @contiguous_inner_most_dim_non_zero_idx_scalable_inner_dim(
-// CHECK-SAME:    %[[SRC:.+]]: memref<16x1xf32>, %[[I:.+]]: index) -> vector<[8]x1xf32>
-//       CHECK:   %[[SRC_0:.+]] = memref.subview %[[SRC]]
-//  CHECK-SAME:     memref<16x1xf32> to memref<16xf32, strided<[1]>>
-//       CHECK:   %[[V:.+]] = vector.transfer_read %[[SRC_0]]
-//       CHECK:   %[[RESULT:.+]] = vector.shape_cast %[[V]] : vector<[8]xf32> to vector<[8]x1xf32>
-//       CHECK:   return %[[RESULT]]
 
 // -----
 
@@ -367,6 +390,165 @@ func.func @contiguous_inner_most_dynamic_outer_scalable_inner_dim(%a: index, %b:
 
 // -----
 
+// Test the impact of changing the in_bounds attribute. The behaviour will
+// depend on whether the index is == 0 or != 0.
+
+// The index to be dropped is == 0, so it's safe to collapse. The other index
+// should be preserved correctly.
+func.func @contiguous_inner_most_zero_idx_in_bounds(%arg0: memref<16x1xf32>, %arg1: vector<8x1xf32>, %i: index) {
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %arg1, %arg0[%i, %c0] {in_bounds = [true, true]} : vector<8x1xf32>, memref<16x1xf32>
+  return
+}
+// CHECK-LABEL:   func.func @contiguous_inner_most_zero_idx_in_bounds(
+// CHECK-SAME:      %[[MEM:.*]]: memref<16x1xf32>,
+// CHECK-SAME:      %[[VEC:.*]]: vector<8x1xf32>,
+// CHECK-SAME:      %[[IDX:.*]]: index) {
+// CHECK:           %[[SV:.*]] = memref.subview %[[MEM]][0, 0] [16, 1] [1, 1] : memref<16x1xf32> to memref<16xf32, strided<[1]>>
+// CHECK:           %[[SC:.*]] = vector.shape_cast %[[VEC]] : vector<8x1xf32> to vector<8xf32>
+// CHECK:           vector.transfer_write %[[SC]], %[[SV]]{{\[}}%[[IDX]]] {in_bounds = [true]} : vector<8xf32>, memref<16xf32, strided<[1]>>
+
+// The index to be dropped is == 0, so it's safe to collapse. The "out of
+// bounds" attribute is too conservative and will be folded to "in bounds"
+// before the pattern runs. The other index should be preserved correctly.
+func.func @contiguous_inner_most_zero_idx_out_of_bounds(%arg0: memref<16x1xf32>, %arg1: vector<8x1xf32>, %i: index) {
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %arg1, %arg0[%i, %c0] {in_bounds = [true, false]} : vector<8x1xf32>, memref<16x1xf32>
+  return
+}
+// CHECK-LABEL:   func.func @contiguous_inner_most_zero_idx_out_of_bounds
+// CHECK-SAME:      %[[MEM:.*]]: memref<16x1xf32>,
+// CHECK-SAME:      %[[VEC:.*]]: vector<8x1xf32>,
+// CHECK-SAME:      %[[IDX:.*]]: index) {
+// CHECK:           %[[SV:.*]] = memref.subview %[[MEM]][0, 0] [16, 1] [1, 1] : memref<16x1xf32> to memref<16xf32, strided<[1]>>
+// CHECK:           %[[SC:.*]] = vector.shape_cast %[[VEC]] : vector<8x1xf32> to vector<8xf32>
+// CHECK:           vector.transfer_write %[[SC]], %[[SV]]{{\[}}%[[IDX]]] {in_bounds = [true]} : vector<8xf32>, memref<16xf32, strided<[1]>>
+
+// The index to be dropped is unknown, but since it's "in bounds", it has to be
+// == 0. It's safe to collapse the corresponding dim.
+func.func @contiguous_inner_most_dim_non_zero_idx_in_bounds(%arg0: memref<16x1xf32>, %arg1: vector<8x1xf32>, %i: index) {
+  vector.transfer_write %arg1, %arg0[%i, %i] {in_bounds = [true, true]} : vector<8x1xf32>, memref<16x1xf32>
+  return
+}
+// CHECK-LABEL: func @contiguous_inner_most_dim_non_zero_idx_in_bounds
+// CHECK-SAME:      %[[MEM:.*]]: memref<16x1xf32>,
+// CHECK-SAME:      %[[VEC:.*]]: vector<8x1xf32>,
+// CHECK-SAME:      %[[IDX:.*]]: index) {
+// CHECK:           %[[SV:.*]] = memref.subview %[[MEM]][0, 0] [16, 1] [1, 1] : memref<16x1xf32> to memref<16xf32, strided<[1]>>
+// CHECK:           %[[SC:.*]] = vector.shape_cast %[[VEC]] : vector<8x1xf32> to vector<8xf32>
+// CHECK:           vector.transfer_write %[[SC]], %[[SV]]{{\[}}%[[IDX]]] {in_bounds = [true]} : vector<8xf32>, memref<16xf32, strided<[1]>>
+
+// Same as the top example within this split, but with the outer vector
+// dim scalable. Note that this example only makes sense when "8 = [8]" (i.e.
+// vscale = 1). This is assumed via the `in_bounds` attribute.
+
+// TODO: Add a similar test for xfer_write
+
+func.func @contiguous_inner_most_non_zero_idx_in_bounds_scalable(%arg0: memref<16x1xf32>, %arg1: vector<[8]x1xf32>, %i: index) {
+  vector.transfer_write %arg1, %arg0[%i, %i] {in_bounds = [true, true]} : vector<[8]x1xf32>, memref<16x1xf32>
+  return
+}
+// CHECK-LABEL:   func.func @contiguous_inner_most_non_zero_idx_in_bounds_scalable(
+// CHECK-SAME:      %[[MEM:.*]]: memref<16x1xf32>,
+// CHECK-SAME:      %[[VEC:.*]]: vector<[8]x1xf32>
+// CHECK-SAME:      %[[IDX:.*]]: index) {
+// CHECK:           %[[SV:.*]] = memref.subview %[[MEM]][0, 0] [16, 1] [1, 1] : memref<16x1xf32> to memref<16xf32, strided<[1]>>
+// CHECK:           %[[SC:.*]] = vector.shape_cast %[[VEC]] : vector<[8]x1xf32> to vector<[8]xf32>
+// CHECK:           vector.transfer_write %[[SC]], %[[SV]]{{\[}}%[[IDX]]] {in_bounds = [true]} : vector<[8]xf32>, memref<16xf32, strided<[1]>>
+
+// The index to be dropped is unknown and "out of bounds" - not safe to
+// collapse.
+func.func @negative_contiguous_inner_most_dim_non_zero_idx_out_of_bounds(%arg0: memref<16x1xf32>, %arg1: vector<8x1xf32>, %i: index) {
+  vector.transfer_write %arg1, %arg0[%i, %i] {in_bounds = [true, false]} : vector<8x1xf32>, memref<16x1xf32>
+  return
+}
+// CHECK-LABEL: func @negative_contiguous_inner_most_dim_non_zero_idx_out_of_bounds
+// CHECK-NOT:     memref.subview
+// CHECK-NOT:     memref.shape_cast
+// CHECK:         vector.transfer_write
+
+// -----
+
+// Verify that the transformation does work even when the input is a "subview"
+
+func.func @contiguous_inner_most_dim_with_subview(%A: memref<1000x1xf32>, %i:index, %ii:index, %vec: vector<4x1xf32>) {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f32
+  %0 = memref.subview %A[%i, 0] [40, 1] [1, 1] : memref<1000x1xf32> to memref<40x1xf32, strided<[1, 1], offset: ?>>
+  vector.transfer_write %vec, %0[%ii, %c0] {in_bounds = [true, true]} : vector<4x1xf32>, memref<40x1xf32, strided<[1, 1], offset: ?>>
+  return
+}
+
+// CHECK-LABEL:   func.func @contiguous_inner_most_dim_with_subview(
+// CHECK-SAME:      %[[MEM:.*]]: memref<1000x1xf32>,
+// CHECK-SAME:      %[[IDX_1:.*]]: index, %[[IDX_2:.*]]: index,
+// CHECK-SAME:      %[[VEC:.*]]: vector<4x1xf32>) {
+// CHECK:           %[[SV_1:.*]] = memref.subview %[[MEM]]{{\[}}%[[IDX_1]], 0] [40, 1] [1, 1] : memref<1000x1xf32> to memref<40x1xf32, strided<[1, 1], offset: ?>>
+// CHECK:           %[[SV_2:.*]] = memref.subview %[[SV_1]][0, 0] [40, 1] [1, 1] : memref<40x1xf32, strided<[1, 1], offset: ?>> to memref<40xf32, strided<[1], offset: ?>>
+// CHECK:           %[[SC:.*]] = vector.shape_cast %[[VEC]] : vector<4x1xf32> to vector<4xf32>
+// CHECK:           vector.transfer_write %[[SC]], %[[SV_2]]{{\[}}%[[IDX_2]]] {in_bounds = [true]} : vector<4xf32>, memref<40xf32, strided<[1], offset: ?>>
+
+// Same as the top example within this split, but with the outer vector
+// dim scalable. Note that this example only makes sense when "4 = [4]" (i.e.
+// vscale = 1). This is assumed via the `in_bounds` attribute.
+
+func.func @contiguous_inner_most_dim_with_subview_scalable_inner_dim(%A: memref<1000x1xf32>, %i:index, %ii:index, %vec: vector<[4]x1xf32>) {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f32
+  %0 = memref.subview %A[%i, 0] [40, 1] [1, 1] : memref<1000x1xf32> to memref<40x1xf32, strided<[1, 1], offset: ?>>
+  vector.transfer_write %vec, %0[%ii, %c0] {in_bounds = [true, true]} : vector<[4]x1xf32>, memref<40x1xf32, strided<[1, 1], offset: ?>>
+  return
+}
+
+// CHECK-LABEL:   func.func @contiguous_inner_most_dim_with_subview_scalable_inner_dim
+// CHECK-SAME:      %[[MEM:.*]]: memref<1000x1xf32>,
+// CHECK-SAME:      %[[IDX_1:.*]]: index, %[[IDX_2:.*]]: index,
+// CHECK-SAME:      %[[VEC:.*]]: vector<[4]x1xf32>) {
+// CHECK:           %[[SV_1:.*]] = memref.subview %[[MEM]]{{\[}}%[[IDX_1]], 0] [40, 1] [1, 1] : memref<1000x1xf32> to memref<40x1xf32, strided<[1, 1], offset: ?>>
+// CHECK:           %[[SV_2:.*]] = memref.subview %[[SV_1]][0, 0] [40, 1] [1, 1] : memref<40x1xf32, strided<[1, 1], offset: ?>> to memref<40xf32, strided<[1], offset: ?>>
+// CHECK:           %[[SC:.*]] = vector.shape_cast %[[VEC]] : vector<[4]x1xf32> to vector<[4]xf32>
+// CHECK:           vector.transfer_write %[[SC]], %[[SV_2]]{{\[}}%[[IDX_2]]] {in_bounds = [true]} : vector<[4]xf32>, memref<40xf32, strided<[1], offset: ?>>
+
+// -----
+
+func.func @contiguous_inner_most_dim_with_subview_2d(%A: memref<1000x1x1xf32>, %i:index, %ii:index, %vec: vector<4x1x1xf32>) {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f32
+  %0 = memref.subview %A[%i, 0, 0] [40, 1, 1] [1, 1, 1] : memref<1000x1x1xf32> to memref<40x1x1xf32, strided<[1, 1, 1], offset: ?>>
+  vector.transfer_write %vec, %0[%ii, %c0, %c0] {in_bounds = [true, true, true]} : vector<4x1x1xf32>, memref<40x1x1xf32, strided<[1, 1, 1], offset: ?>>
+  return
+}
+// CHECK-LABEL:   func.func @contiguous_inner_most_dim_with_subview_2d(
+// CHECK-SAME:      %[[MEM:.*]]: memref<1000x1x1xf32>,
+// CHECK-SAME:      %[[IDX_1:.*]]: index, %[[IDX_2:.*]]: index,
+// CHECK-SAME:      %[[VEC:.*]]: vector<4x1x1xf32>) {
+// CHECK:           %[[SV_1:.*]] = memref.subview %[[MEM]]{{\[}}%[[IDX_1]], 0, 0] [40, 1, 1] [1, 1, 1] : memref<1000x1x1xf32> to memref<40x1x1xf32, strided<[1, 1, 1], offset: ?>>
+// CHECK:           %[[SV_2:.*]] = memref.subview %[[SV_1]][0, 0, 0] [40, 1, 1] [1, 1, 1] : memref<40x1x1xf32, strided<[1, 1, 1], offset: ?>> to memref<40xf32, strided<[1], offset: ?>>
+// CHECK:           %[[SC:.*]] = vector.shape_cast %[[VEC]] : vector<4x1x1xf32> to vector<4xf32>
+// CHECK:           vector.transfer_write %[[SC]], %[[SV_2]]{{\[}}%[[IDX_2]]] {in_bounds = [true]} : vector<4xf32>, memref<40xf32, strided<[1], offset: ?>>
+
+// Same as the top example within this split, but with the outer vector
+// dim scalable. Note that this example only makes sense when "4 = [4]" (i.e.
+// vscale = 1). This is assumed (implicitly) via the `in_bounds` attribute.
+
+func.func @contiguous_inner_most_dim_with_subview_2d_scalable(%A: memref<1000x1x1xf32>, %i:index, %ii:index, %vec: vector<[4]x1x1xf32>) {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f32
+  %0 = memref.subview %A[%i, 0, 0] [40, 1, 1] [1, 1, 1] : memref<1000x1x1xf32> to memref<40x1x1xf32, strided<[1, 1, 1], offset: ?>>
+  vector.transfer_write %vec, %0[%ii, %c0, %c0] {in_bounds = [true, true, true]} : vector<[4]x1x1xf32>, memref<40x1x1xf32, strided<[1, 1, 1], offset: ?>>
+  return
+}
+// CHECK-LABEL:   func.func @contiguous_inner_most_dim_with_subview_2d_scalable
+// CHECK-SAME:      %[[MEM:.*]]: memref<1000x1x1xf32>,
+// CHECK-SAME:      %[[IDX_1:.*]]: index, %[[IDX_2:.*]]: index,
+// CHECK-SAME:      %[[VEC:.*]]: vector<[4]x1x1xf32>) {
+// CHECK:           %[[SV_1:.*]] = memref.subview %[[MEM]]{{\[}}%[[IDX_1]], 0, 0] [40, 1, 1] [1, 1, 1] : memref<1000x1x1xf32> to memref<40x1x1xf32, strided<[1, 1, 1], offset: ?>>
+// CHECK:           %[[SV_2:.*]] = memref.subview %[[SV_1]][0, 0, 0] [40, 1, 1] [1, 1, 1] : memref<40x1x1xf32, strided<[1, 1, 1], offset: ?>> to memref<40xf32, strided<[1], offset: ?>>
+// CHECK:           %[[SC:.*]] = vector.shape_cast %[[VEC]] : vector<[4]x1x1xf32> to vector<[4]xf32>
+// CHECK:           vector.transfer_write %[[SC]], %[[SV_2]]{{\[}}%[[IDX_2]]] {in_bounds = [true]} : vector<[4]xf32>, memref<40xf32, strided<[1], offset: ?>>
+
+// -----
+
 func.func @drop_inner_most_dim(%arg0: memref<1x512x16x1xf32, strided<[8192, 16, 1, 1], offset: ?>>, %arg1: vector<1x16x16x1xf32>, %arg2: index) {
   %c0 = arith.constant 0 : index
   vector.transfer_write %arg1, %arg0[%c0, %arg2, %c0, %c0]
@@ -384,6 +566,30 @@ func.func @drop_inner_most_dim(%arg0: memref<1x512x16x1xf32, strided<[8192, 16, 
 // CHECK:        %[[CAST:.+]] = vector.shape_cast %[[VEC]] : vector<1x16x16x1xf32> to vector<1x16x16xf32>
 // CHECK:        vector.transfer_write %[[CAST]], %[[SUBVIEW]]
 // CHECK-SAME:     [%[[C0]], %[[IDX]], %[[C0]]]
+
+// -----
+
+// NOTE: This is an out-of-bounds access.
+
+func.func @negative_non_unit_inner_vec_dim(%arg0: memref<4x1xf32>, %vec: vector<4x8xf32>) {
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %vec, %arg0[%c0, %c0] : vector<4x8xf32>, memref<4x1xf32>
+  return
+}
+//      CHECK: func.func @negative_non_unit_inner_vec_dim
+//  CHECK-NOT:   memref.subview
+//      CHECK:   vector.transfer_write
+
+// -----
+
+func.func @negative_non_unit_inner_memref_dim(%arg0: memref<4x8xf32>, %vec: vector<4x1xf32>) {
+  %c0 = arith.constant 0 : index
+  vector.transfer_write %vec, %arg0[%c0, %c0] : vector<4x1xf32>, memref<4x8xf32>
+  return
+}
+//      CHECK: func.func @negative_non_unit_inner_memref_dim
+//  CHECK-NOT:   memref.subview
+//      CHECK:   vector.transfer_write
 
 // -----
 

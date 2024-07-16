@@ -19,6 +19,7 @@
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/TargetParser/Triple.h"
 #include <forward_list>
@@ -2831,6 +2832,9 @@ public:
   /// Returns __kmpc_dispatch_fini_* runtime function for the specified
   /// size \a IVSize and sign \a IVSigned.
   FunctionCallee createDispatchFiniFunction(unsigned IVSize, bool IVSigned);
+
+  /// Returns __kmpc_dispatch_deinit runtime function.
+  FunctionCallee createDispatchDeinitFunction();
 
   /// Declarations for LLVM-IR types (simple, array, function and structure) are
   /// generated below. Their names are defined and used in OpenMPKinds.def. Here

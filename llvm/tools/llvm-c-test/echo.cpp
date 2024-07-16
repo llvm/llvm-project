@@ -422,10 +422,9 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
       SmallVector<LLVMValueRef, 8> Idx;
       for (int i = 1; i <= NumIdx; i++)
         Idx.push_back(clone_constant(LLVMGetOperand(Cst, i), M));
-      if (LLVMIsInBounds(Cst))
-        return LLVMConstInBoundsGEP2(ElemTy, Ptr, Idx.data(), NumIdx);
-      else
-        return LLVMConstGEP2(ElemTy, Ptr, Idx.data(), NumIdx);
+
+      return LLVMConstGEPWithNoWrapFlags(ElemTy, Ptr, Idx.data(), NumIdx,
+                                         LLVMGEPGetNoWrapFlags(Cst));
     }
     default:
       fprintf(stderr, "%d is not a supported opcode for constant expressions\n",
@@ -777,11 +776,10 @@ struct FunCloner {
         int NumIdx = LLVMGetNumIndices(Src);
         for (int i = 1; i <= NumIdx; i++)
           Idx.push_back(CloneValue(LLVMGetOperand(Src, i)));
-        if (LLVMIsInBounds(Src))
-          Dst = LLVMBuildInBoundsGEP2(Builder, ElemTy, Ptr, Idx.data(), NumIdx,
-                                      Name);
-        else
-          Dst = LLVMBuildGEP2(Builder, ElemTy, Ptr, Idx.data(), NumIdx, Name);
+
+        Dst = LLVMBuildGEPWithNoWrapFlags(Builder, ElemTy, Ptr, Idx.data(),
+                                          NumIdx, Name,
+                                          LLVMGEPGetNoWrapFlags(Src));
         break;
       }
       case LLVMAtomicRMW: {
