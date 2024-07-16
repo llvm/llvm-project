@@ -1484,8 +1484,7 @@ NormalizedConstraint::NormalizedConstraint(ASTContext &C,
                                            NormalizedConstraint RHS,
                                            CompoundConstraintKind Kind)
     : Constraint{CompoundConstraint{
-          new(C) std::pair<NormalizedConstraint, NormalizedConstraint>{
-              std::move(LHS), std::move(RHS)},
+          new(C) NormalizedConstraintPair{std::move(LHS), std::move(RHS)},
           Kind}} {}
 
 NormalizedConstraint::NormalizedConstraint(ASTContext &C,
@@ -1499,11 +1498,21 @@ NormalizedConstraint::NormalizedConstraint(ASTContext &C,
         Other.getFoldExpandedConstraint()->Pattern);
   } else {
     Constraint = CompoundConstraint(
-        new (C) std::pair<NormalizedConstraint, NormalizedConstraint>{
-            NormalizedConstraint(C, Other.getLHS()),
-            NormalizedConstraint(C, Other.getRHS())},
+        new (C)
+            NormalizedConstraintPair{NormalizedConstraint(C, Other.getLHS()),
+                                     NormalizedConstraint(C, Other.getRHS())},
         Other.getCompoundKind());
   }
+}
+
+NormalizedConstraint &NormalizedConstraint::getLHS() const {
+  assert(isCompound() && "getLHS called on a non-compound constraint.");
+  return Constraint.get<CompoundConstraint>().getPointer()->LHS;
+}
+
+NormalizedConstraint &NormalizedConstraint::getRHS() const {
+  assert(isCompound() && "getRHS called on a non-compound constraint.");
+  return Constraint.get<CompoundConstraint>().getPointer()->RHS;
 }
 
 std::optional<NormalizedConstraint>

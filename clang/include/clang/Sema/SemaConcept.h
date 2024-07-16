@@ -26,7 +26,9 @@
 namespace clang {
 class Sema;
 
-struct AtomicConstraint {
+enum { ConstraintAlignment = 8 };
+
+struct alignas(ConstraintAlignment) AtomicConstraint {
   const Expr *ConstraintExpr;
   std::optional<ArrayRef<TemplateArgumentLoc>> ParameterMapping;
 
@@ -75,7 +77,7 @@ struct AtomicConstraint {
   }
 };
 
-struct FoldExpandedConstraint;
+struct alignas(ConstraintAlignment) FoldExpandedConstraint;
 
 using NormalFormConstraint =
     llvm::PointerUnion<AtomicConstraint *, FoldExpandedConstraint *>;
@@ -95,6 +97,8 @@ NormalForm makeCNF(const NormalizedConstraint &Normalized);
 //  ∧ (B  ∨ C) is (A  ∧ B)  ∨ (A  ∧ C).
 NormalForm makeDNF(const NormalizedConstraint &Normalized);
 
+struct alignas(ConstraintAlignment) NormalizedConstraintPair;
+
 /// \brief A normalized constraint, as defined in C++ [temp.constr.normal], is
 /// either an atomic constraint, a conjunction of normalized constraints or a
 /// disjunction of normalized constraints.
@@ -103,9 +107,8 @@ struct NormalizedConstraint {
 
   enum CompoundConstraintKind { CCK_Conjunction, CCK_Disjunction };
 
-  using CompoundConstraint = llvm::PointerIntPair<
-      std::pair<NormalizedConstraint, NormalizedConstraint> *, 1,
-      CompoundConstraintKind>;
+  using CompoundConstraint = llvm::PointerIntPair<NormalizedConstraintPair *, 1,
+                                                  CompoundConstraintKind>;
 
   llvm::PointerUnion<AtomicConstraint *, FoldExpandedConstraint *,
                      CompoundConstraint>
@@ -142,15 +145,8 @@ struct NormalizedConstraint {
     return Constraint.get<CompoundConstraint>().getInt();
   }
 
-  NormalizedConstraint &getLHS() const {
-    assert(isCompound() && "getLHS called on a non-compound constraint.");
-    return Constraint.get<CompoundConstraint>().getPointer()->first;
-  }
-
-  NormalizedConstraint &getRHS() const {
-    assert(isCompound() && "getRHS called on a non-compound constraint.");
-    return Constraint.get<CompoundConstraint>().getPointer()->second;
-  }
+  NormalizedConstraint &getLHS() const;
+  NormalizedConstraint &getRHS() const;
 
   AtomicConstraint *getAtomicConstraint() const {
     assert(isAtomic() &&
@@ -171,7 +167,11 @@ private:
   fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E);
 };
 
-struct FoldExpandedConstraint {
+struct alignas(ConstraintAlignment) NormalizedConstraintPair {
+  NormalizedConstraint LHS, RHS;
+};
+
+struct alignas(ConstraintAlignment) FoldExpandedConstraint {
   enum class FoldOperatorKind { And, Or } Kind;
   NormalizedConstraint Constraint;
   const Expr *Pattern;
