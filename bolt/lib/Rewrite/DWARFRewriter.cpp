@@ -633,7 +633,7 @@ void DWARFRewriter::updateDebugInfo() {
   // Needs to be invoked in the same order as CUs are processed.
   auto createRangeLocListAddressWriters =
       [&](DWARFUnit &CU,
-          llvm::DenseMap<uint64_t, unsigned long> &LocListWritersIndexByCU) {
+          llvm::DenseMap<uint64_t, uint64_t> &LocListWritersIndexByCU) {
         const uint16_t DwarfVersion = CU.getVersion();
         if (DwarfVersion >= 5) {
           auto AddrW = std::make_unique<DebugAddrWriterDwarf5>(
