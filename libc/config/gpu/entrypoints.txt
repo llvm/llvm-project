@@ -47,6 +47,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strcpy
     libc.src.string.strcspn
     libc.src.string.strdup
+    libc.src.string.strerror
+    libc.src.string.strerror_r
     libc.src.string.strlcat
     libc.src.string.strlcpy
     libc.src.string.strlen
@@ -216,7 +218,11 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # time.h entrypoints
     libc.src.time.clock
+    libc.src.time.clock_gettime
     libc.src.time.nanosleep
+
+    # wchar.h entrypoints
+    libc.src.wchar.wctob
 
     # gpu/rpc.h entrypoints
     libc.src.gpu.rpc_host_call

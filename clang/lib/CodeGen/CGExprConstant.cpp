@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ABIInfoImpl.h"
 #include "CGCXXABI.h"
 #include "CGObjCRuntime.h"
 #include "CGRecordLayout.h"
@@ -585,7 +586,7 @@ private:
                    bool AllowOverwrite = false);
 
   bool AppendBitField(const FieldDecl *Field, uint64_t FieldOffset,
-                      llvm::ConstantInt *InitExpr, bool AllowOverwrite = false);
+                      llvm::Constant *InitExpr, bool AllowOverwrite = false);
 
   bool Build(const InitListExpr *ILE, bool AllowOverwrite);
   bool Build(const APValue &Val, const RecordDecl *RD, bool IsPrimaryBase,
@@ -609,9 +610,25 @@ bool ConstStructBuilder::AppendBytes(CharUnits FieldOffsetInChars,
   return Builder.add(InitCst, StartOffset + FieldOffsetInChars, AllowOverwrite);
 }
 
-bool ConstStructBuilder::AppendBitField(
-    const FieldDecl *Field, uint64_t FieldOffset, llvm::ConstantInt *CI,
-    bool AllowOverwrite) {
+bool ConstStructBuilder::AppendBitField(const FieldDecl *Field,
+                                        uint64_t FieldOffset, llvm::Constant *C,
+                                        bool AllowOverwrite) {
+
+  llvm::ConstantInt *CI = dyn_cast<llvm::ConstantInt>(C);
+  if (!CI) {
+    // Constants for long _BitInt types are sometimes split into individual
+    // bytes. Try to fold these back into an integer constant. If that doesn't
+    // work out, then we are trying to initialize a bitfield with a non-trivial
+    // constant, this must require run-time code.
+    llvm::Type *LoadType =
+        CGM.getTypes().convertTypeForLoadStore(Field->getType(), C->getType());
+    llvm::Constant *FoldedConstant = llvm::ConstantFoldLoadFromConst(
+        C, LoadType, llvm::APInt::getZero(32), CGM.getDataLayout());
+    CI = dyn_cast_if_present<llvm::ConstantInt>(FoldedConstant);
+    if (!CI)
+      return false;
+  }
+
   const CGRecordLayout &RL =
       CGM.getTypes().getCGRecordLayout(Field->getParent());
   const CGBitFieldInfo &Info = RL.getBitFieldInfo(Field);
@@ -720,7 +737,7 @@ bool ConstStructBuilder::Build(const InitListExpr *ILE, bool AllowOverwrite) {
 
     // Zero-sized fields are not emitted, but their initializers may still
     // prevent emission of this struct as a constant.
-    if (Field->isZeroSize(CGM.getContext())) {
+    if (isEmptyFieldForLayout(CGM.getContext(), Field)) {
       if (Init->HasSideEffects(CGM.getContext()))
         return false;
       continue;
@@ -762,15 +779,9 @@ bool ConstStructBuilder::Build(const InitListExpr *ILE, bool AllowOverwrite) {
         AllowOverwrite = true;
     } else {
       // Otherwise we have a bitfield.
-      if (auto *CI = dyn_cast<llvm::ConstantInt>(EltInit)) {
-        if (!AppendBitField(Field, Layout.getFieldOffset(FieldNo), CI,
-                            AllowOverwrite))
-          return false;
-      } else {
-        // We are trying to initialize a bitfield with a non-trivial constant,
-        // this must require run-time code.
+      if (!AppendBitField(Field, Layout.getFieldOffset(FieldNo), EltInit,
+                          AllowOverwrite))
         return false;
-      }
     }
   }
 
@@ -848,7 +859,8 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
       continue;
 
     // Don't emit anonymous bitfields or zero-sized fields.
-    if (Field->isUnnamedBitField() || Field->isZeroSize(CGM.getContext()))
+    if (Field->isUnnamedBitField() ||
+        isEmptyFieldForLayout(CGM.getContext(), *Field))
       continue;
 
     // Emit the value of the initializer.
@@ -871,7 +883,7 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
     } else {
       // Otherwise we have a bitfield.
       if (!AppendBitField(*Field, Layout.getFieldOffset(FieldNo) + OffsetBits,
-                          cast<llvm::ConstantInt>(EltInit), AllowOverwrite))
+                          EltInit, AllowOverwrite))
         return false;
     }
   }
@@ -1888,6 +1900,27 @@ llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
     return Res;
   }
 
+  if (destType->isBitIntType()) {
+    ConstantAggregateBuilder Builder(CGM);
+    llvm::Type *LoadStoreTy = CGM.getTypes().convertTypeForLoadStore(destType);
+    // ptrtoint/inttoptr should not involve _BitInt in constant expressions, so
+    // casting to ConstantInt is safe here.
+    auto *CI = cast<llvm::ConstantInt>(C);
+    llvm::Constant *Res = llvm::ConstantFoldCastOperand(
+        destType->isSignedIntegerOrEnumerationType() ? llvm::Instruction::SExt
+                                                     : llvm::Instruction::ZExt,
+        CI, LoadStoreTy, CGM.getDataLayout());
+    if (CGM.getTypes().typeRequiresSplitIntoByteArray(destType, C->getType())) {
+      // Long _BitInt has array of bytes as in-memory type.
+      // So, split constant into individual bytes.
+      llvm::Type *DesiredTy = CGM.getTypes().ConvertTypeForMem(destType);
+      llvm::APInt Value = cast<llvm::ConstantInt>(Res)->getValue();
+      Builder.addBits(Value, /*OffsetInBits=*/0, /*AllowOverwrite=*/false);
+      return Builder.build(DesiredTy, /*AllowOversized*/ false);
+    }
+    return Res;
+  }
+
   return C;
 }
 
@@ -2495,8 +2528,10 @@ static llvm::Constant *EmitNullConstant(CodeGenModule &CGM,
         cast<CXXRecordDecl>(I.getType()->castAs<RecordType>()->getDecl());
 
       // Ignore empty bases.
-      if (base->isEmpty() ||
-          CGM.getContext().getASTRecordLayout(base).getNonVirtualSize()
+      if (isEmptyRecordForLayout(CGM.getContext(), I.getType()) ||
+          CGM.getContext()
+              .getASTRecordLayout(base)
+              .getNonVirtualSize()
               .isZero())
         continue;
 
@@ -2510,7 +2545,8 @@ static llvm::Constant *EmitNullConstant(CodeGenModule &CGM,
   for (const auto *Field : record->fields()) {
     // Fill in non-bitfields. (Bitfields always use a zero pattern, which we
     // will fill in later.)
-    if (!Field->isBitField() && !Field->isZeroSize(CGM.getContext())) {
+    if (!Field->isBitField() &&
+        !isEmptyFieldForLayout(CGM.getContext(), Field)) {
       unsigned fieldIndex = layout.getLLVMFieldNo(Field);
       elements[fieldIndex] = CGM.EmitNullConstant(Field->getType());
     }
@@ -2532,7 +2568,7 @@ static llvm::Constant *EmitNullConstant(CodeGenModule &CGM,
         cast<CXXRecordDecl>(I.getType()->castAs<RecordType>()->getDecl());
 
       // Ignore empty bases.
-      if (base->isEmpty())
+      if (isEmptyRecordForLayout(CGM.getContext(), I.getType()))
         continue;
 
       unsigned fieldIndex = layout.getVirtualBaseIndex(base);
