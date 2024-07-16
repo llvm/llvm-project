@@ -27,19 +27,19 @@ define internal fastcc void @csr_vgpr_spill_fp_callee() #0 {
 ; CHECK-LABEL: csr_vgpr_spill_fp_callee:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_mov_b32 s6, s33
+; CHECK-NEXT:    s_mov_b32 s18, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
-; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; CHECK-NEXT:    s_xor_saveexec_b64 s[16:17], -1
 ; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
+; CHECK-NEXT:    s_mov_b64 exec, s[16:17]
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_writelane_b32 v1, s30, 0
 ; CHECK-NEXT:    v_writelane_b32 v1, s31, 1
-; CHECK-NEXT:    s_getpc_b64 s[4:5]
-; CHECK-NEXT:    s_add_u32 s4, s4, callee_has_fp@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s5, s5, callee_has_fp@rel32@hi+12
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, callee_has_fp@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, callee_has_fp@rel32@hi+12
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; clobber csr v40
 ; CHECK-NEXT:    ;;#ASMEND
@@ -50,7 +50,7 @@ define internal fastcc void @csr_vgpr_spill_fp_callee() #0 {
 ; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
 ; CHECK-NEXT:    s_addk_i32 s32, 0xfc00
-; CHECK-NEXT:    s_mov_b32 s33, s6
+; CHECK-NEXT:    s_mov_b32 s33, s18
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 bb:
@@ -62,15 +62,20 @@ bb:
 define amdgpu_kernel void @kernel_call() {
 ; CHECK-LABEL: kernel_call:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s4, s7
-; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s5, 0
-; CHECK-NEXT:    s_add_u32 s0, s0, s7
+; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
+; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
+; CHECK-NEXT:    s_add_u32 s0, s0, s15
+; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; CHECK-NEXT:    v_or3_b32 v31, v0, v1, v2
+; CHECK-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; CHECK-NEXT:    s_mov_b32 s32, 0
-; CHECK-NEXT:    s_getpc_b64 s[4:5]
-; CHECK-NEXT:    s_add_u32 s4, s4, csr_vgpr_spill_fp_callee@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s5, s5, csr_vgpr_spill_fp_callee@rel32@hi+12
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, csr_vgpr_spill_fp_callee@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, csr_vgpr_spill_fp_callee@rel32@hi+12
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    s_endpgm
 bb:
   tail call fastcc void @csr_vgpr_spill_fp_callee()
@@ -82,23 +87,23 @@ define internal fastcc void @csr_vgpr_spill_fp_tailcall_callee() #0 {
 ; CHECK-LABEL: csr_vgpr_spill_fp_tailcall_callee:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; CHECK-NEXT:    s_xor_saveexec_b64 s[16:17], -1
 ; CHECK-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
+; CHECK-NEXT:    s_mov_b64 exec, s[16:17]
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_writelane_b32 v1, s33, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; clobber csr v40
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s32 ; 4-byte Folded Reload
-; CHECK-NEXT:    s_getpc_b64 s[4:5]
-; CHECK-NEXT:    s_add_u32 s4, s4, callee_has_fp@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s5, s5, callee_has_fp@rel32@hi+12
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, callee_has_fp@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, callee_has_fp@rel32@hi+12
 ; CHECK-NEXT:    v_readlane_b32 s33, v1, 0
-; CHECK-NEXT:    s_xor_saveexec_b64 s[6:7], -1
+; CHECK-NEXT:    s_xor_saveexec_b64 s[18:19], -1
 ; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
-; CHECK-NEXT:    s_mov_b64 exec, s[6:7]
-; CHECK-NEXT:    s_setpc_b64 s[4:5]
+; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
+; CHECK-NEXT:    s_setpc_b64 s[16:17]
 bb:
   call void asm sideeffect "; clobber csr v40", "~{v40}"()
   tail call fastcc void @callee_has_fp()
@@ -108,15 +113,20 @@ bb:
 define amdgpu_kernel void @kernel_tailcall() {
 ; CHECK-LABEL: kernel_tailcall:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s4, s7
-; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s5, 0
-; CHECK-NEXT:    s_add_u32 s0, s0, s7
+; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
+; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
+; CHECK-NEXT:    s_add_u32 s0, s0, s15
+; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
+; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
+; CHECK-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; CHECK-NEXT:    v_or3_b32 v31, v0, v1, v2
+; CHECK-NEXT:    s_mov_b64 s[8:9], s[6:7]
 ; CHECK-NEXT:    s_mov_b32 s32, 0
-; CHECK-NEXT:    s_getpc_b64 s[4:5]
-; CHECK-NEXT:    s_add_u32 s4, s4, csr_vgpr_spill_fp_tailcall_callee@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s5, s5, csr_vgpr_spill_fp_tailcall_callee@rel32@hi+12
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[4:5]
+; CHECK-NEXT:    s_getpc_b64 s[16:17]
+; CHECK-NEXT:    s_add_u32 s16, s16, csr_vgpr_spill_fp_tailcall_callee@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, csr_vgpr_spill_fp_tailcall_callee@rel32@hi+12
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; CHECK-NEXT:    s_endpgm
 bb:
   tail call fastcc void @csr_vgpr_spill_fp_tailcall_callee()

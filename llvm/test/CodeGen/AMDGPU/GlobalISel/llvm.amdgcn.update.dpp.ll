@@ -6,7 +6,7 @@
 define amdgpu_kernel void @dpp_test(ptr addrspace(1) %out, i32 %in1, i32 %in2) {
 ; GFX8-LABEL: dpp_test:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s3
@@ -19,7 +19,7 @@ define amdgpu_kernel void @dpp_test(ptr addrspace(1) %out, i32 %in1, i32 %in2) {
 ;
 ; GFX10-LABEL: dpp_test:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s3
@@ -30,7 +30,7 @@ define amdgpu_kernel void @dpp_test(ptr addrspace(1) %out, i32 %in1, i32 %in2) {
 ;
 ; GFX11-LABEL: dpp_test:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX11-NEXT:    v_mov_b32_dpp v0, v1 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
@@ -46,7 +46,7 @@ define amdgpu_kernel void @dpp_test(ptr addrspace(1) %out, i32 %in1, i32 %in2) {
 define amdgpu_kernel void @update_dppi64_test(ptr addrspace(1) %arg, i64 %in1, i64 %in2) {
 ; GFX8-LABEL: update_dppi64_test:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
@@ -64,7 +64,7 @@ define amdgpu_kernel void @update_dppi64_test(ptr addrspace(1) %arg, i64 %in1, i
 ;
 ; GFX10-LABEL: update_dppi64_test:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v4, s[0:1]
@@ -78,10 +78,11 @@ define amdgpu_kernel void @update_dppi64_test(ptr addrspace(1) %arg, i64 %in1, i
 ;
 ; GFX11-LABEL: update_dppi64_test:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
-; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
+; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; GFX11-NEXT:    global_load_b64 v[0:1], v4, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_dpp v2, v0 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
@@ -101,7 +102,7 @@ define amdgpu_kernel void @update_dppi64_test(ptr addrspace(1) %arg, i64 %in1, i
 define amdgpu_kernel void @update_dppf64_test(ptr addrspace(1) %arg, double %in1, double %in2) {
 ; GFX8-LABEL: update_dppf64_test:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
@@ -119,7 +120,7 @@ define amdgpu_kernel void @update_dppf64_test(ptr addrspace(1) %arg, double %in1
 ;
 ; GFX10-LABEL: update_dppf64_test:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v4, s[0:1]
@@ -133,10 +134,11 @@ define amdgpu_kernel void @update_dppf64_test(ptr addrspace(1) %arg, double %in1
 ;
 ; GFX11-LABEL: update_dppf64_test:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
-; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
+; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; GFX11-NEXT:    global_load_b64 v[0:1], v4, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_dpp v2, v0 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
@@ -156,7 +158,7 @@ define amdgpu_kernel void @update_dppf64_test(ptr addrspace(1) %arg, double %in1
 define amdgpu_kernel void @update_dppv2i32_test(ptr addrspace(1) %arg, <2 x i32> %in1, <2 x i32> %in2) {
 ; GFX8-LABEL: update_dppv2i32_test:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
@@ -174,7 +176,7 @@ define amdgpu_kernel void @update_dppv2i32_test(ptr addrspace(1) %arg, <2 x i32>
 ;
 ; GFX10-LABEL: update_dppv2i32_test:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v4, s[0:1]
@@ -188,10 +190,11 @@ define amdgpu_kernel void @update_dppv2i32_test(ptr addrspace(1) %arg, <2 x i32>
 ;
 ; GFX11-LABEL: update_dppv2i32_test:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
-; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
+; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; GFX11-NEXT:    global_load_b64 v[0:1], v4, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_dpp v2, v0 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
@@ -211,7 +214,7 @@ define amdgpu_kernel void @update_dppv2i32_test(ptr addrspace(1) %arg, <2 x i32>
 define amdgpu_kernel void @update_dppv2f32_test(ptr addrspace(1) %arg, <2 x float> %in1, <2 x float> %in2) {
 ; GFX8-LABEL: update_dppv2f32_test:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
@@ -229,7 +232,7 @@ define amdgpu_kernel void @update_dppv2f32_test(ptr addrspace(1) %arg, <2 x floa
 ;
 ; GFX10-LABEL: update_dppv2f32_test:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v4, s[0:1]
@@ -243,10 +246,11 @@ define amdgpu_kernel void @update_dppv2f32_test(ptr addrspace(1) %arg, <2 x floa
 ;
 ; GFX11-LABEL: update_dppv2f32_test:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
-; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
+; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; GFX11-NEXT:    global_load_b64 v[0:1], v4, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_dpp v2, v0 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
@@ -266,7 +270,7 @@ define amdgpu_kernel void @update_dppv2f32_test(ptr addrspace(1) %arg, <2 x floa
 define amdgpu_kernel void @update_dpp_p0_test(ptr addrspace(1) %arg, ptr %in1, ptr %in2) {
 ; GFX8-LABEL: update_dpp_p0_test:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
@@ -284,7 +288,7 @@ define amdgpu_kernel void @update_dpp_p0_test(ptr addrspace(1) %arg, ptr %in1, p
 ;
 ; GFX10-LABEL: update_dpp_p0_test:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[2:3], 0x24
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v4, s[0:1]
@@ -298,10 +302,11 @@ define amdgpu_kernel void @update_dpp_p0_test(ptr addrspace(1) %arg, ptr %in1, p
 ;
 ; GFX11-LABEL: update_dpp_p0_test:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
-; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
+; GFX11-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
+; GFX11-NEXT:    v_lshlrev_b32_e32 v4, 3, v0
 ; GFX11-NEXT:    global_load_b64 v[0:1], v4, s[0:1]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_dpp v2, v0 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
@@ -321,7 +326,7 @@ define amdgpu_kernel void @update_dpp_p0_test(ptr addrspace(1) %arg, ptr %in1, p
 define amdgpu_kernel void @update_dpp_p3_test(ptr addrspace(3) %arg, ptr addrspace(3) %in1, ptr %in2) {
 ; GFX8-LABEL: update_dpp_p3_test:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX8-NEXT:    s_mov_b32 m0, -1
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
@@ -336,7 +341,7 @@ define amdgpu_kernel void @update_dpp_p3_test(ptr addrspace(3) %arg, ptr addrspa
 ;
 ; GFX10-LABEL: update_dpp_p3_test:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_add_nc_u32_e32 v0, s0, v0
@@ -349,7 +354,8 @@ define amdgpu_kernel void @update_dpp_p3_test(ptr addrspace(3) %arg, ptr addrspa
 ;
 ; GFX11-LABEL: update_dpp_p3_test:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_nc_u32_e32 v0, s0, v0
@@ -371,11 +377,11 @@ define amdgpu_kernel void @update_dpp_p5_test(ptr addrspace(5) %arg, ptr addrspa
 ; GFX8-LABEL: update_dpp_p5_test:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_mov_b32 s88, SCRATCH_RSRC_DWORD0
-; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX8-NEXT:    s_mov_b32 s89, SCRATCH_RSRC_DWORD1
 ; GFX8-NEXT:    s_mov_b32 s90, -1
 ; GFX8-NEXT:    s_mov_b32 s91, 0xe80000
-; GFX8-NEXT:    s_add_u32 s88, s88, s3
+; GFX8-NEXT:    s_add_u32 s88, s88, s9
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX8-NEXT:    s_addc_u32 s89, s89, 0
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
@@ -390,26 +396,27 @@ define amdgpu_kernel void @update_dpp_p5_test(ptr addrspace(5) %arg, ptr addrspa
 ;
 ; GFX10-LABEL: update_dpp_p5_test:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x24
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX10-NEXT:    s_mov_b32 s4, SCRATCH_RSRC_DWORD0
-; GFX10-NEXT:    s_mov_b32 s5, SCRATCH_RSRC_DWORD1
-; GFX10-NEXT:    s_mov_b32 s6, -1
-; GFX10-NEXT:    s_mov_b32 s7, 0x31c16000
-; GFX10-NEXT:    s_add_u32 s4, s4, s3
-; GFX10-NEXT:    s_addc_u32 s5, s5, 0
+; GFX10-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
+; GFX10-NEXT:    s_mov_b32 s13, SCRATCH_RSRC_DWORD1
+; GFX10-NEXT:    s_mov_b32 s14, -1
+; GFX10-NEXT:    s_mov_b32 s15, 0x31c16000
+; GFX10-NEXT:    s_add_u32 s12, s12, s9
+; GFX10-NEXT:    s_addc_u32 s13, s13, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_add_nc_u32_e32 v0, s0, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s1
-; GFX10-NEXT:    buffer_load_dword v1, v0, s[4:7], 0 offen
+; GFX10-NEXT:    buffer_load_dword v1, v0, s[12:15], 0 offen
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_dpp v2, v1 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
-; GFX10-NEXT:    buffer_store_dword v2, v0, s[4:7], 0 offen
+; GFX10-NEXT:    buffer_store_dword v2, v0, s[12:15], 0 offen
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: update_dpp_p5_test:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
+; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_nc_u32_e32 v0, s0, v0
