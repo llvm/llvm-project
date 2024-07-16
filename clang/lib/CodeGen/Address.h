@@ -227,6 +227,7 @@ public:
 
   bool isSigned() const { return PtrAuthInfo.isSigned(); }
 
+  /// Whether the pointer is known not to be null.
   KnownNonNull_t isKnownNonNull() const {
     assert(isValid());
     return (KnownNonNull_t)Pointer.getInt();
@@ -271,7 +272,8 @@ public:
   Address withElementType(llvm::Type *ElemTy) const {
     if (!hasOffset())
       return Address(getBasePointer(), ElemTy, getAlignment(),
-                     getPointerAuthInfo(), nullptr, isKnownNonNull());
+                     getPointerAuthInfo(), /*Offset=*/nullptr,
+                     isKnownNonNull());
     Address A(*this);
     A.ElementType = ElemTy;
     return A;

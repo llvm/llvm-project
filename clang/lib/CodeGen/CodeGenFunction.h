@@ -2688,7 +2688,7 @@ public:
       Alignment =
           CGM.getNaturalTypeAlignment(T, BaseInfo, TBAAInfo, ForPointeeType);
     return Address(Ptr, ConvertTypeForMem(T), Alignment,
-                   CGM.getPointerAuthInfoForPointeeType(T), nullptr,
+                   CGM.getPointerAuthInfoForPointeeType(T), /*Offset=*/nullptr,
                    IsKnownNonNull);
   }
 
@@ -4434,19 +4434,17 @@ public:
                                         GlobalDecl SchemaDecl,
                                         QualType SchemaType);
 
-  llvm::Value *EmitPointerAuthSign(QualType PointeeType, llvm::Value *Pointer);
   llvm::Value *EmitPointerAuthSign(const CGPointerAuthInfo &Info,
                                    llvm::Value *Pointer);
 
-  llvm::Value *EmitPointerAuthAuth(QualType PointeeType, llvm::Value *Pointer);
   llvm::Value *EmitPointerAuthAuth(const CGPointerAuthInfo &Info,
                                    llvm::Value *Pointer);
 
-  llvm::Value *EmitPointerAuthResign(llvm::Value *Pointer, QualType PointerType,
+  llvm::Value *emitPointerAuthResign(llvm::Value *Pointer, QualType PointerType,
                                      const CGPointerAuthInfo &CurAuthInfo,
                                      const CGPointerAuthInfo &NewAuthInfo,
                                      bool IsKnownNonNull);
-  llvm::Value *EmitPointerAuthResignCall(llvm::Value *Pointer,
+  llvm::Value *emitPointerAuthResignCall(llvm::Value *Pointer,
                                          const CGPointerAuthInfo &CurInfo,
                                          const CGPointerAuthInfo &NewInfo);
 
@@ -4454,13 +4452,10 @@ public:
       const CGPointerAuthInfo &Info,
       SmallVectorImpl<llvm::OperandBundleDef> &Bundles);
 
-  llvm::Value *AuthPointerToPointerCast(llvm::Value *ResultPtr,
+  llvm::Value *authPointerToPointerCast(llvm::Value *ResultPtr,
                                         QualType SourceType, QualType DestType);
-  Address AuthPointerToPointerCast(Address Ptr, QualType SourceType,
+  Address authPointerToPointerCast(Address Ptr, QualType SourceType,
                                    QualType DestType);
-
-  Address EmitPointerAuthSign(Address Addr, QualType PointeeType);
-  Address EmitPointerAuthAuth(Address Addr, QualType PointeeType);
 
   Address getAsNaturalAddressOf(Address Addr, QualType PointeeTy);
 

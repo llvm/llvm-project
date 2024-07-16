@@ -166,86 +166,126 @@ CGPointerAuthInfo CodeGenModule::getPointerAuthInfoForType(QualType T) {
   return ::getPointerAuthInfoForType(*this, T);
 }
 
-static bool isZeroConstant(llvm::Value *value) {
-  if (auto ci = dyn_cast<llvm::ConstantInt>(value))
-    return ci->isZero();
+static bool isZeroConstant(const llvm::Value *Value) {
+  if (const auto *CI = dyn_cast<llvm::ConstantInt>(Value))
+    return CI->isZero();
   return false;
 }
 
-static bool equalAuthPolicies(const CGPointerAuthInfo &left,
-                              const CGPointerAuthInfo &right) {
-  if (left.isSigned() != right.isSigned())
+static bool equalAuthPolicies(const CGPointerAuthInfo &Left,
+                              const CGPointerAuthInfo &Right) {
+  assert((Left.isSigned() || Right.isSigned()) &&
+         "shouldn't be called if neither is signed");
+  if (Left.isSigned() != Right.isSigned())
     return false;
-  assert(left.isSigned() && right.isSigned() &&
-         "should only be called with non-null auth policies");
-  return left.getKey() == right.getKey() &&
-         left.getAuthenticationMode() == right.getAuthenticationMode();
+  return Left.getKey() == Right.getKey() &&
+         Left.getAuthenticationMode() == Right.getAuthenticationMode();
 }
 
-llvm::Value *CodeGenFunction::EmitPointerAuthResign(
-    llvm::Value *value, QualType type, const CGPointerAuthInfo &curAuthInfo,
-    const CGPointerAuthInfo &newAuthInfo, bool isKnownNonNull) {
-  // Fast path: if neither schema wants a signature, we're done.
-  if (!curAuthInfo && !newAuthInfo)
-    return value;
+// Return the discriminator or return zero if the discriminator is null.
+static llvm::Value *getDiscriminatorOrZero(const CGPointerAuthInfo &Info,
+                                           CGBuilderTy &Builder) {
+  llvm::Value *Discriminator = Info.getDiscriminator();
+  return Discriminator ? Discriminator : Builder.getSize(0);
+}
 
-  llvm::Value *null = nullptr;
-  // If the value is obviously null, we're done.
-  if (auto pointerValue = dyn_cast<llvm::PointerType>(value->getType())) {
-    null = CGM.getNullPointer(pointerValue, type);
+llvm::Value *
+CodeGenFunction::emitPointerAuthResignCall(llvm::Value *Value,
+                                           const CGPointerAuthInfo &CurAuth,
+                                           const CGPointerAuthInfo &NewAuth) {
+  assert(CurAuth && NewAuth);
+
+  if (CurAuth.getAuthenticationMode() !=
+          PointerAuthenticationMode::SignAndAuth ||
+      NewAuth.getAuthenticationMode() !=
+          PointerAuthenticationMode::SignAndAuth) {
+    llvm::Value *AuthedValue = EmitPointerAuthAuth(CurAuth, Value);
+    return EmitPointerAuthSign(NewAuth, AuthedValue);
+  }
+  // Convert the pointer to intptr_t before signing it.
+  auto *OrigType = Value->getType();
+  Value = Builder.CreatePtrToInt(Value, IntPtrTy);
+
+  auto *CurKey = Builder.getInt32(CurAuth.getKey());
+  auto *NewKey = Builder.getInt32(NewAuth.getKey());
+
+  llvm::Value *CurDiscriminator = getDiscriminatorOrZero(CurAuth, Builder);
+  llvm::Value *NewDiscriminator = getDiscriminatorOrZero(NewAuth, Builder);
+
+  // call i64 @llvm.ptrauth.resign(i64 %pointer,
+  //                               i32 %curKey, i64 %curDiscriminator,
+  //                               i32 %newKey, i64 %newDiscriminator)
+  auto *Intrinsic = CGM.getIntrinsic(llvm::Intrinsic::ptrauth_resign);
+  Value = EmitRuntimeCall(
+      Intrinsic, {Value, CurKey, CurDiscriminator, NewKey, NewDiscriminator});
+
+  // Convert back to the original type.
+  Value = Builder.CreateIntToPtr(Value, OrigType);
+  return Value;
+}
+
+llvm::Value *CodeGenFunction::emitPointerAuthResign(
+    llvm::Value *Value, QualType Type, const CGPointerAuthInfo &CurAuthInfo,
+    const CGPointerAuthInfo &NewAuthInfo, bool IsKnownNonNull) {
+  // Fast path: if neither schema wants a signature, we're done.
+  if (!CurAuthInfo && !NewAuthInfo)
+    return Value;
+
+  llvm::Value *Null = nullptr;
+  // If the Value is obviously null, we're done.
+  if (auto *PointerValue = dyn_cast<llvm::PointerType>(Value->getType())) {
+    Null = CGM.getNullPointer(PointerValue, Type);
   } else {
-    assert(value->getType()->isIntegerTy());
-    null = llvm::ConstantInt::get(IntPtrTy, 0);
+    assert(Value->getType()->isIntegerTy());
+    Null = llvm::ConstantInt::get(IntPtrTy, 0);
   }
-  if (value == null) {
-    return value;
-  }
+  if (Value == Null)
+    return Value;
 
   // If both schemas sign the same way, we're done.
-  if (equalAuthPolicies(curAuthInfo, newAuthInfo)) {
-    auto curD = curAuthInfo.getDiscriminator();
-    auto newD = newAuthInfo.getDiscriminator();
-    if (curD == newD)
-      return value;
+  if (equalAuthPolicies(CurAuthInfo, NewAuthInfo)) {
+    const llvm::Value *CurD = CurAuthInfo.getDiscriminator();
+    const llvm::Value *NewD = NewAuthInfo.getDiscriminator();
+    if (CurD == NewD)
+      return Value;
 
-    if ((curD == nullptr && isZeroConstant(newD)) ||
-        (newD == nullptr && isZeroConstant(curD)))
-      return value;
+    if ((CurD == nullptr && isZeroConstant(NewD)) ||
+        (NewD == nullptr && isZeroConstant(CurD)))
+      return Value;
   }
 
-  llvm::BasicBlock *initBB = Builder.GetInsertBlock();
-  llvm::BasicBlock *resignBB = nullptr, *contBB = nullptr;
+  llvm::BasicBlock *InitBB = Builder.GetInsertBlock();
+  llvm::BasicBlock *ResignBB = nullptr, *ContBB = nullptr;
 
   // Null pointers have to be mapped to null, and the ptrauth_resign
   // intrinsic doesn't do that.
-  if (!isKnownNonNull && !llvm::isKnownNonZero(value, CGM.getDataLayout())) {
-    contBB = createBasicBlock("resign.cont");
-    resignBB = createBasicBlock("resign.nonnull");
+  if (!IsKnownNonNull && !llvm::isKnownNonZero(Value, CGM.getDataLayout())) {
+    ContBB = createBasicBlock("resign.cont");
+    ResignBB = createBasicBlock("resign.nonnull");
 
-    auto isNonNull = Builder.CreateICmpNE(value, null);
-    Builder.CreateCondBr(isNonNull, resignBB, contBB);
-    EmitBlock(resignBB);
+    auto *IsNonNull = Builder.CreateICmpNE(Value, Null);
+    Builder.CreateCondBr(IsNonNull, ResignBB, ContBB);
+    EmitBlock(ResignBB);
   }
 
   // Perform the auth/sign/resign operation.
-  if (!newAuthInfo) {
-    value = EmitPointerAuthAuth(curAuthInfo, value);
-  } else if (!curAuthInfo) {
-    value = EmitPointerAuthSign(newAuthInfo, value);
-  } else {
-    value = EmitPointerAuthResignCall(value, curAuthInfo, newAuthInfo);
-  }
+  if (!NewAuthInfo)
+    Value = EmitPointerAuthAuth(CurAuthInfo, Value);
+  else if (!CurAuthInfo)
+    Value = EmitPointerAuthSign(NewAuthInfo, Value);
+  else
+    Value = emitPointerAuthResignCall(Value, CurAuthInfo, NewAuthInfo);
 
   // Clean up with a phi if we branched before.
-  if (contBB) {
-    EmitBlock(contBB);
-    auto phi = Builder.CreatePHI(value->getType(), 2);
-    phi->addIncoming(null, initBB);
-    phi->addIncoming(value, resignBB);
-    value = phi;
+  if (ContBB) {
+    EmitBlock(ContBB);
+    auto *Phi = Builder.CreatePHI(Value->getType(), 2);
+    Phi->addIncoming(Null, InitBB);
+    Phi->addIncoming(Value, ResignBB);
+    Value = Phi;
   }
 
-  return value;
+  return Value;
 }
 
 llvm::Constant *
@@ -435,7 +475,7 @@ CodeGenModule::getVTablePointerAuthInfo(CodeGenFunction *CGF,
                            /* AuthenticatesNullValues */ false, Discriminator);
 }
 
-llvm::Value *CodeGenFunction::AuthPointerToPointerCast(llvm::Value *ResultPtr,
+llvm::Value *CodeGenFunction::authPointerToPointerCast(llvm::Value *ResultPtr,
                                                        QualType SourceType,
                                                        QualType DestType) {
   CGPointerAuthInfo CurAuthInfo, NewAuthInfo;
@@ -456,11 +496,11 @@ llvm::Value *CodeGenFunction::AuthPointerToPointerCast(llvm::Value *ResultPtr,
   if (!NewAuthInfo && SourceType->isFunctionPointerType())
     NewAuthInfo = CGM.getFunctionPointerAuthInfo(DestType);
 
-  return EmitPointerAuthResign(ResultPtr, DestType, CurAuthInfo, NewAuthInfo,
+  return emitPointerAuthResign(ResultPtr, DestType, CurAuthInfo, NewAuthInfo,
                                /*IsKnownNonNull=*/false);
 }
 
-Address CodeGenFunction::AuthPointerToPointerCast(Address Ptr,
+Address CodeGenFunction::authPointerToPointerCast(Address Ptr,
                                                   QualType SourceType,
                                                   QualType DestType) {
   CGPointerAuthInfo CurAuthInfo, NewAuthInfo;
@@ -491,20 +531,6 @@ Address CodeGenFunction::AuthPointerToPointerCast(Address Ptr,
   return Ptr;
 }
 
-Address CodeGenFunction::EmitPointerAuthSign(Address Addr,
-                                             QualType PointeeType) {
-  CGPointerAuthInfo Info = getPointerAuthInfoForPointeeType(CGM, PointeeType);
-  llvm::Value *Ptr = EmitPointerAuthSign(Info, Addr.emitRawPointer(*this));
-  return Address(Ptr, Addr.getElementType(), Addr.getAlignment());
-}
-
-Address CodeGenFunction::EmitPointerAuthAuth(Address Addr,
-                                             QualType PointeeType) {
-  CGPointerAuthInfo Info = getPointerAuthInfoForPointeeType(CGM, PointeeType);
-  llvm::Value *Ptr = EmitPointerAuthAuth(Info, Addr.emitRawPointer(*this));
-  return Address(Ptr, Addr.getElementType(), Addr.getAlignment());
-}
-
 Address CodeGenFunction::getAsNaturalAddressOf(Address Addr,
                                                QualType PointeeTy) {
   CGPointerAuthInfo Info =
@@ -525,20 +551,19 @@ Address Address::getResignedAddress(const CGPointerAuthInfo &NewInfo,
                    isKnownNonNull());
 
   assert(ElementType && "Effective type has to be set");
+  assert(!Offset && "unexpected non-null offset");
 
   // If the current and the new ptrauth infos are the same and the offset is
   // null, just cast the base pointer to the effective type.
   if (CurInfo == NewInfo && !hasOffset())
     Val = getBasePointer();
-  else {
-    assert(!Offset && "unexpected non-null offset");
-    Val = CGF.EmitPointerAuthResign(getBasePointer(), QualType(), CurInfo,
+  else
+    Val = CGF.emitPointerAuthResign(getBasePointer(), QualType(), CurInfo,
                                     NewInfo, isKnownNonNull());
-  }
 
   Val = CGF.Builder.CreateBitCast(Val, getType());
-  return Address(Val, getElementType(), getAlignment(), NewInfo, nullptr,
-                 isKnownNonNull());
+  return Address(Val, getElementType(), getAlignment(), NewInfo,
+                 /*Offset=*/nullptr, isKnownNonNull());
 }
 
 llvm::Value *LValue::getPointer(CodeGenFunction &CGF) const {

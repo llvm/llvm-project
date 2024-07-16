@@ -1311,7 +1311,7 @@ static Address EmitPointerWithAlignment(const Expr *E, LValueBaseInfo *BaseInfo,
         if (CE->getCastKind() == CK_AddressSpaceConversion)
           Addr = CGF.Builder.CreateAddrSpaceCast(
               Addr, CGF.ConvertType(E->getType()), ElemTy);
-        return CGF.AuthPointerToPointerCast(Addr, CE->getSubExpr()->getType(),
+        return CGF.authPointerToPointerCast(Addr, CE->getSubExpr()->getType(),
                                             CE->getType());
       }
       break;

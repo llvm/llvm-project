@@ -21,9 +21,15 @@ char test2() {
 
   // CHECK: [[LOAD:%.*]] = load ptr, ptr @fptr
   // CHECK: [[CMP:%.*]] = icmp ne ptr [[LOAD]], null
+  // CHECK-NEXT: br i1 [[CMP]], label %[[NONNULL:.*]], label %[[CONT:.*]]
 
+  // CHECK: [[NONNULL]]:
   // CHECK: [[TOINT:%.*]] = ptrtoint ptr [[LOAD]] to i64
-  // CHECK: call i64 @llvm.ptrauth.resign(i64 [[TOINT]], i32 0, i64 18983, i32 0, i64 0)
+  // CHECK: [[CALL:%.*]] = call i64 @llvm.ptrauth.resign(i64 [[TOINT]], i32 0, i64 18983, i32 0, i64 0)
+  // CHECK: [[TOPTR:%.*]] = inttoptr i64 [[CALL]] to ptr
+
+  // CHECK: [[CONT]]:
+  // CHECK: phi ptr [ null, {{.*}} ], [ [[TOPTR]], %[[NONNULL]] ]
 }
 
 // CHECK-LABEL: define void @test4
@@ -38,6 +44,7 @@ void test4() {
 }
 
 void *vptr;
+// CHECK-LABEL: define void @test5
 void test5() {
   vptr = &*(char *)fptr;
 
