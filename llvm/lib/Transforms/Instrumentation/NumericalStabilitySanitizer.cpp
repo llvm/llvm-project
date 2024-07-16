@@ -498,7 +498,7 @@ private:
 class NsanInstrumentationFunction {
 public:
   virtual std::pair<FunctionCallee, int>
-  getCalleeAndNumArgsForMemoryOp(const uint64_t MemOpSize) const = 0;
+  getCalleeAndNumArgsForMemoryOp(uint64_t MemOpSize) const = 0;
   virtual FunctionCallee getGeneralFunction() const = 0;
   virtual ~NsanInstrumentationFunction() = default;
 };
@@ -508,7 +508,7 @@ class NsanCopy : public NsanInstrumentationFunction {
 public:
   NsanCopy(Module &M);
   std::pair<FunctionCallee, int>
-  getCalleeAndNumArgsForMemoryOp(const uint64_t MemOpSize) const override;
+  getCalleeAndNumArgsForMemoryOp(uint64_t MemOpSize) const override;
   FunctionCallee getGeneralFunction() const override;
 
 private:
@@ -535,7 +535,7 @@ NsanCopy::NsanCopy(Module &M) {
 }
 
 std::pair<FunctionCallee, int>
-NsanCopy::getCalleeAndNumArgsForMemoryOp(const uint64_t MemOpSize) const {
+NsanCopy::getCalleeAndNumArgsForMemoryOp(uint64_t MemOpSize) const {
   size_t Idx =
       MemOpSize == 4 ? 0 : (MemOpSize == 8 ? 1 : (MemOpSize == 16 ? 2 : 3));
   return Idx == 3 ? std::make_pair(NsanCopyFunction[Idx], 3)
@@ -551,7 +551,7 @@ class NsanSetUnknown : public NsanInstrumentationFunction {
 public:
   NsanSetUnknown(Module &M);
   std::pair<FunctionCallee, int>
-  getCalleeAndNumArgsForMemoryOp(const uint64_t MemOpSize) const override;
+  getCalleeAndNumArgsForMemoryOp(uint64_t MemOpSize) const override;
   FunctionCallee getGeneralFunction() const override;
 
 private:
