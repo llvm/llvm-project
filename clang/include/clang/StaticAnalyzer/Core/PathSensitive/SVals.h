@@ -378,18 +378,8 @@ public:
 /// but you're only interested in the ones that belong to
 /// LazyCompoundVal::getRegion(); other bindings are immaterial.
 ///
-/// NOTE: LazyCompoundVal::getRegion() itself is also immaterial. It is only an
-/// implementation detail. LazyCompoundVal represents only the rvalue, the data
-/// (known or unknown) that *was* stored in that region *at some point in the
-/// past*. The region should not be used for any purpose other than figuring out
-/// what part of the frozen Store you're interested in. The value does not
-/// represent the *current* value of that region. Sometimes it may, but this
-/// should not be relied upon. Instead, if you want to figure out what region it
-/// represents, you typically need to see where you got it from in the first
-/// place. The region is absolutely not analogous to the C++ "this" pointer. It
-/// is also not a valid way to "materialize" the prvalue into a glvalue in C++,
-/// because the region represents the *old* storage (sometimes very old), not
-/// the *future* storage.
+/// NOTE: LazyCompoundVal::getRegion() itself is also immaterial (see the actual
+/// method docs for details).
 class LazyCompoundVal : public NonLoc {
   friend class ento::SValBuilder;
 
@@ -399,6 +389,18 @@ class LazyCompoundVal : public NonLoc {
   }
 
 public:
+  /// This function itself is immaterial. It is only an implementation detail.
+  /// LazyCompoundVal represents only the rvalue, the data (known or unknown)
+  /// that *was* stored in that region *at some point in the past*. The region
+  /// should not be used for any purpose other than figuring out what part of
+  /// the frozen Store you're interested in. The value does not represent the
+  /// *current* value of that region. Sometimes it may, but this should not be
+  /// relied upon. Instead, if you want to figure out what region it represents,
+  /// you typically need to see where you got it from in the first place. The
+  /// region is absolutely not analogous to the C++ "this" pointer. It is also
+  /// not a valid way to "materialize" the prvalue into a glvalue in C++,
+  /// because the region represents the *old* storage (sometimes very old), not
+  /// the *future* storage.
   LLVM_ATTRIBUTE_RETURNS_NONNULL
   const LazyCompoundValData *getCVData() const {
     return castDataAs<LazyCompoundValData>();
