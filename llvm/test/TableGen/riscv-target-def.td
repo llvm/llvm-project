@@ -12,9 +12,9 @@ class RISCVExtension<string name, int major, int minor, string desc,
   bit Experimental = false;
 }
 
-class RISCVExtensionBitmask<bits<3> groupID, int bitmaskShift> {
+class RISCVExtensionBitmask<bits<3> groupID, int bitPos> {
   int GroupID = groupID;
-  int BitPos = bitmaskShift;
+  int BitPos = bitPos;
 }
 
 class RISCVExperimentalExtension<string name, int major, int minor, string desc,
