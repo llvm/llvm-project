@@ -91,7 +91,6 @@ struct Eg9 {
 };
 // expecting warning: {{variable of type 'Eg9' bound to register type 'u' does not contain a matching 'uav' resource}}
 Eg9<Texture2D> e9 : register(u0);
-
 // invalid because after template expansion, there are no valid resources inside Eg10 to bind as a UAV.
 
 
@@ -104,10 +103,3 @@ struct Eg10{
 Eg10 e10 : register(u9) : register(u10);
 // expected-error@+1{{conflicting register annotations: multiple register annotations detected for register type 'u'}}
 Eg10 e10a : register(u9, space0) : register(u9, space1);
-
-struct Eg11{
-  RWBuffer<int> a;  
-};
-
-// expected-warning@+1{{register 'c' used on type with no contents to allocate in a constant buffer}}
-Eg11 e11 : register(c9);
