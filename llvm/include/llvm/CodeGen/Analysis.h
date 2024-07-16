@@ -148,10 +148,6 @@ bool returnTypeIsEligibleForTailCall(const Function *F, const Instruction *I,
                                      const TargetLoweringBase &TLI,
                                      bool ReturnsFirstArg = false);
 
-/// Check whether B is a bitcast of a pointer type to another pointer type,
-/// which is equal to A.
-bool isPointerBitcastEqualTo(const Value *A, const Value *B);
-
 /// Returns true if the parent of \p CI returns CI's first argument after
 /// calling \p CI.
 bool funcReturnsFirstArgOfCall(const CallInst &CI);

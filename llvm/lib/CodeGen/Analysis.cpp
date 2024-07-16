@@ -640,20 +640,6 @@ bool llvm::attributesPermitTailCall(const Function *F, const Instruction *I,
   return CallerAttrs == CalleeAttrs;
 }
 
-bool llvm::isPointerBitcastEqualTo(const Value *A, const Value *B) {
-  assert(A && B && "Expected non-null inputs!");
-
-  auto *BitCastIn = dyn_cast<BitCastInst>(B);
-
-  if (!BitCastIn)
-    return false;
-
-  if (!A->getType()->isPointerTy() || !B->getType()->isPointerTy())
-    return false;
-
-  return A == BitCastIn->getOperand(0);
-}
-
 bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
                                            const Instruction *I,
                                            const ReturnInst *Ret,
@@ -685,12 +671,9 @@ bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
   const CallInst *Call = cast<CallInst>(I);
   if (Function *F = Call->getCalledFunction()) {
     Intrinsic::ID IID = F->getIntrinsicID();
-    if (((IID == Intrinsic::memcpy &&
-          TLI.getLibcallName(RTLIB::MEMCPY) == StringRef("memcpy")) ||
-         (IID == Intrinsic::memmove &&
-          TLI.getLibcallName(RTLIB::MEMMOVE) == StringRef("memmove"))) &&
-        (RetVal == Call->getArgOperand(0) ||
-         isPointerBitcastEqualTo(RetVal, Call->getArgOperand(0))))
+    if ((IID == Intrinsic::memcpy &&
+         TLI.getLibcallName(RTLIB::MEMCPY) == StringRef("memcpy")) &&
+        (RetVal == Call->getArgOperand(0)))
       return true;
   }
 
@@ -746,8 +729,7 @@ bool llvm::funcReturnsFirstArgOfCall(const CallInst &CI) {
   const ReturnInst *Ret = dyn_cast<ReturnInst>(CI.getParent()->getTerminator());
   Value *RetVal = Ret ? Ret->getReturnValue() : nullptr;
   bool ReturnsFirstArg = false;
-  if (RetVal && ((RetVal == CI.getArgOperand(0) ||
-                  isPointerBitcastEqualTo(RetVal, CI.getArgOperand(0)))))
+  if (RetVal && ((RetVal == CI.getArgOperand(0))))
     ReturnsFirstArg = true;
   return ReturnsFirstArg;
 }

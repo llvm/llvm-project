@@ -1704,7 +1704,7 @@ SDValue XCoreTargetLowering::PerformDAGCombine(SDNode *N,
         bool isTail = isInTailCallPosition(DAG, ST, Chain);
         return DAG.getMemmove(Chain, dl, ST->getBasePtr(), LD->getBasePtr(),
                               DAG.getConstant(StoreBits / 8, dl, MVT::i32),
-                              Alignment, false, isTail,
+                              Alignment, false, nullptr, isTail,
                               ST->getPointerInfo(), LD->getPointerInfo());
       }
     }

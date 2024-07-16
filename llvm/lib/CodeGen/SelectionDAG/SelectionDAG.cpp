@@ -8352,7 +8352,8 @@ SDValue SelectionDAG::getAtomicMemcpy(SDValue Chain, const SDLoc &dl,
 
 SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
                                  SDValue Src, SDValue Size, Align Alignment,
-                                 bool isVol, bool isTailCall,
+                                 bool isVol, const CallInst *CI,
+                                 std::optional<bool> OverrideTailCall,
                                  MachinePointerInfo DstPtrInfo,
                                  MachinePointerInfo SrcPtrInfo,
                                  const AAMDNodes &AAInfo, AAResults *AA) {
@@ -8398,6 +8399,19 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
   Entry.Node = Size; Args.push_back(Entry);
   // FIXME:  pass in SDLoc
   TargetLowering::CallLoweringInfo CLI(*this);
+
+  bool IsTailCall = false;
+  if (OverrideTailCall.has_value()) {
+    IsTailCall = *OverrideTailCall;
+  } else {
+    bool LowersToMemmove =
+        TLI->getLibcallName(RTLIB::MEMMOVE) == StringRef("memmove");
+    bool ReturnsFirstArg = CI && funcReturnsFirstArgOfCall(*CI);
+    IsTailCall = CI && CI->isTailCall() &&
+                 isInTailCallPosition(*CI, getTarget(),
+                                      ReturnsFirstArg && LowersToMemmove);
+  }
+
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setLibCallee(TLI->getLibcallCallingConv(RTLIB::MEMMOVE),
@@ -8406,7 +8420,7 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
                                       TLI->getPointerTy(getDataLayout())),
                     std::move(Args))
       .setDiscardResult()
-      .setTailCall(isTailCall);
+      .setTailCall(IsTailCall);
 
   std::pair<SDValue,SDValue> CallResult = TLI->LowerCallTo(CLI);
   return CallResult.second;

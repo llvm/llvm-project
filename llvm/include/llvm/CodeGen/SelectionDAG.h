@@ -1190,8 +1190,12 @@ public:
                     const AAMDNodes &AAInfo = AAMDNodes(),
                     AAResults *AA = nullptr);
 
+  /* \p CI if not null is the memset call being lowered.
+   * \p OverrideTailCall is an optional parameter that can be used to override
+   * the tail call optimization decision. */
   SDValue getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
-                     SDValue Size, Align Alignment, bool isVol, bool isTailCall,
+                     SDValue Size, Align Alignment, bool isVol,
+                     const CallInst *CI, std::optional<bool> OverrideTailCall,
                      MachinePointerInfo DstPtrInfo,
                      MachinePointerInfo SrcPtrInfo,
                      const AAMDNodes &AAInfo = AAMDNodes(),
