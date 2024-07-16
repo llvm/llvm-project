@@ -516,7 +516,7 @@ static bool is_local_impl(struct STATVFS &Vfs) {
   // target
   StringRef fstype(Vfs.f_basetype);
   // NFS is the only non-local fstype??
-  return !fstype.equals("nfs");
+  return fstype != "nfs";
 #elif defined(_AIX)
   // Call mntctl; try more than twice in case of timing issues with a concurrent
   // mount.

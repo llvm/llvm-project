@@ -367,11 +367,11 @@ static AMDGPULibFunc::Param getRetType(AMDGPULibFunc::EFuncId id,
 class ParamIterator {
   const AMDGPULibFunc::Param (&Leads)[2];
   const ManglingRule& Rule;
-  int Index;
+  int Index = 0;
 public:
   ParamIterator(const AMDGPULibFunc::Param (&leads)[2],
                 const ManglingRule& rule)
-    : Leads(leads), Rule(rule), Index(0) {}
+    : Leads(leads), Rule(rule) {}
 
   AMDGPULibFunc::Param getNextParam();
 };

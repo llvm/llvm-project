@@ -248,7 +248,8 @@ bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isExtern())
     return true;
 
-  if (Ptr.isInitialized())
+  if (Ptr.isInitialized() ||
+      (Ptr.getDeclDesc()->asVarDecl() == S.EvaluatingDecl))
     return true;
 
   if (!S.checkingPotentialConstantExpression() && S.getLangOpts().CPlusPlus) {
@@ -444,6 +445,27 @@ bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return false;
 }
 
+bool CheckVolatile(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                   AccessKinds AK) {
+  assert(Ptr.isLive());
+
+  // FIXME: This check here might be kinda expensive. Maybe it would be better
+  // to have another field in InlineDescriptor for this?
+  if (!Ptr.isBlockPointer())
+    return true;
+
+  QualType PtrType = Ptr.getType();
+  if (!PtrType.isVolatileQualified())
+    return true;
+
+  const SourceInfo &Loc = S.Current->getSource(OpPC);
+  if (S.getLangOpts().CPlusPlus)
+    S.FFDiag(Loc, diag::note_constexpr_access_volatile_type) << AK << PtrType;
+  else
+    S.FFDiag(Loc);
+  return false;
+}
+
 bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                       AccessKinds AK) {
   assert(Ptr.isLive());
@@ -507,6 +529,8 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!CheckTemporary(S, OpPC, Ptr, AK))
     return false;
   if (!CheckMutable(S, OpPC, Ptr))
+    return false;
+  if (!CheckVolatile(S, OpPC, Ptr, AK))
     return false;
   return true;
 }
