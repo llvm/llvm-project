@@ -19,25 +19,7 @@
 #include <cassert>
 
 #include "test_macros.h"
-
-struct MyMutex {
-  bool locked = false;
-
-  MyMutex() = default;
-  ~MyMutex() { assert(!locked); }
-
-  void lock() {
-    assert(!locked);
-    locked = true;
-  }
-  void unlock() {
-    assert(locked);
-    locked = false;
-  }
-
-  MyMutex(MyMutex const&)            = delete;
-  MyMutex& operator=(MyMutex const&) = delete;
-};
+#include "types.h"
 
 int main(int, char**) {
   MyMutex m;

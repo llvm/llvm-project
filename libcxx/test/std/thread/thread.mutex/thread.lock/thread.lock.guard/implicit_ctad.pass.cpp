@@ -17,11 +17,7 @@
 #include <mutex>
 
 #include "test_macros.h"
-
-struct MyMutex {
-  void lock() {}
-  void unlock() {}
-};
+#include "types.h"
 
 int main(int, char**) {
   MyMutex m;

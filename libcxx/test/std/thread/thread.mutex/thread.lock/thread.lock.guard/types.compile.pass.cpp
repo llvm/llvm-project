@@ -8,18 +8,18 @@
 
 // <mutex>
 
-// template <class Mutex> class lock_guard;
-
-// explicit lock_guard(mutex_type& m);
+// template <class Mutex>
+// class lock_guard
+// {
+// public:
+//     typedef Mutex mutex_type;
+//     ...
+// };
 
 #include <mutex>
+#include <type_traits>
 
-struct MyMutex {};
+#include "test_macros.h"
+#include "types.h"
 
-int main(int, char**)
-{
-  MyMutex m;
-  std::lock_guard<MyMutex> lg = m; // expected-error{{no viable conversion}}
-
-  return 0;
-}
+static_assert((std::is_same<std::lock_guard<MyMutex>::mutex_type, MyMutex>::value), "");

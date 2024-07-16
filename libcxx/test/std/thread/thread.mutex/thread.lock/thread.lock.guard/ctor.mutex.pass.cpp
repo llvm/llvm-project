@@ -8,23 +8,19 @@
 
 // <mutex>
 
-// template <class Mutex>
-// class lock_guard
-// {
-// public:
-//     typedef Mutex mutex_type;
-//     ...
-// };
+// template <class Mutex> class lock_guard;
 
+// explicit lock_guard(mutex_type& m);
+
+#include <cassert>
 #include <mutex>
-#include <type_traits>
 
-#include "test_macros.h"
-
-struct MyMutex {};
+#include "types.h"
 
 int main(int, char**) {
-  static_assert((std::is_same<std::lock_guard<MyMutex>::mutex_type, MyMutex>::value), "");
+  MyMutex m;
+  std::lock_guard<MyMutex> lg(m); // makes sure this compiles and runs
+  static_assert(!std::is_convertible_v<MyMutex, std::lock_guard<MyMutex>>, "constructor must be explicit");
 
   return 0;
 }
