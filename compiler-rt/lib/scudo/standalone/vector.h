@@ -9,7 +9,6 @@
 #ifndef SCUDO_VECTOR_H_
 #define SCUDO_VECTOR_H_
 
-#include "common.h"
 #include "mem_map.h"
 
 #include <string.h>
@@ -121,8 +120,8 @@ private:
   MemMapT ExternalBuffer;
 };
 
-template <typename T, size_t StaticCapacity = 10>
-class Vector : public VectorNoCtor<T, Max<size_t>(10, StaticCapacity)> {
+template <typename T, size_t StaticCapacity = 8>
+class Vector : public VectorNoCtor<T, StaticCapacity> {
 public:
   constexpr Vector() { VectorNoCtor<T, StaticCapacity>::init(); }
   explicit Vector(uptr Count) {
