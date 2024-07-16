@@ -218,6 +218,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.time.clock
     libc.src.time.nanosleep
 
+    # wchar.h entrypoints
+    libc.src.wchar.wctob
+
     # gpu/rpc.h entrypoints
     libc.src.gpu.rpc_host_call
     libc.src.gpu.rpc_fprintf

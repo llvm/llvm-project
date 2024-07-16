@@ -392,7 +392,7 @@ define amdgpu_kernel void @select_add_lhs_const_i16(i1 %cond) {
 ;
 ; GCN-LABEL: select_add_lhs_const_i16:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dword s0, s[4:5], 0x0
+; GCN-NEXT:    s_load_dword s0, s[6:7], 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0x83
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0x80
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)

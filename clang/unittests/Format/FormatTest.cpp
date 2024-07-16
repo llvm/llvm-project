@@ -16875,7 +16875,7 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   verifyFormat("int f();", SpaceFuncDef);
   verifyFormat("void f (int a, T b) {}", SpaceFuncDef);
   verifyFormat("void __attribute__((asdf)) f (int a, T b) {}", SpaceFuncDef);
-  verifyFormat("A::A() : a(1) {}", SpaceFuncDef);
+  verifyFormat("A::A () : a(1) {}", SpaceFuncDef);
   verifyFormat("void f() __attribute__((asdf));", SpaceFuncDef);
   verifyFormat("void __attribute__((asdf)) f();", SpaceFuncDef);
   verifyFormat("#define A(x) x", SpaceFuncDef);
@@ -16901,7 +16901,8 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   verifyFormat("T A::operator()() {}", SpaceFuncDef);
   verifyFormat("auto lambda = [] () { return 0; };", SpaceFuncDef);
   verifyFormat("int x = int(y);", SpaceFuncDef);
-  verifyFormat("M(std::size_t R, std::size_t C) : C(C), data(R) {}",
+  verifyFormat("void foo::bar () {}", SpaceFuncDef);
+  verifyFormat("M (std::size_t R, std::size_t C) : C(C), data(R) {}",
                SpaceFuncDef);
 
   FormatStyle SpaceIfMacros = getLLVMStyle();

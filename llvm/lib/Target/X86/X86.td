@@ -86,14 +86,8 @@ def FeatureSSE42   : SubtargetFeature<"sse4.2", "X86SSELevel", "SSE42",
 // The MMX subtarget feature is separate from the rest of the SSE features
 // because it's important (for odd compatibility reasons) to be able to
 // turn it off explicitly while allowing SSE+ to be on.
-def FeatureMMX     : SubtargetFeature<"mmx","X863DNowLevel", "MMX",
+def FeatureMMX     : SubtargetFeature<"mmx","HasMMX", "true",
                                       "Enable MMX instructions">;
-def Feature3DNow   : SubtargetFeature<"3dnow", "X863DNowLevel", "ThreeDNow",
-                                      "Enable 3DNow! instructions",
-                                      [FeatureMMX]>;
-def Feature3DNowA  : SubtargetFeature<"3dnowa", "X863DNowLevel", "ThreeDNowA",
-                                      "Enable 3DNow! Athlon instructions",
-                                      [Feature3DNow]>;
 // All x86-64 hardware has SSE2, but we don't mark SSE2 as an implied
 // feature, because SSE2 can be disabled (e.g. for compiling OS kernels)
 // without disabling 64-bit mode. Nothing should imply this feature bit. It
@@ -1341,7 +1335,6 @@ def ProcessorFeatures {
   list<SubtargetFeature> BarcelonaFeatures = [FeatureX87,
                                               FeatureCX8,
                                               FeatureSSE4A,
-                                              Feature3DNowA,
                                               FeatureFXSR,
                                               FeatureNOPL,
                                               FeatureCX16,
@@ -1834,32 +1827,32 @@ def : ProcModel<P, SapphireRapidsModel,
 
 def : Proc<"k6",   [FeatureX87, FeatureCX8, FeatureMMX],
                    [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
-def : Proc<"k6-2", [FeatureX87, FeatureCX8, Feature3DNow],
+def : Proc<"k6-2", [FeatureX87, FeatureCX8, FeatureMMX, FeaturePRFCHW],
                    [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
-def : Proc<"k6-3", [FeatureX87, FeatureCX8, Feature3DNow],
+def : Proc<"k6-3", [FeatureX87, FeatureCX8, FeatureMMX, FeaturePRFCHW],
                    [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 
 foreach P = ["athlon", "athlon-tbird"] in {
-  def : Proc<P, [FeatureX87, FeatureCX8, FeatureCMOV, Feature3DNowA,
+  def : Proc<P, [FeatureX87, FeatureCX8, FeatureCMOV, FeatureMMX, FeaturePRFCHW,
                  FeatureNOPL],
                 [TuningSlowSHLD, TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 }
 
 foreach P = ["athlon-4", "athlon-xp", "athlon-mp"] in {
   def : Proc<P, [FeatureX87, FeatureCX8, FeatureCMOV,
-                 FeatureSSE1, Feature3DNowA, FeatureFXSR, FeatureNOPL],
+                 FeatureSSE1, FeatureMMX, FeaturePRFCHW, FeatureFXSR, FeatureNOPL],
                 [TuningSlowSHLD, TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 }
 
 foreach P = ["k8", "opteron", "athlon64", "athlon-fx"] in {
-  def : Proc<P, [FeatureX87, FeatureCX8, FeatureSSE2, Feature3DNowA,
+  def : Proc<P, [FeatureX87, FeatureCX8, FeatureSSE2, FeatureMMX, FeaturePRFCHW,
                  FeatureFXSR, FeatureNOPL, FeatureX86_64, FeatureCMOV],
                 [TuningFastScalarShiftMasks, TuningSlowSHLD, TuningSlowUAMem16,
                  TuningSBBDepBreaking, TuningInsertVZEROUPPER]>;
 }
 
 foreach P = ["k8-sse3", "opteron-sse3", "athlon64-sse3"] in {
-  def : Proc<P, [FeatureX87, FeatureCX8, FeatureSSE3, Feature3DNowA,
+  def : Proc<P, [FeatureX87, FeatureCX8, FeatureSSE3, FeatureMMX, FeaturePRFCHW,
                  FeatureFXSR, FeatureNOPL, FeatureCX16, FeatureCMOV,
                  FeatureX86_64],
                 [TuningFastScalarShiftMasks, TuningSlowSHLD, TuningSlowUAMem16,
@@ -1900,14 +1893,14 @@ def : ProcModel<"znver3", Znver3Model, ProcessorFeatures.ZN3Features,
 def : ProcModel<"znver4", Znver4Model, ProcessorFeatures.ZN4Features,
            ProcessorFeatures.ZN4Tuning>;
 
-def : Proc<"geode",           [FeatureX87, FeatureCX8, Feature3DNowA],
+def : Proc<"geode",           [FeatureX87, FeatureCX8, FeatureMMX, FeaturePRFCHW],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 
 def : Proc<"winchip-c6",      [FeatureX87, FeatureMMX],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
-def : Proc<"winchip2",        [FeatureX87, Feature3DNow],
+def : Proc<"winchip2",        [FeatureX87, FeatureMMX, FeaturePRFCHW],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
-def : Proc<"c3",              [FeatureX87, Feature3DNow],
+def : Proc<"c3",              [FeatureX87, FeatureMMX, FeaturePRFCHW],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 def : Proc<"c3-2",            [FeatureX87, FeatureCX8, FeatureMMX,
                                FeatureSSE1, FeatureFXSR, FeatureCMOV],

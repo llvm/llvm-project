@@ -189,7 +189,6 @@ add_libc_test(
     printf_test.cpp
   DEPENDS
     libc.src.stdio.printf
-    libc.src.stdio.stdout
 )
 
 add_fp_unittest(
@@ -235,7 +234,6 @@ add_libc_test(
     vprintf_test.cpp
   DEPENDS
     libc.src.stdio.vprintf
-    libc.src.stdio.stdout
 )
 
 
