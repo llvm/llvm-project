@@ -3207,8 +3207,7 @@ ExprResult SemaObjC::BuildInstanceMessage(
     if (!isDesignatedInitChain) {
       const ObjCMethodDecl *InitMethod = nullptr;
       auto *CurMD = SemaRef.getCurMethodDecl();
-      if (!CurMD)
-        return ExprResult((Expr *)nullptr);
+      assert(CurMD && "Current method declaration should not be null");
       bool isDesignated =
           CurMD->isDesignatedInitializerForTheInterface(&InitMethod);
       assert(isDesignated && InitMethod);
