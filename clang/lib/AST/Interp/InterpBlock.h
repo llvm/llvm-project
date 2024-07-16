@@ -105,13 +105,6 @@ public:
     return reinterpret_cast<const std::byte *>(this) + sizeof(Block);
   }
 
-  /// Returns a view over the data.
-  template <typename T>
-  T &deref() { return *reinterpret_cast<T *>(data()); }
-  template <typename T> const T &deref() const {
-    return *reinterpret_cast<const T *>(data());
-  }
-
   /// Invokes the constructor.
   void invokeCtor() {
     std::memset(rawData(), 0, Desc->getAllocSize());
