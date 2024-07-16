@@ -3439,7 +3439,7 @@ static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
       Args.hasArg(OPT_fptrauth_function_pointer_type_discrimination);
   Opts.PointerAuthInitFini = Args.hasArg(OPT_fptrauth_init_fini);
   Opts.PointerAuthInitFiniAddressDiscrimination =
-    Args.hasArg(OPT_fptrauth_init_fini_address_discrimination);
+      Args.hasArg(OPT_fptrauth_init_fini_address_discrimination);
 }
 
 /// Check if input file kind and language standard are compatible.
