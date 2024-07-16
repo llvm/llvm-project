@@ -746,12 +746,23 @@ void AllocMemConversion::insertStackSaveRestore(
   mlir::SymbolRefAttr stackRestoreSym =
       builder.getSymbolRefAttr(stackRestoreFn.getName());
 
+  auto createStackRestoreCall = [&](mlir::Operation *user) {
+    builder.setInsertionPoint(user);
+    builder.create<fir::CallOp>(user->getLoc(),
+                                stackRestoreFn.getFunctionType().getResults(),
+                                stackRestoreSym, mlir::ValueRange{sp});
+  };
+
   for (mlir::Operation *user : oldAlloc->getUsers()) {
+    if (auto declareOp = mlir::dyn_cast_if_present<fir::DeclareOp>(user)) {
+      for (mlir::Operation *user : declareOp->getUsers()) {
+        if (mlir::isa<fir::FreeMemOp>(user))
+          createStackRestoreCall(user);
+      }
+    }
+
     if (mlir::isa<fir::FreeMemOp>(user)) {
-      builder.setInsertionPoint(user);
-      builder.create<fir::CallOp>(user->getLoc(),
-                                  stackRestoreFn.getFunctionType().getResults(),
-                                  stackRestoreSym, mlir::ValueRange{sp});
+      createStackRestoreCall(user);
     }
   }
 
