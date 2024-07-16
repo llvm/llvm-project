@@ -1019,9 +1019,12 @@ void TargetLoweringBase::initActions() {
   setOperationAction({ISD::FCBRT, ISD::FLOG, ISD::FLOG2, ISD::FLOG10, ISD::FEXP,
                       ISD::FEXP2, ISD::FEXP10, ISD::FFLOOR, ISD::FNEARBYINT,
                       ISD::FCEIL, ISD::FRINT, ISD::FTRUNC, ISD::LROUND,
-                      ISD::LLROUND, ISD::LRINT, ISD::LLRINT, ISD::FROUNDEVEN,
-                      ISD::FTAN},
+                      ISD::LLROUND, ISD::FROUNDEVEN, ISD::FTAN},
                      {MVT::f32, MVT::f64, MVT::f128}, Expand);
+
+  // Unless the target expands, default LRINT to LibCall.
+  setOperationAction({ISD::LRINT, ISD::LLRINT}, {MVT::f32, MVT::f64, MVT::f128},
+                     LibCall);
 
   setOperationAction(ISD::FTAN, MVT::f16, Promote);
   // Default ISD::TRAP to expand (which turns it into abort).
