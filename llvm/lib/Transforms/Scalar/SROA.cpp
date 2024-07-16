@@ -4975,16 +4975,19 @@ const Value *getAddress(const DbgVariableIntrinsic *DVI) {
     return DAI->getAddress();
   return cast<DbgDeclareInst>(DVI)->getAddress();
 }
+
 const Value *getAddress(const DbgVariableRecord *DVR) {
   assert(DVR->getType() == DbgVariableRecord::LocationType::Declare ||
          DVR->getType() == DbgVariableRecord::LocationType::Assign);
   return DVR->getAddress();
 }
+
 bool isKillAddress(const DbgVariableIntrinsic *DVI) {
   if (const auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
     return DAI->isKillAddress();
   return cast<DbgDeclareInst>(DVI)->isKillLocation();
 }
+
 bool isKillAddress(const DbgVariableRecord *DVR) {
   assert(DVR->getType() == DbgVariableRecord::LocationType::Declare ||
          DVR->getType() == DbgVariableRecord::LocationType::Assign);
@@ -4992,11 +4995,13 @@ bool isKillAddress(const DbgVariableRecord *DVR) {
     return DVR->isKillAddress();
   return DVR->isKillLocation();
 }
+
 const DIExpression *getAddressExpression(const DbgVariableIntrinsic *DVI) {
   if (const auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
     return DAI->getAddressExpression();
   return cast<DbgDeclareInst>(DVI)->getExpression();
 }
+
 const DIExpression *getAddressExpression(const DbgVariableRecord *DVR) {
   assert(DVR->getType() == DbgVariableRecord::LocationType::Declare ||
          DVR->getType() == DbgVariableRecord::LocationType::Assign);
@@ -5005,14 +5010,19 @@ const DIExpression *getAddressExpression(const DbgVariableRecord *DVR) {
   return DVR->getExpression();
 }
 
-/// Similar to DIExpression::createFragmentExpression except for 3 important
-/// distinctions:
+/// Create or replace an existing fragment in a DIExpression with \p Frag.
+/// If the expression already contains a DW_OP_LLVM_extract_bits_[sz]ext
+/// operation, add \p BitExtractOffset to the offset part.
+///
+/// Returns the new expression, or nullptr if this fails (see details below).
+///
+/// This function is similar to DIExpression::createFragmentExpression except
+/// for 3 important distinctions:
 ///   1. The new fragment isn't relative to an existing fragment.
-///   2. There are no checks on the the operation types because it is assumed
-///      the location this expression is computing is not implicit (i.e., it's
-///      always safe to create a fragment because arithmetic operations apply
-///      to the address computation, not to an implicit value computation).
-///   3. Existing extract_bits are modified independetly of fragment changes
+///   2. It assumes the computed location is a memory location. This means we
+///      don't need to perform checks that creating the fragment preserves the
+///      expression semantics.
+///   3. Existing extract_bits are modified independently of fragment changes
 ///      using \p BitExtractOffset. A change to the fragment offset or size
 ///      may affect a bit extract. But a bit extract offset can change
 ///      independently of the fragment dimensions.
@@ -5116,6 +5126,7 @@ insertNewDbgInst(DIBuilder &DIB, DbgAssignIntrinsic *Orig, AllocaInst *NewAddr,
                  DIExpression *NewAddrExpr, Instruction *BeforeInst,
                  std::optional<DIExpression::FragmentInfo> NewFragment,
                  int64_t BitExtractAdjustment) {
+  // DIBuilder::insertDbgAssign will insert the #dbg_assign after NewAddr.
   (void)BeforeInst;
 
   // A dbg.assign puts fragment info in the value expression only. The address

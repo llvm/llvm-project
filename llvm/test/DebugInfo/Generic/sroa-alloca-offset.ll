@@ -127,11 +127,12 @@ entry:
 }
 
 ;; Hand-written part to test what happens when variables are smaller than the
-;; new alloca slices (i.e., check offset rewriting works correctly).  Note that
-;; mem2reg incorrectly preserves the offest in the DIExpression a variable
+;; new alloca slices (i.e., check offset rewriting works correctly). Note that
+;; mem2reg incorrectly preserves the offest in the DIExpression of a variable
 ;; stuffed into the upper bits of a value (that is a bug), e.g. alloca+offset
-;; becomes vreg+offest. It should either convert the offest to a shift, or
-;; encode the register-bit offest using DW_OP_bit_piece.
+;; becomes vreg+offest. It should either convert the offest to a shift, encode
+;; the register-bit offest using DW_OP_bit_piece, or use the new
+;; DW_OP_LLVM_extract_bits_[sz]ext operation.
 ; COMMON-LABEL: _Z4fun3v()
 ; COMMON-NEXT: entry:
 ;; 16 bit variable e (!61): value ve (upper bits)
@@ -163,28 +164,44 @@ entry:
   ret i32 %3, !dbg !58
 }
 
-;; splitAlloca in SROA.cpp only understands expressions with an optional offset
-;; and optional fragment. Check a dbg.declare with an extra op is dropped.  If
-;; this test fails it indicates the debug info updating code in SROA.cpp
-;; splitAlloca may need to be update to account for more complex input
-;; expressions.  Search for this file name in SROA.cpp.
+;; Check that DW_OP_extract_bits_[sz]ext compose with expression offsets and
+;; that new fragments are not created. DW_OP_extract_bits_[sz]ext and fragments
+;; don't compose currently (but could). There are checks that expressions with
+;; bit extracts and fragments are dropped in SROA the test
+;; in llvm/test/DebugInfo/Generic/sroa-extract-bits.ll. FIXME: Don't do that.
+;;
+;; Checks are inline for this one.
+;;
+;; %p alloca is 128 bits
+;; SROA is going to split it in half, discard the lower bits, then split
+;; the upper bits in half and discard the upper bits leaving us with
+;; bits [64, 96) of the original alloca.
+;;
 ; COMMON-LABEL: fun4
-; COMMON-NOT: llvm.dbg
-; COMMON: #dbg_value(ptr %0, ![[p:[0-9]+]], !DIExpression(DW_OP_deref),
-; COMMON: #dbg_value(ptr %0, ![[q:[0-9]+]], !DIExpression(),
-; COMMON-NOT: llvm.dbg
-; COMMON: ret
-define dso_local noundef i32 @fun4(ptr %0) #0 !dbg !65 {
+define dso_local noundef i32 @fun4(i64 %0) !dbg !65 {
 entry:
-  %p = alloca [2 x ptr]
-  store ptr %0, ptr %p
-  call void @llvm.dbg.declare(metadata ptr %p, metadata !67, metadata !DIExpression(DW_OP_deref)), !dbg !66
-  call void @llvm.dbg.declare(metadata ptr %p, metadata !68, metadata !DIExpression()), !dbg !66
-  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %0, ptr align 4 @gf, i64 16, i1 false), !dbg !66
-  %deref = load ptr, ptr %p
-  %1 = getelementptr inbounds %struct.four, ptr %deref, i32 0, i32 0, !dbg !66
-  %2 = load i32, ptr %1, align 4, !dbg !66
-  ret i32 %2, !dbg !66
+  %p = alloca [2 x i64]
+  %1 = getelementptr inbounds [2 x i64], ptr %p, i32 0, i32 1
+  store i64 %0, ptr %1
+  ; COMMON: %p.sroa.0.8.extract.trunc = trunc i64 %0 to i32
+  ;; Simple case - the expression offset (8 bytes) matches the offset of the
+  ;; slice into the alloca, so can be discarded away entirely.
+  ; COMMON-NEXT: #dbg_value(i32 %p.sroa.0.8.extract.trunc, ![[p:[0-9]+]], !DIExpression(DW_OP_LLVM_extract_bits_zext, 0, 32)
+  call void @llvm.dbg.declare(metadata ptr %p, metadata !67, metadata !DIExpression(DW_OP_plus_uconst, 8, DW_OP_LLVM_extract_bits_zext, 0, 32)), !dbg !66
+  ;; The expression offset is 6 bytes, with a bit-extract offset of 32 bits from
+  ;; there for a total offset of 80 bits. SROA is going to split the alloca in
+  ;; half (at bit 64). The new expression needs a final bit extract offset of
+  ;; 80-64=16 bits applied to the mem2reg'd value.
+  ; COMMON-NEXT: #dbg_value(i32 %p.sroa.0.8.extract.trunc, ![[q:[0-9]+]], !DIExpression(DW_OP_LLVM_extract_bits_zext, 16, 8)
+  call void @llvm.dbg.declare(metadata ptr %p, metadata !68, metadata !DIExpression(DW_OP_plus_uconst, 6, DW_OP_LLVM_extract_bits_zext, 32, 8)), !dbg !66
+  ;; FIXME: Just as in _Z4fun3v, the offset from the new alloca (2 bytes) is
+  ;; correct but mem2reg needs to change it from an offset to a shift or
+  ;; adjust the bit-extract (e.g., add the 2 byte offset to the existing 8 bit
+  ;; offset for a 24 bit total bit-extract offset).
+  ; COMMON-NEXT: #dbg_value(i32 %p.sroa.0.8.extract.trunc, ![[r:[0-9]+]], !DIExpression(DW_OP_plus_uconst, 2, DW_OP_LLVM_extract_bits_zext, 8, 8)
+  call void @llvm.dbg.declare(metadata ptr %p, metadata !69, metadata !DIExpression(DW_OP_plus_uconst, 10, DW_OP_LLVM_extract_bits_zext, 8, 8)), !dbg !66
+  %2 = load i32, ptr %1, align 4
+  ret i32 %2
 }
 
 ; COMMON-DAG: ![[x0]] = !DILocalVariable(name: "x",
@@ -200,7 +217,9 @@ entry:
 ; COMMON-DAG: ![[g]] = !DILocalVariable(name: "g",
 ; COMMON-DAG: ![[h]] = !DILocalVariable(name: "h",
 
+; COMMON-DAG: ![[p]] = !DILocalVariable(name: "p"
 ; COMMON-DAG: ![[q]] = !DILocalVariable(name: "q"
+; COMMON-DAG: ![[r]] = !DILocalVariable(name: "r"
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
@@ -254,3 +273,4 @@ declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias
 !66 = !DILocation(line: 9, column: 9, scope: !65)
 !67 = !DILocalVariable(name: "p", scope: !65, file: !3, line: 9, type: !13)
 !68 = !DILocalVariable(name: "q", scope: !65, file: !3, line: 9, type: !13)
+!69 = !DILocalVariable(name: "r", scope: !65, file: !3, line: 9, type: !13)
