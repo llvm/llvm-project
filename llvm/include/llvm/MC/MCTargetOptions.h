@@ -68,6 +68,8 @@ public:
   // ELF.
   bool X86RelaxRelocations = true;
 
+  bool X86Sse2Avx = false;
+
   EmitDwarfUnwindType EmitDwarfUnwind;
 
   int DwarfVersion = 0;

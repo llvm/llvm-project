@@ -111,3 +111,6 @@ RonL
 Reverts: breaks clang-offload-wrapper test
 fb5a38bb4930 [llvm-objcopy] Add verification of added .note section format 
 ---
+Reverts: depends upon older SLP reverts
+beccecaacde4 [SLP]Fix PR98838: do no replace condition of select-based logical op by poison.
+---

@@ -2681,17 +2681,24 @@ bool IRTranslator::translateCallBase(const CallBase &CB,
   }
 
   std::optional<CallLowering::PtrAuthInfo> PAI;
-  if (CB.countOperandBundlesOfType(LLVMContext::OB_ptrauth)) {
+  if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_ptrauth)) {
     // Functions should never be ptrauth-called directly.
     assert(!CB.getCalledFunction() && "invalid direct ptrauth call");
 
-    auto PAB = CB.getOperandBundle("ptrauth");
-    const Value *Key = PAB->Inputs[0];
-    const Value *Discriminator = PAB->Inputs[1];
+    const Value *Key = Bundle->Inputs[0];
+    const Value *Discriminator = Bundle->Inputs[1];
 
-    Register DiscReg = getOrCreateVReg(*Discriminator);
-    PAI = CallLowering::PtrAuthInfo{cast<ConstantInt>(Key)->getZExtValue(),
-                                    DiscReg};
+    // Look through ptrauth constants to try to eliminate the matching bundle
+    // and turn this into a direct call with no ptrauth.
+    // CallLowering will use the raw pointer if it doesn't find the PAI.
+    const auto *CalleeCPA = dyn_cast<ConstantPtrAuth>(CB.getCalledOperand());
+    if (!CalleeCPA || !isa<Function>(CalleeCPA->getPointer()) ||
+        !CalleeCPA->isKnownCompatibleWith(Key, Discriminator, *DL)) {
+      // If we can't make it direct, package the bundle into PAI.
+      Register DiscReg = getOrCreateVReg(*Discriminator);
+      PAI = CallLowering::PtrAuthInfo{cast<ConstantInt>(Key)->getZExtValue(),
+                                      DiscReg};
+    }
   }
 
   Register ConvergenceCtrlToken = 0;
