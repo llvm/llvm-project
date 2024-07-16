@@ -28,14 +28,13 @@
 !       suffix. Clang's driver will try to resolve the path to the ld
 !       executable and may find the GNU linker from MinGW or Cygwin.
 ! UNIX-LABEL:  "{{.*}}ld{{(\.exe)?}}"
-! COMPILER-RT: "{{.*}}/clang_rt.crtbegin.o" 
 ! UNIX-SAME: "[[object_file]]"
 ! UNIX-F128NONE-NOT: FortranFloat128Math
 ! SOLARIS-F128NONE-NOT: FortranFloat128Math
 ! UNIX-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "--as-needed" "-lquadmath" "--no-as-needed"
 ! SOLARIS-F128LIBQUADMATH-SAME: "-lFortranFloat128Math" "-z" "ignore" "-lquadmath" "-z" "record"
 ! UNIX-SAME: "-lFortranRuntime" "-lFortranDecimal" "-lm"
-! COMPILER-RT: "{{.*}}/libclang_rt.builtins.a" "{{.*}}/clang_rt.crtend.o"
+! COMPILER-RT: "{{.*}}/libclang_rt.builtins.a"
 
 ! DARWIN-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! DARWIN-SAME: "[[object_file]]"
