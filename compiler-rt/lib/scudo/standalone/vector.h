@@ -9,6 +9,7 @@
 #ifndef SCUDO_VECTOR_H_
 #define SCUDO_VECTOR_H_
 
+#include "common.h"
 #include "mem_map.h"
 
 #include <string.h>
@@ -21,7 +22,7 @@ namespace scudo {
 // implementation supports only POD types.
 //
 // NOTE: This class is not meant to be used directly, use Vector<T> instead.
-template <typename T> class VectorNoCtor {
+template <typename T, size_t StaticCapacity> class VectorNoCtor {
 public:
   T &operator[](uptr I) {
     DCHECK_LT(I, Size);
@@ -116,18 +117,19 @@ private:
   uptr CapacityBytes = 0;
   uptr Size = 0;
 
-  T LocalData[256 / sizeof(T)] = {};
+  T LocalData[StaticCapacity] = {};
   MemMapT ExternalBuffer;
 };
 
-template <typename T> class Vector : public VectorNoCtor<T> {
+template <typename T, size_t StaticCapacity = 10>
+class Vector : public VectorNoCtor<T, Max<size_t>(10, StaticCapacity)> {
 public:
-  constexpr Vector() { VectorNoCtor<T>::init(); }
+  constexpr Vector() { VectorNoCtor<T, StaticCapacity>::init(); }
   explicit Vector(uptr Count) {
-    VectorNoCtor<T>::init(Count);
+    VectorNoCtor<T, StaticCapacity>::init(Count);
     this->resize(Count);
   }
-  ~Vector() { VectorNoCtor<T>::destroy(); }
+  ~Vector() { VectorNoCtor<T, StaticCapacity>::destroy(); }
   // Disallow copies and moves.
   Vector(const Vector &) = delete;
   Vector &operator=(const Vector &) = delete;
@@ -138,3 +140,4 @@ public:
 } // namespace scudo
 
 #endif // SCUDO_VECTOR_H_
+
