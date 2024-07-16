@@ -4285,6 +4285,12 @@ void Verifier::visitAllocaInst(AllocaInst &AI) {
   SmallPtrSet<Type*, 4> Visited;
   Check(AI.getAllocatedType()->isSized(&Visited),
         "Cannot allocate unsized type", &AI);
+  // Check if it's a target extension type that disallows being used in an
+  // alloca.
+  if (auto *TTy = dyn_cast<TargetExtType>(AI.getAllocatedType())) {
+    Check(TTy->hasProperty(TargetExtType::CanBeAlloca),
+          "Alloca has illegal target extension type", &AI);
+  }
   Check(AI.getArraySize()->getType()->isIntegerTy(),
         "Alloca array size must have integer type", &AI);
   if (MaybeAlign A = AI.getAlign()) {

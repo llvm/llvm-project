@@ -769,6 +769,8 @@ public:
     HasZeroInit = 1U << 0,
     /// This type may be used as the value type of a global variable.
     CanBeGlobal = 1U << 1,
+    /// This type may be used as the allocated type of an alloca instruction.
+    CanBeAlloca = 1U << 2,
   };
 
   /// Returns true if the target extension type contains the given property.
