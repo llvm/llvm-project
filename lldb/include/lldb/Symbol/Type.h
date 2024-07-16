@@ -65,11 +65,6 @@ struct CompilerContext {
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                               const CompilerContext &rhs);
 
-/// Match \p context_chain against \p pattern, which may contain "Any"
-/// kinds. The \p context_chain should *not* contain any "Any" kinds.
-bool contextMatches(llvm::ArrayRef<CompilerContext> context_chain,
-                    llvm::ArrayRef<CompilerContext> pattern);
-
 FLAGS_ENUM(TypeQueryOptions){
     e_none = 0u,
     /// If set, TypeQuery::m_context contains an exact context that must match
