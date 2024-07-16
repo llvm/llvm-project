@@ -911,13 +911,13 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm) {
     if (!cast<MCSectionMachO>(Sec).isVirtualSection() &&
         !isUInt<32>(SectionStart)) {
       Asm.getContext().reportError(
-          SMLoc(), "Cannot encode offset of section; object file too large");
+          SMLoc(), "cannot encode offset of section; object file too large");
       return NumBytesWritten();
     }
     if (NumRelocs && !isUInt<32>(RelocTableEnd)) {
       Asm.getContext().reportError(
           SMLoc(),
-          "Cannot encode offset of relocations; object file too large");
+          "cannot encode offset of relocations; object file too large");
       return NumBytesWritten();
     }
     writeSection(Asm, Sec, getSectionAddress(&Sec), SectionStart, Flags,

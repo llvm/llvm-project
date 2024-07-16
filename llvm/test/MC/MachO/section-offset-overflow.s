@@ -1,6 +1,6 @@
-// RUN: not llvm-mc -triple x86_64-apple-macosx -filetype=obj -o /dev/null %s 2>&1 | FileCheck  %s
+// RUN: not llvm-mc -triple x86_64-apple-macosx -filetype=obj -o /dev/null %s 2>&1 | FileCheck %s
 
-// CHECK: Cannot encode offset of section
+// CHECK: error: cannot encode offset of section
 
         .data
         .long 1
