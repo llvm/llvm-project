@@ -11,8 +11,9 @@
 #include "src/stdio/feof.h"
 #include "src/stdio/ferror.h"
 
+#include "hdr/stdio_macros.h" // for EOF.
+#include "hdr/types/FILE.h"
 #include <stddef.h>
-#include <stdio.h>
 
 namespace LIBC_NAMESPACE {
 

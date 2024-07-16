@@ -8,12 +8,11 @@
 
 #include "file.h"
 
+#include "hdr/stdio_macros.h"
+#include "hdr/types/off_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/span.h"
 #include "src/errno/libc_errno.h" // For error macros
-
-#include <stdio.h>
-#include <stdlib.h>
 
 namespace LIBC_NAMESPACE {
 

@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PUTS_H
 #define LLVM_LIBC_SRC_STDIO_PUTS_H
 
-#include <stdio.h>
-
 namespace LIBC_NAMESPACE {
 
 int puts(const char *__restrict str);

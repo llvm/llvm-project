@@ -913,6 +913,12 @@ Clang options that don't fit neatly into other categories.
   binary compatibility issues on older x86_64 targets, however, so use it with
   caution.
 
+.. option:: -fdisable-block-signature-string
+
+  Instruct clang not to emit the signature string for blocks. Disabling the
+  string can potentially break existing code that relies on it. Users should
+  carefully consider this possibiilty when using the flag.
+
 .. _configuration-files:
 
 Configuration files

@@ -42,6 +42,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/InstructionCost.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -64,7 +65,10 @@ class VPlan;
 class VPReplicateRecipe;
 class VPlanSlp;
 class Value;
+class LoopVectorizationCostModel;
 class LoopVersioning;
+
+struct VPCostContext;
 
 namespace Intrinsic {
 typedef unsigned ID;
@@ -81,6 +85,14 @@ Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
 
 const SCEV *createTripCountSCEV(Type *IdxTy, PredicatedScalarEvolution &PSE,
                                 Loop *CurLoop = nullptr);
+
+/// A helper function that returns the reciprocal of the block probability of
+/// predicated blocks. If we return X, we are assuming the predicated block
+/// will execute once for every X iterations of the loop header.
+///
+/// TODO: We should use actual block probability here, if available. Currently,
+///       we always assume predicated blocks have a 50% chance of executing.
+inline unsigned getReciprocalPredBlockProb() { return 2; }
 
 /// A range of powers-of-2 vectorization factors with fixed start and
 /// adjustable end. The range includes start and excludes end, e.g.,:
@@ -633,6 +645,9 @@ public:
   /// VPBlockBase, thereby "executing" the VPlan.
   virtual void execute(VPTransformState *State) = 0;
 
+  /// Return the cost of the block.
+  virtual InstructionCost cost(ElementCount VF, VPCostContext &Ctx) = 0;
+
   /// Delete all blocks reachable from a given VPBlockBase, inclusive.
   static void deleteCFG(VPBlockBase *Entry);
 
@@ -682,7 +697,10 @@ public:
 };
 
 /// A value that is used outside the VPlan. The operand of the user needs to be
-/// added to the associated LCSSA phi node.
+/// added to the associated phi node. The incoming block from VPlan is
+/// determined by where the VPValue is defined: if it is defined by a recipe
+/// outside a region, its parent block is used, otherwise the middle block is
+/// used.
 class VPLiveOut : public VPUser {
   PHINode *Phi;
 
@@ -694,11 +712,10 @@ public:
     return U->getVPUserID() == VPUser::VPUserID::LiveOut;
   }
 
-  /// Fixup the wrapped LCSSA phi node in the unique exit block.  This simply
-  /// means we need to add the appropriate incoming value from the middle
-  /// block as exiting edges from the scalar epilogue loop (if present) are
-  /// already in place, and we exit the vector loop exclusively to the middle
-  /// block.
+  /// Fix the wrapped phi node. This means adding an incoming value to exit
+  /// block phi's from the vector loop via middle block (values from scalar loop
+  /// already reach these phi's), and updating the value to scalar header phi's
+  /// from the scalar preheader.
   void fixPhi(VPlan &Plan, VPTransformState &State);
 
   /// Returns true if the VPLiveOut uses scalars of operand \p Op.
@@ -714,6 +731,27 @@ public:
   /// Print the VPLiveOut to \p O.
   void print(raw_ostream &O, VPSlotTracker &SlotTracker) const;
 #endif
+};
+
+/// Struct to hold various analysis needed for cost computations.
+struct VPCostContext {
+  const TargetTransformInfo &TTI;
+  VPTypeAnalysis Types;
+  LLVMContext &LLVMCtx;
+  LoopVectorizationCostModel &CM;
+  SmallPtrSet<Instruction *, 8> SkipCostComputation;
+
+  VPCostContext(const TargetTransformInfo &TTI, Type *CanIVTy,
+                LLVMContext &LLVMCtx, LoopVectorizationCostModel &CM)
+      : TTI(TTI), Types(CanIVTy, LLVMCtx), LLVMCtx(LLVMCtx), CM(CM) {}
+
+  /// Return the cost for \p UI with \p VF using the legacy cost model as
+  /// fallback until computing the cost of all recipes migrates to VPlan.
+  InstructionCost getLegacyCost(Instruction *UI, ElementCount VF) const;
+
+  /// Return true if the cost for \p UI shouldn't be computed, e.g. because it
+  /// has already been pre-computed.
+  bool skipCostComputation(Instruction *UI, bool IsVector) const;
 };
 
 /// VPRecipeBase is a base class modeling a sequence of one or more output IR
@@ -754,6 +792,11 @@ public:
   /// The method which generates the output IR instructions that correspond to
   /// this VPRecipe, thereby "executing" the VPlan.
   virtual void execute(VPTransformState &State) = 0;
+
+  /// Return the cost of this recipe, taking into account if the cost
+  /// computation should be skipped and the ForceTargetInstructionCost flag.
+  /// Also takes care of printing the cost for debugging.
+  virtual InstructionCost cost(ElementCount VF, VPCostContext &Ctx);
 
   /// Insert an unlinked recipe into a basic block immediately before
   /// the specified recipe.
@@ -815,6 +858,11 @@ public:
 
   /// Returns the debug location of the recipe.
   DebugLoc getDebugLoc() const { return DL; }
+
+protected:
+  /// Compute the cost of this recipe using the legacy cost model and the
+  /// underlying instructions.
+  InstructionCost computeCost(ElementCount VF, VPCostContext &Ctx) const;
 };
 
 // Helper macro to define common classof implementations for recipes.
@@ -1191,6 +1239,11 @@ public:
     SLPStore,
     ActiveLaneMask,
     ExplicitVectorLength,
+    /// Creates a scalar phi in a leaf VPBB with a single predecessor in VPlan.
+    /// The first operand is the incoming value from the predecessor in VPlan,
+    /// the second operand is the incoming value for all other predecessors
+    /// (which are currently not modeled in VPlan).
+    ResumePhi,
     CalculateTripCountMinusVF,
     // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
@@ -1339,6 +1392,10 @@ public:
   /// Returns true if this VPInstruction produces a scalar value from a vector,
   /// e.g. by performing a reduction or extracting a lane.
   bool isVectorToScalar() const;
+
+  /// Returns true if this VPInstruction's operands are single scalars and the
+  /// result is also a single scalar.
+  bool isSingleScalar() const;
 };
 
 /// VPWidenRecipe is a recipe for producing a copy of vector type its
@@ -1390,8 +1447,6 @@ public:
         ResultTy(ResultTy) {
     assert(UI.getOpcode() == Opcode &&
            "opcode of underlying cast doesn't match");
-    assert(UI.getType() == ResultTy &&
-           "result type of underlying cast doesn't match");
   }
 
   VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy)
@@ -2105,6 +2160,8 @@ public:
            "Op must be an operand of the recipe");
     return Op == getAddr() && !llvm::is_contained(getStoredValues(), Op);
   }
+
+  Instruction *getInsertPos() const { return IG->getInsertPos(); }
 };
 
 /// A recipe to represent inloop reduction operations, performing a reduction on
@@ -2919,6 +2976,9 @@ public:
   /// this VPBasicBlock, thereby "executing" the VPlan.
   void execute(VPTransformState *State) override;
 
+  /// Return the cost of this VPBasicBlock.
+  InstructionCost cost(ElementCount VF, VPCostContext &Ctx) override;
+
   /// Return the position of the first non-phi node recipe in the block.
   iterator getFirstNonPhi();
 
@@ -3093,6 +3153,9 @@ public:
   /// this VPRegionBlock, thereby "executing" the VPlan.
   void execute(VPTransformState *State) override;
 
+  // Return the cost of this region.
+  InstructionCost cost(ElementCount VF, VPCostContext &Ctx) override;
+
   void dropAllReferences(VPValue *NewValue) override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3215,6 +3278,9 @@ public:
 
   /// Generate the IR code for this VPlan.
   void execute(VPTransformState *State);
+
+  /// Return the cost of this plan.
+  InstructionCost cost(ElementCount VF, VPCostContext &Ctx);
 
   VPBasicBlock *getEntry() { return Entry; }
   const VPBasicBlock *getEntry() const { return Entry; }
@@ -3681,13 +3747,12 @@ inline bool isUniformAfterVectorization(VPValue *VPV) {
   if (auto *GEP = dyn_cast<VPWidenGEPRecipe>(Def))
     return all_of(GEP->operands(), isUniformAfterVectorization);
   if (auto *VPI = dyn_cast<VPInstruction>(Def))
-    return VPI->isVectorToScalar();
+    return VPI->isSingleScalar() || VPI->isVectorToScalar();
   return false;
 }
 
 /// Return true if \p V is a header mask in \p Plan.
 bool isHeaderMask(VPValue *V, VPlan &Plan);
-
 } // end namespace vputils
 
 } // end namespace llvm

@@ -866,5 +866,90 @@ bb.3:
   ret void
 }
 
+; This should not cause Assertion `getType() == V->getType() && "All operands to PHI node must be the same type as the PHI node
+; Note: whether or not the assertion fires depends on the iteration ortder of PhiNodes in AMDGPULateCodeGenPrepare, which
+; is non-deterministic due to iterators over a set of pointers.
+
+
+define amdgpu_kernel void @MissingInc_PhiChain(i1 %cmp, <16 x i8> %input) {
+; GFX906-LABEL: MissingInc_PhiChain:
+; GFX906:       ; %bb.0: ; %entry
+; GFX906-NEXT:    s_load_dword s2, s[0:1], 0x24
+; GFX906-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x34
+; GFX906-NEXT:    s_mov_b32 s10, 1
+; GFX906-NEXT:    v_mov_b32_e32 v4, 1
+; GFX906-NEXT:    s_mov_b32 s11, 1
+; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX906-NEXT:    s_bitcmp1_b32 s2, 0
+; GFX906-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; GFX906-NEXT:    s_xor_b64 s[0:1], s[2:3], -1
+; GFX906-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; GFX906-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v0
+; GFX906-NEXT:    s_branch .LBB14_2
+; GFX906-NEXT:  .LBB14_1: ; %bb.5
+; GFX906-NEXT:    ; in Loop: Header=BB14_2 Depth=1
+; GFX906-NEXT:    v_lshrrev_b32_e32 v4, 8, v0
+; GFX906-NEXT:    s_mov_b32 s10, 0
+; GFX906-NEXT:    s_mov_b32 s11, 0
+; GFX906-NEXT:  .LBB14_2: ; %bb.1
+; GFX906-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX906-NEXT:    s_and_b64 vcc, exec, s[0:1]
+; GFX906-NEXT:    s_mov_b64 s[8:9], s[2:3]
+; GFX906-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX906-NEXT:    s_cbranch_vccnz .LBB14_4
+; GFX906-NEXT:  ; %bb.3: ; %bb.2
+; GFX906-NEXT:    ; in Loop: Header=BB14_2 Depth=1
+; GFX906-NEXT:    v_lshlrev_b16_e64 v0, 8, s11
+; GFX906-NEXT:    v_or_b32_sdwa v0, s10, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX906-NEXT:    v_lshlrev_b16_e32 v1, 8, v4
+; GFX906-NEXT:    v_or_b32_e32 v0, v1, v0
+; GFX906-NEXT:    s_mov_b64 s[8:9], -1
+; GFX906-NEXT:  .LBB14_4: ; %Flow
+; GFX906-NEXT:    ; in Loop: Header=BB14_2 Depth=1
+; GFX906-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
+; GFX906-NEXT:    s_cbranch_vccnz .LBB14_7
+; GFX906-NEXT:  ; %bb.5: ; %bb.3
+; GFX906-NEXT:    ; in Loop: Header=BB14_2 Depth=1
+; GFX906-NEXT:    s_and_b64 vcc, exec, s[0:1]
+; GFX906-NEXT:    s_cbranch_vccnz .LBB14_1
+; GFX906-NEXT:  ; %bb.6: ; %bb.4
+; GFX906-NEXT:    ; in Loop: Header=BB14_2 Depth=1
+; GFX906-NEXT:    v_mov_b32_e32 v0, s4
+; GFX906-NEXT:    v_mov_b32_e32 v1, s5
+; GFX906-NEXT:    v_mov_b32_e32 v2, s6
+; GFX906-NEXT:    v_mov_b32_e32 v3, s7
+; GFX906-NEXT:    s_branch .LBB14_1
+; GFX906-NEXT:  .LBB14_7: ; in Loop: Header=BB14_2 Depth=1
+; GFX906-NEXT:    ; implicit-def: $vgpr4
+; GFX906-NEXT:    ; implicit-def: $sgpr10
+; GFX906-NEXT:    ; implicit-def: $sgpr11
+; GFX906-NEXT:    s_cbranch_execz .LBB14_2
+; GFX906-NEXT:  ; %bb.8: ; %DummyReturnBlock
+; GFX906-NEXT:    s_endpgm
+entry:
+  br label %bb.1
+
+bb.1:                               ; preds = %bb.5, %entry
+  %phi1 = phi <16 x i8> [ <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, %entry ], [ %shuffle, %bb.5 ]
+  br i1 %cmp, label %bb.3, label %bb.2
+
+bb.2:                                ; preds = %bb.1
+  %insert = insertelement <16 x i8> %phi1, i8 0, i64 0
+  br label %bb.3
+
+bb.3:                                 ; preds = %bb.2, %bb.1
+  %phi2 = phi <16 x i8> [ %insert, %bb.2 ], [ %phi1, %bb.1 ]
+  br i1 %cmp, label %bb.5, label %bb.4
+
+bb.4:                              ; preds = %bb.3
+  br label %bb.5
+
+bb.5:                               ; preds = %bb.4, %bb.3
+  %phi3 = phi <16 x i8> [ %input, %bb.4 ], [ %phi2, %bb.3 ]
+  %shuffle = shufflevector <16 x i8> %phi3, <16 x i8> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  br label %bb.1
+}
+
+
 
 declare i32 @llvm.amdgcn.workitem.id.x()

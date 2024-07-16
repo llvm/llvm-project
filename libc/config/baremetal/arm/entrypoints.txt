@@ -83,6 +83,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.strtoumax
 
     # stdio.h entrypoints
+    libc.src.stdio.getchar
     libc.src.stdio.printf
     libc.src.stdio.putchar
     libc.src.stdio.puts
@@ -177,6 +178,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.bsearch
     libc.src.stdlib.calloc
     libc.src.stdlib.div
+    libc.src.stdlib.exit
     libc.src.stdlib.free
     libc.src.stdlib.freelist_malloc
     libc.src.stdlib.labs
@@ -312,6 +314,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ilogb
     libc.src.math.ilogbf
     libc.src.math.ilogbl
+    libc.src.math.isnan
+    libc.src.math.isnanf
+    libc.src.math.isnanl
     libc.src.math.ldexp
     libc.src.math.ldexpf
     libc.src.math.ldexpl

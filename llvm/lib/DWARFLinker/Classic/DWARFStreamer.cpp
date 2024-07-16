@@ -1110,6 +1110,7 @@ void DwarfStreamer::emitLineTableRows(
       LineSectionSize += /* extended op */ 1 + getULEB128Size(Size + 1) +
                          /* discriminator */ 1 + Size;
     }
+    Discriminator = 0;
 
     if (Isa != Row.Isa) {
       Isa = Row.Isa;

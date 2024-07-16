@@ -143,6 +143,12 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::COS_F128, "cosf128");
     setLibcallName(RTLIB::TAN_F128, "tanf128");
     setLibcallName(RTLIB::SINCOS_F128, "sincosf128");
+    setLibcallName(RTLIB::ASIN_F128, "asinf128");
+    setLibcallName(RTLIB::ACOS_F128, "acosf128");
+    setLibcallName(RTLIB::ATAN_F128, "atanf128");
+    setLibcallName(RTLIB::SINH_F128, "sinhf128");
+    setLibcallName(RTLIB::COSH_F128, "coshf128");
+    setLibcallName(RTLIB::TANH_F128, "tanhf128");
     setLibcallName(RTLIB::POW_F128, "powf128");
     setLibcallName(RTLIB::POW_FINITE_F128, "__powf128_finite");
     setLibcallName(RTLIB::CEIL_F128, "ceilf128");
@@ -240,18 +246,17 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
       }
       break;
     case Triple::IOS:
+      if (TT.isOSVersionLT(7, 0)) {
+        setLibcallName(RTLIB::EXP10_F32, nullptr);
+        setLibcallName(RTLIB::EXP10_F64, nullptr);
+        break;
+      }
+      [[fallthrough]];
     case Triple::TvOS:
     case Triple::WatchOS:
     case Triple::XROS:
-      if (!TT.isWatchOS() &&
-          (TT.isOSVersionLT(7, 0) || (TT.isOSVersionLT(9, 0) && TT.isX86()))) {
-        setLibcallName(RTLIB::EXP10_F32, nullptr);
-        setLibcallName(RTLIB::EXP10_F64, nullptr);
-      } else {
-        setLibcallName(RTLIB::EXP10_F32, "__exp10f");
-        setLibcallName(RTLIB::EXP10_F64, "__exp10");
-      }
-
+      setLibcallName(RTLIB::EXP10_F32, "__exp10f");
+      setLibcallName(RTLIB::EXP10_F64, "__exp10");
       break;
     default:
       break;
@@ -289,6 +294,144 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::FREXP_F80, nullptr);
     setLibcallName(RTLIB::FREXP_F128, nullptr);
     setLibcallName(RTLIB::FREXP_PPCF128, nullptr);
+  }
+
+  if (TT.isAArch64()) {
+    if (TT.isOSMSVCRT()) {
+      // MSVCRT doesn't have powi; fall back to pow
+      setLibcallName(RTLIB::POWI_F32, nullptr);
+      setLibcallName(RTLIB::POWI_F64, nullptr);
+    }
+  }
+
+  // Disable most libcalls on AMDGPU.
+  if (TT.isAMDGPU()) {
+    for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I) {
+      if (I < RTLIB::ATOMIC_LOAD || I > RTLIB::ATOMIC_FETCH_NAND_16)
+        setLibcallName(static_cast<RTLIB::Libcall>(I), nullptr);
+    }
+  }
+
+  if (TT.isARM() || TT.isThumb()) {
+    // These libcalls are not available in 32-bit.
+    setLibcallName(RTLIB::SHL_I128, nullptr);
+    setLibcallName(RTLIB::SRL_I128, nullptr);
+    setLibcallName(RTLIB::SRA_I128, nullptr);
+    setLibcallName(RTLIB::MUL_I128, nullptr);
+    setLibcallName(RTLIB::MULO_I64, nullptr);
+    setLibcallName(RTLIB::MULO_I128, nullptr);
+
+    if (TT.isOSMSVCRT()) {
+      // MSVCRT doesn't have powi; fall back to pow
+      setLibcallName(RTLIB::POWI_F32, nullptr);
+      setLibcallName(RTLIB::POWI_F64, nullptr);
+    }
+  }
+
+  if (TT.getArch() == Triple::ArchType::avr) {
+    // Division rtlib functions (not supported), use divmod functions instead
+    setLibcallName(RTLIB::SDIV_I8, nullptr);
+    setLibcallName(RTLIB::SDIV_I16, nullptr);
+    setLibcallName(RTLIB::SDIV_I32, nullptr);
+    setLibcallName(RTLIB::UDIV_I8, nullptr);
+    setLibcallName(RTLIB::UDIV_I16, nullptr);
+    setLibcallName(RTLIB::UDIV_I32, nullptr);
+
+    // Modulus rtlib functions (not supported), use divmod functions instead
+    setLibcallName(RTLIB::SREM_I8, nullptr);
+    setLibcallName(RTLIB::SREM_I16, nullptr);
+    setLibcallName(RTLIB::SREM_I32, nullptr);
+    setLibcallName(RTLIB::UREM_I8, nullptr);
+    setLibcallName(RTLIB::UREM_I16, nullptr);
+    setLibcallName(RTLIB::UREM_I32, nullptr);
+  }
+
+  if (TT.getArch() == Triple::ArchType::hexagon) {
+    // These cause problems when the shift amount is non-constant.
+    setLibcallName(RTLIB::SHL_I128, nullptr);
+    setLibcallName(RTLIB::SRL_I128, nullptr);
+    setLibcallName(RTLIB::SRA_I128, nullptr);
+  }
+
+  if (TT.isLoongArch()) {
+    if (!TT.isLoongArch64()) {
+      // Set libcalls.
+      setLibcallName(RTLIB::MUL_I128, nullptr);
+      // The MULO libcall is not part of libgcc, only compiler-rt.
+      setLibcallName(RTLIB::MULO_I64, nullptr);
+    }
+    // The MULO libcall is not part of libgcc, only compiler-rt.
+    setLibcallName(RTLIB::MULO_I128, nullptr);
+  }
+
+  if (TT.isMIPS32()) {
+    // These libcalls are not available in 32-bit.
+    setLibcallName(RTLIB::SHL_I128, nullptr);
+    setLibcallName(RTLIB::SRL_I128, nullptr);
+    setLibcallName(RTLIB::SRA_I128, nullptr);
+    setLibcallName(RTLIB::MUL_I128, nullptr);
+    setLibcallName(RTLIB::MULO_I64, nullptr);
+    setLibcallName(RTLIB::MULO_I128, nullptr);
+  }
+
+  if (TT.isPPC()) {
+    if (!TT.isPPC64()) {
+      // These libcalls are not available in 32-bit.
+      setLibcallName(RTLIB::SHL_I128, nullptr);
+      setLibcallName(RTLIB::SRL_I128, nullptr);
+      setLibcallName(RTLIB::SRA_I128, nullptr);
+      setLibcallName(RTLIB::MUL_I128, nullptr);
+      setLibcallName(RTLIB::MULO_I64, nullptr);
+    }
+    setLibcallName(RTLIB::MULO_I128, nullptr);
+  }
+
+  if (TT.isRISCV32()) {
+    // These libcalls are not available in 32-bit.
+    setLibcallName(RTLIB::SHL_I128, nullptr);
+    setLibcallName(RTLIB::SRL_I128, nullptr);
+    setLibcallName(RTLIB::SRA_I128, nullptr);
+    setLibcallName(RTLIB::MUL_I128, nullptr);
+    setLibcallName(RTLIB::MULO_I64, nullptr);
+  }
+
+  if (TT.isSPARC()) {
+    if (!TT.isSPARC64()) {
+      // These libcalls are not available in 32-bit.
+      setLibcallName(RTLIB::MULO_I64, nullptr);
+      setLibcallName(RTLIB::MUL_I128, nullptr);
+      setLibcallName(RTLIB::SHL_I128, nullptr);
+      setLibcallName(RTLIB::SRL_I128, nullptr);
+      setLibcallName(RTLIB::SRA_I128, nullptr);
+    }
+    setLibcallName(RTLIB::MULO_I128, nullptr);
+  }
+
+  if (TT.isSystemZ()) {
+    setLibcallName(RTLIB::SRL_I128, nullptr);
+    setLibcallName(RTLIB::SHL_I128, nullptr);
+    setLibcallName(RTLIB::SRA_I128, nullptr);
+  }
+
+  if (TT.isX86()) {
+    if (TT.getArch() == Triple::ArchType::x86) {
+      // These libcalls are not available in 32-bit.
+      setLibcallName(RTLIB::SHL_I128, nullptr);
+      setLibcallName(RTLIB::SRL_I128, nullptr);
+      setLibcallName(RTLIB::SRA_I128, nullptr);
+      setLibcallName(RTLIB::MUL_I128, nullptr);
+      // The MULO libcall is not part of libgcc, only compiler-rt.
+      setLibcallName(RTLIB::MULO_I64, nullptr);
+    }
+
+    // The MULO libcall is not part of libgcc, only compiler-rt.
+    setLibcallName(RTLIB::MULO_I128, nullptr);
+
+    if (TT.isOSMSVCRT()) {
+      // MSVCRT doesn't have powi; fall back to pow
+      setLibcallName(RTLIB::POWI_F32, nullptr);
+      setLibcallName(RTLIB::POWI_F64, nullptr);
+    }
   }
 }
 
@@ -964,7 +1107,8 @@ void TargetLoweringBase::initActions() {
       setOperationAction(
           {ISD::FCOPYSIGN, ISD::SIGN_EXTEND_INREG, ISD::ANY_EXTEND_VECTOR_INREG,
            ISD::SIGN_EXTEND_VECTOR_INREG, ISD::ZERO_EXTEND_VECTOR_INREG,
-           ISD::SPLAT_VECTOR, ISD::LRINT, ISD::LLRINT, ISD::FTAN},
+           ISD::SPLAT_VECTOR, ISD::LRINT, ISD::LLRINT, ISD::FTAN, ISD::FACOS,
+           ISD::FASIN, ISD::FATAN, ISD::FCOSH, ISD::FSINH, ISD::FTANH},
           VT, Expand);
 
       // Constrained floating-point operations default to expand.
@@ -1016,14 +1160,17 @@ void TargetLoweringBase::initActions() {
                      Expand);
 
   // These library functions default to expand.
-  setOperationAction({ISD::FCBRT, ISD::FLOG, ISD::FLOG2, ISD::FLOG10, ISD::FEXP,
-                      ISD::FEXP2, ISD::FEXP10, ISD::FFLOOR, ISD::FNEARBYINT,
-                      ISD::FCEIL, ISD::FRINT, ISD::FTRUNC, ISD::LROUND,
-                      ISD::LLROUND, ISD::LRINT, ISD::LLRINT, ISD::FROUNDEVEN,
-                      ISD::FTAN},
+  setOperationAction({ISD::FCBRT,      ISD::FLOG,    ISD::FLOG2,  ISD::FLOG10,
+                      ISD::FEXP,       ISD::FEXP2,   ISD::FEXP10, ISD::FFLOOR,
+                      ISD::FNEARBYINT, ISD::FCEIL,   ISD::FRINT,  ISD::FTRUNC,
+                      ISD::LROUND,     ISD::LLROUND, ISD::LRINT,  ISD::LLRINT,
+                      ISD::FROUNDEVEN, ISD::FTAN,    ISD::FACOS,  ISD::FASIN,
+                      ISD::FATAN,      ISD::FCOSH,   ISD::FSINH,  ISD::FTANH},
                      {MVT::f32, MVT::f64, MVT::f128}, Expand);
 
-  setOperationAction(ISD::FTAN, MVT::f16, Promote);
+  setOperationAction({ISD::FTAN, ISD::FACOS, ISD::FASIN, ISD::FATAN, ISD::FCOSH,
+                      ISD::FSINH, ISD::FTANH},
+                     MVT::f16, Promote);
   // Default ISD::TRAP to expand (which turns it into abort).
   setOperationAction(ISD::TRAP, MVT::Other, Expand);
 

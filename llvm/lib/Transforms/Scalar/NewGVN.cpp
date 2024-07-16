@@ -2525,18 +2525,14 @@ void NewGVN::processOutgoingEdges(Instruction *TI, BasicBlock *B) {
       BasicBlock *TargetBlock = Case.getCaseSuccessor();
       updateReachableEdge(B, TargetBlock);
     } else {
-      for (unsigned i = 0, e = SI->getNumSuccessors(); i != e; ++i) {
-        BasicBlock *TargetBlock = SI->getSuccessor(i);
+      for (BasicBlock *TargetBlock : successors(SI->getParent()))
         updateReachableEdge(B, TargetBlock);
-      }
     }
   } else {
     // Otherwise this is either unconditional, or a type we have no
     // idea about. Just mark successors as reachable.
-    for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i) {
-      BasicBlock *TargetBlock = TI->getSuccessor(i);
+    for (BasicBlock *TargetBlock : successors(TI->getParent()))
       updateReachableEdge(B, TargetBlock);
-    }
 
     // This also may be a memory defining terminator, in which case, set it
     // equivalent only to itself.

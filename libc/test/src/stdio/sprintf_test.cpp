@@ -39,18 +39,19 @@ using LIBC_NAMESPACE::fputil::testing::RoundingMode;
     for (char &c : buff) {                                                     \
       c = 0;                                                                   \
     }                                                                          \
-    LIBC_NAMESPACE::sprintf(buff, "%" FMT, X);                                 \
-    ASSERT_STREQ(buff, expected);                                              \
+    written = LIBC_NAMESPACE::sprintf(buff, "%" FMT, X);                       \
+    ASSERT_STREQ_LEN(written, buff, expected);                                 \
   } while (0)
 
 TEST(LlvmLibcSPrintfTest, Macros) {
   char buff[128];
+  int written;
   macro_test(PRIu8, 1, "1");
   macro_test(PRIX16, 0xAA, "AA");
   macro_test(PRId32, -123, "-123");
   macro_test(PRIX32, 0xFFFFFF85, "FFFFFF85");
   macro_test(PRIo8, 0xFF, "377");
-  macro_test(PRIo64, 0123, "123");
+  macro_test(PRIo64, 0123456712345671234567ll, "123456712345671234567");
 }
 
 TEST(LlvmLibcSPrintfTest, SimpleNoConv) {
@@ -3350,7 +3351,7 @@ TEST_F(LlvmLibcSPrintfTest, FixedConv) {
       LIBC_NAMESPACE::sprintf(buff, "%hR", 0xff); // unsigned short fract max
   ASSERT_STREQ_LEN(written, buff, "0.996094");
 
-  written = LIBC_NAMESPACE::sprintf(buff, "%lk", 0x0); // 0.0
+  written = LIBC_NAMESPACE::sprintf(buff, "%lk", 0x0ll); // 0.0
   ASSERT_STREQ_LEN(written, buff, "0.000000");
 
   written = LIBC_NAMESPACE::sprintf(buff, "%lk",
@@ -3364,7 +3365,7 @@ TEST_F(LlvmLibcSPrintfTest, FixedConv) {
                                     0xffffffff); //-long fract max
   ASSERT_STREQ_LEN(written, buff, "-1.000000");
 
-  written = LIBC_NAMESPACE::sprintf(buff, "%lK", 0x0); // 0.0
+  written = LIBC_NAMESPACE::sprintf(buff, "%lK", 0x0ll); // 0.0
   ASSERT_STREQ_LEN(written, buff, "0.000000");
 
   written =
@@ -3492,7 +3493,7 @@ TEST_F(LlvmLibcSPrintfTest, FixedConv) {
   ASSERT_STREQ_LEN(written, buff, "       0.100 256.000     ");
 
   written =
-      LIBC_NAMESPACE::sprintf(buff, "%+-#12.3lk % 012.3k", 0x000000001013a92a,
+      LIBC_NAMESPACE::sprintf(buff, "%+-#12.3lk % 012.3k", 0x000000001013a92all,
                               0x02740000); // 0.126, 1256.0
   ASSERT_STREQ_LEN(written, buff, "+0.126        0001256.000");
 }
