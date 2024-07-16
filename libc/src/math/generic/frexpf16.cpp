@@ -14,11 +14,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float16, frexpf16, (float16 x, int *exp)) {
-#ifdef __LIBC_USE_BUILTIN_FREXPF16
-  return __builtin_frexpf16(x, exp);
-#else
   return fputil::frexp(x, *exp);
-#endif
 }
 
 } // namespace LIBC_NAMESPACE_DECL
