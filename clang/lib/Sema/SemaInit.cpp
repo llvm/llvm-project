@@ -2007,7 +2007,7 @@ static bool canInitializeArrayWithEmbedDataString(ArrayRef<Expr *> ExprList,
   if (InitType->isArrayType()) {
     const ArrayType *InitArrayType = InitType->getAsArrayTypeUnsafe();
     QualType InitElementTy = InitArrayType->getElementType();
-    QualType EmbedExprElementTy = EE->getType();
+    QualType EmbedExprElementTy = EE->getDataStringLiteral()->getType();
     const bool TypesMatch =
         Context.typesAreCompatible(InitElementTy, EmbedExprElementTy) ||
         (InitElementTy->isCharType() && EmbedExprElementTy->isCharType());
