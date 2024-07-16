@@ -151,7 +151,7 @@ def HasStdExtZimop : Predicate<"Subtarget->hasStdExtZimop()">,
                                         "'Zimop' (May-Be-Operations)">;
 
 def FeatureStdExtZicfilp
-    : RISCVExperimentalExtension<"zicfilp", 0, 4,
+    : RISCVExperimentalExtension<"zicfilp", 1, 0,
                                  "'Zicfilp' (Landing pad)",
                                  [FeatureStdExtZicsr]>;
 def HasStdExtZicfilp : Predicate<"Subtarget->hasStdExtZicfilp()">,
@@ -161,7 +161,7 @@ def NoStdExtZicfilp : Predicate<"!Subtarget->hasStdExtZicfilp()">,
                       AssemblerPredicate<(all_of (not FeatureStdExtZicfilp))>;
 
 def FeatureStdExtZicfiss
-    : RISCVExperimentalExtension<"zicfiss", 0, 4,
+    : RISCVExperimentalExtension<"zicfiss", 1, 0,
                                  "'Zicfiss' (Shadow stack)",
                                  [FeatureStdExtZicsr, FeatureStdExtZimop]>;
 def HasStdExtZicfiss : Predicate<"Subtarget->hasStdExtZicfiss()">,

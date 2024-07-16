@@ -8439,14 +8439,8 @@ ExpectedStmt ASTNodeImporter::VisitCXXDependentScopeMemberExpr(
   auto ToOperatorLoc = importChecked(Err, E->getOperatorLoc());
   auto ToQualifierLoc = importChecked(Err, E->getQualifierLoc());
   auto ToTemplateKeywordLoc = importChecked(Err, E->getTemplateKeywordLoc());
-
-  UnresolvedSet<8> ToUnqualifiedLookups;
-  for (auto D : E->unqualified_lookups())
-    if (auto ToDOrErr = import(D.getDecl()))
-      ToUnqualifiedLookups.addDecl(*ToDOrErr);
-    else
-      return ToDOrErr.takeError();
-
+  auto ToFirstQualifierFoundInScope =
+      importChecked(Err, E->getFirstQualifierFoundInScope());
   if (Err)
     return std::move(Err);
 
@@ -8480,7 +8474,7 @@ ExpectedStmt ASTNodeImporter::VisitCXXDependentScopeMemberExpr(
 
   return CXXDependentScopeMemberExpr::Create(
       Importer.getToContext(), ToBase, ToType, E->isArrow(), ToOperatorLoc,
-      ToQualifierLoc, ToTemplateKeywordLoc, ToUnqualifiedLookups.pairs(),
+      ToQualifierLoc, ToTemplateKeywordLoc, ToFirstQualifierFoundInScope,
       ToMemberNameInfo, ResInfo);
 }
 
