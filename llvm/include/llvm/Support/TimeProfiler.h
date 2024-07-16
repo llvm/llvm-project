@@ -84,13 +84,17 @@ namespace llvm {
 class raw_pwrite_stream;
 
 struct TimeTraceMetadata {
-  std::string Details;
+  std::string Detail;
   // Source file information for the event.
-  std::string Filename; 
+  std::string Filename;
+
+  bool isEmpty() const { return Detail.empty() && Filename.empty(); }
 };
 
 struct TimeTraceProfiler;
 TimeTraceProfiler *getTimeTraceProfilerInstance();
+
+bool isTimeTraceVerbose();
 
 struct TimeTraceProfilerEntry;
 
@@ -98,7 +102,8 @@ struct TimeTraceProfilerEntry;
 /// This sets up the global \p TimeTraceProfilerInstance
 /// variable to be the profiler instance.
 void timeTraceProfilerInitialize(unsigned TimeTraceGranularity,
-                                 StringRef ProcName);
+                                 StringRef ProcName,
+                                 bool TimeTraceVerbose = false);
 
 /// Cleanup the time trace profiler, if it was initialized.
 void timeTraceProfilerCleanup();
@@ -174,7 +179,8 @@ public:
     if (getTimeTraceProfilerInstance() != nullptr)
       Entry = timeTraceProfilerBegin(Name, Detail);
   }
-  TimeTraceScope(StringRef Name, llvm::function_ref<TimeTraceMetadata()> Metadata) {
+  TimeTraceScope(StringRef Name,
+                 llvm::function_ref<TimeTraceMetadata()> Metadata) {
     if (getTimeTraceProfilerInstance() != nullptr)
       Entry = timeTraceProfilerBegin(Name, Metadata);
   }

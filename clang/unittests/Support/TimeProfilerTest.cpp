@@ -23,7 +23,8 @@ namespace {
 
 // Should be called before testing.
 void setupProfiler() {
-  timeTraceProfilerInitialize(/*TimeTraceGranularity=*/0, "test");
+  timeTraceProfilerInitialize(/*TimeTraceGranularity=*/0, "test",
+                              /*TimeTraceVerbose=*/true);
 }
 
 // Should be called after `compileFromString()`.
@@ -65,8 +66,8 @@ std::string buildTraceGraph(StringRef Json) {
   struct EventRecord {
     int64_t TimestampBegin;
     int64_t TimestampEnd;
-    StringRef Name;
-    StringRef Detail;
+    std::string Name;
+    std::string Metadata;
   };
   std::vector<EventRecord> Events;
 
@@ -81,10 +82,16 @@ std::string buildTraceGraph(StringRef Json) {
     int64_t TimestampBegin = TraceEventObj->getInteger("ts").value_or(0);
     int64_t TimestampEnd =
         TimestampBegin + TraceEventObj->getInteger("dur").value_or(0);
-    StringRef Name = TraceEventObj->getString("name").value_or("");
-    StringRef Detail = "";
-    if (json::Object *Args = TraceEventObj->getObject("args"))
-      Detail = Args->getString("detail").value_or("");
+    std::string Name = TraceEventObj->getString("name").value_or("").str();
+    std::string Metadata = "";
+    if (json::Object *Args = TraceEventObj->getObject("args")) {
+      if (StringRef Detail = Args->getString("detail").value_or("");
+          !Detail.empty())
+        Metadata += Detail.str();
+      if (StringRef File = Args->getString("filename").value_or("");
+          !File.empty())
+        Metadata += ", " + File.str();
+    }
 
     // This is a "summary" event, like "Total PerformPendingInstantiations",
     // skip it
@@ -92,7 +99,7 @@ std::string buildTraceGraph(StringRef Json) {
       continue;
 
     Events.emplace_back(
-        EventRecord{TimestampBegin, TimestampEnd, Name, Detail});
+        EventRecord{TimestampBegin, TimestampEnd, Name, Metadata});
   }
 
   // There can be nested events that are very fast, for example:
@@ -132,9 +139,9 @@ std::string buildTraceGraph(StringRef Json) {
       Stream << "| ";
     }
     Stream.write(Event.Name.data(), Event.Name.size());
-    if (!Event.Detail.empty()) {
+    if (!Event.Metadata.empty()) {
       Stream << " (";
-      Stream.write(Event.Detail.data(), Event.Detail.size());
+      Stream.write(Event.Metadata.data(), Event.Metadata.size());
       Stream << ")";
     }
     Stream << "\n";
@@ -170,13 +177,16 @@ int slow_arr[12 + 34 * 56 +                                  // 22nd line
              static_cast<int>(slow_namespace::slow_func())]; // 23rd line
 
 constexpr int slow_init_list[] = {1, 1, 2, 3, 5, 8, 13, 21}; // 25th line
+
+template <typename T>
+void foo(T) {}
+void bar() { foo(0); }
     )";
 
   setupProfiler();
   ASSERT_TRUE(compileFromString(Code, "-std=c++20", "test.cc"));
   std::string Json = teardownProfiler();
-  std::string TraceGraph = buildTraceGraph(Json);
-  ASSERT_TRUE(TraceGraph == R"(
+  ASSERT_EQ(R"(
 Frontend
 | ParseDeclarationOrFunctionDefinition (test.cc:2:1)
 | ParseDeclarationOrFunctionDefinition (test.cc:6:1)
@@ -201,11 +211,13 @@ Frontend
 | | EvaluateAsRValue (<test.cc:22:14, line:23:58>)
 | ParseDeclarationOrFunctionDefinition (test.cc:25:1)
 | | EvaluateAsInitializer (slow_init_list)
+| ParseFunctionDefinition (foo)
+| ParseDeclarationOrFunctionDefinition (test.cc:29:1)
+| | ParseFunctionDefinition (bar)
 | PerformPendingInstantiations
-)");
-
-  // NOTE: If this test is failing, run this test with
-  // `llvm::errs() << TraceGraph;` and change the assert above.
+| | InstantiateFunction (foo<int>, test.cc)
+)",
+            buildTraceGraph(Json));
 }
 
 TEST(TimeProfilerTest, ConstantEvaluationC99) {

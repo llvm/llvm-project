@@ -3427,10 +3427,11 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
 
   llvm::TimeTraceScope TimeScope("InstantiateClass", [&]() {
     llvm::TimeTraceMetadata M;
-    llvm::raw_string_ostream OS(M.Details);
+    llvm::raw_string_ostream OS(M.Detail);
     Instantiation->getNameForDiagnostic(OS, getPrintingPolicy(),
                                         /*Qualified=*/true);
-    M.Filename = SourceMgr.getFilename(Instantiation->getLocation());
+    if (llvm::isTimeTraceVerbose())
+      M.Filename = SourceMgr.getFilename(Instantiation->getLocation());
     return M;
   });
 

@@ -51,7 +51,7 @@ if not all(
     ]
 ):
     sys.exit("Not all Frontend section are before all Backend sections!")
-
+print( "\n\n" ,instants , "\n==================")
 # Check that entries for foo exist and are in a demangled form.
 if not any(e for e in instants if "foo<int>" in e["args"]["detail"]):
     sys.exit("Missing Instantiate entry for foo!")
@@ -59,3 +59,7 @@ if not any(e for e in codegens if "foo<int>" in e["args"]["detail"]):
     sys.exit("Missing CodeGen entry for foo!")
 if not any(e for e in opts if "foo<int>" in e["args"]["detail"]):
     sys.exit("Missing Optimize entry for foo!")
+
+for i in instants:
+    if not i["args"]["filename"].endswith(".cpp"):
+        sys.exit("No filename in instantiation: " + str(i))

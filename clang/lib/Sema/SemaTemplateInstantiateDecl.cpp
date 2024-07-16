@@ -4967,10 +4967,11 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
 
   llvm::TimeTraceScope TimeScope("InstantiateFunction", [&]() {
     llvm::TimeTraceMetadata M;
-    llvm::raw_string_ostream OS(M.Details);
+    llvm::raw_string_ostream OS(M.Detail);
     Function->getNameForDiagnostic(OS, getPrintingPolicy(),
                                    /*Qualified=*/true);
-    M.Filename = SourceMgr.getFilename(Function->getLocation());
+    if (llvm::isTimeTraceVerbose())
+      M.Filename = SourceMgr.getFilename(Function->getLocation());
     return M;
   });
 

@@ -80,7 +80,7 @@ struct llvm::TimeTraceProfilerEntry {
                          std::string &&Dt, bool Ae)
       : Start(std::move(S)), End(std::move(E)), Name(std::move(N)), Metadata(),
         AsyncEvent(Ae) {
-    Metadata.Details = std::move(Dt);
+    Metadata.Detail = std::move(Dt);
   }
 
   TimeTraceProfilerEntry(TimePointType &&S, TimePointType &&E, std::string &&N,
@@ -105,10 +105,12 @@ struct llvm::TimeTraceProfilerEntry {
 };
 
 struct llvm::TimeTraceProfiler {
-  TimeTraceProfiler(unsigned TimeTraceGranularity = 0, StringRef ProcName = "")
+  TimeTraceProfiler(unsigned TimeTraceGranularity = 0, StringRef ProcName = "",
+                    bool TimeTraceVerbose = false)
       : BeginningOfTime(system_clock::now()), StartTime(ClockType::now()),
         ProcName(ProcName), Pid(sys::Process::getProcessId()),
-        Tid(llvm::get_threadid()), TimeTraceGranularity(TimeTraceGranularity) {
+        Tid(llvm::get_threadid()), TimeTraceGranularity(TimeTraceGranularity),
+        TimeTraceVerbose(TimeTraceVerbose) {
     llvm::get_thread_name(ThreadName);
   }
 
@@ -121,9 +123,9 @@ struct llvm::TimeTraceProfiler {
     return Stack.back().get();
   }
 
-  TimeTraceProfilerEntry *begin(std::string Name,
-                                llvm::function_ref<TimeTraceMetadata()>Metadata,
-                                bool AsyncEvent = false) {
+  TimeTraceProfilerEntry *
+  begin(std::string Name, llvm::function_ref<TimeTraceMetadata()> Metadata,
+        bool AsyncEvent = false) {
     Stack.emplace_back(std::make_unique<TimeTraceProfilerEntry>(
         ClockType::now(), TimePointType(), std::move(Name), Metadata(),
         AsyncEvent));
@@ -201,13 +203,13 @@ struct llvm::TimeTraceProfiler {
           J.attribute("dur", DurUs);
         }
         J.attribute("name", E.Name);
-        if (!E.Metadata.Details.empty()) {
-          J.attributeObject("args",
-                            [&] { J.attribute("detail", E.Metadata.Details); });
-        }
-        if (!E.Metadata.Filename.empty()) {
-          J.attributeObject(
-              "args", [&] { J.attribute("filename", E.Metadata.Filename); });
+        if (!E.Metadata.isEmpty()) {
+          J.attributeObject("args", [&] {
+            if (!E.Metadata.Detail.empty())
+              J.attribute("detail", E.Metadata.Detail);
+            if (!E.Metadata.Filename.empty())
+              J.attribute("filename", E.Metadata.Filename);
+          });
         }
       });
 
@@ -329,14 +331,25 @@ struct llvm::TimeTraceProfiler {
 
   // Minimum time granularity (in microseconds)
   const unsigned TimeTraceGranularity;
+
+  // Make time trace capture verbose event details (eg. source filenames). This
+  // can increase the size of the output by 2-3 times.
+  const bool TimeTraceVerbose;
 };
 
+bool llvm::isTimeTraceVerbose() {
+  return getTimeTraceProfilerInstance() &&
+         getTimeTraceProfilerInstance()->TimeTraceVerbose;
+}
+
 void llvm::timeTraceProfilerInitialize(unsigned TimeTraceGranularity,
-                                       StringRef ProcName) {
+                                       StringRef ProcName,
+                                       bool TimeTraceVerbose) {
   assert(TimeTraceProfilerInstance == nullptr &&
          "Profiler should not be initialized");
   TimeTraceProfilerInstance = new TimeTraceProfiler(
-      TimeTraceGranularity, llvm::sys::path::filename(ProcName));
+      TimeTraceGranularity, llvm::sys::path::filename(ProcName),
+      TimeTraceVerbose);
 }
 
 // Removes all TimeTraceProfilerInstances.
