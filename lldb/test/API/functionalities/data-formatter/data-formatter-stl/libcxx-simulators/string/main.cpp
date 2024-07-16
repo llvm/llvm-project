@@ -1,3 +1,5 @@
+#include <libcxx-simulators-common/compressed_pair.h>
+
 #include <climits>
 #include <memory>
 #include <type_traits>
@@ -31,37 +33,6 @@
 
 namespace std {
 namespace __lldb {
-
-template <class _Tp, int _Idx,
-          bool _CanBeEmptyBase =
-              std::is_empty<_Tp>::value && !std::is_final<_Tp>::value>
-struct __compressed_pair_elem {
-  explicit __compressed_pair_elem(_Tp __t) : __value_(__t) {}
-
-  _Tp &__get() { return __value_; }
-
-private:
-  _Tp __value_;
-};
-
-template <class _Tp, int _Idx>
-struct __compressed_pair_elem<_Tp, _Idx, true> : private _Tp {
-  explicit __compressed_pair_elem(_Tp __t) : _Tp(__t) {}
-
-  _Tp &__get() { return *this; }
-};
-
-template <class _T1, class _T2>
-class __compressed_pair : private __compressed_pair_elem<_T1, 0>,
-                          private __compressed_pair_elem<_T2, 1> {
-public:
-  using _Base1 = __compressed_pair_elem<_T1, 0>;
-  using _Base2 = __compressed_pair_elem<_T2, 1>;
-
-  explicit __compressed_pair(_T1 __t1, _T2 __t2) : _Base1(__t1), _Base2(__t2) {}
-
-  _T1 &first() { return static_cast<_Base1 &>(*this).__get(); }
-};
 
 #if defined(ALTERNATE_LAYOUT) && defined(SUBCLASS_PADDING)
 template <class _CharT, size_t = sizeof(_CharT)> struct __padding {
@@ -212,7 +183,7 @@ public:
     };
   };
 
-  __compressed_pair<__rep, allocator_type> __r_;
+  std::__lldb::__compressed_pair<__rep, allocator_type> __r_;
 
 public:
   template <size_t __N>
