@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/ConstraintElimination.h"
+#include "llvm/ADT/DynamicAPInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
@@ -221,17 +222,17 @@ struct StackEntry {
 };
 
 struct ConstraintTy {
-  SmallVector<int64_t, 8> Coefficients;
+  SmallVector<DynamicAPInt, 8> Coefficients;
   SmallVector<ConditionTy, 2> Preconditions;
 
-  SmallVector<SmallVector<int64_t, 8>> ExtraInfo;
+  SmallVector<SmallVector<DynamicAPInt, 8>> ExtraInfo;
 
   bool IsSigned = false;
 
   ConstraintTy() = default;
 
-  ConstraintTy(SmallVector<int64_t, 8> Coefficients, bool IsSigned, bool IsEq,
-               bool IsNe)
+  ConstraintTy(SmallVector<DynamicAPInt, 8> Coefficients, bool IsSigned,
+               bool IsEq, bool IsNe)
       : Coefficients(std::move(Coefficients)), IsSigned(IsSigned), IsEq(IsEq),
         IsNe(IsNe) {}
 
@@ -278,8 +279,9 @@ public:
     auto &Value2Index = getValue2Index(false);
     // Add Arg > -1 constraints to unsigned system for all function arguments.
     for (Value *Arg : FunctionArgs) {
-      ConstraintTy VarPos(SmallVector<int64_t, 8>(Value2Index.size() + 1, 0),
-                          false, false, false);
+      ConstraintTy VarPos(
+          SmallVector<DynamicAPInt, 8>(Value2Index.size() + 1, DynamicAPInt{0}),
+          false, false, false);
       VarPos.Coefficients[Value2Index[Arg]] = -1;
       UnsignedCS.addVariableRow(VarPos.Coefficients);
     }
@@ -663,8 +665,8 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
                         Preconditions, IsSigned, DL);
   auto BDec = decompose(Op1->stripPointerCastsSameRepresentation(),
                         Preconditions, IsSigned, DL);
-  int64_t Offset1 = ADec.Offset;
-  int64_t Offset2 = BDec.Offset;
+  DynamicAPInt Offset1{ADec.Offset};
+  DynamicAPInt Offset2{BDec.Offset};
   Offset1 *= -1;
 
   auto &VariablesA = ADec.Vars;
@@ -692,7 +694,8 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   // Build result constraint, by first adding all coefficients from A and then
   // subtracting all coefficients from B.
   ConstraintTy Res(
-      SmallVector<int64_t, 8>(Value2Index.size() + NewVariables.size() + 1, 0),
+      SmallVector<DynamicAPInt, 8>(Value2Index.size() + NewVariables.size() + 1,
+                                   DynamicAPInt{0}),
       IsSigned, IsEq, IsNe);
   // Collect variables that are known to be positive in all uses in the
   // constraint.
@@ -706,27 +709,24 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   }
 
   for (const auto &KV : VariablesB) {
-    if (SubOverflow(R[GetOrAddIndex(KV.Variable)], KV.Coefficient,
-                    R[GetOrAddIndex(KV.Variable)]))
-      return {};
+    R[GetOrAddIndex(KV.Variable)] =
+        R[GetOrAddIndex(KV.Variable)] - KV.Coefficient;
     auto I =
         KnownNonNegativeVariables.insert({KV.Variable, KV.IsKnownNonNegative});
     I.first->second &= KV.IsKnownNonNegative;
   }
 
-  int64_t OffsetSum;
-  if (AddOverflow(Offset1, Offset2, OffsetSum))
-    return {};
+  DynamicAPInt OffsetSum;
+  OffsetSum = Offset1 + Offset2;
   if (Pred == (IsSigned ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT))
-    if (AddOverflow(OffsetSum, int64_t(-1), OffsetSum))
-      return {};
+    OffsetSum += -1;
   R[0] = OffsetSum;
   Res.Preconditions = std::move(Preconditions);
 
   // Remove any (Coefficient, Variable) entry where the Coefficient is 0 for new
   // variables.
   while (!NewVariables.empty()) {
-    int64_t Last = R.back();
+    DynamicAPInt Last = R.back();
     if (Last != 0)
       break;
     R.pop_back();
@@ -739,7 +739,8 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     if (!KV.second ||
         (!Value2Index.contains(KV.first) && !NewIndexMap.contains(KV.first)))
       continue;
-    SmallVector<int64_t, 8> C(Value2Index.size() + NewVariables.size() + 1, 0);
+    SmallVector<DynamicAPInt, 8> C(Value2Index.size() + NewVariables.size() + 1,
+                                   DynamicAPInt{0});
     C[GetOrAddIndex(KV.first)] = -1;
     Res.ExtraInfo.push_back(C);
   }
@@ -756,8 +757,9 @@ ConstraintTy ConstraintInfo::getConstraintForSolving(CmpInst::Predicate Pred,
       (Pred == CmpInst::ICMP_UGE && Op1 == NullC)) {
     auto &Value2Index = getValue2Index(false);
     // Return constraint that's trivially true.
-    return ConstraintTy(SmallVector<int64_t, 8>(Value2Index.size(), 0), false,
-                        false, false);
+    return ConstraintTy(
+        SmallVector<DynamicAPInt, 8>(Value2Index.size(), DynamicAPInt{0}),
+        false, false, false);
   }
 
   // If both operands are known to be non-negative, change signed predicates to
@@ -892,7 +894,7 @@ void ConstraintInfo::transferToOtherSystem(
 
 #ifndef NDEBUG
 
-static void dumpConstraint(ArrayRef<int64_t> C,
+static void dumpConstraint(ArrayRef<DynamicAPInt> C,
                            const DenseMap<Value *, unsigned> &Value2Index) {
   ConstraintSystem CS(Value2Index);
   CS.addVariableRowFill(C);
@@ -1590,7 +1592,8 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
 
     if (!R.IsSigned) {
       for (Value *V : NewVariables) {
-        ConstraintTy VarPos(SmallVector<int64_t, 8>(Value2Index.size() + 1, 0),
+        ConstraintTy VarPos(SmallVector<DynamicAPInt, 8>(Value2Index.size() + 1,
+                                                         DynamicAPInt{0}),
                             false, false, false);
         VarPos.Coefficients[Value2Index[V]] = -1;
         CSToUse.addVariableRow(VarPos.Coefficients);

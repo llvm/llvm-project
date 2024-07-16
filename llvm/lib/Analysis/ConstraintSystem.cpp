@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/ConstraintSystem.h"
+#include "llvm/ADT/DynamicAPInt.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Debug.h"
@@ -55,8 +55,8 @@ bool ConstraintSystem::eliminateUsingFM() {
       if (R1 == R2)
         continue;
 
-      int64_t UpperLast = getLastCoefficient(RemainingRows[R2], LastIdx);
-      int64_t LowerLast = getLastCoefficient(RemainingRows[R1], LastIdx);
+      DynamicAPInt UpperLast = getLastCoefficient(RemainingRows[R2], LastIdx);
+      DynamicAPInt LowerLast = getLastCoefficient(RemainingRows[R1], LastIdx);
       assert(
           UpperLast != 0 && LowerLast != 0 &&
           "RemainingRows should only contain rows where the variable is != 0");
@@ -79,9 +79,9 @@ bool ConstraintSystem::eliminateUsingFM() {
       while (true) {
         if (IdxUpper >= UpperRow.size() || IdxLower >= LowerRow.size())
           break;
-        int64_t M1, M2, N;
-        int64_t UpperV = 0;
-        int64_t LowerV = 0;
+        DynamicAPInt M1, M2, N;
+        DynamicAPInt UpperV{0};
+        DynamicAPInt LowerV{0};
         uint16_t CurrentId = std::numeric_limits<uint16_t>::max();
         if (IdxUpper < UpperRow.size()) {
           CurrentId = std::min(UpperRow[IdxUpper].Id, CurrentId);
@@ -94,18 +94,13 @@ bool ConstraintSystem::eliminateUsingFM() {
           UpperV = UpperRow[IdxUpper].Coefficient;
           IdxUpper++;
         }
-
-        if (MulOverflow(UpperV, -1 * LowerLast, M1))
-          return false;
+        M1 = UpperV * (-LowerLast);
         if (IdxLower < LowerRow.size() && LowerRow[IdxLower].Id == CurrentId) {
           LowerV = LowerRow[IdxLower].Coefficient;
           IdxLower++;
         }
-
-        if (MulOverflow(LowerV, UpperLast, M2))
-          return false;
-        if (AddOverflow(M1, M2, N))
-          return false;
+        M2 = LowerV * UpperLast;
+        N = M1 + M2;
         if (N == 0)
           continue;
         NR.emplace_back(N, CurrentId);
@@ -170,15 +165,15 @@ void ConstraintSystem::dump() const {
         continue;
       std::string Coefficient;
       if (E.Coefficient != 1)
-        Coefficient = std::to_string(E.Coefficient) + " * ";
+        Coefficient = std::to_string(int64_t{E.Coefficient}) + " * ";
       Parts.push_back(Coefficient + Names[E.Id - 1]);
     }
     // assert(!Parts.empty() && "need to have at least some parts");
-    int64_t ConstPart = 0;
+    DynamicAPInt ConstPart{0};
     if (Row[0].Id == 0)
       ConstPart = Row[0].Coefficient;
     LLVM_DEBUG(dbgs() << join(Parts, std::string(" + "))
-                      << " <= " << std::to_string(ConstPart) << "\n");
+                      << " <= " << std::to_string(int64_t{ConstPart}) << "\n");
   }
 #endif
 }
@@ -191,10 +186,12 @@ bool ConstraintSystem::mayHaveSolution() {
   return HasSolution;
 }
 
-bool ConstraintSystem::isConditionImplied(SmallVector<int64_t, 8> R) const {
+bool ConstraintSystem::isConditionImplied(
+    SmallVector<DynamicAPInt, 8> R) const {
   // If all variable coefficients are 0, we have 'C >= 0'. If the constant is >=
   // 0, R is always true, regardless of the system.
-  if (all_of(ArrayRef(R).drop_front(1), [](int64_t C) { return C == 0; }))
+  if (all_of(ArrayRef(R).drop_front(1),
+             [](const DynamicAPInt &C) { return C == 0; }))
     return R[0] >= 0;
 
   // If there is no solution with the negation of R added to the system, the

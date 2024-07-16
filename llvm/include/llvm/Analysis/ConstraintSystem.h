@@ -9,38 +9,35 @@
 #ifndef LLVM_ANALYSIS_CONSTRAINTSYSTEM_H
 #define LLVM_ANALYSIS_CONSTRAINTSYSTEM_H
 
-#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DynamicAPInt.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/MathExtras.h"
-
-#include <string>
 
 namespace llvm {
 
 class Value;
 class ConstraintSystem {
   struct Entry {
-    int64_t Coefficient;
+    DynamicAPInt Coefficient;
     uint16_t Id;
 
-    Entry(int64_t Coefficient, uint16_t Id)
+    Entry(const DynamicAPInt &Coefficient, uint16_t Id)
         : Coefficient(Coefficient), Id(Id) {}
   };
 
-  static int64_t getConstPart(const Entry &E) {
+  static DynamicAPInt getConstPart(const Entry &E) {
     if (E.Id == 0)
       return E.Coefficient;
-    return 0;
+    return DynamicAPInt{0};
   }
 
-  static int64_t getLastCoefficient(ArrayRef<Entry> Row, uint16_t Id) {
+  static DynamicAPInt getLastCoefficient(ArrayRef<Entry> Row, uint16_t Id) {
     if (Row.empty())
-      return 0;
+      return DynamicAPInt{0};
     if (Row.back().Id == Id)
       return Row.back().Coefficient;
-    return 0;
+    return DynamicAPInt{0};
   }
 
   size_t NumVariables = 0;
@@ -74,11 +71,12 @@ public:
   ConstraintSystem(const DenseMap<Value *, unsigned> &Value2Index)
       : NumVariables(Value2Index.size()), Value2Index(Value2Index) {}
 
-  bool addVariableRow(ArrayRef<int64_t> R) {
+  bool addVariableRow(ArrayRef<DynamicAPInt> R) {
     assert(Constraints.empty() || R.size() == NumVariables);
     // If all variable coefficients are 0, the constraint does not provide any
     // usable information.
-    if (all_of(ArrayRef(R).drop_front(1), [](int64_t C) { return C == 0; }))
+    if (all_of(ArrayRef(R).drop_front(1),
+               [](const DynamicAPInt &C) { return C == 0; }))
       return false;
 
     SmallVector<Entry, 4> NewRow;
@@ -98,10 +96,11 @@ public:
     return Value2Index;
   }
 
-  bool addVariableRowFill(ArrayRef<int64_t> R) {
+  bool addVariableRowFill(ArrayRef<DynamicAPInt> R) {
     // If all variable coefficients are 0, the constraint does not provide any
     // usable information.
-    if (all_of(ArrayRef(R).drop_front(1), [](int64_t C) { return C == 0; }))
+    if (all_of(ArrayRef(R).drop_front(1),
+               [](const DynamicAPInt &C) { return C == 0; }))
       return false;
 
     NumVariables = std::max(R.size(), NumVariables);
@@ -111,7 +110,7 @@ public:
   /// Returns true if there may be a solution for the constraints in the system.
   bool mayHaveSolution();
 
-  static SmallVector<int64_t, 8> negate(SmallVector<int64_t, 8> R) {
+  static SmallVector<DynamicAPInt, 8> negate(SmallVector<DynamicAPInt, 8> R) {
     // The negated constraint R is obtained by multiplying by -1 and adding 1 to
     // the constant.
     R[0] += 1;
@@ -122,11 +121,11 @@ public:
   /// original vector.
   ///
   /// \param R The vector of coefficients to be negated.
-  static SmallVector<int64_t, 8> negateOrEqual(SmallVector<int64_t, 8> R) {
+  static SmallVector<DynamicAPInt, 8>
+  negateOrEqual(SmallVector<DynamicAPInt, 8> R) {
     // The negated constraint R is obtained by multiplying by -1.
     for (auto &C : R)
-      if (MulOverflow(C, int64_t(-1), C))
-        return {};
+      C *= -1;
     return R;
   }
 
@@ -134,19 +133,18 @@ public:
   /// modify the original vector.
   ///
   /// \param R The vector of coefficients to be converted.
-  static SmallVector<int64_t, 8> toStrictLessThan(SmallVector<int64_t, 8> R) {
+  static SmallVector<DynamicAPInt, 8>
+  toStrictLessThan(SmallVector<DynamicAPInt, 8> R) {
     // The strict less than is obtained by subtracting 1 from the constant.
-    if (SubOverflow(R[0], int64_t(1), R[0])) {
-      return {};
-    }
+    R[0] -= 1;
     return R;
   }
 
-  bool isConditionImplied(SmallVector<int64_t, 8> R) const;
+  bool isConditionImplied(SmallVector<DynamicAPInt, 8> R) const;
 
-  SmallVector<int64_t> getLastConstraint() const {
+  SmallVector<DynamicAPInt> getLastConstraint() const {
     assert(!Constraints.empty() && "Constraint system is empty");
-    SmallVector<int64_t> Result(NumVariables, 0);
+    SmallVector<DynamicAPInt> Result(NumVariables, DynamicAPInt{0});
     for (auto &Entry : Constraints.back())
       Result[Entry.Id] = Entry.Coefficient;
     return Result;
