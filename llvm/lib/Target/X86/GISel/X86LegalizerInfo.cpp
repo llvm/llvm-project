@@ -497,6 +497,53 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .clampScalar(0, s32, sMaxScalar)
       .widenScalarToNextPow2(1);
 
+  // For G_UITOFP and G_FPTOUI without AVX512, we have to custom legalize s16
+  // manually. Otherwise, in custom handler there is no way to understand
+  // whether s32 is an original type and we need to promote it to s64 or s32 is
+  // obtained after widening s16 and we shouldn't widen it to s64.
+  //
+  // For AVX512 we simply widen types as there is direct mapping from opcodes
+  // to asm instructions.
+  getActionDefinitionsBuilder(G_UITOFP)
+      .legalIf([=](const LegalityQuery &Query) {
+        return HasAVX512 && typeInSet(0, {s32, s64})(Query) &&
+               typeInSet(1, {s32, s64})(Query);
+      })
+      .customIf([=](const LegalityQuery &Query) {
+        if (HasAVX512)
+          return false;
+        return (HasSSE1 &&
+                (typePairInSet(0, 1, {{s32, s32}, {s32, s16}})(Query) ||
+                 (Is64Bit && typePairInSet(0, 1, {{s32, s64}})(Query)))) ||
+               (HasSSE2 &&
+                (typePairInSet(0, 1, {{s64, s32}, {s64, s16}})(Query) ||
+                 (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query))));
+      })
+      .clampScalar(1, HasAVX512 ? s32 : s16, sMaxScalar)
+      .widenScalarToNextPow2(1)
+      .clampScalar(0, s32, HasSSE2 ? s64 : s32)
+      .widenScalarToNextPow2(0);
+
+  getActionDefinitionsBuilder(G_FPTOUI)
+      .legalIf([=](const LegalityQuery &Query) {
+        return HasAVX512 && typeInSet(0, {s32, s64})(Query) &&
+               typeInSet(1, {s32, s64})(Query);
+      })
+      .customIf([=](const LegalityQuery &Query) {
+        if (HasAVX512)
+          return false;
+        return (HasSSE1 &&
+                (typePairInSet(0, 1, {{s32, s32}, {s16, s32}})(Query) ||
+                 (Is64Bit && typePairInSet(0, 1, {{s64, s32}})(Query)))) ||
+               (HasSSE2 &&
+                (typePairInSet(0, 1, {{s32, s64}, {s16, s64}})(Query) ||
+                 (Is64Bit && typePairInSet(0, 1, {{s64, s64}})(Query))));
+      })
+      .clampScalar(1, s32, sMaxScalar)
+      .widenScalarToNextPow2(1)
+      .clampScalar(0, HasAVX512 ? s32 : s16, HasSSE2 ? s64 : s32)
+      .widenScalarToNextPow2(0);
+
   // vector ops
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
       .customIf([=](const LegalityQuery &Query) {
@@ -589,6 +636,10 @@ bool X86LegalizerInfo::legalizeCustom(LegalizerHelper &Helper, MachineInstr &MI,
     return false;
   case TargetOpcode::G_BUILD_VECTOR:
     return legalizeBuildVector(MI, MRI, Helper);
+  case TargetOpcode::G_FPTOUI:
+    return legalizeFPTOUI(MI, MRI, Helper);
+  case TargetOpcode::G_UITOFP:
+    return legalizeUITOFP(MI, MRI, Helper);
   }
   llvm_unreachable("expected switch to return");
 }
@@ -642,6 +693,112 @@ bool X86LegalizerInfo::legalizeBuildVector(MachineInstr &MI,
   MIRBuilder.buildLoad(Dst, Addr, *MMO);
   MI.eraseFromParent();
   return true;
+}
+
+bool X86LegalizerInfo::legalizeFPTOUI(MachineInstr &MI,
+                                      MachineRegisterInfo &MRI,
+                                      LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  auto [Dst, DstTy, Src, SrcTy] = MI.getFirst2RegLLTs();
+  unsigned DstSizeInBits = DstTy.getScalarSizeInBits();
+  const LLT s32 = LLT::scalar(32);
+  const LLT s64 = LLT::scalar(64);
+
+  // Simply reuse FPTOSI when it is possible to widen the type
+  if (DstSizeInBits == 16 || DstSizeInBits == 32) {
+    auto Casted = MIRBuilder.buildFPTOSI(LLT::scalar(DstSizeInBits * 2), Src);
+    MIRBuilder.buildTrunc(Dst, Casted);
+    MI.eraseFromParent();
+    return true;
+  }
+  if (DstTy == s64) {
+    APInt TwoPExpInt = APInt::getSignMask(DstSizeInBits);
+    APFloat TwoPExpFP(SrcTy == s32 ? APFloat::IEEEsingle()
+                                   : APFloat::IEEEdouble(),
+                      APInt::getZero(SrcTy.getSizeInBits()));
+    TwoPExpFP.convertFromAPInt(TwoPExpInt, /*IsSigned=*/false,
+                               APFloat::rmNearestTiesToEven);
+
+    // For fp Src greater or equal to Threshold(2^Exp), we use FPTOSI on
+    // (Src - 2^Exp) and add 2^Exp by setting highest bit in result to 1.
+    // For fp Src smaller, (Src - 2^Exp) is zeroed by And, the final result
+    // is FPTOSI on Src.
+    auto Casted = MIRBuilder.buildFPTOSI(DstTy, Src);
+    auto Threshold = MIRBuilder.buildFConstant(SrcTy, TwoPExpFP);
+    auto FSub = MIRBuilder.buildFSub(SrcTy, Src, Threshold);
+    auto ResLowBits = MIRBuilder.buildFPTOSI(DstTy, FSub);
+    auto Shift = MIRBuilder.buildConstant(DstTy, DstSizeInBits - 1);
+    auto ResHighBit = MIRBuilder.buildAShr(DstTy, Casted, Shift);
+    auto And = MIRBuilder.buildAnd(DstTy, ResHighBit, ResLowBits);
+    MIRBuilder.buildOr(Dst, And, Casted);
+    MI.eraseFromParent();
+    return true;
+  }
+  return false;
+}
+
+bool X86LegalizerInfo::legalizeUITOFP(MachineInstr &MI,
+                                      MachineRegisterInfo &MRI,
+                                      LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  auto [Dst, DstTy, Src, SrcTy] = MI.getFirst2RegLLTs();
+  const LLT s16 = LLT::scalar(16);
+  const LLT s32 = LLT::scalar(32);
+  const LLT s64 = LLT::scalar(64);
+
+  // Simply reuse SITOFP when it is possible to widen the type
+  if (SrcTy == s16 || SrcTy == s32) {
+    const LLT WidenTy = LLT::scalar(SrcTy.getScalarSizeInBits() * 2);
+    auto Ext = MIRBuilder.buildZExt(WidenTy, Src);
+    MIRBuilder.buildSITOFP(Dst, Ext);
+    MI.eraseFromParent();
+    return true;
+  }
+  if (SrcTy == s64 && DstTy == s32) {
+    // For i64 < INT_MAX we simply reuse SITOFP.
+    // Otherwise, divide i64 by 2, round result by ORing with the lowest bit
+    // saved before division, convert to float by SITOFP, multiply the result
+    // by 2.
+    auto SmallResult = MIRBuilder.buildSITOFP(DstTy, Src);
+    auto One = MIRBuilder.buildConstant(SrcTy, 1);
+    auto Zero = MIRBuilder.buildConstant(SrcTy, 0);
+    auto Halved = MIRBuilder.buildLShr(SrcTy, Src, One);
+    auto LowerBit = MIRBuilder.buildAnd(SrcTy, Src, One);
+    auto RoundedHalved = MIRBuilder.buildOr(SrcTy, Halved, LowerBit);
+    auto HalvedFP = MIRBuilder.buildSITOFP(DstTy, RoundedHalved);
+    auto LargeResult = MIRBuilder.buildFAdd(DstTy, HalvedFP, HalvedFP);
+    auto IsLarge = MIRBuilder.buildICmp(CmpInst::Predicate::ICMP_SLT,
+                                        LLT::scalar(1), Src, Zero);
+    MIRBuilder.buildSelect(Dst, IsLarge, LargeResult, SmallResult);
+    MI.eraseFromParent();
+    return true;
+  }
+  if (SrcTy == s64 && DstTy == s64) {
+    // TODO: rewrite on vector shuffles when supported.
+    // We create doubles from 32 bit parts with 32 exponent difference.
+    //
+    // X = 2^52 * 1.0...LowBits
+    // Y = 2^84 * 1.0...HighBits
+    // Temp = 2^84 * 1.0...HighBits - 2^84 * 1.0 - 2^52 * 1.0
+    //      = - 2^52 * 1.0...HighBits
+    // Result = - 2^52 * 1.0...HighBits + 2^52 * 1.0...LowBits
+    auto TwoP52 = MIRBuilder.buildConstant(s64, UINT64_C(0x4330000000000000));
+    auto TwoP84 = MIRBuilder.buildConstant(s64, UINT64_C(0x4530000000000000));
+    auto TwoP52P84 = llvm::bit_cast<double>(UINT64_C(0x4530000000100000));
+    auto TwoP52P84FP = MIRBuilder.buildFConstant(s64, TwoP52P84);
+    auto HalfWidth = MIRBuilder.buildConstant(s64, 32);
+
+    auto LowBits = MIRBuilder.buildTrunc(s32, Src);
+    LowBits = MIRBuilder.buildZExt(s64, LowBits);
+    auto LowBitsFP = MIRBuilder.buildOr(s64, TwoP52, LowBits);
+    auto HighBits = MIRBuilder.buildLShr(s64, Src, HalfWidth);
+    auto HighBitsFP = MIRBuilder.buildOr(s64, TwoP84, HighBits);
+    auto Scratch = MIRBuilder.buildFSub(s64, HighBitsFP, TwoP52P84FP);
+    MIRBuilder.buildFAdd(Dst, Scratch, LowBitsFP);
+    MI.eraseFromParent();
+    return true;
+  }
+  return false;
 }
 
 bool X86LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
