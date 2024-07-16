@@ -24,6 +24,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __math {
@@ -121,5 +124,6 @@ _LIBCPP_HIDE_FROM_ABI typename __promote<_A1, _A2, _A3>::type hypot(_A1 __x, _A2
 } // namespace __math
 
 _LIBCPP_END_NAMESPACE_STD
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___MATH_HYPOT_H
