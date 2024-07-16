@@ -66,7 +66,7 @@ int main() {
     char name[16];
     res = prctl(PR_GET_NAME, name);
     if (res == 0) {
-        assert(!strcmp(name, "tname"));
+      assert(!strcmp(name, "tname"));
     }
   }
 
