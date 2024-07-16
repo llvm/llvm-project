@@ -160,7 +160,7 @@ bool AMDGPUMarkPromotableLaneShared::checkPromotable(GlobalVariable &GV) {
 
       Type *AccessTy = getLoadStoreType(Inst);
       auto DataSize = DL->getTypeAllocSize(AccessTy);
-      if (DataSize != 4 && DataSize != 8 && DataSize != 12 && DataSize != 16)
+      if (DataSize % 4)
         return RejectUser(Inst, "data-size is not supported");
 
       continue;

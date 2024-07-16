@@ -638,7 +638,7 @@ declare <33 x double> @llvm.experimental.vp.strided.load.v33f64.p0.i64(ptr, i64,
 define <4 x i8> @zero_strided_unmasked_vpload_4i8_i8(ptr %ptr) {
 ; CHECK-OPT-LABEL: zero_strided_unmasked_vpload_4i8_i8:
 ; CHECK-OPT:       # %bb.0:
-; CHECK-OPT-NEXT:    vsetivli zero, 3, e8, mf4, ta, ma
+; CHECK-OPT-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-OPT-NEXT:    vlse8.v v8, (a0), zero
 ; CHECK-OPT-NEXT:    ret
 ;
@@ -657,7 +657,7 @@ define <4 x i8> @zero_strided_unmasked_vpload_4i8_i8(ptr %ptr) {
 define <4 x half> @zero_strided_unmasked_vpload_4f16(ptr %ptr) {
 ; CHECK-OPT-LABEL: zero_strided_unmasked_vpload_4f16:
 ; CHECK-OPT:       # %bb.0:
-; CHECK-OPT-NEXT:    vsetivli zero, 3, e16, mf2, ta, ma
+; CHECK-OPT-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-OPT-NEXT:    vlse16.v v8, (a0), zero
 ; CHECK-OPT-NEXT:    ret
 ;
@@ -669,4 +669,31 @@ define <4 x half> @zero_strided_unmasked_vpload_4f16(ptr %ptr) {
 ; CHECK-NO-OPT-NEXT:    ret
   %load = call <4 x half> @llvm.experimental.vp.strided.load.4f16.p0.i32(ptr %ptr, i32 0, <4 x i1> splat (i1 true), i32 3)
   ret <4 x half> %load
+}
+
+define <4 x i64> @zero_strided_vadd.vx(<4 x i64> %v, ptr %ptr) {
+; CHECK-RV32-LABEL: zero_strided_vadd.vx:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    addi sp, sp, -16
+; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-RV32-NEXT:    lw a1, 4(a0)
+; CHECK-RV32-NEXT:    lw a0, 0(a0)
+; CHECK-RV32-NEXT:    sw a1, 12(sp)
+; CHECK-RV32-NEXT:    sw a0, 8(sp)
+; CHECK-RV32-NEXT:    addi a0, sp, 8
+; CHECK-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-RV32-NEXT:    vlse64.v v10, (a0), zero
+; CHECK-RV32-NEXT:    vadd.vv v8, v8, v10
+; CHECK-RV32-NEXT:    addi sp, sp, 16
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: zero_strided_vadd.vx:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    ld a0, 0(a0)
+; CHECK-RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-RV64-NEXT:    vadd.vx v8, v8, a0
+; CHECK-RV64-NEXT:    ret
+  %load = call <4 x i64> @llvm.experimental.vp.strided.load.v4i64.p0.i32(ptr %ptr, i32 0, <4 x i1> splat (i1 true), i32 4)
+  %w = add <4 x i64> %v, %load
+  ret <4 x i64> %w
 }

@@ -1449,6 +1449,11 @@ def AVLdSt_64 : AVLdStOperand<AV_64, "OPW64">;
 def AVLdSt_96 : AVLdStOperand<AV_96, "OPW96">;
 def AVLdSt_128 : AVLdStOperand<AV_128, "OPW128">;
 def AVLdSt_160 : AVLdStOperand<AV_160, "OPW160">;
+def AVLdSt_192 : AVLdStOperand<AV_192, "OPW192">;
+def AVLdSt_256 : AVLdStOperand<AV_256, "OPW256">;
+def AVLdSt_288 : AVLdStOperand<AV_288, "OPW288">;
+def AVLdSt_512 : AVLdStOperand<AV_512, "OPW512">;
+def AVLdSt_576 : AVLdStOperand<AV_576, "OPW576">;
 def AVLdSt_1024 : AVLdStOperand<AV_1024, "OPW1024">;
 
 //===----------------------------------------------------------------------===//

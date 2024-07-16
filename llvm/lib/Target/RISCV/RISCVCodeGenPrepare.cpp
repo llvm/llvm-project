@@ -163,10 +163,10 @@ bool RISCVCodeGenPrepare::visitIntrinsicInst(IntrinsicInst &I) {
   return true;
 }
 
+// Always expand zero strided loads so we match more .vx splat patterns, even if
+// we have +optimized-zero-stride-loads. RISCVDAGToDAGISel::Select will convert
+// it back to a strided load if it's optimized.
 bool RISCVCodeGenPrepare::expandVPStrideLoad(IntrinsicInst &II) {
-  if (ST->hasOptimizedZeroStrideLoad())
-    return false;
-
   Value *BasePtr, *VL;
 
   using namespace PatternMatch;

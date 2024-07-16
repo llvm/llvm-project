@@ -5540,7 +5540,13 @@ static MachineBasicBlock *emitVLoadVStoreIdx(MachineInstr &MI,
   case AMDGPU::SCRATCH_LOAD_DWORD_SADDR:
   case AMDGPU::SCRATCH_LOAD_DWORDX2_SADDR:
   case AMDGPU::SCRATCH_LOAD_DWORDX3_SADDR:
-  case AMDGPU::SCRATCH_LOAD_DWORDX4_SADDR: {
+  case AMDGPU::SCRATCH_LOAD_DWORDX4_SADDR:
+  case AMDGPU::SCRATCH_LOAD_DWORDX5_SADDR:
+  case AMDGPU::SCRATCH_LOAD_DWORDX6_SADDR:
+  case AMDGPU::SCRATCH_LOAD_DWORDX8_SADDR:
+  case AMDGPU::SCRATCH_LOAD_DWORDX9_SADDR:
+  case AMDGPU::SCRATCH_LOAD_DWORDX16_SADDR:
+  case AMDGPU::SCRATCH_LOAD_DWORDX18_SADDR: {
     Register Dst = MI.getOperand(0).getReg();
     int Offset = EmitIdxSAddr(MI);
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_LOAD_IDX), Dst)
@@ -5554,7 +5560,13 @@ static MachineBasicBlock *emitVLoadVStoreIdx(MachineInstr &MI,
   case AMDGPU::SCRATCH_LOAD_DWORD_ST:
   case AMDGPU::SCRATCH_LOAD_DWORDX2_ST:
   case AMDGPU::SCRATCH_LOAD_DWORDX3_ST:
-  case AMDGPU::SCRATCH_LOAD_DWORDX4_ST: {
+  case AMDGPU::SCRATCH_LOAD_DWORDX4_ST:
+  case AMDGPU::SCRATCH_LOAD_DWORDX5_ST:
+  case AMDGPU::SCRATCH_LOAD_DWORDX6_ST:
+  case AMDGPU::SCRATCH_LOAD_DWORDX8_ST:
+  case AMDGPU::SCRATCH_LOAD_DWORDX9_ST:
+  case AMDGPU::SCRATCH_LOAD_DWORDX16_ST:
+  case AMDGPU::SCRATCH_LOAD_DWORDX18_ST: {
     Register Dst = MI.getOperand(0).getReg();
     int Offset = EmitIdxST(MI);
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_LOAD_IDX), Dst)
@@ -5568,7 +5580,13 @@ static MachineBasicBlock *emitVLoadVStoreIdx(MachineInstr &MI,
   case AMDGPU::SCRATCH_STORE_DWORD_SADDR:
   case AMDGPU::SCRATCH_STORE_DWORDX2_SADDR:
   case AMDGPU::SCRATCH_STORE_DWORDX3_SADDR:
-  case AMDGPU::SCRATCH_STORE_DWORDX4_SADDR: {
+  case AMDGPU::SCRATCH_STORE_DWORDX4_SADDR:
+  case AMDGPU::SCRATCH_STORE_DWORDX5_SADDR:
+  case AMDGPU::SCRATCH_STORE_DWORDX6_SADDR:
+  case AMDGPU::SCRATCH_STORE_DWORDX8_SADDR:
+  case AMDGPU::SCRATCH_STORE_DWORDX9_SADDR:
+  case AMDGPU::SCRATCH_STORE_DWORDX16_SADDR:
+  case AMDGPU::SCRATCH_STORE_DWORDX18_SADDR: {
     Register Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
     int Offset = EmitIdxSAddr(MI);
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_STORE_IDX))
@@ -5584,7 +5602,13 @@ static MachineBasicBlock *emitVLoadVStoreIdx(MachineInstr &MI,
   case AMDGPU::SCRATCH_STORE_DWORD_ST:
   case AMDGPU::SCRATCH_STORE_DWORDX2_ST:
   case AMDGPU::SCRATCH_STORE_DWORDX3_ST:
-  case AMDGPU::SCRATCH_STORE_DWORDX4_ST: {
+  case AMDGPU::SCRATCH_STORE_DWORDX4_ST:
+  case AMDGPU::SCRATCH_STORE_DWORDX5_ST:
+  case AMDGPU::SCRATCH_STORE_DWORDX6_ST:
+  case AMDGPU::SCRATCH_STORE_DWORDX8_ST:
+  case AMDGPU::SCRATCH_STORE_DWORDX9_ST:
+  case AMDGPU::SCRATCH_STORE_DWORDX16_ST:
+  case AMDGPU::SCRATCH_STORE_DWORDX18_ST: {
     Register Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
     int Offset = EmitIdxST(MI);
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::V_STORE_IDX))
@@ -5600,7 +5624,13 @@ static MachineBasicBlock *emitVLoadVStoreIdx(MachineInstr &MI,
   case AMDGPU::SCRATCH_LOAD_DWORD:
   case AMDGPU::SCRATCH_LOAD_DWORDX2:
   case AMDGPU::SCRATCH_LOAD_DWORDX3:
-  case AMDGPU::SCRATCH_LOAD_DWORDX4: {
+  case AMDGPU::SCRATCH_LOAD_DWORDX4:
+  case AMDGPU::SCRATCH_LOAD_DWORDX5:
+  case AMDGPU::SCRATCH_LOAD_DWORDX6:
+  case AMDGPU::SCRATCH_LOAD_DWORDX8:
+  case AMDGPU::SCRATCH_LOAD_DWORDX9:
+  case AMDGPU::SCRATCH_LOAD_DWORDX16:
+  case AMDGPU::SCRATCH_LOAD_DWORDX18: {
     Register Dst = MI.getOperand(0).getReg();
     Register SGPRIdxReg;
     auto InsPt = extractIdxFromVGPR(TII, MBB, MI, SGPRIdxReg);
@@ -5617,7 +5647,13 @@ static MachineBasicBlock *emitVLoadVStoreIdx(MachineInstr &MI,
   case AMDGPU::SCRATCH_STORE_DWORD:
   case AMDGPU::SCRATCH_STORE_DWORDX2:
   case AMDGPU::SCRATCH_STORE_DWORDX3:
-  case AMDGPU::SCRATCH_STORE_DWORDX4: {
+  case AMDGPU::SCRATCH_STORE_DWORDX4:
+  case AMDGPU::SCRATCH_STORE_DWORDX5:
+  case AMDGPU::SCRATCH_STORE_DWORDX6:
+  case AMDGPU::SCRATCH_STORE_DWORDX8:
+  case AMDGPU::SCRATCH_STORE_DWORDX9:
+  case AMDGPU::SCRATCH_STORE_DWORDX16:
+  case AMDGPU::SCRATCH_STORE_DWORDX18: {
     Register Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdata)->getReg();
 
     Register SGPRIdxReg;
@@ -5638,6 +5674,19 @@ static MachineBasicBlock *emitVLoadVStoreIdx(MachineInstr &MI,
     break;
   }
   return &MBB;
+}
+
+static bool IsLaneSharedInVGPR(const MachineMemOperand *MemOpnd) {
+  if (auto *val = MemOpnd->getValue()) {
+    auto *Obj = getUnderlyingObject(val);
+    if (const GlobalVariable *GV = dyn_cast<const GlobalVariable>(Obj)) {
+      if (GV->hasAttribute("lane-shared-in-vgpr")) {
+        assert(MemOpnd->getAddrSpace() == AMDGPUAS::LANE_SHARED);
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
@@ -6244,15 +6293,9 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     if (TII->isFLATScratch(MI)) {
       bool LaneSharedInVGPR = false;
       for (const auto *MemOp : MI.memoperands()) {
-        if (auto *val = MemOp->getValue()) {
-          auto *Obj = getUnderlyingObject(val);
-          if (const GlobalVariable *GV = dyn_cast<const GlobalVariable>(Obj)) {
-            if (GV->hasAttribute("lane-shared-in-vgpr")) {
-              assert(MemOp->getAddrSpace() == AMDGPUAS::LANE_SHARED);
-              LaneSharedInVGPR = true;
-              break;
-            }
-          }
+        if (IsLaneSharedInVGPR(MemOp)) {
+          LaneSharedInVGPR = true;
+          break;
         }
       }
       if (LaneSharedInVGPR) {
@@ -11509,7 +11552,15 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     // v3 and v4 loads are supported for private and global memory.
     return SDValue();
   }
-  if (AS == AMDGPUAS::PRIVATE_ADDRESS) {
+  if (AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::LANE_SHARED) {
+    // we can bypass splitting when it will be converted into v_load_idx, and
+    // NumElements matches the scratch-pseudo we support
+    if (AS == AMDGPUAS::LANE_SHARED) {
+      if (IsLaneSharedInVGPR(Load->getMemOperand()) &&
+          (NumElements <= 6 || NumElements == 8 || NumElements == 9 ||
+           NumElements == 16 || NumElements == 18))
+        return SDValue();
+    }
     // Depending on the setting of the private_element_size field in the
     // resource descriptor, we can only make private accesses up to a certain
     // size.
@@ -12073,7 +12124,15 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
       return expandUnalignedStore(Store, DAG);
 
     return SDValue();
-  } else if (AS == AMDGPUAS::PRIVATE_ADDRESS) {
+  } else if (AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::LANE_SHARED) {
+    // we can bypass splitting when it will be converted into v_load_idx, and
+    // NumElements matches the scratch-pseudo we support
+    if (AS == AMDGPUAS::LANE_SHARED) {
+      if (IsLaneSharedInVGPR(Store->getMemOperand()) &&
+          (NumElements <= 6 || NumElements == 8 || NumElements == 9 ||
+           NumElements == 16 || NumElements == 18))
+        return SDValue();
+    }
     switch (Subtarget->getMaxPrivateElementSize()) {
     case 4:
       return scalarizeVectorStore(Store, DAG);

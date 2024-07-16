@@ -58,12 +58,11 @@ extern void hoo(int) __attribute__ ((ifunc("hoo_ifunc")));
 // CHECK: call i32 @foo(i32
 // CHECK: call void @goo()
 
-// SAN: define internal nonnull {{(noundef )?}}ptr @foo_ifunc() #[[#FOO_IFUNC:]] {
-
 // SAN: define {{(dso_local )?}}noalias {{(noundef )?}}ptr @goo_ifunc() #[[#GOO_IFUNC:]] {
 
-// SAN: define {{(dso_local )?}}noalias {{(noundef )?}}ptr @hoo_ifunc() #[[#HOO_IFUNC:]] {
+// SAN: define {{(dso_local )?}}noalias {{(noundef )?}}ptr @hoo_ifunc() #[[#GOO_IFUNC]] {
 
-// SAN-DAG: attributes #[[#FOO_IFUNC]] = {{{.*}} disable_sanitizer_instrumentation {{.*}}
+// SAN: define internal {{(noundef )?}}nonnull ptr @foo_ifunc() #[[#FOO_IFUNC:]] {
+
 // SAN-DAG: attributes #[[#GOO_IFUNC]] = {{{.*}} disable_sanitizer_instrumentation {{.*}}
-// SAN-DAG: attributes #[[#HOO_IFUNC]] = {{{.*}} disable_sanitizer_instrumentation {{.*}}
+// SAN-DAG: attributes #[[#FOO_IFUNC]] = {{{.*}} disable_sanitizer_instrumentation {{.*}}

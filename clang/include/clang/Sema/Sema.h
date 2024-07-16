@@ -2803,8 +2803,7 @@ public:
   /// (e.g., Base::), perform name lookup for that identifier as a
   /// nested-name-specifier within the given scope, and return the result of
   /// that name lookup.
-  bool LookupFirstQualifierInScope(Scope *S, NestedNameSpecifier *NNS,
-                                   UnresolvedSetImpl &R);
+  NamedDecl *FindFirstQualifierInScope(Scope *S, NestedNameSpecifier *NNS);
 
   /// Keeps information about an identifier in a nested-name-spec.
   ///
@@ -2844,6 +2843,9 @@ public:
   /// \param EnteringContext If true, enter the context specified by the
   ///        nested-name-specifier.
   /// \param SS Optional nested name specifier preceding the identifier.
+  /// \param ScopeLookupResult Provides the result of name lookup within the
+  ///        scope of the nested-name-specifier that was computed at template
+  ///        definition time.
   /// \param ErrorRecoveryLookup Specifies if the method is called to improve
   ///        error recovery and what kind of recovery is performed.
   /// \param IsCorrectedToColon If not null, suggestion of replace '::' -> ':'
@@ -2851,6 +2853,11 @@ public:
   ///       'true' if the identifier is treated as if it was followed by ':',
   ///        not '::'.
   /// \param OnlyNamespace If true, only considers namespaces in lookup.
+  ///
+  /// This routine differs only slightly from ActOnCXXNestedNameSpecifier, in
+  /// that it contains an extra parameter \p ScopeLookupResult, which provides
+  /// the result of name lookup within the scope of the nested-name-specifier
+  /// that was computed at template definition time.
   ///
   /// If ErrorRecoveryLookup is true, then this call is used to improve error
   /// recovery.  This means that it should not emit diagnostics, it should
@@ -2860,6 +2867,7 @@ public:
   /// specifier.
   bool BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
                                    bool EnteringContext, CXXScopeSpec &SS,
+                                   NamedDecl *ScopeLookupResult,
                                    bool ErrorRecoveryLookup,
                                    bool *IsCorrectedToColon = nullptr,
                                    bool OnlyNamespace = false);
@@ -8565,12 +8573,11 @@ public:
                           const TemplateArgumentListInfo *TemplateArgs,
                           bool IsDefiniteInstance, const Scope *S);
 
-  ExprResult
-  ActOnDependentMemberExpr(Expr *Base, QualType BaseType, bool IsArrow,
-                           SourceLocation OpLoc, const CXXScopeSpec &SS,
-                           SourceLocation TemplateKWLoc,
-                           const DeclarationNameInfo &NameInfo,
-                           const TemplateArgumentListInfo *TemplateArgs);
+  ExprResult ActOnDependentMemberExpr(
+      Expr *Base, QualType BaseType, bool IsArrow, SourceLocation OpLoc,
+      const CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
+      NamedDecl *FirstQualifierInScope, const DeclarationNameInfo &NameInfo,
+      const TemplateArgumentListInfo *TemplateArgs);
 
   /// The main callback when the parser finds something like
   ///   expression . [nested-name-specifier] identifier
@@ -8626,14 +8633,15 @@ public:
   ExprResult BuildMemberReferenceExpr(
       Expr *Base, QualType BaseType, SourceLocation OpLoc, bool IsArrow,
       CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
-      const DeclarationNameInfo &NameInfo,
+      NamedDecl *FirstQualifierInScope, const DeclarationNameInfo &NameInfo,
       const TemplateArgumentListInfo *TemplateArgs, const Scope *S,
       ActOnMemberAccessExtraArgs *ExtraArgs = nullptr);
 
   ExprResult
   BuildMemberReferenceExpr(Expr *Base, QualType BaseType, SourceLocation OpLoc,
                            bool IsArrow, const CXXScopeSpec &SS,
-                           SourceLocation TemplateKWLoc, LookupResult &R,
+                           SourceLocation TemplateKWLoc,
+                           NamedDecl *FirstQualifierInScope, LookupResult &R,
                            const TemplateArgumentListInfo *TemplateArgs,
                            const Scope *S, bool SuppressQualifierCheck = false,
                            ActOnMemberAccessExtraArgs *ExtraArgs = nullptr);
@@ -11121,14 +11129,15 @@ public:
                      QualType ObjectType, bool EnteringContext,
                      RequiredTemplateKind RequiredTemplate = SourceLocation(),
                      AssumedTemplateKind *ATK = nullptr,
-                     bool AllowTypoCorrection = true, bool MayBeNNS = false);
+                     bool AllowTypoCorrection = true);
 
-  TemplateNameKind
-  isTemplateName(Scope *S, CXXScopeSpec &SS, bool hasTemplateKeyword,
-                 const UnqualifiedId &Name, ParsedType ObjectType,
-                 bool EnteringContext, TemplateTy &Template,
-                 bool &MemberOfUnknownSpecialization,
-                 bool Disambiguation = false, bool MayBeNNS = false);
+  TemplateNameKind isTemplateName(Scope *S, CXXScopeSpec &SS,
+                                  bool hasTemplateKeyword,
+                                  const UnqualifiedId &Name,
+                                  ParsedType ObjectType, bool EnteringContext,
+                                  TemplateTy &Template,
+                                  bool &MemberOfUnknownSpecialization,
+                                  bool Disambiguation = false);
 
   /// Try to resolve an undeclared template name as a type template.
   ///
@@ -11461,11 +11470,12 @@ public:
   /// For example, given "x.MetaFun::template apply", the scope specifier
   /// \p SS will be "MetaFun::", \p TemplateKWLoc contains the location
   /// of the "template" keyword, and "apply" is the \p Name.
-  TemplateNameKind
-  ActOnTemplateName(Scope *S, CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
-                    const UnqualifiedId &Name, ParsedType ObjectType,
-                    bool EnteringContext, TemplateTy &Template,
-                    bool AllowInjectedClassName = false, bool MayBeNNS = false);
+  TemplateNameKind ActOnTemplateName(Scope *S, CXXScopeSpec &SS,
+                                     SourceLocation TemplateKWLoc,
+                                     const UnqualifiedId &Name,
+                                     ParsedType ObjectType,
+                                     bool EnteringContext, TemplateTy &Template,
+                                     bool AllowInjectedClassName = false);
 
   DeclResult ActOnClassTemplateSpecialization(
       Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
