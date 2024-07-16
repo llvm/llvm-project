@@ -13,6 +13,12 @@ func.func @test_addi_tensor(%arg0 : tensor<8x8xi64>, %arg1 : tensor<8x8xi64>) ->
   return %0 : tensor<8x8xi64>
 }
 
+// CHECK-LABEL: test_addi_unranked_tensor
+func.func @test_addi_unranked_tensor(%arg0 : tensor<*xi32>, %arg1 : tensor<*xi32>) -> tensor<*xi32> {
+  %0 = arith.addi %arg0, %arg1 : tensor<*xi32>
+  return %0 : tensor<*xi32>
+}
+
 // CHECK-LABEL: test_addi_vector
 func.func @test_addi_vector(%arg0 : vector<8xi64>, %arg1 : vector<8xi64>) -> vector<8xi64> {
   %0 = arith.addi %arg0, %arg1 : vector<8xi64>
