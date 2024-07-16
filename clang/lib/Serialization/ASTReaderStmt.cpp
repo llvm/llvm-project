@@ -785,6 +785,12 @@ void ASTStmtReader::VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *E) {
   E->setRParenLoc(readSourceLocation());
 }
 
+static StringRef saveStrToCtx(const std::string &S, ASTContext &Ctx) {
+  char *Buf = new (Ctx) char[S.size()];
+  std::copy(S.begin(), S.end(), Buf);
+  return StringRef(Buf, S.size());
+}
+
 static ConstraintSatisfaction
 readConstraintSatisfaction(ASTRecordReader &Record) {
   ConstraintSatisfaction Satisfaction;
@@ -795,7 +801,9 @@ readConstraintSatisfaction(ASTRecordReader &Record) {
     for (unsigned i = 0; i != NumDetailRecords; ++i) {
       if (/* IsDiagnostic */Record.readInt()) {
         SourceLocation DiagLocation = Record.readSourceLocation();
-        std::string DiagMessage = Record.readString();
+        StringRef DiagMessage =
+            saveStrToCtx(Record.readString(), Record.getContext());
+
         Satisfaction.Details.emplace_back(
             new (Record.getContext())
                 ConstraintSatisfaction::SubstitutionDiagnostic(DiagLocation,
@@ -820,9 +828,13 @@ void ASTStmtReader::VisitConceptSpecializationExpr(
 
 static concepts::Requirement::SubstitutionDiagnostic *
 readSubstitutionDiagnostic(ASTRecordReader &Record) {
-  std::string SubstitutedEntity = Record.readString();
+  StringRef SubstitutedEntity =
+      saveStrToCtx(Record.readString(), Record.getContext());
+
   SourceLocation DiagLoc = Record.readSourceLocation();
-  std::string DiagMessage = Record.readString();
+  StringRef DiagMessage =
+      saveStrToCtx(Record.readString(), Record.getContext());
+
   return new (Record.getContext())
       concepts::Requirement::SubstitutionDiagnostic{SubstitutedEntity, DiagLoc,
                                                     DiagMessage};
