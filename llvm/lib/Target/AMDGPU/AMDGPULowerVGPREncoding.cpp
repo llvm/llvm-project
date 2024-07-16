@@ -60,15 +60,18 @@ using namespace llvm;
 namespace {
 
 class AMDGPULowerVGPREncoding : public MachineFunctionPass {
+  static constexpr unsigned OpNum = 4;
   static constexpr unsigned BitsPerField = 2;
   static constexpr unsigned NumFields = 8;
-  using ModeType = PackedVector<unsigned, BitsPerField>;
+  using ModeType = PackedVector<unsigned, BitsPerField,
+                                std::bitset<BitsPerField * NumFields>>;
 
   class ModeTy : public ModeType {
   public:
-    ModeTy() : ModeType(NumFields) {}
+    // bitset constructor will set all bits to zero
+    ModeTy() : ModeType(0) {}
 
-    operator int64_t() const { return BitVector(*this).getData()[0]; }
+    operator int64_t() const { return raw_bits().to_ulong(); }
   };
 
 public:
@@ -130,7 +133,7 @@ private:
   /// is checked.
   /// \return true if any VGPRs are used in MI.
   bool computeModeForMSBs(ModeTy &NewMode, MachineInstr &MI,
-                          const unsigned Ops[4],
+                          const unsigned Ops[OpNum],
                           const unsigned *Ops2 = nullptr);
 
   /// Abstraction between which index register is used and where the signifying
@@ -183,7 +186,7 @@ AMDGPULowerVGPREncoding::getLowRegister(const MachineOperand &MO) const {
 
 void AMDGPULowerVGPREncoding::updateModeForIDX(ModeTy &Mode,
                                                const ModeTy &Mask) {
-  for (unsigned I = 0; I < 4; ++I) {
+  for (unsigned I = 0; I < OpNum; ++I) {
     Mode[I] = Mask[I];
   }
 }
@@ -241,11 +244,11 @@ bool AMDGPULowerVGPREncoding::lowerIDX(ModeTy &NewMode, MachineInstr &MI) {
 }
 
 bool AMDGPULowerVGPREncoding::computeModeForMSBs(ModeTy &Mode, MachineInstr &MI,
-                                                 const unsigned Ops[4],
+                                                 const unsigned Ops[OpNum],
                                                  const unsigned *Ops2) {
   bool RegUsed = false;
   ModeTy NewMode = Mode;
-  for (unsigned I = 0; I < 4; ++I) {
+  for (unsigned I = 0; I < OpNum; ++I) {
     MachineOperand *Op = TII->getNamedOperand(MI, Ops[I]);
 
     MCRegister Reg;
