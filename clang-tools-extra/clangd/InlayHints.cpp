@@ -383,7 +383,6 @@ class TypeHintBuilder : public TypeVisitor<TypeHintBuilder> {
   const PrintingPolicy &PP;
   SourceManager &SM;
   std::vector<InlayHintLabelPart> LabelChunks;
-  bool AppendSpaceToQuals;
 
   void addLabel(llvm::function_ref<void(llvm::raw_ostream &)> NamePrinter,
                 SourceLocation Location = SourceLocation()) {
@@ -569,8 +568,7 @@ public:
   TypeHintBuilder(ASTContext &Context, StringRef MainFilePath,
                   const PrintingPolicy &PP, llvm::StringRef Prefix)
       : CurrentNestedNameSpecifier(nullptr), Context(Context),
-        MainFilePath(MainFilePath), PP(PP), SM(Context.getSourceManager()),
-        AppendSpaceToQuals(true) {
+        MainFilePath(MainFilePath), PP(PP), SM(Context.getSourceManager()) {
     LabelChunks.reserve(16);
     if (!Prefix.empty())
       addLabel(Prefix.str());
@@ -584,13 +582,11 @@ public:
 
   void VisitQualType(QualType Q, bool AppendSpaceToTopLevelQuals = true,
                      NestedNameSpecifier *NNS = nullptr) {
-    QualType PreviousType = this->CurrentType;
-    NestedNameSpecifier *PreviousNNS = this->CurrentNestedNameSpecifier;
-    bool PrevAppendSpaceToQuals = this->AppendSpaceToQuals;
+    QualType PreviousType = CurrentType;
+    NestedNameSpecifier *PreviousNNS = CurrentNestedNameSpecifier;
 
-    this->AppendSpaceToQuals = AppendSpaceToTopLevelQuals;
-    this->CurrentType = Q;
-    this->CurrentNestedNameSpecifier = NNS;
+    CurrentType = Q;
+    CurrentNestedNameSpecifier = NNS;
     bool CanPrefixQualifiers = canPrefixQualifiers(CurrentType.getTypePtr());
     if (CanPrefixQualifiers)
       maybeAddQualifiers(/*AppendSpaceToQuals=*/true);
@@ -599,9 +595,8 @@ public:
 
     if (!CanPrefixQualifiers)
       maybeAddQualifiers(/*AppendSpaceToQuals=*/AppendSpaceToTopLevelQuals);
-    this->CurrentType = PreviousType;
-    this->CurrentNestedNameSpecifier = PreviousNNS;
-    this->AppendSpaceToQuals = PrevAppendSpaceToQuals;
+    CurrentType = PreviousType;
+    CurrentNestedNameSpecifier = PreviousNNS;
   }
 
   void VisitTagType(const TagType *TT) {
@@ -672,7 +667,6 @@ public:
   }
 
   void VisitElaboratedType(const ElaboratedType *ET) {
-    // maybeAddQualifiers();
     if (auto *NNS = ET->getQualifier()) {
       switch (NNS->getKind()) {
       case NestedNameSpecifier::Identifier:
@@ -704,7 +698,6 @@ public:
   }
 
   void VisitReferenceType(const ReferenceType *RT) {
-    // maybeAddQualifiers();
     QualType Next = skipTopLevelReferences(RT->getPointeeTypeAsWritten());
     VisitQualType(Next);
     if (Next->getPointeeType().isNull())
@@ -721,7 +714,6 @@ public:
     if (Next->getPointeeType().isNull())
       addLabel(" ");
     addLabel("*");
-    // maybeAddQualifiers();
   }
 
   void VisitUsingType(const UsingType *UT) {
@@ -735,7 +727,6 @@ public:
   }
 
   void VisitTemplateSpecializationType(const TemplateSpecializationType *TST) {
-    // maybeAddQualifiers();
     SourceLocation Location;
     TemplateName Name = TST->getTemplateName();
     TemplateName::Qualified PrintQual = TemplateName::Qualified::AsWritten;
@@ -780,7 +771,6 @@ public:
 
   void VisitDeducedTemplateSpecializationType(
       const DeducedTemplateSpecializationType *TST) {
-    // maybeAddQualifiers();
     // FIXME: The TST->getTemplateName() might differ from the name of
     // DeducedType, e.g. when the deduction guide is formed against a type alias
     // Decl.
@@ -788,7 +778,6 @@ public:
   }
 
   void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *ST) {
-    // maybeAddQualifiers();
     return VisitQualType(ST->getReplacementType());
   }
 
