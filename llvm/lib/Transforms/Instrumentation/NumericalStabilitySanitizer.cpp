@@ -672,7 +672,6 @@ private:
 
   std::optional<Regex> CheckFunctionsFilter;
 };
-
 } // end anonymous namespace
 
 PreservedAnalyses
