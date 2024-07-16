@@ -33,7 +33,15 @@ InterpState::~InterpState() {
   }
 }
 
-void InterpState::cleanup() {}
+void InterpState::cleanup() {
+  // As a last resort, make sure all pointers still pointing to a dead block
+  // don't point to it anymore.
+  for (DeadBlock *DB = DeadBlocks; DB; DB = DB->Next) {
+    for (Pointer *P = DB->B.Pointers; P; P = P->Next) {
+      P->PointeeStorage.BS.Pointee = nullptr;
+    }
+  }
+}
 
 Frame *InterpState::getCurrentFrame() {
   if (Current && Current->Caller)
