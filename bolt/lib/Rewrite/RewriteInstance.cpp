@@ -886,7 +886,7 @@ void RewriteInstance::discoverFileObjects() {
     if (SymName == "__hot_start" || SymName == "__hot_end")
       continue;
 
-    FileSymRefs[SymbolAddress] = Symbol;
+    FileSymRefs.emplace(SymbolAddress, Symbol);
 
     // Skip section symbols that will be registered by disassemblePLT().
     if (SymbolType == SymbolRef::ST_Debug) {
@@ -1433,7 +1433,16 @@ void RewriteInstance::registerFragments() {
     const uint64_t Address = BF->getAddress();
 
     // Get fragment's own symbol
-    const auto SymIt = FileSymRefs.find(Address);
+    auto SymIt = FileSymRefs.end();
+    auto EqualAddressSymRange = FileSymRefs.equal_range(Address);
+    while (EqualAddressSymRange.first != EqualAddressSymRange.second) {
+      auto EqualAddressSymIt = EqualAddressSymRange.first;
+      StringRef Name = cantFail(EqualAddressSymIt->second.getName());
+      if (Name.contains(ParentName)) {
+        SymIt = EqualAddressSymIt;
+        break;
+      }
+    }
     if (SymIt == FileSymRefs.end()) {
       BC->errs()
           << "BOLT-ERROR: symbol lookup failed for function at address 0x"
