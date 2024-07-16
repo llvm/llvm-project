@@ -1232,6 +1232,13 @@ namespace Extern {
   }
   static_assert(&ExternNonLiteralVarDecl() == &nl, "");
 #endif
+
+  struct A {
+    int b;
+  };
+
+  extern constexpr A a{12};
+  static_assert(a.b == 12, "");
 }
 
 #if __cplusplus >= 201402L
