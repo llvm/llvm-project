@@ -465,7 +465,12 @@ public:
     }
 
     if (auto *DIE = dyn_cast<CXXDefaultInitExpr>(E)) {
-      PropagateResultObject(DIE->getExpr(), Loc);
+      // If it has a rewritten init, we should propagate to that. If it doesn't,
+      // then the CXXDefaultInitExpr is the only initializer available during
+      // the analysis as the underlying Expr is only traversed as a child of the
+      // Decl being initialized, which is not usually in the CFG.
+      if (DIE->hasRewrittenInit())
+        PropagateResultObject(DIE->getExpr(), Loc);
       return;
     }
 
