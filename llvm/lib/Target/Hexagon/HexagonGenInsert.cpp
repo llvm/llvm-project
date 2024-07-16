@@ -1040,8 +1040,8 @@ void HexagonGenInsert::pruneEmptyLists() {
     if (I->second.empty())
       Prune.push_back(I);
   }
-  for (const auto &It : Prune)
-    IFMap.erase(It);
+  for (unsigned i = 0, n = Prune.size(); i < n; ++i)
+    IFMap.erase(Prune[i]);
 }
 
 void HexagonGenInsert::pruneCoveredSets(unsigned VR) {
@@ -1470,8 +1470,8 @@ bool HexagonGenInsert::removeDeadCode(MachineDomTreeNode *N) {
       continue;
 
     B->erase(MI);
-    for (unsigned Reg : Regs)
-      MRI->markUsesInDebugValueAsUndef(Reg);
+    for (unsigned I = 0, N = Regs.size(); I != N; ++I)
+      MRI->markUsesInDebugValueAsUndef(Regs[I]);
     Changed = true;
   }
 
@@ -1582,8 +1582,8 @@ bool HexagonGenInsert::runOnMachineFunction(MachineFunction &MF) {
       if (Idx >= Cutoff)
         Out.push_back(I);
     }
-    for (const auto &It : Out)
-      IFMap.erase(It);
+    for (unsigned i = 0, n = Out.size(); i < n; ++i)
+      IFMap.erase(Out[i]);
   }
   if (IFMap.empty())
     return Changed;

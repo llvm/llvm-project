@@ -1686,6 +1686,32 @@ static int map_from_llvmopcode(LLVMOpcode code)
     llvm_unreachable("Unhandled Opcode.");
 }
 
+/*-- GEP wrap flag conversions */
+
+static GEPNoWrapFlags mapFromLLVMGEPNoWrapFlags(LLVMGEPNoWrapFlags GEPFlags) {
+  GEPNoWrapFlags NewGEPFlags;
+  if ((GEPFlags & LLVMGEPFlagInBounds) != 0)
+    NewGEPFlags |= GEPNoWrapFlags::inBounds();
+  if ((GEPFlags & LLVMGEPFlagNUSW) != 0)
+    NewGEPFlags |= GEPNoWrapFlags::noUnsignedSignedWrap();
+  if ((GEPFlags & LLVMGEPFlagNUW) != 0)
+    NewGEPFlags |= GEPNoWrapFlags::noUnsignedWrap();
+
+  return NewGEPFlags;
+}
+
+static LLVMGEPNoWrapFlags mapToLLVMGEPNoWrapFlags(GEPNoWrapFlags GEPFlags) {
+  LLVMGEPNoWrapFlags NewGEPFlags = 0;
+  if (GEPFlags.isInBounds())
+    NewGEPFlags |= LLVMGEPFlagInBounds;
+  if (GEPFlags.hasNoUnsignedSignedWrap())
+    NewGEPFlags |= LLVMGEPFlagNUSW;
+  if (GEPFlags.hasNoUnsignedWrap())
+    NewGEPFlags |= LLVMGEPFlagNUW;
+
+  return NewGEPFlags;
+}
+
 /*--.. Constant expressions ................................................--*/
 
 LLVMOpcode LLVMGetConstOpcode(LLVMValueRef ConstantVal) {
@@ -1788,6 +1814,18 @@ LLVMValueRef LLVMConstInBoundsGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
                                NumIndices);
   Constant *Val = unwrap<Constant>(ConstantVal);
   return wrap(ConstantExpr::getInBoundsGetElementPtr(unwrap(Ty), Val, IdxList));
+}
+
+LLVMValueRef LLVMConstGEPWithNoWrapFlags(LLVMTypeRef Ty,
+                                         LLVMValueRef ConstantVal,
+                                         LLVMValueRef *ConstantIndices,
+                                         unsigned NumIndices,
+                                         LLVMGEPNoWrapFlags NoWrapFlags) {
+  ArrayRef<Constant *> IdxList(unwrap<Constant>(ConstantIndices, NumIndices),
+                               NumIndices);
+  Constant *Val = unwrap<Constant>(ConstantVal);
+  return wrap(ConstantExpr::getGetElementPtr(
+      unwrap(Ty), Val, IdxList, mapFromLLVMGEPNoWrapFlags(NoWrapFlags)));
 }
 
 LLVMValueRef LLVMConstTrunc(LLVMValueRef ConstantVal, LLVMTypeRef ToType) {
@@ -3103,6 +3141,16 @@ LLVMTypeRef LLVMGetGEPSourceElementType(LLVMValueRef GEP) {
   return wrap(unwrap<GEPOperator>(GEP)->getSourceElementType());
 }
 
+LLVMGEPNoWrapFlags LLVMGEPGetNoWrapFlags(LLVMValueRef GEP) {
+  GEPOperator *GEPOp = unwrap<GEPOperator>(GEP);
+  return mapToLLVMGEPNoWrapFlags(GEPOp->getNoWrapFlags());
+}
+
+void LLVMGEPSetNoWrapFlags(LLVMValueRef GEP, LLVMGEPNoWrapFlags NoWrapFlags) {
+  GetElementPtrInst *GEPInst = unwrap<GetElementPtrInst>(GEP);
+  GEPInst->setNoWrapFlags(mapFromLLVMGEPNoWrapFlags(NoWrapFlags));
+}
+
 /*--.. Operations on phi nodes .............................................--*/
 
 void LLVMAddIncoming(LLVMValueRef PhiNode, LLVMValueRef *IncomingValues,
@@ -3901,6 +3949,16 @@ LLVMValueRef LLVMBuildInBoundsGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
   ArrayRef<Value *> IdxList(unwrap(Indices), NumIndices);
   return wrap(
       unwrap(B)->CreateInBoundsGEP(unwrap(Ty), unwrap(Pointer), IdxList, Name));
+}
+
+LLVMValueRef LLVMBuildGEPWithNoWrapFlags(LLVMBuilderRef B, LLVMTypeRef Ty,
+                                         LLVMValueRef Pointer,
+                                         LLVMValueRef *Indices,
+                                         unsigned NumIndices, const char *Name,
+                                         LLVMGEPNoWrapFlags NoWrapFlags) {
+  ArrayRef<Value *> IdxList(unwrap(Indices), NumIndices);
+  return wrap(unwrap(B)->CreateGEP(unwrap(Ty), unwrap(Pointer), IdxList, Name,
+                                   mapFromLLVMGEPNoWrapFlags(NoWrapFlags)));
 }
 
 LLVMValueRef LLVMBuildStructGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
