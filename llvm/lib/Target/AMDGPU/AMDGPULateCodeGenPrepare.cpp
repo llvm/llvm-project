@@ -405,7 +405,7 @@ bool LiveRegOptimizer::optimizeLiveType(
         else {
           BasicBlock::iterator InsertPt = U->getParent()->getFirstNonPHIIt();
           // We may pick up ops that were previously converted for users in
-          // other blocks. If there is a originally typed definition of the Op
+          // other blocks. If there is an originally typed definition of the Op
           // already in this block, simply reuse it.
           if (isa<Instruction>(Op) && !isa<PHINode>(Op) &&
               U->getParent() == cast<Instruction>(Op)->getParent()) {
