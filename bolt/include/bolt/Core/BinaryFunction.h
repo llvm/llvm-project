@@ -835,10 +835,6 @@ public:
   /// them.
   void calculateLoopInfo();
 
-  /// Calculate missed macro-fusion opportunities and update BinaryContext
-  /// stats.
-  void calculateMacroOpFusionStats();
-
   /// Returns if BinaryDominatorTree has been constructed for this function.
   bool hasDomTree() const { return BDT != nullptr; }
 

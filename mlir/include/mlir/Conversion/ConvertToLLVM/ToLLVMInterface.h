@@ -11,7 +11,6 @@
 
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
 class ConversionTarget;

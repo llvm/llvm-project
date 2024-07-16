@@ -930,13 +930,6 @@ public:
   /// Return true if the instruction is encoded using EVEX (AVX-512).
   virtual bool hasEVEXEncoding(const MCInst &Inst) const { return false; }
 
-  /// Return true if a pair of instructions represented by \p Insts
-  /// could be fused into a single uop.
-  virtual bool isMacroOpFusionPair(ArrayRef<MCInst> Insts) const {
-    llvm_unreachable("not implemented");
-    return false;
-  }
-
   struct X86MemOperand {
     unsigned BaseRegNum;
     int64_t ScaleImm;
@@ -2048,9 +2041,14 @@ public:
     return InstructionListType();
   }
 
-  virtual InstructionListType createDummyReturnFunction(MCContext *Ctx) const {
-    llvm_unreachable("not implemented");
-    return InstructionListType();
+  /// Returns a function body that contains only a return instruction. An
+  /// example usage is a workaround for the '__bolt_fini_trampoline' of
+  // Instrumentation.
+  virtual InstructionListType
+  createReturnInstructionList(MCContext *Ctx) const {
+    InstructionListType Insts(1);
+    createReturn(Insts[0]);
+    return Insts;
   }
 
   /// This method takes an indirect call instruction and splits it up into an

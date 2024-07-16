@@ -277,6 +277,9 @@ public:
   /// Return true if all values in this range are non-negative.
   bool isAllNonNegative() const;
 
+  /// Return true if all values in this range are positive.
+  bool isAllPositive() const;
+
   /// Return the largest unsigned value contained in the ConstantRange.
   APInt getUnsignedMax() const;
 

@@ -3429,8 +3429,6 @@ void InitListChecker::UpdateStructuredListElement(InitListExpr *StructuredList,
   ++StructuredIndex;
 }
 
-/// Determine whether we can perform aggregate initialization for the purposes
-/// of overload resolution.
 bool Sema::CanPerformAggregateInitializationForOverloadResolution(
     const InitializedEntity &Entity, InitListExpr *From) {
   QualType Type = Entity.getType();
@@ -5578,6 +5576,10 @@ static void TryOrBuildParenListInitialization(
       ExprResult ER;
       ER = IS.Perform(S, SubEntity, SubKind,
                       Arg ? MultiExprArg(Arg) : std::nullopt);
+
+      if (ER.isInvalid())
+        return false;
+
       if (InitExpr)
         *InitExpr = ER.get();
       else
@@ -9813,9 +9815,6 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     // C++ [over.best.ics]p4:
     //   When [...] the constructor [...] is a candidate by
     //    - [over.match.copy] (in all cases)
-    // FIXME: The "second phase of [over.match.list] case can also
-    // theoretically happen here, but it's not clear whether we can
-    // ever have a parameter of the right type.
     if (TD) {
       SmallVector<Expr *, 8> TmpInits;
       for (Expr *E : Inits)

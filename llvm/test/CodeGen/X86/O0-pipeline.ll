@@ -44,7 +44,6 @@
 ; CHECK-NEXT:       Finalize ISel and expand pseudo-instructions
 ; CHECK-NEXT:       Local Stack Slot Allocation
 ; CHECK-NEXT:       X86 speculative load hardening
-; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       X86 EFLAGS copy lowering
 ; CHECK-NEXT:       X86 DynAlloca Expander
 ; CHECK-NEXT:       Fast Tile Register Preconfigure

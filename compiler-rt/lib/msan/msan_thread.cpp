@@ -1,8 +1,8 @@
 
-#include "msan.h"
 #include "msan_thread.h"
-#include "msan_interface_internal.h"
 
+#include "msan.h"
+#include "msan_interface_internal.h"
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 
 namespace __msan {

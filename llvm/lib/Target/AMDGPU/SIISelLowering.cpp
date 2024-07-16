@@ -16216,7 +16216,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       return AtomicExpansionKind::CmpXChg;
 
     // global and flat atomic fadd f64: gfx90a, gfx940.
-    if (Subtarget->hasGFX90AInsts() && Ty->isDoubleTy())
+    if (Subtarget->hasFlatBufferGlobalAtomicFaddF64Inst() && Ty->isDoubleTy())
       return ReportUnsafeHWInst(AtomicExpansionKind::None);
 
     if (AS != AMDGPUAS::FLAT_ADDRESS) {

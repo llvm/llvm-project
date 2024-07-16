@@ -548,7 +548,9 @@ public:
   static bool classof(const SectionBase *d) {
     return SyntheticSection::classof(d) &&
            (d->type == llvm::ELF::SHT_RELA || d->type == llvm::ELF::SHT_REL ||
-            d->type == llvm::ELF::SHT_RELR);
+            d->type == llvm::ELF::SHT_RELR ||
+            (d->type == llvm::ELF::SHT_AARCH64_AUTH_RELR &&
+             config->emachine == llvm::ELF::EM_AARCH64));
   }
   int32_t dynamicTag, sizeDynamicTag;
   SmallVector<DynamicReloc, 0> relocs;
@@ -596,15 +598,17 @@ private:
 };
 
 struct RelativeReloc {
-  uint64_t getOffset() const { return inputSec->getVA(offsetInSec); }
+  uint64_t getOffset() const {
+    return inputSec->getVA(inputSec->relocs()[relocIdx].offset);
+  }
 
   const InputSectionBase *inputSec;
-  uint64_t offsetInSec;
+  size_t relocIdx;
 };
 
 class RelrBaseSection : public SyntheticSection {
 public:
-  RelrBaseSection(unsigned concurrency);
+  RelrBaseSection(unsigned concurrency, bool isAArch64Auth = false);
   void mergeRels();
   bool isNeeded() const override {
     return !relocs.empty() ||
@@ -622,7 +626,7 @@ template <class ELFT> class RelrSection final : public RelrBaseSection {
   using Elf_Relr = typename ELFT::Relr;
 
 public:
-  RelrSection(unsigned concurrency);
+  RelrSection(unsigned concurrency, bool isAArch64Auth = false);
 
   bool updateAllocSize() override;
   size_t getSize() const override { return relrRelocs.size() * this->entsize; }
@@ -1460,6 +1464,7 @@ struct Partition {
   std::unique_ptr<PackageMetadataNote> packageMetadataNote;
   std::unique_ptr<RelocationBaseSection> relaDyn;
   std::unique_ptr<RelrBaseSection> relrDyn;
+  std::unique_ptr<RelrBaseSection> relrAuthDyn;
   std::unique_ptr<VersionDefinitionSection> verDef;
   std::unique_ptr<SyntheticSection> verNeed;
   std::unique_ptr<VersionTableSection> verSym;

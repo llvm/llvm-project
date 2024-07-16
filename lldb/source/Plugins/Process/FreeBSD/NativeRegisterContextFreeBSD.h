@@ -9,14 +9,13 @@
 #ifndef lldb_NativeRegisterContextFreeBSD_h
 #define lldb_NativeRegisterContextFreeBSD_h
 
-#include "lldb/Host/common/NativeThreadProtocol.h"
-
 #include "Plugins/Process/Utility/NativeRegisterContextRegisterInfo.h"
 
 namespace lldb_private {
 namespace process_freebsd {
 
 class NativeProcessFreeBSD;
+class NativeThreadFreeBSD;
 
 class NativeRegisterContextFreeBSD
     : public virtual NativeRegisterContextRegisterInfo {
@@ -28,7 +27,7 @@ public:
   // executable.
   static NativeRegisterContextFreeBSD *
   CreateHostNativeRegisterContextFreeBSD(const ArchSpec &target_arch,
-                                         NativeThreadProtocol &native_thread);
+                                         NativeThreadFreeBSD &native_thread);
   virtual llvm::Error
   CopyHardwareWatchpointsFrom(NativeRegisterContextFreeBSD &source) = 0;
 

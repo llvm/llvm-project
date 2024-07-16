@@ -115,7 +115,7 @@ struct llvm::TimeTraceProfiler {
 
   void end() {
     assert(!Stack.empty() && "Must call begin() first");
-    end(*Stack.back().get());
+    end(*Stack.back());
   }
 
   void end(TimeTraceProfilerEntry &E) {

@@ -50,6 +50,7 @@
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/IR/DbgVariableFragmentInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/SymbolTableListTraits.h"
@@ -460,6 +461,17 @@ public:
     resetDebugValue(0, NewLocation);
   }
 
+  std::optional<DbgVariableFragmentInfo> getFragment() const;
+  /// Get the FragmentInfo for the variable if it exists, otherwise return a
+  /// FragmentInfo that covers the entire variable if the variable size is
+  /// known, otherwise return a zero-sized fragment.
+  DbgVariableFragmentInfo getFragmentOrEntireVariable() const {
+    if (auto Frag = getFragment())
+      return *Frag;
+    if (auto Sz = getFragmentSizeInBits())
+      return {*Sz, 0};
+    return {0, 0};
+  }
   /// Get the size (in bits) of the variable, or fragment of the variable that
   /// is described.
   std::optional<uint64_t> getFragmentSizeInBits() const;

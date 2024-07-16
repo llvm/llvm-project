@@ -1106,9 +1106,8 @@ public:
     // assembly currently.
     if (Group)
       WasmSym->setComdat(true);
-    auto *WS =
-        getContext().getWasmSection(SecName, SectionKind::getText(), 0, Group,
-                                    MCContext::GenericSectionID, nullptr);
+    auto *WS = getContext().getWasmSection(SecName, SectionKind::getText(), 0,
+                                           Group, MCContext::GenericSectionID);
     getStreamer().switchSection(WS);
     // Also generate DWARF for this section if requested.
     if (getContext().getGenDwarfForAssembly())

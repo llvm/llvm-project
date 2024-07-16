@@ -149,6 +149,14 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   // Try looking through a bitcast from one function type to another.
   // Commonly happens with calls to objc_msgSend().
   const Value *CalleeV = CB.getCalledOperand()->stripPointerCasts();
+
+  // If IRTranslator chose to drop the ptrauth info, we can turn this into
+  // a direct call.
+  if (!PAI && CB.countOperandBundlesOfType(LLVMContext::OB_ptrauth)) {
+    CalleeV = cast<ConstantPtrAuth>(CalleeV)->getPointer();
+    assert(isa<Function>(CalleeV));
+  }
+
   if (const Function *F = dyn_cast<Function>(CalleeV)) {
     if (F->hasFnAttribute(Attribute::NonLazyBind)) {
       LLT Ty = getLLTForType(*F->getType(), DL);
@@ -886,10 +894,10 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
         if (VA.getLocInfo() == CCValAssign::Indirect)
           Handler.assignValueToAddress(ArgReg, StackAddr, PointerTy, MPO, VA);
         else
-          Handler.assignValueToAddress(Args[i], Part, StackAddr, MemTy, MPO, VA);
+          Handler.assignValueToAddress(Args[i], Part, StackAddr, MemTy, MPO,
+                                       VA);
       } else if (VA.isMemLoc() && Flags.isByVal()) {
-        assert(Args[i].Regs.size() == 1 &&
-               "didn't expect split byval pointer");
+        assert(Args[i].Regs.size() == 1 && "didn't expect split byval pointer");
 
         if (Handler.isIncomingArgumentHandler()) {
           // We just need to copy the frame index value to the pointer.
@@ -1305,7 +1313,8 @@ Register CallLowering::ValueHandler::extendRegister(Register ValReg,
   }
 
   switch (VA.getLocInfo()) {
-  default: break;
+  default:
+    break;
   case CCValAssign::Full:
   case CCValAssign::BCvt:
     // FIXME: bitconverting between vector types may or may not be a

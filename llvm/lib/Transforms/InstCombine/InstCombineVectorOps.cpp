@@ -419,6 +419,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   // If extracting a specified index from the vector, see if we can recursively
   // find a previously computed scalar that was inserted into the vector.
   auto *IndexC = dyn_cast<ConstantInt>(Index);
+  bool HasKnownValidIndex = false;
   if (IndexC) {
     // Canonicalize type of constant indices to i64 to simplify CSE
     if (auto *NewIdx = getPreferredVectorIndex(IndexC))
@@ -426,6 +427,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
 
     ElementCount EC = EI.getVectorOperandType()->getElementCount();
     unsigned NumElts = EC.getKnownMinValue();
+    HasKnownValidIndex = IndexC->getValue().ult(NumElts);
 
     if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(SrcVec)) {
       Intrinsic::ID IID = II->getIntrinsicID();
@@ -471,8 +473,11 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
     return UnaryOperator::CreateWithCopiedFlags(UO->getOpcode(), E, UO);
   }
 
+  // If the binop is not speculatable, we cannot hoist the extractelement if
+  // it may make the operand poison.
   BinaryOperator *BO;
-  if (match(SrcVec, m_BinOp(BO)) && cheapToScalarize(SrcVec, Index)) {
+  if (match(SrcVec, m_BinOp(BO)) && cheapToScalarize(SrcVec, Index) &&
+      (HasKnownValidIndex || isSafeToSpeculativelyExecute(BO))) {
     // extelt (binop X, Y), Index --> binop (extelt X, Index), (extelt Y, Index)
     Value *X = BO->getOperand(0), *Y = BO->getOperand(1);
     Value *E0 = Builder.CreateExtractElement(X, Index);

@@ -89,3 +89,7 @@ The C23 standard states that if the value of the ``rnd`` argument of the
 the value of a math rounding direction macro, the direction of rounding is
 unspecified. LLVM's libc chooses to use the ``FP_INT_TONEAREST`` rounding
 direction in this case.
+
+Non-const Constant Return Values
+--------------------------------
+Some libc functions, like ``dlerror()``, return ``char *`` instead of ``const char *`` and then tell the caller they promise not to to modify this value. Any modification of this value is undefined behavior.

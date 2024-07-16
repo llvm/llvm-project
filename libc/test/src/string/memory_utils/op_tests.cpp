@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "memory_check_utils.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT64
 #include "src/string/memory_utils/op_aarch64.h"
 #include "src/string/memory_utils/op_builtin.h"
@@ -15,7 +16,7 @@
 #include "src/string/memory_utils/op_x86.h"
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 template <typename T> struct has_head_tail {
   template <typename C> static char sfinae(decltype(&C::head_tail));
@@ -191,6 +192,13 @@ TYPED_TEST(LlvmLibcOpTest, Memset, MemsetImplementations) {
   }
 }
 
+#ifdef LIBC_TARGET_ARCH_IS_X86_64
+// Prevent GCC warning due to ignored __aligned__ attributes when passing x86
+// SIMD types as template arguments.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-attributes"
+#endif // LIBC_TARGET_ARCH_IS_X86_64
+
 using BcmpImplementations = testing::TypeList<
 #ifdef LIBC_TARGET_ARCH_IS_X86_64
 #ifdef __SSE4_1__
@@ -222,6 +230,10 @@ using BcmpImplementations = testing::TypeList<
     generic::BcmpSequence<uint8_t, uint8_t>,
     generic::BcmpSequence<uint8_t, uint8_t, uint8_t>, //
     generic::Bcmp<uint8_t>>;
+
+#ifdef LIBC_TARGET_ARCH_IS_X86_64
+#pragma GCC diagnostic pop
+#endif // LIBC_TARGET_ARCH_IS_X86_64
 
 // Adapt CheckBcmp signature to op implementation signatures.
 template <auto FnImpl>
@@ -274,6 +286,13 @@ TYPED_TEST(LlvmLibcOpTest, Bcmp, BcmpImplementations) {
   }
 }
 
+#ifdef LIBC_TARGET_ARCH_IS_X86_64
+// Prevent GCC warning due to ignored __aligned__ attributes when passing x86
+// SIMD types as template arguments.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-attributes"
+#endif // LIBC_TARGET_ARCH_IS_X86_64
+
 using MemcmpImplementations = testing::TypeList<
 #ifdef LIBC_TARGET_ARCH_IS_X86_64
 #ifdef __SSE2__
@@ -302,6 +321,10 @@ using MemcmpImplementations = testing::TypeList<
     generic::MemcmpSequence<uint8_t, uint8_t>,
     generic::MemcmpSequence<uint8_t, uint8_t, uint8_t>,
     generic::Memcmp<uint8_t>>;
+
+#ifdef LIBC_TARGET_ARCH_IS_X86_64
+#pragma GCC diagnostic pop
+#endif // LIBC_TARGET_ARCH_IS_X86_64
 
 TYPED_TEST(LlvmLibcOpTest, Memcmp, MemcmpImplementations) {
   using Impl = ParamType;
@@ -344,4 +367,4 @@ TYPED_TEST(LlvmLibcOpTest, Memcmp, MemcmpImplementations) {
   }
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -52,7 +52,7 @@ def DataLayoutEntryInterface : AttrInterface<"DataLayoutEntryInterface"> {
     InterfaceMethod<
       /*description=*/"Checks that the entry is well-formed, reports errors "
                       "at the provided location.",
-      /*retTy=*/"::mlir::LogicalResult",
+      /*retTy=*/"::llvm::LogicalResult",
       /*methodName=*/"verifyEntry",
       /*args=*/(ins "::mlir::Location":$loc),
       /*methodBody=*/"",
@@ -166,7 +166,7 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface"> {
     InterfaceMethod<
       /*description=*/"Verifies the validity of the specification and reports "
                       "any errors at the given location.",
-      /*retTy=*/"::mlir::LogicalResult",
+      /*retTy=*/"::llvm::LogicalResult",
       /*methodName=*/"verifySpec",
       /*args=*/(ins "::mlir::Location":$loc),
       /*methodBody=*/"",
@@ -232,7 +232,7 @@ def TargetDeviceSpecInterface : AttrInterface<"TargetDeviceSpecInterface"> {
     InterfaceMethod<
       /*description=*/"Checks that the entry is well-formed, reports errors "
                       "at the provided location.",
-      /*retTy=*/"::mlir::LogicalResult",
+      /*retTy=*/"::llvm::LogicalResult",
       /*methodName=*/"verifyEntry",
       /*args=*/(ins "::mlir::Location":$loc),
       /*methodBody=*/"",
@@ -275,7 +275,7 @@ def TargetSystemSpecInterface : AttrInterface<"TargetSystemSpecInterface"> {
     InterfaceMethod<
       /*description=*/"Verifies the validity of the specification and "
                       "reports any errors at the given location.",
-      /*retTy=*/"::mlir::LogicalResult",
+      /*retTy=*/"::llvm::LogicalResult",
       /*methodName=*/"verifySpec",
       /*args=*/(ins "::mlir::Location":$loc),
       /*methodBody=*/"",
@@ -574,7 +574,7 @@ def DataLayoutTypeInterface : TypeInterface<"DataLayoutTypeInterface"> {
     InterfaceMethod<
       /*description=*/"Verifies that the given list of entries is valid for "
                       "this type.",
-      /*retTy=*/"::mlir::LogicalResult",
+      /*retTy=*/"::llvm::LogicalResult",
       /*methodName=*/"verifyEntries",
       /*args=*/(ins "::mlir::DataLayoutEntryListRef":$entries,
                     "::mlir::Location":$loc),

@@ -593,7 +593,9 @@ unsigned Parser::ParseAttributeArgsCommon(
           EnterExpressionEvaluationContext Unevaluated(
               Actions,
               Uneval ? Sema::ExpressionEvaluationContext::Unevaluated
-                     : Sema::ExpressionEvaluationContext::ConstantEvaluated);
+                     : Sema::ExpressionEvaluationContext::ConstantEvaluated,
+              nullptr,
+              Sema::ExpressionEvaluationContextRecord::EK_AttrArgument);
 
           ExprResult ArgExpr(
               Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression()));
@@ -610,9 +612,12 @@ unsigned Parser::ParseAttributeArgsCommon(
       // General case. Parse all available expressions.
       bool Uneval = attributeParsedArgsUnevaluated(*AttrName);
       EnterExpressionEvaluationContext Unevaluated(
-          Actions, Uneval
-                       ? Sema::ExpressionEvaluationContext::Unevaluated
-                       : Sema::ExpressionEvaluationContext::ConstantEvaluated);
+          Actions,
+          Uneval ? Sema::ExpressionEvaluationContext::Unevaluated
+                 : Sema::ExpressionEvaluationContext::ConstantEvaluated,
+          nullptr,
+          Sema::ExpressionEvaluationContextRecord::ExpressionKind::
+              EK_AttrArgument);
 
       ExprVector ParsedExprs;
       ParsedAttributeArgumentsProperties ArgProperties =
@@ -695,7 +700,10 @@ void Parser::ParseGNUAttributeArgs(
     ParseAttributeWithTypeArg(*AttrName, AttrNameLoc, Attrs, ScopeName,
                               ScopeLoc, Form);
     return;
-  } else if (AttrKind == ParsedAttr::AT_CountedBy) {
+  } else if (AttrKind == ParsedAttr::AT_CountedBy ||
+             AttrKind == ParsedAttr::AT_CountedByOrNull ||
+             AttrKind == ParsedAttr::AT_SizedBy ||
+             AttrKind == ParsedAttr::AT_SizedByOrNull) {
     ParseBoundsAttribute(*AttrName, AttrNameLoc, Attrs, ScopeName, ScopeLoc,
                          Form);
     return;
@@ -3383,7 +3391,7 @@ void Parser::ParseBoundsAttribute(IdentifierInfo &AttrName,
       Sema::ExpressionEvaluationContextRecord::ExpressionKind;
   EnterExpressionEvaluationContext EC(
       Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, nullptr,
-      ExpressionKind::EK_BoundsAttrArgument);
+      ExpressionKind::EK_AttrArgument);
 
   ExprResult ArgExpr(
       Actions.CorrectDelayedTyposInExpr(ParseAssignmentExpression()));
@@ -4861,9 +4869,8 @@ static void DiagnoseCountAttributedTypeInUnnamedAnon(ParsingDeclSpec &DS,
 
     for (const auto &DD : CAT->dependent_decls()) {
       if (!RD->containsDecl(DD.getDecl())) {
-        P.Diag(VD->getBeginLoc(),
-               diag::err_flexible_array_count_not_in_same_struct)
-            << DD.getDecl();
+        P.Diag(VD->getBeginLoc(), diag::err_count_attr_param_not_in_same_struct)
+            << DD.getDecl() << CAT->getKind() << CAT->isArrayType();
         P.Diag(DD.getDecl()->getBeginLoc(),
                diag::note_flexible_array_counted_by_attr_field)
             << DD.getDecl();

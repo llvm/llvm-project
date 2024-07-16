@@ -20,8 +20,7 @@
 
 using namespace llvm;
 
-LinkInModulesPass::LinkInModulesPass(clang::BackendConsumer *BC) : BC(BC),
-  ShouldLinkFiles(ShouldLinkFiles) {}
+LinkInModulesPass::LinkInModulesPass(clang::BackendConsumer *BC) : BC(BC) {}
 
 PreservedAnalyses LinkInModulesPass::run(Module &M, ModuleAnalysisManager &AM) {
   if (!BC)

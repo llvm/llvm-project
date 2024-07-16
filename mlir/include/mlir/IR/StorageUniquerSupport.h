@@ -16,7 +16,6 @@
 #include "mlir/IR/AttrTypeSubElements.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/Support/InterfaceSupport.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/StorageUniquer.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/FunctionExtras.h"

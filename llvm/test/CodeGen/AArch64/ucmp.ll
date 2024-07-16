@@ -93,3 +93,20 @@ define i64 @ucmp.64.64(i64 %x, i64 %y) nounwind {
   %1 = call i64 @llvm.ucmp(i64 %x, i64 %y)
   ret i64 %1
 }
+
+define <1 x i64> @ucmp.1.64.65(<1 x i65> %x, <1 x i65> %y) {
+; CHECK-LABEL: ucmp.1.64.65:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and x8, x1, #0x1
+; CHECK-NEXT:    and x9, x3, #0x1
+; CHECK-NEXT:    cmp x2, x0
+; CHECK-NEXT:    sbcs xzr, x9, x8
+; CHECK-NEXT:    cset x10, lo
+; CHECK-NEXT:    cmp x0, x2
+; CHECK-NEXT:    sbcs xzr, x8, x9
+; CHECK-NEXT:    csinv x8, x10, xzr, hs
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ret
+  %1 = call <1 x i64> @llvm.ucmp(<1 x i65> %x, <1 x i65> %y)
+  ret <1 x i64> %1
+}

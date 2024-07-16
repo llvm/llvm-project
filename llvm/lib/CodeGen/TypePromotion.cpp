@@ -929,7 +929,7 @@ bool TypePromotionImpl::run(Function &F, const TargetMachine *TM,
   TLI = SubtargetInfo->getTargetLowering();
   RegisterBitWidth =
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_Scalar).getFixedValue();
-  Ctx = &F.getParent()->getContext();
+  Ctx = &F.getContext();
 
   // Return the preferred integer width of the instruction, or zero if we
   // shouldn't try.
