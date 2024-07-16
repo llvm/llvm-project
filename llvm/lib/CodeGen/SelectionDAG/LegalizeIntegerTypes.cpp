@@ -332,6 +332,10 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::LLRINT:
     Res = PromoteIntRes_XRINT(N);
     break;
+
+  case ISD::PATCHPOINT:
+    Res = PromoteIntRes_PATCHPOINT(N);
+    break;
   }
 
   // If the result is null then the sub-method took care of registering it.
@@ -658,24 +662,46 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CTLZ(SDNode *N) {
     }
   }
 
-  // Subtract off the extra leading bits in the bigger type.
-  SDValue ExtractLeadingBits = DAG.getConstant(
-      NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits(), dl, NVT);
-  if (!N->isVPOpcode()) {
-    // Zero extend to the promoted type and do the count there.
-    SDValue Op = ZExtPromotedInteger(N->getOperand(0));
-    return DAG.getNode(ISD::SUB, dl, NVT,
-                       DAG.getNode(N->getOpcode(), dl, NVT, Op),
-                       ExtractLeadingBits);
-  }
+  unsigned CtlzOpcode = N->getOpcode();
+  if (CtlzOpcode == ISD::CTLZ || CtlzOpcode == ISD::VP_CTLZ) {
+    // Subtract off the extra leading bits in the bigger type.
+    SDValue ExtractLeadingBits = DAG.getConstant(
+        NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits(), dl, NVT);
 
-  SDValue Mask = N->getOperand(1);
-  SDValue EVL = N->getOperand(2);
-  // Zero extend to the promoted type and do the count there.
-  SDValue Op = VPZExtPromotedInteger(N->getOperand(0), Mask, EVL);
-  return DAG.getNode(ISD::VP_SUB, dl, NVT,
-                     DAG.getNode(N->getOpcode(), dl, NVT, Op, Mask, EVL),
-                     ExtractLeadingBits, Mask, EVL);
+    if (!N->isVPOpcode()) {
+      // Zero extend to the promoted type and do the count there.
+      SDValue Op = ZExtPromotedInteger(N->getOperand(0));
+      return DAG.getNode(ISD::SUB, dl, NVT,
+                         DAG.getNode(N->getOpcode(), dl, NVT, Op),
+                         ExtractLeadingBits);
+    }
+    SDValue Mask = N->getOperand(1);
+    SDValue EVL = N->getOperand(2);
+    // Zero extend to the promoted type and do the count there.
+    SDValue Op = VPZExtPromotedInteger(N->getOperand(0), Mask, EVL);
+    return DAG.getNode(ISD::VP_SUB, dl, NVT,
+                       DAG.getNode(N->getOpcode(), dl, NVT, Op, Mask, EVL),
+                       ExtractLeadingBits, Mask, EVL);
+  }
+  if (CtlzOpcode == ISD::CTLZ_ZERO_UNDEF ||
+      CtlzOpcode == ISD::VP_CTLZ_ZERO_UNDEF) {
+    // Any Extend the argument
+    SDValue Op = GetPromotedInteger(N->getOperand(0));
+    // Op = Op << (sizeinbits(NVT) - sizeinbits(Old VT))
+    unsigned SHLAmount = NVT.getScalarSizeInBits() - OVT.getScalarSizeInBits();
+    auto ShiftConst =
+        DAG.getShiftAmountConstant(SHLAmount, Op.getValueType(), dl);
+    if (!N->isVPOpcode()) {
+      Op = DAG.getNode(ISD::SHL, dl, NVT, Op, ShiftConst);
+      return DAG.getNode(CtlzOpcode, dl, NVT, Op);
+    }
+
+    SDValue Mask = N->getOperand(1);
+    SDValue EVL = N->getOperand(2);
+    Op = DAG.getNode(ISD::VP_SHL, dl, NVT, Op, ShiftConst, Mask, EVL);
+    return DAG.getNode(CtlzOpcode, dl, NVT, Op, Mask, EVL);
+  }
+  llvm_unreachable("Invalid CTLZ Opcode");
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_CTPOP_PARITY(SDNode *N) {
@@ -5747,21 +5773,20 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_SUBVECTOR(SDNode *N) {
 
   SDValue InOp0 = N->getOperand(0);
   if (getTypeAction(InOp0.getValueType()) == TargetLowering::TypePromoteInteger)
-    InOp0 = GetPromotedInteger(N->getOperand(0));
+    InOp0 = GetPromotedInteger(InOp0);
 
   EVT InVT = InOp0.getValueType();
+  EVT InSVT = InVT.getVectorElementType();
 
   unsigned OutNumElems = OutVT.getVectorNumElements();
   SmallVector<SDValue, 8> Ops;
   Ops.reserve(OutNumElems);
   for (unsigned i = 0; i != OutNumElems; ++i) {
-
     // Extract the element from the original vector.
-    SDValue Index = DAG.getNode(ISD::ADD, dl, BaseIdx.getValueType(),
-      BaseIdx, DAG.getConstant(i, dl, BaseIdx.getValueType()));
-    SDValue Ext = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl,
-      InVT.getVectorElementType(), N->getOperand(0), Index);
-
+    SDValue Index = DAG.getNode(ISD::ADD, dl, BaseIdx.getValueType(), BaseIdx,
+                                DAG.getConstant(i, dl, BaseIdx.getValueType()));
+    SDValue Ext = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, InSVT,
+                              N->getOperand(0), Index);
     SDValue Op = DAG.getAnyExtOrTrunc(Ext, dl, NOutVTElem);
     // Insert the converted element to the new vector.
     Ops.push_back(Op);
@@ -6013,6 +6038,24 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VP_REDUCE(SDNode *N) {
   SDValue Start = PromoteIntOpVectorReduction(N, N->getOperand(0));
   return DAG.getNode(N->getOpcode(), DL, Start.getValueType(), Start,
                      N->getOperand(1), N->getOperand(2), N->getOperand(3));
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_PATCHPOINT(SDNode *N) {
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  SDLoc dl(N);
+
+  assert(N->getNumValues() == 3 && "Expected 3 values for PATCHPOINT");
+  SDVTList VTList = DAG.getVTList({NVT, MVT::Other, MVT::Glue});
+
+  SmallVector<SDValue> Ops(N->ops());
+  SDValue Res = DAG.getNode(ISD::PATCHPOINT, dl, VTList, Ops);
+
+  // Replace chain and glue uses with the new patchpoint.
+  SDValue From[] = {SDValue(N, 1), SDValue(N, 2)};
+  SDValue To[] = {Res.getValue(1), Res.getValue(2)};
+  DAG.ReplaceAllUsesOfValuesWith(From, To, 2);
+
+  return Res.getValue(0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_EXTRACT_VECTOR_ELT(SDNode *N) {

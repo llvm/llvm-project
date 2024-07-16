@@ -387,8 +387,7 @@ void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
                            Metadata *Val) {
   NamedMDNode *ModFlags = getOrInsertModuleFlagsMetadata();
   // Replace the flag if it already exists.
-  for (unsigned I = 0, E = ModFlags->getNumOperands(); I != E; ++I) {
-    MDNode *Flag = ModFlags->getOperand(I);
+  for (MDNode *Flag : ModFlags->operands()) {
     ModFlagBehavior MFB;
     MDString *K = nullptr;
     Metadata *V = nullptr;
@@ -398,6 +397,15 @@ void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
     }
   }
   addModuleFlag(Behavior, Key, Val);
+}
+void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
+                           Constant *Val) {
+  setModuleFlag(Behavior, Key, ConstantAsMetadata::get(Val));
+}
+void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
+                           uint32_t Val) {
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  setModuleFlag(Behavior, Key, ConstantInt::get(Int32Ty, Val));
 }
 
 void Module::setDataLayout(StringRef Desc) {

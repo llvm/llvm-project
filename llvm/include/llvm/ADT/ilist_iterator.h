@@ -53,19 +53,19 @@ template <> struct IteratorHelper<true> : ilist_detail::NodeAccess {
 /// Mixin class used to add a \a getNodeParent() function to iterators iff the
 /// list uses \a ilist_parent, calling through to the node's \a getParent(). For
 /// more details see \a ilist_node.
-template <class IteratorTy, class ParentPtrTy, bool IsConst>
+template <class IteratorTy, class ParentTy, bool IsConst>
 class iterator_parent_access;
-template <class IteratorTy, class ParentPtrTy>
-class iterator_parent_access<IteratorTy, ParentPtrTy, true> {
+template <class IteratorTy, class ParentTy>
+class iterator_parent_access<IteratorTy, ParentTy, true> {
 public:
-  inline const ParentPtrTy getNodeParent() const {
+  inline const ParentTy *getNodeParent() const {
     return static_cast<IteratorTy *>(this)->NodePtr->getParent();
   }
 };
-template <class IteratorTy, class ParentPtrTy>
-class iterator_parent_access<IteratorTy, ParentPtrTy, false> {
+template <class IteratorTy, class ParentTy>
+class iterator_parent_access<IteratorTy, ParentTy, false> {
 public:
-  inline ParentPtrTy getNodeParent() {
+  inline ParentTy *getNodeParent() {
     return static_cast<IteratorTy *>(this)->NodePtr->getParent();
   }
 };
@@ -81,13 +81,13 @@ template <class OptionsT, bool IsReverse, bool IsConst>
 class ilist_iterator : ilist_detail::SpecificNodeAccess<OptionsT>,
                        public ilist_detail::iterator_parent_access<
                            ilist_iterator<OptionsT, IsReverse, IsConst>,
-                           typename OptionsT::parent_ptr_ty, IsConst> {
+                           typename OptionsT::parent_ty, IsConst> {
   friend ilist_iterator<OptionsT, IsReverse, !IsConst>;
   friend ilist_iterator<OptionsT, !IsReverse, IsConst>;
   friend ilist_iterator<OptionsT, !IsReverse, !IsConst>;
   friend ilist_detail::iterator_parent_access<
-                           ilist_iterator<OptionsT, IsReverse, IsConst>,
-                           typename OptionsT::parent_ptr_ty, IsConst>;
+      ilist_iterator<OptionsT, IsReverse, IsConst>,
+      typename OptionsT::parent_ty, IsConst>;
 
   using Traits = ilist_detail::IteratorTraits<OptionsT, IsConst>;
   using Access = ilist_detail::SpecificNodeAccess<OptionsT>;
@@ -215,13 +215,13 @@ class ilist_iterator_w_bits
     : ilist_detail::SpecificNodeAccess<OptionsT>,
       public ilist_detail::iterator_parent_access<
           ilist_iterator_w_bits<OptionsT, IsReverse, IsConst>,
-          typename OptionsT::parent_ptr_ty, IsConst> {
+          typename OptionsT::parent_ty, IsConst> {
   friend ilist_iterator_w_bits<OptionsT, IsReverse, !IsConst>;
   friend ilist_iterator_w_bits<OptionsT, !IsReverse, IsConst>;
   friend ilist_iterator<OptionsT, !IsReverse, !IsConst>;
   friend ilist_detail::iterator_parent_access<
-                           ilist_iterator_w_bits<OptionsT, IsReverse, IsConst>,
-                           typename OptionsT::parent_ptr_ty, IsConst>;
+      ilist_iterator_w_bits<OptionsT, IsReverse, IsConst>,
+      typename OptionsT::parent_ty, IsConst>;
 
   using Traits = ilist_detail::IteratorTraits<OptionsT, IsConst>;
   using Access = ilist_detail::SpecificNodeAccess<OptionsT>;

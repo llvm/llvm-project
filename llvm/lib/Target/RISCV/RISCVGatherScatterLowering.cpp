@@ -548,7 +548,7 @@ bool RISCVGatherScatterLowering::runOnFunction(Function &F) {
     return false;
 
   TLI = ST->getTargetLowering();
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
 
   StridedAddrs.clear();

@@ -780,15 +780,23 @@ defm V_SUBREV_U32 : VOP2Inst <"v_subrev_u32", VOP_I32_I32_I32_ARITH, null_frag, 
 
 // These are special and do not read the exec mask.
 let isConvergent = 1, Uses = []<Register>, IsInvalidSingleUseConsumer = 1 in {
-def V_READLANE_B32 : VOP2_Pseudo<"v_readlane_b32", VOP_READLANE,
-  [(set i32:$vdst, (int_amdgcn_readlane i32:$src0, i32:$src1))]>;
+def V_READLANE_B32 : VOP2_Pseudo<"v_readlane_b32", VOP_READLANE, []>;
 let IsNeverUniform = 1, Constraints = "$vdst = $vdst_in", DisableEncoding="$vdst_in" in {
-def V_WRITELANE_B32 : VOP2_Pseudo<"v_writelane_b32", VOP_WRITELANE,
-  [(set i32:$vdst, (int_amdgcn_writelane i32:$src0, i32:$src1, i32:$vdst_in))]> {
+def V_WRITELANE_B32 : VOP2_Pseudo<"v_writelane_b32", VOP_WRITELANE, []> {
     let IsInvalidSingleUseProducer = 1;
   }
 } // End IsNeverUniform, $vdst = $vdst_in, DisableEncoding $vdst_in
 } // End isConvergent = 1
+
+foreach vt = Reg32Types.types in {
+  def : GCNPat<(vt (int_amdgcn_readlane vt:$src0, i32:$src1)),
+        (V_READLANE_B32 VRegOrLdsSrc_32:$src0, SCSrc_b32:$src1)
+  >;
+
+  def : GCNPat<(vt (int_amdgcn_writelane vt:$src0, i32:$src1, vt:$src2)),
+        (V_WRITELANE_B32 SCSrc_b32:$src0, SCSrc_b32:$src1, VGPR_32:$src2)
+  >;
+}
 
 let isReMaterializable = 1 in {
 defm V_BFM_B32 : VOP2Inst <"v_bfm_b32", VOP_I32_I32_I32>;

@@ -16,15 +16,16 @@
 #define MLIR_ANALYSIS_PRESBURGER_MATRIX_H
 
 #include "mlir/Analysis/Presburger/Fraction.h"
-#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include <bitset>
 #include <cassert>
 
 namespace mlir {
 namespace presburger {
+using llvm::ArrayRef;
+using llvm::MutableArrayRef;
+using llvm::raw_ostream;
+using llvm::SmallVector;
 
 /// This is a class to represent a resizable matrix.
 ///

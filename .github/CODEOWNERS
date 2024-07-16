@@ -64,8 +64,8 @@ clang/test/AST/Interp/ @tbaederr
 /mlir/Dialect/*/Transforms/Bufferize.cpp @matthias-springer
 
 # Linalg Dialect in MLIR.
-/mlir/include/mlir/Dialect/Linalg/* @dcaballe @nicolasvasilache @rengolin
-/mlir/lib/Dialect/Linalg/* @dcaballe @nicolasvasilache @rengolin
+/mlir/include/mlir/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin
+/mlir/lib/Dialect/Linalg @dcaballe @nicolasvasilache @rengolin
 /mlir/lib/Dialect/Linalg/Transforms/DecomposeLinalgOps.cpp @MaheshRavishankar @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/DropUnitDims.cpp @MaheshRavishankar @nicolasvasilache
 /mlir/lib/Dialect/Linalg/Transforms/ElementwiseOpFusion.cpp @MaheshRavishankar @nicolasvasilache
@@ -85,8 +85,8 @@ clang/test/AST/Interp/ @tbaederr
 /mlir/**/*VectorToSCF* @banach-space @dcaballe @matthias-springer @nicolasvasilache
 /mlir/**/*VectorToLLVM* @banach-space @dcaballe @nicolasvasilache
 /mlir/**/*X86Vector* @aartbik @dcaballe @nicolasvasilache
-/mlir/include/mlir/Dialect/Vector/* @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Vector/* @dcaballe @nicolasvasilache
+/mlir/include/mlir/Dialect/Vector @dcaballe @nicolasvasilache
+/mlir/lib/Dialect/Vector @dcaballe @nicolasvasilache
 /mlir/lib/Dialect/Vector/Transforms/* @hanhanW @nicolasvasilache
 /mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @MaheshRavishankar @nicolasvasilache
 /mlir/**/*EmulateNarrowType* @dcaballe @hanhanW
@@ -120,6 +120,9 @@ clang/test/AST/Interp/ @tbaederr
 /mlir/**/LLVMIR/**/BasicPtxBuilderInterface* @grypp
 /mlir/**/NVVM* @grypp
 
+# MLIR Index Dialect
+/mlir/**/Index* @mogball
+
 # MLIR Python Bindings
 /mlir/test/python/ @ftynse @makslevental @stellaraccident
 /mlir/python/ @ftynse @makslevental @stellaraccident
@@ -141,3 +144,8 @@ clang/test/AST/Interp/ @tbaederr
 
 # ExtractAPI
 /clang/**/ExtractAPI @daniel-grumberg
+
+# DWARFLinker, dwarfutil, dsymutil
+/llvm/**/DWARFLinker/ @JDevlieghere
+/llvm/**/dsymutil/ @JDevlieghere
+/llvm/**/llvm-dwarfutil/ @JDevlieghere

@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ABIInfoImpl.h"
 #include "CGCUDARuntime.h"
 #include "CGCXXABI.h"
 #include "CGCall.h"
@@ -120,7 +121,7 @@ llvm::AllocaInst *CodeGenFunction::CreateTempAlloca(llvm::Type *Ty,
     Alloca = Builder.CreateAlloca(Ty, ArraySize, Name);
   else
     Alloca = new llvm::AllocaInst(Ty, CGM.getDataLayout().getAllocaAddrSpace(),
-                                  ArraySize, Name, AllocaInsertPt);
+                                  ArraySize, Name, &*AllocaInsertPt);
   if (Allocas) {
     Allocas->Add(Alloca);
   }
@@ -650,16 +651,13 @@ unsigned CodeGenFunction::getAccessedFieldNo(unsigned Idx,
       ->getZExtValue();
 }
 
-/// Emit the hash_16_bytes function from include/llvm/ADT/Hashing.h.
-static llvm::Value *emitHash16Bytes(CGBuilderTy &Builder, llvm::Value *Low,
-                                    llvm::Value *High) {
-  llvm::Value *KMul = Builder.getInt64(0x9ddfea08eb382d69ULL);
-  llvm::Value *K47 = Builder.getInt64(47);
-  llvm::Value *A0 = Builder.CreateMul(Builder.CreateXor(Low, High), KMul);
-  llvm::Value *A1 = Builder.CreateXor(Builder.CreateLShr(A0, K47), A0);
-  llvm::Value *B0 = Builder.CreateMul(Builder.CreateXor(High, A1), KMul);
-  llvm::Value *B1 = Builder.CreateXor(Builder.CreateLShr(B0, K47), B0);
-  return Builder.CreateMul(B1, KMul);
+static llvm::Value *emitHashMix(CGBuilderTy &Builder, llvm::Value *Acc,
+                                llvm::Value *Ptr) {
+  llvm::Value *A0 =
+      Builder.CreateMul(Ptr, Builder.getInt64(0xbf58476d1ce4e5b9u));
+  llvm::Value *A1 =
+      Builder.CreateXor(A0, Builder.CreateLShr(A0, Builder.getInt64(31)));
+  return Builder.CreateXor(Acc, A1);
 }
 
 bool CodeGenFunction::isNullPointerAllowed(TypeCheckKind TCK) {
@@ -821,11 +819,7 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
       EmitBlock(VptrNotNull);
     }
 
-    // Compute a hash of the mangled name of the type.
-    //
-    // FIXME: This is not guaranteed to be deterministic! Move to a
-    //        fingerprinting mechanism once LLVM provides one. For the time
-    //        being the implementation happens to be deterministic.
+    // Compute a deterministic hash of the mangled name of the type.
     SmallString<64> MangledName;
     llvm::raw_svector_ostream Out(MangledName);
     CGM.getCXXABI().getMangleContext().mangleCXXRTTI(Ty.getUnqualifiedType(),
@@ -834,15 +828,19 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
     // Contained in NoSanitizeList based on the mangled type.
     if (!CGM.getContext().getNoSanitizeList().containsType(SanitizerKind::Vptr,
                                                            Out.str())) {
-      llvm::hash_code TypeHash = hash_value(Out.str());
+      // Load the vptr, and mix it with TypeHash.
+      llvm::Value *TypeHash =
+          llvm::ConstantInt::get(Int64Ty, xxh3_64bits(Out.str()));
 
-      // Load the vptr, and compute hash_16_bytes(TypeHash, vptr).
-      llvm::Value *Low = llvm::ConstantInt::get(Int64Ty, TypeHash);
+      llvm::Type *VPtrTy = llvm::PointerType::get(IntPtrTy, 0);
       Address VPtrAddr(Ptr, IntPtrTy, getPointerAlign());
-      llvm::Value *VPtrVal = Builder.CreateLoad(VPtrAddr);
-      llvm::Value *High = Builder.CreateZExt(VPtrVal, Int64Ty);
+      llvm::Value *VPtrVal = GetVTablePtr(VPtrAddr, VPtrTy,
+                                          Ty->getAsCXXRecordDecl(),
+                                          VTableAuthMode::UnsafeUbsanStrip);
+      VPtrVal = Builder.CreateBitOrPointerCast(VPtrVal, IntPtrTy);
 
-      llvm::Value *Hash = emitHash16Bytes(Builder, Low, High);
+      llvm::Value *Hash =
+          emitHashMix(Builder, TypeHash, Builder.CreateZExt(VPtrVal, Int64Ty));
       Hash = Builder.CreateTrunc(Hash, IntPtrTy);
 
       // Look the hash up in our cache.
@@ -1989,6 +1987,9 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
     return EmitAtomicLoad(AtomicLValue, Loc).getScalarVal();
   }
 
+  Addr =
+      Addr.withElementType(convertTypeForLoadStore(Ty, Addr.getElementType()));
+
   llvm::LoadInst *Load = Builder.CreateLoad(Addr, Volatile);
   if (isNontemporal) {
     llvm::MDNode *Node = llvm::MDNode::get(
@@ -2011,27 +2012,33 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
   return EmitFromMemory(Load, Ty);
 }
 
+/// Converts a scalar value from its primary IR type (as returned
+/// by ConvertType) to its load/store type (as returned by
+/// convertTypeForLoadStore).
 llvm::Value *CodeGenFunction::EmitToMemory(llvm::Value *Value, QualType Ty) {
-  // Bool has a different representation in memory than in registers.
-  if (hasBooleanRepresentation(Ty)) {
-    // This should really always be an i1, but sometimes it's already
-    // an i8, and it's awkward to track those cases down.
-    if (Value->getType()->isIntegerTy(1))
-      return Builder.CreateZExt(Value, ConvertTypeForMem(Ty), "frombool");
-    assert(Value->getType()->isIntegerTy(getContext().getTypeSize(Ty)) &&
-           "wrong value rep of bool");
+  if (hasBooleanRepresentation(Ty) || Ty->isBitIntType()) {
+    llvm::Type *StoreTy = convertTypeForLoadStore(Ty, Value->getType());
+    bool Signed = Ty->isSignedIntegerOrEnumerationType();
+    return Builder.CreateIntCast(Value, StoreTy, Signed, "storedv");
+  }
+
+  if (Ty->isExtVectorBoolType()) {
+    llvm::Type *StoreTy = convertTypeForLoadStore(Ty, Value->getType());
+    // Expand to the memory bit width.
+    unsigned MemNumElems = StoreTy->getPrimitiveSizeInBits();
+    // <N x i1> --> <P x i1>.
+    Value = emitBoolVecConversion(Value, MemNumElems, "insertvec");
+    // <P x i1> --> iP.
+    Value = Builder.CreateBitCast(Value, StoreTy);
   }
 
   return Value;
 }
 
+/// Converts a scalar value from its load/store type (as returned
+/// by convertTypeForLoadStore) to its primary IR type (as returned
+/// by ConvertType).
 llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
-  // Bool has a different representation in memory than in registers.
-  if (hasBooleanRepresentation(Ty)) {
-    assert(Value->getType()->isIntegerTy(getContext().getTypeSize(Ty)) &&
-           "wrong value rep of bool");
-    return Builder.CreateTrunc(Value, Builder.getInt1Ty(), "tobool");
-  }
   if (Ty->isExtVectorBoolType()) {
     const auto *RawIntTy = Value->getType();
     // Bitcast iP --> <P x i1>.
@@ -2042,6 +2049,11 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
     llvm::Type *ValTy = ConvertType(Ty);
     unsigned ValNumElems = cast<llvm::FixedVectorType>(ValTy)->getNumElements();
     return emitBoolVecConversion(V, ValNumElems, "extractvec");
+  }
+
+  if (hasBooleanRepresentation(Ty) || Ty->isBitIntType()) {
+    llvm::Type *ResTy = ConvertType(Ty);
+    return Builder.CreateTrunc(Value, ResTy, "loadedv");
   }
 
   return Value;
@@ -2096,17 +2108,10 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
   llvm::Type *SrcTy = Value->getType();
   if (const auto *ClangVecTy = Ty->getAs<VectorType>()) {
     auto *VecTy = dyn_cast<llvm::FixedVectorType>(SrcTy);
-    if (VecTy && ClangVecTy->isExtVectorBoolType()) {
-      auto *MemIntTy = cast<llvm::IntegerType>(Addr.getElementType());
-      // Expand to the memory bit width.
-      unsigned MemNumElems = MemIntTy->getPrimitiveSizeInBits();
-      // <N x i1> --> <P x i1>.
-      Value = emitBoolVecConversion(Value, MemNumElems, "insertvec");
-      // <P x i1> --> iP.
-      Value = Builder.CreateBitCast(Value, MemIntTy);
-    } else if (!CGM.getCodeGenOpts().PreserveVec3Type) {
+    if (!CGM.getCodeGenOpts().PreserveVec3Type) {
       // Handle vec3 special.
-      if (VecTy && cast<llvm::FixedVectorType>(VecTy)->getNumElements() == 3) {
+      if (VecTy && !ClangVecTy->isExtVectorBoolType() &&
+          cast<llvm::FixedVectorType>(VecTy)->getNumElements() == 3) {
         // Our source is a vec3, do a shuffle vector to make it a vec4.
         Value = Builder.CreateShuffleVector(Value, ArrayRef<int>{0, 1, 2, -1},
                                             "extractVec");
@@ -2480,7 +2485,7 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
 void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
                                                      llvm::Value **Result) {
   const CGBitFieldInfo &Info = Dst.getBitFieldInfo();
-  llvm::Type *ResLTy = ConvertTypeForMem(Dst.getType());
+  llvm::Type *ResLTy = convertTypeForLoadStore(Dst.getType());
   Address Ptr = Dst.getBitFieldAddress();
 
   // Get the source value, truncated to the width of the bit-field.
@@ -2865,22 +2870,22 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
   return LV;
 }
 
-static llvm::Constant *EmitFunctionDeclPointer(CodeGenModule &CGM,
-                                               GlobalDecl GD) {
+llvm::Constant *CodeGenModule::getRawFunctionPointer(GlobalDecl GD,
+                                                     llvm::Type *Ty) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
   if (FD->hasAttr<WeakRefAttr>()) {
-    ConstantAddress aliasee = CGM.GetWeakRefReference(FD);
+    ConstantAddress aliasee = GetWeakRefReference(FD);
     return aliasee.getPointer();
   }
 
-  llvm::Constant *V = CGM.GetAddrOfFunction(GD);
+  llvm::Constant *V = GetAddrOfFunction(GD, Ty);
   return V;
 }
 
 static LValue EmitFunctionDeclLValue(CodeGenFunction &CGF, const Expr *E,
                                      GlobalDecl GD) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
-  llvm::Value *V = EmitFunctionDeclPointer(CGF.CGM, GD);
+  llvm::Constant *V = CGF.CGM.getFunctionPointer(GD);
   CharUnits Alignment = CGF.getContext().getDeclAlign(FD);
   return CGF.MakeAddrLValue(V, E->getType(), Alignment,
                             AlignmentSource::Decl);
@@ -3144,21 +3149,8 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
     return LV;
   }
 
-  if (const auto *FD = dyn_cast<FunctionDecl>(ND)) {
-    LValue LV = EmitFunctionDeclLValue(*this, E, FD);
-
-    // Emit debuginfo for the function declaration if the target wants to.
-    if (getContext().getTargetInfo().allowDebugInfoForExternalRef()) {
-      if (CGDebugInfo *DI = CGM.getModuleDebugInfo()) {
-        auto *Fn =
-            cast<llvm::Function>(LV.getPointer(*this)->stripPointerCasts());
-        if (!Fn->getSubprogram())
-          DI->EmitFunctionDecl(FD, FD->getLocation(), T, Fn);
-      }
-    }
-
-    return LV;
-  }
+  if (const auto *FD = dyn_cast<FunctionDecl>(ND))
+    return EmitFunctionDeclLValue(*this, E, FD);
 
   // FIXME: While we're emitting a binding from an enclosing scope, all other
   // DeclRefExprs we see should be implicitly treated as if they also refer to
@@ -3858,9 +3850,10 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
 
     llvm::CallInst *TrapCall = Builder.CreateCall(
         CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),
-        llvm::ConstantInt::get(CGM.Int8Ty, ClSanitizeDebugDeoptimization
-                                               ? TrapBB->getParent()->size()
-                                               : CheckHandlerID));
+        llvm::ConstantInt::get(CGM.Int8Ty,
+                               ClSanitizeDebugDeoptimization
+                                   ? TrapBB->getParent()->size()
+                                   : static_cast<uint64_t>(CheckHandlerID)));
 
     if (!CGM.getCodeGenOpts().TrapFuncName.empty()) {
       auto A = llvm::Attribute::get(getLLVMContext(), "trap-func-name",
@@ -4765,7 +4758,7 @@ static Address emitAddrOfZeroSizeField(CodeGenFunction &CGF, Address Base,
 /// The resulting address doesn't necessarily have the right type.
 static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
                                       const FieldDecl *field) {
-  if (field->isZeroSize(CGF.getContext()))
+  if (isEmptyFieldForLayout(CGF.getContext(), field))
     return emitAddrOfZeroSizeField(CGF, base, field);
 
   const RecordDecl *rec = field->getParent();
@@ -5515,7 +5508,7 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
     // name to make it clear it's not the actual builtin.
     if (CGF.CurFn->getName() != FDInlineName &&
         OnlyHasInlineBuiltinDeclaration(FD)) {
-      llvm::Constant *CalleePtr = EmitFunctionDeclPointer(CGF.CGM, GD);
+      llvm::Constant *CalleePtr = CGF.CGM.getRawFunctionPointer(GD);
       llvm::Function *Fn = llvm::cast<llvm::Function>(CalleePtr);
       llvm::Module *M = Fn->getParent();
       llvm::Function *Clone = M->getFunction(FDInlineName);
@@ -5538,7 +5531,7 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
       return CGCallee::forBuiltin(builtinID, FD);
   }
 
-  llvm::Constant *CalleePtr = EmitFunctionDeclPointer(CGF.CGM, GD);
+  llvm::Constant *CalleePtr = CGF.CGM.getRawFunctionPointer(GD);
   if (CGF.CGM.getLangOpts().CUDA && !CGF.CGM.getLangOpts().CUDAIsDevice &&
       FD->hasAttr<CUDAGlobalAttr>())
     CalleePtr = CGF.CGM.getCUDARuntime().getKernelStub(
@@ -5595,7 +5588,8 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
     GD = GlobalDecl(VD);
 
   CGCalleeInfo calleeInfo(functionType->getAs<FunctionProtoType>(), GD);
-  CGCallee callee(calleeInfo, calleePtr);
+  CGPointerAuthInfo pointerAuth = CGM.getFunctionPointerAuthInfo(functionType);
+  CGCallee callee(calleeInfo, calleePtr, pointerAuth);
   return callee;
 }
 

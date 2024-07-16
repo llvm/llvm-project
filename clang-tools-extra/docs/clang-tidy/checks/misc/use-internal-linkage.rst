@@ -25,3 +25,16 @@ Example:
   }
   // already declared as extern
   extern int v2;
+
+Options
+-------
+
+.. option:: FixMode
+
+  Selects what kind of a fix the check should provide. The default is `UseStatic`.
+
+  ``None``
+    Don't fix automatically.
+
+  ``UseStatic``
+    Add ``static`` for internal linkage variable and function.

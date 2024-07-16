@@ -26,6 +26,7 @@ licenses(["notice"])
 exports_files([
     "LICENSE.TXT",
     "run_lit.sh",
+    "utils/lldb-scripts/mlirDataFormatters.py",
     "utils/textmate/mlir.json",
 ])
 
@@ -824,6 +825,7 @@ mlir_c_api_cc_library(
     includes = ["include"],
     deps = [
         ":ConversionPasses",
+        ":ConvertToSPIRV",
         ":Pass",
     ],
 )
@@ -1032,6 +1034,7 @@ cc_library(
         ":CAPIIRHeaders",
         ":MLIRBindingsPythonHeaders",
         ":Support",
+        ":config",
         "//llvm:Support",
         "@local_config_python//:python_headers",
         "@pybind11",
@@ -2197,6 +2200,7 @@ cc_library(
         ":LLVMDialect",
         ":MemRefDialect",
         ":Pass",
+        ":SCFDialect",
         ":SCFTransforms",
         ":TransformUtils",
         "//llvm:Support",
@@ -2896,6 +2900,7 @@ cc_library(
         ":IR",
         ":LoopLikeInterface",
         ":SCFDialect",
+        ":SCFToControlFlow",
         ":SCFTransformOpsIncGen",
         ":SCFTransforms",
         ":SCFUtils",
@@ -4200,6 +4205,7 @@ cc_library(
         ":ControlFlowToSPIRV",
         ":ConversionPassIncGen",
         ":ConvertToLLVM",
+        ":ConvertToSPIRV",
         ":FuncToEmitC",
         ":FuncToLLVM",
         ":FuncToSPIRV",
@@ -6876,6 +6882,110 @@ gentbl_cc_library(
 )
 
 td_library(
+    name = "PtrTdFiles",
+    srcs = [
+        "include/mlir/Dialect/Ptr/IR/PtrAttrDefs.td",
+        "include/mlir/Dialect/Ptr/IR/PtrDialect.td",
+        "include/mlir/Dialect/Ptr/IR/PtrOps.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":AttrTdFiles",
+        ":BuiltinDialectTdFiles",
+        ":DataLayoutInterfacesTdFiles",
+        ":OpBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "PtrDialectIncGen",
+    tbl_outs = [
+        (
+            ["-gen-dialect-decls"],
+            "include/mlir/Dialect/Ptr/IR/PtrOpsDialect.h.inc",
+        ),
+        (
+            ["-gen-dialect-defs"],
+            "include/mlir/Dialect/Ptr/IR/PtrOpsDialect.cpp.inc",
+        ),
+        (
+            ["-gen-typedef-decls"],
+            "include/mlir/Dialect/Ptr/IR/PtrOpsTypes.h.inc",
+        ),
+        (
+            ["-gen-typedef-defs"],
+            "include/mlir/Dialect/Ptr/IR/PtrOpsTypes.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Ptr/IR/PtrDialect.td",
+    deps = [
+        ":PtrTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "PtrOpsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/Ptr/IR/PtrOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/Ptr/IR/PtrOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Ptr/IR/PtrOps.td",
+    deps = [
+        ":PtrTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "PtrAttrsIncGen",
+    tbl_outs = [
+        (
+            ["-gen-attrdef-decls"],
+            "include/mlir/Dialect/Ptr/IR/PtrOpsAttrs.h.inc",
+        ),
+        (
+            ["-gen-attrdef-defs"],
+            "include/mlir/Dialect/Ptr/IR/PtrOpsAttrs.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Ptr/IR/PtrAttrDefs.td",
+    deps = [
+        ":PtrTdFiles",
+    ],
+)
+
+cc_library(
+    name = "PtrDialect",
+    srcs = glob(
+        [
+            "lib/Dialect/Ptr/IR/*.cpp",
+        ],
+    ),
+    hdrs = glob([
+        "include/mlir/Dialect/Ptr/IR/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":BytecodeOpInterface",
+        ":DataLayoutInterfaces",
+        ":IR",
+        ":InliningUtils",
+        ":PtrAttrsIncGen",
+        ":PtrDialectIncGen",
+        ":PtrOpsIncGen",
+        "//llvm:Support",
+    ],
+)
+
+td_library(
     name = "SPIRVOpsTdFiles",
     srcs = glob(["include/mlir/Dialect/SPIRV/IR/*.td"]),
     includes = ["include"],
@@ -8210,6 +8320,32 @@ cc_library(
 )
 
 cc_library(
+    name = "ConvertToSPIRV",
+    srcs = ["lib/Conversion/ConvertToSPIRV/ConvertToSPIRVPass.cpp"],
+    hdrs = ["include/mlir/Conversion/ConvertToSPIRV/ConvertToSPIRVPass.h"],
+    includes = ["include"],
+    deps = [
+        ":ArithToSPIRV",
+        ":ArithTransforms",
+        ":ConversionPassIncGen",
+        ":FuncToSPIRV",
+        ":IR",
+        ":IndexToSPIRV",
+        ":Pass",
+        ":Rewrite",
+        ":SCFToSPIRV",
+        ":SPIRVConversion",
+        ":SPIRVDialect",
+        ":SPIRVTransforms",
+        ":TransformUtils",
+        ":Transforms",
+        ":UBToSPIRV",
+        ":VectorToSPIRV",
+        ":VectorTransforms",
+    ],
+)
+
+cc_library(
     name = "ControlFlowToSCF",
     srcs = [
         "lib/Conversion/ControlFlowToSCF/ControlFlowToSCF.cpp",
@@ -8407,6 +8543,7 @@ cc_library(
         ":ArithDialect",
         ":ConversionPassIncGen",
         ":EmitCDialect",
+        ":EmitCTransforms",
         ":IR",
         ":Pass",
         ":Support",
@@ -9357,6 +9494,7 @@ cc_library(
         ":PDLInterpDialect",
         ":PDLToPDLInterp",
         ":PolynomialDialect",
+        ":PtrDialect",
         ":QuantOps",
         ":ROCDLDialect",
         ":ROCDLTarget",
@@ -10184,6 +10322,7 @@ td_library(
         "include/mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.td",
         "include/mlir/Dialect/OpenMP/OmpCommon.td",
         "include/mlir/Dialect/OpenMP/OpenMPAttrDefs.td",
+        "include/mlir/Dialect/OpenMP/OpenMPClauses.td",
         "include/mlir/Dialect/OpenMP/OpenMPDialect.td",
         "include/mlir/Dialect/OpenMP/OpenMPEnums.td",
         "include/mlir/Dialect/OpenMP/OpenMPOpBase.td",
@@ -11547,6 +11686,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArmSMEDialect",
+        ":ArmSVEDialect",
         ":ConversionPassIncGen",
         ":IR",
         ":MemRefDialect",
@@ -13783,12 +13923,39 @@ gentbl_cc_library(
     deps = [":OpBaseTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "DLTIAttrsIncGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-attrdef-decls",
+                "-dialect=dlti",
+            ],
+            "include/mlir/Dialect/DLTI/DLTIAttrs.h.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-defs",
+                "-dialect=dlti",
+            ],
+            "include/mlir/Dialect/DLTI/DLTIAttrs.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/DLTI/DLTIAttrs.td",
+    deps = [
+        ":AttrTdFiles",
+        ":DLTIDialectTdFiles",
+    ],
+)
+
 cc_library(
     name = "DLTIDialect",
     srcs = glob(["lib/Dialect/DLTI/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/DLTI/*.h"]),
     includes = ["include"],
     deps = [
+        ":DLTIAttrsIncGen",
         ":DLTIBaseIncGen",
         ":DataLayoutInterfaces",
         ":IR",

@@ -760,6 +760,87 @@ class CastExpressionIdValidator final : public CorrectionCandidateCallback {
 };
 }
 
+bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
+                                   tok::TokenKind *Kind) {
+  if (RevertibleTypeTraits.empty()) {
+#define RTT_JOIN(X, Y) X##Y
+#define REVERTIBLE_TYPE_TRAIT(Name)                                            \
+  RevertibleTypeTraits[PP.getIdentifierInfo(#Name)] = RTT_JOIN(tok::kw_, Name)
+
+    REVERTIBLE_TYPE_TRAIT(__is_abstract);
+    REVERTIBLE_TYPE_TRAIT(__is_aggregate);
+    REVERTIBLE_TYPE_TRAIT(__is_arithmetic);
+    REVERTIBLE_TYPE_TRAIT(__is_array);
+    REVERTIBLE_TYPE_TRAIT(__is_assignable);
+    REVERTIBLE_TYPE_TRAIT(__is_base_of);
+    REVERTIBLE_TYPE_TRAIT(__is_bounded_array);
+    REVERTIBLE_TYPE_TRAIT(__is_class);
+    REVERTIBLE_TYPE_TRAIT(__is_complete_type);
+    REVERTIBLE_TYPE_TRAIT(__is_compound);
+    REVERTIBLE_TYPE_TRAIT(__is_const);
+    REVERTIBLE_TYPE_TRAIT(__is_constructible);
+    REVERTIBLE_TYPE_TRAIT(__is_convertible);
+    REVERTIBLE_TYPE_TRAIT(__is_convertible_to);
+    REVERTIBLE_TYPE_TRAIT(__is_destructible);
+    REVERTIBLE_TYPE_TRAIT(__is_empty);
+    REVERTIBLE_TYPE_TRAIT(__is_enum);
+    REVERTIBLE_TYPE_TRAIT(__is_floating_point);
+    REVERTIBLE_TYPE_TRAIT(__is_final);
+    REVERTIBLE_TYPE_TRAIT(__is_function);
+    REVERTIBLE_TYPE_TRAIT(__is_fundamental);
+    REVERTIBLE_TYPE_TRAIT(__is_integral);
+    REVERTIBLE_TYPE_TRAIT(__is_interface_class);
+    REVERTIBLE_TYPE_TRAIT(__is_layout_compatible);
+    REVERTIBLE_TYPE_TRAIT(__is_literal);
+    REVERTIBLE_TYPE_TRAIT(__is_lvalue_expr);
+    REVERTIBLE_TYPE_TRAIT(__is_lvalue_reference);
+    REVERTIBLE_TYPE_TRAIT(__is_member_function_pointer);
+    REVERTIBLE_TYPE_TRAIT(__is_member_object_pointer);
+    REVERTIBLE_TYPE_TRAIT(__is_member_pointer);
+    REVERTIBLE_TYPE_TRAIT(__is_nothrow_assignable);
+    REVERTIBLE_TYPE_TRAIT(__is_nothrow_constructible);
+    REVERTIBLE_TYPE_TRAIT(__is_nothrow_destructible);
+    REVERTIBLE_TYPE_TRAIT(__is_nullptr);
+    REVERTIBLE_TYPE_TRAIT(__is_object);
+    REVERTIBLE_TYPE_TRAIT(__is_pod);
+    REVERTIBLE_TYPE_TRAIT(__is_pointer);
+    REVERTIBLE_TYPE_TRAIT(__is_polymorphic);
+    REVERTIBLE_TYPE_TRAIT(__is_reference);
+    REVERTIBLE_TYPE_TRAIT(__is_referenceable);
+    REVERTIBLE_TYPE_TRAIT(__is_rvalue_expr);
+    REVERTIBLE_TYPE_TRAIT(__is_rvalue_reference);
+    REVERTIBLE_TYPE_TRAIT(__is_same);
+    REVERTIBLE_TYPE_TRAIT(__is_scalar);
+    REVERTIBLE_TYPE_TRAIT(__is_scoped_enum);
+    REVERTIBLE_TYPE_TRAIT(__is_sealed);
+    REVERTIBLE_TYPE_TRAIT(__is_signed);
+    REVERTIBLE_TYPE_TRAIT(__is_standard_layout);
+    REVERTIBLE_TYPE_TRAIT(__is_trivial);
+    REVERTIBLE_TYPE_TRAIT(__is_trivially_assignable);
+    REVERTIBLE_TYPE_TRAIT(__is_trivially_constructible);
+    REVERTIBLE_TYPE_TRAIT(__is_trivially_copyable);
+    REVERTIBLE_TYPE_TRAIT(__is_unbounded_array);
+    REVERTIBLE_TYPE_TRAIT(__is_union);
+    REVERTIBLE_TYPE_TRAIT(__is_unsigned);
+    REVERTIBLE_TYPE_TRAIT(__is_void);
+    REVERTIBLE_TYPE_TRAIT(__is_volatile);
+    REVERTIBLE_TYPE_TRAIT(__reference_binds_to_temporary);
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
+  REVERTIBLE_TYPE_TRAIT(RTT_JOIN(__, Trait));
+#include "clang/Basic/TransformTypeTraits.def"
+#undef REVERTIBLE_TYPE_TRAIT
+#undef RTT_JOIN
+  }
+  llvm::SmallDenseMap<IdentifierInfo *, tok::TokenKind>::iterator Known =
+      RevertibleTypeTraits.find(II);
+  if (Known != RevertibleTypeTraits.end()) {
+    if (Kind)
+      *Kind = Known->second;
+    return true;
+  }
+  return false;
+}
+
 /// Parse a cast-expression, or, if \pisUnaryExpression is true, parse
 /// a unary-expression.
 ///
@@ -1066,6 +1147,21 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     break;
   }
 
+  case tok::annot_embed: {
+    // We've met #embed in a context where a single value is expected. Take last
+    // element from #embed data as if it were a comma expression.
+    EmbedAnnotationData *Data =
+        reinterpret_cast<EmbedAnnotationData *>(Tok.getAnnotationValue());
+    SourceLocation StartLoc = ConsumeAnnotationToken();
+    ASTContext &Context = Actions.getASTContext();
+    Res = IntegerLiteral::Create(Context,
+                                 llvm::APInt(CHAR_BIT, Data->BinaryData.back()),
+                                 Context.UnsignedCharTy, StartLoc);
+    if (Data->BinaryData.size() > 1)
+      Diag(StartLoc, diag::warn_unused_comma_left_operand);
+    break;
+  }
+
   case tok::kw___super:
   case tok::kw_decltype:
     // Annotate the token and tail recurse.
@@ -1103,85 +1199,9 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
       else if (Next.is(tok::l_paren) && Tok.is(tok::identifier) &&
                Tok.getIdentifierInfo()->hasRevertedTokenIDToIdentifier()) {
         IdentifierInfo *II = Tok.getIdentifierInfo();
-        // Build up the mapping of revertible type traits, for future use.
-        if (RevertibleTypeTraits.empty()) {
-#define RTT_JOIN(X,Y) X##Y
-#define REVERTIBLE_TYPE_TRAIT(Name)                         \
-          RevertibleTypeTraits[PP.getIdentifierInfo(#Name)] \
-            = RTT_JOIN(tok::kw_,Name)
-
-          REVERTIBLE_TYPE_TRAIT(__is_abstract);
-          REVERTIBLE_TYPE_TRAIT(__is_aggregate);
-          REVERTIBLE_TYPE_TRAIT(__is_arithmetic);
-          REVERTIBLE_TYPE_TRAIT(__is_array);
-          REVERTIBLE_TYPE_TRAIT(__is_assignable);
-          REVERTIBLE_TYPE_TRAIT(__is_base_of);
-          REVERTIBLE_TYPE_TRAIT(__is_bounded_array);
-          REVERTIBLE_TYPE_TRAIT(__is_class);
-          REVERTIBLE_TYPE_TRAIT(__is_complete_type);
-          REVERTIBLE_TYPE_TRAIT(__is_compound);
-          REVERTIBLE_TYPE_TRAIT(__is_const);
-          REVERTIBLE_TYPE_TRAIT(__is_constructible);
-          REVERTIBLE_TYPE_TRAIT(__is_convertible);
-          REVERTIBLE_TYPE_TRAIT(__is_convertible_to);
-          REVERTIBLE_TYPE_TRAIT(__is_destructible);
-          REVERTIBLE_TYPE_TRAIT(__is_empty);
-          REVERTIBLE_TYPE_TRAIT(__is_enum);
-          REVERTIBLE_TYPE_TRAIT(__is_floating_point);
-          REVERTIBLE_TYPE_TRAIT(__is_final);
-          REVERTIBLE_TYPE_TRAIT(__is_function);
-          REVERTIBLE_TYPE_TRAIT(__is_fundamental);
-          REVERTIBLE_TYPE_TRAIT(__is_integral);
-          REVERTIBLE_TYPE_TRAIT(__is_interface_class);
-          REVERTIBLE_TYPE_TRAIT(__is_layout_compatible);
-          REVERTIBLE_TYPE_TRAIT(__is_literal);
-          REVERTIBLE_TYPE_TRAIT(__is_lvalue_expr);
-          REVERTIBLE_TYPE_TRAIT(__is_lvalue_reference);
-          REVERTIBLE_TYPE_TRAIT(__is_member_function_pointer);
-          REVERTIBLE_TYPE_TRAIT(__is_member_object_pointer);
-          REVERTIBLE_TYPE_TRAIT(__is_member_pointer);
-          REVERTIBLE_TYPE_TRAIT(__is_nothrow_assignable);
-          REVERTIBLE_TYPE_TRAIT(__is_nothrow_constructible);
-          REVERTIBLE_TYPE_TRAIT(__is_nothrow_destructible);
-          REVERTIBLE_TYPE_TRAIT(__is_nullptr);
-          REVERTIBLE_TYPE_TRAIT(__is_object);
-          REVERTIBLE_TYPE_TRAIT(__is_pod);
-          REVERTIBLE_TYPE_TRAIT(__is_pointer);
-          REVERTIBLE_TYPE_TRAIT(__is_polymorphic);
-          REVERTIBLE_TYPE_TRAIT(__is_reference);
-          REVERTIBLE_TYPE_TRAIT(__is_referenceable);
-          REVERTIBLE_TYPE_TRAIT(__is_rvalue_expr);
-          REVERTIBLE_TYPE_TRAIT(__is_rvalue_reference);
-          REVERTIBLE_TYPE_TRAIT(__is_same);
-          REVERTIBLE_TYPE_TRAIT(__is_scalar);
-          REVERTIBLE_TYPE_TRAIT(__is_scoped_enum);
-          REVERTIBLE_TYPE_TRAIT(__is_sealed);
-          REVERTIBLE_TYPE_TRAIT(__is_signed);
-          REVERTIBLE_TYPE_TRAIT(__is_standard_layout);
-          REVERTIBLE_TYPE_TRAIT(__is_trivial);
-          REVERTIBLE_TYPE_TRAIT(__is_trivially_assignable);
-          REVERTIBLE_TYPE_TRAIT(__is_trivially_constructible);
-          REVERTIBLE_TYPE_TRAIT(__is_trivially_copyable);
-          REVERTIBLE_TYPE_TRAIT(__is_unbounded_array);
-          REVERTIBLE_TYPE_TRAIT(__is_union);
-          REVERTIBLE_TYPE_TRAIT(__is_unsigned);
-          REVERTIBLE_TYPE_TRAIT(__is_void);
-          REVERTIBLE_TYPE_TRAIT(__is_volatile);
-          REVERTIBLE_TYPE_TRAIT(__reference_binds_to_temporary);
-#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
-  REVERTIBLE_TYPE_TRAIT(RTT_JOIN(__, Trait));
-#include "clang/Basic/TransformTypeTraits.def"
-#undef REVERTIBLE_TYPE_TRAIT
-#undef RTT_JOIN
-        }
-
-        // If we find that this is in fact the name of a type trait,
-        // update the token kind in place and parse again to treat it as
-        // the appropriate kind of type trait.
-        llvm::SmallDenseMap<IdentifierInfo *, tok::TokenKind>::iterator Known
-          = RevertibleTypeTraits.find(II);
-        if (Known != RevertibleTypeTraits.end()) {
-          Tok.setKind(Known->second);
+        tok::TokenKind Kind;
+        if (isRevertibleTypeTrait(II, &Kind)) {
+          Tok.setKind(Kind);
           return ParseCastExpression(ParseKind, isAddressOfOperand,
                                      NotCastExpr, isTypeCast,
                                      isVectorLiteral, NotPrimaryExpression);
@@ -3434,7 +3454,8 @@ ExprResult Parser::ParseGenericSelectionExpression() {
     }
     const auto *LIT = cast<LocInfoType>(ControllingType.get().get());
     SourceLocation Loc = LIT->getTypeSourceInfo()->getTypeLoc().getBeginLoc();
-    Diag(Loc, diag::ext_generic_with_type_arg);
+    Diag(Loc, getLangOpts().C2y ? diag::warn_c2y_compat_generic_with_type_arg
+                                : diag::ext_c2y_generic_with_type_arg);
   } else {
     // C11 6.5.1.1p3 "The controlling expression of a generic selection is
     // not evaluated."
@@ -3563,6 +3584,17 @@ ExprResult Parser::ParseFoldExpression(ExprResult LHS,
                                   T.getCloseLocation());
 }
 
+void Parser::ExpandEmbedDirective(SmallVectorImpl<Expr *> &Exprs) {
+  EmbedAnnotationData *Data =
+      reinterpret_cast<EmbedAnnotationData *>(Tok.getAnnotationValue());
+  SourceLocation StartLoc = ConsumeAnnotationToken();
+  ASTContext &Context = Actions.getASTContext();
+  for (auto Byte : Data->BinaryData) {
+    Exprs.push_back(IntegerLiteral::Create(Context, llvm::APInt(CHAR_BIT, Byte),
+                                           Context.UnsignedCharTy, StartLoc));
+  }
+}
+
 /// ParseExpressionList - Used for C/C++ (argument-)expression-list.
 ///
 /// \verbatim
@@ -3598,8 +3630,17 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
     if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
       Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
       Expr = ParseBraceInitializer();
-    } else
+    } else if (Tok.is(tok::annot_embed)) {
+      ExpandEmbedDirective(Exprs);
+      if (Tok.isNot(tok::comma))
+        break;
+      Token Comma = Tok;
+      ConsumeToken();
+      checkPotentialAngleBracketDelimiter(Comma);
+      continue;
+    } else {
       Expr = ParseAssignmentExpression();
+    }
 
     if (EarlyTypoCorrection)
       Expr = Actions.CorrectDelayedTyposInExpr(Expr);

@@ -46,7 +46,7 @@ Pattern => erase op<test.op3>;
 
 #include "include/ods.td"
 
-// CHECK:      static ::mlir::LogicalResult TestCstPDLFn(::mlir::PatternRewriter &rewriter,
+// CHECK:      static ::llvm::LogicalResult TestCstPDLFn(::mlir::PatternRewriter &rewriter,
 // CHECK-SAME:     ::mlir::Attribute attr, ::mlir::Operation * op, ::mlir::Type type,
 // CHECK-SAME:     ::mlir::Value value, ::mlir::TypeRange typeRange, ::mlir::ValueRange valueRange) {
 // CHECK-NEXT:   return success();

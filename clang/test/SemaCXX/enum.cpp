@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++98 -verify -triple x86_64-apple-darwin %s
 // RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++11 -verify -triple x86_64-apple-darwin %s
+
+// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++98 -verify -triple x86_64-apple-darwin %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++11 -verify -triple x86_64-apple-darwin %s -fexperimental-new-constant-interpreter
+
 enum E { // expected-note{{previous definition is here}}
   Val1,
   Val2
@@ -100,10 +104,12 @@ void PR8089() {
 // expressions with UB to be non-constant.
 enum { overflow = 123456 * 234567 };
 #if __cplusplus >= 201103L
-// expected-warning@-2 {{not an integral constant expression}}
-// expected-note@-3 {{value 28958703552 is outside the range of representable values}}
-#else 
-// expected-warning@-5 {{overflow in expression; result is -1'106'067'520 with type 'int'}}
+// expected-warning@-2 {{expression is not an integral constant expression; folding it to a constant is a GNU extension}}
+// expected-note@-3 {{value 28958703552 is outside the range of representable values of type 'int'}}
+#else
+// expected-error@-5 {{expression is not an integral constant expression}}
+// expected-note@-6 {{value 28958703552 is outside the range of representable values of type 'int'}}
+// expected-warning@-7 {{overflow in expression; result is -1'106'067'520 with type 'int'}}
 #endif
 
 // FIXME: This is not consistent with the above case.
@@ -112,8 +118,10 @@ enum NoFold : int { overflow2 = 123456 * 234567 };
 // expected-error@-2 {{enumerator value is not a constant expression}}
 // expected-note@-3 {{value 28958703552 is outside the range of representable values}}
 #else
-// expected-warning@-5 {{overflow in expression; result is -1'106'067'520 with type 'int'}}
-// expected-warning@-6 {{extension}}
+// expected-warning@-5 {{enumeration types with a fixed underlying type are a C++11 extension}}
+// expected-warning@-6 {{overflow in expression; result is -1'106'067'520 with type 'int'}}
+// expected-error@-7 {{expression is not an integral constant expression}}
+// expected-note@-8 {{value 28958703552 is outside the range of representable values of type 'int'}}
 #endif
 
 // PR28903

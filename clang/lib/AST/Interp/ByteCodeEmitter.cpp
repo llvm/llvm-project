@@ -147,7 +147,8 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   assert(Func);
   // For not-yet-defined functions, we only create a Function instance and
   // compile their body later.
-  if (!FuncDecl->isDefined()) {
+  if (!FuncDecl->isDefined() ||
+      (FuncDecl->willHaveBody() && !FuncDecl->hasBody())) {
     Func->setDefined(false);
     return Func;
   }

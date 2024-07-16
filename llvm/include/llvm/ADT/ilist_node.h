@@ -25,17 +25,17 @@ namespace ilist_detail {
 struct NodeAccess;
 
 /// Mixin base class that is used to add \a getParent() and
-/// \a setParent(ParentPtrTy) methods to \a ilist_node_impl iff \a ilist_parent
+/// \a setParent(ParentTy*) methods to \a ilist_node_impl iff \a ilist_parent
 /// has been set in the list options.
-template <class NodeTy, class ParentPtrTy> class node_parent_access {
+template <class NodeTy, class ParentTy> class node_parent_access {
 public:
-  inline const ParentPtrTy getParent() const {
+  inline const ParentTy *getParent() const {
     return static_cast<const NodeTy *>(this)->getNodeBaseParent();
   }
-  inline ParentPtrTy getParent() {
+  inline ParentTy *getParent() {
     return static_cast<NodeTy *>(this)->getNodeBaseParent();
   }
-  void setParent(ParentPtrTy Parent) {
+  void setParent(ParentTy *Parent) {
     return static_cast<NodeTy *>(this)->setNodeBaseParent(Parent);
   }
 };
@@ -71,8 +71,8 @@ public:
 template <class OptionsT>
 class ilist_node_impl
     : OptionsT::node_base_type,
-      public ilist_detail::node_parent_access<
-          ilist_node_impl<OptionsT>, typename OptionsT::parent_ptr_ty> {
+      public ilist_detail::node_parent_access<ilist_node_impl<OptionsT>,
+                                              typename OptionsT::parent_ty> {
   using value_type = typename OptionsT::value_type;
   using node_base_type = typename OptionsT::node_base_type;
   using list_base_type = typename OptionsT::list_base_type;
@@ -81,8 +81,8 @@ class ilist_node_impl
   friend struct ilist_detail::NodeAccess;
   friend class ilist_sentinel<OptionsT>;
 
-  friend class ilist_detail::node_parent_access<
-      ilist_node_impl<OptionsT>, typename OptionsT::parent_ptr_ty>;
+  friend class ilist_detail::node_parent_access<ilist_node_impl<OptionsT>,
+                                                typename OptionsT::parent_ty>;
   friend class ilist_iterator<OptionsT, false, false>;
   friend class ilist_iterator<OptionsT, false, true>;
   friend class ilist_iterator<OptionsT, true, false>;

@@ -3,7 +3,7 @@
 ; RUN: opt < %s -S -passes=loop-vectorize -mtriple=x86_64-- -mattr=+sse4.1 | FileCheck %s --check-prefix=SSE41
 ; RUN: opt < %s -S -passes=loop-vectorize -mtriple=x86_64-- -mattr=+avx    | FileCheck %s --check-prefix=AVX1
 ; RUN: opt < %s -S -passes=loop-vectorize -mtriple=x86_64-- -mattr=+avx2   | FileCheck %s --check-prefix=AVX2
-; RUN: opt < %s -S -passes=loop-vectorize -mtriple=x86_64-- -mcpu=slm      | FileCheck %s --check-prefix=SSE2
+; RUN: opt < %s -S -passes=loop-vectorize -mtriple=x86_64-- -mcpu=slm      | FileCheck %s --check-prefix=SSE41
 
 define void @test_muladd(ptr noalias nocapture %d1, ptr noalias nocapture readonly %s1, ptr noalias nocapture readonly %s2, i32 %n) {
 ; SSE2-LABEL: @test_muladd(

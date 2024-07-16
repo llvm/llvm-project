@@ -5750,19 +5750,7 @@ define void @test_atomicrmw_fadd_v2f16_global_agent_noret__unsafe(ptr addrspace(
 ; GFX9-NEXT:    ret void
 ;
 ; GFX908-LABEL: @test_atomicrmw_fadd_v2f16_global_agent_noret__unsafe(
-; GFX908-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[PTR:%.*]], align 4
-; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX908:       atomicrmw.start:
-; GFX908-NEXT:    [[LOADED:%.*]] = phi <2 x half> [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
-; GFX908-NEXT:    [[NEW:%.*]] = fadd <2 x half> [[LOADED]], [[VALUE:%.*]]
-; GFX908-NEXT:    [[TMP2:%.*]] = bitcast <2 x half> [[NEW]] to i32
-; GFX908-NEXT:    [[TMP3:%.*]] = bitcast <2 x half> [[LOADED]] to i32
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] syncscope("agent") seq_cst seq_cst, align 4
-; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
-; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
-; GFX908-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to <2 x half>
-; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR:%.*]], <2 x half> [[VALUE:%.*]] syncscope("agent") seq_cst, align 4
 ; GFX908-NEXT:    ret void
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_v2f16_global_agent_noret__unsafe(

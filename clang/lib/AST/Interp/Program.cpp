@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Program.h"
-#include "ByteCodeStmtGen.h"
 #include "Context.h"
 #include "Function.h"
 #include "Integral.h"
@@ -64,7 +63,7 @@ unsigned Program::createGlobalString(const StringLiteral *S) {
   // The byte length does not include the null terminator.
   unsigned I = Globals.size();
   unsigned Sz = Desc->getAllocSize();
-  auto *G = new (Allocator, Sz) Global(Desc, /*isStatic=*/true,
+  auto *G = new (Allocator, Sz) Global(Ctx.getEvalID(), Desc, /*isStatic=*/true,
                                        /*isExtern=*/false);
   G->block()->invokeCtor();
 
@@ -127,6 +126,12 @@ std::optional<unsigned> Program::getGlobal(const ValueDecl *VD) {
   return std::nullopt;
 }
 
+std::optional<unsigned> Program::getGlobal(const Expr *E) {
+  if (auto It = GlobalIndices.find(E); It != GlobalIndices.end())
+    return It->second;
+  return std::nullopt;
+}
+
 std::optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD,
                                                    const Expr *Init) {
   if (auto Idx = getGlobal(VD))
@@ -165,7 +170,8 @@ std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *VD) {
   unsigned I = Globals.size();
 
   auto *G = new (Allocator, Desc->getAllocSize())
-      Global(getCurrentDecl(), Desc, /*IsStatic=*/true, /*IsExtern=*/false);
+      Global(Ctx.getEvalID(), getCurrentDecl(), Desc, /*IsStatic=*/true,
+             /*IsExtern=*/false);
   G->block()->invokeCtor();
 
   Globals.push_back(G);
@@ -196,7 +202,14 @@ std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
 }
 
 std::optional<unsigned> Program::createGlobal(const Expr *E) {
-  return createGlobal(E, E->getType(), /*isStatic=*/true, /*isExtern=*/false);
+  if (auto Idx = getGlobal(E))
+    return Idx;
+  if (auto Idx = createGlobal(E, E->getType(), /*isStatic=*/true,
+                              /*isExtern=*/false)) {
+    GlobalIndices[E] = *Idx;
+    return *Idx;
+  }
+  return std::nullopt;
 }
 
 std::optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
@@ -219,7 +232,7 @@ std::optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
   unsigned I = Globals.size();
 
   auto *G = new (Allocator, Desc->getAllocSize())
-      Global(getCurrentDecl(), Desc, IsStatic, IsExtern);
+      Global(Ctx.getEvalID(), getCurrentDecl(), Desc, IsStatic, IsExtern);
   G->block()->invokeCtor();
 
   // Initialize InlineDescriptor fields.
@@ -275,40 +288,41 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   Record::BaseList Bases;
   Record::VirtualBaseList VirtBases;
   if (const auto *CD = dyn_cast<CXXRecordDecl>(RD)) {
-
     for (const CXXBaseSpecifier &Spec : CD->bases()) {
       if (Spec.isVirtual())
         continue;
 
       // In error cases, the base might not be a RecordType.
-      if (const auto *RT = Spec.getType()->getAs<RecordType>()) {
-        const RecordDecl *BD = RT->getDecl();
-        const Record *BR = getOrCreateRecord(BD);
+      const auto *RT = Spec.getType()->getAs<RecordType>();
+      if (!RT)
+        return nullptr;
+      const RecordDecl *BD = RT->getDecl();
+      const Record *BR = getOrCreateRecord(BD);
 
-        if (const Descriptor *Desc = GetBaseDesc(BD, BR)) {
-          BaseSize += align(sizeof(InlineDescriptor));
-          Bases.push_back({BD, BaseSize, Desc, BR});
-          BaseSize += align(BR->getSize());
-          continue;
-        }
-      }
-      return nullptr;
+      const Descriptor *Desc = GetBaseDesc(BD, BR);
+      if (!Desc)
+        return nullptr;
+
+      BaseSize += align(sizeof(InlineDescriptor));
+      Bases.push_back({BD, BaseSize, Desc, BR});
+      BaseSize += align(BR->getSize());
     }
 
     for (const CXXBaseSpecifier &Spec : CD->vbases()) {
+      const auto *RT = Spec.getType()->getAs<RecordType>();
+      if (!RT)
+        return nullptr;
 
-      if (const auto *RT = Spec.getType()->getAs<RecordType>()) {
-        const RecordDecl *BD = RT->getDecl();
-        const Record *BR = getOrCreateRecord(BD);
+      const RecordDecl *BD = RT->getDecl();
+      const Record *BR = getOrCreateRecord(BD);
 
-        if (const Descriptor *Desc = GetBaseDesc(BD, BR)) {
-          VirtSize += align(sizeof(InlineDescriptor));
-          VirtBases.push_back({BD, VirtSize, Desc, BR});
-          VirtSize += align(BR->getSize());
-          continue;
-        }
-      }
-      return nullptr;
+      const Descriptor *Desc = GetBaseDesc(BD, BR);
+      if (!Desc)
+        return nullptr;
+
+      VirtSize += align(sizeof(InlineDescriptor));
+      VirtBases.push_back({BD, VirtSize, Desc, BR});
+      VirtSize += align(BR->getSize());
     }
   }
 

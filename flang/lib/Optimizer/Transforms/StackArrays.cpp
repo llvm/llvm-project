@@ -25,7 +25,6 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/DenseMap.h"
@@ -180,7 +179,7 @@ public:
 private:
   llvm::DenseMap<mlir::Operation *, AllocMemMap> funcMaps;
 
-  mlir::LogicalResult analyseFunction(mlir::Operation *func);
+  llvm::LogicalResult analyseFunction(mlir::Operation *func);
 };
 
 /// Converts a fir.allocmem to a fir.alloca
@@ -191,7 +190,7 @@ public:
       const StackArraysAnalysisWrapper::AllocMemMap &candidateOps)
       : OpRewritePattern(ctx), candidateOps{candidateOps} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::AllocMemOp allocmem,
                   mlir::PatternRewriter &rewriter) const override;
 
@@ -415,7 +414,7 @@ void AllocationAnalysis::processOperation(mlir::Operation *op) {
   visitOperationImpl(op, *before, after);
 }
 
-mlir::LogicalResult
+llvm::LogicalResult
 StackArraysAnalysisWrapper::analyseFunction(mlir::Operation *func) {
   assert(mlir::isa<mlir::func::FuncOp>(func));
   size_t nAllocs = 0;
@@ -507,7 +506,7 @@ static mlir::Value convertAllocationType(mlir::PatternRewriter &rewriter,
   return conv;
 }
 
-mlir::LogicalResult
+llvm::LogicalResult
 AllocMemConversion::matchAndRewrite(fir::AllocMemOp allocmem,
                                     mlir::PatternRewriter &rewriter) const {
   auto oldInsertionPt = rewriter.saveInsertionPoint();

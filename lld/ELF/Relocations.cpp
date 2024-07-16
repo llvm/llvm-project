@@ -492,7 +492,8 @@ int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
 
   // The ABI says that the paired relocation is used only for REL.
   // See p. 4-17 at ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-  if (RelTy::IsRela)
+  // This generalises to relocation types with implicit addends.
+  if (RelTy::HasAddend)
     return 0;
 
   RelType type = rel.getType(config->isMips64EL);
@@ -898,9 +899,9 @@ static void addRelativeReloc(InputSectionBase &isec, uint64_t offsetInSec,
     isec.addReloc({expr, type, offsetInSec, addend, &sym});
     if (shard)
       part.relrDyn->relocsVec[parallel::getThreadIndex()].push_back(
-          {&isec, offsetInSec});
+          {&isec, isec.relocs().size() - 1});
     else
-      part.relrDyn->relocs.push_back({&isec, offsetInSec});
+      part.relrDyn->relocs.push_back({&isec, isec.relocs().size() - 1});
     return;
   }
   part.relaDyn->addRelativeReloc<shard>(target->relativeRel, isec, offsetInSec,
@@ -1154,6 +1155,12 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
         // relative relocation. Use a symbolic relocation instead.
         if (sym.isPreemptible) {
           part.relaDyn->addSymbolReloc(type, *sec, offset, sym, addend, type);
+        } else if (part.relrAuthDyn && sec->addralign >= 2 && offset % 2 == 0) {
+          // When symbol values are determined in
+          // finalizeAddressDependentContent, some .relr.auth.dyn relocations
+          // may be moved to .rela.dyn.
+          sec->addReloc({expr, type, offset, addend, &sym});
+          part.relrAuthDyn->relocs.push_back({sec, sec->relocs().size() - 1});
         } else {
           part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset,
                                   DynamicReloc::AddendOnlyWithTargetVA, sym,
@@ -1392,8 +1399,8 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
     // depending on the symbol being locally defined or not.
     //
     // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} reference a non-preemptible
-    // label, so the LE optimization will be categorized as
-    // R_RELAX_TLS_GD_TO_LE. We fix the categorization in RISCV::relocateAlloc.
+    // label, so TLSDESC=>IE will be categorized as R_RELAX_TLS_GD_TO_LE. We fix
+    // the categorization in RISCV::relocateAlloc.
     if (sym.isPreemptible) {
       sym.setFlags(NEEDS_TLSGD_TO_IE);
       c.addReloc({target->adjustTlsExpr(type, R_RELAX_TLS_GD_TO_IE), type,
@@ -1448,7 +1455,7 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
     return;
 
   RelExpr expr = target->getRelExpr(type, sym, sec->content().data() + offset);
-  int64_t addend = RelTy::IsRela
+  int64_t addend = RelTy::HasAddend
                        ? getAddend<ELFT>(rel)
                        : target->getImplicitAddend(
                              sec->content().data() + rel.r_offset, type);

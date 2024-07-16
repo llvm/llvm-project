@@ -66,9 +66,9 @@ TEST(IListNodeTest, Options) {
                                           ilist_sentinel_tracking<true>>::type>,
       "order shouldn't matter with real tags");
   static_assert(
-      !std::is_same_v<compute_node_options<Node>::type,
-                      compute_node_options<Node, ilist_parent<void>>::type>,
-      "void parent is different to no parent");
+      std::is_same_v<compute_node_options<Node>::type,
+                     compute_node_options<Node, ilist_parent<void>>::type>,
+      "default parent is void");
   static_assert(
       !std::is_same_v<compute_node_options<Node, ilist_parent<ParentA>>::type,
                       compute_node_options<Node, ilist_parent<void>>::type>,

@@ -1453,3 +1453,35 @@ define i32 @tryFactorization_xor_ashr_ashr(i32 %a) {
   %xor = xor i32 %not, %shr1
   ret i32 %xor
 }
+
+; https://alive2.llvm.org/ce/z/SOxv-e
+define i4 @PR96857_xor_with_noundef(i4  %val0, i4  %val1, i4 noundef %val2) {
+; CHECK-LABEL: @PR96857_xor_with_noundef(
+; CHECK-NEXT:    [[VAL4:%.*]] = and i4 [[VAL2:%.*]], [[VAL0:%.*]]
+; CHECK-NEXT:    [[VAL5:%.*]] = xor i4 [[VAL2]], -1
+; CHECK-NEXT:    [[VAL6:%.*]] = and i4 [[VAL5]], [[VAL1:%.*]]
+; CHECK-NEXT:    [[VAL7:%.*]] = or disjoint i4 [[VAL4]], [[VAL6]]
+; CHECK-NEXT:    ret i4 [[VAL7]]
+;
+  %val4 = and i4 %val2, %val0
+  %val5 = xor i4 %val2, -1
+  %val6 = and i4 %val5, %val1
+  %val7 = xor i4 %val4, %val6
+  ret i4 %val7
+}
+
+; https://alive2.llvm.org/ce/z/whLTaJ
+define i4 @PR96857_xor_without_noundef(i4  %val0, i4  %val1, i4 %val2) {
+; CHECK-LABEL: @PR96857_xor_without_noundef(
+; CHECK-NEXT:    [[VAL4:%.*]] = and i4 [[VAL2:%.*]], [[VAL0:%.*]]
+; CHECK-NEXT:    [[VAL5:%.*]] = xor i4 [[VAL2]], -1
+; CHECK-NEXT:    [[VAL6:%.*]] = and i4 [[VAL5]], [[VAL1:%.*]]
+; CHECK-NEXT:    [[VAL7:%.*]] = or i4 [[VAL4]], [[VAL6]]
+; CHECK-NEXT:    ret i4 [[VAL7]]
+;
+  %val4 = and i4 %val2, %val0
+  %val5 = xor i4 %val2, -1
+  %val6 = and i4 %val5, %val1
+  %val7 = xor i4 %val4, %val6
+  ret i4 %val7
+}

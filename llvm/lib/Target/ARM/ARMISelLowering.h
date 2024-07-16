@@ -894,7 +894,7 @@ class VectorType;
                             const SmallVectorImpl<ISD::InputArg> &Ins,
                             const SDLoc &dl, SelectionDAG &DAG,
                             SmallVectorImpl<SDValue> &InVals, bool isThisReturn,
-                            SDValue ThisVal) const;
+                            SDValue ThisVal, bool isCmseNSCall) const;
 
     bool supportSplitCSR(MachineFunction *MF) const override {
       return MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&

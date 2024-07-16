@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DbgVariableFragmentInfo.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PseudoProbe.h"
 #include "llvm/Support/Casting.h"
@@ -828,45 +829,40 @@ class DIBasicType : public DIType {
   static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
                               StringRef Name, uint64_t SizeInBits,
                               uint32_t AlignInBits, unsigned Encoding,
-                              DIFlags Flags, DINodeArray Annotations,
-                              StorageType Storage, bool ShouldCreate = true) {
+                              DIFlags Flags, StorageType Storage,
+                              bool ShouldCreate = true) {
     return getImpl(Context, Tag, getCanonicalMDString(Context, Name),
-                   SizeInBits, AlignInBits, Encoding, Flags, Annotations.get(),
-                   Storage, ShouldCreate);
+                   SizeInBits, AlignInBits, Encoding, Flags, Storage,
+                   ShouldCreate);
   }
   static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
                               MDString *Name, uint64_t SizeInBits,
                               uint32_t AlignInBits, unsigned Encoding,
-                              DIFlags Flags, Metadata *Annotations,
-                              StorageType Storage, bool ShouldCreate = true);
+                              DIFlags Flags, StorageType Storage,
+                              bool ShouldCreate = true);
 
   TempDIBasicType cloneImpl() const {
     return getTemporary(getContext(), getTag(), getName(), getSizeInBits(),
-                        getAlignInBits(), getEncoding(), getFlags(),
-                        getAnnotations());
+                        getAlignInBits(), getEncoding(), getFlags());
   }
 
 public:
   DEFINE_MDNODE_GET(DIBasicType, (unsigned Tag, StringRef Name),
-                    (Tag, Name, 0, 0, 0, FlagZero, {}))
+                    (Tag, Name, 0, 0, 0, FlagZero))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, StringRef Name, uint64_t SizeInBits),
-                    (Tag, Name, SizeInBits, 0, 0, FlagZero, {}))
+                    (Tag, Name, SizeInBits, 0, 0, FlagZero))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, MDString *Name, uint64_t SizeInBits),
-                    (Tag, Name, SizeInBits, 0, 0, FlagZero, {}))
+                    (Tag, Name, SizeInBits, 0, 0, FlagZero))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, StringRef Name, uint64_t SizeInBits,
-                     uint32_t AlignInBits, unsigned Encoding, DIFlags Flags,
-                     DINodeArray Annotations = {}),
-                    (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags,
-                     Annotations))
+                     uint32_t AlignInBits, unsigned Encoding, DIFlags Flags),
+                    (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags))
   DEFINE_MDNODE_GET(DIBasicType,
                     (unsigned Tag, MDString *Name, uint64_t SizeInBits,
-                     uint32_t AlignInBits, unsigned Encoding, DIFlags Flags,
-                     Metadata *Annotations = nullptr),
-                    (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags,
-                     Annotations))
+                     uint32_t AlignInBits, unsigned Encoding, DIFlags Flags),
+                    (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags))
 
   TempDIBasicType clone() const { return cloneImpl(); }
 
@@ -877,16 +873,6 @@ public:
   /// Return the signedness of this type, or std::nullopt if this type is
   /// neither signed nor unsigned.
   std::optional<Signedness> getSignedness() const;
-
-  Metadata *getRawAnnotations() const { return getOperand(3); }
-
-  DINodeArray getAnnotations() const {
-    return cast_or_null<MDTuple>(getRawAnnotations());
-  }
-
-  void replaceAnnotations(DINodeArray Annotations) {
-    replaceOperandWith(3, Annotations.get());
-  }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DIBasicTypeKind;
@@ -1127,10 +1113,6 @@ public:
   }
   Metadata *getRawAnnotations() const { return getOperand(5); }
 
-  void replaceAnnotations(DINodeArray Annotations) {
-    replaceOperandWith(5, Annotations.get());
-  }
-
   /// Get casted version of extra data.
   /// @{
   DIType *getClassType() const;
@@ -1358,10 +1340,6 @@ public:
     return cast_or_null<MDTuple>(getRawAnnotations());
   }
 
-  void replaceAnnotations(DINodeArray Annotations) {
-    replaceOperandWith(13, Annotations.get());
-  }
-
   /// Replace operands.
   ///
   /// If this \a isUniqued() and not \a isResolved(), on a uniquing collision
@@ -1408,30 +1386,26 @@ class DISubroutineType : public DIType {
 
   static DISubroutineType *getImpl(LLVMContext &Context, DIFlags Flags,
                                    uint8_t CC, DITypeRefArray TypeArray,
-                                   DINodeArray Annotations, StorageType Storage,
+                                   StorageType Storage,
                                    bool ShouldCreate = true) {
-    return getImpl(Context, Flags, CC, TypeArray.get(), Annotations.get(),
-                   Storage, ShouldCreate);
+    return getImpl(Context, Flags, CC, TypeArray.get(), Storage, ShouldCreate);
   }
   static DISubroutineType *getImpl(LLVMContext &Context, DIFlags Flags,
                                    uint8_t CC, Metadata *TypeArray,
-                                   Metadata *Annotations, StorageType Storage,
+                                   StorageType Storage,
                                    bool ShouldCreate = true);
 
   TempDISubroutineType cloneImpl() const {
-    return getTemporary(getContext(), getFlags(), getCC(), getTypeArray(),
-                        getAnnotations());
+    return getTemporary(getContext(), getFlags(), getCC(), getTypeArray());
   }
 
 public:
   DEFINE_MDNODE_GET(DISubroutineType,
-                    (DIFlags Flags, uint8_t CC, DITypeRefArray TypeArray,
-                     DINodeArray Annotations = nullptr),
-                    (Flags, CC, TypeArray, Annotations))
+                    (DIFlags Flags, uint8_t CC, DITypeRefArray TypeArray),
+                    (Flags, CC, TypeArray))
   DEFINE_MDNODE_GET(DISubroutineType,
-                    (DIFlags Flags, uint8_t CC, Metadata *TypeArray,
-                     Metadata *Annotations = nullptr),
-                    (Flags, CC, TypeArray, Annotations))
+                    (DIFlags Flags, uint8_t CC, Metadata *TypeArray),
+                    (Flags, CC, TypeArray))
 
   TempDISubroutineType clone() const { return cloneImpl(); }
   // Returns a new temporary DISubroutineType with updated CC
@@ -1448,15 +1422,6 @@ public:
   }
 
   Metadata *getRawTypeArray() const { return getOperand(3); }
-
-  Metadata *getRawAnnotations() const { return getOperand(4); }
-  DINodeArray getAnnotations() const {
-    return cast_or_null<MDTuple>(getRawAnnotations());
-  }
-
-  void replaceAnnotations(DINodeArray Annotations) {
-    replaceOperandWith(4, Annotations.get());
-  }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DISubroutineTypeKind;
@@ -2922,29 +2887,7 @@ public:
   /// Return whether there is exactly one operator and it is a DW_OP_deref;
   bool isDeref() const;
 
-  /// Holds the characteristics of one fragment of a larger variable.
-  struct FragmentInfo {
-    FragmentInfo() = default;
-    FragmentInfo(uint64_t SizeInBits, uint64_t OffsetInBits)
-        : SizeInBits(SizeInBits), OffsetInBits(OffsetInBits) {}
-    uint64_t SizeInBits;
-    uint64_t OffsetInBits;
-    /// Return the index of the first bit of the fragment.
-    uint64_t startInBits() const { return OffsetInBits; }
-    /// Return the index of the bit after the end of the fragment, e.g. for
-    /// fragment offset=16 and size=32 return their sum, 48.
-    uint64_t endInBits() const { return OffsetInBits + SizeInBits; }
-
-    /// Returns a zero-sized fragment if A and B don't intersect.
-    static DIExpression::FragmentInfo intersect(DIExpression::FragmentInfo A,
-                                                DIExpression::FragmentInfo B) {
-      uint64_t StartInBits = std::max(A.OffsetInBits, B.OffsetInBits);
-      uint64_t EndInBits = std::min(A.endInBits(), B.endInBits());
-      if (EndInBits <= StartInBits)
-        return {0, 0};
-      return DIExpression::FragmentInfo(EndInBits - StartInBits, StartInBits);
-    }
-  };
+  using FragmentInfo = DbgVariableFragmentInfo;
 
   /// Return the number of bits that have an active value, i.e. those that
   /// aren't known to be zero/sign (depending on the type of Var) and which
@@ -3039,6 +2982,16 @@ public:
   /// return true with an offset of zero.
   bool extractIfOffset(int64_t &Offset) const;
 
+  /// Assuming that the expression operates on an address, extract a constant
+  /// offset and the successive ops. Return false if the expression contains
+  /// any incompatible ops (including non-zero DW_OP_LLVM_args - only a single
+  /// address operand to the expression is permitted).
+  ///
+  /// We don't try very hard to interpret the expression because we assume that
+  /// foldConstantMath has canonicalized the expression.
+  bool extractLeadingOffset(int64_t &OffsetInBytes,
+                            SmallVectorImpl<uint64_t> &RemainingOps) const;
+
   /// Returns true iff this DIExpression contains at least one instance of
   /// `DW_OP_LLVM_arg, n` for all n in [0, N).
   bool hasAllLocationOps(unsigned N) const;
@@ -3130,6 +3083,43 @@ public:
     else
       return 0;
   }
+
+  /// Computes a fragment, bit-extract operation if needed, and new constant
+  /// offset to describe a part of a variable covered by some memory.
+  ///
+  /// The memory region starts at:
+  ///   \p SliceStart + \p SliceOffsetInBits
+  /// And is size:
+  ///   \p SliceSizeInBits
+  ///
+  /// The location of the existing variable fragment \p VarFrag is:
+  ///   \p DbgPtr + \p DbgPtrOffsetInBits + \p DbgExtractOffsetInBits.
+  ///
+  /// It is intended that these arguments are derived from a debug record:
+  /// - \p DbgPtr is the (single) DIExpression operand.
+  /// - \p DbgPtrOffsetInBits is the constant offset applied to \p DbgPtr.
+  /// - \p DbgExtractOffsetInBits is the offset from a
+  ///   DW_OP_LLVM_bit_extract_[sz]ext operation.
+  ///
+  /// Results and return value:
+  /// - Return false if the result can't be calculated for any reason.
+  /// - \p Result is set to nullopt if the intersect equals \p VarFarg.
+  /// - \p Result contains a zero-sized fragment if there's no intersect.
+  /// - \p OffsetFromLocationInBits is set to the difference between the first
+  ///   bit of the variable location and the first bit of the slice. The
+  ///   magnitude of a negative value therefore indicates the number of bits
+  ///   into the variable fragment that the memory region begins.
+  ///
+  /// We don't pass in a debug record directly to get the constituent parts
+  /// and offsets because different debug records store the information in
+  /// different places (dbg_assign has two DIExpressions - one contains the
+  /// fragment info for the entire intrinsic).
+  static bool calculateFragmentIntersect(
+      const DataLayout &DL, const Value *SliceStart, uint64_t SliceOffsetInBits,
+      uint64_t SliceSizeInBits, const Value *DbgPtr, int64_t DbgPtrOffsetInBits,
+      int64_t DbgExtractOffsetInBits, DIExpression::FragmentInfo VarFrag,
+      std::optional<DIExpression::FragmentInfo> &Result,
+      int64_t &OffsetFromLocationInBits);
 
   using ExtOps = std::array<uint64_t, 6>;
 
