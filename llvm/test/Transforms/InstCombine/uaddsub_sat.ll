@@ -7,11 +7,7 @@ define i32 @uadd_sat32(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i32 @uadd_sat32(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[A]] to i64
-; CHECK-NEXT:    [[CONV1:%.*]] = zext i32 [[B]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[CONV1]], [[CONV]]
-; CHECK-NEXT:    [[SELECT:%.*]] = call i64 @llvm.umin.i64(i64 [[ADD]], i64 4294967295)
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw i64 [[SELECT]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[B]], i32 [[A]])
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
@@ -28,11 +24,7 @@ define i32 @uadd_sat32_min(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i32 @uadd_sat32_min(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[A]] to i64
-; CHECK-NEXT:    [[CONV1:%.*]] = zext i32 [[B]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[CONV1]], [[CONV]]
-; CHECK-NEXT:    [[MIN:%.*]] = call i64 @llvm.umin.i64(i64 [[ADD]], i64 4294967295)
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw i64 [[MIN]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[B]], i32 [[A]])
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
@@ -48,12 +40,7 @@ define i32 @usub_sat32(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i32 @usub_sat32(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[A]] to i64
-; CHECK-NEXT:    [[CONV1:%.*]] = zext i32 [[B]] to i64
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i64 [[CONV]], [[CONV1]]
-; CHECK-NEXT:    [[COND:%.*]] = call i64 @llvm.smin.i64(i64 [[SUB]], i64 4294967295)
-; CHECK-NEXT:    [[COND11:%.*]] = call i64 @llvm.smax.i64(i64 [[COND]], i64 0)
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[COND11]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
@@ -72,12 +59,7 @@ define i32 @usub_sat32_minmax(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i32 @usub_sat32_minmax(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[A]] to i64
-; CHECK-NEXT:    [[CONV1:%.*]] = zext i32 [[B]] to i64
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i64 [[CONV]], [[CONV1]]
-; CHECK-NEXT:    [[COND:%.*]] = call i64 @llvm.smin.i64(i64 [[SUB]], i64 4294967295)
-; CHECK-NEXT:    [[COND11:%.*]] = call i64 @llvm.smax.i64(i64 [[COND]], i64 0)
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[COND11]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
@@ -94,11 +76,7 @@ define i16 @uadd_sat16(i16 %a, i16 %b) {
 ; CHECK-LABEL: define i16 @uadd_sat16(
 ; CHECK-SAME: i16 [[A:%.*]], i16 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext i16 [[A]] to i32
-; CHECK-NEXT:    [[CONV1:%.*]] = zext i16 [[B]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[CONV1]], [[CONV]]
-; CHECK-NEXT:    [[SELECT:%.*]] = call i32 @llvm.umin.i32(i32 [[ADD]], i32 65535)
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw i32 [[SELECT]] to i16
+; CHECK-NEXT:    [[TMP0:%.*]] = call i16 @llvm.uadd.sat.i16(i16 [[B]], i16 [[A]])
 ; CHECK-NEXT:    ret i16 [[TMP0]]
 ;
 entry:
@@ -115,11 +93,7 @@ define i16 @uadd_sat16_min(i16 %a, i16 %b) {
 ; CHECK-LABEL: define i16 @uadd_sat16_min(
 ; CHECK-SAME: i16 [[A:%.*]], i16 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext i16 [[A]] to i32
-; CHECK-NEXT:    [[CONV1:%.*]] = zext i16 [[B]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[CONV1]], [[CONV]]
-; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[ADD]], i32 65535)
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw i32 [[MIN]] to i16
+; CHECK-NEXT:    [[TMP0:%.*]] = call i16 @llvm.uadd.sat.i16(i16 [[B]], i16 [[A]])
 ; CHECK-NEXT:    ret i16 [[TMP0]]
 ;
 entry:
@@ -135,12 +109,7 @@ define i16 @usub_sat16(i16 %a, i16 %b) {
 ; CHECK-LABEL: define i16 @usub_sat16(
 ; CHECK-SAME: i16 [[A:%.*]], i16 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext i16 [[A]] to i32
-; CHECK-NEXT:    [[CONV1:%.*]] = zext i16 [[B]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[CONV]], [[CONV1]]
-; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smin.i32(i32 [[SUB]], i32 65535)
-; CHECK-NEXT:    [[COND11:%.*]] = call i32 @llvm.smax.i32(i32 [[COND]], i32 0)
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[COND11]] to i16
+; CHECK-NEXT:    [[TMP0:%.*]] = call i16 @llvm.usub.sat.i16(i16 [[A]], i16 [[B]])
 ; CHECK-NEXT:    ret i16 [[TMP0]]
 ;
 entry:
@@ -159,12 +128,7 @@ define i16 @usub_sat16_minmax(i16 %a, i16 %b) {
 ; CHECK-LABEL: define i16 @usub_sat16_minmax(
 ; CHECK-SAME: i16 [[A:%.*]], i16 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext i16 [[A]] to i32
-; CHECK-NEXT:    [[CONV1:%.*]] = zext i16 [[B]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[CONV]], [[CONV1]]
-; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smin.i32(i32 [[SUB]], i32 65535)
-; CHECK-NEXT:    [[COND11:%.*]] = call i32 @llvm.smax.i32(i32 [[COND]], i32 0)
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[COND11]] to i16
+; CHECK-NEXT:    [[TMP0:%.*]] = call i16 @llvm.usub.sat.i16(i16 [[A]], i16 [[B]])
 ; CHECK-NEXT:    ret i16 [[TMP0]]
 ;
 entry:
@@ -181,11 +145,7 @@ define i8 @uadd_sat8(i8 %a, i8 %b) {
 ; CHECK-LABEL: define i8 @uadd_sat8(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[A]] to i32
-; CHECK-NEXT:    [[CONV1:%.*]] = zext i8 [[B]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[CONV1]], [[CONV]]
-; CHECK-NEXT:    [[SELECT:%.*]] = call i32 @llvm.umin.i32(i32 [[ADD]], i32 255)
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw i32 [[SELECT]] to i8
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[B]], i8 [[A]])
 ; CHECK-NEXT:    ret i8 [[TMP0]]
 ;
 entry:
@@ -202,11 +162,7 @@ define i8 @uadd_sat8_min(i8 %a, i8 %b) {
 ; CHECK-LABEL: define i8 @uadd_sat8_min(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[A]] to i32
-; CHECK-NEXT:    [[CONV1:%.*]] = zext i8 [[B]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[CONV1]], [[CONV]]
-; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[ADD]], i32 255)
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw i32 [[MIN]] to i8
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[B]], i8 [[A]])
 ; CHECK-NEXT:    ret i8 [[TMP0]]
 ;
 entry:
@@ -222,12 +178,7 @@ define i8 @usub_sat8(i8 %a, i8 %b) {
 ; CHECK-LABEL: define i8 @usub_sat8(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[A]] to i32
-; CHECK-NEXT:    [[CONV1:%.*]] = zext i8 [[B]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[CONV]], [[CONV1]]
-; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smin.i32(i32 [[SUB]], i32 255)
-; CHECK-NEXT:    [[COND11:%.*]] = call i32 @llvm.smax.i32(i32 [[COND]], i32 0)
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[COND11]] to i8
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A]], i8 [[B]])
 ; CHECK-NEXT:    ret i8 [[TMP0]]
 ;
 entry:
@@ -246,12 +197,7 @@ define i8 @usub_sat8_minmax(i8 %a, i8 %b) {
 ; CHECK-LABEL: define i8 @usub_sat8_minmax(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[A]] to i32
-; CHECK-NEXT:    [[CONV1:%.*]] = zext i8 [[B]] to i32
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[CONV]], [[CONV1]]
-; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smin.i32(i32 [[SUB]], i32 255)
-; CHECK-NEXT:    [[COND11:%.*]] = call i32 @llvm.smax.i32(i32 [[COND]], i32 0)
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[COND11]] to i8
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A]], i8 [[B]])
 ; CHECK-NEXT:    ret i8 [[TMP0]]
 ;
 entry:
@@ -268,11 +214,7 @@ define i64 @uadd_sat64(i64 %a, i64 %b) {
 ; CHECK-LABEL: define i64 @uadd_sat64(
 ; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext i64 [[A]] to i65
-; CHECK-NEXT:    [[CONV1:%.*]] = zext i64 [[B]] to i65
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i65 [[CONV1]], [[CONV]]
-; CHECK-NEXT:    [[SELECT:%.*]] = call i65 @llvm.umin.i65(i65 [[ADD]], i65 18446744073709551615)
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw i65 [[SELECT]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.uadd.sat.i64(i64 [[B]], i64 [[A]])
 ; CHECK-NEXT:    ret i64 [[TMP0]]
 ;
 entry:
@@ -289,12 +231,7 @@ define i64 @usub_sat64(i64 %a, i64 %b) {
 ; CHECK-LABEL: define i64 @usub_sat64(
 ; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext i64 [[A]] to i128
-; CHECK-NEXT:    [[CONV1:%.*]] = zext i64 [[B]] to i128
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i128 [[CONV]], [[CONV1]]
-; CHECK-NEXT:    [[COND:%.*]] = call i128 @llvm.smin.i128(i128 [[SUB]], i128 18446744073709551615)
-; CHECK-NEXT:    [[COND11:%.*]] = call i128 @llvm.smax.i128(i128 [[COND]], i128 0)
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i128 [[COND11]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 [[B]])
 ; CHECK-NEXT:    ret i64 [[TMP0]]
 ;
 entry:
@@ -313,11 +250,7 @@ define <4 x i32> @uadd_satv4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: define <4 x i32> @uadd_satv4i32(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext <4 x i32> [[A]] to <4 x i64>
-; CHECK-NEXT:    [[CONV1:%.*]] = zext <4 x i32> [[B]] to <4 x i64>
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <4 x i64> [[CONV1]], [[CONV]]
-; CHECK-NEXT:    [[SELECT:%.*]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> [[ADD]], <4 x i64> <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>)
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw <4 x i64> [[SELECT]] to <4 x i32>
+; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.uadd.sat.v4i32(<4 x i32> [[B]], <4 x i32> [[A]])
 ; CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 ;
 entry:
@@ -334,11 +267,7 @@ define <8 x i16> @uadd_satv8i16_minmax(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: define <8 x i16> @uadd_satv8i16_minmax(
 ; CHECK-SAME: <8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext <8 x i16> [[A]] to <8 x i32>
-; CHECK-NEXT:    [[CONV1:%.*]] = zext <8 x i16> [[B]] to <8 x i32>
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <8 x i32> [[CONV1]], [[CONV]]
-; CHECK-NEXT:    [[SELECT:%.*]] = call <8 x i32> @llvm.umin.v8i32(<8 x i32> [[ADD]], <8 x i32> <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>)
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw <8 x i32> [[SELECT]] to <8 x i16>
+; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> [[B]], <8 x i16> [[A]])
 ; CHECK-NEXT:    ret <8 x i16> [[TMP0]]
 ;
 entry:
@@ -354,12 +283,7 @@ define <16 x i8> @usub_satv16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: define <16 x i8> @usub_satv16i8(
 ; CHECK-SAME: <16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext <16 x i8> [[A]] to <16 x i32>
-; CHECK-NEXT:    [[CONV1:%.*]] = zext <16 x i8> [[B]] to <16 x i32>
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <16 x i32> [[CONV1]], [[CONV]]
-; CHECK-NEXT:    [[SELECT:%.*]] = call <16 x i32> @llvm.smin.v16i32(<16 x i32> [[SUB]], <16 x i32> <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>)
-; CHECK-NEXT:    [[SELECT8:%.*]] = call <16 x i32> @llvm.smax.v16i32(<16 x i32> [[SELECT]], <16 x i32> zeroinitializer)
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc <16 x i32> [[SELECT8]] to <16 x i8>
+; CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i8> @llvm.usub.sat.v16i8(<16 x i8> [[B]], <16 x i8> [[A]])
 ; CHECK-NEXT:    ret <16 x i8> [[TMP0]]
 ;
 entry:
@@ -378,12 +302,7 @@ define <2 x i64> @usub_satv2i64_minmax(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: define <2 x i64> @usub_satv2i64_minmax(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext <2 x i64> [[A]] to <2 x i128>
-; CHECK-NEXT:    [[CONV1:%.*]] = zext <2 x i64> [[B]] to <2 x i128>
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <2 x i128> [[CONV1]], [[CONV]]
-; CHECK-NEXT:    [[SELECT:%.*]] = call <2 x i128> @llvm.smin.v2i128(<2 x i128> [[SUB]], <2 x i128> <i128 18446744073709551615, i128 18446744073709551615>)
-; CHECK-NEXT:    [[SELECT8:%.*]] = call <2 x i128> @llvm.smax.v2i128(<2 x i128> [[SELECT]], <2 x i128> zeroinitializer)
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc <2 x i128> [[SELECT8]] to <2 x i64>
+; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i64> @llvm.usub.sat.v2i64(<2 x i64> [[B]], <2 x i64> [[A]])
 ; CHECK-NEXT:    ret <2 x i64> [[TMP0]]
 ;
 entry:
@@ -400,11 +319,8 @@ define i32 @uadd_sat32_extra_use_1(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i32 @uadd_sat32_extra_use_1(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[A]] to i64
-; CHECK-NEXT:    [[CONV1:%.*]] = zext i32 [[B]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[CONV1]], [[CONV]]
-; CHECK-NEXT:    [[SELECT:%.*]] = call i64 @llvm.umin.i64(i64 [[ADD]], i64 4294967295)
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw i64 [[SELECT]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[B]], i32 [[A]])
+; CHECK-NEXT:    [[SELECT:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    call void @use64(i64 [[SELECT]])
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
@@ -520,12 +436,7 @@ define i32 @usub_sat32_maxmin(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i32 @usub_sat32_maxmin(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[A]] to i64
-; CHECK-NEXT:    [[CONV1:%.*]] = zext i32 [[B]] to i64
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i64 [[CONV]], [[CONV1]]
-; CHECK-NEXT:    [[COND:%.*]] = call i64 @llvm.smax.i64(i64 [[SUB]], i64 0)
-; CHECK-NEXT:    [[COND11:%.*]] = call i64 @llvm.smin.i64(i64 [[COND]], i64 4294967295)
-; CHECK-NEXT:    [[CONV12:%.*]] = trunc nuw i64 [[COND11]] to i32
+; CHECK-NEXT:    [[CONV12:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    ret i32 [[CONV12]]
 ;
 entry:
@@ -544,10 +455,8 @@ define i64 @uadd_sat32_no_trunc(i32 %a, i32 %b) {
 ; CHECK-LABEL: define i64 @uadd_sat32_no_trunc(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[A]] to i64
-; CHECK-NEXT:    [[CONV1:%.*]] = zext i32 [[B]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[CONV1]], [[CONV]]
-; CHECK-NEXT:    [[SELECT:%.*]] = call i64 @llvm.umin.i64(i64 [[ADD]], i64 4294967295)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[B]], i32 [[A]])
+; CHECK-NEXT:    [[SELECT:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    ret i64 [[SELECT]]
 ;
 entry:

@@ -392,7 +392,7 @@ private:
   Instruction *narrowMathIfNoOverflow(BinaryOperator &I);
   Instruction *narrowFunnelShift(TruncInst &Trunc);
   Instruction *optimizeBitCastFromPhi(CastInst &CI, PHINode *PN);
-  Instruction *matchSAddSubSat(IntrinsicInst &MinMax1);
+  Instruction *matchAddSubSat(IntrinsicInst &MinMax1);
   Instruction *foldNot(BinaryOperator &I);
   Instruction *foldBinOpOfDisplacedShifts(BinaryOperator &I);
 
