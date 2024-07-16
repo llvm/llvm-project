@@ -184,16 +184,26 @@ public:
     };
   };
 
+  __long &getLongRep() {
+#if COMPRESSED_PAIR_REV == 0
+    return __r_.first().__l
+#elif COMPRESSED_PAIR_REV <= 2
+    return __rep_.__l;
+#endif
+  }
+
+  __short &getShortRep() {
+#if COMPRESSED_PAIR_REV == 0
+    return __r_.first().__s
+#elif COMPRESSED_PAIR_REV <= 2
+    return __rep_.__s;
+#endif
+  }
+
 #if COMPRESSED_PAIR_REV == 0
   std::__lldb::__compressed_pair<__rep, allocator_type> __r_;
-#define __R_ __r_
-#define __R_L __r_.first().__l
-#define __R_S __r_.first().__s
 #elif COMPRESSED_PAIR_REV <= 2
   _LLDB_COMPRESSED_PAIR(__rep, __rep_, allocator_type, __alloc_);
-#define __R_ __rep_
-#define __R_L __rep_.__l
-#define __R_S __rep_.__s
 #endif
 
 public:
@@ -201,23 +211,23 @@ public:
   basic_string(unsigned char __size, const value_type (&__data)[__N]) {
     static_assert(__N < __min_cap, "");
 #ifdef BITMASKS
-    __R_S.__size_ = __size << __short_shift;
+    getShortRep().__size_ = __size << __short_shift;
 #else
-    __R_S.__size_ = __size;
-    __R_S.__is_long_ = false;
+    getShortRep().__size_ = __size;
+    getShortRep().__is_long_ = false;
 #endif
     for (size_t __i = 0; __i < __N; ++__i)
-      __R_S.__data_[__i] = __data[__i];
+      getShortRep().__data_[__i] = __data[__i];
   }
   basic_string(size_t __cap, size_type __size, pointer __data) {
 #ifdef BITMASKS
-    __R_L.__cap_ = __cap | __long_mask;
+    getLongRep().__cap_ = __cap | __long_mask;
 #else
-    __R_L.__cap_ = __cap / __endian_factor;
-    __R_L.__is_long_ = true;
+    getLongRep().__cap_ = __cap / __endian_factor;
+    getLongRep().__is_long_ = true;
 #endif
-    __R_L.__size_ = __size;
-    __R_L.__data_ = __data;
+    getLongRep().__size_ = __size;
+    getLongRep().__data_ = __data;
   }
 };
 
