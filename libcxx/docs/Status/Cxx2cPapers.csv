@@ -64,7 +64,7 @@
 "`P3029R1 <https://wg21.link/P3029R1>`__","LWG","Better ``mdspan``'s CTAD","Tokyo March 2024","|Complete|","19.0",""
 "","","","","","",""
 "`P2747R2 <https://wg21.link/P2747R2>`__","CWG","``constexpr`` placement new","St. Louis June 2024","","",""
-"`P2997R1 <https://wg21.link/P2997R1>`__","LWG","Removing the common reference requirement from the indirectly invocable concepts","St. Louis June 2024",""|Complete| [#note-P2997R1]_","19.0",""
+"`P2997R1 <https://wg21.link/P2997R1>`__","LWG","Removing the common reference requirement from the indirectly invocable concepts","St. Louis June 2024","|Complete| [#note-P2997R1]_","19.0",""
 "`P2389R2 <https://wg21.link/P2389R2>`__","LWG","``dextents`` Index Type Parameter","St. Louis June 2024","|Complete|","19.0",""
 "`P3168R2 <https://wg21.link/P3168R2>`__","LWG","Give ``std::optional`` Range Support","St. Louis June 2024","","","|ranges|"
 "`P3217R0 <https://wg21.link/P3217R0>`__","LWG","Adjoints to 'Enabling list-initialization for algorithms': find_last","St. Louis June 2024","","",""
