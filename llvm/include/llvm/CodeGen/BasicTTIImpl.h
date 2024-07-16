@@ -2057,12 +2057,6 @@ public:
     case Intrinsic::llrint:
       ISD = ISD::LLRINT;
       break;
-    case Intrinsic::lround:
-      ISD = ISD::LROUND;
-      break;
-    case Intrinsic::llround:
-      ISD = ISD::LLROUND;
-      break;
     case Intrinsic::round:
       ISD = ISD::FROUND;
       break;

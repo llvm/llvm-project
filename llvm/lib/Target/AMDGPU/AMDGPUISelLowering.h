@@ -59,7 +59,6 @@ protected:
 
   SDValue LowerFROUNDEVEN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerLROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFFLOOR(SDValue Op, SelectionDAG &DAG) const;
 
   static bool allowApproxFunc(const SelectionDAG &DAG, SDNodeFlags Flags);

@@ -2410,9 +2410,7 @@ bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
     case ISD::FP_TO_SINT:
     case ISD::FP_TO_UINT:
     case ISD::LRINT:
-    case ISD::LLRINT:
-    case ISD::LROUND:
-    case ISD::LLROUND:     R = PromoteFloatOp_UnaryOp(N, OpNo); break;
+    case ISD::LLRINT:     R = PromoteFloatOp_UnaryOp(N, OpNo); break;
     case ISD::FP_TO_SINT_SAT:
     case ISD::FP_TO_UINT_SAT:
                           R = PromoteFloatOp_FP_TO_XINT_SAT(N, OpNo); break;
