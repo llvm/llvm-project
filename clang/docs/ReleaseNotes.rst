@@ -1039,6 +1039,7 @@ Bug Fixes to C++ Support
 - Fixed failed assertion when resolving context of defaulted comparison method outside of struct. (#GH96043).
 - Clang now diagnoses explicit object parameters in member pointers and other contexts where they should not appear.
   Fixes (#GH85992).
+- Fixed a crash-on-invalid bug involving extraneous template parameter with concept substitution. (#GH73885)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
