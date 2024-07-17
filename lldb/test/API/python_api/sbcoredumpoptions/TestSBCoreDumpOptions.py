@@ -7,7 +7,7 @@ from lldbsuite.test.lldbtest import *
 
 class SBCoreDumpOptionsAPICase(TestBase):
     def test_plugin_name_assignment(self):
-        """Test"""
+        """Test assignment ensuring valid plugin names only."""
         options = lldb.SBCoreDumpOptions()
         error = options.SetPluginName(None)
         self.assertTrue(error.Fail())
