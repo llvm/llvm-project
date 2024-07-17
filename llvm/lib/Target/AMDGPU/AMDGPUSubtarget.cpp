@@ -203,11 +203,13 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   // clang-format on
   MaxWavesPerEU = AMDGPU::IsaInfo::getMaxWavesPerEU(this);
   EUsPerCU = AMDGPU::IsaInfo::getEUsPerCU(this);
-  CallLoweringInfo.reset(new AMDGPUCallLowering(*getTargetLowering()));
-  InlineAsmLoweringInfo.reset(new InlineAsmLowering(getTargetLowering()));
-  Legalizer.reset(new AMDGPULegalizerInfo(*this, TM));
-  RegBankInfo.reset(new AMDGPURegisterBankInfo(*this));
-  InstSelector.reset(new AMDGPUInstructionSelector(*this, *RegBankInfo, TM));
+  CallLoweringInfo = std::make_unique<AMDGPUCallLowering>(*getTargetLowering());
+  InlineAsmLoweringInfo =
+      std::make_unique<InlineAsmLowering>(getTargetLowering());
+  Legalizer = std::make_unique<AMDGPULegalizerInfo>(*this, TM);
+  RegBankInfo = std::make_unique<AMDGPURegisterBankInfo>(*this);
+  InstSelector =
+      std::make_unique<AMDGPUInstructionSelector>(*this, *RegBankInfo, TM);
 }
 
 unsigned GCNSubtarget::getConstantBusLimit(unsigned Opcode) const {

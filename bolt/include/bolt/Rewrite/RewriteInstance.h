@@ -490,7 +490,7 @@ private:
   std::unordered_map<const MCSymbol *, uint32_t> SymbolIndex;
 
   /// Store all non-zero symbols in this map for a quick address lookup.
-  std::map<uint64_t, llvm::object::SymbolRef> FileSymRefs;
+  std::multimap<uint64_t, llvm::object::SymbolRef> FileSymRefs;
 
   /// FILE symbols used for disambiguating split function parents.
   std::vector<ELFSymbolRef> FileSymbols;
