@@ -1964,8 +1964,6 @@ module std_private_type_traits_is_fundamental                            [system
 module std_private_type_traits_is_implicitly_default_constructible       [system] { header "__type_traits/is_implicitly_default_constructible.h" }
 module std_private_type_traits_is_integral                               [system] { header "__type_traits/is_integral.h" }
 module std_private_type_traits_is_literal_type                           [system] { header "__type_traits/is_literal_type.h" }
-module std_private_type_traits_is_member_function_pointer                [system] { header "__type_traits/is_member_function_pointer.h" }
-module std_private_type_traits_is_member_object_pointer                  [system] { header "__type_traits/is_member_object_pointer.h" }
 module std_private_type_traits_is_member_pointer                         [system] { header "__type_traits/is_member_pointer.h" }
 module std_private_type_traits_is_nothrow_assignable                     [system] { header "__type_traits/is_nothrow_assignable.h" }
 module std_private_type_traits_is_nothrow_constructible                  [system] {

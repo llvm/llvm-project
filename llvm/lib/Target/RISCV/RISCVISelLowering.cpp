@@ -699,7 +699,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_SMAX,        ISD::VP_UMIN,        ISD::VP_UMAX,
         ISD::VP_ABS, ISD::EXPERIMENTAL_VP_REVERSE, ISD::EXPERIMENTAL_VP_SPLICE,
         ISD::VP_SADDSAT,     ISD::VP_UADDSAT,     ISD::VP_SSUBSAT,
-        ISD::VP_USUBSAT,     ISD::VP_CTTZ_ELTS,   ISD::VP_CTTZ_ELTS_ZERO_UNDEF};
+        ISD::VP_USUBSAT,     ISD::VP_CTTZ_ELTS,   ISD::VP_CTTZ_ELTS_ZERO_UNDEF,
+        ISD::EXPERIMENTAL_VP_SPLAT};
 
     static const unsigned FloatingPointVPOps[] = {
         ISD::VP_FADD,        ISD::VP_FSUB,        ISD::VP_FMUL,
@@ -715,7 +716,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_FMINIMUM,    ISD::VP_FMAXIMUM,    ISD::VP_LRINT,
         ISD::VP_LLRINT,      ISD::EXPERIMENTAL_VP_REVERSE,
         ISD::EXPERIMENTAL_VP_SPLICE, ISD::VP_REDUCE_FMINIMUM,
-        ISD::VP_REDUCE_FMAXIMUM};
+        ISD::VP_REDUCE_FMAXIMUM, ISD::EXPERIMENTAL_VP_SPLAT};
 
     static const unsigned IntegerVecReduceOps[] = {
         ISD::VECREDUCE_ADD,  ISD::VECREDUCE_AND,  ISD::VECREDUCE_OR,
@@ -7252,6 +7253,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerVPSpliceExperimental(Op, DAG);
   case ISD::EXPERIMENTAL_VP_REVERSE:
     return lowerVPReverseExperimental(Op, DAG);
+  case ISD::EXPERIMENTAL_VP_SPLAT:
+    return lowerVPSplatExperimental(Op, DAG);
   case ISD::CLEAR_CACHE: {
     assert(getTargetMachine().getTargetTriple().isOSLinux() &&
            "llvm.clear_cache only needs custom lower on Linux targets");
@@ -11614,6 +11617,29 @@ RISCVTargetLowering::lowerVPSpliceExperimental(SDValue Op,
   return convertFromScalableVector(VT, Result, DAG, Subtarget);
 }
 
+SDValue RISCVTargetLowering::lowerVPSplatExperimental(SDValue Op,
+                                                      SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Val = Op.getOperand(0);
+  SDValue Mask = Op.getOperand(1);
+  SDValue VL = Op.getOperand(2);
+  MVT VT = Op.getSimpleValueType();
+
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(VT);
+    MVT MaskVT = getMaskTypeFor(ContainerVT);
+    Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
+  }
+
+  SDValue Result =
+      lowerScalarSplat(SDValue(), Val, VL, ContainerVT, DL, DAG, Subtarget);
+
+  if (!VT.isFixedLengthVector())
+    return Result;
+  return convertFromScalableVector(VT, Result, DAG, Subtarget);
+}
+
 SDValue
 RISCVTargetLowering::lowerVPReverseExperimental(SDValue Op,
                                                 SelectionDAG &DAG) const {
@@ -14318,6 +14344,13 @@ struct NodeExtensionHelper {
     case RISCVISD::VMV_V_X_VL:
       return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, NarrowVT,
                          DAG.getUNDEF(NarrowVT), Source.getOperand(1), VL);
+    case RISCVISD::VFMV_V_F_VL:
+      Source = Source.getOperand(1);
+      assert(Source.getOpcode() == ISD::FP_EXTEND && "Unexpected source");
+      Source = Source.getOperand(0);
+      assert(Source.getValueType() == NarrowVT.getVectorElementType());
+      return DAG.getNode(RISCVISD::VFMV_V_F_VL, DL, NarrowVT,
+                         DAG.getUNDEF(NarrowVT), Source, VL);
     default:
       // Other opcodes can only come from the original LHS of VW(ADD|SUB)_W_VL
       // and that operand should already have the right NarrowVT so no
@@ -14475,7 +14508,7 @@ struct NodeExtensionHelper {
     if (ScalarBits < EltBits)
       return;
 
-    unsigned NarrowSize = VT.getScalarSizeInBits() / 2;
+    unsigned NarrowSize = EltBits / 2;
     // If the narrow type cannot be expressed with a legal VMV,
     // this is not a valid candidate.
     if (NarrowSize < 8)
@@ -14533,6 +14566,24 @@ struct NodeExtensionHelper {
     case RISCVISD::VMV_V_X_VL:
       fillUpExtensionSupportForSplat(Root, DAG, Subtarget);
       break;
+    case RISCVISD::VFMV_V_F_VL: {
+      MVT VT = OrigOperand.getSimpleValueType();
+
+      if (!OrigOperand.getOperand(0).isUndef())
+        break;
+
+      SDValue Op = OrigOperand.getOperand(1);
+      if (Op.getOpcode() != ISD::FP_EXTEND)
+        break;
+
+      unsigned NarrowSize = VT.getScalarSizeInBits() / 2;
+      unsigned ScalarBits = Op.getOperand(0).getValueSizeInBits();
+      if (NarrowSize != ScalarBits)
+        break;
+
+      SupportsFPExt = true;
+      break;
+    }
     default:
       break;
     }
@@ -15482,12 +15533,9 @@ static SDValue performVFMADD_VLCombine(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineVFMADD_VLWithVFNEG_VL(N, DAG))
     return V;
 
-  if (N->getValueType(0).isScalableVector() &&
-      N->getValueType(0).getVectorElementType() == MVT::f32 &&
-      (Subtarget.hasVInstructionsF16Minimal() &&
-       !Subtarget.hasVInstructionsF16())) {
+  if (N->getValueType(0).getVectorElementType() == MVT::f32 &&
+      !Subtarget.hasVInstructionsF16())
     return SDValue();
-  }
 
   // FIXME: Ignore strict opcodes for now.
   if (N->isTargetStrictFPOpcode())
@@ -17250,10 +17298,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case RISCVISD::FMUL_VL:
   case RISCVISD::VFWADD_W_VL:
   case RISCVISD::VFWSUB_W_VL: {
-    if (N->getValueType(0).isScalableVector() &&
-        N->getValueType(0).getVectorElementType() == MVT::f32 &&
-        (Subtarget.hasVInstructionsF16Minimal() &&
-         !Subtarget.hasVInstructionsF16()))
+    if (N->getValueType(0).getVectorElementType() == MVT::f32 &&
+        !Subtarget.hasVInstructionsF16())
       return SDValue();
     return combineBinOp_VLToVWBinOp_VL(N, DCI, Subtarget);
   }
@@ -18864,15 +18910,14 @@ ArrayRef<MCPhysReg> RISCV::getArgGPRs(const RISCVABI::ABI ABI) {
 static ArrayRef<MCPhysReg> getFastCCArgGPRs(const RISCVABI::ABI ABI) {
   // The GPRs used for passing arguments in the FastCC, X5 and X6 might be used
   // for save-restore libcall, so we don't use them.
+  // Don't use X7 for fastcc, since Zicfilp uses X7 as the label register.
   static const MCPhysReg FastCCIGPRs[] = {
-      RISCV::X10, RISCV::X11, RISCV::X12, RISCV::X13, RISCV::X14,
-      RISCV::X15, RISCV::X16, RISCV::X17, RISCV::X7,  RISCV::X28,
-      RISCV::X29, RISCV::X30, RISCV::X31};
+      RISCV::X10, RISCV::X11, RISCV::X12, RISCV::X13, RISCV::X14, RISCV::X15,
+      RISCV::X16, RISCV::X17, RISCV::X28, RISCV::X29, RISCV::X30, RISCV::X31};
 
   // The GPRs used for passing arguments in the FastCC when using ILP32E/ILP64E.
   static const MCPhysReg FastCCEGPRs[] = {RISCV::X10, RISCV::X11, RISCV::X12,
-                                          RISCV::X13, RISCV::X14, RISCV::X15,
-                                          RISCV::X7};
+                                          RISCV::X13, RISCV::X14, RISCV::X15};
 
   if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
     return ArrayRef(FastCCEGPRs);
@@ -19887,7 +19932,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
     Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment,
                           /*IsVolatile=*/false,
-                          /*AlwaysInline=*/false, IsTailCall,
+                          /*AlwaysInline=*/false, /*CI*/ nullptr, IsTailCall,
                           MachinePointerInfo(), MachinePointerInfo());
     ByValArgs.push_back(FIPtr);
   }

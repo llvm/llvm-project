@@ -22,7 +22,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsLoongArch.h"
@@ -4225,7 +4225,7 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
     Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment,
                           /*IsVolatile=*/false,
-                          /*AlwaysInline=*/false, /*isTailCall=*/IsTailCall,
+                          /*AlwaysInline=*/false, /*CI=*/nullptr, std::nullopt,
                           MachinePointerInfo(), MachinePointerInfo());
     ByValArgs.push_back(FIPtr);
   }
