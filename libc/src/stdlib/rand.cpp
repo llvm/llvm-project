@@ -31,7 +31,7 @@ LLVM_LIBC_FUNCTION(int, rand, (void)) {
   x = (x >> 32) | (x << 32); 
   uint64_t result = (x * x + z) >> 32;
   // project into range
-  return static_cast<int>(((result) % RAND_MAX + RAND_MAX) % RAND_MAX);
+  return static_cast<int>((result % RAND_MAX + RAND_MAX) % RAND_MAX);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
