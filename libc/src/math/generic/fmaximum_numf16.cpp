@@ -14,7 +14,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float16, fmaximum_numf16, (float16 x, float16 y)) {
-#ifdef __LIBC_USE_BUILTIN_FMAX_FMIN
+#ifdef __LIBC_USE_BUILTIN_FMAXF16_FMINF16
   return __builtin_fmaxf16(x, y);
 #else
   return fputil::fmaximum_num(x, y);
