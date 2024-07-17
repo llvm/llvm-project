@@ -56,13 +56,19 @@ size_t ObjectFileMinidump::GetModuleSpecifications(
 }
 
 bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
-                                  const lldb_private::CoreDumpOptions &core_options,
+                                  const lldb_private::CoreDumpOptions &options,
                                   lldb_private::Status &error) {
-  if (!process_sp || !core_options.GetOutputFile())
+  assert(options.GetOutputFile().has_value());
+  if (!process_sp)
     return false;
 
+  // Minidump defaults to stacks only.
+  SaveCoreStyle core_style = options.GetStyle();
+  if (core_style == SaveCoreStyle::eSaveCoreUnspecified)
+    core_style = SaveCoreStyle::eSaveCoreStackOnly;
+
   llvm::Expected<lldb::FileUP> maybe_core_file = FileSystem::Instance().Open(
-      core_options.GetOutputFile().value(),
+      options.GetOutputFile().value(),
       File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate);
   if (!maybe_core_file) {
     error = maybe_core_file.takeError();
@@ -115,7 +121,7 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
 
   // Note: add memory HAS to be the last thing we do. It can overflow into 64b
   // land and many RVA's only support 32b
-  error = builder.AddMemoryList(core_options.GetCoreDumpStyle());
+  error = builder.AddMemoryList(core_style);
   if (error.Fail()) {
     LLDB_LOGF(log, "AddMemoryList failed: %s", error.AsCString());
     return false;

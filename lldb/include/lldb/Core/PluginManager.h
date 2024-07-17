@@ -178,6 +178,8 @@ public:
 
   static bool UnregisterPlugin(ObjectFileCreateInstance create_callback);
 
+  static bool IsRegisteredPluginName(const char *name);
+
   static ObjectFileCreateInstance
   GetObjectFileCreateCallbackAtIndex(uint32_t idx);
 

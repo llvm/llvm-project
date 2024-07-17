@@ -22,31 +22,31 @@ public:
 
   const SBCoreDumpOptions &operator=(const lldb::SBCoreDumpOptions &rhs);
 
-  /// Set the Core dump plugin name.
+  /// Set the plugin name.
   ///
   /// \param plugin Name of the object file plugin.
-  void SetCoreDumpPluginName(const char *plugin);
+  SBError SetPluginName(const char *plugin);
 
   /// Get the Core dump plugin name, if set.
   ///
   /// \return The name of the plugin, or null if not set.
-  const char * GetCoreDumpPluginName() const;
+  const char *GetPluginName() const;
 
   /// Set the Core dump style.
   ///
   /// \param style The style of the core dump.
-  void SetCoreDumpStyle(lldb::SaveCoreStyle style);
+  void SetStyle(lldb::SaveCoreStyle style);
 
   /// Get the Core dump style, if set.
   ///
   /// \return The core dump style, or undefined if not set.
-  lldb::SaveCoreStyle GetCoreDumpStyle() const;
+  lldb::SaveCoreStyle GetStyle() const;
 
   /// Set the output file path
   ///
-  /// \param output_file a 
+  /// \param output_file a
   /// \class SBFileSpec object that describes the output file.
-  void SetOutputFile(SBFileSpec &output_file);
+  void SetOutputFile(SBFileSpec output_file);
 
   /// Get the output file spec
   ///
@@ -58,7 +58,7 @@ public:
 
 protected:
   friend class SBProcess;
-  lldb_private::CoreDumpOptions &Ref() const;
+  lldb_private::CoreDumpOptions &ref() const;
 
 private:
   std::unique_ptr<lldb_private::CoreDumpOptions> m_opaque_up;

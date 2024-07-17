@@ -2,7 +2,6 @@
 Test saving a core file (or mini dump).
 """
 
-
 import os
 import lldb
 from lldbsuite.test.decorators import *
@@ -21,7 +20,8 @@ class ProcessSaveCoreTestCase(TestBase):
         target = self.dbg.CreateTarget(exe)
         process = target.LaunchSimple(None, None, self.get_process_working_directory())
         self.assertNotEqual(process.GetState(), lldb.eStateStopped)
-        options = SBCoreDumpOptions(core)
+        options = SBCoreDumpOptions()
+        options.SetOutputFile(SBFileSpec(core))
         error = process.SaveCore(core)
         self.assertTrue(error.Fail())
 

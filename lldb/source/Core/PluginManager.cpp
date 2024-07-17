@@ -640,6 +640,18 @@ static ObjectFileInstances &GetObjectFileInstances() {
   return g_instances;
 }
 
+bool PluginManager::IsRegisteredPluginName(const char *name) {
+  if (!name || !name[0])
+    return false;
+
+  const auto &instances = GetObjectFileInstances().GetInstances();
+  for (auto &instance : instances) {
+    if (instance.name == name)
+      return true;
+  }
+  return false;
+}
+
 bool PluginManager::RegisterPlugin(
     llvm::StringRef name, llvm::StringRef description,
     ObjectFileCreateInstance create_callback,
@@ -697,7 +709,7 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
     return error;
   }
 
-  if (options.GetCoreDumpPluginName()->empty()) {
+  if (!options.GetPluginName().has_value()) {
     // Try saving core directly from the process plugin first.
     llvm::Expected<bool> ret =
         process_sp->SaveCore(options.GetOutputFile()->GetPath());
@@ -708,10 +720,10 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
   }
 
   // Fall back to object plugins.
+  const auto &plugin_name = options.GetPluginName().value_or("");
   auto &instances = GetObjectFileInstances().GetInstances();
   for (auto &instance : instances) {
-    if (options.GetCoreDumpPluginName()->empty() ||
-        instance.name == options.GetCoreDumpPluginName()) {
+    if (plugin_name.empty() || instance.name == plugin_name) {
       if (instance.save_core && instance.save_core(process_sp, options, error))
         return error;
     }

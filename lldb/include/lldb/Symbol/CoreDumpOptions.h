@@ -20,14 +20,14 @@ namespace lldb_private {
 
 class CoreDumpOptions {
 public:
-  CoreDumpOptions() {};
+  CoreDumpOptions(){};
   ~CoreDumpOptions() = default;
 
-  void SetCoreDumpPluginName(const char * name);
-  std::optional<std::string> GetCoreDumpPluginName() const;
+  lldb_private::Status SetPluginName(const char *name);
+  std::optional<std::string> GetPluginName() const;
 
-  void SetCoreDumpStyle(lldb::SaveCoreStyle style);
-  lldb::SaveCoreStyle GetCoreDumpStyle() const;
+  void SetStyle(lldb::SaveCoreStyle style);
+  lldb::SaveCoreStyle GetStyle() const;
 
   void SetOutputFile(lldb_private::FileSpec file);
   const std::optional<lldb_private::FileSpec> GetOutputFile() const;

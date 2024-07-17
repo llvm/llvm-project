@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBCoreDumpOptions.h"
+#include "lldb/API/SBError.h"
+#include "lldb/API/SBFileSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/CoreDumpOptions.h"
 #include "lldb/Utility/Instrumentation.h"
@@ -17,6 +18,8 @@
 using namespace lldb;
 
 SBCoreDumpOptions::SBCoreDumpOptions() {
+  LLDB_INSTRUMENT_VA(this)
+
   m_opaque_up = std::make_unique<lldb_private::CoreDumpOptions>();
 }
 
@@ -35,21 +38,21 @@ SBCoreDumpOptions::operator=(const SBCoreDumpOptions &rhs) {
   return *this;
 }
 
-void SBCoreDumpOptions::SetCoreDumpPluginName(const char *name) {
-  m_opaque_up->SetCoreDumpPluginName(name);
+SBError SBCoreDumpOptions::SetPluginName(const char *name) {
+  lldb_private::Status error = m_opaque_up->SetPluginName(name);
+  return SBError(error);
 }
 
-void SBCoreDumpOptions::SetCoreDumpStyle(lldb::SaveCoreStyle style) {
-  m_opaque_up->SetCoreDumpStyle(style);
+void SBCoreDumpOptions::SetStyle(lldb::SaveCoreStyle style) {
+  m_opaque_up->SetStyle(style);
 }
 
-void SBCoreDumpOptions::SetOutputFile(lldb::SBFileSpec &file_spec) {
+void SBCoreDumpOptions::SetOutputFile(lldb::SBFileSpec file_spec) {
   m_opaque_up->SetOutputFile(file_spec.ref());
 }
 
-const char *
-SBCoreDumpOptions::GetCoreDumpPluginName() const {
-  const auto name = m_opaque_up->GetCoreDumpPluginName();
+const char *SBCoreDumpOptions::GetPluginName() const {
+  const auto name = m_opaque_up->GetPluginName();
   if (!name)
     return nullptr;
   return lldb_private::ConstString(name.value()).GetCString();
@@ -62,15 +65,12 @@ SBFileSpec SBCoreDumpOptions::GetOutputFile() const {
   return SBFileSpec();
 }
 
-lldb::SaveCoreStyle
-SBCoreDumpOptions::GetCoreDumpStyle() const {
-  return m_opaque_up->GetCoreDumpStyle();
+lldb::SaveCoreStyle SBCoreDumpOptions::GetStyle() const {
+  return m_opaque_up->GetStyle();
 }
 
-lldb_private::CoreDumpOptions &SBCoreDumpOptions::Ref() const {
+lldb_private::CoreDumpOptions &SBCoreDumpOptions::ref() const {
   return *m_opaque_up.get();
 }
 
-void SBCoreDumpOptions::Clear() {
-  m_opaque_up->Clear();
-}
+void SBCoreDumpOptions::Clear() { m_opaque_up->Clear(); }

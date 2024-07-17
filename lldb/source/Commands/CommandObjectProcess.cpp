@@ -1256,7 +1256,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : m_core_dump_options() {};
+    CommandOptions(){};
 
     ~CommandOptions() override = default;
 
@@ -1271,10 +1271,10 @@ public:
 
       switch (short_option) {
       case 'p':
-        m_core_dump_options.SetCoreDumpPluginName(option_arg.data());
+        m_core_dump_options.SetPluginName(option_arg.data());
         break;
       case 's':
-        m_core_dump_options.SetCoreDumpStyle(
+        m_core_dump_options.SetStyle(
             (lldb::SaveCoreStyle)OptionArgParser::ToOptionEnum(
                 option_arg, GetDefinitions()[option_idx].enum_values,
                 eSaveCoreUnspecified, error));
@@ -1301,12 +1301,14 @@ protected:
       if (command.GetArgumentCount() == 1) {
         FileSpec output_file(command.GetArgumentAtIndex(0));
         FileSystem::Instance().Resolve(output_file);
-        auto core_dump_options = m_options.m_core_dump_options;
+        auto &core_dump_options = m_options.m_core_dump_options;
         core_dump_options.SetOutputFile(output_file);
         Status error = PluginManager::SaveCore(process_sp, core_dump_options);
         if (error.Success()) {
-          if (core_dump_options.GetCoreDumpStyle() == SaveCoreStyle::eSaveCoreDirtyOnly ||
-              core_dump_options.GetCoreDumpStyle() == SaveCoreStyle::eSaveCoreStackOnly) {
+          if (core_dump_options.GetStyle() ==
+                  SaveCoreStyle::eSaveCoreDirtyOnly ||
+              core_dump_options.GetStyle() ==
+                  SaveCoreStyle::eSaveCoreStackOnly) {
             result.AppendMessageWithFormat(
                 "\nModified-memory or stack-memory only corefile "
                 "created.  This corefile may \n"

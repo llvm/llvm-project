@@ -7,34 +7,44 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/CoreDumpOptions.h"
+#include "lldb/Core/PluginManager.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-void CoreDumpOptions::SetCoreDumpPluginName(const char * name) {
+Status CoreDumpOptions::SetPluginName(const char *name) {
+  Status error;
+  if (!name || !name[0]) {
+    m_plugin_name = std::nullopt;
+    error.SetErrorString("no plugin name specified");
+  }
+
+  if (!PluginManager::IsRegisteredPluginName(name)) {
+    error.SetErrorStringWithFormat(
+        "plugin name '%s' is not a registered plugin", name);
+    return error;
+  }
+
   m_plugin_name = name;
+  return error;
 }
 
-void CoreDumpOptions::SetCoreDumpStyle(lldb::SaveCoreStyle style) {
-  m_style = style;
-}
+void CoreDumpOptions::SetStyle(lldb::SaveCoreStyle style) { m_style = style; }
 
-void CoreDumpOptions::SetOutputFile(FileSpec file) {
-  m_file = file;
-}
+void CoreDumpOptions::SetOutputFile(FileSpec file) { m_file = file; }
 
-std::optional<std::string> CoreDumpOptions::GetCoreDumpPluginName() const {
+std::optional<std::string> CoreDumpOptions::GetPluginName() const {
   return m_plugin_name;
 }
 
-lldb::SaveCoreStyle CoreDumpOptions::GetCoreDumpStyle() const {
-  // If unspecified, default to stack only
-  if (m_style == lldb::eSaveCoreUnspecified)
-    return lldb::eSaveCoreStackOnly;
+lldb::SaveCoreStyle CoreDumpOptions::GetStyle() const {
+  if (!m_style.has_value())
+    return lldb::eSaveCoreUnspecified;
   return m_style.value();
 }
 
-const std::optional<lldb_private::FileSpec> CoreDumpOptions::GetOutputFile() const {
+const std::optional<lldb_private::FileSpec>
+CoreDumpOptions::GetOutputFile() const {
   return m_file;
 }
 

@@ -355,9 +355,10 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
 }
 
 bool ObjectFilePECOFF::SaveCore(const lldb::ProcessSP &process_sp,
-                                const lldb_private::CoreDumpOptions &core_options,
+                                const lldb_private::CoreDumpOptions &options,
                                 lldb_private::Status &error) {
-  return SaveMiniDump(process_sp, core_options, error);
+  assert(options.GetOutputFile().has_value());
+  return SaveMiniDump(process_sp, options, error);
 }
 
 bool ObjectFilePECOFF::MagicBytesMatch(DataBufferSP data_sp) {

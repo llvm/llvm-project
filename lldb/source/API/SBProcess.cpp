@@ -1223,19 +1223,16 @@ lldb::SBError SBProcess::SaveCore(const char *file_name) {
 lldb::SBError SBProcess::SaveCore(const char *file_name,
                                   const char *flavor,
                                   SaveCoreStyle core_style) {
-  SBFileSpec fspec(file_name);
   SBCoreDumpOptions options;
-  options.SetOutputFile(fspec);
-  options.SetCoreDumpPluginName(flavor);
-  options.SetCoreDumpStyle(core_style);
+  options.SetOutputFile(SBFileSpec(file_name));
+  options.SetPluginName(flavor);
+  options.SetStyle(core_style);
   return SaveCore(options);
 }
 
 lldb::SBError SBProcess::SaveCore(SBCoreDumpOptions &options) {
 
-  LLDB_INSTRUMENT_VA(this, options.GetOutputFile(),
-                     options.GetCoreDumpPluginName(),
-                     options.GetCoreDumpStyle());
+  LLDB_INSTRUMENT_VA(this, options);
 
   lldb::SBError error;
   ProcessSP process_sp(GetSP());
@@ -1252,7 +1249,7 @@ lldb::SBError SBProcess::SaveCore(SBCoreDumpOptions &options) {
     return error;
   }
 
-  error.ref() = PluginManager::SaveCore(process_sp, options.Ref());
+  error.ref() = PluginManager::SaveCore(process_sp, options.ref());
 
   return error;
 }

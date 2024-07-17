@@ -6519,11 +6519,15 @@ struct page_object {
 };
 
 bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
-                               const lldb_private::CoreDumpOptions &core_options,
+                               const lldb_private::CoreDumpOptions &options,
                                Status &error) {
-  auto core_style = core_options.GetCoreDumpStyle();
-  const auto outfile = core_options.GetOutputFile();
-  if (!process_sp || !outfile)
+  auto core_style = options.GetStyle();
+  if (core_style == SaveCoreStyle::eSaveCoreUnspecified)
+    core_style = SaveCoreStyle::eSaveCoreDirtyOnly;
+  // The FileSpec is already checked in PluginManager::SaveCore.
+  assert(options.GetOutputFile().has_value());
+  const FileSpec outfile = options.GetOutputFile().value();
+  if (!process_sp)
     return false;
 
   Target &target = process_sp->GetTarget();
@@ -6809,9 +6813,9 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
           buffer.PutHex32(segment.flags);
         }
 
-        std::string core_file_path(core_options.GetOutputFile()->GetPath());
+        std::string core_file_path(outfile.GetPath());
         auto core_file = FileSystem::Instance().Open(
-            outfile.value(), File::eOpenOptionWriteOnly | File::eOpenOptionTruncate |
+            outfile, File::eOpenOptionWriteOnly | File::eOpenOptionTruncate |
                          File::eOpenOptionCanCreate);
         if (!core_file) {
           error = core_file.takeError();
