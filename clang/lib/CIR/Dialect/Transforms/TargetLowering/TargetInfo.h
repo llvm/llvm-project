@@ -30,6 +30,9 @@ std::unique_ptr<TargetLoweringInfo>
 createAArch64TargetLoweringInfo(LowerModule &CGM,
                                 ::cir::AArch64ABIKind AVXLevel);
 
+std::unique_ptr<TargetLoweringInfo>
+createSPIRVTargetLoweringInfo(LowerModule &CGM);
+
 } // namespace cir
 } // namespace mlir
 

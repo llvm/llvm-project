@@ -80,6 +80,8 @@ createTargetLoweringInfo(LowerModule &LM) {
       return createX86_64TargetLoweringInfo(LM, X86AVXABILevel::None);
     }
   }
+  case llvm::Triple::spirv64:
+    return createSPIRVTargetLoweringInfo(LM);
   default:
     llvm_unreachable("ABI NYI");
   }
