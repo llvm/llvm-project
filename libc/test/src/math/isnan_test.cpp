@@ -1,4 +1,4 @@
-//===-- Unittest for isnan[f] macro ---------------------------------------===//
+//===-- Unittests for isnan -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,6 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "IsNanTest.h"
-#include "include/llvm-libc-macros/math-function-macros.h"
 
-LIST_ISNAN_TESTS(float, isnan)
+// We need to avoid expanding isnan to __builtin_isnan.
+#undef isnan
+
+#include "src/math/isnan.h"
+
+LIST_ISNAN_TESTS(double, LIBC_NAMESPACE::isnan)

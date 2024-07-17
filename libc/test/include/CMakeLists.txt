@@ -112,36 +112,6 @@ add_libc_test(
 )
 
 add_libc_test(
-  isnan_test
-  SUITE
-    libc_include_tests
-  SRCS
-    isnan_test.cpp
-  DEPENDS
-    libc.include.llvm-libc-macros.math_function_macros
-)
-
-add_libc_test(
-  isnanf_test
-  SUITE
-    libc_include_tests
-  SRCS
-    isnanf_test.cpp
-  DEPENDS
-    libc.include.llvm-libc-macros.math_function_macros
-)
-
-add_libc_test(
-  isnanl_test
-  SUITE
-    libc_include_tests
-  SRCS
-    isnanl_test.cpp
-  DEPENDS
-    libc.include.llvm-libc-macros.math_function_macros
-)
-
-add_libc_test(
   isinf_test
   SUITE
     libc_include_tests
@@ -217,7 +187,7 @@ add_libc_test(
 )
 
 add_libc_test(
-  isnan_c_test
+  isnan_test
   C_TEST
   UNIT_TEST_ONLY
   SUITE
