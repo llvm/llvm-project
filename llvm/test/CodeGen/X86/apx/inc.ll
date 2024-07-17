@@ -20,14 +20,12 @@ entry:
 define i16 @inc16r(i16 noundef %a) {
 ; CHECK-LABEL: inc16r:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    incl %edi, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    incw %di, %ax
 ; CHECK-NEXT:    retq
 ;
 ; NF-LABEL: inc16r:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    {nf} incl %edi, %eax
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    {nf} incw %di, %ax
 ; NF-NEXT:    retq
 entry:
   %inc = add i16 %a, 1
@@ -83,16 +81,12 @@ entry:
 define i16 @inc16m(ptr %ptr) {
 ; CHECK-LABEL: inc16m:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl (%rdi), %eax
-; CHECK-NEXT:    incl %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    incw (%rdi), %ax
 ; CHECK-NEXT:    retq
 ;
 ; NF-LABEL: inc16m:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movzwl (%rdi), %eax
-; NF-NEXT:    incl %eax
-; NF-NEXT:    # kill: def $ax killed $ax killed $eax
+; NF-NEXT:    {nf} incw (%rdi), %ax
 ; NF-NEXT:    retq
 entry:
   %a = load i16, ptr %ptr

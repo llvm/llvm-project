@@ -74,6 +74,9 @@ public:
 
   const char *IsCompilerDirectiveSentinel(const char *, std::size_t) const;
   const char *IsCompilerDirectiveSentinel(CharBlock) const;
+  // 'first' is the sentinel, 'second' is beginning of payload
+  std::optional<std::pair<const char *, const char *>>
+  IsCompilerDirectiveSentinel(const char *p) const;
 
   template <typename... A> Message &Say(A &&...a) {
     return messages_.Say(std::forward<A>(a)...);
@@ -214,7 +217,7 @@ private:
   int prescannerNesting_{0};
   int continuationLines_{0};
   bool isPossibleMacroCall_{false};
-  bool afterIncludeDirective_{false};
+  bool afterPreprocessingDirective_{false};
   bool disableSourceContinuation_{false};
 
   Provenance startProvenance_;
@@ -246,6 +249,8 @@ private:
   // line in an include file.
   bool omitNewline_{false};
   bool skipLeadingAmpersand_{false};
+
+  const std::size_t firstCookedCharacterOffset_{cooked_.BufferedBytes()};
 
   const Provenance spaceProvenance_{
       allSources_.CompilerInsertionProvenance(' ')};

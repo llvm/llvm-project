@@ -30,9 +30,6 @@ __attribute__((target_version("jscvt"))) int default_def_with_version_decls(void
 
 //.
 // CHECK: @__aarch64_cpu_features = external dso_local global { i64 }
-// CHECK: @explicit_default.ifunc = weak_odr alias i32 (), ptr @explicit_default
-// CHECK: @implicit_default.ifunc = weak_odr alias i32 (), ptr @implicit_default
-// CHECK: @default_def_with_version_decls.ifunc = weak_odr alias i32 (), ptr @default_def_with_version_decls
 // CHECK: @explicit_default = weak_odr ifunc i32 (), ptr @explicit_default.resolver
 // CHECK: @implicit_default = weak_odr ifunc i32 (), ptr @implicit_default.resolver
 // CHECK: @default_def_with_version_decls = weak_odr ifunc i32 (), ptr @default_def_with_version_decls.resolver

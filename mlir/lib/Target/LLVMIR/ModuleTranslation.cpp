@@ -31,7 +31,6 @@
 #include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 
@@ -63,6 +62,8 @@
 using namespace mlir;
 using namespace mlir::LLVM;
 using namespace mlir::LLVM::detail;
+
+extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsToLLVM.inc"
 
@@ -638,8 +639,7 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
         if (llvm::ConstantDataSequential::isElementTypeCompatible(
                 elementType)) {
           // TODO: Handle all compatible types. This code only handles integer.
-          if (llvm::IntegerType *iTy =
-                  dyn_cast<llvm::IntegerType>(elementType)) {
+          if (isa<llvm::IntegerType>(elementType)) {
             if (llvm::ConstantInt *ci = dyn_cast<llvm::ConstantInt>(child)) {
               if (ci->getBitWidth() == 8) {
                 SmallVector<int8_t> constants(numElements, ci->getZExtValue());
@@ -1073,9 +1073,15 @@ LogicalResult ModuleTranslation::convertGlobals() {
       // variable -> module -> compile unit
       // If a variable scope points to the module then we use the scope of the
       // module to get the compile unit.
+      // Global variables are also used for things like static local variables
+      // in C and local variables with the save attribute in Fortran. The scope
+      // of the variable is the parent function. We use the compile unit of the
+      // parent function in this case.
       llvm::DIScope *scope = diGlobalVar->getScope();
-      if (llvm::DIModule *mod = dyn_cast_if_present<llvm::DIModule>(scope))
+      if (auto *mod = dyn_cast_if_present<llvm::DIModule>(scope))
         scope = mod->getScope();
+      else if (auto *sp = dyn_cast_if_present<llvm::DISubprogram>(scope))
+        scope = sp->getUnit();
 
       // Get the compile unit (scope) of the the global variable.
       if (llvm::DICompileUnit *compileUnit =
@@ -1325,6 +1331,9 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (auto targetCpu = func.getTargetCpu())
     llvmFunc->addFnAttr("target-cpu", *targetCpu);
 
+  if (auto tuneCpu = func.getTuneCpu())
+    llvmFunc->addFnAttr("tune-cpu", *tuneCpu);
+
   if (auto targetFeatures = func.getTargetFeatures())
     llvmFunc->addFnAttr("target-features", targetFeatures->getFeaturesString());
 
@@ -1349,6 +1358,15 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (auto noSignedZerosFpMath = func.getNoSignedZerosFpMath())
     llvmFunc->addFnAttr("no-signed-zeros-fp-math",
                         llvm::toStringRef(*noSignedZerosFpMath));
+
+  if (auto denormalFpMath = func.getDenormalFpMath())
+    llvmFunc->addFnAttr("denormal-fp-math", *denormalFpMath);
+
+  if (auto denormalFpMathF32 = func.getDenormalFpMathF32())
+    llvmFunc->addFnAttr("denormal-fp-math-f32", *denormalFpMathF32);
+
+  if (auto fpContract = func.getFpContract())
+    llvmFunc->addFnAttr("fp-contract", *fpContract);
 
   // Add function attribute frame-pointer, if found.
   if (FramePointerKindAttr attr = func.getFramePointerAttr())
@@ -1421,6 +1439,12 @@ static void convertFunctionAttributes(LLVMFuncOp func,
     llvmFunc->addFnAttr(llvm::Attribute::AlwaysInline);
   if (func.getOptimizeNoneAttr())
     llvmFunc->addFnAttr(llvm::Attribute::OptimizeNone);
+  if (func.getConvergentAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::Convergent);
+  if (func.getNoUnwindAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::NoUnwind);
+  if (func.getWillReturnAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::WillReturn);
   convertFunctionMemoryAttributes(func, llvmFunc);
 }
 
@@ -1801,6 +1825,9 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
                   StringRef name) {
   m->getContext()->getOrLoadDialect<LLVM::LLVMDialect>();
   auto llvmModule = std::make_unique<llvm::Module>(name, llvmContext);
+  // ModuleTranslation can currently only construct modules in the old debug
+  // info format, so set the flag accordingly.
+  llvmModule->setNewDbgInfoFormatFlag(false);
   if (auto dataLayoutAttr =
           m->getDiscardableAttr(LLVM::LLVMDialect::getDataLayoutAttrName())) {
     llvmModule->setDataLayout(cast<StringAttr>(dataLayoutAttr).getValue());
@@ -1878,6 +1905,11 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   // last.
   if (failed(translator.convertFunctions()))
     return nullptr;
+
+  // Once we've finished constructing elements in the module, we should convert
+  // it to use the debug info format desired by LLVM.
+  // See https://llvm.org/docs/RemoveDIsDebugInfo.html
+  translator.llvmModule->setIsNewDbgInfoFormat(UseNewDbgInfoFormat);
 
   if (!disableVerification &&
       llvm::verifyModule(*translator.llvmModule, &llvm::errs()))

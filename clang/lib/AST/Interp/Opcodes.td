@@ -58,11 +58,14 @@ def ArgRoundingMode : ArgType { let Name = "llvm::RoundingMode"; }
 def ArgLETD: ArgType { let Name = "const LifetimeExtendedTemporaryDecl *"; }
 def ArgCastKind : ArgType { let Name = "CastKind"; }
 def ArgCallExpr : ArgType { let Name = "const CallExpr *"; }
+def ArgExpr : ArgType { let Name = "const Expr *"; }
 def ArgOffsetOfExpr : ArgType { let Name = "const OffsetOfExpr *"; }
 def ArgDeclRef : ArgType { let Name = "const DeclRefExpr *"; }
-def ArgDesc : ArgType { let Name = "const Descriptor *"; }
 def ArgCCI : ArgType { let Name = "const ComparisonCategoryInfo *"; }
 def ArgDecl : ArgType { let Name = "const Decl*"; }
+def ArgVarDecl : ArgType { let Name = "const VarDecl*"; }
+def ArgDesc : ArgType { let Name = "const Descriptor *"; }
+def ArgPrimType : ArgType { let Name = "PrimType"; }
 
 //===----------------------------------------------------------------------===//
 // Classes of types instructions operate on.
@@ -382,6 +385,10 @@ def GetLocal : AccessOpcode { let HasCustomEval = 1; }
 // [] -> [Pointer]
 def SetLocal : AccessOpcode { let HasCustomEval = 1; }
 
+def CheckDecl : Opcode {
+  let Args = [ArgVarDecl];
+}
+
 // [] -> [Value]
 def GetGlobal : AccessOpcode;
 def GetGlobalUnchecked : AccessOpcode;
@@ -526,9 +533,17 @@ def Sub  : AluOpcode;
 def Subf : FloatOpcode;
 def Mul  : AluOpcode;
 def Mulf : FloatOpcode;
+def Mulc : Opcode {
+  let Types = [NumberTypeClass];
+  let HasGroup = 1;
+}
 def Rem  : IntegerOpcode;
 def Div  : IntegerOpcode;
 def Divf : FloatOpcode;
+def Divc : Opcode {
+  let Types = [NumberTypeClass];
+  let HasGroup = 1;
+}
 
 def BitAnd : IntegerOpcode;
 def BitOr : IntegerOpcode;
@@ -701,6 +716,7 @@ def Dup : Opcode {
 
 // [] -> []
 def Invalid : Opcode {}
+def Unsupported : Opcode {}
 def Error : Opcode {}
 def InvalidCast : Opcode {
   let Args = [ArgCastKind];
@@ -733,3 +749,23 @@ def GetMemberPtrDecl : Opcode;
 // Debugging.
 //===----------------------------------------------------------------------===//
 def Dump : Opcode;
+
+def Alloc : Opcode {
+  let Args = [ArgDesc];
+}
+
+def AllocN : Opcode {
+  let Types = [IntegerTypeClass];
+  let Args = [ArgPrimType, ArgExpr, ArgBool];
+  let HasGroup = 1;
+}
+
+def AllocCN : Opcode {
+  let Types = [IntegerTypeClass];
+  let Args = [ArgDesc, ArgBool];
+  let HasGroup = 1;
+}
+
+def Free : Opcode {
+  let Args = [ArgBool];
+}

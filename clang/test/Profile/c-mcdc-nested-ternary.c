@@ -62,6 +62,6 @@ int test(int b, int c, int d, int e, int f) {
 // MCDC:  %[[LAB5:[0-9]+]] = and i32 %[[TEMP]], 7
 // MCDC:  %[[LAB6:[0-9]+]] = trunc i32 %[[LAB5]] to i8
 // MCDC:  %[[LAB7:[0-9]+]] = shl i8 1, %[[LAB6]]
-// MCDC:  %mcdc.bits = load i8, ptr %[[LAB4]], align 1
-// MCDC:  %[[LAB8:[0-9]+]] = or i8 %mcdc.bits, %[[LAB7]]
+// MCDC:  %[[BITS:.+]] = load i8, ptr %[[LAB4]], align 1
+// MCDC:  %[[LAB8:[0-9]+]] = or i8 %[[BITS]], %[[LAB7]]
 // MCDC:  store i8 %[[LAB8]], ptr %[[LAB4]], align 1

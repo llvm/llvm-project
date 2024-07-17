@@ -844,8 +844,9 @@ TEST(CloneFunction, CloneFunctionWithInlinedSubprograms) {
   EXPECT_FALSE(verifyModule(*ImplModule, &errs()));
 
   // Check that DILexicalBlock of inlined function was not cloned.
-  auto DbgDeclareI = Func->begin()->begin();
-  auto ClonedDbgDeclareI = ClonedFunc->begin()->begin();
+  auto DbgDeclareI = Func->begin()->begin()->getDbgRecordRange().begin();
+  auto ClonedDbgDeclareI =
+      ClonedFunc->begin()->begin()->getDbgRecordRange().begin();
   const DebugLoc &DbgLoc = DbgDeclareI->getDebugLoc();
   const DebugLoc &ClonedDbgLoc = ClonedDbgDeclareI->getDebugLoc();
   EXPECT_NE(DbgLoc.get(), ClonedDbgLoc.get());

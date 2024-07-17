@@ -756,8 +756,8 @@ public:
 
   bool CheckDataSection() {
     if (CurrentState != DataSection) {
-      auto WS = cast<MCSectionWasm>(getStreamer().getCurrentSection().first);
-      if (WS && WS->getKind().isText())
+      auto WS = cast<MCSectionWasm>(getStreamer().getCurrentSectionOnly());
+      if (WS && WS->isText())
         return error("data directive must occur in a data segment: ",
                      Lexer.getTok());
     }
@@ -1073,8 +1073,8 @@ public:
 
   void doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) override {
     // Code below only applies to labels in text sections.
-    auto CWS = cast<MCSectionWasm>(getStreamer().getCurrentSection().first);
-    if (!CWS || !CWS->getKind().isText())
+    auto CWS = cast<MCSectionWasm>(getStreamer().getCurrentSectionOnly());
+    if (!CWS->isText())
       return;
 
     auto WasmSym = cast<MCSymbolWasm>(Symbol);
@@ -1106,9 +1106,8 @@ public:
     // assembly currently.
     if (Group)
       WasmSym->setComdat(true);
-    auto *WS =
-        getContext().getWasmSection(SecName, SectionKind::getText(), 0, Group,
-                                    MCContext::GenericSectionID, nullptr);
+    auto *WS = getContext().getWasmSection(SecName, SectionKind::getText(), 0,
+                                           Group, MCContext::GenericSectionID);
     getStreamer().switchSection(WS);
     // Also generate DWARF for this section if requested.
     if (getContext().getGenDwarfForAssembly())

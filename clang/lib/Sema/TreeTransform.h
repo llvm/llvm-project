@@ -2896,6 +2896,9 @@ public:
     SS.Adopt(QualifierLoc);
 
     Base = BaseResult.get();
+    if (Base->containsErrors())
+      return ExprError();
+
     QualType BaseType = Base->getType();
 
     if (isArrow && !BaseType->isPointerType())
@@ -6267,6 +6270,55 @@ QualType TreeTransform<Derived>::TransformFunctionProtoType(
     EPI.ExtParameterInfos = nullptr;
   }
 
+  // Transform any function effects with unevaluated conditions.
+  // Hold this set in a local for the rest of this function, since EPI
+  // may need to hold a FunctionEffectsRef pointing into it.
+  std::optional<FunctionEffectSet> NewFX;
+  if (ArrayRef FXConds = EPI.FunctionEffects.conditions(); !FXConds.empty()) {
+    NewFX.emplace();
+    EnterExpressionEvaluationContext Unevaluated(
+        getSema(), Sema::ExpressionEvaluationContext::ConstantEvaluated);
+
+    for (const FunctionEffectWithCondition &PrevEC : EPI.FunctionEffects) {
+      FunctionEffectWithCondition NewEC = PrevEC;
+      if (Expr *CondExpr = PrevEC.Cond.getCondition()) {
+        ExprResult NewExpr = getDerived().TransformExpr(CondExpr);
+        if (NewExpr.isInvalid())
+          return QualType();
+        std::optional<FunctionEffectMode> Mode =
+            SemaRef.ActOnEffectExpression(NewExpr.get(), PrevEC.Effect.name());
+        if (!Mode)
+          return QualType();
+
+        // The condition expression has been transformed, and re-evaluated.
+        // It may or may not have become constant.
+        switch (*Mode) {
+        case FunctionEffectMode::True:
+          NewEC.Cond = {};
+          break;
+        case FunctionEffectMode::False:
+          NewEC.Effect = FunctionEffect(PrevEC.Effect.oppositeKind());
+          NewEC.Cond = {};
+          break;
+        case FunctionEffectMode::Dependent:
+          NewEC.Cond = EffectConditionExpr(NewExpr.get());
+          break;
+        case FunctionEffectMode::None:
+          llvm_unreachable(
+              "FunctionEffectMode::None shouldn't be possible here");
+        }
+      }
+      if (!SemaRef.diagnoseConflictingFunctionEffect(*NewFX, NewEC,
+                                                     TL.getBeginLoc())) {
+        FunctionEffectSet::Conflicts Errs;
+        NewFX->insert(NewEC, Errs);
+        assert(Errs.empty());
+      }
+    }
+    EPI.FunctionEffects = *NewFX;
+    EPIChanged = true;
+  }
+
   QualType Result = TL.getType();
   if (getDerived().AlwaysRebuild() || ResultType != T->getReturnType() ||
       T->getParamTypes() != llvm::ArrayRef(ParamTypes) || EPIChanged) {
@@ -6502,7 +6554,7 @@ QualType TreeTransform<Derived>::TransformTypeOfExprType(TypeLocBuilder &TLB,
     return QualType();
 
   QualType Result = TL.getType();
-  TypeOfKind Kind = Result->getAs<TypeOfExprType>()->getKind();
+  TypeOfKind Kind = Result->castAs<TypeOfExprType>()->getKind();
   if (getDerived().AlwaysRebuild() || E.get() != TL.getUnderlyingExpr()) {
     Result =
         getDerived().RebuildTypeOfExprType(E.get(), TL.getTypeofLoc(), Kind);
@@ -6527,7 +6579,7 @@ QualType TreeTransform<Derived>::TransformTypeOfType(TypeLocBuilder &TLB,
     return QualType();
 
   QualType Result = TL.getType();
-  TypeOfKind Kind = Result->getAs<TypeOfType>()->getKind();
+  TypeOfKind Kind = Result->castAs<TypeOfType>()->getKind();
   if (getDerived().AlwaysRebuild() || New_Under_TI != Old_Under_TI) {
     Result = getDerived().RebuildTypeOfType(New_Under_TI->getType(), Kind);
     if (Result.isNull())
@@ -6685,8 +6737,13 @@ QualType TreeTransform<Derived>::TransformUnaryTransformType(
   QualType Result = TL.getType();
   if (Result->isDependentType()) {
     const UnaryTransformType *T = TL.getTypePtr();
-    QualType NewBase =
-      getDerived().TransformType(TL.getUnderlyingTInfo())->getType();
+
+    TypeSourceInfo *NewBaseTSI =
+        getDerived().TransformType(TL.getUnderlyingTInfo());
+    if (!NewBaseTSI)
+      return QualType();
+    QualType NewBase = NewBaseTSI->getType();
+
     Result = getDerived().RebuildUnaryTransformType(NewBase,
                                                     T->getUTTKind(),
                                                     TL.getKWLoc());
@@ -7345,7 +7402,8 @@ QualType TreeTransform<Derived>::TransformCountAttributedType(
   if (getDerived().AlwaysRebuild() || InnerTy != OldTy->desugar() ||
       OldCount != NewCount) {
     // Currently, CountAttributedType can only wrap incomplete array types.
-    Result = SemaRef.BuildCountAttributedArrayOrPointerType(InnerTy, NewCount);
+    Result = SemaRef.BuildCountAttributedArrayOrPointerType(
+        InnerTy, NewCount, OldTy->isCountInBytes(), OldTy->isOrNull());
   }
 
   TLB.push<CountAttributedTypeLoc>(Result);
@@ -12870,7 +12928,7 @@ TreeTransform<Derived>::TransformCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
   }
 
   ExprResult First;
-  if (E->getOperator() == OO_Amp)
+  if (E->getNumArgs() == 1 && E->getOperator() == OO_Amp)
     First = getDerived().TransformAddressOfOperand(E->getArg(0));
   else
     First = getDerived().TransformExpr(E->getArg(0));
@@ -12937,6 +12995,11 @@ ExprResult TreeTransform<Derived>::TransformSourceLocExpr(SourceLocExpr *E) {
   return getDerived().RebuildSourceLocExpr(E->getIdentKind(), E->getType(),
                                            E->getBeginLoc(), E->getEndLoc(),
                                            getSema().CurContext);
+}
+
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformEmbedExpr(EmbedExpr *E) {
+  return E;
 }
 
 template<typename Derived>
@@ -14545,6 +14608,9 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       E->getCallOperator()->isConsteval() ?
       Sema::ExpressionEvaluationContext::ImmediateFunctionContext :
       Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+  getSema().currentEvaluationContext().InImmediateEscalatingFunctionContext =
+      getSema().getLangOpts().CPlusPlus20 &&
+      E->getCallOperator()->isImmediateEscalating();
 
   Sema::CodeSynthesisContext C;
   C.Kind = clang::Sema::CodeSynthesisContext::LambdaExpressionSubstitution;

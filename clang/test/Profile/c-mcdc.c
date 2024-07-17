@@ -82,7 +82,7 @@ int test(int a, int b, int c, int d, int e, int f) {
 
 // UPDATE FINAL BITMASK WITH RESULT.
 // NOPROFPASS-LABEL: lor.end:
-// NOPROFPASS: call void @llvm.instrprof.mcdc.tvbitmap.update(ptr @__profn_test, i64 [[HASH]], i32 0, i32 0, ptr %mcdc.addr)
+// NOPROFPASS: call void @llvm.instrprof.mcdc.tvbitmap.update(ptr @__profn_test, i64 [[HASH]], i32 0, ptr %mcdc.addr)
 // MCDC-DAG:  %[[TEMP0:mcdc.temp[0-9]*]] = load i32, ptr %mcdc.addr, align 4
 // MCDC:  %[[TEMP:[0-9]+]] = add i32 %[[TEMP0]], 0
 // MCDC:  %[[LAB1:[0-9]+]] = lshr i32 %[[TEMP]], 3
@@ -90,6 +90,6 @@ int test(int a, int b, int c, int d, int e, int f) {
 // MCDC:  %[[LAB5:[0-9]+]] = and i32 %[[TEMP]], 7
 // MCDC:  %[[LAB6:[0-9]+]] = trunc i32 %[[LAB5]] to i8
 // MCDC:  %[[LAB7:[0-9]+]] = shl i8 1, %[[LAB6]]
-// MCDC:  %mcdc.bits = load i8, ptr %[[LAB4]], align 1
-// MCDC:  %[[LAB8:[0-9]+]] = or i8 %mcdc.bits, %[[LAB7]]
+// MCDC:  %[[BITS:.+]] = load i8, ptr %[[LAB4]], align 1
+// MCDC:  %[[LAB8:[0-9]+]] = or i8 %[[BITS]], %[[LAB7]]
 // MCDC:  store i8 %[[LAB8]], ptr %[[LAB4]], align 1

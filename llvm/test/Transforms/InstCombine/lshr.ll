@@ -1390,8 +1390,8 @@ define i8 @not_signbit_trunc(i16 %x) {
 
 define i2 @bool_add_lshr(i1 %a, i1 %b) {
 ; CHECK-LABEL: @bool_add_lshr(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[TMP1]] to i2
+; CHECK-NEXT:    [[LSHR1:%.*]] = and i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[LSHR1]] to i2
 ; CHECK-NEXT:    ret i2 [[LSHR]]
 ;
   %zext.a = zext i1 %a to i2
@@ -1436,8 +1436,8 @@ define i2 @bool_add_ashr(i1 %a, i1 %b) {
 
 define <2 x i8> @bool_add_lshr_vec(<2 x i1> %a, <2 x i1> %b) {
 ; CHECK-LABEL: @bool_add_lshr_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i1> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[LSHR:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i8>
+; CHECK-NEXT:    [[LSHR1:%.*]] = and <2 x i1> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[LSHR:%.*]] = zext <2 x i1> [[LSHR1]] to <2 x i8>
 ; CHECK-NEXT:    ret <2 x i8> [[LSHR]]
 ;
   %zext.a = zext <2 x i1> %a to <2 x i8>
@@ -1453,8 +1453,7 @@ define i32 @bool_add_lshr_uses(i1 %a, i1 %b) {
 ; CHECK-NEXT:    call void @use(i32 [[ZEXT_A]])
 ; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i1 [[B:%.*]] to i32
 ; CHECK-NEXT:    call void @use(i32 [[ZEXT_B]])
-; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    [[LSHR:%.*]] = and i32 [[ZEXT_A]], [[ZEXT_B]]
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
   %zext.a = zext i1 %a to i32
@@ -1473,8 +1472,7 @@ define i32 @bool_add_lshr_uses2(i1 %a, i1 %b) {
 ; CHECK-NEXT:    call void @use(i32 [[ZEXT_B]])
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[ZEXT_A]], [[ZEXT_B]]
 ; CHECK-NEXT:    call void @use(i32 [[ADD]])
-; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[A]], [[B]]
-; CHECK-NEXT:    [[LSHR:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    [[LSHR:%.*]] = and i32 [[ZEXT_A]], [[ZEXT_B]]
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
   %zext.a = zext i1 %a to i32
@@ -1496,7 +1494,7 @@ define i32 @bool_add_lshr_uses3(i1 %a, i1 %b) {
 ; CHECK-NEXT:    call void @use(i32 [[ZEXT_B]])
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[ZEXT_A]], [[ZEXT_B]]
 ; CHECK-NEXT:    call void @use(i32 [[ADD]])
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[ADD]], 1
+; CHECK-NEXT:    [[LSHR:%.*]] = and i32 [[ZEXT_A]], [[ZEXT_B]]
 ; CHECK-NEXT:    ret i32 [[LSHR]]
 ;
   %zext.a = zext i1 %a to i32

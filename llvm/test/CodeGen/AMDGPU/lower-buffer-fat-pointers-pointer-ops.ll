@@ -196,8 +196,7 @@ define i32 @ptrtoint_offset(ptr addrspace(7) %ptr) {
 ; CHECK-LABEL: define i32 @ptrtoint_offset
 ; CHECK-SAME: ({ ptr addrspace(8), i32 } [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[PTR_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 0
-; CHECK-NEXT:    [[PTR_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
-; CHECK-NEXT:    [[RET:%.*]] = or i32 poison, [[PTR_OFF]]
+; CHECK-NEXT:    [[RET:%.*]] = extractvalue { ptr addrspace(8), i32 } [[PTR]], 1
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %ret = ptrtoint ptr addrspace(7) %ptr to i32

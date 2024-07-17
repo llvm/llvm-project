@@ -532,6 +532,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->saveTemps = args.hasArg(OPT_save_temps);
   config->searchPaths = args::getStrings(args, OPT_library_path);
   config->shared = args.hasArg(OPT_shared);
+  config->shlibSigCheck = !args.hasArg(OPT_no_shlib_sigcheck);
   config->stripAll = args.hasArg(OPT_strip_all);
   config->stripDebug = args.hasArg(OPT_strip_debug);
   config->stackFirst = args.hasArg(OPT_stack_first);
@@ -955,6 +956,47 @@ static void processStubLibrariesPreLTO() {
   }
 }
 
+static bool addStubSymbolDeps(const StubFile *stub_file, Symbol *sym,
+                              ArrayRef<StringRef> deps) {
+  // The first stub library to define a given symbol sets this and
+  // definitions in later stub libraries are ignored.
+  if (sym->forceImport)
+    return false; // Already handled
+  sym->forceImport = true;
+  if (sym->traced)
+    message(toString(stub_file) + ": importing " + sym->getName());
+  else
+    LLVM_DEBUG(llvm::dbgs() << toString(stub_file) << ": importing "
+                            << sym->getName() << "\n");
+  bool depsAdded = false;
+  for (const auto dep : deps) {
+    auto *needed = symtab->find(dep);
+    if (!needed) {
+      error(toString(stub_file) + ": undefined symbol: " + dep +
+            ". Required by " + toString(*sym));
+    } else if (needed->isUndefined()) {
+      error(toString(stub_file) + ": undefined symbol: " + toString(*needed) +
+            ". Required by " + toString(*sym));
+    } else {
+      if (needed->traced)
+        message(toString(stub_file) + ": exported " + toString(*needed) +
+                " due to import of " + sym->getName());
+      else
+        LLVM_DEBUG(llvm::dbgs()
+                   << "force export: " << toString(*needed) << "\n");
+      needed->forceExport = true;
+      if (auto *lazy = dyn_cast<LazySymbol>(needed)) {
+        depsAdded = true;
+        lazy->extract();
+        if (!config->whyExtract.empty())
+          ctx.whyExtractRecords.emplace_back(toString(stub_file),
+                                             sym->getFile(), *sym);
+      }
+    }
+  }
+  return depsAdded;
+}
+
 static void processStubLibraries() {
   log("-- processStubLibraries");
   bool depsAdded = false;
@@ -963,49 +1005,28 @@ static void processStubLibraries() {
     for (auto &stub_file : ctx.stubFiles) {
       LLVM_DEBUG(llvm::dbgs()
                  << "processing stub file: " << stub_file->getName() << "\n");
+
+      // First look for any imported symbols that directly match
+      // the names of the stub imports
       for (auto [name, deps]: stub_file->symbolDependencies) {
         auto* sym = symtab->find(name);
-        if (!sym || !sym->isUndefined()) {
+        if (sym && sym->isUndefined()) {
+          depsAdded |= addStubSymbolDeps(stub_file, sym, deps);
+        } else {
           if (sym && sym->traced)
             message(toString(stub_file) + ": stub symbol not needed: " + name);
           else
-            LLVM_DEBUG(llvm::dbgs() << "stub symbol not needed: `" << name << "`\n");
-          continue;
+            LLVM_DEBUG(llvm::dbgs()
+                       << "stub symbol not needed: `" << name << "`\n");
         }
-        // The first stub library to define a given symbol sets this and
-        // definitions in later stub libraries are ignored.
-        if (sym->forceImport)
-          continue;  // Already handled
-        sym->forceImport = true;
-        if (sym->traced)
-          message(toString(stub_file) + ": importing " + name);
-        else
-          LLVM_DEBUG(llvm::dbgs()
-                     << toString(stub_file) << ": importing " << name << "\n");
-        for (const auto dep : deps) {
-          auto* needed = symtab->find(dep);
-          if (!needed) {
-            error(toString(stub_file) + ": undefined symbol: " + dep +
-                  ". Required by " + toString(*sym));
-          } else if (needed->isUndefined()) {
-            error(toString(stub_file) +
-                  ": undefined symbol: " + toString(*needed) +
-                  ". Required by " + toString(*sym));
-          } else {
-            if (needed->traced)
-              message(toString(stub_file) + ": exported " + toString(*needed) +
-                      " due to import of " + name);
-            else
-              LLVM_DEBUG(llvm::dbgs()
-                         << "force export: " << toString(*needed) << "\n");
-            needed->forceExport = true;
-            if (auto *lazy = dyn_cast<LazySymbol>(needed)) {
-              depsAdded = true;
-              lazy->extract();
-              if (!config->whyExtract.empty())
-                ctx.whyExtractRecords.emplace_back(stub_file->getName(),
-                                                   sym->getFile(), *sym);
-            }
+      }
+
+      // Secondly looks for any symbols with an `importName` that matches
+      for (Symbol *sym : symtab->symbols()) {
+        if (sym->isUndefined() && sym->importName.has_value()) {
+          auto it = stub_file->symbolDependencies.find(sym->importName.value());
+          if (it != stub_file->symbolDependencies.end()) {
+            depsAdded |= addStubSymbolDeps(stub_file, sym, it->second);
           }
         }
       }
@@ -1299,9 +1320,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // We only need to add libcall symbols to the link before LTO if the symbol's
   // definition is in bitcode. Any other required libcall symbols will be added
   // to the link after LTO when we add the LTO object file to the link.
-  if (!ctx.bitcodeFiles.empty())
-    for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
+  if (!ctx.bitcodeFiles.empty()) {
+    llvm::Triple TT(ctx.bitcodeFiles.front()->obj->getTargetTriple());
+    for (auto *s : lto::LTO::getRuntimeLibcallSymbols(TT))
       handleLibcall(s);
+  }
   if (errorCount())
     return;
 

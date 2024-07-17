@@ -236,6 +236,9 @@ def no_growable_memory: FF<"no-growable-memory">,
 def no_entry: FF<"no-entry">,
   HelpText<"Do not output any entry point">;
 
+def no_shlib_sigcheck: FF<"no-shlib-sigcheck">,
+  HelpText<"Do not check signatures of functions defined in shared libraries.">;
+
 def stack_first: FF<"stack-first">,
   HelpText<"Place stack at start of linear memory rather than after data">;
 

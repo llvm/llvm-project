@@ -16,6 +16,7 @@
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 
 namespace Fortran {
 namespace lower {
@@ -331,6 +332,16 @@ bool ClauseProcessor::processDistSchedule(
   return false;
 }
 
+bool ClauseProcessor::processFilter(lower::StatementContext &stmtCtx,
+                                    mlir::omp::FilterClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Filter>()) {
+    result.filteredThreadIdVar =
+        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processFinal(lower::StatementContext &stmtCtx,
                                    mlir::omp::FinalClauseOps &result) const {
   const parser::CharBlock *source = nullptr;
@@ -388,6 +399,28 @@ bool ClauseProcessor::processNumThreads(
     // OMPIRBuilder expects `NUM_THREADS` clause as a `Value`.
     result.numThreadsVar =
         fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processOrder(mlir::omp::OrderClauseOps &result) const {
+  using Order = omp::clause::Order;
+  if (auto *clause = findUniqueClause<Order>()) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    result.orderAttr = mlir::omp::ClauseOrderKindAttr::get(
+        firOpBuilder.getContext(), mlir::omp::ClauseOrderKind::Concurrent);
+    const auto &modifier =
+        std::get<std::optional<Order::OrderModifier>>(clause->t);
+    if (modifier && *modifier == Order::OrderModifier::Unconstrained) {
+      result.orderModAttr = mlir::omp::OrderModifierAttr::get(
+          firOpBuilder.getContext(), mlir::omp::OrderModifier::unconstrained);
+    } else {
+      // "If order-modifier is not unconstrained, the behavior is as if the
+      // reproducible modifier is present."
+      result.orderModAttr = mlir::omp::OrderModifierAttr::get(
+          firOpBuilder.getContext(), mlir::omp::OrderModifier::reproducible);
+    }
     return true;
   }
   return false;
@@ -514,6 +547,65 @@ bool ClauseProcessor::processUntied(mlir::omp::UntiedClauseOps &result) const {
 //===----------------------------------------------------------------------===//
 // ClauseProcessor repeatable clauses
 //===----------------------------------------------------------------------===//
+static llvm::StringMap<bool> getTargetFeatures(mlir::ModuleOp module) {
+  llvm::StringMap<bool> featuresMap;
+  llvm::SmallVector<llvm::StringRef> targetFeaturesVec;
+  if (mlir::LLVM::TargetFeaturesAttr features =
+          fir::getTargetFeatures(module)) {
+    llvm::ArrayRef<mlir::StringAttr> featureAttrs = features.getFeatures();
+    for (auto &featureAttr : featureAttrs) {
+      llvm::StringRef featureKeyString = featureAttr.strref();
+      featuresMap[featureKeyString.substr(1)] = (featureKeyString[0] == '+');
+    }
+  }
+  return featuresMap;
+}
+
+static void
+addAlignedClause(lower::AbstractConverter &converter,
+                 const omp::clause::Aligned &clause,
+                 llvm::SmallVectorImpl<mlir::Value> &alignedVars,
+                 llvm::SmallVectorImpl<mlir::Attribute> &alignmentAttrs) {
+  using Aligned = omp::clause::Aligned;
+  lower::StatementContext stmtCtx;
+  mlir::IntegerAttr alignmentValueAttr;
+  int64_t alignment = 0;
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  if (auto &alignmentValueParserExpr =
+          std::get<std::optional<Aligned::Alignment>>(clause.t)) {
+    mlir::Value operand = fir::getBase(
+        converter.genExprValue(*alignmentValueParserExpr, stmtCtx));
+    alignment = *fir::getIntIfConstant(operand);
+  } else {
+    llvm::StringMap<bool> featuresMap = getTargetFeatures(builder.getModule());
+    llvm::Triple triple = fir::getTargetTriple(builder.getModule());
+    alignment =
+        llvm::OpenMPIRBuilder::getOpenMPDefaultSimdAlign(triple, featuresMap);
+  }
+
+  // The default alignment for some targets is equal to 0.
+  // Do not generate alignment assumption if alignment is less than or equal to
+  // 0.
+  if (alignment > 0) {
+    auto &objects = std::get<omp::ObjectList>(clause.t);
+    if (!objects.empty())
+      genObjectList(objects, converter, alignedVars);
+    alignmentValueAttr = builder.getI64IntegerAttr(alignment);
+    // All the list items in a aligned clause will have same alignment
+    for (std::size_t i = 0; i < objects.size(); i++)
+      alignmentAttrs.push_back(alignmentValueAttr);
+  }
+}
+
+bool ClauseProcessor::processAligned(
+    mlir::omp::AlignedClauseOps &result) const {
+  return findRepeatableClause<omp::clause::Aligned>(
+      [&](const omp::clause::Aligned &clause, const parser::CharBlock &) {
+        addAlignedClause(converter, clause, result.alignedVars,
+                         result.alignmentAttrs);
+      });
+}
 
 bool ClauseProcessor::processAllocate(
     mlir::omp::AllocateClauseOps &result) const {
@@ -669,7 +761,7 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
   auto declSrc = builder.create<hlfir::DeclareOp>(
       loc, funcOp.getArgument(1), copyFuncName + "_src", shape, typeparams,
       /*dummy_scope=*/nullptr, attrs);
-  converter.copyVar(loc, declDst.getBase(), declSrc.getBase());
+  converter.copyVar(loc, declDst.getBase(), declSrc.getBase(), varAttrs);
   builder.create<mlir::func::ReturnOp>(loc);
   return funcOp;
 }
@@ -945,7 +1037,8 @@ bool ClauseProcessor::processReduction(
 
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
-        llvm::copy(reduceVarByRef, std::back_inserter(result.reduceVarByRef));
+        llvm::copy(reduceVarByRef,
+                   std::back_inserter(result.reductionVarsByRef));
         llvm::copy(reductionDeclSymbols,
                    std::back_inserter(result.reductionDeclSymbols));
 
@@ -958,14 +1051,6 @@ bool ClauseProcessor::processReduction(
 
         if (outReductionSyms)
           llvm::copy(reductionSyms, std::back_inserter(*outReductionSyms));
-      });
-}
-
-bool ClauseProcessor::processSectionsReduction(
-    mlir::Location currentLocation, mlir::omp::ReductionClauseOps &) const {
-  return findRepeatableClause<omp::clause::Reduction>(
-      [&](const omp::clause::Reduction &, const parser::CharBlock &) {
-        TODO(currentLocation, "OMPC_Reduction");
       });
 }
 
@@ -990,7 +1075,7 @@ bool ClauseProcessor::processEnter(
 }
 
 bool ClauseProcessor::processUseDeviceAddr(
-    mlir::omp::UseDeviceClauseOps &result,
+    mlir::omp::UseDeviceAddrClauseOps &result,
     llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
     llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
     llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const {
@@ -1002,7 +1087,7 @@ bool ClauseProcessor::processUseDeviceAddr(
 }
 
 bool ClauseProcessor::processUseDevicePtr(
-    mlir::omp::UseDeviceClauseOps &result,
+    mlir::omp::UseDevicePtrClauseOps &result,
     llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
     llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
     llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const {

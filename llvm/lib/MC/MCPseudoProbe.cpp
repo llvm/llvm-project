@@ -80,7 +80,8 @@ void MCPseudoProbe::emit(MCObjectStreamer *MCOS,
     if (AddrDelta->evaluateAsAbsolute(Delta, MCOS->getAssemblerPtr())) {
       MCOS->emitSLEB128IntValue(Delta);
     } else {
-      MCOS->insert(new MCPseudoProbeAddrFragment(AddrDelta));
+      MCOS->insert(MCOS->getContext().allocFragment<MCPseudoProbeAddrFragment>(
+          AddrDelta));
     }
   } else {
     // Emit the GUID of the split function that the sentinel probe represents.
@@ -146,7 +147,7 @@ void MCPseudoProbeInlineTree::emit(MCObjectStreamer *MCOS,
     dbgs() << "Group [\n";
     MCPseudoProbeTable::DdgPrintIndent += 2;
   });
-  assert(!isRoot() && "Root should be handled seperately");
+  assert(!isRoot() && "Root should be handled separately");
 
   // Emit probes grouped by GUID.
   LLVM_DEBUG({
@@ -279,7 +280,7 @@ void MCPseudoProbeFuncDesc::print(raw_ostream &OS) {
 }
 
 void MCDecodedPseudoProbe::getInlineContext(
-    SmallVectorImpl<MCPseduoProbeFrameLocation> &ContextStack,
+    SmallVectorImpl<MCPseudoProbeFrameLocation> &ContextStack,
     const GUIDProbeFunctionMap &GUID2FuncMAP) const {
   uint32_t Begin = ContextStack.size();
   MCDecodedPseudoProbeInlineTree *Cur = InlineTree;
@@ -288,7 +289,7 @@ void MCDecodedPseudoProbe::getInlineContext(
   while (Cur->hasInlineSite()) {
     StringRef FuncName = getProbeFNameForGUID(GUID2FuncMAP, Cur->Parent->Guid);
     ContextStack.emplace_back(
-        MCPseduoProbeFrameLocation(FuncName, std::get<1>(Cur->ISite)));
+        MCPseudoProbeFrameLocation(FuncName, std::get<1>(Cur->ISite)));
     Cur = static_cast<MCDecodedPseudoProbeInlineTree *>(Cur->Parent);
   }
   // Make the ContextStack in caller-callee order
@@ -298,7 +299,7 @@ void MCDecodedPseudoProbe::getInlineContext(
 std::string MCDecodedPseudoProbe::getInlineContextStr(
     const GUIDProbeFunctionMap &GUID2FuncMAP) const {
   std::ostringstream OContextStr;
-  SmallVector<MCPseduoProbeFrameLocation, 16> ContextStack;
+  SmallVector<MCPseudoProbeFrameLocation, 16> ContextStack;
   getInlineContext(ContextStack, GUID2FuncMAP);
   for (auto &Cxt : ContextStack) {
     if (OContextStr.str().size())
@@ -615,7 +616,7 @@ MCPseudoProbeDecoder::getFuncDescForGUID(uint64_t GUID) const {
 
 void MCPseudoProbeDecoder::getInlineContextForProbe(
     const MCDecodedPseudoProbe *Probe,
-    SmallVectorImpl<MCPseduoProbeFrameLocation> &InlineContextStack,
+    SmallVectorImpl<MCPseudoProbeFrameLocation> &InlineContextStack,
     bool IncludeLeaf) const {
   Probe->getInlineContext(InlineContextStack, GUID2FuncDescMap);
   if (!IncludeLeaf)
@@ -624,7 +625,7 @@ void MCPseudoProbeDecoder::getInlineContextForProbe(
   // hence we need to retrieve and prepend leaf if requested.
   const auto *FuncDesc = getFuncDescForGUID(Probe->getGuid());
   InlineContextStack.emplace_back(
-      MCPseduoProbeFrameLocation(FuncDesc->FuncName, Probe->getIndex()));
+      MCPseudoProbeFrameLocation(FuncDesc->FuncName, Probe->getIndex()));
 }
 
 const MCPseudoProbeFuncDesc *MCPseudoProbeDecoder::getInlinerDescForProbe(

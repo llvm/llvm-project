@@ -104,10 +104,13 @@ public:
   ///
   /// \param die The struct/class DWARFDIE containing template parameters.
   /// \return A string, including surrounding '<>', of the template parameters.
-  /// If the DIE's name already has '<>', returns an empty ConstString because
+  /// If the DIE's name already has '<>', returns an empty string because
   /// it's assumed that the caller is using the DIE name anyway.
-  lldb_private::ConstString GetDIEClassTemplateParams(
+  std::string GetDIEClassTemplateParams(
       const lldb_private::plugin::dwarf::DWARFDIE &die) override;
+
+  void MapDeclDIEToDefDIE(const lldb_private::plugin::dwarf::DWARFDIE &decl_die,
+                          const lldb_private::plugin::dwarf::DWARFDIE &def_die);
 
 protected:
   /// Protected typedefs and members.
@@ -168,8 +171,10 @@ protected:
       lldb_private::TypeSystemClang::TemplateParameterInfos
           &template_param_infos);
 
-  std::string
-  GetCPlusPlusQualifiedName(const lldb_private::plugin::dwarf::DWARFDIE &die);
+  void GetUniqueTypeNameAndDeclaration(
+      const lldb_private::plugin::dwarf::DWARFDIE &die,
+      lldb::LanguageType language, lldb_private::ConstString &unique_typename,
+      lldb_private::Declaration &decl_declaration);
 
   bool ParseChildMembers(
       const lldb_private::plugin::dwarf::DWARFDIE &die,

@@ -549,8 +549,8 @@ class MetadataLoader::MetadataLoaderImpl {
   /// DISubprogram's retainedNodes.
   void upgradeCULocals() {
     if (NamedMDNode *CUNodes = TheModule.getNamedMetadata("llvm.dbg.cu")) {
-      for (unsigned I = 0, E = CUNodes->getNumOperands(); I != E; ++I) {
-        auto *CU = dyn_cast<DICompileUnit>(CUNodes->getOperand(I));
+      for (MDNode *N : CUNodes->operands()) {
+        auto *CU = dyn_cast<DICompileUnit>(N);
         if (!CU)
           continue;
 

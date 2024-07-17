@@ -281,7 +281,7 @@ class AMDGPULowerModuleLDS {
     // immediately used by the kernel must still be allocated by it. An
     // equivalent target specific intrinsic which lasts until immediately after
     // codegen would suffice for that, but one would still need to ensure that
-    // the variables are allocated in the anticpated order.
+    // the variables are allocated in the anticipated order.
     BasicBlock *Entry = &Func->getEntryBlock();
     IRBuilder<> Builder(Entry, Entry->getFirstNonPHIIt());
 
@@ -321,8 +321,7 @@ public:
     ArrayType *KernelOffsetsType = ArrayType::get(I32, Variables.size());
 
     SmallVector<Constant *> Elements;
-    for (size_t i = 0; i < Variables.size(); i++) {
-      GlobalVariable *GV = Variables[i];
+    for (GlobalVariable *GV : Variables) {
       auto ConstantGepIt = LDSVarsToConstantGEP.find(GV);
       if (ConstantGepIt != LDSVarsToConstantGEP.end()) {
         auto elt = ConstantExpr::getPtrToInt(ConstantGepIt->second, I32);
@@ -545,7 +544,7 @@ public:
   static std::vector<Function *> assignLDSKernelIDToEachKernel(
       Module *M, DenseSet<Function *> const &KernelsThatAllocateTableLDS,
       DenseSet<Function *> const &KernelsThatIndirectlyAllocateDynamicLDS) {
-    // Associate kernels in the set with an arbirary but reproducible order and
+    // Associate kernels in the set with an arbitrary but reproducible order and
     // annotate them with that order in metadata. This metadata is recognised by
     // the backend and lowered to a SGPR which can be read from using
     // amdgcn_lds_kernel_id.
@@ -1087,7 +1086,7 @@ public:
           raw_string_ostream SS{Buffer};
           SS << format("%u", Offset);
 
-          // Instead of explictly marking kernels that access dynamic variables
+          // Instead of explicitly marking kernels that access dynamic variables
           // using special case metadata, annotate with min-lds == max-lds, i.e.
           // that there is no more space available for allocating more static
           // LDS variables. That is the right condition to prevent allocating
@@ -1173,7 +1172,7 @@ private:
     LayoutFields.reserve(LDSVarsToTransform.size());
     {
       // The order of fields in this struct depends on the order of
-      // varables in the argument which varies when changing how they
+      // variables in the argument which varies when changing how they
       // are identified, leading to spurious test breakage.
       auto Sorted = sortByName(std::vector<GlobalVariable *>(
           LDSVarsToTransform.begin(), LDSVarsToTransform.end()));
@@ -1194,10 +1193,10 @@ private:
     IsPaddingField.reserve(LDSVarsToTransform.size());
     {
       uint64_t CurrentOffset = 0;
-      for (size_t I = 0; I < LayoutFields.size(); I++) {
-        GlobalVariable *FGV = static_cast<GlobalVariable *>(
-            const_cast<void *>(LayoutFields[I].Id));
-        Align DataAlign = LayoutFields[I].Alignment;
+      for (auto &F : LayoutFields) {
+        GlobalVariable *FGV =
+            static_cast<GlobalVariable *>(const_cast<void *>(F.Id));
+        Align DataAlign = F.Alignment;
 
         uint64_t DataAlignV = DataAlign.value();
         if (uint64_t Rem = CurrentOffset % DataAlignV) {
@@ -1218,7 +1217,7 @@ private:
 
         LocalVars.push_back(FGV);
         IsPaddingField.push_back(false);
-        CurrentOffset += LayoutFields[I].Size;
+        CurrentOffset += F.Size;
       }
     }
 

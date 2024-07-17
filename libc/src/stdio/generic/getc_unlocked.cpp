@@ -9,10 +9,12 @@
 #include "src/stdio/getc_unlocked.h"
 #include "src/__support/File/file.h"
 
+#include "hdr/types/FILE.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
-#include <stdio.h>
+#include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, getc_unlocked, (::FILE * stream)) {
   unsigned char c;
@@ -27,4 +29,4 @@ LLVM_LIBC_FUNCTION(int, getc_unlocked, (::FILE * stream)) {
   return c;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

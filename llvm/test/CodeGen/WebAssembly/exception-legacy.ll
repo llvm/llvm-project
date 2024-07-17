@@ -350,8 +350,60 @@ ehcleanupret:                                     ; preds = %catch.start, %ehcle
   cleanupret from %0 unwind to caller
 }
 
+; Regression test for the bug that 'rethrow' was not treated correctly as a
+; terminator in isel.
+define void @test_rethrow_terminator() personality ptr @__gxx_wasm_personality_v0 {
+entry:
+  invoke void @foo()
+          to label %try.cont unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %entry
+  %0 = catchswitch within none [label %catch.start] unwind label %ehcleanup
+
+catch.start:                                      ; preds = %catch.dispatch
+  %1 = catchpad within %0 [ptr @_ZTIi]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  %4 = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTIi)
+  %matches = icmp eq i32 %3, %4
+  br i1 %matches, label %catch, label %rethrow
+
+catch:                                            ; preds = %catch.start
+  %5 = call ptr @__cxa_begin_catch(ptr %2) [ "funclet"(token %1) ]
+  %6 = load i32, ptr %5, align 4
+  call void @__cxa_end_catch() [ "funclet"(token %1) ]
+  catchret from %1 to label %try.cont
+
+rethrow:                                          ; preds = %catch.start
+  invoke void @llvm.wasm.rethrow() #1 [ "funclet"(token %1) ]
+          to label %unreachable unwind label %ehcleanup
+
+try.cont:                                         ; preds = %entry, %catch
+  ret void
+
+ehcleanup:                                        ; preds = %rethrow, %catch.dispatch
+  ; 'rethrow' BB is this BB's predecessor, and its
+  ; 'invoke void @llvm.wasm.rethrow()' is lowered down to a 'RETHROW' in Wasm
+  ; MIR. And this 'phi' creates 'CONST_I32' instruction in the predecessor
+  ; 'rethrow' BB. If 'RETHROW' is not treated correctly as a terminator, it can
+  ; create a BB like
+  ; bb.3.rethrow:
+  ;   RETHROW 0
+  ;   %0 = CONST_I32 20
+  ;   BR ...
+  %tmp = phi i32 [ 10, %catch.dispatch ], [ 20, %rethrow ]
+  %7 = cleanuppad within none []
+  call void @take_i32(i32 %tmp) [ "funclet"(token %7) ]
+  cleanupret from %7 unwind to caller
+
+unreachable:                                      ; preds = %rethrow
+  unreachable
+}
+
+
 declare void @foo()
 declare void @bar(ptr)
+declare void @take_i32(i32)
 declare i32 @__gxx_wasm_personality_v0(...)
 ; Function Attrs: noreturn
 declare void @llvm.wasm.throw(i32, ptr) #1

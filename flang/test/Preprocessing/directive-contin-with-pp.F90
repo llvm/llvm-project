@@ -1,4 +1,4 @@
-! RUN: %flang -fc1 -fdebug-unparse -fopenmp %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fdebug-unparse -fopenmp %s 2>&1 | FileCheck %s
 
 #define DIR_START !dir$
 #define DIR_CONT !dir$&

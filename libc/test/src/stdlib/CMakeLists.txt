@@ -54,44 +54,6 @@ add_libc_test(
     libc.src.stdlib.atoll
 )
 
-add_libc_test(
-  block_test
-  SUITE
-    libc-stdlib-tests
-  SRCS
-    block_test.cpp
-  DEPENDS
-    libc.src.stdlib.block
-    libc.src.__support.CPP.array
-    libc.src.__support.CPP.span
-    libc.src.string.memcpy
-)
-
-add_libc_test(
-  freelist_test
-  SUITE
-    libc-stdlib-tests
-  SRCS
-    freelist_test.cpp
-  DEPENDS
-    libc.src.stdlib.freelist
-    libc.src.__support.CPP.array
-    libc.src.__support.CPP.span
-)
-
-add_libc_test(
-  freelist_heap_test
-  SUITE
-    libc-stdlib-tests
-  SRCS
-    freelist_heap_test.cpp
-  DEPENDS
-    libc.src.__support.CPP.span
-    libc.src.stdlib.freelist_heap
-    libc.src.string.memcmp
-    libc.src.string.memcpy
-)
-
 add_fp_unittest(
   strtod_test
   SUITE
@@ -329,13 +291,38 @@ add_libc_test(
 )
 
 add_libc_test(
+  quick_sort_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    quick_sort_test.cpp
+  HDRS
+    SortingTest.h
+  DEPENDS
+    libc.src.stdlib.qsort_util
+)
+
+add_libc_test(
+  heap_sort_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    heap_sort_test.cpp
+  HDRS
+    SortingTest.h
+  DEPENDS
+    libc.src.stdlib.qsort_util
+)
+
+add_libc_test(
   qsort_test
   SUITE
     libc-stdlib-tests
   SRCS
     qsort_test.cpp
+  HDRS
+    SortingTest.h
   DEPENDS
-    libc.include.stdlib
     libc.src.stdlib.qsort
 )
 

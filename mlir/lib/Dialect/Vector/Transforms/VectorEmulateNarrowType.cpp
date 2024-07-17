@@ -912,8 +912,8 @@ static Value rewriteI4ToI8UnsignedExt(PatternRewriter &rewriter, Location loc,
   return rewriter.create<vector::InterleaveOp>(loc, low, high);
 }
 
-/// Rewrite the i8 -> i4 truncation into a sequence of shuffles and bitwise ops
-/// that take advantage of high-level information to avoid leaving LLVM to
+/// Rewrite the i8 -> i4 truncation into a deinterleave and series of bitwise
+/// ops that take advantage of high-level information to avoid leaving LLVM to
 /// scramble with peephole optimizations.
 static Value rewriteI8ToI4Trunc(PatternRewriter &rewriter, Location loc,
                                 Value srcValue) {
@@ -922,39 +922,22 @@ static Value rewriteI8ToI4Trunc(PatternRewriter &rewriter, Location loc,
          "Expected i8 type");
 
   // 1. De-interleave low and high i8 elements.
-  int64_t vecDimSize = srcVecType.getShape().back();
-  SmallVector<int64_t> deinterleaveLowMaskValues;
-  SmallVector<int64_t> deinterleaveHighMaskValues;
-  assert((vecDimSize % 2) == 0 && "Odd number of i4 elements");
-  deinterleaveLowMaskValues.reserve(vecDimSize / 2);
-  deinterleaveHighMaskValues.reserve(vecDimSize / 2);
-  for (int i = 0, end = vecDimSize; i < end; i += 2) {
-    deinterleaveLowMaskValues.push_back(i);
-    deinterleaveHighMaskValues.push_back(i + 1);
-  }
-
-  auto lowShuffleOp = rewriter.create<vector::ShuffleOp>(
-      loc, srcValue, srcValue,
-      rewriter.getI64ArrayAttr(deinterleaveLowMaskValues));
-  auto highShuffleOp = rewriter.create<vector::ShuffleOp>(
-      loc, srcValue, srcValue,
-      rewriter.getI64ArrayAttr(deinterleaveHighMaskValues));
+  auto deinterleaveOp = rewriter.create<vector::DeinterleaveOp>(loc, srcValue);
 
   // 2. Zero out the upper side of each low i8 element.
   constexpr int8_t i8LowBitMask = 0x0F;
+  VectorType deinterI8VecType = deinterleaveOp.getResultVectorType();
   Value zeroOutMask = rewriter.create<arith::ConstantOp>(
-      loc,
-      DenseElementsAttr::get(lowShuffleOp.getResultVectorType(), i8LowBitMask));
-  Value zeroOutLow =
-      rewriter.create<arith::AndIOp>(loc, lowShuffleOp, zeroOutMask);
+      loc, DenseElementsAttr::get(deinterI8VecType, i8LowBitMask));
+  Value zeroOutLow = rewriter.create<arith::AndIOp>(
+      loc, deinterleaveOp.getRes1(), zeroOutMask);
 
   // 3. Move high i4 values to upper side of the byte.
   constexpr int8_t bitsToShift = 4;
-  VectorType deinterI8VecType = highShuffleOp.getResultVectorType();
   auto shiftValues = rewriter.create<arith::ConstantOp>(
       loc, DenseElementsAttr::get(deinterI8VecType, bitsToShift));
-  Value shlHigh =
-      rewriter.create<arith::ShLIOp>(loc, highShuffleOp, shiftValues);
+  Value shlHigh = rewriter.create<arith::ShLIOp>(loc, deinterleaveOp.getRes2(),
+                                                 shiftValues);
 
   // 4. Merge high and low i4 values.
   auto mergedHiLowOp = rewriter.create<arith::OrIOp>(loc, zeroOutLow, shlHigh);
@@ -1148,7 +1131,7 @@ struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
   }
 };
 
-/// Rewrite the i8 -> i4 part of any truncation into a sequence of shuffles and
+/// Rewrite the i8 -> i4 part of any truncation into a deinterleave and
 /// bitwise ops that take advantage of high-level information to avoid leaving
 /// LLVM to scramble with peephole optimizations.
 ///
@@ -1158,13 +1141,11 @@ struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
 ///
 ///        %cst = arith.constant dense<15> : vector<4xi8>
 ///        %cst_0 = arith.constant dense<4> : vector<4xi8>
-///        %0 = arith.trunci %in : vector<8xi32> to vector<8xi8>
-///        %1 = vector.shuffle %0, %0 [0, 2, 4, 6] : vector<8xi8>, vector<8xi8>
-///        %2 = vector.shuffle %0, %0 [1, 3, 5, 7] : vector<8xi8>, vector<8xi8>
-///        %3 = arith.andi %1, %cst : vector<4xi8>
-///        %4 = arith.shli %2, %cst_0 : vector<4xi8>
-///        %5 = arith.ori %3, %4 : vector<4xi8>
-///        %6 = vector.bitcast %5 : vector<4xi8> to vector<8xi4>
+///        %0, %1 = vector.deinterleave %in : vector<8xi8>, vector<8xi8>
+///        %2 = arith.andi %0, %cst : vector<4xi8>
+///        %3 = arith.shli %1, %cst_0 : vector<4xi8>
+///        %4 = arith.ori %2, %3 : vector<4xi8>
+///        %5 = vector.bitcast %4 : vector<4xi8> to vector<8xi4>
 ///
 struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
   using OpRewritePattern<arith::TruncIOp>::OpRewritePattern;
@@ -1176,11 +1157,6 @@ struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
     auto srcVecType = dyn_cast<VectorType>(srcValue.getType());
     auto dstVecType = dyn_cast<VectorType>(truncOp.getType());
     if (!srcVecType || !dstVecType)
-      return failure();
-
-    // Only single dim vectors are supported until we have
-    // `vector.deinterleave`.
-    if (srcVecType.getRank() != 1)
       return failure();
 
     if (failed(commonConversionPrecondition(rewriter, srcVecType, truncOp)))

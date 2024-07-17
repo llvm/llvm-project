@@ -6,9 +6,11 @@ add_flang_library(FIRTransforms
   AnnotateConstant.cpp
   AssumedRankOpConversion.cpp
   CharacterConversion.cpp
+  ConstantArgumentGlobalisation.cpp
   ControlFlowConverter.cpp
   ArrayValueCopy.cpp
   ExternalNameConversion.cpp
+  MemoryUtils.cpp
   MemoryAllocation.cpp
   StackArrays.cpp
   MemRefDataFlowOpt.cpp
@@ -21,6 +23,7 @@ add_flang_library(FIRTransforms
   OMPFunctionFiltering.cpp
   OMPMapInfoFinalization.cpp
   OMPMarkDeclareTarget.cpp
+  StackReclaim.cpp
   VScaleAttr.cpp
   FunctionAttr.cpp
   DebugTypeGenerator.cpp

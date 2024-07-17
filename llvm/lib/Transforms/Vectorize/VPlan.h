@@ -626,6 +626,15 @@ public:
       appendPredecessor(Pred);
   }
 
+  /// Set each VPBasicBlock in \p NewSuccss as successor of this VPBlockBase.
+  /// This VPBlockBase must have no successors. This VPBlockBase is not added
+  /// as predecessor of any VPBasicBlock in \p NewSuccs.
+  void setSuccessors(ArrayRef<VPBlockBase *> NewSuccs) {
+    assert(Successors.empty() && "Block successors already set.");
+    for (auto *Succ : NewSuccs)
+      appendSuccessor(Succ);
+  }
+
   /// Remove all the predecessor of this block.
   void clearPredecessors() { Predecessors.clear(); }
 
@@ -688,7 +697,10 @@ public:
 };
 
 /// A value that is used outside the VPlan. The operand of the user needs to be
-/// added to the associated LCSSA phi node.
+/// added to the associated phi node. The incoming block from VPlan is
+/// determined by where the VPValue is defined: if it is defined by a recipe
+/// outside a region, its parent block is used, otherwise the middle block is
+/// used.
 class VPLiveOut : public VPUser {
   PHINode *Phi;
 
@@ -700,11 +712,10 @@ public:
     return U->getVPUserID() == VPUser::VPUserID::LiveOut;
   }
 
-  /// Fixup the wrapped LCSSA phi node in the unique exit block.  This simply
-  /// means we need to add the appropriate incoming value from the middle
-  /// block as exiting edges from the scalar epilogue loop (if present) are
-  /// already in place, and we exit the vector loop exclusively to the middle
-  /// block.
+  /// Fix the wrapped phi node. This means adding an incoming value to exit
+  /// block phi's from the vector loop via middle block (values from scalar loop
+  /// already reach these phi's), and updating the value to scalar header phi's
+  /// from the scalar preheader.
   void fixPhi(VPlan &Plan, VPTransformState &State);
 
   /// Returns true if the VPLiveOut uses scalars of operand \p Op.
@@ -898,6 +909,7 @@ public:
     case VPRecipeBase::VPEVLBasedIVPHISC:
     case VPRecipeBase::VPExpandSCEVSC:
     case VPRecipeBase::VPInstructionSC:
+    case VPRecipeBase::VPReductionEVLSC:
     case VPRecipeBase::VPReductionSC:
     case VPRecipeBase::VPReplicateSC:
     case VPRecipeBase::VPScalarIVStepsSC:
@@ -1228,6 +1240,11 @@ public:
     SLPStore,
     ActiveLaneMask,
     ExplicitVectorLength,
+    /// Creates a scalar phi in a leaf VPBB with a single predecessor in VPlan.
+    /// The first operand is the incoming value from the predecessor in VPlan,
+    /// the second operand is the incoming value for all other predecessors
+    /// (which are currently not modeled in VPlan).
+    ResumePhi,
     CalculateTripCountMinusVF,
     // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
@@ -1376,6 +1393,10 @@ public:
   /// Returns true if this VPInstruction produces a scalar value from a vector,
   /// e.g. by performing a reduction or extracting a lane.
   bool isVectorToScalar() const;
+
+  /// Returns true if this VPInstruction's operands are single scalars and the
+  /// result is also a single scalar.
+  bool isSingleScalar() const;
 };
 
 /// VPWidenRecipe is a recipe for producing a copy of vector type its
@@ -2151,17 +2172,27 @@ class VPReductionRecipe : public VPSingleDefRecipe {
   /// The recurrence decriptor for the reduction in question.
   const RecurrenceDescriptor &RdxDesc;
   bool IsOrdered;
+  /// Whether the reduction is conditional.
+  bool IsConditional = false;
+
+protected:
+  VPReductionRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
+                    Instruction *I, ArrayRef<VPValue *> Operands,
+                    VPValue *CondOp, bool IsOrdered)
+      : VPSingleDefRecipe(SC, Operands, I), RdxDesc(R), IsOrdered(IsOrdered) {
+    if (CondOp) {
+      IsConditional = true;
+      addOperand(CondOp);
+    }
+  }
 
 public:
   VPReductionRecipe(const RecurrenceDescriptor &R, Instruction *I,
                     VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
                     bool IsOrdered)
-      : VPSingleDefRecipe(VPDef::VPReductionSC,
-                          ArrayRef<VPValue *>({ChainOp, VecOp}), I),
-        RdxDesc(R), IsOrdered(IsOrdered) {
-    if (CondOp)
-      addOperand(CondOp);
-  }
+      : VPReductionRecipe(VPDef::VPReductionSC, R, I,
+                          ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
+                          IsOrdered) {}
 
   ~VPReductionRecipe() override = default;
 
@@ -2170,7 +2201,15 @@ public:
                                  getVecOp(), getCondOp(), IsOrdered);
   }
 
-  VP_CLASSOF_IMPL(VPDef::VPReductionSC)
+  static inline bool classof(const VPRecipeBase *R) {
+    return R->getVPDefID() == VPRecipeBase::VPReductionSC ||
+           R->getVPDefID() == VPRecipeBase::VPReductionEVLSC;
+  }
+
+  static inline bool classof(const VPUser *U) {
+    auto *R = dyn_cast<VPRecipeBase>(U);
+    return R && classof(R);
+  }
 
   /// Generate the reduction in the loop
   void execute(VPTransformState &State) override;
@@ -2181,13 +2220,62 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
+  /// Return the recurrence decriptor for the in-loop reduction.
+  const RecurrenceDescriptor &getRecurrenceDescriptor() const {
+    return RdxDesc;
+  }
+  /// Return true if the in-loop reduction is ordered.
+  bool isOrdered() const { return IsOrdered; };
+  /// Return true if the in-loop reduction is conditional.
+  bool isConditional() const { return IsConditional; };
   /// The VPValue of the scalar Chain being accumulated.
   VPValue *getChainOp() const { return getOperand(0); }
   /// The VPValue of the vector value to be reduced.
   VPValue *getVecOp() const { return getOperand(1); }
   /// The VPValue of the condition for the block.
   VPValue *getCondOp() const {
-    return getNumOperands() > 2 ? getOperand(2) : nullptr;
+    return isConditional() ? getOperand(getNumOperands() - 1) : nullptr;
+  }
+};
+
+/// A recipe to represent inloop reduction operations with vector-predication
+/// intrinsics, performing a reduction on a vector operand with the explicit
+/// vector length (EVL) into a scalar value, and adding the result to a chain.
+/// The Operands are {ChainOp, VecOp, EVL, [Condition]}.
+class VPReductionEVLRecipe : public VPReductionRecipe {
+public:
+  VPReductionEVLRecipe(VPReductionRecipe *R, VPValue *EVL, VPValue *CondOp)
+      : VPReductionRecipe(
+            VPDef::VPReductionEVLSC, R->getRecurrenceDescriptor(),
+            cast_or_null<Instruction>(R->getUnderlyingValue()),
+            ArrayRef<VPValue *>({R->getChainOp(), R->getVecOp(), EVL}), CondOp,
+            R->isOrdered()) {}
+
+  ~VPReductionEVLRecipe() override = default;
+
+  VPReductionEVLRecipe *clone() override {
+    llvm_unreachable("cloning not implemented yet");
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPReductionEVLSC)
+
+  /// Generate the reduction in the loop
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  /// The VPValue of the explicit vector length.
+  VPValue *getEVL() const { return getOperand(2); }
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return Op == getEVL();
   }
 };
 
@@ -3240,13 +3328,17 @@ public:
 
   ~VPlan();
 
-  /// Create initial VPlan skeleton, having an "entry" VPBasicBlock (wrapping
-  /// original scalar pre-header \p PH) which contains SCEV expansions that need
+  /// Create initial VPlan, having an "entry" VPBasicBlock (wrapping
+  /// original scalar pre-header ) which contains SCEV expansions that need
   /// to happen before the CFG is modified; a VPBasicBlock for the vector
   /// pre-header, followed by a region for the vector loop, followed by the
-  /// middle VPBasicBlock.
+  /// middle VPBasicBlock. If a check is needed to guard executing the scalar
+  /// epilogue loop, it will be added to the middle block, together with
+  /// VPBasicBlocks for the scalar preheader and exit blocks.
   static VPlanPtr createInitialVPlan(const SCEV *TripCount,
-                                     ScalarEvolution &PSE, BasicBlock *PH);
+                                     ScalarEvolution &PSE,
+                                     bool RequiresScalarEpilogueCheck,
+                                     bool TailFolded, Loop *TheLoop);
 
   /// Prepare the plan for execution, setting up the required live-in values.
   void prepareToExecute(Value *TripCount, Value *VectorTripCount,
@@ -3301,6 +3393,7 @@ public:
     return any_of(VFs, [](ElementCount VF) { return VF.isScalable(); });
   }
 
+  /// Returns an iterator range over all VFs of the plan.
   iterator_range<SmallSetVector<ElementCount, 2>::iterator>
   vectorFactors() const {
     return {VFs.begin(), VFs.end()};
@@ -3722,16 +3815,12 @@ inline bool isUniformAfterVectorization(VPValue *VPV) {
   if (auto *GEP = dyn_cast<VPWidenGEPRecipe>(Def))
     return all_of(GEP->operands(), isUniformAfterVectorization);
   if (auto *VPI = dyn_cast<VPInstruction>(Def))
-    return VPI->isVectorToScalar();
+    return VPI->isSingleScalar() || VPI->isVectorToScalar();
   return false;
 }
 
-/// Return true if \p Cond is a uniform boolean.
-bool isUniformBoolean(VPValue *Cond);
-
 /// Return true if \p V is a header mask in \p Plan.
 bool isHeaderMask(VPValue *V, VPlan &Plan);
-
 } // end namespace vputils
 
 } // end namespace llvm

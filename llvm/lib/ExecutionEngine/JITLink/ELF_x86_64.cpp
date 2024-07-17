@@ -153,6 +153,9 @@ private:
     Edge::Kind Kind = Edge::Invalid;
 
     switch (ELFReloc) {
+    case ELF::R_X86_64_PC8:
+      Kind = x86_64::Delta8;
+      break;
     case ELF::R_X86_64_PC32:
     case ELF::R_X86_64_GOTPC32:
       Kind = x86_64::Delta32;

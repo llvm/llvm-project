@@ -80,7 +80,7 @@ void *Decl::operator new(std::size_t Size, const ASTContext &Context,
 
   uint64_t *PrefixPtr = (uint64_t *)Result - 1;
 
-  *PrefixPtr = ID.get();
+  *PrefixPtr = ID.getRawValue();
 
   // We leave the upper 16 bits to store the module IDs. 48 bits should be
   // sufficient to store a declaration ID.
@@ -691,7 +691,7 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
     IdentifierInfo *IIEnv = A->getEnvironment();
     StringRef TargetEnv =
         Context.getTargetInfo().getTriple().getEnvironmentName();
-    StringRef EnvName = AvailabilityAttr::getPrettyEnviromentName(
+    StringRef EnvName = llvm::Triple::getEnvironmentTypeName(
         Context.getTargetInfo().getTriple().getEnvironment());
     // Matching environment or no environment on attribute
     if (!IIEnv || (!TargetEnv.empty() && IIEnv->getName() == TargetEnv)) {
@@ -1122,26 +1122,31 @@ bool Decl::isInExportDeclContext() const {
 bool Decl::isInAnotherModuleUnit() const {
   auto *M = getOwningModule();
 
-  if (!M || !M->isNamedModule())
+  if (!M)
     return false;
 
+  M = M->getTopLevelModule();
+  // FIXME: It is problematic if the header module lives in another module
+  // unit. Consider to fix this by techniques like
+  // ExternalASTSource::hasExternalDefinitions.
+  if (M->isHeaderLikeModule())
+    return false;
+
+  // A global module without parent implies that we're parsing the global
+  // module. So it can't be in another module unit.
+  if (M->isGlobalModule())
+    return false;
+
+  assert(M->isNamedModule() && "New module kind?");
   return M != getASTContext().getCurrentNamedModule();
-}
-
-bool Decl::shouldEmitInExternalSource() const {
-  ExternalASTSource *Source = getASTContext().getExternalSource();
-  if (!Source)
-    return false;
-
-  return Source->hasExternalDefinitions(this) == ExternalASTSource::EK_Always;
-}
-
-bool Decl::isInNamedModule() const {
-  return getOwningModule() && getOwningModule()->isNamedModule();
 }
 
 bool Decl::isFromExplicitGlobalModule() const {
   return getOwningModule() && getOwningModule()->isExplicitGlobalModule();
+}
+
+bool Decl::isInNamedModule() const {
+  return getOwningModule() && getOwningModule()->isNamedModule();
 }
 
 static Decl::Kind getKind(const Decl *D) { return D->getKind(); }
@@ -1417,8 +1422,7 @@ DeclContext *DeclContext::getPrimaryContext() {
   case Decl::TranslationUnit:
     return static_cast<TranslationUnitDecl *>(this)->getFirstDecl();
   case Decl::Namespace:
-    // The original namespace is our primary context.
-    return static_cast<NamespaceDecl *>(this)->getOriginalNamespace();
+    return static_cast<NamespaceDecl *>(this)->getFirstDecl();
 
   case Decl::ObjCMethod:
     return this;

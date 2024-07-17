@@ -2,7 +2,7 @@
 
 !https://github.com/llvm/llvm-project/issues/91205
 
-!CHECK: omp.parallel if(%{{[0-9]+}} : i1) {
+!CHECK: omp.parallel if(%{{[0-9]+}}) {
 !CHECK:   %[[THP1:[0-9]+]] = omp.threadprivate %{{[0-9]+}}#1
 !CHECK:   %[[DCL1:[0-9]+]]:2 = hlfir.declare %[[THP1]] {uniq_name = "_QFcopyin_scalar_arrayEx1"}
 !CHECK:   %[[LD1:[0-9]+]] = fir.load %{{[0-9]+}}#0

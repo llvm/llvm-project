@@ -3095,20 +3095,49 @@ struct FormatStyle {
   bool JavaScriptWrapImports;
   // clang-format on
 
-  /// Keep empty lines (up to ``MaxEmptyLinesToKeep``) at end of file.
-  /// \version 17
-  bool KeepEmptyLinesAtEOF;
-
-  /// If true, the empty line at the start of blocks is kept.
+  /// Options regarding which empty lines are kept.
+  ///
+  /// For example, the config below will remove empty lines at start of the
+  /// file, end of the file, and start of blocks.
+  ///
   /// \code
-  ///    true:                                  false:
-  ///    if (foo) {                     vs.     if (foo) {
-  ///                                             bar();
-  ///      bar();                               }
-  ///    }
+  ///   KeepEmptyLines:
+  ///     AtEndOfFile: false
+  ///     AtStartOfBlock: false
+  ///     AtStartOfFile: false
   /// \endcode
+  struct KeepEmptyLinesStyle {
+    /// Keep empty lines at end of file.
+    bool AtEndOfFile;
+    /// Keep empty lines at start of a block.
+    /// \code
+    ///    true:                                  false:
+    ///    if (foo) {                     vs.     if (foo) {
+    ///                                             bar();
+    ///      bar();                               }
+    ///    }
+    /// \endcode
+    bool AtStartOfBlock;
+    /// Keep empty lines at start of file.
+    bool AtStartOfFile;
+    bool operator==(const KeepEmptyLinesStyle &R) const {
+      return AtEndOfFile == R.AtEndOfFile &&
+             AtStartOfBlock == R.AtStartOfBlock &&
+             AtStartOfFile == R.AtStartOfFile;
+    }
+  };
+  /// Which empty lines are kept.  See ``MaxEmptyLinesToKeep`` for how many
+  /// consecutive empty lines are kept.
+  /// \version 19
+  KeepEmptyLinesStyle KeepEmptyLines;
+
+  /// This option is deprecated. See ``AtEndOfFile`` of ``KeepEmptyLines``.
+  /// \version 17
+  // bool KeepEmptyLinesAtEOF;
+
+  /// This option is deprecated. See ``AtStartOfBlock`` of ``KeepEmptyLines``.
   /// \version 3.7
-  bool KeepEmptyLinesAtTheStartOfBlocks;
+  // bool KeepEmptyLinesAtTheStartOfBlocks;
 
   /// Indentation logic for lambda bodies.
   enum LambdaBodyIndentationKind : int8_t {
@@ -4650,10 +4679,22 @@ struct FormatStyle {
   ///   # Should be declared this way:
   ///   SpacesInParens: Custom
   ///   SpacesInParensOptions:
+  ///     ExceptDoubleParentheses: false
   ///     InConditionalStatements: true
   ///     Other: true
   /// \endcode
   struct SpacesInParensCustom {
+    /// Override any of the following options to prevent addition of space
+    /// when both opening and closing parentheses use multiple parentheses.
+    /// \code
+    ///   true:
+    ///   __attribute__(( noreturn ))
+    ///   __decltype__(( x ))
+    ///   if (( a = b ))
+    /// \endcode
+    ///  false:
+    ///    Uses the applicable option.
+    bool ExceptDoubleParentheses;
     /// Put a space in parentheses only inside conditional statements
     /// (``for/if/while/switch...``).
     /// \code
@@ -4664,8 +4705,9 @@ struct FormatStyle {
     bool InConditionalStatements;
     /// Put a space in C style casts.
     /// \code
-    ///    true:                                  false:
-    ///    x = ( int32 )y                 vs.     x = (int32)y
+    ///   true:                                  false:
+    ///   x = ( int32 )y                  vs.    x = (int32)y
+    ///   y = (( int (*)(int) )foo)(x);          y = ((int (*)(int))foo)(x);
     /// \endcode
     bool InCStyleCasts;
     /// Insert a space in empty parentheses, i.e. ``()``.
@@ -4681,23 +4723,26 @@ struct FormatStyle {
     bool InEmptyParentheses;
     /// Put a space in parentheses not covered by preceding options.
     /// \code
-    ///    true:                                  false:
-    ///    t f( Deleted & ) & = delete;   vs.     t f(Deleted &) & = delete;
+    ///   true:                                 false:
+    ///   t f( Deleted & ) & = delete;    vs.   t f(Deleted &) & = delete;
     /// \endcode
     bool Other;
 
     SpacesInParensCustom()
-        : InConditionalStatements(false), InCStyleCasts(false),
-          InEmptyParentheses(false), Other(false) {}
+        : ExceptDoubleParentheses(false), InConditionalStatements(false),
+          InCStyleCasts(false), InEmptyParentheses(false), Other(false) {}
 
-    SpacesInParensCustom(bool InConditionalStatements, bool InCStyleCasts,
+    SpacesInParensCustom(bool ExceptDoubleParentheses,
+                         bool InConditionalStatements, bool InCStyleCasts,
                          bool InEmptyParentheses, bool Other)
-        : InConditionalStatements(InConditionalStatements),
+        : ExceptDoubleParentheses(ExceptDoubleParentheses),
+          InConditionalStatements(InConditionalStatements),
           InCStyleCasts(InCStyleCasts), InEmptyParentheses(InEmptyParentheses),
           Other(Other) {}
 
     bool operator==(const SpacesInParensCustom &R) const {
-      return InConditionalStatements == R.InConditionalStatements &&
+      return ExceptDoubleParentheses == R.ExceptDoubleParentheses &&
+             InConditionalStatements == R.InConditionalStatements &&
              InCStyleCasts == R.InCStyleCasts &&
              InEmptyParentheses == R.InEmptyParentheses && Other == R.Other;
     }
@@ -4715,6 +4760,7 @@ struct FormatStyle {
   ///   # Example of usage:
   ///   SpacesInParens: Custom
   ///   SpacesInParensOptions:
+  ///     ExceptDoubleParentheses: false
   ///     InConditionalStatements: true
   ///     InEmptyParentheses: true
   /// \endcode
@@ -5033,10 +5079,7 @@ struct FormatStyle {
            JavaImportGroups == R.JavaImportGroups &&
            JavaScriptQuotes == R.JavaScriptQuotes &&
            JavaScriptWrapImports == R.JavaScriptWrapImports &&
-           KeepEmptyLinesAtEOF == R.KeepEmptyLinesAtEOF &&
-           KeepEmptyLinesAtTheStartOfBlocks ==
-               R.KeepEmptyLinesAtTheStartOfBlocks &&
-           Language == R.Language &&
+           KeepEmptyLines == R.KeepEmptyLines && Language == R.Language &&
            LambdaBodyIndentation == R.LambdaBodyIndentation &&
            LineEnding == R.LineEnding && MacroBlockBegin == R.MacroBlockBegin &&
            MacroBlockEnd == R.MacroBlockEnd && Macros == R.Macros &&
@@ -5387,10 +5430,11 @@ extern const char *DefaultFallbackStyle;
 /// \returns FormatStyle as specified by ``StyleName``. If ``StyleName`` is
 /// "file" and no file is found, returns ``FallbackStyle``. If no style could be
 /// determined, returns an Error.
-Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
-                               StringRef FallbackStyle, StringRef Code = "",
-                               llvm::vfs::FileSystem *FS = nullptr,
-                               bool AllowUnknownOptions = false);
+Expected<FormatStyle>
+getStyle(StringRef StyleName, StringRef FileName, StringRef FallbackStyle,
+         StringRef Code = "", llvm::vfs::FileSystem *FS = nullptr,
+         bool AllowUnknownOptions = false,
+         llvm::SourceMgr::DiagHandlerTy DiagHandler = nullptr);
 
 // Guesses the language from the ``FileName`` and ``Code`` to be formatted.
 // Defaults to FormatStyle::LK_Cpp.
@@ -5430,9 +5474,7 @@ bool isClangFormatOff(StringRef Comment);
 } // end namespace format
 } // end namespace clang
 
-namespace std {
 template <>
-struct is_error_code_enum<clang::format::ParseError> : std::true_type {};
-} // namespace std
+struct std::is_error_code_enum<clang::format::ParseError> : std::true_type {};
 
 #endif // LLVM_CLANG_FORMAT_FORMAT_H

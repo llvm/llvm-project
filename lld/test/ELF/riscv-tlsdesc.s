@@ -37,6 +37,11 @@
 # RUN: llvm-mc -triple=riscv32 -filetype=obj d.s -o d.32.o --defsym ELF32=1
 # RUN: ld.lld -shared -soname=d.32.so -o d.32.so d.32.o --fatal-warnings
 
+## The output has a TLS reference but no TLS section.
+# RUN: llvm-mc -filetype=obj -triple=riscv64 a1.s -o a1.64.o
+# RUN: ld.lld -pie a1.64.o c.64.so -o a1.64
+# RUN: llvm-objdump --no-show-raw-insn -M no-aliases -Rd a1.64 | FileCheck %s --check-prefix=IE64A
+
 # GD64-RELA:      .rela.dyn {
 # GD64-RELA-NEXT:   0x2408 R_RISCV_TLSDESC - 0x7FF
 # GD64-RELA-NEXT:   0x23E8 R_RISCV_TLSDESC a 0x0
@@ -164,6 +169,17 @@
 # IE32-NEXT:         lw      a0, 0x80(a0)
 # IE32-NEXT:         add     a0, a0, tp
 
+# IE64A:       OFFSET           TYPE                     VALUE
+# IE64A-NEXT:  0000000000002340 R_RISCV_TLS_TPREL64      c
+# IE64A-EMPTY:
+## &.got[c]-. = 0x2340 - 0x1258 = 0x10e8
+# IE64A-LABEL: <.Ltlsdesc_hi2>:
+# IE64A-NEXT:         addi    zero, zero, 0x0
+# IE64A-NEXT:         addi    zero, zero, 0x0
+# IE64A-NEXT:   1258: auipc   a0, 0x1
+# IE64A-NEXT:         ld      a0, 0xe8(a0)
+# IE64A-NEXT:         add     a0, a0, tp
+
 #--- a.s
 .macro load dst, src
 .ifdef ELF32
@@ -201,6 +217,15 @@ a:
 .zero 2039  ## Place b at 0x7ff
 b:
 .zero 1
+
+#--- a1.s
+## a.s without TLS definitions.
+.Ltlsdesc_hi2:
+  auipc a4, %tlsdesc_hi(c)
+  ld    a5, %tlsdesc_load_lo(.Ltlsdesc_hi2)(a4)
+  addi  a0, a4, %tlsdesc_add_lo(.Ltlsdesc_hi2)
+  jalr  t0, 0(a5), %tlsdesc_call(.Ltlsdesc_hi2)
+  add   a0, a0, tp
 
 #--- c.s
 .tbss

@@ -90,7 +90,7 @@ multiclass VOP3_VOP3PInst<string OpName, VOP3P_Mix_Profile P> {
 let isReMaterializable = 1 in {
 let isCommutable = 1 in {
 defm V_PK_MAD_I16 : VOP3PInst<"v_pk_mad_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16>>;
-defm V_PK_MAD_U16 : VOP3PInst<"v_pk_mad_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16>>;
+defm V_PK_MAD_U16 : VOP3PInst<"v_pk_mad_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16>, imad>;
 
 let FPDPRounding = 1 in {
 defm V_PK_FMA_F16 : VOP3PInst<"v_pk_fma_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16_V2F16>, any_fma>;
@@ -681,8 +681,9 @@ class MAIInst<string OpName, VOPProfile P, SDPatternOperator node>
   bit is_gfx940_xdl = 0;
 }
 
-multiclass MAIInst<string OpName, string P, SDPatternOperator node,
-                   bit NoDstOverlap = !cast<VOPProfileMAI>("VOPProfileMAI_" # P).NoDstOverlap> {
+multiclass MAIInst<string OpName, string P, SDPatternOperator node> {
+  defvar NoDstOverlap = !cast<VOPProfileMAI>("VOPProfileMAI_" # P).NoDstOverlap;
+
   let isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1 in {
     // FP32 denorm mode is respected, rounding mode is not. Exceptions are not supported.
     let Constraints = !if(NoDstOverlap, "@earlyclobber $vdst", "") in {

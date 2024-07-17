@@ -32,12 +32,17 @@ FileHeader:
 # RUN:     --match-full-lines --check-prefixes=GNU-RELOCS,GNU-PLTRELA
 
 # LLVM-RELOCS:      Dynamic Relocations {
+# LLVM-RELOCS-NEXT:   0x8 R_X86_64_64 foo 0x0
 # LLVM-RELOCS-NEXT:   0x1 R_X86_64_NONE foo 0x0
 # LLVM-RELOCS-NEXT:   0x2 R_X86_64_NONE foo
-# LLVM-RELOCS-NEXT:   0x4 R_X86_64_RELATIVE
+# LLVM-RELOCS-NEXT:   0x4 R_X86_64_RELATIVE -
 # LLVM-RELOCS-NEXT:   0x8 R_X86_64_NONE foo
 # LLVM-RELOCS-NEXT: }
 
+#       GNU-RELOCS:'CREL' relocation section at offset 0xa8:
+#  GNU-RELOCS-NEXT:    Offset             Info             Type               Symbol's Value  Symbol's Name
+#  GNU-RELOCS-NEXT:0000000000000008  0000000100000001 R_X86_64_64            0000000000000000 foo + 0
+# GNU-RELOCS-EMPTY:
 #       GNU-RELOCS:'RELA' relocation section at offset 0x78 contains 24 bytes:
 #  GNU-RELOCS-NEXT:    Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
 #  GNU-RELOCS-NEXT:0000000000000001  0000000100000000 R_X86_64_NONE          0000000000000000 foo + 0
@@ -50,10 +55,10 @@ FileHeader:
 #  GNU-RELOCS-NEXT:    Offset             Info             Type               Symbol's Value  Symbol's Name
 #  GNU-RELOCS-NEXT:0000000000000004  0000000000000008 R_X86_64_RELATIVE                 {{$}}
 # GNU-RELOCS-EMPTY:
-#  GNU-PLTREL-NEXT:'PLT' relocation section at offset 0xa8 contains 16 bytes:
+#  GNU-PLTREL-NEXT:'PLT' relocation section at offset 0xac contains 16 bytes:
 #  GNU-PLTREL-NEXT:    Offset             Info             Type               Symbol's Value  Symbol's Name
 #  GNU-PLTREL-NEXT:0000000000000008  0000000100000000 R_X86_64_NONE          0000000000000000 foo
-# GNU-PLTRELA-NEXT:'PLT' relocation section at offset 0xa8 contains 24 bytes:
+# GNU-PLTRELA-NEXT:'PLT' relocation section at offset 0xac contains 24 bytes:
 # GNU-PLTRELA-NEXT:    Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
 # GNU-PLTRELA-NEXT:0000000000000008  0000000100000000 R_X86_64_NONE          0000000000000000 foo + 0
 # GNU-RELOCS-EMPTY:
@@ -82,6 +87,12 @@ Sections:
     Type:    SHT_RELR
     Flags:   [ SHF_ALLOC ]
     Entries: [ 0x0000000000000004 ]
+  - Name:    .crel.dyn
+    Type:    SHT_CREL
+    Relocations:
+      - Type:   R_X86_64_64
+        Offset: 0x8
+        Symbol: foo
   - Name:    .plt
     Type:    [[PLTTYPE=SHT_REL]]
     Relocations:
@@ -111,9 +122,12 @@ Sections:
         Value: 0x8
       - Tag:   DT_RELRENT
         Value: 0x8
-## 0x30 == offset of .plt section in the segment.
-      - Tag:   DT_JMPREL
+## 0x30 == offset of .crel.dyn section in the segment.
+      - Tag:   DT_CREL
         Value: 0x30
+## 0x34 == offset of .plt section in the segment.
+      - Tag:   DT_JMPREL
+        Value: 0x34
       - Tag:   DT_PLTREL
         Value: [[DTPLTREL=17]] ## 17 == DT_REL
       - Tag:   DT_PLTRELSZ
@@ -140,6 +154,7 @@ ProgramHeaders:
 
 # PLTRELUNKNOWN-LLVM:      warning: '[[FILE]]': unknown DT_PLTREL value of 255
 # PLTRELUNKNOWN-LLVM:      Dynamic Relocations {
+# PLTRELUNKNOWN-LLVM-NEXT:   0x8 R_X86_64_64 foo 0x0
 # PLTRELUNKNOWN-LLVM-NEXT:   0x1 R_X86_64_NONE foo 0x0
 # PLTRELUNKNOWN-LLVM-NEXT:   0x2 R_X86_64_NONE foo{{$}}
 # PLTRELUNKNOWN-LLVM-NEXT:   0x4 R_X86_64_RELATIVE -{{$}}
@@ -147,6 +162,10 @@ ProgramHeaders:
 # PLTRELUNKNOWN-LLVM-NEXT: }
 
 # PLTRELUNKNOWN-GNU:        warning: '[[FILE]]': unknown DT_PLTREL value of 255
+# PLTRELUNKNOWN-GNU-EMPTY:
+# PLTRELUNKNOWN-GNU-NEXT:   'CREL' relocation section at offset 0xa8:
+# PLTRELUNKNOWN-GNU-NEXT:       Offset             Info             Type               Symbol's Value  Symbol's Name
+# PLTRELUNKNOWN-GNU-NEXT:   0000000000000008  0000000100000001 R_X86_64_64            0000000000000000 foo + 0
 # PLTRELUNKNOWN-GNU-EMPTY:
 # PLTRELUNKNOWN-GNU-NEXT:   'RELA' relocation section at offset 0x78 contains 24 bytes:
 # PLTRELUNKNOWN-GNU-NEXT:       Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
@@ -160,6 +179,6 @@ ProgramHeaders:
 # PLTRELUNKNOWN-GNU-NEXT:       Offset             Info             Type               Symbol's Value  Symbol's Name
 # PLTRELUNKNOWN-GNU-NEXT:   0000000000000004  0000000000000008 R_X86_64_RELATIVE
 # PLTRELUNKNOWN-GNU-EMPTY:
-# PLTRELUNKNOWN-GNU-NEXT:   'PLT' relocation section at offset 0xa8 contains 16 bytes:
+# PLTRELUNKNOWN-GNU-NEXT:   'PLT' relocation section at offset 0xac contains 16 bytes:
 # PLTRELUNKNOWN-GNU-NEXT:       Offset             Info             Type               Symbol's Value  Symbol's Name
 # PLTRELUNKNOWN-GNU-NEXT:   warning: '[[FILE]]': invalid DT_PLTRELSZ value (0x10) or PLTREL entry size (0x0)

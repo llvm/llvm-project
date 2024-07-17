@@ -1116,14 +1116,25 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     return FoldMaxvalMinval<T>(
         context, std::move(funcRef), RelationalOperator::LT, T::Scalar::HUGE());
   } else if (name == "mod") {
+    bool badPConst{false};
+    if (auto *pExpr{UnwrapExpr<Expr<T>>(args[1])}) {
+      *pExpr = Fold(context, std::move(*pExpr));
+      if (auto pConst{GetScalarConstantValue<T>(*pExpr)}; pConst &&
+          pConst->IsZero() &&
+          context.languageFeatures().ShouldWarn(
+              common::UsageWarning::FoldingAvoidsRuntimeCrash)) {
+        context.messages().Say("MOD: P argument is zero"_warn_en_US);
+        badPConst = true;
+      }
+    }
     return FoldElementalIntrinsic<T, T, T>(context, std::move(funcRef),
         ScalarFuncWithContext<T, T, T>(
-            [](FoldingContext &context, const Scalar<T> &x,
+            [badPConst](FoldingContext &context, const Scalar<T> &x,
                 const Scalar<T> &y) -> Scalar<T> {
               auto quotRem{x.DivideSigned(y)};
               if (context.languageFeatures().ShouldWarn(
                       common::UsageWarning::FoldingAvoidsRuntimeCrash)) {
-                if (quotRem.divisionByZero) {
+                if (!badPConst && quotRem.divisionByZero) {
                   context.messages().Say("mod() by zero"_warn_en_US);
                 } else if (quotRem.overflow) {
                   context.messages().Say("mod() folding overflowed"_warn_en_US);
@@ -1132,12 +1143,23 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
               return quotRem.remainder;
             }));
   } else if (name == "modulo") {
+    bool badPConst{false};
+    if (auto *pExpr{UnwrapExpr<Expr<T>>(args[1])}) {
+      *pExpr = Fold(context, std::move(*pExpr));
+      if (auto pConst{GetScalarConstantValue<T>(*pExpr)}; pConst &&
+          pConst->IsZero() &&
+          context.languageFeatures().ShouldWarn(
+              common::UsageWarning::FoldingAvoidsRuntimeCrash)) {
+        context.messages().Say("MODULO: P argument is zero"_warn_en_US);
+        badPConst = true;
+      }
+    }
     return FoldElementalIntrinsic<T, T, T>(context, std::move(funcRef),
-        ScalarFuncWithContext<T, T, T>([](FoldingContext &context,
+        ScalarFuncWithContext<T, T, T>([badPConst](FoldingContext &context,
                                            const Scalar<T> &x,
                                            const Scalar<T> &y) -> Scalar<T> {
           auto result{x.MODULO(y)};
-          if (result.overflow &&
+          if (!badPConst && result.overflow &&
               context.languageFeatures().ShouldWarn(
                   common::UsageWarning::FoldingException)) {
             context.messages().Say("modulo() folding overflowed"_warn_en_US);

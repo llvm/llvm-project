@@ -51,6 +51,7 @@ enum class ReinterpretMapScope {
 /// Defines a scope for reinterpret map pass.
 enum class SparseEmitStrategy {
   kFunctional,     // generate fully inlined (and functional) sparse iteration
+  kSparseIterator, // generate (experimental) loop using sparse iterator.
   kDebugInterface, // generate only place-holder for sparse iteration
 };
 
@@ -261,7 +262,8 @@ std::unique_ptr<Pass> createSparsificationAndBufferizationPass(
     const SparsificationOptions &sparsificationOptions,
     bool createSparseDeallocs, bool enableRuntimeLibrary,
     bool enableBufferInitialization, unsigned vectorLength,
-    bool enableVLAVectorization, bool enableSIMDIndex32, bool enableGPULibgen);
+    bool enableVLAVectorization, bool enableSIMDIndex32, bool enableGPULibgen,
+    SparseEmitStrategy emitStrategy);
 
 //===----------------------------------------------------------------------===//
 // Sparse Iteration Transform Passes

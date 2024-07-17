@@ -44,7 +44,6 @@ username for an individual isn't available, the brackets will be empty.
 * Ed Maste (individual; FreeBSD) [@emaste]
 * George Burgess IV (Google) [@gburgessiv]
 * Josh Stone (Red Hat; Rust) [@cuviper]
-* Kate McInnes (Apple) []
 * Kristof Beyls (ARM) [@kbeyls]
 * Matthew Riley (Google) [@mmdriley]
 * Nikhil Gupta (Nvidia) []

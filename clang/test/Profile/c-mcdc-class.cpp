@@ -59,8 +59,8 @@ Value::~Value(void) {
 // MCDCCTOR:  %[[LAB5:[0-9]+]] = and i32 %[[TEMP]], 7
 // MCDCCTOR:  %[[LAB6:[0-9]+]] = trunc i32 %[[LAB5]] to i8
 // MCDCCTOR:  %[[LAB7:[0-9]+]] = shl i8 1, %[[LAB6]]
-// MCDCCTOR:  %mcdc.bits = load i8, ptr %[[LAB4]], align 1
-// MCDCCTOR:  %[[LAB8:[0-9]+]] = or i8 %mcdc.bits, %[[LAB7]]
+// MCDCCTOR:  %[[BITS:.+]] = load i8, ptr %[[LAB4]], align 1
+// MCDCCTOR:  %[[LAB8:[0-9]+]] = or i8 %[[BITS]], %[[LAB7]]
 // MCDCCTOR:  store i8 %[[LAB8]], ptr %[[LAB4]], align 1
 
 // MCDCDTOR: @__profbm__ZN5ValueD2Ev = private global [1 x i8] zeroinitializer
@@ -97,6 +97,6 @@ Value::~Value(void) {
 // MCDCDTOR:  %[[LAB5:[0-9]+]] = and i32 %[[TEMP]], 7
 // MCDCDTOR:  %[[LAB6:[0-9]+]] = trunc i32 %[[LAB5]] to i8
 // MCDCDTOR:  %[[LAB7:[0-9]+]] = shl i8 1, %[[LAB6]]
-// MCDCDTOR:  %mcdc.bits = load i8, ptr %[[LAB4]], align 1
-// MCDCDTOR:  %[[LAB8:[0-9]+]] = or i8 %mcdc.bits, %[[LAB7]]
+// MCDCDTOR:  %[[BITS:.+]] = load i8, ptr %[[LAB4]], align 1
+// MCDCDTOR:  %[[LAB8:[0-9]+]] = or i8 %[[BITS]], %[[LAB7]]
 // MCDCDTOR:  store i8 %[[LAB8]], ptr %[[LAB4]], align 1

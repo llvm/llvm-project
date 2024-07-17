@@ -1,9 +1,9 @@
-; RUN: llvm-split -o %t %s -j 3 -mtriple amdgcn-amd-amdhsa -amdgpu-module-splitting-large-kernel-threshold=1.2 -amdgpu-module-splitting-large-kernel-merge-overlap=0.5
+; RUN: llvm-split -o %t %s -j 3 -mtriple amdgcn-amd-amdhsa -amdgpu-module-splitting-large-function-threshold=1.2 -amdgpu-module-splitting-large-function-merge-overlap=0.5
 ; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 %s
 ; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 %s
 ; RUN: llvm-dis -o - %t2 | FileCheck --check-prefix=CHECK2 %s
 
-; RUN: llvm-split -o %t.nolarge %s -j 3 -mtriple amdgcn-amd-amdhsa -amdgpu-module-splitting-large-kernel-threshold=0
+; RUN: llvm-split -o %t.nolarge %s -j 3 -mtriple amdgcn-amd-amdhsa -amdgpu-module-splitting-large-function-threshold=0
 ; RUN: llvm-dis -o - %t.nolarge0 | FileCheck --check-prefix=NOLARGEKERNELS-CHECK0 %s
 ; RUN: llvm-dis -o - %t.nolarge1 | FileCheck --check-prefix=NOLARGEKERNELS-CHECK1 %s
 ; RUN: llvm-dis -o - %t.nolarge2 | FileCheck --check-prefix=NOLARGEKERNELS-CHECK2 %s

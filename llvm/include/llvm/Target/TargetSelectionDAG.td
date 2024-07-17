@@ -266,6 +266,12 @@ def SDTMaskedScatter : SDTypeProfile<0, 4, [
   SDTCisSameNumEltsAs<0, 1>, SDTCisSameNumEltsAs<0, 3>
 ]>;
 
+def SDTVectorCompress : SDTypeProfile<1, 3, [
+  SDTCisVec<0>, SDTCisSameAs<0, 1>,
+  SDTCisVec<2>, SDTCisSameNumEltsAs<1, 2>,
+  SDTCisSameAs<1, 3>
+]>;
+
 def SDTVecShuffle : SDTypeProfile<1, 2, [
   SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>
 ]>;
@@ -434,6 +440,11 @@ def umin       : SDNode<"ISD::UMIN"      , SDTIntBinOp,
 def umax       : SDNode<"ISD::UMAX"      , SDTIntBinOp,
                                   [SDNPCommutative, SDNPAssociative]>;
 
+def scmp       : SDNode<"ISD::SCMP"      , SDTIntBinOp,
+                                  []>;
+def ucmp       : SDNode<"ISD::UCMP"      , SDTIntBinOp,
+                                  []>;
+
 def saddsat    : SDNode<"ISD::SADDSAT"   , SDTIntBinOp, [SDNPCommutative]>;
 def uaddsat    : SDNode<"ISD::UADDSAT"   , SDTIntBinOp, [SDNPCommutative]>;
 def ssubsat    : SDNode<"ISD::SSUBSAT"   , SDTIntBinOp>;
@@ -510,6 +521,12 @@ def fsqrt      : SDNode<"ISD::FSQRT"      , SDTFPUnaryOp>;
 def fsin       : SDNode<"ISD::FSIN"       , SDTFPUnaryOp>;
 def fcos       : SDNode<"ISD::FCOS"       , SDTFPUnaryOp>;
 def ftan       : SDNode<"ISD::FTAN"       , SDTFPUnaryOp>;
+def fasin      : SDNode<"ISD::FASIN"      , SDTFPUnaryOp>;
+def facos      : SDNode<"ISD::FACOS"      , SDTFPUnaryOp>;
+def fatan      : SDNode<"ISD::FATAN"      , SDTFPUnaryOp>;
+def fsinh      : SDNode<"ISD::FSINH"      , SDTFPUnaryOp>;
+def fcosh      : SDNode<"ISD::FCOSH"      , SDTFPUnaryOp>;
+def ftanh      : SDNode<"ISD::FTANH"      , SDTFPUnaryOp>;
 def fexp2      : SDNode<"ISD::FEXP2"      , SDTFPUnaryOp>;
 def fexp10     : SDNode<"ISD::FEXP10"     , SDTFPUnaryOp>;
 def fpow       : SDNode<"ISD::FPOW"       , SDTFPBinOp>;
@@ -565,11 +582,23 @@ def strict_fcos       : SDNode<"ISD::STRICT_FCOS",
                                SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_ftan       : SDNode<"ISD::STRICT_FTAN",
                                SDTFPUnaryOp, [SDNPHasChain]>;
+def strict_fasin      : SDNode<"ISD::STRICT_FASIN",
+                               SDTFPUnaryOp, [SDNPHasChain]>;
+def strict_facos      : SDNode<"ISD::STRICT_FACOS",
+                               SDTFPUnaryOp, [SDNPHasChain]>;
+def strict_fatan      : SDNode<"ISD::STRICT_FATAN",
+                               SDTFPUnaryOp, [SDNPHasChain]>;
+def strict_fsinh      : SDNode<"ISD::STRICT_FSINH",
+                               SDTFPUnaryOp, [SDNPHasChain]>;
+def strict_fcosh      : SDNode<"ISD::STRICT_FCOSH",
+                               SDTFPUnaryOp, [SDNPHasChain]>;
+def strict_ftanh      : SDNode<"ISD::STRICT_FTANH",
+                               SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_fexp2      : SDNode<"ISD::STRICT_FEXP2",
                                SDTFPUnaryOp, [SDNPHasChain]>;
 def strict_fpow       : SDNode<"ISD::STRICT_FPOW",
                                SDTFPBinOp, [SDNPHasChain]>;
-def strict_fldexp       : SDNode<"ISD::STRICT_FLDEXP",
+def strict_fldexp     : SDNode<"ISD::STRICT_FLDEXP",
                                SDTFPExpOp, [SDNPHasChain]>;
 def strict_flog2      : SDNode<"ISD::STRICT_FLOG2",
                                SDTFPUnaryOp, [SDNPHasChain]>;
@@ -733,6 +762,8 @@ def masked_gather : SDNode<"ISD::MGATHER", SDTMaskedGather,
 
 def masked_scatter : SDNode<"ISD::MSCATTER", SDTMaskedScatter,
                             [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+def vector_compress : SDNode<"ISD::VECTOR_COMPRESS", SDTVectorCompress>;
 
 // Do not use ld, st directly. Use load, extload, sextload, zextload, store,
 // and truncst (see below).
@@ -1523,6 +1554,24 @@ def any_fcos       : PatFrags<(ops node:$src),
 def any_ftan       : PatFrags<(ops node:$src),
                               [(strict_ftan node:$src),
                                (ftan node:$src)]>;
+def any_fasin      : PatFrags<(ops node:$src),
+                              [(strict_fasin node:$src),
+                               (fasin node:$src)]>;
+def any_facos      : PatFrags<(ops node:$src),
+                              [(strict_facos node:$src),
+                               (facos node:$src)]>;
+def any_fatan      : PatFrags<(ops node:$src),
+                              [(strict_fatan node:$src),
+                               (fatan node:$src)]>;
+def any_fsinh      : PatFrags<(ops node:$src),
+                              [(strict_fsinh node:$src),
+                               (fsinh node:$src)]>;
+def any_fcosh      : PatFrags<(ops node:$src),
+                              [(strict_fcosh node:$src),
+                               (fcosh node:$src)]>;
+def any_ftanh      : PatFrags<(ops node:$src),
+                              [(strict_ftanh node:$src),
+                               (ftanh node:$src)]>;
 def any_fexp2      : PatFrags<(ops node:$src),
                               [(strict_fexp2 node:$src),
                                (fexp2 node:$src)]>;

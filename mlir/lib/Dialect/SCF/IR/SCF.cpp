@@ -553,6 +553,7 @@ ForOp::replaceWithAdditionalYields(RewriterBase &rewriter,
   scf::ForOp newLoop = rewriter.create<scf::ForOp>(
       getLoc(), getLowerBound(), getUpperBound(), getStep(), inits,
       [](OpBuilder &, Location, Value, ValueRange) {});
+  newLoop->setAttrs(getPrunedAttributeList(getOperation(), {}));
 
   // Generate the new yield values and append them to the scf.yield operation.
   auto yieldOp = cast<scf::YieldOp>(getBody()->getTerminator());
@@ -4296,33 +4297,42 @@ void IndexSwitchOp::getRegionInvocationBounds(
     bounds.emplace_back(/*lb=*/0, /*ub=*/i == liveIndex);
 }
 
-LogicalResult IndexSwitchOp::fold(FoldAdaptor adaptor,
-                                  SmallVectorImpl<OpFoldResult> &results) {
-  std::optional<int64_t> maybeCst = getConstantIntValue(getArg());
-  if (!maybeCst.has_value())
-    return failure();
-  int64_t cst = *maybeCst;
-  int64_t caseIdx, e = getNumCases();
-  for (caseIdx = 0; caseIdx < e; ++caseIdx) {
-    if (cst == getCases()[caseIdx])
-      break;
+struct FoldConstantCase : OpRewritePattern<scf::IndexSwitchOp> {
+  using OpRewritePattern<scf::IndexSwitchOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(scf::IndexSwitchOp op,
+                                PatternRewriter &rewriter) const override {
+    // If `op.getArg()` is a constant, select the region that matches with
+    // the constant value. Use the default region if no matche is found.
+    std::optional<int64_t> maybeCst = getConstantIntValue(op.getArg());
+    if (!maybeCst.has_value())
+      return failure();
+    int64_t cst = *maybeCst;
+    int64_t caseIdx, e = op.getNumCases();
+    for (caseIdx = 0; caseIdx < e; ++caseIdx) {
+      if (cst == op.getCases()[caseIdx])
+        break;
+    }
+
+    Region &r = (caseIdx < op.getNumCases()) ? op.getCaseRegions()[caseIdx]
+                                             : op.getDefaultRegion();
+    Block &source = r.front();
+    Operation *terminator = source.getTerminator();
+    SmallVector<Value> results = terminator->getOperands();
+
+    rewriter.inlineBlockBefore(&source, op);
+    rewriter.eraseOp(terminator);
+    // Repalce the operation with a potentially empty list of results.
+    // Fold mechanism doesn't support the case where the result list is empty.
+    rewriter.replaceOp(op, results);
+
+    return success();
   }
+};
 
-  Region &r = (caseIdx < getNumCases()) ? getCaseRegions()[caseIdx]
-                                        : getDefaultRegion();
-  Block &source = r.front();
-  results.assign(source.getTerminator()->getOperands().begin(),
-                 source.getTerminator()->getOperands().end());
-
-  Block *pDestination = (*this)->getBlock();
-  if (!pDestination)
-    return failure();
-  Block::iterator insertionPoint = (*this)->getIterator();
-  pDestination->getOperations().splice(insertionPoint, source.getOperations(),
-                                       source.getOperations().begin(),
-                                       std::prev(source.getOperations().end()));
-
-  return success();
+void IndexSwitchOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                MLIRContext *context) {
+  results.add<FoldConstantCase>(context);
 }
 
 //===----------------------------------------------------------------------===//

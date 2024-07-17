@@ -7,7 +7,7 @@ define i32 @foo(<vscale x 2 x i32> %x) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARR:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata <vscale x 2 x i32> undef, metadata [[META8:![0-9]+]], metadata !DIExpression()), !dbg [[DBG14:![0-9]+]]
+; CHECK-NEXT:      #dbg_value(<vscale x 2 x i32> undef, [[META8:![0-9]+]], !DIExpression(), [[META14:![0-9]+]])
 ; CHECK-NEXT:    store <vscale x 2 x i32> [[X:%.*]], ptr [[ARR]], align 4
 ; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[ARR]], align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -24,7 +24,7 @@ define i32 @foo2(<vscale x 2 x i32> %x) {
 ; CHECK-LABEL: @foo2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARR:%.*]] = alloca [4 x i32], align 4
-; CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr [[ARR]], metadata [[META15:![0-9]+]], metadata !DIExpression()), !dbg [[DBG17:![0-9]+]]
+; CHECK-NEXT:      #dbg_declare(ptr [[ARR]], [[META15:![0-9]+]], !DIExpression(), [[META17:![0-9]+]])
 ; CHECK-NEXT:    store <vscale x 2 x i32> [[X:%.*]], ptr [[ARR]], align 4
 ; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[ARR]], align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
