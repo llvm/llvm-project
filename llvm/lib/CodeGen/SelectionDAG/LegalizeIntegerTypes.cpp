@@ -87,6 +87,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::MGATHER:     Res = PromoteIntRes_MGATHER(cast<MaskedGatherSDNode>(N));
     break;
+  case ISD::VECTOR_COMPRESS:
+    Res = PromoteIntRes_VECTOR_COMPRESS(N);
+    break;
   case ISD::SELECT:
   case ISD::VSELECT:
   case ISD::VP_SELECT:
@@ -137,6 +140,7 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::SPLAT_VECTOR:
   case ISD::SCALAR_TO_VECTOR:
+  case ISD::EXPERIMENTAL_VP_SPLAT:
     Res = PromoteIntRes_ScalarOp(N);
     break;
   case ISD::STEP_VECTOR: Res = PromoteIntRes_STEP_VECTOR(N); break;
@@ -992,6 +996,13 @@ SDValue DAGTypeLegalizer::PromoteIntRes_MGATHER(MaskedGatherSDNode *N) {
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
   return Res;
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_COMPRESS(SDNode *N) {
+  SDValue Vec = GetPromotedInteger(N->getOperand(0));
+  SDValue Passthru = GetPromotedInteger(N->getOperand(2));
+  return DAG.getNode(ISD::VECTOR_COMPRESS, SDLoc(N), Vec.getValueType(), Vec,
+                     N->getOperand(1), Passthru);
 }
 
 /// Promote the overflow flag of an overflowing arithmetic node.
@@ -1920,6 +1931,7 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
     break;
   case ISD::SPLAT_VECTOR:
   case ISD::SCALAR_TO_VECTOR:
+  case ISD::EXPERIMENTAL_VP_SPLAT:
     Res = PromoteIntOp_ScalarOp(N);
     break;
   case ISD::VSELECT:
@@ -1942,6 +1954,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
                                                  OpNo); break;
   case ISD::MSCATTER: Res = PromoteIntOp_MSCATTER(cast<MaskedScatterSDNode>(N),
                                                   OpNo); break;
+  case ISD::VECTOR_COMPRESS:
+    Res = PromoteIntOp_VECTOR_COMPRESS(N, OpNo);
+    break;
   case ISD::VP_TRUNCATE:
   case ISD::TRUNCATE:     Res = PromoteIntOp_TRUNCATE(N); break;
   case ISD::BF16_TO_FP:
@@ -2215,10 +2230,14 @@ SDValue DAGTypeLegalizer::PromoteIntOp_INSERT_VECTOR_ELT(SDNode *N,
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_ScalarOp(SDNode *N) {
+  SDValue Op = GetPromotedInteger(N->getOperand(0));
+  if (N->getOpcode() == ISD::EXPERIMENTAL_VP_SPLAT)
+    return SDValue(
+        DAG.UpdateNodeOperands(N, Op, N->getOperand(1), N->getOperand(2)), 0);
+
   // Integer SPLAT_VECTOR/SCALAR_TO_VECTOR operands are implicitly truncated,
   // so just promote the operand in place.
-  return SDValue(DAG.UpdateNodeOperands(N,
-                                GetPromotedInteger(N->getOperand(0))), 0);
+  return SDValue(DAG.UpdateNodeOperands(N, Op), 0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_SELECT(SDNode *N, unsigned OpNo) {
@@ -2434,6 +2453,16 @@ SDValue DAGTypeLegalizer::PromoteIntOp_MSCATTER(MaskedScatterSDNode *N,
   return DAG.getMaskedScatter(DAG.getVTList(MVT::Other), N->getMemoryVT(),
                               SDLoc(N), NewOps, N->getMemOperand(),
                               N->getIndexType(), TruncateStore);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_COMPRESS(SDNode *N,
+                                                       unsigned OpNo) {
+  assert(OpNo == 1 && "Can only promote VECTOR_COMPRESS mask.");
+  SDValue Vec = N->getOperand(0);
+  EVT VT = Vec.getValueType();
+  SDValue Passthru = N->getOperand(2);
+  SDValue Mask = PromoteTargetBoolean(N->getOperand(1), VT);
+  return DAG.getNode(ISD::VECTOR_COMPRESS, SDLoc(N), VT, Vec, Mask, Passthru);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_TRUNCATE(SDNode *N) {
@@ -5235,6 +5264,7 @@ bool DAGTypeLegalizer::ExpandIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::EXTRACT_ELEMENT:   Res = ExpandOp_EXTRACT_ELEMENT(N); break;
   case ISD::INSERT_VECTOR_ELT: Res = ExpandOp_INSERT_VECTOR_ELT(N); break;
   case ISD::SCALAR_TO_VECTOR:  Res = ExpandOp_SCALAR_TO_VECTOR(N); break;
+  case ISD::EXPERIMENTAL_VP_SPLAT:
   case ISD::SPLAT_VECTOR:      Res = ExpandIntOp_SPLAT_VECTOR(N); break;
   case ISD::SELECT_CC:         Res = ExpandIntOp_SELECT_CC(N); break;
   case ISD::SETCC:             Res = ExpandIntOp_SETCC(N); break;
@@ -5863,6 +5893,9 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ScalarOp(SDNode *N) {
   EVT NOutElemVT = NOutVT.getVectorElementType();
 
   SDValue Op = DAG.getNode(ISD::ANY_EXTEND, dl, NOutElemVT, N->getOperand(0));
+  if (N->isVPOpcode())
+    return DAG.getNode(N->getOpcode(), dl, NOutVT, Op, N->getOperand(1),
+                       N->getOperand(2));
 
   return DAG.getNode(N->getOpcode(), dl, NOutVT, Op);
 }
