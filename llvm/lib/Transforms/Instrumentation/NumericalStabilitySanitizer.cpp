@@ -45,7 +45,6 @@
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include <cstdint>
-#include <map>
 
 using namespace llvm;
 
