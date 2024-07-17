@@ -8,6 +8,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstrTypes.h"
@@ -23,6 +24,8 @@
 
 using namespace llvm;
 using namespace std;
+
+#include <sstream>
 
 namespace {
 
@@ -179,13 +182,34 @@ template <class C, class E> size_t getIndex(C *Container, E *FindElement) {
   return Idx;
 }
 
-// An instruction index that uniquely identifies an Yk instruction within
+// An instruction index that uniquely identifies a Yk instruction within
 // a basic block.
 //
 // FIXME: At some point it may be worth making type-safe index types (for
 // instruction, block and function indices) and using them throughout
 // the serialiser.
 using InstIdx = size_t;
+
+// An function index that uniquely identifies a Yk function within
+// a module.
+using FuncIdx = size_t;
+
+// An basic block index that uniquely identifies a Yk basic block within
+// a function.
+using BBlockIdx = size_t;
+
+// An instruction ID that uniquely identifies a Yk instruction within a module.
+//
+// We use a raw tuple here (instead of a custom struct) so that it is hashable.
+using InstID = tuple<FuncIdx, BBlockIdx, InstIdx>;
+
+// An index into the path table.
+using PathIdx = size_t;
+
+// Line-level debug information for a Yk instruction.
+//
+// Elements: path index, line number.
+using LineInfo = tuple<PathIdx, unsigned>;
 
 // Maps an LLVM local (the instruction that creates it) to the correspoinding Yk
 // instruction index in its parent basic block.
@@ -271,6 +295,16 @@ private:
   vector<llvm::Type *> Types;
   vector<llvm::Constant *> Constants;
   vector<llvm::GlobalVariable *> Globals;
+
+  // File paths.
+  vector<string> Paths;
+
+  // Line-level debug line info for the instructions of the module.
+  //
+  // If debug info is not being compiled in, this will be empty.
+  map<InstID, LineInfo> LineInfos;
+  // The last processed `LineInfo`. Used for de-duplication.
+  optional<LineInfo> LastLineInfo;
 
   // Return the index of the LLVM type `Ty`, inserting a new entry if
   // necessary.
@@ -1244,6 +1278,52 @@ private:
     InstIdx++;
   }
 
+  size_t getPathIndex(string Path) {
+    vector<string>::iterator It = std::find(Paths.begin(), Paths.end(), Path);
+    if (It != Paths.end()) {
+      // Found.
+      return It - Paths.begin();
+    }
+    // Not found, insert.
+    size_t Idx = Paths.size();
+    Paths.push_back(Path);
+    return Idx;
+  }
+
+  // Record line-level debug information for the specified instruction.
+  void recordLineInfo(Instruction *I, BBlockIdx BBlockIdx, InstIdx InstIdx) {
+    DebugLoc DL = I->getDebugLoc();
+    if (DL) {
+      DILocation *DLoc = DL.get();
+      // This could be optimised by passing the function index down.
+      FuncIdx FuncIdx = getIndex(&M, I->getFunction());
+      InstID Key = {FuncIdx, BBlockIdx, InstIdx};
+      stringstream Path;
+#ifdef __unix__
+      char Sep = '/';
+#else
+#error unknown path separator for this platform
+#endif
+      Path << DLoc->getDirectory().data() << Sep << DLoc->getFilename().data();
+      size_t PathIdx = getPathIndex(Path.str());
+      // Ideally we'd store the start and end line+column so that we can store
+      // sub-line granularity debug info, but I'm not sure it's possible
+      // outside of the compiler frontend, which is long gone.
+      size_t LineNum = DLoc->getLine();
+      // Line numbers start at 1 and 0 seems to indicate an error state.
+      if (LineNum != 0) {
+        LineInfo LI = {PathIdx, LineNum};
+        // Multiple IR instructions could map to the same source line. To avoid
+        // unnecessary noise in the rendered AOT IR, we only add an entry when
+        // the line number changes.
+        if (LI != LastLineInfo) {
+          LineInfos.insert({Key, LI});
+          LastLineInfo = LI;
+        }
+      }
+    }
+  }
+
   void serialiseInst(Instruction *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                      unsigned &InstIdx) {
     // Catch unsupported pointer operands in non-zero address spaces.
@@ -1259,6 +1339,7 @@ private:
     // Macro to make the dispatch below easier to read/sort.
 #define INST_SERIALISE(LLVM_INST, LLVM_INST_TYPE, SERIALISER)                  \
   if (LLVM_INST_TYPE *II = dyn_cast<LLVM_INST_TYPE>(LLVM_INST)) {              \
+    recordLineInfo(LLVM_INST, BBIdx, InstIdx);                                 \
     SERIALISER(II, FLCtxt, BBIdx, InstIdx);                                    \
     return;                                                                    \
   }
@@ -1534,6 +1615,37 @@ private:
     serialiseString(G->getName());
   }
 
+  void serialisePaths() {
+    errs() << "Num Paths: " << Paths.size() << "\n";
+    OutStreamer.emitSizeT(Paths.size());
+    for (string &P : Paths) {
+      serialiseString(P);
+      errs() << P << "\n";
+    }
+  }
+
+  // Serialise line-level debug information.
+  //
+  // This is the dumbest encoding possible, and could surely be optimised
+  // to make it smaller.
+  void serialiseLineInfo() {
+    // num_lineinfos:
+    OutStreamer.emitSizeT(LineInfos.size());
+    // lineinfos:
+    for (auto &[InstID, LI] : LineInfos) {
+      // func_idx:
+      OutStreamer.emitSizeT(std::get<0>(InstID));
+      // bbidx:
+      OutStreamer.emitSizeT(std::get<1>(InstID));
+      // instidx:
+      OutStreamer.emitSizeT(std::get<2>(InstID));
+      // pathidx:
+      OutStreamer.emitSizeT(std::get<0>(LI));
+      // line_num:
+      OutStreamer.emitSizeT(std::get<1>(LI));
+    }
+  }
+
 public:
   YkIRWriter(Module &M, MCStreamer &OutStreamer)
       : M(M), OutStreamer(OutStreamer), DL(&M) {}
@@ -1598,6 +1710,10 @@ public:
     for (llvm::Type *&Ty : Types) {
       serialiseType(Ty);
     }
+    // paths:
+    serialisePaths();
+    // line_info:
+    serialiseLineInfo();
   }
 };
 } // anonymous namespace
