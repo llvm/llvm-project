@@ -14528,9 +14528,10 @@ StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
 
   // Internal variable names.
   std::string OrigVarName = OrigVar->getNameInfo().getAsString();
-  std::string OuterIVName = ".unrolled.iv." + OrigVarName;
-  std::string InnerIVName = ".unroll_inner.iv." + OrigVarName;
-  std::string InnerTripCountName = ".unroll_inner.tripcount." + OrigVarName;
+  std::string OuterIVName = (Twine(".unrolled.iv.") + OrigVarName).str();
+  std::string InnerIVName = (Twine(".unroll_inner.iv.") + OrigVarName).str();
+  std::string InnerTripCountName =
+      (Twine(".unroll_inner.tripcount.") + OrigVarName).str();
 
   // Create the iteration variable for the unrolled loop.
   VarDecl *OuterIVDecl =
@@ -14721,9 +14722,8 @@ StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
 
   // Internal variable names.
   std::string OrigVarName = OrigVar->getNameInfo().getAsString();
-  std::string TripCountName = (Twine(".tripcount.") + OrigVarName).str();
-  std::string ForwardIVName = (Twine(".forward.iv.") + OrigVarName).str();
-  std::string ReversedIVName = (Twine(".reversed.iv.") + OrigVarName).str();
+  std::string ForwardIVName = ".forward.iv." + OrigVarName;
+  std::string ReversedIVName = ".reversed.iv." + OrigVarName;
 
   // LoopHelper.Updates will read the logical iteration number from
   // LoopHelper.IterationVarRef, compute the value of the user loop counter of
