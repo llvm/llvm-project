@@ -33,15 +33,31 @@ for adding this configuration.
      [bazelisk](https://github.com/bazelbuild/bazelisk) which automates
      downloading the proper bazel version
 3. `cd utils/bazel`
-4. `bazel build --config=generic_clang @llvm-project//...`
-   * If you're using clang, it's expected that lld is also available
-   * If you're using MSVC or gcc, instead of `--config=generic_clang`, pass
-   `--config=generic_gcc` or `--config=msvc`
-   * To specify a specific local compiler to use, add the following bazel
-     flag: `--repo_env=CC=/usr/bin/clang`
-     * `--config=generic_clang`/`--config=generic_gcc` by default set
-       `--repo_env=CC=clang`/`--repo_env=CC=gcc`, using `clang`/`gcc` on the
-       `PATH`
+4. The `bazel build` command depends on the local compiler you want to use.
+   * For **clang**, go to step 5.
+   * For **gcc** or **MSVC**, go to step 6
+5. If you are using **clang**, it is expected that lld is also available.
+   The `--config=generic_clang` flag by default sets the compiler to be `clang`
+   binary on the `PATH`.
+   ```
+   bazel build --config=generic_clang @llvm-project//...
+   ```
+   To provide a specific path to your `clang`, use the `--repo_env` Bazel flag.
+   For example:
+   ```
+   bazel build --config=generic_clang --repo_env=CC=/usr/bin/clang --repo_env=CXX=/usr/bin/clang++  @llvm-project//...
+   ```
+6. If you are using **gcc** or **MSVC**, instead of `--config=generic_clang`
+   , pass `--config=generic_gcc` or `--config=generic_msvc`, which sets the
+   compiler to be `gcc` binary on the `PATH`.
+   ```
+   bazel build --config=generic_gcc @llvm-project//...
+   ```
+   To provide a specific path to your `gcc`, use the `--repo_env` Bazel flag.
+   For example:
+   ```
+   bazel build --config=generic_gcc --repo_env=CC=/usr/bin/gcc --repo_env=CXX=/usr/bin/g++  @llvm-project//...
+   ```
 
 # Configuration
 
