@@ -702,6 +702,19 @@ defm "" : ReplaceLane<I64x2, 30>;
 defm "" : ReplaceLane<F32x4, 32>;
 defm "" : ReplaceLane<F64x2, 34>;
 
+// For now use an instrinsic for f16x8.replace_lane instead of ReplaceLane above
+// since LLVM IR generated with half type arguments is not well supported and
+// creates conversions from f16->f32.
+defm REPLACE_LANE_F16x8 :
+  HALF_PRECISION_I<(outs V128:$dst), (ins V128:$vec, vec_i8imm_op:$idx, F32:$x),
+                   (outs), (ins vec_i8imm_op:$idx),
+                   [(set (v8f16 V128:$dst), (int_wasm_replace_lane_f16x8
+                     (v8f16 V128:$vec),
+                     (i32 LaneIdx8:$idx),
+                     (f32 F32:$x)))],
+                   "f16x8.replace_lane\t$dst, $vec, $idx, $x",
+                   "f16x8.replace_lane\t$idx", 0x122>;
+
 // Lower undef lane indices to zero
 def : Pat<(vector_insert (v16i8 V128:$vec), I32:$x, undef),
           (REPLACE_LANE_I8x16 $vec, 0, $x)>;
