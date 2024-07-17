@@ -2186,8 +2186,10 @@ public:
   }
 
   // AMDGPUDeviceTy is incomplete here, passing the underlying agent instead
-  Error pushMemoryCopyD2DAsync(void *Dst, hsa_agent_t DstAgent, const void *Src,
-                               hsa_agent_t SrcAgent, uint64_t CopySize) {
+  Error pushMemoryCopyD2DAsync(
+      void *Dst, hsa_agent_t DstAgent, const void *Src, hsa_agent_t SrcAgent,
+      uint64_t CopySize,
+      std::unique_ptr<ompt::OmptEventInfoTy> OmptInfo = nullptr) {
     AMDGPUSignalTy *OutputSignal;
     if (auto Err = SignalManager.getResources(/*Num=*/1, &OutputSignal))
       return Err;
@@ -2198,6 +2200,16 @@ public:
 
     // Consume stream slot and compute dependencies.
     auto [Curr, InputSignal] = consume(OutputSignal);
+
+#ifdef OMPT_SUPPORT
+    if (OmptInfo) {
+      DP("OMPT-Async: Registering data timing in pushMemoryCopyH2DAsync\n");
+      // Capture the time the data transfer required for the d2h transfer.
+      if (auto Err = Slots[Curr].schedOmptAsyncD2HTransferTiming(
+              Agent, OutputSignal, TicksToTime, std::move(OmptInfo)))
+        return Err;
+    }
+#endif
 
     // The agents need to have access to the corresponding memory
     // This is presently only true if the pointers were originally
@@ -3443,10 +3455,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     AMDGPUDeviceTy &DstDevice = static_cast<AMDGPUDeviceTy &>(DstGenericDevice);
 
+    DP("OMPT-Async: dataExchangeImpl\n");
+    auto LocalOmptEventInfo = getOrNullOmptEventInfo(AsyncInfoWrapper);
+
     // For large transfers use synchronous behavior.
     // If OMPT is enabled or synchronous behavior is explicitly requested:
-    if (OMPT_IF_BUILT(ompt::TracingActive ||) OMPX_ForceSyncRegions ||
-        Size >= OMPX_MaxAsyncCopyBytes) {
+    if (OMPX_ForceSyncRegions || Size >= OMPX_MaxAsyncCopyBytes) {
       if (AsyncInfoWrapper.hasQueue())
         if (auto Err = synchronize(AsyncInfoWrapper))
           return Err;
@@ -3463,7 +3477,14 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       if (auto Err = Signal.wait(getStreamBusyWaitMicroseconds()))
         return Err;
 
-      OMPT_IF_TRACING_ENABLED(recordCopyTimingInNs(Signal.get()););
+#ifdef OMPT_SUPPORT
+      if (LocalOmptEventInfo) {
+        OmptKernelTimingArgsAsyncTy OmptKernelTimingArgsAsync{
+            Agent, &Signal, TicksToTime, std::move(LocalOmptEventInfo)};
+        if (auto Err = timeDataTransferInNsAsync(&OmptKernelTimingArgsAsync))
+          return Err;
+      }
+#endif
 
       return Signal.deinit();
     }
@@ -3475,7 +3496,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Plugin::success();
 
     return Stream->pushMemoryCopyD2DAsync(DstPtr, DstDevice.getAgent(), SrcPtr,
-                                          getAgent(), (uint64_t)Size);
+                                          getAgent(), (uint64_t)Size,
+                                          std::move(LocalOmptEventInfo));
   }
 
   /// Initialize the async info for interoperability purposes.
