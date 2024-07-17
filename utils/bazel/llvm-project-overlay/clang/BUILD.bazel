@@ -2214,7 +2214,6 @@ filegroup(
     name = "python-sources",
     srcs = [
         "bindings/python/clang/cindex.py",
-        "bindings/python/clang/enumerations.py",
     ],
 )
 
