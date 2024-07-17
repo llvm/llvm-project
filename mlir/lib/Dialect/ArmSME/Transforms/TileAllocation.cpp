@@ -538,26 +538,28 @@ chooseSpillUsingHeuristics(OverlappingRangesIterator overlappingRanges,
 void allocateTilesToLiveRanges(
     ArrayRef<LiveRange *> liveRangesSortedByStartPoint) {
   TileAllocator tileAllocator;
-  // `activeRanges` = Live ranges that need to be in a tile at the current point
-  // in the program.
+  // `activeRanges` = Live ranges that need to be in a tile at the
+  // `currentPoint` in the program.
   SetVector<LiveRange *> activeRanges;
   // `inactiveRanges` = Live ranges that _do not_ need to be in a tile
-  // at the current point in the program but could become active again later.
+  // at the `currentPoint` in the program but could become active again later.
   // An inactive section of a live range can be seen as a 'hole' in the live
-  // range, where it is possible to re-use the live range's tile ID _before_ has
-  // it has ended. This allows reusing tiles more (so avoids spills).
+  // range, where it is possible to reuse the live range's tile ID _before_ it
+  // has ended. By identifying 'holes', the allocator can reuse tiles more
+  // often, which helps avoid costly tile spills.
   SetVector<LiveRange *> inactiveRanges;
   for (LiveRange *nextRange : liveRangesSortedByStartPoint) {
-    // Update the `activeRanges` at `newRange->start()`.
+    auto currentPoint = nextRange->start();
+    // Update the `activeRanges` at `currentPoint`.
     activeRanges.remove_if([&](LiveRange *activeRange) {
       // 1. Check for live ranges that have expired.
-      if (activeRange->end() <= nextRange->start()) {
+      if (activeRange->end() <= currentPoint) {
         tileAllocator.releaseTileId(activeRange->getTileType(),
                                     *activeRange->tileId);
         return true;
       }
       // 2. Check for live ranges that have become inactive.
-      if (!activeRange->overlaps(nextRange->start())) {
+      if (!activeRange->overlaps(currentPoint)) {
         tileAllocator.releaseTileId(activeRange->getTileType(),
                                     *activeRange->tileId);
         inactiveRanges.insert(activeRange);
@@ -565,14 +567,14 @@ void allocateTilesToLiveRanges(
       }
       return false;
     });
-    // Update the `inactiveRanges` at `newRange->start()`.
+    // Update the `inactiveRanges` at `currentPoint`.
     inactiveRanges.remove_if([&](LiveRange *inactiveRange) {
       // 1. Check for live ranges that have expired.
-      if (inactiveRange->end() <= nextRange->start()) {
+      if (inactiveRange->end() <= currentPoint) {
         return true;
       }
       // 2. Check for live ranges that have become active.
-      if (inactiveRange->overlaps(nextRange->start())) {
+      if (inactiveRange->overlaps(currentPoint)) {
         tileAllocator.acquireTileId(inactiveRange->getTileType(),
                                     *inactiveRange->tileId);
         activeRanges.insert(inactiveRange);
