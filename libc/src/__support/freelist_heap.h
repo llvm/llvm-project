@@ -22,8 +22,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-extern "C" char _end;
-extern "C" char __libc_heap_limit;
+extern "C" cpp::byte _end;
+extern "C" cpp::byte __libc_heap_limit;
 
 using cpp::optional;
 using cpp::span;
@@ -50,9 +50,14 @@ public:
     size_t total_free_calls;
   };
 
+  constexpr FreeListHeap()
+      : is_initialized_(false), region_(&_end, size_t{0}),
+        heap_limit_(&__libc_heap_limit), freelist_(DEFAULT_BUCKETS),
+        heap_stats_{} {}
+
   constexpr FreeListHeap(span<cpp::byte> region)
-      : is_initialized_(false), region_(region), freelist_(DEFAULT_BUCKETS),
-        heap_stats_{} {
+      : is_initialized_(false), region_(region), heap_limit_{},
+    freelist_(DEFAULT_BUCKETS), heap_stats_{} {
     heap_stats_.total_bytes = region.size();
   }
 
@@ -83,6 +88,10 @@ private:
 
   bool is_initialized_;
   cpp::span<cpp::byte> region_;
+
+  // Kept to initialize region_ by non-constexpr cast to size_t
+  cpp::byte *heap_limit_;
+
   FreeListType freelist_;
   HeapStats heap_stats_;
 };
@@ -100,19 +109,12 @@ private:
   cpp::byte buffer[BUFF_SIZE];
 };
 
-template <size_t NUM_BUCKETS = DEFAULT_BUCKETS.size()>
-class FreeListHeapSymbols : public FreeListHeap<NUM_BUCKETS> {
-  using parent = FreeListHeap<NUM_BUCKETS>;
-  using FreeListNode = typename parent::FreeListType::FreeListNode;
-
-public:
-  constexpr FreeListHeapSymbols()
-      : FreeListHeap<NUM_BUCKETS>{
-            {(cpp::byte *)&_end, (size_t)&__libc_heap_limit}} {}
-};
-
 template <size_t NUM_BUCKETS> void FreeListHeap<NUM_BUCKETS>::init() {
   LIBC_ASSERT(!is_initialized_ && "duplicate initialization");
+  if (heap_limit_) {
+    region_ = {region_.begin(), (size_t)heap_limit_};
+    heap_stats_.total_bytes = region_.size();
+  }
   auto result = BlockType::init(region_);
   BlockType *block = *result;
   freelist_.add_chunk(block_to_span(block));

@@ -18,13 +18,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace {
-#ifndef LIBC_FREELIST_MALLOC_SIZE
-#error "LIBC_FREELIST_MALLOC_SIZE was not defined for this build."
-#endif
-FreeListHeapSymbols<> freelist_heap_symbols;
-} // namespace
-
+static LIBC_CONSTINIT FreeListHeap<> freelist_heap_symbols;
 FreeListHeap<> *freelist_heap = &freelist_heap_symbols;
 
 LLVM_LIBC_FUNCTION(void *, malloc, (size_t size)) {
