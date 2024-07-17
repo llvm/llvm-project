@@ -212,6 +212,7 @@ Changes to the RISC-V Backend
 * Ztso is no longer experimental.
 * The WCH / Nanjing Qinheng Microelectronics QingKe "XW" compressed opcodes are
   supported under the name "Xwchc".
+* ``-mcpu=native`` now detects available features with hwprobe (RISC-V Hardware Probing Interface) on Linux 6.4 or later.
 
 Changes to the WebAssembly Backend
 ----------------------------------
