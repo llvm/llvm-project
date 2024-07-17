@@ -213,6 +213,12 @@ static cl::opt<bool> RenumberBlocksBeforeView(
         "into a dot graph. Only used when a function is being printed."),
     cl::init(false), cl::Hidden);
 
+static cl::opt<unsigned> ExtTspBlockPlacementMaxBlocks(
+    "ext-tsp-block-placement-max-blocks",
+    cl::desc("Maximum number of basic blocks in a function to run ext-TSP "
+             "block placement."),
+    cl::init(UINT_MAX), cl::Hidden);
+
 namespace llvm {
 extern cl::opt<bool> EnableExtTspBlockPlacement;
 extern cl::opt<bool> ApplyExtTspWithoutProfile;
@@ -3511,7 +3517,8 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
 
   // Apply a post-processing optimizing block placement.
   if (MF.size() >= 3 && EnableExtTspBlockPlacement &&
-      (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData())) {
+      (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData()) &&
+      MF.size() <= ExtTspBlockPlacementMaxBlocks) {
     // Find a new placement and modify the layout of the blocks in the function.
     applyExtTsp();
 
