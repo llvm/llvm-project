@@ -497,8 +497,7 @@ private:
 // Second parameter is the number of fallback function arguments
 template <size_t N> class NsanMemOpFn {
 public:
-  NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized, StringRef Fallback,
-              int NFallbackArgs);
+  NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized, StringRef Fallback, size_t NumArgs);
   // Number of parameters can be extracted from FunctionCallee
   FunctionCallee getFunctionFor(uint64_t MemOpSize) const;
   FunctionCallee getFallback() const;
@@ -509,31 +508,34 @@ private:
 
 template <size_t N>
 NsanMemOpFn<N>::NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized,
-                            StringRef Fallback, int NFallbackArgs) {
+                                           StringRef Fallback, size_t NumArgs) {
   LLVMContext &Ctx = M.getContext();
   AttributeList Attr;
   Attr = Attr.addFnAttribute(Ctx, Attribute::NoUnwind);
   Type *PtrTy = PointerType::getUnqual(Ctx);
   Type *VoidTy = Type::getVoidTy(Ctx);
   IntegerType *IntptrTy = M.getDataLayout().getIntPtrType(Ctx);
+  FunctionType *SizedFnTy;
 
-  for (size_t i = 0; i < N - 1; ++i) {
-    if (NFallbackArgs == 3)
-      Funcs[i] = M.getOrInsertFunction(Sized[i], Attr, VoidTy, PtrTy, PtrTy);
-    else if (NFallbackArgs == 2)
-      Funcs[i] = M.getOrInsertFunction(Sized[i], Attr, VoidTy, PtrTy);
-  }
+  if (NumArgs == 3)
+    SizedFnTy = FunctionType::get(VoidTy, {PtrTy, PtrTy}, false);
+  else
+    SizedFnTy = FunctionType::get(VoidTy, {PtrTy}, false);
 
-  if (NFallbackArgs == 3)
+  for (size_t i = 0; i < N - 1; ++i)
+    Funcs[i] = M.getOrInsertFunction(Sized[i], SizedFnTy, Attr);
+
+  if (NumArgs == 3)
     Funcs[N - 1] =
         M.getOrInsertFunction(Fallback, Attr, VoidTy, PtrTy, PtrTy, IntptrTy);
-  else if (NFallbackArgs == 2)
+  else
     Funcs[N - 1] =
         M.getOrInsertFunction(Fallback, Attr, VoidTy, PtrTy, IntptrTy);
 }
 
 template <size_t N>
-FunctionCallee NsanMemOpFn<N>::getFunctionFor(uint64_t MemOpSize) const {
+FunctionCallee
+NsanMemOpFn<N>::getFunctionFor(uint64_t MemOpSize) const {
   size_t Idx =
       MemOpSize == 4 ? 0 : (MemOpSize == 8 ? 1 : (MemOpSize == 16 ? 2 : 3));
 
@@ -541,7 +543,8 @@ FunctionCallee NsanMemOpFn<N>::getFunctionFor(uint64_t MemOpSize) const {
   return Funcs[Idx];
 }
 
-template <size_t N> FunctionCallee NsanMemOpFn<N>::getFallback() const {
+template <size_t N>
+FunctionCallee NsanMemOpFn<N>::getFallback() const {
   return Funcs.back();
 }
 
