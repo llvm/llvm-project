@@ -5633,8 +5633,7 @@ define double @trig_preop_constfold_variable_arg_undef(double %arg) {
 
 define double @trig_preop_constfold_variable_arg_poison(double %arg) {
 ; CHECK-LABEL: @trig_preop_constfold_variable_arg_poison(
-; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double [[ARG:%.*]], i32 poison)
-; CHECK-NEXT:    ret double [[VAL]]
+; CHECK-NEXT:    ret double poison
 ;
   %val = call double @llvm.amdgcn.trig.preop.f64(double %arg, i32 poison)
   ret double %val
@@ -5755,7 +5754,7 @@ define double @trig_preop_constfold_exponent0_mantissa1__segment0() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent0_mantissa1__segment0(
 ; CHECK-NEXT:    ret double 0x3FE45F306DC9C882
 ;
-  %val = call double @llvm.amdgcn.trig.preop.f64(double 0xFFFFFFFFFFFFF, i32 0)
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0x000FFFFFFFFFFFFF, i32 0)
   ret double %val
 }
 
@@ -5763,7 +5762,7 @@ define double @trig_preop_constfold_exponent0_mantissaX__segment0() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent0_mantissaX__segment0(
 ; CHECK-NEXT:    ret double 0x3FE45F306DC9C882
 ;
-  %val = call double @llvm.amdgcn.trig.preop.f64(double 0x4A7F09D5F47D4, i32 0)
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0x0004A7F09D5F47D4, i32 0)
   ret double %val
 }
 
@@ -5779,7 +5778,7 @@ define double @trig_preop_constfold_exponent0_mantissa1__segment2() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent0_mantissa1__segment2(
 ; CHECK-NEXT:    ret double 0x394A6EE06DB14ACC
 ;
-  %val = call double @llvm.amdgcn.trig.preop.f64(double 0xFFFFFFFFFFFFF, i32 2)
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0x000FFFFFFFFFFFFF, i32 2)
   ret double %val
 }
 
@@ -5787,7 +5786,7 @@ define double @trig_preop_constfold_exponent0_mantissaX__segment2() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent0_mantissaX__segment2(
 ; CHECK-NEXT:    ret double 0x394A6EE06DB14ACC
 ;
-  %val = call double @llvm.amdgcn.trig.preop.f64(double 0x394A6EE06DB14A, i32 2)
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0x00094A6EE06DB14A, i32 2)
   ret double %val
 }
 
@@ -5805,7 +5804,7 @@ define double @trig_preop_constfold_exponent0_mantissa1__outbound_segment() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent0_mantissa1__outbound_segment(
 ; CHECK-NEXT:    ret double 0.000000e+00
 ;
-  %val = call double @llvm.amdgcn.trig.preop.f64(double 0xFFFFFFFFFFFFF, i32 22)
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0x000FFFFFFFFFFFFF, i32 22)
   ret double %val
 }
 
@@ -5814,7 +5813,7 @@ define double @trig_preop_constfold_exponent0_mantissaX__outbound_segment() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent0_mantissaX__outbound_segment(
 ; CHECK-NEXT:    ret double 0.000000e+00
 ;
-  %val = call double @llvm.amdgcn.trig.preop.f64(double 0xA6EE06DB14ACC, i32 22)
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0x000A6EE06DB14ACC, i32 22)
   ret double %val
 }
 
@@ -5941,9 +5940,9 @@ define double @trig_preop_constfold_exponent1968_mantissa1__segment2() {
 
 define double @trig_preop_constfold_exponent1968_mantissaX__segment2() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent1968_mantissaX__segment2(
-; CHECK-NEXT:    ret double 0x394A6EE06DB14ACC
+; CHECK-NEXT:    ret double 0x98F2F8BD9E839CE
 ;
-  %val = call double @llvm.amdgcn.trig.preop.f64(double 0x7B02F8BD9E839CE, i32 2)
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0x7B0A2F8BD9E839CE, i32 2)
   ret double %val
 }
 
@@ -5968,9 +5967,9 @@ define double @trig_preop_constfold_exponent1968_mantissa1__outbound_segment() {
 ; src1[4:0] <= 4 for segment to be inbound with this exponent of src0.
 define double @trig_preop_constfold_exponent1968_mantissaX__outbound_segment() {
 ; CHECK-LABEL: @trig_preop_constfold_exponent1968_mantissaX__outbound_segment(
-; CHECK-NEXT:    ret double 0x2F42371D2126E970
+; CHECK-NEXT:    ret double 0.000000e+00
 ;
-  %val = call double @llvm.amdgcn.trig.preop.f64(double 0x7B098F2F8BD9E83, i32 5)
+  %val = call double @llvm.amdgcn.trig.preop.f64(double 0x7B0A98F2F8BD9E83, i32 5)
   ret double %val
 }
 

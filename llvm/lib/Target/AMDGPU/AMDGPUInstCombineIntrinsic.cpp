@@ -1110,8 +1110,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     Value *Src = II.getArgOperand(0);
     Value *Segment = II.getArgOperand(1);
-    if (isa<PoisonValue>(Src))
-      return IC.replaceInstUsesWith(II, Src);
+    if (isa<PoisonValue>(Src) || isa<PoisonValue>(Segment))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
 
     if (isa<UndefValue>(Src)) {
       auto *QNaN = ConstantFP::get(
@@ -1128,10 +1128,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     const APFloat &Fsrc = Csrc->getValueAPF();
     if (Fsrc.isNaN()) {
-      // FIXME: We just need to make the nan quiet here, but that's unavailable
-      // on APFloat, only IEEEfloat
-      auto *Quieted = ConstantFP::get(
-          II.getType(), scalbn(Fsrc, 0, APFloat::rmNearestTiesToEven));
+      auto *Quieted = ConstantFP::get(II.getType(), Fsrc.makeQuiet());
       return IC.replaceInstUsesWith(II, Quieted);
     }
 
@@ -1139,7 +1136,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (!Cseg)
       break;
 
-    uint64_t Exponent = (Fsrc.bitcastToAPInt().getZExtValue() >> 52) & 0x7ff;
+    unsigned Exponent = (Fsrc.bitcastToAPInt().getZExtValue() >> 52) & 0x7ff;
     unsigned SegmentVal = Cseg->getValue().trunc(5).getZExtValue();
     unsigned Shift = SegmentVal * 53;
     if (Exponent > 1077)
@@ -1159,12 +1156,12 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     unsigned Idx = Shift >> 5;
     if (Idx + 2 >= std::size(TwoByPi)) {
       APFloat Zero = APFloat::getZero(II.getType()->getFltSemantics());
-      return IC.replaceInstUsesWith(II, ConstantFP::get(Src->getType(), Zero));
+      return IC.replaceInstUsesWith(II, ConstantFP::get(II.getType(), Zero));
     }
 
     unsigned BShift = Shift & 0x1f;
-    uint64_t Thi = ((uint64_t)TwoByPi[Idx] << 32) | (uint64_t)TwoByPi[Idx + 1];
-    uint64_t Tlo = (uint64_t)TwoByPi[Idx + 2] << 32;
+    uint64_t Thi = Make_64(TwoByPi[Idx], TwoByPi[Idx + 1]);
+    uint64_t Tlo = Make_64(TwoByPi[Idx + 2], 0);
     if (BShift)
       Thi = (Thi << BShift) | (Tlo >> (64 - BShift));
     Thi = Thi >> 11;
