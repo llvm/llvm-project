@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Quant/Transforms/Passes.h"
 #include "mlir/Dialect/Shape/IR/Shape.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -181,8 +182,9 @@ Value materializePerChannelScales(OpBuilder &builder, Location loc,
   return builder.create<arith::ConstantOp>(loc, tensorType, scalesAttr);
 }
 
-Value materializePerChannelZeroPoints(OpBuilder &builder, Location loc,
-                            UniformQuantizedPerAxisType quantizedType) {
+Value materializePerChannelZeroPoints(
+    OpBuilder &builder, Location loc,
+    UniformQuantizedPerAxisType quantizedType) {
   auto zeroPoints = quantizedType.getZeroPoints();
   auto storageType = quantizedType.getStorageType();
   auto zeroPointAttrs = llvm::map_to_vector(
@@ -246,36 +248,42 @@ Value convertIntegerToFloat(OpBuilder &builder, Location loc, Value input,
 Value quantizeScalarOrTensor(OpBuilder &builder, Location loc, Value input,
                              ArrayRef<OpFoldResult> inputShape, Value scale,
                              Value zeroPoint, QuantizedType quantizedType) {
-  // Convert scale and zero point to tensors if necessary
+  // Convert scale to tensor if necessary
   auto inputType = input.getType();
   scale = getScalarOrTensorConstant(
       builder, loc, scale, inputType, inputShape);
-  zeroPoint = getScalarOrTensorConstant(
-      builder, loc, zeroPoint, inputType, inputShape);
 
-  // Convert zero point from storage to expressed type
-  auto expressedScalarOrTensorType =
-      getScalarOrTensorType(quantizedType.getExpressedType(), inputType);
-  zeroPoint = convertIntegerToFloat(builder, loc, zeroPoint,
-                                    expressedScalarOrTensorType,
-                                    quantizedType.isSigned());
-
-  // Scale input and add zero point
+  // Scale input
   auto scaledValue = builder.create<arith::DivFOp>(loc, input, scale);
-  auto storedValueAsExpressedType =
-      builder.create<arith::AddFOp>(loc, scaledValue, zeroPoint);
 
-  // Convert to storage type
+  // Skip unnecessary computations if no zero point is given
+  Value storedValueFloat = scaledValue;
+  if (matchPattern(zeroPoint, m_NonZero())) {
+    // Convert zero point to tensor if necessary
+    zeroPoint = getScalarOrTensorConstant(builder, loc, zeroPoint, inputType,
+                                          inputShape);
+
+    // Convert zero point from storage to expressed type
+    zeroPoint = convertIntegerToFloat(builder, loc, zeroPoint,
+                                      scale.getType(),
+                                      quantizedType.isSigned());
+
+    // Add zero point to stored value
+    storedValueFloat =
+        builder.create<arith::AddFOp>(loc, scaledValue, zeroPoint);
+  }
+
+  // Convert stored value to storage type
   auto storageScalarOrTensorType =
       getScalarOrTensorType(quantizedType.getStorageType(), inputType);
-  auto storedValue = convertFloatToInteger(
-      builder, loc, storedValueAsExpressedType, storageScalarOrTensorType,
+  auto storedValueInt = convertFloatToInteger(
+      builder, loc, storedValueFloat, storageScalarOrTensorType,
       quantizedType.isSigned());
 
   // Clamp stored value it if the storage type is bound
-  storedValue =
-      clampScalarOrTensor(builder, loc, storedValue, inputShape, quantizedType);
-  return storedValue;
+  auto storedValueClamped = clampScalarOrTensor(builder, loc, storedValueInt,
+                                                inputShape, quantizedType);
+  return storedValueClamped;
 }
 
 class QuantizeCastOpConversion : public OpConversionPattern<quant::QuantizeCastOp> {
