@@ -709,8 +709,10 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
     return error;
   }
 
-  if (!process_sp) 
+  if (!process_sp) {
+    error.SetErrorString("Invalid process");
     return error;
+  }
 
   if (!options.GetPluginName().has_value()) {
     // Try saving core directly from the process plugin first.
