@@ -9,21 +9,17 @@
 #ifndef LLVM_FLOAT128
 #define LLVM_FLOAT128
 
+#include <cmath>
+
 namespace llvm {
 
-#ifdef HAS_FLOAT128_LOGF128
-typedef _Float128 float128;
-#define HAS_IEE754_FLOAT128
-#elif HAS__FLOAT128_LOGF128
-typedef __float128 float128;
-extern "C" {
-float128 logf128(float128);
-}
-#define HAS_IEE754_FLOAT128
-#elif HAS_LONG_DOUBLE_LOGF128
-typedef long double float128;
+#ifdef HAS_LOGF128
+#if (__LDBL_MANT_DIG__ == 113) && !defined(__LONG_DOUBLE_IBM128__) &&          \
+    (__SIZEOF_INT128__ == 16)
+typedef decltype(logf128(0.)) float128;
 #define HAS_IEE754_FLOAT128
 #endif
+#endif // HAS_LOGF128
 
 } // namespace llvm
 #endif // LLVM_FLOAT128

@@ -260,63 +260,10 @@ if(C_SUPPORTS_WERROR_UNGUARDED_AVAILABILITY_NEW)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -Werror=unguarded-availability-new")
 endif()
 
-function(logf128_test testname definition)
-  unset(LOGF128_TEST_RUN CACHE)
-  unset(LOGF128_TEST_COMPILE CACHE)
-  try_run(
-    LOGF128_TEST_RUN
-    LOGF128_TEST_COMPILE
-    ${CMAKE_CURRENT_BINARY_DIR}
-    ${CMAKE_CURRENT_BINARY_DIR}/logf128_${testname}.cpp
-    LINK_LIBRARIES m
-  )
-  if(LOGF128_TEST_RUN)
-    set (LLVM_HAS_LOGF128 true CACHE INTERNAL "")
-    set(${definition} true CACHE INTERNAL "")
-    message(STATUS "LLVM: found logf128 with type ${testname}")
-    add_compile_definitions(${definition})
-  endif()
-endfunction()
-
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/logf128_long_double.cpp"
-"
-extern \"C\" {
-long double logf128(long double);
-}
-int main() {
-  long double value = logf128(32.0);
-  if (value > 3.465730L & value < 3.465740L)
-    return 1;
-  return 0;
-}")
-
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/logf128___float128.cpp"
-"
-extern \"C\" {
-__float128 logf128(__float128);
-}
-int main() {
-  __float128 value = logf128(32.0);
-  if (value > 3.465730L & value < 3.465740L)
-    return 1;
-  return 0;
-}")
-
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/logf128__Float128.cpp"
-"
-extern \"C\" {
-_Float128 logf128(_Float128);
-}
-int main() {
-  _Float128 value = logf128(32.0);
-  if (value > 3.465730L & value < 3.465740L)
-    return 1;
-  return 0;
-}")
-
-logf128_test("long_double" HAS_LONG_DOUBLE_LOGF128)
-logf128_test("__float128" HAS__FLOAT128_LOGF128)
-logf128_test("_Float128" HAS_FLOAT128_LOGF128)
+check_cxx_symbol_exists(logf128 cmath HAS_LOGF128)
+if(HAS_LOGF128)
+    add_compile_definitions(HAS_LOGF128)
+endif()
 
 # Determine whether we can register EH tables.
 check_symbol_exists(__register_frame "${CMAKE_CURRENT_LIST_DIR}/unwind.h" HAVE_REGISTER_FRAME)
