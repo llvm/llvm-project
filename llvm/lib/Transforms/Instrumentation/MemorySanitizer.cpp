@@ -2505,21 +2505,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   using OriginCombiner = Combiner<false>;
 
   /// Propagate origin for arbitrary operation.
-  ///
-  /// Optionally skips n trailing operands.
-  void setOriginForNaryOp(Instruction &I, unsigned int skipLastOperands = 0) {
+  void setOriginForNaryOp(Instruction &I) {
     if (!MS.TrackOrigins)
       return;
     IRBuilder<> IRB(&I);
     OriginCombiner OC(this, IRB);
-
-    if (skipLastOperands > 0)
-      assert((I.getNumOperands() > skipLastOperands) &&
-             "Insufficient number of operands to skip!");
-
-    for (unsigned int i = 0; i < I.getNumOperands() - skipLastOperands; i++)
-      OC.Add(I.getOperand(i));
-
+    for (Use &Op : I.operands())
+      OC.Add(Op.get());
     OC.Done(&I);
   }
 
@@ -3983,12 +3975,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     IRB.CreateAlignedStore(interleavedShadow, ShadowPtr, Align(1));
 
     if (MS.TrackOrigins) {
-      // We don't use the last two operands to compute the origin, because:
-      // - the last operand is the callee
-      //   e.g., 'declare void @llvm.aarch64.neon.st2.v8i16.p0(...'
-      // - the second-last operand is the return value
-      //   e.g., '%arraydecay74 = getelementptr inbounds ...'
-      setOriginForNaryOp(I, 2);
+      OriginCombiner OC(this, IRB);
+      for (int i = 0; i < numArgOperands - 1; i++)
+        OC.Add(I.getOperand(i));
+      OC.Done(&I);
     }
 
     if (ClCheckAccessAddress)
