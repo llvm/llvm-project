@@ -92,12 +92,18 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
 
   // FIXME: There may be cases where an argument is processed a bit before
   // DeclareOp is generated. In that case, DeclareOp may point to an
-  // intermediate op and not to BlockArgument. We need to find those cases and
-  // walk the chain to get to the actual argument.
-
+  // intermediate op and not to BlockArgument.
+  // Moreover, with MLIR inlining we cannot use the BlockArgument
+  // position to identify the original number of the dummy argument.
+  // If we want to keep running AddDebugInfoPass late, the dummy argument
+  // position in the argument list has to be expressed in FIR (e.g. as a
+  // constant attribute of [hl]fir.declare/fircg.ext_declare operation that has
+  // a dummy_scope operand).
   unsigned argNo = 0;
-  if (auto Arg = llvm::dyn_cast<mlir::BlockArgument>(declOp.getMemref()))
-    argNo = Arg.getArgNumber() + 1;
+  if (fir::isDummyArgument(declOp.getMemref())) {
+    auto arg = llvm::cast<mlir::BlockArgument>(declOp.getMemref());
+    argNo = arg.getArgNumber() + 1;
+  }
 
   auto tyAttr = typeGen.convertType(fir::unwrapRefType(declOp.getType()),
                                     fileAttr, scopeAttr, declOp.getLoc());

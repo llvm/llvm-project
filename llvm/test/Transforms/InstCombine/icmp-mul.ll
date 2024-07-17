@@ -801,7 +801,8 @@ define i1 @oss_fuzz_39934(i32 %arg) {
 ; CHECK-NEXT:    ret i1 [[C10]]
 ;
   %B13 = mul nsw i32 %arg, -65536
-  %ext = zext i1 icmp eq (ptr @g, ptr null) to i32
+  %cmp = icmp eq ptr @g, null
+  %ext = zext i1 %cmp to i32
   %or = or i32 %ext, 65537
   %mul = mul i32 %or, -65536
   %C10 = icmp ne i32 %mul, %B13

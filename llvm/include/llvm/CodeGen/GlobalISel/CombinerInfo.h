@@ -49,6 +49,10 @@ struct CombinerInfo {
   bool EnableOptSize;
   /// Whether we're optimizing for minsize (-Oz).
   bool EnableMinSize;
+
+  /// The maximum number of times the Combiner will iterate over the
+  /// MachineFunction. Setting this to 0 enables fixed-point iteration.
+  unsigned MaxIterations = 0;
 };
 } // namespace llvm
 

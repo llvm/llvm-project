@@ -25,7 +25,7 @@ void test() {
     typedef std::allocator<char>::is_always_equal IAE; // expected-warning {{'is_always_equal' is deprecated}}
   }
   {
-    typedef std::allocator<const char>::is_always_equal IAE; // expected-warning {{'is_always_equal' is deprecated}}
+    typedef std::allocator<int>::is_always_equal IAE; // expected-warning {{'is_always_equal' is deprecated}}
   }
   {
     typedef std::allocator<void>::is_always_equal IAE; // expected-warning {{'is_always_equal' is deprecated}}

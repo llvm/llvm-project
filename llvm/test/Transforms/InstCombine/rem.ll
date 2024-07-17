@@ -522,7 +522,8 @@ define i32 @pr27968_0(i1 %c0, ptr %p) {
 ; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    br i1 icmp eq (ptr getelementptr inbounds (i8, ptr @a, i64 8), ptr @b), label [[REM_IS_SAFE:%.*]], label [[REM_IS_UNSAFE:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr getelementptr inbounds (i8, ptr @a, i64 8), @b
+; CHECK-NEXT:    br i1 [[CMP]], label [[REM_IS_SAFE:%.*]], label [[REM_IS_UNSAFE:%.*]]
 ; CHECK:       rem.is.safe:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       rem.is.unsafe:
@@ -537,10 +538,11 @@ if.then:
 
 if.end:
   %lhs = phi i32 [ %v, %if.then ], [ 5, %entry ]
-  br i1 icmp eq (ptr getelementptr inbounds ([5 x i16], ptr @a, i64 0, i64 4), ptr @b), label %rem.is.safe, label %rem.is.unsafe
+  %cmp = icmp eq ptr getelementptr inbounds ([5 x i16], ptr @a, i64 0, i64 4), @b
+  br i1 %cmp, label %rem.is.safe, label %rem.is.unsafe
 
 rem.is.safe:
-  %ext = zext i1 icmp eq (ptr getelementptr inbounds ([5 x i16], ptr @a, i64 0, i64 4), ptr @b) to i32
+  %ext = zext i1 %cmp to i32
   %rem = srem i32 %lhs, %ext
   ret i32 %rem
 
@@ -591,7 +593,8 @@ define i32 @pr27968_2(i1 %c0, ptr %p) {
 ; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    br i1 icmp eq (ptr getelementptr inbounds (i8, ptr @a, i64 8), ptr @b), label [[REM_IS_SAFE:%.*]], label [[REM_IS_UNSAFE:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr getelementptr inbounds (i8, ptr @a, i64 8), @b
+; CHECK-NEXT:    br i1 [[CMP]], label [[REM_IS_SAFE:%.*]], label [[REM_IS_UNSAFE:%.*]]
 ; CHECK:       rem.is.safe:
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       rem.is.unsafe:
@@ -606,10 +609,11 @@ if.then:
 
 if.end:
   %lhs = phi i32 [ %v, %if.then ], [ 5, %entry ]
-  br i1 icmp eq (ptr getelementptr inbounds ([5 x i16], ptr @a, i64 0, i64 4), ptr @b), label %rem.is.safe, label %rem.is.unsafe
+  %cmp = icmp eq ptr getelementptr inbounds ([5 x i16], ptr @a, i64 0, i64 4), @b
+  br i1 %cmp, label %rem.is.safe, label %rem.is.unsafe
 
 rem.is.safe:
-  %ext = zext i1 icmp eq (ptr getelementptr inbounds ([5 x i16], ptr @a, i64 0, i64 4), ptr @b) to i32
+  %ext = zext i1 %cmp to i32
   %rem = urem i32 %lhs, %ext
   ret i32 %rem
 

@@ -41,7 +41,6 @@
 #include "llvm/Support/Path.h"
 
 #define DEBUG_TYPE "memprof"
-
 namespace llvm {
 namespace memprof {
 namespace {
@@ -67,8 +66,15 @@ Error checkBuffer(const MemoryBuffer &Buffer) {
   uint64_t TotalSize = 0;
   const char *Next = Buffer.getBufferStart();
   while (Next < Buffer.getBufferEnd()) {
-    auto *H = reinterpret_cast<const Header *>(Next);
-    if (H->Version != MEMPROF_RAW_VERSION) {
+    const auto *H = reinterpret_cast<const Header *>(Next);
+
+    // Check if the version in header is among the supported versions.
+    bool IsSupported = false;
+    for (auto SupportedVersion : MEMPROF_RAW_SUPPORTED_VERSIONS) {
+      if (H->Version == SupportedVersion)
+        IsSupported = true;
+    }
+    if (!IsSupported) {
       return make_error<InstrProfError>(instrprof_error::unsupported_version);
     }
 
@@ -96,19 +102,63 @@ llvm::SmallVector<SegmentEntry> readSegmentEntries(const char *Ptr) {
 }
 
 llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>>
-readMemInfoBlocks(const char *Ptr) {
+readMemInfoBlocksV3(const char *Ptr) {
   using namespace support;
 
   const uint64_t NumItemsToRead =
-      endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
+      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+
   llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>> Items;
   for (uint64_t I = 0; I < NumItemsToRead; I++) {
     const uint64_t Id =
-        endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-    const MemInfoBlock MIB = *reinterpret_cast<const MemInfoBlock *>(Ptr);
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+
+    // We cheat a bit here and remove the const from cast to set the
+    // Histogram Pointer to newly allocated buffer. We also cheat, since V3 and
+    // V4 do not have the same fields. V3 is missing AccessHistogramSize and
+    // AccessHistogram. This means we read "dirty" data in here, but it should
+    // not segfault, since there will be callstack data placed after this in the
+    // binary format.
+    MemInfoBlock MIB = *reinterpret_cast<const MemInfoBlock *>(Ptr);
+    // Overwrite dirty data.
+    MIB.AccessHistogramSize = 0;
+    MIB.AccessHistogram = 0;
+
     Items.push_back({Id, MIB});
+    // Only increment by the size of MIB in V3.
+    Ptr += MEMPROF_V3_MIB_SIZE;
+  }
+  return Items;
+}
+
+llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>>
+readMemInfoBlocksV4(const char *Ptr) {
+  using namespace support;
+
+  const uint64_t NumItemsToRead =
+      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+
+  llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>> Items;
+  for (uint64_t I = 0; I < NumItemsToRead; I++) {
+    const uint64_t Id =
+        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+    // We cheat a bit here and remove the const from cast to set the
+    // Histogram Pointer to newly allocated buffer.
+    MemInfoBlock MIB = *reinterpret_cast<const MemInfoBlock *>(Ptr);
+
     // Only increment by size of MIB since readNext implicitly increments.
     Ptr += sizeof(MemInfoBlock);
+
+    if (MIB.AccessHistogramSize > 0) {
+      MIB.AccessHistogram =
+          (uintptr_t)malloc(MIB.AccessHistogramSize * sizeof(uint64_t));
+    }
+
+    for (uint64_t J = 0; J < MIB.AccessHistogramSize; J++) {
+      ((uint64_t *)MIB.AccessHistogram)[J] =
+          endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+    }
+    Items.push_back({Id, MIB});
   }
   return Items;
 }
@@ -251,6 +301,16 @@ RawMemProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
   return std::move(Reader);
 }
 
+// We need to make sure that all leftover MIB histograms that have not been
+// freed by merge are freed here.
+RawMemProfReader::~RawMemProfReader() {
+  for (auto &[_, MIB] : CallstackProfileData) {
+    if (MemprofRawVersion >= 4ULL && MIB.AccessHistogramSize > 0) {
+      free((void *)MIB.AccessHistogram);
+    }
+  }
+}
+
 bool RawMemProfReader::hasFormat(const StringRef Path) {
   auto BufferOr = MemoryBuffer::getFileOrSTDIN(Path);
   if (!BufferOr)
@@ -281,7 +341,7 @@ void RawMemProfReader::printYAML(raw_ostream &OS) {
 
   OS << "MemprofProfile:\n";
   OS << "  Summary:\n";
-  OS << "    Version: " << MEMPROF_RAW_VERSION << "\n";
+  OS << "    Version: " << MemprofRawVersion << "\n";
   OS << "    NumSegments: " << SegmentInfo.size() << "\n";
   OS << "    NumMibInfo: " << NumMibInfo << "\n";
   OS << "    NumAllocFunctions: " << NumAllocFunctions << "\n";
@@ -573,6 +633,8 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
   // Drop the entries where the callstack is empty.
   for (const uint64_t Id : EntriesToErase) {
     StackMap.erase(Id);
+    if(CallstackProfileData[Id].AccessHistogramSize > 0)
+      free((void*) CallstackProfileData[Id].AccessHistogram);
     CallstackProfileData.erase(Id);
   }
 
@@ -597,7 +659,7 @@ RawMemProfReader::peekBuildIds(MemoryBuffer *DataBuffer) {
                   llvm::SmallSet<std::string, 10>>
       BuildIds;
   while (Next < DataBuffer->getBufferEnd()) {
-    auto *Header = reinterpret_cast<const memprof::Header *>(Next);
+    const auto *Header = reinterpret_cast<const memprof::Header *>(Next);
 
     const llvm::SmallVector<SegmentEntry> Entries =
         readSegmentEntries(Next + Header->SegmentOffset);
@@ -610,12 +672,29 @@ RawMemProfReader::peekBuildIds(MemoryBuffer *DataBuffer) {
   return BuildIds.takeVector();
 }
 
+// FIXME: Add a schema for serializing similiar to IndexedMemprofReader. This
+// will help being able to deserialize different versions raw memprof versions
+// more easily.
+llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>>
+RawMemProfReader::readMemInfoBlocks(const char *Ptr) {
+  if (MemprofRawVersion == 3ULL)
+    return readMemInfoBlocksV3(Ptr);
+  if (MemprofRawVersion == 4ULL)
+    return readMemInfoBlocksV4(Ptr);
+  llvm_unreachable(
+      "Panic: Unsupported version number when reading MemInfoBlocks");
+}
+
 Error RawMemProfReader::readRawProfile(
     std::unique_ptr<MemoryBuffer> DataBuffer) {
   const char *Next = DataBuffer->getBufferStart();
 
   while (Next < DataBuffer->getBufferEnd()) {
-    auto *Header = reinterpret_cast<const memprof::Header *>(Next);
+    const auto *Header = reinterpret_cast<const memprof::Header *>(Next);
+
+    // Set Reader version to memprof raw version of profile. Checking if version
+    // is supported is checked before creating the reader.
+    MemprofRawVersion = Header->Version;
 
     // Read in the segment information, check whether its the same across all
     // profiles in this binary file.
@@ -636,7 +715,21 @@ Error RawMemProfReader::readRawProfile(
     // stackdepot ids are the same.
     for (const auto &[Id, MIB] : readMemInfoBlocks(Next + Header->MIBOffset)) {
       if (CallstackProfileData.count(Id)) {
-        CallstackProfileData[Id].Merge(MIB);
+
+        if (MemprofRawVersion >= 4ULL &&
+            (CallstackProfileData[Id].AccessHistogramSize > 0 ||
+             MIB.AccessHistogramSize > 0)) {
+          uintptr_t ShorterHistogram;
+          if (CallstackProfileData[Id].AccessHistogramSize >
+              MIB.AccessHistogramSize)
+            ShorterHistogram = MIB.AccessHistogram;
+          else
+            ShorterHistogram = CallstackProfileData[Id].AccessHistogram;
+          CallstackProfileData[Id].Merge(MIB);
+          free((void *)ShorterHistogram);
+        } else {
+          CallstackProfileData[Id].Merge(MIB);
+        }
       } else {
         CallstackProfileData[Id] = MIB;
       }
@@ -690,7 +783,7 @@ Error RawMemProfReader::readNextRecord(
       return F;
     auto Iter = this->GuidToSymbolName.find(F.Function);
     assert(Iter != this->GuidToSymbolName.end());
-    F.SymbolName = Iter->getSecond();
+    F.SymbolName = std::make_unique<std::string>(Iter->getSecond());
     return F;
   };
   return MemProfReader::readNextRecord(GuidRecord, IdToFrameCallback);

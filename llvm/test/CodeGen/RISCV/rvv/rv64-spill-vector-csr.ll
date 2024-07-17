@@ -25,7 +25,7 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O0-NEXT:    addi a1, a1, 32
 ; SPILL-O0-NEXT:    vs1r.v v9, (a1) # Unknown-size Folded Spill
 ; SPILL-O0-NEXT:    # implicit-def: $v8
-; SPILL-O0-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; SPILL-O0-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
 ; SPILL-O0-NEXT:    vfadd.vv v8, v9, v10
 ; SPILL-O0-NEXT:    addi a0, sp, 32
 ; SPILL-O0-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
@@ -41,7 +41,7 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O0-NEXT:    # kill: def $x11 killed $x10
 ; SPILL-O0-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
 ; SPILL-O0-NEXT:    # implicit-def: $v8
-; SPILL-O0-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; SPILL-O0-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
 ; SPILL-O0-NEXT:    vfadd.vv v8, v9, v10
 ; SPILL-O0-NEXT:    csrr a0, vlenb
 ; SPILL-O0-NEXT:    slli a0, a0, 1

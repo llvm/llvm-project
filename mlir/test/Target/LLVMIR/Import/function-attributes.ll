@@ -163,11 +163,10 @@ define void @func_memory() memory(readwrite, argmem: none) {
 ; CHECK-LABEL: @passthrough_combined
 ; CHECK-SAME: attributes {passthrough = [
 ; CHECK-DAG: ["alignstack", "16"]
-; CHECK-DAG: "noinline"
 ; CHECK-DAG: "probe-stack"
 ; CHECK-DAG: ["alloc-family", "malloc"]
 ; CHECK:   llvm.return
-define void @passthrough_combined() alignstack(16) noinline "probe-stack" "alloc-family"="malloc" {
+define void @passthrough_combined() alignstack(16) "probe-stack" "alloc-family"="malloc" {
   ret void
 }
 
@@ -344,3 +343,45 @@ declare void @func_attr_no_signed_zeros_fp_math_true() "no-signed-zeros-fp-math"
 ; CHECK-LABEL: @func_attr_no_signed_zeros_fp_math_false
 ; CHECK-SAME: attributes {no_signed_zeros_fp_math = false}
 declare void @func_attr_no_signed_zeros_fp_math_false() "no-signed-zeros-fp-math"="false"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_denormal_fp_math_ieee
+; CHECK-SAME: attributes {denormal_fp_math = "ieee"}
+declare void @func_attr_denormal_fp_math_ieee() "denormal-fp-math"="ieee"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_denormal_fp_math_f32_preserve_sign
+; CHECK-SAME: attributes {denormal_fp_math_f32 = "preserve-sign"}
+declare void @func_attr_denormal_fp_math_f32_preserve_sign() "denormal-fp-math-f32"="preserve-sign"
+
+; // -----
+
+; CHECK-LABEL: @func_attr_fp_contract_fast
+; CHECK-SAME: attributes {fp_contract = "fast"}
+declare void @func_attr_fp_contract_fast() "fp-contract"="fast"
+
+// -----
+
+; CHECK-LABEL: @noinline_attribute
+; CHECK-SAME: attributes {no_inline}
+declare void @noinline_attribute() noinline
+
+// -----
+
+; CHECK-LABEL: @alwaysinline_attribute
+; CHECK-SAME: attributes {always_inline}
+declare void @alwaysinline_attribute() alwaysinline
+
+// -----
+
+; CHECK-LABEL: @optnone_attribute
+; CHECK-SAME: attributes {no_inline, optimize_none}
+declare void @optnone_attribute() noinline optnone
+
+// -----
+
+; CHECK-LABEL: @convergent_attribute
+; CHECK-SAME: attributes {convergent}
+declare void @convergent_attribute() convergent

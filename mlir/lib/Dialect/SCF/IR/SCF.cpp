@@ -21,7 +21,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
-#include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -378,20 +377,20 @@ LogicalResult ForOp::verifyRegions() {
   return success();
 }
 
-std::optional<Value> ForOp::getSingleInductionVar() {
-  return getInductionVar();
+std::optional<SmallVector<Value>> ForOp::getLoopInductionVars() {
+  return SmallVector<Value>{getInductionVar()};
 }
 
-std::optional<OpFoldResult> ForOp::getSingleLowerBound() {
-  return OpFoldResult(getLowerBound());
+std::optional<SmallVector<OpFoldResult>> ForOp::getLoopLowerBounds() {
+  return SmallVector<OpFoldResult>{OpFoldResult(getLowerBound())};
 }
 
-std::optional<OpFoldResult> ForOp::getSingleStep() {
-  return OpFoldResult(getStep());
+std::optional<SmallVector<OpFoldResult>> ForOp::getLoopSteps() {
+  return SmallVector<OpFoldResult>{OpFoldResult(getStep())};
 }
 
-std::optional<OpFoldResult> ForOp::getSingleUpperBound() {
-  return OpFoldResult(getUpperBound());
+std::optional<SmallVector<OpFoldResult>> ForOp::getLoopUpperBounds() {
+  return SmallVector<OpFoldResult>{OpFoldResult(getUpperBound())};
 }
 
 std::optional<ResultRange> ForOp::getLoopResults() { return getResults(); }
@@ -554,6 +553,7 @@ ForOp::replaceWithAdditionalYields(RewriterBase &rewriter,
   scf::ForOp newLoop = rewriter.create<scf::ForOp>(
       getLoc(), getLowerBound(), getUpperBound(), getStep(), inits,
       [](OpBuilder &, Location, Value, ValueRange) {});
+  newLoop->setAttrs(getPrunedAttributeList(getOperation(), {}));
 
   // Generate the new yield values and append them to the scf.yield operation.
   auto yieldOp = cast<scf::YieldOp>(getBody()->getTerminator());
@@ -1428,28 +1428,26 @@ SmallVector<Operation *> ForallOp::getCombiningOps(BlockArgument bbArg) {
   return storeOps;
 }
 
-std::optional<Value> ForallOp::getSingleInductionVar() {
-  if (getRank() != 1)
-    return std::nullopt;
-  return getInductionVar(0);
+std::optional<SmallVector<Value>> ForallOp::getLoopInductionVars() {
+  return SmallVector<Value>{getBody()->getArguments().take_front(getRank())};
 }
 
-std::optional<OpFoldResult> ForallOp::getSingleLowerBound() {
-  if (getRank() != 1)
-    return std::nullopt;
-  return getMixedLowerBound()[0];
+// Get lower bounds as OpFoldResult.
+std::optional<SmallVector<OpFoldResult>> ForallOp::getLoopLowerBounds() {
+  Builder b(getOperation()->getContext());
+  return getMixedValues(getStaticLowerBound(), getDynamicLowerBound(), b);
 }
 
-std::optional<OpFoldResult> ForallOp::getSingleUpperBound() {
-  if (getRank() != 1)
-    return std::nullopt;
-  return getMixedUpperBound()[0];
+// Get upper bounds as OpFoldResult.
+std::optional<SmallVector<OpFoldResult>> ForallOp::getLoopUpperBounds() {
+  Builder b(getOperation()->getContext());
+  return getMixedValues(getStaticUpperBound(), getDynamicUpperBound(), b);
 }
 
-std::optional<OpFoldResult> ForallOp::getSingleStep() {
-  if (getRank() != 1)
-    return std::nullopt;
-  return getMixedStep()[0];
+// Get steps as OpFoldResult.
+std::optional<SmallVector<OpFoldResult>> ForallOp::getLoopSteps() {
+  Builder b(getOperation()->getContext());
+  return getMixedValues(getStaticStep(), getDynamicStep(), b);
 }
 
 ForallOp mlir::scf::getForallOpThreadIndexOwner(Value val) {
@@ -3008,28 +3006,20 @@ void ParallelOp::print(OpAsmPrinter &p) {
 
 SmallVector<Region *> ParallelOp::getLoopRegions() { return {&getRegion()}; }
 
-std::optional<Value> ParallelOp::getSingleInductionVar() {
-  if (getNumLoops() != 1)
-    return std::nullopt;
-  return getBody()->getArgument(0);
+std::optional<SmallVector<Value>> ParallelOp::getLoopInductionVars() {
+  return SmallVector<Value>{getBody()->getArguments()};
 }
 
-std::optional<OpFoldResult> ParallelOp::getSingleLowerBound() {
-  if (getNumLoops() != 1)
-    return std::nullopt;
-  return getLowerBound()[0];
+std::optional<SmallVector<OpFoldResult>> ParallelOp::getLoopLowerBounds() {
+  return getLowerBound();
 }
 
-std::optional<OpFoldResult> ParallelOp::getSingleUpperBound() {
-  if (getNumLoops() != 1)
-    return std::nullopt;
-  return getUpperBound()[0];
+std::optional<SmallVector<OpFoldResult>> ParallelOp::getLoopUpperBounds() {
+  return getUpperBound();
 }
 
-std::optional<OpFoldResult> ParallelOp::getSingleStep() {
-  if (getNumLoops() != 1)
-    return std::nullopt;
-  return getStep()[0];
+std::optional<SmallVector<OpFoldResult>> ParallelOp::getLoopSteps() {
+  return getStep();
 }
 
 ParallelOp mlir::scf::getParallelForInductionVarOwner(Value val) {
@@ -4307,33 +4297,42 @@ void IndexSwitchOp::getRegionInvocationBounds(
     bounds.emplace_back(/*lb=*/0, /*ub=*/i == liveIndex);
 }
 
-LogicalResult IndexSwitchOp::fold(FoldAdaptor adaptor,
-                                  SmallVectorImpl<OpFoldResult> &results) {
-  std::optional<int64_t> maybeCst = getConstantIntValue(getArg());
-  if (!maybeCst.has_value())
-    return failure();
-  int64_t cst = *maybeCst;
-  int64_t caseIdx, e = getNumCases();
-  for (caseIdx = 0; caseIdx < e; ++caseIdx) {
-    if (cst == getCases()[caseIdx])
-      break;
+struct FoldConstantCase : OpRewritePattern<scf::IndexSwitchOp> {
+  using OpRewritePattern<scf::IndexSwitchOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(scf::IndexSwitchOp op,
+                                PatternRewriter &rewriter) const override {
+    // If `op.getArg()` is a constant, select the region that matches with
+    // the constant value. Use the default region if no matche is found.
+    std::optional<int64_t> maybeCst = getConstantIntValue(op.getArg());
+    if (!maybeCst.has_value())
+      return failure();
+    int64_t cst = *maybeCst;
+    int64_t caseIdx, e = op.getNumCases();
+    for (caseIdx = 0; caseIdx < e; ++caseIdx) {
+      if (cst == op.getCases()[caseIdx])
+        break;
+    }
+
+    Region &r = (caseIdx < op.getNumCases()) ? op.getCaseRegions()[caseIdx]
+                                             : op.getDefaultRegion();
+    Block &source = r.front();
+    Operation *terminator = source.getTerminator();
+    SmallVector<Value> results = terminator->getOperands();
+
+    rewriter.inlineBlockBefore(&source, op);
+    rewriter.eraseOp(terminator);
+    // Repalce the operation with a potentially empty list of results.
+    // Fold mechanism doesn't support the case where the result list is empty.
+    rewriter.replaceOp(op, results);
+
+    return success();
   }
+};
 
-  Region &r = (caseIdx < getNumCases()) ? getCaseRegions()[caseIdx]
-                                        : getDefaultRegion();
-  Block &source = r.front();
-  results.assign(source.getTerminator()->getOperands().begin(),
-                 source.getTerminator()->getOperands().end());
-
-  Block *pDestination = (*this)->getBlock();
-  if (!pDestination)
-    return failure();
-  Block::iterator insertionPoint = (*this)->getIterator();
-  pDestination->getOperations().splice(insertionPoint, source.getOperations(),
-                                       source.getOperations().begin(),
-                                       std::prev(source.getOperations().end()));
-
-  return success();
+void IndexSwitchOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                MLIRContext *context) {
+  results.add<FoldConstantCase>(context);
 }
 
 //===----------------------------------------------------------------------===//

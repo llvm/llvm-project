@@ -17,9 +17,9 @@ in  `the official SPIR-V specification <https://www.khronos.org/registry/SPIR-V/
 Usage
 =====
 
-The SPIR-V backend can be invoked either from LLVM's Static Compiler (llc) or Clang, 
-allowing developers to compile LLVM intermediate language (IL) files or OpenCL kernel 
-sources directly to SPIR-V. This section outlines the usage of various commands to 
+The SPIR-V backend can be invoked either from LLVM's Static Compiler (llc) or Clang,
+allowing developers to compile LLVM intermediate language (IL) files or OpenCL kernel
+sources directly to SPIR-V. This section outlines the usage of various commands to
 leverage the SPIR-V backend for different purposes.
 
 Static Compiler Commands
@@ -89,18 +89,22 @@ to specify the target triple:
      Vendor                Description
      ===================== ==============================================================
      *<empty>*/``unknown``  Generic SPIR-V target without any vendor-specific settings.
+     ``amd``                AMDGCN SPIR-V target, with support for target specific
+                            builtins and ASM, meant to be consumed by AMDGCN toolchains.
      ===================== ==============================================================
 
   .. table:: Operating Systems
 
-     ===================== ============================================================
+     ===================== ==============================================================
      OS                    Description
-     ===================== ============================================================
+     ===================== ==============================================================
      *<empty>*/``unknown``  Defaults to the OpenCL runtime.
      ``vulkan``             Vulkan shader runtime.
      ``vulkan1.2``          Vulkan 1.2 runtime, corresponding to SPIR-V 1.5.
      ``vulkan1.3``          Vulkan 1.3 runtime, corresponding to SPIR-V 1.6.
-     ===================== ============================================================
+     ``amdhsa``             AMDHSA runtime, meant to be used on HSA compatible runtimes,
+                            corresponding to SPIR-V 1.6.
+     ===================== ==============================================================
 
   .. table:: SPIR-V Environments
 
@@ -114,15 +118,17 @@ Example:
 
 ``-target spirv64v1.0`` can be used to compile for SPIR-V version 1.0 with 64-bit pointer width.
 
+``-target spirv64-amd-amdhsa`` can be used to compile for AMDGCN flavoured SPIR-V with 64-bit pointer width.
+
 .. _spirv-extensions:
 
 Extensions
 ----------
 
-The SPIR-V backend supports a variety of `extensions <https://github.com/KhronosGroup/SPIRV-Registry/tree/main/extensions>`_ 
-that enable or enhance features beyond the core SPIR-V specification. 
-These extensions can be enabled using the ``-spirv-extensions`` option 
-followed by the name of the extension(s) you wish to enable. Below is a 
+The SPIR-V backend supports a variety of `extensions <https://github.com/KhronosGroup/SPIRV-Registry/tree/main/extensions>`_
+that enable or enhance features beyond the core SPIR-V specification.
+These extensions can be enabled using the ``-spirv-extensions`` option
+followed by the name of the extension(s) you wish to enable. Below is a
 list of supported SPIR-V extensions, sorted alphabetically by their extension names:
 
 .. list-table:: Supported SPIR-V Extensions
@@ -141,10 +147,16 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Allows generating arbitrary width integer types.
    * - ``SPV_INTEL_bfloat16_conversion``
      - Adds instructions to convert between single-precision 32-bit floating-point values and 16-bit bfloat16 values.
+   * - ``SPV_INTEL_cache_controls``
+     - Allows cache control information to be applied to memory access instructions.
    * - ``SPV_INTEL_function_pointers``
      - Allows translation of function pointers.
    * - ``SPV_INTEL_inline_assembly``
      - Allows to use inline assembly.
+   * - ``SPV_INTEL_global_variable_host_access``
+     - Adds decorations that can be applied to global (module scope) variables.
+   * - ``SPV_INTEL_global_variable_fpga_decorations``
+     - Adds decorations that can be applied to global (module scope) variables to help code generation for FPGA devices.
    * - ``SPV_INTEL_optnone``
      - Adds OptNoneINTEL value for Function Control mask that indicates a request to not optimize the function.
    * - ``SPV_INTEL_subgroups``
@@ -183,14 +195,14 @@ To enable all extensions except specified, specify ``all`` followed by a list of
 SPIR-V representation in LLVM IR
 ================================
 
-SPIR-V is intentionally designed for seamless integration with various Intermediate 
-Representations (IRs), including LLVM IR, facilitating straightforward mappings for 
-most of its entities. The development of the SPIR-V backend has been guided by a 
+SPIR-V is intentionally designed for seamless integration with various Intermediate
+Representations (IRs), including LLVM IR, facilitating straightforward mappings for
+most of its entities. The development of the SPIR-V backend has been guided by a
 principle of compatibility with the `Khronos Group SPIR-V LLVM Translator <https://github.com/KhronosGroup/SPIRV-LLVM-Translator>`_.
-Consequently, the input representation accepted by the SPIR-V backend aligns closely 
-with that detailed in `the SPIR-V Representation in LLVM document <https://github.com/KhronosGroup/SPIRV-LLVM-Translator/blob/main/docs/SPIRVRepresentationInLLVM.rst>`_. 
-This document, along with the sections that follow, delineate the main points and focus 
-on any differences between the LLVM IR that this backend processes and the conventions 
+Consequently, the input representation accepted by the SPIR-V backend aligns closely
+with that detailed in `the SPIR-V Representation in LLVM document <https://github.com/KhronosGroup/SPIRV-LLVM-Translator/blob/main/docs/SPIRVRepresentationInLLVM.rst>`_.
+This document, along with the sections that follow, delineate the main points and focus
+on any differences between the LLVM IR that this backend processes and the conventions
 used by other tools.
 
 .. _spirv-special-types:
@@ -231,10 +243,10 @@ previous type has the representation
 Target Intrinsics
 -----------------
 
-The SPIR-V backend employs several LLVM IR intrinsics that facilitate various low-level 
-operations essential for generating correct and efficient SPIR-V code. These intrinsics 
-cover a range of functionalities from type assignment and memory management to control 
-flow and atomic operations. Below is a detailed table of selected intrinsics used in the 
+The SPIR-V backend employs several LLVM IR intrinsics that facilitate various low-level
+operations essential for generating correct and efficient SPIR-V code. These intrinsics
+cover a range of functionalities from type assignment and memory management to control
+flow and atomic operations. Below is a detailed table of selected intrinsics used in the
 SPIR-V backend, along with their descriptions and argument details.
 
 .. list-table:: LLVM IR Intrinsics for SPIR-V
@@ -363,80 +375,80 @@ SPIR-V backend, along with their descriptions and argument details.
 Builtin Functions
 -----------------
 
-The following section highlights the representation of SPIR-V builtins in LLVM IR, 
+The following section highlights the representation of SPIR-V builtins in LLVM IR,
 emphasizing builtins that do not have direct counterparts in LLVM.
 
 Instructions as Function Calls
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-SPIR-V builtins without direct LLVM counterparts are represented as LLVM function calls. 
-These functions, termed SPIR-V builtin functions, follow an IA64 mangling scheme with 
-SPIR-V-specific extensions. Parsing non-mangled calls to builtins is supported in some cases, 
+SPIR-V builtins without direct LLVM counterparts are represented as LLVM function calls.
+These functions, termed SPIR-V builtin functions, follow an IA64 mangling scheme with
+SPIR-V-specific extensions. Parsing non-mangled calls to builtins is supported in some cases,
 but not tested extensively. The general format is:
 
 .. code-block:: c
 
   __spirv_{OpCodeName}{_OptionalPostfixes}
 
-Where `{OpCodeName}` is the SPIR-V opcode name sans the "Op" prefix, and 
-`{OptionalPostfixes}` are decoration-specific postfixes, if any. The mangling and 
-postfixes allow for the representation of SPIR-V's rich instruction set within LLVM's 
+Where `{OpCodeName}` is the SPIR-V opcode name sans the "Op" prefix, and
+`{OptionalPostfixes}` are decoration-specific postfixes, if any. The mangling and
+postfixes allow for the representation of SPIR-V's rich instruction set within LLVM's
 framework.
 
 Extended Instruction Sets
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-SPIR-V defines several extended instruction sets for additional functionalities, such as 
-OpenCL-specific operations. In LLVM IR, these are represented by function calls to 
+SPIR-V defines several extended instruction sets for additional functionalities, such as
+OpenCL-specific operations. In LLVM IR, these are represented by function calls to
 mangled builtins and selected based on the environment. For example:
 
 .. code-block:: c
 
   acos_f32
 
-represents the `acos` function from the OpenCL extended instruction set for a float32 
+represents the `acos` function from the OpenCL extended instruction set for a float32
 input.
 
 Builtin Variables
 ~~~~~~~~~~~~~~~~~
 
-SPIR-V builtin variables, which provide access to special hardware or execution model 
-properties, are mapped to either LLVM function calls or LLVM global variables. The 
+SPIR-V builtin variables, which provide access to special hardware or execution model
+properties, are mapped to either LLVM function calls or LLVM global variables. The
 representation follows the naming convention:
 
 .. code-block:: c
 
   __spirv_BuiltIn{VariableName}
 
-For instance, the SPIR-V builtin `GlobalInvocationId` is accessible in LLVM IR as 
+For instance, the SPIR-V builtin `GlobalInvocationId` is accessible in LLVM IR as
 `__spirv_BuiltInGlobalInvocationId`.
 
 Vector Load and Store Builtins
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-SPIR-V's capabilities for loading and storing vectors are represented in LLVM IR using 
-functions that mimic the SPIR-V instructions. These builtins handle cases that LLVM's 
-native instructions do not directly support, enabling fine-grained control over memory 
+SPIR-V's capabilities for loading and storing vectors are represented in LLVM IR using
+functions that mimic the SPIR-V instructions. These builtins handle cases that LLVM's
+native instructions do not directly support, enabling fine-grained control over memory
 operations.
 
 Atomic Operations
 ~~~~~~~~~~~~~~~~~
 
-SPIR-V's atomic operations, especially those operating on floating-point data, are 
-represented in LLVM IR with corresponding function calls. These builtins ensure 
-atomicity in operations where LLVM might not have direct support, essential for parallel 
+SPIR-V's atomic operations, especially those operating on floating-point data, are
+represented in LLVM IR with corresponding function calls. These builtins ensure
+atomicity in operations where LLVM might not have direct support, essential for parallel
 execution and synchronization.
 
 Image Operations
 ~~~~~~~~~~~~~~~~
 
-SPIR-V provides extensive support for image and sampler operations, which LLVM 
-represents through function calls to builtins. These include image reads, writes, and 
+SPIR-V provides extensive support for image and sampler operations, which LLVM
+represents through function calls to builtins. These include image reads, writes, and
 queries, allowing detailed manipulation of image data and parameters.
 
 Group and Subgroup Operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For workgroup and subgroup operations, LLVM uses function calls to represent SPIR-V's 
-group-based instructions. These builtins facilitate group synchronization, data sharing, 
+For workgroup and subgroup operations, LLVM uses function calls to represent SPIR-V's
+group-based instructions. These builtins facilitate group synchronization, data sharing,
 and collective operations essential for efficient parallel computation.

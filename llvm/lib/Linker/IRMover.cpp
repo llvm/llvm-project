@@ -1192,8 +1192,8 @@ void IRLinker::prepareCompileUnitsForImport() {
   // When importing for ThinLTO, prevent importing of types listed on
   // the DICompileUnit that we don't need a copy of in the importing
   // module. They will be emitted by the originating module.
-  for (unsigned I = 0, E = SrcCompileUnits->getNumOperands(); I != E; ++I) {
-    auto *CU = cast<DICompileUnit>(SrcCompileUnits->getOperand(I));
+  for (MDNode *N : SrcCompileUnits->operands()) {
+    auto *CU = cast<DICompileUnit>(N);
     assert(CU && "Expected valid compile unit");
     // Enums, macros, and retained types don't need to be listed on the
     // imported DICompileUnit. This means they will only be imported
@@ -1489,8 +1489,7 @@ Error IRLinker::linkModuleFlagsMetadata() {
   }
 
   // Check all of the requirements.
-  for (unsigned I = 0, E = Requirements.size(); I != E; ++I) {
-    MDNode *Requirement = Requirements[I];
+  for (MDNode *Requirement : Requirements) {
     MDString *Flag = cast<MDString>(Requirement->getOperand(0));
     Metadata *ReqValue = Requirement->getOperand(1);
 

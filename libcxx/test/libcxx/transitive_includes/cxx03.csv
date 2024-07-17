@@ -187,9 +187,6 @@ condition_variable type_traits
 condition_variable typeinfo
 condition_variable version
 coroutine compare
-coroutine cstddef
-coroutine cstdint
-coroutine cstring
 coroutine iosfwd
 coroutine limits
 coroutine type_traits
@@ -858,7 +855,6 @@ string_view version
 strstream istream
 strstream ostream
 strstream version
-syncstream cstddef
 syncstream ios
 syncstream iosfwd
 syncstream map
@@ -906,6 +902,7 @@ thread type_traits
 thread version
 tuple compare
 tuple cstddef
+tuple cstdint
 tuple exception
 tuple iosfwd
 tuple new

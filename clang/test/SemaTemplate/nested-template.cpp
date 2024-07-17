@@ -3,7 +3,7 @@ class A;
 
 class S {
 public:
-   template<typename T> struct A { 
+   template<typename T> struct A {
      struct Nested {
        typedef T type;
      };
@@ -17,15 +17,15 @@ template<typename T>
 struct Outer {
   template<typename U>
   class Inner0;
-  
+
   template<typename U>
   class Inner1 {
     struct ReallyInner;
-    
+
     T foo(U);
     template<typename V> T bar(V);
     template<typename V> T* bar(V);
-    
+
     static T value1;
     static U value2;
   };
@@ -47,7 +47,7 @@ template<typename X>
 template<typename Y>
 struct Outer<X>::Inner1<Y>::ReallyInner {
   static Y value3;
-  
+
   void g(X, Y);
 };
 
@@ -130,10 +130,10 @@ namespace PR10896 {
   public:
     void foo() {}
   private:
-	
+
     template<typename T>
     T SomeField; // expected-error {{member 'SomeField' declared as a template}}
-    template<> int SomeField2; // expected-error {{extraneous 'template<>' in declaration of member 'SomeField2'}}
+    template<> int SomeField2; // expected-error {{extraneous 'template<>' in declaration of variable 'SomeField2'}}
   };
 
   void g() {

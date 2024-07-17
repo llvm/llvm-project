@@ -315,6 +315,7 @@ private:
     unsigned FileNum = 1;
     unsigned LastLine = 1;
     unsigned Column = 0;
+    unsigned Discriminator = 0;
     unsigned IsStatement = 1;
     unsigned Isa = 0;
     uint64_t Address = -1ULL;
@@ -350,9 +351,15 @@ private:
         Section.emitIntVal(dwarf::DW_LNS_set_column, 1);
         encodeULEB128(Column, Section.OS);
       }
-
-      // FIXME: We should handle the discriminator here, but dsymutil doesn't
-      // consider it, thus ignore it for now.
+      if (Discriminator != Row.Discriminator && MC->getDwarfVersion() >= 4) {
+        Discriminator = Row.Discriminator;
+        unsigned Size = getULEB128Size(Discriminator);
+        Section.emitIntVal(dwarf::DW_LNS_extended_op, 1);
+        encodeULEB128(Size + 1, Section.OS);
+        Section.emitIntVal(dwarf::DW_LNE_set_discriminator, 1);
+        encodeULEB128(Discriminator, Section.OS);
+      }
+      Discriminator = 0;
 
       if (Isa != Row.Isa) {
         Isa = Row.Isa;
@@ -397,7 +404,7 @@ private:
         EncodingBuffer.resize(0);
         Address = -1ULL;
         LastLine = FileNum = IsStatement = 1;
-        RowsSinceLastSequence = Column = Isa = 0;
+        RowsSinceLastSequence = Column = Discriminator = Isa = 0;
       }
     }
 

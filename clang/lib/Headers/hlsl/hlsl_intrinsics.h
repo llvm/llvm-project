@@ -108,6 +108,34 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_abs)
 double4 abs(double4);
 
 //===----------------------------------------------------------------------===//
+// acos builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T acos(T Val)
+/// \brief Returns the arccosine of the input value, \a Val.
+/// \param Val The input value.
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_acos)
+half acos(half);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_acos)
+half2 acos(half2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_acos)
+half3 acos(half3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_acos)
+half4 acos(half4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_acos)
+float acos(float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_acos)
+float2 acos(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_acos)
+float3 acos(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_acos)
+float4 acos(float4);
+
+//===----------------------------------------------------------------------===//
 // all builtins
 //===----------------------------------------------------------------------===//
 
@@ -332,6 +360,62 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_any)
 bool any(double4);
 
 //===----------------------------------------------------------------------===//
+// asin builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T asin(T Val)
+/// \brief Returns the arcsine of the input value, \a Val.
+/// \param Val The input value.
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_asin)
+half asin(half);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_asin)
+half2 asin(half2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_asin)
+half3 asin(half3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_asin)
+half4 asin(half4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_asin)
+float asin(float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_asin)
+float2 asin(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_asin)
+float3 asin(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_asin)
+float4 asin(float4);
+
+//===----------------------------------------------------------------------===//
+// atan builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T atan(T Val)
+/// \brief Returns the arctangent of the input value, \a Val.
+/// \param Val The input value.
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan)
+half atan(half);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan)
+half2 atan(half2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan)
+half3 atan(half3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan)
+half4 atan(half4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan)
+float atan(float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan)
+float2 atan(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan)
+float3 atan(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_atan)
+float4 atan(float4);
+
+//===----------------------------------------------------------------------===//
 // ceil builtins
 //===----------------------------------------------------------------------===//
 
@@ -501,6 +585,34 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
 float3 cos(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_cos)
 float4 cos(float4);
+
+//===----------------------------------------------------------------------===//
+// cosh builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T cosh(T Val)
+/// \brief Returns the hyperbolic cosine of the input value, \a Val.
+/// \param Val The input value.
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cosh)
+half cosh(half);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cosh)
+half2 cosh(half2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cosh)
+half3 cosh(half3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cosh)
+half4 cosh(half4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cosh)
+float cosh(float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cosh)
+float2 cosh(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cosh)
+float3 cosh(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_cosh)
+float4 cosh(float4);
 
 //===----------------------------------------------------------------------===//
 // dot product builtins
@@ -1419,6 +1531,34 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_sin)
 float4 sin(float4);
 
 //===----------------------------------------------------------------------===//
+// sinh builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T sinh(T Val)
+/// \brief Returns the hyperbolic sine of the input value, \a Val.
+/// \param Val The input value.
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sinh)
+half sinh(half);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sinh)
+half2 sinh(half2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sinh)
+half3 sinh(half3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sinh)
+half4 sinh(half4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sinh)
+float sinh(float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sinh)
+float2 sinh(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sinh)
+float3 sinh(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_sinh)
+float4 sinh(float4);
+
+//===----------------------------------------------------------------------===//
 // sqrt builtins
 //===----------------------------------------------------------------------===//
 
@@ -1451,6 +1591,11 @@ float4 sqrt(float4);
 //===----------------------------------------------------------------------===//
 // tan builtins
 //===----------------------------------------------------------------------===//
+
+/// \fn T tan(T Val)
+/// \brief Returns the tangent of the input value, \a Val.
+/// \param Val The input value.
+
 #ifdef __HLSL_ENABLE_16_BIT
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_tan)
 half tan(half);
@@ -1470,6 +1615,34 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_tan)
 float3 tan(float3);
 _HLSL_BUILTIN_ALIAS(__builtin_elementwise_tan)
 float4 tan(float4);
+
+//===----------------------------------------------------------------------===//
+// tanh builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T tanh(T Val)
+/// \brief Returns the hyperbolic tangent of the input value, \a Val.
+/// \param Val The input value.
+
+#ifdef __HLSL_ENABLE_16_BIT
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_tanh)
+half tanh(half);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_tanh)
+half2 tanh(half2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_tanh)
+half3 tanh(half3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_tanh)
+half4 tanh(half4);
+#endif
+
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_tanh)
+float tanh(float);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_tanh)
+float2 tanh(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_tanh)
+float3 tanh(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_elementwise_tanh)
+float4 tanh(float4);
 
 //===----------------------------------------------------------------------===//
 // trunc builtins

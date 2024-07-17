@@ -8,7 +8,7 @@ declare <4 x i16> @llvm.amdgcn.global.load.tr.b128.v4i16.p1(ptr addrspace(1))
 define amdgpu_kernel void @global_load_tr_b64(ptr addrspace(1) %addr, ptr addrspace(1) %use) {
 ; GFX12-LABEL: global_load_tr_b64:
 ; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX12-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    global_load_tr_b64 v1, v0, s[0:1] offset:32
@@ -27,7 +27,7 @@ entry:
 define amdgpu_kernel void @global_load_tr_b128(ptr addrspace(1) %addr, ptr addrspace(1) %use) {
 ; GFX12-LABEL: global_load_tr_b128:
 ; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX12-NEXT:    s_load_b128 s[0:3], s[2:3], 0x24
 ; GFX12-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    global_load_tr_b128 v[0:1], v2, s[0:1] offset:32

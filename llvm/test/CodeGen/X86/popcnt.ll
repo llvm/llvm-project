@@ -109,18 +109,18 @@ define i16 @cnt16(i16 %x) nounwind readnone {
 ;
 ; X64-NDD-LABEL: cnt16:
 ; X64-NDD:       # %bb.0:
-; X64-NDD-NEXT:    shrl %edi, %eax
-; X64-NDD-NEXT:    andl $21845, %eax # imm = 0x5555
-; X64-NDD-NEXT:    subl %eax, %edi, %eax
-; X64-NDD-NEXT:    andl $13107, %eax, %ecx # imm = 0x3333
-; X64-NDD-NEXT:    shrl $2, %eax
-; X64-NDD-NEXT:    andl $13107, %eax # imm = 0x3333
-; X64-NDD-NEXT:    addl %ecx, %eax
-; X64-NDD-NEXT:    shrl $4, %eax, %ecx
-; X64-NDD-NEXT:    addl %ecx, %eax
-; X64-NDD-NEXT:    andl $3855, %eax # imm = 0xF0F
-; X64-NDD-NEXT:    shrl $8, %eax, %ecx
-; X64-NDD-NEXT:    addl %ecx, %eax
+; X64-NDD-NEXT:    shrw %di, %ax
+; X64-NDD-NEXT:    andw $21845, %ax # imm = 0x5555
+; X64-NDD-NEXT:    subw %ax, %di, %ax
+; X64-NDD-NEXT:    andw $13107, %ax, %cx # imm = 0x3333
+; X64-NDD-NEXT:    shrw $2, %ax
+; X64-NDD-NEXT:    andw $13107, %ax # imm = 0x3333
+; X64-NDD-NEXT:    addw %cx, %ax
+; X64-NDD-NEXT:    shrw $4, %ax, %cx
+; X64-NDD-NEXT:    addw %cx, %ax
+; X64-NDD-NEXT:    andw $3855, %ax # imm = 0xF0F
+; X64-NDD-NEXT:    movzbl %ah, %ecx
+; X64-NDD-NEXT:    addw %cx, %ax
 ; X64-NDD-NEXT:    movzbl %al, %eax
 ; X64-NDD-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NDD-NEXT:    retq
@@ -1812,19 +1812,20 @@ define i32 @popcount_i16_zext(i16 zeroext %x) {
 ;
 ; X64-NDD-LABEL: popcount_i16_zext:
 ; X64-NDD:       # %bb.0:
-; X64-NDD-NEXT:    shrl %edi, %eax
-; X64-NDD-NEXT:    andl $21845, %eax # imm = 0x5555
-; X64-NDD-NEXT:    subl %eax, %edi, %eax
-; X64-NDD-NEXT:    andl $13107, %eax, %ecx # imm = 0x3333
-; X64-NDD-NEXT:    shrl $2, %eax
-; X64-NDD-NEXT:    andl $13107, %eax # imm = 0x3333
-; X64-NDD-NEXT:    addl %ecx, %eax
-; X64-NDD-NEXT:    shrl $4, %eax, %ecx
-; X64-NDD-NEXT:    addl %ecx, %eax
-; X64-NDD-NEXT:    andl $3855, %eax # imm = 0xF0F
-; X64-NDD-NEXT:    shrl $8, %eax, %ecx
-; X64-NDD-NEXT:    addl %ecx, %eax
+; X64-NDD-NEXT:    shrw %di, %ax
+; X64-NDD-NEXT:    andw $21845, %ax # imm = 0x5555
+; X64-NDD-NEXT:    subw %ax, %di, %ax
+; X64-NDD-NEXT:    andw $13107, %ax, %cx # imm = 0x3333
+; X64-NDD-NEXT:    shrw $2, %ax
+; X64-NDD-NEXT:    andw $13107, %ax # imm = 0x3333
+; X64-NDD-NEXT:    addw %cx, %ax
+; X64-NDD-NEXT:    shrw $4, %ax, %cx
+; X64-NDD-NEXT:    addw %cx, %ax
+; X64-NDD-NEXT:    andw $3855, %ax # imm = 0xF0F
+; X64-NDD-NEXT:    movzbl %ah, %ecx
+; X64-NDD-NEXT:    addw %cx, %ax
 ; X64-NDD-NEXT:    movzbl %al, %eax
+; X64-NDD-NEXT:    movzwl %ax, %eax
 ; X64-NDD-NEXT:    retq
   %cnt = tail call i16 @llvm.ctpop.i16(i16 %x)
   %z = zext i16 %cnt to i32

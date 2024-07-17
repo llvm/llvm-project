@@ -135,7 +135,7 @@ private:
 
   // Check if an internal declaration in zippered library has an
   // external declaration for a different platform. This results
-  // in the symbol being in a "seperate" platform slice.
+  // in the symbol being in a "separate" platform slice.
   bool shouldIgnoreInternalZipperedSymbol(const Record *R,
                                           const SymbolContext &SymCtx) const;
 

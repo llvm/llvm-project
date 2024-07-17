@@ -7,14 +7,14 @@
 // Build a simple dylib with debug info.
 ; RUN: %clang --target=arm64-apple-macos11 -g -dynamiclib %t/foo.c \
 ; RUN: -current_version 1 -compatibility_version 1 -L%t/usr/lib \
-; RUN: -save-temps \
+; RUN: -save-temps -dynamiclib \
 ; RUN: -o %t/foo.dylib -install_name %t/foo.dylib
 ; RUN: dsymutil %t/foo.dylib -o %t/foo.dSYM
 
 ; RUN: not clang-installapi -x c++ --target=arm64-apple-macos11 \
 ; RUN: -install_name %t/foo.dylib  \
 ; RUN: -current_version 1 -compatibility_version 1 \
-; RUN: -o %t/output.tbd \
+; RUN: -o %t/output.tbd -dynamiclib \
 ; RUN: --verify-against=%t/foo.dylib --dsym=%t/foo.dSYM \
 ; RUN: --verify-mode=Pedantic 2>&1 | FileCheck %s
 

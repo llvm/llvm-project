@@ -158,7 +158,8 @@ static void moveAbsRight(ExprValue &a, ExprValue &b) {
   if (a.sec == nullptr || (a.forceAbsolute && !b.isAbsolute()))
     std::swap(a, b);
   if (!b.isAbsolute())
-    error(a.loc + ": at least one side of the expression must be absolute");
+    script->recordError(
+        a.loc + ": at least one side of the expression must be absolute");
 }
 
 static ExprValue add(ExprValue a, ExprValue b) {
@@ -451,6 +452,7 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
       .Case("elf32-loongarch", {ELF32LEKind, EM_LOONGARCH})
       .Case("elf64-loongarch", {ELF64LEKind, EM_LOONGARCH})
       .Case("elf64-s390", {ELF64BEKind, EM_S390})
+      .Cases("elf32-hexagon", "elf32-littlehexagon", {ELF32LEKind, EM_HEXAGON})
       .Default({ELFNoneKind, EM_NONE});
 }
 
@@ -460,20 +462,28 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
 void ScriptParser::readOutputFormat() {
   expect("(");
 
-  StringRef s;
-  config->bfdname = unquote(next());
+  StringRef s = unquote(next());
   if (!consume(")")) {
     expect(",");
-    s = unquote(next());
+    StringRef tmp = unquote(next());
     if (config->optEB)
-      config->bfdname = s;
+      s = tmp;
     expect(",");
-    s = unquote(next());
+    tmp = unquote(next());
     if (config->optEL)
-      config->bfdname = s;
+      s = tmp;
     consume(")");
   }
-  s = config->bfdname;
+  // If more than one OUTPUT_FORMAT is specified, only the first is checked.
+  if (!config->bfdname.empty())
+    return;
+  config->bfdname = s;
+
+  if (s == "binary") {
+    config->oFormatBinary = true;
+    return;
+  }
+
   if (s.consume_back("-freebsd"))
     config->osabi = ELFOSABI_FREEBSD;
 
@@ -1384,7 +1394,7 @@ StringRef ScriptParser::readParenLiteral() {
 
 static void checkIfExists(const OutputSection &osec, StringRef location) {
   if (osec.location.empty() && script->errorOnMissingSection)
-    error(location + ": undefined section " + osec.name);
+    script->recordError(location + ": undefined section " + osec.name);
 }
 
 static bool isValidSymbolName(StringRef s) {
@@ -1627,7 +1637,9 @@ unsigned ScriptParser::readPhdrType() {
                      .Case("PT_GNU_EH_FRAME", PT_GNU_EH_FRAME)
                      .Case("PT_GNU_STACK", PT_GNU_STACK)
                      .Case("PT_GNU_RELRO", PT_GNU_RELRO)
+                     .Case("PT_OPENBSD_MUTABLE", PT_OPENBSD_MUTABLE)
                      .Case("PT_OPENBSD_RANDOMIZE", PT_OPENBSD_RANDOMIZE)
+                     .Case("PT_OPENBSD_SYSCALLS", PT_OPENBSD_SYSCALLS)
                      .Case("PT_OPENBSD_WXNEEDED", PT_OPENBSD_WXNEEDED)
                      .Case("PT_OPENBSD_BOOTDATA", PT_OPENBSD_BOOTDATA)
                      .Default(-1);

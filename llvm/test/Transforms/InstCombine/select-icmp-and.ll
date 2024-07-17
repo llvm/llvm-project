@@ -299,6 +299,17 @@ define <2 x i32> @test74vec(<2 x i32> %x) {
   ret <2 x i32> %2
 }
 
+define i64 @test75(i32 %X) {
+; CHECK-LABEL: @test75(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 0, i64 8
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+  %1 = icmp slt i32 %X, 0
+  %2 = select i1 %1, i64 0, i64 8
+  ret i64 %2
+}
+
 ;; Code sequence for (X & 16) ? 16 : 0
 define i32 @test15a(i32 %X) {
 ; CHECK-LABEL: @test15a(

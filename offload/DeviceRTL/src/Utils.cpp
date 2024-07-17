@@ -113,6 +113,15 @@ int32_t utils::shuffleDown(uint64_t Mask, int32_t Var, uint32_t Delta,
   return impl::shuffleDown(Mask, Var, Delta, Width);
 }
 
+int64_t utils::shuffleDown(uint64_t Mask, int64_t Var, uint32_t Delta,
+                           int32_t Width) {
+  uint32_t Lo, Hi;
+  utils::unpack(Var, Lo, Hi);
+  Hi = impl::shuffleDown(Mask, Hi, Delta, Width);
+  Lo = impl::shuffleDown(Mask, Lo, Delta, Width);
+  return utils::pack(Lo, Hi);
+}
+
 uint64_t utils::ballotSync(uint64_t Mask, int32_t Pred) {
   return impl::ballotSync(Mask, Pred);
 }
@@ -125,11 +134,7 @@ int32_t __kmpc_shuffle_int32(int32_t Val, int16_t Delta, int16_t SrcLane) {
 }
 
 int64_t __kmpc_shuffle_int64(int64_t Val, int16_t Delta, int16_t Width) {
-  uint32_t lo, hi;
-  utils::unpack(Val, lo, hi);
-  hi = impl::shuffleDown(lanes::All, hi, Delta, Width);
-  lo = impl::shuffleDown(lanes::All, lo, Delta, Width);
-  return utils::pack(lo, hi);
+  return utils::shuffleDown(lanes::All, Val, Delta, Width);
 }
 }
 

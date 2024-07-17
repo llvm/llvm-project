@@ -459,21 +459,23 @@ namespace testClassTemplateDecl {
 
 // CHECK:       ClassTemplateDecl 0x{{.+}} <{{.+}}:[[@LINE-148]]:3, col:31> col:31 TestTemplateDefaultNonType{{$}}
 // CHECK-NEXT:  |-NonTypeTemplateParmDecl 0x{{.+}} <col:12, col:20> col:16 'int' depth 0 index 0 I{{$}}
-// CHECK-NEXT:  | `-TemplateArgument <col:20> expr{{$}}
+// CHECK-NEXT:  | `-TemplateArgument <col:20> expr '42'{{$}}
 // CHECK-NEXT:  |   `-IntegerLiteral 0x{{.+}} <col:20> 'int' 42{{$}}
 // CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <col:24, col:31> col:31 struct TestTemplateDefaultNonType{{$}}
 
 // CHECK:       ClassTemplateDecl 0x{{.+}} <{{.+}}:{{.*}}:3, col:68> col:68 TestTemplateTemplateDefaultType{{$}}
 // CHECK-NEXT:  |-TemplateTemplateParmDecl 0x{{.+}} <col:12, col:42> col:37 depth 0 index 0 TT{{$}}
 // CHECK-NEXT:  | |-TemplateTypeParmDecl 0x{{.+}} <col:21> col:29 typename depth 1 index 0{{$}}
-// CHECK-NEXT:  | `-TemplateArgument <col:42> template TestClassTemplate{{$}}
-// CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <col:61, col:68> col:68 struct TestTemplateTemplateDefaultType{{$}}
+// CHECK-NEXT:  | `-TemplateArgument <col:42> template 'TestClassTemplate':'testClassTemplateDecl::TestClassTemplate' qualified{{$}}
+// CHECK-NEXT:  |   `-ClassTemplateDecl 0x{{.+}} <line:{{.+}}:3, line:{{.+}}:3> line:{{.+}}:30 TestClassTemplate{{$}}
+// CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} <line:{{.*}}:61, col:68> col:68 struct TestTemplateTemplateDefaultType{{$}}
 
 // CHECK:       ClassTemplateDecl 0x{{.+}} prev 0x{{.+}} <{{.+}}:{{.*}}:3, col:82> col:48 TestTemplateTemplateDefaultType{{$}}
 // CHECK-NEXT:  |-TemplateTemplateParmDecl 0x{{.+}} <col:12, col:37> col:37 depth 0 index 0 TT{{$}}
 // CHECK-NEXT:  | |-TemplateTypeParmDecl 0x{{.+}} <col:21> col:29 typename depth 1 index 0{{$}}
-// CHECK-NEXT:  | `-TemplateArgument <line:{{.*}}:42> template TestClassTemplate{{$}}
-// CHECK-NEXT:  |   `-inherited from TemplateTemplateParm 0x{{.+}} 'TT'{{$}}
+// CHECK-NEXT:  | `-TemplateArgument <line:{{.*}}:42> template 'TestClassTemplate':'testClassTemplateDecl::TestClassTemplate' qualified{{$}}
+// CHECK-NEXT:  |   |-inherited from TemplateTemplateParm 0x{{.+}} 'TT'{{$}}
+// CHECK-NEXT:  |   `-ClassTemplateDecl 0x{{.+}} <line:{{.+}}:3, line:{{.+}}:3> line:{{.+}}:30 TestClassTemplate
 // CHECK-NEXT:  `-CXXRecordDecl 0x{{.+}} prev 0x{{.+}} <line:{{.*}}:41, col:82> col:48 struct TestTemplateTemplateDefaultType definition{{$}}
 // CHECK-NEXT:    |-DefinitionData empty aggregate standard_layout trivially_copyable pod trivial literal has_constexpr_non_copy_move_ctor can_const_default_init{{$}}
 // CHECK-NEXT:    | |-DefaultConstructor exists trivial constexpr needs_implicit defaulted_is_constexpr{{$}}
@@ -683,7 +685,8 @@ namespace TestTemplateTemplateParmDecl {
 // CHECK:        FunctionTemplateDecl
 // CHECK-NEXT:     TemplateTemplateParmDecl{{.*}} T
 // CHECK-NEXT:       TemplateTypeParmDecl{{.*}} typename
-// CHECK-NEXT:       TemplateArgument{{.*}} template A
+// CHECK-NEXT:       TemplateArgument{{.*}} template 'A':'TestTemplateTemplateParmDecl::A' qualified{{$}}
+// CHECK-NEXT:         ClassTemplateDecl {{.*}} A
 // CHECK-NEXT:     TemplateTemplateParmDecl{{.*}} ... U
 // CHECK-NEXT:       TemplateTypeParmDecl{{.*}} typename
 
@@ -710,12 +713,12 @@ namespace TestTemplateArgument {
   template<int> class testIntegral { };
   template class testIntegral<1>;
   // CHECK:      ClassTemplateSpecializationDecl{{.*}} class testIntegral
-  // CHECK:        TemplateArgument{{.*}} integral 1
+  // CHECK:        TemplateArgument{{.*}} integral '1'
 
   template<template<typename> class> class testTemplate { };
   template class testTemplate<A>;
   // CHECK:      ClassTemplateSpecializationDecl{{.*}} class testTemplate
-  // CHECK:        TemplateArgument{{.*}} A
+  // CHECK:        TemplateArgument{{.*}} 'TestTemplateArgument::A'{{$}}
 
   template<template<typename> class ...T> class C {
     B<T...> testTemplateExpansion;
@@ -731,10 +734,10 @@ namespace TestTemplateArgument {
   template<int, int ...> class testPack { };
   template class testPack<0, 1, 2>;
   // CHECK:      ClassTemplateSpecializationDecl{{.*}} class testPack
-  // CHECK:        TemplateArgument{{.*}} integral 0
+  // CHECK:        TemplateArgument{{.*}} integral '0'
   // CHECK-NEXT:   TemplateArgument{{.*}} pack
-  // CHECK-NEXT:     TemplateArgument{{.*}} integral 1
-  // CHECK-NEXT:     TemplateArgument{{.*}} integral 2
+  // CHECK-NEXT:     TemplateArgument{{.*}} integral '1'
+  // CHECK-NEXT:     TemplateArgument{{.*}} integral '2'
 }
 
 namespace testUsingDecl {

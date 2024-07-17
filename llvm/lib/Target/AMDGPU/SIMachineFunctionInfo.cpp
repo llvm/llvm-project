@@ -26,7 +26,7 @@
 #include <optional>
 #include <vector>
 
-#define MAX_LANES 64
+enum { MAX_LANES = 64 };
 
 using namespace llvm;
 
@@ -83,7 +83,6 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     if (CC != CallingConv::AMDGPU_Gfx)
       ArgInfo = AMDGPUArgumentUsageInfo::FixedABIFunctionInfo;
 
-    // TODO: Pick a high register, and shift down, similar to a kernel.
     FrameOffsetReg = AMDGPU::SGPR33;
     StackPtrOffsetReg = AMDGPU::SGPR32;
 
@@ -233,6 +232,12 @@ Register SIMachineFunctionInfo::addFlatScratchInit(const SIRegisterInfo &TRI) {
   return ArgInfo.FlatScratchInit.getRegister();
 }
 
+Register SIMachineFunctionInfo::addPrivateSegmentSize(const SIRegisterInfo &TRI) {
+  ArgInfo.PrivateSegmentSize = ArgDescriptor::createRegister(getNextUserSGPR());
+  NumUserSGPRs += 1;
+  return ArgInfo.PrivateSegmentSize.getRegister();
+}
+
 Register SIMachineFunctionInfo::addImplicitBufferPtr(const SIRegisterInfo &TRI) {
   ArgInfo.ImplicitBufferPtr = ArgDescriptor::createRegister(TRI.getMatchingSuperReg(
     getNextUserSGPR(), AMDGPU::sub0, &AMDGPU::SReg_64RegClass));
@@ -353,8 +358,7 @@ bool SIMachineFunctionInfo::allocateVirtualVGPRForSGPRSpills(
     LaneVGPR = SpillVGPRs.back();
   }
 
-  SGPRSpillsToVirtualVGPRLanes[FI].push_back(
-      SIRegisterInfo::SpilledReg(LaneVGPR, LaneIndex));
+  SGPRSpillsToVirtualVGPRLanes[FI].emplace_back(LaneVGPR, LaneIndex);
   return true;
 }
 
@@ -388,8 +392,7 @@ bool SIMachineFunctionInfo::allocatePhysicalVGPRForSGPRSpills(
     LaneVGPR = SpillPhysVGPRs.back();
   }
 
-  SGPRSpillsToPhysicalVGPRLanes[FI].push_back(
-      SIRegisterInfo::SpilledReg(LaneVGPR, LaneIndex));
+  SGPRSpillsToPhysicalVGPRLanes[FI].emplace_back(LaneVGPR, LaneIndex);
   return true;
 }
 

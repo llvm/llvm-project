@@ -22,20 +22,20 @@ int main(int, char**)
     {
 //  queue(const Container&, const Alloc&);
 //  The '45' is not an allocator
-    std::queue que(std::list<int>{1,2,3}, 45);  // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'queue'}}
+    std::queue que(std::list<int>{1,2,3}, 45);  // expected-error-re {{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}queue'}}
     }
 
     {
 //  queue(const queue&, const Alloc&);
 //  The '45' is not an allocator
     std::queue<int> source;
-    std::queue que(source, 45);  // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'queue'}}
+    std::queue que(source, 45);  // expected-error-re {{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}queue'}}
     }
 
 //  Test the implicit deduction guides
     {
 //  queue (allocator &)
-    std::queue que((std::allocator<int>()));  // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'queue'}}
+    std::queue que((std::allocator<int>()));  // expected-error-re {{no viable constructor or deduction guide for deduction of template arguments of '{{(std::)?}}queue'}}
 //  Note: The extra parens are necessary, since otherwise clang decides it is a function declaration.
 //  Also, we can't use {} instead of parens, because that constructs a
 //      stack<allocator<int>, allocator<allocator<int>>>

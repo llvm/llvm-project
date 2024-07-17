@@ -186,3 +186,49 @@ TEST(ToAPValue, FunctionPointersC) {
     ASSERT_EQ(I, 17);
   }
 }
+
+TEST(ToAPValue, MemberPointers) {
+  constexpr char Code[] = "struct S {\n"
+                          "  int m, n;\n"
+                          "};\n"
+                          "constexpr int S::*pm = &S::m;\n"
+                          "constexpr int S::*nn = nullptr;\n";
+
+  auto AST = tooling::buildASTFromCodeWithArgs(
+      Code, {"-fexperimental-new-constant-interpreter"});
+
+  auto &Ctx = AST->getASTContext().getInterpContext();
+  Program &Prog = Ctx.getProgram();
+
+  auto getDecl = [&](const char *Name) -> const ValueDecl * {
+    auto Nodes =
+        match(valueDecl(hasName(Name)).bind("var"), AST->getASTContext());
+    assert(Nodes.size() == 1);
+    const auto *D = Nodes[0].getNodeAs<ValueDecl>("var");
+    assert(D);
+    return D;
+  };
+
+  auto getGlobalPtr = [&](const char *Name) -> Pointer {
+    const VarDecl *D = cast<VarDecl>(getDecl(Name));
+    return Prog.getPtrGlobal(*Prog.getGlobal(D));
+  };
+
+  {
+    const Pointer &GP = getGlobalPtr("pm");
+    ASSERT_TRUE(GP.isLive());
+    const MemberPointer &FP = GP.deref<MemberPointer>();
+    APValue A = FP.toAPValue();
+    ASSERT_EQ(A.getMemberPointerDecl(), getDecl("m"));
+    ASSERT_EQ(A.getKind(), APValue::MemberPointer);
+  }
+
+  {
+    const Pointer &GP = getGlobalPtr("nn");
+    ASSERT_TRUE(GP.isLive());
+    const MemberPointer &NP = GP.deref<MemberPointer>();
+    ASSERT_TRUE(NP.isZero());
+    APValue A = NP.toAPValue();
+    ASSERT_EQ(A.getKind(), APValue::MemberPointer);
+  }
+}

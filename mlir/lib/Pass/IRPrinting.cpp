@@ -271,7 +271,7 @@ createTreePrinterOutputPath(Operation *op, llvm::StringRef passArgument,
   if (failed(createDirectoryOrPrintErr(path)))
     return nullptr;
 
-  for (auto [opName, symbolName] : opAndSymbolNames) {
+  for (const auto &[opName, symbolName] : opAndSymbolNames) {
     llvm::sys::path::append(path, opName + "_" + symbolName);
     if (failed(createDirectoryOrPrintErr(path)))
       return nullptr;

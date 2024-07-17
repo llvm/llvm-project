@@ -406,7 +406,7 @@ func.func @avoidable_spill(%a: vector<[4]xf32>, %b: vector<[4]xf32>, %c: vector<
 // CHECK: arm_sme.get_tile {tile_id = 2 : i32} : vector<[4]x[4]xf32>
 // CHECK: arm_sme.get_tile {tile_id = 3 : i32} : vector<[4]x[4]xf32>
 // CHECK: arm_sme.move_vector_to_tile_slice {{.*}} {tile_id = 0 : i32} : vector<[4]xf32> into vector<[4]x[4]xf32>
-// CHECK-NOT tile_id = 16
+// CHECK-NOT: tile_id = 16
 func.func @cond_branch_with_backedge(%slice: vector<[4]xf32>) {
   %tileA = arm_sme.get_tile : vector<[4]x[4]xf32>
   %tileB = arm_sme.get_tile : vector<[4]x[4]xf32>

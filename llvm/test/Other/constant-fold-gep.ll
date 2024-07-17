@@ -104,7 +104,7 @@
 
 ; Fold GEP of a GEP. Very simple cases are folded without targetdata.
 
-; PLAIN: @Y = global ptr getelementptr inbounds ([3 x { i32, i32 }], ptr @ext, i64 2)
+; PLAIN: @Y = global ptr getelementptr inbounds ([3 x { i32, i32 }], ptr getelementptr inbounds ([3 x { i32, i32 }], ptr @ext, i64 1), i64 1)
 ; PLAIN: @Z = global ptr getelementptr inbounds (i32, ptr getelementptr inbounds ([3 x { i32, i32 }], ptr @ext, i64 0, i64 1, i32 0), i64 1)
 ; OPT: @Y = local_unnamed_addr global ptr getelementptr inbounds (i8, ptr @ext, i64 48)
 ; OPT: @Z = local_unnamed_addr global ptr getelementptr inbounds (i8, ptr @ext, i64 12)
@@ -471,17 +471,18 @@ define ptr @same_addrspace() nounwind noinline {
 @gv2 = internal global [1 x i32] [ i32 2 ]
 @gv3 = internal global [1 x i32] [ i32 2 ]
 
-; Handled by TI-independent constant folder
 define i1 @gv_gep_vs_gv() {
-  ret i1 icmp eq (ptr @gv2, ptr @gv1)
+  %cmp = icmp eq ptr @gv2, @gv1
+  ret i1 %cmp
 }
-; PLAIN: gv_gep_vs_gv
-; PLAIN: ret i1 false
+; OPT: gv_gep_vs_gv
+; OPT: ret i1 false
 
 define i1 @gv_gep_vs_gv_gep() {
-  ret i1 icmp eq (ptr @gv2, ptr @gv3)
+  %cmp = icmp eq ptr @gv2, @gv3
+  ret i1 %cmp
 }
-; PLAIN: gv_gep_vs_gv_gep
-; PLAIN: ret i1 false
+; OPT: gv_gep_vs_gv_gep
+; OPT: ret i1 false
 
 ; CHECK: attributes #0 = { nounwind }

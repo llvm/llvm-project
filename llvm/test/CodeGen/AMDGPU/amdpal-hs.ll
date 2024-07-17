@@ -12,6 +12,7 @@
 ; GCN-NEXT:         .scratch_memory_size: 0
 ; GCN:     .registers:
 ; GCN-NEXT:       '0x2d0a (SPI_SHADER_PGM_RSRC1_HS)': 0
+; GCN-NEXT:       '0x2d0b (SPI_SHADER_PGM_RSRC2_HS)': 0
 ; GCN-NEXT: ...
 ; GCN-NEXT:         .end_amdgpu_pal_metadata
 define amdgpu_hs half @hs_amdpal(half %arg0) {

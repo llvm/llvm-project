@@ -89,18 +89,13 @@ def LinalgInlineScalarOperandsPass : Pass<"linalg-inline-scalar-operands"> {
   ];
 }
 
-def LinalgBufferizePass : Pass<"linalg-bufferize"> {
-  let summary = "Bufferize the linalg dialect";
-  let dependentDialects = [
-    "affine::AffineDialect",
-    "bufferization::BufferizationDialect",
-    "linalg::LinalgDialect",
-    "memref::MemRefDialect",
-  ];
-}
-
 def LinalgGeneralizeNamedOpsPass : Pass<"linalg-generalize-named-ops"> {
   let summary = "Convert named ops into generic ops";
+  let dependentDialects = ["linalg::LinalgDialect"];
+}
+
+def LinalgSpecializeGenericOpsPass : Pass<"linalg-specialize-generic-ops"> {
+  let summary = "Convert generic ops back to named ops";
   let dependentDialects = ["linalg::LinalgDialect"];
 }
 

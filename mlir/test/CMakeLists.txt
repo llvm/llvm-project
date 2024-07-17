@@ -105,6 +105,7 @@ set(MLIR_TEST_DEPENDS
   mlir-capi-llvm-test
   mlir-capi-pass-test
   mlir-capi-quant-test
+  mlir-capi-rewrite-test
   mlir-capi-sparse-tensor-test
   mlir-capi-transform-test
   mlir-capi-transform-interpreter-test
@@ -217,12 +218,12 @@ endif()
 add_custom_target(check-mlir-build-only
   DEPENDS ${MLIR_TEST_DEPENDS}
 )
+set_target_properties(check-mlir-build-only PROPERTIES FOLDER "MLIR/Tests")
 
 add_lit_testsuite(check-mlir "Running the MLIR regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS ${MLIR_TEST_DEPENDS}
   )
-set_target_properties(check-mlir PROPERTIES FOLDER "Tests")
 
 add_lit_testsuites(MLIR ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${MLIR_TEST_DEPENDS}

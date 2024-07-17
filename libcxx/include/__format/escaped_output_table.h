@@ -833,7 +833,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[711] = {
 /// more details.
 
 ///
-/// \pre The code point is a valid Unicode code point.
+/// \\pre The code point is a valid Unicode code point.
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool __needs_escape(const char32_t __code_point) noexcept {
 
   // The entries in the gap at the end.

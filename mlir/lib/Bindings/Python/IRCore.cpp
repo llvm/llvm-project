@@ -108,6 +108,7 @@ Args:
     and report failures in a more robust fashion. Set this to True if doing this
     in order to avoid running a redundant verification. If the IR is actually
     invalid, behavior is undefined.
+  skip_regions: Whether to skip printing regions. Defaults to False.
 )";
 
 static const char kOperationPrintStateDocstring[] =
@@ -697,6 +698,17 @@ void PyMlirContext::clearOperationsInside(MlirOperation op) {
   clearOperationsInside(opRef->getOperation());
 }
 
+void PyMlirContext::clearOperationAndInside(PyOperationBase &op) {
+  MlirOperationWalkCallback invalidatingCallback = [](MlirOperation op,
+                                                      void *userData) {
+    PyMlirContextRef &contextRef = *static_cast<PyMlirContextRef *>(userData);
+    contextRef->clearOperation(op);
+    return MlirWalkResult::MlirWalkResultAdvance;
+  };
+  mlirOperationWalk(op.getOperation(), invalidatingCallback,
+                    &op.getOperation().getContext(), MlirWalkPreOrder);
+}
+
 size_t PyMlirContext::getLiveModuleCount() { return liveModules.size(); }
 
 pybind11::object PyMlirContext::contextEnter() {
@@ -1125,12 +1137,16 @@ PyOperation::~PyOperation() {
   // If the operation has already been invalidated there is nothing to do.
   if (!valid)
     return;
-  auto &liveOperations = getContext()->liveOperations;
-  assert(liveOperations.count(operation.ptr) == 1 &&
-         "destroying operation not in live map");
-  liveOperations.erase(operation.ptr);
-  if (!isAttached()) {
-    mlirOperationDestroy(operation);
+
+  // Otherwise, invalidate the operation and remove it from live map when it is
+  // attached.
+  if (isAttached()) {
+    getContext()->clearOperation(*this);
+  } else {
+    // And destroy it when it is detached, i.e. owned by Python, in which case
+    // all nested operations must be invalidated at removed from the live map as
+    // well.
+    erase();
   }
 }
 
@@ -1206,7 +1222,7 @@ void PyOperationBase::print(std::optional<int64_t> largeElementsLimit,
                             bool enableDebugInfo, bool prettyDebugInfo,
                             bool printGenericOpForm, bool useLocalScope,
                             bool assumeVerified, py::object fileObject,
-                            bool binary) {
+                            bool binary, bool skipRegions) {
   PyOperation &operation = getOperation();
   operation.checkValid();
   if (fileObject.is_none())
@@ -1224,6 +1240,8 @@ void PyOperationBase::print(std::optional<int64_t> largeElementsLimit,
     mlirOpPrintingFlagsUseLocalScope(flags);
   if (assumeVerified)
     mlirOpPrintingFlagsAssumeVerified(flags);
+  if (skipRegions)
+    mlirOpPrintingFlagsSkipRegions(flags);
 
   PyFileAccumulator accum(fileObject, binary);
   mlirOperationPrintWithFlags(operation, flags, accum.getCallback(),
@@ -1299,7 +1317,7 @@ py::object PyOperationBase::getAsm(bool binary,
                                    std::optional<int64_t> largeElementsLimit,
                                    bool enableDebugInfo, bool prettyDebugInfo,
                                    bool printGenericOpForm, bool useLocalScope,
-                                   bool assumeVerified) {
+                                   bool assumeVerified, bool skipRegions) {
   py::object fileObject;
   if (binary) {
     fileObject = py::module::import("io").attr("BytesIO")();
@@ -1313,7 +1331,8 @@ py::object PyOperationBase::getAsm(bool binary,
         /*useLocalScope=*/useLocalScope,
         /*assumeVerified=*/assumeVerified,
         /*fileObject=*/fileObject,
-        /*binary=*/binary);
+        /*binary=*/binary,
+        /*skipRegions=*/skipRegions);
 
   return fileObject.attr("getvalue")();
 }
@@ -1540,14 +1559,8 @@ py::object PyOperation::createOpView() {
 
 void PyOperation::erase() {
   checkValid();
-  // TODO: Fix memory hazards when erasing a tree of operations for which a deep
-  // Python reference to a child operation is live. All children should also
-  // have their `valid` bit set to false.
-  auto &liveOperations = getContext()->liveOperations;
-  if (liveOperations.count(operation.ptr))
-    liveOperations.erase(operation.ptr);
+  getContext()->clearOperationAndInside(*this);
   mlirOperationDestroy(operation);
-  valid = false;
 }
 
 //------------------------------------------------------------------------------
@@ -3034,7 +3047,8 @@ void mlir::python::populateIRCore(py::module &m) {
                                /*prettyDebugInfo=*/false,
                                /*printGenericOpForm=*/false,
                                /*useLocalScope=*/false,
-                               /*assumeVerified=*/false);
+                               /*assumeVerified=*/false,
+                               /*skipRegions=*/false);
           },
           "Returns the assembly form of the operation.")
       .def("print",
@@ -3044,7 +3058,8 @@ void mlir::python::populateIRCore(py::module &m) {
            py::arg("binary") = false, kOperationPrintStateDocstring)
       .def("print",
            py::overload_cast<std::optional<int64_t>, bool, bool, bool, bool,
-                             bool, py::object, bool>(&PyOperationBase::print),
+                             bool, py::object, bool, bool>(
+               &PyOperationBase::print),
            // Careful: Lots of arguments must match up with print method.
            py::arg("large_elements_limit") = py::none(),
            py::arg("enable_debug_info") = false,
@@ -3052,7 +3067,8 @@ void mlir::python::populateIRCore(py::module &m) {
            py::arg("print_generic_op_form") = false,
            py::arg("use_local_scope") = false,
            py::arg("assume_verified") = false, py::arg("file") = py::none(),
-           py::arg("binary") = false, kOperationPrintDocstring)
+           py::arg("binary") = false, py::arg("skip_regions") = false,
+           kOperationPrintDocstring)
       .def("write_bytecode", &PyOperationBase::writeBytecode, py::arg("file"),
            py::arg("desired_version") = py::none(),
            kOperationPrintBytecodeDocstring)
@@ -3064,7 +3080,8 @@ void mlir::python::populateIRCore(py::module &m) {
            py::arg("pretty_debug_info") = false,
            py::arg("print_generic_op_form") = false,
            py::arg("use_local_scope") = false,
-           py::arg("assume_verified") = false, kOperationGetAsmDocstring)
+           py::arg("assume_verified") = false, py::arg("skip_regions") = false,
+           kOperationGetAsmDocstring)
       .def("verify", &PyOperationBase::verify,
            "Verify the operation. Raises MLIRError if verification fails, and "
            "returns true otherwise.")
@@ -3229,6 +3246,19 @@ void mlir::python::populateIRCore(py::module &m) {
             return PyBlockArgumentList(self.getParentOperation(), self.get());
           },
           "Returns a list of block arguments.")
+      .def(
+          "add_argument",
+          [](PyBlock &self, const PyType &type, const PyLocation &loc) {
+            return mlirBlockAddArgument(self.get(), type, loc);
+          },
+          "Append an argument of the specified type to the block and returns "
+          "the newly added argument.")
+      .def(
+          "erase_argument",
+          [](PyBlock &self, unsigned index) {
+            return mlirBlockEraseArgument(self.get(), index);
+          },
+          "Erase the argument at 'index' and remove it from the argument list.")
       .def_property_readonly(
           "operations",
           [](PyBlock &self) {

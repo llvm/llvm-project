@@ -622,9 +622,20 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// At the moment, we cannot lower tensor.unpack with outer_dims_perm.
-func.func @diagnostic_unpack(%arg0: tensor<32x64xf32>, %arg1: tensor<2x4x32x8xf32>) -> tensor<32x64xf32> {
-  // expected-note @below {{target payload op}}
+// CHECK-LABEL: @unpack_with_outer_dims_perm
+//  CHECK-SAME: %[[ARG0:.*]]: tensor<32x64xf32>, %[[ARG1:.*]]: tensor<2x4x32x8xf32>
+//       CHECK: %[[EMPTY:.*]] = tensor.empty() : tensor<4x8x2x32xf32>
+//       CHECK: %[[TRAN:.*]] = linalg.transpose 
+//  CHECK-SAME:   ins(%[[ARG1]] : tensor<2x4x32x8xf32>) 
+//  CHECK-SAME:   outs(%[[EMPTY]] : tensor<4x8x2x32xf32>) 
+//  CHECK-SAME:   permutation = [1, 3, 0, 2]
+//       CHECK: %[[CLP:.*]] = tensor.collapse_shape %[[TRAN]] {{\[}}[0, 1], [2, 3]]
+//  CHECK-SAME:   : tensor<4x8x2x32xf32> into tensor<32x64xf32>
+//       CHECK: %[[SLICE:.*]] = tensor.extract_slice %[[CLP]][0, 0] [32, 64] [1, 1]
+//  CHECK-SAME:   : tensor<32x64xf32> to tensor<32x64xf32>
+//       CHECK: linalg.copy ins(%[[SLICE]]
+//  CHECK-SAME:   : tensor<32x64xf32>) outs(%[[ARG0]] : tensor<32x64xf32>) -> tensor<32x64xf32>
+func.func @unpack_with_outer_dims_perm(%arg0: tensor<32x64xf32>, %arg1: tensor<2x4x32x8xf32>) -> tensor<32x64xf32> {
   %unpack = tensor.unpack %arg1 outer_dims_perm = [1, 0] 
     inner_dims_pos = [1, 0] inner_tiles = [32, 8] into %arg0 : tensor<2x4x32x8xf32> -> tensor<32x64xf32>
   return %unpack : tensor<32x64xf32>
@@ -634,7 +645,6 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %unpack = transform.structured.match ops{["tensor.unpack"]} in %module_op
       : (!transform.any_op) -> !transform.op<"tensor.unpack">
-    // expected-error @below {{cannot lower to transpose + collapse + extract}} 
     transform.structured.lower_unpack %unpack : (!transform.op<"tensor.unpack">)
       -> (!transform.op<"tensor.empty">,
           !transform.op<"linalg.transpose">,

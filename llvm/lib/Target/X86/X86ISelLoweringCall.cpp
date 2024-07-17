@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
 
 #define DEBUG_TYPE "x86-isel"
 
@@ -417,7 +418,8 @@ unsigned X86TargetLowering::getJumpTableEncoding() const {
   if (isPositionIndependent() && Subtarget.isPICStyleGOT())
     return MachineJumpTableInfo::EK_Custom32;
   if (isPositionIndependent() &&
-      getTargetMachine().getCodeModel() == CodeModel::Large)
+      getTargetMachine().getCodeModel() == CodeModel::Large &&
+      !Subtarget.isTargetCOFF())
     return MachineJumpTableInfo::EK_LabelDifference64;
 
   // Otherwise, use the normal jump table encoding heuristics.

@@ -143,7 +143,7 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
         writeIndexToFile(Index, OS);
 
         Path = OutputFileName + "index.dot";
-        raw_fd_ostream OSDot(Path, EC, sys::fs::OpenFlags::OF_None);
+        raw_fd_ostream OSDot(Path, EC, sys::fs::OpenFlags::OF_Text);
         if (EC)
           reportOpenError(Path, EC.message());
         Index.exportToDot(OSDot, GUIDPreservedSymbols);
@@ -191,12 +191,8 @@ static void RegisterPassPlugins(ArrayRef<std::string> PassPlugins,
   // Load requested pass plugins and let them register pass builder callbacks
   for (auto &PluginFN : PassPlugins) {
     auto PassPlugin = PassPlugin::Load(PluginFN);
-    if (!PassPlugin) {
-      errs() << "Failed to load passes from '" << PluginFN
-             << "'. Request ignored.\n";
-      continue;
-    }
-
+    if (!PassPlugin)
+      report_fatal_error(PassPlugin.takeError(), /*gen_crash_diag=*/false);
     PassPlugin->registerPassBuilderCallbacks(PB);
   }
 }

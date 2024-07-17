@@ -38,8 +38,8 @@ struct ExpectedProfilingFileHeader {
 void ValidateFileHeaderBlock(XRayBuffer B) {
   ASSERT_NE(static_cast<const void *>(B.Data), nullptr);
   ASSERT_EQ(B.Size, sizeof(ExpectedProfilingFileHeader));
-  typename std::aligned_storage<sizeof(ExpectedProfilingFileHeader)>::type
-      FileHeaderStorage;
+  alignas(ExpectedProfilingFileHeader)
+      std::byte FileHeaderStorage[sizeof(ExpectedProfilingFileHeader)];
   ExpectedProfilingFileHeader ExpectedHeader;
   std::memcpy(&FileHeaderStorage, B.Data, B.Size);
   auto &FileHeader =

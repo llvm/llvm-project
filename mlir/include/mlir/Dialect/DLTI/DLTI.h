@@ -18,114 +18,13 @@
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 
 namespace mlir {
-namespace impl {
-class DataLayoutEntryStorage;
-class DataLayoutSpecStorage;
-} // namespace impl
-
-//===----------------------------------------------------------------------===//
-// DataLayoutEntryAttr
-//===----------------------------------------------------------------------===//
-
-/// A data layout entry attribute is a key-value pair where the key is a type or
-/// an identifier and the value is another attribute. These entries form a data
-/// layout specification.
-class DataLayoutEntryAttr
-    : public Attribute::AttrBase<DataLayoutEntryAttr, Attribute,
-                                 impl::DataLayoutEntryStorage,
-                                 DataLayoutEntryInterface::Trait> {
-public:
-  using Base::Base;
-
-  /// The keyword used for this attribute in custom syntax.
-  constexpr const static llvm::StringLiteral kAttrKeyword = "dl_entry";
-
-  /// Returns the entry with the given key and value.
-  static DataLayoutEntryAttr get(StringAttr key, Attribute value);
-  static DataLayoutEntryAttr get(Type key, Attribute value);
-
-  /// Returns the key of this entry.
-  DataLayoutEntryKey getKey() const;
-
-  /// Returns the value of this entry.
-  Attribute getValue() const;
-
-  /// Parses an instance of this attribute.
-  static DataLayoutEntryAttr parse(AsmParser &parser);
-
-  /// Prints this attribute.
-  void print(AsmPrinter &os) const;
-
-  static constexpr StringLiteral name = "builtin.data_layout_entry";
-};
-
-//===----------------------------------------------------------------------===//
-// DataLayoutSpecAttr
-//===----------------------------------------------------------------------===//
-
-/// A data layout specification is a list of entries that specify (partial) data
-/// layout information. It is expected to be attached to operations that serve
-/// as scopes for data layout requests.
-class DataLayoutSpecAttr
-    : public Attribute::AttrBase<DataLayoutSpecAttr, Attribute,
-                                 impl::DataLayoutSpecStorage,
-                                 DataLayoutSpecInterface::Trait> {
-public:
-  using Base::Base;
-
-  /// The keyword used for this attribute in custom syntax.
-  constexpr const static StringLiteral kAttrKeyword = "dl_spec";
-
-  /// Returns the specification containing the given list of keys.
-  static DataLayoutSpecAttr get(MLIRContext *ctx,
-                                ArrayRef<DataLayoutEntryInterface> entries);
-
-  /// Returns the specification containing the given list of keys. If the list
-  /// contains duplicate keys or is otherwise invalid, reports errors using the
-  /// given callback and returns null.
-  static DataLayoutSpecAttr
-  getChecked(function_ref<InFlightDiagnostic()> emitError, MLIRContext *context,
-             ArrayRef<DataLayoutEntryInterface> entries);
-
-  /// Checks that the given list of entries does not contain duplicate keys.
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              ArrayRef<DataLayoutEntryInterface> entries);
-
-  /// Combines this specification with `specs`, enclosing specifications listed
-  /// from outermost to innermost. This overwrites the older entries with the
-  /// same key as the newer entries if the entries are compatible. Returns null
-  /// if the specifications are not compatible.
-  DataLayoutSpecAttr combineWith(ArrayRef<DataLayoutSpecInterface> specs) const;
-
-  /// Returns the list of entries.
-  DataLayoutEntryListRef getEntries() const;
-
-  /// Returns the endiannes identifier.
-  StringAttr getEndiannessIdentifier(MLIRContext *context) const;
-
-  /// Returns the alloca memory space identifier.
-  StringAttr getAllocaMemorySpaceIdentifier(MLIRContext *context) const;
-
-  /// Returns the program memory space identifier.
-  StringAttr getProgramMemorySpaceIdentifier(MLIRContext *context) const;
-
-  /// Returns the global memory space identifier.
-  StringAttr getGlobalMemorySpaceIdentifier(MLIRContext *context) const;
-
-  /// Returns the stack alignment identifier.
-  StringAttr getStackAlignmentIdentifier(MLIRContext *context) const;
-
-  /// Parses an instance of this attribute.
-  static DataLayoutSpecAttr parse(AsmParser &parser);
-
-  /// Prints this attribute.
-  void print(AsmPrinter &os) const;
-
-  static constexpr StringLiteral name = "builtin.data_layout_spec";
-};
-
+namespace detail {
+class DataLayoutEntryAttrStorage;
+} // namespace detail
 } // namespace mlir
 
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/DLTI/DLTIAttrs.h.inc"
 #include "mlir/Dialect/DLTI/DLTIDialect.h.inc"
 
 #endif // MLIR_DIALECT_DLTI_DLTI_H

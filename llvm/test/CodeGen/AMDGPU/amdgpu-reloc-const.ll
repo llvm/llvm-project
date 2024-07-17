@@ -17,7 +17,7 @@
 define amdgpu_ps void @ps_main(i32 %arg, i32 inreg %arg1, i32 inreg %arg2) local_unnamed_addr #0 {
   %rc = call i32 @llvm.amdgcn.reloc.constant(metadata !1)
   %rcf = bitcast i32 %rc to float
-  call void @llvm.amdgcn.exp.f32(i32 immarg 40, i32 immarg 15, float %rcf, float undef, float undef, float undef, i1 immarg false, i1 immarg false) #0
+  call void @llvm.amdgcn.exp.f32(i32 40, i32 15, float %rcf, float undef, float undef, float undef, i1 false, i1 false) #0
   ret void
 }
 

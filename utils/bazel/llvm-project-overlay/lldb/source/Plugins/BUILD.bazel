@@ -344,6 +344,7 @@ cc_library(
         "//lldb:SymbolHeaders",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:BinaryFormat",
         "//llvm:DebugInfoDWARF",
         "//llvm:Demangle",
         "//llvm:Object",
@@ -1963,6 +1964,7 @@ cc_library(
         ":PluginProcessMinidump",
         ":PluginProcessUtility",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
@@ -1972,6 +1974,7 @@ cc_library(
         "//llvm:BinaryFormat",
         "//llvm:Object",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 

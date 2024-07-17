@@ -19,31 +19,31 @@ define void @switch_4_arms(i32 %in, ptr %out) nounwind {
 ; LA32-NEXT:    ori $a2, $zero, 2
 ; LA32-NEXT:    blt $a2, $a0, .LBB0_4
 ; LA32-NEXT:  # %bb.1: # %entry
-; LA32-NEXT:    ori $a3, $zero, 1
-; LA32-NEXT:    beq $a0, $a3, .LBB0_7
+; LA32-NEXT:    ori $a2, $zero, 1
+; LA32-NEXT:    beq $a0, $a2, .LBB0_7
 ; LA32-NEXT:  # %bb.2: # %entry
-; LA32-NEXT:    bne $a0, $a2, .LBB0_9
+; LA32-NEXT:    ori $a2, $zero, 2
+; LA32-NEXT:    bne $a0, $a2, .LBB0_10
 ; LA32-NEXT:  # %bb.3: # %bb2
 ; LA32-NEXT:    ori $a0, $zero, 3
-; LA32-NEXT:    st.w $a0, $a1, 0
-; LA32-NEXT:    ret
+; LA32-NEXT:    b .LBB0_9
 ; LA32-NEXT:  .LBB0_4: # %entry
-; LA32-NEXT:    ori $a3, $zero, 3
-; LA32-NEXT:    beq $a0, $a3, .LBB0_8
+; LA32-NEXT:    ori $a2, $zero, 3
+; LA32-NEXT:    beq $a0, $a2, .LBB0_8
 ; LA32-NEXT:  # %bb.5: # %entry
 ; LA32-NEXT:    ori $a2, $zero, 4
-; LA32-NEXT:    bne $a0, $a2, .LBB0_9
+; LA32-NEXT:    bne $a0, $a2, .LBB0_10
 ; LA32-NEXT:  # %bb.6: # %bb4
 ; LA32-NEXT:    ori $a0, $zero, 1
-; LA32-NEXT:    st.w $a0, $a1, 0
-; LA32-NEXT:    ret
+; LA32-NEXT:    b .LBB0_9
 ; LA32-NEXT:  .LBB0_7: # %bb1
 ; LA32-NEXT:    ori $a0, $zero, 4
-; LA32-NEXT:    st.w $a0, $a1, 0
-; LA32-NEXT:    ret
+; LA32-NEXT:    b .LBB0_9
 ; LA32-NEXT:  .LBB0_8: # %bb3
-; LA32-NEXT:    st.w $a2, $a1, 0
+; LA32-NEXT:    ori $a0, $zero, 2
 ; LA32-NEXT:  .LBB0_9: # %exit
+; LA32-NEXT:    st.w $a0, $a1, 0
+; LA32-NEXT:  .LBB0_10: # %exit
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: switch_4_arms:
@@ -52,80 +52,86 @@ define void @switch_4_arms(i32 %in, ptr %out) nounwind {
 ; LA64-NEXT:    ori $a2, $zero, 2
 ; LA64-NEXT:    blt $a2, $a0, .LBB0_4
 ; LA64-NEXT:  # %bb.1: # %entry
-; LA64-NEXT:    ori $a3, $zero, 1
-; LA64-NEXT:    beq $a0, $a3, .LBB0_7
+; LA64-NEXT:    ori $a2, $zero, 1
+; LA64-NEXT:    beq $a0, $a2, .LBB0_7
 ; LA64-NEXT:  # %bb.2: # %entry
-; LA64-NEXT:    bne $a0, $a2, .LBB0_9
+; LA64-NEXT:    ori $a2, $zero, 2
+; LA64-NEXT:    bne $a0, $a2, .LBB0_10
 ; LA64-NEXT:  # %bb.3: # %bb2
 ; LA64-NEXT:    ori $a0, $zero, 3
-; LA64-NEXT:    st.w $a0, $a1, 0
-; LA64-NEXT:    ret
+; LA64-NEXT:    b .LBB0_9
 ; LA64-NEXT:  .LBB0_4: # %entry
-; LA64-NEXT:    ori $a3, $zero, 3
-; LA64-NEXT:    beq $a0, $a3, .LBB0_8
+; LA64-NEXT:    ori $a2, $zero, 3
+; LA64-NEXT:    beq $a0, $a2, .LBB0_8
 ; LA64-NEXT:  # %bb.5: # %entry
 ; LA64-NEXT:    ori $a2, $zero, 4
-; LA64-NEXT:    bne $a0, $a2, .LBB0_9
+; LA64-NEXT:    bne $a0, $a2, .LBB0_10
 ; LA64-NEXT:  # %bb.6: # %bb4
 ; LA64-NEXT:    ori $a0, $zero, 1
-; LA64-NEXT:    st.w $a0, $a1, 0
-; LA64-NEXT:    ret
+; LA64-NEXT:    b .LBB0_9
 ; LA64-NEXT:  .LBB0_7: # %bb1
 ; LA64-NEXT:    ori $a0, $zero, 4
-; LA64-NEXT:    st.w $a0, $a1, 0
-; LA64-NEXT:    ret
+; LA64-NEXT:    b .LBB0_9
 ; LA64-NEXT:  .LBB0_8: # %bb3
-; LA64-NEXT:    st.w $a2, $a1, 0
+; LA64-NEXT:    ori $a0, $zero, 2
 ; LA64-NEXT:  .LBB0_9: # %exit
+; LA64-NEXT:    st.w $a0, $a1, 0
+; LA64-NEXT:  .LBB0_10: # %exit
 ; LA64-NEXT:    ret
 ;
 ; LA32-JT-LABEL: switch_4_arms:
 ; LA32-JT:       # %bb.0: # %entry
-; LA32-JT-NEXT:    addi.w $a2, $a0, -1
-; LA32-JT-NEXT:    ori $a0, $zero, 3
-; LA32-JT-NEXT:    bltu $a0, $a2, .LBB0_6
+; LA32-JT-NEXT:    addi.w $a0, $a0, -1
+; LA32-JT-NEXT:    ori $a2, $zero, 3
+; LA32-JT-NEXT:    bltu $a2, $a0, .LBB0_7
 ; LA32-JT-NEXT:  # %bb.1: # %entry
-; LA32-JT-NEXT:    pcalau12i $a3, %pc_hi20(.LJTI0_0)
-; LA32-JT-NEXT:    addi.w $a3, $a3, %pc_lo12(.LJTI0_0)
-; LA32-JT-NEXT:    alsl.w $a2, $a2, $a3, 2
-; LA32-JT-NEXT:    ld.w $a2, $a2, 0
-; LA32-JT-NEXT:    jr $a2
+; LA32-JT-NEXT:    pcalau12i $a2, %pc_hi20(.LJTI0_0)
+; LA32-JT-NEXT:    addi.w $a2, $a2, %pc_lo12(.LJTI0_0)
+; LA32-JT-NEXT:    alsl.w $a0, $a0, $a2, 2
+; LA32-JT-NEXT:    ld.w $a0, $a0, 0
+; LA32-JT-NEXT:    jr $a0
 ; LA32-JT-NEXT:  .LBB0_2: # %bb1
 ; LA32-JT-NEXT:    ori $a0, $zero, 4
-; LA32-JT-NEXT:    b .LBB0_5
+; LA32-JT-NEXT:    b .LBB0_6
 ; LA32-JT-NEXT:  .LBB0_3: # %bb3
 ; LA32-JT-NEXT:    ori $a0, $zero, 2
-; LA32-JT-NEXT:    b .LBB0_5
+; LA32-JT-NEXT:    b .LBB0_6
 ; LA32-JT-NEXT:  .LBB0_4: # %bb4
 ; LA32-JT-NEXT:    ori $a0, $zero, 1
-; LA32-JT-NEXT:  .LBB0_5: # %exit
-; LA32-JT-NEXT:    st.w $a0, $a1, 0
+; LA32-JT-NEXT:    b .LBB0_6
+; LA32-JT-NEXT:  .LBB0_5: # %bb2
+; LA32-JT-NEXT:    ori $a0, $zero, 3
 ; LA32-JT-NEXT:  .LBB0_6: # %exit
+; LA32-JT-NEXT:    st.w $a0, $a1, 0
+; LA32-JT-NEXT:  .LBB0_7: # %exit
 ; LA32-JT-NEXT:    ret
 ;
 ; LA64-JT-LABEL: switch_4_arms:
 ; LA64-JT:       # %bb.0: # %entry
 ; LA64-JT-NEXT:    addi.w $a0, $a0, 0
-; LA64-JT-NEXT:    addi.d $a2, $a0, -1
-; LA64-JT-NEXT:    ori $a0, $zero, 3
-; LA64-JT-NEXT:    bltu $a0, $a2, .LBB0_6
+; LA64-JT-NEXT:    addi.d $a0, $a0, -1
+; LA64-JT-NEXT:    ori $a2, $zero, 3
+; LA64-JT-NEXT:    bltu $a2, $a0, .LBB0_7
 ; LA64-JT-NEXT:  # %bb.1: # %entry
-; LA64-JT-NEXT:    slli.d $a2, $a2, 3
-; LA64-JT-NEXT:    pcalau12i $a3, %pc_hi20(.LJTI0_0)
-; LA64-JT-NEXT:    addi.d $a3, $a3, %pc_lo12(.LJTI0_0)
-; LA64-JT-NEXT:    ldx.d $a2, $a2, $a3
-; LA64-JT-NEXT:    jr $a2
+; LA64-JT-NEXT:    slli.d $a0, $a0, 3
+; LA64-JT-NEXT:    pcalau12i $a2, %pc_hi20(.LJTI0_0)
+; LA64-JT-NEXT:    addi.d $a2, $a2, %pc_lo12(.LJTI0_0)
+; LA64-JT-NEXT:    ldx.d $a0, $a0, $a2
+; LA64-JT-NEXT:    jr $a0
 ; LA64-JT-NEXT:  .LBB0_2: # %bb1
 ; LA64-JT-NEXT:    ori $a0, $zero, 4
-; LA64-JT-NEXT:    b .LBB0_5
+; LA64-JT-NEXT:    b .LBB0_6
 ; LA64-JT-NEXT:  .LBB0_3: # %bb3
 ; LA64-JT-NEXT:    ori $a0, $zero, 2
-; LA64-JT-NEXT:    b .LBB0_5
+; LA64-JT-NEXT:    b .LBB0_6
 ; LA64-JT-NEXT:  .LBB0_4: # %bb4
 ; LA64-JT-NEXT:    ori $a0, $zero, 1
-; LA64-JT-NEXT:  .LBB0_5: # %exit
-; LA64-JT-NEXT:    st.w $a0, $a1, 0
+; LA64-JT-NEXT:    b .LBB0_6
+; LA64-JT-NEXT:  .LBB0_5: # %bb2
+; LA64-JT-NEXT:    ori $a0, $zero, 3
 ; LA64-JT-NEXT:  .LBB0_6: # %exit
+; LA64-JT-NEXT:    st.w $a0, $a1, 0
+; LA64-JT-NEXT:  .LBB0_7: # %exit
 ; LA64-JT-NEXT:    ret
 entry:
   switch i32 %in, label %exit [

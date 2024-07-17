@@ -1,9 +1,9 @@
-# Check a common case for BOLT address translation tables. These tables are used
-# to translate profile activity happening in a bolted binary back to the
-# original binary, so you can run BOLT again, with updated profile collected
-# in a production environment that only runs bolted binaries. As BOLT only
-# takes no-bolt binaries as inputs, this translation is necessary to cover
-# this scenario.
+## Check a common case for BOLT address translation tables. These tables are used
+## to translate profile activity happening in a bolted binary back to the
+## original binary, so you can run BOLT again, with updated profile collected
+## in a production environment that only runs bolted binaries. As BOLT only
+## takes no-bolt binaries as inputs, this translation is necessary to cover
+## this scenario.
 #
 # RUN: yaml2obj %p/Inputs/blarge.yaml &> %t.exe
 # RUN: llvm-bolt %t.exe -o %t.out --data %p/Inputs/blarge.fdata \
@@ -11,28 +11,28 @@
 # RUN: llvm-bat-dump %t.out --dump-all \
 # RUN:   --translate=0x401180 | FileCheck %s --check-prefix=CHECK-BAT-DUMP
 #
-# In this test we focus on function usqrt at address 0x401170. This is a
-# non-reloc binary case, so we don't expect this address to change, that's
-# why we hardcode its address here. This address also comes hardcoded in the
-# blarge.yaml input file.
-#
-# This is the layout of the function before BOLT reorder blocks:
-#
-#    BB Layout   : .LBB02, .Ltmp39, .LFT1, .Ltmp38, .LFT2
-#
-# This is the layout of the function after BOLT reorder blocks:
-#
-#    BB Layout   : .LBB02, .Ltmp38, .Ltmp39, .LFT2, .LFT3
-#
-# .Ltmp38 is originally at offset 0x39 but gets moved to 0xc (see full dump
-# below).
-#
-# We check that BAT is able to translate references happening in .Ltmp38 to
-# its original offset.
-#
+## In this test we focus on function usqrt at address 0x401170. This is a
+## non-reloc binary case, so we don't expect this address to change, that's
+## why we hardcode its address here. This address also comes hardcoded in the
+## blarge.yaml input file.
+##
+## This is the layout of the function before BOLT reorder blocks:
+##
+##    BB Layout   : .LBB02, .Ltmp39, .LFT1, .Ltmp38, .LFT2
+##
+## This is the layout of the function after BOLT reorder blocks:
+##
+##    BB Layout   : .LBB02, .Ltmp38, .Ltmp39, .LFT2, .LFT3
+##
+## .Ltmp38 is originally at offset 0x39 but gets moved to 0xc (see full dump
+## below).
+##
+## We check that BAT is able to translate references happening in .Ltmp38 to
+## its original offset.
+##
 
-# This binary has 3 functions with profile, all of them are split, so 6 maps.
-# BAT creates one map per function fragment.
+## This binary has 3 functions with profile, all of them are split, so 6 maps.
+## BAT creates one map per function fragment.
 #
 # CHECK:      BOLT: 3 out of 7 functions were overwritten.
 # CHECK:      BOLT-INFO: Wrote 6 BAT maps

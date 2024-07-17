@@ -954,6 +954,32 @@ LLVMTypeRef LLVMTargetExtTypeInContext(LLVMContextRef C, const char *Name,
       TargetExtType::get(*unwrap(C), Name, TypeParamArray, IntParamArray));
 }
 
+const char *LLVMGetTargetExtTypeName(LLVMTypeRef TargetExtTy) {
+  TargetExtType *Type = unwrap<TargetExtType>(TargetExtTy);
+  return Type->getName().data();
+}
+
+unsigned LLVMGetTargetExtTypeNumTypeParams(LLVMTypeRef TargetExtTy) {
+  TargetExtType *Type = unwrap<TargetExtType>(TargetExtTy);
+  return Type->getNumTypeParameters();
+}
+
+LLVMTypeRef LLVMGetTargetExtTypeTypeParam(LLVMTypeRef TargetExtTy,
+                                          unsigned Idx) {
+  TargetExtType *Type = unwrap<TargetExtType>(TargetExtTy);
+  return wrap(Type->getTypeParameter(Idx));
+}
+
+unsigned LLVMGetTargetExtTypeNumIntParams(LLVMTypeRef TargetExtTy) {
+  TargetExtType *Type = unwrap<TargetExtType>(TargetExtTy);
+  return Type->getNumIntParameters();
+}
+
+unsigned LLVMGetTargetExtTypeIntParam(LLVMTypeRef TargetExtTy, unsigned Idx) {
+  TargetExtType *Type = unwrap<TargetExtType>(TargetExtTy);
+  return Type->getIntParameter(Idx);
+}
+
 /*===-- Operations on values ----------------------------------------------===*/
 
 /*--.. Operations on all values ............................................--*/
@@ -1659,6 +1685,32 @@ static int map_from_llvmopcode(LLVMOpcode code)
     llvm_unreachable("Unhandled Opcode.");
 }
 
+/*-- GEP wrap flag conversions */
+
+static GEPNoWrapFlags mapFromLLVMGEPNoWrapFlags(LLVMGEPNoWrapFlags GEPFlags) {
+  GEPNoWrapFlags NewGEPFlags;
+  if ((GEPFlags & LLVMGEPFlagInBounds) != 0)
+    NewGEPFlags |= GEPNoWrapFlags::inBounds();
+  if ((GEPFlags & LLVMGEPFlagNUSW) != 0)
+    NewGEPFlags |= GEPNoWrapFlags::noUnsignedSignedWrap();
+  if ((GEPFlags & LLVMGEPFlagNUW) != 0)
+    NewGEPFlags |= GEPNoWrapFlags::noUnsignedWrap();
+
+  return NewGEPFlags;
+}
+
+static LLVMGEPNoWrapFlags mapToLLVMGEPNoWrapFlags(GEPNoWrapFlags GEPFlags) {
+  LLVMGEPNoWrapFlags NewGEPFlags = 0;
+  if (GEPFlags.isInBounds())
+    NewGEPFlags |= LLVMGEPFlagInBounds;
+  if (GEPFlags.hasNoUnsignedSignedWrap())
+    NewGEPFlags |= LLVMGEPFlagNUSW;
+  if (GEPFlags.hasNoUnsignedWrap())
+    NewGEPFlags |= LLVMGEPFlagNUW;
+
+  return NewGEPFlags;
+}
+
 /*--.. Constant expressions ................................................--*/
 
 LLVMOpcode LLVMGetConstOpcode(LLVMValueRef ConstantVal) {
@@ -1746,25 +1798,6 @@ LLVMValueRef LLVMConstXor(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
                                    unwrap<Constant>(RHSConstant)));
 }
 
-LLVMValueRef LLVMConstICmp(LLVMIntPredicate Predicate,
-                           LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getICmp(Predicate,
-                                    unwrap<Constant>(LHSConstant),
-                                    unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstFCmp(LLVMRealPredicate Predicate,
-                           LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getFCmp(Predicate,
-                                    unwrap<Constant>(LHSConstant),
-                                    unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstShl(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getShl(unwrap<Constant>(LHSConstant),
-                                   unwrap<Constant>(RHSConstant)));
-}
-
 LLVMValueRef LLVMConstGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
                            LLVMValueRef *ConstantIndices, unsigned NumIndices) {
   ArrayRef<Constant *> IdxList(unwrap<Constant>(ConstantIndices, NumIndices),
@@ -1780,6 +1813,18 @@ LLVMValueRef LLVMConstInBoundsGEP2(LLVMTypeRef Ty, LLVMValueRef ConstantVal,
                                NumIndices);
   Constant *Val = unwrap<Constant>(ConstantVal);
   return wrap(ConstantExpr::getInBoundsGetElementPtr(unwrap(Ty), Val, IdxList));
+}
+
+LLVMValueRef LLVMConstGEPWithNoWrapFlags(LLVMTypeRef Ty,
+                                         LLVMValueRef ConstantVal,
+                                         LLVMValueRef *ConstantIndices,
+                                         unsigned NumIndices,
+                                         LLVMGEPNoWrapFlags NoWrapFlags) {
+  ArrayRef<Constant *> IdxList(unwrap<Constant>(ConstantIndices, NumIndices),
+                               NumIndices);
+  Constant *Val = unwrap<Constant>(ConstantVal);
+  return wrap(ConstantExpr::getGetElementPtr(
+      unwrap(Ty), Val, IdxList, mapFromLLVMGEPNoWrapFlags(NoWrapFlags)));
 }
 
 LLVMValueRef LLVMConstTrunc(LLVMValueRef ConstantVal, LLVMTypeRef ToType) {
@@ -2869,18 +2914,12 @@ void LLVMDeleteInstruction(LLVMValueRef Inst) {
 LLVMIntPredicate LLVMGetICmpPredicate(LLVMValueRef Inst) {
   if (ICmpInst *I = dyn_cast<ICmpInst>(unwrap(Inst)))
     return (LLVMIntPredicate)I->getPredicate();
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(unwrap(Inst)))
-    if (CE->getOpcode() == Instruction::ICmp)
-      return (LLVMIntPredicate)CE->getPredicate();
   return (LLVMIntPredicate)0;
 }
 
 LLVMRealPredicate LLVMGetFCmpPredicate(LLVMValueRef Inst) {
   if (FCmpInst *I = dyn_cast<FCmpInst>(unwrap(Inst)))
     return (LLVMRealPredicate)I->getPredicate();
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(unwrap(Inst)))
-    if (CE->getOpcode() == Instruction::FCmp)
-      return (LLVMRealPredicate)CE->getPredicate();
   return (LLVMRealPredicate)0;
 }
 
@@ -3101,6 +3140,16 @@ LLVMTypeRef LLVMGetGEPSourceElementType(LLVMValueRef GEP) {
   return wrap(unwrap<GEPOperator>(GEP)->getSourceElementType());
 }
 
+LLVMGEPNoWrapFlags LLVMGEPGetNoWrapFlags(LLVMValueRef GEP) {
+  GEPOperator *GEPOp = unwrap<GEPOperator>(GEP);
+  return mapToLLVMGEPNoWrapFlags(GEPOp->getNoWrapFlags());
+}
+
+void LLVMGEPSetNoWrapFlags(LLVMValueRef GEP, LLVMGEPNoWrapFlags NoWrapFlags) {
+  GetElementPtrInst *GEPInst = unwrap<GetElementPtrInst>(GEP);
+  GEPInst->setNoWrapFlags(mapFromLLVMGEPNoWrapFlags(NoWrapFlags));
+}
+
 /*--.. Operations on phi nodes .............................................--*/
 
 void LLVMAddIncoming(LLVMValueRef PhiNode, LLVMValueRef *IncomingValues,
@@ -3157,16 +3206,35 @@ LLVMBuilderRef LLVMCreateBuilder(void) {
   return LLVMCreateBuilderInContext(LLVMGetGlobalContext());
 }
 
+static void LLVMPositionBuilderImpl(IRBuilder<> *Builder, BasicBlock *Block,
+                                    Instruction *Instr, bool BeforeDbgRecords) {
+  BasicBlock::iterator I = Instr ? Instr->getIterator() : Block->end();
+  I.setHeadBit(BeforeDbgRecords);
+  Builder->SetInsertPoint(Block, I);
+}
+
 void LLVMPositionBuilder(LLVMBuilderRef Builder, LLVMBasicBlockRef Block,
                          LLVMValueRef Instr) {
-  BasicBlock *BB = unwrap(Block);
-  auto I = Instr ? unwrap<Instruction>(Instr)->getIterator() : BB->end();
-  unwrap(Builder)->SetInsertPoint(BB, I);
+  return LLVMPositionBuilderImpl(unwrap(Builder), unwrap(Block),
+                                 unwrap<Instruction>(Instr), false);
+}
+
+void LLVMPositionBuilderBeforeDbgRecords(LLVMBuilderRef Builder,
+                                         LLVMBasicBlockRef Block,
+                                         LLVMValueRef Instr) {
+  return LLVMPositionBuilderImpl(unwrap(Builder), unwrap(Block),
+                                 unwrap<Instruction>(Instr), true);
 }
 
 void LLVMPositionBuilderBefore(LLVMBuilderRef Builder, LLVMValueRef Instr) {
   Instruction *I = unwrap<Instruction>(Instr);
-  unwrap(Builder)->SetInsertPoint(I->getParent(), I->getIterator());
+  return LLVMPositionBuilderImpl(unwrap(Builder), I->getParent(), I, false);
+}
+
+void LLVMPositionBuilderBeforeInstrAndDbgRecords(LLVMBuilderRef Builder,
+                                                 LLVMValueRef Instr) {
+  Instruction *I = unwrap<Instruction>(Instr);
+  return LLVMPositionBuilderImpl(unwrap(Builder), I->getParent(), I, true);
 }
 
 void LLVMPositionBuilderAtEnd(LLVMBuilderRef Builder, LLVMBasicBlockRef Block) {
@@ -3880,6 +3948,16 @@ LLVMValueRef LLVMBuildInBoundsGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,
   ArrayRef<Value *> IdxList(unwrap(Indices), NumIndices);
   return wrap(
       unwrap(B)->CreateInBoundsGEP(unwrap(Ty), unwrap(Pointer), IdxList, Name));
+}
+
+LLVMValueRef LLVMBuildGEPWithNoWrapFlags(LLVMBuilderRef B, LLVMTypeRef Ty,
+                                         LLVMValueRef Pointer,
+                                         LLVMValueRef *Indices,
+                                         unsigned NumIndices, const char *Name,
+                                         LLVMGEPNoWrapFlags NoWrapFlags) {
+  ArrayRef<Value *> IdxList(unwrap(Indices), NumIndices);
+  return wrap(unwrap(B)->CreateGEP(unwrap(Ty), unwrap(Pointer), IdxList, Name,
+                                   mapFromLLVMGEPNoWrapFlags(NoWrapFlags)));
 }
 
 LLVMValueRef LLVMBuildStructGEP2(LLVMBuilderRef B, LLVMTypeRef Ty,

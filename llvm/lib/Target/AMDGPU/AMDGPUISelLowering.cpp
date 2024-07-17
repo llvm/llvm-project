@@ -42,8 +42,10 @@ EVT AMDGPUTargetLowering::getEquivalentMemType(LLVMContext &Ctx, EVT VT) {
   if (StoreSize <= 32)
     return EVT::getIntegerVT(Ctx, StoreSize);
 
-  assert(StoreSize % 32 == 0 && "Store size not a multiple of 32");
-  return EVT::getVectorVT(Ctx, MVT::i32, StoreSize / 32);
+  if (StoreSize % 32 == 0)
+    return EVT::getVectorVT(Ctx, MVT::i32, StoreSize / 32);
+
+  return VT;
 }
 
 unsigned AMDGPUTargetLowering::numBitsUnsigned(SDValue Op, SelectionDAG &DAG) {
@@ -64,6 +66,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   MaxStoresPerMemset = MaxStoresPerMemsetOptSize = ~0U;
   MaxStoresPerMemcpy = MaxStoresPerMemcpyOptSize = ~0U;
   MaxStoresPerMemmove = MaxStoresPerMemmoveOptSize = ~0U;
+
+  // Enable ganging up loads and stores in the memcpy DAG lowering.
+  MaxGluedStoresPerMemcpy = 16;
 
   // Lower floating point store/load to integer store/load to reduce the number
   // of patterns in tablegen.
@@ -568,12 +573,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::SELECT, MVT::v12f32, Promote);
   AddPromotedToType(ISD::SELECT, MVT::v12f32, MVT::v12i32);
-
-  // Disable most libcalls.
-  for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I) {
-    if (I < RTLIB::ATOMIC_LOAD || I > RTLIB::ATOMIC_FETCH_NAND_16)
-      setLibcallName(static_cast<RTLIB::Libcall>(I), nullptr);
-  }
 
   setSchedulingPreference(Sched::RegPressure);
   setJumpIsExpensive(true);
@@ -1156,7 +1155,7 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
 
   Align MaxAlign = Align(1);
   uint64_t ExplicitArgOffset = 0;
-  const DataLayout &DL = Fn.getParent()->getDataLayout();
+  const DataLayout &DL = Fn.getDataLayout();
 
   unsigned InIndex = 0;
 
@@ -5522,13 +5521,16 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(TBUFFER_LOAD_FORMAT_D16)
   NODE_NAME_CASE(DS_ORDERED_COUNT)
   NODE_NAME_CASE(ATOMIC_CMP_SWAP)
-  NODE_NAME_CASE(ATOMIC_LOAD_FMIN)
-  NODE_NAME_CASE(ATOMIC_LOAD_FMAX)
   NODE_NAME_CASE(BUFFER_LOAD)
   NODE_NAME_CASE(BUFFER_LOAD_UBYTE)
   NODE_NAME_CASE(BUFFER_LOAD_USHORT)
   NODE_NAME_CASE(BUFFER_LOAD_BYTE)
   NODE_NAME_CASE(BUFFER_LOAD_SHORT)
+  NODE_NAME_CASE(BUFFER_LOAD_TFE)
+  NODE_NAME_CASE(BUFFER_LOAD_UBYTE_TFE)
+  NODE_NAME_CASE(BUFFER_LOAD_USHORT_TFE)
+  NODE_NAME_CASE(BUFFER_LOAD_BYTE_TFE)
+  NODE_NAME_CASE(BUFFER_LOAD_SHORT_TFE)
   NODE_NAME_CASE(BUFFER_LOAD_FORMAT)
   NODE_NAME_CASE(BUFFER_LOAD_FORMAT_TFE)
   NODE_NAME_CASE(BUFFER_LOAD_FORMAT_D16)
@@ -5557,7 +5559,6 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(BUFFER_ATOMIC_CMPSWAP)
   NODE_NAME_CASE(BUFFER_ATOMIC_CSUB)
   NODE_NAME_CASE(BUFFER_ATOMIC_FADD)
-  NODE_NAME_CASE(BUFFER_ATOMIC_FADD_BF16)
   NODE_NAME_CASE(BUFFER_ATOMIC_FMIN)
   NODE_NAME_CASE(BUFFER_ATOMIC_FMAX)
   NODE_NAME_CASE(BUFFER_ATOMIC_COND_SUB_U32)
@@ -5838,7 +5839,7 @@ unsigned AMDGPUTargetLowering::ComputeNumSignBitsForTargetNode(
     if (Tmp0 == 1)
       return 1; // Early out.
 
-    return std::min(Tmp0, std::min(Tmp1, Tmp2));
+    return std::min({Tmp0, Tmp1, Tmp2});
   }
   default:
     return 1;
@@ -5875,7 +5876,7 @@ unsigned AMDGPUTargetLowering::computeNumSignBitsForTargetInstr(
     unsigned Tmp0 = Analysis.computeNumSignBits(Src0, DemandedElts, Depth + 1);
     if (Tmp0 == 1)
       return 1;
-    return std::min(Tmp0, std::min(Tmp1, Tmp2));
+    return std::min({Tmp0, Tmp1, Tmp2});
   }
   default:
     return 1;
@@ -6011,7 +6012,7 @@ AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   case AtomicRMWInst::FMin:
     return AtomicExpansionKind::CmpXChg;
   case AtomicRMWInst::Xchg: {
-    const DataLayout &DL = RMW->getFunction()->getParent()->getDataLayout();
+    const DataLayout &DL = RMW->getFunction()->getDataLayout();
     unsigned ValSize = DL.getTypeSizeInBits(RMW->getType());
     if (ValSize == 32 || ValSize == 64)
       return AtomicExpansionKind::None;

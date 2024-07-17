@@ -1,5 +1,7 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=CI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=GFX9 %s
+; RUN: opt -passes=amdgpu-attributor -mcpu=kaveri -mattr=-promote-alloca < %s | llc | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=CI %s
+; RUN: opt -passes=amdgpu-attributor -mcpu=gfx900 -mattr=-promote-alloca < %s | llc | FileCheck -enable-var-scope -check-prefix=HSA -check-prefix=GFX9 %s
+
+target triple = "amdgcn-amd-amdhsa"
 
 ; HSA-LABEL: {{^}}use_group_to_flat_addrspacecast:
 
@@ -108,7 +110,7 @@ define amdgpu_kernel void @use_global_to_flat_addrspacecast(ptr addrspace(1) %pt
 }
 
 ; no-op
-; HSA-LABEl: {{^}}use_constant_to_flat_addrspacecast:
+; HSA-LABEL: {{^}}use_constant_to_flat_addrspacecast:
 ; HSA: s_load_dwordx2 s[[[PTRLO:[0-9]+]]:[[PTRHI:[0-9]+]]]
 ; HSA-DAG: v_mov_b32_e32 v[[VPTRLO:[0-9]+]], s[[PTRLO]]
 ; HSA-DAG: v_mov_b32_e32 v[[VPTRHI:[0-9]+]], s[[PTRHI]]
@@ -119,7 +121,7 @@ define amdgpu_kernel void @use_constant_to_flat_addrspacecast(ptr addrspace(4) %
   ret void
 }
 
-; HSA-LABEl: {{^}}use_constant_to_global_addrspacecast:
+; HSA-LABEL: {{^}}use_constant_to_global_addrspacecast:
 ; HSA: s_load_dwordx2 s[[[PTRLO:[0-9]+]]:[[PTRHI:[0-9]+]]]
 ; CI-DAG: v_mov_b32_e32 v[[VPTRLO:[0-9]+]], s[[PTRLO]]
 ; CI-DAG: v_mov_b32_e32 v[[VPTRHI:[0-9]+]], s[[PTRHI]]

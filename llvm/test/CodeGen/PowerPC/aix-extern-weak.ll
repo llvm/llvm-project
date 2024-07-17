@@ -55,7 +55,6 @@ declare extern_weak void @foo_ext_weak(ptr)
 ; COMMON-NEXT:    .weak   .foo_ext_weak_ref[PR]
 ; COMMON-NEXT:    .weak   foo_ext_weak_ref[DS]
 ; COMMON-NEXT:    .weak   .foo_ext_weak[PR]
-; COMMON-NEXT:    .weak   foo_ext_weak[DS]
 ; COMMON-NEXT:    .toc
 ; COMMON-NEXT: L..C0:
 ; COMMON-NEXT:    .tc foo_ext_weak_p[TC],foo_ext_weak_p
@@ -159,27 +158,6 @@ declare extern_weak void @foo_ext_weak(ptr)
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
 ; CHECKSYM-NEXT:     Index: [[#Index+8]]
-; CHECKSYM-NEXT:     Name: foo_ext_weak
-; CHECKSYM-NEXT:     Value (RelocatableAddress): 0x0
-; CHECKSYM-NEXT:     Section: N_UNDEF
-; CHECKSYM-NEXT:     Type: 0x0
-; CHECKSYM-NEXT:     StorageClass: C_WEAKEXT (0x6F)
-; CHECKSYM-NEXT:     NumberOfAuxEntries: 1
-; CHECKSYM-NEXT:     CSECT Auxiliary Entry {
-; CHECKSYM-NEXT:       Index: [[#Index+9]]
-; CHECKSYM-NEXT:       SectionLen: 0
-; CHECKSYM-NEXT:       ParameterHashIndex: 0x0
-; CHECKSYM-NEXT:       TypeChkSectNum: 0x0
-; CHECKSYM-NEXT:       SymbolAlignmentLog2: 0
-; CHECKSYM-NEXT:       SymbolType: XTY_ER (0x0)
-; CHECKSYM-NEXT:       StorageMappingClass: XMC_DS (0xA)
-; CHECKSYM32-NEXT:     StabInfoIndex: 0x0
-; CHECKSYM32-NEXT:     StabSectNum: 0x0
-; CHECKSYM64-NEXT:     Auxiliary Type: AUX_CSECT (0xFB)
-; CHECKSYM-NEXT:     }
-; CHECKSYM-NEXT:   }
-; CHECKSYM-NEXT:   Symbol {
-; CHECKSYM-NEXT:     Index: [[#Index+10]]
 ; CHECKSYM-NEXT:     Name:
 ; CHECKSYM-NEXT:     Value (RelocatableAddress): 0x0
 ; CHECKSYM-NEXT:     Section: .text
@@ -187,7 +165,7 @@ declare extern_weak void @foo_ext_weak(ptr)
 ; CHECKSYM-NEXT:     StorageClass: C_HIDEXT (0x6B)
 ; CHECKSYM-NEXT:     NumberOfAuxEntries: 1
 ; CHECKSYM-NEXT:     CSECT Auxiliary Entry {
-; CHECKSYM-NEXT:       Index: [[#Index+11]]
+; CHECKSYM-NEXT:       Index: [[#Index+9]]
 ; CHECKSYM-NEXT:       SectionLen: 80
 ; CHECKSYM-NEXT:       ParameterHashIndex: 0x0
 ; CHECKSYM-NEXT:       TypeChkSectNum: 0x0
@@ -200,7 +178,7 @@ declare extern_weak void @foo_ext_weak(ptr)
 ; CHECKSYM-NEXT:     }
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
-; CHECKSYM-NEXT:     Index: [[#Index+12]]
+; CHECKSYM-NEXT:     Index: [[#Index+10]]
 ; CHECKSYM-NEXT:     Name: .main
 ; CHECKSYM-NEXT:     Value (RelocatableAddress): 0x0
 ; CHECKSYM-NEXT:     Section: .text
@@ -208,8 +186,8 @@ declare extern_weak void @foo_ext_weak(ptr)
 ; CHECKSYM-NEXT:     StorageClass: C_EXT (0x2)
 ; CHECKSYM-NEXT:     NumberOfAuxEntries: 1
 ; CHECKSYM-NEXT:     CSECT Auxiliary Entry {
-; CHECKSYM-NEXT:       Index: [[#Index+13]]
-; CHECKSYM-NEXT:       ContainingCsectSymbolIndex: [[#Index+10]]
+; CHECKSYM-NEXT:       Index: [[#Index+11]]
+; CHECKSYM-NEXT:       ContainingCsectSymbolIndex: [[#Index+8]]
 ; CHECKSYM-NEXT:       ParameterHashIndex: 0x0
 ; CHECKSYM-NEXT:       TypeChkSectNum: 0x0
 ; CHECKSYM-NEXT:       SymbolAlignmentLog2: 0
@@ -221,7 +199,7 @@ declare extern_weak void @foo_ext_weak(ptr)
 ; CHECKSYM-NEXT:     }
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
-; CHECKSYM-NEXT:     Index: [[#Index+14]]
+; CHECKSYM-NEXT:     Index: [[#Index+12]]
 ; CHECKSYM-NEXT:     Name: .data
 ; CHECKSYM-NEXT:     Value (RelocatableAddress): 0x50
 ; CHECKSYM-NEXT:     Section: .data
@@ -229,7 +207,7 @@ declare extern_weak void @foo_ext_weak(ptr)
 ; CHECKSYM-NEXT:     StorageClass: C_HIDEXT (0x6B)
 ; CHECKSYM-NEXT:     NumberOfAuxEntries: 1
 ; CHECKSYM-NEXT:     CSECT Auxiliary Entry {
-; CHECKSYM-NEXT:       Index: [[#Index+15]]
+; CHECKSYM-NEXT:       Index: [[#Index+13]]
 ; CHECKSYM32-NEXT:     SectionLen: 4
 ; CHECKSYM64-NEXT:     SectionLen: 8
 ; CHECKSYM-NEXT:       ParameterHashIndex: 0x0
@@ -244,7 +222,7 @@ declare extern_weak void @foo_ext_weak(ptr)
 ; CHECKSYM-NEXT:     }
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
-; CHECKSYM-NEXT:     Index: [[#Index+16]]
+; CHECKSYM-NEXT:     Index: [[#Index+14]]
 ; CHECKSYM-NEXT:     Name: foo_ext_weak_p
 ; CHECKSYM-NEXT:     Value (RelocatableAddress): 0x50
 ; CHECKSYM-NEXT:     Section: .data
@@ -252,8 +230,8 @@ declare extern_weak void @foo_ext_weak(ptr)
 ; CHECKSYM-NEXT:     StorageClass: C_EXT (0x2)
 ; CHECKSYM-NEXT:     NumberOfAuxEntries: 1
 ; CHECKSYM-NEXT:     CSECT Auxiliary Entry {
-; CHECKSYM-NEXT:       Index: [[#Index+17]]
-; CHECKSYM-NEXT:       ContainingCsectSymbolIndex: [[#Index+14]]
+; CHECKSYM-NEXT:       Index: [[#Index+15]]
+; CHECKSYM-NEXT:       ContainingCsectSymbolIndex: [[#Index+12]]
 ; CHECKSYM-NEXT:       ParameterHashIndex: 0x0
 ; CHECKSYM-NEXT:       TypeChkSectNum: 0x0
 ; CHECKSYM-NEXT:       SymbolAlignmentLog2: 0
@@ -265,7 +243,7 @@ declare extern_weak void @foo_ext_weak(ptr)
 ; CHECKSYM-NEXT:     }
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
-; CHECKSYM-NEXT:     Index: [[#Index+18]]
+; CHECKSYM-NEXT:     Index: [[#Index+16]]
 ; CHECKSYM-NEXT:     Name: main
 ; CHECKSYM32-NEXT:   Value (RelocatableAddress): 0x54
 ; CHECKSYM64-NEXT:   Value (RelocatableAddress): 0x58
@@ -274,7 +252,7 @@ declare extern_weak void @foo_ext_weak(ptr)
 ; CHECKSYM-NEXT:     StorageClass: C_EXT (0x2)
 ; CHECKSYM-NEXT:     NumberOfAuxEntries: 1
 ; CHECKSYM-NEXT:     CSECT Auxiliary Entry {
-; CHECKSYM-NEXT:       Index: [[#Index+19]]
+; CHECKSYM-NEXT:       Index: [[#Index+17]]
 ; CHECKSYM32-NEXT:     SectionLen: 12
 ; CHECKSYM64-NEXT:     SectionLen: 24
 ; CHECKSYM-NEXT:       ParameterHashIndex: 0x0
@@ -289,7 +267,7 @@ declare extern_weak void @foo_ext_weak(ptr)
 ; CHECKSYM-NEXT:     }
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
-; CHECKSYM-NEXT:     Index: [[#Index+20]]
+; CHECKSYM-NEXT:     Index: [[#Index+18]]
 ; CHECKSYM-NEXT:     Name: TOC
 ; CHECKSYM32-NEXT:   Value (RelocatableAddress): 0x60
 ; CHECKSYM64-NEXT:   Value (RelocatableAddress): 0x70
@@ -298,7 +276,7 @@ declare extern_weak void @foo_ext_weak(ptr)
 ; CHECKSYM-NEXT:     StorageClass: C_HIDEXT (0x6B)
 ; CHECKSYM-NEXT:     NumberOfAuxEntries: 1
 ; CHECKSYM-NEXT:     CSECT Auxiliary Entry {
-; CHECKSYM-NEXT:       Index: [[#Index+21]]
+; CHECKSYM-NEXT:       Index: [[#Index+19]]
 ; CHECKSYM-NEXT:       SectionLen: 0
 ; CHECKSYM-NEXT:       ParameterHashIndex: 0x0
 ; CHECKSYM-NEXT:       TypeChkSectNum: 0x0
@@ -311,7 +289,7 @@ declare extern_weak void @foo_ext_weak(ptr)
 ; CHECKSYM-NEXT:     }
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
-; CHECKSYM-NEXT:     Index: [[#Index+22]]
+; CHECKSYM-NEXT:     Index: [[#Index+20]]
 ; CHECKSYM-NEXT:     Name: foo_ext_weak_p
 ; CHECKSYM32-NEXT:   Value (RelocatableAddress): 0x60
 ; CHECKSYM64-NEXT:   Value (RelocatableAddress): 0x70
@@ -320,7 +298,7 @@ declare extern_weak void @foo_ext_weak(ptr)
 ; CHECKSYM-NEXT:     StorageClass: C_HIDEXT (0x6B)
 ; CHECKSYM-NEXT:     NumberOfAuxEntries: 1
 ; CHECKSYM-NEXT:     CSECT Auxiliary Entry {
-; CHECKSYM-NEXT:       Index: [[#Index+23]]
+; CHECKSYM-NEXT:       Index: [[#Index+21]]
 ; CHECKSYM32-NEXT:     SectionLen: 4
 ; CHECKSYM64-NEXT:     SectionLen: 8
 ; CHECKSYM-NEXT:       ParameterHashIndex: 0x0
@@ -335,7 +313,7 @@ declare extern_weak void @foo_ext_weak(ptr)
 ; CHECKSYM-NEXT:     }
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
-; CHECKSYM-NEXT:     Index: [[#Index+24]]
+; CHECKSYM-NEXT:     Index: [[#Index+22]]
 ; CHECKSYM-NEXT:     Name: b_w
 ; CHECKSYM32-NEXT:   Value (RelocatableAddress): 0x64
 ; CHECKSYM64-NEXT:   Value (RelocatableAddress): 0x78
@@ -344,7 +322,7 @@ declare extern_weak void @foo_ext_weak(ptr)
 ; CHECKSYM-NEXT:     StorageClass: C_HIDEXT (0x6B)
 ; CHECKSYM-NEXT:     NumberOfAuxEntries: 1
 ; CHECKSYM-NEXT:     CSECT Auxiliary Entry {
-; CHECKSYM-NEXT:       Index: [[#Index+25]]
+; CHECKSYM-NEXT:       Index: [[#Index+23]]
 ; CHECKSYM32-NEXT:     SectionLen: 4
 ; CHECKSYM64-NEXT:     SectionLen: 8
 ; CHECKSYM-NEXT:       ParameterHashIndex: 0x0

@@ -49,6 +49,7 @@
 #include "clang/Basic/PragmaKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/Stack.h"
 #include "clang/Sema/IdentifierResolver.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTRecordReader.h"
@@ -273,7 +274,7 @@ namespace clang {
       auto *&LazySpecializations = D->getCommonPtr()->LazySpecializations;
 
       if (auto &Old = LazySpecializations) {
-        IDs.insert(IDs.end(), Old + 1, Old + 1 + Old[0].get());
+        IDs.insert(IDs.end(), Old + 1, Old + 1 + Old[0].getRawValue());
         llvm::sort(IDs);
         IDs.erase(std::unique(IDs.begin(), IDs.end()), IDs.end());
       }
@@ -1846,13 +1847,8 @@ void ASTDeclReader::VisitNamespaceDecl(NamespaceDecl *D) {
   // same namespace, and we have an invariant that older declarations
   // get merged before newer ones try to merge.
   GlobalDeclID AnonNamespace;
-  if (Redecl.getFirstID() == ThisDeclID) {
+  if (Redecl.getFirstID() == ThisDeclID)
     AnonNamespace = readDeclID();
-  } else {
-    // Link this namespace back to the first declaration, which has already
-    // been deserialized.
-    D->AnonOrFirstNamespaceAndFlags.setPointer(D->getFirstDecl());
-  }
 
   mergeRedeclarable(D, Redecl);
 
@@ -2016,7 +2012,7 @@ void ASTDeclReader::ReadCXXDefinitionData(
     if (Data.NumVBases)
       Data.VBases = ReadGlobalOffset();
 
-    Data.FirstFriend = readDeclID().get();
+    Data.FirstFriend = readDeclID().getRawValue();
   } else {
     using Capture = LambdaCapture;
 
@@ -2276,11 +2272,11 @@ ASTDeclReader::VisitCXXRecordDeclImpl(CXXRecordDecl *D) {
   // compute it.
   if (WasDefinition) {
     GlobalDeclID KeyFn = readDeclID();
-    if (KeyFn.get() && D->isCompleteDefinition())
+    if (KeyFn.isValid() && D->isCompleteDefinition())
       // FIXME: This is wrong for the ARM ABI, where some other module may have
       // made this function no longer be a key function. We need an update
       // record or similar for that case.
-      C.KeyFunctions[D] = KeyFn.get();
+      C.KeyFunctions[D] = KeyFn.getRawValue();
   }
 
   return Redecl;
@@ -2369,7 +2365,7 @@ void ASTDeclReader::VisitFriendDecl(FriendDecl *D) {
   for (unsigned i = 0; i != D->NumTPLists; ++i)
     D->getTrailingObjects<TemplateParameterList *>()[i] =
         Record.readTemplateParameterList();
-  D->NextFriend = readDeclID().get();
+  D->NextFriend = readDeclID().getRawValue();
   D->UnsupportedFriend = (Record.readInt() != 0);
   D->FriendLoc = readSourceLocation();
 }
@@ -2923,7 +2919,7 @@ void ASTDeclReader::mergeTemplatePattern(RedeclarableTemplateDecl *D,
   auto *ExistingPattern = Existing->getTemplatedDecl();
   RedeclarableResult Result(
       /*MergeWith*/ ExistingPattern,
-      GlobalDeclID(DPattern->getCanonicalDecl()->getGlobalID()), IsKeyDecl);
+      DPattern->getCanonicalDecl()->getGlobalID(), IsKeyDecl);
 
   if (auto *DClass = dyn_cast<CXXRecordDecl>(DPattern)) {
     // Merge with any existing definition.
@@ -2972,13 +2968,6 @@ void ASTDeclReader::mergeRedeclarable(Redeclarable<T> *DBase, T *Existing,
     D->First = ExistingCanon;
     ExistingCanon->Used |= D->Used;
     D->Used = false;
-
-    // When we merge a namespace, update its pointer to the first namespace.
-    // We cannot have loaded any redeclarations of this declaration yet, so
-    // there's nothing else that needs to be updated.
-    if (auto *Namespace = dyn_cast<NamespaceDecl>(D))
-      Namespace->AnonOrFirstNamespaceAndFlags.setPointer(
-          assert_cast<NamespaceDecl *>(ExistingCanon));
 
     // When we merge a template, merge its pattern.
     if (auto *DTemplate = dyn_cast<RedeclarableTemplateDecl>(D))
@@ -3078,14 +3067,14 @@ void ASTDeclReader::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
   Expr *Init = Record.readExpr();
   auto IK = static_cast<OMPDeclareReductionInitKind>(Record.readInt());
   D->setInitializer(Init, IK);
-  D->PrevDeclInScope = readDeclID().get();
+  D->PrevDeclInScope = readDeclID().getRawValue();
 }
 
 void ASTDeclReader::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
   Record.readOMPChildren(D->Data);
   VisitValueDecl(D);
   D->VarName = Record.readDeclarationName();
-  D->PrevDeclInScope = readDeclID().get();
+  D->PrevDeclInScope = readDeclID().getRawValue();
 }
 
 void ASTDeclReader::VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D) {
@@ -3139,9 +3128,7 @@ public:
 
   OMPTraitInfo *readOMPTraitInfo() { return Reader.readOMPTraitInfo(); }
 
-  template <typename T> T *GetLocalDeclAs(LocalDeclID LocalID) {
-    return Reader.GetLocalDeclAs<T>(LocalID);
-  }
+  template <typename T> T *readDeclAs() { return Reader.readDeclAs<T>(); }
 };
 }
 
@@ -3244,11 +3231,10 @@ bool ASTReader::isConsumerInterestedIn(Decl *D) {
 /// Get the correct cursor and offset for loading a declaration.
 ASTReader::RecordLocation ASTReader::DeclCursorForID(GlobalDeclID ID,
                                                      SourceLocation &Loc) {
-  GlobalDeclMapType::iterator I = GlobalDeclMap.find(ID);
-  assert(I != GlobalDeclMap.end() && "Corrupted global declaration map");
-  ModuleFile *M = I->second;
-  const DeclOffset &DOffs =
-      M->DeclOffsets[ID.get() - M->BaseDeclID - NUM_PREDEF_DECL_IDS];
+  ModuleFile *M = getOwningModuleFile(ID);
+  assert(M);
+  unsigned LocalDeclIndex = ID.getLocalDeclIndex();
+  const DeclOffset &DOffs = M->DeclOffsets[LocalDeclIndex];
   Loc = ReadSourceLocation(*M, DOffs.getRawLoc());
   return RecordLocation(M, DOffs.getBitOffset(M->DeclsBlockStartOffset));
 }
@@ -3295,7 +3281,7 @@ ASTDeclReader::getOrFakePrimaryClassDefinition(ASTReader &Reader,
 DeclContext *ASTDeclReader::getPrimaryContextForMerging(ASTReader &Reader,
                                                         DeclContext *DC) {
   if (auto *ND = dyn_cast<NamespaceDecl>(DC))
-    return ND->getOriginalNamespace();
+    return ND->getFirstDecl();
 
   if (auto *RD = dyn_cast<CXXRecordDecl>(DC))
     return getOrFakePrimaryClassDefinition(Reader, RD);
@@ -3725,6 +3711,23 @@ void ASTDeclReader::attachPreviousDecl(ASTReader &Reader, Decl *D,
 #include "clang/AST/DeclNodes.inc"
   }
 
+  // [basic.link]/p10:
+  //    If two declarations of an entity are attached to different modules,
+  //    the program is ill-formed;
+  //
+  // FIXME: Get rid of the enumeration of decl types once we have an appropriate
+  // abstract for decls of an entity. e.g., the namespace decl and using decl
+  // doesn't introduce an entity.
+  if (Module *M = Previous->getOwningModule();
+      M && M->isNamedModule() &&
+      isa<VarDecl, FunctionDecl, TagDecl, RedeclarableTemplateDecl>(Previous) &&
+      !Reader.getContext().isInSameModule(M, D->getOwningModule())) {
+    Reader.Diag(Previous->getLocation(),
+                diag::err_multiple_decl_in_different_modules)
+        << cast<NamedDecl>(Previous) << M->Name;
+    Reader.Diag(D->getLocation(), diag::note_also_found);
+  }
+
   // If the declaration was visible in one module, a redeclaration of it in
   // another module remains visible even if it wouldn't be visible by itself.
   //
@@ -3791,7 +3794,6 @@ void ASTReader::markIncompleteDeclChain(Decl *D) {
 
 /// Read the declaration at the given offset from the AST file.
 Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
-  unsigned Index = ID.get() - NUM_PREDEF_DECL_IDS;
   SourceLocation DeclLoc;
   RecordLocation Loc = DeclCursorForID(ID, DeclLoc);
   llvm::BitstreamCursor &DeclsCursor = Loc.F->DeclsCursor;
@@ -4122,12 +4124,15 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   }
 
   assert(D && "Unknown declaration reading AST file");
-  LoadedDecl(Index, D);
+  LoadedDecl(translateGlobalDeclIDToIndex(ID), D);
   // Set the DeclContext before doing any deserialization, to make sure internal
   // calls to Decl::getASTContext() by Decl's methods will find the
   // TranslationUnitDecl without crashing.
   D->setDeclContext(Context.getTranslationUnitDecl());
-  Reader.Visit(D);
+
+  // Reading some declarations can result in deep recursion.
+  clang::runWithSufficientStackSpace([&] { warnStackExhausted(DeclLoc); },
+                                     [&] { Reader.Visit(D); });
 
   // If this declaration is also a declaration context, get the
   // offsets for its tables of lexical and visible declarations.
@@ -4198,6 +4203,7 @@ void ASTReader::PassInterestingDeclsToConsumer() {
   };
   std::deque<Decl *> MaybeInterestingDecls =
       std::move(PotentiallyInterestingDecls);
+  PotentiallyInterestingDecls.clear();
   assert(PotentiallyInterestingDecls.empty());
   while (!MaybeInterestingDecls.empty()) {
     Decl *D = MaybeInterestingDecls.front();
@@ -4348,7 +4354,8 @@ void ASTReader::loadPendingDeclChain(Decl *FirstLocal, uint64_t LocalOffset) {
   // we should instead generate one loop per kind and dispatch up-front?
   Decl *MostRecent = FirstLocal;
   for (unsigned I = 0, N = Record.size(); I != N; ++I) {
-    auto *D = GetLocalDecl(*M, LocalDeclID(Record[N - I - 1]));
+    unsigned Idx = N - I - 1;
+    auto *D = ReadDecl(*M, Record, Idx);
     ASTDeclReader::attachPreviousDecl(*this, D, MostRecent, CanonDecl);
     MostRecent = D;
   }
@@ -4445,7 +4452,7 @@ namespace {
                            M.ObjCCategoriesMap + M.LocalNumObjCCategoriesInMap,
                            Compare);
       if (Result == M.ObjCCategoriesMap + M.LocalNumObjCCategoriesInMap ||
-          Result->DefinitionID != LocalID) {
+          LocalID != Result->getDefinitionID()) {
         // We didn't find anything. If the class definition is in this module
         // file, then the module files it depends on cannot have any categories,
         // so suppress further lookup.
@@ -4457,8 +4464,7 @@ namespace {
       unsigned N = M.ObjCCategories[Offset];
       M.ObjCCategories[Offset++] = 0; // Don't try to deserialize again
       for (unsigned I = 0; I != N; ++I)
-        add(cast_or_null<ObjCCategoryDecl>(
-            Reader.GetLocalDecl(M, LocalDeclID(M.ObjCCategories[Offset++]))));
+        add(Reader.ReadDeclAs<ObjCCategoryDecl>(M, M.ObjCCategories, Offset));
       return true;
     }
   };

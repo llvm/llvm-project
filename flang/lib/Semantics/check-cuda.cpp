@@ -475,21 +475,21 @@ static void CheckReduce(
         auto cat{type->category()};
         bool isOk{false};
         switch (op) {
-        case parser::AccReductionOperator::Operator::Plus:
-        case parser::AccReductionOperator::Operator::Multiply:
-        case parser::AccReductionOperator::Operator::Max:
-        case parser::AccReductionOperator::Operator::Min:
+        case parser::ReductionOperator::Operator::Plus:
+        case parser::ReductionOperator::Operator::Multiply:
+        case parser::ReductionOperator::Operator::Max:
+        case parser::ReductionOperator::Operator::Min:
           isOk = cat == TypeCategory::Integer || cat == TypeCategory::Real;
           break;
-        case parser::AccReductionOperator::Operator::Iand:
-        case parser::AccReductionOperator::Operator::Ior:
-        case parser::AccReductionOperator::Operator::Ieor:
+        case parser::ReductionOperator::Operator::Iand:
+        case parser::ReductionOperator::Operator::Ior:
+        case parser::ReductionOperator::Operator::Ieor:
           isOk = cat == TypeCategory::Integer;
           break;
-        case parser::AccReductionOperator::Operator::And:
-        case parser::AccReductionOperator::Operator::Or:
-        case parser::AccReductionOperator::Operator::Eqv:
-        case parser::AccReductionOperator::Operator::Neqv:
+        case parser::ReductionOperator::Operator::And:
+        case parser::ReductionOperator::Operator::Or:
+        case parser::ReductionOperator::Operator::Eqv:
+        case parser::ReductionOperator::Operator::Neqv:
           isOk = cat == TypeCategory::Logical;
           break;
         }
@@ -548,8 +548,8 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
     return;
   }
 
-  int nbLhs{evaluate::GetNbOfCUDASymbols(assign->lhs)};
-  int nbRhs{evaluate::GetNbOfCUDASymbols(assign->rhs)};
+  int nbLhs{evaluate::GetNbOfCUDADeviceSymbols(assign->lhs)};
+  int nbRhs{evaluate::GetNbOfCUDADeviceSymbols(assign->rhs)};
 
   // device to host transfer with more than one device object on the rhs is not
   // legal.
