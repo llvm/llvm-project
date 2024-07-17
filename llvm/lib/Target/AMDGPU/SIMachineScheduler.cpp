@@ -546,7 +546,7 @@ void SIScheduleBlock::addSucc(SIScheduleBlock *Succ,
   }
   if (Succ->isHighLatencyBlock())
     ++NumHighLatencySuccessors;
-  Succs.push_back(std::pair(Succ, Kind));
+  Succs.emplace_back(Succ, Kind);
 
   assert(none_of(Preds,
                  [=](SIScheduleBlock *P) { return SuccID == P->getID(); }) &&

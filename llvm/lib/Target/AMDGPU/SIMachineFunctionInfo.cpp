@@ -358,8 +358,7 @@ bool SIMachineFunctionInfo::allocateVirtualVGPRForSGPRSpills(
     LaneVGPR = SpillVGPRs.back();
   }
 
-  SGPRSpillsToVirtualVGPRLanes[FI].push_back(
-      SIRegisterInfo::SpilledReg(LaneVGPR, LaneIndex));
+  SGPRSpillsToVirtualVGPRLanes[FI].emplace_back(LaneVGPR, LaneIndex);
   return true;
 }
 
@@ -393,8 +392,7 @@ bool SIMachineFunctionInfo::allocatePhysicalVGPRForSGPRSpills(
     LaneVGPR = SpillPhysVGPRs.back();
   }
 
-  SGPRSpillsToPhysicalVGPRLanes[FI].push_back(
-      SIRegisterInfo::SpilledReg(LaneVGPR, LaneIndex));
+  SGPRSpillsToPhysicalVGPRLanes[FI].emplace_back(LaneVGPR, LaneIndex);
   return true;
 }
 

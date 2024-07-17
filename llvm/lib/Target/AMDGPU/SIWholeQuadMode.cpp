@@ -307,7 +307,7 @@ void SIWholeQuadMode::markInstruction(MachineInstr &MI, char Flag,
 
   LLVM_DEBUG(dbgs() << "markInstruction " << PrintState(Flag) << ": " << MI);
   II.Needs |= Flag;
-  Worklist.push_back(&MI);
+  Worklist.emplace_back(&MI);
 }
 
 /// Mark all relevant definitions of register \p Reg in usage \p UseMI.
@@ -539,7 +539,7 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
           BBI.Needs |= StateExact;
           if (!(BBI.InNeeds & StateExact)) {
             BBI.InNeeds |= StateExact;
-            Worklist.push_back(MBB);
+            Worklist.emplace_back(MBB);
           }
           GlobalFlags |= StateExact;
           III.Disabled = StateWQM | StateStrict;
@@ -568,7 +568,7 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
         BBI.Needs |= StateExact;
         if (!(BBI.InNeeds & StateExact)) {
           BBI.InNeeds |= StateExact;
-          Worklist.push_back(MBB);
+          Worklist.emplace_back(MBB);
         }
         GlobalFlags |= StateExact;
         III.Disabled = StateWQM | StateStrict;
@@ -638,7 +638,7 @@ void SIWholeQuadMode::propagateInstruction(MachineInstr &MI,
     BI.Needs |= StateWQM;
     if (!(BI.InNeeds & StateWQM)) {
       BI.InNeeds |= StateWQM;
-      Worklist.push_back(MBB);
+      Worklist.emplace_back(MBB);
     }
   }
 
@@ -649,7 +649,7 @@ void SIWholeQuadMode::propagateInstruction(MachineInstr &MI,
       InstrInfo &PrevII = Instructions[PrevMI];
       if ((PrevII.OutNeeds | InNeeds) != PrevII.OutNeeds) {
         PrevII.OutNeeds |= InNeeds;
-        Worklist.push_back(PrevMI);
+        Worklist.emplace_back(PrevMI);
       }
     }
   }
@@ -678,7 +678,7 @@ void SIWholeQuadMode::propagateBlock(MachineBasicBlock &MBB,
     InstrInfo &LastII = Instructions[LastMI];
     if ((LastII.OutNeeds | BI.OutNeeds) != LastII.OutNeeds) {
       LastII.OutNeeds |= BI.OutNeeds;
-      Worklist.push_back(LastMI);
+      Worklist.emplace_back(LastMI);
     }
   }
 
@@ -690,7 +690,7 @@ void SIWholeQuadMode::propagateBlock(MachineBasicBlock &MBB,
 
     PredBI.OutNeeds |= BI.InNeeds;
     PredBI.InNeeds |= BI.InNeeds;
-    Worklist.push_back(Pred);
+    Worklist.emplace_back(Pred);
   }
 
   // All successors must be prepared to accept the same set of WQM/Exact data.
@@ -700,7 +700,7 @@ void SIWholeQuadMode::propagateBlock(MachineBasicBlock &MBB,
       continue;
 
     SuccBI.InNeeds |= BI.OutNeeds;
-    Worklist.push_back(Succ);
+    Worklist.emplace_back(Succ);
   }
 }
 

@@ -77,7 +77,7 @@ void InterpState::deallocate(Block *B) {
 
     // We moved the contents over to the DeadBlock.
     B->IsInitialized = false;
-  } else {
+  } else if (B->IsInitialized) {
     B->invokeDtor();
   }
 }
