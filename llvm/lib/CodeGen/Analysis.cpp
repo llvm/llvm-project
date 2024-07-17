@@ -663,20 +663,6 @@ bool llvm::returnTypeIsEligibleForTailCall(const Function *F,
     return true;
 
   const Value *RetVal = Ret->getOperand(0), *CallVal = I;
-  // Intrinsic like llvm.memcpy has no return value, but the expanded
-  // libcall may or may not have return value. On most platforms, it
-  // will be expanded as memcpy in libc, which returns the first
-  // argument. On other platforms like arm-none-eabi, memcpy may be
-  // expanded as library call without return value, like __aeabi_memcpy.
-  const CallInst *Call = cast<CallInst>(I);
-  if (Function *F = Call->getCalledFunction()) {
-    Intrinsic::ID IID = F->getIntrinsicID();
-    if ((IID == Intrinsic::memcpy &&
-         TLI.getLibcallName(RTLIB::MEMCPY) == StringRef("memcpy")) &&
-        (RetVal == Call->getArgOperand(0)))
-      return true;
-  }
-
   SmallVector<unsigned, 4> RetPath, CallPath;
   SmallVector<Type *, 4> RetSubTypes, CallSubTypes;
 
