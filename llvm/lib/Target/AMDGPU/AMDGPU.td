@@ -1573,7 +1573,8 @@ def FeatureISAVersion11_Generic: FeatureSet<
      FeatureUserSGPRInit16Bug,
      FeatureMADIntraFwdBug,
      FeaturePrivEnabledTrap2NopBug,
-     FeatureRequiresCOV6])>;
+     FeatureRequiresCOV6,
+     FeatureRequiredExportPriority])>;
 
 def FeatureISAVersion11_0_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
