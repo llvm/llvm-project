@@ -385,3 +385,15 @@ declare void @optnone_attribute() noinline optnone
 ; CHECK-LABEL: @convergent_attribute
 ; CHECK-SAME: attributes {convergent}
 declare void @convergent_attribute() convergent
+
+// -----
+
+; CHECK-LABEL: @nounwind_attribute
+; CHECK-SAME: attributes {no_unwind}
+declare void @nounwind_attribute() nounwind
+
+// -----
+
+; CHECK-LABEL: @willreturn_attribute
+; CHECK-SAME: attributes {will_return}
+declare void @willreturn_attribute() willreturn

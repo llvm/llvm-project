@@ -6,19 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03
+
 // <mutex>
 
 // template <class Mutex> class lock_guard;
 
-// lock_guard(lock_guard const&) = delete;
+// lock_guard(mutex_type& m, adopt_lock_t);
 
 #include <mutex>
+#include <cassert>
 
-int main(int, char**)
-{
-    std::mutex m;
-    std::lock_guard<std::mutex> lg0(m);
-    std::lock_guard<std::mutex> lg(lg0);
+#include "types.h"
+
+int main(int, char**) {
+  MyMutex m;
+  {
+    m.lock();
+    std::lock_guard<MyMutex> lg(m, std::adopt_lock);
+    assert(m.locked);
+  }
+  assert(!m.locked);
 
   return 0;
 }

@@ -3278,8 +3278,7 @@ SDValue SITargetLowering::LowerCallResult(
   CCInfo.AnalyzeCallResult(Ins, RetCC);
 
   // Copy all of the result registers out of their specified physreg.
-  for (unsigned i = 0; i != RVLocs.size(); ++i) {
-    CCValAssign VA = RVLocs[i];
+  for (CCValAssign VA : RVLocs) {
     SDValue Val;
 
     if (VA.isRegLoc()) {
@@ -3670,8 +3669,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (Callee.isUndef() || isNullConstant(Callee)) {
     if (!CLI.IsTailCall) {
-      for (unsigned I = 0, E = CLI.Ins.size(); I != E; ++I)
-        InVals.push_back(DAG.getUNDEF(CLI.Ins[I].VT));
+      for (ISD::InputArg &Arg : CLI.Ins)
+        InVals.push_back(DAG.getUNDEF(Arg.VT));
     }
 
     return Chain;
@@ -3850,7 +3849,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
             DAG.getMemcpy(Chain, DL, DstAddr, Arg, SizeNode,
                           Outs[i].Flags.getNonZeroByValAlign(),
                           /*isVol = */ false, /*AlwaysInline = */ true,
-                          /*isTailCall = */ false, DstInfo,
+                          /*CI=*/nullptr, std::nullopt, DstInfo,
                           MachinePointerInfo(AMDGPUAS::PRIVATE_ADDRESS));
 
         MemOpChains.push_back(Cpy);
