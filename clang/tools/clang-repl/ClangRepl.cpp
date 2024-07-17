@@ -46,6 +46,12 @@ static llvm::cl::opt<std::string> CudaPath("cuda-path", llvm::cl::Hidden);
 static llvm::cl::opt<std::string> OffloadArch("offload-arch", llvm::cl::Hidden);
 static llvm::cl::OptionCategory
     OOPCategory("Out-of-process Execution Options");
+static llvm::cl::opt<std::string> SlabAllocateSizeString(
+    "slab-allocate",
+    llvm::cl::desc("Allocate from a slab of the given size "
+             "(allowable suffixes: Kb, Mb, Gb. default = "
+             "Kb)"),
+    llvm::cl::init(""), llvm::cl::cat(OOPCategory));
 static llvm::cl::opt<std::string>
     OOPExecutor("oop-executor",
                 llvm::cl::desc("Launch an out-of-process executor to run code"),
@@ -58,6 +64,10 @@ static llvm::cl::opt<std::string> OOPExecutorConnectTCP(
 static llvm::cl::opt<std::string>
     OrcRuntimePath("orc-runtime", llvm::cl::desc("Path to the ORC runtime"),
                    llvm::cl::cat(OOPCategory));
+static llvm::cl::opt<bool> UseSharedMemory(
+    "use-shared-memory",
+    llvm::cl::desc("Use shared memory to transfer generated code and data"),
+    llvm::cl::init(false), llvm::cl::cat(OOPCategory));
 static llvm::cl::list<std::string>
     ClangArgs("Xcc",
               llvm::cl::desc("Argument to pass to the CompilerInvocation"),
@@ -246,9 +256,11 @@ int main(int argc, const char **argv) {
   std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
   if (OOPExecutor.getNumOccurrences()) {
     // Launch an out-of-process executor locally in a child process.
-    EPC = ExitOnErr(launchExecutor(OOPExecutor));
+    EPC = ExitOnErr(
+        launchExecutor(OOPExecutor, UseSharedMemory, SlabAllocateSizeString));
   } else if (OOPExecutorConnectTCP.getNumOccurrences()) {
-    EPC = ExitOnErr(connectTCPSocket(OOPExecutorConnectTCP));
+    EPC = ExitOnErr(connectTCPSocket(
+        OOPExecutorConnectTCP, UseSharedMemory, SlabAllocateSizeString));
   }
 
   std::unique_ptr<llvm::orc::LLJITBuilder> JB;

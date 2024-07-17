@@ -25,12 +25,14 @@
 #include <string>
 
 llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
-launchExecutor(llvm::StringRef ExecutablePath);
+launchExecutor(llvm::StringRef ExecutablePath, bool UseSharedMemory,
+               llvm::StringRef SlabAllocateSizeString);
 
 /// Create a JITLinkExecutor that connects to the given network address
 /// through a TCP socket. A valid NetworkAddress provides hostname and port,
 /// e.g. localhost:20000.
 llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
-connectTCPSocket(llvm::StringRef NetworkAddress);
+connectTCPSocket(llvm::StringRef NetworkAddress, bool UseSharedMemory,
+                 llvm::StringRef SlabAllocateSizeString);
 
 #endif // LLVM_CLANG_INTERPRETER_REMOTEJITUTILS_H

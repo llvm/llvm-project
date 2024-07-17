@@ -12,6 +12,8 @@
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
+#include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/Support/FileSystem.h"
@@ -27,8 +29,62 @@
 using namespace llvm;
 using namespace llvm::orc;
 
+static ExitOnError ExitOnErr;
+
+Expected<uint64_t> getSlabAllocSize(StringRef SizeString) {
+  SizeString = SizeString.trim();
+
+  uint64_t Units = 1024;
+
+  if (SizeString.ends_with_insensitive("kb"))
+    SizeString = SizeString.drop_back(2).rtrim();
+  else if (SizeString.ends_with_insensitive("mb")) {
+    Units = 1024 * 1024;
+    SizeString = SizeString.drop_back(2).rtrim();
+  } else if (SizeString.ends_with_insensitive("gb")) {
+    Units = 1024 * 1024 * 1024;
+    SizeString = SizeString.drop_back(2).rtrim();
+  }
+
+  uint64_t SlabSize = 0;
+  if (SizeString.getAsInteger(10, SlabSize))
+    return make_error<StringError>("Invalid numeric format for slab size",
+                                   inconvertibleErrorCode());
+
+  return SlabSize * Units;
+}
+
+Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+createSharedMemoryManager(SimpleRemoteEPC &SREPC, StringRef SlabAllocateSizeString) {
+  SharedMemoryMapper::SymbolAddrs SAs;
+  if (auto Err = SREPC.getBootstrapSymbols(
+          {{SAs.Instance, rt::ExecutorSharedMemoryMapperServiceInstanceName},
+           {SAs.Reserve,
+            rt::ExecutorSharedMemoryMapperServiceReserveWrapperName},
+           {SAs.Initialize,
+            rt::ExecutorSharedMemoryMapperServiceInitializeWrapperName},
+           {SAs.Deinitialize,
+            rt::ExecutorSharedMemoryMapperServiceDeinitializeWrapperName},
+           {SAs.Release,
+            rt::ExecutorSharedMemoryMapperServiceReleaseWrapperName}}))
+    return std::move(Err);
+
+#ifdef _WIN32
+  size_t SlabSize = 1024 * 1024;
+#else
+  size_t SlabSize = 1024 * 1024 * 1024;
+#endif
+
+  if (!SlabAllocateSizeString.empty())
+    SlabSize = ExitOnErr(getSlabAllocSize(SlabAllocateSizeString));
+
+  return MapperJITLinkMemoryManager::CreateWithMapper<SharedMemoryMapper>(
+      SlabSize, SREPC, SAs);
+}
+
 Expected<std::unique_ptr<SimpleRemoteEPC>>
-launchExecutor(StringRef ExecutablePath) {
+launchExecutor(StringRef ExecutablePath, bool UseSharedMemory,
+               llvm::StringRef SlabAllocateSizeString) {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add support for Windows.
   return make_error<StringError>("-" + ExecutablePath +
@@ -100,6 +156,10 @@ launchExecutor(StringRef ExecutablePath) {
   close(FromExecutor[WriteEnd]);
 
   auto S = SimpleRemoteEPC::Setup();
+  if (UseSharedMemory)
+    S.CreateMemoryManager = [SlabAllocateSizeString](SimpleRemoteEPC &EPC) {
+      return createSharedMemoryManager(EPC, SlabAllocateSizeString);
+    };
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
       std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
@@ -150,7 +210,8 @@ static Expected<int> connectTCPSocketImpl(std::string Host,
 #endif
 
 Expected<std::unique_ptr<SimpleRemoteEPC>>
-connectTCPSocket(StringRef NetworkAddress) {
+connectTCPSocket(StringRef NetworkAddress, bool UseSharedMemory,
+                 llvm::StringRef SlabAllocateSizeString) {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add TCP support for Windows.
   return make_error<StringError>("-" + NetworkAddress +
@@ -187,6 +248,10 @@ connectTCPSocket(StringRef NetworkAddress) {
     return SockFD.takeError();
 
   auto S = SimpleRemoteEPC::Setup();
+  if (UseSharedMemory)
+    S.CreateMemoryManager = [SlabAllocateSizeString](SimpleRemoteEPC &EPC) {
+      return createSharedMemoryManager(EPC, SlabAllocateSizeString);
+    };
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
       std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
