@@ -2367,7 +2367,65 @@ void elf::hexagonTLSSymbolUpdate(ArrayRef<OutputSection *> outputSections) {
       });
 }
 
+static bool matchesRefTo(const NoCrossRefCommand &cmd, StringRef osec) {
+  if (cmd.toFirst)
+    return cmd.outputSections[0] == osec;
+  return llvm::is_contained(cmd.outputSections, osec);
+}
+
+template <class ELFT, class Rels>
+static void scanCrossRefs(const NoCrossRefCommand &cmd, OutputSection *osec,
+                          InputSection *sec, Rels rels) {
+  for (const auto &r : rels) {
+    Symbol &sym = sec->file->getSymbol(r.getSymbol(config->isMips64EL));
+    // A legal cross-reference is when the destination output section is
+    // nullptr, osec for a self-reference, or a section that is described by the
+    // NOCROSSREFS/NOCROSSREFS_TO command.
+    auto *dstOsec = sym.getOutputSection();
+    if (!dstOsec || dstOsec == osec || !matchesRefTo(cmd, dstOsec->name))
+      continue;
+
+    std::string toSymName;
+    if (!sym.isSection())
+      toSymName = toString(sym);
+    else if (auto *d = dyn_cast<Defined>(&sym))
+      toSymName = d->section->name;
+    errorOrWarn(sec->getLocation(r.r_offset) +
+                ": prohibited cross reference from '" + osec->name + "' to '" +
+                toSymName + "' in '" + dstOsec->name + "'");
+  }
+}
+
+// For each output section described by at least one NOCROSSREFS(_TO) command,
+// scan relocations from its input sections for prohibited cross references.
+template <class ELFT> void elf::checkNoCrossRefs() {
+  for (OutputSection *osec : outputSections) {
+    for (const NoCrossRefCommand &noxref : script->noCrossRefs) {
+      if (!llvm::is_contained(noxref.outputSections, osec->name) ||
+          (noxref.toFirst && noxref.outputSections[0] == osec->name))
+        continue;
+      for (SectionCommand *cmd : osec->commands) {
+        auto *isd = dyn_cast<InputSectionDescription>(cmd);
+        if (!isd)
+          continue;
+        parallelForEach(isd->sections, [&](InputSection *sec) {
+          const RelsOrRelas<ELFT> rels = sec->template relsOrRelas<ELFT>();
+          if (rels.areRelocsRel())
+            scanCrossRefs<ELFT>(noxref, osec, sec, rels.rels);
+          else
+            scanCrossRefs<ELFT>(noxref, osec, sec, rels.relas);
+        });
+      }
+    }
+  }
+}
+
 template void elf::scanRelocations<ELF32LE>();
 template void elf::scanRelocations<ELF32BE>();
 template void elf::scanRelocations<ELF64LE>();
 template void elf::scanRelocations<ELF64BE>();
+
+template void elf::checkNoCrossRefs<ELF32LE>();
+template void elf::checkNoCrossRefs<ELF32BE>();
+template void elf::checkNoCrossRefs<ELF64LE>();
+template void elf::checkNoCrossRefs<ELF64BE>();
