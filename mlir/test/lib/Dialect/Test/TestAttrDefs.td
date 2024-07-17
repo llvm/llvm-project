@@ -81,11 +81,11 @@ def AttrWithTrait : Test_Attr<"AttrWithTrait", [TestAttrTrait]> {
   let mnemonic = "attr_with_trait";
 }
 
-// An attribute of decimal formatted integer.
-def TestDecimalIntegerAttr : Test_Attr<"TestDecimalInteger"> {
-  let mnemonic = "decimal_integer";
+// An attribute of a list of decimal formatted integers in similar format to shapes.
+def TestDecimalShapeAttr : Test_Attr<"TestDecimalShape"> {
+  let mnemonic = "decimal_shape";
 
-  let parameters = (ins "int64_t":$value);
+  let parameters = (ins ArrayRefParameter<"int64_t">:$shape);
 
   let hasCustomAssemblyFormat = 1;
 }

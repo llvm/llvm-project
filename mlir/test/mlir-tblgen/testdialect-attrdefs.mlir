@@ -20,15 +20,27 @@ func.func private @overriddenAttr() attributes {
   foo = #test.override_builder<5>
 }
 
-// CHECK-LABEL: @decimalInteger
-// CHECK-SAME: foo = #test.decimal_integer<5>
-func.func private @decimalInteger() attributes {
-  foo = #test.decimal_integer<5>
+// CHECK-LABEL: @decimalIntegerShapeEmpty
+// CHECK-SAME: foo = #test.decimal_shape<>
+func.func private @decimalIntegerShapeEmpty() attributes {
+  foo = #test.decimal_shape<>
+}
+
+// CHECK-LABEL: @decimalIntegerShape
+// CHECK-SAME: foo = #test.decimal_shape<5>
+func.func private @decimalIntegerShape() attributes {
+  foo = #test.decimal_shape<5>
+}
+
+// CHECK-LABEL: @decimalIntegerShapeMultiple
+// CHECK-SAME: foo = #test.decimal_shape<0x3x7>
+func.func private @decimalIntegerShapeMultiple() attributes {
+  foo = #test.decimal_shape<0x3x7>
 }
 
 // -----
 
 func.func private @hexdecimalInteger() attributes {
-// expected-error @below {{expected '>'}}
-  foo = #test.decimal_integer<0x5>
+// expected-error @below {{expected an integer}}
+  sdg = #test.decimal_shape<1x0xb>
 }
