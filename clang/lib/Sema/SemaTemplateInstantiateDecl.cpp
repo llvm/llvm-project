@@ -4970,9 +4970,11 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     llvm::raw_string_ostream OS(M.Detail);
     Function->getNameForDiagnostic(OS, getPrintingPolicy(),
                                    /*Qualified=*/true);
-    if (llvm::isTimeTraceVerbose())
-      M.Filename = SourceMgr.getFilename(
-          SourceMgr.getExpansionLoc(Function->getLocation()));
+    if (llvm::isTimeTraceVerbose()) {
+      auto Loc = SourceMgr.getExpansionLoc(Function->getLocation());
+      M.File = SourceMgr.getFilename(Loc);
+      M.Line = SourceMgr.getExpansionLineNumber(Loc);
+    }
     return M;
   });
 

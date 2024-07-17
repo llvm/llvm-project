@@ -207,8 +207,10 @@ struct llvm::TimeTraceProfiler {
           J.attributeObject("args", [&] {
             if (!E.Metadata.Detail.empty())
               J.attribute("detail", E.Metadata.Detail);
-            if (!E.Metadata.Filename.empty())
-              J.attribute("filename", E.Metadata.Filename);
+            if (!E.Metadata.File.empty())
+              J.attribute("file", E.Metadata.File);
+            if (E.Metadata.Line > 0)
+              J.attribute("line", E.Metadata.Line);
           });
         }
       });
@@ -332,7 +334,7 @@ struct llvm::TimeTraceProfiler {
   // Minimum time granularity (in microseconds)
   const unsigned TimeTraceGranularity;
 
-  // Make time trace capture verbose event details (eg. source filenames). This
+  // Make time trace capture verbose event details (e.g. source filenames). This
   // can increase the size of the output by 2-3 times.
   const bool TimeTraceVerbose;
 };

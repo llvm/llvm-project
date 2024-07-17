@@ -85,10 +85,11 @@ class raw_pwrite_stream;
 
 struct TimeTraceMetadata {
   std::string Detail;
-  // Source file information for the event.
-  std::string Filename;
+  // Source file and line number information for the event.
+  std::string File;
+  int Line;
 
-  bool isEmpty() const { return Detail.empty() && Filename.empty(); }
+  bool isEmpty() const { return Detail.empty() && File.empty(); }
 };
 
 struct TimeTraceProfiler;

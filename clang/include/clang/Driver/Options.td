@@ -3987,7 +3987,7 @@ def ftime_trace_granularity_EQ : Joined<["-"], "ftime-trace-granularity=">, Grou
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
   MarshallingInfoInt<FrontendOpts<"TimeTraceGranularity">, "500u">;
 def ftime_trace_verbose : Joined<["-"], "ftime-trace-verbose">, Group<f_Group>,
-  HelpText<"Make time trace capture verbose event details (eg. source filenames). This can increase the size of the output by 2-3 times">,
+  HelpText<"Make time trace capture verbose event details (e.g. source filenames). This can increase the size of the output by 2-3 times">,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
   MarshallingInfoFlag<FrontendOpts<"TimeTraceVerbose">>;
 def ftime_trace_EQ : Joined<["-"], "ftime-trace=">, Group<f_Group>,

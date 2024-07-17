@@ -42,14 +42,14 @@ std::string teardownProfiler() {
 
 // Returns true if code compiles successfully.
 // We only parse AST here. This is enough for constexpr evaluation.
-bool compileFromString(StringRef Code, StringRef Standard, StringRef FileName,
+bool compileFromString(StringRef Code, StringRef Standard, StringRef File,
                        llvm::StringMap<StringRef> Headers = {}) {
   CompilerInstance Compiler;
   Compiler.createDiagnostics();
 
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS(
       new llvm::vfs::InMemoryFileSystem());
-  FS->addFile(FileName, 0, MemoryBuffer::getMemBuffer(Code));
+  FS->addFile(File, 0, MemoryBuffer::getMemBuffer(Code));
   for (const auto &Header : Headers) {
     FS->addFile(Header.getKey(), 0,
                 MemoryBuffer::getMemBuffer(Header.getValue()));
@@ -59,7 +59,7 @@ bool compileFromString(StringRef Code, StringRef Standard, StringRef FileName,
   Compiler.setFileManager(Files.get());
 
   auto Invocation = std::make_shared<CompilerInvocation>();
-  std::vector<const char *> Args = {Standard.data(), FileName.data()};
+  std::vector<const char *> Args = {Standard.data(), File.data()};
   CompilerInvocation::CreateFromArgs(*Invocation, Args,
                                      Compiler.getDiagnostics());
   Compiler.setInvocation(std::move(Invocation));
@@ -75,14 +75,15 @@ bool compileFromString(StringRef Code, StringRef Standard, StringRef FileName,
 }
 
 std::string GetMetadata(json::Object *Event) {
-  std::string Metadata = "";
+  std::string Metadata;
+  llvm::raw_string_ostream OS(Metadata);
   if (json::Object *Args = Event->getObject("args")) {
-    if (StringRef Detail = Args->getString("detail").value_or("");
-        !Detail.empty())
-      Metadata += Detail.str();
-    if (StringRef File = Args->getString("filename").value_or("");
-        !File.empty())
-      Metadata += ", " + File.str();
+    if (auto Detail = Args->getString("detail"))
+      OS << Detail->str();
+    if (auto File = Args->getString("file"))
+      OS << ", " << File->str();
+    if (auto Line = Args->getInteger("line"))
+      OS << ":" << *Line;
   }
   return Metadata;
 }
@@ -284,9 +285,9 @@ Frontend
 | ParseDeclarationOrFunctionDefinition (test.cc:3:5)
 | | ParseFunctionDefinition (user)
 | PerformPendingInstantiations
-| | InstantiateFunction (fooA<int>, ./a.h)
-| | | InstantiateFunction (fooB<int>, ./b.h)
-| | | InstantiateFunction (fooMTA<int>, ./a.h)
+| | InstantiateFunction (fooA<int>, ./a.h:7)
+| | | InstantiateFunction (fooB<int>, ./b.h:3)
+| | | InstantiateFunction (fooMTA<int>, ./a.h:4)
 )",
             buildTraceGraph(Json));
 }
