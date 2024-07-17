@@ -549,7 +549,6 @@ public:
   bool isPromotableIntegerType(QualType Ty) const;
   bool isVectorArgumentType(QualType Ty) const;
   bool isFPArgumentType(QualType Ty) const;
-  QualType getSingleElementType(QualType Ty) const;
   std::optional<QualType> getFPTypeOfComplexLikeType(QualType Ty) const;
 
   ABIArgInfo classifyReturnType(QualType RetTy) const;
@@ -632,58 +631,6 @@ bool ZOSXPLinkABIInfo::isFPArgumentType(QualType Ty) const {
   return false;
 }
 
-QualType ZOSXPLinkABIInfo::getSingleElementType(QualType Ty) const {
-  const RecordType *RT = Ty->getAs<RecordType>();
-
-  if (RT && RT->isStructureOrClassType()) {
-    const RecordDecl *RD = RT->getDecl();
-    QualType Found;
-
-    // If this is a C++ record, check the bases first.
-    if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
-      if (CXXRD->hasDefinition())
-        for (const auto &I : CXXRD->bases()) {
-          QualType Base = I.getType();
-
-          // Empty bases don't affect things either way.
-          if (isEmptyRecord(getContext(), Base, true))
-            continue;
-
-          if (!Found.isNull())
-            return Ty;
-          Found = getSingleElementType(Base);
-        }
-
-    // Check the fields.
-    for (const auto *FD : RD->fields()) {
-      QualType FT = FD->getType();
-
-      // Ignore empty fields.
-      if (isEmptyField(getContext(), FD, true))
-        continue;
-
-      if (!Found.isNull())
-        return Ty;
-
-      // Treat single element arrays as the element.
-      while (const ConstantArrayType *AT =
-                 getContext().getAsConstantArrayType(FT)) {
-        if (AT->getZExtSize() != 1)
-          break;
-        FT = AT->getElementType();
-      }
-
-      Found = getSingleElementType(FT);
-    }
-
-    // Unlike isSingleElementStruct(), trailing padding is allowed.
-    if (!Found.isNull())
-      return Found;
-  }
-
-  return Ty;
-}
-
 std::optional<QualType>
 ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
   if (const RecordType *RT = Ty->getAsStructureType()) {
@@ -710,11 +657,14 @@ ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
       if (Count >= 2)
         return std::nullopt;
 
-      QualType FT = FD->getType();
-      if (isAggregateTypeForABI(FT) && !isSingleElementStruct(FT, getContext()))
-        return std::nullopt;
+      QualType FTSingleTy = FD->getType();
+      if (isAggregateTypeForABI(FTSingleTy)) {
+        const Type *Ty = isSingleElementStruct(FTSingleTy, getContext());
+        if (!Ty)
+          return std::nullopt;
+        FTSingleTy = QualType(Ty, 0);
+      }
 
-      QualType FTSingleTy = getSingleElementType(FT);
       if (isFPArgumentType(FTSingleTy)) {
         clang::BuiltinType::Kind Kind =
             FTSingleTy->getAs<BuiltinType>()->getKind();
