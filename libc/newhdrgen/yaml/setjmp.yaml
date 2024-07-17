@@ -8,7 +8,7 @@ functions:
   - name: longjmp
     standards: 
       - stdc
-    return_type: void
+    return_type: _Noreturn void
     arguments:
       - type: jmp_buf 
       - type: int
