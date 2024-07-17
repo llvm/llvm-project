@@ -2653,6 +2653,10 @@ public:
   /// \returns if this is an array type, the completely unqualified array type
   /// that corresponds to it. Otherwise, returns T.getUnqualifiedType().
   QualType getUnqualifiedArrayType(QualType T, Qualifiers &Quals) const;
+  QualType getUnqualifiedArrayType(QualType T) const {
+    Qualifiers Quals;
+    return getUnqualifiedArrayType(T, Quals);
+  }
 
   /// Determine whether the given types are equivalent after
   /// cvr-qualifiers have been removed.

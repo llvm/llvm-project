@@ -838,6 +838,8 @@ Bug Fixes in This Version
 - ``__has_unique_object_representations`` correctly handles arrays of unknown bounds of
   types by ensuring they are complete and instantiating them if needed. Fixes (#GH95311).
 
+- ``typeof_unqual`` now properly removes type qualifiers from arrays and their element types. (#GH92667)
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
