@@ -409,7 +409,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
         DEPENDS ${builtins_link_lib} ${builtins_link_lib_tgt}
       )
       add_custom_target( "prepare-${spv_suffix}" ALL DEPENDS "${spv_suffix}" )
-      set_target_properties( "prepare-${spv_suffix}" PROPERTIES FOLDER "libclc/Sourcegenning" )
+      set_target_properties( "prepare-${spv_suffix}" PROPERTIES FOLDER "libclc/Device IR/Prepare" )
       install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${spv_suffix}
          DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
     else()
