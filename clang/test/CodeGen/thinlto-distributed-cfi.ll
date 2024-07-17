@@ -28,7 +28,7 @@
 ; CHECK-DIS: ^2 = typeid: (name: "_ZTS1A", summary: (typeTestRes: (kind: single, sizeM1BitWidth: 0))) ; guid = 7004155349499253778
 
 ; RUN: %clang_cc1 -triple x86_64-grtev4-linux-gnu \
-; RUN:   -emit-obj -fthinlto-index=%t.o.thinlto.bc \
+; RUN:   -fthinlto-index=%t.o.thinlto.bc \
 ; RUN:   -emit-llvm -o - -x ir %t.o | FileCheck %s --check-prefixes=CHECK-IR
 
 ; Ensure that backend does not fail generating native code.

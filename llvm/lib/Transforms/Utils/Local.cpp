@@ -59,6 +59,7 @@
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
@@ -230,7 +231,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
           // Remove weight for this case.
           std::swap(Weights[Idx + 1], Weights.back());
           Weights.pop_back();
-          setBranchWeights(*SI, Weights);
+          setBranchWeights(*SI, Weights, hasBranchWeightOrigin(MD));
         }
         // Remove this entry.
         BasicBlock *ParentBB = SI->getParent();
@@ -730,7 +731,7 @@ simplifyAndDCEInstruction(Instruction *I,
 bool llvm::SimplifyInstructionsInBlock(BasicBlock *BB,
                                        const TargetLibraryInfo *TLI) {
   bool MadeChange = false;
-  const DataLayout &DL = BB->getModule()->getDataLayout();
+  const DataLayout &DL = BB->getDataLayout();
 
 #ifndef NDEBUG
   // In debug builds, ensure that the terminator of the block is never replaced
@@ -1094,11 +1095,9 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
       PN->addIncoming(OldValPN->getIncomingValueForBlock(CommonPred), BB);
 
   } else {
-    for (unsigned i = 0, e = BBPreds.size(); i != e; ++i) {
+    for (BasicBlock *PredBB : BBPreds) {
       // Update existing incoming values in PN for this
       // predecessor of BB.
-      BasicBlock *PredBB = BBPreds[i];
-
       if (PredBB == CommonPred)
         continue;
 
@@ -1600,9 +1599,10 @@ static bool PhiHasDebugValue(DILocalVariable *DIVar,
 /// value when doing the comparison. E.g. an i1 value will be identified as
 /// covering an n-bit fragment, if the store size of i1 is at least n bits.
 static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
-  const DataLayout &DL = DII->getModule()->getDataLayout();
+  const DataLayout &DL = DII->getDataLayout();
   TypeSize ValueSize = DL.getTypeAllocSizeInBits(ValTy);
-  if (std::optional<uint64_t> FragmentSize = DII->getFragmentSizeInBits())
+  if (std::optional<uint64_t> FragmentSize =
+          DII->getExpression()->getActiveBits(DII->getVariable()))
     return TypeSize::isKnownGE(ValueSize, TypeSize::getFixed(*FragmentSize));
 
   // We can't always calculate the size of the DI variable (e.g. if it is a
@@ -1628,7 +1628,8 @@ static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
 static bool valueCoversEntireFragment(Type *ValTy, DbgVariableRecord *DVR) {
   const DataLayout &DL = DVR->getModule()->getDataLayout();
   TypeSize ValueSize = DL.getTypeAllocSizeInBits(ValTy);
-  if (std::optional<uint64_t> FragmentSize = DVR->getFragmentSizeInBits())
+  if (std::optional<uint64_t> FragmentSize =
+          DVR->getExpression()->getActiveBits(DVR->getVariable()))
     return TypeSize::isKnownGE(ValueSize, TypeSize::getFixed(*FragmentSize));
 
   // We can't always calculate the size of the DI variable (e.g. if it is a
@@ -2229,6 +2230,8 @@ template <typename T> static void salvageDbgAssignAddress(T *Assign) {
   assert(!SalvagedExpr->getFragmentInfo().has_value() &&
          "address-expression shouldn't have fragment info");
 
+  SalvagedExpr = SalvagedExpr->foldConstantMath();
+
   // Salvage succeeds if no additional values are required.
   if (AdditionalValues.empty()) {
     Assign->setAddress(NewV);
@@ -2289,6 +2292,7 @@ void llvm::salvageDebugInfoForDbgValues(
     if (!Op0)
       break;
 
+    SalvagedExpr = SalvagedExpr->foldConstantMath();
     DII->replaceVariableLocationOp(&I, Op0);
     bool IsValidSalvageExpr = SalvagedExpr->getNumElements() <= MaxExpressionSize;
     if (AdditionalValues.empty() && IsValidSalvageExpr) {
@@ -2350,6 +2354,7 @@ void llvm::salvageDebugInfoForDbgValues(
     if (!Op0)
       break;
 
+    SalvagedExpr = SalvagedExpr->foldConstantMath();
     DVR->replaceVariableLocationOp(&I, Op0);
     bool IsValidSalvageExpr =
         SalvagedExpr->getNumElements() <= MaxExpressionSize;
@@ -3284,6 +3289,9 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
       case LLVMContext::MD_invariant_group:
         // Preserve !invariant.group in K.
         break;
+      case LLVMContext::MD_mmra:
+        // Combine MMRAs
+        break;
       case LLVMContext::MD_align:
         if (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef))
           K->setMetadata(
@@ -3322,6 +3330,16 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
   if (auto *JMD = J->getMetadata(LLVMContext::MD_invariant_group))
     if (isa<LoadInst>(K) || isa<StoreInst>(K))
       K->setMetadata(LLVMContext::MD_invariant_group, JMD);
+
+  // Merge MMRAs.
+  // This is handled separately because we also want to handle cases where K
+  // doesn't have tags but J does.
+  auto JMMRA = J->getMetadata(LLVMContext::MD_mmra);
+  auto KMMRA = K->getMetadata(LLVMContext::MD_mmra);
+  if (JMMRA || KMMRA) {
+    K->setMetadata(LLVMContext::MD_mmra,
+                   MMRAMetadata::combine(K->getContext(), JMMRA, KMMRA));
+  }
 }
 
 void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J,
@@ -3341,7 +3359,8 @@ void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J,
                          LLVMContext::MD_preserve_access_index,
                          LLVMContext::MD_prof,
                          LLVMContext::MD_nontemporal,
-                         LLVMContext::MD_noundef};
+                         LLVMContext::MD_noundef,
+                         LLVMContext::MD_mmra};
   combineMetadata(K, J, KnownIDs, KDominatesJ);
 }
 
@@ -3350,7 +3369,7 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
   Source.getAllMetadata(MD);
   MDBuilder MDB(Dest.getContext());
   Type *NewType = Dest.getType();
-  const DataLayout &DL = Source.getModule()->getDataLayout();
+  const DataLayout &DL = Source.getDataLayout();
   for (const auto &MDPair : MD) {
     unsigned ID = MDPair.first;
     MDNode *N = MDPair.second;
@@ -3429,15 +3448,15 @@ void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
   combineMetadataForCSE(ReplInst, I, false);
 }
 
-template <typename RootType, typename DominatesFn>
+template <typename RootType, typename ShouldReplaceFn>
 static unsigned replaceDominatedUsesWith(Value *From, Value *To,
                                          const RootType &Root,
-                                         const DominatesFn &Dominates) {
+                                         const ShouldReplaceFn &ShouldReplace) {
   assert(From->getType() == To->getType());
 
   unsigned Count = 0;
   for (Use &U : llvm::make_early_inc_range(From->uses())) {
-    if (!Dominates(Root, U))
+    if (!ShouldReplace(Root, U))
       continue;
     LLVM_DEBUG(dbgs() << "Replace dominated use of '";
                From->printAsOperand(dbgs());
@@ -3479,6 +3498,26 @@ unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
     return DT.dominates(BB, U);
   };
   return ::replaceDominatedUsesWith(From, To, BB, Dominates);
+}
+
+unsigned llvm::replaceDominatedUsesWithIf(
+    Value *From, Value *To, DominatorTree &DT, const BasicBlockEdge &Root,
+    function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
+  auto DominatesAndShouldReplace =
+      [&DT, &ShouldReplace, To](const BasicBlockEdge &Root, const Use &U) {
+        return DT.dominates(Root, U) && ShouldReplace(U, To);
+      };
+  return ::replaceDominatedUsesWith(From, To, Root, DominatesAndShouldReplace);
+}
+
+unsigned llvm::replaceDominatedUsesWithIf(
+    Value *From, Value *To, DominatorTree &DT, const BasicBlock *BB,
+    function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
+  auto DominatesAndShouldReplace = [&DT, &ShouldReplace,
+                                    To](const BasicBlock *BB, const Use &U) {
+    return DT.dominates(BB, U) && ShouldReplace(U, To);
+  };
+  return ::replaceDominatedUsesWith(From, To, BB, DominatesAndShouldReplace);
 }
 
 bool llvm::callsGCLeafFunction(const CallBase *Call,
@@ -3648,6 +3687,30 @@ DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
         return createIntegerExpression(*CI);
     }
   return nullptr;
+}
+
+void llvm::remapDebugVariable(ValueToValueMapTy &Mapping, Instruction *Inst) {
+  auto RemapDebugOperands = [&Mapping](auto *DV, auto Set) {
+    for (auto *Op : Set) {
+      auto I = Mapping.find(Op);
+      if (I != Mapping.end())
+        DV->replaceVariableLocationOp(Op, I->second, /*AllowEmpty=*/true);
+    }
+  };
+  auto RemapAssignAddress = [&Mapping](auto *DA) {
+    auto I = Mapping.find(DA->getAddress());
+    if (I != Mapping.end())
+      DA->setAddress(I->second);
+  };
+  if (auto DVI = dyn_cast<DbgVariableIntrinsic>(Inst))
+    RemapDebugOperands(DVI, DVI->location_ops());
+  if (auto DAI = dyn_cast<DbgAssignIntrinsic>(Inst))
+    RemapAssignAddress(DAI);
+  for (DbgVariableRecord &DVR : filterDbgVars(Inst->getDbgRecordRange())) {
+    RemapDebugOperands(&DVR, DVR.location_ops());
+    if (DVR.isDbgAssign())
+      RemapAssignAddress(&DVR);
+  }
 }
 
 namespace {

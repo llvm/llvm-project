@@ -55,6 +55,10 @@ public:
     return Records.getAllDerivedDefinitions("Association");
   }
 
+  std::vector<Record *> getCategories() const {
+    return Records.getAllDerivedDefinitions("Category");
+  }
+
   std::vector<Record *> getDirectives() const {
     return Records.getAllDerivedDefinitions("Directive");
   }
@@ -131,6 +135,8 @@ public:
   }
 
   Record *getAssociation() const { return Def->getValueAsDef("association"); }
+
+  Record *getCategory() const { return Def->getValueAsDef("category"); }
 };
 
 // Wrapper class that contains Clause's information defined in DirectiveBase.td

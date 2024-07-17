@@ -33,8 +33,8 @@
 !CHECK-NEXT:  }
 
 !CHECK-LABEL: define internal void @test_scalar_..omp_par({{.*}})
-!CHECK:         %[[I:.*]] = alloca i32, i64 1
 !CHECK:         %[[J:.*]] = alloca i32, i64 1
+!CHECK:         %[[I:.*]] = alloca i32, i64 1
 !CHECK:         %[[DID_IT:.*]] = alloca i32
 !CHECK:         store i32 0, ptr %[[DID_IT]]
 !CHECK:         %[[THREAD_NUM1:.*]] = call i32 @__kmpc_global_thread_num(ptr @[[LOC:.*]])

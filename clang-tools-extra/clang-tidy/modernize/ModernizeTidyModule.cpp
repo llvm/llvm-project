@@ -18,6 +18,7 @@
 #include "MacroToEnumCheck.h"
 #include "MakeSharedCheck.h"
 #include "MakeUniqueCheck.h"
+#include "MinMaxUseInitializerListCheck.h"
 #include "PassByValueCheck.h"
 #include "RawStringLiteralCheck.h"
 #include "RedundantVoidArgCheck.h"
@@ -40,7 +41,9 @@
 #include "UseNoexceptCheck.h"
 #include "UseNullptrCheck.h"
 #include "UseOverrideCheck.h"
+#include "UseRangesCheck.h"
 #include "UseStartsEndsWithCheck.h"
+#include "UseStdFormatCheck.h"
 #include "UseStdNumbersCheck.h"
 #include "UseStdPrintCheck.h"
 #include "UseTrailingReturnTypeCheck.h"
@@ -68,11 +71,15 @@ public:
     CheckFactories.registerCheck<MacroToEnumCheck>("modernize-macro-to-enum");
     CheckFactories.registerCheck<MakeSharedCheck>("modernize-make-shared");
     CheckFactories.registerCheck<MakeUniqueCheck>("modernize-make-unique");
+    CheckFactories.registerCheck<MinMaxUseInitializerListCheck>(
+        "modernize-min-max-use-initializer-list");
     CheckFactories.registerCheck<PassByValueCheck>("modernize-pass-by-value");
     CheckFactories.registerCheck<UseDesignatedInitializersCheck>(
         "modernize-use-designated-initializers");
+    CheckFactories.registerCheck<UseRangesCheck>("modernize-use-ranges");
     CheckFactories.registerCheck<UseStartsEndsWithCheck>(
         "modernize-use-starts-ends-with");
+    CheckFactories.registerCheck<UseStdFormatCheck>("modernize-use-std-format");
     CheckFactories.registerCheck<UseStdNumbersCheck>(
         "modernize-use-std-numbers");
     CheckFactories.registerCheck<UseStdPrintCheck>("modernize-use-std-print");

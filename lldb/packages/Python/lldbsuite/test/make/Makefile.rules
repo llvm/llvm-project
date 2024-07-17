@@ -55,7 +55,10 @@ LLDB_BASE_DIR := $(THIS_FILE_DIR)/../../../../../
 # When running tests from Visual Studio, the environment variable isn't
 # inherited all the way down to the process spawned for make.
 #----------------------------------------------------------------------
-HOST_OS := $(shell uname -s)
+ifeq "$(HOST_OS)" ""
+  HOST_OS := $(shell uname -s)
+endif
+
 ifneq (,$(findstring windows32,$(HOST_OS)))
 	HOST_OS := Windows_NT
 endif
@@ -238,10 +241,11 @@ ifeq "$(OS)" "Darwin"
 endif
 
 ifeq "$(OS)" "Darwin"
-	CFLAGS += $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) -I$(LLDB_BASE_DIR)include
+	CFLAGS += $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES)
 else
-	CFLAGS += $(ARCHFLAG)$(ARCH) $(FRAMEWORK_INCLUDES) -I$(LLDB_BASE_DIR)include
+	CFLAGS += $(ARCHFLAG)$(ARCH)
 endif
+CFLAGS += -I$(LLDB_BASE_DIR)include -I$(LLDB_OBJ_ROOT)/include
 
 CFLAGS += -I$(SRCDIR) -I$(THIS_FILE_DIR)
 

@@ -3109,12 +3109,8 @@ void InstrRefBasedLDV::buildVLocValueMap(
   SmallPtrSet<const MachineBasicBlock *, 8> BlocksToExplore;
 
   // The order in which to examine them (RPO).
-  SmallVector<MachineBasicBlock *, 8> BlockOrders;
-
-  // RPO ordering function.
-  auto Cmp = [&](MachineBasicBlock *A, MachineBasicBlock *B) {
-    return BBToOrder[A] < BBToOrder[B];
-  };
+  SmallVector<MachineBasicBlock *, 16> BlockOrders;
+  SmallVector<unsigned, 32> BlockOrderNums;
 
   getBlocksForScope(DILoc, BlocksToExplore, AssignBlocks);
 
@@ -3132,11 +3128,16 @@ void InstrRefBasedLDV::buildVLocValueMap(
   for (const auto *MBB : BlocksToExplore)
     MutBlocksToExplore.insert(const_cast<MachineBasicBlock *>(MBB));
 
-  // Picks out relevants blocks RPO order and sort them.
+  // Picks out relevants blocks RPO order and sort them. Sort their
+  // order-numbers and map back to MBB pointers later, to avoid repeated
+  // DenseMap queries during comparisons.
   for (const auto *MBB : BlocksToExplore)
-    BlockOrders.push_back(const_cast<MachineBasicBlock *>(MBB));
+    BlockOrderNums.push_back(BBToOrder[MBB]);
 
-  llvm::sort(BlockOrders, Cmp);
+  llvm::sort(BlockOrderNums);
+  for (unsigned int I : BlockOrderNums)
+    BlockOrders.push_back(OrderToBB[I]);
+  BlockOrderNums.clear();
   unsigned NumBlocks = BlockOrders.size();
 
   // Allocate some vectors for storing the live ins and live outs. Large.
@@ -3396,16 +3397,24 @@ void InstrRefBasedLDV::initialSetup(MachineFunction &MF) {
       return DL.getLine() != 0;
     return false;
   };
-  // Collect a set of all the artificial blocks.
-  for (auto &MBB : MF)
+
+  // Collect a set of all the artificial blocks. Collect the size too, ilist
+  // size calls are O(n).
+  unsigned int Size = 0;
+  for (auto &MBB : MF) {
+    ++Size;
     if (none_of(MBB.instrs(), hasNonArtificialLocation))
       ArtificialBlocks.insert(&MBB);
+  }
 
   // Compute mappings of block <=> RPO order.
   ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
   unsigned int RPONumber = 0;
+  OrderToBB.reserve(Size);
+  BBToOrder.reserve(Size);
+  BBNumToRPO.reserve(Size);
   auto processMBB = [&](MachineBasicBlock *MBB) {
-    OrderToBB[RPONumber] = MBB;
+    OrderToBB.push_back(MBB);
     BBToOrder[MBB] = RPONumber;
     BBNumToRPO[MBB->getNumber()] = RPONumber;
     ++RPONumber;
@@ -3724,14 +3733,13 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
 
   // Walk back through each block / instruction, collecting DBG_VALUE
   // instructions and recording what machine value their operands refer to.
-  for (auto &OrderPair : OrderToBB) {
-    MachineBasicBlock &MBB = *OrderPair.second;
-    CurBB = MBB.getNumber();
+  for (MachineBasicBlock *MBB : OrderToBB) {
+    CurBB = MBB->getNumber();
     VTracker = &vlocs[CurBB];
-    VTracker->MBB = &MBB;
-    MTracker->loadFromArray(MInLocs[MBB], CurBB);
+    VTracker->MBB = MBB;
+    MTracker->loadFromArray(MInLocs[*MBB], CurBB);
     CurInst = 1;
-    for (auto &MI : MBB) {
+    for (auto &MI : *MBB) {
       process(MI, &MOutLocs, &MInLocs);
       ++CurInst;
     }
@@ -3907,7 +3915,7 @@ public:
   DenseMap<BlockValueNum, LDVSSAPhi *> PHIs;
   /// Map of which blocks generate Undef values -- blocks that are not
   /// dominated by any Def.
-  DenseMap<MachineBasicBlock *, BlockValueNum> UndefMap;
+  DenseMap<MachineBasicBlock *, BlockValueNum> PoisonMap;
   /// Map of machine blocks to our own records of them.
   DenseMap<MachineBasicBlock *, LDVSSABlock *> BlockMap;
   /// Machine location where any PHI must occur.
@@ -3923,7 +3931,7 @@ public:
       delete Block.second;
 
     PHIs.clear();
-    UndefMap.clear();
+    PoisonMap.clear();
     BlockMap.clear();
   }
 
@@ -4017,15 +4025,15 @@ public:
       Preds->push_back(BB->Updater.getSSALDVBlock(Pred));
   }
 
-  /// GetUndefVal - Normally creates an IMPLICIT_DEF instruction with a new
+  /// GetPoisonVal - Normally creates an IMPLICIT_DEF instruction with a new
   /// register. For LiveDebugValues, represents a block identified as not having
   /// any DBG_PHI predecessors.
-  static BlockValueNum GetUndefVal(LDVSSABlock *BB, LDVSSAUpdater *Updater) {
+  static BlockValueNum GetPoisonVal(LDVSSABlock *BB, LDVSSAUpdater *Updater) {
     // Create a value number for this block -- it needs to be unique and in the
-    // "undef" collection, so that we know it's not real. Use a number
+    // "poison" collection, so that we know it's not real. Use a number
     // representing a PHI into this block.
     BlockValueNum Num = ValueIDNum(BB->BB.getNumber(), 0, Updater->Loc).asU64();
-    Updater->UndefMap[&BB->BB] = Num;
+    Updater->PoisonMap[&BB->BB] = Num;
     return Num;
   }
 
@@ -4188,7 +4196,7 @@ std::optional<ValueIDNum> InstrRefBasedLDV::resolveDbgPHIsImpl(
     // Are all these things actually defined?
     for (auto &PHIIt : PHI->IncomingValues) {
       // Any undef input means DBG_PHIs didn't dominate the use point.
-      if (Updater.UndefMap.contains(&PHIIt.first->BB))
+      if (Updater.PoisonMap.contains(&PHIIt.first->BB))
         return std::nullopt;
 
       ValueIDNum ValueToCheck;

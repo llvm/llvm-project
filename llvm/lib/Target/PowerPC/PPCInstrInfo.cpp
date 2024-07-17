@@ -1954,8 +1954,8 @@ void PPCInstrInfo::storeRegToStackSlotNoUpd(
 
   StoreRegToStackSlot(MF, SrcReg, isKill, FrameIdx, RC, NewMIs);
 
-  for (unsigned i = 0, e = NewMIs.size(); i != e; ++i)
-    MBB.insert(MI, NewMIs[i]);
+  for (MachineInstr *NewMI : NewMIs)
+    MBB.insert(MI, NewMI);
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
@@ -2001,8 +2001,8 @@ void PPCInstrInfo::loadRegFromStackSlotNoUpd(
 
   LoadRegFromStackSlot(MF, DL, DestReg, FrameIdx, RC, NewMIs);
 
-  for (unsigned i = 0, e = NewMIs.size(); i != e; ++i)
-    MBB.insert(MI, NewMIs[i]);
+  for (MachineInstr *NewMI : NewMIs)
+    MBB.insert(MI, NewMI);
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
@@ -2125,7 +2125,8 @@ bool PPCInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
 
 static bool MBBDefinesCTR(MachineBasicBlock &MBB) {
   for (MachineInstr &MI : MBB)
-    if (MI.definesRegister(PPC::CTR) || MI.definesRegister(PPC::CTR8))
+    if (MI.definesRegister(PPC::CTR, /*TRI=*/nullptr) ||
+        MI.definesRegister(PPC::CTR8, /*TRI=*/nullptr))
       return true;
   return false;
 }
@@ -2731,19 +2732,19 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     MI->setDesc(NewDesc);
 
     for (MCPhysReg ImpDef : NewDesc.implicit_defs()) {
-      if (!MI->definesRegister(ImpDef)) {
+      if (!MI->definesRegister(ImpDef, /*TRI=*/nullptr)) {
         MI->addOperand(*MI->getParent()->getParent(),
                        MachineOperand::CreateReg(ImpDef, true, true));
       }
     }
     for (MCPhysReg ImpUse : NewDesc.implicit_uses()) {
-      if (!MI->readsRegister(ImpUse)) {
+      if (!MI->readsRegister(ImpUse, /*TRI=*/nullptr)) {
         MI->addOperand(*MI->getParent()->getParent(),
                        MachineOperand::CreateReg(ImpUse, false, true));
       }
     }
   }
-  assert(MI->definesRegister(PPC::CR0) &&
+  assert(MI->definesRegister(PPC::CR0, /*TRI=*/nullptr) &&
          "Record-form instruction does not define cr0?");
 
   // Modify the condition code of operands in OperandsToUpdate.
@@ -2793,7 +2794,7 @@ bool PPCInstrInfo::optimizeCmpPostRA(MachineInstr &CmpMI) const {
 
   bool SrcRegHasOtherUse = false;
   MachineInstr *SrcMI = getDefMIPostRA(SrcReg, CmpMI, SrcRegHasOtherUse);
-  if (!SrcMI || !SrcMI->definesRegister(SrcReg))
+  if (!SrcMI || !SrcMI->definesRegister(SrcReg, /*TRI=*/nullptr))
     return false;
 
   MachineOperand RegMO = CmpMI.getOperand(0);
@@ -2806,7 +2807,7 @@ bool PPCInstrInfo::optimizeCmpPostRA(MachineInstr &CmpMI) const {
   bool IsCRRegKilled = false;
   if (!isRegElgibleForForwarding(RegMO, *SrcMI, CmpMI, false, IsCRRegKilled,
                                  SeenUseOfCRReg) ||
-      SrcMI->definesRegister(CRReg) || SeenUseOfCRReg)
+      SrcMI->definesRegister(CRReg, /*TRI=*/nullptr) || SeenUseOfCRReg)
     return false;
 
   int SrcMIOpc = SrcMI->getOpcode();
@@ -2823,7 +2824,7 @@ bool PPCInstrInfo::optimizeCmpPostRA(MachineInstr &CmpMI) const {
       .addReg(CRReg, RegState::ImplicitDefine);
   SrcMI->clearRegisterDeads(CRReg);
 
-  assert(SrcMI->definesRegister(PPC::CR0) &&
+  assert(SrcMI->definesRegister(PPC::CR0, /*TRI=*/nullptr) &&
          "Record-form instruction does not define cr0?");
 
   LLVM_DEBUG(dbgs() << "with: ");
@@ -3123,7 +3124,7 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(PPC::LWZ));
     uint64_t FAType = MI.getOperand(1).getImm();
 #undef PPC_LNX_FEATURE
-#undef PPC_LNX_CPU
+#undef PPC_CPU
 #define PPC_LNX_DEFINE_OFFSETS
 #include "llvm/TargetParser/PPCTargetParser.def"
     bool IsLE = Subtarget.isLittleEndian();
@@ -3293,7 +3294,7 @@ void PPCInstrInfo::replaceInstrOperandWithImm(MachineInstr &MI,
   // result its number of explicit operands may be changed, thus the begin of
   // implicit operand is changed.
   const TargetRegisterInfo *TRI = &getRegisterInfo();
-  int UseOpIdx = MI.findRegisterUseOperandIdx(InUseReg, false, TRI);
+  int UseOpIdx = MI.findRegisterUseOperandIdx(InUseReg, TRI, false);
   if (UseOpIdx >= 0) {
     MachineOperand &MO = MI.getOperand(UseOpIdx);
     if (MO.isImplicit())
@@ -4437,6 +4438,12 @@ bool PPCInstrInfo::isDefMIElgibleForForwarding(MachineInstr &DefMI,
   if (Opc != PPC::ADDItocL8 && Opc != PPC::ADDI && Opc != PPC::ADDI8)
     return false;
 
+  // Skip the optimization of transformTo[NewImm|Imm]FormFedByAdd for ADDItocL8
+  // on AIX which is used for toc-data access. TODO: Follow up to see if it can
+  // apply for AIX toc-data as well.
+  if (Opc == PPC::ADDItocL8 && Subtarget.isAIX())
+    return false;
+
   assert(DefMI.getNumOperands() >= 3 &&
          "Add inst must have at least three operands");
   RegMO = &DefMI.getOperand(1);
@@ -4512,7 +4519,7 @@ bool PPCInstrInfo::isImmElgibleForForwarding(const MachineOperand &ImmMO,
     // load. A DForm load cannot be represented if it is a multiple of say 2.
     // XForm loads do not have this restriction.
     if (ImmMO.isGlobal()) {
-      const DataLayout &DL = ImmMO.getGlobal()->getParent()->getDataLayout();
+      const DataLayout &DL = ImmMO.getGlobal()->getDataLayout();
       if (ImmMO.getGlobal()->getPointerAlignment(DL) < III.ImmMustBeMultipleOf)
         return false;
     }

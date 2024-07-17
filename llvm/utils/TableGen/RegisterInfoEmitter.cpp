@@ -370,11 +370,10 @@ static void finalizeDwarfRegNumsKeys(DwarfRegNumsVecTy &DwarfRegNums) {
                                       "specified multiple times");
     LastSeenReg = Reg;
   }
-  auto Last = std::unique(
-      DwarfRegNums.begin(), DwarfRegNums.end(),
-      [](const DwarfRegNumsMapPair &A, const DwarfRegNumsMapPair &B) {
-        return A.first->getName() == B.first->getName();
-      });
+  auto Last = llvm::unique(DwarfRegNums, [](const DwarfRegNumsMapPair &A,
+                                            const DwarfRegNumsMapPair &B) {
+    return A.first->getName() == B.first->getName();
+  });
   DwarfRegNums.erase(Last, DwarfRegNums.end());
 }
 
@@ -962,7 +961,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
 
   OS << "extern const MCRegisterDesc " << TargetName
      << "RegDesc[] = { // Descriptors\n";
-  OS << "  { " << RegStrings.get("") << ", 0, 0, 0, 0, 0 },\n";
+  OS << "  { " << RegStrings.get("") << ", 0, 0, 0, 0, 0, 0 },\n";
 
   // Emit the register descriptors now.
   i = 0;
@@ -977,7 +976,8 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
        << DiffSeqs.get(SubRegLists[i]) << ", " << DiffSeqs.get(SuperRegLists[i])
        << ", " << SubRegIdxSeqs.get(SubRegIdxLists[i]) << ", "
        << (Offset << RegUnitBits | FirstRU) << ", "
-       << LaneMaskSeqs.get(RegUnitLaneMasks[i]) << " },\n";
+       << LaneMaskSeqs.get(RegUnitLaneMasks[i]) << ", " << Reg.Constant
+       << " },\n";
     ++i;
   }
   OS << "};\n\n"; // End of register descriptors...

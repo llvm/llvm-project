@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 #define LLVM_LIB_TARGET_AARCH64_AARCH64MACHINEFUNCTIONINFO_H
 
+#include "AArch64Subtarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -34,6 +35,11 @@ struct AArch64FunctionInfo;
 
 class AArch64Subtarget;
 class MachineInstr;
+
+struct TPIDR2Object {
+  int FrameIndex = std::numeric_limits<int>::max();
+  unsigned Uses = 0;
+};
 
 /// AArch64FunctionInfo - This class is derived from MachineFunctionInfo and
 /// contains private AArch64-specific information for each MachineFunction.
@@ -195,7 +201,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   bool IsSVECC = false;
 
   /// The frame-index for the TPIDR2 object used for lazy saves.
-  Register LazySaveTPIDR2Obj = 0;
+  TPIDR2Object TPIDR2;
 
   /// Whether this function changes streaming mode within the function.
   bool HasStreamingModeChanges = false;
@@ -212,6 +218,14 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   // on function entry to record the initial pstate of a function.
   Register PStateSMReg = MCRegister::NoRegister;
 
+  // Has the PNReg used to build PTRUE instruction.
+  // The PTRUE is used for the LD/ST of ZReg pairs in save and restore.
+  unsigned PredicateRegForFillSpill = 0;
+
+  // The stack slots where VG values are stored to.
+  int64_t VGIdx = std::numeric_limits<int>::max();
+  int64_t StreamingVGIdx = std::numeric_limits<int>::max();
+
 public:
   AArch64FunctionInfo(const Function &F, const AArch64Subtarget *STI);
 
@@ -220,14 +234,26 @@ public:
         const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
       const override;
 
+  void setPredicateRegForFillSpill(unsigned Reg) {
+    PredicateRegForFillSpill = Reg;
+  }
+  unsigned getPredicateRegForFillSpill() const {
+    return PredicateRegForFillSpill;
+  }
+
   Register getPStateSMReg() const { return PStateSMReg; };
   void setPStateSMReg(Register Reg) { PStateSMReg = Reg; };
+
+  int64_t getVGIdx() const { return VGIdx; };
+  void setVGIdx(unsigned Idx) { VGIdx = Idx; };
+
+  int64_t getStreamingVGIdx() const { return StreamingVGIdx; };
+  void setStreamingVGIdx(unsigned FrameIdx) { StreamingVGIdx = FrameIdx; };
 
   bool isSVECC() const { return IsSVECC; };
   void setIsSVECC(bool s) { IsSVECC = s; };
 
-  unsigned getLazySaveTPIDR2Obj() const { return LazySaveTPIDR2Obj; }
-  void setLazySaveTPIDR2Obj(unsigned Reg) { LazySaveTPIDR2Obj = Reg; }
+  TPIDR2Object &getTPIDR2Obj() { return TPIDR2; }
 
   void initializeBaseYamlFields(const yaml::AArch64FunctionInfo &YamlMFI);
 

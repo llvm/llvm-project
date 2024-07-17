@@ -1,5 +1,5 @@
 // Test without serialization:
-// RUN: %clang_cc1 -fsyntax-only -triple x86_64-pc-linux -ast-dump %s \
+// RUN: %clang_cc1 -triple x86_64-pc-linux -ast-dump %s \
 // RUN: | FileCheck --strict-whitespace %s
 
 // Test with serialization:
@@ -24,6 +24,6 @@
 
 // CHECK-LABEL: ObjCImplementationDecl {{.*}} Adder
 // CHECK:         ObjCMethodDecl {{.*}} - sum:with: 'float'
-// CHECK:           CompoundStmt {{.*}} MathErrno=1
+// CHECK:           CompoundStmt {{.*}} FPContractMode=1 MathErrno=1
 // CHECK-NEXT:        ReturnStmt
-// CHECK-NEXT:          BinaryOperator {{.*}} 'float' '+' MathErrno=1
+// CHECK-NEXT:          BinaryOperator {{.*}} 'float' '+' FPContractMode=1 MathErrno=1

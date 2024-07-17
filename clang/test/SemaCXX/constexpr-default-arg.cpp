@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++1y -S -o - -emit-llvm -verify %s
-// RUN: %clang_cc1 -std=c++1y -fexperimental-new-constant-interpreter -S -o - -emit-llvm -verify %s
+// RUN: %clang_cc1 -std=c++1y -o - -emit-llvm -verify %s
+// RUN: %clang_cc1 -std=c++1y -fexperimental-new-constant-interpreter -o - -emit-llvm -verify %s
 
 namespace default_arg_temporary {
 

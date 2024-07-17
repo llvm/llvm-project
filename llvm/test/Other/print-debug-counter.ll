@@ -1,16 +1,16 @@
 ; REQUIRES: asserts
 
-; RUN: opt -S -debug-counter=early-cse-skip=1,early-cse-count=1 -passes=early-cse,newgvn,instcombine -earlycse-debug-hash \
-; RUN:        -debug-counter=newgvn-vn-skip=1,newgvn-vn-count=2 \
+; RUN: opt -S -debug-counter=early-cse=1 -passes=early-cse,newgvn,instcombine -earlycse-debug-hash \
+; RUN:        -debug-counter=newgvn-vn=1-2 \
 ; RUN:        -print-debug-counter < %s 2>&1 | FileCheck %s
 ;; Test debug counter prints correct info in right order.
 ; CHECK-LABEL: Counters and values:
 ; CHECK:       early-cse
-; CHECK-SAME:  {4,1,1}
+; CHECK-SAME:  {4,1}
 ; CHECK:       instcombine-visit
-; CHECK-SAME:  {13,0,-1}
+; CHECK-SAME:  {13,empty}
 ; CHECK:       newgvn-vn
-; CHECK-SAME:  {9,1,2}
+; CHECK-SAME:  {9,1-2}
 define i32 @f1(i32 %a, i32 %b) {
 bb:
   %add1 = add i32 %a, %b

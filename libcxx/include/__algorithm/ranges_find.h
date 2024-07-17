@@ -44,9 +44,9 @@ struct __fn {
     if constexpr (forward_iterator<_Iter>) {
       auto [__first_un, __last_un] = std::__unwrap_range(__first, std::move(__last));
       return std::__rewrap_range<_Sent>(
-          std::move(__first), std::__find_impl(std::move(__first_un), std::move(__last_un), __value, __proj));
+          std::move(__first), std::__find(std::move(__first_un), std::move(__last_un), __value, __proj));
     } else {
-      return std::__find_impl(std::move(__first), std::move(__last), __value, __proj);
+      return std::__find(std::move(__first), std::move(__last), __value, __proj);
     }
   }
 

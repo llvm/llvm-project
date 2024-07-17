@@ -126,6 +126,9 @@ PPKEYWORD(error)
 // C99 6.10.6 - Pragma Directive.
 PPKEYWORD(pragma)
 
+// C23 & C++26 #embed
+PPKEYWORD(embed)
+
 // GNU Extensions.
 PPKEYWORD(import)
 PPKEYWORD(include_next)
@@ -161,6 +164,9 @@ TOK(raw_identifier)      // Used only in raw lexing mode.
 // C99 6.4.4.1: Integer Constants
 // C99 6.4.4.2: Floating Constants
 TOK(numeric_constant)    // 0x123
+
+// Directly holds numerical value. Used to process C23 #embed.
+TOK(binary_data)
 
 // C99 6.4.4: Character Constants
 TOK(char_constant)       // 'a'
@@ -328,6 +334,11 @@ KEYWORD(_Atomic                     , KEYALL|KEYNOOPENCL)
 KEYWORD(_Bool                       , KEYNOCXX)
 KEYWORD(_Complex                    , KEYALL)
 KEYWORD(_Generic                    , KEYALL)
+// Note, C2y removed support for _Imaginary; we retain it as a keyword because
+// 1) it's a reserved identifier, so we're allowed to steal it, 2) there's no
+// good way to specify a keyword in earlier but not later language modes within
+// this file, 3) this allows us to provide a better diagnostic in case a user
+// does use the keyword.
 KEYWORD(_Imaginary                  , KEYALL)
 KEYWORD(_Noreturn                   , KEYALL)
 KEYWORD(_Static_assert              , KEYALL)
@@ -537,6 +548,12 @@ TYPE_TRAIT_1(__is_referenceable, IsReferenceable, KEYCXX)
 TYPE_TRAIT_1(__can_pass_in_regs, CanPassInRegs, KEYCXX)
 TYPE_TRAIT_2(__reference_binds_to_temporary, ReferenceBindsToTemporary, KEYCXX)
 TYPE_TRAIT_2(__reference_constructs_from_temporary, ReferenceConstructsFromTemporary, KEYCXX)
+TYPE_TRAIT_2(__reference_converts_from_temporary, ReferenceConvertsFromTemporary, KEYCXX)
+// IsDeducible is only used internally by clang for CTAD implementation and
+// is not exposed to users.
+TYPE_TRAIT_2(/*EmptySpellingName*/, IsDeducible, KEYCXX)
+
+TYPE_TRAIT_1(__is_bitwise_cloneable, IsBitwiseCloneable, KEYALL)
 
 // Embarcadero Expression Traits
 EXPRESSION_TRAIT(__is_lvalue_expr, IsLValueExpr, KEYCXX)
@@ -992,6 +1009,9 @@ ANNOTATION(header_unit)
 
 // Annotation for end of input in clang-repl.
 ANNOTATION(repl_input_end)
+
+// Annotation for #embed
+ANNOTATION(embed)
 
 #undef PRAGMA_ANNOTATION
 #undef ANNOTATION

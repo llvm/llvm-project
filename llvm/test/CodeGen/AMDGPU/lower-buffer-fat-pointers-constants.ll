@@ -143,7 +143,9 @@ define ptr addrspace(7) @gep_p7_from_p7() {
 define i160 @ptrtoint() {
 ; CHECK-LABEL: define i160 @ptrtoint
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    ret i160 add nuw nsw (i160 shl nuw (i160 ptrtoint (ptr addrspace(8) @buf to i160), i160 32), i160 12)
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i160 ptrtoint (ptr addrspace(8) @buf to i160), 32
+; CHECK-NEXT:    [[TMP2:%.*]] = or i160 [[TMP1]], 12
+; CHECK-NEXT:    ret i160 [[TMP2]]
 ;
   ret i160 ptrtoint(
   ptr addrspace(7) getelementptr(
@@ -154,7 +156,9 @@ define i160 @ptrtoint() {
 define i256 @ptrtoint_long() {
 ; CHECK-LABEL: define i256 @ptrtoint_long
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    ret i256 add nuw nsw (i256 shl nuw nsw (i256 ptrtoint (ptr addrspace(8) @buf to i256), i256 32), i256 12)
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i256 ptrtoint (ptr addrspace(8) @buf to i256), 32
+; CHECK-NEXT:    [[TMP2:%.*]] = or i256 [[TMP1]], 12
+; CHECK-NEXT:    ret i256 [[TMP2]]
 ;
   ret i256 ptrtoint(
   ptr addrspace(7) getelementptr(
@@ -165,7 +169,9 @@ define i256 @ptrtoint_long() {
 define i64 @ptrtoint_short() {
 ; CHECK-LABEL: define i64 @ptrtoint_short
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    ret i64 add nuw nsw (i64 shl (i64 ptrtoint (ptr addrspace(8) @buf to i64), i64 32), i64 12)
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 ptrtoint (ptr addrspace(8) @buf to i64), 32
+; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 12
+; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
   ret i64 ptrtoint(
   ptr addrspace(7) getelementptr(
@@ -176,7 +182,7 @@ define i64 @ptrtoint_short() {
 define i32 @ptrtoint_very_short() {
 ; CHECK-LABEL: define i32 @ptrtoint_very_short
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    ret i32 add nuw nsw (i32 shl (i32 ptrtoint (ptr addrspace(8) @buf to i32), i32 32), i32 12)
+; CHECK-NEXT:    ret i32 12
 ;
   ret i32 ptrtoint(
   ptr addrspace(7) getelementptr(
@@ -212,7 +218,7 @@ define <2 x ptr addrspace(7)> @inttoptr_vec() {
 define i32 @fancy_zero() {
 ; CHECK-LABEL: define i32 @fancy_zero
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    ret i32 shl (i32 ptrtoint (ptr addrspace(8) @buf to i32), i32 32)
+; CHECK-NEXT:    ret i32 0
 ;
   ret i32 ptrtoint (
   ptr addrspace(7) addrspacecast (ptr addrspace(8) @buf to ptr addrspace(7))

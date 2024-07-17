@@ -15,18 +15,24 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/FlowSensitive/ASTOps.h"
+#include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <algorithm>
 #include <cassert>
+#include <memory>
 #include <utility>
 
 #define DEBUG_TYPE "dataflow"
@@ -157,7 +163,13 @@ static WidenResult widenDistinctValues(QualType Type, Value &Prev,
                                        Value &Current, Environment &CurrentEnv,
                                        Environment::ValueModel &Model) {
   // Boolean-model widening.
-  if (auto *PrevBool = dyn_cast<BoolValue>(&Prev)) {
+  if (isa<BoolValue>(Prev) && isa<BoolValue>(Current)) {
+    // FIXME: Checking both values should be unnecessary, but we can currently
+    // end up with `BoolValue`s in integer-typed variables. See comment in
+    // `joinDistinctValues()` for details.
+    auto &PrevBool = cast<BoolValue>(Prev);
+    auto &CurBool = cast<BoolValue>(Current);
+
     if (isa<TopBoolValue>(Prev))
       // Safe to return `Prev` here, because Top is never dependent on the
       // environment.
@@ -166,13 +178,12 @@ static WidenResult widenDistinctValues(QualType Type, Value &Prev,
     // We may need to widen to Top, but before we do so, check whether both
     // values are implied to be either true or false in the current environment.
     // In that case, we can simply return a literal instead.
-    auto &CurBool = cast<BoolValue>(Current);
-    bool TruePrev = PrevEnv.proves(PrevBool->formula());
+    bool TruePrev = PrevEnv.proves(PrevBool.formula());
     bool TrueCur = CurrentEnv.proves(CurBool.formula());
     if (TruePrev && TrueCur)
       return {&CurrentEnv.getBoolLiteralValue(true), LatticeEffect::Unchanged};
     if (!TruePrev && !TrueCur &&
-        PrevEnv.proves(PrevEnv.arena().makeNot(PrevBool->formula())) &&
+        PrevEnv.proves(PrevEnv.arena().makeNot(PrevBool.formula())) &&
         CurrentEnv.proves(CurrentEnv.arena().makeNot(CurBool.formula())))
       return {&CurrentEnv.getBoolLiteralValue(false), LatticeEffect::Unchanged};
 
@@ -285,25 +296,20 @@ widenKeyToValueMap(const llvm::MapVector<Key, Value *> &CurMap,
 namespace {
 
 // Visitor that builds a map from record prvalues to result objects.
-// This traverses the body of the function to be analyzed; for each result
-// object that it encounters, it propagates the storage location of the result
-// object to all record prvalues that can initialize it.
-class ResultObjectVisitor : public RecursiveASTVisitor<ResultObjectVisitor> {
+// For each result object that it encounters, it propagates the storage location
+// of the result object to all record prvalues that can initialize it.
+class ResultObjectVisitor : public AnalysisASTVisitor<ResultObjectVisitor> {
 public:
   // `ResultObjectMap` will be filled with a map from record prvalues to result
-  // object. If the function being analyzed returns a record by value,
-  // `LocForRecordReturnVal` is the location to which this record should be
-  // written; otherwise, it is null.
+  // object. If this visitor will traverse a function that returns a record by
+  // value, `LocForRecordReturnVal` is the location to which this record should
+  // be written; otherwise, it is null.
   explicit ResultObjectVisitor(
       llvm::DenseMap<const Expr *, RecordStorageLocation *> &ResultObjectMap,
       RecordStorageLocation *LocForRecordReturnVal,
       DataflowAnalysisContext &DACtx)
       : ResultObjectMap(ResultObjectMap),
         LocForRecordReturnVal(LocForRecordReturnVal), DACtx(DACtx) {}
-
-  bool shouldVisitImplicitCode() { return true; }
-
-  bool shouldVisitLambdaBody() const { return false; }
 
   // Traverse all member and base initializers of `Ctor`. This function is not
   // called by `RecursiveASTVisitor`; it should be called manually if we are
@@ -331,14 +337,6 @@ public:
       if (auto *DefaultInit = dyn_cast<CXXDefaultInitExpr>(InitExpr))
         TraverseStmt(DefaultInit->getExpr());
     }
-  }
-
-  bool TraverseBindingDecl(BindingDecl *BD) {
-    // `RecursiveASTVisitor` doesn't traverse holding variables for
-    // `BindingDecl`s by itself, so we need to tell it to.
-    if (VarDecl *HoldingVar = BD->getHoldingVar())
-      TraverseDecl(HoldingVar);
-    return RecursiveASTVisitor<ResultObjectVisitor>::TraverseBindingDecl(BD);
   }
 
   bool VisitVarDecl(VarDecl *VD) {
@@ -417,8 +415,8 @@ public:
     // lowest-level AST node that initializes a given object, and nothing
     // below them can initialize the same object (or part of it).
     if (isa<CXXConstructExpr>(E) || isa<CallExpr>(E) || isa<LambdaExpr>(E) ||
-        isa<CXXDefaultArgExpr>(E) || isa<CXXDefaultInitExpr>(E) ||
-        isa<CXXStdInitializerListExpr>(E) ||
+        isa<CXXDefaultArgExpr>(E) || isa<CXXStdInitializerListExpr>(E) ||
+        isa<AtomicExpr>(E) ||
         // We treat `BuiltinBitCastExpr` as an "original initializer" too as
         // it may not even be casting from a record type -- and even if it is,
         // the two objects are in general of unrelated type.
@@ -466,6 +464,11 @@ public:
       return;
     }
 
+    if (auto *DIE = dyn_cast<CXXDefaultInitExpr>(E)) {
+      PropagateResultObject(DIE->getExpr(), Loc);
+      return;
+    }
+
     // All other expression nodes that propagate a record prvalue should have
     // exactly one child.
     SmallVector<Stmt *, 1> Children(E->child_begin(), E->child_end());
@@ -486,39 +489,31 @@ private:
 
 } // namespace
 
-Environment::Environment(DataflowAnalysisContext &DACtx)
-    : DACtx(&DACtx),
-      FlowConditionToken(DACtx.arena().makeFlowConditionToken()) {}
-
-Environment::Environment(DataflowAnalysisContext &DACtx,
-                         const DeclContext &DeclCtx)
-    : Environment(DACtx) {
-  CallStack.push_back(&DeclCtx);
-}
-
 void Environment::initialize() {
-  const DeclContext *DeclCtx = getDeclCtx();
-  if (DeclCtx == nullptr)
+  if (InitialTargetStmt == nullptr)
     return;
 
-  const auto *FuncDecl = dyn_cast<FunctionDecl>(DeclCtx);
-  if (FuncDecl == nullptr)
+  if (InitialTargetFunc == nullptr) {
+    initFieldsGlobalsAndFuncs(getReferencedDecls(*InitialTargetStmt));
+    ResultObjectMap =
+        std::make_shared<PrValueToResultObject>(buildResultObjectMap(
+            DACtx, InitialTargetStmt, getThisPointeeStorageLocation(),
+            /*LocForRecordReturnValue=*/nullptr));
     return;
+  }
 
-  assert(FuncDecl->doesThisDeclarationHaveABody());
+  initFieldsGlobalsAndFuncs(getReferencedDecls(*InitialTargetFunc));
 
-  initFieldsGlobalsAndFuncs(FuncDecl);
-
-  for (const auto *ParamDecl : FuncDecl->parameters()) {
+  for (const auto *ParamDecl : InitialTargetFunc->parameters()) {
     assert(ParamDecl != nullptr);
     setStorageLocation(*ParamDecl, createObject(*ParamDecl, nullptr));
   }
 
-  if (FuncDecl->getReturnType()->isRecordType())
+  if (InitialTargetFunc->getReturnType()->isRecordType())
     LocForRecordReturnVal = &cast<RecordStorageLocation>(
-        createStorageLocation(FuncDecl->getReturnType()));
+        createStorageLocation(InitialTargetFunc->getReturnType()));
 
-  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(DeclCtx)) {
+  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(InitialTargetFunc)) {
     auto *Parent = MethodDecl->getParent();
     assert(Parent != nullptr);
 
@@ -530,7 +525,7 @@ void Environment::initialize() {
           setStorageLocation(*VarDecl, createObject(*VarDecl, nullptr));
         } else if (Capture.capturesThis()) {
           const auto *SurroundingMethodDecl =
-              cast<CXXMethodDecl>(DeclCtx->getNonClosureAncestor());
+              cast<CXXMethodDecl>(InitialTargetFunc->getNonClosureAncestor());
           QualType ThisPointeeType =
               SurroundingMethodDecl->getFunctionObjectParameterType();
           setThisPointeeStorageLocation(
@@ -552,18 +547,16 @@ void Environment::initialize() {
 
   // We do this below the handling of `CXXMethodDecl` above so that we can
   // be sure that the storage location for `this` has been set.
-  ResultObjectMap = std::make_shared<PrValueToResultObject>(
-      buildResultObjectMap(DACtx, FuncDecl, getThisPointeeStorageLocation(),
-                           LocForRecordReturnVal));
+  ResultObjectMap =
+      std::make_shared<PrValueToResultObject>(buildResultObjectMap(
+          DACtx, InitialTargetFunc, getThisPointeeStorageLocation(),
+          LocForRecordReturnVal));
 }
 
-// FIXME: Add support for resetting globals after function calls to enable
-// the implementation of sound analyses.
-void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
-  assert(FuncDecl->doesThisDeclarationHaveABody());
+// FIXME: Add support for resetting globals after function calls to enable the
+// implementation of sound analyses.
 
-  ReferencedDecls Referenced = getReferencedDecls(*FuncDecl);
-
+void Environment::initFieldsGlobalsAndFuncs(const ReferencedDecls &Referenced) {
   // These have to be added before the lines that follow to ensure that
   // `create*` work correctly for structs.
   DACtx->addModeledFields(Referenced.Fields);
@@ -574,9 +567,9 @@ void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
 
     // We don't run transfer functions on the initializers of global variables,
     // so they won't be associated with a value or storage location. We
-    // therefore intentionally don't pass an initializer to `createObject()`;
-    // in particular, this ensures that `createObject()` will initialize the
-    // fields of record-type variables with values.
+    // therefore intentionally don't pass an initializer to `createObject()`; in
+    // particular, this ensures that `createObject()` will initialize the fields
+    // of record-type variables with values.
     setStorageLocation(*D, createObject(*D, nullptr));
   }
 
@@ -595,8 +588,8 @@ Environment Environment::fork() const {
 }
 
 bool Environment::canDescend(unsigned MaxDepth,
-                             const DeclContext *Callee) const {
-  return CallStack.size() <= MaxDepth && !llvm::is_contained(CallStack, Callee);
+                             const FunctionDecl *Callee) const {
+  return CallStack.size() < MaxDepth && !llvm::is_contained(CallStack, Callee);
 }
 
 Environment Environment::pushCall(const CallExpr *Call) const {
@@ -643,7 +636,7 @@ void Environment::pushCallInternal(const FunctionDecl *FuncDecl,
 
   CallStack.push_back(FuncDecl);
 
-  initFieldsGlobalsAndFuncs(FuncDecl);
+  initFieldsGlobalsAndFuncs(getReferencedDecls(*FuncDecl));
 
   const auto *ParamIt = FuncDecl->param_begin();
 
@@ -727,6 +720,8 @@ LatticeEffect Environment::widen(const Environment &PrevEnv,
   assert(ThisPointeeLoc == PrevEnv.ThisPointeeLoc);
   assert(CallStack == PrevEnv.CallStack);
   assert(ResultObjectMap == PrevEnv.ResultObjectMap);
+  assert(InitialTargetFunc == PrevEnv.InitialTargetFunc);
+  assert(InitialTargetStmt == PrevEnv.InitialTargetStmt);
 
   auto Effect = LatticeEffect::Unchanged;
 
@@ -762,6 +757,8 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
   assert(EnvA.ThisPointeeLoc == EnvB.ThisPointeeLoc);
   assert(EnvA.CallStack == EnvB.CallStack);
   assert(EnvA.ResultObjectMap == EnvB.ResultObjectMap);
+  assert(EnvA.InitialTargetFunc == EnvB.InitialTargetFunc);
+  assert(EnvA.InitialTargetStmt == EnvB.InitialTargetStmt);
 
   Environment JoinedEnv(*EnvA.DACtx);
 
@@ -769,14 +766,13 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
   JoinedEnv.ResultObjectMap = EnvA.ResultObjectMap;
   JoinedEnv.LocForRecordReturnVal = EnvA.LocForRecordReturnVal;
   JoinedEnv.ThisPointeeLoc = EnvA.ThisPointeeLoc;
+  JoinedEnv.InitialTargetFunc = EnvA.InitialTargetFunc;
+  JoinedEnv.InitialTargetStmt = EnvA.InitialTargetStmt;
 
-  if (EnvA.CallStack.empty()) {
+  const FunctionDecl *Func = EnvA.getCurrentFunc();
+  if (!Func) {
     JoinedEnv.ReturnVal = nullptr;
   } else {
-    // FIXME: Make `CallStack` a vector of `FunctionDecl` so we don't need this
-    // cast.
-    auto *Func = dyn_cast<FunctionDecl>(EnvA.CallStack.back());
-    assert(Func != nullptr);
     JoinedEnv.ReturnVal =
         joinValues(Func->getReturnType(), EnvA.ReturnVal, EnvA, EnvB.ReturnVal,
                    EnvB, JoinedEnv, Model);
@@ -1201,13 +1197,23 @@ Environment::PrValueToResultObject Environment::buildResultObjectMap(
     RecordStorageLocation *LocForRecordReturnVal) {
   assert(FuncDecl->doesThisDeclarationHaveABody());
 
-  PrValueToResultObject Map;
+  PrValueToResultObject Map = buildResultObjectMap(
+      DACtx, FuncDecl->getBody(), ThisPointeeLoc, LocForRecordReturnVal);
 
   ResultObjectVisitor Visitor(Map, LocForRecordReturnVal, *DACtx);
   if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FuncDecl))
     Visitor.TraverseConstructorInits(Ctor, ThisPointeeLoc);
-  Visitor.TraverseStmt(FuncDecl->getBody());
 
+  return Map;
+}
+
+Environment::PrValueToResultObject Environment::buildResultObjectMap(
+    DataflowAnalysisContext *DACtx, Stmt *S,
+    RecordStorageLocation *ThisPointeeLoc,
+    RecordStorageLocation *LocForRecordReturnVal) {
+  PrValueToResultObject Map;
+  ResultObjectVisitor Visitor(Map, LocForRecordReturnVal, *DACtx);
+  Visitor.TraverseStmt(S);
   return Map;
 }
 

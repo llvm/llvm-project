@@ -16,17 +16,17 @@ declare void @llvm.amdgcn.s.barrier()
 declare void @llvm.assume(i1)
 
 ;.
-; CHECK: @[[GC1:[a-zA-Z0-9_$"\\.-]+]] = constant i32 42
-; CHECK: @[[GC2:[a-zA-Z0-9_$"\\.-]+]] = addrspace(4) global i32 0
-; CHECK: @[[GPTR4:[a-zA-Z0-9_$"\\.-]+]] = addrspace(4) global ptr addrspace(4) null
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = global i32 42
-; CHECK: @[[GS:[a-zA-Z0-9_$"\\.-]+]] = addrspace(3) global i32 0
-; CHECK: @[[GPTR:[a-zA-Z0-9_$"\\.-]+]] = global ptr null
-; CHECK: @[[PG1:[a-zA-Z0-9_$"\\.-]+]] = thread_local global i32 42
-; CHECK: @[[PG2:[a-zA-Z0-9_$"\\.-]+]] = addrspace(5) global i32 0
-; CHECK: @[[GPTR5:[a-zA-Z0-9_$"\\.-]+]] = global ptr addrspace(5) null
-; CHECK: @[[G1:[a-zA-Z0-9_$"\\.-]+]] = global i32 42
-; CHECK: @[[G2:[a-zA-Z0-9_$"\\.-]+]] = addrspace(1) global i32 0
+; CHECK: @GC1 = constant i32 42
+; CHECK: @GC2 = addrspace(4) global i32 0
+; CHECK: @GPtr4 = addrspace(4) global ptr addrspace(4) null
+; CHECK: @G = global i32 42
+; CHECK: @GS = addrspace(3) global i32 0
+; CHECK: @GPtr = global ptr null
+; CHECK: @PG1 = thread_local global i32 42
+; CHECK: @PG2 = addrspace(5) global i32 0
+; CHECK: @GPtr5 = global ptr addrspace(5) null
+; CHECK: @G1 = global i32 42
+; CHECK: @G2 = addrspace(1) global i32 0
 ;.
 define void @pos_empty_1(i1 %c) "kernel" {
 ; MODULE-LABEL: define {{[^@]+}}@pos_empty_1
@@ -1268,42 +1268,81 @@ exit:
 !15 = !{i32 7, !"openmp", i32 50}
 !16 = !{i32 7, !"openmp-device", i32 50}
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { "llvm.assume"="ompx_aligned_barrier" }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { convergent nocallback nounwind }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
-; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
-; CHECK: attributes #[[ATTR4]] = { "kernel" }
-; CHECK: attributes #[[ATTR5]] = { nosync memory(none) }
+; MODULE: attributes #[[ATTR0:[0-9]+]] = { "llvm.assume"="ompx_aligned_barrier" }
+; MODULE: attributes #[[ATTR1:[0-9]+]] = { convergent nocallback nounwind }
+; MODULE: attributes #[[ATTR2:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
+; MODULE: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
+; MODULE: attributes #[[ATTR4]] = { "kernel" }
+; MODULE: attributes #[[ATTR5]] = { nosync memory(none) }
 ;.
-; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-; CHECK: [[META1:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-; CHECK: [[META2:![0-9]+]] = !{ptr @pos_empty_1, !"kernel", i32 1}
-; CHECK: [[META3:![0-9]+]] = !{ptr @pos_empty_2, !"kernel", i32 1}
-; CHECK: [[META4:![0-9]+]] = !{ptr @pos_empty_3, !"kernel", i32 1}
-; CHECK: [[META5:![0-9]+]] = !{ptr @pos_empty_4, !"kernel", i32 1}
-; CHECK: [[META6:![0-9]+]] = !{ptr @pos_empty_5, !"kernel", i32 1}
-; CHECK: [[META7:![0-9]+]] = !{ptr @pos_empty_6, !"kernel", i32 1}
-; CHECK: [[META8:![0-9]+]] = !{ptr @neg_empty_8, !"kernel", i32 1}
-; CHECK: [[META9:![0-9]+]] = !{ptr @pos_constant_loads, !"kernel", i32 1}
-; CHECK: [[META10:![0-9]+]] = !{ptr @neg_loads, !"kernel", i32 1}
-; CHECK: [[META11:![0-9]+]] = !{ptr @pos_priv_mem, !"kernel", i32 1}
-; CHECK: [[META12:![0-9]+]] = !{ptr @neg_mem, !"kernel", i32 1}
-; CHECK: [[META13:![0-9]+]] = !{ptr @pos_multiple, !"kernel", i32 1}
-; CHECK: [[META14:![0-9]+]] = !{ptr @multiple_blocks_kernel_1, !"kernel", i32 1}
-; CHECK: [[META15:![0-9]+]] = !{ptr @multiple_blocks_kernel_2, !"kernel", i32 1}
-; CHECK: [[META16:![0-9]+]] = !{ptr @multiple_blocks_functions_kernel_effects_0, !"kernel", i32 1}
-; CHECK: [[META17:![0-9]+]] = !{ptr @pos_empty_7a, !"kernel", i32 1}
-; CHECK: [[META18:![0-9]+]] = !{ptr @pos_empty_7b, !"kernel", i32 1}
-; CHECK: [[META19:![0-9]+]] = !{ptr @neg_empty_9, !"kernel", i32 1}
-; CHECK: [[META20:![0-9]+]] = !{ptr @pos_empty_10, !"kernel", i32 1}
-; CHECK: [[META21:![0-9]+]] = !{ptr @pos_empty_11, !"kernel", i32 1}
-; CHECK: [[META22:![0-9]+]] = !{ptr @neg_empty_12, !"kernel", i32 1}
-; CHECK: [[META23:![0-9]+]] = !{ptr @pos_empty_8, !"kernel", i32 1}
-; CHECK: [[META24:![0-9]+]] = !{ptr @caller_barrier1, !"kernel", i32 1}
-; CHECK: [[META25:![0-9]+]] = !{ptr @caller_barrier2, !"kernel", i32 1}
-; CHECK: [[META26:![0-9]+]] = !{ptr @loop_barrier, !"kernel", i32 1}
-; CHECK: [[META27:![0-9]+]] = !{ptr @loop_barrier_end_barriers, !"kernel", i32 1}
-; CHECK: [[META28:![0-9]+]] = !{ptr @loop_barrier_end_barriers_unknown, !"kernel", i32 1}
-; CHECK: [[META29:![0-9]+]] = !{ptr @loop_barrier_store, !"kernel", i32 1}
-; CHECK: [[META30:![0-9]+]] = !{ptr @loop_barrier_end_barriers_store, !"kernel", i32 1}
+; CGSCC: attributes #[[ATTR0]] = { "llvm.assume"="ompx_aligned_barrier" }
+; CGSCC: attributes #[[ATTR1:[0-9]+]] = { convergent nocallback nounwind }
+; CGSCC: attributes #[[ATTR2:[0-9]+]] = { convergent nocallback nofree nounwind willreturn }
+; CGSCC: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
+; CGSCC: attributes #[[ATTR4]] = { "kernel" }
+; CGSCC: attributes #[[ATTR5]] = { nosync memory(none) }
+;.
+; MODULE: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+; MODULE: [[META1:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+; MODULE: [[META2:![0-9]+]] = !{ptr @pos_empty_1, !"kernel", i32 1}
+; MODULE: [[META3:![0-9]+]] = !{ptr @pos_empty_2, !"kernel", i32 1}
+; MODULE: [[META4:![0-9]+]] = !{ptr @pos_empty_3, !"kernel", i32 1}
+; MODULE: [[META5:![0-9]+]] = !{ptr @pos_empty_4, !"kernel", i32 1}
+; MODULE: [[META6:![0-9]+]] = !{ptr @pos_empty_5, !"kernel", i32 1}
+; MODULE: [[META7:![0-9]+]] = !{ptr @pos_empty_6, !"kernel", i32 1}
+; MODULE: [[META8:![0-9]+]] = !{ptr @neg_empty_8, !"kernel", i32 1}
+; MODULE: [[META9:![0-9]+]] = !{ptr @pos_constant_loads, !"kernel", i32 1}
+; MODULE: [[META10:![0-9]+]] = !{ptr @neg_loads, !"kernel", i32 1}
+; MODULE: [[META11:![0-9]+]] = !{ptr @pos_priv_mem, !"kernel", i32 1}
+; MODULE: [[META12:![0-9]+]] = !{ptr @neg_mem, !"kernel", i32 1}
+; MODULE: [[META13:![0-9]+]] = !{ptr @pos_multiple, !"kernel", i32 1}
+; MODULE: [[META14:![0-9]+]] = !{ptr @multiple_blocks_kernel_1, !"kernel", i32 1}
+; MODULE: [[META15:![0-9]+]] = !{ptr @multiple_blocks_kernel_2, !"kernel", i32 1}
+; MODULE: [[META16:![0-9]+]] = !{ptr @multiple_blocks_functions_kernel_effects_0, !"kernel", i32 1}
+; MODULE: [[META17:![0-9]+]] = !{ptr @pos_empty_7a, !"kernel", i32 1}
+; MODULE: [[META18:![0-9]+]] = !{ptr @pos_empty_7b, !"kernel", i32 1}
+; MODULE: [[META19:![0-9]+]] = !{ptr @neg_empty_9, !"kernel", i32 1}
+; MODULE: [[META20:![0-9]+]] = !{ptr @pos_empty_10, !"kernel", i32 1}
+; MODULE: [[META21:![0-9]+]] = !{ptr @pos_empty_11, !"kernel", i32 1}
+; MODULE: [[META22:![0-9]+]] = !{ptr @neg_empty_12, !"kernel", i32 1}
+; MODULE: [[META23:![0-9]+]] = !{ptr @pos_empty_8, !"kernel", i32 1}
+; MODULE: [[META24:![0-9]+]] = !{ptr @caller_barrier1, !"kernel", i32 1}
+; MODULE: [[META25:![0-9]+]] = !{ptr @caller_barrier2, !"kernel", i32 1}
+; MODULE: [[META26:![0-9]+]] = !{ptr @loop_barrier, !"kernel", i32 1}
+; MODULE: [[META27:![0-9]+]] = !{ptr @loop_barrier_end_barriers, !"kernel", i32 1}
+; MODULE: [[META28:![0-9]+]] = !{ptr @loop_barrier_end_barriers_unknown, !"kernel", i32 1}
+; MODULE: [[META29:![0-9]+]] = !{ptr @loop_barrier_store, !"kernel", i32 1}
+; MODULE: [[META30:![0-9]+]] = !{ptr @loop_barrier_end_barriers_store, !"kernel", i32 1}
+;.
+; CGSCC: [[META0:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+; CGSCC: [[META1:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+; CGSCC: [[META2:![0-9]+]] = !{ptr @pos_empty_1, !"kernel", i32 1}
+; CGSCC: [[META3:![0-9]+]] = !{ptr @pos_empty_2, !"kernel", i32 1}
+; CGSCC: [[META4:![0-9]+]] = !{ptr @pos_empty_3, !"kernel", i32 1}
+; CGSCC: [[META5:![0-9]+]] = !{ptr @pos_empty_4, !"kernel", i32 1}
+; CGSCC: [[META6:![0-9]+]] = !{ptr @pos_empty_5, !"kernel", i32 1}
+; CGSCC: [[META7:![0-9]+]] = !{ptr @pos_empty_6, !"kernel", i32 1}
+; CGSCC: [[META8:![0-9]+]] = !{ptr @neg_empty_8, !"kernel", i32 1}
+; CGSCC: [[META9:![0-9]+]] = !{ptr @pos_constant_loads, !"kernel", i32 1}
+; CGSCC: [[META10:![0-9]+]] = !{ptr @neg_loads, !"kernel", i32 1}
+; CGSCC: [[META11:![0-9]+]] = !{ptr @pos_priv_mem, !"kernel", i32 1}
+; CGSCC: [[META12:![0-9]+]] = !{ptr @neg_mem, !"kernel", i32 1}
+; CGSCC: [[META13:![0-9]+]] = !{ptr @pos_multiple, !"kernel", i32 1}
+; CGSCC: [[META14:![0-9]+]] = !{ptr @multiple_blocks_kernel_1, !"kernel", i32 1}
+; CGSCC: [[META15:![0-9]+]] = !{ptr @multiple_blocks_kernel_2, !"kernel", i32 1}
+; CGSCC: [[META16:![0-9]+]] = !{ptr @multiple_blocks_functions_kernel_effects_0, !"kernel", i32 1}
+; CGSCC: [[META17:![0-9]+]] = !{ptr @pos_empty_7a, !"kernel", i32 1}
+; CGSCC: [[META18:![0-9]+]] = !{ptr @pos_empty_7b, !"kernel", i32 1}
+; CGSCC: [[META19:![0-9]+]] = !{ptr @neg_empty_9, !"kernel", i32 1}
+; CGSCC: [[META20:![0-9]+]] = !{ptr @pos_empty_10, !"kernel", i32 1}
+; CGSCC: [[META21:![0-9]+]] = !{ptr @pos_empty_11, !"kernel", i32 1}
+; CGSCC: [[META22:![0-9]+]] = !{ptr @neg_empty_12, !"kernel", i32 1}
+; CGSCC: [[META23:![0-9]+]] = !{ptr @pos_empty_8, !"kernel", i32 1}
+; CGSCC: [[META24:![0-9]+]] = !{ptr @caller_barrier1, !"kernel", i32 1}
+; CGSCC: [[META25:![0-9]+]] = !{ptr @caller_barrier2, !"kernel", i32 1}
+; CGSCC: [[META26:![0-9]+]] = !{ptr @loop_barrier, !"kernel", i32 1}
+; CGSCC: [[META27:![0-9]+]] = !{ptr @loop_barrier_end_barriers, !"kernel", i32 1}
+; CGSCC: [[META28:![0-9]+]] = !{ptr @loop_barrier_end_barriers_unknown, !"kernel", i32 1}
+; CGSCC: [[META29:![0-9]+]] = !{ptr @loop_barrier_store, !"kernel", i32 1}
+; CGSCC: [[META30:![0-9]+]] = !{ptr @loop_barrier_end_barriers_store, !"kernel", i32 1}
 ;.

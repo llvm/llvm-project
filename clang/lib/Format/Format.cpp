@@ -28,7 +28,7 @@
 
 using clang::format::FormatStyle;
 
-LLVM_YAML_IS_SEQUENCE_VECTOR(clang::format::FormatStyle::RawStringFormat)
+LLVM_YAML_IS_SEQUENCE_VECTOR(FormatStyle::RawStringFormat)
 
 namespace llvm {
 namespace yaml {
@@ -100,6 +100,7 @@ struct MappingTraits<FormatStyle::ShortCaseStatementsAlignmentStyle> {
     IO.mapOptional("Enabled", Value.Enabled);
     IO.mapOptional("AcrossEmptyLines", Value.AcrossEmptyLines);
     IO.mapOptional("AcrossComments", Value.AcrossComments);
+    IO.mapOptional("AlignCaseArrows", Value.AlignCaseArrows);
     IO.mapOptional("AlignCaseColons", Value.AlignCaseColons);
   }
 };
@@ -307,6 +308,7 @@ struct ScalarEnumerationTraits<FormatStyle::EscapedNewlineAlignmentStyle> {
                           FormatStyle::EscapedNewlineAlignmentStyle &Value) {
     IO.enumCase(Value, "DontAlign", FormatStyle::ENAS_DontAlign);
     IO.enumCase(Value, "Left", FormatStyle::ENAS_Left);
+    IO.enumCase(Value, "LeftWithLastLine", FormatStyle::ENAS_LeftWithLastLine);
     IO.enumCase(Value, "Right", FormatStyle::ENAS_Right);
 
     // For backward compatibility.
@@ -364,6 +366,14 @@ template <> struct ScalarEnumerationTraits<FormatStyle::JavaScriptQuoteStyle> {
     IO.enumCase(Value, "Leave", FormatStyle::JSQS_Leave);
     IO.enumCase(Value, "Single", FormatStyle::JSQS_Single);
     IO.enumCase(Value, "Double", FormatStyle::JSQS_Double);
+  }
+};
+
+template <> struct MappingTraits<FormatStyle::KeepEmptyLinesStyle> {
+  static void mapping(IO &IO, FormatStyle::KeepEmptyLinesStyle &Value) {
+    IO.mapOptional("AtEndOfFile", Value.AtEndOfFile);
+    IO.mapOptional("AtStartOfBlock", Value.AtStartOfBlock);
+    IO.mapOptional("AtStartOfFile", Value.AtStartOfFile);
   }
 };
 
@@ -719,6 +729,7 @@ template <> struct MappingTraits<FormatStyle::SpacesInLineComment> {
 
 template <> struct MappingTraits<FormatStyle::SpacesInParensCustom> {
   static void mapping(IO &IO, FormatStyle::SpacesInParensCustom &Spaces) {
+    IO.mapOptional("ExceptDoubleParentheses", Spaces.ExceptDoubleParentheses);
     IO.mapOptional("InCStyleCasts", Spaces.InCStyleCasts);
     IO.mapOptional("InConditionalStatements", Spaces.InConditionalStatements);
     IO.mapOptional("InEmptyParentheses", Spaces.InEmptyParentheses);
@@ -807,7 +818,6 @@ template <> struct MappingTraits<FormatStyle> {
         FormatStyle PredefinedStyle;
         if (getPredefinedStyle(StyleName, Style.Language, &PredefinedStyle) &&
             Style == PredefinedStyle) {
-          IO.mapOptional("# BasedOnStyle", StyleName);
           BasedOnStyle = StyleName;
           break;
         }
@@ -868,6 +878,9 @@ template <> struct MappingTraits<FormatStyle> {
                      OnCurrentLine);
       IO.mapOptional("DeriveLineEnding", DeriveLineEnding);
       IO.mapOptional("DerivePointerBinding", Style.DerivePointerAlignment);
+      IO.mapOptional("KeepEmptyLinesAtEOF", Style.KeepEmptyLines.AtEndOfFile);
+      IO.mapOptional("KeepEmptyLinesAtTheStartOfBlocks",
+                     Style.KeepEmptyLines.AtStartOfBlock);
       IO.mapOptional("IndentFunctionDeclarationAfterType",
                      Style.IndentWrappedFunctionNames);
       IO.mapOptional("IndentRequires", Style.IndentRequiresClause);
@@ -912,6 +925,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.AllowBreakBeforeNoexceptSpecifier);
     IO.mapOptional("AllowShortBlocksOnASingleLine",
                    Style.AllowShortBlocksOnASingleLine);
+    IO.mapOptional("AllowShortCaseExpressionOnASingleLine",
+                   Style.AllowShortCaseExpressionOnASingleLine);
     IO.mapOptional("AllowShortCaseLabelsOnASingleLine",
                    Style.AllowShortCaseLabelsOnASingleLine);
     IO.mapOptional("AllowShortCompoundRequirementOnASingleLine",
@@ -1001,9 +1016,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("JavaImportGroups", Style.JavaImportGroups);
     IO.mapOptional("JavaScriptQuotes", Style.JavaScriptQuotes);
     IO.mapOptional("JavaScriptWrapImports", Style.JavaScriptWrapImports);
-    IO.mapOptional("KeepEmptyLinesAtTheStartOfBlocks",
-                   Style.KeepEmptyLinesAtTheStartOfBlocks);
-    IO.mapOptional("KeepEmptyLinesAtEOF", Style.KeepEmptyLinesAtEOF);
+    IO.mapOptional("KeepEmptyLines", Style.KeepEmptyLines);
     IO.mapOptional("LambdaBodyIndentation", Style.LambdaBodyIndentation);
     IO.mapOptional("LineEnding", Style.LineEnding);
     IO.mapOptional("MacroBlockBegin", Style.MacroBlockBegin);
@@ -1172,8 +1185,8 @@ template <> struct MappingTraits<FormatStyle> {
         (SpacesInParentheses || SpaceInEmptyParentheses ||
          SpacesInConditionalStatement || SpacesInCStyleCastParentheses)) {
       if (SpacesInParentheses) {
-        // set all options except InCStyleCasts and InEmptyParentheses
-        // to true for backward compatibility.
+        // For backward compatibility.
+        Style.SpacesInParensOptions.ExceptDoubleParentheses = false;
         Style.SpacesInParensOptions.InConditionalStatements = true;
         Style.SpacesInParensOptions.InCStyleCasts =
             SpacesInCStyleCastParentheses;
@@ -1233,7 +1246,7 @@ std::error_code make_error_code(ParseError e) {
   return std::error_code(static_cast<int>(e), getParseCategory());
 }
 
-inline llvm::Error make_string_error(const llvm::Twine &Message) {
+inline llvm::Error make_string_error(const Twine &Message) {
   return llvm::make_error<llvm::StringError>(Message,
                                              llvm::inconvertibleErrorCode());
 }
@@ -1424,6 +1437,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AllowAllParametersOfDeclarationOnNextLine = true;
   LLVMStyle.AllowBreakBeforeNoexceptSpecifier = FormatStyle::BBNSS_Never;
   LLVMStyle.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Never;
+  LLVMStyle.AllowShortCaseExpressionOnASingleLine = true;
   LLVMStyle.AllowShortCaseLabelsOnASingleLine = false;
   LLVMStyle.AllowShortCompoundRequirementOnASingleLine = true;
   LLVMStyle.AllowShortEnumsOnASingleLine = true;
@@ -1513,8 +1527,11 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
       /*Hex=*/0,     /*HexMinDigits=*/0};
   LLVMStyle.JavaScriptQuotes = FormatStyle::JSQS_Leave;
   LLVMStyle.JavaScriptWrapImports = true;
-  LLVMStyle.KeepEmptyLinesAtEOF = false;
-  LLVMStyle.KeepEmptyLinesAtTheStartOfBlocks = true;
+  LLVMStyle.KeepEmptyLines = {
+      /*AtEndOfFile=*/false,
+      /*AtStartOfBlock=*/true,
+      /*AtStartOfFile=*/true,
+  };
   LLVMStyle.LambdaBodyIndentation = FormatStyle::LBI_Signature;
   LLVMStyle.Language = Language;
   LLVMStyle.LineEnding = FormatStyle::LE_DeriveLF;
@@ -1637,7 +1654,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
                                                 {".*", 3, 0, false}};
   GoogleStyle.IncludeStyle.IncludeIsMainRegex = "([-_](test|unittest))?$";
   GoogleStyle.IndentCaseLabels = true;
-  GoogleStyle.KeepEmptyLinesAtTheStartOfBlocks = false;
+  GoogleStyle.KeepEmptyLines.AtStartOfBlock = false;
   GoogleStyle.ObjCBinPackProtocolList = FormatStyle::BPS_Never;
   GoogleStyle.ObjCSpaceAfterProperty = false;
   GoogleStyle.ObjCSpaceBeforeProtocolList = true;
@@ -2358,7 +2375,7 @@ private:
           // FIXME: handle error. For now, print error message and skip the
           // replacement for release version.
           if (Err) {
-            llvm::errs() << llvm::toString(std::move(Err)) << "\n";
+            llvm::errs() << toString(std::move(Err)) << "\n";
             assert(false);
           }
         };
@@ -2799,7 +2816,7 @@ private:
       // FIXME: better error handling. for now just print error message and skip
       // for the release version.
       if (Err) {
-        llvm::errs() << llvm::toString(std::move(Err)) << "\n";
+        llvm::errs() << toString(std::move(Err)) << "\n";
         assert(false && "Fixes must not conflict!");
       }
       Idx = End + 1;
@@ -3071,7 +3088,7 @@ static void sortCppIncludes(const FormatStyle &Style,
       llvm::to_vector<16>(llvm::seq<unsigned>(0, Includes.size()));
 
   if (Style.SortIncludes == FormatStyle::SI_CaseInsensitive) {
-    llvm::stable_sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
+    stable_sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
       const auto LHSFilenameLower = Includes[LHSI].Filename.lower();
       const auto RHSFilenameLower = Includes[RHSI].Filename.lower();
       return std::tie(Includes[LHSI].Priority, LHSFilenameLower,
@@ -3080,7 +3097,7 @@ static void sortCppIncludes(const FormatStyle &Style,
                       Includes[RHSI].Filename);
     });
   } else {
-    llvm::stable_sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
+    stable_sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
       return std::tie(Includes[LHSI].Priority, Includes[LHSI].Filename) <
              std::tie(Includes[RHSI].Priority, Includes[RHSI].Filename);
     });
@@ -3112,11 +3129,12 @@ static void sortCppIncludes(const FormatStyle &Style,
   // enough as additional newlines might be added or removed across #include
   // blocks. This we handle below by generating the updated #include blocks and
   // comparing it to the original.
-  if (Indices.size() == Includes.size() && llvm::is_sorted(Indices) &&
+  if (Indices.size() == Includes.size() && is_sorted(Indices) &&
       Style.IncludeStyle.IncludeBlocks == tooling::IncludeStyle::IBS_Preserve) {
     return;
   }
 
+  const auto OldCursor = Cursor ? *Cursor : 0;
   std::string result;
   for (unsigned Index : Indices) {
     if (!result.empty()) {
@@ -3140,6 +3158,8 @@ static void sortCppIncludes(const FormatStyle &Style,
   // the entire range of blocks. Otherwise, no replacement is generated.
   if (replaceCRLF(result) == replaceCRLF(std::string(Code.substr(
                                  IncludesBeginOffset, IncludesBlockSize)))) {
+    if (Cursor)
+      *Cursor = OldCursor;
     return;
   }
 
@@ -3148,7 +3168,7 @@ static void sortCppIncludes(const FormatStyle &Style,
   // FIXME: better error handling. For now, just skip the replacement for the
   // release version.
   if (Err) {
-    llvm::errs() << llvm::toString(std::move(Err)) << "\n";
+    llvm::errs() << toString(std::move(Err)) << "\n";
     assert(false);
   }
 }
@@ -3202,10 +3222,16 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
     if (Trimmed.contains(RawStringTermination))
       FormattingOff = false;
 
-    if (isClangFormatOff(Trimmed))
+    bool IsBlockComment = false;
+
+    if (isClangFormatOff(Trimmed)) {
       FormattingOff = true;
-    else if (isClangFormatOn(Trimmed))
+    } else if (isClangFormatOn(Trimmed)) {
       FormattingOff = false;
+    } else if (Trimmed.starts_with("/*")) {
+      IsBlockComment = true;
+      Pos = Code.find("*/", SearchFrom + 2);
+    }
 
     const bool EmptyLineSkipped =
         Trimmed.empty() &&
@@ -3215,9 +3241,10 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
 
     bool MergeWithNextLine = Trimmed.ends_with("\\");
     if (!FormattingOff && !MergeWithNextLine) {
-      if (tooling::HeaderIncludes::IncludeRegex.match(Line, &Matches)) {
+      if (!IsBlockComment &&
+          tooling::HeaderIncludes::IncludeRegex.match(Trimmed, &Matches)) {
         StringRef IncludeName = Matches[2];
-        if (Line.contains("/*") && !Line.contains("*/")) {
+        if (Trimmed.contains("/*") && !Trimmed.contains("*/")) {
           // #include with a start of a block comment, but without the end.
           // Need to keep all the lines until the end of the comment together.
           // FIXME: This is somehow simplified check that probably does not work
@@ -3301,7 +3328,7 @@ static void sortJavaImports(const FormatStyle &Style,
 
   bool StaticImportAfterNormalImport =
       Style.SortJavaStaticImport == FormatStyle::SJSIO_After;
-  llvm::sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
+  sort(Indices, [&](unsigned LHSI, unsigned RHSI) {
     // Negating IsStatic to push static imports above non-static imports.
     return std::make_tuple(!Imports[LHSI].IsStatic ^
                                StaticImportAfterNormalImport,
@@ -3351,7 +3378,7 @@ static void sortJavaImports(const FormatStyle &Style,
   // FIXME: better error handling. For now, just skip the replacement for the
   // release version.
   if (Err) {
-    llvm::errs() << llvm::toString(std::move(Err)) << "\n";
+    llvm::errs() << toString(std::move(Err)) << "\n";
     assert(false);
   }
 }
@@ -3445,7 +3472,7 @@ tooling::Replacements sortIncludes(const FormatStyle &Style, StringRef Code,
 }
 
 template <typename T>
-static llvm::Expected<tooling::Replacements>
+static Expected<tooling::Replacements>
 processReplacements(T ProcessFunc, StringRef Code,
                     const tooling::Replacements &Replaces,
                     const FormatStyle &Style) {
@@ -3464,7 +3491,7 @@ processReplacements(T ProcessFunc, StringRef Code,
   return Replaces.merge(FormatReplaces);
 }
 
-llvm::Expected<tooling::Replacements>
+Expected<tooling::Replacements>
 formatReplacements(StringRef Code, const tooling::Replacements &Replaces,
                    const FormatStyle &Style) {
   // We need to use lambda function here since there are two versions of
@@ -3509,13 +3536,13 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
     return Replaces;
 
   tooling::Replacements HeaderInsertions;
-  std::set<llvm::StringRef> HeadersToDelete;
+  std::set<StringRef> HeadersToDelete;
   tooling::Replacements Result;
   for (const auto &R : Replaces) {
     if (isHeaderInsertion(R)) {
       // Replacements from \p Replaces must be conflict-free already, so we can
       // simply consume the error.
-      llvm::consumeError(HeaderInsertions.add(R));
+      consumeError(HeaderInsertions.add(R));
     } else if (isHeaderDeletion(R)) {
       HeadersToDelete.insert(R.getReplacementText());
     } else if (R.getOffset() == UINT_MAX) {
@@ -3523,7 +3550,7 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
                       "not supported! "
                    << R.getReplacementText() << "\n";
     } else {
-      llvm::consumeError(Result.add(R));
+      consumeError(Result.add(R));
     }
   }
   if (HeaderInsertions.empty() && HeadersToDelete.empty())
@@ -3540,13 +3567,12 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
       if (Err) {
         // Ignore the deletion on conflict.
         llvm::errs() << "Failed to add header deletion replacement for "
-                     << Header << ": " << llvm::toString(std::move(Err))
-                     << "\n";
+                     << Header << ": " << toString(std::move(Err)) << "\n";
       }
     }
   }
 
-  llvm::SmallVector<StringRef, 4> Matches;
+  SmallVector<StringRef, 4> Matches;
   for (const auto &R : HeaderInsertions) {
     auto IncludeDirective = R.getReplacementText();
     bool Matched =
@@ -3561,7 +3587,7 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
     if (Replace) {
       auto Err = Result.add(*Replace);
       if (Err) {
-        llvm::consumeError(std::move(Err));
+        consumeError(std::move(Err));
         unsigned NewOffset =
             Result.getShiftedCodePosition(Replace->getOffset());
         auto Shifted = tooling::Replacement(FileName, NewOffset, 0,
@@ -3575,7 +3601,7 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
 
 } // anonymous namespace
 
-llvm::Expected<tooling::Replacements>
+Expected<tooling::Replacements>
 cleanupAroundReplacements(StringRef Code, const tooling::Replacements &Replaces,
                           const FormatStyle &Style) {
   // We need to use lambda function here since there are two versions of
@@ -3764,11 +3790,11 @@ reformat(const FormatStyle &Style, StringRef Code,
     tooling::Replacements NonNoOpFixes;
     for (const tooling::Replacement &Fix : Fixes) {
       StringRef OriginalCode = Code.substr(Fix.getOffset(), Fix.getLength());
-      if (!OriginalCode.equals(Fix.getReplacementText())) {
+      if (OriginalCode != Fix.getReplacementText()) {
         auto Err = NonNoOpFixes.add(Fix);
         if (Err) {
           llvm::errs() << "Error adding replacements : "
-                       << llvm::toString(std::move(Err)) << "\n";
+                       << toString(std::move(Err)) << "\n";
         }
       }
     }
@@ -3852,8 +3878,7 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   LangOpts.Digraphs = LexingStd >= FormatStyle::LS_Cpp11;
 
   LangOpts.LineComment = 1;
-  bool AlternativeOperators = Style.isCpp();
-  LangOpts.CXXOperatorNames = AlternativeOperators ? 1 : 0;
+  LangOpts.CXXOperatorNames = Style.isCpp();
   LangOpts.Bool = 1;
   LangOpts.ObjC = 1;
   LangOpts.MicrosoftExt = 1;    // To get kw___try, kw___finally.
@@ -3941,34 +3966,37 @@ const char *DefaultFallbackStyle = "LLVM";
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 loadAndParseConfigFile(StringRef ConfigFile, llvm::vfs::FileSystem *FS,
-                       FormatStyle *Style, bool AllowUnknownOptions) {
+                       FormatStyle *Style, bool AllowUnknownOptions,
+                       llvm::SourceMgr::DiagHandlerTy DiagHandler) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
       FS->getBufferForFile(ConfigFile.str());
   if (auto EC = Text.getError())
     return EC;
-  if (auto EC = parseConfiguration(*Text.get(), Style, AllowUnknownOptions))
+  if (auto EC = parseConfiguration(*Text.get(), Style, AllowUnknownOptions,
+                                   DiagHandler)) {
     return EC;
+  }
   return Text;
 }
 
-llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
-                                     StringRef FallbackStyleName,
-                                     StringRef Code, llvm::vfs::FileSystem *FS,
-                                     bool AllowUnknownOptions) {
+Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
+                               StringRef FallbackStyleName, StringRef Code,
+                               llvm::vfs::FileSystem *FS,
+                               bool AllowUnknownOptions,
+                               llvm::SourceMgr::DiagHandlerTy DiagHandler) {
   FormatStyle Style = getLLVMStyle(guessLanguage(FileName, Code));
   FormatStyle FallbackStyle = getNoStyle();
   if (!getPredefinedStyle(FallbackStyleName, Style.Language, &FallbackStyle))
     return make_string_error("Invalid fallback style: " + FallbackStyleName);
 
-  llvm::SmallVector<std::unique_ptr<llvm::MemoryBuffer>, 1>
-      ChildFormatTextToApply;
+  SmallVector<std::unique_ptr<llvm::MemoryBuffer>, 1> ChildFormatTextToApply;
 
   if (StyleName.starts_with("{")) {
     // Parse YAML/JSON style from the command line.
     StringRef Source = "<command-line>";
     if (std::error_code ec =
             parseConfiguration(llvm::MemoryBufferRef(StyleName, Source), &Style,
-                               AllowUnknownOptions)) {
+                               AllowUnknownOptions, DiagHandler)) {
       return make_string_error("Error parsing -style: " + ec.message());
     }
 
@@ -3988,7 +4016,8 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
       StyleName.starts_with_insensitive("file:")) {
     auto ConfigFile = StyleName.substr(5);
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
-        loadAndParseConfigFile(ConfigFile, FS, &Style, AllowUnknownOptions);
+        loadAndParseConfigFile(ConfigFile, FS, &Style, AllowUnknownOptions,
+                               DiagHandler);
     if (auto EC = Text.getError()) {
       return make_string_error("Error reading " + ConfigFile + ": " +
                                EC.message());
@@ -4027,8 +4056,9 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
 
   auto applyChildFormatTexts = [&](FormatStyle *Style) {
     for (const auto &MemBuf : llvm::reverse(ChildFormatTextToApply)) {
-      auto EC = parseConfiguration(*MemBuf, Style, AllowUnknownOptions,
-                                   dropDiagnosticHandler);
+      auto EC =
+          parseConfiguration(*MemBuf, Style, AllowUnknownOptions,
+                             DiagHandler ? DiagHandler : dropDiagnosticHandler);
       // It was already correctly parsed.
       assert(!EC);
       static_cast<void>(EC);
@@ -4036,7 +4066,7 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
   };
 
   // Look for .clang-format/_clang-format file in the file's parent directories.
-  llvm::SmallVector<std::string, 2> FilesToLookFor;
+  SmallVector<std::string, 2> FilesToLookFor;
   FilesToLookFor.push_back(".clang-format");
   FilesToLookFor.push_back("_clang-format");
 
@@ -4062,7 +4092,8 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
       }
 
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
-          loadAndParseConfigFile(ConfigFile, FS, &Style, AllowUnknownOptions);
+          loadAndParseConfigFile(ConfigFile, FS, &Style, AllowUnknownOptions,
+                                 DiagHandler);
       if (auto EC = Text.getError()) {
         if (EC != ParseError::Unsuitable) {
           return make_string_error("Error reading " + ConfigFile + ": " +

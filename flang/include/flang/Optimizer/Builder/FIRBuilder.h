@@ -38,6 +38,13 @@ class ExtendedValue;
 class MutableBoxValue;
 class BoxValue;
 
+/// Get the integer type with a pointer size.
+inline mlir::Type getIntPtrType(mlir::OpBuilder &builder) {
+  // TODO: Delay the need of such type until codegen or find a way to use
+  // llvm::DataLayout::getPointerSizeInBits here.
+  return builder.getI64Type();
+}
+
 //===----------------------------------------------------------------------===//
 // FirOpBuilder
 //===----------------------------------------------------------------------===//
@@ -50,8 +57,10 @@ public:
                         mlir::SymbolTable *symbolTable = nullptr)
       : OpBuilder{op, /*listener=*/this}, kindMap{std::move(kindMap)},
         symbolTable{symbolTable} {}
-  explicit FirOpBuilder(mlir::OpBuilder &builder, fir::KindMapping kindMap)
-      : OpBuilder(builder), OpBuilder::Listener(), kindMap{std::move(kindMap)} {
+  explicit FirOpBuilder(mlir::OpBuilder &builder, fir::KindMapping kindMap,
+                        mlir::SymbolTable *symbolTable = nullptr)
+      : OpBuilder(builder), OpBuilder::Listener(), kindMap{std::move(kindMap)},
+        symbolTable{symbolTable} {
     setListener(this);
   }
   explicit FirOpBuilder(mlir::OpBuilder &builder, mlir::ModuleOp mod)
@@ -141,11 +150,7 @@ public:
 
   /// Get the integer type whose bit width corresponds to the width of pointer
   /// types, or is bigger.
-  mlir::Type getIntPtrType() {
-    // TODO: Delay the need of such type until codegen or find a way to use
-    // llvm::DataLayout::getPointerSizeInBits here.
-    return getI64Type();
-  }
+  mlir::Type getIntPtrType() { return fir::getIntPtrType(*this); }
 
   /// Wrap `str` to a SymbolRefAttr.
   mlir::SymbolRefAttr getSymbolRefAttr(llvm::StringRef str) {
@@ -254,13 +259,13 @@ public:
                              mlir::StringAttr linkage = {},
                              mlir::Attribute value = {}, bool isConst = false,
                              bool isTarget = false,
-                             fir::CUDADataAttributeAttr cudaAttr = {});
+                             cuf::DataAttributeAttr dataAttr = {});
 
   fir::GlobalOp createGlobal(mlir::Location loc, mlir::Type type,
                              llvm::StringRef name, bool isConst, bool isTarget,
                              std::function<void(FirOpBuilder &)> bodyBuilder,
                              mlir::StringAttr linkage = {},
-                             fir::CUDADataAttributeAttr cudaAttr = {});
+                             cuf::DataAttributeAttr dataAttr = {});
 
   /// Create a global constant (read-only) value.
   fir::GlobalOp createGlobalConstant(mlir::Location loc, mlir::Type type,
@@ -283,6 +288,10 @@ public:
   /// Convert a StringRef string into a fir::StringLitOp.
   fir::StringLitOp createStringLitOp(mlir::Location loc,
                                      llvm::StringRef string);
+
+  std::pair<fir::TypeInfoOp, mlir::OpBuilder::InsertPoint>
+  createTypeInfoOp(mlir::Location loc, fir::RecordType recordType,
+                   fir::RecordType parentType);
 
   //===--------------------------------------------------------------------===//
   // Linkage helpers (inline). The default linkage is external.
@@ -706,8 +715,20 @@ fir::BoxValue createBoxValue(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value createNullBoxProc(fir::FirOpBuilder &builder, mlir::Location loc,
                               mlir::Type boxType);
 
+/// Convert a value to a new type. Return the value directly if it has the right
+/// type.
+mlir::Value createConvert(mlir::OpBuilder &, mlir::Location, mlir::Type,
+                          mlir::Value);
+
 /// Set internal linkage attribute on a function.
 void setInternalLinkage(mlir::func::FuncOp);
+
+llvm::SmallVector<mlir::Value>
+elideExtentsAlreadyInType(mlir::Type type, mlir::ValueRange shape);
+
+llvm::SmallVector<mlir::Value>
+elideLengthsAlreadyInType(mlir::Type type, mlir::ValueRange lenParams);
+
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s -check-prefix=CHECK-CODE
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s -check-prefix=CHECK-CODE
 
 ; void f(long A[], long N) {
 ;   long i;

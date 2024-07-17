@@ -25,6 +25,7 @@ typedef Empty EmptyArMB[1][2];
 typedef int Int;
 typedef Int IntAr[10];
 typedef Int IntArNB[];
+typedef Int IntArZero[0];
 class Statics { static int priv; static NonPOD np; };
 union EmptyUnion {};
 union IncompleteUnion; // expected-note {{forward declaration of 'IncompleteUnion'}}
@@ -685,6 +686,7 @@ void is_array()
 {
   static_assert(__is_array(IntAr));
   static_assert(__is_array(IntArNB));
+  static_assert(!__is_array(IntArZero));
   static_assert(__is_array(UnionAr));
 
   static_assert(!__is_array(void));
@@ -714,6 +716,7 @@ void is_array()
 void is_bounded_array(int n) {
   static_assert(__is_bounded_array(IntAr));
   static_assert(!__is_bounded_array(IntArNB));
+  static_assert(!__is_bounded_array(IntArZero));
   static_assert(__is_bounded_array(UnionAr));
 
   static_assert(!__is_bounded_array(void));
@@ -746,6 +749,7 @@ void is_bounded_array(int n) {
 void is_unbounded_array(int n) {
   static_assert(!__is_unbounded_array(IntAr));
   static_assert(__is_unbounded_array(IntArNB));
+  static_assert(!__is_unbounded_array(IntArZero));
   static_assert(!__is_unbounded_array(UnionAr));
 
   static_assert(!__is_unbounded_array(void));
@@ -2509,6 +2513,20 @@ void is_convertible()
   static_assert(__is_convertible(FloatWrapper, IntWrapper));
   static_assert(__is_convertible(FloatWrapper, float));
   static_assert(__is_convertible(float, FloatWrapper));
+  static_assert(__is_convertible(IntWrapper, IntWrapper&&));
+  static_assert(__is_convertible(IntWrapper, const IntWrapper&));
+  static_assert(__is_convertible(IntWrapper, int&&));
+  static_assert(__is_convertible(IntWrapper, const int&));
+  static_assert(__is_convertible(int, IntWrapper&&));
+  static_assert(__is_convertible(int, const IntWrapper&));
+  static_assert(__is_convertible(IntWrapper, FloatWrapper&&));
+  static_assert(__is_convertible(IntWrapper, const FloatWrapper&));
+  static_assert(__is_convertible(FloatWrapper, IntWrapper&&));
+  static_assert(__is_convertible(FloatWrapper, const IntWrapper&&));
+  static_assert(__is_convertible(FloatWrapper, float&&));
+  static_assert(__is_convertible(FloatWrapper, const float&));
+  static_assert(__is_convertible(float, FloatWrapper&&));
+  static_assert(__is_convertible(float, const FloatWrapper&));
 }
 
 void is_nothrow_convertible()
@@ -2521,6 +2539,20 @@ void is_nothrow_convertible()
   static_assert(!__is_nothrow_convertible(FloatWrapper, IntWrapper));
   static_assert(!__is_nothrow_convertible(FloatWrapper, float));
   static_assert(__is_nothrow_convertible(float, FloatWrapper));
+  static_assert(__is_nothrow_convertible(IntWrapper, IntWrapper&&));
+  static_assert(__is_nothrow_convertible(IntWrapper, const IntWrapper&));
+  static_assert(__is_nothrow_convertible(IntWrapper, int&&));
+  static_assert(__is_nothrow_convertible(IntWrapper, const int&));
+  static_assert(!__is_nothrow_convertible(int, IntWrapper&&));
+  static_assert(!__is_nothrow_convertible(int, const IntWrapper&));
+  static_assert(!__is_nothrow_convertible(IntWrapper, FloatWrapper&&));
+  static_assert(!__is_nothrow_convertible(IntWrapper, const FloatWrapper&));
+  static_assert(!__is_nothrow_convertible(FloatWrapper, IntWrapper&&));
+  static_assert(!__is_nothrow_convertible(FloatWrapper, const IntWrapper&));
+  static_assert(!__is_nothrow_convertible(FloatWrapper, float&&));
+  static_assert(!__is_nothrow_convertible(FloatWrapper, const float&));
+  static_assert(__is_nothrow_convertible(float, FloatWrapper&&));
+  static_assert(__is_nothrow_convertible(float, const FloatWrapper&));
 }
 
 struct FromInt { FromInt(int); };
@@ -2880,6 +2912,12 @@ struct ConvertsToRef {
   operator RefType() const { return static_cast<RefType>(obj); }
   mutable T obj = 42;
 };
+template <class T, class RefType = T &>
+class ConvertsToRefPrivate {
+  operator RefType() const { return static_cast<RefType>(obj); }
+  mutable T obj = 42;
+};
+
 
 void reference_binds_to_temporary_checks() {
   static_assert(!(__reference_binds_to_temporary(int &, int &)));
@@ -2909,12 +2947,25 @@ void reference_binds_to_temporary_checks() {
 
   static_assert((__is_constructible(int const &, LongRef)));
   static_assert((__reference_binds_to_temporary(int const &, LongRef)));
+  static_assert(!__reference_binds_to_temporary(int const &, ConvertsToRefPrivate<long, long &>));
+
 
   // Test that it doesn't accept non-reference types as input.
   static_assert(!(__reference_binds_to_temporary(int, long)));
 
   static_assert((__reference_binds_to_temporary(const int &, long)));
 }
+
+
+struct ExplicitConversionRvalueRef {
+    operator int();
+    explicit operator int&&();
+};
+
+struct ExplicitConversionRef {
+    operator int();
+    explicit operator int&();
+};
 
 void reference_constructs_from_temporary_checks() {
   static_assert(!__reference_constructs_from_temporary(int &, int &));
@@ -2945,6 +2996,8 @@ void reference_constructs_from_temporary_checks() {
 
   static_assert(__is_constructible(int const &, LongRef));
   static_assert(__reference_constructs_from_temporary(int const &, LongRef));
+  static_assert(!__reference_constructs_from_temporary(int const &, ConvertsToRefPrivate<long, long &>));
+
 
   // Test that it doesn't accept non-reference types as input.
   static_assert(!__reference_constructs_from_temporary(int, long));
@@ -2959,6 +3012,65 @@ void reference_constructs_from_temporary_checks() {
   static_assert(!__reference_constructs_from_temporary(const int&, int&&));
   static_assert(__reference_constructs_from_temporary(int&&, long&&));
   static_assert(__reference_constructs_from_temporary(int&&, long));
+
+
+  static_assert(!__reference_constructs_from_temporary(int&, ExplicitConversionRef));
+  static_assert(!__reference_constructs_from_temporary(const int&, ExplicitConversionRef));
+  static_assert(!__reference_constructs_from_temporary(int&&, ExplicitConversionRvalueRef));
+
+
+}
+
+void reference_converts_from_temporary_checks() {
+  static_assert(!__reference_converts_from_temporary(int &, int &));
+  static_assert(!__reference_converts_from_temporary(int &, int &&));
+
+  static_assert(!__reference_converts_from_temporary(int const &, int &));
+  static_assert(!__reference_converts_from_temporary(int const &, int const &));
+  static_assert(!__reference_converts_from_temporary(int const &, int &&));
+
+  static_assert(!__reference_converts_from_temporary(int &, long &)); // doesn't construct
+
+  static_assert(__reference_converts_from_temporary(int const &, long &));
+  static_assert(__reference_converts_from_temporary(int const &, long &&));
+  static_assert(__reference_converts_from_temporary(int &&, long &));
+
+  using LRef = ConvertsToRef<int, int &>;
+  using RRef = ConvertsToRef<int, int &&>;
+  using CLRef = ConvertsToRef<int, const int &>;
+  using LongRef = ConvertsToRef<long, long &>;
+  static_assert(__is_constructible(int &, LRef));
+  static_assert(!__reference_converts_from_temporary(int &, LRef));
+
+  static_assert(__is_constructible(int &&, RRef));
+  static_assert(!__reference_converts_from_temporary(int &&, RRef));
+
+  static_assert(__is_constructible(int const &, CLRef));
+  static_assert(!__reference_converts_from_temporary(int &&, CLRef));
+
+  static_assert(__is_constructible(int const &, LongRef));
+  static_assert(__reference_converts_from_temporary(int const &, LongRef));
+  static_assert(!__reference_converts_from_temporary(int const &, ConvertsToRefPrivate<long, long &>));
+
+
+  // Test that it doesn't accept non-reference types as input.
+  static_assert(!__reference_converts_from_temporary(int, long));
+
+  static_assert(__reference_converts_from_temporary(const int &, long));
+
+  // Additional checks
+  static_assert(__reference_converts_from_temporary(POD const&, Derives));
+  static_assert(__reference_converts_from_temporary(int&&, int));
+  static_assert(__reference_converts_from_temporary(const int&, int));
+  static_assert(!__reference_converts_from_temporary(int&&, int&&));
+  static_assert(!__reference_converts_from_temporary(const int&, int&&));
+  static_assert(__reference_converts_from_temporary(int&&, long&&));
+  static_assert(__reference_converts_from_temporary(int&&, long));
+
+  static_assert(!__reference_converts_from_temporary(int&, ExplicitConversionRef));
+  static_assert(__reference_converts_from_temporary(const int&, ExplicitConversionRef));
+  static_assert(__reference_converts_from_temporary(int&&, ExplicitConversionRvalueRef));
+
 }
 
 void array_rank() {
@@ -3565,6 +3677,12 @@ struct NonTriviallyEqualityComparableNoComparator {
 };
 static_assert(!__is_trivially_equality_comparable(NonTriviallyEqualityComparableNoComparator));
 
+struct NonTriviallyEqualityComparableConvertibleToBuiltin {
+  int i;
+  operator unsigned() const;
+};
+static_assert(!__is_trivially_equality_comparable(NonTriviallyEqualityComparableConvertibleToBuiltin));
+
 struct NonTriviallyEqualityComparableNonDefaultedComparator {
   int i;
   int j;
@@ -3773,7 +3891,50 @@ struct NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2 {
 
   bool operator==(const NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2&) const = default;
 };
+
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2));
+
+template<bool B>
+struct MaybeTriviallyEqualityComparable {
+    int i;
+    bool operator==(const MaybeTriviallyEqualityComparable&) const requires B = default;
+    bool operator==(const MaybeTriviallyEqualityComparable& rhs) const { return (i % 3) == (rhs.i % 3); }
+};
+static_assert(__is_trivially_equality_comparable(MaybeTriviallyEqualityComparable<true>));
+static_assert(!__is_trivially_equality_comparable(MaybeTriviallyEqualityComparable<false>));
+
+struct NotTriviallyEqualityComparableMoreConstrainedExternalOp {
+  int i;
+  bool operator==(const NotTriviallyEqualityComparableMoreConstrainedExternalOp&) const = default;
+};
+
+bool operator==(const NotTriviallyEqualityComparableMoreConstrainedExternalOp&,
+                const NotTriviallyEqualityComparableMoreConstrainedExternalOp&) __attribute__((enable_if(true, ""))) {}
+
+static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableMoreConstrainedExternalOp));
+
+struct TriviallyEqualityComparableExternalDefaultedOp {
+  int i;
+  friend bool operator==(TriviallyEqualityComparableExternalDefaultedOp, TriviallyEqualityComparableExternalDefaultedOp);
+};
+bool operator==(TriviallyEqualityComparableExternalDefaultedOp, TriviallyEqualityComparableExternalDefaultedOp) = default;
+
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableExternalDefaultedOp));
+
+struct EqualityComparableBase {
+  bool operator==(const EqualityComparableBase&) const = default;
+};
+
+struct ComparingBaseOnly : EqualityComparableBase {
+  int j_ = 0;
+};
+static_assert(!__is_trivially_equality_comparable(ComparingBaseOnly));
+
+template <class>
+class Template {};
+
+// Make sure we don't crash when instantiating a type
+static_assert(!__is_trivially_equality_comparable(Template<Template<int>>));
 
 namespace hidden_friend {
 

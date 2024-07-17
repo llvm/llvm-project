@@ -29,7 +29,7 @@ def apply_named_sequence(
     if transform_options is None:
         _cextTransformInterpreter.apply_named_sequence(*args)
     else:
-        _cextTransformInterpreter(*args, transform_options)
+        _cextTransformInterpreter.apply_named_sequence(*args, transform_options)
 
 
 def copy_symbols_and_merge_into(target, other):

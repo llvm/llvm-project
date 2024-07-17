@@ -746,18 +746,6 @@ unsigned CodeGenSchedModels::getSchedRWIdx(const Record *Def,
   return I == RWVec.end() ? 0 : std::distance(RWVec.begin(), I);
 }
 
-bool CodeGenSchedModels::hasReadOfWrite(Record *WriteDef) const {
-  for (auto &ProcModel : ProcModels) {
-    const RecVec &RADefs = ProcModel.ReadAdvanceDefs;
-    for (auto &RADef : RADefs) {
-      RecVec ValidWrites = RADef->getValueAsListOfDefs("ValidWrites");
-      if (is_contained(ValidWrites, WriteDef))
-        return true;
-    }
-  }
-  return false;
-}
-
 static void splitSchedReadWrites(const RecVec &RWDefs, RecVec &WriteDefs,
                                  RecVec &ReadDefs) {
   for (Record *RWDef : RWDefs) {
@@ -1711,7 +1699,7 @@ static void inferFromTransitions(ArrayRef<PredTransition> LastTransitions,
     RecVec Preds;
     transform(LastTransition.PredTerm, std::back_inserter(Preds),
               [](const PredCheck &P) { return P.Predicate; });
-    Preds.erase(std::unique(Preds.begin(), Preds.end()), Preds.end());
+    Preds.erase(llvm::unique(Preds), Preds.end());
     dumpTransition(SchedModels, FromSC, SCTrans, Preds);
     SCTrans.PredTerm = std::move(Preds);
     SchedModels.getSchedClass(FromClassIdx)
@@ -2222,6 +2210,15 @@ bool CodeGenProcModel::isUnsupported(const CodeGenInstruction &Inst) const {
       if (TheDef->getName() == PredDef->getName())
         return true;
     }
+  }
+  return false;
+}
+
+bool CodeGenProcModel::hasReadOfWrite(Record *WriteDef) const {
+  for (auto &RADef : ReadAdvanceDefs) {
+    RecVec ValidWrites = RADef->getValueAsListOfDefs("ValidWrites");
+    if (is_contained(ValidWrites, WriteDef))
+      return true;
   }
   return false;
 }

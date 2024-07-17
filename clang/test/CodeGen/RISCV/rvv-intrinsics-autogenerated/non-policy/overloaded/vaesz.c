@@ -156,13 +156,3 @@ vuint32m8_t test_vaesz_vs_u32m4_u32m8(vuint32m8_t vd, vuint32m4_t vs2, size_t vl
   return __riscv_vaesz(vd, vs2, vl);
 }
 
-// CHECK-RV64-LABEL: define dso_local <vscale x 16 x i32> @test_vaesz_vs_u32m8_u32m8
-// CHECK-RV64-SAME: (<vscale x 16 x i32> [[VD:%.*]], <vscale x 16 x i32> [[VS2:%.*]], i64 noundef [[VL:%.*]]) #[[ATTR0]] {
-// CHECK-RV64-NEXT:  entry:
-// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i32> @llvm.riscv.vaesz.vs.nxv16i32.nxv16i32.i64(<vscale x 16 x i32> [[VD]], <vscale x 16 x i32> [[VS2]], i64 [[VL]], i64 3)
-// CHECK-RV64-NEXT:    ret <vscale x 16 x i32> [[TMP0]]
-//
-vuint32m8_t test_vaesz_vs_u32m8_u32m8(vuint32m8_t vd, vuint32m8_t vs2, size_t vl) {
-  return __riscv_vaesz(vd, vs2, vl);
-}
-

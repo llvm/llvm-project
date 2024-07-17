@@ -1,7 +1,7 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX12,W32 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX12,W64 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,-wavefrontsize64 %s 2>&1 | FileCheck --check-prefixes=GFX12-ERR,W32-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=-wavefrontsize32,+wavefrontsize64 %s 2>&1 | FileCheck --check-prefixes=GFX12-ERR,W64-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32 -show-encoding %s | FileCheck --check-prefixes=GFX12,W32 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX12,W64 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32 %s 2>&1 | FileCheck --check-prefixes=GFX12-ERR,W32-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64 %s 2>&1 | FileCheck --check-prefixes=GFX12-ERR,W64-ERR --implicit-check-not=error: %s
 
 v_add3_u32_e64_dpp v5, v1, v2, v3 quad_perm:[3,2,1,0]
 // GFX12: [0x05,0x00,0x55,0xd6,0xfa,0x04,0x0e,0x04,0x01,0x1b,0x00,0xff]
@@ -1192,6 +1192,18 @@ v_cvt_sr_bf8_f32_e64_dpp v1, -v2, v3 quad_perm:[3,2,1,0] row_mask:0xe bank_mask:
 v_cvt_sr_bf8_f32_e64_dpp v1, -v2, v3 quad_perm:[3,2,1,0] row_mask:0xe bank_mask:0xd fi:1
 // GFX12: encoding: [0x01,0x00,0x6c,0xd7,0xfa,0x06,0x02,0x20,0x02,0x1b,0x04,0xed]
 
+v_cvt_sr_bf8_f32 v1, v2, v3 byte_sel:0 quad_perm:[3,2,1,0]
+// GFX12: v_cvt_sr_bf8_f32_e64_dpp v1, v2, v3 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x01,0x00,0x6c,0xd7,0xfa,0x06,0x02,0x00,0x02,0x1b,0x00,0xff]
+
+v_cvt_sr_bf8_f32 v1, v2, v3 byte_sel:1 quad_perm:[3,2,1,0]
+// GFX12: v_cvt_sr_bf8_f32_e64_dpp v1, v2, v3 byte_sel:1 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x01,0x20,0x6c,0xd7,0xfa,0x06,0x02,0x00,0x02,0x1b,0x00,0xff]
+
+v_cvt_sr_bf8_f32 v1, v2, v3 byte_sel:2 quad_perm:[3,2,1,0]
+// GFX12: v_cvt_sr_bf8_f32_e64_dpp v1, v2, v3 byte_sel:2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x01,0x40,0x6c,0xd7,0xfa,0x06,0x02,0x00,0x02,0x1b,0x00,0xff]
+
+v_cvt_sr_bf8_f32 v1, v2, v3 byte_sel:3 quad_perm:[3,2,1,0]
+// GFX12: v_cvt_sr_bf8_f32_e64_dpp v1, v2, v3 byte_sel:3 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x01,0x60,0x6c,0xd7,0xfa,0x06,0x02,0x00,0x02,0x1b,0x00,0xff]
+
 v_cvt_sr_fp8_f32_e64_dpp v1, -v2, v3 quad_perm:[3,2,1,0] row_mask:0xe bank_mask:0xd
 // GFX12: encoding: [0x01,0x00,0x6b,0xd7,0xfa,0x06,0x02,0x20,0x02,0x1b,0x00,0xed]
 
@@ -1218,6 +1230,18 @@ v_cvt_sr_fp8_f32_e64_dpp v1, -v2, v3 quad_perm:[3,2,1,0] row_mask:0xe bank_mask:
 
 v_cvt_sr_fp8_f32_e64_dpp v1, -v2, v3 quad_perm:[3,2,1,0] row_mask:0xe bank_mask:0xd fi:1
 // GFX12: encoding: [0x01,0x00,0x6b,0xd7,0xfa,0x06,0x02,0x20,0x02,0x1b,0x04,0xed]
+
+v_cvt_sr_fp8_f32 v1, v2, v3 byte_sel:0 quad_perm:[3,2,1,0]
+// GFX12: v_cvt_sr_fp8_f32_e64_dpp v1, v2, v3 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x01,0x00,0x6b,0xd7,0xfa,0x06,0x02,0x00,0x02,0x1b,0x00,0xff]
+
+v_cvt_sr_fp8_f32 v1, v2, v3 byte_sel:1 quad_perm:[3,2,1,0]
+// GFX12: v_cvt_sr_fp8_f32_e64_dpp v1, v2, v3 byte_sel:1 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x01,0x20,0x6b,0xd7,0xfa,0x06,0x02,0x00,0x02,0x1b,0x00,0xff]
+
+v_cvt_sr_fp8_f32 v1, v2, v3 byte_sel:2 quad_perm:[3,2,1,0]
+// GFX12: v_cvt_sr_fp8_f32_e64_dpp v1, v2, v3 byte_sel:2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x01,0x40,0x6b,0xd7,0xfa,0x06,0x02,0x00,0x02,0x1b,0x00,0xff]
+
+v_cvt_sr_fp8_f32 v1, v2, v3 byte_sel:3 quad_perm:[3,2,1,0]
+// GFX12: v_cvt_sr_fp8_f32_e64_dpp v1, v2, v3 byte_sel:3 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x01,0x60,0x6b,0xd7,0xfa,0x06,0x02,0x00,0x02,0x1b,0x00,0xff]
 
 v_cvt_pk_i16_f32_e64_dpp v5, v1, v2 quad_perm:[3,2,1,0]
 // GFX12: [0x05,0x00,0x06,0xd7,0xfa,0x04,0x02,0x00,0x01,0x1b,0x00,0xff]

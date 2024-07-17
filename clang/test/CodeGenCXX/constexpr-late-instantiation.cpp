@@ -1,5 +1,5 @@
 // Make sure foo is instantiated and we don't get a link error
-// RUN: %clang_cc1 -S -emit-llvm -triple %itanium_abi_triple %s -o- | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple %itanium_abi_triple %s -o- | FileCheck %s
 
 template <typename T>
 constexpr T foo(T a);

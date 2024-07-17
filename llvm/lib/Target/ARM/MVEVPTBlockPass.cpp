@@ -131,7 +131,8 @@ static bool StepOverPredicatedInstrs(MachineBasicBlock::instr_iterator &Iter,
 static bool IsVPRDefinedOrKilledByBlock(MachineBasicBlock::iterator Iter,
                                         MachineBasicBlock::iterator End) {
   for (; Iter != End; ++Iter)
-    if (Iter->definesRegister(ARM::VPR) || Iter->killsRegister(ARM::VPR))
+    if (Iter->definesRegister(ARM::VPR, /*TRI=*/nullptr) ||
+        Iter->killsRegister(ARM::VPR, /*TRI=*/nullptr))
       return true;
   return false;
 }

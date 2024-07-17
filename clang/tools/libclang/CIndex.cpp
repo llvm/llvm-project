@@ -743,14 +743,10 @@ bool CursorVisitor::VisitClassTemplateSpecializationDecl(
   }
 
   // Visit the template arguments used in the specialization.
-  if (TypeSourceInfo *SpecType = D->getTypeAsWritten()) {
-    TypeLoc TL = SpecType->getTypeLoc();
-    if (TemplateSpecializationTypeLoc TSTLoc =
-            TL.getAs<TemplateSpecializationTypeLoc>()) {
-      for (unsigned I = 0, N = TSTLoc.getNumArgs(); I != N; ++I)
-        if (VisitTemplateArgumentLoc(TSTLoc.getArgLoc(I)))
-          return true;
-    }
+  if (const auto *ArgsWritten = D->getTemplateArgsAsWritten()) {
+    for (const TemplateArgumentLoc &Arg : ArgsWritten->arguments())
+      if (VisitTemplateArgumentLoc(Arg))
+        return true;
   }
 
   return ShouldVisitBody && VisitCXXRecordDecl(D);
@@ -780,10 +776,9 @@ bool CursorVisitor::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   }
 
   // Visit the default argument.
-  if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited())
-    if (TypeSourceInfo *DefArg = D->getDefaultArgumentInfo())
-      if (Visit(DefArg->getTypeLoc()))
-        return true;
+  if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited() &&
+      VisitTemplateArgumentLoc(D->getDefaultArgument()))
+    return true;
 
   return false;
 }
@@ -950,8 +945,9 @@ bool CursorVisitor::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
     return true;
 
   if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited())
-    if (Expr *DefArg = D->getDefaultArgument())
-      return Visit(MakeCXCursor(DefArg, StmtParent, TU, RegionOfInterest));
+    if (D->hasDefaultArgument() &&
+        VisitTemplateArgumentLoc(D->getDefaultArgument()))
+      return true;
 
   return false;
 }
@@ -1647,6 +1643,8 @@ bool CursorVisitor::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
 #include "clang/Basic/RISCVVTypes.def"
 #define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+#define AMDGPU_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/AMDGPUTypes.def"
 #define BUILTIN_TYPE(Id, SingletonId)
 #define SIGNED_TYPE(Id, SingletonId) case BuiltinType::Id:
 #define UNSIGNED_TYPE(Id, SingletonId) case BuiltinType::Id:
@@ -2174,6 +2172,7 @@ public:
   void VisitRequiresExpr(const RequiresExpr *E);
   void VisitCXXParenListInitExpr(const CXXParenListInitExpr *E);
   void VisitOpenACCComputeConstruct(const OpenACCComputeConstruct *D);
+  void VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *D);
   void VisitOMPExecutableDirective(const OMPExecutableDirective *D);
   void VisitOMPLoopBasedDirective(const OMPLoopBasedDirective *D);
   void VisitOMPLoopDirective(const OMPLoopDirective *D);
@@ -2782,6 +2781,11 @@ class OpenACCClauseEnqueue : public OpenACCClauseVisitor<OpenACCClauseEnqueue> {
 public:
   OpenACCClauseEnqueue(EnqueueVisitor &V) : Visitor(V) {}
 
+  void VisitVarList(const OpenACCClauseWithVarList &C) {
+    for (Expr *Var : C.getVarList())
+      Visitor.AddStmt(Var);
+  }
+
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
   void Visit##CLAUSE_NAME##Clause(const OpenACC##CLAUSE_NAME##Clause &C);
 #include "clang/Basic/OpenACCClauses.def"
@@ -2807,6 +2811,61 @@ void OpenACCClauseEnqueue::VisitNumGangsClause(const OpenACCNumGangsClause &C) {
   for (Expr *IE : C.getIntExprs())
     Visitor.AddStmt(IE);
 }
+
+void OpenACCClauseEnqueue::VisitPrivateClause(const OpenACCPrivateClause &C) {
+  VisitVarList(C);
+}
+
+void OpenACCClauseEnqueue::VisitFirstPrivateClause(
+    const OpenACCFirstPrivateClause &C) {
+  VisitVarList(C);
+}
+
+void OpenACCClauseEnqueue::VisitPresentClause(const OpenACCPresentClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitNoCreateClause(const OpenACCNoCreateClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitCopyClause(const OpenACCCopyClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitCopyInClause(const OpenACCCopyInClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitCopyOutClause(const OpenACCCopyOutClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitCreateClause(const OpenACCCreateClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitAttachClause(const OpenACCAttachClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitDevicePtrClause(
+    const OpenACCDevicePtrClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitAsyncClause(const OpenACCAsyncClause &C) {
+  if (C.hasIntExpr())
+    Visitor.AddStmt(C.getIntExpr());
+}
+void OpenACCClauseEnqueue::VisitWaitClause(const OpenACCWaitClause &C) {
+  if (const Expr *DevNumExpr = C.getDevNumExpr())
+    Visitor.AddStmt(DevNumExpr);
+  for (Expr *QE : C.getQueueIdExprs())
+    Visitor.AddStmt(QE);
+}
+void OpenACCClauseEnqueue::VisitDeviceTypeClause(
+    const OpenACCDeviceTypeClause &C) {}
+void OpenACCClauseEnqueue::VisitReductionClause(
+    const OpenACCReductionClause &C) {
+  VisitVarList(C);
+}
+void OpenACCClauseEnqueue::VisitAutoClause(const OpenACCAutoClause &C) {}
+void OpenACCClauseEnqueue::VisitIndependentClause(
+    const OpenACCIndependentClause &C) {}
+void OpenACCClauseEnqueue::VisitSeqClause(const OpenACCSeqClause &C) {}
 } // namespace
 
 void EnqueueVisitor::EnqueueChildren(const OpenACCClause *C) {
@@ -3439,6 +3498,12 @@ void EnqueueVisitor::VisitOMPTargetTeamsDistributeSimdDirective(
 
 void EnqueueVisitor::VisitOpenACCComputeConstruct(
     const OpenACCComputeConstruct *C) {
+  EnqueueChildren(C);
+  for (auto *Clause : C->clauses())
+    EnqueueChildren(Clause);
+}
+
+void EnqueueVisitor::VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *C) {
   EnqueueChildren(C);
   for (auto *Clause : C->clauses())
     EnqueueChildren(Clause);
@@ -5160,6 +5225,11 @@ CXString clang_getCursorSpelling(CXCursor C) {
       return cxstring::createDup(OS.str());
     }
 
+    if (C.kind == CXCursor_BinaryOperator ||
+        C.kind == CXCursor_CompoundAssignOperator) {
+      return clang_Cursor_getBinaryOpcodeStr(clang_Cursor_getBinaryOpcode(C));
+    }
+
     const Decl *D = getDeclFromExpr(getCursorExpr(C));
     if (D)
       return getDeclSpelling(D);
@@ -5615,16 +5685,19 @@ CXString clang_getCursorDisplayName(CXCursor C) {
 
   if (const ClassTemplateSpecializationDecl *ClassSpec =
           dyn_cast<ClassTemplateSpecializationDecl>(D)) {
-    // If the type was explicitly written, use that.
-    if (TypeSourceInfo *TSInfo = ClassSpec->getTypeAsWritten())
-      return cxstring::createDup(TSInfo->getType().getAsString(Policy));
-
     SmallString<128> Str;
     llvm::raw_svector_ostream OS(Str);
     OS << *ClassSpec;
-    printTemplateArgumentList(
-        OS, ClassSpec->getTemplateArgs().asArray(), Policy,
-        ClassSpec->getSpecializedTemplate()->getTemplateParameters());
+    // If the template arguments were written explicitly, use them..
+    if (const auto *ArgsWritten = ClassSpec->getTemplateArgsAsWritten()) {
+      printTemplateArgumentList(
+          OS, ArgsWritten->arguments(), Policy,
+          ClassSpec->getSpecializedTemplate()->getTemplateParameters());
+    } else {
+      printTemplateArgumentList(
+          OS, ClassSpec->getTemplateArgs().asArray(), Policy,
+          ClassSpec->getSpecializedTemplate()->getTemplateParameters());
+    }
     return cxstring::createDup(OS.str());
   }
 
@@ -5713,8 +5786,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("UnaryOperator");
   case CXCursor_ArraySubscriptExpr:
     return cxstring::createRef("ArraySubscriptExpr");
-  case CXCursor_OMPArraySectionExpr:
-    return cxstring::createRef("OMPArraySectionExpr");
+  case CXCursor_ArraySectionExpr:
+    return cxstring::createRef("ArraySectionExpr");
   case CXCursor_OMPArrayShapingExpr:
     return cxstring::createRef("OMPArrayShapingExpr");
   case CXCursor_OMPIteratorExpr:
@@ -6179,6 +6252,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("ConceptDecl");
   case CXCursor_OpenACCComputeConstruct:
     return cxstring::createRef("OpenACCComputeConstruct");
+  case CXCursor_OpenACCLoopConstruct:
+    return cxstring::createRef("OpenACCLoopConstruct");
   }
 
   llvm_unreachable("Unhandled CXCursorKind");
@@ -8883,6 +8958,35 @@ unsigned clang_Cursor_isExternalSymbol(CXCursor C, CXString *language,
     return 1;
   }
   return 0;
+}
+
+enum CX_BinaryOperatorKind clang_Cursor_getBinaryOpcode(CXCursor C) {
+  if (C.kind != CXCursor_BinaryOperator &&
+      C.kind != CXCursor_CompoundAssignOperator) {
+    return CX_BO_Invalid;
+  }
+
+  const Expr *D = getCursorExpr(C);
+  if (const auto *BinOp = dyn_cast<BinaryOperator>(D)) {
+    switch (BinOp->getOpcode()) {
+#define BINARY_OPERATION(Name, Spelling)                                       \
+  case BO_##Name:                                                              \
+    return CX_BO_##Name;
+#include "clang/AST/OperationKinds.def"
+    }
+  }
+
+  return CX_BO_Invalid;
+}
+
+CXString clang_Cursor_getBinaryOpcodeStr(enum CX_BinaryOperatorKind Op) {
+  if (Op > CX_BO_LAST)
+    return cxstring::createEmpty();
+
+  return cxstring::createDup(
+      // BinaryOperator::getOpcodeStr has no case for CX_BO_Invalid,
+      // so subtract 1
+      BinaryOperator::getOpcodeStr(static_cast<BinaryOperatorKind>(Op - 1)));
 }
 
 CXSourceRange clang_Cursor_getCommentRange(CXCursor C) {

@@ -39,11 +39,11 @@ define <vscale x 32 x i32> @caller_scalable_vector_split_indirect(<vscale x 32 x
 ; RV32-NEXT:    vs8r.v v8, (a0)
 ; RV32-NEXT:    csrr a1, vlenb
 ; RV32-NEXT:    slli a1, a1, 3
-; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    vs8r.v v16, (a0)
+; RV32-NEXT:    add a1, a0, a1
 ; RV32-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; RV32-NEXT:    vmv.v.i v8, 0
 ; RV32-NEXT:    addi a0, sp, 128
+; RV32-NEXT:    vs8r.v v16, (a1)
 ; RV32-NEXT:    vmv.v.i v16, 0
 ; RV32-NEXT:    call callee_scalable_vector_split_indirect
 ; RV32-NEXT:    addi sp, s0, -144
@@ -70,11 +70,11 @@ define <vscale x 32 x i32> @caller_scalable_vector_split_indirect(<vscale x 32 x
 ; RV64-NEXT:    vs8r.v v8, (a0)
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    slli a1, a1, 3
-; RV64-NEXT:    add a0, a0, a1
-; RV64-NEXT:    vs8r.v v16, (a0)
+; RV64-NEXT:    add a1, a0, a1
 ; RV64-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; RV64-NEXT:    vmv.v.i v8, 0
 ; RV64-NEXT:    addi a0, sp, 128
+; RV64-NEXT:    vs8r.v v16, (a1)
 ; RV64-NEXT:    vmv.v.i v16, 0
 ; RV64-NEXT:    call callee_scalable_vector_split_indirect
 ; RV64-NEXT:    addi sp, s0, -144

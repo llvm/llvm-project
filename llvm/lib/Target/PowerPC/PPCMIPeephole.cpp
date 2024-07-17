@@ -45,6 +45,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugCounter.h"
 
 using namespace llvm;
 
@@ -94,6 +95,13 @@ static cl::opt<bool>
     EnableTrapOptimization("ppc-opt-conditional-trap",
                            cl::desc("enable optimization of conditional traps"),
                            cl::init(false), cl::Hidden);
+
+DEBUG_COUNTER(
+    PeepholeXToICounter, "ppc-xtoi-peephole",
+    "Controls whether PPC reg+reg to reg+imm peephole is performed on a MI");
+
+DEBUG_COUNTER(PeepholePerOpCounter, "ppc-per-op-peephole",
+              "Controls whether PPC per opcode peephole is performed on a MI");
 
 namespace {
 
@@ -147,14 +155,14 @@ private:
 public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LiveVariables>();
-    AU.addRequired<MachineDominatorTree>();
-    AU.addRequired<MachinePostDominatorTree>();
-    AU.addRequired<MachineBlockFrequencyInfo>();
-    AU.addPreserved<LiveVariables>();
-    AU.addPreserved<MachineDominatorTree>();
-    AU.addPreserved<MachinePostDominatorTree>();
-    AU.addPreserved<MachineBlockFrequencyInfo>();
+    AU.addRequired<LiveVariablesWrapperPass>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachinePostDominatorTreeWrapperPass>();
+    AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+    AU.addPreserved<LiveVariablesWrapperPass>();
+    AU.addPreserved<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -192,10 +200,10 @@ void PPCMIPeephole::addRegToUpdateWithLine(Register Reg, int Line) {
 void PPCMIPeephole::initialize(MachineFunction &MFParm) {
   MF = &MFParm;
   MRI = &MF->getRegInfo();
-  MDT = &getAnalysis<MachineDominatorTree>();
-  MPDT = &getAnalysis<MachinePostDominatorTree>();
-  MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
-  LV = &getAnalysis<LiveVariables>();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MPDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
+  MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
+  LV = &getAnalysis<LiveVariablesWrapperPass>().getLV();
   EntryFreq = MBFI->getEntryFreq();
   TII = MF->getSubtarget<PPCSubtarget>().getInstrInfo();
   RegsToUpdate.clear();
@@ -440,6 +448,9 @@ void PPCMIPeephole::convertUnprimedAccPHIs(
       if (MRI->isSSA())
         addRegToUpdate(RegMBB.first.getReg());
     }
+    // The liveness of old PHI and new PHI have to be updated.
+    addRegToUpdate(PHI->getOperand(0).getReg());
+    addRegToUpdate(AccReg);
     ChangedPHIMap[PHI] = NewPHI.getInstr();
     LLVM_DEBUG(dbgs() << "Converting PHI: ");
     LLVM_DEBUG(PHI->dump());
@@ -467,6 +478,9 @@ bool PPCMIPeephole::simplifyCode() {
       for (MachineBasicBlock &MBB : *MF) {
         for (MachineInstr &MI : MBB) {
           if (MI.isDebugInstr())
+            continue;
+
+          if (!DebugCounter::shouldExecute(PeepholeXToICounter))
             continue;
 
           SmallSet<Register, 4> RRToRIRegsToUpdate;
@@ -536,6 +550,9 @@ bool PPCMIPeephole::simplifyCode() {
 
       // Ignore debug instructions.
       if (MI.isDebugInstr())
+        continue;
+
+      if (!DebugCounter::shouldExecute(PeepholePerOpCounter))
         continue;
 
       // Per-opcode peepholes.
@@ -1274,6 +1291,10 @@ bool PPCMIPeephole::simplifyCode() {
           addRegToUpdate(OrigOp1Reg);
           if (MI.getOperand(1).isReg())
             addRegToUpdate(MI.getOperand(1).getReg());
+          if (ToErase && ToErase->getOperand(1).isReg())
+            for (auto UseReg : ToErase->explicit_uses())
+              if (UseReg.isReg())
+                addRegToUpdate(UseReg.getReg());
           ++NumRotatesCollapsed;
         }
         break;
@@ -2014,10 +2035,10 @@ bool PPCMIPeephole::combineSEXTAndSHL(MachineInstr &MI,
 
 INITIALIZE_PASS_BEGIN(PPCMIPeephole, DEBUG_TYPE,
                       "PowerPC MI Peephole Optimization", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(LiveVariables)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LiveVariablesWrapperPass)
 INITIALIZE_PASS_END(PPCMIPeephole, DEBUG_TYPE,
                     "PowerPC MI Peephole Optimization", false, false)
 

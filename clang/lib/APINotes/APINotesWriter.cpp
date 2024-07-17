@@ -42,8 +42,8 @@ class APINotesWriter::Implementation {
   /// this context and provides both the context ID and information describing
   /// the context within that module.
   llvm::DenseMap<ContextTableKey,
-                 std::pair<unsigned, VersionedSmallVector<ObjCContextInfo>>>
-      ObjCContexts;
+                 std::pair<unsigned, VersionedSmallVector<ContextInfo>>>
+      Contexts;
 
   /// Information about parent contexts for each context.
   ///
@@ -51,7 +51,7 @@ class APINotesWriter::Implementation {
   llvm::DenseMap<uint32_t, uint32_t> ParentContexts;
 
   /// Mapping from context IDs to the identifier ID holding the name.
-  llvm::DenseMap<unsigned, unsigned> ObjCContextNames;
+  llvm::DenseMap<unsigned, unsigned> ContextNames;
 
   /// Information about Objective-C properties.
   ///
@@ -147,7 +147,7 @@ private:
   void writeBlockInfoBlock(llvm::BitstreamWriter &Stream);
   void writeControlBlock(llvm::BitstreamWriter &Stream);
   void writeIdentifierBlock(llvm::BitstreamWriter &Stream);
-  void writeObjCContextBlock(llvm::BitstreamWriter &Stream);
+  void writeContextBlock(llvm::BitstreamWriter &Stream);
   void writeObjCPropertyBlock(llvm::BitstreamWriter &Stream);
   void writeObjCMethodBlock(llvm::BitstreamWriter &Stream);
   void writeObjCSelectorBlock(llvm::BitstreamWriter &Stream);
@@ -178,7 +178,7 @@ void APINotesWriter::Implementation::writeToStream(llvm::raw_ostream &OS) {
     writeBlockInfoBlock(Stream);
     writeControlBlock(Stream);
     writeIdentifierBlock(Stream);
-    writeObjCContextBlock(Stream);
+    writeContextBlock(Stream);
     writeObjCPropertyBlock(Stream);
     writeObjCMethodBlock(Stream);
     writeObjCSelectorBlock(Stream);
@@ -240,7 +240,7 @@ void APINotesWriter::Implementation::writeBlockInfoBlock(
   BLOCK_RECORD(identifier_block, IDENTIFIER_DATA);
 
   BLOCK(OBJC_CONTEXT_BLOCK);
-  BLOCK_RECORD(objc_context_block, OBJC_CONTEXT_ID_DATA);
+  BLOCK_RECORD(context_block, CONTEXT_ID_DATA);
 
   BLOCK(OBJC_PROPERTY_BLOCK);
   BLOCK_RECORD(objc_property_block, OBJC_PROPERTY_DATA);
@@ -337,7 +337,7 @@ void APINotesWriter::Implementation::writeIdentifierBlock(
 
 namespace {
 /// Used to serialize the on-disk Objective-C context table.
-class ObjCContextIDTableInfo {
+class ContextIDTableInfo {
 public:
   using key_type = ContextTableKey;
   using key_type_ref = key_type;
@@ -552,9 +552,8 @@ void emitCommonTypeInfo(raw_ostream &OS, const CommonTypeInfo &CTI) {
 }
 
 /// Used to serialize the on-disk Objective-C property table.
-class ObjCContextInfoTableInfo
-    : public VersionedTableInfo<ObjCContextInfoTableInfo, unsigned,
-                                ObjCContextInfo> {
+class ContextInfoTableInfo
+    : public VersionedTableInfo<ContextInfoTableInfo, unsigned, ContextInfo> {
 public:
   unsigned getKeyLength(key_type_ref) { return sizeof(uint32_t); }
 
@@ -567,11 +566,11 @@ public:
     return static_cast<size_t>(llvm::hash_value(Key));
   }
 
-  unsigned getUnversionedInfoSize(const ObjCContextInfo &OCI) {
+  unsigned getUnversionedInfoSize(const ContextInfo &OCI) {
     return getCommonTypeInfoSize(OCI) + 1;
   }
 
-  void emitUnversionedInfo(raw_ostream &OS, const ObjCContextInfo &OCI) {
+  void emitUnversionedInfo(raw_ostream &OS, const ContextInfo &OCI) {
     emitCommonTypeInfo(OS, OCI);
 
     uint8_t payload = 0;
@@ -590,19 +589,19 @@ public:
 };
 } // namespace
 
-void APINotesWriter::Implementation::writeObjCContextBlock(
+void APINotesWriter::Implementation::writeContextBlock(
     llvm::BitstreamWriter &Stream) {
   llvm::BCBlockRAII restoreBlock(Stream, OBJC_CONTEXT_BLOCK_ID, 3);
 
-  if (ObjCContexts.empty())
+  if (Contexts.empty())
     return;
 
   {
     llvm::SmallString<4096> HashTableBlob;
     uint32_t Offset;
     {
-      llvm::OnDiskChainedHashTableGenerator<ObjCContextIDTableInfo> Generator;
-      for (auto &OC : ObjCContexts)
+      llvm::OnDiskChainedHashTableGenerator<ContextIDTableInfo> Generator;
+      for (auto &OC : Contexts)
         Generator.insert(OC.first, OC.second.first);
 
       llvm::raw_svector_ostream BlobStream(HashTableBlob);
@@ -612,16 +611,16 @@ void APINotesWriter::Implementation::writeObjCContextBlock(
       Offset = Generator.Emit(BlobStream);
     }
 
-    objc_context_block::ObjCContextIDLayout ObjCContextID(Stream);
-    ObjCContextID.emit(Scratch, Offset, HashTableBlob);
+    context_block::ContextIDLayout ContextID(Stream);
+    ContextID.emit(Scratch, Offset, HashTableBlob);
   }
 
   {
     llvm::SmallString<4096> HashTableBlob;
     uint32_t Offset;
     {
-      llvm::OnDiskChainedHashTableGenerator<ObjCContextInfoTableInfo> Generator;
-      for (auto &OC : ObjCContexts)
+      llvm::OnDiskChainedHashTableGenerator<ContextInfoTableInfo> Generator;
+      for (auto &OC : Contexts)
         Generator.insert(OC.second.first, OC.second.second);
 
       llvm::raw_svector_ostream BlobStream(HashTableBlob);
@@ -631,8 +630,8 @@ void APINotesWriter::Implementation::writeObjCContextBlock(
       Offset = Generator.Emit(BlobStream);
     }
 
-    objc_context_block::ObjCContextInfoLayout ObjCContextInfo(Stream);
-    ObjCContextInfo.emit(Scratch, Offset, HashTableBlob);
+    context_block::ContextInfoLayout ContextInfo(Stream);
+    ContextInfo.emit(Scratch, Offset, HashTableBlob);
   }
 }
 
@@ -1128,7 +1127,7 @@ public:
     return 2 + (TI.SwiftImportAs ? TI.SwiftImportAs->size() : 0) +
            2 + (TI.SwiftRetainOp ? TI.SwiftRetainOp->size() : 0) +
            2 + (TI.SwiftReleaseOp ? TI.SwiftReleaseOp->size() : 0) +
-           1 + getCommonTypeInfoSize(TI);
+           2 + getCommonTypeInfoSize(TI);
   }
 
   void emitUnversionedInfo(raw_ostream &OS, const TagInfo &TI) {
@@ -1145,6 +1144,11 @@ public:
       Flags |= (value.value() << 1 | 1 << 0);
 
     writer.write<uint8_t>(Flags);
+
+    if (auto Copyable = TI.isSwiftCopyable())
+      writer.write<uint8_t>(*Copyable ? kSwiftCopyable : kSwiftNonCopyable);
+    else
+      writer.write<uint8_t>(0);
 
     if (auto ImportAs = TI.SwiftImportAs) {
       writer.write<uint16_t>(ImportAs->size() + 1);
@@ -1258,25 +1262,25 @@ void APINotesWriter::writeToStream(llvm::raw_ostream &OS) {
   Implementation->writeToStream(OS);
 }
 
-ContextID APINotesWriter::addObjCContext(std::optional<ContextID> ParentCtxID,
-                                         StringRef Name, ContextKind Kind,
-                                         const ObjCContextInfo &Info,
-                                         VersionTuple SwiftVersion) {
+ContextID APINotesWriter::addContext(std::optional<ContextID> ParentCtxID,
+                                     llvm::StringRef Name, ContextKind Kind,
+                                     const ContextInfo &Info,
+                                     llvm::VersionTuple SwiftVersion) {
   IdentifierID NameID = Implementation->getIdentifier(Name);
 
   uint32_t RawParentCtxID = ParentCtxID ? ParentCtxID->Value : -1;
   ContextTableKey Key(RawParentCtxID, static_cast<uint8_t>(Kind), NameID);
-  auto Known = Implementation->ObjCContexts.find(Key);
-  if (Known == Implementation->ObjCContexts.end()) {
-    unsigned NextID = Implementation->ObjCContexts.size() + 1;
+  auto Known = Implementation->Contexts.find(Key);
+  if (Known == Implementation->Contexts.end()) {
+    unsigned NextID = Implementation->Contexts.size() + 1;
 
-    Implementation::VersionedSmallVector<ObjCContextInfo> EmptyVersionedInfo;
-    Known = Implementation->ObjCContexts
+    Implementation::VersionedSmallVector<ContextInfo> EmptyVersionedInfo;
+    Known = Implementation->Contexts
                 .insert(std::make_pair(
                     Key, std::make_pair(NextID, EmptyVersionedInfo)))
                 .first;
 
-    Implementation->ObjCContextNames[NextID] = NameID;
+    Implementation->ContextNames[NextID] = NameID;
     Implementation->ParentContexts[NextID] = RawParentCtxID;
   }
 
@@ -1323,9 +1327,9 @@ void APINotesWriter::addObjCMethod(ContextID CtxID, ObjCSelectorRef Selector,
     uint32_t ParentCtxID = Implementation->ParentContexts[CtxID.Value];
     ContextTableKey CtxKey(ParentCtxID,
                            static_cast<uint8_t>(ContextKind::ObjCClass),
-                           Implementation->ObjCContextNames[CtxID.Value]);
-    assert(Implementation->ObjCContexts.contains(CtxKey));
-    auto &VersionedVec = Implementation->ObjCContexts[CtxKey].second;
+                           Implementation->ContextNames[CtxID.Value]);
+    assert(Implementation->Contexts.contains(CtxKey));
+    auto &VersionedVec = Implementation->Contexts[CtxKey].second;
     bool Found = false;
     for (auto &Versioned : VersionedVec) {
       if (Versioned.first == SwiftVersion) {
@@ -1336,7 +1340,7 @@ void APINotesWriter::addObjCMethod(ContextID CtxID, ObjCSelectorRef Selector,
     }
 
     if (!Found) {
-      VersionedVec.push_back({SwiftVersion, ObjCContextInfo()});
+      VersionedVec.push_back({SwiftVersion, ContextInfo()});
       VersionedVec.back().second.setHasDesignatedInits(true);
     }
   }

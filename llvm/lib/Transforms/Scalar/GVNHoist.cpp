@@ -238,18 +238,6 @@ public:
   const VNtoInsns &getStoreVNTable() const { return VNtoCallsStores; }
 };
 
-static void combineKnownMetadata(Instruction *ReplInst, Instruction *I) {
-  static const unsigned KnownIDs[] = {LLVMContext::MD_tbaa,
-                                      LLVMContext::MD_alias_scope,
-                                      LLVMContext::MD_noalias,
-                                      LLVMContext::MD_range,
-                                      LLVMContext::MD_fpmath,
-                                      LLVMContext::MD_invariant_load,
-                                      LLVMContext::MD_invariant_group,
-                                      LLVMContext::MD_access_group};
-  combineMetadata(ReplInst, I, KnownIDs, true);
-}
-
 // This pass hoists common computations across branches sharing common
 // dominator. The primary goal is to reduce the code size, and in some
 // cases reduce critical path (by exposing more ILP).
@@ -996,8 +984,8 @@ unsigned GVNHoist::rauw(const SmallVecInsn &Candidates, Instruction *Repl,
         MSSAUpdater->removeMemoryAccess(OldMA);
       }
 
+      combineMetadataForCSE(Repl, I, true);
       Repl->andIRFlags(I);
-      combineKnownMetadata(Repl, I);
       I->replaceAllUsesWith(Repl);
       // Also invalidate the Alias Analysis cache.
       MD->removeInstruction(I);

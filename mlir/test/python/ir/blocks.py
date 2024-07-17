@@ -145,3 +145,35 @@ def testBlockHash():
             block1 = Block.create_at_start(dummy.operation.regions[0], [f32])
             block2 = Block.create_at_start(dummy.operation.regions[0], [f32])
             assert hash(block1) != hash(block2)
+
+
+# CHECK-LABEL: TEST: testBlockAddArgs
+@run
+def testBlockAddArgs():
+    with Context() as ctx, Location.unknown(ctx) as loc:
+        ctx.allow_unregistered_dialects = True
+        f32 = F32Type.get()
+        op = Operation.create("test", regions=1, loc=Location.unknown())
+        blocks = op.regions[0].blocks
+        blocks.append()
+        # CHECK: ^bb0:
+        op.print(enable_debug_info=True)
+        blocks[0].add_argument(f32, loc)
+        # CHECK: ^bb0(%{{.+}}: f32 loc(unknown)):
+        op.print(enable_debug_info=True)
+
+
+# CHECK-LABEL: TEST: testBlockEraseArgs
+@run
+def testBlockEraseArgs():
+    with Context() as ctx, Location.unknown(ctx) as loc:
+        ctx.allow_unregistered_dialects = True
+        f32 = F32Type.get()
+        op = Operation.create("test", regions=1, loc=Location.unknown())
+        blocks = op.regions[0].blocks
+        blocks.append(f32)
+        # CHECK: ^bb0(%{{.+}}: f32 loc(unknown)):
+        op.print(enable_debug_info=True)
+        blocks[0].erase_argument(0)
+        # CHECK: ^bb0:
+        op.print(enable_debug_info=True)

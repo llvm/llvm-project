@@ -49,8 +49,6 @@ public:
   CFGLoopInfo(const llvm::DominatorTreeBase<mlir::Block, false> &domTree);
 };
 
-raw_ostream &operator<<(raw_ostream &os, mlir::Block &block);
-
 } // namespace mlir
 
 #endif // MLIR_ANALYSIS_LOOPINFO_H

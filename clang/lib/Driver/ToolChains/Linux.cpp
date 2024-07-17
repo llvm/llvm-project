@@ -568,16 +568,12 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
     Loader =
         (tools::ppc::hasPPCAbiArg(Args, "elfv1")) ? "ld64.so.1" : "ld64.so.2";
     break;
-  case llvm::Triple::riscv32: {
-    StringRef ABIName = tools::riscv::getRISCVABI(Args, Triple);
-    LibDir = "lib";
-    Loader = ("ld-linux-riscv32-" + ABIName + ".so.1").str();
-    break;
-  }
+  case llvm::Triple::riscv32:
   case llvm::Triple::riscv64: {
+    StringRef ArchName = llvm::Triple::getArchTypeName(Arch);
     StringRef ABIName = tools::riscv::getRISCVABI(Args, Triple);
     LibDir = "lib";
-    Loader = ("ld-linux-riscv64-" + ABIName + ".so.1").str();
+    Loader = ("ld-linux-" + ArchName + "-" + ABIName + ".so.1").str();
     break;
   }
   case llvm::Triple::sparc:
@@ -815,7 +811,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsPowerPC64 || IsSystemZ ||
       IsLoongArch64 || IsRISCV64)
     Res |= SanitizerKind::Thread;
-  if (IsX86_64 || IsSystemZ)
+  if (IsX86_64 || IsSystemZ || IsPowerPC64)
     Res |= SanitizerKind::KernelMemory;
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsMIPS || IsArmArch ||
       IsPowerPC64 || IsHexagon || IsLoongArch64 || IsRISCV64)
@@ -826,6 +822,9 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   if (IsX86_64 || IsAArch64) {
     Res |= SanitizerKind::KernelHWAddress;
   }
+  if (IsX86_64)
+    Res |= SanitizerKind::NumericalStability;
+
   // Work around "Cannot represent a difference across sections".
   if (getTriple().getArch() == llvm::Triple::ppc64)
     Res &= ~SanitizerKind::Function;
@@ -840,25 +839,6 @@ void Linux::addProfileRTLibs(const llvm::opt::ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(
         Twine("-u", llvm::getInstrProfRuntimeHookVarName())));
   ToolChain::addProfileRTLibs(Args, CmdArgs);
-}
-
-llvm::DenormalMode
-Linux::getDefaultDenormalModeForType(const llvm::opt::ArgList &DriverArgs,
-                                     const JobAction &JA,
-                                     const llvm::fltSemantics *FPType) const {
-  switch (getTriple().getArch()) {
-  case llvm::Triple::x86:
-  case llvm::Triple::x86_64: {
-    std::string Unused;
-    // DAZ and FTZ are turned on in crtfastmath.o
-    if (!DriverArgs.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles) &&
-        isFastMathRuntimeAvailable(DriverArgs, Unused))
-      return llvm::DenormalMode::getPreserveSign();
-    return llvm::DenormalMode::getIEEE();
-  }
-  default:
-    return llvm::DenormalMode::getIEEE();
-  }
 }
 
 void Linux::addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const {

@@ -1091,24 +1091,19 @@ bool StackFrame::GetFrameBaseValue(Scalar &frame_base, Status *error_ptr) {
 
       m_flags.Set(GOT_FRAME_BASE);
       ExecutionContext exe_ctx(shared_from_this());
-      Value expr_value;
       addr_t loclist_base_addr = LLDB_INVALID_ADDRESS;
       if (!m_sc.function->GetFrameBaseExpression().IsAlwaysValidSingleExpr())
         loclist_base_addr =
             m_sc.function->GetAddressRange().GetBaseAddress().GetLoadAddress(
                 exe_ctx.GetTargetPtr());
 
-      if (!m_sc.function->GetFrameBaseExpression().Evaluate(
-              &exe_ctx, nullptr, loclist_base_addr, nullptr, nullptr,
-              expr_value, &m_frame_base_error)) {
-        // We should really have an error if evaluate returns, but in case we
-        // don't, lets set the error to something at least.
-        if (m_frame_base_error.Success())
-          m_frame_base_error.SetErrorString(
-              "Evaluation of the frame base expression failed.");
-      } else {
-        m_frame_base = expr_value.ResolveValue(&exe_ctx);
-      }
+      llvm::Expected<Value> expr_value =
+          m_sc.function->GetFrameBaseExpression().Evaluate(
+              &exe_ctx, nullptr, loclist_base_addr, nullptr, nullptr);
+      if (!expr_value)
+        m_frame_base_error = expr_value.takeError();
+      else
+        m_frame_base = expr_value->ResolveValue(&exe_ctx);
     } else {
       m_frame_base_error.SetErrorString("No function in symbol context.");
     }
@@ -1203,26 +1198,23 @@ bool StackFrame::IsArtificial() const {
   return m_stack_frame_kind == StackFrame::Kind::Artificial;
 }
 
-lldb::LanguageType StackFrame::GetLanguage() {
+SourceLanguage StackFrame::GetLanguage() {
   CompileUnit *cu = GetSymbolContext(eSymbolContextCompUnit).comp_unit;
   if (cu)
     return cu->GetLanguage();
-  return lldb::eLanguageTypeUnknown;
+  return {};
 }
 
-lldb::LanguageType StackFrame::GuessLanguage() {
-  LanguageType lang_type = GetLanguage();
+SourceLanguage StackFrame::GuessLanguage() {
+  SourceLanguage lang_type = GetLanguage();
 
   if (lang_type == eLanguageTypeUnknown) {
-    SymbolContext sc = GetSymbolContext(eSymbolContextFunction
-                                        | eSymbolContextSymbol);
-    if (sc.function) {
-      lang_type = sc.function->GetMangled().GuessLanguage();
-    }
+    SymbolContext sc =
+        GetSymbolContext(eSymbolContextFunction | eSymbolContextSymbol);
+    if (sc.function)
+      lang_type = LanguageType(sc.function->GetMangled().GuessLanguage());
     else if (sc.symbol)
-    {
-      lang_type = sc.symbol->GetMangled().GuessLanguage();
-    }
+      lang_type = SourceLanguage(sc.symbol->GetMangled().GuessLanguage());
   }
 
   return lang_type;
@@ -1302,7 +1294,7 @@ GetBaseExplainingDereference(const Instruction::Operand &operand,
   }
   return std::make_pair(nullptr, 0);
 }
-}
+} // namespace
 
 lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
   TargetSP target_sp = CalculateTarget();

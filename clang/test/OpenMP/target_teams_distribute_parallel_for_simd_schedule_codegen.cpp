@@ -1118,6 +1118,7 @@ int main (int argc, char **argv) {
 // CHECK1:       omp.dispatch.inc:
 // CHECK1-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK1:       omp.dispatch.end:
+// CHECK1-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP6]])
 // CHECK1-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK1-NEXT:    [[TMP15:%.*]] = icmp ne i32 [[TMP14]], 0
 // CHECK1-NEXT:    br i1 [[TMP15]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -1281,6 +1282,7 @@ int main (int argc, char **argv) {
 // CHECK1:       omp.dispatch.inc:
 // CHECK1-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK1:       omp.dispatch.end:
+// CHECK1-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP6]])
 // CHECK1-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK1-NEXT:    [[TMP15:%.*]] = icmp ne i32 [[TMP14]], 0
 // CHECK1-NEXT:    br i1 [[TMP15]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -2193,6 +2195,7 @@ int main (int argc, char **argv) {
 // CHECK3:       omp.dispatch.inc:
 // CHECK3-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK3:       omp.dispatch.end:
+// CHECK3-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP6]])
 // CHECK3-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK3-NEXT:    [[TMP15:%.*]] = icmp ne i32 [[TMP14]], 0
 // CHECK3-NEXT:    br i1 [[TMP15]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -2351,6 +2354,7 @@ int main (int argc, char **argv) {
 // CHECK3:       omp.dispatch.inc:
 // CHECK3-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK3:       omp.dispatch.end:
+// CHECK3-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP6]])
 // CHECK3-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK3-NEXT:    [[TMP15:%.*]] = icmp ne i32 [[TMP14]], 0
 // CHECK3-NEXT:    br i1 [[TMP15]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -3285,6 +3289,7 @@ int main (int argc, char **argv) {
 // CHECK5:       omp.dispatch.inc:
 // CHECK5-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK5:       omp.dispatch.end:
+// CHECK5-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP6]])
 // CHECK5-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK5-NEXT:    [[TMP15:%.*]] = icmp ne i32 [[TMP14]], 0
 // CHECK5-NEXT:    br i1 [[TMP15]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -3448,6 +3453,7 @@ int main (int argc, char **argv) {
 // CHECK5:       omp.dispatch.inc:
 // CHECK5-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK5:       omp.dispatch.end:
+// CHECK5-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP6]])
 // CHECK5-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK5-NEXT:    [[TMP15:%.*]] = icmp ne i32 [[TMP14]], 0
 // CHECK5-NEXT:    br i1 [[TMP15]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -4360,6 +4366,7 @@ int main (int argc, char **argv) {
 // CHECK7:       omp.dispatch.inc:
 // CHECK7-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK7:       omp.dispatch.end:
+// CHECK7-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP6]])
 // CHECK7-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK7-NEXT:    [[TMP15:%.*]] = icmp ne i32 [[TMP14]], 0
 // CHECK7-NEXT:    br i1 [[TMP15]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -4518,6 +4525,7 @@ int main (int argc, char **argv) {
 // CHECK7:       omp.dispatch.inc:
 // CHECK7-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK7:       omp.dispatch.end:
+// CHECK7-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP6]])
 // CHECK7-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK7-NEXT:    [[TMP15:%.*]] = icmp ne i32 [[TMP14]], 0
 // CHECK7-NEXT:    br i1 [[TMP15]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -6351,12 +6359,15 @@ int main (int argc, char **argv) {
 // CHECK13:       omp.dispatch.inc:
 // CHECK13-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK13:       omp.dispatch.end:
-// CHECK13-NEXT:    [[TMP21:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK13-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[TMP21]], 0
-// CHECK13-NEXT:    br i1 [[TMP22]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
+// CHECK13-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK13-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP21]], align 4
+// CHECK13-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP22]])
+// CHECK13-NEXT:    [[TMP23:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
+// CHECK13-NEXT:    [[TMP24:%.*]] = icmp ne i32 [[TMP23]], 0
+// CHECK13-NEXT:    br i1 [[TMP24]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
 // CHECK13:       .omp.final.then:
-// CHECK13-NEXT:    [[TMP23:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK13-NEXT:    [[SUB7:%.*]] = sub nsw i32 [[TMP23]], 0
+// CHECK13-NEXT:    [[TMP25:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK13-NEXT:    [[SUB7:%.*]] = sub nsw i32 [[TMP25]], 0
 // CHECK13-NEXT:    [[DIV8:%.*]] = sdiv i32 [[SUB7]], 1
 // CHECK13-NEXT:    [[MUL9:%.*]] = mul nsw i32 [[DIV8]], 1
 // CHECK13-NEXT:    [[ADD10:%.*]] = add nsw i32 0, [[MUL9]]
@@ -6603,12 +6614,15 @@ int main (int argc, char **argv) {
 // CHECK13:       omp.dispatch.inc:
 // CHECK13-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK13:       omp.dispatch.end:
-// CHECK13-NEXT:    [[TMP22:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK13-NEXT:    [[TMP23:%.*]] = icmp ne i32 [[TMP22]], 0
-// CHECK13-NEXT:    br i1 [[TMP23]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
+// CHECK13-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK13-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
+// CHECK13-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP23]])
+// CHECK13-NEXT:    [[TMP24:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
+// CHECK13-NEXT:    [[TMP25:%.*]] = icmp ne i32 [[TMP24]], 0
+// CHECK13-NEXT:    br i1 [[TMP25]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
 // CHECK13:       .omp.final.then:
-// CHECK13-NEXT:    [[TMP24:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK13-NEXT:    [[SUB8:%.*]] = sub nsw i32 [[TMP24]], 0
+// CHECK13-NEXT:    [[TMP26:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1]], align 4
+// CHECK13-NEXT:    [[SUB8:%.*]] = sub nsw i32 [[TMP26]], 0
 // CHECK13-NEXT:    [[DIV9:%.*]] = sdiv i32 [[SUB8]], 1
 // CHECK13-NEXT:    [[MUL10:%.*]] = mul nsw i32 [[DIV9]], 1
 // CHECK13-NEXT:    [[ADD11:%.*]] = add nsw i32 0, [[MUL10]]
@@ -7567,6 +7581,7 @@ int main (int argc, char **argv) {
 // CHECK13:       omp.dispatch.inc:
 // CHECK13-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK13:       omp.dispatch.end:
+// CHECK13-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP6]])
 // CHECK13-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK13-NEXT:    [[TMP15:%.*]] = icmp ne i32 [[TMP14]], 0
 // CHECK13-NEXT:    br i1 [[TMP15]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -7744,6 +7759,7 @@ int main (int argc, char **argv) {
 // CHECK13:       omp.dispatch.inc:
 // CHECK13-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK13:       omp.dispatch.end:
+// CHECK13-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP7]])
 // CHECK13-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK13-NEXT:    [[TMP16:%.*]] = icmp ne i32 [[TMP15]], 0
 // CHECK13-NEXT:    br i1 [[TMP16]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -9176,12 +9192,15 @@ int main (int argc, char **argv) {
 // CHECK15:       omp.dispatch.inc:
 // CHECK15-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK15:       omp.dispatch.end:
-// CHECK15-NEXT:    [[TMP21:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK15-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[TMP21]], 0
-// CHECK15-NEXT:    br i1 [[TMP22]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
+// CHECK15-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
+// CHECK15-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP21]], align 4
+// CHECK15-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP22]])
+// CHECK15-NEXT:    [[TMP23:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
+// CHECK15-NEXT:    [[TMP24:%.*]] = icmp ne i32 [[TMP23]], 0
+// CHECK15-NEXT:    br i1 [[TMP24]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
 // CHECK15:       .omp.final.then:
-// CHECK15-NEXT:    [[TMP23:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK15-NEXT:    [[SUB6:%.*]] = sub nsw i32 [[TMP23]], 0
+// CHECK15-NEXT:    [[TMP25:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK15-NEXT:    [[SUB6:%.*]] = sub nsw i32 [[TMP25]], 0
 // CHECK15-NEXT:    [[DIV7:%.*]] = sdiv i32 [[SUB6]], 1
 // CHECK15-NEXT:    [[MUL8:%.*]] = mul nsw i32 [[DIV7]], 1
 // CHECK15-NEXT:    [[ADD9:%.*]] = add nsw i32 0, [[MUL8]]
@@ -9423,12 +9442,15 @@ int main (int argc, char **argv) {
 // CHECK15:       omp.dispatch.inc:
 // CHECK15-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK15:       omp.dispatch.end:
-// CHECK15-NEXT:    [[TMP22:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK15-NEXT:    [[TMP23:%.*]] = icmp ne i32 [[TMP22]], 0
-// CHECK15-NEXT:    br i1 [[TMP23]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
+// CHECK15-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
+// CHECK15-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
+// CHECK15-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP23]])
+// CHECK15-NEXT:    [[TMP24:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
+// CHECK15-NEXT:    [[TMP25:%.*]] = icmp ne i32 [[TMP24]], 0
+// CHECK15-NEXT:    br i1 [[TMP25]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
 // CHECK15:       .omp.final.then:
-// CHECK15-NEXT:    [[TMP24:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK15-NEXT:    [[SUB7:%.*]] = sub nsw i32 [[TMP24]], 0
+// CHECK15-NEXT:    [[TMP26:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1]], align 4
+// CHECK15-NEXT:    [[SUB7:%.*]] = sub nsw i32 [[TMP26]], 0
 // CHECK15-NEXT:    [[DIV8:%.*]] = sdiv i32 [[SUB7]], 1
 // CHECK15-NEXT:    [[MUL9:%.*]] = mul nsw i32 [[DIV8]], 1
 // CHECK15-NEXT:    [[ADD10:%.*]] = add nsw i32 0, [[MUL9]]
@@ -10365,6 +10387,7 @@ int main (int argc, char **argv) {
 // CHECK15:       omp.dispatch.inc:
 // CHECK15-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK15:       omp.dispatch.end:
+// CHECK15-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP6]])
 // CHECK15-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK15-NEXT:    [[TMP15:%.*]] = icmp ne i32 [[TMP14]], 0
 // CHECK15-NEXT:    br i1 [[TMP15]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -10537,6 +10560,7 @@ int main (int argc, char **argv) {
 // CHECK15:       omp.dispatch.inc:
 // CHECK15-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK15:       omp.dispatch.end:
+// CHECK15-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP7]])
 // CHECK15-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK15-NEXT:    [[TMP16:%.*]] = icmp ne i32 [[TMP15]], 0
 // CHECK15-NEXT:    br i1 [[TMP16]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -11985,12 +12009,15 @@ int main (int argc, char **argv) {
 // CHECK17:       omp.dispatch.inc:
 // CHECK17-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK17:       omp.dispatch.end:
-// CHECK17-NEXT:    [[TMP21:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK17-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[TMP21]], 0
-// CHECK17-NEXT:    br i1 [[TMP22]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
+// CHECK17-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK17-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP21]], align 4
+// CHECK17-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP22]])
+// CHECK17-NEXT:    [[TMP23:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
+// CHECK17-NEXT:    [[TMP24:%.*]] = icmp ne i32 [[TMP23]], 0
+// CHECK17-NEXT:    br i1 [[TMP24]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
 // CHECK17:       .omp.final.then:
-// CHECK17-NEXT:    [[TMP23:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK17-NEXT:    [[SUB7:%.*]] = sub nsw i32 [[TMP23]], 0
+// CHECK17-NEXT:    [[TMP25:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK17-NEXT:    [[SUB7:%.*]] = sub nsw i32 [[TMP25]], 0
 // CHECK17-NEXT:    [[DIV8:%.*]] = sdiv i32 [[SUB7]], 1
 // CHECK17-NEXT:    [[MUL9:%.*]] = mul nsw i32 [[DIV8]], 1
 // CHECK17-NEXT:    [[ADD10:%.*]] = add nsw i32 0, [[MUL9]]
@@ -12237,12 +12264,15 @@ int main (int argc, char **argv) {
 // CHECK17:       omp.dispatch.inc:
 // CHECK17-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK17:       omp.dispatch.end:
-// CHECK17-NEXT:    [[TMP22:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK17-NEXT:    [[TMP23:%.*]] = icmp ne i32 [[TMP22]], 0
-// CHECK17-NEXT:    br i1 [[TMP23]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
+// CHECK17-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK17-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
+// CHECK17-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP23]])
+// CHECK17-NEXT:    [[TMP24:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
+// CHECK17-NEXT:    [[TMP25:%.*]] = icmp ne i32 [[TMP24]], 0
+// CHECK17-NEXT:    br i1 [[TMP25]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
 // CHECK17:       .omp.final.then:
-// CHECK17-NEXT:    [[TMP24:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK17-NEXT:    [[SUB8:%.*]] = sub nsw i32 [[TMP24]], 0
+// CHECK17-NEXT:    [[TMP26:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1]], align 4
+// CHECK17-NEXT:    [[SUB8:%.*]] = sub nsw i32 [[TMP26]], 0
 // CHECK17-NEXT:    [[DIV9:%.*]] = sdiv i32 [[SUB8]], 1
 // CHECK17-NEXT:    [[MUL10:%.*]] = mul nsw i32 [[DIV9]], 1
 // CHECK17-NEXT:    [[ADD11:%.*]] = add nsw i32 0, [[MUL10]]
@@ -13201,6 +13231,7 @@ int main (int argc, char **argv) {
 // CHECK17:       omp.dispatch.inc:
 // CHECK17-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK17:       omp.dispatch.end:
+// CHECK17-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP6]])
 // CHECK17-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK17-NEXT:    [[TMP15:%.*]] = icmp ne i32 [[TMP14]], 0
 // CHECK17-NEXT:    br i1 [[TMP15]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -13378,6 +13409,7 @@ int main (int argc, char **argv) {
 // CHECK17:       omp.dispatch.inc:
 // CHECK17-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK17:       omp.dispatch.end:
+// CHECK17-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP7]])
 // CHECK17-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK17-NEXT:    [[TMP16:%.*]] = icmp ne i32 [[TMP15]], 0
 // CHECK17-NEXT:    br i1 [[TMP16]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -14810,12 +14842,15 @@ int main (int argc, char **argv) {
 // CHECK19:       omp.dispatch.inc:
 // CHECK19-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK19:       omp.dispatch.end:
-// CHECK19-NEXT:    [[TMP21:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK19-NEXT:    [[TMP22:%.*]] = icmp ne i32 [[TMP21]], 0
-// CHECK19-NEXT:    br i1 [[TMP22]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
+// CHECK19-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
+// CHECK19-NEXT:    [[TMP22:%.*]] = load i32, ptr [[TMP21]], align 4
+// CHECK19-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP22]])
+// CHECK19-NEXT:    [[TMP23:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
+// CHECK19-NEXT:    [[TMP24:%.*]] = icmp ne i32 [[TMP23]], 0
+// CHECK19-NEXT:    br i1 [[TMP24]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
 // CHECK19:       .omp.final.then:
-// CHECK19-NEXT:    [[TMP23:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
-// CHECK19-NEXT:    [[SUB6:%.*]] = sub nsw i32 [[TMP23]], 0
+// CHECK19-NEXT:    [[TMP25:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_]], align 4
+// CHECK19-NEXT:    [[SUB6:%.*]] = sub nsw i32 [[TMP25]], 0
 // CHECK19-NEXT:    [[DIV7:%.*]] = sdiv i32 [[SUB6]], 1
 // CHECK19-NEXT:    [[MUL8:%.*]] = mul nsw i32 [[DIV7]], 1
 // CHECK19-NEXT:    [[ADD9:%.*]] = add nsw i32 0, [[MUL8]]
@@ -15057,12 +15092,15 @@ int main (int argc, char **argv) {
 // CHECK19:       omp.dispatch.inc:
 // CHECK19-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK19:       omp.dispatch.end:
-// CHECK19-NEXT:    [[TMP22:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
-// CHECK19-NEXT:    [[TMP23:%.*]] = icmp ne i32 [[TMP22]], 0
-// CHECK19-NEXT:    br i1 [[TMP23]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
+// CHECK19-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
+// CHECK19-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
+// CHECK19-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP23]])
+// CHECK19-NEXT:    [[TMP24:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
+// CHECK19-NEXT:    [[TMP25:%.*]] = icmp ne i32 [[TMP24]], 0
+// CHECK19-NEXT:    br i1 [[TMP25]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
 // CHECK19:       .omp.final.then:
-// CHECK19-NEXT:    [[TMP24:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1]], align 4
-// CHECK19-NEXT:    [[SUB7:%.*]] = sub nsw i32 [[TMP24]], 0
+// CHECK19-NEXT:    [[TMP26:%.*]] = load i32, ptr [[DOTCAPTURE_EXPR_1]], align 4
+// CHECK19-NEXT:    [[SUB7:%.*]] = sub nsw i32 [[TMP26]], 0
 // CHECK19-NEXT:    [[DIV8:%.*]] = sdiv i32 [[SUB7]], 1
 // CHECK19-NEXT:    [[MUL9:%.*]] = mul nsw i32 [[DIV8]], 1
 // CHECK19-NEXT:    [[ADD10:%.*]] = add nsw i32 0, [[MUL9]]
@@ -15999,6 +16037,7 @@ int main (int argc, char **argv) {
 // CHECK19:       omp.dispatch.inc:
 // CHECK19-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK19:       omp.dispatch.end:
+// CHECK19-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP6]])
 // CHECK19-NEXT:    [[TMP14:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK19-NEXT:    [[TMP15:%.*]] = icmp ne i32 [[TMP14]], 0
 // CHECK19-NEXT:    br i1 [[TMP15]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]
@@ -16171,6 +16210,7 @@ int main (int argc, char **argv) {
 // CHECK19:       omp.dispatch.inc:
 // CHECK19-NEXT:    br label [[OMP_DISPATCH_COND]]
 // CHECK19:       omp.dispatch.end:
+// CHECK19-NEXT:    call void @__kmpc_dispatch_deinit(ptr @[[GLOB3]], i32 [[TMP7]])
 // CHECK19-NEXT:    [[TMP15:%.*]] = load i32, ptr [[DOTOMP_IS_LAST]], align 4
 // CHECK19-NEXT:    [[TMP16:%.*]] = icmp ne i32 [[TMP15]], 0
 // CHECK19-NEXT:    br i1 [[TMP16]], label [[DOTOMP_FINAL_THEN:%.*]], label [[DOTOMP_FINAL_DONE:%.*]]

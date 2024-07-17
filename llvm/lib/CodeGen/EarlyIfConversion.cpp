@@ -599,8 +599,8 @@ static bool hasSameValue(const MachineRegisterInfo &MRI,
     return false;
 
   // Further, check that the two defs come from corresponding operands.
-  int TIdx = TDef->findRegisterDefOperandIdx(TReg);
-  int FIdx = FDef->findRegisterDefOperandIdx(FReg);
+  int TIdx = TDef->findRegisterDefOperandIdx(TReg, /*TRI=*/nullptr);
+  int FIdx = FDef->findRegisterDefOperandIdx(FReg, /*TRI=*/nullptr);
   if (TIdx == -1 || FIdx == -1)
     return false;
 
@@ -617,8 +617,7 @@ void SSAIfConv::replacePHIInstrs() {
   DebugLoc HeadDL = FirstTerm->getDebugLoc();
 
   // Convert all PHIs to select instructions inserted before FirstTerm.
-  for (unsigned i = 0, e = PHIs.size(); i != e; ++i) {
-    PHIInfo &PI = PHIs[i];
+  for (PHIInfo &PI : PHIs) {
     LLVM_DEBUG(dbgs() << "If-converting " << *PI.PHI);
     Register DstReg = PI.PHI->getOperand(0).getReg();
     if (hasSameValue(*MRI, TII, PI.TReg, PI.FReg)) {
@@ -645,8 +644,7 @@ void SSAIfConv::rewritePHIOperands() {
   DebugLoc HeadDL = FirstTerm->getDebugLoc();
 
   // Convert all PHIs to select instructions inserted before FirstTerm.
-  for (unsigned i = 0, e = PHIs.size(); i != e; ++i) {
-    PHIInfo &PI = PHIs[i];
+  for (PHIInfo &PI : PHIs) {
     unsigned DstReg = 0;
 
     LLVM_DEBUG(dbgs() << "If-converting " << *PI.PHI);
@@ -789,18 +787,18 @@ char &llvm::EarlyIfConverterID = EarlyIfConverter::ID;
 
 INITIALIZE_PASS_BEGIN(EarlyIfConverter, DEBUG_TYPE,
                       "Early If Converter", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineTraceMetrics)
 INITIALIZE_PASS_END(EarlyIfConverter, DEBUG_TYPE,
                     "Early If Converter", false, false)
 
 void EarlyIfConverter::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<MachineBranchProbabilityInfo>();
-  AU.addRequired<MachineDominatorTree>();
-  AU.addPreserved<MachineDominatorTree>();
-  AU.addRequired<MachineLoopInfo>();
-  AU.addPreserved<MachineLoopInfo>();
+  AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
+  AU.addPreserved<MachineDominatorTreeWrapperPass>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
+  AU.addPreserved<MachineLoopInfoWrapperPass>();
   AU.addRequired<MachineTraceMetrics>();
   AU.addPreserved<MachineTraceMetrics>();
   MachineFunctionPass::getAnalysisUsage(AU);
@@ -962,8 +960,7 @@ bool EarlyIfConverter::shouldConvertIf() {
   CriticalPathInfo TBlock{};
   CriticalPathInfo FBlock{};
   bool ShouldConvert = true;
-  for (unsigned i = 0, e = IfConv.PHIs.size(); i != e; ++i) {
-    SSAIfConv::PHIInfo &PI = IfConv.PHIs[i];
+  for (SSAIfConv::PHIInfo &PI : IfConv.PHIs) {
     unsigned Slack = TailTrace.getInstrSlack(*PI.PHI);
     unsigned MaxDepth = Slack + TailTrace.getInstrCycles(*PI.PHI).Depth;
     LLVM_DEBUG(dbgs() << "Slack " << Slack << ":\t" << *PI.PHI);
@@ -1089,8 +1086,8 @@ bool EarlyIfConverter::runOnMachineFunction(MachineFunction &MF) {
   TRI = STI.getRegisterInfo();
   SchedModel = STI.getSchedModel();
   MRI = &MF.getRegInfo();
-  DomTree = &getAnalysis<MachineDominatorTree>();
-  Loops = &getAnalysis<MachineLoopInfo>();
+  DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   Traces = &getAnalysis<MachineTraceMetrics>();
   MinInstr = nullptr;
 
@@ -1144,17 +1141,17 @@ char &llvm::EarlyIfPredicatorID = EarlyIfPredicator::ID;
 
 INITIALIZE_PASS_BEGIN(EarlyIfPredicator, DEBUG_TYPE, "Early If Predicator",
                       false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
-INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)
 INITIALIZE_PASS_END(EarlyIfPredicator, DEBUG_TYPE, "Early If Predicator", false,
                     false)
 
 void EarlyIfPredicator::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<MachineBranchProbabilityInfo>();
-  AU.addRequired<MachineDominatorTree>();
-  AU.addPreserved<MachineDominatorTree>();
-  AU.addRequired<MachineLoopInfo>();
-  AU.addPreserved<MachineLoopInfo>();
+  AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
+  AU.addPreserved<MachineDominatorTreeWrapperPass>();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
+  AU.addPreserved<MachineLoopInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -1223,9 +1220,9 @@ bool EarlyIfPredicator::runOnMachineFunction(MachineFunction &MF) {
   TRI = STI.getRegisterInfo();
   MRI = &MF.getRegInfo();
   SchedModel.init(&STI);
-  DomTree = &getAnalysis<MachineDominatorTree>();
-  Loops = &getAnalysis<MachineLoopInfo>();
-  MBPI = &getAnalysis<MachineBranchProbabilityInfo>();
+  DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
 
   bool Changed = false;
   IfConv.runOnMachineFunction(MF);

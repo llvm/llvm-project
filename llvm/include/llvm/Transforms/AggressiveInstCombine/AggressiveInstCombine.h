@@ -8,7 +8,7 @@
 /// \file
 ///
 /// AggressiveInstCombiner - Combine expression patterns to form expressions
-/// with fewer, simple instructions. This pass does not modify the CFG.
+/// with fewer, simple instructions.
 ///
 //===----------------------------------------------------------------------===//
 

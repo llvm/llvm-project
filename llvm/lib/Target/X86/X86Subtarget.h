@@ -55,10 +55,6 @@ class X86Subtarget final : public X86GenSubtargetInfo {
     NoSSE, SSE1, SSE2, SSE3, SSSE3, SSE41, SSE42, AVX, AVX2, AVX512
   };
 
-  enum X863DNowEnum {
-    NoThreeDNow, MMX, ThreeDNow, ThreeDNowA
-  };
-
   /// Which PIC style to use
   PICStyles::Style PICStyle;
 
@@ -66,9 +62,6 @@ class X86Subtarget final : public X86GenSubtargetInfo {
 
   /// SSE1, SSE2, SSE3, SSSE3, SSE41, SSE42, or none supported.
   X86SSEEnum X86SSELevel = NoSSE;
-
-  /// MMX, 3DNow, 3DNow Athlon, or none supported.
-  X863DNowEnum X863DNowLevel = NoThreeDNow;
 
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool ATTRIBUTE = DEFAULT;
@@ -207,23 +200,16 @@ public:
   bool hasAVX2() const { return X86SSELevel >= AVX2; }
   bool hasAVX512() const { return X86SSELevel >= AVX512; }
   bool hasInt256() const { return hasAVX2(); }
-  bool hasMMX() const { return X863DNowLevel >= MMX; }
-  bool hasThreeDNow() const { return X863DNowLevel >= ThreeDNow; }
-  bool hasThreeDNowA() const { return X863DNowLevel >= ThreeDNowA; }
   bool hasAnyFMA() const { return hasFMA() || hasFMA4(); }
   bool hasPrefetchW() const {
     // The PREFETCHW instruction was added with 3DNow but later CPUs gave it
-    // its own CPUID bit as part of deprecating 3DNow. Intel eventually added
-    // it and KNL has another that prefetches to L2 cache. We assume the
-    // L1 version exists if the L2 version does.
-    return hasThreeDNow() || hasPRFCHW() || hasPREFETCHWT1();
+    // its own CPUID bit as part of deprecating 3DNow.
+    return hasPRFCHW();
   }
   bool hasSSEPrefetch() const {
-    // We implicitly enable these when we have a write prefix supporting cache
-    // level OR if we have prfchw, but don't already have a read prefetch from
-    // 3dnow.
-    return hasSSE1() || (hasPRFCHW() && !hasThreeDNow()) || hasPREFETCHWT1() ||
-           hasPREFETCHI();
+    // We also implicitly enable these when we have a write prefix supporting
+    // cache level OR if we have prfchw.
+    return hasSSE1() || hasPRFCHW() || hasPREFETCHI();
   }
   bool canUseLAHFSAHF() const { return hasLAHFSAHF64() || !is64Bit(); }
   // These are generic getters that OR together all of the thunk types
@@ -244,7 +230,8 @@ public:
   // TODO: Currently we're always allowing widening on CPUs without VLX,
   // because for many cases we don't have a better option.
   bool canExtendTo512DQ() const {
-    return hasAVX512() && (!hasVLX() || getPreferVectorWidth() >= 512);
+    return hasAVX512() && hasEVEX512() &&
+           (!hasVLX() || getPreferVectorWidth() >= 512);
   }
   bool canExtendTo512BW() const  {
     return hasBWI() && canExtendTo512DQ();

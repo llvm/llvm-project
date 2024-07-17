@@ -14,9 +14,11 @@
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/PatternMatch.h"
 #include <cmath>
 #include <optional>
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "riscvtti"
 
@@ -97,6 +99,7 @@ RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
     case RISCV::VMANDN_MM:
     case RISCV::VMNAND_MM:
     case RISCV::VCPOP_M:
+    case RISCV::VFIRST_M:
       Cost += 1;
       break;
     default:
@@ -599,12 +602,8 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) {
-  if (isa<ScalableVectorType>(VecTy))
+  if (isa<ScalableVectorType>(VecTy) && Factor != 2)
     return InstructionCost::getInvalid();
-  auto *FVTy = cast<FixedVectorType>(VecTy);
-  InstructionCost MemCost =
-      getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace, CostKind);
-  unsigned VF = FVTy->getNumElements() / Factor;
 
   // The interleaved memory access pass will lower interleaved memory ops (i.e
   // a load and store followed by a specific shuffle) to vlseg/vsseg
@@ -612,23 +611,39 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
   // memory op
   if (!UseMaskForCond && !UseMaskForGaps &&
       Factor <= TLI->getMaxSupportedInterleaveFactor()) {
-    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(FVTy);
+    auto *VTy = cast<VectorType>(VecTy);
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VTy);
     // Need to make sure type has't been scalarized
-    if (LT.second.isFixedLengthVector()) {
-      auto *LegalFVTy = FixedVectorType::get(FVTy->getElementType(),
-                                             LT.second.getVectorNumElements());
-      // FIXME: We use the memory op cost of the *legalized* type here, becuase
-      // it's getMemoryOpCost returns a really expensive cost for types like
-      // <6 x i8>, which show up when doing interleaves of Factor=3 etc.
-      // Should the memory op cost of these be cheaper?
-      if (TLI->isLegalInterleavedAccessType(LegalFVTy, Factor, Alignment,
+    if (LT.second.isVector()) {
+      auto *SubVecTy =
+          VectorType::get(VTy->getElementType(),
+                          VTy->getElementCount().divideCoefficientBy(Factor));
+
+      if (VTy->getElementCount().isKnownMultipleOf(Factor) &&
+          TLI->isLegalInterleavedAccessType(SubVecTy, Factor, Alignment,
                                             AddressSpace, DL)) {
+        // FIXME: We use the memory op cost of the *legalized* type here,
+        // because it's getMemoryOpCost returns a really expensive cost for
+        // types like <6 x i8>, which show up when doing interleaves of
+        // Factor=3 etc. Should the memory op cost of these be cheaper?
+        auto *LegalVTy = VectorType::get(VTy->getElementType(),
+                                         LT.second.getVectorElementCount());
         InstructionCost LegalMemCost = getMemoryOpCost(
-            Opcode, LegalFVTy, Alignment, AddressSpace, CostKind);
+            Opcode, LegalVTy, Alignment, AddressSpace, CostKind);
         return LT.first + LegalMemCost;
       }
     }
   }
+
+  // TODO: Return the cost of interleaved accesses for scalable vector when
+  // unable to convert to segment accesses instructions.
+  if (isa<ScalableVectorType>(VecTy))
+    return InstructionCost::getInvalid();
+
+  auto *FVTy = cast<FixedVectorType>(VecTy);
+  InstructionCost MemCost =
+      getMemoryOpCost(Opcode, VecTy, Alignment, AddressSpace, CostKind);
+  unsigned VF = FVTy->getNumElements() / Factor;
 
   // An interleaved load will look like this for Factor=3:
   // %wide.vec = load <12 x i32>, ptr %3, align 4
@@ -894,6 +909,26 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                  getRISCVInstructionCost(RISCV::VADD_VX, LT.second, CostKind);
     return 1 + (LT.first - 1);
   }
+  case Intrinsic::experimental_cttz_elts: {
+    Type *ArgTy = ICA.getArgTypes()[0];
+    EVT ArgType = TLI->getValueType(DL, ArgTy, true);
+    if (getTLI()->shouldExpandCttzElements(ArgType))
+      break;
+    InstructionCost Cost = getRISCVInstructionCost(
+        RISCV::VFIRST_M, getTypeLegalizationCost(ArgTy).second, CostKind);
+
+    // If zero_is_poison is false, then we will generate additional
+    // cmp + select instructions to convert -1 to EVL.
+    Type *BoolTy = Type::getInt1Ty(RetTy->getContext());
+    if (ICA.getArgs().size() > 1 &&
+        cast<ConstantInt>(ICA.getArgs()[1])->isZero())
+      Cost += getCmpSelInstrCost(Instruction::ICmp, BoolTy, RetTy,
+                                 CmpInst::ICMP_SLT, CostKind) +
+              getCmpSelInstrCost(Instruction::Select, RetTy, BoolTy,
+                                 CmpInst::BAD_ICMP_PREDICATE, CostKind);
+
+    return Cost;
+  }
   case Intrinsic::vp_rint: {
     // RISC-V target uses at least 5 instructions to lower rounding intrinsics.
     unsigned Cost = 5;
@@ -922,6 +957,32 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     unsigned VPISD = getISDForVPIntrinsicID(ICA.getID());
     if (TLI->isOperationCustom(VPISD, LT.second))
       return Cost * LT.first;
+    break;
+  }
+  // vp integer arithmetic ops.
+  case Intrinsic::vp_add:
+  case Intrinsic::vp_and:
+  case Intrinsic::vp_ashr:
+  case Intrinsic::vp_lshr:
+  case Intrinsic::vp_mul:
+  case Intrinsic::vp_or:
+  case Intrinsic::vp_sdiv:
+  case Intrinsic::vp_shl:
+  case Intrinsic::vp_srem:
+  case Intrinsic::vp_sub:
+  case Intrinsic::vp_udiv:
+  case Intrinsic::vp_urem:
+  case Intrinsic::vp_xor:
+  // vp float arithmetic ops.
+  case Intrinsic::vp_fadd:
+  case Intrinsic::vp_fsub:
+  case Intrinsic::vp_fmul:
+  case Intrinsic::vp_fdiv:
+  case Intrinsic::vp_frem: {
+    std::optional<unsigned> FOp =
+        VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
+    if (FOp)
+      return getArithmeticInstrCost(*FOp, ICA.getReturnType(), CostKind);
     break;
   }
   }
@@ -1436,6 +1497,21 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     }
   }
 
+  // With ShortForwardBranchOpt or ConditionalMoveFusion, scalar icmp + select
+  // instructions will lower to SELECT_CC and lower to PseudoCCMOVGPR which will
+  // generate a conditional branch + mv. The cost of scalar (icmp + select) will
+  // be (0 + select instr cost).
+  if (ST->hasConditionalMoveFusion() && I && isa<ICmpInst>(I) &&
+      ValTy->isIntegerTy() && !I->user_empty()) {
+    if (all_of(I->users(), [&](const User *U) {
+          return match(U, m_Select(m_Specific(I), m_Value(), m_Value())) &&
+                 U->getType()->isIntegerTy() &&
+                 !isa<ConstantData>(U->getOperand(1)) &&
+                 !isa<ConstantData>(U->getOperand(2));
+        }))
+      return 0;
+  }
+
   // TODO: Add cost for scalar type.
 
   return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
@@ -1612,29 +1688,59 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
   if (Op2Info.isConstant())
     ConstantMatCost += getConstantMatCost(1, Op2Info);
 
+  unsigned Op;
   switch (TLI->InstructionOpcodeToISD(Opcode)) {
   case ISD::ADD:
   case ISD::SUB:
-  case ISD::AND:
-  case ISD::OR:
-  case ISD::XOR:
+    Op = RISCV::VADD_VV;
+    break;
   case ISD::SHL:
   case ISD::SRL:
   case ISD::SRA:
+    Op = RISCV::VSLL_VV;
+    break;
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR:
+    Op = (Ty->getScalarSizeInBits() == 1) ? RISCV::VMAND_MM : RISCV::VAND_VV;
+    break;
   case ISD::MUL:
   case ISD::MULHS:
   case ISD::MULHU:
+    Op = RISCV::VMUL_VV;
+    break;
+  case ISD::SDIV:
+  case ISD::UDIV:
+    Op = RISCV::VDIV_VV;
+    break;
+  case ISD::SREM:
+  case ISD::UREM:
+    Op = RISCV::VREM_VV;
+    break;
   case ISD::FADD:
   case ISD::FSUB:
+    // TODO: Address FP16 with VFHMIN
+    Op = RISCV::VFADD_VV;
+    break;
   case ISD::FMUL:
-  case ISD::FNEG: {
-    return ConstantMatCost + TLI->getLMULCost(LT.second) * LT.first * 1;
-  }
+    // TODO: Address FP16 with VFHMIN
+    Op = RISCV::VFMUL_VV;
+    break;
+  case ISD::FDIV:
+    Op = RISCV::VFDIV_VV;
+    break;
+  case ISD::FNEG:
+    Op = RISCV::VFSGNJN_VV;
+    break;
   default:
-    return ConstantMatCost +
-           BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                         Args, CxtI);
+    // Assuming all other instructions have the same cost until a need arises to
+    // differentiate them.
+    return ConstantMatCost + BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind,
+                                                           Op1Info, Op2Info,
+                                                           Args, CxtI);
   }
+  return ConstantMatCost +
+         LT.first * getRISCVInstructionCost(Op, LT.second, CostKind);
 }
 
 // TODO: Deduplicate from TargetTransformInfoImplCRTPBase.
@@ -1801,10 +1907,14 @@ unsigned RISCVTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
 bool RISCVTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                                  const TargetTransformInfo::LSRCost &C2) {
   // RISC-V specific here are "instruction number 1st priority".
-  return std::tie(C1.Insns, C1.NumRegs, C1.AddRecCost,
+  // If we need to emit adds inside the loop to add up base registers, then
+  // we need at least one extra temporary register.
+  unsigned C1NumRegs = C1.NumRegs + (C1.NumBaseAdds != 0);
+  unsigned C2NumRegs = C2.NumRegs + (C2.NumBaseAdds != 0);
+  return std::tie(C1.Insns, C1NumRegs, C1.AddRecCost,
                   C1.NumIVMuls, C1.NumBaseAdds,
                   C1.ScaleCost, C1.ImmCost, C1.SetupCost) <
-         std::tie(C2.Insns, C2.NumRegs, C2.AddRecCost,
+         std::tie(C2.Insns, C2NumRegs, C2.AddRecCost,
                   C2.NumIVMuls, C2.NumBaseAdds,
                   C2.ScaleCost, C2.ImmCost, C2.SetupCost);
 }

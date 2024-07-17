@@ -356,7 +356,10 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
                                         "ICF breakdown", opts::TimeICF);
     ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
       // Make sure indices are in-order.
-      BF.getLayout().updateLayoutIndices();
+      if (opts::ICFUseDFS)
+        BF.getLayout().updateLayoutIndices(BF.dfs());
+      else
+        BF.getLayout().updateLayoutIndices();
 
       // Pre-compute hash before pushing into hashtable.
       // Hash instruction operands to minimize hash collisions.

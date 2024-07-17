@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only  -emit-llvm-only %s
+// RUN: %clang_cc1 -std=c++11 -verify  -emit-llvm-only %s
 // RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only  -fdelayed-template-parsing %s 
 // RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only  -fms-extensions %s 
 // RUN: %clang_cc1 -std=c++11 -verify -fsyntax-only  -fdelayed-template-parsing -fms-extensions %s 

@@ -31,6 +31,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -766,6 +767,26 @@ public:
     createTripCountGreaterCondition(int TC, MachineBasicBlock &MBB,
                                     SmallVectorImpl<MachineOperand> &Cond) = 0;
 
+    /// Create a condition to determine if the remaining trip count for a phase
+    /// is greater than TC. Some instructions such as comparisons may be
+    /// inserted at the bottom of MBB. All instructions expanded for the
+    /// phase must be inserted in MBB before calling this function.
+    /// LastStage0Insts is the map from the original instructions scheduled at
+    /// stage#0 to the expanded instructions for the last iteration of the
+    /// kernel. LastStage0Insts is intended to obtain the instruction that
+    /// refers the latest loop counter value.
+    ///
+    /// MBB can also be a predecessor of the prologue block. Then
+    /// LastStage0Insts must be empty and the compared value is the initial
+    /// value of the trip count.
+    virtual void createRemainingIterationsGreaterCondition(
+        int TC, MachineBasicBlock &MBB, SmallVectorImpl<MachineOperand> &Cond,
+        DenseMap<MachineInstr *, MachineInstr *> &LastStage0Insts) {
+      llvm_unreachable(
+          "Target didn't implement "
+          "PipelinerLoopInfo::createRemainingIterationsGreaterCondition!");
+    }
+
     /// Modify the loop such that the trip count is
     /// OriginalTC + TripCountAdjust.
     virtual void adjustTripCount(int TripCountAdjust) = 0;
@@ -779,6 +800,10 @@ public:
     /// Once this function is called, no other functions on this object are
     /// valid; the loop has been removed.
     virtual void disposed() = 0;
+
+    /// Return true if the target can expand pipelined schedule with modulo
+    /// variable expansion.
+    virtual bool isMVEExpanderSupported() { return false; }
   };
 
   /// Analyze loop L, which must be a single-basic-block loop, and if the
@@ -1271,11 +1296,20 @@ public:
     return true;
   }
 
+  /// The returned array encodes the operand index for each parameter because
+  /// the operands may be commuted; the operand indices for associative
+  /// operations might also be target-specific. Each element specifies the index
+  /// of {Prev, A, B, X, Y}.
+  virtual void
+  getReassociateOperandIndices(const MachineInstr &Root, unsigned Pattern,
+                               std::array<unsigned, 5> &OperandIndices) const;
+
   /// Attempt to reassociate \P Root and \P Prev according to \P Pattern to
   /// reduce critical path length.
   void reassociateOps(MachineInstr &Root, MachineInstr &Prev, unsigned Pattern,
                       SmallVectorImpl<MachineInstr *> &InsInstrs,
                       SmallVectorImpl<MachineInstr *> &DelInstrs,
+                      ArrayRef<unsigned> OperandIndices,
                       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const;
 
   /// Reassociation of some instructions requires inverse operations (e.g.
@@ -2180,7 +2214,7 @@ public:
   /// Return MIR formatter to format/parse MIR operands.  Target can override
   /// this virtual function and return target specific MIR formatter.
   virtual const MIRFormatter *getMIRFormatter() const {
-    if (!Formatter.get())
+    if (!Formatter)
       Formatter = std::make_unique<MIRFormatter>();
     return Formatter.get();
   }

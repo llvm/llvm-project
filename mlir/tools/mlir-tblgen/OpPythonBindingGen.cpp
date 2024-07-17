@@ -457,7 +457,7 @@ static void emitAttributeAccessors(const Operator &op, raw_ostream &os) {
     std::string sanitizedName = sanitizeName(namedAttr.name);
 
     // Unit attributes are handled specially.
-    if (namedAttr.attr.getStorageType().trim().equals("::mlir::UnitAttr")) {
+    if (namedAttr.attr.getStorageType().trim() == "::mlir::UnitAttr") {
       os << llvm::formatv(unitAttributeGetterTemplate, sanitizedName,
                           namedAttr.name);
       os << llvm::formatv(unitAttributeSetterTemplate, sanitizedName,
@@ -668,7 +668,7 @@ populateBuilderLinesAttr(const Operator &op,
       continue;
 
     // Unit attributes are handled specially.
-    if (attribute->attr.getStorageType().trim().equals("::mlir::UnitAttr")) {
+    if (attribute->attr.getStorageType().trim() == "::mlir::UnitAttr") {
       builderLines.push_back(llvm::formatv(initUnitAttributeTemplate,
                                            attribute->name, argNames[i]));
       continue;

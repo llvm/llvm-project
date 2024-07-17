@@ -315,7 +315,7 @@ public:
       }
       result.overflow = false;
     } else if constexpr (bits < FROM::bits) {
-      auto back{FROM::template ConvertSigned(result.value)};
+      auto back{FROM::template ConvertSigned<Integer>(result.value)};
       result.overflow = back.value.CompareUnsigned(that) != Ordering::Equal;
     }
     return result;

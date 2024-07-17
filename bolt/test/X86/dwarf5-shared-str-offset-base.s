@@ -9,8 +9,8 @@
 # RUN: llvm-dwarfdump --show-section-sizes %tmain.exe.bolt >> %tout.text
 # RUN: cat %tout.text | FileCheck %s
 
-# This test checks that with DWARF5 when two CUs share the same .debug_str_offsets
-# entry BOLT does not create a duplicate.
+## This test checks that with DWARF5 when two CUs share the same .debug_str_offsets
+## entry BOLT does not create a duplicate.
 
 # CHECK: DW_AT_str_offsets_base (0x[[#%.8x,ADDR:]]
 # CHECK: DW_AT_str_offsets_base (0x[[#ADDR]]

@@ -92,12 +92,6 @@ public:
                     const MCSubtargetInfo *STI) const override {
     return true;
   }
-
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
-    return true;
-  }
 };
 
 class DirectXMCAsmInfo : public MCAsmInfo {

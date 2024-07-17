@@ -14,8 +14,8 @@
 // UNSUPPORTED: target={{ve-.*}}
 
 // These tests fail on previously released dylibs, investigation needed.
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{11.0|12.0}}
+// XFAIL: stdlib=system && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14|15}}
+// XFAIL: stdlib=system && target={{.+}}-apple-macosx{{11.0|12.0}}
 
 #include <exception>
 #include <stdlib.h>

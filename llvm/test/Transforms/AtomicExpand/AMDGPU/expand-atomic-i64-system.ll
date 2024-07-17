@@ -35,24 +35,24 @@ define i64 @test_atomicrmw_xchg_i64_global_system__amdgpu_no_fine_grained_memory
 }
 
 ; xchg is supported over PCIe, so no expansion is necessary. Metadata should be ignored.
-define i64 @test_atomicrmw_xchg_i64_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_xchg_i64_global_system__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_xchg_i64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_xchg_i64_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory.access [[META0]]
+; COMMON-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    ret i64 [[RES]]
 ;
-  %res = atomicrmw xchg ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw xchg ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
 ; xchg is supported over PCIe, so no expansion is necessary. Metadata should be ignored.
-define i64 @test_atomicrmw_xchg_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_xchg_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_xchg_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_xchg_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory.access [[META0]]
+; COMMON-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    ret i64 [[RES]]
 ;
-  %res = atomicrmw xchg ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw xchg ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
@@ -83,24 +83,24 @@ define i64 @test_atomicrmw_add_i64_global_system__amdgpu_no_fine_grained_memory(
 }
 
 ; add is supported over PCIe, so no expansion is necessary. Metadata should be ignored.
-define i64 @test_atomicrmw_add_i64_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_add_i64_global_system__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_add_i64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_add_i64_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[RES:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory.access [[META0]]
+; COMMON-NEXT:    [[RES:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    ret i64 [[RES]]
 ;
-  %res = atomicrmw add ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw add ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
 ; add is supported over PCIe, so no expansion is necessary. Metadata should be ignored.
-define i64 @test_atomicrmw_add_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_add_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_add_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_add_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[RES:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory.access [[META0]]
+; COMMON-NEXT:    [[RES:%.*]] = atomicrmw add ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    ret i64 [[RES]]
 ;
-  %res = atomicrmw add ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw add ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
@@ -129,23 +129,23 @@ define i64 @test_atomicrmw_sub_i64_global_system__amdgpu_no_fine_grained_memory(
   ret i64 %res
 }
 
-define i64 @test_atomicrmw_sub_i64_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_sub_i64_global_system__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_sub_i64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_sub_i64_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory.access [[META0]]
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
-  %res = atomicrmw sub ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw sub ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
-define i64 @test_atomicrmw_sub_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_sub_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_sub_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_sub_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory.access [[META0]]
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw sub ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
-  %res = atomicrmw sub ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw sub ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
@@ -174,23 +174,23 @@ define i64 @test_atomicrmw_and_i64_global_system__amdgpu_no_fine_grained_memory(
   ret i64 %res
 }
 
-define i64 @test_atomicrmw_and_i64_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_and_i64_global_system__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_and_i64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_and_i64_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory.access [[META0]]
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
-  %res = atomicrmw and ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw and ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
-define i64 @test_atomicrmw_and_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_and_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_and_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_and_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory.access [[META0]]
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw and ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
-  %res = atomicrmw and ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw and ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
@@ -239,8 +239,8 @@ define i64 @test_atomicrmw_nand_i64_global_system__amdgpu_no_fine_grained_memory
   ret i64 %res
 }
 
-define i64 @test_atomicrmw_nand_i64_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_nand_i64_global_system__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_nand_i64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_nand_i64_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -255,12 +255,12 @@ define i64 @test_atomicrmw_nand_i64_global_system__amdgpu_no_remote_memory_acces
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
-  %res = atomicrmw nand ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw nand ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
-define i64 @test_atomicrmw_nand_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_nand_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_nand_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_nand_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -275,7 +275,7 @@ define i64 @test_atomicrmw_nand_i64_global_system__amdgpu_no_fine_grained_memory
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
-  %res = atomicrmw nand ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw nand ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
@@ -304,23 +304,23 @@ define i64 @test_atomicrmw_or_i64_global_system__amdgpu_no_fine_grained_memory(p
   ret i64 %res
 }
 
-define i64 @test_atomicrmw_or_i64_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_or_i64_global_system__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_or_i64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_or_i64_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory.access [[META0]]
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
-  %res = atomicrmw or ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw or ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
-define i64 @test_atomicrmw_or_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_or_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_or_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_or_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory.access [[META0]]
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw or ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
-  %res = atomicrmw or ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw or ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
@@ -349,23 +349,23 @@ define i64 @test_atomicrmw_xor_i64_global_system__amdgpu_no_fine_grained_memory(
   ret i64 %res
 }
 
-define i64 @test_atomicrmw_xor_i64_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_xor_i64_global_system__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_xor_i64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_xor_i64_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory.access [[META0]]
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
-  %res = atomicrmw xor ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw xor ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
-define i64 @test_atomicrmw_xor_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_xor_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_xor_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_xor_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory.access [[META0]]
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw xor ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
-  %res = atomicrmw xor ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw xor ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
@@ -414,8 +414,8 @@ define i64 @test_atomicrmw_max_i64_global_system__amdgpu_no_fine_grained_memory(
   ret i64 %res
 }
 
-define i64 @test_atomicrmw_max_i64_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_max_i64_global_system__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_max_i64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_max_i64_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -430,12 +430,12 @@ define i64 @test_atomicrmw_max_i64_global_system__amdgpu_no_remote_memory_access
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
-  %res = atomicrmw max ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw max ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
-define i64 @test_atomicrmw_max_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_max_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_max_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_max_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -450,7 +450,7 @@ define i64 @test_atomicrmw_max_i64_global_system__amdgpu_no_fine_grained_memory_
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
-  %res = atomicrmw max ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw max ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
@@ -499,8 +499,8 @@ define i64 @test_atomicrmw_min_i64_global_system__amdgpu_no_fine_grained_memory(
   ret i64 %res
 }
 
-define i64 @test_atomicrmw_min_i64_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_min_i64_global_system__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_min_i64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_min_i64_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -515,12 +515,12 @@ define i64 @test_atomicrmw_min_i64_global_system__amdgpu_no_remote_memory_access
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
-  %res = atomicrmw min ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw min ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
-define i64 @test_atomicrmw_min_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_min_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_min_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_min_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -535,7 +535,7 @@ define i64 @test_atomicrmw_min_i64_global_system__amdgpu_no_fine_grained_memory_
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
-  %res = atomicrmw min ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw min ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
@@ -584,8 +584,8 @@ define i64 @test_atomicrmw_umax_i64_global_system__amdgpu_no_fine_grained_memory
   ret i64 %res
 }
 
-define i64 @test_atomicrmw_umax_i64_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_umax_i64_global_system__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_umax_i64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_umax_i64_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -600,12 +600,12 @@ define i64 @test_atomicrmw_umax_i64_global_system__amdgpu_no_remote_memory_acces
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
-  %res = atomicrmw umax ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw umax ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
-define i64 @test_atomicrmw_umax_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_umax_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_umax_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_umax_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -620,7 +620,7 @@ define i64 @test_atomicrmw_umax_i64_global_system__amdgpu_no_fine_grained_memory
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
-  %res = atomicrmw umax ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw umax ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
@@ -669,8 +669,8 @@ define i64 @test_atomicrmw_umin_i64_global_system__amdgpu_no_fine_grained_memory
   ret i64 %res
 }
 
-define i64 @test_atomicrmw_umin_i64_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_umin_i64_global_system__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_umin_i64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_umin_i64_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -685,12 +685,12 @@ define i64 @test_atomicrmw_umin_i64_global_system__amdgpu_no_remote_memory_acces
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
-  %res = atomicrmw umin ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw umin ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
-define i64 @test_atomicrmw_umin_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_umin_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_umin_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_umin_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
 ; COMMON-NEXT:    [[TMP1:%.*]] = load i64, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -705,7 +705,7 @@ define i64 @test_atomicrmw_umin_i64_global_system__amdgpu_no_fine_grained_memory
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
-  %res = atomicrmw umin ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw umin ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
@@ -734,23 +734,23 @@ define i64 @test_atomicrmw_uinc_wrap_i64_global_system__amdgpu_no_fine_grained_m
   ret i64 %res
 }
 
-define i64 @test_atomicrmw_uinc_wrap_i64_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_uinc_wrap_i64_global_system__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_uinc_wrap_i64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_uinc_wrap_i64_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw uinc_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory.access [[META0]]
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw uinc_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
-  %res = atomicrmw uinc_wrap ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw uinc_wrap ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
-define i64 @test_atomicrmw_uinc_wrap_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_uinc_wrap_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_uinc_wrap_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_uinc_wrap_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw uinc_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory.access [[META0]]
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw uinc_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
-  %res = atomicrmw uinc_wrap ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw uinc_wrap ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
@@ -779,23 +779,23 @@ define i64 @test_atomicrmw_udec_wrap_i64_global_system__amdgpu_no_fine_grained_m
   ret i64 %res
 }
 
-define i64 @test_atomicrmw_udec_wrap_i64_global_system__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_udec_wrap_i64_global_system__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_udec_wrap_i64_global_system__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_udec_wrap_i64_global_system__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw udec_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory.access [[META0]]
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw udec_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
-  %res = atomicrmw udec_wrap ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw udec_wrap ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 
-define i64 @test_atomicrmw_udec_wrap_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(ptr addrspace(1) %ptr, i64 %value) {
-; COMMON-LABEL: define i64 @test_atomicrmw_udec_wrap_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory_access(
+define i64 @test_atomicrmw_udec_wrap_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, i64 %value) {
+; COMMON-LABEL: define i64 @test_atomicrmw_udec_wrap_i64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], i64 [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw udec_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory.access [[META0]]
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = atomicrmw udec_wrap ptr addrspace(1) [[PTR]], i64 [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    ret i64 [[NEWLOADED]]
 ;
-  %res = atomicrmw udec_wrap ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %res = atomicrmw udec_wrap ptr addrspace(1) %ptr, i64 %value seq_cst, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
   ret i64 %res
 }
 

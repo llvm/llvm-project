@@ -160,6 +160,13 @@ func.func @load_unsupported_type(%ptr : !llvm.ptr) {
 
 // -----
 
+func.func @load_unsupported_type(%ptr : !llvm.ptr) {
+  // expected-error@below {{unsupported type 'i33' for atomic access}}
+  %1 = llvm.load %ptr atomic monotonic {alignment = 16 : i64} : !llvm.ptr -> i33
+}
+
+// -----
+
 func.func @load_unaligned_atomic(%ptr : !llvm.ptr) {
   // expected-error@below {{expected alignment for atomic access}}
   %1 = llvm.load %ptr atomic monotonic : !llvm.ptr -> f32
@@ -191,6 +198,13 @@ func.func @store_unsupported_type(%val : f80, %ptr : !llvm.ptr) {
 func.func @store_unsupported_type(%val : i1, %ptr : !llvm.ptr) {
   // expected-error@below {{unsupported type 'i1' for atomic access}}
   llvm.store %val, %ptr atomic monotonic {alignment = 16 : i64} : i1, !llvm.ptr
+}
+
+// -----
+
+func.func @store_unsupported_type(%val : i48, %ptr : !llvm.ptr) {
+  // expected-error@below {{unsupported type 'i48' for atomic access}}
+  llvm.store %val, %ptr atomic monotonic {alignment = 16 : i64} : i48, !llvm.ptr
 }
 
 // -----
@@ -1221,17 +1235,17 @@ func.func @extract_scalable_from_fixed_length_vector(%arg0 : vector<16xf32>) {
 
 // -----
 
-func.func @experimental_vector_interleave2_bad_type0(%vec1: vector<[2]xf16>, %vec2 : vector<[4]xf16>) {
+func.func @vector_interleave2_bad_type0(%vec1: vector<[2]xf16>, %vec2 : vector<[4]xf16>) {
   // expected-error@+1 {{op failed to verify that all of {vec1, vec2} have same type}}
-  %0 = "llvm.intr.experimental.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[4]xf16>) -> vector<[8]xf16>
+  %0 = "llvm.intr.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[4]xf16>) -> vector<[8]xf16>
   return
 }
 
 // -----
 
-func.func @experimental_vector_interleave2_bad_type1(%vec1: vector<[2]xf16>, %vec2 : vector<[2]xf16>) {
+func.func @vector_interleave2_bad_type1(%vec1: vector<[2]xf16>, %vec2 : vector<[2]xf16>) {
   // expected-error@+1 {{op failed to verify that result has twice as many elements as 'vec1'}}
-  %0 = "llvm.intr.experimental.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[2]xf16>) -> vector<[8]xf16>
+  %0 = "llvm.intr.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[2]xf16>) -> vector<[8]xf16>
   return
 }
 
@@ -1239,9 +1253,9 @@ func.func @experimental_vector_interleave2_bad_type1(%vec1: vector<[2]xf16>, %ve
 
 /// result vector type is not scalable.
 
-func.func @experimental_vector_interleave2_bad_type2(%vec1: vector<[2]xf16>, %vec2 : vector<[2]xf16>) {
+func.func @vector_interleave2_bad_type2(%vec1: vector<[2]xf16>, %vec2 : vector<[2]xf16>) {
   // expected-error@+1 {{op failed to verify that result has twice as many elements as 'vec1'}}
-  %0 = "llvm.intr.experimental.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[2]xf16>) -> vector<4xf16>
+  %0 = "llvm.intr.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[2]xf16>) -> vector<4xf16>
   return
 }
 
@@ -1250,9 +1264,9 @@ func.func @experimental_vector_interleave2_bad_type2(%vec1: vector<[2]xf16>, %ve
 
 /// element type doesn't match.
 
-func.func @experimental_vector_interleave2_bad_type3(%vec1: vector<[2]xf16>, %vec2 : vector<[2]xf16>) {
+func.func @vector_interleave2_bad_type3(%vec1: vector<[2]xf16>, %vec2 : vector<[2]xf16>) {
   // expected-error@+1 {{op failed to verify that result has twice as many elements as 'vec1'}}
-  %0 = "llvm.intr.experimental.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[2]xf16>) -> vector<[4]xf32>
+  %0 = "llvm.intr.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[2]xf16>) -> vector<[4]xf32>
   return
 }
 
@@ -1457,4 +1471,18 @@ func.func @tma_load(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier: !
   // expected-error@+1 {{expects coordinates between 1 to 5 dimension}}
   nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3,%crd0,%crd1,%crd2,%crd3]: !llvm.ptr<3>, !llvm.ptr  
   return
+}
+
+// -----
+
+// expected-error @below {{no_inline and always_inline attributes are incompatible}}
+llvm.func @alwaysinline_noinline() attributes { always_inline, no_inline } {
+  llvm.return
+}
+
+// -----
+
+// expected-error @below {{'llvm.func' op with optimize_none must also be no_inline}}
+llvm.func @optnone_requires_noinline() attributes { optimize_none } {
+  llvm.return
 }

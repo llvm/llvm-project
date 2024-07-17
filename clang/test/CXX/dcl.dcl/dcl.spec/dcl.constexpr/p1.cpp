@@ -89,6 +89,9 @@ struct S {
   template<typename T> constexpr T f(); // expected-warning 0-1{{C++14}} expected-note 0-1{{candidate}}
   template <typename T>
   T g() const; // expected-note-re {{candidate template ignored: could not match 'T (){{( __attribute__\(\(thiscall\)\))?}} const' against 'char (){{( __attribute__\(\(thiscall\)\))?}}'}}
+#if __cplusplus >= 201402L
+  // expected-note@-2 {{candidate template ignored: could not match 'T () const' against 'int ()'}}
+#endif
 };
 
 // explicit specialization can differ in constepxr
@@ -100,13 +103,17 @@ template <> notlit S::f() const { return notlit(); }
 #if __cplusplus >= 201402L
 // expected-error@-2 {{no function template matches}}
 #endif
-template <> constexpr int S::g() { return 0; } // expected-note {{previous}}
+template <> constexpr int S::g() { return 0; }
 #if __cplusplus < 201402L
 // expected-warning@-2 {{C++14}}
+// expected-note@-3 {{previous}}
 #else
-// expected-error@-4 {{does not match any declaration in 'S'}}
+// expected-error@-5 {{no function template matches function template specialization 'g'}}
 #endif
-template <> int S::g() const; // expected-error {{non-constexpr declaration of 'g<int>' follows constexpr declaration}}
+template <> int S::g() const;
+#if __cplusplus < 201402L
+// expected-error@-2 {{non-constexpr declaration of 'g<int>' follows constexpr declaration}}
+#endif
 // specializations can drop the 'constexpr' but not the implied 'const'.
 template <> char S::g() { return 0; } // expected-error {{no function template matches}}
 template <> double S::g() const { return 0; } // ok
@@ -154,3 +161,14 @@ namespace {
   // FIXME: We should diagnose this prior to C++17.
   const int &r = A::n;
 }
+
+#if __cplusplus < 201402L
+namespace ImplicitConstexprDef {
+  struct A {
+    void f(); // expected-note {{member declaration does not match because it is not const qualified}}
+  };
+
+  constexpr void A::f() { } // expected-warning {{'constexpr' non-static member function will not be implicitly 'const' in C++14; add 'const' to avoid a change in behavior}}
+                            // expected-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'ImplicitConstexprDef::A'}}
+}
+#endif

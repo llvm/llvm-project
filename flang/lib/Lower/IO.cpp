@@ -168,7 +168,7 @@ static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
 }
 
 inline int64_t getLength(mlir::Type argTy) {
-  return argTy.cast<fir::SequenceType>().getShape()[0];
+  return mlir::cast<fir::SequenceType>(argTy).getShape()[0];
 }
 
 /// Get (or generate) the MLIR FuncOp for a given IO runtime function.
@@ -656,11 +656,11 @@ static void genNamelistIO(Fortran::lower::AbstractConverter &converter,
 static mlir::func::FuncOp getOutputFunc(mlir::Location loc,
                                         fir::FirOpBuilder &builder,
                                         mlir::Type type, bool isFormatted) {
-  if (fir::unwrapPassByRefType(type).isa<fir::RecordType>())
+  if (mlir::isa<fir::RecordType>(fir::unwrapPassByRefType(type)))
     return getIORuntimeFunc<mkIOKey(OutputDerivedType)>(loc, builder);
   if (!isFormatted)
     return getIORuntimeFunc<mkIOKey(OutputDescriptor)>(loc, builder);
-  if (auto ty = type.dyn_cast<mlir::IntegerType>()) {
+  if (auto ty = mlir::dyn_cast<mlir::IntegerType>(type)) {
     switch (ty.getWidth()) {
     case 1:
       return getIORuntimeFunc<mkIOKey(OutputLogical)>(loc, builder);
@@ -677,14 +677,14 @@ static mlir::func::FuncOp getOutputFunc(mlir::Location loc,
     }
     llvm_unreachable("unknown OutputInteger kind");
   }
-  if (auto ty = type.dyn_cast<mlir::FloatType>()) {
+  if (auto ty = mlir::dyn_cast<mlir::FloatType>(type)) {
     if (auto width = ty.getWidth(); width == 32)
       return getIORuntimeFunc<mkIOKey(OutputReal32)>(loc, builder);
     else if (width == 64)
       return getIORuntimeFunc<mkIOKey(OutputReal64)>(loc, builder);
   }
   auto kindMap = fir::getKindMapping(builder.getModule());
-  if (auto ty = type.dyn_cast<fir::ComplexType>()) {
+  if (auto ty = mlir::dyn_cast<fir::ComplexType>(type)) {
     // COMPLEX(KIND=k) corresponds to a pair of REAL(KIND=k).
     auto width = kindMap.getRealBitsize(ty.getFKind());
     if (width == 32)
@@ -692,7 +692,7 @@ static mlir::func::FuncOp getOutputFunc(mlir::Location loc,
     else if (width == 64)
       return getIORuntimeFunc<mkIOKey(OutputComplex64)>(loc, builder);
   }
-  if (type.isa<fir::LogicalType>())
+  if (mlir::isa<fir::LogicalType>(type))
     return getIORuntimeFunc<mkIOKey(OutputLogical)>(loc, builder);
   if (fir::factory::CharacterExprHelper::isCharacterScalar(type)) {
     // TODO: What would it mean if the default CHARACTER KIND is set to a wide
@@ -731,14 +731,14 @@ static void genOutputItemList(
     mlir::func::FuncOp outputFunc =
         getOutputFunc(loc, builder, itemTy, isFormatted);
     mlir::Type argType = outputFunc.getFunctionType().getInput(1);
-    assert((isFormatted || argType.isa<fir::BoxType>()) &&
+    assert((isFormatted || mlir::isa<fir::BoxType>(argType)) &&
            "expect descriptor for unformatted IO runtime");
     llvm::SmallVector<mlir::Value> outputFuncArgs = {cookie};
     fir::factory::CharacterExprHelper helper{builder, loc};
-    if (argType.isa<fir::BoxType>()) {
+    if (mlir::isa<fir::BoxType>(argType)) {
       mlir::Value box = fir::getBase(converter.genExprBox(loc, *expr, stmtCtx));
       outputFuncArgs.push_back(builder.createConvert(loc, argType, box));
-      if (fir::unwrapPassByRefType(itemTy).isa<fir::RecordType>())
+      if (mlir::isa<fir::RecordType>(fir::unwrapPassByRefType(itemTy)))
         outputFuncArgs.push_back(getNonTbpDefinedIoTableAddr(converter));
     } else if (helper.isCharacterScalar(itemTy)) {
       fir::ExtendedValue exv = converter.genExprAddr(loc, expr, stmtCtx);
@@ -773,29 +773,29 @@ static void genOutputItemList(
 static mlir::func::FuncOp getInputFunc(mlir::Location loc,
                                        fir::FirOpBuilder &builder,
                                        mlir::Type type, bool isFormatted) {
-  if (fir::unwrapPassByRefType(type).isa<fir::RecordType>())
+  if (mlir::isa<fir::RecordType>(fir::unwrapPassByRefType(type)))
     return getIORuntimeFunc<mkIOKey(InputDerivedType)>(loc, builder);
   if (!isFormatted)
     return getIORuntimeFunc<mkIOKey(InputDescriptor)>(loc, builder);
-  if (auto ty = type.dyn_cast<mlir::IntegerType>())
+  if (auto ty = mlir::dyn_cast<mlir::IntegerType>(type))
     return ty.getWidth() == 1
                ? getIORuntimeFunc<mkIOKey(InputLogical)>(loc, builder)
                : getIORuntimeFunc<mkIOKey(InputInteger)>(loc, builder);
-  if (auto ty = type.dyn_cast<mlir::FloatType>()) {
+  if (auto ty = mlir::dyn_cast<mlir::FloatType>(type)) {
     if (auto width = ty.getWidth(); width == 32)
       return getIORuntimeFunc<mkIOKey(InputReal32)>(loc, builder);
     else if (width == 64)
       return getIORuntimeFunc<mkIOKey(InputReal64)>(loc, builder);
   }
   auto kindMap = fir::getKindMapping(builder.getModule());
-  if (auto ty = type.dyn_cast<fir::ComplexType>()) {
+  if (auto ty = mlir::dyn_cast<fir::ComplexType>(type)) {
     auto width = kindMap.getRealBitsize(ty.getFKind());
     if (width == 32)
       return getIORuntimeFunc<mkIOKey(InputComplex32)>(loc, builder);
     else if (width == 64)
       return getIORuntimeFunc<mkIOKey(InputComplex64)>(loc, builder);
   }
-  if (type.isa<fir::LogicalType>())
+  if (mlir::isa<fir::LogicalType>(type))
     return getIORuntimeFunc<mkIOKey(InputLogical)>(loc, builder);
   if (fir::factory::CharacterExprHelper::isCharacterScalar(type)) {
     auto asciiKind = kindMap.defaultCharacterKind();
@@ -830,12 +830,12 @@ createIoRuntimeCallForItem(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Type argType = inputFunc.getFunctionType().getInput(1);
   llvm::SmallVector<mlir::Value> inputFuncArgs = {cookie};
-  if (argType.isa<fir::BaseBoxType>()) {
+  if (mlir::isa<fir::BaseBoxType>(argType)) {
     mlir::Value box = fir::getBase(item);
-    auto boxTy = box.getType().dyn_cast<fir::BaseBoxType>();
+    auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(box.getType());
     assert(boxTy && "must be previously emboxed");
     inputFuncArgs.push_back(builder.createConvert(loc, argType, box));
-    if (fir::unwrapPassByRefType(boxTy).isa<fir::RecordType>())
+    if (mlir::isa<fir::RecordType>(fir::unwrapPassByRefType(boxTy)))
       inputFuncArgs.push_back(getNonTbpDefinedIoTableAddr(converter));
   } else {
     mlir::Value itemAddr = fir::getBase(item);
@@ -846,16 +846,16 @@ createIoRuntimeCallForItem(Fortran::lower::AbstractConverter &converter,
       mlir::Value len = fir::getLen(item);
       inputFuncArgs.push_back(builder.createConvert(
           loc, inputFunc.getFunctionType().getInput(2), len));
-    } else if (itemTy.isa<mlir::IntegerType>()) {
+    } else if (mlir::isa<mlir::IntegerType>(itemTy)) {
       inputFuncArgs.push_back(builder.create<mlir::arith::ConstantOp>(
           loc, builder.getI32IntegerAttr(
-                   itemTy.cast<mlir::IntegerType>().getWidth() / 8)));
+                   mlir::cast<mlir::IntegerType>(itemTy).getWidth() / 8)));
     }
   }
   auto call = builder.create<fir::CallOp>(loc, inputFunc, inputFuncArgs);
   auto itemAddr = fir::getBase(item);
   auto itemTy = fir::unwrapRefType(itemAddr.getType());
-  if (itemTy.isa<fir::LogicalType>())
+  if (mlir::isa<fir::LogicalType>(itemTy))
     boolRefToLogical(loc, builder, itemAddr);
   return call.getResult(0);
 }
@@ -886,7 +886,7 @@ static void genInputItemList(Fortran::lower::AbstractConverter &converter,
       mlir::func::FuncOp inputFunc = getInputFunc(
           loc, builder, vectorSubscriptBox.getElementType(), isFormatted);
       const bool mustBox =
-          inputFunc.getFunctionType().getInput(1).isa<fir::BoxType>();
+          mlir::isa<fir::BoxType>(inputFunc.getFunctionType().getInput(1));
       if (!checkResult) {
         auto elementalGenerator = [&](const fir::ExtendedValue &element) {
           createIoRuntimeCallForItem(converter, loc, inputFunc, cookie,
@@ -911,9 +911,10 @@ static void genInputItemList(Fortran::lower::AbstractConverter &converter,
     mlir::Type itemTy = converter.genType(*expr);
     mlir::func::FuncOp inputFunc =
         getInputFunc(loc, builder, itemTy, isFormatted);
-    auto itemExv = inputFunc.getFunctionType().getInput(1).isa<fir::BoxType>()
-                       ? converter.genExprBox(loc, *expr, stmtCtx)
-                       : converter.genExprAddr(loc, expr, stmtCtx);
+    auto itemExv =
+        mlir::isa<fir::BoxType>(inputFunc.getFunctionType().getInput(1))
+            ? converter.genExprBox(loc, *expr, stmtCtx)
+            : converter.genExprAddr(loc, expr, stmtCtx);
     ok = createIoRuntimeCallForItem(converter, loc, inputFunc, cookie, itemExv);
   }
 }
@@ -927,6 +928,11 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
   Fortran::lower::StatementContext stmtCtx;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Location loc = converter.getCurrentLocation();
+  mlir::arith::IntegerOverflowFlags flags{};
+  if (converter.getLoweringOptions().getNSWOnLoopVarInc())
+    flags = bitEnumSet(flags, mlir::arith::IntegerOverflowFlags::nsw);
+  auto iofAttr =
+      mlir::arith::IntegerOverflowFlagsAttr::get(builder.getContext(), flags);
   makeNextConditionalOn(builder, loc, checkResult, ok, inLoop);
   const auto &itemList = std::get<0>(ioImpliedDo.t);
   const auto &control = std::get<1>(ioImpliedDo.t);
@@ -964,7 +970,7 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
     genItemList(ioImpliedDo);
     builder.setInsertionPointToEnd(doLoopOp.getBody());
     mlir::Value result = builder.create<mlir::arith::AddIOp>(
-        loc, doLoopOp.getInductionVar(), doLoopOp.getStep());
+        loc, doLoopOp.getInductionVar(), doLoopOp.getStep(), iofAttr);
     builder.create<fir::ResultOp>(loc, result);
     builder.setInsertionPointAfter(doLoopOp);
     // The loop control variable may be used after the loop.
@@ -1006,7 +1012,7 @@ static void genIoLoop(Fortran::lower::AbstractConverter &converter,
   mlir::OpResult iterateResult = builder.getBlock()->back().getResult(0);
   mlir::Value inductionResult0 = iterWhileOp.getInductionVar();
   auto inductionResult1 = builder.create<mlir::arith::AddIOp>(
-      loc, inductionResult0, iterWhileOp.getStep());
+      loc, inductionResult0, iterWhileOp.getStep(), iofAttr);
   auto inductionResult = builder.create<mlir::arith::SelectOp>(
       loc, iterateResult, inductionResult1, inductionResult0);
   llvm::SmallVector<mlir::Value> results = {inductionResult, iterateResult};
@@ -1382,7 +1388,7 @@ static void threadSpecs(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   for (const auto &spec : specList) {
     makeNextConditionalOn(builder, loc, checkResult, ok);
-    ok = std::visit(
+    ok = Fortran::common::visit(
         Fortran::common::visitors{
             [&](const Fortran::parser::IoControlSpec::Size &x) -> mlir::Value {
               // Size must be queried after the related READ runtime calls, not
@@ -1419,7 +1425,7 @@ ConditionSpecInfo lowerErrorSpec(Fortran::lower::AbstractConverter &converter,
   ConditionSpecInfo csi;
   const Fortran::lower::SomeExpr *ioMsgExpr = nullptr;
   for (const auto &spec : specList) {
-    std::visit(
+    Fortran::common::visit(
         Fortran::common::visitors{
             [&](const Fortran::parser::StatVariable &var) {
               csi.ioStatExpr = Fortran::semantics::GetExpr(var);
@@ -1772,8 +1778,8 @@ static mlir::Value genIOUnitNumber(Fortran::lower::AbstractConverter &converter,
   auto &builder = converter.getFirOpBuilder();
   auto rawUnit = fir::getBase(converter.genExprValue(loc, iounit, stmtCtx));
   unsigned rawUnitWidth =
-      rawUnit.getType().cast<mlir::IntegerType>().getWidth();
-  unsigned runtimeArgWidth = ty.cast<mlir::IntegerType>().getWidth();
+      mlir::cast<mlir::IntegerType>(rawUnit.getType()).getWidth();
+  unsigned runtimeArgWidth = mlir::cast<mlir::IntegerType>(ty).getWidth();
   // The IO runtime supports `int` unit numbers, if the unit number may
   // overflow when passed to the IO runtime, check that the unit number is
   // in range before calling the BeginXXX.
@@ -2331,7 +2337,7 @@ mlir::Value genInquireSpec<Fortran::parser::InquireSpec::IntVar>(
   if (!eleTy)
     fir::emitFatalError(loc,
                         "internal error: expected a memory reference type");
-  auto width = eleTy.cast<mlir::IntegerType>().getWidth();
+  auto width = mlir::cast<mlir::IntegerType>(eleTy).getWidth();
   mlir::IndexType idxTy = builder.getIndexType();
   mlir::Value kind = builder.createIntegerConstant(loc, idxTy, width / 8);
   llvm::SmallVector<mlir::Value> args = {
@@ -2391,7 +2397,7 @@ lowerIdExpr(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
             const std::list<Fortran::parser::InquireSpec> &ispecs,
             Fortran::lower::StatementContext &stmtCtx) {
   for (const Fortran::parser::InquireSpec &spec : ispecs)
-    if (mlir::Value v = std::visit(
+    if (mlir::Value v = Fortran::common::visit(
             Fortran::common::visitors{
                 [&](const Fortran::parser::IdExpr &idExpr) {
                   return fir::getBase(converter.genExprValue(
@@ -2413,11 +2419,11 @@ static void threadInquire(Fortran::lower::AbstractConverter &converter,
   mlir::Value idExpr = lowerIdExpr(converter, loc, ispecs, stmtCtx);
   for (const Fortran::parser::InquireSpec &spec : ispecs) {
     makeNextConditionalOn(builder, loc, checkResult, ok);
-    ok = std::visit(Fortran::common::visitors{[&](const auto &x) {
-                      return genInquireSpec(converter, loc, cookie, idExpr, x,
-                                            stmtCtx);
-                    }},
-                    spec.u);
+    ok = Fortran::common::visit(Fortran::common::visitors{[&](const auto &x) {
+                                  return genInquireSpec(converter, loc, cookie,
+                                                        idExpr, x, stmtCtx);
+                                }},
+                                spec.u);
   }
 }
 

@@ -228,8 +228,7 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
     std::string msg = llvm::formatv("redefinition of persistent variable '{0}'",
                                     name).str();
     m_parser_vars->m_diagnostics->AddDiagnostic(
-        msg, DiagnosticSeverity::eDiagnosticSeverityError,
-        DiagnosticOrigin::eDiagnosticOriginLLDB);
+        msg, lldb::eSeverityError, DiagnosticOrigin::eDiagnosticOriginLLDB);
     return false;
   }
 

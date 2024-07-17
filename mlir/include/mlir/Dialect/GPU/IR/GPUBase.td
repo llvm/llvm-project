@@ -62,6 +62,11 @@ def GPU_Dialect : Dialect {
     static bool isWorkgroupMemoryAddressSpace(Attribute memorySpace);
   }];
 
+  let discardableAttrs = (ins
+    "::mlir::DenseI32ArrayAttr":$known_block_size,
+    "::mlir::DenseI32ArrayAttr":$known_grid_size
+  );
+
   let dependentDialects = ["arith::ArithDialect"];
   let useDefaultAttributePrinterParser = 1;
   let useDefaultTypePrinterParser = 1;

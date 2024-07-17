@@ -18,7 +18,7 @@
 #include <stdlib.h>
 
 int testApplyNamedSequence(MlirContext ctx) {
-  fprintf(stderr, "%s\n", __FUNCTION__);
+  fprintf(stderr, "%s\n", __func__);
 
   const char module[] =
       "module attributes {transform.with_named_sequence} {"

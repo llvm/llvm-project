@@ -220,7 +220,7 @@ struct SectionDescriptor : SectionDescriptorBase {
   /// Returns section content.
   StringRef getContents() override {
     if (SectionOffsetInsideAsmPrinterOutputStart == 0)
-      return StringRef(Contents.data(), Contents.size());
+      return Contents;
 
     return Contents.slice(SectionOffsetInsideAsmPrinterOutputStart,
                           SectionOffsetInsideAsmPrinterOutputEnd);

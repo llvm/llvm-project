@@ -241,7 +241,7 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
        (ST.hasReadM0SendMsgHazard() && isSendMsgTraceDataOrGDS(TII, *MI)) ||
        (ST.hasReadM0LdsDmaHazard() && isLdsDma(*MI)) ||
        (ST.hasReadM0LdsDirectHazard() &&
-        MI->readsRegister(AMDGPU::LDS_DIRECT))) &&
+        MI->readsRegister(AMDGPU::LDS_DIRECT, /*TRI=*/nullptr))) &&
       checkReadM0Hazards(MI) > 0)
     return HazardType;
 
@@ -381,7 +381,8 @@ unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) {
         MI->getOpcode() == AMDGPU::DS_READ_ADDTID_B32)) ||
       (ST.hasReadM0SendMsgHazard() && isSendMsgTraceDataOrGDS(TII, *MI)) ||
       (ST.hasReadM0LdsDmaHazard() && isLdsDma(*MI)) ||
-      (ST.hasReadM0LdsDirectHazard() && MI->readsRegister(AMDGPU::LDS_DIRECT)))
+      (ST.hasReadM0LdsDirectHazard() &&
+       MI->readsRegister(AMDGPU::LDS_DIRECT, /*TRI=*/nullptr)))
     return std::max(WaitStates, checkReadM0Hazards(MI));
 
   if (SIInstrInfo::isMAI(*MI))
@@ -445,10 +446,10 @@ void GCNHazardRecognizer::RecedeCycle() {
 // Helper Functions
 //===----------------------------------------------------------------------===//
 
-typedef enum { HazardFound, HazardExpired, NoHazardFound } HazardFnResult;
+using HazardFnResult = enum { HazardFound, HazardExpired, NoHazardFound };
 
-typedef function_ref<bool(const MachineInstr &, int WaitStates)> IsExpiredFn;
-typedef function_ref<unsigned int(const MachineInstr &)> GetNumWaitStatesFn;
+using IsExpiredFn = function_ref<bool(const MachineInstr &, int WaitStates)>;
+using GetNumWaitStatesFn = function_ref<unsigned int(const MachineInstr &)>;
 
 // Search for a hazard in a block and its predecessors.
 template <typename StateT>
@@ -1161,7 +1162,7 @@ bool GCNHazardRecognizer::fixVMEMtoScalarWriteHazards(MachineInstr *MI) {
 
     for (const MachineOperand &Def : MI->defs()) {
       const MachineOperand *Op =
-          I.findRegisterUseOperand(Def.getReg(), false, TRI);
+          I.findRegisterUseOperand(Def.getReg(), TRI, false);
       if (!Op)
         continue;
       return true;
@@ -2341,7 +2342,7 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
         case 8:
           NeedWaitStates = SMFMA16x16WritesVGPROverlappedSrcABWaitStates;
           break;
-        case 16: [[fallthrough]];
+        case 16:
         default:
           NeedWaitStates = SMFMA32x32WritesVGPROverlappedSrcABWaitStates;
         }

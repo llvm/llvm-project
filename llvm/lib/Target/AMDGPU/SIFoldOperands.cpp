@@ -1519,6 +1519,9 @@ const MachineOperand *SIFoldOperands::isClamp(const MachineInstr &MI) const {
   case AMDGPU::V_MAX_F64_e64:
   case AMDGPU::V_MAX_NUM_F64_e64:
   case AMDGPU::V_PK_MAX_F16: {
+    if (MI.mayRaiseFPException())
+      return nullptr;
+
     if (!TII->getNamedOperand(MI, AMDGPU::OpName::clamp)->getImm())
       return nullptr;
 
@@ -1563,6 +1566,9 @@ bool SIFoldOperands::tryFoldClamp(MachineInstr &MI) {
 
   // The type of clamp must be compatible.
   if (TII->getClampMask(*Def) != TII->getClampMask(MI))
+    return false;
+
+  if (Def->mayRaiseFPException())
     return false;
 
   MachineOperand *DefClamp = TII->getNamedOperand(*Def, AMDGPU::OpName::clamp);
@@ -1650,7 +1656,9 @@ SIFoldOperands::isOMod(const MachineInstr &MI) const {
         ((Op == AMDGPU::V_MUL_F64_e64 || Op == AMDGPU::V_MUL_F64_pseudo_e64 ||
           Op == AMDGPU::V_MUL_F16_e64 || Op == AMDGPU::V_MUL_F16_t16_e64 ||
           Op == AMDGPU::V_MUL_F16_fake16_e64) &&
-         MFI->getMode().FP64FP16Denormals.Output != DenormalMode::PreserveSign))
+         MFI->getMode().FP64FP16Denormals.Output !=
+             DenormalMode::PreserveSign) ||
+        MI.mayRaiseFPException())
       return std::pair(nullptr, SIOutMods::NONE);
 
     const MachineOperand *RegOp = nullptr;
@@ -1725,6 +1733,9 @@ bool SIFoldOperands::tryFoldOMod(MachineInstr &MI) {
   if (!DefOMod || DefOMod->getImm() != SIOutMods::NONE)
     return false;
 
+  if (Def->mayRaiseFPException())
+    return false;
+
   // Clamp is applied after omod. If the source already has clamp set, don't
   // fold it.
   if (TII->hasModifiersSet(*Def, AMDGPU::OpName::clamp))
@@ -1759,8 +1770,7 @@ bool SIFoldOperands::tryFoldRegSequence(MachineInstr &MI) {
   if (!getRegSeqInit(Defs, Reg, MCOI::OPERAND_REGISTER))
     return false;
 
-  for (auto &Def : Defs) {
-    const auto *Op = Def.first;
+  for (auto &[Op, SubIdx] : Defs) {
     if (!Op->isReg())
       return false;
     if (TRI->isAGPR(*MRI, Op->getReg()))
@@ -1798,8 +1808,7 @@ bool SIFoldOperands::tryFoldRegSequence(MachineInstr &MI) {
   auto RS = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                     TII->get(AMDGPU::REG_SEQUENCE), Dst);
 
-  for (unsigned I = 0; I < Defs.size(); ++I) {
-    MachineOperand *Def = Defs[I].first;
+  for (auto &[Def, SubIdx] : Defs) {
     Def->setIsKill(false);
     if (TRI->isAGPR(*MRI, Def->getReg())) {
       RS.add(*Def);
@@ -1808,7 +1817,7 @@ bool SIFoldOperands::tryFoldRegSequence(MachineInstr &MI) {
       SubDef->getOperand(1).setIsKill(false);
       RS.addReg(SubDef->getOperand(1).getReg(), 0, Def->getSubReg());
     }
-    RS.addImm(Defs[I].second);
+    RS.addImm(SubIdx);
   }
 
   Op->setReg(Dst);
@@ -2106,6 +2115,8 @@ bool SIFoldOperands::tryOptimizeAGPRPhis(MachineBasicBlock &MBB) {
 
     for (unsigned K = 1; K < MI.getNumOperands(); K += 2) {
       MachineOperand &PhiMO = MI.getOperand(K);
+      if (!PhiMO.getSubReg())
+        continue;
       RegToMO[{PhiMO.getReg(), PhiMO.getSubReg()}].push_back(&PhiMO);
     }
   }

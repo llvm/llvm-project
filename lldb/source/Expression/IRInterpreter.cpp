@@ -264,7 +264,7 @@ public:
         lldb_private::ConstString name(constant_func->getName());
         bool missing_weak = false;
         lldb::addr_t addr = m_execution_unit.FindSymbol(name, missing_weak);
-        if (addr == LLDB_INVALID_ADDRESS || missing_weak)
+        if (addr == LLDB_INVALID_ADDRESS)
           return false;
         value = APInt(m_target_data.getPointerSizeInBits(), addr);
         return true;

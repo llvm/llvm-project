@@ -454,7 +454,7 @@ private:
       if (!MacroName.isValid() || !MacroName.isFileID())
         continue;
       // All conditions satisfied, add the macro.
-      if (auto *Tok = AST.getTokens().spelledTokenAt(MacroName))
+      if (auto *Tok = AST.getTokens().spelledTokenContaining(MacroName))
         CurParent = &CurParent->inMacro(
             *Tok, SM, AST.getTokens().expansionStartingAt(Tok));
     }

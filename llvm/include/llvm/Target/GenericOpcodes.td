@@ -110,6 +110,12 @@ def G_GLOBAL_VALUE : GenericInstruction {
   let hasSideEffects = false;
 }
 
+def G_PTRAUTH_GLOBAL_VALUE : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins unknown:$addr, i32imm:$key, type1:$addrdisc, i64imm:$disc);
+  let hasSideEffects = 0;
+}
+
 def G_CONSTANT_POOL : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$src);
@@ -988,6 +994,55 @@ def G_FSIN : GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Floating point tangent of a value.
+def G_FTAN : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
+// Floating point arccosine of a value.
+def G_FACOS : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
+// Floating point arcsine of a value.
+def G_FASIN : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
+// Floating point arctangent of a value.
+def G_FATAN : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
+// Floating point hyperbolic cosine of a value.
+def G_FCOSH : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
+// Floating point hyperbolic sine of a value.
+def G_FSINH : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
+// Floating point hyperbolic tangent of a value.
+def G_FTANH : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
 // Floating point square root of a value.
 // This returns NaN for negative nonzero values.
 // NOTE: Unlike libm sqrt(), this never sets errno. In all other respects it's
@@ -1490,6 +1545,13 @@ def G_SHUFFLE_VECTOR: GenericInstruction {
 def G_SPLAT_VECTOR: GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$val);
+  let hasSideEffects = false;
+}
+
+// Generic masked compress.
+def G_VECTOR_COMPRESS: GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$vec, type1:$mask, type0:$passthru);
   let hasSideEffects = false;
 }
 

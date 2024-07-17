@@ -35,9 +35,7 @@ entry:
 define float @i16tof32(i16 signext %a) {
 ; MIPS32-LABEL: i16tof32:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    sll $1, $4, 16
-; MIPS32-NEXT:    sra $1, $1, 16
-; MIPS32-NEXT:    mtc1 $1, $f0
+; MIPS32-NEXT:    mtc1 $4, $f0
 ; MIPS32-NEXT:    cvt.s.w $f0, $f0
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
@@ -49,9 +47,7 @@ entry:
 define float @i8tof32(i8 signext %a) {
 ; MIPS32-LABEL: i8tof32:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    sll $1, $4, 24
-; MIPS32-NEXT:    sra $1, $1, 24
-; MIPS32-NEXT:    mtc1 $1, $f0
+; MIPS32-NEXT:    mtc1 $4, $f0
 ; MIPS32-NEXT:    cvt.s.w $f0, $f0
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
@@ -93,9 +89,7 @@ entry:
 define double @i16tof64(i16 signext %a) {
 ; MIPS32-LABEL: i16tof64:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    sll $1, $4, 16
-; MIPS32-NEXT:    sra $1, $1, 16
-; MIPS32-NEXT:    mtc1 $1, $f0
+; MIPS32-NEXT:    mtc1 $4, $f0
 ; MIPS32-NEXT:    cvt.d.w $f0, $f0
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
@@ -107,9 +101,7 @@ entry:
 define double @i8tof64(i8 signext %a) {
 ; MIPS32-LABEL: i8tof64:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    sll $1, $4, 24
-; MIPS32-NEXT:    sra $1, $1, 24
-; MIPS32-NEXT:    mtc1 $1, $f0
+; MIPS32-NEXT:    mtc1 $4, $f0
 ; MIPS32-NEXT:    cvt.d.w $f0, $f0
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop

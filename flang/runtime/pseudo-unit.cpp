@@ -36,11 +36,11 @@ ExternalFileUnit *ExternalFileUnit::LookUpOrCreate(
 
 ExternalFileUnit *ExternalFileUnit::LookUpOrCreateAnonymous(int unit,
     Direction direction, Fortran::common::optional<bool>,
-    const Terminator &terminator) {
+    IoErrorHandler &handler) {
   if (direction != Direction::Output) {
-    terminator.Crash("ExternalFileUnit only supports output IO");
+    handler.Crash("ExternalFileUnit only supports output IO");
   }
-  return New<ExternalFileUnit>{terminator}(unit).release();
+  return New<ExternalFileUnit>{handler}(unit).release();
 }
 
 ExternalFileUnit *ExternalFileUnit::LookUp(const char *, std::size_t) {
@@ -65,7 +65,7 @@ bool ExternalFileUnit::OpenUnit(Fortran::common::optional<OpenStatus> status,
   handler.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 
-void ExternalFileUnit::OpenAnonymousUnit(Fortran::common::optional<OpenStatus>,
+bool ExternalFileUnit::OpenAnonymousUnit(Fortran::common::optional<OpenStatus>,
     Fortran::common::optional<Action>, Position, Convert convert,
     IoErrorHandler &handler) {
   handler.Crash("%s: unsupported", RT_PRETTY_FUNCTION);

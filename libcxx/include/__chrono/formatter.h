@@ -46,6 +46,7 @@
 #include <__memory/addressof.h>
 #include <cmath>
 #include <ctime>
+#include <limits>
 #include <sstream>
 #include <string_view>
 
@@ -88,6 +89,9 @@ __format_sub_seconds(basic_stringstream<_CharT>& __sstr, const chrono::duration<
   using __duration = chrono::duration<_Rep, _Period>;
 
   auto __fraction = __value - chrono::duration_cast<chrono::seconds>(__value);
+  // Converts a negative fraction to its positive value.
+  if (__value < chrono::seconds{0} && __fraction != __duration{0})
+    __fraction += chrono::seconds{1};
   if constexpr (chrono::treat_as_floating_point_v<_Rep>)
     // When the floating-point value has digits itself they are ignored based
     // on the wording in [tab:time.format.spec]
@@ -586,9 +590,16 @@ __format_chrono(const _Tp& __value,
     __sstr << __value;
   else {
     if constexpr (chrono::__is_duration<_Tp>::value) {
-      if (__value < __value.zero())
-        __sstr << _CharT('-');
-      __formatter::__format_chrono_using_chrono_specs(__sstr, chrono::abs(__value), __chrono_specs);
+      // A duration can be a user defined arithmetic type. Users may specialize
+      // numeric_limits, but they may not specialize is_signed.
+      if constexpr (numeric_limits<typename _Tp::rep>::is_signed) {
+        if (__value < __value.zero()) {
+          __sstr << _CharT('-');
+          __formatter::__format_chrono_using_chrono_specs(__sstr, -__value, __chrono_specs);
+        } else
+          __formatter::__format_chrono_using_chrono_specs(__sstr, __value, __chrono_specs);
+      } else
+        __formatter::__format_chrono_using_chrono_specs(__sstr, __value, __chrono_specs);
       // TODO FMT When keeping the precision it will truncate the string.
       // Note that the behaviour what the precision does isn't specified.
       __specs.__precision_ = -1;

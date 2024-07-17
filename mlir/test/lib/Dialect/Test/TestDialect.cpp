@@ -28,7 +28,6 @@
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
@@ -326,12 +325,9 @@ struct TestOpEffectInterfaceFallback
 void TestDialect::initialize() {
   registerAttributes();
   registerTypes();
-  addOperations<
-#define GET_OP_LIST
-#include "TestOps.cpp.inc"
-      >();
   registerOpsSyntax();
   addOperations<ManualCppOpWithFold>();
+  registerTestDialectOperations(this);
   registerDynamicOp(getDynamicGenericOp(this));
   registerDynamicOp(getDynamicOneOperandTwoResultsOp(this));
   registerDynamicOp(getDynamicCustomParserPrinterOp(this));

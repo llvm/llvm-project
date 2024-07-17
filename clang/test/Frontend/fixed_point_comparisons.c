@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -ffixed-point -triple x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,UNPADDED
-// RUN: %clang_cc1 -ffixed-point -triple x86_64-unknown-linux-gnu -fpadding-on-unsigned-fixed-point -S -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,PADDED
+// RUN: %clang_cc1 -ffixed-point -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,UNPADDED
+// RUN: %clang_cc1 -ffixed-point -triple x86_64-unknown-linux-gnu -fpadding-on-unsigned-fixed-point -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,PADDED
 
 // Fixed point against other fixed point
 _Bool b_eq_true = 2.5hk == 2.5uhk;  // CHECK-DAG: @b_eq_true  = {{.*}}global i8 1, align 1
@@ -249,8 +249,8 @@ void TestIntComparisons(void) {
   sa == b;
   // CHECK:      [[A:%[0-9]+]] = load i16, ptr %sa, align 2
   // CHECK-NEXT: [[B:%[0-9]+]] = load i8, ptr %b, align 1
-  // CHECK-NEXT: %tobool = trunc i8 [[B]] to i1
-  // CHECK-NEXT: [[CONV_B:%[a-z0-9]+]] = zext i1 %tobool to i32
+  // CHECK-NEXT: %loadedv = trunc i8 [[B]] to i1
+  // CHECK-NEXT: [[CONV_B:%[a-z0-9]+]] = zext i1 %loadedv to i32
   // CHECK-NEXT: [[RESIZE_A:%[a-z0-9]+]] = sext i16 [[A]] to i39
   // CHECK-NEXT: [[RESIZE_B:%[a-z0-9]+]] = sext i32 [[CONV_B]] to i39
   // CHECK-NEXT: [[UPSCALE_B:%[a-z0-9]+]] = shl i39 [[RESIZE_B]], 7

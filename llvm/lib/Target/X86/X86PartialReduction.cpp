@@ -508,7 +508,7 @@ bool X86PartialReduction::runOnFunction(Function &F) {
   auto &TM = TPC->getTM<X86TargetMachine>();
   ST = TM.getSubtargetImpl(F);
 
-  DL = &F.getParent()->getDataLayout();
+  DL = &F.getDataLayout();
 
   bool MadeChange = false;
   for (auto &BB : F) {

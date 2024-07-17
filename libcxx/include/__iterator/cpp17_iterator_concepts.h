@@ -68,7 +68,7 @@ concept __cpp17_default_constructible = is_default_constructible_v<_Tp>;
 template <class _Iter>
 concept __cpp17_iterator =
     __cpp17_copy_constructible<_Iter> && __cpp17_copy_assignable<_Iter> && __cpp17_destructible<_Iter> &&
-    (is_signed_v<__iter_diff_t<_Iter>> || is_void_v<__iter_diff_t<_Iter>>)&&requires(_Iter __iter) {
+    (is_signed_v<__iter_diff_t<_Iter>> || is_void_v<__iter_diff_t<_Iter>>) && requires(_Iter __iter) {
       { *__iter };
       { ++__iter } -> same_as<_Iter&>;
     };

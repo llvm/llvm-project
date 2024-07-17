@@ -183,7 +183,7 @@ ARM_ARCH("armv9.5-a", ARMV9_5A, "9.5-A", "+v9.5a", ARMBuildAttrs::CPUArch::v9_A,
           ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_CRC | ARM::AEK_RAS |
           ARM::AEK_DOTPROD | ARM::AEK_BF16 | ARM::AEK_I8MM))
 ARM_ARCH("armv8-r", ARMV8R, "8-R", "+v8r", ARMBuildAttrs::CPUArch::v8_R,
-         FK_NEON_FP_ARMV8,
+         FK_FPV5_SP_D16,
          (ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
           ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_CRC))
 ARM_ARCH("armv8-m.base", ARMV8MBaseline, "8-M.Baseline", "+v8m.base",
@@ -329,7 +329,8 @@ ARM_CPU_NAME("cortex-r7", ARMV7R, FK_VFPV3_D16_FP16, false,
              (ARM::AEK_MP | ARM::AEK_HWDIVARM))
 ARM_CPU_NAME("cortex-r8", ARMV7R, FK_VFPV3_D16_FP16, false,
              (ARM::AEK_MP | ARM::AEK_HWDIVARM))
-ARM_CPU_NAME("cortex-r52", ARMV8R, FK_NEON_FP_ARMV8, true, ARM::AEK_NONE)
+ARM_CPU_NAME("cortex-r52", ARMV8R, FK_NEON_FP_ARMV8, false, ARM::AEK_NONE)
+ARM_CPU_NAME("cortex-r52plus", ARMV8R, FK_NEON_FP_ARMV8, false, ARM::AEK_NONE)
 ARM_CPU_NAME("sc300", ARMV7M, FK_NONE, false, ARM::AEK_NONE)
 ARM_CPU_NAME("cortex-m3", ARMV7M, FK_NONE, true, ARM::AEK_NONE)
 ARM_CPU_NAME("cortex-m4", ARMV7EM, FK_FPV4_SP_D16, true, ARM::AEK_NONE)

@@ -678,7 +678,7 @@ std::string Context::getCoveragePath(StringRef filename,
     return std::string(filename);
 
   std::string CoveragePath;
-  if (options.LongFileNames && !filename.equals(mainFilename))
+  if (options.LongFileNames && filename != mainFilename)
     CoveragePath =
         mangleCoveragePath(mainFilename, options.PreservePaths) + "##";
   CoveragePath += mangleCoveragePath(filename, options.PreservePaths);

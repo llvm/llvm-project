@@ -116,10 +116,13 @@ protected:
 
   void computeSummaryAndThreshold(SampleProfileMap &ProfileMap);
 
-  void calculateAndShowDensity(const SampleProfileMap &Profiles);
+  void calculateBodySamplesAndSize(const FunctionSamples &FSamples,
+                                   uint64_t &TotalBodySamples,
+                                   uint64_t &FuncBodySize);
 
-  double calculateDensity(const SampleProfileMap &Profiles,
-                          uint64_t HotCntThreshold);
+  double calculateDensity(const SampleProfileMap &Profiles);
+
+  void calculateAndShowDensity(const SampleProfileMap &Profiles);
 
   void showDensitySuggestion(double Density);
 

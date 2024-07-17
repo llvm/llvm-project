@@ -22,14 +22,21 @@ using LIBC_NAMESPACE::testing::tlog;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcPowfTest, TrickyInputs) {
-  constexpr int N = 11;
+  constexpr int N = 13;
   constexpr mpfr::BinaryInput<float> INPUTS[N] = {
-      {0x1.290bbp-124f, 0x1.1e6d92p-25f}, {0x1.2e9fb6p+5f, -0x1.1b82b6p-18f},
-      {0x1.6877f6p+60f, -0x1.75f1c6p-4f}, {0x1.0936acp-63f, -0x1.55200ep-15f},
-      {0x1.d6d72ap+43f, -0x1.749ccap-5f}, {0x1.4afb2ap-40f, 0x1.063198p+0f},
-      {0x1.0124dep+0f, -0x1.fdb016p+9f},  {0x1.1058p+0f, 0x1.ap+64f},
-      {0x1.1058p+0f, -0x1.ap+64f},        {0x1.1058p+0f, 0x1.ap+64f},
+      {0x1.290bbp-124f, 0x1.1e6d92p-25f},
+      {0x1.2e9fb6p+5f, -0x1.1b82b6p-18f},
+      {0x1.6877f6p+60f, -0x1.75f1c6p-4f},
+      {0x1.0936acp-63f, -0x1.55200ep-15f},
+      {0x1.d6d72ap+43f, -0x1.749ccap-5f},
+      {0x1.4afb2ap-40f, 0x1.063198p+0f},
+      {0x1.0124dep+0f, -0x1.fdb016p+9f},
+      {0x1.1058p+0f, 0x1.ap+64f},
+      {0x1.1058p+0f, -0x1.ap+64f},
+      {0x1.1058p+0f, 0x1.ap+64f},
       {0x1.fa32d4p-1f, 0x1.67a62ep+12f},
+      {-0x1.8p-49, 0x1.8p+1},
+      {0x1.8p-48, 0x1.8p+1},
   };
 
   for (int i = 0; i < N; ++i) {

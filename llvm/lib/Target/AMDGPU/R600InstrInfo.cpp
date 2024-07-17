@@ -207,11 +207,11 @@ bool R600InstrInfo::mustBeLastInClause(unsigned Opcode) const {
 }
 
 bool R600InstrInfo::usesAddressRegister(MachineInstr &MI) const {
-  return MI.findRegisterUseOperandIdx(R600::AR_X, false, &RI) != -1;
+  return MI.findRegisterUseOperandIdx(R600::AR_X, &RI, false) != -1;
 }
 
 bool R600InstrInfo::definesAddressRegister(MachineInstr &MI) const {
-  return MI.findRegisterDefOperandIdx(R600::AR_X, false, false, &RI) != -1;
+  return MI.findRegisterDefOperandIdx(R600::AR_X, &RI, false, false) != -1;
 }
 
 bool R600InstrInfo::readsLDSSrcReg(const MachineInstr &MI) const {
@@ -326,11 +326,11 @@ R600InstrInfo::ExtractSrcs(MachineInstr &MI,
     Register Reg = Src.first->getReg();
     int Index = RI.getEncodingValue(Reg) & 0xff;
     if (Reg == R600::OQAP) {
-      Result.push_back(std::pair(Index, 0U));
+      Result.emplace_back(Index, 0U);
     }
     if (PV.contains(Reg)) {
       // 255 is used to tells its a PS/PV reg
-      Result.push_back(std::pair(255, 0U));
+      Result.emplace_back(255, 0U);
       continue;
     }
     if (Index > 127) {
@@ -339,7 +339,7 @@ R600InstrInfo::ExtractSrcs(MachineInstr &MI,
       continue;
     }
     unsigned Chan = RI.getHWRegChan(Reg);
-    Result.push_back(std::pair(Index, Chan));
+    Result.emplace_back(Index, Chan);
   }
   for (; i < 3; ++i)
     Result.push_back(DummyPair);

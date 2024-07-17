@@ -1,0 +1,17 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+
+module dev
+  integer, device :: syncthreads
+
+contains
+
+  attributes(device) subroutine sub1()
+    syncthreads = 1 ! syncthreads not overwritten by cudadevice
+  end subroutine
+
+  attributes(global) subroutine sub2()
+!ERROR: 'threadfence' is use-associated from module 'cudadevice' and cannot be re-declared
+    integer :: threadfence
+  end subroutine
+end module
+

@@ -985,13 +985,13 @@ define i1 @expand_binop_undef(i32 %x, i32 %y) {
 define i32 @pr47322_more_poisonous_replacement(i32 %arg) {
 ; CHECK-LABEL: @pr47322_more_poisonous_replacement(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ARG:%.*]], 0
-; CHECK-NEXT:    [[TRAILING:%.*]] = call i32 @llvm.cttz.i32(i32 [[ARG]], i1 immarg true)
+; CHECK-NEXT:    [[TRAILING:%.*]] = call i32 @llvm.cttz.i32(i32 [[ARG]], i1 true)
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[ARG]], [[TRAILING]]
 ; CHECK-NEXT:    [[R1_SROA_0_1:%.*]] = select i1 [[CMP]], i32 0, i32 [[SHIFTED]]
 ; CHECK-NEXT:    ret i32 [[R1_SROA_0_1]]
 ;
   %cmp = icmp eq i32 %arg, 0
-  %trailing = call i32 @llvm.cttz.i32(i32 %arg, i1 immarg true)
+  %trailing = call i32 @llvm.cttz.i32(i32 %arg, i1 true)
   %shifted = lshr i32 %arg, %trailing
   %r1.sroa.0.1 = select i1 %cmp, i32 0, i32 %shifted
   ret i32 %r1.sroa.0.1
@@ -1105,19 +1105,19 @@ define <2 x i32> @select_ctpop_zero_vec(<2 x i32> %x) {
 define <2 x i32> @select_vector_reverse(<2 x i32> %x) {
 ; CHECK-LABEL: @select_vector_reverse(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[REV:%.*]] = call <2 x i32> @llvm.experimental.vector.reverse.v2i32(<2 x i32> [[X]])
+; CHECK-NEXT:    [[REV:%.*]] = call <2 x i32> @llvm.vector.reverse.v2i32(<2 x i32> [[X]])
 ; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i32> zeroinitializer, <2 x i32> [[REV]]
 ; CHECK-NEXT:    ret <2 x i32> [[SEL]]
 ;
   %cmp = icmp eq <2 x i32> %x, zeroinitializer
-  %rev = call <2 x i32> @llvm.experimental.vector.reverse.v2i32(<2 x i32> %x)
+  %rev = call <2 x i32> @llvm.vector.reverse.v2i32(<2 x i32> %x)
   %sel = select <2 x i1> %cmp, <2 x i32> zeroinitializer, <2 x i32> %rev
   ret <2 x i32> %sel
 }
 
 declare i32 @llvm.ctpop.i32(i32)
 declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>)
-declare <2 x i32> @llvm.experimental.vector.reverse.v2i32(<2 x i32>)
+declare <2 x i32> @llvm.vector.reverse.v2i32(<2 x i32>)
 
 define <2 x i32> @vec_select_no_equivalence(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @vec_select_no_equivalence(

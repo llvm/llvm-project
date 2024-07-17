@@ -1,46 +1,46 @@
 {
   "functions": {
     "isalnum": {
-      "defined": "7.4.1.1"
+      "c-definition": "7.4.1.1"
     },
     "isalpha": {
-      "defined": "7.4.1.2"
+      "c-definition": "7.4.1.2"
     },
     "isblank": {
-      "defined": "7.4.1.3"
+      "c-definition": "7.4.1.3"
     },
     "iscntrl": {
-      "defined": "7.4.1.4"
+      "c-definition": "7.4.1.4"
     },
     "isdigit": {
-      "defined": "7.4.1.5"
+      "c-definition": "7.4.1.5"
     },
     "isgraph": {
-      "defined": "7.4.1.6"	
+      "c-definition": "7.4.1.6"
     },
     "islower": {
-      "defined": "7.4.1.7"
+      "c-definition": "7.4.1.7"
     },
     "isprint": {
-      "defined": "7.4.1.8"
+      "c-definition": "7.4.1.8"
     },
     "ispunct": {
-      "defined": "7.4.1.9"
+      "c-definition": "7.4.1.9"
     },
     "isspace": {
-      "defined": "7.4.1.10"
+      "c-definition": "7.4.1.10"
     },
     "isupper": {
-      "defined": "7.4.1.11"
+      "c-definition": "7.4.1.11"
     },
     "isxdigit": {
-      "defined": "7.4.1.12"
+      "c-definition": "7.4.1.12"
     },
     "tolower" : {
-      "defined": "7.4.2.1"
+      "c-definition": "7.4.2.1"
     },
     "toupper": {
-      "defined": "7.4.2.2"
+      "c-definition": "7.4.2.2"
     }
   }
 }

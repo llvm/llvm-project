@@ -36,35 +36,20 @@ class MachineFunction;
 extern template class AnalysisManager<MachineFunction>;
 using MachineFunctionAnalysisManager = AnalysisManager<MachineFunction>;
 
-namespace detail {
-
-template <typename PassT>
-struct MachinePassModel
-    : PassModel<MachineFunction, PassT, MachineFunctionAnalysisManager> {
-  explicit MachinePassModel(PassT &&Pass)
-      : PassModel<MachineFunction, PassT, MachineFunctionAnalysisManager>(
-            std::move(Pass)) {}
-
-  friend void swap(MachinePassModel &LHS, MachinePassModel &RHS) {
-    using std::swap;
-    swap(LHS.Pass, RHS.Pass);
-  }
-
-  MachinePassModel &operator=(MachinePassModel RHS) {
-    swap(*this, RHS);
-    return *this;
-  }
-
-  MachinePassModel &operator=(const MachinePassModel &) = delete;
-  PreservedAnalyses run(MachineFunction &IR,
-                        MachineFunctionAnalysisManager &AM) override {
+/// An RAII based helper class to modify MachineFunctionProperties when running
+/// pass. Define a MFPropsModifier in PassT::run to set
+/// MachineFunctionProperties properly.
+template <typename PassT> class MFPropsModifier {
+public:
+  MFPropsModifier(PassT &P_, MachineFunction &MF_) : P(P_), MF(MF_) {
+    auto &MFProps = MF.getProperties();
 #ifndef NDEBUG
-    if constexpr (is_detected<has_get_required_properties_t, PassT>::value) {
-      auto &MFProps = IR.getProperties();
-      auto RequiredProperties = PassT::getRequiredProperties();
+    if constexpr (has_get_required_properties_v<PassT>) {
+      auto &MFProps = MF.getProperties();
+      auto RequiredProperties = P.getRequiredProperties();
       if (!MFProps.verifyRequiredProperties(RequiredProperties)) {
         errs() << "MachineFunctionProperties required by " << PassT::name()
-               << " pass are not met by function " << IR.getName() << ".\n"
+               << " pass are not met by function " << MF.getName() << ".\n"
                << "Required properties: ";
         RequiredProperties.print(errs());
         errs() << "\nCurrent properties: ";
@@ -73,18 +58,22 @@ struct MachinePassModel
         report_fatal_error("MachineFunctionProperties check failed");
       }
     }
-#endif
+#endif // NDEBUG
+    if constexpr (has_get_cleared_properties_v<PassT>)
+      MFProps.reset(P.getClearedProperties());
+  }
 
-    auto PA = this->Pass.run(IR, AM);
-
-    if constexpr (is_detected<has_get_set_properties_t, PassT>::value)
-      IR.getProperties().set(PassT::getSetProperties());
-    if constexpr (is_detected<has_get_cleared_properties_t, PassT>::value)
-      IR.getProperties().reset(PassT::getClearedProperties());
-    return PA;
+  ~MFPropsModifier() {
+    if constexpr (has_get_set_properties_v<PassT>) {
+      auto &MFProps = MF.getProperties();
+      MFProps.set(P.getSetProperties());
+    }
   }
 
 private:
+  PassT &P;
+  MachineFunction &MF;
+
   template <typename T>
   using has_get_required_properties_t =
       decltype(std::declval<T &>().getRequiredProperties());
@@ -96,8 +85,23 @@ private:
   template <typename T>
   using has_get_cleared_properties_t =
       decltype(std::declval<T &>().getClearedProperties());
+
+  template <typename T>
+  static constexpr bool has_get_required_properties_v =
+      is_detected<has_get_required_properties_t, T>::value;
+
+  template <typename T>
+  static constexpr bool has_get_set_properties_v =
+      is_detected<has_get_set_properties_t, T>::value;
+
+  template <typename T>
+  static constexpr bool has_get_cleared_properties_v =
+      is_detected<has_get_cleared_properties_t, T>::value;
 };
-} // namespace detail
+
+// Additional deduction guide to suppress warning.
+template <typename PassT>
+MFPropsModifier(PassT &P, MachineFunction &MF) -> MFPropsModifier<PassT>;
 
 using MachineFunctionAnalysisManagerModuleProxy =
     InnerAnalysisManagerProxy<MachineFunctionAnalysisManager, Module>;
@@ -108,6 +112,15 @@ bool MachineFunctionAnalysisManagerModuleProxy::Result::invalidate(
     ModuleAnalysisManager::Invalidator &Inv);
 extern template class InnerAnalysisManagerProxy<MachineFunctionAnalysisManager,
                                                 Module>;
+using MachineFunctionAnalysisManagerFunctionProxy =
+    InnerAnalysisManagerProxy<MachineFunctionAnalysisManager, Function>;
+
+template <>
+bool MachineFunctionAnalysisManagerFunctionProxy::Result::invalidate(
+    Function &F, const PreservedAnalyses &PA,
+    FunctionAnalysisManager::Invalidator &Inv);
+extern template class InnerAnalysisManagerProxy<MachineFunctionAnalysisManager,
+                                                Function>;
 
 extern template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
                                                 MachineFunction>;
@@ -127,16 +140,6 @@ public:
       // because we are taking ownership of the responsibilty to clear the
       // analysis state.
       Arg.FAM = nullptr;
-    }
-
-    ~Result() {
-      // FAM is cleared in a moved from state where there is nothing to do.
-      if (!FAM)
-        return;
-
-      // Clear out the analysis manager if we're being destroyed -- it means we
-      // didn't even see an invalidate call when we got invalidated.
-      FAM->clear();
     }
 
     Result &operator=(Result &&RHS) {
@@ -187,18 +190,18 @@ private:
   FunctionAnalysisManager *FAM;
 };
 
-class ModuleToMachineFunctionPassAdaptor
-    : public PassInfoMixin<ModuleToMachineFunctionPassAdaptor> {
+class FunctionToMachineFunctionPassAdaptor
+    : public PassInfoMixin<FunctionToMachineFunctionPassAdaptor> {
 public:
   using PassConceptT =
       detail::PassConcept<MachineFunction, MachineFunctionAnalysisManager>;
 
-  explicit ModuleToMachineFunctionPassAdaptor(
+  explicit FunctionToMachineFunctionPassAdaptor(
       std::unique_ptr<PassConceptT> Pass)
       : Pass(std::move(Pass)) {}
 
-  /// Runs the function pass across every function in the module.
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  /// Runs the function pass across every function in the function.
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
 
@@ -209,30 +212,15 @@ private:
 };
 
 template <typename MachineFunctionPassT>
-ModuleToMachineFunctionPassAdaptor
-createModuleToMachineFunctionPassAdaptor(MachineFunctionPassT &&Pass) {
+FunctionToMachineFunctionPassAdaptor
+createFunctionToMachineFunctionPassAdaptor(MachineFunctionPassT &&Pass) {
   using PassModelT = detail::PassModel<MachineFunction, MachineFunctionPassT,
                                        MachineFunctionAnalysisManager>;
   // Do not use make_unique, it causes too many template instantiations,
   // causing terrible compile times.
-  return ModuleToMachineFunctionPassAdaptor(
-      std::unique_ptr<ModuleToMachineFunctionPassAdaptor::PassConceptT>(
+  return FunctionToMachineFunctionPassAdaptor(
+      std::unique_ptr<FunctionToMachineFunctionPassAdaptor::PassConceptT>(
           new PassModelT(std::forward<MachineFunctionPassT>(Pass))));
-}
-
-template <>
-template <typename PassT>
-void PassManager<MachineFunction>::addPass(PassT &&Pass) {
-  using MachinePassModelT = detail::MachinePassModel<PassT>;
-  // Do not use make_unique or emplace_back, they cause too many template
-  // instantiations, causing terrible compile times.
-  if constexpr (std::is_same_v<PassT, PassManager<MachineFunction>>) {
-    for (auto &P : Pass.Passes)
-      Passes.push_back(std::move(P));
-  } else {
-    Passes.push_back(std::unique_ptr<MachinePassModelT>(
-        new MachinePassModelT(std::forward<PassT>(Pass))));
-  }
 }
 
 template <>
@@ -243,6 +231,10 @@ extern template class PassManager<MachineFunction>;
 
 /// Convenience typedef for a pass manager over functions.
 using MachineFunctionPassManager = PassManager<MachineFunction>;
+
+/// Returns the minimum set of Analyses that all machine function passes must
+/// preserve.
+PreservedAnalyses getMachineFunctionPassPreservedAnalyses();
 
 } // end namespace llvm
 

@@ -13,7 +13,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "llvm/ADT/ArrayRef.h"
 
-void fir::runtime::genEnvironmentDefaults(
+mlir::Value fir::runtime::genEnvironmentDefaults(
     fir::FirOpBuilder &builder, mlir::Location loc,
     const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults) {
   std::string envDefaultListPtrName =
@@ -34,14 +34,8 @@ void fir::runtime::genEnvironmentDefaults(
 
   // If no defaults were specified, initialize with a null pointer.
   if (envDefaults.empty()) {
-    builder.createGlobalConstant(
-        loc, envDefaultListRefTy, envDefaultListPtrName,
-        [&](fir::FirOpBuilder &builder) {
-          mlir::Value nullVal =
-              builder.createNullConstant(loc, envDefaultListRefTy);
-          builder.create<fir::HasValueOp>(loc, nullVal);
-        });
-    return;
+    mlir::Value nullVal = builder.createNullConstant(loc, envDefaultListRefTy);
+    return nullVal;
   }
 
   // Create the Item list.
@@ -99,11 +93,7 @@ void fir::runtime::genEnvironmentDefaults(
       envDefaultListBuilder, linkOnce);
 
   // Define the pointer to the list used by the runtime.
-  builder.createGlobalConstant(
-      loc, envDefaultListRefTy, envDefaultListPtrName,
-      [&](fir::FirOpBuilder &builder) {
-        mlir::Value addr = builder.create<fir::AddrOfOp>(
-            loc, envDefaultList.resultType(), envDefaultList.getSymbol());
-        builder.create<fir::HasValueOp>(loc, addr);
-      });
+  mlir::Value addr = builder.create<fir::AddrOfOp>(
+      loc, envDefaultList.resultType(), envDefaultList.getSymbol());
+  return addr;
 }

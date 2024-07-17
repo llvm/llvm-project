@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +amx-tile   \
-// RUN: -target-feature +amx-int8 -target-feature +amx-bf16 -target-feature +amx-fp16 -emit-llvm -fsyntax-only -verify
+// RUN: -target-feature +amx-int8 -target-feature +amx-bf16 -target-feature +amx-fp16 -fsyntax-only -verify
 
 #include <immintrin.h>
 

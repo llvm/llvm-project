@@ -95,17 +95,18 @@ public:
 class ConvertConversion : public mlir::OpRewritePattern<fir::ConvertOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::ConvertOp op,
                   mlir::PatternRewriter &rewriter) const override {
-    if (op.getRes().getType().isa<mlir::MemRefType>()) {
+    if (mlir::isa<mlir::MemRefType>(op.getRes().getType())) {
       // due to index calculation moving to affine maps we still need to
       // add converts for sequence types this has a side effect of losing
       // some information about arrays with known dimensions by creating:
       // fir.convert %arg0 : (!fir.ref<!fir.array<5xi32>>) ->
       // !fir.ref<!fir.array<?xi32>>
-      if (auto refTy = op.getValue().getType().dyn_cast<fir::ReferenceType>())
-        if (auto arrTy = refTy.getEleTy().dyn_cast<fir::SequenceType>()) {
+      if (auto refTy =
+              mlir::dyn_cast<fir::ReferenceType>(op.getValue().getType()))
+        if (auto arrTy = mlir::dyn_cast<fir::SequenceType>(refTy.getEleTy())) {
           fir::SequenceType::Shape flatShape = {
               fir::SequenceType::getUnknownExtent()};
           auto flatArrTy = fir::SequenceType::get(flatShape, arrTy.getEleTy());
@@ -132,7 +133,7 @@ mlir::Type convertMemRef(mlir::MemRefType type) {
 class StdAllocConversion : public mlir::OpRewritePattern<memref::AllocOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(memref::AllocOp op,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<fir::AllocaOp>(op, convertMemRef(op.getType()),
@@ -158,7 +159,7 @@ public:
     mlir::ConversionTarget target(*context);
     target.addIllegalOp<memref::AllocOp>();
     target.addDynamicallyLegalOp<fir::ConvertOp>([](fir::ConvertOp op) {
-      if (op.getRes().getType().isa<mlir::MemRefType>())
+      if (mlir::isa<mlir::MemRefType>(op.getRes().getType()))
         return false;
       return true;
     });

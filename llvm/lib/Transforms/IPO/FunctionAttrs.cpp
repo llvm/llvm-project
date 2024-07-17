@@ -1169,7 +1169,7 @@ static bool isReturnNonNull(Function *F, const SCCNodeSet &SCCNodes,
     if (auto *Ret = dyn_cast<ReturnInst>(BB.getTerminator()))
       FlowsToReturn.insert(Ret->getReturnValue());
 
-  auto &DL = F->getParent()->getDataLayout();
+  auto &DL = F->getDataLayout();
 
   for (unsigned i = 0; i != FlowsToReturn.size(); ++i) {
     Value *RetVal = FlowsToReturn[i];
@@ -1186,10 +1186,15 @@ static bool isReturnNonNull(Function *F, const SCCNodeSet &SCCNodes,
     switch (RVI->getOpcode()) {
     // Extend the analysis by looking upwards.
     case Instruction::BitCast:
-    case Instruction::GetElementPtr:
     case Instruction::AddrSpaceCast:
       FlowsToReturn.insert(RVI->getOperand(0));
       continue;
+    case Instruction::GetElementPtr:
+      if (cast<GEPOperator>(RVI)->isInBounds()) {
+        FlowsToReturn.insert(RVI->getOperand(0));
+        continue;
+      }
+      return false;
     case Instruction::Select: {
       SelectInst *SI = cast<SelectInst>(RVI);
       FlowsToReturn.insert(SI->getTrueValue());
@@ -1306,7 +1311,7 @@ static void addNoUndefAttrs(const SCCNodeSet &SCCNodes,
     if (F->getReturnType()->isVoidTy())
       continue;
 
-    const DataLayout &DL = F->getParent()->getDataLayout();
+    const DataLayout &DL = F->getDataLayout();
     if (all_of(*F, [&](BasicBlock &BB) {
           if (auto *Ret = dyn_cast<ReturnInst>(BB.getTerminator())) {
             // TODO: perform context-sensitive analysis?
