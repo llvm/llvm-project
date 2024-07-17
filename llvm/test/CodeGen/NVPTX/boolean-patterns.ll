@@ -18,16 +18,14 @@ define i1 @m2and_ri(i1 %a) {
 
 ; CHECK-LABEL: select2or
 define i1 @select2or(i1 %a, i1 %b) {
-; CHECK: or.b16 %rs{{[0-9]+}}, %rs{{[0-9]+}}, %rs{{[0-9]+}}
-; CHECK-NOT: selp
+; CHECK: or.pred %p{{[0-9]+}}, %p{{[0-9]+}}, %p{{[0-9]+}}
   %r = select i1 %a, i1 1, i1 %b
   ret i1 %r
 }
 
 ; CHECK-LABEL: select2and
 define i1 @select2and(i1 %a, i1 %b) {
-; CHECK: and.b16 %rs{{[0-9]+}}, %rs{{[0-9]+}}, %rs{{[0-9]+}}
-; CHECK-NOT: selp
+; CHECK: and.pred %p{{[0-9]+}}, %p{{[0-9]+}}, %p{{[0-9]+}}
   %r = select i1 %a, i1 %b, i1 0
   ret i1 %r
 }
