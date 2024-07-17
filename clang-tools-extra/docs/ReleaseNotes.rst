@@ -482,6 +482,11 @@ Changes in existing checks
   false-positives when type of the member does not match the type of the
   initializer.
 
+- Improved :doc:`readability-redundant-smartptr-get
+  <clang-tidy/checks/readability/readability-redundant-smartptr-get>` check to
+  improves code readability and efficiency by removing unnecessary
+  dereferences.
+
 - Improved :doc:`readability-static-accessed-through-instance
   <clang-tidy/checks/readability/static-accessed-through-instance>` check to
   support calls to overloaded operators as base expression and provide fixes to
