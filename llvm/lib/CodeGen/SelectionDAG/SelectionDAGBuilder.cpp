@@ -44,7 +44,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -104,6 +104,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cstddef>
+#include <deque>
 #include <iterator>
 #include <limits>
 #include <optional>
@@ -4797,8 +4798,8 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
   const auto &TTI =
       TLI.getTargetMachine().getTargetTransformInfo(*I.getFunction());
   SDValue StoreNode =
-      !IsCompressing && TTI.hasConditionalLoadStoreForType(
-                            I.getArgOperand(0)->getType()->getScalarType())
+      !IsCompressing &&
+              TTI.hasConditionalLoadStoreForType(I.getArgOperand(0)->getType())
           ? TLI.visitMaskedStore(DAG, sdl, getMemoryRoot(), MMO, Ptr, Src0,
                                  Mask)
           : DAG.getMaskedStore(getMemoryRoot(), sdl, Src0, Ptr, Offset, Mask,
@@ -4983,8 +4984,8 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   // variables.
   SDValue Load;
   SDValue Res;
-  if (!IsExpanding && TTI.hasConditionalLoadStoreForType(
-                          Src0Operand->getType()->getScalarType()))
+  if (!IsExpanding &&
+      TTI.hasConditionalLoadStoreForType(Src0Operand->getType()))
     Res = TLI.visitMaskedLoad(DAG, sdl, InChain, MMO, Load, Ptr, Src0, Mask);
   else
     Res = Load =
@@ -6459,14 +6460,14 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     Align SrcAlign = MCI.getSourceAlign().valueOrOne();
     Align Alignment = std::min(DstAlign, SrcAlign);
     bool isVol = MCI.isVolatile();
-    bool isTC = I.isTailCall() && isInTailCallPosition(I, DAG.getTarget());
     // FIXME: Support passing different dest/src alignments to the memcpy DAG
     // node.
     SDValue Root = isVol ? getRoot() : getMemoryRoot();
-    SDValue MC = DAG.getMemcpy(
-        Root, sdl, Op1, Op2, Op3, Alignment, isVol,
-        /* AlwaysInline */ false, isTC, MachinePointerInfo(I.getArgOperand(0)),
-        MachinePointerInfo(I.getArgOperand(1)), I.getAAMetadata(), AA);
+    SDValue MC = DAG.getMemcpy(Root, sdl, Op1, Op2, Op3, Alignment, isVol,
+                               /* AlwaysInline */ false, &I, std::nullopt,
+                               MachinePointerInfo(I.getArgOperand(0)),
+                               MachinePointerInfo(I.getArgOperand(1)),
+                               I.getAAMetadata(), AA);
     updateDAGForMaybeTailCall(MC);
     return;
   }
@@ -6481,13 +6482,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     Align SrcAlign = MCI.getSourceAlign().valueOrOne();
     Align Alignment = std::min(DstAlign, SrcAlign);
     bool isVol = MCI.isVolatile();
-    bool isTC = I.isTailCall() && isInTailCallPosition(I, DAG.getTarget());
     // FIXME: Support passing different dest/src alignments to the memcpy DAG
     // node.
-    SDValue MC = DAG.getMemcpy(
-        getRoot(), sdl, Dst, Src, Size, Alignment, isVol,
-        /* AlwaysInline */ true, isTC, MachinePointerInfo(I.getArgOperand(0)),
-        MachinePointerInfo(I.getArgOperand(1)), I.getAAMetadata(), AA);
+    SDValue MC = DAG.getMemcpy(getRoot(), sdl, Dst, Src, Size, Alignment, isVol,
+                               /* AlwaysInline */ true, &I, std::nullopt,
+                               MachinePointerInfo(I.getArgOperand(0)),
+                               MachinePointerInfo(I.getArgOperand(1)),
+                               I.getAAMetadata(), AA);
     updateDAGForMaybeTailCall(MC);
     return;
   }
@@ -6499,11 +6500,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // @llvm.memset defines 0 and 1 to both mean no alignment.
     Align Alignment = MSI.getDestAlign().valueOrOne();
     bool isVol = MSI.isVolatile();
-    bool isTC = I.isTailCall() && isInTailCallPosition(I, DAG.getTarget());
     SDValue Root = isVol ? getRoot() : getMemoryRoot();
     SDValue MS = DAG.getMemset(
         Root, sdl, Op1, Op2, Op3, Alignment, isVol, /* AlwaysInline */ false,
-        isTC, MachinePointerInfo(I.getArgOperand(0)), I.getAAMetadata());
+        &I, MachinePointerInfo(I.getArgOperand(0)), I.getAAMetadata());
     updateDAGForMaybeTailCall(MS);
     return;
   }
@@ -6516,10 +6516,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // @llvm.memset defines 0 and 1 to both mean no alignment.
     Align DstAlign = MSII.getDestAlign().valueOrOne();
     bool isVol = MSII.isVolatile();
-    bool isTC = I.isTailCall() && isInTailCallPosition(I, DAG.getTarget());
     SDValue Root = isVol ? getRoot() : getMemoryRoot();
     SDValue MC = DAG.getMemset(Root, sdl, Dst, Value, Size, DstAlign, isVol,
-                               /* AlwaysInline */ true, isTC,
+                               /* AlwaysInline */ true, &I,
                                MachinePointerInfo(I.getArgOperand(0)),
                                I.getAAMetadata());
     updateDAGForMaybeTailCall(MC);
@@ -6535,12 +6534,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     Align SrcAlign = MMI.getSourceAlign().valueOrOne();
     Align Alignment = std::min(DstAlign, SrcAlign);
     bool isVol = MMI.isVolatile();
-    bool isTC = I.isTailCall() && isInTailCallPosition(I, DAG.getTarget());
     // FIXME: Support passing different dest/src alignments to the memmove DAG
     // node.
     SDValue Root = isVol ? getRoot() : getMemoryRoot();
-    SDValue MM = DAG.getMemmove(Root, sdl, Op1, Op2, Op3, Alignment, isVol,
-                                isTC, MachinePointerInfo(I.getArgOperand(0)),
+    SDValue MM = DAG.getMemmove(Root, sdl, Op1, Op2, Op3, Alignment, isVol, &I,
+                                /* OverrideTailCall */ std::nullopt,
+                                MachinePointerInfo(I.getArgOperand(0)),
                                 MachinePointerInfo(I.getArgOperand(1)),
                                 I.getAAMetadata(), AA);
     updateDAGForMaybeTailCall(MM);
@@ -6791,6 +6790,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::sin:
   case Intrinsic::cos:
   case Intrinsic::tan:
+  case Intrinsic::asin:
+  case Intrinsic::acos:
+  case Intrinsic::atan:
+  case Intrinsic::sinh:
+  case Intrinsic::cosh:
+  case Intrinsic::tanh:
   case Intrinsic::exp10:
   case Intrinsic::floor:
   case Intrinsic::ceil:
@@ -6809,6 +6814,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     case Intrinsic::sin:          Opcode = ISD::FSIN;          break;
     case Intrinsic::cos:          Opcode = ISD::FCOS;          break;
     case Intrinsic::tan:          Opcode = ISD::FTAN;          break;
+    case Intrinsic::asin:         Opcode = ISD::FASIN;         break;
+    case Intrinsic::acos:         Opcode = ISD::FACOS;         break;
+    case Intrinsic::atan:         Opcode = ISD::FATAN;         break;
+    case Intrinsic::sinh:         Opcode = ISD::FSINH;         break;
+    case Intrinsic::cosh:         Opcode = ISD::FCOSH;         break;
+    case Intrinsic::tanh:         Opcode = ISD::FTANH;         break;
     case Intrinsic::exp10:        Opcode = ISD::FEXP10;        break;
     case Intrinsic::floor:        Opcode = ISD::FFLOOR;        break;
     case Intrinsic::ceil:         Opcode = ISD::FCEIL;         break;
@@ -7976,6 +7987,37 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, Trunc);
     return;
   }
+  case Intrinsic::experimental_vector_partial_reduce_add: {
+    SDValue OpNode = getValue(I.getOperand(1));
+    EVT ReducedTy = EVT::getEVT(I.getType());
+    EVT FullTy = OpNode.getValueType();
+
+    unsigned Stride = ReducedTy.getVectorMinNumElements();
+    unsigned ScaleFactor = FullTy.getVectorMinNumElements() / Stride;
+
+    // Collect all of the subvectors
+    std::deque<SDValue> Subvectors;
+    Subvectors.push_back(getValue(I.getOperand(0)));
+    for (unsigned i = 0; i < ScaleFactor; i++) {
+      auto SourceIndex = DAG.getVectorIdxConstant(i * Stride, sdl);
+      Subvectors.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, sdl, ReducedTy,
+                                       {OpNode, SourceIndex}));
+    }
+
+    // Flatten the subvector tree
+    while (Subvectors.size() > 1) {
+      Subvectors.push_back(DAG.getNode(ISD::ADD, sdl, ReducedTy,
+                                       {Subvectors[0], Subvectors[1]}));
+      Subvectors.pop_front();
+      Subvectors.pop_front();
+    }
+
+    assert(Subvectors.size() == 1 &&
+           "There should only be one subvector after tree flattening");
+
+    setValue(&I, Subvectors[0]);
+    return;
+  }
   case Intrinsic::experimental_cttz_elts: {
     auto DL = getCurSDLoc();
     SDValue Op = getValue(I.getOperand(0));
@@ -8072,6 +8114,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   case Intrinsic::vector_deinterleave2:
     visitVectorDeinterleave(I);
+    return;
+  case Intrinsic::experimental_vector_compress:
+    setValue(&I, DAG.getNode(ISD::VECTOR_COMPRESS, sdl,
+                             getValue(I.getArgOperand(0)).getValueType(),
+                             getValue(I.getArgOperand(0)),
+                             getValue(I.getArgOperand(1)),
+                             getValue(I.getArgOperand(2)), Flags));
     return;
   case Intrinsic::experimental_convergence_anchor:
   case Intrinsic::experimental_convergence_entry:
@@ -8995,11 +9044,10 @@ bool SelectionDAGBuilder::visitMemPCpyCall(const CallInst &I) {
   // because the return pointer needs to be adjusted by the size of
   // the copied memory.
   SDValue Root = getMemoryRoot();
-  SDValue MC = DAG.getMemcpy(Root, sdl, Dst, Src, Size, Alignment, false, false,
-                             /*isTailCall=*/false,
-                             MachinePointerInfo(I.getArgOperand(0)),
-                             MachinePointerInfo(I.getArgOperand(1)),
-                             I.getAAMetadata());
+  SDValue MC = DAG.getMemcpy(
+      Root, sdl, Dst, Src, Size, Alignment, false, false, /*CI=*/nullptr,
+      std::nullopt, MachinePointerInfo(I.getArgOperand(0)),
+      MachinePointerInfo(I.getArgOperand(1)), I.getAAMetadata());
   assert(MC.getNode() != nullptr &&
          "** memcpy should not be lowered as TailCall in mempcpy context **");
   DAG.setRoot(MC);
@@ -9229,6 +9277,42 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
         if (visitUnaryFloatCall(I, ISD::FTAN))
           return;
         break;
+      case LibFunc_asin:
+      case LibFunc_asinf:
+      case LibFunc_asinl:
+        if (visitUnaryFloatCall(I, ISD::FASIN))
+          return;
+        break;
+      case LibFunc_acos:
+      case LibFunc_acosf:
+      case LibFunc_acosl:
+        if (visitUnaryFloatCall(I, ISD::FACOS))
+          return;
+        break;
+      case LibFunc_atan:
+      case LibFunc_atanf:
+      case LibFunc_atanl:
+        if (visitUnaryFloatCall(I, ISD::FATAN))
+          return;
+        break;
+      case LibFunc_sinh:
+      case LibFunc_sinhf:
+      case LibFunc_sinhl:
+        if (visitUnaryFloatCall(I, ISD::FSINH))
+          return;
+        break;
+      case LibFunc_cosh:
+      case LibFunc_coshf:
+      case LibFunc_coshl:
+        if (visitUnaryFloatCall(I, ISD::FCOSH))
+          return;
+        break;
+      case LibFunc_tanh:
+      case LibFunc_tanhf:
+      case LibFunc_tanhl:
+        if (visitUnaryFloatCall(I, ISD::FTANH))
+          return;
+        break;
       case LibFunc_sqrt:
       case LibFunc_sqrtf:
       case LibFunc_sqrtl:
@@ -9373,6 +9457,14 @@ void SelectionDAGBuilder::LowerCallSiteWithPtrAuthBundle(
   assert(Key->getType()->isIntegerTy(32) && "Invalid ptrauth key");
   assert(Discriminator->getType()->isIntegerTy(64) &&
          "Invalid ptrauth discriminator");
+
+  // Look through ptrauth constants to find the raw callee.
+  // Do a direct unauthenticated call if we found it and everything matches.
+  if (const auto *CalleeCPA = dyn_cast<ConstantPtrAuth>(CalleeV))
+    if (CalleeCPA->isKnownCompatibleWith(Key, Discriminator,
+                                         DAG.getDataLayout()))
+      return LowerCallTo(CB, getValue(CalleeCPA->getPointer()), CB.isTailCall(),
+                         CB.isMustTailCall(), EHPadBB);
 
   // Functions should never be ptrauth-called directly.
   assert(!isa<Function>(CalleeV) && "invalid direct ptrauth call");
@@ -11980,17 +12072,7 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
         // table branch.
         if (FallthroughUnreachable) {
           Function &CurFunc = CurMF->getFunction();
-          bool HasBranchTargetEnforcement = false;
-          if (CurFunc.hasFnAttribute("branch-target-enforcement")) {
-            HasBranchTargetEnforcement =
-                CurFunc.getFnAttribute("branch-target-enforcement")
-                    .getValueAsBool();
-          } else {
-            HasBranchTargetEnforcement =
-                CurMF->getMMI().getModule()->getModuleFlag(
-                    "branch-target-enforcement");
-          }
-          if (!HasBranchTargetEnforcement)
+          if (!CurFunc.hasFnAttribute("branch-target-enforcement"))
             JTH->FallthroughUnreachable = true;
         }
 

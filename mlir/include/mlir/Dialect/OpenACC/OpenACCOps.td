@@ -1121,6 +1121,20 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
 
   let regions = (region AnyRegion:$region);
 
+  let builders = [
+    OpBuilder<(ins
+      CArg<"mlir::ValueRange", "{}">:$numGangs,
+      CArg<"mlir::ValueRange", "{}">:$numWorkers,
+      CArg<"mlir::ValueRange", "{}">:$vectorLength,
+      CArg<"mlir::ValueRange", "{}">:$asyncOperands,
+      CArg<"mlir::ValueRange", "{}">:$waitOperands,
+      CArg<"mlir::Value", "{}">:$ifCond,
+      CArg<"mlir::Value", "{}">:$selfCond,
+      CArg<"mlir::ValueRange", "{}">:$reductionOperands,
+      CArg<"mlir::ValueRange", "{}">:$gangPrivateOperands,
+      CArg<"mlir::ValueRange", "{}">:$gangFirstPrivateOperands,
+      CArg<"mlir::ValueRange", "{}">:$dataClauseOperands)>];
+
   let extraClassDeclaration = [{
     /// The number of data operands.
     unsigned getNumDataOperands();

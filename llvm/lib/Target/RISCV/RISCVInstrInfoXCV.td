@@ -198,7 +198,7 @@ let DecoderNamespace = "XCValu" in {
 
 } // DecoderNamespace = "XCValu"
 
-let Predicates = [HasVendorXCValu],
+let Predicates = [HasVendorXCValu, IsRV32],
   hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   // General ALU Operations
   def CV_ABS    : CVInstAluR<0b0101000, 0b011, "cv.abs">,
@@ -249,10 +249,10 @@ let Predicates = [HasVendorXCValu],
                   Sched<[]>;
   def CV_SUBURN : CVInstAluRRI<0b11, 0b011, "cv.suburn">,
                   Sched<[]>;
-} // Predicates = [HasVendorXCValu],
+} // Predicates = [HasVendorXCValu, IsRV32],
   //   hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
-let Predicates = [HasVendorXCValu],
+let Predicates = [HasVendorXCValu, IsRV32],
   hasSideEffects = 0, mayLoad = 0, mayStore = 0,
   Constraints = "$rd = $rd_wb" in {
   def CV_ADDNR   : CVInstAluRRNR<0b1000000, 0b011, "cv.addnr">,
@@ -272,7 +272,7 @@ let Predicates = [HasVendorXCValu],
   def CV_SUBURNR : CVInstAluRRNR<0b1000111, 0b011, "cv.suburnr">,
                    Sched<[]>;
 
-} // Predicates = [HasVendorXCValu],
+} // Predicates = [HasVendorXCValu, IsRV32],
   //   hasSideEffects = 0, mayLoad = 0, mayStore = 0,
   //   Constraints = "$rd = $rd_wb"
 
@@ -716,6 +716,13 @@ def CV_HI5: SDNodeXForm<imm, [{
                                    N->getValueType(0));
 }]>;
 
+def powerOf2Minus1 : ImmLeaf<XLenVT, [{ return isPowerOf2_32(Imm+1); }]>;
+def trailing1sPlus1 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(
+                          llvm::countr_one(N->getZExtValue()) + 1,
+                          SDLoc(N), N->getValueType(0));
+}]>;
+
 multiclass PatCoreVBitManip<Intrinsic intr> {
   def : PatGprGpr<intr, !cast<RVInst>("CV_" # NAME # "R")>;
   def : Pat<(intr GPR:$rs1, cv_uimm10:$imm),
@@ -748,8 +755,54 @@ let Predicates = [HasVendorXCVbitmanip, IsRV32] in {
   def : Pat<(bitreverse (XLenVT GPR:$rs)), (CV_BITREV GPR:$rs, 0, 0)>;
 }
 
+class PatCoreVAluGpr<string intr, string asm> :
+  PatGpr<!cast<Intrinsic>("int_riscv_cv_alu_" # intr),
+            !cast<RVInst>("CV_" # asm)>;
+class PatCoreVAluGprGpr <string intr, string asm> :
+  PatGprGpr<!cast<Intrinsic>("int_riscv_cv_alu_" # intr),
+               !cast<RVInst>("CV_" # asm)>;
+
+multiclass PatCoreVAluGprImm<Intrinsic intr> {
+  def : PatGprGpr<intr, !cast<RVInst>("CV_" # NAME # "R")>;
+  def : Pat<(intr (XLenVT GPR:$rs1), powerOf2Minus1:$upperBound),
+            (!cast<RVInst>("CV_" # NAME) GPR:$rs1,
+            (trailing1sPlus1 imm:$upperBound))>;
+}
+
+multiclass PatCoreVAluGprGprImm<Intrinsic intr> {
+  def : Pat<(intr GPR:$rs1, GPR:$rs2, GPR:$rs3),
+            (!cast<RVInst>("CV_" # NAME # "R") GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
+  def : Pat<(intr GPR:$rs1, GPR:$rs2, uimm5:$imm),
+            (!cast<RVInst>("CV_" # NAME) GPR:$rs1, GPR:$rs2, uimm5:$imm)>;
+}
+
+let Predicates = [HasVendorXCValu, IsRV32], AddedComplexity = 1 in {
+  def : PatGpr<abs, CV_ABS>;
+  def : PatGprGpr<setle, CV_SLET>;
+  def : PatGprGpr<setule, CV_SLETU>;
+  def : PatGprGpr<smin, CV_MIN>;
+  def : PatGprGpr<umin, CV_MINU>;
+  def : PatGprGpr<smax, CV_MAX>;
+  def : PatGprGpr<umax, CV_MAXU>;
+
+  def : Pat<(sext_inreg (XLenVT GPR:$rs1), i16), (CV_EXTHS GPR:$rs1)>;
+  def : Pat<(sext_inreg (XLenVT GPR:$rs1), i8), (CV_EXTBS GPR:$rs1)>;
+  def : Pat<(and (XLenVT GPR:$rs1), 0xffff), (CV_EXTHZ GPR:$rs1)>;
+
+  defm CLIP   : PatCoreVAluGprImm<int_riscv_cv_alu_clip>;
+  defm CLIPU  : PatCoreVAluGprImm<int_riscv_cv_alu_clipu>;
+  defm ADDN   : PatCoreVAluGprGprImm<int_riscv_cv_alu_addn>;
+  defm ADDUN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_addun>;
+  defm ADDRN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_addrn>;
+  defm ADDURN : PatCoreVAluGprGprImm<int_riscv_cv_alu_addurn>;
+  defm SUBN   : PatCoreVAluGprGprImm<int_riscv_cv_alu_subn>;
+  defm SUBUN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_subun>;
+  defm SUBRN  : PatCoreVAluGprGprImm<int_riscv_cv_alu_subrn>;
+  defm SUBURN : PatCoreVAluGprGprImm<int_riscv_cv_alu_suburn>;
+} // Predicates = [HasVendorXCValu, IsRV32]
+
 //===----------------------------------------------------------------------===//
-// Patterns for immediate branching operations 
+// Patterns for immediate branching operations
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
@@ -772,4 +825,37 @@ let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
 
   def : Selectbi<SETEQ>;
   def : Selectbi<SETNE>;
+}
+
+class PatCoreVMacGprGprGpr <string intr, string asm>
+  : Pat<(!cast<Intrinsic>("int_riscv_cv_mac_" # intr) GPR:$rs1, GPR:$rs2, GPR:$rd),
+        (!cast<RVInst>("CV_" # asm) GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+class PatCoreVMacGprGprGprUimm5 <string intr, string asm>
+  : Pat<(!cast<Intrinsic>("int_riscv_cv_mac_" # intr) GPR:$rs1, GPR:$rs2, GPR:$rd, cv_tuimm5:$imm5),
+        (!cast<RVInst>("CV_" # asm) GPR:$rd, GPR:$rs1, GPR:$rs2, cv_tuimm5:$imm5)>;
+class PatCoreVMacGprGprUimm5 <string intr, string asm>
+  : Pat<(!cast<Intrinsic>("int_riscv_cv_mac_" # intr) GPR:$rs1, GPR:$rs2, cv_tuimm5:$imm5),
+        (!cast<RVInst>("CV_" # asm) GPR:$rs1, GPR:$rs2, cv_tuimm5:$imm5)>;
+
+let Predicates = [HasVendorXCVmac] in {
+  def : PatCoreVMacGprGprGpr<"mac", "MAC">;
+  def : PatCoreVMacGprGprGpr<"msu", "MSU">;
+
+  def : PatCoreVMacGprGprUimm5<"muluN", "MULUN">;
+  def : PatCoreVMacGprGprUimm5<"mulhhuN", "MULHHUN">;
+  def : PatCoreVMacGprGprUimm5<"mulsN", "MULSN">;
+  def : PatCoreVMacGprGprUimm5<"mulhhsN", "MULHHSN">;
+  def : PatCoreVMacGprGprUimm5<"muluRN", "MULURN">;
+  def : PatCoreVMacGprGprUimm5<"mulhhuRN", "MULHHURN">;
+  def : PatCoreVMacGprGprUimm5<"mulsRN", "MULSRN">;
+  def : PatCoreVMacGprGprUimm5<"mulhhsRN", "MULHHSRN">;
+
+  def : PatCoreVMacGprGprGprUimm5<"macuN", "MACUN">;
+  def : PatCoreVMacGprGprGprUimm5<"machhuN", "MACHHUN">;
+  def : PatCoreVMacGprGprGprUimm5<"macsN", "MACSN">;
+  def : PatCoreVMacGprGprGprUimm5<"machhsN", "MACHHSN">;
+  def : PatCoreVMacGprGprGprUimm5<"macuRN", "MACURN">;
+  def : PatCoreVMacGprGprGprUimm5<"machhuRN", "MACHHURN">;
+  def : PatCoreVMacGprGprGprUimm5<"macsRN", "MACSRN">;
+  def : PatCoreVMacGprGprGprUimm5<"machhsRN", "MACHHSRN">;
 }

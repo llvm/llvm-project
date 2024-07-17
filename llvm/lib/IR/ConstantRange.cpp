@@ -241,7 +241,36 @@ bool ConstantRange::getEquivalentICmp(CmpInst::Predicate &Pred,
 
 bool ConstantRange::icmp(CmpInst::Predicate Pred,
                          const ConstantRange &Other) const {
-  return makeSatisfyingICmpRegion(Pred, Other).contains(*this);
+  if (isEmptySet() || Other.isEmptySet())
+    return true;
+
+  switch (Pred) {
+  case CmpInst::ICMP_EQ:
+    if (const APInt *L = getSingleElement())
+      if (const APInt *R = Other.getSingleElement())
+        return *L == *R;
+    return false;
+  case CmpInst::ICMP_NE:
+    return inverse().contains(Other);
+  case CmpInst::ICMP_ULT:
+    return getUnsignedMax().ult(Other.getUnsignedMin());
+  case CmpInst::ICMP_ULE:
+    return getUnsignedMax().ule(Other.getUnsignedMin());
+  case CmpInst::ICMP_UGT:
+    return getUnsignedMin().ugt(Other.getUnsignedMax());
+  case CmpInst::ICMP_UGE:
+    return getUnsignedMin().uge(Other.getUnsignedMax());
+  case CmpInst::ICMP_SLT:
+    return getSignedMax().slt(Other.getSignedMin());
+  case CmpInst::ICMP_SLE:
+    return getSignedMax().sle(Other.getSignedMin());
+  case CmpInst::ICMP_SGT:
+    return getSignedMin().sgt(Other.getSignedMax());
+  case CmpInst::ICMP_SGE:
+    return getSignedMin().sge(Other.getSignedMax());
+  default:
+    llvm_unreachable("Invalid ICmp predicate");
+  }
 }
 
 /// Exact mul nuw region for single element RHS.

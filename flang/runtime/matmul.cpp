@@ -443,48 +443,6 @@ static inline RT_API_ATTRS void DoMatmul(
 
 RT_DIAG_POP
 
-// Maps the dynamic type information from the arguments' descriptors
-// to the right instantiation of DoMatmul() for valid combinations of
-// types.
-template <bool IS_ALLOCATING> struct Matmul {
-  using ResultDescriptor =
-      std::conditional_t<IS_ALLOCATING, Descriptor, const Descriptor>;
-  template <TypeCategory XCAT, int XKIND> struct MM1 {
-    template <TypeCategory YCAT, int YKIND> struct MM2 {
-      RT_API_ATTRS void operator()(ResultDescriptor &result,
-          const Descriptor &x, const Descriptor &y,
-          Terminator &terminator) const {
-        if constexpr (constexpr auto resultType{
-                          GetResultType(XCAT, XKIND, YCAT, YKIND)}) {
-          if constexpr (Fortran::common::IsNumericTypeCategory(
-                            resultType->first) ||
-              resultType->first == TypeCategory::Logical) {
-            return DoMatmul<IS_ALLOCATING, resultType->first,
-                resultType->second, CppTypeFor<XCAT, XKIND>,
-                CppTypeFor<YCAT, YKIND>>(result, x, y, terminator);
-          }
-        }
-        terminator.Crash("MATMUL: bad operand types (%d(%d), %d(%d))",
-            static_cast<int>(XCAT), XKIND, static_cast<int>(YCAT), YKIND);
-      }
-    };
-    RT_API_ATTRS void operator()(ResultDescriptor &result, const Descriptor &x,
-        const Descriptor &y, Terminator &terminator, TypeCategory yCat,
-        int yKind) const {
-      ApplyType<MM2, void>(yCat, yKind, terminator, result, x, y, terminator);
-    }
-  };
-  RT_API_ATTRS void operator()(ResultDescriptor &result, const Descriptor &x,
-      const Descriptor &y, const char *sourceFile, int line) const {
-    Terminator terminator{sourceFile, line};
-    auto xCatKind{x.type().GetCategoryAndKind()};
-    auto yCatKind{y.type().GetCategoryAndKind()};
-    RUNTIME_CHECK(terminator, xCatKind.has_value() && yCatKind.has_value());
-    ApplyType<MM1, void>(xCatKind->first, xCatKind->second, terminator, result,
-        x, y, terminator, yCatKind->first, yCatKind->second);
-  }
-};
-
 template <bool IS_ALLOCATING, TypeCategory XCAT, int XKIND, TypeCategory YCAT,
     int YKIND>
 struct MatmulHelper {
@@ -514,15 +472,6 @@ namespace Fortran::runtime {
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
-void RTDEF(Matmul)(Descriptor &result, const Descriptor &x, const Descriptor &y,
-    const char *sourceFile, int line) {
-  Matmul<true>{}(result, x, y, sourceFile, line);
-}
-void RTDEF(MatmulDirect)(const Descriptor &result, const Descriptor &x,
-    const Descriptor &y, const char *sourceFile, int line) {
-  Matmul<false>{}(result, x, y, sourceFile, line);
-}
-
 #define MATMUL_INSTANCE(XCAT, XKIND, YCAT, YKIND) \
   void RTDEF(Matmul##XCAT##XKIND##YCAT##YKIND)(Descriptor & result, \
       const Descriptor &x, const Descriptor &y, const char *sourceFile, \
@@ -538,6 +487,8 @@ void RTDEF(MatmulDirect)(const Descriptor &result, const Descriptor &x,
     MatmulHelper<false, TypeCategory::XCAT, XKIND, TypeCategory::YCAT, \
         YKIND>{}(result, x, y, sourceFile, line); \
   }
+
+#define MATMUL_FORCE_ALL_TYPES 0
 
 #include "flang/Runtime/matmul-instances.inc"
 

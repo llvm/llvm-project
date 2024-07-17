@@ -78,12 +78,10 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
 
   // Emit the ArchExtKind enum
   OS << "#ifdef EMIT_ARCHEXTKIND_ENUM\n"
-     << "enum ArchExtKind : unsigned {\n"
-     << "  AEK_NONE = 1,\n";
+     << "enum ArchExtKind : unsigned {\n";
   for (const Record *Rec : SortedExtensions) {
     auto AEK = Rec->getValueAsString("ArchExtKindSpelling").upper();
-    if (AEK != "AEK_NONE")
-      OS << "  " << AEK << ",\n";
+    OS << "  " << AEK << ",\n";
   }
   OS << "  AEK_NUM_EXTENSIONS\n"
      << "};\n"
@@ -108,7 +106,6 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
     OS << ", \"-" << Rec->getValueAsString("Name") << "\""; // negfeature
     OS << "},\n";
   };
-  OS << "  {\"none\", {}, AArch64::AEK_NONE, {}, {}, {}, {} },\n";
   OS << "};\n"
      << "#undef EMIT_EXTENSIONS\n"
      << "#endif // EMIT_EXTENSIONS\n"

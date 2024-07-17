@@ -536,6 +536,11 @@ SPIRVPrepareFunctions::removeAggregateTypesFromSignature(Function *F) {
       CI->mutateFunctionType(NewF->getFunctionType());
     U->replaceUsesOfWith(F, NewF);
   }
+
+  // register the mutation
+  if (RetType != F->getReturnType())
+    TM.getSubtarget<SPIRVSubtarget>(*F).getSPIRVGlobalRegistry()->addMutated(
+        NewF, F->getReturnType());
   return NewF;
 }
 

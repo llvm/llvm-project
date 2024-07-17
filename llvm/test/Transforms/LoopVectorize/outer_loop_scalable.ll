@@ -52,7 +52,7 @@ define void @foo() {
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq <vscale x 4 x i64> [[TMP13]], shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 512, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <vscale x 4 x i1> [[TMP14]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[OUTER_LOOP_LATCH4]], label [[INNER_LOOP1]]
-; CHECK:       outer_loop_latch4:
+; CHECK:       vector.latch:
 ; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <vscale x 4 x float> [ [[TMP12]], [[INNER_LOOP1]] ]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> [[VEC_PHI5]], <vscale x 4 x ptr> [[TMP10]], i32 4, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
 ; CHECK-NEXT:    [[TMP16:%.*]] = add nuw nsw <vscale x 4 x i64> [[VEC_IND]], shufflevector (<vscale x 4 x i64> insertelement (<vscale x 4 x i64> poison, i64 1, i64 0), <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer)

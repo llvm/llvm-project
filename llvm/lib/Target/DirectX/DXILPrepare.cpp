@@ -116,6 +116,31 @@ static void removeStringFunctionAttributes(Function &F,
   F.removeRetAttrs(DeadAttrs);
 }
 
+static void cleanModuleFlags(Module &M) {
+  NamedMDNode *MDFlags = M.getModuleFlagsMetadata();
+  if (!MDFlags)
+    return;
+
+  SmallVector<llvm::Module::ModuleFlagEntry> FlagEntries;
+  M.getModuleFlagsMetadata(FlagEntries);
+  bool Updated = false;
+  for (auto &Flag : FlagEntries) {
+    // llvm 3.7 only supports behavior up to AppendUnique.
+    if (Flag.Behavior <= Module::ModFlagBehavior::AppendUnique)
+      continue;
+    Flag.Behavior = Module::ModFlagBehavior::Warning;
+    Updated = true;
+  }
+
+  if (!Updated)
+    return;
+
+  MDFlags->eraseFromParent();
+
+  for (auto &Flag : FlagEntries)
+    M.addModuleFlag(Flag.Behavior, Flag.Key->getString(), Flag.Val);
+}
+
 class DXILPrepareModule : public ModulePass {
 
   static Value *maybeGenerateBitcast(IRBuilder<> &Builder,
@@ -213,6 +238,8 @@ public:
         }
       }
     }
+    // Remove flags not for DXIL.
+    cleanModuleFlags(M);
     return true;
   }
 

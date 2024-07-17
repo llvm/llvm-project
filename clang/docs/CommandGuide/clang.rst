@@ -393,6 +393,20 @@ number of cross compilers, or may only support a native target.
   allowed to generate instructions that are valid on i486 and later processors,
   but which may not exist on earlier ones.
 
+.. option:: --print-enabled-extensions
+
+  Prints the list of extensions that are enabled for the target specified by the
+  combination of `--target`, `-march`, and `-mcpu` values. Currently, this
+  option is only supported on AArch64 and RISC-V. On RISC-V, this option also
+  prints out the ISA string of enabled extensions.
+
+.. option:: --print-supported-extensions
+
+  Prints the list of all extensions that are supported for every CPU target
+  for an architecture (specified through ``--target=<architecture>`` or
+  :option:`-arch` ``<architecture>``). If no target is specified, the system
+  default target will be used. Currently, this option is only supported on
+  AArch64 and RISC-V.
 
 Code Generation Options
 ~~~~~~~~~~~~~~~~~~~~~~~

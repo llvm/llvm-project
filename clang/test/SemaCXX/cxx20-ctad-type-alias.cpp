@@ -266,7 +266,7 @@ template <typename U>
 using Bar = Foo<U>; // expected-note {{could not match 'Foo<type-parameter-0-0>' against 'int'}} \
                     // expected-note {{implicit deduction guide declared as 'template <typename U> requires __is_deducible(test18::Bar, Foo<type-parameter-0-0>) Bar(Foo<type-parameter-0-0>) -> Foo<type-parameter-0-0>'}} \
                     // expected-note {{candidate template ignored: constraints not satisfied}} \
-                    // expected-note {{implicit deduction guide declared as 'template <typename T> requires False<T> && __is_deducible(test18::Bar, Foo<int>) Bar(type-parameter-0-0) -> Foo<int>'}} \
+                    // expected-note {{implicit deduction guide declared as 'template <typename T> requires False<type-parameter-0-0> && __is_deducible(test18::Bar, Foo<int>) Bar(type-parameter-0-0) -> Foo<int>'}} \
                     // expected-note {{candidate function template not viable}} \
                     // expected-note {{implicit deduction guide declared as 'template <typename U> requires __is_deducible(test18::Bar, Foo<type-parameter-0-0>) Bar() -> Foo<type-parameter-0-0>'}}
 
@@ -414,4 +414,70 @@ struct A1 {
 template <typename U>
 using AFoo = A1<int>::A2<int>::Foo<U>;
 AFoo case3(1);
+
+// Case4: crashes on the constexpr evaluator due to the mixed-up index for the
+// template parameters `V`.
+template<class T, typename T2>
+struct Case4 {
+  template<class V> requires C<V>
+  Case4(V, T);
+};
+
+template<class T2>
+using ACase4 = Case4<T2, T2>;
+ACase4 case4{0, 1};
+
 } // namespace test24
+
+namespace GH92212 {
+template<typename T, typename...Us>
+struct A{
+  template<typename V> requires __is_same(V, int)
+  A(V);
+};
+
+template<typename...TS>
+using AA = A<int, TS...>;
+AA a{0};
+}
+
+namespace GH94927 {
+template <typename T>
+struct A {
+  A(T);
+};
+A(int) -> A<char>;
+
+template <typename U>
+using B1 = A<U>;
+B1 b1(100); // deduce to A<char>;
+static_assert(__is_same(decltype(b1), A<char>));
+
+template <typename U>
+requires (!__is_same(U, char)) // filter out the explicit deduction guide.
+using B2 = A<U>;
+template <typename V>
+using B3 = B2<V>;
+
+B2 b2(100); // deduced to A<int>;
+static_assert(__is_same(decltype(b2), A<int>));
+B3 b3(100); // decuded to A<int>;
+static_assert(__is_same(decltype(b3), A<int>));
+
+
+// the nested case
+template <typename T1>
+struct Out {
+  template <typename T2>
+  struct A {
+    A(T2);
+  };
+  A(int) -> A<T1>;
+  
+  template <typename T3>
+  using B = A<T3>;
+};
+
+Out<float>::B out(100); // deduced to Out<float>::A<float>;
+static_assert(__is_same(decltype(out), Out<float>::A<float>));
+}

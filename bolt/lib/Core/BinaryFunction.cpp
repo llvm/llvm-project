@@ -2538,6 +2538,7 @@ private:
     case MCCFIInstruction::OpWindowSave:
     case MCCFIInstruction::OpNegateRAState:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
+    case MCCFIInstruction::OpLabel:
       llvm_unreachable("unsupported CFI opcode");
       break;
     case MCCFIInstruction::OpRememberState:
@@ -2675,6 +2676,7 @@ struct CFISnapshotDiff : public CFISnapshot {
     case MCCFIInstruction::OpWindowSave:
     case MCCFIInstruction::OpNegateRAState:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
+    case MCCFIInstruction::OpLabel:
       llvm_unreachable("unsupported CFI opcode");
       return false;
     case MCCFIInstruction::OpRememberState:
@@ -2823,6 +2825,7 @@ BinaryFunction::unwindCFIState(int32_t FromState, int32_t ToState,
     case MCCFIInstruction::OpWindowSave:
     case MCCFIInstruction::OpNegateRAState:
     case MCCFIInstruction::OpLLVMDefAspaceCfa:
+    case MCCFIInstruction::OpLabel:
       llvm_unreachable("unsupported CFI opcode");
       break;
     case MCCFIInstruction::OpGnuArgsSize:

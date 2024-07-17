@@ -10,6 +10,17 @@ add_fp_unittest(
   DEPENDS
     libc.src.errno.errno
     libc.src.math.cosf
+)
+
+add_fp_unittest(
+  cospif_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    cospif_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.cospif
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
 )
@@ -3939,4 +3950,24 @@ add_fp_unittest(
     sincos_test.cpp
   DEPENDS
     libc.src.math.sincos
+)
+
+add_fp_unittest(
+  tan_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    tan_test.cpp
+  DEPENDS
+    libc.src.math.tan
+)
+
+add_fp_unittest(
+  cbrtf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    cbrtf_test.cpp
+  DEPENDS
+    libc.src.math.cbrtf
 )

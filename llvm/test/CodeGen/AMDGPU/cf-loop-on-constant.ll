@@ -5,12 +5,12 @@
 define amdgpu_kernel void @test_loop(ptr addrspace(3) %ptr, i32 %n) nounwind {
 ; GCN-LABEL: test_loop:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dword s2, s[0:1], 0xa
+; GCN-NEXT:    s_load_dword s0, s[2:3], 0xa
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_cmp_eq_u32 s2, -1
+; GCN-NEXT:    s_cmp_eq_u32 s0, -1
 ; GCN-NEXT:    s_cbranch_scc1 .LBB0_3
 ; GCN-NEXT:  ; %bb.1: ; %for.body.preheader
-; GCN-NEXT:    s_load_dword s0, s[0:1], 0x9
+; GCN-NEXT:    s_load_dword s0, s[2:3], 0x9
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_addk_i32 s0, 0x80
 ; GCN-NEXT:    s_and_b64 vcc, exec, -1
@@ -118,7 +118,7 @@ for.body:
 define amdgpu_kernel void @loop_const_true(ptr addrspace(3) %ptr, i32 %n) nounwind {
 ; GCN-LABEL: loop_const_true:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dword s0, s[0:1], 0x9
+; GCN-NEXT:    s_load_dword s0, s[2:3], 0x9
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_addk_i32 s0, 0x80
 ; GCN-NEXT:    s_and_b64 vcc, exec, -1
@@ -214,7 +214,7 @@ for.body:
 define amdgpu_kernel void @loop_const_false(ptr addrspace(3) %ptr, i32 %n) nounwind {
 ; GCN-LABEL: loop_const_false:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dword s0, s[0:1], 0x9
+; GCN-NEXT:    s_load_dword s0, s[2:3], 0x9
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    s_mov_b32 m0, -1
@@ -303,7 +303,7 @@ for.body:
 define amdgpu_kernel void @loop_const_undef(ptr addrspace(3) %ptr, i32 %n) nounwind {
 ; GCN-LABEL: loop_const_undef:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dword s0, s[0:1], 0x9
+; GCN-NEXT:    s_load_dword s0, s[2:3], 0x9
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    s_mov_b32 m0, -1
@@ -393,7 +393,7 @@ define amdgpu_kernel void @loop_arg_0(ptr addrspace(3) %ptr, i32 %n) nounwind {
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    s_mov_b32 m0, -1
 ; GCN-NEXT:    ds_read_u8 v0, v0
-; GCN-NEXT:    s_load_dword s4, s[0:1], 0x9
+; GCN-NEXT:    s_load_dword s4, s[2:3], 0x9
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_readfirstlane_b32 s0, v0
 ; GCN-NEXT:    s_bitcmp1_b32 s0, 0

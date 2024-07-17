@@ -1627,9 +1627,10 @@ QualType QualType::stripObjCKindOfType(const ASTContext &constCtx) const {
 }
 
 QualType QualType::getAtomicUnqualifiedType() const {
-  if (const auto AT = getTypePtr()->getAs<AtomicType>())
-    return AT->getValueType().getUnqualifiedType();
-  return getUnqualifiedType();
+  QualType T = *this;
+  if (const auto AT = T.getTypePtr()->getAs<AtomicType>())
+    T = AT->getValueType();
+  return T.getUnqualifiedType();
 }
 
 std::optional<ArrayRef<QualType>>
@@ -2815,66 +2816,6 @@ bool QualType::isTriviallyRelocatableType(const ASTContext &Context) const {
   }
 }
 
-static bool
-HasNonDeletedDefaultedEqualityComparison(const CXXRecordDecl *Decl) {
-  if (Decl->isUnion())
-    return false;
-  if (Decl->isLambda())
-    return Decl->isCapturelessLambda();
-
-  auto IsDefaultedOperatorEqualEqual = [&](const FunctionDecl *Function) {
-    return Function->getOverloadedOperator() ==
-               OverloadedOperatorKind::OO_EqualEqual &&
-           Function->isDefaulted() && Function->getNumParams() > 0 &&
-           (Function->getParamDecl(0)->getType()->isReferenceType() ||
-            Decl->isTriviallyCopyable());
-  };
-
-  if (llvm::none_of(Decl->methods(), IsDefaultedOperatorEqualEqual) &&
-      llvm::none_of(Decl->friends(), [&](const FriendDecl *Friend) {
-        if (NamedDecl *ND = Friend->getFriendDecl()) {
-          return ND->isFunctionOrFunctionTemplate() &&
-                 IsDefaultedOperatorEqualEqual(ND->getAsFunction());
-        }
-        return false;
-      }))
-    return false;
-
-  return llvm::all_of(Decl->bases(),
-                      [](const CXXBaseSpecifier &BS) {
-                        if (const auto *RD = BS.getType()->getAsCXXRecordDecl())
-                          return HasNonDeletedDefaultedEqualityComparison(RD);
-                        return true;
-                      }) &&
-         llvm::all_of(Decl->fields(), [](const FieldDecl *FD) {
-           auto Type = FD->getType();
-           if (Type->isArrayType())
-             Type = Type->getBaseElementTypeUnsafe()->getCanonicalTypeUnqualified();
-
-           if (Type->isReferenceType() || Type->isEnumeralType())
-             return false;
-           if (const auto *RD = Type->getAsCXXRecordDecl())
-             return HasNonDeletedDefaultedEqualityComparison(RD);
-           return true;
-         });
-}
-
-bool QualType::isTriviallyEqualityComparableType(
-    const ASTContext &Context) const {
-  QualType CanonicalType = getCanonicalType();
-  if (CanonicalType->isIncompleteType() || CanonicalType->isDependentType() ||
-      CanonicalType->isEnumeralType() || CanonicalType->isArrayType())
-    return false;
-
-  if (const auto *RD = CanonicalType->getAsCXXRecordDecl()) {
-    if (!HasNonDeletedDefaultedEqualityComparison(RD))
-      return false;
-  }
-
-  return Context.hasUniqueObjectRepresentations(
-      CanonicalType, /*CheckIfTriviallyCopyable=*/false);
-}
-
 bool QualType::isNonWeakInMRRWithObjCWeak(const ASTContext &Context) const {
   return !Context.getLangOpts().ObjCAutoRefCount &&
          Context.getLangOpts().ObjCWeak &&
@@ -3950,18 +3891,19 @@ QualType MacroQualifiedType::getModifiedType() const {
   return Inner;
 }
 
-TypeOfExprType::TypeOfExprType(Expr *E, TypeOfKind Kind, QualType Can)
+TypeOfExprType::TypeOfExprType(const ASTContext &Context, Expr *E,
+                               TypeOfKind Kind, QualType Can)
     : Type(TypeOfExpr,
            // We have to protect against 'Can' being invalid through its
            // default argument.
            Kind == TypeOfKind::Unqualified && !Can.isNull()
-               ? Can.getAtomicUnqualifiedType()
+               ? Context.getUnqualifiedArrayType(Can).getAtomicUnqualifiedType()
                : Can,
            toTypeDependence(E->getDependence()) |
                (E->getType()->getDependence() &
                 TypeDependence::VariablyModified)),
-      TOExpr(E) {
-  TypeOfBits.IsUnqual = Kind == TypeOfKind::Unqualified;
+      TOExpr(E), Context(Context) {
+  TypeOfBits.Kind = static_cast<unsigned>(Kind);
 }
 
 bool TypeOfExprType::isSugared() const {
@@ -3971,7 +3913,9 @@ bool TypeOfExprType::isSugared() const {
 QualType TypeOfExprType::desugar() const {
   if (isSugared()) {
     QualType QT = getUnderlyingExpr()->getType();
-    return TypeOfBits.IsUnqual ? QT.getAtomicUnqualifiedType() : QT;
+    return getKind() == TypeOfKind::Unqualified
+               ? Context.getUnqualifiedArrayType(QT).getAtomicUnqualifiedType()
+               : QT;
   }
   return QualType(this, 0);
 }
@@ -3981,6 +3925,24 @@ void DependentTypeOfExprType::Profile(llvm::FoldingSetNodeID &ID,
                                       bool IsUnqual) {
   E->Profile(ID, Context, true);
   ID.AddBoolean(IsUnqual);
+}
+
+TypeOfType::TypeOfType(const ASTContext &Context, QualType T, QualType Can,
+                       TypeOfKind Kind)
+    : Type(TypeOf,
+           Kind == TypeOfKind::Unqualified
+               ? Context.getUnqualifiedArrayType(Can).getAtomicUnqualifiedType()
+               : Can,
+           T->getDependence()),
+      TOType(T), Context(Context) {
+  TypeOfBits.Kind = static_cast<unsigned>(Kind);
+}
+
+QualType TypeOfType::desugar() const {
+  QualType QT = getUnmodifiedType();
+  return getKind() == TypeOfKind::Unqualified
+             ? Context.getUnqualifiedArrayType(QT).getAtomicUnqualifiedType()
+             : QT;
 }
 
 DecltypeType::DecltypeType(Expr *E, QualType underlyingType, QualType can)

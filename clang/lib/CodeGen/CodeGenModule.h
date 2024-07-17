@@ -485,6 +485,14 @@ private:
   typedef std::pair<OrderGlobalInitsOrStermFinalizers, llvm::Function *>
       GlobalInitData;
 
+  // When a tail call is performed on an "undefined" symbol, on PPC without pc
+  // relative feature, the tail call is not allowed. In "EmitCall" for such
+  // tail calls, the "undefined" symbols may be forward declarations, their
+  // definitions are provided in the module after the callsites. For such tail
+  // calls, diagnose message should not be emitted.
+  llvm::SmallSetVector<std::pair<const FunctionDecl *, SourceLocation>, 4>
+      MustTailCallUndefinedGlobals;
+
   struct GlobalInitPriorityCmp {
     bool operator()(const GlobalInitData &LHS,
                     const GlobalInitData &RHS) const {
@@ -555,6 +563,9 @@ private:
 
   bool isTriviallyRecursive(const FunctionDecl *F);
   bool shouldEmitFunction(GlobalDecl GD);
+  // Whether a global variable should be emitted by CUDA/HIP host/device
+  // related attributes.
+  bool shouldEmitCUDAGlobalVar(const VarDecl *VD) const;
   bool shouldOpportunisticallyEmitVTables();
   /// Map used to be sure we don't emit the same CompoundLiteral twice.
   llvm::DenseMap<const CompoundLiteralExpr *, llvm::GlobalVariable *>
@@ -964,6 +975,10 @@ public:
 
   CGPointerAuthInfo getFunctionPointerAuthInfo(QualType T);
 
+  CGPointerAuthInfo getPointerAuthInfoForPointeeType(QualType type);
+
+  CGPointerAuthInfo getPointerAuthInfoForType(QualType type);
+
   bool shouldSignPointer(const PointerAuthSchema &Schema);
   llvm::Constant *getConstantSignedPointer(llvm::Constant *Pointer,
                                            const PointerAuthSchema &Schema,
@@ -1338,7 +1353,7 @@ public:
 
   void EmitTentativeDefinition(const VarDecl *D);
 
-  void EmitExternalDeclaration(const VarDecl *D);
+  void EmitExternalDeclaration(const DeclaratorDecl *D);
 
   void EmitVTable(CXXRecordDecl *Class);
 
@@ -1647,6 +1662,11 @@ public:
     return getTriple().isSPIRVLogical();
   }
 
+  void addUndefinedGlobalForTailCall(
+      std::pair<const FunctionDecl *, SourceLocation> Global) {
+    MustTailCallUndefinedGlobals.insert(Global);
+  }
+
 private:
   bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;
 
@@ -1690,6 +1710,7 @@ private:
 
   void EmitGlobalVarDefinition(const VarDecl *D, bool IsTentative = false);
   void EmitExternalVarDeclaration(const VarDecl *D);
+  void EmitExternalFunctionDeclaration(const FunctionDecl *D);
   void EmitAliasDefinition(GlobalDecl GD);
   void emitIFuncDefinition(GlobalDecl GD);
   void emitCPUDispatchDefinition(GlobalDecl GD);

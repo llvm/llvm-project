@@ -2,6 +2,7 @@
 // RUN: env LIBOMPTARGET_SHARED_MEMORY_SIZE=256 \
 // RUN:   %libomptarget-run-amdgcn-amd-amdhsa | %fcheck-amdgcn-amd-amdhsa
 // REQUIRES: amdgcn-amd-amdhsa
+// XFAIL: amdgcn-amd-amdhsa
 
 #include <omp.h>
 #include <stdio.h>

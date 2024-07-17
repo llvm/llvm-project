@@ -318,15 +318,15 @@ Register SPIRVGlobalRegistry::buildConstantInt(uint64_t Val,
     if (EmitIR) {
       MIRBuilder.buildConstant(Res, *ConstInt);
     } else {
+      if (!SpvType)
+        SpvType = getOrCreateSPIRVIntegerType(BitWidth, MIRBuilder);
       MachineInstrBuilder MIB;
       if (Val) {
-        assert(SpvType);
         MIB = MIRBuilder.buildInstr(SPIRV::OpConstantI)
                   .addDef(Res)
                   .addUse(getSPIRVTypeID(SpvType));
         addNumImm(APInt(BitWidth, Val), MIB);
       } else {
-        assert(SpvType);
         MIB = MIRBuilder.buildInstr(SPIRV::OpConstantNull)
                   .addDef(Res)
                   .addUse(getSPIRVTypeID(SpvType));

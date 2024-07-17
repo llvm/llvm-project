@@ -41,6 +41,7 @@
 #include "UseNoexceptCheck.h"
 #include "UseNullptrCheck.h"
 #include "UseOverrideCheck.h"
+#include "UseRangesCheck.h"
 #include "UseStartsEndsWithCheck.h"
 #include "UseStdFormatCheck.h"
 #include "UseStdNumbersCheck.h"
@@ -75,6 +76,7 @@ public:
     CheckFactories.registerCheck<PassByValueCheck>("modernize-pass-by-value");
     CheckFactories.registerCheck<UseDesignatedInitializersCheck>(
         "modernize-use-designated-initializers");
+    CheckFactories.registerCheck<UseRangesCheck>("modernize-use-ranges");
     CheckFactories.registerCheck<UseStartsEndsWithCheck>(
         "modernize-use-starts-ends-with");
     CheckFactories.registerCheck<UseStdFormatCheck>("modernize-use-std-format");

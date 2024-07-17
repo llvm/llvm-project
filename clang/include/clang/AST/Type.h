@@ -1142,9 +1142,6 @@ public:
   /// Return true if this is a trivially relocatable type.
   bool isTriviallyRelocatableType(const ASTContext &Context) const;
 
-  /// Return true if this is a trivially equality comparable type.
-  bool isTriviallyEqualityComparableType(const ASTContext &Context) const;
-
   /// Returns true if it is a class and it might be dynamic.
   bool mayBeDynamicClass() const;
 
@@ -1621,6 +1618,10 @@ public:
   QualType stripObjCKindOfType(const ASTContext &ctx) const;
 
   /// Remove all qualifiers including _Atomic.
+  ///
+  /// Like getUnqualifiedType(), the type may still be qualified if it is a
+  /// sugared array type.  To strip qualifiers even from within a sugared array
+  /// type, use in conjunction with ASTContext::getUnqualifiedArrayType.
   QualType getAtomicUnqualifiedType() const;
 
 private:
@@ -2108,8 +2109,8 @@ protected:
 
     LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned IsUnqual : 1; // If true: typeof_unqual, else: typeof
+    LLVM_PREFERRED_TYPE(TypeOfKind)
+    unsigned Kind : 1;
   };
 
   class UsingBitfields {
@@ -2509,6 +2510,7 @@ public:
   bool isFunctionNoProtoType() const { return getAs<FunctionNoProtoType>(); }
   bool isFunctionProtoType() const { return getAs<FunctionProtoType>(); }
   bool isPointerType() const;
+  bool isSignableType() const;
   bool isAnyPointerType() const;   // Any C pointer or ObjC object pointer
   bool isCountAttributedType() const;
   bool isBlockPointerType() const;
@@ -5663,19 +5665,20 @@ public:
 /// extension) or a `typeof_unqual` expression (a C23 feature).
 class TypeOfExprType : public Type {
   Expr *TOExpr;
+  const ASTContext &Context;
 
 protected:
   friend class ASTContext; // ASTContext creates these.
 
-  TypeOfExprType(Expr *E, TypeOfKind Kind, QualType Can = QualType());
+  TypeOfExprType(const ASTContext &Context, Expr *E, TypeOfKind Kind,
+                 QualType Can = QualType());
 
 public:
   Expr *getUnderlyingExpr() const { return TOExpr; }
 
   /// Returns the kind of 'typeof' type this is.
   TypeOfKind getKind() const {
-    return TypeOfBits.IsUnqual ? TypeOfKind::Unqualified
-                               : TypeOfKind::Qualified;
+    return static_cast<TypeOfKind>(TypeOfBits.Kind);
   }
 
   /// Remove a single level of sugar.
@@ -5696,7 +5699,8 @@ public:
 class DependentTypeOfExprType : public TypeOfExprType,
                                 public llvm::FoldingSetNode {
 public:
-  DependentTypeOfExprType(Expr *E, TypeOfKind Kind) : TypeOfExprType(E, Kind) {}
+  DependentTypeOfExprType(const ASTContext &Context, Expr *E, TypeOfKind Kind)
+      : TypeOfExprType(Context, E, Kind) {}
 
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
     Profile(ID, Context, getUnderlyingExpr(),
@@ -5713,32 +5717,23 @@ class TypeOfType : public Type {
   friend class ASTContext; // ASTContext creates these.
 
   QualType TOType;
+  const ASTContext &Context;
 
-  TypeOfType(QualType T, QualType Can, TypeOfKind Kind)
-      : Type(TypeOf,
-             Kind == TypeOfKind::Unqualified ? Can.getAtomicUnqualifiedType()
-                                             : Can,
-             T->getDependence()),
-        TOType(T) {
-    TypeOfBits.IsUnqual = Kind == TypeOfKind::Unqualified;
-  }
+  TypeOfType(const ASTContext &Context, QualType T, QualType Can,
+             TypeOfKind Kind);
 
 public:
   QualType getUnmodifiedType() const { return TOType; }
 
   /// Remove a single level of sugar.
-  QualType desugar() const {
-    QualType QT = getUnmodifiedType();
-    return TypeOfBits.IsUnqual ? QT.getAtomicUnqualifiedType() : QT;
-  }
+  QualType desugar() const;
 
   /// Returns whether this type directly provides sugar.
   bool isSugared() const { return true; }
 
   /// Returns the kind of 'typeof' type this is.
   TypeOfKind getKind() const {
-    return TypeOfBits.IsUnqual ? TypeOfKind::Unqualified
-                               : TypeOfKind::Qualified;
+    return static_cast<TypeOfKind>(TypeOfBits.Kind);
   }
 
   static bool classof(const Type *T) { return T->getTypeClass() == TypeOf; }
@@ -8003,6 +7998,8 @@ inline bool Type::isPointerType() const {
 inline bool Type::isAnyPointerType() const {
   return isPointerType() || isObjCObjectPointerType();
 }
+
+inline bool Type::isSignableType() const { return isPointerType(); }
 
 inline bool Type::isBlockPointerType() const {
   return isa<BlockPointerType>(CanonicalType);

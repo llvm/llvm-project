@@ -1139,8 +1139,8 @@ uint64_t WinCOFFWriter::writeObject(MCAssembler &Asm) {
 #ifndef NDEBUG
   sections::iterator I = Sections.begin();
   sections::iterator IE = Sections.end();
-  MCAssembler::iterator J = Asm.begin();
-  MCAssembler::iterator JE = Asm.end();
+  auto J = Asm.begin();
+  auto JE = Asm.end();
   for (; I != IE && J != JE; ++I, ++J) {
     while (J != JE && ((Mode == NonDwoOnly && isDwoSection(*J)) ||
                        (Mode == DwoOnly && !isDwoSection(*J))))

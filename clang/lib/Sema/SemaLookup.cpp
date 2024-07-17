@@ -2325,7 +2325,7 @@ static bool LookupQualifiedNameInUsingDirectives(Sema &S, LookupResult &R,
   // We have already looked into the initial namespace; seed the queue
   // with its using-children.
   for (auto *I : StartDC->using_directives()) {
-    NamespaceDecl *ND = I->getNominatedNamespace()->getOriginalNamespace();
+    NamespaceDecl *ND = I->getNominatedNamespace()->getFirstDecl();
     if (S.isVisible(I) && Visited.insert(ND).second)
       Queue.push_back(ND);
   }
@@ -4983,13 +4983,16 @@ static void AddKeywordsToConsumer(Sema &SemaRef,
     static const char *const CTypeSpecs[] = {
       "char", "const", "double", "enum", "float", "int", "long", "short",
       "signed", "struct", "union", "unsigned", "void", "volatile",
-      "_Complex", "_Imaginary",
+      "_Complex",
       // storage-specifiers as well
       "extern", "inline", "static", "typedef"
     };
 
     for (const auto *CTS : CTypeSpecs)
       Consumer.addKeywordResult(CTS);
+
+    if (SemaRef.getLangOpts().C99 && !SemaRef.getLangOpts().C2y)
+      Consumer.addKeywordResult("_Imaginary");
 
     if (SemaRef.getLangOpts().C99)
       Consumer.addKeywordResult("restrict");
