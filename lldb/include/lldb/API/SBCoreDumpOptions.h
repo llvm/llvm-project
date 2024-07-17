@@ -22,7 +22,8 @@ public:
 
   const SBCoreDumpOptions &operator=(const lldb::SBCoreDumpOptions &rhs);
 
-  /// Set the plugin name.
+  /// Set the plugin name. Supplying null or empty string will reset
+  /// the option.
   ///
   /// \param plugin Name of the object file plugin.
   SBError SetPluginName(const char *plugin);

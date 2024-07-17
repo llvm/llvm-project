@@ -80,7 +80,7 @@ lldb_private::CoreDumpOptions &SBCoreDumpOptions::ref() const {
   return *m_opaque_up.get();
 }
 
-void SBCoreDumpOptions::Clear() { 
-    LLDB_INSTRUMENT_VA(this);
-    m_opaque_up->Clear(); 
+void SBCoreDumpOptions::Clear() {
+  LLDB_INSTRUMENT_VA(this);
+  m_opaque_up->Clear();
 }

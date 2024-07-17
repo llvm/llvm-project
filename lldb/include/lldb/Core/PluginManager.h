@@ -178,7 +178,7 @@ public:
 
   static bool UnregisterPlugin(ObjectFileCreateInstance create_callback);
 
-  static bool IsRegisteredPluginName(const char *name);
+  static bool IsRegisteredObjectFilePluginName(llvm::StringRef name);
 
   static ObjectFileCreateInstance
   GetObjectFileCreateCallbackAtIndex(uint32_t idx);

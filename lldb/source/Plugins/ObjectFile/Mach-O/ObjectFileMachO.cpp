@@ -6524,11 +6524,10 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
   auto core_style = options.GetStyle();
   if (core_style == SaveCoreStyle::eSaveCoreUnspecified)
     core_style = SaveCoreStyle::eSaveCoreDirtyOnly;
-  // The FileSpec is already checked in PluginManager::SaveCore.
+  // The FileSpec and Process are already checked in PluginManager::SaveCore.
   assert(options.GetOutputFile().has_value());
   const FileSpec outfile = options.GetOutputFile().value();
-  if (!process_sp)
-    return false;
+  assert(process_sp);
 
   Target &target = process_sp->GetTarget();
   const ArchSpec target_arch = target.GetArchitecture();

@@ -640,8 +640,8 @@ static ObjectFileInstances &GetObjectFileInstances() {
   return g_instances;
 }
 
-bool PluginManager::IsRegisteredPluginName(const char *name) {
-  if (!name || !name[0])
+bool PluginManager::IsRegisteredObjectFilePluginName(llvm::StringRef name) {
+  if (name.empty())
     return false;
 
   const auto &instances = GetObjectFileInstances().GetInstances();

@@ -16,12 +16,11 @@ Status CoreDumpOptions::SetPluginName(const char *name) {
   Status error;
   if (!name || !name[0]) {
     m_plugin_name = std::nullopt;
-    error.SetErrorString("no plugin name specified");
   }
 
-  if (!PluginManager::IsRegisteredPluginName(name)) {
+  if (!PluginManager::IsRegisteredObjectFilePluginName(name)) {
     error.SetErrorStringWithFormat(
-        "plugin name '%s' is not a registered plugin", name);
+        "plugin name '%s' is not a valid ObjectFile plugin name", name);
     return error;
   }
 
@@ -38,9 +37,7 @@ std::optional<std::string> CoreDumpOptions::GetPluginName() const {
 }
 
 lldb::SaveCoreStyle CoreDumpOptions::GetStyle() const {
-  if (!m_style.has_value())
-    return lldb::eSaveCoreUnspecified;
-  return m_style.value();
+  return m_style.value_or(lldb::eSaveCoreUnspecified);
 }
 
 const std::optional<lldb_private::FileSpec>

@@ -10,14 +10,17 @@ class SBCoreDumpOptionsAPICase(TestBase):
         """Test assignment ensuring valid plugin names only."""
         options = lldb.SBCoreDumpOptions()
         error = options.SetPluginName(None)
-        self.assertTrue(error.Fail())
+        self.assertTrue(error.Success())
         self.assertEqual(options.GetPluginName(), None)
         error = options.SetPluginName("Not a real plugin")
-        self.assertTrue(error.Fail())
+        self.assertTrue(error.Success())
         self.assertEqual(options.GetPluginName(), None)
         error = options.SetPluginName("minidump")
         self.assertTrue(error.Success())
         self.assertEqual(options.GetPluginName(), "minidump")
+        error = options.SetPluginName("")
+        self.assertTrue(error.Success())
+        self.assertEqual(options.GetPluginName(), None)
 
     def test_default_corestyle_behavior(self):
         """Test that the default core style is unspecified."""

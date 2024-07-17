@@ -1256,7 +1256,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions(){};
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
