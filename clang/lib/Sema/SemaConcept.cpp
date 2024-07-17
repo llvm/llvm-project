@@ -625,6 +625,12 @@ bool Sema::CheckConstraintSatisfaction(
         *this, nullptr, ConstraintExprs, ConvertedConstraints,
         TemplateArgsLists, TemplateIDRange, OutSatisfaction);
   }
+  // Invalid templates could make their way here. Substituting them could result
+  // in dependent expressions.
+  if (Template->isInvalidDecl()) {
+    OutSatisfaction.IsSatisfied = false;
+    return true;
+  }
 
   // A list of the template argument list flattened in a predictible manner for
   // the purposes of caching. The ConstraintSatisfaction type is in AST so it
