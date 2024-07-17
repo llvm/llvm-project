@@ -2772,6 +2772,117 @@ bool Compiler<Emitter>::VisitCXXInheritedCtorInitExpr(
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
+  assert(classifyPrim(E->getType()) == PT_Ptr);
+  const Expr *Init = E->getInitializer();
+  QualType ElementType = E->getAllocatedType();
+  std::optional<PrimType> ElemT = classify(ElementType);
+  unsigned PlacementArgs = E->getNumPlacementArgs();
+  bool IsNoThrow = false;
+
+  // FIXME: Better diagnostic. diag::note_constexpr_new_placement
+  if (PlacementArgs != 0) {
+    // The only new-placement list we support is of the form (std::nothrow).
+    //
+    // FIXME: There is no restriction on this, but it's not clear that any
+    // other form makes any sense. We get here for cases such as:
+    //
+    //   new (std::align_val_t{N}) X(int)
+    //
+    // (which should presumably be valid only if N is a multiple of
+    // alignof(int), and in any case can't be deallocated unless N is
+    // alignof(X) and X has new-extended alignment).
+    if (PlacementArgs != 1 || !E->getPlacementArg(0)->getType()->isNothrowT())
+      return this->emitInvalid(E);
+
+    if (!this->discard(E->getPlacementArg(0)))
+      return false;
+    IsNoThrow = true;
+  }
+
+  const Descriptor *Desc;
+  if (ElemT) {
+    if (E->isArray())
+      Desc = nullptr; // We're not going to use it in this case.
+    else
+      Desc = P.createDescriptor(E, *ElemT, Descriptor::InlineDescMD,
+                                /*IsConst=*/false, /*IsTemporary=*/false,
+                                /*IsMutable=*/false);
+  } else {
+    Desc = P.createDescriptor(
+        E, ElementType.getTypePtr(),
+        E->isArray() ? std::nullopt : Descriptor::InlineDescMD,
+        /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false, Init);
+  }
+
+  if (E->isArray()) {
+    std::optional<const Expr *> ArraySizeExpr = E->getArraySize();
+    if (!ArraySizeExpr)
+      return false;
+
+    const Expr *Stripped = *ArraySizeExpr;
+    for (; auto *ICE = dyn_cast<ImplicitCastExpr>(Stripped);
+         Stripped = ICE->getSubExpr())
+      if (ICE->getCastKind() != CK_NoOp &&
+          ICE->getCastKind() != CK_IntegralCast)
+        break;
+
+    PrimType SizeT = classifyPrim(Stripped->getType());
+
+    if (!this->visit(Stripped))
+      return false;
+
+    if (ElemT) {
+      // N primitive elements.
+      if (!this->emitAllocN(SizeT, *ElemT, E, IsNoThrow, E))
+        return false;
+    } else {
+      // N Composite elements.
+      if (!this->emitAllocCN(SizeT, Desc, IsNoThrow, E))
+        return false;
+    }
+
+    if (Init && !this->visitInitializer(Init))
+      return false;
+
+  } else {
+    // Allocate just one element.
+    if (!this->emitAlloc(Desc, E))
+      return false;
+
+    if (Init) {
+      if (ElemT) {
+        if (!this->visit(Init))
+          return false;
+
+        if (!this->emitInit(*ElemT, E))
+          return false;
+      } else {
+        // Composite.
+        if (!this->visitInitializer(Init))
+          return false;
+      }
+    }
+  }
+
+  if (DiscardResult)
+    return this->emitPopPtr(E);
+
+  return true;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
+  const Expr *Arg = E->getArgument();
+
+  // Arg must be an lvalue.
+  if (!this->visit(Arg))
+    return false;
+
+  return this->emitFree(E->isArrayForm(), E);
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::VisitExpressionTraitExpr(const ExpressionTraitExpr *E) {
   assert(Ctx.getLangOpts().CPlusPlus);
   return this->emitConstBool(E->getValue(), E);
