@@ -485,7 +485,6 @@ bool Sema::CheckConstraintSatisfaction(
   }
   // Invalid templates could make their way here. Substituting them could result
   // in dependent expressions.
-  // FIXME: Say something in the diagnostic note?
   if (Template->isInvalidDecl()) {
     OutSatisfaction.IsSatisfied = false;
     return true;
