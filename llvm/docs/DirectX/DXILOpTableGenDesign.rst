@@ -93,63 +93,78 @@ properties are specified as fields of the ``DXILOp`` class as described below.
         class DXILOpClass;
 
    Concrete operation records, such as ``unary`` are defined by inheriting from ``DXILOpClass``.
-6. A non-``void`` return type of the operation is represented as a list with one ``LLVMType``. 
-   A ``void`` return is represented as a null-list, ``[]``.
-7. Non-zero count of operation arguments are represented as a list of ``LLVMType`` with each type
+6. Return type of the operation is represented as ``LLVMType``.
+7. Operation arguments are represented as a list of ``LLVMType`` with each type
    corresponding to the argument position. An overload type, if supported by the operation, is
-   denoted as the positional type ``dxil_overload_ty`` in the argument or in the result, where
-   ``dxil_overload_ty`` is defined to be synonymous to ``llvm_any_ty``.
+   denoted as the positional type ``overloadTy`` in the argument or in the result, where
+   ``overloadTy`` is defined to be synonymous to ``llvm_any_ty``.
 
    .. code-block::
 
-      defvar dxil_overload_ty = llvm_any_ty
+      defvar overloadTy = llvm_any_ty
 
-   Use of TableGen class ``LLVMMatchType`` is supported to match type of another argument.
+   Empty list, ``[]`` represents an operation with no arguments.
 
-8. Valid overload types and shader stages predicated on Shader Model version are specified
-   as a list of ``Constraints`` records. Representation of ``Constraints`` class is described
-   a later section.
-9. Various attributes of the DXIL Operation are represented as a ``list`` of ``Attribute`` class 
-   records. Representation of ``Attribute`` class is described in a later section.
+8. Valid operation overload types predicated on DXIL version are specified as
+   a list of ``VersionedOverloads`` records. Representation of ``VersionedOverloads``
+   class is described in a later section.
+9.  Valid shader stages predicated on DXIL version are specified as a list of
+    ``VersionedStages`` records. Representation of ``VersionedStages`` class is
+    described in a later section.
+10. Various attributes of the DXIL Operation are represented as a ``list`` of
+    ``VersionedAttributes`` class records. Representation of ``VersionedAttributes``
+    class is described in a later section.
 
-10. DXIL Version is represented as a record of class ``DXILVersion``, whose details are provided
-    in a later section.
+Types specific to DXIL
+----------------------
 
-A DXIL Operation is represented by the following TableGen class by encapsulating the various
+Type notation used in this document viz., ``<size>Ty`` corresponds to TableGen records for
+LLVM types ``llvm_<size>_ty``. Apart from ``overloadTy`` described above, ``resRetF32Ty`` is
+used to denote resource return type and ``handleTy`` is used to denote handle type.
+
+Specification of DXIL Operation
+================================
+
+A DXIL Operation is represented by the following TableGen class that encapsulates the various
 TableGen representations of its properties described above.
 
 .. code-block::
 
    // Abstraction DXIL Operation
-   class DXILOp {
+   class DXILOp<int opcode, DXILOpClass opclass> {
      // A short description of the operation
      string Doc = "";
 
      // Opcode of DXIL Operation
-     int OpCode = 0;
+     int OpCode = opcode;
 
      // Class of DXIL Operation.
-     DXILOpClass OpClass = UnknownOpClass;
+     DXILOpClass OpClass = opclass;
 
      // LLVM Intrinsic DXIL Operation maps to
-     Intrinsic LLVMIntrinsic = ? ;
+     Intrinsic LLVMIntrinsic = ?;
+
+     // Result type of the op.
+     list<LLVMType> result = [];
 
      // List of argument types of the op. Default to 0 arguments.
      list<LLVMType> arguments = [];
 
-     // List of result types of the op. Default to 0 results.
-     list<LLVMType> result = [];
+     // List of valid overload types predicated by DXIL version
+     list<VersionedOverloads> overloads;
 
-     list<Constraints> constraints = [];
+     // List of valid shader stages predicated by DXIL version
+    list<VersionedStages> stages;
 
-     // Operation attributes
-     list<DXILAttribute> attributes = [];
-
-     Version DXILVersion = ? ;
+     // List of valid attributes predicated by DXIL version
+     list<VersionedAttributes> versioned_attributes = [];
    }
 
 Version Specification
 =====================
+
+DXIL version is used to specify various version-dependent operation properties in
+place of Shader Model version.
 
 A ``Version`` class encapsulating ``Major`` and ``Minor`` version number is defined
 as follows:
@@ -163,21 +178,20 @@ as follows:
    }
 
 
-Concrete representations of valid Shader Model and DXIL versions are defined as follows:
+Concrete representations of valid DXIL versions are defined as follows:
 
 .. code-block::
 
-   // Definition of Shader Model 6.0 - 6.8 and DXIL Version 1.0 - 1.8
+   // Definition of DXIL Version 1.0 - 1.8
    foreach i = 0...8 in {
-     def SM6_#i : Version<6, i>;
-     def DX1_#i : Version<1, i>;
+     def DXIL1_#i : Version<1, i>;
    }
 
 Shader Stage Specification
 ==========================
 
-Various shader stages such as ``compute``, ``pixel``, ``vertex``, etc., are represented as
-follows
+Various shader stages such as ``compute``, ``pixel``, ``vertex``, etc., are represented
+as follows
 
 .. code-block::
 
@@ -189,195 +203,230 @@ follows
    def vertex : ShaderStage;
    ...
 
-Constraint Specification
-========================
+Shader Attribute Specification
+==============================
 
-DXIL Operation properties such as valid overload types and valid shader stages are
-predicated on Shader Model version. These are represented as list of constraints.
-
-Following is the class representing a predicate and a constraint class representing
-a ``list<Pred> l`` of properties applicable to the DXIL Operation predicated on
-``Pred p``.
+Various operation memory access and boolean attributes such as ``ReadNone``,
+``IsWave`` etc., are represented as follows
 
 .. code-block::
 
-   // Primitive predicate
-   class Pred;
-
-   // Generic constraint
-   class Constraints<Pred p, list<Pred> l = []> : Pred {
-     Pred pred = p;
-     list<Pred> constraints = l;
-   }
-
-
-A shader model version predicate class is defined as
-
-.. code-block::
-
-   class SMVersion<Version ver> : Pred {
-     Version SMVersion = ver;
-   }
-
-Overload type predicates are represented as records of the class
-
-.. code-block::
-
-   class Overloads<list<LLVMType> tys> : Pred {
-    list<LLVMType> overload_types = tys;
-  }
-
-Shader Stage predicates are represented as records of class
-
-.. code-block::
-
-   class Stages<list<ShaderStage> st> : Pred {
-    list<ShaderStage> stage_kinds = st;
-   }
-
-Overload and shader stages constrained by Shader Model version are expressed by
-composing the above predicate records.
-
-If no constraints are specified for a DXIL operation, it is assumed to 
-
-a) be supported in Shader Model 6.0 and later.
-b) have no overload types
-c) be supported in all shader stage kinds
-
-If a constraint is specified, one or both of the Overload type and shader kind 
-constraints can be omitted when appropriate.
-
-Examples of Constraint Specification
-------------------------------------
-
-1. Consider a DXIL Operation with the following properties,
-
-   1. In Shader Model 6.2 and later
-
-      a) supports overload types ``half``, ``float``, ``i16`` and ``i32`` and
-      b) is valid for stages ``pixel`` and ``compute``
-
-   2. In Shader Model 6.3 and later
-
-      a) supports additional valid overload types ``double`` and ``i64`` and
-      b) is valid for all stages
-
-   The constraints of such an operation are represented as
-
-   .. code-block::
-
-      constraints = [Constraints<SMVersion<SM6_2>,
-                    [Overloads<[llvm_half_ty, llvm_float_ty, llvm_i16_ty, llvm_i32_ty]>,
-                     Stages<[pixel, compute]>]>,
-       Constraints<SMVersion<SM6_3>,
-                     [Overloads<[llvm_half_ty, llvm_float_ty, llvm_double_ty,
-                                    llvm_i16_ty, llvm_i32_ty, llvm_i64_ty]>]];
-
-   Note that ``Stage<>`` predicate is not specified for the constraint predicated for 
-   ``SM6_3`` to signify that the operation is valid in all shader stages in Shader Model 
-   version 6.3.
-
-2. Consider a DXIL operation that is valid in Shader Model version 6.2 and later,
-
-   1. with no overload types, i.e., all argument types and result type are fixed.
-   2. is valid for all stages.
-
-   This is represented as
-
-   .. code-block::
-
-        [Constraints<SMVersion<SM6_2>, []];
-
-Specifying properties predicated on Shader Model version using the field
-``constraints`` not only allows for all of them to be specified together but
-also allows for a single place to specify minimum shader model version that supports
-the operation. Thus, a separate field is not needed to specify minimum shader model
-version.
-
-Attribute Specification
-=======================
-
-DXIL Operation attributes that are not predicated on any constraint, are represented as
-a ``list`` of Attribute records of ``DXILAttributes`` class.
-
-.. code-block::
-
-  class DXILAttributes;
-
-Following example records represent memory attributes
-
-.. code-block::
+  class DXILAttribute;
 
   def ReadOnly : DXILOpAttributes;
   def ReadNone : DXILOpAttributes;
+  def IsWave : DXILOpAttributes;
+  ...
+
+Constrained Specification
+=========================
+
+DXIL Operation properties such as valid overload types, shader stages and
+attributes are predicated on DXIL version. These are represented as list of
+versioned constraints.
+
+Overload Type Specification
+---------------------------
+
+``overloads`` field of ``class DXILOp`` is used to represent valid operation
+overloads predicated on DXIL version as list of records of the following class
+
+.. code-block::
+
+   class VersionedOverloads<Version minver, list<LLVMType> ols> {
+     Version dxil_version = minver;
+     list<LLVMType> overload_types = ols;
+   }
+
+Following is an example specification of valid overload types for ``DXIL1_0`` and
+``DXIL1_2``.
+
+.. code-block::
+
+   overloads = [
+                 VersionedOverloads<DXIL1_0, [halfTy, floatTy]>,
+                 VersionedOverloads<DXIL1_2, [halfTy, floatTy, doubleTy]>
+               ];
+
+An empty list signifies that the operation supports no overload types.
+
+
+Stages Specification
+--------------------
+
+``stages`` field of ``class DXILOp`` is used to represent valid operation
+stages predicated on DXIL version as list of records of the following class
+
+.. code-block::
+
+   class VersionedStages<Version minver, list<ShaderStage> sts> {
+     Version dxil_version = minver;
+     list<ShaderStage> shader_stages = sts;
+   }
+
+Following is an example specification of valid stages for ``DXIL1_0``,
+``DXIL1_2``, ``DXIL1_4`` and ``DXIL1_6``.
+
+.. code-block::
+
+   stages = [
+             VersionedStages<DXIL1_0, [compute, pixel]>,
+             VersionedStages<DXIL1_2, [compute, pixel, mesh]>,
+             VersionedStages<DXIL1_4, [all_stages]>,
+             VersionedStages<DXIL1_6, [removed]>
+            ];
+
+The following two pseudo stage records in addition to standard shader stages
+are defined.
+
+1. ``all_stages`` signifies that the operation is valid for all stages in the
+   specified DXIL version and later.
+2. ``removed`` signifies removal of support for the operation in the specified
+   DXIL version and later.
+
+A non-empty list of supported stages is required to be specified. If an operation
+is supported in all DXIL versions and all stages it is required to be specified as
+
+.. code-block::
+
+   stages = [VersionedStages<DXIL1_0, [all_stages]>];
+
+
+
+Attribute Specification
+-----------------------
+
+``attributes`` field of ``class DXILOp`` is used to represent valid operation
+attributes predicated on DXIL version as list of records of the following class
+
+.. code-block::
+
+  class VersionedAttributes<MinVersion minver, list<DXILAttribute> attrs> {
+    MinVersion dxil_version = ver;
+    list<DXILAttribute> attributes = attrs;
+  }
+
+Following is an example specification of valid attributes for ``DXIL1_0``.
+
+.. code-block::
+
+   attributes = [VersionedAttributes<DXIL1_0, [ReadNone]];
+
+A null list of ``attributes`` signifies no operation attributes.
+
+Each of the constraints states that the specified overload type, stage or
+attribute records are valid for the predicated DXIL version. Only
+the constraints corresponding to latest minimal DXIL version is applicable.
+Note as in the above example, any overload types, stages or attributes,
+that remain valid in a later DXIL version need to be specified in full.
+This provides the flexibility to specify constraints independent
+of others in the list.
+
 
 DXIL Operation Specification Examples
 =====================================
 
-A convenience class ``DXILOpAndCLass`` is defined to specify the minimal properties
-of a ``DXILOp`` as follows.
+Following examples illustrate the specification of some of the DXIL Ops.
+
+``Sin`` operation - an operation valid in all DXIL versions and all stages
+and has valid overload types predicated on DXIL version.
 
 .. code-block::
 
-  class DXILOpAndClass<int opcode, DXILOpClass opcalss> : DXILOp {
-    int OpCode = opcode;
-    DXILOpClass OpClass = opcalss;
-  }
-
-Following examples illustrate the specification of some of the DXIL Ops
-
-``Sin`` operation valid in SM 6.0 for all shader stages but with overload types constraints.
-
-.. code-block::
-
-  def Sin : DXILOpAndClass<13, unary> {
+  def Sin : DXILOp<13, unary> {
     let Doc = "Returns sine(theta) for theta in radians.";
     let LLVMIntrinsic = int_sin;
-    let arguments = [LLVMMatchType<0>];
-    let result = [dxil_overload_ty];
-    let constraints = [
-      Constraints<SMVersion<SM6_0>, [Overloads<[llvm_half_ty, llvm_float_ty]>]>
-    ];
-    let attributes = [ReadNone];
-    let DXILVersion = DX1_0;
+    let result = overloadTy;
+    let arguments = [overloadTy];
+    let overloads = [VersionedOverloads<DXIL1_0, [halfTy, floatTy]>];
+    let stages = [VersionedStages<DXIL1_0, [all_stages]>];
+    let attributes = [VersionedAttributes<DXIL1_0, [ReadNone]>];
   }
 
-
-``FlattenedThreadIdInGroup`` operation valid in SM 6.0 with shader stage validity
-constraints; with  fixed argument type, hence no valid overload type and ``void`` 
-return type, hence ``result`` field not specified.
+``FlattenedThreadIdInGroup`` - an operation with no arguments, no
+overload types, and valid stages and attributes predicated by DXIL Version.
 
 .. code-block::
 
-   def FlattenedThreadIdInGroup : DXILOpAndClass<96, flattenedThreadIdInGroup> {
-     let Doc = "Provides a flattened index for a given thread within a given "
-               "group (SV_GroupIndex)";
-     let LLVMIntrinsic = int_dx_flattened_thread_id_in_group;
-     let arguments = [llvm_i32_ty];
-     let constraints =
-         [Constraints<SMVersion<SM6_0>,
-                      [Stages<[compute, mesh, amplification, node]>]>];
-     let attributes = [ReadNone];
-     let DXILVersion = DX1_0;
+   def FlattenedThreadIdInGroup :  DXILOp<96, flattenedThreadIdInGroup> {
+    let Doc = "Provides a flattened index for a given thread within a given "
+              "group (SV_GroupIndex)";
+    let LLVMIntrinsic = int_dx_flattened_thread_id_in_group;
+    let result = i32Ty;
+    let stages = [VersionedStages<DXIL1_0, [compute, mesh, amplification, node]>];
+    let attributes = [VersionedAttributes<DXIL1_0, [ReadNone]>];
    }
 
-``RawBufferStore`` operation with different valid overload types for SM 6.2+ and SM 6.3+.
+``RawBufferStore`` - an operation with ``void`` return type, valid overload types
+predicated by DXIL Version and valid in all DXIL versions and stages.
 
 .. code-block::
 
-   def RawBufferStore : DXILOpAndClass<140, rawBufferStore> {
+   def RawBufferStore : DXILOp<140, rawBufferStore> {
      let Doc = "Writes to a RWByteAddressBuffer or RWStructuredBuffer.";
-     let LLVMIntrinsic = int_rwbuffer_store;
-     let arguments = [llvm_i32_ty, dxil_resource_ty, llvm_i32_ty, llvm_i32_ty, dxil_overload_ty,
-                      dxil_overload_ty, dxil_overload_ty, dxil_overload_ty, llvm_i8_ty, llvm_i32_ty];
-     let constraints = [Constraints<SMVersion<SM6_2>,
-                          [Overloads<[llvm_half_ty, llvm_float_ty, llvm_i16_ty, llvm_i32_ty]>]>,
-                        Constraints<SMVersion<SM6_3>,
-                          [Overloads<[llvm_half_ty, llvm_float_ty, llvm_double_ty,
-                                 llvm_i16_ty, llvm_i32_ty, llvm_i64_ty]>]>];
-     let DXILVersion = DX1_2;
+     let result = voidTy;
+     let arguments = [dxil_resource_ty, i32Ty, i32Ty, overloadTy,
+                      overloadTy, overloadTy, overloadTy, i8Ty, i32Ty];
+     let overloads = [
+                      VersionedOverloads<DXIL1_2, [halfTy, floatTy, i16Ty, i32Ty]>,
+                      VersionedOverloads<DXIL1_3>,[halfTy, floatTy, doubleTy,
+                                                   i16Ty, i32Ty, i64Ty]>
+                     ];
+      let stages = [VersionedStages<DXIL1_2, all_stages>];
+      let attributes = [VersionedAttributes<DXIL1_0, [ReadOnly]>];
    }
 
+``DerivCoarseX`` - an operation with no overload types and stages predicated
+by DXIL Version.
+
+.. code-block::
+
+   def DerivCoarseX : DXILOp<83, unary> {
+    let doc = "Computes the rate of change per stamp in x direction.";
+    let LLVMIntrinsic = int_dx_ddx;
+    let result = overloadTy;
+    let arguments = [overloadTy];
+    let stages = [
+                   Versioned<DXIL1_0, [library, pixel]>,
+                   Versioned<DXIL1_6, [library, pixel, amplification, compute, mesh]>
+                 ];
+    let attributes = [VersionedAttributes<DXIL1_0, [ReadNone]>];
+   }
+
+``CreateHandle`` - an operation with no overload types, no associated ``LLVMIntrinsic``
+and stages predicated  by DXIL Version.
+
+.. code-block::
+
+   def CreateHandle : DXILOp<57, createHandle> {
+     let doc = "Creates the handle to a resource";
+     let result = i32Ty;
+     let arguments = [i8Ty, i32Ty, i32Ty, i1Ty];
+     let stages = [
+                   Versioned<DXIL1_0, [all_stages]>,
+                   Versioned<DXIL1_6, [removed]
+                  ];
+     let attributes = [VersionedAttributes<DXIL1_0, [ReadOnly]>];
+   }
+
+``Sample`` - an operation with valid overload types, stages and attributes
+predicated by DXIL version.
+
+.. code-block::
+
+   def Sample : DXILOp<60, sample> {
+     let Doc = "Samples a texture";
+     let LLVMIntrinsic = int_dx_sample;
+     let result = resRetF32Ty;
+     let arguments = [handleTy, handleTy, floatTy, floatTy, floatTy, floatTy,
+                      i32Ty, i32Ty, i32Ty, floatTy];
+     let overloads = [Versioned<DXIL1_0, [halfTy, floatTy, i16Ty, i32Ty]>];
+     let stages = [
+                   Versioned<DXIL1_0, [library, pixel]>,
+                   Versioned<DXIL1_6, [library, pixel, amplification, compute, mesh]>
+                  ];
+     let attributes = [VersionedAttributes<DXIL1_0, [ReadOnly]>];
+   }
 
 Summary
 =======
