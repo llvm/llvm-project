@@ -704,37 +704,27 @@ ZOSXPLinkABIInfo::getFPTypeOfComplexLikeType(QualType Ty) const {
     // of a complex type, it does not count. This design may be somewhat
     // inconsistent but it matches the behavior of the legacy C compiler.
     int Count = 0;
-    clang::BuiltinType::Kind elemKind;
+    clang::BuiltinType::Kind ElemKind;
     QualType RetTy;
     for (const auto *FD : RD->fields()) {
       if (Count >= 2)
         return std::nullopt;
 
       QualType FT = FD->getType();
-      QualType FTSingleTy = getSingleElementType(FT);
-      if (getContext().getTypeSize(FTSingleTy) != getContext().getTypeSize(FT))
+      if (isAggregateTypeForABI(FT) && !isSingleElementStruct(FT, getContext()))
         return std::nullopt;
 
-      if (const BuiltinType *BT = FTSingleTy->getAs<BuiltinType>()) {
-        switch (BT->getKind()) {
-        case BuiltinType::Float:
-        case BuiltinType::Double:
-        case BuiltinType::LongDouble:
-          if (Count == 0) {
-            elemKind = BT->getKind();
-            RetTy = FTSingleTy;
-            break;
-          } else if (elemKind == BT->getKind()) {
-            break;
-          } else {
-            return std::nullopt;
-          }
-        default:
+      QualType FTSingleTy = getSingleElementType(FT);
+      if (isFPArgumentType(FTSingleTy)) {
+        clang::BuiltinType::Kind Kind =
+            FTSingleTy->getAs<BuiltinType>()->getKind();
+        if (Count == 0) {
+          ElemKind = Kind;
+          RetTy = FTSingleTy;
+        } else if (ElemKind != Kind)
           return std::nullopt;
-        }
-      } else {
+      } else
         return std::nullopt;
-      }
 
       Count++;
     }
