@@ -1096,7 +1096,7 @@ public:
       : F(Func), M(Modu), BFI(BFIin), PSI(PSI),
         FuncInfo(Func, TLI, ComdatMembers, false, BPI, BFIin, IsCS,
                  InstrumentFuncEntry, HasSingleByteCoverage),
-        FreqAttr(FFA_Normal), IsCS(IsCS) {}
+        FreqAttr(FFA_Normal), IsCS(IsCS), VPC(Func, TLI) {}
 
   void handleInstrProfError(Error Err, uint64_t MismatchedFuncSum);
 
@@ -1177,6 +1177,8 @@ private:
 
   // Is to use the context sensitive profile.
   bool IsCS;
+
+  ValueProfileCollector VPC;
 
   // Find the Instrumented BB and set the value. Return false on error.
   bool setInstrumentedCounts(const std::vector<uint64_t> &CountFromProfile);
@@ -1755,8 +1757,18 @@ void PGOUseFunc::annotateValueSites() {
 void PGOUseFunc::annotateValueSites(uint32_t Kind) {
   assert(Kind <= IPVK_Last);
   unsigned ValueSiteIndex = 0;
-  auto &ValueSites = FuncInfo.ValueSites[Kind];
   unsigned NumValueSites = ProfileRecord.getNumValueSites(Kind);
+  // FuncPGOInstrumentation ctor finds value sites for each kind. It runs on the
+  // common path of pgo-instr-gen and pgo-instr-use, and vtable kind path
+  // is gated by `-enable-vtable-value-profiling`. Give pgo-instr-use pass a
+  // second chance to find out vtable value sites when vtable profiles are
+  // present and `-enable-vtable-profile-use` is not explicitly off.
+  if (NumValueSites > 0 && Kind == IPVK_VTableTarget &&
+      NumValueSites != FuncInfo.ValueSites[IPVK_VTableTarget].size() &&
+      !(EnableVTableProfileUse.getNumOccurrences() &&
+        EnableVTableProfileUse == false))
+    FuncInfo.ValueSites[IPVK_VTableTarget] = VPC.get(IPVK_VTableTarget);
+  auto &ValueSites = FuncInfo.ValueSites[Kind];
   if (NumValueSites != ValueSites.size()) {
     auto &Ctx = M->getContext();
     Ctx.diagnose(DiagnosticInfoPGOProfile(

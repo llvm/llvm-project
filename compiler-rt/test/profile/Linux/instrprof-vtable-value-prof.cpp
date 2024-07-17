@@ -1,4 +1,4 @@
-// REQUIRES: lld, lld-available
+// REQUIRES: lld-available
 
 // Building the instrumented binary will fail because lld doesn't support
 // big-endian ELF for PPC (aka ABI 1).
@@ -109,6 +109,20 @@
 // ICTEXT: {{.*}}instrprof-vtable-value-prof.cpp;_ZTVN12_GLOBAL__N_18Derived2E:750
 // ICTEXT: _ZTV8Derived1:250
 
+// When vtable value profiles exist, pgo-instr-use pass should annotate them
+// even if `-enable-vtable-value-profiling` is not explicitly on.
+// RUN: %clangxx -m64 -fprofile-use=test.profdata -fuse-ld=lld -O2 -mllvm -print-after=pgo-instr-use -mllvm -filter-print-funcs=main -mllvm -print-module-scope %s 2>&1 | FileCheck %s --check-prefix=ANNOTATE
+
+// ANNOTATE-NOT: Inconsistent number of value sites
+// ANNOTATE: !{!"VP", i32 2
+
+// When vtable value profiles exist, pgo-instr-use pass will not annotate them
+// if `-enable-vtable-profile-use` is explicitly off.
+// RUN: %clangxx -m64 -fprofile-use=test.profdata -fuse-ld=lld -O2 -mllvm -enable-vtable-profile-use=false -mllvm -print-after=pgo-instr-use -mllvm -filter-print-funcs=main -mllvm -print-module-scope %s 2>&1 | FileCheck %s --check-prefix=OMIT
+
+// OMIT: Inconsistent number of value sites
+// OMIT-NOT: !{!"VP", i32 2
+
 // Test indirect call promotion transformation using vtable profiles.
 // - Build with `-g` to enable debug information.
 // - In real world settings, ICP pass is disabled in prelink pipeline. In
@@ -128,12 +142,12 @@
 // RUN:    | FileCheck %s --check-prefixes=REMARK,IR --implicit-check-not="!VP"
 
 // For the indirect call site `ptr->func`
-// REMARK: instrprof-vtable-value-prof.cpp:205:19: Promote indirect call to _ZN12_GLOBAL__N_18Derived24funcEii with count 150 out of 200, sink 1 instruction(s) and compare 1 vtable(s): {_ZTVN12_GLOBAL__N_18Derived2E}
-// REMARK: instrprof-vtable-value-prof.cpp:205:19: Promote indirect call to _ZN8Derived14funcEii with count 50 out of 50, sink 1 instruction(s) and compare 1 vtable(s): {_ZTV8Derived1}
+// REMARK: instrprof-vtable-value-prof.cpp:214:19: Promote indirect call to _ZN12_GLOBAL__N_18Derived24funcEii with count 150 out of 200, sink 1 instruction(s) and compare 1 vtable(s): {_ZTVN12_GLOBAL__N_18Derived2E}
+// REMARK: instrprof-vtable-value-prof.cpp:214:19: Promote indirect call to _ZN8Derived14funcEii with count 50 out of 50, sink 1 instruction(s) and compare 1 vtable(s): {_ZTV8Derived1}
 //
 // For the indirect call site `delete ptr`
-// REMARK: instrprof-vtable-value-prof.cpp:207:5: Promote indirect call to _ZN12_GLOBAL__N_18Derived2D0Ev with count 750 out of 1000, sink 2 instruction(s) and compare 1 vtable(s): {_ZTVN12_GLOBAL__N_18Derived2E}
-// REMARK: instrprof-vtable-value-prof.cpp:207:5: Promote indirect call to _ZN8Derived1D0Ev with count 250 out of 250, sink 2 instruction(s) and compare 1 vtable(s): {_ZTV8Derived1}
+// REMARK: instrprof-vtable-value-prof.cpp:216:5: Promote indirect call to _ZN12_GLOBAL__N_18Derived2D0Ev with count 750 out of 1000, sink 2 instruction(s) and compare 1 vtable(s): {_ZTVN12_GLOBAL__N_18Derived2E}
+// REMARK: instrprof-vtable-value-prof.cpp:216:5: Promote indirect call to _ZN8Derived1D0Ev with count 250 out of 250, sink 2 instruction(s) and compare 1 vtable(s): {_ZTV8Derived1}
 
 // The IR matchers for indirect callsite `ptr->func`.
 // IR-LABEL: @main
