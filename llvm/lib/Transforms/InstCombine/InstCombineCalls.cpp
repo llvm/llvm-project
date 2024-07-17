@@ -3340,13 +3340,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
   case Intrinsic::vector_reduce_or:
   case Intrinsic::vector_reduce_and: {
-    // Canonicalize logical or/and reductions:
-    // Or reduction for i1 is represented as:
-    // %val = bitcast <ReduxWidth x i1> to iReduxWidth
-    // %res = cmp ne iReduxWidth %val, 0
-    // And reduction for i1 is represented as:
-    // %val = bitcast <ReduxWidth x i1> to iReduxWidth
-    // %res = cmp eq iReduxWidth %val, 11111
     Value *Arg = II->getArgOperand(0);
     Value *Vect;
 
@@ -3356,24 +3349,40 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return II;
     }
 
-    if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
-      if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
-        if (FTy->getElementType() == Builder.getInt1Ty()) {
-          Value *Res = Builder.CreateBitCast(
-              Vect, Builder.getIntNTy(FTy->getNumElements()));
-          if (IID == Intrinsic::vector_reduce_and) {
-            Res = Builder.CreateICmpEQ(
-                Res, ConstantInt::getAllOnesValue(Res->getType()));
-          } else {
-            assert(IID == Intrinsic::vector_reduce_or &&
-                   "Expected or reduction.");
-            Res = Builder.CreateIsNotNull(Res);
-          }
-          if (Arg != Vect)
-            Res = Builder.CreateCast(cast<CastInst>(Arg)->getOpcode(), Res,
-                                     II->getType());
-          return replaceInstUsesWith(CI, Res);
-        }
+    // reduce_or (z/sext V) -> z/sext (reduce_or V)
+    // reduce_and (z/sext V) -> z/sext (reduce_and V)
+    if (match(Arg, m_ZExtOrSExt(m_Value(Vect)))) {
+      Value *Res;
+      if (IID == Intrinsic::vector_reduce_and) {
+        Res = Builder.CreateAndReduce(Vect);
+      } else {
+        assert(IID == Intrinsic::vector_reduce_or && "Expected or reduction.");
+        Res = Builder.CreateOrReduce(Vect);
+      }
+      Res = Builder.CreateCast(cast<CastInst>(Arg)->getOpcode(), Res,
+                               II->getType());
+      return replaceInstUsesWith(CI, Res);
+    }
+
+    // Canonicalize logical or/and reductions:
+    // Or reduction for i1 is represented as:
+    // %val = bitcast <ReduxWidth x i1> to iReduxWidth
+    // %res = cmp ne iReduxWidth %val, 0
+    // And reduction for i1 is represented as:
+    // %val = bitcast <ReduxWidth x i1> to iReduxWidth
+    // %res = cmp eq iReduxWidth %val, 11111
+    if (auto *FTy = dyn_cast<FixedVectorType>(Arg->getType());
+        FTy && FTy->getElementType() == Builder.getInt1Ty()) {
+      Value *Res =
+          Builder.CreateBitCast(Arg, Builder.getIntNTy(FTy->getNumElements()));
+      if (IID == Intrinsic::vector_reduce_and) {
+        Res = Builder.CreateICmpEQ(
+            Res, ConstantInt::getAllOnesValue(Res->getType()));
+      } else {
+        assert(IID == Intrinsic::vector_reduce_or && "Expected or reduction.");
+        Res = Builder.CreateIsNotNull(Res);
+      }
+      return replaceInstUsesWith(CI, Res);
     }
     [[fallthrough]];
   }

@@ -37,6 +37,28 @@ define i64 @reduce_and_zext(<8 x i1> %x) {
   ret i64 %res
 }
 
+define i32 @reduce_and_sext_i8(<4 x i8> %x) {
+; CHECK-LABEL: @reduce_and_sext_i8(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.vector.reduce.and.v4i8(<4 x i8> [[X:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = sext i8 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %sext = sext <4 x i8> %x to <4 x i32>
+  %res = call i32 @llvm.vector.reduce.and.v4i32(<4 x i32> %sext)
+  ret i32 %res
+}
+
+define i64 @reduce_and_zext_i8(<8 x i8> %x) {
+; CHECK-LABEL: @reduce_and_zext_i8(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.vector.reduce.and.v8i8(<8 x i8> [[X:%.*]])
+; CHECK-NEXT:    [[RES:%.*]] = zext i8 [[TMP1]] to i64
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+  %zext = zext <8 x i8> %x to <8 x i64>
+  %res = call i64 @llvm.vector.reduce.and.v8i64(<8 x i64> %zext)
+  ret i64 %res
+}
+
 define i16 @reduce_and_sext_same(<16 x i1> %x) {
 ; CHECK-LABEL: @reduce_and_sext_same(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i1> [[X:%.*]] to i16
@@ -118,9 +140,9 @@ define i1 @reduce_and_pointer_cast_wide(ptr %arg, ptr %arg1) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[LHS:%.*]] = load <8 x i16>, ptr [[ARG1:%.*]], align 16
 ; CHECK-NEXT:    [[RHS:%.*]] = load <8 x i16>, ptr [[ARG:%.*]], align 16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <8 x i16> [[LHS]], [[RHS]]
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i1> [[CMP]] to i8
-; CHECK-NEXT:    [[ALL_EQ:%.*]] = icmp eq i8 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne <8 x i16> [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i1> [[TMP0]] to i8
+; CHECK-NEXT:    [[ALL_EQ:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[ALL_EQ]]
 ;
 bb:
@@ -153,9 +175,9 @@ define i1 @reduce_and_pointer_cast_ne_wide(ptr %arg, ptr %arg1) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[LHS:%.*]] = load <8 x i16>, ptr [[ARG1:%.*]], align 16
 ; CHECK-NEXT:    [[RHS:%.*]] = load <8 x i16>, ptr [[ARG:%.*]], align 16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <8 x i16> [[LHS]], [[RHS]]
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i1> [[CMP]] to i8
-; CHECK-NEXT:    [[ALL_EQ:%.*]] = icmp ne i8 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne <8 x i16> [[LHS]], [[RHS]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i1> [[TMP0]] to i8
+; CHECK-NEXT:    [[ALL_EQ:%.*]] = icmp ne i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[ALL_EQ]]
 ;
 bb:
