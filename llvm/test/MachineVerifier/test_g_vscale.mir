@@ -1,4 +1,5 @@
-# RUN: not --crash llc -verify-machineinstrs -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -verify-machineinstrs -mtriple=arm64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# REQUIRES: aarch64-registered-target
 
 ---
 name:            g_vscale

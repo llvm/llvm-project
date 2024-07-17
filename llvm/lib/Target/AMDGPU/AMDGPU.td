@@ -1898,7 +1898,6 @@ def FeatureISAVersion12_10 : FeatureSet<
    FeaturePackedFP32Ops,
    FeatureDot7Insts,
    FeatureDot8Insts,
-   FeatureWavefrontSize32,
    FeatureShaderCyclesHiLoRegisters,
    FeatureArchitectedFlatScratch,
    FeatureArchitectedSGPRs,
