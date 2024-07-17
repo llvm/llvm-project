@@ -366,8 +366,23 @@ bb:
 define <4 x i8> @uadd_sat_v4i8(<4 x i8> %arg0, <4 x i8> %arg1) {
 ; GCN-LABEL: @uadd_sat_v4i8(
 ; GCN-NEXT:  bb:
-; GCN-NEXT:    [[TMP0:%.*]] = call <4 x i8> @llvm.uadd.sat.v4i8(<4 x i8> [[ARG0:%.*]], <4 x i8> [[ARG1:%.*]])
-; GCN-NEXT:    ret <4 x i8> [[TMP0]]
+; GCN-NEXT:    [[ARG0_0:%.*]] = extractelement <4 x i8> [[ARG0:%.*]], i64 0
+; GCN-NEXT:    [[ARG0_1:%.*]] = extractelement <4 x i8> [[ARG0]], i64 1
+; GCN-NEXT:    [[ARG0_2:%.*]] = extractelement <4 x i8> [[ARG0]], i64 2
+; GCN-NEXT:    [[ARG0_3:%.*]] = extractelement <4 x i8> [[ARG0]], i64 3
+; GCN-NEXT:    [[ARG1_0:%.*]] = extractelement <4 x i8> [[ARG1:%.*]], i64 0
+; GCN-NEXT:    [[ARG1_1:%.*]] = extractelement <4 x i8> [[ARG1]], i64 1
+; GCN-NEXT:    [[ARG1_2:%.*]] = extractelement <4 x i8> [[ARG1]], i64 2
+; GCN-NEXT:    [[ARG1_3:%.*]] = extractelement <4 x i8> [[ARG1]], i64 3
+; GCN-NEXT:    [[ADD_0:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[ARG0_0]], i8 [[ARG1_0]])
+; GCN-NEXT:    [[ADD_1:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[ARG0_1]], i8 [[ARG1_1]])
+; GCN-NEXT:    [[ADD_2:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[ARG0_2]], i8 [[ARG1_2]])
+; GCN-NEXT:    [[ADD_3:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[ARG0_3]], i8 [[ARG1_3]])
+; GCN-NEXT:    [[INS_0:%.*]] = insertelement <4 x i8> poison, i8 [[ADD_0]], i64 0
+; GCN-NEXT:    [[INS_1:%.*]] = insertelement <4 x i8> [[INS_0]], i8 [[ADD_1]], i64 1
+; GCN-NEXT:    [[INS_2:%.*]] = insertelement <4 x i8> [[INS_1]], i8 [[ADD_2]], i64 2
+; GCN-NEXT:    [[INS_3:%.*]] = insertelement <4 x i8> [[INS_2]], i8 [[ADD_3]], i64 3
+; GCN-NEXT:    ret <4 x i8> [[INS_3]]
 ;
 bb:
   %arg0.0 = extractelement <4 x i8> %arg0, i64 0
@@ -392,8 +407,23 @@ bb:
 define <4 x i8> @usub_sat_v4i8(<4 x i8> %arg0, <4 x i8> %arg1) {
 ; GCN-LABEL: @usub_sat_v4i8(
 ; GCN-NEXT:  bb:
-; GCN-NEXT:    [[TMP0:%.*]] = call <4 x i8> @llvm.usub.sat.v4i8(<4 x i8> [[ARG0:%.*]], <4 x i8> [[ARG1:%.*]])
-; GCN-NEXT:    ret <4 x i8> [[TMP0]]
+; GCN-NEXT:    [[ARG0_0:%.*]] = extractelement <4 x i8> [[ARG0:%.*]], i64 0
+; GCN-NEXT:    [[ARG0_1:%.*]] = extractelement <4 x i8> [[ARG0]], i64 1
+; GCN-NEXT:    [[ARG0_2:%.*]] = extractelement <4 x i8> [[ARG0]], i64 2
+; GCN-NEXT:    [[ARG0_3:%.*]] = extractelement <4 x i8> [[ARG0]], i64 3
+; GCN-NEXT:    [[ARG1_0:%.*]] = extractelement <4 x i8> [[ARG1:%.*]], i64 0
+; GCN-NEXT:    [[ARG1_1:%.*]] = extractelement <4 x i8> [[ARG1]], i64 1
+; GCN-NEXT:    [[ARG1_2:%.*]] = extractelement <4 x i8> [[ARG1]], i64 2
+; GCN-NEXT:    [[ARG1_3:%.*]] = extractelement <4 x i8> [[ARG1]], i64 3
+; GCN-NEXT:    [[ADD_0:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[ARG0_0]], i8 [[ARG1_0]])
+; GCN-NEXT:    [[ADD_1:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[ARG0_1]], i8 [[ARG1_1]])
+; GCN-NEXT:    [[ADD_2:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[ARG0_2]], i8 [[ARG1_2]])
+; GCN-NEXT:    [[ADD_3:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[ARG0_3]], i8 [[ARG1_3]])
+; GCN-NEXT:    [[INS_0:%.*]] = insertelement <4 x i8> poison, i8 [[ADD_0]], i64 0
+; GCN-NEXT:    [[INS_1:%.*]] = insertelement <4 x i8> [[INS_0]], i8 [[ADD_1]], i64 1
+; GCN-NEXT:    [[INS_2:%.*]] = insertelement <4 x i8> [[INS_1]], i8 [[ADD_2]], i64 2
+; GCN-NEXT:    [[INS_3:%.*]] = insertelement <4 x i8> [[INS_2]], i8 [[ADD_3]], i64 3
+; GCN-NEXT:    ret <4 x i8> [[INS_3]]
 ;
 bb:
   %arg0.0 = extractelement <4 x i8> %arg0, i64 0
