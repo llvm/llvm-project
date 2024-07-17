@@ -496,9 +496,10 @@ private:
 
 // First parameter is the number of functions
 // Second parameter is the number of fallback function arguments
-template <size_t N, int NFallbackArgs> class NsanMemOpFn {
+template <size_t N> class NsanMemOpFn {
 public:
-  NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized, StringRef Fallback);
+  NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized, StringRef Fallback,
+              int NFallbackArgs);
   // Number of parameters can be extracted from FunctionCallee
   FunctionCallee getFunctionFor(uint64_t MemOpSize) const;
   FunctionCallee getFallback() const;
@@ -507,9 +508,9 @@ private:
   std::array<FunctionCallee, N> Funcs;
 };
 
-template <size_t N, int NFallbackArgs>
-NsanMemOpFn<N, NFallbackArgs>::NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized,
-                                           StringRef Fallback) {
+template <size_t N>
+NsanMemOpFn<N>::NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized,
+                            StringRef Fallback, int NFallbackArgs) {
   LLVMContext &Ctx = M.getContext();
   AttributeList Attr;
   Attr = Attr.addFnAttribute(Ctx, Attribute::NoUnwind);
@@ -532,9 +533,8 @@ NsanMemOpFn<N, NFallbackArgs>::NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized,
         M.getOrInsertFunction(Fallback, Attr, VoidTy, PtrTy, IntptrTy);
 }
 
-template <size_t N, int NFallbackArgs>
-FunctionCallee
-NsanMemOpFn<N, NFallbackArgs>::getFunctionFor(uint64_t MemOpSize) const {
+template <size_t N>
+FunctionCallee NsanMemOpFn<N>::getFunctionFor(uint64_t MemOpSize) const {
   size_t Idx =
       MemOpSize == 4 ? 0 : (MemOpSize == 8 ? 1 : (MemOpSize == 16 ? 2 : 3));
 
@@ -542,8 +542,7 @@ NsanMemOpFn<N, NFallbackArgs>::getFunctionFor(uint64_t MemOpSize) const {
   return Funcs[Idx];
 }
 
-template <size_t N, int NFallbackArgs>
-FunctionCallee NsanMemOpFn<N, NFallbackArgs>::getFallback() const {
+template <size_t N> FunctionCallee NsanMemOpFn<N>::getFallback() const {
   return Funcs.back();
 }
 
@@ -611,8 +610,8 @@ private:
   FunctionCallee NsanCheckValue[FTValueType::kNumValueTypes] = {};
   FunctionCallee NsanFCmpFail[FTValueType::kNumValueTypes] = {};
 
-  NsanMemOpFn<4, 3> NsanCopyFns;
-  NsanMemOpFn<4, 2> NsanSetUnknownFns;
+  NsanMemOpFn<4> NsanCopyFns;
+  NsanMemOpFn<4> NsanSetUnknownFns;
 
   FunctionCallee NsanGetRawShadowTypePtr;
   FunctionCallee NsanGetRawShadowPtr;
@@ -658,12 +657,12 @@ static GlobalValue *createThreadLocalGV(const char *Name, Module &M, Type *Ty) {
 NumericalStabilitySanitizer::NumericalStabilitySanitizer(Module &M)
     : DL(M.getDataLayout()), Context(M.getContext()), Config(Context),
       NsanCopyFns(M, {"__nsan_copy_4", "__nsan_copy_8", "__nsan_copy_16"},
-                  "__nsan_copy_values"),
+                  "__nsan_copy_values", 3),
       NsanSetUnknownFns(M,
                         {"__nsan_set_value_unknown_4",
                          "__nsan_set_value_unknown_8",
                          "__nsan_set_value_unknown_16"},
-                        "__nsan_set_value_unknown") {
+                        "__nsan_set_value_unknown", 2) {
   IntptrTy = DL.getIntPtrType(Context);
   Type *PtrTy = PointerType::getUnqual(Context);
   Type *Int32Ty = Type::getInt32Ty(Context);
