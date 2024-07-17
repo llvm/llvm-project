@@ -496,7 +496,8 @@ private:
 // Template parameter is the number of functions
 template <size_t N> class NsanMemOpFn {
 public:
-  NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized, StringRef Fallback, size_t NumArgs);
+  NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized, StringRef Fallback,
+              size_t NumArgs);
   // Number of parameters can be extracted from FunctionCallee
   FunctionCallee getFunctionFor(uint64_t MemOpSize) const;
   FunctionCallee getFallback() const;
@@ -507,7 +508,7 @@ private:
 
 template <size_t N>
 NsanMemOpFn<N>::NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized,
-                                           StringRef Fallback, size_t NumArgs) {
+                            StringRef Fallback, size_t NumArgs) {
   LLVMContext &Ctx = M.getContext();
   AttributeList Attr;
   Attr = Attr.addFnAttribute(Ctx, Attribute::NoUnwind);
@@ -533,8 +534,7 @@ NsanMemOpFn<N>::NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized,
 }
 
 template <size_t N>
-FunctionCallee
-NsanMemOpFn<N>::getFunctionFor(uint64_t MemOpSize) const {
+FunctionCallee NsanMemOpFn<N>::getFunctionFor(uint64_t MemOpSize) const {
   size_t Idx =
       MemOpSize == 4 ? 0 : (MemOpSize == 8 ? 1 : (MemOpSize == 16 ? 2 : 3));
 
@@ -542,8 +542,7 @@ NsanMemOpFn<N>::getFunctionFor(uint64_t MemOpSize) const {
   return Funcs[Idx];
 }
 
-template <size_t N>
-FunctionCallee NsanMemOpFn<N>::getFallback() const {
+template <size_t N> FunctionCallee NsanMemOpFn<N>::getFallback() const {
   return Funcs.back();
 }
 
