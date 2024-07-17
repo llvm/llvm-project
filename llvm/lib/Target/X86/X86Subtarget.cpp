@@ -290,8 +290,7 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     IsUnalignedMem16Slow = false;
 
   LLVM_DEBUG(dbgs() << "Subtarget features: SSELevel " << X86SSELevel
-                    << ", 3DNowLevel " << X863DNowLevel << ", 64bit "
-                    << HasX86_64 << "\n");
+                    << ", MMX " << HasMMX << ", 64bit " << HasX86_64 << "\n");
   if (Is64Bit && !HasX86_64)
     report_fatal_error("64-bit code requested on a subtarget that doesn't "
                        "support it!");
