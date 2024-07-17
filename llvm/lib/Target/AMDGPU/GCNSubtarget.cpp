@@ -52,6 +52,11 @@ static cl::opt<unsigned>
                  cl::desc("Number of addresses from which to enable MIMG NSA."),
                  cl::init(2), cl::Hidden);
 
+static cl::opt<bool>
+    CoerceIllegal("amdgpu-coerce-illegal-types",
+                  cl::desc("Whether or not to coerce illegal types"),
+                  cl::ReallyHidden, cl::init(false));
+
 GCNSubtarget::~GCNSubtarget() = default;
 
 GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
@@ -191,6 +196,8 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   RegBankInfo = std::make_unique<AMDGPURegisterBankInfo>(*this);
   InstSelector =
       std::make_unique<AMDGPUInstructionSelector>(*this, *RegBankInfo, TM);
+
+  ShouldCoerceIllegalTypes = CoerceIllegal;
 }
 
 const SelectionDAGTargetInfo *GCNSubtarget::getSelectionDAGInfo() const {
