@@ -3923,10 +3923,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// Calculates the shadow for interleaving 2, 3 or 4 vectors
   /// (e.g., for Arm NEON vector store).
   Value *interleaveShadow(IRBuilder<> &IRB, IntrinsicInst &I) {
-    // Call arguments only
-    int numArgOperands = I.getNumOperands() - 1;
+    // Don't use getNumOperands() because it includes the callee
+    int numArgOperands = I.arg_size();
     assert(numArgOperands >= 1);
 
+    // The last arg operand is the output
     int numVectors = numArgOperands - 1;
 
     for (int i = 0; i < numVectors; i++) {
@@ -3969,9 +3970,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     Value *interleavedShadow = interleaveShadow(IRB, I);
 
-    // Call arguments only
-    int numArgOperands = I.getNumOperands() - 1;
+    // Don't use getNumOperands() because it includes the callee
+    int numArgOperands = I.arg_size();
     assert(numArgOperands >= 1);
+
+    // The last arg operand is the output
     Value *Addr = I.getArgOperand(numArgOperands - 1);
 
     Value *ShadowPtr, *OriginPtr;
