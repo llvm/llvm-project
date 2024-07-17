@@ -554,8 +554,7 @@ public:
 
 } // end anonymous namespace
 
-void AArch64TargetMachine::registerPassBuilderCallbacks(
-    PassBuilder &PB, bool PopulateClassToPassNames) {
+void AArch64TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
@@ -862,7 +861,6 @@ void AArch64PassConfig::addPreEmitPass() {
 }
 
 void AArch64PassConfig::addPostBBSections() {
-  addPass(createAArch64IndirectThunks());
   addPass(createAArch64SLSHardeningPass());
   addPass(createAArch64PointerAuthPass());
   if (EnableBranchTargets)

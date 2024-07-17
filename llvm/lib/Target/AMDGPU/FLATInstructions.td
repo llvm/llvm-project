@@ -752,20 +752,30 @@ defm FLAT_ATOMIC_DEC_X2     : FLAT_Atomic_Pseudo <"flat_atomic_dec_x2",
 
 // GFX7-, GFX10-only flat instructions.
 let SubtargetPredicate = isGFX7GFX10 in {
-
 defm FLAT_ATOMIC_FCMPSWAP_X2 : FLAT_Atomic_Pseudo <"flat_atomic_fcmpswap_x2",
                                 VReg_64, f64, v2f64, VReg_128>;
-
 } // End SubtargetPredicate = isGFX7GFX10
 
-let SubtargetPredicate = HasBufferFlatGlobalAtomicsF64 in {
+
+// The names may be flat_atomic_fmin_x2 on some subtargets, but we
+// choose this as the canonical name.
+let SubtargetPredicate = HasAtomicFMinFMaxF64FlatInsts in {
+defm FLAT_ATOMIC_MIN_F64 : FLAT_Atomic_Pseudo <"flat_atomic_min_f64",
+                                               VReg_64, f64>;
+
+defm FLAT_ATOMIC_MAX_F64 : FLAT_Atomic_Pseudo <"flat_atomic_max_f64",
+                                                VReg_64, f64>;
+}
+
+let SubtargetPredicate = HasAtomicFMinFMaxF64GlobalInsts in {
+defm GLOBAL_ATOMIC_MIN_F64 : FLAT_Global_Atomic_Pseudo<"global_atomic_min_f64", VReg_64, f64>;
+defm GLOBAL_ATOMIC_MAX_F64 : FLAT_Global_Atomic_Pseudo<"global_atomic_max_f64", VReg_64, f64>;
+}
+
+let SubtargetPredicate = HasFlatBufferGlobalAtomicFaddF64Inst  in {
   defm FLAT_ATOMIC_ADD_F64   : FLAT_Atomic_Pseudo<"flat_atomic_add_f64", VReg_64, f64>;
-  defm FLAT_ATOMIC_MIN_F64   : FLAT_Atomic_Pseudo<"flat_atomic_min_f64", VReg_64, f64>;
-  defm FLAT_ATOMIC_MAX_F64   : FLAT_Atomic_Pseudo<"flat_atomic_max_f64", VReg_64, f64>;
   defm GLOBAL_ATOMIC_ADD_F64 : FLAT_Global_Atomic_Pseudo<"global_atomic_add_f64", VReg_64, f64>;
-  defm GLOBAL_ATOMIC_MIN_F64 : FLAT_Global_Atomic_Pseudo<"global_atomic_min_f64", VReg_64, f64>;
-  defm GLOBAL_ATOMIC_MAX_F64 : FLAT_Global_Atomic_Pseudo<"global_atomic_max_f64", VReg_64, f64>;
-} // End SubtargetPredicate = HasBufferFlatGlobalAtomicsF64
+} // End SubtargetPredicate = HasFlatBufferGlobalAtomicFaddF64Inst
 
 let SubtargetPredicate = HasAtomicFlatPkAdd16Insts in {
   defm FLAT_ATOMIC_PK_ADD_F16    : FLAT_Atomic_Pseudo<"flat_atomic_pk_add_f16",  VGPR_32, v2f16>;
@@ -966,6 +976,15 @@ defm SCRATCH_LOAD_LDS_SSHORT : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_s
 defm SCRATCH_LOAD_LDS_DWORD  : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_dword">;
 
 let SubtargetPredicate = isGFX12Plus in {
+  let Uses = [EXEC, M0] in {
+    defm GLOBAL_LOAD_BLOCK  : FLAT_Global_Load_Pseudo <"global_load_block", VReg_1024>;
+    defm GLOBAL_STORE_BLOCK  : FLAT_Global_Store_Pseudo <"global_store_block", VReg_1024>;
+  }
+  let Uses = [EXEC, FLAT_SCR, M0] in {
+    defm SCRATCH_LOAD_BLOCK : FLAT_Scratch_Load_Pseudo <"scratch_load_block", VReg_1024>;
+    defm SCRATCH_STORE_BLOCK : FLAT_Scratch_Store_Pseudo <"scratch_store_block", VReg_1024>;
+  }
+
   let WaveSizePredicate = isWave32 in {
     let Mnemonic = "global_load_tr_b128" in
     defm GLOBAL_LOAD_TR_B128_w32  : FLAT_Global_Load_Pseudo <"global_load_tr_b128_w32", VReg_128>;
@@ -1406,6 +1425,17 @@ defm : FlatAtomicPat <"FLAT_ATOMIC_OR_X2", "atomic_load_or_"#as, i64>;
 defm : FlatAtomicPat <"FLAT_ATOMIC_SWAP_X2", "atomic_swap_"#as, i64>;
 defm : FlatAtomicPat <"FLAT_ATOMIC_CMPSWAP_X2", "AMDGPUatomic_cmp_swap_"#as, i64, v2i64>;
 defm : FlatAtomicPat <"FLAT_ATOMIC_XOR_X2", "atomic_load_xor_"#as, i64>;
+
+let SubtargetPredicate = HasAtomicFMinFMaxF32FlatInsts in {
+defm : FlatAtomicPat <"FLAT_ATOMIC_FMIN", "atomic_load_fmin_"#as, f32>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_FMAX", "atomic_load_fmax_"#as, f32>;
+}
+
+let SubtargetPredicate = HasAtomicFMinFMaxF64FlatInsts in {
+defm : FlatAtomicPat <"FLAT_ATOMIC_MIN_F64", "atomic_load_fmin_"#as, f64>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_MAX_F64", "atomic_load_fmax_"#as, f64>;
+}
+
 } // end foreach as
 
 let SubtargetPredicate = isGFX12Plus in {
@@ -1567,33 +1597,22 @@ let OtherPredicates = [isGFX12Plus] in {
   }
 }
 
-let OtherPredicates = [isGFX10Plus] in {
+let SubtargetPredicate = HasAtomicFMinFMaxF32GlobalInsts, OtherPredicates = [HasFlatGlobalInsts] in {
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_FMIN", "atomic_load_fmin_global", f32>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_FMAX", "atomic_load_fmax_global", f32>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_FMIN", "atomic_load_fmin_flat", f32>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_FMAX", "atomic_load_fmax_flat", f32>;
-}
-
-let OtherPredicates = [isGFX10GFX11] in {
 defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_FMIN", "int_amdgcn_global_atomic_fmin", f32>;
 defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_FMAX", "int_amdgcn_global_atomic_fmax", f32>;
+}
 
+let SubtargetPredicate = HasAtomicFMinFMaxF32FlatInsts in {
+defm : FlatAtomicPat <"FLAT_ATOMIC_FMIN", "atomic_load_fmin_flat", f32>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_FMAX", "atomic_load_fmax_flat", f32>;
 defm : FlatAtomicIntrPat <"FLAT_ATOMIC_FMIN", "int_amdgcn_flat_atomic_fmin", f32>;
 defm : FlatAtomicIntrPat <"FLAT_ATOMIC_FMAX", "int_amdgcn_flat_atomic_fmax", f32>;
 }
 
-let OtherPredicates = [isGFX10Only] in {
-defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_MIN_F64", "atomic_load_fmin_global", f64>;
-defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_MAX_F64", "atomic_load_fmax_global", f64>;
-defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_MIN_F64", "int_amdgcn_global_atomic_fmin", f64>;
-defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_MAX_F64", "int_amdgcn_global_atomic_fmax", f64>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_MIN_F64", "atomic_load_fmin_flat", f64>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_MAX_F64", "atomic_load_fmax_flat", f64>;
-defm : FlatAtomicIntrPat <"FLAT_ATOMIC_MIN_F64", "int_amdgcn_flat_atomic_fmin", f64>;
-defm : FlatAtomicIntrPat <"FLAT_ATOMIC_MAX_F64", "int_amdgcn_flat_atomic_fmax", f64>;
-}
-
 let OtherPredicates = [isGFX12Only] in {
+  // FIXME: Remove these intrinsics
   defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_FMIN", "int_amdgcn_global_atomic_fmin_num", f32>;
   defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_FMAX", "int_amdgcn_global_atomic_fmax_num", f32>;
   defm : FlatAtomicIntrPat <"FLAT_ATOMIC_FMIN", "int_amdgcn_flat_atomic_fmin_num", f32>;
@@ -1607,6 +1626,7 @@ defm : GlobalFLATAtomicPatsNoRtnWithAddrSpace <"GLOBAL_ATOMIC_ADD_F32", "int_amd
 }
 
 let OtherPredicates = [HasAtomicBufferGlobalPkAddF16NoRtnInsts] in {
+defm : GlobalFLATAtomicPatsNoRtn <"GLOBAL_ATOMIC_PK_ADD_F16", "atomic_load_fadd_global", v2f16>;
 defm : GlobalFLATAtomicPatsNoRtnWithAddrSpace <"GLOBAL_ATOMIC_PK_ADD_F16", "int_amdgcn_flat_atomic_fadd", "global_addrspace", v2f16>;
 defm : GlobalFLATAtomicPatsNoRtnWithAddrSpace <"GLOBAL_ATOMIC_PK_ADD_F16", "int_amdgcn_global_atomic_fadd", "global_addrspace", v2f16>;
 }
@@ -1623,20 +1643,24 @@ defm : GlobalFLATAtomicPatsRtnWithAddrSpace <"GLOBAL_ATOMIC_PK_ADD_F16", "int_am
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_PK_ADD_F16", "atomic_load_fadd_global", v2f16>;
 }
 
-let OtherPredicates = [HasBufferFlatGlobalAtomicsF64] in {
-defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_ADD_F64", "atomic_load_fadd_global", f64>;
+let SubtargetPredicate = HasAtomicFMinFMaxF64GlobalInsts, OtherPredicates = [HasFlatGlobalInsts] in {
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_MIN_F64", "atomic_load_fmin_global", f64>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_MAX_F64", "atomic_load_fmax_global", f64>;
-defm : GlobalFLATAtomicPatsWithAddrSpace<"GLOBAL_ATOMIC_ADD_F64", "int_amdgcn_flat_atomic_fadd", "global_addrspace", f64>;
-defm : GlobalFLATAtomicPatsWithAddrSpace<"GLOBAL_ATOMIC_ADD_F64", "int_amdgcn_global_atomic_fadd", "global_addrspace", f64>;
 defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_MIN_F64", "int_amdgcn_global_atomic_fmin", f64>;
 defm : GlobalFLATAtomicIntrPats <"GLOBAL_ATOMIC_MAX_F64", "int_amdgcn_global_atomic_fmax", f64>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_ADD_F64", "atomic_load_fadd_flat", f64>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_MIN_F64", "atomic_load_fmin_flat", f64>;
-defm : FlatAtomicPat <"FLAT_ATOMIC_MAX_F64", "atomic_load_fmax_flat", f64>;
-defm : FlatAtomicIntrPat <"FLAT_ATOMIC_ADD_F64", "int_amdgcn_flat_atomic_fadd", f64>;
+}
+
+let SubtargetPredicate = HasAtomicFMinFMaxF64FlatInsts in {
 defm : FlatAtomicIntrPat <"FLAT_ATOMIC_MIN_F64", "int_amdgcn_flat_atomic_fmin", f64>;
 defm : FlatAtomicIntrPat <"FLAT_ATOMIC_MAX_F64", "int_amdgcn_flat_atomic_fmax", f64>;
+}
+
+let OtherPredicates = [HasFlatBufferGlobalAtomicFaddF64Inst] in {
+defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_ADD_F64", "atomic_load_fadd_global", f64>;
+defm : GlobalFLATAtomicPatsWithAddrSpace<"GLOBAL_ATOMIC_ADD_F64", "int_amdgcn_flat_atomic_fadd", "global_addrspace", f64>;
+defm : GlobalFLATAtomicPatsWithAddrSpace<"GLOBAL_ATOMIC_ADD_F64", "int_amdgcn_global_atomic_fadd", "global_addrspace", f64>;
+defm : FlatAtomicPat <"FLAT_ATOMIC_ADD_F64", "atomic_load_fadd_flat", f64>;
+defm : FlatAtomicIntrPat <"FLAT_ATOMIC_ADD_F64", "int_amdgcn_flat_atomic_fadd", f64>;
 }
 
 let OtherPredicates = [HasFlatAtomicFaddF32Inst] in {
@@ -2658,6 +2682,8 @@ defm GLOBAL_STORE_BYTE_D16_HI      : VGLOBAL_Real_AllAddr_gfx12<0x024, "global_s
 defm GLOBAL_STORE_SHORT_D16_HI     : VGLOBAL_Real_AllAddr_gfx12<0x025, "global_store_d16_hi_b16">;
 defm GLOBAL_LOAD_DWORD_ADDTID      : VGLOBAL_Real_AllAddr_gfx12<0x028, "global_load_addtid_b32">;
 defm GLOBAL_STORE_DWORD_ADDTID     : VGLOBAL_Real_AllAddr_gfx12<0x029, "global_store_addtid_b32">;
+defm GLOBAL_LOAD_BLOCK             : VGLOBAL_Real_AllAddr_gfx12<0x053>;
+defm GLOBAL_STORE_BLOCK            : VGLOBAL_Real_AllAddr_gfx12<0x054>;
 
 defm GLOBAL_ATOMIC_SWAP            : VGLOBAL_Real_Atomics_gfx12<0x033, "global_atomic_swap_b32">;
 defm GLOBAL_ATOMIC_CMPSWAP         : VGLOBAL_Real_Atomics_gfx12<0x034, "global_atomic_cmpswap_b32">;
@@ -2728,3 +2754,6 @@ defm SCRATCH_LOAD_SBYTE_D16_HI     : VSCRATCH_Real_AllAddr_gfx12<0x22, "scratch_
 defm SCRATCH_LOAD_SHORT_D16_HI     : VSCRATCH_Real_AllAddr_gfx12<0x23, "scratch_load_d16_hi_b16">;
 defm SCRATCH_STORE_BYTE_D16_HI     : VSCRATCH_Real_AllAddr_gfx12<0x24, "scratch_store_d16_hi_b8">;
 defm SCRATCH_STORE_SHORT_D16_HI    : VSCRATCH_Real_AllAddr_gfx12<0x25, "scratch_store_d16_hi_b16">;
+
+defm SCRATCH_LOAD_BLOCK            : VSCRATCH_Real_AllAddr_gfx12<0x53>;
+defm SCRATCH_STORE_BLOCK           : VSCRATCH_Real_AllAddr_gfx12<0x54>;

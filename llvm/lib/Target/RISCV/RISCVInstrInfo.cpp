@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -163,6 +164,18 @@ Register RISCVInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   }
 
   return 0;
+}
+
+bool RISCVInstrInfo::isReallyTriviallyReMaterializable(
+    const MachineInstr &MI) const {
+  if (RISCV::getRVVMCOpcode(MI.getOpcode()) == RISCV::VID_V &&
+      MI.getOperand(1).isUndef() &&
+      /* After RISCVInsertVSETVLI most pseudos will have implicit uses on vl and
+         vtype.  Make sure we only rematerialize before RISCVInsertVSETVLI
+         i.e. -riscv-vsetvl-after-rvv-regalloc=true */
+      !MI.hasRegisterImplicitUseOperand(RISCV::VTYPE))
+    return true;
+  return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
 }
 
 static bool forwardCopyWillClobberTuple(unsigned DstReg, unsigned SrcReg,
@@ -1455,17 +1468,14 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   if (Opcode == TargetOpcode::INLINEASM ||
       Opcode == TargetOpcode::INLINEASM_BR) {
     const MachineFunction &MF = *MI.getParent()->getParent();
-    const auto &TM = static_cast<const RISCVTargetMachine &>(MF.getTarget());
     return getInlineAsmLength(MI.getOperand(0).getSymbolName(),
-                              *TM.getMCAsmInfo());
+                              *MF.getTarget().getMCAsmInfo());
   }
 
   if (!MI.memoperands_empty()) {
     MachineMemOperand *MMO = *(MI.memoperands_begin());
-    const MachineFunction &MF = *MI.getParent()->getParent();
-    const auto &ST = MF.getSubtarget<RISCVSubtarget>();
-    if (ST.hasStdExtZihintntl() && MMO->isNonTemporal()) {
-      if (ST.hasStdExtCOrZca() && ST.enableRVCHintInstrs()) {
+    if (STI.hasStdExtZihintntl() && MMO->isNonTemporal()) {
+      if (STI.hasStdExtCOrZca() && STI.enableRVCHintInstrs()) {
         if (isCompressibleInst(MI, STI))
           return 4; // c.ntl.all + c.load/c.store
         return 6;   // c.ntl.all + load/store
@@ -2373,6 +2383,12 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           // clang-format on
         case RISCVOp::OPERAND_UIMM2_LSB0:
           Ok = isShiftedUInt<1, 1>(Imm);
+          break;
+        case RISCVOp::OPERAND_UIMM5_LSB0:
+          Ok = isShiftedUInt<4, 1>(Imm);
+          break;
+        case RISCVOp::OPERAND_UIMM6_LSB0:
+          Ok = isShiftedUInt<5, 1>(Imm);
           break;
         case RISCVOp::OPERAND_UIMM7_LSB00:
           Ok = isShiftedUInt<5, 2>(Imm);

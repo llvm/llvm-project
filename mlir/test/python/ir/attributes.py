@@ -157,7 +157,7 @@ def testAffineMapAttr():
         # CHECK: affine_map<(d0, d1)[s0, s1, s2] -> ()>
         attr_built = AffineMapAttr.get(map0)
         print(str(attr_built))
-
+        assert attr_built.value == map0
         attr_parsed = Attribute.parse(str(attr_built))
         assert attr_built == attr_parsed
 

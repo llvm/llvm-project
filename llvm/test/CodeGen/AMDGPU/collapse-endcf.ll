@@ -13,7 +13,7 @@ define amdgpu_kernel void @simple_nested_if(ptr addrspace(1) nocapture %arg) {
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB0_3
 ; GCN-NEXT:  ; %bb.1: ; %bb.outer.then
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
@@ -180,7 +180,7 @@ define amdgpu_kernel void @uncollapsable_nested_if(ptr addrspace(1) nocapture %a
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB1_4
 ; GCN-NEXT:  ; %bb.1: ; %bb.outer.then
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; GCN-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
@@ -380,7 +380,7 @@ bb.outer.end:                                     ; preds = %bb.inner.then, %bb
 define amdgpu_kernel void @nested_if_if_else(ptr addrspace(1) nocapture %arg) {
 ; GCN-LABEL: nested_if_if_else:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
@@ -614,7 +614,7 @@ bb.outer.end:                                        ; preds = %bb, %bb.then, %b
 define amdgpu_kernel void @nested_if_else_if(ptr addrspace(1) nocapture %arg) {
 ; GCN-LABEL: nested_if_else_if:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[2:3], 0x9
 ; GCN-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
@@ -911,10 +911,10 @@ define amdgpu_kernel void @s_endpgm_unsafe_barrier(ptr addrspace(1) nocapture %a
 ; GCN-LABEL: s_endpgm_unsafe_barrier:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    v_cmp_lt_u32_e32 vcc, 1, v0
-; GCN-NEXT:    s_and_saveexec_b64 s[2:3], vcc
+; GCN-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GCN-NEXT:    s_cbranch_execz .LBB4_2
 ; GCN-NEXT:  ; %bb.1: ; %bb.then
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
+; GCN-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x9
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
@@ -922,7 +922,7 @@ define amdgpu_kernel void @s_endpgm_unsafe_barrier(ptr addrspace(1) nocapture %a
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v1, v[0:1], s[4:7], 0 addr64
 ; GCN-NEXT:  .LBB4_2: ; %bb.end
-; GCN-NEXT:    s_or_b64 exec, exec, s[2:3]
+; GCN-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GCN-NEXT:    s_barrier
 ; GCN-NEXT:    s_endpgm

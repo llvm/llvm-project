@@ -253,7 +253,11 @@ SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
 
 MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
                                        const MachineRegisterInfo *MRI) {
-  MachineInstr *ConstInstr = MRI->getVRegDef(ConstReg);
+  MachineInstr *MI = MRI->getVRegDef(ConstReg);
+  MachineInstr *ConstInstr =
+      MI->getOpcode() == SPIRV::G_TRUNC || MI->getOpcode() == SPIRV::G_ZEXT
+          ? MRI->getVRegDef(MI->getOperand(1).getReg())
+          : MI;
   if (auto *GI = dyn_cast<GIntrinsic>(ConstInstr)) {
     if (GI->is(Intrinsic::spv_track_constant)) {
       ConstReg = ConstInstr->getOperand(2).getReg();

@@ -124,6 +124,13 @@ def fir_AllocaOp : fir_Op<"alloca", [AttrSizedOperandSegments,
     Indeed, a user would likely expect a good Fortran compiler to perform such
     an optimization.
 
+    Stack allocations have a maximum lifetime concept: their uses must not
+    exceed the lifetime of the closest parent operation with the
+    AutomaticAllocationScope trait, IsIsolatedFromAbove trait, or
+    LoopLikeOpInterface trait. This restriction is meant to ease the
+    insertion of stack save and restore operations, and to ease the conversion
+    of stack allocation into heap allocation.
+
     Until Fortran 2018, procedures defaulted to non-recursive. A legal
     implementation could therefore convert stack allocations to global
     allocations. Such a conversion effectively adds the SAVE attribute to all
@@ -183,11 +190,17 @@ def fir_AllocaOp : fir_Op<"alloca", [AttrSizedOperandSegments,
     mlir::Type getAllocatedType();
     bool hasLenParams() { return !getTypeparams().empty(); }
     bool hasShapeOperands() { return !getShape().empty(); }
+    bool isDynamic() {return hasLenParams() || hasShapeOperands();}
     unsigned numLenParams() { return getTypeparams().size(); }
     operand_range getLenParams() { return getTypeparams(); }
     unsigned numShapeOperands() { return getShape().size(); }
     operand_range getShapeOperands() { return getShape(); }
     static mlir::Type getRefTy(mlir::Type ty);
+    /// Is this an operation that owns the alloca directly made in its region?
+    static bool ownsNestedAlloca(mlir::Operation* op);
+    /// Get the parent region that owns this alloca. Nullptr if none can be
+    /// identified.
+    mlir::Region* getOwnerRegion();
   }];
 }
 
@@ -2956,7 +2969,10 @@ def fir_TypeInfoOp : fir_Op<"type_info",
 
   let hasVerifier = 1;
 
-  let regions = (region MaxSizedRegion<1>:$dispatch_table);
+  let regions = (region
+    MaxSizedRegion<1>:$dispatch_table,
+    MaxSizedRegion<1>:$component_info
+  );
 
   let builders = [
     OpBuilder<(ins "fir::RecordType":$type, "fir::RecordType":$parent_type,
@@ -2967,6 +2983,7 @@ def fir_TypeInfoOp : fir_Op<"type_info",
     $sym_name (`noinit` $no_init^)? (`nodestroy` $no_destroy^)?
     (`nofinal` $no_final^)? (`extends` $parent_type^)? attr-dict `:` $type
     (`dispatch_table` $dispatch_table^)?
+    (`component_info` $component_info^)?
   }];
 
   let extraClassDeclaration = [{
@@ -3008,6 +3025,24 @@ def fir_DTEntryOp : fir_Op<"dt_entry", [HasParent<"TypeInfoOp">]> {
   let extraClassDeclaration = [{
     static constexpr llvm::StringRef getProcAttrNameStr() { return "proc"; }
   }];
+}
+
+def fir_DTComponentOp : fir_Op<"dt_component", [HasParent<"TypeInfoOp">]> {
+  let summary = "define extra information about a component inside fir.type_info";
+
+  let description = [{
+    ```
+      fir.dt_component i lbs [-1,2] init @init_val
+    ```
+  }];
+
+  let arguments = (ins
+    StrAttr:$name,
+    OptionalAttr<DenseI64ArrayAttr>:$lower_bounds,
+    OptionalAttr<FlatSymbolRefAttr>:$init_val
+  );
+
+  let assemblyFormat = "$name (`lbs` $lower_bounds^)? (`init` $init_val^)? attr-dict";
 }
 
 def fir_AbsentOp : fir_OneResultOp<"absent", [NoMemoryEffect]> {

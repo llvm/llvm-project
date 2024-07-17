@@ -294,6 +294,9 @@ HANDLE_TARGET_OPCODE(G_FRAME_INDEX)
 /// Generic reference to global value.
 HANDLE_TARGET_OPCODE(G_GLOBAL_VALUE)
 
+/// Generic ptrauth-signed reference to global value.
+HANDLE_TARGET_OPCODE(G_PTRAUTH_GLOBAL_VALUE)
+
 /// Generic instruction to materialize the address of an object in the constant
 /// pool.
 HANDLE_TARGET_OPCODE(G_CONSTANT_POOL)

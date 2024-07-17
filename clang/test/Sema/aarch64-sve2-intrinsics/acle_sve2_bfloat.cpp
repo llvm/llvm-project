@@ -14,16 +14,16 @@
 
 void test_bfloat(const bfloat16_t *const_bf16_ptr, svbfloat16_t bf16, svbfloat16x2_t bf16x2)
 {
-  // expected-error@+2 {{'svwhilerw_bf16' needs target feature (sve2|sme),bf16}}
-  // overload-error@+1 {{'svwhilerw' needs target feature (sve2|sme),bf16}}
+  // expected-error@+2 {{'svwhilerw_bf16' needs target feature (sve2,bf16)|(sme,bf16)}}
+  // overload-error@+1 {{'svwhilerw' needs target feature (sve2,bf16)|(sme,bf16)}}
   SVE_ACLE_FUNC(svwhilerw,_bf16,,)(const_bf16_ptr, const_bf16_ptr);
-  // expected-error@+2 {{'svtbx_bf16' needs target feature (sve2|sme),bf16}}
-  // overload-error@+1 {{'svtbx' needs target feature (sve2|sme),bf16}}
+  // expected-error@+2 {{'svtbx_bf16' needs target feature (sve2,bf16)|(sme,bf16)}}
+  // overload-error@+1 {{'svtbx' needs target feature (sve2,bf16)|(sme,bf16)}}
   SVE_ACLE_FUNC(svtbx,_bf16,,)(bf16, bf16, svundef_u16());
-  // expected-error@+2 {{'svtbl2_bf16' needs target feature (sve2|sme),bf16}}
-  // overload-error@+1 {{'svtbl2' needs target feature (sve2|sme),bf16}}
+  // expected-error@+2 {{'svtbl2_bf16' needs target feature (sve2,bf16)|(sme,bf16)}}
+  // overload-error@+1 {{'svtbl2' needs target feature (sve2,bf16)|(sme,bf16)}}
   SVE_ACLE_FUNC(svtbl2,_bf16,,)(bf16x2, svundef_u16());
-  // expected-error@+2 {{'svwhilewr_bf16' needs target feature (sve2|sme),bf16}}
-  // overload-error@+1 {{'svwhilewr' needs target feature (sve2|sme),bf16}}
+  // expected-error@+2 {{'svwhilewr_bf16' needs target feature (sve2,bf16)|(sme,bf16)}}
+  // overload-error@+1 {{'svwhilewr' needs target feature (sve2,bf16)|(sme,bf16)}}
   SVE_ACLE_FUNC(svwhilewr,_bf16,,)(const_bf16_ptr, const_bf16_ptr);
 }

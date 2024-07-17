@@ -41,11 +41,14 @@ class MCSectionXCOFF final : public MCSection {
   static constexpr unsigned DefaultAlignVal = 4;
   static constexpr unsigned DefaultTextAlignVal = 32;
 
+  // XTY_CM sections are virtual except for toc-data symbols.
   MCSectionXCOFF(StringRef Name, XCOFF::StorageMappingClass SMC,
                  XCOFF::SymbolType ST, SectionKind K, MCSymbolXCOFF *QualName,
                  MCSymbol *Begin, StringRef SymbolTableName,
                  bool MultiSymbolsAllowed)
-      : MCSection(SV_XCOFF, Name, K.isText(), Begin),
+      : MCSection(SV_XCOFF, Name, K.isText(),
+                  /*IsVirtual=*/ST == XCOFF::XTY_CM && SMC != XCOFF::XMC_TD,
+                  Begin),
         CsectProp(XCOFF::CsectProperties(SMC, ST)), QualName(QualName),
         SymbolTableName(SymbolTableName), DwarfSubtypeFlags(std::nullopt),
         MultiSymbolsAllowed(MultiSymbolsAllowed), Kind(K) {
@@ -69,12 +72,14 @@ class MCSectionXCOFF final : public MCSection {
     }
   }
 
+  // DWARF sections are never virtual.
   MCSectionXCOFF(StringRef Name, SectionKind K, MCSymbolXCOFF *QualName,
                  XCOFF::DwarfSectionSubtypeFlags DwarfSubtypeFlags,
                  MCSymbol *Begin, StringRef SymbolTableName,
                  bool MultiSymbolsAllowed)
-      : MCSection(SV_XCOFF, Name, K.isText(), Begin), QualName(QualName),
-        SymbolTableName(SymbolTableName), DwarfSubtypeFlags(DwarfSubtypeFlags),
+      : MCSection(SV_XCOFF, Name, K.isText(), /*IsVirtual=*/false, Begin),
+        QualName(QualName), SymbolTableName(SymbolTableName),
+        DwarfSubtypeFlags(DwarfSubtypeFlags),
         MultiSymbolsAllowed(MultiSymbolsAllowed), Kind(K) {
     assert(QualName != nullptr && "QualName is needed.");
 
@@ -112,9 +117,8 @@ public:
 
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
-                            const MCExpr *Subsection) const override;
+                            uint32_t Subsection) const override;
   bool useCodeAlign() const override;
-  bool isVirtualSection() const override;
   StringRef getSymbolTableName() const { return SymbolTableName; }
   void setSymbolTableName(StringRef STN) { SymbolTableName = STN; }
   bool isMultiSymbolsAllowed() const { return MultiSymbolsAllowed; }

@@ -303,7 +303,7 @@ def OMPC_NumThreads : Clause<"num_threads"> {
 def OMPC_OMPX_Attribute : Clause<"ompx_attribute"> {
   let clangClass = "OMPXAttributeClause";
 }
-def OMPC_OMX_Bare : Clause<"ompx_bare"> {
+def OMPC_OMPX_Bare : Clause<"ompx_bare"> {
   let clangClass = "OMPXBareClause";
 }
 def OMPC_OMPX_DynCGroupMem : Clause<"ompx_dyn_cgroup_mem"> {
@@ -665,6 +665,7 @@ def OMP_Distribute : Directive<"distribute"> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_Collapse>,
     VersionedClause<OMPC_DistSchedule>,
+    VersionedClause<OMPC_Order, 50>,
   ];
   let association = AS_Loop;
   let category = CA_Executable;
@@ -2030,7 +2031,7 @@ def OMP_TargetTeams : Directive<"target teams"> {
     VersionedClause<OMPC_NoWait>,
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
-    VersionedClause<OMPC_OMX_Bare>,
+    VersionedClause<OMPC_OMPX_Bare>,
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Target, OMP_Teams];
@@ -2061,6 +2062,7 @@ def OMP_TargetTeamsDistribute : Directive<"target teams distribute"> {
     VersionedClause<OMPC_NoWait>,
     VersionedClause<OMPC_NumTeams>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
+    VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_ThreadLimit>,
   ];
   let leafConstructs = [OMP_Target, OMP_Teams, OMP_Distribute];
@@ -2334,6 +2336,7 @@ def OMP_TeamsDistribute : Directive<"teams distribute"> {
   ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_Order, 50>,
   ];
   let leafConstructs = [OMP_Teams, OMP_Distribute];
   let category = CA_Executable;

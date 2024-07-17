@@ -85,8 +85,12 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::FABS:
+  case ISD::FACOS:
+  case ISD::FASIN:
+  case ISD::FATAN:
   case ISD::FCEIL:
   case ISD::FCOS:
+  case ISD::FCOSH:
   case ISD::FEXP:
   case ISD::FEXP2:
   case ISD::FEXP10:
@@ -107,8 +111,10 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
   case ISD::FSIN:
+  case ISD::FSINH:
   case ISD::FSQRT:
   case ISD::FTAN:
+  case ISD::FTANH:
   case ISD::FTRUNC:
   case ISD::SIGN_EXTEND:
   case ISD::SINT_TO_FP:
@@ -1029,7 +1035,10 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_VECREDUCE_SEQ(SDNode *N) {
 SDValue DAGTypeLegalizer::ScalarizeVecOp_CMP(SDNode *N) {
   SDValue LHS = GetScalarizedVector(N->getOperand(0));
   SDValue RHS = GetScalarizedVector(N->getOperand(1));
-  return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0), LHS, RHS);
+
+  EVT ResVT = N->getValueType(0).getVectorElementType();
+  SDValue Cmp = DAG.getNode(N->getOpcode(), SDLoc(N), ResVT, LHS, RHS);
+  return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), N->getValueType(0), Cmp);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1076,6 +1085,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FCOPYSIGN:         SplitVecRes_FPOp_MultiType(N, Lo, Hi); break;
   case ISD::IS_FPCLASS:        SplitVecRes_IS_FPCLASS(N, Lo, Hi); break;
   case ISD::INSERT_VECTOR_ELT: SplitVecRes_INSERT_VECTOR_ELT(N, Lo, Hi); break;
+  case ISD::EXPERIMENTAL_VP_SPLAT: SplitVecRes_VP_SPLAT(N, Lo, Hi); break;
   case ISD::SPLAT_VECTOR:
   case ISD::SCALAR_TO_VECTOR:
     SplitVecRes_ScalarOp(N, Lo, Hi);
@@ -1146,9 +1156,13 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::CTPOP:
   case ISD::VP_CTPOP:
   case ISD::FABS: case ISD::VP_FABS:
+  case ISD::FACOS:
+  case ISD::FASIN:
+  case ISD::FATAN:
   case ISD::FCEIL:
   case ISD::VP_FCEIL:
   case ISD::FCOS:
+  case ISD::FCOSH:
   case ISD::FEXP:
   case ISD::FEXP2:
   case ISD::FEXP10:
@@ -1181,8 +1195,10 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FROUNDEVEN:
   case ISD::VP_FROUNDEVEN:
   case ISD::FSIN:
+  case ISD::FSINH:
   case ISD::FSQRT: case ISD::VP_SQRT:
   case ISD::FTAN:
+  case ISD::FTANH:
   case ISD::FTRUNC:
   case ISD::VP_FROUNDTOZERO:
   case ISD::SINT_TO_FP:
@@ -1990,6 +2006,16 @@ void DAGTypeLegalizer::SplitVecRes_ScalarOp(SDNode *N, SDValue &Lo,
     assert(N->getOpcode() == ISD::SPLAT_VECTOR && "Unexpected opcode");
     Hi = Lo;
   }
+}
+
+void DAGTypeLegalizer::SplitVecRes_VP_SPLAT(SDNode *N, SDValue &Lo,
+                                            SDValue &Hi) {
+  SDLoc dl(N);
+  auto [LoVT, HiVT] = DAG.GetSplitDestVTs(N->getValueType(0));
+  auto [MaskLo, MaskHi] = SplitMask(N->getOperand(1));
+  auto [EVLLo, EVLHi] = DAG.SplitEVL(N->getOperand(2), N->getValueType(0), dl);
+  Lo = DAG.getNode(N->getOpcode(), dl, LoVT, N->getOperand(0), MaskLo, EVLLo);
+  Hi = DAG.getNode(N->getOpcode(), dl, HiVT, N->getOperand(0), MaskHi, EVLHi);
 }
 
 void DAGTypeLegalizer::SplitVecRes_LOAD(LoadSDNode *LD, SDValue &Lo,
@@ -4284,6 +4310,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::STEP_VECTOR:
   case ISD::SPLAT_VECTOR:
   case ISD::SCALAR_TO_VECTOR:
+  case ISD::EXPERIMENTAL_VP_SPLAT:
     Res = WidenVecRes_ScalarOp(N);
     break;
   case ISD::SIGN_EXTEND_INREG: Res = WidenVecRes_InregOp(N); break;
@@ -4479,8 +4506,12 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     break;
 
   case ISD::FABS:
+  case ISD::FACOS:
+  case ISD::FASIN:
+  case ISD::FATAN:
   case ISD::FCEIL:
   case ISD::FCOS:
+  case ISD::FCOSH:
   case ISD::FEXP:
   case ISD::FEXP2:
   case ISD::FEXP10:
@@ -4493,8 +4524,10 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
   case ISD::FSIN:
+  case ISD::FSINH:
   case ISD::FSQRT:
   case ISD::FTAN:
+  case ISD::FTANH:
   case ISD::FTRUNC:
     if (unrollExpandedOp())
       break;
@@ -5231,7 +5264,13 @@ SDValue DAGTypeLegalizer::WidenVecRes_ExpOp(SDNode *N) {
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue InOp = GetWidenedVector(N->getOperand(0));
   SDValue RHS = N->getOperand(1);
-  SDValue ExpOp = RHS.getValueType().isVector() ? GetWidenedVector(RHS) : RHS;
+  EVT ExpVT = RHS.getValueType();
+  SDValue ExpOp = RHS;
+  if (ExpVT.isVector()) {
+    EVT WideExpVT =
+        WidenVT.changeVectorElementType(ExpVT.getVectorElementType());
+    ExpOp = ModifyToType(RHS, WideExpVT);
+  }
 
   return DAG.getNode(N->getOpcode(), SDLoc(N), WidenVT, InOp, ExpOp);
 }
@@ -5808,6 +5847,9 @@ SDValue DAGTypeLegalizer::WidenVecRes_VP_GATHER(VPGatherSDNode *N) {
 
 SDValue DAGTypeLegalizer::WidenVecRes_ScalarOp(SDNode *N) {
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  if (N->isVPOpcode())
+    return DAG.getNode(N->getOpcode(), SDLoc(N), WidenVT, N->getOperand(0),
+                       N->getOperand(1), N->getOperand(2));
   return DAG.getNode(N->getOpcode(), SDLoc(N), WidenVT, N->getOperand(0));
 }
 
@@ -6347,6 +6389,10 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
     Res = WidenVecOp_FP_TO_XINT_SAT(N);
     break;
 
+  case ISD::EXPERIMENTAL_VP_SPLAT:
+    Res = WidenVecOp_VP_SPLAT(N, OpNo);
+    break;
+
   case ISD::VECREDUCE_FADD:
   case ISD::VECREDUCE_FMUL:
   case ISD::VECREDUCE_ADD:
@@ -6805,6 +6851,13 @@ SDValue DAGTypeLegalizer::WidenVecOp_STORE(SDNode *N) {
   }
 
   report_fatal_error("Unable to widen vector store");
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_VP_SPLAT(SDNode *N, unsigned OpNo) {
+  assert(OpNo == 1 && "Can widen only mask operand of vp_splat");
+  return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0),
+                     N->getOperand(0), GetWidenedVector(N->getOperand(1)),
+                     N->getOperand(2));
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_VP_STORE(SDNode *N, unsigned OpNo) {

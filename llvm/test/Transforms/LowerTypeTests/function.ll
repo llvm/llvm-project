@@ -112,8 +112,8 @@ define i1 @foo(ptr %p) {
 ; X86-LINUX: attributes #[[ATTR]] = { naked nocf_check noinline }
 ; X86-WIN32: attributes #[[ATTR]] = { nocf_check noinline }
 ; ARM: attributes #[[ATTR]] = { naked noinline
-; THUMB: attributes #[[ATTR]] = { naked noinline "branch-target-enforcement"="false" "sign-return-address"="none" "target-cpu"="cortex-a8" "target-features"="+thumb-mode" }
-; THUMBV6M: attributes #[[ATTR]] = { naked noinline "branch-target-enforcement"="false" "sign-return-address"="none" "target-features"="+thumb-mode" }
+; THUMB: attributes #[[ATTR]] = { naked noinline "target-cpu"="cortex-a8" "target-features"="+thumb-mode" }
+; THUMBV6M: attributes #[[ATTR]] = { naked noinline "target-features"="+thumb-mode" }
 ; RISCV: attributes #[[ATTR]] = { naked noinline "target-features"="-c,-relax" }
 ; LOONGARCH64: attributes #[[ATTR]] = { naked noinline }
 

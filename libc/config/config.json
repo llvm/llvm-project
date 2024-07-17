@@ -1,4 +1,10 @@
 {
+  "errno": {
+    "LIBC_CONF_ERRNO_MODE": {
+      "value": "",
+      "doc": "The implementation used for errno, acceptable values are LIBC_ERRNO_MODE_UNDEFINED, LIBC_ERRNO_MODE_THREAD_LOCAL, LIBC_ERRNO_MODE_SHARED, LIBC_ERRNO_MODE_EXTERNAL, and LIBC_ERRNO_MODE_SYSTEM."
+    }
+  },
   "printf": {
     "LIBC_CONF_PRINTF_DISABLE_FLOAT": {
       "value": false,
@@ -19,6 +25,16 @@
     "LIBC_CONF_PRINTF_DISABLE_FIXED_POINT": {
       "value": false,
       "doc": "Disable printing fixed point values in printf and friends."
+    }
+  },
+  "scanf": {
+    "LIBC_CONF_SCANF_DISABLE_FLOAT": {
+      "value": false,
+      "doc": "Disable parsing floating point values in scanf and friends."
+    },
+    "LIBC_CONF_SCANF_DISABLE_INDEX_MODE": {
+      "value": false,
+      "doc": "Disable index mode in the scanf format string."
     }
   },
   "string": {
@@ -59,6 +75,18 @@
     "LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE": {
       "value": 1073741824,
       "doc": "Default size for the constinit freelist buffer used for the freelist malloc implementation (default 1o 1GB)."
+    }
+  },
+  "math": {
+    "LIBC_CONF_MATH_OPTIMIZATIONS": {
+      "value": 0,
+      "doc": "Configures optimizations for math functions. Values accepted are LIBC_MATH_SKIP_ACCURATE_PASS, LIBC_MATH_SMALL_TABLES, LIBC_MATH_NO_ERRNO, LIBC_MATH_NO_EXCEPT, and LIBC_MATH_FAST."
+    }
+  },
+  "qsort": {
+    "LIBC_CONF_QSORT_IMPL": {
+      "value": "LIBC_QSORT_QUICK_SORT",
+      "doc": "Configures sorting algorithm for qsort and qsort_r. Values accepted are LIBC_QSORT_QUICK_SORT, LIBC_QSORT_HEAP_SORT."
     }
   }
 }

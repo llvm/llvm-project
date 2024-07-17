@@ -570,7 +570,7 @@ void MIRPrinter::convertMachineMetadataNodes(yaml::MachineFunction &YMF,
     std::string NS;
     raw_string_ostream StrOS(NS);
     MD.second->print(StrOS, MST, MF.getFunction().getParent());
-    YMF.MachineMetadataNodes.push_back(StrOS.str());
+    YMF.MachineMetadataNodes.push_back(NS);
   }
 }
 
@@ -588,7 +588,7 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
 
     yaml::MachineConstantPoolValue YamlConstant;
     YamlConstant.ID = ID++;
-    YamlConstant.Value = StrOS.str();
+    YamlConstant.Value = Str;
     YamlConstant.Alignment = Constant.getAlign();
     YamlConstant.IsTargetSpecific = Constant.isMachineConstantPoolEntry();
 
@@ -608,7 +608,7 @@ void MIRPrinter::convert(ModuleSlotTracker &MST,
     for (const auto *MBB : Table.MBBs) {
       raw_string_ostream StrOS(Str);
       StrOS << printMBBReference(*MBB);
-      Entry.Blocks.push_back(StrOS.str());
+      Entry.Blocks.push_back(Str);
       Str.clear();
     }
     YamlJTI.Entries.push_back(Entry);

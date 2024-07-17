@@ -87,7 +87,7 @@ llvm::opt::DerivedArgList *AMDGPUOpenMPToolChain::TranslateArgs(
               llvm::formatv("{0}", llvm::fmt_consume(ArchsOrErr.takeError()));
           getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
               << llvm::Triple::getArchTypeName(getArch()) << ErrMsg << "-march";
-          Arch = CudaArchToString(CudaArch::HIPDefault);
+          Arch = OffloadArchToString(OffloadArch::HIPDefault);
         } else {
           Arch = Args.MakeArgString(ArchsOrErr->front());
         }

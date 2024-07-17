@@ -8,7 +8,6 @@
 
 #include "AVRMCExpr.h"
 
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
@@ -69,10 +68,10 @@ bool AVRMCExpr::evaluateAsConstant(int64_t &Result) const {
 }
 
 bool AVRMCExpr::evaluateAsRelocatableImpl(MCValue &Result,
-                                          const MCAsmLayout *Layout,
+                                          const MCAssembler *Asm,
                                           const MCFixup *Fixup) const {
   MCValue Value;
-  bool isRelocatable = SubExpr->evaluateAsRelocatable(Value, Layout, Fixup);
+  bool isRelocatable = SubExpr->evaluateAsRelocatable(Value, Asm, Fixup);
 
   if (!isRelocatable)
     return false;
@@ -80,10 +79,10 @@ bool AVRMCExpr::evaluateAsRelocatableImpl(MCValue &Result,
   if (Value.isAbsolute()) {
     Result = MCValue::get(evaluateAsInt64(Value.getConstant()));
   } else {
-    if (!Layout)
+    if (!Asm || !Asm->hasLayout())
       return false;
 
-    MCContext &Context = Layout->getAssembler().getContext();
+    MCContext &Context = Asm->getContext();
     const MCSymbolRefExpr *Sym = Value.getSymA();
     MCSymbolRefExpr::VariantKind Modifier = Sym->getKind();
     if (Modifier != MCSymbolRefExpr::VK_None)

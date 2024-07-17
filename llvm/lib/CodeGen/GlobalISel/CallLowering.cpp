@@ -49,6 +49,8 @@ addFlagsUsingAttrFn(ISD::ArgFlagsTy &Flags,
     Flags.setNest();
   if (AttrFn(Attribute::ByVal))
     Flags.setByVal();
+  if (AttrFn(Attribute::ByRef))
+    Flags.setByRef();
   if (AttrFn(Attribute::Preallocated))
     Flags.setPreallocated();
   if (AttrFn(Attribute::InAlloca))
@@ -147,6 +149,14 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   // Try looking through a bitcast from one function type to another.
   // Commonly happens with calls to objc_msgSend().
   const Value *CalleeV = CB.getCalledOperand()->stripPointerCasts();
+
+  // If IRTranslator chose to drop the ptrauth info, we can turn this into
+  // a direct call.
+  if (!PAI && CB.countOperandBundlesOfType(LLVMContext::OB_ptrauth)) {
+    CalleeV = cast<ConstantPtrAuth>(CalleeV)->getPointer();
+    assert(isa<Function>(CalleeV));
+  }
+
   if (const Function *F = dyn_cast<Function>(CalleeV)) {
     if (F->hasFnAttribute(Attribute::NonLazyBind)) {
       LLT Ty = getLLTForType(*F->getType(), DL);
@@ -221,17 +231,26 @@ void CallLowering::setArgFlags(CallLowering::ArgInfo &Arg, unsigned OpIdx,
   }
 
   Align MemAlign = DL.getABITypeAlign(Arg.Ty);
-  if (Flags.isByVal() || Flags.isInAlloca() || Flags.isPreallocated()) {
+  if (Flags.isByVal() || Flags.isInAlloca() || Flags.isPreallocated() ||
+      Flags.isByRef()) {
     assert(OpIdx >= AttributeList::FirstArgIndex);
     unsigned ParamIdx = OpIdx - AttributeList::FirstArgIndex;
 
     Type *ElementTy = FuncInfo.getParamByValType(ParamIdx);
     if (!ElementTy)
+      ElementTy = FuncInfo.getParamByRefType(ParamIdx);
+    if (!ElementTy)
       ElementTy = FuncInfo.getParamInAllocaType(ParamIdx);
     if (!ElementTy)
       ElementTy = FuncInfo.getParamPreallocatedType(ParamIdx);
+
     assert(ElementTy && "Must have byval, inalloca or preallocated type");
-    Flags.setByValSize(DL.getTypeAllocSize(ElementTy));
+
+    uint64_t MemSize = DL.getTypeAllocSize(ElementTy);
+    if (Flags.isByRef())
+      Flags.setByRefSize(MemSize);
+    else
+      Flags.setByValSize(MemSize);
 
     // For ByVal, alignment should be passed from FE.  BE will guess if
     // this info is not there but there are cases it cannot get right.
@@ -722,7 +741,7 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
   MachineFunction &MF = MIRBuilder.getMF();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const Function &F = MF.getFunction();
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
 
   const unsigned NumArgs = Args.size();
 
@@ -875,10 +894,10 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
         if (VA.getLocInfo() == CCValAssign::Indirect)
           Handler.assignValueToAddress(ArgReg, StackAddr, PointerTy, MPO, VA);
         else
-          Handler.assignValueToAddress(Args[i], Part, StackAddr, MemTy, MPO, VA);
+          Handler.assignValueToAddress(Args[i], Part, StackAddr, MemTy, MPO,
+                                       VA);
       } else if (VA.isMemLoc() && Flags.isByVal()) {
-        assert(Args[i].Regs.size() == 1 &&
-               "didn't expect split byval pointer");
+        assert(Args[i].Regs.size() == 1 && "didn't expect split byval pointer");
 
         if (Handler.isIncomingArgumentHandler()) {
           // We just need to copy the frame index value to the pointer.
@@ -1294,7 +1313,8 @@ Register CallLowering::ValueHandler::extendRegister(Register ValReg,
   }
 
   switch (VA.getLocInfo()) {
-  default: break;
+  default:
+    break;
   case CCValAssign::Full:
   case CCValAssign::BCvt:
     // FIXME: bitconverting between vector types may or may not be a

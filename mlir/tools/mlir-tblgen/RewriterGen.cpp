@@ -366,7 +366,7 @@ std::string PatternEmitter::handleConstantAttr(Attribute attr,
 
 void PatternEmitter::emitStaticMatcher(DagNode tree, std::string funcName) {
   os << formatv(
-      "static ::mlir::LogicalResult {0}(::mlir::PatternRewriter &rewriter, "
+      "static ::llvm::LogicalResult {0}(::mlir::PatternRewriter &rewriter, "
       "::mlir::Operation *op0, ::llvm::SmallVector<::mlir::Operation "
       "*, 4> &tblgen_ops",
       funcName);
@@ -1081,7 +1081,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
   {
     auto classScope = os.scope();
     os.printReindented(R"(
-    ::mlir::LogicalResult matchAndRewrite(::mlir::Operation *op0,
+    ::llvm::LogicalResult matchAndRewrite(::mlir::Operation *op0,
         ::mlir::PatternRewriter &rewriter) const override {)")
         << '\n';
     {
@@ -1117,7 +1117,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
 
       os << "return ::mlir::success();\n";
     }
-    os << "};\n";
+    os << "}\n";
   }
   os << "};\n\n";
 }

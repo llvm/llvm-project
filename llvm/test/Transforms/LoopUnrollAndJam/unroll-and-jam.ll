@@ -639,8 +639,8 @@ define i32 @test6() #0 {
 ; CHECK-NEXT:    [[P0_UNR_PH:%.*]] = phi i32 [ 2, [[FOR_LATCH]] ]
 ; CHECK-NEXT:    br label [[FOR_END_UNR_LCSSA]]
 ; CHECK:       for.end.unr-lcssa:
-; CHECK-NEXT:    [[DOTLCSSA_LCSSA_PH:%.*]] = phi i32 [ undef, [[ENTRY:%.*]] ], [ [[DOTLCSSA_LCSSA_PH_PH]], [[FOR_END_UNR_LCSSA_LOOPEXIT]] ]
-; CHECK-NEXT:    [[INC_LCSSA_LCSSA_PH:%.*]] = phi i32 [ undef, [[ENTRY]] ], [ [[INC_LCSSA_LCSSA_PH_PH]], [[FOR_END_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[DOTLCSSA_LCSSA_PH:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[DOTLCSSA_LCSSA_PH_PH]], [[FOR_END_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[INC_LCSSA_LCSSA_PH:%.*]] = phi i32 [ poison, [[ENTRY]] ], [ [[INC_LCSSA_LCSSA_PH_PH]], [[FOR_END_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[P0_UNR:%.*]] = phi i32 [ [[F_PROMOTED10]], [[ENTRY]] ], [ [[P0_UNR_PH]], [[FOR_END_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    br i1 true, label [[FOR_OUTER_EPIL_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.outer.epil.preheader:
@@ -1324,9 +1324,9 @@ define signext i16 @test10(i32 %k) #0 {
 ; CHECK-NEXT:    [[STOREMERGE_5_LCSSA_LCSSA_PH_PH:%.*]] = phi i32 [ 0, [[FOR_INC24]] ]
 ; CHECK-NEXT:    br label [[FOR_END26_UNR_LCSSA]]
 ; CHECK:       for.end26.unr-lcssa:
-; CHECK-NEXT:    [[DEC_LCSSA_LCSSA_PH:%.*]] = phi i64 [ undef, [[ENTRY:%.*]] ], [ [[DEC_LCSSA_LCSSA_PH_PH]], [[FOR_END26_UNR_LCSSA_LOOPEXIT]] ]
-; CHECK-NEXT:    [[STOREMERGE_4_LCSSA_LCSSA_PH:%.*]] = phi i64 [ undef, [[ENTRY]] ], [ [[STOREMERGE_4_LCSSA_LCSSA_PH_PH]], [[FOR_END26_UNR_LCSSA_LOOPEXIT]] ]
-; CHECK-NEXT:    [[STOREMERGE_5_LCSSA_LCSSA_PH:%.*]] = phi i32 [ undef, [[ENTRY]] ], [ [[STOREMERGE_5_LCSSA_LCSSA_PH_PH]], [[FOR_END26_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[DEC_LCSSA_LCSSA_PH:%.*]] = phi i64 [ poison, [[ENTRY:%.*]] ], [ [[DEC_LCSSA_LCSSA_PH_PH]], [[FOR_END26_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[STOREMERGE_4_LCSSA_LCSSA_PH:%.*]] = phi i64 [ poison, [[ENTRY]] ], [ [[STOREMERGE_4_LCSSA_LCSSA_PH_PH]], [[FOR_END26_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[STOREMERGE_5_LCSSA_LCSSA_PH:%.*]] = phi i32 [ poison, [[ENTRY]] ], [ [[STOREMERGE_5_LCSSA_LCSSA_PH_PH]], [[FOR_END26_UNR_LCSSA_LOOPEXIT]] ]
 ; CHECK-NEXT:    br i1 true, label [[FOR_BODY_EPIL_PREHEADER:%.*]], label [[FOR_END26:%.*]]
 ; CHECK:       for.body.epil.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY_EPIL:%.*]]

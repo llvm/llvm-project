@@ -133,20 +133,20 @@ private:
       const std::pair<unsigned, unsigned> &BankLine = getAccessedBankLine(Sel);
       if (CachedConsts.empty()) {
         CachedConsts.push_back(BankLine);
-        UsedKCache.push_back(std::pair<unsigned, unsigned>(0, KCacheIndex));
+        UsedKCache.emplace_back(0, KCacheIndex);
         continue;
       }
       if (CachedConsts[0] == BankLine) {
-        UsedKCache.push_back(std::pair<unsigned, unsigned>(0, KCacheIndex));
+        UsedKCache.emplace_back(0, KCacheIndex);
         continue;
       }
       if (CachedConsts.size() == 1) {
         CachedConsts.push_back(BankLine);
-        UsedKCache.push_back(std::pair<unsigned, unsigned>(1, KCacheIndex));
+        UsedKCache.emplace_back(1, KCacheIndex);
         continue;
       }
       if (CachedConsts[1] == BankLine) {
-        UsedKCache.push_back(std::pair<unsigned, unsigned>(1, KCacheIndex));
+        UsedKCache.emplace_back(1, KCacheIndex);
         continue;
       }
       return false;

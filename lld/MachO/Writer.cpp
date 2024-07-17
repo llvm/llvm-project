@@ -640,7 +640,17 @@ void Writer::treatSpecialUndefineds() {
 
 static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
                                     const lld::macho::Reloc &r) {
-  assert(sym->isLive());
+  if (!sym->isLive()) {
+    if (Defined *defined = dyn_cast<Defined>(sym)) {
+      if (config->emitInitOffsets &&
+          defined->isec()->getName() == section_names::moduleInitFunc)
+        fatal(isec->getLocation(r.offset) + ": cannot reference " +
+              sym->getName() +
+              " defined in __mod_init_func when -init_offsets is used");
+    }
+    assert(false && "referenced symbol must be live");
+  }
+
   const RelocAttrs &relocAttrs = target->getRelocAttrs(r.type);
 
   if (relocAttrs.hasAttr(RelocAttrBits::BRANCH)) {

@@ -516,7 +516,7 @@ struct __policy {
   }
 
   _LIBCPP_HIDE_FROM_ABI static const __policy* __create_empty() {
-    static const _LIBCPP_CONSTEXPR __policy __policy = {
+    static constexpr __policy __policy = {
         nullptr,
         nullptr,
         true,
@@ -543,7 +543,7 @@ private:
 
   template <typename _Fun>
   _LIBCPP_HIDE_FROM_ABI static const __policy* __choose_policy(/* is_small = */ false_type) {
-    static const _LIBCPP_CONSTEXPR __policy __policy = {
+    static constexpr __policy __policy = {
         &__large_clone<_Fun>,
         &__large_destroy<_Fun>,
         false,
@@ -558,7 +558,7 @@ private:
 
   template <typename _Fun>
   _LIBCPP_HIDE_FROM_ABI static const __policy* __choose_policy(/* is_small = */ true_type) {
-    static const _LIBCPP_CONSTEXPR __policy __policy = {
+    static constexpr __policy __policy = {
         nullptr,
         nullptr,
         false,
