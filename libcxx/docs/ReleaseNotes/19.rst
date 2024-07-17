@@ -55,6 +55,7 @@ Implemented Papers
 - P2231R1 - Missing ``constexpr`` in ``std::optional`` and ``std::variant``
 - P0019R8 - ``std::atomic_ref``
 - P2389R2 - Alias template ``dims`` for the ``extents`` of ``mdspan``
+- P1223R5 - ``find_last``
 
 Improvements and New Features
 -----------------------------

@@ -75,14 +75,14 @@ struct __fn {
 
   template <forward_iterator _Iter, sentinel_for<_Iter> _Sent, class _Type, class _Proj = identity>
     requires indirect_binary_predicate<ranges::equal_to, projected<_Iter, _Proj>, const _Type*>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr subrange<_Iter>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static subrange<_Iter>
   operator()(_Iter __first, _Sent __last, const _Type& __value, _Proj __proj = {}) const {
     return __find_last_impl(std::move(__first), std::move(__last), __value, __proj);
   }
 
   template <forward_range _Range, class _Type, class _Proj = identity>
     requires indirect_binary_predicate<ranges::equal_to, projected<iterator_t<_Range>, _Proj>, const _Type*>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr borrowed_subrange_t<_Range>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static borrowed_subrange_t<_Range>
   operator()(_Range&& __range, const _Type& __value, _Proj __proj = {}) const {
     return __find_last_impl(ranges::begin(__range), ranges::end(__range), __value, __proj);
   }
