@@ -609,6 +609,9 @@ protected:
   bool
   insertWaitsBeforeSystemScopeStore(const MachineBasicBlock::iterator MI) const;
 
+  bool setAtomicScope(const MachineBasicBlock::iterator &MI,
+                      SIAtomicScope Scope, SIAtomicAddrSpace AddrSpace) const;
+
 public:
   SIGfx12CacheControl(const GCNSubtarget &ST) : SIGfx11CacheControl(ST) {}
 
@@ -625,6 +628,28 @@ public:
                                       bool IsLastUse) const override;
 
   bool expandSystemScopeStore(MachineBasicBlock::iterator &MI) const override;
+
+  bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
+                     SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
+                     Position Pos) const override;
+
+  bool enableLoadCacheBypass(const MachineBasicBlock::iterator &MI,
+                             SIAtomicScope Scope,
+                             SIAtomicAddrSpace AddrSpace) const override {
+    return setAtomicScope(MI, Scope, AddrSpace);
+  }
+
+  bool enableStoreCacheBypass(const MachineBasicBlock::iterator &MI,
+                              SIAtomicScope Scope,
+                              SIAtomicAddrSpace AddrSpace) const override {
+    return setAtomicScope(MI, Scope, AddrSpace);
+  }
+
+  bool enableRMWCacheBypass(const MachineBasicBlock::iterator &MI,
+                            SIAtomicScope Scope,
+                            SIAtomicAddrSpace AddrSpace) const override {
+    return setAtomicScope(MI, Scope, AddrSpace);
+  }
 };
 
 class SIMemoryLegalizer final : public MachineFunctionPass {
@@ -723,7 +748,7 @@ static SIAtomicAddrSpace getFenceAddrSpaceMMRA(const MachineInstr &MI,
   return (Result != SIAtomicAddrSpace::NONE) ? Result : Default;
 }
 
-} // end namespace anonymous
+} // end anonymous namespace
 
 void SIMemOpAccess::reportUnsupported(const MachineBasicBlock::iterator &MI,
                                       const char *Msg) const {
@@ -2429,6 +2454,72 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   return true;
 }
 
+bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
+                                        SIAtomicScope Scope,
+                                        SIAtomicAddrSpace AddrSpace,
+                                        bool IsCrossAddrSpaceOrdering,
+                                        Position Pos) const {
+  MachineBasicBlock &MBB = *MI->getParent();
+  DebugLoc DL = MI->getDebugLoc();
+
+  // The scratch address space does not need the global memory cache
+  // writeback as all memory operations by the same thread are
+  // sequentially consistent, and no other thread can access scratch
+  // memory.
+
+  // Other address spaces do not have a cache.
+  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) == SIAtomicAddrSpace::NONE)
+    return false;
+
+  if (Pos == Position::AFTER)
+    ++MI;
+
+  // GLOBAL_WB is always needed, even for write-through caches, as it
+  // additionally ensures all operations have reached the desired cache level.
+  bool SkipWB = false;
+  AMDGPU::CPol::CPol ScopeImm = AMDGPU::CPol::SCOPE_DEV;
+  switch (Scope) {
+  case SIAtomicScope::SYSTEM:
+    ScopeImm = AMDGPU::CPol::SCOPE_SYS;
+    break;
+  case SIAtomicScope::AGENT:
+    ScopeImm = AMDGPU::CPol::SCOPE_DEV;
+    break;
+  case SIAtomicScope::WORKGROUP:
+    // In WGP mode the waves of a work-group can be executing on either CU of
+    // the WGP. Therefore we need to ensure all operations have reached L1,
+    // hence the SCOPE_SE WB.
+    // For CU mode, we need operations to reach L0, so the wait is enough -
+    // there are no ways for an operation to report completion without reaching
+    // at least L0.
+    if (ST.isCuModeEnabled())
+      SkipWB = true;
+    else
+      ScopeImm = AMDGPU::CPol::SCOPE_SE;
+    break;
+  case SIAtomicScope::WAVEFRONT:
+  case SIAtomicScope::SINGLETHREAD:
+    // No cache to invalidate.
+    return false;
+  default:
+    llvm_unreachable("Unsupported synchronization scope");
+  }
+
+  if (!SkipWB)
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB)).addImm(ScopeImm);
+
+  if (Pos == Position::AFTER)
+    --MI;
+
+  // We always have to wait for previous memory operations (load/store) to
+  // complete, whether we inserted a WB or not. If we inserted a WB (storecnt),
+  // we of course need to wait for that as well.
+  insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
+             IsCrossAddrSpaceOrdering, Pos);
+
+  return true;
+}
+
 bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
     MachineBasicBlock::iterator &MI, SIAtomicAddrSpace AddrSpace, SIMemOp Op,
     bool IsVolatile, bool IsNonTemporal, bool IsLastUse = false) const {
@@ -2477,6 +2568,44 @@ bool SIGfx12CacheControl::expandSystemScopeStore(
     return insertWaitsBeforeSystemScopeStore(MI);
 
   return false;
+}
+
+bool SIGfx12CacheControl::setAtomicScope(const MachineBasicBlock::iterator &MI,
+                                         SIAtomicScope Scope,
+                                         SIAtomicAddrSpace AddrSpace) const {
+  bool Changed = false;
+
+  if ((AddrSpace & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE) {
+    switch (Scope) {
+    case SIAtomicScope::SYSTEM:
+      Changed |= setScope(MI, AMDGPU::CPol::SCOPE_SYS);
+      break;
+    case SIAtomicScope::AGENT:
+      Changed |= setScope(MI, AMDGPU::CPol::SCOPE_DEV);
+      break;
+    case SIAtomicScope::WORKGROUP:
+      // In workgroup mode, SCOPE_SE is needed as waves can executes on
+      // different CUs that access different L0s.
+      if (!ST.isCuModeEnabled())
+        Changed |= setScope(MI, AMDGPU::CPol::SCOPE_SE);
+      break;
+    case SIAtomicScope::WAVEFRONT:
+    case SIAtomicScope::SINGLETHREAD:
+      // No cache to bypass.
+      break;
+    default:
+      llvm_unreachable("Unsupported synchronization scope");
+    }
+  }
+
+  // The scratch address space does not need the global memory caches
+  // to be bypassed as all memory operations by the same thread are
+  // sequentially consistent, and no other thread can access scratch
+  // memory.
+
+  // Other address spaces do not have a cache.
+
+  return Changed;
 }
 
 bool SIMemoryLegalizer::removeAtomicPseudoMIs() {
