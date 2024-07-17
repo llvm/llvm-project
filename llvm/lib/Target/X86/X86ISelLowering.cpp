@@ -58854,8 +58854,8 @@ static bool useEGPRInlineAsm(const X86Subtarget &Subtarget) {
 
 std::pair<unsigned, const TargetRegisterClass *>
 X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
-                                                StringRef Constraint,
-                                                MVT VT) const {
+                                                StringRef Constraint, MVT VT,
+                                                std::string &ErrMsg) const {
   // First, see if this is a constraint that directly corresponds to an LLVM
   // register class.
   if (Constraint.size() == 1) {
@@ -58888,6 +58888,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         if (VT == MVT::v64i1 || VT == MVT::i64)
           return std::make_pair(0U, &X86::VK64RegClass);
       }
+      ErrMsg = "register is unavailable without AVX512 or AVX512BW";
       break;
     case 'q':   // GENERAL_REGS in 64-bit mode, Q_REGS in 32-bit mode.
       if (Subtarget.is64Bit()) {
@@ -58941,6 +58942,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, useEGPRInlineAsm(Subtarget)
                                       ? &X86::GR64RegClass
                                       : &X86::GR64_NOREX2RegClass);
+      ErrMsg = "couldn't allocate for type " + EVT(VT).getEVTString();
       break;
     case 'R':   // LEGACY_REGS
       if (VT == MVT::i8 || VT == MVT::i1)
@@ -58962,17 +58964,23 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, &X86::RFP64RegClass);
       if (VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f80)
         return std::make_pair(0U, &X86::RFP80RegClass);
+      ErrMsg = "couldn't allocate for type " + EVT(VT).getEVTString();
       break;
     case 'y':   // MMX_REGS if MMX allowed.
       if (!Subtarget.hasMMX()) break;
       return std::make_pair(0U, &X86::VR64RegClass);
     case 'v':
     case 'x':   // SSE_REGS if SSE1 allowed or AVX_REGS if AVX allowed
-      if (!Subtarget.hasSSE1()) break;
+      if (!Subtarget.hasSSE1()) {
+        ErrMsg = "register is unavailable without SSE1";
+        break;
+      }
       bool VConstraint = (Constraint[0] == 'v');
 
       switch (VT.SimpleTy) {
-      default: break;
+      default:
+        ErrMsg = "couldn't allocate for type " + EVT(VT).getEVTString();
+        break;
       // Scalar SSE types.
       case MVT::f16:
         if (VConstraint && Subtarget.hasFP16())
@@ -59043,14 +59051,18 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
           return std::make_pair(0U, &X86::VR256RegClass);
         break;
       case MVT::v32f16:
-        if (!Subtarget.hasFP16())
+        if (!Subtarget.hasFP16()) {
+          ErrMsg = "register is unavailable without AVX512FP16";
           break;
+        }
         if (VConstraint)
           return std::make_pair(0U, &X86::VR512RegClass);
         return std::make_pair(0U, &X86::VR512_0_15RegClass);
       case MVT::v32bf16:
-        if (!Subtarget.hasBF16())
+        if (!Subtarget.hasBF16()) {
+          ErrMsg = "register is unavailable without AVX512BF16";
           break;
+        }
         if (VConstraint)
           return std::make_pair(0U, &X86::VR512RegClass);
         return std::make_pair(0U, &X86::VR512_0_15RegClass);
@@ -59074,7 +59086,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     case 'i':
     case 't':
     case '2':
-      return getRegForInlineAsmConstraint(TRI, "x", VT);
+      return getRegForInlineAsmConstraint(TRI, "x", VT, ErrMsg);
     case 'm':
       if (!Subtarget.hasMMX()) break;
       return std::make_pair(0U, &X86::VR64RegClass);
@@ -59162,6 +59174,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         if (VT == MVT::v64i1 || VT == MVT::i64)
           return std::make_pair(0U, &X86::VK64WMRegClass);
       }
+      ErrMsg = "register is unavailable without AVX512 or AVX512BW";
       break;
     }
   } else if (Constraint.size() == 2 && Constraint[0] == 'j') {
@@ -59197,7 +59210,8 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   // Use the default implementation in TargetLowering to convert the register
   // constraint into a member of a register class.
   std::pair<Register, const TargetRegisterClass*> Res;
-  Res = TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
+  Res =
+      TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT, ErrMsg);
 
   // Not found as a standard register?
   if (!Res.second) {
@@ -59241,18 +59255,20 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     return Res;
   }
 
+  // Make sure it isn't a register that requires AVX512.
+  if (!Subtarget.hasAVX512() && isFRClass(*Res.second) &&
+      TRI->getEncodingValue(Res.first) & 0x10) {
+    // Register requires EVEX prefix.
+    ErrMsg = "register is unavailable without AVX512F";
+    return std::make_pair(0, nullptr);
+  }
+
   // Make sure it isn't a register that requires 64-bit mode.
   if (!Subtarget.is64Bit() &&
       (isFRClass(*Res.second) || isGRClass(*Res.second)) &&
       TRI->getEncodingValue(Res.first) >= 8) {
     // Register requires REX prefix, but we're in 32-bit mode.
-    return std::make_pair(0, nullptr);
-  }
-
-  // Make sure it isn't a register that requires AVX512.
-  if (!Subtarget.hasAVX512() && isFRClass(*Res.second) &&
-      TRI->getEncodingValue(Res.first) & 0x10) {
-    // Register requires EVEX prefix.
+    ErrMsg = "register is unavailable in 32-bit mode";
     return std::make_pair(0, nullptr);
   }
 
@@ -59274,8 +59290,10 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   if (isGRClass(*Class)) {
     unsigned Size = VT.getSizeInBits();
     if (Size == 1) Size = 8;
-    if (Size != 8 && Size != 16 && Size != 32 && Size != 64)
+    if (Size != 8 && Size != 16 && Size != 32 && Size != 64) {
+      ErrMsg = "couldn't allocate for type " + EVT(VT).getEVTString();
       return std::make_pair(0, nullptr);
+    }
     Register DestReg = getX86SubSuperRegister(Res.first, Size);
     if (DestReg.isValid()) {
       bool is64Bit = Subtarget.is64Bit();

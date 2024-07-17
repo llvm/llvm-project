@@ -192,9 +192,10 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
             if (Op.Type == InlineAsm::isClobber) {
               // Clobbers don't have SDValue operands, hence SDValue().
               TLI->ComputeConstraintToUse(Op, SDValue(), DAG);
+              std::string ErrMsg;
               std::pair<unsigned, const TargetRegisterClass *> PhysReg =
                   TLI->getRegForInlineAsmConstraint(TRI, Op.ConstraintCode,
-                                                    Op.ConstraintVT);
+                                                    Op.ConstraintVT, ErrMsg);
               if (PhysReg.first == SP)
                 MF->getFrameInfo().setHasOpaqueSPAdjustment(true);
             }

@@ -5034,7 +5034,8 @@ public:
   /// returns a register number of 0 and a null register class pointer.
   virtual std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
-                               StringRef Constraint, MVT VT) const;
+                               StringRef Constraint, MVT VT,
+                               std::string &ErrMsg) const;
 
   virtual InlineAsm::ConstraintCode
   getInlineAsmMemConstraint(StringRef ConstraintCode) const {

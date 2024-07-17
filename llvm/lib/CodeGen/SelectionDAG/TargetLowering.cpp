@@ -5620,8 +5620,8 @@ void TargetLowering::CollectTargetIntrinsicOperands(
 
 std::pair<unsigned, const TargetRegisterClass *>
 TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *RI,
-                                             StringRef Constraint,
-                                             MVT VT) const {
+                                             StringRef Constraint, MVT VT,
+                                             std::string &ErrMsg) const {
   if (!Constraint.starts_with("{"))
     return std::make_pair(0u, static_cast<TargetRegisterClass *>(nullptr));
   assert(*(Constraint.end() - 1) == '}' && "Not a brace enclosed constraint?");
@@ -5654,6 +5654,8 @@ TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *RI,
       }
     }
   }
+  if (!R.second)
+    ErrMsg = "register is unavailable";
 
   return R;
 }
@@ -5842,12 +5844,13 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
       AsmOperandInfo &Input = ConstraintOperands[OpInfo.MatchingInput];
 
       if (OpInfo.ConstraintVT != Input.ConstraintVT) {
+        std::string ErrMsg;
         std::pair<unsigned, const TargetRegisterClass *> MatchRC =
             getRegForInlineAsmConstraint(TRI, OpInfo.ConstraintCode,
-                                         OpInfo.ConstraintVT);
+                                         OpInfo.ConstraintVT, ErrMsg);
         std::pair<unsigned, const TargetRegisterClass *> InputRC =
             getRegForInlineAsmConstraint(TRI, Input.ConstraintCode,
-                                         Input.ConstraintVT);
+                                         Input.ConstraintVT, ErrMsg);
         if ((OpInfo.ConstraintVT.isInteger() !=
              Input.ConstraintVT.isInteger()) ||
             (MatchRC.second != InputRC.second)) {
