@@ -79,6 +79,7 @@ Changes to the LLVM IR
   * ``llvm.instprof.mcdc.tvbitmap.update``: 3rd argument has been
     removed. The next argument has been changed from byte index to bit
     index.
+* Added ``llvm.experimental.vector.compress`` intrinsic.
 
 Changes to LLVM infrastructure
 ------------------------------
