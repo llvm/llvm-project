@@ -19,7 +19,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 class ProcessIdentity {
-  static thread_local bool fork_inflight;
+  static LIBC_INLINE_VAR thread_local bool fork_inflight = true;
   static pid_t cache;
   static pid_t get_uncached();
 

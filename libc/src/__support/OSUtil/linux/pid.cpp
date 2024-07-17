@@ -13,7 +13,6 @@
 namespace LIBC_NAMESPACE_DECL {
 
 pid_t ProcessIdentity::cache = -1;
-thread_local bool ProcessIdentity::fork_inflight = true;
 pid_t ProcessIdentity::get_uncached() {
   return syscall_impl<pid_t>(SYS_getpid);
 }
