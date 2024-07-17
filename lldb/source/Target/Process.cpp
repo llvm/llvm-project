@@ -2548,8 +2548,9 @@ ModuleSP Process::ReadModuleFromMemory(const FileSpec &file_spec,
     Status error;
     std::unique_ptr<Progress> progress_up;
     // Reading an ObjectFile from a local corefile is very fast,
-    // don't print a progress report.
-    if (!GetCoreFile())
+    // only print a progress update if we're reading from a
+    // live session which might go over gdb remote serial protocol.
+    if (IsLiveDebugSession())
       progress_up = std::make_unique<Progress>(
           "Reading binary from memory", file_spec.GetFilename().GetString());
 
