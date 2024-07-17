@@ -80,7 +80,6 @@ using EnableIfCallable = std::enable_if_t<std::disjunction<
 template <typename ReturnT, typename... ParamTs> class UniqueFunctionBase {
 protected:
   static constexpr size_t InlineStorageSize = sizeof(void *) * 3;
-  static constexpr size_t InlineStorageAlign = alignof(void *);
 
   template <typename T, class = void>
   struct IsSizeLessThanThresholdT : std::false_type {};
@@ -162,8 +161,7 @@ protected:
     // provide three pointers worth of storage here.
     // This is mutable as an inlined `const unique_function<void() const>` may
     // still modify its own mutable members.
-    alignas(InlineStorageAlign) mutable std::byte
-        InlineStorage[InlineStorageSize];
+    alignas(void *) mutable std::byte InlineStorage[InlineStorageSize];
   } StorageUnion;
 
   // A compressed pointer to either our dispatching callback or our table of
@@ -264,7 +262,7 @@ protected:
     bool IsInlineStorage = true;
     void *CallableAddr = getInlineStorage();
     if (sizeof(CallableT) > InlineStorageSize ||
-        alignof(CallableT) > InlineStorageAlign) {
+        alignof(CallableT) > alignof(decltype(StorageUnion.InlineStorage))) {
       IsInlineStorage = false;
       // Allocate out-of-line storage. FIXME: Use an explicit alignment
       // parameter in C++17 mode.
