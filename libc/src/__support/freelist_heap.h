@@ -20,10 +20,10 @@
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/memory_utils/inline_memset.h"
 
-extern char _end;
-extern char __libc_heap_limit;
-
 namespace LIBC_NAMESPACE_DECL {
+
+extern "C" char _end;
+extern "C" char __libc_heap_limit;
 
 using cpp::optional;
 using cpp::span;
