@@ -7054,65 +7054,32 @@ void SemaOpenMP::ActOnFinishedFunctionDefinitionInOpenMPAssumeScope(Decl *D) {
     FD->addAttr(AA);
 }
 
-class OMPAssumeStmtVisitor : public StmtVisitor<OMPAssumeStmtVisitor> {
-  SmallVector<OMPAssumeAttr *, 4> *OMPAssumeScoped;
-
-public:
-  OMPAssumeStmtVisitor(SmallVector<OMPAssumeAttr *, 4> *OMPAssumeScoped) {
-    this->OMPAssumeScoped = OMPAssumeScoped;
-  }
-
-  void VisitCapturedStmt(CapturedStmt *CS) {
-    // To find the CaptureDecl for the CaptureStmt
-    CapturedDecl *CD = CS->getCapturedDecl();
-    if (CD) {
-      for (OMPAssumeAttr *AA : *OMPAssumeScoped)
-        CD->addAttr(AA);
-    }
-  }
-
-  void VisitCompoundStmt(CompoundStmt *CS) {
-    // Handle CompoundStmt
-    // Visit each statement in the CompoundStmt
-    for (Stmt *SubStmt : CS->body()) {
-      if (Expr *CE = dyn_cast<Expr>(SubStmt)) {
-        // If the statement is a Expr, process it
-        VisitExpr(CE);
-      }
-    }
-  }
-
-  void VisitExpr(Expr *CE) {
-    // Handle all Expr
-    for (auto *Child : CE->children()) {
-      Visit(Child);
-    }
-  }
-
-  void Visit(Stmt *S) {
-    const char *CName = S->getStmtClassName();
-    if ((strstr(CName, "OMP") != NULL) &&
-        (strstr(CName, "Directive") != NULL)) {
-      for (Stmt *Child : S->children()) {
-        auto *CS = dyn_cast<CapturedStmt>(Child);
-        if (CS)
-          VisitCapturedStmt(CS);
-        else
-          StmtVisitor<OMPAssumeStmtVisitor>::Visit(Child);
-      }
-    } else {
-      StmtVisitor<OMPAssumeStmtVisitor>::Visit(S);
-    }
-  }
-};
-
 StmtResult
 SemaOpenMP::ActOnFinishedStatementInOpenMPAssumeScope(Stmt *AssociatedStmt) {
 
   if (AssociatedStmt) {
-    // Add the AssumeAttr to the Directive associated with the Assume Directive.
-    OMPAssumeStmtVisitor Visitor(&OMPAssumeScoped);
-    Visitor.Visit(AssociatedStmt);
+    // Add OMPAssumeAttr to all the CapturedDecl present with the
+    // AssociatedStmt, for example:
+    //
+    // -OMPSimdDirective
+    //  `-CapturedStmt
+    //    `-CapturedDecl
+    //      ....
+    //      -OMPAssumeAttr
+    const char *CName = AssociatedStmt->getStmtClassName();
+    if ((strstr(CName, "OMP") != NULL) &&
+        (strstr(CName, "Directive") != NULL)) {
+      for (Stmt *Child : AssociatedStmt->children()) {
+        auto *CS = dyn_cast<CapturedStmt>(Child);
+        if (CS) {
+          CapturedDecl *CD = CS->getCapturedDecl();
+          if (CD) {
+            for (OMPAssumeAttr *AA : OMPAssumeScoped)
+              CD->addAttr(AA);
+          }
+        }
+      }
+    }
   }
   return AssociatedStmt;
 }
