@@ -1023,10 +1023,11 @@ R"(All available -march extensions for RISC-V
     xtheadsync           1.0
     xtheadvdot           1.0
     xventanacondops      1.0
+    xwchc                2.2
 
 Experimental extensions
-    zicfilp              0.4       This is a long dummy description
-    zicfiss              0.4
+    zicfilp              1.0       This is a long dummy description
+    zicfiss              1.0
     zalasr               0.1
     smmpm                1.0
     smnpm                1.0
@@ -1060,11 +1061,41 @@ For example, clang -march=rv32i_v1p0)";
 
   outs().flush();
   testing::internal::CaptureStdout();
-  riscvExtensionsHelp(DummyMap);
+  RISCVISAInfo::printSupportedExtensions(DummyMap);
   outs().flush();
 
   std::string CapturedOutput = testing::internal::GetCapturedStdout();
   EXPECT_TRUE([](std::string &Captured, std::string &Expected) {
                 return Captured.find(Expected) != std::string::npos;
               }(CapturedOutput, ExpectedOutput));
+}
+
+TEST(TargetParserTest, RISCVPrintEnabledExtensions) {
+  // clang-format off
+  std::string ExpectedOutput =
+R"(Extensions enabled for the given RISC-V target
+
+    Name                 Version   Description
+    i                    2.1       'I' (Base Integer Instruction Set)
+
+Experimental extensions
+    zicfilp              1.0       'Zicfilp' (Landing pad)
+
+ISA String: rv64i2p1_zicfilp1p0_zicsr2p0
+)";
+  // clang-format on
+
+  StringMap<StringRef> DescMap;
+  DescMap["i"] = "'I' (Base Integer Instruction Set)";
+  DescMap["experimental-zicfilp"] = "'Zicfilp' (Landing pad)";
+  std::set<StringRef> EnabledExtensions = {"i", "experimental-zicfilp"};
+
+  outs().flush();
+  testing::internal::CaptureStdout();
+  RISCVISAInfo::printEnabledExtensions(/*IsRV64=*/true, EnabledExtensions,
+                                       DescMap);
+  outs().flush();
+  std::string CapturedOutput = testing::internal::GetCapturedStdout();
+
+  EXPECT_EQ(CapturedOutput, ExpectedOutput);
 }

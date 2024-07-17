@@ -423,9 +423,9 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
 
 /// Return true if we can prove that all callees pass in a valid pointer for the
 /// specified function argument.
-static bool allCallersPassValidPointerForArgument(Argument *Arg,
-                                                  Align NeededAlign,
-                                                  uint64_t NeededDerefBytes) {
+static bool allCallersPassValidPointerForArgument(
+    Argument *Arg, SmallPtrSetImpl<CallBase *> &RecursiveCalls,
+    Align NeededAlign, uint64_t NeededDerefBytes) {
   Function *Callee = Arg->getParent();
   const DataLayout &DL = Callee->getDataLayout();
   APInt Bytes(64, NeededDerefBytes);
@@ -438,6 +438,33 @@ static bool allCallersPassValidPointerForArgument(Argument *Arg,
   // direct callees.
   return all_of(Callee->users(), [&](User *U) {
     CallBase &CB = cast<CallBase>(*U);
+    // In case of functions with recursive calls, this check
+    // (isDereferenceableAndAlignedPointer) will fail when it tries to look at
+    // the first caller of this function. The caller may or may not have a load,
+    // incase it doesn't load the pointer being passed, this check will fail.
+    // So, it's safe to skip the check incase we know that we are dealing with a
+    // recursive call. For example we have a IR given below.
+    //
+    // def fun(ptr %a) {
+    //   ...
+    //   %loadres = load i32, ptr %a, align 4
+    //   %res = call i32 @fun(ptr %a)
+    //   ...
+    // }
+    //
+    // def bar(ptr %x) {
+    //   ...
+    //   %resbar = call i32 @fun(ptr %x)
+    //   ...
+    // }
+    //
+    // Since we record processed recursive calls, we check if the current
+    // CallBase has been processed before. If yes it means that it is a
+    // recursive call and we can skip the check just for this call. So, just
+    // return true.
+    if (RecursiveCalls.contains(&CB))
+      return true;
+
     return isDereferenceableAndAlignedPointer(CB.getArgOperand(Arg->getArgNo()),
                                               NeededAlign, Bytes, DL);
   });
@@ -571,6 +598,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
   SmallVector<const Use *, 16> Worklist;
   SmallPtrSet<const Use *, 16> Visited;
   SmallVector<LoadInst *, 16> Loads;
+  SmallPtrSet<CallBase *, 4> RecursiveCalls;
   auto AppendUses = [&](const Value *V) {
     for (const Use &U : V->uses())
       if (Visited.insert(&U).second)
@@ -611,6 +639,33 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
       // unknown users
     }
 
+    auto *CB = dyn_cast<CallBase>(V);
+    Value *PtrArg = U->get();
+    if (CB && CB->getCalledFunction() == CB->getFunction()) {
+      if (PtrArg != Arg) {
+        LLVM_DEBUG(dbgs() << "ArgPromotion of " << *Arg << " failed: "
+                          << "pointer offset is not equal to zero\n");
+        return false;
+      }
+
+      unsigned int ArgNo = Arg->getArgNo();
+      if (U->getOperandNo() != ArgNo) {
+        LLVM_DEBUG(dbgs() << "ArgPromotion of " << *Arg << " failed: "
+                          << "arg position is different in callee\n");
+        return false;
+      }
+
+      // We limit promotion to only promoting up to a fixed number of elements
+      // of the aggregate.
+      if (MaxElements > 0 && ArgParts.size() > MaxElements) {
+        LLVM_DEBUG(dbgs() << "ArgPromotion of " << *Arg << " failed: "
+                          << "more than " << MaxElements << " parts\n");
+        return false;
+      }
+
+      RecursiveCalls.insert(CB);
+      continue;
+    }
     // Unknown user.
     LLVM_DEBUG(dbgs() << "ArgPromotion of " << *Arg << " failed: "
                       << "unknown user " << *V << "\n");
@@ -619,7 +674,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
 
   if (NeededDerefBytes || NeededAlign > 1) {
     // Try to prove a required deref / aligned requirement.
-    if (!allCallersPassValidPointerForArgument(Arg, NeededAlign,
+    if (!allCallersPassValidPointerForArgument(Arg, RecursiveCalls, NeededAlign,
                                                NeededDerefBytes)) {
       LLVM_DEBUG(dbgs() << "ArgPromotion of " << *Arg << " failed: "
                         << "not dereferenceable or aligned\n");

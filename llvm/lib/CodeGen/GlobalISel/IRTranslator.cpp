@@ -38,7 +38,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/SwitchLoweringUtils.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
@@ -1994,6 +1994,8 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_VECREDUCE_UMAX;
     case Intrinsic::vector_reduce_umin:
       return TargetOpcode::G_VECREDUCE_UMIN;
+    case Intrinsic::experimental_vector_compress:
+      return TargetOpcode::G_VECTOR_COMPRESS;
     case Intrinsic::lround:
       return TargetOpcode::G_LROUND;
     case Intrinsic::llround:
@@ -2649,17 +2651,24 @@ bool IRTranslator::translateCallBase(const CallBase &CB,
   }
 
   std::optional<CallLowering::PtrAuthInfo> PAI;
-  if (CB.countOperandBundlesOfType(LLVMContext::OB_ptrauth)) {
+  if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_ptrauth)) {
     // Functions should never be ptrauth-called directly.
     assert(!CB.getCalledFunction() && "invalid direct ptrauth call");
 
-    auto PAB = CB.getOperandBundle("ptrauth");
-    const Value *Key = PAB->Inputs[0];
-    const Value *Discriminator = PAB->Inputs[1];
+    const Value *Key = Bundle->Inputs[0];
+    const Value *Discriminator = Bundle->Inputs[1];
 
-    Register DiscReg = getOrCreateVReg(*Discriminator);
-    PAI = CallLowering::PtrAuthInfo{cast<ConstantInt>(Key)->getZExtValue(),
-                                    DiscReg};
+    // Look through ptrauth constants to try to eliminate the matching bundle
+    // and turn this into a direct call with no ptrauth.
+    // CallLowering will use the raw pointer if it doesn't find the PAI.
+    const auto *CalleeCPA = dyn_cast<ConstantPtrAuth>(CB.getCalledOperand());
+    if (!CalleeCPA || !isa<Function>(CalleeCPA->getPointer()) ||
+        !CalleeCPA->isKnownCompatibleWith(Key, Discriminator, *DL)) {
+      // If we can't make it direct, package the bundle into PAI.
+      Register DiscReg = getOrCreateVReg(*Discriminator);
+      PAI = CallLowering::PtrAuthInfo{cast<ConstantInt>(Key)->getZExtValue(),
+                                      DiscReg};
+    }
   }
 
   Register ConvergenceCtrlToken = 0;

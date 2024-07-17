@@ -285,7 +285,7 @@ void AMDGPUAsmPrinter::emitFunctionEntryLabel() {
     // Disassemble function name label to text.
     DisasmLines.push_back(MF->getName().str() + ":");
     DisasmLineMaxLen = std::max(DisasmLineMaxLen, DisasmLines.back().size());
-    HexLines.push_back("");
+    HexLines.emplace_back("");
   }
 
   AsmPrinter::emitFunctionEntryLabel();
@@ -298,7 +298,7 @@ void AMDGPUAsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
         (Twine("BB") + Twine(getFunctionNumber())
          + "_" + Twine(MBB.getNumber()) + ":").str());
     DisasmLineMaxLen = std::max(DisasmLineMaxLen, DisasmLines.back().size());
-    HexLines.push_back("");
+    HexLines.emplace_back("");
   }
   AsmPrinter::emitBasicBlockStart(MBB);
 }
@@ -344,13 +344,13 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
     switch (CodeObjectVersion) {
     case AMDGPU::AMDHSA_COV4:
-      HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV4());
+      HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV4>();
       break;
     case AMDGPU::AMDHSA_COV5:
-      HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV5());
+      HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV5>();
       break;
     case AMDGPU::AMDHSA_COV6:
-      HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV6());
+      HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV6>();
       break;
     default:
       report_fatal_error("Unexpected code object version");

@@ -9,8 +9,9 @@
 #include "src/network/ntohl.h"
 #include "src/__support/common.h"
 #include "src/__support/endian.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(uint32_t, ntohl, (uint32_t netlong)) {
   if constexpr (Endian::IS_LITTLE)
@@ -19,4 +20,4 @@ LLVM_LIBC_FUNCTION(uint32_t, ntohl, (uint32_t netlong)) {
     return netlong;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

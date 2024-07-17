@@ -978,11 +978,7 @@ void AArch64FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
       // For GPRs, we only care to clear out the 64-bit register.
       if (MCRegister XReg = getRegisterOrZero(Reg, HasSVE))
         GPRsToZero.set(XReg);
-    } else if (AArch64::FPR128RegClass.contains(Reg) ||
-               AArch64::FPR64RegClass.contains(Reg) ||
-               AArch64::FPR32RegClass.contains(Reg) ||
-               AArch64::FPR16RegClass.contains(Reg) ||
-               AArch64::FPR8RegClass.contains(Reg)) {
+    } else if (AArch64InstrInfo::isFpOrNEON(Reg)) {
       // For FPRs,
       if (MCRegister XReg = getRegisterOrZero(Reg, HasSVE))
         FPRsToZero.set(XReg);
@@ -3079,7 +3075,11 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
 
   computeCalleeSaveRegisterPairs(MF, CSI, TRI, RegPairs, hasFP(MF));
 
-  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  // Refresh the reserved regs in case there are any potential changes since the
+  // last freeze.
+  MRI.freezeReservedRegs();
+
   if (homogeneousPrologEpilog(MF)) {
     auto MIB = BuildMI(MBB, MI, DL, TII.get(AArch64::HOM_Prolog))
                    .setMIFlag(MachineInstr::FrameSetup);

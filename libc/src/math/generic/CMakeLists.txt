@@ -70,6 +70,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -82,6 +84,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -107,6 +111,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.properties.architectures
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -455,6 +462,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -467,6 +476,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -492,6 +503,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.properties.architectures
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -517,6 +531,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -529,6 +545,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -554,6 +572,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.properties.architectures
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -579,6 +600,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -591,6 +614,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -616,6 +641,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.properties.architectures
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -641,6 +669,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -653,6 +683,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -678,6 +710,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.properties.architectures
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -827,6 +862,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -839,6 +876,8 @@ add_entrypoint_object(
     -O3
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -864,6 +903,9 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.nearest_integer_operations
+    libc.src.__support.macros.properties.architectures
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(

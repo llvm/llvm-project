@@ -131,6 +131,7 @@ private:
     case ThunkKind::ThunkBRAB:
       return BLRABThunks[indexOfXReg(Xm)];
     }
+    llvm_unreachable("Unknown ThunkKindId enum");
   }
 };
 

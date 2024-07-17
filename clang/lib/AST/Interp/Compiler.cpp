@@ -2772,6 +2772,117 @@ bool Compiler<Emitter>::VisitCXXInheritedCtorInitExpr(
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
+  assert(classifyPrim(E->getType()) == PT_Ptr);
+  const Expr *Init = E->getInitializer();
+  QualType ElementType = E->getAllocatedType();
+  std::optional<PrimType> ElemT = classify(ElementType);
+  unsigned PlacementArgs = E->getNumPlacementArgs();
+  bool IsNoThrow = false;
+
+  // FIXME: Better diagnostic. diag::note_constexpr_new_placement
+  if (PlacementArgs != 0) {
+    // The only new-placement list we support is of the form (std::nothrow).
+    //
+    // FIXME: There is no restriction on this, but it's not clear that any
+    // other form makes any sense. We get here for cases such as:
+    //
+    //   new (std::align_val_t{N}) X(int)
+    //
+    // (which should presumably be valid only if N is a multiple of
+    // alignof(int), and in any case can't be deallocated unless N is
+    // alignof(X) and X has new-extended alignment).
+    if (PlacementArgs != 1 || !E->getPlacementArg(0)->getType()->isNothrowT())
+      return this->emitInvalid(E);
+
+    if (!this->discard(E->getPlacementArg(0)))
+      return false;
+    IsNoThrow = true;
+  }
+
+  const Descriptor *Desc;
+  if (ElemT) {
+    if (E->isArray())
+      Desc = nullptr; // We're not going to use it in this case.
+    else
+      Desc = P.createDescriptor(E, *ElemT, Descriptor::InlineDescMD,
+                                /*IsConst=*/false, /*IsTemporary=*/false,
+                                /*IsMutable=*/false);
+  } else {
+    Desc = P.createDescriptor(
+        E, ElementType.getTypePtr(),
+        E->isArray() ? std::nullopt : Descriptor::InlineDescMD,
+        /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false, Init);
+  }
+
+  if (E->isArray()) {
+    std::optional<const Expr *> ArraySizeExpr = E->getArraySize();
+    if (!ArraySizeExpr)
+      return false;
+
+    const Expr *Stripped = *ArraySizeExpr;
+    for (; auto *ICE = dyn_cast<ImplicitCastExpr>(Stripped);
+         Stripped = ICE->getSubExpr())
+      if (ICE->getCastKind() != CK_NoOp &&
+          ICE->getCastKind() != CK_IntegralCast)
+        break;
+
+    PrimType SizeT = classifyPrim(Stripped->getType());
+
+    if (!this->visit(Stripped))
+      return false;
+
+    if (ElemT) {
+      // N primitive elements.
+      if (!this->emitAllocN(SizeT, *ElemT, E, IsNoThrow, E))
+        return false;
+    } else {
+      // N Composite elements.
+      if (!this->emitAllocCN(SizeT, Desc, IsNoThrow, E))
+        return false;
+    }
+
+    if (Init && !this->visitInitializer(Init))
+      return false;
+
+  } else {
+    // Allocate just one element.
+    if (!this->emitAlloc(Desc, E))
+      return false;
+
+    if (Init) {
+      if (ElemT) {
+        if (!this->visit(Init))
+          return false;
+
+        if (!this->emitInit(*ElemT, E))
+          return false;
+      } else {
+        // Composite.
+        if (!this->visitInitializer(Init))
+          return false;
+      }
+    }
+  }
+
+  if (DiscardResult)
+    return this->emitPopPtr(E);
+
+  return true;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
+  const Expr *Arg = E->getArgument();
+
+  // Arg must be an lvalue.
+  if (!this->visit(Arg))
+    return false;
+
+  return this->emitFree(E->isArrayForm(), E);
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::VisitExpressionTraitExpr(const ExpressionTraitExpr *E) {
   assert(Ctx.getLangOpts().CPlusPlus);
   return this->emitConstBool(E->getValue(), E);
@@ -3073,13 +3184,13 @@ bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
     }
 
     assert(S == Result);
-    // This better produces a value (i.e. is an expression).
     if (const Expr *ResultExpr = dyn_cast<Expr>(S)) {
       if (DiscardResult)
         return this->discard(ResultExpr);
       return this->delegate(ResultExpr);
     }
-    return false;
+
+    return this->visitStmt(S);
   }
 
   return BS.destroyLocals();
@@ -3583,7 +3694,19 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD, bool Topleve
         return checkDecl() && this->emitInitGlobal(*VarT, GlobalIndex, VD);
       }
 
-      return checkDecl() && this->visitGlobalInitializer(Init, GlobalIndex);
+      if (!checkDecl())
+        return false;
+
+      if (!this->emitGetPtrGlobal(GlobalIndex, Init))
+        return false;
+
+      if (!visitInitializer(Init))
+        return false;
+
+      if (!this->emitFinishInit(Init))
+        return false;
+
+      return this->emitPopPtr(Init);
     };
 
     // We've already seen and initialized this global.
@@ -3627,7 +3750,16 @@ VarCreationState Compiler<Emitter>::visitVarDecl(const VarDecl *VD, bool Topleve
         if (!Init)
           return true;
 
-        return this->visitLocalInitializer(Init, *Offset);
+        if (!this->emitGetPtrLocal(*Offset, Init))
+          return false;
+
+        if (!visitInitializer(Init))
+          return false;
+
+        if (!this->emitFinishInit(Init))
+          return false;
+
+        return this->emitPopPtr(Init);
       }
       return false;
     }
@@ -4685,6 +4817,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
   case UO_PostInc: { // x++
     if (!Ctx.getLangOpts().CPlusPlus14)
       return this->emitInvalid(E);
+    if (!T)
+      return this->emitError(E);
 
     if (!this->visit(SubExpr))
       return false;
@@ -4706,6 +4840,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
   case UO_PostDec: { // x--
     if (!Ctx.getLangOpts().CPlusPlus14)
       return this->emitInvalid(E);
+    if (!T)
+      return this->emitError(E);
 
     if (!this->visit(SubExpr))
       return false;
@@ -4727,6 +4863,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
   case UO_PreInc: { // ++x
     if (!Ctx.getLangOpts().CPlusPlus14)
       return this->emitInvalid(E);
+    if (!T)
+      return this->emitError(E);
 
     if (!this->visit(SubExpr))
       return false;
@@ -4774,6 +4912,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
   case UO_PreDec: { // --x
     if (!Ctx.getLangOpts().CPlusPlus14)
       return this->emitInvalid(E);
+    if (!T)
+      return this->emitError(E);
 
     if (!this->visit(SubExpr))
       return false;
@@ -4819,6 +4959,9 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     return E->isGLValue() || this->emitLoadPop(*T, E);
   }
   case UO_LNot: // !x
+    if (!T)
+      return this->emitError(E);
+
     if (DiscardResult)
       return this->discard(SubExpr);
 
@@ -4832,10 +4975,16 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       return this->emitCast(PT_Bool, ET, E);
     return true;
   case UO_Minus: // -x
+    if (!T)
+      return this->emitError(E);
+
     if (!this->visit(SubExpr))
       return false;
     return DiscardResult ? this->emitPop(*T, E) : this->emitNeg(*T, E);
   case UO_Plus:                // +x
+    if (!T)
+      return this->emitError(E);
+
     if (!this->visit(SubExpr)) // noop
       return false;
     return DiscardResult ? this->emitPop(*T, E) : true;
@@ -4852,6 +5001,9 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       return this->discard(SubExpr);
     return this->visit(SubExpr);
   case UO_Not: // ~x
+    if (!T)
+      return this->emitError(E);
+
     if (!this->visit(SubExpr))
       return false;
     return DiscardResult ? this->emitPop(*T, E) : this->emitComp(*T, E);
@@ -5094,9 +5246,10 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     if (E->getType()->isVoidType())
       return true;
     // Convert the dummy pointer to another pointer type if we have to.
-    if (PrimType PT = classifyPrim(E); PT != PT_Ptr && isPtrType(PT)) {
-      if (!this->emitDecayPtr(PT_Ptr, PT, E))
-        return false;
+    if (PrimType PT = classifyPrim(E); PT != PT_Ptr) {
+      if (isPtrType(PT))
+        return this->emitDecayPtr(PT_Ptr, PT, E);
+      return false;
     }
     return true;
   }

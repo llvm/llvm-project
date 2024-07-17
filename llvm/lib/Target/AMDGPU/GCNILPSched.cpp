@@ -27,7 +27,7 @@ class GCNILPScheduler {
   };
 
   SpecificBumpPtrAllocator<Candidate> Alloc;
-  typedef simple_ilist<Candidate> Queue;
+  using Queue = simple_ilist<Candidate>;
   Queue PendingQueue;
   Queue AvailQueue;
   unsigned CurQueueId = 0;
@@ -359,4 +359,4 @@ std::vector<const SUnit*> makeGCNILPScheduler(ArrayRef<const SUnit*> BotRoots,
   GCNILPScheduler S;
   return S.schedule(BotRoots, DAG);
 }
-}
+} // namespace llvm

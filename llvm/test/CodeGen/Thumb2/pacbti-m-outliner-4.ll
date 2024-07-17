@@ -164,9 +164,9 @@ return:                                           ; preds = %entry, %if.end
 ; CHECK-NOT: aut
 ; CHECK:        b    _Z1hii
 
-attributes #0 = { minsize noinline optsize "denormal-fp-math"="preserve-sign,preserve-sign" "denormal-fp-math-f32"="ieee,ieee" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="cortex-m3" "target-features"="+armv7-m,+hwdiv,+thumb-mode" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind }
-attributes #2 = { noreturn }
+attributes #0 = { minsize noinline optsize "sign-return-address"="non-leaf" "denormal-fp-math"="preserve-sign,preserve-sign" "denormal-fp-math-f32"="ieee,ieee" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="cortex-m3" "target-features"="+armv7-m,+hwdiv,+thumb-mode" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { nounwind "sign-return-address"="non-leaf" }
+attributes #2 = { noreturn "sign-return-address"="non-leaf" }
 
 
 !llvm.module.flags = !{!0, !1, !2}
