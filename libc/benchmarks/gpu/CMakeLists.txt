@@ -15,13 +15,15 @@ function(add_benchmark benchmark_name)
   endif()
   add_libc_hermetic(
     ${benchmark_name}
-    IS_BENCHMARK
+    IS_GPU_BENCHMARK
     LINK_LIBRARIES
       LibcGpuBenchmark.hermetic
       ${BENCHMARK_LINK_LIBRARIES}
     ${BENCHMARK_UNPARSED_ARGUMENTS}
   )
   get_fq_target_name(${benchmark_name} fq_target_name)
+  set(fq_build_target_name ${fq_target_name}.__build__)
+
   add_dependencies(gpu-benchmark ${fq_target_name})
 endfunction(add_benchmark)
 
@@ -43,6 +45,7 @@ add_unittest_framework_library(
     libc.src.__support.CPP.functional
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.algorithm
+    libc.src.__support.CPP.atomic
     libc.src.__support.fixed_point.fx_rep
     libc.src.__support.macros.properties.types
     libc.src.__support.OSUtil.osutil

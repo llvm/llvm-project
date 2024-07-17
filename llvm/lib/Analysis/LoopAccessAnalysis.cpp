@@ -206,12 +206,13 @@ RuntimeCheckingPtrGroup::RuntimeCheckingPtrGroup(
 static std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
     const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy,
     PredicatedScalarEvolution &PSE,
-    DenseMap<const SCEV *, std::pair<const SCEV *, const SCEV *>>
-        &PointerBounds) {
+    DenseMap<std::pair<const SCEV *, Type *>,
+             std::pair<const SCEV *, const SCEV *>> &PointerBounds) {
   ScalarEvolution *SE = PSE.getSE();
 
   auto [Iter, Ins] = PointerBounds.insert(
-      {PtrExpr, {SE->getCouldNotCompute(), SE->getCouldNotCompute()}});
+      {{PtrExpr, AccessTy},
+       {SE->getCouldNotCompute(), SE->getCouldNotCompute()}});
   if (!Ins)
     return Iter->second;
 
@@ -3083,6 +3084,22 @@ const LoopAccessInfo &LoopAccessInfoManager::getInfo(Loop &L) {
         std::make_unique<LoopAccessInfo>(&L, &SE, TTI, TLI, &AA, &DT, &LI);
 
   return *It->second;
+}
+void LoopAccessInfoManager::clear() {
+  SmallVector<Loop *> ToRemove;
+  // Collect LoopAccessInfo entries that may keep references to IR outside the
+  // analyzed loop or SCEVs that may have been modified or invalidated. At the
+  // moment, that is loops requiring memory or SCEV runtime checks, as those cache
+  // SCEVs, e.g. for pointer expressions.
+  for (const auto &[L, LAI] : LoopAccessInfoMap) {
+    if (LAI->getRuntimePointerChecking()->getChecks().empty() &&
+        LAI->getPSE().getPredicate().isAlwaysTrue())
+      continue;
+    ToRemove.push_back(L);
+  }
+
+  for (Loop *L : ToRemove)
+    LoopAccessInfoMap.erase(L);
 }
 
 bool LoopAccessInfoManager::invalidate(

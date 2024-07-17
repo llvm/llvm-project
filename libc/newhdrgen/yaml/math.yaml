@@ -7,6 +7,12 @@ types:
 enums: []
 objects: []
 functions:
+  - name: cbrtf
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: float
   - name: copysign
     standards: 
       - stdc
@@ -28,22 +34,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-  - name: copysignf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: copysignf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: ceil
     standards: 
       - stdc
@@ -62,20 +52,6 @@ functions:
     return_type: long double
     arguments:
       - type: long double
-  - name: ceilf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: ceilf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: fabs
     standards: 
       - stdc
@@ -96,20 +72,6 @@ functions:
     return_type: long double
     arguments:
       - type: long double
-  - name: fabsf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: fabsf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: fdim
     standards: 
       - stdc
@@ -131,22 +93,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-  - name: fdimf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: fdimf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: floor
     standards: 
       - stdc
@@ -165,20 +111,6 @@ functions:
     return_type: long double
     arguments:
       - type: long double
-  - name: floorf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: floorf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: fmin
     standards: 
       - stdc
@@ -200,21 +132,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-  - name: fminf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: fminf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-      - type: float128
   - name: fmax
     standards: 
       - stdc
@@ -236,21 +153,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-  - name: fmaxf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: fmaxf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-      - type: float128
   - name: fmaximum
     standards: 
       - stdc
@@ -272,22 +174,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-  - name: fmaximumf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: fmaximumf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: fmaximum_num
     standards: 
       - stdc
@@ -309,22 +195,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-  - name: fmaximum_numf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: fmaximum_numf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: fmaximum_mag
     standards: 
       - stdc
@@ -346,22 +216,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-  - name: fmaximum_magf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: fmaximum_magf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: fmaximum_mag_num
     standards: 
       - stdc
@@ -383,22 +237,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-  - name: fmaximum_mag_numf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: fmaximum_mag_numf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: fminimum
     standards: 
       - stdc
@@ -420,22 +258,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-  - name: fminimumf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: fminimumf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: fminimum_num
     standards: 
       - stdc
@@ -450,29 +272,6 @@ functions:
     arguments:
       - type: float
       - type: float
-  - name: fminimum_numl
-    standards: 
-      - stdc
-    return_type: long double
-    arguments:
-      - type: long double
-      - type: long double
-  - name: fminimum_numf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: fminimum_numf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: fminimum_mag
     standards: 
       - stdc
@@ -494,22 +293,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-  - name: fminimum_magf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: fminimum_magf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: fminimum_mag_num
     standards: 
       - stdc
@@ -531,22 +314,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-  - name: fminimum_mag_numf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: fminimum_mag_numf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: fma
     standards: 
       - stdc
@@ -563,42 +330,6 @@ functions:
       - type: float
       - type: float
       - type: float
-  - name: f16fma
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: double
-      - type: double
-      - type: double
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: f16fmaf
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: float
-      - type: float
-      - type: float
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: f16fmal
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: long double
-      - type: long double
-      - type: long double
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: f16fmaf128
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: float128
-      - type: float128
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
   - name: fmod
     standards: 
       - stdc
@@ -620,22 +351,13 @@ functions:
     arguments:
       - type: long double
       - type: long double
-  - name: fmodf16
-    standards: 
+  - name: fmul
+    standards:
       - stdc
-    return_type: _Float16
+    return_type: float
     arguments:
-      - type: _Float16
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT128
-  - name: fmodf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
+      - type: double
+      - type: double
   - name: frexp
     standards: 
       - stdc
@@ -657,22 +379,6 @@ functions:
     arguments:
       - type: long double
       - type: int *
-  - name: frexpf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: int *
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: frexpf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-      - type: int *
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: fromfp
     standards: 
       - stdc
@@ -697,24 +403,6 @@ functions:
       - type: long double
       - type: int
       - type: unsigned int
-  - name: fromfpf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: int
-      - type: unsigned int
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: fromfpf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-      - type: int
-      - type: unsigned int
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: fromfpx
     standards: 
       - stdc
@@ -739,24 +427,6 @@ functions:
       - type: long double
       - type: int
       - type: unsigned int
-  - name: fromfpxf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: int
-      - type: unsigned int
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: fromfpxf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-      - type: int
-      - type: unsigned int
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: ufromfp
     standards: 
       - stdc
@@ -781,24 +451,6 @@ functions:
       - type: long double
       - type: int
       - type: unsigned int
-  - name: ufromfpf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: int
-      - type: unsigned int
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: ufromfpf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-      - type: int
-      - type: unsigned int
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: ufromfpx
     standards: 
       - stdc
@@ -823,24 +475,6 @@ functions:
       - type: long double
       - type: int
       - type: unsigned int
-  - name: ufromfpxf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: int
-      - type: unsigned int
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: ufromfpxf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-      - type: int
-      - type: unsigned int
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: hypot
     standards: 
       - stdc
@@ -873,20 +507,24 @@ functions:
     return_type: int
     arguments:
       - type: long double
-  - name: ilogbf16
-    standards: 
-      - stdc
+  - name: isnan
+    standards:
+      - BSDExtensions
+    return_type: int
+    arguments: 
+      - type: double
+  - name: isnanf
+    standards:
+      - BSDExtensions
     return_type: int
     arguments:
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: ilogbf128
-    standards: 
-      - stdc
+      - type: float
+  - name: isnanl
+    standards:
+      - BSDExtensions
     return_type: int
     arguments:
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
+      - type: long double
   - name: llogb
     standards: 
       - stdc
@@ -905,20 +543,6 @@ functions:
     return_type: long
     arguments:
       - type: long double
-  - name: llogbf16
-    standards: 
-      - stdc
-    return_type: long
-    arguments:
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: llogbf128
-    standards: 
-      - stdc
-    return_type: long
-    arguments:
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: ldexp
     standards: 
       - stdc
@@ -940,22 +564,6 @@ functions:
     arguments:
       - type: long double
       - type: int
-  - name: ldexpf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: int
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: ldexpf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-      - type: int
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: log10
     standards: 
       - stdc
@@ -1004,30 +612,6 @@ functions:
     return_type: float
     arguments:
       - type: float
-  - name: log1p
-    standards: 
-      - stdc
-    return_type: double
-    arguments:
-      - type: double
-  - name: log1pf
-    standards: 
-      - stdc
-    return_type: float
-    arguments:
-      - type: float
-  - name: log2
-    standards: 
-      - stdc
-    return_type: double
-    arguments:
-      - type: double
-  - name: log2f
-    standards: 
-      - stdc
-    return_type: float
-    arguments:
-      - type: float
   - name: logb
     standards: 
       - stdc
@@ -1046,20 +630,6 @@ functions:
     return_type: long double
     arguments:
       - type: long double
-  - name: logbf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: logbf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: modf
     standards: 
       - stdc
@@ -1081,22 +651,6 @@ functions:
     arguments:
       - type: long double
       - type: long double *
-  - name: modff16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: _Float16 *
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: modff128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-      - type: float128 *
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: cos
     standards: 
       - stdc
@@ -1222,14 +776,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-  - name: remainderf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
   - name: remquo
     standards: 
       - stdc
@@ -1254,24 +800,6 @@ functions:
       - type: long double
       - type: long double
       - type: int *
-  - name: remquof16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: _Float16
-      - type: int *
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: remquof128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-      - type: float128
-      - type: int *
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: round
     standards: 
       - stdc
@@ -1290,20 +818,6 @@ functions:
     return_type: long double
     arguments:
       - type: long double
-  - name: roundf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: roundf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: roundeven
     standards: 
       - stdc
@@ -1322,20 +836,6 @@ functions:
     return_type: long double
     arguments:
       - type: long double
-  - name: roundevenf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: roundevenf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: lround
     standards: 
       - stdc
@@ -1354,52 +854,24 @@ functions:
     return_type: long
     arguments:
       - type: long double
-  - name: lroundf16
-    standards: 
-      - stdc
-    return_type: long
-    arguments:
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: lroundf128
-    standards: 
-      - stdc
-    return_type: long
-    arguments:
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: llround
     standards: 
       - stdc
-    return_type: Longlong
+    return_type: long long
     arguments:
       - type: double
   - name: llroundf
     standards: 
       - stdc
-    return_type: Longlong
+    return_type: long long
     arguments:
       - type: float
   - name: llroundl
     standards: 
       - stdc
-    return_type: Longlong
+    return_type: long long
     arguments:
       - type: long double
-  - name: llroundf16
-    standards: 
-      - stdc
-    return_type: Longlong
-    arguments:
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: llroundf128
-    standards: 
-      - stdc
-    return_type: Longlong
-    arguments:
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: rint
     standards: 
       - stdc
@@ -1418,20 +890,6 @@ functions:
     return_type: long double
     arguments:
       - type: long double
-  - name: rintf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: rintf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: lrint
     standards: 
       - stdc
@@ -1450,52 +908,24 @@ functions:
     return_type: long
     arguments:
       - type: long double
-  - name: lrintf16
-    standards: 
-      - stdc
-    return_type: long
-    arguments:
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: lrintf128
-    standards: 
-      - stdc
-    return_type: long
-    arguments:
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: llrint
     standards: 
       - stdc
-    return_type: Longlong
+    return_type: long long
     arguments:
       - type: double
   - name: llrintf
     standards: 
       - stdc
-    return_type: Longlong
+    return_type: long long
     arguments:
       - type: float
   - name: llrintl
     standards: 
       - stdc
-    return_type: Longlong
+    return_type: long long
     arguments:
       - type: long double
-  - name: llrintf16
-    standards: 
-      - stdc
-    return_type: Longlong
-    arguments:
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: llrintf128
-    standards: 
-      - stdc
-    return_type: Longlong
-    arguments:
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: sqrt
     standards: 
       - stdc
@@ -1514,13 +944,6 @@ functions:
     return_type: long double
     arguments:
       - type: long double
-  - name: sqrtf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: trunc
     standards: 
       - stdc
@@ -1539,20 +962,6 @@ functions:
     return_type: long double
     arguments:
       - type: long double
-  - name: truncf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: truncf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: nearbyint
     standards: 
       - stdc
@@ -1571,20 +980,6 @@ functions:
     return_type: long double
     arguments:
       - type: long double
-  - name: nearbyintf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: nearbyintf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: nextafterf
     standards: 
       - stdc
@@ -1606,22 +1001,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-  - name: nextafterf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: nextafterf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: nexttowardf
     standards: 
       - stdc
@@ -1643,14 +1022,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-  - name: nexttowardf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
   - name: nextdown
     standards: 
       - stdc
@@ -1669,20 +1040,6 @@ functions:
     return_type: long double
     arguments:
       - type: long double
-  - name: nextdownf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: nextdownf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: nextup
     standards: 
       - stdc
@@ -1701,20 +1058,6 @@ functions:
     return_type: long double
     arguments:
       - type: long double
-  - name: nextupf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: nextupf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: powf
     standards: 
       - stdc
@@ -1729,6 +1072,18 @@ functions:
     arguments:
       - type: double
       - type: double
+  - name: powi
+    standards: llvm_libc_ext
+    return_type: double
+    arguments:
+      - type: double
+      - type: int
+  - name: powif
+    standards: llvm_libc_ext
+    return_type: float
+    arguments:
+      - type: float
+      - type: int
   - name: coshf
     standards: 
       - stdc
@@ -1796,14 +1151,6 @@ functions:
     return_type: float
     arguments:
       - type: float
-  - name: scalblnf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: long
-    guard: LIBC_TYPES_HAS_FLOAT16
   - name: scalbn
     standards: 
       - stdc
@@ -1825,21 +1172,6 @@ functions:
     arguments:
       - type: long double
       - type: int
-  - name: scalbnf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16
-      - type: int
-  - name: scalbnf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: float128
-      - type: int
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: nanf
     standards: 
       - stdc
@@ -1858,20 +1190,6 @@ functions:
     return_type: long double
     arguments:
       - type: const char *
-  - name: nanf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: const char *
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: nanf128
-    standards: 
-      - stdc
-    return_type: float128
-    arguments:
-      - type: const char *
-    guard: LIBC_TYPES_HAS_FLOAT128
   - name: canonicalize
     standards: 
       - stdc
@@ -1893,14 +1211,6 @@ functions:
     arguments:
       - type: long double
       - type: long double
-  - name: canonicalizef16
-    standards: 
-      - stdc
-    return_type: int
-    arguments:
-      - type: _Float16
-      - type: _Float16
-    guard: LIBC_TYPES_HAS_FLOAT16
   - name: canonicalizef128
     standards: 
       - stdc
@@ -1909,75 +1219,29 @@ functions:
       - type: float128
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
-  - name: totalorderf16
+  - name: canonicalizef16
     standards: 
       - stdc
     return_type: int
     arguments:
-      - type: _Float16 *
-      - type: _Float16 *
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: totalordermagf16
-    standards: 
-      - stdc
-    return_type: int
-    arguments:
-      - type: _Float16 *
-      - type: _Float16 *
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: getpayloadf16
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: _Float16 *
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: setpayloadf16
-    standards: 
-      - stdc
-    return_type: int
-    arguments:
-      - type: _Float16 *
+      - type: _Float16
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-  - name: setpayloadsigf16
+  - name: ceilf16
     standards: 
       - stdc
-    return_type: int
+    return_type: _Float16
     arguments:
-      - type: _Float16 *
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-  - name: f16addf128
+  - name: copysignf16
     standards: 
       - stdc
     return_type: _Float16
     arguments:
-      - type: float128
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
-  - name: f16subf128
-    standards: 
-      - stdc
-    return_type: _Float16
-    arguments:
-      - type: float128
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
-  - name: f16sqrtf
-    standards: 
-      - llvm_libc_ext
-    return_type: _Float16
-    arguments:
-      - type: float
+      - type: _Float16
+      - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-  - name: f16sqrtf128
-    standards: 
-      - llvm_libc_ext
-    return_type: _Float16
-    arguments:
-      - type: float128
-    guard: LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
   - name: f16add
     standards: 
       - llvm_libc_ext
@@ -2000,6 +1264,78 @@ functions:
     return_type: _Float16
     arguments:
       - type: long double
+      - type: long double
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16div
+    standards: 
+      - llvm_libc_ext
+    return_type: _Float16
+    arguments:
+      - type: double
+      - type: double
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16divf
+    standards:
+      - llvm_libc_ext
+    return_type: _Float16
+    arguments:
+      - type: float
+      - type: float
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16divl
+    standards: 
+      - llvm_libc_ext
+    return_type: _Float16
+    arguments:
+      - type: long double
+      - type: long double
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16fma
+    standards: 
+      - llvm_libc_ext
+    return_type: _Float16
+    arguments:
+      - type: double
+      - type: double
+      - type: double
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16fmaf
+    standards: 
+      - llvm_libc_ext
+    return_type: _Float16
+    arguments:
+      - type: float
+      - type: float
+      - type: float
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16fmal
+    standards: 
+      - llvm_libc_ext
+    return_type: _Float16
+    arguments:
+      - type: long double
+      - type: long double
+      - type: long double
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16sqrt
+    standards: 
+      - llvm_libc_ext
+    return_type: _Float16
+    arguments:
+      - type: double
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16sqrtf
+    standards: 
+      - llvm_libc_ext
+    return_type: _Float16
+    arguments:
+      - type: float
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16sqrtl
+    standards: 
+      - llvm_libc_ext
+    return_type: _Float16
+    arguments:
       - type: long double
     guard: LIBC_TYPES_HAS_FLOAT16
   - name: f16sub
@@ -2026,22 +1362,377 @@ functions:
       - type: long double
       - type: long double
     guard: LIBC_TYPES_HAS_FLOAT16
-  - name: f16div
+  - name: fabsf16
     standards: 
-      - llvm_libc_ext
+      - stdc
     return_type: _Float16
     arguments:
-      - type: double
-      - type: double
+      - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-  - name: f16divf
-    standards:
-      - llvm_libc_ext
+  - name: fdimf16
+    standards: 
+      - stdc
     return_type: _Float16
     arguments:
-      - type: float
-      - type: float
+      - type: _Float16
+      - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: floorf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: fmaxf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: fmaximum_mag_numf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: fmaximum_magf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: fmaximum_numf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: fmaximumf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: fminf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: fminimum_mag_numf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: fminimum_magf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: fminimum_numf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: fminimumf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: fmodf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: frexpf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: int *
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: fromfpf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: int
+      - type: unsigned int
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: fromfpxf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: int
+      - type: unsigned int
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: getpayloadf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16 *
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: ilogbf16
+    standards: 
+      - stdc
+    return_type: int
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: ldexpf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: int
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: llogbf16
+    standards: 
+      - stdc
+    return_type: long
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: llrintf16
+    standards: 
+      - stdc
+    return_type: long long
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: llroundf16
+    standards: 
+      - stdc
+    return_type: long long
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: logbf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: lrintf16
+    standards: 
+      - stdc
+    return_type: long
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: lroundf16
+    standards: 
+      - stdc
+    return_type: long
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: modff16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: _Float16 *
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: nanf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: const char *
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: nearbyintf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: nextafterf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: nextdownf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: nexttowardf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: nextupf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: remainderf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: remquof16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: _Float16
+      - type: int *
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: rintf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: roundevenf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: roundf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: scalblnf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: long
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: scalbnf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: int
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: setpayloadf16
+    standards: 
+      - stdc
+    return_type: int
+    arguments:
+      - type: _Float16 *
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: setpayloadsigf16
+    standards: 
+      - stdc
+    return_type: int
+    arguments:
+      - type: _Float16 *
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: totalorderf16
+    standards: 
+      - stdc
+    return_type: int
+    arguments:
+      - type: _Float16 *
+      - type: _Float16 *
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: totalordermagf16
+    standards: 
+      - stdc
+    return_type: int
+    arguments:
+      - type: _Float16 *
+      - type: _Float16 *
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: truncf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: ufromfpf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: int
+      - type: unsigned int
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: ufromfpxf16
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: int
+      - type: unsigned int
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: f16addf128
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
   - name: f16divf128
     standards:
       - stdc
@@ -2050,25 +1741,349 @@ functions:
       - type: float128
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
-  - name: f16divl
+  - name: f16fmaf128
+    standards: 
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: float128
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
+  - name: f16sqrtf128
     standards: 
       - llvm_libc_ext
     return_type: _Float16
     arguments:
-      - type: long double
-      - type: long double
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: f16sqrt
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
+  - name: f16subf128
     standards: 
-      - llvm_libc_ext
+      - stdc
     return_type: _Float16
     arguments:
-      - type: double
-    guard: LIBC_TYPES_HAS_FLOAT16
-  - name: f16sqrtl
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
+  - name: ceilf128
     standards: 
-      - llvm_libc_ext
-    return_type: _Float16
+      - stdc
+    return_type: float128
     arguments:
-      - type: long double
-    guard: LIBC_TYPES_HAS_FLOAT16
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: copysignf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: fabsf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: fdimf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: floorf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: fmaxf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: fmaximum_mag_numf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: fmaximum_magf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: fmaximum_numf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: fmaximumf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: fminf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: fminimum_mag_numf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: fminimum_magf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: fminimum_numf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: fminimumf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: fmodf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: frexpf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: int *
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: fromfpf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: int
+      - type: unsigned int
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: fromfpxf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: int
+      - type: unsigned int
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: ilogbf128
+    standards: 
+      - stdc
+    return_type: int
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: ldexpf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: int
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: llogbf128
+    standards: 
+      - stdc
+    return_type: long
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: llrintf128
+    standards: 
+      - stdc
+    return_type: long long
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: llroundf128
+    standards: 
+      - stdc
+    return_type: long long
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: logbf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: lrintf128
+    standards: 
+      - stdc
+    return_type: long
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: lroundf128
+    standards: 
+      - stdc
+    return_type: long
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: modff128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: float128 *
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: nanf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: const char *
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: nearbyintf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: nextafterf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: nextdownf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: nextupf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: remquof128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: float128
+      - type: int *
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: rintf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: roundevenf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: roundf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: scalbnf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: int
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: sqrtf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: truncf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: ufromfpf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: int
+      - type: unsigned int
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: ufromfpxf128
+    standards: 
+      - stdc
+    return_type: float128
+    arguments:
+      - type: float128
+      - type: int
+      - type: unsigned int
+    guard: LIBC_TYPES_HAS_FLOAT128

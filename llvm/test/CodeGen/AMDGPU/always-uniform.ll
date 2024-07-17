@@ -7,7 +7,7 @@ declare i32 @llvm.amdgcn.readfirstlane(i32)
 define amdgpu_kernel void @readfirstlane_uniform(ptr addrspace(1) noalias nocapture readonly, ptr addrspace(1) noalias nocapture readonly) {
 ; GCN-LABEL: readfirstlane_uniform:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
 ; GCN-NEXT:    v_readfirstlane_b32 s4, v0
 ; GCN-NEXT:    s_mov_b32 s5, 0
 ; GCN-NEXT:    s_lshl_b64 s[4:5], s[4:5], 2
