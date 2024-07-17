@@ -39,19 +39,23 @@ SBCoreDumpOptions::operator=(const SBCoreDumpOptions &rhs) {
 }
 
 SBError SBCoreDumpOptions::SetPluginName(const char *name) {
+  LLDB_INSTRUMENT_VA(this, name);
   lldb_private::Status error = m_opaque_up->SetPluginName(name);
   return SBError(error);
 }
 
 void SBCoreDumpOptions::SetStyle(lldb::SaveCoreStyle style) {
+  LLDB_INSTRUMENT_VA(this, style);
   m_opaque_up->SetStyle(style);
 }
 
 void SBCoreDumpOptions::SetOutputFile(lldb::SBFileSpec file_spec) {
+  LLDB_INSTRUMENT_VA(this, file_spec);
   m_opaque_up->SetOutputFile(file_spec.ref());
 }
 
 const char *SBCoreDumpOptions::GetPluginName() const {
+  LLDB_INSTRUMENT_VA(this);
   const auto name = m_opaque_up->GetPluginName();
   if (!name)
     return nullptr;
@@ -59,6 +63,7 @@ const char *SBCoreDumpOptions::GetPluginName() const {
 }
 
 SBFileSpec SBCoreDumpOptions::GetOutputFile() const {
+  LLDB_INSTRUMENT_VA(this);
   const auto file_spec = m_opaque_up->GetOutputFile();
   if (file_spec)
     return SBFileSpec(file_spec.value());
@@ -66,11 +71,16 @@ SBFileSpec SBCoreDumpOptions::GetOutputFile() const {
 }
 
 lldb::SaveCoreStyle SBCoreDumpOptions::GetStyle() const {
+  LLDB_INSTRUMENT_VA(this);
   return m_opaque_up->GetStyle();
 }
 
 lldb_private::CoreDumpOptions &SBCoreDumpOptions::ref() const {
+  LLDB_INSTRUMENT_VA(this);
   return *m_opaque_up.get();
 }
 
-void SBCoreDumpOptions::Clear() { m_opaque_up->Clear(); }
+void SBCoreDumpOptions::Clear() { 
+    LLDB_INSTRUMENT_VA(this);
+    m_opaque_up->Clear(); 
+}

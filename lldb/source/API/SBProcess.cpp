@@ -1217,12 +1217,16 @@ bool SBProcess::IsInstrumentationRuntimePresent(
 
 lldb::SBError SBProcess::SaveCore(const char *file_name) {
   LLDB_INSTRUMENT_VA(this, file_name);
-  return SaveCore(file_name, "", SaveCoreStyle::eSaveCoreFull);
+  SBCoreDumpOptions options;
+  options.SetOutputFile(SBFileSpec(file_name));
+  options.SetStyle(SaveCoreStyle::eSaveCoreFull);
+  return SaveCore(options);
 }
 
 lldb::SBError SBProcess::SaveCore(const char *file_name,
                                   const char *flavor,
                                   SaveCoreStyle core_style) {
+  LLDB_INSTRUMENT_VA(this, file_name, flavor, core_style);
   SBCoreDumpOptions options;
   options.SetOutputFile(SBFileSpec(file_name));
   options.SetPluginName(flavor);
