@@ -1,9 +1,6 @@
 header: arpa-inet.h
 macros: []
-types:
-  - type_name: uint32_t
-  - type_name: uint16_t
-  - type_name: inttypes.h
+types: []
 enums: []
 objects: []
 functions:
