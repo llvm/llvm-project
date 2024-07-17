@@ -195,8 +195,7 @@ static long initHwProbe(struct riscv_hwprobe *Hwprobes, int len) {
     SET_RISCV_FEATURE(EXT);                                                    \
   }
 
-#define SET_RISCV_FEATURE(EXT)                                                 \
-  __riscv_feature_bits.features[EXT##_GROUPID] |= EXT##_BITMASK
+#define SET_RISCV_FEATURE(EXT) features[EXT##_GROUPID] |= EXT##_BITMASK
 
 static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
 
@@ -207,6 +206,8 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
   // Init standard extension
   // TODO: Maybe Extension implied generate from tablegen?
   __riscv_feature_bits.length = RISCV_FEATURE_BITS_LENGTH;
+
+  unsigned long long features[RISCV_FEATURE_BITS_LENGTH];
   // Check RISCV_HWPROBE_KEY_BASE_BEHAVIOR
   unsigned long long BaseValue = Hwprobes[0].value;
   if (BaseValue & RISCV_HWPROBE_BASE_BEHAVIOR_IMA) {
@@ -258,6 +259,10 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
   SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZTSO);
   SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZACAS);
   SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(ZICOND);
+
+  int i;
+  for (i = 0; i < RISCV_FEATURE_BITS_LENGTH; i++)
+    __riscv_feature_bits.features[i] = features[i];
 }
 
 #endif // defined(__linux__)
