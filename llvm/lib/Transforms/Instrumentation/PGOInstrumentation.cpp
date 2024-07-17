@@ -1760,11 +1760,11 @@ void PGOUseFunc::annotateValueSites(uint32_t Kind) {
   unsigned NumValueSites = ProfileRecord.getNumValueSites(Kind);
   // FuncPGOInstrumentation ctor finds value sites for each kind. It runs on the
   // common path of pgo-instr-gen and pgo-instr-use, and vtable kind path
-  // is gated by `-enable-vtable-value-profiling`. Give pgo-instr-use pass a
-  // second chance to find out vtable value sites when vtable profiles are
-  // present and `-enable-vtable-profile-use` is not explicitly off.
+  // is gated by `-enable-vtable-value-profiling`. If vtable profiles are
+  // present, not explicitly discarded and vtable sites remain empty, try to
+  // find the sites again.
   if (NumValueSites > 0 && Kind == IPVK_VTableTarget &&
-      NumValueSites != FuncInfo.ValueSites[IPVK_VTableTarget].size() &&
+      FuncInfo.ValueSites[Kind].empty() &&
       !(EnableVTableProfileUse.getNumOccurrences() &&
         EnableVTableProfileUse == false))
     FuncInfo.ValueSites[IPVK_VTableTarget] = VPC.get(IPVK_VTableTarget);
