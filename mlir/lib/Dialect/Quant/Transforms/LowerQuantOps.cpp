@@ -258,7 +258,7 @@ Value quantizeScalarOrTensor(OpBuilder &builder, Location loc, Value input,
 
   // Skip unnecessary computations if no zero point is given
   Value storedValueFloat = scaledValue;
-  if (matchPattern(zeroPoint, m_NonZero())) {
+  if (!matchPattern(zeroPoint, m_Zero())) {
     // Convert zero point to tensor if necessary
     zeroPoint = getScalarOrTensorConstant(builder, loc, zeroPoint, inputType,
                                           inputShape);
