@@ -69,6 +69,7 @@ YAMLProfileWriter::convert(const BinaryFunction &BF, bool UseDFS,
   YamlBF.Hash = BF.getHash();
   YamlBF.NumBasicBlocks = BF.size();
   YamlBF.ExecCount = BF.getKnownExecutionCount();
+  YamlBF.PseudoProbeDescHash = BF.getPseudoProbeDescHash();
 
   BinaryFunction::BasicBlockOrderType Order;
   llvm::copy(UseDFS ? BF.dfs() : BF.getLayout().blocks(),

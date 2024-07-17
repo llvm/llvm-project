@@ -151,6 +151,7 @@ struct BinaryFunctionProfile {
   llvm::yaml::Hex64 Hash{0};
   uint64_t ExecCount{0};
   std::vector<BinaryBasicBlockProfile> Blocks;
+  llvm::yaml::Hex64 PseudoProbeDescHash{0};
   bool Used{false};
 };
 } // end namespace bolt
@@ -164,6 +165,7 @@ template <> struct MappingTraits<bolt::BinaryFunctionProfile> {
     YamlIO.mapRequired("nblocks", BFP.NumBasicBlocks);
     YamlIO.mapOptional("blocks", BFP.Blocks,
                        std::vector<bolt::BinaryBasicBlockProfile>());
+    YamlIO.mapOptional("pseudo_probe_desc_hash", BFP.PseudoProbeDescHash);
   }
 };
 

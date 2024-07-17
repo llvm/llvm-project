@@ -78,11 +78,17 @@ public:
   PseudoProbeRewriter(BinaryContext &BC)
       : MetadataRewriter("pseudo-probe-rewriter", BC) {}
 
+  Error preCFGInitializer() override;
   Error postEmitFinalizer() override;
 };
 
-Error PseudoProbeRewriter::postEmitFinalizer() {
+Error PseudoProbeRewriter::preCFGInitializer() {
   parsePseudoProbe();
+
+  return Error::success();
+}
+
+Error PseudoProbeRewriter::postEmitFinalizer() {
   updatePseudoProbes();
 
   return Error::success();
@@ -138,6 +144,12 @@ void PseudoProbeRewriter::parsePseudoProbe() {
     ProbeDecoder.printGUID2FuncDescMap(outs());
     ProbeDecoder.printProbesForAllAddresses(outs());
   }
+
+  for (const auto &[GUID, FuncDesc] : ProbeDecoder.getGUID2FuncDescMap())
+    if (FuncStartAddrs.contains(GUID))
+      if (BinaryFunction *BF =
+              BC.getBinaryFunctionAtAddress(FuncStartAddrs[GUID]))
+        BF->setPseudoProbeDescHash(FuncDesc.FuncHash);
 }
 
 void PseudoProbeRewriter::updatePseudoProbes() {

@@ -1,6 +1,19 @@
 # REQUIRES: system-linux
 # RUN: llvm-bolt  %S/../../../llvm/test/tools/llvm-profgen/Inputs/inline-cs-pseudoprobe.perfbin --print-pseudo-probes=all -o %t.bolt 2>&1 | FileCheck %s
 
+# PREAGG: B X:0 #foo# 1 0
+# PREAGG: B X:0 #bar# 1 0
+# PREAGG: B X:0 #main# 1 0
+# RUN: link_fdata %s %S/../../../llvm/test/tools/llvm-profgen/Inputs/inline-cs-pseudoprobe.perfbin %t.preagg PREAGG
+# RUN: perf2bolt %S/../../../llvm/test/tools/llvm-profgen/Inputs/inline-cs-pseudoprobe.perfbin -p %t.preagg --pa -w %t.yaml -o %t.fdata 
+# RUN: FileCheck --input-file %t.yaml %s --check-prefix CHECK-YAML
+# CHECK-YAML: name: bar
+# CHECK-YAML: pseudo_probe_desc_hash: 0x10E852DA94
+# CHECK-YAML: name: foo
+# CHECK-YAML: pseudo_probe_desc_hash: 0x200205A19C5B4
+# CHECK-YAML: name: main
+# CHECK-YAML: pseudo_probe_desc_hash: 0x10000FFFFFFFF
+
 CHECK: Report of decoding input pseudo probe binaries
 
 CHECK-NEXT: Pseudo Probe Desc:

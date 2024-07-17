@@ -2345,6 +2345,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
       YamlBF.Hash = BAT->getBFHash(FuncAddress);
       YamlBF.ExecCount = BF->getKnownExecutionCount();
       YamlBF.NumBasicBlocks = BAT->getNumBasicBlocks(FuncAddress);
+      YamlBF.PseudoProbeDescHash = BF->getPseudoProbeDescHash();
       const BoltAddressTranslation::BBHashMapTy &BlockMap =
           BAT->getBBHashMap(FuncAddress);
       YamlBF.Blocks.resize(YamlBF.NumBasicBlocks);
