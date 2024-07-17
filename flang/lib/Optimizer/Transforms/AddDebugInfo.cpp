@@ -76,8 +76,11 @@ static uint32_t getLineFromLoc(mlir::Location loc) {
 }
 
 bool debugInfoIsAlreadySet(mlir::Location loc) {
-  if (loc->findInstanceOf<mlir::FusedLocWith<mlir::LLVM::DISubprogramAttr>>())
+  if (mlir::isa<mlir::FusedLoc>(loc)) {
+    if (loc->findInstanceOf<mlir::FusedLocWith<fir::LocationKindAttr>>())
+      return false;
     return true;
+  }
   return false;
 }
 
