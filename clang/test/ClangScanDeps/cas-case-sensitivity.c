@@ -53,10 +53,6 @@ void bar2(void) {
   foo();
 }
 
-//--- header.h
-#pragma once
-void foo(void);
-
 //--- Header.h
 #pragma once
 void foo(void);
