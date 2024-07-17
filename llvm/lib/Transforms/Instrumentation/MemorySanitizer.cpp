@@ -3979,7 +3979,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (MS.TrackOrigins) {
       OriginCombiner OC(this, IRB);
       for (int i = 0; i < numArgOperands - 1; i++)
-        OC.Add(I.getOperand(i));
+        OC.Add(I.getArgOperand(i));
       OC.Done(&I);
     }
   }
