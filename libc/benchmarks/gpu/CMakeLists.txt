@@ -19,8 +19,6 @@ function(add_benchmark benchmark_name)
     LINK_LIBRARIES
       LibcGpuBenchmark.hermetic
       ${BENCHMARK_LINK_LIBRARIES}
-    LOADER_ARGS
-      --print-resource-usage
     ${BENCHMARK_UNPARSED_ARGUMENTS}
   )
   get_fq_target_name(${benchmark_name} fq_target_name)
