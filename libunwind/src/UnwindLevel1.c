@@ -72,6 +72,19 @@
     __asm__ volatile("jmpq *%%rdx\n\t" :: "D"(cetRegContext),                  \
                      "d"(cetJumpAddress));                                     \
   } while (0)
+#elif defined(_LIBUNWIND_TARGET_AARCH64)
+#define __cet_ss_step_size 8
+#define __unw_phase2_resume(cursor, fn)                                        \
+  do {                                                                         \
+    _LIBUNWIND_POP_CET_SSP((fn));                                              \
+    void *cetRegContext = __libunwind_cet_get_registers((cursor));             \
+    void *cetJumpAddress = __libunwind_cet_get_jump_target();                  \
+    __asm__ volatile("mov x0, %0\n\t"                                          \
+                     "br %1\n\t"                                               \
+                     :                                                         \
+                     : "r"(cetRegContext), "r"(cetJumpAddress)                 \
+                     : "x0");                                                  \
+  } while (0)
 #endif
 
 static _Unwind_Reason_Code
@@ -170,6 +183,10 @@ unwind_phase1(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
 }
 extern int __unw_step_stage2(unw_cursor_t *);
 
+#if defined(_LIBUNWIND_USE_CET) && defined(_LIBUNWIND_TARGET_AARCH64)
+// Enable the GCS target feature to permit GCS instructions to be used.
+__attribute__((target("gcs")))
+#endif
 static _Unwind_Reason_Code
 unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *exception_object) {
   __unw_init_local(cursor, uc);
@@ -181,7 +198,14 @@ unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
   // frame walked is unwind_phase2.
   unsigned framesWalked = 1;
 #ifdef _LIBUNWIND_USE_CET
+#if defined(_LIBUNWIND_TARGET_I386) || defined(_LIBUNWIND_TARGET_X86_64)
   unsigned long shadowStackTop = _get_ssp();
+#elif defined(_LIBUNWIND_TARGET_AARCH64)
+  unsigned long shadowStackTop = 0;
+  if (__chkfeat(_CHKFEAT_GCS)) {
+    shadowStackTop = (unsigned long)__gcspr();
+  }
+#endif
 #endif
   // Walk each frame until we reach where search phase said to stop.
   while (true) {
@@ -306,6 +330,10 @@ unwind_phase2(unw_context_t *uc, unw_cursor_t *cursor, _Unwind_Exception *except
   return _URC_FATAL_PHASE2_ERROR;
 }
 
+#if defined(_LIBUNWIND_USE_CET) && defined(_LIBUNWIND_TARGET_AARCH64)
+// Enable the GCS target feature to permit GCS instructions to be used.
+__attribute__((target("gcs")))
+#endif
 static _Unwind_Reason_Code
 unwind_phase2_forced(unw_context_t *uc, unw_cursor_t *cursor,
                      _Unwind_Exception *exception_object,
