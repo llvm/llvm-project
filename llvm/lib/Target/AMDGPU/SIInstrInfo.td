@@ -317,8 +317,8 @@ def SIfptrunc_round_downward : SDNode<"AMDGPUISD::FPTRUNC_ROUND_DOWNWARD",
 // scales are known 0.
 class UnscaledMFMAOptimizationPat<SDPatternOperator intrin> : PatFrag<
   (ops node:$srca, node:$srcb, node:$srcc,
-       node:$cbsz, node:$abid, node:$blgp),
-  (intrin $srca, $srcb, $srcc, $cbsz, $abid, $blgp,
+       node:$cbsz, node:$blgp),
+  (intrin $srca, $srcb, $srcc, $cbsz, $blgp,
           srcvalue, 0, srcvalue, 0)
 >;
 
@@ -2518,6 +2518,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field string AsmVOPDY = getAsmVOPDPart<NumSrcArgs, "Y">.ret;
   field string TieRegDPP = "$old";
   field bit IsSMFMAC = false;
+  field bit HasAbid = !and(IsMAI, HasSrc1);
 }
 
   class VOP_NO_EXT <VOPProfile p> : VOPProfile <p.ArgVT> {

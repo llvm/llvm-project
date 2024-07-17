@@ -565,6 +565,7 @@ def VOPProfileAccWrite : VOP3P_Profile<VOP_I32_I32, VOP3_MAI> {
 class VOPProfileMAI<VOPProfile P, RegisterOperand _SrcRC, RegisterOperand _DstRC,
                     RegisterOperand SrcARC = AVSrc_32, RegisterOperand SrcBRC = SrcARC>
   : VOP3P_Profile<P, VOP3_MAI> {
+  bit HasAbid = true;
   let DstRC = _DstRC;
   let Src0RC64 = SrcARC;
   let Src1RC64 = SrcBRC;
@@ -574,8 +575,11 @@ class VOPProfileMAI<VOPProfile P, RegisterOperand _SrcRC, RegisterOperand _DstRC
   let HasIntClamp = 0;
   let HasOMod = 0;
   let HasModifiers = 0;
-  let AsmVOP3Base = "$vdst, $src0, $src1, $src2$cbsz$abid$blgp";
-  let Ins64 = (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, CBSZ:$cbsz, ABID:$abid, blgp:$blgp);
+  let AsmVOP3Base = "$vdst, $src0, $src1, $src2$cbsz"#!if(HasAbid,"$abid","")#"$blgp";
+  let Ins64 = !con(
+       (ins Src0RC64:$src0, Src1RC64:$src1, Src2RC64:$src2, CBSZ:$cbsz),
+       !if(HasAbid, (ins ABID:$abid), (ins)),
+       (ins blgp:$blgp));
   let InsVOP3Base = Ins64;
   // Dst and SrcC cannot partially overlap if SrcC/Dst is bigger than 4 VGPRs.
   // We then create two versions of the instruction: with tied dst and src2
@@ -673,6 +677,15 @@ def VOPProfileMAI_F32_V8BF16_X16_VCD : VOPProfileMAI<VOP_V16F32_V8BF16_V8BF16_V1
 def VOPProfileMAI_F32_V8BF16_X4     : VOPProfileMAI<VOP_V4F32_V8BF16_V8BF16_V4F32,     AISrc_128_f32,  ADst_128, AVSrc_128>;
 def VOPProfileMAI_F32_V8BF16_X4_VCD : VOPProfileMAI<VOP_V4F32_V8BF16_V8BF16_V4F32,     VISrc_128_f32,  VDst_128, AVSrc_128>;
 
+// For i32_16x16x64_i8
+def VOPProfileMAI_I32_V4I32_V4I32_X128     : VOPProfileMAI<VOP_V4I32_V4I32_V4I32_V4I32,    AISrc_128_f32,  ADst_128, AVSrc_128>;
+def VOPProfileMAI_I32_V4I32_V4I32_X128_VCD : VOPProfileMAI<VOP_V4I32_V4I32_V4I32_V4I32,    VISrc_128_f32,  VDst_128, AVSrc_128>;
+
+// For i32_32x32x32_i8
+def VOPProfileMAI_I32_V4I32_V4I32_X16     : VOPProfileMAI<VOP_V16I32_V4I32_V4I32_V16I32,    AISrc_512_b32,  ADst_512, AVSrc_128>;
+def VOPProfileMAI_I32_V4I32_V4I32_X16_VCD : VOPProfileMAI<VOP_V16I32_V4I32_V4I32_V16I32,    VISrc_512_b32,  VDst_512, AVSrc_128>;
+
+let HasAbid = false in {
 // For f32_16x16x128_f8f6f4 - f8 x f8 case
 def VOPProfileMAI_F32_V8I32_V8I32_X128     : VOPProfileMAI<VOP_V4F32_V8I32_V8I32_V4F32,    AISrc_128_f32,  ADst_128, AVSrc_256>;
 def VOPProfileMAI_F32_V8I32_V8I32_X128_VCD : VOPProfileMAI<VOP_V4F32_V8I32_V8I32_V4F32,    VISrc_128_f32,  VDst_128, AVSrc_256>;
@@ -744,15 +757,7 @@ def VOPProfileMAI_F32_V4I32_V6I32_X512_VCD : VOPProfileMAI<VOP_V16F32_V4I32_V6I3
 // For f32_32x32x64_f8f6f4 - f4 x f4 case
 def VOPProfileMAI_F32_V4I32_V4I32_X512     : VOPProfileMAI<VOP_V16F32_V4I32_V4I32_V16F32,    AISrc_512_f32,  ADst_512, AVSrc_128, AVSrc_128>;
 def VOPProfileMAI_F32_V4I32_V4I32_X512_VCD : VOPProfileMAI<VOP_V16F32_V4I32_V4I32_V16F32,    VISrc_512_f32,  VDst_512, AVSrc_128, AVSrc_128>;
-
-
-// For i32_16x16x64_i8
-def VOPProfileMAI_I32_V4I32_V4I32_X128     : VOPProfileMAI<VOP_V4I32_V4I32_V4I32_V4I32,    AISrc_128_f32,  ADst_128, AVSrc_128>;
-def VOPProfileMAI_I32_V4I32_V4I32_X128_VCD : VOPProfileMAI<VOP_V4I32_V4I32_V4I32_V4I32,    VISrc_128_f32,  VDst_128, AVSrc_128>;
-
-// For i32_32x32x32_i8
-def VOPProfileMAI_I32_V4I32_V4I32_X16     : VOPProfileMAI<VOP_V16I32_V4I32_V4I32_V16I32,    AISrc_512_b32,  ADst_512, AVSrc_128>;
-def VOPProfileMAI_I32_V4I32_V4I32_X16_VCD : VOPProfileMAI<VOP_V16I32_V4I32_V4I32_V16I32,    VISrc_512_b32,  VDst_512, AVSrc_128>;
+}
 
 
 class MFMATable <bit is_mac, string Name> {
@@ -774,13 +779,17 @@ class MFMA_F8F6F4_WithSizeTable_Helper<VOP3_Pseudo  ps, string F8F8Op> :
                             !cast<Instruction>(F8F8Op)> {
 }
 
-class MAIFrag<SDPatternOperator Op, code pred, bit Scaled = false> : PatFrag <
-  !if(Scaled, (ops node:$src0, node:$src1, node:$src2, node:$cbsz, node:$abid, node:$blgp,
-                     node:$scale_src0_opsel, node:$scale_src0,
-                     node:$scale_src1_opsel, node:$scale_src1),
-              (ops node:$src0, node:$src1, node:$src2, node:$cbsz, node:$abid, node:$blgp)),
-  !if(Scaled, (Op $src0, $src1, $src2, $cbsz, $abid, $blgp, $scale_src0_opsel, $scale_src0, $scale_src1_opsel, $scale_src1),
-              (Op $src0, $src1, $src2, $cbsz, $abid, $blgp)),
+// Currently assumes scaled instructions never have abid
+class MAIFrag<SDPatternOperator Op, code pred, bit HasAbid = true, bit Scaled = false> : PatFrag <
+  !if(Scaled, (ops node:$src0, node:$src1, node:$src2, node:$cbsz, node:$blgp,
+                   node:$scale_src0_opsel, node:$scale_src0,
+                   node:$scale_src1_opsel, node:$scale_src1),
+              !con((ops node:$src0, node:$src1, node:$src2, node:$cbsz),
+                   !if(HasAbid, (ops node:$abid), (ops)),
+                    (ops node:$blgp))),
+  !if(Scaled, (Op $src0, $src1, $src2, $cbsz, $blgp, $scale_src0_opsel, $scale_src0, $scale_src1_opsel, $scale_src1),
+              !if(HasAbid, (Op $src0, $src1, $src2, $cbsz, $abid, $blgp),
+                           (Op $src0, $src1, $src2, $cbsz, $blgp))),
   pred
 >;
 
@@ -800,11 +809,15 @@ defvar MayNotNeedAGPRs_gisel = [{
   return !MF.getInfo<SIMachineFunctionInfo>()->mayNeedAGPRs();
 }];
 
-class AgprMAIFrag<SDPatternOperator Op, bit Scaled = false> : MAIFrag<Op, MayNeedAGPRs, Scaled> {
+class AgprMAIFrag<SDPatternOperator Op, bit HasAbid = true,
+                  bit Scaled = false> :
+  MAIFrag<Op, MayNeedAGPRs, HasAbid, Scaled> {
   let GISelPredicateCode = MayNeedAGPRs_gisel;
 }
 
-class VgprMAIFrag<SDPatternOperator Op, bit Scaled = false> : MAIFrag<Op, MayNotNeedAGPRs, Scaled> {
+class VgprMAIFrag<SDPatternOperator Op, bit HasAbid = true,
+                   bit Scaled = false> :
+  MAIFrag<Op, MayNotNeedAGPRs, HasAbid, Scaled> {
   let GISelPredicateCode = MayNotNeedAGPRs_gisel;
 }
 
@@ -840,13 +853,14 @@ class ScaledMAIInst<string OpName, MAIInst BaseInst, SDPatternOperator node> :
          op_sel_hi0:$scale_src1_opsel));
   let AsmOperands =
     "$vdst, $src0, $src1, $src2, $scale_src0, $scale_src1"
-    "$scale_src0_opsel$scale_src1_opsel$cbsz$abid$blgp";
+    "$scale_src0_opsel$scale_src1_opsel$cbsz$blgp";
 
   let FixedSize = 1;
   let Size = 16;
 }
 
 multiclass MAIInst<string OpName, string P, SDPatternOperator node = null_frag,
+                   bit HasAbid = true,
                    bit Scaled = false> {
   defvar NoDstOverlap = !cast<VOPProfileMAI>("VOPProfileMAI_" # P).NoDstOverlap;
 
@@ -854,12 +868,12 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node = null_frag,
     // FP32 denorm mode is respected, rounding mode is not. Exceptions are not supported.
     let Constraints = !if(NoDstOverlap, "@earlyclobber $vdst", "") in {
       def _e64 : MAIInst<OpName, !cast<VOPProfileMAI>("VOPProfileMAI_" # P),
-                         !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, AgprMAIFrag<node, Scaled>), Scaled>,
+                         !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, AgprMAIFrag<node, HasAbid, Scaled>), Scaled>,
                  MFMATable<0, NAME # "_e64">;
 
       let SubtargetPredicate = isGFX90APlus, Mnemonic = OpName in
       def _vgprcd_e64 : MAIInst<OpName # "_vgprcd", !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD"),
-                                !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, VgprMAIFrag<node, Scaled>), Scaled>,
+                                !if(!or(NoDstOverlap, !eq(node, null_frag)), null_frag, VgprMAIFrag<node, HasAbid, Scaled>), Scaled>,
                         MFMATable<0, NAME # "_vgprcd_e64">;
     }
 
@@ -868,12 +882,12 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node = null_frag,
           isConvertibleToThreeAddress = NoDstOverlap,
           Mnemonic = OpName in {
         def "_mac_e64" : MAIInst<OpName # "_mac", !cast<VOPProfileMAI>("VOPProfileMAI_" # P),
-                                 !if(!eq(node, null_frag), null_frag, AgprMAIFrag<node, Scaled>), Scaled>,
+                                 !if(!eq(node, null_frag), null_frag, AgprMAIFrag<node, HasAbid, Scaled>), Scaled>,
                          MFMATable<1, NAME # "_e64">;
 
         let SubtargetPredicate = isGFX90APlus in
         def _mac_vgprcd_e64 : MAIInst<OpName # "_mac_vgprcd", !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD"),
-                                      !if(!eq(node, null_frag), null_frag, VgprMAIFrag<node, Scaled>), Scaled>,
+                                      !if(!eq(node, null_frag), null_frag, VgprMAIFrag<node, HasAbid, Scaled>), Scaled>,
                               MFMATable<1, NAME # "_vgprcd_e64">;
       }
     }
@@ -885,14 +899,16 @@ multiclass ScaledMAIInst_mc<string OpName, string UnscaledOpName_, SDPatternOper
   defvar VariantSuffix = !subst(!toupper(OpName), "", NAME); // Drop the main opcode name prefix to get the "_fN_fM" suffix.
   defvar UnscaledOpName = UnscaledOpName_#VariantSuffix;
 
+  defvar HasAbid = false;
+
   defvar NoDstOverlap = !cast<VOPProfileMAI>(!cast<MAIInst>(UnscaledOpName#"_e64").Pfl).NoDstOverlap;
 
   def _e64 : ScaledMAIInst<OpName,
-        !cast<MAIInst>(UnscaledOpName#"_e64"), !if(NoDstOverlap, null_frag, AgprMAIFrag<node, true>)>,
+        !cast<MAIInst>(UnscaledOpName#"_e64"), !if(NoDstOverlap, null_frag, AgprMAIFrag<node, HasAbid, true>)>,
       MFMATable<0, NAME # "_e64">;
 
   def _vgprcd_e64 : ScaledMAIInst<OpName # "_vgprcd",
-          !cast<MAIInst>(UnscaledOpName#"_vgprcd_e64"), !if(NoDstOverlap, null_frag, VgprMAIFrag<node, true>)>,
+          !cast<MAIInst>(UnscaledOpName#"_vgprcd_e64"), !if(NoDstOverlap, null_frag, VgprMAIFrag<node, HasAbid, true>)>,
         MFMATable<0, NAME # "_vgprcd_e64">;
 
  if NoDstOverlap then {
@@ -900,11 +916,11 @@ multiclass ScaledMAIInst_mc<string OpName, string UnscaledOpName_, SDPatternOper
        isConvertibleToThreeAddress = NoDstOverlap,
        Mnemonic = UnscaledOpName_ in {
      def _mac_e64 : ScaledMAIInst<OpName # "_mac",
-          !cast<MAIInst>(UnscaledOpName # "_mac_e64"), AgprMAIFrag<node, true>>,
+          !cast<MAIInst>(UnscaledOpName # "_mac_e64"), AgprMAIFrag<node, HasAbid, true>>,
         MFMATable<1, NAME # "_e64">;
 
      def _mac_vgprcd_e64 : ScaledMAIInst<OpName # " _mac_vgprcd",
-          !cast<MAIInst>(UnscaledOpName # "_mac_vgprcd_e64"), VgprMAIFrag<node, true>>,
+          !cast<MAIInst>(UnscaledOpName # "_mac_vgprcd_e64"), VgprMAIFrag<node, HasAbid, true>>,
         MFMATable<1, NAME # "_vgprcd_e64">;
     }
   }
@@ -913,15 +929,16 @@ multiclass ScaledMAIInst_mc<string OpName, string UnscaledOpName_, SDPatternOper
 // Each of SrcA and SrcB can be encoded using 3 different sizes, so
 // define 9 permutations of register classes.
 multiclass MAIInst_SrcFormats_mc<string OpName, string ProfileSuffix, SDPatternOperator node> {
-  defm _f8_f8 : MAIInst<OpName, "F32_V8I32_V8I32"#ProfileSuffix, node>;
-  defm _f8_f6 : MAIInst<OpName, "F32_V8I32_V6I32"#ProfileSuffix, node>;
-  defm _f6_f8 : MAIInst<OpName, "F32_V6I32_V8I32"#ProfileSuffix, node>;
-  defm _f6_f6 : MAIInst<OpName, "F32_V6I32_V6I32"#ProfileSuffix, node>;
-  defm _f8_f4 : MAIInst<OpName, "F32_V8I32_V4I32"#ProfileSuffix, node>;
-  defm _f4_f8 : MAIInst<OpName, "F32_V4I32_V8I32"#ProfileSuffix, node>;
-  defm _f6_f4 : MAIInst<OpName, "F32_V6I32_V4I32"#ProfileSuffix, node>;
-  defm _f4_f6 : MAIInst<OpName, "F32_V4I32_V6I32"#ProfileSuffix, node>;
-  defm _f4_f4 : MAIInst<OpName, "F32_V4I32_V4I32"#ProfileSuffix, node>;
+  defvar HasAbid = false;
+  defm _f8_f8 : MAIInst<OpName, "F32_V8I32_V8I32"#ProfileSuffix, node, HasAbid>;
+  defm _f8_f6 : MAIInst<OpName, "F32_V8I32_V6I32"#ProfileSuffix, node, HasAbid>;
+  defm _f6_f8 : MAIInst<OpName, "F32_V6I32_V8I32"#ProfileSuffix, node, HasAbid>;
+  defm _f6_f6 : MAIInst<OpName, "F32_V6I32_V6I32"#ProfileSuffix, node, HasAbid>;
+  defm _f8_f4 : MAIInst<OpName, "F32_V8I32_V4I32"#ProfileSuffix, node, HasAbid>;
+  defm _f4_f8 : MAIInst<OpName, "F32_V4I32_V8I32"#ProfileSuffix, node, HasAbid>;
+  defm _f6_f4 : MAIInst<OpName, "F32_V6I32_V4I32"#ProfileSuffix, node, HasAbid>;
+  defm _f4_f6 : MAIInst<OpName, "F32_V4I32_V6I32"#ProfileSuffix, node, HasAbid>;
+  defm _f4_f4 : MAIInst<OpName, "F32_V4I32_V4I32"#ProfileSuffix, node, HasAbid>;
 }
 
 multiclass MAIInst_SrcFormats_Scaled_mc<string OpName, string UnscaledOpName, SDPatternOperator node> {

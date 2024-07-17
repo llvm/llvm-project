@@ -18824,7 +18824,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
             : Intrinsic::amdgcn_mfma_scale_f32_16x16x128_f8f6f4,
         {VT, VT});
 
-    SmallVector<Value *, 10> Args;
+    SmallVector<Value *, 9> Args;
     for (unsigned I = 0, N = E->getNumArgs(); I != N; ++I)
       Args.push_back(EmitScalarExpr(E->getArg(I)));
     return Builder.CreateCall(F, Args);

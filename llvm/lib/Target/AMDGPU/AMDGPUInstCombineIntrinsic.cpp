@@ -1279,7 +1279,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Value *Src0 = II.getArgOperand(0);
     Value *Src1 = II.getArgOperand(1);
     uint64_t CBSZ = cast<ConstantInt>(II.getArgOperand(3))->getZExtValue();
-    uint64_t BLGP = cast<ConstantInt>(II.getArgOperand(5))->getZExtValue();
+    uint64_t BLGP = cast<ConstantInt>(II.getArgOperand(4))->getZExtValue();
     auto *Src0Ty = cast<FixedVectorType>(Src0->getType());
     auto *Src1Ty = cast<FixedVectorType>(Src1->getType());
 

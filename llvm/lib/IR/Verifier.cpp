@@ -6284,11 +6284,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Value *Src1 = Call.getArgOperand(1);
 
     uint64_t CBSZ = cast<ConstantInt>(Call.getArgOperand(3))->getZExtValue();
-    uint64_t BLGP = cast<ConstantInt>(Call.getArgOperand(5))->getZExtValue();
+    uint64_t BLGP = cast<ConstantInt>(Call.getArgOperand(4))->getZExtValue();
     Check(CBSZ <= 4, "invalid value for cbsz format", Call,
           Call.getArgOperand(3));
     Check(BLGP <= 4, "invalid value for blgp format", Call,
-          Call.getArgOperand(5));
+          Call.getArgOperand(4));
 
     // AMDGPU::MFMAScaleFormats values
     auto getFormatNumRegs = [](unsigned FormatVal) {
