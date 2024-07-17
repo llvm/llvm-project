@@ -75,12 +75,11 @@ lldb::SaveCoreStyle SBCoreDumpOptions::GetStyle() const {
   return m_opaque_up->GetStyle();
 }
 
-lldb_private::CoreDumpOptions &SBCoreDumpOptions::ref() const {
-  LLDB_INSTRUMENT_VA(this);
-  return *m_opaque_up.get();
-}
-
 void SBCoreDumpOptions::Clear() {
   LLDB_INSTRUMENT_VA(this);
   m_opaque_up->Clear();
+}
+
+lldb_private::CoreDumpOptions &SBCoreDumpOptions::ref() const {
+  return *m_opaque_up.get();
 }

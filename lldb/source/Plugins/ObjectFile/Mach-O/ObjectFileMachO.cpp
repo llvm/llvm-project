@@ -6526,8 +6526,8 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
     core_style = SaveCoreStyle::eSaveCoreDirtyOnly;
   // The FileSpec and Process are already checked in PluginManager::SaveCore.
   assert(options.GetOutputFile().has_value());
-  const FileSpec outfile = options.GetOutputFile().value();
   assert(process_sp);
+  const FileSpec outfile = options.GetOutputFile().value();
 
   Target &target = process_sp->GetTarget();
   const ArchSpec target_arch = target.GetArchitecture();

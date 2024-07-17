@@ -709,6 +709,9 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
     return error;
   }
 
+  if (!process_sp) 
+    return error;
+
   if (!options.GetPluginName().has_value()) {
     // Try saving core directly from the process plugin first.
     llvm::Expected<bool> ret =
