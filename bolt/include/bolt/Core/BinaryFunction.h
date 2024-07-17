@@ -2261,7 +2261,7 @@ public:
   size_t getHash() const { return Hash; }
 
   /// Returns the function hash from pseudo-probe description of the function.
-  size_t getPseudoProbeDescHash() const { return PseudoProbeDescHash; }
+  uint64_t getPseudoProbeDescHash() const { return PseudoProbeDescHash; }
 
   void setPseudoProbeDescHash(uint64_t Hash) { PseudoProbeDescHash = Hash; }
 
