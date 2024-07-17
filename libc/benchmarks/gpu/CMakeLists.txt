@@ -6,14 +6,10 @@ function(add_benchmark benchmark_name)
   cmake_parse_arguments(
     "BENCHMARK"
     "" # Optional arguments
-    "NUM_THREADS" # Single value arguments
+    "" # Single value arguments
     "LINK_LIBRARIES" # Multi-value arguments
     ${ARGN}
   )
-
-  if(NOT BENCHMARK_NUM_THREADS)
-    set(BENCHMARK_NUM_THREADS 1)
-  endif()
   
   if(NOT libc.src.time.clock IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
     message(FATAL_ERROR "target does not support clock")
@@ -24,8 +20,6 @@ function(add_benchmark benchmark_name)
     LINK_LIBRARIES
       LibcGpuBenchmark.hermetic
       ${BENCHMARK_LINK_LIBRARIES}
-    LOADER_ARGS
-      --threads ${BENCHMARK_NUM_THREADS}
     ${BENCHMARK_UNPARSED_ARGUMENTS}
   )
   get_fq_target_name(${benchmark_name} fq_target_name)

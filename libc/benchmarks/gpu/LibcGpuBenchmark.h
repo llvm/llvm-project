@@ -74,7 +74,7 @@ struct BenchmarkResult {
   clock_t total_time = 0;
 };
 
-enum BenchmarkFlags { SINGLE_THREADED = 0x1 };
+enum BenchmarkFlags { SINGLE_THREADED = 0x1, SINGLE_WAVE = 0x2 };
 
 BenchmarkResult benchmark(const BenchmarkOptions &options,
                           cpp::function<uint64_t(void)> wrapper_func);
@@ -113,5 +113,10 @@ private:
   LIBC_NAMESPACE::benchmarks::Benchmark SuiteName##_##TestName##_Instance(     \
       Func, #SuiteName "." #TestName,                                          \
       LIBC_NAMESPACE::benchmarks::BenchmarkFlags::SINGLE_THREADED)
+
+#define SINGLE_WAVE_BENCHMARK(SuiteName, TestName, Func)                       \
+  LIBC_NAMESPACE::benchmarks::Benchmark SuiteName##_##TestName##_Instance(     \
+      Func, #SuiteName "." #TestName,                                          \
+      LIBC_NAMESPACE::benchmarks::BenchmarkFlags::SINGLE_WAVE)
 
 #endif
