@@ -835,10 +835,6 @@ public:
   /// them.
   void calculateLoopInfo();
 
-  /// Calculate missed macro-fusion opportunities and update BinaryContext
-  /// stats.
-  void calculateMacroOpFusionStats();
-
   /// Returns if BinaryDominatorTree has been constructed for this function.
   bool hasDomTree() const { return BDT != nullptr; }
 
@@ -929,6 +925,12 @@ public:
   const MCInst *getInstructionAtOffset(uint64_t Offset) const {
     return const_cast<BinaryFunction *>(this)->getInstructionAtOffset(Offset);
   }
+
+  /// When the function is in disassembled state, return an instruction that
+  /// contains the \p Offset.
+  MCInst *getInstructionContainingOffset(uint64_t Offset);
+
+  std::optional<MCInst> disassembleInstructionAtOffset(uint64_t Offset) const;
 
   /// Return offset for the first instruction. If there is data at the
   /// beginning of a function then offset of the first instruction could

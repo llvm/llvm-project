@@ -449,3 +449,34 @@ TEST_F(AArch64GISelMITest, BuildBitfieldExtract) {
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
+
+TEST_F(AArch64GISelMITest, BuildFPEnv) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT S32 = LLT::scalar(32); 
+  SmallVector<Register, 4> Copies;
+  collectCopies(Copies, MF);
+
+  B.buildGetFPEnv(Copies[0]);
+  B.buildSetFPEnv(Copies[1]);
+  B.buildResetFPEnv();
+  auto GetFPMode = B.buildGetFPMode(S32);
+  B.buildSetFPMode(GetFPMode);
+  B.buildResetFPMode();
+
+  auto CheckStr = R"(
+  ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0
+  ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+  ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
+  ; CHECK: [[COPY0]]:_(s64) = G_GET_FPENV
+  ; CHECK: G_SET_FPENV [[COPY1]]:_(s64)
+  ; CHECK: G_RESET_FPENV
+  ; CHECK: [[FPMODE:%[0-9]+]]:_(s32) = G_GET_FPMODE
+  ; CHECK: G_SET_FPMODE [[FPMODE]]:_(s32)
+  ; CHECK: G_RESET_FPMODE
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}

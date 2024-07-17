@@ -483,7 +483,7 @@ bool X86SpeculativeLoadHardeningPass::runOnMachineFunction(
                          PredStateSubReg);
     ++NumInstsInserted;
     MachineOperand *ZeroEFLAGSDefOp =
-        ZeroI->findRegisterDefOperand(X86::EFLAGS);
+        ZeroI->findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr);
     assert(ZeroEFLAGSDefOp && ZeroEFLAGSDefOp->isImplicit() &&
            "Must have an implicit def of EFLAGS!");
     ZeroEFLAGSDefOp->setIsDead(true);
@@ -762,7 +762,8 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughCFG(
             // If this is the last cmov and the EFLAGS weren't originally
             // live-in, mark them as killed.
             if (!LiveEFLAGS && Cond == Conds.back())
-              CMovI->findRegisterUseOperand(X86::EFLAGS)->setIsKill(true);
+              CMovI->findRegisterUseOperand(X86::EFLAGS, /*TRI=*/nullptr)
+                  ->setIsKill(true);
 
             ++NumInstsInserted;
             LLVM_DEBUG(dbgs() << "  Inserting cmov: "; CMovI->dump();
@@ -821,8 +822,7 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughCFG(
 
     // Sort and unique the codes to minimize them.
     llvm::sort(UncondCodeSeq);
-    UncondCodeSeq.erase(std::unique(UncondCodeSeq.begin(), UncondCodeSeq.end()),
-                        UncondCodeSeq.end());
+    UncondCodeSeq.erase(llvm::unique(UncondCodeSeq), UncondCodeSeq.end());
 
     // Build a checking version of the successor.
     BuildCheckingBlockForSuccAndConds(MBB, *UncondSucc, /*SuccCount*/ 1,
@@ -1185,7 +1185,8 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughIndirectBranches(
             .addReg(PS->InitialReg)
             .addReg(PS->PoisonReg)
             .addImm(X86::COND_NE);
-    CMovI->findRegisterUseOperand(X86::EFLAGS)->setIsKill(true);
+    CMovI->findRegisterUseOperand(X86::EFLAGS, /*TRI=*/nullptr)
+        ->setIsKill(true);
     ++NumInstsInserted;
     LLVM_DEBUG(dbgs() << "  Inserting cmov: "; CMovI->dump(); dbgs() << "\n");
     CMovs.push_back(&*CMovI);
@@ -1202,7 +1203,8 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughIndirectBranches(
 // Returns true if the MI has EFLAGS as a register def operand and it's live,
 // otherwise it returns false
 static bool isEFLAGSDefLive(const MachineInstr &MI) {
-  if (const MachineOperand *DefOp = MI.findRegisterDefOperand(X86::EFLAGS)) {
+  if (const MachineOperand *DefOp =
+          MI.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr)) {
     return !DefOp->isDead();
   }
   return false;
@@ -1213,7 +1215,8 @@ static bool isEFLAGSLive(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
   // Check if EFLAGS are alive by seeing if there is a def of them or they
   // live-in, and then seeing if that def is in turn used.
   for (MachineInstr &MI : llvm::reverse(llvm::make_range(MBB.begin(), I))) {
-    if (MachineOperand *DefOp = MI.findRegisterDefOperand(X86::EFLAGS)) {
+    if (MachineOperand *DefOp =
+            MI.findRegisterDefOperand(X86::EFLAGS, /*TRI=*/nullptr)) {
       // If the def is dead, then EFLAGS is not live.
       if (DefOp->isDead())
         return false;
@@ -2182,7 +2185,7 @@ void X86SpeculativeLoadHardeningPass::tracePredStateThroughCall(
                    .addReg(NewStateReg, RegState::Kill)
                    .addReg(PS->PoisonReg)
                    .addImm(X86::COND_NE);
-  CMovI->findRegisterUseOperand(X86::EFLAGS)->setIsKill(true);
+  CMovI->findRegisterUseOperand(X86::EFLAGS, /*TRI=*/nullptr)->setIsKill(true);
   ++NumInstsInserted;
   LLVM_DEBUG(dbgs() << "  Inserting cmov: "; CMovI->dump(); dbgs() << "\n");
 

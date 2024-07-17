@@ -35,7 +35,6 @@ public:
 
   /// This forwards to CodeGenFunction::InsertHelper.
   void InsertHelper(llvm::Instruction *I, const llvm::Twine &Name,
-                    llvm::BasicBlock *BB,
                     llvm::BasicBlock::iterator InsertPt) const override;
 
 private:
@@ -63,7 +62,7 @@ class CGBuilderTy : public CGBuilderBaseTy {
   template <bool IsInBounds>
   Address createConstGEP2_32(Address Addr, unsigned Idx0, unsigned Idx1,
                              const llvm::Twine &Name) {
-    const llvm::DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
+    const llvm::DataLayout &DL = BB->getDataLayout();
     llvm::GetElementPtrInst *GEP;
     if (IsInBounds)
       GEP = cast<llvm::GetElementPtrInst>(CreateConstInBoundsGEP2_32(
@@ -219,7 +218,7 @@ public:
   Address CreateStructGEP(Address Addr, unsigned Index,
                           const llvm::Twine &Name = "") {
     llvm::StructType *ElTy = cast<llvm::StructType>(Addr.getElementType());
-    const llvm::DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
+    const llvm::DataLayout &DL = BB->getDataLayout();
     const llvm::StructLayout *Layout = DL.getStructLayout(ElTy);
     auto Offset = CharUnits::fromQuantity(Layout->getElementOffset(Index));
 
@@ -241,7 +240,7 @@ public:
   Address CreateConstArrayGEP(Address Addr, uint64_t Index,
                               const llvm::Twine &Name = "") {
     llvm::ArrayType *ElTy = cast<llvm::ArrayType>(Addr.getElementType());
-    const llvm::DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
+    const llvm::DataLayout &DL = BB->getDataLayout();
     CharUnits EltSize =
         CharUnits::fromQuantity(DL.getTypeAllocSize(ElTy->getElementType()));
 
@@ -261,7 +260,7 @@ public:
   Address CreateConstInBoundsGEP(Address Addr, uint64_t Index,
                                  const llvm::Twine &Name = "") {
     llvm::Type *ElTy = Addr.getElementType();
-    const llvm::DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
+    const llvm::DataLayout &DL = BB->getDataLayout();
     CharUnits EltSize = CharUnits::fromQuantity(DL.getTypeAllocSize(ElTy));
 
     return Address(
@@ -278,7 +277,7 @@ public:
   Address CreateConstGEP(Address Addr, uint64_t Index,
                          const llvm::Twine &Name = "") {
     llvm::Type *ElTy = Addr.getElementType();
-    const llvm::DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
+    const llvm::DataLayout &DL = BB->getDataLayout();
     CharUnits EltSize = CharUnits::fromQuantity(DL.getTypeAllocSize(ElTy));
 
     return Address(CreateGEP(ElTy, Addr.getBasePointer(), getSize(Index), Name),
@@ -291,7 +290,7 @@ public:
   using CGBuilderBaseTy::CreateGEP;
   Address CreateGEP(CodeGenFunction &CGF, Address Addr, llvm::Value *Index,
                     const llvm::Twine &Name = "") {
-    const llvm::DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
+    const llvm::DataLayout &DL = BB->getDataLayout();
     CharUnits EltSize =
         CharUnits::fromQuantity(DL.getTypeAllocSize(Addr.getElementType()));
 
@@ -413,7 +412,7 @@ public:
                                           unsigned FieldIndex,
                                           llvm::MDNode *DbgInfo) {
     llvm::StructType *ElTy = cast<llvm::StructType>(Addr.getElementType());
-    const llvm::DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
+    const llvm::DataLayout &DL = BB->getDataLayout();
     const llvm::StructLayout *Layout = DL.getStructLayout(ElTy);
     auto Offset = CharUnits::fromQuantity(Layout->getElementOffset(Index));
 

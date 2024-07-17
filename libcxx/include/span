@@ -206,12 +206,12 @@ struct __is_std_span<span<_Tp, _Sz>> : true_type {};
 
 template <class _Range, class _ElementType>
 concept __span_compatible_range =
-    ranges::contiguous_range<_Range> &&                            //
-    ranges::sized_range<_Range> &&                                 //
-    (ranges::borrowed_range<_Range> || is_const_v<_ElementType>)&& //
-    !__is_std_span<remove_cvref_t<_Range>>::value &&               //
-    !__is_std_array<remove_cvref_t<_Range>>::value &&              //
-    !is_array_v<remove_cvref_t<_Range>> &&                         //
+    ranges::contiguous_range<_Range> &&                             //
+    ranges::sized_range<_Range> &&                                  //
+    (ranges::borrowed_range<_Range> || is_const_v<_ElementType>) && //
+    !__is_std_span<remove_cvref_t<_Range>>::value &&                //
+    !__is_std_array<remove_cvref_t<_Range>>::value &&               //
+    !is_array_v<remove_cvref_t<_Range>> &&                          //
     is_convertible_v<remove_reference_t<ranges::range_reference_t<_Range>> (*)[], _ElementType (*)[]>;
 
 template <class _From, class _To>
@@ -294,7 +294,8 @@ public:
   }
 
   template <__span_array_convertible<element_type> _OtherElementType>
-  _LIBCPP_HIDE_FROM_ABI constexpr span(const span<_OtherElementType, _Extent>& __other) : __data_{__other.data()} {}
+  _LIBCPP_HIDE_FROM_ABI constexpr span(const span<_OtherElementType, _Extent>& __other) noexcept
+      : __data_{__other.data()} {}
 
   template <__span_array_convertible<element_type> _OtherElementType>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit span(const span<_OtherElementType, dynamic_extent>& __other) noexcept
@@ -325,8 +326,8 @@ public:
   }
 
   template <size_t _Offset, size_t _Count = dynamic_extent>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto subspan() const noexcept
-      -> span<element_type, _Count != dynamic_extent ? _Count : _Extent - _Offset> {
+  _LIBCPP_HIDE_FROM_ABI constexpr auto
+  subspan() const noexcept -> span<element_type, _Count != dynamic_extent ? _Count : _Extent - _Offset> {
     static_assert(_Offset <= _Extent, "span<T, N>::subspan<Offset, Count>(): Offset out of range");
     static_assert(_Count == dynamic_extent || _Count <= _Extent - _Offset,
                   "span<T, N>::subspan<Offset, Count>(): Offset + Count out of range");

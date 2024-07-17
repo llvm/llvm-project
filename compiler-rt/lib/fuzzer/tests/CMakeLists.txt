@@ -12,10 +12,10 @@ if (APPLE)
 endif()
 
 add_custom_target(FuzzerUnitTests)
-set_target_properties(FuzzerUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
+set_target_properties(FuzzerUnitTests PROPERTIES FOLDER "Compiler-RT/Tests")
 
 add_custom_target(FuzzedDataProviderUnitTests)
-set_target_properties(FuzzedDataProviderUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
+set_target_properties(FuzzedDataProviderUnitTests PROPERTIES FOLDER "Compiler-RT/Tests")
 
 set(LIBFUZZER_UNITTEST_LINK_FLAGS ${COMPILER_RT_UNITTEST_LINK_FLAGS})
 list(APPEND LIBFUZZER_UNITTEST_LINK_FLAGS --driver-mode=g++)
@@ -58,7 +58,7 @@ if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST FUZZER_SUPPORTED_ARCH)
     ${LIBFUZZER_TEST_RUNTIME_OBJECTS})
   set_target_properties(${LIBFUZZER_TEST_RUNTIME} PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    FOLDER "Compiler-RT Runtime tests")
+    FOLDER "Compiler-RT/Tests/Runtime")
 
   if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND
      COMPILER_RT_LIBCXX_PATH AND

@@ -56,9 +56,9 @@ struct IndexedLoadStoreMatchInfo {
   Register Addr;
   Register Base;
   Register Offset;
-  bool RematOffset; // True if Offset is a constant that needs to be
-                    // rematerialized before the new load/store.
-  bool IsPre;
+  bool RematOffset = false; // True if Offset is a constant that needs to be
+                            // rematerialized before the new load/store.
+  bool IsPre = false;
 };
 
 struct PtrAddChain {
@@ -599,10 +599,6 @@ public:
   /// This variant does not erase \p MI after calling the build function.
   void applyBuildFnNoErase(MachineInstr &MI, BuildFnTy &MatchInfo);
 
-  /// Use a function which takes in a MachineIRBuilder to perform a combine.
-  /// By default, it erases the instruction \p MI from the function.
-  void applyBuildFnMO(const MachineOperand &MO, BuildFnTy &MatchInfo);
-
   bool matchOrShiftToFunnelShift(MachineInstr &MI, BuildFnTy &MatchInfo);
   bool matchFunnelShiftToRotate(MachineInstr &MI);
   void applyFunnelShiftToRotate(MachineInstr &MI);
@@ -814,11 +810,23 @@ public:
   /// Match constant LHS ops that should be commuted.
   bool matchCommuteConstantToRHS(MachineInstr &MI);
 
+  /// Combine sext of trunc.
+  bool matchSextOfTrunc(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  /// Combine zext of trunc.
+  bool matchZextOfTrunc(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  /// Combine zext nneg to sext.
+  bool matchNonNegZext(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
   /// Match constant LHS FP ops that should be commuted.
   bool matchCommuteFPConstantToRHS(MachineInstr &MI);
 
   // Given a binop \p MI, commute operands 1 and 2.
   void applyCommuteBinOpOperands(MachineInstr &MI);
+
+  /// Combine select to integer min/max.
+  bool matchSelectIMinMax(const MachineOperand &MO, BuildFnTy &MatchInfo);
 
   /// Combine selects.
   bool matchSelect(MachineInstr &MI, BuildFnTy &MatchInfo);
@@ -835,10 +843,6 @@ public:
   /// Combine extract vector element.
   bool matchExtractVectorElement(MachineInstr &MI, BuildFnTy &MatchInfo);
 
-  /// Combine extract vector element with freeze on the vector register.
-  bool matchExtractVectorElementWithFreeze(const MachineOperand &MO,
-                                           BuildFnTy &MatchInfo);
-
   /// Combine extract vector element with a build vector on the vector register.
   bool matchExtractVectorElementWithBuildVector(const MachineOperand &MO,
                                                 BuildFnTy &MatchInfo);
@@ -848,10 +852,39 @@ public:
   bool matchExtractVectorElementWithBuildVectorTrunc(const MachineOperand &MO,
                                                      BuildFnTy &MatchInfo);
 
+  /// Combine extract vector element with a shuffle vector on the vector
+  /// register.
+  bool matchExtractVectorElementWithShuffleVector(const MachineOperand &MO,
+                                                  BuildFnTy &MatchInfo);
+
   /// Combine extract vector element with a insert vector element on the vector
   /// register and different indices.
   bool matchExtractVectorElementWithDifferentIndices(const MachineOperand &MO,
                                                      BuildFnTy &MatchInfo);
+  /// Use a function which takes in a MachineIRBuilder to perform a combine.
+  /// By default, it erases the instruction def'd on \p MO from the function.
+  void applyBuildFnMO(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  /// Match FPOWI if it's safe to extend it into a series of multiplications.
+  bool matchFPowIExpansion(MachineInstr &MI, int64_t Exponent);
+
+  /// Expands FPOWI into a series of multiplications and a division if the
+  /// exponent is negative.
+  void applyExpandFPowI(MachineInstr &MI, int64_t Exponent);
+
+  /// Combine insert vector element OOB.
+  bool matchInsertVectorElementOOB(MachineInstr &MI, BuildFnTy &MatchInfo);
+
+  bool matchFreezeOfSingleMaybePoisonOperand(MachineInstr &MI,
+                                             BuildFnTy &MatchInfo);
+
+  bool matchAddOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  bool matchMulOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  bool matchSubOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
+
+  bool matchShlOfVScale(const MachineOperand &MO, BuildFnTy &MatchInfo);
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
@@ -948,9 +981,6 @@ private:
   bool tryFoldBoolSelectToLogic(GSelect *Select, BuildFnTy &MatchInfo);
 
   bool tryFoldSelectOfConstants(GSelect *Select, BuildFnTy &MatchInfo);
-
-  /// Try to fold (icmp X, Y) ? X : Y -> integer minmax.
-  bool tryFoldSelectToIntMinMax(GSelect *Select, BuildFnTy &MatchInfo);
 
   bool isOneOrOneSplat(Register Src, bool AllowUndefs);
   bool isZeroOrZeroSplat(Register Src, bool AllowUndefs);

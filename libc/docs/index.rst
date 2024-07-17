@@ -72,6 +72,7 @@ stages there is no ABI stability in any form.
    ctype
    signal
    threads
+   setjmp
 
 .. toctree::
    :hidden:

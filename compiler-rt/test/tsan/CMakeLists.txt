@@ -137,5 +137,4 @@ if(COMPILER_RT_TSAN_HAS_STATIC_RUNTIME)
                     ${TSAN_DYNAMIC_TESTSUITES}
                     EXCLUDE_FROM_CHECK_ALL
                     DEPENDS ${TSAN_DYNAMIC_TEST_DEPS})
-  set_target_properties(check-tsan-dynamic PROPERTIES FOLDER "Compiler-RT Misc")
 endif()

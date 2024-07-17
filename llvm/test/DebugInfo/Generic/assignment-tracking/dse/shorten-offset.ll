@@ -29,10 +29,10 @@
 ;; bits that overlap the dbg.assign's fagment: [128, 160) (offset=128 size=32).
 
 ; CHECK: @_Z10shortenEndv
-; CHECK:      call void @llvm.dbg.assign({{.*}}, metadata ptr %local, metadata !DIExpression())
+; CHECK:      #dbg_assign({{.*}}, ptr %local, !DIExpression(),
 ; CHECK:      call void @llvm.memset{{.*}}, !DIAssignID ![[ID:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 96), metadata ![[ID:[0-9]+]], metadata ptr %offset_4_bytes, metadata !DIExpression(DW_OP_plus_uconst, 4))
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 128, 32), metadata ![[UniqueID1:[0-9]+]], metadata ptr undef, metadata !DIExpression({{.*}}))
+; CHECK-NEXT: #dbg_assign(i8 0, ![[VAR:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 64, 96), ![[ID:[0-9]+]], ptr %offset_4_bytes, !DIExpression(DW_OP_plus_uconst, 4),
+; CHECK-NEXT: #dbg_assign(i8 0, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 128, 32), ![[UniqueID1:[0-9]+]], ptr undef, !DIExpression({{.*}}),
 
 ;; DSE will shorten the first store in shortenStart from [0, 160) bits to [128,
 ;; 160) bits. Variable 'local2' has been adjusted to be 160 bits.  Check we get
@@ -41,10 +41,10 @@
 ;; [0, 128) (offset=0, size=128).
 
 ; CHECK: @_Z12shortenStartv
-; CHECK:      call void @llvm.dbg.assign({{.*}}, metadata ptr %local2, metadata !DIExpression())
+; CHECK:      #dbg_assign({{.*}}, ptr %local2, !DIExpression(),
 ; CHECK:      call void @llvm.memset{{.*}}, !DIAssignID ![[ID2:[0-9]+]]
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR2:[0-9]+]], metadata !DIExpression(), metadata ![[ID2]], metadata ptr %local2, metadata !DIExpression())
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata i8 0, metadata ![[VAR2]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 128), metadata ![[UniqueID2:[0-9]+]], metadata ptr undef, metadata !DIExpression())
+; CHECK-NEXT: #dbg_assign(i8 0, ![[VAR2:[0-9]+]], !DIExpression(), ![[ID2]], ptr %local2, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(i8 0, ![[VAR2]], !DIExpression(DW_OP_LLVM_fragment, 0, 128), ![[UniqueID2:[0-9]+]], ptr undef, !DIExpression(),
 
 ; CHECK-DAG: ![[ID]] = distinct !DIAssignID()
 ; CHECK-DAG: ![[UniqueID1]] = distinct !DIAssignID()

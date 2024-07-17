@@ -22,9 +22,14 @@ using namespace llvm;
 #define DEBUG_TYPE "loongarch-isel"
 #define PASS_NAME "LoongArch DAG->DAG Pattern Instruction Selection"
 
-char LoongArchDAGToDAGISel::ID;
+char LoongArchDAGToDAGISelLegacy::ID;
 
-INITIALIZE_PASS(LoongArchDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
+LoongArchDAGToDAGISelLegacy::LoongArchDAGToDAGISelLegacy(
+    LoongArchTargetMachine &TM)
+    : SelectionDAGISelLegacy(ID, std::make_unique<LoongArchDAGToDAGISel>(TM)) {}
+
+INITIALIZE_PASS(LoongArchDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false,
+                false)
 
 void LoongArchDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we have already selected.
@@ -414,5 +419,5 @@ bool LoongArchDAGToDAGISel::selectVSplatUimmPow2(SDValue N,
 // This pass converts a legalized DAG into a LoongArch-specific DAG, ready
 // for instruction scheduling.
 FunctionPass *llvm::createLoongArchISelDag(LoongArchTargetMachine &TM) {
-  return new LoongArchDAGToDAGISel(TM);
+  return new LoongArchDAGToDAGISelLegacy(TM);
 }

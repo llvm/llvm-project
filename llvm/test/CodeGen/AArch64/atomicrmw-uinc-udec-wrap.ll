@@ -55,15 +55,15 @@ define i32 @atomicrmw_uinc_wrap_i32(ptr %ptr, i32 %val) {
 define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 ; CHECK-LABEL: atomicrmw_uinc_wrap_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:  .LBB3_1: // %atomicrmw.start
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldaxr x0, [x8]
-; CHECK-NEXT:    cmp x0, x1
-; CHECK-NEXT:    csinc x9, xzr, x0, hs
-; CHECK-NEXT:    stlxr w10, x9, [x8]
+; CHECK-NEXT:    ldaxr x8, [x0]
+; CHECK-NEXT:    cmp x8, x1
+; CHECK-NEXT:    csinc x9, xzr, x8, hs
+; CHECK-NEXT:    stlxr w10, x9, [x0]
 ; CHECK-NEXT:    cbnz w10, .LBB3_1
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
+; CHECK-NEXT:    mov x0, x8
 ; CHECK-NEXT:    ret
   %result = atomicrmw uinc_wrap ptr %ptr, i64 %val seq_cst
   ret i64 %result

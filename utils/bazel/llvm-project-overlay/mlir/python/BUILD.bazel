@@ -83,6 +83,13 @@ filegroup(
 )
 
 filegroup(
+    name = "RewritePyFiles",
+    srcs = [
+        "mlir/rewrite.py",
+    ],
+)
+
+filegroup(
     name = "RuntimePyFiles",
     srcs = glob([
         "mlir/runtime/*.py",
@@ -338,13 +345,6 @@ filegroup(
 gentbl_filegroup(
     name = "AsyncOpsPyGen",
     tbl_outs = [
-        (
-            [
-                "-gen-python-enum-bindings",
-                "-bind-dialect=async",
-            ],
-            "mlir/dialects/_async_enum_gen.py",
-        ),
         (
             [
                 "-gen-python-op-bindings",

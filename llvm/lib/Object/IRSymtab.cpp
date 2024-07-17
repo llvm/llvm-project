@@ -295,7 +295,7 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
       return make_error<StringError>("Only variables can have common linkage!",
                                      inconvertibleErrorCode());
     Uncommon().CommonSize =
-        GV->getParent()->getDataLayout().getTypeAllocSize(GV->getValueType());
+        GV->getDataLayout().getTypeAllocSize(GV->getValueType());
     Uncommon().CommonAlign = GVar->getAlign() ? GVar->getAlign()->value() : 0;
   }
 

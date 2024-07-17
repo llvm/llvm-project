@@ -120,7 +120,7 @@ public:
   iterator begin() const { return MemoryLocs.begin(); }
   iterator end() const { return MemoryLocs.end(); }
 
-  unsigned size() { return MemoryLocs.size(); }
+  unsigned size() const { return MemoryLocs.size(); }
 
   /// Retrieve the pointer values for the memory locations in this alias set.
   /// The order matches that of the memory locations, but duplicate pointer

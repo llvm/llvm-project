@@ -1,28 +1,28 @@
 ---
 TpiStream:
-  Records:         
+  Records:
     # uint32_t* [Index: 0x1000]
     - Kind:            LF_POINTER
-      Pointer:         
-        ReferentType:    117     
+      Pointer:
+        ReferentType:    117
         Attrs:           32778
     # uint32_t** [Index: 0x1001]
     - Kind:            LF_POINTER
-      Pointer:         
-        ReferentType:    4096    
+      Pointer:
+        ReferentType:    4096
         Attrs:           32778
     # uint32_t*** [Index: 0x1002]
     - Kind:            LF_POINTER
-      Pointer:         
-        ReferentType:    4097    
+      Pointer:
+        ReferentType:    4097
         Attrs:           32778
     # [uint32_t, uint32_t*, uint32_t**] [Index: 0x1003]
     - Kind:            LF_ARGLIST
-      ArgList:         
+      ArgList:
         ArgIndices:      [ 117, 4096, 4097 ]
     # uint32_t (uint32_t, uint32_t*, uint32_t**) [Index: 0x1004]
     - Kind:            LF_PROCEDURE
-      Procedure:       
+      Procedure:
         ReturnType:      117
         CallConv:        NearC
         Options:         [ None ]
@@ -30,17 +30,17 @@ TpiStream:
         ArgumentList:    4099
     # int64_t* [Index: 0x1005]
     - Kind:            LF_POINTER
-      Pointer:         
-        ReferentType:    118     
+      Pointer:
+        ReferentType:    118
         Attrs:           32778
     # int64_t** [Index: 0x1006]
     - Kind:            LF_POINTER
-      Pointer:         
+      Pointer:
         ReferentType:    4101
         Attrs:           32778
     # struct OnlyInMerge2 [Index: 0x1007]
     - Kind:            LF_STRUCTURE
-      Class:           
+      Class:
         MemberCount:     0
         Options:         [ None, ForwardReference, HasUniqueName ]
         FieldList:       0

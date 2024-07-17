@@ -42,7 +42,7 @@ define i32 @fold_memcmp_a5pi_a5p5_n(i32 %i, i64 %n) {
 ; CHECK-LABEL: @fold_memcmp_a5pi_a5p5_n(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I:%.*]] to i64
 ; CHECK-NEXT:    [[PA5_PI:%.*]] = getelementptr [5 x i8], ptr @a5, i64 0, i64 [[TMP1]]
-; CHECK-NEXT:    [[CMP:%.*]] = call i32 @memcmp(ptr [[PA5_PI]], ptr nonnull getelementptr inbounds ([5 x i8], ptr @a5, i64 1, i64 0), i64 [[N:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = call i32 @memcmp(ptr [[PA5_PI]], ptr nonnull getelementptr inbounds (i8, ptr @a5, i64 5), i64 [[N:%.*]])
 ; CHECK-NEXT:    ret i32 [[CMP]]
 ;
   %pa5_pi = getelementptr [5 x i8], ptr @a5, i32 0, i32 %i

@@ -141,7 +141,14 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::EXP10_F128, "exp10f128");
     setLibcallName(RTLIB::SIN_F128, "sinf128");
     setLibcallName(RTLIB::COS_F128, "cosf128");
+    setLibcallName(RTLIB::TAN_F128, "tanf128");
     setLibcallName(RTLIB::SINCOS_F128, "sincosf128");
+    setLibcallName(RTLIB::ASIN_F128, "asinf128");
+    setLibcallName(RTLIB::ACOS_F128, "acosf128");
+    setLibcallName(RTLIB::ATAN_F128, "atanf128");
+    setLibcallName(RTLIB::SINH_F128, "sinhf128");
+    setLibcallName(RTLIB::COSH_F128, "coshf128");
+    setLibcallName(RTLIB::TANH_F128, "tanhf128");
     setLibcallName(RTLIB::POW_F128, "powf128");
     setLibcallName(RTLIB::POW_FINITE_F128, "__powf128_finite");
     setLibcallName(RTLIB::CEIL_F128, "ceilf128");
@@ -227,6 +234,33 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
                               CallingConv::ARM_AAPCS_VFP);
       }
     }
+
+    switch (TT.getOS()) {
+    case Triple::MacOSX:
+      if (TT.isMacOSXVersionLT(10, 9)) {
+        setLibcallName(RTLIB::EXP10_F32, nullptr);
+        setLibcallName(RTLIB::EXP10_F64, nullptr);
+      } else {
+        setLibcallName(RTLIB::EXP10_F32, "__exp10f");
+        setLibcallName(RTLIB::EXP10_F64, "__exp10");
+      }
+      break;
+    case Triple::IOS:
+      if (TT.isOSVersionLT(7, 0)) {
+        setLibcallName(RTLIB::EXP10_F32, nullptr);
+        setLibcallName(RTLIB::EXP10_F64, nullptr);
+        break;
+      }
+      [[fallthrough]];
+    case Triple::TvOS:
+    case Triple::WatchOS:
+    case Triple::XROS:
+      setLibcallName(RTLIB::EXP10_F32, "__exp10f");
+      setLibcallName(RTLIB::EXP10_F64, "__exp10");
+      break;
+    default:
+      break;
+    }
   } else {
     setLibcallName(RTLIB::FPEXT_F16_F32, "__gnu_h2f_ieee");
     setLibcallName(RTLIB::FPROUND_F32_F16, "__gnu_f2h_ieee");
@@ -260,6 +294,151 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::FREXP_F80, nullptr);
     setLibcallName(RTLIB::FREXP_F128, nullptr);
     setLibcallName(RTLIB::FREXP_PPCF128, nullptr);
+  }
+
+  if (TT.isAArch64()) {
+    if (TT.isOSMSVCRT()) {
+      // MSVCRT doesn't have powi; fall back to pow
+      setLibcallName(RTLIB::POWI_F32, nullptr);
+      setLibcallName(RTLIB::POWI_F64, nullptr);
+    }
+  }
+
+  // Disable most libcalls on AMDGPU.
+  if (TT.isAMDGPU()) {
+    for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I) {
+      if (I < RTLIB::ATOMIC_LOAD || I > RTLIB::ATOMIC_FETCH_NAND_16)
+        setLibcallName(static_cast<RTLIB::Libcall>(I), nullptr);
+    }
+  }
+
+  // Disable most libcalls on NVPTX.
+  if (TT.isNVPTX()) {
+    for (int I = 0; I < RTLIB::UNKNOWN_LIBCALL; ++I)
+      if (I < RTLIB::ATOMIC_LOAD || I > RTLIB::ATOMIC_FETCH_NAND_16)
+        setLibcallName(static_cast<RTLIB::Libcall>(I), nullptr);
+  }
+
+  if (TT.isARM() || TT.isThumb()) {
+    // These libcalls are not available in 32-bit.
+    setLibcallName(RTLIB::SHL_I128, nullptr);
+    setLibcallName(RTLIB::SRL_I128, nullptr);
+    setLibcallName(RTLIB::SRA_I128, nullptr);
+    setLibcallName(RTLIB::MUL_I128, nullptr);
+    setLibcallName(RTLIB::MULO_I64, nullptr);
+    setLibcallName(RTLIB::MULO_I128, nullptr);
+
+    if (TT.isOSMSVCRT()) {
+      // MSVCRT doesn't have powi; fall back to pow
+      setLibcallName(RTLIB::POWI_F32, nullptr);
+      setLibcallName(RTLIB::POWI_F64, nullptr);
+    }
+  }
+
+  if (TT.getArch() == Triple::ArchType::avr) {
+    // Division rtlib functions (not supported), use divmod functions instead
+    setLibcallName(RTLIB::SDIV_I8, nullptr);
+    setLibcallName(RTLIB::SDIV_I16, nullptr);
+    setLibcallName(RTLIB::SDIV_I32, nullptr);
+    setLibcallName(RTLIB::UDIV_I8, nullptr);
+    setLibcallName(RTLIB::UDIV_I16, nullptr);
+    setLibcallName(RTLIB::UDIV_I32, nullptr);
+
+    // Modulus rtlib functions (not supported), use divmod functions instead
+    setLibcallName(RTLIB::SREM_I8, nullptr);
+    setLibcallName(RTLIB::SREM_I16, nullptr);
+    setLibcallName(RTLIB::SREM_I32, nullptr);
+    setLibcallName(RTLIB::UREM_I8, nullptr);
+    setLibcallName(RTLIB::UREM_I16, nullptr);
+    setLibcallName(RTLIB::UREM_I32, nullptr);
+  }
+
+  if (TT.getArch() == Triple::ArchType::hexagon) {
+    // These cause problems when the shift amount is non-constant.
+    setLibcallName(RTLIB::SHL_I128, nullptr);
+    setLibcallName(RTLIB::SRL_I128, nullptr);
+    setLibcallName(RTLIB::SRA_I128, nullptr);
+  }
+
+  if (TT.isLoongArch()) {
+    if (!TT.isLoongArch64()) {
+      // Set libcalls.
+      setLibcallName(RTLIB::MUL_I128, nullptr);
+      // The MULO libcall is not part of libgcc, only compiler-rt.
+      setLibcallName(RTLIB::MULO_I64, nullptr);
+    }
+    // The MULO libcall is not part of libgcc, only compiler-rt.
+    setLibcallName(RTLIB::MULO_I128, nullptr);
+  }
+
+  if (TT.isMIPS32()) {
+    // These libcalls are not available in 32-bit.
+    setLibcallName(RTLIB::SHL_I128, nullptr);
+    setLibcallName(RTLIB::SRL_I128, nullptr);
+    setLibcallName(RTLIB::SRA_I128, nullptr);
+    setLibcallName(RTLIB::MUL_I128, nullptr);
+    setLibcallName(RTLIB::MULO_I64, nullptr);
+    setLibcallName(RTLIB::MULO_I128, nullptr);
+  }
+
+  if (TT.isPPC()) {
+    if (!TT.isPPC64()) {
+      // These libcalls are not available in 32-bit.
+      setLibcallName(RTLIB::SHL_I128, nullptr);
+      setLibcallName(RTLIB::SRL_I128, nullptr);
+      setLibcallName(RTLIB::SRA_I128, nullptr);
+      setLibcallName(RTLIB::MUL_I128, nullptr);
+      setLibcallName(RTLIB::MULO_I64, nullptr);
+    }
+    setLibcallName(RTLIB::MULO_I128, nullptr);
+  }
+
+  if (TT.isRISCV32()) {
+    // These libcalls are not available in 32-bit.
+    setLibcallName(RTLIB::SHL_I128, nullptr);
+    setLibcallName(RTLIB::SRL_I128, nullptr);
+    setLibcallName(RTLIB::SRA_I128, nullptr);
+    setLibcallName(RTLIB::MUL_I128, nullptr);
+    setLibcallName(RTLIB::MULO_I64, nullptr);
+  }
+
+  if (TT.isSPARC()) {
+    if (!TT.isSPARC64()) {
+      // These libcalls are not available in 32-bit.
+      setLibcallName(RTLIB::MULO_I64, nullptr);
+      setLibcallName(RTLIB::MUL_I128, nullptr);
+      setLibcallName(RTLIB::SHL_I128, nullptr);
+      setLibcallName(RTLIB::SRL_I128, nullptr);
+      setLibcallName(RTLIB::SRA_I128, nullptr);
+    }
+    setLibcallName(RTLIB::MULO_I128, nullptr);
+  }
+
+  if (TT.isSystemZ()) {
+    setLibcallName(RTLIB::SRL_I128, nullptr);
+    setLibcallName(RTLIB::SHL_I128, nullptr);
+    setLibcallName(RTLIB::SRA_I128, nullptr);
+  }
+
+  if (TT.isX86()) {
+    if (TT.getArch() == Triple::ArchType::x86) {
+      // These libcalls are not available in 32-bit.
+      setLibcallName(RTLIB::SHL_I128, nullptr);
+      setLibcallName(RTLIB::SRL_I128, nullptr);
+      setLibcallName(RTLIB::SRA_I128, nullptr);
+      setLibcallName(RTLIB::MUL_I128, nullptr);
+      // The MULO libcall is not part of libgcc, only compiler-rt.
+      setLibcallName(RTLIB::MULO_I64, nullptr);
+    }
+
+    // The MULO libcall is not part of libgcc, only compiler-rt.
+    setLibcallName(RTLIB::MULO_I128, nullptr);
+
+    if (TT.isOSMSVCRT()) {
+      // MSVCRT doesn't have powi; fall back to pow
+      setLibcallName(RTLIB::POWI_F32, nullptr);
+      setLibcallName(RTLIB::POWI_F64, nullptr);
+    }
   }
 }
 
@@ -909,6 +1088,9 @@ void TargetLoweringBase::initActions() {
     setOperationAction({ISD::ADDC, ISD::ADDE, ISD::SUBC, ISD::SUBE}, VT,
                        Expand);
 
+    // [US]CMP default to expand
+    setOperationAction({ISD::UCMP, ISD::SCMP}, VT, Expand);
+
     // Halving adds
     setOperationAction(
         {ISD::AVGFLOORS, ISD::AVGFLOORU, ISD::AVGCEILS, ISD::AVGCEILU}, VT,
@@ -932,7 +1114,8 @@ void TargetLoweringBase::initActions() {
       setOperationAction(
           {ISD::FCOPYSIGN, ISD::SIGN_EXTEND_INREG, ISD::ANY_EXTEND_VECTOR_INREG,
            ISD::SIGN_EXTEND_VECTOR_INREG, ISD::ZERO_EXTEND_VECTOR_INREG,
-           ISD::SPLAT_VECTOR, ISD::LRINT, ISD::LLRINT},
+           ISD::SPLAT_VECTOR, ISD::LRINT, ISD::LLRINT, ISD::FTAN, ISD::FACOS,
+           ISD::FASIN, ISD::FATAN, ISD::FCOSH, ISD::FSINH, ISD::FTANH},
           VT, Expand);
 
       // Constrained floating-point operations default to expand.
@@ -984,12 +1167,17 @@ void TargetLoweringBase::initActions() {
                      Expand);
 
   // These library functions default to expand.
-  setOperationAction({ISD::FCBRT, ISD::FLOG, ISD::FLOG2, ISD::FLOG10, ISD::FEXP,
-                      ISD::FEXP2, ISD::FEXP10, ISD::FFLOOR, ISD::FNEARBYINT,
-                      ISD::FCEIL, ISD::FRINT, ISD::FTRUNC, ISD::LROUND,
-                      ISD::LLROUND, ISD::LRINT, ISD::LLRINT, ISD::FROUNDEVEN},
+  setOperationAction({ISD::FCBRT,      ISD::FLOG,    ISD::FLOG2,  ISD::FLOG10,
+                      ISD::FEXP,       ISD::FEXP2,   ISD::FEXP10, ISD::FFLOOR,
+                      ISD::FNEARBYINT, ISD::FCEIL,   ISD::FRINT,  ISD::FTRUNC,
+                      ISD::LROUND,     ISD::LLROUND, ISD::LRINT,  ISD::LLRINT,
+                      ISD::FROUNDEVEN, ISD::FTAN,    ISD::FACOS,  ISD::FASIN,
+                      ISD::FATAN,      ISD::FCOSH,   ISD::FSINH,  ISD::FTANH},
                      {MVT::f32, MVT::f64, MVT::f128}, Expand);
 
+  setOperationAction({ISD::FTAN, ISD::FACOS, ISD::FASIN, ISD::FATAN, ISD::FCOSH,
+                      ISD::FSINH, ISD::FTANH},
+                     MVT::f16, Promote);
   // Default ISD::TRAP to expand (which turns it into abort).
   setOperationAction(ISD::TRAP, MVT::Other, Expand);
 
@@ -1007,6 +1195,10 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::SET_FPMODE, VT, Expand);
   }
   setOperationAction(ISD::RESET_FPMODE, MVT::Other, Expand);
+
+  // This one by default will call __clear_cache unless the target
+  // wants something different.
+  setOperationAction(ISD::CLEAR_CACHE, MVT::Other, LibCall);
 }
 
 MVT TargetLoweringBase::getScalarShiftAmountTy(const DataLayout &DL,
@@ -1014,13 +1206,12 @@ MVT TargetLoweringBase::getScalarShiftAmountTy(const DataLayout &DL,
   return MVT::getIntegerVT(DL.getPointerSizeInBits(0));
 }
 
-EVT TargetLoweringBase::getShiftAmountTy(EVT LHSTy, const DataLayout &DL,
-                                         bool LegalTypes) const {
+EVT TargetLoweringBase::getShiftAmountTy(EVT LHSTy,
+                                         const DataLayout &DL) const {
   assert(LHSTy.isInteger() && "Shift amount is not an integer type!");
   if (LHSTy.isVector())
     return LHSTy;
-  MVT ShiftVT =
-      LegalTypes ? getScalarShiftAmountTy(DL, LHSTy) : getPointerTy(DL);
+  MVT ShiftVT = getScalarShiftAmountTy(DL, LHSTy);
   // If any possible shift value won't fit in the prefered type, just use
   // something safe. Assume it will be legalized when the shift is expanded.
   if (ShiftVT.getSizeInBits() < Log2_32_Ceil(LHSTy.getSizeInBits()))
@@ -1046,6 +1237,24 @@ bool TargetLoweringBase::canOpTrap(unsigned Op, EVT VT) const {
 bool TargetLoweringBase::isFreeAddrSpaceCast(unsigned SrcAS,
                                              unsigned DestAS) const {
   return TM.isNoopAddrSpaceCast(SrcAS, DestAS);
+}
+
+unsigned TargetLoweringBase::getBitWidthForCttzElements(
+    Type *RetTy, ElementCount EC, bool ZeroIsPoison,
+    const ConstantRange *VScaleRange) const {
+  // Find the smallest "sensible" element type to use for the expansion.
+  ConstantRange CR(APInt(64, EC.getKnownMinValue()));
+  if (EC.isScalable())
+    CR = CR.umul_sat(*VScaleRange);
+
+  if (ZeroIsPoison)
+    CR = CR.subtract(APInt(64, 1));
+
+  unsigned EltWidth = RetTy->getScalarSizeInBits();
+  EltWidth = std::min(EltWidth, (unsigned)CR.getActiveBits());
+  EltWidth = std::max(llvm::bit_ceil(EltWidth), (unsigned)8);
+
+  return EltWidth;
 }
 
 void TargetLoweringBase::setJumpIsExpensive(bool isExpensive) {
@@ -1384,9 +1593,6 @@ TargetLoweringBase::findRepresentativeClass(const TargetRegisterInfo *TRI,
 /// this allows us to compute derived properties we expose.
 void TargetLoweringBase::computeRegisterProperties(
     const TargetRegisterInfo *TRI) {
-  static_assert(MVT::VALUETYPE_SIZE <= MVT::MAX_ALLOWED_VALUETYPE,
-                "Too many value types for ValueTypeActions to hold!");
-
   // Everything defaults to needing one register.
   for (unsigned i = 0; i != MVT::VALUETYPE_SIZE; ++i) {
     NumRegistersForVT[i] = 1;
@@ -2249,7 +2455,7 @@ static int getOpEnabled(bool IsSqrt, EVT VT, StringRef Override) {
     if (IsDisabled)
       RecipType = RecipType.substr(1);
 
-    if (RecipType.equals(VTName) || RecipType.equals(VTNameNoSize))
+    if (RecipType == VTName || RecipType == VTNameNoSize)
       return IsDisabled ? TargetLoweringBase::ReciprocalEstimate::Disabled
                         : TargetLoweringBase::ReciprocalEstimate::Enabled;
   }
@@ -2299,7 +2505,7 @@ static int getOpRefinementSteps(bool IsSqrt, EVT VT, StringRef Override) {
       continue;
 
     RecipType = RecipType.substr(0, RefPos);
-    if (RecipType.equals(VTName) || RecipType.equals(VTNameNoSize))
+    if (RecipType == VTName || RecipType == VTNameNoSize)
       return RefSteps;
   }
 

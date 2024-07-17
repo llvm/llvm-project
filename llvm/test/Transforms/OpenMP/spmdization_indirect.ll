@@ -15,18 +15,18 @@
 
 ;.
 ; AMDGPU: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
-; AMDGPU: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; AMDGPU: @[[SPMD_CALLEES_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU: @[[SPMD_CALLEES_METADATA_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU: @[[SPMD_AND_NON_SPMD_CALLEES_METADATA_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; AMDGPU: @[[SPMD_AND_NON_SPMD_CALLEE_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
+; AMDGPU: @spmd_callees_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU: @spmd_callees_metadata_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU: @spmd_and_non_spmd_callees_metadata_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; AMDGPU: @spmd_and_non_spmd_callee_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ;.
 ; NVPTX: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
-; NVPTX: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; NVPTX: @[[SPMD_CALLEES_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX: @[[SPMD_CALLEES_METADATA_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX: @[[SPMD_AND_NON_SPMD_CALLEES_METADATA_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
-; NVPTX: @[[SPMD_AND_NON_SPMD_CALLEE_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX: @[[GLOB1:[0-9]+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
+; NVPTX: @spmd_callees_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 1, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX: @spmd_callees_metadata_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 3, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX: @spmd_and_non_spmd_callees_metadata_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
+; NVPTX: @spmd_and_non_spmd_callee_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ;.
 define weak void @spmd_callees(i1 %c) #0 {
 ; AMDGPU-LABEL: define {{[^@]+}}@spmd_callees
@@ -1149,19 +1149,19 @@ attributes #11 = { convergent }
 ; AMDGPU: [[META13:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 ; AMDGPU: [[META14:![0-9]+]] = !{i32 8, !"PIC Level", i32 2}
 ; AMDGPU: [[META15:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
-; AMDGPU: [[META16:![0-9]+]] = !{!"clang version 14.0.0"}
-; AMDGPU: [[TBAA17]] = !{!18, !18, i64 0}
-; AMDGPU: [[META18:![0-9]+]] = !{!"int", !19, i64 0}
-; AMDGPU: [[META19:![0-9]+]] = !{!"omnipotent char", !20, i64 0}
-; AMDGPU: [[META20:![0-9]+]] = !{!"Simple C/C++ TBAA"}
-; AMDGPU: [[LOOP21]] = distinct !{!21, !22, !23}
-; AMDGPU: [[META22:![0-9]+]] = !{!"llvm.loop.mustprogress"}
-; AMDGPU: [[META23:![0-9]+]] = !{!"llvm.loop.unroll.disable"}
-; AMDGPU: [[LOOP24]] = distinct !{!24, !22, !23}
-; AMDGPU: [[TBAA25]] = !{!26, !26, i64 0}
-; AMDGPU: [[META26:![0-9]+]] = !{!"any pointer", !19, i64 0}
-; AMDGPU: [[LOOP27]] = distinct !{!27, !22, !23}
-; AMDGPU: [[LOOP28]] = distinct !{!28, !22, !23}
+; AMDGPU: [[META16:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+; AMDGPU: [[TBAA17]] = !{[[META18:![0-9]+]], [[META18]], i64 0}
+; AMDGPU: [[META18]] = !{!"int", [[META19:![0-9]+]], i64 0}
+; AMDGPU: [[META19]] = !{!"omnipotent char", [[META20:![0-9]+]], i64 0}
+; AMDGPU: [[META20]] = !{!"Simple C/C++ TBAA"}
+; AMDGPU: [[LOOP21]] = distinct !{[[LOOP21]], [[META22:![0-9]+]], [[META23:![0-9]+]]}
+; AMDGPU: [[META22]] = !{!"llvm.loop.mustprogress"}
+; AMDGPU: [[META23]] = !{!"llvm.loop.unroll.disable"}
+; AMDGPU: [[LOOP24]] = distinct !{[[LOOP24]], [[META22]], [[META23]]}
+; AMDGPU: [[TBAA25]] = !{[[META26:![0-9]+]], [[META26]], i64 0}
+; AMDGPU: [[META26]] = !{!"any pointer", [[META19]], i64 0}
+; AMDGPU: [[LOOP27]] = distinct !{[[LOOP27]], [[META22]], [[META23]]}
+; AMDGPU: [[LOOP28]] = distinct !{[[LOOP28]], [[META22]], [[META23]]}
 ;.
 ; NVPTX: [[META0:![0-9]+]] = !{i32 0, i32 64770, i32 541341486, !"", i32 74, i32 5}
 ; NVPTX: [[META1:![0-9]+]] = !{i32 0, i32 64770, i32 541341486, !"sequential_loop_to_stack_var", i32 20, i32 1}
@@ -1179,17 +1179,17 @@ attributes #11 = { convergent }
 ; NVPTX: [[META13:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 ; NVPTX: [[META14:![0-9]+]] = !{i32 8, !"PIC Level", i32 2}
 ; NVPTX: [[META15:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
-; NVPTX: [[META16:![0-9]+]] = !{!"clang version 14.0.0"}
-; NVPTX: [[TBAA17]] = !{!18, !18, i64 0}
-; NVPTX: [[META18:![0-9]+]] = !{!"int", !19, i64 0}
-; NVPTX: [[META19:![0-9]+]] = !{!"omnipotent char", !20, i64 0}
-; NVPTX: [[META20:![0-9]+]] = !{!"Simple C/C++ TBAA"}
-; NVPTX: [[LOOP21]] = distinct !{!21, !22, !23}
-; NVPTX: [[META22:![0-9]+]] = !{!"llvm.loop.mustprogress"}
-; NVPTX: [[META23:![0-9]+]] = !{!"llvm.loop.unroll.disable"}
-; NVPTX: [[LOOP24]] = distinct !{!24, !22, !23}
-; NVPTX: [[TBAA25]] = !{!26, !26, i64 0}
-; NVPTX: [[META26:![0-9]+]] = !{!"any pointer", !19, i64 0}
-; NVPTX: [[LOOP27]] = distinct !{!27, !22, !23}
-; NVPTX: [[LOOP28]] = distinct !{!28, !22, !23}
+; NVPTX: [[META16:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+; NVPTX: [[TBAA17]] = !{[[META18:![0-9]+]], [[META18]], i64 0}
+; NVPTX: [[META18]] = !{!"int", [[META19:![0-9]+]], i64 0}
+; NVPTX: [[META19]] = !{!"omnipotent char", [[META20:![0-9]+]], i64 0}
+; NVPTX: [[META20]] = !{!"Simple C/C++ TBAA"}
+; NVPTX: [[LOOP21]] = distinct !{[[LOOP21]], [[META22:![0-9]+]], [[META23:![0-9]+]]}
+; NVPTX: [[META22]] = !{!"llvm.loop.mustprogress"}
+; NVPTX: [[META23]] = !{!"llvm.loop.unroll.disable"}
+; NVPTX: [[LOOP24]] = distinct !{[[LOOP24]], [[META22]], [[META23]]}
+; NVPTX: [[TBAA25]] = !{[[META26:![0-9]+]], [[META26]], i64 0}
+; NVPTX: [[META26]] = !{!"any pointer", [[META19]], i64 0}
+; NVPTX: [[LOOP27]] = distinct !{[[LOOP27]], [[META22]], [[META23]]}
+; NVPTX: [[LOOP28]] = distinct !{[[LOOP28]], [[META22]], [[META23]]}
 ;.

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <chrono>
 #include <cstdlib>
 #include <limits>
 #include <memory>
@@ -32,7 +33,7 @@
 #include "Commands/CommandObjectQuit.h"
 #include "Commands/CommandObjectRegexCommand.h"
 #include "Commands/CommandObjectRegister.h"
-#include "Commands/CommandObjectScript.h"
+#include "Commands/CommandObjectScripting.h"
 #include "Commands/CommandObjectSession.h"
 #include "Commands/CommandObjectSettings.h"
 #include "Commands/CommandObjectSource.h"
@@ -47,10 +48,12 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/StreamFile.h"
+#include "lldb/Utility/ErrorMessages.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timer.h"
 
 #include "lldb/Host/Config.h"
@@ -119,15 +122,15 @@ enum {
 #include "InterpreterPropertiesEnum.inc"
 };
 
-ConstString &CommandInterpreter::GetStaticBroadcasterClass() {
-  static ConstString class_name("lldb.commandInterpreter");
+llvm::StringRef CommandInterpreter::GetStaticBroadcasterClass() {
+  static constexpr llvm::StringLiteral class_name("lldb.commandInterpreter");
   return class_name;
 }
 
 CommandInterpreter::CommandInterpreter(Debugger &debugger,
                                        bool synchronous_execution)
     : Broadcaster(debugger.GetBroadcasterManager(),
-                  CommandInterpreter::GetStaticBroadcasterClass().AsCString()),
+                  CommandInterpreter::GetStaticBroadcasterClass().str()),
       Properties(
           OptionValuePropertiesSP(new OptionValueProperties("interpreter"))),
       IOHandlerDelegate(IOHandlerDelegate::Completion::LLDBCommand),
@@ -158,6 +161,17 @@ bool CommandInterpreter::GetPromptOnQuit() const {
 
 void CommandInterpreter::SetPromptOnQuit(bool enable) {
   const uint32_t idx = ePropertyPromptOnQuit;
+  SetPropertyAtIndex(idx, enable);
+}
+
+bool CommandInterpreter::GetSaveTranscript() const {
+  const uint32_t idx = ePropertySaveTranscript;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_interpreter_properties[idx].default_uint_value != 0);
+}
+
+void CommandInterpreter::SetSaveTranscript(bool enable) {
+  const uint32_t idx = ePropertySaveTranscript;
   SetPropertyAtIndex(idx, enable);
 }
 
@@ -504,6 +518,15 @@ void CommandInterpreter::Initialize() {
     AddAlias("re", cmd_obj_sp);
   }
 
+  cmd_obj_sp = GetCommandSPExact("scripting run");
+  if (cmd_obj_sp) {
+    AddAlias("sc", cmd_obj_sp);
+    AddAlias("scr", cmd_obj_sp);
+    AddAlias("scri", cmd_obj_sp);
+    AddAlias("scrip", cmd_obj_sp);
+    AddAlias("script", cmd_obj_sp);
+  }
+
   cmd_obj_sp = GetCommandSPExact("session history");
   if (cmd_obj_sp) {
     AddAlias("history", cmd_obj_sp);
@@ -555,7 +578,7 @@ void CommandInterpreter::LoadCommandDictionary() {
   REGISTER_COMMAND_OBJECT("process", CommandObjectMultiwordProcess);
   REGISTER_COMMAND_OBJECT("quit", CommandObjectQuit);
   REGISTER_COMMAND_OBJECT("register", CommandObjectRegister);
-  REGISTER_COMMAND_OBJECT("script", CommandObjectScript);
+  REGISTER_COMMAND_OBJECT("scripting", CommandObjectMultiwordScripting);
   REGISTER_COMMAND_OBJECT("settings", CommandObjectMultiwordSettings);
   REGISTER_COMMAND_OBJECT("session", CommandObjectSession);
   REGISTER_COMMAND_OBJECT("source", CommandObjectMultiwordSource);
@@ -816,11 +839,11 @@ void CommandInterpreter::LoadCommandDictionary() {
   std::unique_ptr<CommandObjectRegexCommand> bt_regex_cmd_up(
       new CommandObjectRegexCommand(
           *this, "_regexp-bt",
-          "Show the current thread's call stack.  Any numeric argument "
-          "displays at most that many "
-          "frames.  The argument 'all' displays all threads.  Use 'settings"
-          " set frame-format' to customize the printing of individual frames "
-          "and 'settings set thread-format' to customize the thread header.",
+          "Show backtrace of the current thread's call stack.  Any numeric "
+          "argument displays at most that many frames.  The argument 'all' "
+          "displays all threads.  Use 'settings set frame-format' to customize "
+          "the printing of individual frames and 'settings set thread-format' "
+          "to customize the thread header.",
           "bt [<digit> | all]", 0, false));
   if (bt_regex_cmd_up) {
     // accept but don't document "bt -c <number>" -- before bt was a regex
@@ -1804,51 +1827,8 @@ CommandInterpreter::PreprocessToken(std::string &expr_str) {
     error = expr_result_valobj_sp->GetError();
 
   if (error.Success()) {
-    switch (expr_result) {
-    case eExpressionSetupError:
-      error.SetErrorStringWithFormat(
-          "expression setup error for the expression '%s'", expr_str.c_str());
-      break;
-    case eExpressionParseError:
-      error.SetErrorStringWithFormat(
-          "expression parse error for the expression '%s'", expr_str.c_str());
-      break;
-    case eExpressionResultUnavailable:
-      error.SetErrorStringWithFormat(
-          "expression error fetching result for the expression '%s'",
-          expr_str.c_str());
-      break;
-    case eExpressionCompleted:
-      break;
-    case eExpressionDiscarded:
-      error.SetErrorStringWithFormat(
-          "expression discarded for the expression '%s'", expr_str.c_str());
-      break;
-    case eExpressionInterrupted:
-      error.SetErrorStringWithFormat(
-          "expression interrupted for the expression '%s'", expr_str.c_str());
-      break;
-    case eExpressionHitBreakpoint:
-      error.SetErrorStringWithFormat(
-          "expression hit breakpoint for the expression '%s'",
-          expr_str.c_str());
-      break;
-    case eExpressionTimedOut:
-      error.SetErrorStringWithFormat(
-          "expression timed out for the expression '%s'", expr_str.c_str());
-      break;
-    case eExpressionStoppedForDebug:
-      error.SetErrorStringWithFormat("expression stop at entry point "
-                                     "for debugging for the "
-                                     "expression '%s'",
-                                     expr_str.c_str());
-      break;
-    case eExpressionThreadVanished:
-      error.SetErrorStringWithFormat(
-          "expression thread vanished for the expression '%s'",
-          expr_str.c_str());
-      break;
-    }
+    std::string result = lldb_private::toString(expr_result);
+    error.SetErrorString(result + "for the expression '" + expr_str + "'");
   }
   return error;
 }
@@ -1889,7 +1869,21 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   else
     add_to_history = (lazy_add_to_history == eLazyBoolYes);
 
-  m_transcript_stream << "(lldb) " << command_line << '\n';
+  // The same `transcript_item` will be used below to add output and error of
+  // the command.
+  StructuredData::DictionarySP transcript_item;
+  if (GetSaveTranscript()) {
+    m_transcript_stream << "(lldb) " << command_line << '\n';
+
+    transcript_item = std::make_shared<StructuredData::Dictionary>();
+    transcript_item->AddStringItem("command", command_line);
+    transcript_item->AddIntegerItem(
+        "timestampInEpochSeconds",
+        std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::system_clock::now().time_since_epoch())
+            .count());
+    m_transcript.AddItem(transcript_item);
+  }
 
   bool empty_command = false;
   bool comment_command = false;
@@ -1994,7 +1988,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   // Take care of things like setting up the history command & calling the
   // appropriate Execute method on the CommandObject, with the appropriate
   // arguments.
-
+  StatsDuration execute_time;
   if (cmd_obj != nullptr) {
     bool generate_repeat_command = add_to_history;
     // If we got here when empty_command was true, then this command is a
@@ -2035,14 +2029,33 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
         log, "HandleCommand, command line after removing command name(s): '%s'",
         remainder.c_str());
 
+    // To test whether or not transcript should be saved, `transcript_item` is
+    // used instead of `GetSaveTrasncript()`. This is because the latter will
+    // fail when the command is "settings set interpreter.save-transcript true".
+    if (transcript_item) {
+      transcript_item->AddStringItem("commandName", cmd_obj->GetCommandName());
+      transcript_item->AddStringItem("commandArguments", remainder);
+    }
+
+    ElapsedTime elapsed(execute_time);
     cmd_obj->Execute(remainder.c_str(), result);
   }
 
   LLDB_LOGF(log, "HandleCommand, command %s",
             (result.Succeeded() ? "succeeded" : "did not succeed"));
 
-  m_transcript_stream << result.GetOutputData();
-  m_transcript_stream << result.GetErrorData();
+  // To test whether or not transcript should be saved, `transcript_item` is
+  // used instead of `GetSaveTrasncript()`. This is because the latter will
+  // fail when the command is "settings set interpreter.save-transcript true".
+  if (transcript_item) {
+    m_transcript_stream << result.GetOutputData();
+    m_transcript_stream << result.GetErrorData();
+
+    transcript_item->AddStringItem("output", result.GetOutputData());
+    transcript_item->AddStringItem("error", result.GetErrorData());
+    transcript_item->AddFloatItem("durationInSeconds",
+                                  execute_time.get().count());
+  }
 
   return result.Succeeded();
 }
@@ -2661,7 +2674,8 @@ enum {
   eHandleCommandFlagEchoCommentCommand = (1u << 3),
   eHandleCommandFlagPrintResult = (1u << 4),
   eHandleCommandFlagPrintErrors = (1u << 5),
-  eHandleCommandFlagStopOnCrash = (1u << 6)
+  eHandleCommandFlagStopOnCrash = (1u << 6),
+  eHandleCommandFlagAllowRepeats = (1u << 7)
 };
 
 void CommandInterpreter::HandleCommandsFromFile(
@@ -3083,14 +3097,19 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
       return;
 
   const bool is_interactive = io_handler.GetIsInteractive();
-  if (!is_interactive) {
+  const bool allow_repeats =
+      io_handler.GetFlags().Test(eHandleCommandFlagAllowRepeats);
+
+  if (!is_interactive && !allow_repeats) {
     // When we are not interactive, don't execute blank lines. This will happen
     // sourcing a commands file. We don't want blank lines to repeat the
     // previous command and cause any errors to occur (like redefining an
     // alias, get an error and stop parsing the commands file).
+    // But obey the AllowRepeats flag if the user has set it.
     if (line.empty())
       return;
-
+  }
+  if (!is_interactive) {
     // When using a non-interactive file handle (like when sourcing commands
     // from a file) we need to echo the command out so we don't just see the
     // command output and no command...
@@ -3204,6 +3223,8 @@ bool CommandInterpreter::SaveTranscript(
   if (output_file == std::nullopt || output_file->empty()) {
     std::string now = llvm::to_string(std::chrono::system_clock::now());
     std::replace(now.begin(), now.end(), ' ', '_');
+    // Can't have file name with colons on Windows
+    std::replace(now.begin(), now.end(), ':', '-');
     const std::string file_name = "lldb_session_" + now + ".log";
 
     FileSpec save_location = GetSaveSessionDirectory();
@@ -3340,6 +3361,8 @@ CommandInterpreter::GetIOHandler(bool force_create,
         flags |= eHandleCommandFlagPrintResult;
       if (options->m_print_errors != eLazyBoolNo)
         flags |= eHandleCommandFlagPrintErrors;
+      if (options->m_allow_repeats == eLazyBoolYes)
+        flags |= eHandleCommandFlagAllowRepeats;
     } else {
       flags = eHandleCommandFlagEchoCommand | eHandleCommandFlagPrintResult |
               eHandleCommandFlagPrintErrors;
@@ -3553,4 +3576,8 @@ llvm::json::Value CommandInterpreter::GetStatistics() {
   for (const auto &command_usage : m_command_usages)
     stats.try_emplace(command_usage.getKey(), command_usage.getValue());
   return stats;
+}
+
+const StructuredData::Array &CommandInterpreter::GetTranscript() const {
+  return m_transcript;
 }

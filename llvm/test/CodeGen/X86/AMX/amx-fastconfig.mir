@@ -77,7 +77,8 @@ liveins:
   - { reg: '$edx', virtual-reg: '%11' }
 frameInfo:
   maxAlignment:    1
-machineFunctionInfo: {}
+machineFunctionInfo:
+  amxProgModel: ManagedRA
 body:             |
   ; CHECK-LABEL: name: test_api
   ; CHECK: bb.0.entry:

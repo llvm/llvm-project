@@ -694,7 +694,7 @@ bool LTOModule::hasCtorDtor() const {
     if (auto *GV = dyn_cast_if_present<GlobalValue *>(Sym)) {
       StringRef Name = GV->getName();
       if (Name.consume_front("llvm.global_")) {
-        if (Name.equals("ctors") || Name.equals("dtors"))
+        if (Name == "ctors" || Name == "dtors")
           return true;
       }
     }

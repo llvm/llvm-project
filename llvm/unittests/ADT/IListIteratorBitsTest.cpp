@@ -27,6 +27,11 @@ struct PlainNode : ilist_node<PlainNode> {
   friend class dummy;
 };
 
+class Parent {};
+struct ParentNode
+    : ilist_node<ParentNode, ilist_iterator_bits<true>, ilist_parent<Parent>> {
+};
+
 TEST(IListIteratorBitsTest, DefaultConstructor) {
   simple_ilist<Node, ilist_iterator_bits<true>>::iterator I;
   simple_ilist<Node, ilist_iterator_bits<true>>::reverse_iterator RI;
@@ -119,6 +124,24 @@ TEST(IListIteratorBitsTest, RangeIteration) {
 
   for (Node &N : make_range(RevIt, L.rend()))
     (void)N;
+}
+
+TEST(IListIteratorBitsTest, GetParent) {
+  simple_ilist<ParentNode, ilist_iterator_bits<true>, ilist_parent<Parent>> L;
+  Parent P;
+  ParentNode A;
+
+  // Parents are not set automatically.
+  A.setParent(&P);
+  L.insert(L.end(), A);
+  L.end().getNodePtr()->setParent(&P);
+
+  // Check we can get the node parent from all iterators, including for the
+  // sentinel.
+  EXPECT_EQ(&P, L.begin().getNodeParent());
+  EXPECT_EQ(&P, L.end().getNodeParent());
+  EXPECT_EQ(&P, L.rbegin().getNodeParent());
+  EXPECT_EQ(&P, L.rend().getNodeParent());
 }
 
 } // end namespace

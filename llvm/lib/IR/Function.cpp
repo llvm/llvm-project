@@ -79,9 +79,11 @@ using ProfileCount = Function::ProfileCount;
 // are not in the public header file...
 template class llvm::SymbolTableListTraits<BasicBlock>;
 
-static cl::opt<unsigned> NonGlobalValueMaxNameSize(
+static cl::opt<int> NonGlobalValueMaxNameSize(
     "non-global-value-max-name-size", cl::Hidden, cl::init(1024),
     cl::desc("Maximum size for the name of non-global values."));
+
+extern cl::opt<bool> UseNewDbgInfoFormat;
 
 void Function::convertToNewDbgValues() {
   IsNewDbgInfoFormat = true;
@@ -357,6 +359,10 @@ LLVMContext &Function::getContext() const {
   return getType()->getContext();
 }
 
+const DataLayout &Function::getDataLayout() const {
+  return getParent()->getDataLayout();
+}
+
 unsigned Function::getInstructionCount() const {
   unsigned NumInstrs = 0;
   for (const BasicBlock &BB : BasicBlocks)
@@ -383,6 +389,9 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
   case FramePointerKind::None:
     // 0 ("none") is the default.
     break;
+  case FramePointerKind::Reserved:
+    B.addAttribute("frame-pointer", "reserved");
+    break;
   case FramePointerKind::NonLeaf:
     B.addAttribute("frame-pointer", "non-leaf");
     break;
@@ -392,6 +401,41 @@ Function *Function::createWithDefaultAttr(FunctionType *Ty,
   }
   if (M->getModuleFlag("function_return_thunk_extern"))
     B.addAttribute(Attribute::FnRetThunkExtern);
+  StringRef DefaultCPU = F->getContext().getDefaultTargetCPU();
+  if (!DefaultCPU.empty())
+    B.addAttribute("target-cpu", DefaultCPU);
+  StringRef DefaultFeatures = F->getContext().getDefaultTargetFeatures();
+  if (!DefaultFeatures.empty())
+    B.addAttribute("target-features", DefaultFeatures);
+
+  // Check if the module attribute is present and not zero.
+  auto isModuleAttributeSet = [&](const StringRef &ModAttr) -> bool {
+    const auto *Attr =
+        mdconst::extract_or_null<ConstantInt>(M->getModuleFlag(ModAttr));
+    return Attr && !Attr->isZero();
+  };
+
+  auto AddAttributeIfSet = [&](const StringRef &ModAttr) {
+    if (isModuleAttributeSet(ModAttr))
+      B.addAttribute(ModAttr);
+  };
+
+  StringRef SignType = "none";
+  if (isModuleAttributeSet("sign-return-address"))
+    SignType = "non-leaf";
+  if (isModuleAttributeSet("sign-return-address-all"))
+    SignType = "all";
+  if (SignType != "none") {
+    B.addAttribute("sign-return-address", SignType);
+    B.addAttribute("sign-return-address-key",
+                   isModuleAttributeSet("sign-return-address-with-bkey")
+                       ? "b_key"
+                       : "a_key");
+  }
+  AddAttributeIfSet("branch-target-enforcement");
+  AddAttributeIfSet("branch-protection-pauth-lr");
+  AddAttributeIfSet("guarded-control-stack");
+
   F->addFnAttrs(B);
   return F;
 }
@@ -438,7 +482,7 @@ Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
     : GlobalObject(Ty, Value::FunctionVal,
                    OperandTraits<Function>::op_begin(this), 0, Linkage, name,
                    computeAddrSpace(AddrSpace, ParentModule)),
-      NumArgs(Ty->getNumParams()), IsNewDbgInfoFormat(false) {
+      NumArgs(Ty->getNumParams()), IsNewDbgInfoFormat(UseNewDbgInfoFormat) {
   assert(FunctionType::isValidReturnType(getReturnType()) &&
          "invalid return type");
   setGlobalObjectSubClassData(0);
@@ -733,6 +777,10 @@ void Function::addDereferenceableOrNullParamAttr(unsigned ArgNo,
                                                  uint64_t Bytes) {
   AttributeSets = AttributeSets.addDereferenceableOrNullParamAttr(getContext(),
                                                                   ArgNo, Bytes);
+}
+
+void Function::addRangeRetAttr(const ConstantRange &CR) {
+  AttributeSets = AttributeSets.addRangeRetAttr(getContext(), CR);
 }
 
 DenormalMode Function::getDenormalMode(const fltSemantics &FPType) const {
@@ -1487,7 +1535,19 @@ bool Intrinsic::isConstrainedFPIntrinsic(ID QID) {
 #define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
   case Intrinsic::INTRINSIC:
 #include "llvm/IR/ConstrainedOps.def"
+#undef INSTRUCTION
     return true;
+  default:
+    return false;
+  }
+}
+
+bool Intrinsic::hasConstrainedFPRoundingModeOperand(Intrinsic::ID QID) {
+  switch (QID) {
+#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
+  case Intrinsic::INTRINSIC:                                                   \
+    return ROUND_MODE == 1;
+#include "llvm/IR/ConstrainedOps.def"
 #undef INSTRUCTION
   default:
     return false;
@@ -1843,8 +1903,8 @@ bool Function::hasAddressTaken(const User **PutOffender,
         if (llvm::all_of(FUU->users(), [](const User *U) {
               if (const auto *GV = dyn_cast<GlobalVariable>(U))
                 return GV->hasName() &&
-                       (GV->getName().equals("llvm.compiler.used") ||
-                        GV->getName().equals("llvm.used"));
+                       (GV->getName() == "llvm.compiler.used" ||
+                        GV->getName() == "llvm.used");
               return false;
             }))
           continue;
@@ -1989,7 +2049,7 @@ std::optional<ProfileCount> Function::getEntryCount(bool AllowSynthetic) const {
   MDNode *MD = getMetadata(LLVMContext::MD_prof);
   if (MD && MD->getOperand(0))
     if (MDString *MDS = dyn_cast<MDString>(MD->getOperand(0))) {
-      if (MDS->getString().equals("function_entry_count")) {
+      if (MDS->getString() == "function_entry_count") {
         ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(1));
         uint64_t Count = CI->getValue().getZExtValue();
         // A value of -1 is used for SamplePGO when there were no samples.
@@ -1998,7 +2058,7 @@ std::optional<ProfileCount> Function::getEntryCount(bool AllowSynthetic) const {
           return std::nullopt;
         return ProfileCount(Count, PCT_Real);
       } else if (AllowSynthetic &&
-                 MDS->getString().equals("synthetic_function_entry_count")) {
+                 MDS->getString() == "synthetic_function_entry_count") {
         ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(1));
         uint64_t Count = CI->getValue().getZExtValue();
         return ProfileCount(Count, PCT_Synthetic);
@@ -2011,7 +2071,7 @@ DenseSet<GlobalValue::GUID> Function::getImportGUIDs() const {
   DenseSet<GlobalValue::GUID> R;
   if (MDNode *MD = getMetadata(LLVMContext::MD_prof))
     if (MDString *MDS = dyn_cast<MDString>(MD->getOperand(0)))
-      if (MDS->getString().equals("function_entry_count"))
+      if (MDS->getString() == "function_entry_count")
         for (unsigned i = 2; i < MD->getNumOperands(); i++)
           R.insert(mdconst::extract<ConstantInt>(MD->getOperand(i))
                        ->getValue()
@@ -2027,9 +2087,8 @@ void Function::setSectionPrefix(StringRef Prefix) {
 
 std::optional<StringRef> Function::getSectionPrefix() const {
   if (MDNode *MD = getMetadata(LLVMContext::MD_section_prefix)) {
-    assert(cast<MDString>(MD->getOperand(0))
-               ->getString()
-               .equals("function_section_prefix") &&
+    assert(cast<MDString>(MD->getOperand(0))->getString() ==
+               "function_section_prefix" &&
            "Metadata not match");
     return cast<MDString>(MD->getOperand(1))->getString();
   }

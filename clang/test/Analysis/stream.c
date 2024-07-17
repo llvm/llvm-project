@@ -1,11 +1,11 @@
-// RUN: %clang_analyze_cc1 -triple=x86_64-pc-linux-gnu -analyzer-checker=core,alpha.unix.Stream,debug.ExprInspection \
-// RUN:   -analyzer-config alpha.unix.Stream:Pedantic=true -verify %s
-// RUN: %clang_analyze_cc1 -triple=armv8-none-linux-eabi -analyzer-checker=core,alpha.unix.Stream,debug.ExprInspection \
-// RUN:   -analyzer-config alpha.unix.Stream:Pedantic=true -verify %s
-// RUN: %clang_analyze_cc1 -triple=aarch64-linux-gnu -analyzer-checker=core,alpha.unix.Stream,debug.ExprInspection \
-// RUN:   -analyzer-config alpha.unix.Stream:Pedantic=true -verify %s
-// RUN: %clang_analyze_cc1 -triple=hexagon -analyzer-checker=core,alpha.unix.Stream,debug.ExprInspection \
-// RUN:   -analyzer-config alpha.unix.Stream:Pedantic=true -verify %s
+// RUN: %clang_analyze_cc1 -triple=x86_64-pc-linux-gnu -analyzer-checker=core,unix.Stream,debug.ExprInspection \
+// RUN:   -analyzer-config unix.Stream:Pedantic=true -verify %s
+// RUN: %clang_analyze_cc1 -triple=armv8-none-linux-eabi -analyzer-checker=core,unix.Stream,debug.ExprInspection \
+// RUN:   -analyzer-config unix.Stream:Pedantic=true -verify %s
+// RUN: %clang_analyze_cc1 -triple=aarch64-linux-gnu -analyzer-checker=core,unix.Stream,debug.ExprInspection \
+// RUN:   -analyzer-config unix.Stream:Pedantic=true -verify %s
+// RUN: %clang_analyze_cc1 -triple=hexagon -analyzer-checker=core,unix.Stream,debug.ExprInspection \
+// RUN:   -analyzer-config unix.Stream:Pedantic=true -verify %s
 
 #include "Inputs/system-header-simulator.h"
 #include "Inputs/system-header-simulator-for-malloc.h"
@@ -452,4 +452,49 @@ void getline_buffer_size_negative() {
 
   free(buffer);
   fclose(file);
+}
+
+void gh_93408_regression(void *buffer) {
+  FILE *f = fopen("/tmp/foo.txt", "r");
+  fread(buffer, 1, 1, f); // expected-warning {{Stream pointer might be NULL}} no-crash
+  fclose(f);
+}
+
+typedef void VOID;
+void gh_93408_regression_typedef(VOID *buffer) {
+  FILE *f = fopen("/tmp/foo.txt", "r");
+  fread(buffer, 1, 1, f); // expected-warning {{Stream pointer might be NULL}} no-crash
+  fclose(f);
+}
+
+struct FAM {
+  int data;
+  int tail[];
+};
+
+struct FAM0 {
+  int data;
+  int tail[0];
+};
+
+void gh_93408_regression_FAM(struct FAM *p) {
+  FILE *f = fopen("/tmp/foo.txt", "r");
+  fread(p->tail, 1, 1, f); // expected-warning {{Stream pointer might be NULL}}
+  fclose(f);
+}
+
+void gh_93408_regression_FAM0(struct FAM0 *p) {
+  FILE *f = fopen("/tmp/foo.txt", "r");
+  fread(p->tail, 1, 1, f); // expected-warning {{Stream pointer might be NULL}}
+  fclose(f);
+}
+
+struct ZeroSized {
+    int data[0];
+};
+
+void gh_93408_regression_ZeroSized(struct ZeroSized *buffer) {
+  FILE *f = fopen("/tmp/foo.txt", "r");
+  fread(buffer, 1, 1, f); // expected-warning {{Stream pointer might be NULL}} no-crash
+  fclose(f);
 }

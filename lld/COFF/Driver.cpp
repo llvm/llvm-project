@@ -44,6 +44,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -412,6 +413,8 @@ void LinkerDriver::parseDirectives(InputFile *file) {
         enqueuePath(*path, false, false);
       break;
     case OPT_entry:
+      if (!arg->getValue()[0])
+        fatal("missing entry point symbol name");
       ctx.config.entry = addUndefined(mangle(arg->getValue()));
       break;
     case OPT_failifmismatch:
@@ -2248,6 +2251,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   {
     llvm::TimeTraceScope timeScope("Entry point");
     if (auto *arg = args.getLastArg(OPT_entry)) {
+      if (!arg->getValue()[0])
+        fatal("missing entry point symbol name");
       config->entry = addUndefined(mangle(arg->getValue()));
     } else if (!config->entry && !config->noEntry) {
       if (args.hasArg(OPT_dll)) {
@@ -2603,6 +2608,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle /print-symbol-order.
   if (auto *arg = args.getLastArg(OPT_print_symbol_order))
     config->printSymbolOrder = arg->getValue();
+
+  ctx.symtab.initializeEntryThunks();
 
   // Identify unreferenced COMDAT sections.
   if (config->doGC) {

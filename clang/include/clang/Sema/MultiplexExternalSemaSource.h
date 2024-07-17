@@ -65,7 +65,7 @@ public:
 
   /// Resolve a declaration ID into a declaration, potentially
   /// building a new declaration.
-  Decl *GetExternalDecl(Decl::DeclID ID) override;
+  Decl *GetExternalDecl(GlobalDeclID ID) override;
 
   /// Complete the redeclaration chain if it's been extended since the
   /// previous generation of the AST source.

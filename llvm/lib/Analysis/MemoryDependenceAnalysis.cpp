@@ -399,7 +399,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     BatchAAResults &BatchAA) {
   bool isInvariantLoad = false;
   Align MemLocAlign =
-      MemLoc.Ptr->getPointerAlignment(BB->getModule()->getDataLayout());
+      MemLoc.Ptr->getPointerAlignment(BB->getDataLayout());
 
   unsigned DefaultLimit = getDefaultBlockScanLimit();
   if (!Limit)
@@ -910,7 +910,7 @@ void MemoryDependenceResults::getNonLocalPointerDependency(
                                        const_cast<Value *>(Loc.Ptr)));
     return;
   }
-  const DataLayout &DL = FromBB->getModule()->getDataLayout();
+  const DataLayout &DL = FromBB->getDataLayout();
   PHITransAddr Address(const_cast<Value *>(Loc.Ptr), DL, &AC);
 
   // This is the set of blocks we've inspected, and the pointer we consider in

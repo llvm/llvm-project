@@ -7,8 +7,8 @@
 define amdgpu_kernel void @test_kernel(i32 %val) #0 {
 ; CHECK-LABEL: test_kernel:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_mov_b32 s32, 0x180000
 ; CHECK-NEXT:    s_mov_b32 s33, 0
+; CHECK-NEXT:    s_mov_b32 s32, 0x180000
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s10, s15
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s11, 0
 ; CHECK-NEXT:    s_add_u32 s0, s0, s15

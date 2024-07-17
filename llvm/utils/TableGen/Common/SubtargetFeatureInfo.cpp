@@ -108,7 +108,7 @@ void SubtargetFeatureInfo::emitComputeAvailableFeatures(
   if (!ExtraParams.empty())
     OS << ", " << ExtraParams;
   OS << ") const {\n";
-  OS << "  PredicateBitset Features;\n";
+  OS << "  PredicateBitset Features{};\n";
   for (const auto &SF : SubtargetFeatures) {
     const SubtargetFeatureInfo &SFI = SF.second;
     StringRef CondStr = SFI.TheDef->getValueAsString("CondString");

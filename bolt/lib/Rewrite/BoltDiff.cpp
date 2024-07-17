@@ -292,7 +292,7 @@ class RewriteInstanceDiff {
         }
       }
     }
-    PrintProgramStats PPS(opts::NeverPrint);
+    PrintProgramStats PPS;
     outs() << "* BOLT-DIFF: Starting print program stats pass for binary 1\n";
     RI1.BC->logBOLTErrorsAndQuitOnFatal(PPS.runOnFunctions(*RI1.BC));
     outs() << "* BOLT-DIFF: Starting print program stats pass for binary 2\n";

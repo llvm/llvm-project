@@ -11,8 +11,8 @@
 ; GCN-NEXT:         .entry_point:    cs_amdpal
 ; GCN-NEXT:         .scratch_memory_size: 0
 ; GCN:     .registers:
-; GCN-NEXT:       0x2e12 (COMPUTE_PGM_RSRC1):
-; GCN-NEXT:       0x2e13 (COMPUTE_PGM_RSRC2):
+; GCN-NEXT:       '0x2e12 (COMPUTE_PGM_RSRC1)':
+; GCN-NEXT:       '0x2e13 (COMPUTE_PGM_RSRC2)':
 ; GCN-NEXT: ...
 ; GCN-NEXT:         .end_amdgpu_pal_metadata
 define amdgpu_cs half @cs_amdpal(half %arg0) {

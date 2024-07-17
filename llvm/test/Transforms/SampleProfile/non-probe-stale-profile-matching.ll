@@ -1,6 +1,6 @@
 ; REQUIRES: x86_64-linux
 ; REQUIRES: asserts
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/non-probe-stale-profile-matching.prof --salvage-stale-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/non-probe-stale-profile-matching.prof --salvage-stale-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl -profile-isfs 2>&1 | FileCheck %s
 
 ; The profiled source code:
 
@@ -51,7 +51,7 @@
 ; CHECK: Run stale profile matching for bar
 
 ; CHECK: Run stale profile matching for foo
-; CHECK: Callsite with callee:bar is matched from 1.1 to 1.1
+; CHECK: Callsite with callee:bar is matched from 1.15 to 1.15
 ; CHECK: Callsite with callee:bar is matched from 2 to 2
 
 ; CHECK: Run stale profile matching for main
@@ -183,7 +183,7 @@ attributes #3 = { mustprogress nocallback nofree nosync nounwind willreturn memo
 !15 = !DILocation(line: 7, column: 9, scope: !14)
 !16 = !DILocation(line: 7, column: 7, scope: !14)
 !17 = !DILocation(line: 7, column: 23, scope: !18)
-!18 = !DILexicalBlockFile(scope: !14, file: !10, discriminator: 2)
+!18 = !DILexicalBlockFile(scope: !14, file: !10, discriminator: 15)
 !19 = !DILocation(line: 7, column: 15, scope: !18)
 !20 = !DILocation(line: 8, column: 21, scope: !14)
 !21 = !DILocation(line: 8, column: 15, scope: !14)
@@ -201,7 +201,7 @@ attributes #3 = { mustprogress nocallback nofree nosync nounwind willreturn memo
 !33 = !DILocation(line: 14, column: 8, scope: !25)
 !34 = !DILocation(line: 14, scope: !25)
 !35 = !DILocation(line: 14, column: 21, scope: !36)
-!36 = !DILexicalBlockFile(scope: !25, file: !10, discriminator: 2)
+!36 = !DILexicalBlockFile(scope: !25, file: !10, discriminator: 15)
 !37 = !DILocation(line: 14, column: 3, scope: !36)
 !38 = !DILocation(line: 14, column: 3, scope: !39)
 !39 = !DILexicalBlockFile(scope: !25, file: !10, discriminator: 4)

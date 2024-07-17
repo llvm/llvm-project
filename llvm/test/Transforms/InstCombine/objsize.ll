@@ -64,7 +64,7 @@ define i1 @baz() nounwind {
 define void @test1(ptr %q, i32 %x) nounwind noinline {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr getelementptr inbounds ([0 x i8], ptr @window, i32 0, i32 10), i1 false, i1 false, i1 false)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr getelementptr inbounds (i8, ptr @window, i32 10), i1 false, i1 false, i1 false)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[TMP1]], label %"47", label %"46"
 ; CHECK:       "46":
@@ -112,7 +112,7 @@ define void @test3(i1 %c1, ptr %ptr1, ptr %ptr2, ptr %ptr3) nounwind {
 ; CHECK:       bb11:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb12:
-; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__inline_memcpy_chk(ptr nonnull getelementptr inbounds ([480 x float], ptr @array, i32 0, i32 1), ptr [[PTR3:%.*]], i32 512) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__inline_memcpy_chk(ptr nonnull getelementptr inbounds (i8, ptr @array, i32 4), ptr [[PTR3:%.*]], i32 512) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ;
 entry:

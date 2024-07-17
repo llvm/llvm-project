@@ -24,7 +24,10 @@ const uint16_t VERSION_MAJOR = 0;
 /// API notes file minor version number.
 ///
 /// When the format changes IN ANY WAY, this number should be incremented.
-const uint16_t VERSION_MINOR = 25; // SwiftImportAs
+const uint16_t VERSION_MINOR = 26; // SwiftCopyable
+
+const uint8_t kSwiftCopyable = 1;
+const uint8_t kSwiftNonCopyable = 2;
 
 using IdentifierID = llvm::PointerEmbeddedInt<unsigned, 31>;
 using IdentifierIDField = llvm::BCVBR<16>;
@@ -129,26 +132,26 @@ using IdentifierDataLayout = llvm::BCRecordLayout<
     >;
 } // namespace identifier_block
 
-namespace objc_context_block {
+namespace context_block {
 enum {
-  OBJC_CONTEXT_ID_DATA = 1,
-  OBJC_CONTEXT_INFO_DATA = 2,
+  CONTEXT_ID_DATA = 1,
+  CONTEXT_INFO_DATA = 2,
 };
 
-using ObjCContextIDLayout =
-    llvm::BCRecordLayout<OBJC_CONTEXT_ID_DATA, // record ID
+using ContextIDLayout =
+    llvm::BCRecordLayout<CONTEXT_ID_DATA, // record ID
                          llvm::BCVBR<16>, // table offset within the blob (see
                                           // below)
                          llvm::BCBlob // map from ObjC class names/protocol (as
                                       // IDs) to context IDs
                          >;
 
-using ObjCContextInfoLayout = llvm::BCRecordLayout<
-    OBJC_CONTEXT_INFO_DATA, // record ID
-    llvm::BCVBR<16>,        // table offset within the blob (see below)
-    llvm::BCBlob            // map from ObjC context IDs to context information.
+using ContextInfoLayout = llvm::BCRecordLayout<
+    CONTEXT_INFO_DATA, // record ID
+    llvm::BCVBR<16>,   // table offset within the blob (see below)
+    llvm::BCBlob       // map from ObjC context IDs to context information.
     >;
-} // namespace objc_context_block
+} // namespace context_block
 
 namespace objc_property_block {
 enum {

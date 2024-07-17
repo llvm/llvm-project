@@ -129,6 +129,9 @@ private:
   uint64_t UnitSize{0};
   llvm::DenseSet<uint64_t> AllProcessed;
   DWARF5AcceleratorTable &DebugNamesTable;
+  // Unordered map to handle name collision if output DWO directory is
+  // specified.
+  std::unordered_map<std::string, uint32_t> NameToIndexMap;
 
   /// Returns current state of the DIEBuilder
   State &getState() { return *BuilderState.get(); }
@@ -212,10 +215,9 @@ private:
   /// Along with current CU, and DIE being processed and the new DIE offset to
   /// be updated, it takes in Parents vector that can be empty if this DIE has
   /// no parents.
-  uint32_t
-  finalizeDIEs(DWARFUnit &CU, DIE &Die,
-               std::vector<std::optional<BOLTDWARF5AccelTableData *>> &Parents,
-               uint32_t &CurOffset);
+  uint32_t finalizeDIEs(DWARFUnit &CU, DIE &Die,
+                        std::optional<BOLTDWARF5AccelTableData *> Parent,
+                        uint32_t NumberParentsInChain, uint32_t &CurOffset);
 
   void registerUnit(DWARFUnit &DU, bool NeedSort);
 
@@ -384,6 +386,17 @@ public:
   bool deleteValue(DIEValueList *Die, dwarf::Attribute Attribute) {
     return Die->deleteValue(Attribute);
   }
+  /// Updates DWO Name and Compilation directory for Skeleton CU \p Unit.
+  std::string updateDWONameCompDir(DebugStrOffsetsWriter &StrOffstsWriter,
+                                   DebugStrWriter &StrWriter,
+                                   DWARFUnit &SkeletonCU,
+                                   std::optional<StringRef> DwarfOutputPath,
+                                   std::optional<StringRef> DWONameToUse);
+  /// Updates DWO Name and Compilation directory for Type Units.
+  void updateDWONameCompDirForTypes(DebugStrOffsetsWriter &StrOffstsWriter,
+                                    DebugStrWriter &StrWriter, DWARFUnit &Unit,
+                                    std::optional<StringRef> DwarfOutputPath,
+                                    const StringRef DWOName);
 };
 } // namespace bolt
 } // namespace llvm

@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-allow-nonaffine-loops -polly-print-scops -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-allow-nonaffine-loops -polly-codegen -disable-output
+; RUN: opt %loadNPMPolly -polly-allow-nonaffine-loops '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-allow-nonaffine-loops -passes=polly-codegen -disable-output
 ;
 ; CHECK:      Domain :=
 ; CHECK-NEXT:   { Stmt_loop2__TO__loop[] };

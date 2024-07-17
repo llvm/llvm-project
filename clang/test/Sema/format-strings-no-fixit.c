@@ -1,5 +1,5 @@
 // RUN: cp %s %t
-// RUN: %clang_cc1 -fsyntax-only -fixit %t
+// RUN: %clang_cc1 -fixit %t
 // RUN: %clang_cc1 -E -o - %t | FileCheck %s
 
 /* This is a test of the various code modification hints that are

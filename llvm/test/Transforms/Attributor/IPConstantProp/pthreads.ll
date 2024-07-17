@@ -29,7 +29,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; FIXME: nocapture & noalias for %alloc2 in %call3
 
 ;.
-; CHECK: @[[GLOBALVPTR:[a-zA-Z0-9_$"\\.-]+]] = common dso_local global ptr null, align 8
+; CHECK: @GlobalVPtr = common dso_local global ptr null, align 8
 ;.
 define dso_local i32 @main() {
 ; TUNIT-LABEL: define {{[^@]+}}@main() {
@@ -114,8 +114,13 @@ entry:
 !1 = !{i64 2, i64 3, i1 false}
 !0 = !{!1}
 ;.
-; CHECK: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
-; CHECK: [[META0:![0-9]+]] = !{!1}
-; CHECK: [[META1:![0-9]+]] = !{i64 2, i64 3, i1 false}
+; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+;.
+; TUNIT: [[META0:![0-9]+]] = !{[[META1:![0-9]+]]}
+; TUNIT: [[META1]] = !{i64 2, i64 3, i1 false}
+;.
+; CGSCC: [[META0:![0-9]+]] = !{[[META1:![0-9]+]]}
+; CGSCC: [[META1]] = !{i64 2, i64 3, i1 false}
 ;.

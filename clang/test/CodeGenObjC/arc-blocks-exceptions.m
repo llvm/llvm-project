@@ -5,17 +5,22 @@ void test1(_Bool c) {
   __weak id weakId = 0;
   test1_fn(c ? ^{ (void)weakId; } : 0);
 
-  // CHECK: [[CLEANUP_COND:%.*]] = alloca i1
-  // CHECK-NEXT: [[CLEANUP_SAVE:%.*]] = alloca ptr
+  // CHECK: [[CLEANUP_SAVE:%cond-cleanup.save.*]] = alloca ptr
+  // CHECK-NEXT: [[CLEANUP_COND:%.*]] = alloca i1
+  // CHECK-NEXT: [[CLEANUP_COND1:%.*]] = alloca i1
 
-  // CHECK: store i1 true, ptr [[CLEANUP_COND]]
-  // CHECK-NEXT: store ptr {{.*}}, ptr [[CLEANUP_SAVE]]
+  // CHECK: store i1 false, ptr [[CLEANUP_COND]]
+  // CHECK-NEXT: store i1 false, ptr [[CLEANUP_COND1]]
+
+  // CHECK: store ptr {{.*}}, ptr [[CLEANUP_SAVE]]
+  // CHECK-NEXT: store i1 true, ptr [[CLEANUP_COND]]
+  // CHECK-NEXT: store i1 true, ptr [[CLEANUP_COND1]]
 
   // CHECK: invoke void @test1_fn(
   // CHECK-NEXT: to label %[[INVOKE_CONT:.*]] unwind label %[[LANDING_PAD_LAB:.*]]
 
   // CHECK: [[INVOKE_CONT]]:
-  // CHECK-NEXT: [[LOAD:%.*]] = load i1, ptr [[CLEANUP_COND]]
+  // CHECK-NEXT: [[LOAD:%.*]] = load i1, ptr [[CLEANUP_COND1]]
   // CHECK-NEXT: br i1 [[LOAD]], label %[[END_OF_SCOPE_LAB:.*]], label
 
   // CHECK: [[END_OF_SCOPE_LAB]]:

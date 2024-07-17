@@ -82,11 +82,13 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // InterpStack when calling the function.
   bool HasThisPointer = false;
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl)) {
-    if (MD->isImplicitObjectMemberFunction() && !IsLambdaStaticInvoker) {
-      HasThisPointer = true;
-      ParamTypes.push_back(PT_Ptr);
-      ParamOffsets.push_back(ParamOffset);
-      ParamOffset += align(primSize(PT_Ptr));
+    if (!IsLambdaStaticInvoker) {
+      HasThisPointer = MD->isInstance();
+      if (MD->isImplicitObjectMemberFunction()) {
+        ParamTypes.push_back(PT_Ptr);
+        ParamOffsets.push_back(ParamOffset);
+        ParamOffset += align(primSize(PT_Ptr));
+      }
     }
 
     // Set up lambda capture to closure record field mapping.
@@ -145,7 +147,8 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   assert(Func);
   // For not-yet-defined functions, we only create a Function instance and
   // compile their body later.
-  if (!FuncDecl->isDefined()) {
+  if (!FuncDecl->isDefined() ||
+      (FuncDecl->willHaveBody() && !FuncDecl->hasBody())) {
     Func->setDefined(false);
     return Func;
   }

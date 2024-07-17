@@ -368,6 +368,7 @@ void MIRPrinter::convert(ModuleSlotTracker &MST,
   YamlMFI.HasVAStart = MFI.hasVAStart();
   YamlMFI.HasMustTailInVarArgFunc = MFI.hasMustTailInVarArgFunc();
   YamlMFI.HasTailCall = MFI.hasTailCall();
+  YamlMFI.IsCalleeSavedInfoValid = MFI.isCalleeSavedInfoValid();
   YamlMFI.LocalFrameSize = MFI.getLocalFrameSize();
   if (MFI.getSavePoint()) {
     raw_string_ostream StrOS(YamlMFI.SavePoint.Value);
@@ -569,7 +570,7 @@ void MIRPrinter::convertMachineMetadataNodes(yaml::MachineFunction &YMF,
     std::string NS;
     raw_string_ostream StrOS(NS);
     MD.second->print(StrOS, MST, MF.getFunction().getParent());
-    YMF.MachineMetadataNodes.push_back(StrOS.str());
+    YMF.MachineMetadataNodes.push_back(NS);
   }
 }
 
@@ -587,7 +588,7 @@ void MIRPrinter::convert(yaml::MachineFunction &MF,
 
     yaml::MachineConstantPoolValue YamlConstant;
     YamlConstant.ID = ID++;
-    YamlConstant.Value = StrOS.str();
+    YamlConstant.Value = Str;
     YamlConstant.Alignment = Constant.getAlign();
     YamlConstant.IsTargetSpecific = Constant.isMachineConstantPoolEntry();
 
@@ -607,7 +608,7 @@ void MIRPrinter::convert(ModuleSlotTracker &MST,
     for (const auto *MBB : Table.MBBs) {
       raw_string_ostream StrOS(Str);
       StrOS << printMBBReference(*MBB);
-      Entry.Blocks.push_back(StrOS.str());
+      Entry.Blocks.push_back(Str);
       Str.clear();
     }
     YamlJTI.Entries.push_back(Entry);
@@ -812,6 +813,8 @@ void MIPrinter::print(const MachineInstr &MI) {
     OS << "nneg ";
   if (MI.getFlag(MachineInstr::Disjoint))
     OS << "disjoint ";
+  if (MI.getFlag(MachineInstr::NoUSWrap))
+    OS << "nusw ";
 
   OS << TII->getName(MI.getOpcode());
   if (I < E)
@@ -854,6 +857,13 @@ void MIPrinter::print(const MachineInstr &MI) {
       OS << ',';
     OS << " pcsections ";
     PCSections->printAsOperand(OS, MST);
+    NeedComma = true;
+  }
+  if (MDNode *MMRA = MI.getMMRAMetadata()) {
+    if (NeedComma)
+      OS << ',';
+    OS << " mmra ";
+    MMRA->printAsOperand(OS, MST);
     NeedComma = true;
   }
   if (uint32_t CFIType = MI.getCFIType()) {

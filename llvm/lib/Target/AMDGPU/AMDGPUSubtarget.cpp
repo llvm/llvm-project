@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/MDBuilder.h"
@@ -104,6 +105,14 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
                                         : AMDGPUSubtarget::SOUTHERN_ISLANDS;
   }
 
+  if (!hasFeature(AMDGPU::FeatureWavefrontSize32) &&
+      !hasFeature(AMDGPU::FeatureWavefrontSize64)) {
+    // If there is no default wave size it must be a generation before gfx10,
+    // these have FeatureWavefrontSize64 in their definition already. For gfx10+
+    // set wave32 as a default.
+    ToggleFeature(AMDGPU::FeatureWavefrontSize32);
+  }
+
   // We don't support FP64 for EG/NI atm.
   assert(!hasFP64() || (getGeneration() >= AMDGPUSubtarget::SOUTHERN_ISLANDS));
 
@@ -165,6 +174,15 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   return *this;
 }
 
+void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
+  LLVMContext &Ctx = F.getContext();
+  if (hasFeature(AMDGPU::FeatureWavefrontSize32) ==
+      hasFeature(AMDGPU::FeatureWavefrontSize64)) {
+    Ctx.diagnose(DiagnosticInfoUnsupported(
+        F, "must specify exactly one of wavefrontsize32 and wavefrontsize64"));
+  }
+}
+
 AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT) : TargetTriple(TT) {}
 
 bool AMDGPUSubtarget::useRealTrue16Insts() const {
@@ -189,8 +207,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   InlineAsmLoweringInfo.reset(new InlineAsmLowering(getTargetLowering()));
   Legalizer.reset(new AMDGPULegalizerInfo(*this, TM));
   RegBankInfo.reset(new AMDGPURegisterBankInfo(*this));
-  InstSelector.reset(new AMDGPUInstructionSelector(
-  *this, *static_cast<AMDGPURegisterBankInfo *>(RegBankInfo.get()), TM));
+  InstSelector.reset(new AMDGPUInstructionSelector(*this, *RegBankInfo, TM));
 }
 
 unsigned GCNSubtarget::getConstantBusLimit(unsigned Opcode) const {
@@ -550,10 +567,16 @@ bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
   else
     ++MaxSize;
 
-  MDBuilder MDB(I->getContext());
-  MDNode *MaxWorkGroupSizeRange = MDB.createRange(APInt(32, MinSize),
-                                                  APInt(32, MaxSize));
-  I->setMetadata(LLVMContext::MD_range, MaxWorkGroupSizeRange);
+  APInt Lower{32, MinSize};
+  APInt Upper{32, MaxSize};
+  if (auto *CI = dyn_cast<CallBase>(I)) {
+    ConstantRange Range(Lower, Upper);
+    CI->addRangeRetAttr(Range);
+  } else {
+    MDBuilder MDB(I->getContext());
+    MDNode *MaxWorkGroupSizeRange = MDB.createRange(Lower, Upper);
+    I->setMetadata(LLVMContext::MD_range, MaxWorkGroupSizeRange);
+  }
   return true;
 }
 
@@ -581,7 +604,7 @@ uint64_t AMDGPUSubtarget::getExplicitKernArgSize(const Function &F,
   assert(F.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
          F.getCallingConv() == CallingConv::SPIR_KERNEL);
 
-  const DataLayout &DL = F.getParent()->getDataLayout();
+  const DataLayout &DL = F.getDataLayout();
   uint64_t ExplicitArgBytes = 0;
   MaxAlign = Align(1);
 
@@ -664,29 +687,8 @@ bool GCNSubtarget::useVGPRIndexMode() const {
 bool GCNSubtarget::useAA() const { return UseAA; }
 
 unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
-  if (getGeneration() >= AMDGPUSubtarget::GFX10)
-    return getMaxWavesPerEU();
-
-  if (getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
-    if (SGPRs <= 80)
-      return 10;
-    if (SGPRs <= 88)
-      return 9;
-    if (SGPRs <= 100)
-      return 8;
-    return 7;
-  }
-  if (SGPRs <= 48)
-    return 10;
-  if (SGPRs <= 56)
-    return 9;
-  if (SGPRs <= 64)
-    return 8;
-  if (SGPRs <= 72)
-    return 7;
-  if (SGPRs <= 80)
-    return 6;
-  return 5;
+  return AMDGPU::IsaInfo::getOccupancyWithNumSGPRs(SGPRs, getMaxWavesPerEU(),
+                                                   getGeneration());
 }
 
 unsigned GCNSubtarget::getOccupancyWithNumVGPRs(unsigned NumVGPRs) const {
@@ -1109,6 +1111,9 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
 
   if (hasFlatScratchInit())
     NumUsedUserSGPRs += getNumUserSGPRForField(FlatScratchInitID);
+
+  if (hasPrivateSegmentSize())
+    NumUsedUserSGPRs += getNumUserSGPRForField(PrivateSegmentSizeID);
 }
 
 void GCNUserSGPRUsageInfo::allocKernargPreloadSGPRs(unsigned NumSGPRs) {

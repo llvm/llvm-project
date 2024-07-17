@@ -53,7 +53,8 @@ mlirAttributeIsASparseTensorEncodingAttr(MlirAttribute attr);
 MLIR_CAPI_EXPORTED MlirAttribute mlirSparseTensorEncodingAttrGet(
     MlirContext ctx, intptr_t lvlRank,
     MlirSparseTensorLevelType const *lvlTypes, MlirAffineMap dimToLvl,
-    MlirAffineMap lvlTodim, int posWidth, int crdWidth);
+    MlirAffineMap lvlTodim, int posWidth, int crdWidth,
+    MlirAttribute explicitVal, MlirAttribute implicitVal);
 
 /// Returns the level-rank of the `sparse_tensor.encoding` attribute.
 MLIR_CAPI_EXPORTED intptr_t
@@ -84,6 +85,14 @@ mlirSparseTensorEncodingAttrGetPosWidth(MlirAttribute attr);
 /// Returns the coordinate bitwidth of the `sparse_tensor.encoding` attribute.
 MLIR_CAPI_EXPORTED int
 mlirSparseTensorEncodingAttrGetCrdWidth(MlirAttribute attr);
+
+/// Returns the explicit value of the `sparse_tensor.encoding` attribute.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirSparseTensorEncodingAttrGetExplicitVal(MlirAttribute attr);
+
+/// Returns the implicit value of the `sparse_tensor.encoding` attribute.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirSparseTensorEncodingAttrGetImplicitVal(MlirAttribute attr);
 
 MLIR_CAPI_EXPORTED unsigned
 mlirSparseTensorEncodingAttrGetStructuredN(MlirSparseTensorLevelType lvlType);

@@ -51,7 +51,8 @@ class EmitC_BinaryOp<string mnemonic, list<Trait> traits = []> :
 def CExpression : NativeOpTrait<"emitc::CExpression">;
 
 // Types only used in binary arithmetic operations.
-def IntegerIndexOrOpaqueType : AnyTypeOf<[EmitCIntegerType, Index, EmitC_OpaqueType]>;
+def IntegerIndexOrOpaqueType : Type<CPred<"emitc::isIntegerIndexOrOpaqueType($_self)">,
+"integer, index or opaque type supported by EmitC">;
 def FloatIntegerIndexOrOpaqueType : AnyTypeOf<[EmitCFloatType, IntegerIndexOrOpaqueType]>;
 
 def EmitC_AddOp : EmitC_BinaryOp<"add", [CExpression]> {
@@ -470,7 +471,7 @@ def EmitC_ForOp : EmitC_Op<"for",
     upper bound and step respectively, and defines an SSA value for its
     induction variable. It has one region capturing the loop body. The induction
     variable is represented as an argument of this region. This SSA value is a
-    signless integer or index. The step is a value of same type.
+    signless integer, or an index. The step is a value of same type.
 
     This operation has no result. The body region must contain exactly one block
     that terminates with `emitc.yield`. Calling ForOp::build will create such a
@@ -907,6 +908,48 @@ def EmitC_SubOp : EmitC_BinaryOp<"sub", [CExpression]> {
   let hasVerifier = 1;
 }
 
+def EmitC_MemberOp : EmitC_Op<"member"> {
+  let summary = "Member operation";
+  let description = [{
+    With the `member` operation the member access operator `.` can be
+    applied.
+
+    Example:
+
+    ```mlir
+    %0 = "emitc.member" (%arg0) {member = "a"}
+        : (!emitc.opaque<"mystruct">) -> i32
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<StrAttr, "the member to access">:$member,
+    EmitC_OpaqueType:$operand
+  );
+  let results = (outs EmitCType);
+}
+
+def EmitC_MemberOfPtrOp : EmitC_Op<"member_of_ptr"> {
+  let summary = "Member of pointer operation";
+  let description = [{
+    With the `member_of_ptr` operation the member access operator `->`
+    can be applied.
+
+    Example:
+
+    ```mlir
+    %0 = "emitc.member_of_ptr" (%arg0) {member = "a"}
+        : (!emitc.ptr<!emitc.opaque<"mystruct">>) -> i32
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<StrAttr, "the member to access">:$member,
+    AnyTypeOf<[EmitC_OpaqueType,EmitC_PointerType]>:$operand
+  );
+  let results = (outs EmitCType);
+}
+
 def EmitC_ConditionalOp : EmitC_Op<"conditional",
     [AllTypesMatch<["true_value", "false_value", "result"]>, CExpression]> {
   let summary = "Conditional (ternary) operation";
@@ -1012,6 +1055,75 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
   let results = (outs EmitCType);
 
   let hasVerifier = 1;
+}
+
+def EmitC_GlobalOp : EmitC_Op<"global", [Symbol]> {
+  let summary = "A global variable";
+  let description = [{
+    The `emitc.global` operation declares or defines a named global variable.
+    The backing memory for the variable is allocated statically and is
+    described by the type of the variable.
+    Optionally, an `initial_value` can be provided.
+    Internal linkage can be specified using the `static_specifier` unit attribute
+    and external linkage can be specified using the `extern_specifier` unit attribute.
+    Note that the default linkage without those two keywords depends on whether
+    the target is C or C++ and whether the global variable is `const`.
+    The global variable can also be marked constant using the `const_specifier`
+    unit attribute. Writing to such constant global variables is
+    undefined.
+
+    The global variable can be accessed by using the `emitc.get_global` to
+    retrieve the value for the global variable.
+
+    Example:
+
+    ```mlir
+    // Global variable with an initial value.
+    emitc.global @x : emitc.array<2xf32> = dense<0.0, 2.0>
+    // External global variable
+    emitc.global extern @x : emitc.array<2xf32>
+    // Constant global variable with internal linkage
+    emitc.global static const @x : i32 = 0
+    ```
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       TypeAttr:$type,
+                       OptionalAttr<EmitC_OpaqueOrTypedAttr>:$initial_value,
+                       UnitAttr:$extern_specifier,
+                       UnitAttr:$static_specifier,
+                       UnitAttr:$const_specifier);
+
+  let assemblyFormat = [{
+       (`extern` $extern_specifier^)?
+       (`static` $static_specifier^)?
+       (`const` $const_specifier^)?
+       $sym_name
+       `:` custom<EmitCGlobalOpTypeAndInitialValue>($type, $initial_value)
+       attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+def EmitC_GetGlobalOp : EmitC_Op<"get_global",
+    [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "Obtain access to a global variable";
+  let description = [{
+     The `emitc.get_global` operation retrieves the lvalue of a
+     named global variable. If the global variable is marked constant, assigning
+     to that lvalue is undefined.
+
+     Example:
+
+     ```mlir
+     %x = emitc.get_global @foo : !emitc.array<2xf32>
+     ```
+  }];
+
+  let arguments = (ins FlatSymbolRefAttr:$name);
+  let results = (outs EmitCType:$result);
+  let assemblyFormat = "$name `:` type($result) attr-dict";
 }
 
 def EmitC_VerbatimOp : EmitC_Op<"verbatim"> {

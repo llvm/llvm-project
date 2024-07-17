@@ -63,8 +63,8 @@ define void @test2(i64 %i) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i64 (...) @goo()
 ; CHECK-NEXT:    store i64 [[CALL]], ptr @g2, align 8
-; CHECK-NEXT:    [[T2_PRE:%.*]] = load i64, ptr getelementptr inbounds ([100 x i64], ptr @a, i64 0, i64 3), align 8
-; CHECK-NEXT:    [[T3_PRE:%.*]] = load i64, ptr getelementptr inbounds ([100 x i64], ptr @b, i64 0, i64 3), align 8
+; CHECK-NEXT:    [[T2_PRE:%.*]] = load i64, ptr getelementptr inbounds (i8, ptr @a, i64 24), align 8
+; CHECK-NEXT:    [[T3_PRE:%.*]] = load i64, ptr getelementptr inbounds (i8, ptr @b, i64 24), align 8
 ; CHECK-NEXT:    [[DOTPRE:%.*]] = mul nsw i64 [[T3_PRE]], [[T2_PRE]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:

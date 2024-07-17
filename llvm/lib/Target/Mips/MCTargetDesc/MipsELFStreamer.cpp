@@ -90,8 +90,7 @@ void MipsELFStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   Labels.push_back(Symbol);
 }
 
-void MipsELFStreamer::switchSection(MCSection *Section,
-                                    const MCExpr *Subsection) {
+void MipsELFStreamer::switchSection(MCSection *Section, uint32_t Subsection) {
   MCELFStreamer::switchSection(Section, Subsection);
   Labels.clear();
 }
@@ -112,10 +111,11 @@ void MipsELFStreamer::EmitMipsOptionRecords() {
     I->EmitMipsOptionRecord();
 }
 
-MCELFStreamer *llvm::createMipsELFStreamer(
-    MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
-    std::unique_ptr<MCObjectWriter> OW, std::unique_ptr<MCCodeEmitter> Emitter,
-    bool RelaxAll) {
+MCELFStreamer *
+llvm::createMipsELFStreamer(MCContext &Context,
+                            std::unique_ptr<MCAsmBackend> MAB,
+                            std::unique_ptr<MCObjectWriter> OW,
+                            std::unique_ptr<MCCodeEmitter> Emitter) {
   return new MipsELFStreamer(Context, std::move(MAB), std::move(OW),
                              std::move(Emitter));
 }

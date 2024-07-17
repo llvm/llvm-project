@@ -30,7 +30,7 @@
 #endif
 
 using namespace std::chrono;
-namespace fs = std::__fs::filesystem;
+namespace fs = std::filesystem;
 using fs::file_time_type;
 using fs::detail::time_util;
 

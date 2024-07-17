@@ -97,23 +97,23 @@ module {
     // CHECK-NEXT: nse = 5
     // CHECK-NEXT: dim = ( 3, 4, 8 )
     // CHECK-NEXT: lvl = ( 3, 4, 8 )
-    // CHECK-NEXT: pos[0] : ( 0, 2
-    // CHECK-NEXT: crd[0] : ( 0, 2
-    // CHECK-NEXT: pos[1] : ( 0, 2, 3
-    // CHECK-NEXT: crd[1] : ( 0, 3, 2
-    // CHECK-NEXT: pos[2] : ( 0, 1, 2, 5
-    // CHECK-NEXT: crd[2] : ( 0, 7, 1, 2, 7
-    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 0, 2 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3 )
+    // CHECK-NEXT: crd[1] : ( 0, 3, 2 )
+    // CHECK-NEXT: pos[2] : ( 0, 1, 2, 5 )
+    // CHECK-NEXT: crd[2] : ( 0, 7, 1, 2, 7 )
+    // CHECK-NEXT: values : ( 1, 2, 3, 4, 5 )
     // CHECK-NEXT: ----
     // CHECK:      ---- Sparse Tensor ----
     // CHECK-NEXT: nse = 24
     // CHECK-NEXT: dim = ( 3, 4, 8 )
     // CHECK-NEXT: lvl = ( 3, 4, 8 )
-    // CHECK-NEXT: pos[0] : ( 0, 2
-    // CHECK-NEXT: crd[0] : ( 0, 2
-    // CHECK-NEXT: pos[1] : ( 0, 2, 3
-    // CHECK-NEXT: crd[1] : ( 0, 3, 2
-    // CHECK-NEXT: values : ( 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 6, 8, 0, 0, 0, 0, 10
+    // CHECK-NEXT: pos[0] : ( 0, 2 )
+    // CHECK-NEXT: crd[0] : ( 0, 2 )
+    // CHECK-NEXT: pos[1] : ( 0, 2, 3 )
+    // CHECK-NEXT: crd[1] : ( 0, 3, 2 )
+    // CHECK-NEXT: values : ( 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 6, 8, 0, 0, 0, 0, 10 )
     // CHECK-NEXT: ----
     //
     sparse_tensor.print %st : tensor<?x?x?xf64, #ST1>

@@ -5,6 +5,7 @@
 # Setup Project
 #===============================================================================
 cmake_minimum_required(VERSION 3.20.0)
+set(LLVM_SUBPROJECT_TITLE "libc++")
 
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
@@ -121,7 +122,7 @@ option(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS
    on definitions in a shared library. By default, we assume that we're not building
    libc++ for any specific vendor, and we disable those annotations. Vendors wishing
    to provide compile-time errors when using features unavailable on some version of
-   the shared library they shipped should turn this on and see `include/__availability`
+   the shared library they shipped should turn this on and see `include/__configuration/availability.h`
    for more details." OFF)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -178,7 +179,7 @@ set(LIBCXX_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
 option(LIBCXX_INSTALL_HEADERS "Install the libc++ headers." ON)
 option(LIBCXX_INSTALL_LIBRARY "Install the libc++ library." ON)
 option(LIBCXX_INSTALL_MODULES
-  "Install the libc++ C++20 module source files (experimental)." OFF
+  "Install the libc++ C++20 module source files (experimental)." ON
 )
 cmake_dependent_option(LIBCXX_INSTALL_STATIC_LIBRARY
   "Install the static libc++ library." ON
@@ -432,18 +433,19 @@ set(LIBCXX_SHARED_OUTPUT_NAME "c++" CACHE STRING "Output name for the shared lib
 set(LIBCXX_STATIC_OUTPUT_NAME "c++" CACHE STRING "Output name for the static libc++ runtime library.")
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
-  set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
+  set(LIBCXX_TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
+  if(LIBCXX_LIBDIR_SUBDIR)
+    string(APPEND LIBCXX_TARGET_SUBDIR /${LIBCXX_LIBDIR_SUBDIR})
+  endif()
+  set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LIBCXX_TARGET_SUBDIR})
   set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
   set(LIBCXX_GENERATED_MODULE_DIR "${LLVM_BINARY_DIR}/modules/c++/v1")
-  set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LLVM_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1")
-  set(LIBCXX_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE STRING
+  set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LLVM_BINARY_DIR}/include/${LIBCXX_TARGET_SUBDIR}/c++/v1")
+  set(LIBCXX_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBCXX_TARGET_SUBDIR} CACHE STRING
       "Path where built libc++ libraries should be installed.")
-  set(LIBCXX_INSTALL_INCLUDE_TARGET_DIR "${CMAKE_INSTALL_INCLUDEDIR}/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1" CACHE STRING
+  set(LIBCXX_INSTALL_INCLUDE_TARGET_DIR "${CMAKE_INSTALL_INCLUDEDIR}/${LIBCXX_TARGET_SUBDIR}/c++/v1" CACHE STRING
       "Path where target-specific libc++ headers should be installed.")
-  if(LIBCXX_LIBDIR_SUBDIR)
-    string(APPEND LIBCXX_LIBRARY_DIR /${LIBCXX_LIBDIR_SUBDIR})
-    string(APPEND LIBCXX_INSTALL_LIBRARY_DIR /${LIBCXX_LIBDIR_SUBDIR})
-  endif()
+  unset(LIBCXX_TARGET_SUBDIR)
 else()
   if(LLVM_LIBRARY_OUTPUT_INTDIR)
     set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
@@ -550,6 +552,10 @@ function(cxx_add_basic_build_flags target)
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_add_compile_flags_if_supported(${target} PRIVATE -fvisibility=hidden)
   endif()
+
+  # Build with -fsized-deallocation, which is default in recent versions of Clang.
+  # TODO(LLVM 21): This can be dropped once we only support Clang >= 19.
+  target_add_compile_flags_if_supported(${target} PRIVATE -fsized-deallocation)
 
   # Let the library headers know they are currently being used to build the
   # library.
@@ -778,8 +784,8 @@ config_define_if_not(LIBCXX_ENABLE_WIDE_CHARACTERS _LIBCPP_HAS_NO_WIDE_CHARACTER
 config_define_if_not(LIBCXX_ENABLE_TIME_ZONE_DATABASE _LIBCPP_HAS_NO_TIME_ZONE_DATABASE)
 config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
 
-# TODO(LLVM 19): Produce a deprecation warning.
 if (LIBCXX_ENABLE_ASSERTIONS)
+  message(DEPRECATION "LIBCXX_ENABLE_ASSERTIONS is deprecated and will be removed in LLVM 20. Please use LIBCXX_HARDENING_MODE instead.")
   set(LIBCXX_HARDENING_MODE "extensive")
 endif()
 if (LIBCXX_HARDENING_MODE STREQUAL "none")
@@ -855,14 +861,13 @@ endfunction()
 #===============================================================================
 # Setup Source Code And Tests
 #===============================================================================
+add_custom_target(cxx-test-depends
+  COMMENT "Build dependencies required to run the libc++ test suite.")
+
 add_subdirectory(include)
 add_subdirectory(src)
 add_subdirectory(utils)
 add_subdirectory(modules)
-
-set(LIBCXX_TEST_DEPS "cxx_experimental")
-
-list(APPEND LIBCXX_TEST_DEPS generate-cxx-modules)
 
 if (LIBCXX_INCLUDE_BENCHMARKS)
   add_subdirectory(benchmarks)

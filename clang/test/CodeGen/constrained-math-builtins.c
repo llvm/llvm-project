@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-linux -ffp-exception-behavior=maytrap -w -S -o - -emit-llvm %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux -ffp-exception-behavior=maytrap -w -o - -emit-llvm %s | FileCheck %s
 
 // Test codegen of constrained math builtins.
 //
@@ -78,12 +78,13 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c, _
 // CHECK: call x86_fp80 @llvm.experimental.constrained.floor.f80(x86_fp80 %{{.*}}, metadata !"fpexcept.strict")
 // CHECK: call fp128 @llvm.experimental.constrained.floor.f128(fp128 %{{.*}}, metadata !"fpexcept.strict")
 
-  __builtin_fma(f,f,f);        __builtin_fmaf(f,f,f);       __builtin_fmal(f,f,f); __builtin_fmaf128(f,f,f);
+  __builtin_fma(f,f,f);        __builtin_fmaf(f,f,f);       __builtin_fmal(f,f,f);  __builtin_fmaf128(f,f,f); __builtin_fmaf16(f,f,f);
 
 // CHECK: call double @llvm.experimental.constrained.fma.f64(double %{{.*}}, double %{{.*}}, double %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // CHECK: call float @llvm.experimental.constrained.fma.f32(float %{{.*}}, float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // CHECK: call x86_fp80 @llvm.experimental.constrained.fma.f80(x86_fp80 %{{.*}}, x86_fp80 %{{.*}}, x86_fp80 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // CHECK: call fp128 @llvm.experimental.constrained.fma.f128(fp128 %{{.*}}, fp128 %{{.*}}, fp128 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call half @llvm.experimental.constrained.fma.f16(half %{{.*}}, half %{{.*}}, half %{{.*}}, metadata !"fpexcept.strict")
 
   __builtin_fmax(f,f);       __builtin_fmaxf(f,f);      __builtin_fmaxl(f,f); __builtin_fmaxf128(f,f);
 
@@ -182,6 +183,14 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c, _
 // CHECK: call float @llvm.experimental.constrained.sqrt.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // CHECK: call x86_fp80 @llvm.experimental.constrained.sqrt.f80(x86_fp80 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 // CHECK: call fp128 @llvm.experimental.constrained.sqrt.f128(fp128 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+
+  __builtin_tan(f);        __builtin_tanf(f);       __builtin_tanl(f); __builtin_tanf128(f);
+
+// CHECK: call double @llvm.experimental.constrained.tan.f64(double %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call float @llvm.experimental.constrained.tan.f32(float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call x86_fp80 @llvm.experimental.constrained.tan.f80(x86_fp80 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// CHECK: call fp128 @llvm.experimental.constrained.tan.f128(fp128 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+
 
   __builtin_trunc(f);      __builtin_truncf(f);     __builtin_truncl(f); __builtin_truncf128(f);
 
@@ -314,6 +323,11 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c, _
 // CHECK: declare float @llvm.experimental.constrained.sqrt.f32(float, metadata, metadata)
 // CHECK: declare x86_fp80 @llvm.experimental.constrained.sqrt.f80(x86_fp80, metadata, metadata)
 // CHECK: declare fp128 @llvm.experimental.constrained.sqrt.f128(fp128, metadata, metadata)
+
+// CHECK: declare double @llvm.experimental.constrained.tan.f64(double, metadata, metadata)
+// CHECK: declare float @llvm.experimental.constrained.tan.f32(float, metadata, metadata)
+// CHECK: declare x86_fp80 @llvm.experimental.constrained.tan.f80(x86_fp80, metadata, metadata)
+// CHECK: declare fp128 @llvm.experimental.constrained.tan.f128(fp128, metadata, metadata)
 
 // CHECK: declare double @llvm.experimental.constrained.trunc.f64(double, metadata)
 // CHECK: declare float @llvm.experimental.constrained.trunc.f32(float, metadata)

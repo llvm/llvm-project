@@ -938,21 +938,10 @@ entry:
 }
 
 define i32 @extract_v4i32_shuffle_const(<4 x i32> %a, <4 x i32> %b, i32 %c) {
-; CHECK-SD-LABEL: extract_v4i32_shuffle_const:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov w0, s1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: extract_v4i32_shuffle_const:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI36_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI36_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-GI-NEXT:    mov s0, v0.s[2]
-; CHECK-GI-NEXT:    fmov w0, s0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: extract_v4i32_shuffle_const:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov w0, s1
+; CHECK-NEXT:    ret
 entry:
   %vector = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 3>
   %d = extractelement <4 x i32> %vector, i32 2

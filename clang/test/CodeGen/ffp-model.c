@@ -1,4 +1,5 @@
 // REQUIRES: x86-registered-target
+// UNSUPPORTED: target={{.*}}-zos{{.*}}
 // RUN: %clang -S -emit-llvm -fenable-matrix -ffp-model=fast %s -o - \
 // RUN: | FileCheck %s --check-prefixes=CHECK,CHECK-FAST
 

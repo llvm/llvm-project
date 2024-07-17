@@ -187,9 +187,15 @@ bool AMDGPUTargetInfo::initFeatureMap(
     return false;
 
   // TODO: Should move this logic into TargetParser
-  std::string ErrorMsg;
-  if (!insertWaveSizeFeature(CPU, getTriple(), Features, ErrorMsg)) {
-    Diags.Report(diag::err_invalid_feature_combination) << ErrorMsg;
+  auto HasError = insertWaveSizeFeature(CPU, getTriple(), Features);
+  switch (HasError.first) {
+  default:
+    break;
+  case llvm::AMDGPU::INVALID_FEATURE_COMBINATION:
+    Diags.Report(diag::err_invalid_feature_combination) << HasError.second;
+    return false;
+  case llvm::AMDGPU::UNSUPPORTED_TARGET_FEATURE:
+    Diags.Report(diag::err_opt_not_valid_on_target) << HasError.second;
     return false;
   }
 
@@ -232,7 +238,7 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
 
   HasLegalHalfType = true;
   HasFloat16 = true;
-  WavefrontSize = GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32 ? 32 : 64;
+  WavefrontSize = (GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32) ? 32 : 64;
   AllowAMDGPUUnsafeFPAtomics = Opts.AllowAMDGPUUnsafeFPAtomics;
 
   // Set pointer width and alignment for the generic address space.

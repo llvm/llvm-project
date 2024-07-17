@@ -15,6 +15,7 @@
 
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
+#include "llvm/IR/VectorBuilder.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
 namespace llvm {
@@ -372,15 +373,6 @@ RecurKind getMinMaxReductionRecurKind(Intrinsic::ID RdxID);
 /// Returns the comparison predicate used when expanding a min/max reduction.
 CmpInst::Predicate getMinMaxReductionPredicate(RecurKind RK);
 
-/// See RecurrenceDescriptor::isAnyOfPattern for a description of the pattern we
-/// are trying to match. In this pattern, we are only ever selecting between two
-/// values: 1) an initial start value \p StartVal of the reduction PHI, and 2) a
-/// loop invariant value. If any of lane value in \p Left, \p Right is not equal
-/// to \p StartVal, select the loop invariant value. This is done by selecting
-/// \p Right iff \p Left is equal to \p StartVal.
-Value *createAnyOfOp(IRBuilderBase &Builder, Value *StartVal, RecurKind RK,
-                     Value *Left, Value *Right);
-
 /// Returns a Min/Max operation corresponding to MinMaxRecurrenceKind.
 /// The Builder's fast-math-flags must be set to propagate the expected values.
 Value *createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
@@ -403,6 +395,10 @@ Value *getShuffleReduction(IRBuilderBase &Builder, Value *Src, unsigned Op,
 /// Fast-math-flags are propagated using the IRBuilder's setting.
 Value *createSimpleTargetReduction(IRBuilderBase &B, Value *Src,
                                    RecurKind RdxKind);
+/// Overloaded function to generate vector-predication intrinsics for target
+/// reduction.
+Value *createSimpleTargetReduction(VectorBuilder &VB, Value *Src,
+                                   const RecurrenceDescriptor &Desc);
 
 /// Create a target reduction of the given vector \p Src for a reduction of the
 /// kind RecurKind::IAnyOf or RecurKind::FAnyOf. The reduction operation is
@@ -421,6 +417,11 @@ Value *createTargetReduction(IRBuilderBase &B, const RecurrenceDescriptor &Desc,
 /// Create an ordered reduction intrinsic using the given recurrence
 /// descriptor \p Desc.
 Value *createOrderedReduction(IRBuilderBase &B,
+                              const RecurrenceDescriptor &Desc, Value *Src,
+                              Value *Start);
+/// Overloaded function to generate vector-predication intrinsics for ordered
+/// reduction.
+Value *createOrderedReduction(VectorBuilder &VB,
                               const RecurrenceDescriptor &Desc, Value *Src,
                               Value *Start);
 

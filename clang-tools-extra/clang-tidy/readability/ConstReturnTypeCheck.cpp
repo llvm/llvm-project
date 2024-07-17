@@ -55,14 +55,6 @@ AST_MATCHER(QualType, isLocalConstQualified) {
   return Node.isLocalConstQualified();
 }
 
-AST_MATCHER(QualType, isTypeOfType) {
-  return isa<TypeOfType>(Node.getTypePtr());
-}
-
-AST_MATCHER(QualType, isTypeOfExprType) {
-  return isa<TypeOfExprType>(Node.getTypePtr());
-}
-
 struct CheckResult {
   // Source range of the relevant `const` token in the definition being checked.
   CharSourceRange ConstRange;
@@ -110,16 +102,11 @@ void ConstReturnTypeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void ConstReturnTypeCheck::registerMatchers(MatchFinder *Finder) {
   // Find all function definitions for which the return types are `const`
   // qualified, ignoring decltype types.
-  auto NonLocalConstType =
-      qualType(unless(isLocalConstQualified()),
-               anyOf(decltypeType(), autoType(), isTypeOfType(),
-                     isTypeOfExprType(), substTemplateTypeParmType()));
   Finder->addMatcher(
-      functionDecl(
-          returns(allOf(isConstQualified(), unless(NonLocalConstType))),
-          anyOf(isDefinition(), cxxMethodDecl(isPure())),
-          // Overridden functions are not actionable.
-          unless(cxxMethodDecl(isOverride())))
+      functionDecl(returns(isLocalConstQualified()),
+                   anyOf(isDefinition(), cxxMethodDecl(isPure())),
+                   // Overridden functions are not actionable.
+                   unless(cxxMethodDecl(isOverride())))
           .bind("func"),
       this);
 }

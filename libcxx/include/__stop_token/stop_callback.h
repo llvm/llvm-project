@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___STOP_TOKEN_STOP_CALLBACK_H
 #define _LIBCPP___STOP_TOKEN_STOP_CALLBACK_H
 
-#include <__availability>
 #include <__concepts/constructible.h>
 #include <__concepts/destructible.h>
 #include <__concepts/invocable.h>

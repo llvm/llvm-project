@@ -65,14 +65,14 @@ static mlir::FunctionType getCPtrFunctionType(mlir::FunctionType funcTy) {
   auto resultType = funcTy.getResult(0);
   assert(fir::isa_builtin_cptr_type(resultType));
   llvm::SmallVector<mlir::Type> outputTypes;
-  auto recTy = resultType.dyn_cast<fir::RecordType>();
+  auto recTy = mlir::dyn_cast<fir::RecordType>(resultType);
   outputTypes.emplace_back(recTy.getTypeList()[0].second);
   return mlir::FunctionType::get(funcTy.getContext(), funcTy.getInputs(),
                                  outputTypes);
 }
 
 static bool mustEmboxResult(mlir::Type resultType, bool shouldBoxResult) {
-  return resultType.isa<fir::SequenceType, fir::RecordType>() &&
+  return mlir::isa<fir::SequenceType, fir::RecordType>(resultType) &&
          shouldBoxResult;
 }
 
@@ -84,7 +84,7 @@ public:
   CallConversion(mlir::MLIRContext *context, bool shouldBoxResult)
       : OpRewritePattern<Op>(context, 1), shouldBoxResult{shouldBoxResult} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(Op op, mlir::PatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
     auto result = op->getResult(0);
@@ -114,7 +114,7 @@ public:
     bool isResultBuiltinCPtr = fir::isa_builtin_cptr_type(result.getType());
     Op newOp;
     if (isResultBuiltinCPtr) {
-      auto recTy = result.getType().template dyn_cast<fir::RecordType>();
+      auto recTy = mlir::dyn_cast<fir::RecordType>(result.getType());
       newResultTypes.emplace_back(recTy.getTypeList()[0].second);
     }
 
@@ -192,7 +192,7 @@ public:
   using OpRewritePattern::OpRewritePattern;
   SaveResultOpConversion(mlir::MLIRContext *context)
       : OpRewritePattern(context) {}
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::SaveResultOp op,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.eraseOp(op);
@@ -205,7 +205,7 @@ public:
   using OpRewritePattern::OpRewritePattern;
   ReturnOpConversion(mlir::MLIRContext *context, mlir::Value newArg)
       : OpRewritePattern(context), newArg{newArg} {}
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(mlir::func::ReturnOp ret,
                   mlir::PatternRewriter &rewriter) const override {
     auto loc = ret.getLoc();
@@ -258,10 +258,10 @@ public:
   using OpRewritePattern::OpRewritePattern;
   AddrOfOpConversion(mlir::MLIRContext *context, bool shouldBoxResult)
       : OpRewritePattern(context), shouldBoxResult{shouldBoxResult} {}
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(fir::AddrOfOp addrOf,
                   mlir::PatternRewriter &rewriter) const override {
-    auto oldFuncTy = addrOf.getType().cast<mlir::FunctionType>();
+    auto oldFuncTy = mlir::cast<mlir::FunctionType>(addrOf.getType());
     mlir::FunctionType newFuncTy;
     // TODO: This should be generalized for derived types, and it is
     // architecture and OS dependent.
@@ -296,7 +296,7 @@ public:
     auto loc = func.getLoc();
     auto *context = &getContext();
     // Convert function type itself if it has an abstract result.
-    auto funcTy = func.getFunctionType().cast<mlir::FunctionType>();
+    auto funcTy = mlir::cast<mlir::FunctionType>(func.getFunctionType());
     if (hasAbstractResult(funcTy)) {
       // TODO: This should be generalized for derived types, and it is
       // architecture and OS dependent.
@@ -343,11 +343,11 @@ public:
     return mlir::TypeSwitch<mlir::Type, bool>(type)
         .Case([](fir::BoxProcType boxProc) {
           return fir::hasAbstractResult(
-              boxProc.getEleTy().cast<mlir::FunctionType>());
+              mlir::cast<mlir::FunctionType>(boxProc.getEleTy()));
         })
         .Case([](fir::PointerType pointer) {
           return fir::hasAbstractResult(
-              pointer.getEleTy().cast<mlir::FunctionType>());
+              mlir::cast<mlir::FunctionType>(pointer.getEleTy()));
         })
         .Default([](auto &&) { return false; });
   }
@@ -411,7 +411,7 @@ public:
       return !hasAbstractResult(call.getFunctionType());
     });
     target.addDynamicallyLegalOp<fir::AddrOfOp>([](fir::AddrOfOp addrOf) {
-      if (auto funTy = addrOf.getType().dyn_cast<mlir::FunctionType>())
+      if (auto funTy = mlir::dyn_cast<mlir::FunctionType>(addrOf.getType()))
         return !hasAbstractResult(funTy);
       return true;
     });

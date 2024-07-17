@@ -680,7 +680,7 @@ define float @test_pown_afn_nnan_ninf_f32(float %x, i32 %y) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[X]] to i32
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and i32 [[__YEVEN]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float [[__EXP2]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[__POW_SIGN]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i32 [[__POW_SIGN]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32 [[TMP2]] to float
 ; CHECK-NEXT:    ret float [[TMP3]]
 ;
@@ -698,12 +698,11 @@ define <2 x float> @test_pown_afn_nnan_ninf_v2f32(<2 x float> %x, <2 x i32> %y) 
 ; CHECK-NEXT:    [[POWNI2F:%.*]] = sitofp <2 x i32> [[Y]] to <2 x float>
 ; CHECK-NEXT:    [[__YLOGX:%.*]] = fmul nnan ninf afn <2 x float> [[__LOG2]], [[POWNI2F]]
 ; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[__YLOGX]])
-; CHECK-NEXT:    [[__YTOU:%.*]] = fptosi <2 x float> [[POWNI2F]] to <2 x i32>
-; CHECK-NEXT:    [[__YEVEN:%.*]] = shl <2 x i32> [[__YTOU]], <i32 31, i32 31>
+; CHECK-NEXT:    [[__YEVEN:%.*]] = shl <2 x i32> [[Y]], <i32 31, i32 31>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[X]] to <2 x i32>
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and <2 x i32> [[__YEVEN]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x float> [[__EXP2]] to <2 x i32>
-; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i32> [[__POW_SIGN]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint <2 x i32> [[__POW_SIGN]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP2]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[TMP3]]
 ;
@@ -744,8 +743,8 @@ define <2 x double> @test_pown_afn_nnan_ninf_v2f64(<2 x double> %x, <2 x i32> %y
 ; CHECK-NEXT:    [[POWNI2F:%.*]] = sitofp <2 x i32> [[Y]] to <2 x double>
 ; CHECK-NEXT:    [[__YLOGX:%.*]] = fmul nnan ninf afn <2 x double> [[__LOG2]], [[POWNI2F]]
 ; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn <2 x double> @_Z4exp2Dv2_d(<2 x double> [[__YLOGX]])
-; CHECK-NEXT:    [[__YTOU1:%.*]] = zext <2 x i32> [[Y]] to <2 x i64>
-; CHECK-NEXT:    [[__YEVEN:%.*]] = shl <2 x i64> [[__YTOU1]], <i64 63, i64 63>
+; CHECK-NEXT:    [[__YTOU:%.*]] = zext <2 x i32> [[Y]] to <2 x i64>
+; CHECK-NEXT:    [[__YEVEN:%.*]] = shl <2 x i64> [[__YTOU]], <i64 63, i64 63>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x double> [[X]] to <2 x i64>
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and <2 x i64> [[__YEVEN]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x double> [[__EXP2]] to <2 x i64>
@@ -772,7 +771,7 @@ define half @test_pown_afn_nnan_ninf_f16(half %x, i32 %y) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast half [[X]] to i16
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and i16 [[__YEVEN]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast half [[__EXP2]] to i16
-; CHECK-NEXT:    [[TMP2:%.*]] = or i16 [[__POW_SIGN]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i16 [[__POW_SIGN]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i16 [[TMP2]] to half
 ; CHECK-NEXT:    ret half [[TMP3]]
 ;
@@ -790,12 +789,12 @@ define <2 x half> @test_pown_afn_nnan_ninf_v2f16(<2 x half> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    [[POWNI2F:%.*]] = sitofp <2 x i32> [[Y]] to <2 x half>
 ; CHECK-NEXT:    [[__YLOGX:%.*]] = fmul nnan ninf afn <2 x half> [[__LOG2]], [[POWNI2F]]
 ; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn <2 x half> @llvm.exp2.v2f16(<2 x half> [[__YLOGX]])
-; CHECK-NEXT:    [[__YTOU:%.*]] = fptosi <2 x half> [[POWNI2F]] to <2 x i16>
+; CHECK-NEXT:    [[__YTOU:%.*]] = trunc <2 x i32> [[Y]] to <2 x i16>
 ; CHECK-NEXT:    [[__YEVEN:%.*]] = shl <2 x i16> [[__YTOU]], <i16 15, i16 15>
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x half> [[X]] to <2 x i16>
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and <2 x i16> [[__YEVEN]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x half> [[__EXP2]] to <2 x i16>
-; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i16> [[__POW_SIGN]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint <2 x i16> [[__POW_SIGN]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i16> [[TMP2]] to <2 x half>
 ; CHECK-NEXT:    ret <2 x half> [[TMP3]]
 ;
@@ -829,7 +828,7 @@ define float @test_pown_fast_f32_strictfp(float %x, i32 %y) #1 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[X]] to i32
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and i32 [[__YEVEN]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float [[__EXP2]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[__POW_SIGN]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i32 [[__POW_SIGN]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32 [[TMP2]] to float
 ; CHECK-NEXT:    ret float [[TMP3]]
 ;
@@ -1075,7 +1074,7 @@ define float @test_pown_afn_ninf_nnan_f32__x_known_positive(float nofpclass(ninf
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float [[X]] to i32
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and i32 [[__YEVEN]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float [[__EXP2]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[__POW_SIGN]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i32 [[__POW_SIGN]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32 [[TMP2]] to float
 ; CHECK-NEXT:    ret float [[TMP3]]
 ;

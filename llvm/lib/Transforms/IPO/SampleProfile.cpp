@@ -252,19 +252,20 @@ static cl::opt<unsigned> PrecentMismatchForStalenessError(
 
 static cl::opt<bool> CallsitePrioritizedInline(
     "sample-profile-prioritized-inline", cl::Hidden,
-
     cl::desc("Use call site prioritized inlining for sample profile loader."
              "Currently only CSSPGO is supported."));
 
 static cl::opt<bool> UsePreInlinerDecision(
     "sample-profile-use-preinliner", cl::Hidden,
-
     cl::desc("Use the preinliner decisions stored in profile context."));
 
 static cl::opt<bool> AllowRecursiveInline(
     "sample-profile-recursive-inline", cl::Hidden,
-
     cl::desc("Allow sample loader inliner to inline recursive calls."));
+
+static cl::opt<bool> RemoveProbeAfterProfileAnnotation(
+    "sample-profile-remove-probe", cl::Hidden, cl::init(false),
+    cl::desc("Remove pseudo-probe after sample profile annotation."));
 
 static cl::opt<std::string> ProfileInlineReplayFile(
     "sample-profile-inline-replay", cl::init(""), cl::value_desc("filename"),
@@ -518,6 +519,7 @@ protected:
   void generateMDProfMetadata(Function &F);
   bool rejectHighStalenessProfile(Module &M, ProfileSummaryInfo *PSI,
                                   const SampleProfileMap &Profiles);
+  void removePseudoProbeInsts(Module &M);
 
   /// Map from function name to Function *. Used to find the function from
   /// the function name. If the function name contains suffix, additional
@@ -786,27 +788,23 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
 /// NOMORE_ICP_MAGICNUM count values in the value profile of \p Inst, we
 /// cannot promote for \p Inst anymore.
 static bool doesHistoryAllowICP(const Instruction &Inst, StringRef Candidate) {
-  uint32_t NumVals = 0;
   uint64_t TotalCount = 0;
-  std::unique_ptr<InstrProfValueData[]> ValueData =
-      std::make_unique<InstrProfValueData[]>(MaxNumPromotions);
-  bool Valid =
-      getValueProfDataFromInst(Inst, IPVK_IndirectCallTarget, MaxNumPromotions,
-                               ValueData.get(), NumVals, TotalCount, true);
+  auto ValueData = getValueProfDataFromInst(Inst, IPVK_IndirectCallTarget,
+                                            MaxNumPromotions, TotalCount, true);
   // No valid value profile so no promoted targets have been recorded
   // before. Ok to do ICP.
-  if (!Valid)
+  if (ValueData.empty())
     return true;
 
   unsigned NumPromoted = 0;
-  for (uint32_t I = 0; I < NumVals; I++) {
-    if (ValueData[I].Count != NOMORE_ICP_MAGICNUM)
+  for (const auto &V : ValueData) {
+    if (V.Count != NOMORE_ICP_MAGICNUM)
       continue;
 
     // If the promotion candidate has NOMORE_ICP_MAGICNUM count in the
     // metadata, it means the candidate has been promoted for this
     // indirect call.
-    if (ValueData[I].Value == Function::getGUID(Candidate))
+    if (V.Value == Function::getGUID(Candidate))
       return false;
     NumPromoted++;
     // If already have MaxNumPromotions promotion, don't do it anymore.
@@ -832,14 +830,10 @@ updateIDTMetaData(Instruction &Inst,
   // `MaxNumPromotions` inside it.
   if (MaxNumPromotions == 0)
     return;
-  uint32_t NumVals = 0;
   // OldSum is the existing total count in the value profile data.
   uint64_t OldSum = 0;
-  std::unique_ptr<InstrProfValueData[]> ValueData =
-      std::make_unique<InstrProfValueData[]>(MaxNumPromotions);
-  bool Valid =
-      getValueProfDataFromInst(Inst, IPVK_IndirectCallTarget, MaxNumPromotions,
-                               ValueData.get(), NumVals, OldSum, true);
+  auto ValueData = getValueProfDataFromInst(Inst, IPVK_IndirectCallTarget,
+                                            MaxNumPromotions, OldSum, true);
 
   DenseMap<uint64_t, uint64_t> ValueCountMap;
   if (Sum == 0) {
@@ -848,10 +842,8 @@ updateIDTMetaData(Instruction &Inst,
            "If sum is 0, assume only one element in CallTargets "
            "with count being NOMORE_ICP_MAGICNUM");
     // Initialize ValueCountMap with existing value profile data.
-    if (Valid) {
-      for (uint32_t I = 0; I < NumVals; I++)
-        ValueCountMap[ValueData[I].Value] = ValueData[I].Count;
-    }
+    for (const auto &V : ValueData)
+      ValueCountMap[V.Value] = V.Count;
     auto Pair =
         ValueCountMap.try_emplace(CallTargets[0].Value, CallTargets[0].Count);
     // If the target already exists in value profile, decrease the total
@@ -864,11 +856,9 @@ updateIDTMetaData(Instruction &Inst,
   } else {
     // Initialize ValueCountMap with existing NOMORE_ICP_MAGICNUM
     // counts in the value profile.
-    if (Valid) {
-      for (uint32_t I = 0; I < NumVals; I++) {
-        if (ValueData[I].Count == NOMORE_ICP_MAGICNUM)
-          ValueCountMap[ValueData[I].Value] = ValueData[I].Count;
-      }
+    for (const auto &V : ValueData) {
+      if (V.Count == NOMORE_ICP_MAGICNUM)
+        ValueCountMap[V.Value] = V.Count;
     }
 
     for (const auto &Data : CallTargets) {
@@ -1389,10 +1379,11 @@ SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
       return InlineCost::getAlways("preinliner");
   }
 
-  // For old FDO inliner, we inline the call site as long as cost is not
-  // "Never". The cost-benefit check is done earlier.
+  // For old FDO inliner, we inline the call site if it is below hot threshold,
+  // even if the function is hot based on sample profile data. This is to
+  // prevent huge functions from being inlined.
   if (!CallsitePrioritizedInline) {
-    return InlineCost::get(Cost.getCost(), INT_MAX);
+    return InlineCost::get(Cost.getCost(), SampleHotCallSiteThreshold);
   }
 
   // Otherwise only use the cost from call analyzer, but overwite threshold with
@@ -1581,7 +1572,7 @@ void SampleProfileLoader::promoteMergeNotInlinedContextSamples(
               FunctionId(FunctionSamples::getCanonicalFnName(Callee->getName()))];
         OutlineFS->merge(*FS, 1);
         // Set outlined profile to be synthetic to not bias the inliner.
-        OutlineFS->SetContextSynthetic();
+        OutlineFS->setContextSynthetic();
       }
     } else {
       auto pair =
@@ -1595,7 +1586,7 @@ void SampleProfileLoader::promoteMergeNotInlinedContextSamples(
 static SmallVector<InstrProfValueData, 2>
 GetSortedValueDataFromCallTargets(const SampleRecord::CallTargetMap &M) {
   SmallVector<InstrProfValueData, 2> R;
-  for (const auto &I : SampleRecord::SortCallTargets(M)) {
+  for (const auto &I : SampleRecord::sortCallTargets(M)) {
     R.emplace_back(
         InstrProfValueData{I.first.getHashCode(), I.second});
   }
@@ -1659,7 +1650,8 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           else if (OverwriteExistingWeights)
             I.setMetadata(LLVMContext::MD_prof, nullptr);
         } else if (!isa<IntrinsicInst>(&I)) {
-          setBranchWeights(I, {static_cast<uint32_t>(BlockWeights[BB])});
+          setBranchWeights(I, {static_cast<uint32_t>(BlockWeights[BB])},
+                           /*IsExpected=*/false);
         }
       }
     } else if (OverwriteExistingWeights || ProfileSampleBlockAccurate) {
@@ -1670,7 +1662,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           if (cast<CallBase>(I).isIndirectCall()) {
             I.setMetadata(LLVMContext::MD_prof, nullptr);
           } else {
-            setBranchWeights(I, {uint32_t(0)});
+            setBranchWeights(I, {uint32_t(0)}, /*IsExpected=*/false);
           }
         }
       }
@@ -1713,13 +1705,15 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
       // if needed. Sample counts in profiles are 64-bit unsigned values,
       // but internally branch weights are expressed as 32-bit values.
       if (Weight > std::numeric_limits<uint32_t>::max()) {
-        LLVM_DEBUG(dbgs() << " (saturated due to uint32_t overflow)");
+        LLVM_DEBUG(dbgs() << " (saturated due to uint32_t overflow)\n");
         Weight = std::numeric_limits<uint32_t>::max();
       }
       if (!SampleProfileUseProfi) {
         // Weight is added by one to avoid propagation errors introduced by
         // 0 weights.
-        Weights.push_back(static_cast<uint32_t>(Weight + 1));
+        Weights.push_back(static_cast<uint32_t>(
+            Weight == std::numeric_limits<uint32_t>::max() ? Weight
+                                                           : Weight + 1));
       } else {
         // Profi creates proper weights that do not require "+1" adjustments but
         // we evenly split the weight among branches with the same destination.
@@ -1751,7 +1745,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
     if (MaxWeight > 0 &&
         (!TI->extractProfTotalWeight(TempWeight) || OverwriteExistingWeights)) {
       LLVM_DEBUG(dbgs() << "SUCCESS. Found non-zero weights.\n");
-      setBranchWeights(*TI, Weights);
+      setBranchWeights(*TI, Weights, /*IsExpected=*/false);
       ORE->emit([&]() {
         return OptimizationRemark(DEBUG_TYPE, "PopularDest", MaxDestInst)
                << "most popular destination for conditional branches at "
@@ -2127,6 +2121,20 @@ bool SampleProfileLoader::rejectHighStalenessProfile(
   return false;
 }
 
+void SampleProfileLoader::removePseudoProbeInsts(Module &M) {
+  for (auto &F : M) {
+    std::vector<Instruction *> InstsToDel;
+    for (auto &BB : F) {
+      for (auto &I : BB) {
+        if (isa<PseudoProbeInst>(&I))
+          InstsToDel.push_back(&I);
+      }
+    }
+    for (auto *I : InstsToDel)
+      I->eraseFromParent();
+  }
+}
+
 bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
                                       ProfileSummaryInfo *_PSI,
                                       LazyCallGraph &CG) {
@@ -2195,6 +2203,9 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
     for (const std::pair<Function *, NotInlinedProfileInfo> &pair :
          notInlinedCallInfo)
       updateProfileCallee(pair.first, pair.second.entryCount);
+
+  if (RemoveProbeAfterProfileAnnotation && FunctionSamples::ProfileIsProbeBased)
+    removePseudoProbeInsts(M);
 
   return retval;
 }
