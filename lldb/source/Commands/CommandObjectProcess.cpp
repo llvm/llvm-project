@@ -1271,7 +1271,7 @@ public:
 
       switch (short_option) {
       case 'p':
-        m_core_dump_options.SetPluginName(option_arg.data());
+        error = m_core_dump_options.SetPluginName(option_arg.data());
         break;
       case 's':
         m_core_dump_options.SetStyle(

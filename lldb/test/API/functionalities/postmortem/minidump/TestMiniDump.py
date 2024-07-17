@@ -130,7 +130,6 @@ class MiniDumpTestCase(TestBase):
             process = target.LaunchSimple(
                 None, None, self.get_process_working_directory()
             )
-
             self.assertState(process.GetState(), lldb.eStateStopped)
             self.assertTrue(process.SaveCore(core))
             self.assertTrue(os.path.isfile(core))
