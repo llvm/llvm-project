@@ -421,6 +421,38 @@ public:
   }
 };
 
+template <class ArithOp, class EmitCOp>
+class BinaryUIOpConversion final : public OpConversionPattern<ArithOp> {
+public:
+  using OpConversionPattern<ArithOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(ArithOp uiBinOp, typename ArithOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type newRetTy = this->getTypeConverter()->convertType(uiBinOp.getType());
+    if (!newRetTy)
+      return rewriter.notifyMatchFailure(uiBinOp,
+                                         "converting result type failed");
+    if (!isa<IntegerType>(newRetTy)) {
+      return rewriter.notifyMatchFailure(uiBinOp, "expected integer type");
+    }
+    Type unsignedType =
+        adaptIntegralTypeSignedness(newRetTy, /*needsUnsigned=*/true);
+    if (!unsignedType)
+      return rewriter.notifyMatchFailure(uiBinOp,
+                                         "converting result type failed");
+    Value lhsAdapted = adaptValueType(uiBinOp.getLhs(), rewriter, unsignedType);
+    Value rhsAdapted = adaptValueType(uiBinOp.getRhs(), rewriter, unsignedType);
+
+    auto newDivOp =
+        rewriter.create<EmitCOp>(uiBinOp.getLoc(), unsignedType,
+                                 ArrayRef<Value>{lhsAdapted, rhsAdapted});
+    Value resultAdapted = adaptValueType(newDivOp, rewriter, newRetTy);
+    rewriter.replaceOp(uiBinOp, resultAdapted);
+    return success();
+  }
+};
+
 template <typename ArithOp, typename EmitCOp>
 class IntegerOpConversion final : public OpConversionPattern<ArithOp> {
 public:
@@ -722,6 +754,8 @@ void mlir::populateArithToEmitCPatterns(TypeConverter &typeConverter,
     ArithOpConversion<arith::MulFOp, emitc::MulOp>,
     ArithOpConversion<arith::RemSIOp, emitc::RemOp>,
     ArithOpConversion<arith::SubFOp, emitc::SubOp>,
+    BinaryUIOpConversion<arith::DivUIOp, emitc::DivOp>,
+    BinaryUIOpConversion<arith::RemUIOp, emitc::RemOp>,
     IntegerOpConversion<arith::AddIOp, emitc::AddOp>,
     IntegerOpConversion<arith::MulIOp, emitc::MulOp>,
     IntegerOpConversion<arith::SubIOp, emitc::SubOp>,
