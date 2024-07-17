@@ -1003,6 +1003,106 @@ static bool canSimplifyNullLoadOrGEP(LoadInst &LI, Value *Op) {
   return false;
 }
 
+static Value *foldLoadFromIndexedGlobal(LoadInst &LI, IRBuilderBase &Builder,
+                                        TargetLibraryInfo &TLI) {
+  if (LI.isVolatile())
+    return nullptr;
+
+  auto *GEP = dyn_cast<GetElementPtrInst>(LI.getPointerOperand());
+  if (!GEP)
+    return nullptr;
+
+  auto *GV = dyn_cast<GlobalVariable>(GEP->getPointerOperand());
+  if (!GV || !GV->isConstant() || !GV->hasDefinitiveInitializer())
+    return nullptr;
+
+  Constant *Init = GV->getInitializer();
+  auto &DL = LI.getDataLayout();
+
+  uint64_t IndexBW = DL.getIndexTypeSizeInBits(GEP->getType());
+  APInt ConstOffset(IndexBW, 0);
+  MapVector<Value *, APInt> VariableOffsets;
+  if (!GEP->collectOffset(DL, IndexBW, VariableOffsets, ConstOffset))
+    return nullptr;
+
+  if (!ConstOffset.isZero() || VariableOffsets.size() != 1)
+    return nullptr;
+
+  auto &Step = VariableOffsets.front().second;
+  if (Step.isNonPositive())
+    return nullptr;
+  uint64_t ArraySize = DL.getTypeAllocSize(Init->getType()).getFixedValue();
+  // Don't blow up on huge arrays.
+  // This threshold is chosen based on statistics on a dataset
+  // which is collected from real-world applications.
+  constexpr uint64_t MaxArraySize = 16;
+  if (ArraySize > MaxArraySize * Step.getZExtValue())
+    return nullptr;
+
+  Value *Index = VariableOffsets.front().first;
+  if (Index->getType()->getScalarSizeInBits() != IndexBW)
+    return nullptr;
+
+  Type *LoadTy = LI.getType();
+  SmallMapVector<Constant *, uint64_t, 2> ValueMap;
+  // MultiMapIdx indicates that this value occurs more than once in the array.
+  constexpr uint64_t MultiMapIdx = static_cast<uint64_t>(-1);
+  uint32_t MultiMapElts = 0;
+  APInt Offset(IndexBW, 0);
+  for (uint64_t I = 0; Offset.getZExtValue() < ArraySize; ++I, Offset += Step) {
+    Constant *Elt = ConstantFoldLoadFromConst(Init, LoadTy, Offset, DL);
+
+    if (!Elt)
+      return nullptr;
+
+    // bail out if the array contains undef values
+    if (isa<UndefValue>(Elt))
+      return nullptr;
+
+    if (auto It = ValueMap.find(Elt); It != ValueMap.end()) {
+      if (It->second == MultiMapIdx)
+        continue;
+      if (++MultiMapElts == 2)
+        return nullptr;
+      It->second = MultiMapIdx;
+    } else {
+      if (ValueMap.size() == 2)
+        return nullptr;
+      ValueMap.insert(std::make_pair(Elt, I));
+    }
+  }
+
+  // Handle load from uniform arrays.
+  if (ValueMap.size() == 1)
+    return ValueMap.begin()->first;
+
+  // Now we have two unique values in the array. And at least one value
+  // only occurs in Array[Index].
+  assert(ValueMap.size() == 2);
+
+  auto [C1, I1] = *ValueMap.begin();
+  auto [C2, I2] = *ValueMap.rbegin();
+  assert((I1 != MultiMapIdx || I2 != MultiMapIdx) &&
+         "Should have a one to one mapping");
+  Value *TrueArm;
+  Value *FalseArm;
+  uint64_t C;
+  if (I1 != MultiMapIdx) {
+    TrueArm = C1;
+    FalseArm = C2;
+    C = I1;
+  } else {
+    TrueArm = C2;
+    FalseArm = C1;
+    C = I2;
+  }
+
+  return Builder.CreateSelect(
+      Builder.CreateICmp(ICmpInst::ICMP_EQ, Index,
+                         ConstantInt::get(Index->getType(), C)),
+      TrueArm, FalseArm);
+}
+
 Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
   Value *Op = LI.getOperand(0);
   if (Value *Res = simplifyLoadInst(&LI, Op, SQ.getWithInstruction(&LI)))
@@ -1052,6 +1152,10 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
     CreateNonTerminatorUnreachable(&LI);
     return replaceInstUsesWith(LI, PoisonValue::get(LI.getType()));
   }
+
+  // Convert load from a constant lookup table into select
+  if (auto *V = foldLoadFromIndexedGlobal(LI, Builder, TLI))
+    return replaceInstUsesWith(LI, V);
 
   if (Op->hasOneUse()) {
     // Change select and PHI nodes to select values instead of addresses: this
