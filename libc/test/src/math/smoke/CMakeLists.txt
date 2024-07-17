@@ -3971,3 +3971,13 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.cbrtf
 )
+
+add_fp_unittest(
+  cbrt_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    cbrt_test.cpp
+  DEPENDS
+    libc.src.math.cbrt
+)
