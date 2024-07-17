@@ -175,8 +175,6 @@ X86_FEATURE_COMPAT(AVX512BF16,      "avx512bf16",            34)
 X86_FEATURE_COMPAT(AVX512VP2INTERSECT, "avx512vp2intersect", 35)
 // Below Features has some missings comparing to gcc, it's because gcc has some
 // not one-to-one mapped in llvm.
-X86_FEATURE_COMPAT(3DNOW,           "3dnow",                  0)
-X86_FEATURE       (3DNOWA,          "3dnowa")
 X86_FEATURE_COMPAT(ADX,             "adx",                    0)
 X86_FEATURE       (64BIT,           "64bit")
 X86_FEATURE_COMPAT(CLDEMOTE,        "cldemote",               0)
