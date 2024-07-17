@@ -11,13 +11,12 @@
 
 #include "hdr/types/FILE.h"
 #include "hdr/types/cookie_io_functions_t.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 ::FILE *fopencookie(void *cookie, const char *__restrict mode,
                     cookie_io_functions_t desc);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_FOPENCOOKIE_H

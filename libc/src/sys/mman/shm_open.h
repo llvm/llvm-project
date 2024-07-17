@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_SYS_MMAN_SHM_OPEN_H
 #define LLVM_LIBC_SRC_SYS_MMAN_SHM_OPEN_H
 
-#include "src/__support/macros/config.h"
 #include <llvm-libc-types/mode_t.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int shm_open(const char *name, int oflag, mode_t mode);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SYS_MMAN_SHM_OPEN_H

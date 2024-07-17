@@ -16,9 +16,8 @@
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
 #include "src/__support/integer_literals.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 namespace generic {
 
@@ -226,6 +225,6 @@ LIBC_INLINE constexpr Float128 SIN_K_PI_OVER_128_F128[65] = {
 
 } // namespace generic
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_RANGE_REDUCTION_DOUBLE_COMMON_H

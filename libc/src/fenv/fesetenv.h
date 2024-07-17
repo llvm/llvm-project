@@ -10,12 +10,11 @@
 #define LLVM_LIBC_SRC_FENV_FESETENV_H
 
 #include "hdr/types/fenv_t.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int fesetenv(const fenv_t *);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_FENV_FESETENV_H

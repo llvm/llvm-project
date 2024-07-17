@@ -9,11 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_CLOCK_CONVERSION_H
 #define LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_CLOCK_CONVERSION_H
 
-#include "src/__support/macros/config.h"
 #include "src/__support/time/linux/clock_gettime.h"
 #include "src/__support/time/units.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 namespace internal {
 
 LIBC_INLINE timespec convert_clock(timespec input, clockid_t from,
@@ -38,6 +37,6 @@ LIBC_INLINE timespec convert_clock(timespec input, clockid_t from,
 }
 
 } // namespace internal
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_TIME_LINUX_CLOCK_CONVERSION_H
