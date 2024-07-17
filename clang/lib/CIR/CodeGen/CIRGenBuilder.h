@@ -758,13 +758,6 @@ public:
     return create<mlir::cir::GetMemberOp>(loc, result, base, name, index);
   }
 
-  mlir::Value createComplexCreate(mlir::Location loc, mlir::Value real,
-                                  mlir::Value imag) {
-    auto resultComplexTy =
-        mlir::cir::ComplexType::get(getContext(), real.getType());
-    return create<mlir::cir::ComplexCreateOp>(loc, resultComplexTy, real, imag);
-  }
-
   /// Create a cir.complex.real_ptr operation that derives a pointer to the real
   /// part of the complex value pointed to by the specified pointer value.
   mlir::Value createRealPtr(mlir::Location loc, mlir::Value value) {

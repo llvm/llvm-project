@@ -564,6 +564,26 @@ LogicalResult ComplexCreateOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexRealOp and ComplexImagOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ComplexRealOp::verify() {
+  if (getType() != getOperand().getType().getElementTy()) {
+    emitOpError() << "cir.complex.real result type does not match operand type";
+    return failure();
+  }
+  return success();
+}
+
+LogicalResult ComplexImagOp::verify() {
+  if (getType() != getOperand().getType().getElementTy()) {
+    emitOpError() << "cir.complex.imag result type does not match operand type";
+    return failure();
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ComplexRealPtrOp and ComplexImagPtrOp
 //===----------------------------------------------------------------------===//
 
@@ -3305,6 +3325,12 @@ LogicalResult BinOp::verify() {
   if (noWrap && !noWrapOps)
     return emitError() << "The nsw/nuw flags are applicable to opcodes: 'add', "
                           "'sub' and 'mul'";
+
+  bool complexOps = getKind() == mlir::cir::BinOpKind::Add ||
+                    getKind() == mlir::cir::BinOpKind::Sub;
+  if (isa<mlir::cir::ComplexType>(getType()) && !complexOps)
+    return emitError()
+           << "cir.binop can only represent 'add' and 'sub' on complex numbers";
 
   return mlir::success();
 }

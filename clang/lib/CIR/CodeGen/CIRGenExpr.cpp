@@ -2512,8 +2512,10 @@ LValue CIRGenFunction::buildLValue(const Expr *E) {
     QualType Ty = E->getType();
     if (const AtomicType *AT = Ty->getAs<AtomicType>())
       assert(0 && "not yet implemented");
-    assert(!Ty->isAnyComplexType() && "complex types not implemented");
-    return buildCompoundAssignmentLValue(cast<CompoundAssignOperator>(E));
+    if (!Ty->isAnyComplexType())
+      return buildCompoundAssignmentLValue(cast<CompoundAssignOperator>(E));
+    return buildComplexCompoundAssignmentLValue(
+        cast<CompoundAssignOperator>(E));
   }
   case Expr::CallExprClass:
   case Expr::CXXMemberCallExprClass:

@@ -1211,11 +1211,63 @@ def ComplexCreateOp : CIR_Op<"complex.create", [Pure, SameTypeOperands]> {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexRealOp and ComplexImagOp
+//===----------------------------------------------------------------------===//
+
+def ComplexRealOp : CIR_Op<"complex.real", [Pure]> {
+  let summary = "Extract the real part of a complex value";
+  let description = [{
+    `cir.complex.real` operation takes an operand of `!cir.complex` type and
+    yields the real part of it.
+
+    Example:
+
+    ```mlir
+    %1 = cir.complex.real %0 : !cir.complex<!cir.float> -> !cir.float
+    ```
+  }];
+
+  let results = (outs CIR_AnyIntOrFloat:$result);
+  let arguments = (ins CIR_ComplexType:$operand);
+
+  let assemblyFormat = [{
+    $operand `:` qualified(type($operand)) `->` qualified(type($result))
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+def ComplexImagOp : CIR_Op<"complex.imag", [Pure]> {
+  let summary = "Extract the imaginary part of a complex value";
+  let description = [{
+    `cir.complex.imag` operation takes an operand of `!cir.complex` type and
+    yields the imaginary part of it.
+
+    Example:
+
+    ```mlir
+    %1 = cir.complex.imag %0 : !cir.complex<!cir.float> -> !cir.float
+    ```
+  }];
+
+  let results = (outs CIR_AnyIntOrFloat:$result);
+  let arguments = (ins CIR_ComplexType:$operand);
+
+  let assemblyFormat = [{
+    $operand `:` qualified(type($operand)) `->` qualified(type($result))
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // ComplexRealPtrOp and ComplexImagPtrOp
 //===----------------------------------------------------------------------===//
 
 def ComplexRealPtrOp : CIR_Op<"complex.real_ptr", [Pure]> {
-  let summary = "Extract the real part of a complex value";
+  let summary = "Derive a pointer to the real part of a complex value";
   let description = [{
     `cir.complex.real_ptr` operation takes a pointer operand that points to a
     complex value of type `!cir.complex` and yields a pointer to the real part
@@ -1240,7 +1292,7 @@ def ComplexRealPtrOp : CIR_Op<"complex.real_ptr", [Pure]> {
 }
 
 def ComplexImagPtrOp : CIR_Op<"complex.imag_ptr", [Pure]> {
-  let summary = "Extract the imaginary part of a complex value";
+  let summary = "Derive a pointer to the imaginary part of a complex value";
   let description = [{
     `cir.complex.imag_ptr` operation takes a pointer operand that points to a
     complex value of type `!cir.complex` and yields a pointer to the imaginary
@@ -1262,6 +1314,68 @@ def ComplexImagPtrOp : CIR_Op<"complex.imag_ptr", [Pure]> {
   }];
 
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexBinOp
+//===----------------------------------------------------------------------===//
+
+def ComplexBinOpKind : I32EnumAttr<
+    "ComplexBinOpKind",
+    "complex number binary operation kind",
+    [BinOpKind_Mul, BinOpKind_Div]> {
+  let cppNamespace = "::mlir::cir";
+}
+
+def ComplexRangeKind_Full : I32EnumAttrCase<"Full", 1, "full">;
+def ComplexRangeKind_Improved : I32EnumAttrCase<"Improved", 2, "improved">;
+def ComplexRangeKind_Promoted : I32EnumAttrCase<"Promoted", 3, "promoted">;
+def ComplexRangeKind_Basic : I32EnumAttrCase<"Basic", 4, "basic">;
+def ComplexRangeKind_None : I32EnumAttrCase<"None", 5, "none">;
+
+def ComplexRangeKind : I32EnumAttr<
+    "ComplexRangeKind",
+    "complex multiplication and division implementation",
+    [ComplexRangeKind_Full, ComplexRangeKind_Improved,
+     ComplexRangeKind_Promoted, ComplexRangeKind_Basic,
+     ComplexRangeKind_None]> {
+  let cppNamespace = "::mlir::cir";
+}
+
+def ComplexBinOp : CIR_Op<"complex.binop",
+    [Pure, SameTypeOperands, SameOperandsAndResultType]> {
+  let summary = "Binary operations on operands of complex type";
+  let description = [{
+    The `cir.complex.binop` operation represents a binary operation on operands
+    of C complex type (e.g. `float _Complex`). The operation can only represent
+    binary multiplication or division on complex numbers; other binary
+    operations, such as addition and subtraction, are represented by the
+    `cir.binop` operation.
+
+    The operation requires two input operands and has one result. The types of
+    all the operands and the result should be of the same `!cir.complex` type.
+
+    The operation also takes a `range` attribute that specifies the complex
+    range of the binary operation.
+
+    Examples:
+
+    ```mlir
+    %2 = cir.complex.binop add %0, %1 : !cir.complex<!cir.float>
+    %2 = cir.complex.binop mul %0, %1 : !cir.complex<!cir.float>
+    ```
+  }];
+
+  let results = (outs CIR_ComplexType:$result);
+  let arguments = (ins Arg<ComplexBinOpKind, "operation kind">:$kind,
+                       CIR_ComplexType:$lhs, CIR_ComplexType:$rhs,
+                       Arg<ComplexRangeKind, "complex range kind">:$range,
+                       UnitAttr:$promoted);
+
+  let assemblyFormat = [{
+    $kind $lhs `,` $rhs `range` `(` $range `)` (`promoted` $promoted^)?
+    `:` qualified(type($lhs)) attr-dict
+  }];
 }
 
 //===----------------------------------------------------------------------===//

@@ -61,9 +61,9 @@ public:
   }
 
   /// Return the real/imag components of this complex value.
-  std::pair<mlir::Value, mlir::Value> getComplexVal() const {
-    assert(0 && "not implemented");
-    return {};
+  mlir::Value getComplexVal() const {
+    assert(isComplex() && "Not a complex!");
+    return V1.getPointer();
   }
 
   /// Return the mlir::Value of the address of the aggregate.

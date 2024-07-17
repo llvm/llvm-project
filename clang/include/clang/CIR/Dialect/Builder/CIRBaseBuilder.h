@@ -145,6 +145,15 @@ public:
     return create<mlir::cir::CmpOp>(loc, getBoolTy(), kind, lhs, rhs);
   }
 
+  mlir::Value createIsNaN(mlir::Location loc, mlir::Value operand) {
+    return createCompare(loc, mlir::cir::CmpOpKind::ne, operand, operand);
+  }
+
+  mlir::Value createUnaryOp(mlir::Location loc, mlir::cir::UnaryOpKind kind,
+                            mlir::Value operand) {
+    return create<mlir::cir::UnaryOp>(loc, kind, operand);
+  }
+
   mlir::Value createBinop(mlir::Value lhs, mlir::cir::BinOpKind kind,
                           const llvm::APInt &rhs) {
     return create<mlir::cir::BinOp>(
@@ -156,6 +165,11 @@ public:
                           mlir::Value rhs) {
     return create<mlir::cir::BinOp>(lhs.getLoc(), lhs.getType(), kind, lhs,
                                     rhs);
+  }
+
+  mlir::Value createBinop(mlir::Location loc, mlir::Value lhs,
+                          mlir::cir::BinOpKind kind, mlir::Value rhs) {
+    return create<mlir::cir::BinOp>(loc, lhs.getType(), kind, lhs, rhs);
   }
 
   mlir::Value createShift(mlir::Value lhs, const llvm::APInt &rhs,
@@ -195,6 +209,10 @@ public:
     return createBinop(lhs, mlir::cir::BinOpKind::And, rhs);
   }
 
+  mlir::Value createAnd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
+    return createBinop(loc, lhs, mlir::cir::BinOpKind::And, rhs);
+  }
+
   mlir::Value createOr(mlir::Value lhs, llvm::APInt rhs) {
     auto val = getConstAPInt(lhs.getLoc(), lhs.getType(), rhs);
     return createBinop(lhs, mlir::cir::BinOpKind::Or, val);
@@ -224,6 +242,60 @@ public:
   mlir::Value createMul(mlir::Value lhs, llvm::APInt rhs) {
     auto val = getConstAPInt(lhs.getLoc(), lhs.getType(), rhs);
     return createBinop(lhs, mlir::cir::BinOpKind::Mul, val);
+  }
+
+  mlir::Value createComplexCreate(mlir::Location loc, mlir::Value real,
+                                  mlir::Value imag) {
+    auto resultComplexTy =
+        mlir::cir::ComplexType::get(getContext(), real.getType());
+    return create<mlir::cir::ComplexCreateOp>(loc, resultComplexTy, real, imag);
+  }
+
+  mlir::Value createComplexReal(mlir::Location loc, mlir::Value operand) {
+    auto operandTy = mlir::cast<mlir::cir::ComplexType>(operand.getType());
+    return create<mlir::cir::ComplexRealOp>(loc, operandTy.getElementTy(),
+                                            operand);
+  }
+
+  mlir::Value createComplexImag(mlir::Location loc, mlir::Value operand) {
+    auto operandTy = mlir::cast<mlir::cir::ComplexType>(operand.getType());
+    return create<mlir::cir::ComplexImagOp>(loc, operandTy.getElementTy(),
+                                            operand);
+  }
+
+  mlir::Value createComplexBinOp(mlir::Location loc, mlir::Value lhs,
+                                 mlir::cir::ComplexBinOpKind kind,
+                                 mlir::Value rhs,
+                                 mlir::cir::ComplexRangeKind range,
+                                 bool promoted) {
+    return create<mlir::cir::ComplexBinOp>(loc, kind, lhs, rhs, range,
+                                           promoted);
+  }
+
+  mlir::Value createComplexAdd(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs) {
+    return createBinop(loc, lhs, mlir::cir::BinOpKind::Add, rhs);
+  }
+
+  mlir::Value createComplexSub(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs) {
+    return createBinop(loc, lhs, mlir::cir::BinOpKind::Sub, rhs);
+  }
+
+  mlir::Value createComplexMul(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs,
+                               mlir::cir::ComplexRangeKind range,
+                               bool promoted) {
+    return createComplexBinOp(loc, lhs, mlir::cir::ComplexBinOpKind::Mul, rhs,
+                              range, promoted);
+  }
+
+  mlir::Value createComplexDiv(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs,
+                               mlir::cir::ComplexRangeKind range,
+                               bool promoted) {
+    return createComplexBinOp(loc, lhs, mlir::cir::ComplexBinOpKind::Div, rhs,
+                              range, promoted);
   }
 
   mlir::cir::StoreOp createStore(mlir::Location loc, mlir::Value val,
