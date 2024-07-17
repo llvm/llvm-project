@@ -79,6 +79,7 @@ Changes to the LLVM IR
   * ``llvm.instprof.mcdc.tvbitmap.update``: 3rd argument has been
     removed. The next argument has been changed from byte index to bit
     index.
+* Added ``llvm.experimental.vector.compress`` intrinsic.
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -218,6 +219,9 @@ Changes to the X86 Backend
 - Removed knl/knm specific ISA intrinsics: AVX512PF, AVX512ER, PREFETCHWT1,
   while assembly encoding/decoding supports are kept.
 
+- Removed ``3DNow!``-specific ISA intrinsics and codegen support. The ``3dnow`` and ``3dnowa`` target features are no longer supported. The intrinsics ``llvm.x86.3dnow.*``, ``llvm.x86.3dnowa.*``, and ``llvm.x86.mmx.femms`` have been removed. Assembly encoding/decoding for the corresponding instructions remains supported.
+
+
 Changes to the OCaml bindings
 -----------------------------
 
@@ -316,6 +320,14 @@ They are described in detail in the `debug info migration guide <https://llvm.or
   * ``LLVMConstGEPWithNoWrapFlags``
   * ``LLVMGEPGetNoWrapFlags``
   * ``LLVMGEPSetNoWrapFlags``
+
+* Added the following functions for creating and accessing data for ConstantPtrAuth constants:
+
+  * ``LLVMConstantPtrAuth``
+  * ``LLVMGetConstantPtrAuthPointer``
+  * ``LLVMGetConstantPtrAuthKey``
+  * ``LLVMGetConstantPtrAuthDiscriminator``
+  * ``LLVMGetConstantPtrAuthAddrDiscriminator``
 
 Changes to the CodeGen infrastructure
 -------------------------------------

@@ -382,6 +382,7 @@ def StdC : StandardSpec<"stdc"> {
       ],
       [], // Enumerations
       [
+          FunctionSpec<"cbrt", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"cbrtf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
 
           FunctionSpec<"copysign", RetValSpec<DoubleType>, [ArgSpec<DoubleType>, ArgSpec<DoubleType>]>,
