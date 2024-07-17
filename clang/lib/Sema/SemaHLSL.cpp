@@ -711,26 +711,28 @@ RegisterBindingFlags HLSLFillRegisterBindingFlags(Sema &S, Decl *TheDecl) {
   return Flags;
 }
 
+enum RegisterType { SRV, UAV, CBuffer, Sampler, C, I };
+
 int getRegisterTypeIndex(StringRef Slot) {
   switch (Slot[0]) {
   case 't':
   case 'T':
-    return 0;
+    return RegisterType::SRV;
   case 'u':
   case 'U':
-    return 1;
+    return RegisterType::UAV;
   case 'b':
   case 'B ':
-    return 2;
+    return RegisterType::CBuffer;
   case 's':
   case 'S':
-    return 3;
+    return RegisterType::Sampler;
   case 'c':
   case 'C':
-    return 4;
+    return RegisterType::C;
   case 'i':
   case 'I':
-    return 5;
+    return RegisterType::I;
   default:
     llvm_unreachable("invalid register type");
   }
@@ -816,28 +818,28 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
 
     switch (DeclResourceClass) {
     case llvm::hlsl::ResourceClass::SRV:
-      if (getRegisterTypeIndex(Slot) != 0)
+      if (getRegisterTypeIndex(Slot) != RegisterType::SRV)
         S.Diag(TheDecl->getLocation(),
                diag::err_hlsl_mismatching_register_type_and_resource_type)
             << getHLSLResourceTypeStr(S, TheDecl) << Slot.substr(0, 1)
             << 0 /*srv*/;
       break;
     case llvm::hlsl::ResourceClass::UAV:
-      if (getRegisterTypeIndex(Slot) != 1)
+      if (getRegisterTypeIndex(Slot) != RegisterType::UAV)
         S.Diag(TheDecl->getLocation(),
                diag::err_hlsl_mismatching_register_type_and_resource_type)
             << getHLSLResourceTypeStr(S, TheDecl) << Slot.substr(0, 1)
             << 1 /*uav*/;
       break;
     case llvm::hlsl::ResourceClass::CBuffer:
-      if (getRegisterTypeIndex(Slot) != 2)
+      if (getRegisterTypeIndex(Slot) != RegisterType::CBuffer)
         S.Diag(TheDecl->getLocation(),
                diag::err_hlsl_mismatching_register_type_and_resource_type)
             << getHLSLResourceTypeStr(S, TheDecl) << Slot.substr(0, 1)
             << 2 /*cbv*/;
       break;
     case llvm::hlsl::ResourceClass::Sampler:
-      if (getRegisterTypeIndex(Slot) != 3)
+      if (getRegisterTypeIndex(Slot) != RegisterType::Sampler)
         S.Diag(TheDecl->getLocation(),
                diag::err_hlsl_mismatching_register_type_and_resource_type)
             << getHLSLResourceTypeStr(S, TheDecl) << Slot.substr(0, 1)
@@ -851,23 +853,23 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
   // including the legacy "i" and "b" register types.
   if (Flags.Basic) {
     if (Flags.DefaultGlobals) {
-      if (getRegisterTypeIndex(Slot) == 2)
+      if (getRegisterTypeIndex(Slot) == RegisterType::CBuffer)
         S.Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_b);
-      if (getRegisterTypeIndex(Slot) == 5)
+      if (getRegisterTypeIndex(Slot) == RegisterType::I)
         S.Diag(ArgLoc, diag::warn_hlsl_deprecated_register_type_i);
     }
 
-    if (getRegisterTypeIndex(Slot) == 4) {
+    if (getRegisterTypeIndex(Slot) == RegisterType::C) {
       if (!Flags.DefaultGlobals) {
         S.Diag(ArgLoc, diag::warn_hlsl_register_type_c_not_in_global_scope);
       }
-    } else if (getRegisterTypeIndex(Slot) == 0) {
+    } else if (getRegisterTypeIndex(Slot) == RegisterType::SRV) {
       S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_type_and_variable_type)
           << 0 << getHLSLResourceTypeStr(S, TheDecl);
-    } else if (getRegisterTypeIndex(Slot) == 1) {
+    } else if (getRegisterTypeIndex(Slot) == RegisterType::UAV) {
       S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_type_and_variable_type)
           << 1 << getHLSLResourceTypeStr(S, TheDecl);
-    } else if (getRegisterTypeIndex(Slot) == 3) {
+    } else if (getRegisterTypeIndex(Slot) == RegisterType::Sampler) {
       S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_type_and_variable_type)
           << 3 << getHLSLResourceTypeStr(S, TheDecl);
       // any other register type should emit
@@ -882,7 +884,7 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
   // finally, we handle the udt case
   if (Flags.UDT) {
     switch (getRegisterTypeIndex(Slot)) {
-    case 0: {
+    case RegisterType::SRV: {
       if (!Flags.SRV) {
         S.Diag(TheDecl->getLocation(),
                diag::warn_hlsl_UDT_missing_resource_type_member)
@@ -890,7 +892,7 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
       }
       break;
     }
-    case 1: {
+    case RegisterType::UAV: {
       if (!Flags.UAV) {
         S.Diag(TheDecl->getLocation(),
                diag::warn_hlsl_UDT_missing_resource_type_member)
@@ -898,7 +900,7 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
       }
       break;
     }
-    case 2: {
+    case RegisterType::CBuffer: {
       if (!Flags.CBV) {
         S.Diag(TheDecl->getLocation(),
                diag::warn_hlsl_UDT_missing_resource_type_member)
@@ -906,7 +908,7 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
       }
       break;
     }
-    case 3: {
+    case RegisterType::Sampler: {
       if (!Flags.Sampler) {
         S.Diag(TheDecl->getLocation(),
                diag::warn_hlsl_UDT_missing_resource_type_member)
@@ -914,7 +916,7 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
       }
       break;
     }
-    case 4: {
+    case RegisterType::C: {
       if (!Flags.ContainsNumeric)
         S.Diag(TheDecl->getLocation(), diag::warn_hlsl_UDT_missing_basic_type);
       break;
