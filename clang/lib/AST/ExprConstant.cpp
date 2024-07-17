@@ -12949,13 +12949,21 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
           Info.Ctx.getTargetInfo().getMaxAtomicInlineWidth();
       if (Size <= Info.Ctx.toCharUnitsFromBits(InlineWidthBits)) {
         if (BuiltinOp == Builtin::BI__c11_atomic_is_lock_free ||
-            Size == CharUnits::One() ||
-            E->getArg(1)->isNullPointerConstant(Info.Ctx,
-                                                Expr::NPC_NeverValueDependent))
-          // OK, we will inline appropriately-aligned operations of this size,
-          // and _Atomic(T) is appropriately-aligned.
+            Size == CharUnits::One())
           return Success(1, E);
 
+        // If the pointer argument can be evaluated to a compile-time constant
+        // integer (or nullptr), check if that value is appropriately aligned.
+        const Expr *PtrArg = E->getArg(1);
+        Expr::EvalResult ExprResult;
+        APSInt IntResult;
+        if (PtrArg->EvaluateAsRValue(ExprResult, Info.Ctx) &&
+            ExprResult.Val.toIntegralConstant(IntResult, PtrArg->getType(),
+                                              Info.Ctx) &&
+            IntResult.isAligned(Size.getAsAlign()))
+          return Success(1, E);
+
+        // Otherwise, check if the type's alignment against Size.
         QualType PointeeType = E->getArg(1)->IgnoreImpCasts()->getType()->
           castAs<PointerType>()->getPointeeType();
         if (!PointeeType->isIncompleteType() &&
