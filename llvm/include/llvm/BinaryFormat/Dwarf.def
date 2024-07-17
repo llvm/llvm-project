@@ -11,23 +11,24 @@
 //===----------------------------------------------------------------------===//
 
 // TODO: Add other DW-based macros.
-#if !(                                                                         \
-    defined HANDLE_DW_TAG || defined HANDLE_DW_AT || defined HANDLE_DW_FORM || \
-    defined HANDLE_DW_OP || defined HANDLE_DW_OP_LLVM_USEROP ||                    \
-    defined HANDLE_HETEROGENEOUS_OP ||                                         \
-    defined HANDLE_DW_LANG || defined HANDLE_DW_ATE ||                         \
-    defined HANDLE_DW_VIRTUALITY || defined HANDLE_DW_DEFAULTED ||             \
-    defined HANDLE_DW_CC || defined HANDLE_DW_LNS || defined HANDLE_DW_LNE ||  \
-    defined HANDLE_DW_LNCT || defined HANDLE_DW_MACRO ||                       \
-    defined HANDLE_DW_MACRO_GNU || defined HANDLE_MACRO_FLAG ||                \
-    defined HANDLE_DW_RLE || defined HANDLE_DW_LLE ||                          \
-    (defined HANDLE_DW_CFA && defined HANDLE_DW_CFA_PRED) ||                   \
-    defined HANDLE_DW_APPLE_PROPERTY || defined HANDLE_DW_UT ||                \
-    defined HANDLE_DWARF_SECTION || defined HANDLE_DW_IDX ||                   \
-    defined HANDLE_DW_END || defined HANDLE_DW_SECT ||                         \
-    defined HANDLE_DW_MSPACE || \
-    ( defined HANDLE_DW_ASPACE && defined HANDLE_DW_ASPACE_PRED) )
-//#error "Missing macro definition of HANDLE_DW*"
+#if !(defined HANDLE_DW_TAG || defined HANDLE_DW_AT ||                         \
+      defined HANDLE_DW_FORM || defined HANDLE_DW_OP ||                        \
+      defined HANDLE_DW_OP_LLVM_USEROP || defined HANDLE_DW_LANG ||            \
+      defined HANDLE_DW_LNAME || defined HANDLE_DW_ATE ||                      \
+      defined HANDLE_DW_VIRTUALITY || defined HANDLE_DW_DEFAULTED ||           \
+      defined HANDLE_DW_CC || defined HANDLE_DW_LNS ||                         \
+      defined HANDLE_DW_LNE || defined HANDLE_DW_LNCT ||                       \
+      defined HANDLE_DW_MACRO || defined HANDLE_DW_MACRO_GNU ||                \
+      defined HANDLE_MACRO_FLAG || defined HANDLE_DW_RLE ||                    \
+      defined HANDLE_DW_LLE ||                                                 \
+      (defined HANDLE_DW_CFA && defined HANDLE_DW_CFA_PRED) ||                 \
+      defined HANDLE_DW_APPLE_PROPERTY || defined HANDLE_DW_UT ||              \
+      defined HANDLE_DWARF_SECTION || defined HANDLE_DW_IDX ||                 \
+      defined HANDLE_DW_END || defined HANDLE_DW_SECT ||                       \
+      defined HANDLE_HETEROGENEOUS_OP ||                                       \
+      defined HANDLE_DW_MSPACE ||                                              \
+      ( defined HANDLE_DW_ASPACE && defined HANDLE_DW_ASPACE_PRED) )
+      #error "Missing macro definition of HANDLE_DW*"
 #endif
 
 #ifndef HANDLE_DW_TAG
