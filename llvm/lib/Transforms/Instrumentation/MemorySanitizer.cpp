@@ -3876,9 +3876,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   // Given two shadows AAAA..., BBBB..., return the interleaved value
   // ABABABAB ...
+  //
+  // Width == number of elements in A == number of elements in B
   Value *interleaveAB(IRBuilder<> &IRB, Value *left, Value *right, uint Width) {
     assert(isa<FixedVectorType>(left->getType()));
     assert(isa<FixedVectorType>(right->getType()));
+    assert(cast<FixedVectorType>(left->getType())->getNumElements() == Width);
+    assert(cast<FixedVectorType>(right->getType())->getNumElements() == Width);
 
     SmallVector<Constant *> Idxs;
 
@@ -3892,10 +3896,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   // Given three shadows, which are already interleaved into two shadows
   // ABABABAB and CxCxCxCx (x is undef), return the interleaved value ABCABCABC.
+  //
+  // Note: Width == number of elements in A == number of elements in B
+  //             == number of elements in C
   Value *interleaveABCx(IRBuilder<> &IRB, Value *left, Value *right,
                         uint Width) {
     assert(isa<FixedVectorType>(left->getType()));
     assert(isa<FixedVectorType>(right->getType()));
+    assert(cast<FixedVectorType>(left->getType())->getNumElements() == 2 * Width);
+    assert(cast<FixedVectorType>(right->getType())->getNumElements() == 2 * Width);
 
     SmallVector<Constant *> Idxs;
 
