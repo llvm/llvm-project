@@ -51,6 +51,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/ADT/PackedVector.h"
 
 using namespace llvm;
 
@@ -59,6 +60,20 @@ using namespace llvm;
 namespace {
 
 class AMDGPULowerVGPREncoding : public MachineFunctionPass {
+  static constexpr unsigned OpNum = 4;
+  static constexpr unsigned BitsPerField = 2;
+  static constexpr unsigned NumFields = 8;
+  using ModeType = PackedVector<unsigned, BitsPerField,
+                                std::bitset<BitsPerField * NumFields>>;
+
+  class ModeTy : public ModeType {
+  public:
+    // bitset constructor will set all bits to zero
+    ModeTy() : ModeType(0) {}
+
+    operator int64_t() const { return raw_bits().to_ulong(); }
+  };
+
 public:
   static char ID;
 
@@ -83,7 +98,7 @@ private:
   const SIMachineFunctionInfo *MFI;
 
   /// Current mode bits.
-  unsigned Mode;
+  ModeTy Mode;
 
   /// Number of current hard clause instructions.
   unsigned ClauseLen;
@@ -98,10 +113,10 @@ private:
   MachineBasicBlock::instr_iterator Clause;
 
   /// Insert mode change before \p I. \returns true if mode was changed.
-  bool setMode(unsigned NewMode, MachineBasicBlock::instr_iterator I);
+  bool setMode(ModeTy NewMode, MachineBasicBlock::instr_iterator I);
 
   /// Reset mode to default.
-  void resetMode(MachineBasicBlock::instr_iterator I) { setMode(0, I); }
+  void resetMode(MachineBasicBlock::instr_iterator I) { setMode(ModeTy(), I); }
 
   /// If \p MO is a high VGPR \returns offset MSBs and a corresponding low VGPR.
   /// If \p MO is a low VGPR \returns 0 and that register.
@@ -117,11 +132,15 @@ private:
   /// If provided and an operand from \p Ops is not a VGPR, then \p Ops2
   /// is checked.
   /// \return true if any VGPRs are used in MI.
-  bool computeModeForMSBs(unsigned &NewMode, MachineInstr &MI,
-                          const unsigned Ops[4],
+  bool computeModeForMSBs(ModeTy &NewMode, MachineInstr &MI,
+                          const unsigned Ops[OpNum],
                           const unsigned *Ops2 = nullptr);
 
-  bool lowerIDX(unsigned &NewMode, MachineInstr &MI);
+  /// Abstraction between which index register is used and where the signifying
+  /// bits are stored.
+  inline void updateModeForIDX(ModeTy &Mode, const ModeTy &Mask);
+
+  bool lowerIDX(ModeTy &NewMode, MachineInstr &MI);
 
   /// Check if an instruction \p I is within a clause and returns a suitable
   /// iterator to insert mode change. It may also modify the S_CLAUSE
@@ -130,7 +149,7 @@ private:
   handleClause(MachineBasicBlock::instr_iterator I);
 };
 
-bool AMDGPULowerVGPREncoding::setMode(unsigned NewMode,
+bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
                                       MachineBasicBlock::instr_iterator I) {
   if (NewMode == Mode)
     return false;
@@ -165,17 +184,14 @@ AMDGPULowerVGPREncoding::getLowRegister(const MachineOperand &MO) const {
   return std::pair(Idx >> 8, RC->getRegister(RegNum));
 }
 
-// Abstraction between which index register is used and where the signifying
-// bits are stored.
-static void updateModeForIDX(unsigned &Mode,
-                             const SmallVectorImpl<unsigned> &IdxRegsUsed) {
-  for (unsigned I = 0; I < 4; ++I) {
-    Mode &= ~(3 << (I * 2));
-    Mode |= IdxRegsUsed[I] << (I * 2);
+void AMDGPULowerVGPREncoding::updateModeForIDX(ModeTy &Mode,
+                                               const ModeTy &Mask) {
+  for (unsigned I = 0; I < OpNum; ++I) {
+    Mode[I] = Mask[I];
   }
 }
 
-bool AMDGPULowerVGPREncoding::lowerIDX(unsigned &NewMode, MachineInstr &MI) {
+bool AMDGPULowerVGPREncoding::lowerIDX(ModeTy &NewMode, MachineInstr &MI) {
   unsigned Opc = MI.getOpcode();
   // TODO-GFX13: We can look at the actual operands to determine the index
   // register, but for now IsLoad is enough.
@@ -183,10 +199,12 @@ bool AMDGPULowerVGPREncoding::lowerIDX(unsigned &NewMode, MachineInstr &MI) {
              .getReg() == AMDGPU::IDX1);
   bool IsLoad = Opc == AMDGPU::V_LOAD_IDX;
   // src0, src1, src2, dst
-  SmallVector<unsigned, 4> IdxRegsUsed = {0, 0, 0, 1};
+  ModeTy UsedIdxRegs;
   if (IsLoad)
-    IdxRegsUsed = {1, 0, 0, 0};
-  updateModeForIDX(NewMode, IdxRegsUsed);
+    UsedIdxRegs[0] = 1;
+  else
+    UsedIdxRegs[3] = 1;
+  updateModeForIDX(NewMode, UsedIdxRegs);
 
   // Synthesize the offset VGPR
   int OffsetIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::offset);
@@ -225,13 +243,12 @@ bool AMDGPULowerVGPREncoding::lowerIDX(unsigned &NewMode, MachineInstr &MI) {
   return setMode(NewMode, MIB->getIterator());
 }
 
-bool AMDGPULowerVGPREncoding::computeModeForMSBs(unsigned &Mode,
-                                                 MachineInstr &MI,
-                                                 const unsigned Ops[4],
+bool AMDGPULowerVGPREncoding::computeModeForMSBs(ModeTy &Mode, MachineInstr &MI,
+                                                 const unsigned Ops[OpNum],
                                                  const unsigned *Ops2) {
   bool RegUsed = false;
-  unsigned NewMode = Mode;
-  for (unsigned I = 0; I < 4; ++I) {
+  ModeTy NewMode = Mode;
+  for (unsigned I = 0; I < OpNum; ++I) {
     MachineOperand *Op = TII->getNamedOperand(MI, Ops[I]);
 
     MCRegister Reg;
@@ -275,9 +292,8 @@ bool AMDGPULowerVGPREncoding::computeModeForMSBs(unsigned &Mode,
     // idx select bits.
     RegUsed = true;
 
-    unsigned BitOffset = ST->hasVGPRIndexingRegisters() ? 8 : 0;
-    NewMode &= ~(3 << (I * 2 + BitOffset));
-    NewMode |= MSBits << (I * 2 + BitOffset);
+    unsigned IdxOffset = ST->hasVGPRIndexingRegisters() ? 4 : 0;
+    NewMode[I + IdxOffset] = MSBits;
   }
 
   Mode = NewMode;
@@ -285,7 +301,7 @@ bool AMDGPULowerVGPREncoding::computeModeForMSBs(unsigned &Mode,
 }
 
 bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
-  unsigned NewMode = Mode;
+  ModeTy NewMode = Mode;
   unsigned Opc = MI.getOpcode();
   // TODO-GFX13 Support BUNDLEs with multiple V_LOAD/STORE_IDX instructions
   if (Opc == AMDGPU::V_LOAD_IDX || Opc == AMDGPU::V_STORE_IDX)
@@ -296,7 +312,7 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
     bool VGPRAreUsed = computeModeForMSBs(NewMode, MI, Ops.first, Ops.second);
     if (VGPRAreUsed && ST->hasVGPRIndexingRegisters()) {
       // Idx registers are used, and we should reset them to 0.
-      SmallVector<unsigned, 4> IdxRegsUsed = {0, 0, 0, 0};
+      ModeTy IdxRegsUsed;
       updateModeForIDX(NewMode, IdxRegsUsed);
     }
     return setMode(NewMode, MI.getIterator());
@@ -350,7 +366,7 @@ bool AMDGPULowerVGPREncoding::runOnMachineFunction(MachineFunction &MF) {
 
   bool Changed = false;
   ClauseLen = ClauseRemaining = 0;
-  Mode = 0;
+  Mode.reset();
   for (auto &MBB : MF) {
     for (auto &MI : llvm::make_early_inc_range(MBB.instrs())) {
       if (MI.isMetaInstruction())
@@ -359,7 +375,7 @@ bool AMDGPULowerVGPREncoding::runOnMachineFunction(MachineFunction &MF) {
       if (MI.isTerminator() || MI.isCall()) {
         if (MI.getOpcode() == AMDGPU::S_ENDPGM ||
             MI.getOpcode() == AMDGPU::S_ENDPGM_SAVED)
-          Mode = 0;
+          Mode.reset();
         else
           resetMode(MI.getIterator());
         continue;
