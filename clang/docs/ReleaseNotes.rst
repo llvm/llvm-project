@@ -362,6 +362,12 @@ C23 Feature Support
 - Added the ``FLT_NORM_MAX``, ``DBL_NORM_MAX``, and ``LDBL_NORM_MAX`` to the
   freestanding implementation of ``<float.h>`` that ships with Clang.
 
+- Compiler support for `N2653 char8_t: A type for UTF-8 characters and strings`
+  <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2653.htm>`_: ``u8`` string
+  literals are now of type ``char8_t[N]`` in C23 and expose
+  ``__CLANG_ATOMIC_CHAR8_T_LOCK_FREE``/``__GCC_ATOMIC_CHAR8_T_LOCK_FREE`` to
+  implement the corresponding macro in ``<stdatomic.h>``.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -1042,6 +1048,7 @@ Bug Fixes to C++ Support
 - Fixed failed assertion when resolving context of defaulted comparison method outside of struct. (#GH96043).
 - Clang now diagnoses explicit object parameters in member pointers and other contexts where they should not appear.
   Fixes (#GH85992).
+- Fixed a crash-on-invalid bug involving extraneous template parameter with concept substitution. (#GH73885)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
