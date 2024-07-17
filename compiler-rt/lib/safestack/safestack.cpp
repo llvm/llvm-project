@@ -13,6 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#define SANITIZER_COMMON_NO_REDEFINE_BUILTINS
+
 #include "safestack_platform.h"
 #include "safestack_util.h"
 
@@ -223,6 +225,17 @@ INTERCEPTOR(int, pthread_create, pthread_t *thread,
     pthread_attr_getguardsize(&tmpattr, &guard);
     pthread_attr_destroy(&tmpattr);
   }
+
+#if SANITIZER_SOLARIS
+  // Solaris pthread_attr_init initializes stacksize to 0 (the default), so
+  // hardcode the actual values as documented in pthread_create(3C).
+  if (size == 0)
+#  if defined(_LP64)
+    size = 2 * 1024 * 1024;
+#  else
+    size = 1024 * 1024;
+#  endif
+#endif
 
   SFS_CHECK(size);
   size = RoundUpTo(size, kStackAlign);
