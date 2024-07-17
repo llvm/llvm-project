@@ -71,7 +71,8 @@ public:
       std::apply([&](auto&&... __args) { __s_.reset(static_cast<_SP>(__p_), std::forward<_Args>(__args)...); },
                  std::move(__a_));
     } else {
-      static_assert(is_constructible_v<_Smart, _SP, _Args...>);
+      static_assert(is_constructible_v<_Smart, _SP, _Args...>,
+                    "The smart pointer must be constructible from arguments of types _Smart, _Pointer, _Args...");
       std::apply([&](auto&&... __args) { __s_ = _Smart(static_cast<_SP>(__p_), std::forward<_Args>(__args)...); },
                  std::move(__a_));
     }
@@ -82,7 +83,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI operator void**() const noexcept
     requires(!is_same_v<_Pointer, void*>)
   {
-    static_assert(is_pointer_v<_Pointer>);
+    static_assert(is_pointer_v<_Pointer>, "The conversion to void** requires _Pointer to be a raw pointer.");
 
     return reinterpret_cast<void**>(static_cast<_Pointer*>(*this));
   }
