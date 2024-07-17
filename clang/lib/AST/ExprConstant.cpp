@@ -980,6 +980,12 @@ namespace {
     /// is set; this is used when evaluating ICEs in C.
     bool CheckingForUndefinedBehavior = false;
 
+    /// Whether we're checking for an expression that causing the unsigned
+    /// integer expression type to overflow and wrap-around back to 0 when
+    /// evaluating an ICE.  If set to true, the ICE evaluation will fail as
+    /// though the expression could not be calculated at compile time
+    bool CheckingForUnsignedIntegerOverflow = false;
+
     enum EvaluationMode {
       /// Evaluate as a constant expression. Stop if we find that the expression
       /// is not a constant expression.
@@ -2791,24 +2797,28 @@ static bool truncateBitfieldValue(EvalInfo &Info, const Expr *E,
 
 /// Perform the given integer operation, which is known to need at most BitWidth
 /// bits, and check for overflow in the original type (if that type was not an
-/// unsigned type).
+/// unsigned type or EvalInfo.CheckingForUnsignedIntegerOverflow is true).
 template<typename Operation>
 static bool CheckedIntArithmetic(EvalInfo &Info, const Expr *E,
                                  const APSInt &LHS, const APSInt &RHS,
                                  unsigned BitWidth, Operation Op,
                                  APSInt &Result) {
-  if (LHS.isUnsigned()) {
+  if (LHS.isUnsigned() && !Info.CheckingForUnsignedIntegerOverflow) {
     Result = Op(LHS, RHS);
     return true;
   }
 
-  APSInt Value(Op(LHS.extend(BitWidth), RHS.extend(BitWidth)), false);
+  APSInt Value(Op(LHS.extend(BitWidth), RHS.extend(BitWidth)),
+               LHS.isUnsigned());
   Result = Value.trunc(LHS.getBitWidth());
   if (Result.extend(BitWidth) != Value) {
+    if (Result.isUnsigned())
+      return false;
     if (Info.checkingForUndefinedBehavior())
       Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                        diag::warn_integer_constant_overflow)
-          << toString(Result, 10, Result.isSigned(), /*formatAsCLiteral=*/false,
+          << toString(Result, 10, Result.isSigned(),
+                      /*formatAsCLiteral=*/false,
                       /*UpperCase=*/true, /*InsertSeparators=*/true)
           << E->getType() << E->getSourceRange();
     return HandleOverflow(Info, E, Value, E->getType());
@@ -16943,17 +16953,16 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
 }
 
 /// Evaluate an expression as a C++11 integral constant expression.
-static bool EvaluateCPlusPlus11IntegralConstantExpr(const ASTContext &Ctx,
-                                                    const Expr *E,
-                                                    llvm::APSInt *Value,
-                                                    SourceLocation *Loc) {
+static bool EvaluateCPlusPlus11IntegralConstantExpr(
+    const ASTContext &Ctx, const Expr *E, llvm::APSInt *Value,
+    SourceLocation *Loc, bool CheckUnsignedOverflow) {
   if (!E->getType()->isIntegralOrUnscopedEnumerationType()) {
     if (Loc) *Loc = E->getExprLoc();
     return false;
   }
 
   APValue Result;
-  if (!E->isCXX11ConstantExpr(Ctx, &Result, Loc))
+  if (!E->isCXX11ConstantExpr(Ctx, &Result, Loc, CheckUnsignedOverflow))
     return false;
 
   if (!Result.isInt()) {
@@ -16973,7 +16982,8 @@ bool Expr::isIntegerConstantExpr(const ASTContext &Ctx,
   ExprTimeTraceScope TimeScope(this, Ctx, "isIntegerConstantExpr");
 
   if (Ctx.getLangOpts().CPlusPlus11)
-    return EvaluateCPlusPlus11IntegralConstantExpr(Ctx, this, nullptr, Loc);
+    return EvaluateCPlusPlus11IntegralConstantExpr(Ctx, this, nullptr, Loc,
+                                                   false);
 
   ICEDiag D = CheckICE(this, Ctx);
   if (D.Kind != IK_ICE) {
@@ -16984,7 +16994,8 @@ bool Expr::isIntegerConstantExpr(const ASTContext &Ctx,
 }
 
 std::optional<llvm::APSInt>
-Expr::getIntegerConstantExpr(const ASTContext &Ctx, SourceLocation *Loc) const {
+Expr::getIntegerConstantExpr(const ASTContext &Ctx, SourceLocation *Loc,
+                             bool CheckUnsignedOverflow) const {
   if (isValueDependent()) {
     // Expression evaluator can't succeed on a dependent expression.
     return std::nullopt;
@@ -16993,7 +17004,8 @@ Expr::getIntegerConstantExpr(const ASTContext &Ctx, SourceLocation *Loc) const {
   APSInt Value;
 
   if (Ctx.getLangOpts().CPlusPlus11) {
-    if (EvaluateCPlusPlus11IntegralConstantExpr(Ctx, this, &Value, Loc))
+    if (EvaluateCPlusPlus11IntegralConstantExpr(Ctx, this, &Value, Loc,
+                                                CheckUnsignedOverflow))
       return Value;
     return std::nullopt;
   }
@@ -17024,7 +17036,8 @@ bool Expr::isCXX98IntegralConstantExpr(const ASTContext &Ctx) const {
 }
 
 bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result,
-                               SourceLocation *Loc) const {
+                               SourceLocation *Loc,
+                               bool CheckUnsignedOverflow) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
 
@@ -17037,6 +17050,7 @@ bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result,
   SmallVector<PartialDiagnosticAt, 8> Diags;
   Status.Diag = &Diags;
   EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantExpression);
+  Info.CheckingForUnsignedIntegerOverflow = CheckUnsignedOverflow;
 
   APValue Scratch;
   bool IsConstExpr =

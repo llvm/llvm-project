@@ -104,6 +104,11 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`bugprone-implicit-widening-of-multiplication-result
+  <clang-tidy/checks/bugprone/implicit-widening-of-multiplication-result>` check
+  by allowing the `IgnoreConstantIntExpr` option to apply to both signed and
+  unsigned integer types.
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing
   member function calls too.
