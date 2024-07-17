@@ -7416,10 +7416,9 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     tryToFixVariablyModifiedVarType(TInfo, R, D.getIdentifierLoc(),
                                     /*DiagID=*/0);
 
-  if (const AutoType *AutoT = R->getAs<AutoType>()) {
-    AutoTypeLoc Loc = TInfo->getTypeLoc().getContainedAutoTypeLoc();
-    CheckConstrainedAuto(AutoT,
-                         Loc ? Loc.getConceptNameLoc() : SourceLocation());
+  if (AutoTypeLoc TL = TInfo->getTypeLoc().getContainedAutoTypeLoc()) {
+    const AutoType *AT = TL.getTypePtr();
+    CheckConstrainedAuto(AT, TL.getConceptNameLoc());
   }
 
   bool IsMemberSpecialization = false;
