@@ -93,11 +93,11 @@ function(create_object_library fq_target_name)
     endif()
   endif()
 
-  if(fq_deps_list)
-    add_dependencies(${fq_target_name} ${fq_deps_list})
-    # Add deps as link libraries to inherit interface compile and link options.
-    target_link_libraries(${fq_target_name} PUBLIC ${fq_deps_list})
-  endif()
+  list(APPEND fq_deps_list libc.src.__support.macros.config)
+  list(REMOVE_DUPLICATES fq_deps_list)
+  add_dependencies(${fq_target_name} ${fq_deps_list})
+  # Add deps as link libraries to inherit interface compile and link options.
+  target_link_libraries(${fq_target_name} PUBLIC ${fq_deps_list})
 
   set_target_properties(
     ${fq_target_name}

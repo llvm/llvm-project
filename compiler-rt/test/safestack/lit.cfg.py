@@ -33,5 +33,5 @@ if config.lto_supported:
         )
     )
 
-if config.host_os not in ["Linux", "FreeBSD", "NetBSD", "SunOS"]:
+if config.host_os not in ["Linux", "FreeBSD", "NetBSD"]:
     config.unsupported = True

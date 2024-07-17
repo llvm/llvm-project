@@ -151,7 +151,7 @@ def HasStdExtZimop : Predicate<"Subtarget->hasStdExtZimop()">,
                                         "'Zimop' (May-Be-Operations)">;
 
 def FeatureStdExtZicfilp
-    : RISCVExperimentalExtension<"zicfilp", 0, 4,
+    : RISCVExperimentalExtension<"zicfilp", 1, 0,
                                  "'Zicfilp' (Landing pad)",
                                  [FeatureStdExtZicsr]>;
 def HasStdExtZicfilp : Predicate<"Subtarget->hasStdExtZicfilp()">,
@@ -161,7 +161,7 @@ def NoStdExtZicfilp : Predicate<"!Subtarget->hasStdExtZicfilp()">,
                       AssemblerPredicate<(all_of (not FeatureStdExtZicfilp))>;
 
 def FeatureStdExtZicfiss
-    : RISCVExperimentalExtension<"zicfiss", 0, 4,
+    : RISCVExperimentalExtension<"zicfiss", 1, 0,
                                  "'Zicfiss' (Shadow stack)",
                                  [FeatureStdExtZicsr, FeatureStdExtZimop]>;
 def HasStdExtZicfiss : Predicate<"Subtarget->hasStdExtZicfiss()">,
@@ -1006,81 +1006,81 @@ def HasVendorXVentanaCondOps : Predicate<"Subtarget->hasVendorXVentanaCondOps()"
 
 def FeatureVendorXTHeadBa
     : RISCVExtension<"xtheadba", 1, 0,
-                     "'xtheadba' (T-Head address calculation instructions)">;
+                     "'XTHeadBa' (T-Head address calculation instructions)">;
 def HasVendorXTHeadBa : Predicate<"Subtarget->hasVendorXTHeadBa()">,
                         AssemblerPredicate<(all_of FeatureVendorXTHeadBa),
-                            "'xtheadba' (T-Head address calculation instructions)">;
+                            "'XTHeadBa' (T-Head address calculation instructions)">;
 
 def FeatureVendorXTHeadBb
     : RISCVExtension<"xtheadbb", 1, 0,
-                     "'xtheadbb' (T-Head basic bit-manipulation instructions)">;
+                     "'XTHeadBb' (T-Head basic bit-manipulation instructions)">;
 def HasVendorXTHeadBb : Predicate<"Subtarget->hasVendorXTHeadBb()">,
                         AssemblerPredicate<(all_of FeatureVendorXTHeadBb),
-                            "'xtheadbb' (T-Head basic bit-manipulation instructions)">;
+                            "'XTHeadBb' (T-Head basic bit-manipulation instructions)">;
 
 def FeatureVendorXTHeadBs
     : RISCVExtension<"xtheadbs", 1, 0,
-                     "'xtheadbs' (T-Head single-bit instructions)">;
+                     "'XTHeadBs' (T-Head single-bit instructions)">;
 def HasVendorXTHeadBs : Predicate<"Subtarget->hasVendorXTHeadBs()">,
                         AssemblerPredicate<(all_of FeatureVendorXTHeadBs),
-                            "'xtheadbs' (T-Head single-bit instructions)">;
+                            "'XTHeadBs' (T-Head single-bit instructions)">;
 
 def FeatureVendorXTHeadCondMov
     : RISCVExtension<"xtheadcondmov", 1, 0,
-                     "'xtheadcondmov' (T-Head conditional move instructions)">;
+                     "'XTHeadCondMov' (T-Head conditional move instructions)">;
 def HasVendorXTHeadCondMov : Predicate<"Subtarget->hasVendorXTHeadCondMov()">,
                              AssemblerPredicate<(all_of FeatureVendorXTHeadCondMov),
-                                 "'xtheadcondmov' (T-Head conditional move instructions)">;
+                                 "'XTHeadCondMov' (T-Head conditional move instructions)">;
 
 def FeatureVendorXTHeadCmo
     : RISCVExtension<"xtheadcmo", 1, 0,
-                     "'xtheadcmo' (T-Head cache management instructions)">;
+                     "'XTHeadCmo' (T-Head cache management instructions)">;
 def HasVendorXTHeadCmo : Predicate<"Subtarget->hasVendorXTHeadCmo()">,
                          AssemblerPredicate<(all_of FeatureVendorXTHeadCmo),
-                             "'xtheadcmo' (T-Head cache management instructions)">;
+                             "'XTHeadCmo' (T-Head cache management instructions)">;
 
 def FeatureVendorXTHeadFMemIdx
     : RISCVExtension<"xtheadfmemidx", 1, 0,
-                     "'xtheadfmemidx' (T-Head FP Indexed Memory Operations)">;
+                     "'XTHeadFMemIdx' (T-Head FP Indexed Memory Operations)">;
 def HasVendorXTHeadFMemIdx : Predicate<"Subtarget->hasVendorXTHeadFMemIdx()">,
                              AssemblerPredicate<(all_of FeatureVendorXTHeadFMemIdx),
-                                 "'xtheadfmemidx' (T-Head FP Indexed Memory Operations)">;
+                                 "'XTHeadFMemIdx' (T-Head FP Indexed Memory Operations)">;
 
 def FeatureVendorXTHeadMac
     : RISCVExtension<"xtheadmac", 1, 0,
-                     "'xtheadmac' (T-Head Multiply-Accumulate Instructions)">;
+                     "'XTHeadMac' (T-Head Multiply-Accumulate Instructions)">;
 def HasVendorXTHeadMac : Predicate<"Subtarget->hasVendorXTHeadMac()">,
                          AssemblerPredicate<(all_of FeatureVendorXTHeadMac),
-                             "'xtheadmac' (T-Head Multiply-Accumulate Instructions)">;
+                             "'XTHeadMac' (T-Head Multiply-Accumulate Instructions)">;
 
 def FeatureVendorXTHeadMemIdx
     : RISCVExtension<"xtheadmemidx", 1, 0,
-                     "'xtheadmemidx' (T-Head Indexed Memory Operations)">;
+                     "'XTHeadMemIdx' (T-Head Indexed Memory Operations)">;
 def HasVendorXTHeadMemIdx : Predicate<"Subtarget->hasVendorXTHeadMemIdx()">,
                             AssemblerPredicate<(all_of FeatureVendorXTHeadMemIdx),
-                                "'xtheadmemidx' (T-Head Indexed Memory Operations)">;
+                                "'XTHeadMemIdx' (T-Head Indexed Memory Operations)">;
 
 def FeatureVendorXTHeadMemPair
     : RISCVExtension<"xtheadmempair", 1, 0,
-                     "'xtheadmempair' (T-Head two-GPR Memory Operations)">;
+                     "'XTHeadMemPair' (T-Head two-GPR Memory Operations)">;
 def HasVendorXTHeadMemPair : Predicate<"Subtarget->hasVendorXTHeadMemPair()">,
                              AssemblerPredicate<(all_of FeatureVendorXTHeadMemPair),
-                                 "'xtheadmempair' (T-Head two-GPR Memory Operations)">;
+                                 "'XTHeadMemPair' (T-Head two-GPR Memory Operations)">;
 
 def FeatureVendorXTHeadSync
     : RISCVExtension<"xtheadsync", 1, 0,
-                     "'xtheadsync' (T-Head multicore synchronization instructions)">;
+                     "'XTHeadSync' (T-Head multicore synchronization instructions)">;
 def HasVendorXTHeadSync : Predicate<"Subtarget->hasVendorXTHeadSync()">,
                           AssemblerPredicate<(all_of FeatureVendorXTHeadSync),
-                              "'xtheadsync' (T-Head multicore synchronization instructions)">;
+                              "'XTHeadSync' (T-Head multicore synchronization instructions)">;
 
 def FeatureVendorXTHeadVdot
     : RISCVExtension<"xtheadvdot", 1, 0,
-                     "'xtheadvdot' (T-Head Vector Extensions for Dot)",
+                     "'XTHeadVdot' (T-Head Vector Extensions for Dot)",
                      [FeatureStdExtV]>;
 def HasVendorXTHeadVdot : Predicate<"Subtarget->hasVendorXTHeadVdot()">,
                           AssemblerPredicate<(all_of FeatureVendorXTHeadVdot),
-                              "'xtheadvdot' (T-Head Vector Extensions for Dot)">;
+                              "'XTHeadVdot' (T-Head Vector Extensions for Dot)">;
 
 // SiFive Extensions
 
