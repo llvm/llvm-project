@@ -14,39 +14,24 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, rand, (void)) {
-  unsigned long orig = rand_next.load(cpp::MemoryOrder::RELAXED);
+// Default random key as used in https://squaresrng.wixsite.com/rand
+static constexpr uint64_t RANDOM_KEY = 0x548c9decbce65297;
 
-  // An implementation of the xorshift64star pseudo random number generator.
-  // This is a good general purpose generator for most non-cryptographics
-  // applications.
-  if constexpr (sizeof(void *) == sizeof(uint64_t)) {
-    for (;;) {
-      unsigned long x = orig;
-      x ^= x >> 12;
-      x ^= x << 25;
-      x ^= x >> 27;
-      if (rand_next.compare_exchange_strong(orig, x, cpp::MemoryOrder::ACQUIRE,
-                                            cpp::MemoryOrder::RELAXED))
-        return static_cast<int>((x * 0x2545F4914F6CDD1Dul) >> 32) & RAND_MAX;
-      sleep_briefly();
-    }
-  } else {
-    // This is the xorshift32 pseudo random number generator, slightly different
-    // from the 64-bit star version above, as the previous version fails to
-    // generate uniform enough LSB in 32-bit systems.
-    for (;;) {
-      unsigned long x = orig;
-      x ^= x >> 13;
-      x ^= x << 27;
-      x ^= x >> 5;
-      if (rand_next.compare_exchange_strong(orig, x, cpp::MemoryOrder::ACQUIRE,
-                                            cpp::MemoryOrder::RELAXED))
-        return static_cast<int>(x * 1597334677ul) & RAND_MAX;
-      sleep_briefly();
-    }
-  }
-  __builtin_unreachable();
+LLVM_LIBC_FUNCTION(int, rand, (void)) {
+  // Based on Squares: A Fast Counter-Based RNG
+  // https://arxiv.org/pdf/2004.06278
+  uint64_t counter = static_cast<uint64_t>(rand_next.fetch_add(1));
+  uint64_t x = counter * RANDOM_KEY, y = counter * RANDOM_KEY;
+  uint64_t z = y + RANDOM_KEY;
+  x = x * x + y;
+  x = (x >> 32) | (x << 32);
+  x = x * x + z;
+  x = (x >> 32) | (x << 32); 
+  x = x * x + y;
+  x = (x >> 32) | (x << 32); 
+  uint64_t result = (x * x + z) >> 32;
+  // project into range
+  return static_cast<int>(((result) % RAND_MAX + RAND_MAX) % RAND_MAX);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
