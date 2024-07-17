@@ -82,11 +82,14 @@ void call_no_default(void) { used_no_default(); }
 // CHECK: declare void @used_no_default()
 
 
-// Test that no ifunc is generated if the default definition is missing,
-// neither a declaration since the versioned function is not used.
+// Test that neither an ifunc nor a declaration is generated if the default
+// definition is missing since the versioned function is not used.
 //
 __attribute__((target_version("aes"))) void not_used_no_default(void) {}
 // CHECK-LABEL: define dso_local void @not_used_no_default._Maes(
+//
+// CHECK-NOT: declare void @not_used_no_default(
+
 
 // Test that an ifunc is generated if the default version is defined but not used.
 //
@@ -95,6 +98,8 @@ __attribute__((target_version("aes"))) void not_used_with_default(void) {}
 //
 __attribute__((target_version("default"))) void not_used_with_default(void) {}
 // CHECK-LABEL: define dso_local void @not_used_with_default.default(
+//
+// CHECK-NOT: declare void @not_used_with_default(
 
 
 // CHECK: define weak_odr ptr @used_before_default_def.resolver()
