@@ -1068,8 +1068,7 @@ struct ReturnOpVectorUnroll final : OpRewritePattern<func::ReturnOp> {
 
       // Create `vector.extract_strided_slice` ops to form legal vectors from
       // the original operand of illegal type.
-      SmallVector<int64_t> originalShape =
-          llvm::to_vector<4>(origVecType.getShape());
+     auto originalShape = llvm::to_vector_of<int64_t, 4>(origVecType.getShape());
       SmallVector<int64_t> strides(targetShape->size(), 1);
       SmallVector<Type> newTypes;
       Value returnValue = returnOp.getOperand(origResultNo);
