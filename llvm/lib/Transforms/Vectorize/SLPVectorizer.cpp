@@ -9642,8 +9642,14 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           CostKind, VI);
       auto [MinMaxID, SelectOnly] = canConvertToMinOrMaxIntrinsic(VI);
       if (MinMaxID != Intrinsic::not_intrinsic) {
-        IntrinsicCostAttributes CostAttrs(MinMaxID, OrigScalarTy,
-                                          {OrigScalarTy, OrigScalarTy});
+        Type *CanonicalType = OrigScalarTy;
+        if (CanonicalType->isPtrOrPtrVectorTy())
+          CanonicalType = CanonicalType->getWithNewType(IntegerType::get(
+              CanonicalType->getContext(),
+              DL->getTypeSizeInBits(CanonicalType->getScalarType())));
+
+        IntrinsicCostAttributes CostAttrs(MinMaxID, CanonicalType,
+                                          {CanonicalType, CanonicalType});
         InstructionCost IntrinsicCost =
             TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
         // If the selects are the only uses of the compares, they will be
@@ -9669,6 +9675,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       //
       auto [MinMaxID, SelectOnly] = canConvertToMinOrMaxIntrinsic(VL);
       if (MinMaxID != Intrinsic::not_intrinsic) {
+        Type *CanonicalType = VecTy;
+        if (CanonicalType->isPtrOrPtrVectorTy())
+          CanonicalType = CanonicalType->getWithNewType(IntegerType::get(
+              CanonicalType->getContext(),
+              DL->getTypeSizeInBits(CanonicalType->getScalarType())));
         IntrinsicCostAttributes CostAttrs(MinMaxID, VecTy, {VecTy, VecTy});
         InstructionCost IntrinsicCost =
             TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
@@ -18274,6 +18285,14 @@ bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
   if (!findBuildAggregate(IVI, TTI, BuildVectorOpds, BuildVectorInsts))
     return false;
 
+  if (MaxVFOnly && BuildVectorOpds.size() == 2) {
+    R.getORE()->emit([&]() {
+      return OptimizationRemarkMissed(SV_NAME, "NotPossible", IVI)
+             << "Cannot SLP vectorize list: only 2 elements of buildvalue, "
+                "trying reduction first.";
+    });
+    return false;
+  }
   LLVM_DEBUG(dbgs() << "SLP: array mappable to vector: " << *IVI << "\n");
   // Aggregate value is unlikely to be processed in vector register.
   return tryToVectorizeList(BuildVectorOpds, R, MaxVFOnly);
@@ -18290,6 +18309,14 @@ bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
        isFixedVectorShuffle(BuildVectorOpds, Mask)))
     return false;
 
+  if (MaxVFOnly && BuildVectorInsts.size() == 2) {
+    R.getORE()->emit([&]() {
+      return OptimizationRemarkMissed(SV_NAME, "NotPossible", IEI)
+             << "Cannot SLP vectorize list: only 2 elements of buildvector, "
+                "trying reduction first.";
+    });
+    return false;
+  }
   LLVM_DEBUG(dbgs() << "SLP: array mappable to vector: " << *IEI << "\n");
   return tryToVectorizeList(BuildVectorInsts, R, MaxVFOnly);
 }
