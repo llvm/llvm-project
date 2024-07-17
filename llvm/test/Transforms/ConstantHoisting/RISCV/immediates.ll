@@ -238,8 +238,8 @@ define void @test21(ptr %p1, ptr %p2) {
 define void @test22(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: define void @test22(
 ; CHECK-SAME: ptr [[P1:%.*]], ptr [[P2:%.*]]) {
-; CHECK-NEXT:    store i128 0, ptr [[P1]], align 8
-; CHECK-NEXT:    store i128 -1, ptr [[P2]], align 8
+; CHECK-NEXT:    store i64 0, ptr [[P1]], align 8
+; CHECK-NEXT:    store i64 -1, ptr [[P2]], align 8
 ; CHECK-NEXT:    ret void
 ;
   store i64 0, ptr %p1, align 8
