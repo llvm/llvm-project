@@ -9,11 +9,12 @@
 #include "src/math/setpayloadf16.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, setpayloadf16, (float16 * res, float16 pl)) {
   return static_cast<int>(fputil::setpayload</*IsSignaling=*/false>(*res, pl));
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
