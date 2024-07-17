@@ -43,6 +43,8 @@ class raw_ostream;
 class LiveIntervals;
 class TargetRegisterClass;
 class TargetRegisterInfo;
+template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
+using MachineFunctionAnalysisManager = AnalysisManager<MachineFunction>;
 
 // This structure uniquely identifies a basic block section.
 // Possible values are
@@ -968,7 +970,16 @@ public:
   /// MachineLoopInfo, as applicable.
   MachineBasicBlock *
   SplitCriticalEdge(MachineBasicBlock *Succ, Pass &P,
-                    std::vector<SparseBitVector<>> *LiveInSets = nullptr);
+                    std::vector<SparseBitVector<>> *LiveInSets = nullptr) {
+    return SplitCriticalEdge(Succ, &P, nullptr, LiveInSets);
+  }
+
+  MachineBasicBlock *
+  SplitCriticalEdge(MachineBasicBlock *Succ,
+                    MachineFunctionAnalysisManager &MFAM,
+                    std::vector<SparseBitVector<>> *LiveInSets = nullptr) {
+    return SplitCriticalEdge(Succ, nullptr, &MFAM, LiveInSets);
+  }
 
   /// Check if the edge between this block and the given successor \p
   /// Succ, can be split. If this returns true a subsequent call to
@@ -1243,6 +1254,12 @@ private:
   /// unless you know what you're doing, because it doesn't update Pred's
   /// successors list. Use Pred->removeSuccessor instead.
   void removePredecessor(MachineBasicBlock *Pred);
+
+  // Helper method for new pass manager migration.
+  MachineBasicBlock *
+  SplitCriticalEdge(MachineBasicBlock *Succ, Pass *P,
+                    MachineFunctionAnalysisManager *MFAM,
+                    std::vector<SparseBitVector<>> *LiveInSets);
 };
 
 raw_ostream& operator<<(raw_ostream &OS, const MachineBasicBlock &MBB);
