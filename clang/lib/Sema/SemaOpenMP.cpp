@@ -14722,8 +14722,10 @@ StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
 
   // Internal variable names.
   std::string OrigVarName = OrigVar->getNameInfo().getAsString();
-  std::string ForwardIVName = ".forward.iv." + OrigVarName;
-  std::string ReversedIVName = ".reversed.iv." + OrigVarName;
+  SmallString<64> ForwardIVName(".forward.iv.");
+  ForwardIVName += OrigVarName;
+  SmallString<64> ReversedIVName(".reversed.iv.");
+  ReversedIVName += OrigVarName;
 
   // LoopHelper.Updates will read the logical iteration number from
   // LoopHelper.IterationVarRef, compute the value of the user loop counter of
