@@ -97,6 +97,7 @@ static_library("AST") {
     "Interp/Context.cpp",
     "Interp/Descriptor.cpp",
     "Interp/Disasm.cpp",
+    "Interp/DynamicAllocator.cpp",
     "Interp/EvalEmitter.cpp",
     "Interp/EvaluationResult.cpp",
     "Interp/Floating.cpp",

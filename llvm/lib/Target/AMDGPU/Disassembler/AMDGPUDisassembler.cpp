@@ -45,10 +45,26 @@ using namespace llvm;
 
 using DecodeStatus = llvm::MCDisassembler::DecodeStatus;
 
+static const MCSubtargetInfo &addDefaultWaveSize(const MCSubtargetInfo &STI,
+                                                 MCContext &Ctx) {
+  if (!STI.hasFeature(AMDGPU::FeatureWavefrontSize64) &&
+      !STI.hasFeature(AMDGPU::FeatureWavefrontSize32)) {
+    MCSubtargetInfo &STICopy = Ctx.getSubtargetCopy(STI);
+    // If there is no default wave size it must be a generation before gfx10,
+    // these have FeatureWavefrontSize64 in their definition already. For gfx10+
+    // set wave32 as a default.
+    STICopy.ToggleFeature(AMDGPU::FeatureWavefrontSize32);
+    return STICopy;
+  }
+
+  return STI;
+}
+
 AMDGPUDisassembler::AMDGPUDisassembler(const MCSubtargetInfo &STI,
                                        MCContext &Ctx, MCInstrInfo const *MCII)
-    : MCDisassembler(STI, Ctx), MCII(MCII), MRI(*Ctx.getRegisterInfo()),
-      MAI(*Ctx.getAsmInfo()), TargetMaxInstBytes(MAI.getMaxInstLength(&STI)),
+    : MCDisassembler(addDefaultWaveSize(STI, Ctx), Ctx), MCII(MCII),
+      MRI(*Ctx.getRegisterInfo()), MAI(*Ctx.getAsmInfo()),
+      TargetMaxInstBytes(MAI.getMaxInstLength(&STI)),
       CodeObjectVersion(AMDGPU::getDefaultAMDHSACodeObjectVersion()) {
   // ToDo: AMDGPUDisassembler supports only VI ISA.
   if (!STI.hasFeature(AMDGPU::FeatureGCN3Encoding) && !isGFX10Plus())
@@ -2366,8 +2382,16 @@ const MCExpr *AMDGPUDisassembler::createConstantSymbolExpr(StringRef Id,
                                                            int64_t Val) {
   MCContext &Ctx = getContext();
   MCSymbol *Sym = Ctx.getOrCreateSymbol(Id);
-  assert(!Sym->isVariable());
-  Sym->setVariableValue(MCConstantExpr::create(Val, Ctx));
+  // Note: only set value to Val on a new symbol in case an dissassembler
+  // has already been initialized in this context.
+  if (!Sym->isVariable()) {
+    Sym->setVariableValue(MCConstantExpr::create(Val, Ctx));
+  } else {
+    int64_t Res = ~Val;
+    bool Valid = Sym->getVariableValue()->evaluateAsAbsolute(Res);
+    if (!Valid || Res != Val)
+      Ctx.reportWarning(SMLoc(), "unsupported redefinition of " + Id);
+  }
   return MCSymbolRefExpr::create(Sym, Ctx);
 }
 

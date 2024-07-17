@@ -46,6 +46,7 @@ Implemented Papers
 - P2872R3 - Remove ``wstring_convert`` From C++26
 - P3142R0 - Printing Blank Lines with ``println`` (as DR against C++23)
 - P2944R3 - Comparisons for ``reference_wrapper`` (comparison operators for ``reference_wrapper`` only)
+- P2968R2 - Make ``std::ignore`` a first-class object
 - P2302R4 - ``std::ranges::contains``
 - P1659R3 - ``std::ranges::starts_with`` and ``std::ranges::ends_with``
 - P3029R1 - Better ``mdspan``'s CTAD
@@ -53,6 +54,7 @@ Implemented Papers
 - P2713R1 - Escaping improvements in ``std::format``
 - P2231R1 - Missing ``constexpr`` in ``std::optional`` and ``std::variant``
 - P0019R8 - ``std::atomic_ref``
+- P2389R2 - Alias template ``dims`` for the ``extents`` of ``mdspan``
 
 Improvements and New Features
 -----------------------------
@@ -74,6 +76,9 @@ Improvements and New Features
 
 - The formatting library is updated to Unicode 15.1.0.
 
+- ``std::ignore``\s ``const __ignore_t& operator=(_Tp&&) const`` was changed to
+  ``const __ignore_type& operator=(const _Tp&) const noexcept`` for all language versions.
+
 Deprecations and Removals
 -------------------------
 
@@ -85,7 +90,7 @@ Deprecations and Removals
   This decision is based on LEWGs discussion on `P3122 <https://wg21.link/P3122>` and `P3162 <https://wg21.link/P3162>`
   to not use ``[[nodiscard]]`` in the standard.
 
-- TODO: The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable that was used to enable the safe mode has been deprecated and setting
+- The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable that was used to enable the safe mode has been deprecated and setting
   it triggers an error; use the ``LIBCXX_HARDENING_MODE`` CMake variable with the value ``extensive`` instead. Similarly,
   the ``_LIBCPP_ENABLE_ASSERTIONS`` macro has been deprecated (setting it to ``1`` still enables the extensive mode in
   the LLVM 19 release while also issuing a deprecation warning). See :ref:`the hardening documentation
@@ -130,6 +135,12 @@ Deprecations and Removals
   `std-allocator-const <https://clang.llvm.org/extra/clang-tidy/checks/portability/std-allocator-const.html>`
   enabled.
 
+- When configuring libc++ with localization or threads disabled, the library no longer emits an error when
+  trying to ``#include <locale>`` and other such headers. Instead, those headers have no content. This is
+  consistent with the behavior for all other libc++ carve-outs like filesystem, wide characters, a source
+  of randomness, and others. Users that were checking whether including a header would fail (e.g. via a script
+  or CMake's ``try_compile`` will experience a change in behavior).
+
 
 Upcoming Deprecations and Removals
 ----------------------------------
@@ -139,6 +150,8 @@ LLVM 20
 
 - The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable and the ``_LIBCPP_ENABLE_ASSERTIONS`` macro that were used to enable
   the safe mode will be removed in LLVM 20.
+
+- The C++20 synchronization library will be removed entirely in language modes prior to C++20 in LLVM 20.
 
 LLVM 21
 ~~~~~~~

@@ -1756,6 +1756,44 @@ const APInt &Constant::getUniqueInteger() const {
   return cast<ConstantInt>(C)->getValue();
 }
 
+ConstantRange Constant::toConstantRange() const {
+  if (auto *CI = dyn_cast<ConstantInt>(this))
+    return ConstantRange(CI->getValue());
+
+  unsigned BitWidth = getType()->getScalarSizeInBits();
+  if (!getType()->isVectorTy())
+    return ConstantRange::getFull(BitWidth);
+
+  if (auto *CI = dyn_cast_or_null<ConstantInt>(
+          getSplatValue(/*AllowPoison=*/true)))
+    return ConstantRange(CI->getValue());
+
+  if (auto *CDV = dyn_cast<ConstantDataVector>(this)) {
+    ConstantRange CR = ConstantRange::getEmpty(BitWidth);
+    for (unsigned I = 0, E = CDV->getNumElements(); I < E; ++I)
+      CR = CR.unionWith(CDV->getElementAsAPInt(I));
+    return CR;
+  }
+
+  if (auto *CV = dyn_cast<ConstantVector>(this)) {
+    ConstantRange CR = ConstantRange::getEmpty(BitWidth);
+    for (unsigned I = 0, E = CV->getNumOperands(); I < E; ++I) {
+      Constant *Elem = CV->getOperand(I);
+      if (!Elem)
+        return ConstantRange::getFull(BitWidth);
+      if (isa<PoisonValue>(Elem))
+        continue;
+      auto *CI = dyn_cast<ConstantInt>(Elem);
+      if (!CI)
+        return ConstantRange::getFull(BitWidth);
+      CR = CR.unionWith(CI->getValue());
+    }
+    return CR;
+  }
+
+  return ConstantRange::getFull(BitWidth);
+}
+
 //---- ConstantPointerNull::get() implementation.
 //
 

@@ -2587,6 +2587,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_fma:
   case Builtin::BI__builtin_fmaf:
   case Builtin::BI__builtin_fmal:
+  case Builtin::BI__builtin_fmaf16:
   case Builtin::BIfma:
   case Builtin::BIfmaf:
   case Builtin::BIfmal: {
@@ -5888,12 +5889,16 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_printf:
   case Builtin::BIprintf:
     if (getTarget().getTriple().isNVPTX() ||
-        getTarget().getTriple().isAMDGCN()) {
+        getTarget().getTriple().isAMDGCN() ||
+        (getTarget().getTriple().isSPIRV() &&
+         getTarget().getTriple().getVendor() == Triple::VendorType::AMD)) {
       if (getLangOpts().OpenMPIsTargetDevice)
         return EmitOpenMPDevicePrintfCallExpr(E);
       if (getTarget().getTriple().isNVPTX())
         return EmitNVPTXDevicePrintfCallExpr(E);
-      if (getTarget().getTriple().isAMDGCN() && getLangOpts().HIP)
+      if ((getTarget().getTriple().isAMDGCN() ||
+           getTarget().getTriple().isSPIRV()) &&
+          getLangOpts().HIP)
         return EmitAMDGPUDevicePrintfCallExpr(E);
     }
 
@@ -11502,6 +11507,15 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, {Address, RW, Locality, Data});
   }
 
+  if (BuiltinID == AArch64::BI__hlt) {
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_hlt);
+    Builder.CreateCall(F, {EmitScalarExpr(E->getArg(0))});
+
+    // Return 0 for convenience, even though MSVC returns some other undefined
+    // value.
+    return ConstantInt::get(Builder.getInt32Ty(), 0);
+  }
+
   // Handle MSVC intrinsics before argument evaluation to prevent double
   // evaluation.
   if (std::optional<MSVCIntrin> MsvcIntId =
@@ -15955,14 +15969,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, {Ops[0]});
   }
 
-  // 3DNow!
-  case X86::BI__builtin_ia32_pswapdsf:
-  case X86::BI__builtin_ia32_pswapdsi: {
-    llvm::Type *MMXTy = llvm::Type::getX86_MMXTy(getLLVMContext());
-    Ops[0] = Builder.CreateBitCast(Ops[0], MMXTy, "cast");
-    llvm::Function *F = CGM.getIntrinsic(Intrinsic::x86_3dnowa_pswapd);
-    return Builder.CreateCall(F, Ops, "pswapd");
-  }
   case X86::BI__builtin_ia32_rdrand16_step:
   case X86::BI__builtin_ia32_rdrand32_step:
   case X86::BI__builtin_ia32_rdrand64_step:
@@ -18375,13 +18381,12 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       llvm_unreachable("rcp operand must have a float representation");
     llvm::Type *Ty = Op0->getType();
     llvm::Type *EltTy = Ty->getScalarType();
-    Constant *One =
-        Ty->isVectorTy()
-            ? ConstantVector::getSplat(
-                  ElementCount::getFixed(
-                      dyn_cast<FixedVectorType>(Ty)->getNumElements()),
-                  ConstantFP::get(EltTy, 1.0))
-            : ConstantFP::get(EltTy, 1.0);
+    Constant *One = Ty->isVectorTy()
+                        ? ConstantVector::getSplat(
+                              ElementCount::getFixed(
+                                  cast<FixedVectorType>(Ty)->getNumElements()),
+                              ConstantFP::get(EltTy, 1.0))
+                        : ConstantFP::get(EltTy, 1.0);
     return Builder.CreateFDiv(One, Op0, "hlsl.rcp");
   }
   case Builtin::BI__builtin_hlsl_elementwise_rsqrt: {
