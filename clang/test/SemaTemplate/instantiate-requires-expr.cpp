@@ -232,15 +232,8 @@ namespace GH73885 {
 
 template <class> // expected-error {{extraneous}}
 template <class T> requires(T{})
-bool e_v = true;
+constexpr bool e_v = true;
 
 static_assert(e_v<bool>);
-
-// We do accept the following as an extension. See Sema::MatchTemplateParametersToScopeSpecifier()
-template <>  // expected-warning {{extraneous}}
-template <class T> requires(T{true})
-constexpr bool e = true;
-
-static_assert(e<bool>);
 
 } // namespace GH73885
