@@ -101,7 +101,7 @@ DWARFExpressionCopyBytesTest::createStreamer(raw_pwrite_stream &OS) {
   Res.Ctx =
       std::make_unique<MCContext>(Triple(TripleName), MAI.get(), MRI.get(),
                                   /*MSTI=*/nullptr);
-  Res.MOFI.reset(TheTarget->createMCObjectFileInfo(*Res.Ctx.get(),
+  Res.MOFI.reset(TheTarget->createMCObjectFileInfo(*Res.Ctx,
                                                    /*PIC=*/false));
   Res.Ctx->setObjectFileInfo(Res.MOFI.get());
 

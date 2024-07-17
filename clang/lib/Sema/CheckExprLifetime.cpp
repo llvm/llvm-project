@@ -39,6 +39,11 @@ enum LifetimeKind {
   /// This is a mem-initializer: if it would extend a temporary (other than via
   /// a default member initializer), the program is ill-formed.
   LK_MemInitializer,
+
+  /// The lifetime of a temporary bound to this entity probably ends too soon,
+  /// because the entity is a pointer and we assign the address of a temporary
+  /// object to it.
+  LK_Assignment,
 };
 using LifetimeResult =
     llvm::PointerIntPair<const InitializedEntity *, 3, LifetimeKind>;
@@ -971,6 +976,8 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
                                   const InitializedEntity *ExtendingEntity,
                                   LifetimeKind LK,
                                   const AssignedEntity *AEntity, Expr *Init) {
+  assert((AEntity && LK == LK_Assignment) ||
+         (InitEntity && LK != LK_Assignment));
   // If this entity doesn't have an interesting lifetime, don't bother looking
   // for temporaries within its initializer.
   if (LK == LK_FullExpression)
@@ -1031,8 +1038,6 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
 
       switch (shouldLifetimeExtendThroughPath(Path)) {
       case PathLifetimeKind::Extend:
-        assert(InitEntity && "Lifetime extension should happen only for "
-                             "initialization and not assignment");
         // Update the storage duration of the materialized temporary.
         // FIXME: Rebuild the expression instead of mutating it.
         MTE->setExtendingDecl(ExtendingEntity->getDecl(),
@@ -1041,8 +1046,6 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
         return true;
 
       case PathLifetimeKind::ShouldExtend:
-        assert(InitEntity && "Lifetime extension should happen only for "
-                             "initialization and not assignment");
         // We're supposed to lifetime-extend the temporary along this path (per
         // the resolution of DR1815), but we don't support that yet.
         //
@@ -1060,23 +1063,27 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
         if (pathContainsInit(Path))
           return false;
 
-        if (InitEntity) {
-          SemaRef.Diag(DiagLoc, diag::warn_dangling_variable)
-              << RK << !InitEntity->getParent()
-              << ExtendingEntity->getDecl()->isImplicit()
-              << ExtendingEntity->getDecl() << Init->isGLValue() << DiagRange;
-        } else {
-          SemaRef.Diag(DiagLoc, diag::warn_dangling_pointer_assignment)
-              << AEntity->LHS << DiagRange;
-        }
+        SemaRef.Diag(DiagLoc, diag::warn_dangling_variable)
+            << RK << !InitEntity->getParent()
+            << ExtendingEntity->getDecl()->isImplicit()
+            << ExtendingEntity->getDecl() << Init->isGLValue() << DiagRange;
         break;
       }
       break;
     }
 
+    case LK_Assignment: {
+      if (!MTE)
+        return false;
+      assert(shouldLifetimeExtendThroughPath(Path) ==
+                 PathLifetimeKind::NoExtend &&
+             "No lifetime extension for assignments");
+      if (!pathContainsInit(Path))
+        SemaRef.Diag(DiagLoc, diag::warn_dangling_pointer_assignment)
+            << AEntity->LHS << DiagRange;
+      return false;
+    }
     case LK_MemInitializer: {
-      assert(InitEntity && "Expect only on initializing the entity");
-
       if (MTE) {
         // Under C++ DR1696, if a mem-initializer (or a default member
         // initializer used by the absence of one) would lifetime-extend a
@@ -1151,7 +1158,6 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
     }
 
     case LK_New:
-      assert(InitEntity && "Expect only on initializing the entity");
       if (isa<MaterializeTemporaryExpr>(L)) {
         if (IsGslPtrInitWithGslTempOwner)
           SemaRef.Diag(DiagLoc, diag::warn_dangling_lifetime_pointer)
@@ -1169,7 +1175,6 @@ static void checkExprLifetimeImpl(Sema &SemaRef,
 
     case LK_Return:
     case LK_StmtExprResult:
-      assert(InitEntity && "Expect only on initializing the entity");
       if (auto *DRE = dyn_cast<DeclRefExpr>(L)) {
         // We can't determine if the local variable outlives the statement
         // expression.
@@ -1284,10 +1289,11 @@ void checkExprLifetime(Sema &SemaRef, const InitializedEntity &Entity,
 
 void checkExprLifetime(Sema &SemaRef, const AssignedEntity &Entity,
                        Expr *Init) {
-  LifetimeKind LK = LK_FullExpression;
-  if (Entity.LHS->getType()->isPointerType()) // builtin pointer type
-    LK = LK_Extended;
-  checkExprLifetimeImpl(SemaRef, nullptr, nullptr, LK, &Entity, Init);
+  if (!Entity.LHS->getType()->isPointerType()) // builtin pointer type
+    return;
+  checkExprLifetimeImpl(SemaRef, /*InitEntity=*/nullptr,
+                        /*ExtendingEntity=*/nullptr, LK_Assignment, &Entity,
+                        Init);
 }
 
 } // namespace clang::sema

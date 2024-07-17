@@ -307,19 +307,19 @@ DWARFDie::getAttributeValueAsReferencedDie(dwarf::Attribute Attr) const {
 
 DWARFDie
 DWARFDie::getAttributeValueAsReferencedDie(const DWARFFormValue &V) const {
-  if (auto SpecRef = V.getAsRelativeReference()) {
-    if (SpecRef->Unit)
-      return SpecRef->Unit->getDIEForOffset(SpecRef->Unit->getOffset() +
-                                            SpecRef->Offset);
-    if (V.getForm() == dwarf::DW_FORM_ref_sig8) {
-      if (DWARFTypeUnit *TU = U->getContext().getTypeUnitForHash(
-              U->getVersion(), SpecRef->Offset, U->isDWOUnit()))
-        return TU->getDIEForOffset(TU->getTypeOffset() + TU->getOffset());
-    }
-    if (auto *SpecUnit = U->getUnitVector().getUnitForOffset(SpecRef->Offset))
-      return SpecUnit->getDIEForOffset(SpecRef->Offset);
+  DWARFDie Result;
+  if (std::optional<uint64_t> Offset = V.getAsRelativeReference()) {
+    Result = const_cast<DWARFUnit *>(V.getUnit())
+                 ->getDIEForOffset(V.getUnit()->getOffset() + *Offset);
+  } else if (Offset = V.getAsDebugInfoReference(); Offset) {
+    if (DWARFUnit *SpecUnit = U->getUnitVector().getUnitForOffset(*Offset))
+      Result = SpecUnit->getDIEForOffset(*Offset);
+  } else if (std::optional<uint64_t> Sig = V.getAsSignatureReference()) {
+    if (DWARFTypeUnit *TU = U->getContext().getTypeUnitForHash(
+            U->getVersion(), *Sig, U->isDWOUnit()))
+      Result = TU->getDIEForOffset(TU->getTypeOffset() + TU->getOffset());
   }
-  return {};
+  return Result;
 }
 
 std::optional<uint64_t> DWARFDie::getRangesBaseAttribute() const {

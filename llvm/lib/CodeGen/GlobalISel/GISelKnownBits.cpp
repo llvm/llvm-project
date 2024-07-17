@@ -859,5 +859,5 @@ GISelKnownBits &GISelKnownBitsAnalysis::get(MachineFunction &MF) {
         MF.getTarget().getOptLevel() == CodeGenOptLevel::None ? 2 : 6;
     Info = std::make_unique<GISelKnownBits>(MF, MaxDepth);
   }
-  return *Info.get();
+  return *Info;
 }

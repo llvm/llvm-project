@@ -631,7 +631,7 @@ public:
 
   /// Get the minimum number of elements in this vector. The actual number of
   /// elements in the vector is an integer multiple of this value.
-  uint64_t getMinNumElements() const { return ElementQuantity; }
+  unsigned getMinNumElements() const { return ElementQuantity; }
 
   static bool classof(const Type *T) {
     return T->getTypeID() == ScalableVectorTyID;

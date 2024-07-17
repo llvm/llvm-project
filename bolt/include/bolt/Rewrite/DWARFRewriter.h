@@ -66,10 +66,6 @@ private:
   /// .debug_aranges DWARF section.
   std::unique_ptr<DebugARangesSectionWriter> ARangesSectionWriter;
 
-  /// Stores and serializes information that will be put into the
-  /// .debug_addr DWARF section.
-  std::unique_ptr<DebugAddrWriter> AddrWriter;
-
   /// Stores and serializes information that will be put in to the
   /// .debug_addr DWARF section.
   /// Does not do de-duplication.
@@ -88,6 +84,14 @@ private:
                          std::unique_ptr<DebugRangeListsSectionWriter>>;
   /// Store Rangelists writer for each DWO CU.
   RangeListsDWOWriers RangeListsWritersByCU;
+
+  /// Stores ranges writer for each DWO CU.
+  std::unordered_map<uint64_t, std::unique_ptr<DebugRangesSectionWriter>>
+      LegacyRangesWritersByCU;
+
+  /// Stores address writer for each CU.
+  std::unordered_map<uint64_t, std::unique_ptr<DebugAddrWriter>>
+      AddressWritersByCU;
 
   std::mutex LocListDebugInfoPatchesMutex;
 
@@ -111,6 +115,7 @@ private:
   void updateUnitDebugInfo(DWARFUnit &Unit, DIEBuilder &DIEBldr,
                            DebugLocWriter &DebugLocWriter,
                            DebugRangesSectionWriter &RangesSectionWriter,
+                           DebugAddrWriter &AddressWriter,
                            std::optional<uint64_t> RangesBase = std::nullopt);
 
   /// Patches the binary for an object's address ranges to be updated.
@@ -137,13 +142,15 @@ private:
   /// Process and write out CUs that are passsed in.
   void finalizeCompileUnits(DIEBuilder &DIEBlder, DIEStreamer &Streamer,
                             CUOffsetMap &CUMap,
-                            const std::list<DWARFUnit *> &CUs);
+                            const std::list<DWARFUnit *> &CUs,
+                            DebugAddrWriter &FinalAddrWriter);
 
   /// Finalize debug sections in the main binary.
   void finalizeDebugSections(DIEBuilder &DIEBlder,
                              DWARF5AcceleratorTable &DebugNamesTable,
                              DIEStreamer &Streamer, raw_svector_ostream &ObjOS,
-                             CUOffsetMap &CUMap);
+                             CUOffsetMap &CUMap,
+                             DebugAddrWriter &FinalAddrWriter);
 
   /// Patches the binary for DWARF address ranges (e.g. in functions and lexical
   /// blocks) to be updated.

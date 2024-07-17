@@ -283,6 +283,12 @@
 
   List of functions to pad with amount of bytes
 
+- `--print-mappings`
+
+  Print mappings in the legend, between characters/blocks and text sections
+  (default false).
+
+
 - `--profile-format=<value>`
 
   Format to dump profile output in aggregation mode, default is fdata
@@ -687,6 +693,10 @@
 - `--min-branch-clusters`
 
   Use a modified clustering algorithm geared towards minimizing branches
+
+- `--name-similarity-function-matching-threshold=<uint>`
+
+  Match functions using namespace and edit distance.
 
 - `--no-inline`
 

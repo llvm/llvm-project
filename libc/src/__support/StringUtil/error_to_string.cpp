@@ -15,10 +15,11 @@
 #include "src/__support/StringUtil/message_mapper.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 constexpr size_t max_buff_size() {
@@ -74,4 +75,4 @@ cpp::string_view get_error_string(int err_num, cpp::span<char> buffer) {
     return internal::build_error_string(err_num, buffer);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

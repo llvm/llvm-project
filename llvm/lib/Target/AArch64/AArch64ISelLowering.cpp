@@ -48,7 +48,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
@@ -1008,12 +1008,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   } else {
     setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
     setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
-  }
-
-  if (Subtarget->getTargetTriple().isOSMSVCRT()) {
-    // MSVCRT doesn't have powi; fall back to pow
-    setLibcallName(RTLIB::POWI_F32, nullptr);
-    setLibcallName(RTLIB::POWI_F64, nullptr);
   }
 
   // Make floating-point constants legal for the large code model, so they don't
@@ -3876,10 +3870,15 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   //    cmp     w13, w12
   // can be turned into:
   //    cmp     w12, w11, lsl #1
-  if (!isa<ConstantSDNode>(RHS) || !isLegalArithImmed(RHS->getAsZExtVal())) {
-    SDValue TheLHS = isCMN(LHS, CC) ? LHS.getOperand(1) : LHS;
+  if (!isa<ConstantSDNode>(RHS) ||
+      !isLegalArithImmed(RHS->getAsAPIntVal().abs().getZExtValue())) {
+    bool LHSIsCMN = isCMN(LHS, CC);
+    bool RHSIsCMN = isCMN(RHS, CC);
+    SDValue TheLHS = LHSIsCMN ? LHS.getOperand(1) : LHS;
+    SDValue TheRHS = RHSIsCMN ? RHS.getOperand(1) : RHS;
 
-    if (getCmpOperandFoldingProfit(TheLHS) > getCmpOperandFoldingProfit(RHS)) {
+    if (getCmpOperandFoldingProfit(TheLHS) + (LHSIsCMN ? 1 : 0) >
+        getCmpOperandFoldingProfit(TheRHS) + (RHSIsCMN ? 1 : 0)) {
       std::swap(LHS, RHS);
       CC = ISD::getSetCCSwappedOperands(CC);
     }
@@ -8579,7 +8578,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
             Chain, DL, DstAddr, Arg, SizeNode,
             Outs[i].Flags.getNonZeroByValAlign(),
             /*isVol = */ false, /*AlwaysInline = */ false,
-            /*isTailCall = */ false, DstInfo, MachinePointerInfo());
+            /*CI=*/nullptr, std::nullopt, DstInfo, MachinePointerInfo());
 
         MemOpChains.push_back(Cpy);
       } else {
@@ -9233,10 +9232,24 @@ AArch64TargetLowering::LowerDarwinGlobalTLSAddress(SDValue Op,
   // normal AArch64 call node: x0 takes the address of the descriptor, and
   // returns the address of the variable in this thread.
   Chain = DAG.getCopyToReg(Chain, DL, AArch64::X0, DescAddr, SDValue());
-  Chain =
-      DAG.getNode(AArch64ISD::CALL, DL, DAG.getVTList(MVT::Other, MVT::Glue),
-                  Chain, FuncTLVGet, DAG.getRegister(AArch64::X0, MVT::i64),
-                  DAG.getRegisterMask(Mask), Chain.getValue(1));
+
+  unsigned Opcode = AArch64ISD::CALL;
+  SmallVector<SDValue, 8> Ops;
+  Ops.push_back(Chain);
+  Ops.push_back(FuncTLVGet);
+
+  // With ptrauth-calls, the tlv access thunk pointer is authenticated (IA, 0).
+  if (DAG.getMachineFunction().getFunction().hasFnAttribute("ptrauth-calls")) {
+    Opcode = AArch64ISD::AUTH_CALL;
+    Ops.push_back(DAG.getTargetConstant(AArch64PACKey::IA, DL, MVT::i32));
+    Ops.push_back(DAG.getTargetConstant(0, DL, MVT::i64)); // Integer Disc.
+    Ops.push_back(DAG.getRegister(AArch64::NoRegister, MVT::i64)); // Addr Disc.
+  }
+
+  Ops.push_back(DAG.getRegister(AArch64::X0, MVT::i64));
+  Ops.push_back(DAG.getRegisterMask(Mask));
+  Ops.push_back(Chain.getValue(1));
+  Chain = DAG.getNode(Opcode, DL, DAG.getVTList(MVT::Other, MVT::Glue), Ops);
   return DAG.getCopyFromReg(Chain, DL, AArch64::X0, PtrVT, Chain.getValue(1));
 }
 
@@ -9545,8 +9558,7 @@ SDValue AArch64TargetLowering::LowerGlobalTLSAddress(SDValue Op,
 //   Load a signed pointer for symbol 'sym' from a stub slot named
 //   'sym$auth_ptr$key$disc' filled by dynamic linker during relocation
 //   resolving. This usually lowers to adrp+ldr, but also emits an entry into
-//   .data with an
-//   @AUTH relocation. See LowerLOADauthptrstatic.
+//   .data with an @AUTH relocation. See LowerLOADauthptrstatic.
 //
 // All 3 are pseudos that are expand late to longer sequences: this lets us
 // provide integrity guarantees on the to-be-signed intermediate values.
@@ -9599,8 +9611,8 @@ AArch64TargetLowering::LowerPtrAuthGlobalAddress(SDValue Op,
         "constant discriminator in ptrauth global out of range [0, 0xffff]");
 
   // Choosing between 3 lowering alternatives is target-specific.
-  if (!Subtarget->isTargetELF())
-    report_fatal_error("ptrauth global lowering is only implemented for ELF");
+  if (!Subtarget->isTargetELF() && !Subtarget->isTargetMachO())
+    report_fatal_error("ptrauth global lowering only supported on MachO/ELF");
 
   int64_t PtrOffsetC = 0;
   if (Ptr.getOpcode() == ISD::ADD) {
@@ -9971,6 +9983,26 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
   EVT VT8Bit = VT.is64BitVector() ? MVT::v8i8 : MVT::v16i8;
   Val = DAG.getBitcast(VT8Bit, Val);
   Val = DAG.getNode(ISD::CTPOP, DL, VT8Bit, Val);
+
+  if (Subtarget->hasDotProd() && VT.getScalarSizeInBits() != 16 &&
+      VT.getVectorNumElements() >= 2) {
+    EVT DT = VT == MVT::v2i64 ? MVT::v4i32 : VT;
+    SDValue Zeros = DAG.getConstant(0, DL, DT);
+    SDValue Ones = DAG.getConstant(1, DL, VT8Bit);
+
+    if (VT == MVT::v2i64) {
+      Val = DAG.getNode(AArch64ISD::UDOT, DL, DT, Zeros, Ones, Val);
+      Val = DAG.getNode(AArch64ISD::UADDLP, DL, VT, Val);
+    } else if (VT == MVT::v2i32) {
+      Val = DAG.getNode(AArch64ISD::UDOT, DL, DT, Zeros, Ones, Val);
+    } else if (VT == MVT::v4i32) {
+      Val = DAG.getNode(AArch64ISD::UDOT, DL, DT, Zeros, Ones, Val);
+    } else {
+      llvm_unreachable("Unexpected type for custom ctpop lowering");
+    }
+
+    return Val;
+  }
 
   // Widen v8i8/v16i8 CTPOP result to VT by repeatedly widening pairwise adds.
   unsigned EltSize = 8;
@@ -10846,8 +10878,9 @@ SDValue AArch64TargetLowering::LowerVACOPY(SDValue Op,
 
   return DAG.getMemcpy(Op.getOperand(0), DL, Op.getOperand(1), Op.getOperand(2),
                        DAG.getConstant(VaListSize, DL, MVT::i32),
-                       Align(PtrSize), false, false, false,
-                       MachinePointerInfo(DestSV), MachinePointerInfo(SrcSV));
+                       Align(PtrSize), false, false, /*CI=*/nullptr,
+                       std::nullopt, MachinePointerInfo(DestSV),
+                       MachinePointerInfo(SrcSV));
 }
 
 SDValue AArch64TargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
@@ -11461,6 +11494,8 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
           return std::make_pair(0U, &AArch64::ZPRRegClass);
         return std::make_pair(0U, nullptr);
       }
+      if (VT == MVT::Other)
+        break;
       uint64_t VTSize = VT.getFixedSizeInBits();
       if (VTSize == 16)
         return std::make_pair(0U, &AArch64::FPR16RegClass);
@@ -16101,6 +16136,24 @@ static Value *createTblShuffleForZExt(IRBuilderBase &Builder, Value *Op,
   return Result;
 }
 
+static Value *createTblShuffleForSExt(IRBuilderBase &Builder, Value *Op,
+                                      FixedVectorType *DstTy,
+                                      bool IsLittleEndian) {
+  auto *SrcTy = cast<FixedVectorType>(Op->getType());
+  auto SrcWidth = cast<IntegerType>(SrcTy->getElementType())->getBitWidth();
+  auto DstWidth = cast<IntegerType>(DstTy->getElementType())->getBitWidth();
+
+  SmallVector<int> Mask;
+  if (!createTblShuffleMask(SrcWidth, DstWidth, SrcTy->getNumElements(),
+                            !IsLittleEndian, Mask))
+    return nullptr;
+
+  auto *FirstEltZero = Builder.CreateInsertElement(
+      PoisonValue::get(SrcTy), Builder.getInt8(0), uint64_t(0));
+
+  return Builder.CreateShuffleVector(Op, FirstEltZero, Mask);
+}
+
 static void createTblForTrunc(TruncInst *TI, bool IsLittleEndian) {
   IRBuilder<> Builder(TI);
   SmallVector<Value *> Parts;
@@ -16281,10 +16334,25 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
     Value *ZExt = createTblShuffleForZExt(
         Builder, I->getOperand(0), FixedVectorType::getInteger(DstTy),
         FixedVectorType::getInteger(DstTy), Subtarget->isLittleEndian());
-    if (!ZExt)
-      return false;
+    assert(ZExt && "Cannot fail for the i8 to float conversion");
     auto *UI = Builder.CreateUIToFP(ZExt, DstTy);
     I->replaceAllUsesWith(UI);
+    I->eraseFromParent();
+    return true;
+  }
+
+  auto *SIToFP = dyn_cast<SIToFPInst>(I);
+  if (SIToFP && SrcTy->getElementType()->isIntegerTy(8) &&
+      DstTy->getElementType()->isFloatTy()) {
+    IRBuilder<> Builder(I);
+    auto *Shuffle = createTblShuffleForSExt(Builder, I->getOperand(0),
+                                            FixedVectorType::getInteger(DstTy),
+                                            Subtarget->isLittleEndian());
+    assert(Shuffle && "Cannot fail for the i8 to float conversion");
+    auto *Cast = Builder.CreateBitCast(Shuffle, VectorType::getInteger(DstTy));
+    auto *AShr = Builder.CreateAShr(Cast, 24, "", true);
+    auto *SI = Builder.CreateSIToFP(AShr, DstTy);
+    I->replaceAllUsesWith(SI);
     I->eraseFromParent();
     return true;
   }
@@ -17677,18 +17745,25 @@ AArch64TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
                                      SmallVectorImpl<SDNode *> &Created) const {
   AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
   if (isIntDivCheap(N->getValueType(0), Attr))
-    return SDValue(N,0); // Lower SDIV as SDIV
+    return SDValue(N, 0); // Lower SDIV as SDIV
 
   EVT VT = N->getValueType(0);
 
   // For scalable and fixed types, mark them as cheap so we can handle it much
   // later. This allows us to handle larger than legal types.
-  if (VT.isScalableVector() || Subtarget->useSVEForFixedLengthVectors())
+  if (VT.isScalableVector() ||
+      (VT.isFixedLengthVector() && Subtarget->useSVEForFixedLengthVectors()))
     return SDValue(N, 0);
 
   // fold (sdiv X, pow2)
   if ((VT != MVT::i32 && VT != MVT::i64) ||
       !(Divisor.isPowerOf2() || Divisor.isNegatedPowerOf2()))
+    return SDValue();
+
+  // If the divisor is 2 or -2, the default expansion is better. It will add
+  // (N->getValueType(0) >> (BitWidth - 1)) to it before shifting right.
+  if (Divisor == 2 ||
+      Divisor == APInt(Divisor.getBitWidth(), -2, /*isSigned*/ true))
     return SDValue();
 
   return TargetLowering::buildSDIVPow2WithCMov(N, Divisor, DAG, Created);
@@ -22122,6 +22197,10 @@ static SDValue performVectorShiftCombine(SDNode *N,
     if (DCI.DAG.ComputeNumSignBits(Op.getOperand(0)) > ShiftImm)
       return Op.getOperand(0);
 
+  // If the shift is exact, the shifted out bits matter.
+  if (N->getFlags().hasExact())
+    return SDValue();
+
   APInt ShiftedOutBits = APInt::getLowBitsSet(OpScalarSize, ShiftImm);
   APInt DemandedMask = ~ShiftedOutBits;
 
@@ -24809,7 +24888,7 @@ static SDValue tryCombineMULLWithUZP1(SDNode *N,
   } else if (isEssentiallyExtractHighSubvector(RHS) &&
              LHS.getOpcode() == ISD::TRUNCATE) {
     TruncHigh = LHS;
-    if (LHS.getOpcode() == ISD::BITCAST)
+    if (RHS.getOpcode() == ISD::BITCAST)
       ExtractHigh = RHS.getOperand(0);
     else
       ExtractHigh = RHS;
@@ -24838,6 +24917,7 @@ static SDValue tryCombineMULLWithUZP1(SDNode *N,
   // This dagcombine assumes the two extract_high uses same source vector in
   // order to detect the pair of the mull. If they have different source vector,
   // this code will not work.
+  // TODO: Should also try to look through a bitcast.
   bool HasFoundMULLow = true;
   SDValue ExtractHighSrcVec = ExtractHigh.getOperand(0);
   if (ExtractHighSrcVec->use_size() != 2)

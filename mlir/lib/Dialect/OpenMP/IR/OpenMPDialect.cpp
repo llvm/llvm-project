@@ -33,12 +33,12 @@
 #include <cstddef>
 #include <iterator>
 #include <optional>
+#include <variant>
 
 #include "mlir/Dialect/OpenMP/OpenMPOpsDialect.cpp.inc"
 #include "mlir/Dialect/OpenMP/OpenMPOpsEnums.cpp.inc"
 #include "mlir/Dialect/OpenMP/OpenMPOpsInterfaces.cpp.inc"
 #include "mlir/Dialect/OpenMP/OpenMPTypeInterfaces.cpp.inc"
-#include "mlir/Support/LogicalResult.h"
 
 using namespace mlir;
 using namespace mlir::omp;
@@ -67,15 +67,6 @@ struct LLVMPointerPointerLikeModel
                                             LLVM::LLVMPointerType> {
   Type getElementType(Type pointer) const { return Type(); }
 };
-
-struct OpenMPDialectFoldInterface : public DialectFoldInterface {
-  using DialectFoldInterface::DialectFoldInterface;
-
-  bool shouldMaterializeInto(Region *region) const final {
-    // Avoid folding constants across target regions
-    return isa<TargetOp>(region->getParentOp());
-  }
-};
 } // namespace
 
 void OpenMPDialect::initialize() {
@@ -92,7 +83,6 @@ void OpenMPDialect::initialize() {
 #include "mlir/Dialect/OpenMP/OpenMPOpsTypes.cpp.inc"
       >();
 
-  addInterface<OpenMPDialectFoldInterface>();
   MemRefType::attachInterface<MemRefPointerLikeModel>(*getContext());
   LLVM::LLVMPointerType::attachInterface<LLVMPointerPointerLikeModel>(
       *getContext());
@@ -2577,6 +2567,15 @@ LogicalResult PrivateClauseOp::verify() {
     return failure();
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Spec 5.2: Masked construct (10.5)
+//===----------------------------------------------------------------------===//
+
+void MaskedOp::build(OpBuilder &builder, OperationState &state,
+                     const MaskedClauseOps &clauses) {
+  MaskedOp::build(builder, state, clauses.filteredThreadIdVar);
 }
 
 #define GET_ATTRDEF_CLASSES

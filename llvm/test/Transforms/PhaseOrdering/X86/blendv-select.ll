@@ -4,7 +4,7 @@
 ; RUN: opt < %s -O3 -S -mtriple=x86_64-- -mcpu=x86-64-v4 | FileCheck %s
 
 ;
-; TODO: PR58895 - replace shuffled _mm_blendv_epi8+icmp with select+icmp
+; PR58895 - replace shuffled _mm_blendv_epi8+icmp with select+icmp
 ;
 
 ;
@@ -13,22 +13,9 @@
 
 define <4 x double> @x86_pblendvb_v4f64_v2f64(<4 x double> %a, <4 x double> %b, <4 x double> %c, <4 x double> %d) {
 ; CHECK-LABEL: @x86_pblendvb_v4f64_v2f64(
-; CHECK-NEXT:    [[A_BC:%.*]] = bitcast <4 x double> [[A:%.*]] to <32 x i8>
-; CHECK-NEXT:    [[B_BC:%.*]] = bitcast <4 x double> [[B:%.*]] to <32 x i8>
-; CHECK-NEXT:    [[A_LO:%.*]] = shufflevector <32 x i8> [[A_BC]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[B_LO:%.*]] = shufflevector <32 x i8> [[B_BC]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[A_HI:%.*]] = shufflevector <32 x i8> [[A_BC]], <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[B_HI:%.*]] = shufflevector <32 x i8> [[B_BC]], <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <4 x double> [[C:%.*]], [[D:%.*]]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
-; CHECK-NEXT:    [[SEXT_BC:%.*]] = bitcast <4 x i64> [[SEXT]] to <32 x i8>
-; CHECK-NEXT:    [[SEXT_LO:%.*]] = shufflevector <32 x i8> [[SEXT_BC]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[SEXT_HI:%.*]] = shufflevector <32 x i8> [[SEXT_BC]], <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[SEL_LO:%.*]] = tail call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> [[A_LO]], <16 x i8> [[B_LO]], <16 x i8> [[SEXT_LO]])
-; CHECK-NEXT:    [[SEL_HI:%.*]] = tail call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> [[A_HI]], <16 x i8> [[B_HI]], <16 x i8> [[SEXT_HI]])
-; CHECK-NEXT:    [[CONCAT:%.*]] = shufflevector <16 x i8> [[SEL_LO]], <16 x i8> [[SEL_HI]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[RES:%.*]] = bitcast <32 x i8> [[CONCAT]] to <4 x double>
-; CHECK-NEXT:    ret <4 x double> [[RES]]
+; CHECK-NEXT:    [[DOTV:%.*]] = select <4 x i1> [[CMP]], <4 x double> [[B:%.*]], <4 x double> [[A:%.*]]
+; CHECK-NEXT:    ret <4 x double> [[DOTV]]
 ;
   %a.bc = bitcast <4 x double> %a to <32 x i8>
   %b.bc = bitcast <4 x double> %b to <32 x i8>
@@ -50,22 +37,9 @@ define <4 x double> @x86_pblendvb_v4f64_v2f64(<4 x double> %a, <4 x double> %b, 
 
 define <8 x float> @x86_pblendvb_v8f32_v4f32(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x float> %d) {
 ; CHECK-LABEL: @x86_pblendvb_v8f32_v4f32(
-; CHECK-NEXT:    [[A_BC:%.*]] = bitcast <8 x float> [[A:%.*]] to <32 x i8>
-; CHECK-NEXT:    [[B_BC:%.*]] = bitcast <8 x float> [[B:%.*]] to <32 x i8>
-; CHECK-NEXT:    [[A_LO:%.*]] = shufflevector <32 x i8> [[A_BC]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[B_LO:%.*]] = shufflevector <32 x i8> [[B_BC]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[A_HI:%.*]] = shufflevector <32 x i8> [[A_BC]], <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[B_HI:%.*]] = shufflevector <32 x i8> [[B_BC]], <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <8 x float> [[C:%.*]], [[D:%.*]]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-; CHECK-NEXT:    [[SEXT_BC:%.*]] = bitcast <8 x i32> [[SEXT]] to <32 x i8>
-; CHECK-NEXT:    [[SEXT_LO:%.*]] = shufflevector <32 x i8> [[SEXT_BC]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[SEXT_HI:%.*]] = shufflevector <32 x i8> [[SEXT_BC]], <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[SEL_LO:%.*]] = tail call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> [[A_LO]], <16 x i8> [[B_LO]], <16 x i8> [[SEXT_LO]])
-; CHECK-NEXT:    [[SEL_HI:%.*]] = tail call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> [[A_HI]], <16 x i8> [[B_HI]], <16 x i8> [[SEXT_HI]])
-; CHECK-NEXT:    [[CONCAT:%.*]] = shufflevector <16 x i8> [[SEL_LO]], <16 x i8> [[SEL_HI]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[RES:%.*]] = bitcast <32 x i8> [[CONCAT]] to <8 x float>
-; CHECK-NEXT:    ret <8 x float> [[RES]]
+; CHECK-NEXT:    [[DOTV:%.*]] = select <8 x i1> [[CMP]], <8 x float> [[B:%.*]], <8 x float> [[A:%.*]]
+; CHECK-NEXT:    ret <8 x float> [[DOTV]]
 ;
   %a.bc = bitcast <8 x float> %a to <32 x i8>
   %b.bc = bitcast <8 x float> %b to <32 x i8>
@@ -87,22 +61,9 @@ define <8 x float> @x86_pblendvb_v8f32_v4f32(<8 x float> %a, <8 x float> %b, <8 
 
 define <4 x i64> @x86_pblendvb_v4i64_v2i64(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c, <4 x i64> %d) {
 ; CHECK-LABEL: @x86_pblendvb_v4i64_v2i64(
-; CHECK-NEXT:    [[A_BC:%.*]] = bitcast <4 x i64> [[A:%.*]] to <32 x i8>
-; CHECK-NEXT:    [[B_BC:%.*]] = bitcast <4 x i64> [[B:%.*]] to <32 x i8>
-; CHECK-NEXT:    [[A_LO:%.*]] = shufflevector <32 x i8> [[A_BC]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[B_LO:%.*]] = shufflevector <32 x i8> [[B_BC]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[A_HI:%.*]] = shufflevector <32 x i8> [[A_BC]], <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[B_HI:%.*]] = shufflevector <32 x i8> [[B_BC]], <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <4 x i64> [[C:%.*]], [[D:%.*]]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
-; CHECK-NEXT:    [[SEXT_BC:%.*]] = bitcast <4 x i64> [[SEXT]] to <32 x i8>
-; CHECK-NEXT:    [[SEXT_LO:%.*]] = shufflevector <32 x i8> [[SEXT_BC]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[SEXT_HI:%.*]] = shufflevector <32 x i8> [[SEXT_BC]], <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[SEL_LO:%.*]] = tail call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> [[A_LO]], <16 x i8> [[B_LO]], <16 x i8> [[SEXT_LO]])
-; CHECK-NEXT:    [[SEL_HI:%.*]] = tail call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> [[A_HI]], <16 x i8> [[B_HI]], <16 x i8> [[SEXT_HI]])
-; CHECK-NEXT:    [[CONCAT:%.*]] = shufflevector <16 x i8> [[SEL_LO]], <16 x i8> [[SEL_HI]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[RES:%.*]] = bitcast <32 x i8> [[CONCAT]] to <4 x i64>
-; CHECK-NEXT:    ret <4 x i64> [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> [[CMP]], <4 x i64> [[B:%.*]], <4 x i64> [[A:%.*]]
+; CHECK-NEXT:    ret <4 x i64> [[TMP1]]
 ;
   %a.bc = bitcast <4 x i64> %a to <32 x i8>
   %b.bc = bitcast <4 x i64> %b to <32 x i8>
@@ -124,23 +85,13 @@ define <4 x i64> @x86_pblendvb_v4i64_v2i64(<4 x i64> %a, <4 x i64> %b, <4 x i64>
 
 define <4 x i64> @x86_pblendvb_v8i32_v4i32(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c, <4 x i64> %d) {
 ; CHECK-LABEL: @x86_pblendvb_v8i32_v4i32(
-; CHECK-NEXT:    [[A_BC:%.*]] = bitcast <4 x i64> [[A:%.*]] to <32 x i8>
-; CHECK-NEXT:    [[B_BC:%.*]] = bitcast <4 x i64> [[B:%.*]] to <32 x i8>
 ; CHECK-NEXT:    [[C_BC:%.*]] = bitcast <4 x i64> [[C:%.*]] to <8 x i32>
 ; CHECK-NEXT:    [[D_BC:%.*]] = bitcast <4 x i64> [[D:%.*]] to <8 x i32>
-; CHECK-NEXT:    [[A_LO:%.*]] = shufflevector <32 x i8> [[A_BC]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[B_LO:%.*]] = shufflevector <32 x i8> [[B_BC]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[A_HI:%.*]] = shufflevector <32 x i8> [[A_BC]], <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[B_HI:%.*]] = shufflevector <32 x i8> [[B_BC]], <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <8 x i32> [[C_BC]], [[D_BC]]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
-; CHECK-NEXT:    [[SEXT_BC:%.*]] = bitcast <8 x i32> [[SEXT]] to <32 x i8>
-; CHECK-NEXT:    [[SEXT_LO:%.*]] = shufflevector <32 x i8> [[SEXT_BC]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[SEXT_HI:%.*]] = shufflevector <32 x i8> [[SEXT_BC]], <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[SEL_LO:%.*]] = tail call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> [[A_LO]], <16 x i8> [[B_LO]], <16 x i8> [[SEXT_LO]])
-; CHECK-NEXT:    [[SEL_HI:%.*]] = tail call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> [[A_HI]], <16 x i8> [[B_HI]], <16 x i8> [[SEXT_HI]])
-; CHECK-NEXT:    [[CONCAT:%.*]] = shufflevector <16 x i8> [[SEL_LO]], <16 x i8> [[SEL_HI]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[RES:%.*]] = bitcast <32 x i8> [[CONCAT]] to <4 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i64> [[A:%.*]] to <8 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i64> [[B:%.*]] to <8 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <8 x i1> [[CMP]], <8 x i32> [[TMP2]], <8 x i32> [[TMP1]]
+; CHECK-NEXT:    [[RES:%.*]] = bitcast <8 x i32> [[TMP3]] to <4 x i64>
 ; CHECK-NEXT:    ret <4 x i64> [[RES]]
 ;
   %a.bc = bitcast <4 x i64> %a to <32 x i8>
@@ -165,23 +116,13 @@ define <4 x i64> @x86_pblendvb_v8i32_v4i32(<4 x i64> %a, <4 x i64> %b, <4 x i64>
 
 define <4 x i64> @x86_pblendvb_v16i16_v8i16(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c, <4 x i64> %d) {
 ; CHECK-LABEL: @x86_pblendvb_v16i16_v8i16(
-; CHECK-NEXT:    [[A_BC:%.*]] = bitcast <4 x i64> [[A:%.*]] to <32 x i8>
-; CHECK-NEXT:    [[B_BC:%.*]] = bitcast <4 x i64> [[B:%.*]] to <32 x i8>
 ; CHECK-NEXT:    [[C_BC:%.*]] = bitcast <4 x i64> [[C:%.*]] to <16 x i16>
 ; CHECK-NEXT:    [[D_BC:%.*]] = bitcast <4 x i64> [[D:%.*]] to <16 x i16>
-; CHECK-NEXT:    [[A_LO:%.*]] = shufflevector <32 x i8> [[A_BC]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[B_LO:%.*]] = shufflevector <32 x i8> [[B_BC]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[A_HI:%.*]] = shufflevector <32 x i8> [[A_BC]], <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[B_HI:%.*]] = shufflevector <32 x i8> [[B_BC]], <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <16 x i16> [[C_BC]], [[D_BC]]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <16 x i1> [[CMP]] to <16 x i16>
-; CHECK-NEXT:    [[SEXT_BC:%.*]] = bitcast <16 x i16> [[SEXT]] to <32 x i8>
-; CHECK-NEXT:    [[SEXT_LO:%.*]] = shufflevector <32 x i8> [[SEXT_BC]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[SEXT_HI:%.*]] = shufflevector <32 x i8> [[SEXT_BC]], <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[SEL_LO:%.*]] = tail call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> [[A_LO]], <16 x i8> [[B_LO]], <16 x i8> [[SEXT_LO]])
-; CHECK-NEXT:    [[SEL_HI:%.*]] = tail call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> [[A_HI]], <16 x i8> [[B_HI]], <16 x i8> [[SEXT_HI]])
-; CHECK-NEXT:    [[CONCAT:%.*]] = shufflevector <16 x i8> [[SEL_LO]], <16 x i8> [[SEL_HI]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[RES:%.*]] = bitcast <32 x i8> [[CONCAT]] to <4 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i64> [[A:%.*]] to <16 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i64> [[B:%.*]] to <16 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <16 x i1> [[CMP]], <16 x i16> [[TMP2]], <16 x i16> [[TMP1]]
+; CHECK-NEXT:    [[RES:%.*]] = bitcast <16 x i16> [[TMP3]] to <4 x i64>
 ; CHECK-NEXT:    ret <4 x i64> [[RES]]
 ;
   %a.bc = bitcast <4 x i64> %a to <32 x i8>
@@ -210,17 +151,8 @@ define <4 x i64> @x86_pblendvb_v32i8_v16i8(<4 x i64> %a, <4 x i64> %b, <4 x i64>
 ; CHECK-NEXT:    [[B_BC:%.*]] = bitcast <4 x i64> [[B:%.*]] to <32 x i8>
 ; CHECK-NEXT:    [[C_BC:%.*]] = bitcast <4 x i64> [[C:%.*]] to <32 x i8>
 ; CHECK-NEXT:    [[D_BC:%.*]] = bitcast <4 x i64> [[D:%.*]] to <32 x i8>
-; CHECK-NEXT:    [[A_LO:%.*]] = shufflevector <32 x i8> [[A_BC]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[B_LO:%.*]] = shufflevector <32 x i8> [[B_BC]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[A_HI:%.*]] = shufflevector <32 x i8> [[A_BC]], <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[B_HI:%.*]] = shufflevector <32 x i8> [[B_BC]], <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <32 x i8> [[C_BC]], [[D_BC]]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <32 x i1> [[CMP]] to <32 x i8>
-; CHECK-NEXT:    [[SEXT_LO:%.*]] = shufflevector <32 x i8> [[SEXT]], <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[SEXT_HI:%.*]] = shufflevector <32 x i8> [[SEXT]], <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[SEL_LO:%.*]] = tail call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> [[A_LO]], <16 x i8> [[B_LO]], <16 x i8> [[SEXT_LO]])
-; CHECK-NEXT:    [[SEL_HI:%.*]] = tail call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> [[A_HI]], <16 x i8> [[B_HI]], <16 x i8> [[SEXT_HI]])
-; CHECK-NEXT:    [[CONCAT:%.*]] = shufflevector <16 x i8> [[SEL_LO]], <16 x i8> [[SEL_HI]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; CHECK-NEXT:    [[CONCAT:%.*]] = select <32 x i1> [[CMP]], <32 x i8> [[B_BC]], <32 x i8> [[A_BC]]
 ; CHECK-NEXT:    [[RES:%.*]] = bitcast <32 x i8> [[CONCAT]] to <4 x i64>
 ; CHECK-NEXT:    ret <4 x i64> [[RES]]
 ;
@@ -249,22 +181,9 @@ define <4 x i64> @x86_pblendvb_v32i8_v16i8(<4 x i64> %a, <4 x i64> %b, <4 x i64>
 
 define <8 x double> @x86_pblendvb_v8f64_v4f64(<8 x double> %a, <8 x double> %b, <8 x double> %c, <8 x double> %d) {
 ; CHECK-LABEL: @x86_pblendvb_v8f64_v4f64(
-; CHECK-NEXT:    [[A_BC:%.*]] = bitcast <8 x double> [[A:%.*]] to <64 x i8>
-; CHECK-NEXT:    [[B_BC:%.*]] = bitcast <8 x double> [[B:%.*]] to <64 x i8>
-; CHECK-NEXT:    [[A_LO:%.*]] = shufflevector <64 x i8> [[A_BC]], <64 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[B_LO:%.*]] = shufflevector <64 x i8> [[B_BC]], <64 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[A_HI:%.*]] = shufflevector <64 x i8> [[A_BC]], <64 x i8> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[B_HI:%.*]] = shufflevector <64 x i8> [[B_BC]], <64 x i8> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <8 x double> [[C:%.*]], [[D:%.*]]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i64>
-; CHECK-NEXT:    [[SEXT_BC:%.*]] = bitcast <8 x i64> [[SEXT]] to <64 x i8>
-; CHECK-NEXT:    [[SEXT_LO:%.*]] = shufflevector <64 x i8> [[SEXT_BC]], <64 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[SEXT_HI:%.*]] = shufflevector <64 x i8> [[SEXT_BC]], <64 x i8> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[SEL_LO:%.*]] = tail call <32 x i8> @llvm.x86.avx2.pblendvb(<32 x i8> [[A_LO]], <32 x i8> [[B_LO]], <32 x i8> [[SEXT_LO]])
-; CHECK-NEXT:    [[SEL_HI:%.*]] = tail call <32 x i8> @llvm.x86.avx2.pblendvb(<32 x i8> [[A_HI]], <32 x i8> [[B_HI]], <32 x i8> [[SEXT_HI]])
-; CHECK-NEXT:    [[CONCAT:%.*]] = shufflevector <32 x i8> [[SEL_LO]], <32 x i8> [[SEL_HI]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[RES:%.*]] = bitcast <64 x i8> [[CONCAT]] to <8 x double>
-; CHECK-NEXT:    ret <8 x double> [[RES]]
+; CHECK-NEXT:    [[DOTV:%.*]] = select <8 x i1> [[CMP]], <8 x double> [[B:%.*]], <8 x double> [[A:%.*]]
+; CHECK-NEXT:    ret <8 x double> [[DOTV]]
 ;
   %a.bc = bitcast <8 x double> %a to <64 x i8>
   %b.bc = bitcast <8 x double> %b to <64 x i8>
@@ -286,22 +205,9 @@ define <8 x double> @x86_pblendvb_v8f64_v4f64(<8 x double> %a, <8 x double> %b, 
 
 define <16 x float> @x86_pblendvb_v16f32_v8f32(<16 x float> %a, <16 x float> %b, <16 x float> %c, <16 x float> %d) {
 ; CHECK-LABEL: @x86_pblendvb_v16f32_v8f32(
-; CHECK-NEXT:    [[A_BC:%.*]] = bitcast <16 x float> [[A:%.*]] to <64 x i8>
-; CHECK-NEXT:    [[B_BC:%.*]] = bitcast <16 x float> [[B:%.*]] to <64 x i8>
-; CHECK-NEXT:    [[A_LO:%.*]] = shufflevector <64 x i8> [[A_BC]], <64 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[B_LO:%.*]] = shufflevector <64 x i8> [[B_BC]], <64 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[A_HI:%.*]] = shufflevector <64 x i8> [[A_BC]], <64 x i8> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[B_HI:%.*]] = shufflevector <64 x i8> [[B_BC]], <64 x i8> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <16 x float> [[C:%.*]], [[D:%.*]]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <16 x i1> [[CMP]] to <16 x i32>
-; CHECK-NEXT:    [[SEXT_BC:%.*]] = bitcast <16 x i32> [[SEXT]] to <64 x i8>
-; CHECK-NEXT:    [[SEXT_LO:%.*]] = shufflevector <64 x i8> [[SEXT_BC]], <64 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[SEXT_HI:%.*]] = shufflevector <64 x i8> [[SEXT_BC]], <64 x i8> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[SEL_LO:%.*]] = tail call <32 x i8> @llvm.x86.avx2.pblendvb(<32 x i8> [[A_LO]], <32 x i8> [[B_LO]], <32 x i8> [[SEXT_LO]])
-; CHECK-NEXT:    [[SEL_HI:%.*]] = tail call <32 x i8> @llvm.x86.avx2.pblendvb(<32 x i8> [[A_HI]], <32 x i8> [[B_HI]], <32 x i8> [[SEXT_HI]])
-; CHECK-NEXT:    [[CONCAT:%.*]] = shufflevector <32 x i8> [[SEL_LO]], <32 x i8> [[SEL_HI]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[RES:%.*]] = bitcast <64 x i8> [[CONCAT]] to <16 x float>
-; CHECK-NEXT:    ret <16 x float> [[RES]]
+; CHECK-NEXT:    [[DOTV:%.*]] = select <16 x i1> [[CMP]], <16 x float> [[B:%.*]], <16 x float> [[A:%.*]]
+; CHECK-NEXT:    ret <16 x float> [[DOTV]]
 ;
   %a.bc = bitcast <16 x float> %a to <64 x i8>
   %b.bc = bitcast <16 x float> %b to <64 x i8>
@@ -323,22 +229,9 @@ define <16 x float> @x86_pblendvb_v16f32_v8f32(<16 x float> %a, <16 x float> %b,
 
 define <8 x i64> @x86_pblendvb_v8i64_v4i64(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i64> %d) {
 ; CHECK-LABEL: @x86_pblendvb_v8i64_v4i64(
-; CHECK-NEXT:    [[A_BC:%.*]] = bitcast <8 x i64> [[A:%.*]] to <64 x i8>
-; CHECK-NEXT:    [[B_BC:%.*]] = bitcast <8 x i64> [[B:%.*]] to <64 x i8>
-; CHECK-NEXT:    [[A_LO:%.*]] = shufflevector <64 x i8> [[A_BC]], <64 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[B_LO:%.*]] = shufflevector <64 x i8> [[B_BC]], <64 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[A_HI:%.*]] = shufflevector <64 x i8> [[A_BC]], <64 x i8> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[B_HI:%.*]] = shufflevector <64 x i8> [[B_BC]], <64 x i8> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <8 x i64> [[C:%.*]], [[D:%.*]]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i64>
-; CHECK-NEXT:    [[SEXT_BC:%.*]] = bitcast <8 x i64> [[SEXT]] to <64 x i8>
-; CHECK-NEXT:    [[SEXT_LO:%.*]] = shufflevector <64 x i8> [[SEXT_BC]], <64 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[SEXT_HI:%.*]] = shufflevector <64 x i8> [[SEXT_BC]], <64 x i8> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[SEL_LO:%.*]] = tail call <32 x i8> @llvm.x86.avx2.pblendvb(<32 x i8> [[A_LO]], <32 x i8> [[B_LO]], <32 x i8> [[SEXT_LO]])
-; CHECK-NEXT:    [[SEL_HI:%.*]] = tail call <32 x i8> @llvm.x86.avx2.pblendvb(<32 x i8> [[A_HI]], <32 x i8> [[B_HI]], <32 x i8> [[SEXT_HI]])
-; CHECK-NEXT:    [[CONCAT:%.*]] = shufflevector <32 x i8> [[SEL_LO]], <32 x i8> [[SEL_HI]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[RES:%.*]] = bitcast <64 x i8> [[CONCAT]] to <8 x i64>
-; CHECK-NEXT:    ret <8 x i64> [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select <8 x i1> [[CMP]], <8 x i64> [[B:%.*]], <8 x i64> [[A:%.*]]
+; CHECK-NEXT:    ret <8 x i64> [[TMP1]]
 ;
   %a.bc = bitcast <8 x i64> %a to <64 x i8>
   %b.bc = bitcast <8 x i64> %b to <64 x i8>
@@ -360,29 +253,19 @@ define <8 x i64> @x86_pblendvb_v8i64_v4i64(<8 x i64> %a, <8 x i64> %b, <8 x i64>
 
 define <8 x i64> @x86_pblendvb_v16i32_v8i32(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i64> %d) {
 ; CHECK-LABEL: @x86_pblendvb_v16i32_v8i32(
-; CHECK-NEXT:    [[A_BC:%.*]] = bitcast <8 x i64> [[A:%.*]] to <64 x i8>
-; CHECK-NEXT:    [[B_BC:%.*]] = bitcast <8 x i64> [[B:%.*]] to <64 x i8>
-; CHECK-NEXT:    [[C_BC:%.*]] = bitcast <8 x i64> [[A]] to <16 x i32>
-; CHECK-NEXT:    [[D_BC:%.*]] = bitcast <8 x i64> [[B]] to <16 x i32>
-; CHECK-NEXT:    [[A_LO:%.*]] = shufflevector <64 x i8> [[A_BC]], <64 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[B_LO:%.*]] = shufflevector <64 x i8> [[B_BC]], <64 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[A_HI:%.*]] = shufflevector <64 x i8> [[A_BC]], <64 x i8> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[B_HI:%.*]] = shufflevector <64 x i8> [[B_BC]], <64 x i8> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+; CHECK-NEXT:    [[C_BC:%.*]] = bitcast <8 x i64> [[C:%.*]] to <16 x i32>
+; CHECK-NEXT:    [[D_BC:%.*]] = bitcast <8 x i64> [[D:%.*]] to <16 x i32>
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <16 x i32> [[C_BC]], [[D_BC]]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <16 x i1> [[CMP]] to <16 x i32>
-; CHECK-NEXT:    [[SEXT_BC:%.*]] = bitcast <16 x i32> [[SEXT]] to <64 x i8>
-; CHECK-NEXT:    [[SEXT_LO:%.*]] = shufflevector <64 x i8> [[SEXT_BC]], <64 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[SEXT_HI:%.*]] = shufflevector <64 x i8> [[SEXT_BC]], <64 x i8> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[SEL_LO:%.*]] = tail call <32 x i8> @llvm.x86.avx2.pblendvb(<32 x i8> [[A_LO]], <32 x i8> [[B_LO]], <32 x i8> [[SEXT_LO]])
-; CHECK-NEXT:    [[SEL_HI:%.*]] = tail call <32 x i8> @llvm.x86.avx2.pblendvb(<32 x i8> [[A_HI]], <32 x i8> [[B_HI]], <32 x i8> [[SEXT_HI]])
-; CHECK-NEXT:    [[CONCAT:%.*]] = shufflevector <32 x i8> [[SEL_LO]], <32 x i8> [[SEL_HI]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[RES:%.*]] = bitcast <64 x i8> [[CONCAT]] to <8 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i64> [[A:%.*]] to <16 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i64> [[B:%.*]] to <16 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <16 x i1> [[CMP]], <16 x i32> [[TMP2]], <16 x i32> [[TMP1]]
+; CHECK-NEXT:    [[RES:%.*]] = bitcast <16 x i32> [[TMP3]] to <8 x i64>
 ; CHECK-NEXT:    ret <8 x i64> [[RES]]
 ;
   %a.bc = bitcast <8 x i64> %a to <64 x i8>
   %b.bc = bitcast <8 x i64> %b to <64 x i8>
-  %c.bc = bitcast <8 x i64> %a to <16 x i32>
-  %d.bc = bitcast <8 x i64> %b to <16 x i32>
+  %c.bc = bitcast <8 x i64> %c to <16 x i32>
+  %d.bc = bitcast <8 x i64> %d to <16 x i32>
   %a.lo = shufflevector <64 x i8> %a.bc, <64 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   %b.lo = shufflevector <64 x i8> %b.bc, <64 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   %a.hi = shufflevector <64 x i8> %a.bc, <64 x i8> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
@@ -401,23 +284,13 @@ define <8 x i64> @x86_pblendvb_v16i32_v8i32(<8 x i64> %a, <8 x i64> %b, <8 x i64
 
 define <8 x i64> @x86_pblendvb_v32i16_v16i16(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i64> %d) {
 ; CHECK-LABEL: @x86_pblendvb_v32i16_v16i16(
-; CHECK-NEXT:    [[A_BC:%.*]] = bitcast <8 x i64> [[A:%.*]] to <64 x i8>
-; CHECK-NEXT:    [[B_BC:%.*]] = bitcast <8 x i64> [[B:%.*]] to <64 x i8>
 ; CHECK-NEXT:    [[C_BC:%.*]] = bitcast <8 x i64> [[C:%.*]] to <32 x i16>
 ; CHECK-NEXT:    [[D_BC:%.*]] = bitcast <8 x i64> [[D:%.*]] to <32 x i16>
-; CHECK-NEXT:    [[A_LO:%.*]] = shufflevector <64 x i8> [[A_BC]], <64 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[B_LO:%.*]] = shufflevector <64 x i8> [[B_BC]], <64 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[A_HI:%.*]] = shufflevector <64 x i8> [[A_BC]], <64 x i8> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[B_HI:%.*]] = shufflevector <64 x i8> [[B_BC]], <64 x i8> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <32 x i16> [[C_BC]], [[D_BC]]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <32 x i1> [[CMP]] to <32 x i16>
-; CHECK-NEXT:    [[SEXT_BC:%.*]] = bitcast <32 x i16> [[SEXT]] to <64 x i8>
-; CHECK-NEXT:    [[SEXT_LO:%.*]] = shufflevector <64 x i8> [[SEXT_BC]], <64 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[SEXT_HI:%.*]] = shufflevector <64 x i8> [[SEXT_BC]], <64 x i8> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[SEL_LO:%.*]] = tail call <32 x i8> @llvm.x86.avx2.pblendvb(<32 x i8> [[A_LO]], <32 x i8> [[B_LO]], <32 x i8> [[SEXT_LO]])
-; CHECK-NEXT:    [[SEL_HI:%.*]] = tail call <32 x i8> @llvm.x86.avx2.pblendvb(<32 x i8> [[A_HI]], <32 x i8> [[B_HI]], <32 x i8> [[SEXT_HI]])
-; CHECK-NEXT:    [[CONCAT:%.*]] = shufflevector <32 x i8> [[SEL_LO]], <32 x i8> [[SEL_HI]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[RES:%.*]] = bitcast <64 x i8> [[CONCAT]] to <8 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i64> [[A:%.*]] to <32 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i64> [[B:%.*]] to <32 x i16>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <32 x i1> [[CMP]], <32 x i16> [[TMP2]], <32 x i16> [[TMP1]]
+; CHECK-NEXT:    [[RES:%.*]] = bitcast <32 x i16> [[TMP3]] to <8 x i64>
 ; CHECK-NEXT:    ret <8 x i64> [[RES]]
 ;
   %a.bc = bitcast <8 x i64> %a to <64 x i8>
@@ -446,17 +319,8 @@ define <8 x i64> @x86_pblendvb_v64i8_v32i8(<8 x i64> %a, <8 x i64> %b, <8 x i64>
 ; CHECK-NEXT:    [[B_BC:%.*]] = bitcast <8 x i64> [[B:%.*]] to <64 x i8>
 ; CHECK-NEXT:    [[C_BC:%.*]] = bitcast <8 x i64> [[C:%.*]] to <64 x i8>
 ; CHECK-NEXT:    [[D_BC:%.*]] = bitcast <8 x i64> [[D:%.*]] to <64 x i8>
-; CHECK-NEXT:    [[A_LO:%.*]] = shufflevector <64 x i8> [[A_BC]], <64 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[B_LO:%.*]] = shufflevector <64 x i8> [[B_BC]], <64 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[A_HI:%.*]] = shufflevector <64 x i8> [[A_BC]], <64 x i8> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[B_HI:%.*]] = shufflevector <64 x i8> [[B_BC]], <64 x i8> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <64 x i8> [[C_BC]], [[D_BC]]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <64 x i1> [[CMP]] to <64 x i8>
-; CHECK-NEXT:    [[SEXT_LO:%.*]] = shufflevector <64 x i8> [[SEXT]], <64 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[SEXT_HI:%.*]] = shufflevector <64 x i8> [[SEXT]], <64 x i8> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    [[SEL_LO:%.*]] = tail call <32 x i8> @llvm.x86.avx2.pblendvb(<32 x i8> [[A_LO]], <32 x i8> [[B_LO]], <32 x i8> [[SEXT_LO]])
-; CHECK-NEXT:    [[SEL_HI:%.*]] = tail call <32 x i8> @llvm.x86.avx2.pblendvb(<32 x i8> [[A_HI]], <32 x i8> [[B_HI]], <32 x i8> [[SEXT_HI]])
-; CHECK-NEXT:    [[CONCAT:%.*]] = shufflevector <32 x i8> [[SEL_LO]], <32 x i8> [[SEL_HI]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+; CHECK-NEXT:    [[CONCAT:%.*]] = select <64 x i1> [[CMP]], <64 x i8> [[B_BC]], <64 x i8> [[A_BC]]
 ; CHECK-NEXT:    [[RES:%.*]] = bitcast <64 x i8> [[CONCAT]] to <8 x i64>
 ; CHECK-NEXT:    ret <8 x i64> [[RES]]
 ;

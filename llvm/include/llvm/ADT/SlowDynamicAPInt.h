@@ -21,6 +21,10 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/Support/raw_ostream.h"
 
+namespace llvm {
+class DynamicAPInt;
+} // namespace llvm
+
 namespace llvm::detail {
 /// A simple class providing dynamic arbitrary-precision arithmetic. Internally,
 /// it stores an APInt, whose width is doubled whenever an overflow occurs at a
@@ -68,6 +72,9 @@ public:
 
   /// Overload to compute a hash_code for a SlowDynamicAPInt value.
   friend hash_code hash_value(const SlowDynamicAPInt &X); // NOLINT
+
+  // Make DynamicAPInt a friend so it can access Val directly.
+  friend DynamicAPInt;
 
   unsigned getBitWidth() const { return Val.getBitWidth(); }
 

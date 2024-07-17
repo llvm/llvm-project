@@ -1071,7 +1071,7 @@ def ReturnPointerRangeChecker : Checker<"ReturnPtrRange">,
 
 let ParentPackage = Taint in {
 
-def GenericTaintChecker : Checker<"TaintPropagation">,
+def TaintPropagationChecker : Checker<"TaintPropagation">, // Modelling checker
   HelpText<"Generate taint information used by other checkers">,
   CheckerOptions<[
     CmdLineOption<String,
@@ -1080,6 +1080,12 @@ def GenericTaintChecker : Checker<"TaintPropagation">,
                   "",
                   InAlpha>,
   ]>,
+  Documentation<NotDocumented>,
+  Hidden;
+
+def GenericTaintChecker : Checker<"GenericTaint">,
+  HelpText<"Reports potential injection vulnerabilities">,
+  Dependencies<[TaintPropagationChecker]>,
   Documentation<HasDocumentation>;
 
 } // end "alpha.security.taint"
@@ -1717,9 +1723,7 @@ let ParentPackage = TaintOptIn in {
 def TaintedAllocChecker: Checker<"TaintedAlloc">,
   HelpText<"Check for memory allocations, where the size parameter "
            "might be a tainted (attacker controlled) value.">,
-  Dependencies<[DynamicMemoryModeling]>,
-  //FIXME: GenericTaintChecker should be a dependency, but only after it
-  //is transformed into a modeling checker
+  Dependencies<[DynamicMemoryModeling, TaintPropagationChecker]>,
   Documentation<HasDocumentation>;
 
 } // end "optin.taint"

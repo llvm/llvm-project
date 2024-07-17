@@ -1,5 +1,5 @@
 header: inttypes.h
-macros: 
+macros: []
 types:
   - type_name: imaxdiv_t
 enums: []

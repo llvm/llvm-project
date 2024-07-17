@@ -5863,7 +5863,7 @@ define i8 @vreduce_mul_v2i8(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    lb a0, 1(a0)
+; CHECK-NEXT:    lbu a0, 1(a0)
 ; CHECK-NEXT:    vmul.vx v8, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret

@@ -393,6 +393,9 @@ struct PromoteMem2Reg {
   /// Lazily compute the number of predecessors a block has.
   DenseMap<const BasicBlock *, unsigned> BBNumPreds;
 
+  /// Whether the function has the no-signed-zeros-fp-math attribute set.
+  bool NoSignedZeros = false;
+
 public:
   PromoteMem2Reg(ArrayRef<AllocaInst *> Allocas, DominatorTree &DT,
                  AssumptionCache *AC)
@@ -522,7 +525,13 @@ rewriteSingleStoreAlloca(AllocaInst *AI, AllocaInfo &Info, LargeBlockInfo &LBI,
                          SmallSet<DbgAssignIntrinsic *, 8> *DbgAssignsToDelete,
                          SmallSet<DbgVariableRecord *, 8> *DVRAssignsToDelete) {
   StoreInst *OnlyStore = Info.OnlyStore;
-  bool StoringGlobalVal = !isa<Instruction>(OnlyStore->getOperand(0));
+  Value *ReplVal = OnlyStore->getOperand(0);
+  // Loads may either load the stored value or uninitialized memory (undef).
+  // If the stored value may be poison, then replacing an uninitialized memory
+  // load with it would be incorrect. If the store dominates the load, we know
+  // it is always initialized.
+  bool RequireDominatingStore =
+      isa<Instruction>(ReplVal) || !isGuaranteedNotToBePoison(ReplVal);
   BasicBlock *StoreBB = OnlyStore->getParent();
   int StoreIndex = -1;
 
@@ -539,7 +548,7 @@ rewriteSingleStoreAlloca(AllocaInst *AI, AllocaInfo &Info, LargeBlockInfo &LBI,
     // only value stored to the alloca.  We can do this if the value is
     // dominated by the store.  If not, we use the rest of the mem2reg machinery
     // to insert the phi nodes as needed.
-    if (!StoringGlobalVal) { // Non-instructions are always dominated.
+    if (RequireDominatingStore) {
       if (LI->getParent() == StoreBB) {
         // If we have a use that is in the same block as the store, compare the
         // indices of the two instructions to see which one came first.  If the
@@ -562,7 +571,6 @@ rewriteSingleStoreAlloca(AllocaInst *AI, AllocaInfo &Info, LargeBlockInfo &LBI,
     }
 
     // Otherwise, we *can* safely rewrite this load.
-    Value *ReplVal = OnlyStore->getOperand(0);
     // If the replacement value is the load, this must occur in unreachable
     // code.
     if (ReplVal == LI)
@@ -739,6 +747,8 @@ void PromoteMem2Reg::run() {
   AllocaInfo Info;
   LargeBlockInfo LBI;
   ForwardIDFCalculator IDF(DT);
+
+  NoSignedZeros = F.getFnAttribute("no-signed-zeros-fp-math").getValueAsBool();
 
   for (unsigned AllocaNum = 0; AllocaNum != Allocas.size(); ++AllocaNum) {
     AllocaInst *AI = Allocas[AllocaNum];
@@ -1128,10 +1138,7 @@ NextIteration:
         // on the phi node generated at this stage, fabs folding does not
         // happen. So, we try to infer nsz flag from the function attributes to
         // enable this fabs folding.
-        if (APN->isComplete() && isa<FPMathOperator>(APN) &&
-            BB->getParent()
-                ->getFnAttribute("no-signed-zeros-fp-math")
-                .getValueAsBool())
+        if (isa<FPMathOperator>(APN) && NoSignedZeros)
           APN->setHasNoSignedZeros(true);
 
         // The currently active variable for this block is now the PHI.

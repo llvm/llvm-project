@@ -40,6 +40,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -163,11 +164,31 @@ ImplicitConversionRank clang::GetConversionRank(ImplicitConversionKind Kind) {
       ICR_C_Conversion,
       ICR_C_Conversion_Extension,
       ICR_Conversion,
+      ICR_HLSL_Dimension_Reduction,
       ICR_Conversion,
-      ICR_Conversion,
+      ICR_HLSL_Scalar_Widening,
   };
   static_assert(std::size(Rank) == (int)ICK_Num_Conversion_Kinds);
   return Rank[(int)Kind];
+}
+
+ImplicitConversionRank
+clang::GetDimensionConversionRank(ImplicitConversionRank Base,
+                                  ImplicitConversionKind Dimension) {
+  ImplicitConversionRank Rank = GetConversionRank(Dimension);
+  if (Rank == ICR_HLSL_Scalar_Widening) {
+    if (Base == ICR_Promotion)
+      return ICR_HLSL_Scalar_Widening_Promotion;
+    if (Base == ICR_Conversion)
+      return ICR_HLSL_Scalar_Widening_Conversion;
+  }
+  if (Rank == ICR_HLSL_Dimension_Reduction) {
+    if (Base == ICR_Promotion)
+      return ICR_HLSL_Dimension_Reduction_Promotion;
+    if (Base == ICR_Conversion)
+      return ICR_HLSL_Dimension_Reduction_Conversion;
+  }
+  return Rank;
 }
 
 /// GetImplicitConversionName - Return the name of this kind of
@@ -207,6 +228,7 @@ static const char *GetImplicitConversionName(ImplicitConversionKind Kind) {
       "Fixed point conversion",
       "HLSL vector truncation",
       "Non-decaying array conversion",
+      "HLSL vector splat",
   };
   static_assert(std::size(Name) == (int)ICK_Num_Conversion_Kinds);
   return Name[Kind];
@@ -217,7 +239,7 @@ static const char *GetImplicitConversionName(ImplicitConversionKind Kind) {
 void StandardConversionSequence::setAsIdentityConversion() {
   First = ICK_Identity;
   Second = ICK_Identity;
-  Element = ICK_Identity;
+  Dimension = ICK_Identity;
   Third = ICK_Identity;
   DeprecatedStringLiteralToCharPtr = false;
   QualificationIncludesObjCLifetime = false;
@@ -240,8 +262,8 @@ ImplicitConversionRank StandardConversionSequence::getRank() const {
     Rank = GetConversionRank(First);
   if (GetConversionRank(Second) > Rank)
     Rank = GetConversionRank(Second);
-  if (GetConversionRank(Element) > Rank)
-    Rank = GetConversionRank(Element);
+  if (GetDimensionConversionRank(Rank, Dimension) > Rank)
+    Rank = GetDimensionConversionRank(Rank, Dimension);
   if (GetConversionRank(Third) > Rank)
     Rank = GetConversionRank(Third);
   return Rank;
@@ -1969,15 +1991,15 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
         if (FromElts < ToElts)
           return false;
         if (FromElts == ToElts)
-          ICK = ICK_Identity;
+          ElConv = ICK_Identity;
         else
-          ICK = ICK_HLSL_Vector_Truncation;
+          ElConv = ICK_HLSL_Vector_Truncation;
 
         QualType FromElTy = FromExtType->getElementType();
         QualType ToElTy = ToExtType->getElementType();
         if (S.Context.hasSameUnqualifiedType(FromElTy, ToElTy))
           return true;
-        return IsVectorElementConversion(S, FromElTy, ToElTy, ElConv, From);
+        return IsVectorElementConversion(S, FromElTy, ToElTy, ICK, From);
       }
       // There are no conversions between extended vector types other than the
       // identity conversion.
@@ -1986,6 +2008,11 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
 
     // Vector splat from any arithmetic type to a vector.
     if (FromType->isArithmeticType()) {
+      if (S.getLangOpts().HLSL) {
+        ElConv = ICK_HLSL_Vector_Splat;
+        QualType ToElTy = ToExtType->getElementType();
+        return IsVectorElementConversion(S, FromType, ToElTy, ICK, From);
+      }
       ICK = ICK_Vector_Splat;
       return true;
     }
@@ -2200,7 +2227,7 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
   // conversion.
   bool IncompatibleObjC = false;
   ImplicitConversionKind SecondICK = ICK_Identity;
-  ImplicitConversionKind ElementICK = ICK_Identity;
+  ImplicitConversionKind DimensionICK = ICK_Identity;
   if (S.Context.hasSameUnqualifiedType(FromType, ToType)) {
     // The unqualified versions of the types are the same: there's no
     // conversion to do.
@@ -2266,10 +2293,10 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
                                          InOverloadResolution, FromType)) {
     // Pointer to member conversions (4.11).
     SCS.Second = ICK_Pointer_Member;
-  } else if (IsVectorConversion(S, FromType, ToType, SecondICK, ElementICK,
+  } else if (IsVectorConversion(S, FromType, ToType, SecondICK, DimensionICK,
                                 From, InOverloadResolution, CStyle)) {
     SCS.Second = SecondICK;
-    SCS.Element = ElementICK;
+    SCS.Dimension = DimensionICK;
     FromType = ToType.getUnqualifiedType();
   } else if (!S.getLangOpts().CPlusPlus &&
              S.Context.typesAreCompatible(ToType, FromType)) {
@@ -4256,24 +4283,6 @@ getFixedEnumPromtion(Sema &S, const StandardConversionSequence &SCS) {
   return FixedEnumPromotion::ToPromotedUnderlyingType;
 }
 
-static ImplicitConversionSequence::CompareKind
-HLSLCompareFloatingRank(QualType LHS, QualType RHS) {
-  assert(LHS->isVectorType() == RHS->isVectorType() &&
-         "Either both elements should be vectors or neither should.");
-  if (const auto *VT = LHS->getAs<VectorType>())
-    LHS = VT->getElementType();
-
-  if (const auto *VT = RHS->getAs<VectorType>())
-    RHS = VT->getElementType();
-
-  const auto L = LHS->castAs<BuiltinType>()->getKind();
-  const auto R = RHS->castAs<BuiltinType>()->getKind();
-  if (L == R)
-    return ImplicitConversionSequence::Indistinguishable;
-  return L < R ? ImplicitConversionSequence::Better
-               : ImplicitConversionSequence::Worse;
-}
-
 /// CompareStandardConversionSequences - Compare two standard
 /// conversion sequences to determine whether one is better than the
 /// other or if they are indistinguishable (C++ 13.3.3.2p3).
@@ -4514,22 +4523,6 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
                  ? ImplicitConversionSequence::Better
                  : ImplicitConversionSequence::Worse;
   }
-
-  if (S.getLangOpts().HLSL) {
-    // On a promotion we prefer the lower rank to disambiguate.
-    if ((SCS1.Second == ICK_Floating_Promotion &&
-         SCS2.Second == ICK_Floating_Promotion) ||
-        (SCS1.Element == ICK_Floating_Promotion &&
-         SCS2.Element == ICK_Floating_Promotion))
-      return HLSLCompareFloatingRank(SCS1.getToType(2), SCS2.getToType(2));
-    // On a conversion we prefer the higher rank to disambiguate.
-    if ((SCS1.Second == ICK_Floating_Conversion &&
-         SCS2.Second == ICK_Floating_Conversion) ||
-        (SCS1.Element == ICK_Floating_Conversion &&
-         SCS2.Element == ICK_Floating_Conversion))
-      return HLSLCompareFloatingRank(SCS2.getToType(2), SCS1.getToType(2));
-  }
-
   return ImplicitConversionSequence::Indistinguishable;
 }
 
@@ -5073,7 +5066,7 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
                               : (RefConv & Sema::ReferenceConversions::ObjC)
                                     ? ICK_Compatible_Conversion
                                     : ICK_Identity;
-    ICS.Standard.Element = ICK_Identity;
+    ICS.Standard.Dimension = ICK_Identity;
     // FIXME: As a speculative fix to a defect introduced by CWG2352, we rank
     // a reference binding that performs a non-top-level qualification
     // conversion as a qualification conversion, not as an identity conversion.
@@ -5989,6 +5982,7 @@ static bool CheckConvertedConstantConversions(Sema &S,
   case ICK_Vector_Conversion:
   case ICK_SVE_Vector_Conversion:
   case ICK_RVV_Vector_Conversion:
+  case ICK_HLSL_Vector_Splat:
   case ICK_Vector_Splat:
   case ICK_Complex_Real:
   case ICK_Block_Pointer_Conversion:
@@ -6275,7 +6269,7 @@ Sema::EvaluateConvertedConstantExpression(Expr *E, QualType T, APValue &Value,
 static void dropPointerConversion(StandardConversionSequence &SCS) {
   if (SCS.Second == ICK_Pointer_Conversion) {
     SCS.Second = ICK_Identity;
-    SCS.Element = ICK_Identity;
+    SCS.Dimension = ICK_Identity;
     SCS.Third = ICK_Identity;
     SCS.ToTypePtrs[2] = SCS.ToTypePtrs[1] = SCS.ToTypePtrs[0];
   }
@@ -11884,6 +11878,46 @@ static void DiagnoseFailedExplicitSpec(Sema &S, OverloadCandidate *Cand) {
       << (ES.getExpr() ? ES.getExpr()->getSourceRange() : SourceRange());
 }
 
+static void NoteImplicitDeductionGuide(Sema &S, FunctionDecl *Fn) {
+  auto *DG = dyn_cast<CXXDeductionGuideDecl>(Fn);
+  if (!DG)
+    return;
+  TemplateDecl *OriginTemplate =
+      DG->getDeclName().getCXXDeductionGuideTemplate();
+  // We want to always print synthesized deduction guides for type aliases.
+  // They would retain the explicit bit of the corresponding constructor.
+  if (!(DG->isImplicit() || (OriginTemplate && OriginTemplate->isTypeAlias())))
+    return;
+  std::string FunctionProto;
+  llvm::raw_string_ostream OS(FunctionProto);
+  FunctionTemplateDecl *Template = DG->getDescribedFunctionTemplate();
+  if (!Template) {
+    // This also could be an instantiation. Find out the primary template.
+    FunctionDecl *Pattern =
+        DG->getTemplateInstantiationPattern(/*ForDefinition=*/false);
+    if (!Pattern) {
+      // The implicit deduction guide is built on an explicit non-template
+      // deduction guide. Currently, this might be the case only for type
+      // aliases.
+      // FIXME: Add a test once https://github.com/llvm/llvm-project/pull/96686
+      // gets merged.
+      assert(OriginTemplate->isTypeAlias() &&
+             "Non-template implicit deduction guides are only possible for "
+             "type aliases");
+      DG->print(OS);
+      S.Diag(DG->getLocation(), diag::note_implicit_deduction_guide)
+          << FunctionProto;
+      return;
+    }
+    Template = Pattern->getDescribedFunctionTemplate();
+    assert(Template && "Cannot find the associated function template of "
+                       "CXXDeductionGuideDecl?");
+  }
+  Template->print(OS);
+  S.Diag(DG->getLocation(), diag::note_implicit_deduction_guide)
+      << FunctionProto;
+}
+
 /// Generates a 'note' diagnostic for an overload candidate.  We've
 /// already generated a primary error at the call site.
 ///
@@ -11940,6 +11974,17 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
     S.NoteOverloadCandidate(Cand->FoundDecl, Fn, Cand->getRewriteKind());
     return;
   }
+
+  // If this is a synthesized deduction guide we're deducing against, add a note
+  // for it. These deduction guides are not explicitly spelled in the source
+  // code, so simply printing a deduction failure note mentioning synthesized
+  // template parameters or pointing to the header of the surrounding RecordDecl
+  // would be confusing.
+  //
+  // We prefer adding such notes at the end of the deduction failure because
+  // duplicate code snippets appearing in the diagnostic would likely become
+  // noisy.
+  auto _ = llvm::make_scope_exit([&] { NoteImplicitDeductionGuide(S, Fn); });
 
   switch (Cand->FailureKind) {
   case ovl_fail_too_many_arguments:

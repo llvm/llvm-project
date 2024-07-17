@@ -2687,6 +2687,16 @@ void Dumper::printRelocations() {
            << "VALUE\n";
 
     for (SectionRef Section : P.second) {
+      // CREL sections require decoding, each section may have its own specific
+      // decode problems.
+      if (O.isELF() && ELFSectionRef(Section).getType() == ELF::SHT_CREL) {
+        StringRef Err =
+            cast<const ELFObjectFileBase>(O).getCrelDecodeProblem(Section);
+        if (!Err.empty()) {
+          reportUniqueWarning(Err);
+          continue;
+        }
+      }
       for (const RelocationRef &Reloc : Section.relocations()) {
         uint64_t Address = Reloc.getOffset();
         SmallString<32> RelocName;

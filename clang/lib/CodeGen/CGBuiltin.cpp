@@ -2587,6 +2587,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_fma:
   case Builtin::BI__builtin_fmaf:
   case Builtin::BI__builtin_fmal:
+  case Builtin::BI__builtin_fmaf16:
   case Builtin::BIfma:
   case Builtin::BIfmaf:
   case Builtin::BIfmal: {
@@ -5888,12 +5889,16 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_printf:
   case Builtin::BIprintf:
     if (getTarget().getTriple().isNVPTX() ||
-        getTarget().getTriple().isAMDGCN()) {
+        getTarget().getTriple().isAMDGCN() ||
+        (getTarget().getTriple().isSPIRV() &&
+         getTarget().getTriple().getVendor() == Triple::VendorType::AMD)) {
       if (getLangOpts().OpenMPIsTargetDevice)
         return EmitOpenMPDevicePrintfCallExpr(E);
       if (getTarget().getTriple().isNVPTX())
         return EmitNVPTXDevicePrintfCallExpr(E);
-      if (getTarget().getTriple().isAMDGCN() && getLangOpts().HIP)
+      if ((getTarget().getTriple().isAMDGCN() ||
+           getTarget().getTriple().isSPIRV()) &&
+          getLangOpts().HIP)
         return EmitAMDGPUDevicePrintfCallExpr(E);
     }
 
@@ -11502,6 +11507,15 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, {Address, RW, Locality, Data});
   }
 
+  if (BuiltinID == AArch64::BI__hlt) {
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_hlt);
+    Builder.CreateCall(F, {EmitScalarExpr(E->getArg(0))});
+
+    // Return 0 for convenience, even though MSVC returns some other undefined
+    // value.
+    return ConstantInt::get(Builder.getInt32Ty(), 0);
+  }
+
   // Handle MSVC intrinsics before argument evaluation to prevent double
   // evaluation.
   if (std::optional<MSVCIntrin> MsvcIntId =
@@ -15955,14 +15969,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, {Ops[0]});
   }
 
-  // 3DNow!
-  case X86::BI__builtin_ia32_pswapdsf:
-  case X86::BI__builtin_ia32_pswapdsi: {
-    llvm::Type *MMXTy = llvm::Type::getX86_MMXTy(getLLVMContext());
-    Ops[0] = Builder.CreateBitCast(Ops[0], MMXTy, "cast");
-    llvm::Function *F = CGM.getIntrinsic(Intrinsic::x86_3dnowa_pswapd);
-    return Builder.CreateCall(F, Ops, "pswapd");
-  }
   case X86::BI__builtin_ia32_rdrand16_step:
   case X86::BI__builtin_ia32_rdrand32_step:
   case X86::BI__builtin_ia32_rdrand64_step:
@@ -16748,10 +16754,10 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
   auto GenAIXPPCBuiltinCpuExpr = [&](unsigned SupportMethod, unsigned FieldIdx,
                                      unsigned Mask, CmpInst::Predicate CompOp,
                                      unsigned OpValue) -> Value * {
-    if (SupportMethod == AIX_BUILTIN_PPC_FALSE)
+    if (SupportMethod == BUILTIN_PPC_FALSE)
       return llvm::ConstantInt::getFalse(ConvertType(E->getType()));
 
-    if (SupportMethod == AIX_BUILTIN_PPC_TRUE)
+    if (SupportMethod == BUILTIN_PPC_TRUE)
       return llvm::ConstantInt::getTrue(ConvertType(E->getType()));
 
     assert(SupportMethod <= SYS_CALL && "Invalid value for SupportMethod.");
@@ -16803,34 +16809,39 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
     llvm::Triple Triple = getTarget().getTriple();
 
-    if (Triple.isOSAIX()) {
-      unsigned SupportMethod, FieldIdx, CpuIdValue;
-      CmpInst::Predicate CompareOp;
-      typedef std::tuple<unsigned, unsigned, CmpInst::Predicate, unsigned>
-          CPUType;
-      std::tie(SupportMethod, FieldIdx, CompareOp, CpuIdValue) =
-          static_cast<CPUType>(StringSwitch<CPUType>(CPUStr)
-#define PPC_AIX_CPU(NAME, SUPPORT_METHOD, INDEX, COMPARE_OP, VALUE)            \
-  .Case(NAME, {SUPPORT_METHOD, INDEX, COMPARE_OP, VALUE})
+    unsigned LinuxSupportMethod, LinuxIDValue, AIXSupportMethod, AIXIDValue;
+    typedef std::tuple<unsigned, unsigned, unsigned, unsigned> CPUInfo;
+
+    std::tie(LinuxSupportMethod, LinuxIDValue, AIXSupportMethod, AIXIDValue) =
+        static_cast<CPUInfo>(StringSwitch<CPUInfo>(CPUStr)
+#define PPC_CPU(NAME, Linux_SUPPORT_METHOD, LinuxID, AIX_SUPPORT_METHOD,       \
+                AIXID)                                                         \
+  .Case(NAME, {Linux_SUPPORT_METHOD, LinuxID, AIX_SUPPORT_METHOD, AIXID})
 #include "llvm/TargetParser/PPCTargetParser.def"
-                                   .Default({AIX_BUILTIN_PPC_FALSE, 0,
-                                             CmpInst::Predicate(), 0}));
-      return GenAIXPPCBuiltinCpuExpr(SupportMethod, FieldIdx, 0, CompareOp,
-                                     CpuIdValue);
+                                 .Default({BUILTIN_PPC_UNSUPPORTED, 0,
+                                           BUILTIN_PPC_UNSUPPORTED, 0}));
+
+    if (Triple.isOSAIX()) {
+      assert((AIXSupportMethod != BUILTIN_PPC_UNSUPPORTED) &&
+             "Invalid CPU name. Missed by SemaChecking?");
+      return GenAIXPPCBuiltinCpuExpr(AIXSupportMethod, AIX_SYSCON_IMPL_IDX, 0,
+                                     ICmpInst::ICMP_EQ, AIXIDValue);
     }
 
     assert(Triple.isOSLinux() &&
            "__builtin_cpu_is() is only supported for AIX and Linux.");
-    unsigned NumCPUID = StringSwitch<unsigned>(CPUStr)
-#define PPC_LNX_CPU(Name, NumericID) .Case(Name, NumericID)
-#include "llvm/TargetParser/PPCTargetParser.def"
-                            .Default(-1U);
-    assert(NumCPUID < -1U && "Invalid CPU name. Missed by SemaChecking?");
+
+    assert((LinuxSupportMethod != BUILTIN_PPC_UNSUPPORTED) &&
+           "Invalid CPU name. Missed by SemaChecking?");
+
+    if (LinuxSupportMethod == BUILTIN_PPC_FALSE)
+      return llvm::ConstantInt::getFalse(ConvertType(E->getType()));
+
     Value *Op0 = llvm::ConstantInt::get(Int32Ty, PPC_FAWORD_CPUID);
     llvm::Function *F = CGM.getIntrinsic(Intrinsic::ppc_fixed_addr_ld);
     Value *TheCall = Builder.CreateCall(F, {Op0}, "cpu_is");
     return Builder.CreateICmpEQ(TheCall,
-                                llvm::ConstantInt::get(Int32Ty, NumCPUID));
+                                llvm::ConstantInt::get(Int32Ty, LinuxIDValue));
   }
   case Builtin::BI__builtin_cpu_supports: {
     llvm::Triple Triple = getTarget().getTriple();
@@ -16848,7 +16859,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
                         VALUE)                                                 \
   .Case(NAME, {SUPPORT_METHOD, INDEX, MASK, COMP_OP, VALUE})
 #include "llvm/TargetParser/PPCTargetParser.def"
-                                          .Default({AIX_BUILTIN_PPC_FALSE, 0, 0,
+                                          .Default({BUILTIN_PPC_FALSE, 0, 0,
                                                     CmpInst::Predicate(), 0}));
       return GenAIXPPCBuiltinCpuExpr(SupportMethod, FieldIdx, Mask, CompOp,
                                      Value);
@@ -18370,13 +18381,12 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       llvm_unreachable("rcp operand must have a float representation");
     llvm::Type *Ty = Op0->getType();
     llvm::Type *EltTy = Ty->getScalarType();
-    Constant *One =
-        Ty->isVectorTy()
-            ? ConstantVector::getSplat(
-                  ElementCount::getFixed(
-                      dyn_cast<FixedVectorType>(Ty)->getNumElements()),
-                  ConstantFP::get(EltTy, 1.0))
-            : ConstantFP::get(EltTy, 1.0);
+    Constant *One = Ty->isVectorTy()
+                        ? ConstantVector::getSplat(
+                              ElementCount::getFixed(
+                                  cast<FixedVectorType>(Ty)->getNumElements()),
+                              ConstantFP::get(EltTy, 1.0))
+                        : ConstantFP::get(EltTy, 1.0);
     return Builder.CreateFDiv(One, Op0, "hlsl.rcp");
   }
   case Builtin::BI__builtin_hlsl_elementwise_rsqrt: {

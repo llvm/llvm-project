@@ -19,6 +19,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -364,6 +365,22 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   return glob;
 }
 
+std::pair<fir::TypeInfoOp, mlir::OpBuilder::InsertPoint>
+fir::FirOpBuilder::createTypeInfoOp(mlir::Location loc,
+                                    fir::RecordType recordType,
+                                    fir::RecordType parentType) {
+  mlir::ModuleOp module = getModule();
+  if (fir::TypeInfoOp typeInfo =
+          fir::lookupTypeInfoOp(recordType.getName(), module, symbolTable))
+    return {typeInfo, InsertPoint{}};
+  InsertPoint insertPoint = saveInsertionPoint();
+  setInsertionPoint(module.getBody(), module.getBody()->end());
+  auto typeInfo = create<fir::TypeInfoOp>(loc, recordType, parentType);
+  if (symbolTable)
+    symbolTable->insert(typeInfo);
+  return {typeInfo, insertPoint};
+}
+
 mlir::Value fir::FirOpBuilder::convertWithSemantics(
     mlir::Location loc, mlir::Type toTy, mlir::Value val,
     bool allowCharacterConversion, bool allowRebox) {
@@ -438,13 +455,19 @@ mlir::Value fir::FirOpBuilder::convertWithSemantics(
   return createConvert(loc, toTy, val);
 }
 
-mlir::Value fir::FirOpBuilder::createConvert(mlir::Location loc,
-                                             mlir::Type toTy, mlir::Value val) {
+mlir::Value fir::factory::createConvert(mlir::OpBuilder &builder,
+                                        mlir::Location loc, mlir::Type toTy,
+                                        mlir::Value val) {
   if (val.getType() != toTy) {
     assert(!fir::isa_derived(toTy));
-    return create<fir::ConvertOp>(loc, toTy, val);
+    return builder.create<fir::ConvertOp>(loc, toTy, val);
   }
   return val;
+}
+
+mlir::Value fir::FirOpBuilder::createConvert(mlir::Location loc,
+                                             mlir::Type toTy, mlir::Value val) {
+  return fir::factory::createConvert(*this, loc, toTy, val);
 }
 
 void fir::FirOpBuilder::createStoreWithConvert(mlir::Location loc,
