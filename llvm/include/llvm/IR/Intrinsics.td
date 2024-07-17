@@ -2344,6 +2344,13 @@ def int_experimental_vp_reverse:
                          llvm_i32_ty],
                         [IntrNoMem]>;
 
+def int_experimental_vp_splat:
+  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                        [LLVMVectorElementType<0>,
+                         LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                         llvm_i32_ty],
+                        [IntrNoMem]>;
+
 def int_vp_is_fpclass:
       DefaultAttrsIntrinsic<[ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
                               [ llvm_anyvector_ty,
