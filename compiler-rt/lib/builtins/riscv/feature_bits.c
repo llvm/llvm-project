@@ -269,8 +269,6 @@ void __init_riscv_feature_bits() {
   if (FeaturesBitCached)
     return;
 
-  FeaturesBitCached = 1;
-
 #if defined(__linux__)
   struct riscv_hwprobe Hwprobes[] = {
       {RISCV_HWPROBE_KEY_BASE_BEHAVIOR, 0},
@@ -282,4 +280,6 @@ void __init_riscv_feature_bits() {
 
   initRISCVFeature(Hwprobes);
 #endif // defined(__linux__)
+
+  FeaturesBitCached = 1;
 }
