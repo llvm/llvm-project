@@ -161,14 +161,10 @@ struct CpuInfo {
   StringRef Name; // Name, as written for -mcpu.
   const ArchInfo &Arch;
   AArch64::ExtensionBitset
-      DefaultExtensions; // Default extensions for this CPU. These will be
-                         // ORd with the architecture defaults.
+      DefaultExtensions; // Default extensions for this CPU.
 
   AArch64::ExtensionBitset getImpliedExtensions() const {
-    AArch64::ExtensionBitset ImpliedExts;
-    ImpliedExts |= DefaultExtensions;
-    ImpliedExts |= Arch.DefaultExts;
-    return ImpliedExts;
+    return DefaultExtensions;
   }
 };
 

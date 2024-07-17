@@ -1871,7 +1871,7 @@ bool X86InstructionSelector::selectSelect(MachineInstr &I,
 
 InstructionSelector *
 llvm::createX86InstructionSelector(const X86TargetMachine &TM,
-                                   X86Subtarget &Subtarget,
-                                   X86RegisterBankInfo &RBI) {
+                                   const X86Subtarget &Subtarget,
+                                   const X86RegisterBankInfo &RBI) {
   return new X86InstructionSelector(TM, Subtarget, RBI);
 }

@@ -113,7 +113,11 @@ static T PickFP(const llvm::fltSemantics *Sem, T IEEEHalfVal, T IEEESingleVal,
 
 static void DefineFloatMacros(MacroBuilder &Builder, StringRef Prefix,
                               const llvm::fltSemantics *Sem, StringRef Ext) {
-  const char *DenormMin, *Epsilon, *Max, *Min;
+  const char *DenormMin, *NormMax, *Epsilon, *Max, *Min;
+  NormMax = PickFP(Sem, "6.5504e+4", "3.40282347e+38",
+                   "1.7976931348623157e+308", "1.18973149535723176502e+4932",
+                   "8.98846567431157953864652595394501e+307",
+                   "1.18973149535723176508575932662800702e+4932");
   DenormMin = PickFP(Sem, "5.9604644775390625e-8", "1.40129846e-45",
                      "4.9406564584124654e-324", "3.64519953188247460253e-4951",
                      "4.94065645841246544176568792868221e-324",
@@ -144,6 +148,7 @@ static void DefineFloatMacros(MacroBuilder &Builder, StringRef Prefix,
   DefPrefix += "_";
 
   Builder.defineMacro(DefPrefix + "DENORM_MIN__", Twine(DenormMin)+Ext);
+  Builder.defineMacro(DefPrefix + "NORM_MAX__", Twine(NormMax)+Ext);
   Builder.defineMacro(DefPrefix + "HAS_DENORM__");
   Builder.defineMacro(DefPrefix + "DIG__", Twine(Digits));
   Builder.defineMacro(DefPrefix + "DECIMAL_DIG__", Twine(DecimalDigits));

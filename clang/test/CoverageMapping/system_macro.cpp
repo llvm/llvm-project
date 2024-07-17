@@ -5,9 +5,8 @@
 
 // LL_CHECK: @__covrec_
 // LL_W_SYS: [[PROFC:@.*__profc_.*SysTmpl.*]] =
-// LL_WOSYS: [[PROFC:@.*__profc_.*SysTmpl.*]] =
 // LL_W_SYS: @{{.*}}__profd_{{.*}}SysTmpl{{.*}} =
-// LL_WOSYS: @{{.*}}__profd_{{.*}}SysTmpl{{.*}} =
+// LL_WOSYS-NOT: SysTmpl
 
 // LL_CHECK: @llvm.used =
 
@@ -21,7 +20,7 @@
 template <bool f> bool SysTmpl() { return f; }
 // Check SysTmpl() is instrumented or not.
 // LL_W_SYS: load i64, ptr [[PROFC]],
-// LL_WOSYS: load i64, ptr [[PROFC]],
+// LL_WOSYS-NOT: load i64, ptr @__profc_
 
 #else
 

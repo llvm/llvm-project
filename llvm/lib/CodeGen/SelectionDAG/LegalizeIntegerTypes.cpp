@@ -137,6 +137,7 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::SPLAT_VECTOR:
   case ISD::SCALAR_TO_VECTOR:
+  case ISD::EXPERIMENTAL_VP_SPLAT:
     Res = PromoteIntRes_ScalarOp(N);
     break;
   case ISD::STEP_VECTOR: Res = PromoteIntRes_STEP_VECTOR(N); break;
@@ -328,6 +329,10 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::LRINT:
   case ISD::LLRINT:
     Res = PromoteIntRes_XRINT(N);
+    break;
+
+  case ISD::PATCHPOINT:
+    Res = PromoteIntRes_PATCHPOINT(N);
     break;
   }
 
@@ -1916,6 +1921,7 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
     break;
   case ISD::SPLAT_VECTOR:
   case ISD::SCALAR_TO_VECTOR:
+  case ISD::EXPERIMENTAL_VP_SPLAT:
     Res = PromoteIntOp_ScalarOp(N);
     break;
   case ISD::VSELECT:
@@ -2211,10 +2217,14 @@ SDValue DAGTypeLegalizer::PromoteIntOp_INSERT_VECTOR_ELT(SDNode *N,
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_ScalarOp(SDNode *N) {
+  SDValue Op = GetPromotedInteger(N->getOperand(0));
+  if (N->getOpcode() == ISD::EXPERIMENTAL_VP_SPLAT)
+    return SDValue(
+        DAG.UpdateNodeOperands(N, Op, N->getOperand(1), N->getOperand(2)), 0);
+
   // Integer SPLAT_VECTOR/SCALAR_TO_VECTOR operands are implicitly truncated,
   // so just promote the operand in place.
-  return SDValue(DAG.UpdateNodeOperands(N,
-                                GetPromotedInteger(N->getOperand(0))), 0);
+  return SDValue(DAG.UpdateNodeOperands(N, Op), 0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_SELECT(SDNode *N, unsigned OpNo) {
@@ -5231,6 +5241,7 @@ bool DAGTypeLegalizer::ExpandIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::EXTRACT_ELEMENT:   Res = ExpandOp_EXTRACT_ELEMENT(N); break;
   case ISD::INSERT_VECTOR_ELT: Res = ExpandOp_INSERT_VECTOR_ELT(N); break;
   case ISD::SCALAR_TO_VECTOR:  Res = ExpandOp_SCALAR_TO_VECTOR(N); break;
+  case ISD::EXPERIMENTAL_VP_SPLAT:
   case ISD::SPLAT_VECTOR:      Res = ExpandIntOp_SPLAT_VECTOR(N); break;
   case ISD::SELECT_CC:         Res = ExpandIntOp_SELECT_CC(N); break;
   case ISD::SETCC:             Res = ExpandIntOp_SETCC(N); break;
@@ -5859,6 +5870,9 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ScalarOp(SDNode *N) {
   EVT NOutElemVT = NOutVT.getVectorElementType();
 
   SDValue Op = DAG.getNode(ISD::ANY_EXTEND, dl, NOutElemVT, N->getOperand(0));
+  if (N->isVPOpcode())
+    return DAG.getNode(N->getOpcode(), dl, NOutVT, Op, N->getOperand(1),
+                       N->getOperand(2));
 
   return DAG.getNode(N->getOpcode(), dl, NOutVT, Op);
 }
@@ -6011,6 +6025,24 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VP_REDUCE(SDNode *N) {
   SDValue Start = PromoteIntOpVectorReduction(N, N->getOperand(0));
   return DAG.getNode(N->getOpcode(), DL, Start.getValueType(), Start,
                      N->getOperand(1), N->getOperand(2), N->getOperand(3));
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_PATCHPOINT(SDNode *N) {
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  SDLoc dl(N);
+
+  assert(N->getNumValues() == 3 && "Expected 3 values for PATCHPOINT");
+  SDVTList VTList = DAG.getVTList({NVT, MVT::Other, MVT::Glue});
+
+  SmallVector<SDValue> Ops(N->ops());
+  SDValue Res = DAG.getNode(ISD::PATCHPOINT, dl, VTList, Ops);
+
+  // Replace chain and glue uses with the new patchpoint.
+  SDValue From[] = {SDValue(N, 1), SDValue(N, 2)};
+  SDValue To[] = {Res.getValue(1), Res.getValue(2)};
+  DAG.ReplaceAllUsesOfValuesWith(From, To, 2);
+
+  return Res.getValue(0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_EXTRACT_VECTOR_ELT(SDNode *N) {

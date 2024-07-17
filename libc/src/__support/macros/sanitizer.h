@@ -12,42 +12,10 @@
 #include "src/__support/macros/config.h" //LIBC_HAS_FEATURE
 
 //-----------------------------------------------------------------------------
-// Properties to check the presence or absence or sanitizers
-//-----------------------------------------------------------------------------
-
-// MemorySanitizer (MSan) is a detector of uninitialized reads. It consists of
-// a compiler instrumentation module and a run-time library. The
-// MEMORY_SANITIZER macro is deprecated but we will continue to honor it for
-// now.
-#ifdef LIBC_HAVE_MEMORY_SANITIZER
-#error "LIBC_HAVE_MEMORY_SANITIZER cannot be directly set."
-#elif defined(MEMORY_SANITIZER) || defined(__SANITIZE_MEMORY__) ||             \
-    (LIBC_HAS_FEATURE(memory_sanitizer) && !defined(__native_client__))
-#define LIBC_HAVE_MEMORY_SANITIZER
-#endif
-
-// AddressSanitizer (ASan) is a fast memory error detector. The
-// ADDRESS_SANITIZER macro is deprecated but we will continue to honor it for
-// now.
-#ifdef LIBC_HAVE_ADDRESS_SANITIZER
-#error "LIBC_HAVE_ADDRESS_SANITIZER cannot be directly set."
-#elif defined(ADDRESS_SANITIZER) || defined(__SANITIZE_ADDRESS__) ||           \
-    LIBC_HAS_FEATURE(address_sanitizer)
-#define LIBC_HAVE_ADDRESS_SANITIZER
-#endif
-
-// HWAddressSanitizer (HWASan) is a fast, low memory overhead error detector.
-#ifdef LIBC_HAVE_HWADDRESS_SANITIZER
-#error "LIBC_HAVE_HWADDRESS_SANITIZER cannot be directly set."
-#elif LIBC_HAS_FEATURE(hwaddress_sanitizer)
-#define LIBC_HAVE_HWADDRESS_SANITIZER
-#endif
-
-//-----------------------------------------------------------------------------
 // Functions to unpoison memory
 //-----------------------------------------------------------------------------
 
-#if defined(LIBC_HAVE_MEMORY_SANITIZER)
+#if LIBC_HAS_FEATURE(memory_sanitizer)
 // Only perform MSAN unpoison in non-constexpr context.
 #include <sanitizer/msan_interface.h>
 #define MSAN_UNPOISON(addr, size)                                              \
@@ -59,7 +27,8 @@
 #define MSAN_UNPOISON(ptr, size)
 #endif
 
-#ifdef LIBC_HAVE_ADDRESS_SANITIZER
+#if LIBC_HAS_FEATURE(address_sanitizer)
+#define LIBC_HAVE_ADDRESS_SANITIZER
 #include <sanitizer/asan_interface.h>
 #define ASAN_POISON_MEMORY_REGION(addr, size)                                  \
   __asan_poison_memory_region((addr), (size))

@@ -550,6 +550,12 @@ static constexpr IntrinsicHandler handlers[]{
        {"identity", asAddr, handleDynamicOptional},
        {"ordered", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"rename",
+     &I::genRename,
+     {{{"path1", asBox},
+       {"path2", asBox},
+       {"status", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"repeat",
      &I::genRepeat,
      {{{"string", asAddr}, {"ncopies", asValue}}},
@@ -577,6 +583,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"back", asValue, handleDynamicOptional},
        {"kind", asValue}}},
      /*isElemental=*/true},
+    {"second",
+     &I::genSecond,
+     {{{"time", asAddr}}},
+     /*isElemental=*/false},
     {"selected_char_kind",
      &I::genSelectedCharKind,
      {{{"name", asAddr}}},
@@ -1058,6 +1068,12 @@ static constexpr MathOperation mathOperations[] = {
     {"atan", "catanf", genFuncType<Ty::Complex<4>, Ty::Complex<4>>, genLibCall},
     {"atan", "catan", genFuncType<Ty::Complex<8>, Ty::Complex<8>>, genLibCall},
     {"atan", RTNAME_STRING(CAtanF128), FuncTypeComplex16Complex16,
+     genLibF128Call},
+    {"atan", "atan2f", genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Real<4>>,
+     genMathOp<mlir::math::Atan2Op>},
+    {"atan", "atan2", genFuncType<Ty::Real<8>, Ty::Real<8>, Ty::Real<8>>,
+     genMathOp<mlir::math::Atan2Op>},
+    {"atan", RTNAME_STRING(Atan2F128), FuncTypeReal16Real16Real16,
      genLibF128Call},
     {"atan2", "atan2f", genFuncType<Ty::Real<4>, Ty::Real<4>, Ty::Real<4>>,
      genMathOp<mlir::math::Atan2Op>},
@@ -5911,6 +5927,37 @@ IntrinsicLibrary::genReduce(mlir::Type resultType,
   return readAndAddCleanUp(resultMutableBox, resultType, "REDUCE");
 }
 
+// RENAME
+fir::ExtendedValue
+IntrinsicLibrary::genRename(std::optional<mlir::Type> resultType,
+                            mlir::ArrayRef<fir::ExtendedValue> args) {
+  assert((args.size() == 3 && !resultType.has_value()) ||
+         (args.size() == 2 && resultType.has_value()));
+
+  mlir::Value path1 = fir::getBase(args[0]);
+  mlir::Value path2 = fir::getBase(args[1]);
+  if (!path1 || !path2)
+    fir::emitFatalError(loc, "Expected at least two dummy arguments");
+
+  if (resultType.has_value()) {
+    // code-gen for the function form of RENAME
+    auto statusAddr = builder.createTemporary(loc, *resultType);
+    auto statusBox = builder.createBox(loc, statusAddr);
+    fir::runtime::genRename(builder, loc, path1, path2, statusBox);
+    return builder.create<fir::LoadOp>(loc, statusAddr);
+  } else {
+    // code-gen for the procedure form of RENAME
+    mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
+    auto status = args[2];
+    mlir::Value statusBox =
+        isStaticallyPresent(status)
+            ? fir::getBase(status)
+            : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+    fir::runtime::genRename(builder, loc, path1, path2, statusBox);
+    return {};
+  }
+}
+
 // REPEAT
 fir::ExtendedValue
 IntrinsicLibrary::genRepeat(mlir::Type resultType,
@@ -6095,6 +6142,27 @@ IntrinsicLibrary::genScan(mlir::Type resultType,
 
   // Handle cleanup of allocatable result descriptor and return
   return readAndAddCleanUp(resultMutableBox, resultType, "SCAN");
+}
+
+// SECOND
+fir::ExtendedValue
+IntrinsicLibrary::genSecond(std::optional<mlir::Type> resultType,
+                            mlir::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1 && !resultType || args.empty() && resultType);
+
+  fir::ExtendedValue result;
+
+  if (resultType)
+    result = builder.createTemporary(loc, *resultType);
+  else
+    result = args[0];
+
+  llvm::SmallVector<fir::ExtendedValue, 1> subroutineArgs(1, result);
+  genCpuTime(subroutineArgs);
+
+  if (resultType)
+    return result;
+  return {};
 }
 
 // SELECTED_CHAR_KIND
