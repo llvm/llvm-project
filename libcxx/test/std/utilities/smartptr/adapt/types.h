@@ -44,7 +44,7 @@ struct ConstructiblePtr {
   void release() { ptr.release(); }
 };
 
-static_assert(std::is_same_v<std::__pointer_of_t< ConstructiblePtr<int>>, int* >);
+LIBCPP_STATIC_ASSERT(std::is_same_v<std::__pointer_of_t< ConstructiblePtr<int>>, int* >);
 static_assert(std::is_constructible_v< ConstructiblePtr<int>, int* >);
 
 struct ResetArg {};
@@ -68,7 +68,7 @@ struct ResettablePtr {
   void release() { ptr.release(); }
 };
 
-static_assert(std::is_same_v<std::__pointer_of_t< ResettablePtr<int>>, int* >);
+LIBCPP_STATIC_ASSERT(std::is_same_v<std::__pointer_of_t< ResettablePtr<int>>, int* >);
 static_assert(std::is_constructible_v< ResettablePtr<int>, int* >);
 
 template <typename T>
@@ -78,7 +78,7 @@ struct NonConstructiblePtr : public ResettablePtr<T> {
   void reset(T* p) { ResettablePtr<T>::ptr.reset(p); }
 };
 
-static_assert(std::is_same_v<std::__pointer_of_t< NonConstructiblePtr<int>>, int* >);
+LIBCPP_STATIC_ASSERT(std::is_same_v<std::__pointer_of_t< NonConstructiblePtr<int>>, int* >);
 static_assert(!std::is_constructible_v< NonConstructiblePtr<int>, int* >);
 
 #endif // TEST_LIBCXX_UTILITIES_SMARTPTR_ADAPT_TYPES_H
