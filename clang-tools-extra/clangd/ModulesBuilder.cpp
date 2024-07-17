@@ -182,8 +182,7 @@ llvm::Error buildModuleFile(llvm::StringRef ModuleName,
   // third party modules, we should return true instead of false here.
   // Currently we simply bail out.
   if (ModuleUnitFileName.empty())
-    return llvm::createStringError(
-        llvm::formatv("Failed to get the primary source"));
+    return llvm::createStringError("Failed to get the primary source");
 
   // Try cheap operation earlier to boil-out cheaply if there are problems.
   auto Cmd = CDB.getCompileCommand(ModuleUnitFileName);
@@ -196,7 +195,8 @@ llvm::Error buildModuleFile(llvm::StringRef ModuleName,
     if (llvm::Error Err = buildModuleFile(RequiredModuleName, CDB, TFS, MDB,
                                           ModuleFilesPrefix, BuiltModuleFiles))
       return llvm::createStringError(
-          llvm::formatv("Failed to build dependency {0}", RequiredModuleName));
+          llvm::formatv("Failed to build dependency {0}: {1}",
+                        RequiredModuleName, llvm::toString(std::move(Err))));
   }
 
   Cmd->Output = getModuleFilePath(ModuleName, ModuleFilesPrefix);
@@ -208,13 +208,12 @@ llvm::Error buildModuleFile(llvm::StringRef ModuleName,
   IgnoreDiagnostics IgnoreDiags;
   auto CI = buildCompilerInvocation(Inputs, IgnoreDiags);
   if (!CI)
-    return llvm::createStringError(
-        llvm::formatv("Failed to build compiler invocation"));
+    return llvm::createStringError("Failed to build compiler invocation");
 
   auto FS = Inputs.TFS->view(Inputs.CompileCommand.Directory);
   auto Buf = FS->getBufferForFile(Inputs.CompileCommand.Filename);
   if (!Buf)
-    return llvm::createStringError(llvm::formatv("Failed to create buffer"));
+    return llvm::createStringError("Failed to create buffer");
 
   // In clang's driver, we will suppress the check for ODR violation in GMF.
   // See the implementation of RenderModulesOptions in Clang.cpp.
@@ -232,14 +231,13 @@ llvm::Error buildModuleFile(llvm::StringRef ModuleName,
       prepareCompilerInstance(std::move(CI), /*Preamble=*/nullptr,
                               std::move(*Buf), std::move(FS), IgnoreDiags);
   if (!Clang)
-    return llvm::createStringError(
-        llvm::formatv("Failed to prepare compiler instance"));
+    return llvm::createStringError("Failed to prepare compiler instance");
 
   GenerateReducedModuleInterfaceAction Action;
   Clang->ExecuteAction(Action);
 
   if (Clang->getDiagnostics().hasErrorOccurred())
-    return llvm::createStringError(llvm::formatv("Compilation failed"));
+    return llvm::createStringError("Compilation failed");
 
   BuiltModuleFiles.addModuleFile(ModuleName, Inputs.CompileCommand.Output);
   return llvm::Error::success();
@@ -311,6 +309,9 @@ bool StandalonePrerequisiteModules::canReuse(
 
   // Following the practice of clang's driver to suppres the checking for ODR
   // violation in GMF.
+  // See
+  // https://clang.llvm.org/docs/StandardCPlusPlusModules.html#object-definition-consistency
+  // for example.
   Clang.getLangOpts().SkipODRCheckInGMF = true;
 
   Clang.createASTReader();

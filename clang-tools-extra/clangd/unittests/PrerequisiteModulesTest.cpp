@@ -13,16 +13,13 @@
 
 #include "ModulesBuilder.h"
 #include "ScanningProjectModules.h"
-
 #include "Annotations.h"
 #include "CodeComplete.h"
 #include "Compiler.h"
 #include "TestTU.h"
 #include "support/ThreadsafeFS.h"
-
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
