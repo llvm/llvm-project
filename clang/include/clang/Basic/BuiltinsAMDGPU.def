@@ -632,6 +632,8 @@ TARGET_BUILTIN(__builtin_amdgcn_ds_load_tr4_b64_v2i32, "V2iV2i*3", "nc", "gfx121
 TARGET_BUILTIN(__builtin_amdgcn_ds_load_tr8_b64_v2i32, "V2iV2i*3", "nc", "gfx1210-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_ds_load_tr6_b96_v3i32, "V3iV3i*3", "nc", "gfx1210-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_ds_load_tr16_b128_v8i16, "V8sV8s*3", "nc", "gfx1210-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_ds_load_tr16_b128_v8f16, "V8hV8h*3", "nc", "gfx1210-insts,wavefrontsize32")
+TARGET_BUILTIN(__builtin_amdgcn_ds_load_tr16_b128_v8bf16, "V8yV8y*3", "nc", "gfx1210-insts,wavefrontsize32")
 
 TARGET_BUILTIN(__builtin_amdgcn_global_load_monitor_b32, "ii*1Ii", "nc", "gfx1210-insts")
 TARGET_BUILTIN(__builtin_amdgcn_global_load_monitor_b64, "V2iV2i*1Ii", "nc", "gfx1210-insts")
