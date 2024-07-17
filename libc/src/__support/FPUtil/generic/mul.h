@@ -1,4 +1,4 @@
-//===-- Division of IEEE 754 floating-point numbers -------------*- C++ -*-===//
+//===-- Multiplication of IEEE 754 floating-point numbers -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -35,9 +35,8 @@ mul(InType x, InType y) {
   using InFPBits = FPBits<InType>;
   using InStorageType = typename InFPBits::StorageType;
   // The product of two p-digit numbers is a 2p-digit number.
-  using DyadicFloat = DyadicFloat<cpp::bit_ceil(
-      2 * static_cast<size_t>(InFPBits::FRACTION_LEN))>;
-  using DyadicMantissaType = typename DyadicFloat::MantissaType;
+  using DyadicFloat =
+      DyadicFloat<cpp::bit_ceil(2 * static_cast<size_t>(InFPBits::SIG_LEN))>;
 
   InFPBits x_bits(x);
   InFPBits y_bits(y);
@@ -96,21 +95,7 @@ mul(InType x, InType y) {
   DyadicFloat xd(x);
   DyadicFloat yd(y);
 
-  // The product is either in the [2, 4) range or the [1, 2) range. We initially
-  // set the exponent as if the product were in the [2, 4) range. If the product
-  // is in the [1, 2) range, then it has 1 leading zero bit and the DyadicFloat
-  // constructor will normalize it and adjust the exponent.
-  int result_exp = xd.get_unbiased_exponent() + yd.get_unbiased_exponent() + 1 -
-                   DyadicMantissaType::BITS + 1;
-
-  // We use a single DyadicFloat type, which can fit the 2p-digit product, for
-  // both the normalized inputs and the product. So we need to right-shift the
-  // normalized input mantissas before multiplying them.
-  xd.shift_right(DyadicMantissaType::BITS / 2);
-  yd.shift_right(DyadicMantissaType::BITS / 2);
-  DyadicMantissaType product = xd.mantissa * yd.mantissa;
-
-  DyadicFloat result(result_sign, result_exp, product);
+  DyadicFloat result = quick_mul(xd, yd);
   return result.template as<OutType, /*ShouldSignalExceptions=*/true>();
 }
 
