@@ -1776,8 +1776,7 @@ bool SIFoldOperands::tryFoldRegSequence(MachineInstr &MI) {
   if (!getRegSeqInit(Defs, Reg, MCOI::OPERAND_REGISTER))
     return false;
 
-  for (auto &Def : Defs) {
-    const auto *Op = Def.first;
+  for (auto &[Op, SubIdx] : Defs) {
     if (!Op->isReg())
       return false;
     if (TRI->isAGPR(*MRI, Op->getReg()))
@@ -1815,8 +1814,7 @@ bool SIFoldOperands::tryFoldRegSequence(MachineInstr &MI) {
   auto RS = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                     TII->get(AMDGPU::REG_SEQUENCE), Dst);
 
-  for (unsigned I = 0; I < Defs.size(); ++I) {
-    MachineOperand *Def = Defs[I].first;
+  for (auto &[Def, SubIdx] : Defs) {
     Def->setIsKill(false);
     if (TRI->isAGPR(*MRI, Def->getReg())) {
       RS.add(*Def);
@@ -1825,7 +1823,7 @@ bool SIFoldOperands::tryFoldRegSequence(MachineInstr &MI) {
       SubDef->getOperand(1).setIsKill(false);
       RS.addReg(SubDef->getOperand(1).getReg(), 0, Def->getSubReg());
     }
-    RS.addImm(Defs[I].second);
+    RS.addImm(SubIdx);
   }
 
   Op->setReg(Dst);

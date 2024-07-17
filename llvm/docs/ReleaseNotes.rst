@@ -329,6 +329,14 @@ They are described in detail in the `debug info migration guide <https://llvm.or
   * ``LLVMGEPGetNoWrapFlags``
   * ``LLVMGEPSetNoWrapFlags``
 
+* Added the following functions for creating and accessing data for ConstantPtrAuth constants:
+
+  * ``LLVMConstantPtrAuth``
+  * ``LLVMGetConstantPtrAuthPointer``
+  * ``LLVMGetConstantPtrAuthKey``
+  * ``LLVMGetConstantPtrAuthDiscriminator``
+  * ``LLVMGetConstantPtrAuthAddrDiscriminator``
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
