@@ -934,13 +934,20 @@ void Preprocessor::Lex(Token &Result) {
       break;
     case tok::annot_module_name: {
       auto *Info = static_cast<ModuleNameInfo *>(Result.getAnnotationValue());
-      for (const auto &Tok : Info->Toks) {
-        if (Tok.is(tok::identifier))
+      for (const auto &Tok : Info->getTokens()) {
+        switch (Tok.getKind()) {
+        case tok::identifier:
           ModuleDeclState.handleIdentifier(Tok.getIdentifierInfo());
-        else if (Tok.is(tok::period))
+          break;
+        case tok::period:
           ModuleDeclState.handlePeriod();
-        else
-          llvm_unreachable("Expects an identifier or a '.' in module name");
+          break;
+        case tok::colon:
+          ModuleDeclState.handleColon();
+          break;
+        default:
+          llvm_unreachable("Unexpected token in module name");
+        }
       }
       if (ModuleDeclState.isModuleCandidate())
         break;
@@ -1146,6 +1153,50 @@ void Preprocessor::CollectPpImportSuffix(SmallVectorImpl<Token> &Toks) {
   }
 }
 
+void
+buildModuleIdPath(ArrayRef<Token> Toks, SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path) {
+  for (const auto &Tok : Toks) {
+    if (Tok.is(tok::identifier))
+      Path.push_back(
+          std::make_pair(Tok.getIdentifierInfo(), Tok.getLocation()));
+  }
+}
+
+std::string ModuleNameInfo::getFlatName() const {
+  std::string FlatModuleName;
+  for (auto &Tok : getTokens()) {
+    switch (Tok.getKind()) {
+    case tok::identifier:
+      FlatModuleName += Tok.getIdentifierInfo()->getName();
+      break;
+    case tok::period:
+      FlatModuleName += '.';
+      break;
+    case tok::colon:
+      FlatModuleName += ':';
+      break;
+    default:
+      llvm_unreachable("Unexpected token in module name");
+    }
+  }
+  return FlatModuleName;
+}
+
+void ModuleNameInfo::getModuleIdPath(
+    SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path) const {
+  return getModuleIdPath(getTokens(), Path);
+}
+
+void ModuleNameInfo::getModuleIdPath(
+    ArrayRef<Token> ModuleName,
+    SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path) {
+  for (const auto &Tok : ModuleName) {
+    if (Tok.is(tok::identifier))
+      Path.push_back(
+          std::make_pair(Tok.getIdentifierInfo(), Tok.getLocation()));
+  }
+}
+
 /// Lex a module name or a partition name.
 ///
 ///     module-name:
@@ -1156,67 +1207,59 @@ void Preprocessor::CollectPpImportSuffix(SmallVectorImpl<Token> &Toks) {
 ///
 ///     module-name-qualifier
 ///           module-name-qualifier[opt] identifier .
-///
-/// \param Result The lex result, guaranteed to be tok::annot_module_name.
-///
-/// \param FirstName The fist identifier in the module name or partition name.
-/// Normally, lex a module name is only tried when an identifier is encountered.
-/// To avoid entering unnecessary Caching-Lex-Mode and putting the obtained
-/// identifier back into the token stream, we pass the first module name
-/// identifier as a parameter. We assumed that \p FirstName is an identifier.
-///
-/// \param AllowMacroExpansion Whether allow macro expansion in module name. In
-/// C++20 Modules, and since P3034R1, module declarations shouldn't be macros.
-///
-/// If there is only a module name, tok::annot_module_name is returned. If there
-/// both have a module-name and a partition name, three tokens will be returned,
-/// the first one is the module-name (if it exists), the second one is ':', and
-/// the third one is the partition-name.
-void Preprocessor::LexModuleName(Token &Result, const Token FirstName,
-                                 bool AllowMacroExpansion) {
-  assert(FirstName.is(tok::identifier) &&
-         "The first token must be an identifier");
-  bool ExpectsIdentifier = true, SkipLexFirstName = true;
-  SmallVector<Token, 8> ModuleName, PartitionName;
-  auto *CurrLexingName = &ModuleName;
-  Token ColonTok, Tok = FirstName;
-
-  while (true) {
-    // Since we already have the FirstName token, skip to lex a new token.
-    if (SkipLexFirstName) {
-      SkipLexFirstName = false;
-    } else {
-      if (AllowMacroExpansion)
+bool Preprocessor::LexModuleName(Token &Result, bool IsImport) {
+  bool ExpectsIdentifier = true, IsLexingPartition = false;
+  SmallVector<Token, 8> ModuleName;
+  std::optional<unsigned> ColonTokIndex;
+  auto LexNextToken = [&](Token &Tok) {
+    if (IsImport)
         Lex(Tok);
       else
         LexUnexpandedToken(Tok);
-    }
+  };
 
-    if (ExpectsIdentifier && Tok.is(tok::identifier)) {
-      auto *MI = getMacroInfo(Tok.getIdentifierInfo());
-      if (getLangOpts().CPlusPlusModules && !AllowMacroExpansion && MI &&
+  while (true) {
+    LexNextToken(Result);
+    if (ExpectsIdentifier && Result.is(tok::identifier)) {
+      auto *MI = getMacroInfo(Result.getIdentifierInfo());
+      if (getLangOpts().CPlusPlusModules && !IsImport && MI &&
           MI->isObjectLike()) {
-        Diag(Tok, diag::err_module_decl_cannot_be_macros)
-            << Tok.getLocation() << (CurrLexingName == &PartitionName)
-            << Tok.getIdentifierInfo();
+        Diag(Result, diag::err_module_decl_cannot_be_macros)
+            << Result.getLocation() << IsLexingPartition
+            << Result.getIdentifierInfo();
       }
-      CurrLexingName->push_back(Tok);
+      ModuleName.push_back(Result);
       ExpectsIdentifier = false;
       continue;
     }
 
-    if (!ExpectsIdentifier && Tok.is(tok::period)) {
-      CurrLexingName->push_back(Tok);
+    if (!ExpectsIdentifier && Result.is(tok::period)) {
+      ModuleName.push_back(Result);
       ExpectsIdentifier = true;
       continue;
     }
 
     // Module partition only allowed in C++20 Modules.
-    if (getLangOpts().CPlusPlusModules && !ExpectsIdentifier &&
-        Tok.is(tok::colon)) {
-      ColonTok = Tok;
-      CurrLexingName = &PartitionName;
-      ExpectsIdentifier = true;
+    if (getLangOpts().CPlusPlusModules && Result.is(tok::colon)) {
+      // Handle the form like: import :P;
+      // If the token after ':' is not an identifier, this is a invalid module
+      // name.
+      if (ModuleName.empty()) {
+        Token Tmp;
+        LexNextToken(Tmp);
+        EnterToken(Tmp, /*IsReiject=*/false);
+        // A private-module-fragment, module :private;
+        if (!IsImport && Tmp.is(tok::kw_private))
+          return true;
+        // import :N;
+        if (IsImport && Tmp.isNot(tok::identifier))
+          return false;
+      } else if (!ExpectsIdentifier) {
+        ExpectsIdentifier = true;
+      }
+      IsLexingPartition = true;
+      ColonTokIndex = ModuleName.size();
+      ModuleName.push_back(Result);
       continue;
     }
 
@@ -1226,44 +1269,38 @@ void Preprocessor::LexModuleName(Token &Result, const Token FirstName,
     // We only emit diagnostic in the preprocessor, and in the parser we skip
     // invalid tokens and recover from errors.
     if (getLangOpts().CPlusPlusModules && !ExpectsIdentifier &&
-        Tok.is(tok::l_paren))
-      Diag(Tok, diag::err_unxepected_paren_in_module_decl)
-          << (CurrLexingName == &PartitionName);
+        Result.is(tok::l_paren))
+      Diag(Result, diag::err_unxepected_paren_in_module_decl) << IsLexingPartition;
     break;
-  }
-
-  auto CreateAnnotTok = [&](ArrayRef<Token> Names) {
-    Token NameTok;
-    NameTok.startToken();
-    NameTok.setKind(tok::annot_module_name);
-    NameTok.setLocation(Names.front().getLocation());
-    NameTok.setAnnotationEndLoc(Names.back().getLocation());
-    auto *Info = getPreprocessorAllocator().Allocate<ModuleNameInfo>();
-    Info->Toks = Names.copy(getPreprocessorAllocator());
-    NameTok.setAnnotationValue(static_cast<void *>(Info));
-    return NameTok;
-  };
-
-  // Return the first annot_module_name token and put the rest tokens into
-  // stream.
-  Result = CreateAnnotTok(ModuleName);
-  SmallVector<Token, 4> Toks;
-  if (CurrLexingName == &PartitionName) {
-    Toks.push_back(ColonTok);
-    if (!PartitionName.empty())
-      Toks.push_back(CreateAnnotTok(PartitionName));
   }
 
   // Put the last token back to stream, it's not a valid part of module name.
   // We lexed it unexpanded but it might be a valid macro expansion
-  Tok.clearFlag(Token::DisableExpand);
-  Toks.push_back(Tok);
-
-  auto ToksCopy = std::make_unique<Token[]>(Toks.size());
-  std::copy(Toks.begin(), Toks.end(), ToksCopy.get());
-  EnterTokenStream(std::move(ToksCopy), Toks.size(),
+  Result.clearFlag(Token::DisableExpand);
+  auto ToksCopy = std::make_unique<Token[]>(1);
+  *ToksCopy.get() = Result;
+  EnterTokenStream(std::move(ToksCopy), 1,
                    /*DisableMacroExpansion=*/false,
                    /*IsReinject=*/false);
+
+  if (ModuleName.empty())
+    return false;
+  Result.startToken();
+  Result.setKind(tok::annot_module_name);
+  Result.setLocation(ModuleName.front().getLocation());
+  Result.setAnnotationEndLoc(ModuleName.back().getLocation());
+  auto AnnotToks = ArrayRef(ModuleName).copy(getPreprocessorAllocator());
+  ArrayRef<Token> ModuleNameToks, PartitionNameToks;
+  if (ColonTokIndex.has_value()) {
+    ModuleNameToks = ArrayRef(AnnotToks.begin(), AnnotToks.begin() + *ColonTokIndex);
+    PartitionNameToks = ArrayRef(AnnotToks.begin() + *ColonTokIndex, AnnotToks.end());
+  } else {
+    ModuleNameToks = AnnotToks;
+  }
+  ModuleNameInfo *Info = new (getPreprocessorAllocator())
+      ModuleNameInfo(ModuleNameToks, PartitionNameToks);
+  Result.setAnnotationValue(static_cast<void *>(Info));
+  return true;
 }
 
 /// Lex a token following the 'import' contextual keyword.
@@ -1298,6 +1335,8 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
                      /*DisableMacroExpansion*/ true, /*IsReinject*/ false);
   };
 
+  SmallVector<Token, 32> Suffix;
+
   // Lex the next token. The header-name lexing rules are used at the start of
   // a pp-import.
   //
@@ -1307,130 +1346,109 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
   if (NamedModuleImportPath.empty() && getLangOpts().CPlusPlusModules) {
     if (LexHeaderName(Result))
       return true;
+
+    // Check for a header-name.
+    if (Result.is(tok::header_name)) {
+      // Enter the header-name token into the token stream; a Lex action cannot
+      // both return a token and cache tokens (doing so would corrupt the token
+      // cache if the call to Lex comes from CachingLex / PeekAhead).
+      Suffix.push_back(Result);
+
+      // Consume the pp-import-suffix and expand any macros in it now. We'll add
+      // it back into the token stream later.
+      CollectPpImportSuffix(Suffix);
+      if (Suffix.back().isNot(tok::semi)) {
+        // This is not a pp-import after all.
+        EnterTokens(Suffix);
+        return false;
+      }
+
+      // C++2a [cpp.module]p1:
+      //   The ';' preprocessing-token terminating a pp-import shall not have
+      //   been produced by macro replacement.
+      SourceLocation SemiLoc = Suffix.back().getLocation();
+      if (SemiLoc.isMacroID())
+        Diag(SemiLoc, diag::err_header_import_semi_in_macro);
+
+      // Reconstitute the import token.
+      Token ImportTok;
+      ImportTok.startToken();
+      ImportTok.setKind(tok::kw_import);
+      ImportTok.setLocation(ModuleImportLoc);
+      ImportTok.setIdentifierInfo(getIdentifierInfo("import"));
+      ImportTok.setLength(6);
+
+      auto Action = HandleHeaderIncludeOrImport(
+          /*HashLoc*/ SourceLocation(), ImportTok, Suffix.front(), SemiLoc);
+      switch (Action.Kind) {
+      case ImportAction::None:
+        break;
+
+      case ImportAction::ModuleBegin:
+        // Let the parser know we're textually entering the module.
+        Suffix.emplace_back();
+        Suffix.back().startToken();
+        Suffix.back().setKind(tok::annot_module_begin);
+        Suffix.back().setLocation(SemiLoc);
+        Suffix.back().setAnnotationEndLoc(SemiLoc);
+        Suffix.back().setAnnotationValue(Action.ModuleForHeader);
+        [[fallthrough]];
+
+      case ImportAction::ModuleImport:
+      case ImportAction::HeaderUnitImport:
+      case ImportAction::SkippedModuleImport:
+        // We chose to import (or textually enter) the file. Convert the
+        // header-name token into a header unit annotation token.
+        Suffix[0].setKind(tok::annot_header_unit);
+        Suffix[0].setAnnotationEndLoc(Suffix[0].getLocation());
+        Suffix[0].setAnnotationValue(Action.ModuleForHeader);
+        // FIXME: Call the moduleImport callback?
+        break;
+      case ImportAction::Failure:
+        assert(TheModuleLoader.HadFatalFailure &&
+               "This should be an early exit only to a fatal error");
+        Result.setKind(tok::eof);
+        CurLexer->cutOffLexing();
+        EnterTokens(Suffix);
+        return true;
+      }
+
+      EnterTokens(Suffix);
+      return false;
+    }
   } else {
     Lex(Result);
   }
 
-  bool ImportingHeader = Result.is(tok::header_name);
-  // Check for a header-name.
-  SmallVector<Token, 32> Suffix;
-  if (ImportingHeader) {
-    // Enter the header-name token into the token stream; a Lex action cannot
-    // both return a token and cache tokens (doing so would corrupt the token
-    // cache if the call to Lex comes from CachingLex / PeekAhead).
-    Suffix.push_back(Result);
-
-    // Consume the pp-import-suffix and expand any macros in it now. We'll add
-    // it back into the token stream later.
-    CollectPpImportSuffix(Suffix);
-    if (Suffix.back().isNot(tok::semi)) {
-      // This is not a pp-import after all.
-      EnterTokens(Suffix);
-      return false;
-    }
-
-    // C++2a [cpp.module]p1:
-    //   The ';' preprocessing-token terminating a pp-import shall not have
-    //   been produced by macro replacement.
-    SourceLocation SemiLoc = Suffix.back().getLocation();
-    if (SemiLoc.isMacroID())
-      Diag(SemiLoc, diag::err_header_import_semi_in_macro);
-
-    // Reconstitute the import token.
-    Token ImportTok;
-    ImportTok.startToken();
-    ImportTok.setKind(tok::kw_import);
-    ImportTok.setLocation(ModuleImportLoc);
-    ImportTok.setIdentifierInfo(getIdentifierInfo("import"));
-    ImportTok.setLength(6);
-
-    auto Action = HandleHeaderIncludeOrImport(
-        /*HashLoc*/ SourceLocation(), ImportTok, Suffix.front(), SemiLoc);
-    switch (Action.Kind) {
-    case ImportAction::None:
-      break;
-
-    case ImportAction::ModuleBegin:
-      // Let the parser know we're textually entering the module.
-      Suffix.emplace_back();
-      Suffix.back().startToken();
-      Suffix.back().setKind(tok::annot_module_begin);
-      Suffix.back().setLocation(SemiLoc);
-      Suffix.back().setAnnotationEndLoc(SemiLoc);
-      Suffix.back().setAnnotationValue(Action.ModuleForHeader);
-      [[fallthrough]];
-
-    case ImportAction::ModuleImport:
-    case ImportAction::HeaderUnitImport:
-    case ImportAction::SkippedModuleImport:
-      // We chose to import (or textually enter) the file. Convert the
-      // header-name token into a header unit annotation token.
-      Suffix[0].setKind(tok::annot_header_unit);
-      Suffix[0].setAnnotationEndLoc(Suffix[0].getLocation());
-      Suffix[0].setAnnotationValue(Action.ModuleForHeader);
-      // FIXME: Call the moduleImport callback?
-      break;
-    case ImportAction::Failure:
-      assert(TheModuleLoader.HadFatalFailure &&
-             "This should be an early exit only to a fatal error");
-      Result.setKind(tok::eof);
-      CurLexer->cutOffLexing();
-      EnterTokens(Suffix);
+  if (Result.isOneOf(tok::identifier, tok::colon)) {
+    EnterToken(Result, /*IsReinject=*/false);
+    if (!LexModuleName(Result, /*IsImport=*/true))
       return true;
-    }
-
-    EnterTokens(Suffix);
-    return false;
-  }
-
-  // Import a module partition only allowed in C++20 Modules.
-  // It's must in a named module fragment. When we meet an unexpect
-  // partition-name, return a ':' and partition-name tokens, but don't load the
-  // module.
-  bool UnexpectedPartitionName = false;
-  std::optional<Token> ImportPartitionColon;
-  // Meet a partition name.
-  if (Result.is(tok::colon)) {
-    ImportPartitionColon = Result;
-    // If next token is an identifier, try lex module names.
-    Token NextTok;
-    Lex(NextTok);
-
-    // If it's not an identifier, put it back and return ':'.
-    if (NextTok.isNot(tok::identifier)) {
-      EnterTokens({NextTok});
-      return true;
-    }
-
-    Result = NextTok;
-    if (NamedModuleImportPath.empty() && getLangOpts().CPlusPlusModules &&
-        ModuleDeclState.isNamedModule()) {
-      std::string Name = ModuleDeclState.getPrimaryName().str();
-      Name += ":";
-      NamedModuleImportPath.push_back(
-          {getIdentifierInfo(Name), Result.getLocation()});
+    auto *Info = Result.getAnnotationValueAs<ModuleNameInfo *>();
+    if (getLangOpts().CPlusPlusModules) {
+      // Under the standard C++ Modules, the dot is just part of the module
+      // name, and not a real hierarchy separator. Flatten such module names
+      // now.
+      //
+      // FIXME: Is this the right level to be performing this transformation?
+      std::string FlatModuleName;
+      if (Info->getTokens().front().is(tok::colon)) {
+        // Import a module partition allowed in C++20 Modules.
+        // We can import a partition in named module TU.
+        if (NamedModuleImportPath.empty() && ModuleDeclState.isNamedModule())
+          FlatModuleName = llvm::Twine(ModuleDeclState.getPrimaryName())
+                               .concat(Info->getFlatName())
+                               .str();
+        else
+          return true;
+      } else {
+        FlatModuleName = Info->getFlatName();
+      }
+      NamedModuleImportPath.emplace_back(getIdentifierInfo(FlatModuleName),
+                                         Result.getLocation());
     } else {
-      UnexpectedPartitionName = true;
+      Info->getModuleIdPath(NamedModuleImportPath);
     }
-  }
-
-  if (Result.is(tok::identifier)) {
-    LexModuleName(Result, Result);
-    assert(Result.is(tok::annot_module_name) && "Expects a module name");
-    auto *Info = static_cast<ModuleNameInfo *>(Result.getAnnotationValue());
-    for (const auto &Tok : Info->Toks) {
-      if (Tok.is(tok::identifier))
-        NamedModuleImportPath.push_back(
-            std::make_pair(Tok.getIdentifierInfo(), Tok.getLocation()));
-    }
-
-    if (ImportPartitionColon.has_value()) {
-      EnterTokens(Result);
-      Result = *ImportPartitionColon;
-    }
-    if (!UnexpectedPartitionName)
-      CurLexerCallback = CLK_LexAfterModuleImport;
-    return true;
   }
 
   // If we didn't recognize a module name at all, this is not a (valid) import.
@@ -1449,24 +1467,6 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
       return false;
     }
     SemiLoc = Suffix.back().getLocation();
-  }
-
-  // Under the standard C++ Modules, the dot is just part of the module name,
-  // and not a real hierarchy separator. Flatten such module names now.
-  //
-  // FIXME: Is this the right level to be performing this transformation?
-  std::string FlatModuleName;
-  if (getLangOpts().CPlusPlusModules) {
-    for (auto &Piece : NamedModuleImportPath) {
-      // If the FlatModuleName ends with colon, it implies it is a partition.
-      if (!FlatModuleName.empty() && FlatModuleName.back() != ':')
-        FlatModuleName += ".";
-      FlatModuleName += Piece.first->getName();
-    }
-    SourceLocation FirstPathLoc = NamedModuleImportPath[0].second;
-    NamedModuleImportPath.clear();
-    NamedModuleImportPath.push_back(
-        std::make_pair(getIdentifierInfo(FlatModuleName), FirstPathLoc));
   }
 
   Module *Imported = nullptr;
@@ -1514,17 +1514,7 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
 bool Preprocessor::LexAfterModuleDecl(Token &Result) {
   // Figure out what kind of lexer we actually have.
   recomputeCurLexerKind();
-  LexUnexpandedToken(Result);
-
-  // If we don't expect an identifier but got an identifier, it's not a part of
-  // module name.
-  if (Result.isNot(tok::identifier)) {
-    EnterToken(Result, /*IsReinject=*/false);
-    return false;
-  }
-  LexModuleName(Result, Result, /*AllowMacroExpansion=*/false);
-  assert(Result.is(tok::annot_module_name) && "Expects a module name");
-  return true;
+  return LexModuleName(Result, /*IsImport=*/false);
 }
 
 void Preprocessor::makeModuleVisible(Module *M, SourceLocation Loc) {

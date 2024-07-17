@@ -1740,8 +1740,8 @@ public:
   /// Lex a token, forming a header-name token if possible.
   bool LexHeaderName(Token &Result, bool AllowMacroExpansion = true);
 
-  void LexModuleName(Token &Result, const Token FirstName,
-                     bool AllowMacroExpansion = true);
+  /// Lex a module name or a partition name.
+  bool LexModuleName(Token &Result, bool IsImport);
 
   /// Lex the parameters for an #embed directive, returns nullopt on error.
   std::optional<LexEmbedParametersResult> LexEmbedParameters(Token &Current,
@@ -3071,6 +3071,45 @@ struct EmbedAnnotationData {
 
 /// Registry of pragma handlers added by plugins
 using PragmaHandlerRegistry = llvm::Registry<PragmaHandler>;
+
+/// Module/Partition name token sequance.
+///
+///     module-name:
+///           module-name-qualifier[opt] identifier
+///
+///     module-name-qualifier
+///           module-name-qualifier[opt] identifier .
+class ModuleNameInfo {
+  friend class Preprocessor;
+  ArrayRef<Token> ModuleName;
+  ArrayRef<Token> PartitionName;
+
+  ModuleNameInfo(ArrayRef<Token> Module, ArrayRef<Token> Partition)
+      : ModuleName(Module), PartitionName(Partition) {}
+
+public:
+  ArrayRef<Token> getTokens() const {
+    if (ModuleName.empty())
+      return PartitionName;
+    if (PartitionName.empty())
+      return ModuleName;
+    return ArrayRef(ModuleName.begin(), PartitionName.end());
+  }
+  bool hasModuleName() const { return !ModuleName.empty(); }
+  bool hasPartitionName() const { return !PartitionName.empty(); }
+  ArrayRef<Token> getModuleName() const { return ModuleName; }
+  ArrayRef<Token> getPartitionName() const { return PartitionName; }
+  Token getColonToken() const {
+    assert(hasPartitionName() && "Do not have a partition name");
+    return getPartitionName().front();
+  }
+  std::string getFlatName() const;
+  void getModuleIdPath(
+      SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path) const;
+  static void getModuleIdPath(
+      ArrayRef<Token> ModuleName,
+      SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path);
+};
 
 } // namespace clang
 

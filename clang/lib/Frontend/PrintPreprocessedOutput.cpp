@@ -954,14 +954,7 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       continue;
     } else if (Tok.is(tok::annot_module_name)) {
       auto *Info = static_cast<ModuleNameInfo *>(Tok.getAnnotationValue());
-      for (auto &NameTok : Info->Toks) {
-        if (NameTok.is(tok::identifier))
-          *Callbacks->OS << NameTok.getIdentifierInfo()->getName();
-        else if (NameTok.is(tok::period))
-          *Callbacks->OS << '.';
-        else
-          llvm_unreachable("unexpected token in a module name");
-      }
+      *Callbacks->OS << Info->getFlatName();
       PP.Lex(Tok);
       continue;
     } else if (Tok.is(tok::annot_header_unit)) {

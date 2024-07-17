@@ -3960,7 +3960,7 @@ void Parser::ParseDeclarationSpecifiers(
       goto DoneWithDeclSpec;
     case tok::annot_module_name: {
       PP.EnterTokenStream(
-          static_cast<ModuleNameInfo *>(Tok.getAnnotationValue())->Toks,
+          Tok.getAnnotationValueAs<ModuleNameInfo *>()->getTokens(),
           /*DisableMacroExpansion=*/true, /*IsReinject=*/false);
       ConsumeAnyToken();
       [[fallthrough]];
