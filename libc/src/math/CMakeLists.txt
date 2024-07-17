@@ -65,6 +65,7 @@ add_math_entrypoint_object(canonicalizel)
 add_math_entrypoint_object(canonicalizef16)
 add_math_entrypoint_object(canonicalizef128)
 
+add_math_entrypoint_object(cbrt)
 add_math_entrypoint_object(cbrtf)
 
 add_math_entrypoint_object(ceil)

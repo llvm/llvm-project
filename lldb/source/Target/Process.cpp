@@ -21,6 +21,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/DynamicCheckerFunctions.h"
 #include "lldb/Expression/UserExpression.h"
@@ -2550,6 +2551,14 @@ ModuleSP Process::ReadModuleFromMemory(const FileSpec &file_spec,
   ModuleSP module_sp(new Module(file_spec, ArchSpec()));
   if (module_sp) {
     Status error;
+    std::unique_ptr<Progress> progress_up;
+    // Reading an ObjectFile from a local corefile is very fast,
+    // only print a progress update if we're reading from a
+    // live session which might go over gdb remote serial protocol.
+    if (IsLiveDebugSession())
+      progress_up = std::make_unique<Progress>(
+          "Reading binary from memory", file_spec.GetFilename().GetString());
+
     ObjectFile *objfile = module_sp->GetMemoryObjectFile(
         shared_from_this(), header_addr, error, size_to_read);
     if (objfile)

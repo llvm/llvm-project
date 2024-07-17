@@ -2225,6 +2225,18 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
+add_fp_unittest(
+  cbrt_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    cbrt_test.cpp
+  DEPENDS
+    libc.src.math.cbrt
+    libc.src.__support.FPUtil.fp_bits
+)
+
 add_subdirectory(generic)
 add_subdirectory(smoke)
 

@@ -49,6 +49,7 @@ bool ResourceInfo::isTyped() const {
   case ResourceKind::NumEntries:
     llvm_unreachable("Invalid resource kind");
   }
+  llvm_unreachable("Unhandled ResourceKind enum");
 }
 
 bool ResourceInfo::isFeedback() const {
