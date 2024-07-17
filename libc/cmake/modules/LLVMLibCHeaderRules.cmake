@@ -97,7 +97,7 @@ function(add_gen_header2 target_name)
 
   set(fq_data_files "")
   if(ADD_GEN_HDR2_DATA_FILES)
-    foreach(data_file IN 2LISTS ADD_GEN_HDR2_DATA_FILES)
+    foreach(data_file IN LISTS ADD_GEN_HDR2_DATA_FILES)
       list(APPEND fq_data_files "${CMAKE_CURRENT_SOURCE_DIR}/${data_file}")
     endforeach(data_file)
   endif()
@@ -132,7 +132,7 @@ function(add_gen_header2 target_name)
   endif()
   
   if(ADD_GEN_HDR2_DEPENDS)
-    get_fq_deps_list(f2q_deps_list ${ADD_GEN_HDR2_DEPENDS})
+    get_fq_deps_list(fq_deps_list ${ADD_GEN_HDR2_DEPENDS})
     # Dependencies of a add_header target can only be another add_gen_header target
     # or an add_header target.
     foreach(dep IN LISTS fq_deps_list)
