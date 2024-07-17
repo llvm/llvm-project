@@ -16,6 +16,7 @@
 
 // explicit out_ptr_t(Smart&, Args...);
 
+#include <cassert>
 #include <memory>
 
 #include "test_convertible.h"
@@ -28,6 +29,9 @@ int main(int, char**) {
     std::out_ptr_t<std::unique_ptr<int>, int*>{uPtr};
 
     static_assert(!test_convertible<std::out_ptr_t<std::unique_ptr<int>, int*>>(), "This constructor must be explicit");
+
+    // Test the state of the pointer after construction. Complete tests are available in out_ptr.general.pass.cpp
+    assert(uPtr == nullptr);
   }
 
   {
@@ -37,12 +41,18 @@ int main(int, char**) {
 
     static_assert(!test_convertible<std::out_ptr_t<decltype(uPtr), int*, std::default_delete<int>>>(),
                   "This constructor must be explicit");
+
+    // Test the state of the pointer after construction. Complete tests are available in out_ptr.general.pass.cpp
+    assert(uPtr == nullptr);
   }
 
   {
     std::unique_ptr<int, MoveOnlyDeleter<int>> uPtr;
 
     std::out_ptr_t<decltype(uPtr), int*, MoveOnlyDeleter<int>>{uPtr, MoveOnlyDeleter<int>{}};
+
+    // Test the state of the pointer after construction. Complete tests are available in out_ptr.general.pass.cpp
+    assert(uPtr == nullptr);
   }
 
   return 0;
