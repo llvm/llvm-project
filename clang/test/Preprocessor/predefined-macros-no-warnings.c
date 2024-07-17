@@ -75,6 +75,8 @@
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple m68k
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple m68k-linux
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple m68k-netbsd
+// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple le32-nacl
+// RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple le64
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple ppc
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple ppc-freebsd
 // RUN: %clang_cc1 %s -Eonly -Wsystem-headers -Werror -triple ppc-netbsd

@@ -26,7 +26,7 @@
 #include <optional>
 #include <vector>
 
-#define MAX_LANES 64
+enum { MAX_LANES = 64 };
 
 using namespace llvm;
 
@@ -324,8 +324,7 @@ void SIMachineFunctionInfo::shiftSpillPhysVGPRsToLowestRange(
     MachineFunction &MF) {
   const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  for (unsigned I = 0, E = SpillPhysVGPRs.size(); I < E; ++I) {
-    Register Reg = SpillPhysVGPRs[I];
+  for (Register &Reg : SpillPhysVGPRs) {
     Register NewReg =
         TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass, MF);
     if (!NewReg || NewReg >= Reg)
@@ -335,7 +334,6 @@ void SIMachineFunctionInfo::shiftSpillPhysVGPRsToLowestRange(
     MF.replaceFrameInstRegister(Reg, NewReg);
 
     // Update various tables with the new VGPR.
-    SpillPhysVGPRs[I] = NewReg;
     WWMReservedRegs.remove(Reg);
     WWMReservedRegs.insert(NewReg);
     WWMSpills.insert(std::make_pair(NewReg, WWMSpills[Reg]));
@@ -345,6 +343,8 @@ void SIMachineFunctionInfo::shiftSpillPhysVGPRsToLowestRange(
       MBB.removeLiveIn(Reg);
       MBB.sortUniqueLiveIns();
     }
+
+    Reg = NewReg;
   }
 }
 
@@ -359,8 +359,7 @@ bool SIMachineFunctionInfo::allocateVirtualVGPRForSGPRSpills(
     LaneVGPR = SpillVGPRs.back();
   }
 
-  SGPRSpillsToVirtualVGPRLanes[FI].push_back(
-      SIRegisterInfo::SpilledReg(LaneVGPR, LaneIndex));
+  SGPRSpillsToVirtualVGPRLanes[FI].emplace_back(LaneVGPR, LaneIndex);
   return true;
 }
 
@@ -394,8 +393,7 @@ bool SIMachineFunctionInfo::allocatePhysicalVGPRForSGPRSpills(
     LaneVGPR = SpillPhysVGPRs.back();
   }
 
-  SGPRSpillsToPhysicalVGPRLanes[FI].push_back(
-      SIRegisterInfo::SpilledReg(LaneVGPR, LaneIndex));
+  SGPRSpillsToPhysicalVGPRLanes[FI].emplace_back(LaneVGPR, LaneIndex);
   return true;
 }
 
