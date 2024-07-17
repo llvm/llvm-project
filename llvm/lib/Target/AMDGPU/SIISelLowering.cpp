@@ -3641,7 +3641,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (Callee.isUndef() || isNullConstant(Callee)) {
     if (!CLI.IsTailCall) {
-      for (auto &Arg : CLI.Ins)
+      for (ISD::InputArg &Arg : CLI.Ins)
         InVals.push_back(DAG.getUNDEF(Arg.VT));
     }
 

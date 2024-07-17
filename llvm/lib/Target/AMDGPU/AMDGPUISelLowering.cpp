@@ -1342,7 +1342,7 @@ SDValue AMDGPUTargetLowering::lowerUnhandledCall(CallLoweringInfo &CLI,
   DAG.getContext()->diagnose(NoCalls);
 
   if (!CLI.IsTailCall) {
-    for (auto &Arg : CLI.Ins)
+    for (ISD::InputArg &Arg : CLI.Ins)
       InVals.push_back(DAG.getUNDEF(Arg.VT));
   }
 
