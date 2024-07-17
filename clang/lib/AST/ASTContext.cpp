@@ -4896,14 +4896,14 @@ QualType ASTContext::getFunctionTypeInternal(
   size_t Size = FunctionProtoType::totalSizeToAlloc<
       QualType, SourceLocation, FunctionType::FunctionTypeExtraBitfields,
       FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
-      Expr *, FunctionDecl *, FunctionProtoType::ExtParameterInfo,
-      FunctionEffect, EffectConditionExpr, Qualifiers>(
+      Expr *, FunctionDecl *, FunctionProtoType::ExtParameterInfo, Qualifiers,
+      FunctionEffect, EffectConditionExpr>(
       NumArgs, EPI.Variadic, EPI.requiresFunctionProtoTypeExtraBitfields(),
       EPI.requiresFunctionProtoTypeArmAttributes(), ESH.NumExceptionType,
       ESH.NumExprPtr, ESH.NumFunctionDeclPtr,
-      EPI.ExtParameterInfos ? NumArgs : 0, EPI.FunctionEffects.size(),
-      EPI.FunctionEffects.conditions().size(),
-      EPI.TypeQuals.hasNonFastQualifiers() ? 1 : 0);
+      EPI.ExtParameterInfos ? NumArgs : 0,
+      EPI.TypeQuals.hasNonFastQualifiers() ? 1 : 0, EPI.FunctionEffects.size(),
+      EPI.FunctionEffects.conditions().size());
 
   auto *FTP = (FunctionProtoType *)Allocate(Size, alignof(FunctionProtoType));
   FunctionProtoType::ExtProtoInfo newEPI = EPI;
@@ -4911,6 +4911,8 @@ QualType ASTContext::getFunctionTypeInternal(
   Types.push_back(FTP);
   if (!Unique)
     FunctionProtoTypes.InsertNode(FTP, InsertPos);
+  if (!EPI.FunctionEffects.empty())
+    AnyFunctionEffects = true;
   return QualType(FTP, 0);
 }
 
