@@ -14833,7 +14833,7 @@ StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
   // The new loop body.
   SmallVector<Stmt *, 4> BodyStmts;
   BodyStmts.reserve(LoopHelper.Updates.size() + 2 +
-                    isa<CXXForRangeStmt>(LoopStmt));
+                    (isa<CXXForRangeStmt>(LoopStmt) ? 1 : 0));
   BodyStmts.push_back(InitReversed.get());
   llvm::append_range(BodyStmts, LoopHelper.Updates);
   if (auto *CXXRangeFor = dyn_cast<CXXForRangeStmt>(LoopStmt))
