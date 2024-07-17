@@ -5749,18 +5749,27 @@ SDValue DAGTypeLegalizer::WidenVecRes_VP_STRIDED_LOAD(VPStridedLoadSDNode *N) {
 
 SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {
 
-  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(),N->getValueType(0));
+  EVT VT = N->getValueType(0);
+  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
   SDValue Mask = N->getMask();
   EVT MaskVT = Mask.getValueType();
   SDValue PassThru = GetWidenedVector(N->getPassThru());
   ISD::LoadExtType ExtType = N->getExtensionType();
   SDLoc dl(N);
 
-  // The mask should be widened as well
-  EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(),
-                                    MaskVT.getVectorElementType(),
-                                    WidenVT.getVectorNumElements());
-  Mask = ModifyToType(Mask, WideMaskVT, true);
+  if (VT == MVT::nxv1i8 || VT == MVT::nxv1i16 || VT == MVT::nxv1i32 ||
+      VT == MVT::nxv1i64) {
+    EVT WideMaskVT =
+        EVT::getVectorVT(*DAG.getContext(), MaskVT.getVectorElementType(),
+                         WidenVT.getVectorMinNumElements(), true);
+    Mask = ModifyToType(Mask, WideMaskVT, true);
+  } else {
+    // The mask should be widened as well
+    EVT WideMaskVT =
+        EVT::getVectorVT(*DAG.getContext(), MaskVT.getVectorElementType(),
+                         WidenVT.getVectorNumElements());
+    Mask = ModifyToType(Mask, WideMaskVT, true);
+  }
 
   SDValue Res = DAG.getMaskedLoad(
       WidenVT, dl, N->getChain(), N->getBasePtr(), N->getOffset(), Mask,
@@ -6914,30 +6923,43 @@ SDValue DAGTypeLegalizer::WidenVecOp_MSTORE(SDNode *N, unsigned OpNo) {
   SDValue StVal = MST->getValue();
   SDLoc dl(N);
 
-  if (OpNo == 1) {
-    // Widen the value.
-    StVal = GetWidenedVector(StVal);
+  EVT VT = StVal.getValueType();
 
-    // The mask should be widened as well.
-    EVT WideVT = StVal.getValueType();
-    EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(),
-                                      MaskVT.getVectorElementType(),
-                                      WideVT.getVectorNumElements());
-    Mask = ModifyToType(Mask, WideMaskVT, true);
+  if (OpNo == 1) {
+    if (VT == MVT::nxv1i8 || VT == MVT::nxv1i16 || VT == MVT::nxv1i32 ||
+        VT == MVT::nxv1i64) {
+      EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+      EVT WideMaskVT =
+          EVT::getVectorVT(*DAG.getContext(), MaskVT.getVectorElementType(),
+                           WidenVT.getVectorMinNumElements(), true);
+      StVal = ModifyToType(StVal, WidenVT);
+      Mask = ModifyToType(Mask, WideMaskVT, true);
+    } else {
+      // Widen the value.
+      StVal = GetWidenedVector(StVal);
+
+      // The mask should be widened as well.
+      EVT WideVT = StVal.getValueType();
+      EVT WideMaskVT =
+          EVT::getVectorVT(*DAG.getContext(), MaskVT.getVectorElementType(),
+                           WideVT.getVectorNumElements());
+      Mask = ModifyToType(Mask, WideMaskVT, true);
+    }
   } else {
     // Widen the mask.
     EVT WideMaskVT = TLI.getTypeToTransformTo(*DAG.getContext(), MaskVT);
     Mask = ModifyToType(Mask, WideMaskVT, true);
 
-    EVT ValueVT = StVal.getValueType();
-    EVT WideVT = EVT::getVectorVT(*DAG.getContext(),
-                                  ValueVT.getVectorElementType(),
+    EVT WideVT = EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(),
                                   WideMaskVT.getVectorNumElements());
     StVal = ModifyToType(StVal, WideVT);
   }
 
-  assert(Mask.getValueType().getVectorNumElements() ==
-         StVal.getValueType().getVectorNumElements() &&
+  assert((VT.isScalableVector() ? Mask.getValueType().getVectorMinNumElements()
+                                : Mask.getValueType().getVectorNumElements()) ==
+             (VT.isScalableVector()
+                  ? StVal.getValueType().getVectorMinNumElements()
+                  : StVal.getValueType().getVectorNumElements()) &&
          "Mask and data vectors should have the same number of elements");
   return DAG.getMaskedStore(MST->getChain(), dl, StVal, MST->getBasePtr(),
                             MST->getOffset(), Mask, MST->getMemoryVT(),
