@@ -1484,10 +1484,9 @@ void MachineBasicBlock::ReplaceUsesOfBlockWith(MachineBasicBlock *Old,
 
     // Scan the operands of this machine instruction, replacing any uses of Old
     // with New.
-    for (unsigned i = 0, e = I->getNumOperands(); i != e; ++i)
-      if (I->getOperand(i).isMBB() &&
-          I->getOperand(i).getMBB() == Old)
-        I->getOperand(i).setMBB(New);
+    for (MachineOperand &MO : I->operands())
+      if (MO.isMBB() && MO.getMBB() == Old)
+        MO.setMBB(New);
   }
 
   // Update the successor information.
