@@ -176,6 +176,7 @@ check_cxx_compiler_flag(-nostdlib++ COMPILER_RT_HAS_NOSTDLIBXX_FLAG)
 check_include_files("sys/auxv.h"    COMPILER_RT_HAS_AUXV)
 
 # Libraries.
+check_library_exists(atomic __atomic_load_8 "" COMPILER_RT_HAS_LIBATOMIC)
 check_library_exists(dl dlopen "" COMPILER_RT_HAS_LIBDL)
 check_library_exists(rt shm_open "" COMPILER_RT_HAS_LIBRT)
 check_library_exists(m pow "" COMPILER_RT_HAS_LIBM)
