@@ -538,24 +538,25 @@ size_t YAMLProfileReader::matchWithCallGraph(BinaryContext &BC) {
   for (yaml::bolt::BinaryFunctionProfile &YamlBF : YamlBP.Functions) {
     if (YamlBF.Used)
       continue;
-    std::set<yaml::bolt::BinaryFunctionProfile *> *AdjacentYamlBFs =
-        CGMatcher.getAdjacentYamlBFs(YamlBF);
-    if (!AdjacentYamlBFs)
+    auto AdjacentYamlBFsOpt = CGMatcher.getAdjacentYamlBFs(YamlBF);
+    if (!AdjacentYamlBFsOpt)
       continue;
+    std::set<yaml::bolt::BinaryFunctionProfile *> AdjacentYamlBFs =
+        AdjacentYamlBFsOpt.value();
     std::string AdjacentYamlBFsHashStr;
-    for (auto *AdjacentYamlBF : *AdjacentYamlBFs)
+    for (auto *AdjacentYamlBF : AdjacentYamlBFs)
       AdjacentYamlBFsHashStr += AdjacentYamlBF->Name;
     uint64_t Hash = std::hash<std::string>{}(AdjacentYamlBFsHashStr);
-    std::vector<BinaryFunction *> *BFsWithSameHash =
-        CGMatcher.getBFsWithNeighborHash(Hash);
-    if (!BFsWithSameHash)
+    auto BFsWithSameHashOpt = CGMatcher.getBFsWithNeighborHash(Hash);
+    if (!BFsWithSameHashOpt)
       continue;
+    std::vector<BinaryFunction *> BFsWithSameHash = BFsWithSameHashOpt.value();
     // Finds the binary function with the longest common prefix to the profiled
     // function and matches.
     BinaryFunction *ClosestBF = nullptr;
     size_t LCP = 0;
     std::string YamlBFBaseName = GetBaseName(YamlBF.Name);
-    for (BinaryFunction *BF : *BFsWithSameHash) {
+    for (BinaryFunction *BF : BFsWithSameHash) {
       if (ProfiledFunctions.count(BF))
         continue;
       std::string BFName = std::string(BF->getOneName());

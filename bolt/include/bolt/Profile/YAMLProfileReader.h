@@ -55,17 +55,19 @@ public:
                      ProfileLookupMap &IdToYAMLBF);
 
     /// Returns the YamlBFs adjacent to the parameter YamlBF in the call graph.
-    std::set<yaml::bolt::BinaryFunctionProfile *> *
+    std::optional<std::set<yaml::bolt::BinaryFunctionProfile *>>
     getAdjacentYamlBFs(yaml::bolt::BinaryFunctionProfile &YamlBF) {
       auto It = YamlBFAdjacencyMap.find(&YamlBF);
-      return It == YamlBFAdjacencyMap.end() ? nullptr : &It->second;
+      return It == YamlBFAdjacencyMap.end() ? std::nullopt
+                                            : std::make_optional(It->second);
     }
 
     /// Returns the binary functions with the parameter neighbor hash.
-    std::vector<BinaryFunction *> *
+    std::optional<std::vector<BinaryFunction *>>
     getBFsWithNeighborHash(uint64_t NeighborHash) {
       auto It = NeighborHashToBFs.find(NeighborHash);
-      return It == NeighborHashToBFs.end() ? nullptr : &It->second;
+      return It == NeighborHashToBFs.end() ? std::nullopt
+                                           : std::make_optional(It->second);
     }
 
   private:
