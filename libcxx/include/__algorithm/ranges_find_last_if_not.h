@@ -40,7 +40,7 @@ struct __fn {
             class _Proj = identity,
             indirect_unary_predicate<projected<_Iter, _Proj>> _Pred>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static subrange<_Iter>
-  operator()(_Iter __first, _Sent __last, _Pred __pred, _Proj __proj = {}) const {
+  operator()(_Iter __first, _Sent __last, _Pred __pred, _Proj __proj = {}) {
     auto __pred2 = [&__pred](auto&& __e) -> bool { return !std::invoke(__pred, std::forward<decltype(__e)>(__e)); };
     return ranges::__find_last_if_impl(std::move(__first), std::move(__last), __pred2, __proj);
   }
@@ -49,7 +49,7 @@ struct __fn {
             class _Proj = identity,
             indirect_unary_predicate<projected<iterator_t<_Range>, _Proj>> _Pred>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static borrowed_subrange_t<_Range>
-  operator()(_Range&& __range, _Pred __pred, _Proj __proj = {}) const {
+  operator()(_Range&& __range, _Pred __pred, _Proj __proj = {}) {
     auto __pred2 = [&__pred](auto&& __e) -> bool { return !std::invoke(__pred, std::forward<decltype(__e)>(__e)); };
     return ranges::__find_last_if_impl(ranges::begin(__range), ranges::end(__range), __pred2, __proj);
   }
