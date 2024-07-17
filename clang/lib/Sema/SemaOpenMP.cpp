@@ -14528,10 +14528,9 @@ StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
 
   // Internal variable names.
   std::string OrigVarName = OrigVar->getNameInfo().getAsString();
-  std::string OuterIVName = (Twine(".unrolled.iv.") + OrigVarName).str();
-  std::string InnerIVName = (Twine(".unroll_inner.iv.") + OrigVarName).str();
-  std::string InnerTripCountName =
-      (Twine(".unroll_inner.tripcount.") + OrigVarName).str();
+  std::string OuterIVName = ".unrolled.iv." + OrigVarName;
+  std::string InnerIVName = ".unroll_inner.iv." + OrigVarName;
+  std::string InnerTripCountName = ".unroll_inner.tripcount." + OrigVarName;
 
   // Create the iteration variable for the unrolled loop.
   VarDecl *OuterIVDecl =
@@ -14731,13 +14730,13 @@ StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
   // that logical iteration from it, then assign it to the user loop counter
   // variable. We cannot directly use LoopHelper.IterationVarRef as the
   // induction variable of the generated loop because it may cause an underflow:
-  // \code
+  // \code{.c}
   //   for (unsigned i = 0; i < n; ++i)
   //     body(i);
   // \endcode
   //
   // Naive reversal:
-  // \code
+  // \code{.c}
   //   for (unsigned i = n-1; i >= 0; --i)
   //     body(i);
   // \endcode
@@ -14746,7 +14745,7 @@ StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
   // iteration counter of the original loop, convert it to the logical iteration
   // number of the reversed loop, then let LoopHelper.Updates compute the user's
   // loop iteration variable from it.
-  // \code
+  // \code{.cpp}
   //   for (auto .forward.iv = 0; .forward.iv < n; ++.forward.iv) {
   //     auto .reversed.iv = n - .forward.iv - 1;
   //     i = (.reversed.iv + 0) * 1;                // LoopHelper.Updates
@@ -14778,12 +14777,11 @@ StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
       &SemaRef.PP.getIdentifierTable().get(ReversedIVName));
 
   // For init-statement:
-  // \code
-  //   auto .forward.iv = 0
+  // \code{.cpp}
+  //   auto .forward.iv = 0;
   // \endcode
-  IntegerLiteral *Zero =
-      IntegerLiteral::Create(Context, llvm::APInt::getZero(IVWidth),
-                             ForwardIVDecl->getType(), OrigVarLoc);
+  auto *Zero = IntegerLiteral::Create(Context, llvm::APInt::getZero(IVWidth),
+                                      ForwardIVDecl->getType(), OrigVarLoc);
   SemaRef.AddInitializerToDecl(ForwardIVDecl, Zero, /*DirectInit=*/false);
   StmtResult Init = new (Context)
       DeclStmt(DeclGroupRef(ForwardIVDecl), OrigVarLocBegin, OrigVarLocEnd);
@@ -14791,8 +14789,8 @@ StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
     return StmtError();
 
   // Forward iv cond-expression:
-  // \code
-  //   .forward.iv < NumIterations
+  // \code{.cpp}
+  //   .forward.iv < MakeNumIterations()
   // \endcode
   ExprResult Cond =
       SemaRef.BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_LT,
@@ -14800,16 +14798,21 @@ StmtResult SemaOpenMP::ActOnOpenMPReverseDirective(Stmt *AStmt,
   if (!Cond.isUsable())
     return StmtError();
 
-  // Forward incr-statement: ++.forward.iv
+  // Forward incr-statement:
+  // \code{.c}
+  //   ++.forward.iv
+  // \endcode
   ExprResult Incr = SemaRef.BuildUnaryOp(CurScope, LoopHelper.Inc->getExprLoc(),
                                          UO_PreInc, MakeForwardRef());
   if (!Incr.isUsable())
     return StmtError();
 
-  // Reverse the forward-iv: auto .reversed.iv = MakeNumIterations() - 1 -
-  // .forward.iv
-  IntegerLiteral *One = IntegerLiteral::Create(Context, llvm::APInt(IVWidth, 1),
-                                               IVTy, TransformLoc);
+  // Reverse the forward-iv:
+  // \code{.cpp}
+  //   auto .reversed.iv = MakeNumIterations() - 1 - .forward.iv
+  // \endcode
+  auto *One = IntegerLiteral::Create(Context, llvm::APInt(IVWidth, 1), IVTy,
+                                     TransformLoc);
   ExprResult Minus = SemaRef.BuildBinOp(CurScope, TransformLoc, BO_Sub,
                                         MakeNumIterations(), One);
   if (!Minus.isUsable())
