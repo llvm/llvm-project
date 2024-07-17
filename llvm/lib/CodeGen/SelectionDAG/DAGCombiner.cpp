@@ -15869,15 +15869,22 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
     break;
   }
 
-  switch (N0.getOpcode()) {
-  case ISD::ADD:
-  case ISD::SUB:
-  case ISD::MUL:
-  case ISD::AND:
-  case ISD::OR:
-  case ISD::XOR:
-    // if ()
-    break;
+  if (TLI.shouldReduceRegisterPressure()) {
+    switch (N0.getOpcode()) {
+    case ISD::ADD:
+    case ISD::SUB:
+    case ISD::MUL:
+    case ISD::AND:
+    case ISD::OR:
+    case ISD::XOR:
+      if (!(N0.hasOneUse() && VT.isScalarInteger()))
+        break;
+      if (LegalOperations && !TLI.isOperationLegal(N0.getOpcode(), VT))
+        break;
+      SDValue NarrowL = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(0));
+      SDValue NarrowR = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(1));
+      return DAG.getNode(N0.getOpcode(), DL, VT, NarrowL, NarrowR);
+    }
   }
 
   return SDValue();
