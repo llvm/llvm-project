@@ -218,12 +218,12 @@ define i64 @uadd_sat64(i64 %a, i64 %b) {
 ; CHECK-NEXT:    ret i64 [[TMP0]]
 ;
 entry:
-  %conv = zext i64 %a to i65
-  %conv1 = zext i64 %b to i65
-  %add = add i65 %conv1, %conv
-  %0 = icmp ult i65 %add, 18446744073709551615
-  %select = select i1 %0, i65 %add, i65 18446744073709551615
-  %conv2 = trunc i65 %select to i64
+  %conv = zext i64 %a to i128
+  %conv1 = zext i64 %b to i128
+  %add = add i128 %conv1, %conv
+  %0 = icmp ult i128 %add, 18446744073709551615
+  %select = select i1 %0, i128 %add, i128 18446744073709551615
+  %conv2 = trunc i128 %select to i64
   ret i64 %conv2
 }
 
@@ -485,6 +485,24 @@ define i8 @const(i8 %X) {
   %l12 = select i1 %l11, i16 %l10, i16 0
   %conv = trunc i16 %l12 to i8
   ret i8 %conv
+}
+
+define i32 @invalid_sub_could_be_negative(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @invalid_sub_could_be_negative(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[A]] to i64
+; CHECK-NEXT:    [[CONV3:%.*]] = zext i32 [[B]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i64 [[CONV]], [[CONV3]]
+; CHECK-NEXT:    [[SPEC_STORE_SELECT13:%.*]] = call i64 @llvm.umin.i64(i64 [[SUB]], i64 4294967295)
+; CHECK-NEXT:    [[CONV10:%.*]] = trunc nuw i64 [[SPEC_STORE_SELECT13]] to i32
+; CHECK-NEXT:    ret i32 [[CONV10]]
+;
+  %conv = zext i32 %a to i64
+  %conv3 = zext i32 %b to i64
+  %sub = sub nsw i64 %conv, %conv3
+  %spec.store.select13 = call i64 @llvm.umin.i64(i64 %sub, i64 4294967295)
+  %conv10 = trunc i64 %spec.store.select13 to i32
+  ret i32 %conv10
 }
 
 declare void @use64(i64)

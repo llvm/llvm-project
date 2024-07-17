@@ -1141,6 +1141,9 @@ Instruction *InstCombinerImpl::matchAddSubSat(IntrinsicInst &MinMax1) {
     if (!match(MinMax2, m_SMin(m_BinOp(AddSub), m_APInt(MaxValue))))
       return nullptr;
   } else if (match(&MinMax1, m_UMin(m_BinOp(AddSub), m_APInt(MaxValue)))) {
+    // Bail out if AddSub could be negative.
+    if (!isKnownNonNegative(AddSub, SQ.getWithInstruction(AddSub)))
+      return nullptr;
     IsUnsignedSaturate = true;
   } else
     return nullptr;
