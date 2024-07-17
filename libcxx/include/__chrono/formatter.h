@@ -963,7 +963,7 @@ public:
 // Note due to how libc++'s formatters are implemented there is no need to add
 // the exposition only local-time-format-t abstraction.
 template <class _Duration, class _TimeZonePtr, __fmt_char_type _CharT>
-struct formatter< chrono::zoned_time<_Duration, _TimeZonePtr>, _CharT> : public __formatter_chrono<_CharT> {
+struct formatter<chrono::zoned_time<_Duration, _TimeZonePtr>, _CharT> : public __formatter_chrono<_CharT> {
 public:
   using _Base = __formatter_chrono<_CharT>;
 
