@@ -1996,9 +1996,18 @@ static bool checkDestructorReference(QualType ElementType, SourceLocation Loc,
   return SemaRef.DiagnoseUseOfDecl(Destructor, Loc);
 }
 
-static bool canInitializeArrayWithEmbedDataString(ArrayRef<Expr *> ExprList,
-                                                  QualType InitType,
-                                                  ASTContext &Context) {
+static bool
+canInitializeArrayWithEmbedDataString(ArrayRef<Expr *> ExprList,
+                                      const InitializedEntity &Entity,
+                                      ASTContext &Context) {
+  QualType InitType = Entity.getType();
+  const InitializedEntity *Parent = &Entity;
+
+  while (Parent) {
+    InitType = Parent->getType();
+    Parent = Parent->getParent();
+  }
+
   // Only one initializer, it's an embed and the types match;
   EmbedExpr *EE =
       ExprList.size() == 1
@@ -2037,7 +2046,7 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
     }
   }
 
-  if (canInitializeArrayWithEmbedDataString(IList->inits(), DeclType,
+  if (canInitializeArrayWithEmbedDataString(IList->inits(), Entity,
                                             SemaRef.Context)) {
     EmbedExpr *Embed = cast<EmbedExpr>(IList->inits()[0]);
     IList->setInit(0, Embed->getDataStringLiteral());
