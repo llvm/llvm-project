@@ -33,6 +33,11 @@ together.
 
 Some important things to think about w.r.t. canonicalization patterns:
 
+*   The goal of canonicalization is to make subsequent optimizations more
+    effective. Therefore, performance improvements are not necessary for
+    canonicalization. But it is generally better to define a canonicalize
+    pattern that do not harm the performance.
+
 *   Pass pipelines should not rely on the canonicalizer pass for correctness.
     They should work correctly with all instances of the canonicalization pass
     removed.
@@ -50,6 +55,60 @@ Some important things to think about w.r.t. canonicalization patterns:
 
 *   It is always good to eliminate operations entirely when possible, e.g. by
     folding known identities (like "x + 0 = x").
+
+*   Canonicalize isn't a great place to put pattens with expensive compile time
+    (i.e. have O(n) complexity) or complicated cost models.
+
+*   Canonicalize shouldn't drop the semantic of original operation.
+
+For example, a pattern that transform
+
+```
+  %res = vector.transpose %0, [1, 0] : vector<nx1x<eltty>> to vector<1xnx<elty>>
+```
+
+to
+
+```
+  %res = vector.shape_cast %0 : vector<nx1x<eltty>> to vector<1xnx<elty>>
+```
+
+is not a good canonicalize pattern because it drops the transpose semantic.
+
+
+A pattern that transform (linalg.transpose is only use of %broadcast)
+
+```
+  %broadcast = linalg.broadcast
+      ins(%input : tensor<2x4x5xf32>)
+      outs(%init1 : tensor<1x2x3x4x5x6xf32>)
+      dimensions = [0, 2, 5]
+  %transpose = linalg.transpose
+      ins(%broadcast : tensor<1x2x3x4x5x6xf32>)
+      outs(%init2 : tensor<1x6x2x3x5x4xf32>)
+      permutation = [0, 5, 1, 2, 4, 3]
+```
+
+to
+
+```
+  %tranpose = linalg.transpose
+      ins(%input : tensor<2x4x5xf32>)
+      outs(%tmp_init : tensor<2x5x4xf32>)
+      permutation = [0, 2, 1]
+  %broadcast = linalg.broadcast
+      ins(%transpose : tensor<2x5x4xf32>)
+      outs(%init2 : tensor<1x6x2x3x5x4xf32>)
+      dimensions = [0, 3, 1]
+```
+
+is a good canonicalize pattern because:
+
+1. This pattern is converge.
+2. This pattern always transforms the program towards reducing the amount of
+   computational data, which is a clear lattice.
+3. This is not a one-off pattern, new matches may be generated during the
+   application process.
 
 ## Globally Applied Rules
 
@@ -189,7 +248,7 @@ each of the operands, returning the corresponding constant attribute. These
 operands are those that implement the `ConstantLike` trait. If any of the
 operands are non-constant, a null `Attribute` value is provided instead. For
 example, if MyOp provides three operands [`a`, `b`, `c`], but only `b` is
-constant then `adaptor` will return Attribute() for `getA()` and `getC()`, 
+constant then `adaptor` will return Attribute() for `getA()` and `getC()`,
 and b-value for `getB()`.
 
 Also above, is the use of `OpFoldResult`. This class represents the possible
