@@ -11,6 +11,9 @@ void active (void)
   A();
 }
 
+// LLVM: @y = weak_odr global
+// LLVM: @x = weak global
+
 // CIR:      cir.func extern_weak private @B()
 // CIR:      cir.func @active()
 // CIR-NEXT:   cir.call @B() : () -> ()
@@ -18,3 +21,9 @@ void active (void)
 // LLVM:     declare !dbg !{{.}} extern_weak void @B()
 // LLVM:     define void @active()
 // LLVM-NEXT:  call void @B()
+
+int __attribute__((selectany)) y;
+// CIR:      cir.global weak_odr @y
+
+int __attribute__((weak)) x;
+// CIR:      cir.global weak
