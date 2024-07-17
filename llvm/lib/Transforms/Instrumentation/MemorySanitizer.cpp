@@ -3920,7 +3920,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return IRB.CreateShuffleVector(left, right, ConstantVector::get(Idxs));
   }
 
-  /// Calculates the shadow when interleaving 2, 3 or 4 vectors
+  /// Calculates the shadow for interleaving 2, 3 or 4 vectors
   /// (e.g., for Arm NEON vector store).
   Value *interleaveShadow(IRBuilder<> &IRB, IntrinsicInst &I) {
     // Call arguments only
