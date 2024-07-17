@@ -3020,22 +3020,22 @@ static Instruction *
 foldSelectOfSymmetricSelect(SelectInst &OuterSelVal,
                             InstCombiner::BuilderTy &Builder) {
 
-  DecomposedSelect OuterSel, InnerSel;
-  if (!match(&OuterSelVal,
-             m_Select(m_Value(OuterSel.Cond),
-                      m_OneUse(m_Select(m_Value(InnerSel.Cond),
-                                        m_Value(InnerSel.TrueVal),
-                                        m_Value(InnerSel.FalseVal))),
-                      m_OneUse(m_Select(m_Deferred(InnerSel.Cond),
-                                        m_Deferred(InnerSel.FalseVal),
-                                        m_Deferred(InnerSel.TrueVal))))))
+  Value *OuterCond, *InnerCond, *InnerTrueVal, *InnerFalseVal;
+  if (!match(
+          &OuterSelVal,
+          m_Select(m_Value(OuterCond),
+                   m_OneUse(m_Select(m_Value(InnerCond), m_Value(InnerTrueVal),
+                                     m_Value(InnerFalseVal))),
+                   m_OneUse(m_Select(m_Deferred(InnerCond),
+                                     m_Deferred(InnerFalseVal),
+                                     m_Deferred(InnerTrueVal))))))
     return nullptr;
 
-  if (OuterSel.Cond->getType() != InnerSel.Cond->getType())
+  if (OuterCond->getType() != InnerCond->getType())
     return nullptr;
 
-  Value *Xor = Builder.CreateXor(InnerSel.Cond, OuterSel.Cond);
-  return SelectInst::Create(Xor, InnerSel.FalseVal, InnerSel.TrueVal);
+  Value *Xor = Builder.CreateXor(InnerCond, OuterCond);
+  return SelectInst::Create(Xor, InnerFalseVal, InnerTrueVal);
 }
 
 /// Look for patterns like
