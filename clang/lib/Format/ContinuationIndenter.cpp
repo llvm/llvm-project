@@ -147,13 +147,31 @@ static bool startsNextParameter(const FormatToken &Current,
            Style.BreakInheritanceList != FormatStyle::BILS_BeforeComma));
 }
 
+// Returns \c true if \c Token in an alignable binary operator
+static bool isAlignableBinaryOperator(const FormatToken &Token) {
+  // No need to align binary operators that only have two operands.
+  bool HasTwoOperands = Token.OperatorIndex == 0 && !Token.NextOperator &&
+                        Token.isNot(TT_ConditionalExpr);
+  return Token.is(TT_BinaryOperator) && !HasTwoOperands &&
+         Token.getPrecedence() > prec::Conditional &&
+         Token.getPrecedence() < prec::PointerToMember;
+}
+
 // Returns \c true if \c Current starts the next operand in a binary operation.
 static bool startsNextOperand(const FormatToken &Current) {
   assert(Current.Previous);
   const auto &Previous = *Current.Previous;
-  return Previous.is(TT_BinaryOperator) && !Current.isTrailingComment() &&
-         Previous.getPrecedence() > prec::Conditional &&
-         Previous.getPrecedence() < prec::PointerToMember;
+  return isAlignableBinaryOperator(Previous) && !Current.isTrailingComment();
+}
+
+// Returns \c true if \c Current is a binary operation that must break.
+static bool mustBreakBinaryOperation(const FormatToken &Current,
+                                     const FormatStyle &Style) {
+  return !Style.BinPackBinaryOperations &&
+         ((isAlignableBinaryOperator(Current) &&
+           Style.BreakBeforeBinaryOperators != FormatStyle::BOS_None) ||
+          (startsNextOperand(Current) &&
+           Style.BreakBeforeBinaryOperators == FormatStyle::BOS_None));
 }
 
 static bool opensProtoMessageField(const FormatToken &LessTok,
@@ -847,7 +865,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   }
   if (CurrentState.AvoidBinPacking && startsNextParameter(Current, Style))
     CurrentState.NoLineBreak = true;
-  if (!Style.BinPackBinaryOperations && startsNextOperand(Current))
+  if (mustBreakBinaryOperation(Current, Style))
     CurrentState.NoLineBreak = true;
 
   if (startsSegmentOfBuilderTypeCall(Current) &&
@@ -1216,8 +1234,9 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
     }
   }
 
-  if (!Style.BinPackBinaryOperations && startsNextOperand(Current))
+  if (mustBreakBinaryOperation(Current, Style))
     CurrentState.BreakBeforeParameter = true;
+
   return Penalty;
 }
 
