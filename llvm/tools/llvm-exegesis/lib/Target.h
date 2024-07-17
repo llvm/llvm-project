@@ -88,7 +88,7 @@ public:
 
   virtual bool checkOpcodeSupported(int Opcode,
                                     const MCSubtargetInfo &SI) const {
-    return true;
+    return false;
   }
 
   // Find register by name, NoRegister if not found.

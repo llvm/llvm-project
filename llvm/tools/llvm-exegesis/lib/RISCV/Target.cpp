@@ -103,7 +103,7 @@ bool ExegesisRISCVTarget::checkOpcodeSupported(
   FeatureBitset RequiredFeatures = RISCV_MC::computeRequiredFeatures(Opcode);
   FeatureBitset MissingFeatures =
       (AvailableFeatures & RequiredFeatures) ^ RequiredFeatures;
-  return MissingFeatures.none();
+  return !(MissingFeatures.none());
 }
 
 #define GET_REGISTER_MATCHER
