@@ -109,8 +109,11 @@ RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
   return Cost;
 }
 
-InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
-                                            TTI::TargetCostKind CostKind) {
+static InstructionCost getIntImmCostImpl(const DataLayout &DL,
+                                         const RISCVSubtarget *ST,
+                                         const APInt &Imm, Type *Ty,
+                                         TTI::TargetCostKind CostKind,
+                                         bool FreeZeroes) {
   assert(Ty->isIntegerTy() &&
          "getIntImmCost can only estimate cost of materialising integers");
 
@@ -119,10 +122,13 @@ InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
     return TTI::TCC_Free;
 
   // Otherwise, we check how many instructions it will take to materialise.
-  const DataLayout &DL = getDataLayout();
-  return RISCVMatInt::getIntMatCost(Imm, DL.getTypeSizeInBits(Ty), *getST(),
-                                    /*CompressionCost=*/false,
-                                    /*FreeZeroes=*/true);
+  return RISCVMatInt::getIntMatCost(Imm, DL.getTypeSizeInBits(Ty), *ST,
+                                    /*CompressionCost=*/false, FreeZeroes);
+}
+
+InstructionCost RISCVTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty,
+                                            TTI::TargetCostKind CostKind) {
+  return getIntImmCostImpl(getDataLayout(), getST(), Imm, Ty, CostKind, false);
 }
 
 // Look for patterns of shift followed by AND that can be turned into a pair of
@@ -180,7 +186,8 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     // misaligned accesses are not legal (experience shows constant hoisting
     // can sometimes be harmful in such cases).
     if (Idx == 1 || !Inst)
-      return getIntImmCost(Imm, Ty, CostKind);
+      return getIntImmCostImpl(getDataLayout(), getST(), Imm, Ty, CostKind,
+                               /*FreeZeroes=*/true);
 
     StoreInst *ST = cast<StoreInst>(Inst);
     if (!getTLI()->allowsMemoryAccessForAlignment(
@@ -188,7 +195,8 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
             ST->getPointerAddressSpace(), ST->getAlign()))
       return TTI::TCC_Free;
 
-    return getIntImmCost(Imm, Ty, CostKind);
+    return getIntImmCostImpl(getDataLayout(), getST(), Imm, Ty, CostKind,
+                             /*FreeZeroes=*/true);
   }
   case Instruction::Load:
     // If the address is a constant, use the materialization cost.

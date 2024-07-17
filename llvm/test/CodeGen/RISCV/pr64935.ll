@@ -4,7 +4,10 @@
 define i1 @f() {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 1
+; CHECK-NEXT:    lui a0, 524288
+; CHECK-NEXT:    not a0, a0
+; CHECK-NEXT:    sltiu a0, a0, 2
+; CHECK-NEXT:    xori a0, a0, 1
 ; CHECK-NEXT:    ret
   %B25 = shl i64 4294967296, -9223372036854775808
   %B13 = sub i64 -1, -9223372036854775808
