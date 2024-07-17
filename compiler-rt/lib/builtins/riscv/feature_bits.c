@@ -184,7 +184,6 @@ static long initHwProbe(struct riscv_hwprobe *Hwprobes, int len) {
   return syscall_impl_5_args(__NR_riscv_hwprobe, (long)Hwprobes, len, 0, 0, 0);
 }
 
-
 #define SET_RISCV_HWPROBE_EXT_SINGLE_RISCV_FEATURE(EXTNAME)                    \
   SET_SINGLE_IMAEXT_RISCV_FEATURE(RISCV_HWPROBE_EXT_##EXTNAME, EXTNAME)
 
