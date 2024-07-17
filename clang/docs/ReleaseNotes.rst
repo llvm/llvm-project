@@ -1043,6 +1043,7 @@ Bug Fixes to C++ Support
 - Clang now diagnoses explicit object parameters in member pointers and other contexts where they should not appear.
   Fixes (#GH85992).
 - Fixed a crash-on-invalid bug involving extraneous template parameter with concept substitution. (#GH73885)
+- Fixed a failed assertion when checking invalid delete operator declaration (GH96191).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
