@@ -456,17 +456,17 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
 /// NHWC first. We need to generate 2 levels of loops to iterate on N and C.
 /// After the transformation, we get
 ///
-/// scf.for %h = 0 to HTile step 1
-///   scf.for %w = 0 to WTile step 1
+/// scf.for %h = 0 to tileH step 1
+///   scf.for %w = 0 to tileW step 1
 ///     scf.for %n = 0 to N step 1
 ///       scf.for %c = 0 to C step 1
-///         %extracted = extract input<alphaH x alphaW> from
-///                              input<N x H x W x C>
+///         %extracted = extract %extracted<alphaH x alphaW> from
+///                              %input<N x H x W x C>
 ///                              at [%n, (%h x m), (%w x m), %c]
 ///         %ret = linalg.matmul BT, %extracted
 ///         %ret = linalg.matmul %ret, B
-///         %inserted = insert %ret into
-///                            input<alphaH x alphaW x tileH x tileW x N x C>
+///         %inserted = insert %ret<alphaH x alphaW> into
+///                            %output<alphaH x alphaW x tileH x tileW x N x C>
 ///                            at [0, 0, %h, %w, %n, %c]
 Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
                      Value retValue, int64_t m, int64_t r,
@@ -668,12 +668,18 @@ static Value matrixMultiply(RewriterBase &rewriter, Location loc,
 /// HWNF first. We need to generate 2 levels of loops to iterate on N and F.
 /// After the transformation, we get
 ///
-/// scf.for %n = lo_n to hi_n step 1
-///   scf.for %f = lo_f to hi_f step 1
-///     %extracted = extract input<h x w> from result<h x w x n x f>
-///     %ret = linalg.matmul AT, %extracted
-///     %ret = linalg.matmul %ret, A
-///     %inserted = insert %ret into ret<n x h x w x f>
+/// scf.for %h = 0 to tileH step 1
+///   scf.for %w = 0 to tileW step 1
+///     scf.for %n = 0 to N step 1
+///       scf.for %f = 0 to F step 1
+///         %extracted = extract %extracted<alphaH x alphaW> from
+///                              %input<alphaH x alphaW x tileH x tileW x N x F>
+///                              at [0, 0, %h, %w, %n, %f]
+///         %ret = linalg.matmul AT, %extracted
+///         %ret = linalg.matmul %ret, A
+///         %inserted = insert %ret<alphaH x alphaW> into
+///                            output<N x H x W x F>
+///                            at [%n, (%h x m), (%w x m), %f]
 Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
                       Value output, int64_t m, int64_t r,
                       bool leftTransform = true, bool rightTransform = true) {
