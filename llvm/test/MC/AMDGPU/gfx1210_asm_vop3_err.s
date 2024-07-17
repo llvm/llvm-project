@@ -287,3 +287,28 @@ v_cvt_sr_bf8_f16 v1, v2, v3 byte_sel:4
 // GFX121X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid byte_sel value.
 // GFX121X-ERR-NEXT:{{^}}v_cvt_sr_bf8_f16 v1, v2, v3 byte_sel:4
 // GFX121X-ERR-NEXT:{{^}}                            ^
+
+v_cvt_scale_pk8_f16_fp8 v[10:13], s[20:21], v8
+// GFX121X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX121X-ERR-NEXT:{{^}}v_cvt_scale_pk8_f16_fp8 v[10:13], s[20:21], v8
+// GFX121X-ERR-NEXT:{{^}}                                  ^
+
+v_cvt_scale_pk8_f16_fp8 v[10:13], 1, v8
+// GFX121X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX121X-ERR-NEXT:{{^}}v_cvt_scale_pk8_f16_fp8 v[10:13], 1, v8
+// GFX121X-ERR-NEXT:{{^}}                                  ^
+
+v_cvt_scale_pk8_bf16_fp8 v[10:13], s[20:21], v8
+// GFX121X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX121X-ERR-NEXT:{{^}}v_cvt_scale_pk8_bf16_fp8 v[10:13], s[20:21], v8
+// GFX121X-ERR-NEXT:{{^}}                                   ^
+
+v_cvt_scale_pk8_f32_fp8 v[10:17], s[20:21], v8
+// GFX121X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX121X-ERR-NEXT:{{^}}v_cvt_scale_pk8_f32_fp8 v[10:17], s[20:21], v8
+// GFX121X-ERR-NEXT:{{^}}                                  ^
+
+v_cvt_scale_pk32_bf16_bf6 v[10:25], s[20:25], 0xcf00
+// GFX121X-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX121X-ERR-NEXT:{{^}}v_cvt_scale_pk32_bf16_bf6 v[10:25], s[20:25], 0xcf00
+// GFX121X-ERR-NEXT:{{^}}                                    ^

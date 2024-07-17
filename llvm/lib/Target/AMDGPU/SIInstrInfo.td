@@ -1747,13 +1747,6 @@ class getVGPRSrcForVT<ValueType VT> {
                               1 : VGPRSrc_32);
 }
 
-// VGPR only VOP3DPP src with 9 bit encoding
-class getVOP3DPPVRegSrcForVT<ValueType VT> {
-  RegisterOperand ret = !cond(!eq(VT.Size, 96) : VRegSrc_96,
-                              !eq(VT.Size, 64) : VRegSrc_64,
-                              1 : VRegSrc_32);
-}
-
 // Src2 of VOP3 DPP instructions cannot be a literal
 class getVOP3DPPSrcForVT<ValueType VT> {
   RegisterOperand ret =
