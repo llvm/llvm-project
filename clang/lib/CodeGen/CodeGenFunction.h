@@ -797,15 +797,23 @@ public:
     CGFPOptionsRAII(CodeGenFunction &CGF, const Expr *E);
     ~CGFPOptionsRAII();
 
+    FPOptions getOldFPOptions() const { return OldFPFeatures; }
+
   private:
     void ConstructorHelper(FPOptions FPFeatures);
     CodeGenFunction &CGF;
     FPOptions OldFPFeatures;
+    llvm::Value *OldDynamicRM;
+    llvm::Value *OldStaticRM;
+    bool OldCurrentRoundingIsStatic;
     llvm::fp::ExceptionBehavior OldExcept;
     llvm::RoundingMode OldRounding;
     std::optional<CGBuilderTy::FastMathFlagGuard> FMFGuard;
   };
   FPOptions CurFPFeatures;
+  llvm::Value *DynamicRoundingMode = nullptr;
+  llvm::Value *StaticRoundingMode = nullptr;
+  bool CurrentRoundingIsStatic = false;
 
 public:
   /// ObjCEHValueStack - Stack of Objective-C exception values, used for
@@ -3318,6 +3326,14 @@ public:
 
   /// Get the record field index as represented in debug info.
   unsigned getDebugInfoFIndex(const RecordDecl *Rec, unsigned FieldIndex);
+
+  /// Optionally emit code that sets required floating-point control modes and
+  /// creates corresponding cleanup action.
+  void emitSetFPControlModes(FPOptions NewFP, FPOptions OldFP);
+
+  void setRoundingModeForCall(const CGCallee &Callee);
+  void restoreRoundingModeAfterCall();
+  bool requiresDynamicRounding(const CGCallee &Callee);
 
 
   //===--------------------------------------------------------------------===//

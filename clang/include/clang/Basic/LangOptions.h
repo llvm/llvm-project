@@ -850,6 +850,12 @@ public:
            getAllowFEnvAccess();
   }
 
+  /// Checks if the rounding mode is unknown at compile-time.
+  bool isRoundingModeDynamic() const {
+    return (getConstRoundingMode() == RoundingMode::Dynamic) &&
+           (getAllowFEnvAccess() || getRoundingMath());
+  }
+
   RoundingMode getRoundingMode() const {
     RoundingMode RM = getConstRoundingMode();
     if (RM == RoundingMode::Dynamic) {

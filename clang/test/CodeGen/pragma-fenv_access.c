@@ -1,9 +1,21 @@
-// RUN: %clang_cc1 -fexperimental-strict-floating-point -ffp-exception-behavior=strict -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck --check-prefixes=CHECK,STRICT %s
-// RUN: %clang_cc1 -fexperimental-strict-floating-point -frounding-math -ffp-exception-behavior=strict -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck --check-prefixes=CHECK,STRICT-RND %s
-// RUN: %clang_cc1 -fexperimental-strict-floating-point -ffp-exception-behavior=strict -triple %itanium_abi_triple -emit-llvm %s -o - -fms-extensions -DMS | FileCheck --check-prefixes=CHECK,STRICT %s
-// RUN: %clang_cc1 -fexperimental-strict-floating-point -frounding-math -ffp-exception-behavior=strict -triple %itanium_abi_triple -emit-llvm %s -o - -fms-extensions -DMS | FileCheck --check-prefixes=CHECK,STRICT-RND %s
-// RUN: %clang_cc1 -fexperimental-strict-floating-point -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck --check-prefixes=CHECK,DEFAULT %s
-// RUN: %clang_cc1 -fexperimental-strict-floating-point -frounding-math -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck --check-prefixes=CHECK,DEFAULT-RND %s
+// RUN: %clang_cc1 -fexperimental-strict-floating-point -ffp-exception-behavior=strict -triple %itanium_abi_triple -emit-llvm %s -o - \
+// RUN:   | FileCheck --check-prefixes=CHECK,STRICT,DEFM %s \
+// RUN:        --implicit-check-not "call void @llvm.set.rounding" --implicit-check-not "call i32 @llvm.get.rounding"
+// RUN: %clang_cc1 -fexperimental-strict-floating-point -frounding-math -ffp-exception-behavior=strict -triple %itanium_abi_triple -emit-llvm %s -o - \
+// RUN:   | FileCheck --check-prefixes=CHECK,STRICT-RND,RNDM %s \
+// RUN:        --implicit-check-not "call void @llvm.set.rounding" --implicit-check-not "call i32 @llvm.get.rounding"
+// RUN: %clang_cc1 -fexperimental-strict-floating-point -ffp-exception-behavior=strict -triple %itanium_abi_triple -emit-llvm %s -o - -fms-extensions -DMS \
+// RUN:   | FileCheck --check-prefixes=CHECK,STRICT,DEFM %s \
+// RUN:        --implicit-check-not "call void @llvm.set.rounding" --implicit-check-not "call i32 @llvm.get.rounding"
+// RUN: %clang_cc1 -fexperimental-strict-floating-point -frounding-math -ffp-exception-behavior=strict -triple %itanium_abi_triple -emit-llvm %s -o - -fms-extensions -DMS \
+// RUN:   | FileCheck --check-prefixes=CHECK,STRICT-RND,RNDM %s \
+// RUN:        --implicit-check-not "call void @llvm.set.rounding" --implicit-check-not "call i32 @llvm.get.rounding"
+// RUN: %clang_cc1 -fexperimental-strict-floating-point -triple %itanium_abi_triple -emit-llvm %s -o - \
+// RUN:   | FileCheck --check-prefixes=CHECK,DEFAULT,DEFM %s \
+// RUN:        --implicit-check-not "call void @llvm.set.rounding" --implicit-check-not "call i32 @llvm.get.rounding"
+// RUN: %clang_cc1 -fexperimental-strict-floating-point -frounding-math -triple %itanium_abi_triple -emit-llvm %s -o - \
+// RUN:   | FileCheck --check-prefixes=CHECK,DEFAULT-RND,RNDM %s \
+// RUN:        --implicit-check-not "call void @llvm.set.rounding" --implicit-check-not "call i32 @llvm.get.rounding"
 
 float func_00(float x, float y) {
   return x + y;
@@ -107,7 +119,11 @@ float func_08(float x, float y) {
   return x + y;
 }
 // CHECK-LABEL: @func_08
+// RNDM:   [[RM:%[0-9]+]] = call i32 @llvm.get.rounding()
+// CHECK:  call void @llvm.set.rounding(i32 2)
 // CHECK:  call float @llvm.experimental.constrained.fadd.f32({{.*}}, metadata !"round.upward", metadata !"fpexcept.strict")
+// RNDM:   call void @llvm.set.rounding(i32 [[RM]])
+// DEFM:   call void @llvm.set.rounding(i32 1)
 
 
 float func_09(float x, float y) {
@@ -116,7 +132,10 @@ float func_09(float x, float y) {
   return x + y;
 }
 // CHECK-LABEL: @func_09
+// RNDM:  [[RM:%[0-9]+]] = call i32 @llvm.get.rounding()
+// RNDM:  call void @llvm.set.rounding(i32 1)
 // CHECK: call float @llvm.experimental.constrained.fadd.f32(float {{.*}}, float {{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+// RNDM:  call void @llvm.set.rounding(i32 [[RM]])
 
 
 float func_10(float x, float y) {
@@ -126,7 +145,10 @@ float func_10(float x, float y) {
   return x + y;
 }
 // CHECK-LABEL: @func_10
+// RNDM:  [[RM:%[0-9]+]] = call i32 @llvm.get.rounding()
+// RNDM:  call void @llvm.set.rounding(i32 1)
 // CHECK: call float @llvm.experimental.constrained.fadd.f32(float {{.*}}, float {{.*}}, metadata !"round.tonearest", metadata !"fpexcept.ignore")
+// RNDM:  call void @llvm.set.rounding(i32 [[RM]])
 
 
 float func_11(float x, float y) {
@@ -136,8 +158,11 @@ float func_11(float x, float y) {
   return x + y;
 }
 // CHECK-LABEL: @func_11
+// RNDM:  [[RM:%[0-9]+]] = call i32 @llvm.get.rounding()
+// RNDM:  call void @llvm.set.rounding(i32 1)
 // STRICT: call float @llvm.experimental.constrained.fadd.f32(float {{.*}}, float {{.*}}, metadata !"round.tonearest", metadata !"fpexcept.ignore")
 // DEFAULT: fadd float
+// RNDM:  call void @llvm.set.rounding(i32 [[RM]])
 
 
 float func_12(float x, float y) {
@@ -156,7 +181,11 @@ float func_13(float x, float y) {
   return x + y;
 }
 // CHECK-LABEL: @func_13
+// RNDM:   [[RM:%[0-9]+]] = call i32 @llvm.get.rounding()
+// CHECK:  call void @llvm.set.rounding(i32 2)
 // CHECK:  call float @llvm.experimental.constrained.fadd.f32({{.*}}, metadata !"round.upward", metadata !"fpexcept.maytrap")
+// RNDM:   call void @llvm.set.rounding(i32 [[RM]])
+// DEFM:   call void @llvm.set.rounding(i32 1)
 
 
 float func_14(float x, float y, float z) {
@@ -184,10 +213,14 @@ float func_15(float x, float y, float z) {
   }
 }
 // CHECK-LABEL: @func_15
+// RNDM:    [[RM:%[0-9]+]] = call i32 @llvm.get.rounding()
+// CHECK:   call void @llvm.set.rounding(i32 0)
 // STRICT:  call float @llvm.experimental.constrained.fmul.f32({{.*}}, metadata !"round.towardzero", metadata !"fpexcept.strict")
 // STRICT:  call float @llvm.experimental.constrained.fadd.f32({{.*}}, metadata !"round.towardzero", metadata !"fpexcept.strict")
 // DEFAULT: call float @llvm.experimental.constrained.fmul.f32({{.*}}, metadata !"round.towardzero", metadata !"fpexcept.strict")
 // DEFAULT: call float @llvm.experimental.constrained.fadd.f32({{.*}}, metadata !"round.towardzero", metadata !"fpexcept.ignore")
+// RNDM:    call void @llvm.set.rounding(i32 [[RM]])
+// DEFM:    call void @llvm.set.rounding(i32 1)
 
 
 float func_16(float x, float y) {
