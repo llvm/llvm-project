@@ -173,9 +173,10 @@ define i64 @test_bitreverse_i64(i64 %a) nounwind {
 ; GFNI-LABEL: test_bitreverse_i64:
 ; GFNI:       # %bb.0:
 ; GFNI-NEXT:    vmovq %rdi, %xmm0
-; GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; GFNI-NEXT:    vmovq %xmm0, %rax
 ; GFNI-NEXT:    bswapq %rax
+; GFNI-NEXT:    vzeroupper
 ; GFNI-NEXT:    retq
   %b = call i64 @llvm.bitreverse.i64(i64 %a)
   ret i64 %b
@@ -238,9 +239,10 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; GFNI-LABEL: test_bitreverse_i32:
 ; GFNI:       # %bb.0:
 ; GFNI-NEXT:    vmovd %edi, %xmm0
-; GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; GFNI-NEXT:    vmovd %xmm0, %eax
 ; GFNI-NEXT:    bswapl %eax
+; GFNI-NEXT:    vzeroupper
 ; GFNI-NEXT:    retq
   %b = call i32 @llvm.bitreverse.i32(i32 %a)
   ret i32 %b
@@ -306,10 +308,11 @@ define i24 @test_bitreverse_i24(i24 %a) nounwind {
 ; GFNI-LABEL: test_bitreverse_i24:
 ; GFNI:       # %bb.0:
 ; GFNI-NEXT:    vmovd %edi, %xmm0
-; GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; GFNI-NEXT:    vmovd %xmm0, %eax
 ; GFNI-NEXT:    bswapl %eax
 ; GFNI-NEXT:    shrl $8, %eax
+; GFNI-NEXT:    vzeroupper
 ; GFNI-NEXT:    retq
   %b = call i24 @llvm.bitreverse.i24(i24 %a)
   ret i24 %b
@@ -375,10 +378,11 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; GFNI-LABEL: test_bitreverse_i16:
 ; GFNI:       # %bb.0:
 ; GFNI-NEXT:    vmovd %edi, %xmm0
-; GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; GFNI-NEXT:    vmovd %xmm0, %eax
 ; GFNI-NEXT:    rolw $8, %ax
 ; GFNI-NEXT:    # kill: def $ax killed $ax killed $eax
+; GFNI-NEXT:    vzeroupper
 ; GFNI-NEXT:    retq
   %b = call i16 @llvm.bitreverse.i16(i16 %a)
   ret i16 %b
@@ -433,9 +437,10 @@ define i8 @test_bitreverse_i8(i8 %a) {
 ; GFNI-LABEL: test_bitreverse_i8:
 ; GFNI:       # %bb.0:
 ; GFNI-NEXT:    vmovd %edi, %xmm0
-; GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; GFNI-NEXT:    vmovd %xmm0, %eax
 ; GFNI-NEXT:    # kill: def $al killed $al killed $eax
+; GFNI-NEXT:    vzeroupper
 ; GFNI-NEXT:    retq
   %b = call i8 @llvm.bitreverse.i8(i8 %a)
   ret i8 %b
@@ -492,10 +497,11 @@ define i4 @test_bitreverse_i4(i4 %a) {
 ; GFNI-LABEL: test_bitreverse_i4:
 ; GFNI:       # %bb.0:
 ; GFNI-NEXT:    vmovd %edi, %xmm0
-; GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; GFNI-NEXT:    vmovd %xmm0, %eax
 ; GFNI-NEXT:    shrb $4, %al
 ; GFNI-NEXT:    # kill: def $al killed $al killed $eax
+; GFNI-NEXT:    vzeroupper
 ; GFNI-NEXT:    retq
   %b = call i4 @llvm.bitreverse.i4(i4 %a)
   ret i4 %b
@@ -1340,48 +1346,48 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; GFNI-NEXT:    pushq %r14
 ; GFNI-NEXT:    pushq %rbx
 ; GFNI-NEXT:    movq %rdi, %rax
-; GFNI-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [9241421688590303745,9241421688590303745]
 ; GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
+; GFNI-NEXT:    vpbroadcastq {{.*#+}} ymm0 = [9241421688590303745,9241421688590303745,9241421688590303745,9241421688590303745]
+; GFNI-NEXT:    vgf2p8affineqb $0, %ymm0, %ymm1, %ymm1
 ; GFNI-NEXT:    vmovq %xmm1, %r10
 ; GFNI-NEXT:    bswapq %r10
 ; GFNI-NEXT:    vmovq %r9, %xmm1
-; GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
+; GFNI-NEXT:    vgf2p8affineqb $0, %ymm0, %ymm1, %ymm1
 ; GFNI-NEXT:    vmovq %xmm1, %rdi
 ; GFNI-NEXT:    bswapq %rdi
 ; GFNI-NEXT:    vmovq %r8, %xmm1
-; GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
+; GFNI-NEXT:    vgf2p8affineqb $0, %ymm0, %ymm1, %ymm1
 ; GFNI-NEXT:    vmovq %xmm1, %r8
 ; GFNI-NEXT:    bswapq %r8
 ; GFNI-NEXT:    movq %r8, %r9
 ; GFNI-NEXT:    shldq $16, %rdi, %r9
 ; GFNI-NEXT:    shldq $16, %r10, %rdi
 ; GFNI-NEXT:    vmovq %rcx, %xmm1
-; GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
+; GFNI-NEXT:    vgf2p8affineqb $0, %ymm0, %ymm1, %ymm1
 ; GFNI-NEXT:    vmovq %xmm1, %rcx
 ; GFNI-NEXT:    bswapq %rcx
 ; GFNI-NEXT:    shrdq $48, %rcx, %r8
 ; GFNI-NEXT:    vmovq %rdx, %xmm1
-; GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
+; GFNI-NEXT:    vgf2p8affineqb $0, %ymm0, %ymm1, %ymm1
 ; GFNI-NEXT:    vmovq %xmm1, %rdx
 ; GFNI-NEXT:    bswapq %rdx
 ; GFNI-NEXT:    shrdq $48, %rdx, %rcx
 ; GFNI-NEXT:    vmovq %rsi, %xmm1
-; GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
+; GFNI-NEXT:    vgf2p8affineqb $0, %ymm0, %ymm1, %ymm1
 ; GFNI-NEXT:    vmovq %xmm1, %rsi
 ; GFNI-NEXT:    bswapq %rsi
 ; GFNI-NEXT:    shrdq $48, %rsi, %rdx
 ; GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
+; GFNI-NEXT:    vgf2p8affineqb $0, %ymm0, %ymm1, %ymm1
 ; GFNI-NEXT:    vmovq %xmm1, %r11
 ; GFNI-NEXT:    bswapq %r11
 ; GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
+; GFNI-NEXT:    vgf2p8affineqb $0, %ymm0, %ymm1, %ymm1
 ; GFNI-NEXT:    vmovq %xmm1, %rbx
 ; GFNI-NEXT:    bswapq %rbx
 ; GFNI-NEXT:    shrdq $48, %rbx, %r11
 ; GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm0
+; GFNI-NEXT:    vgf2p8affineqb $0, %ymm0, %ymm1, %ymm0
 ; GFNI-NEXT:    vmovq %xmm0, %r14
 ; GFNI-NEXT:    bswapq %r14
 ; GFNI-NEXT:    shrdq $48, %r14, %rbx
@@ -1398,6 +1404,7 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; GFNI-NEXT:    movw %si, 64(%rax)
 ; GFNI-NEXT:    popq %rbx
 ; GFNI-NEXT:    popq %r14
+; GFNI-NEXT:    vzeroupper
 ; GFNI-NEXT:    retq
   %Z = call i528 @llvm.bitreverse.i528(i528 %A)
   ret i528 %Z
