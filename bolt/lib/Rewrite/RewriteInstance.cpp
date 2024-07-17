@@ -1052,7 +1052,9 @@ void RewriteInstance::discoverFileObjects() {
 
         // Remove the symbol from FileSymRefs so that we can skip it from
         // in the future.
-        auto SI = FileSymRefs.find(SymbolAddress);
+        auto SI = llvm::find_if(
+            llvm::make_range(FileSymRefs.equal_range(SymbolAddress)),
+            [&](auto SymIt) { return SymIt.second == Symbol; });
         assert(SI != FileSymRefs.end() && "symbol expected to be present");
         assert(SI->second == Symbol && "wrong symbol found");
         FileSymRefs.erase(SI);
@@ -1433,16 +1435,11 @@ void RewriteInstance::registerFragments() {
     const uint64_t Address = BF->getAddress();
 
     // Get fragment's own symbol
-    auto SymIt = FileSymRefs.end();
-    auto EqualAddressSymRange = FileSymRefs.equal_range(Address);
-    while (EqualAddressSymRange.first != EqualAddressSymRange.second) {
-      auto EqualAddressSymIt = EqualAddressSymRange.first;
-      StringRef Name = cantFail(EqualAddressSymIt->second.getName());
-      if (Name.contains(ParentName)) {
-        SymIt = EqualAddressSymIt;
-        break;
-      }
-    }
+    const auto SymIt = llvm::find_if(
+        llvm::make_range(FileSymRefs.equal_range(Address)), [&](auto SI) {
+          StringRef Name = cantFail(SI.second.getName());
+          return Name.contains(ParentName);
+        });
     if (SymIt == FileSymRefs.end()) {
       BC->errs()
           << "BOLT-ERROR: symbol lookup failed for function at address 0x"
