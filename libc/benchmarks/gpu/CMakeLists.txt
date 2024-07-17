@@ -11,10 +11,10 @@ function(add_benchmark benchmark_name)
     ${ARGN}
   )
 
-  if(NOT ${BENCHMARK_NUM_THREADS})
+  if(NOT BENCHMARK_NUM_THREADS)
     set(BENCHMARK_NUM_THREADS 1)
   endif()
-
+  
   if(NOT libc.src.time.clock IN_LIST TARGET_LLVMLIBC_ENTRYPOINTS)
     message(FATAL_ERROR "target does not support clock")
   endif()
