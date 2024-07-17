@@ -26,6 +26,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
+include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 include "mlir/IR/BuiltinAttributeInterfaces.td"
@@ -82,7 +83,9 @@ def CastKind : I32EnumAttr<
   let cppNamespace = "::mlir::cir";
 }
 
-def CastOp : CIR_Op<"cast", [Pure]> {
+def CastOp : CIR_Op<"cast",
+             [Pure,
+              DeclareOpInterfaceMethods<PromotableOpInterface>]> {
   // FIXME: not all conversions are free of side effects.
   let summary = "Conversion between values of different types";
   let description = [{
@@ -389,7 +392,8 @@ class AllocaTypesMatchWith<string summary, string lhsArg, string rhsArg,
 def AllocaOp : CIR_Op<"alloca", [
   AllocaTypesMatchWith<"'allocaType' matches pointee type of 'addr'",
                  "addr", "allocaType",
-                 "cast<PointerType>($_self).getPointee()">]> {
+                 "cast<PointerType>($_self).getPointee()">,
+                 DeclareOpInterfaceMethods<PromotableAllocationOpInterface>]> {
   let summary = "Defines a scope-local variable";
   let description = [{
     The `cir.alloca` operation defines a scope-local variable.
@@ -473,7 +477,8 @@ def AllocaOp : CIR_Op<"alloca", [
 def LoadOp : CIR_Op<"load", [
   TypesMatchWith<"type of 'result' matches pointee type of 'addr'",
                  "addr", "result",
-                 "cast<PointerType>($_self).getPointee()">]> {
+                 "cast<PointerType>($_self).getPointee()">,
+                 DeclareOpInterfaceMethods<PromotableMemOpInterface>]> {
 
   let summary = "Load value from memory adddress";
   let description = [{
@@ -531,7 +536,8 @@ def LoadOp : CIR_Op<"load", [
 def StoreOp : CIR_Op<"store", [
   TypesMatchWith<"type of 'value' matches pointee type of 'addr'",
                  "addr", "value",
-                 "cast<PointerType>($_self).getPointee()">]> {
+                 "cast<PointerType>($_self).getPointee()">,
+                 DeclareOpInterfaceMethods<PromotableMemOpInterface>]> {
 
   let summary = "Store value to memory address";
   let description = [{
@@ -1691,7 +1697,7 @@ def BrOp : CIR_Op<"br",
 
 def BrCondOp : CIR_Op<"brcond",
       [DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
-       Pure, Terminator, SameVariadicOperandSize]> {
+       Pure, Terminator, AttrSizedOperandSegments]> {
   let summary = "Conditional branch";
   let description = [{
     The `cir.brcond %cond, ^bb0, ^bb1` branches to 'bb0' block in case
@@ -1714,11 +1720,8 @@ def BrCondOp : CIR_Op<"brcond",
     OpBuilder<(ins "Value":$cond, "Block *":$destTrue, "Block *":$destFalse,
                CArg<"ValueRange", "{}">:$destOperandsTrue,
                CArg<"ValueRange", "{}">:$destOperandsFalse), [{
-      $_state.addOperands(cond);
-      $_state.addSuccessors(destTrue);
-      $_state.addSuccessors(destFalse);
-      $_state.addOperands(destOperandsTrue);
-      $_state.addOperands(destOperandsFalse);
+      build($_builder, $_state, cond, destOperandsTrue,
+            destOperandsFalse, destTrue, destFalse);
     }]>
   ];
 
@@ -3202,7 +3205,9 @@ def CatchParamOp : CIR_Op<"catch_param"> {
 // CopyOp
 //===----------------------------------------------------------------------===//
 
-def CopyOp : CIR_Op<"copy", [SameTypeOperands]> {
+def CopyOp : CIR_Op<"copy",
+             [SameTypeOperands,
+              DeclareOpInterfaceMethods<PromotableMemOpInterface>]> {
   let arguments = (ins Arg<CIR_PointerType, "", [MemWrite]>:$dst,
                        Arg<CIR_PointerType, "", [MemRead]>:$src,
                        UnitAttr:$is_volatile);
@@ -4088,6 +4093,13 @@ def AtomicCmpXchg : CIR_Op<"atomic.cmp_xchg",
   }];
 
   let hasVerifier = 0;
+}
+
+def UndefOp : CIR_Op<"undef", [Pure]> {
+  let summary = "Creates an undefined value of CIR dialect type.";
+  let description = [{ `cir.undef` is similar to the one in the LLVM IR dialect }];
+  let results = (outs AnyType:$res);
+  let assemblyFormat = "attr-dict `:` type($res)";
 }
 
 #endif // LLVM_CLANG_CIR_DIALECT_IR_CIROPS

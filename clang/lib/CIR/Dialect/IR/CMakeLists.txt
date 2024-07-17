@@ -2,6 +2,7 @@ add_clang_library(MLIRCIR
   CIRAttrs.cpp
   CIRDataLayout.cpp
   CIRDialect.cpp
+  CIRMemorySlot.cpp
   CIRTypes.cpp
   FPEnv.cpp
 
