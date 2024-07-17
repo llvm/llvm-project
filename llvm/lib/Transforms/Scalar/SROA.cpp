@@ -5299,6 +5299,8 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
   NumAllocaPartitions += NumPartitions;
   MaxPartitionsPerAlloca.updateMax(NumPartitions);
 
+  // Migrate debug information from the old alloca to the new alloca(s)
+  // and the individual partitions.
   auto MigrateOne = [&](auto *DbgVariable) {
     // Can't overlap with undef memory.
     if (isKillAddress(DbgVariable))
