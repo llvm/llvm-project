@@ -10,11 +10,14 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/PreprocessorOptions.h"
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <stack>
 
 #include "gtest/gtest.h"
+#include <tuple>
 
 using namespace clang;
 using namespace llvm;
@@ -39,14 +42,24 @@ std::string teardownProfiler() {
 
 // Returns true if code compiles successfully.
 // We only parse AST here. This is enough for constexpr evaluation.
-bool compileFromString(StringRef Code, StringRef Standard, StringRef FileName) {
+bool compileFromString(StringRef Code, StringRef Standard, StringRef FileName,
+                       llvm::StringMap<StringRef> Headers = {}) {
   CompilerInstance Compiler;
   Compiler.createDiagnostics();
 
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS(
+      new llvm::vfs::InMemoryFileSystem());
+  FS->addFile(FileName, 0, MemoryBuffer::getMemBuffer(Code));
+  for (const auto &Header : Headers) {
+    FS->addFile(Header.getKey(), 0,
+                MemoryBuffer::getMemBuffer(Header.getValue()));
+  }
+  llvm::IntrusiveRefCntPtr<FileManager> Files(
+      new FileManager(FileSystemOptions(), FS));
+  Compiler.setFileManager(Files.get());
+
   auto Invocation = std::make_shared<CompilerInvocation>();
-  Invocation->getPreprocessorOpts().addRemappedFile(
-      FileName, MemoryBuffer::getMemBuffer(Code).release());
-  const char *Args[] = {Standard.data(), FileName.data()};
+  std::vector<const char *> Args = {Standard.data(), FileName.data()};
   CompilerInvocation::CreateFromArgs(*Invocation, Args,
                                      Compiler.getDiagnostics());
   Compiler.setInvocation(std::move(Invocation));
@@ -59,6 +72,19 @@ bool compileFromString(StringRef Code, StringRef Standard, StringRef FileName) {
     }
   } Action;
   return Compiler.ExecuteAction(Action);
+}
+
+std::string GetMetadata(json::Object *Event) {
+  std::string Metadata = "";
+  if (json::Object *Args = Event->getObject("args")) {
+    if (StringRef Detail = Args->getString("detail").value_or("");
+        !Detail.empty())
+      Metadata += Detail.str();
+    if (StringRef File = Args->getString("filename").value_or("");
+        !File.empty())
+      Metadata += ", " + File.str();
+  }
+  return Metadata;
 }
 
 // Returns pretty-printed trace graph.
@@ -75,6 +101,7 @@ std::string buildTraceGraph(StringRef Json) {
   Expected<json::Value> Root = json::parse(Json);
   if (!Root)
     return "";
+  std::stack<json::Object *> SourceEvents;
   for (json::Value &TraceEventValue :
        *Root->getAsObject()->getArray("traceEvents")) {
     json::Object *TraceEventObj = TraceEventValue.getAsObject();
@@ -83,14 +110,20 @@ std::string buildTraceGraph(StringRef Json) {
     int64_t TimestampEnd =
         TimestampBegin + TraceEventObj->getInteger("dur").value_or(0);
     std::string Name = TraceEventObj->getString("name").value_or("").str();
-    std::string Metadata = "";
-    if (json::Object *Args = TraceEventObj->getObject("args")) {
-      if (StringRef Detail = Args->getString("detail").value_or("");
-          !Detail.empty())
-        Metadata += Detail.str();
-      if (StringRef File = Args->getString("filename").value_or("");
-          !File.empty())
-        Metadata += ", " + File.str();
+    std::string Metadata = GetMetadata(TraceEventObj);
+
+    if (Name == "Source") {
+      if (TraceEventObj->getString("ph").value_or("") == "b") {
+        SourceEvents.push(TraceEventObj);
+      } else {
+        json::Object *SourceBegin = SourceEvents.top();
+        SourceEvents.pop();
+        Events.emplace_back(
+            EventRecord{SourceBegin->getInteger("ts").value_or(0),
+                        /*TimestampEnd=*/TimestampBegin, "Source",
+                        GetMetadata(SourceBegin)});
+      }
+      continue;
     }
 
     // This is a "summary" event, like "Total PerformPendingInstantiations",
@@ -111,8 +144,10 @@ std::string buildTraceGraph(StringRef Json) {
   std::reverse(Events.begin(), Events.end());
   std::stable_sort(
       Events.begin(), Events.end(), [](const auto &lhs, const auto &rhs) {
-        return std::make_pair(lhs.TimestampBegin, -lhs.TimestampEnd) <
-               std::make_pair(rhs.TimestampBegin, -rhs.TimestampEnd);
+        return std::make_tuple(lhs.TimestampBegin, -lhs.TimestampEnd,
+                               lhs.Name != "Source") <
+               std::make_tuple(rhs.TimestampBegin, -rhs.TimestampEnd,
+                               rhs.Name != "Source");
       });
 
   std::stringstream Stream;
@@ -177,10 +212,6 @@ int slow_arr[12 + 34 * 56 +                                  // 22nd line
              static_cast<int>(slow_namespace::slow_func())]; // 23rd line
 
 constexpr int slow_init_list[] = {1, 1, 2, 3, 5, 8, 13, 21}; // 25th line
-
-template <typename T>
-void foo(T) {}
-void bar() { foo(0); }
     )";
 
   setupProfiler();
@@ -211,11 +242,51 @@ Frontend
 | | EvaluateAsRValue (<test.cc:22:14, line:23:58>)
 | ParseDeclarationOrFunctionDefinition (test.cc:25:1)
 | | EvaluateAsInitializer (slow_init_list)
-| ParseFunctionDefinition (foo)
-| ParseDeclarationOrFunctionDefinition (test.cc:29:1)
-| | ParseFunctionDefinition (bar)
 | PerformPendingInstantiations
-| | InstantiateFunction (foo<int>, test.cc)
+)",
+            buildTraceGraph(Json));
+}
+
+TEST(TimeProfilerTest, TemplateInstantiations) {
+  constexpr StringRef B_H = R"(
+    template <typename T> 
+    T fooB(T t) { 
+      return T();
+    }
+
+    #define MacroTemp(x) template <typename T> void foo##x(T) { T(); }
+  )";
+
+  constexpr StringRef A_H = R"(
+    #include "b.h"
+
+    MacroTemp(MTA)
+
+    template <typename T>
+    void fooA(T t) { fooB(t); fooMTA(t); }
+  )";
+  constexpr StringRef Code = R"(
+    #include "a.h"
+    void user() { fooA(0); }
+  )";
+
+  setupProfiler();
+  ASSERT_TRUE(compileFromString(Code, "-std=c++20", "test.cc",
+                                /*Headers=*/{{"a.h", A_H}, {"b.h", B_H}}));
+  std::string Json = teardownProfiler();
+  ASSERT_EQ(R"(
+Frontend
+| Source (./a.h)
+| | Source (./b.h)
+| | ParseFunctionDefinition (fooB)
+| | ParseFunctionDefinition (fooMTA)
+| ParseFunctionDefinition (fooA)
+| ParseDeclarationOrFunctionDefinition (test.cc:3:5)
+| | ParseFunctionDefinition (user)
+| PerformPendingInstantiations
+| | InstantiateFunction (fooA<int>, ./a.h)
+| | | InstantiateFunction (fooB<int>, ./b.h)
+| | | InstantiateFunction (fooMTA<int>, ./a.h)
 )",
             buildTraceGraph(Json));
 }
@@ -230,15 +301,12 @@ struct {
   setupProfiler();
   ASSERT_TRUE(compileFromString(Code, "-std=c99", "test.c"));
   std::string Json = teardownProfiler();
-  std::string TraceGraph = buildTraceGraph(Json);
-  ASSERT_TRUE(TraceGraph == R"(
+  ASSERT_EQ(R"(
 Frontend
 | ParseDeclarationOrFunctionDefinition (test.c:2:1)
 | | isIntegerConstantExpr (<test.c:3:18>)
 | | EvaluateKnownConstIntCheckOverflow (<test.c:3:18>)
 | PerformPendingInstantiations
-)");
-
-  // NOTE: If this test is failing, run this test with
-  // `llvm::errs() << TraceGraph;` and change the assert above.
+)",
+            buildTraceGraph(Json));
 }

@@ -3431,7 +3431,8 @@ Sema::InstantiateClass(SourceLocation PointOfInstantiation,
     Instantiation->getNameForDiagnostic(OS, getPrintingPolicy(),
                                         /*Qualified=*/true);
     if (llvm::isTimeTraceVerbose())
-      M.Filename = SourceMgr.getFilename(Instantiation->getLocation());
+      M.Filename = SourceMgr.getFilename(
+          SourceMgr.getExpansionLoc(Instantiation->getLocation()));
     return M;
   });
 
