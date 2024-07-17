@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1300 -amdgpu-promote-lane-shared=false -stop-after=finalize-isel -verify-machineinstrs -o - %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1300 -stop-after=finalize-isel -o - %s | FileCheck -check-prefix=VIDX %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1300 -stop-after=finalize-isel -verify-machineinstrs -o - %s | FileCheck -check-prefix=VIDX %s
 target datalayout = "A5"
 
 @a = external local_unnamed_addr addrspace(10) global <8 x i16>, align 16

@@ -399,6 +399,7 @@ def Reg32Types : RegisterTypes<[i32, f32, v2i16, v2f16, v2bf16, p2, p3, p5, p6]>
 def Reg64Types : RegisterTypes<[i64, f64, v2i32, v2f32, p0, v4i16, v4f16, v4bf16]>;
 def Reg96Types : RegisterTypes<[v3i32, v3f32]>;
 def Reg128Types : RegisterTypes<[v4i32, v4f32, v2i64, v2f64, v8i16, v8f16, v8bf16]>;
+def Reg256Types : RegisterTypes<[v8i32, v8f32, v4i64, v4f64, v16i16, v16f16, v16bf16]>;
 
 
 def SCC_CLASS : SIRegisterClass<"AMDGPU", [i1], 1, (add SCC)> {
@@ -502,8 +503,12 @@ def IDX_REG_32 : SIRegisterClass<"AMDGPU", [i32], 32,
 // Staging pseudo-registers for representing dynamically indexed VGPRs
 // Used for the dst of V_LOAD_IDX and for the src of V_STORE_IDX
 // It is TBD, but this RC can probably hold any type.
-def STAGING_REG_32 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg16Types.types), 32,
-                                     (add STG_SRCA, STG_SRCB, STG_SRCC, STG_DSTA, STG_DSTB)> {
+def STAGING_REG
+    : SIRegisterClass<
+          "AMDGPU",
+          !listconcat(Reg256Types.types, Reg128Types.types, Reg96Types.types, Reg64Types.types,
+                      Reg32Types.types, Reg16Types.types),
+          16, (add STG_SRCA, STG_SRCB, STG_SRCC, STG_DSTA, STG_DSTB)> {
   let isAllocatable = 0;
   let GeneratePressureSet = 0;
 }
@@ -652,7 +657,7 @@ def VGPR_16 : SIRegisterClass<"AMDGPU",  Reg16Types.types, 16,
 }
 
 def VGPR_16_STAGING : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
-                          (add VGPR_16, STAGING_REG_32)> {
+                          (add VGPR_16, STAGING_REG)> {
   let Size = 16;
   let isAllocatable = 0;
 }
@@ -672,7 +677,7 @@ def VGPR_16_Lo128 : SIRegisterClass<"AMDGPU",  Reg16Types.types, 16,
 }
 
 def VGPR_16_Lo128_STAGING : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
-                          (add VGPR_16_Lo128, STAGING_REG_32)> {
+                          (add VGPR_16_Lo128, STAGING_REG)> {
   let Size = 16;
   let isAllocatable = 0;
 }
@@ -689,7 +694,7 @@ def VGPR_32 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg16Types
 
 // On GFX13+ all VALU instructions can do dynamic indexing, so all operands should be able to be a staging register.
 def VGPR_32_STAGING : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg16Types.types), 32,
-                          (add VGPR_32, STAGING_REG_32)> {
+                          (add VGPR_32, STAGING_REG)> {
   // We must define the size field, because memory operations in BUF/DS etc. access it.
   let Size = 32;
   let isAllocatable = 0;
@@ -705,7 +710,7 @@ def VGPR_32_Lo128 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg1
 }
 
 def VGPR_32_Lo128_STAGING : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg16Types.types), 32,
-                          (add VGPR_32_Lo128, STAGING_REG_32)> {
+                          (add VGPR_32_Lo128, STAGING_REG)> {
   let Size = 32;
   let isAllocatable = 0;
 }
@@ -720,7 +725,7 @@ def VGPR_32_Lo256 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg1
 }
 
 def VGPR_32_Lo256_STAGING : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg16Types.types), 32,
-                          (add VGPR_32_Lo256, STAGING_REG_32)> {
+                          (add VGPR_32_Lo256, STAGING_REG)> {
   let Size = 32;
   let isAllocatable = 0;
 }
@@ -1207,6 +1212,20 @@ defm AV_512 : AVRegClass<16, VReg_512.RegTypes, (add VGPR_512), (add AGPR_512)>;
 defm AV_1024 : AVRegClass<32, VReg_1024.RegTypes, (add VGPR_1024), (add AGPR_1024)>;
 }
 
+// Allow any width of VGPR. Only used for the data operand of V_LOAD/STORE_IDX.
+def VGPR_IDX_DATA_OP_RC
+    : SIRegisterClass<"AMDGPU",
+                      !listconcat(Reg16Types.types, Reg32Types.types,
+                                   Reg64Types.types, Reg128Types.types,
+                                   Reg256Types.types),
+                      16,
+                      //(add VGPR_32,
+                      (add VGPR_16, VGPR_32, VGPR_64, VGPR_128, VGPR_256,
+                       STAGING_REG)> {
+  let isAllocatable = 0;
+  let HasVGPR = 1;
+}
+
 //===----------------------------------------------------------------------===//
 //  Register operands
 //===----------------------------------------------------------------------===//
@@ -1399,6 +1418,11 @@ def VGPRSrc_16_Lo128 : RegisterOperand<VGPR_16_Lo128_STAGING> {
 def VGPRSrc_16 : RegisterOperand<VGPR_16_STAGING> {
   let DecoderMethod = "DecodeVGPR_16RegisterClass";
   let EncoderMethod = "getMachineOpValueT16";
+}
+
+// For V_LOAD/STORE_IDX only
+def VGPR_IDX_DATA_OP : RegisterOperand<VGPR_IDX_DATA_OP_RC> {
+  let DecoderMethod = "";
 }
 
 //===----------------------------------------------------------------------===//
