@@ -17,7 +17,7 @@ A root signature can be specified in HLSL as a `string
 The string contains a collection of comma-separated clauses that describe root
 signature constituent components.
 
-There are two mechanisms to compile an HLSL root signature. First, it is
+There are three mechanisms to compile an HLSL root signature. First, it is
 possible to attach a root signature string to a particular shader via the
 RootSignature attribute (in the following example, using the main entry
 point):
@@ -41,7 +41,7 @@ point):
               "              addressU = TEXTURE_ADDRESS_CLAMP, " \
               "              filter = FILTER_MIN_MAG_MIP_LINEAR )"
 
-    [RootSignature(MyRS)]
+    [RootSignature(RS)]
     float4 main(float4 coord : COORD) : SV_Target
     {
     …
@@ -50,7 +50,27 @@ point):
 The compiler will create and verify the root signature blob for the shader and
 embed it alongside the shader byte code into the shader blob.
 
-The other mechanism is to create a standalone root signature blob, perhaps to
+The second mechanism is using -rootsig-define option to specify macro define of
+the root signature string.
+
+.. code-block::
+
+    #define RS "…"
+
+    float4 main(float4 coord : COORD) : SV_Target
+    {
+    …
+    }
+
+Instead of adding the root signature attribute, the root signature macro define
+is passed to the compiler with -rootsign-define.
+
+.. code-block:: sh
+
+  dxc.exe -T ps_6_0 MyRS1.hlsl -rootsig-define RS -Fo MyRS1.fxo
+
+
+The third mechanism is to create a standalone root signature blob, perhaps to
 reuse it with a large set of shaders, saving space. The name of the define
 string is specified via the usual -E argument. For example:
 
