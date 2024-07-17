@@ -109,7 +109,7 @@ if (NOT CMAKE_CROSSCOMPILING)
   # Set a CACHE variable that is visible to the CMakeLists.txt in runtime/, so that
   # the compiled Fortran modules can be added to the link line of the FortranRuntime
   # library.
-  set(FORTRAN_MODULE_OBJECTS ${module_objects} CACHE INTERNAL "")
+  set(FORTRAN_MODULE_OBJECTS ${module_objects} CACHE INTERNAL "" FORCE)
 
   # Special case for omp_lib.mod, because its source comes from openmp/runtime/src/include.
   # It also produces two module files: omp_lib.mod and omp_lib_kinds.mod.  Compile these
