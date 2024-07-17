@@ -174,7 +174,6 @@ else()
   add_llvm_utility( prepare_builtins utils/prepare-builtins.cpp )
   setup_host_tool( prepare_builtins PREPARE_BUILTINS prepare_builtins_exe prepare_builtins_target )
 endif()
-set_target_properties( prepare_builtins PROPERTIES FOLDER "libclc/Sourcegenning")
 target_compile_definitions( prepare_builtins PRIVATE ${LLVM_VERSION_DEFINE} )
 # These were not properly reported in early LLVM and we don't need them
 target_compile_options( prepare_builtins PRIVATE -fno-rtti -fno-exceptions )
@@ -392,6 +391,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     add_custom_target( ${builtins_comp_lib_tgt}
       DEPENDS ${bytecode_files}
     )
+    set_target_properties( ${builtins_comp_lib_tgt} PROPERTIES FOLDER "libclc/Device IR/Comp" )
 
     set( builtins_link_lib_tgt builtins.link.${arch_suffix} )
     link_bc(
