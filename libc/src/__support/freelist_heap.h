@@ -51,13 +51,10 @@ public:
   };
 
   constexpr FreeListHeap()
-      : is_initialized_(false), region_(&_end, size_t{0}),
-        heap_limit_(&__libc_heap_limit), freelist_(DEFAULT_BUCKETS),
-        heap_stats_{} {}
+      : region_(&_end, size_t{0}), heap_limit_(&__libc_heap_limit) {}
 
   constexpr FreeListHeap(span<cpp::byte> region)
-      : is_initialized_(false), region_(region), heap_limit_{},
-    freelist_(DEFAULT_BUCKETS), heap_stats_{} {
+      : region_(region), heap_limit_{} {
     heap_stats_.total_bytes = region.size();
   }
 
@@ -86,14 +83,14 @@ private:
     return ptr >= region_.begin() && ptr < region_.end();
   }
 
-  bool is_initialized_;
+  bool is_initialized_ = false;
   cpp::span<cpp::byte> region_;
 
   // Kept to initialize region_ by non-constexpr cast to size_t
   cpp::byte *heap_limit_;
 
-  FreeListType freelist_;
-  HeapStats heap_stats_;
+  FreeListType freelist_{DEFAULT_BUCKETS};
+  HeapStats heap_stats_{};
 };
 
 template <size_t BUFF_SIZE, size_t NUM_BUCKETS = DEFAULT_BUCKETS.size()>
