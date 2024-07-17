@@ -835,6 +835,9 @@ Bug Fixes in This Version
 
 - Fixed Clang from generating dangling StringRefs when deserializing Exprs & Stmts (#GH98667)
 
+- ``__has_unique_object_representations`` correctly handles arrays of unknown bounds of
+  types by ensuring they are complete and instantiating them if needed. Fixes (#GH95311).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
