@@ -2505,21 +2505,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   using OriginCombiner = Combiner<false>;
 
   /// Propagate origin for arbitrary operation.
-  /// skipLastOperand is useful for Arm NEON instructions, which have the
-  /// destination address as the last operand.
-  void setOriginForNaryOp(Instruction &I, bool skipLastOperand = false) {
+  void setOriginForNaryOp(Instruction &I, unsigned int skipLastOperands = 0) {
     if (!MS.TrackOrigins)
       return;
     IRBuilder<> IRB(&I);
     OriginCombiner OC(this, IRB);
 
-    if (skipLastOperand)
-      assert((I.getNumOperands() > 0) &&
-             "Skip last operand requested on instruction with no operands");
-
-    unsigned int i = 0;
-    for (i = 0; i < I.getNumOperands() - (skipLastOperand ? 1 : 0); i++)
-      OC.Add(I.getOperand(i));
+    if (skipLastOperands > 0)
+      assert((I.getNumOperands() > skipLastOperands) &&
+             "Insufficient number of operands to skip!");
 
     OC.Done(&I);
   }
@@ -3969,8 +3963,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         Addr, IRB, interleavedShadow->getType(), Align(1), /*isStore*/ true);
     IRB.CreateAlignedStore(interleavedShadow, ShadowPtr, Align(1));
 
-    if (MS.TrackOrigins)
-      setOriginForNaryOp(I, true);
+    if (MS.TrackOrigins) {
+      // We don't use the last two operands to compute the origin, because:
+      // - the last operand is the callee
+      //   e.g., 'declare void @llvm.aarch64.neon.st2.v8i16.p0(...'
+      // - the second-last operand is the return value
+      //   e.g., '%arraydecay74 = getelementptr inbounds ...'
+      setOriginForNaryOp(I, 2);
+    }
 
     if (ClCheckAccessAddress)
       insertShadowCheck(Addr, &I);
