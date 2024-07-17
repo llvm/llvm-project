@@ -12,6 +12,8 @@
 #include <type_traits>
 #include <memory>
 
+#include "test_macros.h"
+
 // Custom deleters.
 
 template <typename T>
