@@ -125,8 +125,8 @@ hsa_status_t get_agent(hsa_agent_t *output_agent) {
   return iterate_agents(cb);
 }
 
-void print_kernel_resources(char *kernel_name) {
-  fprintf("Kernel resources on AMDGPU is not supported yet.\n");
+void print_kernel_resources(const char *kernel_name) {
+  fprintf(stderr, "Kernel resources on AMDGPU is not supported yet.\n");
 }
 
 /// Retrieve a global memory pool with a \p flag from the agent.
