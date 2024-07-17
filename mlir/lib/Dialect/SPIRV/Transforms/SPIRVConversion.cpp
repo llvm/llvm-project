@@ -985,13 +985,15 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
     for (auto [count, op] : enumerate(entryBlock.getOperations())) {
       // We first look for operands that are placeholders for initially legal
       // arguments.
+      Operation &curOp = op;
       for (auto [operandIdx, operandVal] : llvm::enumerate(op.getOperands())) {
         Operation *operandOp = operandVal.getDefiningOp();
-        auto it = tmpOps.find(operandOp);
-        if (it != tmpOps.end())
-          rewriter.modifyOpInPlace(&op, [&] {
-            op.setOperand(operandIdx, newFuncOp.getArgument(it->second));
+        if (auto it = tmpOps.find(operandOp); it != tmpOps.end()) {
+          size_t idx = operandIdx;
+          rewriter.modifyOpInPlace(&curOp, [&curOp, &newFuncOp, it, idx] {
+            curOp.setOperand(idx, newFuncOp.getArgument(it->second));
           });
+        }
       }
       // Since all newly created operations are in the beginning, reaching the
       // end of them means that any later `vector.insert_strided_slice` should
@@ -1000,8 +1002,8 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
         continue;
       if (auto vecOp = dyn_cast<vector::InsertStridedSliceOp>(op)) {
         size_t unrolledInputNo = unrolledInputNums[idx];
-        rewriter.modifyOpInPlace(&op, [&] {
-          op.setOperand(0, newFuncOp.getArgument(unrolledInputNo));
+        rewriter.modifyOpInPlace(&curOp, [&] {
+          curOp.setOperand(0, newFuncOp.getArgument(unrolledInputNo));
         });
         ++idx;
       }
