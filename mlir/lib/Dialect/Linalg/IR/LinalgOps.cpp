@@ -2885,15 +2885,6 @@ LogicalResult WinogradFilterTransformOp::verify() {
 // WinogradInputTransformOp
 //===----------------------------------------------------------------------===//
 
-Value getValueFromOpFoldResult(OpFoldResult opFoldResult, OpBuilder &builder,
-                               Location loc) {
-  if (auto attr = opFoldResult.dyn_cast<Attribute>()) {
-    auto intAttr = cast<IntegerAttr>(attr);
-    return builder.create<arith::ConstantOp>(loc, intAttr);
-  }
-  return opFoldResult.get<Value>();
-}
-
 LogicalResult WinogradInputTransformOp::verify() {
   auto inputType = cast<ShapedType>(getInput().getType());
   ArrayRef<int64_t> inputShape = inputType.getShape();
@@ -2934,9 +2925,9 @@ LogicalResult WinogradInputTransformOp::verify() {
 SmallVector<Range>
 WinogradInputTransformOp::getIterationDomain(OpBuilder &builder) {
   Location loc = getLoc();
-  auto indexType = builder.getIndexType();
-  auto zeroAttr = builder.getIntegerAttr(indexType, 0);
-  auto oneAttr = builder.getIntegerAttr(indexType, 1);
+  IndexType indexType = builder.getIndexType();
+  IntegerAttr zeroAttr = builder.getIntegerAttr(indexType, 0);
+  IntegerAttr oneAttr = builder.getIntegerAttr(indexType, 1);
   Value output = getOutput();
   SmallVector<Range> loopBounds(6);
   for (unsigned dim = 0; dim < 6; ++dim) {
@@ -2958,21 +2949,13 @@ LogicalResult WinogradInputTransformOp::getResultTilePosition(
     OpBuilder &builder, unsigned resultNumber, ArrayRef<OpFoldResult> offsets,
     ArrayRef<OpFoldResult> sizes, SmallVector<OpFoldResult> &resultOffsets,
     SmallVector<OpFoldResult> &resultSizes) {
-  auto zeroAttr = builder.getI64IntegerAttr(0);
-  auto oneAttr = builder.getI64IntegerAttr(1);
+  IntegerAttr zeroAttr = builder.getI64IntegerAttr(0);
+  IntegerAttr oneAttr = builder.getI64IntegerAttr(1);
 
-  resultOffsets.push_back(zeroAttr);
-  resultOffsets.push_back(zeroAttr);
-  resultOffsets.push_back(offsets[2]);
-  resultOffsets.push_back(offsets[3]);
-  resultOffsets.push_back(zeroAttr);
-  resultOffsets.push_back(zeroAttr);
-  resultSizes.push_back(sizes[0]);
-  resultSizes.push_back(sizes[1]);
-  resultSizes.push_back(oneAttr);
-  resultSizes.push_back(oneAttr);
-  resultSizes.push_back(sizes[4]);
-  resultSizes.push_back(sizes[5]);
+  resultOffsets.append(
+      {zeroAttr, zeroAttr, offsets[2], offsets[3], zeroAttr, zeroAttr});
+  resultSizes.append(
+      {sizes[0], sizes[1], oneAttr, oneAttr, sizes[4], sizes[5]});
 
   return success();
 }
@@ -2981,11 +2964,11 @@ FailureOr<TilingResult>
 WinogradInputTransformOp::getTiledImplementation(OpBuilder &builder,
                                                  ArrayRef<OpFoldResult> offsets,
                                                  ArrayRef<OpFoldResult> sizes) {
-  auto oneAttr = builder.getI64IntegerAttr(1);
-  auto zeroAttr = builder.getI64IntegerAttr(0);
+  IntegerAttr oneAttr = builder.getI64IntegerAttr(1);
+  IntegerAttr zeroAttr = builder.getI64IntegerAttr(0);
   Value input = getInput();
   auto inputType = cast<ShapedType>(input.getType());
-  auto inputShape = inputType.getShape();
+  ArrayRef<int64_t> inputShape = inputType.getShape();
   int64_t inputH = inputShape[1];
   int64_t inputW = inputShape[2];
   int64_t m = getM();
@@ -2993,29 +2976,25 @@ WinogradInputTransformOp::getTiledImplementation(OpBuilder &builder,
   int64_t alpha = m + r - 1;
   int64_t alphaH = inputH != 1 ? alpha : 1;
   int64_t alphaW = inputW != 1 ? alpha : 1;
-  auto alphaHAttr = builder.getI64IntegerAttr(alphaH);
-  auto alphaWAttr = builder.getI64IntegerAttr(alphaW);
+  IntegerAttr alphaHAttr = builder.getI64IntegerAttr(alphaH);
+  IntegerAttr alphaWAttr = builder.getI64IntegerAttr(alphaW);
 
   Location loc = getLoc();
   SmallVector<Value> tiledOperands;
   SmallVector<OpFoldResult> sliceOffsets, sliceSizes;
 
-  auto context = builder.getContext();
+  MLIRContext *context = builder.getContext();
   auto affineMap =
       AffineMap::get(1, 0, {builder.getAffineDimExpr(0) * m}, context);
   Value mappedOffset1 = builder.create<affine::AffineApplyOp>(
-      loc, affineMap, getValueFromOpFoldResult(offsets[2], builder, loc));
+      loc, affineMap,
+      getValueOrCreateConstantIndexOp(builder, loc, offsets[2]));
   Value mappedOffset2 = builder.create<affine::AffineApplyOp>(
-      loc, affineMap, getValueFromOpFoldResult(offsets[3], builder, loc));
+      loc, affineMap,
+      getValueOrCreateConstantIndexOp(builder, loc, offsets[3]));
 
-  sliceOffsets.push_back(zeroAttr);
-  sliceOffsets.push_back(mappedOffset1);
-  sliceOffsets.push_back(mappedOffset2);
-  sliceOffsets.push_back(zeroAttr);
-  sliceSizes.push_back(sizes[4]);
-  sliceSizes.push_back(alphaHAttr);
-  sliceSizes.push_back(alphaWAttr);
-  sliceSizes.push_back(sizes[5]);
+  sliceOffsets.append({zeroAttr, mappedOffset1, mappedOffset2, zeroAttr});
+  sliceSizes.append({sizes[4], alphaHAttr, alphaWAttr, sizes[5]});
   SmallVector<OpFoldResult> inputStrides(4, oneAttr);
   tiledOperands.emplace_back(builder.create<tensor::ExtractSliceOp>(
       loc, getInput(), sliceOffsets, sliceSizes, inputStrides));
@@ -3030,7 +3009,7 @@ WinogradInputTransformOp::getTiledImplementation(OpBuilder &builder,
   tiledOperands.emplace_back(builder.create<tensor::ExtractSliceOp>(
       loc, getOutput(), sliceOffsets, sliceSizes, outputStrides));
 
-  SmallVector<Type, 4> resultTypes;
+  SmallVector<Type> resultTypes;
   resultTypes.push_back(tiledOperands[1].getType());
   Operation *tiledOp =
       mlir::clone(builder, getOperation(), resultTypes, tiledOperands);
@@ -3083,9 +3062,9 @@ LogicalResult WinogradOutputTransformOp::verify() {
 SmallVector<Range>
 WinogradOutputTransformOp::getIterationDomain(OpBuilder &builder) {
   Location loc = getLoc();
-  auto indexType = builder.getIndexType();
-  auto zeroAttr = builder.getIntegerAttr(indexType, 0);
-  auto oneAttr = builder.getIntegerAttr(indexType, 1);
+  IndexType indexType = builder.getIndexType();
+  IntegerAttr zeroAttr = builder.getIntegerAttr(indexType, 0);
+  IntegerAttr oneAttr = builder.getIntegerAttr(indexType, 1);
   Value value = getValue();
   SmallVector<Range> loopBounds(6);
   for (unsigned dim = 0; dim < 6; ++dim) {
@@ -3107,57 +3086,44 @@ LogicalResult WinogradOutputTransformOp::getResultTilePosition(
     OpBuilder &builder, unsigned resultNumber, ArrayRef<OpFoldResult> offsets,
     ArrayRef<OpFoldResult> sizes, SmallVector<OpFoldResult> &resultOffsets,
     SmallVector<OpFoldResult> &resultSizes) {
-  auto zeroAttr = builder.getI64IntegerAttr(0);
+  IntegerAttr zeroAttr = builder.getI64IntegerAttr(0);
   Value output = getOutput();
   auto outputType = cast<ShapedType>(output.getType());
-  auto outputShape = outputType.getShape();
+  ArrayRef<int64_t> outputShape = outputType.getShape();
   int64_t outputH = outputShape[1];
   int64_t outputW = outputShape[2];
   int64_t m = getM();
-  auto heightM = builder.getI64IntegerAttr(outputH != 1 ? m : 1);
-  auto widthM = builder.getI64IntegerAttr(outputW != 1 ? m : 1);
+  IntegerAttr heightM = builder.getI64IntegerAttr(outputH != 1 ? m : 1);
+  IntegerAttr widthM = builder.getI64IntegerAttr(outputW != 1 ? m : 1);
 
   Location loc = getLoc();
-  auto context = builder.getContext();
+  MLIRContext *context = builder.getContext();
   auto affineMap =
       AffineMap::get(1, 0, {builder.getAffineDimExpr(0) * m}, context);
   Value mappedOffset1 = builder.create<affine::AffineApplyOp>(
-      loc, affineMap, getValueFromOpFoldResult(offsets[2], builder, loc));
+      loc, affineMap,
+      getValueOrCreateConstantIndexOp(builder, loc, offsets[2]));
   Value mappedOffset2 = builder.create<affine::AffineApplyOp>(
-      loc, affineMap, getValueFromOpFoldResult(offsets[3], builder, loc));
+      loc, affineMap,
+      getValueOrCreateConstantIndexOp(builder, loc, offsets[3]));
 
-  resultOffsets.push_back(zeroAttr);
-  resultOffsets.push_back(mappedOffset1);
-  resultOffsets.push_back(mappedOffset2);
-  resultOffsets.push_back(zeroAttr);
-  resultSizes.push_back(sizes[4]);
-  resultSizes.push_back(heightM);
-  resultSizes.push_back(widthM);
-  resultSizes.push_back(sizes[5]);
+  resultOffsets.append({zeroAttr, mappedOffset1, mappedOffset2, zeroAttr});
+  resultSizes.append({sizes[4], heightM, widthM, sizes[5]});
   return success();
 }
 
 FailureOr<TilingResult> WinogradOutputTransformOp::getTiledImplementation(
     OpBuilder &builder, ArrayRef<OpFoldResult> offsets,
     ArrayRef<OpFoldResult> sizes) {
-  auto oneAttr = builder.getI64IntegerAttr(1);
-  auto zeroAttr = builder.getI64IntegerAttr(0);
+  IntegerAttr oneAttr = builder.getI64IntegerAttr(1);
+  IntegerAttr zeroAttr = builder.getI64IntegerAttr(0);
   Location loc = getLoc();
   SmallVector<Value> tiledOperands;
   SmallVector<OpFoldResult> sliceOffsets, sliceSizes;
 
-  sliceOffsets.push_back(zeroAttr);
-  sliceOffsets.push_back(zeroAttr);
-  sliceOffsets.push_back(offsets[2]);
-  sliceOffsets.push_back(offsets[3]);
-  sliceOffsets.push_back(zeroAttr);
-  sliceOffsets.push_back(zeroAttr);
-  sliceSizes.push_back(sizes[0]);
-  sliceSizes.push_back(sizes[1]);
-  sliceSizes.push_back(oneAttr);
-  sliceSizes.push_back(oneAttr);
-  sliceSizes.push_back(sizes[4]);
-  sliceSizes.push_back(sizes[5]);
+  sliceOffsets.append(
+      {zeroAttr, zeroAttr, offsets[2], offsets[3], zeroAttr, zeroAttr});
+  sliceSizes.append({sizes[0], sizes[1], oneAttr, oneAttr, sizes[4], sizes[5]});
   SmallVector<OpFoldResult> sliceStrides(6, oneAttr);
   tiledOperands.emplace_back(builder.create<tensor::ExtractSliceOp>(
       loc, getValue(), sliceOffsets, sliceSizes, sliceStrides));
@@ -3172,7 +3138,7 @@ FailureOr<TilingResult> WinogradOutputTransformOp::getTiledImplementation(
   tiledOperands.emplace_back(builder.create<tensor::ExtractSliceOp>(
       loc, getOutput(), sliceOffsets, sliceSizes, strides));
 
-  SmallVector<Type, 4> resultTypes;
+  SmallVector<Type> resultTypes;
   resultTypes.push_back(tiledOperands[1].getType());
   Operation *tiledOp =
       mlir::clone(builder, getOperation(), resultTypes, tiledOperands);
