@@ -200,7 +200,8 @@ if (LIBCXX_ENABLE_SHARED)
   add_library(cxx_shared SHARED ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
   target_include_directories(cxx_shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   target_link_libraries(cxx_shared PUBLIC cxx-headers
-                                   PRIVATE ${LIBCXX_LIBRARIES})
+                                   PRIVATE ${LIBCXX_LIBRARIES}
+                                   PRIVATE libcxx-libc-shared libcxx-libm-shared)
   set_target_properties(cxx_shared
     PROPERTIES
       COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
@@ -227,11 +228,6 @@ if (LIBCXX_ENABLE_SHARED)
     target_link_libraries(cxx_shared PRIVATE libcxx-abi-shared-objects)
   else()
     target_link_libraries(cxx_shared PUBLIC libcxx-abi-shared)
-  endif()
-
-  # Link against LLVM libc.
-  if (LIBCXX_USE_LLVM_LIBC)
-    target_link_libraries(cxx_shared PUBLIC libc libm)
   endif()
 
   # Maybe re-export symbols from libc++abi
@@ -299,7 +295,7 @@ if (LIBCXX_ENABLE_STATIC)
   target_include_directories(cxx_static PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   target_link_libraries(cxx_static PUBLIC cxx-headers
                                    PRIVATE ${LIBCXX_LIBRARIES}
-                                   PRIVATE libcxx-abi-static)
+                                   PRIVATE libcxx-libc-static libcxx-libm-static libcxx-abi-static)
   set_target_properties(cxx_static
     PROPERTIES
       COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
@@ -328,11 +324,6 @@ if (LIBCXX_ENABLE_STATIC)
   # Attempt to merge the libc++.a archive and the ABI library archive into one.
   if (LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY)
     target_link_libraries(cxx_static PRIVATE libcxx-abi-static-objects)
-  endif()
-
-  # Link against LLVM libc.
-  if (LIBCXX_USE_LLVM_LIBC)
-    target_link_libraries(cxx_static PUBLIC libc libm)
   endif()
 endif()
 
