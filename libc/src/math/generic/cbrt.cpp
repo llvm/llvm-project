@@ -26,7 +26,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 using DoubleDouble = fputil::DoubleDouble;
-using Float128 = typename fputil::DyadicFloat<128>;
+using Float128 = fputil::DyadicFloat<128>;
 
 namespace {
 
@@ -143,10 +143,9 @@ constexpr double get_error(const DoubleDouble &x_3, const DoubleDouble &a_sq) {
 // https://gitlab.inria.fr/core-math/core-math/-/blob/master/src/binary64/cbrt/cbrt.c
 
 LLVM_LIBC_FUNCTION(double, cbrt, (double x)) {
-  using FPBits = typename fputil::FPBits<double>;
+  using FPBits = fputil::FPBits<double>;
 
-  uint64_t x_u = FPBits(x).uintval();
-  uint64_t x_abs = x_u & 0x7fff'ffff'ffff'ffff;
+  uint64_t x_abs = FPBits(x).abs().uintval();
 
   unsigned exp_bias_correction = 682; // 1023 * 2/3
 
