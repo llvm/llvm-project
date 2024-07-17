@@ -493,8 +493,7 @@ private:
   DenseMap<Value *, Value *> Map;
 };
 
-// First parameter is the number of functions
-// Second parameter is the number of fallback function arguments
+// Template parameter is the number of functions
 template <size_t N> class NsanMemOpFn {
 public:
   NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized, StringRef Fallback, size_t NumArgs);
