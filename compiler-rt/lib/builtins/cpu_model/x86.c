@@ -125,8 +125,8 @@ enum ProcessorFeatures {
   FEATURE_AVX512BW,
   FEATURE_AVX512DQ,
   FEATURE_AVX512CD,
-  FEATURE_AVX512ER,
-  FEATURE_AVX512PF,
+  FEATURE_NF,
+  FEATURE_CF,
   FEATURE_AVX512VBMI,
   FEATURE_AVX512IFMA,
   FEATURE_AVX5124VNNIW,
@@ -142,10 +142,10 @@ enum ProcessorFeatures {
   // FIXME: Below Features has some missings comparing to gcc, it's because gcc
   // has some not one-to-one mapped in llvm.
   FEATURE_3DNOW,
-  // FEATURE_3DNOWP,
+  // FEATURE_3DNOWA,
   FEATURE_ADX = 40,
-  // FEATURE_ABM,
-  FEATURE_CLDEMOTE = 42,
+  FEATURE_64BIT,
+  FEATURE_CLDEMOTE,
   FEATURE_CLFLUSHOPT,
   FEATURE_CLWB,
   FEATURE_CLZERO,
@@ -157,7 +157,7 @@ enum ProcessorFeatures {
   FEATURE_ENQCMD = 48,
   FEATURE_F16C,
   FEATURE_FSGSBASE,
-  // FEATURE_FXSAVE,
+  FEATURE_CRC32,
   // FEATURE_HLE,
   // FEATURE_IBT,
   FEATURE_LAHF_LM = 54,
@@ -171,7 +171,7 @@ enum ProcessorFeatures {
   // FEATURE_OSXSAVE,
   FEATURE_PCONFIG = 63,
   FEATURE_PKU,
-  FEATURE_PREFETCHWT1,
+  FEATURE_EVEX512,
   FEATURE_PRFCHW,
   FEATURE_PTWRITE,
   FEATURE_RDPID,
@@ -205,6 +205,7 @@ enum ProcessorFeatures {
   FEATURE_X86_64_V2,
   FEATURE_X86_64_V3,
   FEATURE_X86_64_V4,
+  FEATURE_APXF,
   FEATURE_AVXIFMA,
   FEATURE_AVXVNNIINT8,
   FEATURE_AVXNECONVERT,
@@ -217,7 +218,7 @@ enum ProcessorFeatures {
   FEATURE_SM3,
   FEATURE_SHA512,
   FEATURE_SM4,
-  FEATURE_APXF,
+  FEATUE_EGPR,
   FEATURE_USERMSR,
   FEATURE_AVX10_1_256,
   FEATURE_AVX10_1_512,
@@ -840,8 +841,10 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_CMPXCHG16B);
   if ((ECX >> 19) & 1)
     setFeature(FEATURE_SSE4_1);
-  if ((ECX >> 20) & 1)
+  if ((ECX >> 20) & 1) {
     setFeature(FEATURE_SSE4_2);
+    setFeature(FEATURE_CRC32);
+  }
   if ((ECX >> 22) & 1)
     setFeature(FEATURE_MOVBE);
   if ((ECX >> 23) & 1)
@@ -894,8 +897,10 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_BMI2);
   if (HasLeaf7 && ((EBX >> 11) & 1))
     setFeature(FEATURE_RTM);
-  if (HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save)
+  if (HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save) {
     setFeature(FEATURE_AVX512F);
+    setFeature(FEATURE_EVEX512);
+  }
   if (HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save)
     setFeature(FEATURE_AVX512DQ);
   if (HasLeaf7 && ((EBX >> 18) & 1))
@@ -904,12 +909,10 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_ADX);
   if (HasLeaf7 && ((EBX >> 21) & 1) && HasAVX512Save)
     setFeature(FEATURE_AVX512IFMA);
+  if (HasLeaf7 && ((EBX >> 23) & 1))
+    setFeature(FEATURE_CLFLUSHOPT);
   if (HasLeaf7 && ((EBX >> 24) & 1))
     setFeature(FEATURE_CLWB);
-  if (HasLeaf7 && ((EBX >> 26) & 1) && HasAVX512Save)
-    setFeature(FEATURE_AVX512PF);
-  if (HasLeaf7 && ((EBX >> 27) & 1) && HasAVX512Save)
-    setFeature(FEATURE_AVX512ER);
   if (HasLeaf7 && ((EBX >> 28) & 1) && HasAVX512Save)
     setFeature(FEATURE_AVX512CD);
   if (HasLeaf7 && ((EBX >> 29) & 1))
@@ -919,8 +922,6 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   if (HasLeaf7 && ((EBX >> 31) & 1) && HasAVX512Save)
     setFeature(FEATURE_AVX512VL);
 
-  if (HasLeaf7 && ((ECX >> 0) & 1))
-    setFeature(FEATURE_PREFETCHWT1);
   if (HasLeaf7 && ((ECX >> 1) & 1) && HasAVX512Save)
     setFeature(FEATURE_AVX512VBMI);
   if (HasLeaf7 && ((ECX >> 4) & 1))
@@ -1064,7 +1065,7 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
       setFeature(FEATURE_MWAITX);
 
     if (((EDX >> 29) & 1))
-      setFeature(FEATURE_LM);
+      setFeature(FEATURE_64BIT);
   }
 
   bool HasExtLeaf8 = MaxExtLevel >= 0x80000008 &&
@@ -1084,7 +1085,7 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   if (HasLeaf7 && HasLeaf19 && ((EBX >> 2) & 1))
     setFeature(FEATURE_WIDEKL);
 
-  if (hasFeature(FEATURE_LM) && hasFeature(FEATURE_SSE2)) {
+  if (hasFeature(FEATURE_64BIT) && hasFeature(FEATURE_SSE2)) {
     setFeature(FEATURE_X86_64_BASELINE);
     if (hasFeature(FEATURE_CMPXCHG16B) && hasFeature(FEATURE_POPCNT) &&
         hasFeature(FEATURE_LAHF_LM) && hasFeature(FEATURE_SSE4_2)) {

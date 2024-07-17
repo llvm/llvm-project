@@ -1223,11 +1223,10 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
 
 static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
                                  unsigned *Features) {
-  unsigned EAX, EBX;
+  unsigned EAX = 0, EBX = 0;
 
-  auto setFeature = [&](unsigned F) {
-    Features[F / 32] |= 1U << (F % 32);
-  };
+#define hasFeature(F) ((Features[F / 32] >> (F % 32)) & 1)
+#define setFeature(F) Features[F / 32] |= 1U << (F % 32)
 
   if ((EDX >> 15) & 1)
     setFeature(X86::FEATURE_CMOV);
@@ -1246,26 +1245,31 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(X86::FEATURE_SSSE3);
   if ((ECX >> 12) & 1)
     setFeature(X86::FEATURE_FMA);
+  if ((ECX >> 13) & 1)
+    setFeature(X86::FEATURE_CMPXCHG16B);
   if ((ECX >> 19) & 1)
     setFeature(X86::FEATURE_SSE4_1);
   if ((ECX >> 20) & 1) {
     setFeature(X86::FEATURE_SSE4_2);
     setFeature(X86::FEATURE_CRC32);
   }
+  if ((ECX >> 22) & 1)
+    setFeature(X86::FEATURE_MOVBE);
   if ((ECX >> 23) & 1)
     setFeature(X86::FEATURE_POPCNT);
   if ((ECX >> 25) & 1)
     setFeature(X86::FEATURE_AES);
-
-  if ((ECX >> 22) & 1)
-    setFeature(X86::FEATURE_MOVBE);
+  if ((ECX >> 29) & 1)
+    setFeature(X86::FEATURE_F16C);
+  if ((ECX >> 30) & 1)
+    setFeature(X86::FEATURE_RDRND);
 
   // If CPUID indicates support for XSAVE, XRESTORE and AVX, and XGETBV
   // indicates that the AVX registers will be saved and restored on context
   // switch, then we have full AVX support.
   const unsigned AVXBits = (1 << 27) | (1 << 28);
-  bool HasAVX = ((ECX & AVXBits) == AVXBits) && !getX86XCR0(&EAX, &EDX) &&
-                ((EAX & 0x6) == 0x6);
+  bool HasAVXSave = ((ECX & AVXBits) == AVXBits) && !getX86XCR0(&EAX, &EDX) &&
+                    ((EAX & 0x6) == 0x6);
 #if defined(__APPLE__)
   // Darwin lazily saves the AVX512 context on first use: trust that the OS will
   // save the AVX512 context if we use AVX512 instructions, even the bit is not
@@ -1273,33 +1277,50 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   bool HasAVX512Save = true;
 #else
   // AVX512 requires additional context to be saved by the OS.
-  bool HasAVX512Save = HasAVX && ((EAX & 0xe0) == 0xe0);
+  bool HasAVX512Save = HasAVXSave && ((EAX & 0xe0) == 0xe0);
 #endif
+  // AMX requires additional context to be saved by the OS.
+  const unsigned AMXBits = (1 << 17) | (1 << 18);
+  bool HasXSave = ((ECX >> 27) & 1) && !getX86XCR0(&EAX, &EDX);
+  bool HasAMXSave = HasXSave && ((EAX & AMXBits) == AMXBits);
 
-  if (HasAVX)
+  if (HasAVXSave)
     setFeature(X86::FEATURE_AVX);
+
+  if (((ECX >> 26) & 1) && HasAVXSave)
+    setFeature(X86::FEATURE_XSAVE);
 
   bool HasLeaf7 =
       MaxLeaf >= 0x7 && !getX86CpuIDAndInfoEx(0x7, 0x0, &EAX, &EBX, &ECX, &EDX);
 
+  if (HasLeaf7 && ((EBX >> 0) & 1))
+    setFeature(X86::FEATURE_FSGSBASE);
+  if (HasLeaf7 && ((EBX >> 2) & 1))
+    setFeature(X86::FEATURE_SGX);
   if (HasLeaf7 && ((EBX >> 3) & 1))
     setFeature(X86::FEATURE_BMI);
-  if (HasLeaf7 && ((EBX >> 5) & 1) && HasAVX)
+  if (HasLeaf7 && ((EBX >> 5) & 1) && HasAVXSave)
     setFeature(X86::FEATURE_AVX2);
   if (HasLeaf7 && ((EBX >> 8) & 1))
     setFeature(X86::FEATURE_BMI2);
+  if (HasLeaf7 && ((EBX >> 11) & 1))
+    setFeature(X86::FEATURE_RTM);
   if (HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save) {
     setFeature(X86::FEATURE_AVX512F);
     setFeature(X86::FEATURE_EVEX512);
   }
   if (HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX512DQ);
+  if (HasLeaf7 && ((EBX >> 18) & 1))
+    setFeature(X86::FEATURE_RDSEED);
   if (HasLeaf7 && ((EBX >> 19) & 1))
     setFeature(X86::FEATURE_ADX);
   if (HasLeaf7 && ((EBX >> 21) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX512IFMA);
   if (HasLeaf7 && ((EBX >> 23) & 1))
     setFeature(X86::FEATURE_CLFLUSHOPT);
+  if (HasLeaf7 && ((EBX >> 24) & 1))
+    setFeature(X86::FEATURE_CLWB);
   if (HasLeaf7 && ((EBX >> 28) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX512CD);
   if (HasLeaf7 && ((EBX >> 29) & 1))
@@ -1311,11 +1332,19 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
 
   if (HasLeaf7 && ((ECX >> 1) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX512VBMI);
+  if (HasLeaf7 && ((ECX >> 4) & 1))
+    setFeature(X86::FEATURE_PKU);
+  if (HasLeaf7 && ((ECX >> 5) & 1))
+    setFeature(X86::FEATURE_WAITPKG);
   if (HasLeaf7 && ((ECX >> 6) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX512VBMI2);
+  if (HasLeaf7 && ((ECX >> 7) & 1))
+    setFeature(X86::FEATURE_SHSTK);
   if (HasLeaf7 && ((ECX >> 8) & 1))
     setFeature(X86::FEATURE_GFNI);
-  if (HasLeaf7 && ((ECX >> 10) & 1) && HasAVX)
+  if (HasLeaf7 && ((ECX >> 9) & 1) && HasAVXSave)
+    setFeature(X86::FEATURE_VAES);
+  if (HasLeaf7 && ((ECX >> 10) & 1) && HasAVXSave)
     setFeature(X86::FEATURE_VPCLMULQDQ);
   if (HasLeaf7 && ((ECX >> 11) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX512VNNI);
@@ -1323,36 +1352,169 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(X86::FEATURE_AVX512BITALG);
   if (HasLeaf7 && ((ECX >> 14) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX512VPOPCNTDQ);
+  if (HasLeaf7 && ((ECX >> 22) & 1))
+    setFeature(X86::FEATURE_RDPID);
+  if (HasLeaf7 && ((ECX >> 23) & 1))
+    setFeature(X86::FEATURE_KL);
+  if (HasLeaf7 && ((ECX >> 25) & 1))
+    setFeature(X86::FEATURE_CLDEMOTE);
+  if (HasLeaf7 && ((ECX >> 27) & 1))
+    setFeature(X86::FEATURE_MOVDIRI);
+  if (HasLeaf7 && ((ECX >> 28) & 1))
+    setFeature(X86::FEATURE_MOVDIR64B);
+  if (HasLeaf7 && ((ECX >> 29) & 1))
+    setFeature(X86::FEATURE_ENQCMD);
 
   if (HasLeaf7 && ((EDX >> 2) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX5124VNNIW);
   if (HasLeaf7 && ((EDX >> 3) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX5124FMAPS);
+  if (HasLeaf7 && ((EDX >> 5) & 1))
+    setFeature(X86::FEATURE_UINTR);
   if (HasLeaf7 && ((EDX >> 8) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX512VP2INTERSECT);
+  if (HasLeaf7 && ((EDX >> 14) & 1))
+    setFeature(X86::FEATURE_SERIALIZE);
+  if (HasLeaf7 && ((EDX >> 16) & 1))
+    setFeature(X86::FEATURE_TSXLDTRK);
+  if (HasLeaf7 && ((EDX >> 18) & 1))
+    setFeature(X86::FEATURE_PCONFIG);
+  if (HasLeaf7 && ((EDX >> 22) & 1) && HasAMXSave)
+    setFeature(X86::FEATURE_AMX_BF16);
+  if (HasLeaf7 && ((EDX >> 23) & 1) && HasAVX512Save)
+    setFeature(X86::FEATURE_AVX512FP16);
+  if (HasLeaf7 && ((EDX >> 24) & 1) && HasAMXSave)
+    setFeature(X86::FEATURE_AMX_TILE);
+  if (HasLeaf7 && ((EDX >> 25) & 1) && HasAMXSave)
+    setFeature(X86::FEATURE_AMX_INT8);
 
   // EAX from subleaf 0 is the maximum subleaf supported. Some CPUs don't
   // return all 0s for invalid subleaves so check the limit.
   bool HasLeaf7Subleaf1 =
       HasLeaf7 && EAX >= 1 &&
       !getX86CpuIDAndInfoEx(0x7, 0x1, &EAX, &EBX, &ECX, &EDX);
+  if (HasLeaf7Subleaf1 && ((EAX >> 0) & 1))
+    setFeature(X86::FEATURE_SHA512);
+  if (HasLeaf7Subleaf1 && ((EAX >> 1) & 1))
+    setFeature(X86::FEATURE_SM3);
+  if (HasLeaf7Subleaf1 && ((EAX >> 2) & 1))
+    setFeature(X86::FEATURE_SM4);
+  if (HasLeaf7Subleaf1 && ((EAX >> 3) & 1))
+    setFeature(X86::FEATURE_RAOINT);
+  if (HasLeaf7Subleaf1 && ((EAX >> 4) & 1) && HasAVXSave)
+    setFeature(X86::FEATURE_AVXVNNI);
   if (HasLeaf7Subleaf1 && ((EAX >> 5) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX512BF16);
+  if (HasLeaf7Subleaf1 && ((EAX >> 7) & 1))
+    setFeature(X86::FEATURE_CMPCCXADD);
+  if (HasLeaf7Subleaf1 && ((EAX >> 21) & 1) && HasAMXSave)
+    setFeature(X86::FEATURE_AMX_FP16);
+  if (HasLeaf7Subleaf1 && ((EAX >> 22) & 1))
+    setFeature(X86::FEATURE_HRESET);
+  if (HasLeaf7Subleaf1 && ((EAX >> 23) & 1) && HasAVXSave)
+    setFeature(X86::FEATURE_AVXIFMA);
+
+  if (HasLeaf7Subleaf1 && ((EDX >> 4) & 1) && HasAVXSave)
+    setFeature(X86::FEATURE_AVXVNNIINT8);
+  if (HasLeaf7Subleaf1 && ((EDX >> 5) & 1) && HasAVXSave)
+    setFeature(X86::FEATURE_AVXNECONVERT);
+  if (HasLeaf7Subleaf1 && ((EDX >> 8) & 1) && HasAMXSave)
+    setFeature(X86::FEATURE_AMX_COMPLEX);
+  if (HasLeaf7Subleaf1 && ((EDX >> 10) & 1) && HasAVXSave)
+    setFeature(X86::FEATURE_AVXVNNIINT16);
+  if (HasLeaf7Subleaf1 && ((EDX >> 14) & 1))
+    setFeature(X86::FEATURE_PREFETCHI);
+  if (HasLeaf7Subleaf1 && ((EDX >> 15) & 1))
+    setFeature(X86::FEATURE_USERMSR);
+  if (HasLeaf7Subleaf1 && ((EDX >> 19) & 1))
+    setFeature(X86::FEATURE_AVX10_1_256);
+  if (HasLeaf7Subleaf1 && ((EDX >> 21) & 1))
+    setFeature(X86::FEATURE_APXF);
+
+  unsigned MaxLevel;
+  getX86CpuIDAndInfo(0, &MaxLevel, &EBX, &ECX, &EDX);
+  bool HasLeafD = MaxLevel >= 0xd &&
+                  !getX86CpuIDAndInfoEx(0xd, 0x1, &EAX, &EBX, &ECX, &EDX);
+  if (HasLeafD && ((EAX >> 0) & 1) && HasAVXSave)
+    setFeature(X86::FEATURE_XSAVEOPT);
+  if (HasLeafD && ((EAX >> 1) & 1) && HasAVXSave)
+    setFeature(X86::FEATURE_XSAVEC);
+  if (HasLeafD && ((EAX >> 3) & 1) && HasAVXSave)
+    setFeature(X86::FEATURE_XSAVES);
+
+  bool HasLeaf24 =
+      MaxLevel >= 0x24 && !getX86CpuIDAndInfo(0x24, &EAX, &EBX, &ECX, &EDX);
+  if (HasLeaf7Subleaf1 && ((EDX >> 19) & 1) && HasLeaf24 && ((EBX >> 18) & 1))
+    setFeature(X86::FEATURE_AVX10_1_512);
 
   unsigned MaxExtLevel;
   getX86CpuIDAndInfo(0x80000000, &MaxExtLevel, &EBX, &ECX, &EDX);
 
   bool HasExtLeaf1 = MaxExtLevel >= 0x80000001 &&
                      !getX86CpuIDAndInfo(0x80000001, &EAX, &EBX, &ECX, &EDX);
-  if (HasExtLeaf1 && ((ECX >> 6) & 1))
-    setFeature(X86::FEATURE_SSE4_A);
-  if (HasExtLeaf1 && ((ECX >> 11) & 1))
-    setFeature(X86::FEATURE_XOP);
-  if (HasExtLeaf1 && ((ECX >> 16) & 1))
-    setFeature(X86::FEATURE_FMA4);
+  if (HasExtLeaf1) {
+    if (ECX & 1)
+      setFeature(X86::FEATURE_LAHF_LM);
+    if ((ECX >> 5) & 1)
+      setFeature(X86::FEATURE_LZCNT);
+    if (((ECX >> 6) & 1))
+      setFeature(X86::FEATURE_SSE4_A);
+    if (((ECX >> 8) & 1))
+      setFeature(X86::FEATURE_PRFCHW);
+    if (((ECX >> 11) & 1))
+      setFeature(X86::FEATURE_XOP);
+    if (((ECX >> 15) & 1))
+      setFeature(X86::FEATURE_LWP);
+    if (((ECX >> 16) & 1))
+      setFeature(X86::FEATURE_FMA4);
+    if (((ECX >> 21) & 1))
+      setFeature(X86::FEATURE_TBM);
+    if (((ECX >> 29) & 1))
+      setFeature(X86::FEATURE_MWAITX);
 
-  if (HasExtLeaf1 && ((EDX >> 29) & 1))
-    setFeature(X86::FEATURE_64BIT);
+    if (((EDX >> 29) & 1))
+      setFeature(X86::FEATURE_64BIT);
+  }
+
+  bool HasExtLeaf8 = MaxExtLevel >= 0x80000008 &&
+                     !getX86CpuIDAndInfo(0x80000008, &EAX, &EBX, &ECX, &EDX);
+  if (HasExtLeaf8 && ((EBX >> 0) & 1))
+    setFeature(X86::FEATURE_CLZERO);
+  if (HasExtLeaf8 && ((EBX >> 9) & 1))
+    setFeature(X86::FEATURE_WBNOINVD);
+
+  bool HasLeaf14 = MaxLevel >= 0x14 &&
+                   !getX86CpuIDAndInfoEx(0x14, 0x0, &EAX, &EBX, &ECX, &EDX);
+  if (HasLeaf14 && ((EBX >> 4) & 1))
+    setFeature(X86::FEATURE_PTWRITE);
+
+  bool HasLeaf19 =
+      MaxLevel >= 0x19 && !getX86CpuIDAndInfo(0x19, &EAX, &EBX, &ECX, &EDX);
+  if (HasLeaf7 && HasLeaf19 && ((EBX >> 2) & 1))
+    setFeature(X86::FEATURE_WIDEKL);
+
+  if (hasFeature(X86::FEATURE_64BIT) && hasFeature(X86::FEATURE_SSE2)) {
+    setFeature(X86::FEATURE_X86_64_BASELINE);
+    if (hasFeature(X86::FEATURE_CMPXCHG16B) &&
+        hasFeature(X86::FEATURE_POPCNT) && hasFeature(X86::FEATURE_LAHF_LM) &&
+        hasFeature(X86::FEATURE_SSE4_2)) {
+      setFeature(X86::FEATURE_X86_64_V2);
+      if (hasFeature(X86::FEATURE_AVX2) && hasFeature(X86::FEATURE_BMI) &&
+          hasFeature(X86::FEATURE_BMI2) && hasFeature(X86::FEATURE_F16C) &&
+          hasFeature(X86::FEATURE_FMA) && hasFeature(X86::FEATURE_LZCNT) &&
+          hasFeature(X86::FEATURE_MOVBE)) {
+        setFeature(X86::FEATURE_X86_64_V3);
+        if (hasFeature(X86::FEATURE_AVX512BW) &&
+            hasFeature(X86::FEATURE_AVX512CD) &&
+            hasFeature(X86::FEATURE_AVX512DQ) &&
+            hasFeature(X86::FEATURE_AVX512VL))
+          setFeature(X86::FEATURE_X86_64_V4);
+      }
+    }
+  }
+
+#undef hasFeature
+#undef setFeature
 }
 
 StringRef sys::getHostCPUName() {
