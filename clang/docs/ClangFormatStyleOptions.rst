@@ -2065,23 +2065,6 @@ the configuration (without a prefix: ``Auto``).
         aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
     }
 
-.. _BinPackBinaryOperations:
-
-**BinPackBinaryOperations** (``Boolean``) :versionbadge:`clang-format 19` :ref:`¶ <BinPackBinaryOperations>`
-  If ``false``, binary operations will either be all on the same line
-  or each operation will have one line each.
-
-  .. code-block:: c++
-
-    true:
-    aaaaaaaaaaaaaaaaaaaa && aaaaaaaaaaaaaaaaaaaa ||
-    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
-
-    false:
-    aaaaaaaaaaaaaaaaaaaa &&
-    aaaaaaaaaaaaaaaaaaaa ||
-    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa;
-
 .. _BinPackParameters:
 
 **BinPackParameters** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <BinPackParameters>`
@@ -3316,6 +3299,46 @@ the configuration (without a prefix: ``Auto``).
      veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongDescription ?
          firstValue :
          SecondValueVeryVeryVeryVeryLong;
+
+.. _BreakBinaryOperations:
+
+**BreakBinaryOperations** (``BreakBinaryOperationsStyle``) :versionbadge:`clang-format 19` :ref:`¶ <BreakBinaryOperations>`
+  The break constructor initializers style to use.
+
+  Possible values:
+
+  * ``BBO_Never`` (in configuration: ``Never``)
+    Don't break binary operations
+
+    .. code-block:: c++
+
+       aaa + bbbb * ccccc - ddddd +
+       eeeeeeeeeeeeeeee;
+
+  * ``BBO_BreakAll`` (in configuration: ``BreakAll``)
+    Binary operations will either be all on the same line, or each operation
+    will have one line each.
+
+    .. code-block:: c++
+
+       aaa +
+       bbbb *
+       ccccc -
+       ddddd +
+       eeeeeeeeeeeeeeee;
+
+  * ``BBO_BreakRespectPrecedence`` (in configuration: ``BreakRespectPrecedence``)
+    Binary operations of a particular precedence that go beyond the column
+    limit will have one line each.
+
+    .. code-block:: c++
+
+       aaa +
+       bbbb * ccccc -
+       ddddd +
+       eeeeeeeeeeeeeeee;
+
+
 
 .. _BreakConstructorInitializers:
 

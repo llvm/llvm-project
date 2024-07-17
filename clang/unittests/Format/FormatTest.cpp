@@ -27628,7 +27628,7 @@ TEST_F(FormatTest, SpaceBetweenKeywordAndLiteral) {
   verifyFormat("return sizeof \"5\";");
 }
 
-TEST_F(FormatTest, BinPackBinaryOperations) {
+TEST_F(FormatTest, BreakBinaryOperations) {
   auto Style = getLLVMStyleWithColumns(60);
   // Logical operations
   verifyFormat("if (condition1 && condition2) {\n"
@@ -27662,7 +27662,7 @@ TEST_F(FormatTest, BinPackBinaryOperations) {
                "    operand1 + operand2 - (operand3 + operand4);",
                Style);
 
-  Style.BinPackBinaryOperations = false;
+  Style.BreakBinaryOperations = FormatStyle::BBO_BreakAll;
 
   // Logical operations
   verifyFormat("if (condition1 && condition2) {\n"
@@ -27710,6 +27710,7 @@ TEST_F(FormatTest, BinPackBinaryOperations) {
                Style);
 
   // Ensure mixed precedence operations are handled properly
+  Style.BreakBinaryOperations = FormatStyle::BBO_BreakAll;
   verifyFormat("result = op1 + op2 * op3 - op4;", Style);
 
   verifyFormat("result = operand1 +\n"
@@ -27740,7 +27741,34 @@ TEST_F(FormatTest, BinPackBinaryOperations) {
                "         operand6->member;",
                Style);
 
+  Style.BreakBinaryOperations = FormatStyle::BBO_BreakRespectPrecedence;
+  verifyFormat("result = op1 + op2 * op3 - op4;", Style);
+
+  verifyFormat("result = operand1 +\n"
+               "         operand2 / operand3 +\n"
+               "         operand4 / operand5 * operand6;",
+               Style);
+
+  verifyFormat("result = operand1 * operand2 -\n"
+               "         operand3 * operand4 -\n"
+               "         operand5 +\n"
+               "         operand6;",
+               Style);
+
+  verifyFormat("result = operand1 * (operand2 - operand3 * operand4) -\n"
+               "         operand5 +\n"
+               "         operand6;",
+               Style);
+
+  verifyFormat("std::uint32_t a = byte_buffer[0] |\n"
+               "                  byte_buffer[1] << 8 |\n"
+               "                  byte_buffer[2] << 16 |\n"
+               "                  byte_buffer[3] << 24;",
+               Style);
+
+  Style.BreakBinaryOperations = FormatStyle::BBO_BreakAll;
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
+
   // Logical operations
   verifyFormat("if (condition1 && condition2) {\n"
                "}",
@@ -27779,6 +27807,7 @@ TEST_F(FormatTest, BinPackBinaryOperations) {
                Style);
 
   // Ensure mixed precedence operations are handled properly
+  Style.BreakBinaryOperations = FormatStyle::BBO_BreakAll;
   verifyFormat("result = op1 + op2 * op3 - op4;", Style);
 
   verifyFormat("result = operand1\n"
@@ -27804,9 +27833,37 @@ TEST_F(FormatTest, BinPackBinaryOperations) {
                Style);
 
   verifyFormat("std::uint32_t a = byte_buffer[0]\n"
-               "                  | (byte_buffer[1] << 8)\n"
-               "                  | (byte_buffer[2] << 16)\n"
-               "                  | (byte_buffer[3] << 24);",
+               "                  | byte_buffer[1]\n"
+               "                  << 8\n"
+               "                  | byte_buffer[2]\n"
+               "                  << 16\n"
+               "                  | byte_buffer[3]\n"
+               "                  << 24;",
+               Style);
+
+  Style.BreakBinaryOperations = FormatStyle::BBO_BreakRespectPrecedence;
+  verifyFormat("result = op1 + op2 * op3 - op4;", Style);
+
+  verifyFormat("result = operand1\n"
+               "         + operand2 / operand3\n"
+               "         + operand4 / operand5 * operand6;",
+               Style);
+
+  verifyFormat("result = operand1 * operand2\n"
+               "         - operand3 * operand4\n"
+               "         - operand5\n"
+               "         + operand6;",
+               Style);
+
+  verifyFormat("result = operand1 * (operand2 - operand3 * operand4)\n"
+               "         - operand5\n"
+               "         + operand6;",
+               Style);
+
+  verifyFormat("std::uint32_t a = byte_buffer[0]\n"
+               "                  | byte_buffer[1] << 8\n"
+               "                  | byte_buffer[2] << 16\n"
+               "                  | byte_buffer[3] << 24;",
                Style);
 }
 

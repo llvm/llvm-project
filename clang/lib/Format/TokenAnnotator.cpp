@@ -3153,10 +3153,10 @@ public:
       parse(Precedence + 1);
 
       int CurrentPrecedence = getCurrentPrecedence();
-      if (!Style.BinPackBinaryOperations &&
+      if (Style.BreakBinaryOperations == FormatStyle::BBO_BreakAll &&
           CurrentPrecedence > prec::Conditional &&
           CurrentPrecedence < prec::PointerToMember) {
-        // With BinPackBinaryOperations disabled,
+        // When BreakBinaryOperations is set to BreakAll,
         // all operations will be on the same line or on individual lines.
         // Override precedence to avoid adding fake parenthesis which could
         // group operations of a different precedence level on the same line

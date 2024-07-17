@@ -160,7 +160,6 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(AllowShortEnumsOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortLoopsOnASingleLine);
   CHECK_PARSE_BOOL(BinPackArguments);
-  CHECK_PARSE_BOOL(BinPackBinaryOperations);
   CHECK_PARSE_BOOL(BinPackParameters);
   CHECK_PARSE_BOOL(BreakAdjacentStringLiterals);
   CHECK_PARSE_BOOL(BreakAfterJavaFieldAnnotations);
@@ -404,6 +403,14 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::BOS_None);
   CHECK_PARSE("BreakBeforeBinaryOperators: true", BreakBeforeBinaryOperators,
               FormatStyle::BOS_All);
+
+  Style.BreakBinaryOperations = FormatStyle::BBO_Never;
+  CHECK_PARSE("BreakBinaryOperations: BreakAll", BreakBinaryOperations,
+              FormatStyle::BBO_BreakAll);
+  CHECK_PARSE("BreakBinaryOperations: BreakRespectPrecedence",
+              BreakBinaryOperations, FormatStyle::BBO_BreakRespectPrecedence);
+  CHECK_PARSE("BreakBinaryOperations: Never", BreakBinaryOperations,
+              FormatStyle::BBO_Never);
 
   Style.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   CHECK_PARSE("BreakConstructorInitializers: BeforeComma",

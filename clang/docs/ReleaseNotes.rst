@@ -1143,7 +1143,7 @@ clang-format
 - Adds ``LeftWithLastLine`` suboption to ``AlignEscapedNewlines``.
 - Adds ``KeepEmptyLines`` option to deprecate ``KeepEmptyLinesAtEOF``
   and ``KeepEmptyLinesAtTheStartOfBlocks``.
-- Adds ``BinPackBinaryOperations`` option.
+- Adds ``BreakBinaryOperations`` option.
 - Add ``ExceptDoubleParentheses`` sub-option for ``SpacesInParensOptions``
   to override addition of spaces between multiple, non-redundant parentheses
   similar to the rules used for ``RemoveParentheses``.
