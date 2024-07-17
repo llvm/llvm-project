@@ -223,8 +223,7 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
   FileSpec name_filespec(name);
 
   if (uuid.IsValid()) {
-    Progress progress("Locating binary",
-                      prog_str.GetString().str());
+    Progress progress("Locating binary", prog_str.GetString().str());
 
     // Has lldb already seen a module with this UUID?
     // Or have external lookup enabled in DebugSymbols on macOS.
