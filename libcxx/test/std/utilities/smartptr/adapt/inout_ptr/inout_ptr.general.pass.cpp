@@ -20,6 +20,8 @@
 
 #include "../types.h"
 
+// Test updating the ownership of an `inout_ptr_t`-managed pointer for an API with a non-void pointer type.
+// The API returns a new valid object.
 void test_replace_int_p() {
   auto replace_int_p = [](int** pp) {
     assert(**pp == 90);
@@ -81,6 +83,8 @@ void test_replace_int_p() {
   }
 }
 
+// Test updating the ownership of an `inout_ptr_t`-managed pointer for an API with a non-void pointer type.
+// The API returns `nullptr`.
 void test_replace_int_p_with_nullptr() {
   auto replace_int_p_with_nullptr = [](int** pp) -> void {
     assert(**pp == 90);
@@ -107,6 +111,8 @@ void test_replace_int_p_with_nullptr() {
   }
 }
 
+// Test updating the ownership of an `inout_ptr_t`-managed pointer for an API with a void pointer type.
+// The API returns a new valid object.
 void test_replace_int_void_p() {
   auto replace_int_void_p = [](void** pp) {
     assert(*(static_cast<int*>(*pp)) == 90);
@@ -134,6 +140,8 @@ void test_replace_int_void_p() {
   }
 }
 
+// Test updating the ownership of an `inout_ptr_t`-managed pointer for an API with a non-void pointer type.
+// The API returns `nullptr`.
 void test_replace_int_void_p_with_nullptr() {
   auto replace_int_void_p_with_nullptr = [](void** pp) {
     assert(*(static_cast<int*>(*pp)) == 90);
@@ -159,6 +167,8 @@ void test_replace_int_void_p_with_nullptr() {
   }
 }
 
+// Test updating the ownership of an `inout_ptr_t`-managed pointer for an API with a void pointer type.
+// The API returns a new valid object.
 void test_replace_nullptr_with_int_p() {
   auto replace_nullptr_with_int_p = [](int** pp) {
     assert(*pp == nullptr);

@@ -20,6 +20,8 @@
 
 #include "../types.h"
 
+// Test updating an `out_ptr_t`-managed pointer for an API with a non-void pointer type.
+// The API returns a new valid object.
 void test_get_int_p() {
   auto get_int_p = [](int** pp) { *pp = new int{84}; };
 
@@ -87,6 +89,8 @@ void test_get_int_p() {
   }
 }
 
+// Test updating an `out_ptr_t`-managed pointer for an API with a non-void pointer type.
+// The API returns `nullptr`.
 void test_get_int_p_nullptr() {
   auto get_int_p_nullptr = [](int** pp) { *pp = nullptr; };
   // raw pointer
@@ -120,6 +124,8 @@ void test_get_int_p_nullptr() {
   }
 }
 
+// Test updating an `out_ptr_t`-managed pointer for an API with a void pointer type.
+// The API returns a new valid object.
 void test_get_int_void_p() {
   auto get_int_void_p = [](void** pp) { *(reinterpret_cast<int**>(pp)) = new int{84}; };
 
@@ -178,6 +184,8 @@ void test_get_int_void_p() {
   }
 }
 
+// Test updating an `out_ptr_t`-managed pointer for an API with a void pointer type.
+// The API returns `nullptr`.
 void test_get_int_void_p_nullptr() {
   auto get_int_void_p_nullptr = [](void** pp) { *pp = nullptr; };
 
