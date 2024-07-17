@@ -57,8 +57,8 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addPreserved<LiveIntervals>();
-    AU.addPreserved<SlotIndexes>();
+    AU.addPreserved<LiveIntervalsWrapperPass>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -482,7 +482,8 @@ bool GCNRewritePartialRegUses::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   TRI = static_cast<const SIRegisterInfo *>(MRI->getTargetRegisterInfo());
   TII = MF.getSubtarget().getInstrInfo();
-  LIS = getAnalysisIfAvailable<LiveIntervals>();
+  auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+  LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
   bool Changed = false;
   for (size_t I = 0, E = MRI->getNumVirtRegs(); I < E; ++I) {
     Changed |= rewriteReg(Register::index2VirtReg(I));

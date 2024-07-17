@@ -631,7 +631,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // of Libtool. We cannot convince every software developer to migrate to
   // the latest version and re-generate scripts. So we have this hack.
   if (args.hasArg(OPT_v) || args.hasArg(OPT_version))
-    message(getLLDVersion() + ", compatible with GNU linkers");
+    message(getLLDVersion() + " (compatible with GNU linkers)");
 
   if (const char *path = getReproduceOption(args)) {
     // Note that --reproduce is a debug option so you can ignore it
@@ -2551,8 +2551,12 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
     // If __real_ is referenced, pull in the symbol if it is lazy. Do this after
     // processing __wrap_ as that may have referenced __real_.
     StringRef realName = saver().save("__real_" + name);
-    if (symtab.find(realName))
+    if (Symbol *real = symtab.find(realName)) {
       symtab.addUnusedUndefined(name, sym->binding);
+      // Update sym's binding, which will replace real's later in
+      // SymbolTable::wrap.
+      sym->binding = real->binding;
+    }
 
     Symbol *real = symtab.addUnusedUndefined(realName);
     v.push_back({sym, real, wrap});
@@ -2962,6 +2966,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // With this the symbol table should be complete. After this, no new names
   // except a few linker-synthesized ones will be added to the symbol table.
   const size_t numObjsBeforeLTO = ctx.objectFiles.size();
+  const size_t numInputFilesBeforeLTO = ctx.driver.files.size();
   compileBitcodeFiles<ELFT>(skipLinkedOutput);
 
   // Symbol resolution finished. Report backward reference problems,
@@ -2985,6 +2990,20 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   parallelForEach(newObjectFiles, postParseObjectFile);
   for (const DuplicateSymbol &d : ctx.duplicates)
     reportDuplicate(*d.sym, d.file, d.section, d.value);
+
+  // ELF dependent libraries may have introduced new input files after LTO has
+  // completed. This is an error if the files haven't already been parsed, since
+  // changing the symbol table could break the semantic assumptions of LTO.
+  auto newInputFiles = ArrayRef(ctx.driver.files).slice(numInputFilesBeforeLTO);
+  if (!newInputFiles.empty()) {
+    DenseSet<StringRef> oldFilenames;
+    for (InputFile *f :
+         ArrayRef(ctx.driver.files).slice(0, numInputFilesBeforeLTO))
+      oldFilenames.insert(f->getName());
+    for (InputFile *newFile : newInputFiles)
+      if (!oldFilenames.contains(newFile->getName()))
+        errorOrWarn("input file '" + newFile->getName() + "' added after LTO");
+  }
 
   // Handle --exclude-libs again because lto.tmp may reference additional
   // libcalls symbols defined in an excluded archive. This may override

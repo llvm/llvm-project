@@ -167,7 +167,10 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
     print(OS, This, S.getCtx(), S.getCtx().getRecordType(M->getParent()));
     OS << "->";
   }
-  OS << *F << "(";
+
+  F->getNameForDiagnostic(OS, S.getCtx().getPrintingPolicy(),
+                          /*Qualified=*/false);
+  OS << '(';
   unsigned Off = 0;
 
   Off += Func->hasRVO() ? primSize(PT_Ptr) : 0;

@@ -371,6 +371,10 @@ bool DbgVariableRecord::isKillLocation() const {
          any_of(location_ops(), [](Value *V) { return isa<UndefValue>(V); });
 }
 
+std::optional<DbgVariableFragmentInfo> DbgVariableRecord::getFragment() const {
+  return getExpression()->getFragmentInfo();
+}
+
 std::optional<uint64_t> DbgVariableRecord::getFragmentSizeInBits() const {
   if (auto Fragment = getExpression()->getFragmentInfo())
     return Fragment->SizeInBits;

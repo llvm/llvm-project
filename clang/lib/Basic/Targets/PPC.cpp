@@ -93,6 +93,8 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasQuadwordAtomics = true;
     } else if (Feature == "+aix-shared-lib-tls-model-opt") {
       HasAIXShLibTLSModelOpt = true;
+    } else if (Feature == "+longcall") {
+      UseLongCalls = true;
     }
     // TODO: Finish this list and add an assert that we've handled them
     // all.
@@ -728,6 +730,7 @@ bool PPCTargetInfo::hasFeature(StringRef Feature) const {
       .Case("isa-v31-instructions", IsISA3_1)
       .Case("quadword-atomics", HasQuadwordAtomics)
       .Case("aix-shared-lib-tls-model-opt", HasAIXShLibTLSModelOpt)
+      .Case("longcall", UseLongCalls)
       .Default(false);
 }
 

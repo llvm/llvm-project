@@ -918,3 +918,44 @@ struct C {
   }
 };
 }
+
+namespace GH85992 {
+namespace N {
+struct A {
+  int f(this A);
+};
+
+int f(A);
+}
+
+struct S {
+  int (S::*x)(this int); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+  int (*y)(this int); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+  int (***z)(this int); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+
+  int f(this S);
+  int ((g))(this S);
+  friend int h(this S); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+  int h(int x, int (*)(this S)); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+
+  struct T {
+    int f(this T);
+  };
+
+  friend int T::f(this T);
+  friend int N::A::f(this N::A);
+  friend int N::f(this N::A); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+  int friend func(this T); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+};
+
+using T = int (*)(this int); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+using U = int (S::*)(this int); // expected-error {{an explicit object parameter can only appear as the first parameter of a member function}}
+int h(this int); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+
+int S::f(this S) { return 1; }
+
+namespace a {
+void f();
+};
+void a::f(this auto) {} // expected-error {{an explicit object parameter cannot appear in a non-member function}}
+}

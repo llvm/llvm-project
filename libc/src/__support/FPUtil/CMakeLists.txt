@@ -155,6 +155,8 @@ add_header_library(
     multiply_add.h
   DEPENDS
     libc.src.__support.common
+  FLAGS
+    FMA_OPT
 )
 
 add_header_library(

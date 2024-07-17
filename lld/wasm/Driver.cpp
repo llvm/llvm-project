@@ -532,6 +532,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->saveTemps = args.hasArg(OPT_save_temps);
   config->searchPaths = args::getStrings(args, OPT_library_path);
   config->shared = args.hasArg(OPT_shared);
+  config->shlibSigCheck = !args.hasArg(OPT_no_shlib_sigcheck);
   config->stripAll = args.hasArg(OPT_strip_all);
   config->stripDebug = args.hasArg(OPT_strip_debug);
   config->stackFirst = args.hasArg(OPT_stack_first);

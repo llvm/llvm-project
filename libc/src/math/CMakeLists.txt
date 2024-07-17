@@ -65,6 +65,8 @@ add_math_entrypoint_object(canonicalizel)
 add_math_entrypoint_object(canonicalizef16)
 add_math_entrypoint_object(canonicalizef128)
 
+add_math_entrypoint_object(cbrtf)
+
 add_math_entrypoint_object(ceil)
 add_math_entrypoint_object(ceilf)
 add_math_entrypoint_object(ceill)
@@ -243,6 +245,10 @@ add_math_entrypoint_object(ilogbl)
 add_math_entrypoint_object(ilogbf16)
 add_math_entrypoint_object(ilogbf128)
 
+add_math_entrypoint_object(isnan)
+add_math_entrypoint_object(isnanf)
+add_math_entrypoint_object(isnanl)
+
 add_math_entrypoint_object(llogb)
 add_math_entrypoint_object(llogbf)
 add_math_entrypoint_object(llogbl)
@@ -340,6 +346,8 @@ add_math_entrypoint_object(nextupf128)
 
 add_math_entrypoint_object(pow)
 add_math_entrypoint_object(powf)
+add_math_entrypoint_object(powi)
+add_math_entrypoint_object(powif)
 
 add_math_entrypoint_object(remainder)
 add_math_entrypoint_object(remainderf)

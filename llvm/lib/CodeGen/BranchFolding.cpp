@@ -98,7 +98,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<MachineBlockFrequencyInfo>();
+      AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
       AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
       AU.addRequired<ProfileSummaryInfoWrapperPass>();
       AU.addRequired<TargetPassConfig>();
@@ -130,7 +130,7 @@ bool BranchFolderPass::runOnMachineFunction(MachineFunction &MF) {
   bool EnableTailMerge = !MF.getTarget().requiresStructuredCFG() &&
                          PassConfig->getEnableTailMerge();
   MBFIWrapper MBBFreqInfo(
-      getAnalysis<MachineBlockFrequencyInfo>());
+      getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI());
   BranchFolder Folder(
       EnableTailMerge, /*CommonHoist=*/true, MBBFreqInfo,
       getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI(),
@@ -415,7 +415,7 @@ MachineBasicBlock *BranchFolder::SplitMBBAt(MachineBasicBlock &CurMBB,
   // NewMBB belongs to the same loop as CurMBB.
   if (MLI)
     if (MachineLoop *ML = MLI->getLoopFor(&CurMBB))
-      ML->addBasicBlockToLoop(NewMBB, MLI->getBase());
+      ML->addBasicBlockToLoop(NewMBB, *MLI);
 
   // NewMBB inherits CurMBB's block frequency.
   MBBFreqInfo.setBlockFreq(NewMBB, MBBFreqInfo.getBlockFreq(&CurMBB));

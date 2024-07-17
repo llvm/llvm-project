@@ -3961,3 +3961,13 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.tan
 )
+
+add_fp_unittest(
+  cbrtf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    cbrtf_test.cpp
+  DEPENDS
+    libc.src.math.cbrtf
+)

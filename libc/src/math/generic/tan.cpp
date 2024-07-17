@@ -17,6 +17,7 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
@@ -52,7 +53,7 @@ LIBC_INLINE constexpr bool NO_FMA = true;
 #define LIBC_MATH_TAN_SKIP_ACCURATE_PASS
 #endif
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 using DoubleDouble = fputil::DoubleDouble;
 using Float128 = typename fputil::DyadicFloat<128>;
@@ -95,7 +96,7 @@ LIBC_INLINE DoubleDouble tan_eval(const DoubleDouble &u) {
 }
 
 // Accurate evaluation of tan for small u.
-Float128 tan_eval(const Float128 &u) {
+[[maybe_unused]] Float128 tan_eval(const Float128 &u) {
   Float128 u_sq = fputil::quick_mul(u, u);
 
   // tan(x) ~ x + x^3/3 + x^5 * 2/15 + x^7 * 17/315 + x^9 * 62/2835 +
@@ -127,7 +128,8 @@ Float128 tan_eval(const Float128 &u) {
 // Calculation a / b = a * (1/b) for Float128.
 // Using the initial approximation of q ~ (1/b), then apply 2 Newton-Raphson
 // iterations, before multiplying by a.
-Float128 newton_raphson_div(const Float128 &a, Float128 b, double q) {
+[[maybe_unused]] Float128 newton_raphson_div(const Float128 &a, Float128 b,
+                                             double q) {
   Float128 q0(q);
   constexpr Float128 TWO(2.0);
   b.sign = (b.sign == Sign::POS) ? Sign::NEG : Sign::POS;
@@ -148,7 +150,7 @@ LLVM_LIBC_FUNCTION(double, tan, (double x)) {
 
   DoubleDouble y;
   unsigned k;
-  generic::LargeRangeReduction<NO_FMA> range_reduction_large;
+  generic::LargeRangeReduction<NO_FMA> range_reduction_large{};
 
   // |x| < 2^32 (with FMA) or |x| < 2^23 (w/o FMA)
   if (LIBC_LIKELY(x_e < FPBits::EXP_BIAS + FAST_PASS_EXPONENT)) {
@@ -315,4 +317,4 @@ LLVM_LIBC_FUNCTION(double, tan, (double x)) {
 #endif // !LIBC_MATH_TAN_SKIP_ACCURATE_PASS
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

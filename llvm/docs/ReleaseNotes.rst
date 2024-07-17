@@ -129,6 +129,8 @@ Changes to the AMDGPU Backend
 -----------------------------
 
 * Implemented the ``llvm.get.fpenv`` and ``llvm.set.fpenv`` intrinsics.
+* Added ``!amdgpu.no.fine.grained.memory`` and
+  ``!amdgpu.no.remote.memory`` metadata to control atomic behavior.
 
 * Implemented :ref:`llvm.get.rounding <int_get_rounding>` and :ref:`llvm.set.rounding <int_set_rounding>`
 
@@ -136,6 +138,10 @@ Changes to the AMDGPU Backend
   ``llvm.amdgcn.ds.fmax`` intrinsics. Users should use the
   :ref:`atomicrmw <i_atomicrmw>` instruction with `fadd`, `fmin` and
   `fmax` with addrspace(3) instead.
+
+* AMDGPUAttributor is no longer run as part of the codegen pass
+  pipeline. It is expected to run as part of the middle end
+  optimizations.
 
 Changes to the ARM Backend
 --------------------------
@@ -189,6 +195,16 @@ Changes to the RISC-V Backend
 * B (the collection of the Zba, Zbb, Zbs extensions) is supported.
 * Added smcdeleg, ssccfg, smcsrind, and sscsrind extensions to -march.
 * ``-mcpu=syntacore-scr3-rv32`` and ``-mcpu=syntacore-scr3-rv64`` were added.
+* The default atomics mapping was changed to emit an additional trailing fence
+  for sequentially consistent stores, offering compatibility with a future
+  mapping using load-acquire and store-release instructions while remaining
+  fully compatible with objects produced prior to this change. The mapping
+  (ABI) used is recorded as an ELF attribute.
+* Ztso is no longer experimental.
+* The WCH / Nanjing Qinheng Microelectronics QingKe "XW" compressed opcodes are
+  supported under the name "Xwchc".
+* ``-mcpu=native`` now detects available features with hwprobe (RISC-V Hardware Probing Interface) on Linux 6.4 or later.
+* The version of Zicfilp/Zicfiss is updated to 1.0.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -309,6 +325,13 @@ Changes to the Debug Info
   supported on a best-effort basis from here onwards; for more information, see
   the `migration docs <https://llvm.org/docs/RemoveDIsDebugInfo.html>`_.
 
+* When emitting DWARF v2 and not in strict DWARF mode, LLVM will now add
+  a ``DW_AT_type`` to instances of ``DW_TAG_enumeration_type``. This is actually
+  a DWARF v3 feature which tells tools what the enum's underlying type is.
+  Emitting this for v2 as well will help users who have to build binaries with
+  DWARF v2 but are using tools that understand newer DWARF standards. Older
+  tools will ignore it. (`#98335 <https://github.com/llvm/llvm-project/pull/98335>`_)
+
 Changes to the LLVM tools
 ---------------------------------
 * llvm-nm and llvm-objdump can now print symbol information from linked
@@ -368,6 +391,10 @@ Changes to the LLVM tools
   using buttons on top-right corner of the page or using keys (L/R/B or 
   jumping in reverse direction with shift+L/R/B). (`#95662
   <https://github.com/llvm/llvm-project/pull/95662>`_).
+
+* llvm-objcopy now verifies format of ``.note`` sections for ELF input. This can
+  be disabled by ``--no-verify-note-sections``. (`#90458
+  <https://github.com/llvm/llvm-project/pull/90458>`).
 
 Changes to LLDB
 ---------------------------------

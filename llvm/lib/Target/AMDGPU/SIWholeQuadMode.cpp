@@ -236,9 +236,9 @@ public:
   StringRef getPassName() const override { return "SI Whole Quad Mode"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LiveIntervals>();
-    AU.addPreserved<SlotIndexes>();
-    AU.addPreserved<LiveIntervals>();
+    AU.addRequired<LiveIntervalsWrapperPass>();
+    AU.addPreserved<SlotIndexesWrapperPass>();
+    AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -256,7 +256,7 @@ char SIWholeQuadMode::ID = 0;
 
 INITIALIZE_PASS_BEGIN(SIWholeQuadMode, DEBUG_TYPE, "SI Whole Quad Mode", false,
                       false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(SIWholeQuadMode, DEBUG_TYPE, "SI Whole Quad Mode", false,
@@ -550,8 +550,7 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
                  Opcode == AMDGPU::DS_DIRECT_LOAD) {
         // Mark these STRICTWQM, but only for the instruction, not its operands.
         // This avoid unnecessarily marking M0 as requiring WQM.
-        InstrInfo &II = Instructions[&MI];
-        II.Needs |= StateStrictWQM;
+        III.Needs |= StateStrictWQM;
         GlobalFlags |= StateStrictWQM;
       } else if (Opcode == AMDGPU::V_SET_INACTIVE_B32 ||
                  Opcode == AMDGPU::V_SET_INACTIVE_B64) {
@@ -1637,7 +1636,7 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   TII = ST->getInstrInfo();
   TRI = &TII->getRegisterInfo();
   MRI = &MF.getRegInfo();
-  LIS = &getAnalysis<LiveIntervals>();
+  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   auto *MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
   MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
   auto *PDTWrapper =
@@ -1676,6 +1675,8 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   if (!(GlobalFlags & (StateWQM | StateStrict)) && LowerToCopyInstrs.empty() &&
       LowerToMovInstrs.empty() && KillInstrs.empty()) {
     lowerLiveMaskQueries();
+    if (!InitExecInstrs.empty())
+      LIS->removeAllRegUnitsForPhysReg(AMDGPU::EXEC);
     return !InitExecInstrs.empty() || !LiveMaskQueries.empty();
   }
 
@@ -1717,7 +1718,7 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   LIS->removeAllRegUnitsForPhysReg(AMDGPU::SCC);
 
   // If we performed any kills then recompute EXEC
-  if (!KillInstrs.empty())
+  if (!KillInstrs.empty() || !InitExecInstrs.empty())
     LIS->removeAllRegUnitsForPhysReg(AMDGPU::EXEC);
 
   return true;
