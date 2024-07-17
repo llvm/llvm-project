@@ -188,7 +188,8 @@ public:
               feOptions.ClangIRLibOpt, libOptOpts, passOptParsingFailure,
               action == CIRGenAction::OutputType::EmitCIRFlat,
               action == CIRGenAction::OutputType::EmitMLIR,
-              feOptions.ClangIREnableCallConvLowering)
+              feOptions.ClangIREnableCallConvLowering,
+              feOptions.ClangIREnableMem2Reg)
               .failed()) {
         if (!passOptParsingFailure.empty())
           diagnosticsEngine.Report(diag::err_drv_cir_pass_opt_parsing)

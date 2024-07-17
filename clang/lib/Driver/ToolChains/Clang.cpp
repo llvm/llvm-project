@@ -4980,6 +4980,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_fclangir_call_conv_lowering))
     CmdArgs.push_back("-fclangir-call-conv-lowering");
+  
+  if (Args.hasArg(options::OPT_fclangir_mem2reg))
+    CmdArgs.push_back("-fclangir-mem2reg");
 
   // ClangIR lib opt requires idiom recognizer.
   if (Args.hasArg(options::OPT_fclangir_lib_opt,

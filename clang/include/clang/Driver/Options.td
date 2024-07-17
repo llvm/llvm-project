@@ -2982,6 +2982,10 @@ def fclangir_call_conv_lowering : Flag<["-"], "fclangir-call-conv-lowering">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
   HelpText<"Enable ClangIR calling convention lowering">,
   MarshallingInfoFlag<FrontendOpts<"ClangIREnableCallConvLowering">>;
+def fclangir_mem2reg : Flag<["-"], "fclangir-mem2reg">,
+  Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
+  HelpText<"Enable mem2reg on the flat ClangIR">,
+  MarshallingInfoFlag<FrontendOpts<"ClangIREnableMem2Reg">>;
 
 def clangir_disable_passes : Flag<["-"], "clangir-disable-passes">,
   Visibility<[ClangOption, CC1Option]>,
