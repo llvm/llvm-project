@@ -524,10 +524,14 @@ size_t YAMLProfileReader::matchWithCallGraph(BinaryContext &BC) {
   auto GetBaseName = [&](std::string &FunctionName) {
     if (Demangler.partialDemangle(FunctionName.c_str()))
       return std::string("");
-    std::vector<char> Buffer(FunctionName.begin(), FunctionName.end());
-    size_t BufferSize;
-    char *BaseName = Demangler.getFunctionBaseName(&Buffer[0], &BufferSize);
-    return std::string(BaseName, BufferSize);
+    size_t BufferSize = 1;
+    char *Buffer = static_cast<char *>(std::malloc(BufferSize));
+    char *BaseName = Demangler.getFunctionBaseName(Buffer, &BufferSize);
+    if (!BaseName)
+      return std::string("");
+    std::string BaseNameStr(BaseName, BufferSize);
+    std::free(BaseName);
+    return BaseNameStr;
   };
 
   // Matches YAMLBF to BFs with neighbor hashes.
