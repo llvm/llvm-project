@@ -525,7 +525,7 @@ bb:
 }
 
 ; CHECK: DIVERGENT: %tmp0 = call <3 x i32> @llvm.amdgcn.ds.load.tr6.b96.v3i32(ptr addrspace(3) %addr)
-define amdgpu_kernel void @ds_load_tr6_b96_v4i32(ptr addrspace(3) %addr, ptr addrspace(1) %out) {
+define amdgpu_kernel void @ds_load_tr6_b96_v3i32(ptr addrspace(3) %addr, ptr addrspace(1) %out) {
 bb:
   %tmp0 = call <3 x i32> @llvm.amdgcn.ds.load.tr6.b96.v3i32(ptr addrspace(3) %addr)
   store <3 x i32> %tmp0, ptr addrspace(1) %out, align 8
@@ -537,6 +537,22 @@ define amdgpu_kernel void @ds_load_tr16_b128_v8i16(ptr addrspace(3) %addr, ptr a
 bb:
   %tmp0 = call <8 x i16> @llvm.amdgcn.ds.load.tr16.b128.v8i16(ptr addrspace(3) %addr)
   store <8 x i16> %tmp0, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+; CHECK: DIVERGENT: %tmp0 = call <8 x half> @llvm.amdgcn.ds.load.tr16.b128.v8f16(ptr addrspace(3) %addr)
+define amdgpu_kernel void @ds_load_tr16_b128_v8f16(ptr addrspace(3) %addr, ptr addrspace(1) %out) {
+bb:
+  %tmp0 = call <8 x half> @llvm.amdgcn.ds.load.tr16.b128.v8f16(ptr addrspace(3) %addr)
+  store <8 x half> %tmp0, ptr addrspace(1) %out, align 16
+  ret void
+}
+
+; CHECK: DIVERGENT: %tmp0 = call <8 x bfloat> @llvm.amdgcn.ds.load.tr16.b128.v8bf16(ptr addrspace(3) %addr)
+define amdgpu_kernel void @ds_load_tr16_b128_v8bf16(ptr addrspace(3) %addr, ptr addrspace(1) %out) {
+bb:
+  %tmp0 = call <8 x bfloat> @llvm.amdgcn.ds.load.tr16.b128.v8bf16(ptr addrspace(3) %addr)
+  store <8 x bfloat> %tmp0, ptr addrspace(1) %out, align 16
   ret void
 }
 
@@ -878,6 +894,8 @@ declare <2 x i32> @llvm.amdgcn.ds.load.tr8.b64.v2i32(ptr addrspace(3))
 declare <2 x i32> @llvm.amdgcn.ds.load.tr4.b64.v2i32(ptr addrspace(3))
 declare <3 x i32> @llvm.amdgcn.ds.load.tr6.b96.v3i32(ptr addrspace(3))
 declare <8 x i16> @llvm.amdgcn.ds.load.tr16.b128.v8i16(ptr addrspace(3))
+declare <8 x half> @llvm.amdgcn.ds.load.tr16.b128.v8f16(ptr addrspace(3))
+declare <8 x bfloat> @llvm.amdgcn.ds.load.tr16.b128.v8bf16(ptr addrspace(3))
 
 attributes #0 = { nounwind convergent }
 attributes #1 = { nounwind readnone convergent }
