@@ -238,8 +238,8 @@ static_assert(e_v<bool>);
 
 // We do accept the following as an extension. See Sema::MatchTemplateParametersToScopeSpecifier()
 template <>  // expected-warning {{extraneous}}
-template <class T> requires(T{})
-bool e = true;
+template <class T> requires(T{true})
+constexpr bool e = true;
 
 static_assert(e<bool>);
 
