@@ -80,11 +80,12 @@ entries:
 
     Name: MyFramework
 
-:Classes, Protocols, Tags, Typedefs, Globals, Enumerators, Functions:
+:Classes, Protocols, Tags, Typedefs, Globals, Enumerators, Functions, Namespaces:
 
   Arrays of top-level declarations. Each entry in the array must have a
-  'Name' key with its Objective-C name. "Tags" refers to structs, enums, and
-  unions; "Enumerators" refers to enum cases.
+  'Name' key with its Objective-C or C++ name. "Tags" refers to structs,
+  C++ classes, enums, and unions; "Classes" refers to Objective-C classes;
+  "Enumerators" refers to enum cases.
 
   ::
 
@@ -156,6 +157,36 @@ declaration kind), all of which are optional:
 
     - Class: NSBundle
       SwiftName: Bundle
+
+:SwiftImportAs:
+
+  For a class, possible values are ``owned`` (equivalent to
+  ``SWIFT_SELF_CONTAINED``) or ``reference`` (equivalent to
+  ``SWIFT_SHARED_REFERENCE``, also requires specifying ``SwiftReleaseOp`` and
+  ``SwiftRetainOp``).
+
+  For a method, possible values are ``unsafe`` (equivalent
+  to ``SWIFT_RETURNS_INDEPENDENT_VALUE``) or ``computed_property`` (equivalent to
+  ``SWIFT_COMPUTED_PROPERTY``).
+
+  ::
+
+    Tags:
+    - Name: RefCountedStorage
+      SwiftImportAs: reference
+      SwiftReleaseOp: RCRelease
+      SwiftRetainOp: RCRetain
+
+:SwiftCopyable:
+
+  Allows annotating a C++ class as non-copyable in Swift. Equivalent to
+  ``SWIFT_NONCOPYABLE``, or to an explicit conformance ``: ~Copyable``.
+
+  ::
+
+    Tags:
+    - Name: tzdb
+      SwiftCopyable: false
 
 :Availability, AvailabilityMsg:
 

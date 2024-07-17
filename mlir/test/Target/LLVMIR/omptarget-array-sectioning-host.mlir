@@ -42,7 +42,7 @@ module attributes {omp.is_target_device = false} {
 
 // CHECK: @.offload_sizes = private unnamed_addr constant [2 x i64] [i64 36, i64 108]
 // CHECK: @.offload_maptypes = private unnamed_addr constant [2 x i64] [i64 35, i64 35]
-// CHECKL: @.offload_mapnames = private constant [2 x ptr] [ptr @0, ptr @1]
+// CHECK: @.offload_mapnames = private constant [2 x ptr] [ptr @0, ptr @1]
 
 // CHECK: define void @_3d_target_array_section()
 

@@ -18,15 +18,23 @@ void target_svebf16(svbfloat16_t t, bfloat16x8_t m) {
 }
 
 void base(int8x16_t n, bfloat16x8_t m) {
-  // expected-error@+1 {{'svundef_s8' needs target feature sve}}
-  svset_neonq_s8(svundef_s8(), n); // expected-error {{'svset_neonq_s8' needs target feature sve}}
-  // expected-error@+1 {{'svundef_s8' needs target feature sve}}
-  svget_neonq_s8(svundef_s8()); // expected-error {{'svget_neonq_s8' needs target feature sve}}
-  svdup_neonq_s8(n); // expected-error {{'svdup_neonq_s8' needs target feature sve}}
+  // expected-error@+3 {{SVE vector type 'svint8_t' (aka '__SVInt8_t') cannot be used in a target without sve}}
+  // expected-error@+2 {{SVE vector type 'svint8_t' (aka '__SVInt8_t') cannot be used in a target without sve}}
+  // expected-error@+1 {{SVE vector type 'svint8_t' (aka '__SVInt8_t') cannot be used in a target without sve}}
+  svset_neonq_s8(svundef_s8(), n);
+  // expected-error@+2 {{SVE vector type 'svint8_t' (aka '__SVInt8_t') cannot be used in a target without sve}}
+  // expected-error@+1 {{SVE vector type 'svint8_t' (aka '__SVInt8_t') cannot be used in a target without sve}}
+  svget_neonq_s8(svundef_s8());
+  // expected-error@+1 {{SVE vector type 'svint8_t' (aka '__SVInt8_t') cannot be used in a target without sve}}
+  svdup_neonq_s8(n);
 
-  // expected-error@+1 {{'svundef_bf16' needs target feature sve}}
-  svset_neonq_bf16(svundef_bf16(), m); // expected-error {{'svset_neonq_bf16' needs target feature sve,bf16}}
-  // expected-error@+1 {{'svundef_bf16' needs target feature sve}}
-  svget_neonq_bf16(svundef_bf16()); // expected-error {{'svget_neonq_bf16' needs target feature sve,bf16}}
-  svdup_neonq_bf16(m); // expected-error {{'svdup_neonq_bf16' needs target feature sve,bf16}}
+  // expected-error@+3 {{SVE vector type 'svbfloat16_t' (aka '__SVBfloat16_t') cannot be used in a target without sve}}
+  // expected-error@+2 {{SVE vector type 'svbfloat16_t' (aka '__SVBfloat16_t') cannot be used in a target without sve}}
+  // expected-error@+1 {{SVE vector type 'svbfloat16_t' (aka '__SVBfloat16_t') cannot be used in a target without sve}}
+  svset_neonq_bf16(svundef_bf16(), m);
+  // expected-error@+2 {{SVE vector type 'svbfloat16_t' (aka '__SVBfloat16_t') cannot be used in a target without sve}}
+  // expected-error@+1 {{SVE vector type 'svbfloat16_t' (aka '__SVBfloat16_t') cannot be used in a target without sve}}
+  svget_neonq_bf16(svundef_bf16());
+  // expected-error@+1 {{SVE vector type 'svbfloat16_t' (aka '__SVBfloat16_t') cannot be used in a target without sve}}
+  svdup_neonq_bf16(m);
 }

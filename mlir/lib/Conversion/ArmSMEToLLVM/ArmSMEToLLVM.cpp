@@ -18,6 +18,7 @@
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 #include "mlir/Dialect/ArmSME/Transforms/Transforms.h"
 #include "mlir/Dialect/ArmSME/Utils/Utils.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -247,8 +248,8 @@ struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
       return failure();
 
     tileOp->emitWarning(
-        "failed to allocate SME virtual tile to operation, all tile "
-        "operations will go through memory, expect degraded performance");
+        "failed to allocate SME virtual tile to operation, tile value will go "
+        "through memory, expect degraded performance");
 
     // Step 1. Create an alloca for the tile at the top of the function (if one
     // does not already exist).
@@ -877,6 +878,24 @@ struct ConvertArmSMEToLLVMPass
 
     if (failed(applyPartialConversion(function, target, std::move(patterns))))
       signalPassFailure();
+
+    // Walk the function and fail if there are unexpected operations on SME
+    // tile types after conversion.
+    function->walk([&](Operation *op) {
+      // These ops are legal post conversion, skip these.
+      if (isa<arm_sme::CopyTileOp, arm_sme::GetTileOp, cf::BranchOp>(op) ||
+          !op->isRegistered())
+        return;
+      auto isSMETileType = [](Type type) {
+        return arm_sme::isValidSMETileVectorType(type);
+      };
+      if (llvm::any_of(op->getResultTypes(), isSMETileType) ||
+          llvm::any_of(op->getOperandTypes(), isSMETileType)) {
+        op->emitOpError("unexpected operation with SME tile type after "
+                        "conversion to LLVM");
+        signalPassFailure();
+      }
+    });
   }
 };
 

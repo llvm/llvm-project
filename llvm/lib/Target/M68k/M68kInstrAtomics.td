@@ -35,7 +35,7 @@ def CAS32 : MxCASOp<0x3, MxType32d>;
 
 
 foreach size = [8, 16, 32] in {
-  def : Pat<(!cast<SDPatternOperator>("atomic_cmp_swap_"#size) MxCP_ARI:$ptr,
+  def : Pat<(!cast<SDPatternOperator>("atomic_cmp_swap_i"#size) MxCP_ARI:$ptr,
                                                                 !cast<MxRegOp>("MxDRD"#size):$cmp,
                                                                 !cast<MxRegOp>("MxDRD"#size):$new),
             (!cast<MxInst>("CAS"#size) !cast<MxRegOp>("MxDRD"#size):$cmp,

@@ -245,8 +245,8 @@ define <8 x i1> @buildvec_mask_v8i1() {
 define <8 x i1> @buildvec_mask_nonconst_v8i1(i1 %x, i1 %y) {
 ; CHECK-LABEL: buildvec_mask_nonconst_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    li a2, 19
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a2
 ; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
@@ -256,8 +256,8 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1(i1 %x, i1 %y) {
 ;
 ; ZVE32F-LABEL: buildvec_mask_nonconst_v8i1:
 ; ZVE32F:       # %bb.0:
-; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; ZVE32F-NEXT:    li a2, 19
+; ZVE32F-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; ZVE32F-NEXT:    vmv.s.x v0, a2
 ; ZVE32F-NEXT:    vmv.v.x v8, a1
 ; ZVE32F-NEXT:    vmerge.vxm v8, v8, a0, v0
@@ -286,8 +286,8 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %w) {
 ; CHECK-NEXT:    vslide1down.vx v9, v9, a1
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a3
 ; CHECK-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-NEXT:    vslide1down.vx v8, v8, a2
 ; CHECK-NEXT:    vmv.v.i v0, 15
+; CHECK-NEXT:    vslide1down.vx v8, v8, a2
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
@@ -303,8 +303,8 @@ define <8 x i1> @buildvec_mask_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %w) {
 ; ZVE32F-NEXT:    vslide1down.vx v9, v9, a1
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a3
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, zero
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a2
 ; ZVE32F-NEXT:    vmv.v.i v0, 15
+; ZVE32F-NEXT:    vslide1down.vx v8, v8, a2
 ; ZVE32F-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; ZVE32F-NEXT:    vand.vi v8, v8, 1
 ; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
@@ -331,8 +331,8 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %
 ; CHECK-NEXT:    vslide1down.vx v9, v9, a1
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a3
 ; CHECK-NEXT:    vslide1down.vx v8, v8, zero
-; CHECK-NEXT:    vslide1down.vx v8, v8, a2
 ; CHECK-NEXT:    vmv.v.i v0, 15
+; CHECK-NEXT:    vslide1down.vx v8, v8, a2
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
@@ -348,8 +348,8 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1_2(i1 %x, i1 %y, i1 %z, i1 %
 ; ZVE32F-NEXT:    vslide1down.vx v9, v9, a1
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a3
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, zero
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a2
 ; ZVE32F-NEXT:    vmv.v.i v0, 15
+; ZVE32F-NEXT:    vslide1down.vx v8, v8, a2
 ; ZVE32F-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; ZVE32F-NEXT:    vand.vi v8, v8, 1
 ; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
@@ -375,8 +375,8 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1(i1 %x, i1 %y) optsize {
 ; CHECK-NEXT:    vslide1down.vx v9, v9, a1
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a1
-; CHECK-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.v.i v0, 15
+; CHECK-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
@@ -391,8 +391,8 @@ define <8 x i1> @buildvec_mask_optsize_nonconst_v8i1(i1 %x, i1 %y) optsize {
 ; ZVE32F-NEXT:    vslide1down.vx v9, v9, a1
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
 ; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
-; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
 ; ZVE32F-NEXT:    vmv.v.i v0, 15
+; ZVE32F-NEXT:    vslide1down.vx v8, v8, a1
 ; ZVE32F-NEXT:    vslidedown.vi v8, v9, 4, v0.t
 ; ZVE32F-NEXT:    vand.vi v8, v8, 1
 ; ZVE32F-NEXT:    vmsne.vi v0, v8, 0
@@ -527,13 +527,13 @@ define <128 x i1> @buildvec_mask_v128i1() {
 ; RV64-LABEL: buildvec_mask_v128i1:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a0, %hi(.LCPI20_0)
-; RV64-NEXT:    addi a0, a0, %lo(.LCPI20_0)
+; RV64-NEXT:    ld a0, %lo(.LCPI20_0)(a0)
+; RV64-NEXT:    lui a1, %hi(.LCPI20_1)
+; RV64-NEXT:    ld a1, %lo(.LCPI20_1)(a1)
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vlse64.v v0, (a0), zero
-; RV64-NEXT:    lui a0, %hi(.LCPI20_1)
-; RV64-NEXT:    ld a0, %lo(.LCPI20_1)(a0)
+; RV64-NEXT:    vmv.v.x v0, a0
 ; RV64-NEXT:    vsetvli zero, zero, e64, m1, tu, ma
-; RV64-NEXT:    vmv.s.x v0, a0
+; RV64-NEXT:    vmv.s.x v0, a1
 ; RV64-NEXT:    ret
 ;
 ; ZVE32F-LABEL: buildvec_mask_v128i1:
@@ -549,20 +549,20 @@ define <128 x i1> @buildvec_mask_v128i1() {
 define <128 x i1> @buildvec_mask_optsize_v128i1() optsize {
 ; CHECK-LABEL: buildvec_mask_optsize_v128i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI21_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI21_0)
-; CHECK-NEXT:    li a1, 128
-; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-; CHECK-NEXT:    vlm.v v0, (a0)
+; CHECK-NEXT:    li a0, 128
+; CHECK-NEXT:    lui a1, %hi(.LCPI21_0)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI21_0)
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-NEXT:    vlm.v v0, (a1)
 ; CHECK-NEXT:    ret
 ;
 ; ZVE32F-LABEL: buildvec_mask_optsize_v128i1:
 ; ZVE32F:       # %bb.0:
-; ZVE32F-NEXT:    lui a0, %hi(.LCPI21_0)
-; ZVE32F-NEXT:    addi a0, a0, %lo(.LCPI21_0)
-; ZVE32F-NEXT:    li a1, 128
-; ZVE32F-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
-; ZVE32F-NEXT:    vlm.v v0, (a0)
+; ZVE32F-NEXT:    li a0, 128
+; ZVE32F-NEXT:    lui a1, %hi(.LCPI21_0)
+; ZVE32F-NEXT:    addi a1, a1, %lo(.LCPI21_0)
+; ZVE32F-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; ZVE32F-NEXT:    vlm.v v0, (a1)
 ; ZVE32F-NEXT:    ret
   ret <128 x i1> <i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 0, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 0, i1 1, i1 1, i1 0, i1 0, i1 1, i1 1, i1 1>
 }

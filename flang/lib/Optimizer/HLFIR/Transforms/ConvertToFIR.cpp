@@ -31,28 +31,6 @@ namespace hlfir {
 
 using namespace mlir;
 
-static mlir::Value genAllocatableTempFromSourceBox(mlir::Location loc,
-                                                   fir::FirOpBuilder &builder,
-                                                   mlir::Value sourceBox) {
-  assert(mlir::isa<fir::BaseBoxType>(sourceBox.getType()) &&
-         "must be a base box type");
-  // Use the runtime to make a quick and dirty temp with the rhs value.
-  // Overkill for scalar rhs that could be done in much more clever ways.
-  // Note that temp descriptor must have the allocatable flag set so that
-  // the runtime will allocate it with the shape and type parameters of
-  // the RHS.
-  // This has the huge benefit of dealing with all cases, including
-  // polymorphic entities.
-  mlir::Type fromHeapType = fir::HeapType::get(fir::unwrapRefType(
-      mlir::cast<fir::BaseBoxType>(sourceBox.getType()).getEleTy()));
-  mlir::Type fromBoxHeapType = fir::BoxType::get(fromHeapType);
-  mlir::Value fromMutableBox =
-      fir::factory::genNullBoxStorage(builder, loc, fromBoxHeapType);
-  fir::runtime::genAssignTemporary(builder, loc, fromMutableBox, sourceBox);
-  mlir::Value copy = builder.create<fir::LoadOp>(loc, fromMutableBox);
-  return copy;
-}
-
 namespace {
 /// May \p lhs alias with \p rhs?
 /// TODO: implement HLFIR alias analysis.
@@ -60,7 +38,7 @@ class AssignOpConversion : public mlir::OpRewritePattern<hlfir::AssignOp> {
 public:
   explicit AssignOpConversion(mlir::MLIRContext *ctx) : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::AssignOp assignOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = assignOp->getLoc();
@@ -211,13 +189,19 @@ public:
               // check (for IsContiguous) the copy loops can hardly provide any
               // value to optimizations, instead, the optimizer just wastes
               // compilation time on these loops.
-              mlir::Value temp =
-                  genAllocatableTempFromSourceBox(loc, builder, inputVariable);
+              mlir::Value temp = copyInOp.getTempBox();
+              fir::runtime::genCopyInAssign(builder, loc, temp, inputVariable);
+              mlir::Value copy = builder.create<fir::LoadOp>(loc, temp);
               // Get rid of allocatable flag in the fir.box.
-              temp = builder.create<fir::ReboxOp>(loc, resultAddrType, temp,
-                                                  /*shape=*/mlir::Value{},
-                                                  /*slice=*/mlir::Value{});
-              builder.create<fir::ResultOp>(loc, temp);
+              if (mlir::cast<fir::BaseBoxType>(resultAddrType).isAssumedRank())
+                copy = builder.create<fir::ReboxAssumedRankOp>(
+                    loc, resultAddrType, copy,
+                    fir::LowerBoundModifierAttribute::Preserve);
+              else
+                copy = builder.create<fir::ReboxOp>(loc, resultAddrType, copy,
+                                                    /*shape=*/mlir::Value{},
+                                                    /*slice=*/mlir::Value{});
+              builder.create<fir::ResultOp>(loc, copy);
             })
             .getResults()[0];
     return {addr, builder.genNot(loc, isContiguous)};
@@ -247,7 +231,7 @@ public:
     return {res[0], res[1]};
   }
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::CopyInOp copyInOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = copyInOp.getLoc();
@@ -265,7 +249,7 @@ public:
   explicit CopyOutOpConversion(mlir::MLIRContext *ctx)
       : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::CopyOutOp copyOutOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = copyOutOp.getLoc();
@@ -274,34 +258,26 @@ public:
     builder.genIfThen(loc, copyOutOp.getWasCopied())
         .genThen([&]() {
           mlir::Value temp = copyOutOp.getTemp();
+          mlir::Value varMutableBox;
+          // Generate CopyOutAssign runtime call.
           if (mlir::Value var = copyOutOp.getVar()) {
-            auto mutableBoxTo = builder.createTemporary(loc, var.getType());
-            builder.create<fir::StoreOp>(loc, var, mutableBoxTo);
-            // Generate CopyOutAssign() call to copy data from the temporary
-            // to the actualArg. Note that in case the actual argument
-            // is ALLOCATABLE/POINTER the CopyOutAssign() implementation
-            // should not engage its reallocation, because the temporary
-            // is rank, shape and type compatible with it.
-            // Moreover, CopyOutAssign() guarantees that there will be no
-            // finalization for the LHS even if it is of a derived type
-            // with finalization.
-            fir::runtime::genCopyOutAssign(builder, loc, mutableBoxTo, temp,
-                                           /*skipToInit=*/true);
+            // Set the variable descriptor pointer in order to copy data from
+            // the temporary to the actualArg. Note that in case the actual
+            // argument is ALLOCATABLE/POINTER the CopyOutAssign()
+            // implementation should not engage its reallocation, because the
+            // temporary is rank, shape and type compatible with it. Moreover,
+            // CopyOutAssign() guarantees that there will be no finalization for
+            // the LHS even if it is of a derived type with finalization.
+            varMutableBox = builder.createTemporary(loc, var.getType());
+            builder.create<fir::StoreOp>(loc, var, varMutableBox);
+          } else {
+            // Even when there is no need to copy back the data (e.g., the dummy
+            // argument was intent(in), CopyOutAssign is called to
+            // destroy/deallocate the temporary.
+            varMutableBox = builder.create<fir::ZeroOp>(loc, temp.getType());
           }
-          // Destroy components of the temporary (if any).
-          fir::runtime::genDerivedTypeDestroyWithoutFinalization(builder, loc,
-                                                                 temp);
-          mlir::Type heapType =
-              fir::HeapType::get(fir::dyn_cast_ptrOrBoxEleTy(temp.getType()));
-          mlir::Value tempAddr =
-              builder.create<fir::BoxAddrOp>(loc, heapType, temp);
-
-          // Deallocate the top-level entity of the temporary.
-          //
-          // Note that this FreeMemOp is coupled with the runtime
-          // allocation engaged by the code generated by
-          // genAllocatableTempFromSourceBox().
-          builder.create<fir::FreeMemOp>(loc, tempAddr);
+          fir::runtime::genCopyOutAssign(builder, loc, varMutableBox,
+                                         copyOutOp.getTemp());
         })
         .end();
     rewriter.eraseOp(copyOutOp);
@@ -314,22 +290,22 @@ public:
   explicit DeclareOpConversion(mlir::MLIRContext *ctx)
       : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::DeclareOp declareOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = declareOp->getLoc();
     mlir::Value memref = declareOp.getMemref();
     fir::FortranVariableFlagsAttr fortranAttrs;
-    fir::CUDADataAttributeAttr cudaAttr;
+    cuf::DataAttributeAttr dataAttr;
     if (auto attrs = declareOp.getFortranAttrs())
       fortranAttrs =
           fir::FortranVariableFlagsAttr::get(rewriter.getContext(), *attrs);
-    if (auto attr = declareOp.getCudaAttr())
-      cudaAttr = fir::CUDADataAttributeAttr::get(rewriter.getContext(), *attr);
+    if (auto attr = declareOp.getDataAttr())
+      dataAttr = cuf::DataAttributeAttr::get(rewriter.getContext(), *attr);
     auto firDeclareOp = rewriter.create<fir::DeclareOp>(
         loc, memref.getType(), memref, declareOp.getShape(),
         declareOp.getTypeparams(), declareOp.getDummyScope(),
-        declareOp.getUniqName(), fortranAttrs, cudaAttr);
+        declareOp.getUniqName(), fortranAttrs, dataAttr);
 
     // Propagate other attributes from hlfir.declare to fir.declare.
     // OpenACC's acc.declare is one example. Right now, the propagation
@@ -348,7 +324,17 @@ public:
       // Helper to generate the hlfir fir.box with the local lower bounds and
       // type parameters.
       auto genHlfirBox = [&]() -> mlir::Value {
-        if (!mlir::isa<fir::BaseBoxType>(firBase.getType())) {
+        if (auto baseBoxType =
+                mlir::dyn_cast<fir::BaseBoxType>(firBase.getType())) {
+          // Rebox so that lower bounds are correct.
+          if (baseBoxType.isAssumedRank())
+            return builder.create<fir::ReboxAssumedRankOp>(
+                loc, hlfirBaseType, firBase,
+                fir::LowerBoundModifierAttribute::SetToOnes);
+          return builder.create<fir::ReboxOp>(loc, hlfirBaseType, firBase,
+                                              declareOp.getShape(),
+                                              /*slice=*/mlir::Value{});
+        } else {
           llvm::SmallVector<mlir::Value> typeParams;
           auto maybeCharType = mlir::dyn_cast<fir::CharacterType>(
               fir::unwrapSequenceType(fir::unwrapPassByRefType(hlfirBaseType)));
@@ -358,11 +344,6 @@ public:
           return builder.create<fir::EmboxOp>(
               loc, hlfirBaseType, firBase, declareOp.getShape(),
               /*slice=*/mlir::Value{}, typeParams);
-        } else {
-          // Rebox so that lower bounds are correct.
-          return builder.create<fir::ReboxOp>(loc, hlfirBaseType, firBase,
-                                              declareOp.getShape(),
-                                              /*slice=*/mlir::Value{});
         }
       };
       if (!mlir::cast<fir::FortranVariableOpInterface>(declareOp.getOperation())
@@ -447,7 +428,7 @@ public:
   explicit DesignateOpConversion(mlir::MLIRContext *ctx)
       : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::DesignateOp designate,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = designate.getLoc();
@@ -667,7 +648,7 @@ public:
   explicit ParentComponentOpConversion(mlir::MLIRContext *ctx)
       : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::ParentComponentOp parentComponent,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = parentComponent.getLoc();
@@ -715,7 +696,7 @@ public:
   explicit NoReassocOpConversion(mlir::MLIRContext *ctx)
       : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::NoReassocOp noreassoc,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<fir::NoReassocOp>(noreassoc,
@@ -728,7 +709,7 @@ class NullOpConversion : public mlir::OpRewritePattern<hlfir::NullOp> {
 public:
   explicit NullOpConversion(mlir::MLIRContext *ctx) : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::NullOp nullop,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<fir::ZeroOp>(nullop, nullop.getType());
@@ -741,7 +722,7 @@ class GetExtentOpConversion
 public:
   using mlir::OpRewritePattern<hlfir::GetExtentOp>::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::GetExtentOp getExtentOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Value shape = getExtentOp.getShape();
@@ -789,7 +770,3 @@ public:
 };
 
 } // namespace
-
-std::unique_ptr<mlir::Pass> hlfir::createConvertHLFIRtoFIRPass() {
-  return std::make_unique<ConvertHLFIRtoFIR>();
-}

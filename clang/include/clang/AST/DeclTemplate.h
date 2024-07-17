@@ -478,7 +478,7 @@ class FunctionTemplateSpecializationInfo final
 public:
   /// The template arguments used to produce the function template
   /// specialization from the function template.
-  const TemplateArgumentList *TemplateArguments;
+  TemplateArgumentList *TemplateArguments;
 
   /// The template arguments as written in the sources, if provided.
   /// FIXME: Normally null; tail-allocate this.
@@ -491,7 +491,7 @@ public:
 private:
   FunctionTemplateSpecializationInfo(
       FunctionDecl *FD, FunctionTemplateDecl *Template,
-      TemplateSpecializationKind TSK, const TemplateArgumentList *TemplateArgs,
+      TemplateSpecializationKind TSK, TemplateArgumentList *TemplateArgs,
       const ASTTemplateArgumentListInfo *TemplateArgsAsWritten,
       SourceLocation POI, MemberSpecializationInfo *MSInfo)
       : Function(FD, MSInfo ? true : false), Template(Template, TSK - 1),
@@ -511,8 +511,7 @@ public:
 
   static FunctionTemplateSpecializationInfo *
   Create(ASTContext &C, FunctionDecl *FD, FunctionTemplateDecl *Template,
-         TemplateSpecializationKind TSK,
-         const TemplateArgumentList *TemplateArgs,
+         TemplateSpecializationKind TSK, TemplateArgumentList *TemplateArgs,
          const TemplateArgumentListInfo *TemplateArgsAsWritten,
          SourceLocation POI, MemberSpecializationInfo *MSInfo);
 
@@ -1186,7 +1185,7 @@ class TemplateTypeParmDecl final : public TypeDecl,
 
   /// The default template argument, if any.
   using DefArgStorage =
-      DefaultArgStorage<TemplateTypeParmDecl, TypeSourceInfo *>;
+      DefaultArgStorage<TemplateTypeParmDecl, TemplateArgumentLoc *>;
   DefArgStorage DefaultArgument;
 
   TemplateTypeParmDecl(DeclContext *DC, SourceLocation KeyLoc,
@@ -1226,13 +1225,9 @@ public:
   bool hasDefaultArgument() const { return DefaultArgument.isSet(); }
 
   /// Retrieve the default argument, if any.
-  QualType getDefaultArgument() const {
-    return DefaultArgument.get()->getType();
-  }
-
-  /// Retrieves the default argument's source information, if any.
-  TypeSourceInfo *getDefaultArgumentInfo() const {
-    return DefaultArgument.get();
+  const TemplateArgumentLoc &getDefaultArgument() const {
+    static const TemplateArgumentLoc NoneLoc;
+    return DefaultArgument.isSet() ? *DefaultArgument.get() : NoneLoc;
   }
 
   /// Retrieves the location of the default argument declaration.
@@ -1245,9 +1240,8 @@ public:
   }
 
   /// Set the default argument for this template parameter.
-  void setDefaultArgument(TypeSourceInfo *DefArg) {
-    DefaultArgument.set(DefArg);
-  }
+  void setDefaultArgument(const ASTContext &C,
+                          const TemplateArgumentLoc &DefArg);
 
   /// Set that this default argument was inherited from another
   /// parameter.
@@ -1366,7 +1360,8 @@ class NonTypeTemplateParmDecl final
 
   /// The default template argument, if any, and whether or not
   /// it was inherited.
-  using DefArgStorage = DefaultArgStorage<NonTypeTemplateParmDecl, Expr *>;
+  using DefArgStorage =
+      DefaultArgStorage<NonTypeTemplateParmDecl, TemplateArgumentLoc *>;
   DefArgStorage DefaultArgument;
 
   // FIXME: Collapse this into TemplateParamPosition; or, just move depth/index
@@ -1436,7 +1431,10 @@ public:
   bool hasDefaultArgument() const { return DefaultArgument.isSet(); }
 
   /// Retrieve the default argument, if any.
-  Expr *getDefaultArgument() const { return DefaultArgument.get(); }
+  const TemplateArgumentLoc &getDefaultArgument() const {
+    static const TemplateArgumentLoc NoneLoc;
+    return DefaultArgument.isSet() ? *DefaultArgument.get() : NoneLoc;
+  }
 
   /// Retrieve the location of the default argument, if any.
   SourceLocation getDefaultArgumentLoc() const;
@@ -1450,7 +1448,8 @@ public:
   /// Set the default argument for this template parameter, and
   /// whether that default argument was inherited from another
   /// declaration.
-  void setDefaultArgument(Expr *DefArg) { DefaultArgument.set(DefArg); }
+  void setDefaultArgument(const ASTContext &C,
+                          const TemplateArgumentLoc &DefArg);
   void setInheritedDefaultArgument(const ASTContext &C,
                                    NonTypeTemplateParmDecl *Parm) {
     DefaultArgument.setInherited(C, Parm);

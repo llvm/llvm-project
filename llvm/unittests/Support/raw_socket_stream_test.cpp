@@ -7,7 +7,6 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <future>
-#include <iostream>
 #include <stdlib.h>
 #include <thread>
 
@@ -86,13 +85,8 @@ TEST(raw_socket_streamTest, TIMEOUT_PROVIDED) {
   std::chrono::milliseconds Timeout = std::chrono::milliseconds(100);
   Expected<std::unique_ptr<raw_socket_stream>> MaybeServer =
       ServerListener.accept(Timeout);
-
-  ASSERT_THAT_EXPECTED(MaybeServer, Failed());
-  llvm::Error Err = MaybeServer.takeError();
-  llvm::handleAllErrors(std::move(Err), [&](const llvm::StringError &SE) {
-    std::error_code EC = SE.convertToErrorCode();
-    ASSERT_EQ(EC, std::errc::timed_out);
-  });
+  ASSERT_EQ(llvm::errorToErrorCode(MaybeServer.takeError()),
+            std::errc::timed_out);
 }
 
 TEST(raw_socket_streamTest, FILE_DESCRIPTOR_CLOSED) {
@@ -122,12 +116,7 @@ TEST(raw_socket_streamTest, FILE_DESCRIPTOR_CLOSED) {
 
   // Wait for the CloseThread to finish
   CloseThread.join();
-
-  ASSERT_THAT_EXPECTED(MaybeServer, Failed());
-  llvm::Error Err = MaybeServer.takeError();
-  llvm::handleAllErrors(std::move(Err), [&](const llvm::StringError &SE) {
-    std::error_code EC = SE.convertToErrorCode();
-    ASSERT_EQ(EC, std::errc::operation_canceled);
-  });
+  ASSERT_EQ(llvm::errorToErrorCode(MaybeServer.takeError()),
+            std::errc::operation_canceled);
 }
 } // namespace

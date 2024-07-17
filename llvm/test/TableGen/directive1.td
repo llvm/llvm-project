@@ -45,6 +45,7 @@ def TDL_DirA : Directive<"dira"> {
   ];
   let isDefault = 1;
   let association = AS_None;
+  let category = CA_Executable;
 }
 
 // CHECK:       #ifndef LLVM_Tdl_INC
@@ -70,6 +71,17 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static constexpr std::size_t Association_enumSize = 6;
+// CHECK-EMPTY:
+// CHECK-NEXT:  enum class Category {
+// CHECK-NEXT:    Declarative,
+// CHECK-NEXT:    Executable,
+// CHECK-NEXT:    Informational,
+// CHECK-NEXT:    Meta,
+// CHECK-NEXT:    Subsidiary,
+// CHECK-NEXT:    Utility,
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  static constexpr std::size_t Category_enumSize = 6;
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum class Directive {
 // CHECK-NEXT:    TDLD_dira,
@@ -115,6 +127,7 @@ def TDL_DirA : Directive<"dira"> {
 // CHECK-EMPTY:
 // CHECK-NEXT:  constexpr std::size_t getMaxLeafCount() { return 0; }
 // CHECK-NEXT:  Association getDirectiveAssociation(Directive D);
+// CHECK-NEXT:  Category getDirectiveCategory(Directive D);
 // CHECK-NEXT:  AKind getAKind(StringRef);
 // CHECK-NEXT:  llvm::StringRef getTdlAKindName(AKind);
 // CHECK-EMPTY:
@@ -364,7 +377,15 @@ def TDL_DirA : Directive<"dira"> {
 // IMPL-NEXT:    switch (Dir) {
 // IMPL-NEXT:    case llvm::tdl::Directive::TDLD_dira:
 // IMPL-NEXT:      return llvm::tdl::Association::None;
-// IMPL-NEXT:    } // switch(Dir)
+// IMPL-NEXT:    } // switch (Dir)
+// IMPL-NEXT:    llvm_unreachable("Unexpected directive");
+// IMPL-NEXT:  }
+// IMPL-EMPTY:
+// IMPL-NEXT:  llvm::tdl::Category llvm::tdl::getDirectiveCategory(llvm::tdl::Directive Dir) {
+// IMPL-NEXT:    switch (Dir) {
+// IMPL-NEXT:    case llvm::tdl::TDLD_dira:
+// IMPL-NEXT:      return llvm::tdl::Category::Executable;
+// IMPL-NEXT:    } // switch (Dir)
 // IMPL-NEXT:    llvm_unreachable("Unexpected directive");
 // IMPL-NEXT:  }
 // IMPL-EMPTY:

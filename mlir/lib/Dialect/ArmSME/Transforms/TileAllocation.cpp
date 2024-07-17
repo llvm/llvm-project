@@ -46,6 +46,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Liveness.h"
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 #include "mlir/Dialect/ArmSME/Transforms/Passes.h"
 #include "mlir/Dialect/ArmSME/Transforms/Transforms.h"
@@ -333,7 +334,7 @@ DenseMap<Operation *, unsigned>
 generateOperationNumbering(FunctionOpInterface function) {
   unsigned index = 0;
   SetVector<Block *> blocks =
-      getTopologicallySortedBlocks(function.getFunctionBody());
+      getBlocksSortedByDominance(function.getFunctionBody());
   DenseMap<Operation *, unsigned> operationToIndexMap;
   for (Block *block : blocks) {
     index++; // We want block args to have their own number.

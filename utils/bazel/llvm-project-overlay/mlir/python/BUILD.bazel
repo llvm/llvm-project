@@ -83,6 +83,13 @@ filegroup(
 )
 
 filegroup(
+    name = "RewritePyFiles",
+    srcs = [
+        "mlir/rewrite.py",
+    ],
+)
+
+filegroup(
     name = "RuntimePyFiles",
     srcs = glob([
         "mlir/runtime/*.py",

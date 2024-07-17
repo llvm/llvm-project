@@ -215,6 +215,7 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
       RemInst = RealRem;
       // And replace the original instruction with the new one.
       OrigRemInst->replaceAllUsesWith(RealRem);
+      RealRem->setDebugLoc(OrigRemInst->getDebugLoc());
       OrigRemInst->eraseFromParent();
       NumRecomposed++;
       // Note that we have left ((X / Y) * Y) around.
@@ -366,7 +367,9 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
       if (!DivDominates)
         DivInst->moveBefore(RemInst);
       Mul->insertAfter(RemInst);
+      Mul->setDebugLoc(RemInst->getDebugLoc());
       Sub->insertAfter(Mul);
+      Sub->setDebugLoc(RemInst->getDebugLoc());
 
       // If DivInst has the exact flag, remove it. Otherwise this optimization
       // may replace a well-defined value 'X % Y' with poison.
@@ -381,18 +384,19 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
       //   %mul = mul %div, 1   // %mul = undef
       //   %rem = sub %x, %mul  // %rem = undef - undef = undef
       // If X is not frozen, %rem becomes undef after transformation.
-      // TODO: We need a undef-specific checking function in ValueTracking
-      if (!isGuaranteedNotToBeUndefOrPoison(X, nullptr, DivInst, &DT)) {
+      if (!isGuaranteedNotToBeUndef(X, nullptr, DivInst, &DT)) {
         auto *FrX =
             new FreezeInst(X, X->getName() + ".frozen", DivInst->getIterator());
+        FrX->setDebugLoc(DivInst->getDebugLoc());
         DivInst->setOperand(0, FrX);
         Sub->setOperand(0, FrX);
       }
       // Same for Y. If X = 1 and Y = (undef | 1), %rem in src is either 1 or 0,
       // but %rem in tgt can be one of many integer values.
-      if (!isGuaranteedNotToBeUndefOrPoison(Y, nullptr, DivInst, &DT)) {
+      if (!isGuaranteedNotToBeUndef(Y, nullptr, DivInst, &DT)) {
         auto *FrY =
             new FreezeInst(Y, Y->getName() + ".frozen", DivInst->getIterator());
+        FrY->setDebugLoc(DivInst->getDebugLoc());
         DivInst->setOperand(1, FrY);
         Mul->setOperand(1, FrY);
       }

@@ -2574,6 +2574,128 @@ TypeSystemClang::GetDeclContextForType(clang::QualType type) {
   return nullptr;
 }
 
+/// Returns the clang::RecordType of the specified \ref qual_type. This
+/// function will try to complete the type if necessary (and allowed
+/// by the specified \ref allow_completion). If we fail to return a *complete*
+/// type, returns nullptr.
+static const clang::RecordType *GetCompleteRecordType(clang::ASTContext *ast,
+                                                      clang::QualType qual_type,
+                                                      bool allow_completion) {
+  assert(qual_type->isRecordType());
+
+  const auto *tag_type = llvm::cast<clang::RecordType>(qual_type.getTypePtr());
+
+  clang::CXXRecordDecl *cxx_record_decl = qual_type->getAsCXXRecordDecl();
+
+  // RecordType with no way of completing it, return the plain
+  // TagType.
+  if (!cxx_record_decl || !cxx_record_decl->hasExternalLexicalStorage())
+    return tag_type;
+
+  const bool is_complete = cxx_record_decl->isCompleteDefinition();
+  const bool fields_loaded =
+      cxx_record_decl->hasLoadedFieldsFromExternalStorage();
+
+  // Already completed this type, nothing to be done.
+  if (is_complete && fields_loaded)
+    return tag_type;
+
+  if (!allow_completion)
+    return nullptr;
+
+  // Call the field_begin() accessor to for it to use the external source
+  // to load the fields...
+  //
+  // TODO: if we need to complete the type but have no external source,
+  // shouldn't we error out instead?
+  clang::ExternalASTSource *external_ast_source = ast->getExternalSource();
+  if (external_ast_source) {
+    external_ast_source->CompleteType(cxx_record_decl);
+    if (cxx_record_decl->isCompleteDefinition()) {
+      cxx_record_decl->field_begin();
+      cxx_record_decl->setHasLoadedFieldsFromExternalStorage(true);
+    }
+  }
+
+  return tag_type;
+}
+
+/// Returns the clang::EnumType of the specified \ref qual_type. This
+/// function will try to complete the type if necessary (and allowed
+/// by the specified \ref allow_completion). If we fail to return a *complete*
+/// type, returns nullptr.
+static const clang::EnumType *GetCompleteEnumType(clang::ASTContext *ast,
+                                                  clang::QualType qual_type,
+                                                  bool allow_completion) {
+  assert(qual_type->isEnumeralType());
+  assert(ast);
+
+  const clang::EnumType *enum_type =
+      llvm::cast<clang::EnumType>(qual_type.getTypePtr());
+
+  auto *tag_decl = enum_type->getAsTagDecl();
+  assert(tag_decl);
+
+  // Already completed, nothing to be done.
+  if (tag_decl->getDefinition())
+    return enum_type;
+
+  if (!allow_completion)
+    return nullptr;
+
+  // No definition but can't complete it, error out.
+  if (!tag_decl->hasExternalLexicalStorage())
+    return nullptr;
+
+  // We can't complete the type without an external source.
+  clang::ExternalASTSource *external_ast_source = ast->getExternalSource();
+  if (!external_ast_source)
+    return nullptr;
+
+  external_ast_source->CompleteType(tag_decl);
+  return enum_type;
+}
+
+/// Returns the clang::ObjCObjectType of the specified \ref qual_type. This
+/// function will try to complete the type if necessary (and allowed
+/// by the specified \ref allow_completion). If we fail to return a *complete*
+/// type, returns nullptr.
+static const clang::ObjCObjectType *
+GetCompleteObjCObjectType(clang::ASTContext *ast, QualType qual_type,
+                          bool allow_completion) {
+  assert(qual_type->isObjCObjectType());
+  assert(ast);
+
+  const clang::ObjCObjectType *objc_class_type =
+      llvm::cast<clang::ObjCObjectType>(qual_type);
+
+  clang::ObjCInterfaceDecl *class_interface_decl =
+      objc_class_type->getInterface();
+  // We currently can't complete objective C types through the newly added
+  // ASTContext because it only supports TagDecl objects right now...
+  if (!class_interface_decl)
+    return objc_class_type;
+
+  // Already complete, nothing to be done.
+  if (class_interface_decl->getDefinition())
+    return objc_class_type;
+
+  if (!allow_completion)
+    return nullptr;
+
+  // No definition but can't complete it, error out.
+  if (!class_interface_decl->hasExternalLexicalStorage())
+    return nullptr;
+
+  // We can't complete the type without an external source.
+  clang::ExternalASTSource *external_ast_source = ast->getExternalSource();
+  if (!external_ast_source)
+    return nullptr;
+
+  external_ast_source->CompleteType(class_interface_decl);
+  return objc_class_type;
+}
+
 static bool GetCompleteQualType(clang::ASTContext *ast,
                                 clang::QualType qual_type,
                                 bool allow_completion = true) {
@@ -2591,92 +2713,26 @@ static bool GetCompleteQualType(clang::ASTContext *ast,
                                  allow_completion);
   } break;
   case clang::Type::Record: {
-    clang::CXXRecordDecl *cxx_record_decl = qual_type->getAsCXXRecordDecl();
-    if (cxx_record_decl) {
-      if (cxx_record_decl->hasExternalLexicalStorage()) {
-        const bool is_complete = cxx_record_decl->isCompleteDefinition();
-        const bool fields_loaded =
-            cxx_record_decl->hasLoadedFieldsFromExternalStorage();
-        if (is_complete && fields_loaded)
-          return true;
+    if (const auto *RT =
+            GetCompleteRecordType(ast, qual_type, allow_completion))
+      return !RT->isIncompleteType();
 
-        if (!allow_completion)
-          return false;
-
-        // Call the field_begin() accessor to for it to use the external source
-        // to load the fields...
-        clang::ExternalASTSource *external_ast_source =
-            ast->getExternalSource();
-        if (external_ast_source) {
-          external_ast_source->CompleteType(cxx_record_decl);
-          if (cxx_record_decl->isCompleteDefinition()) {
-            cxx_record_decl->field_begin();
-            cxx_record_decl->setHasLoadedFieldsFromExternalStorage(true);
-          }
-        }
-      }
-    }
-    const clang::TagType *tag_type =
-        llvm::cast<clang::TagType>(qual_type.getTypePtr());
-    return !tag_type->isIncompleteType();
+    return false;
   } break;
 
   case clang::Type::Enum: {
-    const clang::TagType *tag_type =
-        llvm::dyn_cast<clang::TagType>(qual_type.getTypePtr());
-    if (tag_type) {
-      clang::TagDecl *tag_decl = tag_type->getDecl();
-      if (tag_decl) {
-        if (tag_decl->getDefinition())
-          return true;
+    if (const auto *ET = GetCompleteEnumType(ast, qual_type, allow_completion))
+      return !ET->isIncompleteType();
 
-        if (!allow_completion)
-          return false;
-
-        if (tag_decl->hasExternalLexicalStorage()) {
-          if (ast) {
-            clang::ExternalASTSource *external_ast_source =
-                ast->getExternalSource();
-            if (external_ast_source) {
-              external_ast_source->CompleteType(tag_decl);
-              return !tag_type->isIncompleteType();
-            }
-          }
-        }
-        return false;
-      }
-    }
-
+    return false;
   } break;
   case clang::Type::ObjCObject:
   case clang::Type::ObjCInterface: {
-    const clang::ObjCObjectType *objc_class_type =
-        llvm::dyn_cast<clang::ObjCObjectType>(qual_type);
-    if (objc_class_type) {
-      clang::ObjCInterfaceDecl *class_interface_decl =
-          objc_class_type->getInterface();
-      // We currently can't complete objective C types through the newly added
-      // ASTContext because it only supports TagDecl objects right now...
-      if (class_interface_decl) {
-        if (class_interface_decl->getDefinition())
-          return true;
+    if (const auto *OT =
+            GetCompleteObjCObjectType(ast, qual_type, allow_completion))
+      return !OT->isIncompleteType();
 
-        if (!allow_completion)
-          return false;
-
-        if (class_interface_decl->hasExternalLexicalStorage()) {
-          if (ast) {
-            clang::ExternalASTSource *external_ast_source =
-                ast->getExternalSource();
-            if (external_ast_source) {
-              external_ast_source->CompleteType(class_interface_decl);
-              return !objc_class_type->isIncompleteType();
-            }
-          }
-        }
-        return false;
-      }
-    }
+    return false;
   } break;
 
   case clang::Type::Attributed:
@@ -4688,11 +4744,11 @@ TypeSystemClang::GetBitSize(lldb::opaque_compiler_type_t type,
       ExecutionContext exe_ctx(exe_scope);
       Process *process = exe_ctx.GetProcessPtr();
       if (process) {
-        ObjCLanguageRuntime *objc_runtime = ObjCLanguageRuntime::Get(*process);
-        if (objc_runtime) {
-          uint64_t bit_size = 0;
-          if (objc_runtime->GetTypeBitSize(GetType(qual_type), bit_size))
-            return bit_size;
+        if (ObjCLanguageRuntime *objc_runtime =
+                ObjCLanguageRuntime::Get(*process)) {
+          if (std::optional<uint64_t> bit_size =
+                  objc_runtime->GetTypeBitSize(GetType(qual_type)))
+            return *bit_size;
         }
       } else {
         static bool g_printed = false;
@@ -5003,6 +5059,11 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
 
     case clang::BuiltinType::UnresolvedTemplate:
       break;
+
+    // AMD GPU builtin types.
+#define AMDGPU_TYPE(Name, Id, SingletonId) case clang::BuiltinType::Id:
+#include "clang/Basic/AMDGPUTypes.def"
+      break;
     }
     break;
   // All pointer types are represented as unsigned integer encodings. We may
@@ -5272,8 +5333,7 @@ TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
                                 bool omit_empty_base_classes,
                                 const ExecutionContext *exe_ctx) {
   if (!type)
-    return llvm::make_error<llvm::StringError>("invalid clang type",
-                                               llvm::inconvertibleErrorCode());
+    return llvm::createStringError("invalid clang type");
 
   uint32_t num_children = 0;
   clang::QualType qual_type(RemoveWrappingTypes(GetQualType(type)));
@@ -5331,9 +5391,8 @@ TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
       num_children += std::distance(record_decl->field_begin(),
                                record_decl->field_end());
     } else
-      return llvm::make_error<llvm::StringError>(
-          "incomplete type \"" + GetDisplayTypeName(type).GetString() + "\"",
-          llvm::inconvertibleErrorCode());
+      return llvm::createStringError(
+          "incomplete type \"" + GetDisplayTypeName(type).GetString() + "\"");
     break;
   case clang::Type::ObjCObject:
   case clang::Type::ObjCInterface:
@@ -6130,7 +6189,7 @@ uint32_t TypeSystemClang::GetNumPointeeChildren(clang::QualType type) {
   return 0;
 }
 
-CompilerType TypeSystemClang::GetChildCompilerTypeAtIndex(
+llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
     lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
     bool transparent_pointers, bool omit_empty_base_classes,
     bool ignore_array_bounds, std::string &child_name,
@@ -6156,11 +6215,8 @@ CompilerType TypeSystemClang::GetChildCompilerTypeAtIndex(
 
   auto num_children_or_err =
       GetNumChildren(type, omit_empty_base_classes, exe_ctx);
-  if (!num_children_or_err) {
-    LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), num_children_or_err.takeError(),
-                    "{0}");
-    return {};
-  }
+  if (!num_children_or_err)
+    return num_children_or_err.takeError();
 
   const bool idx_is_valid = idx < *num_children_or_err;
   int32_t bit_offset;
@@ -6242,7 +6298,8 @@ CompilerType TypeSystemClang::GetChildCompilerTypeAtIndex(
             std::optional<uint64_t> size =
                 base_class_clang_type.GetBitSize(get_exe_scope());
             if (!size)
-              return {};
+              return llvm::createStringError("no size info for base class");
+
             uint64_t base_class_clang_type_bit_size = *size;
 
             // Base classes bit sizes should be a multiple of 8 bits in size
@@ -6274,7 +6331,8 @@ CompilerType TypeSystemClang::GetChildCompilerTypeAtIndex(
           std::optional<uint64_t> size =
               field_clang_type.GetByteSize(get_exe_scope());
           if (!size)
-            return {};
+            return llvm::createStringError("no size info for field");
+
           child_byte_size = *size;
           const uint32_t child_bit_size = child_byte_size * 8;
 
@@ -6692,7 +6750,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
               return child_indexes.size();
             child_indexes.pop_back();
 
-          } else if (field_name.equals(name)) {
+          } else if (field_name == name) {
             // We have to add on the number of base classes to this index!
             child_indexes.push_back(
                 child_idx + TypeSystemClang::GetNumBaseClasses(
@@ -6779,7 +6837,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
                  ivar_pos != ivar_end; ++ivar_pos, ++child_idx) {
               const clang::ObjCIvarDecl *ivar_decl = *ivar_pos;
 
-              if (ivar_decl->getName().equals(name_sref)) {
+              if (ivar_decl->getName() == name_sref) {
                 if ((!omit_empty_base_classes && superclass_interface_decl) ||
                     (omit_empty_base_classes &&
                      ObjCDeclHasIVars(superclass_interface_decl, true)))
@@ -6948,7 +7006,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
         for (field = record_decl->field_begin(),
             field_end = record_decl->field_end();
              field != field_end; ++field, ++child_idx) {
-          if (field->getName().equals(name))
+          if (field->getName() == name)
             return child_idx;
         }
       }
@@ -6975,7 +7033,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
                  ivar_pos != ivar_end; ++ivar_pos, ++child_idx) {
               const clang::ObjCIvarDecl *ivar_decl = *ivar_pos;
 
-              if (ivar_decl->getName().equals(name)) {
+              if (ivar_decl->getName() == name) {
                 if ((!omit_empty_base_classes && superclass_interface_decl) ||
                     (omit_empty_base_classes &&
                      ObjCDeclHasIVars(superclass_interface_decl, true)))
@@ -6986,7 +7044,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
             }
 
             if (superclass_interface_decl) {
-              if (superclass_interface_decl->getName().equals(name))
+              if (superclass_interface_decl->getName() == name)
                 return 0;
             }
           }
@@ -8581,8 +8639,13 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream &s,
   const clang::EnumDecl *enum_decl = enutype->getDecl();
   assert(enum_decl);
   lldb::offset_t offset = byte_offset;
-  const uint64_t enum_svalue = data.GetMaxS64Bitfield(
-      &offset, byte_size, bitfield_bit_size, bitfield_bit_offset);
+  bool qual_type_is_signed = qual_type->isSignedIntegerOrEnumerationType();
+  const uint64_t enum_svalue =
+      qual_type_is_signed
+          ? data.GetMaxS64Bitfield(&offset, byte_size, bitfield_bit_size,
+                                   bitfield_bit_offset)
+          : data.GetMaxU64Bitfield(&offset, byte_size, bitfield_bit_size,
+                                   bitfield_bit_offset);
   bool can_be_bitfield = true;
   uint64_t covered_bits = 0;
   int num_enumerators = 0;
@@ -8593,17 +8656,25 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream &s,
   // every enumerator is either a one bit value or a superset of the previous
   // enumerators. Also 0 doesn't make sense when the enumerators are used as
   // flags.
-  for (auto *enumerator : enum_decl->enumerators()) {
-    uint64_t val = enumerator->getInitVal().getSExtValue();
-    val = llvm::SignExtend64(val, 8*byte_size);
-    if (llvm::popcount(val) != 1 && (val & ~covered_bits) != 0)
-      can_be_bitfield = false;
-    covered_bits |= val;
-    ++num_enumerators;
-    if (val == enum_svalue) {
-      // Found an exact match, that's all we need to do.
-      s.PutCString(enumerator->getNameAsString());
-      return true;
+  clang::EnumDecl::enumerator_range enumerators = enum_decl->enumerators();
+  if (enumerators.empty())
+    can_be_bitfield = false;
+  else {
+    for (auto *enumerator : enumerators) {
+      llvm::APSInt init_val = enumerator->getInitVal();
+      uint64_t val = qual_type_is_signed ? init_val.getSExtValue()
+                                         : init_val.getZExtValue();
+      if (qual_type_is_signed)
+        val = llvm::SignExtend64(val, 8 * byte_size);
+      if (llvm::popcount(val) != 1 && (val & ~covered_bits) != 0)
+        can_be_bitfield = false;
+      covered_bits |= val;
+      ++num_enumerators;
+      if (val == enum_svalue) {
+        // Found an exact match, that's all we need to do.
+        s.PutCString(enumerator->getNameAsString());
+        return true;
+      }
     }
   }
 
@@ -8615,10 +8686,17 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream &s,
   // No exact match, but we don't think this is a bitfield. Print the value as
   // decimal.
   if (!can_be_bitfield) {
-    if (qual_type->isSignedIntegerOrEnumerationType())
+    if (qual_type_is_signed)
       s.Printf("%" PRIi64, enum_svalue);
     else
       s.Printf("%" PRIu64, enum_uvalue);
+    return true;
+  }
+
+  if (!enum_uvalue) {
+    // This is a bitfield enum, but the value is 0 so we know it won't match
+    // with any of the enumerators.
+    s.Printf("0x%" PRIx64, enum_uvalue);
     return true;
   }
 
@@ -8646,7 +8724,8 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream &s,
       s.PutCString(" | ");
   }
 
-  // If there is a remainder that is not covered by the value, print it as hex.
+  // If there is a remainder that is not covered by the value, print it as
+  // hex.
   if (remaining_value)
     s.Printf("0x%" PRIx64, remaining_value);
 
@@ -9115,10 +9194,8 @@ static CompilerContextKind GetCompilerKind(clang::Decl::Kind clang_kind,
     if (decl_ctx) {
       if (decl_ctx->isFunctionOrMethod())
         return CompilerContextKind::Function;
-      else if (decl_ctx->isRecord())
-        return (CompilerContextKind)((uint16_t)CompilerContextKind::Class |
-                                     (uint16_t)CompilerContextKind::Struct |
-                                     (uint16_t)CompilerContextKind::Union);
+      if (decl_ctx->isRecord())
+        return CompilerContextKind::ClassOrStruct | CompilerContextKind::Union;
     }
     break;
   }
@@ -9231,15 +9308,14 @@ std::vector<CompilerDecl> TypeSystemClang::DeclContextFindDeclByName(
               if (clang::NamedDecl *nd =
                       llvm::dyn_cast<clang::NamedDecl>(target)) {
                 IdentifierInfo *ii = nd->getIdentifier();
-                if (ii != nullptr &&
-                    ii->getName().equals(name.AsCString(nullptr)))
+                if (ii != nullptr && ii->getName() == name.AsCString(nullptr))
                   found_decls.push_back(GetCompilerDecl(nd));
               }
             }
           } else if (clang::NamedDecl *nd =
                          llvm::dyn_cast<clang::NamedDecl>(child)) {
             IdentifierInfo *ii = nd->getIdentifier();
-            if (ii != nullptr && ii->getName().equals(name.AsCString(nullptr)))
+            if (ii != nullptr && ii->getName() == name.AsCString(nullptr))
               found_decls.push_back(GetCompilerDecl(nd));
           }
         }
@@ -9349,7 +9425,7 @@ uint32_t TypeSystemClang::CountDeclLevels(clang::DeclContext *frame_decl_ctx,
                 // Check names.
                 IdentifierInfo *ii = nd->getIdentifier();
                 if (ii == nullptr ||
-                    !ii->getName().equals(child_name->AsCString(nullptr)))
+                    ii->getName() != child_name->AsCString(nullptr))
                   continue;
                 // Check types, if one was provided.
                 if (child_type) {
@@ -9429,14 +9505,24 @@ bool TypeSystemClang::DeclContextIsContainedInLookup(
   auto *decl_ctx = (clang::DeclContext *)opaque_decl_ctx;
   auto *other = (clang::DeclContext *)other_opaque_decl_ctx;
 
+  // If we have an inline or anonymous namespace, then the lookup of the
+  // parent context also includes those namespace contents.
+  auto is_transparent_lookup_allowed = [](clang::DeclContext *DC) {
+    if (DC->isInlineNamespace())
+      return true;
+
+    if (auto const *NS = dyn_cast<NamespaceDecl>(DC))
+      return NS->isAnonymousNamespace();
+
+    return false;
+  };
+
   do {
     // A decl context always includes its own contents in its lookup.
     if (decl_ctx == other)
       return true;
-
-    // If we have an inline namespace, then the lookup of the parent context
-    // also includes the inline namespace contents.
-  } while (other->isInlineNamespace() && (other = other->getParent()));
+  } while (is_transparent_lookup_allowed(other) &&
+           (other = other->getParent()));
 
   return false;
 }

@@ -392,7 +392,7 @@ TEST(ClangdServerTest, SearchLibDir) {
   ErrorCheckingCallbacks DiagConsumer;
   MockCompilationDatabase CDB;
   CDB.ExtraClangFlags.insert(CDB.ExtraClangFlags.end(),
-                             {"-xc++", "-target", "x86_64-linux-unknown",
+                             {"-xc++", "--target=x86_64-unknown-linux-gnu",
                               "-m64", "--gcc-toolchain=/randomusr",
                               "-stdlib=libstdc++"});
   ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &DiagConsumer);

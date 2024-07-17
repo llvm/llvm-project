@@ -225,7 +225,7 @@ namespace clang {
 
       ArrayRef<GlobalDeclID> LazySpecializations;
       if (auto *LS = Common->LazySpecializations)
-        LazySpecializations = llvm::ArrayRef(LS + 1, LS[0].get());
+        LazySpecializations = llvm::ArrayRef(LS + 1, LS[0].getRawValue());
 
       // Add a slot to the record for the number of specializations.
       unsigned I = Record.size();
@@ -1383,7 +1383,7 @@ void ASTDeclWriter::VisitNamespaceDecl(NamespaceDecl *D) {
   Record.AddSourceLocation(D->getBeginLoc());
   Record.AddSourceLocation(D->getRBraceLoc());
 
-  if (D->isOriginalNamespace())
+  if (D->isFirstDecl())
     Record.AddDeclRef(D->getAnonymousNamespace());
   Code = serialization::DECL_NAMESPACE;
 
@@ -1733,7 +1733,7 @@ void ASTDeclWriter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   if (Writer.isGeneratingReducedBMI()) {
     auto Name = Context.DeclarationNames.getCXXDeductionGuideName(D);
     for (auto *DG : D->getDeclContext()->noload_lookup(Name))
-      Writer.GetDeclRef(DG);
+      Writer.GetDeclRef(DG->getCanonicalDecl());
   }
 
   Code = serialization::DECL_CLASS_TEMPLATE;
@@ -1899,7 +1899,7 @@ void ASTDeclWriter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
                         !D->defaultArgumentWasInherited();
   Record.push_back(OwnsDefaultArg);
   if (OwnsDefaultArg)
-    Record.AddTypeSourceInfo(D->getDefaultArgumentInfo());
+    Record.AddTemplateArgumentLoc(D->getDefaultArgument());
 
   if (!TC && !OwnsDefaultArg &&
       D->getDeclContext() == D->getLexicalDeclContext() &&
@@ -1941,7 +1941,7 @@ void ASTDeclWriter::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
                           !D->defaultArgumentWasInherited();
     Record.push_back(OwnsDefaultArg);
     if (OwnsDefaultArg)
-      Record.AddStmt(D->getDefaultArgument());
+      Record.AddTemplateArgumentLoc(D->getDefaultArgument());
     Code = serialization::DECL_NON_TYPE_TEMPLATE_PARM;
   }
 }
@@ -2828,7 +2828,7 @@ void ASTWriter::WriteDecl(ASTContext &Context, Decl *D) {
   SourceLocationEncoding::RawLocEncoding RawLoc =
       getRawSourceLocationEncoding(getAdjustedLocation(Loc));
 
-  unsigned Index = ID.get() - FirstDeclID.get();
+  unsigned Index = ID.getRawValue() - FirstDeclID.getRawValue();
   if (DeclOffsets.size() == Index)
     DeclOffsets.emplace_back(RawLoc, Offset, DeclTypesBlockStartOffset);
   else if (DeclOffsets.size() < Index) {

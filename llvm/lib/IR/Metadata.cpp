@@ -1196,10 +1196,10 @@ MDNode *MDNode::mergeDirectCallProfMetadata(MDNode *A, MDNode *B,
   StringRef AProfName = AMDS->getString();
   StringRef BProfName = BMDS->getString();
   if (AProfName == "branch_weights" && BProfName == "branch_weights") {
-    ConstantInt *AInstrWeight =
-        mdconst::dyn_extract<ConstantInt>(A->getOperand(1));
-    ConstantInt *BInstrWeight =
-        mdconst::dyn_extract<ConstantInt>(B->getOperand(1));
+    ConstantInt *AInstrWeight = mdconst::dyn_extract<ConstantInt>(
+        A->getOperand(getBranchWeightOffset(A)));
+    ConstantInt *BInstrWeight = mdconst::dyn_extract<ConstantInt>(
+        B->getOperand(getBranchWeightOffset(B)));
     assert(AInstrWeight && BInstrWeight && "verified by LLVM verifier");
     return MDNode::get(Ctx,
                        {MDHelper.createString("branch_weights"),
@@ -1590,7 +1590,7 @@ void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
   if (!Value::hasMetadata())
     return; // Nothing to remove!
 
-  SmallSet<unsigned, 4> KnownSet;
+  SmallSet<unsigned, 32> KnownSet;
   KnownSet.insert(KnownIDs.begin(), KnownIDs.end());
 
   // A DIAssignID attachment is debug metadata, don't drop it.

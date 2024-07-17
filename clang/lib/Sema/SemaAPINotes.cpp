@@ -17,6 +17,8 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaSwift.h"
+#include <stack>
 
 using namespace clang;
 
@@ -269,7 +271,8 @@ static void ProcessAPINotes(Sema &S, Decl *D,
               ASTAllocateString(S.Context, Info.UnavailableMsg),
               /*Strict=*/false,
               /*Replacement=*/StringRef(),
-              /*Priority=*/Sema::AP_Explicit);
+              /*Priority=*/Sema::AP_Explicit,
+              /*Environment=*/nullptr);
         },
         [](const Decl *D) {
           return llvm::find_if(D->attrs(), [](const Attr *next) -> bool {
@@ -302,8 +305,8 @@ static void ProcessAPINotes(Sema &S, Decl *D,
                         SourceLocation(), nullptr, nullptr, nullptr,
                         ParsedAttr::Form::GNU());
 
-          if (!S.DiagnoseSwiftName(D, Info.SwiftName, D->getLocation(), *SNA,
-                                   /*IsAsync=*/false))
+          if (!S.Swift().DiagnoseName(D, Info.SwiftName, D->getLocation(), *SNA,
+                                      /*IsAsync=*/false))
             return nullptr;
 
           return new (S.Context)
@@ -671,7 +674,7 @@ static void ProcessAPINotes(Sema &S, TypedefNameDecl *D,
 
 /// Process API notes for an Objective-C class or protocol.
 static void ProcessAPINotes(Sema &S, ObjCContainerDecl *D,
-                            const api_notes::ObjCContextInfo &Info,
+                            const api_notes::ContextInfo &Info,
                             VersionedInfoMetadata Metadata) {
   // Handle common type information.
   ProcessAPINotes(S, D, static_cast<const api_notes::CommonTypeInfo &>(Info),
@@ -680,7 +683,7 @@ static void ProcessAPINotes(Sema &S, ObjCContainerDecl *D,
 
 /// Process API notes for an Objective-C class.
 static void ProcessAPINotes(Sema &S, ObjCInterfaceDecl *D,
-                            const api_notes::ObjCContextInfo &Info,
+                            const api_notes::ContextInfo &Info,
                             VersionedInfoMetadata Metadata) {
   if (auto AsNonGeneric = Info.getSwiftImportAsNonGeneric()) {
     handleAPINotedAttribute<SwiftImportAsNonGenericAttr>(

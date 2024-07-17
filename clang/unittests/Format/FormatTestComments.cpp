@@ -1087,6 +1087,36 @@ TEST_F(FormatTestComments, KeepsLevelOfCommentBeforePPDirective) {
                Style);
 }
 
+TEST_F(FormatTestComments, CommentsBetweenUnbracedBodyAndPPDirective) {
+  verifyFormat("{\n"
+               "  if (a)\n"
+               "    f(); // comment\n"
+               "#define A\n"
+               "}");
+
+  verifyFormat("{\n"
+               "  while (a)\n"
+               "    f();\n"
+               "// comment\n"
+               "#define A\n"
+               "}");
+
+  verifyNoChange("{\n"
+                 "  if (a)\n"
+                 "    f();\n"
+                 "  // comment\n"
+                 "#define A\n"
+                 "}");
+
+  verifyNoChange("{\n"
+                 "  while (a)\n"
+                 "    if (b)\n"
+                 "      f();\n"
+                 "  // comment\n"
+                 "#define A\n"
+                 "}");
+}
+
 TEST_F(FormatTestComments, SplitsLongLinesInComments) {
   // FIXME: Do we need to fix up the "  */" at the end?
   // It doesn't look like any of our current logic triggers this.
@@ -3115,6 +3145,23 @@ TEST_F(FormatTestComments, AlignTrailingCommentsLeave) {
                    "int bar = 1234;       // This is a very long comment\n"
                    "          // which is wrapped arround.",
                    Style));
+
+  Style = getLLVMStyle();
+  Style.AlignTrailingComments.Kind = FormatStyle::TCAS_Leave;
+  Style.TabWidth = 2;
+  Style.UseTab = FormatStyle::UT_ForIndentation;
+  verifyNoChange("{\n"
+                 "\t// f\n"
+                 "\tf();\n"
+                 "\n"
+                 "\t// g\n"
+                 "\tg();\n"
+                 "\t{\n"
+                 "\t\t// h();  // h\n"
+                 "\t\tfoo();  // foo\n"
+                 "\t}\n"
+                 "}",
+                 Style);
 }
 
 TEST_F(FormatTestComments, DontAlignNamespaceComments) {

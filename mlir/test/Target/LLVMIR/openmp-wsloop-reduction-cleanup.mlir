@@ -30,7 +30,7 @@
     %loop_ub = llvm.mlir.constant(9 : i32) : i32
     %loop_lb = llvm.mlir.constant(0 : i32) : i32
     %loop_step = llvm.mlir.constant(1 : i32) : i32 
-    omp.wsloop byref reduction(@add_reduction_i_32 %1 -> %arg0 : !llvm.ptr, @add_reduction_i_32 %2 -> %arg1 : !llvm.ptr) {
+    omp.wsloop reduction(byref @add_reduction_i_32 %1 -> %arg0 : !llvm.ptr, byref @add_reduction_i_32 %2 -> %arg1 : !llvm.ptr) {
       omp.loop_nest (%loop_cnt) : i32 = (%loop_lb) to (%loop_ub) inclusive step (%loop_step) {
         llvm.store %0, %arg0 : i32, !llvm.ptr
         llvm.store %0, %arg1 : i32, !llvm.ptr

@@ -1,5 +1,7 @@
 # RUN: llvm-mc -triple=riscv64 -show-encoding --mattr=+v %s \
 # RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
+# RUN: llvm-mc -triple=riscv64 -show-encoding --mattr=+zve32x %s 2>&1 \
+# RUN:        | FileCheck %s --check-prefix=CHECK-ZVE32X
 # RUN: not llvm-mc -triple=riscv64 -show-encoding %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 # RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+v %s \
@@ -71,18 +73,21 @@ vsetvli a2, a0, e32, m8, ta, ma
 
 vsetvli a2, a0, e32, mf2, ta, ma
 # CHECK-INST: vsetvli a2, a0, e32, mf2, ta, ma
+# CHECK-ZVE32X: :[[#@LINE-2]]:17: warning: use of vtype encodings with SEW > 16 and LMUL == mf2 may not be compatible with all RVV implementations{{$}}
 # CHECK-ENCODING: [0x57,0x76,0x75,0x0d]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 0d757657 <unknown>
 
 vsetvli a2, a0, e32, mf4, ta, ma
 # CHECK-INST: vsetvli a2, a0, e32, mf4, ta, ma
+# CHECK-ZVE32X: :[[#@LINE-2]]:17: warning: use of vtype encodings with SEW > 8 and LMUL == mf4 may not be compatible with all RVV implementations{{$}}
 # CHECK-ENCODING: [0x57,0x76,0x65,0x0d]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 0d657657 <unknown>
 
 vsetvli a2, a0, e32, mf8, ta, ma
 # CHECK-INST: vsetvli a2, a0, e32, mf8, ta, ma
+# CHECK-ZVE32X: :[[#@LINE-2]]:22: warning: use of vtype encodings with LMUL < SEWMIN/ELEN == mf4 is reserved{{$}}
 # CHECK-ENCODING: [0x57,0x76,0x55,0x0d]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 0d557657 <unknown>

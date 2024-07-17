@@ -144,6 +144,14 @@ def getSuitableClangTidy(cfg):
 # fmt: off
 DEFAULT_PARAMETERS = [
     Parameter(
+        name="compiler",
+        type=str,
+        help="The path of the compiler to use for testing.",
+        actions=lambda cxx: [
+            AddSubstitution("%{cxx}", shlex.quote(cxx)),
+        ],
+    ),
+    Parameter(
         name="target_triple",
         type=str,
         help="The target triple to compile the test suite for. This must be "
@@ -257,6 +265,19 @@ DEFAULT_PARAMETERS = [
         ),
     ),
     Parameter(
+        name="using_system_stdlib",
+        choices=[True, False],
+        type=bool,
+        default=False,
+        help="""Whether the Standard Library being tested is the one that shipped with the system by default.
+
+                This is different from the 'stdlib' parameter, which describes the flavor of libc++ being
+                tested. 'using_system_stdlib' describes whether the target system passed with 'target_triple'
+                also corresponds to the version of the library being tested.
+             """,
+        actions=lambda is_system: [AddFeature("stdlib=system")] if is_system else [],
+    ),
+    Parameter(
         name="enable_warnings",
         choices=[True, False],
         type=bool,
@@ -353,11 +374,12 @@ DEFAULT_PARAMETERS = [
     ),
     Parameter(
         name="hardening_mode",
-        choices=["none", "fast", "extensive", "debug"],
+        choices=["none", "fast", "extensive", "debug", "undefined"],
         type=str,
-        default="none",
+        default="undefined",
         help="Whether to enable one of the hardening modes when compiling the test suite. This is only "
-        "meaningful when running the tests against libc++.",
+        "meaningful when running the tests against libc++. By default, no hardening mode is specified "
+        "so the default hardening mode of the standard library will be used (if any).",
         actions=lambda hardening_mode: filter(
             None,
             [
@@ -365,7 +387,7 @@ DEFAULT_PARAMETERS = [
                 AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST")      if hardening_mode == "fast" else None,
                 AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE") if hardening_mode == "extensive" else None,
                 AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG")     if hardening_mode == "debug" else None,
-                AddFeature("libcpp-hardening-mode={}".format(hardening_mode)),
+                AddFeature("libcpp-hardening-mode={}".format(hardening_mode))               if hardening_mode != "undefined" else None,
             ],
         ),
     ),

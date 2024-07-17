@@ -34,6 +34,9 @@ struct overloaded : Ts... {
   using Ts::operator()...;
 };
 
+template <class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
+
 void test_overload_ambiguity() {
   using V = std::variant<float, long, std::string>;
   using namespace std::string_literals;

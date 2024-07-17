@@ -279,6 +279,55 @@ transform.sequence failures(propagate) {
 
 // -----
 
+transform.sequence failures(propagate) {
+  ^bb0(%root: !transform.any_op):
+  %op = test_produce_self_handle_or_forward_operand : () -> !transform.any_op
+  // expected-error @below {{op expects the same number of targets as the body has block arguments}}
+  transform.foreach %op : !transform.any_op -> !transform.any_op, !transform.any_value {
+  ^bb1(%op_arg: !transform.any_op, %val_arg: !transform.any_value):
+    transform.yield %op_arg, %val_arg : !transform.any_op, !transform.any_value
+  }
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+  ^bb0(%root: !transform.any_op):
+  %op = test_produce_self_handle_or_forward_operand : () -> !transform.any_op
+  // expected-error @below {{op expects co-indexed targets and the body's block arguments to have the same op/value/param type}}
+  transform.foreach %op : !transform.any_op -> !transform.any_value {
+  ^bb1(%val_arg: !transform.any_value):
+    transform.yield %val_arg : !transform.any_value
+  }
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+  ^bb0(%root: !transform.any_op):
+  %op = test_produce_self_handle_or_forward_operand : () -> !transform.any_op
+  // expected-error @below {{op expects the same number of results as the yield terminator has operands}}
+  transform.foreach %op : !transform.any_op -> !transform.any_op, !transform.any_op {
+  ^bb1(%arg_op: !transform.any_op):
+    transform.yield %arg_op : !transform.any_op
+  }
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+  ^bb0(%root: !transform.any_op):
+  %op = test_produce_self_handle_or_forward_operand : () -> !transform.any_op
+  %val = transform.test_produce_value_handle_to_self_operand %op : (!transform.any_op) -> !transform.any_value
+  // expected-error @below {{expects co-indexed results and yield operands to have the same op/value/param type}}
+  transform.foreach %op, %val : !transform.any_op, !transform.any_value -> !transform.any_op, !transform.any_value {
+  ^bb1(%op_arg: !transform.any_op, %val_arg: !transform.any_value):
+    transform.yield %val_arg, %op_arg : !transform.any_value, !transform.any_op
+  }
+}
+
+// -----
+
 transform.sequence failures(suppress) {
 ^bb0(%arg0: !transform.any_op):
   // expected-error @below {{TransformOpInterface requires memory effects on operands to be specified}}

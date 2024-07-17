@@ -39,6 +39,10 @@ struct AllocateClauseOps {
   llvm::SmallVector<Value> allocatorVars, allocateVars;
 };
 
+struct CancelDirectiveNameClauseOps {
+  ClauseCancellationConstructTypeAttr cancelDirectiveNameAttr;
+};
+
 struct CollapseClauseOps {
   llvm::SmallVector<Value> loopLBVar, loopUBVar, loopStepVar;
 };
@@ -46,6 +50,10 @@ struct CollapseClauseOps {
 struct CopyprivateClauseOps {
   llvm::SmallVector<Value> copyprivateVars;
   llvm::SmallVector<Attribute> copyprivateFuncs;
+};
+
+struct CriticalNameClauseOps {
+  StringAttr criticalNameAttr;
 };
 
 struct DependClauseOps {
@@ -73,6 +81,10 @@ struct DoacrossClauseOps {
   IntegerAttr doacrossNumLoopsAttr;
 };
 
+struct FilterClauseOps {
+  Value filteredThreadIdVar;
+};
+
 struct FinalClauseOps {
   Value finalVar;
 };
@@ -84,6 +96,7 @@ struct GrainsizeClauseOps {
 struct HasDeviceAddrClauseOps {
   llvm::SmallVector<Value> hasDeviceAddrVars;
 };
+
 struct HintClauseOps {
   IntegerAttr hintAttr;
 };
@@ -94,6 +107,7 @@ struct IfClauseOps {
 
 struct InReductionClauseOps {
   llvm::SmallVector<Value> inReductionVars;
+  llvm::SmallVector<bool> inReductionVarsByRef;
   llvm::SmallVector<Attribute> inReductionDeclSymbols;
 };
 
@@ -115,10 +129,6 @@ struct MapClauseOps {
 
 struct MergeableClauseOps {
   UnitAttr mergeableAttr;
-};
-
-struct NameClauseOps {
-  StringAttr nameAttr;
 };
 
 struct NogroupClauseOps {
@@ -147,6 +157,7 @@ struct NumThreadsClauseOps {
 
 struct OrderClauseOps {
   ClauseOrderKindAttr orderAttr;
+  OrderModifierAttr orderModAttr;
 };
 
 struct OrderedClauseOps {
@@ -177,8 +188,8 @@ struct ProcBindClauseOps {
 
 struct ReductionClauseOps {
   llvm::SmallVector<Value> reductionVars;
+  llvm::SmallVector<bool> reductionVarsByRef;
   llvm::SmallVector<Attribute> reductionDeclSymbols;
-  UnitAttr reductionByRefAttr;
 };
 
 struct SafelenClauseOps {
@@ -198,6 +209,7 @@ struct SimdlenClauseOps {
 
 struct TaskReductionClauseOps {
   llvm::SmallVector<Value> taskReductionVars;
+  llvm::SmallVector<bool> taskReductionVarsByRef;
   llvm::SmallVector<Attribute> taskReductionDeclSymbols;
 };
 
@@ -209,8 +221,12 @@ struct UntiedClauseOps {
   UnitAttr untiedAttr;
 };
 
-struct UseDeviceClauseOps {
-  llvm::SmallVector<Value> useDevicePtrVars, useDeviceAddrVars;
+struct UseDeviceAddrClauseOps {
+  llvm::SmallVector<Value> useDeviceAddrVars;
+};
+
+struct UseDevicePtrClauseOps {
+  llvm::SmallVector<Value> useDevicePtrVars;
 };
 
 //===----------------------------------------------------------------------===//
@@ -225,7 +241,13 @@ template <typename... Mixins>
 struct Clauses : public Mixins... {};
 } // namespace detail
 
-using CriticalClauseOps = detail::Clauses<HintClauseOps, NameClauseOps>;
+using CancelClauseOps =
+    detail::Clauses<CancelDirectiveNameClauseOps, IfClauseOps>;
+
+using CancellationPointClauseOps =
+    detail::Clauses<CancelDirectiveNameClauseOps>;
+
+using CriticalClauseOps = detail::Clauses<CriticalNameClauseOps, HintClauseOps>;
 
 // TODO `indirect` clause.
 using DeclareTargetClauseOps = detail::Clauses<DeviceTypeClauseOps>;
@@ -236,8 +258,7 @@ using DistributeClauseOps =
 
 using LoopNestClauseOps = detail::Clauses<CollapseClauseOps, LoopRelatedOps>;
 
-// TODO `filter` clause.
-using MaskedClauseOps = detail::Clauses<>;
+using MaskedClauseOps = detail::Clauses<FilterClauseOps>;
 
 using OrderedOpClauseOps = detail::Clauses<DoacrossClauseOps>;
 
@@ -264,10 +285,11 @@ using TargetClauseOps =
     detail::Clauses<AllocateClauseOps, DependClauseOps, DeviceClauseOps,
                     HasDeviceAddrClauseOps, IfClauseOps, InReductionClauseOps,
                     IsDevicePtrClauseOps, MapClauseOps, NowaitClauseOps,
-                    PrivateClauseOps, ReductionClauseOps, ThreadLimitClauseOps>;
+                    PrivateClauseOps, ThreadLimitClauseOps>;
 
-using TargetDataClauseOps = detail::Clauses<DeviceClauseOps, IfClauseOps,
-                                            MapClauseOps, UseDeviceClauseOps>;
+using TargetDataClauseOps =
+    detail::Clauses<DeviceClauseOps, IfClauseOps, MapClauseOps,
+                    UseDeviceAddrClauseOps, UseDevicePtrClauseOps>;
 
 using TargetEnterExitUpdateDataClauseOps =
     detail::Clauses<DependClauseOps, DeviceClauseOps, IfClauseOps, MapClauseOps,

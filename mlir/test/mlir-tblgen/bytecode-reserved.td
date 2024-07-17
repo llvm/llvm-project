@@ -2,7 +2,7 @@
 
 include "mlir/IR/BuiltinDialectBytecode.td"
 
-// CHECK static ::mlir::Type readIntegerType
+// CHECK: static ::mlir::Type readIntegerType
 
 def TestDialectTypes : DialectTypes<"Test"> {
 // CHECK: static Type readType

@@ -1592,6 +1592,67 @@ m_FCmp(FCmpInst::Predicate &Pred, const LHS &L, const RHS &R) {
   return CmpClass_match<LHS, RHS, FCmpInst, FCmpInst::Predicate>(Pred, L, R);
 }
 
+template <typename LHS, typename RHS>
+inline CmpClass_match<LHS, RHS, CmpInst, CmpInst::Predicate>
+m_Cmp(const LHS &L, const RHS &R) {
+  CmpInst::Predicate Unused;
+  return CmpClass_match<LHS, RHS, CmpInst, CmpInst::Predicate>(Unused, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate>
+m_ICmp(const LHS &L, const RHS &R) {
+  ICmpInst::Predicate Unused;
+  return CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate>(Unused, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline CmpClass_match<LHS, RHS, FCmpInst, FCmpInst::Predicate>
+m_FCmp(const LHS &L, const RHS &R) {
+  FCmpInst::Predicate Unused;
+  return CmpClass_match<LHS, RHS, FCmpInst, FCmpInst::Predicate>(Unused, L, R);
+}
+
+// Same as CmpClass, but instead of saving Pred as out output variable, match a
+// specific input pred for equality.
+template <typename LHS_t, typename RHS_t, typename Class, typename PredicateTy>
+struct SpecificCmpClass_match {
+  const PredicateTy Predicate;
+  LHS_t L;
+  RHS_t R;
+
+  SpecificCmpClass_match(PredicateTy Pred, const LHS_t &LHS, const RHS_t &RHS)
+      : Predicate(Pred), L(LHS), R(RHS) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *I = dyn_cast<Class>(V))
+      return I->getPredicate() == Predicate && L.match(I->getOperand(0)) &&
+             R.match(I->getOperand(1));
+    return false;
+  }
+};
+
+template <typename LHS, typename RHS>
+inline SpecificCmpClass_match<LHS, RHS, CmpInst, CmpInst::Predicate>
+m_SpecificCmp(CmpInst::Predicate MatchPred, const LHS &L, const RHS &R) {
+  return SpecificCmpClass_match<LHS, RHS, CmpInst, CmpInst::Predicate>(
+      MatchPred, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline SpecificCmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate>
+m_SpecificICmp(ICmpInst::Predicate MatchPred, const LHS &L, const RHS &R) {
+  return SpecificCmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate>(
+      MatchPred, L, R);
+}
+
+template <typename LHS, typename RHS>
+inline SpecificCmpClass_match<LHS, RHS, FCmpInst, FCmpInst::Predicate>
+m_SpecificFCmp(FCmpInst::Predicate MatchPred, const LHS &L, const RHS &R) {
+  return SpecificCmpClass_match<LHS, RHS, FCmpInst, FCmpInst::Predicate>(
+      MatchPred, L, R);
+}
+
 //===----------------------------------------------------------------------===//
 // Matchers for instructions with a given opcode and number of operands.
 //
@@ -1948,8 +2009,8 @@ m_IntToPtr(const OpTy &Op) {
 
 /// Matches Trunc.
 template <typename OpTy>
-inline CastOperator_match<OpTy, Instruction::Trunc> m_Trunc(const OpTy &Op) {
-  return CastOperator_match<OpTy, Instruction::Trunc>(Op);
+inline CastInst_match<OpTy, TruncInst> m_Trunc(const OpTy &Op) {
+  return CastInst_match<OpTy, TruncInst>(Op);
 }
 
 /// Matches trunc nuw.
@@ -1967,7 +2028,7 @@ m_NSWTrunc(const OpTy &Op) {
 }
 
 template <typename OpTy>
-inline match_combine_or<CastOperator_match<OpTy, Instruction::Trunc>, OpTy>
+inline match_combine_or<CastInst_match<OpTy, TruncInst>, OpTy>
 m_TruncOrSelf(const OpTy &Op) {
   return m_CombineOr(m_Trunc(Op), Op);
 }
@@ -2309,6 +2370,22 @@ m_UnordFMin(const LHS &L, const RHS &R) {
   return MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>(L, R);
 }
 
+/// Matches a 'Not' as 'xor V, -1' or 'xor -1, V'.
+/// NOTE: we first match the 'Not' (by matching '-1'),
+/// and only then match the inner matcher!
+template <typename ValTy>
+inline BinaryOp_match<cst_pred_ty<is_all_ones>, ValTy, Instruction::Xor, true>
+m_Not(const ValTy &V) {
+  return m_c_Xor(m_AllOnes(), V);
+}
+
+template <typename ValTy>
+inline BinaryOp_match<cst_pred_ty<is_all_ones, false>, ValTy, Instruction::Xor,
+                      true>
+m_NotForbidPoison(const ValTy &V) {
+  return m_c_Xor(m_AllOnesForbidPoison(), V);
+}
+
 //===----------------------------------------------------------------------===//
 // Matchers for overflow check patterns: e.g. (a + b) u< a, (a ^ -1) <u b
 // Note that S might be matched to other instructions than AddInst.
@@ -2343,13 +2420,13 @@ struct UAddWithOverflow_match {
         return L.match(AddLHS) && R.match(AddRHS) && S.match(ICmpRHS);
 
     Value *Op1;
-    auto XorExpr = m_OneUse(m_Xor(m_Value(Op1), m_AllOnes()));
-    // (a ^ -1) <u b
+    auto XorExpr = m_OneUse(m_Not(m_Value(Op1)));
+    // (~a) <u b
     if (Pred == ICmpInst::ICMP_ULT) {
       if (XorExpr.match(ICmpLHS))
         return L.match(Op1) && R.match(ICmpRHS) && S.match(ICmpLHS);
     }
-    //  b > u (a ^ -1)
+    //  b > u (~a)
     if (Pred == ICmpInst::ICMP_UGT) {
       if (XorExpr.match(ICmpRHS))
         return L.match(Op1) && R.match(ICmpLHS) && S.match(ICmpRHS);
@@ -2601,6 +2678,14 @@ m_c_ICmp(ICmpInst::Predicate &Pred, const LHS &L, const RHS &R) {
                                                                        R);
 }
 
+template <typename LHS, typename RHS>
+inline CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate, true>
+m_c_ICmp(const LHS &L, const RHS &R) {
+  ICmpInst::Predicate Unused;
+  return CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate, true>(Unused,
+                                                                       L, R);
+}
+
 /// Matches a specific opcode with LHS and RHS in either order.
 template <typename LHS, typename RHS>
 inline SpecificBinaryOp_match<LHS, RHS, true>
@@ -2657,22 +2742,6 @@ inline OverflowingBinaryOp_match<cst_pred_ty<is_zero_int>, ValTy,
                                  OverflowingBinaryOperator::NoSignedWrap>
 m_NSWNeg(const ValTy &V) {
   return m_NSWSub(m_ZeroInt(), V);
-}
-
-/// Matches a 'Not' as 'xor V, -1' or 'xor -1, V'.
-/// NOTE: we first match the 'Not' (by matching '-1'),
-/// and only then match the inner matcher!
-template <typename ValTy>
-inline BinaryOp_match<cst_pred_ty<is_all_ones>, ValTy, Instruction::Xor, true>
-m_Not(const ValTy &V) {
-  return m_c_Xor(m_AllOnes(), V);
-}
-
-template <typename ValTy>
-inline BinaryOp_match<cst_pred_ty<is_all_ones, false>, ValTy, Instruction::Xor,
-                      true>
-m_NotForbidPoison(const ValTy &V) {
-  return m_c_Xor(m_AllOnesForbidPoison(), V);
 }
 
 /// Matches an SMin with LHS and RHS in either order.

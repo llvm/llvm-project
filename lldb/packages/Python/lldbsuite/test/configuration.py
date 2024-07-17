@@ -43,6 +43,7 @@ arch = None
 compiler = None
 dsymutil = None
 sdkroot = None
+make_path = None
 
 # The overriden dwarf verison.
 dwarf_version = 0

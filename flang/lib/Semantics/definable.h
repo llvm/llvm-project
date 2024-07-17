@@ -36,8 +36,9 @@ using DefinabilityFlags =
     common::EnumSet<DefinabilityFlag, DefinabilityFlag_enumSize>;
 
 // Tests a symbol or LHS variable or pointer for definability in a given scope.
-// When the entity is not definable, returns a "because:" Message suitable for
-// attachment to an error message to explain why the entity cannot be defined.
+// When the entity is not definable, returns a Message suitable for attachment
+// to an error or warning message (as a "because: addendum) to explain why the
+// entity cannot be defined.
 // When the entity can be defined in that context, returns std::nullopt.
 std::optional<parser::Message> WhyNotDefinable(
     parser::CharBlock, const Scope &, DefinabilityFlags, const Symbol &);

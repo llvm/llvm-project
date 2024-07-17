@@ -18,6 +18,7 @@
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "llvm/ADT/SmallVector.h"
@@ -151,6 +152,9 @@ class Parser : public CodeCompletionHandler {
 
   /// Identifier for "replacement".
   IdentifierInfo *Ident_replacement;
+
+  /// Identifier for "environment".
+  IdentifierInfo *Ident_environment;
 
   /// Identifiers used by the 'external_source_symbol' attribute.
   IdentifierInfo *Ident_language, *Ident_defined_in,
@@ -463,15 +467,18 @@ class Parser : public CodeCompletionHandler {
 
   /// Flags describing a context in which we're parsing a statement.
   enum class ParsedStmtContext {
+    /// This context permits declarations in language modes where declarations
+    /// are not statements.
+    AllowDeclarationsInC = 0x1,
     /// This context permits standalone OpenMP directives.
-    AllowStandaloneOpenMPDirectives = 0x1,
+    AllowStandaloneOpenMPDirectives = 0x2,
     /// This context is at the top level of a GNU statement expression.
-    InStmtExpr = 0x2,
+    InStmtExpr = 0x4,
 
     /// The context of a regular substatement.
     SubStmt = 0,
     /// The context of a compound-statement.
-    Compound = AllowStandaloneOpenMPDirectives,
+    Compound = AllowDeclarationsInC | AllowStandaloneOpenMPDirectives,
 
     LLVM_MARK_AS_BITMASK_ENUM(InStmtExpr)
   };
@@ -1642,8 +1649,12 @@ private:
   void ParseLexedAttributes(ParsingClass &Class);
   void ParseLexedAttributeList(LateParsedAttrList &LAs, Decl *D,
                                bool EnterScope, bool OnDefinition);
+  void ParseLexedCAttributeList(LateParsedAttrList &LA, bool EnterScope,
+                                ParsedAttributes *OutAttrs = nullptr);
   void ParseLexedAttribute(LateParsedAttribute &LA,
                            bool EnterScope, bool OnDefinition);
+  void ParseLexedCAttribute(LateParsedAttribute &LA, bool EnterScope,
+                            ParsedAttributes *OutAttrs = nullptr);
   void ParseLexedMethodDeclarations(ParsingClass &Class);
   void ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM);
   void ParseLexedMethodDefs(ParsingClass &Class);
@@ -1866,6 +1877,10 @@ private:
     UnaryExprOnly,
     PrimaryExprOnly
   };
+
+  bool isRevertibleTypeTrait(const IdentifierInfo *Id,
+                             clang::tok::TokenKind *Kind = nullptr);
+
   ExprResult ParseCastExpression(CastParseKind ParseKind,
                                  bool isAddressOfOperand,
                                  bool &NotCastExpr,
@@ -2111,6 +2126,8 @@ private:
     QualType PreferredBaseType;
   };
   ExprResult ParseInitializerWithPotentialDesignator(DesignatorCompletionInfo);
+  ExprResult createEmbedExpr();
+  void injectEmbedTokens();
 
   //===--------------------------------------------------------------------===//
   // clang Expressions
@@ -2480,24 +2497,23 @@ private:
   bool trySkippingFunctionBody();
 
   bool ParseImplicitInt(DeclSpec &DS, CXXScopeSpec *SS,
-                        const ParsedTemplateInfo &TemplateInfo,
-                        AccessSpecifier AS, DeclSpecContext DSC,
-                        ParsedAttributes &Attrs);
+                        ParsedTemplateInfo &TemplateInfo, AccessSpecifier AS,
+                        DeclSpecContext DSC, ParsedAttributes &Attrs);
   DeclSpecContext
   getDeclSpecContextFromDeclaratorContext(DeclaratorContext Context);
-  void ParseDeclarationSpecifiers(
-      DeclSpec &DS,
-      const ParsedTemplateInfo &TemplateInfo = ParsedTemplateInfo(),
-      AccessSpecifier AS = AS_none,
-      DeclSpecContext DSC = DeclSpecContext::DSC_normal,
-      LateParsedAttrList *LateAttrs = nullptr) {
+  void
+  ParseDeclarationSpecifiers(DeclSpec &DS, ParsedTemplateInfo &TemplateInfo,
+                             AccessSpecifier AS = AS_none,
+                             DeclSpecContext DSC = DeclSpecContext::DSC_normal,
+                             LateParsedAttrList *LateAttrs = nullptr) {
     return ParseDeclarationSpecifiers(DS, TemplateInfo, AS, DSC, LateAttrs,
                                       getImplicitTypenameContext(DSC));
   }
-  void ParseDeclarationSpecifiers(
-      DeclSpec &DS, const ParsedTemplateInfo &TemplateInfo, AccessSpecifier AS,
-      DeclSpecContext DSC, LateParsedAttrList *LateAttrs,
-      ImplicitTypenameContext AllowImplicitTypename);
+  void
+  ParseDeclarationSpecifiers(DeclSpec &DS, ParsedTemplateInfo &TemplateInfo,
+                             AccessSpecifier AS, DeclSpecContext DSC,
+                             LateParsedAttrList *LateAttrs,
+                             ImplicitTypenameContext AllowImplicitTypename);
 
   SourceLocation ParsePackIndexingType(DeclSpec &DS);
   void AnnotateExistingIndexedTypeNamePack(ParsedType T,
@@ -2531,7 +2547,8 @@ private:
 
   void ParseStructDeclaration(
       ParsingDeclSpec &DS,
-      llvm::function_ref<void(ParsingFieldDeclarator &)> FieldsCallback);
+      llvm::function_ref<Decl *(ParsingFieldDeclarator &)> FieldsCallback,
+      LateParsedAttrList *LateFieldAttrs = nullptr);
 
   DeclGroupPtrTy ParseTopLevelStmtDecl();
 
@@ -2811,7 +2828,7 @@ private:
                                        SourceLocation CorrectLocation);
 
   void stripTypeAttributesOffDeclSpec(ParsedAttributes &Attrs, DeclSpec &DS,
-                                      Sema::TagUseKind TUK);
+                                      TagUseKind TUK);
 
   // FixItLoc = possible correct location for the attributes
   void ProhibitAttributes(ParsedAttributes &Attrs,
@@ -2994,19 +3011,22 @@ private:
   bool ParseCXXAssumeAttributeArg(ParsedAttributes &Attrs,
                                   IdentifierInfo *AttrName,
                                   SourceLocation AttrNameLoc,
-                                  SourceLocation *EndLoc);
+                                  SourceLocation *EndLoc,
+                                  ParsedAttr::Form Form);
 
   IdentifierInfo *TryParseCXX11AttributeIdentifier(
       SourceLocation &Loc,
-      Sema::AttributeCompletion Completion = Sema::AttributeCompletion::None,
+      SemaCodeCompletion::AttributeCompletion Completion =
+          SemaCodeCompletion::AttributeCompletion::None,
       const IdentifierInfo *EnclosingScope = nullptr);
 
   void MaybeParseHLSLAnnotations(Declarator &D,
-                                 SourceLocation *EndLoc = nullptr) {
+                                 SourceLocation *EndLoc = nullptr,
+                                 bool CouldBeBitField = false) {
     assert(getLangOpts().HLSL && "MaybeParseHLSLAnnotations is for HLSL only");
     if (Tok.is(tok::colon)) {
       ParsedAttributes Attrs(AttrFactory);
-      ParseHLSLAnnotations(Attrs, EndLoc);
+      ParseHLSLAnnotations(Attrs, EndLoc, CouldBeBitField);
       D.takeAttributes(Attrs);
     }
   }
@@ -3014,12 +3034,13 @@ private:
   void MaybeParseHLSLAnnotations(ParsedAttributes &Attrs,
                                  SourceLocation *EndLoc = nullptr) {
     assert(getLangOpts().HLSL && "MaybeParseHLSLAnnotations is for HLSL only");
-    if (getLangOpts().HLSL && Tok.is(tok::colon))
+    if (Tok.is(tok::colon))
       ParseHLSLAnnotations(Attrs, EndLoc);
   }
 
   void ParseHLSLAnnotations(ParsedAttributes &Attrs,
-                            SourceLocation *EndLoc = nullptr);
+                            SourceLocation *EndLoc = nullptr,
+                            bool CouldBeBitField = false);
   Decl *ParseHLSLBuffer(SourceLocation &DeclEnd);
 
   void MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs) {
@@ -3107,6 +3128,8 @@ private:
                                  IdentifierInfo *ScopeName,
                                  SourceLocation ScopeLoc,
                                  ParsedAttr::Form Form);
+
+  void DistributeCLateParsedAttrs(Decl *Dcl, LateParsedAttrList *LateAttrs);
 
   void ParseBoundsAttribute(IdentifierInfo &AttrName,
                             SourceLocation AttrNameLoc, ParsedAttributes &Attrs,
@@ -3308,7 +3331,7 @@ private:
   // C++ 9: classes [class] and C structs/unions.
   bool isValidAfterTypeSpecifier(bool CouldBeBitfield);
   void ParseClassSpecifier(tok::TokenKind TagTokKind, SourceLocation TagLoc,
-                           DeclSpec &DS, const ParsedTemplateInfo &TemplateInfo,
+                           DeclSpec &DS, ParsedTemplateInfo &TemplateInfo,
                            AccessSpecifier AS, bool EnteringContext,
                            DeclSpecContext DSC, ParsedAttributes &Attributes);
   void SkipCXXMemberSpecification(SourceLocation StartLoc,
@@ -3330,7 +3353,7 @@ private:
                                                                VirtSpecifiers &VS);
   DeclGroupPtrTy ParseCXXClassMemberDeclaration(
       AccessSpecifier AS, ParsedAttributes &Attr,
-      const ParsedTemplateInfo &TemplateInfo = ParsedTemplateInfo(),
+      ParsedTemplateInfo &TemplateInfo,
       ParsingDeclRAIIObject *DiagsFromTParams = nullptr);
   DeclGroupPtrTy
   ParseCXXClassMemberDeclarationWithPragmas(AccessSpecifier &AS,
@@ -3494,6 +3517,19 @@ private:
   /// metadirective and therefore ends on the closing paren.
   StmtResult ParseOpenMPDeclarativeOrExecutableDirective(
       ParsedStmtContext StmtCtx, bool ReadDirectiveWithinMetadirective = false);
+
+  /// Parses executable directive.
+  ///
+  /// \param StmtCtx The context in which we're parsing the directive.
+  /// \param DKind The kind of the executable directive.
+  /// \param Loc Source location of the beginning of the directive.
+  /// \param ReadDirectiveWithinMetadirective true if directive is within a
+  /// metadirective and therefore ends on the closing paren.
+  StmtResult
+  ParseOpenMPExecutableDirective(ParsedStmtContext StmtCtx,
+                                 OpenMPDirectiveKind DKind, SourceLocation Loc,
+                                 bool ReadDirectiveWithinMetadirective);
+
   /// Parses clause of kind \a CKind for directive of a kind \a Kind.
   ///
   /// \param DKind Kind of current directive.
@@ -3644,6 +3680,7 @@ private:
   struct OpenACCDirectiveParseInfo {
     OpenACCDirectiveKind DirKind;
     SourceLocation StartLoc;
+    SourceLocation DirLoc;
     SourceLocation EndLoc;
     SmallVector<OpenACCClause *> Clauses;
     // TODO OpenACC: As we implement support for the Atomic, Routine, Cache, and
@@ -3682,9 +3719,9 @@ private:
 
   using OpenACCVarParseResult = std::pair<ExprResult, OpenACCParseCanContinue>;
   /// Parses a single variable in a variable list for OpenACC.
-  OpenACCVarParseResult ParseOpenACCVar();
+  OpenACCVarParseResult ParseOpenACCVar(OpenACCClauseKind CK);
   /// Parses the variable list for the variety of places that take a var-list.
-  llvm::SmallVector<Expr *> ParseOpenACCVarList();
+  llvm::SmallVector<Expr *> ParseOpenACCVarList(OpenACCClauseKind CK);
   /// Parses any parameters for an OpenACC Clause, including required/optional
   /// parens.
   OpenACCClauseParseResult

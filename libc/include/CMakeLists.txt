@@ -52,6 +52,15 @@ add_gen_header(
 )
 
 add_gen_header(
+  dlfcn
+  DEF_FILE dlfcn.h.def
+  GEN_HDR dlfcn.h
+  DEPENDS
+    .llvm-libc-macros.dlfcn_macros
+    .llvm_libc_common_h
+)
+
+add_gen_header(
   features
   DEF_FILE features.h.def
   GEN_HDR features.h
@@ -111,7 +120,9 @@ add_gen_header(
   GEN_HDR math.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.float16_macros
     .llvm-libc-macros.math_macros
+    .llvm-libc-macros.math_function_macros
     .llvm-libc-types.double_t
     .llvm-libc-types.float_t
     .llvm-libc-types.float128
@@ -222,30 +233,23 @@ add_gen_header(
   GEN_HDR errno.h
   DEPENDS
     .llvm-libc-macros.generic_error_number_macros
+    .llvm-libc-macros.error_number_macros
 )
 
-if(EXISTS "${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/signal.h.in")
-  add_gen_header(
-    signal
-    DEF_FILE signal.h.def
-    PARAMS
-      platform_signal=../config/${LIBC_TARGET_OS}/signal.h.in
-    GEN_HDR signal.h
-    DATA_FILES
-      ../config/${LIBC_TARGET_OS}/signal.h.in
-    DEPENDS
-      .llvm-libc-macros.signal_macros
-      .llvm-libc-types.sig_atomic_t
-      .llvm-libc-types.sigset_t
-      .llvm-libc-types.struct_sigaction
-      .llvm-libc-types.union_sigval
-      .llvm-libc-types.siginfo_t
-      .llvm-libc-types.stack_t
-      .llvm-libc-types.pid_t
-  )
-else()
-  message(STATUS "Skipping header signal.h as the target config is missing")
-endif()
+add_gen_header(
+  signal
+  DEF_FILE signal.h.def
+  GEN_HDR signal.h
+  DEPENDS
+    .llvm-libc-macros.signal_macros
+    .llvm-libc-types.sig_atomic_t
+    .llvm-libc-types.sigset_t
+    .llvm-libc-types.struct_sigaction
+    .llvm-libc-types.union_sigval
+    .llvm-libc-types.siginfo_t
+    .llvm-libc-types.stack_t
+    .llvm-libc-types.pid_t
+)
 
 add_gen_header(
   stdbit
@@ -331,6 +335,7 @@ add_gen_header(
     .llvm-libc-types.pthread_mutex_t
     .llvm-libc-types.pthread_mutexattr_t
     .llvm-libc-types.pthread_once_t
+    .llvm-libc-types.pthread_rwlock_t
     .llvm-libc-types.pthread_rwlockattr_t
     .llvm-libc-types.pthread_t
 )
@@ -521,10 +526,6 @@ add_gen_header(
   sys_syscall
   DEF_FILE sys/syscall.h.def
   GEN_HDR sys/syscall.h
-  PARAMS
-    syscall_numbers=../config/${LIBC_TARGET_OS}/syscall_numbers.h.inc
-  DATA_FILES
-    ../config/${LIBC_TARGET_OS}/syscall_numbers.h.inc
 )
 
 add_gen_header(

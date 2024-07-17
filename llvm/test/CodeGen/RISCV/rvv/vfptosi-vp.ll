@@ -394,7 +394,15 @@ declare <vscale x 32 x i16> @llvm.vp.fptosi.nxv32i16.nxv32f32(<vscale x 32 x flo
 define <vscale x 32 x i16> @vfptosi_nxv32i16_nxv32f32(<vscale x 32 x float> %va, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfptosi_nxv32i16_nxv32f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmv1r.v v24, v0
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    slli a1, a1, 3
+; CHECK-NEXT:    sub sp, sp, a1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
+; CHECK-NEXT:    vmv1r.v v7, v0
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    srli a2, a1, 2
 ; CHECK-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
@@ -404,16 +412,22 @@ define <vscale x 32 x i16> @vfptosi_nxv32i16_nxv32f32(<vscale x 32 x float> %va,
 ; CHECK-NEXT:    sltu a3, a0, a2
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    and a2, a3, a2
+; CHECK-NEXT:    addi a3, sp, 16
+; CHECK-NEXT:    vl8r.v v24, (a3) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
-; CHECK-NEXT:    vfncvt.rtz.x.f.w v28, v16, v0.t
+; CHECK-NEXT:    vfncvt.rtz.x.f.w v20, v24, v0.t
 ; CHECK-NEXT:    bltu a0, a1, .LBB25_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB25_2:
+; CHECK-NEXT:    vmv1r.v v0, v7
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    vfncvt.rtz.x.f.w v24, v8, v0.t
-; CHECK-NEXT:    vmv8r.v v8, v24
+; CHECK-NEXT:    vfncvt.rtz.x.f.w v16, v8, v0.t
+; CHECK-NEXT:    vmv8r.v v8, v16
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x i16> @llvm.vp.fptosi.nxv32i16.nxv32f32(<vscale x 32 x float> %va, <vscale x 32 x i1> %m, i32 %evl)
   ret <vscale x 32 x i16> %v
@@ -440,8 +454,8 @@ define <vscale x 32 x i32> @vfptosi_nxv32i32_nxv32f32(<vscale x 32 x float> %va,
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB26_2:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x i32> @llvm.vp.fptosi.nxv32i32.nxv32f32(<vscale x 32 x float> %va, <vscale x 32 x i1> %m, i32 %evl)

@@ -350,11 +350,6 @@ def FinalizingBufferize : Pass<"finalizing-bufferize", "func::FuncOp"> {
   let constructor = "mlir::bufferization::createFinalizingBufferizePass()";
 }
 
-def BufferizationBufferize : Pass<"bufferization-bufferize", "func::FuncOp"> {
-  let summary = "Bufferize the `bufferization` dialect";
-  let constructor = "mlir::bufferization::createBufferizationBufferizePass()";
-}
-
 def DropEquivalentBufferResults : Pass<"drop-equivalent-buffer-results", "ModuleOp">  {
   let summary = "Remove MemRef return values that are equivalent to a bbArg";
   let description = [{
@@ -503,6 +498,8 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     Option<"bufferizeFunctionBoundaries", "bufferize-function-boundaries",
            "bool", /*default=*/"0",
            "Bufferize function boundaries (experimental).">,
+    Option<"checkParallelRegions", "check-parallel-regions", "bool",
+           /*default=*/"true", "Account for parallel regions in RaW analysis.">,
     Option<"copyBeforeWrite", "copy-before-write", "bool", /*default=*/"false",
            "Skip the analysis. Make a buffer copy on every write.">,
     ListOption<"dialectFilter", "dialect-filter", "std::string",

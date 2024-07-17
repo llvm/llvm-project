@@ -178,7 +178,7 @@ entry:
 define void @csrrd_d_noret() {
 ; CHECK-LABEL: csrrd_d_noret:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    csrrd $a0, 1
+; CHECK-NEXT:    csrrd $zero, 1
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i64 @llvm.loongarch.csrrd.d(i32 1)
@@ -240,7 +240,7 @@ entry:
 define void @iocsrrd_d_noret(i32 %a) {
 ; CHECK-LABEL: iocsrrd_d_noret:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    iocsrrd.d $a0, $a0
+; CHECK-NEXT:    iocsrrd.d $zero, $a0
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i64 @llvm.loongarch.iocsrrd.d(i32 %a)
@@ -290,7 +290,7 @@ entry:
 define void @lddir_d_noret(i64 %a) {
 ; CHECK-LABEL: lddir_d_noret:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lddir $a0, $a0, 1
+; CHECK-NEXT:    lddir $zero, $a0, 1
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i64 @llvm.loongarch.lddir.d(i64 %a, i64 1)

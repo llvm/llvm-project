@@ -38,3 +38,8 @@ unsigned SuffixTreeLeafNode::getEndIdx() const {
 
 unsigned SuffixTreeLeafNode::getSuffixIdx() const { return SuffixIdx; }
 void SuffixTreeLeafNode::setSuffixIdx(unsigned Idx) { SuffixIdx = Idx; }
+
+unsigned SuffixTreeNode::getLeftLeafIdx() const { return LeftLeafIdx; }
+unsigned SuffixTreeNode::getRightLeafIdx() const { return RightLeafIdx; }
+void SuffixTreeNode::setLeftLeafIdx(unsigned Idx) { LeftLeafIdx = Idx; }
+void SuffixTreeNode::setRightLeafIdx(unsigned Idx) { RightLeafIdx = Idx; }

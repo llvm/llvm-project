@@ -1963,8 +1963,7 @@ void ObjCMigrateASTConsumer::HandleTranslationUnit(ASTContext &Ctx) {
     llvm::raw_svector_ostream vecOS(newText);
     buf.write(vecOS);
     std::unique_ptr<llvm::MemoryBuffer> memBuf(
-        llvm::MemoryBuffer::getMemBufferCopy(
-            StringRef(newText.data(), newText.size()), file->getName()));
+        llvm::MemoryBuffer::getMemBufferCopy(newText.str(), file->getName()));
     SmallString<64> filePath(file->getName());
     FileMgr.FixupRelativePath(filePath);
     Remapper.remap(filePath.str(), std::move(memBuf));

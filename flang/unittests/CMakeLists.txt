@@ -8,7 +8,7 @@ if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)
 endif()
 
 add_custom_target(FlangUnitTests)
-set_target_properties(FlangUnitTests PROPERTIES FOLDER "Flang Unit Tests")
+set_target_properties(FlangUnitTests PROPERTIES FOLDER "Flang/Tests")
 
 function(add_flang_unittest_offload_properties target)
   # Set CUDA_RESOLVE_DEVICE_SYMBOLS.
@@ -55,6 +55,7 @@ function(add_flang_nongtest_unittest test_name)
   endif()
 
   add_executable(${test_name}${suffix} ${test_name}.cpp)
+  set_target_properties(${test_name}${suffix} PROPERTIES FOLDER "Flang/Tests/Unit")
 
   if (LLVM_LINK_LLVM_DYLIB AND NOT ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
     set(llvm_libs LLVM)

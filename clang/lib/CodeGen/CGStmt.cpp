@@ -414,7 +414,8 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     CGM.ErrorUnsupported(S, "OpenMP dispatch directive");
     break;
   case Stmt::OMPScopeDirectiveClass:
-    llvm_unreachable("scope not supported with FE outlining");
+    CGM.ErrorUnsupported(S, "scope with FE outlining");
+    break;
   case Stmt::OMPMaskedDirectiveClass:
     EmitOMPMaskedDirective(cast<OMPMaskedDirective>(*S));
     break;
@@ -441,6 +442,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     break;
   case Stmt::OpenACCComputeConstructClass:
     EmitOpenACCComputeConstruct(cast<OpenACCComputeConstruct>(*S));
+    break;
+  case Stmt::OpenACCLoopConstructClass:
+    EmitOpenACCLoopConstruct(cast<OpenACCLoopConstruct>(*S));
     break;
   }
 }
@@ -1533,9 +1537,15 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
     Builder.CreateStore(Result.getScalarVal(), ReturnValue);
   } else {
     switch (getEvaluationKind(RV->getType())) {
-    case TEK_Scalar:
-      Builder.CreateStore(EmitScalarExpr(RV), ReturnValue);
+    case TEK_Scalar: {
+      llvm::Value *Ret = EmitScalarExpr(RV);
+      if (CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::Indirect)
+        EmitStoreOfScalar(Ret, MakeAddrLValue(ReturnValue, RV->getType()),
+                          /*isInit*/ true);
+      else
+        Builder.CreateStore(Ret, ReturnValue);
       break;
+    }
     case TEK_Complex:
       EmitComplexExprIntoLValue(RV, MakeAddrLValue(ReturnValue, RV->getType()),
                                 /*isInit*/ true);
@@ -2372,13 +2382,12 @@ std::pair<llvm::Value*, llvm::Type *> CodeGenFunction::EmitAsmInputLValue(
         getTargetHooks().isScalarizableAsmOperand(*this, Ty)) {
       Ty = llvm::IntegerType::get(getLLVMContext(), Size);
 
-      return {
-          Builder.CreateLoad(InputValue.getAddress(*this).withElementType(Ty)),
-          nullptr};
+      return {Builder.CreateLoad(InputValue.getAddress().withElementType(Ty)),
+              nullptr};
     }
   }
 
-  Address Addr = InputValue.getAddress(*this);
+  Address Addr = InputValue.getAddress();
   ConstraintStr += '*';
   return {InputValue.getPointer(*this), Addr.getElementType()};
 }
@@ -2574,7 +2583,7 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
     // ResultTypeRequiresCast.size() elements of RegResults.
     if ((i < ResultTypeRequiresCast.size()) && ResultTypeRequiresCast[i]) {
       unsigned Size = CGF.getContext().getTypeSize(ResultRegQualTys[i]);
-      Address A = Dest.getAddress(CGF).withElementType(ResultRegTypes[i]);
+      Address A = Dest.getAddress().withElementType(ResultRegTypes[i]);
       if (CGF.getTargetHooks().isScalarizableAsmOperand(CGF, TruncTy)) {
         Builder.CreateStore(Tmp, A);
         continue;
@@ -2776,7 +2785,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
             std::max((uint64_t)LargestVectorWidth,
                      VT->getPrimitiveSizeInBits().getKnownMinValue());
     } else {
-      Address DestAddr = Dest.getAddress(*this);
+      Address DestAddr = Dest.getAddress();
       // Matrix types in memory are represented by arrays, but accessed through
       // vector pointers, with the alignment specified on the access operation.
       // For inline assembly, update pointer arguments to use vector pointers.
@@ -3124,7 +3133,7 @@ CodeGenFunction::EmitCapturedStmt(const CapturedStmt &S, CapturedRegionKind K) {
 
 Address CodeGenFunction::GenerateCapturedStmtArgument(const CapturedStmt &S) {
   LValue CapStruct = InitCapturedStruct(S);
-  return CapStruct.getAddress(*this);
+  return CapStruct.getAddress();
 }
 
 /// Creates the outlined function for a CapturedStmt.

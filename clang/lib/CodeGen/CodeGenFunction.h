@@ -137,7 +137,8 @@ enum TypeEvaluationKind {
   SANITIZER_CHECK(SubOverflow, sub_overflow, 0)                                \
   SANITIZER_CHECK(TypeMismatch, type_mismatch, 1)                              \
   SANITIZER_CHECK(AlignmentAssumption, alignment_assumption, 0)                \
-  SANITIZER_CHECK(VLABoundNotPositive, vla_bound_not_positive, 0)
+  SANITIZER_CHECK(VLABoundNotPositive, vla_bound_not_positive, 0)              \
+  SANITIZER_CHECK(BoundsSafety, bounds_safety, 0)
 
 enum SanitizerHandler {
 #define SANITIZER_CHECK(Enum, Name, Version) Enum,
@@ -220,7 +221,6 @@ template <> struct DominatingValue<RValue> {
     };
     LLVM_PREFERRED_TYPE(Kind)
     unsigned K : 3;
-    unsigned IsVolatile : 1;
 
     saved_type(DominatingLLVMValue::saved_type Val1, unsigned K)
         : Vals{Val1, DominatingLLVMValue::saved_type()}, K(K) {}
@@ -229,8 +229,7 @@ template <> struct DominatingValue<RValue> {
                DominatingLLVMValue::saved_type Val2)
         : Vals{Val1, Val2}, K(ComplexAddress) {}
 
-    saved_type(DominatingValue<Address>::saved_type AggregateAddr,
-               bool IsVolatile, unsigned K)
+    saved_type(DominatingValue<Address>::saved_type AggregateAddr, unsigned K)
         : AggregateAddr(AggregateAddr), K(K) {}
 
   public:
@@ -344,7 +343,6 @@ public:
   /// CGBuilder insert helper. This function is called after an
   /// instruction is created using Builder.
   void InsertHelper(llvm::Instruction *I, const llvm::Twine &Name,
-                    llvm::BasicBlock *BB,
                     llvm::BasicBlock::iterator InsertPt) const;
 
   /// CurFuncDecl - Holds the Decl for the current outermost
@@ -2455,10 +2453,20 @@ public:
 
   void InitializeVTablePointers(const CXXRecordDecl *ClassDecl);
 
+  // VTableTrapMode - whether we guarantee that loading the
+  // vtable is guaranteed to trap on authentication failure,
+  // even if the resulting vtable pointer is unused.
+  enum class VTableAuthMode {
+    Authenticate,
+    MustTrap,
+    UnsafeUbsanStrip // Should only be used for Vptr UBSan check
+  };
   /// GetVTablePtr - Return the Value of the vtable pointer member pointed
   /// to by This.
-  llvm::Value *GetVTablePtr(Address This, llvm::Type *VTableTy,
-                            const CXXRecordDecl *VTableClass);
+  llvm::Value *
+  GetVTablePtr(Address This, llvm::Type *VTableTy,
+               const CXXRecordDecl *VTableClass,
+               VTableAuthMode AuthMode = VTableAuthMode::Authenticate);
 
   enum CFITypeCheckKind {
     CFITCK_VCall,
@@ -2568,6 +2576,8 @@ public:
 
   llvm::Type *ConvertTypeForMem(QualType T);
   llvm::Type *ConvertType(QualType T);
+  llvm::Type *convertTypeForLoadStore(QualType ASTTy,
+                                      llvm::Type *LLVMTy = nullptr);
   llvm::Type *ConvertType(const TypeDecl *T) {
     return ConvertType(getContext().getTypeDeclType(T));
   }
@@ -3015,7 +3025,8 @@ public:
   /// \returns A pointer to the argument.
   // FIXME: We should be able to get rid of this method and use the va_arg
   // instruction in LLVM instead once it works well enough.
-  Address EmitVAArg(VAArgExpr *VE, Address &VAListAddr);
+  RValue EmitVAArg(VAArgExpr *VE, Address &VAListAddr,
+                   AggValueSlot Slot = AggValueSlot::ignored());
 
   /// emitArrayLength - Compute the length of an array, even if it's a
   /// VLA, and drill down to the base element type.
@@ -4061,6 +4072,13 @@ public:
     EmitStmt(S.getStructuredBlock());
   }
 
+  void EmitOpenACCLoopConstruct(const OpenACCLoopConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // simply emitting its loop, but in the future we will implement
+    // some sort of IR.
+    EmitStmt(S.getLoop());
+  }
+
   //===--------------------------------------------------------------------===//
   //                         LValue Expression Emission
   //===--------------------------------------------------------------------===//
@@ -4208,6 +4226,11 @@ public:
   RValue EmitLoadOfExtVectorElementLValue(LValue V);
   RValue EmitLoadOfBitfieldLValue(LValue LV, SourceLocation Loc);
   RValue EmitLoadOfGlobalRegLValue(LValue LV);
+
+  /// Like EmitLoadOfLValue but also handles complex and aggregate types.
+  RValue EmitLoadOfAnyValue(LValue V,
+                            AggValueSlot Slot = AggValueSlot::ignored(),
+                            SourceLocation Loc = {});
 
   /// EmitStoreThroughLValue - Store the specified rvalue into the specified
   /// lvalue, where both are guaranteed to the have the same type, and that type
@@ -4405,6 +4428,23 @@ public:
   }
 
   bool isPointerKnownNonNull(const Expr *E);
+
+  /// Create the discriminator from the storage address and the entity hash.
+  llvm::Value *EmitPointerAuthBlendDiscriminator(llvm::Value *StorageAddress,
+                                                 llvm::Value *Discriminator);
+  CGPointerAuthInfo EmitPointerAuthInfo(const PointerAuthSchema &Schema,
+                                        llvm::Value *StorageAddress,
+                                        GlobalDecl SchemaDecl,
+                                        QualType SchemaType);
+  llvm::Value *EmitPointerAuthSign(QualType PointeeType, llvm::Value *Pointer);
+  llvm::Value *EmitPointerAuthSign(const CGPointerAuthInfo &Info,
+                                   llvm::Value *Pointer);
+  llvm::Value *EmitPointerAuthAuth(const CGPointerAuthInfo &Info,
+                                   llvm::Value *Pointer);
+
+  void EmitPointerAuthOperandBundle(
+      const CGPointerAuthInfo &Info,
+      SmallVectorImpl<llvm::OperandBundleDef> &Bundles);
 
   // Return the copy constructor name with the prefix "__copy_constructor_"
   // removed.
@@ -4634,6 +4674,9 @@ public:
   llvm::Value *EmitHexagonBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitRISCVBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                     ReturnValueSlot ReturnValue);
+
+  void AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
+                                      const CallExpr *E);
   void ProcessOrderScopeAMDGCN(llvm::Value *Order, llvm::Value *Scope,
                                llvm::AtomicOrdering &AO,
                                llvm::SyncScope::ID &SSID);
@@ -4765,6 +4808,13 @@ public:
   /// EmitAggExprToLValue - Emit the computation of the specified expression of
   /// aggregate type into a temporary LValue.
   LValue EmitAggExprToLValue(const Expr *E);
+
+  enum ExprValueKind { EVK_RValue, EVK_NonRValue };
+
+  /// EmitAggFinalDestCopy - Emit copy of the specified aggregate into
+  /// destination address.
+  void EmitAggFinalDestCopy(QualType Type, AggValueSlot Dest, const LValue &Src,
+                            ExprValueKind SrcKind);
 
   /// Build all the stores needed to initialize an aggregate at Dest with the
   /// value Val.

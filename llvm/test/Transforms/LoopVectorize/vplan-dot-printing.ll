@@ -13,7 +13,7 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT:  edge [fontname=Courier, fontsize=30]
 ; CHECK-NEXT:  compound=true
 ; CHECK-NEXT:  N0 [label =
-; CHECK-NEXT:    "ph:\l" +
+; CHECK-NEXT:    "ir-bb\<for.body.preheader\>:\l" +
 ; CHECK-NEXT:    "No successors\l"
 ; CHECK-NEXT:  ]
 ; CHECK-NEXT:  N1 [label =

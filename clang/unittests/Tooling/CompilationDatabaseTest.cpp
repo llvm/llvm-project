@@ -402,7 +402,6 @@ TEST(findCompileArgsInJsonDatabase, FindsEntry) {
 TEST(findCompileArgsInJsonDatabase, ParsesCompilerWrappers) {
   std::vector<std::pair<std::string, std::string>> Cases = {
       {"distcc gcc foo.c", "gcc foo.c"},
-      {"gomacc clang++ foo.c", "clang++ foo.c"},
       {"sccache clang++ foo.c", "clang++ foo.c"},
       {"ccache gcc foo.c", "gcc foo.c"},
       {"ccache.exe gcc foo.c", "gcc foo.c"},

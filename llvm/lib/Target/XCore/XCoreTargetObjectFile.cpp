@@ -118,7 +118,7 @@ MCSection *XCoreTargetObjectFile::SelectSectionForGlobal(
     if (Kind.isMergeableConst16())      return MergeableConst16Section;
   }
   Type *ObjType = GO->getValueType();
-  auto &DL = GO->getParent()->getDataLayout();
+  auto &DL = GO->getDataLayout();
   if (TM.getCodeModel() == CodeModel::Small || !ObjType->isSized() ||
       DL.getTypeAllocSize(ObjType) < CodeModelLargeSize) {
     if (Kind.isReadOnly())              return UseCPRel? ReadOnlySection

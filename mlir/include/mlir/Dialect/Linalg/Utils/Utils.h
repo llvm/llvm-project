@@ -219,7 +219,6 @@ struct FusionInfo {
   LinalgOp fusedProducer;
 };
 
-/// Tensor counterpart of `fuseProducerOfBuffer`.
 /// This implements the fusion part of the "tileAndFuse on tensors"
 /// transformation and thus requires the `consumerOpOperand` to be a
 /// `extract_slice` op (generally obtained by applying the tiling
@@ -227,7 +226,6 @@ struct FusionInfo {
 FailureOr<FusionInfo> fuseProducerOfTensor(OpBuilder &b,
                                            OpOperand &consumerOpOperand);
 
-/// Tensor counterpart of `fuseProducerOfBuffer`.
 /// This implements the fusion part of the "tileAndFuse on tensors"
 /// transformation and thus requires the `consumerOpOperand` to be a
 /// `extract_slice` op (generally obtained by applying the tiling

@@ -644,24 +644,23 @@ static_assert(__builtin_os_log_format_buffer_size("%{mask.xyz}s", "abc") != 0, "
 /// Some tests are missing since we run this for multiple targets,
 /// some of which do not support _BitInt.
 #ifndef __AVR__
+typedef _BitInt(128) BitInt128;
+typedef double vector4double __attribute__((__vector_size__(32)));
+typedef float vector4float __attribute__((__vector_size__(16)));
+typedef long long vector4long __attribute__((__vector_size__(32)));
+typedef int vector4int __attribute__((__vector_size__(16)));
+typedef short vector4short __attribute__((__vector_size__(8)));
+typedef char vector4char __attribute__((__vector_size__(4)));
+typedef BitInt128 vector4BitInt128 __attribute__((__vector_size__(64)));
+typedef double vector8double __attribute__((__vector_size__(64)));
+typedef float vector8float __attribute__((__vector_size__(32)));
+typedef long long vector8long __attribute__((__vector_size__(64)));
+typedef int vector8int __attribute__((__vector_size__(32)));
+typedef short vector8short __attribute__((__vector_size__(16)));
+typedef char vector8char __attribute__((__vector_size__(8)));
+typedef BitInt128 vector8BitInt128 __attribute__((__vector_size__(128)));
+
 namespace convertvector {
-  typedef _BitInt(128) BitInt128;
-
-  typedef double vector4double __attribute__((__vector_size__(32)));
-  typedef float vector4float __attribute__((__vector_size__(16)));
-  typedef long long vector4long __attribute__((__vector_size__(32)));
-  typedef int vector4int __attribute__((__vector_size__(16)));
-  typedef short vector4short __attribute__((__vector_size__(8)));
-  typedef char vector4char __attribute__((__vector_size__(4)));
-  typedef BitInt128 vector4BitInt128 __attribute__((__vector_size__(64)));
-  typedef double vector8double __attribute__((__vector_size__(64)));
-  typedef float vector8float __attribute__((__vector_size__(32)));
-  typedef long long vector8long __attribute__((__vector_size__(64)));
-  typedef int vector8int __attribute__((__vector_size__(32)));
-  typedef short vector8short __attribute__((__vector_size__(16)));
-  typedef char vector8char __attribute__((__vector_size__(8)));
-  typedef BitInt128 vector8BitInt128 __attribute__((__vector_size__(128)));
-
   constexpr vector4double from_vector4double_to_vector4double_var =
       __builtin_convertvector((vector4double){0, 1, 2, 3}, vector4double);
   constexpr vector4float from_vector4double_to_vector4float_var =
@@ -873,4 +872,37 @@ namespace convertvector {
   static_assert(from_vector8BitInt128_to_vector8BitInt128_var[3] == 3, ""); // ref-error {{not an integral constant expression}}
   static_assert(from_vector8BitInt128_to_vector8BitInt128_var[4] == 4, ""); // ref-error {{not an integral constant expression}}
 }
+
+namespace shufflevector {
+  constexpr vector4char vector4charConst1 = {0, 1, 2, 3};
+  constexpr vector4char vector4charConst2 = {4, 5, 6, 7};
+  constexpr vector8char vector8intConst = {8, 9, 10, 11, 12, 13, 14, 15};
+  constexpr vector4char vectorShuffle1 =
+      __builtin_shufflevector(vector4charConst1, vector4charConst2, 0, 1, 2, 3);
+  constexpr vector4char vectorShuffle2 =
+      __builtin_shufflevector(vector4charConst1, vector4charConst2, 4, 5, 6, 7);
+  constexpr vector4char vectorShuffle3 =
+      __builtin_shufflevector(vector4charConst1, vector4charConst2, 0, 2, 4, 6);
+  constexpr vector8char vectorShuffle4 = __builtin_shufflevector(
+      vector8intConst, vector8intConst, 0, 2, 4, 6, 8, 10, 12, 14);
+  constexpr vector4char vectorShuffle5 =
+      __builtin_shufflevector(vector8intConst, vector8intConst, 0, 2, 4, 6);
+  constexpr vector8char vectorShuffle6 = __builtin_shufflevector(
+      vector4charConst1, vector4charConst2, 0, 2, 4, 6, 1, 3, 5, 7);
+
+  static_assert(vectorShuffle6[0] == 0, "");// ref-error {{not an integral constant expression}}
+  static_assert(vectorShuffle6[1] == 2, "");// ref-error {{not an integral constant expression}}
+  static_assert(vectorShuffle6[2] == 4, "");// ref-error {{not an integral constant expression}}
+  static_assert(vectorShuffle6[3] == 6, "");// ref-error {{not an integral constant expression}}
+  static_assert(vectorShuffle6[4] == 1, "");// ref-error {{not an integral constant expression}}
+  static_assert(vectorShuffle6[5] == 3, "");// ref-error {{not an integral constant expression}}
+  static_assert(vectorShuffle6[6] == 5, "");// ref-error {{not an integral constant expression}}
+  static_assert(vectorShuffle6[7] == 7, "");// ref-error {{not an integral constant expression}}
+
+  constexpr vector4char  vectorShuffleFail1 = __builtin_shufflevector( // both-error {{must be initialized by a constant expression}}\
+                                                                       // ref-error {{index for __builtin_shufflevector not within the bounds of the input vectors; index of -1 found at position 0 is not permitted in a constexpr context}}
+          vector4charConst1,
+          vector4charConst2, -1, -1, -1, -1);
+}
+
 #endif

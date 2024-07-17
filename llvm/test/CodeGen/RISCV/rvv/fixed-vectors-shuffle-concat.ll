@@ -33,8 +33,8 @@ define <8 x i32> @concat_4xv2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x 
 ; VLS-LABEL: concat_4xv2i32:
 ; VLS:       # %bb.0:
 ; VLS-NEXT:    vmv1r.v v13, v10
-; VLS-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; VLS-NEXT:    vmv1r.v v12, v8
+; VLS-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; VLS-NEXT:    vslideup.vi v13, v11, 2
 ; VLS-NEXT:    vslideup.vi v12, v9, 2
 ; VLS-NEXT:    vmv2r.v v8, v12
@@ -147,8 +147,8 @@ define <16 x i32> @concat_8xv2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x
 ; VLS-NEXT:    vmv1r.v v19, v14
 ; VLS-NEXT:    vmv1r.v v18, v12
 ; VLS-NEXT:    vmv1r.v v17, v10
-; VLS-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; VLS-NEXT:    vmv1r.v v16, v8
+; VLS-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; VLS-NEXT:    vslideup.vi v19, v15, 2
 ; VLS-NEXT:    vslideup.vi v18, v13, 2
 ; VLS-NEXT:    vslideup.vi v17, v11, 2

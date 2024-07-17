@@ -1162,6 +1162,8 @@ static void createFiles(const InputArgList &args) {
   // This loop should be reserved for options whose exact ordering matters.
   // Other options should be handled via filtered() and/or getLastArg().
   bool isLazy = false;
+  // If we've processed an opening --start-lib, without a matching --end-lib
+  bool inLib = false;
   for (const Arg *arg : args) {
     const Option &opt = arg->getOption();
     warnIfDeprecatedOption(opt);
@@ -1219,13 +1221,16 @@ static void createFiles(const InputArgList &args) {
                    LoadType::CommandLine);
       break;
     case OPT_start_lib:
-      if (isLazy)
+      if (inLib)
         error("nested --start-lib");
-      isLazy = true;
+      inLib = true;
+      if (!config->allLoad)
+        isLazy = true;
       break;
     case OPT_end_lib:
-      if (!isLazy)
+      if (!inLib)
         error("stray --end-lib");
+      inLib = false;
       isLazy = false;
       break;
     default:
@@ -1241,6 +1246,9 @@ static void gatherInputSections() {
       // Compact unwind entries require special handling elsewhere. (In
       // contrast, EH frames are handled like regular ConcatInputSections.)
       if (section->name == section_names::compactUnwind)
+        continue;
+      // Addrsig sections contain metadata only needed at link time.
+      if (section->name == section_names::addrSig)
         continue;
       for (const Subsection &subsection : section->subsections)
         addInputSection(subsection.isec);
@@ -1386,6 +1394,12 @@ static void handleExplicitExports() {
           defined->privateExtern = true;
     });
   }
+}
+
+static void eraseInitializerSymbols() {
+  for (ConcatInputSection *isec : in.initOffsets->inputs())
+    for (Defined *sym : isec->symbols)
+      sym->used = false;
 }
 
 namespace lld {
@@ -1648,6 +1662,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       config->emitChainedFixups || args.hasArg(OPT_init_offsets);
   config->emitRelativeMethodLists = shouldEmitRelativeMethodLists(args);
   config->icfLevel = getICFLevel(args);
+  config->keepICFStabs = args.hasArg(OPT_keep_icf_stabs);
   config->dedupStrings =
       args.hasFlag(OPT_deduplicate_strings, OPT_no_deduplicate_strings, true);
   config->deadStripDuplicates = args.hasArg(OPT_dead_strip_duplicates);
@@ -1965,6 +1980,11 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     if (config->deadStrip)
       markLive();
 
+    // Ensure that no symbols point inside __mod_init_func sections if they are
+    // removed due to -init_offsets. This must run after dead stripping.
+    if (config->emitInitOffsets)
+      eraseInitializerSymbols();
+
     // Categories are not subject to dead-strip. The __objc_catlist section is
     // marked as NO_DEAD_STRIP and that propagates into all category data.
     if (args.hasArg(OPT_check_category_conflicts))
@@ -1972,7 +1992,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
     // Category merging uses "->live = false" to erase old category data, so
     // it has to run after dead-stripping (markLive).
-    if (args.hasArg(OPT_objc_category_merging, OPT_no_objc_category_merging))
+    if (args.hasFlag(OPT_objc_category_merging, OPT_no_objc_category_merging,
+                     false))
       objc::mergeCategories();
 
     // ICF assumes that all literals have been folded already, so we must run

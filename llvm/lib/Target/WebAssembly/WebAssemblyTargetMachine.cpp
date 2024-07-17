@@ -90,7 +90,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyMCLowerPrePassPass(PR);
   initializeWebAssemblyLowerRefTypesIntPtrConvPass(PR);
   initializeWebAssemblyFixBrTableDefaultsPass(PR);
-  initializeWebAssemblyDAGToDAGISelPass(PR);
+  initializeWebAssemblyDAGToDAGISelLegacyPass(PR);
 }
 
 //===----------------------------------------------------------------------===//
@@ -385,18 +385,36 @@ FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
 using WebAssembly::WasmEnableEH;
 using WebAssembly::WasmEnableEmEH;
 using WebAssembly::WasmEnableEmSjLj;
+using WebAssembly::WasmEnableExnref;
 using WebAssembly::WasmEnableSjLj;
 
 static void basicCheckForEHAndSjLj(TargetMachine *TM) {
-  // Before checking, we make sure TargetOptions.ExceptionModel is the same as
+
+  // You can't enable two modes of EH at the same time
+  if (WasmEnableEmEH && WasmEnableEH)
+    report_fatal_error(
+        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-eh");
+  // You can't enable two modes of SjLj at the same time
+  if (WasmEnableEmSjLj && WasmEnableSjLj)
+    report_fatal_error(
+        "-enable-emscripten-sjlj not allowed with -wasm-enable-sjlj");
+  // You can't mix Emscripten EH with Wasm SjLj.
+  if (WasmEnableEmEH && WasmEnableSjLj)
+    report_fatal_error(
+        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-sjlj");
+  if (WasmEnableExnref && !WasmEnableEH)
+    report_fatal_error(
+        "-wasm-enable-exnref should be used with -wasm-enable-eh");
+
+  // Here we make sure TargetOptions.ExceptionModel is the same as
   // MCAsmInfo.ExceptionsType. Normally these have to be the same, because clang
   // stores the exception model info in LangOptions, which is later transferred
   // to TargetOptions and MCAsmInfo. But when clang compiles bitcode directly,
   // clang's LangOptions is not used and thus the exception model info is not
   // correctly transferred to TargetOptions and MCAsmInfo, so we make sure we
-  // have the correct exception model in WebAssemblyMCAsmInfo constructor.
-  // But in this case TargetOptions is still not updated, so we make sure they
-  // are the same.
+  // have the correct exception model in WebAssemblyMCAsmInfo constructor. But
+  // in this case TargetOptions is still not updated, so we make sure they are
+  // the same.
   TM->Options.ExceptionModel = TM->getMCAsmInfo()->getExceptionHandlingType();
 
   // Basic Correctness checking related to -exception-model
@@ -418,18 +436,6 @@ static void basicCheckForEHAndSjLj(TargetMachine *TM) {
         "-exception-model=wasm only allowed with at least one of "
         "-wasm-enable-eh or -wasm-enable-sjlj");
 
-  // You can't enable two modes of EH at the same time
-  if (WasmEnableEmEH && WasmEnableEH)
-    report_fatal_error(
-        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-eh");
-  // You can't enable two modes of SjLj at the same time
-  if (WasmEnableEmSjLj && WasmEnableSjLj)
-    report_fatal_error(
-        "-enable-emscripten-sjlj not allowed with -wasm-enable-sjlj");
-  // You can't mix Emscripten EH with Wasm SjLj.
-  if (WasmEnableEmEH && WasmEnableSjLj)
-    report_fatal_error(
-        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-sjlj");
   // Currently it is allowed to mix Wasm EH with Emscripten SjLj as an interim
   // measure, but some code will error out at compile time in this combination.
   // See WebAssemblyLowerEmscriptenEHSjLj pass for details.

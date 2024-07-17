@@ -613,7 +613,7 @@ uint64_t EhFrameSection::getFdePc(uint8_t *buf, size_t fdeOff,
   size_t off = fdeOff + 8;
   uint64_t addr = readFdeAddr(buf + off, enc & 0xf);
   if ((enc & 0x70) == DW_EH_PE_absptr)
-    return addr;
+    return config->is64 ? addr : uint32_t(addr);
   if ((enc & 0x70) == DW_EH_PE_pcrel)
     return addr + getParent()->addr + off + outSecOff;
   fatal("unknown FDE size relative encoding");
@@ -1420,6 +1420,12 @@ DynamicSection<ELFT>::computeContents() {
     addInt(config->useAndroidRelrTags ? DT_ANDROID_RELRENT : DT_RELRENT,
            sizeof(Elf_Relr));
   }
+  if (part.relrAuthDyn && part.relrAuthDyn->getParent() &&
+      !part.relrAuthDyn->relocs.empty()) {
+    addInSec(DT_AARCH64_AUTH_RELR, *part.relrAuthDyn);
+    addInt(DT_AARCH64_AUTH_RELRSZ, part.relrAuthDyn->getParent()->size);
+    addInt(DT_AARCH64_AUTH_RELRENT, sizeof(Elf_Relr));
+  }
   if (isMain && in.relaPlt->isNeeded()) {
     addInSec(DT_JMPREL, *in.relaPlt);
     entries.emplace_back(DT_PLTRELSZ, addPltRelSz());
@@ -1731,10 +1737,13 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *buf) {
   }
 }
 
-RelrBaseSection::RelrBaseSection(unsigned concurrency)
-    : SyntheticSection(SHF_ALLOC,
-                       config->useAndroidRelrTags ? SHT_ANDROID_RELR : SHT_RELR,
-                       config->wordsize, ".relr.dyn"),
+RelrBaseSection::RelrBaseSection(unsigned concurrency, bool isAArch64Auth)
+    : SyntheticSection(
+          SHF_ALLOC,
+          isAArch64Auth
+              ? SHT_AARCH64_AUTH_RELR
+              : (config->useAndroidRelrTags ? SHT_ANDROID_RELR : SHT_RELR),
+          config->wordsize, isAArch64Auth ? ".relr.auth.dyn" : ".relr.dyn"),
       relocsVec(concurrency) {}
 
 void RelrBaseSection::mergeRels() {
@@ -2002,8 +2011,8 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize() {
 }
 
 template <class ELFT>
-RelrSection<ELFT>::RelrSection(unsigned concurrency)
-    : RelrBaseSection(concurrency) {
+RelrSection<ELFT>::RelrSection(unsigned concurrency, bool isAArch64Auth)
+    : RelrBaseSection(concurrency, isAArch64Auth) {
   this->entsize = config->wordsize;
 }
 
@@ -4720,9 +4729,14 @@ template <class ELFT> void elf::createSyntheticSections() {
       add(*part.buildId);
     }
 
+    // dynSymTab is always present to simplify sym->includeInDynsym() in
+    // finalizeSections.
     part.dynStrTab = std::make_unique<StringTableSection>(".dynstr", true);
     part.dynSymTab =
         std::make_unique<SymbolTableSection<ELFT>>(*part.dynStrTab);
+
+    if (config->relocatable)
+      continue;
     part.dynamic = std::make_unique<DynamicSection<ELFT>>();
 
     if (hasMemtag()) {
@@ -4774,21 +4788,22 @@ template <class ELFT> void elf::createSyntheticSections() {
     if (config->relrPackDynRelocs) {
       part.relrDyn = std::make_unique<RelrSection<ELFT>>(threadCount);
       add(*part.relrDyn);
+      part.relrAuthDyn = std::make_unique<RelrSection<ELFT>>(
+          threadCount, /*isAArch64Auth=*/true);
+      add(*part.relrAuthDyn);
     }
 
-    if (!config->relocatable) {
-      if (config->ehFrameHdr) {
-        part.ehFrameHdr = std::make_unique<EhFrameHeader>();
-        add(*part.ehFrameHdr);
-      }
-      part.ehFrame = std::make_unique<EhFrameSection>();
-      add(*part.ehFrame);
+    if (config->ehFrameHdr) {
+      part.ehFrameHdr = std::make_unique<EhFrameHeader>();
+      add(*part.ehFrameHdr);
+    }
+    part.ehFrame = std::make_unique<EhFrameSection>();
+    add(*part.ehFrame);
 
-      if (config->emachine == EM_ARM) {
-        // This section replaces all the individual .ARM.exidx InputSections.
-        part.armExidx = std::make_unique<ARMExidxSyntheticSection>();
-        add(*part.armExidx);
-      }
+    if (config->emachine == EM_ARM) {
+      // This section replaces all the individual .ARM.exidx InputSections.
+      part.armExidx = std::make_unique<ARMExidxSyntheticSection>();
+      add(*part.armExidx);
     }
 
     if (!config->packageMetadata.empty()) {

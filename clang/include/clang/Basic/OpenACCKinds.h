@@ -514,6 +514,42 @@ enum class OpenACCReductionOperator {
   /// Invalid Reduction Clause Kind.
   Invalid,
 };
+
+template <typename StreamTy>
+inline StreamTy &printOpenACCReductionOperator(StreamTy &Out,
+                                               OpenACCReductionOperator Op) {
+  switch (Op) {
+  case OpenACCReductionOperator::Addition:
+    return Out << "+";
+  case OpenACCReductionOperator::Multiplication:
+    return Out << "*";
+  case OpenACCReductionOperator::Max:
+    return Out << "max";
+  case OpenACCReductionOperator::Min:
+    return Out << "min";
+  case OpenACCReductionOperator::BitwiseAnd:
+    return Out << "&";
+  case OpenACCReductionOperator::BitwiseOr:
+    return Out << "|";
+  case OpenACCReductionOperator::BitwiseXOr:
+    return Out << "^";
+  case OpenACCReductionOperator::And:
+    return Out << "&&";
+  case OpenACCReductionOperator::Or:
+    return Out << "||";
+  case OpenACCReductionOperator::Invalid:
+    return Out << "<invalid>";
+  }
+  llvm_unreachable("Unknown reduction operator kind");
+}
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
+                                             OpenACCReductionOperator Op) {
+  return printOpenACCReductionOperator(Out, Op);
+}
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
+                                     OpenACCReductionOperator Op) {
+  return printOpenACCReductionOperator(Out, Op);
+}
 } // namespace clang
 
 #endif // LLVM_CLANG_BASIC_OPENACCKINDS_H

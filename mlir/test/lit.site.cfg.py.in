@@ -3,6 +3,7 @@
 import sys
 
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
+config.llvm_src_root = "@LLVM_SOURCE_DIR@"
 config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
 config.llvm_shlib_ext = "@SHLIBEXT@"
 config.llvm_shlib_dir = lit_config.substitute(path(r"@SHLIBDIR@"))
@@ -25,7 +26,7 @@ config.mlir_cmake_dir = "@MLIR_CMAKE_DIR@"
 config.mlir_lib_dir = "@MLIR_LIB_DIR@"
 
 config.build_examples = @LLVM_BUILD_EXAMPLES@
-config.run_cuda_tests = @MLIR_ENABLE_CUDA_CONVERSIONS@
+config.run_nvptx_tests = @LLVM_HAS_NVPTX_TARGET@
 config.enable_cuda_runner = @MLIR_ENABLE_CUDA_RUNNER@
 config.run_rocm_tests = @MLIR_ENABLE_ROCM_CONVERSIONS@
 config.enable_rocm_runner = @MLIR_ENABLE_ROCM_RUNNER@

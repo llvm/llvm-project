@@ -26,6 +26,11 @@ namespace SparcASITag {
 #define GET_ASITagsList_IMPL
 #include "SparcGenSearchableTables.inc"
 } // end namespace SparcASITag
+
+namespace SparcPrefetchTag {
+#define GET_PrefetchTagsList_IMPL
+#include "SparcGenSearchableTables.inc"
+} // end namespace SparcPrefetchTag
 } // end namespace llvm
 
 using namespace llvm;

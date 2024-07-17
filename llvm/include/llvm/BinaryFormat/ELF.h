@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <cstring>
+#include <type_traits>
 
 namespace llvm {
 namespace ELF {
@@ -742,65 +743,69 @@ enum : unsigned {
 
   // AMDGCN-based processors.
   // clang-format off
-  EF_AMDGPU_MACH_AMDGCN_GFX600        = 0x020,
-  EF_AMDGPU_MACH_AMDGCN_GFX601        = 0x021,
-  EF_AMDGPU_MACH_AMDGCN_GFX700        = 0x022,
-  EF_AMDGPU_MACH_AMDGCN_GFX701        = 0x023,
-  EF_AMDGPU_MACH_AMDGCN_GFX702        = 0x024,
-  EF_AMDGPU_MACH_AMDGCN_GFX703        = 0x025,
-  EF_AMDGPU_MACH_AMDGCN_GFX704        = 0x026,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X27 = 0x027,
-  EF_AMDGPU_MACH_AMDGCN_GFX801        = 0x028,
-  EF_AMDGPU_MACH_AMDGCN_GFX802        = 0x029,
-  EF_AMDGPU_MACH_AMDGCN_GFX803        = 0x02a,
-  EF_AMDGPU_MACH_AMDGCN_GFX810        = 0x02b,
-  EF_AMDGPU_MACH_AMDGCN_GFX900        = 0x02c,
-  EF_AMDGPU_MACH_AMDGCN_GFX902        = 0x02d,
-  EF_AMDGPU_MACH_AMDGCN_GFX904        = 0x02e,
-  EF_AMDGPU_MACH_AMDGCN_GFX906        = 0x02f,
-  EF_AMDGPU_MACH_AMDGCN_GFX908        = 0x030,
-  EF_AMDGPU_MACH_AMDGCN_GFX909        = 0x031,
-  EF_AMDGPU_MACH_AMDGCN_GFX90C        = 0x032,
-  EF_AMDGPU_MACH_AMDGCN_GFX1010       = 0x033,
-  EF_AMDGPU_MACH_AMDGCN_GFX1011       = 0x034,
-  EF_AMDGPU_MACH_AMDGCN_GFX1012       = 0x035,
-  EF_AMDGPU_MACH_AMDGCN_GFX1030       = 0x036,
-  EF_AMDGPU_MACH_AMDGCN_GFX1031       = 0x037,
-  EF_AMDGPU_MACH_AMDGCN_GFX1032       = 0x038,
-  EF_AMDGPU_MACH_AMDGCN_GFX1033       = 0x039,
-  EF_AMDGPU_MACH_AMDGCN_GFX602        = 0x03a,
-  EF_AMDGPU_MACH_AMDGCN_GFX705        = 0x03b,
-  EF_AMDGPU_MACH_AMDGCN_GFX805        = 0x03c,
-  EF_AMDGPU_MACH_AMDGCN_GFX1035       = 0x03d,
-  EF_AMDGPU_MACH_AMDGCN_GFX1034       = 0x03e,
-  EF_AMDGPU_MACH_AMDGCN_GFX90A        = 0x03f,
-  EF_AMDGPU_MACH_AMDGCN_GFX940        = 0x040,
-  EF_AMDGPU_MACH_AMDGCN_GFX1100       = 0x041,
-  EF_AMDGPU_MACH_AMDGCN_GFX1013       = 0x042,
-  EF_AMDGPU_MACH_AMDGCN_GFX1150       = 0x043,
-  EF_AMDGPU_MACH_AMDGCN_GFX1103       = 0x044,
-  EF_AMDGPU_MACH_AMDGCN_GFX1036       = 0x045,
-  EF_AMDGPU_MACH_AMDGCN_GFX1101       = 0x046,
-  EF_AMDGPU_MACH_AMDGCN_GFX1102       = 0x047,
-  EF_AMDGPU_MACH_AMDGCN_GFX1200       = 0x048,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X49 = 0x049,
-  EF_AMDGPU_MACH_AMDGCN_GFX1151       = 0x04a,
-  EF_AMDGPU_MACH_AMDGCN_GFX941        = 0x04b,
-  EF_AMDGPU_MACH_AMDGCN_GFX942        = 0x04c,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D = 0x04d,
-  EF_AMDGPU_MACH_AMDGCN_GFX1201       = 0x04e,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4F = 0x04f,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X50 = 0x050,
-  EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC      = 0x051,
-  EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC   = 0x052,
-  EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC   = 0x053,
-  EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC     = 0x054,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X55 = 0x055,
+  EF_AMDGPU_MACH_AMDGCN_GFX600          = 0x020,
+  EF_AMDGPU_MACH_AMDGCN_GFX601          = 0x021,
+  EF_AMDGPU_MACH_AMDGCN_GFX700          = 0x022,
+  EF_AMDGPU_MACH_AMDGCN_GFX701          = 0x023,
+  EF_AMDGPU_MACH_AMDGCN_GFX702          = 0x024,
+  EF_AMDGPU_MACH_AMDGCN_GFX703          = 0x025,
+  EF_AMDGPU_MACH_AMDGCN_GFX704          = 0x026,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X27   = 0x027,
+  EF_AMDGPU_MACH_AMDGCN_GFX801          = 0x028,
+  EF_AMDGPU_MACH_AMDGCN_GFX802          = 0x029,
+  EF_AMDGPU_MACH_AMDGCN_GFX803          = 0x02a,
+  EF_AMDGPU_MACH_AMDGCN_GFX810          = 0x02b,
+  EF_AMDGPU_MACH_AMDGCN_GFX900          = 0x02c,
+  EF_AMDGPU_MACH_AMDGCN_GFX902          = 0x02d,
+  EF_AMDGPU_MACH_AMDGCN_GFX904          = 0x02e,
+  EF_AMDGPU_MACH_AMDGCN_GFX906          = 0x02f,
+  EF_AMDGPU_MACH_AMDGCN_GFX908          = 0x030,
+  EF_AMDGPU_MACH_AMDGCN_GFX909          = 0x031,
+  EF_AMDGPU_MACH_AMDGCN_GFX90C          = 0x032,
+  EF_AMDGPU_MACH_AMDGCN_GFX1010         = 0x033,
+  EF_AMDGPU_MACH_AMDGCN_GFX1011         = 0x034,
+  EF_AMDGPU_MACH_AMDGCN_GFX1012         = 0x035,
+  EF_AMDGPU_MACH_AMDGCN_GFX1030         = 0x036,
+  EF_AMDGPU_MACH_AMDGCN_GFX1031         = 0x037,
+  EF_AMDGPU_MACH_AMDGCN_GFX1032         = 0x038,
+  EF_AMDGPU_MACH_AMDGCN_GFX1033         = 0x039,
+  EF_AMDGPU_MACH_AMDGCN_GFX602          = 0x03a,
+  EF_AMDGPU_MACH_AMDGCN_GFX705          = 0x03b,
+  EF_AMDGPU_MACH_AMDGCN_GFX805          = 0x03c,
+  EF_AMDGPU_MACH_AMDGCN_GFX1035         = 0x03d,
+  EF_AMDGPU_MACH_AMDGCN_GFX1034         = 0x03e,
+  EF_AMDGPU_MACH_AMDGCN_GFX90A          = 0x03f,
+  EF_AMDGPU_MACH_AMDGCN_GFX940          = 0x040,
+  EF_AMDGPU_MACH_AMDGCN_GFX1100         = 0x041,
+  EF_AMDGPU_MACH_AMDGCN_GFX1013         = 0x042,
+  EF_AMDGPU_MACH_AMDGCN_GFX1150         = 0x043,
+  EF_AMDGPU_MACH_AMDGCN_GFX1103         = 0x044,
+  EF_AMDGPU_MACH_AMDGCN_GFX1036         = 0x045,
+  EF_AMDGPU_MACH_AMDGCN_GFX1101         = 0x046,
+  EF_AMDGPU_MACH_AMDGCN_GFX1102         = 0x047,
+  EF_AMDGPU_MACH_AMDGCN_GFX1200         = 0x048,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X49   = 0x049,
+  EF_AMDGPU_MACH_AMDGCN_GFX1151         = 0x04a,
+  EF_AMDGPU_MACH_AMDGCN_GFX941          = 0x04b,
+  EF_AMDGPU_MACH_AMDGCN_GFX942          = 0x04c,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D   = 0x04d,
+  EF_AMDGPU_MACH_AMDGCN_GFX1201         = 0x04e,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4F   = 0x04f,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X50   = 0x050,
+  EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC    = 0x051,
+  EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC = 0x052,
+  EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC = 0x053,
+  EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC   = 0x054,
+  EF_AMDGPU_MACH_AMDGCN_GFX1152         = 0x055,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X56   = 0x056,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X57   = 0x057,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X58   = 0x058,
+  EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC   = 0x059,
   // clang-format on
 
   // First/last AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,
-  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC,
+  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC,
 
   // Indicates if the "xnack" target feature is enabled for all code contained
   // in the object.
@@ -1078,7 +1083,10 @@ enum : unsigned {
   SHT_SYMTAB_SHNDX = 18,  // Indices for SHN_XINDEX entries.
   // Experimental support for SHT_RELR sections. For details, see proposal
   // at https://groups.google.com/forum/#!topic/generic-abi/bX460iggiKg
-  SHT_RELR = 19,         // Relocation entries; only offsets.
+  SHT_RELR = 19, // Relocation entries; only offsets.
+  // TODO: Experimental CREL relocations. LLVM will change the value and
+  // break compatibility in the future.
+  SHT_CREL = 0x40000014,
   SHT_LOOS = 0x60000000, // Lowest operating system-specific type.
   // Android packed relocation section types.
   // https://android.googlesource.com/platform/bionic/+/6f12bfece5dcc01325e0abba56a46b1bcf991c69/tools/relocation_packer/src/elf_file.cc#37
@@ -1421,6 +1429,14 @@ struct Elf64_Rela {
   void setSymbolAndType(Elf64_Word s, Elf64_Word t) {
     r_info = ((Elf64_Xword)s << 32) + (t & 0xffffffffL);
   }
+};
+
+// In-memory representation of CREL. The serialized representation uses LEB128.
+template <bool Is64> struct Elf_Crel {
+  std::conditional_t<Is64, uint64_t, uint32_t> r_offset;
+  uint32_t r_symidx;
+  uint32_t r_type;
+  std::conditional_t<Is64, int64_t, int32_t> r_addend;
 };
 
 // Relocation entry without explicit addend or info (relative relocations only).
@@ -1932,6 +1948,8 @@ enum {
   ELFCOMPRESS_LOPROC = 0x70000000, // Start of processor-specific.
   ELFCOMPRESS_HIPROC = 0x7fffffff  // End of processor-specific.
 };
+
+constexpr unsigned CREL_HDR_ADDEND = 4;
 
 /// Convert an architecture name into ELF's e_machine value.
 uint16_t convertArchNameToEMachine(StringRef Arch);

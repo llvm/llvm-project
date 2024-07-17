@@ -309,6 +309,11 @@ struct BufferizationOptions {
   /// bufferized or not.
   bool bufferizeFunctionBoundaries = false;
 
+  // Specifies whether to account for parallel regions in RaW analysis. If true,
+  // then writes inside of parallel regions that write to buffers defined
+  // outside of the parallel region will be given a new buffer.
+  bool checkParallelRegions = true;
+
   /// Certain ops have aliasing OpOperand/OpResult invariants (e.g., scf.for).
   /// If this flag is set to `false`, those invariants are no longer enforced
   /// with buffer copies.

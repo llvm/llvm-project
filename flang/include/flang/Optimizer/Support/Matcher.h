@@ -13,6 +13,7 @@
 #ifndef FORTRAN_OPTIMIZER_SUPPORT_MATCHER_H
 #define FORTRAN_OPTIMIZER_SUPPORT_MATCHER_H
 
+#include "flang/Common/idioms.h"
 #include <variant>
 
 // Boilerplate CRTP class for a simplified type-casing syntactic sugar. This
@@ -23,10 +24,10 @@ template<class... Ts> struct matches : Ts... { using Ts::operator()...; };
 template<class... Ts> matches(Ts...) -> matches<Ts...>;
 template<typename N> struct matcher {
   template<typename... Ts> auto match(Ts... ts) {
-    return std::visit(matches{ts...}, static_cast<N*>(this)->matchee());
+    return Fortran::common::visit(matches{ts...}, static_cast<N*>(this)->matchee());
   }
   template<typename... Ts> auto match(Ts... ts) const {
-    return std::visit(matches{ts...}, static_cast<N const*>(this)->matchee());
+    return Fortran::common::visit(matches{ts...}, static_cast<N const*>(this)->matchee());
   }
 };
 // clang-format on

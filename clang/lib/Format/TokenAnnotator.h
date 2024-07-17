@@ -22,6 +22,8 @@ namespace format {
 
 enum LineType {
   LT_Invalid,
+  // Contains public/private/protected followed by TT_InheritanceColon.
+  LT_AccessModifier,
   LT_ImportStatement,
   LT_ObjCDecl, // An @interface, @implementation, or @protocol line.
   LT_ObjCMethodDecl,
@@ -45,7 +47,7 @@ enum ScopeType {
 class AnnotatedLine {
 public:
   AnnotatedLine(const UnwrappedLine &Line)
-      : First(Line.Tokens.front().Tok), Level(Line.Level),
+      : First(Line.Tokens.front().Tok), Type(LT_Other), Level(Line.Level),
         PPLevel(Line.PPLevel),
         MatchingOpeningBlockLineIndex(Line.MatchingOpeningBlockLineIndex),
         MatchingClosingBlockLineIndex(Line.MatchingClosingBlockLineIndex),

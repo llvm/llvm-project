@@ -9,15 +9,14 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_NEXTTOWARDTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_NEXTTOWARDTEST_H
 
-#include "hdr/fenv_macros.h"
-#include "hdr/math_macros.h"
 #include "src/__support/CPP/bit.h"
-#include "src/__support/CPP/type_traits.h"
-#include "src/__support/FPUtil/BasicOperations.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
+
+#include "hdr/fenv_macros.h"
 
 // TODO: Strengthen errno,exception checks and remove these assert macros
 // after new matchers/test fixtures are added
@@ -194,7 +193,7 @@ public:
     result_bits = FPBits(result);
     ASSERT_EQ(result_bits.get_biased_exponent(), x_bits.get_biased_exponent());
     ASSERT_EQ(result_bits.get_mantissa(),
-              x_bits.get_mantissa() + StorageType(1));
+              static_cast<StorageType>(x_bits.get_mantissa() + StorageType(1)));
 
     x = -x;
 
@@ -208,7 +207,7 @@ public:
     result_bits = FPBits(result);
     ASSERT_EQ(result_bits.get_biased_exponent(), x_bits.get_biased_exponent());
     ASSERT_EQ(result_bits.get_mantissa(),
-              x_bits.get_mantissa() + StorageType(1));
+              static_cast<StorageType>(x_bits.get_mantissa() + StorageType(1)));
   }
 };
 

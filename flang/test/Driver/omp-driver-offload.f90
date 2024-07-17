@@ -207,3 +207,23 @@
 ! RUN:      --rocm-path=%S/Inputs/rocm %s 2>&1 \
 ! RUN:   | FileCheck --check-prefix=ROCM-PATH %s
 ! ROCM-PATH: Found HIP installation: {{.*Inputs.*rocm}}, version 3.6.20214-a2917cd
+
+! Test -fopenmp-force-usm option without offload
+! RUN: %flang -S -### %s -o %t 2>&1 \
+! RUN: -fopenmp -fopenmp-force-usm \
+! RUN: --target=aarch64-unknown-linux-gnu \
+! RUN:   | FileCheck %s --check-prefix=FORCE-USM-NO-OFFLOAD
+
+! FORCE-USM-NO-OFFLOAD: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
+! FORCE-USM-NO-OFFLOAD-SAME: "-fopenmp" "-fopenmp-force-usm"
+
+! Test -fopenmp-force-usm option with offload
+! RUN: %flang -S -### %s -o %t 2>&1 \
+! RUN: -fopenmp -fopenmp-force-usm --offload-arch=gfx90a \
+! RUN: --target=aarch64-unknown-linux-gnu \
+! RUN:   | FileCheck %s --check-prefix=FORCE-USM-OFFLOAD
+
+! FORCE-USM-OFFLOAD: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
+! FORCE-USM-OFFLOAD-SAME: "-fopenmp" "-fopenmp-force-usm"
+! FORCE-USM-OFFLOAD-NEXT: "{{[^"]*}}flang-new" "-fc1" "-triple" "amdgcn-amd-amdhsa"
+! FORCE-USM-OFFLOAD-SAME: "-fopenmp" "-fopenmp-force-usm"

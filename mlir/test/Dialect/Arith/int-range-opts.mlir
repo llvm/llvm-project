@@ -75,7 +75,7 @@ func.func @test() -> i1 {
 // -----
 
 // CHECK-LABEL: func @test
-// CHECK: test.reflect_bounds {smax = 24 : i8, smin = 0 : i8, umax = 24 : i8, umin = 0 : i8}
+// CHECK: test.reflect_bounds {smax = 24 : si8, smin = 0 : si8, umax = 24 : ui8, umin = 0 : ui8}
 func.func @test() -> i8 {
   %cst1 = arith.constant 1 : i8
   %i8val = test.with_bounds { umin = 0 : i8, umax = 12 : i8, smin = 0 : i8, smax = 12 : i8 } : i8
@@ -87,7 +87,7 @@ func.func @test() -> i8 {
 // -----
 
 // CHECK-LABEL: func @test
-// CHECK: test.reflect_bounds {smax = 127 : i8, smin = -128 : i8, umax = -1 : i8, umin = 0 : i8}
+// CHECK: test.reflect_bounds {smax = 127 : si8, smin = -128 : si8, umax = 254 : ui8, umin = 0 : ui8}
 func.func @test() -> i8 {
   %cst1 = arith.constant 1 : i8
   %i8val = test.with_bounds { umin = 0 : i8, umax = 127 : i8, smin = 0 : i8, smax = 127 : i8 } : i8
@@ -96,3 +96,39 @@ func.func @test() -> i8 {
   return %1: i8
 }
 
+// -----
+
+// CHECK-LABEL: func @trivial_rem
+// CHECK: [[val:%.+]] = test.with_bounds
+// CHECK: return [[val]]
+func.func @trivial_rem() -> i8 {
+  %c64 = arith.constant 64 : i8
+  %val = test.with_bounds { umin = 0 : ui8, umax = 63 : ui8, smin = 0 : si8, smax = 63 : si8 } : i8
+  %mod = arith.remsi %val, %c64 : i8
+  return %mod : i8
+}
+
+// -----
+
+// CHECK-LABEL: func @non_const_rhs
+// CHECK: [[mod:%.+]] = arith.remui
+// CHECK: return [[mod]]
+func.func @non_const_rhs() -> i8 {
+  %c64 = arith.constant 64 : i8
+  %val = test.with_bounds { umin = 0 : ui8, umax = 2 : ui8, smin = 0 : si8, smax = 2 : si8 } : i8
+  %rhs = test.with_bounds { umin = 63 : ui8, umax = 64 : ui8, smin = 63 : si8, smax = 64 : si8 } : i8
+  %mod = arith.remui %val, %rhs : i8
+  return %mod : i8
+}
+
+// -----
+
+// CHECK-LABEL: func @wraps
+// CHECK: [[mod:%.+]] = arith.remsi
+// CHECK: return [[mod]]
+func.func @wraps() -> i8 {
+  %c64 = arith.constant 64 : i8
+  %val = test.with_bounds { umin = 63 : ui8, umax = 65 : ui8, smin = 63 : si8, smax = 65 : si8 } : i8
+  %mod = arith.remsi %val, %c64 : i8
+  return %mod : i8
+}

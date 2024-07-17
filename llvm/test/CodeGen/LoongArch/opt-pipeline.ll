@@ -63,10 +63,12 @@
 ; LAXX-NEXT:       Replace intrinsics with calls to vector library
 ; LAXX-NEXT:       Partially inline calls to library functions
 ; LAXX-NEXT:       Expand vector predication intrinsics
+; LAXX-NEXT:       Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; LAXX-NEXT:       Scalarize Masked Memory Intrinsics
 ; LAXX-NEXT:       Expand reduction intrinsics
 ; LAXX-NEXT:       Natural Loop Information
 ; LAXX-NEXT:       TLS Variable Hoist
+; LAXX-NEXT:       Type Promotion
 ; LAXX-NEXT:       CodeGen Prepare
 ; LAXX-NEXT:       Dominator Tree Construction
 ; LAXX-NEXT:       Exception handling preparation
@@ -118,6 +120,7 @@
 ; LAXX-NEXT:       Register Coalescer
 ; LAXX-NEXT:       Rename Disconnected Subregister Components
 ; LAXX-NEXT:       Machine Instruction Scheduler
+; LAXX-NEXT:       LoongArch Dead register definitions
 ; LAXX-NEXT:       Machine Block Frequency Analysis
 ; LAXX-NEXT:       Debug Variable Analysis
 ; LAXX-NEXT:       Live Stack Slot Analysis
