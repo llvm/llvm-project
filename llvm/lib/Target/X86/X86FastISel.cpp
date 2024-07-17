@@ -3224,7 +3224,8 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
     return false;
 
   // Functions with no_caller_saved_registers that need special handling.
-  if ((CB && isa<CallInst>(CB) && CB->hasFnAttr("no_caller_saved_registers")))
+  if ((isa_and_nonnull<CallInst>(CB) &&
+       CB->hasFnAttr("no_caller_saved_registers")))
     return false;
 
   // Functions with no_callee_saved_registers that need special handling.

@@ -2011,10 +2011,10 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       CallConv == CallingConv::Tail || CallConv == CallingConv::SwiftTail;
   bool IsCalleePopSRet = !IsGuaranteeTCO && hasCalleePopSRet(Outs, Subtarget);
   X86MachineFunctionInfo *X86Info = MF.getInfo<X86MachineFunctionInfo>();
-  bool HasNCSR = (CB && isa<CallInst>(CB) &&
+  bool HasNCSR = (isa_and_nonnull<CallInst>(CB) &&
                   CB->hasFnAttr("no_caller_saved_registers"));
   bool HasNoCfCheck = (CB && CB->doesNoCfCheck());
-  bool IsIndirectCall = (CB && isa<CallInst>(CB) && CB->isIndirectCall());
+  bool IsIndirectCall = (isa_and_nonnull<CallInst>(CB) && CB->isIndirectCall());
   bool IsCFICall = IsIndirectCall && CLI.CFIType;
   const Module *M = MF.getMMI().getModule();
   Metadata *IsCFProtectionSupported = M->getModuleFlag("cf-protection-branch");
