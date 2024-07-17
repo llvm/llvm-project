@@ -472,6 +472,13 @@ include(HandleLibcxxFlags)
 # 'config-ix' use them during feature checks. It also adds them to both
 # 'LIBCXX_COMPILE_FLAGS' and 'LIBCXX_LINK_FLAGS'
 
+# These are required to make CMake flag checking work.
+if (${LLVM_RUNTIMES_TARGET} MATCHES "^amdgcn")
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nogpulib")
+elseif (${LLVM_RUNTIMES_TARGET} MATCHES "^nvptx")
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -flto -c -Wno-unused-command-line-argument")
+endif()
+
 if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
   add_flags_if_supported("-mdefault-visibility-export-mapping=explicit")
   set(CMAKE_AIX_EXPORT_ALL_SYMBOLS OFF)
