@@ -180,6 +180,10 @@ static cl::opt<unsigned> MaxSwitchCasesPerResult(
     "max-switch-cases-per-result", cl::Hidden, cl::init(16),
     cl::desc("Limit cases to analyze when converting a switch to select"));
 
+static cl::opt<unsigned> MinICmpsToSwitch(
+    "min-icmps-to-switch", cl::Hidden, cl::init(9),
+    cl::desc("Minimum number of icmp sequences to convert to switch"));
+
 STATISTIC(NumBitMaps, "Number of switch instructions turned into bitmaps");
 STATISTIC(NumLinearMaps,
           "Number of switch instructions turned into linear mapping");
@@ -4893,8 +4897,8 @@ bool SimplifyCFGOpt::SimplifyBranchOnICmpChain(BranchInst *BI,
   if (!CompVal)
     return false;
 
-  // Avoid turning single icmps into a switch.
-  if (UsedICmps <= 1)
+  // Avoid turning few icmps into a switch.
+  if (UsedICmps < MinICmpsToSwitch)
     return false;
 
   bool TrueWhenEqual = match(Cond, m_LogicalOr(m_Value(), m_Value()));
