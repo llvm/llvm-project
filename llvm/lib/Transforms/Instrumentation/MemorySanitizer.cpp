@@ -3895,8 +3895,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                         uint Width) {
     assert(isa<FixedVectorType>(left->getType()));
     assert(isa<FixedVectorType>(right->getType()));
-    assert(cast<FixedVectorType>(left->getType())->getNumElements() == 2 * Width);
-    assert(cast<FixedVectorType>(right->getType())->getNumElements() == 2 * Width);
+    assert(cast<FixedVectorType>(left->getType())->getNumElements() ==
+           2 * Width);
+    assert(cast<FixedVectorType>(right->getType())->getNumElements() ==
+           2 * Width);
 
     SmallVector<Constant *> Idxs;
 
