@@ -660,14 +660,6 @@ class WorkloadImportsManager : public ModuleImportsManager {
         }
         Set.insert(ElemIt->second);
       }
-      LLVM_DEBUG({
-        dbgs() << "[Workload] Root: " << Root << " we have " << Set.size()
-               << " distinct callees.\n";
-        for (const auto &VI : Set) {
-          dbgs() << "[Workload] Root: " << Root
-                 << " Would include: " << VI.getGUID() << "\n";
-        }
-      });
     }
   }
 
@@ -733,6 +725,16 @@ public:
     if (!ContextualProfile.empty())
       loadFromCtxProf();
     loadFromJson();
+    LLVM_DEBUG({
+      for (const auto &[Root, Set] : Workloads) {
+        dbgs() << "[Workload] Root: " << Root << " we have " << Set.size()
+               << " distinct callees.\n";
+        for (const auto &VI : Set) {
+          dbgs() << "[Workload] Root: " << Root
+                 << " Would include: " << VI.getGUID() << "\n";
+        }
+      }
+    });
   }
 };
 
