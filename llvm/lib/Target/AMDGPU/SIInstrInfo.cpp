@@ -1089,7 +1089,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // whole block for every handled copy.
   std::unique_ptr<RegScavenger> RS;
   if (Opcode == AMDGPU::INSTRUCTION_LIST_END)
-    RS.reset(new RegScavenger());
+    RS = std::make_unique<RegScavenger>();
 
   ArrayRef<int16_t> SubIndices = RI.getRegSplitParts(RC, EltSize);
 
