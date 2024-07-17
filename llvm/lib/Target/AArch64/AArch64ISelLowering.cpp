@@ -48,7 +48,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
@@ -3870,10 +3870,15 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   //    cmp     w13, w12
   // can be turned into:
   //    cmp     w12, w11, lsl #1
-  if (!isa<ConstantSDNode>(RHS) || !isLegalArithImmed(RHS->getAsZExtVal())) {
-    SDValue TheLHS = isCMN(LHS, CC) ? LHS.getOperand(1) : LHS;
+  if (!isa<ConstantSDNode>(RHS) ||
+      !isLegalArithImmed(RHS->getAsAPIntVal().abs().getZExtValue())) {
+    bool LHSIsCMN = isCMN(LHS, CC);
+    bool RHSIsCMN = isCMN(RHS, CC);
+    SDValue TheLHS = LHSIsCMN ? LHS.getOperand(1) : LHS;
+    SDValue TheRHS = RHSIsCMN ? RHS.getOperand(1) : RHS;
 
-    if (getCmpOperandFoldingProfit(TheLHS) > getCmpOperandFoldingProfit(RHS)) {
+    if (getCmpOperandFoldingProfit(TheLHS) + (LHSIsCMN ? 1 : 0) >
+        getCmpOperandFoldingProfit(TheRHS) + (RHSIsCMN ? 1 : 0)) {
       std::swap(LHS, RHS);
       CC = ISD::getSetCCSwappedOperands(CC);
     }
@@ -8573,7 +8578,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
             Chain, DL, DstAddr, Arg, SizeNode,
             Outs[i].Flags.getNonZeroByValAlign(),
             /*isVol = */ false, /*AlwaysInline = */ false,
-            /*isTailCall = */ false, DstInfo, MachinePointerInfo());
+            /*CI=*/nullptr, std::nullopt, DstInfo, MachinePointerInfo());
 
         MemOpChains.push_back(Cpy);
       } else {
@@ -9227,10 +9232,24 @@ AArch64TargetLowering::LowerDarwinGlobalTLSAddress(SDValue Op,
   // normal AArch64 call node: x0 takes the address of the descriptor, and
   // returns the address of the variable in this thread.
   Chain = DAG.getCopyToReg(Chain, DL, AArch64::X0, DescAddr, SDValue());
-  Chain =
-      DAG.getNode(AArch64ISD::CALL, DL, DAG.getVTList(MVT::Other, MVT::Glue),
-                  Chain, FuncTLVGet, DAG.getRegister(AArch64::X0, MVT::i64),
-                  DAG.getRegisterMask(Mask), Chain.getValue(1));
+
+  unsigned Opcode = AArch64ISD::CALL;
+  SmallVector<SDValue, 8> Ops;
+  Ops.push_back(Chain);
+  Ops.push_back(FuncTLVGet);
+
+  // With ptrauth-calls, the tlv access thunk pointer is authenticated (IA, 0).
+  if (DAG.getMachineFunction().getFunction().hasFnAttribute("ptrauth-calls")) {
+    Opcode = AArch64ISD::AUTH_CALL;
+    Ops.push_back(DAG.getTargetConstant(AArch64PACKey::IA, DL, MVT::i32));
+    Ops.push_back(DAG.getTargetConstant(0, DL, MVT::i64)); // Integer Disc.
+    Ops.push_back(DAG.getRegister(AArch64::NoRegister, MVT::i64)); // Addr Disc.
+  }
+
+  Ops.push_back(DAG.getRegister(AArch64::X0, MVT::i64));
+  Ops.push_back(DAG.getRegisterMask(Mask));
+  Ops.push_back(Chain.getValue(1));
+  Chain = DAG.getNode(Opcode, DL, DAG.getVTList(MVT::Other, MVT::Glue), Ops);
   return DAG.getCopyFromReg(Chain, DL, AArch64::X0, PtrVT, Chain.getValue(1));
 }
 
@@ -10859,8 +10878,9 @@ SDValue AArch64TargetLowering::LowerVACOPY(SDValue Op,
 
   return DAG.getMemcpy(Op.getOperand(0), DL, Op.getOperand(1), Op.getOperand(2),
                        DAG.getConstant(VaListSize, DL, MVT::i32),
-                       Align(PtrSize), false, false, false,
-                       MachinePointerInfo(DestSV), MachinePointerInfo(SrcSV));
+                       Align(PtrSize), false, false, /*CI=*/nullptr,
+                       std::nullopt, MachinePointerInfo(DestSV),
+                       MachinePointerInfo(SrcSV));
 }
 
 SDValue AArch64TargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
@@ -17738,6 +17758,12 @@ AArch64TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
   // fold (sdiv X, pow2)
   if ((VT != MVT::i32 && VT != MVT::i64) ||
       !(Divisor.isPowerOf2() || Divisor.isNegatedPowerOf2()))
+    return SDValue();
+
+  // If the divisor is 2 or -2, the default expansion is better. It will add
+  // (N->getValueType(0) >> (BitWidth - 1)) to it before shifting right.
+  if (Divisor == 2 ||
+      Divisor == APInt(Divisor.getBitWidth(), -2, /*isSigned*/ true))
     return SDValue();
 
   return TargetLowering::buildSDIVPow2WithCMov(N, Divisor, DAG, Created);

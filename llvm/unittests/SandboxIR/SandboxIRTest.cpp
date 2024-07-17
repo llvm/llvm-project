@@ -122,6 +122,9 @@ define i32 @foo(i32 %v0, i32 %v1) {
   BasicBlock *LLVMBB = &*LLVMF.begin();
   auto LLVMBBIt = LLVMBB->begin();
   Instruction *LLVMI0 = &*LLVMBBIt++;
+  Instruction *LLVMRet = &*LLVMBBIt++;
+  Argument *LLVMArg0 = LLVMF.getArg(0);
+  Argument *LLVMArg1 = LLVMF.getArg(1);
 
   auto &F = *Ctx.createFunction(&LLVMF);
   auto &BB = *F.begin();
@@ -203,6 +206,126 @@ OperandNo: 0
   EXPECT_FALSE(I0->hasNUses(0u));
   EXPECT_TRUE(I0->hasNUses(1u));
   EXPECT_FALSE(I0->hasNUses(2u));
+
+  // Check User.setOperand().
+  Ret->setOperand(0, Arg0);
+  EXPECT_EQ(Ret->getOperand(0), Arg0);
+  EXPECT_EQ(Ret->getOperandUse(0).get(), Arg0);
+  EXPECT_EQ(LLVMRet->getOperand(0), LLVMArg0);
+
+  Ret->setOperand(0, Arg1);
+  EXPECT_EQ(Ret->getOperand(0), Arg1);
+  EXPECT_EQ(Ret->getOperandUse(0).get(), Arg1);
+  EXPECT_EQ(LLVMRet->getOperand(0), LLVMArg1);
+}
+
+TEST_F(SandboxIRTest, RUOW) {
+  parseIR(C, R"IR(
+declare void @bar0()
+declare void @bar1()
+
+@glob0 = global ptr @bar0
+@glob1 = global ptr @bar1
+
+define i32 @foo(i32 %arg0, i32 %arg1) {
+  %add0 = add i32 %arg0, %arg1
+  %gep1 = getelementptr i8, ptr @glob0, i32 1
+  %gep2 = getelementptr i8, ptr @glob1, i32 1
+  ret i32 %add0
+}
+)IR");
+  llvm::Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto *Arg0 = F.getArg(0);
+  auto *Arg1 = F.getArg(1);
+  auto It = BB.begin();
+  auto *I0 = &*It++;
+  auto *I1 = &*It++;
+  auto *I2 = &*It++;
+  auto *Ret = &*It++;
+
+  bool Replaced;
+  // Try to replace an operand that doesn't match.
+  Replaced = I0->replaceUsesOfWith(Ret, Arg1);
+  EXPECT_FALSE(Replaced);
+  EXPECT_EQ(I0->getOperand(0), Arg0);
+  EXPECT_EQ(I0->getOperand(1), Arg1);
+
+  // Replace I0 operands when operands differ.
+  Replaced = I0->replaceUsesOfWith(Arg0, Arg1);
+  EXPECT_TRUE(Replaced);
+  EXPECT_EQ(I0->getOperand(0), Arg1);
+  EXPECT_EQ(I0->getOperand(1), Arg1);
+
+  // Replace I0 operands when operands are the same.
+  Replaced = I0->replaceUsesOfWith(Arg1, Arg0);
+  EXPECT_TRUE(Replaced);
+  EXPECT_EQ(I0->getOperand(0), Arg0);
+  EXPECT_EQ(I0->getOperand(1), Arg0);
+
+  // Replace Ret operand.
+  Replaced = Ret->replaceUsesOfWith(I0, Arg0);
+  EXPECT_TRUE(Replaced);
+  EXPECT_EQ(Ret->getOperand(0), Arg0);
+
+  // Check RAUW on constant.
+  auto *Glob0 = cast<sandboxir::Constant>(I1->getOperand(0));
+  auto *Glob1 = cast<sandboxir::Constant>(I2->getOperand(0));
+  auto *Glob0Op = Glob0->getOperand(0);
+  Glob0->replaceUsesOfWith(Glob0Op, Glob1);
+  EXPECT_EQ(Glob0->getOperand(0), Glob1);
+}
+
+TEST_F(SandboxIRTest, RAUW_RUWIf) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr) {
+  %ld0 = load float, ptr %ptr
+  %ld1 = load float, ptr %ptr
+  store float %ld0, ptr %ptr
+  store float %ld0, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function &LLVMF = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  llvm::BasicBlock *LLVMBB = &*LLVMF.begin();
+
+  Ctx.createFunction(&LLVMF);
+  auto *BB = cast<sandboxir::BasicBlock>(Ctx.getValue(LLVMBB));
+  auto It = BB->begin();
+  sandboxir::Instruction *Ld0 = &*It++;
+  sandboxir::Instruction *Ld1 = &*It++;
+  sandboxir::Instruction *St0 = &*It++;
+  sandboxir::Instruction *St1 = &*It++;
+  // Check RUWIf when the lambda returns false.
+  Ld0->replaceUsesWithIf(Ld1, [](const sandboxir::Use &Use) { return false; });
+  EXPECT_EQ(St0->getOperand(0), Ld0);
+  EXPECT_EQ(St1->getOperand(0), Ld0);
+  // Check RUWIf when the lambda returns true.
+  Ld0->replaceUsesWithIf(Ld1, [](const sandboxir::Use &Use) { return true; });
+  EXPECT_EQ(St0->getOperand(0), Ld1);
+  EXPECT_EQ(St1->getOperand(0), Ld1);
+  St0->setOperand(0, Ld0);
+  St1->setOperand(0, Ld0);
+  // Check RUWIf user == St0.
+  Ld0->replaceUsesWithIf(
+      Ld1, [St0](const sandboxir::Use &Use) { return Use.getUser() == St0; });
+  EXPECT_EQ(St0->getOperand(0), Ld1);
+  EXPECT_EQ(St1->getOperand(0), Ld0);
+  St0->setOperand(0, Ld0);
+  // Check RUWIf user == St1.
+  Ld0->replaceUsesWithIf(
+      Ld1, [St1](const sandboxir::Use &Use) { return Use.getUser() == St1; });
+  EXPECT_EQ(St0->getOperand(0), Ld0);
+  EXPECT_EQ(St1->getOperand(0), Ld1);
+  St1->setOperand(0, Ld0);
+  // Check RAUW.
+  Ld1->replaceAllUsesWith(Ld0);
+  EXPECT_EQ(St0->getOperand(0), Ld0);
+  EXPECT_EQ(St1->getOperand(0), Ld0);
 }
 
 // Check that the operands/users are counted correctly.
@@ -347,4 +470,93 @@ bb0:
 )IR");
   }
 #endif // NDEBUG
+}
+
+TEST_F(SandboxIRTest, Instruction) {
+  parseIR(C, R"IR(
+define void @foo(i8 %v1) {
+  %add0 = add i8 %v1, %v1
+  %sub1 = sub i8 %add0, %v1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  sandboxir::Function *F = Ctx.createFunction(LLVMF);
+  auto *Arg = F->getArg(0);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *I0 = &*It++;
+  auto *I1 = &*It++;
+  auto *Ret = &*It++;
+
+  // Check getPrevNode().
+  EXPECT_EQ(Ret->getPrevNode(), I1);
+  EXPECT_EQ(I1->getPrevNode(), I0);
+  EXPECT_EQ(I0->getPrevNode(), nullptr);
+
+  // Check getNextNode().
+  EXPECT_EQ(I0->getNextNode(), I1);
+  EXPECT_EQ(I1->getNextNode(), Ret);
+  EXPECT_EQ(Ret->getNextNode(), nullptr);
+
+  // Check getIterator().
+  EXPECT_EQ(I0->getIterator(), std::next(BB->begin(), 0));
+  EXPECT_EQ(I1->getIterator(), std::next(BB->begin(), 1));
+  EXPECT_EQ(Ret->getIterator(), std::next(BB->begin(), 2));
+
+  // Check getOpcode().
+  EXPECT_EQ(I0->getOpcode(), sandboxir::Instruction::Opcode::Opaque);
+  EXPECT_EQ(I1->getOpcode(), sandboxir::Instruction::Opcode::Opaque);
+  EXPECT_EQ(Ret->getOpcode(), sandboxir::Instruction::Opcode::Opaque);
+
+  // Check moveBefore(I).
+  I1->moveBefore(I0);
+  EXPECT_EQ(I0->getPrevNode(), I1);
+  EXPECT_EQ(I1->getNextNode(), I0);
+
+  // Check moveAfter(I).
+  I1->moveAfter(I0);
+  EXPECT_EQ(I0->getNextNode(), I1);
+  EXPECT_EQ(I1->getPrevNode(), I0);
+
+  // Check moveBefore(BB, It).
+  I1->moveBefore(*BB, BB->begin());
+  EXPECT_EQ(I1->getPrevNode(), nullptr);
+  EXPECT_EQ(I1->getNextNode(), I0);
+  I1->moveBefore(*BB, BB->end());
+  EXPECT_EQ(I1->getNextNode(), nullptr);
+  EXPECT_EQ(Ret->getNextNode(), I1);
+  I1->moveBefore(*BB, std::next(BB->begin()));
+  EXPECT_EQ(I0->getNextNode(), I1);
+  EXPECT_EQ(I1->getNextNode(), Ret);
+
+  // Check removeFromParent().
+  I0->removeFromParent();
+#ifndef NDEBUG
+  EXPECT_DEATH(I0->getPrevNode(), ".*Detached.*");
+  EXPECT_DEATH(I0->getNextNode(), ".*Detached.*");
+#endif // NDEBUG
+  EXPECT_EQ(I0->getParent(), nullptr);
+  EXPECT_EQ(I1->getPrevNode(), nullptr);
+  EXPECT_EQ(I0->getOperand(0), Arg);
+
+  // Check insertBefore().
+  I0->insertBefore(I1);
+  EXPECT_EQ(I1->getPrevNode(), I0);
+
+  // Check insertInto().
+  I0->removeFromParent();
+  I0->insertInto(BB, BB->end());
+  EXPECT_EQ(Ret->getNextNode(), I0);
+  I0->moveBefore(I1);
+  EXPECT_EQ(I0->getNextNode(), I1);
+
+  // Check eraseFromParent().
+#ifndef NDEBUG
+  EXPECT_DEATH(I0->eraseFromParent(), "Still connected to users.*");
+#endif
+  I1->eraseFromParent();
+  EXPECT_EQ(I0->getNumUses(), 0u);
+  EXPECT_EQ(I0->getNextNode(), Ret);
 }

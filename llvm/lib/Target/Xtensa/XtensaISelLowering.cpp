@@ -356,7 +356,7 @@ XtensaTargetLowering::LowerCall(CallLoweringInfo &CLI,
       SDValue Memcpy = DAG.getMemcpy(
           Chain, DL, Address, ArgValue, SizeNode, Flags.getNonZeroByValAlign(),
           /*isVolatile=*/false, /*AlwaysInline=*/false,
-          /*isTailCall=*/false, MachinePointerInfo(), MachinePointerInfo());
+          /*CI=*/nullptr, std::nullopt, MachinePointerInfo(), MachinePointerInfo());
       MemOpChains.push_back(Memcpy);
     } else {
       assert(VA.isMemLoc() && "Argument not register or memory");

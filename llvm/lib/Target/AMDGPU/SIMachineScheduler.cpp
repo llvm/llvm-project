@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "SIMachineScheduler.h"
-#include "SIInstrInfo.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIInstrInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
@@ -135,8 +135,7 @@ static const char *getReasonStr(SIScheduleCandReason Reason) {
 
 #endif
 
-namespace llvm {
-namespace SISched {
+namespace llvm::SISched {
 static bool tryLess(int TryVal, int CandVal,
                     SISchedulerCandidate &TryCand,
                     SISchedulerCandidate &Cand,
@@ -170,8 +169,7 @@ static bool tryGreater(int TryVal, int CandVal,
   Cand.setRepeat(Reason);
   return false;
 }
-} // end namespace SISched
-} // end namespace llvm
+} // end namespace llvm::SISched
 
 // SIScheduleBlock //
 
@@ -548,7 +546,7 @@ void SIScheduleBlock::addSucc(SIScheduleBlock *Succ,
   }
   if (Succ->isHighLatencyBlock())
     ++NumHighLatencySuccessors;
-  Succs.push_back(std::pair(Succ, Kind));
+  Succs.emplace_back(Succ, Kind);
 
   assert(none_of(Preds,
                  [=](SIScheduleBlock *P) { return SuccID == P->getID(); }) &&
@@ -619,9 +617,8 @@ SIScheduleBlockCreator::getBlocks(SISchedulerBlockCreatorVariant BlockVariant) {
     Res.TopDownBlock2Index = TopDownBlock2Index;
     Blocks[BlockVariant] = Res;
     return Res;
-  } else {
-    return B->second;
   }
+  return B->second;
 }
 
 bool SIScheduleBlockCreator::isSUInBlock(SUnit *SU, unsigned ID) {
@@ -707,45 +704,42 @@ void SIScheduleBlockCreator::colorHighLatenciesGroups() {
                                                HasSubGraph);
         if (!HasSubGraph)
           continue; // No dependencies between each other
-        else if (SubGraph.size() > 5) {
+        if (SubGraph.size() > 5) {
           // Too many elements would be required to be added to the block.
           CompatibleGroup = false;
           break;
         }
-        else {
-          // Check the type of dependency
-          for (unsigned k : SubGraph) {
-            // If in the path to join the two instructions,
-            // there is another high latency instruction,
-            // or instructions colored for another block
-            // abort the merge.
-            if (DAG->IsHighLatencySU[k] ||
-                (CurrentColoring[k] != ProposedColor &&
-                 CurrentColoring[k] != 0)) {
-              CompatibleGroup = false;
-              break;
-            }
-            // If one of the SU in the subgraph depends on the result of SU j,
-            // there'll be a data dependency.
-            if (hasDataDependencyPred(DAG->SUnits[k], DAG->SUnits[j])) {
-              CompatibleGroup = false;
-              break;
-            }
-          }
-          if (!CompatibleGroup)
-            break;
-          // Same check for the SU
-          if (hasDataDependencyPred(SU, DAG->SUnits[j])) {
+        // Check the type of dependency
+        for (unsigned k : SubGraph) {
+          // If in the path to join the two instructions,
+          // there is another high latency instruction,
+          // or instructions colored for another block
+          // abort the merge.
+          if (DAG->IsHighLatencySU[k] || (CurrentColoring[k] != ProposedColor &&
+                                          CurrentColoring[k] != 0)) {
             CompatibleGroup = false;
             break;
           }
-          // Add all the required instructions to the block
-          // These cannot live in another block (because they
-          // depend (order dependency) on one of the
-          // instruction in the block, and are required for the
-          // high latency instruction we add.
-          llvm::append_range(AdditionalElements, SubGraph);
+          // If one of the SU in the subgraph depends on the result of SU j,
+          // there'll be a data dependency.
+          if (hasDataDependencyPred(DAG->SUnits[k], DAG->SUnits[j])) {
+            CompatibleGroup = false;
+            break;
+          }
         }
+        if (!CompatibleGroup)
+          break;
+        // Same check for the SU
+        if (hasDataDependencyPred(SU, DAG->SUnits[j])) {
+          CompatibleGroup = false;
+          break;
+        }
+        // Add all the required instructions to the block
+        // These cannot live in another block (because they
+        // depend (order dependency) on one of the
+        // instruction in the block, and are required for the
+        // high latency instruction we add.
+        llvm::append_range(AdditionalElements, SubGraph);
       }
       if (CompatibleGroup) {
         FormingGroup.insert(SU.NodeNum);

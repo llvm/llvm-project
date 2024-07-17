@@ -1663,14 +1663,14 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
 bool SITargetLowering::canMergeStoresTo(unsigned AS, EVT MemVT,
                                         const MachineFunction &MF) const {
-  if (AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS) {
+  if (AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS)
     return (MemVT.getSizeInBits() <= 4 * 32);
-  } else if (AS == AMDGPUAS::PRIVATE_ADDRESS) {
+  if (AS == AMDGPUAS::PRIVATE_ADDRESS) {
     unsigned MaxPrivateBits = 8 * getSubtarget()->getMaxPrivateElementSize();
     return (MemVT.getSizeInBits() <= MaxPrivateBits);
-  } else if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS) {
-    return (MemVT.getSizeInBits() <= 2 * 32);
   }
+  if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS)
+    return (MemVT.getSizeInBits() <= 2 * 32);
   return true;
 }
 
@@ -3031,7 +3031,8 @@ SDValue SITargetLowering::LowerFormalArguments(
 
       InVals.push_back(NewArg);
       continue;
-    } else if (!IsEntryFunc && VA.isMemLoc()) {
+    }
+    if (!IsEntryFunc && VA.isMemLoc()) {
       SDValue Val = lowerStackParameter(DAG, VA, DL, Chain, Arg);
       InVals.push_back(Val);
       if (!Arg.Flags.isByVal())
@@ -3250,8 +3251,7 @@ SDValue SITargetLowering::LowerCallResult(
   CCInfo.AnalyzeCallResult(Ins, RetCC);
 
   // Copy all of the result registers out of their specified physreg.
-  for (unsigned i = 0; i != RVLocs.size(); ++i) {
-    CCValAssign VA = RVLocs[i];
+  for (CCValAssign VA : RVLocs) {
     SDValue Val;
 
     if (VA.isRegLoc()) {
@@ -3642,8 +3642,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (Callee.isUndef() || isNullConstant(Callee)) {
     if (!CLI.IsTailCall) {
-      for (unsigned I = 0, E = CLI.Ins.size(); I != E; ++I)
-        InVals.push_back(DAG.getUNDEF(CLI.Ins[I].VT));
+      for (ISD::InputArg &Arg : CLI.Ins)
+        InVals.push_back(DAG.getUNDEF(Arg.VT));
     }
 
     return Chain;
@@ -3822,7 +3822,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
             DAG.getMemcpy(Chain, DL, DstAddr, Arg, SizeNode,
                           Outs[i].Flags.getNonZeroByValAlign(),
                           /*isVol = */ false, /*AlwaysInline = */ true,
-                          /*isTailCall = */ false, DstInfo,
+                          /*CI=*/nullptr, std::nullopt, DstInfo,
                           MachinePointerInfo(AMDGPUAS::PRIVATE_ADDRESS));
 
         MemOpChains.push_back(Cpy);
@@ -4814,14 +4814,14 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
         .addReg(PhiReg)
         .add(*Val)
         .addReg(SGPRIdxReg)
-        .addImm(AMDGPU::sub0);
+        .addImm(SubReg);
   } else {
     const MCInstrDesc &MovRelDesc = TII->getIndirectRegWriteMovRelPseudo(
         TRI.getRegSizeInBits(*VecRC), 32, false);
     BuildMI(*LoopBB, InsPt, DL, MovRelDesc, Dst)
         .addReg(PhiReg)
         .add(*Val)
-        .addImm(AMDGPU::sub0);
+        .addImm(SubReg);
   }
 
   MI.eraseFromParent();
@@ -10922,7 +10922,8 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
       return expandUnalignedStore(Store, DAG);
 
     return SDValue();
-  } else if (AS == AMDGPUAS::PRIVATE_ADDRESS) {
+  }
+  if (AS == AMDGPUAS::PRIVATE_ADDRESS) {
     switch (Subtarget->getMaxPrivateElementSize()) {
     case 4:
       return scalarizeVectorStore(Store, DAG);
@@ -12517,11 +12518,12 @@ SITargetLowering::performSignExtendInRegCombine(SDNode *N,
         Opc, DL, ResList, Ops, M->getMemoryVT(), M->getMemOperand());
     SDValue LoadVal = DCI.DAG.getNode(ISD::TRUNCATE, DL, VT, BufferLoad);
     return LoadVal;
-  } else if (((Src.getOpcode() == AMDGPUISD::BUFFER_LOAD_UBYTE &&
-               VTSign->getVT() == MVT::i8) ||
-              (Src.getOpcode() == AMDGPUISD::BUFFER_LOAD_USHORT &&
-               VTSign->getVT() == MVT::i16)) &&
-             Src.hasOneUse()) {
+  }
+  if (((Src.getOpcode() == AMDGPUISD::BUFFER_LOAD_UBYTE &&
+        VTSign->getVT() == MVT::i8) ||
+       (Src.getOpcode() == AMDGPUISD::BUFFER_LOAD_USHORT &&
+        VTSign->getVT() == MVT::i16)) &&
+      Src.hasOneUse()) {
     auto *M = cast<MemSDNode>(Src);
     SDValue Ops[] = {
       Src.getOperand(0), // Chain
@@ -16344,7 +16346,7 @@ SITargetLowering::getRegClassFor(MVT VT, bool isDivergent) const {
                                                : &AMDGPU::SReg_32RegClass;
   if (!TRI->isSGPRClass(RC) && !isDivergent)
     return TRI->getEquivalentSGPRClass(RC);
-  else if (TRI->isSGPRClass(RC) && isDivergent)
+  if (TRI->isSGPRClass(RC) && isDivergent)
     return TRI->getEquivalentVGPRClass(RC);
 
   return RC;
