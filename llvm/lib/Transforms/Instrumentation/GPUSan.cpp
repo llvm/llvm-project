@@ -231,6 +231,8 @@ private:
   }
   FunctionCallee getAllocationInfoFn(PtrOrigin PO) {
     assert(PO >= LOCAL && PO <= GLOBAL && "Origin does not need handling.");
+    if (auto *F = M.getFunction("ompx_get_allocation_info" + getSuffix(PO)))
+      return FunctionCallee(F->getFunctionType(), F);
     return getOrCreateFn(
         AllocationInfoFn[PO], "ompx_get_allocation_info" + getSuffix(PO),
         StructType::create({getPtrTy(PO), Int64Ty, Int32Ty}), {getPtrTy(PO)});
@@ -872,13 +874,14 @@ bool GPUSanImpl::instrument() {
     Value *Idx = createCall(IRB, getThreadIdFn(), {}, "san.gtid");
     Value *Ptr = IRB.CreateGEP(Int64Ty, LocationsArray, {Idx});
     IRB.CreateStore(ConstantInt::get(Int64Ty, 0), Ptr);
+
+    for (auto *KernelFn : Kernels) {
+      IRBuilder<> IRB(
+          &*KernelFn->getEntryBlock().getFirstNonPHIOrDbgOrAlloca());
+      createCall(IRB, InitSharedFn, {});
+    }
   }
   IRB.CreateRetVoid();
-
-  for (auto *KernelFn : Kernels) {
-    IRBuilder<> IRB(&*KernelFn->getEntryBlock().getFirstNonPHIOrDbgOrAlloca());
-    createCall(IRB, InitSharedFn, {});
-  }
 
   for (const auto &It : llvm::enumerate(AmbiguousCallsOrdered)) {
     IRBuilder<> IRB(It.value());
@@ -910,6 +913,13 @@ bool GPUSanImpl::instrument() {
   GV->setVisibility(GlobalValue::ProtectedVisibility);
 
   for (auto *CI : Calls) {
+    if (!CI->getCalledFunction()) {
+      CI->dump();
+      continue;
+    }
+    //  if (!CI->getCalledFunction()->getName().contains("gep") &&
+    //      !CI->getCalledFunction()->getName().contains("info"))
+    //    continue;
     InlineFunctionInfo IFI;
     if (InlineFunction(*CI, IFI).isSuccess())
       Changed = true;

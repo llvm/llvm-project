@@ -22,6 +22,7 @@ int64_t __san_get_location_value();
 }
 
 #define INLINE gnu::always_inline
+#define NOINLINE gnu::noinline
 
 enum class AllocationKind { LOCAL, GLOBAL, LAST = GLOBAL };
 
@@ -234,7 +235,8 @@ struct SanitizerTrapInfoTy {
   }
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation, noreturn, INLINE, gnu::cold]] void
+  [[clang::disable_sanitizer_instrumentation, noreturn, NOINLINE,
+    gnu::cold]] void
   exceedsAllocationLength(_AS_PTR(void, AK) Start, uint64_t Length,
                           int64_t AllocationId, uint64_t Slot,
                           int64_t SourceId) {
@@ -244,7 +246,8 @@ struct SanitizerTrapInfoTy {
   }
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation, noreturn, INLINE, gnu::cold]] void
+  [[clang::disable_sanitizer_instrumentation, noreturn, NOINLINE,
+    gnu::cold]] void
   exceedsAllocationSlots(_AS_PTR(void, AK) Start, uint64_t Length,
                          int64_t AllocationId, uint64_t Slot,
                          int64_t SourceId) {
@@ -254,7 +257,8 @@ struct SanitizerTrapInfoTy {
   }
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation, noreturn, INLINE, gnu::cold]] void
+  [[clang::disable_sanitizer_instrumentation, noreturn, NOINLINE,
+    gnu::cold]] void
   pointerOutsideAllocation(_AS_PTR(void, AK) Start, uint64_t Length,
                            int64_t AllocationId, uint64_t Slot, uint64_t PC) {
     allocationError<AK>(PointerOutsideAllocation, Start, Length, AllocationId,
@@ -287,12 +291,14 @@ struct SanitizerTrapInfoTy {
   }
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation, noreturn, INLINE, gnu::cold]] void
+  [[clang::disable_sanitizer_instrumentation, noreturn, NOINLINE,
+    gnu::cold]] void
   accessError(const AllocationPtrTy<AK> AP, int64_t Size, int64_t AccessId,
               int64_t SourceId);
 
   template <enum AllocationKind AK>
-  [[clang::disable_sanitizer_instrumentation, noreturn, INLINE, gnu::cold]] void
+  [[clang::disable_sanitizer_instrumentation, noreturn, NOINLINE,
+    gnu::cold]] void
   garbagePointer(const AllocationPtrTy<AK> AP, void *P, int64_t SourceId) {
     ErrorCode = GarbagePointer;
     AllocationStart = P;
@@ -343,7 +349,7 @@ getAllocation(const AllocationPtrTy<AK> AP, int64_t AccessId = 0) {
 }
 
 template <enum AllocationKind AK>
-[[clang::disable_sanitizer_instrumentation, noreturn, INLINE, gnu::cold]] void
+[[clang::disable_sanitizer_instrumentation, noreturn, NOINLINE, gnu::cold]] void
 SanitizerTrapInfoTy::accessError(const AllocationPtrTy<AK> AP, int64_t Size,
                                  int64_t AccessId, int64_t SourceId) {
   auto &A = getAllocationArray<AK>().Arr[AP.AllocationId];
