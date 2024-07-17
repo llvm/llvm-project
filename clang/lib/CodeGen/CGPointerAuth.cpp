@@ -232,7 +232,7 @@ llvm::Value *CodeGenFunction::emitPointerAuthResign(
     return Value;
 
   llvm::Value *Null = nullptr;
-  // If the Value is obviously null, we're done.
+  // If the value is obviously null, we're done.
   if (auto *PointerValue = dyn_cast<llvm::PointerType>(Value->getType())) {
     Null = CGM.getNullPointer(PointerValue, Type);
   } else {
