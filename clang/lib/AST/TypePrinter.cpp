@@ -644,16 +644,25 @@ void TypePrinter::printDependentAddressSpaceAfter(
 void TypePrinter::printDependentSizedExtVectorBefore(
                                           const DependentSizedExtVectorType *T,
                                           raw_ostream &OS) {
+  if (Policy.UseHLSLTypes)
+    OS << "vector<";
   printBefore(T->getElementType(), OS);
 }
 
 void TypePrinter::printDependentSizedExtVectorAfter(
                                           const DependentSizedExtVectorType *T,
                                           raw_ostream &OS) {
-  OS << " __attribute__((ext_vector_type(";
-  if (T->getSizeExpr())
-    T->getSizeExpr()->printPretty(OS, nullptr, Policy);
-  OS << ")))";
+  if (Policy.UseHLSLTypes) {
+    OS << ", ";
+    if (T->getSizeExpr())
+      T->getSizeExpr()->printPretty(OS, nullptr, Policy);
+    OS << ">";
+  } else {
+    OS << " __attribute__((ext_vector_type(";
+    if (T->getSizeExpr())
+      T->getSizeExpr()->printPretty(OS, nullptr, Policy);
+    OS << ")))";
+  }
   printAfter(T->getElementType(), OS);
 }
 
@@ -815,14 +824,23 @@ void TypePrinter::printDependentVectorAfter(
 
 void TypePrinter::printExtVectorBefore(const ExtVectorType *T,
                                        raw_ostream &OS) {
+  if (Policy.UseHLSLTypes)
+    OS << "vector<";
   printBefore(T->getElementType(), OS);
 }
 
 void TypePrinter::printExtVectorAfter(const ExtVectorType *T, raw_ostream &OS) {
   printAfter(T->getElementType(), OS);
-  OS << " __attribute__((ext_vector_type(";
-  OS << T->getNumElements();
-  OS << ")))";
+
+  if (Policy.UseHLSLTypes) {
+    OS << ", ";
+    OS << T->getNumElements();
+    OS << ">";
+  } else {
+    OS << " __attribute__((ext_vector_type(";
+    OS << T->getNumElements();
+    OS << ")))";
+  }
 }
 
 void TypePrinter::printConstantMatrixBefore(const ConstantMatrixType *T,
@@ -997,6 +1015,17 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
     break;
   }
   T->printExceptionSpecification(OS, Policy);
+
+  const FunctionEffectsRef FX = T->getFunctionEffects();
+  for (const auto &CFE : FX) {
+    OS << " __attribute__((" << CFE.Effect.name();
+    if (const Expr *E = CFE.Cond.getCondition()) {
+      OS << '(';
+      E->printPretty(OS, nullptr, Policy);
+      OS << ')';
+    }
+    OS << "))";
+  }
 
   if (T->hasTrailingReturn()) {
     OS << " -> ";
@@ -1586,14 +1615,14 @@ void TypePrinter::printTemplateId(const TemplateSpecializationType *T,
   IncludeStrongLifetimeRAII Strong(Policy);
 
   TemplateDecl *TD = T->getTemplateName().getAsTemplateDecl();
-  // FIXME: Null TD never excercised in test suite.
+  // FIXME: Null TD never exercised in test suite.
   if (FullyQualify && TD) {
     if (!Policy.SuppressScope)
       AppendScope(TD->getDeclContext(), OS, TD->getDeclName());
 
     OS << TD->getName();
   } else {
-    T->getTemplateName().print(OS, Policy);
+    T->getTemplateName().print(OS, Policy, TemplateName::Qualified::None);
   }
 
   DefaultTemplateArgsPolicyRAII TemplateArgs(Policy);
@@ -1905,6 +1934,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     break;
 
   case attr::CountedBy:
+  case attr::CountedByOrNull:
+  case attr::SizedBy:
+  case attr::SizedByOrNull:
   case attr::LifetimeBound:
   case attr::TypeNonNull:
   case attr::TypeNullable:
@@ -1928,6 +1960,10 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::ArmOut:
   case attr::ArmInOut:
   case attr::ArmPreserves:
+  case attr::NonBlocking:
+  case attr::NonAllocating:
+  case attr::Blocking:
+  case attr::Allocating:
     llvm_unreachable("This attribute should have been handled already");
 
   case attr::NSReturnsRetained:
@@ -2281,8 +2317,9 @@ bool clang::isSubstitutedDefaultArgument(ASTContext &Ctx, TemplateArgument Arg,
                Ctx, Arg, TTPD->getDefaultArgument().getArgument(), Args, Depth);
   } else if (auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
     return NTTPD->hasDefaultArgument() &&
-           isSubstitutedTemplateArgument(Ctx, Arg, NTTPD->getDefaultArgument(),
-                                         Args, Depth);
+           isSubstitutedTemplateArgument(
+               Ctx, Arg, NTTPD->getDefaultArgument().getArgument(), Args,
+               Depth);
   }
   return false;
 }

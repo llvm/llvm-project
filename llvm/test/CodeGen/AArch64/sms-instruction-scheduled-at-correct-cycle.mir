@@ -1,0 +1,335 @@
+# RUN: llc --verify-machineinstrs -mtriple=aarch64 -o - %s -run-pass pipeliner -aarch64-enable-pipeliner -debug-only=pipeliner -pipeliner-max-stages=50 -pipeliner-max-mii=50 -pipeliner-enable-copytophi=0 -pipeliner-ii-search-range=30 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Test that each instruction must be scheduled between the early cycle and the late cycle. Previously there were cases where an instruction is scheduled outside of the valid range. See issue #93936 for details.
+
+# CHECK: {{^ *}}Try to schedule with 47
+# CHECK: {{^ *}}Inst (11)   %48:fpr128 = LDRQui %35:gpr64sp, 0 :: (load (s128) from %ir.lsr.iv63, align 4, !tbaa !0)
+# CHECK-EMPTY:
+# CHECK-NEXT: {{^ *}}es: ffffffe9 ls: ffffffe9
+# CHECK-NEXT: {{^ *}}Trying to insert node between -23 and -23 II: 47
+# CHECK-NEXT: {{^ *}}failed to insert at cycle -23   %48:fpr128 = LDRQui %35:gpr64sp, 0 :: (load (s128) from %ir.lsr.iv63, align 4, !tbaa !0)
+
+--- |
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+  
+  define dso_local void @f(ptr nocapture noundef writeonly %a, ptr nocapture noundef readonly %b, ptr nocapture noundef readonly %c, ptr nocapture noundef readonly %d, ptr nocapture noundef readonly %e, float noundef %f, i32 noundef %N) local_unnamed_addr {
+  entry:
+    %cmp16 = icmp sgt i32 %N, 0
+    br i1 %cmp16, label %for.body.preheader, label %for.cond.cleanup
+  
+  for.body.preheader:                               ; preds = %entry
+    %wide.trip.count = zext nneg i32 %N to i64
+    %min.iters.check = icmp ult i32 %N, 8
+    br i1 %min.iters.check, label %for.body.preheader37, label %vector.memcheck
+  
+  vector.memcheck:                                  ; preds = %for.body.preheader
+    %0 = ptrtoint ptr %a to i64
+    %1 = ptrtoint ptr %b to i64
+    %2 = ptrtoint ptr %c to i64
+    %3 = ptrtoint ptr %d to i64
+    %4 = ptrtoint ptr %e to i64
+    %5 = sub i64 %0, %1
+    %diff.check = icmp ult i64 %5, 32
+    %6 = sub i64 %0, %2
+    %diff.check22 = icmp ult i64 %6, 32
+    %conflict.rdx = or i1 %diff.check, %diff.check22
+    %7 = sub i64 %0, %3
+    %diff.check24 = icmp ult i64 %7, 32
+    %conflict.rdx25 = or i1 %conflict.rdx, %diff.check24
+    %8 = sub i64 %0, %4
+    %diff.check27 = icmp ult i64 %8, 32
+    %conflict.rdx28 = or i1 %conflict.rdx25, %diff.check27
+    br i1 %conflict.rdx28, label %for.body.preheader37, label %vector.ph
+  
+  vector.ph:                                        ; preds = %vector.memcheck
+    %n.vec = and i64 %wide.trip.count, 2147483640
+    %broadcast.splatinsert = insertelement <4 x float> poison, float %f, i64 0
+    %broadcast.splat = shufflevector <4 x float> %broadcast.splatinsert, <4 x float> poison, <4 x i32> zeroinitializer
+    %scevgep54 = getelementptr i8, ptr %b, i64 16
+    %scevgep58 = getelementptr i8, ptr %a, i64 16
+    %scevgep62 = getelementptr i8, ptr %c, i64 16
+    %scevgep66 = getelementptr i8, ptr %e, i64 16
+    %scevgep70 = getelementptr i8, ptr %d, i64 16
+    br label %vector.body
+  
+  vector.body:                                      ; preds = %vector.body, %vector.ph
+    %lsr.iv71 = phi ptr [ %scevgep72, %vector.body ], [ %scevgep70, %vector.ph ]
+    %lsr.iv67 = phi ptr [ %scevgep68, %vector.body ], [ %scevgep66, %vector.ph ]
+    %lsr.iv63 = phi ptr [ %scevgep64, %vector.body ], [ %scevgep62, %vector.ph ]
+    %lsr.iv59 = phi ptr [ %scevgep60, %vector.body ], [ %scevgep58, %vector.ph ]
+    %lsr.iv55 = phi ptr [ %scevgep56, %vector.body ], [ %scevgep54, %vector.ph ]
+    %lsr.iv52 = phi i64 [ %lsr.iv.next53, %vector.body ], [ %n.vec, %vector.ph ]
+    %scevgep57 = getelementptr i8, ptr %lsr.iv55, i64 -16
+    %wide.load = load <4 x float>, ptr %scevgep57, align 4, !tbaa !6
+    %wide.load29 = load <4 x float>, ptr %lsr.iv55, align 4, !tbaa !6
+    %9 = fmul <4 x float> %wide.load, %broadcast.splat
+    %10 = fmul <4 x float> %wide.load29, %broadcast.splat
+    %scevgep65 = getelementptr i8, ptr %lsr.iv63, i64 -16
+    %wide.load30 = load <4 x float>, ptr %scevgep65, align 4, !tbaa !6
+    %wide.load31 = load <4 x float>, ptr %lsr.iv63, align 4, !tbaa !6
+    %scevgep73 = getelementptr i8, ptr %lsr.iv71, i64 -16
+    %wide.load32 = load <4 x float>, ptr %scevgep73, align 4, !tbaa !6
+    %wide.load33 = load <4 x float>, ptr %lsr.iv71, align 4, !tbaa !6
+    %11 = fsub <4 x float> %wide.load30, %wide.load32
+    %12 = fsub <4 x float> %wide.load31, %wide.load33
+    %13 = fmul <4 x float> %9, %11
+    %14 = fmul <4 x float> %10, %12
+    %scevgep69 = getelementptr i8, ptr %lsr.iv67, i64 -16
+    %wide.load34 = load <4 x float>, ptr %scevgep69, align 4, !tbaa !6
+    %wide.load35 = load <4 x float>, ptr %lsr.iv67, align 4, !tbaa !6
+    %15 = fdiv <4 x float> %13, %wide.load34
+    %16 = fdiv <4 x float> %14, %wide.load35
+    %scevgep61 = getelementptr i8, ptr %lsr.iv59, i64 -16
+    store <4 x float> %15, ptr %scevgep61, align 4, !tbaa !6
+    store <4 x float> %16, ptr %lsr.iv59, align 4, !tbaa !6
+    %lsr.iv.next53 = add nsw i64 %lsr.iv52, -8
+    %scevgep56 = getelementptr i8, ptr %lsr.iv55, i64 32
+    %scevgep60 = getelementptr i8, ptr %lsr.iv59, i64 32
+    %scevgep64 = getelementptr i8, ptr %lsr.iv63, i64 32
+    %scevgep68 = getelementptr i8, ptr %lsr.iv67, i64 32
+    %scevgep72 = getelementptr i8, ptr %lsr.iv71, i64 32
+    %17 = icmp eq i64 %lsr.iv.next53, 0
+    br i1 %17, label %middle.block, label %vector.body, !llvm.loop !10
+  
+  middle.block:                                     ; preds = %vector.body
+    %cmp.n = icmp eq i64 %n.vec, %wide.trip.count
+    br i1 %cmp.n, label %for.cond.cleanup, label %for.body.preheader37
+  
+  for.body.preheader37:                             ; preds = %vector.memcheck, %for.body.preheader, %middle.block
+    %indvars.iv.ph = phi i64 [ %n.vec, %middle.block ], [ 0, %for.body.preheader ], [ 0, %vector.memcheck ]
+    %18 = shl nuw nsw i64 %indvars.iv.ph, 2
+    %scevgep = getelementptr i8, ptr %a, i64 %18
+    %scevgep39 = getelementptr i8, ptr %e, i64 %18
+    %scevgep42 = getelementptr i8, ptr %d, i64 %18
+    %scevgep45 = getelementptr i8, ptr %c, i64 %18
+    %scevgep48 = getelementptr i8, ptr %b, i64 %18
+    %19 = sub i64 %wide.trip.count, %indvars.iv.ph
+    br label %for.body
+  
+  for.cond.cleanup:                                 ; preds = %for.body, %middle.block, %entry
+    ret void
+  
+  for.body:                                         ; preds = %for.body.preheader37, %for.body
+    %lsr.iv51 = phi i64 [ %19, %for.body.preheader37 ], [ %lsr.iv.next, %for.body ]
+    %lsr.iv49 = phi ptr [ %scevgep48, %for.body.preheader37 ], [ %scevgep50, %for.body ]
+    %lsr.iv46 = phi ptr [ %scevgep45, %for.body.preheader37 ], [ %scevgep47, %for.body ]
+    %lsr.iv43 = phi ptr [ %scevgep42, %for.body.preheader37 ], [ %scevgep44, %for.body ]
+    %lsr.iv40 = phi ptr [ %scevgep39, %for.body.preheader37 ], [ %scevgep41, %for.body ]
+    %lsr.iv = phi ptr [ %scevgep, %for.body.preheader37 ], [ %scevgep38, %for.body ]
+    %20 = load float, ptr %lsr.iv49, align 4, !tbaa !6
+    %mul = fmul float %20, %f
+    %21 = load float, ptr %lsr.iv46, align 4, !tbaa !6
+    %22 = load float, ptr %lsr.iv43, align 4, !tbaa !6
+    %sub = fsub float %21, %22
+    %mul5 = fmul float %mul, %sub
+    %23 = load float, ptr %lsr.iv40, align 4, !tbaa !6
+    %div = fdiv float %mul5, %23
+    store float %div, ptr %lsr.iv, align 4, !tbaa !6
+    %scevgep38 = getelementptr i8, ptr %lsr.iv, i64 4
+    %scevgep41 = getelementptr i8, ptr %lsr.iv40, i64 4
+    %scevgep44 = getelementptr i8, ptr %lsr.iv43, i64 4
+    %scevgep47 = getelementptr i8, ptr %lsr.iv46, i64 4
+    %scevgep50 = getelementptr i8, ptr %lsr.iv49, i64 4
+    %lsr.iv.next = add i64 %lsr.iv51, -1
+    %exitcond.not = icmp eq i64 %lsr.iv.next, 0
+    br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  }
+  
+  !6 = !{!7, !7, i64 0}
+  !7 = !{!"float", !8, i64 0}
+  !8 = !{!"omnipotent char", !9, i64 0}
+  !9 = !{!"Simple C/C++ TBAA"}
+  !10 = distinct !{!10, !11, !12, !13}
+  !11 = !{!"llvm.loop.mustprogress"}
+  !12 = !{!"llvm.loop.isvectorized", i32 1}
+  !13 = !{!"llvm.loop.unroll.runtime.disable"}
+  !14 = distinct !{!14, !11, !12}
+
+...
+---
+name:            f
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0', virtual-reg: '%39' }
+  - { reg: '$x1', virtual-reg: '%40' }
+  - { reg: '$x2', virtual-reg: '%41' }
+  - { reg: '$x3', virtual-reg: '%42' }
+  - { reg: '$x4', virtual-reg: '%43' }
+  - { reg: '$s0', virtual-reg: '%44' }
+  - { reg: '$w5', virtual-reg: '%45' }
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.7
+    liveins: $x0, $x1, $x2, $x3, $x4, $s0, $w5
+  
+    %45:gpr32common = COPY $w5
+    %44:fpr32 = COPY $s0
+    %43:gpr64common = COPY $x4
+    %42:gpr64common = COPY $x3
+    %41:gpr64common = COPY $x2
+    %40:gpr64common = COPY $x1
+    %39:gpr64common = COPY $x0
+    dead $wzr = SUBSWri %45, 1, 0, implicit-def $nzcv
+    Bcc 11, %bb.7, implicit $nzcv
+    B %bb.1
+  
+  bb.1.for.body.preheader:
+    successors: %bb.12, %bb.2
+  
+    %48:gpr32 = ORRWrs $wzr, %45, 0
+    %0:gpr64 = SUBREG_TO_REG 0, killed %48, %subreg.sub_32
+    dead $wzr = SUBSWri %45, 8, 0, implicit-def $nzcv
+    Bcc 2, %bb.2, implicit $nzcv
+  
+  bb.12:
+    %49:gpr64all = COPY $xzr
+    %47:gpr64all = COPY %49
+    B %bb.6
+  
+  bb.2.vector.memcheck:
+    successors: %bb.6, %bb.11
+  
+    %55:gpr64common = SUBXrr %39, %40
+    %59:gpr64all = COPY $xzr
+    %51:gpr64all = COPY %59
+    dead $xzr = SUBSXri killed %55, 32, 0, implicit-def $nzcv
+    Bcc 3, %bb.6, implicit $nzcv
+    B %bb.11
+  
+  bb.11.vector.memcheck:
+    successors: %bb.6, %bb.10
+  
+    %56:gpr64common = SUBXrr %39, %41
+    dead $xzr = SUBSXri %56, 32, 0, implicit-def $nzcv
+    Bcc 3, %bb.6, implicit $nzcv
+    B %bb.10
+  
+  bb.10.vector.memcheck:
+    successors: %bb.6, %bb.9
+  
+    %57:gpr64common = SUBXrr %39, %42
+    dead $xzr = SUBSXri %57, 32, 0, implicit-def $nzcv
+    Bcc 3, %bb.6, implicit $nzcv
+    B %bb.9
+  
+  bb.9.vector.memcheck:
+    successors: %bb.6, %bb.3
+  
+    %58:gpr64common = SUBXrr %39, %43
+    dead $xzr = SUBSXri %58, 32, 0, implicit-def $nzcv
+    Bcc 3, %bb.6, implicit $nzcv
+    B %bb.3
+  
+  bb.3.vector.ph:
+    %64:gpr64common = ANDXri %0, 8027
+    %1:gpr64 = COPY %64
+    %66:fpr128 = IMPLICIT_DEF
+    %65:fpr128 = INSERT_SUBREG %66, %44, %subreg.ssub
+    %67:gpr64sp = ADDXri %40, 16, 0
+    %3:gpr64all = COPY %67
+    %68:gpr64sp = ADDXri %39, 16, 0
+    %4:gpr64all = COPY %68
+    %69:gpr64sp = ADDXri %41, 16, 0
+    %5:gpr64all = COPY %69
+    %70:gpr64sp = ADDXri %43, 16, 0
+    %6:gpr64all = COPY %70
+    %71:gpr64sp = ADDXri %42, 16, 0
+    %7:gpr64all = COPY %71
+  
+  bb.4.vector.body:
+    successors: %bb.5, %bb.4
+  
+    %8:gpr64sp = PHI %7, %bb.3, %19, %bb.4
+    %9:gpr64sp = PHI %6, %bb.3, %18, %bb.4
+    %10:gpr64sp = PHI %5, %bb.3, %17, %bb.4
+    %11:gpr64sp = PHI %4, %bb.3, %16, %bb.4
+    %12:gpr64sp = PHI %3, %bb.3, %15, %bb.4
+    %13:gpr64sp = PHI %1, %bb.3, %14, %bb.4
+    %72:fpr128 = LDURQi %12, -16 :: (load (s128) from %ir.scevgep57, align 4, !tbaa !6)
+    %73:fpr128 = LDRQui %12, 0 :: (load (s128) from %ir.lsr.iv55, align 4, !tbaa !6)
+    %74:fpr128 = nofpexcept FMULv4i32_indexed killed %72, %65, 0, implicit $fpcr
+    %75:fpr128 = nofpexcept FMULv4i32_indexed killed %73, %65, 0, implicit $fpcr
+    %76:fpr128 = LDURQi %10, -16 :: (load (s128) from %ir.scevgep65, align 4, !tbaa !6)
+    %77:fpr128 = LDRQui %10, 0 :: (load (s128) from %ir.lsr.iv63, align 4, !tbaa !6)
+    %78:fpr128 = LDURQi %8, -16 :: (load (s128) from %ir.scevgep73, align 4, !tbaa !6)
+    %79:fpr128 = LDRQui %8, 0 :: (load (s128) from %ir.lsr.iv71, align 4, !tbaa !6)
+    %80:fpr128 = nofpexcept FSUBv4f32 killed %76, killed %78, implicit $fpcr
+    %81:fpr128 = nofpexcept FSUBv4f32 killed %77, killed %79, implicit $fpcr
+    %82:fpr128 = nofpexcept FMULv4f32 killed %74, killed %80, implicit $fpcr
+    %83:fpr128 = nofpexcept FMULv4f32 killed %75, killed %81, implicit $fpcr
+    %84:fpr128 = LDURQi %9, -16 :: (load (s128) from %ir.scevgep69, align 4, !tbaa !6)
+    %85:fpr128 = LDRQui %9, 0 :: (load (s128) from %ir.lsr.iv67, align 4, !tbaa !6)
+    %86:fpr128 = nofpexcept FDIVv4f32 killed %82, killed %84, implicit $fpcr
+    %87:fpr128 = nofpexcept FDIVv4f32 killed %83, killed %85, implicit $fpcr
+    STURQi killed %86, %11, -16 :: (store (s128) into %ir.scevgep61, align 4, !tbaa !6)
+    STRQui killed %87, %11, 0 :: (store (s128) into %ir.lsr.iv59, align 4, !tbaa !6)
+    %88:gpr64 = nsw SUBSXri %13, 8, 0, implicit-def $nzcv
+    %14:gpr64all = COPY %88
+    %89:gpr64sp = ADDXri %12, 32, 0
+    %15:gpr64all = COPY %89
+    %90:gpr64sp = ADDXri %11, 32, 0
+    %16:gpr64all = COPY %90
+    %91:gpr64sp = ADDXri %10, 32, 0
+    %17:gpr64all = COPY %91
+    %92:gpr64sp = ADDXri %9, 32, 0
+    %18:gpr64all = COPY %92
+    %93:gpr64sp = ADDXri %8, 32, 0
+    %19:gpr64all = COPY %93
+    Bcc 1, %bb.4, implicit $nzcv
+    B %bb.5
+  
+  bb.5.middle.block:
+    dead $xzr = SUBSXrr %64, %0, implicit-def $nzcv
+    Bcc 0, %bb.7, implicit $nzcv
+    B %bb.6
+  
+  bb.6.for.body.preheader37:
+    %20:gpr64 = PHI %47, %bb.12, %51, %bb.2, %51, %bb.11, %51, %bb.10, %51, %bb.9, %1, %bb.5
+    %95:gpr64 = nuw nsw UBFMXri %20, 62, 61
+    %96:gpr64 = ADDXrr %39, %95
+    %21:gpr64all = COPY %96
+    %97:gpr64 = ADDXrr %43, %95
+    %22:gpr64all = COPY %97
+    %98:gpr64 = ADDXrr %42, %95
+    %23:gpr64all = COPY %98
+    %99:gpr64 = ADDXrr %41, %95
+    %24:gpr64all = COPY %99
+    %100:gpr64 = ADDXrr %40, %95
+    %25:gpr64all = COPY %100
+    %101:gpr64 = SUBXrr %0, %20
+    %26:gpr64all = COPY %101
+    B %bb.8
+  
+  bb.7.for.cond.cleanup:
+    RET_ReallyLR
+  
+  bb.8.for.body:
+    successors: %bb.7, %bb.8
+  
+    %27:gpr64sp = PHI %26, %bb.6, %38, %bb.8
+    %28:gpr64sp = PHI %25, %bb.6, %37, %bb.8
+    %29:gpr64sp = PHI %24, %bb.6, %36, %bb.8
+    %30:gpr64sp = PHI %23, %bb.6, %35, %bb.8
+    %31:gpr64sp = PHI %22, %bb.6, %34, %bb.8
+    %32:gpr64sp = PHI %21, %bb.6, %33, %bb.8
+    early-clobber %102:gpr64sp, %103:fpr32 = LDRSpost %28, 4 :: (load (s32) from %ir.lsr.iv49, !tbaa !6)
+    %104:fpr32 = nofpexcept FMULSrr killed %103, %44, implicit $fpcr
+    early-clobber %105:gpr64sp, %106:fpr32 = LDRSpost %29, 4 :: (load (s32) from %ir.lsr.iv46, !tbaa !6)
+    early-clobber %107:gpr64sp, %108:fpr32 = LDRSpost %30, 4 :: (load (s32) from %ir.lsr.iv43, !tbaa !6)
+    %109:fpr32 = nofpexcept FSUBSrr killed %106, killed %108, implicit $fpcr
+    %110:fpr32 = nofpexcept FMULSrr killed %104, killed %109, implicit $fpcr
+    early-clobber %111:gpr64sp, %112:fpr32 = LDRSpost %31, 4 :: (load (s32) from %ir.lsr.iv40, !tbaa !6)
+    %113:fpr32 = nofpexcept FDIVSrr killed %110, killed %112, implicit $fpcr
+    early-clobber %114:gpr64sp = STRSpost killed %113, %32, 4 :: (store (s32) into %ir.lsr.iv, !tbaa !6)
+    %33:gpr64all = COPY %114
+    %34:gpr64all = COPY %111
+    %35:gpr64all = COPY %107
+    %36:gpr64all = COPY %105
+    %37:gpr64all = COPY %102
+    %115:gpr64 = SUBSXri %27, 1, 0, implicit-def $nzcv
+    %38:gpr64all = COPY %115
+    Bcc 0, %bb.7, implicit $nzcv
+    B %bb.8
+
+...

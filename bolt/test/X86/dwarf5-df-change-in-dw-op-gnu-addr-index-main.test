@@ -10,7 +10,7 @@
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.dwo.dwo &> %t/maindwodwo.txt
 ; RUN: cat %t/maindwodwo.txt | FileCheck -check-prefix=BOLT-DWO-MAIN %s
 
-; Tests that new indices are assigned to DW_OP_GNU_addr_index.
+;; Tests that new indices are assigned to DW_OP_GNU_addr_index.
 
 ; PRE-BOLT-DWO-MAIN: version = 0x0005
 ; PRE-BOLT-DWO-MAIN: DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x0)

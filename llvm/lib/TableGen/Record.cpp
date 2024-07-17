@@ -2283,9 +2283,9 @@ DefInit *VarDefInit::instantiate() {
     ArrayRef<Init *> TArgs = Class->getTemplateArgs();
     MapResolver R(NewRec);
 
-    for (unsigned I = 0, E = TArgs.size(); I != E; ++I) {
-      R.set(TArgs[I], NewRec->getValue(TArgs[I])->getValue());
-      NewRec->removeValue(TArgs[I]);
+    for (Init *Arg : TArgs) {
+      R.set(Arg, NewRec->getValue(Arg)->getValue());
+      NewRec->removeValue(Arg);
     }
 
     for (auto *Arg : args()) {

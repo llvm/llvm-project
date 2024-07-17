@@ -27,8 +27,8 @@ define i64 @caller_float_in_regs() nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    lu12i.w $a1, 262144
+; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    bl %plt(callee_float_in_regs)
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16

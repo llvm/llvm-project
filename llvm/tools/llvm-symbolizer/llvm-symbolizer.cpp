@@ -337,6 +337,14 @@ static void symbolizeInput(const opt::InputArgList &Args,
   object::BuildID BuildID(IncomingBuildID.begin(), IncomingBuildID.end());
   uint64_t Offset = 0;
   StringRef Symbol;
+
+  // An empty input string may be used to check if the process is alive and
+  // responding to input. Do not emit a message on stderr in this case but
+  // respond on stdout.
+  if (InputString.empty()) {
+    printUnknownLineInfo(ModuleName, Printer);
+    return;
+  }
   if (Error E = parseCommand(Args.getLastArgValue(OPT_obj_EQ), IsAddr2Line,
                              StringRef(InputString), Cmd, ModuleName, BuildID,
                              Symbol, Offset)) {

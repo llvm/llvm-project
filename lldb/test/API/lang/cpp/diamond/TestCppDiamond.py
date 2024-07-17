@@ -109,7 +109,7 @@ class TestCase(TestBase):
 
     @expectedFailureAll
     @no_debug_info_test
-    def test(self):
+    def test_invalid_member(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
             self, "// breakpoint 1", lldb.SBFileSpec("main.cpp")

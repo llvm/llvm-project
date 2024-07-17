@@ -30,6 +30,7 @@
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/LambdaCapture.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/OpenACCClause.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
@@ -510,6 +511,7 @@ private:
   bool
   TraverseOpenACCAssociatedStmtConstruct(OpenACCAssociatedStmtConstruct *S);
   bool VisitOpenACCClauseList(ArrayRef<const OpenACCClause *>);
+  bool VisitOpenACCClause(const OpenACCClause *);
 };
 
 template <typename Derived>
@@ -853,10 +855,14 @@ bool RecursiveASTVisitor<Derived>::TraverseDeclarationNameInfo(
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseTemplateName(TemplateName Template) {
-  if (DependentTemplateName *DTN = Template.getAsDependentTemplateName())
+  if (DependentTemplateName *DTN = Template.getAsDependentTemplateName()) {
     TRY_TO(TraverseNestedNameSpecifier(DTN->getQualifier()));
-  else if (QualifiedTemplateName *QTN = Template.getAsQualifiedTemplateName())
-    TRY_TO(TraverseNestedNameSpecifier(QTN->getQualifier()));
+  } else if (QualifiedTemplateName *QTN =
+                 Template.getAsQualifiedTemplateName()) {
+    if (QTN->getQualifier()) {
+      TRY_TO(TraverseNestedNameSpecifier(QTN->getQualifier()));
+    }
+  }
 
   return true;
 }
@@ -2320,7 +2326,7 @@ DEF_TRAVERSE_DECL(NonTypeTemplateParmDecl, {
   // A non-type template parameter, e.g. "S" in template<int S> class Foo ...
   TRY_TO(TraverseDeclaratorHelper(D));
   if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited())
-    TRY_TO(TraverseStmt(D->getDefaultArgument()));
+    TRY_TO(TraverseTemplateArgumentLoc(D->getDefaultArgument()));
 })
 
 DEF_TRAVERSE_DECL(ParmVarDecl, {
@@ -2858,6 +2864,11 @@ DEF_TRAVERSE_STMT(ShuffleVectorExpr, {})
 DEF_TRAVERSE_STMT(ConvertVectorExpr, {})
 DEF_TRAVERSE_STMT(StmtExpr, {})
 DEF_TRAVERSE_STMT(SourceLocExpr, {})
+DEF_TRAVERSE_STMT(EmbedExpr, {
+  for (IntegerLiteral *IL : S->underlying_data_elements()) {
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(IL);
+  }
+})
 
 DEF_TRAVERSE_STMT(UnresolvedLookupExpr, {
   TRY_TO(TraverseNestedNameSpecifierLoc(S->getQualifierLoc()));
@@ -3968,14 +3979,33 @@ bool RecursiveASTVisitor<Derived>::TraverseOpenACCAssociatedStmtConstruct(
 }
 
 template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOpenACCClause(const OpenACCClause *C) {
+  for (const Stmt *Child : C->children())
+    TRY_TO(TraverseStmt(const_cast<Stmt *>(Child)));
+  return true;
+}
+
+template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOpenACCClauseList(
-    ArrayRef<const OpenACCClause *>) {
+    ArrayRef<const OpenACCClause *> Clauses) {
+
+  for (const auto *C : Clauses)
+    TRY_TO(VisitOpenACCClause(C));
+//    if (const auto *WithCond = dyn_cast<OopenACCClauseWithCondition>(C);
+//        WithCond && WIthCond->hasConditionExpr()) {
+//      TRY_TO(TraverseStmt(WithCond->getConditionExpr());
+//    } else if (const auto *
+//  }
+//  OpenACCClauseWithCondition::getConditionExpr/hasConditionExpr
+//OpenACCClauseWithExprs::children (might be null?)
   // TODO OpenACC: When we have Clauses with expressions, we should visit them
   // here.
   return true;
 }
 
 DEF_TRAVERSE_STMT(OpenACCComputeConstruct,
+                  { TRY_TO(TraverseOpenACCAssociatedStmtConstruct(S)); })
+DEF_TRAVERSE_STMT(OpenACCLoopConstruct,
                   { TRY_TO(TraverseOpenACCAssociatedStmtConstruct(S)); })
 
 // FIXME: look at the following tricky-seeming exprs to see if we

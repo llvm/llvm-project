@@ -47,7 +47,7 @@ from ..support import seven
 
 def is_exe(fpath):
     """Returns true if fpath is an executable."""
-    if fpath == None:
+    if fpath is None:
         return False
     if sys.platform == "win32":
         if not fpath.endswith(".exe"):
@@ -266,6 +266,13 @@ def parseOptionsAndInitTestdirs():
                     configuration.compiler = candidate
                     break
 
+    if args.make:
+        configuration.make_path = args.make
+    elif platform_system == "FreeBSD" or platform_system == "NetBSD":
+        configuration.make_path = "gmake"
+    else:
+        configuration.make_path = "make"
+
     if args.dsymutil:
         configuration.dsymutil = args.dsymutil
     elif platform_system == "Darwin":
@@ -304,7 +311,9 @@ def parseOptionsAndInitTestdirs():
         lldbtest_config.out_of_tree_debugserver = args.out_of_tree_debugserver
 
     # Set SDKROOT if we are using an Apple SDK
-    if platform_system == "Darwin" and args.apple_sdk:
+    if args.sysroot is not None:
+        configuration.sdkroot = args.sysroot
+    elif platform_system == "Darwin" and args.apple_sdk:
         configuration.sdkroot = seven.get_command_output(
             'xcrun --sdk "%s" --show-sdk-path 2> /dev/null' % (args.apple_sdk)
         )
@@ -542,12 +551,6 @@ def setupSysPath():
     lldbDAPExec = os.path.join(lldbDir, "lldb-dap")
     if is_exe(lldbDAPExec):
         os.environ["LLDBDAP_EXEC"] = lldbDAPExec
-    else:
-        if not configuration.shouldSkipBecauseOfCategories(["lldb-dap"]):
-            print(
-                "The 'lldb-dap' executable cannot be located.  The lldb-dap tests can not be run as a result."
-            )
-            configuration.skip_categories.append("lldb-dap")
 
     lldbPythonDir = None  # The directory that contains 'lldb/__init__.py'
 
@@ -929,6 +932,24 @@ def checkPexpectSupport():
         configuration.skip_categories.append("pexpect")
 
 
+def checkDAPSupport():
+    import lldb
+
+    if "LLDBDAP_EXEC" not in os.environ:
+        msg = (
+            "The 'lldb-dap' executable cannot be located and its tests will not be run."
+        )
+    elif lldb.remote_platform:
+        msg = "lldb-dap tests are not compatible with remote platforms and will not be run."
+    else:
+        msg = None
+
+    if msg:
+        if configuration.verbose:
+            print(msg)
+        configuration.skip_categories.append("lldb-dap")
+
+
 def run_suite():
     # On MacOS X, check to make sure that domain for com.apple.DebugSymbols defaults
     # does not exist before proceeding to running the test suite.
@@ -1029,6 +1050,7 @@ def run_suite():
     checkObjcSupport()
     checkForkVForkSupport()
     checkPexpectSupport()
+    checkDAPSupport()
 
     skipped_categories_list = ", ".join(configuration.skip_categories)
     print(

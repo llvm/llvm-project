@@ -2,11 +2,11 @@
 
 // REQUIRES: aarch64-registered-target
 
-// RUN: %clang_cc1 -triple aarch64 -target-feature +sme2 -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
-// RUN: %clang_cc1 -triple aarch64 -target-feature +sme2 -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -D__SVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sme2 -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
-// RUN: %clang_cc1 -D__SVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sme2 -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -triple aarch64 -target-feature +sme2 -target-feature +bf16 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -target-feature +sme2 -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -target-feature +sme2 -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -D__SVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sme -target-feature +sme2 -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
+// RUN: %clang_cc1 -D__SVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sme -target-feature +sme2 -target-feature +bf16 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -triple aarch64 -target-feature +sme -target-feature +sme2 -target-feature +bf16 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
 #include <arm_sme.h>
 
@@ -496,4 +496,26 @@ svuint8_t test_qcvt_u8_s32_x4(svint32x4_t zn) __arm_streaming {
 //
 svuint16_t test_qcvt_u16_s64_x4(svint64x4_t zn) __arm_streaming {
   return SVE_ACLE_FUNC(svqcvt_u16,_s64_x4,,)(zn);
+}
+
+// CHECK-LABEL: @test_cvt_f32_x2(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.fcvt.widen.x2.nxv4f32(<vscale x 8 x half> [[ZN:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 0
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> poison, <vscale x 4 x float> [[TMP1]], i64 0)
+// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 1
+// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> [[TMP2]], <vscale x 4 x float> [[TMP3]], i64 4)
+// CHECK-NEXT:    ret <vscale x 8 x float> [[TMP4]]
+//
+// CPP-CHECK-LABEL: @_Z15test_cvt_f32_x2u13__SVFloat16_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.fcvt.widen.x2.nxv4f32(<vscale x 8 x half> [[ZN:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 0
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> poison, <vscale x 4 x float> [[TMP1]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP0]], 1
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> [[TMP2]], <vscale x 4 x float> [[TMP3]], i64 4)
+// CPP-CHECK-NEXT:    ret <vscale x 8 x float> [[TMP4]]
+//
+__attribute__((target("sme-f16f16"))) svfloat32x2_t test_cvt_f32_x2(svfloat16_t zn)  __arm_streaming {
+  return SVE_ACLE_FUNC(svcvt_f32,_f16_x2,,)(zn);
 }

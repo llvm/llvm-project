@@ -21,7 +21,7 @@ stdout. It can be ran as:
 Parameters:
 
     -d   --directory   Specify which directory to scan. Multiple directories can be searched by
-                       providing a semicolon seperated list of directories.
+                       providing a semicolon separated list of directories.
 
     -l   --log         Combine all yaml files into one log (instead of generating a summary)
 

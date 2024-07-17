@@ -4,7 +4,7 @@
 ;; This is a collection of tests whose only purpose is to show changes in the
 ;; default configuration.  Please keep these tests minimal - if you're testing
 ;; functionality of some specific configuration, please place that in a
-;; seperate test file with a hard coded configuration (even if that
+;; separate test file with a hard coded configuration (even if that
 ;; configuration is the current default).
 
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n64-S128"

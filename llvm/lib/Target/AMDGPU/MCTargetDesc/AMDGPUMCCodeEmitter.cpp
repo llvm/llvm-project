@@ -662,6 +662,11 @@ void AMDGPUMCCodeEmitter::getMachineOpValueT16Lo128(
 void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
     const MCInst &MI, const MCOperand &MO, unsigned OpNo, APInt &Op,
     SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
+  int64_t Val;
+  if (MO.isExpr() && MO.getExpr()->evaluateAsAbsolute(Val)) {
+    Op = Val;
+    return;
+  }
 
   if (MO.isExpr() && MO.getExpr()->getKind() != MCExpr::Constant) {
     // FIXME: If this is expression is PCRel or not should not depend on what

@@ -3,7 +3,7 @@
 // REQUIRES: has_sancovcc
 // UNSUPPORTED: ubsan,i386-darwin,target={{(powerpc64|s390x|thumb).*}}
 // This test is failing for lsan on darwin on x86_64h.
-// UNSUPPORTED: darwin && x86-target-arch && lsan
+// UNSUPPORTED: x86_64h-darwin && lsan
 // XFAIL: tsan
 // XFAIL: android && asan
 

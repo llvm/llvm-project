@@ -361,8 +361,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %vec:_(<2 x s64>) = COPY $q0
     ; CHECK-NEXT: %idx:_(s64) = COPY $x1
-    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s64) = G_EXTRACT_VECTOR_ELT %vec(<2 x s64>), %idx(s64)
-    ; CHECK-NEXT: %extract:_(s64) = G_FREEZE [[EVEC]]
+    ; CHECK-NEXT: %fvec:_(<2 x s64>) = G_FREEZE %vec
+    ; CHECK-NEXT: %extract:_(s64) = G_EXTRACT_VECTOR_ELT %fvec(<2 x s64>), %idx(s64)
     ; CHECK-NEXT: $x0 = COPY %extract(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %vec:_(<2 x s64>) = COPY $q0

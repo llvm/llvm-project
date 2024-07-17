@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -passes=polly-codegen -S < %s | FileCheck %s
 ;
 ; llvm.org/PR25439
 ; Scalar reloads in the generated entering block were not recognized as

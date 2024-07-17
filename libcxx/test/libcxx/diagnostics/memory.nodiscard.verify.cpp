@@ -39,15 +39,3 @@ void test_allocator() {
   allocator.allocate_at_least(1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
 }
-
-void test_const_allocator() {
-  std::allocator<const int> allocator;
-  allocator.allocate(1);          // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-#if TEST_STD_VER <= 17
-  allocator.allocate(1, nullptr); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-#endif
-#if TEST_STD_VER >= 23
-  allocator.allocate_at_least(1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-#endif
-}

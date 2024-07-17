@@ -454,6 +454,15 @@ Q: What command line options can I use for OpenMP?
 We recommend taking a look at the OpenMP 
 :doc:`command line argument reference <CommandLineArgumentReference>` page.
 
+Q: Can I build the offloading runtimes without CUDA or HSA?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+By default, the offloading runtime will load the associated vendor runtime 
+during initialization rather than directly linking against them. This allows the 
+program to be built and run on many machine. If you wish to directly link 
+against these libraries, use the ``LIBOMPTARGET_DLOPEN_PLUGINS=""`` option to 
+suppress it for each plugin. The default value is every plugin enabled with 
+``LIBOMPTARGET_PLUGINS_TO_BUILD``.
+
 Q: Why is my build taking a long time?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 When installing OpenMP and other LLVM components, the build time on multicore 

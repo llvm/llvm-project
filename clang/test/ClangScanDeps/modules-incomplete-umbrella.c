@@ -47,6 +47,12 @@ framework module FW_Private {
 // CHECK_TU-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Headers/FW.h",
 // CHECK_TU-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.modulemap"
 // CHECK_TU-NEXT:       ],
+// CHECK_TU-NEXT:       "link-libraries": [
+// CHECK_TU-NEXT:         {
+// CHECK_TU-NEXT:           "isFramework": true,
+// CHECK_TU-NEXT:           "link-name": "FW"
+// CHECK_TU-NEXT:         }
+// CHECK_TU-NEXT:       ],
 // CHECK_TU-NEXT:       "name": "FW"
 // CHECK_TU-NEXT:     },
 // CHECK_TU-NEXT:     {
@@ -59,6 +65,12 @@ framework module FW_Private {
 // CHECK_TU-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.private.modulemap",
 // CHECK_TU-NEXT:         "[[PREFIX]]/frameworks/FW.framework/PrivateHeaders/FW_Private.h",
 // CHECK_TU-NEXT:         "[[PREFIX]]/frameworks/FW.framework/PrivateHeaders/One.h"
+// CHECK_TU-NEXT:       ],
+// CHECK_TU-NEXT:       "link-libraries": [
+// CHECK_TU-NEXT:         {
+// CHECK_TU-NEXT:           "isFramework": true,
+// CHECK_TU-NEXT:           "link-name": "FW"
+// CHECK_TU-NEXT:         }
 // CHECK_TU-NEXT:       ],
 // CHECK_TU-NEXT:       "name": "FW_Private"
 // CHECK_TU-NEXT:     }
@@ -125,6 +137,12 @@ module Mod { header "Mod.h" }
 // CHECK_MODULE-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Headers/FW.h",
 // CHECK_MODULE-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.modulemap"
 // CHECK_MODULE-NEXT:       ],
+// CHECK_MODULE-NEXT:       "link-libraries": [
+// CHECK_MODULE-NEXT:         {
+// CHECK_MODULE-NEXT:           "isFramework": true,
+// CHECK_MODULE-NEXT:           "link-name": "FW"
+// CHECK_MODULE-NEXT:         }
+// CHECK_MODULE-NEXT:       ],
 // CHECK_MODULE-NEXT:       "name": "FW"
 // CHECK_MODULE-NEXT:     },
 // CHECK_MODULE-NEXT:     {
@@ -137,6 +155,12 @@ module Mod { header "Mod.h" }
 // CHECK_MODULE-NEXT:         "[[PREFIX]]/frameworks/FW.framework/Modules/module.private.modulemap",
 // CHECK_MODULE-NEXT:         "[[PREFIX]]/frameworks/FW.framework/PrivateHeaders/FW_Private.h",
 // CHECK_MODULE-NEXT:         "[[PREFIX]]/frameworks/FW.framework/PrivateHeaders/One.h"
+// CHECK_MODULE-NEXT:       ],
+// CHECK_MODULE-NEXT:       "link-libraries": [
+// CHECK_MODULE-NEXT:         {
+// CHECK_MODULE-NEXT:           "isFramework": true,
+// CHECK_MODULE-NEXT:           "link-name": "FW"
+// CHECK_MODULE-NEXT:         }
 // CHECK_MODULE-NEXT:       ],
 // CHECK_MODULE-NEXT:       "name": "FW_Private"
 // CHECK_MODULE-NEXT:     },
@@ -164,6 +188,7 @@ module Mod { header "Mod.h" }
 // CHECK_MODULE-NEXT:         "[[PREFIX]]/frameworks/FW.framework/PrivateHeaders/Two.h",
 // CHECK_MODULE-NEXT:         "[[PREFIX]]/module.modulemap"
 // CHECK_MODULE-NEXT:       ],
+// CHECK_MODULE-NEXT:       "link-libraries": [],
 // CHECK_MODULE-NEXT:       "name": "Mod"
 // CHECK_MODULE-NEXT:     }
 // CHECK_MODULE-NEXT:   ],

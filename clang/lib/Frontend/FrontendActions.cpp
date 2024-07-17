@@ -273,9 +273,6 @@ std::unique_ptr<ASTConsumer>
 GenerateModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) {
   std::vector<std::unique_ptr<ASTConsumer>> Consumers;
-  Consumers.push_back(std::make_unique<CXX20ModulesGenerator>(
-      CI.getPreprocessor(), CI.getModuleCache(),
-      CI.getFrontendOpts().OutputFile));
 
   if (CI.getFrontendOpts().GenReducedBMI &&
       !CI.getFrontendOpts().ModuleOutputPath.empty()) {
@@ -283,6 +280,10 @@ GenerateModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
         CI.getPreprocessor(), CI.getModuleCache(),
         CI.getFrontendOpts().ModuleOutputPath));
   }
+
+  Consumers.push_back(std::make_unique<CXX20ModulesGenerator>(
+      CI.getPreprocessor(), CI.getModuleCache(),
+      CI.getFrontendOpts().OutputFile));
 
   return std::make_unique<MultiplexConsumer>(std::move(Consumers));
 }
@@ -840,9 +841,16 @@ static StringRef ModuleKindName(Module::ModuleKind MK) {
 }
 
 void DumpModuleInfoAction::ExecuteAction() {
-  assert(isCurrentFileAST() && "dumping non-AST?");
-  // Set up the output file.
   CompilerInstance &CI = getCompilerInstance();
+
+  // Don't process files of type other than module to avoid crash
+  if (!isCurrentFileAST()) {
+    CI.getDiagnostics().Report(diag::err_file_is_not_module)
+        << getCurrentFile();
+    return;
+  }
+
+  // Set up the output file.
   StringRef OutputFileName = CI.getFrontendOpts().OutputFile;
   if (!OutputFileName.empty() && OutputFileName != "-") {
     std::error_code EC;

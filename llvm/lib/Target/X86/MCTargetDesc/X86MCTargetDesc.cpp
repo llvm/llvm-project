@@ -742,6 +742,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86TargetMC() {
     TargetRegistry::RegisterNullTargetStreamer(*T, createX86NullTargetStreamer);
 
     TargetRegistry::RegisterCOFFStreamer(*T, createX86WinCOFFStreamer);
+    TargetRegistry::RegisterELFStreamer(*T, createX86ELFStreamer);
 
     // Register the MCInstPrinter.
     TargetRegistry::RegisterMCInstPrinter(*T, createX86MCInstPrinter);

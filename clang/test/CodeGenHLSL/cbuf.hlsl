@@ -16,9 +16,9 @@ tbuffer A : register(t2, space1) {
 
 float foo() {
 // CHECK: load float, ptr @[[CB]], align 4
-// CHECK: load double, ptr getelementptr inbounds ({ float, double }, ptr @[[CB]], i32 0, i32 1), align 8
+// CHECK: load double, ptr getelementptr ({ float, double }, ptr @[[CB]], i32 0, i32 1), align 8
 // CHECK: load float, ptr @[[TB]], align 4
-// CHECK: load double, ptr getelementptr inbounds ({ float, double }, ptr @[[TB]], i32 0, i32 1), align 8
+// CHECK: load double, ptr getelementptr ({ float, double }, ptr @[[TB]], i32 0, i32 1), align 8
   return a + b + c*d;
 }
 

@@ -102,23 +102,23 @@ define i64 @mustprogress_mayunwind() mustprogress personality ptr @__gxx_persona
 ; FNATTRS: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; FNATTRS-LABEL: @mustprogress_mayunwind(
 ; FNATTRS-NEXT:    [[A:%.*]] = invoke i64 @fn_noread()
-; FNATTRS-NEXT:    to label [[A:%.*]] unwind label [[B:%.*]]
+; FNATTRS-NEXT:            to label [[A:%.*]] unwind label [[B:%.*]]
 ; FNATTRS:       A:
 ; FNATTRS-NEXT:    ret i64 10
 ; FNATTRS:       B:
 ; FNATTRS-NEXT:    [[VAL:%.*]] = landingpad { ptr, i32 }
-; FNATTRS-NEXT:    catch ptr null
+; FNATTRS-NEXT:            catch ptr null
 ; FNATTRS-NEXT:    ret i64 0
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nosync nounwind willreturn memory(none)
 ; ATTRIBUTOR-LABEL: @mustprogress_mayunwind(
-; ATTRIBUTOR-NEXT:    [[A:%.*]] = invoke i64 @fn_noread()
-; ATTRIBUTOR-NEXT:    to label [[A:%.*]] unwind label [[B:%.*]]
+; ATTRIBUTOR-NEXT:    [[A:%.*]] = invoke i64 @fn_noread() #[[ATTR13:[0-9]+]]
+; ATTRIBUTOR-NEXT:            to label [[A:%.*]] unwind label [[B:%.*]]
 ; ATTRIBUTOR:       A:
 ; ATTRIBUTOR-NEXT:    ret i64 10
 ; ATTRIBUTOR:       B:
 ; ATTRIBUTOR-NEXT:    [[VAL:%.*]] = landingpad { ptr, i32 }
-; ATTRIBUTOR-NEXT:    catch ptr null
+; ATTRIBUTOR-NEXT:            catch ptr null
 ; ATTRIBUTOR-NEXT:    ret i64 0
 ;
   %a = invoke i64 @fn_noread()

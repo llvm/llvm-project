@@ -189,3 +189,39 @@ namespace std_example {
   template<C5 T> struct C5_check {}; // expected-note{{because 'short' does not satisfy 'C5'}}
   using c5 = C5_check<short>; // expected-error{{constraints not satisfied for class template 'C5_check' [with T = short]}}
 }
+
+namespace access_checks {
+namespace in_return_type_requirement {
+
+// https://github.com/llvm/llvm-project/issues/93788
+template <typename From, typename To>
+concept is_assignable = requires(From from, To to) {
+  from = to;
+};
+
+template <typename T>
+class trait {
+ public:
+  using public_type = int;
+ private:
+  using private_type = int;
+};
+
+template <typename T>
+concept has_field = requires(T t) {
+  { t.field } -> is_assignable<typename trait<T>::private_type>;  // expected-note {{'private_type' is a private member}}
+};
+template <typename T>
+concept has_field2 = requires(T t) {
+  { t.field } -> is_assignable<typename trait<T>::public_type>;
+};
+
+struct A {
+  int field;
+};
+static_assert(has_field<A>); // expected-error {{static assertion failed}} \
+                             // expected-note {{because 'A' does not satisfy 'has_field'}}
+static_assert(has_field2<A>);
+
+}  // namespace access_checks
+}  // namespace in_return_type_requirement

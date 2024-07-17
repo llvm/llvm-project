@@ -171,13 +171,15 @@ class DebugCommunication(object):
         self.output_condition.release()
         return output
 
-    def collect_output(self, category, duration, clear=True):
-        end_time = time.time() + duration
+    def collect_output(self, category, timeout_secs, pattern, clear=True):
+        end_time = time.time() + timeout_secs
         collected_output = ""
         while end_time > time.time():
             output = self.get_output(category, timeout=0.25, clear=clear)
             if output:
                 collected_output += output
+                if pattern is not None and pattern in output:
+                    break
         return collected_output if collected_output else None
 
     def enqueue_recv_packet(self, packet):
@@ -572,6 +574,8 @@ class DebugCommunication(object):
         coreFile=None,
         postRunCommands=None,
         sourceMap=None,
+        gdbRemotePort=None,
+        gdbRemoteHostname=None,
     ):
         args_dict = {}
         if pid is not None:
@@ -601,6 +605,10 @@ class DebugCommunication(object):
             args_dict["postRunCommands"] = postRunCommands
         if sourceMap:
             args_dict["sourceMap"] = sourceMap
+        if gdbRemotePort is not None:
+            args_dict["gdb-remote-port"] = gdbRemotePort
+        if gdbRemoteHostname is not None:
+            args_dict["gdb-remote-hostname"] = gdbRemoteHostname
         command_dict = {"command": "attach", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 

@@ -1,25 +1,25 @@
-# This test reproduces the case where C++ exception handling is used and split
-# function optimization is enabled. In particular, function foo is splitted
-# to two fragments:
-#    foo: contains 2 try blocks, which invokes bar to throw exception
-#    foo.cold.1: contains 2 corresponding catch blocks (landing pad)
-#
-# Similar to split jump table, split landing pad target to different fragment.
-# This test is written to ensure BOLT safely handle these targets, e.g., by
-# marking them as non-simple.
-#
-# Steps to write this test:
-# - Create a copy of Inputs/src/unreachable.cpp
-# - Simplify bar(), focus on throw an exception
-# - Create the second switch case in foo() to have multiple landing pads
-# - Compile with clang++ to .s
-# - Move landing pad code from foo to foo.cold.1
-# - Ensure that all landing pads can be reached normally
-#
-# Additional details:
-# .gcc_except_table specify the landing pads for try blocks
-#    LPStart = 255 (omit), which means LPStart = foo start
-# Landing pads .Ltmp2 and .Ltmp5 in call site record are offset to foo start.
+## This test reproduces the case where C++ exception handling is used and split
+## function optimization is enabled. In particular, function foo is splitted
+## to two fragments:
+##    foo: contains 2 try blocks, which invokes bar to throw exception
+##    foo.cold.1: contains 2 corresponding catch blocks (landing pad)
+##
+## Similar to split jump table, split landing pad target to different fragment.
+## This test is written to ensure BOLT safely handle these targets, e.g., by
+## marking them as non-simple.
+##
+## Steps to write this test:
+## - Create a copy of Inputs/src/unreachable.cpp
+## - Simplify bar(), focus on throw an exception
+## - Create the second switch case in foo() to have multiple landing pads
+## - Compile with clang++ to .s
+## - Move landing pad code from foo to foo.cold.1
+## - Ensure that all landing pads can be reached normally
+##
+## Additional details:
+## .gcc_except_table specify the landing pads for try blocks
+##    LPStart = 255 (omit), which means LPStart = foo start
+## Landing pads .Ltmp2 and .Ltmp5 in call site record are offset to foo start.
 
 
 # REQUIRES: system-linux

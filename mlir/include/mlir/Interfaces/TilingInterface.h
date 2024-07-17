@@ -33,6 +33,15 @@ struct TilingResult {
   SmallVector<Value> tiledValues;
 };
 
+/// Container for the result of merge operation of tiling.
+/// - `mergeOps` contains operations created during the merge.
+/// - `replacements` contains the values that represents the result of the
+/// merge. These are used as replacements for the original tiled operation.
+struct MergeResult {
+  SmallVector<Operation *> mergeOps;
+  SmallVector<Value> replacements;
+};
+
 } // namespace mlir
 
 /// Include the ODS generated interface header files.

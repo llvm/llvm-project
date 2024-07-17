@@ -18,7 +18,6 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <cstdint>
@@ -42,6 +41,19 @@ static bool isLessThanTargetBitWidth(Operation *op, unsigned targetBitWidth) {
       return false;
   }
   return true;
+}
+
+static bool isLessThanOrEqualTargetBitWidth(Type t, unsigned targetBitWidth) {
+  VectorType vecType = dyn_cast<VectorType>(t);
+  // Reject index since getElementTypeBitWidth will abort for Index types.
+  if (!vecType || vecType.getElementType().isIndex())
+    return false;
+  // There are no dimension to fold if it is a 0-D vector.
+  if (vecType.getRank() == 0)
+    return false;
+  unsigned trailingVecDimBitWidth =
+      vecType.getShape().back() * vecType.getElementTypeBitWidth();
+  return trailingVecDimBitWidth <= targetBitWidth;
 }
 
 namespace {
@@ -138,10 +150,12 @@ struct LinearizeVectorExtractStridedSlice final
   LogicalResult
   matchAndRewrite(vector::ExtractStridedSliceOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Type dstType = getTypeConverter()->convertType(extractOp.getType());
-    assert(!(extractOp.getVector().getType().isScalable() ||
-             cast<VectorType>(dstType).isScalable()) &&
-           "scalable vectors are not supported.");
+    VectorType dstType =
+        getTypeConverter()->convertType<VectorType>(extractOp.getType());
+    assert(dstType && "vector type destination expected.");
+    if (extractOp.getVector().getType().isScalable() || dstType.isScalable())
+      return rewriter.notifyMatchFailure(extractOp,
+                                         "scalable vectors are not supported.");
     if (!isLessThanTargetBitWidth(extractOp, targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
           extractOp, "Can't flatten since targetBitWidth <= OpSize");
@@ -251,10 +265,14 @@ struct LinearizeVectorShuffle final
   LogicalResult
   matchAndRewrite(vector::ShuffleOp shuffleOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Type dstType = getTypeConverter()->convertType(shuffleOp.getType());
+    VectorType dstType =
+        getTypeConverter()->convertType<VectorType>(shuffleOp.getType());
+    assert(dstType && "vector type destination expected.");
+    // The assert is used because vector.shuffle does not support scalable
+    // vectors.
     assert(!(shuffleOp.getV1VectorType().isScalable() ||
              shuffleOp.getV2VectorType().isScalable() ||
-             cast<VectorType>(dstType).isScalable()) &&
+             dstType.isScalable()) &&
            "scalable vectors are not supported.");
     if (!isLessThanTargetBitWidth(shuffleOp, targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
@@ -323,9 +341,10 @@ struct LinearizeVectorExtract final
   matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type dstTy = getTypeConverter()->convertType(extractOp.getType());
-    assert(!(extractOp.getVector().getType().isScalable() ||
-             cast<VectorType>(dstTy).isScalable()) &&
-           "scalable vectors are not supported.");
+    if (extractOp.getVector().getType().isScalable() ||
+        cast<VectorType>(dstTy).isScalable())
+      return rewriter.notifyMatchFailure(extractOp,
+                                         "scalable vectors are not supported.");
     if (!isLessThanTargetBitWidth(extractOp, targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
           extractOp, "Can't flatten since targetBitWidth <= OpSize");
@@ -350,6 +369,90 @@ struct LinearizeVectorExtract final
     std::iota(indices.begin(), indices.end(), linearizedOffset);
     rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
         extractOp, dstTy, adaptor.getVector(), adaptor.getVector(),
+        rewriter.getI64ArrayAttr(indices));
+
+    return success();
+  }
+
+private:
+  unsigned targetVectorBitWidth;
+};
+
+/// This pattern converts the InsertOp to a ShuffleOp that works on a
+/// linearized vector.
+/// Following,
+///   vector.insert %source %destination [ position ]
+/// is converted to :
+///   %source_1d = vector.shape_cast %source
+///   %destination_1d = vector.shape_cast %destination
+///   %out_1d = vector.shuffle %destination_1d, %source_1d [ shuffle_indices_1d
+///   ] %out_nd = vector.shape_cast %out_1d
+/// `shuffle_indices_1d` is computed using the position of the original insert.
+struct LinearizeVectorInsert final
+    : public OpConversionPattern<vector::InsertOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LinearizeVectorInsert(
+      const TypeConverter &typeConverter, MLIRContext *context,
+      unsigned targetVectBitWidth = std::numeric_limits<unsigned>::max(),
+      PatternBenefit benefit = 1)
+      : OpConversionPattern(typeConverter, context, benefit),
+        targetVectorBitWidth(targetVectBitWidth) {}
+  LogicalResult
+  matchAndRewrite(vector::InsertOp insertOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    VectorType dstTy = getTypeConverter()->convertType<VectorType>(
+        insertOp.getDestVectorType());
+    assert(dstTy && "vector type destination expected.");
+    if (insertOp.getDestVectorType().isScalable() || dstTy.isScalable())
+      return rewriter.notifyMatchFailure(insertOp,
+                                         "scalable vectors are not supported.");
+
+    if (!isLessThanOrEqualTargetBitWidth(insertOp.getSourceType(),
+                                         targetVectorBitWidth))
+      return rewriter.notifyMatchFailure(
+          insertOp, "Can't flatten since targetBitWidth < OpSize");
+
+    // dynamic position is not supported
+    if (insertOp.hasDynamicPosition())
+      return rewriter.notifyMatchFailure(insertOp,
+                                         "dynamic position is not supported.");
+    auto srcTy = insertOp.getSourceType();
+    auto srcAsVec = dyn_cast<VectorType>(srcTy);
+    uint64_t srcSize = 0;
+    if (srcAsVec) {
+      srcSize = srcAsVec.getNumElements();
+    } else {
+      return rewriter.notifyMatchFailure(insertOp,
+                                         "scalars are not supported.");
+    }
+
+    auto dstShape = insertOp.getDestVectorType().getShape();
+    const auto dstSize = insertOp.getDestVectorType().getNumElements();
+    auto dstSizeForOffsets = dstSize;
+
+    // compute linearized offset
+    int64_t linearizedOffset = 0;
+    auto offsetsNd = insertOp.getStaticPosition();
+    for (auto [dim, offset] : llvm::enumerate(offsetsNd)) {
+      dstSizeForOffsets /= dstShape[dim];
+      linearizedOffset += offset * dstSizeForOffsets;
+    }
+
+    llvm::SmallVector<int64_t, 2> indices(dstSize);
+    auto origValsUntil = indices.begin();
+    std::advance(origValsUntil, linearizedOffset);
+    std::iota(indices.begin(), origValsUntil,
+              0); // original values that remain [0, offset)
+    auto newValsUntil = origValsUntil;
+    std::advance(newValsUntil, srcSize);
+    std::iota(origValsUntil, newValsUntil,
+              dstSize); // new values [offset, offset+srcNumElements)
+    std::iota(newValsUntil, indices.end(),
+              linearizedOffset + srcSize); // the rest of original values
+                                           // [offset+srcNumElements, end)
+
+    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
+        insertOp, dstTy, adaptor.getDest(), adaptor.getSource(),
         rewriter.getI64ArrayAttr(indices));
 
     return success();
@@ -410,6 +513,6 @@ void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(
                    : true;
       });
   patterns.add<LinearizeVectorShuffle, LinearizeVectorExtract,
-               LinearizeVectorExtractStridedSlice>(
+               LinearizeVectorInsert, LinearizeVectorExtractStridedSlice>(
       typeConverter, patterns.getContext(), targetBitWidth);
 }

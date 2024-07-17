@@ -81,7 +81,7 @@ constexpr bool test()
     }
 
     {
-        std::allocator<Counted const> a;
+        std::allocator<Counted> a;
         Counted const* p = a.allocate(2);
         int count = 0;
         std::construct_at(p, count);
@@ -92,7 +92,7 @@ constexpr bool test()
         assert(count == 1);
         p->~Counted();
         assert(count == 0);
-        a.deallocate(p, 2);
+        a.deallocate(const_cast<Counted*>(p), 2);
     }
 
     return true;

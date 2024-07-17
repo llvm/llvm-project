@@ -146,12 +146,14 @@ test0:
 
     .ident      "clang version 9.0.0 (trunk 364502) (llvm/trunk 364571)"
 
-.tabletype empty_eref_table, externref
-empty_eref_table:
+.tabletype empty_externref_table, externref
+empty_externref_table:
 
-.tabletype empty_fref_table, funcref
-empty_fref_table:
+.tabletype empty_funcref_table, funcref
+empty_funcref_table:
 
+.tabletype empty_exnref_table, exnref
+empty_exnref_table:
 
 # CHECK:           .text
 # CHECK:           .globaltype __stack_pointer, i32
@@ -283,8 +285,11 @@ empty_fref_table:
 # CHECK-NEXT:      .p2align    2
 # CHECK-NEXT:      .int32      test0
 
-# CHECK:           .tabletype empty_eref_table, externref
-# CHECK-NEXT: empty_eref_table:
+# CHECK:           .tabletype empty_externref_table, externref
+# CHECK-NEXT: empty_externref_table:
 
-# CHECK:           .tabletype empty_fref_table, funcref
-# CHECK-NEXT: empty_fref_table:
+# CHECK:           .tabletype empty_funcref_table, funcref
+# CHECK-NEXT: empty_funcref_table:
+
+# CHECK:           .tabletype empty_exnref_table, exnref
+# CHECK-NEXT: empty_exnref_table:

@@ -243,11 +243,8 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
       continue;
 
     MetadataAsValue *VMD = cast<MetadataAsValue>(II->getOperand(1));
-    Type *ElementTy = cast<ConstantAsMetadata>(VMD->getMetadata())->getType();
-    if (isUntypedPointerTy(ElementTy))
-      ElementTy =
-          TypedPointerType::get(IntegerType::getInt8Ty(II->getContext()),
-                                getPointerAddressSpace(ElementTy));
+    Type *ElementTy =
+        toTypedPointer(cast<ConstantAsMetadata>(VMD->getMetadata())->getType());
     SPIRVType *ElementType = GR->getOrCreateSPIRVType(ElementTy, MIRBuilder);
     return GR->getOrCreateSPIRVPointerType(
         ElementType, MIRBuilder,
@@ -257,12 +254,8 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
 
   // Replace PointerType with TypedPointerType to be able to map SPIR-V types to
   // LLVM types in a consistent manner
-  if (isUntypedPointerTy(OriginalArgType)) {
-    OriginalArgType =
-        TypedPointerType::get(Type::getInt8Ty(F.getContext()),
-                              getPointerAddressSpace(OriginalArgType));
-  }
-  return GR->getOrCreateSPIRVType(OriginalArgType, MIRBuilder, ArgAccessQual);
+  return GR->getOrCreateSPIRVType(toTypedPointer(OriginalArgType), MIRBuilder,
+                                  ArgAccessQual);
 }
 
 static SPIRV::ExecutionModel::ExecutionModel
@@ -386,8 +379,8 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   Type *FRetTy = FTy->getReturnType();
   if (isUntypedPointerTy(FRetTy)) {
     if (Type *FRetElemTy = GR->findDeducedElementType(&F)) {
-      TypedPointerType *DerivedTy =
-          TypedPointerType::get(FRetElemTy, getPointerAddressSpace(FRetTy));
+      TypedPointerType *DerivedTy = TypedPointerType::get(
+          toTypedPointer(FRetElemTy), getPointerAddressSpace(FRetTy));
       GR->addReturnType(&F, DerivedTy);
       FRetTy = DerivedTy;
     }

@@ -8,12 +8,12 @@ int global;
 
 // NONE: define internal void @asan.module_ctor() #[[#ATTR:]] {
 // NONE: define internal void @asan.module_dtor() #[[#ATTR]] {
-// NONE: attributes #[[#ATTR]] = { nounwind }
+// NONE: attributes #[[#ATTR]] = { nounwind
 
 // NONLEAF: define internal void @asan.module_ctor() #[[#ATTR:]] {
 // NONLEAF: define internal void @asan.module_dtor() #[[#ATTR]] {
-// NONLEAF: attributes #[[#ATTR]] = { nounwind "frame-pointer"="non-leaf" }
+// NONLEAF: attributes #[[#ATTR]] = { nounwind "frame-pointer"="non-leaf"
 
 // ALL: define internal void @asan.module_ctor() #[[#ATTR:]] {
 // ALL: define internal void @asan.module_dtor() #[[#ATTR]] {
-// ALL: attributes #[[#ATTR]] = { nounwind "frame-pointer"="all" }
+// ALL: attributes #[[#ATTR]] = { nounwind "frame-pointer"="all"

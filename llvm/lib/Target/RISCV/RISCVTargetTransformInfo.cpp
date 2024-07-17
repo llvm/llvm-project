@@ -959,6 +959,32 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return Cost * LT.first;
     break;
   }
+  // vp integer arithmetic ops.
+  case Intrinsic::vp_add:
+  case Intrinsic::vp_and:
+  case Intrinsic::vp_ashr:
+  case Intrinsic::vp_lshr:
+  case Intrinsic::vp_mul:
+  case Intrinsic::vp_or:
+  case Intrinsic::vp_sdiv:
+  case Intrinsic::vp_shl:
+  case Intrinsic::vp_srem:
+  case Intrinsic::vp_sub:
+  case Intrinsic::vp_udiv:
+  case Intrinsic::vp_urem:
+  case Intrinsic::vp_xor:
+  // vp float arithmetic ops.
+  case Intrinsic::vp_fadd:
+  case Intrinsic::vp_fsub:
+  case Intrinsic::vp_fmul:
+  case Intrinsic::vp_fdiv:
+  case Intrinsic::vp_frem: {
+    std::optional<unsigned> FOp =
+        VPIntrinsic::getFunctionalOpcodeForVP(ICA.getID());
+    if (FOp)
+      return getArithmeticInstrCost(*FOp, ICA.getReturnType(), CostKind);
+    break;
+  }
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
@@ -1881,10 +1907,14 @@ unsigned RISCVTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
 bool RISCVTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                                  const TargetTransformInfo::LSRCost &C2) {
   // RISC-V specific here are "instruction number 1st priority".
-  return std::tie(C1.Insns, C1.NumRegs, C1.AddRecCost,
+  // If we need to emit adds inside the loop to add up base registers, then
+  // we need at least one extra temporary register.
+  unsigned C1NumRegs = C1.NumRegs + (C1.NumBaseAdds != 0);
+  unsigned C2NumRegs = C2.NumRegs + (C2.NumBaseAdds != 0);
+  return std::tie(C1.Insns, C1NumRegs, C1.AddRecCost,
                   C1.NumIVMuls, C1.NumBaseAdds,
                   C1.ScaleCost, C1.ImmCost, C1.SetupCost) <
-         std::tie(C2.Insns, C2.NumRegs, C2.AddRecCost,
+         std::tie(C2.Insns, C2NumRegs, C2.AddRecCost,
                   C2.NumIVMuls, C2.NumBaseAdds,
                   C2.ScaleCost, C2.ImmCost, C2.SetupCost);
 }

@@ -115,12 +115,14 @@ struct BuiltinTypeDeclBuilder {
     return addMemberVariable("h", Ty, Access);
   }
 
-  BuiltinTypeDeclBuilder &annotateResourceClass(ResourceClass RC,
-                                                ResourceKind RK, bool IsROV) {
+  BuiltinTypeDeclBuilder &annotateHLSLResource(ResourceClass RC,
+                                               ResourceKind RK, bool IsROV) {
     if (Record->isCompleteDefinition())
       return *this;
-    Record->addAttr(HLSLResourceAttr::CreateImplicit(Record->getASTContext(),
-                                                     RC, RK, IsROV));
+    Record->addAttr(
+        HLSLResourceClassAttr::CreateImplicit(Record->getASTContext(), RC));
+    Record->addAttr(
+        HLSLResourceAttr::CreateImplicit(Record->getASTContext(), RK, IsROV));
     return *this;
   }
 
@@ -171,7 +173,6 @@ struct BuiltinTypeDeclBuilder {
 
     DeclRefExpr *Fn =
         lookupBuiltinFunction(AST, S, "__builtin_hlsl_create_handle");
-
     Expr *RCExpr = emitResourceClassExpr(AST, RC);
     Expr *Call = CallExpr::Create(AST, Fn, {RCExpr}, AST.VoidPtrTy, VK_PRValue,
                                   SourceLocation(), FPOptionsOverride());
@@ -442,10 +443,12 @@ void HLSLExternalSemaSource::defineHLSLVectorAlias() {
       AST, HLSLNamespace, SourceLocation(), SourceLocation(), 0, 1,
       &AST.Idents.get("element_count", tok::TokenKind::identifier), AST.IntTy,
       false, AST.getTrivialTypeSourceInfo(AST.IntTy));
-  Expr *LiteralExpr =
-      IntegerLiteral::Create(AST, llvm::APInt(AST.getIntWidth(AST.IntTy), 4),
-                             AST.IntTy, SourceLocation());
-  SizeParam->setDefaultArgument(LiteralExpr);
+  llvm::APInt Val(AST.getIntWidth(AST.IntTy), 4);
+  TemplateArgument Default(AST, llvm::APSInt(std::move(Val)), AST.IntTy,
+                           /*IsDefaulted=*/true);
+  SizeParam->setDefaultArgument(
+      AST, SemaPtr->getTrivialTemplateArgumentLoc(Default, AST.IntTy,
+                                                  SourceLocation(), SizeParam));
   TemplateParams.emplace_back(SizeParam);
 
   auto *ParamList =
@@ -479,12 +482,6 @@ void HLSLExternalSemaSource::defineHLSLVectorAlias() {
 
 void HLSLExternalSemaSource::defineTrivialHLSLTypes() {
   defineHLSLVectorAlias();
-
-  ResourceDecl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Resource")
-                     .startDefinition()
-                     .addHandleMember(AccessSpecifier::AS_public)
-                     .completeDefinition()
-                     .Record;
 }
 
 /// Set up common members and attributes for buffer types
@@ -494,7 +491,7 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
   return BuiltinTypeDeclBuilder(Decl)
       .addHandleMember()
       .addDefaultHandleConstructor(S, RC)
-      .annotateResourceClass(RC, RK, IsROV);
+      .annotateHLSLResource(RC, RK, IsROV);
 }
 
 void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {

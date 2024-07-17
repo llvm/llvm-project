@@ -287,7 +287,7 @@ class DefaultIntArgument<string name, int default> : IntArgument<name, 1> {
 // possible values, and a list of enumerators to map them to.
 class EnumArgument<string name, string type, bit is_string, list<string> values,
                    list<string> enums, bit opt = 0, bit fake = 0,
-                   bit isExternalType = 0>
+                   bit isExternalType = 0, bit isCovered = 1>
     : Argument<name, opt, fake> {
   string Type = type;
   // When true, the argument will be parsed as an unevaluated string literal
@@ -296,13 +296,16 @@ class EnumArgument<string name, string type, bit is_string, list<string> values,
   list<string> Values = values;
   list<string> Enums = enums;
   bit IsExternalType = isExternalType;
+  // We need to know whether an external enum is fully covered by the options
+  // in order to decide whether to emit unreachable default labels in a switch.
+  bit IsCovered = isCovered;
 }
 
 // FIXME: There should be a VariadicArgument type that takes any other type
 //        of argument and generates the appropriate type.
 class VariadicEnumArgument<string name, string type, bit is_string,
                            list<string> values, list<string> enums,
-                           bit isExternalType = 0>
+                           bit isExternalType = 0, bit isCovered = 1>
     : Argument<name, 1>  {
   string Type = type;
   // When true, the argument will be parsed as an unevaluated string literal
@@ -311,6 +314,9 @@ class VariadicEnumArgument<string name, string type, bit is_string,
   list<string> Values = values;
   list<string> Enums = enums;
   bit IsExternalType = isExternalType;
+  // We need to know whether an external enum is fully covered by the options
+  // in order to decide whether to emit unreachable default labels in a switch.
+  bit IsCovered = isCovered;
 }
 
 // Represents an attribute wrapped by another attribute.
@@ -680,6 +686,10 @@ class Attr {
   bit PragmaAttributeSupport;
   // Set to true if this attribute accepts parameter pack expansion expressions.
   bit AcceptsExprPack = 0;
+  // To support multiple enum parameters to an attribute without breaking
+  // our existing general parsing we need to have a separate flag that
+  // opts an attribute into strict parsing of attribute parameters
+  bit StrictEnumParameters = 0;
   // Lists language options, one of which is required to be true for the
   // attribute to be applicable. If empty, no language options are required.
   list<LangOpt> LangOpts = [];
@@ -1060,19 +1070,6 @@ static llvm::StringRef canonicalizePlatformName(llvm::StringRef Platform) {
              .Case("ShaderModel", "shadermodel")
              .Default(Platform);
 }
-static llvm::StringRef getPrettyEnviromentName(llvm::StringRef Environment) {
-    return llvm::StringSwitch<llvm::StringRef>(Environment)
-             .Case("pixel", "pixel shader")
-             .Case("vertex", "vertex shader")
-             .Case("geometry", "geometry shader")
-             .Case("hull", "hull shader")
-             .Case("domain", "domain shader")
-             .Case("compute", "compute shader")
-             .Case("mesh", "mesh shader")
-             .Case("amplification", "amplification shader")
-             .Case("library", "shader library")
-             .Default(Environment);
-}
 static llvm::Triple::EnvironmentType getEnvironmentType(llvm::StringRef Environment) {
     return llvm::StringSwitch<llvm::Triple::EnvironmentType>(Environment)
              .Case("pixel", llvm::Triple::Pixel)
@@ -1081,6 +1078,12 @@ static llvm::Triple::EnvironmentType getEnvironmentType(llvm::StringRef Environm
              .Case("hull", llvm::Triple::Hull)
              .Case("domain", llvm::Triple::Domain)
              .Case("compute", llvm::Triple::Compute)
+             .Case("raygeneration", llvm::Triple::RayGeneration)
+             .Case("intersection", llvm::Triple::Intersection)
+             .Case("anyhit", llvm::Triple::AnyHit)
+             .Case("closesthit", llvm::Triple::ClosestHit)
+             .Case("miss", llvm::Triple::Miss)
+             .Case("callable", llvm::Triple::Callable)
              .Case("mesh", llvm::Triple::Mesh)
              .Case("amplification", llvm::Triple::Amplification)
              .Case("library", llvm::Triple::Library)
@@ -1462,6 +1465,28 @@ def CXX11NoReturn : InheritableAttr {
   let Documentation = [CXX11NoReturnDocs];
 }
 
+def NonBlocking : TypeAttr {
+  let Spellings = [Clang<"nonblocking">];
+  let Args = [ExprArgument<"Cond", /*optional*/1>];
+  let Documentation = [NonBlockingDocs];
+}
+
+def NonAllocating : TypeAttr {
+  let Spellings = [Clang<"nonallocating">];
+  let Args = [ExprArgument<"Cond", /*optional*/1>];
+  let Documentation = [NonAllocatingDocs];
+}
+
+def Blocking : TypeAttr {
+  let Spellings = [Clang<"blocking">];
+  let Documentation = [BlockingDocs];
+}
+
+def Allocating : TypeAttr {
+  let Spellings = [Clang<"allocating">];
+  let Documentation = [AllocatingDocs];
+}
+
 // Similar to CUDA, OpenCL attributes do not receive a [[]] spelling because
 // the specification does not expose them with one currently.
 def OpenCLKernel : InheritableAttr {
@@ -1640,10 +1665,11 @@ def Unlikely : StmtAttr {
 def : MutualExclusions<[Likely, Unlikely]>;
 
 def CXXAssume : StmtAttr {
-  let Spellings = [CXX11<"", "assume", 202207>];
+  let Spellings = [CXX11<"", "assume", 202207>, Clang<"assume">];
   let Subjects = SubjectList<[NullStmt], ErrorDiag, "empty statements">;
   let Args = [ExprArgument<"Assumption">];
   let Documentation = [CXXAssumeDocs];
+  let HasCustomParsing = 1;
 }
 
 def NoMerge : DeclOrStmtAttr {
@@ -2024,9 +2050,12 @@ def Convergent : InheritableAttr {
 def NoInline : DeclOrStmtAttr {
   let Spellings = [CustomKeyword<"__noinline__">, GCC<"noinline">,
                    CXX11<"clang", "noinline">, C23<"clang", "noinline">,
+                   CXX11<"msvc", "noinline">, C23<"msvc", "noinline">,
                    Declspec<"noinline">];
-  let Accessors = [Accessor<"isClangNoInline", [CXX11<"clang", "noinline">,
-                                                C23<"clang", "noinline">]>];
+  let Accessors = [Accessor<"isStmtNoInline", [CXX11<"clang", "noinline">,
+                                               C23<"clang", "noinline">,
+                                               CXX11<"msvc", "noinline">,
+                                               C23<"msvc", "noinline">]>];
   let Documentation = [NoInlineDocs];
   let Subjects = SubjectList<[Function, Stmt], WarnDiag,
                              "functions and statements">;
@@ -2256,7 +2285,38 @@ def TypeNullUnspecified : TypeAttr {
 def CountedBy : DeclOrTypeAttr {
   let Spellings = [Clang<"counted_by">];
   let Subjects = SubjectList<[Field], ErrorDiag>;
-  let Args = [ExprArgument<"Count">, IntArgument<"NestedLevel">];
+  let Args = [ExprArgument<"Count">, IntArgument<"NestedLevel", 1>];
+  let LateParsed = LateAttrParseExperimentalExt;
+  let ParseArgumentsAsUnevaluated = 1;
+  let Documentation = [CountedByDocs];
+  let LangOpts = [COnly];
+}
+
+def CountedByOrNull : DeclOrTypeAttr {
+  let Spellings = [Clang<"counted_by_or_null">];
+  let Subjects = SubjectList<[Field], ErrorDiag>;
+  let Args = [ExprArgument<"Count">, IntArgument<"NestedLevel", 1>];
+  let LateParsed = LateAttrParseExperimentalExt;
+  let ParseArgumentsAsUnevaluated = 1;
+  let Documentation = [CountedByDocs];
+  let LangOpts = [COnly];
+}
+
+def SizedBy : DeclOrTypeAttr {
+  let Spellings = [Clang<"sized_by">];
+  let Subjects = SubjectList<[Field], ErrorDiag>;
+  let Args = [ExprArgument<"Size">, IntArgument<"NestedLevel", 1>];
+  let LateParsed = LateAttrParseExperimentalExt;
+  let ParseArgumentsAsUnevaluated = 1;
+  let Documentation = [CountedByDocs];
+  let LangOpts = [COnly];
+}
+
+def SizedByOrNull : DeclOrTypeAttr {
+  let Spellings = [Clang<"sized_by_or_null">];
+  let Subjects = SubjectList<[Field], ErrorDiag>;
+  let Args = [ExprArgument<"Size">, IntArgument<"NestedLevel", 1>];
+  let LateParsed = LateAttrParseExperimentalExt;
   let ParseArgumentsAsUnevaluated = 1;
   let Documentation = [CountedByDocs];
   let LangOpts = [COnly];
@@ -2915,7 +2975,7 @@ def CodeModel : InheritableAttr, TargetSpecificAttr<TargetLoongArch> {
   let Spellings = [GCC<"model">];
   let Args = [EnumArgument<"Model", "llvm::CodeModel::Model", /*is_string=*/1,
               ["normal", "medium", "extreme"], ["Small", "Medium", "Large"],
-              /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>];
+              /*opt=*/0, /*fake=*/0, /*isExternalType=*/1, /*isCovered=*/0>];
   let Subjects = SubjectList<[NonTLSGlobalVar], ErrorDiag>;
   let Documentation = [CodeModelDocs];
 }
@@ -3065,7 +3125,8 @@ def M68kRTD: DeclOrTypeAttr {
   let Documentation = [M68kRTDDocs];
 }
 
-def PreserveNone : DeclOrTypeAttr, TargetSpecificAttr<TargetAnyX86> {
+def PreserveNone : DeclOrTypeAttr,
+                   TargetSpecificAttr<TargetArch<!listconcat(TargetAArch64.Arches, TargetAnyX86.Arches)>> {
   let Spellings = [Clang<"preserve_none">];
   let Subjects = SubjectList<[FunctionLike]>;
   let Documentation = [PreserveNoneDocs];
@@ -3629,7 +3690,7 @@ def NoThreadSafetyAnalysis : InheritableAttr {
 def GuardedBy : InheritableAttr {
   let Spellings = [GNU<"guarded_by">];
   let Args = [ExprArgument<"Arg">];
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -3640,7 +3701,7 @@ def GuardedBy : InheritableAttr {
 def PtGuardedBy : InheritableAttr {
   let Spellings = [GNU<"pt_guarded_by">];
   let Args = [ExprArgument<"Arg">];
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -3651,7 +3712,7 @@ def PtGuardedBy : InheritableAttr {
 def AcquiredAfter : InheritableAttr {
   let Spellings = [GNU<"acquired_after">];
   let Args = [VariadicExprArgument<"Args">];
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -3662,7 +3723,7 @@ def AcquiredAfter : InheritableAttr {
 def AcquiredBefore : InheritableAttr {
   let Spellings = [GNU<"acquired_before">];
   let Args = [VariadicExprArgument<"Args">];
-  let LateParsed = LateAttrParseStandard;
+  let LateParsed = LateAttrParseExperimentalExt;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
@@ -4111,6 +4172,18 @@ def LoopHint : Attr {
   let HasCustomParsing = 1;
 }
 
+/// The HLSL loop attributes
+def HLSLLoopHint: StmtAttr {
+  /// [unroll(directive)]
+  /// [loop]
+  let Spellings = [Microsoft<"unroll">, Microsoft<"loop">];
+  let Args = [UnsignedArgument<"directive", /*opt*/1>];
+  let Subjects = SubjectList<[ForStmt, WhileStmt, DoStmt],
+                              ErrorDiag, "'for', 'while', and 'do' statements">;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLLoopHintDocs, HLSLUnrollHintDocs];
+}
+
 def CapturedRecord : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   let Spellings = [];
@@ -4255,7 +4328,7 @@ def OMPDeclareVariant : InheritableAttr {
 }
 
 def OMPAssume : InheritableAttr {
-  let Spellings = [Clang<"assume">, CXX11<"omp", "assume">];
+  let Spellings = [CXX11<"omp", "assume">];
   let Subjects = SubjectList<[Function, ObjCMethod]>;
   let InheritEvenIfAlreadyPresent = 1;
   let Documentation = [OMPAssumeDocs];
@@ -4466,45 +4539,62 @@ def HLSLShader : InheritableAttr {
   let Subjects = SubjectList<[HLSLEntry]>;
   let LangOpts = [HLSL];
   let Args = [
-    EnumArgument<"Type", "ShaderType", /*is_string=*/true,
+    EnumArgument<"Type", "llvm::Triple::EnvironmentType", /*is_string=*/true,
                  ["pixel", "vertex", "geometry", "hull", "domain", "compute",
                   "raygeneration", "intersection", "anyhit", "closesthit",
                   "miss", "callable", "mesh", "amplification"],
                  ["Pixel", "Vertex", "Geometry", "Hull", "Domain", "Compute",
                   "RayGeneration", "Intersection", "AnyHit", "ClosestHit",
-                  "Miss", "Callable", "Mesh", "Amplification"]>
+                  "Miss", "Callable", "Mesh", "Amplification"],
+                  /*opt=*/0, /*fake=*/0, /*isExternalType=*/1, /*isCovered=*/0>
   ];
   let Documentation = [HLSLSV_ShaderTypeAttrDocs];
+  let AdditionalMembers =
+[{
+  static bool isValidShaderType(llvm::Triple::EnvironmentType ShaderType) {
+    return ShaderType >= llvm::Triple::Pixel && ShaderType <= llvm::Triple::Amplification;
+  }
+}];
 }
 
 def HLSLResource : InheritableAttr {
   let Spellings = [];
   let Subjects = SubjectList<[Struct]>;
   let LangOpts = [HLSL];
-  let Args = [EnumArgument<"ResourceClass", "llvm::hlsl::ResourceClass",
-                           /*is_string=*/0,
-                           ["SRV", "UAV", "CBuffer", "Sampler"],
-                           ["SRV", "UAV", "CBuffer", "Sampler"],
-                           /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>,
-              EnumArgument<"ResourceKind", "llvm::hlsl::ResourceKind",
-                           /*is_string=*/0,
-                           ["Texture1D", "Texture2D", "Texture2DMS",
-                            "Texture3D", "TextureCube", "Texture1DArray",
-                            "Texture2DArray", "Texture2DMSArray",
-                            "TextureCubeArray", "TypedBuffer", "RawBuffer",
-                            "StructuredBuffer", "CBuffer", "Sampler",
-                            "TBuffer", "RTAccelerationStructure",
-                            "FeedbackTexture2D", "FeedbackTexture2DArray"],
-                           ["Texture1D", "Texture2D", "Texture2DMS",
-                            "Texture3D", "TextureCube", "Texture1DArray",
-                            "Texture2DArray", "Texture2DMSArray",
-                            "TextureCubeArray", "TypedBuffer", "RawBuffer",
-                            "StructuredBuffer", "CBuffer", "Sampler",
-                            "TBuffer", "RTAccelerationStructure",
-                            "FeedbackTexture2D", "FeedbackTexture2DArray"],
-                           /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>,
-              DefaultBoolArgument<"isROV", /*default=*/0>
-              ];
+  let Args = [    
+    EnumArgument<
+        "ResourceKind", "llvm::hlsl::ResourceKind",
+        /*is_string=*/0,
+        [
+          "Texture1D", "Texture2D", "Texture2DMS", "Texture3D", "TextureCube",
+          "Texture1DArray", "Texture2DArray", "Texture2DMSArray",
+          "TextureCubeArray", "TypedBuffer", "RawBuffer", "StructuredBuffer",
+          "CBuffer", "Sampler", "TBuffer", "RTAccelerationStructure",
+          "FeedbackTexture2D", "FeedbackTexture2DArray"
+        ],
+        [
+          "Texture1D", "Texture2D", "Texture2DMS", "Texture3D", "TextureCube",
+          "Texture1DArray", "Texture2DArray", "Texture2DMSArray",
+          "TextureCubeArray", "TypedBuffer", "RawBuffer", "StructuredBuffer",
+          "CBuffer", "Sampler", "TBuffer", "RTAccelerationStructure",
+          "FeedbackTexture2D", "FeedbackTexture2DArray"
+        ],
+        /*opt=*/0, /*fake=*/0, /*isExternalType=*/1, /*isCovered=*/0>,
+    DefaultBoolArgument<"isROV", /*default=*/0>
+  ];
+  let Documentation = [InternalOnly];
+}
+
+def HLSLResourceClass : InheritableAttr {
+  let Spellings = [CXX11<"hlsl", "resource_class">];
+  let Subjects = SubjectList<[Struct]>;
+  let LangOpts = [HLSL];
+  let Args = [
+	EnumArgument<"ResourceClass", "llvm::hlsl::ResourceClass",
+				 /*is_string=*/true, ["SRV", "UAV", "CBuffer", "Sampler"],
+				 ["SRV", "UAV", "CBuffer", "Sampler"],
+				 /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>
+  ];
   let Documentation = [InternalOnly];
 }
 
@@ -4540,6 +4630,31 @@ def NoRandomizeLayout : InheritableAttr {
   let LangOpts = [COnly];
 }
 def : MutualExclusions<[RandomizeLayout, NoRandomizeLayout]>;
+
+def VTablePointerAuthentication : InheritableAttr {
+  let Spellings = [Clang<"ptrauth_vtable_pointer">];
+  let Subjects = SubjectList<[CXXRecord]>;
+  let Documentation = [Undocumented];
+  let StrictEnumParameters = 1;
+  let Args = [EnumArgument<"Key", "VPtrAuthKeyType", /*is_string=*/ true,
+                ["default_key", "no_authentication", "process_dependent",
+                 "process_independent"],
+                ["DefaultKey", "NoKey", "ProcessDependent",
+                 "ProcessIndependent"]>,
+              EnumArgument<"AddressDiscrimination", "AddressDiscriminationMode",
+                /*is_string=*/ true,
+                ["default_address_discrimination", "no_address_discrimination",
+                 "address_discrimination"],
+                ["DefaultAddressDiscrimination", "NoAddressDiscrimination",
+                 "AddressDiscrimination"]>,
+              EnumArgument<"ExtraDiscrimination", "ExtraDiscrimination",
+                /*is_string=*/ true,
+                ["default_extra_discrimination", "no_extra_discrimination",
+                 "type_discrimination", "custom_discrimination"],
+                ["DefaultExtraDiscrimination", "NoExtraDiscrimination",
+                 "TypeDiscrimination", "CustomDiscrimination"]>,
+              IntArgument<"CustomDiscriminationValue", 1>];
+}
 
 def FunctionReturnThunks : InheritableAttr,
     TargetSpecificAttr<TargetAnyX86> {

@@ -110,6 +110,9 @@ public:
   evaluate::FoldingContext &foldingContext() { return foldingContext_; }
   parser::AllCookedSources &allCookedSources() { return allCookedSources_; }
   ModuleDependences &moduleDependences() { return moduleDependences_; }
+  std::map<const Symbol *, SourceName> &moduleFileOutputRenamings() {
+    return moduleFileOutputRenamings_;
+  }
 
   SemanticsContext &set_location(
       const std::optional<parser::CharBlock> &location) {
@@ -299,14 +302,16 @@ private:
   std::list<parser::Program> modFileParseTrees_;
   std::unique_ptr<CommonBlockMap> commonBlockMap_;
   ModuleDependences moduleDependences_;
+  std::map<const Symbol *, SourceName> moduleFileOutputRenamings_;
 };
 
 class Semantics {
 public:
-  explicit Semantics(SemanticsContext &context, parser::Program &program,
-      bool debugModuleWriter = false)
-      : context_{context}, program_{program} {
-    context.set_debugModuleWriter(debugModuleWriter);
+  explicit Semantics(SemanticsContext &context, parser::Program &program)
+      : context_{context}, program_{program} {}
+  Semantics &set_hermeticModuleFileOutput(bool yes = true) {
+    hermeticModuleFileOutput_ = yes;
+    return *this;
   }
 
   SemanticsContext &context() const { return context_; }
@@ -322,6 +327,7 @@ public:
 private:
   SemanticsContext &context_;
   parser::Program &program_;
+  bool hermeticModuleFileOutput_{false};
 };
 
 // Base class for semantics checkers.

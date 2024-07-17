@@ -3,7 +3,9 @@
 // RUN:   -analyzer-checker=alpha.deadcode.UnreachableCode \
 // RUN:   -analyzer-checker=alpha.core.CastSize \
 // RUN:   -analyzer-checker=unix.Malloc \
-// RUN:   -analyzer-checker=cplusplus.NewDelete
+// RUN:   -analyzer-checker=cplusplus.NewDelete \
+// RUN:   -analyzer-checker=alpha.security.taint.TaintPropagation \
+// RUN:   -analyzer-checker=optin.taint.TaintedAlloc
 
 // RUN: %clang_analyze_cc1 -w -verify %s \
 // RUN:   -triple i386-unknown-linux-gnu \
@@ -11,14 +13,18 @@
 // RUN:   -analyzer-checker=alpha.deadcode.UnreachableCode \
 // RUN:   -analyzer-checker=alpha.core.CastSize \
 // RUN:   -analyzer-checker=unix.Malloc \
-// RUN:   -analyzer-checker=cplusplus.NewDelete
+// RUN:   -analyzer-checker=cplusplus.NewDelete \
+// RUN:   -analyzer-checker=alpha.security.taint.TaintPropagation \
+// RUN:   -analyzer-checker=optin.taint.TaintedAlloc
 
 // RUN: %clang_analyze_cc1 -w -verify %s -DTEST_INLINABLE_ALLOCATORS \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.deadcode.UnreachableCode \
 // RUN:   -analyzer-checker=alpha.core.CastSize \
 // RUN:   -analyzer-checker=unix.Malloc \
-// RUN:   -analyzer-checker=cplusplus.NewDelete
+// RUN:   -analyzer-checker=cplusplus.NewDelete \
+// RUN:   -analyzer-checker=alpha.security.taint.TaintPropagation \
+// RUN:   -analyzer-checker=optin.taint.TaintedAlloc
 
 // RUN: %clang_analyze_cc1 -w -verify %s -DTEST_INLINABLE_ALLOCATORS \
 // RUN:   -triple i386-unknown-linux-gnu \
@@ -26,7 +32,9 @@
 // RUN:   -analyzer-checker=alpha.deadcode.UnreachableCode \
 // RUN:   -analyzer-checker=alpha.core.CastSize \
 // RUN:   -analyzer-checker=unix.Malloc \
-// RUN:   -analyzer-checker=cplusplus.NewDelete
+// RUN:   -analyzer-checker=cplusplus.NewDelete \
+// RUN:   -analyzer-checker=alpha.security.taint.TaintPropagation \
+// RUN:   -analyzer-checker=optin.taint.TaintedAlloc
 
 #include "Inputs/system-header-simulator-cxx.h"
 
@@ -36,6 +44,14 @@ void free(void *);
 void *realloc(void *ptr, size_t size);
 void *calloc(size_t nmemb, size_t size);
 char *strdup(const char *s);
+int scanf( const char* format, ... );
+
+void taintAlloc() {
+  size_t size = 0;
+  scanf("%zu", &size);
+  int *ptr = new int[size];// expected-warning{{Memory allocation function is called with a tainted (potentially attacker controlled) value}}
+  delete[] ptr;
+}
 
 void checkThatMallocCheckerIsRunning() {
   malloc(4);
