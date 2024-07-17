@@ -183,7 +183,7 @@ void GCNSubtarget::checkSubtargetFeatures(const Function &F) const {
   }
 }
 
-AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT) : TargetTriple(TT) {}
+AMDGPUSubtarget::AMDGPUSubtarget(Triple TT) : TargetTriple(std::move(TT)) {}
 
 bool AMDGPUSubtarget::useRealTrue16Insts() const {
   return hasTrue16BitInsts() && EnableRealTrue16Insts;

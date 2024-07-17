@@ -986,9 +986,12 @@ void reportVectorizationFailure(const StringRef DebugMsg,
       << "loop not vectorized: " << OREMsg);
 }
 
-void reportVectorizationInfo(const StringRef Msg, const StringRef ORETag,
+/// Reports an informative message: print \p Msg for debugging purposes as well
+/// as an optimization remark. Uses either \p I as location of the remark, or
+/// otherwise \p TheLoop.
+static void reportVectorizationInfo(const StringRef Msg, const StringRef ORETag,
                              OptimizationRemarkEmitter *ORE, Loop *TheLoop,
-                             Instruction *I) {
+                             Instruction *I = nullptr) {
   LLVM_DEBUG(debugVectorizationMessage("", Msg, I));
   LoopVectorizeHints Hints(TheLoop, true /* doesn't matter */, *ORE);
   ORE->emit(
@@ -10281,7 +10284,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       InnerLoopUnroller Unroller(L, PSE, LI, DT, TLI, TTI, AC, ORE, IC, &LVL,
                                  &CM, BFI, PSI, Checks);
 
-      VPlan &BestPlan = LVP.getBestPlanFor(VF.Width);
+      VPlan &BestPlan = LVP.getBestPlan();
+      assert(BestPlan.hasScalarVFOnly() &&
+             "VPlan cost model and legacy cost model disagreed");
       LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT, false);
 
       ORE->emit([&]() {
