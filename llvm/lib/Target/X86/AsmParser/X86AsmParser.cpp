@@ -3800,7 +3800,7 @@ bool X86AsmParser::processInstruction(MCInst &Inst, const OperandVector &Ops) {
     if (ForcedOpcodePrefix == OpcodePrefix_EVEX_CMP_TEST) {                    \
       Inst.setOpcode(X86::TO);                                                 \
       Inst.addOperand(MCOperand::createImm(15));                               \
-      Inst.addOperand(MCOperand::createImm(4));                                \
+      Inst.addOperand(MCOperand::createImm(10));                               \
       return true;                                                             \
     }                                                                          \
     return false;                                                              \
