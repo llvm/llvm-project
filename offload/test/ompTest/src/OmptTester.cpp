@@ -285,7 +285,10 @@ static void on_ompt_callback_target_data_op_emi(
     const void *codeptr_ra) {
   assert(codeptr_ra != 0 && "Unexpected null codeptr");
   // Both src and dest must not be null
-  assert((src_addr != 0 || dest_addr != 0) && "Both src and dest addr null");
+  // However, for omp_target_alloc only the END call holds a value for one of
+  // the two entries
+  if (optype != ompt_target_data_alloc)
+    assert((src_addr != 0 || dest_addr != 0) && "Both src and dest addr null");
   if (endpoint == ompt_scope_begin)
     *host_op_id = NextOpId.fetch_add(1, std::memory_order_relaxed);
   OmptCallbackHandler::get().handleTargetDataOpEmi(
