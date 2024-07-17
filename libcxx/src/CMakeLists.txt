@@ -229,6 +229,11 @@ if (LIBCXX_ENABLE_SHARED)
     target_link_libraries(cxx_shared PUBLIC libcxx-abi-shared)
   endif()
 
+  # Link against LLVM libc.
+  if (LIBCXX_USE_LLVM_LIBC)
+    target_link_libraries(cxx_shared PUBLIC libc libm)
+  endif()
+
   # Maybe re-export symbols from libc++abi
   # In particular, we don't re-export the symbols if libc++abi is merged statically
   # into libc++ because in that case there's no dylib to re-export from.
@@ -323,6 +328,11 @@ if (LIBCXX_ENABLE_STATIC)
   # Attempt to merge the libc++.a archive and the ABI library archive into one.
   if (LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY)
     target_link_libraries(cxx_static PRIVATE libcxx-abi-static-objects)
+  endif()
+
+  # Link against LLVM libc.
+  if (LIBCXX_USE_LLVM_LIBC)
+    target_link_libraries(cxx_static PUBLIC libc libm)
   endif()
 endif()
 

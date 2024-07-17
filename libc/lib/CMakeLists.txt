@@ -30,7 +30,10 @@ foreach(archive IN ZIP_LISTS
       ARCHIVE_OUTPUT_NAME ${archive_0}
   )
   if(LLVM_LIBC_FULL_BUILD)
-    target_link_libraries(${archive_1} PUBLIC libc-headers)
+    target_link_libraries(${archive_1} INTERFACE libc-headers)
+    if(LIBC_CC_SUPPORTS_NOLIBC)
+      target_link_options(${archive_1} INTERFACE "-nolibc")
+    endif()
     if(TARGET libc-startup)
       add_dependencies(${archive_1} libc-startup)
     endif()

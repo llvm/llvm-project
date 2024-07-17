@@ -293,6 +293,7 @@ option(LIBCXX_ENABLE_THREADS "Build libc++ with support for threads." ON)
 option(LIBCXX_ENABLE_MONOTONIC_CLOCK
   "Build libc++ with support for a monotonic clock.
    This option may only be set to OFF when LIBCXX_ENABLE_THREADS=OFF." ON)
+option(LIBCXX_USE_LLVM_LIBC "Build libc++ against LLVM libc." OFF)
 option(LIBCXX_HAS_MUSL_LIBC "Build libc++ with support for the Musl C library" OFF)
 option(LIBCXX_HAS_PTHREAD_API "Ignore auto-detection and force use of pthread API" OFF)
 option(LIBCXX_HAS_WIN32_THREAD_API "Ignore auto-detection and force use of win32 thread API" OFF)

@@ -102,3 +102,6 @@ check_cxx_compiler_flag("-nostdlib++" LIBC_CC_SUPPORTS_NOSTDLIBPP)
 
 # clang-3.0+
 check_cxx_compiler_flag("-nostdlibinc" LIBC_CC_SUPPORTS_NOSTDLIBINC)
+
+# clang-3.0+
+check_cxx_compiler_flag("-nolibc" LIBC_CC_SUPPORTS_NOLIBC)

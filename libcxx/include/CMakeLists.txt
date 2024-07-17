@@ -1043,6 +1043,9 @@ add_custom_target(generate-cxx-headers ALL DEPENDS ${_all_includes})
 
 add_library(cxx-headers INTERFACE)
 target_link_libraries(cxx-headers INTERFACE libcxx-abi-headers)
+if (LIBCXX_USE_LLVM_LIBC)
+  target_link_libraries(cxx-headers INTERFACE libc-headers)
+endif()
 add_dependencies(cxx-headers generate-cxx-headers)
 # It's important that the arch directory be included first so that its header files
 # which interpose on the default include dir be included instead of the default ones.

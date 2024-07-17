@@ -664,6 +664,9 @@ get_all_install_header_targets(all_install_header_targets ${TARGET_PUBLIC_HEADER
 add_library(libc-headers INTERFACE)
 add_dependencies(libc-headers ${all_install_header_targets})
 target_include_directories(libc-headers SYSTEM INTERFACE ${LIBC_INCLUDE_DIR})
+if(LIBC_CC_SUPPORTS_NOSTDLIBINC)
+  target_compile_options(libc-headers INTERFACE "-nostdlibinc")
+endif()
 
 foreach(target IN LISTS all_install_header_targets)
   get_target_property(header_file ${target} HEADER_FILE_PATH)
