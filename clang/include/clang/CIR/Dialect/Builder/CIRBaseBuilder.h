@@ -75,13 +75,19 @@ public:
     return mlir::cir::IntType::get(getContext(), N, true);
   }
 
-  mlir::cir::PointerType
-  getPointerTo(mlir::Type ty, clang::LangAS langAS = clang::LangAS::Default) {
-    mlir::cir::AddressSpaceAttr addrSpaceAttr;
-    if (langAS != clang::LangAS::Default)
-      addrSpaceAttr = mlir::cir::AddressSpaceAttr::get(getContext(), langAS);
+  mlir::cir::AddressSpaceAttr getAddrSpaceAttr(clang::LangAS langAS) {
+    if (langAS == clang::LangAS::Default)
+      return {};
+    return mlir::cir::AddressSpaceAttr::get(getContext(), langAS);
+  }
 
-    return mlir::cir::PointerType::get(getContext(), ty, addrSpaceAttr);
+  mlir::cir::PointerType getPointerTo(mlir::Type ty,
+                                      mlir::cir::AddressSpaceAttr cirAS = {}) {
+    return mlir::cir::PointerType::get(getContext(), ty, cirAS);
+  }
+
+  mlir::cir::PointerType getPointerTo(mlir::Type ty, clang::LangAS langAS) {
+    return getPointerTo(ty, getAddrSpaceAttr(langAS));
   }
 
   mlir::cir::PointerType
