@@ -16,7 +16,7 @@ namespace lldb {
 
 class LLDB_API SBCoreDumpOptions {
 public:
-  SBCoreDumpOptions(const char *filePath);
+  SBCoreDumpOptions();
   SBCoreDumpOptions(const lldb::SBCoreDumpOptions &rhs);
   ~SBCoreDumpOptions() = default;
 
@@ -29,8 +29,8 @@ public:
 
   /// Get the Core dump plugin name, if set.
   ///
-  /// \return The name of the plugin, or nullopt if not set.
-  const std::optional<const char *> GetCoreDumpPluginName() const;
+  /// \return The name of the plugin, or null if not set.
+  const char * GetCoreDumpPluginName() const;
 
   /// Set the Core dump style.
   ///
@@ -39,13 +39,22 @@ public:
 
   /// Get the Core dump style, if set.
   ///
-  /// \return The core dump style, or nullopt if not set.
-  const std::optional<lldb::SaveCoreStyle> GetCoreDumpStyle() const;
+  /// \return The core dump style, or undefined if not set.
+  lldb::SaveCoreStyle GetCoreDumpStyle() const;
 
-  /// Get the output file path
+  /// Set the output file path
   ///
-  /// \return The output file path.
-  const char *GetOutputFile() const;
+  /// \param output_file a 
+  /// \class SBFileSpec object that describes the output file.
+  void SetOutputFile(SBFileSpec &output_file);
+
+  /// Get the output file spec
+  ///
+  /// \return The output file spec.
+  SBFileSpec GetOutputFile() const;
+
+  /// Reset all options.
+  void Clear();
 
 protected:
   friend class SBProcess;

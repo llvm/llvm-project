@@ -56,17 +56,13 @@ size_t ObjectFileMinidump::GetModuleSpecifications(
 }
 
 bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
-                                  lldb_private::CoreDumpOptions &core_options,
+                                  const lldb_private::CoreDumpOptions &core_options,
                                   lldb_private::Status &error) {
-  // Set default core style if it isn't set.
-  if (core_options.GetCoreDumpStyle() == SaveCoreStyle::eSaveCoreUnspecified)
-    core_options.SetCoreDumpStyle(SaveCoreStyle::eSaveCoreStackOnly);
-
-  if (!process_sp)
+  if (!process_sp || !core_options.GetOutputFile())
     return false;
 
   llvm::Expected<lldb::FileUP> maybe_core_file = FileSystem::Instance().Open(
-      core_options.GetOutputFile(),
+      core_options.GetOutputFile().value(),
       File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate);
   if (!maybe_core_file) {
     error = maybe_core_file.takeError();

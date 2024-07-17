@@ -1223,7 +1223,9 @@ lldb::SBError SBProcess::SaveCore(const char *file_name) {
 lldb::SBError SBProcess::SaveCore(const char *file_name,
                                   const char *flavor,
                                   SaveCoreStyle core_style) {
-  SBCoreDumpOptions options(file_name);
+  SBFileSpec fspec(file_name);
+  SBCoreDumpOptions options;
+  options.SetOutputFile(fspec);
   options.SetCoreDumpPluginName(flavor);
   options.SetCoreDumpStyle(core_style);
   return SaveCore(options);

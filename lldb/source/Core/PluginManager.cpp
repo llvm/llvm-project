@@ -690,11 +690,17 @@ PluginManager::GetObjectFileCreateMemoryCallbackForPluginName(
 }
 
 Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
-                               lldb_private::CoreDumpOptions &options) {
+                               const lldb_private::CoreDumpOptions &options) {
+  Status error;
+  if (!options.GetOutputFile()) {
+    error.SetErrorString("No output file specified");
+    return error;
+  }
+
   if (options.GetCoreDumpPluginName()->empty()) {
     // Try saving core directly from the process plugin first.
     llvm::Expected<bool> ret =
-        process_sp->SaveCore(options.GetOutputFile().GetPath());
+        process_sp->SaveCore(options.GetOutputFile()->GetPath());
     if (!ret)
       return Status(ret.takeError());
     if (ret.get())
@@ -702,7 +708,6 @@ Status PluginManager::SaveCore(const lldb::ProcessSP &process_sp,
   }
 
   // Fall back to object plugins.
-  Status error;
   auto &instances = GetObjectFileInstances().GetInstances();
   for (auto &instance : instances) {
     if (options.GetCoreDumpPluginName()->empty() ||

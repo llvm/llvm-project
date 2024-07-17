@@ -6519,16 +6519,12 @@ struct page_object {
 };
 
 bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
-                               lldb_private::CoreDumpOptions &core_options,
+                               const lldb_private::CoreDumpOptions &core_options,
                                Status &error) {
   auto core_style = core_options.GetCoreDumpStyle();
   const auto outfile = core_options.GetOutputFile();
-  if (!process_sp)
+  if (!process_sp || !outfile)
     return false;
-
-  // Default on macOS is to create a dirty-memory-only corefile.
-  if (core_style == SaveCoreStyle::eSaveCoreUnspecified)
-    core_style = SaveCoreStyle::eSaveCoreDirtyOnly;
 
   Target &target = process_sp->GetTarget();
   const ArchSpec target_arch = target.GetArchitecture();
@@ -6813,9 +6809,9 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
           buffer.PutHex32(segment.flags);
         }
 
-        std::string core_file_path(outfile.GetPath());
+        std::string core_file_path(core_options.GetOutputFile()->GetPath());
         auto core_file = FileSystem::Instance().Open(
-            outfile, File::eOpenOptionWriteOnly | File::eOpenOptionTruncate |
+            outfile.value(), File::eOpenOptionWriteOnly | File::eOpenOptionTruncate |
                          File::eOpenOptionCanCreate);
         if (!core_file) {
           error = core_file.takeError();

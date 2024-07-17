@@ -11,27 +11,35 @@
 using namespace lldb;
 using namespace lldb_private;
 
-void CoreDumpOptions::SetCoreDumpPluginName(const llvm::StringRef name) {
-  m_core_dump_plugin_name = name.data();
-}
-
-std::optional<llvm::StringRef> CoreDumpOptions::GetCoreDumpPluginName() const {
-  if (!m_core_dump_plugin_name)
-    return std::nullopt;
-  return m_core_dump_plugin_name->data();
+void CoreDumpOptions::SetCoreDumpPluginName(const char * name) {
+  m_plugin_name = name;
 }
 
 void CoreDumpOptions::SetCoreDumpStyle(lldb::SaveCoreStyle style) {
-  m_core_dump_style = style;
+  m_style = style;
+}
+
+void CoreDumpOptions::SetOutputFile(FileSpec file) {
+  m_file = file;
+}
+
+std::optional<std::string> CoreDumpOptions::GetCoreDumpPluginName() const {
+  return m_plugin_name;
 }
 
 lldb::SaveCoreStyle CoreDumpOptions::GetCoreDumpStyle() const {
   // If unspecified, default to stack only
-  if (m_core_dump_style == lldb::eSaveCoreUnspecified)
+  if (m_style == lldb::eSaveCoreUnspecified)
     return lldb::eSaveCoreStackOnly;
-  return m_core_dump_style;
+  return m_style.value();
 }
 
-const lldb_private::FileSpec &CoreDumpOptions::GetOutputFile() const {
-  return m_core_dump_file;
+const std::optional<lldb_private::FileSpec> CoreDumpOptions::GetOutputFile() const {
+  return m_file;
+}
+
+void CoreDumpOptions::Clear() {
+  m_file = std::nullopt;
+  m_plugin_name = std::nullopt;
+  m_style = std::nullopt;
 }

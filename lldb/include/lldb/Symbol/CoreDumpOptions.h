@@ -20,22 +20,24 @@ namespace lldb_private {
 
 class CoreDumpOptions {
 public:
-  CoreDumpOptions(const lldb_private::FileSpec &fspec)
-      : m_core_dump_file(std::move(fspec)){};
+  CoreDumpOptions() {};
   ~CoreDumpOptions() = default;
 
-  void SetCoreDumpPluginName(llvm::StringRef name);
-  std::optional<llvm::StringRef> GetCoreDumpPluginName() const;
+  void SetCoreDumpPluginName(const char * name);
+  std::optional<std::string> GetCoreDumpPluginName() const;
 
   void SetCoreDumpStyle(lldb::SaveCoreStyle style);
   lldb::SaveCoreStyle GetCoreDumpStyle() const;
 
-  const lldb_private::FileSpec &GetOutputFile() const;
+  void SetOutputFile(lldb_private::FileSpec file);
+  const std::optional<lldb_private::FileSpec> GetOutputFile() const;
+
+  void Clear();
 
 private:
-  std::optional<std::string> m_core_dump_plugin_name;
-  const lldb_private::FileSpec m_core_dump_file;
-  lldb::SaveCoreStyle m_core_dump_style = lldb::eSaveCoreUnspecified;
+  std::optional<std::string> m_plugin_name;
+  std::optional<lldb_private::FileSpec> m_file;
+  std::optional<lldb::SaveCoreStyle> m_style;
 };
 } // namespace lldb_private
 
