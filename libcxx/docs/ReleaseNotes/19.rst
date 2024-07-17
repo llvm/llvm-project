@@ -141,6 +141,8 @@ Deprecations and Removals
   of randomness, and others. Users that were checking whether including a header would fail (e.g. via a script
   or CMake's ``try_compile`` will experience a change in behavior).
 
+- The operators in the ``rel_ops`` namespace have been deprecated. The deprecation is part of the paper
+  P0768R1 "Library Support for the Spaceship (Comparison) Operator".
 
 Upcoming Deprecations and Removals
 ----------------------------------
@@ -176,3 +178,7 @@ Build System Changes
   to automatically detect the presence of ``clang-tidy`` and the required ``Clang`` libraries.
 
 - The CMake options ``LIBCXX_INSTALL_MODULES`` now defaults to ``ON``.
+
+- The CMake options ``LIBCXX_BENCHMARK_NATIVE_STDLIB`` and ``LIBCXX_BENCHMARK_NATIVE_GCC_TOOLCHAIN`` have
+  been removed. To benchmark the native standard library, configure the test suite against the native
+  standard library directly instead.
