@@ -1153,7 +1153,7 @@ private:
   SmallPtrSet<MachineBasicBlock *, 16> ArtificialBlocks;
 
   // Mapping of blocks to and from their RPOT order.
-  DenseMap<unsigned int, MachineBasicBlock *> OrderToBB;
+  SmallVector<MachineBasicBlock *> OrderToBB;
   DenseMap<const MachineBasicBlock *, unsigned int> BBToOrder;
   DenseMap<unsigned, unsigned> BBNumToRPO;
 
