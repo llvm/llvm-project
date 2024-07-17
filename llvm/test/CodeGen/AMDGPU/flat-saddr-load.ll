@@ -1672,7 +1672,7 @@ define amdgpu_ps float @flat_zextload_saddr_i16_immneg128(ptr inreg %sbase, i32 
 define amdgpu_ps float @atomic_flat_load_saddr_i32(ptr inreg %sbase, i32 %voffset) {
 ; GFX1210-LABEL: atomic_flat_load_saddr_i32:
 ; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    flat_load_b32 v0, v0, s[2:3] th:TH_LOAD_NT
+; GFX1210-NEXT:    flat_load_b32 v0, v0, s[2:3] scope:SCOPE_SYS
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
@@ -1687,7 +1687,7 @@ define amdgpu_ps float @atomic_flat_load_saddr_i32(ptr inreg %sbase, i32 %voffse
 define amdgpu_ps float @atomic_flat_load_saddr_i32_immneg128(ptr inreg %sbase, i32 %voffset) {
 ; GFX1210-LABEL: atomic_flat_load_saddr_i32_immneg128:
 ; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    flat_load_b32 v0, v0, s[2:3] offset:-128 th:TH_LOAD_NT
+; GFX1210-NEXT:    flat_load_b32 v0, v0, s[2:3] offset:-128 scope:SCOPE_SYS
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
@@ -1703,7 +1703,7 @@ define amdgpu_ps float @atomic_flat_load_saddr_i32_immneg128(ptr inreg %sbase, i
 define amdgpu_ps <2 x float> @atomic_flat_load_saddr_i64(ptr inreg %sbase, i32 %voffset) {
 ; GFX1210-LABEL: atomic_flat_load_saddr_i64:
 ; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    flat_load_b64 v[0:1], v0, s[2:3] th:TH_LOAD_NT
+; GFX1210-NEXT:    flat_load_b64 v[0:1], v0, s[2:3] scope:SCOPE_SYS
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1210-NEXT:    s_wait_xcnt 0x0
@@ -1718,7 +1718,7 @@ define amdgpu_ps <2 x float> @atomic_flat_load_saddr_i64(ptr inreg %sbase, i32 %
 define amdgpu_ps <2 x float> @atomic_flat_load_saddr_i64_immneg128(ptr inreg %sbase, i32 %voffset) {
 ; GFX1210-LABEL: atomic_flat_load_saddr_i64_immneg128:
 ; GFX1210:       ; %bb.0:
-; GFX1210-NEXT:    flat_load_b64 v[0:1], v0, s[2:3] offset:-128 th:TH_LOAD_NT
+; GFX1210-NEXT:    flat_load_b64 v[0:1], v0, s[2:3] offset:-128 scope:SCOPE_SYS
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1210-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1210-NEXT:    s_wait_xcnt 0x0

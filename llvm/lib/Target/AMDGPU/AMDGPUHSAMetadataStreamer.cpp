@@ -47,8 +47,7 @@ static cl::opt<bool> VerifyHSAMetadata(
     "amdgpu-verify-hsa-metadata",
     cl::desc("Verify AMDGPU HSA Metadata"));
 
-namespace AMDGPU {
-namespace HSAMD {
+namespace AMDGPU::HSAMD {
 
 //===----------------------------------------------------------------------===//
 // HSAMetadataStreamerV4
@@ -736,6 +735,5 @@ void MetadataStreamerMsgPackV6::emitKernelAttrs(const Function &Func,
   }
 }
 
-} // end namespace HSAMD
-} // end namespace AMDGPU
+} // end namespace AMDGPU::HSAMD
 } // end namespace llvm

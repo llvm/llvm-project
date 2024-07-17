@@ -431,6 +431,10 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
           args.getLastArg(clang::driver::options::OPT_target_cpu))
     opts.cpu = a->getValue();
 
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_tune_cpu))
+    opts.cpuToTuneFor = a->getValue();
+
   for (const llvm::opt::Arg *currentArg :
        args.filtered(clang::driver::options::OPT_target_feature))
     opts.featuresAsWritten.emplace_back(currentArg->getValue());

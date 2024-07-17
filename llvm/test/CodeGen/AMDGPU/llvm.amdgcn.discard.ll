@@ -4,10 +4,16 @@
 
 
 define amdgpu_ps void @flat_discard_b32(ptr %addr) {
-; GFX1300-LABEL: flat_discard_b32:
-; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    flat_discard_b32 v[0:1] offset:32
-; GFX1300-NEXT:    s_endpgm
+; GFX1300-SDAG-LABEL: flat_discard_b32:
+; GFX1300-SDAG:       ; %bb.0: ; %entry
+; GFX1300-SDAG-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    flat_discard_b32 v[0:1] offset:32 scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    s_endpgm
+;
+; GFX1300-GISEL-LABEL: flat_discard_b32:
+; GFX1300-GISEL:       ; %bb.0: ; %entry
+; GFX1300-GISEL-NEXT:    flat_discard_b32 v[0:1] offset:32
+; GFX1300-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(0) %addr, i32 4
   call void @llvm.amdgcn.discard.b32(ptr addrspace(0) %gep, i32 0);
@@ -15,11 +21,18 @@ entry:
 }
 
 define amdgpu_ps void @global_discard_b32(ptr addrspace(1) %addr) {
-; GFX1300-LABEL: global_discard_b32:
-; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    global_discard_b32 v[0:1], off offset:32
-; GFX1300-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX1300-NEXT:    s_endpgm
+; GFX1300-SDAG-LABEL: global_discard_b32:
+; GFX1300-SDAG:       ; %bb.0: ; %entry
+; GFX1300-SDAG-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    global_discard_b32 v[0:1], off offset:32 scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1300-SDAG-NEXT:    s_endpgm
+;
+; GFX1300-GISEL-LABEL: global_discard_b32:
+; GFX1300-GISEL:       ; %bb.0: ; %entry
+; GFX1300-GISEL-NEXT:    global_discard_b32 v[0:1], off offset:32
+; GFX1300-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1300-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
   call void @llvm.amdgcn.discard.b32(ptr addrspace(1) %gep, i32 0);
@@ -27,11 +40,18 @@ entry:
 }
 
 define amdgpu_ps void @global_discard_b32_saddr(ptr addrspace(1) inreg %sbase, i32 %voffset) {
-; GFX1300-LABEL: global_discard_b32_saddr:
-; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    global_discard_b32 v0, s[0:1] offset:128
-; GFX1300-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX1300-NEXT:    s_endpgm
+; GFX1300-SDAG-LABEL: global_discard_b32_saddr:
+; GFX1300-SDAG:       ; %bb.0: ; %entry
+; GFX1300-SDAG-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    global_discard_b32 v0, s[0:1] offset:128 scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1300-SDAG-NEXT:    s_endpgm
+;
+; GFX1300-GISEL-LABEL: global_discard_b32_saddr:
+; GFX1300-GISEL:       ; %bb.0: ; %entry
+; GFX1300-GISEL-NEXT:    global_discard_b32 v0, s[0:1] offset:128
+; GFX1300-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1300-GISEL-NEXT:    s_endpgm
 entry:
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -41,10 +61,16 @@ entry:
 }
 
 define amdgpu_ps void @flat_discard_b128(ptr %addr) {
-; GFX1300-LABEL: flat_discard_b128:
-; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    flat_discard_b128 v[0:1] offset:32 th:TH_STORE_NT
-; GFX1300-NEXT:    s_endpgm
+; GFX1300-SDAG-LABEL: flat_discard_b128:
+; GFX1300-SDAG:       ; %bb.0: ; %entry
+; GFX1300-SDAG-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    flat_discard_b128 v[0:1] offset:32 th:TH_STORE_NT scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    s_endpgm
+;
+; GFX1300-GISEL-LABEL: flat_discard_b128:
+; GFX1300-GISEL:       ; %bb.0: ; %entry
+; GFX1300-GISEL-NEXT:    flat_discard_b128 v[0:1] offset:32 th:TH_STORE_NT
+; GFX1300-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(0) %addr, i32 4
   call void @llvm.amdgcn.discard.b128(ptr addrspace(0) %gep, i32 1);
@@ -52,11 +78,18 @@ entry:
 }
 
 define amdgpu_ps void @global_discard_b128(ptr addrspace(1) %addr) {
-; GFX1300-LABEL: global_discard_b128:
-; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    global_discard_b128 v[0:1], off offset:32
-; GFX1300-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX1300-NEXT:    s_endpgm
+; GFX1300-SDAG-LABEL: global_discard_b128:
+; GFX1300-SDAG:       ; %bb.0: ; %entry
+; GFX1300-SDAG-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    global_discard_b128 v[0:1], off offset:32 scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1300-SDAG-NEXT:    s_endpgm
+;
+; GFX1300-GISEL-LABEL: global_discard_b128:
+; GFX1300-GISEL:       ; %bb.0: ; %entry
+; GFX1300-GISEL-NEXT:    global_discard_b128 v[0:1], off offset:32
+; GFX1300-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1300-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
   call void @llvm.amdgcn.discard.b128(ptr addrspace(1) %gep, i32 0);
@@ -64,11 +97,18 @@ entry:
 }
 
 define amdgpu_ps void @global_discard_b128_saddr(ptr addrspace(1) inreg %sbase, i32 %voffset) {
-; GFX1300-LABEL: global_discard_b128_saddr:
-; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    global_discard_b128 v0, s[0:1] offset:128
-; GFX1300-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX1300-NEXT:    s_endpgm
+; GFX1300-SDAG-LABEL: global_discard_b128_saddr:
+; GFX1300-SDAG:       ; %bb.0: ; %entry
+; GFX1300-SDAG-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    global_discard_b128 v0, s[0:1] offset:128 scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1300-SDAG-NEXT:    s_endpgm
+;
+; GFX1300-GISEL-LABEL: global_discard_b128_saddr:
+; GFX1300-GISEL:       ; %bb.0: ; %entry
+; GFX1300-GISEL-NEXT:    global_discard_b128 v0, s[0:1] offset:128
+; GFX1300-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1300-GISEL-NEXT:    s_endpgm
 entry:
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -78,10 +118,16 @@ entry:
 }
 
 define amdgpu_ps void @flat_discard_b1024(ptr %addr) {
-; GFX1300-LABEL: flat_discard_b1024:
-; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    flat_discard_b1024 v[0:1] offset:32
-; GFX1300-NEXT:    s_endpgm
+; GFX1300-SDAG-LABEL: flat_discard_b1024:
+; GFX1300-SDAG:       ; %bb.0: ; %entry
+; GFX1300-SDAG-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    flat_discard_b1024 v[0:1] offset:32 scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    s_endpgm
+;
+; GFX1300-GISEL-LABEL: flat_discard_b1024:
+; GFX1300-GISEL:       ; %bb.0: ; %entry
+; GFX1300-GISEL-NEXT:    flat_discard_b1024 v[0:1] offset:32
+; GFX1300-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(0) %addr, i32 4
   call void @llvm.amdgcn.discard.b1024(ptr addrspace(0) %gep, i32 0);
@@ -89,11 +135,18 @@ entry:
 }
 
 define amdgpu_ps void @global_discard_b1024(ptr addrspace(1) %addr) {
-; GFX1300-LABEL: global_discard_b1024:
-; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    global_discard_b1024 v[0:1], off offset:32 th:TH_STORE_HT scope:SCOPE_SE
-; GFX1300-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX1300-NEXT:    s_endpgm
+; GFX1300-SDAG-LABEL: global_discard_b1024:
+; GFX1300-SDAG:       ; %bb.0: ; %entry
+; GFX1300-SDAG-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    global_discard_b1024 v[0:1], off offset:32 th:TH_STORE_HT scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1300-SDAG-NEXT:    s_endpgm
+;
+; GFX1300-GISEL-LABEL: global_discard_b1024:
+; GFX1300-GISEL:       ; %bb.0: ; %entry
+; GFX1300-GISEL-NEXT:    global_discard_b1024 v[0:1], off offset:32 th:TH_STORE_HT scope:SCOPE_SE
+; GFX1300-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1300-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %addr, i32 4
   call void @llvm.amdgcn.discard.b1024(ptr addrspace(1) %gep, i32 10);
@@ -101,11 +154,18 @@ entry:
 }
 
 define amdgpu_ps void @global_discard_b1024_saddr(ptr addrspace(1) inreg %sbase, i32 %voffset) {
-; GFX1300-LABEL: global_discard_b1024_saddr:
-; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    global_discard_b1024 v0, s[0:1] offset:128 th:TH_STORE_HT scope:SCOPE_SE
-; GFX1300-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX1300-NEXT:    s_endpgm
+; GFX1300-SDAG-LABEL: global_discard_b1024_saddr:
+; GFX1300-SDAG:       ; %bb.0: ; %entry
+; GFX1300-SDAG-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    global_discard_b1024 v0, s[0:1] offset:128 th:TH_STORE_HT scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1300-SDAG-NEXT:    s_endpgm
+;
+; GFX1300-GISEL-LABEL: global_discard_b1024_saddr:
+; GFX1300-GISEL:       ; %bb.0: ; %entry
+; GFX1300-GISEL-NEXT:    global_discard_b1024 v0, s[0:1] offset:128 th:TH_STORE_HT scope:SCOPE_SE
+; GFX1300-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX1300-GISEL-NEXT:    s_endpgm
 entry:
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
@@ -115,10 +175,16 @@ entry:
 }
 
 define amdgpu_ps void @scratch_discard_b32(ptr addrspace(5) %addr) {
-; GFX1300-LABEL: scratch_discard_b32:
-; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    scratch_discard_b32 v0, off offset:32 th:TH_STORE_NT_HT scope:SCOPE_DEV
-; GFX1300-NEXT:    s_endpgm
+; GFX1300-SDAG-LABEL: scratch_discard_b32:
+; GFX1300-SDAG:       ; %bb.0: ; %entry
+; GFX1300-SDAG-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    scratch_discard_b32 v0, off offset:32 th:TH_STORE_NT_HT scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    s_endpgm
+;
+; GFX1300-GISEL-LABEL: scratch_discard_b32:
+; GFX1300-GISEL:       ; %bb.0: ; %entry
+; GFX1300-GISEL-NEXT:    scratch_discard_b32 v0, off offset:32 th:TH_STORE_NT_HT scope:SCOPE_DEV
+; GFX1300-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(5) %addr, i32 4
   call void @llvm.amdgcn.discard.b32(ptr addrspace(5) %gep, i32 22);
@@ -131,7 +197,8 @@ define amdgpu_kernel void @scratch_discard_b32_saddr(ptr addrspace(5) inreg %sba
 ; GFX1300-SDAG-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX1300-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-SDAG-NEXT:    s_add_co_i32 s0, s0, s1
-; GFX1300-SDAG-NEXT:    scratch_discard_b32 off, s0 offset:128 th:TH_STORE_NT_HT scope:SCOPE_DEV
+; GFX1300-SDAG-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    scratch_discard_b32 off, s0 offset:128 th:TH_STORE_NT_HT scope:SCOPE_SYS
 ; GFX1300-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1300-GISEL-LABEL: scratch_discard_b32_saddr:
@@ -150,10 +217,16 @@ entry:
 }
 
 define amdgpu_ps void @scratch_discard_b128(ptr addrspace(5) %addr) {
-; GFX1300-LABEL: scratch_discard_b128:
-; GFX1300:       ; %bb.0: ; %entry
-; GFX1300-NEXT:    scratch_discard_b128 v0, off offset:32 th:TH_STORE_BYPASS scope:SCOPE_SYS
-; GFX1300-NEXT:    s_endpgm
+; GFX1300-SDAG-LABEL: scratch_discard_b128:
+; GFX1300-SDAG:       ; %bb.0: ; %entry
+; GFX1300-SDAG-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    scratch_discard_b128 v0, off offset:32 th:TH_STORE_BYPASS scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    s_endpgm
+;
+; GFX1300-GISEL-LABEL: scratch_discard_b128:
+; GFX1300-GISEL:       ; %bb.0: ; %entry
+; GFX1300-GISEL-NEXT:    scratch_discard_b128 v0, off offset:32 th:TH_STORE_BYPASS scope:SCOPE_SYS
+; GFX1300-GISEL-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(5) %addr, i32 4
   call void @llvm.amdgcn.discard.b128(ptr addrspace(5) %gep, i32 27);
@@ -166,7 +239,8 @@ define amdgpu_kernel void @scratch_discard_b128_saddr(ptr addrspace(5) inreg %sb
 ; GFX1300-SDAG-NEXT:    s_load_b64 s[0:1], s[2:3], 0x24
 ; GFX1300-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-SDAG-NEXT:    s_add_co_i32 s0, s0, s1
-; GFX1300-SDAG-NEXT:    scratch_discard_b128 off, s0 offset:-128
+; GFX1300-SDAG-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1300-SDAG-NEXT:    scratch_discard_b128 off, s0 offset:-128 scope:SCOPE_SYS
 ; GFX1300-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1300-GISEL-LABEL: scratch_discard_b128_saddr:
@@ -183,3 +257,5 @@ entry:
   call void @llvm.amdgcn.discard.b128(ptr addrspace(5) %gep1, i32 0);
   ret void
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GFX1300: {{.*}}
