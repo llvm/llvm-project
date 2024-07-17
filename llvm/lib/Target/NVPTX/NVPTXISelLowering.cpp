@@ -5740,7 +5740,6 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     case ISD::ADDRSPACECAST:
       return combineADDRSPACECAST(N, DCI);
   }
-
   return SDValue();
 }
 
