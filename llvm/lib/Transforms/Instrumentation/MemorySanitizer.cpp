@@ -3883,15 +3883,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (ClCheckAccessAddress)
       insertShadowCheck(Addr, &I);
 
-    IntrinsicInst* ShadowI = cast<IntrinsicInst>(I.clone());
+    IntrinsicInst *ShadowI = cast<IntrinsicInst>(I.clone());
     for (int i = 0; i < numArgOperands - 1; i++) {
-      ShadowI->setArgOperand (i, getShadow(&I, i));
+      ShadowI->setArgOperand(i, getShadow(&I, i));
     }
 
     Value *ShadowPtr, *OriginPtr;
     std::tie(ShadowPtr, OriginPtr) = getShadowOriginPtr(
         Addr, IRB, ShadowI->getType(), Align(1), /*isStore*/ true);
-    ShadowI->setArgOperand (numArgOperands - 1, ShadowPtr);
+    ShadowI->setArgOperand(numArgOperands - 1, ShadowPtr);
     ShadowI->insertAfter(&I);
 
     if (MS.TrackOrigins) {
