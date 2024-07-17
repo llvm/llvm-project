@@ -178,3 +178,7 @@ Build System Changes
   to automatically detect the presence of ``clang-tidy`` and the required ``Clang`` libraries.
 
 - The CMake options ``LIBCXX_INSTALL_MODULES`` now defaults to ``ON``.
+
+- The CMake options ``LIBCXX_BENCHMARK_NATIVE_STDLIB`` and ``LIBCXX_BENCHMARK_NATIVE_GCC_TOOLCHAIN`` have
+  been removed. To benchmark the native standard library, configure the test suite against the native
+  standard library directly instead.
