@@ -224,7 +224,9 @@ namespace std {
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #  include <locale>
+#  endif
 #  include <queue>
 #  include <stack>
 #endif
