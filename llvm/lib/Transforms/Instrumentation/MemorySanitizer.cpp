@@ -3920,7 +3920,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return IRB.CreateShuffleVector(left, right, ConstantVector::get(Idxs));
   }
 
-  Value *interleaveShadowOrOrigin(IRBuilder<> &IRB, IntrinsicInst &I) {
+  /// Calculates the shadow when interleaving 2, 3 or 4 vectors
+  /// (e.g., for Arm NEON vector store).
+  Value *interleaveShadow(IRBuilder<> &IRB, IntrinsicInst &I) {
     // Call arguments only
     int numArgOperands = I.getNumOperands() - 1;
     assert(numArgOperands >= 1);
@@ -3965,7 +3967,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void handleNEONVectorStoreIntrinsic(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
 
-    Value *interleavedShadow = interleaveShadowOrOrigin(IRB, I);
+    Value *interleavedShadow = interleaveShadow(IRB, I);
 
     // Call arguments only
     int numArgOperands = I.getNumOperands() - 1;
