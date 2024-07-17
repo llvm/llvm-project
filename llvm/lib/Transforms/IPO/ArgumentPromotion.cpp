@@ -640,8 +640,8 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
     }
 
     auto *CB = dyn_cast<CallBase>(V);
-    Value *PtrArg = cast<Value>(U);
-    if (CB && PtrArg && CB->getCalledFunction() == CB->getFunction()) {
+    Value *PtrArg = U->get();
+    if (CB && CB->getCalledFunction() == CB->getFunction()) {
       if (PtrArg != Arg) {
         LLVM_DEBUG(dbgs() << "ArgPromotion of " << *Arg << " failed: "
                           << "pointer offset is not equal to zero\n");
@@ -649,7 +649,7 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
       }
 
       unsigned int ArgNo = Arg->getArgNo();
-      if (CB->getArgOperand(ArgNo) != Arg || U->getOperandNo() != ArgNo) {
+      if (U->getOperandNo() != ArgNo) {
         LLVM_DEBUG(dbgs() << "ArgPromotion of " << *Arg << " failed: "
                           << "arg position is different in callee\n");
         return false;

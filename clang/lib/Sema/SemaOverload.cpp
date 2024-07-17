@@ -1863,7 +1863,7 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
     // we need to not alter FromFn, or else even an innocuous cast
     // like dropping effects will fail. In C++ however we do want to
     // alter FromFn (because of the way PerformImplicitConversion works).
-    if (getLangOpts().CPlusPlus) {
+    if (Context.hasAnyFunctionEffects() && getLangOpts().CPlusPlus) {
       FromFPT = cast<FunctionProtoType>(FromFn); // in case FromFn changed above
 
       // Transparently add/drop effects; here we are concerned with
@@ -16036,11 +16036,13 @@ Sema::BuildForRangeBeginEndCall(SourceLocation Loc,
 
   CandidateSet->clear(OverloadCandidateSet::CSK_Normal);
   if (!MemberLookup.empty()) {
-    ExprResult MemberRef = BuildMemberReferenceExpr(
-        Range, Range->getType(), Loc,
-        /*IsPtr=*/false, /*SS=*/CXXScopeSpec(),
-        /*TemplateKWLoc=*/SourceLocation(), MemberLookup,
-        /*TemplateArgs=*/nullptr, S);
+    ExprResult MemberRef =
+        BuildMemberReferenceExpr(Range, Range->getType(), Loc,
+                                 /*IsPtr=*/false, CXXScopeSpec(),
+                                 /*TemplateKWLoc=*/SourceLocation(),
+                                 /*FirstQualifierInScope=*/nullptr,
+                                 MemberLookup,
+                                 /*TemplateArgs=*/nullptr, S);
     if (MemberRef.isInvalid()) {
       *CallExpr = ExprError();
       return FRS_DiagnosticIssued;
