@@ -96,7 +96,7 @@ _LIBCPP_HIDE_FROM_ABI bool __is_function_overridden(_Ret (*__fptr)(_Args...)) no
 }
 _LIBCPP_END_NAMESPACE_STD
 
-#elif defined(_LIBCPP_OBJECT_FORMAT_ELF)
+#elif defined(_LIBCPP_OBJECT_FORMAT_ELF) && !defined(__NVPTX__)
 
 #  define _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION 1
 #  define _LIBCPP_MAKE_OVERRIDABLE_FUNCTION_DETECTABLE __attribute__((__section__("__lcxx_override")))
