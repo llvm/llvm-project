@@ -3034,6 +3034,15 @@ def getMFMA_F8F6F4_WithSize : GenericTable {
   let PrimaryKeyName = "getMFMA_F8F6F4_InstWithNumRegs" ;
 }
 
+def isMFMA_F8F6F4Table : GenericTable {
+  let FilterClass = "MFMA_F8F6F4_WithSizeTable";
+  let CppTypeName = "MFMA_F8F6F4_Info";
+//  let Fields = [ "Opcode" ];
+  let Fields = [ "Opcode", "F8F8Opcode", "NumRegsSrcA", "NumRegsSrcB" ];
+  let PrimaryKey = [ "Opcode" ];
+  let PrimaryKeyName = "isMFMA_F8F6F4" ;
+}
+
 def VOPDComponentTable : GenericTable {
   let FilterClass = "VOPD_Component";
   let CppTypeName = "VOPDComponentInfo";
