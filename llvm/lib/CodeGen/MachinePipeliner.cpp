@@ -999,8 +999,8 @@ void SwingSchedulerDAG::updatePhiDependences() {
         RemoveDeps.push_back(PI);
       }
     }
-    for (int i = 0, e = RemoveDeps.size(); i != e; ++i)
-      I.removePred(RemoveDeps[i]);
+    for (const SDep &D : RemoveDeps)
+      I.removePred(D);
   }
 }
 
@@ -1041,18 +1041,18 @@ void SwingSchedulerDAG::changeDependences() {
     for (const SDep &P : I.Preds)
       if (P.getSUnit() == DefSU)
         Deps.push_back(P);
-    for (int i = 0, e = Deps.size(); i != e; i++) {
-      Topo.RemovePred(&I, Deps[i].getSUnit());
-      I.removePred(Deps[i]);
+    for (const SDep &D : Deps) {
+      Topo.RemovePred(&I, D.getSUnit());
+      I.removePred(D);
     }
     // Remove the chain dependence between the instructions.
     Deps.clear();
     for (auto &P : LastSU->Preds)
       if (P.getSUnit() == &I && P.getKind() == SDep::Order)
         Deps.push_back(P);
-    for (int i = 0, e = Deps.size(); i != e; i++) {
-      Topo.RemovePred(LastSU, Deps[i].getSUnit());
-      LastSU->removePred(Deps[i]);
+    for (const SDep &D : Deps) {
+      Topo.RemovePred(LastSU, D.getSUnit());
+      LastSU->removePred(D);
     }
 
     // Add a dependence between the new instruction and the instruction
