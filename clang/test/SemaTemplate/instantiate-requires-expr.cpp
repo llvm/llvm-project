@@ -241,6 +241,6 @@ template <>  // expected-warning {{extraneous}}
 template <class T> requires(T{})
 bool e = true;
 
-static_assert(e_v<bool>);
+static_assert(e<bool>);
 
 } // namespace GH73885
