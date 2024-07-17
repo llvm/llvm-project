@@ -239,6 +239,7 @@ static Type *typeFromFTValueType(FTValueType VT, LLVMContext &Context) {
   case kNumValueTypes:
     return nullptr;
   }
+  llvm_unreachable("Unhandled FTValueType enum");
 }
 
 // Returns the type name for an FTValueType.
@@ -253,6 +254,7 @@ static const char *typeNameFromFTValueType(FTValueType VT) {
   case kNumValueTypes:
     return nullptr;
   }
+  llvm_unreachable("Unhandled FTValueType enum");
 }
 
 // A specific mapping configuration of application type to shadow type for nsan
@@ -395,6 +397,7 @@ public:
     case kStore:
       return Builder.CreatePtrToInt(Address, IntptrTy);
     }
+    llvm_unreachable("Unhandled CheckType enum");
   }
 
 private:

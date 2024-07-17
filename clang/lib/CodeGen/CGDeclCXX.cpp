@@ -840,6 +840,10 @@ CodeGenModule::EmitCXXGlobalInitFunc() {
       // No Itanium initializer in header like modules.
       if (M->isHeaderLikeModule())
         continue;
+      // We're allowed to skip the initialization if we are sure it doesn't
+      // do any thing.
+      if (!M->isNamedModuleInterfaceHasInit())
+        continue;
       llvm::FunctionType *FTy = llvm::FunctionType::get(VoidTy, false);
       SmallString<256> FnName;
       {

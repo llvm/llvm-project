@@ -1,13 +1,3 @@
-if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
-  set(extra_entrypoints
-      # stdio.h entrypoints
-      libc.src.stdio.snprintf
-      libc.src.stdio.sprintf
-      libc.src.stdio.vsnprintf
-      libc.src.stdio.vsprintf
-  )
-endif()
-
 set(TARGET_LIBC_ENTRYPOINTS
     # assert.h entrypoints
     libc.src.assert.__assert_fail
@@ -57,6 +47,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strcpy
     libc.src.string.strcspn
     libc.src.string.strdup
+    libc.src.string.strerror
+    libc.src.string.strerror_r
     libc.src.string.strlcat
     libc.src.string.strlcpy
     libc.src.string.strlen
@@ -185,9 +177,16 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.errno.errno
 
     # stdio.h entrypoints
-    ${extra_entrypoints}
     libc.src.stdio.clearerr
     libc.src.stdio.fclose
+    libc.src.stdio.printf
+    libc.src.stdio.vprintf
+    libc.src.stdio.fprintf
+    libc.src.stdio.vfprintf
+    libc.src.stdio.sprintf
+    libc.src.stdio.snprintf
+    libc.src.stdio.vsprintf
+    libc.src.stdio.vsnprintf
     libc.src.stdio.feof
     libc.src.stdio.ferror
     libc.src.stdio.fflush
@@ -205,6 +204,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.putc
     libc.src.stdio.putchar
     libc.src.stdio.puts
+    libc.src.stdio.remove
     libc.src.stdio.stderr
     libc.src.stdio.stdin
     libc.src.stdio.stdout
@@ -218,7 +218,11 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # time.h entrypoints
     libc.src.time.clock
+    libc.src.time.clock_gettime
     libc.src.time.nanosleep
+
+    # wchar.h entrypoints
+    libc.src.wchar.wctob
 
     # gpu/rpc.h entrypoints
     libc.src.gpu.rpc_host_call
@@ -241,6 +245,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atanf
     libc.src.math.atanh
     libc.src.math.atanhf
+    libc.src.math.cbrtf
     libc.src.math.ceil
     libc.src.math.ceilf
     libc.src.math.copysign
@@ -311,6 +316,8 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.nexttowardf
     libc.src.math.pow
     libc.src.math.powf
+    libc.src.math.powi
+    libc.src.math.powif
     libc.src.math.remainder
     libc.src.math.remainderf
     libc.src.math.remquo

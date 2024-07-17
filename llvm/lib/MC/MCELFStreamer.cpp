@@ -511,12 +511,6 @@ static void CheckBundleSubtargets(const MCSubtargetInfo *OldSTI,
 void MCELFStreamer::emitInstToData(const MCInst &Inst,
                                    const MCSubtargetInfo &STI) {
   MCAssembler &Assembler = getAssembler();
-  SmallVector<MCFixup, 4> Fixups;
-  SmallString<256> Code;
-  Assembler.getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
-
-  for (auto &Fixup : Fixups)
-    fixSymbolsInTLSFixups(Fixup.getValue());
 
   // There are several possibilities here:
   //
@@ -526,9 +520,7 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
   //
   // If bundling is enabled:
   // - If we're not in a bundle-locked group, emit the instruction into a
-  //   fragment of its own. If there are no fixups registered for the
-  //   instruction, emit a MCCompactEncodedInstFragment. Otherwise, emit a
-  //   MCDataFragment.
+  //   fragment of its own.
   // - If we're in a bundle-locked group, append the instruction to the current
   //   data fragment because we want all the instructions in a group to get into
   //   the same fragment. Be careful not to do that for the first instruction in
@@ -542,16 +534,6 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
       // The bundle-locking directive ensures this is a new data fragment.
       DF = cast<MCDataFragment>(getCurrentFragment());
       CheckBundleSubtargets(DF->getSubtargetInfo(), &STI);
-    } else if (!isBundleLocked() && Fixups.size() == 0) {
-      // Optimize memory usage by emitting the instruction to a
-      // MCCompactEncodedInstFragment when not in a bundle-locked group and
-      // there are no fixups registered.
-      MCCompactEncodedInstFragment *CEIF =
-          getContext().allocFragment<MCCompactEncodedInstFragment>();
-      insert(CEIF);
-      CEIF->getContents().append(Code.begin(), Code.end());
-      CEIF->setHasInstructions(STI);
-      return;
     } else {
       DF = getContext().allocFragment<MCDataFragment>();
       insert(DF);
@@ -571,17 +553,22 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
     DF = getOrCreateDataFragment(&STI);
   }
 
-  // Add the fixups and data.
+  // Emit instruction directly into data fragment.
+  size_t FixupStartIndex = DF->getFixups().size();
+  size_t CodeOffset = DF->getContents().size();
+  Assembler.getEmitter().encodeInstruction(Inst, DF->getContents(),
+                                           DF->getFixups(), STI);
+
+  auto Fixups = MutableArrayRef(DF->getFixups()).slice(FixupStartIndex);
   for (auto &Fixup : Fixups) {
-    Fixup.setOffset(Fixup.getOffset() + DF->getContents().size());
-    DF->getFixups().push_back(Fixup);
+    Fixup.setOffset(Fixup.getOffset() + CodeOffset);
+    fixSymbolsInTLSFixups(Fixup.getValue());
   }
 
   DF->setHasInstructions(STI);
   if (!Fixups.empty() && Fixups.back().getTargetKind() ==
                              getAssembler().getBackend().RelaxFixupKind)
     DF->setLinkerRelaxable();
-  DF->getContents().append(Code.begin(), Code.end());
 }
 
 void MCELFStreamer::emitBundleAlignMode(Align Alignment) {
@@ -712,17 +699,16 @@ void MCELFStreamer::setAttributeItems(unsigned Attribute, unsigned IntValue,
 
 MCELFStreamer::AttributeItem *
 MCELFStreamer::getAttributeItem(unsigned Attribute) {
-  for (size_t I = 0; I < Contents.size(); ++I)
-    if (Contents[I].Tag == Attribute)
-      return &Contents[I];
+  for (AttributeItem &Item : Contents)
+    if (Item.Tag == Attribute)
+      return &Item;
   return nullptr;
 }
 
 size_t
 MCELFStreamer::calculateContentSize(SmallVector<AttributeItem, 64> &AttrsVec) {
   size_t Result = 0;
-  for (size_t I = 0; I < AttrsVec.size(); ++I) {
-    AttributeItem Item = AttrsVec[I];
+  for (const AttributeItem &Item : AttrsVec) {
     switch (Item.Type) {
     case AttributeItem::HiddenAttribute:
       break;
@@ -783,8 +769,7 @@ void MCELFStreamer::createAttributesSection(
 
   // Size should have been accounted for already, now
   // emit each field as its type (ULEB or String)
-  for (size_t I = 0; I < AttrsVec.size(); ++I) {
-    AttributeItem Item = AttrsVec[I];
+  for (const AttributeItem &Item : AttrsVec) {
     emitULEB128IntValue(Item.Tag);
     switch (Item.Type) {
     default:

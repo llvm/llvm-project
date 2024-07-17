@@ -1193,7 +1193,7 @@ void TestVersionedOpA::writeProperties(mlir::DialectBytecodeWriter &writer) {
 // TestOpWithVersionedProperties
 //===----------------------------------------------------------------------===//
 
-mlir::LogicalResult TestOpWithVersionedProperties::readFromMlirBytecode(
+llvm::LogicalResult TestOpWithVersionedProperties::readFromMlirBytecode(
     mlir::DialectBytecodeReader &reader, test::VersionedProperties &prop) {
   uint64_t value1, value2 = 0;
   if (failed(reader.readVarInt(value1)))
@@ -1321,7 +1321,7 @@ DenseMap<Attribute, MemorySlot> TestMultiSlotAlloca::destructure(
   DenseMap<Attribute, MemorySlot> slotMap;
 
   for (Attribute usedIndex : usedIndices) {
-    Type elemType = slot.elementPtrs.lookup(usedIndex);
+    Type elemType = slot.subelementTypes.lookup(usedIndex);
     MemRefType elemPtr = MemRefType::get({}, elemType);
     auto subAlloca = builder.create<TestMultiSlotAlloca>(getLoc(), elemPtr);
     newAllocators.push_back(subAlloca);

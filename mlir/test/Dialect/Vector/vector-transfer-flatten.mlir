@@ -640,6 +640,21 @@ func.func @fold_inner_unit_dim_scalable(%arg0 : vector<8x1x[1]x3xf128>,
 
 // -----
 
+func.func @fold_all_unit_dims(%arg0: vector<1x1xf32>) -> vector<1xf32> {
+  %0 = arith.mulf %arg0, %arg0 : vector<1x1xf32>
+  %res = vector.shape_cast %0 : vector<1x1xf32> to vector<1xf32>
+  return %res : vector<1xf32>
+}
+
+// CHECK-LABEL: func.func @fold_all_unit_dims(
+// CHECK-SAME:    %[[VAL_0:.*]]: vector<1x1xf32>) -> vector<1xf32>
+// CHECK:         %[[VAL_1:.*]] = vector.shape_cast %[[VAL_0]] : vector<1x1xf32> to vector<1xf32>
+// CHECK:         %[[VAL_2:.*]] = vector.shape_cast %[[VAL_0]] : vector<1x1xf32> to vector<1xf32>
+// CHECK:         %[[VAL_3:.*]] = arith.mulf %[[VAL_1]], %[[VAL_2]] : vector<1xf32>
+// CHECK:         return %[[VAL_3]] : vector<1xf32>
+
+// -----
+
 func.func @negative_out_of_bound_transfer_read(
     %arg : memref<?x4x3x2xi8, strided<[24, 6, 2, 1], offset: ?>>) -> vector<5x4x3x2xi8> {
   %c0 = arith.constant 0 : index

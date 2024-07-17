@@ -2441,3 +2441,36 @@ llvm.func @optimize_none() attributes { no_inline, optimize_none } {
 
 // CHECK: #[[ATTRS]]
 // CHECK-SAME: optnone
+
+// -----
+
+// CHECK-LABEL: @convergent
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @convergent() attributes { convergent } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: convergent
+
+// -----
+
+// CHECK-LABEL: @nounwind
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @nounwind() attributes { no_unwind } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: nounwind
+
+// -----
+
+// CHECK-LABEL: @willreturn
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @willreturn() attributes { will_return } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: willreturn

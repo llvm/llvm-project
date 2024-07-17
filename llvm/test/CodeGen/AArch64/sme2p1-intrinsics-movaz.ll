@@ -901,4 +901,224 @@ declare <vscale x 8 x bfloat> @llvm.aarch64.sme.readz.q.vert.nxv8bf16(i32, i32)
 declare <vscale x 8 x half> @llvm.aarch64.sme.readz.q.vert.nxv8f16(i32, i32)
 declare <vscale x 4 x float> @llvm.aarch64.sme.readz.q.vert.nxv4f32(i32, i32)
 declare <vscale x 2 x double> @llvm.aarch64.sme.readz.q.vert.nxv2f64(i32, i32)
-attributes #0 = { nounwind "target-features" = "+sme2p1"}
+
+;MOVAZ (array to vector, Multi)
+
+
+;;
+; X2
+;;
+
+define {<vscale x 16 x i8>, <vscale x 16 x i8>} @test_readz_z8_i8_x2(i32 %slice) #0 {
+; CHECK-LABEL: test_readz_z8_i8_x2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    movaz { z0.d, z1.d }, za.d[w8, 0, vgx2]
+; CHECK-NEXT:    movaz { z0.d, z1.d }, za.d[w8, 7, vgx2]
+; CHECK-NEXT:    ret
+  %res = call  {<vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.aarch64.sme.readz.x2.nxv16i8(i32 %slice)
+  %slice.max = add i32 %slice, 7
+  %res2 = call {<vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.aarch64.sme.readz.x2.nxv16i8(i32 %slice.max)
+  ret {<vscale x 16 x i8>, <vscale x 16 x i8>} %res2
+}
+
+define {<vscale x 8 x i16>, <vscale x 8 x i16>} @test_readz_z16_i16_x2(i32 %slice) #0 {
+; CHECK-LABEL: test_readz_z16_i16_x2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    movaz { z0.d, z1.d }, za.d[w8, 0, vgx2]
+; CHECK-NEXT:    movaz { z0.d, z1.d }, za.d[w8, 7, vgx2]
+; CHECK-NEXT:    ret
+  %res = call  {<vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.aarch64.sme.readz.x2.nxv8i16(i32 %slice)
+  %slice.max = add i32 %slice, 7
+  %res2 = call {<vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.aarch64.sme.readz.x2.nxv8i16(i32 %slice.max)
+  ret {<vscale x 8 x i16>, <vscale x 8 x i16>} %res2
+}
+
+define {<vscale x 4 x i32>, <vscale x 4 x i32>} @test_readz_z32_i32_x2(i32 %slice) #0 {
+; CHECK-LABEL: test_readz_z32_i32_x2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    movaz { z0.d, z1.d }, za.d[w8, 0, vgx2]
+; CHECK-NEXT:    movaz { z0.d, z1.d }, za.d[w8, 7, vgx2]
+; CHECK-NEXT:    ret
+  %res = call  {<vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.aarch64.sme.readz.x2.nxv4i32(i32 %slice)
+  %slice.max = add i32 %slice, 7
+  %res2 = call {<vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.aarch64.sme.readz.x2.nxv4i32(i32 %slice.max)
+  ret {<vscale x 4 x i32>, <vscale x 4 x i32>} %res2
+}
+
+define {<vscale x 2 x i64>, <vscale x 2 x i64>} @test_readz_z64_i64_x2(i32 %slice) #0 {
+; CHECK-LABEL: test_readz_z64_i64_x2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    movaz { z0.d, z1.d }, za.d[w8, 0, vgx2]
+; CHECK-NEXT:    movaz { z0.d, z1.d }, za.d[w8, 7, vgx2]
+; CHECK-NEXT:    ret
+  %res = call  {<vscale x 2 x i64>, <vscale x 2 x i64>} @llvm.aarch64.sme.readz.x2.nxv2i64(i32 %slice)
+  %slice.max = add i32 %slice, 7
+  %res2 = call {<vscale x 2 x i64>, <vscale x 2 x i64>} @llvm.aarch64.sme.readz.x2.nxv2i64(i32 %slice.max)
+  ret {<vscale x 2 x i64>, <vscale x 2 x i64>} %res2
+}
+
+define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @test_readz_z16_bf16_x2(i32 %slice) #0 {
+; CHECK-LABEL: test_readz_z16_bf16_x2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    movaz { z0.d, z1.d }, za.d[w8, 0, vgx2]
+; CHECK-NEXT:    movaz { z0.d, z1.d }, za.d[w8, 7, vgx2]
+; CHECK-NEXT:    ret
+  %res = call  {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @llvm.aarch64.sme.readz.x2.nxv8bf16(i32 %slice)
+  %slice.max = add i32 %slice, 7
+  %res2 = call {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @llvm.aarch64.sme.readz.x2.nxv8bf16(i32 %slice.max)
+  ret {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>} %res2
+}
+
+define {<vscale x 8 x half>, <vscale x 8 x half>} @test_readz_z16_f16_x2(i32 %slice) #0 {
+; CHECK-LABEL: test_readz_z16_f16_x2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    movaz { z0.d, z1.d }, za.d[w8, 0, vgx2]
+; CHECK-NEXT:    movaz { z0.d, z1.d }, za.d[w8, 7, vgx2]
+; CHECK-NEXT:    ret
+  %res = call  {<vscale x 8 x half>, <vscale x 8 x half>} @llvm.aarch64.sme.readz.x2.nxv8f16(i32 %slice)
+  %slice.max = add i32 %slice, 7
+  %res2 = call {<vscale x 8 x half>, <vscale x 8 x half>} @llvm.aarch64.sme.readz.x2.nxv8f16(i32 %slice.max)
+  ret {<vscale x 8 x half>, <vscale x 8 x half>} %res2
+}
+
+define {<vscale x 4 x float>, <vscale x 4 x float>} @test_readz_z32_f32_x2(i32 %slice) #0 {
+; CHECK-LABEL: test_readz_z32_f32_x2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    movaz { z0.d, z1.d }, za.d[w8, 0, vgx2]
+; CHECK-NEXT:    movaz { z0.d, z1.d }, za.d[w8, 7, vgx2]
+; CHECK-NEXT:    ret
+  %res = call  {<vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sme.readz.x2.nxv4f32(i32 %slice)
+  %slice.max = add i32 %slice, 7
+  %res2 = call {<vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sme.readz.x2.nxv4f32(i32 %slice.max)
+  ret {<vscale x 4 x float>, <vscale x 4 x float>} %res2
+}
+
+define {<vscale x 2 x double>, <vscale x 2 x double>} @test_readz_z64_f64_x2(i32 %slice) #0 {
+; CHECK-LABEL: test_readz_z64_f64_x2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    movaz { z0.d, z1.d }, za.d[w8, 0, vgx2]
+; CHECK-NEXT:    movaz { z0.d, z1.d }, za.d[w8, 7, vgx2]
+; CHECK-NEXT:    ret
+  %res = call  {<vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sme.readz.x2.nxv2f64(i32 %slice)
+  %slice.max = add i32 %slice, 7
+  %res2 = call {<vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sme.readz.x2.nxv2f64(i32 %slice.max)
+  ret {<vscale x 2 x double>, <vscale x 2 x double>} %res2
+}
+
+;;
+; X4
+;;
+
+define {<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>} @test_readz_z8_i8_x4(i32 %slice) #0 {
+; CHECK-LABEL: test_readz_z8_i8_x4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    movaz { z0.d - z3.d }, za.d[w8, 0, vgx4]
+; CHECK-NEXT:    movaz { z0.d - z3.d }, za.d[w8, 7, vgx4]
+; CHECK-NEXT:    ret
+  %res = call  {<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.aarch64.sme.readz.x4.nxv16i8(i32 %slice)
+  %slice.max = add i32 %slice, 7
+  %res2 = call {<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.aarch64.sme.readz.x4.nxv16i8(i32 %slice.max)
+  ret {<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>} %res2
+}
+
+define {<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>} @test_readz_z16_i16_x4(i32 %slice) #0 {
+; CHECK-LABEL: test_readz_z16_i16_x4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    movaz { z0.d - z3.d }, za.d[w8, 0, vgx4]
+; CHECK-NEXT:    movaz { z0.d - z3.d }, za.d[w8, 7, vgx4]
+; CHECK-NEXT:    ret
+  %res = call  {<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.aarch64.sme.readz.x4.nxv8i16(i32 %slice)
+  %slice.max = add i32 %slice, 7
+  %res2 = call {<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.aarch64.sme.readz.x4.nxv8i16(i32 %slice.max)
+  ret {<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>} %res2
+}
+
+define {<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>} @test_readz_z32_i32_x4(i32 %slice) #0 {
+; CHECK-LABEL: test_readz_z32_i32_x4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    movaz { z0.d - z3.d }, za.d[w8, 0, vgx4]
+; CHECK-NEXT:    movaz { z0.d - z3.d }, za.d[w8, 7, vgx4]
+; CHECK-NEXT:    ret
+  %res = call  {<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.aarch64.sme.readz.x4.nxv4i32(i32 %slice)
+  %slice.max = add i32 %slice, 7
+  %res2 = call {<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.aarch64.sme.readz.x4.nxv4i32(i32 %slice.max)
+  ret {<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>} %res2
+}
+
+define {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>} @test_readz_z64_i64_x4(i32 %slice) #0 {
+; CHECK-LABEL: test_readz_z64_i64_x4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    movaz { z0.d - z3.d }, za.d[w8, 0, vgx4]
+; CHECK-NEXT:    movaz { z0.d - z3.d }, za.d[w8, 7, vgx4]
+; CHECK-NEXT:    ret
+  %res = call  {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>} @llvm.aarch64.sme.readz.x4.nxv2i64(i32 %slice)
+  %slice.max = add i32 %slice, 7
+  %res2 = call {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>} @llvm.aarch64.sme.readz.x4.nxv2i64(i32 %slice.max)
+  ret {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>} %res2
+}
+
+define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @test_readz_z16_bf16_x4(i32 %slice) #0 {
+; CHECK-LABEL: test_readz_z16_bf16_x4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    movaz { z0.d - z3.d }, za.d[w8, 0, vgx4]
+; CHECK-NEXT:    movaz { z0.d - z3.d }, za.d[w8, 7, vgx4]
+; CHECK-NEXT:    ret
+  %res = call  {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @llvm.aarch64.sme.readz.x4.nxv8bf16(i32 %slice)
+  %slice.max = add i32 %slice, 7
+  %res2 = call {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @llvm.aarch64.sme.readz.x4.nxv8bf16(i32 %slice.max)
+  ret {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>} %res2
+}
+
+define {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} @test_readz_z16_f16_x4(i32 %slice) #0 {
+; CHECK-LABEL: test_readz_z16_f16_x4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    movaz { z0.d - z3.d }, za.d[w8, 0, vgx4]
+; CHECK-NEXT:    movaz { z0.d - z3.d }, za.d[w8, 7, vgx4]
+; CHECK-NEXT:    ret
+  %res = call  {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} @llvm.aarch64.sme.readz.x4.nxv8f16(i32 %slice)
+  %slice.max = add i32 %slice, 7
+  %res2 = call {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} @llvm.aarch64.sme.readz.x4.nxv8f16(i32 %slice.max)
+  ret {<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>} %res2
+}
+
+define {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @test_readz_z32_f32_x4(i32 %slice) #0 {
+; CHECK-LABEL: test_readz_z32_f32_x4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    movaz { z0.d - z3.d }, za.d[w8, 0, vgx4]
+; CHECK-NEXT:    movaz { z0.d - z3.d }, za.d[w8, 7, vgx4]
+; CHECK-NEXT:    ret
+  %res = call  {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sme.readz.x4.nxv4f32(i32 %slice)
+  %slice.max = add i32 %slice, 7
+  %res2 = call {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} @llvm.aarch64.sme.readz.x4.nxv4f32(i32 %slice.max)
+  ret {<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>} %res2
+}
+
+define {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @test_readz_z64_f64_x4(i32 %slice) #0 {
+; CHECK-LABEL: test_readz_z64_f64_x4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    movaz { z0.d - z3.d }, za.d[w8, 0, vgx4]
+; CHECK-NEXT:    movaz { z0.d - z3.d }, za.d[w8, 7, vgx4]
+; CHECK-NEXT:    ret
+  %res = call  {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sme.readz.x4.nxv2f64(i32 %slice)
+  %slice.max = add i32 %slice, 7
+  %res2 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sme.readz.x4.nxv2f64(i32 %slice.max)
+  ret {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} %res2
+}
+
+attributes #0 = { "target-features"="+sme2p1" }
