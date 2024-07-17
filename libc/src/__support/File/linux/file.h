@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/types/off_t.h"
 #include "src/__support/File/file.h"
 
 namespace LIBC_NAMESPACE {
