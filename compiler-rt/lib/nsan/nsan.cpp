@@ -68,7 +68,7 @@ __nsan_copy_values(const u8 *daddr, const u8 *saddr, uptr size) {
     __builtin_memmove((void *)GetShadowTypeAddrFor(daddr),                     \
                       GetShadowTypeAddrFor(saddr), N);                         \
     __builtin_memmove((void *)GetShadowAddrFor(daddr),                         \
-                      GetShadowAddrFor(saddr), N *kShadowScale);               \
+                      GetShadowAddrFor(saddr), N * kShadowScale);              \
   }
 
 NSAN_COPY_VALUES_N(4)
