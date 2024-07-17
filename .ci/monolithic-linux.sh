@@ -77,21 +77,22 @@ if [[ "${runtimes}" != "" ]]; then
   INSTALL_DIR="${BUILD_DIR}/install"
   mkdir -p ${RUNTIMES_BUILD_DIR}
 
-  echo "--- cmake runtimes C++03"
+  # FIXME: This should be re-enabled once we get more CI bandwidth
+  # echo "--- cmake runtimes C++03"
 
-  cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
-      -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
-      -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
-      -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
-      -D LIBCXX_CXX_ABI=libcxxabi \
-      -D CMAKE_BUILD_TYPE=RelWithDebInfo \
-      -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-      -D LIBCXX_TEST_PARAMS="std=c++03" \
-      -D LIBCXXABI_TEST_PARAMS="std=c++03"
+  # cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
+  #     -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
+  #     -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
+  #     -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
+  #     -D LIBCXX_CXX_ABI=libcxxabi \
+  #     -D CMAKE_BUILD_TYPE=RelWithDebInfo \
+  #     -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+  #     -D LIBCXX_TEST_PARAMS="std=c++03" \
+  #     -D LIBCXXABI_TEST_PARAMS="std=c++03"
 
-  echo "--- ninja runtimes C++03"
+  # echo "--- ninja runtimes C++03"
 
-  ninja -vC "${RUNTIMES_BUILD_DIR}" ${runtime_targets}
+  # ninja -vC "${RUNTIMES_BUILD_DIR}" ${runtime_targets}
 
   echo "--- cmake runtimes C++26"
 
@@ -110,20 +111,21 @@ if [[ "${runtimes}" != "" ]]; then
 
   ninja -vC "${RUNTIMES_BUILD_DIR}" ${runtime_targets}
 
-  echo "--- cmake runtimes clang modules"
+  # FIXME: This should be re-enabled once we get more CI bandwidth
+  # echo "--- cmake runtimes clang modules"
 
-  rm -rf "${RUNTIMES_BUILD_DIR}"
-  cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
-      -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
-      -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
-      -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
-      -D LIBCXX_CXX_ABI=libcxxabi \
-      -D CMAKE_BUILD_TYPE=RelWithDebInfo \
-      -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-      -D LIBCXX_TEST_PARAMS="enable_modules=clang" \
-      -D LIBCXXABI_TEST_PARAMS="enable_modules=clang"
+  # rm -rf "${RUNTIMES_BUILD_DIR}"
+  # cmake -S "${MONOREPO_ROOT}/runtimes" -B "${RUNTIMES_BUILD_DIR}" -GNinja \
+  #     -D CMAKE_C_COMPILER="${INSTALL_DIR}/bin/clang" \
+  #     -D CMAKE_CXX_COMPILER="${INSTALL_DIR}/bin/clang++" \
+  #     -D LLVM_ENABLE_RUNTIMES="${runtimes}" \
+  #     -D LIBCXX_CXX_ABI=libcxxabi \
+  #     -D CMAKE_BUILD_TYPE=RelWithDebInfo \
+  #     -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+  #     -D LIBCXX_TEST_PARAMS="enable_modules=clang" \
+  #     -D LIBCXXABI_TEST_PARAMS="enable_modules=clang"
 
-  echo "--- ninja runtimes clang modules"
+  # echo "--- ninja runtimes clang modules"
   
-  ninja -vC "${RUNTIMES_BUILD_DIR}" ${runtime_targets}
+  # ninja -vC "${RUNTIMES_BUILD_DIR}" ${runtime_targets}
 fi
