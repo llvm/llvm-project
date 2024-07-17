@@ -25,6 +25,7 @@ class TestHeaderGenIntegration(unittest.TestCase):
                 "python3",
                 str(self.source_dir / "libc/newhdrgen/yaml_to_classes.py"),
                 str(yaml_file),
+                "--h_def_file",
                 str(h_def_file),
                 "--output_dir",
                 str(output_dir),
