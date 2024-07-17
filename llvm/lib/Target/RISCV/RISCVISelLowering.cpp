@@ -14477,8 +14477,7 @@ struct NodeExtensionHelper {
     // widening opcode by splatting to smaller element size.
     unsigned EltBits = VT.getScalarSizeInBits();
     unsigned ScalarBits = Op.getValueSizeInBits();
-    // Make sure we're not getting all bits from the element, we need special
-    // handling.
+    // If we're not getting all bits from the element, we need special handling.
     if (ScalarBits < EltBits) {
       // This should only occur on RV32.
       assert(Opc == RISCVISD::VMV_V_X_VL && EltBits == 64 && ScalarBits == 32 &&
