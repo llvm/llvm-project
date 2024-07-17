@@ -569,6 +569,9 @@ public:
   /// The llvm.vp.* intrinsics for this instruction Opcode
   static Intrinsic::ID getForOpcode(unsigned OC);
 
+  /// The llvm.vp.reduce.* intrinsics for this intrinsic.
+  static Intrinsic::ID getForIntrinsic(Intrinsic::ID);
+
   // Whether \p ID is a VP intrinsic ID.
   static bool isVPIntrinsic(Intrinsic::ID);
 
