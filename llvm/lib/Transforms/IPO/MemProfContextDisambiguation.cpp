@@ -505,9 +505,8 @@ private:
   /// we were able to identify the call chain through intermediate tail calls.
   /// In the latter case new context nodes are added to the graph for the
   /// identified tail calls, and their synthesized nodes are added to
-  /// TailCallToContextNodeMap. The EdgeIter is updated in either case to the
-  /// next element after the input position (either incremented or updated after
-  /// removing the old edge).
+  /// TailCallToContextNodeMap. The EdgeIter is updated in the latter case for
+  /// the updated edges and to prepare it for an increment in the caller.
   bool
   calleesMatch(CallTy Call, EdgeIter &EI,
                MapVector<CallInfo, ContextNode *> &TailCallToContextNodeMap);
@@ -1835,12 +1834,11 @@ void CallsiteContextGraph<DerivedCCG, FuncTy,
     assert(Node->Clones.empty());
     // Check all node callees and see if in the same function.
     auto Call = Node->Call.call();
-    for (auto EI = Node->CalleeEdges.begin(); EI != Node->CalleeEdges.end();) {
+    for (auto EI = Node->CalleeEdges.begin(); EI != Node->CalleeEdges.end();
+         ++EI) {
       auto Edge = *EI;
-      if (!Edge->Callee->hasCall()) {
-        ++EI;
+      if (!Edge->Callee->hasCall())
         continue;
-      }
       assert(NodeToCallingFunc.count(Edge->Callee));
       // Check if the called function matches that of the callee node.
       if (calleesMatch(Call, EI, TailCallToContextNodeMap))
@@ -1889,16 +1887,12 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::calleesMatch(
   // calls between the profiled caller and callee.
   std::vector<std::pair<CallTy, FuncTy *>> FoundCalleeChain;
   if (!calleeMatchesFunc(Call, ProfiledCalleeFunc, CallerFunc,
-                         FoundCalleeChain)) {
-    ++EI;
+                         FoundCalleeChain))
     return false;
-  }
 
   // The usual case where the profiled callee matches that of the IR/summary.
-  if (FoundCalleeChain.empty()) {
-    ++EI;
+  if (FoundCalleeChain.empty())
     return true;
-  }
 
   auto AddEdge = [Edge, &EI](ContextNode *Caller, ContextNode *Callee) {
     auto *CurEdge = Callee->findEdgeFromCaller(Caller);
@@ -1959,6 +1953,13 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::calleesMatch(
   // Remove old edge
   Edge->Callee->eraseCallerEdge(Edge.get());
   EI = Edge->Caller->CalleeEdges.erase(EI);
+
+  // To simplify the increment of EI in the caller, subtract one from EI.
+  // In the final AddEdge call we would have either added a new callee edge,
+  // to Edge->Caller, or found an existing one. Either way we are guaranteed
+  // that there is at least one callee edge.
+  assert(!Edge->Caller->CalleeEdges.empty());
+  --EI;
 
   return true;
 }
