@@ -9,14 +9,14 @@ define i32 @reduce_uadd_v16i8(<32 x i8> %a) #0 {
 ; NO_STREAMING-LABEL: reduce_uadd_v16i8:
 ; NO_STREAMING:       // %bb.0:
 ; NO_STREAMING-NEXT:    ushll2 v2.8h, v1.16b, #0
-; NO_STREAMING-NEXT:    ushll2 v3.8h, v0.16b, #0
 ; NO_STREAMING-NEXT:    ushll v1.8h, v1.8b, #0
+; NO_STREAMING-NEXT:    ushll2 v3.8h, v0.16b, #0
 ; NO_STREAMING-NEXT:    ushll v0.8h, v0.8b, #0
-; NO_STREAMING-NEXT:    uaddl2 v4.4s, v3.8h, v2.8h
-; NO_STREAMING-NEXT:    uaddl v2.4s, v3.4h, v2.4h
-; NO_STREAMING-NEXT:    uaddl2 v5.4s, v0.8h, v1.8h
-; NO_STREAMING-NEXT:    uaddl v0.4s, v0.4h, v1.4h
-; NO_STREAMING-NEXT:    add v1.4s, v5.4s, v4.4s
+; NO_STREAMING-NEXT:    uaddl2 v4.4s, v1.8h, v2.8h
+; NO_STREAMING-NEXT:    uaddl v1.4s, v1.4h, v2.4h
+; NO_STREAMING-NEXT:    uaddl2 v2.4s, v0.8h, v3.8h
+; NO_STREAMING-NEXT:    uaddl v0.4s, v0.4h, v3.4h
+; NO_STREAMING-NEXT:    add v1.4s, v1.4s, v4.4s
 ; NO_STREAMING-NEXT:    add v0.4s, v0.4s, v2.4s
 ; NO_STREAMING-NEXT:    add v0.4s, v0.4s, v1.4s
 ; NO_STREAMING-NEXT:    addv s0, v0.4s
@@ -55,14 +55,14 @@ define i32 @reduce_sadd_v16i8(<32 x i8> %a) #0 {
 ; NO_STREAMING-LABEL: reduce_sadd_v16i8:
 ; NO_STREAMING:       // %bb.0:
 ; NO_STREAMING-NEXT:    sshll2 v2.8h, v1.16b, #0
-; NO_STREAMING-NEXT:    sshll2 v3.8h, v0.16b, #0
 ; NO_STREAMING-NEXT:    sshll v1.8h, v1.8b, #0
+; NO_STREAMING-NEXT:    sshll2 v3.8h, v0.16b, #0
 ; NO_STREAMING-NEXT:    sshll v0.8h, v0.8b, #0
-; NO_STREAMING-NEXT:    saddl2 v4.4s, v3.8h, v2.8h
-; NO_STREAMING-NEXT:    saddl v2.4s, v3.4h, v2.4h
-; NO_STREAMING-NEXT:    saddl2 v5.4s, v0.8h, v1.8h
-; NO_STREAMING-NEXT:    saddl v0.4s, v0.4h, v1.4h
-; NO_STREAMING-NEXT:    add v1.4s, v5.4s, v4.4s
+; NO_STREAMING-NEXT:    saddl2 v4.4s, v1.8h, v2.8h
+; NO_STREAMING-NEXT:    saddl v1.4s, v1.4h, v2.4h
+; NO_STREAMING-NEXT:    saddl2 v2.4s, v0.8h, v3.8h
+; NO_STREAMING-NEXT:    saddl v0.4s, v0.4h, v3.4h
+; NO_STREAMING-NEXT:    add v1.4s, v1.4s, v4.4s
 ; NO_STREAMING-NEXT:    add v0.4s, v0.4s, v2.4s
 ; NO_STREAMING-NEXT:    add v0.4s, v0.4s, v1.4s
 ; NO_STREAMING-NEXT:    addv s0, v0.4s

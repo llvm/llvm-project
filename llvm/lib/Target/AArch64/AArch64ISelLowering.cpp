@@ -17517,62 +17517,56 @@ performVecReduceAddExtCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   SelectionDAG &DAG = DCI.DAG;
   auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
   SDValue VecOp = N->getOperand(0).getOperand(0);
+  EVT VecOpVT = VecOp.getValueType();
   SDLoc DL(N);
 
-  bool IsScalableType = VecOp.getValueType().isScalableVector();
-  std::deque<SDValue> ResultValues;
-  ResultValues.push_back(VecOp);
-
-  // Split the input vectors if not legal.
-  while (!TLI.isTypeLegal(ResultValues.front().getValueType())) {
-    if (!ResultValues.front()
-             .getValueType()
-             .getVectorElementCount()
-             .isKnownEven())
-      return SDValue();
-    EVT CurVT = ResultValues.front().getValueType();
-    while (true) {
-      SDValue Vec = ResultValues.front();
-      if (Vec.getValueType() != CurVT)
-        break;
-      ResultValues.pop_front();
-      SDValue Lo, Hi;
-      std::tie(Lo, Hi) = DAG.SplitVector(Vec, DL);
-      ResultValues.push_back(Lo);
-      ResultValues.push_back(Hi);
-    }
+  // Split the input vectors if not legal, e.g.
+  // i32 (vecreduce_add (zext nxv32i8 %op to nxv32i32))
+  // ->
+  // i32 (add
+  //   (i32 vecreduce_add (zext nxv16i8 %op.lo to nxv16i32)),
+  //   (i32 vecreduce_add (zext nxv16i8 %op.hi to nxv16i32)))
+  if (TLI.getTypeAction(*DAG.getContext(), VecOpVT) ==
+      TargetLowering::TypeSplitVector) {
+    SDValue Lo, Hi;
+    std::tie(Lo, Hi) = DAG.SplitVector(VecOp, DL);
+    unsigned ExtOpc = IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+    EVT HalfVT = N->getOperand(0).getValueType().getHalfNumVectorElementsVT(
+        *DAG.getContext());
+    Lo = DAG.getNode(ISD::VECREDUCE_ADD, DL, N->getValueType(0),
+                     DAG.getNode(ExtOpc, DL, HalfVT, Lo));
+    Hi = DAG.getNode(ISD::VECREDUCE_ADD, DL, N->getValueType(0),
+                     DAG.getNode(ExtOpc, DL, HalfVT, Hi));
+    return DAG.getNode(ISD::ADD, DL, N->getValueType(0), Lo, Hi);
   }
 
-  EVT ElemType = N->getValueType(0);
-  SmallVector<SDValue, 2> Results;
-  if (!IsScalableType &&
-      !TLI.useSVEForFixedLengthVectorVT(
-          ResultValues[0].getValueType(),
-          /*OverrideNEON=*/Subtarget.useSVEForFixedLengthVectors(
-              ResultValues[0].getValueType())))
+  if (!TLI.isTypeLegal(VecOpVT))
     return SDValue();
 
-  for (SDValue Reg : ResultValues) {
-    EVT RdxVT = Reg->getValueType(0);
-    SDValue Pg = getPredicateForVector(DAG, DL, RdxVT);
-    if (!IsScalableType) {
-      EVT ContainerVT = getContainerForFixedLengthVector(DAG, RdxVT);
-      Reg = convertToScalableVector(DAG, ContainerVT, Reg);
-    }
-    SDValue Res =
-        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
-                    DAG.getConstant(IsSigned ? Intrinsic::aarch64_sve_saddv
-                                             : Intrinsic::aarch64_sve_uaddv,
-                                    DL, MVT::i64),
-                    Pg, Reg);
-    if (ElemType != MVT::i64)
-      Res = DAG.getAnyExtOrTrunc(Res, DL, ElemType);
-    Results.push_back(Res);
+  if (VecOpVT.isFixedLengthVector() &&
+      !TLI.useSVEForFixedLengthVectorVT(VecOpVT, !Subtarget.isNeonAvailable()))
+    return SDValue();
+
+  // The input type is legal so map VECREDUCE_ADD to UADDV/SADDV, e.g.
+  // i32 (vecreduce_add (zext nxv16i8 %op to nxv16i32))
+  // ->
+  // i32 (UADDV nxv16i8:%op)
+  EVT ElemType = N->getValueType(0);
+  SDValue Pg = getPredicateForVector(DAG, DL, VecOpVT);
+  if (VecOpVT.isFixedLengthVector()) {
+    EVT ContainerVT = getContainerForFixedLengthVector(DAG, VecOpVT);
+    VecOp = convertToScalableVector(DAG, ContainerVT, VecOp);
   }
-  SDValue ToAdd = Results[0];
-  for (unsigned I = 1; I < ResultValues.size(); ++I)
-    ToAdd = DAG.getNode(ISD::ADD, DL, ElemType, ToAdd, Results[I]);
-  return ToAdd;
+  SDValue Res =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+                  DAG.getConstant(IsSigned ? Intrinsic::aarch64_sve_saddv
+                                           : Intrinsic::aarch64_sve_uaddv,
+                                  DL, MVT::i64),
+                  Pg, VecOp);
+  if (ElemType != MVT::i64)
+    Res = DAG.getAnyExtOrTrunc(Res, DL, ElemType);
+
+  return Res;
 }
 
 // Turn a v8i8/v16i8 extended vecreduce into a udot/sdot and vecreduce
