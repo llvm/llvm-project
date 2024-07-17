@@ -819,8 +819,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // We have some custom DAG combine patterns for these nodes
   setTargetDAGCombine({ISD::ADD, ISD::AND, ISD::EXTRACT_VECTOR_ELT, ISD::FADD,
-                       ISD::MUL, ISD::SHL, ISD::SREM, ISD::UREM, ISD::VSELECT,
-                       ISD::BUILD_VECTOR, ISD::ADDRSPACECAST});
+                       ISD::LOAD, ISD::MUL, ISD::SHL, ISD::SREM, ISD::UREM,
+                       ISD::VSELECT, ISD::SELECT});
 
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
@@ -5701,6 +5701,32 @@ static SDValue combineADDRSPACECAST(SDNode *N,
   return SDValue();
 }
 
+// This transformations was once reliably performed by instcombine, but thanks
+// to poison semantics they are no longer safe for LLVM IR, perform them here
+// instead.
+static SDValue PerformSELECTCombine(SDNode *N,
+                                    TargetLowering::DAGCombinerInfo &DCI) {
+  return SDValue();
+  if (!(N->getValueType(0) == MVT::i1))
+    return SDValue();
+
+  unsigned Opcode = N->getOpcode();
+  SDValue SecondOperand;
+  if (auto Const = dyn_cast<ConstantSDNode>(N->getOperand(2)); Const && Const->isZero()) {
+    // (select cond, x, false) -> (and cond, x)
+    Opcode = ISD::AND;
+    SecondOperand = N->getOperand(1);
+  } else if (auto Const = dyn_cast<ConstantSDNode>(N->getOperand(1)); Const && Const->isOne()) {
+    // (select cond, true, x) -> (or cond, x)
+    Opcode = ISD::OR;
+    SecondOperand = N->getOperand(2);
+  } else {
+    return SDValue();
+  }
+
+  return DCI.DAG.getNode(Opcode, SDLoc(N), MVT::i1, N->getOperand(0), SecondOperand);
+}
+
 SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   CodeGenOptLevel OptLevel = getTargetMachine().getOptLevel();
@@ -5721,6 +5747,10 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
       return PerformREMCombine(N, DCI, OptLevel);
     case ISD::SETCC:
       return PerformSETCCCombine(N, DCI, STI.getSmVersion());
+    case ISD::LOAD:
+      return PerformLOADCombine(N, DCI);
+    case ISD::SELECT:
+      return PerformSELECTCombine(N, DCI);
     case NVPTXISD::StoreRetval:
     case NVPTXISD::StoreRetvalV2:
     case NVPTXISD::StoreRetvalV4:
