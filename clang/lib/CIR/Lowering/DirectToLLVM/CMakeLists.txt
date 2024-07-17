@@ -42,3 +42,7 @@ add_clang_library(clangCIRLoweringDirectToLLVM
   MLIROpenMPDialect
   MLIROpenMPToLLVMIRTranslation
   )
+
+target_include_directories(clangCIRLoweringDirectToLLVM PRIVATE
+  ${CLANG_SOURCE_DIR}/lib/CIR/Dialect/Transforms/TargetLowering
+  )
