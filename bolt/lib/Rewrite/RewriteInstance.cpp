@@ -1262,6 +1262,7 @@ void RewriteInstance::discoverFileObjects() {
 
   registerFragments();
   FileSymbols.clear();
+  FileSymRefs.clear();
 
   discoverBOLTReserved();
 }
