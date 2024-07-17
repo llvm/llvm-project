@@ -3968,6 +3968,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // The last arg operand is the output
     Value *Addr = I.getArgOperand(numArgOperands - 1);
+    if (ClCheckAccessAddress)
+      insertShadowCheck(Addr, &I);
 
     Value *ShadowPtr, *OriginPtr;
     std::tie(ShadowPtr, OriginPtr) = getShadowOriginPtr(
@@ -3980,9 +3982,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         OC.Add(I.getOperand(i));
       OC.Done(&I);
     }
-
-    if (ClCheckAccessAddress)
-      insertShadowCheck(Addr, &I);
   }
 
   void visitIntrinsicInst(IntrinsicInst &I) {

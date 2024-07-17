@@ -23,7 +23,7 @@ define void @st2_8b(<8 x i8> %A, <8 x i8> %B, ptr %P) nounwind sanitize_memory {
 ; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to ptr
 ; CHECK-NEXT:    store <16 x i8> [[TMP7]], ptr [[TMP10]], align 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP19:%.*]], label [[TMP20:%.*]], !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    unreachable
