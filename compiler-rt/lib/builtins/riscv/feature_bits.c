@@ -6,6 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#define RISCV_FEATURE_BITS_LENGTH 1
+struct {
+  unsigned length;
+  unsigned long long features[RISCV_FEATURE_BITS_LENGTH];
+} __riscv_feature_bits __attribute__((visibility("hidden"), nocommon));
+
+#define RISCV_VENDOR_FEATURE_BITS_LENGTH 1
+struct {
+  unsigned vendorID;
+  unsigned length;
+  unsigned long long features[RISCV_VENDOR_FEATURE_BITS_LENGTH];
+} __riscv_vendor_feature_bits __attribute__((visibility("hidden"), nocommon));
+
 #if defined(__linux__)
 
 static long syscall_impl_5_args(long number, long arg1, long arg2, long arg3,
@@ -85,19 +98,6 @@ struct riscv_hwprobe {
 static long initHwProbe(struct riscv_hwprobe *Hwprobes, int len) {
   return syscall_impl_5_args(__NR_riscv_hwprobe, (long)Hwprobes, len, 0, 0, 0);
 }
-
-#define RISCV_FEATURE_BITS_LENGTH 1
-struct {
-  unsigned length;
-  unsigned long long features[RISCV_FEATURE_BITS_LENGTH];
-} __riscv_feature_bits __attribute__((visibility("hidden"), nocommon));
-
-#define RISCV_VENDOR_FEATURE_BITS_LENGTH 1
-struct {
-  unsigned vendorID;
-  unsigned length;
-  unsigned long long features[RISCV_VENDOR_FEATURE_BITS_LENGTH];
-} __riscv_vendor_feature_bits __attribute__((visibility("hidden"), nocommon));
 
 // NOTE: Should sync-up with RISCVFeatures.td
 // TODO: Maybe generate a header from tablegen then include it.
