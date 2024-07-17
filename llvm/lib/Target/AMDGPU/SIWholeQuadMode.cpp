@@ -798,6 +798,8 @@ MachineBasicBlock *SIWholeQuadMode::splitBlock(MachineBasicBlock *BB,
 
 MachineInstr *SIWholeQuadMode::lowerKillF32(MachineBasicBlock &MBB,
                                             MachineInstr &MI) {
+  assert(LiveMaskReg.isVirtual());
+
   const DebugLoc &DL = MI.getDebugLoc();
   unsigned Opcode = 0;
 
@@ -915,6 +917,8 @@ MachineInstr *SIWholeQuadMode::lowerKillF32(MachineBasicBlock &MBB,
 
 MachineInstr *SIWholeQuadMode::lowerKillI1(MachineBasicBlock &MBB,
                                            MachineInstr &MI, bool IsWQM) {
+  assert(LiveMaskReg.isVirtual());
+
   const DebugLoc &DL = MI.getDebugLoc();
   MachineInstr *MaskUpdateMI = nullptr;
 
@@ -1146,6 +1150,8 @@ MachineBasicBlock::iterator SIWholeQuadMode::prepareInsertion(
 void SIWholeQuadMode::toExact(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator Before,
                               Register SaveWQM) {
+  assert(LiveMaskReg.isVirtual());
+
   bool IsTerminator = Before == MBB.end();
   if (!IsTerminator) {
     auto FirstTerm = MBB.getFirstTerminator();
@@ -1670,7 +1676,6 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   }
 
   const char GlobalFlags = analyzeFunction(MF);
-  const bool NeedsLiveMask = !(KillInstrs.empty() && LiveMaskQueries.empty());
   bool Changed = false;
 
   LiveMaskReg = Exec;
@@ -1679,7 +1684,11 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   MachineBasicBlock::iterator EntryMI = lowerInitExecInstrs(Entry, Changed);
 
   // Store a copy of the original live mask when required
-  if (NeedsLiveMask || (GlobalFlags & StateWQM)) {
+  const bool HasLiveMaskQueries = !LiveMaskQueries.empty();
+  const bool HasWaveModes = GlobalFlags & ~StateExact;
+  const bool HasKills = !KillInstrs.empty();
+  const bool UsesWQM = GlobalFlags & StateWQM;
+  if (HasKills || UsesWQM || (HasWaveModes && HasLiveMaskQueries)) {
     LiveMaskReg = MRI->createVirtualRegister(TRI->getBoolRC());
     MachineInstr *MI =
         BuildMI(Entry, EntryMI, DebugLoc(), TII->get(AMDGPU::COPY), LiveMaskReg)
@@ -1693,7 +1702,7 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   Changed |= lowerLiveMaskQueries();
   Changed |= lowerCopyInstrs();
 
-  if (!(GlobalFlags & ~StateExact)) {
+  if (!HasWaveModes) {
     // No wave mode execution
     Changed |= lowerKillInstrs(false);
   } else if (GlobalFlags == StateWQM) {

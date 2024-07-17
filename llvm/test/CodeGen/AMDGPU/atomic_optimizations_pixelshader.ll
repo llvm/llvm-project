@@ -16,8 +16,7 @@ declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32,
 define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspace(8) inreg %inout) {
 ; GFX7-LABEL: add_i32_constant:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_mov_b64 s[8:9], exec
-; GFX7-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; GFX7-NEXT:    s_mov_b64 s[10:11], exec
 ; GFX7-NEXT:    ; implicit-def: $vgpr0
 ; GFX7-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
 ; GFX7-NEXT:    s_cbranch_execz .LBB0_4
@@ -52,8 +51,7 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ;
 ; GFX89-LABEL: add_i32_constant:
 ; GFX89:       ; %bb.0: ; %entry
-; GFX89-NEXT:    s_mov_b64 s[8:9], exec
-; GFX89-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; GFX89-NEXT:    s_mov_b64 s[10:11], exec
 ; GFX89-NEXT:    ; implicit-def: $vgpr0
 ; GFX89-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
 ; GFX89-NEXT:    s_cbranch_execz .LBB0_4
@@ -88,9 +86,8 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ;
 ; GFX1064-LABEL: add_i32_constant:
 ; GFX1064:       ; %bb.0: ; %entry
-; GFX1064-NEXT:    s_mov_b64 s[8:9], exec
+; GFX1064-NEXT:    s_mov_b64 s[10:11], exec
 ; GFX1064-NEXT:    ; implicit-def: $vgpr0
-; GFX1064-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
 ; GFX1064-NEXT:    s_cbranch_execz .LBB0_4
 ; GFX1064-NEXT:  ; %bb.1:
@@ -125,9 +122,8 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ;
 ; GFX1032-LABEL: add_i32_constant:
 ; GFX1032:       ; %bb.0: ; %entry
-; GFX1032-NEXT:    s_mov_b32 s8, exec_lo
+; GFX1032-NEXT:    s_mov_b32 s9, exec_lo
 ; GFX1032-NEXT:    ; implicit-def: $vgpr0
-; GFX1032-NEXT:    s_mov_b32 s9, s8
 ; GFX1032-NEXT:    s_and_saveexec_b32 s8, s9
 ; GFX1032-NEXT:    s_cbranch_execz .LBB0_4
 ; GFX1032-NEXT:  ; %bb.1:
@@ -161,10 +157,9 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ;
 ; GFX1164-LABEL: add_i32_constant:
 ; GFX1164:       ; %bb.0: ; %entry
-; GFX1164-NEXT:    s_mov_b64 s[8:9], exec
+; GFX1164-NEXT:    s_mov_b64 s[10:11], exec
 ; GFX1164-NEXT:    ; implicit-def: $vgpr0
-; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1164-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1164-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
 ; GFX1164-NEXT:    s_cbranch_execz .LBB0_4
 ; GFX1164-NEXT:  ; %bb.1:
@@ -204,10 +199,9 @@ define amdgpu_ps void @add_i32_constant(ptr addrspace(8) inreg %out, ptr addrspa
 ;
 ; GFX1132-LABEL: add_i32_constant:
 ; GFX1132:       ; %bb.0: ; %entry
-; GFX1132-NEXT:    s_mov_b32 s8, exec_lo
+; GFX1132-NEXT:    s_mov_b32 s9, exec_lo
 ; GFX1132-NEXT:    ; implicit-def: $vgpr0
-; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1132-NEXT:    s_mov_b32 s9, s8
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1132-NEXT:    s_and_saveexec_b32 s8, s9
 ; GFX1132-NEXT:    s_cbranch_execz .LBB0_4
 ; GFX1132-NEXT:  ; %bb.1:
