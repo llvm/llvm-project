@@ -164,8 +164,16 @@ TEST_CONSTEXPR_CXX20 bool tests()
         assert ( (cii >= ii1 ));
         assert (cii - ii1 == 0);
         assert (ii1 - cii == 0);
+#  if TEST_STD_VER >= 20
+        // P1614 + LWG3352
+        std::same_as<std::strong_ordering> decltype(auto) r1 = ii1 <=> ii2;
+        assert(r1 == std::strong_ordering::equal);
+
+        std::same_as<std::strong_ordering> decltype(auto) r2 = ii1 <=> ii2;
+        assert(r2 == std::strong_ordering::equal);
+#  endif // TEST_STD_VER > 20
     }
-#endif
+#endif // TEST_STD_VER > 11
 
     return true;
 }

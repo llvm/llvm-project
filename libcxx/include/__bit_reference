@@ -16,6 +16,7 @@
 #include <__bit/countr.h>
 #include <__bit/invert_if.h>
 #include <__bit/popcount.h>
+#include <__compare/ordering.h>
 #include <__config>
 #include <__fwd/bit_reference.h>
 #include <__iterator/iterator_traits.h>
@@ -913,6 +914,7 @@ public:
     return __x.__seg_ == __y.__seg_ && __x.__ctz_ == __y.__ctz_;
   }
 
+#if _LIBCPP_STD_VER <= 17
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 friend bool
   operator!=(const __bit_iterator& __x, const __bit_iterator& __y) {
     return !(__x == __y);
@@ -937,6 +939,18 @@ public:
   operator>=(const __bit_iterator& __x, const __bit_iterator& __y) {
     return !(__x < __y);
   }
+#else  // _LIBCPP_STD_VER <= 17
+  _LIBCPP_HIDE_FROM_ABI constexpr friend strong_ordering
+  operator<=>(const __bit_iterator& __x, const __bit_iterator& __y) {
+    if (__x.__seg_ < __y.__seg_)
+      return strong_ordering::less;
+
+    if (__x.__seg_ == __y.__seg_)
+      return __x.__ctz_ <=> __y.__ctz_;
+
+    return strong_ordering::greater;
+  }
+#endif // _LIBCPP_STD_VER <= 17
 
 private:
   _LIBCPP_HIDE_FROM_ABI
