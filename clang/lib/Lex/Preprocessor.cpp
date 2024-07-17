@@ -1153,15 +1153,6 @@ void Preprocessor::CollectPpImportSuffix(SmallVectorImpl<Token> &Toks) {
   }
 }
 
-void
-buildModuleIdPath(ArrayRef<Token> Toks, SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path) {
-  for (const auto &Tok : Toks) {
-    if (Tok.is(tok::identifier))
-      Path.push_back(
-          std::make_pair(Tok.getIdentifierInfo(), Tok.getLocation()));
-  }
-}
-
 std::string ModuleNameInfo::getFlatName() const {
   std::string FlatModuleName;
   for (auto &Tok : getTokens()) {
@@ -1213,9 +1204,9 @@ bool Preprocessor::LexModuleName(Token &Result, bool IsImport) {
   std::optional<unsigned> ColonTokIndex;
   auto LexNextToken = [&](Token &Tok) {
     if (IsImport)
-        Lex(Tok);
-      else
-        LexUnexpandedToken(Tok);
+      Lex(Tok);
+    else
+      LexUnexpandedToken(Tok);
   };
 
   while (true) {
@@ -1270,7 +1261,8 @@ bool Preprocessor::LexModuleName(Token &Result, bool IsImport) {
     // invalid tokens and recover from errors.
     if (getLangOpts().CPlusPlusModules && !ExpectsIdentifier &&
         Result.is(tok::l_paren))
-      Diag(Result, diag::err_unxepected_paren_in_module_decl) << IsLexingPartition;
+      Diag(Result, diag::err_unxepected_paren_in_module_decl)
+          << IsLexingPartition;
     break;
   }
 
@@ -1292,8 +1284,10 @@ bool Preprocessor::LexModuleName(Token &Result, bool IsImport) {
   auto AnnotToks = ArrayRef(ModuleName).copy(getPreprocessorAllocator());
   ArrayRef<Token> ModuleNameToks, PartitionNameToks;
   if (ColonTokIndex.has_value()) {
-    ModuleNameToks = ArrayRef(AnnotToks.begin(), AnnotToks.begin() + *ColonTokIndex);
-    PartitionNameToks = ArrayRef(AnnotToks.begin() + *ColonTokIndex, AnnotToks.end());
+    ModuleNameToks =
+        ArrayRef(AnnotToks.begin(), AnnotToks.begin() + *ColonTokIndex);
+    PartitionNameToks =
+        ArrayRef(AnnotToks.begin() + *ColonTokIndex, AnnotToks.end());
   } else {
     ModuleNameToks = AnnotToks;
   }

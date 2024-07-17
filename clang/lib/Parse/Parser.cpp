@@ -2611,14 +2611,14 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
             << SourceRange(ColonLoc, Path.back().second);
       // Recover by leaving partition empty.
       else if (ParseModuleName(ColonLoc, Info->getPartitionName(), Path,
-                              /*IsImport=*/true))
+                               /*IsImport=*/true))
         return nullptr;
       else
         IsPartition = true;
     } else if (ParseModuleName(ImportLoc, Info->getModuleName(), Path,
                                /*IsImport=*/true))
       return nullptr;
-  } 
+  }
 
   ParsedAttributes Attrs(AttrFactory);
   MaybeParseCXX11Attributes(Attrs);
@@ -2713,8 +2713,7 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
 ///         module-name-qualifier:
 ///           module-name-qualifier[opt] identifier '.'
 bool Parser::ParseModuleName(
-    SourceLocation UseLoc,
-    ArrayRef<Token> ModuleName,
+    SourceLocation UseLoc, ArrayRef<Token> ModuleName,
     SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path,
     bool IsImport) {
   ModuleNameInfo::getModuleIdPath(ModuleName, Path);

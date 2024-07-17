@@ -3876,8 +3876,7 @@ private:
   }
 
   bool ParseModuleName(
-      SourceLocation UseLoc,
-      ArrayRef<Token> ModuleName,
+      SourceLocation UseLoc, ArrayRef<Token> ModuleName,
       SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path,
       bool IsImport);
 
