@@ -79,6 +79,7 @@ Changes to the LLVM IR
   * ``llvm.instprof.mcdc.tvbitmap.update``: 3rd argument has been
     removed. The next argument has been changed from byte index to bit
     index.
+* Added ``llvm.experimental.vector.compress`` intrinsic.
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -328,6 +329,14 @@ They are described in detail in the `debug info migration guide <https://llvm.or
   * ``LLVMConstGEPWithNoWrapFlags``
   * ``LLVMGEPGetNoWrapFlags``
   * ``LLVMGEPSetNoWrapFlags``
+
+* Added the following functions for creating and accessing data for ConstantPtrAuth constants:
+
+  * ``LLVMConstantPtrAuth``
+  * ``LLVMGetConstantPtrAuthPointer``
+  * ``LLVMGetConstantPtrAuthKey``
+  * ``LLVMGetConstantPtrAuthDiscriminator``
+  * ``LLVMGetConstantPtrAuthAddrDiscriminator``
 
 Changes to the CodeGen infrastructure
 -------------------------------------
