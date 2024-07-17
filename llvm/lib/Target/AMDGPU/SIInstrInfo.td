@@ -1618,7 +1618,7 @@ class getNumSrcArgs<ValueType Src0, ValueType Src1, ValueType Src2> {
 class getVALUDstForVT<ValueType VT, bit IsTrue16 = 0, bit IsVOP3Encoding = 0> {
   defvar op16 = !if(IsTrue16, !if (IsVOP3Encoding, VOPDstOperand_t16,
                                    VOPDstOperand_t16Lo128),
-                    VOPDstOperand<VGPR_32>);
+                    VOPDstOperand_VGPR_32);
   RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VOPDstOperand<VReg_1024>,
                               !eq(VT.Size, 512)  : VOPDstOperand<VReg_512>,
                               !eq(VT.Size, 256)  : VOPDstOperand<VReg_256>,
@@ -1626,16 +1626,16 @@ class getVALUDstForVT<ValueType VT, bit IsTrue16 = 0, bit IsVOP3Encoding = 0> {
                               !eq(VT.Size, 128)  : VOPDstOperand<VReg_128>,
                               !eq(VT.Size, 96)   : VOPDstOperand<VReg_96>,
                               !eq(VT.Size, 64)   : VOPDstOperand<VReg_64>,
-                              !eq(VT.Size, 32)   : VOPDstOperand<VGPR_32>,
+                              !eq(VT.Size, 32)   : VOPDstOperand_VGPR_32,
                               !eq(VT.Size, 16)   : op16,
                               1                  : VOPDstS64orS32); // else VT == i1
 }
 
 class getVALUDstForVT_fake16<ValueType VT> {
-  RegisterOperand ret = !if(!eq(VT.Size, 32), VOPDstOperand<VGPR_32>,
+  RegisterOperand ret = !if(!eq(VT.Size, 32), VOPDstOperand_VGPR_32,
                           !if(!eq(VT.Size, 128), VOPDstOperand<VReg_128>,
                             !if(!eq(VT.Size, 64), VOPDstOperand<VReg_64>,
-                              !if(!eq(VT.Size, 16), VOPDstOperand<VGPR_32_Lo128>,
+                              !if(!eq(VT.Size, 16), VOPDstOperand_VGPR_32_Lo128,
                               VOPDstS64orS32)))); // else VT == i1
 }
 
@@ -1644,7 +1644,7 @@ class getVALUDstForVT_fake16<ValueType VT> {
 class getSDWADstForVT<ValueType VT> {
   RegisterOperand ret = !if(!eq(VT.Size, 1),
                             SDWAVopcDst, // VOPC
-                            VOPDstOperand<VGPR_32>); // VOP1/2 32-bit dst
+                            VOPDstOperand_VGPR_32); // VOP1/2 32-bit dst
 }
 
 // Returns the register class to use for source 0 of VOP[12C]
@@ -1717,8 +1717,8 @@ class getVregSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 0> {
         !eq(VT.Size, 48)  : RegisterOperand<VReg_64>,
         !eq(VT.Size, 16)  : !if(IsTrue16,
                                 !if(IsFake16, VGPRSrc_32_Lo128, VGPRSrc_16_Lo128),
-                                RegisterOperand<VGPR_32>),
-        1                 : RegisterOperand<VGPR_32>);
+                                VGPRSrc_32),
+        1                 : VGPRSrc_32);
 }
 
 class getSDWASrcForVT <ValueType VT> {
@@ -2646,9 +2646,9 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   // It is a slight misnomer to use the deferred f32 operand type for non-float
   // operands, but this operand type will only be used if the other dual
   // component is FMAAK or FMAMK
-  field dag InsVOPDXDeferred = (ins !if(!eq(Src0VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0X, VGPR_32:$vsrc1X);
+  field dag InsVOPDXDeferred = (ins !if(!eq(Src0VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0X, VGPRSrc_32:$vsrc1X);
   field dag InsVOPDY = (ins Src0RC32:$src0Y, Src1RC32:$vsrc1Y);
-  field dag InsVOPDYDeferred = (ins !if(!eq(Src1VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0Y, VGPR_32:$vsrc1Y);
+  field dag InsVOPDYDeferred = (ins !if(!eq(Src1VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0Y, VGPRSrc_32:$vsrc1Y);
   field bit HasVOPD3Src2 = !empty(Ins32); // VOP3 does not have Ins32.
   field dag InsVOPD3X = getInsVOPD3<Src0VOPD3, Src1VOPD3, Src2VOPD3,
                                     Src0ModVOPD3, Src1ModVOPD3, Src2ModVOPD3,

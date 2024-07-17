@@ -7,6 +7,7 @@
 define amdgpu_ps void @test_asynccnt() {
 ; GCN-LABEL: test_asynccnt:
 ; GCN:       ; %bb.0:
+; GCN-NEXT:    global_wb scope:SCOPE_SYS
 ; GCN-NEXT:    s_wait_asynccnt 0x0
 ; GCN-NEXT:    global_inv scope:SCOPE_SYS
 ; GCN-NEXT:    s_endpgm
@@ -17,6 +18,7 @@ define amdgpu_ps void @test_asynccnt() {
 define amdgpu_ps void @test_tensorcnt() {
 ; GCN-LABEL: test_tensorcnt:
 ; GCN:       ; %bb.0:
+; GCN-NEXT:    global_wb scope:SCOPE_SYS
 ; GCN-NEXT:    s_wait_tensorcnt 0x0
 ; GCN-NEXT:    global_inv scope:SCOPE_SYS
 ; GCN-NEXT:    s_endpgm

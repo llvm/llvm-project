@@ -11,18 +11,16 @@ def BITOP3_16 : ComplexPattern<i16, 4, "SelectBITOP3", [and, or, xor]>;
 
 // Special case for v_div_fmas_{f32|f64}, since it seems to be the
 // only VOP instruction that implicitly reads VCC.
-let Asm64 = " $vdst, $src0_modifiers, $src1_modifiers, $src2_modifiers$clamp$omod" in {
 def VOP_F32_F32_F32_F32_VCC : VOPProfile<[f32, f32, f32, f32]> {
-  let Outs64 = (outs DstRC.RegClass:$vdst);
+  let Outs64 = (outs DstRC:$vdst);
   let HasExtVOP3DPP = 0;
   let HasExtDPP = 0;
   let IsSingle = 1;
 }
 def VOP_F64_F64_F64_F64_VCC : VOPProfile<[f64, f64, f64, f64]> {
-  let Outs64 = (outs DstRC.RegClass:$vdst);
+  let Outs64 = (outs DstRC:$vdst);
   let HasExt64BitDPP = 1;
   let IsSingle = 1;
-}
 }
 
 class VOP3b_Profile<ValueType vt> : VOPProfile<[vt, vt, vt, vt]> {
@@ -126,7 +124,7 @@ class getInterp16Asm <bit HasSrc2, bit HasOMod> {
   string src2 = !if(HasSrc2, ", $src2_modifiers", "");
   string omod = !if(HasOMod, "$omod", "");
   string ret =
-    " $vdst, $src0_modifiers, $attr$attrchan"#src2#"$high$clamp"#omod;
+    "$vdst, $src0_modifiers, $attr$attrchan"#src2#"$high$clamp"#omod;
 }
 
 class getInterp16Ins <bit HasSrc2, bit HasOMod,
@@ -156,7 +154,7 @@ class VOP3_INTERP16 <list<ValueType> ArgVT> : VOPProfile<ArgVT> {
   let Src0Mod = FPVRegInputMods;
   let Src2Mod = FPVRegInputMods;
 
-  let Outs64 = (outs DstRC.RegClass:$vdst);
+  let Outs64 = (outs DstRC:$vdst);
   let Ins64 = getInterp16Ins<HasSrc2, HasOMod, Src0Mod, Src2Mod>.ret;
   let Asm64 = getInterp16Asm<HasSrc2, HasOMod>.ret;
 }

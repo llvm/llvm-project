@@ -63,6 +63,7 @@
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Target/VerboseTrapFrameRecognizer.h"
 #include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -522,7 +523,11 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
   if (!value_sp->OptionWasSet() && platform_cache_line_size != 0)
     value_sp->SetValueAs(platform_cache_line_size);
 
+  // FIXME: Frame recognizer registration should not be done in Target.
+  // We should have a plugin do the registration instead, for example, a
+  // common C LanguageRuntime plugin.
   RegisterAssertFrameRecognizer(this);
+  RegisterVerboseTrapFrameRecognizer(*this);
 }
 
 Process::~Process() {

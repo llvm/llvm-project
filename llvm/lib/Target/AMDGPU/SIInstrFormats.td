@@ -325,12 +325,20 @@ def CPolBit {
 
 class VOPDstOperand <RegisterClass rc> : RegisterOperand <rc, "printVOPDst">;
 
-def VOPDstOperand_t16 : VOPDstOperand <VGPR_16> {
+def VOPDstOperand_VGPR_32 : VOPDstOperand <VGPR_32_STAGING> {
+  let DecoderMethod = "DecodeVGPR_32RegisterClass";
+}
+
+def VOPDstOperand_VGPR_32_Lo128 : VOPDstOperand <VGPR_32_Lo128_STAGING> {
+  let DecoderMethod = "DecodeVGPR_32RegisterClass";
+}
+
+def VOPDstOperand_t16 : VOPDstOperand <VGPR_16_STAGING> {
   let EncoderMethod = "getMachineOpValueT16";
   let DecoderMethod = "DecodeVGPR_16RegisterClass";
 }
 
-def VOPDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_Lo128> {
+def VOPDstOperand_t16Lo128 : VOPDstOperand <VGPR_16_Lo128_STAGING> {
   let EncoderMethod = "getMachineOpValueT16Lo128";
   let DecoderMethod = "DecodeVGPR_16_Lo128RegisterClass";
 }

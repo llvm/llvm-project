@@ -44,9 +44,8 @@ define void @back_off_barrier_no_fence(ptr %in, ptr %out) #0 {
 ; GFX10-BACKOFF:       ; %bb.0:
 ; GFX10-BACKOFF-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-BACKOFF-NEXT:    flat_load_dword v0, v[0:1]
-; GFX10-BACKOFF-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX10-BACKOFF-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-BACKOFF-NEXT:    s_barrier
+; GFX10-BACKOFF-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-BACKOFF-NEXT:    flat_store_dword v[2:3], v0
 ; GFX10-BACKOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-BACKOFF-NEXT:    s_setpc_b64 s[30:31]

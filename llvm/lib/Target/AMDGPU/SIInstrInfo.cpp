@@ -40,15 +40,12 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "AMDGPUGenInstrInfo.inc"
 
-namespace llvm {
-namespace AMDGPU {
+namespace llvm::AMDGPU {
 #define GET_D16ImageDimIntrinsics_IMPL
 #define GET_ImageDimIntrinsicTable_IMPL
 #define GET_RsrcIntrinsics_IMPL
 #include "AMDGPUGenSearchableTables.inc"
-}
-}
-
+} // namespace llvm::AMDGPU
 
 // Must be at least 4 to be able to branch over minimum unconditional branch
 // code. This is only for making it possible to write reasonably small tests for
@@ -1095,7 +1092,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // whole block for every handled copy.
   std::unique_ptr<RegScavenger> RS;
   if (Opcode == AMDGPU::INSTRUCTION_LIST_END)
-    RS.reset(new RegScavenger());
+    RS = std::make_unique<RegScavenger>();
 
   ArrayRef<int16_t> SubIndices = RI.getRegSplitParts(RC, EltSize);
 
@@ -4199,13 +4196,16 @@ bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const 
   //       EXEC = 0, but checking for that case here seems not worth it
   //       given the typical code patterns.
   if (Opcode == AMDGPU::S_SENDMSG || Opcode == AMDGPU::S_SENDMSGHALT ||
-      isEXP(Opcode) ||
-      Opcode == AMDGPU::DS_ORDERED_COUNT || Opcode == AMDGPU::S_TRAP ||
-      Opcode == AMDGPU::DS_GWS_INIT || Opcode == AMDGPU::DS_GWS_BARRIER)
+      isEXP(Opcode) || Opcode == AMDGPU::DS_ORDERED_COUNT ||
+      Opcode == AMDGPU::S_TRAP || Opcode == AMDGPU::S_WAIT_EVENT)
     return true;
 
   if (MI.isCall() || MI.isInlineAsm())
     return true; // conservative assumption
+
+  // Assume that barrier interactions are only intended with active lanes.
+  if (isBarrier(Opcode))
+    return true;
 
   // A mode change is a scalar operation that influences vector instructions.
   if (modifiesModeRegister(MI))
@@ -5658,6 +5658,26 @@ adjustAllocatableRegClass(const GCNSubtarget &ST, const SIRegisterInfo &RI,
       break;
     case AMDGPU::AV_512RegClassID:
       RCID = AMDGPU::VReg_512RegClassID;
+      break;
+    default:
+      break;
+    }
+  } else if (IsAllocatable) {
+    switch (RCID) {
+    case AMDGPU::VGPR_32_STAGINGRegClassID:
+      RCID = AMDGPU::VGPR_32RegClassID;
+      break;
+    case AMDGPU::VGPR_32_Lo256_STAGINGRegClassID:
+      RCID = AMDGPU::VGPR_32_Lo256RegClassID;
+      break;
+    case AMDGPU::VGPR_32_Lo128_STAGINGRegClassID:
+      RCID = AMDGPU::VGPR_32_Lo128RegClassID;
+      break;
+    case AMDGPU::VGPR_16_STAGINGRegClassID:
+      RCID = AMDGPU::VGPR_16RegClassID;
+      break;
+    case AMDGPU::VGPR_16_Lo128_STAGINGRegClassID:
+      RCID = AMDGPU::VGPR_16_Lo128RegClassID;
       break;
     default:
       break;
