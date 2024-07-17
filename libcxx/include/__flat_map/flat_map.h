@@ -12,13 +12,16 @@
 #include <__algorithm/ranges_equal.h>
 #include <__algorithm/ranges_lexicographical_compare.h>
 #include <__algorithm/ranges_lower_bound.h>
-#include <__algorithm/ranges_sort.h>
+#include <__algorithm/ranges_stable_sort.h>
 #include <__algorithm/ranges_unique.h>
+#include <__algorithm/ranges_upper_bound.h>
 #include <__compare/synth_three_way.h>
+#include <__concepts/convertible_to.h>
 #include <__config>
 #include <__flat_map/sorted_unique.h>
 #include <__functional/is_transparent.h>
 #include <__functional/operations.h>
+#include <__iterator/concepts.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/ranges_iterator_traits.h>
@@ -26,11 +29,20 @@
 #include <__memory/allocator_traits.h>
 #include <__memory/uses_allocator.h>
 #include <__memory/uses_allocator_construction.h>
+#include <__ranges/concepts.h>
 #include <__ranges/container_compatible_range.h>
+#include <__ranges/ref_view.h>
+#include <__ranges/subrange.h>
 #include <__ranges/zip_view.h>
+#include <__type_traits/conjunction.h>
+#include <__type_traits/invoke.h>
+#include <__type_traits/is_allocator.h>
+#include <__type_traits/is_nothrow_default_constructible.h>
+#include <__type_traits/maybe_const.h>
 #include <__utility/pair.h>
 #include <initializer_list>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -50,14 +62,21 @@ class flat_map {
   template <bool _Const>
   struct __iterator;
 
+  template <class, class, class, class, class>
+  friend class flat_map;
+
 public:
   // types
-  using key_type               = _Key;
-  using mapped_type            = _Tp;
-  using value_type             = pair<key_type, mapped_type>;
-  using key_compare            = _Compare;
-  using reference              = pair<const key_type&, mapped_type&>;
-  using const_reference        = pair<const key_type&, const mapped_type&>;
+  using key_type    = _Key;
+  using mapped_type = _Tp;
+  using value_type  = pair<key_type, mapped_type>;
+  using key_compare = _Compare;
+  // TODO : the following is the spec, but not implementable for vector<bool>
+  // using reference              = pair<const key_type&, mapped_type&>;
+  // using const_reference        = pair<const key_type&, const mapped_type&>;
+  using reference = pair<ranges::range_reference_t<const _KeyContainer>, ranges::range_reference_t<_MappedContainer>>;
+  using const_reference =
+      pair<ranges::range_reference_t<const _KeyContainer>, ranges::range_reference_t<const _MappedContainer>>;
   using size_type              = size_t;
   using difference_type        = ptrdiff_t;
   using iterator               = __iterator<false>; // see [container.requirements]
@@ -71,6 +90,7 @@ public:
   private:
     key_compare __comp_;
     value_compare(key_compare __c) : __comp_(__c) {}
+    friend flat_map;
 
   public:
     _LIBCPP_HIDE_FROM_ABI bool operator()(const_reference __x, const_reference __y) const {
@@ -95,7 +115,7 @@ private:
   private:
     using __key_iterator    = ranges::iterator_t<__maybe_const<_Const, key_container_type>>;
     using __mapped_iterator = ranges::iterator_t<__maybe_const<_Const, mapped_container_type>>;
-    using __reference       = conditional_t<_Const, flat_map::const_reference, flat_map::reference>;
+    using __reference       = pair<iter_reference_t<__key_iterator>, iter_reference_t<__mapped_iterator>>;
 
     struct __arrow_proxy {
       __reference __ref_;
@@ -104,6 +124,8 @@ private:
 
     __key_iterator __key_iter_;
     __mapped_iterator __mapped_iter_;
+
+    friend flat_map;
 
   public:
     using iterator_concept  = random_access_iterator_tag;
@@ -170,7 +192,7 @@ private:
       return __x.__key_iter_ < __y.__key_iter_;
     }
 
-    _LIBCPP_HIDE_FROM_ABI friend bool operator<(const __iterator& __x, const __iterator& __y) { return __y < __x; }
+    _LIBCPP_HIDE_FROM_ABI friend bool operator>(const __iterator& __x, const __iterator& __y) { return __y < __x; }
 
     _LIBCPP_HIDE_FROM_ABI friend bool operator<=(const __iterator& __x, const __iterator& __y) { return !(__y < __x); }
 
@@ -203,7 +225,10 @@ private:
 
 public:
   // [flat.map.cons], construct/copy/destroy
-  _LIBCPP_HIDE_FROM_ABI flat_map() : flat_map(key_compare()) {}
+  _LIBCPP_HIDE_FROM_ABI flat_map() noexcept(
+      is_nothrow_default_constructible_v<_KeyContainer> && is_nothrow_default_constructible_v<_MappedContainer> &&
+      is_nothrow_default_constructible_v<_Compare>)
+      : __containers_(), __compare_() {}
 
   template <class _Allocator>
     requires __allocator_ctor_constraint<_Allocator>
@@ -286,14 +311,14 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit flat_map(const _Allocator& __alloc)
       : flat_map(__ctor_uses_allocator_empty_tag{}, __alloc) {}
 
-  template <class _InputIterator>
+  template <input_iterator _InputIterator>
   _LIBCPP_HIDE_FROM_ABI
   flat_map(_InputIterator __first, _InputIterator __last, const key_compare& __comp = key_compare())
       : __containers_(), __compare_(__comp) {
     insert(__first, __last);
   }
 
-  template <class _InputIterator, class _Allocator>
+  template <input_iterator _InputIterator, class _Allocator>
     requires __allocator_ctor_constraint<_Allocator>
   _LIBCPP_HIDE_FROM_ABI
   flat_map(_InputIterator __first, _InputIterator __last, const key_compare& __comp, const _Allocator& __alloc)
@@ -301,7 +326,7 @@ public:
     insert(__first, __last);
   }
 
-  template <class _InputIterator, class _Allocator>
+  template <input_iterator _InputIterator, class _Allocator>
     requires __allocator_ctor_constraint<_Allocator>
   _LIBCPP_HIDE_FROM_ABI flat_map(_InputIterator __first, _InputIterator __last, const _Allocator& __alloc)
       : flat_map(__ctor_uses_allocator_empty_tag{}, __alloc) {
@@ -330,13 +355,13 @@ public:
     insert_range(std::forward<_Range>(__rg));
   }
 
-  template <class _InputIterator>
+  template <input_iterator _InputIterator>
   _LIBCPP_HIDE_FROM_ABI flat_map(
       sorted_unique_t __s, _InputIterator __first, _InputIterator __last, const key_compare& __comp = key_compare())
       : __containers_(), __compare_(__comp) {
     insert(__s, __first, __last);
   }
-  template <class _InputIterator, class _Allocator>
+  template <input_iterator _InputIterator, class _Allocator>
     requires __allocator_ctor_constraint<_Allocator>
   _LIBCPP_HIDE_FROM_ABI
   flat_map(sorted_unique_t __s,
@@ -348,7 +373,7 @@ public:
     insert(__s, __first, __last);
   }
 
-  template <class _InputIterator, class _Allocator>
+  template <input_iterator _InputIterator, class _Allocator>
     requires __allocator_ctor_constraint<_Allocator>
   _LIBCPP_HIDE_FROM_ABI
   flat_map(sorted_unique_t __s, _InputIterator __first, _InputIterator __last, const _Allocator& __alloc)
@@ -480,14 +505,14 @@ public:
   template <class... _Args>
     requires is_constructible_v<pair<key_type, mapped_type>, _Args...>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> emplace(_Args&&... __args) {
-    std::pair<key_type, value_type> __pair(std::forward<_Args>(__args)...);
+    std::pair<key_type, mapped_type> __pair(std::forward<_Args>(__args)...);
     return __binary_search_emplace_impl(std::move(__pair));
   }
 
   template <class... _Args>
     requires is_constructible_v<pair<key_type, mapped_type>, _Args...>
   _LIBCPP_HIDE_FROM_ABI iterator emplace_hint(const_iterator __hint, _Args&&... __args) {
-    std::pair<key_type, value_type> __pair(std::forward<_Args>(__args)...);
+    std::pair<key_type, mapped_type> __pair(std::forward<_Args>(__args)...);
     if (__is_hint_correct(__hint, __pair.first)) {
       if (__compare_(__pair.first, __hint->first)) {
         return __emplace_impl(__hint, std::move(__pair));
@@ -525,22 +550,30 @@ public:
     return emplace_hint(__hint, std::forward<_Pp>(__x));
   }
 
-  template <class _InputIterator>
+  template <input_iterator _InputIterator>
   _LIBCPP_HIDE_FROM_ABI void insert(_InputIterator __first, _InputIterator __last) {
-    insert(ranges::subrange<_InputIterator>(std::move(__first), std::move(__last)));
+    if constexpr (sized_sentinel_for<_InputIterator, _InputIterator>) {
+      __reserve_impl(__last - __first);
+    }
+
+    for (; __first != __last; ++__first) {
+      __binary_search_emplace_impl(value_type(*__first));
+    }
   }
 
-  template <class _InputIterator>
+  template <input_iterator _InputIterator>
   void insert(sorted_unique_t, _InputIterator __first, _InputIterator __last) {
     if constexpr (sized_sentinel_for<_InputIterator, _InputIterator>) {
       __reserve_impl(__last - __first);
     }
 
-    auto __it  = begin();
-    auto __end = end();
+    auto __it = begin();
     while (__first != __last) {
       value_type __pair(*__first);
-      __it = ranges::lower_bound(__it, __end, __compare_, &containers::keys);
+      auto __end = end();
+      __it       = ranges::lower_bound(__it, __end, __pair.first, __compare_, [](const auto& __p) -> decltype(auto) {
+        return std::get<0>(__p);
+      });
       if (__it == __end || __compare_(__pair.first, __it->first)) {
         __it = __emplace_impl(__it, std::move(__pair));
       }
@@ -727,6 +760,7 @@ public:
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try {
 #  endif // _LIBCPP_HAS_NO_EXCEPTIONS
+      using std::swap;
       swap(__compare_, __y.__compare_);
       swap(__containers_.keys, __y.__containers_.keys);
       swap(__containers_.values, __y.__containers_.values);
@@ -847,11 +881,15 @@ public:
   friend _LIBCPP_HIDE_FROM_ABI void swap(flat_map& __x, flat_map& __y) noexcept { __x.swap(__y); }
 
 private:
-  struct __ctor_uses_allocator_tag {};
-  struct __ctor_uses_allocator_empty_tag {};
+  struct __ctor_uses_allocator_tag {
+    explicit __ctor_uses_allocator_tag() = default;
+  };
+  struct __ctor_uses_allocator_empty_tag {
+    explicit __ctor_uses_allocator_empty_tag() = default;
+  };
   _LIBCPP_HIDE_FROM_ABI void __sort_and_unique() {
     auto __zv = ranges::views::zip(__containers_.keys, __containers_.values);
-    ranges::sort(__zv, __compare_, &containers::keys);
+    ranges::stable_sort(__zv, __compare_, [](const auto& __p) -> decltype(auto) { return std::get<0>(__p); });
     auto __it   = ranges::unique(__zv, __key_equiv(__compare_)).begin();
     auto __dist = ranges::distance(__zv.begin(), __it);
     __containers_.keys.erase(__containers_.keys.begin() + __dist, __containers_.keys.end());
@@ -920,16 +958,16 @@ private:
 
   template <class _Res, class _Fn, class _Self, class _Kp>
   _LIBCPP_HIDE_FROM_ABI static _Res __binary_search_impl(_Fn __search_fn, _Self&& __self, _Kp& __x) {
-    auto __key_iter = __search_fn(__self.__containers_.keys, __self.__compare_, __x);
+    auto __key_iter = __search_fn(__self.__containers_.keys, __x, __self.__compare_);
     auto __mapped_iter =
         __self.__containers_.values.begin() +
         static_cast<ranges::range_difference_t<mapped_container_type>>(
-            ranges::distance(__self.__containers_.values.begin(), __key_iter));
+            ranges::distance(__self.__containers_.keys.begin(), __key_iter));
 
     return _Res(std::move(__key_iter), std::move(__mapped_iter));
   }
 
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __binary_search_emplace_impl(std::pair<key_type, value_type>&& __pair) {
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __binary_search_emplace_impl(std::pair<key_type, mapped_type>&& __pair) {
     if (auto __it = lower_bound(__pair.first); __it == end() || __compare_(__pair.first, (*__it).first)) {
       return pair<iterator, bool>(__emplace_impl(__it, std::move(__pair)), true);
     } else {
@@ -938,8 +976,8 @@ private:
   }
 
   template <class _Iter>
-  _LIBCPP_HIDE_FROM_ABI iterator __emplace_impl(_Iter&& __it, std::pair<key_type, value_type>&& __pair) {
-    return __try_emplace_impl(__it.__key_iter, __it.__mapped_iter, std::move(__pair.first), std::move(__pair.second));
+  _LIBCPP_HIDE_FROM_ABI iterator __emplace_impl(_Iter&& __it, std::pair<key_type, mapped_type>&& __pair) {
+    return __try_emplace_impl(__it.__key_iter_, __it.__mapped_iter_, std::move(__pair.first), std::move(__pair.second));
   }
 
   template <class _KeyArg, class... _MArgs>
@@ -1002,7 +1040,8 @@ private:
   };
 
   template <class _Container, class _Iter, class... _Args>
-  _LIBCPP_HIDE_FROM_ABI auto __safe_emplace(_Container& __container, _Iter&& __iter, _Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI ranges::iterator_t<_Container>
+  __safe_emplace(_Container& __container, _Iter&& __iter, _Args&&... __args) {
     if constexpr (!__failed_emplacement_has_side_effects<_Container>()) {
       // just let the exception be thrown as the container is still in its original state on exception
       return __container.emplace(__iter, std::forward<_Args>(__args)...);
@@ -1010,7 +1049,6 @@ private:
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
       try {
 #  endif // _LIBCPP_HAS_NO_EXCEPTIONS
-        return __container.emplace(__iter, std::forward<_Args>(__args)...);
 #  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
       } catch (const exception& __ex) {
         // The container might be in some unknown state and we can't get flat_map into consistent state
@@ -1143,6 +1181,11 @@ private:
 };
 
 template <class _KeyContainer, class _MappedContainer, class _Compare = less<typename _KeyContainer::value_type>>
+  requires(!__is_allocator<_Compare>::value && !__is_allocator<_KeyContainer>::value &&
+           !__is_allocator<_MappedContainer>::value &&
+           is_invocable_v<const _Compare&,
+                          const typename _KeyContainer::value_type&,
+                          const typename _KeyContainer::value_type&>)
 flat_map(_KeyContainer, _MappedContainer, _Compare = _Compare())
     -> flat_map<typename _KeyContainer::value_type,
                 typename _MappedContainer::value_type,
@@ -1151,13 +1194,22 @@ flat_map(_KeyContainer, _MappedContainer, _Compare = _Compare())
                 _MappedContainer>;
 
 template <class _KeyContainer, class _MappedContainer, class _Allocator>
+  requires(uses_allocator_v<_KeyContainer, _Allocator> && uses_allocator_v<_MappedContainer, _Allocator> &&
+           !__is_allocator<_KeyContainer>::value && !__is_allocator<_MappedContainer>::value)
 flat_map(_KeyContainer, _MappedContainer, _Allocator)
     -> flat_map<typename _KeyContainer::value_type,
                 typename _MappedContainer::value_type,
                 less<typename _KeyContainer::value_type>,
                 _KeyContainer,
                 _MappedContainer>;
+
 template <class _KeyContainer, class _MappedContainer, class _Compare, class _Allocator>
+  requires(!__is_allocator<_Compare>::value && !__is_allocator<_KeyContainer>::value &&
+           !__is_allocator<_MappedContainer>::value && uses_allocator_v<_KeyContainer, _Allocator> &&
+           uses_allocator_v<_MappedContainer, _Allocator> &&
+           is_invocable_v<const _Compare&,
+                          const typename _KeyContainer::value_type&,
+                          const typename _KeyContainer::value_type&>)
 flat_map(_KeyContainer, _MappedContainer, _Compare, _Allocator)
     -> flat_map<typename _KeyContainer::value_type,
                 typename _MappedContainer::value_type,
@@ -1166,6 +1218,11 @@ flat_map(_KeyContainer, _MappedContainer, _Compare, _Allocator)
                 _MappedContainer>;
 
 template <class _KeyContainer, class _MappedContainer, class _Compare = less<typename _KeyContainer::value_type>>
+  requires(!__is_allocator<_Compare>::value && !__is_allocator<_KeyContainer>::value &&
+           !__is_allocator<_MappedContainer>::value &&
+           is_invocable_v<const _Compare&,
+                          const typename _KeyContainer::value_type&,
+                          const typename _KeyContainer::value_type&>)
 flat_map(sorted_unique_t, _KeyContainer, _MappedContainer, _Compare = _Compare())
     -> flat_map<typename _KeyContainer::value_type,
                 typename _MappedContainer::value_type,
@@ -1174,13 +1231,22 @@ flat_map(sorted_unique_t, _KeyContainer, _MappedContainer, _Compare = _Compare()
                 _MappedContainer>;
 
 template <class _KeyContainer, class _MappedContainer, class _Allocator>
+  requires(uses_allocator_v<_KeyContainer, _Allocator> && uses_allocator_v<_MappedContainer, _Allocator> &&
+           !__is_allocator<_KeyContainer>::value && !__is_allocator<_MappedContainer>::value)
 flat_map(sorted_unique_t, _KeyContainer, _MappedContainer, _Allocator)
     -> flat_map<typename _KeyContainer::value_type,
                 typename _MappedContainer::value_type,
                 less<typename _KeyContainer::value_type>,
                 _KeyContainer,
                 _MappedContainer>;
+
 template <class _KeyContainer, class _MappedContainer, class _Compare, class _Allocator>
+  requires(!__is_allocator<_Compare>::value && !__is_allocator<_KeyContainer>::value &&
+           !__is_allocator<_MappedContainer>::value && uses_allocator_v<_KeyContainer, _Allocator> &&
+           uses_allocator_v<_MappedContainer, _Allocator> &&
+           is_invocable_v<const _Compare&,
+                          const typename _KeyContainer::value_type&,
+                          const typename _KeyContainer::value_type&>)
 flat_map(sorted_unique_t, _KeyContainer, _MappedContainer, _Compare, _Allocator)
     -> flat_map<typename _KeyContainer::value_type,
                 typename _MappedContainer::value_type,
@@ -1188,17 +1254,20 @@ flat_map(sorted_unique_t, _KeyContainer, _MappedContainer, _Compare, _Allocator)
                 _KeyContainer,
                 _MappedContainer>;
 
-template <class _InputIterator, class _Compare = less<__iter_key_type<_InputIterator>>>
+template <input_iterator _InputIterator, class _Compare = less<__iter_key_type<_InputIterator>>>
+  requires(!__is_allocator<_Compare>::value)
 flat_map(_InputIterator, _InputIterator, _Compare = _Compare())
     -> flat_map<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>, _Compare>;
 
-template <class _InputIterator, class _Compare = less<__iter_key_type<_InputIterator>>>
+template <input_iterator _InputIterator, class _Compare = less<__iter_key_type<_InputIterator>>>
+  requires(!__is_allocator<_Compare>::value)
 flat_map(sorted_unique_t, _InputIterator, _InputIterator, _Compare = _Compare())
     -> flat_map<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>, _Compare>;
 
 template <ranges::input_range _Range,
           class _Compare   = less<__iter_key_type<_Range>>,
           class _Allocator = allocator<byte>>
+  requires(!__is_allocator<_Compare>::value && __is_allocator<_Allocator>::value)
 flat_map(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Allocator())
     -> flat_map<__range_key_type<_Range>,
                 __range_mapped_type<_Range>,
@@ -1207,6 +1276,7 @@ flat_map(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Allocator(
                 vector<__range_mapped_type<_Range>, __alloc_rebind<_Allocator, __range_mapped_type<_Range>>>>;
 
 template <ranges::input_range _Range, class _Allocator>
+  requires __is_allocator<_Allocator>::value
 flat_map(from_range_t, _Range&&, _Allocator)
     -> flat_map<__range_key_type<_Range>,
                 __range_mapped_type<_Range>,
@@ -1215,9 +1285,11 @@ flat_map(from_range_t, _Range&&, _Allocator)
                 vector<__range_mapped_type<_Range>, __alloc_rebind<_Allocator, __range_mapped_type<_Range>>>>;
 
 template <class _Key, class _Tp, class _Compare = less<_Key>>
+  requires(!__is_allocator<_Compare>::value)
 flat_map(initializer_list<pair<_Key, _Tp>>, _Compare = _Compare()) -> flat_map<_Key, _Tp, _Compare>;
 
 template <class _Key, class _Tp, class _Compare = less<_Key>>
+  requires(!__is_allocator<_Compare>::value)
 flat_map(sorted_unique_t, initializer_list<pair<_Key, _Tp>>, _Compare = _Compare()) -> flat_map<_Key, _Tp, _Compare>;
 
 template <class _Key, class _Tp, class _Compare, class _KeyContainer, class _MappedContainer, class _Allocator>
