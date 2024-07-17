@@ -25,6 +25,7 @@ macro(add_header_macro TARGET_NAME YAML_FILE DEF_FILE GEN_HDR DEPENDS)
       DEF_FILE ${DEF_FILE}
       GEN_HDR ${GEN_HDR}
       ${DEPENDS}
+      ${ARGN}
     )
   else()
     add_gen_header(
@@ -32,6 +33,7 @@ macro(add_header_macro TARGET_NAME YAML_FILE DEF_FILE GEN_HDR DEPENDS)
       DEF_FILE ${DEF_FILE}
       GEN_HDR ${GEN_HDR}
       ${DEPENDS}
+      ${ARGN}
     )
   endif()
 endmacro()
