@@ -7762,7 +7762,7 @@ def mreassociate : Flag<["-"], "mreassociate">,
 def menable_no_nans : Flag<["-"], "menable-no-nans">,
   HelpText<"Allow optimization to assume there are no NaNs.">,
   MarshallingInfoFlag<LangOpts<"NoHonorNaNs">>, ImpliedByAnyOf<[ffast_math.KeyPath]>;
-def menable_no_infinities : Flag<["-"], "menable-no-infs">,
+def menable_no_infs : Flag<["-"], "menable-no-infs">,
   HelpText<"Allow optimization to assume there are no infinities.">,
   MarshallingInfoFlag<LangOpts<"NoHonorInfs">>, ImpliedByAnyOf<[ffast_math.KeyPath]>;
 
