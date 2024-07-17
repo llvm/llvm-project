@@ -3866,94 +3866,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  // Given two shadows AAAA..., BBBB..., return the interleaved value
-  // ABABABAB ...
-  //
-  // Width == number of elements in A == number of elements in B
-  Value *interleaveAB(IRBuilder<> &IRB, Value *left, Value *right, uint Width) {
-    assert(isa<FixedVectorType>(left->getType()));
-    assert(isa<FixedVectorType>(right->getType()));
-    assert(cast<FixedVectorType>(left->getType())->getNumElements() == Width);
-    assert(cast<FixedVectorType>(right->getType())->getNumElements() == Width);
-
-    SmallVector<Constant *> Idxs;
-
-    for (uint i = 0; i < Width; i++) {
-      Idxs.push_back(IRB.getInt32(i));
-      Idxs.push_back(IRB.getInt32(i + Width));
-    }
-
-    return IRB.CreateShuffleVector(left, right, ConstantVector::get(Idxs));
-  }
-
-  // Given three shadows, which are already interleaved into two shadows
-  // ABABABAB and CxCxCxCx (x is undef), return the interleaved value ABCABCABC.
-  //
-  // Note: Width == number of elements in A == number of elements in B
-  //             == number of elements in C
-  Value *interleaveABCx(IRBuilder<> &IRB, Value *left, Value *right,
-                        uint Width) {
-    assert(isa<FixedVectorType>(left->getType()));
-    assert(isa<FixedVectorType>(right->getType()));
-    assert(cast<FixedVectorType>(left->getType())->getNumElements() ==
-           2 * Width);
-    assert(cast<FixedVectorType>(right->getType())->getNumElements() ==
-           2 * Width);
-
-    SmallVector<Constant *> Idxs;
-
-    // Width parameter is the width of a single shadow (e.g., A).
-    // The width of AB (or Cx) is Width * 2.
-    for (uint i = 0; i < Width * 2; i += 2) {
-      Idxs.push_back(IRB.getInt32(i));
-      Idxs.push_back(IRB.getInt32(i + 1));
-      Idxs.push_back(IRB.getInt32(i + Width));
-      // Index (i + 1 + Width) contains Undef; don't copy
-    }
-
-    return IRB.CreateShuffleVector(left, right, ConstantVector::get(Idxs));
-  }
-
-  /// Calculates the shadow for interleaving 2, 3 or 4 vectors
-  /// (e.g., for Arm NEON vector store).
-  Value *interleaveShadow(IRBuilder<> &IRB, IntrinsicInst &I) {
-    // Don't use getNumOperands() because it includes the callee
-    int numArgOperands = I.arg_size();
-    assert(numArgOperands >= 1);
-
-    // The last arg operand is the output
-    int numVectors = numArgOperands - 1;
-
-    for (int i = 0; i < numVectors; i++) {
-      assert(isa<FixedVectorType>(I.getArgOperand(i)->getType()));
-    }
-
-    // Last operand is the destination
-    assert(isa<PointerType>(I.getArgOperand(numArgOperands - 1)->getType()));
-
-    uint16_t Width =
-        cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements();
-
-    Value *interleaved = nullptr;
-    if (numVectors == 2) {
-      interleaved =
-          interleaveAB(IRB, getShadow(&I, 0), getShadow(&I, 1), Width);
-    } else if (numVectors == 3) {
-      Value *UndefV = UndefValue::get(getShadow(&I, 0)->getType());
-      Value *AB = interleaveAB(IRB, getShadow(&I, 0), getShadow(&I, 1), Width);
-      Value *Cx = interleaveAB(IRB, getShadow(&I, 2), UndefV, Width);
-      interleaved = interleaveABCx(IRB, AB, Cx, Width);
-    } else if (numVectors == 4) {
-      Value *AB = interleaveAB(IRB, getShadow(&I, 0), getShadow(&I, 1), Width);
-      Value *CD = interleaveAB(IRB, getShadow(&I, 2), getShadow(&I, 3), Width);
-      interleaved = interleaveAB(IRB, AB, CD, Width * 2);
-    } else {
-      assert((numVectors >= 2) && (numVectors <= 4));
-    }
-
-    return interleaved;
-  }
-
   /// Handle Arm NEON vector store intrinsics (vst{2,3,4}).
   ///
   /// Arm NEON vector store intrinsics have the output address (pointer) as the
@@ -3961,8 +3873,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// void.
   void handleNEONVectorStoreIntrinsic(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
-
-    Value *interleavedShadow = interleaveShadow(IRB, I);
 
     // Don't use getNumOperands() because it includes the callee
     int numArgOperands = I.arg_size();
@@ -3973,10 +3883,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (ClCheckAccessAddress)
       insertShadowCheck(Addr, &I);
 
+    IntrinsicInst* ShadowI = cast<IntrinsicInst>(I.clone());
+    for (int i = 0; i < numArgOperands - 1; i++) {
+      ShadowI->setArgOperand (i, getShadow(&I, i));
+    }
+
     Value *ShadowPtr, *OriginPtr;
     std::tie(ShadowPtr, OriginPtr) = getShadowOriginPtr(
-        Addr, IRB, interleavedShadow->getType(), Align(1), /*isStore*/ true);
-    IRB.CreateAlignedStore(interleavedShadow, ShadowPtr, Align(1));
+        Addr, IRB, ShadowI->getType(), Align(1), /*isStore*/ true);
+    ShadowI->setArgOperand (numArgOperands - 1, ShadowPtr);
+    ShadowI->insertAfter(&I);
 
     if (MS.TrackOrigins) {
       OriginCombiner OC(this, IRB);
