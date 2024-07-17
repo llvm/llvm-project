@@ -1348,6 +1348,24 @@ void Sema::ActOnPragmaFEnvAccess(SourceLocation Loc, bool IsEnabled) {
   CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());
 }
 
+void Sema::ActOnPragmaAtomicOption(SourceLocation Loc, PragmaAtomicKind Kind,
+                                   bool IsEnabled) {
+  AtomicOptionsOverride NewAtomicOptions = getCurAtomicOptionsOverrides();
+  switch (Kind) {
+  case PAK_NoRemoteMemory:
+    NewAtomicOptions.setNoRemoteMemoryOverride(IsEnabled);
+    break;
+  case PAK_NoFineGrainedMemory:
+    NewAtomicOptions.setNoFineGrainedMemoryOverride(IsEnabled);
+    break;
+  case PAK_IgnoreDenormalMode:
+    NewAtomicOptions.setIgnoreDenormalModeOverride(IsEnabled);
+    break;
+  }
+
+  AtomicPragmaStack.Act(Loc, PSK_Set, StringRef(), NewAtomicOptions);
+}
+
 void Sema::ActOnPragmaCXLimitedRange(SourceLocation Loc,
                                      LangOptions::ComplexRangeKind Range) {
   FPOptionsOverride NewFPFeatures = CurFPFeatureOverrides();

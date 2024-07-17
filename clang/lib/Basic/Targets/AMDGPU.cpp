@@ -241,6 +241,11 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
   WavefrontSize = (GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32) ? 32 : 64;
   AllowAMDGPUUnsafeFPAtomics = Opts.AllowAMDGPUUnsafeFPAtomics;
 
+  // Set the default atomic options
+  AtomicOpts.setNoRemoteMemory(true);
+  AtomicOpts.setNoFineGrainedMemory(true);
+  AtomicOpts.setIgnoreDenormalMode(Opts.AllowAMDGPUUnsafeFPAtomics);
+
   // Set pointer width and alignment for the generic address space.
   PointerWidth = PointerAlign = getPointerWidthV(LangAS::Default);
   if (getMaxPointerWidth() == 64) {
@@ -264,6 +269,8 @@ void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
   // can be removed from the following line.
   setAddressSpaceMap(/*DefaultIsPrivate=*/Opts.OpenCL ||
                      !isAMDGCN(getTriple()));
+
+  AtomicOpts.applyChanges(AtomicOptionsOverride(Opts));
 }
 
 ArrayRef<Builtin::Info> AMDGPUTargetInfo::getTargetBuiltins() const {

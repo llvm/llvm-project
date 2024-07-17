@@ -2939,7 +2939,9 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case STMT_COMPOUND: {
       unsigned NumStmts = Record[ASTStmtReader::NumStmtFields];
       bool HasFPFeatures = Record[ASTStmtReader::NumStmtFields + 1];
-      S = CompoundStmt::CreateEmpty(Context, NumStmts, HasFPFeatures);
+      // TODO: Add serialization of atomic options
+      S = CompoundStmt::CreateEmpty(Context, NumStmts, HasFPFeatures,
+                                    /*HasAtomicOptions=*/false);
       break;
     }
 

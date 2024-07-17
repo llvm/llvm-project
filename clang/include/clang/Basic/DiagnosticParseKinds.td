@@ -1272,6 +1272,9 @@ def warn_pragma_init_seg_unsupported_target : Warning<
 def err_pragma_file_or_compound_scope : Error<
   "'#pragma %0' can only appear at file scope or at the start of a "
   "compound statement">;
+// - #pragma restricted to start of compound statement
+def err_pragma_compound_scope : Error<
+  "'#pragma %0' can only appear at the start of a compound statement">;
 // - #pragma stdc unknown
 def ext_stdc_pragma_ignored : ExtWarn<"unknown pragma in STDC namespace">,
    InGroup<UnknownPragmas>;
@@ -1654,6 +1657,12 @@ def err_pragma_fp_invalid_argument : Error<
   "'on' or 'off'|"
   "'ignore', 'maytrap' or 'strict'|"
   "'source', 'double' or 'extended'}2">;
+
+def err_pragma_atomic_invalid_option : Error<
+  "%select{invalid|missing}0 option%select{ %1|}0; expected 'no_remote_memory', 'no_fine_grained_memory', or 'ignore_denormal_mode'">;
+
+def err_pragma_atomic_invalid_argument : Error<
+  "unexpected argument '%0' to '#pragma clang atomic %1'; expected 'on' or 'off'">;
 
 def err_pragma_invalid_keyword : Error<
   "invalid argument; expected 'enable'%select{|, 'full'}0%select{|, 'assume_safety'}1 or 'disable'">;

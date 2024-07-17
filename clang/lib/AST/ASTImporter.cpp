@@ -6913,7 +6913,10 @@ ExpectedStmt ASTNodeImporter::VisitCompoundStmt(CompoundStmt *S) {
 
   FPOptionsOverride FPO =
       S->hasStoredFPFeatures() ? S->getStoredFPFeatures() : FPOptionsOverride();
-  return CompoundStmt::Create(Importer.getToContext(), ToStmts, FPO,
+  AtomicOptionsOverride AO = S->hasStoredAtomicOptions()
+                                 ? S->getStoredAtomicOptions()
+                                 : AtomicOptionsOverride();
+  return CompoundStmt::Create(Importer.getToContext(), ToStmts, FPO, AO,
                               *ToLBracLocOrErr, *ToRBracLocOrErr);
 }
 

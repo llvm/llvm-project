@@ -457,7 +457,8 @@ StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
                       : getCurCompoundScope().InitialFPFeatures;
   FPOptionsOverride FPDiff = getCurFPFeatures().getChangesFrom(FPO);
 
-  return CompoundStmt::Create(Context, Elts, FPDiff, L, R);
+  return CompoundStmt::Create(Context, Elts, FPDiff,
+                              getCurAtomicOptionsOverrides(), L, R);
 }
 
 ExprResult

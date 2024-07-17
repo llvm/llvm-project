@@ -7718,9 +7718,9 @@ Stmt *Sema::MaybeCreateStmtWithCleanups(Stmt *SubStmt) {
   // a StmtExpr; currently this is only used for asm statements.
   // This is hacky, either create a new CXXStmtWithTemporaries statement or
   // a new AsmStmtWithTemporaries.
-  CompoundStmt *CompStmt =
-      CompoundStmt::Create(Context, SubStmt, FPOptionsOverride(),
-                           SourceLocation(), SourceLocation());
+  CompoundStmt *CompStmt = CompoundStmt::Create(
+      Context, SubStmt, FPOptionsOverride(), AtomicOptionsOverride(),
+      SourceLocation(), SourceLocation());
   Expr *E = new (Context)
       StmtExpr(CompStmt, Context.VoidTy, SourceLocation(), SourceLocation(),
                /*FIXME TemplateDepth=*/0);

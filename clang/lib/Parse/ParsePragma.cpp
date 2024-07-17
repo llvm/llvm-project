@@ -183,6 +183,12 @@ struct PragmaFPHandler : public PragmaHandler {
                     Token &FirstToken) override;
 };
 
+struct PragmaAtomicHandler : public PragmaHandler {
+  PragmaAtomicHandler() : PragmaHandler("atomic") {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override;
+};
+
 // A pragma handler to be the base of the NoOpenMPHandler and NoOpenACCHandler,
 // which are identical other than the name given to them, and the diagnostic
 // emitted.
@@ -568,6 +574,9 @@ void Parser::initializePragmaHandlers() {
   FPHandler = std::make_unique<PragmaFPHandler>();
   PP.AddPragmaHandler("clang", FPHandler.get());
 
+  AtomicHandler = std::make_unique<PragmaAtomicHandler>();
+  PP.AddPragmaHandler("clang", AtomicHandler.get());
+
   AttributePragmaHandler =
       std::make_unique<PragmaAttributeHandler>(AttrFactory);
   PP.AddPragmaHandler("clang", AttributePragmaHandler.get());
@@ -708,6 +717,9 @@ void Parser::resetPragmaHandlers() {
 
   PP.RemovePragmaHandler("clang", FPHandler.get());
   FPHandler.reset();
+
+  PP.RemovePragmaHandler("clang", AtomicHandler.get());
+  AtomicHandler.reset();
 
   PP.RemovePragmaHandler("clang", AttributePragmaHandler.get());
   AttributePragmaHandler.reset();
@@ -3530,6 +3542,141 @@ void Parser::HandlePragmaFP() {
   if (AnnotValue->EvalMethodValue)
     Actions.ActOnPragmaFPEvalMethod(Tok.getLocation(),
                                     *AnnotValue->EvalMethodValue);
+  ConsumeAnnotationToken();
+}
+
+struct TokAtomicAnnotValue {
+  std::optional<bool> NoRemoteMemoryValue;
+  std::optional<bool> NoFineGrainedMemoryValue;
+  std::optional<bool> IgnoreDenormalModeValue;
+};
+
+void PragmaAtomicHandler::HandlePragma(Preprocessor &PP,
+                                       PragmaIntroducer Introducer,
+                                       Token &Tok) {
+  Token PragmaName = Tok;
+  SmallVector<Token, 1> TokenList;
+
+  PP.Lex(Tok);
+  if (Tok.isNot(tok::identifier)) {
+    PP.Diag(Tok.getLocation(), diag::err_pragma_atomic_invalid_option)
+        << /*MissingOption=*/true << "";
+    return;
+  }
+
+  auto *AnnotValue = new (PP.getPreprocessorAllocator()) TokAtomicAnnotValue;
+  int OptionCount = 0;
+
+  while (Tok.is(tok::identifier) && OptionCount < 3) {
+    IdentifierInfo *OptionInfo = Tok.getIdentifierInfo();
+
+    auto OptionKind =
+        llvm::StringSwitch<std::optional<PragmaAtomicKind>>(
+            OptionInfo->getName())
+            .Case("no_remote_memory", PAK_NoRemoteMemory)
+            .Case("no_fine_grained_memory", PAK_NoFineGrainedMemory)
+            .Case("ignore_denormal_mode", PAK_IgnoreDenormalMode)
+            .Default(std::nullopt);
+
+    if (!OptionKind) {
+      PP.Diag(Tok.getLocation(), diag::err_pragma_atomic_invalid_option)
+          << /*MissingOption=*/false << OptionInfo;
+      return;
+    }
+
+    PP.Lex(Tok);
+
+    // Read '('
+    if (Tok.isNot(tok::l_paren)) {
+      PP.Diag(Tok.getLocation(), diag::err_expected) << tok::l_paren;
+      return;
+    }
+    PP.Lex(Tok);
+
+    if (Tok.isNot(tok::identifier)) {
+      PP.Diag(Tok.getLocation(), diag::err_pragma_atomic_invalid_argument)
+          << PP.getSpelling(Tok) << OptionInfo->getName();
+      return;
+    }
+
+    const IdentifierInfo *II = Tok.getIdentifierInfo();
+    bool Value = llvm::StringSwitch<bool>(II->getName())
+                     .Case("on", true)
+                     .Case("off", false)
+                     .Default(false);
+
+    switch (*OptionKind) {
+    case PAK_NoRemoteMemory:
+      AnnotValue->NoRemoteMemoryValue = Value;
+      break;
+    case PAK_NoFineGrainedMemory:
+      AnnotValue->NoFineGrainedMemoryValue = Value;
+      break;
+    case PAK_IgnoreDenormalMode:
+      AnnotValue->IgnoreDenormalModeValue = Value;
+      break;
+    }
+
+    PP.Lex(Tok);
+
+    // Read ')'
+    if (Tok.isNot(tok::r_paren)) {
+      PP.Diag(Tok.getLocation(), diag::err_expected) << tok::r_paren;
+      return;
+    }
+    PP.Lex(Tok);
+
+    OptionCount++;
+  }
+
+  if (Tok.isNot(tok::eod)) {
+    PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+        << "clang atomic";
+    return;
+  }
+
+  Token AtomicTok;
+  AtomicTok.startToken();
+  AtomicTok.setKind(tok::annot_pragma_atomic);
+  AtomicTok.setLocation(PragmaName.getLocation());
+  AtomicTok.setAnnotationEndLoc(PragmaName.getLocation());
+  AtomicTok.setAnnotationValue(reinterpret_cast<void *>(AnnotValue));
+  TokenList.push_back(AtomicTok);
+
+  auto TokenArray = std::make_unique<Token[]>(TokenList.size());
+  std::copy(TokenList.begin(), TokenList.end(), TokenArray.get());
+
+  PP.EnterTokenStream(std::move(TokenArray), TokenList.size(),
+                      /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
+}
+
+void Parser::HandlePragmaAtomic() {
+  assert(Tok.is(tok::annot_pragma_atomic));
+
+  if (!getCurScope()->isCompoundStmtScope()) {
+    Diag(Tok.getLocation(), diag::err_pragma_compound_scope) << "clang atomic";
+    ConsumeAnnotationToken();
+    return;
+  }
+
+  auto *AnnotValue =
+      reinterpret_cast<TokAtomicAnnotValue *>(Tok.getAnnotationValue());
+
+  if (AnnotValue->NoRemoteMemoryValue) {
+    Actions.ActOnPragmaAtomicOption(Tok.getLocation(), PAK_NoRemoteMemory,
+                                    *AnnotValue->NoRemoteMemoryValue);
+  }
+
+  if (AnnotValue->NoFineGrainedMemoryValue) {
+    Actions.ActOnPragmaAtomicOption(Tok.getLocation(), PAK_NoFineGrainedMemory,
+                                    *AnnotValue->NoFineGrainedMemoryValue);
+  }
+
+  if (AnnotValue->IgnoreDenormalModeValue) {
+    Actions.ActOnPragmaAtomicOption(Tok.getLocation(), PAK_IgnoreDenormalMode,
+                                    *AnnotValue->IgnoreDenormalModeValue);
+  }
+
   ConsumeAnnotationToken();
 }
 

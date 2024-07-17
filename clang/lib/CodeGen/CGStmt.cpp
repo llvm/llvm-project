@@ -518,6 +518,8 @@ CodeGenFunction::EmitCompoundStmtWithoutScope(const CompoundStmt &S,
                                               bool GetLast,
                                               AggValueSlot AggSlot) {
 
+  CGAtomicOptionsRAII AORAII(CGM, S.getStoredAtomicOptionsOrDefault());
+
   const Stmt *ExprResult = S.getStmtExprResult();
   assert((!GetLast || (GetLast && ExprResult)) &&
          "If GetLast is true then the CompoundStmt must have a StmtExprResult");

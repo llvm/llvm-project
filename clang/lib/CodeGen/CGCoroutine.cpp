@@ -348,7 +348,8 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
     auto *Catch = new (CGF.getContext())
         CXXCatchStmt(Loc, /*exDecl=*/nullptr, Coro.ExceptionHandler);
     auto *TryBody = CompoundStmt::Create(CGF.getContext(), S.getResumeExpr(),
-                                         FPOptionsOverride(), Loc, Loc);
+                                         FPOptionsOverride(),
+                                         AtomicOptionsOverride(), Loc, Loc);
     TryStmt = CXXTryStmt::Create(CGF.getContext(), Loc, TryBody, Catch);
     CGF.EnterCXXTryStmt(*TryStmt);
     CGF.EmitStmt(TryBody);

@@ -1738,6 +1738,23 @@ public:
     return result;
   }
 
+  // This stack tracks the current state of Sema.CurAtomicFeatures.
+  PragmaStack<AtomicOptionsOverride> AtomicPragmaStack;
+
+  AtomicOptionsOverride getCurAtomicOptionsOverrides() {
+    AtomicOptionsOverride Result;
+    if (!AtomicPragmaStack.hasValue()) {
+      Result = AtomicOptionsOverride();
+    } else {
+      Result = AtomicPragmaStack.CurrentValue;
+    }
+    return Result;
+  }
+
+  void setCurAtomicOptionsOverrides(AtomicOptionsOverride AO) {
+    AtomicPragmaStack.CurrentValue = AO;
+  }
+
   enum PragmaSectionKind {
     PSK_DataSeg,
     PSK_BSSSeg,
@@ -2037,6 +2054,11 @@ public:
 
   /// Called to set constant rounding mode for floating point operations.
   void ActOnPragmaFEnvRound(SourceLocation Loc, llvm::RoundingMode);
+
+  /// Called on well formed
+  /// \#pragma clang atomic
+  void ActOnPragmaAtomicOption(SourceLocation Loc, PragmaAtomicKind Kind,
+                               bool IsEnabled);
 
   /// Called to set exception behavior for floating point operations.
   void setExceptionMode(SourceLocation Loc, LangOptions::FPExceptionModeKind);
@@ -13539,8 +13561,8 @@ public:
         SavedPendingLocalImplicitInstantiations;
   };
 
-  /// Records and restores the CurFPFeatures state on entry/exit of compound
-  /// statements.
+  /// Records and restores the CurFPFeatures state on entry/exit
+  /// of compound statements.
   class FPFeaturesStateRAII {
   public:
     FPFeaturesStateRAII(Sema &S);
@@ -13553,6 +13575,18 @@ public:
     FPOptionsOverride OldOverrides;
     LangOptions::FPEvalMethodKind OldEvalMethod;
     SourceLocation OldFPPragmaLocation;
+  };
+
+  /// Records and restores the AtomicOptions state on entry/exit
+  /// of compound statements.
+  class AtomicOptionsRAII {
+  public:
+    AtomicOptionsRAII(Sema &S_);
+    ~AtomicOptionsRAII();
+
+  private:
+    Sema &S;
+    AtomicOptionsOverride SavedAOO;
   };
 
   class GlobalEagerInstantiationScope {

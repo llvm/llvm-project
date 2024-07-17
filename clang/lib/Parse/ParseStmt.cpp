@@ -483,6 +483,13 @@ Retry:
     ConsumeAnnotationToken();
     return StmtError();
 
+  case tok::annot_pragma_atomic:
+    ProhibitAttributes(CXX11Attrs);
+    ProhibitAttributes(GNUAttrs);
+    Diag(Tok, diag::err_pragma_compound_scope) << "clang atomic";
+    ConsumeAnnotationToken();
+    return StmtError();
+
   case tok::annot_pragma_opencl_extension:
     ProhibitAttributes(CXX11Attrs);
     ProhibitAttributes(GNUAttrs);
@@ -1095,6 +1102,9 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
     case tok::annot_pragma_fenv_round:
       HandlePragmaFEnvRound();
       break;
+    case tok::annot_pragma_atomic:
+      HandlePragmaAtomic();
+      break;
     case tok::annot_pragma_cx_limited_range:
       HandlePragmaCXLimitedRange();
       break;
@@ -1194,6 +1204,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
   // Record the current FPFeatures, restore on leaving the
   // compound statement.
   Sema::FPFeaturesStateRAII SaveFPFeatures(Actions);
+  Sema::AtomicOptionsRAII SaveAtomicOpts(Actions);
 
   InMessageExpressionRAIIObject InMessage(*this, false);
   BalancedDelimiterTracker T(*this, tok::l_brace);

@@ -197,9 +197,9 @@ struct BuiltinTypeDeclBuilder {
         AST, Handle, Call, BO_Assign, Handle->getType(), VK_LValue, OK_Ordinary,
         SourceLocation(), FPOptionsOverride());
 
-    Constructor->setBody(
-        CompoundStmt::Create(AST, {Assign}, FPOptionsOverride(),
-                             SourceLocation(), SourceLocation()));
+    Constructor->setBody(CompoundStmt::Create(
+        AST, {Assign}, FPOptionsOverride(), AtomicOptionsOverride(),
+        SourceLocation(), SourceLocation()));
     Constructor->setAccess(AccessSpecifier::AS_public);
     Record->addDecl(Constructor);
     return *this;
@@ -279,9 +279,9 @@ struct BuiltinTypeDeclBuilder {
 
     auto *Return = ReturnStmt::Create(AST, SourceLocation(), Array, nullptr);
 
-    MethodDecl->setBody(CompoundStmt::Create(AST, {Return}, FPOptionsOverride(),
-                                             SourceLocation(),
-                                             SourceLocation()));
+    MethodDecl->setBody(CompoundStmt::Create(
+        AST, {Return}, FPOptionsOverride(), AtomicOptionsOverride(),
+        SourceLocation(), SourceLocation()));
     MethodDecl->setLexicalDeclContext(Record);
     MethodDecl->setAccess(AccessSpecifier::AS_public);
     MethodDecl->addAttr(AlwaysInlineAttr::CreateImplicit(

@@ -1,0 +1,19 @@
+//===--- AtomicOptions.def - Atomic Options database -------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+// This file defines the Atomic language options. Users of this file
+// must define the OPTION macro to make use of this information.
+#ifndef OPTION
+#  error Define the OPTION macro to handle atomic language options
+#endif
+
+// OPTION(name, type, width, previousName)
+OPTION(NoRemoteMemory, bool, 1, First)
+OPTION(NoFineGrainedMemory, bool, 1, NoRemoteMemory)
+OPTION(IgnoreDenormalMode, bool, 1, NoFineGrainedMemory)
+
+#undef OPTION

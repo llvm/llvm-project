@@ -42,6 +42,13 @@ enum PragmaFPKind {
   PFK_Exceptions,  // #pragma clang fp exceptions
   PFK_EvalMethod   // #pragma clang fp eval_method
 };
+
+enum PragmaAtomicKind {
+  PAK_NoRemoteMemory,      // #prama clang atomic begin(no_remote_memory:on)
+  PAK_NoFineGrainedMemory, // #pragma clang atomic
+                           // begin(no_fine_grained_memory:on)
+  PAK_IgnoreDenormalMode, // #pragma clang atomic begin(ignore_denormal_mode:on)
+};
 }
 
 #endif

@@ -238,3 +238,55 @@ LLVM_DUMP_METHOD void FPOptionsOverride::dump() {
 #include "clang/Basic/FPOptions.def"
   llvm::errs() << "\n";
 }
+
+AtomicOptions
+AtomicOptions::defaultWithoutTrailingStorage(const LangOptions &LO) {
+  AtomicOptions result(LO);
+  return result;
+}
+
+AtomicOptionsOverride
+AtomicOptions::getChangesSlow(const AtomicOptions &Base) const {
+  AtomicOptions::storage_type OverrideMask = 0;
+#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+  if (get##NAME() != Base.get##NAME())                                         \
+    OverrideMask |= NAME##Mask;
+#include "clang/Basic/AtomicOptions.def"
+  return AtomicOptionsOverride(*this, OverrideMask);
+}
+
+LLVM_DUMP_METHOD void AtomicOptions::dump() {
+#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+  llvm::errs() << "\n " #NAME " " << get##NAME();
+#include "clang/Basic/AtomicOptions.def"
+  llvm::errs() << "\n";
+}
+
+LLVM_DUMP_METHOD void AtomicOptionsOverride::dump() {
+#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+  if (has##NAME##Override())                                                   \
+    llvm::errs() << "\n " #NAME " Override is " << get##NAME##Override();
+#include "clang/Basic/AtomicOptions.def"
+  llvm::errs() << "\n";
+}
+
+AtomicOptionsOverride::AtomicOptionsOverride(const LangOptions &LO) {
+  for (const auto &Setting : LO.AtomicOptionsAsWritten) {
+    SmallVector<StringRef, 2> KeyValue;
+    StringRef(Setting).split(KeyValue, ":");
+    // Assuming option string has been checked elsewhere and is valid.
+    assert(KeyValue.size() == 2 && "Invalid atomic option format");
+    StringRef Key = KeyValue[0];
+    StringRef Val = KeyValue[1];
+    bool IsEnabled = (Val == "on");
+
+    if (Key == "no_fine_grained_memory")
+      setNoFineGrainedMemoryOverride(IsEnabled);
+    else if (Key == "no_remote_memory")
+      setNoRemoteMemoryOverride(IsEnabled);
+    else if (Key == "ignore_denormal_mode")
+      setIgnoreDenormalModeOverride(IsEnabled);
+    else
+      assert(false && "Unknown atomic option key");
+  }
+}
