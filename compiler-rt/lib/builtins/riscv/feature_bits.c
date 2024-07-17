@@ -210,7 +210,7 @@ static void initRISCVFeature(struct riscv_hwprobe Hwprobes[]) {
   unsigned long long features[RISCV_FEATURE_BITS_LENGTH];
   int i;
 
-  for (i=0; i<RISCV_FEATURE_BITS_LENGTH; i++)
+  for (i = 0; i < RISCV_FEATURE_BITS_LENGTH; i++)
     features[i] = 0;
 
   // Check RISCV_HWPROBE_KEY_BASE_BEHAVIOR
