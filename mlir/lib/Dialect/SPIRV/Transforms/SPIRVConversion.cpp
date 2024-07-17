@@ -940,8 +940,8 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
       }
       VectorType unrolledType =
           VectorType::get(*targetShape, origVecType.getElementType());
-      SmallVector<int64_t> originalShape =
-          llvm::to_vector(origVecType.getShape());
+      auto originalShape =
+          llvm::to_vector_of<int64_t, 4>(origVecType.getShape());
 
       // Prepare the result vector.
       Value result = rewriter.create<arith::ConstantOp>(
@@ -981,7 +981,7 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
 
     // Replace the placeholder values with the new arguments. We assume there is
     // only one block for now.
-    size_t idx = 0;
+    size_t unrolledInputIdx = 0;
     for (auto [count, op] : enumerate(entryBlock.getOperations())) {
       // We first look for operands that are placeholders for initially legal
       // arguments.
@@ -1001,13 +1001,12 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
       if (count >= newOpCount)
         continue;
       if (auto vecOp = dyn_cast<vector::InsertStridedSliceOp>(op)) {
-        size_t unrolledInputNo = unrolledInputNums[idx];
+        size_t unrolledInputNo = unrolledInputNums[unrolledInputIdx];
         rewriter.modifyOpInPlace(&curOp, [&] {
           curOp.setOperand(0, newFuncOp.getArgument(unrolledInputNo));
         });
-        ++idx;
+        ++unrolledInputIdx;
       }
-      ++count;
     }
 
     // Erase the original funcOp. The `tmpOps` do not need to be erased since
@@ -1068,7 +1067,8 @@ struct ReturnOpVectorUnroll final : OpRewritePattern<func::ReturnOp> {
 
       // Create `vector.extract_strided_slice` ops to form legal vectors from
       // the original operand of illegal type.
-     auto originalShape = llvm::to_vector_of<int64_t, 4>(origVecType.getShape());
+      auto originalShape =
+          llvm::to_vector_of<int64_t, 4>(origVecType.getShape());
       SmallVector<int64_t> strides(targetShape->size(), 1);
       SmallVector<Type> newTypes;
       Value returnValue = returnOp.getOperand(origResultNo);
