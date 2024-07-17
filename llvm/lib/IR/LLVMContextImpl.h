@@ -1557,6 +1557,8 @@ public:
 
   DenseMap<TargetExtType *, std::unique_ptr<ConstantTargetNone>> CTNConstants;
 
+  DenseMap<Type *, std::unique_ptr<ConstantAMXNone>> CAMXConstants;
+
   DenseMap<Type *, std::unique_ptr<UndefValue>> UVConstants;
 
   DenseMap<Type *, std::unique_ptr<PoisonValue>> PVConstants;
