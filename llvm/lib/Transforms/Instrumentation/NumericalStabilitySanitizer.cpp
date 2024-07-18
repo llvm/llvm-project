@@ -518,41 +518,35 @@ NsanMemOpFn::NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized,
 
   NumSizedFuncs = Sized.size();
 
-  // Reserve space for sized funcs and for fallback
-  Funcs.reserve(NumSizedFuncs + 1);
-
+  // First entry is fallback function
   if (NumArgs == 3) {
-    Funcs[NumSizedFuncs] =
-        M.getOrInsertFunction(Fallback, Attr, VoidTy, PtrTy, PtrTy, IntptrTy);
+    Funcs.push_back(
+        M.getOrInsertFunction(Fallback, Attr, VoidTy, PtrTy, PtrTy, IntptrTy));
     SizedFnTy = FunctionType::get(VoidTy, {PtrTy, PtrTy}, false);
   } else if (NumArgs == 2) {
-    Funcs[NumSizedFuncs] =
-        M.getOrInsertFunction(Fallback, Attr, VoidTy, PtrTy, IntptrTy);
+    Funcs.push_back(
+        M.getOrInsertFunction(Fallback, Attr, VoidTy, PtrTy, IntptrTy));
     SizedFnTy = FunctionType::get(VoidTy, {PtrTy}, false);
   } else {
     assert(!"Unexpected value of sized functions arguments");
   }
 
   for (size_t i = 0; i < NumSizedFuncs; ++i)
-    Funcs[i] = M.getOrInsertFunction(Sized[i], SizedFnTy, Attr);
+    Funcs.push_back(M.getOrInsertFunction(Sized[i], SizedFnTy, Attr));
 }
 
 FunctionCallee NsanMemOpFn::getFunctionFor(uint64_t MemOpSize) const {
-  // We have NumSizedFuncs + 1 elements in `Funcs`
-  size_t MaxIdx = NumSizedFuncs;
-
   // Now `getFunctionFor` operates on `Funcs` of size 4 (at least) and the
   // following code assumes that the number of functions in `Func` is sufficient
-  assert(MaxIdx >= 3 && "Unexpected MaxIdx value");
+  assert(NumSizedFuncs >= 3 && "Unexpected number of sized functions");
 
-  size_t Idx = MemOpSize == 4
-                   ? 0
-                   : (MemOpSize == 8 ? 1 : (MemOpSize == 16 ? 2 : MaxIdx));
+  size_t Idx =
+      MemOpSize == 4 ? 1 : (MemOpSize == 8 ? 2 : (MemOpSize == 16 ? 3 : 0));
 
   return Funcs[Idx];
 }
 
-FunctionCallee NsanMemOpFn::getFallback() const { return Funcs[NumSizedFuncs]; }
+FunctionCallee NsanMemOpFn::getFallback() const { return Funcs[0]; }
 
 /// Instantiating NumericalStabilitySanitizer inserts the nsan runtime library
 /// API function declarations into the module if they don't exist already.
