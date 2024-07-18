@@ -1856,33 +1856,53 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           // Currently we are going to assume SIGTRAP means we are either
           // hitting a breakpoint or hardware single stepping.
 
-          // If we were stepping then assume the stop was the result of the
-          // trace.
-          if (thread_sp->GetTemporaryResumeState() == eStateStepping) {
-            thread_sp->SetStopInfo(
-                StopInfo::CreateStopReasonToTrace(*thread_sp));
-            handled = true;
-          } else {
-            addr_t pc = thread_sp->GetRegisterContext()->GetPC() +
-                        m_breakpoint_pc_offset;
-            lldb::BreakpointSiteSP bp_site_sp =
-                thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(
-                    pc);
+          // We can't disambiguate between stepping-to-a-breakpointsite and
+          // hitting-a-breakpointsite.
+          //
+          // A user can instruction-step, and be stopped at a BreakpointSite.
+          // Or a user can be sitting at a BreakpointSite,
+          // instruction-step which hits the breakpoint and the pc does not
+          // advance.
+          //
+          // In both cases, we're at a BreakpointSite when stopped, and
+          // the resume state was eStateStepping.
 
-            if (bp_site_sp) {
+          // Assume if we're at a BreakpointSite, we hit it.
+          handled = true;
+          addr_t pc =
+              thread_sp->GetRegisterContext()->GetPC() + m_breakpoint_pc_offset;
+          BreakpointSiteSP bp_site_sp =
+              thread_sp->GetProcess()->GetBreakpointSiteList().FindByAddress(
+                  pc);
+
+          // We can't know if we hit it or not. So if we are stopped at
+          // a BreakpointSite, assume we hit it, and should step past the
+          // breakpoint when we resume. This is contrary to how we handle
+          // BreakpointSites in any other location, but we can't know for
+          // sure what happened so it's a reasonable default.
+          if (bp_site_sp) {
+            if (bp_site_sp->IsEnabled())
               thread_sp->SetThreadHitBreakpointSite();
-              // If the breakpoint is for this thread, then we'll report the
-              // hit, but if it is for another thread, we can just report no
-              // reason.
-              if (bp_site_sp->ValidForThisThread(*thread_sp)) {
-                if (m_breakpoint_pc_offset != 0)
-                  thread_sp->GetRegisterContext()->SetPC(pc);
-                thread_sp->SetStopInfo(
-                    StopInfo::CreateStopReasonWithBreakpointSiteID(
-                        *thread_sp, bp_site_sp->GetID()));
-                handled = true;
-              }
+
+            if (bp_site_sp->ValidForThisThread(*thread_sp)) {
+              if (m_breakpoint_pc_offset != 0)
+                thread_sp->GetRegisterContext()->SetPC(pc);
+              thread_sp->SetStopInfo(
+                  StopInfo::CreateStopReasonWithBreakpointSiteID(
+                      *thread_sp, bp_site_sp->GetID()));
+            } else {
+              StopInfoSP invalid_stop_info_sp;
+              thread_sp->SetStopInfo(invalid_stop_info_sp);
             }
+          } else {
+            // If we were stepping then assume the stop was the result of the
+            // trace.  If we were not stepping then report the SIGTRAP.
+            if (thread_sp->GetTemporaryResumeState() == eStateStepping)
+              thread_sp->SetStopInfo(
+                  StopInfo::CreateStopReasonToTrace(*thread_sp));
+            else
+              thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithSignal(
+                  *thread_sp, signo, description.c_str()));
           }
         }
         if (!handled)

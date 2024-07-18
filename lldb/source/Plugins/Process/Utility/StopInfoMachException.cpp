@@ -577,15 +577,18 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
 
   ProcessSP process_sp(thread.GetProcess());
   RegisterContextSP reg_ctx_sp(thread.GetRegisterContext());
-  BreakpointSiteSP bp_site_sp;
-  addr_t pc = LLDB_INVALID_ADDRESS;
-  if (reg_ctx_sp) {
-    pc = reg_ctx_sp->GetPC();
-    BreakpointSiteSP bp_site_sp =
-        process_sp->GetBreakpointSiteList().FindByAddress(pc);
-    if (bp_site_sp && bp_site_sp->IsEnabled())
-      thread.SetThreadStoppedAtUnexecutedBP(pc);
-  }
+  // Caveat: with x86 KDP if we've hit a breakpoint, the pc we
+  // receive is past the breakpoint instruction.
+  // If we have a breakpoint at 0x100 (on a 1-byte original instruction)
+  // and at 0x101, we hit the 0x100 breakpoint and the pc is
+  // reported at 0x101.  We will initially mark this as being at
+  // an unexecuted breakpoint at 0x101, but that will be refined
+  // later in this method after we've correctly decremented pc.
+  addr_t pc = reg_ctx_sp->GetPC();
+  BreakpointSiteSP bp_site_sp =
+      process_sp->GetBreakpointSiteList().FindByAddress(pc);
+  if (bp_site_sp && bp_site_sp->IsEnabled())
+    thread.SetThreadStoppedAtUnexecutedBP(pc);
 
   switch (exc_type) {
   case 1: // EXC_BAD_ACCESS
@@ -613,69 +616,82 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
     }
     break;
 
-  // [exc_type, exc_code, exc_sub_code, exc_sub_sub_code]
-  //
-  // Instruction step:
-  //   [6, 1, 0]
-  //   Intel KDP [6, 3, ??]
-  //   armv7 [6, 0x102, <stop-pc>]  Same as software breakpoint!
-  //
-  // Software breakpoint:
-  //   x86 [6, 2, 0]
-  //   Intel KDP [6, 2, <bp-addr + 1>]
-  //   arm64 [6, 1, <bp-addr>]
-  //   armv7 [6, 0x102, <bp-addr>]  Same as instruction step!
-  //
-  // Hardware breakpoint:
-  //   x86 [6, 1, <bp-addr>, 0]
-  //   x86/Rosetta not implemented, see software breakpoint
-  //   arm64 [6, 1, <bp-addr>]
-  //   armv7 not implemented, see software breakpoint
-  //
-  // Hardware watchpoint:
-  //   x86 [6, 1, <accessed-addr>, 0] (both Intel hw and Rosetta)
-  //   arm64 [6, 0x102, <accessed-addr>, 0]
-  //   armv7 [6, 0x102, <accessed-addr>, 0]
-  //
-  // arm64 BRK instruction (imm arg not reflected in the ME)
-  //   [ 6, 1, <addr-of-BRK-insn>]
-  //
-  // In order of codes mach exceptions:
-  //   [6, 1, 0] - instruction step
-  //   [6, 1, <bp-addr>] - hardware breakpoint or watchpoint
-  //
-  //   [6, 2, 0] - software breakpoint
-  //   [6, 2, <bp-addr + 1>] - software breakpoint
-  //
-  //   [6, 3] - instruction step
-  //
-  //   [6, 0x102, <stop-pc>] armv7 instruction step
-  //   [6, 0x102, <bp-addr>] armv7 software breakpoint
-  //   [6, 0x102, <accessed-addr>, 0] arm64/armv7 watchpoint
+    // A mach exception comes with 2-4 pieces of data.
+    // The sub-codes are only provided for certain types
+    // of mach exceptions.
+    // [exc_type, exc_code, exc_sub_code, exc_sub_sub_code]
+    //
+    // Here are all of the EXC_BREAKPOINT, exc_type==6,
+    // exceptions we can receive.
+    //
+    // Instruction step:
+    //   [6, 1, 0]
+    //   Intel KDP [6, 3, ??]
+    //   armv7 [6, 0x102, <stop-pc>]  Same as software breakpoint!
+    //
+    // Software breakpoint:
+    //   x86 [6, 2, 0]
+    //   Intel KDP [6, 2, <bp-addr + 1>]
+    //   arm64 [6, 1, <bp-addr>]
+    //   armv7 [6, 0x102, <bp-addr>]  Same as instruction step!
+    //
+    // Hardware breakpoint:
+    //   x86 [6, 1, <bp-addr>, 0]
+    //   x86/Rosetta not implemented, see software breakpoint
+    //   arm64 [6, 1, <bp-addr>]
+    //   armv7 not implemented, see software breakpoint
+    //
+    // Hardware watchpoint:
+    //   x86 [6, 1, <accessed-addr>, 0] (both Intel hw and Rosetta)
+    //   arm64 [6, 0x102, <accessed-addr>, 0]
+    //   armv7 [6, 0x102, <accessed-addr>, 0]
+    //
+    // arm64 BRK instruction (imm arg not reflected in the ME)
+    //   [ 6, 1, <addr-of-BRK-insn>]
+    //
+    // In order of codes mach exceptions:
+    //   [6, 1, 0] - instruction step
+    //   [6, 1, <bp-addr>] - hardware breakpoint or watchpoint
+    //
+    //   [6, 2, 0] - software breakpoint
+    //   [6, 2, <bp-addr + 1>] - software breakpoint
+    //
+    //   [6, 3] - instruction step
+    //
+    //   [6, 0x102, <stop-pc>] armv7 instruction step
+    //   [6, 0x102, <bp-addr>] armv7 software breakpoint
+    //   [6, 0x102, <accessed-addr>, 0] arm64/armv7 watchpoint
+
   case 6: // EXC_BREAKPOINT
   {
     bool stopped_by_hitting_breakpoint = false;
     bool stopped_by_completing_stepi = false;
     bool stopped_watchpoint = false;
-    std::optional<addr_t> value;
+    std::optional<addr_t> address;
 
     // exc_code 1
-    if (exc_code == 1 && exc_sub_code == 0)
-      stopped_by_completing_stepi = true;
-    if (exc_code == 1 && exc_sub_code != 0) {
-      stopped_by_hitting_breakpoint = true;
-      stopped_watchpoint = true;
-      value = exc_sub_code;
+    if (exc_code == 1) {
+      if (exc_sub_code == 0) {
+        stopped_by_completing_stepi = true;
+      } else {
+        // Ambiguous: could be signalling a
+        // breakpoint or watchpoint hit.
+        stopped_by_hitting_breakpoint = true;
+        stopped_watchpoint = true;
+        address = exc_sub_code;
+      }
     }
 
     // exc_code 2
-    if (exc_code == 2 && exc_sub_code == 0)
-      stopped_by_hitting_breakpoint = true;
-    if (exc_code == 2 && exc_sub_code != 0) {
-      stopped_by_hitting_breakpoint = true;
-      // Intel KDP software breakpoint
-      if (!pc_already_adjusted)
-        pc_decrement = 1;
+    if (exc_code == 2) {
+      if (exc_sub_code == 0)
+        stopped_by_hitting_breakpoint = true;
+      else {
+        stopped_by_hitting_breakpoint = true;
+        // Intel KDP software breakpoint
+        if (!pc_already_adjusted)
+          pc_decrement = 1;
+      }
     }
 
     // exc_code 3
@@ -689,22 +705,20 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
         stopped_by_completing_stepi = true;
       }
       stopped_watchpoint = true;
-      value = exc_sub_code;
+      address = exc_sub_code;
     }
 
-    // Go through the reasons why we stopped, starting
-    // with the easiest to detect unambiguously.  We
-    // may have multiple possible reasons set.
+    // The Mach Exception may have been ambiguous --
+    // e.g. we stopped either because of a breakpoint
+    // or a watchpoint.  We'll disambiguate which it
+    // really was.
 
     if (stopped_by_hitting_breakpoint) {
-      addr_t pc = LLDB_INVALID_ADDRESS;
-      if (reg_ctx_sp)
-        pc = reg_ctx_sp->GetPC() - pc_decrement;
-      else if (value)
-        pc = *value;
+      addr_t pc = reg_ctx_sp->GetPC() - pc_decrement;
 
-      if (value)
-        bp_site_sp = process_sp->GetBreakpointSiteList().FindByAddress(*value);
+      if (address)
+        bp_site_sp =
+            process_sp->GetBreakpointSiteList().FindByAddress(*address);
       if (!bp_site_sp && reg_ctx_sp) {
         bp_site_sp = process_sp->GetBreakpointSiteList().FindByAddress(pc);
       }
@@ -732,15 +746,20 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
       }
     }
 
-    if (stopped_watchpoint && value) {
+    // Breakpoint-hit events are handled.
+    // Now handle watchpoints.
+
+    if (stopped_watchpoint && address) {
       WatchpointResourceSP wp_rsrc_sp =
           target->GetProcessSP()->GetWatchpointResourceList().FindByAddress(
-              *value);
+              *address);
       if (wp_rsrc_sp && wp_rsrc_sp->GetNumberOfConstituents() > 0) {
         return StopInfo::CreateStopReasonWithWatchpointID(
             thread, wp_rsrc_sp->GetConstituentAtIndex(0)->GetID());
       }
     }
+
+    // Finally, handle instruction step.
 
     if (stopped_by_completing_stepi) {
       if (thread.GetTemporaryResumeState() != eStateStepping)
