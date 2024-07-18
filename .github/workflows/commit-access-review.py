@@ -1,3 +1,14 @@
+#!/usr/bin/env python3
+# ===-- commit-access-review.py  --------------------------------------------===#
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+# ===------------------------------------------------------------------------===#
+#
+# ===------------------------------------------------------------------------===#
+
 import datetime
 import github
 import re
@@ -129,9 +140,6 @@ def check_manual_requests(start_date, token) -> bool:
     users = []
     for issue in data["search"]["nodes"]:
         users.extend([user[1:] for user in re.findall("@[^ ,\n]+", issue["body"])])
-        # Do we need to check comments if we are checking mentions??
-        # for comment in issue['comments']['nodes']:
-        #    users.append(comment['author']['login'])
 
     return users
 
@@ -388,7 +396,6 @@ def main():
 
     print("Start:", len(triage_list), "triagers")
     # Step 0 Check if users have requested commit access in the last year.
-
     for user in check_manual_requests(one_year_ago, token):
         if user in triage_list:
             print(user, "requested commit access in the last year.")
@@ -431,12 +438,10 @@ def main():
 
     print("Complete:", len(triage_list), "triagers")
 
-    filename = "triagers.log"
-    f = open(filename, "w")
-    for user in triage_list:
-        print(triage_list[user].__repr__())
-        f.write(user + "\n")
-    f.close()
+    with open("triagers.log", "w") as triagers_log:
+        for user in triage_list:
+            print(triage_list[user].__repr__())
+            triagers_log.write(user + "\n")
 
 
 if __name__ == "__main__":
