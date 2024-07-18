@@ -442,7 +442,7 @@ struct CandidateComparer {
     // In inline replay mode, CalleeSamples may be null and the order doesn't
     // matter.
     if (!LCS || !RCS)
-      return false;
+      return LCS;
 
     // Tie breaker using number of samples try to favor smaller functions first
     if (LCS->getBodySamples().size() != RCS->getBodySamples().size())
