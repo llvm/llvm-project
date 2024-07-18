@@ -1483,8 +1483,7 @@ def FeatureISAVersion10_Common : FeatureSet<
   [FeatureGFX10,
    FeatureLDSBankCount32,
    FeatureDLInsts,
-   FeatureNSAEncoding,
-   FeatureBackOffBarrier]>;
+   FeatureNSAEncoding]>;
 
 def FeatureISAVersion10_1_Common : FeatureSet<
   !listconcat(FeatureISAVersion10_Common.Features,
