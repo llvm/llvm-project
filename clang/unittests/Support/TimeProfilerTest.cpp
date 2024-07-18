@@ -112,8 +112,8 @@ std::string buildTraceGraph(StringRef Json) {
     std::string Name = TraceEventObj->getString("name").value_or("").str();
     std::string Metadata = GetMetadata(TraceEventObj);
 
-    // Skip source events as they are asynchronous events and may not perfectly
-    // nest the synchronous events.
+    // Source events are asynchronous events and may not perfectly nest the
+    // synchronous events. Skip testing them.
     if (Name == "Source")
       continue;
 
