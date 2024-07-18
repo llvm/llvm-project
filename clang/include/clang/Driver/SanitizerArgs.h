@@ -79,6 +79,7 @@ public:
   bool needsStableAbi() const { return StableABI; }
 
   bool needsMemProfRt() const { return NeedsMemProfRt; }
+  bool needsRtsanRt() const { return Sanitizers.has(SanitizerKind::Realtime); }
   bool needsAsanRt() const { return Sanitizers.has(SanitizerKind::Address); }
   bool needsHwasanRt() const {
     return Sanitizers.has(SanitizerKind::HWAddress);

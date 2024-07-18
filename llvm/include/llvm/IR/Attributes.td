@@ -239,6 +239,9 @@ def ReadNone : EnumAttr<"readnone", [ParamAttr]>;
 /// Function only reads from memory.
 def ReadOnly : EnumAttr<"readonly", [ParamAttr]>;
 
+/// Function is marked to be non-blocking
+def NonBlocking : EnumAttr<"nonblocking", [FnAttr]>;
+
 /// Return value is always equal to this argument.
 def Returned : EnumAttr<"returned", [ParamAttr]>;
 
