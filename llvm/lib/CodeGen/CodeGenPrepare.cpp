@@ -2000,7 +2000,7 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
     AddOrSub = std::nullopt;
     AddOrSubOffset = nullptr;
   } else {
-    // Search through a NUW add/sub.
+    // Search through a NUW add/sub on top of the loop increment.
     Value *V0, *V1;
     if (match(Incr, m_NUWAddLike(m_Value(V0), m_Value(V1))))
       AddOrSub = true;
@@ -2045,6 +2045,7 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
   if (!match(LoopIncrInfo->first, m_NUWAdd(m_Value(), m_Value())))
     return false;
 
+  // Need unique loop preheader and latch.
   if (PN->getBasicBlockIndex(L->getLoopLatch()) < 0 ||
       PN->getBasicBlockIndex(L->getLoopPreheader()) < 0)
     return false;
@@ -2080,12 +2081,16 @@ static bool foldURemOfLoopIncrement(Instruction *Rem, const LoopInfo *LI,
                                              AddOrSubOffset, LoopIncrPN))
     return false;
 
-  // Only non-constant remainder as the extra IV is is probably not profitable
+  // Only non-constant remainder as the extra IV is probably not profitable
   // in that case. Further, since remainder amount is non-constant, only handle
   // case where `IncrLoopInvariant` and `Start` are 0 to entirely eliminate the
   // rem (as opposed to just hoisting it outside of the loop).
   //
-  // Potential TODO: Should we have a check for how "nested" this remainder
+  // Potential TODO(1): `urem` of a const ends up as `mul` + `shift` + `add`. If
+  // we can rule out register pressure and ensure this `urem` is executed each
+  // iteration, its probably profitable to handle the const case as well.
+  //
+  // Potential TODO(2): Should we have a check for how "nested" this remainder
   // operation is? The new code runs every iteration so if the remainder is
   // guarded behind unlikely conditions this might not be worth it.
   if (AddOrSub.has_value() || match(RemAmt, m_ImmConstant()))
