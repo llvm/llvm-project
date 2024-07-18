@@ -2784,11 +2784,8 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     //    This all implies the 2 i16 elements are non-zero.
     Type *FromTy = I->getOperand(0)->getType();
     if ((FromTy->isIntOrIntVectorTy() || FromTy->isPtrOrPtrVectorTy()) &&
-        (BitWidth % getBitWidth(FromTy->getScalarType(), Q.DL)) == 0) {
-      if (match(I, m_ElementWiseBitCast(m_Value())))
-        return isKnownNonZero(I->getOperand(0), DemandedElts, Q, Depth);
+        (BitWidth % getBitWidth(FromTy->getScalarType(), Q.DL)) == 0)
       return isKnownNonZero(I->getOperand(0), Q, Depth);
-    }
   } break;
   case Instruction::IntToPtr:
     // Note that we have to take special care to avoid looking through
