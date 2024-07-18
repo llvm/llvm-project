@@ -1,5 +1,5 @@
 if(LIBC_TESTS_CAN_USE_MPFR)
-  add_library(libcMPFRWrapper
+  add_library(libcMPFRWrapper STATIC
     MPFRUtils.cpp
     MPFRUtils.h
     mpfr_inc.h
