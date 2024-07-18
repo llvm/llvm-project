@@ -100,7 +100,7 @@ struct PseudoProbeInfo {
   uint8_t Type;
 
   bool operator==(const PseudoProbeInfo &Other) const {
-    return Index == Other.Index;
+    return GUID == Other.GUID && Index == Other.Index;
   }
   bool operator!=(const PseudoProbeInfo &Other) const {
     return !(*this == Other);
