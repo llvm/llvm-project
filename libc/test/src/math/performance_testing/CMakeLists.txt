@@ -414,7 +414,6 @@ add_perf_binary(
     libc.src.math.copysignf16
     libc.src.math.fabsf
     libc.src.math.fabsf16
-    libc.src.math.frexpf16
   COMPILE_OPTIONS
     -fno-builtin
 )
