@@ -51,7 +51,7 @@ define i1 @reduction_logical_mul(<2 x i1> %x) {
 
 define i1 @reduction_logical_mul_nxv2i1(<vscale x 2 x i1> %x) {
 ; CHECK-LABEL: @reduction_logical_mul_nxv2i1(
-; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.mul.nxv2i1(<vscale x 2 x i1> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.and.nxv2i1(<vscale x 2 x i1> [[X:%.*]])
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %r = call i1 @llvm.vector.reduce.mul.nxv2i1(<vscale x 2 x i1> %x)
@@ -71,7 +71,7 @@ define i1 @reduction_logical_xor(<2 x i1> %x) {
 
 define i1 @reduction_logical_xor_nxv2i1(<vscale x 2 x i1> %x) {
 ; CHECK-LABEL: @reduction_logical_xor_nxv2i1(
-; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.xor.nxv2i1(<vscale x 2 x i1> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.add.nxv2i1(<vscale x 2 x i1> [[X:%.*]])
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %r = call i1 @llvm.vector.reduce.xor.nxv2i1(<vscale x 2 x i1> %x)
@@ -90,7 +90,7 @@ define i1 @reduction_logical_smin(<2 x i1> %x) {
 
 define i1 @reduction_logical_smin_nxv2i1(<vscale x 2 x i1> %x) {
 ; CHECK-LABEL: @reduction_logical_smin_nxv2i1(
-; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.smin.nxv2i1(<vscale x 2 x i1> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.or.nxv2i1(<vscale x 2 x i1> [[X:%.*]])
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %r = call i1 @llvm.vector.reduce.smin.nxv2i1(<vscale x 2 x i1> %x)
@@ -109,7 +109,7 @@ define i1 @reduction_logical_smax(<2 x i1> %x) {
 
 define i1 @reduction_logical_smax_nxv2i1(<vscale x 2 x i1> %x) {
 ; CHECK-LABEL: @reduction_logical_smax_nxv2i1(
-; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.smax.nxv2i1(<vscale x 2 x i1> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.and.nxv2i1(<vscale x 2 x i1> [[X:%.*]])
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %r = call i1 @llvm.vector.reduce.smax.nxv2i1(<vscale x 2 x i1> %x)
@@ -128,7 +128,7 @@ define i1 @reduction_logical_umin(<2 x i1> %x) {
 
 define i1 @reduction_logical_umin_nxv2i1(<vscale x 2 x i1> %x) {
 ; CHECK-LABEL: @reduction_logical_umin_nxv2i1(
-; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.umin.nxv2i1(<vscale x 2 x i1> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.and.nxv2i1(<vscale x 2 x i1> [[X:%.*]])
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %r = call i1 @llvm.vector.reduce.umin.nxv2i1(<vscale x 2 x i1> %x)
@@ -147,7 +147,7 @@ define i1 @reduction_logical_umax(<2 x i1> %x) {
 
 define i1 @reduction_logical_umax_nxv2i1(<vscale x 2 x i1> %x) {
 ; CHECK-LABEL: @reduction_logical_umax_nxv2i1(
-; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.umax.nxv2i1(<vscale x 2 x i1> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call i1 @llvm.vector.reduce.or.nxv2i1(<vscale x 2 x i1> [[X:%.*]])
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %r = call i1 @llvm.vector.reduce.umax.nxv2i1(<vscale x 2 x i1> %x)
@@ -199,7 +199,7 @@ define i1 @reduction_logical_and_reverse_v2i1(<2 x i1> %p) {
 
 define i1 @reduction_logical_xor_reverse_nxv2i1(<vscale x 2 x i1> %p) {
 ; CHECK-LABEL: @reduction_logical_xor_reverse_nxv2i1(
-; CHECK-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.xor.nxv2i1(<vscale x 2 x i1> [[P:%.*]])
+; CHECK-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.add.nxv2i1(<vscale x 2 x i1> [[P:%.*]])
 ; CHECK-NEXT:    ret i1 [[RED]]
 ;
   %rev = call <vscale x 2 x i1> @llvm.vector.reverse.nxv2i1(<vscale x 2 x i1> %p)

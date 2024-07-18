@@ -56163,19 +56163,18 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     };
     auto IsConcatFree = [](MVT VT, ArrayRef<SDValue> SubOps, unsigned Op) {
       bool AllConstants = true;
-      bool AllSubs = true;
-      unsigned VecSize = VT.getSizeInBits();
+      bool AllSubVectors = true;
       for (unsigned I = 0, E = SubOps.size(); I != E; ++I) {
-        SDValue BC = peekThroughBitcasts(SubOps[I].getOperand(Op));
-        unsigned SubSize = BC.getValueSizeInBits();
-        unsigned EltSize = BC.getScalarValueSizeInBits();
+        SDValue Sub = SubOps[I].getOperand(Op);
+        unsigned NumSubElts = Sub.getValueType().getVectorNumElements();
+        SDValue BC = peekThroughBitcasts(Sub);
         AllConstants &= ISD::isBuildVectorOfConstantSDNodes(BC.getNode()) ||
                         ISD::isBuildVectorOfConstantFPSDNodes(BC.getNode());
-        AllSubs &= BC.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-                   BC.getOperand(0).getValueSizeInBits() == VecSize &&
-                   (BC.getConstantOperandVal(1) * EltSize) == (I * SubSize);
+        AllSubVectors &= Sub.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+                         Sub.getOperand(0).getValueType() == VT &&
+                         Sub.getConstantOperandAPInt(1) == (I * NumSubElts);
       }
-      return AllConstants || AllSubs;
+      return AllConstants || AllSubVectors;
     };
 
     switch (Op0.getOpcode()) {
