@@ -697,8 +697,8 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     return 2;
 
   case Matcher::CheckValueType:
-    OS << "OPC_CheckValueType, MVT::"
-       << cast<CheckValueTypeMatcher>(N)->getTypeName() << ",\n";
+    OS << "OPC_CheckValueType, "
+       << getEnumName(cast<CheckValueTypeMatcher>(N)->getVT()) << ",\n";
     return 2;
 
   case Matcher::CheckComplexPat: {
