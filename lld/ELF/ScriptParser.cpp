@@ -1692,11 +1692,11 @@ ScriptParser::readSymbols() {
   while (!errorCount()) {
     if (consume("}"))
       break;
-    if (consumeLabel("local")) {
+    if (consume("local:") || (consume("local") && consume(":"))) {
       v = &locals;
       continue;
     }
-    if (consumeLabel("global")) {
+    if (consume("global:") || (consume("global") && consume(":"))) {
       v = &globals;
       continue;
     }
