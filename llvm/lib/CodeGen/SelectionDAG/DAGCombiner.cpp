@@ -2645,8 +2645,7 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
     return DAG.getNode(ISD::ADD, DL, VT, N1, N0);
 
   if (areBitwiseNotOfEachother(N0, N1))
-    return DAG.getConstant(APInt::getAllOnes(VT.getScalarSizeInBits()),
-                           SDLoc(N), VT);
+    return DAG.getConstant(APInt::getAllOnes(VT.getScalarSizeInBits()), DL, VT);
 
   // fold vector ops
   if (VT.isVector()) {
