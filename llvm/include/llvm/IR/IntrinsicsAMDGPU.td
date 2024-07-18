@@ -3121,7 +3121,8 @@ class AMDGPUDiscard : DefaultAttrsIntrinsic<
   [],
   [llvm_anyptr_ty, // vaddr,
    llvm_i32_ty],   // cachepolicy
-  [IntrWriteMem, ImmArg<ArgIndex<1>>]
+  [IntrWriteMem, ImmArg<ArgIndex<1>>],
+  "", [SDNPMemOperand]
 >;
 
 foreach size = ["b32", "b128", "b1024"] in
