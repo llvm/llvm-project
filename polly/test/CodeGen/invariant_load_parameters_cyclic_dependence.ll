@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s | FileCheck %s --check-prefix=SCOP
-; RUN: opt %loadPolly -polly-codegen -polly-invariant-load-hoisting=true -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s --check-prefix=SCOP
+; RUN: opt %loadNPMPolly -passes=polly-codegen -polly-invariant-load-hoisting=true -S < %s | FileCheck %s
 ;
 ; SCOP:         Assumed Context:
 ; SCOP-NEXT:    [p_0, tmp4] -> {  :  }

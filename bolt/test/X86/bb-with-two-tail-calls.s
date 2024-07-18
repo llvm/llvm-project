@@ -1,5 +1,5 @@
-# This reproduces a bug with dynostats when trying to compute branch stats
-# at a block with two tails calls (one conditional and one unconditional).
+## This reproduces a bug with dynostats when trying to compute branch stats
+## at a block with two tails calls (one conditional and one unconditional).
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown \
 # RUN:   %s -o %t.o
@@ -17,7 +17,7 @@
 # CHECK:         {{.*}}:   ja      {{.*}} # TAILCALL # Offset: 7 # CTCTakenCount: 4
 # CHECK-NEXT:    {{.*}}:   jmp     {{.*}} # TAILCALL # Offset: 13
 
-# Confirm that a deleted basic block is emitted at function end offset (0xe)
+## Confirm that a deleted basic block is emitted at function end offset (0xe)
 # CHECK-BAT: [[#%x,ADDR:]] g .text  [[#%x,SIZE:]] _start
 # CHECK-BAT: Function Address: 0x[[#%x,ADDR]]
 # CHECK-BAT: 0x[[#%x,SIZE]]

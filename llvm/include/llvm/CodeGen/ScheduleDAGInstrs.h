@@ -18,7 +18,6 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseMultiSet.h"
-#include "llvm/ADT/SparseSet.h"
 #include "llvm/ADT/identity.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -90,12 +89,6 @@ namespace llvm {
   /// without any frees.
   using RegUnit2SUnitsMap =
       SparseMultiSet<PhysRegSUOper, identity<unsigned>, uint16_t>;
-
-  /// Use SparseSet as a SparseMap by relying on the fact that it never
-  /// compares ValueT's, only unsigned keys. This allows the set to be cleared
-  /// between scheduling regions in constant time as long as ValueT does not
-  /// require a destructor.
-  using VReg2SUnitMap = SparseSet<VReg2SUnit, VirtReg2IndexFunctor>;
 
   /// Track local uses of virtual registers. These uses are gathered by the DAG
   /// builder and may be consulted by the scheduler to avoid iterating an entire

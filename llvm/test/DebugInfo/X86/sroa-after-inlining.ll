@@ -34,7 +34,7 @@
 
 ; CHECK: _Z3barv
 ; CHECK: %[[RESULT:.*]] = call i32 @_Z3foov
-; CHECK: llvm.dbg.value(metadata i32 %[[RESULT]], metadata [[METADATA_IDX1:![0-9]+]]
+; CHECK: #dbg_value(i32 %[[RESULT]], [[METADATA_IDX1:![0-9]+]]
 ; CHECK: ret
 ; CHECK: DICompileUnit
 ; CHECK: [[METADATA_IDX1]] = !DILocalVariable(name: "result"

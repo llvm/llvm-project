@@ -238,7 +238,7 @@ bool InitUndef::processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB,
     }
 
     if (isEarlyClobberMI(MI)) {
-      if (ST->enableSubRegLiveness())
+      if (MRI->subRegLivenessEnabled())
         Changed |= handleSubReg(MF, MI, DLD);
       Changed |= handleReg(&MI);
     }

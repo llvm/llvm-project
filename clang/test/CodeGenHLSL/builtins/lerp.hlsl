@@ -86,27 +86,3 @@ float3 test_lerp_float3_splat(float p0, float3 p1) { return lerp(p0, p1, p1); }
 // SPIR_CHECK: %hlsl.lerp = call <4 x float> @llvm.spv.lerp.v4f32(<4 x float> %splat.splat, <4 x float> %[[b]], <4 x float> %[[c]])
 // CHECK:  ret <4 x float> %hlsl.lerp
 float4 test_lerp_float4_splat(float p0, float4 p1) { return lerp(p0, p1, p1); }
-
-// CHECK: %[[a:.*]] = load <2 x float>, ptr %p0.addr, align 8
-// CHECK: %[[b:.*]] = load <2 x float>, ptr %p0.addr, align 8
-// CHECK: %conv = sitofp i32 {{.*}} to float
-// CHECK: %splat.splatinsert = insertelement <2 x float> poison, float %conv, i64 0
-// CHECK: %splat.splat = shufflevector <2 x float> %splat.splatinsert, <2 x float> poison, <2 x i32> zeroinitializer
-// DXIL_CHECK: %hlsl.lerp = call <2 x float> @llvm.dx.lerp.v2f32(<2 x float> %[[a]], <2 x float> %[[b]], <2 x float> %splat.splat)
-// SPIR_CHECK: %hlsl.lerp = call <2 x float> @llvm.spv.lerp.v2f32(<2 x float> %[[a]], <2 x float> %[[b]], <2 x float> %splat.splat)
-// CHECK: ret <2 x float> %hlsl.lerp
-float2 test_lerp_float2_int_splat(float2 p0, int p1) {
-  return lerp(p0, p0, p1);
-}
-
-// CHECK: %[[a:.*]] = load <3 x float>, ptr %p0.addr, align 16
-// CHECK: %[[b:.*]] = load <3 x float>, ptr %p0.addr, align 16
-// CHECK: %conv = sitofp i32 {{.*}} to float
-// CHECK: %splat.splatinsert = insertelement <3 x float> poison, float %conv, i64 0
-// CHECK: %splat.splat = shufflevector <3 x float> %splat.splatinsert, <3 x float> poison, <3 x i32> zeroinitializer
-// DXIL_CHECK:  %hlsl.lerp = call <3 x float> @llvm.dx.lerp.v3f32(<3 x float> %[[a]], <3 x float> %[[b]], <3 x float> %splat.splat)
-// SPIR_CHECK:  %hlsl.lerp = call <3 x float> @llvm.spv.lerp.v3f32(<3 x float> %[[a]], <3 x float> %[[b]], <3 x float> %splat.splat)
-// CHECK: ret <3 x float> %hlsl.lerp
-float3 test_lerp_float3_int_splat(float3 p0, int p1) {
-  return lerp(p0, p0, p1);
-}

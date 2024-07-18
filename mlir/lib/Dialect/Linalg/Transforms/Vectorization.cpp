@@ -195,6 +195,10 @@ struct VectorizationState {
   /// Returns the canonical vector shape used to vectorize the iteration space.
   ArrayRef<int64_t> getCanonicalVecShape() const { return canonicalVecShape; }
 
+  /// Returns the vector dimensions that are scalable in the canonical vector
+  /// shape.
+  ArrayRef<bool> getScalableVecDims() const { return scalableVecDims; }
+
   /// Returns a vector type of the provided `elementType` with the canonical
   /// vector shape and the corresponding fixed/scalable dimensions bit. If
   /// `dimPermutation` is provided, the canonical vector dimensions are permuted
@@ -694,23 +698,24 @@ static VectorizationResult vectorizeLinalgIndex(RewriterBase &rewriter,
     return VectorizationResult{VectorizationStatus::Failure, nullptr};
   auto loc = indexOp.getLoc();
   // Compute the static loop sizes of the index op.
-  auto targetShape = state.getCanonicalVecShape();
+  ArrayRef<int64_t> targetShape = state.getCanonicalVecShape();
+  auto dim = indexOp.getDim();
   // Compute a one-dimensional index vector for the index op dimension.
-  auto constantSeq =
-      llvm::to_vector(llvm::seq<int64_t>(0, targetShape[indexOp.getDim()]));
-  auto indexSteps = rewriter.create<arith::ConstantOp>(
-      loc, rewriter.getIndexVectorAttr(constantSeq));
+  auto indexVectorType =
+      VectorType::get({targetShape[dim]}, rewriter.getIndexType(),
+                      state.getScalableVecDims()[dim]);
+  auto indexSteps = rewriter.create<vector::StepOp>(loc, indexVectorType);
   // Return the one-dimensional index vector if it lives in the trailing
   // dimension of the iteration space since the vectorization algorithm in this
   // case can handle the broadcast.
-  if (indexOp.getDim() == targetShape.size() - 1)
+  if (dim == targetShape.size() - 1)
     return VectorizationResult{VectorizationStatus::NewOp, indexSteps};
   // Otherwise permute the targetShape to move the index dimension last,
   // broadcast the one-dimensional index vector to the permuted shape, and
   // finally transpose the broadcasted index vector to undo the permutation.
   auto permPattern =
       llvm::to_vector(llvm::seq<unsigned>(0, targetShape.size()));
-  std::swap(permPattern[indexOp.getDim()], permPattern.back());
+  std::swap(permPattern[dim], permPattern.back());
   auto permMap =
       AffineMap::getPermutationMap(permPattern, linalgOp.getContext());
 
@@ -719,7 +724,7 @@ static VectorizationResult vectorizeLinalgIndex(RewriterBase &rewriter,
       indexSteps);
   SmallVector<int64_t> transposition =
       llvm::to_vector<16>(llvm::seq<int64_t>(0, linalgOp.getNumLoops()));
-  std::swap(transposition.back(), transposition[indexOp.getDim()]);
+  std::swap(transposition.back(), transposition[dim]);
   auto transposeOp =
       rewriter.create<vector::TransposeOp>(loc, broadCastOp, transposition);
   return VectorizationResult{VectorizationStatus::NewOp, transposeOp};
@@ -1338,8 +1343,17 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
 
     SmallVector<Value> indices(linalgOp.getShape(opOperand).size(), zero);
 
+    // Make sure that the in_bounds attribute corresponding to a broadcast dim
+    // is `true`
+    SmallVector<unsigned> broadcastedDims = readMap.getBroadcastDims();
+    SmallVector<bool> inBounds(readType.getRank(), false);
+
+    for (auto idx : broadcastedDims)
+      inBounds[idx] = true;
+
     Operation *read = rewriter.create<vector::TransferReadOp>(
-        loc, readType, opOperand->get(), indices, readMap);
+        loc, readType, opOperand->get(), indices, readMap,
+        ArrayRef<bool>(inBounds));
     read = state.maskOperation(rewriter, read, linalgOp, maskingMap);
     Value readValue = read->getResult(0);
 
@@ -2676,11 +2690,12 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
   // The `masked` attribute is only valid on this padded buffer.
   // When forwarding to vector.transfer_read, the attribute must be reset
   // conservatively.
+  auto vectorType = xferOp.getVectorType();
   Value res = rewriter.create<vector::TransferReadOp>(
-      xferOp.getLoc(), xferOp.getVectorType(), in, xferOp.getIndices(),
+      xferOp.getLoc(), vectorType, in, xferOp.getIndices(),
       xferOp.getPermutationMapAttr(), xferOp.getPadding(), xferOp.getMask(),
-      // in_bounds is explicitly reset
-      /*inBoundsAttr=*/ArrayAttr());
+      rewriter.getBoolArrayAttr(
+          SmallVector<bool>(vectorType.getRank(), false)));
 
   if (maybeFillOp)
     rewriter.eraseOp(maybeFillOp);
@@ -2734,11 +2749,12 @@ LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
   // The `masked` attribute is only valid on this padded buffer.
   // When forwarding to vector.transfer_write, the attribute must be reset
   // conservatively.
+  auto vector = xferOp.getVector();
   rewriter.create<vector::TransferWriteOp>(
-      xferOp.getLoc(), xferOp.getVector(), out, xferOp.getIndices(),
+      xferOp.getLoc(), vector, out, xferOp.getIndices(),
       xferOp.getPermutationMapAttr(), xferOp.getMask(),
-      // in_bounds is explicitly reset
-      /*inBoundsAttr=*/ArrayAttr());
+      rewriter.getBoolArrayAttr(
+          SmallVector<bool>(vector.getType().getRank(), false)));
 
   rewriter.eraseOp(copyOp);
   rewriter.eraseOp(xferOp);
@@ -3233,6 +3249,11 @@ struct Conv1DGenerator
         return opToMask;
       auto maskType =
           VectorType::get(maskShape, rewriter.getI1Type(), scalableDims);
+
+      SmallVector<bool> inBounds(maskShape.size(), true);
+      auto xferOp = cast<VectorTransferOpInterface>(opToMask);
+      xferOp->setAttr(xferOp.getInBoundsAttrName(),
+                      rewriter.getBoolArrayAttr(inBounds));
 
       SmallVector<OpFoldResult> mixedDims = vector::getMixedSizesXfer(
           cast<LinalgOp>(op).hasPureTensorSemantics(), opToMask, rewriter);

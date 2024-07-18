@@ -14,7 +14,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK-LABEL: void @foo()
 ; CHECK: bar:
-; INTRINSIC-NEXT: call void @llvm.dbg.label(metadata ![[LABEL:[0-9]+]]), !dbg ![[LOC:[0-9]+]]
+; INTRINSIC-NEXT: #dbg_label(![[LABEL:[0-9]+]],  ![[LOC:[0-9]+]]
 ; RECORD-NEXT: #dbg_label(![[LABEL:[0-9]+]], ![[LOC:[0-9]+]])
 
 ; CHECK-DAG: ![[LABEL]] = !DILabel({{.*}}name: "bar"

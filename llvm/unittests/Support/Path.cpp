@@ -626,8 +626,8 @@ TEST(SupportDeathTest, TempDirectoryOnWindows) {
   // different values of specific env vars. To prevent corrupting env vars of
   // the current process all checks are done in separated processes.
   EXPECT_TEMP_DIR(_wputenv_s(L"TMP", L"C:\\OtherFolder"), "C:\\OtherFolder");
-  EXPECT_TEMP_DIR(_wputenv_s(L"TMP", L"C:/Unix/Path/Seperators"),
-                  "C:\\Unix\\Path\\Seperators");
+  EXPECT_TEMP_DIR(_wputenv_s(L"TMP", L"C:/Unix/Path/Separators"),
+                  "C:\\Unix\\Path\\Separators");
   EXPECT_TEMP_DIR(_wputenv_s(L"TMP", L"Local Path"), ".+\\Local Path$");
   EXPECT_TEMP_DIR(_wputenv_s(L"TMP", L"F:\\TrailingSep\\"), "F:\\TrailingSep");
   EXPECT_TEMP_DIR(

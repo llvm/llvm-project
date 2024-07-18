@@ -76,7 +76,9 @@ class OMPMapInfoFinalizationPass
     // alloca.
     if (mlir::isa<fir::BaseBoxType>(descriptor.getType())) {
       mlir::OpBuilder::InsertPoint insPt = builder.saveInsertionPoint();
-      builder.setInsertionPointToStart(builder.getAllocaBlock());
+      mlir::Block *allocaBlock = builder.getAllocaBlock();
+      assert(allocaBlock && "No alloca block found for this top level op");
+      builder.setInsertionPointToStart(allocaBlock);
       auto alloca = builder.create<fir::AllocaOp>(loc, descriptor.getType());
       builder.restoreInsertionPoint(insPt);
       builder.create<fir::StoreOp>(loc, descriptor, alloca);
@@ -217,17 +219,23 @@ class OMPMapInfoFinalizationPass
     mapClauseOwner.getMapOperandsMutable().assign(newMapOps);
   }
 
-  // This pass executes on mlir::ModuleOp's finding omp::MapInfoOp's containing
-  // descriptor based types (allocatables, pointers, assumed shape etc.) and
-  // expanding them into multiple omp::MapInfoOp's for each pointer member
-  // contained within the descriptor.
+  // This pass executes on omp::MapInfoOp's containing descriptor based types
+  // (allocatables, pointers, assumed shape etc.) and expanding them into
+  // multiple omp::MapInfoOp's for each pointer member contained within the
+  // descriptor.
+  //
+  // From the perspective of the MLIR pass manager this runs on the top level
+  // operation (usually function) containing the MapInfoOp because this pass
+  // will mutate siblings of MapInfoOp.
   void runOnOperation() override {
-    mlir::func::FuncOp func = getOperation();
-    mlir::ModuleOp module = func->getParentOfType<mlir::ModuleOp>();
+    mlir::ModuleOp module =
+        mlir::dyn_cast_or_null<mlir::ModuleOp>(getOperation());
+    if (!module)
+      module = getOperation()->getParentOfType<mlir::ModuleOp>();
     fir::KindMapping kindMap = fir::getKindMapping(module);
     fir::FirOpBuilder builder{module, std::move(kindMap)};
 
-    func->walk([&](mlir::omp::MapInfoOp op) {
+    getOperation()->walk([&](mlir::omp::MapInfoOp op) {
       // TODO: Currently only supports a single user for the MapInfoOp, this
       // is fine for the moment as the Fortran Frontend will generate a
       // new MapInfoOp per Target operation for the moment. However, when/if
@@ -253,9 +261,3 @@ class OMPMapInfoFinalizationPass
 };
 
 } // namespace
-
-namespace fir {
-std::unique_ptr<mlir::Pass> createOMPMapInfoFinalizationPass() {
-  return std::make_unique<OMPMapInfoFinalizationPass>();
-}
-} // namespace fir

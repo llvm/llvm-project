@@ -659,6 +659,14 @@ private:
   std::unique_ptr<MemProfFrameHashTable> MemProfFrameTable;
   /// MemProf call stack data on-disk indexed via call stack id.
   std::unique_ptr<MemProfCallStackHashTable> MemProfCallStackTable;
+  /// The starting address of the frame array.
+  const unsigned char *FrameBase = nullptr;
+  /// The starting address of the call stack array.
+  const unsigned char *CallStackBase = nullptr;
+
+  Error deserializeV012(const unsigned char *Start, const unsigned char *Ptr,
+                        uint64_t FirstWord);
+  Error deserializeV3(const unsigned char *Start, const unsigned char *Ptr);
 
 public:
   IndexedMemProfReader() = default;
@@ -685,22 +693,15 @@ private:
   /// Context sensitive profile summary data.
   std::unique_ptr<ProfileSummary> CS_Summary;
   IndexedMemProfReader MemProfReader;
-  /// VTableNamePtr points to the beginning of compressed vtable names.
-  /// When a symtab is constructed from profiles by llvm-profdata, the list of
-  /// names could be decompressed based on `VTableNamePtr` and
-  /// `CompressedVTableNamesLen`.
+  /// The compressed vtable names, to be used for symtab construction.
   /// A compiler that reads indexed profiles could construct symtab from module
   /// IR so it doesn't need the decompressed names.
-  const char *VTableNamePtr = nullptr;
-  /// The length of compressed vtable names.
-  uint64_t CompressedVTableNamesLen = 0;
-  /// Total size of binary ids.
-  uint64_t BinaryIdsSize{0};
-  /// Start address of binary id length and data pairs.
-  const uint8_t *BinaryIdsStart = nullptr;
+  StringRef VTableName;
+  /// A memory buffer holding binary ids.
+  ArrayRef<uint8_t> BinaryIdsBuffer;
 
   // Index to the current record in the record array.
-  unsigned RecordIndex;
+  unsigned RecordIndex = 0;
 
   // Read the profile summary. Return a pointer pointing to one byte past the
   // end of the summary data if it exists or the input \c Cur.
@@ -713,7 +714,7 @@ public:
       std::unique_ptr<MemoryBuffer> DataBuffer,
       std::unique_ptr<MemoryBuffer> RemappingBuffer = nullptr)
       : DataBuffer(std::move(DataBuffer)),
-        RemappingBuffer(std::move(RemappingBuffer)), RecordIndex(0) {}
+        RemappingBuffer(std::move(RemappingBuffer)) {}
   IndexedInstrProfReader(const IndexedInstrProfReader &) = delete;
   IndexedInstrProfReader &operator=(const IndexedInstrProfReader &) = delete;
 

@@ -16,14 +16,13 @@ U u = baz(3);
 // CHECK-NEXT: [[ARR:%.*]] = alloca [4 x i32], align 16
 // CHECK-NEXT: store i32 [[A:%.*]], ptr [[I_ADDR]], align 4
 // CHECK-NEXT: store i32 [[B:%.*]], ptr [[J_ADDR]], align 4
-// CHECK-NEXT: [[ARRINIT_BEGIN:%.*]] = getelementptr inbounds [4 x i32], ptr [[ARR]], i64 0, i64 0
 // CHECK-NEXT: [[TMP_0:%.*]] = load i32, ptr [[I_ADDR]], align 4
-// CHECK-NEXT: store i32 [[TMP_0]], ptr [[ARRINIT_BEGIN]], align 4
-// CHECK-NEXT: [[ARRINIT_ELEM:%.*]] = getelementptr inbounds i32, ptr [[ARRINIT_BEGIN]], i64 1
+// CHECK-NEXT: store i32 [[TMP_0]], ptr [[ARR]], align 4
+// CHECK-NEXT: [[ARRINIT_ELEM:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 1
 // CHECK-NEXT: [[TMP_1:%.*]] = load i32, ptr [[J_ADDR]], align 4
 // CHECK-NEXT: store i32 [[TMP_1]], ptr [[ARRINIT_ELEM]], align 4
-// CHECK-NEXT: [[ARRINIT_START:%.*]] = getelementptr inbounds i32, ptr [[ARRINIT_ELEM]], i64 1
-// CHECK-NEXT: [[ARRINIT_END:%.*]] = getelementptr inbounds i32, ptr [[ARRINIT_BEGIN]], i64 4
+// CHECK-NEXT: [[ARRINIT_START:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 2
+// CHECK-NEXT: [[ARRINIT_END:%.*]] = getelementptr inbounds i32, ptr [[ARR]], i64 4
 // CHECK-NEXT: br label [[ARRINIT_BODY:%.*]]
 // CHECK: [[ARRINIT_CUR:%.*]] = phi ptr [ [[ARRINIT_START]], %entry ], [ [[ARRINIT_NEXT:%.*]], [[ARRINIT_BODY]] ]
 // CHECK-NEXT: store i32 0, ptr [[ARRINIT_CUR]], align 4

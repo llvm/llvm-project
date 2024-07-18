@@ -819,11 +819,16 @@ static Instruction *foldNoWrapAdd(BinaryOperator &Add,
   Value *X;
   const APInt *C1, *C2;
   if (match(Op1, m_APInt(C1)) &&
-      match(Op0, m_OneUse(m_ZExt(m_NUWAddLike(m_Value(X), m_APInt(C2))))) &&
+      match(Op0, m_ZExt(m_NUWAddLike(m_Value(X), m_APInt(C2)))) &&
       C1->isNegative() && C1->sge(-C2->sext(C1->getBitWidth()))) {
-    Constant *NewC =
-        ConstantInt::get(X->getType(), *C2 + C1->trunc(C2->getBitWidth()));
-    return new ZExtInst(Builder.CreateNUWAdd(X, NewC), Ty);
+    APInt NewC = *C2 + C1->trunc(C2->getBitWidth());
+    // If the smaller add will fold to zero, we don't need to check one use.
+    if (NewC.isZero())
+      return new ZExtInst(X, Ty);
+    // Otherwise only do this if the existing zero extend will be removed.
+    if (Op0->hasOneUse())
+      return new ZExtInst(
+          Builder.CreateNUWAdd(X, ConstantInt::get(X->getType(), NewC)), Ty);
   }
 
   // More general combining of constants in the wide type.
@@ -905,8 +910,14 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
 
   // (X | Op01C) + Op1C --> X + (Op01C + Op1C) iff the `or` is actually an `add`
   Constant *Op01C;
-  if (match(Op0, m_DisjointOr(m_Value(X), m_ImmConstant(Op01C))))
-    return BinaryOperator::CreateAdd(X, ConstantExpr::getAdd(Op01C, Op1C));
+  if (match(Op0, m_DisjointOr(m_Value(X), m_ImmConstant(Op01C)))) {
+    BinaryOperator *NewAdd =
+        BinaryOperator::CreateAdd(X, ConstantExpr::getAdd(Op01C, Op1C));
+    NewAdd->setHasNoSignedWrap(Add.hasNoSignedWrap() &&
+                               willNotOverflowSignedAdd(Op01C, Op1C, Add));
+    NewAdd->setHasNoUnsignedWrap(Add.hasNoUnsignedWrap());
+    return NewAdd;
+  }
 
   // (X | C2) + C --> (X | C2) ^ C2 iff (C2 == -C)
   const APInt *C2;
@@ -1692,6 +1703,24 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     Value *NotZero = Builder.CreateIsNotNull(A, "isnotnull");
     Value *Zext = Builder.CreateZExt(NotZero, Ty, "isnotnull.zext");
     return BinaryOperator::CreateOr(LHS, Zext);
+  }
+
+  {
+    Value *Cond, *Ext;
+    Constant *C;
+    // (add X, (sext/zext (icmp eq X, C)))
+    //    -> (select (icmp eq X, C), (add C, (sext/zext 1)), X)
+    auto CondMatcher = m_CombineAnd(
+        m_Value(Cond), m_ICmp(Pred, m_Deferred(A), m_ImmConstant(C)));
+
+    if (match(&I,
+              m_c_Add(m_Value(A),
+                      m_CombineAnd(m_Value(Ext), m_ZExtOrSExt(CondMatcher)))) &&
+        Pred == ICmpInst::ICMP_EQ && Ext->hasOneUse()) {
+      Value *Add = isa<ZExtInst>(Ext) ? InstCombiner::AddOne(C)
+                                      : InstCombiner::SubOne(C);
+      return replaceInstUsesWith(I, Builder.CreateSelect(Cond, Add, A));
+    }
   }
 
   if (Instruction *Ashr = foldAddToAshr(I))

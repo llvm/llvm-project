@@ -94,8 +94,11 @@ void EmulateFloatPattern::rewrite(Operation *op, ArrayRef<Value> operands,
   SmallVector<Value> newResults(expandedOp->getResults());
   for (auto [res, oldType, newType] : llvm::zip_equal(
            MutableArrayRef{newResults}, op->getResultTypes(), resultTypes)) {
-    if (oldType != newType)
-      res = rewriter.create<arith::TruncFOp>(loc, oldType, res);
+    if (oldType != newType) {
+      auto truncFOp = rewriter.create<arith::TruncFOp>(loc, oldType, res);
+      truncFOp.setFastmath(arith::FastMathFlags::contract);
+      res = truncFOp.getResult();
+    }
   }
   rewriter.replaceOp(op, newResults);
 }
@@ -114,7 +117,9 @@ void mlir::arith::populateEmulateUnsupportedFloatsConversions(
   });
   converter.addTargetMaterialization(
       [](OpBuilder &b, Type target, ValueRange input, Location loc) {
-        return b.create<arith::ExtFOp>(loc, target, input);
+        auto extFOp = b.create<arith::ExtFOp>(loc, target, input);
+        extFOp.setFastmath(arith::FastMathFlags::contract);
+        return extFOp;
       });
 }
 

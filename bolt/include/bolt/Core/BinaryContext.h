@@ -698,10 +698,6 @@ public:
 
   /// Binary-wide aggregated stats.
   struct BinaryStats {
-    /// Stats for macro-fusion.
-    uint64_t MissedMacroFusionPairs{0};
-    uint64_t MissedMacroFusionExecCount{0};
-
     /// Stats for stale profile matching:
     ///   the total number of basic blocks in the profile
     uint32_t NumStaleBlocks{0};
@@ -1224,8 +1220,7 @@ public:
 
   /// Return a signed value of \p Size stored at \p Address. The address has
   /// to be a valid statically allocated address for the binary.
-  ErrorOr<uint64_t> getSignedValueAtAddress(uint64_t Address,
-                                            size_t Size) const;
+  ErrorOr<int64_t> getSignedValueAtAddress(uint64_t Address, size_t Size) const;
 
   /// Special case of getUnsignedValueAtAddress() that uses a pointer size.
   ErrorOr<uint64_t> getPointerAtAddress(uint64_t Address) const {

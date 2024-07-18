@@ -535,7 +535,7 @@ void PruningFunctionCloner::CloneBlock(
       // this stage, thus instruction simplification is performed after
       // processing phi-nodes.
       if (Value *V = ConstantFoldInstruction(
-              NewInst, BB->getModule()->getDataLayout())) {
+              NewInst, BB->getDataLayout())) {
         if (isInstructionTriviallyDead(NewInst)) {
           VMap[&*II] = V;
           NewInst->eraseFromParent();
@@ -818,7 +818,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
 
   // As phi-nodes have been now remapped, allow incremental simplification of
   // newly-cloned instructions.
-  const DataLayout &DL = NewFunc->getParent()->getDataLayout();
+  const DataLayout &DL = NewFunc->getDataLayout();
   for (const auto &BB : *OldFunc) {
     for (const auto &I : BB) {
       auto *NewI = dyn_cast_or_null<Instruction>(VMap.lookup(&I));

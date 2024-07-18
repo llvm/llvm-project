@@ -1,5 +1,4 @@
 // REQUIRES: zstd
-// REQUIRES: x86-registered-target
 // UNSUPPORTED: target={{.*}}-darwin{{.*}}, target={{.*}}-aix{{.*}}, target={{.*}}-zos{{.*}}
 
 //

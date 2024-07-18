@@ -33,15 +33,16 @@ define <2 x i8> @expandload_v2i8(ptr %base, <2 x i8> %src0, <2 x i1> %mask) {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB1_3: # %cond.load
 ; CHECK-NEXT:    lbu a2, 0(a0)
-; CHECK-NEXT:    vsetivli zero, 2, e8, m1, tu, ma
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a2
 ; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    andi a1, a1, 2
 ; CHECK-NEXT:    beqz a1, .LBB1_2
 ; CHECK-NEXT:  .LBB1_4: # %cond.load1
 ; CHECK-NEXT:    lbu a0, 0(a0)
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-NEXT:    ret
   %res = call <2 x i8> @llvm.masked.expandload.v2i8(ptr %base, <2 x i1> %mask, <2 x i8> %src0)
@@ -69,15 +70,16 @@ define <4 x i8> @expandload_v4i8(ptr %base, <4 x i8> %src0, <4 x i1> %mask) {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB2_5: # %cond.load
 ; CHECK-NEXT:    lbu a2, 0(a0)
-; CHECK-NEXT:    vsetivli zero, 4, e8, m1, tu, ma
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a2
 ; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    andi a2, a1, 2
 ; CHECK-NEXT:    beqz a2, .LBB2_2
 ; CHECK-NEXT:  .LBB2_6: # %cond.load1
 ; CHECK-NEXT:    lbu a2, 0(a0)
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, tu, ma
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v9, a2
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    andi a2, a1, 4
@@ -133,15 +135,16 @@ define <8 x i8> @expandload_v8i8(ptr %base, <8 x i8> %src0, <8 x i1> %mask) {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB3_9: # %cond.load
 ; CHECK-NEXT:    lbu a2, 0(a0)
-; CHECK-NEXT:    vsetivli zero, 8, e8, m1, tu, ma
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a2
 ; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    andi a2, a1, 2
 ; CHECK-NEXT:    beqz a2, .LBB3_2
 ; CHECK-NEXT:  .LBB3_10: # %cond.load1
 ; CHECK-NEXT:    lbu a2, 0(a0)
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, ma
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v9, a2
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    andi a2, a1, 4
@@ -227,15 +230,16 @@ define <2 x i16> @expandload_v2i16(ptr %base, <2 x i16> %src0, <2 x i1> %mask) {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB5_3: # %cond.load
 ; CHECK-NEXT:    lh a2, 0(a0)
-; CHECK-NEXT:    vsetivli zero, 2, e16, m2, tu, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a2
 ; CHECK-NEXT:    addi a0, a0, 2
 ; CHECK-NEXT:    andi a1, a1, 2
 ; CHECK-NEXT:    beqz a1, .LBB5_2
 ; CHECK-NEXT:  .LBB5_4: # %cond.load1
 ; CHECK-NEXT:    lh a0, 0(a0)
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-NEXT:    ret
   %res = call <2 x i16> @llvm.masked.expandload.v2i16(ptr align 2 %base, <2 x i1> %mask, <2 x i16> %src0)
@@ -263,15 +267,16 @@ define <4 x i16> @expandload_v4i16(ptr %base, <4 x i16> %src0, <4 x i1> %mask) {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB6_5: # %cond.load
 ; CHECK-NEXT:    lh a2, 0(a0)
-; CHECK-NEXT:    vsetivli zero, 4, e16, m2, tu, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a2
 ; CHECK-NEXT:    addi a0, a0, 2
 ; CHECK-NEXT:    andi a2, a1, 2
 ; CHECK-NEXT:    beqz a2, .LBB6_2
 ; CHECK-NEXT:  .LBB6_6: # %cond.load1
 ; CHECK-NEXT:    lh a2, 0(a0)
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf2, tu, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v9, a2
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf2, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-NEXT:    addi a0, a0, 2
 ; CHECK-NEXT:    andi a2, a1, 4
@@ -327,15 +332,16 @@ define <8 x i16> @expandload_v8i16(ptr %base, <8 x i16> %src0, <8 x i1> %mask) {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB7_9: # %cond.load
 ; CHECK-NEXT:    lh a2, 0(a0)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m2, tu, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a2
 ; CHECK-NEXT:    addi a0, a0, 2
 ; CHECK-NEXT:    andi a2, a1, 2
 ; CHECK-NEXT:    beqz a2, .LBB7_2
 ; CHECK-NEXT:  .LBB7_10: # %cond.load1
 ; CHECK-NEXT:    lh a2, 0(a0)
-; CHECK-NEXT:    vsetivli zero, 2, e16, m1, tu, ma
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v9, a2
+; CHECK-NEXT:    vsetivli zero, 2, e16, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-NEXT:    addi a0, a0, 2
 ; CHECK-NEXT:    andi a2, a1, 4
@@ -421,15 +427,16 @@ define <2 x i32> @expandload_v2i32(ptr %base, <2 x i32> %src0, <2 x i1> %mask) {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB9_3: # %cond.load
 ; CHECK-NEXT:    lw a2, 0(a0)
-; CHECK-NEXT:    vsetivli zero, 2, e32, m4, tu, ma
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a2
 ; CHECK-NEXT:    addi a0, a0, 4
 ; CHECK-NEXT:    andi a1, a1, 2
 ; CHECK-NEXT:    beqz a1, .LBB9_2
 ; CHECK-NEXT:  .LBB9_4: # %cond.load1
 ; CHECK-NEXT:    lw a0, 0(a0)
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-NEXT:    ret
   %res = call <2 x i32> @llvm.masked.expandload.v2i32(ptr align 4 %base, <2 x i1> %mask, <2 x i32> %src0)
@@ -457,15 +464,16 @@ define <4 x i32> @expandload_v4i32(ptr %base, <4 x i32> %src0, <4 x i1> %mask) {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB10_5: # %cond.load
 ; CHECK-NEXT:    lw a2, 0(a0)
-; CHECK-NEXT:    vsetivli zero, 4, e32, m4, tu, ma
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a2
 ; CHECK-NEXT:    addi a0, a0, 4
 ; CHECK-NEXT:    andi a2, a1, 2
 ; CHECK-NEXT:    beqz a2, .LBB10_2
 ; CHECK-NEXT:  .LBB10_6: # %cond.load1
 ; CHECK-NEXT:    lw a2, 0(a0)
-; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv.s.x v9, a2
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-NEXT:    addi a0, a0, 4
 ; CHECK-NEXT:    andi a2, a1, 4
@@ -521,15 +529,16 @@ define <8 x i32> @expandload_v8i32(ptr %base, <8 x i32> %src0, <8 x i1> %mask) {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB11_9: # %cond.load
 ; CHECK-NEXT:    lw a2, 0(a0)
-; CHECK-NEXT:    vsetivli zero, 8, e32, m4, tu, ma
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a2
 ; CHECK-NEXT:    addi a0, a0, 4
 ; CHECK-NEXT:    andi a2, a1, 2
 ; CHECK-NEXT:    beqz a2, .LBB11_2
 ; CHECK-NEXT:  .LBB11_10: # %cond.load1
 ; CHECK-NEXT:    lw a2, 0(a0)
-; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv.s.x v10, a2
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vi v8, v10, 1
 ; CHECK-NEXT:    addi a0, a0, 4
 ; CHECK-NEXT:    andi a2, a1, 4
@@ -664,15 +673,16 @@ define <2 x i64> @expandload_v2i64(ptr %base, <2 x i64> %src0, <2 x i1> %mask) {
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB13_3: # %cond.load
 ; RV64-NEXT:    ld a2, 0(a0)
-; RV64-NEXT:    vsetivli zero, 2, e64, m8, tu, ma
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, tu, ma
 ; RV64-NEXT:    vmv.s.x v8, a2
 ; RV64-NEXT:    addi a0, a0, 8
 ; RV64-NEXT:    andi a1, a1, 2
 ; RV64-NEXT:    beqz a1, .LBB13_2
 ; RV64-NEXT:  .LBB13_4: # %cond.load1
 ; RV64-NEXT:    ld a0, 0(a0)
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vmv.s.x v9, a0
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vslideup.vi v8, v9, 1
 ; RV64-NEXT:    ret
   %res = call <2 x i64> @llvm.masked.expandload.v2i64(ptr align 8 %base, <2 x i1> %mask, <2 x i64> %src0)
@@ -758,15 +768,16 @@ define <4 x i64> @expandload_v4i64(ptr %base, <4 x i64> %src0, <4 x i1> %mask) {
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB14_5: # %cond.load
 ; RV64-NEXT:    ld a2, 0(a0)
-; RV64-NEXT:    vsetivli zero, 4, e64, m8, tu, ma
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, tu, ma
 ; RV64-NEXT:    vmv.s.x v8, a2
 ; RV64-NEXT:    addi a0, a0, 8
 ; RV64-NEXT:    andi a2, a1, 2
 ; RV64-NEXT:    beqz a2, .LBB14_2
 ; RV64-NEXT:  .LBB14_6: # %cond.load1
 ; RV64-NEXT:    ld a2, 0(a0)
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vmv.s.x v10, a2
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
 ; RV64-NEXT:    vslideup.vi v8, v10, 1
 ; RV64-NEXT:    addi a0, a0, 8
 ; RV64-NEXT:    andi a2, a1, 4
@@ -936,15 +947,16 @@ define <8 x i64> @expandload_v8i64(ptr %base, <8 x i64> %src0, <8 x i1> %mask) {
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB15_9: # %cond.load
 ; RV64-NEXT:    ld a2, 0(a0)
-; RV64-NEXT:    vsetivli zero, 8, e64, m8, tu, ma
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, tu, ma
 ; RV64-NEXT:    vmv.s.x v8, a2
 ; RV64-NEXT:    addi a0, a0, 8
 ; RV64-NEXT:    andi a2, a1, 2
 ; RV64-NEXT:    beqz a2, .LBB15_2
 ; RV64-NEXT:  .LBB15_10: # %cond.load1
 ; RV64-NEXT:    ld a2, 0(a0)
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
+; RV64-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vmv.s.x v12, a2
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
 ; RV64-NEXT:    vslideup.vi v8, v12, 1
 ; RV64-NEXT:    addi a0, a0, 8
 ; RV64-NEXT:    andi a2, a1, 4

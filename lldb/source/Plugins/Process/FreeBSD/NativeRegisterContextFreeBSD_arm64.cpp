@@ -16,6 +16,7 @@
 
 #include "Plugins/Process/FreeBSD/NativeProcessFreeBSD.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
+#include "Plugins/Process/Utility/RegisterFlagsDetector_arm64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 
 // clang-format off
@@ -28,14 +29,29 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_freebsd;
 
+// A NativeRegisterContext is constructed per thread, but all threads' registers
+// will contain the same fields. Therefore this mutex prevents each instance
+// competing with the other, and subsequent instances from having to detect the
+// fields all over again.
+static std::mutex g_register_flags_detector_mutex;
+static Arm64RegisterFlagsDetector g_register_flags_detector;
+
 NativeRegisterContextFreeBSD *
 NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread) {
+    const ArchSpec &target_arch, NativeThreadFreeBSD &native_thread) {
+  std::lock_guard<std::mutex> lock(g_register_flags_detector_mutex);
+  if (!g_register_flags_detector.HasDetected()) {
+    NativeProcessFreeBSD &process = native_thread.GetProcess();
+    g_register_flags_detector.DetectFields(
+        process.GetAuxValue(AuxVector::AUXV_FREEBSD_AT_HWCAP).value_or(0),
+        process.GetAuxValue(AuxVector::AUXV_AT_HWCAP2).value_or(0));
+  }
+
   return new NativeRegisterContextFreeBSD_arm64(target_arch, native_thread);
 }
 
 NativeRegisterContextFreeBSD_arm64::NativeRegisterContextFreeBSD_arm64(
-    const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
+    const ArchSpec &target_arch, NativeThreadFreeBSD &native_thread)
     : NativeRegisterContextRegisterInfo(
           native_thread, new RegisterInfoPOSIX_arm64(target_arch, 0))
 #ifdef LLDB_HAS_FREEBSD_WATCHPOINT
@@ -43,6 +59,10 @@ NativeRegisterContextFreeBSD_arm64::NativeRegisterContextFreeBSD_arm64(
       m_read_dbreg(false)
 #endif
 {
+  g_register_flags_detector.UpdateRegisterInfo(
+      GetRegisterInfoInterface().GetRegisterInfo(),
+      GetRegisterInfoInterface().GetRegisterCount());
+
   ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
   ::memset(&m_hbp_regs, 0, sizeof(m_hbp_regs));
 }

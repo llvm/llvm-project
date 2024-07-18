@@ -28,16 +28,6 @@ using namespace mlir;
 // AliasAnalysis: alias
 //===----------------------------------------------------------------------===//
 
-static bool isDummyArgument(mlir::Value v) {
-  auto blockArg{mlir::dyn_cast<mlir::BlockArgument>(v)};
-  if (!blockArg)
-    return false;
-
-  auto *owner{blockArg.getOwner()};
-  return owner->isEntryBlock() &&
-         mlir::isa<mlir::FunctionOpInterface>(owner->getParentOp());
-}
-
 /// Temporary function to skip through all the no op operations
 /// TODO: Generalize support of fir.load
 static mlir::Value getOriginalDef(mlir::Value v) {
@@ -85,7 +75,7 @@ bool AliasAnalysis::Source::isTargetOrPointer() const {
 
 bool AliasAnalysis::Source::isDummyArgument() const {
   if (auto v = origin.u.dyn_cast<mlir::Value>()) {
-    return ::isDummyArgument(v);
+    return fir::isDummyArgument(v);
   }
   return false;
 }
@@ -105,6 +95,9 @@ bool AliasAnalysis::Source::isRecordWithPointerComponent() const {
 }
 
 AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
+  // TODO: alias() has to be aware of the function scopes.
+  // After MLIR inlining, the current implementation may
+  // not recognize non-aliasing entities.
   auto lhsSrc = getSource(lhs);
   auto rhsSrc = getSource(rhs);
   bool approximateSource = lhsSrc.approximateSource || rhsSrc.approximateSource;
@@ -242,7 +235,8 @@ getAttrsFromVariable(fir::FortranVariableOpInterface var) {
   return attrs;
 }
 
-AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
+AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
+                                               bool getInstantiationPoint) {
   auto *defOp = v.getDefiningOp();
   SourceKind type{SourceKind::Unknown};
   mlir::Type ty;
@@ -254,6 +248,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
   bool followingData = !isBoxRef;
   mlir::SymbolRefAttr global;
   Source::Attributes attributes;
+  mlir::Value instantiationPoint;
   while (defOp && !breakFromLoop) {
     ty = defOp->getResultTypes()[0];
     llvm::TypeSwitch<Operation *>(defOp)
@@ -344,6 +339,21 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
             breakFromLoop = true;
             return;
           }
+          if (getInstantiationPoint) {
+            // Fetch only the innermost instantiation point.
+            if (!instantiationPoint)
+              instantiationPoint = op->getResult(0);
+
+            if (op.getDummyScope()) {
+              // Do not track past DeclareOp that has the dummy_scope
+              // operand. This DeclareOp is known to represent
+              // a dummy argument for some runtime instantiation
+              // of a procedure.
+              type = SourceKind::Argument;
+              breakFromLoop = true;
+              return;
+            }
+          }
           // TODO: Look for the fortran attributes present on the operation
           // Track further through the operand
           v = op.getMemref();
@@ -382,9 +392,17 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
     }
 
   if (type == SourceKind::Global) {
-    return {{global, followingData}, type, ty, attributes, approximateSource};
+    return {{global, instantiationPoint, followingData},
+            type,
+            ty,
+            attributes,
+            approximateSource};
   }
-  return {{v, followingData}, type, ty, attributes, approximateSource};
+  return {{v, instantiationPoint, followingData},
+          type,
+          ty,
+          attributes,
+          approximateSource};
 }
 
 } // namespace fir

@@ -269,40 +269,6 @@ void init_capture_init_list() {
   // CHECK: }
 }
 
-void check_dr1815() { // dr1815: yes
-#if __cplusplus >= 201402L
-
-  struct A {
-    int &&r = 0;
-    ~A() {}
-  };
-
-  struct B {
-    A &&a = A{};
-    ~B() {}
-  };
-  B a = {};
-  
-  // CHECK: call {{.*}}block_scope_begin_function
-  extern void block_scope_begin_function();
-  extern void block_scope_end_function();
-  block_scope_begin_function();
-  {
-    // CHECK: call void @_ZZ12check_dr1815vEN1BD1Ev
-    // CHECK: call void @_ZZ12check_dr1815vEN1AD1Ev
-    B b = {};
-  }
-  // CHECK: call {{.*}}block_scope_end_function
-  block_scope_end_function();
-
-  // CHECK: call {{.*}}some_other_function
-  extern void some_other_function();
-  some_other_function();
-  // CHECK: call void @_ZZ12check_dr1815vEN1BD1Ev
-  // CHECK: call void @_ZZ12check_dr1815vEN1AD1Ev
-#endif
-}
-
 namespace P2718R0 {
 namespace basic {
 template <typename E> using T2 = std::list<E>;

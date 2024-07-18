@@ -229,6 +229,7 @@ public:
   bool isLegalAddImmediate(int64_t Imm) const override;
   bool isZExtFree(SDValue Val, EVT VT2) const override;
   bool isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const override;
+  bool signExtendConstant(const ConstantInt *CI) const override;
 
   bool hasAndNotCompare(SDValue Y) const override;
 
@@ -266,7 +267,7 @@ private:
   SDValue getAddr(NodeTy *N, SelectionDAG &DAG, CodeModel::Model M,
                   bool IsLocal = true) const;
   SDValue getStaticTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
-                           unsigned Opc, bool Large = false) const;
+                           unsigned Opc, bool UseGOT, bool Large = false) const;
   SDValue getDynamicTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
                             unsigned Opc, bool Large = false) const;
   SDValue getTLSDescAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,

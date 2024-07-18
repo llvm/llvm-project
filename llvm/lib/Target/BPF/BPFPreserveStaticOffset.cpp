@@ -116,6 +116,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsBPF.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -374,7 +375,7 @@ static bool foldGEPChainAsU8Access(SmallVector<GetElementPtrInst *> &GEPs,
     return false;
 
   GetElementPtrInst *First = GEPs[0];
-  const DataLayout &DL = First->getModule()->getDataLayout();
+  const DataLayout &DL = First->getDataLayout();
   LLVMContext &C = First->getContext();
   Type *PtrTy = First->getType()->getScalarType();
   APInt Offset(DL.getIndexTypeSizeInBits(PtrTy), 0);

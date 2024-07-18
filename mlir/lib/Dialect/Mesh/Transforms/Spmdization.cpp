@@ -28,7 +28,6 @@
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -266,7 +265,7 @@ unsplitLastAxisInResharding(ImplicitLocOpBuilder &builder,
   builder.setInsertionPointAfterValue(sourceShard);
 
   MeshShardingAttr targetSharding =
-      targetShardingInUnsplitLastAxis(ctx, sourceSharding, splitMeshAxis);
+      targetShardingInUnsplitLastAxis(ctx, sourceSharding, splitTensorAxis);
   ShapedType allGatherResultShape = allGatherResultShapeInUnsplitLastAxis(
       sourceShard.getType(), mesh.getShape()[splitMeshAxis], splitTensorAxis);
   Value allGatherResult = builder.create<AllGatherOp>(

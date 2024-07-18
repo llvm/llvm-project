@@ -1,6 +1,6 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 
-module attributes {} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
   func.func @_QQmain() attributes {fir.bindc_name = "mn"} {
     %c7 = arith.constant 7 : index
     %c8 = arith.constant 8 : index

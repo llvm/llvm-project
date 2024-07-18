@@ -308,6 +308,7 @@ struct ScalarEnumerationTraits<FormatStyle::EscapedNewlineAlignmentStyle> {
                           FormatStyle::EscapedNewlineAlignmentStyle &Value) {
     IO.enumCase(Value, "DontAlign", FormatStyle::ENAS_DontAlign);
     IO.enumCase(Value, "Left", FormatStyle::ENAS_Left);
+    IO.enumCase(Value, "LeftWithLastLine", FormatStyle::ENAS_LeftWithLastLine);
     IO.enumCase(Value, "Right", FormatStyle::ENAS_Right);
 
     // For backward compatibility.
@@ -365,6 +366,14 @@ template <> struct ScalarEnumerationTraits<FormatStyle::JavaScriptQuoteStyle> {
     IO.enumCase(Value, "Leave", FormatStyle::JSQS_Leave);
     IO.enumCase(Value, "Single", FormatStyle::JSQS_Single);
     IO.enumCase(Value, "Double", FormatStyle::JSQS_Double);
+  }
+};
+
+template <> struct MappingTraits<FormatStyle::KeepEmptyLinesStyle> {
+  static void mapping(IO &IO, FormatStyle::KeepEmptyLinesStyle &Value) {
+    IO.mapOptional("AtEndOfFile", Value.AtEndOfFile);
+    IO.mapOptional("AtStartOfBlock", Value.AtStartOfBlock);
+    IO.mapOptional("AtStartOfFile", Value.AtStartOfFile);
   }
 };
 
@@ -720,6 +729,7 @@ template <> struct MappingTraits<FormatStyle::SpacesInLineComment> {
 
 template <> struct MappingTraits<FormatStyle::SpacesInParensCustom> {
   static void mapping(IO &IO, FormatStyle::SpacesInParensCustom &Spaces) {
+    IO.mapOptional("ExceptDoubleParentheses", Spaces.ExceptDoubleParentheses);
     IO.mapOptional("InCStyleCasts", Spaces.InCStyleCasts);
     IO.mapOptional("InConditionalStatements", Spaces.InConditionalStatements);
     IO.mapOptional("InEmptyParentheses", Spaces.InEmptyParentheses);
@@ -868,6 +878,9 @@ template <> struct MappingTraits<FormatStyle> {
                      OnCurrentLine);
       IO.mapOptional("DeriveLineEnding", DeriveLineEnding);
       IO.mapOptional("DerivePointerBinding", Style.DerivePointerAlignment);
+      IO.mapOptional("KeepEmptyLinesAtEOF", Style.KeepEmptyLines.AtEndOfFile);
+      IO.mapOptional("KeepEmptyLinesAtTheStartOfBlocks",
+                     Style.KeepEmptyLines.AtStartOfBlock);
       IO.mapOptional("IndentFunctionDeclarationAfterType",
                      Style.IndentWrappedFunctionNames);
       IO.mapOptional("IndentRequires", Style.IndentRequiresClause);
@@ -1003,9 +1016,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("JavaImportGroups", Style.JavaImportGroups);
     IO.mapOptional("JavaScriptQuotes", Style.JavaScriptQuotes);
     IO.mapOptional("JavaScriptWrapImports", Style.JavaScriptWrapImports);
-    IO.mapOptional("KeepEmptyLinesAtTheStartOfBlocks",
-                   Style.KeepEmptyLinesAtTheStartOfBlocks);
-    IO.mapOptional("KeepEmptyLinesAtEOF", Style.KeepEmptyLinesAtEOF);
+    IO.mapOptional("KeepEmptyLines", Style.KeepEmptyLines);
     IO.mapOptional("LambdaBodyIndentation", Style.LambdaBodyIndentation);
     IO.mapOptional("LineEnding", Style.LineEnding);
     IO.mapOptional("MacroBlockBegin", Style.MacroBlockBegin);
@@ -1174,8 +1185,8 @@ template <> struct MappingTraits<FormatStyle> {
         (SpacesInParentheses || SpaceInEmptyParentheses ||
          SpacesInConditionalStatement || SpacesInCStyleCastParentheses)) {
       if (SpacesInParentheses) {
-        // set all options except InCStyleCasts and InEmptyParentheses
-        // to true for backward compatibility.
+        // For backward compatibility.
+        Style.SpacesInParensOptions.ExceptDoubleParentheses = false;
         Style.SpacesInParensOptions.InConditionalStatements = true;
         Style.SpacesInParensOptions.InCStyleCasts =
             SpacesInCStyleCastParentheses;
@@ -1516,8 +1527,11 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
       /*Hex=*/0,     /*HexMinDigits=*/0};
   LLVMStyle.JavaScriptQuotes = FormatStyle::JSQS_Leave;
   LLVMStyle.JavaScriptWrapImports = true;
-  LLVMStyle.KeepEmptyLinesAtEOF = false;
-  LLVMStyle.KeepEmptyLinesAtTheStartOfBlocks = true;
+  LLVMStyle.KeepEmptyLines = {
+      /*AtEndOfFile=*/false,
+      /*AtStartOfBlock=*/true,
+      /*AtStartOfFile=*/true,
+  };
   LLVMStyle.LambdaBodyIndentation = FormatStyle::LBI_Signature;
   LLVMStyle.Language = Language;
   LLVMStyle.LineEnding = FormatStyle::LE_DeriveLF;
@@ -1640,7 +1654,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
                                                 {".*", 3, 0, false}};
   GoogleStyle.IncludeStyle.IncludeIsMainRegex = "([-_](test|unittest))?$";
   GoogleStyle.IndentCaseLabels = true;
-  GoogleStyle.KeepEmptyLinesAtTheStartOfBlocks = false;
+  GoogleStyle.KeepEmptyLines.AtStartOfBlock = false;
   GoogleStyle.ObjCBinPackProtocolList = FormatStyle::BPS_Never;
   GoogleStyle.ObjCSpaceAfterProperty = false;
   GoogleStyle.ObjCSpaceBeforeProtocolList = true;
@@ -3208,10 +3222,16 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
     if (Trimmed.contains(RawStringTermination))
       FormattingOff = false;
 
-    if (isClangFormatOff(Trimmed))
+    bool IsBlockComment = false;
+
+    if (isClangFormatOff(Trimmed)) {
       FormattingOff = true;
-    else if (isClangFormatOn(Trimmed))
+    } else if (isClangFormatOn(Trimmed)) {
       FormattingOff = false;
+    } else if (Trimmed.starts_with("/*")) {
+      IsBlockComment = true;
+      Pos = Code.find("*/", SearchFrom + 2);
+    }
 
     const bool EmptyLineSkipped =
         Trimmed.empty() &&
@@ -3221,9 +3241,10 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
 
     bool MergeWithNextLine = Trimmed.ends_with("\\");
     if (!FormattingOff && !MergeWithNextLine) {
-      if (tooling::HeaderIncludes::IncludeRegex.match(Line, &Matches)) {
+      if (!IsBlockComment &&
+          tooling::HeaderIncludes::IncludeRegex.match(Trimmed, &Matches)) {
         StringRef IncludeName = Matches[2];
-        if (Line.contains("/*") && !Line.contains("*/")) {
+        if (Trimmed.contains("/*") && !Trimmed.contains("*/")) {
           // #include with a start of a block comment, but without the end.
           // Need to keep all the lines until the end of the comment together.
           // FIXME: This is somehow simplified check that probably does not work
@@ -3945,20 +3966,24 @@ const char *DefaultFallbackStyle = "LLVM";
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 loadAndParseConfigFile(StringRef ConfigFile, llvm::vfs::FileSystem *FS,
-                       FormatStyle *Style, bool AllowUnknownOptions) {
+                       FormatStyle *Style, bool AllowUnknownOptions,
+                       llvm::SourceMgr::DiagHandlerTy DiagHandler) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
       FS->getBufferForFile(ConfigFile.str());
   if (auto EC = Text.getError())
     return EC;
-  if (auto EC = parseConfiguration(*Text.get(), Style, AllowUnknownOptions))
+  if (auto EC = parseConfiguration(*Text.get(), Style, AllowUnknownOptions,
+                                   DiagHandler)) {
     return EC;
+  }
   return Text;
 }
 
 Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
                                StringRef FallbackStyleName, StringRef Code,
                                llvm::vfs::FileSystem *FS,
-                               bool AllowUnknownOptions) {
+                               bool AllowUnknownOptions,
+                               llvm::SourceMgr::DiagHandlerTy DiagHandler) {
   FormatStyle Style = getLLVMStyle(guessLanguage(FileName, Code));
   FormatStyle FallbackStyle = getNoStyle();
   if (!getPredefinedStyle(FallbackStyleName, Style.Language, &FallbackStyle))
@@ -3971,7 +3996,7 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
     StringRef Source = "<command-line>";
     if (std::error_code ec =
             parseConfiguration(llvm::MemoryBufferRef(StyleName, Source), &Style,
-                               AllowUnknownOptions)) {
+                               AllowUnknownOptions, DiagHandler)) {
       return make_string_error("Error parsing -style: " + ec.message());
     }
 
@@ -3991,7 +4016,8 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
       StyleName.starts_with_insensitive("file:")) {
     auto ConfigFile = StyleName.substr(5);
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
-        loadAndParseConfigFile(ConfigFile, FS, &Style, AllowUnknownOptions);
+        loadAndParseConfigFile(ConfigFile, FS, &Style, AllowUnknownOptions,
+                               DiagHandler);
     if (auto EC = Text.getError()) {
       return make_string_error("Error reading " + ConfigFile + ": " +
                                EC.message());
@@ -4030,8 +4056,9 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
 
   auto applyChildFormatTexts = [&](FormatStyle *Style) {
     for (const auto &MemBuf : llvm::reverse(ChildFormatTextToApply)) {
-      auto EC = parseConfiguration(*MemBuf, Style, AllowUnknownOptions,
-                                   dropDiagnosticHandler);
+      auto EC =
+          parseConfiguration(*MemBuf, Style, AllowUnknownOptions,
+                             DiagHandler ? DiagHandler : dropDiagnosticHandler);
       // It was already correctly parsed.
       assert(!EC);
       static_cast<void>(EC);
@@ -4065,7 +4092,8 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
       }
 
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
-          loadAndParseConfigFile(ConfigFile, FS, &Style, AllowUnknownOptions);
+          loadAndParseConfigFile(ConfigFile, FS, &Style, AllowUnknownOptions,
+                                 DiagHandler);
       if (auto EC = Text.getError()) {
         if (EC != ParseError::Unsuitable) {
           return make_string_error("Error reading " + ConfigFile + ": " +

@@ -11,7 +11,7 @@
 #define SUPPORT_TEST_MACROS_HPP
 
 #ifdef __has_include
-#  if __has_include("<version>")
+#  if __has_include(<version>)
 #    include <version>
 #  else
 #    include <ciso646>

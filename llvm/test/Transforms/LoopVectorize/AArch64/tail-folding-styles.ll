@@ -63,9 +63,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA:       vector.ph:
 ; DATA-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; DATA-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
-; DATA-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
-; DATA-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 4
-; DATA-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP7]], 1
+; DATA-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP5]], 1
 ; DATA-NEXT:    [[N_RND_UP:%.*]] = add i64 [[UMAX]], [[TMP8]]
 ; DATA-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP5]]
 ; DATA-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -110,9 +108,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_NO_LANEMASK:       vector.ph:
 ; DATA_NO_LANEMASK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; DATA_NO_LANEMASK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
-; DATA_NO_LANEMASK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
-; DATA_NO_LANEMASK-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 4
-; DATA_NO_LANEMASK-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP7]], 1
+; DATA_NO_LANEMASK-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP5]], 1
 ; DATA_NO_LANEMASK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[UMAX]], [[TMP8]]
 ; DATA_NO_LANEMASK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP5]]
 ; DATA_NO_LANEMASK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -165,9 +161,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_AND_CONTROL:       vector.ph:
 ; DATA_AND_CONTROL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; DATA_AND_CONTROL-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4
-; DATA_AND_CONTROL-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
-; DATA_AND_CONTROL-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 4
-; DATA_AND_CONTROL-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP7]], 1
+; DATA_AND_CONTROL-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP5]], 1
 ; DATA_AND_CONTROL-NEXT:    [[N_RND_UP:%.*]] = add i64 [[UMAX]], [[TMP8]]
 ; DATA_AND_CONTROL-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP5]]
 ; DATA_AND_CONTROL-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
@@ -211,9 +205,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_AND_CONTROL_NO_RT_CHECK:       vector.ph:
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 4
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 4
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
+; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP1]], 1
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[UMAX]], [[TMP4]]
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]

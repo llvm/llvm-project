@@ -29,6 +29,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 
 using namespace llvm;
 
@@ -51,6 +52,8 @@ static MCInstrInfo *createAArch64MCInstrInfo() {
 
 static MCSubtargetInfo *
 createAArch64MCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
+  CPU = AArch64::resolveCPUAlias(CPU);
+
   if (CPU.empty()) {
     CPU = "generic";
     if (FS.empty())

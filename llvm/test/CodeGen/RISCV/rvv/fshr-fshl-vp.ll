@@ -1282,18 +1282,17 @@ define <vscale x 1 x i9> @fshr_v1i9(<vscale x 1 x i9> %a, <vscale x 1 x i9> %b, 
 ; CHECK-LABEL: fshr_v1i9:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 511
-; CHECK-NEXT:    vsetvli a2, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vand.vx v10, v10, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-NEXT:    vsll.vi v9, v9, 7, v0.t
+; CHECK-NEXT:    vand.vx v10, v10, a1, v0.t
 ; CHECK-NEXT:    li a0, 9
 ; CHECK-NEXT:    vremu.vx v10, v10, a0, v0.t
 ; CHECK-NEXT:    vadd.vi v10, v10, 7, v0.t
 ; CHECK-NEXT:    vand.vi v11, v10, 15, v0.t
+; CHECK-NEXT:    vsll.vi v9, v9, 7, v0.t
 ; CHECK-NEXT:    vsrl.vv v9, v9, v11, v0.t
-; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vnot.v v10, v10, v0.t
 ; CHECK-NEXT:    vand.vi v10, v10, 15, v0.t
+; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vsll.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
@@ -1306,18 +1305,17 @@ define <vscale x 1 x i9> @fshl_v1i9(<vscale x 1 x i9> %a, <vscale x 1 x i9> %b, 
 ; CHECK-LABEL: fshl_v1i9:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 511
-; CHECK-NEXT:    vsetvli a2, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vand.vx v10, v10, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-NEXT:    vsll.vi v9, v9, 7, v0.t
-; CHECK-NEXT:    vsrl.vi v9, v9, 1, v0.t
+; CHECK-NEXT:    vand.vx v10, v10, a1, v0.t
 ; CHECK-NEXT:    li a0, 9
 ; CHECK-NEXT:    vremu.vx v10, v10, a0, v0.t
-; CHECK-NEXT:    vnot.v v11, v10, v0.t
-; CHECK-NEXT:    vand.vi v11, v11, 15, v0.t
-; CHECK-NEXT:    vsrl.vv v9, v9, v11, v0.t
+; CHECK-NEXT:    vand.vi v11, v10, 15, v0.t
+; CHECK-NEXT:    vsll.vv v8, v8, v11, v0.t
+; CHECK-NEXT:    vnot.v v10, v10, v0.t
 ; CHECK-NEXT:    vand.vi v10, v10, 15, v0.t
-; CHECK-NEXT:    vsll.vv v8, v8, v10, v0.t
+; CHECK-NEXT:    vsll.vi v9, v9, 7, v0.t
+; CHECK-NEXT:    vsrl.vi v9, v9, 1, v0.t
+; CHECK-NEXT:    vsrl.vv v9, v9, v10, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %res = call <vscale x 1 x i9> @llvm.vp.fshl.nxv1i9(<vscale x 1 x i9> %a, <vscale x 1 x i9> %b, <vscale x 1 x i9> %c, <vscale x 1 x i1> %m, i32 %evl)
@@ -1330,15 +1328,14 @@ declare <vscale x 1 x i4> @llvm.vp.fshr.nxv1i4(<vscale x 1 x i4>, <vscale x 1 x 
 define <vscale x 1 x i8> @fshr_v1i4(<vscale x 1 x i8> %a, <vscale x 1 x i8> %b, <vscale x 1 x i8> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: fshr_v1i4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vand.vi v10, v10, 15
-; CHECK-NEXT:    li a1, 4
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
-; CHECK-NEXT:    vremu.vx v10, v10, a1, v0.t
+; CHECK-NEXT:    vand.vi v10, v10, 15, v0.t
 ; CHECK-NEXT:    vand.vi v9, v9, 15, v0.t
 ; CHECK-NEXT:    vsll.vi v8, v8, 4, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
-; CHECK-NEXT:    vsrl.vv v8, v8, v10, v0.t
+; CHECK-NEXT:    li a0, 4
+; CHECK-NEXT:    vremu.vx v9, v10, a0, v0.t
+; CHECK-NEXT:    vsrl.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 15, v0.t
 ; CHECK-NEXT:    ret
   %trunca = call <vscale x 1 x i4> @llvm.vp.trunc.nxv1i4.nxv1i8(<vscale x 1 x i8> %a, <vscale x 1 x i1> %m, i32 zeroext %evl)
@@ -1353,15 +1350,14 @@ declare <vscale x 1 x i4> @llvm.vp.fshl.nxv1i4(<vscale x 1 x i4>, <vscale x 1 x 
 define <vscale x 1 x i8> @fshl_v1i4(<vscale x 1 x i8> %a, <vscale x 1 x i8> %b, <vscale x 1 x i8> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: fshl_v1i4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
-; CHECK-NEXT:    vand.vi v10, v10, 15
-; CHECK-NEXT:    li a1, 4
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
-; CHECK-NEXT:    vremu.vx v10, v10, a1, v0.t
+; CHECK-NEXT:    vand.vi v10, v10, 15, v0.t
 ; CHECK-NEXT:    vand.vi v9, v9, 15, v0.t
 ; CHECK-NEXT:    vsll.vi v8, v8, 4, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
-; CHECK-NEXT:    vsll.vv v8, v8, v10, v0.t
+; CHECK-NEXT:    li a0, 4
+; CHECK-NEXT:    vremu.vx v9, v10, a0, v0.t
+; CHECK-NEXT:    vsll.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vsrl.vi v8, v8, 4, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 15, v0.t
 ; CHECK-NEXT:    ret

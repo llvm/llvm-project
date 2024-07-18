@@ -16,11 +16,12 @@
 
 namespace Fortran::runtime {
 
-template <typename T> class ReduceAccumulator {
+template <typename T, bool isByValue> class ReduceAccumulator {
 public:
-  RT_API_ATTRS ReduceAccumulator(const Descriptor &array,
-      ReductionOperation<T> operation, const T *identity,
-      Terminator &terminator)
+  using Operation = std::conditional_t<isByValue, ValueReductionOperation<T>,
+      ReferenceReductionOperation<T>>;
+  RT_API_ATTRS ReduceAccumulator(const Descriptor &array, Operation operation,
+      const T *identity, Terminator &terminator)
       : array_{array}, operation_{operation}, identity_{identity},
         terminator_{terminator} {}
   RT_API_ATTRS void Reinitialize() { result_.reset(); }
@@ -28,7 +29,11 @@ public:
   RT_API_ATTRS bool AccumulateAt(const SubscriptValue at[]) {
     const auto *operand{array_.Element<A>(at)};
     if (result_) {
-      result_ = operation_(&*result_, operand);
+      if constexpr (isByValue) {
+        result_ = operation_(*result_, *operand);
+      } else {
+        result_ = operation_(&*result_, operand);
+      }
     } else {
       result_ = *operand;
     }
@@ -48,7 +53,7 @@ public:
 private:
   const Descriptor &array_;
   common::optional<T> result_;
-  ReductionOperation<T> operation_;
+  Operation operation_;
   const T *identity_{nullptr};
   Terminator &terminator_;
 };
@@ -104,104 +109,213 @@ private:
 extern "C" {
 RT_EXT_API_GROUP_BEGIN
 
-std::int8_t RTDEF(ReduceInteger1)(const Descriptor &array,
-    ReductionOperation<std::int8_t> operation, const char *source, int line,
-    int dim, const Descriptor *mask, const std::int8_t *identity,
+std::int8_t RTDEF(ReduceInteger1Ref)(const Descriptor &array,
+    ReferenceReductionOperation<std::int8_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int8_t *identity,
     bool ordered) {
   Terminator terminator{source, line};
   return GetTotalReduction<TypeCategory::Integer, 1>(array, source, line, dim,
       mask,
-      ReduceAccumulator<std::int8_t>{array, operation, identity, terminator},
+      ReduceAccumulator<std::int8_t, false>{
+          array, operation, identity, terminator},
       "REDUCE");
 }
-void RTDEF(ReduceInteger1Dim)(Descriptor &result, const Descriptor &array,
-    ReductionOperation<std::int8_t> operation, const char *source, int line,
-    int dim, const Descriptor *mask, const std::int8_t *identity,
+std::int8_t RTDEF(ReduceInteger1Value)(const Descriptor &array,
+    ValueReductionOperation<std::int8_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int8_t *identity,
     bool ordered) {
   Terminator terminator{source, line};
-  using Accumulator = ReduceAccumulator<std::int8_t>;
+  return GetTotalReduction<TypeCategory::Integer, 1>(array, source, line, dim,
+      mask,
+      ReduceAccumulator<std::int8_t, true>{
+          array, operation, identity, terminator},
+      "REDUCE");
+}
+void RTDEF(ReduceInteger1DimRef)(Descriptor &result, const Descriptor &array,
+    ReferenceReductionOperation<std::int8_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int8_t *identity,
+    bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<std::int8_t, false>;
   Accumulator accumulator{array, operation, identity, terminator};
   PartialReduction<Accumulator, TypeCategory::Integer, 1>(result, array,
       array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
 }
-std::int16_t RTDEF(ReduceInteger2)(const Descriptor &array,
-    ReductionOperation<std::int16_t> operation, const char *source, int line,
-    int dim, const Descriptor *mask, const std::int16_t *identity,
+void RTDEF(ReduceInteger1DimValue)(Descriptor &result, const Descriptor &array,
+    ValueReductionOperation<std::int8_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int8_t *identity,
+    bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<std::int8_t, true>;
+  Accumulator accumulator{array, operation, identity, terminator};
+  PartialReduction<Accumulator, TypeCategory::Integer, 1>(result, array,
+      array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
+}
+std::int16_t RTDEF(ReduceInteger2Ref)(const Descriptor &array,
+    ReferenceReductionOperation<std::int16_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int16_t *identity,
     bool ordered) {
   Terminator terminator{source, line};
   return GetTotalReduction<TypeCategory::Integer, 2>(array, source, line, dim,
       mask,
-      ReduceAccumulator<std::int16_t>{array, operation, identity, terminator},
+      ReduceAccumulator<std::int16_t, false>{
+          array, operation, identity, terminator},
       "REDUCE");
 }
-void RTDEF(ReduceInteger2Dim)(Descriptor &result, const Descriptor &array,
-    ReductionOperation<std::int16_t> operation, const char *source, int line,
-    int dim, const Descriptor *mask, const std::int16_t *identity,
+std::int16_t RTDEF(ReduceInteger2Value)(const Descriptor &array,
+    ValueReductionOperation<std::int16_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int16_t *identity,
     bool ordered) {
   Terminator terminator{source, line};
-  using Accumulator = ReduceAccumulator<std::int16_t>;
+  return GetTotalReduction<TypeCategory::Integer, 2>(array, source, line, dim,
+      mask,
+      ReduceAccumulator<std::int16_t, true>{
+          array, operation, identity, terminator},
+      "REDUCE");
+}
+void RTDEF(ReduceInteger2DimRef)(Descriptor &result, const Descriptor &array,
+    ReferenceReductionOperation<std::int16_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int16_t *identity,
+    bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<std::int16_t, false>;
   Accumulator accumulator{array, operation, identity, terminator};
   PartialReduction<Accumulator, TypeCategory::Integer, 2>(result, array,
       array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
 }
-std::int32_t RTDEF(ReduceInteger4)(const Descriptor &array,
-    ReductionOperation<std::int32_t> operation, const char *source, int line,
-    int dim, const Descriptor *mask, const std::int32_t *identity,
+void RTDEF(ReduceInteger2DimValue)(Descriptor &result, const Descriptor &array,
+    ValueReductionOperation<std::int16_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int16_t *identity,
+    bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<std::int16_t, true>;
+  Accumulator accumulator{array, operation, identity, terminator};
+  PartialReduction<Accumulator, TypeCategory::Integer, 2>(result, array,
+      array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
+}
+std::int32_t RTDEF(ReduceInteger4Ref)(const Descriptor &array,
+    ReferenceReductionOperation<std::int32_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int32_t *identity,
     bool ordered) {
   Terminator terminator{source, line};
   return GetTotalReduction<TypeCategory::Integer, 4>(array, source, line, dim,
       mask,
-      ReduceAccumulator<std::int32_t>{array, operation, identity, terminator},
+      ReduceAccumulator<std::int32_t, false>{
+          array, operation, identity, terminator},
       "REDUCE");
 }
-void RTDEF(ReduceInteger4Dim)(Descriptor &result, const Descriptor &array,
-    ReductionOperation<std::int32_t> operation, const char *source, int line,
-    int dim, const Descriptor *mask, const std::int32_t *identity,
+std::int32_t RTDEF(ReduceInteger4Value)(const Descriptor &array,
+    ValueReductionOperation<std::int32_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int32_t *identity,
     bool ordered) {
   Terminator terminator{source, line};
-  using Accumulator = ReduceAccumulator<std::int32_t>;
+  return GetTotalReduction<TypeCategory::Integer, 4>(array, source, line, dim,
+      mask,
+      ReduceAccumulator<std::int32_t, true>{
+          array, operation, identity, terminator},
+      "REDUCE");
+}
+void RTDEF(ReduceInteger4DimRef)(Descriptor &result, const Descriptor &array,
+    ReferenceReductionOperation<std::int32_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int32_t *identity,
+    bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<std::int32_t, false>;
   Accumulator accumulator{array, operation, identity, terminator};
   PartialReduction<Accumulator, TypeCategory::Integer, 4>(result, array,
       array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
 }
-std::int64_t RTDEF(ReduceInteger8)(const Descriptor &array,
-    ReductionOperation<std::int64_t> operation, const char *source, int line,
-    int dim, const Descriptor *mask, const std::int64_t *identity,
+void RTDEF(ReduceInteger4DimValue)(Descriptor &result, const Descriptor &array,
+    ValueReductionOperation<std::int32_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int32_t *identity,
+    bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<std::int32_t, true>;
+  Accumulator accumulator{array, operation, identity, terminator};
+  PartialReduction<Accumulator, TypeCategory::Integer, 4>(result, array,
+      array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
+}
+std::int64_t RTDEF(ReduceInteger8Ref)(const Descriptor &array,
+    ReferenceReductionOperation<std::int64_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int64_t *identity,
     bool ordered) {
   Terminator terminator{source, line};
   return GetTotalReduction<TypeCategory::Integer, 8>(array, source, line, dim,
       mask,
-      ReduceAccumulator<std::int64_t>{array, operation, identity, terminator},
+      ReduceAccumulator<std::int64_t, false>{
+          array, operation, identity, terminator},
       "REDUCE");
 }
-void RTDEF(ReduceInteger8Dim)(Descriptor &result, const Descriptor &array,
-    ReductionOperation<std::int64_t> operation, const char *source, int line,
-    int dim, const Descriptor *mask, const std::int64_t *identity,
+std::int64_t RTDEF(ReduceInteger8Value)(const Descriptor &array,
+    ValueReductionOperation<std::int64_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int64_t *identity,
     bool ordered) {
   Terminator terminator{source, line};
-  using Accumulator = ReduceAccumulator<std::int64_t>;
+  return GetTotalReduction<TypeCategory::Integer, 8>(array, source, line, dim,
+      mask,
+      ReduceAccumulator<std::int64_t, true>{
+          array, operation, identity, terminator},
+      "REDUCE");
+}
+void RTDEF(ReduceInteger8DimRef)(Descriptor &result, const Descriptor &array,
+    ReferenceReductionOperation<std::int64_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int64_t *identity,
+    bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<std::int64_t, false>;
+  Accumulator accumulator{array, operation, identity, terminator};
+  PartialReduction<Accumulator, TypeCategory::Integer, 8>(result, array,
+      array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
+}
+void RTDEF(ReduceInteger8DimValue)(Descriptor &result, const Descriptor &array,
+    ValueReductionOperation<std::int64_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int64_t *identity,
+    bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<std::int64_t, true>;
   Accumulator accumulator{array, operation, identity, terminator};
   PartialReduction<Accumulator, TypeCategory::Integer, 8>(result, array,
       array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
 }
 #ifdef __SIZEOF_INT128__
-common::int128_t RTDEF(ReduceInteger16)(const Descriptor &array,
-    ReductionOperation<common::int128_t> operation, const char *source,
+common::int128_t RTDEF(ReduceInteger16Ref)(const Descriptor &array,
+    ReferenceReductionOperation<common::int128_t> operation, const char *source,
     int line, int dim, const Descriptor *mask, const common::int128_t *identity,
     bool ordered) {
   Terminator terminator{source, line};
   return GetTotalReduction<TypeCategory::Integer, 16>(array, source, line, dim,
       mask,
-      ReduceAccumulator<common::int128_t>{
+      ReduceAccumulator<common::int128_t, false>{
           array, operation, identity, terminator},
       "REDUCE");
 }
-void RTDEF(ReduceInteger16Dim)(Descriptor &result, const Descriptor &array,
-    ReductionOperation<common::int128_t> operation, const char *source,
+common::int128_t RTDEF(ReduceInteger16Value)(const Descriptor &array,
+    ValueReductionOperation<common::int128_t> operation, const char *source,
     int line, int dim, const Descriptor *mask, const common::int128_t *identity,
     bool ordered) {
   Terminator terminator{source, line};
-  using Accumulator = ReduceAccumulator<common::int128_t>;
+  return GetTotalReduction<TypeCategory::Integer, 16>(array, source, line, dim,
+      mask,
+      ReduceAccumulator<common::int128_t, true>{
+          array, operation, identity, terminator},
+      "REDUCE");
+}
+void RTDEF(ReduceInteger16DimRef)(Descriptor &result, const Descriptor &array,
+    ReferenceReductionOperation<common::int128_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const common::int128_t *identity,
+    bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<common::int128_t, false>;
+  Accumulator accumulator{array, operation, identity, terminator};
+  PartialReduction<Accumulator, TypeCategory::Integer, 16>(result, array,
+      array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
+}
+void RTDEF(ReduceInteger16DimValue)(Descriptor &result, const Descriptor &array,
+    ValueReductionOperation<common::int128_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const common::int128_t *identity,
+    bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<common::int128_t, true>;
   Accumulator accumulator{array, operation, identity, terminator};
   PartialReduction<Accumulator, TypeCategory::Integer, 16>(result, array,
       array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
@@ -209,231 +323,464 @@ void RTDEF(ReduceInteger16Dim)(Descriptor &result, const Descriptor &array,
 #endif
 
 // TODO: real/complex(2 & 3)
-float RTDEF(ReduceReal4)(const Descriptor &array,
-    ReductionOperation<float> operation, const char *source, int line, int dim,
-    const Descriptor *mask, const float *identity, bool ordered) {
+float RTDEF(ReduceReal4Ref)(const Descriptor &array,
+    ReferenceReductionOperation<float> operation, const char *source, int line,
+    int dim, const Descriptor *mask, const float *identity, bool ordered) {
   Terminator terminator{source, line};
   return GetTotalReduction<TypeCategory::Real, 4>(array, source, line, dim,
-      mask, ReduceAccumulator<float>{array, operation, identity, terminator},
+      mask,
+      ReduceAccumulator<float, false>{array, operation, identity, terminator},
       "REDUCE");
 }
-void RTDEF(ReduceReal4Dim)(Descriptor &result, const Descriptor &array,
-    ReductionOperation<float> operation, const char *source, int line, int dim,
-    const Descriptor *mask, const float *identity, bool ordered) {
+float RTDEF(ReduceReal4Value)(const Descriptor &array,
+    ValueReductionOperation<float> operation, const char *source, int line,
+    int dim, const Descriptor *mask, const float *identity, bool ordered) {
   Terminator terminator{source, line};
-  using Accumulator = ReduceAccumulator<float>;
+  return GetTotalReduction<TypeCategory::Real, 4>(array, source, line, dim,
+      mask,
+      ReduceAccumulator<float, true>{array, operation, identity, terminator},
+      "REDUCE");
+}
+void RTDEF(ReduceReal4DimRef)(Descriptor &result, const Descriptor &array,
+    ReferenceReductionOperation<float> operation, const char *source, int line,
+    int dim, const Descriptor *mask, const float *identity, bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<float, false>;
   Accumulator accumulator{array, operation, identity, terminator};
   PartialReduction<Accumulator, TypeCategory::Real, 4>(result, array,
       array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
 }
-double RTDEF(ReduceReal8)(const Descriptor &array,
-    ReductionOperation<double> operation, const char *source, int line, int dim,
-    const Descriptor *mask, const double *identity, bool ordered) {
+void RTDEF(ReduceReal4DimValue)(Descriptor &result, const Descriptor &array,
+    ValueReductionOperation<float> operation, const char *source, int line,
+    int dim, const Descriptor *mask, const float *identity, bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<float, true>;
+  Accumulator accumulator{array, operation, identity, terminator};
+  PartialReduction<Accumulator, TypeCategory::Real, 4>(result, array,
+      array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
+}
+double RTDEF(ReduceReal8Ref)(const Descriptor &array,
+    ReferenceReductionOperation<double> operation, const char *source, int line,
+    int dim, const Descriptor *mask, const double *identity, bool ordered) {
   Terminator terminator{source, line};
   return GetTotalReduction<TypeCategory::Real, 8>(array, source, line, dim,
-      mask, ReduceAccumulator<double>{array, operation, identity, terminator},
+      mask,
+      ReduceAccumulator<double, false>{array, operation, identity, terminator},
       "REDUCE");
 }
-void RTDEF(ReduceReal8Dim)(Descriptor &result, const Descriptor &array,
-    ReductionOperation<double> operation, const char *source, int line, int dim,
-    const Descriptor *mask, const double *identity, bool ordered) {
+double RTDEF(ReduceReal8Value)(const Descriptor &array,
+    ValueReductionOperation<double> operation, const char *source, int line,
+    int dim, const Descriptor *mask, const double *identity, bool ordered) {
   Terminator terminator{source, line};
-  using Accumulator = ReduceAccumulator<double>;
+  return GetTotalReduction<TypeCategory::Real, 8>(array, source, line, dim,
+      mask,
+      ReduceAccumulator<double, true>{array, operation, identity, terminator},
+      "REDUCE");
+}
+void RTDEF(ReduceReal8DimRef)(Descriptor &result, const Descriptor &array,
+    ReferenceReductionOperation<double> operation, const char *source, int line,
+    int dim, const Descriptor *mask, const double *identity, bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<double, false>;
+  Accumulator accumulator{array, operation, identity, terminator};
+  PartialReduction<Accumulator, TypeCategory::Real, 8>(result, array,
+      array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
+}
+void RTDEF(ReduceReal8DimValue)(Descriptor &result, const Descriptor &array,
+    ValueReductionOperation<double> operation, const char *source, int line,
+    int dim, const Descriptor *mask, const double *identity, bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<double, true>;
   Accumulator accumulator{array, operation, identity, terminator};
   PartialReduction<Accumulator, TypeCategory::Real, 8>(result, array,
       array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
 }
 #if LDBL_MANT_DIG == 64
-long double RTDEF(ReduceReal10)(const Descriptor &array,
-    ReductionOperation<long double> operation, const char *source, int line,
-    int dim, const Descriptor *mask, const long double *identity,
+long double RTDEF(ReduceReal10Ref)(const Descriptor &array,
+    ReferenceReductionOperation<long double> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const long double *identity,
     bool ordered) {
   Terminator terminator{source, line};
   return GetTotalReduction<TypeCategory::Real, 10>(array, source, line, dim,
       mask,
-      ReduceAccumulator<long double>{array, operation, identity, terminator},
+      ReduceAccumulator<long double, false>{
+          array, operation, identity, terminator},
       "REDUCE");
 }
-void RTDEF(ReduceReal10Dim)(Descriptor &result, const Descriptor &array,
-    ReductionOperation<long double> operation, const char *source, int line,
-    int dim, const Descriptor *mask, const long double *identity,
+long double RTDEF(ReduceReal10Value)(const Descriptor &array,
+    ValueReductionOperation<long double> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const long double *identity,
     bool ordered) {
   Terminator terminator{source, line};
-  using Accumulator = ReduceAccumulator<long double>;
+  return GetTotalReduction<TypeCategory::Real, 10>(array, source, line, dim,
+      mask,
+      ReduceAccumulator<long double, true>{
+          array, operation, identity, terminator},
+      "REDUCE");
+}
+void RTDEF(ReduceReal10DimRef)(Descriptor &result, const Descriptor &array,
+    ReferenceReductionOperation<long double> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const long double *identity,
+    bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<long double, false>;
+  Accumulator accumulator{array, operation, identity, terminator};
+  PartialReduction<Accumulator, TypeCategory::Real, 10>(result, array,
+      array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
+}
+void RTDEF(ReduceReal10DimValue)(Descriptor &result, const Descriptor &array,
+    ValueReductionOperation<long double> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const long double *identity,
+    bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<long double, true>;
   Accumulator accumulator{array, operation, identity, terminator};
   PartialReduction<Accumulator, TypeCategory::Real, 10>(result, array,
       array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
 }
 #endif
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
-CppFloat128Type RTDEF(ReduceReal16)(const Descriptor &array,
-    ReductionOperation<CppFloat128Type> operation, const char *source, int line,
-    int dim, const Descriptor *mask, const CppFloat128Type *identity,
+CppFloat128Type RTDEF(ReduceReal16Ref)(const Descriptor &array,
+    ReferenceReductionOperation<CppFloat128Type> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const CppFloat128Type *identity,
     bool ordered) {
   Terminator terminator{source, line};
   return GetTotalReduction<TypeCategory::Real, 16>(array, source, line, dim,
       mask,
-      ReduceAccumulator<CppFloat128Type>{
+      ReduceAccumulator<CppFloat128Type, false>{
           array, operation, identity, terminator},
       "REDUCE");
 }
-void RTDEF(ReduceReal16Dim)(Descriptor &result, const Descriptor &array,
-    ReductionOperation<CppFloat128Type> operation, const char *source, int line,
-    int dim, const Descriptor *mask, const CppFloat128Type *identity,
+CppFloat128Type RTDEF(ReduceReal16Value)(const Descriptor &array,
+    ValueReductionOperation<CppFloat128Type> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const CppFloat128Type *identity,
     bool ordered) {
   Terminator terminator{source, line};
-  using Accumulator = ReduceAccumulator<CppFloat128Type>;
+  return GetTotalReduction<TypeCategory::Real, 16>(array, source, line, dim,
+      mask,
+      ReduceAccumulator<CppFloat128Type, true>{
+          array, operation, identity, terminator},
+      "REDUCE");
+}
+void RTDEF(ReduceReal16DimRef)(Descriptor &result, const Descriptor &array,
+    ReferenceReductionOperation<CppFloat128Type> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const CppFloat128Type *identity,
+    bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<CppFloat128Type, false>;
+  Accumulator accumulator{array, operation, identity, terminator};
+  PartialReduction<Accumulator, TypeCategory::Real, 16>(result, array,
+      array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
+}
+void RTDEF(ReduceReal16DimValue)(Descriptor &result, const Descriptor &array,
+    ValueReductionOperation<CppFloat128Type> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const CppFloat128Type *identity,
+    bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<CppFloat128Type, true>;
   Accumulator accumulator{array, operation, identity, terminator};
   PartialReduction<Accumulator, TypeCategory::Real, 16>(result, array,
       array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
 }
 #endif
 
-void RTDEF(CppReduceComplex4)(std::complex<float> &result,
-    const Descriptor &array, ReductionOperation<std::complex<float>> operation,
+void RTDEF(CppReduceComplex4Ref)(std::complex<float> &result,
+    const Descriptor &array,
+    ReferenceReductionOperation<std::complex<float>> operation,
     const char *source, int line, int dim, const Descriptor *mask,
     const std::complex<float> *identity, bool ordered) {
   Terminator terminator{source, line};
   result = GetTotalReduction<TypeCategory::Complex, 4>(array, source, line, dim,
       mask,
-      ReduceAccumulator<std::complex<float>>{
+      ReduceAccumulator<std::complex<float>, false>{
           array, operation, identity, terminator},
       "REDUCE");
 }
-void RTDEF(CppReduceComplex4Dim)(Descriptor &result, const Descriptor &array,
-    ReductionOperation<std::complex<float>> operation, const char *source,
+void RTDEF(CppReduceComplex4Value)(std::complex<float> &result,
+    const Descriptor &array,
+    ValueReductionOperation<std::complex<float>> operation, const char *source,
     int line, int dim, const Descriptor *mask,
     const std::complex<float> *identity, bool ordered) {
   Terminator terminator{source, line};
-  using Accumulator = ReduceAccumulator<std::complex<float>>;
+  result = GetTotalReduction<TypeCategory::Complex, 4>(array, source, line, dim,
+      mask,
+      ReduceAccumulator<std::complex<float>, true>{
+          array, operation, identity, terminator},
+      "REDUCE");
+}
+void RTDEF(CppReduceComplex4DimRef)(Descriptor &result, const Descriptor &array,
+    ReferenceReductionOperation<std::complex<float>> operation,
+    const char *source, int line, int dim, const Descriptor *mask,
+    const std::complex<float> *identity, bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<std::complex<float>, false>;
   Accumulator accumulator{array, operation, identity, terminator};
   PartialReduction<Accumulator, TypeCategory::Complex, 4>(result, array,
       array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
 }
-void RTDEF(CppReduceComplex8)(std::complex<double> &result,
-    const Descriptor &array, ReductionOperation<std::complex<double>> operation,
+void RTDEF(CppReduceComplex4DimValue)(Descriptor &result,
+    const Descriptor &array,
+    ValueReductionOperation<std::complex<float>> operation, const char *source,
+    int line, int dim, const Descriptor *mask,
+    const std::complex<float> *identity, bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<std::complex<float>, true>;
+  Accumulator accumulator{array, operation, identity, terminator};
+  PartialReduction<Accumulator, TypeCategory::Complex, 4>(result, array,
+      array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
+}
+void RTDEF(CppReduceComplex8Ref)(std::complex<double> &result,
+    const Descriptor &array,
+    ReferenceReductionOperation<std::complex<double>> operation,
     const char *source, int line, int dim, const Descriptor *mask,
     const std::complex<double> *identity, bool ordered) {
   Terminator terminator{source, line};
   result = GetTotalReduction<TypeCategory::Complex, 8>(array, source, line, dim,
       mask,
-      ReduceAccumulator<std::complex<double>>{
+      ReduceAccumulator<std::complex<double>, false>{
           array, operation, identity, terminator},
       "REDUCE");
 }
-void RTDEF(CppReduceComplex8Dim)(Descriptor &result, const Descriptor &array,
-    ReductionOperation<std::complex<double>> operation, const char *source,
+void RTDEF(CppReduceComplex8Value)(std::complex<double> &result,
+    const Descriptor &array,
+    ValueReductionOperation<std::complex<double>> operation, const char *source,
     int line, int dim, const Descriptor *mask,
     const std::complex<double> *identity, bool ordered) {
   Terminator terminator{source, line};
-  using Accumulator = ReduceAccumulator<std::complex<double>>;
+  result = GetTotalReduction<TypeCategory::Complex, 8>(array, source, line, dim,
+      mask,
+      ReduceAccumulator<std::complex<double>, true>{
+          array, operation, identity, terminator},
+      "REDUCE");
+}
+void RTDEF(CppReduceComplex8DimRef)(Descriptor &result, const Descriptor &array,
+    ReferenceReductionOperation<std::complex<double>> operation,
+    const char *source, int line, int dim, const Descriptor *mask,
+    const std::complex<double> *identity, bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<std::complex<double>, false>;
+  Accumulator accumulator{array, operation, identity, terminator};
+  PartialReduction<Accumulator, TypeCategory::Complex, 8>(result, array,
+      array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
+}
+void RTDEF(CppReduceComplex8DimValue)(Descriptor &result,
+    const Descriptor &array,
+    ValueReductionOperation<std::complex<double>> operation, const char *source,
+    int line, int dim, const Descriptor *mask,
+    const std::complex<double> *identity, bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<std::complex<double>, true>;
   Accumulator accumulator{array, operation, identity, terminator};
   PartialReduction<Accumulator, TypeCategory::Complex, 8>(result, array,
       array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
 }
 #if LDBL_MANT_DIG == 64
-void RTDEF(CppReduceComplex10)(std::complex<long double> &result,
+void RTDEF(CppReduceComplex10Ref)(std::complex<long double> &result,
     const Descriptor &array,
-    ReductionOperation<std::complex<long double>> operation, const char *source,
-    int line, int dim, const Descriptor *mask,
+    ReferenceReductionOperation<std::complex<long double>> operation,
+    const char *source, int line, int dim, const Descriptor *mask,
     const std::complex<long double> *identity, bool ordered) {
   Terminator terminator{source, line};
   result = GetTotalReduction<TypeCategory::Complex, 10>(array, source, line,
       dim, mask,
-      ReduceAccumulator<std::complex<long double>>{
+      ReduceAccumulator<std::complex<long double>, false>{
           array, operation, identity, terminator},
       "REDUCE");
 }
-void RTDEF(CppReduceComplex10Dim)(Descriptor &result, const Descriptor &array,
-    ReductionOperation<std::complex<long double>> operation, const char *source,
-    int line, int dim, const Descriptor *mask,
+void RTDEF(CppReduceComplex10Value)(std::complex<long double> &result,
+    const Descriptor &array,
+    ValueReductionOperation<std::complex<long double>> operation,
+    const char *source, int line, int dim, const Descriptor *mask,
     const std::complex<long double> *identity, bool ordered) {
   Terminator terminator{source, line};
-  using Accumulator = ReduceAccumulator<std::complex<long double>>;
+  result = GetTotalReduction<TypeCategory::Complex, 10>(array, source, line,
+      dim, mask,
+      ReduceAccumulator<std::complex<long double>, true>{
+          array, operation, identity, terminator},
+      "REDUCE");
+}
+void RTDEF(CppReduceComplex10DimRef)(Descriptor &result,
+    const Descriptor &array,
+    ReferenceReductionOperation<std::complex<long double>> operation,
+    const char *source, int line, int dim, const Descriptor *mask,
+    const std::complex<long double> *identity, bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<std::complex<long double>, false>;
+  Accumulator accumulator{array, operation, identity, terminator};
+  PartialReduction<Accumulator, TypeCategory::Complex, 10>(result, array,
+      array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
+}
+void RTDEF(CppReduceComplex10DimValue)(Descriptor &result,
+    const Descriptor &array,
+    ValueReductionOperation<std::complex<long double>> operation,
+    const char *source, int line, int dim, const Descriptor *mask,
+    const std::complex<long double> *identity, bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<std::complex<long double>, true>;
   Accumulator accumulator{array, operation, identity, terminator};
   PartialReduction<Accumulator, TypeCategory::Complex, 10>(result, array,
       array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
 }
 #endif
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
-void RTDEF(CppReduceComplex16)(std::complex<CppFloat128Type> &result,
+void RTDEF(CppReduceComplex16Ref)(std::complex<CppFloat128Type> &result,
     const Descriptor &array,
-    ReductionOperation<std::complex<CppFloat128Type>> operation,
+    ReferenceReductionOperation<std::complex<CppFloat128Type>> operation,
     const char *source, int line, int dim, const Descriptor *mask,
     const std::complex<CppFloat128Type> *identity, bool ordered) {
   Terminator terminator{source, line};
   result = GetTotalReduction<TypeCategory::Complex, 16>(array, source, line,
       dim, mask,
-      ReduceAccumulator<std::complex<CppFloat128Type>>{
+      ReduceAccumulator<std::complex<CppFloat128Type>, false>{
           array, operation, identity, terminator},
       "REDUCE");
 }
-void RTDEF(CppReduceComplex16Dim)(Descriptor &result, const Descriptor &array,
-    ReductionOperation<std::complex<CppFloat128Type>> operation,
+void RTDEF(CppReduceComplex16Value)(std::complex<CppFloat128Type> &result,
+    const Descriptor &array,
+    ValueReductionOperation<std::complex<CppFloat128Type>> operation,
     const char *source, int line, int dim, const Descriptor *mask,
     const std::complex<CppFloat128Type> *identity, bool ordered) {
   Terminator terminator{source, line};
-  using Accumulator = ReduceAccumulator<std::complex<CppFloat128Type>>;
+  result = GetTotalReduction<TypeCategory::Complex, 16>(array, source, line,
+      dim, mask,
+      ReduceAccumulator<std::complex<CppFloat128Type>, true>{
+          array, operation, identity, terminator},
+      "REDUCE");
+}
+void RTDEF(CppReduceComplex16DimRef)(Descriptor &result,
+    const Descriptor &array,
+    ReferenceReductionOperation<std::complex<CppFloat128Type>> operation,
+    const char *source, int line, int dim, const Descriptor *mask,
+    const std::complex<CppFloat128Type> *identity, bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<std::complex<CppFloat128Type>, false>;
+  Accumulator accumulator{array, operation, identity, terminator};
+  PartialReduction<Accumulator, TypeCategory::Complex, 16>(result, array,
+      array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
+}
+void RTDEF(CppReduceComplex16DimValue)(Descriptor &result,
+    const Descriptor &array,
+    ValueReductionOperation<std::complex<CppFloat128Type>> operation,
+    const char *source, int line, int dim, const Descriptor *mask,
+    const std::complex<CppFloat128Type> *identity, bool ordered) {
+  Terminator terminator{source, line};
+  using Accumulator = ReduceAccumulator<std::complex<CppFloat128Type>, true>;
   Accumulator accumulator{array, operation, identity, terminator};
   PartialReduction<Accumulator, TypeCategory::Complex, 16>(result, array,
       array.ElementBytes(), dim, mask, terminator, "REDUCE", accumulator);
 }
 #endif
 
-bool RTDEF(ReduceLogical1)(const Descriptor &array,
-    ReductionOperation<std::int8_t> operation, const char *source, int line,
-    int dim, const Descriptor *mask, const std::int8_t *identity,
+bool RTDEF(ReduceLogical1Ref)(const Descriptor &array,
+    ReferenceReductionOperation<std::int8_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int8_t *identity,
     bool ordered) {
-  return RTNAME(ReduceInteger1)(
+  return RTNAME(ReduceInteger1Ref)(
              array, operation, source, line, dim, mask, identity, ordered) != 0;
 }
-void RTDEF(ReduceLogical1Dim)(Descriptor &result, const Descriptor &array,
-    ReductionOperation<std::int8_t> operation, const char *source, int line,
-    int dim, const Descriptor *mask, const std::int8_t *identity,
+bool RTDEF(ReduceLogical1Value)(const Descriptor &array,
+    ValueReductionOperation<std::int8_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int8_t *identity,
     bool ordered) {
-  RTNAME(ReduceInteger1Dim)
+  return RTNAME(ReduceInteger1Value)(
+             array, operation, source, line, dim, mask, identity, ordered) != 0;
+}
+void RTDEF(ReduceLogical1DimRef)(Descriptor &result, const Descriptor &array,
+    ReferenceReductionOperation<std::int8_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int8_t *identity,
+    bool ordered) {
+  RTNAME(ReduceInteger1DimRef)
   (result, array, operation, source, line, dim, mask, identity, ordered);
 }
-bool RTDEF(ReduceLogical2)(const Descriptor &array,
-    ReductionOperation<std::int16_t> operation, const char *source, int line,
-    int dim, const Descriptor *mask, const std::int16_t *identity,
+void RTDEF(ReduceLogical1DimValue)(Descriptor &result, const Descriptor &array,
+    ValueReductionOperation<std::int8_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int8_t *identity,
     bool ordered) {
-  return RTNAME(ReduceInteger2)(
-             array, operation, source, line, dim, mask, identity, ordered) != 0;
-}
-void RTDEF(ReduceLogical2Dim)(Descriptor &result, const Descriptor &array,
-    ReductionOperation<std::int16_t> operation, const char *source, int line,
-    int dim, const Descriptor *mask, const std::int16_t *identity,
-    bool ordered) {
-  RTNAME(ReduceInteger2Dim)
+  RTNAME(ReduceInteger1DimValue)
   (result, array, operation, source, line, dim, mask, identity, ordered);
 }
-bool RTDEF(ReduceLogical4)(const Descriptor &array,
-    ReductionOperation<std::int32_t> operation, const char *source, int line,
-    int dim, const Descriptor *mask, const std::int32_t *identity,
+bool RTDEF(ReduceLogical2Ref)(const Descriptor &array,
+    ReferenceReductionOperation<std::int16_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int16_t *identity,
     bool ordered) {
-  return RTNAME(ReduceInteger4)(
+  return RTNAME(ReduceInteger2Ref)(
              array, operation, source, line, dim, mask, identity, ordered) != 0;
 }
-void RTDEF(ReduceLogical4Dim)(Descriptor &result, const Descriptor &array,
-    ReductionOperation<std::int32_t> operation, const char *source, int line,
-    int dim, const Descriptor *mask, const std::int32_t *identity,
+bool RTDEF(ReduceLogical2Value)(const Descriptor &array,
+    ValueReductionOperation<std::int16_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int16_t *identity,
     bool ordered) {
-  RTNAME(ReduceInteger4Dim)
+  return RTNAME(ReduceInteger2Value)(
+             array, operation, source, line, dim, mask, identity, ordered) != 0;
+}
+void RTDEF(ReduceLogical2DimRef)(Descriptor &result, const Descriptor &array,
+    ReferenceReductionOperation<std::int16_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int16_t *identity,
+    bool ordered) {
+  RTNAME(ReduceInteger2DimRef)
   (result, array, operation, source, line, dim, mask, identity, ordered);
 }
-bool RTDEF(ReduceLogical8)(const Descriptor &array,
-    ReductionOperation<std::int64_t> operation, const char *source, int line,
-    int dim, const Descriptor *mask, const std::int64_t *identity,
+void RTDEF(ReduceLogical2DimValue)(Descriptor &result, const Descriptor &array,
+    ValueReductionOperation<std::int16_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int16_t *identity,
     bool ordered) {
-  return RTNAME(ReduceInteger8)(
+  RTNAME(ReduceInteger2DimValue)
+  (result, array, operation, source, line, dim, mask, identity, ordered);
+}
+bool RTDEF(ReduceLogical4Ref)(const Descriptor &array,
+    ReferenceReductionOperation<std::int32_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int32_t *identity,
+    bool ordered) {
+  return RTNAME(ReduceInteger4Ref)(
              array, operation, source, line, dim, mask, identity, ordered) != 0;
 }
-void RTDEF(ReduceLogical8Dim)(Descriptor &result, const Descriptor &array,
-    ReductionOperation<std::int64_t> operation, const char *source, int line,
-    int dim, const Descriptor *mask, const std::int64_t *identity,
+bool RTDEF(ReduceLogical4Value)(const Descriptor &array,
+    ValueReductionOperation<std::int32_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int32_t *identity,
     bool ordered) {
-  RTNAME(ReduceInteger8Dim)
+  return RTNAME(ReduceInteger4Value)(
+             array, operation, source, line, dim, mask, identity, ordered) != 0;
+}
+void RTDEF(ReduceLogical4DimRef)(Descriptor &result, const Descriptor &array,
+    ReferenceReductionOperation<std::int32_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int32_t *identity,
+    bool ordered) {
+  RTNAME(ReduceInteger4DimRef)
+  (result, array, operation, source, line, dim, mask, identity, ordered);
+}
+void RTDEF(ReduceLogical4DimValue)(Descriptor &result, const Descriptor &array,
+    ValueReductionOperation<std::int32_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int32_t *identity,
+    bool ordered) {
+  RTNAME(ReduceInteger4DimValue)
+  (result, array, operation, source, line, dim, mask, identity, ordered);
+}
+bool RTDEF(ReduceLogical8Ref)(const Descriptor &array,
+    ReferenceReductionOperation<std::int64_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int64_t *identity,
+    bool ordered) {
+  return RTNAME(ReduceInteger8Ref)(
+             array, operation, source, line, dim, mask, identity, ordered) != 0;
+}
+bool RTDEF(ReduceLogical8Value)(const Descriptor &array,
+    ValueReductionOperation<std::int64_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int64_t *identity,
+    bool ordered) {
+  return RTNAME(ReduceInteger8Value)(
+             array, operation, source, line, dim, mask, identity, ordered) != 0;
+}
+void RTDEF(ReduceLogical8DimRef)(Descriptor &result, const Descriptor &array,
+    ReferenceReductionOperation<std::int64_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int64_t *identity,
+    bool ordered) {
+  RTNAME(ReduceInteger8DimRef)
+  (result, array, operation, source, line, dim, mask, identity, ordered);
+}
+void RTDEF(ReduceLogical8DimValue)(Descriptor &result, const Descriptor &array,
+    ValueReductionOperation<std::int64_t> operation, const char *source,
+    int line, int dim, const Descriptor *mask, const std::int64_t *identity,
+    bool ordered) {
+  RTNAME(ReduceInteger8DimValue)
   (result, array, operation, source, line, dim, mask, identity, ordered);
 }
 

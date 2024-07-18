@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-int-range-inference -canonicalize %s | FileCheck %s
+// RUN: mlir-opt -int-range-optimizations -canonicalize %s | FileCheck %s
 
 // CHECK-LABEL: func @add_min_max
 // CHECK: %[[c3:.*]] = arith.constant 3 : index
@@ -898,4 +898,41 @@ func.func @test_shl_i8_nowrap() -> i8 {
   %1 = arith.shli %0, %cst3 overflow<nsw> : i8
   %2 = test.reflect_bounds %1 : i8
   return %2: i8
+}
+
+/// A test case to ensure that the ranges for unsupported ops are initialized
+/// properly to maxRange, rather than left uninitialized.
+/// In this test case, the previous behavior would leave the ranges for %a and
+/// %b uninitialized, resulting in arith.cmpf's range not being updated, even
+/// though it has an integer valued result.
+
+// CHECK-LABEL: func @test_cmpf_propagates
+// CHECK: test.reflect_bounds {smax = 2 : index, smin = 1 : index, umax = 2 : index, umin = 1 : index}
+func.func @test_cmpf_propagates(%a: f32, %b: f32) -> index {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+
+  %0 = arith.cmpf ueq, %a, %b : f32
+  %1 = arith.select %0, %c1, %c2 : index
+  %2 = test.reflect_bounds %1 : index
+  func.return %2 : index
+}
+
+// CHECK-LABEL: func @zero_trip_loop
+func.func @zero_trip_loop() {
+  %idx1 = arith.constant 1 : index
+  scf.for %arg0 = %idx1 to %idx1 step %idx1 {
+    %138 = index.floordivs %arg0, %arg0
+  }
+  return
+}
+
+// CHECK-LABEL: func @zero_trip_loop2
+func.func @zero_trip_loop2() {
+  %idx1 = arith.constant 1 : index
+  %idxm1 = arith.constant -1 : index
+  scf.for %arg0 = %idx1 to %idx1 step %idxm1 {
+    %138 = index.floordivs %arg0, %arg0
+  }
+  return
 }

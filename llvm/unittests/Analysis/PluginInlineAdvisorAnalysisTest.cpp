@@ -1,6 +1,7 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/Config/config.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"

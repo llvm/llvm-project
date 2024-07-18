@@ -1,15 +1,18 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
-! Tests for C1128:
+! Tests for F'2023 C1130:
 ! A variable-name that appears in a LOCAL or LOCAL_INIT locality-spec shall not
 ! have the ALLOCATABLE; INTENT (IN); or OPTIONAL attribute; shall not be of
 ! finalizable type; shall not be a nonpointer polymorphic dummy argument; and
 ! shall not be a coarray or an assumed-size array.
 
 subroutine s1()
-! Cannot have ALLOCATABLE variable in a locality spec
+! Cannot have ALLOCATABLE variable in a LOCAL/LOCAL_INIT locality spec
   integer, allocatable :: k
-!ERROR: ALLOCATABLE variable 'k' not allowed in a locality-spec
+!ERROR: ALLOCATABLE variable 'k' not allowed in a LOCAL locality-spec
   do concurrent(i=1:5) local(k)
+  end do
+!ERROR: ALLOCATABLE variable 'k' not allowed in a LOCAL_INIT locality-spec
+  do concurrent(i=1:5) local_init(k)
   end do
 end subroutine s1
 
@@ -37,7 +40,7 @@ subroutine s4(arg)
 end subroutine s4
 
 module m
-! Cannot have a variable of a finalizable type in a locality spec
+! Cannot have a variable of a finalizable type in a LOCAL locality spec
   type t1
     integer :: i
   contains
@@ -46,7 +49,7 @@ module m
  contains
   subroutine s5()
     type(t1) :: var
-    !ERROR: Finalizable variable 'var' not allowed in a locality-spec
+    !ERROR: Finalizable variable 'var' not allowed in a LOCAL locality-spec
     do concurrent(i=1:5) local(var)
     end do
   end subroutine s5
@@ -56,7 +59,7 @@ module m
 end module m
 
 subroutine s6
-! Cannot have a nonpointer polymorphic dummy argument in a locality spec
+! Cannot have a nonpointer polymorphic dummy argument in a LOCAL locality spec
   type :: t
     integer :: field
   end type t
@@ -70,7 +73,7 @@ contains
     end do
 
 ! This is not allowed
-!ERROR: Nonpointer polymorphic argument 'y' not allowed in a locality-spec
+!ERROR: Nonpointer polymorphic argument 'y' not allowed in a LOCAL locality-spec
     do concurrent(i=1:5) local(y)
     end do
   end subroutine s
@@ -79,7 +82,7 @@ end subroutine s6
 subroutine s7()
 ! Cannot have a coarray
   integer, codimension[*] :: coarray_var
-!ERROR: Coarray 'coarray_var' not allowed in a locality-spec
+!ERROR: Coarray 'coarray_var' not allowed in a LOCAL locality-spec
   do concurrent(i=1:5) local(coarray_var)
   end do
 end subroutine s7

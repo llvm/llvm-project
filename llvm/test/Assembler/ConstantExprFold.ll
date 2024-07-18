@@ -16,13 +16,6 @@
 %Ty = type { i32, i32 }
 @B = external global %Ty
 
-; @icmp_ult1 and @icmp_ult2 will be folded by the target-dependent constant folder instead.
-@icmp_ult1 = global i1 icmp ult (ptr @A, ptr getelementptr (i64, ptr @A, i64 1))        ; true
-@icmp_slt = global i1 icmp slt (ptr @A, ptr @A)        ; false
-@icmp_ult2 = global i1 icmp ult (ptr @B,
-  ptr getelementptr (%Ty, ptr @B, i64 0, i32 1))            ; true
-;global i1 icmp ne (ptr @A, ptr @B)                 ; true
-
 ; PR2206
 @cons = weak global i32 0, align 8              ; <ptr> [#uses=1]
 
@@ -43,9 +36,6 @@
 ; CHECK: @mul = global ptr null
 ; CHECK: @xor = global ptr @A
 ; CHECK: @B = external global %Ty
-; CHECK: @icmp_ult1 = global i1 icmp ugt (ptr getelementptr inbounds (i64, ptr @A, i64 1), ptr @A)
-; CHECK: @icmp_slt = global i1 false
-; CHECK: @icmp_ult2 = global i1 icmp ugt (ptr getelementptr inbounds (%Ty, ptr @B, i64 0, i32 1), ptr @B)
 ; CHECK: @cons = weak global i32 0, align 8
 ; CHECK: @gep1 = global <2 x ptr> undef
 ; CHECK: @gep2 = global <2 x ptr> undef

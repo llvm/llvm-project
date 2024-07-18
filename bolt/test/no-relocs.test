@@ -1,7 +1,7 @@
-# Verifies that input without relocations is rejected in relocs mode.
+## Verifies that input without relocations is rejected in relocs mode.
 
-# This test uses the clang driver without target flags and will only succeed
-# on Linux systems where the host triple matches the target.
+## This test uses the clang driver without target flags and will only succeed
+## on Linux systems where the host triple matches the target.
 REQUIRES: system-linux
 
 RUN: %clang %cflags %S/Inputs/icf-jump-tables.c -o %t
