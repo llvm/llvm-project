@@ -130,8 +130,9 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) {
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_f32_e32 v3, v4, v2
+; GFX12-NEXT:    global_wb scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    flat_atomic_cmpswap_b32 v3, v[0:1], v[3:4] th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    flat_atomic_cmpswap_b32 v3, v[0:1], v[3:4] th:TH_ATOMIC_RETURN scope:SCOPE_SE
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
 ; GFX12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
@@ -290,8 +291,9 @@ define i32 @atomic_nand_i32_global(ptr addrspace(1) %ptr) nounwind {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_not_b32_e32 v2, v3
 ; GFX12-NEXT:    v_or_b32_e32 v2, -5, v2
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_atomic_cmpswap_b32 v2, v[0:1], v[2:3], off th:TH_ATOMIC_RETURN
+; GFX12-NEXT:    global_atomic_cmpswap_b32 v2, v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
@@ -806,6 +808,7 @@ define amdgpu_kernel void @atomic_add_local(ptr addrspace(3) %local) {
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_mul_i32 s0, s0, 5
 ; GFX12-NEXT:    v_dual_mov_b32 v1, s0 :: v_dual_mov_b32 v0, s1
+; GFX12-NEXT:    global_wb scope:SCOPE_SE
 ; GFX12-NEXT:    ds_add_u32 v0, v1
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
@@ -874,8 +877,9 @@ define void @flat_atomic_xchg_i32_noret(ptr %ptr, i32 %in) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    flat_atomic_swap_b32 v[0:1], v2
+; GFX12-NEXT:    flat_atomic_swap_b32 v[0:1], v2 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -1051,6 +1055,7 @@ define amdgpu_kernel void @atomic_add_ret_local(ptr addrspace(1) %out, ptr addrs
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_mul_i32 s1, s1, 5
 ; GFX12-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s4
+; GFX12-NEXT:    global_wb scope:SCOPE_SE
 ; GFX12-NEXT:    ds_add_rtn_u32 v1, v1, v2
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SE
@@ -1655,4 +1660,3 @@ entry:
   %bc = bitcast <2 x i32> %r.1 to <2 x float>
   ret <2 x float> %bc
 }
-

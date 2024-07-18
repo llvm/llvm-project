@@ -44,6 +44,8 @@ to learn about the defaults for your platform and target.
     - ``LIBC_CONF_RAW_MUTEX_DEFAULT_SPIN_COUNT``: Default number of spins before blocking if a mutex is in contention (default to 100).
     - ``LIBC_CONF_RWLOCK_DEFAULT_SPIN_COUNT``: Default number of spins before blocking if a rwlock is in contention (default to 100).
     - ``LIBC_CONF_TIMEOUT_ENSURE_MONOTONICITY``: Automatically adjust timeout to CLOCK_MONOTONIC (default to true). POSIX API may require CLOCK_REALTIME, which can be unstable and leading to unexpected behavior. This option will convert the real-time timestamp to monotonic timestamp relative to the time of call.
+* **"qsort" options**
+    - ``LIBC_CONF_QSORT_IMPL``: Configures sorting algorithm for qsort and qsort_r. Values accepted are LIBC_QSORT_QUICK_SORT, LIBC_QSORT_HEAP_SORT.
 * **"scanf" options**
     - ``LIBC_CONF_SCANF_DISABLE_FLOAT``: Disable parsing floating point values in scanf and friends.
     - ``LIBC_CONF_SCANF_DISABLE_INDEX_MODE``: Disable index mode in the scanf format string.
