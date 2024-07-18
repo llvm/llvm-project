@@ -322,13 +322,15 @@ public:
 
   std::unique_ptr<PBQPRAConstraint> getCustomPBQPConstraints() const override;
 
-  bool isCallingConvWin64(CallingConv::ID CC) const {
+  bool isCallingConvWin64(CallingConv::ID CC, bool IsVarArg) const {
     switch (CC) {
     case CallingConv::C:
     case CallingConv::Fast:
     case CallingConv::Swift:
     case CallingConv::SwiftTail:
       return isTargetWindows();
+    case CallingConv::PreserveNone:
+      return IsVarArg && isTargetWindows();
     case CallingConv::Win64:
       return true;
     default:

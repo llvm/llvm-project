@@ -2001,7 +2001,7 @@ bool AArch64InstructionSelector::selectVaStartDarwin(
 
   int FrameIdx = FuncInfo->getVarArgsStackIndex();
   if (MF.getSubtarget<AArch64Subtarget>().isCallingConvWin64(
-          MF.getFunction().getCallingConv())) {
+          MF.getFunction().getCallingConv(), MF.getFunction().isVarArg())) {
     FrameIdx = FuncInfo->getVarArgsGPRSize() > 0
                    ? FuncInfo->getVarArgsGPRIndex()
                    : FuncInfo->getVarArgsStackIndex();
