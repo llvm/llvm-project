@@ -59,13 +59,16 @@ concept CanSentinelMinus =
     // Note: Do *not* use std::iterator_traits here because T may not have
     // all the required pieces when it is not a forward_range.
     std::is_same_v<typename T::difference_type, decltype(std::declval<T>() - std::default_sentinel)> &&
-    std::is_same_v<typename T::difference_type, decltype(std::default_sentinel - std::declval<T>())> && requires(T& t) {
+    std::is_same_v<typename T::difference_type, decltype(std::default_sentinel - std::declval<T>())> &&
+    requires(T& t) {
       t - std::default_sentinel;
       std::default_sentinel - t;
     };
 
 template <class T>
-concept CanDifferencePlus = std::is_same_v<T, decltype(std::declval<T>() + 1)> && requires(T& t) { t + 1; };
+concept CanDifferencePlus =
+    std::is_same_v<T, decltype(std::declval<T>() + 1)> && requires(T& t) { t + 1; } &&
+    std::is_same_v<T, decltype(1 + std::declval<T>())> && requires(T& t) { 1 + t; };
 template <class T>
 concept CanDifferenceMinus = std::is_same_v<T, decltype(std::declval<T>() - 1)> && requires(T& t) { t - 1; };
 
@@ -235,12 +238,14 @@ template <typename Iter>
   requires std::sized_sentinel_for<Iter, Iter> && (!std::forward_iterator<Iter>)
 constexpr bool test_non_forward_operator_minus(Iter zero_begin, Iter one_begin, Iter end) {
   using Base = BasicTestView<Iter, Iter>;
-  // Test the non-forward-range operator- between two iterators (i.e., ceil).
+  // Test the non-forward-range operator- between two iterators (i.e., ceil) and an
+  // iterator and a default sentinel.
+  using StrideViewIterator = std::ranges::iterator_t<std::ranges::stride_view<Base>>;
+  static_assert(std::weakly_incrementable<StrideViewIterator>);
+  static_assert(!std::ranges::forward_range<Base>);
+
   // First, what operators are valid for an iterator derived from a stride view
   // over a sized input view.
-  using StrideViewIterator = std::ranges::iterator_t<std::ranges::stride_view<Base>>;
-
-  static_assert(std::weakly_incrementable<StrideViewIterator>);
 
   static_assert(!CanPostDecrement<StrideViewIterator>);
   static_assert(!CanPreDecrement<StrideViewIterator>);
@@ -268,11 +273,11 @@ constexpr bool test_non_forward_operator_minus(Iter zero_begin, Iter one_begin, 
   auto sv_one_offset_begin  = stride_view_over_base_one_offset.begin();
 
   auto sv_zero_offset_zeroth_index = sv_zero_offset_begin;
-  auto sv_zero_offset_third_index  = ++sv_zero_offset_begin;
-  auto sv_zero_offset_sixth_index  = ++sv_zero_offset_begin;
+  auto sv_zero_offset_third_index  = ++sv_zero_offset_begin; // With a stride of 3, so ++ moves 3 indexes.
+  auto sv_zero_offset_sixth_index  = ++sv_zero_offset_begin; // With a stride of 3, so ++ moves 3 indexes.
 
   auto sv_one_offset_oneth_index  = sv_one_offset_begin;
-  auto sv_one_offset_fourth_index = ++sv_one_offset_begin;
+  auto sv_one_offset_fourth_index = ++sv_one_offset_begin; // With a stride of 3, so ++ moves 3 indexes.
 
   static_assert(std::sized_sentinel_for<std::ranges::iterator_t<Base>, std::ranges::iterator_t<Base>>);
   static_assert(CanMinus<decltype(sv_zero_offset_begin)>);
@@ -294,7 +299,10 @@ constexpr bool test_non_forward_operator_minus(Iter zero_begin, Iter one_begin, 
   assert(stride_view_over_base_zero_offset.end() == std::default_sentinel);
   assert(std::default_sentinel == stride_view_over_base_zero_offset.end());
 
+  assert(std::default_sentinel - stride_view_over_base_zero_offset.end() == 0);
   assert(stride_view_over_base_zero_offset.end() - std::default_sentinel == 0);
+  //assert((std::default_sentinel - )== 0);
+
   assert(std::default_sentinel - stride_view_over_base_zero_offset.begin() ==
          std::ranges::distance(stride_view_over_base_zero_offset));
   assert(stride_view_over_base_zero_offset.begin() - std::default_sentinel ==
@@ -303,17 +311,19 @@ constexpr bool test_non_forward_operator_minus(Iter zero_begin, Iter one_begin, 
   return true;
 }
 
-template <std::forward_iterator Iter>
-constexpr bool test_forward_operator_minus(Iter begin, Iter end) {
-  // Test the forward-range operator- between two iterators (i.e., no ceil).
+template <std::forward_iterator Iter, typename difference_type>
+constexpr bool test_forward_operator_minus(Iter begin, Iter end, difference_type distance) {
+  // Test the forward-range operator- between two iterators (i.e., no ceil) and
+  // an iterator and a default sentinel.
   using Base = BasicTestView<Iter, Iter>;
-  //int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+
+  using StrideViewIterator = std::ranges::iterator_t<std::ranges::stride_view<Base>>;
+  static_assert(std::ranges::forward_range<Base>);
+  static_assert(std::weakly_incrementable<StrideViewIterator>);
 
   // First, what operators are valid for an iterator derived from a stride view
   // over a sized forward view (even though it is actually much more than that!).
-  using StrideViewIterator = std::ranges::iterator_t<std::ranges::stride_view<Base>>;
 
-  static_assert(std::weakly_incrementable<StrideViewIterator>);
   static_assert(CanMinus<StrideViewIterator>);
   static_assert(CanSentinelMinus<StrideViewIterator>);
 
@@ -361,6 +371,8 @@ constexpr bool test_forward_operator_minus(Iter begin, Iter end) {
          std::ranges::distance(stride_view_over_base_zero_offset));
   assert(stride_view_over_base_zero_offset.begin() - std::default_sentinel ==
          -std::ranges::distance(stride_view_over_base_zero_offset));
+  assert(stride_view_over_base_zero_offset.begin() - std::default_sentinel == -distance);
+  assert(std::default_sentinel - stride_view_over_base_zero_offset.begin() == distance);
   return true;
 }
 
@@ -398,7 +410,7 @@ constexpr bool test_properly_handling_missing() {
   assert(std::default_sentinel - strider.end() == 0);
   assert(std::default_sentinel - strider_iter == 0);
 
-  // Let's make sure that the newly regenerated __missing_ gets used.
+  // Let's make sure that the newly regenerated __missing__ gets used.
   strider_iter += -2;
   assert(*strider_iter == 1);
 
@@ -407,10 +419,10 @@ constexpr bool test_properly_handling_missing() {
 
 int main(int, char**) {
   {
-    constexpr int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-    std::vector<int> vec{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-    test_forward_operator_minus(arr, arr + 10);
-    test_forward_operator_minus(vec.begin(), vec.end());
+    constexpr int arr[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    std::vector<int> vec{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+    test_forward_operator_minus(arr, arr + 11, 4);
+    test_forward_operator_minus(vec.begin(), vec.end(), 4);
   }
 
   {
