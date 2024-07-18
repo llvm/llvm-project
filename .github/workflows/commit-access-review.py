@@ -201,7 +201,9 @@ def get_num_commits(user: str, start_date: datetime.datetime, token: str) -> int
     return count
 
 
-def is_new_committer_query_repo(user: str, start_date: datetime.datetime, token: str) -> bool:
+def is_new_committer_query_repo(
+    user: str, start_date: datetime.datetime, token: str
+) -> bool:
     """
     Determine if ``user`` is a new committer.  A new committer can keep their
     commit access even if they don't meet the criteria.
@@ -267,7 +269,7 @@ def is_new_committer(user: str, start_date: datetime.datetime, token: str) -> bo
 
 def get_review_count(user: str, start_date: datetime.datetime, token: str) -> int:
     """
-    Return the number of reviews that ``user`` has done since ``start_date``. 
+    Return the number of reviews that ``user`` has done since ``start_date``.
     """
     query = """
         query ($query: String!) {
