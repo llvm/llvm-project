@@ -5995,9 +5995,9 @@ public:
   void ActOnPureSpecifier(Decl *D, SourceLocation PureSpecLoc);
   void SetDeclDeleted(Decl *dcl, SourceLocation DelLoc,
                       StringLiteral *Message = nullptr);
-  void SetDeclDefaulted(Decl *dcl, SourceLocation DefaultLoc);
+  void SetDeclDefaulted(Scope *S, Decl *dcl, SourceLocation DefaultLoc);
 
-  void SetFunctionBodyKind(Decl *D, SourceLocation Loc, FnBodyKind BodyKind,
+  void SetFunctionBodyKind(Scope *S, Decl *D, SourceLocation Loc, FnBodyKind BodyKind,
                            StringLiteral *DeletedMessage = nullptr);
   void ActOnStartTrailingRequiresClause(Scope *S, Declarator &D);
   ExprResult ActOnFinishTrailingRequiresClause(ExprResult ConstraintExpr);

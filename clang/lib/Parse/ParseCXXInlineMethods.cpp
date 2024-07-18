@@ -124,7 +124,7 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
                       ? diag::warn_cxx98_compat_defaulted_deleted_function
                       : diag::ext_defaulted_deleted_function)
         << 0 /* defaulted */;
-      Actions.SetDeclDefaulted(FnD, KWLoc);
+      Actions.SetDeclDefaulted(nullptr, FnD, KWLoc);
       if (auto *DeclAsFunction = dyn_cast<FunctionDecl>(FnD)) {
         DeclAsFunction->setRangeEnd(KWEndLoc);
       }

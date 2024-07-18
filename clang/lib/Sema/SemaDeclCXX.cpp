@@ -17940,7 +17940,7 @@ void Sema::SetDeclDeleted(Decl *Dcl, SourceLocation DelLoc,
   Fn->setDeletedAsWritten(true, Message);
 }
 
-void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
+void Sema::SetDeclDefaulted(Scope *S, Decl *Dcl, SourceLocation DefaultLoc) {
   if (!Dcl || Dcl->isInvalidDecl())
     return;
 
@@ -18016,7 +18016,7 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
   }
 
   if (DefKind.isComparison()) {
-    if (CheckExplicitlyDefaultedComparison(nullptr, FD, DefKind.asComparison()))
+    if (CheckExplicitlyDefaultedComparison(S, FD, DefKind.asComparison()))
       FD->setInvalidDecl();
     else
       DefineDefaultedComparison(DefaultLoc, FD, DefKind.asComparison());
@@ -18050,14 +18050,14 @@ void Sema::DiagnoseReturnInConstructorExceptionHandler(CXXTryStmt *TryBlock) {
   }
 }
 
-void Sema::SetFunctionBodyKind(Decl *D, SourceLocation Loc, FnBodyKind BodyKind,
+void Sema::SetFunctionBodyKind(Scope *S, Decl *D, SourceLocation Loc, FnBodyKind BodyKind,
                                StringLiteral *DeletedMessage) {
   switch (BodyKind) {
   case FnBodyKind::Delete:
     SetDeclDeleted(D, Loc, DeletedMessage);
     break;
   case FnBodyKind::Default:
-    SetDeclDefaulted(D, Loc);
+    SetDeclDefaulted(S, D, Loc);
     break;
   case FnBodyKind::Other:
     llvm_unreachable(
