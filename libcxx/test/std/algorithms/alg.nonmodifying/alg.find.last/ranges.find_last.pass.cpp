@@ -60,7 +60,10 @@ static_assert(!HasFindLastR<ForwardRangeNotSentinelEqualityComparableWith, int>)
 
 template <class It, class Sent = It>
 constexpr void test_iterators() {
-  using ValueT = std::iter_value_t<It>;
+  using ValueT    = std::iter_value_t<It>;
+  auto make_range = [](auto& a) {
+    return std::ranges::subrange(It(std::ranges::begin(a)), Sent(It(std::ranges::end(a))));
+  };
   { // simple test
     {
       ValueT a[] = {1, 2, 3, 4};
@@ -71,9 +74,8 @@ constexpr void test_iterators() {
     }
     {
       ValueT a[] = {1, 2, 3, 4};
-      auto range = std::ranges::subrange(It(a), Sent(It(a + 4)));
 
-      std::same_as<std::ranges::subrange<It>> auto ret = std::ranges::find_last(range, 2);
+      std::same_as<std::ranges::subrange<It>> auto ret = std::ranges::find_last(make_range(a), 2);
       assert(base(ret.begin()) == a + 1);
       assert(*ret.begin() == 2);
     }
@@ -84,14 +86,13 @@ constexpr void test_iterators() {
       std::array<ValueT, 0> a = {};
 
       auto ret = std::ranges::find_last(It(a.data()), Sent(It(a.data())), 1).begin();
-      assert(base(ret) == a.data());
+      assert(ret == It(a.data()));
     }
     {
       std::array<ValueT, 0> a = {};
 
-      auto range = std::ranges::subrange(It(a.data()), Sent(It(a.data())));
-      auto ret   = std::ranges::find_last(range, 1).begin();
-      assert(base(ret) == a.data());
+      auto ret = std::ranges::find_last(make_range(a), 1).begin();
+      assert(ret == It(a.begin()));
     }
   }
 
@@ -99,14 +100,14 @@ constexpr void test_iterators() {
     {
       ValueT a[] = {1, 1, 1};
 
-      auto ret = std::ranges::find_last(a, a + 3, 0).begin();
-      assert(ret == a + 3);
+      auto ret = std::ranges::find_last(It(a), Sent(It(a + 3)), 0).begin();
+      assert(ret == It(a + 3));
     }
     {
       ValueT a[] = {1, 1, 1};
 
-      auto ret = std::ranges::find_last(a, 0).begin();
-      assert(ret == a + 3);
+      auto ret = std::ranges::find_last(make_range(a), 0).begin();
+      assert(ret == It(a + 3));
     }
   }
 }

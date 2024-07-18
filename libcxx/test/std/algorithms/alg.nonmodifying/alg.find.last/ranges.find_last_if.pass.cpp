@@ -57,22 +57,122 @@ static_assert(!HasFindLastIfR<ForwardRangeNotIncrementable>);
 static_assert(!HasFindLastIfR<ForwardRangeNotSentinelSemiregular>);
 static_assert(!HasFindLastIfR<ForwardRangeNotSentinelEqualityComparableWith>);
 
-template <class It, class Sent = It>
-constexpr void test_iterators() {
-  {
-    int a[] = {1, 2, 3, 4};
-    std::same_as<std::ranges::subrange<It>> auto ret =
-        std::ranges::find_last_if(It(a), Sent(It(a + 4)), [](int x) { return x == 4; });
-    assert(base(ret.begin()) == a + 3);
-    assert(*ret.begin() == 4);
-  }
-  {
-    int a[]    = {1, 2, 3, 4};
-    auto range = std::ranges::subrange(It(a), Sent(It(a + 4)));
+template <class It, class Sent>
+constexpr auto make_range(auto& a) {
+  return std::ranges::subrange(It(std::ranges::begin(a)), Sent(It(std::ranges::end(a))));
+}
 
-    std::same_as<std::ranges::subrange<It>> auto ret = std::ranges::find_last_if(range, [](int x) { return x == 4; });
-    assert(base(ret.begin()) == a + 3);
-    assert(*ret.begin() == 4);
+template <template <class> class IteratorT, template <class> class SentinelT>
+constexpr void test_iterator_classes() {
+  {
+    using it   = IteratorT<int*>;
+    using sent = SentinelT<it>;
+
+    {
+      int a[] = {1, 2, 3, 4};
+      std::same_as<std::ranges::subrange<it>> auto ret =
+          std::ranges::find_last_if(it(a), sent(it(a + 4)), [](int x) { return x == 4; });
+      assert(base(ret.begin()) == a + 3);
+      assert(*ret.begin() == 4);
+    }
+    {
+      int a[] = {1, 2, 3, 4};
+
+      std::same_as<std::ranges::subrange<it>> auto ret =
+          std::ranges::find_last_if(make_range<it, sent>(a), [](int x) { return x == 4; });
+      assert(ret.begin() == it(a + 3));
+      assert(*ret.begin() == 4);
+    }
+  }
+
+  { // check that an empty range works
+    using it   = IteratorT<std::ranges::iterator_t<std::array<int, 0>&>>;
+    using sent = SentinelT<it>;
+
+    {
+      std::array<int, 0> a = {};
+
+      auto ret = std::ranges::find_last_if(it(a.data()), sent(it(a.data())), [](auto&&) { return true; }).begin();
+      assert(ret == it(a.data()));
+    }
+    {
+      std::array<int, 0> a = {};
+
+      auto ret = std::ranges::find_last_if(make_range<it, sent>(a), [](auto&&) { return true; }).begin();
+      assert(ret == it(a.begin()));
+    }
+  }
+
+  { // check that last is returned with no match
+    using it   = IteratorT<int*>;
+    using sent = SentinelT<it>;
+
+    {
+      int a[] = {1, 1, 1};
+
+      auto ret = std::ranges::find_last_if(it(a), sent(it(a + 3)), [](auto&&) { return false; }).begin();
+      assert(ret == it(a + 3));
+    }
+    {
+      int a[] = {1, 1, 1};
+
+      auto ret = std::ranges::find_last_if(make_range<it, sent>(a), [](auto&&) { return false; }).begin();
+      assert(ret == it(a + 3));
+    }
+  }
+
+  { // check that the last element is returned
+    struct S {
+      int comp;
+      int other;
+    };
+    using it   = IteratorT<S*>;
+    using sent = SentinelT<it>;
+
+    S a[] = {{0, 0}, {0, 2}, {0, 1}};
+
+    auto ret = std::ranges::find_last_if(
+                   it(std::begin(a)), sent(it(std::end(a))), [](int c) { return c == 0; }, &S::comp)
+                   .begin();
+    assert(ret == it(a + 2));
+    assert((*ret).comp == 0);
+    assert((*ret).other == 1);
+  }
+
+  {
+    // count projection and predicate invocation count
+    {
+      int a[]              = {1, 2, 3, 4};
+      int predicate_count  = 0;
+      int projection_count = 0;
+
+      using it   = IteratorT<int*>;
+      using sent = SentinelT<it>;
+
+      auto ret =
+          std::ranges::find_last_if(
+              it(a),
+              sent(it(a + 4)),
+              [&](int i) {
+                ++predicate_count;
+                return i == 2;
+              },
+              [&](int i) {
+                ++projection_count;
+                return i;
+              })
+              .begin();
+      assert(ret == it(a + 1));
+      assert(*ret == 2);
+
+      if constexpr (std::bidirectional_iterator<it>) {
+        assert(predicate_count == 3);
+        assert(projection_count == 3);
+      } else {
+        assert(predicate_count == 4);
+        assert(projection_count == 4);
+      }
+    }
   }
 }
 
@@ -83,14 +183,23 @@ struct NonConstComparable {
   friend constexpr bool operator==(NonConstComparable&, const NonConstComparable&) { return true; }
 };
 
+template <class T>
+struct add_const_to_ptr;
+template <class T>
+struct add_const_to_ptr<T*> {
+  using type = const T*;
+};
+template <class T>
+using add_const_to_ptr_t = add_const_to_ptr<T>::type;
+
 constexpr bool test() {
-  test_iterators<int*>();
-  test_iterators<const int*>();
-  test_iterators<forward_iterator<int*>, sentinel_wrapper<forward_iterator<int*>>>();
-  test_iterators<bidirectional_iterator<int*>>();
-  test_iterators<forward_iterator<int*>>();
-  test_iterators<random_access_iterator<int*>>();
-  test_iterators<contiguous_iterator<int*>>();
+  test_iterator_classes<std::type_identity_t, std::type_identity_t>();
+  test_iterator_classes<add_const_to_ptr_t, std::type_identity_t>();
+  test_iterator_classes<contiguous_iterator, std::type_identity_t>();
+  test_iterator_classes<random_access_iterator, std::type_identity_t>();
+  test_iterator_classes<bidirectional_iterator, std::type_identity_t>();
+  test_iterator_classes<forward_iterator, std::type_identity_t>();
+  test_iterator_classes<forward_iterator, sentinel_wrapper>();
 
   {
     // check that projections are used properly and that they are called with the iterator directly
@@ -108,116 +217,18 @@ constexpr bool test() {
   }
 
   {
-    // check that the last element is returned
-    {
-      struct S {
-        int comp;
-        int other;
-      };
-      S a[]    = {{0, 0}, {0, 2}, {0, 1}};
-      auto ret = std::ranges::find_last_if(a, [](int i) { return i == 0; }, &S::comp).begin();
-      assert(ret == a + 2);
-      assert(ret->comp == 0);
-      assert(ret->other == 1);
-    }
-    {
-      struct S {
-        int comp;
-        int other;
-      };
-      S a[]    = {{0, 0}, {0, 2}, {0, 1}};
-      auto ret = std::ranges::find_last_if(a, a + 3, [](int i) { return i == 0; }, &S::comp).begin();
-      assert(ret == a + 2);
-      assert(ret->comp == 0);
-      assert(ret->other == 1);
-    }
-  }
-
-  {
-    // check that end iterator is returned with no match
-    {
-      int a[]  = {1, 1, 1};
-      auto ret = std::ranges::find_last_if(a, a + 3, [](int) { return false; }).begin();
-      assert(ret == a + 3);
-    }
-    {
-      int a[]  = {1, 1, 1};
-      auto ret = std::ranges::find_last_if(a, [](int) { return false; }).begin();
-      assert(ret == a + 3);
-    }
-  }
-
-  {
     // check that ranges::dangling is returned
     [[maybe_unused]] std::same_as<std::ranges::dangling> auto ret =
         std::ranges::find_last_if(std::array{1, 2}, [](int) { return false; });
   }
 
   {
-    // check that an iterator is returned with a borrowing range
+    // check that a subrange is returned with a borrowing range
     int a[] = {1, 2, 3, 4};
     std::same_as<std::ranges::subrange<int*>> auto ret =
         std::ranges::find_last_if(std::views::all(a), [](int) { return true; });
     assert(ret.begin() == a + 3);
     assert(*ret.begin() == 4);
-  }
-
-  {
-    // check that std::invoke is used
-    struct S {
-      int i;
-    };
-    S a[] = {S{1}, S{3}, S{2}};
-
-    std::same_as<S*> auto ret = std::ranges::find_last_if(a, [](int) { return false; }, &S::i).begin();
-    assert(ret == a + 3);
-  }
-
-  {
-    // count projection and predicate invocation count
-    {
-      int a[]              = {1, 2, 3, 4};
-      int predicate_count  = 0;
-      int projection_count = 0;
-      auto ret =
-          std::ranges::find_last_if(
-              a,
-              a + 4,
-              [&](int i) {
-                ++predicate_count;
-                return i == 2;
-              },
-              [&](int i) {
-                ++projection_count;
-                return i;
-              })
-              .begin();
-      assert(ret == a + 1);
-      assert(*ret == 2);
-      assert(predicate_count == 3);
-      assert(projection_count == 3);
-    }
-    {
-      int a[]              = {1, 2, 3, 4};
-      int predicate_count  = 0;
-      int projection_count = 0;
-      auto ret =
-          std::ranges::find_last_if(
-              a,
-              [&](int i) {
-                ++predicate_count;
-                return i == 2;
-              },
-              [&](int i) {
-                ++projection_count;
-                return i;
-              })
-              .begin();
-      assert(ret == a + 1);
-      assert(*ret == 2);
-      assert(predicate_count == 3);
-      assert(projection_count == 3);
-    }
   }
 
   {
@@ -233,22 +244,6 @@ constexpr bool test() {
 
       auto ret = std::ranges::find_last_if(a, [](auto&& e) { return e == NonConstComparable{}; }).begin();
       assert(ret == a);
-    }
-  }
-
-  {
-    // check that an empty range works
-    {
-      std::array<int, 0> a = {};
-
-      auto ret = std::ranges::find_last_if(a.begin(), a.end(), [](int) { return true; }).begin();
-      assert(ret == a.begin());
-    }
-    {
-      std::array<int, 0> a = {};
-
-      auto ret = std::ranges::find_last_if(a, [](int) { return true; }).begin();
-      assert(ret == a.begin());
     }
   }
 
