@@ -51,8 +51,10 @@ static bool CheckMemoryRangeAvailability(uptr beg, uptr size, bool verbose) {
     uptr end = beg + size - 1;
     if (!MemoryRangeIsAvailable(beg, end)) {
       if (verbose)
-        Printf("FATAL: Memory range 0x%zx - 0x%zx is not available.\n", beg,
-               end);
+        Printf(
+            "FATAL: MemorySanitizer: Shadow range 0x%zx-0x%zx is not "
+            "available.\n",
+            beg, end);
       return false;
     }
   }
@@ -72,8 +74,10 @@ static bool ProtectMemoryRange(uptr beg, uptr size, const char *name) {
     }
     if ((uptr)addr != beg) {
       uptr end = beg + size - 1;
-      Printf("FATAL: Cannot protect memory range 0x%zx - 0x%zx (%s).\n", beg,
-             end, name);
+      Printf(
+          "FATAL: MemorySanitizer: Cannot protect memory range 0x%zx-0x%zx "
+          "(%s).\n",
+          beg, end, name);
       return false;
     }
   }
