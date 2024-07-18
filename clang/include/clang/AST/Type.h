@@ -132,7 +132,6 @@ class TemplateArgument;
 class TemplateArgumentListInfo;
 class TemplateArgumentLoc;
 class TemplateTypeParmDecl;
-template <typename> class TreeTransform;
 class TypedefNameDecl;
 class UnresolvedUsingTypenameDecl;
 class UsingShadowDecl;
@@ -4901,7 +4900,6 @@ public:
     return !(LHS == RHS);
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID) const;
   void dump(llvm::raw_ostream &OS) const;
 };
 
@@ -4971,8 +4969,8 @@ class FunctionProtoType final
           FunctionProtoType, QualType, SourceLocation,
           FunctionType::FunctionTypeExtraBitfields,
           FunctionType::FunctionTypeArmAttributes, FunctionType::ExceptionType,
-          Expr *, FunctionDecl *, FunctionType::ExtParameterInfo,
-          FunctionEffect, EffectConditionExpr, Qualifiers> {
+          Expr *, FunctionDecl *, FunctionType::ExtParameterInfo, Qualifiers,
+          FunctionEffect, EffectConditionExpr> {
   friend class ASTContext; // ASTContext creates these.
   friend TrailingObjects;
 
@@ -5003,21 +5001,21 @@ class FunctionProtoType final
   //   an ExtParameterInfo for each of the parameters. Present if and
   //   only if hasExtParameterInfos() is true.
   //
+  // * Optionally a Qualifiers object to represent extra qualifiers that can't
+  //   be represented by FunctionTypeBitfields.FastTypeQuals. Present if and
+  //   only if hasExtQualifiers() is true.
+  //
   // * Optionally, an array of getNumFunctionEffects() FunctionEffect.
   //   Present only when getNumFunctionEffects() > 0
   //
   // * Optionally, an array of getNumFunctionEffects() EffectConditionExpr.
   //   Present only when getNumFunctionEffectConditions() > 0.
   //
-  // * Optionally a Qualifiers object to represent extra qualifiers that can't
-  //   be represented by FunctionTypeBitfields.FastTypeQuals. Present if and
-  //   only if hasExtQualifiers() is true.
-  //
   // The optional FunctionTypeExtraBitfields has to be before the data
   // related to the exception specification since it contains the number
   // of exception types.
   //
-  // We put the ExtParameterInfos last.  If all were equal, it would make
+  // We put the ExtParameterInfos later.  If all were equal, it would make
   // more sense to put these before the exception specification, because
   // it's much easier to skip past them compared to the elaborate switch
   // required to skip the exception specification.  However, all is not
@@ -5132,6 +5130,10 @@ private:
 
   unsigned numTrailingObjects(OverloadToken<ExtParameterInfo>) const {
     return hasExtParameterInfos() ? getNumParams() : 0;
+  }
+
+  unsigned numTrailingObjects(OverloadToken<Qualifiers>) const {
+    return hasExtQualifiers() ? 1 : 0;
   }
 
   unsigned numTrailingObjects(OverloadToken<FunctionEffect>) const {
@@ -8615,6 +8617,18 @@ QualType DecayedType::getPointeeType() const {
 // APFixedPoint instead of APSInt and scale.
 void FixedPointValueToString(SmallVectorImpl<char> &Str, llvm::APSInt Val,
                              unsigned Scale);
+
+inline FunctionEffectsRef FunctionEffectsRef::get(QualType QT) {
+  while (true) {
+    QualType Pointee = QT->getPointeeType();
+    if (Pointee.isNull())
+      break;
+    QT = Pointee;
+  }
+  if (const auto *FPT = QT->getAs<FunctionProtoType>())
+    return FPT->getFunctionEffects();
+  return {};
+}
 
 } // namespace clang
 

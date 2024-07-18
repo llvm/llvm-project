@@ -13,4 +13,3 @@ functions:
       - type: const char *
       - type: unsigned
       - type: const char *
-    guard: __cplusplus

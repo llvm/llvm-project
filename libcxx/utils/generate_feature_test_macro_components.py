@@ -1266,7 +1266,7 @@ feature_test_macros = [
             "values": {
                 "c++17": 201606,
                 "c++20": 201803,
-                # "c++26": 202403, # P2591R5: Concatenation of strings and string views
+                "c++26": 202403,  # P2591R5: Concatenation of strings and string views
             },
             "headers": ["string", "string_view"],
         },
