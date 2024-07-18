@@ -3073,22 +3073,46 @@ struct EmbedAnnotationData {
 /// Registry of pragma handlers added by plugins
 using PragmaHandlerRegistry = llvm::Registry<PragmaHandler>;
 
-/// Module/Partition name token sequance.
+/// Represents module or partition name token sequance.
 ///
 ///     module-name:
 ///           module-name-qualifier[opt] identifier
 ///
+///     partition-name: [C++20]
+///           : module-name-qualifier[opt] identifier
+///
 ///     module-name-qualifier
 ///           module-name-qualifier[opt] identifier .
+///
+/// This class can only be created by the preprocessor and guarantees that the
+/// two source array being contiguous in memory and only contains 3 kind of
+/// tokens (identifier, '.' and ':'). And only available when the preprocessor
+/// returns annot_module_name token.
+///
+/// For exmaple:
+///
+/// export module m.n:c.d
+///
+/// The module name array has 3 tokens ['m', '.', 'n'].
+/// The partition name array has 4 tokens [':', 'c', '.', 'd'].
+///
+/// When import a partition in a named module fragment (Eg. import :part1;),
+/// the module name array will be empty, and the partition name array has 2
+/// tokens.
+///
+/// When we meet a private-module-fragment (Eg. module :private;), preprocessor
+/// will not return a annot_module_name token, but will return 2 separate tokens
+/// [':', 'kw_private'].
+
 class ModuleNameInfo {
   friend class Preprocessor;
   ArrayRef<Token> ModuleName;
   ArrayRef<Token> PartitionName;
 
-  ModuleNameInfo(ArrayRef<Token> Module, ArrayRef<Token> Partition)
-      : ModuleName(Module), PartitionName(Partition) {}
+  ModuleNameInfo(ArrayRef<Token> AnnotToks, std::optional<unsigned> ColonIndex);
 
 public:
+  /// Return the contiguous token array.
   ArrayRef<Token> getTokens() const {
     if (ModuleName.empty())
       return PartitionName;
@@ -3104,9 +3128,17 @@ public:
     assert(hasPartitionName() && "Do not have a partition name");
     return getPartitionName().front();
   }
+
+  /// Under the standard C++ Modules, the dot is just part of the module name,
+  /// and not a real hierarchy separator. Flatten such module names now.
   std::string getFlatName() const;
+
+  /// Build a module id path from the contiguous token array, both include
+  /// module name and partition name.
   void getModuleIdPath(
       SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path) const;
+
+  /// Build a module id path from \param ModuleName.
   static void getModuleIdPath(
       ArrayRef<Token> ModuleName,
       SmallVectorImpl<std::pair<IdentifierInfo *, SourceLocation>> &Path);

@@ -1002,6 +1002,8 @@ PRAGMA_ANNOTATION(pragma_riscv)
 ANNOTATION(module_include)
 ANNOTATION(module_begin)
 ANNOTATION(module_end)
+
+// Annotations for C++, Clang and Objective-C named modules.
 ANNOTATION(module_name)
 
 // Annotation for a header_name token that has been looked up and transformed

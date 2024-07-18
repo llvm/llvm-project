@@ -926,12 +926,6 @@ void Preprocessor::Lex(Token &Result) {
       StdCXXImportSeqState.handleExport();
       ModuleDeclState.handleExport();
       break;
-    case tok::colon:
-      ModuleDeclState.handleColon();
-      break;
-    case tok::period:
-      ModuleDeclState.handlePeriod();
-      break;
     case tok::annot_module_name: {
       auto *Info = static_cast<ModuleNameInfo *>(Result.getAnnotationValue());
       for (const auto &Tok : Info->getTokens()) {
@@ -978,7 +972,6 @@ void Preprocessor::Lex(Token &Result) {
           break;
         }
       }
-      ModuleDeclState.handleIdentifier(Result.getIdentifierInfo());
       if (ModuleDeclState.isModuleCandidate())
         break;
       [[fallthrough]];
@@ -1153,6 +1146,16 @@ void Preprocessor::CollectPpImportSuffix(SmallVectorImpl<Token> &Toks) {
   }
 }
 
+ModuleNameInfo::ModuleNameInfo(ArrayRef<Token> AnnotToks,
+                               std::optional<unsigned> ColonIndex) {
+  assert(!AnnotToks.empty() && "Named module token cannot be empty.");
+  if (!ColonIndex.has_value())
+    ColonIndex = AnnotToks.size();
+  ModuleName = ArrayRef(AnnotToks.begin(), AnnotToks.begin() + *ColonIndex);
+  PartitionName = ArrayRef(AnnotToks.begin() + *ColonIndex, AnnotToks.end());
+  assert(ModuleName.end() == PartitionName.begin());
+}
+
 std::string ModuleNameInfo::getFlatName() const {
   std::string FlatModuleName;
   for (auto &Tok : getTokens()) {
@@ -1239,7 +1242,8 @@ bool Preprocessor::LexModuleName(Token &Result, bool IsImport) {
         Token Tmp;
         LexNextToken(Tmp);
         EnterToken(Tmp, /*IsReiject=*/false);
-        // A private-module-fragment, module :private;
+        // A private-module-fragment:
+        // export module :private;
         if (!IsImport && Tmp.is(tok::kw_private))
           return true;
         // import :N;
@@ -1282,17 +1286,8 @@ bool Preprocessor::LexModuleName(Token &Result, bool IsImport) {
   Result.setLocation(ModuleName.front().getLocation());
   Result.setAnnotationEndLoc(ModuleName.back().getLocation());
   auto AnnotToks = ArrayRef(ModuleName).copy(getPreprocessorAllocator());
-  ArrayRef<Token> ModuleNameToks, PartitionNameToks;
-  if (ColonTokIndex.has_value()) {
-    ModuleNameToks =
-        ArrayRef(AnnotToks.begin(), AnnotToks.begin() + *ColonTokIndex);
-    PartitionNameToks =
-        ArrayRef(AnnotToks.begin() + *ColonTokIndex, AnnotToks.end());
-  } else {
-    ModuleNameToks = AnnotToks;
-  }
-  ModuleNameInfo *Info = new (getPreprocessorAllocator())
-      ModuleNameInfo(ModuleNameToks, PartitionNameToks);
+  ModuleNameInfo *Info =
+      new (getPreprocessorAllocator()) ModuleNameInfo(AnnotToks, ColonTokIndex);
   Result.setAnnotationValue(static_cast<void *>(Info));
   return true;
 }
