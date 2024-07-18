@@ -18,6 +18,6 @@
 #include "mlir/CAPI/Wrap.h"
 #include "mlir/IR/PatternMatch.h"
 
-DEFINE_C_API_PTR_METHODS(MlirRewriterBase, mlir::RewriterBase);
+DEFINE_C_API_PTR_METHODS(MlirRewriterBase, mlir::RewriterBase)
 
 #endif // MLIR_CAPIREWRITER_H
