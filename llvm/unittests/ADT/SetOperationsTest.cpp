@@ -207,16 +207,14 @@ TEST(SetOperationsTest, SetSubtractSmallPtrSet) {
   // Set1.size() < Set2.size()
   SmallPtrSet<int *, 4> Set1 = {&A[0], &A[1]};
   SmallPtrSet<int *, 4> Set2 = {&A[1], &A[2], &A[3]};
-  SmallPtrSet<int *, 4> ExpectedSet1 = {&A[0]};
   set_subtract(Set1, Set2);
-  EXPECT_EQ(ExpectedSet1, Set1);
+  EXPECT_THAT(Set1, testing::UnorderedElementsAre(&A[0]));
 
   // Set1.size() > Set2.size()
   Set1 = {&A[0], &A[1], &A[2]};
   Set2 = {&A[0], &A[2]};
-  ExpectedSet1 = {&A[1]};
   set_subtract(Set1, Set2);
-  EXPECT_EQ(ExpectedSet1, Set1);
+  EXPECT_THAT(Set1, testing::UnorderedElementsAre(&A[1]));
 }
 
 TEST(SetOperationsTest, SetSubtractSmallVector) {
@@ -225,16 +223,14 @@ TEST(SetOperationsTest, SetSubtractSmallVector) {
   // Set1.size() < Set2.size()
   SmallPtrSet<int *, 4> Set1 = {&A[0], &A[1]};
   SmallVector<int *> Set2 = {&A[1], &A[2], &A[3]};
-  SmallPtrSet<int *, 4> ExpectedSet1 = {&A[0]};
   set_subtract(Set1, Set2);
-  EXPECT_EQ(ExpectedSet1, Set1);
+  EXPECT_THAT(Set1, testing::UnorderedElementsAre(&A[0]));
 
   // Set1.size() > Set2.size()
   Set1 = {&A[0], &A[1], &A[2]};
   Set2 = {&A[0], &A[2]};
-  ExpectedSet1 = {&A[1]};
   set_subtract(Set1, Set2);
-  EXPECT_EQ(ExpectedSet1, Set1);
+  EXPECT_THAT(Set1, testing::UnorderedElementsAre(&A[1]));
 }
 
 TEST(SetOperationsTest, SetSubtractRemovedRemaining) {
