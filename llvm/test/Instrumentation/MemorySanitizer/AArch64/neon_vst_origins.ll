@@ -33,7 +33,7 @@ define void @st2_16b(<16 x i8> %A, <16 x i8> %B, ptr %P) nounwind sanitize_memor
 ; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <16 x i8> [[TMP5]] to i128
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp ne i128 [[TMP13]], 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = select i1 [[TMP14]], i32 [[TMP6]], i32 [[TMP4]]
-; CHECK-NEXT:    store i32 [[TMP15]], ptr [[TMP12]], align 1
+; CHECK-NEXT:    store i32 [[TMP15]], ptr [[TMP12]], align 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[TMP12]], i32 1
 ; CHECK-NEXT:    store i32 [[TMP15]], ptr [[TMP16]], align 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr [[TMP12]], i32 2
@@ -88,7 +88,7 @@ define void @st3_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, ptr %P) nounwind 
 ; CHECK-NEXT:    [[TMP18:%.*]] = bitcast <16 x i8> [[TMP7]] to i128
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp ne i128 [[TMP18]], 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = select i1 [[TMP19]], i32 [[TMP8]], i32 [[TMP17]]
-; CHECK-NEXT:    store i32 [[TMP20]], ptr [[TMP14]], align 1
+; CHECK-NEXT:    store i32 [[TMP20]], ptr [[TMP14]], align 4
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i32, ptr [[TMP14]], i32 1
 ; CHECK-NEXT:    store i32 [[TMP20]], ptr [[TMP21]], align 4
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i32, ptr [[TMP14]], i32 2
@@ -156,7 +156,7 @@ define void @st4_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, ptr
 ; CHECK-NEXT:    [[TMP23:%.*]] = bitcast <16 x i8> [[TMP9]] to i128
 ; CHECK-NEXT:    [[TMP24:%.*]] = icmp ne i128 [[TMP23]], 0
 ; CHECK-NEXT:    [[TMP25:%.*]] = select i1 [[TMP24]], i32 [[TMP10]], i32 [[TMP22]]
-; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP16]], align 1
+; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP16]], align 4
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i32, ptr [[TMP16]], i32 1
 ; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP26]], align 4
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i32, ptr [[TMP16]], i32 2
