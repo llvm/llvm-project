@@ -1034,13 +1034,13 @@ Bug Fixes to C++ Support
 - Fixed a CTAD substitution bug involving type aliases that reference outer template parameters. (#GH94614).
 - Clang now correctly handles unexpanded packs in the template parameter list of a generic lambda expression
   (#GH48937)
+- Clang now correctly handles unexpanded packs in a lambda used as the pattern of a folded expression. (#GH56852), 
+  (#GH85667).
 - Fix a crash when parsing an invalid type-requirement in a requires expression. (#GH51868)
 - Fix parsing of built-in type-traits such as ``__is_pointer`` in libstdc++ headers. (#GH95598)
 - Fixed failed assertion when resolving context of defaulted comparison method outside of struct. (#GH96043).
 - Clang now diagnoses explicit object parameters in member pointers and other contexts where they should not appear.
   Fixes (#GH85992).
-- Fixed a crash where template parameter packs were not expanded correctly in a lambda used
-  as the pattern of a folded expression. (#GH56852), (#GH85667) and (#GH18873).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
