@@ -79,11 +79,11 @@ LLVM_LIBC_FUNCTION(float, hypotf, (float x, float y)) {
     double err = (sum_sq - r_sq.hi) + (sum_sq_lo - r_sq.lo);
 #endif
 
-    if (err > 0)
+    if (err > 0) {
       r_u |= 1;
-    else if ((err < 0) && (r_u & 1) == 0)
+    } else if ((err < 0) && (r_u & 1) == 0) {
       r_u -= 1;
-    else if ((r_u & 0x0000'0000'1FFF'FFFF) == 0) {
+    } else if ((r_u & 0x0000'0000'1FFF'FFFF) == 0) {
       // The rounded result is exact.
       fputil::clear_except_if_required(FE_INEXACT);
     }
