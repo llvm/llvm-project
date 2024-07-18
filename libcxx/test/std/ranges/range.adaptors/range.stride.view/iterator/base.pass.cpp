@@ -100,12 +100,10 @@ bool base_copy() {
 }
 
 int main(int, char**) {
-  /*
   base_noexcept();
   static_assert(base_noexcept());
   base_const();
   static_assert(base_const());
-  */
   base_move();
   base_copy();
   return 0;
