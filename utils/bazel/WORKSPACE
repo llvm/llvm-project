@@ -2,7 +2,6 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository", "new_git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 
@@ -76,10 +75,11 @@ apple_support_dependencies()
 # Note: that building from source requires `m4` to be installed on the host machine.
 # This is a known issue: https://github.com/bazelbuild/rules_foreign_cc/issues/755.
 
-git_repository(
+http_archive(
     name = "rules_foreign_cc",
-    remote = "https://github.com/bazelbuild/rules_foreign_cc.git",
-    tag = "0.9.0",
+    sha256 = "4b33d62cf109bcccf286b30ed7121129cc34cf4f4ed9d8a11f38d9108f40ba74",
+    strip_prefix = "rules_foreign_cc-0.11.1",
+    url = "https://github.com/bazelbuild/rules_foreign_cc/releases/download/0.11.1/rules_foreign_cc-0.11.1.tar.gz",
 )
 
 load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
@@ -112,11 +112,12 @@ maybe(
 )
 
 maybe(
-    new_git_repository,
+    http_archive,
     name = "pfm",
     build_file = "@llvm-raw//utils/bazel/third_party_build:pfm.BUILD",
-    remote = "https://git.code.sf.net/p/perfmon2/libpfm4",
-    tag = "v4.12.1",
+    sha256 = "d18b97764c755528c1051d376e33545d0eb60c6ebf85680436813fa5b04cc3d1",
+    strip_prefix = "libpfm-4.13.0",
+    urls = ["https://versaweb.dl.sourceforge.net/project/perfmon2/libpfm4/libpfm-4.13.0.tar.gz"],
 )
 
 maybe(
