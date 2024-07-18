@@ -155,6 +155,7 @@ void SetSigProcMask(__sanitizer_sigset_t *set, __sanitizer_sigset_t *oldset) {
   CHECK_EQ(0, internal_sigprocmask(SIG_SETMASK, set, oldset));
 }
 
+// Block asynchronous signals
 void BlockSignals(__sanitizer_sigset_t *oldset) {
   __sanitizer_sigset_t set;
   internal_sigfillset(&set);
@@ -169,7 +170,17 @@ void BlockSignals(__sanitizer_sigset_t *oldset) {
   // If this signal is blocked, such calls cannot be handled and the process may
   // hang.
   internal_sigdelset(&set, 31);
+
+  // Don't block synchronous signals
+  internal_sigdelset(&set, SIGSEGV);
+  internal_sigdelset(&set, SIGBUS);
+  internal_sigdelset(&set, SIGILL);
+  internal_sigdelset(&set, SIGTRAP);
+  internal_sigdelset(&set, SIGABRT);
+  internal_sigdelset(&set, SIGFPE);
+  internal_sigdelset(&set, SIGPIPE);
 #  endif
+
   SetSigProcMask(&set, oldset);
 }
 
@@ -563,7 +574,9 @@ int TgKill(pid_t pid, tid_t tid, int sig) {
   return internal_syscall(SYSCALL(thr_kill2), pid, tid, sig);
 #    elif SANITIZER_SOLARIS
   (void)pid;
-  return thr_kill(tid, sig);
+  errno = thr_kill(tid, sig);
+  // TgKill is expected to return -1 on error, not an errno.
+  return errno != 0 ? -1 : 0;
 #    endif
 }
 #  endif

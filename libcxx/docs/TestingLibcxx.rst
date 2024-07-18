@@ -351,7 +351,7 @@ Test Filenames`_ when determining the names for new test files.
      - Same as ``FOO.pass.cpp``, but for Objective-C++.
 
    * - ``FOO.compile.pass.cpp``
-     - Checks whether the C++ code in the file compiles successfully. In general, prefer ``compile`` tests over ``verify`` tests, 
+     - Checks whether the C++ code in the file compiles successfully. In general, prefer ``compile`` tests over ``verify`` tests,
        subject to the specific recommendations, below, for when to write ``verify`` tests.
    * - ``FOO.compile.pass.mm``
      - Same as ``FOO.compile.pass.cpp``, but for Objective-C++.
@@ -447,18 +447,11 @@ An example build would look like:
 
 .. code-block:: bash
 
-  $ cd build
-  $ ninja cxx-benchmarks
+  $ ninja -C build cxx-benchmarks
 
 This will build all of the benchmarks under ``<libcxx-src>/benchmarks`` to be
 built against the just-built libc++. The compiled tests are output into
 ``build/projects/libcxx/benchmarks``.
-
-The benchmarks can also be built against the platforms native standard library
-using the ``-DLIBCXX_BUILD_BENCHMARKS_NATIVE_STDLIB=ON`` CMake option. This
-is useful for comparing the performance of libc++ to other standard libraries.
-The compiled benchmarks are named ``<test>.libcxx.out`` if they test libc++ and
-``<test>.native.out`` otherwise.
 
 Also See:
 
@@ -476,8 +469,8 @@ For example:
 .. code-block:: bash
 
   $ cd build/projects/libcxx/benchmarks
-  $ ./algorithms.libcxx.out # Runs all the benchmarks
-  $ ./algorithms.libcxx.out --benchmark_filter=BM_Sort.* # Only runs the sort benchmarks
+  $ ./algorithms.bench.out # Runs all the benchmarks
+  $ ./algorithms.bench.out --benchmark_filter=BM_Sort.* # Only runs the sort benchmarks
 
 For more information about running benchmarks see `Google Benchmark`_.
 

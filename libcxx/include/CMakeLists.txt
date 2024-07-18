@@ -710,6 +710,7 @@ set(files
   __thread/timed_backoff_policy.h
   __tree
   __tuple/find_index.h
+  __tuple/ignore.h
   __tuple/make_tuple_types.h
   __tuple/sfinae_helpers.h
   __tuple/tuple_element.h
@@ -776,8 +777,6 @@ set(files
   __type_traits/is_implicitly_default_constructible.h
   __type_traits/is_integral.h
   __type_traits/is_literal_type.h
-  __type_traits/is_member_function_pointer.h
-  __type_traits/is_member_object_pointer.h
   __type_traits/is_member_pointer.h
   __type_traits/is_nothrow_assignable.h
   __type_traits/is_nothrow_constructible.h

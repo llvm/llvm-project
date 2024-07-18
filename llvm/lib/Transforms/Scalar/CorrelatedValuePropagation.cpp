@@ -33,6 +33,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -108,14 +109,8 @@ static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
   if (!Op1)
     return nullptr;
 
-  LazyValueInfo::Tristate Result = LVI->getPredicateAt(
-      C->getPredicate(), Op0, Op1, At, /*UseBlockValue=*/false);
-  if (Result == LazyValueInfo::Unknown)
-    return nullptr;
-
-  return (Result == LazyValueInfo::True)
-             ? ConstantInt::getTrue(C->getContext())
-             : ConstantInt::getFalse(C->getContext());
+  return LVI->getPredicateAt(C->getPredicate(), Op0, Op1, At,
+                             /*UseBlockValue=*/false);
 }
 
 static bool processSelect(SelectInst *S, LazyValueInfo *LVI) {
@@ -242,15 +237,17 @@ static Value *getValueOnEdge(LazyValueInfo *LVI, Value *Incoming,
 
   // The "false" case
   if (auto *C = dyn_cast<Constant>(SI->getFalseValue()))
-    if (LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CxtI) ==
-        LazyValueInfo::False)
+    if (auto *Res = dyn_cast_or_null<ConstantInt>(
+            LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CxtI));
+        Res && Res->isZero())
       return SI->getTrueValue();
 
   // The "true" case,
   // similar to the select "false" case, but try the select "true" value
   if (auto *C = dyn_cast<Constant>(SI->getTrueValue()))
-    if (LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CxtI) ==
-        LazyValueInfo::False)
+    if (auto *Res = dyn_cast_or_null<ConstantInt>(
+            LVI->getPredicateOnEdge(ICmpInst::ICMP_EQ, SI, C, From, To, CxtI));
+        Res && Res->isZero())
       return SI->getFalseValue();
 
   return nullptr;
@@ -319,16 +316,13 @@ static bool processICmp(ICmpInst *Cmp, LazyValueInfo *LVI) {
 static bool constantFoldCmp(CmpInst *Cmp, LazyValueInfo *LVI) {
   Value *Op0 = Cmp->getOperand(0);
   Value *Op1 = Cmp->getOperand(1);
-  LazyValueInfo::Tristate Result =
-      LVI->getPredicateAt(Cmp->getPredicate(), Op0, Op1, Cmp,
-                          /*UseBlockValue=*/true);
-  if (Result == LazyValueInfo::Unknown)
+  Constant *Res = LVI->getPredicateAt(Cmp->getPredicate(), Op0, Op1, Cmp,
+                                      /*UseBlockValue=*/true);
+  if (!Res)
     return false;
 
   ++NumCmps;
-  Constant *TorF =
-      ConstantInt::get(CmpInst::makeCmpResultType(Op0->getType()), Result);
-  Cmp->replaceAllUsesWith(TorF);
+  Cmp->replaceAllUsesWith(Res);
   Cmp->eraseFromParent();
   return true;
 }
@@ -370,11 +364,11 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
 
     for (auto CI = SI->case_begin(), CE = SI->case_end(); CI != CE;) {
       ConstantInt *Case = CI->getCaseValue();
-      LazyValueInfo::Tristate State =
+      auto *Res = dyn_cast_or_null<ConstantInt>(
           LVI->getPredicateAt(CmpInst::ICMP_EQ, Cond, Case, I,
-                              /* UseBlockValue */ true);
+                              /* UseBlockValue */ true));
 
-      if (State == LazyValueInfo::False) {
+      if (Res && Res->isZero()) {
         // This case never fires - remove it.
         BasicBlock *Succ = CI->getCaseSuccessor();
         Succ->removePredecessor(BB);
@@ -391,7 +385,7 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
           DTU.applyUpdatesPermissive({{DominatorTree::Delete, BB, Succ}});
         continue;
       }
-      if (State == LazyValueInfo::True) {
+      if (Res && Res->isOne()) {
         // This case always fires.  Arrange for the switch to be turned into an
         // unconditional branch by replacing the switch condition with the case
         // value.
@@ -544,29 +538,28 @@ static bool processAbsIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
   return false;
 }
 
-static bool processCmpIntrinsic(IntrinsicInst *II, LazyValueInfo *LVI) {
-  bool IsSigned = II->getIntrinsicID() == Intrinsic::scmp;
-  ConstantRange LHS_CR = LVI->getConstantRangeAtUse(II->getOperandUse(0),
-                                                    /*UndefAllowed*/ false);
-  ConstantRange RHS_CR = LVI->getConstantRangeAtUse(II->getOperandUse(1),
-                                                    /*UndefAllowed*/ false);
+static bool processCmpIntrinsic(CmpIntrinsic *CI, LazyValueInfo *LVI) {
+  ConstantRange LHS_CR =
+      LVI->getConstantRangeAtUse(CI->getOperandUse(0), /*UndefAllowed*/ false);
+  ConstantRange RHS_CR =
+      LVI->getConstantRangeAtUse(CI->getOperandUse(1), /*UndefAllowed*/ false);
 
-  if (LHS_CR.icmp(IsSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT, RHS_CR)) {
+  if (LHS_CR.icmp(CI->getGTPredicate(), RHS_CR)) {
     ++NumCmpIntr;
-    II->replaceAllUsesWith(ConstantInt::get(II->getType(), 1));
-    II->eraseFromParent();
+    CI->replaceAllUsesWith(ConstantInt::get(CI->getType(), 1));
+    CI->eraseFromParent();
     return true;
   }
-  if (LHS_CR.icmp(IsSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT, RHS_CR)) {
+  if (LHS_CR.icmp(CI->getLTPredicate(), RHS_CR)) {
     ++NumCmpIntr;
-    II->replaceAllUsesWith(ConstantInt::getSigned(II->getType(), -1));
-    II->eraseFromParent();
+    CI->replaceAllUsesWith(ConstantInt::getSigned(CI->getType(), -1));
+    CI->eraseFromParent();
     return true;
   }
   if (LHS_CR.icmp(ICmpInst::ICMP_EQ, RHS_CR)) {
     ++NumCmpIntr;
-    II->replaceAllUsesWith(ConstantInt::get(II->getType(), 0));
-    II->eraseFromParent();
+    CI->replaceAllUsesWith(ConstantInt::get(CI->getType(), 0));
+    CI->eraseFromParent();
     return true;
   }
 
@@ -664,9 +657,8 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
     return processAbsIntrinsic(&cast<IntrinsicInst>(CB), LVI);
   }
 
-  if (CB.getIntrinsicID() == Intrinsic::scmp ||
-      CB.getIntrinsicID() == Intrinsic::ucmp) {
-    return processCmpIntrinsic(&cast<IntrinsicInst>(CB), LVI);
+  if (auto *CI = dyn_cast<CmpIntrinsic>(&CB)) {
+    return processCmpIntrinsic(CI, LVI);
   }
 
   if (auto *MM = dyn_cast<MinMaxIntrinsic>(&CB)) {
@@ -715,11 +707,12 @@ static bool processCallSite(CallBase &CB, LazyValueInfo *LVI) {
     // relatively expensive analysis for constants which are obviously either
     // null or non-null to start with.
     if (Type && !CB.paramHasAttr(ArgNo, Attribute::NonNull) &&
-        !isa<Constant>(V) &&
-        LVI->getPredicateAt(ICmpInst::ICMP_EQ, V,
-                            ConstantPointerNull::get(Type), &CB,
-                            /*UseBlockValue=*/false) == LazyValueInfo::False)
-      ArgNos.push_back(ArgNo);
+        !isa<Constant>(V))
+      if (auto *Res = dyn_cast_or_null<ConstantInt>(LVI->getPredicateAt(
+              ICmpInst::ICMP_EQ, V, ConstantPointerNull::get(Type), &CB,
+              /*UseBlockValue=*/false));
+          Res && Res->isZero())
+        ArgNos.push_back(ArgNo);
     ArgNo++;
   }
 
@@ -1189,21 +1182,20 @@ static bool processBinOp(BinaryOperator *BinOp, LazyValueInfo *LVI) {
 }
 
 static bool processAnd(BinaryOperator *BinOp, LazyValueInfo *LVI) {
-  if (BinOp->getType()->isVectorTy())
-    return false;
+  using namespace llvm::PatternMatch;
 
   // Pattern match (and lhs, C) where C includes a superset of bits which might
   // be set in lhs.  This is a common truncation idiom created by instcombine.
   const Use &LHS = BinOp->getOperandUse(0);
-  ConstantInt *RHS = dyn_cast<ConstantInt>(BinOp->getOperand(1));
-  if (!RHS || !RHS->getValue().isMask())
+  const APInt *RHS;
+  if (!match(BinOp->getOperand(1), m_LowBitMask(RHS)))
     return false;
 
   // We can only replace the AND with LHS based on range info if the range does
   // not include undef.
   ConstantRange LRange =
       LVI->getConstantRangeAtUse(LHS, /*UndefAllowed=*/false);
-  if (!LRange.getUnsignedMax().ule(RHS->getValue()))
+  if (!LRange.getUnsignedMax().ule(*RHS))
     return false;
 
   BinOp->replaceAllUsesWith(LHS);

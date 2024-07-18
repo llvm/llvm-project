@@ -9,11 +9,12 @@
 #include "src/network/htons.h"
 #include "src/__support/common.h"
 #include "src/__support/endian.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(uint16_t, htons, (uint16_t hostshort)) {
   return Endian::to_big_endian(hostshort);
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

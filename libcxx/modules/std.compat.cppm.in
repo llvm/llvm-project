@@ -69,6 +69,9 @@ module;
 #  if __has_include(<hazard_pointer>)
 #    error "please update the header information for <hazard_pointer> in headers_not_available in utils/libcxx/header_information.py"
 #  endif // __has_include(<hazard_pointer>)
+#  if __has_include(<inplace_vector>)
+#    error "please update the header information for <inplace_vector> in headers_not_available in utils/libcxx/header_information.py"
+#  endif // __has_include(<inplace_vector>)
 #  if __has_include(<linalg>)
 #    error "please update the header information for <linalg> in headers_not_available in utils/libcxx/header_information.py"
 #  endif // __has_include(<linalg>)

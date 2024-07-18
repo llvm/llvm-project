@@ -1247,6 +1247,9 @@ static void gatherInputSections() {
       // contrast, EH frames are handled like regular ConcatInputSections.)
       if (section->name == section_names::compactUnwind)
         continue;
+      // Addrsig sections contain metadata only needed at link time.
+      if (section->name == section_names::addrSig)
+        continue;
       for (const Subsection &subsection : section->subsections)
         addInputSection(subsection.isec);
     }
@@ -1391,6 +1394,12 @@ static void handleExplicitExports() {
           defined->privateExtern = true;
     });
   }
+}
+
+static void eraseInitializerSymbols() {
+  for (ConcatInputSection *isec : in.initOffsets->inputs())
+    for (Defined *sym : isec->symbols)
+      sym->used = false;
 }
 
 namespace lld {
@@ -1971,6 +1980,11 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     if (config->deadStrip)
       markLive();
 
+    // Ensure that no symbols point inside __mod_init_func sections if they are
+    // removed due to -init_offsets. This must run after dead stripping.
+    if (config->emitInitOffsets)
+      eraseInitializerSymbols();
+
     // Categories are not subject to dead-strip. The __objc_catlist section is
     // marked as NO_DEAD_STRIP and that propagates into all category data.
     if (args.hasArg(OPT_check_category_conflicts))
@@ -1978,7 +1992,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
     // Category merging uses "->live = false" to erase old category data, so
     // it has to run after dead-stripping (markLive).
-    if (args.hasArg(OPT_objc_category_merging, OPT_no_objc_category_merging))
+    if (args.hasFlag(OPT_objc_category_merging, OPT_no_objc_category_merging,
+                     false))
       objc::mergeCategories();
 
     // ICF assumes that all literals have been folded already, so we must run

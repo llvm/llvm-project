@@ -185,11 +185,11 @@ struct MallocDebugL {
   void* (*valloc)(uptr size);
 };
 
-ALIGNED(32) const MallocDebugK asan_malloc_dispatch_k = {
+alignas(32) const MallocDebugK asan_malloc_dispatch_k = {
     WRAP(malloc),  WRAP(free),     WRAP(calloc),
     WRAP(realloc), WRAP(memalign), WRAP(malloc_usable_size)};
 
-ALIGNED(32) const MallocDebugL asan_malloc_dispatch_l = {
+alignas(32) const MallocDebugL asan_malloc_dispatch_l = {
     WRAP(calloc),         WRAP(free),               WRAP(mallinfo),
     WRAP(malloc),         WRAP(malloc_usable_size), WRAP(memalign),
     WRAP(posix_memalign), WRAP(pvalloc),            WRAP(realloc),

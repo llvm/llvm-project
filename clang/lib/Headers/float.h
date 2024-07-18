@@ -86,6 +86,12 @@
 #    undef DBL_HAS_SUBNORM
 #    undef LDBL_HAS_SUBNORM
 #  endif
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) ||              \
+    !defined(__STRICT_ANSI__)
+#    undef FLT_NORM_MAX
+#    undef DBL_NORM_MAX
+#    undef LDBL_NORM_MAX
+#endif
 #endif
 
 #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) ||              \
@@ -164,8 +170,12 @@
 #if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L) ||              \
     !defined(__STRICT_ANSI__)
    /* C23 5.2.5.3.3p29-30 */
-#  define INFINITY (__builtin_inf())
-#  define NAN (__builtin_nan(""))
+#  define INFINITY (__builtin_inff())
+#  define NAN (__builtin_nanf(""))
+   /* C23 5.2.5.3.3p32 */
+#  define FLT_NORM_MAX __FLT_NORM_MAX__
+#  define DBL_NORM_MAX __DBL_NORM_MAX__
+#  define LDBL_NORM_MAX __LDBL_NORM_MAX__
 #endif
 
 #ifdef __STDC_WANT_IEC_60559_TYPES_EXT__

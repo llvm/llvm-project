@@ -199,7 +199,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   // a GNU compatible linker. As long as an output for the -v option
   // contains "GNU" or "with BFD", they recognize us as GNU-compatible.
   if (args.hasArg(OPT_v) || args.hasArg(OPT_version))
-    message(getLLDVersion() + ", compatible with GNU linkers");
+    message(getLLDVersion() + " (compatible with GNU linkers)");
 
   // The behavior of -v or --version is a bit strange, but this is
   // needed for compatibility with GNU linkers.
