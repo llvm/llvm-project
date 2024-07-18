@@ -4034,6 +4034,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerExtractInsertVectorElt(MI);
   case G_SHUFFLE_VECTOR:
     return lowerShuffleVector(MI);
+  case G_VECTOR_COMPRESS:
+    return lowerVECTOR_COMPRESS(MI);
   case G_DYN_STACKALLOC:
     return lowerDynStackAlloc(MI);
   case G_STACKSAVE:
@@ -7589,6 +7591,93 @@ LegalizerHelper::lowerShuffleVector(MachineInstr &MI) {
     MIRBuilder.buildCopy(DstReg, BuildVec[0]);
   else
     MIRBuilder.buildBuildVector(DstReg, BuildVec);
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerVECTOR_COMPRESS(llvm::MachineInstr &MI) {
+  auto [Dst, DstTy, Vec, VecTy, Mask, MaskTy, Passthru, PassthruTy] =
+      MI.getFirst4RegLLTs();
+
+  if (VecTy.isScalableVector())
+    report_fatal_error("Cannot expand masked_compress for scalable vectors.");
+
+  Align VecAlign = getStackTemporaryAlignment(VecTy);
+  MachinePointerInfo PtrInfo;
+  Register StackPtr =
+      createStackTemporary(TypeSize::getFixed(VecTy.getSizeInBytes()), VecAlign,
+                           PtrInfo)
+          .getReg(0);
+  MachinePointerInfo ValPtrInfo =
+      MachinePointerInfo::getUnknownStack(*MI.getMF());
+
+  LLT IdxTy = LLT::scalar(32);
+  LLT ValTy = VecTy.getElementType();
+  Align ValAlign = getStackTemporaryAlignment(ValTy);
+
+  auto OutPos = MIRBuilder.buildConstant(IdxTy, 0);
+
+  bool HasPassthru =
+      MRI.getVRegDef(Passthru)->getOpcode() != TargetOpcode::G_IMPLICIT_DEF;
+
+  if (HasPassthru)
+    MIRBuilder.buildStore(Passthru, StackPtr, PtrInfo, VecAlign);
+
+  Register LastWriteVal;
+  std::optional<APInt> PassthruSplatVal =
+      isConstantOrConstantSplatVector(*MRI.getVRegDef(Passthru), MRI);
+
+  if (PassthruSplatVal.has_value()) {
+    LastWriteVal =
+        MIRBuilder.buildConstant(ValTy, PassthruSplatVal.value()).getReg(0);
+  } else if (HasPassthru) {
+    auto Popcount = MIRBuilder.buildZExt(MaskTy.changeElementSize(32), Mask);
+    Popcount = MIRBuilder.buildInstr(TargetOpcode::G_VECREDUCE_ADD,
+                                     {LLT::scalar(32)}, {Popcount});
+
+    Register LastElmtPtr =
+        getVectorElementPointer(StackPtr, VecTy, Popcount.getReg(0));
+    LastWriteVal =
+        MIRBuilder.buildLoad(ValTy, LastElmtPtr, ValPtrInfo, ValAlign)
+            .getReg(0);
+  }
+
+  unsigned NumElmts = VecTy.getNumElements();
+  for (unsigned I = 0; I < NumElmts; ++I) {
+    auto Idx = MIRBuilder.buildConstant(IdxTy, I);
+    auto Val = MIRBuilder.buildExtractVectorElement(ValTy, Vec, Idx);
+    Register ElmtPtr =
+        getVectorElementPointer(StackPtr, VecTy, OutPos.getReg(0));
+    MIRBuilder.buildStore(Val, ElmtPtr, ValPtrInfo, ValAlign);
+
+    LLT MaskITy = MaskTy.getElementType();
+    auto MaskI = MIRBuilder.buildExtractVectorElement(MaskITy, Mask, Idx);
+    if (MaskITy.getSizeInBits() > 1)
+      MaskI = MIRBuilder.buildTrunc(LLT::scalar(1), MaskI);
+
+    MaskI = MIRBuilder.buildZExt(IdxTy, MaskI);
+    OutPos = MIRBuilder.buildAdd(IdxTy, OutPos, MaskI);
+
+    if (HasPassthru && I == NumElmts - 1) {
+      auto EndOfVector =
+          MIRBuilder.buildConstant(IdxTy, VecTy.getNumElements() - 1);
+      auto AllLanesSelected = MIRBuilder.buildICmp(
+          CmpInst::ICMP_UGT, LLT::scalar(1), OutPos, EndOfVector);
+      OutPos = MIRBuilder.buildInstr(TargetOpcode::G_UMIN, {IdxTy},
+                                     {OutPos, EndOfVector});
+      ElmtPtr = getVectorElementPointer(StackPtr, VecTy, OutPos.getReg(0));
+
+      LastWriteVal =
+          MIRBuilder.buildSelect(ValTy, AllLanesSelected, Val, LastWriteVal)
+              .getReg(0);
+      MIRBuilder.buildStore(LastWriteVal, ElmtPtr, ValPtrInfo, ValAlign);
+    }
+  }
+
+  // TODO: Use StackPtr's FrameIndex alignment.
+  MIRBuilder.buildLoad(Dst, StackPtr, PtrInfo, VecAlign);
+
   MI.eraseFromParent();
   return Legalized;
 }
