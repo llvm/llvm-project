@@ -6,13 +6,13 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m -tail-dup-placement-threshold=4 < %s | FileCheck %s --check-prefix=CHECK-O2
 ; RUN: llc -mtriple=riscv64 -mattr=+m -tail-dup-placement-threshold=6 < %s | FileCheck %s --check-prefix=CHECK-O3
 
-@a = external dso_local local_unnamed_addr global i32
-@b = external dso_local local_unnamed_addr global i32
-@c = external dso_local local_unnamed_addr global i32
+@a = external global i32
+@b = external global i32
+@c = external global i32
 
 declare i32 @foo(i32)
 
-define dso_local i32 @test(i32 %n) {
+define i32 @test(i32 %n) {
 ; CHECK-O2-LABEL: test:
 ; CHECK-O2:       # %bb.0: # %entry
 ; CHECK-O2-NEXT:    sext.w a1, a0
