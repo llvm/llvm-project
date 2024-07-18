@@ -1566,8 +1566,7 @@ AMDGPUDisassembler::decodeNonVGPRSrcOp(const OpWidthTy Width, unsigned Val,
     if (MandatoryLiteral)
       // Keep a sentinel value for deferred setting
       return MCOperand::createImm(LITERAL_CONST);
-    else
-      return decodeLiteralConstant(Sema == AMDGPU::OperandSemantics::FP64);
+    return decodeLiteralConstant(Sema == AMDGPU::OperandSemantics::FP64);
   }
 
   switch (Width) {
@@ -1701,9 +1700,9 @@ AMDGPUDisassembler::decodeSDWASrc(const OpWidthTy Width, const unsigned Val,
       return decodeFPImmed(ImmWidth, SVal, Sema);
 
     return decodeSpecialReg32(SVal);
-  } else if (STI.hasFeature(AMDGPU::FeatureVolcanicIslands)) {
-    return createRegOperand(getVgprClassId(Width), Val);
   }
+  if (STI.hasFeature(AMDGPU::FeatureVolcanicIslands))
+    return createRegOperand(getVgprClassId(Width), Val);
   llvm_unreachable("unsupported target");
 }
 
@@ -1731,15 +1730,13 @@ MCOperand AMDGPUDisassembler::decodeSDWAVopcDst(unsigned Val) const {
     if (TTmpIdx >= 0) {
       auto TTmpClsId = getTtmpClassId(IsWave64 ? OPW64 : OPW32);
       return createSRegOperand(TTmpClsId, TTmpIdx);
-    } else if (Val > SGPR_MAX) {
-      return IsWave64 ? decodeSpecialReg64(Val)
-                      : decodeSpecialReg32(Val);
-    } else {
-      return createSRegOperand(getSgprClassId(IsWave64 ? OPW64 : OPW32), Val);
     }
-  } else {
-    return createRegOperand(IsWave64 ? AMDGPU::VCC : AMDGPU::VCC_LO);
+    if (Val > SGPR_MAX) {
+      return IsWave64 ? decodeSpecialReg64(Val) : decodeSpecialReg32(Val);
+    }
+    return createSRegOperand(getSgprClassId(IsWave64 ? OPW64 : OPW32), Val);
   }
+  return createRegOperand(IsWave64 ? AMDGPU::VCC : AMDGPU::VCC_LO);
 }
 
 MCOperand AMDGPUDisassembler::decodeBoolReg(unsigned Val) const {
@@ -2265,7 +2262,8 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
       return createReservedKDBitsError(
           KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
           amdhsa::KERNEL_CODE_PROPERTIES_OFFSET, "must be zero on gfx9");
-    } else if (isGFX10Plus()) {
+    }
+    if (isGFX10Plus()) {
       PRINT_DIRECTIVE(".amdhsa_wavefront_size32",
                       KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
     }
