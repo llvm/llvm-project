@@ -294,7 +294,7 @@ public:
   bool supportsEfficientVectorElementLoadStore() const;
   bool enableInterleavedAccessVectorization();
 
-  unsigned getBranchMispredictPenalty() const;
+  InstructionCost getBranchMispredictPenalty() const;
 
 private:
   bool supportsGather() const;

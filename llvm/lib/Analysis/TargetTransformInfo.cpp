@@ -279,7 +279,7 @@ BranchProbability TargetTransformInfo::getPredictableBranchThreshold() const {
              : TTIImpl->getPredictableBranchThreshold();
 }
 
-unsigned TargetTransformInfo::getBranchMispredictPenalty() const {
+InstructionCost TargetTransformInfo::getBranchMispredictPenalty() const {
   return TTIImpl->getBranchMispredictPenalty();
 }
 

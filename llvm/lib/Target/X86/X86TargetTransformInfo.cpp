@@ -6757,7 +6757,7 @@ InstructionCost X86TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
   return -1;
 }
 
-unsigned X86TTIImpl::getBranchMispredictPenalty() const {
+InstructionCost X86TTIImpl::getBranchMispredictPenalty() const {
   // TODO: Hook MispredictPenalty of SchedMachineModel into this.
   return 14;
 }
