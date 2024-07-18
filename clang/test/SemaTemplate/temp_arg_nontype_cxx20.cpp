@@ -115,7 +115,7 @@ namespace CopyCounting {
   static_assert(f(X<A{}>()) == 0);
 
   template<A a> struct Y { void f(); };
-  template<A a> void g(Y<a> y) { y.Y<a>::f(); }
+  template<A a> void g(Y<a> y) { y.template Y<a>::f(); }
   void h() { constexpr A a; g<a>(Y<a>{}); }
 
   template<A a> struct Z {
