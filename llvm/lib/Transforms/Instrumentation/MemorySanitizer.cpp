@@ -2505,7 +2505,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     void DoneAndStoreOrigin(TypeSize TS, Value *OriginPtr) {
       if (MSV->MS.TrackOrigins) {
         assert(Origin);
-        MSV->paintOrigin(IRB, Origin, OriginPtr, TS, kMinOriginAlignment);
+        MSV->paintOrigin(IRB, Origin, OriginPtr, TS, Align(1));
       }
     }
   };
@@ -3918,6 +3918,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
             (numArgOperands - 1));
     Type *ShadowTy = getShadowTy(OutputVectorTy);
     Value *ShadowPtr, *OriginPtr;
+    // AArch64 NEON does not need alignment (unless OS requires it)
     std::tie(ShadowPtr, OriginPtr) =
         getShadowOriginPtr(Addr, IRB, ShadowTy, Align(1), /*isStore*/ true);
     ShadowI->setArgOperand(numArgOperands - 1, ShadowPtr);

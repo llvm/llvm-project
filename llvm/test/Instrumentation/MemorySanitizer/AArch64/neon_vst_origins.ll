@@ -33,12 +33,27 @@ define void @st2_16b(<16 x i8> %A, <16 x i8> %B, ptr %P) nounwind sanitize_memor
 ; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <16 x i8> [[TMP5]] to i128
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp ne i128 [[TMP13]], 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = select i1 [[TMP14]], i32 [[TMP6]], i32 [[TMP4]]
+; CHECK-NEXT:    store i32 [[TMP15]], ptr [[TMP12]], align 4
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[TMP12]], i32 1
+; CHECK-NEXT:    store i32 [[TMP15]], ptr [[TMP16]], align 4
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr [[TMP12]], i32 2
+; CHECK-NEXT:    store i32 [[TMP15]], ptr [[TMP17]], align 4
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i32, ptr [[TMP12]], i32 3
+; CHECK-NEXT:    store i32 [[TMP15]], ptr [[TMP18]], align 4
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i32, ptr [[TMP12]], i32 4
+; CHECK-NEXT:    store i32 [[TMP15]], ptr [[TMP19]], align 4
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[TMP12]], i32 5
+; CHECK-NEXT:    store i32 [[TMP15]], ptr [[TMP20]], align 4
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i32, ptr [[TMP12]], i32 6
+; CHECK-NEXT:    store i32 [[TMP15]], ptr [[TMP21]], align 4
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i32, ptr [[TMP12]], i32 7
+; CHECK-NEXT:    store i32 [[TMP15]], ptr [[TMP22]], align 4
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP16:%.*]], label [[TMP17:%.*]], !prof [[PROF0:![0-9]+]]
-; CHECK:       16:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP23:%.*]], label [[TMP24:%.*]], !prof [[PROF0:![0-9]+]]
+; CHECK:       23:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP2]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       17:
+; CHECK:       24:
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st2.v16i8.p0(<16 x i8> [[A]], <16 x i8> [[B]], ptr [[P]])
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st2.v16i8.p0(<16 x i8> [[TMP3]], <16 x i8> [[TMP5]], ptr [[TMP9]])
 ; CHECK-NEXT:    ret void
@@ -73,12 +88,35 @@ define void @st3_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, ptr %P) nounwind 
 ; CHECK-NEXT:    [[TMP18:%.*]] = bitcast <16 x i8> [[TMP7]] to i128
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp ne i128 [[TMP18]], 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = select i1 [[TMP19]], i32 [[TMP8]], i32 [[TMP17]]
+; CHECK-NEXT:    store i32 [[TMP20]], ptr [[TMP14]], align 4
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i32, ptr [[TMP14]], i32 1
+; CHECK-NEXT:    store i32 [[TMP20]], ptr [[TMP21]], align 4
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i32, ptr [[TMP14]], i32 2
+; CHECK-NEXT:    store i32 [[TMP20]], ptr [[TMP22]], align 4
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i32, ptr [[TMP14]], i32 3
+; CHECK-NEXT:    store i32 [[TMP20]], ptr [[TMP23]], align 4
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i32, ptr [[TMP14]], i32 4
+; CHECK-NEXT:    store i32 [[TMP20]], ptr [[TMP24]], align 4
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i32, ptr [[TMP14]], i32 5
+; CHECK-NEXT:    store i32 [[TMP20]], ptr [[TMP25]], align 4
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i32, ptr [[TMP14]], i32 6
+; CHECK-NEXT:    store i32 [[TMP20]], ptr [[TMP26]], align 4
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i32, ptr [[TMP14]], i32 7
+; CHECK-NEXT:    store i32 [[TMP20]], ptr [[TMP27]], align 4
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i32, ptr [[TMP14]], i32 8
+; CHECK-NEXT:    store i32 [[TMP20]], ptr [[TMP28]], align 4
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i32, ptr [[TMP14]], i32 9
+; CHECK-NEXT:    store i32 [[TMP20]], ptr [[TMP29]], align 4
+; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i32, ptr [[TMP14]], i32 10
+; CHECK-NEXT:    store i32 [[TMP20]], ptr [[TMP30]], align 4
+; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr i32, ptr [[TMP14]], i32 11
+; CHECK-NEXT:    store i32 [[TMP20]], ptr [[TMP31]], align 4
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP21:%.*]], label [[TMP22:%.*]], !prof [[PROF0]]
-; CHECK:       21:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP32:%.*]], label [[TMP33:%.*]], !prof [[PROF0]]
+; CHECK:       32:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP2]]) #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       22:
+; CHECK:       33:
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st3.v16i8.p0(<16 x i8> [[A]], <16 x i8> [[B]], <16 x i8> [[C]], ptr [[P]])
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st3.v16i8.p0(<16 x i8> [[TMP3]], <16 x i8> [[TMP5]], <16 x i8> [[TMP7]], ptr [[TMP11]])
 ; CHECK-NEXT:    ret void
@@ -118,12 +156,43 @@ define void @st4_16b(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, ptr
 ; CHECK-NEXT:    [[TMP23:%.*]] = bitcast <16 x i8> [[TMP9]] to i128
 ; CHECK-NEXT:    [[TMP24:%.*]] = icmp ne i128 [[TMP23]], 0
 ; CHECK-NEXT:    [[TMP25:%.*]] = select i1 [[TMP24]], i32 [[TMP10]], i32 [[TMP22]]
+; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP16]], align 4
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i32, ptr [[TMP16]], i32 1
+; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP26]], align 4
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i32, ptr [[TMP16]], i32 2
+; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP27]], align 4
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i32, ptr [[TMP16]], i32 3
+; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP28]], align 4
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i32, ptr [[TMP16]], i32 4
+; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP29]], align 4
+; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i32, ptr [[TMP16]], i32 5
+; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP30]], align 4
+; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr i32, ptr [[TMP16]], i32 6
+; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP31]], align 4
+; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr i32, ptr [[TMP16]], i32 7
+; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP32]], align 4
+; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr i32, ptr [[TMP16]], i32 8
+; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP33]], align 4
+; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr i32, ptr [[TMP16]], i32 9
+; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP34]], align 4
+; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr i32, ptr [[TMP16]], i32 10
+; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP35]], align 4
+; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr i32, ptr [[TMP16]], i32 11
+; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP36]], align 4
+; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr i32, ptr [[TMP16]], i32 12
+; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP37]], align 4
+; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr i32, ptr [[TMP16]], i32 13
+; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP38]], align 4
+; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr i32, ptr [[TMP16]], i32 14
+; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP39]], align 4
+; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr i32, ptr [[TMP16]], i32 15
+; CHECK-NEXT:    store i32 [[TMP25]], ptr [[TMP40]], align 4
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP26:%.*]], label [[TMP27:%.*]], !prof [[PROF0]]
-; CHECK:       26:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP41:%.*]], label [[TMP42:%.*]], !prof [[PROF0]]
+; CHECK:       41:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP2]]) #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       27:
+; CHECK:       42:
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st4.v16i8.p0(<16 x i8> [[A]], <16 x i8> [[B]], <16 x i8> [[C]], <16 x i8> [[D]], ptr [[P]])
 ; CHECK-NEXT:    call void @llvm.aarch64.neon.st4.v16i8.p0(<16 x i8> [[TMP3]], <16 x i8> [[TMP5]], <16 x i8> [[TMP7]], <16 x i8> [[TMP9]], ptr [[TMP13]])
 ; CHECK-NEXT:    ret void
