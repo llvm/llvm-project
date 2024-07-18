@@ -40,6 +40,7 @@
 #ifndef LLVM_SANDBOXIR_TRACKER_H
 #define LLVM_SANDBOXIR_TRACKER_H
 
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -99,6 +100,41 @@ public:
 #endif
 };
 
+class EraseFromParent : public IRChangeBase {
+  /// Contains all the data we need to restore an "erased" (i.e., detached)
+  /// instruction: the instruction itself and its operands in order.
+  struct InstrAndOperands {
+    /// The operands that got dropped.
+    SmallVector<llvm::Value *> Operands;
+    /// The instruction that got "erased".
+    llvm::Instruction *LLVMI;
+  };
+  /// The instruction data is in reverse program order, which helps create the
+  /// original program order during revert().
+  SmallVector<InstrAndOperands> InstrData;
+  /// This is either the next Instruction in the stream, or the parent
+  /// BasicBlock if at the end of the BB.
+  PointerUnion<llvm::Instruction *, llvm::BasicBlock *> NextLLVMIOrBB;
+  /// We take ownership of the "erased" instruction.
+  std::unique_ptr<sandboxir::Value> ErasedIPtr;
+
+public:
+  EraseFromParent(std::unique_ptr<sandboxir::Value> &&IPtr, Tracker &Tracker);
+  void revert() final;
+  void accept() final;
+#ifndef NDEBUG
+  void dump(raw_ostream &OS) const final {
+    dumpCommon(OS);
+    OS << "EraseFromParent";
+  }
+  LLVM_DUMP_METHOD void dump() const final;
+  friend raw_ostream &operator<<(raw_ostream &OS, const EraseFromParent &C) {
+    C.dump(OS);
+    return OS;
+  }
+#endif
+};
+
 /// The tracker collects all the change objects and implements the main API for
 /// saving / reverting / accepting.
 class Tracker {
@@ -116,6 +152,7 @@ private:
 #endif
   /// The current state of the tracker.
   TrackerState State = TrackerState::Disabled;
+  Context &Ctx;
 
 public:
 #ifndef NDEBUG
@@ -124,8 +161,9 @@ public:
   bool InMiddleOfCreatingChange = false;
 #endif // NDEBUG
 
-  Tracker() = default;
+  explicit Tracker(Context &Ctx) : Ctx(Ctx) {}
   ~Tracker();
+  Context &getContext() const { return Ctx; }
   /// Record \p Change and take ownership. This is the main function used to
   /// track Sandbox IR changes.
   void track(std::unique_ptr<IRChangeBase> &&Change);
