@@ -1290,3 +1290,9 @@ namespace UnaryOpError {
   }
 }
 #endif
+
+namespace VolatileReads {
+  const volatile int b = 1;
+  static_assert(b, ""); // both-error {{not an integral constant expression}} \
+                        // both-note {{read of volatile-qualified type 'const volatile int' is not allowed in a constant expression}}
+}
