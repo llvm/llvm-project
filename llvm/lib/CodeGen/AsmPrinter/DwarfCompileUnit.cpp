@@ -1036,6 +1036,15 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(const Loc::MMI &MMI,
   std::optional<unsigned> NVPTXAddressSpace;
   DIELoc *Loc = new (DIEValueAllocator) DIELoc;
   DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
+  auto PoisonedExpr =
+      find_if(MMI.getFrameIndexExprs(), [](const auto &Fragment) {
+        return Fragment.Expr->holdsOldElements() && Fragment.Expr->isPoisoned();
+      });
+  if (PoisonedExpr != MMI.getFrameIndexExprs().end()) {
+    DwarfExpr.addExpression(PoisonedExpr->Expr);
+    addBlock(VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
+    return;
+  }
   for (const auto &Fragment : MMI.getFrameIndexExprs()) {
     Register FrameReg;
     const DIExpression *Expr = Fragment.Expr;

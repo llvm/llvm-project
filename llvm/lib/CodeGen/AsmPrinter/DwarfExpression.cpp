@@ -913,7 +913,7 @@ std::optional<NewOpResult> DwarfExpression::traverse(DIOp::Arg Arg,
 
   if (Entry.isLocation()) {
     auto DWARFRegister = TRI->getDwarfRegNum(Entry.getLoc().getReg(), false);
-    if (DWARFRegister == -1) {
+    if (DWARFRegister < 0) {
       return std::nullopt;
     }
     addReg(DWARFRegister);

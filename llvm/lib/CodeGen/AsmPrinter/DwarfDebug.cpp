@@ -242,7 +242,7 @@ static DbgValueLoc getDebugLocValue(const MachineInstr *MI) {
   const bool IsVariadic = !SingleLocExprOpt;
   // If we have a variadic debug value instruction that is equivalent to a
   // non-variadic instruction, then convert it to non-variadic form here.
-  if (!IsVariadic && !MI->isNonListDebugValue() && Expr->holdsOldElements()) {
+  if (!IsVariadic && !MI->isNonListDebugValue()) {
     assert(MI->getNumDebugOperands() == 1 &&
            "Mismatched DIExpression and debug operands for debug instruction.");
     Expr = *SingleLocExprOpt;
@@ -302,7 +302,8 @@ void Loc::MMI::addFrameIndexExpr(const DIExpression *Expr, int FI) {
   assert((FrameIndexExprs.size() == 1 ||
           llvm::all_of(FrameIndexExprs,
                        [](const FrameIndexExpr &FIE) {
-                         return FIE.Expr && FIE.Expr->isFragment();
+                         return FIE.Expr && (FIE.Expr->isFragment() ||
+                                             FIE.Expr->isPoisoned());
                        })) &&
          "conflicting locations for variable");
 }

@@ -3264,6 +3264,11 @@ public:
                     (bool /*ignored*/, ArrayRef<DIOp::Variant> Elements),
                     (false, Elements))
 
+  static DIExpression *getPoisoned(LLVMContext &Ctx) {
+    return get(Ctx, PoisonedExpr);
+  }
+  DIExpression *getPoisoned() const { return getPoisoned(getContext()); }
+
   TempDIExpression clone() const { return cloneImpl(); }
 
   OldElementsRef getElements() const {
@@ -3298,6 +3303,8 @@ public:
   }
   bool holdsOldElements() const { return holds<OldElements>(); }
   bool holdsNewElements() const { return holds<NewElements>(); }
+
+  bool isPoisoned() const;
 
   enum SignedOrUnsignedConstant { SignedConstant, UnsignedConstant };
   /// Determine whether this represents a constant value, if so

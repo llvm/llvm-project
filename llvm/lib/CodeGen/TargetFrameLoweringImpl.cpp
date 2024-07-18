@@ -94,7 +94,7 @@ DIExpression *TargetFrameLowering::lowerFIArgToFPArg(const MachineFunction &MF,
                                                      uint64_t ArgIndex,
                                                      StackOffset Offset) const {
   const DataLayout &DL = MF.getDataLayout();
-  LLVMContext &Context = MF.getMMI().getModule()->getContext();
+  LLVMContext &Context = MF.getFunction().getParent()->getContext();
   DIExprBuilder Builder(*Expr);
   for (auto &&I = Builder.begin(); I != Builder.end(); ++I) {
     if (auto *Arg = std::get_if<DIOp::Arg>(&*I)) {

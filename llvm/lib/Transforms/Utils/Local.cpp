@@ -2432,9 +2432,13 @@ static Value *salvageNewDebugInfo(Instruction &I, uint64_t CurrentLocOps,
 
     if (CI->isNoopCast(DL))
       Ops.emplace_back(DIOp::Reinterpret(Type));
-    else if (isa<SExtInst>(&I))
+    // FIXME(diexpression-poison): relax restriction to integer type to match IR
+    // instruction
+    else if (isa<SExtInst>(&I) && Type->isIntegerTy())
       Ops.emplace_back(DIOp::SExt(Type));
-    else if (isa<ZExtInst>(&I))
+    // FIXME(diexpression-poison): relax restriction to integer type to match IR
+    // instruction
+    else if (isa<ZExtInst>(&I) && Type->isIntegerTy())
       Ops.emplace_back(DIOp::ZExt(Type));
     else if (isa<TruncInst>(&I))
       Ops.emplace_back(DIOp::Convert(Type));

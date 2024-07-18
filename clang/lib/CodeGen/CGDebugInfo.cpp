@@ -5184,7 +5184,10 @@ llvm::DILocalVariable *CGDebugInfo::EmitDef(const VarDecl *VD,
     ExprBuilder.append<llvm::DIOp::Arg>(0u, Storage->getType());
   llvm::Type *ReferrerPointeeTy =
       (!Name.empty() && VD->isEscapingByref()) ? BlockPtrTy : VDMemTy;
-  ExprBuilder.append<llvm::DIOp::Deref>(ReferrerPointeeTy);
+  if (UsePointerValue)
+    ExprBuilder.append<llvm::DIOp::Deref>(Storage->getType());
+  else
+    ExprBuilder.append<llvm::DIOp::Deref>(ReferrerPointeeTy);
 
   // If this is implicit parameter of CXXThis or ObjCSelf kind, then give it an
   // object pointer flag.

@@ -94,7 +94,7 @@ DIExpression *AMDGPUFrameLowering::lowerFIArgToFPArg(const MachineFunction &MF,
                                                      uint64_t ArgIndex,
                                                      StackOffset Offset) const {
   const DataLayout &DL = MF.getDataLayout();
-  LLVMContext &Context = MF.getMMI().getModule()->getContext();
+  LLVMContext &Context = MF.getFunction().getParent()->getContext();
   const auto &ST = MF.getSubtarget<GCNSubtarget>();
   DIExprBuilder Builder(*Expr);
   for (auto &&I = Builder.begin(); I != Builder.end(); ++I) {

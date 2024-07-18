@@ -1599,6 +1599,12 @@ public:
   }
 
   bool visitResult(StackEntry Result) {
+    // FIXME(diexpression-poison): The IR type size in bits may not correspond
+    // to the DIType size as calculated by Clang, for example the debug type
+    // for "uchar3" calls it 32-bits whereas the IR type chosen for it <3 x i8>
+    // will naively be only 24-bits. Until we can reconcile this issue just
+    // avoid failing it in the verifier.
+    return true;
     if (!Env)
       return true;
     std::optional<uint64_t> ResultSizeInBits = getSizeInBits(Result.ResultType);
@@ -1636,6 +1642,9 @@ bool DIExpression::isValid(
     // Check that there's space for the operand.
     if (I->get() + I->getSize() > E->get())
       return false;
+
+    if (I->getOp() == dwarf::DW_OP_LLVM_poisoned)
+      return true;
 
     uint64_t Op = I->getOp();
     if ((Op >= dwarf::DW_OP_reg0 && Op <= dwarf::DW_OP_reg31) ||
@@ -1768,6 +1777,11 @@ bool DIExpression::isComplex() const {
 
 bool DIExpression::isSingleLocationExpression() const {
   if (!isValid())
+    return false;
+
+  // It is simpler for these cases to always be considered variadic, as
+  // there are fewer paths to handle.
+  if (holdsNewElements() || isPoisoned())
     return false;
 
   if (getNumElements() == 0)
@@ -2077,6 +2091,10 @@ DIExpression *DIExpression::appendOpsToArg(const DIExpression *Expr,
                                            unsigned ArgNo, bool StackValue) {
   assert(Expr && "Can't add ops to this expression");
 
+  // FIXME: Handle newops here?
+  if (Expr->isPoisoned())
+    return Expr->getPoisoned();
+
   // Handle non-variadic intrinsics by prepending the opcodes.
   if (!any_of(Expr->expr_ops(),
               [](auto Op) { return Op.getOp() == dwarf::DW_OP_LLVM_arg; })) {
@@ -2187,6 +2205,9 @@ DIExpression *DIExpression::prependOpcodes(const DIExpression *Expr,
 DIExpression *DIExpression::append(const DIExpression *Expr,
                                    ArrayRef<uint64_t> Ops) {
   assert(Expr && !Ops.empty() && "Can't append ops to this expression");
+
+  if (Expr->isPoisoned())
+    return Expr->getPoisoned();
 
   // Copy Expr's current op list.
   SmallVector<uint64_t, 16> NewOps;
@@ -2326,6 +2347,13 @@ std::optional<DIExpression *> DIExpression::createFragmentExpression(
 
   if (Expr->holdsNewElements())
     return createNewFragmentExpression(Expr, OffsetInBits, SizeInBits);
+
+  // FIXME(diexpression-poison): Is it safe to handle each fragment
+  // independently? If a fragment gets poisoned we lose the fragment info, so
+  // can't locate it correctly. Conservatively we can just have it cover the
+  // whole variable.
+  if (Expr->isPoisoned())
+    return Expr->getPoisoned();
 
   SmallVector<uint64_t, 8> Ops;
   // Track whether it's safe to split the value at the top of the DWARF stack,
@@ -2542,6 +2570,19 @@ uint64_t DIExpression::getNewNumLocationOperands() const {
     if (auto *Arg = std::get_if<DIOp::Arg>(&Op))
       Result = std::max(Result, static_cast<uint64_t>(Arg->getIndex() + 1));
   return Result;
+}
+
+/// Returns true if the expression holds NewElements or contains the
+/// DW_OP_LLVM_poisoned operation.
+///
+/// \warning This is intended for use in "old paths" where a new expression is
+/// equivalent to a poisoned expression. These paths still need to create a
+/// poison expression if this returns true, however; the underlying expression
+/// may hold NewElements otherwise.
+bool DIExpression::isPoisoned() const {
+  return any_of(expr_ops(), [](auto Op) {
+    return Op.getOp() == dwarf::DW_OP_LLVM_poisoned;
+  });
 }
 
 std::optional<DIExpression::SignedOrUnsignedConstant>
