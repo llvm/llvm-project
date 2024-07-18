@@ -208,7 +208,7 @@ struct AtExitCtx {
 struct InterceptorContext {
   // The object is 64-byte aligned, because we want hot data to be located
   // in a single cache line if possible (it's accessed in every interceptor).
-  alignas(64) LibIgnore libignore;
+  ALIGNED(64) LibIgnore libignore;
   __sanitizer_sigaction sigactions[kSigCount];
 #if !SANITIZER_APPLE && !SANITIZER_NETBSD
   unsigned finalize_key;
@@ -220,7 +220,7 @@ struct InterceptorContext {
   InterceptorContext() : libignore(LINKER_INITIALIZED), atexit_mu(MutexTypeAtExit), AtExitStack() {}
 };
 
-alignas(64) static char interceptor_placeholder[sizeof(InterceptorContext)];
+static ALIGNED(64) char interceptor_placeholder[sizeof(InterceptorContext)];
 InterceptorContext *interceptor_ctx() {
   return reinterpret_cast<InterceptorContext*>(&interceptor_placeholder[0]);
 }
