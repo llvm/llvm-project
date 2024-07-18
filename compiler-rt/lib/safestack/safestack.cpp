@@ -17,11 +17,34 @@
 
 #include "safestack_platform.h"
 #include "safestack_util.h"
+#include "sanitizer_common/sanitizer_internal_defs.h"
 
 #include <errno.h>
+#include <string.h>
 #include <sys/resource.h>
 
 #include "interception/interception.h"
+
+// interception.h drags in sanitizer_redefine_builtins.h, which in turn
+// creates references to __sanitizer_internal_memcpy etc.  The interceptors
+// aren't needed here, so just forward to libc.
+extern "C" {
+SANITIZER_INTERFACE_ATTRIBUTE void *__sanitizer_internal_memcpy(void *dest,
+                                                                const void *src,
+                                                                size_t n) {
+  return memcpy(dest, src, n);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE void *__sanitizer_internal_memmove(
+    void *dest, const void *src, size_t n) {
+  return memmove(dest, src, n);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE void *__sanitizer_internal_memset(void *s, int c,
+                                                                size_t n) {
+  return memset(s, c, n);
+}
+}  // extern "C"
 
 using namespace safestack;
 
