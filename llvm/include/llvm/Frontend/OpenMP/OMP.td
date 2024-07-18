@@ -630,13 +630,6 @@ def OMP_EndDeclareVariant : Directive<"end declare variant"> {
   let association = AS_Delimited;
   let category = OMP_DeclareVariant.category;
 }
-def OMP_Reverse : Directive<"reverse"> {
-  let association = AS_Loop;
-}
-# TODO: order alphabetically
-def OMP_Interchange : Directive<"interchange"> {
-  let association = AS_Loop;
-}
 def OMP_Depobj : Directive<"depobj"> {
   let allowedClauses = [
     VersionedClause<OMPC_Depend, 50>,
@@ -739,6 +732,10 @@ def OMP_For : Directive<"for"> {
     VersionedClause<OMPC_Reduction>,
     VersionedClause<OMPC_Schedule>,
   ];
+  let association = AS_Loop;
+  let category = CA_Executable;
+}
+def OMP_Interchange : Directive<"interchange"> {
   let association = AS_Loop;
   let category = CA_Executable;
 }
@@ -1776,6 +1773,10 @@ def OMP_ParallelWorkshare : Directive<"parallel workshare"> {
     VersionedClause<OMPC_ProcBind>,
   ];
   let leafConstructs = [OMP_Parallel, OMP_Workshare];
+  let category = CA_Executable;
+}
+def OMP_Reverse : Directive<"reverse"> {
+  let association = AS_Loop;
   let category = CA_Executable;
 }
 def OMP_TargetParallel : Directive<"target parallel"> {
