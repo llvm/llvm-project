@@ -68,6 +68,10 @@ std::string toString(wasm::Symbol::Kind kind) {
     return "SectionKind";
   case wasm::Symbol::OutputSectionKind:
     return "OutputSectionKind";
+  case wasm::Symbol::SharedFunctionKind:
+    return "SharedFunctionKind";
+  case wasm::Symbol::SharedDataKind:
+    return "SharedDataKind";
   }
   llvm_unreachable("invalid symbol kind");
 }
@@ -221,11 +225,12 @@ void Symbol::setHidden(bool isHidden) {
 }
 
 bool Symbol::isImported() const {
-  return isUndefined() && (importName.has_value() || forceImport);
+  return isShared() ||
+         (isUndefined() && (importName.has_value() || forceImport));
 }
 
 bool Symbol::isExported() const {
-  if (!isDefined() || isLocal())
+  if (!isDefined() || isShared() || isLocal())
     return false;
 
   // Shared libraries must export all weakly defined symbols
