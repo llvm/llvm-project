@@ -60,6 +60,13 @@ template <class S1Ty, class S2Ty> void set_intersect(S1Ty &S1, const S2Ty &S2) {
   auto Pred = [&S2](const auto &E) { return !S2.count(E); };
   if constexpr (detail::HasMemberRemoveIf<S1Ty, decltype(Pred)>) {
     S1.remove_if(Pred);
+  } else if constexpr (detail::HasMemberEraseIter<S1Ty>) {
+    typename S1Ty::iterator Next;
+    for (typename S1Ty::iterator I = S1.begin(); I != S1.end(); I = Next) {
+      Next = std::next(I);
+      if (!S2.count(*I))
+        S1.erase(I); // Erase element if not in S2
+    }
   } else {
     for (typename S1Ty::iterator I = S1.begin(); I != S1.end();) {
       const auto &E = *I;
