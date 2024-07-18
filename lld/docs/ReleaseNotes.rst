@@ -81,6 +81,9 @@ ELF Improvements
   (`#87530 <https://github.com/llvm/llvm-project/pull/87530>`_)
 * ``OUTPUT_FORMAT(binary)`` is now supported.
   (`#98837 <https://github.com/llvm/llvm-project/pull/98837>`_)
+* ``NOCROSSREFS`` and ``NOCRFOSSREFS_TO`` commands now supported to prohibit
+  cross references between certain output sections.
+  (`#98773 <https://github.com/llvm/llvm-project/pull/98773>`_)
 * Orphan placement is refined to prefer the last similar section when its rank <= orphan's rank.
   (`#94099 <https://github.com/llvm/llvm-project/pull/94099>`_)
   Non-alloc orphan sections are now placed at the end.

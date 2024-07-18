@@ -190,13 +190,9 @@ public:
   // Returns true if the SU matches all rules
   bool allowedByRules(const SUnit *SU,
                       SmallVectorImpl<SchedGroup> &SyncPipe) const {
-    if (Rules.empty())
-      return true;
-    for (size_t I = 0; I < Rules.size(); I++) {
-      auto TheRule = Rules[I].get();
-      if (!TheRule->apply(SU, Collection, SyncPipe)) {
+    for (auto &Rule : Rules) {
+      if (!Rule.get()->apply(SU, Collection, SyncPipe))
         return false;
-      }
     }
     return true;
   }
