@@ -2786,7 +2786,7 @@ static bool hoistMulAddAssociation(Instruction &I, Loop &L,
 /// 1. "(LV op C1) op C2" ==> "LV op (C1 op C2)"
 ///
 /// where op is an associative binary op, LV is a loop variant, and C1 and C2
-/// are loop invariants.
+/// are loop invariants that we want to hoist.
 ///
 /// TODO: This can be extended to more cases such as
 /// 2. "C1 op (C2 op LV)" ==> "(C1 op C2) op LV"
@@ -2818,8 +2818,8 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
     IRBuilder<> Builder(Preheader->getTerminator());
     Value *Inv = Builder.CreateBinOp(Opcode, C1, C2, "invariant.op");
 
-    auto *NewBO = BinaryOperator::Create(Opcode, LV, Inv,
-                                         BO->getName() + ".reass", BO);
+    auto *NewBO =
+        BinaryOperator::Create(Opcode, LV, Inv, BO->getName() + ".reass", BO);
     NewBO->copyIRFlags(BO);
     BO->replaceAllUsesWith(NewBO);
     eraseInstruction(*BO, SafetyInfo, MSSAU);
