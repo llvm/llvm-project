@@ -11,7 +11,6 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/File/file.h"
 #include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/stdio/fprintf.h"
 
 #include "hdr/types/FILE.h"
@@ -20,7 +19,7 @@
 // just the re-ordering of argv elements such that unknown arguments can be
 // easily iterated over.
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 template <typename T> struct RefWrapper {
   RefWrapper() = delete;
@@ -203,4 +202,4 @@ LLVM_LIBC_FUNCTION(int, getopt,
   return getopt_r(argc, argv, optstring, impl::ctx);
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE

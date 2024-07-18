@@ -12,10 +12,9 @@
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/macros/config.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 struct MsgMapping {
   int num;
@@ -99,6 +98,6 @@ constexpr MsgTable<N1 + N2> operator+(const MsgTable<N1> &t1,
   return res;
 }
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_STRINGUTIL_MESSAGE_MAPPER_H

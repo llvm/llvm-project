@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_THREADS_CND_BROADCAST_H
 #define LLVM_LIBC_SRC_THREADS_CND_BROADCAST_H
 
-#include "src/__support/macros/config.h"
 #include <threads.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int cnd_broadcast(cnd_t *cond);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_THREADS_CND_BROADCAST_H
