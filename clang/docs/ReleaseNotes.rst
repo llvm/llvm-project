@@ -231,6 +231,10 @@ Crash and bug fixes
 Improvements
 ^^^^^^^^^^^^
 
+- Improved handling of ``__attribute__((ownership_returns(class, idx)))``. Now clang
+  reports an error if attribute is attached to a function that returns non-pointer
+  value
+
 Moved checkers
 ^^^^^^^^^^^^^^
 
