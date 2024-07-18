@@ -113,11 +113,6 @@
 
   Prints out offsets for abbrev and debug_info of Skeleton CUs that get patched.
 
-- `--deterministic-debuginfo`
-
-  Disables parallel execution of tasks that may produce nondeterministic debug
-  info
-
 - `--dot-tooltip-code`
 
   Add basic block instructions as tool tips on nodes
