@@ -1045,7 +1045,8 @@ public:
   DebugVariableMap &DVMap;
   /// Map DebugVariable to the latest Value it's defined to have.
   /// Needs to be a MapVector because we determine order-in-the-input-MIR from
-  /// the order in this container. (FIXME: this is less true now).
+  /// the order in this container. (FIXME: likely no longer true as the ordering
+  /// is now provided by DebugVariableMap).
   /// We only retain the last DbgValue in each block for each variable, to
   /// determine the blocks live-out variable value. The Vars container forms the
   /// transfer function for this block, as part of the dataflow analysis. The
