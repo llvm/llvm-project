@@ -4197,14 +4197,11 @@ bool LoopVectorizationCostModel::isScalableVectorizationAllowed() {
     return false;
   }
 
-  if (!Legal->isSafeForAnyVectorWidth()) {
-    std::optional<unsigned> MaxVScale = getMaxVScale(*TheFunction, TTI);
-    if (!MaxVScale) {
-      reportVectorizationInfo(
-          "The target does not provide maximum vscale value.",
-          "ScalableVFUnfeasible", ORE, TheLoop);
-      return false;
-    }
+  if (!Legal->isSafeForAnyVectorWidth() && !getMaxVScale(*TheFunction, TTI)) {
+    reportVectorizationInfo("The target does not provide maximum vscale value "
+                            "for safe distance analysis.",
+                            "ScalableVFUnfeasible", ORE, TheLoop);
+    return false;
   }
 
   IsScalableVectorizationAllowed = true;
