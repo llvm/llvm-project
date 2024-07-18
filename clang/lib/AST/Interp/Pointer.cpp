@@ -57,9 +57,9 @@ Pointer::~Pointer() {
   if (isIntegralPointer())
     return;
 
-  if (PointeeStorage.BS.Pointee) {
-    PointeeStorage.BS.Pointee->removePointer(this);
-    PointeeStorage.BS.Pointee->cleanup();
+  if (Block *Pointee = PointeeStorage.BS.Pointee) {
+    Pointee->removePointer(this);
+    Pointee->cleanup();
   }
 }
 
@@ -152,8 +152,9 @@ APValue Pointer::toAPValue() const {
   Pointer Ptr = *this;
   while (Ptr.isField() || Ptr.isArrayElement()) {
     if (Ptr.isArrayRoot()) {
-        Path.push_back(APValue::LValuePathEntry::ArrayIndex(0));
-        Ptr = Ptr.getBase();
+      Path.push_back(APValue::LValuePathEntry(
+          {Ptr.getFieldDesc()->asDecl(), /*IsVirtual=*/false}));
+      Ptr = Ptr.getBase();
     } else if (Ptr.isArrayElement()) {
       if (Ptr.isOnePastEnd())
         Path.push_back(APValue::LValuePathEntry::ArrayIndex(Ptr.getArray().getNumElems()));
@@ -188,6 +189,7 @@ APValue Pointer::toAPValue() const {
 void Pointer::print(llvm::raw_ostream &OS) const {
   OS << PointeeStorage.BS.Pointee << " (";
   if (isBlockPointer()) {
+    const Block *B = PointeeStorage.BS.Pointee;
     OS << "Block) {";
 
     if (isRoot())
@@ -200,8 +202,8 @@ void Pointer::print(llvm::raw_ostream &OS) const {
     else
       OS << Offset << ", ";
 
-    if (PointeeStorage.BS.Pointee)
-      OS << PointeeStorage.BS.Pointee->getSize();
+    if (B)
+      OS << B->getSize();
     else
       OS << "nullptr";
   } else {

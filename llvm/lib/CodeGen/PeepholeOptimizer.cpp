@@ -169,8 +169,8 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.setPreservesCFG();
       MachineFunctionPass::getAnalysisUsage(AU);
-      AU.addRequired<MachineLoopInfo>();
-      AU.addPreserved<MachineLoopInfo>();
+      AU.addRequired<MachineLoopInfoWrapperPass>();
+      AU.addPreserved<MachineLoopInfoWrapperPass>();
       if (Aggressive) {
         AU.addRequired<MachineDominatorTreeWrapperPass>();
         AU.addPreserved<MachineDominatorTreeWrapperPass>();
@@ -488,7 +488,7 @@ char &llvm::PeepholeOptimizerID = PeepholeOptimizer::ID;
 INITIALIZE_PASS_BEGIN(PeepholeOptimizer, DEBUG_TYPE,
                       "Peephole Optimizations", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(PeepholeOptimizer, DEBUG_TYPE,
                     "Peephole Optimizations", false, false)
 
@@ -1671,7 +1671,7 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   DT = Aggressive ? &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree()
                   : nullptr;
-  MLI = &getAnalysis<MachineLoopInfo>();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   MF.setDelegate(this);
 
   bool Changed = false;

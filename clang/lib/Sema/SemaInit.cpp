@@ -1993,9 +1993,18 @@ static bool checkDestructorReference(QualType ElementType, SourceLocation Loc,
   return SemaRef.DiagnoseUseOfDecl(Destructor, Loc);
 }
 
-static bool canInitializeArrayWithEmbedDataString(ArrayRef<Expr *> ExprList,
-                                                  QualType InitType,
-                                                  ASTContext &Context) {
+static bool
+canInitializeArrayWithEmbedDataString(ArrayRef<Expr *> ExprList,
+                                      const InitializedEntity &Entity,
+                                      ASTContext &Context) {
+  QualType InitType = Entity.getType();
+  const InitializedEntity *Parent = &Entity;
+
+  while (Parent) {
+    InitType = Parent->getType();
+    Parent = Parent->getParent();
+  }
+
   // Only one initializer, it's an embed and the types match;
   EmbedExpr *EE =
       ExprList.size() == 1
@@ -2034,7 +2043,7 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
     }
   }
 
-  if (canInitializeArrayWithEmbedDataString(IList->inits(), DeclType,
+  if (canInitializeArrayWithEmbedDataString(IList->inits(), Entity,
                                             SemaRef.Context)) {
     EmbedExpr *Embed = cast<EmbedExpr>(IList->inits()[0]);
     IList->setInit(0, Embed->getDataStringLiteral());
@@ -5576,6 +5585,10 @@ static void TryOrBuildParenListInitialization(
       ExprResult ER;
       ER = IS.Perform(S, SubEntity, SubKind,
                       Arg ? MultiExprArg(Arg) : std::nullopt);
+
+      if (ER.isInvalid())
+        return false;
+
       if (InitExpr)
         *InitExpr = ER.get();
       else
@@ -5608,7 +5621,7 @@ static void TryOrBuildParenListInitialization(
           << SE->getSourceRange();
       return;
     } else {
-      assert(isa<IncompleteArrayType>(Entity.getType()));
+      assert(Entity.getType()->isIncompleteArrayType());
       ArrayLength = Args.size();
     }
     EntityIndexToProcess = ArrayLength;
@@ -9811,9 +9824,6 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     // C++ [over.best.ics]p4:
     //   When [...] the constructor [...] is a candidate by
     //    - [over.match.copy] (in all cases)
-    // FIXME: The "second phase of [over.match.list] case can also
-    // theoretically happen here, but it's not clear whether we can
-    // ever have a parameter of the right type.
     if (TD) {
       SmallVector<Expr *, 8> TmpInits;
       for (Expr *E : Inits)

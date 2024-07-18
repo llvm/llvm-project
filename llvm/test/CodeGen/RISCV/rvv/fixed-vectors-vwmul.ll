@@ -795,22 +795,13 @@ define <4 x i32> @vwmul_vx_v4i32_i32(ptr %x, ptr %y) {
 }
 
 define <2 x i64> @vwmul_vx_v2i64_i8(ptr %x, ptr %y) {
-; RV32-LABEL: vwmul_vx_v2i64_i8:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-NEXT:    vle32.v v8, (a0)
-; RV32-NEXT:    lb a0, 0(a1)
-; RV32-NEXT:    vsext.vf2 v9, v8
-; RV32-NEXT:    vmul.vx v8, v9, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vwmul_vx_v2i64_i8:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV64-NEXT:    vle32.v v9, (a0)
-; RV64-NEXT:    lb a0, 0(a1)
-; RV64-NEXT:    vwmul.vx v8, v9, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: vwmul_vx_v2i64_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    lb a0, 0(a1)
+; CHECK-NEXT:    vwmul.vx v8, v9, a0
+; CHECK-NEXT:    ret
   %a = load <2 x i32>, ptr %x
   %b = load i8, ptr %y
   %c = sext i8 %b to i64
@@ -822,22 +813,13 @@ define <2 x i64> @vwmul_vx_v2i64_i8(ptr %x, ptr %y) {
 }
 
 define <2 x i64> @vwmul_vx_v2i64_i16(ptr %x, ptr %y) {
-; RV32-LABEL: vwmul_vx_v2i64_i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-NEXT:    vle32.v v8, (a0)
-; RV32-NEXT:    lh a0, 0(a1)
-; RV32-NEXT:    vsext.vf2 v9, v8
-; RV32-NEXT:    vmul.vx v8, v9, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vwmul_vx_v2i64_i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV64-NEXT:    vle32.v v9, (a0)
-; RV64-NEXT:    lh a0, 0(a1)
-; RV64-NEXT:    vwmul.vx v8, v9, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: vwmul_vx_v2i64_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    lh a0, 0(a1)
+; CHECK-NEXT:    vwmul.vx v8, v9, a0
+; CHECK-NEXT:    ret
   %a = load <2 x i32>, ptr %x
   %b = load i16, ptr %y
   %c = sext i16 %b to i64
@@ -849,22 +831,13 @@ define <2 x i64> @vwmul_vx_v2i64_i16(ptr %x, ptr %y) {
 }
 
 define <2 x i64> @vwmul_vx_v2i64_i32(ptr %x, ptr %y) {
-; RV32-LABEL: vwmul_vx_v2i64_i32:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-NEXT:    vle32.v v8, (a0)
-; RV32-NEXT:    lw a0, 0(a1)
-; RV32-NEXT:    vsext.vf2 v9, v8
-; RV32-NEXT:    vmul.vx v8, v9, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vwmul_vx_v2i64_i32:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV64-NEXT:    vle32.v v9, (a0)
-; RV64-NEXT:    lw a0, 0(a1)
-; RV64-NEXT:    vwmul.vx v8, v9, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: vwmul_vx_v2i64_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    lw a0, 0(a1)
+; CHECK-NEXT:    vwmul.vx v8, v9, a0
+; CHECK-NEXT:    ret
   %a = load <2 x i32>, ptr %x
   %b = load i32, ptr %y
   %c = sext i32 %b to i64

@@ -1676,6 +1676,15 @@ bool Sema::CheckRedeclarationExported(NamedDecl *New, NamedDecl *Old) {
   if (IsOldExported)
     return false;
 
+  // If the Old declaration are not attached to named modules
+  // and the New declaration are attached to global module.
+  // It should be fine to allow the export since it doesn't change
+  // the linkage of declarations. See
+  // https://github.com/llvm/llvm-project/issues/98583 for details.
+  if (!Old->isInNamedModule() && New->getOwningModule() &&
+      New->getOwningModule()->isImplicitGlobalModule())
+    return false;
+
   assert(IsNewExported);
 
   auto Lk = Old->getFormalLinkage();
@@ -2285,10 +2294,17 @@ FunctionDecl *Sema::CreateBuiltin(IdentifierInfo *II, QualType Type,
     Parent = CLinkageDecl;
   }
 
-  FunctionDecl *New = FunctionDecl::Create(Context, Parent, Loc, Loc, II, Type,
-                                           /*TInfo=*/nullptr, SC_Extern,
-                                           getCurFPFeatures().isFPConstrained(),
-                                           false, Type->isFunctionProtoType());
+  ConstexprSpecKind ConstexprKind = ConstexprSpecKind::Unspecified;
+  if (Context.BuiltinInfo.isImmediate(ID)) {
+    assert(getLangOpts().CPlusPlus20 &&
+           "consteval builtins should only be available in C++20 mode");
+    ConstexprKind = ConstexprSpecKind::Consteval;
+  }
+
+  FunctionDecl *New = FunctionDecl::Create(
+      Context, Parent, Loc, Loc, II, Type, /*TInfo=*/nullptr, SC_Extern,
+      getCurFPFeatures().isFPConstrained(), /*isInlineSpecified=*/false,
+      Type->isFunctionProtoType(), ConstexprKind);
   New->setImplicit();
   New->addAttr(BuiltinAttr::CreateImplicit(Context, ID));
 
@@ -3797,45 +3813,47 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     return true;
   }
 
-  const auto OldFX = Old->getFunctionEffects();
-  const auto NewFX = New->getFunctionEffects();
   QualType OldQTypeForComparison = OldQType;
-  if (OldFX != NewFX) {
-    const auto Diffs = FunctionEffectDifferences(OldFX, NewFX);
-    for (const auto &Diff : Diffs) {
-      if (Diff.shouldDiagnoseRedeclaration(*Old, OldFX, *New, NewFX)) {
-        Diag(New->getLocation(),
-             diag::warn_mismatched_func_effect_redeclaration)
-            << Diff.effectName();
-        Diag(Old->getLocation(), diag::note_previous_declaration);
+  if (Context.hasAnyFunctionEffects()) {
+    const auto OldFX = Old->getFunctionEffects();
+    const auto NewFX = New->getFunctionEffects();
+    if (OldFX != NewFX) {
+      const auto Diffs = FunctionEffectDifferences(OldFX, NewFX);
+      for (const auto &Diff : Diffs) {
+        if (Diff.shouldDiagnoseRedeclaration(*Old, OldFX, *New, NewFX)) {
+          Diag(New->getLocation(),
+               diag::warn_mismatched_func_effect_redeclaration)
+              << Diff.effectName();
+          Diag(Old->getLocation(), diag::note_previous_declaration);
+        }
       }
-    }
-    // Following a warning, we could skip merging effects from the previous
-    // declaration, but that would trigger an additional "conflicting types"
-    // error.
-    if (const auto *NewFPT = NewQType->getAs<FunctionProtoType>()) {
-      FunctionEffectSet::Conflicts MergeErrs;
-      FunctionEffectSet MergedFX =
-          FunctionEffectSet::getUnion(OldFX, NewFX, MergeErrs);
-      if (!MergeErrs.empty())
-        diagnoseFunctionEffectMergeConflicts(MergeErrs, New->getLocation(),
-                                             Old->getLocation());
+      // Following a warning, we could skip merging effects from the previous
+      // declaration, but that would trigger an additional "conflicting types"
+      // error.
+      if (const auto *NewFPT = NewQType->getAs<FunctionProtoType>()) {
+        FunctionEffectSet::Conflicts MergeErrs;
+        FunctionEffectSet MergedFX =
+            FunctionEffectSet::getUnion(OldFX, NewFX, MergeErrs);
+        if (!MergeErrs.empty())
+          diagnoseFunctionEffectMergeConflicts(MergeErrs, New->getLocation(),
+                                               Old->getLocation());
 
-      FunctionProtoType::ExtProtoInfo EPI = NewFPT->getExtProtoInfo();
-      EPI.FunctionEffects = FunctionEffectsRef(MergedFX);
-      QualType ModQT = Context.getFunctionType(NewFPT->getReturnType(),
-                                               NewFPT->getParamTypes(), EPI);
-
-      New->setType(ModQT);
-      NewQType = New->getType();
-
-      // Revise OldQTForComparison to include the merged effects,
-      // so as not to fail due to differences later.
-      if (const auto *OldFPT = OldQType->getAs<FunctionProtoType>()) {
-        EPI = OldFPT->getExtProtoInfo();
+        FunctionProtoType::ExtProtoInfo EPI = NewFPT->getExtProtoInfo();
         EPI.FunctionEffects = FunctionEffectsRef(MergedFX);
-        OldQTypeForComparison = Context.getFunctionType(
-            OldFPT->getReturnType(), OldFPT->getParamTypes(), EPI);
+        QualType ModQT = Context.getFunctionType(NewFPT->getReturnType(),
+                                                 NewFPT->getParamTypes(), EPI);
+
+        New->setType(ModQT);
+        NewQType = New->getType();
+
+        // Revise OldQTForComparison to include the merged effects,
+        // so as not to fail due to differences later.
+        if (const auto *OldFPT = OldQType->getAs<FunctionProtoType>()) {
+          EPI = OldFPT->getExtProtoInfo();
+          EPI.FunctionEffects = FunctionEffectsRef(MergedFX);
+          OldQTypeForComparison = Context.getFunctionType(
+              OldFPT->getReturnType(), OldFPT->getParamTypes(), EPI);
+        }
       }
     }
   }
@@ -4500,16 +4518,18 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
   }
 
   mergeDeclAttributes(New, Old);
-  // Warn if an already-declared variable is made a weak_import in a subsequent
+  // Warn if an already-defined variable is made a weak_import in a subsequent
   // declaration
-  if (New->hasAttr<WeakImportAttr>() &&
-      Old->getStorageClass() == SC_None &&
-      !Old->hasAttr<WeakImportAttr>()) {
-    Diag(New->getLocation(), diag::warn_weak_import) << New->getDeclName();
-    Diag(Old->getLocation(), diag::note_previous_declaration);
-    // Remove weak_import attribute on new declaration.
-    New->dropAttr<WeakImportAttr>();
-  }
+  if (New->hasAttr<WeakImportAttr>())
+    for (auto *D = Old; D; D = D->getPreviousDecl()) {
+      if (D->isThisDeclarationADefinition() != VarDecl::DeclarationOnly) {
+        Diag(New->getLocation(), diag::warn_weak_import) << New->getDeclName();
+        Diag(D->getLocation(), diag::note_previous_definition);
+        // Remove weak_import attribute on new declaration.
+        New->dropAttr<WeakImportAttr>();
+        break;
+      }
+    }
 
   if (const auto *ILA = New->getAttr<InternalLinkageAttr>())
     if (!Old->hasAttr<InternalLinkageAttr>()) {
@@ -13313,7 +13333,8 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   if (getLangOpts().CPlusPlusModules && currentModuleIsHeaderUnit() &&
       !VDecl->isInvalidDecl() && VDecl->isThisDeclarationADefinition() &&
       VDecl->getFormalLinkage() == Linkage::External && !VDecl->isInline() &&
-      !VDecl->isTemplated() && !isa<VarTemplateSpecializationDecl>(VDecl)) {
+      !VDecl->isTemplated() && !isa<VarTemplateSpecializationDecl>(VDecl) &&
+      !VDecl->getInstantiatedFromStaticDataMember()) {
     Diag(VDecl->getLocation(), diag::err_extern_def_in_header_unit);
     VDecl->setInvalidDecl();
   }
@@ -15221,6 +15242,9 @@ ShouldWarnAboutMissingPrototype(const FunctionDecl *FD,
     if (IdentifierInfo *II = FD->getIdentifier())
       if (II->isStr("main") || II->isStr("efi_main"))
         return false;
+
+  if (FD->isMSVCRTEntryPoint())
+    return false;
 
   // Don't warn about inline functions.
   if (FD->isInlined())
@@ -18028,15 +18052,6 @@ void Sema::ActOnTagFinishDefinition(Scope *S, Decl *TagD,
       if (NumInitMethods > 1 || !Def->hasInitMethod())
         Diag(RD->getLocation(), diag::err_sycl_special_type_num_init_method);
     }
-
-    // If we're defining a dynamic class in a module interface unit, we always
-    // need to produce the vtable for it even if the vtable is not used in the
-    // current TU.
-    //
-    // The case that the current class is not dynamic is handled in
-    // MarkVTableUsed.
-    if (getCurrentModule() && getCurrentModule()->isInterfaceOrPartition())
-      MarkVTableUsed(RD->getLocation(), RD, /*DefinitionRequired=*/true);
   }
 
   // Exit this scope of this tag's definition.

@@ -18,9 +18,11 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 
-namespace LIBC_NAMESPACE::fputil::generic {
+namespace LIBC_NAMESPACE_DECL {
+namespace fputil::generic {
 
 template <typename OutType, typename InType>
 LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
@@ -118,6 +120,7 @@ div(InType x, InType y) {
   return result.template as<OutType, /*ShouldSignalExceptions=*/true>();
 }
 
-} // namespace LIBC_NAMESPACE::fputil::generic
+} // namespace fputil::generic
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_DIV_H

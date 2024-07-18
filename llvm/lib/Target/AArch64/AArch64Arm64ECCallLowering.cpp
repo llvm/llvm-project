@@ -525,7 +525,7 @@ Function *AArch64Arm64ECCallLowering::buildEntryThunk(Function *F) {
   unsigned ThunkArgOffset = TransformDirectToSRet ? 2 : 1;
   unsigned PassthroughArgSize =
       (F->isVarArg() ? 5 : Thunk->arg_size()) - ThunkArgOffset;
-  assert(ArgTranslations.size() == F->isVarArg() ? 5 : PassthroughArgSize);
+  assert(ArgTranslations.size() == (F->isVarArg() ? 5 : PassthroughArgSize));
 
   // Translate arguments to call.
   SmallVector<Value *> Args;
