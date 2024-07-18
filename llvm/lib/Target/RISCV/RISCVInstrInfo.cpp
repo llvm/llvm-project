@@ -3763,9 +3763,10 @@ RISCVInstrInfo::getSerializableMachineMemOperandTargetFlags() const {
   return ArrayRef(TargetFlags);
 }
 
-unsigned int
-RISCVInstrInfo::getTailDuplicateSize(CodeGenOptLevel OptLevel) const {
-  return OptLevel >= CodeGenOptLevel::Aggressive ? 6 : 2;
+unsigned RISCVInstrInfo::getTailDuplicateSize(CodeGenOptLevel OptLevel) const {
+  return OptLevel >= CodeGenOptLevel::Aggressive
+             ? STI.getTailDupAggressiveThreshold()
+             : 2;
 }
 
 // Returns true if this is the sext.w pattern, addiw rd, rs1, 0.
