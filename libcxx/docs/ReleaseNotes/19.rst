@@ -143,6 +143,12 @@ Deprecations and Removals
   of randomness, and others. Users that were checking whether including a header would fail (e.g. via a script
   or CMake's ``try_compile`` will experience a change in behavior).
 
+- libc++ no longer supports relational comparison for ``std::chrono::weekday``. The relational comparison operators were
+  provided as an undocumented extension. If you were using relational comparison on ``std::chrono::weekday``, compare
+  the results of ``c_encoding()`` or ``iso_encoding()`` instead. The
+  ``_LIBCPP_ENABLE_REMOVED_WEEKDAY_RELATIONAL_OPERATORS`` macro can be defined to temporarily re-enable this extension.
+  This macro will be honored for one release and ignored starting in LLVM 20.
+
 - The operators in the ``rel_ops`` namespace have been deprecated. The deprecation is part of the paper
   P0768R1 "Library Support for the Spaceship (Comparison) Operator".
 
@@ -156,6 +162,10 @@ LLVM 20
   the safe mode will be removed in LLVM 20.
 
 - The C++20 synchronization library will be removed entirely in language modes prior to C++20 in LLVM 20.
+
+- The relational operators for ``std::chrono::weekday`` will be removed entirely, and the
+  ``_LIBCPP_ENABLE_REMOVED_WEEKDAY_RELATIONAL_OPERATORS`` macro that was used to re-enable this extension will be
+  ignored in LLVM 20.
 
 LLVM 21
 ~~~~~~~
