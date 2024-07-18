@@ -493,8 +493,6 @@ private:
   DenseMap<Value *, Value *> Map;
 };
 
-// First parameter is the number of functions
-// Second parameter is the number of fallback function arguments
 class NsanMemOpFn {
 public:
   NsanMemOpFn(Module &M, ArrayRef<StringRef> Sized, StringRef Fallback,
