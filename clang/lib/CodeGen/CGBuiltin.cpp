@@ -18766,6 +18766,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr8_b64_v2i32:
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr6_b96_v3i32:
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8i16:
+  case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8f16:
+  case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8bf16:
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr4_b64_v2i32:
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr8_b64_v2i32:
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr6_b96_v3i32:
@@ -18799,6 +18801,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       IID = Intrinsic::amdgcn_ds_load_tr8_b64;
       break;
     case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8i16:
+    case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8f16:
+    case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8bf16:
       IID = Intrinsic::amdgcn_ds_load_tr16_b128;
       break;
     case AMDGPU::BI__builtin_amdgcn_ds_read_tr4_b64_v2i32:
@@ -18997,7 +19001,20 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
                                             (uint64_t)0);
     return Builder.CreateInsertElement(I0, A, 1);
   }
+  case AMDGPU::BI__builtin_amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
+  case AMDGPU::BI__builtin_amdgcn_mfma_scale_f32_32x32x64_f8f6f4: {
+    llvm::FixedVectorType *VT = FixedVectorType::get(Builder.getInt32Ty(), 8);
+    Function *F = CGM.getIntrinsic(
+        BuiltinID == AMDGPU::BI__builtin_amdgcn_mfma_scale_f32_32x32x64_f8f6f4
+            ? Intrinsic::amdgcn_mfma_scale_f32_32x32x64_f8f6f4
+            : Intrinsic::amdgcn_mfma_scale_f32_16x16x128_f8f6f4,
+        {VT, VT});
 
+    SmallVector<Value *, 10> Args;
+    for (unsigned I = 0, N = E->getNumArgs(); I != N; ++I)
+      Args.push_back(EmitScalarExpr(E->getArg(I)));
+    return Builder.CreateCall(F, Args);
+  }
   case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32:
   case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_tied_w32:
   case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64:
