@@ -4222,6 +4222,7 @@ cc_library(
         ":MathToFuncs",
         ":MathToLLVM",
         ":MathToLibm",
+        ":MathToROCDL",
         ":MathToSPIRV",
         ":MemRefToEmitC",
         ":MemRefToLLVM",

@@ -684,7 +684,7 @@ bool clang::isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind) {
 }
 
 bool clang::isOpenMPLoopTransformationDirective(OpenMPDirectiveKind DKind) {
-  return DKind == OMPD_tile || DKind == OMPD_unroll;
+  return DKind == OMPD_tile || DKind == OMPD_unroll || DKind == OMPD_reverse;
 }
 
 bool clang::isOpenMPCombinedParallelADirective(OpenMPDirectiveKind DKind) {

@@ -2899,6 +2899,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   case OMPD_assume:
     Directive = ParseOpenMPAssumesDirective(DKind, ConsumeToken());
     break;
+  case OMPD_reverse:
   case OMPD_declare_target: {
     SourceLocation DTLoc = ConsumeAnyToken();
     bool HasClauses = Tok.isNot(tok::annot_pragma_openmp_end);
