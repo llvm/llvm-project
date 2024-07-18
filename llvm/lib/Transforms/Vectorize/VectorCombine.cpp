@@ -2143,10 +2143,8 @@ bool VectorCombine::foldCastFromReductions(Instruction &I) {
       (TruncOnly || !match(ReductionSrc, m_OneUse(m_ZExtOrSExt(m_Value(Src))))))
     return false;
 
-  // Note: Only trunc has a constexpr, neither sext or zext do.
-  auto CastOpc = Instruction::Trunc;
-  if (auto *Cast = dyn_cast<CastInst>(ReductionSrc))
-    CastOpc = (Instruction::CastOps)cast<Instruction>(Cast)->getOpcode();
+  auto CastOpc =
+      (Instruction::CastOps)cast<Instruction>(ReductionSrc)->getOpcode();
 
   auto *SrcTy = cast<VectorType>(Src->getType());
   auto *ReductionSrcTy = cast<VectorType>(ReductionSrc->getType());
@@ -2155,9 +2153,9 @@ bool VectorCombine::foldCastFromReductions(Instruction &I) {
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost OldCost = TTI.getArithmeticReductionCost(
       ReductionOpc, ReductionSrcTy, std::nullopt, CostKind);
-  if (auto *Cast = dyn_cast<CastInst>(ReductionSrc))
-    OldCost += TTI.getCastInstrCost(CastOpc, ReductionSrcTy, SrcTy,
-                                    TTI::CastContextHint::None, CostKind, Cast);
+  OldCost += TTI.getCastInstrCost(CastOpc, ReductionSrcTy, SrcTy,
+                                  TTI::CastContextHint::None, CostKind,
+                                  cast<CastInst>(ReductionSrc));
   InstructionCost NewCost =
       TTI.getArithmeticReductionCost(ReductionOpc, SrcTy, std::nullopt,
                                      CostKind) +
