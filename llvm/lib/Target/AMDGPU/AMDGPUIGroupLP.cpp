@@ -112,7 +112,7 @@ public:
   virtual ~InstructionRule() = default;
 };
 
-typedef DenseMap<SUnit *, SmallVector<int, 4>> SUnitsToCandidateSGsMap;
+using SUnitsToCandidateSGsMap = DenseMap<SUnit *, SmallVector<int, 4>>;
 
 // Classify instructions into groups to enable fine tuned control over the
 // scheduler. These groups may be more specific than current SchedModel
@@ -261,8 +261,8 @@ static void resetEdges(SUnit &SU, ScheduleDAGInstrs *DAG) {
           S.getSUnit()->removePred(SP);
 }
 
-typedef std::pair<SUnit *, SmallVector<int, 4>> SUToCandSGsPair;
-typedef SmallVector<SUToCandSGsPair, 4> SUsToCandSGsVec;
+using SUToCandSGsPair = std::pair<SUnit *, SmallVector<int, 4>>;
+using SUsToCandSGsVec = SmallVector<SUToCandSGsPair, 4>;
 
 // The PipelineSolver is used to assign SUnits to SchedGroups in a pipeline
 // in non-trivial cases. For example, if the requested pipeline is

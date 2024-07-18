@@ -27,7 +27,7 @@ class GCNILPScheduler {
   };
 
   SpecificBumpPtrAllocator<Candidate> Alloc;
-  typedef simple_ilist<Candidate> Queue;
+  using Queue = simple_ilist<Candidate>;
   Queue PendingQueue;
   Queue AvailQueue;
   unsigned CurQueueId = 0;
