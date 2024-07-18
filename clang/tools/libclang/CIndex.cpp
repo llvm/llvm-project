@@ -2182,6 +2182,7 @@ public:
   VisitOMPLoopTransformationDirective(const OMPLoopTransformationDirective *D);
   void VisitOMPTileDirective(const OMPTileDirective *D);
   void VisitOMPUnrollDirective(const OMPUnrollDirective *D);
+  void VisitOMPReverseDirective(const OMPReverseDirective *D);
   void VisitOMPForDirective(const OMPForDirective *D);
   void VisitOMPForSimdDirective(const OMPForSimdDirective *D);
   void VisitOMPSectionsDirective(const OMPSectionsDirective *D);
@@ -3225,6 +3226,10 @@ void EnqueueVisitor::VisitOMPTileDirective(const OMPTileDirective *D) {
 }
 
 void EnqueueVisitor::VisitOMPUnrollDirective(const OMPUnrollDirective *D) {
+  VisitOMPLoopTransformationDirective(D);
+}
+
+void EnqueueVisitor::VisitOMPReverseDirective(const OMPReverseDirective *D) {
   VisitOMPLoopTransformationDirective(D);
 }
 
@@ -6097,6 +6102,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPTileDirective");
   case CXCursor_OMPUnrollDirective:
     return cxstring::createRef("OMPUnrollDirective");
+  case CXCursor_OMPReverseDirective:
+    return cxstring::createRef("OMPReverseDirective");
   case CXCursor_OMPForDirective:
     return cxstring::createRef("OMPForDirective");
   case CXCursor_OMPForSimdDirective:
