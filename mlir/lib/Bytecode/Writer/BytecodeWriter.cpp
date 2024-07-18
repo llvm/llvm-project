@@ -204,7 +204,8 @@ public:
   // Integer Emission
 
   /// Emit a single byte.
-  template <typename T> void emitByte(T byte, StringLiteral desc) {
+  template <typename T>
+  void emitByte(T byte, StringLiteral desc) {
     LLVM_DEBUG(llvm::dbgs()
                << "emitByte(" << uint64_t(byte) << ")\t" << desc << '\n');
     currentResult.push_back(static_cast<uint8_t>(byte));
