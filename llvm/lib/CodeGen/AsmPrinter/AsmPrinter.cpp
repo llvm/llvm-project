@@ -3967,7 +3967,11 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
   // Emit an alignment directive for this block, if needed.
   const Align Alignment = MBB.getAlignment();
   if (Alignment != Align(1))
+  {
+    for (auto &Handler : DebugHandlers)
+      Handler->beginCodeAlignment(MBB);
     emitAlignment(Alignment, nullptr, MBB.getMaxBytesForAlignment());
+  }
 
   // If the block has its address taken, emit any labels that were used to
   // reference the block.  It is possible that there is more than one label
