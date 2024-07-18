@@ -405,10 +405,16 @@ bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
   // The This pointer is writable in constructors and destructors,
   // even if isConst() returns true.
-  if (const Function *Func = S.Current->getFunction();
-      Func && (Func->isConstructor() || Func->isDestructor()) &&
-      Ptr.block() == S.Current->getThis().block()) {
-    return true;
+  // TODO(perf): We could be hitting this code path quite a lot in complex
+  // constructors. Is there a better way to do this?
+  if (S.Current->getFunction()) {
+    for (const InterpFrame *Frame = S.Current; Frame; Frame = Frame->Caller) {
+      if (const Function *Func = Frame->getFunction();
+          Func && (Func->isConstructor() || Func->isDestructor()) &&
+          Ptr.block() == Frame->getThis().block()) {
+        return true;
+      }
+    }
   }
 
   if (!Ptr.isBlockPointer())
