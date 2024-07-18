@@ -497,6 +497,7 @@ public:
   bool isLegalAddImmediate(int64_t Imm) const override;
   bool isTruncateFree(Type *SrcTy, Type *DstTy) const override;
   bool isTruncateFree(EVT SrcVT, EVT DstVT) const override;
+  bool isTruncateFree(SDValue Val, EVT VT2) const override;
   bool isZExtFree(SDValue Val, EVT VT2) const override;
   bool isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const override;
   bool signExtendConstant(const ConstantInt *CI) const override;
