@@ -536,8 +536,62 @@
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=standard -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=bti -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+bti -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI %s
+// CHECK-BTI-OFF-NOT: __ARM_FEATURE_BTI_DEFAULT
+// CHECK-BTI:         #define __ARM_FEATURE_BTI_DEFAULT 1
+
+// ================== Check Armv8.5-A random number generation extension.
+// RUN: %clang -target aarch64-none-elf -march=armv8.5-a+rng -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-RNG %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.5-a -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-NO-RNG %s
+// CHECK-RNG: __ARM_FEATURE_RNG 1
+// CHECK-NO-RNG-NOT: __ARM_FEATURE_RNG 1
+
+// ================== Check BFloat16 Extensions.
+// RUN: %clang -target aarch64-none-elf -march=armv8.6-a+bf16 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-BFLOAT %s
+// CHECK-BFLOAT: __ARM_BF16_FORMAT_ALTERNATIVE 1
+// CHECK-BFLOAT: __ARM_FEATURE_BF16 1
+// CHECK-BFLOAT: __ARM_FEATURE_BF16_VECTOR_ARITHMETIC 1
+
+// ================== Check Armv8.7-A LS64 extension.
+// RUN: %clang -target aarch64-none-elf -march=armv8.7-a+ls64 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-LS64 %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.7-a      -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-NO-LS64 %s
+// CHECK-LS64: __ARM_FEATURE_LS64 1
+// CHECK-NO-LS64-NOT: __ARM_FEATURE_LS64 1
+
+// ================== Check sve-vector-bits flag.
+// RUN: %clang -target aarch64-none-elf -march=armv8-a+sve -msve-vector-bits=128  -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS -D#VBITS=128  %s
+// RUN: %clang -target aarch64-none-elf -march=armv8-a+sve -msve-vector-bits=256  -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS -D#VBITS=256  %s
+// RUN: %clang -target aarch64-none-elf -march=armv8-a+sve -msve-vector-bits=512  -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS -D#VBITS=512  %s
+// RUN: %clang -target aarch64-none-elf -march=armv8-a+sve -msve-vector-bits=1024 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS -D#VBITS=1024 %s
+// RUN: %clang -target aarch64-none-elf -march=armv8-a+sve -msve-vector-bits=2048 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS -D#VBITS=2048 %s
+// RUN: %clang -target aarch64-none-elf -march=armv8-a+sve -msve-vector-bits=512+ -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-NO-SVE-VECTOR-BITS %s
+// CHECK-SVE-VECTOR-BITS: __ARM_FEATURE_SVE_BITS [[#VBITS:]]
+// CHECK-NO-SVE-VECTOR-BITS-NOT: __ARM_FEATURE_SVE_BITS
+
+// ================== Check Large System Extensions (LSE)
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+lse -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSE %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+lse -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSE %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSE %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSE %s
+// CHECK-LSE: __ARM_FEATURE_ATOMICS 1
+
+// ================== Check Armv8.8-A/Armv9.3-A memcpy and memset acceleration instructions (MOPS)
+// RUN: %clang -target aarch64-none-elf -march=armv8.7-a             -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.7-a+mops        -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.8-a             -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.8-a+nomops      -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.8-a+nomops+mops -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.8-a+mops        -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
+// RUN: %clang -target aarch64-none-elf -march=armv8.8-a+mops+nomops -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
+// RUN: %clang -target aarch64-none-elf -march=armv9.2-a             -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
+// RUN: %clang -target aarch64-none-elf -march=armv9.2-a+mops        -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
+// RUN: %clang -target aarch64-none-elf -march=armv9.3-a             -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
+// RUN: %clang -target aarch64-none-elf -march=armv9.3-a+nomops      -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
+// RUN: %clang -target aarch64-none-elf -march=armv9.3-a+mops        -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-MOPS   %s
+// Check that -target-feature -v9.3a doesn't enable dependant features
+// RUN: %clang -target aarch64-none-elf -Xclang -target-feature -Xclang -v9.3a  -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS   %s
 // CHECK-MOPS: __ARM_FEATURE_MOPS 1
 // CHECK-NOMOPS-NOT: __ARM_FEATURE_MOPS 1
+
 // ================== Check Armv8.9-A/Armv9.4-A 128-bit System Registers (FEAT_SYSREG128)
 // RUN: %clang -target aarch64-none-elf -march=armv8.9-a      -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOSYS128 %s
 // RUN: %clang -target aarch64-none-elf -march=armv9.4-a      -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOSYS128 %s
