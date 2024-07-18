@@ -57,6 +57,7 @@
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -455,6 +456,9 @@ private:
 
 PreservedAnalyses HWAddressSanitizerPass::run(Module &M,
                                               ModuleAnalysisManager &MAM) {
+  // Return early if nosanitize_hwaddress module flag is present for the module.
+  if (checkIfAlreadyInstrumented(M, "nosanitize_hwaddress"))
+    return PreservedAnalyses::all();
   const StackSafetyGlobalInfo *SSI = nullptr;
   auto TargetTriple = llvm::Triple(M.getTargetTriple());
   if (shouldUseStackSafetyAnalysis(TargetTriple, Options.DisableOptimization))

@@ -198,6 +198,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -706,6 +707,9 @@ MemorySanitizerOptions::MemorySanitizerOptions(int TO, bool R, bool K,
 
 PreservedAnalyses MemorySanitizerPass::run(Module &M,
                                            ModuleAnalysisManager &AM) {
+  // Return early if nosanitize_memory module flag is present for the module.
+  if (checkIfAlreadyInstrumented(M, "nosanitize_memory"))
+    return PreservedAnalyses::all();
   bool Modified = false;
   if (!Options.Kernel) {
     insertModuleCtor(M);
