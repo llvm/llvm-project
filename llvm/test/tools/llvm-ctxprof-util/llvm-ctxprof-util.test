@@ -1,0 +1,39 @@
+; RUN: mkdir -p %t
+; RUN: llvm-ctxprof-util fromJSON --input %S/Inputs/empty.json -output %t/empty.bitstream
+; RUN: llvm-bcanalyzer --dump %t/empty.bitstream | FileCheck %s --check-prefix=EMPTY
+
+; RUN: llvm-ctxprof-util fromJSON --input %S/Inputs/valid.json -output %t/valid.bitstream
+; RUN: llvm-bcanalyzer --dump %t/valid.bitstream | FileCheck %s --check-prefix=VALID
+
+; EMPTY: <BLOCKINFO_BLOCK/>
+; EMPTY-NEXT: <Metadata NumWords=1 BlockCodeSize=2>
+; EMPTY-NEXT:   <Version op0=1/>
+; EMPTY-NEXT: </Metadata>
+
+; Note that uin64_t are printed as signed values by llvm-bcanalyzer
+
+; VALID: <BLOCKINFO_BLOCK/>
+; VALID: <Context
+; VALID-NEXT: <GUID op0=1000/>
+; VALID-NEXT: <Counters op0=1 op1=2 op2=3/>
+; VALID-NEXT: <Context
+
+; We have no callee/context at index 0, 2 callsites for index 1, and one for
+; index 2
+
+; VALID-NEXT:   <GUID op0=-3/>
+; VALID-NEXT:   <CalleeIndex op0=1/>
+; VALID-NEXT:   <Counters op0=6 op1=7 op2=8/>
+; VALID:      </Context>
+; VALID-NEXT: <Context
+; VALID-NEXT:   <GUID op0=2000/>
+; VALID-NEXT:   <CalleeIndex op0=1/>
+; VALID:      </Context>
+; VALID-NEXT: <Context
+; VALID-NEXT: <GUID op0=3000/>
+; VALID-NEXT:   <CalleeIndex op0=2/>
+; VALID-NEXT:   <Counters op0=40 op1=50/>
+; VALID-NEXT: </Context>
+; VALID-NEXT: </Context>
+; VALID-NEXT: <Context
+; VALID-NEXT: <GUID op0=-4/>
