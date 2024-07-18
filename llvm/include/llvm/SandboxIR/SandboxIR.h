@@ -68,8 +68,9 @@ namespace llvm {
 
 namespace sandboxir {
 
-class Function;
+class BasicBlock;
 class Context;
+class Function;
 class Instruction;
 class User;
 class Value;
@@ -508,6 +509,14 @@ protected:
 
   Opcode Opc;
 
+  /// A SandboxIR Instruction may map to multiple LLVM IR Instruction. This
+  /// returns its topmost LLVM IR instruction.
+  llvm::Instruction *getTopmostLLVMInstruction() const;
+
+  /// \Returns the LLVM IR Instructions that this SandboxIR maps to in program
+  /// order.
+  virtual SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const = 0;
+
 public:
   static const char *getOpcodeName(Opcode Opc);
 #ifndef NDEBUG
@@ -518,6 +527,40 @@ public:
 #endif
   /// This is used by BasicBlock::iterator.
   virtual unsigned getNumOfIRInstrs() const = 0;
+  /// \Returns a BasicBlock::iterator for this Instruction.
+  BBIterator getIterator() const;
+  /// \Returns the next sandboxir::Instruction in the block, or nullptr if at
+  /// the end of the block.
+  Instruction *getNextNode() const;
+  /// \Returns the previous sandboxir::Instruction in the block, or nullptr if
+  /// at the beginning of the block.
+  Instruction *getPrevNode() const;
+  /// \Returns this Instruction's opcode. Note that SandboxIR has its own opcode
+  /// state to allow for new SandboxIR-specific instructions.
+  Opcode getOpcode() const { return Opc; }
+  /// Detach this from its parent BasicBlock without deleting it.
+  void removeFromParent();
+  /// Detach this Value from its parent and delete it.
+  void eraseFromParent();
+  /// Insert this detached instruction before \p BeforeI.
+  void insertBefore(Instruction *BeforeI);
+  /// Insert this detached instruction after \p AfterI.
+  void insertAfter(Instruction *AfterI);
+  /// Insert this detached instruction into \p BB at \p WhereIt.
+  void insertInto(BasicBlock *BB, const BBIterator &WhereIt);
+  /// Move this instruction to \p WhereIt.
+  void moveBefore(BasicBlock &BB, const BBIterator &WhereIt);
+  /// Move this instruction before \p Before.
+  void moveBefore(Instruction *Before) {
+    moveBefore(*Before->getParent(), Before->getIterator());
+  }
+  /// Move this instruction after \p After.
+  void moveAfter(Instruction *After) {
+    moveBefore(*After->getParent(), std::next(After->getIterator()));
+  }
+  /// \Returns the BasicBlock containing this Instruction, or null if it is
+  /// detached.
+  BasicBlock *getParent() const;
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From);
 
@@ -542,6 +585,9 @@ class OpaqueInst : public sandboxir::Instruction {
   friend class Context; // For constructor.
   Use getOperandUseInternal(unsigned OpIdx, bool Verify) const final {
     return getOperandUseDefault(OpIdx, Verify);
+  }
+  SmallVector<llvm::Instruction *, 1> getLLVMInstrs() const final {
+    return {cast<llvm::Instruction>(Val)};
   }
 
 public:
@@ -570,7 +616,8 @@ class BasicBlock : public Value {
   /// Builds a graph that contains all values in \p BB in their original form
   /// i.e., no vectorization is taking place here.
   void buildBasicBlockFromLLVMIR(llvm::BasicBlock *LLVMBB);
-  friend class Context; // For `buildBasicBlockFromIR`
+  friend class Context;     // For `buildBasicBlockFromIR`
+  friend class Instruction; // For LLVM Val.
 
   BasicBlock(llvm::BasicBlock *BB, Context &SBCtx)
       : Value(ClassID::Block, BB, SBCtx) {
@@ -623,6 +670,12 @@ protected:
   DenseMap<llvm::Value *, std::unique_ptr<sandboxir::Value>>
       LLVMValueToValueMap;
 
+  /// Remove \p V from the maps and returns the unique_ptr.
+  std::unique_ptr<Value> detachLLVMValue(llvm::Value *V);
+  /// Remove \p SBV from all SandboxIR maps and stop owning it. This effectively
+  /// detaches \p V from the underlying IR.
+  std::unique_ptr<Value> detach(Value *V);
+  friend void Instruction::eraseFromParent(); // For detach().
   /// Take ownership of VPtr and store it in `LLVMValueToValueMap`.
   Value *registerValue(std::unique_ptr<Value> &&VPtr);
 
