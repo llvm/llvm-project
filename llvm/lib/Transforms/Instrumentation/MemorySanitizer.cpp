@@ -3918,8 +3918,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
             (numArgOperands - 1));
     Type *ShadowTy = getShadowTy(OutputVectorTy);
     Value *ShadowPtr, *OriginPtr;
-    std::tie(ShadowPtr, OriginPtr)
-        = getShadowOriginPtr(Addr, IRB, ShadowTy, Align(1), /*isStore*/ true);
+    std::tie(ShadowPtr, OriginPtr) =
+        getShadowOriginPtr(Addr, IRB, ShadowTy, Align(1), /*isStore*/ true);
     ShadowI->setArgOperand(numArgOperands - 1, ShadowPtr);
     ShadowI->insertAfter(&I);
 
