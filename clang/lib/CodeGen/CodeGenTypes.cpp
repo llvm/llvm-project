@@ -575,7 +575,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
               Info.EC.getKnownMinValue() *
               ConvertType(Info.ElementType)->getScalarSizeInBits() / 8;
           return llvm::TargetExtType::get(
-              getLLVMContext(), "riscv_vec_tuple",
+              getLLVMContext(), "riscv.vector.tuple",
               llvm::ScalableVectorType::get(
                   llvm::Type::getInt8Ty(getLLVMContext()), I8EltCount),
               Info.NumVectors);

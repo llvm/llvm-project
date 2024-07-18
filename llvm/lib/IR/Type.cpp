@@ -114,7 +114,7 @@ bool Type::isRISCVVectorTupleTy() const {
   if (!isTargetExtTy())
     return false;
 
-  return cast<TargetExtType>(this)->getName() == "riscv_vec_tuple";
+  return cast<TargetExtType>(this)->getName() == "riscv.vector.tuple";
 }
 
 bool Type::canLosslesslyBitCastTo(Type *Ty) const {
@@ -843,11 +843,11 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
   // RISC-V vector tuple type. The layout is represented as the type that needs
   // the same number of vector registers(VREGS) as this tuple type, represented
   // as <vscale x (VREGS * 8) x i8>.
-  if (Name == "riscv_vec_tuple") {
+  if (Name == "riscv.vector.tuple") {
     unsigned TotalNumElts =
-        std::max<uint64_t>(cast<ScalableVectorType>(Ty->getTypeParameter(0))
-                               ->getMinNumElements(),
-                           8) *
+        std::max(cast<ScalableVectorType>(Ty->getTypeParameter(0))
+                     ->getMinNumElements(),
+                 8U) *
         Ty->getIntParameter(0);
     return TargetTypeInfo(
         ScalableVectorType::get(Type::getInt8Ty(C), TotalNumElts));
