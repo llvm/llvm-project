@@ -2140,14 +2140,13 @@ bool VectorCombine::foldCastFromReductions(Instruction &I) {
 
   Value *Src;
   if (!match(ReductionSrc, m_OneUse(m_Trunc(m_Value(Src)))) &&
-      (TruncOnly ||
-       !match(ReductionSrc, m_OneUse(m_ZExtOrSExt(m_Value(Src))))))
+      (TruncOnly || !match(ReductionSrc, m_OneUse(m_ZExtOrSExt(m_Value(Src))))))
     return false;
 
   // Note: Only trunc has a constexpr, neither sext or zext do.
   auto CastOpc = Instruction::Trunc;
   if (auto *Cast = dyn_cast<CastInst>(ReductionSrc))
-      CastOpc = (Instruction::CastOps)cast<Instruction>(Cast)->getOpcode();
+    CastOpc = (Instruction::CastOps)cast<Instruction>(Cast)->getOpcode();
 
   auto *SrcTy = cast<VectorType>(Src->getType());
   auto *ReductionSrcTy = cast<VectorType>(ReductionSrc->getType());
@@ -2157,21 +2156,19 @@ bool VectorCombine::foldCastFromReductions(Instruction &I) {
   InstructionCost OldCost = TTI.getArithmeticReductionCost(
       ReductionOpc, ReductionSrcTy, std::nullopt, CostKind);
   if (auto *Cast = dyn_cast<CastInst>(ReductionSrc))
-    OldCost +=
-        TTI.getCastInstrCost(CastOpc, ReductionSrcTy, SrcTy,
-                             TTI::CastContextHint::None, CostKind, Cast);
+    OldCost += TTI.getCastInstrCost(CastOpc, ReductionSrcTy, SrcTy,
+                                    TTI::CastContextHint::None, CostKind, Cast);
   InstructionCost NewCost =
       TTI.getArithmeticReductionCost(ReductionOpc, SrcTy, std::nullopt,
                                      CostKind) +
-      TTI.getCastInstrCost(CastOpc, ResultTy,
-                           ReductionSrcTy->getScalarType(),
+      TTI.getCastInstrCost(CastOpc, ResultTy, ReductionSrcTy->getScalarType(),
                            TTI::CastContextHint::None, CostKind);
 
   if (OldCost <= NewCost || !NewCost.isValid())
     return false;
 
-  Value *NewReduction = Builder.CreateIntrinsic(
-      SrcTy->getScalarType(), II->getIntrinsicID(), {Src});
+  Value *NewReduction = Builder.CreateIntrinsic(SrcTy->getScalarType(),
+                                                II->getIntrinsicID(), {Src});
   Value *NewCast = Builder.CreateCast(CastOpc, NewReduction, ResultTy);
   replaceValue(I, *NewCast);
   return true;
