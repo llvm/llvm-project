@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_FMINL_H
 #define LLVM_LIBC_SRC_MATH_FMINL_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 long double fminl(long double x, long double y);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_FMINL_H

@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STDIO_GETCHAR_UNLOCKED_H
 #define LLVM_LIBC_SRC_STDIO_GETCHAR_UNLOCKED_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int getchar_unlocked();
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_GETCHAR_UNLOCKED_H

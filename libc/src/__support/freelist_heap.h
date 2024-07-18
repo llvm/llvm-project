@@ -16,11 +16,10 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/libc_assert.h"
-#include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/memory_utils/inline_memset.h"
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 using cpp::optional;
 using cpp::span;
@@ -259,6 +258,6 @@ void *FreeListHeap<NUM_BUCKETS>::calloc(size_t num, size_t size) {
 
 extern FreeListHeap<> *freelist_heap;
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FREELIST_HEAP_H

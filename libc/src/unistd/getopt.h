@@ -10,10 +10,9 @@
 #define LLVM_LIBC_SRC_UNISTD_GETOPT_H
 
 #include "hdr/types/FILE.h"
-#include "src/__support/macros/config.h"
 #include <unistd.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 namespace impl {
 void set_getopt_state(char **, int *, int *, unsigned *, int *, FILE *);
@@ -21,6 +20,6 @@ void set_getopt_state(char **, int *, int *, unsigned *, int *, FILE *);
 
 int getopt(int argc, char *const argv[], const char *optstring);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_UNISTD_GETOPT_H

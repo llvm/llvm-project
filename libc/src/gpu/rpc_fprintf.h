@@ -10,14 +10,13 @@
 #define LLVM_LIBC_SRC_GPU_RPC_HOST_CALL_H
 
 #include "hdr/types/FILE.h"
-#include "src/__support/macros/config.h"
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 int rpc_fprintf(::FILE *__restrict stream, const char *__restrict format,
                 void *argc, size_t size);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_GPU_RPC_HOST_CALL_H

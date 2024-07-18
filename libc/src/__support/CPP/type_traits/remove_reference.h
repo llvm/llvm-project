@@ -9,10 +9,8 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_REMOVE_REFERENCE_H
 
 #include "src/__support/CPP/type_traits/type_identity.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
-namespace cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // remove_reference
 template <class T> struct remove_reference : cpp::type_identity<T> {};
@@ -21,7 +19,6 @@ template <class T> struct remove_reference<T &&> : cpp::type_identity<T> {};
 template <class T>
 using remove_reference_t = typename remove_reference<T>::type;
 
-} // namespace cpp
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_REMOVE_REFERENCE_H

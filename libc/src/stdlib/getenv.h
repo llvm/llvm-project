@@ -9,12 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STDLIB_GETENV_H
 #define LLVM_LIBC_SRC_STDLIB_GETENV_H
 
-#include "src/__support/macros/config.h"
-
-namespace LIBC_NAMESPACE_DECL {
+namespace LIBC_NAMESPACE {
 
 char *getenv(const char *name);
 
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDLIB_GETENV_H

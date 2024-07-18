@@ -9,17 +9,14 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_TRIVIALLY_CONSTRUCTIBLE_H
 
 #include "src/__support/CPP/type_traits/integral_constant.h"
-#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE_DECL {
-namespace cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // is_trivially_constructible
 template <class T, class... Args>
 struct is_trivially_constructible
     : integral_constant<bool, __is_trivially_constructible(T, Args...)> {};
 
-} // namespace cpp
-} // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_TRIVIALLY_CONSTRUCTIBLE_H
