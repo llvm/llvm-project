@@ -6052,19 +6052,19 @@ QualType ASTContext::getTypeOfExprType(Expr *tofExpr, TypeOfKind Kind) const {
     if (Canon) {
       // We already have a "canonical" version of an identical, dependent
       // typeof(expr) type. Use that as our canonical type.
-      toe = new (*this, alignof(TypeOfExprType))
-          TypeOfExprType(tofExpr, Kind, QualType((TypeOfExprType *)Canon, 0));
+      toe = new (*this, alignof(TypeOfExprType)) TypeOfExprType(
+          *this, tofExpr, Kind, QualType((TypeOfExprType *)Canon, 0));
     } else {
       // Build a new, canonical typeof(expr) type.
       Canon = new (*this, alignof(DependentTypeOfExprType))
-          DependentTypeOfExprType(tofExpr, Kind);
+          DependentTypeOfExprType(*this, tofExpr, Kind);
       DependentTypeOfExprTypes.InsertNode(Canon, InsertPos);
       toe = Canon;
     }
   } else {
     QualType Canonical = getCanonicalType(tofExpr->getType());
     toe = new (*this, alignof(TypeOfExprType))
-        TypeOfExprType(tofExpr, Kind, Canonical);
+        TypeOfExprType(*this, tofExpr, Kind, Canonical);
   }
   Types.push_back(toe);
   return QualType(toe, 0);
@@ -6077,8 +6077,8 @@ QualType ASTContext::getTypeOfExprType(Expr *tofExpr, TypeOfKind Kind) const {
 /// on canonical types (which are always unique).
 QualType ASTContext::getTypeOfType(QualType tofType, TypeOfKind Kind) const {
   QualType Canonical = getCanonicalType(tofType);
-  auto *tot =
-      new (*this, alignof(TypeOfType)) TypeOfType(tofType, Canonical, Kind);
+  auto *tot = new (*this, alignof(TypeOfType))
+      TypeOfType(*this, tofType, Canonical, Kind);
   Types.push_back(tot);
   return QualType(tot, 0);
 }
