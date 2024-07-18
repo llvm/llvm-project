@@ -211,6 +211,9 @@ public:
 
   /// Expands a pointer to the containing array, undoing narrowing.
   [[nodiscard]] Pointer expand() const {
+    assert(isBlockPointer());
+    Block *Pointee = asBlockPointer().Pointee;
+
     if (isElementPastEnd()) {
       // Revert to an outer one-past-end pointer.
       unsigned Adjust;
@@ -218,7 +221,7 @@ public:
         Adjust = sizeof(InitMapPtr);
       else
         Adjust = sizeof(InlineDescriptor);
-      return Pointer(asBlockPointer().Pointee, asBlockPointer().Base,
+      return Pointer(Pointee, asBlockPointer().Base,
                      asBlockPointer().Base + getSize() + Adjust);
     }
 
@@ -228,15 +231,17 @@ public:
 
     // If at base, point to an array of base types.
     if (isRoot())
-      return Pointer(asBlockPointer().Pointee, RootPtrMark, 0);
+      return Pointer(Pointee, RootPtrMark, 0);
 
     // Step into the containing array, if inside one.
     unsigned Next = asBlockPointer().Base - getInlineDesc()->Offset;
     const Descriptor *Desc =
-        Next == 0 ? getDeclDesc() : getDescriptor(Next)->Desc;
+        (Next == Pointee->getDescriptor()->getMetadataSize())
+            ? getDeclDesc()
+            : getDescriptor(Next)->Desc;
     if (!Desc->IsArray)
       return *this;
-    return Pointer(asBlockPointer().Pointee, Next, Offset);
+    return Pointer(Pointee, Next, Offset);
   }
 
   /// Checks if the pointer is null.
